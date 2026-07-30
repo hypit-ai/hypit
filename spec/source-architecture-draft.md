@@ -2,16 +2,18 @@
 
 > **Draft; not frozen.**
 >
-> 本文记录 2026-07-30 对完整 SVML 源码架构的当前共识。已经冻结的稿子语法仍以
+> 本文记录截至 2026-07-31 对完整 SVML 源码架构的当前共识。已经冻结的稿子语法仍以
 > [Script Surface v1](./script-surface-v1.md) 为准；本文中的文档外壳、跨文件
 > import、组件调用、参数表和引用写法仍需原型验证后才能冻结。
 
-SVML 是视频的源语言，不是画布文件，也不是最终像素格式。编译器展开当前影片
-及其全部 import，得到可检查的语义 DAG；运行时能力返回媒体与对齐证据，Locate
-把语义时间统一量化，最后确定性地产出 HyperFrames HTML。
+SVML 是视频的源语言，不是画布文件，也不是最终像素格式。一个可编译单元是
+当前 `.svml`、它的全部传递 import 和锁文件组成的 **source closure**。编译器
+展开 source closure，得到可检查的语义 DAG；运行时能力返回媒体与语音对齐
+证据，Locate 把所有时间统一量化，Track projector 再确定性地产出
+HyperFrames HTML。
 
 ```text
-.svml + transitive imports
+.svml + transitive .svk/.svs/.svc imports + svml.lock
         │
         ▼
 parse / bind / typecheck / expand
@@ -22,23 +24,37 @@ Plan IR (values · calls · ports · topology · effective params · provenance)
         └──────────────> Estimate timeline
         │
         ▼
-Capability Host (generation · alignment · media probe)
+Capability Host (media materialization · Speech Compile · media probe)
         │
         ▼
-Locate
+Locate (Base Clock · temporal projection · deterministic space)
         │
         ▼
 Located IR
         │
         ▼
-Imported render components
+Imported Track projectors
         │
         ▼
-HyperFrames HTML
+private HyperFrames Document AST
+        ├──────────────> Visual Surface Tree
+        └──────────────> Audio Tree
+        │
+        ▼
+HyperFrames HTML (the sole formal final compile target)
 ```
 
-Canvas 和 Timeline 是 IR 的人类视图，不是第二份作者真相。Pin、take、缓存、
-任务和运行状态不进入 SVML 源码。
+Canvas/DAG、Estimate Timeline 和 Located Timeline 都是为了人类查看与修改而
+投影出的 IR 视图，不是第二份作者真相。Visual Surface Tree 和 Audio Tree
+只是编译器私有的 HyperFrames lowering 结构，不是另一门作者语言、公共存储
+格式或另一台“引擎”。MP4 等成片是运行、录制或封装该 HTML 的结果，不是另一个
+语义编译目标。
+
+这就是“新引擎”的严格含义：它是 **SVML compiler/runtime → HyperFrames
+HTML**，不是再发明一套与 HyperFrames 并列的渲染引擎。新能力通常通过 import
+新的 `.svk`、`.svs` 或 `.svc` 并更新锁文件获得；只有源语法、公共 ABI、基础
+值类型或 HyperFrames target 改变时才需要发布编译器。Pin、take、缓存、任务和
+运行状态不进入 SVML 源码。
 
 ## 1. 四种文件
 
@@ -192,6 +208,24 @@ import、移动一段声明或运行 `svml fmt`，不能让 Canvas 把既有实�
 要跨实例引用、单独投影或跨次编译保留身份，就必须有稳定 id/key，不能使用数组
 下标兜底。
 
+稳定身份不能兼任缓存命中条件。每个可执行实例还必须拥有独立的执行摘要：
+
+```text
+executionDigest
+= locked Kernel implementation + public ABI version
++ effective parameters + deterministic lowering result
++ transitive input artifact hashes
+```
+
+`instanceIdentity` 用于 Canvas 身份、诊断和跨次编辑关联；`executionDigest`
+用于自动缓存、take 兼容性和执行失效。改 Prompt 或参考图时，前者保持不变，
+后者必须改变。
+
+Pin 仍是源码外的显式作者决定，而不是自动缓存。用户可以明确要求旧 artifact
+继续供给同一类型端口，即使当前 `executionDigest` 已改变；只有输出类型、schema
+或其他硬合同不兼容时才拒绝。下游摘要使用实际被 Pin 的 artifact hash，因此
+复用是可见、可追踪的，不会伪装成新参数下重新生成的结果。
+
 ## 3. `.svk`: 定义平级 Kernel
 
 `.svk` 定义一个可直接 import、调用和验证的 Kernel。所有 Kernel 使用同一种
@@ -201,9 +235,10 @@ import、移动一段声明或运行 `svml fmt`，不能让 Canvas 把既有实�
 - 导出的调用名、内容模型及允许的子元素；
 - 输入和输出端口及其类型、cardinality、动态端口或 item schema；
 - 参数类型、合法值、默认值和必填约束；
-- temporal port 接受 `SelectionSet` 还是 `MomentSet`；
+- temporal port 接受 `SelectionSet`、`MomentSet` 还是手工 `ProgramSpan`，以及
+  它按 `one`、`each` 还是 `set` 消费 occurrence；
 - 声明性的调用、数据流展开和 Capability lowering；
-- 运行时入口和/或 Located props 到 HyperFrames DOM 的渲染实现；
+- 受限运行时入口和/或 Located props 到 HyperFrames fragment 的 projector；
 - 编译器可以执行的静态诊断合同。
 
 并非每个 Kernel 都同时具有运行时和渲染实现：`gpt-image` 只需调用能力并产出
@@ -329,24 +364,42 @@ provider prompt
 
 ### 3.3 编译器、Capability Host 与渲染边界
 
-SVK 可以把 HTML、CSS、SVG、Canvas、GSAP、Lottie、Three.js 或其他
-HyperFrames 可承载实现放进自己的渲染部分，但其权限止于组件根节点内部：
+SVK 可以实现 HTML、CSS、SVG、Canvas、GSAP、Lottie、Three.js 或其他
+HyperFrames 可承载能力，但“只许改组件根节点”不能只写成规范愿望。在同一
+document 中，普通 JavaScript 能访问全局 DOM，普通 CSS 也能越过组件边界；
+Shadow DOM 只能形成样式边界，不是 JavaScript 安全边界。因此根节点是
+**composition contract**，不是 security boundary。
+
+SVK manifest 必须把入口拆成宿主可执行的有限 ABI：
 
 ```text
-编译器 / Locate
-  └─ 决定实例根节点的时间区间、Track、空间框和可见性
-       └─ SVK render 决定根节点内部的标记、样式和动画
+static expand        source declarations → typed Plan fragment
+capability lowering  typed request → declared artifact/evidence
+track projection     Located props → HyperFrames fragment
 ```
 
-SVK render 不得硬编码整片绝对开始/结束位置、外部 Track index，或绕开
-Selection/Moment 与 Locate 自行放置根节点。组件内部的 `300ms` 入场动画合法，
-因为它相对本实例；`12.4s` 处出现在整片中的写法非法。匿名的一次性渲染片段
-将来若开放，也必须遵守同一边界，不另开时间逃生舱。
+- `static expand` 必须纯、确定、无 I/O，并满足无环展开、终止条件和实例数上限；
+- `capability lowering` 只能通过宿主注入的类型化 capability handle 访问
+  provider，不能接触其他 capability 的凭证；
+- `track projection` 只获得 scoped root、Located props、确定性 frame clock、
+  显式 seed 和已声明资源；默认没有网络、墙钟、未注入随机源或全局 DOM；
+- 声明式 projector 可由宿主直接解释；可执行 projector 必须精确锁定，并按
+  宿主信任策略在隔离 realm/iframe 或明确受信进程中运行；
+- 第三方 CSS 必须 scope；第三方 JavaScript 不能因为使用 Shadow DOM 就被视为
+  已隔离；
+- 一个实现需要的 capability、网络或其他权限必须在 manifest 声明并进入
+  `svml.lock`，宿主可以拒绝。
+
+这些是 compiler/runtime 的 effect 与安全合同，不是要求作者在 `.svml` 中把
+调用分成 `generation`、`analysis`、`render`、`export` 四类，也不记录所谓
+“重跑范围”。业务 Kernel 仍然平级；固定阶段只用于阻止 provider 代码在 parse
+时执行、renderer 反向改变 Speech Spine、循环展开和越权访问。
 
 Capability Host 只接收 Kernel lowering 后的类型化调用，并返回声明过的输出与
 证据。凭证、队列、重试和 provider SDK 可以对源语言不透明；调用、依赖、
 fan-out、端口、生成参数和输出类型不能藏在任意运行时代码里，必须先进入
-Plan IR。
+Plan IR。Track projector 只把已经 Located 的值编译为 HyperFrames fragment，
+不能回写 Plan、改动 Base Clock 或产生新的 provider 调用。
 
 ### 3.4 零特权验收
 
@@ -360,11 +413,11 @@ typechecker、expander 与 renderer 接口。下列真实能力是 SVK 格式的
 | `seedance-speaker` | Script 投影依赖、媒体生成和运行时证据 |
 | `seedance-reference` | 异构输入、多端口与多输出 |
 | `ranking-tier-list` | 动态 items、必填字段和枚举校验 |
-| `speech-spine` | 唯一 Program Clock、主音频、Segment 绑定和同步 Visual Facet |
-| `media-track` | Item/Present、共享播放映射、相对窗口与局部 layer |
-| `broll-track` | 多 item、跨 Segment Selection、Present 与重复端口组 |
+| `speech-spine` | 唯一 Program Clock、主口播音频、Segment 绑定和同步 Visual Facet |
+| `media-track` | Item/Present、共享播放映射、语义与手工窗口、局部 layer |
+| `broll-track` | 多 item、跨 Segment Selection、组合序列、交叉转场与音频贡献 |
 | `caption-track` | Script/Narrative IR 到 Track 的确定性映射 |
-| `film` | 一个 Speech Spine、多 Track 组装与唯一根输出 |
+| `film` | 一个 Speech Spine、多 Track、全局 z 与音频树组装、唯一根输出 |
 
 如果其中任一个必须在编译器里按名字写专用业务分支，说明公开 SVK 清单仍缺
 表达力。Script parser、基础值类型、Selection/Moment、模块解析和编译各相属于
@@ -441,8 +494,11 @@ effective parameter 都要保留最终来源和被覆盖链，因此 Canvas、ag
 - 产品名、发音、Tagline、人物照片、音色引用；
 - 可复用的长 Prompt；
 - 不依赖当前 Film Script 的 GPT Image、Seedance 和转换调用；
-- 由这些值组成的可复用、可静态展开内容子图；
-- 不含绝对时间的具名渲染片段。
+- 由这些值组成的可复用、可静态展开内容子图。
+
+`.svc` 不保存可执行 DOM/CSS/JavaScript 或匿名“渲染片段”。可执行的
+HyperFrames projection 必须由具名 `.svk` 定义；`.svc` 只能给该 Kernel 提供
+类型化数据。这样内容模块不会偷偷成为一份绕过 ABI 和锁文件的匿名 Kernel。
 
 示意：
 
@@ -520,7 +576,7 @@ imports
 一条影片有且仅有一个 Speech Spine。它按顺序把 Script Segment 与 `Audio` 或
 `Video` 媒体绑定，产出：
 
-- 全片唯一的 Program Clock、结构切点和主音频；
+- 全片唯一的 Program Clock、结构切点和主口播音频；
 - 全局 Speech Alignment 与 Temporal Anchor Map；
 - 每个 Segment 的 ProgramRange；
 - 视频型 Segment 可选的、静音且已与 Program Clock 同步的 Visual Facet。
@@ -533,7 +589,7 @@ Facet，空镜、背景和其他铺底仍是普通 Track Item。
 因此旧实现中的 `Base Track` 被拆成两个角色：
 
 ```text
-Speech Spine = Program Clock + master audio + alignment + synchronized facets
+Speech Spine = Program Clock + primary speech audio + alignment + synchronized facets
 Visual Track = 在既定 Program Clock 上显示媒体
 ```
 
@@ -541,37 +597,62 @@ Visual Track = 在既定 Program Clock 上显示媒体
 兼容形状，不应固化为 SVML 源语言。Base FX 也不承担正常布局；分屏、圆形裁切、
 位置、透明度和相对动画属于 Item/Present。
 
-### 6.2 Material、Item 与 Present
+“主口播音频”不等于“全片唯一允许的音频”。B-roll 的视频原声、Track 自带的
+转场音效、Ranking 出现音效、BGM 和独立 SFX 都可以由相应 Track 直接贡献给
+Film 的 Audio Tree；不要求为了每个声音再复制一份独立 Audio Track。独立
+Audio Track 只用于确实独立编排的声音。
 
-`Item` 没有被 `Present` 取代。三者的身份与生命周期不同：
+新架构不引入 `audioCueIntent`。它是当前引擎为若干节点转接音频提示的兼容形状，
+不是 SVML 源词汇，也不是新的公共 IR 合同。Kernel 应把 `source-audio`、
+`enter-sound`、`appear-sound` 等自己公开的类型化参数直接 projector 为
+HyperFrames audio fragment。
 
-```text
-Material = Image / Video 等内容值，可以 fan-out
-Item     = Material 在一条 Track 上的一次连续使用和播放
-Present  = 同一个 Item 播放过程中的一个定时显示 surface
-```
+### 6.2 Material、Track Item、Occurrence 与 Present
 
-一个媒体 Item 至少拥有稳定 `id`、`source`、显式或由同步 source 携带的
-TemporalPlacement、playback/source sampling、基础 presentation，以及零到
-多个具名 Present。Present 是 Item 的子项，只拥有自己的 TemporalPlacement、
-presentation 参数、局部 layer 和相对入退场动画；它不能修改或重启父 Item 的
-source-time mapping。
-
-同一个 Material 被两个 Item 引用，表示两次可独立开始、循环、拉伸或结束的
-播放；同一个 Item 下有多个 Present，表示播放保持连续，只改变位置、形状或
-同时产生多个同步 surface。A-roll 与 B-roll 在视觉投影层都降低为媒体 Item：
+`Item` 没有被 `Present` 取代，但也不能被语言内核硬定义成“一次连续播放”。
+四个概念分工如下：
 
 ```text
-A-roll Item source = Speech Spine Visual Facet
-                      + locked synchronized playback
-
-B-roll Item source = ordinary Image / Video
-                      + authored TemporalPlacement and playback
+Material           = Image / Video / Audio 等可 fan-out 的内容值
+Track Item         = 某个 Track Kernel 定义的一项作者输入
+Located Occurrence = Track 将一个时间 occurrence 降低后得到的一次连续使用
+Present            = 同一 Located Occurrence 上的一个定时显示 surface
 ```
 
-二者的生成来源、音频权威和 Track Kernel 可以不同，不妨碍它们共享下游
-Item/Present IR。`broll-track` 仍可定义自己的 item schema、序列、转场和音效；
-“统一为媒体”不等于删除 B-roll Item。
+SelectionSet 必须永久保留全部有序、可非连通的 occurrences；语言核心不得为了
+迎合某一种 Track 而把它偷偷拍平为一个连续区间，也不得默认只取第一段。每个
+temporal port 由其 `.svk` 声明消费合同：
+
+```text
+one   exactly one occurrence; otherwise type/cardinality error
+each  one stable Track/Located instance per occurrence
+set   receive the complete ordered SelectionSet as one typed input
+```
+
+多样式字幕典型地使用 `set`，因为一个样式规则需要一次看到所有非连通命中；
+普通媒体 Track 常使用 `each`，让每个 occurrence 各自建立连续播放映射；
+明确只接受一个窗口的组件使用 `one`。这是谁消费集合的问题，不是 Script 是否
+允许非连通的问题。若某个 Track 需要更复杂语义，应通过自己的公开 item schema
+在这三种合同之上表达，不能让编译器按 Track 名猜。
+
+对使用 `each` 的媒体 Track，每个 Located Occurrence 都有稳定 occurrence
+identity 和且仅有一个 ProgramRange，随后才建立 source-time mapping。因而
+`stretch`、`loop`、`native` 不再面对“跨 gap 怎么播放”的歧义：
+
+```text
+SelectionSet occurrence[0] → MediaUse A → mapping M₀(t)
+SelectionSet occurrence[1] → MediaUse B → mapping M₁(t)
+```
+
+一个媒体 Item 至少拥有稳定 `id`、`source`、temporal placement、playback、
+基础 presentation，以及零到多个具名 Present。Present 只改变该 Located
+Occurrence 的 surface、空间、局部层和入退场；它不重启其 source-time mapping。
+同一个 Material 被多个 Item 引用仍表示多次独立使用，fan-out 不复制素材。
+
+A-roll 与 B-roll 都可以降低为媒体 surface，但并不因此成为同一种业务对象：
+A-roll 的 source 可以是 Speech Spine 的同步 Visual Facet；`broll-track` 则
+可以定义多 item 序列、组合后转场、声音和自己的动态端口组。`Item` 是 Track
+拥有的作者单元，不是编译器预设的 `broll` 领域模型。
 
 ### 6.3 统一 TemporalPlacement、求交与层叠
 
@@ -579,33 +660,46 @@ Item 与 Present 平等使用同一种时间放置合同：
 
 ```text
 TemporalPlacement {
-  locator: SelectionSet | MomentSet | ProgramRange
-  projection: identity | relative WindowProjection
+  locator: SelectionSet | MomentSet | ProgramSpan | FullProgram
+  projection: identity | WindowProjection
 }
 ```
 
-`during=` 接闭合的 SelectionSet/ProgramRange；`at=` 接完整的 MomentSet。
+`during=` 接闭合的 SelectionSet 或手工 ProgramSpan；`at=` 接完整的 MomentSet。
 Moment 消费者若需要持续窗口，必须由有限的素材原生时长、Kernel/SVS 相对时长
 或显式相对 WindowProjection 得到，不能再拼接另一个未声明端点。`window`
-中的秒数是相对于具名 range/moment 的量，不是全片绝对时间；SVML 仍不允许把
-作者位置钉在全片第 N 秒。
+可以相对具名 range/moment，也可以直接给出基于 Program 起点或终点的手工窗口：
 
-编译顺序固定为：
-
-```text
-B  = Resolve(item.locator)
-W  = Project(B, item.projection)
-M  = BuildSourceTimeMapping(item.source, W, item.playback)
-
-Bᵢ = Resolve(presentᵢ.locator)
-Vᵢ = Project(Bᵢ, presentᵢ.projection)
-Eᵢ = W ∩ Vᵢ
+```svml
+during={script.selection.promise}  <!-- 语义窗口，优先 -->
+during="0s .. 3s"                  <!-- 全片开头三秒，合法 -->
+during="end-2s .. end"             <!-- 全片最后两秒，合法 -->
+window="start-200ms .. end"        <!-- 相对已有窗口的局部投影 -->
 ```
 
-`Eᵢ` 是 Present 的实际 surface window。在任意 `t ∈ Eᵢ`，所有 Present 都从
-父 Item 的同一个 `M(t)` 采样；求交、裁切、样式切换和 layer 重叠均不得重置
-素材时间。一个 Present 超出 Item window 的部分正常裁掉；一个 occurrence
-求交为空则省略并产生诊断，整个 Present 均为空时报告 unused presentation。
+基于语义的 Selection/Moment 是 SVML 最有价值、最可迁移的定位方式，但不是
+强制宗教。标题前三秒、片尾箭头、固定片头等需求本来就属于 Program 时间；
+作者完全不引用 Selection/Moment 也合法。工具可以对大量手工秒数给出
+portability lint，但不能禁止。所有语义与手工时间最后都量化到同一个 Base
+Clock 的整数边界，不存在第二条“手工时间线”。
+
+以使用 `each` 的媒体 Item 为例，每个 occurrence 独立执行：
+
+```text
+Bₖ = ResolveOccurrence(item.locator, k)
+Wₖ = Project(Bₖ, item.projection)
+Mₖ = BuildSourceTimeMapping(item.source, Wₖ, item.playback)
+
+Bₖᵢ = ResolveOccurrence(presentᵢ.locator, matching-policy)
+Vₖᵢ = Project(Bₖᵢ, presentᵢ.projection)
+Eₖᵢ = Wₖ ∩ Vₖᵢ
+```
+
+`Eₖᵢ` 是 Present 的实际 surface window。在任意 `t ∈ Eₖᵢ`，同一 Located
+Occurrence 的所有 Present 都从同一个 `Mₖ(t)` 采样；求交、裁切、样式切换和
+局部重叠均不得重置素材时间。一个 Present 超出父窗口的部分正常裁掉；某个
+occurrence 求交为空则省略并产生诊断，整个 Present 均为空时报告 unused
+presentation。
 
 Present 可以重叠，语义是同时绘制多个共享 `M(t)` 的 surface，而不是按源码
 顺序或 CSS specificity 猜覆盖关系：
@@ -613,7 +707,7 @@ Present 可以重叠，语义是同时绘制多个共享 `M(t)` 的 surface，�
 - 不重叠时不要求显式 layer；
 - 重叠且 local layer 不同时，按 layer 合成；
 - 重叠且 local layer 相同时，以 `presentation_layer_ambiguous` 失败；
-- layer 只在父 Item 内排序，不代替 Track/Film 的层级；
+- local layer 只在父 Item 内排序，不代替 Track 的全局 z；
 - 需要属性组合而非双 surface 时，应在一个 Present 上组合 SVS class。
 
 Item 的基础 presentation 是默认值和 fallback。没有活跃 Present 时渲染一份
@@ -632,12 +726,81 @@ Present 覆盖。
 若要交叠淡化，可让后一个 Present 的相对 Projection 比语义起点提前，例如
 `window="start-200ms .. end"`；重叠 surface 仍共享 `M(t)`，不会跳帧或重播。
 
-### 6.4 完整示意
+### 6.4 确定性空间与全局 z
+
+Locate v1 不只确定时间，也必须把 Track projector 需要的空间输入降为明确值。
+公共 ABI 至少需要这些确定性空间形状：
+
+```text
+SpatialPlacement
+= canvas | named-region | fixed-box | inset/alignment
++ transform | crop/fill | mask/radius | opacity
+```
+
+它们可以来自 Kernel 默认、SVS class 或实例属性，也可以包含作者显式声明的
+确定性关键帧；最终进入 Located props 的是画布坐标、尺寸、裁切和变换，而不是
+让 renderer 临时猜布局。
+
+SVML v1、stdlib 和验收用例明确不实现 VLM、bbox、subject selector、人脸跟踪、
+pose/keypoint 或“看完整视频后再决定空间”。这些能力若未来值得做，可以作为
+导入的扩展 Kernel、evidence provider 或对已编译 HyperFrames HTML 的后处理器；
+它们不能反过来改变 Script、Speech Spine 或基于语义时间戳的免剪辑定位原则。
+
+每条有视觉输出的 Track 必须拥有 **全片绝对 z**。Film 的全局视觉栈按
+`(z, stableTrackIdentity)` 确定性排序，不按 Film 子元素顺序、Canvas y 坐标或
+创建先后猜测。由此 B-roll 可以位于 A-roll 下方，而 A-roll 的圆形画中画可以
+在同一时刻盖到 B-roll 上方。一个 Track 在同一 Film 中最多引用一次；重复引用
+是 `duplicate_track_in_film`，不能靠复制 Track 制造层级。
+
+Track 内部仍可用 local layer 表达同一 Item 的重叠 Present，B-roll projector
+也可维护自己的局部合成顺序；local layer 永远不能越过 Track 的全局 z。
+
+### 6.5 Track projector、B-roll 组合与音频
+
+Track 不是一条只能放单个 DOM 节点的薄容器，而是一个确定性 projector。它可以
+一次读取本 Track 的全部 Located items，再输出同步的视觉和音频 fragment：
+
+```text
+Located Track
+  ├─ visual projection → HyperFrames visual subtree
+  └─ audio projection  → HyperFrames audio subtree
+```
+
+`broll-track` 因而可以先把多项素材组成内部 sequence，再在相邻 item 之间应用
+`crossfade`、`push`、`wipe`、`cover`、`page-turn` 等交叉转场，同时输出
+`composite_below` 等自身需要的视觉协议。`composite_below` 在 projector 阶段
+绑定为该 surface 的绝对 z 以下已经累计的视觉栈，不是一个写死的“Base Track”。
+转场只改变两个 Located items 的局部重叠与采样，不改变 Speech Spine、Program
+Clock 或全局 z。`duration="200ms"` 这类数值是已定位 item 之间的局部转场参数，
+不是替代 Selection 的全片定位。
+
+视觉转场绝不隐式改变音频。B-roll Track 可以显式输出视频原声、gain/fade 和
+转场音效，无需额外复制 Audio Track；如果作者没有声明音频行为，`crossfade`
+只 crossfade 两个 visual surfaces。
+
+Film projector 汇总：
+
+```text
+Visual Surface Tree = all Track visual fragments sorted by global z
+Audio Tree          = Speech Spine primary audio
+                    + Track audio contributions
+                    + optional independent audio tracks
+HyperFrames HTML    = one document containing both trees and the Base Clock
+```
+
+Audio Tree 必须显式保存 source、ProgramRange、gain、bus/duck 以及重叠混合规则；
+不能因某个声音没有独立 Canvas 节点就丢失。Visual Surface Tree 和 Audio Tree
+都是编译器内部 lowering，不要求作者在 `.svml` 中手写两棵树。
+
+### 6.6 完整示意
 
 下面示例中，A-roll 是一个 50 秒视频，第一处 speech token 在对齐后可以落到
 第 10 秒；`demo` 仍由 Segment 的两个结构切点覆盖完整媒体区间。前 10 秒没有
 词法锚点，但 Present 可以相对 `demo` 起点每两秒换位，并用 200ms overlap
-消除硬闪。`window` 的确切表达式语法尚需 parser 原型验证，语义按上一节固定。
+消除硬闪。B-roll 在全局 `z=100`，A-roll 在 `z=200`，所以 A-roll 画中画能
+盖在 B-roll 上方；标题和片尾箭头演示合法的手工 ProgramSpan。B-roll 原声和
+转场音效由 B-roll Track 自己进入 Audio Tree。具体标签和属性表面仍需 parser
+原型验证，本例冻结的是数据合同。
 
 ```svml
 <svml version="1">
@@ -645,6 +808,7 @@ Present 覆盖。
   <import from="./kernels/speech-spine.svk"/>
   <import from="./kernels/media-track.svk"/>
   <import from="./kernels/broll-track.svk"/>
+  <import from="./kernels/text-track.svk"/>
   <import from="./kernels/caption-track.svk"/>
   <import from="./kernels/film.svk"/>
 
@@ -671,10 +835,11 @@ Present 覆盖。
     />
   </speech-spine>
 
-  <media-track id="aroll">
+  <media-track id="aroll" z="200">
     <item
       id="host"
       source={speech.segment.main.visual}
+      during={script.selection.demo}
       playback="sync"
       class="house.host-base"
     >
@@ -741,34 +906,43 @@ Present 覆盖。
     </item>
   </media-track>
 
-  <broll-track id="broll">
+  <broll-track id="broll" z="100" composite="below">
+    <item
+      id="poster"
+      source={content.poster.image}
+      during={script.selection.promise}
+      playback="hold"
+      class="house.full-frame"
+    />
     <item
       id="product-demo"
       source={content.product-demo.video}
-      during={script.selection.demo}
+      during={script.selection.reveal}
       playback="stretch"
-      class="house.product-base"
-    >
-      <present
-        id="promise"
-        during={script.selection.promise}
-        layer="10"
-        class="house.full-frame"
-        exit="fade 200ms"
-      />
-      <present
-        id="reveal"
-        during={script.selection.reveal}
-        window="start-200ms .. end"
-        layer="20"
-        class="house.bottom-card"
-        enter="fade 200ms"
-      />
-    </item>
+      audio="source"
+      class="house.full-frame"
+    />
+    <transition
+      from="poster"
+      to="product-demo"
+      kind="crossfade"
+      duration="200ms"
+      sound={content.whoosh.audio}
+    />
   </broll-track>
+
+  <text-track id="manual-overlays" z="250">
+    <item id="opening-title" during="0s .. 3s" class="house.title">
+      The semantic video era starts now.
+    </item>
+    <item id="ending-arrow" during="end-2s .. end" class="house.arrow">
+      ↓
+    </item>
+  </text-track>
 
   <caption-track
     id="captions"
+    z="300"
     class="house.launch"
     script={script}
   />
@@ -778,13 +952,19 @@ Present 覆盖。
     class="house.vertical"
     spine={speech.spine}
   >
-    <layer track={aroll.track}/>
-    <layer track={broll.track}/>
-    <layer track={captions.track}/>
+    <track ref={broll.track}/>
+    <track ref={aroll.track}/>
+    <track ref={manual-overlays.track}/>
+    <track ref={captions.track}/>
   </film>
 
 </svml>
 ```
+
+Film 内 `<track>` 的书写顺序在这里仅为排版，不决定层叠。若
+`script.selection.emphasis` 含多个非连通 occurrence，声明为 `set` 的 Caption
+端口会一次得到整个集合；声明为 `each` 的媒体端口会为每个 occurrence 建立
+独立 Located Occurrence；声明为 `one` 的端口则必须明确报 cardinality error。
 
 ## 7. Script 依赖规则
 
@@ -817,17 +997,61 @@ context-free `.svc` 内容。
 
 ### 8.1 确定性编译相
 
-任何 Capability Host 或渲染运行时被调用之前，源码必须完整经过：
+任何 Capability Host 或 projector 被调用之前，source closure 必须完整经过：
 
 ```text
 parse → bind → typecheck → expand → plan
 ```
 
 这些阶段都是确定性、只读的，失败时不得留下 provider 调用、缓存选择或部分
-运行状态。成功的 Plan IR 至少可以打印：
+运行状态。SVML 对外区分三个逐级更完整的编译结果，而不是把所有东西都叫
+“跑图”：
+
+```text
+Plan Compile
+  source closure → typed Plan IR → Canvas/DAG view
+
+Estimate Compile
+  Plan + syllable/segment estimates → estimated Base Clock/Anchor Map
+  → Estimate Timeline
+
+Located HTML Compile
+  Plan + materialized media + required Speech Compile evidence
+  → Located IR → Track projectors → HyperFrames Document AST
+  → HyperFrames HTML
+```
+
+对于有口播的一条完整 Film，Located HTML Compile 必须经过唯一的 Speech
+Compile protocol，缺一不可：
+
+```text
+1. Speech Spine materialization
+   生成/读取各 Segment 媒体，统一采样与顺序，组装 primary speech audio，
+   建立结构性的 Base Clock 与 Segment ProgramRanges
+
+2. WhisperX alignment
+   对统一口播音轨得到测量后的词级时间与置信证据
+
+3. Narrative Planner
+   一次结构化处理完成改词/显示词校正、Cue 切分和所需字段标注，
+   再由确定性 binder 生成最终 Anchor Map
+```
+
+这里的三步是影片编译协议，不是 `.svml` 作者需要手写的三类节点，也不是
+generation/analysis/render 的重跑标签。没有词汇内容的纯静音 Film 可以显式走
+non-lexical profile，跳过 WhisperX 与 Narrative Planner，但仍必须有结构性的
+Base Clock。Estimate Timeline 可以在实测 evidence 之前供人预览；它不能冒充
+最终 Located HTML。
+
+Speech Compile 完成后，所有 Selection、Moment 和手工 ProgramSpan 都投影到
+同一个 Base Clock；Track projector 随后只消费 Located props。VLM/bbox 不在
+这条 v1 编译链中。
+
+成功的 Plan IR 至少可以打印：
 
 - 唯一 Film root、从它可达的全部 Kernel 调用、输入输出端口和 DAG 边；
-- 每个 execution instance 的稳定 identity，以及未进入执行子图的声明清单；
+- 每个 execution instance 的稳定 identity、execution digest，以及未进入执行
+  子图的声明清单；
 - 每个 effective parameter 的值、来源和覆盖链；
 - 完整 import DAG、规范来源、内容哈希和实际使用的 Kernel 实现；
 - Script 的 Estimate Anchor Map、预览时间线及仍需 Evidence 才能解析的部分；
@@ -867,9 +1091,16 @@ parse(format(source)).semanticIR == parse(source).semanticIR
 语言与 Script Surface 版本、全部解析后 import 的来源与内容哈希、Kernel
 实现、effective parameters 和目标 schema 版本。
 
-这些 provenance 属于编译产物，不把 Pin、take、缓存或任务状态带回 SVML
-源码。是否采用单独 dependency lockfile、其文件名和发布协议，留给
-package/resolver 原型决定。
+`svml.lock` 是 source closure 的必需生成物，不再留作以后决定。它至少固定：
+
+- 每个传递 import 的 canonical URI、精确版本、内容哈希和完整依赖边；
+- Kernel manifest、实现哈希、ABI/profile 和声明权限；
+- 编译器兼容范围与 HyperFrames target；
+- 解析 registry/Git/URL 后真正使用的不可变 artifact。
+
+作者通常不手写锁文件，但可执行、可复现的冻结编译必须携带它；只有源码而没有
+可解析锁文件时可以做编辑与诊断，不能宣称可复现构建。Pin、take、缓存、任务和
+运行状态仍不进入 `.svml` 或 `svml.lock`；它们属于另一个运行状态/lock record。
 
 ## 9. 当前需要原型验证的部分
 
@@ -879,25 +1110,40 @@ package/resolver 原型决定。
    `ranking-tier-list`、`speech-spine`、`media-track`、`broll-track`、
    `caption-track` 和 `film` 都能只用公开 SVK 清单定义，编译器不按 tag 名写
    特殊业务分支；
-2. `.svc` 中的多级生成和 fan-out 能完整进入 Plan IR；同一模块中不可达的生成
-   调用只被检查和报告，不成为 execution instance，也不触发运行时；
-3. Script-dependent A-roll 留在 `.svml` 后，Estimate/Evidence/Locate 的数据
-   依赖没有隐式边；
+2. `.svc` 中的多级生成和 fan-out 能完整进入 Plan IR，不可达调用不触发运行时，
+   且 `.svc` 不能藏匿名可执行渲染片段；
+3. Script-dependent A-roll 留在 `.svml` 后，Plan/Estimate/Speech Compile/
+   Locate 的数据依赖没有隐式边；
 4. `.svs` 按 Kernel default → classes → instance 的固定顺序解析，且每个结果
    都能解释来源而不引入 cost/rebuild 语义；
-5. 统一 import 能处理本地别名、同名冲突、环和 transitive provenance；展开后
-   的全部源码、参数和实现能被冻结，保证离线复现；
-6. Seedance 与 Ranking 变体作为平级 Kernel 时，重复声明可接受、共享运行时代码
-   无需进入语言，并且不需要 family/mode conformance；
-7. SVK render 只能控制实例根节点内部，无法绕开 Locate 写整片绝对时间或 Track；
+5. 统一 import 与 `svml.lock` 能处理别名、同名冲突、环、精确实现、权限和
+   transitive provenance，并能离线复现同一 source closure；
+6. Seedance 与 Ranking 变体作为平级 Kernel 时，共享运行时代码无需进入语言，
+   并且不需要 family/mode conformance；
+7. static expand、capability lowering 和 track projection 的 ABI 能实际隔离
+   provider 凭证、全局 DOM/CSS、网络、墙钟和随机性；组件 root 不被误当成
+   JavaScript 安全边界；
 8. formatter、source map、一次弃用迁移与 document/SVK/IR 版本独立性通过
    golden fixtures；
-9. 只做格式化、移动声明或重排 import 时，Plan/Canvas identity 保持不变；
-   插入具名动态 item 不会让既有 item 改指，重复 expansion key 会 fail closed；
-10. Speech Spine 先建立唯一 Program Clock、主音频和同步 Visual Facet；任何
-    Track/Present 都不能反过来决定 Spine 时间或从像素推导作者定位；
-11. 同一 Item 的多个 Present 共享一个 source-time mapping；硬切复用同一
-    Anchor/Frame Boundary，overlap 按显式 local layer 合成且不重启媒体；
-12. Selection、Moment 和 ProgramRange 经同一 TemporalPlacement/WindowProjection
-    进入 Item 与 Present；相对秒数不会退化成全片绝对时间；
-13. Canvas/DAG view 和 Timeline view 都只消费 IR，不成为新的作者真相。
+9. 只做格式化、移动声明或重排 import 时，instance identity 保持不变；参数或
+   传递输入变化时 execution digest 改变；Pin 复用旧 artifact 时下游摘要使用
+   实际 artifact hash；
+10. 同一个非连通 SelectionSet 分别进入 `set` Caption、`each` media 和 `one`
+    consumer，得到完整集合、稳定多实例和明确 cardinality error，而不是隐式
+    取第一段；
+11. Speech Spine → WhisperX → Narrative Planner 三步完成后才产出有口播 Film
+    的最终 Anchor Map；Track/Present 不能反向决定 Spine 时间；
+12. Selection、Moment、`0s .. 3s`、`end-2s .. end` 和相对 WindowProjection
+    都进入同一个 Base Clock；手工 ProgramSpan 合法但不成为第二条时间线；
+13. 同一 Located Occurrence 的多个 Present 共享一个 source-time mapping；
+    硬切复用同一 Frame Boundary，overlap 按显式 local layer 合成且不重启媒体；
+14. fixed-box、named-region、crop/mask 等确定性空间合同能完整进入 Located
+    props；v1 fixtures 不依赖 VLM、bbox、subject tracking 或像素反向定位；
+15. B-roll 多 item 组合、`composite_below`、交叉转场、视频原声和转场音效能由
+    一个 Track projector 同时贡献 Visual/Audio fragment，不生成
+    `audioCueIntent`；
+16. Film 按全局 z 而非子元素顺序绘制；A-roll 画中画可盖在 B-roll 上方，重复
+    Track 引用 fail closed；
+17. Canvas/DAG、Estimate Timeline、Located Timeline 都只消费 IR；Visual
+    Surface Tree 和 Audio Tree 只是私有 HyperFrames lowering；唯一正式最终
+    编译目标是 HyperFrames HTML。
