@@ -86,8 +86,7 @@ Segment 的两个结构切点；真正的静音或素材行为由外部 Program 
 
 ## 1. 文档与 Segment
 
-一个 Script 有且仅有一个 `<script>` 根。结构标签必须独占一行。v1 的
-Segment 形式只有：
+一个 Script 有且仅有一个 `<script>` 根。v1 的 Segment 形式只有：
 
 ```svml
 <segment id="intro">
@@ -127,11 +126,13 @@ Segment 形式只有：
 
 ## 2. Role Cue
 
-Role Cue 只在 spoken line 的逻辑行首（忽略规范缩进）出现：
+Role Cue 只在 Segment 内的逻辑行首（忽略规范缩进）出现，并开启一个
+spoken turn：
 
 ```svml
 <segment id="dialogue">
-  <A> What time is it?
+  <A> What time
+      is it?
   <B> It’s 8:30.
 </segment>
 ```
@@ -153,14 +154,19 @@ speaker 数据模型，不建立人物实体，不选择音色，不成为可接
 - Role Cue 只由“逻辑行首、合法尖括号内容、且不含未转义 `|`”这一位置识别，
   并且同一行必须跟随非空 spoken content。
 - 正文里的冒号永远是正文；解析器不通过 `A:` 猜说话人。
-- 同一个非空 Segment 要么所有 spoken line 都有 Role Cue，要么都没有。
-  空白行、纯 Selection 行和注释不算 spoken line。
+- 同一个非空 Segment 要么完全无 Role Cue，要么第一个 spoken atom 必须由
+  Role Cue 开启。时间标记、注释和布局空白不算 spoken atom；已经以无 Cue
+  正文开始的 Segment 不得在中途切换为有 Cue 模式。
+- 一个 Role Cue 的 turn 一直延续到下一个 Role Cue 或 Segment 结束。turn
+  内的物理换行只是布局空白，不结束 turn，也不要求重复 Role Cue。
 - Role label 是 NFC 后 1–32 个 Unicode 字符的可读文本；可由 Unicode
   Letter、Mark、Number、内部空格、`_`、`-`、`.` 组成，首尾不得有空白。
   引号、`=`、`/`、换行、`<`、`>`、`|`、`:` 均非法，因此带属性的未知
   结构标签不会被吞成 Role Cue。
-- Role Cue 的作用域只到本行结束。源码自动折行属于编辑器显示，不得写入
-  语义换行；下一位说话人必须另起一行并再次声明。
+- 在 `dialogue` 投影中，Role Cue 边界由规范 serializer 输出为一次换行和
+  `label: ` 前缀；在 `speech` 与 `caption` 中只移除 Cue，并在相邻 atom
+  之间保留必要分隔。重新折行源码不得改变 Narrative IR 的语义内容或任一
+  文本投影；允许变化的只有 source range 和 source hash。
 
 ## 3. Dual Text
 
@@ -423,10 +429,10 @@ Dual Text 内另有：
 \>
 ```
 
-未知反斜杠转义必须报错。解析顺序固定为：
+未知反斜杠转义必须报错。解析优先级固定为：
 
-1. 独占行的已知结构标签与注释；
-2. spoken line 逻辑行首、不含未转义 `|` 的 `<Role>`;
+1. 已知结构标签与注释；
+2. Segment 内逻辑行首、不含未转义 `|` 的 `<Role>`;
 3. 含一个未转义分隔 `|` 的 inline `<display | speech>`;
 4. 其他尖括号结构报错。
 
@@ -437,22 +443,28 @@ temporal name namespace。三者的 id 均满足：
 [a-z][a-z0-9_-]{0,63}
 ```
 
-源码缩进、换行和连续空白是 authoring layout，不是字幕换行或停顿指令。
-编译投影在 atom 边界保留必要分隔并规范化布局空白；字幕 cue 切分与硬换行由
-外部 Caption Program 决定。规范 formatter 使用两空格缩进 Segment、四
-空格缩进 spoken line，并在 Segment 之间留一空行；formatter 不得改变
-Narrative IR。
+除“逻辑行首可识别 Role Cue”这一词法作用外，源码缩进、换行和连续空白都
+是 authoring layout，不是 turn、字幕换行或停顿指令。编译投影在 atom
+边界保留必要分隔并规范化布局空白；字幕 cue 切分与硬换行由外部 Caption
+Program 决定。
 
-注释使用独立行的 `<!-- ... -->`，可以跨行但不能嵌套，也不能写进 spoken
-line 或 Dual Text。注释不进入任何投影、token、Selection、Moment 或 hash
-的语义内容；需要可复现源码身份时可以另算 source hash。
+结构标签和注释不依靠独占一行才被解析。规范 formatter 把结构标签和注释
+各自放在独立行，使用两空格缩进 Segment、四空格缩进 Segment 内的 spoken
+content，并在 Segment 之间留一空行。formatter 前后重新解析所得 Narrative
+IR 的语义内容必须相同；允许变化的只有 source range 和 source hash。
+
+注释使用 `<!-- ... -->`，可以跨行但不能嵌套，也不能写进 Dual Text、Slot、
+temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之间允许布局
+空白的位置，并按布局空白处理；规范 formatter 将其独占一行。注释不进入
+任何投影、token、Selection、Moment 或 hash 的语义内容；需要可复现源码
+身份时可以另算 source hash。
 
 ## 8. Narrative IR 与消费者合同
 
 解析结果至少保留：
 
 - Segment 的顺序、id 和结构边界；
-- 每个 spoken line 的可选 Role Cue；
+- 每个 Segment 的有序 spoken turn，以及各 turn 的可选 Role Cue；
 - plain / Dual Text / Slot atom 及其源码范围；
 - caption atom 到一个或多个 speech token 的显式映射；
 - 每个 SelectionSet 的一个或多个有序 occurrence；
