@@ -767,10 +767,12 @@ references、package exports 和 forbidden-import tests 建立真实边界，避
 6. 再把前代 Postgres worker 包装为第二个 Host，实现相同 conformance suite；
    不先改变生产表、队列或 provider 行为。
 
-TemporalProduction 的获取明确不属于本批记录；在单独实现前，不以假实现冻结
-它的请求或 Receipt 形状。后续协议必须把选中的 `ProgramBasis`、完整
-`2M + 2N` 锚点表、各点质量、Evidence 摘要和 Producer 实现摘要作为一个可验证
-结果交给编译器，不能退回到隐式全局 alignment 或由下游补锚点。
+TemporalBasisProduction 与 SemanticMap 的获取明确不属于本批记录；在单独实现
+前，不以假实现冻结它们的请求或 Receipt 形状。后续协议必须分别携带选中的
+`ProgramBasis`/production provenance，以及绑定该 basis 的完整 `2M + 2N`
+SemanticMap、各点质量、Locator 与 Evidence 摘要。二者由编译器验证后形成
+TemporalBinding，不能退回到隐式全局 alignment、把 Locator 藏进 Basis
+Component，或由下游补锚点。
 
 ## 19. 完成标准
 
