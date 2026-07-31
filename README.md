@@ -2,16 +2,17 @@
 
 Semantic Video Markup Language is a semantic source language for information-flow
 video. Script creates stable semantic addresses; a Composition selects one
-content-addressed ProgramBasis; a versioned Locator binds those addresses to that
-basis; imported Track components then lower the program into one deterministic
-HyperFrames document.
+content-addressed ProgramBasis and one imported Locator Component whose SemanticMap
+binds those addresses to that basis; Track Components then lower the program into
+one deterministic HyperFrames document.
 
 ```text
 .svml + .svc + .svs + .svk + lock + evidence
                          │
-                         ├─ Plan IR ───────────────> Canvas view
-                         ├─ TemporalBinding ───────> Timeline view
-                         └─ flat Track[] ──────────> HyperFrames HTML
+                         ├─ Plan IR ─────────────────────> Canvas view
+                         ├─ Basis + SemanticMap ─────────> TemporalBinding
+                         ├─ TemporalBinding ─────────────> Timeline view
+                         └─ flat Track[] ────────────────> HyperFrames HTML
 ```
 
 Canvas and Timeline are views of the same source closure. They are not additional
@@ -44,8 +45,9 @@ preserving the eventual capability boundary.
 The executable prototype still implements frozen Script Surface v1: one globally
 monotonic Speech Spine alignment with shared adjacent Segment cuts. The architecture
 draft and Script Surface v2 draft specify the next boundary: a replaceable Basis
-Producer, a separately versioned Locator, and `2M + 2N` independent Segment/word
-endpoint identities. The repository does not claim that migration is implemented.
+Component, an importable Locator Component that outputs SemanticMap, and `2M + 2N`
+independent Segment/word endpoint identities. The repository does not claim that
+migration is implemented.
 
 ## Commands
 
@@ -98,10 +100,11 @@ speech program (0.46% duration error); it remains preview evidence, not measured
 alignment.
 
 [`examples/flat-track-launch/flat-track-launch.svml`](examples/flat-track-launch/flat-track-launch.svml)
-is the readable fixture for the next architecture boundary: decoupled Basis and
-Locator, Script Surface v2, continuous A-roll Present changes, B-roll transition
-audio, disconnected caption selections, absolute z and Film as the sole `Track[]`
-consumer. It is a draft fixture, not yet accepted by the executable v1 compiler.
+is the readable fixture for the next architecture boundary: separate Basis and
+Locator Components, Script Surface v2, continuous A-roll Present changes, B-roll
+transition audio, disconnected caption selections, absolute z and Film as the sole
+`Track[]` consumer. It is a draft fixture, not yet accepted by the executable v1
+compiler.
 
 ## Specification
 
@@ -111,7 +114,8 @@ consumer. It is a draft fixture, not yet accepted by the executable v1 compiler.
   independent Segment endpoint and `2M + 2N` migration.
 - [Source Architecture Draft](spec/source-architecture-draft.md) — the current
   draft for `.svk` components, `.svs` parameter sheets, `.svc` content modules,
-  Script-dependent generation, Basis Producers, flat Tracks, and a Composition root.
+  Script-dependent generation, the five SVK output roles, flat Tracks, and a
+  Composition root.
 - [Compiler prototype record](docs/compiler-prototype-v1.md) — implemented
   boundaries, real-video evidence and remaining work.
 - [External Runtime Host Architecture Draft](docs/runtime-host-architecture-draft.md)
