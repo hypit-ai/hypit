@@ -20,6 +20,13 @@
   />
 
   <port
+    name="program"
+    direction="output"
+    type="SpeechProgram"
+    cardinality="one"
+  />
+
+  <port
     name="map"
     direction="output"
     type="ExactSemanticMap"
@@ -34,7 +41,14 @@
   />
 
   <param
-    name="overlap"
+    name="join"
+    type="enum(cut,crossfade,gap)"
+    default="cut"
+  />
+
+  <param
+    name="joinDuration"
+    style="join-duration"
     type="duration"
     default="0ms"
   />
@@ -45,9 +59,17 @@
     <field name="sourceWindow" type="SourceRange"/>
   </child>
 
+  <child name="join" cardinality="zero-or-more">
+    <field name="after" type="id" required="true"/>
+    <field name="overlap" type="duration"/>
+    <field name="gap" type="duration"/>
+    <field name="audio" type="enum(cut,crossfade)"/>
+    <field name="visual" type="enum(cut,dissolve)"/>
+  </child>
+
   <import
     as="basis-component"
-    from="@svml/std/crossfade-speech.svk"
+    from="@svml/std/speech-assemble.svk"
   />
 
   <import
@@ -59,7 +81,8 @@
 
     <basis-component
       id="basis"
-      overlap={params.overlap}
+      defaultJoin={params.join}
+      defaultJoinDuration={params.joinDuration}
     >
       <for each={children.segment} as="item">
         <segment
@@ -67,6 +90,16 @@
           script={ports.script.segment[item.id]}
           source={item.source}
           sourceWindow={item.sourceWindow}
+        />
+      </for>
+
+      <for each={children.join} as="join">
+        <join
+          after={join.after}
+          overlap={join.overlap}
+          gap={join.gap}
+          audio={join.audio}
+          visual={join.visual}
         />
       </for>
     </basis-component>
@@ -86,6 +119,13 @@
       port="map"
       value={locator.map}
     />
+
+    <export port="program">
+      <value
+        production={basis.production}
+        semantic={locator.map}
+      />
+    </export>
 
     <export
       port="facets.visual"

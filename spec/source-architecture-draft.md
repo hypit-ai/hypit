@@ -180,7 +180,8 @@ Component instance 可以被 Canvas 投影成节点，但 Node 只是一种人�
 
 这五种是端口类型，不是五种互斥 SVK。一个 Component 可以同时输出多个边界
 类型；例如 `speech-program` 同时输出 `TemporalBasisProduction`、
-`ExactSemanticMap` 和 `ProgramBoundVideo`。不能再按所谓“最强输出”把整个
+`ExactSemanticMap` 和 `ProgramBoundVideo`，还可以把前两者暴露为普通的
+`SpeechProgram` 结构包。不能再按所谓“最强输出”把整个
 Component 强行归入唯一类别。生成、素材变换、Basis、Locator、Track 和
 Composition 都不需要另一套调用语法：
 
@@ -195,7 +196,7 @@ Composition 都不需要另一套调用语法：
 gpt-image         Text + Image[] → Image
 crossfade-speech  SegmentMedia[] → TemporalBasisProduction
 speech-locator    SemanticIndex + basis + Evidence → ExactSemanticMap
-speech-program    Script + SegmentMedia[] → basis + map + visual facet
+speech-program    Script + SegmentMedia[] + JoinSpec[] → program + visual facet
 ranking-tier-list items + time   → Track
 film              basis + semantic + Track[] → HyperFramesDocument
 ```
@@ -300,8 +301,8 @@ SVK 定义的是可调用 Component 类型，不要求每个实现都是原子�
 
 ```text
 speech-program
-├─ crossfade-speech → TemporalBasisProduction + facets
-└─ speech-locator   → ExactSemanticMap
+├─ speech-assemble → TemporalBasisProduction + facets
+└─ speech-locator  → ExactSemanticMap
 ```
 
 它解决作者层面的重复接线，但不能隐藏编译事实。编译后，
@@ -311,13 +312,18 @@ speech-program
 voice::basis
 voice::locator
 
-voice.production    = voice::basis.production
-voice.map           = voice::locator.map
-voice.facets.visual = voice::basis.facets.visual
+voice.program.production = voice::basis.production
+voice.program.semantic   = voice::locator.map
+voice.production         = voice::basis.production
+voice.map                = voice::locator.map
+voice.facets.visual      = voice::basis.facets.visual
 ```
 
 内部实例分别进入 Plan、lock、Evidence、execution digest、缓存和诊断。外部端口
 只是类型化 alias，不复制 Artifact，也不把两个内部 execution 合并成黑盒。
+`SpeechProgram` 只是 `{ production, semantic }` 的类型化结构包，不是新的公共
+时间真相；`primaryAudio` 和 `facets` 仍从 `production` 访问，不能在结构包里复制
+出第二份值。Compiler 仍逐项验证其中的 basis/map affinity。
 Composite 外层仍有稳定 instance identity，并用独立 `expansionDigest` 覆盖
 Composite 定义、effective params、公开 children、锁定 imports 和展开结果；
 它本身没有一个吞掉内部缓存边界的 Artifact execution。导出端口沿用实际内部
@@ -326,20 +332,31 @@ Composite 定义、effective params、公开 children、锁定 imports 和展开
 `composite-v1` v1 必须满足：
 
 - body 只能 import/实例化 Component、连接端口和 export 端口；
+- 所有输入必须来自公开 typed port、param 或 child；禁止通过 `document.*` 等
+  ambient context 偷读调用文档；
 - 不执行 JavaScript、网络、provider SDK、墙钟或随机逻辑；
 - `<for>` 只能遍历调用点源码中有限、已类型检查的 children；
 - `collection[item.id]` 只表示稳定 id-keyed lookup；缺失或重复 id 必须失败，
   不提供位置下标寻址；
+- 动态公开端口组只能由有限 children 的稳定 `id` 导出，键不能来自位置下标；
+  展开后的每个端口保留内部值的类型、identity、Artifact hash 和 provenance；
 - 内部身份由外部 instance identity、内部 declaration id 和稳定 child id 组成，
   不使用数组下标；
 - 禁止直接或间接递归 Composite；
 - 禁止依据 Runtime Artifact 内容动态产生未知数量的 Component；
-- 每个导出值必须来自声明过的内部端口并通过公开 output typecheck；
+- 每个导出值必须来自声明过的内部端口并通过公开 output typecheck；结构包的每个
+  字段只能 alias 一个内部端口，不能复制或改写 Artifact/Evidence；
 - source map 同时保留调用位置和 Composite 定义位置；
 - Canvas 可以折叠成一个高级 Component，也必须能够展开查看全部内部实例。
 
 `composite-v1` 是唯一允许 SVK 透明展开多个 Plan instances 的 profile。其他
 profile 仍不得在运行时代码中暗中创建 Component 或 provider 调用。
+
+高级 Composite 可以提供 `speech-spine` 这样的 V1 兼容调用名，但它仍是普通、
+可替换且可完全绕过的 Library Component；Compiler 不认识该名字，也不要求每份
+文档存在 Speech Spine。类似地，`film program={voice.program}` 可以由导入的
+Film 门面归一化为 basis/map 输入；这不是 Compiler 特判。若门面通过 Composite
+实现，内部原语必须使用 `film-core` 等不同调用名，不能让 `<film>` 展开成自身。
 
 ## 4. `.svs`: typed parameter sheet
 
@@ -437,6 +454,10 @@ Runtime。类型系统要求一个且仅一个未被其他 Component 消费的 C
 Locator、Tracks 与 Film，也可以实例化 `speech-program` 等 Composite，让同样的
 内部实例和端口由编译期透明展开产生。
 
+SVML 文档版本、Script Surface 版本和 SVK ABI 是独立版本轴。Script v2 应显式
+写成 `<script version="2">`；`<svml version="2">` 不能在没有规范声明的情况下
+静默改变共享 Segment cut、Anchor identity 数量或吸附语义。
+
 ### 6.1 Basis Producer 与 Locator 解耦
 
 Basis Component 只建立一条物理 Program 时间轴及媒体映射：
@@ -449,6 +470,11 @@ TemporalBasisProduction {
   audio: ProgramAudioContribution[]
   facets: named Program-bound media outputs
   productionDigest: Digest
+}
+
+SpeechProgram {
+  production: alias<TemporalBasisProduction>
+  semantic: alias<ExactSemanticMap>
 }
 
 ProgramBasis {
@@ -466,6 +492,9 @@ digest；只拥有相同 fps/duration 的两条不同视频绝不能同 digest�
 `productionDigest` 另外覆盖 Component 实现、原始输入、参数、Evidence 与
 provenance。ProgramPoint 是整数 frame boundary，ProgramRange 统一使用
 `[startFrame, endFrameExclusive)`。
+
+`SpeechProgram` 只为作者减少重复接线，不改变底层二元合同，也不把 audio、
+facets 或 Evidence 复制到新对象中。
 
 Basis Component 不拥有 SemanticMap。一个 Locator Component 显式接收当前
 SemanticIndex、选中的 TemporalBasisProduction 和它需要的 Evidence，并输出：
@@ -507,11 +536,13 @@ Estimate 与 Exact 是不同类型。Estimate Timeline 可以用前者；最终 
 量化后，生成唯一 `TemporalBinding`。Track 只消费 Located Selection/Moment，
 不能调用 WhisperX、补锚点或另建时钟。
 
-Composition 必须在源码中同时选择一个 basis 和一个 ExactSemanticMap。Map 的
-`basisDigest` 必须等于 selected basis 的 `basisDigest`；否则在任何 Track
-lowering 或 provider 调用前失败。Locator instance、implementation、参数和
-Evidence 都通过普通 reachability、identity、executionDigest 与 lock 机制处理，
-不再依赖源码外的隐式 Locator binding。
+Composition 在 Composite 展开后必须同时选择一个 basis 和一个
+ExactSemanticMap。作者可以显式传入两者，也可以把普通 `SpeechProgram` 交给
+Film 门面；两种写法归一化为完全相同的 Plan。Map 的 `basisDigest` 必须等于
+selected basis 的 `basisDigest`；否则在任何 Track lowering 或 provider 调用前
+失败。Locator instance、implementation、参数和 Evidence 都通过普通
+reachability、identity、executionDigest 与 lock 机制处理，不再依赖源码外的
+隐式 Locator binding。
 
 Script Surface v2 若有 `N` 个 Segment、`M` 个 speech token，Map 必须覆盖
 `2M + 2N` 个 identity。相邻 Segment `A`、`B` 允许 hard cut、overlap 或 gap，
@@ -529,13 +560,21 @@ A.start = 0.0s   B.start = 4.5s
 A.end   = 5.0s   B.end   = 12.5s
 ```
 
-源码分别声明 Basis 与 Locator Component：
+源码可以分别声明 Basis 与 Locator Component。相邻 Segment 的连接是生产者输入
+数据，而不是语言级 family/mode：
 
 ```svml
-<crossfade-speech id="voice" overlap="500ms">
+<speech-assemble id="voice" defaultJoin="cut">
   <segment id="a" script={script.segment.a} source={clip-a}/>
   <segment id="b" script={script.segment.b} source={clip-b}/>
-</crossfade-speech>
+
+  <join
+    after="a"
+    overlap="500ms"
+    audio="crossfade"
+    visual="dissolve"
+  />
+</speech-assemble>
 
 <speech-locator
   id="location"
@@ -551,8 +590,21 @@ A.end   = 5.0s   B.end   = 12.5s
 </film>
 ```
 
-`speech-assemble.svk` 可以顺序拼接，`crossfade-speech.svk` 可以重叠组装；二者
-只需输出同一 `TemporalBasisProduction`。`speech-locator.svk` 可以把完整定位
+规范化后的 `JoinSpec` 分别记录相邻 Segment 的时间关系（cut、gap 或 overlap）、
+音频混合和视觉 facet 转场。`crossfade` 不能含糊地同时代表这三件事；
+`join="crossfade" joinDuration="500ms"` 之类的作者简写只能是某个 Component
+定义的局部语法糖，必须在 Plan 中展开成完整 JoinSpec。
+
+同一条序列可以逐连接混用 cut、gap 和 overlap，所以 stdlib 的普通门面应把
+`JoinSpec[]` 交给一个 `speech-assemble` Basis Component，不能先按全局枚举选择
+`hard-cut-speech`，再要求该 Component 处理局部 crossfade 覆盖。真正拥有不同
+输入合同或组装不变量的算法仍可成为平级 Basis Component；第三方可以绕过门面
+直接调用，也可以发布另一个 Composite。
+
+Locator 也不使用语言级或开放全局枚举。`locator="speech|manual|tts"` 会把输入
+不同、Evidence 不同、甚至输出为 Estimated/Exact 不同类型的实现压进封闭 mode。
+官方 `speech-program` 门面可以固定导入一个 Exact Locator；替换 Locator 时使用
+低级 Basis + Locator 接线，或导入另一个 Composite。`speech-locator.svk` 可以把完整定位
 作为一个 capability，也可以是消费显式 Evidence 的 pure Component。WhisperX
 与 Narrative Planner 的版本、Evidence 和 digest 必须进入执行记录，但内部每
 一步不必自动成为源码节点。
@@ -825,7 +877,8 @@ reproducible
 11. Value、TemporalBasisProduction、SemanticMap、Track、HyperFramesDocument
     是五种公共输出边界，不是互斥 SVK 类别；一个 SVK 可以同时暴露多个。
 12. `composite-v1` 只做有限、无递归、可审计的编译期展开；所有内部实例进入
-    Plan/lock，SVC 不重复定义参数化 Recipe。
+    Plan/lock，SVC 不重复定义参数化 Recipe；Composite 不读取 ambient document
+    context，结构包只 alias 内部端口。
 13. SVK 是 Component，不是 Node；Canvas/DAG/Timeline 都是 IR view。
 14. Compiler 管法律，Library 管词汇与算法，Runtime 管副作用，Canvas 管视图。
 15. 唯一正式成片编译目标是 HyperFrames HTML。
@@ -836,8 +889,9 @@ reproducible
    和 `TemporalBinding` schema/digest；
 2. 实现 `speech-locator.svk`，让 Composition 显式引用其 Map；用 atomic
    capability 与 Evidence + pure locator 两种实现验证同一 SemanticMap ABI；
-3. 用 hard-cut speech 与 crossfade speech 两个平级 Basis Component 验证同一
-   Locator Component 和 Script v2 `2M + 2N`；
+3. 用一个支持逐连接 JoinSpec 的 `speech-assemble` Basis Component 验证 hard
+   cut、gap、crossfade 混用，再用一个真正采用不同组装不变量的平级 Basis
+   Component 验证同一 Locator Component 和 Script v2 `2M + 2N`；
 4. 实现 `composite-v1` 的 parser/typecheck/finite expansion/identity/source-map，
    用 `speech-program.svk` 证明内部 Basis 与 Locator 仍分别进入 Plan/lock；
 5. 实现 flat LocatedTrack/visual/audio contribution IR，删除公共

@@ -1,7 +1,13 @@
 <sheet version="1" id="house">
 
   speech-program.default {
-    overlap: 500ms;
+    join: cut;
+    join-duration: 0ms;
+  }
+
+  speech-program.smooth {
+    join: crossfade;
+    join-duration: 500ms;
   }
 
 </sheet>

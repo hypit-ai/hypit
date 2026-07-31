@@ -109,7 +109,9 @@ compiler.
 [`examples/composite-speech-program/minimal.svml`](examples/composite-speech-program/minimal.svml)
 and its adjacent `speech-program.svk` define the proposed `composite-v1` author
 surface: one transparent Component replaces repeated Basis/Locator wiring while
-both internal instances remain independently visible in Plan and lock.
+both internal instances remain independently visible in Plan and lock. Its
+`SpeechProgram` output is only a typed alias bundle, per-Segment joins are author
+data consumed by one assembler, and the Component has no ambient document access.
 
 ## Specification
 
