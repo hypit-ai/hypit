@@ -8,9 +8,9 @@
 
 SVML 是视频的源语言，不是画布文件，也不是最终像素格式。一个可编译单元是
 当前 `.svml`、它的全部传递 import 和锁文件组成的 **source closure**。编译器
-展开 source closure，得到可检查的语义 DAG；运行时能力返回媒体与语音对齐
-证据，Locate 把所有时间统一量化，Track projector 再确定性地产出
-HyperFrames HTML。
+展开 source closure，得到可检查的语义 DAG；被 Composition 选中的 Temporal
+Producer 返回唯一 ProgramBasis 与完整语义锚点表，Locate 把全部语义和手工
+时间统一量化，Track projector 再确定性地产出 HyperFrames HTML。
 
 ```text
 .svml + transitive .svk/.svs/.svc imports + svml.lock
@@ -24,10 +24,10 @@ Plan IR (values · calls · ports · topology · effective params · provenance)
         └──────────────> Estimate timeline
         │
         ▼
-Capability Host (media materialization · Speech Compile · media probe)
+Capability Host (media materialization · Temporal Production · evidence acquisition)
         │
         ▼
-Locate (Base Clock · temporal projection · deterministic space)
+Locate (ProgramBasis · Complete Anchor Table · temporal projection · deterministic space)
         │
         ▼
 Located IR
@@ -160,12 +160,14 @@ at={script.moment.pop}             <!-- MomentSet -->
 
 Import 只把符号带入作用域，声明只定义一个值或调用；两者都不产生执行副作用。
 编译器先解析、绑定并检查完整的 transitive module graph，再以当前文档唯一的
-`Film` root 为起点，沿输入引用反向求出执行可达子图：
+Composition root 为起点，沿输入引用反向求出执行可达子图。`film` 可以是
+stdlib 提供的 Composition Kernel，但名字本身没有语言特权：
 
 ```text
-Film
-├─ Speech Spine
-│  └─ ordered Segment media + Script bindings
+Composition
+├─ selected TemporalProduction
+│  └─ Temporal Producer
+│     └─ Segment media + Script bindings + optional evidence acquisition
 └─ Track[]
    └─ Item[]
       ├─ Present[]
@@ -176,12 +178,14 @@ Film
 
 只有这棵可达子图中的调用才成为 Plan IR execution instances，交给
 Capability Host、Locate 和 HyperFrames，并默认投影到当前 Canvas/DAG 与
-Timeline。导入一个 kit 不会运行其中全部 Kernel；导入一个声明了十项内容的
-`.svc`，当前 Film 只引用两项就只执行那两项及其传递依赖。
+Timeline。一个 source closure 可以声明多个备选 Temporal Producer，但一次
+Composition 只能选择一个权威 TemporalProduction；未被选择的声明不执行。
+导入一个 kit 不会运行其中全部 Kernel；导入一个声明了十项内容的
+`.svc`，当前 Composition 只引用两项就只执行那两项及其传递依赖。
 
 不可达声明仍然是可解析、可检查和可供工具浏览的源码定义，但不触发 provider、
 渲染或其他运行时回调。编译器可以报告 unused declaration，Canvas 也可以提供
-“查看未使用定义”的独立视图；它们不能被混进当前 Film 的执行 DAG。若未来需要
+“查看未使用定义”的独立视图；它们不能被混进当前 Composition 的执行 DAG。若未来需要
 单独构建某个内容值，应由工具显式选择另一个临时 root，不改变 SVML 默认语义。
 
 ### 2.2 稳定编译身份
@@ -400,13 +404,14 @@ track projection     Located props → HyperFrames fragment
 这些是 compiler/runtime 的 effect 与安全合同，不是要求作者在 `.svml` 中把
 调用分成 `generation`、`analysis`、`render`、`export` 四类，也不记录所谓
 “重跑范围”。业务 Kernel 仍然平级；ABI profile 只用于阻止 provider 代码在
-parse 时执行、renderer 反向改变 Speech Spine 和越权访问。
+parse 时执行、renderer 反向改变 TemporalProduction 和越权访问。
 
 Capability Host 只接收 Kernel lowering 后的类型化调用，并返回声明过的输出与
 证据。凭证、队列、重试和 provider SDK 可以对源语言不透明；调用、依赖、
 fan-out、端口、生成参数和输出类型不能藏在任意运行时代码里，必须先进入
 Plan IR。Track projector 只把已经 Located 的值编译为 HyperFrames fragment，
-不能回写 Plan、改动 Base Clock 或产生新的 provider 调用。
+不能回写 Plan、改动 ProgramBasis/Complete Anchor Table 或产生新的 provider
+调用。
 
 ### 3.4 零特权验收
 
@@ -420,11 +425,12 @@ typechecker、capability binding 与 renderer 接口。下列真实能力是 SVK
 | `seedance-speaker` | Script 投影依赖、媒体生成和运行时证据 |
 | `seedance-reference` | 异构输入、多端口与多输出 |
 | `ranking-tier-list` | 动态 items、必填字段和枚举校验 |
-| `speech-spine` | 唯一 Program Clock、主口播音频、Segment 绑定和同步 Visual Facet |
+| `speech-spine` | 作为官方默认 Temporal Producer，用顺序拼接、WhisperX 与 Narrative Planner 产出完整定位表；它不获得语言特权 |
+| `crossfade-speech` | 用重叠、变速或其他组装方法产出同一 TemporalProduction 合同，证明 Segment 不依赖共享切点 |
 | `media-track` | Item/Present、共享播放映射、语义与手工窗口、局部 layer |
 | `broll-track` | 多 item、跨 Segment Selection、组合序列、交叉转场与音频贡献 |
 | `caption-track` | Script/Narrative IR 到 Track 的确定性映射 |
-| `film` | 一个 Speech Spine、多 Track、全局 z 与音频树组装、唯一根输出 |
+| `film` | 一个显式选择的 TemporalProduction、多 Track、全局 z 与音频树组装、唯一 Composition 输出 |
 
 如果其中任一个必须在编译器里按名字写专用业务分支，说明公开 SVK 清单仍缺
 表达力。Script parser、基础值类型、Selection/Moment、模块解析和编译各相属于
@@ -566,48 +572,130 @@ imports
 + Script
 + 依赖当前 Script 的内容生成
 + 其他只属于本片的内容生成
-+ exactly one Speech Spine
++ 被当前 Composition 选择的 exactly one TemporalProduction
 + N Tracks
-+ exactly one Film
++ exactly one Composition root
 ```
 
 `<values>` 不是必需的独立层：可复用值进入 `.svc`，本片一次性值可直接在
 `.svml` 中具名声明或内联。`<output>` 也没有必要：类型系统要求恰好存在一个
-未被其他组件消费的 Film/Composition root；零个或多个 root 都是编译错误。
+未被其他组件消费的 Composition root；零个或多个 root 都是编译错误。
 输出路径、编码和是否转 MP4 属于 CLI/运行时参数。
 
 `<program>` 是否保留为纯排版容器尚未冻结。它不得引入新的作用域或执行语义。
 
-### 6.1 Speech Spine 是时间基底，不是视觉底片
+### 6.1 Temporal Producer 是鸭子合同，Speech Spine 只是默认实现
 
-一条影片有且仅有一个 Speech Spine。它按顺序把 Script Segment 与 `Audio` 或
-`Video` 媒体绑定，产出：
-
-- 全片唯一的 Program Clock、结构切点和主口播音频；
-- 全局 Speech Alignment 与 Temporal Anchor Map；
-- 每个 Segment 的 ProgramRange；
-- 视频型 Segment 可选的、静音且已与 Program Clock 同步的 Visual Facet。
-
-Spine Segment 不写 `during=`，因为它建立的正是所有 Selection/Moment 被 Locate
-到全局时间的前提。Spine 也不决定 Visual Facet 以全屏、分屏还是画中画出现；
-Visual Facet 作为同步媒体进入普通 Track Item。音频型 Segment 没有 Visual
-Facet，空镜、背景和其他铺底仍是普通 Track Item。
-
-因此旧实现中的 `Base Track` 被拆成两个角色：
+SVML 不指定“谁必须生产全局时间”。一个 Kernel 或可达子图只要接收当前
+Script 的 `N` 个 Segment 及其绑定媒体，并输出下面的公共类型，它就是合法的
+Temporal Producer：
 
 ```text
-Speech Spine = Program Clock + primary speech audio + alignment + synchronized facets
-Visual Track = 在既定 Program Clock 上显示媒体
+TemporalProduction {
+  basis: ProgramBasis
+  anchors: CompleteAnchorTable
+  audio?: Program-bound AudioContribution[]
+  facets?: named Program-bound media outputs
+}
 ```
 
-当前 Base v4 把一份 `MediaPresentation` 挂在整个视频 Segment 上，属于实现期
-兼容形状，不应固化为 SVML 源语言。Base FX 也不承担正常布局；分屏、圆形裁切、
-位置、透明度和相对动画属于 Item/Present。
+Composition 不创造时钟；它必须显式选择且只选择一个 TemporalProduction 作为
+本次输出的权威时间真相。不能只传一个 fps/duration 相同的裸 clock，因为两个
+坐标相同的生产结果仍可能来自不同的 Segment 组装、证据和量化规则。
+`ProgramBasis` 因而携带内容寻址的 `basisDigest`，至少覆盖时钟、生产者实现、
+相关输入媒体摘要、组装映射和量化规则。
 
-“主口播音频”不等于“全片唯一允许的音频”。B-roll 的视频原声、Track 自带的
-转场音效、Ranking 出现音效、BGM 和独立 SFX 都可以由相应 Track 直接贡献给
-Film 的 Audio Tree；不要求为了每个声音再复制一份独立 Audio Track。独立
-Audio Track 只用于确实独立编排的声音。
+Script 先确定 Semantic Anchor Index。若有 `N` 个 Segment，总词数
+`M = Σmₖ`，Index 恰有 `2M + 2N` 个稳定身份：每个词的 start/end，以及每个
+Segment 自己独立的 start/end。Temporal Producer 的核心义务是提交总映射：
+
+```text
+Locate: SemanticAnchorIdentity → ProgramPoint(basisDigest)
+```
+
+`CompleteAnchorTable` 至少携带 `semanticIndexDigest`、`basisDigest`、表摘要、
+来源证据摘要和全部 Segment 记录：
+
+```text
+segment[k].start
+token[k,1].start
+token[k,1].end
+...
+token[k,mₖ].start
+token[k,mₖ].end
+segment[k].end
+```
+
+表的完整性和证据质量是两件事。每个身份都必须有坐标，但坐标可以分别标记为
+`measured`、`derived` 或 `estimated`；预览与最终输出 profile 可以对质量提出
+不同要求。Producer 不能用“没有 WhisperX 词”作为遗漏锚点的理由，也不能把
+纯插值伪装成实测证据。
+
+v1 默认只检查每个 Segment 内部非降序并允许相邻点重合：
+
+```text
+segment.start ≤ token₁.start ≤ token₁.end ≤ ... ≤ segment.end
+```
+
+不同 Segment 之间没有全局单调、无重叠或相邻首尾共享约束。相邻 Segment 的
+两个端点身份独立，硬切只是它们碰巧坐标相等：
+
+```text
+hard cut   A.end == B.start
+overlap    B.start <  A.end
+gap        B.start >  A.end
+```
+
+因此 Producer 内部可以自由拼接、交叉淡化、平移、变速、拉伸、裁切、插入或
+删除内容；只要最终 ProgramBasis 与完整锚点表满足合同，Script、Selection、
+Moment 和 Track 都不需要知道实现过程。对于一个 5 秒 A、8 秒 B 和 0.5 秒
+交叉，合法结果可以是：
+
+```text
+A.start = 0.0s
+B.start = 4.5s
+A.end   = 5.0s
+B.end   = 12.5s
+```
+
+在源码表面，这只是换一个实现同一输出端口合同的 imported Kernel；Script、
+Track 和 Composition 不需要增加“交叉时间线”语法：
+
+```svml
+<crossfade-speech id="voice" overlap="500ms">
+  <segment id="a" script={script.segment.a} source={clip-a}/>
+  <segment id="b" script={script.segment.b} source={clip-b}/>
+</crossfade-speech>
+
+<film id="main" temporal={voice.production}>
+  <!-- ordinary Tracks consume script.selection.* / script.moment.* -->
+</film>
+```
+
+这里 `overlap` 只是这个 Producer 自己的公开参数，不是 SVML 内核参数；另一个
+Producer 完全可以使用 transition children、自动节奏或没有任何 overlap 参数，
+只要输出端口仍是 `TemporalProduction`。
+
+这张表按 Script 源码顺序读取时不再全局单调，而这是预期行为。Script 顺序是
+叙事与身份顺序，不是强制物理播放顺序。跨 Segment Selection 的两个端点仍
+独立解析；具体消费者决定如何处理投影后的重叠、零长或反向 occurrence。
+
+官方 `speech-spine.svk` 可以继续作为默认 Producer：它顺序组装 Segment，
+输出主口播音频和可选同步 Visual Facet，再用 WhisperX 与 Narrative Planner
+生成 CompleteAnchorTable。但这是一个 stdlib 实现，不是编译器特权。任何
+第三方 `crossfade-speech.svk`、TTS-native producer、人工 timing producer 或
+其他实现，只要输出同一个 `TemporalProduction` 类型即可替换它。
+
+生产者用来建立定位的音视频与最终如何显示仍然解耦。Producer 可以输出可选的
+Program-bound audio 和具名媒体 facets；Visual Track 决定这些 facet 以全屏、
+分屏还是画中画出现。它也可以只输出 basis/anchors，让其他显式 Track 提供全部
+画面和声音。当前 Base v4 把一份 `MediaPresentation` 挂在整个视频 Segment 上，
+属于兼容形状，不应固化为 SVML 源语言。
+
+Temporal Producer 的 audio 也不等于“全片唯一允许的音频”。B-roll 视频原声、
+Track 转场音效、Ranking 出现音效、BGM 和独立 SFX 都可以由相应 Track 直接
+贡献给 Composition 的 Audio Tree；不要求为了每个声音再复制一份独立 Audio
+Track。独立 Audio Track 只用于确实独立编排的声音。
 
 新架构不引入 `audioCueIntent`。它是当前引擎为若干节点转接音频提示的兼容形状，
 不是 SVML 源词汇，也不是新的公共 IR 合同。Kernel 应把 `source-audio`、
@@ -657,7 +745,7 @@ Occurrence 的 surface、空间、局部层和入退场；它不重启其 source
 同一个 Material 被多个 Item 引用仍表示多次独立使用，fan-out 不复制素材。
 
 A-roll 与 B-roll 都可以降低为媒体 surface，但并不因此成为同一种业务对象：
-A-roll 的 source 可以是 Speech Spine 的同步 Visual Facet；`broll-track` 则
+A-roll 的 source 可以是当前 Temporal Producer 的同步 Visual Facet；`broll-track` 则
 可以定义多 item 序列、组合后转场、声音和自己的动态端口组。`Item` 是 Track
 拥有的作者单元，不是编译器预设的 `broll` 领域模型。
 
@@ -751,7 +839,8 @@ SpatialPlacement
 SVML v1、stdlib 和验收用例明确不实现 VLM、bbox、subject selector、人脸跟踪、
 pose/keypoint 或“看完整视频后再决定空间”。这些能力若未来值得做，可以作为
 导入的扩展 Kernel、evidence provider 或对已编译 HyperFrames HTML 的后处理器；
-它们不能反过来改变 Script、Speech Spine 或基于语义时间戳的免剪辑定位原则。
+它们不能反过来改变 Script、TemporalProduction 或基于语义时间戳的免剪辑
+定位原则。
 
 每条有视觉输出的 Track 必须拥有 **全片绝对 z**。Film 的全局视觉栈按
 `(z, stableTrackIdentity)` 确定性排序，不按 Film 子元素顺序、Canvas y 坐标或
@@ -777,8 +866,8 @@ Located Track
 `crossfade`、`push`、`wipe`、`cover`、`page-turn` 等交叉转场，同时输出
 `composite_below` 等自身需要的视觉协议。`composite_below` 在 projector 阶段
 绑定为该 surface 的绝对 z 以下已经累计的视觉栈，不是一个写死的“Base Track”。
-转场只改变两个 Located items 的局部重叠与采样，不改变 Speech Spine、Program
-Clock 或全局 z。`duration="200ms"` 这类数值是已定位 item 之间的局部转场参数，
+转场只改变两个 Located items 的局部重叠与采样，不改变权威 ProgramBasis、
+Complete Anchor Table 或全局 z。`duration="200ms"` 这类数值是已定位 item 之间的局部转场参数，
 不是替代 Selection 的全片定位。
 
 视觉转场绝不隐式改变音频。B-roll Track 可以显式输出视频原声、gain/fade 和
@@ -789,10 +878,10 @@ Film projector 汇总：
 
 ```text
 Visual Surface Tree = all Track visual fragments sorted by global z
-Audio Tree          = Speech Spine primary audio
+Audio Tree          = TemporalProduction audio contributions
                     + Track audio contributions
                     + optional independent audio tracks
-HyperFrames HTML    = one document containing both trees and the Base Clock
+HyperFrames HTML    = one document containing both trees and the ProgramBasis
 ```
 
 Audio Tree 必须显式保存 source、ProgramRange、gain、bus/duck 以及重叠混合规则；
@@ -957,7 +1046,7 @@ Audio Tree 必须显式保存 source、ProgramRange、gain、bus/duck 以及重�
   <film
     id="main"
     class="house.vertical"
-    spine={speech.spine}
+    temporal={speech.production}
   >
     <track ref={broll.track}/>
     <track ref={aroll.track}/>
@@ -1019,49 +1108,54 @@ Plan Compile
   source closure → typed Plan IR → Canvas/DAG view
 
 Estimate Compile
-  Plan + syllable/segment estimates → estimated Base Clock/Anchor Map
+  Plan + estimated TemporalProduction → estimated ProgramBasis/Complete Anchor Table
   → Estimate Timeline
 
 Located HTML Compile
-  Plan + materialized media + required Speech Compile evidence
+  Plan + materialized media + selected complete TemporalProduction
   → Located IR → Track projectors → HyperFrames Document AST
   → HyperFrames HTML
 ```
 
-对于有口播的一条完整 Film，Located HTML Compile 必须经过唯一的 Speech
-Compile protocol，缺一不可：
+不同 Producer 可以使用完全不同的内部算法，但 Runtime Host 对它们只执行同一
+外部协议：
 
 ```text
-1. Speech Spine materialization
-   生成/读取各 Segment 媒体，统一采样与顺序，组装 primary speech audio，
-   建立结构性的 Base Clock 与 Segment ProgramRanges
-
-2. WhisperX alignment
-   对统一口播音轨得到测量后的词级时间与置信证据
-
-3. Narrative Planner
-   一次结构化处理完成改词/显示词校正、Cue 切分和所需字段标注，
-   再由确定性 binder 生成最终 Anchor Map
+1. materialize declared inputs and internal assembly
+2. acquire only the evidence declared by this Producer
+3. emit one content-addressed ProgramBasis and one total CompleteAnchorTable
 ```
 
-这里的三步是影片编译协议，不是 `.svml` 作者需要手写的三类节点，也不是
-generation/analysis/render 的重跑标签。没有词汇内容的纯静音 Film 可以显式走
-non-lexical profile，跳过 WhisperX 与 Narrative Planner，但仍必须有结构性的
-Base Clock。Estimate Timeline 可以在实测 evidence 之前供人预览；它不能冒充
-最终 Located HTML。
+官方 `speech-spine` Producer 自己仍采用推荐的完整口播流程：先生成/读取并
+顺序组装 Segment 媒体，再对统一口播音轨做 WhisperX，最后由 Narrative
+Planner 一次完成改词/显示词校正、Cue 切分与字段标注并绑定完整锚点表。对该
+Producer 来说三步缺一不可；它们不再是所有 SVML 影片或所有第三方 Producer
+必须服从的编译器特判。交叉转场 Producer、TTS 原生 timing Producer 或人工
+定位 Producer 可以使用别的证据与组装方法。
 
-Speech Compile 完成后，所有 Selection、Moment 和手工 ProgramSpan 都投影到
-同一个 Base Clock；Track projector 随后只消费 Located props。VLM/bbox 不在
-这条 v1 编译链中。
+没有词汇内容的 Producer 不需要 WhisperX，但仍要给每个空 Segment 提交独立
+start/end。WhisperX 返回空词也不会降低 Complete Anchor Table 的总性要求：
+Producer 必须用自己声明的 fallback 补全锚点，并诚实标记 `estimated`，或者
+整次 Temporal Production 失败；不能把缺失位置交给下游猜。
+
+Estimate Timeline 可以在实测 evidence 之前供人预览。它使用相同的完整表形状，
+但点的质量可以是 `estimated`；最终输出 profile 是否允许这些点由显式策略决定，
+不能把 estimated 静默改写为 measured。
+
+Temporal Production 完成后，所有 Selection、Moment 和手工 ProgramSpan 都
+投影到它的同一个 ProgramBasis；Track projector 随后只消费 Located props。
+VLM/bbox 不在这条 v1 编译链中。
 
 成功的 Plan IR 至少可以打印：
 
-- 唯一 Film root、从它可达的全部 Kernel 调用、输入输出端口和 DAG 边；
+- 唯一 Composition root、它选择的 TemporalProduction，以及从它可达的全部
+  Kernel 调用、输入输出端口和 DAG 边；
 - 每个 execution instance 的稳定 identity、execution digest，以及未进入执行
   子图的声明清单；
 - 每个 effective parameter 的值、来源和覆盖链；
 - 完整 import DAG、规范来源、内容哈希和实际使用的 Kernel 实现；
-- Script 的 Estimate Anchor Map、预览时间线及仍需 Evidence 才能解析的部分；
+- Script 的 Semantic Anchor Index、estimated/complete table、预览时间线及
+  仍需 Evidence 才能提高质量的点；
 - 所有运行时能力请求及其类型化输入，但不把“是否重跑”写回源码。
 
 每条诊断至少包含稳定错误码、主源码范围、必要的相关范围、具体失败事实和一个
@@ -1096,7 +1190,10 @@ parse(format(source)).semanticIR == parse(source).semanticIR
 下游 IR 或 HyperFrames 升级时，只要作者意图仍可无损表达，就由编译器 emitter
 适配，不要求所有 `.svml` 迁移。一次可复现的冻结编译必须记录编译器版本、
 语言与 Script Surface 版本、全部解析后 import 的来源与内容哈希、Kernel
-实现、effective parameters 和目标 schema 版本。
+实现、effective parameters 和目标 schema 版本。冻结记录还必须包含被选中的
+Composition identity、`semanticIndexDigest`、`basisDigest`、完整锚点表摘要、
+每个点的质量标记及全部传递 Evidence 摘要；否则两次坐标相同但来源不同的定位
+会被错误视为同一次可复现构建。
 
 `svml.lock` 是 source closure 的必需生成物，不再留作以后决定。它至少固定：
 
@@ -1114,12 +1211,12 @@ parse(format(source)).semanticIR == parse(source).semanticIR
 在冻结完整文档格式前，至少验证：
 
 1. `gpt-image`、`seedance-speaker`、异构输入与多输出媒体 Kernel、
-   `ranking-tier-list`、`speech-spine`、`media-track`、`broll-track`、
+   `ranking-tier-list`、`speech-spine`、`crossfade-speech`、`media-track`、`broll-track`、
    `caption-track` 和 `film` 都能只用公开 SVK 清单定义，编译器不按 tag 名写
    特殊业务分支；
 2. `.svc` 中的多级生成和 fan-out 能完整进入 Plan IR，不可达调用不触发运行时，
    且 `.svc` 不能藏匿名可执行渲染片段；
-3. Script-dependent A-roll 留在 `.svml` 后，Plan/Estimate/Speech Compile/
+3. Script-dependent A-roll 留在 `.svml` 后，Plan/Estimate/Temporal Production/
    Locate 的数据依赖没有隐式边；
 4. `.svs` 按 Kernel default → classes → instance 的固定顺序解析，且每个结果
    都能解释来源而不引入 cost/rebuild 语义；
@@ -1138,10 +1235,12 @@ parse(format(source)).semanticIR == parse(source).semanticIR
 10. 同一个非连通 SelectionSet 分别进入 `set` Caption、`each` media 和 `one`
     consumer，得到完整集合、稳定多实例和明确 cardinality error，而不是隐式
     取第一段；
-11. Speech Spine → WhisperX → Narrative Planner 三步完成后才产出有口播 Film
-    的最终 Anchor Map；Track/Present 不能反向决定 Spine 时间；
+11. `speech-spine` 与至少一个交叉转场 Producer 都只通过公共
+    `TemporalProduction` 输出工作；后者能让相邻 Segment 的独立端点重叠，
+    两者都必须完整绑定 `2M + 2N` 个身份，Track/Present 不能反向改表；
 12. Selection、Moment、`0s .. 3s`、`end-2s .. end` 和相对 WindowProjection
-    都进入同一个 Base Clock；手工 ProgramSpan 合法但不成为第二条时间线；
+    都进入当前 Composition 选择的同一个 ProgramBasis；手工 ProgramSpan 合法
+    但不成为第二条时间线；
 13. 同一 Located Occurrence 的多个 Present 共享一个 source-time mapping；
     硬切复用同一 Frame Boundary，overlap 按显式 local layer 合成且不重启媒体；
 14. fixed-box、named-region、crop/mask 等确定性空间合同能完整进入 Located
@@ -1149,7 +1248,7 @@ parse(format(source)).semanticIR == parse(source).semanticIR
 15. B-roll 多 item 组合、`composite_below`、交叉转场、视频原声和转场音效能由
     一个 Track projector 同时贡献 Visual/Audio fragment，不生成
     `audioCueIntent`；
-16. Film 按全局 z 而非子元素顺序绘制；A-roll 画中画可盖在 B-roll 上方，重复
+16. stdlib Film 按全局 z 而非子元素顺序绘制；A-roll 画中画可盖在 B-roll 上方，重复
     Track 引用 fail closed；
 17. Canvas/DAG、Estimate Timeline、Located Timeline 都只消费 IR；Visual
     Surface Tree 和 Audio Tree 只是私有 HyperFrames lowering；唯一正式最终
