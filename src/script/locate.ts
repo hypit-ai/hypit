@@ -1,23 +1,29 @@
 import { fail } from "../diagnostics.js";
 import type {
-  AlignmentEvidence,
+  ExactSemanticMap,
   LocatedScript,
   MarkerBoundary,
   NarrativeIR,
+  ProgramBasis,
   ProgramRange,
+  SemanticMap,
 } from "../model.js";
-import { normalizeWord } from "../util.js";
+import { basisFps, semanticPoints, validateSemanticMap } from "../temporal.js";
 
-function frameAt(seconds: number, fps: number): number {
-  return Math.round(seconds * fps);
-}
-
-function range(startSec: number, endSec: number, fps: number): ProgramRange {
-  const startFrame = frameAt(startSec, fps);
-  const endFrameExclusive = frameAt(endSec, fps);
-  if (endFrameExclusive < startFrame) {
-    fail("locate_negative_range", `Range ${startSec}..${endSec} resolves backwards.`);
+function range(
+  startFrame: number,
+  endFrameExclusive: number,
+  basis: ProgramBasis,
+  label: string,
+  requirePositive = false,
+): ProgramRange {
+  if (endFrameExclusive < startFrame || (requirePositive && endFrameExclusive === startFrame)) {
+    fail(
+      requirePositive ? "locate_nonpositive_range" : "locate_negative_range",
+      `${label} resolves to non-positive range ${startFrame}..${endFrameExclusive}.`,
+    );
   }
+  const fps = basisFps(basis);
   return {
     startFrame,
     endFrameExclusive,
@@ -26,180 +32,72 @@ function range(startSec: number, endSec: number, fps: number): ProgramRange {
   };
 }
 
-function boundaryTime(
+export function boundaryAnchor(
+  narrative: NarrativeIR,
   boundary: MarkerBoundary,
   affinity: "left" | "right",
-  narrative: NarrativeIR,
-  evidence: AlignmentEvidence,
-): number {
-  const left = boundary.tokenIndex > 0 ? evidence.words[boundary.tokenIndex - 1] : undefined;
-  const right = evidence.words[boundary.tokenIndex];
-  if (affinity === "left" && left) return left.endSec;
-  if (affinity === "right" && right) return right.startSec;
+): string {
+  if (boundary.segmentId) {
+    const segment = narrative.segments.find((item) => item.id === boundary.segmentId);
+    if (!segment) fail("locate_boundary_segment", `Unknown Segment "${boundary.segmentId}".`);
+    if (affinity === "left") {
+      const token = narrative.tokens[boundary.tokenIndex - 1];
+      if (token && token.segmentId === segment.id) return token.endAnchorId;
+      return segment.startAnchorId;
+    }
+    const token = narrative.tokens[boundary.tokenIndex];
+    if (token && token.segmentId === segment.id) return token.startAnchorId;
+    return segment.endAnchorId;
+  }
 
-  const segment = boundary.segmentId
-    ? evidence.segments.find((item) => item.id === boundary.segmentId)
-    : undefined;
-  if (segment) return affinity === "left" ? segment.endSec : segment.startSec;
-
-  const cut = boundary.structuralCut ?? 0;
-  if (cut <= 0) return 0;
-  if (cut >= narrative.segments.length) return evidence.durationSec;
-  const rightSegment = evidence.segments.find((item) => item.id === narrative.segments[cut]?.id);
-  const leftSegment = evidence.segments.find((item) => item.id === narrative.segments[cut - 1]?.id);
-  if (affinity === "right" && rightSegment) return rightSegment.startSec;
-  if (leftSegment) return leftSegment.endSec;
-  fail("locate_unresolved_boundary", `Could not resolve structural cut ${cut}.`);
+  const position = boundary.structuralPosition;
+  if (affinity === "left") {
+    return narrative.segments[position - 1]?.endAnchorId
+      ?? narrative.segments[position]?.startAnchorId
+      ?? fail("locate_boundary_empty", "Script has no structural boundary candidate.");
+  }
+  return narrative.segments[position]?.startAnchorId
+    ?? narrative.segments[position - 1]?.endAnchorId
+    ?? fail("locate_boundary_empty", "Script has no structural boundary candidate.");
 }
 
-export function locateScript(
+function validateCaptionCues(
   narrative: NarrativeIR,
-  evidence: AlignmentEvidence,
-): LocatedScript {
-  if (evidence.contract !== "svml.speech-alignment.v1") {
-    fail("locate_alignment_contract", `Unsupported alignment contract "${evidence.contract}".`);
-  }
-  if (
-    !Number.isFinite(evidence.fps)
-    || evidence.fps <= 0
-    || !Number.isFinite(evidence.durationSec)
-    || evidence.durationSec <= 0
-  ) {
-    fail("locate_alignment_clock", "Alignment evidence requires positive finite fps and durationSec.");
-  }
-  if (narrative.tokens.length !== evidence.words.length) {
-    fail(
-      "locate_alignment_cardinality",
-      `Script has ${narrative.tokens.length} words but alignment has ${evidence.words.length}.`,
-    );
-  }
-  for (let index = 0; index < evidence.words.length; index += 1) {
-    const word = evidence.words[index];
-    if (!word) continue;
-    if (
-      !Number.isFinite(word.startSec)
-      || !Number.isFinite(word.endSec)
-      || word.startSec < 0
-      || word.endSec < word.startSec
-      || word.endSec > evidence.durationSec
-    ) {
-      fail(
-        "locate_alignment_word_window",
-        `Alignment word ${index + 1} has invalid window ${word.startSec}..${word.endSec}.`,
-      );
-    }
-    const previous = evidence.words[index - 1];
-    if (previous && word.startSec < previous.endSec - 1e-6) {
-      fail(
-        "locate_alignment_word_overlap",
-        `Alignment word ${index + 1} starts at ${word.startSec} before word ${index} ends at ${previous.endSec}.`,
-      );
-    }
-    const segment = evidence.segments.find((item) => item.id === word.segmentId);
-    if (
-      !segment
-      || word.startSec < segment.startSec - 1e-6
-      || word.endSec > segment.endSec + 1e-6
-    ) {
-      fail(
-        "locate_alignment_word_segment",
-        `Alignment word ${index + 1} falls outside segment "${word.segmentId}".`,
-      );
-    }
-  }
-  for (let index = 0; index < narrative.tokens.length; index += 1) {
-    const token = narrative.tokens[index];
-    const word = evidence.words[index];
-    if (!token || !word) continue;
-    if (token.normalized !== normalizeWord(word.text)) {
-      fail(
-        "locate_alignment_word_mismatch",
-        `Word ${index + 1} is "${token.text}" in Script and "${word.text}" in alignment evidence.`,
-      );
-    }
-    if (token.segmentId !== word.segmentId) {
-      fail(
-        "locate_alignment_segment_mismatch",
-        `Word ${index + 1} belongs to ${token.segmentId} in Script and ${word.segmentId} in evidence.`,
-      );
-    }
-  }
-  const fps = evidence.fps;
-  const words = narrative.tokens.map((token, index) => {
-    const word = evidence.words[index];
-    if (!word) fail("locate_alignment_missing_word", `Missing aligned word ${index + 1}.`);
-    return { ...token, ...range(word.startSec, word.endSec, fps) };
-  });
-  const segments = Object.fromEntries(evidence.segments.map((segment) => [
-    segment.id,
-    range(segment.startSec, segment.endSec, fps),
-  ]));
-  const selections = Object.fromEntries(Object.entries(narrative.selections).map(([id, occurrences]) => [
-    id,
-    {
-      id,
-      ranges: occurrences.map((occurrence) => range(
-        boundaryTime(occurrence.open.boundary, occurrence.open.affinity, narrative, evidence),
-        boundaryTime(occurrence.close.boundary, occurrence.close.affinity, narrative, evidence),
-        fps,
-      )),
-    },
-  ]));
-  const moments = Object.fromEntries(Object.entries(narrative.moments).map(([id, occurrences]) => [
-    id,
-    {
-      id,
-      frames: occurrences.map((occurrence) => frameAt(
-        boundaryTime(occurrence.boundary, occurrence.affinity, narrative, evidence),
-        fps,
-      )),
-    },
-  ]));
-  const captionAtoms = narrative.captionAtoms.map((atom) => {
-    const first = words[atom.startWord];
-    const last = words[atom.endWordExclusive - 1];
-    if (!first || !last || first.segmentId !== last.segmentId) {
-      fail("locate_caption_atom", `Caption atom "${atom.id}" has an invalid speech span.`);
-    }
-    return {
-      ...atom,
-      ...range(first.startSec, last.endSec, fps),
-    };
-  });
-  const captionCues = evidence.captionCues?.map((cue, index) => {
+  locatedWords: LocatedScript["words"],
+  locatedAtoms: LocatedScript["captionAtoms"],
+  map: SemanticMap,
+  basis: ProgramBasis,
+): LocatedScript["captionCues"] {
+  const cues = map.captionCues;
+  if (!cues) return undefined;
+  const located = cues.map((cue, index) => {
     if (!Number.isInteger(cue.startWord) || !Number.isInteger(cue.endWordExclusive)) {
-      fail("locate_caption_cue_index", `Caption cue ${index + 1} must use integer word indexes.`);
+      fail("locate_caption_cue_index", `Caption cue ${index + 1} must use integer token indexes.`);
     }
     if (
       cue.startWord < 0
       || cue.endWordExclusive <= cue.startWord
-      || cue.endWordExclusive > words.length
+      || cue.endWordExclusive > locatedWords.length
     ) {
       fail(
         "locate_caption_cue_range",
-        `Caption cue ${index + 1} has invalid word range ${cue.startWord}..${cue.endWordExclusive}.`,
+        `Caption cue ${index + 1} has invalid token range ${cue.startWord}..${cue.endWordExclusive}.`,
       );
     }
-    const previous = evidence.captionCues?.[index - 1];
+    const previous = cues[index - 1];
     const expectedStart = previous?.endWordExclusive ?? 0;
     if (cue.startWord !== expectedStart) {
       fail(
         "locate_caption_cue_partition",
-        `Caption cue ${index + 1} starts at word ${cue.startWord}; expected ${expectedStart}.`,
+        `Caption cue ${index + 1} starts at token ${cue.startWord}; expected ${expectedStart}.`,
       );
     }
-    const first = words[cue.startWord];
-    const last = words[cue.endWordExclusive - 1];
-    if (!first || !last) {
-      fail("locate_caption_cue_word", `Caption cue ${index + 1} references a missing word.`);
+    const first = locatedWords[cue.startWord];
+    const last = locatedWords[cue.endWordExclusive - 1];
+    if (!first || !last || first.segmentId !== last.segmentId) {
+      fail("locate_caption_cue_segment", `Caption cue ${index + 1} crosses Script Segments.`);
     }
-    if (first.segmentId !== last.segmentId) {
-      fail(
-        "locate_caption_cue_segment",
-        `Caption cue ${index + 1} crosses Script segments ${first.segmentId} and ${last.segmentId}.`,
-      );
-    }
-    for (const atom of captionAtoms) {
+    for (const atom of locatedAtoms) {
       const overlaps = cue.startWord < atom.endWordExclusive
         && cue.endWordExclusive > atom.startWord;
       const contains = cue.startWord <= atom.startWord
@@ -215,21 +113,105 @@ export function locateScript(
       id: cue.id ?? `cue-${index + 1}`,
       startWord: cue.startWord,
       endWordExclusive: cue.endWordExclusive,
-      ...range(first.startSec, last.endSec, fps),
+      ...range(first.startFrame, last.endFrameExclusive, basis, `Caption cue ${index + 1}`),
     };
   });
-  if (
-    captionCues
-    && (captionCues.at(-1)?.endWordExclusive ?? 0) !== words.length
-  ) {
+  if ((located.at(-1)?.endWordExclusive ?? 0) !== narrative.tokens.length) {
     fail(
       "locate_caption_cue_partition",
-      `Caption cues end at word ${captionCues.at(-1)?.endWordExclusive ?? 0}; expected ${words.length}.`,
+      `Caption cues end at token ${located.at(-1)?.endWordExclusive ?? 0}; expected ${narrative.tokens.length}.`,
     );
   }
+  return located;
+}
+
+export function locateScript(
+  narrative: NarrativeIR,
+  basis: ProgramBasis,
+  map: ExactSemanticMap,
+): LocatedScript {
+  if (map.contract !== "svml.exact-semantic-map.v1") {
+    fail("locate_exact_required", "Located HTML compilation requires ExactSemanticMap.");
+  }
+  return bindSemanticMap(narrative, basis, map);
+}
+
+export function bindSemanticMap(
+  narrative: NarrativeIR,
+  basis: ProgramBasis,
+  map: SemanticMap,
+): LocatedScript {
+  validateSemanticMap(narrative, basis, map);
+  const points = semanticPoints(map);
+  const point = (identity: string): number => {
+    const value = points.get(identity);
+    if (value === undefined) fail("locate_anchor_missing", `SemanticMap is missing "${identity}".`);
+    return value;
+  };
+  const fps = basisFps(basis);
+  const words = narrative.tokens.map((token) => ({
+    ...token,
+    ...range(
+      point(token.startAnchorId),
+      point(token.endAnchorId),
+      basis,
+      `Token "${token.text}"`,
+    ),
+  }));
+  const segments = Object.fromEntries(narrative.segments.map((segment) => [
+    segment.id,
+    range(
+      point(segment.startAnchorId),
+      point(segment.endAnchorId),
+      basis,
+      `Segment "${segment.id}"`,
+    ),
+  ]));
+  const selections = Object.fromEntries(Object.entries(narrative.selections).map(
+    ([id, occurrences]) => [
+      id,
+      {
+        id,
+        ranges: occurrences.map((occurrence, index) => range(
+          point(boundaryAnchor(narrative, occurrence.open.boundary, occurrence.open.affinity)),
+          point(boundaryAnchor(narrative, occurrence.close.boundary, occurrence.close.affinity)),
+          basis,
+          `Selection "${id}" occurrence ${index + 1}`,
+          true,
+        )),
+      },
+    ],
+  ));
+  const moments = Object.fromEntries(Object.entries(narrative.moments).map(
+    ([id, occurrences]) => [
+      id,
+      {
+        id,
+        frames: occurrences.map((occurrence) => point(
+          boundaryAnchor(narrative, occurrence.boundary, occurrence.affinity),
+        )),
+      },
+    ],
+  ));
+  const captionAtoms = narrative.captionAtoms.map((atom) => {
+    const first = words[atom.startWord];
+    const last = words[atom.endWordExclusive - 1];
+    if (!first || !last || first.segmentId !== last.segmentId) {
+      fail("locate_caption_atom", `Caption atom "${atom.id}" has an invalid speech span.`);
+    }
+    return {
+      ...atom,
+      ...range(first.startFrame, last.endFrameExclusive, basis, `Caption atom "${atom.id}"`),
+    };
+  });
+  const captionCues = validateCaptionCues(narrative, words, captionAtoms, map, basis);
   return {
-    durationFrames: frameAt(evidence.durationSec, fps),
-    durationSec: frameAt(evidence.durationSec, fps) / fps,
+    contract: "svml.temporal-binding.v1",
+    precision: map.contract === "svml.exact-semantic-map.v1" ? "exact" : "estimated",
+    basisDigest: basis.basisDigest,
+    semanticMapDigest: map.mapDigest,
+    durationFrames: basis.durationFrames,
+    durationSec: basis.durationFrames / fps,
     fps,
     words,
     segments,

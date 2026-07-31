@@ -24,7 +24,7 @@ export default {
             return {
               startFrame,
               endFrameExclusive: Math.min(
-                context.located.durationFrames,
+                context.program.durationFrames,
                 startFrame + durationFrames,
               ),
             };

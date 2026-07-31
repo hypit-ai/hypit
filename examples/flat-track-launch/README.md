@@ -1,20 +1,23 @@
-# Flat Track Launch architecture fixture
+# Flat Track Launch executable fixture
 
-This source is the readable fixture for the unimplemented Source Architecture
-Draft. It deliberately exercises v1 contracts that the early compiler does not
-yet accept:
+This is the end-to-end v1 architecture fixture. It compiles without generation
+providers and exercises the contracts together:
 
-- Script Surface v1 independent Segment endpoints (`2M + 2N`);
-- a Basis Component that overlaps adjacent Segment media;
-- an imported Locator Component that produces the selected ExactSemanticMap;
-- one ProgramBasis and one absolute ProgramSpace;
-- flat visual/audio Track contributions with no Track nesting;
-- continuous A-roll source mapping across overlapping Present windows;
-- B-roll transition audio inside the B-roll Track;
-- disconnected caption selections, Moments and manual ProgramSpans;
-- Film as the sole `Track[]` consumer.
+- independent Script Segment endpoints (`2M + 2N`);
+- replaceable Basis Producer and Locator Components;
+- one explicit `ProgramBasis` plus `ExactSemanticMap`;
+- flat Tracks and absolute `z`, with Film as the only `Track[]` consumer;
+- one continuous A-roll mapping with overlapping Present windows;
+- manual `ProgramSpan`, a `Moment`, B-roll audio and a visual crossfade;
+- a disconnected SelectionSet driving one caption style rule;
+- top-level and nested Component fields configured by `.svs`.
 
-The `@svml/std/*` imports and local assets are illustrative package paths. The
-adjacent `launch.svs` makes every ProgramSpace placement explicit. Do not use this
-fixture as the executable regression until the flat Track milestone lands; use
-`../regen-ranking/regen-ranking.svml` for the current compiler.
+It reuses the checked-in local artifacts and exact alignment evidence from the
+adjacent `regen-ranking` example. No provider is called.
+
+```sh
+pnpm svml compile examples/flat-track-launch/flat-track-launch.svml \
+  --out /tmp/svml-flat-track-launch/index.html
+pnpm svml render examples/flat-track-launch/flat-track-launch.svml \
+  --out /tmp/svml-flat-track-launch.mp4
+```

@@ -23,6 +23,31 @@ export type SvmlLock = {
   };
   reproducible: boolean;
   modules: NonNullable<SourceDocument["modules"]>;
+  expansions: PlanIR["expansions"];
+  execution?: {
+    planDigest: string;
+    artifactManifestHash?: string;
+    basisDigest: string;
+    productionDigest: string;
+    semanticIndexDigest: string;
+    semanticMapDigest: string;
+    locatorDigest: string;
+    evidenceDigests: string[];
+    quantizationPolicy: string;
+    anchors: Array<{
+      identity: string;
+      frame: number;
+      quality: string;
+    }>;
+    programSpace: {
+      width: number;
+      height: number;
+      fps: number;
+      durationFrames: number;
+    };
+    targetDigest: string;
+    htmlDigest: string;
+  };
   materials: Array<{
     identity: string;
     type: string;
@@ -89,12 +114,13 @@ export function createLock(
       name: "hyperframes",
       version: "0.7.84",
     },
-    reproducible: materials.every((material) => material.status === "content"),
+    reproducible: false,
     modules: (document.modules ?? []).map((module) => ({
       ...module,
       uri: lockUri(module.uri),
       dependencies: module.dependencies.map(lockUri),
     })).sort((left, right) => left.uri.localeCompare(right.uri)),
+    expansions: plan.expansions,
     materials,
     kernels: manifests.map((manifest) => ({
       name: manifest.name,
@@ -112,10 +138,24 @@ export function createLock(
   };
 }
 
+export function freezeLock(
+  sourceLock: SvmlLock,
+  execution: NonNullable<SvmlLock["execution"]>,
+  artifactsVerified: boolean,
+): SvmlLock {
+  return {
+    ...sourceLock,
+    reproducible:
+      artifactsVerified
+      && sourceLock.materials.every((material) => material.status === "content"),
+    execution,
+  };
+}
+
 export async function verifyLockFile(
   file: string,
   expected: SvmlLock,
-): Promise<void> {
+): Promise<SvmlLock> {
   let actual: unknown;
   try {
     actual = JSON.parse(await readFile(file, "utf8"));
@@ -128,10 +168,17 @@ export async function verifyLockFile(
   if (!actual || typeof actual !== "object" || (actual as { contract?: string }).contract !== "svml.lock.v1") {
     fail("lock_contract", `${file} is not an svml.lock.v1 document.`);
   }
-  if (stableJson(actual) !== stableJson(expected)) {
+  const parsed = actual as SvmlLock;
+  const sourceOnly: SvmlLock = {
+    ...parsed,
+    reproducible: false,
+  };
+  delete sourceOnly.execution;
+  if (stableJson(sourceOnly) !== stableJson(expected)) {
     fail(
       "lock_mismatch",
       `${file} does not match the resolved source closure; regenerate it with "svml lock".`,
     );
   }
+  return parsed;
 }

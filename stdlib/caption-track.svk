@@ -16,5 +16,15 @@
   <param name="strokeColor" style="stroke-color" type="string" default="rgba(0,0,0,.82)"/>
   <param name="shadow" type="string" default="0 2px 9px rgba(0,0,0,.5), 0 0 2px rgba(0,0,0,.68)"/>
   <port name="script" direction="input" type="NarrativeIR" cardinality="one"/>
+  <port name="semantic" direction="input" type="ExactSemanticMap" cardinality="one"/>
   <port name="track" direction="output" type="Track" cardinality="one"/>
+  <child name="style" cardinality="zero-or-more">
+    <field name="id" type="id" required="true"/>
+    <field name="during" type="SelectionSet|ProgramSpan" consume="set" required="true"/>
+    <field name="color" style="fill" type="string"/>
+    <field name="activeColor" style="active-fill" type="string"/>
+    <field name="background" type="string"/>
+    <field name="weight" type="number"/>
+    <field name="scale" type="number"/>
+  </child>
 </kernel>

@@ -8,7 +8,7 @@ import type {
   ScriptToken,
   SelectionOccurrence,
 } from "../model.js";
-import { normalizeWord } from "../util.js";
+import { normalizeWord, sha256, stableJson } from "../util.js";
 
 type Marker = {
   id: string;
@@ -77,13 +77,25 @@ function joinProjection(parts: string[]): string {
 function markerBoundary(
   tokenIndex: number,
   segment: MutableSegment | undefined,
-  structuralCut: number,
+  structuralPosition: number,
 ): MarkerBoundary {
   return {
     tokenIndex,
-    structuralCut,
+    structuralPosition,
     ...(segment ? { segmentId: segment.id } : {}),
   };
+}
+
+function segmentAnchorId(segmentId: string, edge: "start" | "end"): string {
+  return `segment:${segmentId}:${edge}`;
+}
+
+function tokenAnchorId(
+  segmentId: string,
+  segmentTokenIndex: number,
+  edge: "start" | "end",
+): string {
+  return `segment:${segmentId}:token:${segmentTokenIndex + 1}:${edge}`;
 }
 
 export function parseScript(
@@ -105,7 +117,7 @@ export function parseScript(
   const captionAtoms: NarrativeIR["captionAtoms"] = [];
   let current: MutableSegment | undefined;
   let offset = 0;
-  let structuralCut = 0;
+  let structuralPosition = 0;
   let lineStart = true;
 
   const location = (at: number) => sourceLocation(file, scriptSource, at);
@@ -196,7 +208,7 @@ export function parseScript(
     literalPieces(raw, absoluteStart, dual).map((piece) => piece.value).join("");
 
   const addMarker = (marker: Marker, at: number): void => {
-    const boundary = markerBoundary(tokens.length, current, structuralCut);
+    const boundary = markerBoundary(tokens.length, current, structuralPosition);
     if (marker.kind === "moment") {
       if (openSelections.has(marker.id) || selections[marker.id]) {
         fail(
@@ -292,10 +304,14 @@ export function parseScript(
       const normalized = normalizeWord(match[0]);
       if (!normalized) continue;
       const index = tokens.length;
+      const segmentTokenIndex = index - current.tokenStart;
       tokens.push({
         id: `w${index + 1}`,
         index,
         segmentId: current.id,
+        segmentTokenIndex,
+        startAnchorId: tokenAnchorId(current.id, segmentTokenIndex, "start"),
+        endAnchorId: tokenAnchorId(current.id, segmentTokenIndex, "end"),
         text: match[0],
         normalized,
         sourceStart: sourceOffset + start + match.index,
@@ -402,11 +418,13 @@ export function parseScript(
       if (segmentOpen[3] === "/") {
         segments.push({
           ...current,
+          startAnchorId: segmentAnchorId(current.id, "start"),
+          endAnchorId: segmentAnchorId(current.id, "end"),
           tokenEnd: tokens.length,
           sourceEnd: sourceOffset + offset,
         });
         current = undefined;
-        structuralCut += 1;
+        structuralPosition += 1;
       }
       continue;
     }
@@ -419,11 +437,13 @@ export function parseScript(
       offset += segmentClose[0].length;
       segments.push({
         ...current,
+        startAnchorId: segmentAnchorId(current.id, "start"),
+        endAnchorId: segmentAnchorId(current.id, "end"),
         tokenEnd: tokens.length,
         sourceEnd: sourceOffset + offset,
       });
       current = undefined;
-      structuralCut += 1;
+      structuralPosition += 1;
       lineStart = true;
       continue;
     }
@@ -561,12 +581,58 @@ export function parseScript(
     if (caption) captionSegments.push(caption);
   }
 
+  const semanticAnchors = segments.flatMap((segment) => [
+    {
+      id: segment.startAnchorId,
+      kind: "segment-start" as const,
+      segmentId: segment.id,
+    },
+    ...tokens.slice(segment.tokenStart, segment.tokenEnd).flatMap((token) => [
+      {
+        id: token.startAnchorId,
+        kind: "token-start" as const,
+        segmentId: segment.id,
+        tokenId: token.id,
+        segmentTokenIndex: token.segmentTokenIndex,
+      },
+      {
+        id: token.endAnchorId,
+        kind: "token-end" as const,
+        segmentId: segment.id,
+        tokenId: token.id,
+        segmentTokenIndex: token.segmentTokenIndex,
+      },
+    ]),
+    {
+      id: segment.endAnchorId,
+      kind: "segment-end" as const,
+      segmentId: segment.id,
+    },
+  ]);
+  const semanticTokens = tokens.map((token) => ({
+    id: token.id,
+    segmentId: token.segmentId,
+    segmentTokenIndex: token.segmentTokenIndex,
+    normalized: token.normalized,
+    startAnchorId: token.startAnchorId,
+    endAnchorId: token.endAnchorId,
+  }));
+  const semanticIndexPayload = {
+    contract: "svml.semantic-index.v1" as const,
+    anchors: semanticAnchors,
+    tokens: semanticTokens,
+  };
+
   return {
     segments,
     tokens,
     selections,
     moments,
     captionAtoms,
+    semanticIndex: {
+      ...semanticIndexPayload,
+      digest: sha256(stableJson(semanticIndexPayload)),
+    },
     projections: {
       dialogue: dialogueTurns.join("\n"),
       speech: speechSegments.join("\n"),

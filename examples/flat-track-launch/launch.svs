@@ -1,7 +1,8 @@
 <sheet version="1" id="house">
 
   film.vertical {
-    resolution: 1080x1920;
+    width: 1080;
+    height: 1920;
     frame-rate: 30;
     background: #09090B;
   }
@@ -34,15 +35,6 @@
 
   media-track.face-bottom-right {
     x: 0.65;
-    y: 0.64;
-    width: 0.30;
-    height: 0.30;
-    fit: cover;
-    mask: circle;
-  }
-
-  media-track.face-bottom-left {
-    x: 0.05;
     y: 0.64;
     width: 0.30;
     height: 0.30;
@@ -84,21 +76,24 @@
     fit: cover;
   }
 
-  ranking-tier-list.ranking {
+  ranking-column.ranking {
     x: 0.06;
     y: 0.14;
-    width: 0.88;
-    row-gap: 0.018;
-    board-color: #141418;
-    accent: #8B5CF6;
+    width: 0.42;
+    row-height: 0.071;
+    gap: 0.018;
+    stage-x: 0.66;
+    stage-y: 0.73;
+    stage-size: 0.33;
   }
 
   text-track.title {
     x: 0.06;
     y: 0.08;
     width: 0.88;
-    font-family: Inter;
-    font-size: 64px;
+    height: 0.12;
+    font-family: Inter, Arial, sans-serif;
+    font-size: 64;
     font-weight: 850;
     fill: #FFFFFF;
   }
@@ -107,7 +102,8 @@
     x: 0.42;
     y: 0.80;
     width: 0.16;
-    font-size: 120px;
+    height: 0.14;
+    font-size: 120;
     fill: #A78BFA;
   }
 
@@ -115,14 +111,15 @@
     x: 0.08;
     y: 0.78;
     width: 0.84;
-    font-family: Inter;
-    font-size: 56px;
+    font-family: Inter, Arial, sans-serif;
+    font-size: 56;
     font-weight: 800;
     fill: #FFFFFF;
   }
 
   caption-track.caption-emphasis {
     fill: #FDE047;
+    active-fill: #FFFFFF;
     scale: 1.08;
   }
 

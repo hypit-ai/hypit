@@ -18,7 +18,7 @@ export type KernelPort = {
 export type KernelParameter = {
   name: string;
   styleName: string;
-  type: "string" | "number" | "boolean";
+  type: string;
   defaultValue?: AttributeValue;
 };
 
@@ -46,12 +46,14 @@ export type KernelManifest = {
   sourceHash: string;
   implementationPath?: string;
   implementationHash: string;
-  profile: "isolated-projector-v1" | "capability-v1";
+  profile: "isolated-projector-v1" | "capability-v1" | "composite-v1";
   capability?: string;
   permissions: string[];
   ports: KernelPort[];
   parameters: KernelParameter[];
   children: KernelChildSchema[];
+  compositeImports?: Array<{ alias: string; sourcePath: string; kernelName?: string }>;
+  compose?: SourceElement;
 };
 
 export type KernelRegistry = Map<string, KernelManifest>;
@@ -124,7 +126,14 @@ function booleanAttribute(
 function parseParameter(sourcePath: string, element: SourceElement): KernelParameter {
   const name = stringAttribute(element, "name");
   const type = stringAttribute(element, "type");
-  if (!name || !type || !["string", "number", "boolean"].includes(type)) {
+  if (
+    !name
+    || !type
+    || !(
+      ["string", "number", "boolean", "duration"].includes(type)
+      || /^enum\([A-Za-z_][A-Za-z0-9_.:-]*(?:,[A-Za-z_][A-Za-z0-9_.:-]*)+\)$/u.test(type)
+    )
+  ) {
     fail("kernel_manifest_parameter", `${sourcePath} contains an invalid <param>.`);
   }
   let defaultValue = element.attributes.default;
@@ -139,6 +148,22 @@ function parseParameter(sourcePath: string, element: SourceElement): KernelParam
       fail(
         "kernel_manifest_parameter_default",
         `${sourcePath} parameter ${name} has a non-boolean default.`,
+      );
+    }
+    if (type === "duration" && (
+      typeof defaultValue !== "string"
+      || !/^[+-]?\d+(?:\.\d+)?(?:ms|s)$/u.test(defaultValue)
+    )) {
+      fail(
+        "kernel_manifest_parameter_default",
+        `${sourcePath} parameter ${name} has an invalid duration default.`,
+      );
+    }
+    const enumValues = /^enum\((.+)\)$/u.exec(type)?.[1]?.split(",");
+    if (enumValues && (typeof defaultValue !== "string" || !enumValues.includes(defaultValue))) {
+      fail(
+        "kernel_manifest_parameter_default",
+        `${sourcePath} parameter ${name} has an invalid enum default.`,
       );
     }
     if (type === "string" && typeof defaultValue !== "string") {
@@ -212,7 +237,7 @@ function parseManifest(sourcePath: string, source: string): KernelManifest {
   if (!name || !/^[A-Za-z_][A-Za-z0-9_.:-]*$/u.test(name)) {
     fail("kernel_manifest_name", `${sourcePath} has an invalid or missing Kernel name.`);
   }
-  if (profile !== "isolated-projector-v1" && profile !== "capability-v1") {
+  if (!["isolated-projector-v1", "capability-v1", "composite-v1"].includes(profile ?? "")) {
     fail("kernel_manifest_profile", `${sourcePath} has unsupported profile "${profile ?? ""}".`);
   }
   if (profile === "isolated-projector-v1" && !implementation) {
@@ -262,7 +287,28 @@ function parseManifest(sourcePath: string, source: string): KernelManifest {
   if (new Set(children.map((child) => child.name)).size !== children.length) {
     fail("kernel_manifest_child_duplicate", `${sourcePath} repeats a root child schema.`);
   }
-  const known = new Set(["port", "param", "child"]);
+  const compositeImports = childElements(root, "import").map((element) => ({
+    alias: stringAttribute(element, "as") ?? "",
+    sourcePath: resolve(dirname(sourcePath), stringAttribute(element, "from") ?? ""),
+  }));
+  const compose = childElements(root, "compose")[0];
+  if (profile === "composite-v1") {
+    if (implementation || capability || !compose || !compositeImports.length) {
+      fail(
+        "kernel_composite_shape",
+        `${sourcePath} composite-v1 requires imports and one <compose>, without implementation/capability.`,
+      );
+    }
+    if (compositeImports.some((item) => !item.alias)) {
+      fail("kernel_composite_import", `${sourcePath} Composite imports require explicit aliases.`);
+    }
+  }
+  const known = new Set([
+    "port",
+    "param",
+    "child",
+    ...(profile === "composite-v1" ? ["import", "compose"] : []),
+  ]);
   const unknown = childElements(root).find((element) => !known.has(element.name));
   if (unknown) {
     fail("kernel_manifest_element", `${sourcePath} contains unknown <${unknown.name}>.`);
@@ -275,7 +321,7 @@ function parseManifest(sourcePath: string, source: string): KernelManifest {
     sourceHash: sha256(source),
     ...(implementation ? { implementationPath: resolve(dirname(sourcePath), implementation) } : {}),
     implementationHash: "",
-    profile,
+    profile: profile as KernelManifest["profile"],
     ...(capability ? { capability } : {}),
     permissions: (stringAttribute(root, "permissions", "") ?? "")
       .split(/[\s,]+/u)
@@ -283,27 +329,70 @@ function parseManifest(sourcePath: string, source: string): KernelManifest {
     ports,
     parameters,
     children,
+    ...(profile === "composite-v1" ? { compositeImports, compose } : {}),
   };
 }
 
 export async function loadKernels(document: SourceDocument): Promise<KernelRegistry> {
   const registry: KernelRegistry = new Map();
   const imports = childElements(document.root, "import");
+  const loading = new Set<string>();
+  const definitions = new Map<string, KernelManifest>();
+  const load = async (sourcePath: string): Promise<KernelManifest> => {
+    sourcePath = resolve(sourcePath);
+    if (loading.has(sourcePath)) {
+      fail("kernel_import_cycle", `Composite Kernel import cycle at ${sourcePath}.`);
+    }
+    const byPath = definitions.get(sourcePath);
+    if (byPath) return byPath;
+    loading.add(sourcePath);
+    const manifest = parseManifest(sourcePath, await readFile(sourcePath, "utf8"));
+    if (manifest.profile === "composite-v1") {
+      for (const imported of manifest.compositeImports ?? []) {
+        const nested = await load(imported.sourcePath);
+        imported.kernelName = nested.name;
+      }
+      manifest.implementationHash = sha256(`composite\0${manifest.sourceHash}`);
+    } else {
+      manifest.implementationHash = manifest.implementationPath
+        ? sha256(await readFile(manifest.implementationPath))
+        : sha256(`capability\0${manifest.capability ?? manifest.name}`);
+    }
+    definitions.set(sourcePath, manifest);
+    loading.delete(sourcePath);
+    return manifest;
+  };
+  const bind = (binding: string, manifest: KernelManifest): void => {
+    if (!/^[A-Za-z_][A-Za-z0-9_.:-]*$/u.test(binding)) {
+      fail("kernel_import_alias", `Kernel import alias "${binding}" is invalid.`);
+    }
+    const existing = registry.get(binding);
+    if (existing && existing.sourcePath !== manifest.sourcePath) {
+      fail(
+        "kernel_duplicate_binding",
+        `Kernel binding "${binding}" is defined by both ${existing.sourcePath} and ${manifest.sourcePath}.`,
+      );
+    }
+    registry.set(binding, binding === manifest.name ? manifest : { ...manifest, name: binding });
+  };
+  const bindCompositeDependencies = (manifest: KernelManifest): void => {
+    for (const imported of manifest.compositeImports ?? []) {
+      const nested = definitions.get(resolve(imported.sourcePath));
+      if (!nested) fail("kernel_import_resolution", `Kernel import ${imported.sourcePath} is unresolved.`);
+      bind(nested.name, nested);
+      bindCompositeDependencies(nested);
+    }
+  };
   for (const element of imports) {
     const from = attributeString(element, "from");
     if (!from.endsWith(".svk")) continue;
-    const sourcePath = resolve(dirname(document.file), from);
-    const manifest = parseManifest(sourcePath, await readFile(sourcePath, "utf8"));
-    manifest.implementationHash = manifest.implementationPath
-      ? sha256(await readFile(manifest.implementationPath))
-      : sha256(`capability\0${manifest.capability ?? manifest.name}`);
-    if (registry.has(manifest.name)) {
-      fail(
-        "kernel_duplicate_binding",
-        `Kernel "${manifest.name}" is imported more than once; use explicit aliases once namespace syntax is enabled.`,
-      );
+    const manifest = await load(resolve(dirname(document.file), from));
+    bindCompositeDependencies(manifest);
+    const alias = element.attributes.as;
+    if (alias !== undefined && typeof alias !== "string") {
+      fail("kernel_import_alias", `${document.file} Kernel import alias must be a string.`);
     }
-    registry.set(manifest.name, manifest);
+    bind(alias ?? manifest.name, manifest);
   }
   return registry;
 }

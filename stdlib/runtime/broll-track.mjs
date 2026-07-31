@@ -34,7 +34,7 @@ export default {
       if (String(source.type).toLowerCase() !== expectedKind.toLowerCase()) {
         throw new Error(`broll item "${id}" expected ${expectedKind}, received ${source.type}`);
       }
-      const presentations = resolveItemPresentations(context, item, source);
+      const presentations = resolveItemPresentations(context, item, source, z);
       for (const [index, presentation] of presentations.entries()) {
         const range = presentation.range;
         const zoom = numberAttr(item, "zoom", 1);
@@ -55,9 +55,10 @@ export default {
           source: source.source,
           startFrame: range.startFrame,
           endFrameExclusive: range.endFrameExclusive,
-          z,
-          layer: presentation.layer,
-          muted: !(item.attributes.audio === true || item.attributes.audio === "source"),
+          z: presentation.z,
+          // HyperFrames receives source audio as an explicit sibling contribution.
+          // Keep the visual element muted so one source can never play twice.
+          muted: true,
           ...timing,
           style: {
             ...presentationStyle(presentation.element, item, { fit: "contain" }),
@@ -83,12 +84,14 @@ export default {
           presentation.parentRange,
         ]));
         for (const [parentIndex, range] of parents) {
+          const timing = mediaTiming(item, { parentRange: range, range }, source, context.fps);
           audios.push({
             id: `${context.instance.id}:${id}:${parentIndex}:audio`,
             source: source.source,
             startFrame: range.startFrame,
             endFrameExclusive: range.endFrameExclusive,
-            mediaStartSec: numberAttr(item, "mediaStart", 0),
+            mediaStartSec: timing.mediaStartSec,
+            playbackRate: timing.playbackRate,
             volume: numberAttr(item, "volume", 1),
             bus: "source",
           });
@@ -122,7 +125,7 @@ export default {
       const cue = incoming.startFrame;
       const startFrame = cue - Math.floor(durationFrames * cueRatio);
       const endFrameExclusive = startFrame + durationFrames;
-      if (startFrame < 0 || endFrameExclusive > context.located.durationFrames) {
+      if (startFrame < 0 || endFrameExclusive > context.program.durationFrames) {
         throw new Error(`broll transition ${from} -> ${to} leaves the master timeline`);
       }
       if (occupiedWindows.some((window) =>

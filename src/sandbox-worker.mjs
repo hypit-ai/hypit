@@ -1,4 +1,5 @@
 import { readFile, realpath } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import vm from "node:vm";
@@ -25,6 +26,7 @@ async function main() {
     name: "svml-kernel-projector",
     codeGeneration: { strings: false, wasm: false },
   });
+  context.__svmlSha256 = value => createHash("sha256").update(value).digest("hex");
   new vm.Script(`
     Object.defineProperty(Math, "random", {
       value() { throw new Error("SVK projector cannot use ambient randomness"); },
@@ -84,9 +86,14 @@ async function main() {
     (() => {
       const context = JSON.parse(globalThis.__svmlInput);
       context.resolve = value => value;
-      context.resolvePath = () => {
-        throw new Error("resolvePath is unavailable in isolated projector ABI v1");
+      const stableJson = value => {
+        if (Array.isArray(value)) return "[" + value.map(stableJson).join(",") + "]";
+        if (value && typeof value === "object") {
+          return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + stableJson(value[key])).join(",") + "}";
+        }
+        return JSON.stringify(value);
       };
+      context.digest = value => globalThis.__svmlSha256(stableJson(value));
       const frameRange = (startSec, endSec) => {
         const startFrame = Math.round(startSec * context.fps);
         const endFrameExclusive = Math.round(endSec * context.fps);
@@ -101,10 +108,10 @@ async function main() {
       const endpoint = raw => {
         const value = String(raw).trim();
         if (value === "start") return 0;
-        if (value === "end") return context.located.durationSec;
+        if (value === "end") return context.program.durationSec;
         const relative = /^(start|end)([+-])(\\d+(?:\\.\\d+)?)(ms|s)$/.exec(value);
         if (relative) {
-          const base = relative[1] === "start" ? 0 : context.located.durationSec;
+          const base = relative[1] === "start" ? 0 : context.program.durationSec;
           const amount = Number(relative[3]) * (relative[4] === "ms" ? 0.001 : 1);
           return base + (relative[2] === "+" ? amount : -amount);
         }
@@ -123,7 +130,7 @@ async function main() {
         const contract = temporalContract(path, "selection");
         let ranges;
         if (typeof value === "string") {
-          if (value === "full") ranges = [frameRange(0, context.located.durationSec)];
+          if (value === "full") ranges = [frameRange(0, context.program.durationSec)];
           else {
             const parts = value.split("..");
             if (parts.length !== 2) throw new Error("manual span requires start .. end");

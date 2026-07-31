@@ -9,6 +9,12 @@
     fill: #fefefe;
   }
 
+  subtitles.launch {
+    z: 510;
+    font-size: 44;
+    fill: #fefefe;
+  }
+
   film.vertical {
     width: 1080;
     height: 1920;
