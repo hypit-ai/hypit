@@ -9,9 +9,9 @@ does not freeze the full architecture draft; the frozen Script syntax remains in
 The slice predates the independent-endpoint Basis/Locator contract. Its implemented
 Locate path still assumes globally monotonic words and one shared cut between
 adjacent Segments. The current architecture instead requires a selected
-`TemporalBasisProduction` plus a separately versioned `ExactSemanticMap` covering
-`2M + 2N` identities. That is a declared next implementation boundary, not behavior
-already provided by this prototype.
+`TemporalBasisProduction` plus an imported Locator Component whose
+`ExactSemanticMap` covers `2M + 2N` identities. That is a declared next
+implementation boundary, not behavior already provided by this prototype.
 
 ## Outcome
 
@@ -129,7 +129,8 @@ The following are not silently approximated:
 7. Decoupled Basis Production and Location. Replace shared structural cuts with
    Script Surface v2 independent Segment endpoints; validate `2M + 2N`; prove both
    hard-cut and crossfade Basis Components through one `TemporalBasisProduction`
-   ABI; then bind each through the same separately locked Locator ABI.
+   ABI; import a Locator Component that outputs SemanticMap; and require Film to
+   select both matching outputs explicitly.
 8. Flat Track ABI. Make every Track output absolute ProgramSpace visual/audio
    contributions, prohibit Track input ports, and keep Film as the only `Track[]`
    consumer. No public VisualSurface, VisualTree, AudioTree or Track Aggregator is

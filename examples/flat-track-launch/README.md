@@ -6,7 +6,7 @@ yet accept:
 
 - Script Surface v2 independent Segment endpoints (`2M + 2N`);
 - a Basis Component that overlaps adjacent Segment media;
-- a separately locked Locator that produces the ExactSemanticMap;
+- an imported Locator Component that produces the selected ExactSemanticMap;
 - one ProgramBasis and one absolute ProgramSpace;
 - flat visual/audio Track contributions with no Track nesting;
 - continuous A-roll source mapping across overlapping Present windows;
