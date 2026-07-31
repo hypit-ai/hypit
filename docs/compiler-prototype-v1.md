@@ -6,11 +6,11 @@ This record describes the first executable slice of the source architecture. It
 does not freeze the full architecture draft; the frozen Script syntax remains in
 `spec/script-surface-v1.md`.
 
-The slice predates the independent-endpoint Temporal Producer contract. Its
-implemented Locate path still assumes globally monotonic words and one shared cut
-between adjacent Segments. The current architecture instead requires a selected
-`TemporalProduction` with a complete `2M + 2N` anchor table and permits different
-Segments to overlap. That is a declared next implementation boundary, not behavior
+The slice predates the independent-endpoint Basis/Locator contract. Its implemented
+Locate path still assumes globally monotonic words and one shared cut between
+adjacent Segments. The current architecture instead requires a selected
+`TemporalBasisProduction` plus a separately versioned `ExactSemanticMap` covering
+`2M + 2N` identities. That is a declared next implementation boundary, not behavior
 already provided by this prototype.
 
 ## Outcome
@@ -27,7 +27,7 @@ compile     → svml.hyperframes-document.v1 → HyperFrames HTML
 The compiler does not contain special branches for `ranking-column`,
 `broll-track`, `media-track`, `caption-track` or `film`. Each is an imported
 `.svk` manifest plus an isolated projector. The only privileged compiler concepts
-in this slice are source parsing, values/references, Script/Locate, the Kernel ABI,
+in this slice are source parsing, values/references, Script/Locate, the Component ABI,
 Plan reachability and the HyperFrames target ABI.
 
 ## Real-video acceptance
@@ -81,7 +81,7 @@ Selection ranges, B-roll cut frames and audio are asserted independently.
 ### Source closure
 
 - transitive, cycle-checked `.svc` imports;
-- typed `.svs` classes with Kernel default → classes → instance precedence;
+- typed `.svs` classes with Component default → classes → instance precedence;
 - whole-attribute references with no Prompt interpolation;
 - root reachability, fan-out and unused declaration elimination;
 - identity independent of line number, import order and local alias;
@@ -102,11 +102,13 @@ Selection ranges, B-roll cut frames and audio are asserted independently.
 - pure JSON input/output, execution timeout and memory limit;
 - scoped CSS and rejection of active/unscoped markup;
 - integer half-open frame ranges lowered safely to HyperFrames seconds;
-- separate visual and audio fragments, global visual `z`, local presentation layer,
+- separate flat visual and audio fragments, global visual `z`, presentation priority,
   audio buses and explicit media time mapping;
 - Item/Present intersection without restarting source time;
 - B-roll visual crossfade independent of source audio;
-- Film as the unique reachable root and current prototype master-clock owner.
+- Film as the unique reachable root and current prototype master-clock owner. The
+  architecture draft moves clock creation to a selected Basis Component and leaves
+  Film as the sole `Track[]` consumer.
 
 ## Deliberate next boundaries
 
@@ -115,7 +117,7 @@ The following are not silently approximated:
 1. Live Capability Host adapters for generation, STT and media probing.
    Capability calls already remain typed Plan nodes and can be satisfied by
    verified offline artifacts; no provider adapter or credential path exists yet.
-2. A live capability request adapter. SVML v1 intentionally does not let a Kernel
+2. A live capability request adapter. SVML v1 intentionally does not let a Component
    hide additional Plan calls; reusable multi-call topology belongs in `.svc`.
 3. A lossless whole-document CST and formatter. The implemented Script formatter
    is deliberately conservative and refuses unsupported structural-line layouts.
@@ -124,10 +126,14 @@ The following are not silently approximated:
    intentionally contains no authored `x/y`; layout belongs to the viewer.
 6. VLM, bbox and visual tracking. They are explicitly outside SVML v1's semantic
    spine and may later exist as evidence extensions or HTML post-processing.
-7. Duck-typed Temporal Producers. Replace shared structural cuts with independent
-   Segment start/end identities, validate word order per Segment rather than
-   globally, bind one complete table to one ProgramBasis, and prove both hard-cut
-   Speech Spine and overlapping/crossfade producers through the same public ABI.
+7. Decoupled Basis Production and Location. Replace shared structural cuts with
+   Script Surface v2 independent Segment endpoints; validate `2M + 2N`; prove both
+   hard-cut and crossfade Basis Components through one `TemporalBasisProduction`
+   ABI; then bind each through the same separately locked Locator ABI.
+8. Flat Track ABI. Make every Track output absolute ProgramSpace visual/audio
+   contributions, prohibit Track input ports, and keep Film as the only `Track[]`
+   consumer. No public VisualSurface, VisualTree, AudioTree or Track Aggregator is
+   introduced.
 
 The next implementation milestone should be the typed request side of the
 Capability Host contract. A live provider adapter must not be enabled until the

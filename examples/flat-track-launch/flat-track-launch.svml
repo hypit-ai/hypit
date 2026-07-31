@@ -1,0 +1,242 @@
+<!--
+  Architecture fixture for Source Architecture Draft.
+  It is intentionally not accepted by the current Script Surface v1 prototype.
+-->
+<svml version="2">
+
+  <import from="@svml/std/crossfade-speech.svk"/>
+  <import from="@svml/std/media-track.svk"/>
+  <import from="@svml/std/broll-track.svk"/>
+  <import from="@svml/std/ranking-tier-list.svk"/>
+  <import from="@svml/std/text-track.svk"/>
+  <import from="@svml/std/caption-track.svk"/>
+  <import from="@svml/std/audio-track.svk"/>
+  <import from="@svml/std/film.svk"/>
+
+  <import as="house" from="./launch.svs"/>
+
+  <script version="2">
+    @whole
+
+    @prelude
+    <segment id="prelude"/>
+    @/prelude
+
+    <segment id="intro">
+      <HOST> @promise @emphasis Video creation is about to change @/emphasis.
+             @/promise~ @ranking! @rank-svml SVML starts with meaning, not pixels.
+             @/rank-svml
+    </segment>
+
+    <segment id="close">
+      <HOST> @reveal One semantic source becomes @emphasis every frame @/emphasis,
+             every track, and every version. @/reveal
+    </segment>
+
+    @/whole~
+  </script>
+
+  <!-- Plain values can fan out to Basis and Track Components. -->
+  <video id="host-long" src="./assets/host-50s.mp4"/>
+  <image id="poster" src="./assets/poster.png"/>
+  <video id="product-demo" src="./assets/product-demo.mp4"/>
+  <image id="rank-icon-svml" src="./assets/svml.png"/>
+  <image id="rank-icon-editors" src="./assets/editors.png"/>
+  <audio id="whoosh" src="./assets/whoosh.wav"/>
+  <audio id="music" src="./assets/music.mp3"/>
+
+  <!--
+    Basis production assembles physical media only. It emits ProgramBasis,
+    source maps, program audio and a program-bound visual facet. The locked
+    Locator separately binds this Script's 2M + 2N identities to the basis.
+  -->
+  <crossfade-speech id="voice" overlap="500ms">
+    <segment
+      id="prelude"
+      script={script.segment.prelude}
+      source={host-long}
+      sourceWindow="0s .. 10s"
+    />
+    <segment
+      id="intro"
+      script={script.segment.intro}
+      source={host-long}
+      sourceWindow="10s .. 30s"
+    />
+    <segment
+      id="close"
+      script={script.segment.close}
+      source={host-long}
+      sourceWindow="30s .. 50s"
+    />
+  </crossfade-speech>
+
+  <!--
+    One program-bound host facet, one continuous source mapping. Present changes
+    only x/y/size/mask/z; it never restarts or seeks the video.
+  -->
+  <media-track id="aroll" z="200">
+    <item
+      id="host"
+      source={voice.facets.visual}
+      during={script.selection.whole}
+      playback="program-map"
+      class="house.host-full"
+    >
+      <!-- Ten seconds without words: manual projections remain legal. -->
+      <present
+        id="prelude-top-left"
+        during={script.selection.prelude}
+        window="start .. start+2.2s"
+        z="210"
+        class="house.face-top-left"
+        exit="fade 200ms"
+      />
+      <present
+        id="prelude-top-right"
+        during={script.selection.prelude}
+        window="start+2s .. start+4.2s"
+        z="211"
+        class="house.face-top-right"
+        enter="fade 200ms"
+        exit="fade 200ms"
+      />
+      <present
+        id="prelude-bottom-right"
+        during={script.selection.prelude}
+        window="start+4s .. start+6.2s"
+        z="212"
+        class="house.face-bottom-right"
+        enter="fade 200ms"
+        exit="fade 200ms"
+      />
+      <present
+        id="prelude-bottom-left"
+        during={script.selection.prelude}
+        window="start+6s .. start+8.2s"
+        z="213"
+        class="house.face-bottom-left"
+        enter="fade 200ms"
+        exit="fade 200ms"
+      />
+      <present
+        id="prelude-center"
+        during={script.selection.prelude}
+        window="start+8s .. end"
+        z="214"
+        class="house.face-center"
+        enter="fade 200ms"
+      />
+
+      <present
+        id="promise-split"
+        during={script.selection.promise}
+        z="220"
+        class="house.host-lower-split"
+      />
+      <present
+        id="reveal-pip"
+        during={script.selection.reveal}
+        window="start-200ms .. end"
+        z="221"
+        class="house.host-corner-circle"
+        enter="fade 200ms"
+      />
+    </item>
+  </media-track>
+
+  <!-- B-roll owns item composition, visual transition, source audio and SFX. -->
+  <broll-track id="broll" z="100" class="house.broll-full">
+    <item
+      id="poster"
+      source={poster}
+      during={script.selection.promise}
+      playback="hold"
+    />
+    <item
+      id="product-demo"
+      source={product-demo}
+      during={script.selection.reveal}
+      playback="stretch"
+      sourceAudio="on"
+      sourceGain="0.35"
+    />
+    <transition
+      from="poster"
+      to="product-demo"
+      kind="crossfade"
+      duration="200ms"
+      sound={whoosh}
+      soundGain="0.7"
+    />
+  </broll-track>
+
+  <!-- Ranking is another flat Track, not a child of either media Track. -->
+  <ranking-tier-list
+    id="ranking"
+    z="300"
+    at={script.moment.ranking}
+    class="house.ranking"
+  >
+    <item
+      id="svml"
+      label="SVML"
+      rank="1"
+      icon={rank-icon-svml}
+      during={script.selection.rank-svml}
+    />
+    <item
+      id="editors"
+      label="Pixel-first editors"
+      rank="2"
+      icon={rank-icon-editors}
+      during={script.selection.reveal}
+    />
+  </ranking-tier-list>
+
+  <!-- Manual ProgramSpan is intentionally legal. -->
+  <text-track id="overlays" z="400">
+    <item id="opening-title" during="0s .. 3s" class="house.title">
+      Semantic video starts with meaning.
+    </item>
+    <item id="ending-arrow" during="end-2s .. end" class="house.arrow">
+      ↓
+    </item>
+  </text-track>
+
+  <!-- The repeated emphasis Selection is disconnected and consumed as a set. -->
+  <caption-track id="captions" z="500" script={script} class="house.captions">
+    <style during={script.selection.emphasis} class="house.caption-emphasis"/>
+  </caption-track>
+
+  <audio-track id="background-music">
+    <item
+      id="music"
+      source={music}
+      during="full"
+      volume="0.28"
+      bus="music"
+      duckUnder="voice"
+    />
+  </audio-track>
+
+  <!--
+    Child order is deliberately not z order. Film is the only Track[] consumer.
+    Grain and master mix are Film-level because they need the complete program.
+  -->
+  <film
+    id="launch"
+    basis={voice.production}
+    class="house.vertical"
+    globalEffect="grain-soft"
+    masterMix="house.launch-mix"
+  >
+    <track ref={captions.track}/>
+    <track ref={background-music.track}/>
+    <track ref={broll.track}/>
+    <track ref={overlays.track}/>
+    <track ref={aroll.track}/>
+    <track ref={ranking.track}/>
+  </film>
+
+</svml>
