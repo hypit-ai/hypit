@@ -1,0 +1,13 @@
+{
+  "contract": "svml.speech-alignment.v1",
+  "durationSec": 3,
+  "fps": 30,
+  "words": [
+    { "text": "Alpha", "startSec": 0, "endSec": 0.7, "segmentId": "main" },
+    { "text": "gap", "startSec": 1, "endSec": 1.5, "segmentId": "main" },
+    { "text": "omega", "startSec": 2, "endSec": 2.7, "segmentId": "main" }
+  ],
+  "segments": [
+    { "id": "main", "startSec": 0, "endSec": 3 }
+  ]
+}

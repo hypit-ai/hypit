@@ -1,0 +1,24 @@
+<svml version="1">
+  <import from="../../../stdlib/speech-spine.svk"/>
+  <import from="../../../stdlib/ranking-column.svk"/>
+  <import from="../../../stdlib/film.svk"/>
+
+  <script>
+    <segment id="main">@pick Alpha @/pick gap @pick omega @/pick.</segment>
+  </script>
+
+  <video id="avatar" src="../presentation/long.mp4"/>
+  <image id="icon" src="../collision/left/image.png"/>
+
+  <speech-spine id="speech">
+    <segment id="main" script={script.segment.main} visual={avatar}/>
+  </speech-spine>
+
+  <ranking-column id="ranking" z="1">
+    <item id="picked" rank="1" image={icon} during={script.selection.pick}/>
+  </ranking-column>
+
+  <film id="film" speech={speech.speech}>
+    <track ref={ranking.track}/>
+  </film>
+</svml>

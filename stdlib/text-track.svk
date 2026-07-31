@@ -1,0 +1,22 @@
+<kernel name="text-track" abi="1" implementation="./runtime/text-track.mjs">
+  <param name="z" type="number"/>
+  <port name="item" direction="input" type="TextItem" cardinality="one-or-more"/>
+  <port name="track" direction="output" type="Track" cardinality="one"/>
+  <child name="item" cardinality="one-or-more">
+    <field name="id" type="id" required="true"/>
+    <field name="text" type="string" required="true"/>
+    <field name="during" type="SelectionSet|ProgramSpan" consume="each"/>
+    <field name="x" type="number"/>
+    <field name="y" type="number"/>
+    <field name="width" type="number"/>
+    <field name="height" type="number"/>
+    <field name="font" type="string"/>
+    <field name="size" type="number"/>
+    <field name="weight" type="number"/>
+    <field name="lineHeight" type="number"/>
+    <field name="letterSpacing" type="number"/>
+    <field name="color" type="string"/>
+    <field name="background" type="string"/>
+    <field name="uppercase" type="boolean"/>
+  </child>
+</kernel>
