@@ -36,6 +36,13 @@
       source={host}
       sourceWindow="5s .. 10s"
     />
+
+    <join
+      after="intro"
+      overlap="500ms"
+      audio="crossfade"
+      visual="dissolve"
+    />
   </speech-program>
 
   <media-track id="aroll">
@@ -46,10 +53,7 @@
     />
   </media-track>
 
-  <film
-    basis={voice.production}
-    semantic={voice.map}
-  >
+  <film program={voice.program}>
     <track ref={aroll.track}/>
   </film>
 

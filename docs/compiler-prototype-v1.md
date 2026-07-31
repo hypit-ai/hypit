@@ -128,10 +128,12 @@ The following are not silently approximated:
 6. VLM, bbox and visual tracking. They are explicitly outside SVML v1's semantic
    spine and may later exist as evidence extensions or HTML post-processing.
 7. Decoupled Basis Production and Location. Replace shared structural cuts with
-   Script Surface v2 independent Segment endpoints; validate `2M + 2N`; prove both
-   hard-cut and crossfade Basis Components through one `TemporalBasisProduction`
-   ABI; import a Locator Component that outputs SemanticMap; and require Film to
-   select both matching outputs explicitly.
+   Script Surface v2 independent Segment endpoints; validate `2M + 2N`; prove
+   mixed hard-cut, gap and crossfade `JoinSpec` values through one ordinary
+   `speech-assemble` Basis Component, then prove a genuinely different Basis
+   implementation through the same `TemporalBasisProduction` ABI; import a
+   Locator Component that outputs SemanticMap; and require Film, after Composite
+   expansion, to select both matching outputs explicitly.
 8. Flat Track ABI. Make every Track output absolute ProgramSpace visual/audio
    contributions, prohibit Track input ports, and keep Film as the only `Track[]`
    consumer. No public VisualSurface, VisualTree, AudioTree or Track Aggregator is
