@@ -1,11 +1,20 @@
 <svml version="1">
   <import from="./pinned-image.svk"/>
   <import from="./artifact-film.svk"/>
+  <import from="../../../stdlib/speech-assemble.svk"/>
+  <import from="../../../stdlib/speech-locator.svk"/>
 
   <script>
     <segment id="main">Hello.</segment>
   </script>
 
+  <audio id="voice-audio" src="./alignment.json"/>
+  <alignment id="alignment" src="./alignment.json"/>
+  <speech-assemble id="speech" fps="30">
+    <segment id="main" script={script.segment.main} audio={voice-audio} sourceWindow="0s .. 1s"/>
+  </speech-assemble>
+  <speech-locator id="location" script={script} basis={speech.production} evidence={alignment}/>
+
   <pinned-image id="poster" prompt="A pinned result; never call a provider."/>
-  <artifact-film id="film" image={poster.image}/>
+  <artifact-film id="film" image={poster.image} basis={speech.production} semantic={location.map}/>
 </svml>

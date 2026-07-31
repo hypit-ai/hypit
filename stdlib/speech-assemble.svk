@@ -1,0 +1,23 @@
+<kernel name="speech-assemble" abi="1" implementation="./runtime/speech-assemble.mjs">
+  <param name="fps" type="number" default="30"/>
+  <param name="defaultJoin" style="default-join" type="string" default="cut"/>
+  <param name="defaultJoinDuration" style="default-join-duration" type="string" default="0ms"/>
+  <port name="production" direction="output" type="TemporalBasisProduction" cardinality="one"/>
+  <port name="facets.visual" direction="output" type="ProgramBoundVideoSequence" cardinality="zero-or-one"/>
+  <port name="segment.*.visual" direction="output" type="ProgramBoundVideo" cardinality="zero-or-one"/>
+  <port name="segment.*.audio" direction="output" type="ProgramBoundAudio" cardinality="one"/>
+  <child name="segment" cardinality="one-or-more">
+    <field name="id" type="id" required="true"/>
+    <field name="script" type="ScriptSegment" required="true"/>
+    <field name="visual" type="Video"/>
+    <field name="audio" type="Audio" required="true"/>
+    <field name="sourceWindow" type="string" required="true"/>
+  </child>
+  <child name="join" cardinality="zero-or-more">
+    <field name="after" type="id" required="true"/>
+    <field name="overlap" type="string"/>
+    <field name="gap" type="string"/>
+    <field name="audio" type="string"/>
+    <field name="visual" type="string"/>
+  </child>
+</kernel>

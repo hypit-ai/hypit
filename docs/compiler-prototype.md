@@ -1,149 +1,151 @@
-# Early compiler prototype record
+# SVML v1 compiler implementation record
 
 Date: 2026-07-31
 
-This record describes an early executable slice of the source architecture. SVML
-has not been publicly released, and this implementation is not a prior language
-version or compatibility contract. The sole target remains the draft in
-`spec/script-surface-v1.md` and `spec/source-architecture-draft.md`.
-
-The slice predates the current independent-endpoint Basis/Locator contract. Its implemented
-Locate path still assumes globally monotonic words and one shared cut between
-adjacent Segments. The current architecture instead requires a selected
-`TemporalBasisProduction` plus an imported Locator Component whose
-`ExactSemanticMap` covers `2M + 2N` identities. That is a declared next
-implementation boundary, not behavior already provided by this prototype. The
-prototype will be replaced directly.
+This record describes the executable v1 slice. SVML has not been publicly
+released; the removed shared-cut Speech Spine prototype is not a compatibility
+contract. The implementation targets `spec/script-surface-v1.md` and
+`spec/source-architecture-draft.md` directly.
 
 ## Outcome
 
-One SVML source closure now deterministically produces all three useful views:
+One source closure deterministically produces all author and output views:
 
 ```text
 check/plan  → svml.plan.v1
 canvas      → svml.canvas-view.v1
-timeline    → svml.timeline-view.v1
-compile     → svml.hyperframes-document.v1 → HyperFrames HTML
+estimate    → EstimatedSemanticMap → preview TemporalBinding
+timeline    → exact TemporalBinding → svml.timeline-view.v1
+compile     → flat Track[] → svml.hyperframes-document.v1 → HTML
+render      → HyperFrames browser recording → MP4
 ```
 
-The compiler does not contain special branches for `ranking-column`,
-`broll-track`, `media-track`, `caption-track` or `film`. Each is an imported
-`.svk` manifest plus an isolated projector. The only privileged compiler concepts
-in this slice are source parsing, values/references, Script/Locate, the Component ABI,
-Plan reachability and the HyperFrames target ABI.
+The compiler has no branches for `speech-assemble`, `speech-locator`,
+`media-track`, `ranking-column`, `broll-track`, `caption-track` or `film`.
+Those names are imported Components. Privileged compiler concepts stop at source
+parsing, Script/SemanticIndex, typed Plan and reachability, Basis/Map validation,
+TemporalBinding, Component ABI isolation, flat Track validation, lock/digests and
+the HyperFrames target ABI.
 
-## Real-video acceptance
+## Architecture contracts implemented
 
-The acceptance source is `examples/regen-ranking/regen-ranking.svml`. It uses the
-exact pinned artifacts from:
+### Script and time
 
-- production Project `cmrs0yofw00042tlz2t0ygwaw`;
-- Canvas `cmrx7771b00052ts5koz1yy7e`;
-- Job `cmrxqbub800012tjoi2ev2u24`;
-- frozen final SHA-256
-  `986c2b4f81381e5c5ab6df3c7b58f8bcc5324f9ae11ce820ed1cd8e5ee74c8b8`.
+- exactly one readable Script and one ordered Narrative IR;
+- Role Cues, three text projections, Dual Text, literal-only Slots and source
+  ranges;
+- closed, crossing and disconnected Selections plus left/right-affine Moments;
+- independent start/end identities for every token and Segment;
+- canonical `2M + 2N` SemanticIndex ordering and digest;
+- `EstimatedSemanticMap` and `ExactSemanticMap` are distinct types;
+- exact Maps cover every identity, bind one `basisDigest`, preserve per-Segment
+  order and the two cross-Segment monotonic constraints;
+- zero/negative resolved Selections fail rather than being repaired by a
+  consumer.
 
-The production system was inspected read-only through the public `hypit` CLI.
-No Canvas Run and no image/video/audio generation task was submitted. Alignment
-evidence was recovered from the already pinned speech audio and the frozen result.
+### Basis and Locator
 
-Current deterministic output:
+- `speech-assemble.svk` emits one validated `TemporalBasisProduction`, program
+  audio, alignment subjects, source maps and program-bound visual/audio facets;
+- hard cut, gap and overlap are per-boundary author inputs; audio cut/crossfade
+  and visual cut/dissolve are independent choices;
+- adjacent Segment endpoints may coincide, overlap or have a gap without sharing
+  identity;
+- `media-basis.svk` proves a precomposed medium can satisfy the same public ABI;
+- `speech-locator.svk` explicitly consumes Script, Basis production and typed
+  Alignment Evidence, then emits an exact Map;
+- a capability-profile Locator can emit the same typed Map through a verified
+  Artifact binding;
+- Basis outcome identity, production provenance and SemanticMap identity use
+  separate digests.
 
-| Contract | Result |
-|---|---:|
-| Canvas | 27 stable nodes, 29 typed edges |
-| Master clock | 1080 × 1920, 30 fps, 1083 frames |
-| Timeline | 155 visual fragments, 14 audio fragments |
-| Audio parity | APSNR 174.207 / 174.208 dB |
-| Visual parity | aggregate SSIM 0.949835 |
-| B-roll cuts | reference frame boundaries reproduced |
-| Syllable estimate | 36.267 s vs 36.1 s measured (0.46% error) |
+### Source closure and Components
 
-The SSIM result compares separate browser/codec rendering paths and is therefore
-not expected to be byte-identical. Frame count, program duration, semantic
-Selection ranges, B-roll cut frames and audio are asserted independently.
-
-## Implemented contracts
-
-### Source and Script
-
-- exactly one `<script>` per `.svml`;
-- CRLF/CR normalization to LF and Unicode NFC;
-- canonical Segment and temporal ids;
-- East Asian ideographs and kana tokenized individually;
-- turn-scoped Role Cues and three text projections;
-- Dual Text caption atom mapped to its full speech span;
-- closed Selection occurrences, disconnected Selection sets and Moments;
-- marker endpoint affinity, including right-default `@x!` and left `~@x!`;
-- parse-first literal Slot binding that cannot inject Script syntax;
-- malformed reserved `<`, `@`, `${` or escape syntax fails closed.
-- conservative canonical Script formatting with semantic round-trip and
-  idempotence guards.
-
-### Source closure
-
-- transitive, cycle-checked `.svc` imports;
+- transitive cycle-checked `.svc` imports and portable module identity;
 - typed `.svs` classes with Component default → classes → instance precedence;
-- whole-attribute references with no Prompt interpolation;
-- root reachability, fan-out and unused declaration elimination;
-- identity independent of line number, import order and local alias;
-- execution digest separate from stable identity;
-- content-addressed material staging and exact lock verification.
+- nested public child fields may be styled, while ports/topology stay outside
+  SVS;
+- whole-attribute references, type/cardinality checking and fan-out;
+- stable instance identity independent of line, alias and source position;
+- execution digests include implementation, effective parameters and transitive
+  material/Artifact hashes;
+- `composite-v1` performs finite, non-recursive, typed expansion with stable
+  internal ids, explicit exports, expansion digests and lock records;
+- only `composite-v1` may expand Plan instances; ordinary projectors cannot
+  create hidden calls.
 
-### Runtime and lowering
+### Isolated lowering and Track/Film
 
-- `.svk` manifest ports, parameter schemas and implementation hashes;
-- recursive child-content schemas, child cardinality and field/reference types;
-- explicit Selection/Moment `one`, `each` or `set` consumption enforced by the
-  isolated ABI rather than guessed from a Track name;
-- capability-profile Plan instances resolved only through exact
-  `svml.artifacts.v1` bindings; the compiler has no implicit provider fallback;
-- one child process and restricted VM realm per projection;
-- no network, wall clock, ambient random source, Node builtin import, `process`,
-  `require`, dynamic import or global DOM;
-- pure JSON input/output, execution timeout and memory limit;
-- scoped CSS and rejection of active/unscoped markup;
-- integer half-open frame ranges lowered safely to HyperFrames seconds;
-- separate flat visual and audio fragments, global visual `z`, presentation priority,
-  audio buses and explicit media time mapping;
-- Item/Present intersection without restarting source time;
-- B-roll visual crossfade independent of source audio;
-- Film as the unique reachable root and current prototype master-clock owner. The
-  architecture draft moves clock creation to a selected Basis Component and leaves
-  Film as the sole `Track[]` consumer.
+- one restricted VM process per projector with JSON-only I/O;
+- no network, DOM, Node builtins, dynamic imports, wall clock or ambient random;
+- relative code imports remain inside the locked package root;
+- active HTML and unscoped CSS are rejected;
+- manifest-declared Selection/Moment `one`, `each` and `set` consumption;
+- all Track outputs are flat visual/audio/style arrays with validated half-open
+  Program ranges;
+- no Component may consume Track except the single reachable Composition root;
+- Present ranges intersect their parent Item and retain one source-time mapping;
+- same-z overlapping Presents fail, while different z values intentionally
+  layer without fake Track copies;
+- B-roll can own visual crossfade, source audio and transition SFX in one Track;
+- Basis audio, Track audio and visual contributions meet only in Film;
+- Film child order does not determine paint order; emitted HTML sorts visuals by
+  absolute `(z, stable id)`.
 
-## Deliberate next boundaries
+### Freeze and reproducibility
 
-The following are not silently approximated:
+`svml lock` executes the deterministic local Plan and records:
 
-1. Live Capability Host adapters for generation, STT and media probing.
-   Capability calls already remain typed Plan nodes and can be satisfied by
-   verified offline artifacts; no provider adapter or credential path exists yet.
-2. A live capability request adapter. Ordinary capability/pure Components must not
-   hide additional Plan calls. Reusable typed expansion belongs only in the proposed
-   `composite-v1` SVK profile; its internal instances remain visible in Plan/lock.
-3. A lossless whole-document CST and formatter. The implemented Script formatter
-   is deliberately conservative and refuses unsupported structural-line layouts.
-4. Package/registry resolution beyond local relative imports.
-5. Canvas UI layout and source edits projected back from Canvas. Canvas JSON
-   intentionally contains no authored `x/y`; layout belongs to the viewer.
-6. VLM, bbox and visual tracking. They are explicitly outside SVML v1's semantic
-   spine and may later exist as evidence extensions or HTML post-processing.
-7. Decoupled Basis Production and Location. Replace shared structural cuts with
-   Script Surface v1 independent Segment endpoints; validate `2M + 2N`; prove
-   mixed hard-cut, gap and crossfade `JoinSpec` values through one ordinary
-   `speech-assemble` Basis Component, then prove a genuinely different Basis
-   implementation through the same `TemporalBasisProduction` ABI; import a
-   Locator Component that outputs SemanticMap; and require Film, after Composite
-   expansion, to select both matching outputs explicitly.
-8. Flat Track ABI. Make every Track output absolute ProgramSpace visual/audio
-   contributions, prohibit Track input ports, and keep Film as the only `Track[]`
-   consumer. No public VisualSurface, VisualTree, AudioTree or Track Aggregator is
-   introduced.
-9. Composite SVK ABI. Parse and typecheck finite child iteration, stable internal
-   identity, port exports, recursion rejection and dual source maps; prove the
-   contract with `speech-program.svk` before enabling arbitrary packages.
+- source closure and Component manifest/implementation hashes;
+- Plan and Composite expansion digests;
+- material and capability Artifact hashes;
+- basis, production, SemanticIndex, Map, Locator and Evidence digests;
+- the complete anchor table and quantization policy;
+- ProgramSpace and canonical target digest.
 
-The next implementation milestone should be the typed request side of the
-Capability Host contract. A live provider adapter must not be enabled until the
-same request can be inspected and satisfied by a fake host without credentials.
+The compiler reports `sourceClosureVerified`, `artifactsVerified`,
+`temporalEvidenceVerified`, `lockVerified` and `reproducible` separately. A
+source-only lock cannot claim temporal reproducibility. A full frozen lock must
+match the complete compile outcome.
+
+## Executable acceptance fixtures
+
+| Fixture | What it proves | Current result |
+|---|---|---:|
+| Regen Ranking | real pinned ranking + B-roll production | 29 nodes, 33 edges, 1083 frames, 153 visual, 14 audio |
+| Flat Track Launch | complete public v1 author surface | 25 nodes, 29 edges, 1083 frames, 154 visual, 8 audio |
+| Composite Speech Program | transparent high-level author component | 1 expansion, 4 instances, 285 frames |
+| Media Basis | alternative Basis producer | same Locator/Film ABI, 30 frames |
+| Capability Locator | typed exact Map as frozen Artifact | same Map validation path |
+
+The Regen source uses pinned artifacts from production Project
+`cmrs0yofw00042tlz2t0ygwaw`, Canvas `cmrx7771b00052ts5koz1yy7e` and Job
+`cmrxqbub800012tjoi2ev2u24`. The historical final SHA-256 is
+`986c2b4f81381e5c5ab6df3c7b58f8bcc5324f9ae11ce820ed1cd8e5ee74c8b8`.
+They were recovered read-only; no Canvas run or media generation was submitted.
+
+The final browser/codec comparison records aggregate visual SSIM `0.965800` and
+audio APSNR `174.207 / 174.208 dB`. Both videos are 1080×1920, 30 fps and exactly
+36.1 seconds. Frame count, semantic Selection ranges,
+B-roll boundaries and audio were asserted separately because different browser
+and codec paths are not expected to be byte-identical.
+
+## Deliberately external or still narrow
+
+The following are not silently approximated by the compiler:
+
+1. Live provider, credential, queue, retry and CAS adapters. Those belong to the
+   External Runtime Host. Current capability tests use exact offline Artifact
+   bindings only.
+2. Package/registry resolution beyond local relative imports and lock records.
+3. A lossless whole-document CST formatter. Script formatting is implemented
+   conservatively and fails closed when round-trip identity is uncertain.
+4. Canvas UI layout and reverse authoring edits. Canvas JSON is a view and
+   intentionally contains no authored node coordinates.
+5. VLM, bbox, face tracking or visual reverse-location. They are outside the v1
+   semantic locating model and may be post-processing extensions.
+6. Production browser hosting and recording. The CLI runs the local HyperFrames
+   renderer, while deploy/runtime orchestration remains a separate service.
+
+These are product/runtime extensions, not missing alternate authoring truths in
+SVML source.

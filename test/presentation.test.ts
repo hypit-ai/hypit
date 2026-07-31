@@ -4,11 +4,10 @@ import { fileURLToPath } from "node:url";
 import { compileSource } from "../src/compiler.js";
 import type { VisualFragment } from "../src/runtime-contract.js";
 
-test("Present ranges intersect the Item, overlap by layer, and keep one source-time map", async () => {
+test("Present ranges intersect the Item, overlap by absolute z, and keep one source-time map", async () => {
   const fixture = fileURLToPath(new URL("./fixtures/presentation/", import.meta.url));
   const compilation = await compileSource({
     file: `${fixture}/main.svml`,
-    evidenceFile: `${fixture}/alignment.json`,
   });
   const visuals = compilation.projections.get("aroll")?.visuals ?? [];
   assert.equal(visuals.length, 3);
@@ -16,13 +15,13 @@ test("Present ranges intersect the Item, overlap by layer, and keep one source-t
     visuals.map((fragment) => [
       fragment.startFrame,
       fragment.endFrameExclusive,
-      fragment.layer,
+      fragment.z,
       fragment.mediaStartSec,
     ]),
     [
-      [60, 90, 0, 2],
-      [0, 36, 10, 0],
-      [30, 60, 20, 1],
+      [60, 90, 200, 2],
+      [0, 36, 210, 0],
+      [30, 60, 220, 1],
     ],
   );
   assert.equal(visuals[1]?.style?.["border-radius"], "50%");
@@ -38,11 +37,18 @@ test("Present ranges intersect the Item, overlap by layer, and keep one source-t
   );
 });
 
+test("a Present with no parent intersection fails instead of disappearing", async () => {
+  const fixture = fileURLToPath(new URL("./fixtures/presentation/", import.meta.url));
+  await assert.rejects(
+    compileSource({ file: `${fixture}/empty-present.svml` }),
+    /presentation_empty/u,
+  );
+});
+
 test("B-roll crossfade extends only the visual surfaces and leaves source audio independent", async () => {
   const fixture = fileURLToPath(new URL("./fixtures/collision/", import.meta.url));
   const compilation = await compileSource({
     file: `${fixture}/main.svml`,
-    evidenceFile: `${fixture}/alignment.json`,
   });
   const broll = compilation.projections.get("broll");
   const visuals = (broll?.visuals ?? []) as VisualFragment[];
@@ -59,7 +65,6 @@ test("temporal one/each cardinality is declared by the Kernel contract", async (
   const fixture = fileURLToPath(new URL("./fixtures/disconnected/", import.meta.url));
   const each = await compileSource({
     file: `${fixture}/each.svml`,
-    evidenceFile: `${fixture}/alignment.json`,
   });
   assert.equal(each.projections.get("media")?.visuals?.length, 2);
   const media = each.plan.kernels.find((kernel) => kernel.name === "media-track");
@@ -67,7 +72,6 @@ test("temporal one/each cardinality is declared by the Kernel contract", async (
 
   const set = await compileSource({
     file: `${fixture}/set.svml`,
-    evidenceFile: `${fixture}/alignment.json`,
   });
   assert.deepEqual(set.projections.get("styles")?.diagnostics, [{
     code: "selection_set_count",
@@ -77,8 +81,17 @@ test("temporal one/each cardinality is declared by the Kernel contract", async (
   await assert.rejects(
     compileSource({
       file: `${fixture}/one.svml`,
-      evidenceFile: `${fixture}/alignment.json`,
     }),
     /temporal cardinality expected one, received 2/u,
   );
+});
+
+test("disconnected SelectionSet drives one caption style rule without losing occurrences", async () => {
+  const fixture = fileURLToPath(new URL("./fixtures/disconnected/", import.meta.url));
+  const compilation = await compileSource({ file: `${fixture}/captions.svml` });
+  const captions = compilation.projections.get("captions")?.visuals ?? [];
+  assert.ok(captions.length > 0);
+  assert.ok(captions.some((fragment) => /color:#ff0000/u.test(fragment.html ?? "")));
+  assert.ok(captions.some((fragment) => /color:#00ff00/u.test(fragment.html ?? "")));
+  assert.ok(captions.some((fragment) => /scale\(1\.1\)/u.test(fragment.html ?? "")));
 });

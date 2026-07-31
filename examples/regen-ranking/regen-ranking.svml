@@ -1,6 +1,7 @@
 <svml version="1">
 
-  <import from="../../stdlib/speech-spine.svk"/>
+  <import from="../../stdlib/speech-assemble.svk"/>
+  <import from="../../stdlib/speech-locator.svk"/>
   <import from="../../stdlib/media-track.svk"/>
   <import from="../../stdlib/ranking-column.svk"/>
   <import from="../../stdlib/broll-track.svk"/>
@@ -61,17 +62,20 @@
   <audio id="ranking-appear" src="./assets/ranking-appear.wav"/>
   <audio id="ranking-move" src="./assets/ranking-move.wav"/>
   <audio id="background-music" src="./assets/background.mp3"/>
+  <alignment id="alignment" src="./evidence/alignment.json"/>
 
-  <speech-spine id="speech">
-    <segment id="scene-1" script={script.segment.scene-1} visual={avatar-1} audio={avatar-1-audio}/>
-    <segment id="scene-2" script={script.segment.scene-2} visual={avatar-2} audio={avatar-2-audio}/>
-    <segment id="scene-3" script={script.segment.scene-3} visual={avatar-3} audio={avatar-3-audio}/>
-  </speech-spine>
+  <speech-assemble id="voice" fps="30" defaultJoin="cut">
+    <segment id="scene-1" script={script.segment.scene-1} visual={avatar-1} audio={avatar-1-audio} sourceWindow="0s .. 12.033333333333333s"/>
+    <segment id="scene-2" script={script.segment.scene-2} visual={avatar-2} audio={avatar-2-audio} sourceWindow="0s .. 12.033333333333333s"/>
+    <segment id="scene-3" script={script.segment.scene-3} visual={avatar-3} audio={avatar-3-audio} sourceWindow="0s .. 12.033333333333333s"/>
+  </speech-assemble>
+
+  <speech-locator id="location" script={script} basis={voice.production} evidence={alignment}/>
 
   <media-track id="base" z="20">
-    <item id="scene-1" source={speech.segment.scene-1.visual} fit="cover"/>
-    <item id="scene-2" source={speech.segment.scene-2.visual} fit="cover"/>
-    <item id="scene-3" source={speech.segment.scene-3.visual} fit="cover"/>
+    <item id="scene-1" source={voice.segment.scene-1.visual} fit="cover"/>
+    <item id="scene-2" source={voice.segment.scene-2.visual} fit="cover"/>
+    <item id="scene-3" source={voice.segment.scene-3.visual} fit="cover"/>
   </media-track>
 
   <ranking-column
@@ -128,6 +132,7 @@
   <caption-track
     id="captions"
     script={script}
+    semantic={location.map}
     z="500"
     x="0.37"
     y="0.54"
@@ -148,7 +153,8 @@
 
   <film
     id="regen-ranking"
-    speech={speech.speech}
+    basis={voice.production}
+    semantic={location.map}
     width="1080"
     height="1920"
     fps="30"

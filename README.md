@@ -1,56 +1,60 @@
 # SVML
 
 Semantic Video Markup Language is a semantic source language for information-flow
-video. Script creates stable semantic addresses; a Composition selects one
-content-addressed ProgramBasis and one imported Locator Component whose SemanticMap
-binds those addresses to that basis; Track Components then lower the program into
-one deterministic HyperFrames document.
+video. Script creates stable semantic addresses. A Composition selects one
+content-addressed `ProgramBasis` and one exact `SemanticMap`; flat Track
+Components then lower every audiovisual contribution into one deterministic
+HyperFrames HTML document.
 
 ```text
-.svml + .svc + .svs + .svk + lock + evidence
-                         │
-                         ├─ Plan IR ─────────────────────> Canvas view
-                         ├─ Basis + SemanticMap ─────────> TemporalBinding
-                         ├─ TemporalBinding ─────────────> Timeline view
-                         └─ flat Track[] ────────────────> HyperFrames HTML
+.svml + transitive .svk/.svs/.svc imports + lock + evidence
+        │
+        ├─ typed Plan IR ─────────────────────────────> Canvas view
+        ├─ Basis Producer ─────> TemporalBasisProduction
+        ├─ Locator ────────────> ExactSemanticMap
+        ├─ Basis + Map ────────> TemporalBinding ─────> Timeline view
+        └─ flat Track[] ───────> Composition ─────────> HyperFrames HTML
 ```
 
-Canvas and Timeline are views of the same source closure. They are not additional
-authoring truths. Provider tasks, pins, takes and caches are runtime state and do
-not enter the source language.
+Canvas and Timeline are views of the same source closure, not additional
+authoring truths. Provider tasks, pins, takes, caches and queue state belong to a
+Runtime Host and do not enter the source language.
 
-## Current prototype
+## Implemented v1 slice
 
-The repository contains a strict TypeScript compiler and an intentionally small
-stdlib. The deterministic slice is working end to end:
+The TypeScript compiler and local standard library implement the current v1
+architecture end to end:
 
-- an early Script parser with dialogue, speech and caption projections;
-- closed, possibly disconnected Selection sets and zero-width Moments;
-- `.svc` content modules and typed `.svs` parameter classes;
-- stable Plan identities, separate execution digests and a verified `svml.lock`;
-- isolated `.svk` component lowering with scoped CSS and a JSON-only ABI;
-- typed `.svk` ports, parameters and recursive child-content schemas;
+- readable Script with Role Cues, Dual Text, Slots, closed/disconnected
+  Selections and zero-width Moments;
+- an exact `SemanticIndex` with independent word and Segment endpoints
+  (`2M + 2N` identities);
+- replaceable `TemporalBasisProduction` and `ExactSemanticMap` Components,
+  validated and bound before any Track lowering;
+- hard cut, gap and audio/visual crossfade joins with distinct source-to-program
+  maps;
+- typed `.svc` content modules and `.svs` classes, including nested Component
+  fields;
+- stable Plan identity, separate execution digests and a full temporal
+  `svml.lock`;
+- isolated `.svk` projectors, verified offline capability artifacts and finite,
+  auditable `composite-v1` expansion;
 - manifest-enforced temporal `one` / `each` / `set` consumption;
-- a temporary Speech Spine prototype, media/presentation mapping, ranking, B-roll,
-  captions, text and audio;
-- frame-exact Located IR, Canvas/Timeline views and HyperFrames HTML.
+- flat media, ranking, B-roll, caption, text and audio Tracks in one absolute
+  ProgramSpace;
+- Film as the only `Track[]` consumer and HyperFrames HTML as the sole formal
+  video compilation target.
 
-The current runtime deliberately has no live generation provider host. A
-`profile="capability-v1"` Component remains visible in Plan, but compilation requires
-an exact, content-verified `svml.artifacts.v1` binding for its outputs and never
-falls back to a provider call. Direct existing `Image`, `Video` and `Audio` values
-work as usual. This keeps the first end-to-end reference deterministic while
-preserving the eventual capability boundary.
+There is no live provider adapter in this repository. A reachable
+`profile="capability-v1"` Component must be satisfied by an exact,
+content-verified `svml.artifacts.v1` binding; compilation never falls back to a
+provider call. Existing local `Image`, `Video`, `Audio` and Evidence values work
+directly.
 
-SVML has not been publicly released, so the repository does not preserve the early
-prototype as a compatibility contract. The sole v1 target is the architecture draft
-and Script Surface v1: a replaceable Basis Component, an imported Locator Component,
-and `2M + 2N` independent Segment/word endpoint identities. The executable prototype
-still uses shared adjacent Segment cuts and a temporary `speech-spine`; it is an
-incomplete implementation scheduled for direct replacement, not an older language
-version that v1 must support.
+SVML has not been publicly released. There is no legacy v1 compatibility layer:
+the current architecture and Script Surface are the only v1 target.
 
-## Commands
+## Quick start
 
 Requires Node.js 22 and pnpm.
 
@@ -61,70 +65,73 @@ pnpm test
 pnpm build
 
 pnpm svml check examples/regen-ranking/regen-ranking.svml
-pnpm svml fmt examples/regen-ranking/regen-ranking.svml --check
+pnpm svml script examples/regen-ranking/regen-ranking.svml --out narrative.json
+pnpm svml plan examples/regen-ranking/regen-ranking.svml --out plan.json
 pnpm svml canvas examples/regen-ranking/regen-ranking.svml --out canvas.json
-pnpm svml estimate examples/regen-ranking/regen-ranking.svml \
-  --out estimated-alignment.json
-pnpm svml timeline examples/regen-ranking/regen-ranking.svml \
-  --evidence examples/regen-ranking/evidence/alignment.json \
-  --out timeline.json
+pnpm svml estimate examples/regen-ranking/regen-ranking.svml --out estimate.json
+pnpm svml timeline examples/regen-ranking/regen-ranking.svml --out timeline.json
+
+# Produce a full frozen lock, including the selected Basis, Map and Evidence.
 pnpm svml lock examples/regen-ranking/regen-ranking.svml --out svml.lock
+
 pnpm svml compile examples/regen-ranking/regen-ranking.svml \
-  --evidence examples/regen-ranking/evidence/alignment.json \
   --lock svml.lock \
   --out build/index.html
 pnpm svml render build/index.html --out build/video.mp4
 ```
 
-`--artifacts` is needed only when the reachable Plan contains capability Components.
-`fmt` currently canonicalizes only the prototype Script body and refuses any rewrite
-whose reparsed semantic IR differs.
-`canvas` requires no timing or provider result. `estimate` deterministically
-creates provisional syllable-based alignment; `timeline` and `compile` consume
-either that preview evidence or measured Speech Spine evidence. The current
-prototype verifies source closure and bound capability artifacts. It does not yet
-claim complete temporal reproducibility because Evidence, Locator, ProgramBasis and
-SemanticMap digests are not all part of the executable lock path.
+`--artifacts` is required only when the reachable Plan contains capability
+Components. Exact alignment is an explicit typed value referenced by the
+Locator in source; it is not an ambient CLI argument. `estimate` returns an
+`EstimatedSemanticMap` for preview and cannot be supplied where final HTML
+requires an `ExactSemanticMap`.
 
-## Reference implementation
+`fmt` currently canonicalizes only the Script body and refuses a rewrite if the
+reparsed semantic IR differs. `canvas` needs no materialized time evidence.
+`timeline`, `compile` and `lock` execute the deterministic local Plan and validate
+the selected Basis/Map pair.
 
-[`examples/regen-ranking/regen-ranking.svml`](examples/regen-ranking/regen-ranking.svml)
-reconstructs a real production video using the temporary Speech Spine prototype,
-a five-item ranking track, five B-roll items, captions, title, music and sound effects. The media files
-are intentionally gitignored; their production provenance and frozen assertions
-are recorded in
-[`examples/regen-ranking/reference.json`](examples/regen-ranking/reference.json).
-The regression test compiles the example to 27 Canvas nodes, 29 typed topology
-edges, 1083 frames, 155 visual fragments and 14 audio fragments.
-The default syllable estimator predicts 36.267 seconds for the frozen 36.1-second
-speech program (0.46% duration error); it remains preview evidence, not measured
-alignment.
+## Four source files
 
-[`examples/flat-track-launch/flat-track-launch.svml`](examples/flat-track-launch/flat-track-launch.svml)
-is the readable fixture for the v1 architecture target: separate Basis and
-Locator Components, Script Surface v1, continuous A-roll Present changes, B-roll
-transition audio, disconnected caption selections, absolute z and Film as the sole
-`Track[]` consumer. It is a draft fixture not yet accepted by the early compiler
-prototype.
+| Suffix | Responsibility |
+|---|---|
+| `.svml` | One film's Script, local values, Component calls, Tracks and Composition |
+| `.svk` | An importable Component vocabulary, public typed ABI and lowering |
+| `.svs` | Typed parameter classes for public Component parameters and fields |
+| `.svc` | Context-free reusable content values and content subgraphs |
 
-[`examples/composite-speech-program/minimal.svml`](examples/composite-speech-program/minimal.svml)
-and its adjacent `speech-program.svk` define the proposed `composite-v1` author
-surface: one transparent Component replaces repeated Basis/Locator wiring while
-both internal instances remain independently visible in Plan and lock. Its
-`SpeechProgram` output is only a typed alias bundle, per-Segment joins are author
-data consumed by one assembler, and the Component has no ambient document access.
+The compiler owns universal language laws. Libraries own replaceable vocabulary
+and algorithms. A Runtime Host owns effects, credentials, queues and storage.
+Canvas owns only a human-readable view.
 
-## Specification
+## Executable examples
 
-- [Script Surface v1](spec/script-surface-v1.md) — the sole draft target for the
-  human-readable Script, including independent Segment endpoints and `2M + 2N`.
-- [Source Architecture Draft](spec/source-architecture-draft.md) — the current
-  draft for `.svk` components, `.svs` parameter sheets, `.svc` content modules,
-  Script-dependent generation, five public output boundaries, `composite-v1`, flat
-  Tracks, and a Composition root.
-- [Compiler prototype record](docs/compiler-prototype.md) — implemented
-  boundaries, real-video evidence and remaining work.
-- [External Runtime Host Architecture Draft](docs/runtime-host-architecture-draft.md)
-  — portable runtime, Artifact, Effect/Receipt, Worker, queue, provider and
-  self-hosting boundaries; TemporalBasisProduction acquisition remains
-  intentionally deferred.
+- [`examples/regen-ranking/regen-ranking.svml`](examples/regen-ranking/regen-ranking.svml)
+  reconstructs a pinned production video with five ranking items, five B-roll
+  items, captions, title, BGM and sound effects. It compiles to 29 Plan nodes,
+  33 typed edges, 1083 frames, 153 visual fragments and 14 audio fragments.
+- [`examples/flat-track-launch/flat-track-launch.svml`](examples/flat-track-launch/flat-track-launch.svml)
+  is the comprehensive language fixture: explicit Basis/Locator, nested SVS,
+  overlapping Presents, manual ProgramSpans, a Moment, B-roll source audio and
+  transition SFX, disconnected caption styling and absolute z.
+- [`examples/composite-speech-program/minimal.svml`](examples/composite-speech-program/minimal.svml)
+  proves that an author-facing `speech-program` can hide repetitive wiring while
+  expanding to separately auditable `voice::basis` and `voice::locator`
+  instances. The compiler has no special knowledge of that Component name.
+- [`examples/media-basis`](test/fixtures/media-basis) proves that precomposed
+  media can implement the same Basis contract and reuse the same Locator and
+  Composition path.
+
+The local media used by the examples are already-materialized artifacts; no
+generation provider is invoked by tests or compilation.
+
+## Specification and implementation record
+
+- [Script Surface v1](spec/script-surface-v1.md)
+- [Source Architecture v1 draft](spec/source-architecture-draft.md)
+- [Compiler implementation record](docs/compiler-prototype.md)
+- [External Runtime Host architecture](docs/runtime-host-architecture-draft.md)
+
+VLM, bbox, face tracking and visual reverse-location are intentionally outside
+SVML v1. They may be implemented later as explicit post-processing extensions;
+the semantic audio timeline remains the language's locating foundation.

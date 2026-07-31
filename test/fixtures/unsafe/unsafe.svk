@@ -1,3 +1,5 @@
 <kernel name="unsafe" abi="1" root="true" implementation="./unsafe.mjs">
+  <port name="basis" direction="input" type="TemporalBasisProduction" cardinality="one"/>
+  <port name="semantic" direction="input" type="ExactSemanticMap" cardinality="one"/>
   <port name="document" direction="output" type="HyperframesDocument" cardinality="one"/>
 </kernel>

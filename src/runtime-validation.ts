@@ -149,7 +149,7 @@ function normalizeSurface(value: unknown): void {
     }
     const audioIds = (surface.audios ?? []).map((fragment) => fragment.id);
     if (new Set(audioIds).size !== audioIds.length) {
-      fail("kernel_audio_duplicate_id", "A projected audio tree repeats a fragment id.");
+      fail("kernel_audio_duplicate_id", "A projected audio contribution set repeats a fragment id.");
     }
     const styles = Array.isArray(surface.styles) ? surface.styles : [];
     if (surface.visuals) surface.visuals = surface.visuals.map((fragment) =>

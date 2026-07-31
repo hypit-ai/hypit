@@ -23,6 +23,9 @@ export type SourceElement = {
   origin?: {
     file: string;
     localId?: string;
+    expansionDigest?: string;
+    callSite?: { file: string; start: number; end: number };
+    definitionSite?: { file: string; start: number; end: number };
   };
   parameterSources?: Record<string, ParameterSource[]>;
 };
@@ -37,7 +40,7 @@ export type SourceText = {
 export type SourceNode = SourceElement | SourceText;
 
 export type SourceModuleRecord = {
-  kind: "svml" | "svc" | "svs";
+  kind: "svml" | "svc" | "svs" | "svk";
   uri: string;
   contentHash: string;
   dependencies: string[];
@@ -50,6 +53,14 @@ export type SourceDocument = {
   scriptSource: string;
   scriptOffset: number;
   modules?: SourceModuleRecord[];
+  expansions?: Array<{
+    instanceId: string;
+    component: string;
+    manifestHash: string;
+    expansionDigest: string;
+    internalIds: string[];
+    exports: Record<string, string>;
+  }>;
 };
 
 export type ScriptAtom =
@@ -60,6 +71,9 @@ export type ScriptToken = {
   id: string;
   index: number;
   segmentId: string;
+  segmentTokenIndex: number;
+  startAnchorId: string;
+  endAnchorId: string;
   text: string;
   normalized: string;
   sourceStart: number;
@@ -69,7 +83,7 @@ export type ScriptToken = {
 export type MarkerBoundary = {
   tokenIndex: number;
   segmentId?: string;
-  structuralCut?: number;
+  structuralPosition: number;
 };
 
 export type SelectionOccurrence = {
@@ -98,11 +112,41 @@ export type MomentOccurrence = {
 export type ScriptSegment = {
   id: string;
   index: number;
+  startAnchorId: string;
+  endAnchorId: string;
   atoms: ScriptAtom[];
   tokenStart: number;
   tokenEnd: number;
   sourceStart: number;
   sourceEnd: number;
+};
+
+export type SemanticAnchorKind =
+  | "segment-start"
+  | "token-start"
+  | "token-end"
+  | "segment-end";
+
+export type SemanticAnchorIdentity = {
+  id: string;
+  kind: SemanticAnchorKind;
+  segmentId: string;
+  tokenId?: string;
+  segmentTokenIndex?: number;
+};
+
+export type SemanticIndex = {
+  contract: "svml.semantic-index.v1";
+  anchors: SemanticAnchorIdentity[];
+  tokens: Array<{
+    id: string;
+    segmentId: string;
+    segmentTokenIndex: number;
+    normalized: string;
+    startAnchorId: string;
+    endAnchorId: string;
+  }>;
+  digest: string;
 };
 
 export type CaptionAtom = {
@@ -121,11 +165,99 @@ export type NarrativeIR = {
   selections: Record<string, SelectionOccurrence[]>;
   moments: Record<string, MomentOccurrence[]>;
   captionAtoms: CaptionAtom[];
+  semanticIndex: SemanticIndex;
   projections: {
     dialogue: string;
     speech: string;
     caption: string;
   };
+};
+
+export type Rational = {
+  numerator: number;
+  denominator: number;
+};
+
+export type ProgramBasis = {
+  contract: "svml.program-basis.v1";
+  frameRate: Rational;
+  originFrame: 0;
+  durationFrames: number;
+  basisDigest: string;
+};
+
+export type ProgramPoint = {
+  basisDigest: string;
+  frame: number;
+};
+
+export type SemanticPointQuality = "estimated" | "derived" | "measured";
+
+export type SemanticAnchorPoint = {
+  identity: string;
+  point: ProgramPoint;
+  quality: SemanticPointQuality;
+};
+
+export type SemanticMapBase = {
+  semanticIndexDigest: string;
+  basisDigest: string;
+  anchors: SemanticAnchorPoint[];
+  evidenceDigests: string[];
+  locatorDigest: string;
+  quantizationPolicy: "nearest-frame";
+  captionCues?: AlignmentCaptionCue[];
+  mapDigest: string;
+};
+
+export type EstimatedSemanticMap = SemanticMapBase & {
+  contract: "svml.estimated-semantic-map.v1";
+};
+
+export type ExactSemanticMap = SemanticMapBase & {
+  contract: "svml.exact-semantic-map.v1";
+};
+
+export type SemanticMap = EstimatedSemanticMap | ExactSemanticMap;
+
+export type SourceToProgramMap = {
+  id: string;
+  sourceId: string;
+  sourceDigest: string;
+  sourceStartFrame: number;
+  sourceEndFrameExclusive: number;
+  programStartFrame: number;
+  programEndFrameExclusive: number;
+};
+
+export type ProgramAudioContribution = {
+  id: string;
+  sourceId: string;
+  sourceDigest: string;
+  source: string;
+  sourceMapId: string;
+  sourceStartFrame: number;
+  sourceEndFrameExclusive: number;
+  programStartFrame: number;
+  programEndFrameExclusive: number;
+  gain: number;
+  fadeInFrames?: number;
+  fadeOutFrames?: number;
+};
+
+export type TemporalBasisProduction = {
+  contract: "svml.temporal-basis-production.v1";
+  basis: ProgramBasis;
+  alignmentSubjects: Array<{
+    id: string;
+    sourceId: string;
+    sourceDigest: string;
+    sourceMapId: string;
+  }>;
+  sourceMaps: SourceToProgramMap[];
+  audio: ProgramAudioContribution[];
+  facets: Record<string, unknown>;
+  productionDigest: string;
 };
 
 export type AlignmentWord = {
@@ -183,6 +315,10 @@ export type LocatedCaptionCue = ProgramRange & {
 export type LocatedCaptionAtom = CaptionAtom & ProgramRange;
 
 export type LocatedScript = {
+  contract: "svml.temporal-binding.v1";
+  precision: "estimated" | "exact";
+  basisDigest: string;
+  semanticMapDigest: string;
   durationFrames: number;
   durationSec: number;
   fps: number;
@@ -196,7 +332,7 @@ export type LocatedScript = {
 
 export type PlanValue = {
   id: string;
-  type: "Image" | "Video" | "Audio" | "Text";
+  type: "Image" | "Video" | "Audio" | "Text" | "AlignmentEvidence";
   source?: string;
   value?: string;
   identity: string;
@@ -220,6 +356,11 @@ export type PlanInstance = {
   children: SourceNode[];
   dependencies: string[];
   executionDigest?: string;
+  expansionDigest?: string;
+  sourceMap?: {
+    callSite: { file: string; start: number; end: number };
+    definitionSite: { file: string; start: number; end: number };
+  };
 };
 
 export type PlanIR = {
@@ -232,7 +373,7 @@ export type PlanIR = {
     abiVersion: string;
     manifestHash: string;
     implementationHash: string;
-    profile: "isolated-projector-v1" | "capability-v1";
+    profile: "isolated-projector-v1" | "capability-v1" | "composite-v1";
     capability?: string;
     ports: Array<{
       name: string;
@@ -244,7 +385,7 @@ export type PlanIR = {
     parameters: Array<{
       name: string;
       styleName: string;
-      type: "string" | "number" | "boolean";
+      type: string;
       defaultValue?: AttributeValue;
     }>;
     children: Array<{
@@ -262,6 +403,7 @@ export type PlanIR = {
     }>;
   }>;
   root: string;
+  expansions: NonNullable<SourceDocument["expansions"]>;
   edges: Array<{
     from: string;
     to: string;

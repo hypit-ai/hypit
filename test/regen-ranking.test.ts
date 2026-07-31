@@ -20,7 +20,6 @@ test("regen ranking compiles to the frozen production timing contract", async ()
   ) as Reference;
   const compilation = await compileSource({
     file: `${example}/regen-ranking.svml`,
-    evidenceFile: `${example}/evidence/alignment.json`,
   });
 
   assert.equal(compilation.located.fps, reference.clock.fps);

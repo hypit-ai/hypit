@@ -16,11 +16,11 @@ test(".svc content DAG and .svs parameter classes bind into one source closure",
 
   assert.deepEqual(
     checked.plan.instances.map((instance) => instance.id).sort(),
-    ["brand.poster", "broll", "captions", "main-film", "speech"],
+    ["brand.poster", "broll", "captions", "location", "main-film", "speech"],
   );
   assert.deepEqual(
     checked.plan.values.map((value) => value.id).sort(),
-    ["avatar", "brand.logo"],
+    ["alignment", "avatar", "brand.logo", "voice-audio"],
   );
   const logo = checked.plan.values.find((value) => value.id === "brand.logo");
   assert.equal(logo?.localId, "logo");
@@ -42,7 +42,6 @@ test(".svc content DAG and .svs parameter classes bind into one source closure",
 
   const compilation = await compileSource({
     file,
-    evidenceFile: `${fixtures}/alignment.json`,
   });
   assert.match(compilation.html, /data-composition-id="main-film"/u);
   assert.match(compilation.html, /#112233/u);
@@ -75,10 +74,14 @@ test("svml.lock verifies the exact source closure and Kernel implementations", a
 
   const verified = await compileSource({
     file,
-    evidenceFile: `${fixtures}/alignment.json`,
     lockFile: lock,
   });
-  assert.equal(verified.lockVerified, true);
+  assert.equal(verified.sourceClosureVerified, true);
+  assert.equal(verified.lockVerified, false);
+  await writeFile(lock, `${JSON.stringify(verified.lock, null, 2)}\n`, "utf8");
+  const frozen = await compileSource({ file, lockFile: lock });
+  assert.equal(frozen.lockVerified, true);
+  assert.equal(frozen.lock.execution?.htmlDigest.length, 64);
 
   const changed = structuredClone(checked.lock);
   changed.kernels[0]!.implementationHash = "0".repeat(64);
@@ -86,7 +89,6 @@ test("svml.lock verifies the exact source closure and Kernel implementations", a
   await assert.rejects(
     compileSource({
       file,
-      evidenceFile: `${fixtures}/alignment.json`,
       lockFile: lock,
     }),
     (error: unknown) =>
@@ -109,7 +111,6 @@ test("asset staging uses content-addressed names and never overwrites equal base
   await mkdir(directory, { recursive: true });
   await compileSource({
     file: `${collision}/main.svml`,
-    evidenceFile: `${collision}/alignment.json`,
     outputFile: output,
   });
 

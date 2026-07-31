@@ -1,49 +1,40 @@
-# Composite Speech Program draft fixture
+# Composite Speech Program executable fixture
 
-This directory demonstrates the proposed, unimplemented `composite-v1` SVK
-profile.
+This directory proves the implemented `composite-v1` profile.
 
 - `minimal.svml` is the author-facing source.
-- `speech-program.svk` defines a callable Component that statically expands
-  `speech-assemble` and `speech-locator`.
-- `house.svs` configures only the Composite's public join shorthand.
+- `speech-program.svk` statically expands `speech-assemble` and
+  `speech-locator`.
+- `house.svs` configures only public Composite parameters.
+- `alignment.json` is explicit typed Evidence.
 
-For `<speech-program id="voice">`, canonical expansion creates the internal
-instances `voice::basis` and `voice::locator`. Their implementations, digests,
-Evidence and Artifacts remain independently visible in Plan and lock. The outer
-ports are aliases:
+For `<speech-program id="voice">`, expansion creates:
 
 ```text
-voice.program.production = voice::basis.production
-voice.program.semantic   = voice::locator.map
-voice.production         = voice::basis.production
-voice.map                = voice::locator.map
-voice.facets.visual      = voice::basis.facets.visual
+voice::basis    → TemporalBasisProduction + ProgramBoundVideoSequence
+       │
+       └──────────────> voice::locator → ExactSemanticMap
+
+voice.production   = voice::basis.production
+voice.map          = voice::locator.map
+voice.facets.visual = voice::basis.facets.visual
 ```
 
-`voice.program` is a typed port bundle whose fields alias the two internal
-outputs. It does not copy audio, facets, Evidence or Artifacts, and it does not
-replace the compiler's basis/map affinity check. The imported Film facade accepts
-the bundle as author-facing shorthand; after Composite expansion the Plan still
-contains the selected Basis and ExactSemanticMap separately.
+The two internal instances, implementation digests, Evidence dependencies and
+outputs remain visible in Plan and lock. The outer ports are aliases; the
+Composite does not copy Artifacts or merge execution boundaries.
 
-The default join and each `<join after="...">` are author data. They normalize to
-per-boundary `JoinSpec` values consumed by one `speech-assemble` instance; they do
-not select a language-level family or mode. `after` names a stable Segment id, and
-the following Segment comes from source order. A join cannot declare both `gap`
-and `overlap`.
-
-The v1 stdlib publishes `speech-program` as its chosen author surface. It remains
-an ordinary imported Composite, never a compiler keyword or a required singleton.
-Alternative Locators use explicit low-level wiring or another Composite instead
-of extending a closed `locator="..."` enum.
+`join` and `joinDuration` are author shorthand forwarded to one assembler. Each
+explicit `<join after="...">` may override the corresponding boundary. They do
+not select a compiler family or language-level mode.
 
 The bracket expression in `ports.script.segment[item.id]` is a stable id-keyed
-lookup, not a positional array lookup. The `for` iterates only over finite children
-declared at the call site.
+lookup over finite declared children, not positional indexing. The Composite
+receives Script and Evidence through explicit typed inputs and cannot read
+ambient document state.
 
-The Composite receives its Script through an explicit typed input. Reading
-`document.script` or any other ambient caller state is forbidden.
-
-The current compiler must reject or clearly report unsupported `composite-v1`;
-these files are architecture fixtures, not executable regression inputs.
+```sh
+pnpm svml check examples/composite-speech-program/minimal.svml
+pnpm svml compile examples/composite-speech-program/minimal.svml \
+  --out /tmp/svml-composite/index.html
+```

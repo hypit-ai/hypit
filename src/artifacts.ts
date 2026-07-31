@@ -8,9 +8,9 @@ import type { KernelProjection } from "./runtime-contract.js";
 import { sha256, stableJson } from "./util.js";
 
 type ArtifactOutput = {
-  type: "Image" | "Video" | "Audio" | "Text";
+  type: string;
   uri?: string;
-  value?: string;
+  value?: unknown;
   contentDigest: string;
 };
 
@@ -50,6 +50,16 @@ async function resolveOutput(
       fail("artifact_digest", "Text artifact contentDigest does not match its value.");
     }
     return { type: "Text", value: output.value, contentDigest: digest };
+  }
+  if (!["Image", "Video", "Audio"].includes(output.type)) {
+    if (output.uri !== undefined || output.value === undefined) {
+      fail("artifact_typed_value", `${output.type} artifact output requires value and forbids uri.`);
+    }
+    const digest = sha256(stableJson(output.value));
+    if (digest !== output.contentDigest) {
+      fail("artifact_digest", `${output.type} artifact contentDigest does not match its value.`);
+    }
+    return output.value as Record<string, unknown>;
   }
   if (typeof output.uri !== "string" || output.value !== undefined) {
     fail("artifact_media", `${output.type} artifact output requires uri and forbids value.`);

@@ -24,11 +24,12 @@ const VALUE_TYPES: Record<string, PlanValue["type"]> = {
   video: "Video",
   audio: "Audio",
   text: "Text",
+  alignment: "AlignmentEvidence",
 };
 
 function idOf(element: SourceElement): string {
   const id = element.attributes.id;
-  if (typeof id !== "string" || !/^[A-Za-z_][A-Za-z0-9_.-]*$/u.test(id)) {
+  if (typeof id !== "string" || !/^[A-Za-z_][A-Za-z0-9_.:-]*$/u.test(id)) {
     fail("plan_declaration_id", `<${element.name}> requires a stable id.`);
   }
   return id;
@@ -75,9 +76,17 @@ function scalarAccepts(type: string, value: AttributeValue): boolean {
   if (type === "number") return typeof value === "number" && Number.isFinite(value);
   if (type === "boolean") return typeof value === "boolean";
   if (type === "id") {
-    return typeof value === "string" && /^[A-Za-z_][A-Za-z0-9_.-]*$/u.test(value);
+    return typeof value === "string" && /^[A-Za-z_][A-Za-z0-9_.:-]*$/u.test(value);
   }
   if (type === "ProgramSpan" || type === "ProgramPoint") return typeof value === "string";
+  if (type === "duration") {
+    return typeof value === "string" && /^[+-]?\d+(?:\.\d+)?(?:ms|s)$/u.test(value);
+  }
+  if (type === "SourceRange") {
+    return typeof value === "string" && /^\s*\d+(?:\.\d+)?(?:ms|s)\s*\.\.\s*\d+(?:\.\d+)?(?:ms|s)\s*$/u.test(value);
+  }
+  const enumValues = /^enum\((.+)\)$/u.exec(type)?.[1]?.split(",");
+  if (enumValues) return typeof value === "string" && enumValues.includes(value);
   return false;
 }
 
@@ -144,7 +153,7 @@ function validateChild(
   }
 }
 
-function validateKernelShape(element: SourceElement, manifest: KernelManifest): void {
+export function validateKernelShape(element: SourceElement, manifest: KernelManifest): void {
   const inputPorts = manifest.ports.filter((port) => port.direction === "input");
   const allowed = new Set([
     "id",
@@ -338,6 +347,17 @@ export function buildPlan(
       effectiveParameters,
       children: element.children,
       dependencies: [...new Set(dependencies)],
+      ...(element.origin?.expansionDigest
+        ? { expansionDigest: element.origin.expansionDigest }
+        : {}),
+      ...(element.origin?.callSite && element.origin.definitionSite
+        ? {
+            sourceMap: {
+              callSite: element.origin.callSite,
+              definitionSite: element.origin.definitionSite,
+            },
+          }
+        : {}),
     });
   }
 
@@ -482,6 +502,39 @@ export function buildPlan(
   };
   visit(root);
   const reachableInstances = instances.filter((instance) => reachable.has(instance.id));
+  const reachableEdges = edges.filter((edge) => reachable.has(edge.from) && reachable.has(edge.to));
+  const rootManifest = kernels.get(rootCandidates[0]!.kernel)!;
+  const basisInputs = rootManifest.ports.filter((port) =>
+    port.direction === "input" && port.type.split("|").includes("TemporalBasisProduction"));
+  const semanticInputs = rootManifest.ports.filter((port) =>
+    port.direction === "input" && port.type.split("|").includes("ExactSemanticMap"));
+  if (
+    basisInputs.length !== 1
+    || basisInputs[0]?.cardinality !== "one"
+    || semanticInputs.length !== 1
+    || semanticInputs[0]?.cardinality !== "one"
+  ) {
+    fail(
+      "composition_temporal_contract",
+      `Composition Kernel "${rootManifest.name}" must select exactly one TemporalBasisProduction and one ExactSemanticMap.`,
+    );
+  }
+  const trackEdges = reachableEdges.filter((edge) => edge.type === "Track");
+  const illegalTrackConsumer = trackEdges.find((edge) => edge.to !== root);
+  if (illegalTrackConsumer) {
+    fail(
+      "track_terminal_contract",
+      `Track "${illegalTrackConsumer.from}" is consumed by non-Composition instance "${illegalTrackConsumer.to}".`,
+    );
+  }
+  const duplicateTrack = trackEdges.find((edge, index) =>
+    trackEdges.findIndex((candidate) => candidate.from === edge.from && candidate.to === edge.to) !== index);
+  if (duplicateTrack) {
+    fail(
+      "duplicate_track_in_composition",
+      `Composition "${root}" references Track "${duplicateTrack.from}" more than once.`,
+    );
+  }
   const usedKernels = new Set(reachableInstances.map((instance) => instance.kernel));
   return {
     contract: "svml.plan.v1",
@@ -503,7 +556,8 @@ export function buildPlan(
       }))
       .sort((left, right) => left.name.localeCompare(right.name)),
     root,
-    edges: edges.filter((edge) => reachable.has(edge.from) && reachable.has(edge.to)),
+    expansions: document.expansions ?? [],
+    edges: reachableEdges,
   };
 }
 
