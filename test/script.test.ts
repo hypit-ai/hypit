@@ -1,11 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AlignmentEvidence } from "../src/model.js";
+import type { AlignmentEvidence, NarrativeIR } from "../src/model.js";
 import { locateScript } from "../src/script/locate.js";
 import { estimateAlignment } from "../src/script/estimate.js";
 import { parseScript } from "../src/script/parse.js";
 import { formatDocumentScript } from "../src/format.js";
 import { parseDocumentSource } from "../src/source/parse-document.js";
+import {
+  createProgramBasis,
+  semanticMapFromAlignment,
+  validateSemanticMap,
+} from "../src/temporal.js";
+import { sha256, stableJson } from "../src/util.js";
+
+function locateAlignment(narrative: NarrativeIR, evidence: AlignmentEvidence) {
+  const basis = createProgramBasis({
+    fps: evidence.fps,
+    durationFrames: Math.round(evidence.durationSec * evidence.fps),
+    outcomeDigest: sha256(stableJson(evidence)),
+  });
+  const map = semanticMapFromAlignment(narrative, basis, evidence, { precision: "exact" });
+  assert.equal(map.contract, "svml.exact-semantic-map.v1");
+  return locateScript(narrative, basis, map);
+}
 
 test("Script Surface projects role, dual text, selections and moments", () => {
   const narrative = parseScript("fixture.svml", `
@@ -32,6 +49,130 @@ test("Script Surface projects role, dual text, selections and moments", () => {
   );
 });
 
+test("Script v1 builds independent 2M + 2N anchor identities", () => {
+  const narrative = parseScript("fixture.svml", `
+    <segment id="a">Alpha beta.</segment>
+    <segment id="b"/>
+    <segment id="c">Gamma.</segment>
+  `);
+  assert.equal(narrative.tokens.length, 3);
+  assert.equal(narrative.segments.length, 3);
+  assert.equal(narrative.semanticIndex.anchors.length, 2 * 3 + 2 * 3);
+  assert.deepEqual(
+    narrative.semanticIndex.anchors.map((anchor) => anchor.id),
+    [
+      "segment:a:start",
+      "segment:a:token:1:start",
+      "segment:a:token:1:end",
+      "segment:a:token:2:start",
+      "segment:a:token:2:end",
+      "segment:a:end",
+      "segment:b:start",
+      "segment:b:end",
+      "segment:c:start",
+      "segment:c:token:1:start",
+      "segment:c:token:1:end",
+      "segment:c:end",
+    ],
+  );
+  assert.notEqual(
+    narrative.segments[0]?.endAnchorId,
+    narrative.segments[1]?.startAnchorId,
+  );
+  assert.match(narrative.semanticIndex.digest, /^[a-f0-9]{64}$/u);
+});
+
+test("overlapping Segments retain distinct boundary affinity on one ProgramBasis", () => {
+  const narrative = parseScript("fixture.svml", `
+    <segment id="a">Alpha.</segment>
+    ~@left! @right!
+    <segment id="b">Beta.</segment>
+  `);
+  const evidence: AlignmentEvidence = {
+    contract: "svml.speech-alignment.v1",
+    durationSec: 8,
+    fps: 30,
+    words: [
+      { text: "Alpha", startSec: 0.2, endSec: 4.8, segmentId: "a" },
+      { text: "Beta", startSec: 4.6, endSec: 7.8, segmentId: "b" },
+    ],
+    segments: [
+      { id: "a", startSec: 0, endSec: 5 },
+      { id: "b", startSec: 4.5, endSec: 8 },
+    ],
+  };
+  const located = locateAlignment(narrative, evidence);
+  assert.deepEqual(located.moments.left?.frames, [150]);
+  assert.deepEqual(located.moments.right?.frames, [135]);
+  assert.equal(located.segments.a?.endFrameExclusive, 150);
+  assert.equal(located.segments.b?.startFrame, 135);
+});
+
+test("SemanticMap rejects source-order reversal, wrong basis and digest tampering", () => {
+  const narrative = parseScript(
+    "fixture.svml",
+    `<segment id="a">Alpha.</segment><segment id="b">Beta.</segment>`,
+  );
+  const evidence: AlignmentEvidence = {
+    contract: "svml.speech-alignment.v1",
+    durationSec: 5,
+    fps: 30,
+    words: [
+      { text: "Alpha", startSec: 1.1, endSec: 1.8, segmentId: "a" },
+      { text: "Beta", startSec: 0.2, endSec: 0.8, segmentId: "b" },
+    ],
+    segments: [
+      { id: "a", startSec: 1, endSec: 2 },
+      { id: "b", startSec: 0, endSec: 1 },
+    ],
+  };
+  const basis = createProgramBasis({
+    fps: 30,
+    durationFrames: 150,
+    outcomeDigest: sha256("reordered"),
+  });
+  assert.throws(
+    () => semanticMapFromAlignment(narrative, basis, evidence, { precision: "exact" }),
+    /locator_segment_order/u,
+  );
+
+  const validEvidence: AlignmentEvidence = {
+    ...evidence,
+    words: [
+      { text: "Alpha", startSec: 0.1, endSec: 0.8, segmentId: "a" },
+      { text: "Beta", startSec: 1.1, endSec: 1.8, segmentId: "b" },
+    ],
+    segments: [
+      { id: "a", startSec: 0, endSec: 1 },
+      { id: "b", startSec: 1, endSec: 2 },
+    ],
+  };
+  const validMap = semanticMapFromAlignment(
+    narrative,
+    basis,
+    validEvidence,
+    { precision: "exact" },
+  );
+  assert.throws(
+    () => validateSemanticMap(narrative, basis, {
+      ...validMap,
+      anchors: validMap.anchors.map((anchor, index) => index === 0
+        ? { ...anchor, point: { ...anchor.point, frame: anchor.point.frame + 1 } }
+        : anchor),
+    }),
+    /semantic_map_digest/u,
+  );
+  const otherBasis = createProgramBasis({
+    fps: 30,
+    durationFrames: 150,
+    outcomeDigest: sha256("other"),
+  });
+  assert.throws(
+    () => validateSemanticMap(narrative, otherBasis, validMap),
+    /semantic_map_basis/u,
+  );
+});
+
 test("Dual Text owns its complete speech span and caption cues cannot split it", () => {
   const narrative = parseScript(
     "fixture.svml",
@@ -51,7 +192,7 @@ test("Dual Text owns its complete speech span and caption cues cannot split it",
     ],
     segments: [{ id: "one", startSec: 0, endSec: 2 }],
   };
-  const located = locateScript(narrative, evidence);
+  const located = locateAlignment(narrative, evidence);
   assert.deepEqual(
     located.captionAtoms.map((atom) => [
       atom.display,
@@ -61,7 +202,7 @@ test("Dual Text owns its complete speech span and caption cues cannot split it",
     [["lmao", 15, 51]],
   );
   assert.throws(
-    () => locateScript(narrative, {
+    () => locateAlignment(narrative, {
       ...evidence,
       captionCues: [
         { startWord: 0, endWordExclusive: 4 },
@@ -139,7 +280,7 @@ test("caption cue evidence is a complete ordered word partition", () => {
       { id: "payoff", startWord: 1, endWordExclusive: 3 },
     ],
   };
-  const located = locateScript(narrative, evidence);
+  const located = locateAlignment(narrative, evidence);
   assert.deepEqual(
     located.captionCues?.map((cue) => [
       cue.id,
@@ -155,7 +296,7 @@ test("caption cue evidence is a complete ordered word partition", () => {
   );
 
   assert.throws(
-    () => locateScript(narrative, {
+    () => locateAlignment(narrative, {
       ...evidence,
       captionCues: [{ startWord: 1, endWordExclusive: 3 }],
     }),
@@ -163,12 +304,12 @@ test("caption cue evidence is a complete ordered word partition", () => {
   );
 
   assert.throws(
-    () => locateScript(narrative, {
+    () => locateAlignment(narrative, {
       ...evidence,
       words: evidence.words.map((word, index) =>
         index === 1 ? { ...word, startSec: 0.2 } : word),
     }),
-    /locate_alignment_word_overlap/u,
+    /locator_word_overlap/u,
   );
 });
 

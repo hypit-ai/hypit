@@ -10,7 +10,7 @@ const brollKernel = fileURLToPath(
   new URL("../stdlib/broll-track.svk", import.meta.url),
 );
 const unsafeKernel = fileURLToPath(
-  new URL("./fixtures/unsafe/unsafe.svk", import.meta.url),
+  new URL("./fixtures/artifacts/artifact-film.svk", import.meta.url),
 );
 
 async function checkBody(body: string): Promise<ReturnType<typeof checkSource>> {
@@ -22,7 +22,7 @@ async function checkBody(body: string): Promise<ReturnType<typeof checkSource>> 
   <script><segment id="main">Hello.</segment></script>
   <audio id="sound" src="./missing.wav"/>
   ${body}
-  <unsafe id="root"/>
+  <artifact-film id="root" image={sound} basis={sound} semantic={sound}/>
 </svml>
 `, "utf8");
   return checkSource(file);

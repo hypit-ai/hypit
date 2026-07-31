@@ -1,9 +1,5 @@
 import type {
-  AlignmentEvidence,
   AttributeValue,
-  LocatedScript,
-  NarrativeIR,
-  PlanIR,
   PlanInstance,
   PlanValue,
   ProgramRange,
@@ -16,7 +12,6 @@ export type VisualFragment = {
   startFrame: number;
   endFrameExclusive: number;
   z: number;
-  layer?: number;
   source?: string;
   mediaStartSec?: number;
   playbackRate?: number;
@@ -65,19 +60,20 @@ export type HyperframesDocument = {
 
 export type RuntimeValue = PlanValue & {
   absoluteSource?: string;
+  data?: unknown;
 };
 
 export type KernelContext = {
   instance: PlanInstance;
   element: SourceElement;
-  narrative: NarrativeIR;
-  located: LocatedScript;
-  alignment: AlignmentEvidence;
-  plan: PlanIR;
-  values: Map<string, RuntimeValue>;
-  results: Map<string, KernelProjection>;
   resolve: (value: AttributeValue | undefined) => unknown;
-  resolvePath: (path: string) => unknown;
+  digest: (value: unknown) => string;
+  program?: {
+    basisDigest: string;
+    fps: number;
+    durationFrames: number;
+    durationSec: number;
+  };
   temporalContracts: Record<string, {
     kind: "selection" | "moment";
     consume: "one" | "each" | "set";

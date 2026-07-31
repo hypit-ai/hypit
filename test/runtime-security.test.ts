@@ -42,7 +42,6 @@ test("isolated projector ABI rejects Node builtin imports", async () => {
   await assert.rejects(
     compileSource({
       file: `${fixture}/main.svml`,
-      evidenceFile: `${fixture}/alignment.json`,
     }),
     (error: unknown) =>
       error instanceof SvmlError

@@ -73,7 +73,7 @@ function parseReference(cursor: Cursor): AttributeValue {
   }
   const path = cursor.source.slice(start, cursor.offset).trim();
   cursor.offset += 1;
-  if (!/^[A-Za-z_][A-Za-z0-9_.:-]*$/u.test(path)) {
+  if (!/^[A-Za-z_][A-Za-z0-9_.:-]*(?:\[[A-Za-z_][A-Za-z0-9_.:-]*\])?$/u.test(path)) {
     fail(
       "source_invalid_reference",
       `Invalid reference path "${path}".`,

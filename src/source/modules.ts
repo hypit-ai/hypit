@@ -78,7 +78,7 @@ function cloneNode(
   if (localId) attributes.id = `${args.prefix}${localId}`;
   if (
     args.topLevel
-    && ["image", "video", "audio"].includes(node.name)
+    && ["image", "video", "audio", "alignment"].includes(node.name)
     && typeof attributes.src === "string"
     && !isAbsolute(attributes.src)
     && !isExternalSource(attributes.src)

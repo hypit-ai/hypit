@@ -1,11 +1,12 @@
 # SVML Source Architecture Draft
 
-> **Draft; not frozen.**
+> **Executable v1 candidate; not yet publicly frozen.**
 >
 > 本文记录截至 2026-07-31 的首个公开目标 SVML v1 源码架构。SVML 尚未发布，
 > 因此不为仓库中的早期原型保留兼容层；独立 Segment 端点与 `2M + 2N` 直接属于
 > [Script Surface v1](./script-surface-v1.md)。文档外壳、Component ABI、Locator
-> ABI 和 flat Track IR 仍需原型验证后才能冻结。
+> ABI 和 flat Track IR 已由仓库中的端到端 fixture 验证；公开冻结只等待规范审阅，
+> 不再等待另一套旧架构兼容实现。
 
 SVML 是信息流视频的语义源语言，不是画布文件，也不是像素渲染格式。它的
 北极星是：以口播语义建立稳定地址，把这些地址迟绑定到本次成片唯一的物理
@@ -164,7 +165,7 @@ Component instance 可以被 Canvas 投影成节点，但 Node 只是一种人�
 - 输入/输出端口类型、cardinality 和动态 item schema；
 - temporal port 接受 SelectionSet、MomentSet 还是 ProgramSpan，以及
   `one` / `each` / `set` cardinality；
-- `capability-v1`、`pure-lowering-v1` 或 `composite-v1` 实现；
+- `capability-v1`、`isolated-projector-v1` 或 `composite-v1` 实现；
 - 实现摘要、ABI 版本、权限和资源限制。
 
 所有 Component 使用同一种标签和 manifest 机制。公共端口目前有五种重要输出
@@ -175,13 +176,12 @@ Component instance 可以被 Canvas 投影成节点，但 Node 只是一种人�
 | 普通 typed value | Value | `gpt-image`、`seedance`、Evidence producer |
 | `TemporalBasisProduction` | Basis | `speech-assemble`、其他自定义时基生产者 |
 | `EstimatedSemanticMap` / `ExactSemanticMap` | Locator | `speech-locator`、`manual-locator` |
-| `Track` | Track | `media-track`、`ranking-tier-list`、`caption-track` |
+| `Track` | Track | `media-track`、`ranking-column`、`caption-track` |
 | `HyperFramesDocument` | Composition | `film` |
 
 这五种是端口类型，不是五种互斥 SVK。一个 Component 可以同时输出多个边界
 类型；例如 `speech-program` 同时输出 `TemporalBasisProduction`、
-`ExactSemanticMap` 和 `ProgramBoundVideo`，还可以把前两者暴露为普通的
-`SpeechProgram` 结构包。不能再按所谓“最强输出”把整个
+`ExactSemanticMap` 和 `ProgramBoundVideo`。不能再按所谓“最强输出”把整个
 Component 强行归入唯一类别。生成、素材变换、Basis、Locator、Track 和
 Composition 都不需要另一套调用语法：
 
@@ -197,7 +197,7 @@ gpt-image         Text + Image[] → Image
 speech-assemble  SegmentMedia[] + JoinSpec[] → TemporalBasisProduction
 speech-locator    SemanticIndex + basis + Evidence → ExactSemanticMap
 speech-program    Script + SegmentMedia[] + JoinSpec[] → program + visual facet
-ranking-tier-list items + time   → Track
+ranking-column    items + time   → Track
 film              basis + semantic + Track[] → HyperFramesDocument
 ```
 
@@ -210,7 +210,7 @@ v1 不定义 `family`、继承、`implements` 或语言级 mode。合同不同�
 平级 Component：
 
 ```svml
-<ranking-tier-list .../>
+<ranking-column .../>
 <ranking-card-stack .../>
 <ranking-bracket .../>
 
@@ -278,7 +278,7 @@ receipt、媒体探测和浏览器录制。Canvas 只把 Plan/Located IR 投影�
 
 ```text
 capability-v1     typed request → declared artifact/evidence
-pure-lowering-v1  typed values → typed values / SemanticMap / Track / HyperFramesDocument
+isolated-projector-v1 typed values → typed values / SemanticMap / Track / HyperFramesDocument
 composite-v1      typed source children → statically expanded Component subgraph
 ```
 
@@ -312,8 +312,6 @@ speech-program
 voice::basis
 voice::locator
 
-voice.program.production = voice::basis.production
-voice.program.semantic   = voice::locator.map
 voice.production         = voice::basis.production
 voice.map                = voice::locator.map
 voice.facets.visual      = voice::basis.facets.visual
@@ -321,9 +319,8 @@ voice.facets.visual      = voice::basis.facets.visual
 
 内部实例分别进入 Plan、lock、Evidence、execution digest、缓存和诊断。外部端口
 只是类型化 alias，不复制 Artifact，也不把两个内部 execution 合并成黑盒。
-`SpeechProgram` 只是 `{ production, semantic }` 的类型化结构包，不是新的公共
-时间真相；`primaryAudio` 和 `facets` 仍从 `production` 访问，不能在结构包里复制
-出第二份值。Compiler 仍逐项验证其中的 basis/map affinity。
+Composite 公开的 `production` 与 `map` 仍是两个独立类型化 alias，不包装成新的
+公共时间真相。Compiler 逐项验证 basis/map affinity。
 Composite 外层仍有稳定 instance identity，并用独立 `expansionDigest` 覆盖
 Composite 定义、effective params、公开 children、锁定 imports 和展开结果；
 它本身没有一个吞掉内部缓存边界的 Artifact execution。导出端口沿用实际内部
@@ -338,8 +335,8 @@ Composite 定义、effective params、公开 children、锁定 imports 和展开
 - `<for>` 只能遍历调用点源码中有限、已类型检查的 children；
 - `collection[item.id]` 只表示稳定 id-keyed lookup；缺失或重复 id 必须失败，
   不提供位置下标寻址；
-- 动态公开端口组只能由有限 children 的稳定 `id` 导出，键不能来自位置下标；
-  展开后的每个端口保留内部值的类型、identity、Artifact hash 和 provenance；
+- v1 公开输出端口集合必须由 manifest 静态声明；按 child id 组织的动态结果放在
+  一个已声明的结构化输出内，不能在运行期发明未知端口；
 - 内部身份由外部 instance identity、内部 declaration id 和稳定 child id 组成，
   不使用数组下标；
 - 禁止直接或间接递归 Composite；
@@ -354,10 +351,8 @@ profile 仍不得在运行时代码中暗中创建 Component 或 provider 调用
 
 v1 stdlib 只发布最终选择的作者词汇，例如 `speech-program`。任何高级门面都仍是
 普通、可替换且可完全绕过的 Library Component；Compiler 不认识其名字，也不
-要求每份文档存在某种 Speech Program。类似地，
-`film program={voice.program}` 可以由导入的 Film 门面归一化为 basis/map 输入；
-这不是 Compiler 特判。若门面通过 Composite 实现，内部原语必须使用
-`film-core` 等不同调用名，不能让 `<film>` 展开成自身。
+要求每份文档存在某种 Speech Program。若 Library 另行提供 Film Composite
+门面，内部原语必须使用 `film-core` 等不同调用名，不能让 `<film>` 展开成自身。
 
 ## 4. `.svs`: typed parameter sheet
 
@@ -382,7 +377,8 @@ SVS 配置已经由 SVK 定义的参数，不定义端口、拓扑、内容身�
   }
 
   film.vertical {
-    resolution: 1080x1920;
+    width: 1080;
+    height: 1920;
     frame-rate: 30;
   }
 
@@ -473,13 +469,8 @@ TemporalBasisProduction {
   productionDigest: Digest
 }
 
-SpeechProgram {
-  production: alias<TemporalBasisProduction>
-  semantic: alias<ExactSemanticMap>
-}
-
 ProgramBasis {
-  fps: Rational
+  frameRate: Rational
   originFrame: 0
   durationFrames: integer
   basisDigest: Digest
@@ -494,8 +485,8 @@ digest；只拥有相同 fps/duration 的两条不同视频绝不能同 digest�
 provenance。ProgramPoint 是整数 frame boundary，ProgramRange 统一使用
 `[startFrame, endFrameExclusive)`。
 
-`SpeechProgram` 只为作者减少重复接线，不改变底层二元合同，也不把 audio、
-facets 或 Evidence 复制到新对象中。
+`speech-program` 一类 Composite 只为作者减少重复接线，不改变底层二元合同，
+也不把 audio、facets 或 Evidence 复制到新对象中。
 
 Basis Component 不拥有 SemanticMap。一个 Locator Component 显式接收当前
 SemanticIndex、选中的 TemporalBasisProduction 和它需要的 Evidence，并输出：
@@ -513,7 +504,7 @@ atomic locator
   one capability request → ExactSemanticMap + evidence digests
 
 modular locator
-  Evidence Value Components → pure Locator Component → ExactSemanticMap
+  Evidence Value Components → isolated Locator projector → ExactSemanticMap
 ```
 
 简单项目只写一个 `speech-locator`；需要替换、复用或检查中间 Evidence 时，
@@ -538,8 +529,8 @@ Estimate 与 Exact 是不同类型。Estimate Timeline 可以用前者；最终 
 不能调用 WhisperX、补锚点或另建时钟。
 
 Composition 在 Composite 展开后必须同时选择一个 basis 和一个
-ExactSemanticMap。作者可以显式传入两者，也可以把普通 `SpeechProgram` 交给
-Film 门面；两种写法归一化为完全相同的 Plan。Map 的 `basisDigest` 必须等于
+ExactSemanticMap。作者可以显式传入两者，也可以由普通 Composite alias 两个
+输出后传入。Map 的 `basisDigest` 必须等于
 selected basis 的 `basisDigest`；否则在任何 Track lowering 或 provider 调用前
 失败。Locator instance、implementation、参数和 Evidence 都通过普通
 reachability、identity、executionDigest 与 lock 机制处理，不再依赖源码外的
@@ -566,8 +557,10 @@ A.end   = 5.0s   B.end   = 12.5s
 
 ```svml
 <speech-assemble id="voice" defaultJoin="cut">
-  <segment id="a" script={script.segment.a} source={clip-a}/>
-  <segment id="b" script={script.segment.b} source={clip-b}/>
+  <segment id="a" script={script.segment.a} visual={clip-a} audio={audio-a}
+           sourceWindow="0s .. 5s"/>
+  <segment id="b" script={script.segment.b} visual={clip-b} audio={audio-b}
+           sourceWindow="0s .. 8s"/>
 
   <join
     after="a"
@@ -581,6 +574,7 @@ A.end   = 5.0s   B.end   = 12.5s
   id="location"
   script={script}
   basis={voice.production}
+  evidence={alignment}
 />
 
 <film
@@ -606,7 +600,7 @@ Locator 也不使用语言级或开放全局枚举。`locator="speech|manual|tts
 不同、Evidence 不同、甚至输出为 Estimated/Exact 不同类型的实现压进封闭 mode。
 官方 `speech-program` 门面可以固定导入一个 Exact Locator；替换 Locator 时使用
 低级 Basis + Locator 接线，或导入另一个 Composite。`speech-locator.svk` 可以把完整定位
-作为一个 capability，也可以是消费显式 Evidence 的 pure Component。WhisperX
+作为一个 capability，也可以是消费显式 Evidence 的 isolated projector。WhisperX
 与 Narrative Planner 的版本、Evidence 和 digest 必须进入执行记录，但内部每
 一步不必自动成为源码节点。
 
@@ -640,7 +634,6 @@ LocatedAudioContribution {
   gain: number
   bus?: string
   fades?: Fade[]
-  duck?: DuckRule
 }
 ```
 
@@ -750,9 +743,10 @@ crossfade、push、wipe、cover 或 page-turn。它不消费 `composite_below`
 VisualSurface；正常 alpha/mask/transform 由 Composition 按绝对 z 合成。确实
 需要“已合成全片像素”的效果属于 Film 级效果。
 
-视觉转场不隐式改变声音。任何 Track 都可显式携带视频原声、gain/fade、bus、
-duck 和转场 SFX；不必为了声音再复制一条 Track。独立 Audio Track 只在声音
-确实独立编排时使用。公共 IR 不需要 Audio Tree。
+视觉转场不隐式改变声音。任何 Track 都可显式携带视频原声、gain/fade、bus
+和转场 SFX；不必为了声音再复制一条 Track。独立 Audio Track 只在声音确实
+独立编排时使用。duck、master gain 等跨贡献混音规则由 Composition Component
+显式实现；公共 IR 不需要 Audio Tree。
 
 Composition 对 visual contribution 按 `(z, stableContributionIdentity)` 排序。
 Film 中 `<track>` 的书写顺序不决定层叠；作者意图重叠时必须使用不同绝对 z。
@@ -767,15 +761,15 @@ Film 继续自由组合。
 
 [Flat Track Launch](../examples/flat-track-launch/flat-track-launch.svml) 覆盖：
 
-- 交叉组装 Basis Component 与显式 Locator Component；
-- 50 秒 A-roll 在同一 source mapping 上切换全屏、分屏和圆形画中画；
+- 显式 Basis Component 与 Locator Component；另一个 Composite fixture 验证
+  音频 crossfade 与视觉 dissolve；
+- 连续 A-roll source mapping 上按手工与语义窗口切换全屏、分屏和圆形画中画；
 - B-roll 多 item/crossfade、视频原声和转场 SFX；
 - Ranking、字幕、前三秒标题、片尾箭头和 BGM；
 - 所有 visual contribution 使用同一 ProgramSpace 的绝对 z；
-- Film 是唯一 `Track[]` consumer，负责全片效果和 master mix。
+- Film 是唯一 `Track[]` consumer。
 
-它是架构草案的可读 fixture，尚不声称能由当前 v1 原型执行。可执行回归仍是
-`examples/regen-ranking/regen-ranking.svml`。
+它与 Composite Speech Program、Regen Ranking 都是当前编译器的可执行回归。
 
 ## 7. Script 依赖规则
 
@@ -849,8 +843,7 @@ expansionDigest   = Composite definition + params + children + imports + expande
 - basis/production/map digest、完整 anchor table、point quality、Evidence digests；
 - ProgramSpace、Track contribution digests 和输出 HTML digest。
 
-当前原型只验证 source closure 与 capability artifacts，不能因此宣称完整 temporal
-reproducibility。迁移期间应分别报告：
+当前编译器分别报告：
 
 ```text
 sourceClosureVerified
@@ -884,23 +877,24 @@ reproducible
 14. Compiler 管法律，Library 管词汇与算法，Runtime 管副作用，Canvas 管视图。
 15. 唯一正式成片编译目标是 HyperFrames HTML。
 
-## 10. 原型验收顺序
+## 10. v1 可执行验收
 
-1. 冻结 `ProgramBasis`、`TemporalBasisProduction`、Estimated/ExactSemanticMap
-   和 `TemporalBinding` schema/digest；
-2. 实现 `speech-locator.svk`，让 Composition 显式引用其 Map；用 atomic
-   capability 与 Evidence + pure locator 两种实现验证同一 SemanticMap ABI；
-3. 用一个支持逐连接 JoinSpec 的 `speech-assemble` Basis Component 验证 hard
-   cut、gap、crossfade 混用，再用一个真正采用不同组装不变量的平级 Basis
-   Component 验证同一 Locator Component 和 Script v1 `2M + 2N`；
-4. 实现 `composite-v1` 的 parser/typecheck/finite expansion/identity/source-map，
-   用 `speech-program.svk` 证明内部 Basis 与 Locator 仍分别进入 Plan/lock；
-5. 实现 flat LocatedTrack/visual/audio contribution IR，删除公共
-   VisualSurface/VisualTree/AudioTree/Track Aggregator；
-6. 让 media、B-roll、ranking、caption、text、audio 都只输出 flat Track；
-7. 让 Film 成为唯一 Track[] consumer，按绝对 z 和 ProgramRange 编译 HTML；
-8. 用 Composite Speech Program、Flat Track Launch 与真实 Regen Ranking 三份
-   fixture 验证最简表面、A-roll Present、
-   B-roll 转场、Track 内音频、manual ProgramSpan 和全片效果；
-9. 再接 fake Runtime Host；在同一协议通过前不启用生产 provider；
-10. 最后实现 Canvas/Timeline 投影，保持它们不是作者真相。
+当前仓库已经以自动回归覆盖：
+
+1. `ProgramBasis`、`TemporalBasisProduction`、Estimated/ExactSemanticMap 与
+   `TemporalBinding` schema/digest；
+2. 显式 Evidence Locator 与 capability Artifact Locator 共用同一 Map ABI；
+3. `speech-assemble` 的 cut/gap/overlap、独立音频/视觉 join，以及另一平级
+   `media-basis` 生产者；
+4. `composite-v1` 的 parser/typecheck/finite expansion/identity/source-map/lock；
+5. flat Track IR，且 public API 不含 VisualTree/AudioTree/Track Aggregator；
+6. media、B-roll、ranking、caption、text、audio 的 terminal Track 输出；
+7. Film 唯一消费 `Track[]`，绝对 z 和 ProgramRange 编译到 HyperFrames HTML；
+8. Composite Speech Program、Flat Track Launch 与真实 Regen Ranking 三份
+   端到端 fixture；
+9. Canvas/Timeline 是 Plan/Located IR 投影，不成为作者真相；
+10. full lock 覆盖 source、Artifact、Basis、Map、Evidence、ProgramSpace、target
+    与 HTML digest。
+
+生产 provider、队列、凭证和浏览器托管属于独立 Runtime Host 里程碑，不进入
+本 Source Architecture 的语言验收，也不会在 compiler 内被暗中实现。

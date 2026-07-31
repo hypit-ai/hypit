@@ -3,7 +3,8 @@
   <param name="height" type="number"/>
   <param name="fps" style="frame-rate" type="number"/>
   <param name="background" type="string" default="#000000"/>
-  <port name="speech" direction="input" type="SpeechSpine" cardinality="one"/>
+  <port name="basis" direction="input" type="TemporalBasisProduction" cardinality="one"/>
+  <port name="semantic" direction="input" type="ExactSemanticMap" cardinality="one"/>
   <port name="track" direction="input" type="Track" cardinality="zero-or-more"/>
   <port name="document" direction="output" type="HyperframesDocument" cardinality="one"/>
   <child name="track" cardinality="zero-or-more">

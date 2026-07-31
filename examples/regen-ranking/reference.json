@@ -14,9 +14,9 @@
   },
   "plan": {
     "root": "regen-ranking",
-    "values": 19,
-    "instances": 8,
-    "edges": 29
+    "values": 20,
+    "instances": 9,
+    "edges": 33
   },
   "selectionFrames": {
     "handsome-1": [[791, 831]],
@@ -26,7 +26,22 @@
     "instagram-post": [[977, 1009]]
   },
   "locatedOutput": {
-    "visualFragments": 155,
+    "visualFragments": 153,
     "audioFragments": 14
+  },
+  "renderComparison": {
+    "reference": "/svml-reference/regen-ranking-column-east-asian/final.mp4",
+    "durationSec": 36.1,
+    "video": {
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "ssimAll": 0.9658
+    },
+    "audio": {
+      "sampleRate": 48000,
+      "channels": 2,
+      "apsnrDb": [174.207, 174.208]
+    }
   }
 }

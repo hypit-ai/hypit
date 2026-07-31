@@ -4,7 +4,7 @@
   <port name="track" direction="output" type="Track" cardinality="one"/>
   <child name="item" cardinality="one-or-more">
     <field name="id" type="id" required="true"/>
-    <field name="source" type="Image|Video" required="true"/>
+    <field name="source" type="Image|Video|ProgramBoundImage|ProgramBoundVideo" required="true"/>
     <field name="during" type="SelectionSet|ProgramSpan" consume="each"/>
     <field name="window" type="string"/>
     <field name="playback" type="string"/>
@@ -20,22 +20,23 @@
     <field name="height" type="number"/>
     <field name="fit" type="string"/>
     <field name="position" type="string"/>
-    <field name="shape" type="string"/>
+    <field name="shape" style="mask" type="string"/>
     <field name="radius" type="number"/>
     <field name="opacity" type="number"/>
     <field name="background" type="string"/>
+    <field name="z" type="number"/>
     <child name="present" cardinality="zero-or-more">
       <field name="id" type="id" required="true"/>
       <field name="during" type="SelectionSet|ProgramSpan" consume="each"/>
       <field name="window" type="string"/>
-      <field name="layer" type="number"/>
+      <field name="z" type="number"/>
       <field name="x" type="number"/>
       <field name="y" type="number"/>
       <field name="width" type="number"/>
       <field name="height" type="number"/>
       <field name="fit" type="string"/>
       <field name="position" type="string"/>
-      <field name="shape" type="string"/>
+      <field name="shape" style="mask" type="string"/>
       <field name="radius" type="number"/>
       <field name="opacity" type="number"/>
       <field name="background" type="string"/>

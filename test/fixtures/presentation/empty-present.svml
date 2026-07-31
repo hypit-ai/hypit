@@ -2,7 +2,6 @@
   <import from="../../../stdlib/speech-assemble.svk"/>
   <import from="../../../stdlib/speech-locator.svk"/>
   <import from="../../../stdlib/media-track.svk"/>
-  <import from="../../../stdlib/audio-track.svk"/>
   <import from="../../../stdlib/film.svk"/>
 
   <script>
@@ -13,46 +12,20 @@
 
   <video id="long-video" src="./long.mp4"/>
   <audio id="voice-audio" src="./long.mp4"/>
-  <audio id="pop-sound" src="./pop.wav"/>
   <alignment id="alignment" src="./alignment.json"/>
 
   <speech-assemble id="speech" fps="30">
     <segment id="main" script={script.segment.main} visual={long-video} audio={voice-audio} sourceWindow="0s .. 3s"/>
   </speech-assemble>
-
   <speech-locator id="location" script={script} basis={speech.production} evidence={alignment}/>
 
   <media-track id="aroll" z="200">
-    <item id="host" source={long-video} during="full" fit="cover">
-      <present
-        id="top-circle"
-        during="start .. start+1.2s"
-        z="210"
-        x="0.05"
-        y="0.05"
-        width="0.3"
-        height="0.3"
-        shape="circle"
-      />
-      <present
-        id="lower-split"
-        during="start+1s .. start+2s"
-        z="220"
-        x="0"
-        y="0.5"
-        width="1"
-        height="0.5"
-        enter="fade 200ms"
-      />
+    <item id="host" source={long-video} during="full">
+      <present id="outside" during="end+1s .. end+2s" z="230"/>
     </item>
   </media-track>
 
-  <audio-track id="sfx">
-    <item id="pop" source={pop-sound} at={script.moment.pop} duration="200ms" bus="sfx"/>
-  </audio-track>
-
   <film id="presentation" basis={speech.production} semantic={location.map}>
     <track ref={aroll.track}/>
-    <track ref={sfx.track}/>
   </film>
 </svml>
