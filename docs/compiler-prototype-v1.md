@@ -117,8 +117,9 @@ The following are not silently approximated:
 1. Live Capability Host adapters for generation, STT and media probing.
    Capability calls already remain typed Plan nodes and can be satisfied by
    verified offline artifacts; no provider adapter or credential path exists yet.
-2. A live capability request adapter. SVML v1 intentionally does not let a Component
-   hide additional Plan calls; reusable multi-call topology belongs in `.svc`.
+2. A live capability request adapter. Ordinary capability/pure Components must not
+   hide additional Plan calls. Reusable typed expansion belongs only in the proposed
+   `composite-v1` SVK profile; its internal instances remain visible in Plan/lock.
 3. A lossless whole-document CST and formatter. The implemented Script formatter
    is deliberately conservative and refuses unsupported structural-line layouts.
 4. Package/registry resolution beyond local relative imports.
@@ -135,6 +136,9 @@ The following are not silently approximated:
    contributions, prohibit Track input ports, and keep Film as the only `Track[]`
    consumer. No public VisualSurface, VisualTree, AudioTree or Track Aggregator is
    introduced.
+9. Composite SVK ABI. Parse and typecheck finite child iteration, stable internal
+   identity, port exports, recursion rejection and dual source maps; prove the
+   contract with `speech-program.svk` before enabling arbitrary packages.
 
 The next implementation milestone should be the typed request side of the
 Capability Host contract. A live provider adapter must not be enabled until the
