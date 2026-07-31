@@ -1,16 +1,16 @@
 # SVML Script Surface v1
 
-> **Surface frozen; implementation pending.**
+> **Draft; not frozen.**
 >
-> 本规范冻结 SVML 稿子区的 v1 源语言。Script 是后端无关的语义源，不声明
-> 某个画布、节点注册表或渲染器已经实现这些规则。实现只有在通过本文的
+> SVML 尚未公开发布，不存在需要兼容的旧语言版本。本文直接定义首个公开目标
+> Script Surface v1；仓库中的早期原型不是规范合同。实现只有在通过本文的
 > parser、projection、source-map 和 temporal golden fixtures 后，才可声称
-> 支持 Script Surface v1。
+> 支持 SVML v1。
 
-SVML 是语义视频源语言，不是像素渲染格式。本文只冻结它最高频、最需要保持
+SVML 是语义视频源语言，不是像素渲染格式。本文只定义它最高频、最需要保持
 可读性的稿子区 `<script>`；画布、节点、样式、生成参数和其他 Program 区域的
-外层文档结构另行设计。冻结之后，新增语义应首先组合本文已有构造；确需改变
-正文语法时必须发布新的 Script Surface 版本，不能静默扩写 v1。
+外层文档结构另行设计。v1 发布后，新增语义应首先组合本文已有构造；确需改变
+正文语法时再发布新版本，不能因为早期原型行为而削弱当前 v1。
 
 ## 一页合同
 
@@ -18,7 +18,7 @@ SVML 是语义视频源语言，不是像素渲染格式。本文只冻结它最
 
 | 构造 | 只负责 | 不负责 |
 |---|---|---|
-| `Segment` | 有序的媒体/口播块和结构切点 | 自动 Selection、时长、静音 |
+| `Segment` | 有序的媒体/口播块和独立结构端点 | 自动 Selection、时长、静音 |
 | `Role Cue` | `dialogue` 导出时的“谁说了什么”文本前缀 | speaker 实体、音色、字段路由 |
 | `Dual Text` | 显示文字与实际读音不同 | TTS 厂商参数、样式、动作 |
 | `Selection` | 一个或多个显式闭合的语义时间区间 | 消费者声明、绝对秒数 |
@@ -80,7 +80,7 @@ Meet Hypit.
 ```
 
 `silence` 只是 Selection 的名字，不会自动让音频静音。它完整选择了空
-Segment 的两个结构切点；真正的静音或素材行为由外部 Program 决定。
+Segment 的两个独立结构端点；真正的静音或素材行为由外部 Program 决定。
 `pop` 是一个默认吸右的 Moment，解析到 `laughed` 的起音；它同样不进入
 任何文本投影。
 
@@ -107,8 +107,9 @@ Segment 的两个结构切点；真正的静音或素材行为由外部 Program 
   结果或 `<script>` 外的 Program。
 - Segment 不自动声明同名 Selection。选择一个、三个或任意多个 Segment，
   都必须显式写闭合 Selection。
-- 相邻 Segment 共享一个切点。因此 `m` 个 Segment 始终贡献 `m + 1` 个
-  具有稳定身份的结构切点。
+- 每个 Segment 独立拥有 `start` 与 `end` 两个稳定 identity；相邻 Segment
+  不共享结构端点 identity。两个 identity 可以在硬切时落到同一 ProgramPoint，
+  也可以因 overlap 或 gap 落到不同点，但不能合并身份。
 
 例如选择三个连续 Segment：
 
@@ -228,10 +229,10 @@ Selection 是区间声明，不是供下游自行拼接的两个公开锚点：
 
 | 端点写法 | 吸附方向 | 典型含义 |
 |---|---|---|
-| `@id` | 右 | 从右侧词首或右侧结构切点开始 |
-| `~@id` | 左 | 向外扩到左侧词尾或左侧结构切点 |
-| `@/id` | 左 | 在左侧词尾或左侧结构切点结束 |
-| `@/id~` | 右 | 向外扩到右侧词首或右侧结构切点 |
+| `@id` | 右 | 从右侧词首或右侧结构端点开始 |
+| `~@id` | 左 | 向外扩到左侧词尾或左侧结构端点 |
+| `@/id` | 左 | 在左侧词尾或左侧结构端点结束 |
+| `@/id~` | 右 | 向外扩到右侧词首或右侧结构端点 |
 
 例子：
 
@@ -296,24 +297,71 @@ Slot 绑定、Dual Text speech 投影和 NFC 归一化之后，v1 使用规范�
 边界，可以在新的 timing profile / Script Surface 版本中复用相同的
 Selection/Moment 类型；v1 不应为尚不存在的精度引入新正文符号。
 
-若 speech 中有 `n` 个 token、Script 中有 `m` 个 Segment，Temporal Anchor
-Map 恰有：
+若 Script 有 `N` 个 Segment，第 `k` 个 Segment 有 `mₖ` 个 speech token，且
+`M = Σmₖ`，Semantic Anchor Index 恰有：
 
 ```text
-2n + m + 1
+Σ(2mₖ + 2) = 2M + 2N
 ```
 
-个稳定身份：每个 token 的词首/词尾各一个，加上 `m + 1` 个唯一结构切点。
-这些身份即使最终解析到同一帧也不能合并。
+个稳定身份。每个 Segment 内的局部顺序是：
 
-同一份 SelectionSet 可先在 Estimate Anchor Map 上得到预览区间，再在
-Evidence Anchor Map 上得到精确区间。Script 本身不含秒数、帧号或采样点。
+```text
+segment[k].start
+token[k,1].start
+token[k,1].end
+...
+token[k,mₖ].start
+token[k,mₖ].end
+segment[k].end
+```
+
+Program 起点和终点属于 ProgramBasis，不额外进入 Semantic Anchor Index。空
+Segment 仍有独立 start/end，即使二者最终重合；任意不同 identity 即使最终
+落到同一帧也不能合并。
+
+Locator 必须提交覆盖全部 `2M + 2N` identity 的总映射：
+
+```text
+SemanticAnchorIdentity → ProgramPoint(basisDigest)
+```
+
+完整性与精度正交：每个点都必须存在，同时可以标记为 `estimated`、`derived`
+或 `measured`。消费者不得补点、移动点或从相邻 occurrence 借点。每个 Segment
+内部必须非降序：
+
+```text
+segment.start ≤ token₁.start ≤ token₁.end ≤ ... ≤ segment.end
+```
+
+按源码相邻的 Segment `A`、`B` 还必须保持：
+
+```text
+A.start ≤ B.start
+A.end   ≤ B.end
+```
+
+这允许硬切、重叠与留白，同时禁止一个 Locator 把后写的整个 Segment 静默排到
+前写 Segment 之前：
+
+```text
+hard cut   A.end == B.start
+overlap    B.start <  A.end
+gap        B.start >  A.end
+```
+
+若未来需要真正重排或并行 speech，应发布显式的非线性叙事模型；v1 不让普通
+Range 在不同 Locator 下反向或消失。
+
+同一份 SelectionSet 可先在 `EstimatedSemanticMap` 上得到预览区间，再在
+`ExactSemanticMap` 上得到成片区间。两者使用完全相同的 identity、不同的精度
+类型。Script 本身不含秒数、帧号或采样点。
 Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只
 量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
 
-对齐、结构切点或帧量化可能使某个 occurrence 最终成为零长或反向区间。
-消费者先应用自己的 projection，再只丢弃该非正区间 occurrence；不得移动
-Selection 端点、借用相邻 occurrence 或替作者补范围。
+对齐、结构端点、projection 或帧量化可能使某个 occurrence 最终成为零长或
+反向区间。实现必须产生明确诊断，不能静默丢弃、移动 Selection 端点、借用
+相邻 occurrence 或替作者补范围。
 
 ## 5. Moment
 
@@ -328,8 +376,8 @@ Moment 是完整的点声明，不是省略了 close 的 Selection：
 
 | 写法 | 吸附方向 | 典型含义 |
 |---|---|---|
-| `@id!` | 右 | 右侧词首或右侧结构切点 |
-| `~@id!` | 左 | 左侧词尾或左侧结构切点 |
+| `@id!` | 右 | 右侧词首或右侧结构端点 |
+| `~@id!` | 左 | 左侧词尾或左侧结构端点 |
 
 默认右吸覆盖“与某个词一起开始”的高频情况：
 
@@ -343,8 +391,9 @@ I just @pop! laughed my ass out.
 I laughed ~@pop! and left.
 ```
 
-`pop` 解析到 `laughed` 的收音。位于两个 Segment 之间时，左右候选是对应
-方向上的共享结构切点。
+`pop` 解析到 `laughed` 的收音。位于两个 Segment 之间时，左候选是前一
+Segment 的 `end`，右候选是后一 Segment 的 `start`；两者可以同点，也可以因
+overlap 或 gap 落在不同点。
 
 规范规则：
 
@@ -359,10 +408,10 @@ I laughed ~@pop! and left.
   temporal syntax，不能退化为正文。
 - Moment 与 Selection marker 可出现在相同位置，包括 Segment 之间和
   Dual Text 的 speech 侧，但均不得切入 v1 speech token。
-- Moment 只选择 Temporal Anchor Map 中已有的一个候选点，不新增 anchor
-  identity；因此 `2n + m + 1` 的精确计数不因 Moment 数量改变。
-- MomentSet 与 SelectionSet 复用同一份 Estimate/Evidence Anchor Map 和
-  一次性帧量化；区别只在最终载体是 `Point[]` 而不是 `Range[]`。
+- Moment 只选择 Semantic Anchor Index 中已有的一个候选点，不新增 anchor
+  identity；因此 `2M + 2N` 的精确计数不因 Moment 数量改变。
+- MomentSet 与 SelectionSet 复用同一份 Estimated/Exact SemanticMap 和一次性
+  帧量化；区别只在最终载体是 `Point[]` 而不是 `Range[]`。
 
 消费端保持两个互不相混的类型：
 
@@ -463,7 +512,7 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 
 解析结果至少保留：
 
-- Segment 的顺序、id 和结构边界；
+- Segment 的顺序、id 和独立 start/end identity；
 - 每个 Segment 的有序 spoken turn，以及各 turn 的可选 Role Cue；
 - plain / Dual Text / Slot atom 及其源码范围；
 - caption atom 到一个或多个 speech token 的显式映射；
@@ -533,7 +582,7 @@ Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
 
 一个实现只有同时满足以下证据，才能声明支持 Script Surface v1：
 
-1. 冻结本文全部正例、反例、投影和 source-map golden fixtures；
+1. 本文全部正例、反例、投影和 source-map golden fixtures；
 2. parser、formatter、Narrative IR 与三投影不依赖 provider 或渲染器；
 3. SelectionSet 支持闭合、交叉、非连通 occurrence 与左右 affinity；
 4. MomentSet 支持 `@id!` / `~@id!`、单/多 occurrence 与 `at` 类型闸；
@@ -541,3 +590,6 @@ Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
 6. Slot 采用 parse-first、literal-only binding，不能注入语法；
 7. 未知版本、未知保留语法、混合 temporal type 与 partial dual atom 全部
    fail closed。
+8. `2M + 2N` identity 的规范序列化、digest、完整 Map 与相邻 Segment 双单调
+   约束都有 golden fixtures；硬切、overlap、gap、空 Segment 和端点重合均被
+   覆盖。

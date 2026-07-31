@@ -1,10 +1,10 @@
 # Flat Track Launch architecture fixture
 
 This source is the readable fixture for the unimplemented Source Architecture
-Draft. It deliberately exercises contracts that the current v1 compiler does not
+Draft. It deliberately exercises v1 contracts that the early compiler does not
 yet accept:
 
-- Script Surface v2 independent Segment endpoints (`2M + 2N`);
+- Script Surface v1 independent Segment endpoints (`2M + 2N`);
 - a Basis Component that overlaps adjacent Segment media;
 - an imported Locator Component that produces the selected ExactSemanticMap;
 - one ProgramBasis and one absolute ProgramSpace;

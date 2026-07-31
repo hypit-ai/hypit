@@ -33,10 +33,10 @@ not select a language-level family or mode. `after` names a stable Segment id, a
 the following Segment comes from source order. A join cannot declare both `gap`
 and `overlap`.
 
-An implementation may retain `speech-spine` as a compatibility facade for V1
-authors. It remains an ordinary imported Composite, never a compiler keyword or a
-required singleton. Alternative Locators use explicit low-level wiring or another
-Composite instead of extending a closed `locator="..."` enum.
+The v1 stdlib publishes `speech-program` as its chosen author surface. It remains
+an ordinary imported Composite, never a compiler keyword or a required singleton.
+Alternative Locators use explicit low-level wiring or another Composite instead
+of extending a closed `locator="..."` enum.
 
 The bracket expression in `ports.script.segment[item.id]` is a stable id-keyed
 lookup, not a positional array lookup. The `for` iterates only over finite children
