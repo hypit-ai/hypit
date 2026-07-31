@@ -1,62 +1,18 @@
-<!-- Proposed composite-v1 syntax; not implemented by the current compiler. -->
-<kernel
-  name="speech-program"
-  abi="1"
-  profile="composite-v1"
->
+<kernel name="speech-program" abi="1" profile="composite-v1">
+  <port name="script" direction="input" type="NarrativeIR" cardinality="one"/>
+  <port name="evidence" direction="input" type="AlignmentEvidence" cardinality="one"/>
+  <port name="production" direction="output" type="TemporalBasisProduction" cardinality="one"/>
+  <port name="map" direction="output" type="ExactSemanticMap" cardinality="one"/>
+  <port name="facets.visual" direction="output" type="ProgramBoundVideoSequence" cardinality="one"/>
 
-  <port
-    name="script"
-    direction="input"
-    type="Script"
-    cardinality="one"
-  />
-
-  <port
-    name="production"
-    direction="output"
-    type="TemporalBasisProduction"
-    cardinality="one"
-  />
-
-  <port
-    name="program"
-    direction="output"
-    type="SpeechProgram"
-    cardinality="one"
-  />
-
-  <port
-    name="map"
-    direction="output"
-    type="ExactSemanticMap"
-    cardinality="one"
-  />
-
-  <port
-    name="facets.visual"
-    direction="output"
-    type="ProgramBoundVideo"
-    cardinality="zero-or-one"
-  />
-
-  <param
-    name="join"
-    type="enum(cut,crossfade,gap)"
-    default="cut"
-  />
-
-  <param
-    name="joinDuration"
-    style="join-duration"
-    type="duration"
-    default="0ms"
-  />
+  <param name="join" type="enum(cut,crossfade,gap)" default="cut"/>
+  <param name="joinDuration" style="join-duration" type="duration" default="0ms"/>
 
   <child name="segment" cardinality="one-or-more">
     <field name="id" type="id" required="true"/>
-    <field name="source" type="Video" required="true"/>
-    <field name="sourceWindow" type="SourceRange"/>
+    <field name="visual" type="Video"/>
+    <field name="audio" type="Audio" required="true"/>
+    <field name="sourceWindow" type="SourceRange" required="true"/>
   </child>
 
   <child name="join" cardinality="zero-or-more">
@@ -67,32 +23,20 @@
     <field name="visual" type="enum(cut,dissolve)"/>
   </child>
 
-  <import
-    as="basis-component"
-    from="@svml/std/speech-assemble.svk"
-  />
-
-  <import
-    as="locator-component"
-    from="@svml/std/speech-locator.svk"
-  />
+  <import as="assemble" from="../../stdlib/speech-assemble.svk"/>
+  <import as="locate" from="../../stdlib/speech-locator.svk"/>
 
   <compose>
-
-    <basis-component
-      id="basis"
-      defaultJoin={params.join}
-      defaultJoinDuration={params.joinDuration}
-    >
+    <assemble id="basis" defaultJoin={params.join} defaultJoinDuration={params.joinDuration}>
       <for each={children.segment} as="item">
         <segment
           id={item.id}
           script={ports.script.segment[item.id]}
-          source={item.source}
+          visual={item.visual}
+          audio={item.audio}
           sourceWindow={item.sourceWindow}
         />
       </for>
-
       <for each={children.join} as="join">
         <join
           after={join.after}
@@ -102,36 +46,12 @@
           visual={join.visual}
         />
       </for>
-    </basis-component>
+    </assemble>
 
-    <locator-component
-      id="locator"
-      script={ports.script}
-      basis={basis.production}
-    />
+    <locate id="locator" script={ports.script} basis={basis.production} evidence={ports.evidence}/>
 
-    <export
-      port="production"
-      value={basis.production}
-    />
-
-    <export
-      port="map"
-      value={locator.map}
-    />
-
-    <export port="program">
-      <value
-        production={basis.production}
-        semantic={locator.map}
-      />
-    </export>
-
-    <export
-      port="facets.visual"
-      value={basis.facets.visual}
-    />
-
+    <export port="production" value={basis.production}/>
+    <export port="map" value={locator.map}/>
+    <export port="facets.visual" value={basis.facets.visual}/>
   </compose>
-
 </kernel>

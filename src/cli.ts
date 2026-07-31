@@ -94,7 +94,12 @@ async function run(): Promise<void> {
   }
   if (args.command === "lock") {
     if (!file) throw new Error("usage: svml lock <file.svml> [--out svml.lock]");
-    const result = await checkSource(file);
+    const result = await compileSource({
+      file,
+      ...(option(args, "artifacts")
+        ? { artifactsFile: option(args, "artifacts")! }
+        : {}),
+    });
     const output = option(args, "out") ?? resolve(dirname(resolve(file)), "svml.lock");
     await writeJson(output, result.lock);
     process.stdout.write(`${JSON.stringify({
@@ -188,9 +193,14 @@ async function run(): Promise<void> {
         : {}),
       ...(numeric("fps") !== undefined ? { fps: numeric("fps")! } : {}),
     });
+    const payload = {
+      basis: result.basis,
+      map: result.map,
+      timeline: result.located,
+    };
     const output = option(args, "out");
-    if (output) await writeJson(output, result.evidence);
-    else process.stdout.write(`${JSON.stringify(result.evidence, null, 2)}\n`);
+    if (output) await writeJson(output, payload);
+    else process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
     return;
   }
   if (args.command === "canvas") {
@@ -204,12 +214,10 @@ async function run(): Promise<void> {
   }
   if (args.command === "timeline") {
     if (!file) {
-      throw new Error("usage: svml timeline <file.svml> --evidence alignment.json [--out timeline.json]");
+      throw new Error("usage: svml timeline <file.svml> [--out timeline.json]");
     }
-    const evidenceFile = option(args, "evidence", true);
     const compilation = await compileSource({
       file,
-      evidenceFile: evidenceFile!,
       ...(option(args, "lock") ? { lockFile: option(args, "lock")! } : {}),
       ...(option(args, "artifacts")
         ? { artifactsFile: option(args, "artifacts")! }
@@ -223,13 +231,11 @@ async function run(): Promise<void> {
   }
   if (args.command === "compile") {
     if (!file) {
-      throw new Error("usage: svml compile <file.svml> --evidence alignment.json --out index.html");
+      throw new Error("usage: svml compile <file.svml> --out index.html");
     }
-    const evidenceFile = option(args, "evidence", true);
     const outputFile = option(args, "out", true);
     const compilation = await compileSource({
       file,
-      evidenceFile: evidenceFile!,
       outputFile: outputFile!,
       ...(option(args, "lock") ? { lockFile: option(args, "lock")! } : {}),
       ...(option(args, "artifacts")
@@ -278,14 +284,14 @@ async function run(): Promise<void> {
 
 usage:
   svml check <file.svml>
-  svml lock <file.svml> [--out svml.lock]
+  svml lock <file.svml> [--out svml.lock] [--artifacts artifacts.json]
   svml script <file.svml> [--out narrative.json]
   svml plan <file.svml> [--out plan.json]
   svml fmt <file.svml> [--check|--write|--out formatted.svml]
   svml estimate <file.svml> [--out alignment.json] [--fps 30]
   svml canvas <file.svml> [--out canvas.json]
-  svml timeline <file.svml> --evidence alignment.json [--out timeline.json] [--lock svml.lock] [--artifacts artifacts.json]
-  svml compile <file.svml> --evidence alignment.json --out index.html [--lock svml.lock] [--artifacts artifacts.json]
+  svml timeline <file.svml> [--out timeline.json] [--lock svml.lock] [--artifacts artifacts.json]
+  svml compile <file.svml> --out index.html [--lock svml.lock] [--artifacts artifacts.json]
   svml render <index.html> --out video.mp4
 
 The current runtime is deterministic-only: it has no generation provider host.

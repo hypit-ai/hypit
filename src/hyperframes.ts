@@ -96,8 +96,6 @@ export function emitHyperframesHtml(args: {
 }): string {
   const orderedVisuals = [...args.visuals].sort((left, right) =>
     left.z - right.z
-    || (left.layer ?? 0) - (right.layer ?? 0)
-    || left.startFrame - right.startFrame
     || left.id.localeCompare(right.id));
   const visuals = orderedVisuals.map((fragment, index) =>
     visualHtml(fragment, args.fps, index));

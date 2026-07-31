@@ -141,6 +141,9 @@ export default {
     const stageSize = Math.round(context.width * numberAttr(context.element, "stageSize", 0.33));
     const stageCx = Math.round(context.width * numberAttr(context.element, "stageX", 0.66));
     const stageCy = Math.round(context.height * numberAttr(context.element, "stageY", 0.73));
+    const boardStartFrame = context.element.attributes.at
+      ? context.moment(context.element.attributes.at, "at")[0]
+      : 0;
     const cellLeft = x + pad + rowH + Math.max(8, Math.round(rowH * 0.16));
     const rows = Array.from({ length: total }, (_, index) => {
       const top = pad + index * (rowH + gap);
@@ -150,8 +153,8 @@ export default {
     const visuals = [{
       id: `${context.instance.id}:board`,
       kind: "html",
-      startFrame: 0,
-      endFrameExclusive: context.located.durationFrames,
+      startFrame: boardStartFrame,
+      endFrameExclusive: context.program.durationFrames,
       z,
       html: rows,
       style: {
@@ -178,15 +181,20 @@ export default {
       const rank = Math.max(1, Math.min(total, numberAttr(item, "rank")));
       const base = context.selection(item.attributes.during, "item.during")[0];
       const range = projectWindow(base, item.attributes.window, context.fps);
+      const visibleRange = {
+        ...range,
+        startFrame: Math.max(boardStartFrame, range.startFrame),
+      };
       const top = y + pad + (rank - 1) * (rowH + gap);
-      const endDuration = (context.located.durationFrames - range.endFrameExclusive) / context.fps;
+      const settledStartFrame = Math.max(boardStartFrame, range.endFrameExclusive);
+      const endDuration = (context.program.durationFrames - settledStartFrame) / context.fps;
       if (endDuration > 0) {
         visuals.push({
           id: `${context.instance.id}:${id}:settled`,
           kind: "image",
           source: image.source,
-          startFrame: range.endFrameExclusive,
-          endFrameExclusive: context.located.durationFrames,
+          startFrame: settledStartFrame,
+          endFrameExclusive: context.program.durationFrames,
           z: z + 1,
           style: {
             left: `${cellLeft}px`,
@@ -205,8 +213,9 @@ export default {
           },
         });
       }
+      if (visibleRange.endFrameExclusive <= visibleRange.startFrame) continue;
       const keyframes = `svml-rank-${context.instance.id}-${id}`.replaceAll(/[^A-Za-z0-9_-]/gu, "-");
-      const durationFrames = Math.max(1, range.endFrameExclusive - range.startFrame);
+      const durationFrames = Math.max(1, visibleRange.endFrameExclusive - visibleRange.startFrame);
       const duration = durationFrames / context.fps;
       const targetCx = cellLeft + rowH / 2;
       const targetCy = top + rowH / 2;
@@ -214,8 +223,8 @@ export default {
         id: `${context.instance.id}:${id}:active`,
         kind: "image",
         source: image.source,
-        startFrame: range.startFrame,
-        endFrameExclusive: range.endFrameExclusive,
+        startFrame: visibleRange.startFrame,
+        endFrameExclusive: visibleRange.endFrameExclusive,
         z: z + 2,
         style: {
           left: `${stageCx - stageSize / 2}px`,
@@ -254,10 +263,10 @@ ${activeKeyframes({
         audios.push({
           id: `${context.instance.id}:${id}:appear`,
           source: appear.source,
-          startFrame: range.startFrame,
+          startFrame: visibleRange.startFrame,
           endFrameExclusive: Math.min(
-            context.located.durationFrames,
-            range.startFrame + Math.round(0.247021 * context.fps),
+            context.program.durationFrames,
+            visibleRange.startFrame + Math.round(0.247021 * context.fps),
           ),
           volume: numberAttr(context.element, "appearGain", 0.09),
           bus: "sfx",
@@ -268,8 +277,8 @@ ${activeKeyframes({
         audios.push({
           id: `${context.instance.id}:${id}:move`,
           source: move.source,
-          startFrame: Math.max(range.startFrame, range.endFrameExclusive - Math.round(0.55 * context.fps)),
-          endFrameExclusive: Math.min(context.located.durationFrames, range.endFrameExclusive - Math.round(0.55 * context.fps) + moveFrames),
+          startFrame: Math.max(visibleRange.startFrame, visibleRange.endFrameExclusive - Math.round(0.55 * context.fps)),
+          endFrameExclusive: Math.min(context.program.durationFrames, visibleRange.endFrameExclusive - Math.round(0.55 * context.fps) + moveFrames),
           volume: numberAttr(context.element, "moveGain", 0.1),
           bus: "sfx",
         });

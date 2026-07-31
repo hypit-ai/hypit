@@ -12,6 +12,7 @@
   <param name="moveGain" style="move-gain" type="number" default="0.1"/>
   <port name="appearSound" direction="input" type="Audio" cardinality="zero-or-one"/>
   <port name="moveSound" direction="input" type="Audio" cardinality="zero-or-one"/>
+  <port name="at" direction="input" type="MomentSet|ProgramPoint" cardinality="zero-or-one" consume="one"/>
   <port name="item" direction="input" type="RankingItem" cardinality="one-or-more"/>
   <port name="track" direction="output" type="Track" cardinality="one"/>
   <child name="item" cardinality="one-or-more">

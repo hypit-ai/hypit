@@ -1,9 +1,10 @@
 import {
   elements,
-  material,
+  mediaMaterials,
   mediaTiming,
   numberAttr,
   presentationAnimation,
+  programBoundAnimation,
   presentationStyle,
   resolveItemPresentations,
   resolveAttr,
@@ -18,9 +19,13 @@ export default {
     const visuals = [];
     for (const item of elements(context, "item")) {
       const id = stringAttr(item, "id");
-      const source = material(resolveAttr(context, item, "source"));
-      const presentations = resolveItemPresentations(context, item, source);
+      const sources = mediaMaterials(resolveAttr(context, item, "source"));
+      const itemVisuals = [];
+      const resolvedPresentIds = new Set();
+      for (const [sourceIndex, source] of sources.entries()) {
+      const presentations = resolveItemPresentations(context, item, source, z, { allowEmptyPresent: true });
       for (const [index, presentation] of presentations.entries()) {
+        if (presentation.explicit) resolvedPresentIds.add(presentation.id);
         const range = presentation.range;
         const animation = presentationAnimation(
           presentation.element,
@@ -28,26 +33,46 @@ export default {
           context.fps,
           `${context.instance.id}-${id}-${presentation.id}-${index}`,
         );
+        const sourceAnimation = programBoundAnimation(
+          source,
+          range,
+          context.fps,
+          `${context.instance.id}-${id}-${sourceIndex}-${presentation.id}-${index}`,
+        );
         const timing = source.type === "Video"
           ? mediaTiming(item, presentation, source, context.fps)
           : {};
-        visuals.push({
-          id: `${context.instance.id}:${id}:${index}`,
+        itemVisuals.push({
+          id: `${context.instance.id}:${id}:${sourceIndex}:${index}`,
           kind: source.type === "Image" ? "image" : "video",
           source: source.source,
           startFrame: range.startFrame,
           endFrameExclusive: range.endFrameExclusive,
-          z,
-          layer: presentation.layer,
+          z: presentation.z,
           muted: true,
           ...timing,
           style: {
             ...presentationStyle(presentation.element, item),
-            ...(animation.animation ? { animation: animation.animation } : {}),
+            ...((animation.animation || sourceAnimation.animation) ? {
+              animation: [animation.animation, sourceAnimation.animation].filter(Boolean).join(", "),
+            } : {}),
           },
-          ...(animation.css ? { css: animation.css } : {}),
+          ...((animation.css || sourceAnimation.css) ? {
+            css: [animation.css, sourceAnimation.css].filter(Boolean).join("\n"),
+          } : {}),
         });
       }
+      }
+      if (!itemVisuals.length) {
+        throw new Error(`item_empty: Item "${id}" has no intersection with its source`);
+      }
+      for (const present of elements({ element: item }, "present")) {
+        const presentId = stringAttr(present, "id");
+        if (!resolvedPresentIds.has(presentId)) {
+          throw new Error(`presentation_empty: Present "${presentId}" has no intersection with its Item`);
+        }
+      }
+      visuals.push(...itemVisuals);
     }
     return trackOutput(visuals);
   },

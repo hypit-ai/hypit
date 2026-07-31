@@ -10,12 +10,12 @@
     <field name="y" type="number"/>
     <field name="width" type="number"/>
     <field name="height" type="number"/>
-    <field name="font" type="string"/>
-    <field name="size" type="number"/>
-    <field name="weight" type="number"/>
-    <field name="lineHeight" type="number"/>
-    <field name="letterSpacing" type="number"/>
-    <field name="color" type="string"/>
+    <field name="font" style="font-family" type="string"/>
+    <field name="size" style="font-size" type="number"/>
+    <field name="weight" style="font-weight" type="number"/>
+    <field name="lineHeight" style="line-height" type="number"/>
+    <field name="letterSpacing" style="letter-spacing" type="number"/>
+    <field name="color" style="fill" type="string"/>
     <field name="background" type="string"/>
     <field name="uppercase" type="boolean"/>
   </child>

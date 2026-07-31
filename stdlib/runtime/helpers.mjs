@@ -30,13 +30,24 @@ export function resolveAttr(context, element, name) {
 
 export function material(value, expected) {
   if (!value || typeof value !== "object") throw new Error(`expected ${expected ?? "media"} material`);
-  const type = value.type ?? value.kind;
-  if (expected && type && String(type).toLowerCase() !== expected.toLowerCase()) {
-    throw new Error(`expected ${expected}, received ${String(type)}`);
+  const declaredType = String(value.type ?? value.kind ?? "");
+  const programBound = /^ProgramBound(?:Image|Video|Audio)$/u.test(declaredType);
+  const type = programBound ? declaredType.slice("ProgramBound".length) : declaredType;
+  if (expected && type && type.toLowerCase() !== expected.toLowerCase()) {
+    throw new Error(`expected ${expected}, received ${declaredType}`);
   }
   const source = value.absoluteSource ?? value.source;
   if (typeof source !== "string") throw new Error(`${expected ?? "media"} material has no source`);
-  return { ...value, source };
+  return { ...value, type, declaredType, programBound, source };
+}
+
+export function mediaMaterials(value, expected) {
+  if (value?.type === "ProgramBoundVideoSequence") {
+    const segments = Object.values(value.segments ?? {}).map((segment) => material(segment, expected));
+    if (!segments.length) throw new Error("ProgramBoundVideoSequence has no media segments");
+    return segments;
+  }
+  return [material(value, expected)];
 }
 
 function unitSeconds(raw) {
@@ -219,7 +230,7 @@ export function presentationAnimation(element, range, fps, id) {
   };
 }
 
-export function resolveItemPresentations(context, item, source) {
+export function resolveItemPresentations(context, item, source, defaultZ, options = {}) {
   const rawParents = item.attributes.during
     ? context.selection(item.attributes.during, "item.during")
     : source.range
@@ -228,8 +239,10 @@ export function resolveItemPresentations(context, item, source) {
   if (!rawParents.length) {
     throw new Error(`item "${stringAttr(item, "id")}" has no temporal range`);
   }
-  const parents = rawParents.map((range) =>
-    projectWindow(range, item.attributes.window, context.fps));
+  const parents = rawParents
+    .map((range) => projectWindow(range, item.attributes.window, context.fps))
+    .map((range) => source.range ? intersectRange(range, source.range) : range)
+    .filter(Boolean);
   const presents = elements({ element: item }, "present");
   const explicit = [];
   for (const [presentIndex, present] of presents.entries()) {
@@ -247,10 +260,13 @@ export function resolveItemPresentations(context, item, source) {
           parentRange,
           range,
           element: present,
-          layer: numberAttr(present, "layer", presentIndex + 1),
+          z: numberAttr(present, "z", numberAttr(item, "z", defaultZ)),
           explicit: true,
         });
       }
+    }
+    if (!options.allowEmptyPresent && !explicit.some((value) => value.id === stringAttr(present, "id"))) {
+      throw new Error(`presentation_empty: Present "${stringAttr(present, "id")}" has no intersection with its Item`);
     }
   }
   const defaults = [];
@@ -268,18 +284,43 @@ export function resolveItemPresentations(context, item, source) {
         parentRange,
         range,
         element: undefined,
-        layer: 0,
+        z: numberAttr(item, "z", defaultZ),
         explicit: false,
       });
+    }
+  }
+  for (let left = 0; left < explicit.length; left += 1) {
+    for (let right = left + 1; right < explicit.length; right += 1) {
+      const a = explicit[left];
+      const b = explicit[right];
+      if (
+        a.z === b.z
+        && a.range.startFrame < b.range.endFrameExclusive
+        && b.range.startFrame < a.range.endFrameExclusive
+      ) {
+        throw new Error(`presentation_z_ambiguous: Present "${a.id}" and "${b.id}" overlap at z=${a.z}`);
+      }
     }
   }
   return [...defaults, ...explicit];
 }
 
 export function mediaTiming(item, presentation, source, fps) {
-  const playback = stringAttr(item, "playback", "sync");
-  const offsetFrames = presentation.range.startFrame - presentation.parentRange.startFrame;
-  const mediaStart = numberAttr(item, "mediaStart", 0);
+  const playback = stringAttr(item, "playback", source.programBound ? "program-map" : "sync");
+  const mappingRange = source.programBound && source.range
+    ? source.range
+    : presentation.parentRange;
+  const offsetFrames = presentation.range.startFrame - mappingRange.startFrame;
+  const mediaStart = numberAttr(item, "mediaStart", source.mediaStartSec ?? 0);
+  if (playback === "program-map") {
+    if (!source.programBound) {
+      throw new Error(`playback "program-map" requires ProgramBound media`);
+    }
+    return {
+      mediaStartSec: mediaStart + offsetFrames / fps * (source.playbackRate ?? 1),
+      playbackRate: source.playbackRate ?? 1,
+    };
+  }
   if (playback === "sync") {
     return {
       mediaStartSec: mediaStart + offsetFrames / fps,
@@ -306,4 +347,30 @@ export function mediaTiming(item, presentation, source, fps) {
   }
   if (playback === "hold" && source.type === "Image") return {};
   throw new Error(`unsupported playback "${playback}" for ${source.type}`);
+}
+
+export function programBoundAnimation(source, range, fps, id) {
+  if (!source.programBound || (!source.fadeInFrames && !source.fadeOutFrames)) return {};
+  const totalFrames = Math.max(1, range.endFrameExclusive - range.startFrame);
+  const sourceStart = source.range.startFrame;
+  const sourceEnd = source.range.endFrameExclusive;
+  const fadeInEnd = sourceStart + (source.fadeInFrames ?? 0);
+  const fadeOutStart = sourceEnd - (source.fadeOutFrames ?? 0);
+  const points = new Map([[0, 1], [100, 1]]);
+  const percent = (frameValue) => Math.max(0, Math.min(100,
+    (frameValue - range.startFrame) / totalFrames * 100));
+  if (source.fadeInFrames && range.startFrame < fadeInEnd) {
+    points.set(0, Math.max(0, (range.startFrame - sourceStart) / source.fadeInFrames));
+    points.set(percent(Math.min(range.endFrameExclusive, fadeInEnd)), 1);
+  }
+  if (source.fadeOutFrames && range.endFrameExclusive > fadeOutStart) {
+    points.set(percent(Math.max(range.startFrame, fadeOutStart)), 1);
+    points.set(100, Math.max(0, (sourceEnd - range.endFrameExclusive) / source.fadeOutFrames));
+  }
+  const name = `svml-program-bound-${id}`.replaceAll(/[^A-Za-z0-9_-]/gu, "-");
+  return {
+    animation: `${name} ${totalFrames / fps}s linear both`,
+    css: `@keyframes ${name} { ${[...points].sort((a, b) => a[0] - b[0])
+      .map(([at, opacity]) => `${at}% { opacity:${opacity}; }`).join(" ")} }`,
+  };
 }

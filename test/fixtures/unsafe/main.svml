@@ -1,9 +1,18 @@
 <svml version="1">
   <import from="./unsafe.svk"/>
+  <import from="../../../stdlib/speech-assemble.svk"/>
+  <import from="../../../stdlib/speech-locator.svk"/>
 
   <script>
     <segment id="main">Hello.</segment>
   </script>
 
-  <unsafe id="main"/>
+  <audio id="voice-audio" src="./alignment.json"/>
+  <alignment id="alignment" src="./alignment.json"/>
+  <speech-assemble id="speech" fps="30">
+    <segment id="main" script={script.segment.main} audio={voice-audio} sourceWindow="0s .. 1s"/>
+  </speech-assemble>
+  <speech-locator id="location" script={script} basis={speech.production} evidence={alignment}/>
+
+  <unsafe id="main" basis={speech.production} semantic={location.map}/>
 </svml>

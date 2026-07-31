@@ -10,6 +10,8 @@ import type {
   SourceNode,
 } from "../model.js";
 import type {
+  KernelChildSchema,
+  KernelField,
   KernelManifest,
   KernelParameter,
   KernelRegistry,
@@ -57,8 +59,20 @@ function typedValue(
     if (typeof value !== "boolean") {
       fail("style_parameter_type", `${source} expects boolean ${parameter.styleName}.`);
     }
-  } else if (typeof value !== "string") {
-    fail("style_parameter_type", `${source} expects string ${parameter.styleName}.`);
+  } else {
+    if (typeof value !== "string") {
+      fail("style_parameter_type", `${source} expects string ${parameter.styleName}.`);
+    }
+    if (
+      parameter.type === "duration"
+      && !/^[+-]?\d+(?:\.\d+)?(?:ms|s)$/u.test(value)
+    ) {
+      fail("style_parameter_type", `${source} expects duration ${parameter.styleName}.`);
+    }
+    const enumValues = /^enum\((.+)\)$/u.exec(parameter.type)?.[1]?.split(",");
+    if (enumValues && !enumValues.includes(value)) {
+      fail("style_parameter_type", `${source} expects ${parameter.type} ${parameter.styleName}.`);
+    }
   }
   return value;
 }
@@ -140,6 +154,7 @@ function findRule(
   token: string,
   element: SourceElement,
   sheets: Sheet[],
+  selector: string,
 ): StyleRule {
   const dot = token.indexOf(".");
   if (dot > 0) {
@@ -148,18 +163,18 @@ function findRule(
     const sheet = sheets.find((candidate) => candidate.binding === binding);
     if (!sheet) fail("style_unknown_binding", `Unknown style binding "${binding}".`);
     const rule = sheet.rules.find(
-      (candidate) => candidate.selector === element.name && candidate.className === className,
+      (candidate) => candidate.selector === selector && candidate.className === className,
     );
     if (!rule) {
       fail(
         "style_unknown_class",
-        `${sheet.file} does not define ${element.name}.${className}.`,
+        `${sheet.file} does not define ${selector}.${className}.`,
       );
     }
     return rule;
   }
   const matches = sheets.flatMap((sheet) => sheet.rules.filter(
-    (candidate) => candidate.selector === element.name && candidate.className === token,
+    (candidate) => candidate.selector === selector && candidate.className === token,
   ));
   if (matches.length !== 1) {
     fail(
@@ -180,6 +195,23 @@ function parameterFor(
   );
 }
 
+function fieldFor(
+  schemas: KernelChildSchema[],
+  elementName: string,
+  styleName: string,
+): KernelField | undefined {
+  for (const schema of schemas) {
+    if (schema.name === elementName) {
+      const field = schema.fields.find((candidate) =>
+        candidate.styleName === styleName || candidate.name === styleName);
+      if (field) return field;
+    }
+    const nested = fieldFor(schema.children, elementName, styleName);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
 function styleElement(
   element: SourceElement,
   sheets: Sheet[],
@@ -187,7 +219,16 @@ function styleElement(
   ownerKernel?: KernelManifest,
 ): SourceElement {
   const manifest = kernels.get(element.name) ?? ownerKernel;
+  if (element.parameterSources) {
+    return {
+      ...element,
+      children: element.children.map((child) => child.kind === "element"
+        ? styleElement(child, sheets, kernels, manifest)
+        : child),
+    };
+  }
   const topLevelKernel = kernels.get(element.name);
+  const selector = topLevelKernel?.name ?? ownerKernel?.name ?? element.name;
   const classValue = element.attributes.class;
   if (classValue !== undefined && typeof classValue !== "string") {
     fail("style_class_type", `<${element.name}> class must be a string.`);
@@ -195,19 +236,27 @@ function styleElement(
   const attributes: Record<string, AttributeValue> = {};
   const parameterSources: Record<string, ParameterSource[]> = {};
   for (const token of (classValue ?? "").split(/\s+/u).filter(Boolean)) {
-    const rule = findRule(token, element, sheets);
+    const rule = findRule(token, element, sheets, selector);
     for (const property of rule.properties) {
       const parameter = topLevelKernel
         ? parameterFor(topLevelKernel, property.name)
         : undefined;
-      if (topLevelKernel && !parameter) {
+      const field = !topLevelKernel && ownerKernel
+        ? fieldFor(ownerKernel.children, element.name, property.name)
+        : undefined;
+      if ((topLevelKernel || ownerKernel) && !parameter && !field) {
         fail(
           "style_unknown_parameter",
           `${rule.source} configures unknown public parameter "${property.name}".`,
         );
       }
-      const name = parameter?.name ?? property.name;
-      const value = typedValue(property.raw, parameter, rule.source);
+      const schema = parameter ?? (field ? {
+        name: field.name,
+        styleName: field.styleName,
+        type: field.type,
+      } : undefined);
+      const name = schema?.name ?? property.name;
+      const value = typedValue(property.raw, schema, rule.source);
       attributes[name] = value;
       (parameterSources[name] ??= []).push({
         kind: "svs-class",

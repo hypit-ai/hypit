@@ -108,6 +108,7 @@ export async function attachExecutionDigests(
       abi: manifest.abiVersion,
       manifest: manifest.sourceHash,
       implementation: manifest.implementationHash,
+      expansion: instance.expansionDigest,
       attributes: Object.fromEntries(Object.entries(instance.attributes)
         .filter(([name]) => !["id", "class"].includes(name))
         .map(([name, value]) => [name, canonicalValue(value)])),

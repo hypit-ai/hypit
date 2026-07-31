@@ -1,13 +1,76 @@
-import { html, numberAttr, stringAttr, trackOutput } from "./helpers.mjs";
+import { elements, html, numberAttr, stringAttr, trackOutput } from "./helpers.mjs";
 
 export default {
   abiVersion: "1",
   project(context) {
     const script = context.resolve(context.element.attributes.script);
-    const located = script.located;
+    const semantic = context.resolve(context.element.attributes.semantic);
+    if (semantic?.contract !== "svml.exact-semantic-map.v1") {
+      throw new Error("caption-track requires ExactSemanticMap");
+    }
+    if (semantic.basisDigest !== context.program.basisDigest) {
+      throw new Error("caption-track SemanticMap does not match the selected ProgramBasis");
+    }
+    const points = new Map(semantic.anchors.map((anchor) => [anchor.identity, anchor.point.frame]));
+    const frameRange = (startFrame, endFrameExclusive) => ({
+      startFrame,
+      endFrameExclusive,
+      startSec: startFrame / context.fps,
+      endSec: endFrameExclusive / context.fps,
+    });
+    const locatedWords = script.tokens.map((token) => ({
+      ...token,
+      ...frameRange(points.get(token.startAnchorId), points.get(token.endAnchorId)),
+    }));
+    const captionAtoms = script.captionAtoms.map((atom) => ({
+      ...atom,
+      ...frameRange(
+        locatedWords[atom.startWord].startFrame,
+        locatedWords[atom.endWordExclusive - 1].endFrameExclusive,
+      ),
+    }));
+    const captionCues = semantic.captionCues?.map((cue, index) => ({
+      id: cue.id ?? `cue-${index + 1}`,
+      ...cue,
+      ...frameRange(
+        locatedWords[cue.startWord].startFrame,
+        locatedWords[cue.endWordExclusive - 1].endFrameExclusive,
+      ),
+    }));
+    const located = {
+      words: locatedWords,
+      captionAtoms,
+      captionCues,
+      durationFrames: context.program.durationFrames,
+    };
     const z = numberAttr(context.element, "z");
     const maxWords = Math.max(1, Math.round(numberAttr(context.element, "maxWords", 3)));
     const words = located.words;
+    const styledRanges = elements(context, "style").map((style) => ({
+      id: stringAttr(style, "id"),
+      ranges: context.selection(style.attributes.during, "style.during"),
+      color: style.attributes.color,
+      activeColor: style.attributes.activeColor,
+      background: style.attributes.background,
+      weight: style.attributes.weight,
+      scale: style.attributes.scale,
+    }));
+    const inlineStyle = (word, active) => {
+      const declarations = {};
+      for (const rule of styledRanges) {
+        if (!rule.ranges.some((range) =>
+          word.startFrame < range.endFrameExclusive
+          && word.endFrameExclusive > range.startFrame)) continue;
+        if (typeof rule.color === "string") declarations.color = rule.color;
+        if (active && typeof rule.activeColor === "string") declarations.color = rule.activeColor;
+        if (typeof rule.background === "string") declarations.background = rule.background;
+        if (typeof rule.weight === "number") declarations["font-weight"] = rule.weight;
+        if (typeof rule.scale === "number") declarations.transform = `scale(${rule.scale})`;
+      }
+      const body = Object.entries(declarations)
+        .map(([name, value]) => `${name}:${String(value)}`).join(";");
+      return body ? ` style="${html(body)}"` : "";
+    };
     const atomsByStart = new Map(located.captionAtoms.map((atom) => [atom.startWord, atom]));
     const displayUnits = (startWord, endWordExclusive) => {
       const units = [];
@@ -58,8 +121,11 @@ export default {
             nextCueStart ?? located.durationFrames,
             word.endFrameExclusive + Math.round(numberAttr(context.element, "hold", 0.08) * context.fps),
           );
-        const body = group.map((item, index) =>
-          `<span class="${index === activeIndex ? "active" : ""}">${html(item.text)}</span>`).join("");
+        if (endFrameExclusive <= word.startFrame) continue;
+        const body = group.map((item, index) => {
+          const active = index === activeIndex;
+          return `<span class="${active ? "active" : ""}"${inlineStyle(item, active)}>${html(item.text)}</span>`;
+        }).join("");
         const fragmentDuration = Math.max(
           1 / context.fps,
           (endFrameExclusive - word.startFrame) / context.fps,

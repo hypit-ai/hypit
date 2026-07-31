@@ -1,5 +1,6 @@
 <svml version="1">
-  <import from="../../../stdlib/speech-spine.svk"/>
+  <import from="../../../stdlib/speech-assemble.svk"/>
+  <import from="../../../stdlib/speech-locator.svk"/>
   <import from="./selection-set.svk"/>
   <import from="../../../stdlib/film.svk"/>
 
@@ -8,16 +9,19 @@
   </script>
 
   <video id="avatar" src="../presentation/long.mp4"/>
+  <audio id="voice-audio" src="../presentation/long.mp4"/>
+  <alignment id="alignment" src="./alignment.json"/>
 
-  <speech-spine id="speech">
-    <segment id="main" script={script.segment.main} visual={avatar}/>
-  </speech-spine>
+  <speech-assemble id="speech" fps="30">
+    <segment id="main" script={script.segment.main} visual={avatar} audio={voice-audio} sourceWindow="0s .. 3s"/>
+  </speech-assemble>
+  <speech-locator id="location" script={script} basis={speech.production} evidence={alignment}/>
 
   <selection-set id="styles">
     <item id="highlight" during={script.selection.pick}/>
   </selection-set>
 
-  <film id="film" speech={speech.speech}>
+  <film id="film" basis={speech.production} semantic={location.map}>
     <track ref={styles.track}/>
   </film>
 </svml>
