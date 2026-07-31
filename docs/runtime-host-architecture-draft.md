@@ -767,8 +767,10 @@ references、package exports 和 forbidden-import tests 建立真实边界，避
 6. 再把前代 Postgres worker 包装为第二个 Host，实现相同 conformance suite；
    不先改变生产表、队列或 provider 行为。
 
-主时间线和对齐 Evidence 流程明确不属于本批记录；在单独讨论完成前，不以假
-实现或泛化占位符冻结其请求、阶段或 Receipt 形状。
+TemporalProduction 的获取明确不属于本批记录；在单独实现前，不以假实现冻结
+它的请求或 Receipt 形状。后续协议必须把选中的 `ProgramBasis`、完整
+`2M + 2N` 锚点表、各点质量、Evidence 摘要和 Producer 实现摘要作为一个可验证
+结果交给编译器，不能退回到隐式全局 alignment 或由下游补锚点。
 
 ## 19. 完成标准
 
