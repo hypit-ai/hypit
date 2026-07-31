@@ -154,6 +154,12 @@ function advance(
 `advance`。每次调用重新确定当前所有 ready 且未满足的请求；互不依赖的请求
 可以并行返回。
 
+提议中的 `profile="composite-v1"` 不增加 Runtime Effect 类型。Compiler 在
+`prepare` 阶段把它有限、确定性地展开为普通内部 Component instances；Bundle、
+EffectRequest、Receipt、Artifact 和 lock 只按这些规范内部 identity 工作。
+Runtime Host 不执行 `<compose>`，也不能把整个 Composite 当成一个不透明请求
+吞掉内部 capability。
+
 ```text
 prepare source
     ↓

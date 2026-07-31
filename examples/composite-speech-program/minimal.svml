@@ -1,0 +1,56 @@
+<!--
+  Proposed composite-v1 author surface. The current compiler does not implement
+  this profile or Script Surface v2 yet.
+-->
+<svml version="2">
+
+  <import from="./speech-program.svk"/>
+  <import from="@svml/std/media-track.svk"/>
+  <import from="@svml/std/film.svk"/>
+  <import as="house" from="./house.svs"/>
+
+  <script version="2">
+    <segment id="intro">
+      <HOST> Hello, this is SVML.
+    </segment>
+
+    <segment id="close">
+      <HOST> Write the script, get the video.
+    </segment>
+  </script>
+
+  <video id="host" src="./host.mp4"/>
+
+  <speech-program
+    id="voice"
+    script={script}
+    class="house.default"
+  >
+    <segment
+      id="intro"
+      source={host}
+      sourceWindow="0s .. 5s"
+    />
+    <segment
+      id="close"
+      source={host}
+      sourceWindow="5s .. 10s"
+    />
+  </speech-program>
+
+  <media-track id="aroll">
+    <item
+      source={voice.facets.visual}
+      during="full"
+      playback="program-map"
+    />
+  </media-track>
+
+  <film
+    basis={voice.production}
+    semantic={voice.map}
+  >
+    <track ref={aroll.track}/>
+  </film>
+
+</svml>

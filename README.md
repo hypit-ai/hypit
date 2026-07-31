@@ -106,6 +106,11 @@ transition audio, disconnected caption selections, absolute z and Film as the so
 `Track[]` consumer. It is a draft fixture, not yet accepted by the executable v1
 compiler.
 
+[`examples/composite-speech-program/minimal.svml`](examples/composite-speech-program/minimal.svml)
+and its adjacent `speech-program.svk` define the proposed `composite-v1` author
+surface: one transparent Component replaces repeated Basis/Locator wiring while
+both internal instances remain independently visible in Plan and lock.
+
 ## Specification
 
 - [Script Surface v1](spec/script-surface-v1.md) — the frozen, human-readable
@@ -114,8 +119,8 @@ compiler.
   independent Segment endpoint and `2M + 2N` migration.
 - [Source Architecture Draft](spec/source-architecture-draft.md) — the current
   draft for `.svk` components, `.svs` parameter sheets, `.svc` content modules,
-  Script-dependent generation, the five SVK output roles, flat Tracks, and a
-  Composition root.
+  Script-dependent generation, five public output boundaries, `composite-v1`, flat
+  Tracks, and a Composition root.
 - [Compiler prototype record](docs/compiler-prototype-v1.md) — implemented
   boundaries, real-video evidence and remaining work.
 - [External Runtime Host Architecture Draft](docs/runtime-host-architecture-draft.md)
