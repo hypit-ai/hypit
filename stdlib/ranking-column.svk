@@ -1,0 +1,24 @@
+<kernel name="ranking-column" abi="1" implementation="./runtime/ranking-column.mjs">
+  <param name="z" type="number"/>
+  <param name="x" type="number" default="0"/>
+  <param name="y" type="number" default="0.17"/>
+  <param name="width" type="number" default="0.305"/>
+  <param name="rowHeight" style="row-height" type="number" default="0.071"/>
+  <param name="gap" type="number" default="0.011"/>
+  <param name="stageX" style="stage-x" type="number" default="0.66"/>
+  <param name="stageY" style="stage-y" type="number" default="0.73"/>
+  <param name="stageSize" style="stage-size" type="number" default="0.33"/>
+  <param name="appearGain" style="appear-gain" type="number" default="0.09"/>
+  <param name="moveGain" style="move-gain" type="number" default="0.1"/>
+  <port name="appearSound" direction="input" type="Audio" cardinality="zero-or-one"/>
+  <port name="moveSound" direction="input" type="Audio" cardinality="zero-or-one"/>
+  <port name="item" direction="input" type="RankingItem" cardinality="one-or-more"/>
+  <port name="track" direction="output" type="Track" cardinality="one"/>
+  <child name="item" cardinality="one-or-more">
+    <field name="id" type="id" required="true"/>
+    <field name="rank" type="number" required="true"/>
+    <field name="image" type="Image" required="true"/>
+    <field name="during" type="SelectionSet" consume="one" required="true"/>
+    <field name="window" type="string"/>
+  </child>
+</kernel>

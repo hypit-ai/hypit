@@ -1,0 +1,13 @@
+{
+  "contract": "svml.speech-alignment.v1",
+  "durationSec": 2,
+  "fps": 30,
+  "words": [
+    { "text": "Left", "startSec": 0.1, "endSec": 0.5, "segmentId": "main" },
+    { "text": "and", "startSec": 0.6, "endSec": 0.9, "segmentId": "main" },
+    { "text": "right", "startSec": 1, "endSec": 1.5, "segmentId": "main" }
+  ],
+  "segments": [
+    { "id": "main", "startSec": 0, "endSec": 2 }
+  ]
+}

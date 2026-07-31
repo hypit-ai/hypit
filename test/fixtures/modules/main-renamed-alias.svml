@@ -1,0 +1,31 @@
+<svml version="1">
+  <import from="../../../stdlib/speech-spine.svk"/>
+  <import from="../../../stdlib/broll-track.svk"/>
+  <import from="../../../stdlib/caption-track.svk"/>
+  <import from="../../../stdlib/film.svk"/>
+  <import as="assets" from="./brand.svc"/>
+  <import as="house" from="./house.svs"/>
+
+  <script>
+    <segment id="main">
+      @poster Hello @/poster.
+    </segment>
+  </script>
+
+  <video id="avatar" src="./avatar.mp4"/>
+
+  <speech-spine id="speech">
+    <segment id="main" script={script.segment.main} visual={avatar}/>
+  </speech-spine>
+
+  <broll-track id="broll" class="house.full">
+    <item id="poster" source={assets.poster.image} during={script.selection.poster}/>
+  </broll-track>
+
+  <caption-track id="captions" script={script} class="house.launch" size="48"/>
+
+  <film id="main-film" class="house.vertical" speech={speech.speech}>
+    <track ref={broll.track}/>
+    <track ref={captions.track}/>
+  </film>
+</svml>

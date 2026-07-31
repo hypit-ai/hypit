@@ -1,0 +1,20 @@
+<kernel name="caption-track" abi="1" implementation="./runtime/caption-track.mjs">
+  <param name="z" type="number"/>
+  <param name="x" type="number" default="0.37"/>
+  <param name="y" type="number" default="0.54"/>
+  <param name="width" type="number" default="0.64"/>
+  <param name="maxWords" style="max-words" type="number" default="3"/>
+  <param name="hold" type="number" default="0.08"/>
+  <param name="cueFade" style="cue-fade" type="number" default="0.12"/>
+  <param name="font" style="font-family" type="string" default="Poppins, Inter, Arial, sans-serif"/>
+  <param name="size" style="font-size" type="number" default="50"/>
+  <param name="weight" style="font-weight" type="number" default="800"/>
+  <param name="tracking" style="letter-spacing" type="number" default="-1"/>
+  <param name="color" style="fill" type="string" default="#ffffff"/>
+  <param name="highlight" type="string" default="#ffd34d"/>
+  <param name="strokeWidth" style="stroke-width" type="number" default="0.002"/>
+  <param name="strokeColor" style="stroke-color" type="string" default="rgba(0,0,0,.82)"/>
+  <param name="shadow" type="string" default="0 2px 9px rgba(0,0,0,.5), 0 0 2px rgba(0,0,0,.68)"/>
+  <port name="script" direction="input" type="NarrativeIR" cardinality="one"/>
+  <port name="track" direction="output" type="Track" cardinality="one"/>
+</kernel>

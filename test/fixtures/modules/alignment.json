@@ -1,0 +1,20 @@
+{
+  "contract": "svml.speech-alignment.v1",
+  "durationSec": 1,
+  "fps": 30,
+  "words": [
+    {
+      "text": "Hello",
+      "startSec": 0.1,
+      "endSec": 0.8,
+      "segmentId": "main"
+    }
+  ],
+  "segments": [
+    {
+      "id": "main",
+      "startSec": 0,
+      "endSec": 1
+    }
+  ]
+}

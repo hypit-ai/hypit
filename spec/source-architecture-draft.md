@@ -16,7 +16,7 @@ HyperFrames HTML。
 .svml + transitive .svk/.svs/.svc imports + svml.lock
         │
         ▼
-parse / bind / typecheck / expand
+parse / bind / typecheck / resolve modules
         │
         ▼
 Plan IR (values · calls · ports · topology · effective params · provenance)
@@ -63,7 +63,7 @@ HTML**，不是再发明一套与 HyperFrames 并列的渲染引擎。新能力�
 
 | 文件 | 只负责 | Web 类比 |
 |---|---|---|
-| `.svk` | 定义组件词汇、类型、端口、声明性展开和渲染实现 | Web Component / component package |
+| `.svk` | 定义一个原子组件词汇、类型、端口、能力请求或渲染实现 | Web Component / component package |
 | `.svs` | 给已有组件提供可复用的参数规则和预设 | typed CSS |
 | `.svc` | 声明可复用的具名内容值和内容生成子图 | data/module/`<defs>` |
 | `.svml` | 当前影片的 Script、片内调用、语义时间放置、Tracks 和 Film | HTML document / main |
@@ -193,7 +193,6 @@ Timeline。导入一个 kit 不会运行其中全部 Kernel；导入一个声明
 Plan instance identity
 = canonical module identity
 + declaration id
-+ deterministic expansion key path
 ```
 
 模块内容哈希属于 provenance，不进入 identity；否则改一个参数就会把原实例
@@ -202,11 +201,11 @@ Plan instance identity
 import、移动一段声明或运行 `svml fmt`，不能让 Canvas 把既有实例解释为
 “删除后新建”。
 
-一个 Kernel 若会把动态 item 展开成多个独立 Plan/Canvas 实例，其 SVK schema
-必须声明如何从稳定字段得到 expansion key，并拒绝重复 key。只在 Kernel 内部
-参与绘制、不会成为独立实例或外部引用目标的匿名有序行可以没有 id；一旦某一项
-要跨实例引用、单独投影或跨次编译保留身份，就必须有稳定 id/key，不能使用数组
-下标兜底。
+SVML v1 不允许 `.svk` 暗中展开新的 Plan/Canvas 实例。需要让多个调用、缓存
+边界或 fan-out 在拓扑中可见时，把它们显式声明在 `.svml`，或封装成可复用的
+`.svc` 内容子图。Kernel 内部只参与一次投影、不会成为独立执行实例的 item 仍由
+递归 child schema 描述；一旦某项要跨实例引用或拥有独立执行身份，就必须提升为
+具名声明，不能使用数组下标或隐藏 expansion key 兜底。
 
 稳定身份不能兼任缓存命中条件。每个可执行实例还必须拥有独立的执行摘要：
 
@@ -226,6 +225,13 @@ Pin 仍是源码外的显式作者决定，而不是自动缓存。用户可以�
 或其他硬合同不兼容时才拒绝。下游摘要使用实际被 Pin 的 artifact hash，因此
 复用是可见、可追踪的，不会伪装成新参数下重新生成的结果。
 
+离线编译使用独立的 `svml.artifacts.v1` 绑定文件把 reachable capability
+instance 的稳定 identity、当前 execution digest、输出端口与内容哈希绑定起来。
+它不是 SVML 源码，也不是自动缓存；缺少绑定时编译器必须失败，绝不能静默调用
+付费 provider。原型阶段只接受可本地校验内容哈希的精确绑定。显式 Pin 如何在
+request digest 已变化时继续复用旧 take，仍属于后续 runtime 协议，不能以忽略
+digest 的方式偷渡进普通 artifact binding。
+
 ## 3. `.svk`: 定义平级 Kernel
 
 `.svk` 定义一个可直接 import、调用和验证的 Kernel。所有 Kernel 使用同一种
@@ -237,7 +243,8 @@ Pin 仍是源码外的显式作者决定，而不是自动缓存。用户可以�
 - 参数类型、合法值、默认值和必填约束；
 - temporal port 接受 `SelectionSet`、`MomentSet` 还是手工 `ProgramSpan`，以及
   它按 `one`、`each` 还是 `set` 消费 occurrence；
-- 声明性的调用、数据流展开和 Capability lowering；
+- 单一 capability request 的类型化描述，或 Located props 到 fragment 的
+  projector；
 - 受限运行时入口和/或 Located props 到 HyperFrames fragment 的 projector；
 - 编译器可以执行的静态诊断合同。
 
@@ -251,8 +258,10 @@ Pin 仍是源码外的显式作者决定，而不是自动缓存。用户可以�
 它们只是彼此平级的 `.svk`。用户 Kernel 和 stdlib Kernel 走同一套机制，不需要
 中央注册、晋升或 Engine 发布。
 
-生成拓扑不能藏在任意 JavaScript 黑盒中。渲染内部可以对编译器不透明，但模型
-调用、依赖、fan-out、端口、调用参数和输出类型必须通过声明性展开进入 Plan IR。
+生成拓扑不能藏在任意 JavaScript 黑盒中。渲染内部可以对编译器不透明，但每个
+模型调用、依赖、fan-out、端口、调用参数和输出类型都必须由 `.svml`/`.svc`
+中的具名声明直接进入 Plan IR。一个需要三次图片生成和一次视频生成的 recipe
+就是四个可见调用，不由某个 `.svk` 在背后展开。
 
 Capability Host 仍然存在：它负责凭证、队列、重试以及真正调用 Seedance、
 GPT Image、WhisperX 等底层能力。这里的“无引擎”是没有中心组件注册引擎，不是
@@ -261,7 +270,7 @@ GPT Image、WhisperX 等底层能力。这里的“无引擎”是没有中心�
 ### 3.1 平级而非 Family / Mode
 
 SVML v1 不定义 `family`、`implements`、继承或语言级 `mode`。所有 Kernel
-彼此平级；每个 Kernel 完整拥有自己的端口、参数、默认值、展开和实现合同。
+彼此平级；每个 Kernel 完整拥有自己的端口、参数、默认值和实现合同。
 编译器只检查一个调用是否满足它实际引用的那个 Kernel，不检查它是否符合
 `ranking`、`seedance` 或其他产品类别的共同契约。
 
@@ -370,15 +379,13 @@ document 中，普通 JavaScript 能访问全局 DOM，普通 CSS 也能越过�
 Shadow DOM 只能形成样式边界，不是 JavaScript 安全边界。因此根节点是
 **composition contract**，不是 security boundary。
 
-SVK manifest 必须把入口拆成宿主可执行的有限 ABI：
+SVK manifest 必须选择一个宿主可执行的有限 ABI：
 
 ```text
-static expand        source declarations → typed Plan fragment
 capability lowering  typed request → declared artifact/evidence
 track projection     Located props → HyperFrames fragment
 ```
 
-- `static expand` 必须纯、确定、无 I/O，并满足无环展开、终止条件和实例数上限；
 - `capability lowering` 只能通过宿主注入的类型化 capability handle 访问
   provider，不能接触其他 capability 的凭证；
 - `track projection` 只获得 scoped root、Located props、确定性 frame clock、
@@ -392,8 +399,8 @@ track projection     Located props → HyperFrames fragment
 
 这些是 compiler/runtime 的 effect 与安全合同，不是要求作者在 `.svml` 中把
 调用分成 `generation`、`analysis`、`render`、`export` 四类，也不记录所谓
-“重跑范围”。业务 Kernel 仍然平级；固定阶段只用于阻止 provider 代码在 parse
-时执行、renderer 反向改变 Speech Spine、循环展开和越权访问。
+“重跑范围”。业务 Kernel 仍然平级；ABI profile 只用于阻止 provider 代码在
+parse 时执行、renderer 反向改变 Speech Spine 和越权访问。
 
 Capability Host 只接收 Kernel lowering 后的类型化调用，并返回声明过的输出与
 证据。凭证、队列、重试和 provider SDK 可以对源语言不透明；调用、依赖、
@@ -404,7 +411,7 @@ Plan IR。Track projector 只把已经 Located 的值编译为 HyperFrames fragm
 ### 3.4 零特权验收
 
 随编译器发货的 stdlib Kernel 和第三方 Kernel 必须经过同一 parser、binder、
-typechecker、expander 与 renderer 接口。下列真实能力是 SVK 格式的最小验收
+typechecker、capability binding 与 renderer 接口。下列真实能力是 SVK 格式的最小验收
 集，而不是允许编译器按 tag 名特判的白名单：
 
 | 验收 Kernel | 必须证明的表达力 |
@@ -1000,7 +1007,7 @@ context-free `.svc` 内容。
 任何 Capability Host 或 projector 被调用之前，source closure 必须完整经过：
 
 ```text
-parse → bind → typecheck → expand → plan
+parse → bind → typecheck → resolve modules → plan
 ```
 
 这些阶段都是确定性、只读的，失败时不得留下 provider 调用、缓存选择或部分
@@ -1058,7 +1065,7 @@ Speech Compile 完成后，所有 Selection、Moment 和手工 ProgramSpan 都�
 - 所有运行时能力请求及其类型化输入，但不把“是否重跑”写回源码。
 
 每条诊断至少包含稳定错误码、主源码范围、必要的相关范围、具体失败事实和一个
-可执行修法。生成源码、import 展开和 Kernel expansion 必须保留 source map，
+可执行修法。生成源码和 import/`.svc` 展开必须保留 source map，
 使错误回到作者实际编辑的文件，而不是只指向展开后的 IR。
 
 ### 8.2 CST、格式化与迁移
@@ -1120,7 +1127,7 @@ parse(format(source)).semanticIR == parse(source).semanticIR
    transitive provenance，并能离线复现同一 source closure；
 6. Seedance 与 Ranking 变体作为平级 Kernel 时，共享运行时代码无需进入语言，
    并且不需要 family/mode conformance；
-7. static expand、capability lowering 和 track projection 的 ABI 能实际隔离
+7. capability lowering 和 track projection 的 ABI 能实际隔离
    provider 凭证、全局 DOM/CSS、网络、墙钟和随机性；组件 root 不被误当成
    JavaScript 安全边界；
 8. formatter、source map、一次弃用迁移与 document/SVK/IR 版本独立性通过

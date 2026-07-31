@@ -1,0 +1,58 @@
+<svml version="1">
+  <import from="../../../stdlib/speech-spine.svk"/>
+  <import from="../../../stdlib/media-track.svk"/>
+  <import from="../../../stdlib/audio-track.svk"/>
+  <import from="../../../stdlib/film.svk"/>
+
+  <script>
+    <segment id="main">
+      One @pop! two three.
+    </segment>
+  </script>
+
+  <video id="long-video" src="./long.mp4"/>
+  <audio id="pop-sound" src="./pop.wav"/>
+
+  <speech-spine id="speech">
+    <segment id="main" script={script.segment.main} visual={long-video}/>
+  </speech-spine>
+
+  <media-track id="aroll" z="200">
+    <item id="host" source={long-video} during="full" fit="cover">
+      <present
+        id="top-circle"
+        during="start .. start+1.2s"
+        layer="10"
+        x="0.05"
+        y="0.05"
+        width="0.3"
+        height="0.3"
+        shape="circle"
+      />
+      <present
+        id="lower-split"
+        during="start+1s .. start+2s"
+        layer="20"
+        x="0"
+        y="0.5"
+        width="1"
+        height="0.5"
+        enter="fade 200ms"
+      />
+      <present
+        id="outside"
+        during="end+1s .. end+2s"
+        layer="30"
+      />
+    </item>
+  </media-track>
+
+  <audio-track id="sfx">
+    <item id="pop" source={pop-sound} at={script.moment.pop} duration="200ms" bus="sfx"/>
+  </audio-track>
+
+  <film id="presentation" speech={speech.speech}>
+    <track ref={aroll.track}/>
+    <track ref={sfx.track}/>
+  </film>
+</svml>

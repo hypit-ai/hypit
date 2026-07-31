@@ -1,0 +1,165 @@
+<svml version="1">
+
+  <import from="../../stdlib/speech-spine.svk"/>
+  <import from="../../stdlib/media-track.svk"/>
+  <import from="../../stdlib/ranking-column.svk"/>
+  <import from="../../stdlib/broll-track.svk"/>
+  <import from="../../stdlib/text-track.svk"/>
+  <import from="../../stdlib/caption-track.svk"/>
+  <import from="../../stdlib/audio-track.svk"/>
+  <import from="../../stdlib/film.svk"/>
+
+  <script>
+    <segment id="scene-1">
+      <NARRATOR> @photoshop Photoshop.
+      <SPEAKER> Powerful, but only if you know how to use it. Otherwise, your new profile
+                picture becomes a three-hour design project @/photoshop.
+      <NARRATOR> @facetune Facetune.
+      <SPEAKER> Fast and great for touch-ups. But it still leaves you with the same awkward
+                pose and the same dorm-room background @/facetune.
+    </segment>
+
+    <segment id="scene-2">
+      <NARRATOR> @remini Remini.
+      <SPEAKER> Great for blurry photos. It restores detail, but it can't fix the pose,
+                outfit, or background. You get the same bad photo in HD @/remini.
+      <NARRATOR> @chatgpt ChatGPT.
+      <SPEAKER> More flexible. It can create a new shot, but getting your face and the
+                details right becomes a prompt-writing group project @/chatgpt.
+    </segment>
+
+    <segment id="scene-3">
+      <NARRATOR> @regen ReGen.
+      <SPEAKER> Pick a photo you love, and the app @handsome-1 rebuilds it around you with a
+                @/handsome-1~ @handsome-2 better pose, outfit, and setting. @/handsome-2
+                From one selfie, you can make @dating-photo a dating photo, @/dating-photo~
+                @linkedin-headshot LinkedIn headshot, @/linkedin-headshot~
+                @instagram-post or Instagram post, @/instagram-post
+                so you get what you wanted instead of fixing a bad shot @/regen.
+    </segment>
+  </script>
+
+  <video id="avatar-1" src="./assets/avatar-1.mp4"/>
+  <video id="avatar-2" src="./assets/avatar-2.mp4"/>
+  <video id="avatar-3" src="./assets/avatar-3.mp4"/>
+  <audio id="avatar-1-audio" src="./assets/avatar-1.mp3"/>
+  <audio id="avatar-2-audio" src="./assets/avatar-2.mp3"/>
+  <audio id="avatar-3-audio" src="./assets/avatar-3.mp3"/>
+
+  <image id="ranking-icon-1" src="./assets/ranking-icon-1.jpg"/>
+  <image id="ranking-icon-2" src="./assets/ranking-icon-2.jpg"/>
+  <image id="ranking-icon-3" src="./assets/ranking-icon-3.jpg"/>
+  <image id="ranking-icon-4" src="./assets/ranking-icon-4.jpg"/>
+  <image id="ranking-icon-5" src="./assets/ranking-icon-5.jpg"/>
+
+  <image id="broll-1" src="./assets/broll-1.png"/>
+  <image id="broll-2" src="./assets/broll-2.png"/>
+  <image id="broll-3" src="./assets/broll-3.png"/>
+  <image id="broll-4" src="./assets/broll-4.png"/>
+  <image id="broll-5" src="./assets/broll-5.png"/>
+
+  <audio id="ranking-appear" src="./assets/ranking-appear.wav"/>
+  <audio id="ranking-move" src="./assets/ranking-move.wav"/>
+  <audio id="background-music" src="./assets/background.mp3"/>
+
+  <speech-spine id="speech">
+    <segment id="scene-1" script={script.segment.scene-1} visual={avatar-1} audio={avatar-1-audio}/>
+    <segment id="scene-2" script={script.segment.scene-2} visual={avatar-2} audio={avatar-2-audio}/>
+    <segment id="scene-3" script={script.segment.scene-3} visual={avatar-3} audio={avatar-3-audio}/>
+  </speech-spine>
+
+  <media-track id="base" z="20">
+    <item id="scene-1" source={speech.segment.scene-1.visual} fit="cover"/>
+    <item id="scene-2" source={speech.segment.scene-2.visual} fit="cover"/>
+    <item id="scene-3" source={speech.segment.scene-3.visual} fit="cover"/>
+  </media-track>
+
+  <ranking-column
+    id="ranking"
+    z="42"
+    x="0"
+    y="0.17"
+    width="0.305"
+    rowHeight="0.071"
+    gap="0.011"
+    stageX="0.66"
+    stageY="0.73"
+    stageSize="0.33"
+    appearSound={ranking-appear}
+    moveSound={ranking-move}
+    appearGain="0.09"
+    moveGain="0.10"
+  >
+    <item id="regen"     rank="1" image={ranking-icon-1} during={script.selection.regen}     window="start+0.1s .. end-0.3s"/>
+    <item id="chatgpt"   rank="2" image={ranking-icon-2} during={script.selection.chatgpt}   window="start+0.1s .. end-0.3s"/>
+    <item id="remini"    rank="3" image={ranking-icon-3} during={script.selection.remini}    window="start+0.1s .. end-0.3s"/>
+    <item id="facetune"  rank="4" image={ranking-icon-4} during={script.selection.facetune}  window="start+0.1s .. end-0.3s"/>
+    <item id="photoshop" rank="5" image={ranking-icon-5} during={script.selection.photoshop} window="start+0.1s .. end-0.3s"/>
+  </ranking-column>
+
+  <text-track id="title" z="70">
+    <item
+      id="title"
+      text="Ranking AI photo apps for guys with no good pics"
+      during="full"
+      x="0"
+      y="0.09895833333333333"
+      width="1"
+      height="0.078125"
+      font="Poppins, Inter, Arial, sans-serif"
+      size="54"
+      weight="950"
+      lineHeight="0.92"
+      letterSpacing="0.2"
+      color="#050505"
+      background="#ffffff"
+      uppercase="true"
+    />
+  </text-track>
+
+  <broll-track id="broll" z="700">
+    <item id="handsome-1"        source={broll-5} during={script.selection.handsome-1}        fit="contain" zoom="1.02"/>
+    <item id="handsome-2"        source={broll-4} during={script.selection.handsome-2}        fit="contain" zoom="1.03"/>
+    <item id="dating-photo"      source={broll-3} during={script.selection.dating-photo}      fit="contain" zoom="1.02"/>
+    <item id="linkedin-headshot" source={broll-2} during={script.selection.linkedin-headshot} fit="contain" zoom="1.03"/>
+    <item id="instagram-post"    source={broll-1} during={script.selection.instagram-post}    fit="contain" zoom="1.02"/>
+  </broll-track>
+
+  <caption-track
+    id="captions"
+    script={script}
+    z="500"
+    x="0.37"
+    y="0.54"
+    width="0.64"
+    maxWords="3"
+    hold="0.08"
+    font="Poppins, Inter, Arial, sans-serif"
+    size="50"
+    weight="800"
+    tracking="-1"
+    color="#ffffff"
+    highlight="#ffd34d"
+  />
+
+  <audio-track id="music">
+    <item id="background" source={background-music} during="full" volume="0.9"/>
+  </audio-track>
+
+  <film
+    id="regen-ranking"
+    speech={speech.speech}
+    width="1080"
+    height="1920"
+    fps="30"
+    background="#000000"
+  >
+    <track ref={base.track}/>
+    <track ref={ranking.track}/>
+    <track ref={title.track}/>
+    <track ref={broll.track}/>
+    <track ref={captions.track}/>
+    <track ref={music.track}/>
+  </film>
+
+</svml>
