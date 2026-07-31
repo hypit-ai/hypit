@@ -6,6 +6,13 @@ This record describes the first executable slice of the source architecture. It
 does not freeze the full architecture draft; the frozen Script syntax remains in
 `spec/script-surface-v1.md`.
 
+The slice predates the independent-endpoint Temporal Producer contract. Its
+implemented Locate path still assumes globally monotonic words and one shared cut
+between adjacent Segments. The current architecture instead requires a selected
+`TemporalProduction` with a complete `2M + 2N` anchor table and permits different
+Segments to overlap. That is a declared next implementation boundary, not behavior
+already provided by this prototype.
+
 ## Outcome
 
 One SVML source closure now deterministically produces all three useful views:
@@ -99,7 +106,7 @@ Selection ranges, B-roll cut frames and audio are asserted independently.
   audio buses and explicit media time mapping;
 - Item/Present intersection without restarting source time;
 - B-roll visual crossfade independent of source audio;
-- Film as the unique reachable root and master-clock owner.
+- Film as the unique reachable root and current prototype master-clock owner.
 
 ## Deliberate next boundaries
 
@@ -117,6 +124,10 @@ The following are not silently approximated:
    intentionally contains no authored `x/y`; layout belongs to the viewer.
 6. VLM, bbox and visual tracking. They are explicitly outside SVML v1's semantic
    spine and may later exist as evidence extensions or HTML post-processing.
+7. Duck-typed Temporal Producers. Replace shared structural cuts with independent
+   Segment start/end identities, validate word order per Segment rather than
+   globally, bind one complete table to one ProgramBasis, and prove both hard-cut
+   Speech Spine and overlapping/crossfade producers through the same public ABI.
 
 The next implementation milestone should be the typed request side of the
 Capability Host contract. A live provider adapter must not be enabled until the

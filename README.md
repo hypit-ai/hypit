@@ -1,9 +1,10 @@
 # SVML
 
 Semantic Video Markup Language is a semantic source language for information-flow
-video. Its primary clock is the spoken narrative: Script compiles to aligned words,
-Selections and Moments; ordinary imported Kernels project the resulting media graph
-to one deterministic HyperFrames document.
+video. Script creates stable semantic addresses; a Composition-selected Temporal
+Producer binds every Segment and word endpoint to one ProgramBasis; ordinary
+imported Kernels project the resulting media graph to one deterministic HyperFrames
+document.
 
 ```text
 .svml + .svc + .svs + .svk + lock + evidence
@@ -29,8 +30,8 @@ stdlib. The deterministic slice is working end to end:
 - isolated `.svk` projectors with scoped CSS and a JSON-only ABI;
 - typed `.svk` ports, parameters and recursive child-content schemas;
 - manifest-enforced temporal `one` / `each` / `set` consumption;
-- Speech Spine, media/presentation mapping, ranking, B-roll, captions, text and
-  audio;
+- a Speech Spine reference producer, media/presentation mapping, ranking, B-roll,
+  captions, text and audio;
 - frame-exact Located IR, Canvas/Timeline views and HyperFrames HTML.
 
 The current runtime deliberately has no live generation provider host. A
@@ -39,6 +40,13 @@ an exact, content-verified `svml.artifacts.v1` binding for its outputs and never
 falls back to a provider call. Direct existing `Image`, `Video` and `Audio` values
 work as usual. This keeps the first end-to-end reference deterministic while
 preserving the eventual capability boundary.
+
+The executable prototype still models temporal evidence as one globally monotonic
+Speech Spine alignment with shared adjacent Segment cuts. The current architecture
+draft supersedes that restriction with a duck-typed `TemporalProduction` contract
+and `2M + 2N` independent Segment/word endpoint identities. That migration is an
+explicit implementation boundary; the repository does not claim it is already
+implemented.
 
 ## Commands
 
@@ -71,7 +79,7 @@ pnpm svml render build/index.html --out build/video.mp4
 whose reparsed semantic IR differs.
 `canvas` requires no timing or provider result. `estimate` deterministically
 creates provisional syllable-based alignment; `timeline` and `compile` consume
-either that preview evidence or measured Speech Compile evidence. A compile is
+either that preview evidence or measured Speech Spine evidence. A compile is
 marked reproducible only when its exact
 module/Kernel/material closure matches the lock and every reachable capability
 output has been content-verified.
@@ -79,8 +87,8 @@ output has been content-verified.
 ## Reference implementation
 
 [`examples/regen-ranking/regen-ranking.svml`](examples/regen-ranking/regen-ranking.svml)
-reconstructs a real production video containing Speech Spine, a five-item ranking
-track, five B-roll items, captions, title, music and sound effects. The media files
+reconstructs a real production video containing the Speech Spine reference producer,
+a five-item ranking track, five B-roll items, captions, title, music and sound effects. The media files
 are intentionally gitignored; their production provenance and frozen assertions
 are recorded in
 [`examples/regen-ranking/reference.json`](examples/regen-ranking/reference.json).
@@ -96,10 +104,10 @@ alignment.
   source language for narrative, text projections, selections, and moments.
 - [Source Architecture Draft](spec/source-architecture-draft.md) — the current
   draft for `.svk` components, `.svs` parameter sheets, `.svc` content modules,
-  Script-dependent generation, Tracks, and the single Film root.
+  Script-dependent generation, Temporal Producers, Tracks, and a Composition root.
 - [Compiler prototype record](docs/compiler-prototype-v1.md) — implemented
   boundaries, real-video evidence and remaining work.
 - [External Runtime Host Architecture Draft](docs/runtime-host-architecture-draft.md)
   — portable runtime, Artifact, Effect/Receipt, Worker, queue, provider and
-  self-hosting boundaries; narrative-clock and alignment acquisition remain
+  self-hosting boundaries; TemporalProduction acquisition remains
   intentionally deferred.

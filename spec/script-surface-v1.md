@@ -18,7 +18,7 @@ SVML 是语义视频源语言，不是像素渲染格式。本文只冻结它最
 
 | 构造 | 只负责 | 不负责 |
 |---|---|---|
-| `Segment` | 有序的媒体/口播块和结构切点 | 自动 Selection、时长、静音 |
+| `Segment` | 有序的媒体/口播块和独立首尾锚点 | 自动 Selection、时长、静音 |
 | `Role Cue` | `dialogue` 导出时的“谁说了什么”文本前缀 | speaker 实体、音色、字段路由 |
 | `Dual Text` | 显示文字与实际读音不同 | TTS 厂商参数、样式、动作 |
 | `Selection` | 一个或多个显式闭合的语义时间区间 | 消费者声明、绝对秒数 |
@@ -80,7 +80,7 @@ Meet Hypit.
 ```
 
 `silence` 只是 Selection 的名字，不会自动让音频静音。它完整选择了空
-Segment 的两个结构切点；真正的静音或素材行为由外部 Program 决定。
+Segment 的两个独立结构锚点；真正的静音或素材行为由外部 Program 决定。
 `pop` 是一个默认吸右的 Moment，解析到 `laughed` 的起音；它同样不进入
 任何文本投影。
 
@@ -102,13 +102,17 @@ Segment 的两个结构切点；真正的静音或素材行为由外部 Program 
 - Segment id 在文档内唯一，Segment 不允许嵌套。
 - 自然语言只能出现在 Segment 内；Segment 之间只允许空白、Selection/Moment
   标记和注释。
-- 空 Segment 使用自闭合形式。它有结构开始/结束切点，但没有词法锚点。
+- 空 Segment 使用自闭合形式。它有独立的结构开始/结束锚点，但没有词法锚点。
 - 空 Segment 不蕴含静音，也不蕴含任何默认时长。其物理时长来自媒体、生成
   结果或 `<script>` 外的 Program。
 - Segment 不自动声明同名 Selection。选择一个、三个或任意多个 Segment，
   都必须显式写闭合 Selection。
-- 相邻 Segment 共享一个切点。因此 `m` 个 Segment 始终贡献 `m + 1` 个
-  具有稳定身份的结构切点。
+- 每个 Segment 独立拥有开始和结束锚点。因此 `m` 个 Segment 始终贡献
+  `2m` 个具有稳定身份的结构锚点；相邻 Segment 的两个边界即使最终落在
+  同一个 ProgramPoint，也不能合并成同一身份。
+- Segment 的源码顺序是叙事与作者顺序，不强迫其物理区间首尾相接。Temporal
+  Producer 可以把两个相邻 Segment 定位为硬切、重叠或留白，也可以让多个
+  身份落到同一个点；这些关系属于定位表，不属于 Script 源语法。
 
 例如选择三个连续 Segment：
 
@@ -253,7 +257,7 @@ before ~@x hello @/x~ after
 @/pause
 ```
 
-`pause` 的开始吸附空 Segment 的开始切点，结束吸附它的结束切点。Selection
+`pause` 的开始吸附空 Segment 的开始锚点，结束吸附它的结束锚点。Selection
 可完全位于 Segment 外，也可跨任意数量的 Segment。
 
 ### 4.2 闭合、交叉与非连通
@@ -296,18 +300,53 @@ Slot 绑定、Dual Text speech 投影和 NFC 归一化之后，v1 使用规范�
 边界，可以在新的 timing profile / Script Surface 版本中复用相同的
 Selection/Moment 类型；v1 不应为尚不存在的精度引入新正文符号。
 
-若 speech 中有 `n` 个 token、Script 中有 `m` 个 Segment，Temporal Anchor
-Map 恰有：
+若 Script 中有 `N` 个 Segment，第 `k` 个 Segment 有 `mₖ` 个 speech token，
+且总 token 数 `M = Σmₖ`，Semantic Anchor Index 恰有：
 
 ```text
-2n + m + 1
+Σ(2mₖ + 2) = 2M + 2N
 ```
 
-个稳定身份：每个 token 的词首/词尾各一个，加上 `m + 1` 个唯一结构切点。
-这些身份即使最终解析到同一帧也不能合并。
+个稳定身份。第 `k` 个 Segment 的局部序列是：
 
-同一份 SelectionSet 可先在 Estimate Anchor Map 上得到预览区间，再在
-Evidence Anchor Map 上得到精确区间。Script 本身不含秒数、帧号或采样点。
+```text
+segment[k].start
+token[k,1].start
+token[k,1].end
+...
+token[k,mₖ].start
+token[k,mₖ].end
+segment[k].end
+```
+
+Program 起点和终点属于 ProgramBasis，不额外进入这 `2M + 2N` 个 Script
+身份。Temporal Producer 必须输出从上述每一个身份到同一 ProgramBasis 中
+ProgramPoint 的完整映射；不得遗漏端点，也不得要求消费者补点。不同身份可以
+落到同一点，但身份仍不能合并。
+
+v1 默认的有序 Segment profile 只要求每个 Segment 自己内部非降序，允许任意
+相邻点重合：
+
+```text
+segment.start ≤ token₁.start ≤ token₁.end ≤ ... ≤ segment.end
+```
+
+不同 Segment 之间没有全局单调、无重叠或首尾相接约束。因此：
+
+```text
+hard cut   segment[a].end == segment[b].start
+overlap    segment[b].start <  segment[a].end
+gap        segment[b].start >  segment[a].end
+```
+
+都是合法定位结果。跨 Segment 的 Selection 仍按两个具名端点分别解析；若某个
+消费者投影后得到零长或反向区间，继续遵守下文的 occurrence 丢弃规则，而不是
+反向修改锚点表。
+
+同一份 SelectionSet 可先在 estimated Complete Anchor Table 上得到预览区间，
+再在 evidence/derived Complete Anchor Table 上得到最终区间。完整性与证据质量
+正交：表必须始终覆盖全部身份，但每个点可以标记为 `estimated`、`derived` 或
+`measured`。Script 本身不含秒数、帧号或采样点。
 Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只
 量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
 
@@ -343,8 +382,9 @@ I just @pop! laughed my ass out.
 I laughed ~@pop! and left.
 ```
 
-`pop` 解析到 `laughed` 的收音。位于两个 Segment 之间时，左右候选是对应
-方向上的共享结构切点。
+`pop` 解析到 `laughed` 的收音。位于两个 Segment 之间时，左吸候选是前一个
+Segment 的结束锚点，右吸候选是后一个 Segment 的开始锚点；两者可能落在
+同一点，也可能因重叠或留白而落在不同点。
 
 规范规则：
 
@@ -359,9 +399,9 @@ I laughed ~@pop! and left.
   temporal syntax，不能退化为正文。
 - Moment 与 Selection marker 可出现在相同位置，包括 Segment 之间和
   Dual Text 的 speech 侧，但均不得切入 v1 speech token。
-- Moment 只选择 Temporal Anchor Map 中已有的一个候选点，不新增 anchor
-  identity；因此 `2n + m + 1` 的精确计数不因 Moment 数量改变。
-- MomentSet 与 SelectionSet 复用同一份 Estimate/Evidence Anchor Map 和
+- Moment 只选择 Complete Anchor Table 中已有的一个候选点，不新增 anchor
+  identity；因此 `2M + 2N` 的精确计数不因 Moment 数量改变。
+- MomentSet 与 SelectionSet 复用同一份 Complete Anchor Table 和
   一次性帧量化；区别只在最终载体是 `Point[]` 而不是 `Range[]`。
 
 消费端保持两个互不相混的类型：
@@ -463,7 +503,7 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 
 解析结果至少保留：
 
-- Segment 的顺序、id 和结构边界；
+- Segment 的顺序、id、结构边界和各自独立的 start/end anchor identity；
 - 每个 Segment 的有序 spoken turn，以及各 turn 的可选 Role Cue；
 - plain / Dual Text / Slot atom 及其源码范围；
 - caption atom 到一个或多个 speech token 的显式映射；
@@ -503,7 +543,7 @@ Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
 | 绝对秒数、帧号、采样点、任意 sub-frame 位置 | Script 外的运行时/Program |
 | token 内音素或字素级切点、标点专属时间 | 后续 timing profile 或新版本 |
 | 空 Segment 的预览时长 | 媒体、生成器或显式 Program |
-| 同时重叠说话 | 多轨媒体/生成 Program；Base Script 仍是顺序语义轴 |
+| 同时重叠说话 | 不新增正文语法；Temporal Producer 可把不同 Segment 定位为重叠，Caption/Track 分别声明自己的 overlap policy |
 | 笑声、咳嗽、环境声、SFX、beep | 音频/生成/SFX Program |
 | 无 speech 时间依据的纯显示文字 | Text、Deck 或 Caption Program |
 | 字幕样式、手工断行、动效、画面动作 | 相应 Program 引用 Selection |
@@ -537,7 +577,10 @@ Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
 2. parser、formatter、Narrative IR 与三投影不依赖 provider 或渲染器；
 3. SelectionSet 支持闭合、交叉、非连通 occurrence 与左右 affinity；
 4. MomentSet 支持 `@id!` / `~@id!`、单/多 occurrence 与 `at` 类型闸；
-5. Dual Text 在 speech、caption 与时间映射上保持一个可审计 source map；
-6. Slot 采用 parse-first、literal-only binding，不能注入语法；
-7. 未知版本、未知保留语法、混合 temporal type 与 partial dual atom 全部
+5. Semantic Anchor Index 恰有 `2M + 2N` 个独立身份；Complete Anchor Table
+   覆盖硬切、重叠、留白、空 Segment、端点重合和跨 Segment Selection，并且
+   只逐 Segment 校验单调性；
+6. Dual Text 在 speech、caption 与时间映射上保持一个可审计 source map；
+7. Slot 采用 parse-first、literal-only binding，不能注入语法；
+8. 未知版本、未知保留语法、混合 temporal type 与 partial dual atom 全部
    fail closed。
