@@ -1,0 +1,7 @@
+<sheet version="1" id="house">
+
+  speech-program.default {
+    overlap: 500ms;
+  }
+
+</sheet>
