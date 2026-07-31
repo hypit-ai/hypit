@@ -2,10 +2,10 @@
 
 > **Draft; not frozen.**
 >
-> 本文记录截至 2026-07-31 的完整 SVML 源码架构。可执行原型仍实现
-> [Script Surface v1](./script-surface-v1.md)；独立 Segment 端点属于
-> [Script Surface v2 Draft](./script-surface-v2-draft.md)。本文中的文档外壳、
-> Component ABI、Locator ABI 和 flat Track IR 仍需原型验证后才能冻结。
+> 本文记录截至 2026-07-31 的首个公开目标 SVML v1 源码架构。SVML 尚未发布，
+> 因此不为仓库中的早期原型保留兼容层；独立 Segment 端点与 `2M + 2N` 直接属于
+> [Script Surface v1](./script-surface-v1.md)。文档外壳、Component ABI、Locator
+> ABI 和 flat Track IR 仍需原型验证后才能冻结。
 
 SVML 是信息流视频的语义源语言，不是画布文件，也不是像素渲染格式。它的
 北极星是：以口播语义建立稳定地址，把这些地址迟绑定到本次成片唯一的物理
@@ -173,7 +173,7 @@ Component instance 可以被 Canvas 投影成节点，但 Node 只是一种人�
 | 输出 | 角色 | 典型 Component |
 |---|---|---|
 | 普通 typed value | Value | `gpt-image`、`seedance`、Evidence producer |
-| `TemporalBasisProduction` | Basis | `speech-assemble`、`crossfade-speech` |
+| `TemporalBasisProduction` | Basis | `speech-assemble`、其他自定义时基生产者 |
 | `EstimatedSemanticMap` / `ExactSemanticMap` | Locator | `speech-locator`、`manual-locator` |
 | `Track` | Track | `media-track`、`ranking-tier-list`、`caption-track` |
 | `HyperFramesDocument` | Composition | `film` |
@@ -194,7 +194,7 @@ Composition 都不需要另一套调用语法：
 
 ```text
 gpt-image         Text + Image[] → Image
-crossfade-speech  SegmentMedia[] → TemporalBasisProduction
+speech-assemble  SegmentMedia[] + JoinSpec[] → TemporalBasisProduction
 speech-locator    SemanticIndex + basis + Evidence → ExactSemanticMap
 speech-program    Script + SegmentMedia[] + JoinSpec[] → program + visual facet
 ranking-tier-list items + time   → Track
@@ -352,11 +352,12 @@ Composite 定义、effective params、公开 children、锁定 imports 和展开
 `composite-v1` 是唯一允许 SVK 透明展开多个 Plan instances 的 profile。其他
 profile 仍不得在运行时代码中暗中创建 Component 或 provider 调用。
 
-高级 Composite 可以提供 `speech-spine` 这样的 V1 兼容调用名，但它仍是普通、
-可替换且可完全绕过的 Library Component；Compiler 不认识该名字，也不要求每份
-文档存在 Speech Spine。类似地，`film program={voice.program}` 可以由导入的
-Film 门面归一化为 basis/map 输入；这不是 Compiler 特判。若门面通过 Composite
-实现，内部原语必须使用 `film-core` 等不同调用名，不能让 `<film>` 展开成自身。
+v1 stdlib 只发布最终选择的作者词汇，例如 `speech-program`。任何高级门面都仍是
+普通、可替换且可完全绕过的 Library Component；Compiler 不认识其名字，也不
+要求每份文档存在某种 Speech Program。类似地，
+`film program={voice.program}` 可以由导入的 Film 门面归一化为 basis/map 输入；
+这不是 Compiler 特判。若门面通过 Composite 实现，内部原语必须使用
+`film-core` 等不同调用名，不能让 `<film>` 展开成自身。
 
 ## 4. `.svs`: typed parameter sheet
 
@@ -454,9 +455,9 @@ Runtime。类型系统要求一个且仅一个未被其他 Component 消费的 C
 Locator、Tracks 与 Film，也可以实例化 `speech-program` 等 Composite，让同样的
 内部实例和端口由编译期透明展开产生。
 
-SVML 文档版本、Script Surface 版本和 SVK ABI 是独立版本轴。Script v2 应显式
-写成 `<script version="2">`；`<svml version="2">` 不能在没有规范声明的情况下
-静默改变共享 Segment cut、Anchor identity 数量或吸附语义。
+SVML 文档版本和 SVK ABI 是独立版本轴。首个公开源码写作
+`<svml version="1">`，其中 `<script>` 直接采用本文的 Script Surface v1。
+未来若 Script 需要独立演进，再为已发布的合同设计显式版本机制。
 
 ### 6.1 Basis Producer 与 Locator 解耦
 
@@ -544,7 +545,7 @@ selected basis 的 `basisDigest`；否则在任何 Track lowering 或 provider �
 reachability、identity、executionDigest 与 lock 机制处理，不再依赖源码外的
 隐式 Locator binding。
 
-Script Surface v2 若有 `N` 个 Segment、`M` 个 speech token，Map 必须覆盖
+Script Surface v1 若有 `N` 个 Segment、`M` 个 speech token，Map 必须覆盖
 `2M + 2N` 个 identity。相邻 Segment `A`、`B` 允许 hard cut、overlap 或 gap，
 同时保持：
 
@@ -827,8 +828,8 @@ Parser 除 AST 外保留注释、空白、属性顺序和源码范围。Formatte
 parse(format(source)).semanticIR == parse(source).semanticIR
 ```
 
-迁移在 AST/CST 上执行。冻结 v1 不得被静默改写；共享 Segment cuts → 独立端点
-必须显式升级到 Script Surface v2。
+未来迁移应在 AST/CST 上执行。当前仓库没有已发布的旧语言需要迁移；早期原型
+直接重写为本文 v1，其共享 Segment cut 行为不构成语言合同。
 
 ### 8.3 Digest 与冻结记录
 
@@ -867,7 +868,7 @@ reproducible
    ExactSemanticMap。
 3. Basis Component 与 Locator Component 分离；二者都是 SVK，Estimate 不能
    冒充 Exact。
-4. Script v2 Map 完整覆盖 `2M + 2N` identity，消费者不能补点。
+4. Script v1 Map 完整覆盖 `2M + 2N` identity，消费者不能补点。
 5. SelectionSet 永久支持非连通；`one/each/set` 由消费者声明。
 6. 所有视听贡献共享一个 ProgramBasis 和一个 ProgramSpace。
 7. Track 是 flat terminal contribution；不嵌套、不聚合、不消费 Track。
@@ -891,7 +892,7 @@ reproducible
    capability 与 Evidence + pure locator 两种实现验证同一 SemanticMap ABI；
 3. 用一个支持逐连接 JoinSpec 的 `speech-assemble` Basis Component 验证 hard
    cut、gap、crossfade 混用，再用一个真正采用不同组装不变量的平级 Basis
-   Component 验证同一 Locator Component 和 Script v2 `2M + 2N`；
+   Component 验证同一 Locator Component 和 Script v1 `2M + 2N`；
 4. 实现 `composite-v1` 的 parser/typecheck/finite expansion/identity/source-map，
    用 `speech-program.svk` 证明内部 Basis 与 Locator 仍分别进入 Plan/lock；
 5. 实现 flat LocatedTrack/visual/audio contribution IR，删除公共
