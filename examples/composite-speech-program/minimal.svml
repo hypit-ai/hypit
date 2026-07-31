@@ -1,15 +1,15 @@
 <!--
   Proposed composite-v1 author surface. The current compiler does not implement
-  this profile or Script Surface v2 yet.
+  this profile or the complete Script Surface v1 yet.
 -->
-<svml version="2">
+<svml version="1">
 
   <import from="./speech-program.svk"/>
   <import from="@svml/std/media-track.svk"/>
   <import from="@svml/std/film.svk"/>
   <import as="house" from="./house.svs"/>
 
-  <script version="2">
+  <script>
     <segment id="intro">
       <HOST> Hello, this is SVML.
     </segment>

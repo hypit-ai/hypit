@@ -1,17 +1,19 @@
-# Compiler prototype v1 record
+# Early compiler prototype record
 
 Date: 2026-07-31
 
-This record describes the first executable slice of the source architecture. It
-does not freeze the full architecture draft; the frozen Script syntax remains in
-`spec/script-surface-v1.md`.
+This record describes an early executable slice of the source architecture. SVML
+has not been publicly released, and this implementation is not a prior language
+version or compatibility contract. The sole target remains the draft in
+`spec/script-surface-v1.md` and `spec/source-architecture-draft.md`.
 
-The slice predates the independent-endpoint Basis/Locator contract. Its implemented
+The slice predates the current independent-endpoint Basis/Locator contract. Its implemented
 Locate path still assumes globally monotonic words and one shared cut between
 adjacent Segments. The current architecture instead requires a selected
 `TemporalBasisProduction` plus an imported Locator Component whose
 `ExactSemanticMap` covers `2M + 2N` identities. That is a declared next
-implementation boundary, not behavior already provided by this prototype.
+implementation boundary, not behavior already provided by this prototype. The
+prototype will be replaced directly.
 
 ## Outcome
 
@@ -128,7 +130,7 @@ The following are not silently approximated:
 6. VLM, bbox and visual tracking. They are explicitly outside SVML v1's semantic
    spine and may later exist as evidence extensions or HTML post-processing.
 7. Decoupled Basis Production and Location. Replace shared structural cuts with
-   Script Surface v2 independent Segment endpoints; validate `2M + 2N`; prove
+   Script Surface v1 independent Segment endpoints; validate `2M + 2N`; prove
    mixed hard-cut, gap and crossfade `JoinSpec` values through one ordinary
    `speech-assemble` Basis Component, then prove a genuinely different Basis
    implementation through the same `TemporalBasisProduction` ABI; import a
