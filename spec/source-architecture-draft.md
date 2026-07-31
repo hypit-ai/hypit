@@ -164,11 +164,11 @@ Component instance 可以被 Canvas 投影成节点，但 Node 只是一种人�
 - 输入/输出端口类型、cardinality 和动态 item schema；
 - temporal port 接受 SelectionSet、MomentSet 还是 ProgramSpan，以及
   `one` / `each` / `set` cardinality；
-- `capability-v1` request lowering 或 `pure-lowering-v1` 实现；
+- `capability-v1`、`pure-lowering-v1` 或 `composite-v1` 实现；
 - 实现摘要、ABI 版本、权限和资源限制。
 
-所有 Component 使用同一种标签和 manifest 机制。按照主要输出，SVK 有五种
-数据流角色：
+所有 Component 使用同一种标签和 manifest 机制。公共端口目前有五种重要输出
+边界：
 
 | 输出 | 角色 | 典型 Component |
 |---|---|---|
@@ -178,9 +178,11 @@ Component instance 可以被 Canvas 投影成节点，但 Node 只是一种人�
 | `Track` | Track | `media-track`、`ranking-tier-list`、`caption-track` |
 | `HyperFramesDocument` | Composition | `film` |
 
-这五种是由输出端口推导的角色，不是 manifest 中五个互斥 `kind`。同一 Component
-可以有多个普通辅助输出；它以对外最强的边界类型归类。生成、素材变换、Basis、
-Locator、Track 和 Composition 都不需要另一套调用语法：
+这五种是端口类型，不是五种互斥 SVK。一个 Component 可以同时输出多个边界
+类型；例如 `speech-program` 同时输出 `TemporalBasisProduction`、
+`ExactSemanticMap` 和 `ProgramBoundVideo`。不能再按所谓“最强输出”把整个
+Component 强行归入唯一类别。生成、素材变换、Basis、Locator、Track 和
+Composition 都不需要另一套调用语法：
 
 ```svml
 <call kind="producer" .../>
@@ -193,6 +195,7 @@ Locator、Track 和 Composition 都不需要另一套调用语法：
 gpt-image         Text + Image[] → Image
 crossfade-speech  SegmentMedia[] → TemporalBasisProduction
 speech-locator    SemanticIndex + basis + Evidence → ExactSemanticMap
+speech-program    Script + SegmentMedia[] → basis + map + visual facet
 ranking-tier-list items + time   → Track
 film              basis + semantic + Track[] → HyperFramesDocument
 ```
@@ -275,6 +278,7 @@ receipt、媒体探测和浏览器录制。Canvas 只把 Plan/Located IR 投影�
 ```text
 capability-v1     typed request → declared artifact/evidence
 pure-lowering-v1  typed values → typed values / SemanticMap / Track / HyperFramesDocument
+composite-v1      typed source children → statically expanded Component subgraph
 ```
 
 Capability 代码只通过宿主注入的类型化 handle 访问 provider，不能接触其他
@@ -284,6 +288,58 @@ CSS 必须 scope。Shadow DOM 只是样式边界，不是 JavaScript 安全边�
 
 ABI profile 是安全与 effect 合同，不是 `generation/analysis/render/export` 业务
 分类，也不把“重跑范围”写进源码。
+
+### 3.5 `composite-v1`: 透明组合 Component
+
+SVK 定义的是可调用 Component 类型，不要求每个实现都是原子运行时代码。
+`composite-v1` 允许一个高级 SVK 在编译期实例化其他已 import SVK，并把内部
+端口映射成自己的公开端口：
+
+[Composite Speech Program fixture](../examples/composite-speech-program/minimal.svml)
+同时给出作者源码、Composite SVK、SVS 和规范展开身份。
+
+```text
+speech-program
+├─ crossfade-speech → TemporalBasisProduction + facets
+└─ speech-locator   → ExactSemanticMap
+```
+
+它解决作者层面的重复接线，但不能隐藏编译事实。编译后，
+`<speech-program id="voice">` 至少产生：
+
+```text
+voice::basis
+voice::locator
+
+voice.production    = voice::basis.production
+voice.map           = voice::locator.map
+voice.facets.visual = voice::basis.facets.visual
+```
+
+内部实例分别进入 Plan、lock、Evidence、execution digest、缓存和诊断。外部端口
+只是类型化 alias，不复制 Artifact，也不把两个内部 execution 合并成黑盒。
+Composite 外层仍有稳定 instance identity，并用独立 `expansionDigest` 覆盖
+Composite 定义、effective params、公开 children、锁定 imports 和展开结果；
+它本身没有一个吞掉内部缓存边界的 Artifact execution。导出端口沿用实际内部
+值的 Artifact hash 和 provenance。
+
+`composite-v1` v1 必须满足：
+
+- body 只能 import/实例化 Component、连接端口和 export 端口；
+- 不执行 JavaScript、网络、provider SDK、墙钟或随机逻辑；
+- `<for>` 只能遍历调用点源码中有限、已类型检查的 children；
+- `collection[item.id]` 只表示稳定 id-keyed lookup；缺失或重复 id 必须失败，
+  不提供位置下标寻址；
+- 内部身份由外部 instance identity、内部 declaration id 和稳定 child id 组成，
+  不使用数组下标；
+- 禁止直接或间接递归 Composite；
+- 禁止依据 Runtime Artifact 内容动态产生未知数量的 Component；
+- 每个导出值必须来自声明过的内部端口并通过公开 output typecheck；
+- source map 同时保留调用位置和 Composite 定义位置；
+- Canvas 可以折叠成一个高级 Component，也必须能够展开查看全部内部实例。
+
+`composite-v1` 是唯一允许 SVK 透明展开多个 Plan instances 的 profile。其他
+profile 仍不得在运行时代码中暗中创建 Component 或 provider 调用。
 
 ## 4. `.svs`: typed parameter sheet
 
@@ -325,7 +381,9 @@ Component defaults
 
 不采用 CSS specificity、`!important`、父子选择器或 import 顺序覆盖。每个
 effective parameter 都保留来源与覆盖链。SVS 不携带 cost、rebuild、cache 或
-Pin 语义。
+Pin 语义。SVS 可以配置 Composite 明确暴露的公共参数，但不能通过
+`voice::basis` 等内部路径穿透封装；需要配置内部行为时，Composite 必须把它
+提升为公开 parameter。
 
 ## 5. `.svc`: context-free content module
 
@@ -354,9 +412,14 @@ SVC 可以包含具名 Text/Image/Audio/Video、文件、人物、音色、长 P
 SVC 不保存可执行 DOM/CSS/JS，也不隐式读取 importer 的 `script.*`。当前 Script
 专属生成调用留在 `.svml`；能脱离当前影片成立的内容才适合提取到 `.svc`。
 
+SVC 可以保存已有 Component 的具体实例和 fan-out 内容 DAG，但不定义新的调用
+类型：它不声明通用 input/output ports、params、child schema 或可反复实例化的
+body。若一个模块需要这些能力，它定义的是 Component，应写成
+`profile="composite-v1"` 的 `.svk`，不能在 SVC 中重新发明第二套参数化 Recipe。
+
 ## 6. `.svml`: 当前影片
 
-一份可执行文档只需要：
+一份可执行文档在所有 Composite 展开后，reachable Plan 必须且只需包含：
 
 ```text
 imports
@@ -370,6 +433,9 @@ imports
 
 `<values>` 和 `<output>` 不是必需层。输出路径、编码、是否转 MP4 属于 CLI 和
 Runtime。类型系统要求一个且仅一个未被其他 Component 消费的 Composition root。
+这些是展开后不变量，不是要求作者逐段手写五层样板。作者可以显式声明 Basis、
+Locator、Tracks 与 Film，也可以实例化 `speech-program` 等 Composite，让同样的
+内部实例和端口由编译期透明展开产生。
 
 ### 6.1 Basis Producer 与 Locator 解耦
 
@@ -642,6 +708,10 @@ Film 中 `<track>` 的书写顺序不决定层叠；作者意图重叠时必须�
 
 ### 6.5 完整示例
 
+[Composite Speech Program](../examples/composite-speech-program/minimal.svml)
+展示最简作者表面：一个 `speech-program` 代替 Basis + Locator 样板，Track 与
+Film 继续自由组合。
+
 [Flat Track Launch](../examples/flat-track-launch/flat-track-launch.svml) 覆盖：
 
 - 交叉组装 Basis Component 与显式 Locator Component；
@@ -714,6 +784,7 @@ parse(format(source)).semanticIR == parse(source).semanticIR
 basisDigest       = canonical clock + program media + subjects + source maps
 productionDigest  = Component implementation + inputs + params + mappings
 semanticMapDigest = SemanticIndex + basis + anchors + Locator + Evidence + quantization
+expansionDigest   = Composite definition + params + children + imports + expanded Plan
 ```
 
 一次可复现冻结至少记录：
@@ -721,6 +792,7 @@ semanticMapDigest = SemanticIndex + basis + anchors + Locator + Evidence + quant
 - 编译器、SVML、Script Surface、Plan/Located IR 和 HyperFrames target 版本；
 - Composition identity 与所有传递 import 的 canonical URI/hash；
 - Component ABI、实现、effective params 与 transitive Artifact hashes；
+- Composite expansionDigest、规范内部 identities 和导出端口 alias；
 - basis/production/map digest、完整 anchor table、point quality、Evidence digests；
 - ProgramSpace、Track contribution digests 和输出 HTML digest。
 
@@ -750,11 +822,13 @@ reproducible
 8. 只有 Composition root 可以消费 `Track[]` 并输出 HyperFramesDocument。
 9. 所有视觉位置是绝对 `x/y/z/t`；Track 顺序不决定 z。
 10. Audio 可属于 Basis 或任意 Track；不强迫复制 Audio Track。
-11. SVK 按主要输出形成 Value、Basis、SemanticMap、Track、HyperFramesDocument
-    五种数据流角色，但不增加 manifest `kind`。
-12. SVK 是 Component，不是 Node；Canvas/DAG/Timeline 都是 IR view。
-13. Compiler 管法律，Library 管词汇与算法，Runtime 管副作用，Canvas 管视图。
-14. 唯一正式成片编译目标是 HyperFrames HTML。
+11. Value、TemporalBasisProduction、SemanticMap、Track、HyperFramesDocument
+    是五种公共输出边界，不是互斥 SVK 类别；一个 SVK 可以同时暴露多个。
+12. `composite-v1` 只做有限、无递归、可审计的编译期展开；所有内部实例进入
+    Plan/lock，SVC 不重复定义参数化 Recipe。
+13. SVK 是 Component，不是 Node；Canvas/DAG/Timeline 都是 IR view。
+14. Compiler 管法律，Library 管词汇与算法，Runtime 管副作用，Canvas 管视图。
+15. 唯一正式成片编译目标是 HyperFrames HTML。
 
 ## 10. 原型验收顺序
 
@@ -764,11 +838,14 @@ reproducible
    capability 与 Evidence + pure locator 两种实现验证同一 SemanticMap ABI；
 3. 用 hard-cut speech 与 crossfade speech 两个平级 Basis Component 验证同一
    Locator Component 和 Script v2 `2M + 2N`；
-4. 实现 flat LocatedTrack/visual/audio contribution IR，删除公共
+4. 实现 `composite-v1` 的 parser/typecheck/finite expansion/identity/source-map，
+   用 `speech-program.svk` 证明内部 Basis 与 Locator 仍分别进入 Plan/lock；
+5. 实现 flat LocatedTrack/visual/audio contribution IR，删除公共
    VisualSurface/VisualTree/AudioTree/Track Aggregator；
-5. 让 media、B-roll、ranking、caption、text、audio 都只输出 flat Track；
-6. 让 Film 成为唯一 Track[] consumer，按绝对 z 和 ProgramRange 编译 HTML；
-7. 用 Flat Track Launch 与真实 Regen Ranking 两份 fixture 验证 A-roll Present、
+6. 让 media、B-roll、ranking、caption、text、audio 都只输出 flat Track；
+7. 让 Film 成为唯一 Track[] consumer，按绝对 z 和 ProgramRange 编译 HTML；
+8. 用 Composite Speech Program、Flat Track Launch 与真实 Regen Ranking 三份
+   fixture 验证最简表面、A-roll Present、
    B-roll 转场、Track 内音频、manual ProgramSpan 和全片效果；
-8. 再接 fake Runtime Host；在同一协议通过前不启用生产 provider；
-9. 最后实现 Canvas/Timeline 投影，保持它们不是作者真相。
+9. 再接 fake Runtime Host；在同一协议通过前不启用生产 provider；
+10. 最后实现 Canvas/Timeline 投影，保持它们不是作者真相。

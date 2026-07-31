@@ -1,0 +1,97 @@
+<!-- Proposed composite-v1 syntax; not implemented by the current compiler. -->
+<kernel
+  name="speech-program"
+  abi="1"
+  profile="composite-v1"
+>
+
+  <port
+    name="script"
+    direction="input"
+    type="Script"
+    cardinality="one"
+  />
+
+  <port
+    name="production"
+    direction="output"
+    type="TemporalBasisProduction"
+    cardinality="one"
+  />
+
+  <port
+    name="map"
+    direction="output"
+    type="ExactSemanticMap"
+    cardinality="one"
+  />
+
+  <port
+    name="facets.visual"
+    direction="output"
+    type="ProgramBoundVideo"
+    cardinality="zero-or-one"
+  />
+
+  <param
+    name="overlap"
+    type="duration"
+    default="0ms"
+  />
+
+  <child name="segment" cardinality="one-or-more">
+    <field name="id" type="id" required="true"/>
+    <field name="source" type="Video" required="true"/>
+    <field name="sourceWindow" type="SourceRange"/>
+  </child>
+
+  <import
+    as="basis-component"
+    from="@svml/std/crossfade-speech.svk"
+  />
+
+  <import
+    as="locator-component"
+    from="@svml/std/speech-locator.svk"
+  />
+
+  <compose>
+
+    <basis-component
+      id="basis"
+      overlap={params.overlap}
+    >
+      <for each={children.segment} as="item">
+        <segment
+          id={item.id}
+          script={ports.script.segment[item.id]}
+          source={item.source}
+          sourceWindow={item.sourceWindow}
+        />
+      </for>
+    </basis-component>
+
+    <locator-component
+      id="locator"
+      script={ports.script}
+      basis={basis.production}
+    />
+
+    <export
+      port="production"
+      value={basis.production}
+    />
+
+    <export
+      port="map"
+      value={locator.map}
+    />
+
+    <export
+      port="facets.visual"
+      value={basis.facets.visual}
+    />
+
+  </compose>
+
+</kernel>
