@@ -1,0 +1,23 @@
+<svml version="1">
+  <import from="../../../stdlib/speech-spine.svk"/>
+  <import from="../../../stdlib/media-track.svk"/>
+  <import from="../../../stdlib/film.svk"/>
+
+  <script>
+    <segment id="main">@pick Alpha @/pick gap @pick omega @/pick.</segment>
+  </script>
+
+  <video id="avatar" src="../presentation/long.mp4"/>
+
+  <speech-spine id="speech">
+    <segment id="main" script={script.segment.main} visual={avatar}/>
+  </speech-spine>
+
+  <media-track id="media" z="1">
+    <item id="picked" source={avatar} during={script.selection.pick}/>
+  </media-track>
+
+  <film id="film" speech={speech.speech}>
+    <track ref={media.track}/>
+  </film>
+</svml>

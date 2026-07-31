@@ -1,0 +1,32 @@
+{
+  "contract": "svml.reference-video.v1",
+  "source": {
+    "projectId": "cmrs0yofw00042tlz2t0ygwaw",
+    "canvasId": "cmrx7771b00052ts5koz1yy7e",
+    "jobId": "cmrxqbub800012tjoi2ev2u24",
+    "finalSha256": "986c2b4f81381e5c5ab6df3c7b58f8bcc5324f9ae11ce820ed1cd8e5ee74c8b8"
+  },
+  "clock": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationFrames": 1083
+  },
+  "plan": {
+    "root": "regen-ranking",
+    "values": 19,
+    "instances": 8,
+    "edges": 29
+  },
+  "selectionFrames": {
+    "handsome-1": [[791, 831]],
+    "handsome-2": [[831, 888]],
+    "dating-photo": [[925, 952]],
+    "linkedin-headshot": [[952, 977]],
+    "instagram-post": [[977, 1009]]
+  },
+  "locatedOutput": {
+    "visualFragments": 155,
+    "audioFragments": 14
+  }
+}

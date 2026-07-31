@@ -1,0 +1,33 @@
+{
+  "name": "@svml/compiler",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "svml": "./dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node tools/copy-runtime.mjs",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test 'test/**/*.test.ts'",
+    "svml": "node --import tsx src/cli.ts"
+  },
+  "files": [
+    "dist/src",
+    "stdlib",
+    "spec",
+    "docs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "hyperframes": "0.7.84"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
+  }
+}

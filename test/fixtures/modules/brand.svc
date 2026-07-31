@@ -1,0 +1,11 @@
+<content version="1" id="brand">
+  <import from="./identity-image.svk"/>
+
+  <image id="logo" src="./logo.png"/>
+
+  <text id="tagline">
+    A #1 semantic video language.
+  </text>
+
+  <identity-image id="poster" source={logo}/>
+</content>

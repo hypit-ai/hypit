@@ -1,0 +1,29 @@
+<svml version="1">
+  <import from="../../../stdlib/speech-spine.svk"/>
+  <import from="../../../stdlib/broll-track.svk"/>
+  <import from="../../../stdlib/film.svk"/>
+
+  <script>
+    <segment id="main">
+      @left Left @/left and @right right @/right.
+    </segment>
+  </script>
+
+  <video id="avatar" src="./avatar.mp4"/>
+  <image id="left-image" src="./left/image.png"/>
+  <image id="right-image" src="./right/image.png"/>
+
+  <speech-spine id="speech">
+    <segment id="main" script={script.segment.main} visual={avatar}/>
+  </speech-spine>
+
+  <broll-track id="broll" z="100">
+    <item id="left" source={left-image} during={script.selection.left}/>
+    <item id="right" source={right-image} during={script.selection.right}/>
+    <transition from="left" to="right" kind="crossfade" duration="200ms"/>
+  </broll-track>
+
+  <film id="collision" speech={speech.speech}>
+    <track ref={broll.track}/>
+  </film>
+</svml>
