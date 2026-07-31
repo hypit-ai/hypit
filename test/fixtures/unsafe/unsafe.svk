@@ -1,0 +1,3 @@
+<kernel name="unsafe" abi="1" root="true" implementation="./unsafe.mjs">
+  <port name="document" direction="output" type="HyperframesDocument" cardinality="one"/>
+</kernel>

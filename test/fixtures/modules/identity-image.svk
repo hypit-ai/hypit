@@ -1,0 +1,4 @@
+<kernel name="identity-image" abi="1" implementation="./identity-image.mjs">
+  <port name="source" direction="input" type="Image" cardinality="one"/>
+  <port name="image" direction="output" type="Image" cardinality="one"/>
+</kernel>

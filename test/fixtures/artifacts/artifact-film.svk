@@ -1,0 +1,9 @@
+<kernel
+  name="artifact-film"
+  abi="1"
+  root="true"
+  implementation="./artifact-film.mjs"
+>
+  <port name="image" direction="input" type="Image" cardinality="one"/>
+  <port name="document" direction="output" type="HyperframesDocument" cardinality="one"/>
+</kernel>

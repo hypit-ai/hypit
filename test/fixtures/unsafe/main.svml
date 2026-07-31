@@ -1,0 +1,9 @@
+<svml version="1">
+  <import from="./unsafe.svk"/>
+
+  <script>
+    <segment id="main">Hello.</segment>
+  </script>
+
+  <unsafe id="main"/>
+</svml>

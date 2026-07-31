@@ -1,0 +1,1126 @@
+{
+  "contract": "svml.speech-alignment.v1",
+  "durationSec": 36.1,
+  "fps": 30,
+  "words": [
+    {
+      "text": "Photoshop",
+      "startSec": 0.08,
+      "endSec": 1,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "Powerful",
+      "startSec": 1,
+      "endSec": 1.53,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "but",
+      "startSec": 1.53,
+      "endSec": 1.9,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "only",
+      "startSec": 1.9,
+      "endSec": 1.99,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "if",
+      "startSec": 1.99,
+      "endSec": 2,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "you",
+      "startSec": 2,
+      "endSec": 2.23,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "know",
+      "startSec": 2.23,
+      "endSec": 2.36,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "how",
+      "startSec": 2.36,
+      "endSec": 2.56,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "to",
+      "startSec": 2.56,
+      "endSec": 2.64,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "use",
+      "startSec": 2.64,
+      "endSec": 2.79,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "it",
+      "startSec": 2.79,
+      "endSec": 3.12,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "Otherwise",
+      "startSec": 3.12,
+      "endSec": 3.6,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "your",
+      "startSec": 3.6,
+      "endSec": 3.77,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "new",
+      "startSec": 3.77,
+      "endSec": 4.08,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "profile",
+      "startSec": 4.08,
+      "endSec": 4.22,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "picture",
+      "startSec": 4.22,
+      "endSec": 4.68,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "becomes",
+      "startSec": 4.68,
+      "endSec": 4.84,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "a",
+      "startSec": 4.84,
+      "endSec": 4.9,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "three-hour",
+      "startSec": 4.9,
+      "endSec": 5.42,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "design",
+      "startSec": 5.42,
+      "endSec": 5.84,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "project",
+      "startSec": 5.84,
+      "endSec": 6.4,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "Facetune",
+      "startSec": 6.4,
+      "endSec": 7.4,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "Fast",
+      "startSec": 7.4,
+      "endSec": 7.59,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "and",
+      "startSec": 7.59,
+      "endSec": 7.71,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "great",
+      "startSec": 7.71,
+      "endSec": 8,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "for",
+      "startSec": 8,
+      "endSec": 8.33,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "touch-ups",
+      "startSec": 8.33,
+      "endSec": 8.64,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "But",
+      "startSec": 8.64,
+      "endSec": 8.76,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "it",
+      "startSec": 8.76,
+      "endSec": 8.96,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "still",
+      "startSec": 8.96,
+      "endSec": 9.04,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "leaves",
+      "startSec": 9.04,
+      "endSec": 9.29,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "you",
+      "startSec": 9.29,
+      "endSec": 9.45,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "with",
+      "startSec": 9.45,
+      "endSec": 9.57,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "the",
+      "startSec": 9.57,
+      "endSec": 9.69,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "same",
+      "startSec": 9.69,
+      "endSec": 9.85,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "awkward",
+      "startSec": 9.85,
+      "endSec": 10.14,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "pose",
+      "startSec": 10.14,
+      "endSec": 10.48,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "and",
+      "startSec": 10.48,
+      "endSec": 10.52,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "the",
+      "startSec": 10.52,
+      "endSec": 10.67,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "same",
+      "startSec": 10.67,
+      "endSec": 10.87,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "dorm-room",
+      "startSec": 10.87,
+      "endSec": 11.48,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "background",
+      "startSec": 11.48,
+      "endSec": 12,
+      "segmentId": "scene-1"
+    },
+    {
+      "text": "Remini",
+      "startSec": 12.043333333333333,
+      "endSec": 13.033333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "Great",
+      "startSec": 13.033333333333333,
+      "endSec": 13.283333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "for",
+      "startSec": 13.283333333333333,
+      "endSec": 13.563333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "blurry",
+      "startSec": 13.563333333333333,
+      "endSec": 13.773333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "photos",
+      "startSec": 13.773333333333333,
+      "endSec": 14.033333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "It",
+      "startSec": 14.033333333333333,
+      "endSec": 14.103333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "restores",
+      "startSec": 14.103333333333333,
+      "endSec": 14.393333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "detail",
+      "startSec": 14.393333333333333,
+      "endSec": 14.613333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "but",
+      "startSec": 14.613333333333333,
+      "endSec": 14.763333333333334,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "it",
+      "startSec": 14.763333333333334,
+      "endSec": 14.793333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "can't",
+      "startSec": 14.793333333333333,
+      "endSec": 14.973333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "fix",
+      "startSec": 14.973333333333333,
+      "endSec": 15.083333333333332,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "the",
+      "startSec": 15.083333333333332,
+      "endSec": 15.213333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "pose",
+      "startSec": 15.213333333333333,
+      "endSec": 15.373333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "outfit",
+      "startSec": 15.373333333333333,
+      "endSec": 15.733333333333334,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "or",
+      "startSec": 15.733333333333334,
+      "endSec": 15.853333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "background",
+      "startSec": 15.853333333333333,
+      "endSec": 16.633333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "You",
+      "startSec": 16.633333333333333,
+      "endSec": 16.793333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "get",
+      "startSec": 16.793333333333333,
+      "endSec": 16.953333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "the",
+      "startSec": 16.953333333333333,
+      "endSec": 17.163333333333334,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "same",
+      "startSec": 17.163333333333334,
+      "endSec": 17.373333333333335,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "bad",
+      "startSec": 17.373333333333335,
+      "endSec": 17.503333333333334,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "photo",
+      "startSec": 17.503333333333334,
+      "endSec": 17.813333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "in",
+      "startSec": 17.813333333333333,
+      "endSec": 17.873333333333335,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "HD",
+      "startSec": 17.873333333333335,
+      "endSec": 18.184444444444445,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "ChatGPT",
+      "startSec": 18.184444444444445,
+      "endSec": 19.273333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "More",
+      "startSec": 19.273333333333333,
+      "endSec": 19.53333333333333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "flexible",
+      "startSec": 19.53333333333333,
+      "endSec": 20,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "It",
+      "startSec": 20,
+      "endSec": 20.033,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "can",
+      "startSec": 20.033,
+      "endSec": 20.133,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "create",
+      "startSec": 20.133,
+      "endSec": 20.433,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "a",
+      "startSec": 20.433,
+      "endSec": 20.533,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "new",
+      "startSec": 20.533,
+      "endSec": 20.7,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "shot",
+      "startSec": 20.7,
+      "endSec": 20.967,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "but",
+      "startSec": 20.967,
+      "endSec": 21.133,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "getting",
+      "startSec": 21.133,
+      "endSec": 21.333,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "your",
+      "startSec": 21.333,
+      "endSec": 21.5,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "face",
+      "startSec": 21.5,
+      "endSec": 21.833,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "and",
+      "startSec": 21.833,
+      "endSec": 21.9,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "the",
+      "startSec": 21.9,
+      "endSec": 22,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "details",
+      "startSec": 22,
+      "endSec": 22.433,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "right",
+      "startSec": 22.433,
+      "endSec": 22.6,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "becomes",
+      "startSec": 22.6,
+      "endSec": 22.933,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "a",
+      "startSec": 22.933,
+      "endSec": 23.067,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "prompt-writing",
+      "startSec": 23.067,
+      "endSec": 23.567,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "group",
+      "startSec": 23.567,
+      "endSec": 23.733,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "project",
+      "startSec": 23.733,
+      "endSec": 24.066666666666666,
+      "segmentId": "scene-2"
+    },
+    {
+      "text": "ReGen",
+      "startSec": 24.076666666666668,
+      "endSec": 25.066666666666666,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "Pick",
+      "startSec": 25.066666666666666,
+      "endSec": 25.266666666666666,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "a",
+      "startSec": 25.266666666666666,
+      "endSec": 25.306666666666665,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "photo",
+      "startSec": 25.306666666666665,
+      "endSec": 25.576666666666668,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "you",
+      "startSec": 25.576666666666668,
+      "endSec": 25.726666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "love",
+      "startSec": 25.726666666666667,
+      "endSec": 26.006666666666668,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "and",
+      "startSec": 26.006666666666668,
+      "endSec": 26.076666666666668,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "the",
+      "startSec": 26.076666666666668,
+      "endSec": 26.226666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "app",
+      "startSec": 26.226666666666667,
+      "endSec": 26.376666666666665,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "rebuilds",
+      "startSec": 26.376666666666665,
+      "endSec": 26.886666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "it",
+      "startSec": 26.886666666666667,
+      "endSec": 26.906666666666666,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "around",
+      "startSec": 26.906666666666666,
+      "endSec": 27.196666666666665,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "you",
+      "startSec": 27.196666666666665,
+      "endSec": 27.346666666666668,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "with",
+      "startSec": 27.346666666666668,
+      "endSec": 27.546666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "a",
+      "startSec": 27.546666666666667,
+      "endSec": 27.7,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "better",
+      "startSec": 27.7,
+      "endSec": 27.906666666666666,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "pose",
+      "startSec": 27.906666666666666,
+      "endSec": 28.206666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "outfit",
+      "startSec": 28.206666666666667,
+      "endSec": 28.706666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "and",
+      "startSec": 28.706666666666667,
+      "endSec": 28.926666666666666,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "setting",
+      "startSec": 28.926666666666666,
+      "endSec": 29.6,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "From",
+      "startSec": 29.633,
+      "endSec": 29.867,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "one",
+      "startSec": 29.867,
+      "endSec": 29.967,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "selfie",
+      "startSec": 29.967,
+      "endSec": 30.4,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "you",
+      "startSec": 30.433,
+      "endSec": 30.533,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "can",
+      "startSec": 30.533,
+      "endSec": 30.7,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "make",
+      "startSec": 30.7,
+      "endSec": 30.833,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "a",
+      "startSec": 30.833,
+      "endSec": 31.006666666666668,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "dating",
+      "startSec": 31.006666666666668,
+      "endSec": 31.546666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "photo",
+      "startSec": 31.546666666666667,
+      "endSec": 31.71666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "LinkedIn",
+      "startSec": 31.71666666666667,
+      "endSec": 32.04666666666667,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "headshot",
+      "startSec": 32.04666666666667,
+      "endSec": 32.567,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "or",
+      "startSec": 32.567,
+      "endSec": 32.70666666666666,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "Instagram",
+      "startSec": 32.70666666666666,
+      "endSec": 33.196666666666665,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "post",
+      "startSec": 33.196666666666665,
+      "endSec": 33.633,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "so",
+      "startSec": 33.667,
+      "endSec": 33.767,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "you",
+      "startSec": 33.767,
+      "endSec": 33.933,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "get",
+      "startSec": 33.933,
+      "endSec": 34,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "what",
+      "startSec": 34,
+      "endSec": 34.133,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "you",
+      "startSec": 34.133,
+      "endSec": 34.267,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "wanted",
+      "startSec": 34.267,
+      "endSec": 34.6,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "instead",
+      "startSec": 34.6,
+      "endSec": 34.867,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "of",
+      "startSec": 34.867,
+      "endSec": 35.067,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "fixing",
+      "startSec": 35.067,
+      "endSec": 35.433,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "a",
+      "startSec": 35.433,
+      "endSec": 35.533,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "bad",
+      "startSec": 35.533,
+      "endSec": 35.767,
+      "segmentId": "scene-3"
+    },
+    {
+      "text": "shot",
+      "startSec": 35.767,
+      "endSec": 36.06666666666666,
+      "segmentId": "scene-3"
+    }
+  ],
+  "segments": [
+    {
+      "id": "scene-1",
+      "startSec": 0,
+      "endSec": 12.033333333333333
+    },
+    {
+      "id": "scene-2",
+      "startSec": 12.033333333333333,
+      "endSec": 24.066666666666666
+    },
+    {
+      "id": "scene-3",
+      "startSec": 24.066666666666666,
+      "endSec": 36.1
+    }
+  ],
+  "provenance": {
+    "method": "whisper.cpp word timestamps + deterministic intended-script LCS projection",
+    "source": "existing pinned avatar audio; no generation call",
+    "captionCues": {
+      "kind": "reference-recovery",
+      "source": "regen ranking Job cmrxqbub800012tjoi2ev2u24",
+      "note": "Cue boundaries are evidence emitted by Locate, not authored SVML timing."
+    },
+    "timingOverrides": {
+      "kind": "reference-recovery",
+      "source": "scene transitions in regen ranking Job cmrxqbub800012tjoi2ev2u24",
+      "note": "Only boundaries visible in the frozen reference video are overridden."
+    }
+  },
+  "captionCues": [
+    {
+      "startWord": 0,
+      "endWordExclusive": 1
+    },
+    {
+      "startWord": 1,
+      "endWordExclusive": 2
+    },
+    {
+      "startWord": 2,
+      "endWordExclusive": 5
+    },
+    {
+      "startWord": 5,
+      "endWordExclusive": 8
+    },
+    {
+      "startWord": 8,
+      "endWordExclusive": 11
+    },
+    {
+      "startWord": 11,
+      "endWordExclusive": 12
+    },
+    {
+      "startWord": 12,
+      "endWordExclusive": 14
+    },
+    {
+      "startWord": 14,
+      "endWordExclusive": 16
+    },
+    {
+      "startWord": 16,
+      "endWordExclusive": 18
+    },
+    {
+      "startWord": 18,
+      "endWordExclusive": 20
+    },
+    {
+      "startWord": 20,
+      "endWordExclusive": 21
+    },
+    {
+      "startWord": 21,
+      "endWordExclusive": 22
+    },
+    {
+      "startWord": 22,
+      "endWordExclusive": 24
+    },
+    {
+      "startWord": 24,
+      "endWordExclusive": 26
+    },
+    {
+      "startWord": 26,
+      "endWordExclusive": 27
+    },
+    {
+      "startWord": 27,
+      "endWordExclusive": 28
+    },
+    {
+      "startWord": 28,
+      "endWordExclusive": 31
+    },
+    {
+      "startWord": 31,
+      "endWordExclusive": 34
+    },
+    {
+      "startWord": 34,
+      "endWordExclusive": 35
+    },
+    {
+      "startWord": 35,
+      "endWordExclusive": 38
+    },
+    {
+      "startWord": 38,
+      "endWordExclusive": 40
+    },
+    {
+      "startWord": 40,
+      "endWordExclusive": 42
+    },
+    {
+      "startWord": 42,
+      "endWordExclusive": 43
+    },
+    {
+      "startWord": 43,
+      "endWordExclusive": 44
+    },
+    {
+      "startWord": 44,
+      "endWordExclusive": 47
+    },
+    {
+      "startWord": 47,
+      "endWordExclusive": 50
+    },
+    {
+      "startWord": 50,
+      "endWordExclusive": 53
+    },
+    {
+      "startWord": 53,
+      "endWordExclusive": 56
+    },
+    {
+      "startWord": 56,
+      "endWordExclusive": 57
+    },
+    {
+      "startWord": 57,
+      "endWordExclusive": 59
+    },
+    {
+      "startWord": 59,
+      "endWordExclusive": 62
+    },
+    {
+      "startWord": 62,
+      "endWordExclusive": 65
+    },
+    {
+      "startWord": 65,
+      "endWordExclusive": 67
+    },
+    {
+      "startWord": 67,
+      "endWordExclusive": 68
+    },
+    {
+      "startWord": 68,
+      "endWordExclusive": 70
+    },
+    {
+      "startWord": 70,
+      "endWordExclusive": 73
+    },
+    {
+      "startWord": 73,
+      "endWordExclusive": 75
+    },
+    {
+      "startWord": 75,
+      "endWordExclusive": 76
+    },
+    {
+      "startWord": 76,
+      "endWordExclusive": 77
+    },
+    {
+      "startWord": 77,
+      "endWordExclusive": 80
+    },
+    {
+      "startWord": 80,
+      "endWordExclusive": 83
+    },
+    {
+      "startWord": 83,
+      "endWordExclusive": 86
+    },
+    {
+      "startWord": 86,
+      "endWordExclusive": 87
+    },
+    {
+      "startWord": 87,
+      "endWordExclusive": 89
+    },
+    {
+      "startWord": 89,
+      "endWordExclusive": 90
+    },
+    {
+      "startWord": 90,
+      "endWordExclusive": 93
+    },
+    {
+      "startWord": 93,
+      "endWordExclusive": 95
+    },
+    {
+      "startWord": 95,
+      "endWordExclusive": 98
+    },
+    {
+      "startWord": 98,
+      "endWordExclusive": 100
+    },
+    {
+      "startWord": 100,
+      "endWordExclusive": 103
+    },
+    {
+      "startWord": 103,
+      "endWordExclusive": 105
+    },
+    {
+      "startWord": 105,
+      "endWordExclusive": 106
+    },
+    {
+      "startWord": 106,
+      "endWordExclusive": 107
+    },
+    {
+      "startWord": 107,
+      "endWordExclusive": 108
+    },
+    {
+      "startWord": 108,
+      "endWordExclusive": 109
+    },
+    {
+      "startWord": 109,
+      "endWordExclusive": 111
+    },
+    {
+      "startWord": 111,
+      "endWordExclusive": 112
+    },
+    {
+      "startWord": 112,
+      "endWordExclusive": 114
+    },
+    {
+      "startWord": 114,
+      "endWordExclusive": 116
+    },
+    {
+      "startWord": 116,
+      "endWordExclusive": 118
+    },
+    {
+      "startWord": 118,
+      "endWordExclusive": 120
+    },
+    {
+      "startWord": 120,
+      "endWordExclusive": 122
+    },
+    {
+      "startWord": 122,
+      "endWordExclusive": 123
+    },
+    {
+      "startWord": 123,
+      "endWordExclusive": 125
+    },
+    {
+      "startWord": 125,
+      "endWordExclusive": 127
+    },
+    {
+      "startWord": 127,
+      "endWordExclusive": 129
+    },
+    {
+      "startWord": 129,
+      "endWordExclusive": 131
+    },
+    {
+      "startWord": 131,
+      "endWordExclusive": 133
+    },
+    {
+      "startWord": 133,
+      "endWordExclusive": 135
+    }
+  ]
+}

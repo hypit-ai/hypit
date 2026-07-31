@@ -1,0 +1,11 @@
+<svml version="1">
+  <import from="./pinned-image.svk"/>
+  <import from="./artifact-film.svk"/>
+
+  <script>
+    <segment id="main">Hello.</segment>
+  </script>
+
+  <pinned-image id="poster" prompt="A pinned result; never call a provider."/>
+  <artifact-film id="film" image={poster.image}/>
+</svml>

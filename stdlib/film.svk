@@ -1,0 +1,12 @@
+<kernel name="film" abi="1" root="true" implementation="./runtime/film.mjs">
+  <param name="width" type="number"/>
+  <param name="height" type="number"/>
+  <param name="fps" style="frame-rate" type="number"/>
+  <param name="background" type="string" default="#000000"/>
+  <port name="speech" direction="input" type="SpeechSpine" cardinality="one"/>
+  <port name="track" direction="input" type="Track" cardinality="zero-or-more"/>
+  <port name="document" direction="output" type="HyperframesDocument" cardinality="one"/>
+  <child name="track" cardinality="zero-or-more">
+    <field name="ref" type="Track" required="true"/>
+  </child>
+</kernel>
