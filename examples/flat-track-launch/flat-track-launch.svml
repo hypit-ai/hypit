@@ -5,6 +5,7 @@
 <svml version="2">
 
   <import from="@svml/std/crossfade-speech.svk"/>
+  <import from="@svml/std/speech-locator.svk"/>
   <import from="@svml/std/media-track.svk"/>
   <import from="@svml/std/broll-track.svk"/>
   <import from="@svml/std/ranking-tier-list.svk"/>
@@ -47,8 +48,8 @@
 
   <!--
     Basis production assembles physical media only. It emits ProgramBasis,
-    source maps, program audio and a program-bound visual facet. The locked
-    Locator separately binds this Script's 2M + 2N identities to the basis.
+    source maps, program audio and a program-bound visual facet. The Locator
+    Component separately binds this Script's 2M + 2N identities to the basis.
   -->
   <crossfade-speech id="voice" overlap="500ms">
     <segment
@@ -70,6 +71,17 @@
       sourceWindow="30s .. 50s"
     />
   </crossfade-speech>
+
+  <!--
+    SemanticMap is the fifth SVK output role. A simple speech-locator may expose
+    one atomic capability; a modular alternative can consume explicit Evidence
+    Value Components while preserving this exact output contract.
+  -->
+  <speech-locator
+    id="location"
+    script={script}
+    basis={voice.production}
+  />
 
   <!--
     One program-bound host facet, one continuous source mapping. Present changes
@@ -227,6 +239,7 @@
   <film
     id="launch"
     basis={voice.production}
+    semantic={location.map}
     class="house.vertical"
     globalEffect="grain-soft"
     masterMix="house.launch-mix"
