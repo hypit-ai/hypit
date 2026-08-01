@@ -103,7 +103,7 @@ test("capability instances require exact verified artifacts and never invoke a p
   );
 });
 
-test("a Locator capability returns ExactSemanticMap through the same typed Artifact ABI", async () => {
+test("a Locator capability returns CompleteSemanticMap through the same typed Artifact ABI", async () => {
   const source = fileURLToPath(
     new URL("../examples/composite-speech-program/minimal.svml", import.meta.url),
   );
@@ -134,13 +134,13 @@ test("a Locator capability returns ExactSemanticMap through the same typed Artif
   </script>
   <video id="host" src="${avatar}"/>
   <audio id="host-audio" src="${audio}"/>
-  <alignment id="alignment" src="${evidence}"/>
+  <timing id="timing" src="${evidence}"/>
   <speech-assemble id="voice" fps="30" defaultJoin="cut">
     <segment id="intro" script={script.segment.intro} visual={host} audio={host-audio} sourceWindow="0s .. 5s"/>
     <segment id="close" script={script.segment.close} visual={host} audio={host-audio} sourceWindow="5s .. 10s"/>
     <join after="intro" overlap="500ms" audio="crossfade" visual="dissolve"/>
   </speech-assemble>
-  <pinned-locator id="location" script={script} basis={voice.production} evidence={alignment}/>
+  <pinned-locator id="location" script={script} basis={voice.production} evidence={timing}/>
   <film id="film" basis={voice.production} semantic={location.map}/>
 </svml>\n`, "utf8");
   const checked = await checkSource(svml);
@@ -153,7 +153,7 @@ test("a Locator capability returns ExactSemanticMap through the same typed Artif
       executionDigest: instance?.executionDigest,
       outputs: {
         map: {
-          type: "ExactSemanticMap",
+          type: "CompleteSemanticMap",
           value: reference.semanticMap,
           contentDigest: sha256(stableJson(reference.semanticMap)),
         },

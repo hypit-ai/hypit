@@ -1,8 +1,9 @@
 {
-  "contract": "svml.speech-alignment.v1",
+  "contract": "svml.speech-timing-evidence.v1",
   "durationSec": 1,
   "fps": 30,
-  "words": [
+  "quality": "measured",
+  "units": [
     {
       "text": "Hello",
       "startSec": 0,

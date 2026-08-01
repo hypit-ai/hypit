@@ -29,6 +29,8 @@ test("composite-v1 expands finite internal Basis/Locator instances with audited 
   assert.match(internal?.sourceMap?.definitionSite.file ?? "", /speech-program\.svk$/u);
 
   const compilation = await compileSource({ file: fixture });
+  assert.equal(compilation.plan.kernels.some((kernel) =>
+    kernel.ports.some((port) => port.type === "CaptionTrack")), false);
   assert.equal(compilation.located.durationFrames, 285);
   assert.equal(compilation.basis.sourceMaps.length, 4);
   assert.equal(compilation.basis.audio[0]?.fadeOutFrames, 15);

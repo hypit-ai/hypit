@@ -16,9 +16,9 @@ import {
 } from "./kernel.js";
 import { createLock, freezeLock, verifyLockFile, type SvmlLock } from "./lock.js";
 import type {
-  AlignmentEvidence,
+  CompleteSemanticMap,
   AttributeValue,
-  ExactSemanticMap,
+  SpeechTimingEvidence,
   LocatedScript,
   PlanIR,
   SourceDocument,
@@ -34,7 +34,7 @@ import type {
 import { projectKernelIsolated } from "./sandbox.js";
 import { validateKernelProjection } from "./runtime-validation.js";
 import { bindSemanticMap, locateScript } from "./script/locate.js";
-import { estimateAlignment, type EstimateOptions } from "./script/estimate.js";
+import { estimateSpeechTiming, type EstimateOptions } from "./script/estimate.js";
 import { parseScript } from "./script/parse.js";
 import { loadSourceClosure } from "./source/modules.js";
 import { childElements, textContent } from "./source/query.js";
@@ -42,7 +42,7 @@ import { applyStyleSheets } from "./source/styles.js";
 import { sha256, stableJson } from "./util.js";
 import {
   createProgramBasis,
-  semanticMapFromAlignment,
+  semanticMapFromTiming,
   validateSemanticMap,
   validateTemporalBasisProduction,
 } from "./temporal.js";
@@ -52,7 +52,7 @@ export type Compilation = {
   narrative: ReturnType<typeof parseScript>;
   plan: PlanIR;
   basis: TemporalBasisProduction;
-  semanticMap: ExactSemanticMap;
+  semanticMap: CompleteSemanticMap;
   located: LocatedScript;
   html: string;
   target: HyperframesDocument;
@@ -211,13 +211,13 @@ export async function estimateSource(
   file: string,
   options: EstimateOptions = {},
 ): Promise<{
-  evidence: AlignmentEvidence;
+  evidence: SpeechTimingEvidence;
   basis: ReturnType<typeof createProgramBasis>;
-  map: ReturnType<typeof semanticMapFromAlignment>;
+  map: ReturnType<typeof semanticMapFromTiming>;
   located: LocatedScript;
 }> {
   const checked = await checkSource(file);
-  const evidence = estimateAlignment(checked.narrative, options);
+  const evidence = estimateSpeechTiming(checked.narrative, options);
   const basis = createProgramBasis({
     fps: evidence.fps,
     durationFrames: Math.round(evidence.durationSec * evidence.fps),
@@ -226,11 +226,10 @@ export async function estimateSource(
       evidence,
     })),
   });
-  const map = semanticMapFromAlignment(
+  const map = semanticMapFromTiming(
     checked.narrative,
     basis,
     evidence,
-    { precision: "estimated" },
   );
   return {
     evidence,
@@ -264,7 +263,7 @@ export async function compileSource(args: {
   const basisPort = rootManifest.ports.find((port) =>
     port.direction === "input" && port.type.split("|").includes("TemporalBasisProduction"));
   const semanticPort = rootManifest.ports.find((port) =>
-    port.direction === "input" && port.type.split("|").includes("ExactSemanticMap"));
+    port.direction === "input" && port.type.split("|").includes("CompleteSemanticMap"));
   if (!basisPort || !semanticPort) {
     fail("runtime_composition_contract", "Composition does not expose basis/map input ports.");
   }
@@ -278,7 +277,7 @@ export async function compileSource(args: {
     const absoluteSource = value.source
       ? pathToFileURL(resolve(dirname(value.module), value.source)).href
       : undefined;
-    const data = value.type === "AlignmentEvidence" && value.source
+    const data = value.type === "SpeechTimingEvidence" && value.source
       ? JSON.parse(await readFile(resolve(dirname(value.module), value.source), "utf8"))
       : undefined;
     return [
@@ -390,7 +389,8 @@ export async function compileSource(args: {
     const projection = validateKernelProjection(await projectKernelIsolated(manifest, context));
     if (located) {
       for (const port of manifest.ports.filter((candidate) =>
-        candidate.direction === "output" && candidate.type === "Track")) {
+        candidate.direction === "output"
+        && (candidate.type === "Track" || candidate.type === "CaptionTrack"))) {
         validateTrackOutput(instance.id, port.name, projection.outputs[port.name], located.durationFrames);
       }
     }
@@ -428,12 +428,12 @@ export async function compileSource(args: {
   ) as TemporalBasisProduction | undefined;
   const semanticMap = resolveValue(
     rootElement.attributes[semanticPort.name],
-  ) as ExactSemanticMap | undefined;
+  ) as CompleteSemanticMap | undefined;
   if (production?.contract !== "svml.temporal-basis-production.v1") {
     fail("runtime_basis_missing", "Composition root must select one TemporalBasisProduction.");
   }
-  if (semanticMap?.contract !== "svml.exact-semantic-map.v1") {
-    fail("runtime_semantic_map_missing", "Composition root must select one ExactSemanticMap.");
+  if (semanticMap?.contract !== "svml.complete-semantic-map.v1") {
+    fail("runtime_semantic_map_missing", "Composition root must select one CompleteSemanticMap.");
   }
   validateTemporalBasisProduction(production);
   validateSemanticMap(checked.narrative, production.basis, semanticMap);

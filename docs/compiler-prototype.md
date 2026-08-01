@@ -1,6 +1,6 @@
 # SVML v1 compiler implementation record
 
-Date: 2026-07-31
+Date: 2026-08-01
 
 This record describes the executable v1 slice. SVML has not been publicly
 released; the removed shared-cut Speech Spine prototype is not a compatibility
@@ -14,8 +14,8 @@ One source closure deterministically produces all author and output views:
 ```text
 check/plan  → svml.plan.v1
 canvas      → svml.canvas-view.v1
-estimate    → EstimatedSemanticMap → preview TemporalBinding
-timeline    → exact TemporalBinding → svml.timeline-view.v1
+estimate    → estimated SpeechTimingEvidence → CompleteSemanticMap
+timeline    → TemporalBinding → svml.timeline-view.v1
 compile     → flat Track[] → svml.hyperframes-document.v1 → HTML
 render      → HyperFrames browser recording → MP4
 ```
@@ -37,8 +37,9 @@ the HyperFrames target ABI.
 - closed, crossing and disconnected Selections plus left/right-affine Moments;
 - independent start/end identities for every token and Segment;
 - canonical `2M + 2N` SemanticIndex ordering and digest;
-- `EstimatedSemanticMap` and `ExactSemanticMap` are distinct types;
-- exact Maps cover every identity, bind one `basisDigest`, preserve per-Segment
+- `CompleteSemanticMap` is the single public Map type; anchor quality records
+  measured, derived or estimated evidence;
+- complete Maps cover every identity, bind one `basisDigest`, preserve per-Segment
   order and the two cross-Segment monotonic constraints;
 - zero/negative resolved Selections fail rather than being repaired by a
   consumer.
@@ -53,7 +54,10 @@ the HyperFrames target ABI.
   identity;
 - `media-basis.svk` proves a precomposed medium can satisfy the same public ABI;
 - `speech-locator.svk` explicitly consumes Script, Basis production and typed
-  Alignment Evidence, then emits an exact Map;
+  `SpeechTimingEvidence`, then directly aligns noisy units to authoritative
+  Script tokens and emits a complete Map;
+- N:1, 1:N, incorrect, extra and missing measured units are handled without a
+  corrected-transcript or LLM stage;
 - a capability-profile Locator can emit the same typed Map through a verified
   Artifact binding;
 - Basis outcome identity, production provenance and SemanticMap identity use
@@ -89,6 +93,10 @@ the HyperFrames target ABI.
   layer without fake Track copies;
 - B-roll can own visual crossfade, source audio and transition SFX in one Track;
 - Basis audio, Track audio and visual contributions meet only in Film;
+- `caption-planner.svk` runs after Locate and emits only token cues and typed
+  annotations; `caption-track.svk` supports Selection, Role, annotation and mute
+  scopes without changing Script or SemanticMap;
+- each Composition has zero or one `CaptionTrack`;
 - Film child order does not determine paint order; emitted HTML sorts visuals by
   absolute `(z, stable id)`.
 
@@ -112,11 +120,11 @@ match the complete compile outcome.
 
 | Fixture | What it proves | Current result |
 |---|---|---:|
-| Regen Ranking | real pinned ranking + B-roll production | 29 nodes, 33 edges, 1083 frames, 153 visual, 14 audio |
-| Flat Track Launch | complete public v1 author surface | 25 nodes, 29 edges, 1083 frames, 154 visual, 8 audio |
+| Regen Ranking | noisy Timing → Script truth + ranking + B-roll | 30 nodes, 35 edges, 1083 frames, 154 visual, 14 audio |
+| Flat Track Launch | complete public v1 author surface | 26 nodes, 31 edges, 1083 frames, 155 visual, 8 audio |
 | Composite Speech Program | transparent high-level author component | 1 expansion, 4 instances, 285 frames |
 | Media Basis | alternative Basis producer | same Locator/Film ABI, 30 frames |
-| Capability Locator | typed exact Map as frozen Artifact | same Map validation path |
+| Capability Locator | typed complete Map as frozen Artifact | same Map validation path |
 
 The Regen source uses pinned artifacts from production Project
 `cmrs0yofw00042tlz2t0ygwaw`, Canvas `cmrx7771b00052ts5koz1yy7e` and Job
@@ -124,11 +132,14 @@ The Regen source uses pinned artifacts from production Project
 `986c2b4f81381e5c5ab6df3c7b58f8bcc5324f9ae11ce820ed1cd8e5ee74c8b8`.
 They were recovered read-only; no Canvas run or media generation was submitted.
 
-The final browser/codec comparison records aggregate visual SSIM `0.965800` and
-audio APSNR `174.207 / 174.208 dB`. Both videos are 1080×1920, 30 fps and exactly
-36.1 seconds. Frame count, semantic Selection ranges,
-B-roll boundaries and audio were asserted separately because different browser
-and codec paths are not expected to be byte-identical.
+The post-refactor browser render produced SHA-256
+`8f4aa42ee0fee426abbae9aaca3173a099eb1e8b66bd33b973a6425626a80ec7`:
+1080×1920 H.264, 30 fps, exactly 36.1 seconds, with 48 kHz stereo AAC. Its
+SpeechTimingEvidence deliberately contains merged, split, incorrect and extra
+recognition units; rendered captions still contain the Script wording
+`Photoshop Powerful but` and never the noisy `power full but` / `uh` evidence.
+Four extracted frames were visually checked across A-roll, ranking, B-roll and
+final-state sections.
 
 ## Deliberately external or still narrow
 

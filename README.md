@@ -11,7 +11,7 @@ HyperFrames HTML document.
         │
         ├─ typed Plan IR ─────────────────────────────> Canvas view
         ├─ Basis Producer ─────> TemporalBasisProduction
-        ├─ Locator ────────────> ExactSemanticMap
+        ├─ Locator ────────────> CompleteSemanticMap
         ├─ Basis + Map ────────> TemporalBinding ─────> Timeline view
         └─ flat Track[] ───────> Composition ─────────> HyperFrames HTML
 ```
@@ -29,8 +29,10 @@ architecture end to end:
   Selections and zero-width Moments;
 - an exact `SemanticIndex` with independent word and Segment endpoints
   (`2M + 2N` identities);
-- replaceable `TemporalBasisProduction` and `ExactSemanticMap` Components,
+- replaceable `TemporalBasisProduction` and `CompleteSemanticMap` Components,
   validated and bound before any Track lowering;
+- direct monotonic many-to-many alignment from authoritative Script tokens to
+  noisy `SpeechTimingEvidence`, without a corrected-transcript stage;
 - hard cut, gap and audio/visual crossfade joins with distinct source-to-program
   maps;
 - typed `.svc` content modules and `.svs` classes, including nested Component
@@ -40,6 +42,8 @@ architecture end to end:
 - isolated `.svk` projectors, verified offline capability artifacts and finite,
   auditable `composite-v1` expansion;
 - manifest-enforced temporal `one` / `each` / `set` consumption;
+- a post-locate `CaptionPlan` that may group cues and add typed style annotations
+  but cannot rewrite Script text or timing;
 - flat media, ranking, B-roll, caption, text and audio Tracks in one absolute
   ProgramSpace;
 - Film as the only `Track[]` consumer and HyperFrames HTML as the sole formal
@@ -81,10 +85,10 @@ pnpm svml render build/index.html --out build/video.mp4
 ```
 
 `--artifacts` is required only when the reachable Plan contains capability
-Components. Exact alignment is an explicit typed value referenced by the
-Locator in source; it is not an ambient CLI argument. `estimate` returns an
-`EstimatedSemanticMap` for preview and cannot be supplied where final HTML
-requires an `ExactSemanticMap`.
+Components. Speech timing is an explicit typed value referenced by the Locator
+in source; it is not an ambient CLI argument. `estimate` produces estimated
+timing evidence and the same structurally complete `CompleteSemanticMap` type;
+per-anchor quality records what was measured, derived or estimated.
 
 `fmt` currently canonicalizes only the Script body and refuses a rewrite if the
 reparsed semantic IR differs. `canvas` needs no materialized time evidence.
@@ -108,8 +112,8 @@ Canvas owns only a human-readable view.
 
 - [`examples/regen-ranking/regen-ranking.svml`](examples/regen-ranking/regen-ranking.svml)
   reconstructs a pinned production video with five ranking items, five B-roll
-  items, captions, title, BGM and sound effects. It compiles to 29 Plan nodes,
-  33 typed edges, 1083 frames, 153 visual fragments and 14 audio fragments.
+  items, captions, title, BGM and sound effects. It compiles to 30 Plan nodes,
+  35 typed edges and 1083 frames.
 - [`examples/flat-track-launch/flat-track-launch.svml`](examples/flat-track-launch/flat-track-launch.svml)
   is the comprehensive language fixture: explicit Basis/Locator, nested SVS,
   overlapping Presents, manual ProgramSpans, a Moment, B-roll source audio and

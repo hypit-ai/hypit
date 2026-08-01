@@ -64,8 +64,26 @@ export type SourceDocument = {
 };
 
 export type ScriptAtom =
-  | { kind: "text"; speech: string; caption: string; start: number; end: number }
+  | {
+    kind: "text";
+    speech: string;
+    caption: string;
+    start: number;
+    end: number;
+    tokenStart: number;
+    tokenEndExclusive: number;
+  }
   | { kind: "role"; label: string; start: number; end: number };
+
+export type SpokenTurn = {
+  id: string;
+  segmentId: string;
+  role?: string;
+  tokenStart: number;
+  tokenEndExclusive: number;
+  sourceStart: number;
+  sourceEnd: number;
+};
 
 export type ScriptToken = {
   id: string;
@@ -153,8 +171,8 @@ export type CaptionAtom = {
   id: string;
   display: string;
   segmentId: string;
-  startWord: number;
-  endWordExclusive: number;
+  startToken: number;
+  endTokenExclusive: number;
   sourceStart: number;
   sourceEnd: number;
 };
@@ -162,6 +180,7 @@ export type CaptionAtom = {
 export type NarrativeIR = {
   segments: ScriptSegment[];
   tokens: ScriptToken[];
+  turns: SpokenTurn[];
   selections: Record<string, SelectionOccurrence[]>;
   moments: Record<string, MomentOccurrence[]>;
   captionAtoms: CaptionAtom[];
@@ -206,19 +225,14 @@ export type SemanticMapBase = {
   evidenceDigests: string[];
   locatorDigest: string;
   quantizationPolicy: "nearest-frame";
-  captionCues?: AlignmentCaptionCue[];
   mapDigest: string;
 };
 
-export type EstimatedSemanticMap = SemanticMapBase & {
-  contract: "svml.estimated-semantic-map.v1";
+export type CompleteSemanticMap = SemanticMapBase & {
+  contract: "svml.complete-semantic-map.v1";
 };
 
-export type ExactSemanticMap = SemanticMapBase & {
-  contract: "svml.exact-semantic-map.v1";
-};
-
-export type SemanticMap = EstimatedSemanticMap | ExactSemanticMap;
+export type SemanticMap = CompleteSemanticMap;
 
 export type SourceToProgramMap = {
   id: string;
@@ -260,33 +274,51 @@ export type TemporalBasisProduction = {
   productionDigest: string;
 };
 
-export type AlignmentWord = {
+export type SpeechTimingUnit = {
   text: string;
   startSec: number;
   endSec: number;
   segmentId: string;
 };
 
-export type AlignmentSegment = {
+export type SpeechTimingSegment = {
   id: string;
   startSec: number;
   endSec: number;
 };
 
-export type AlignmentCaptionCue = {
-  id?: string;
-  startWord: number;
-  endWordExclusive: number;
-};
-
-export type AlignmentEvidence = {
-  contract: "svml.speech-alignment.v1";
+export type SpeechTimingEvidence = {
+  contract: "svml.speech-timing-evidence.v1";
   durationSec: number;
   fps: number;
-  words: AlignmentWord[];
-  segments: AlignmentSegment[];
-  captionCues?: AlignmentCaptionCue[];
+  quality: "measured" | "estimated";
+  units: SpeechTimingUnit[];
+  segments: SpeechTimingSegment[];
   provenance?: Record<string, unknown>;
+};
+
+export type CaptionCue = {
+  id: string;
+  startToken: number;
+  endTokenExclusive: number;
+};
+
+export type CaptionAnnotation = {
+  id: string;
+  kind: string;
+  startToken: number;
+  endTokenExclusive: number;
+  value?: string;
+};
+
+export type CaptionPlan = {
+  contract: "svml.caption-plan.v1";
+  semanticIndexDigest: string;
+  basisDigest: string;
+  cues: CaptionCue[];
+  annotations: CaptionAnnotation[];
+  plannerDigest: string;
+  planDigest: string;
 };
 
 export type ProgramRange = {
@@ -306,17 +338,10 @@ export type LocatedMoment = {
   frames: number[];
 };
 
-export type LocatedCaptionCue = ProgramRange & {
-  id: string;
-  startWord: number;
-  endWordExclusive: number;
-};
-
 export type LocatedCaptionAtom = CaptionAtom & ProgramRange;
 
 export type LocatedScript = {
   contract: "svml.temporal-binding.v1";
-  precision: "estimated" | "exact";
   basisDigest: string;
   semanticMapDigest: string;
   durationFrames: number;
@@ -327,12 +352,11 @@ export type LocatedScript = {
   selections: Record<string, LocatedSelection>;
   moments: Record<string, LocatedMoment>;
   captionAtoms: LocatedCaptionAtom[];
-  captionCues?: LocatedCaptionCue[];
 };
 
 export type PlanValue = {
   id: string;
-  type: "Image" | "Video" | "Audio" | "Text" | "AlignmentEvidence";
+  type: "Image" | "Video" | "Audio" | "Text" | "SpeechTimingEvidence";
   source?: string;
   value?: string;
   identity: string;

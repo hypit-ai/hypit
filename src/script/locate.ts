@@ -1,6 +1,6 @@
 import { fail } from "../diagnostics.js";
 import type {
-  ExactSemanticMap,
+  CompleteSemanticMap,
   LocatedScript,
   MarkerBoundary,
   NarrativeIR,
@@ -61,77 +61,13 @@ export function boundaryAnchor(
     ?? fail("locate_boundary_empty", "Script has no structural boundary candidate.");
 }
 
-function validateCaptionCues(
-  narrative: NarrativeIR,
-  locatedWords: LocatedScript["words"],
-  locatedAtoms: LocatedScript["captionAtoms"],
-  map: SemanticMap,
-  basis: ProgramBasis,
-): LocatedScript["captionCues"] {
-  const cues = map.captionCues;
-  if (!cues) return undefined;
-  const located = cues.map((cue, index) => {
-    if (!Number.isInteger(cue.startWord) || !Number.isInteger(cue.endWordExclusive)) {
-      fail("locate_caption_cue_index", `Caption cue ${index + 1} must use integer token indexes.`);
-    }
-    if (
-      cue.startWord < 0
-      || cue.endWordExclusive <= cue.startWord
-      || cue.endWordExclusive > locatedWords.length
-    ) {
-      fail(
-        "locate_caption_cue_range",
-        `Caption cue ${index + 1} has invalid token range ${cue.startWord}..${cue.endWordExclusive}.`,
-      );
-    }
-    const previous = cues[index - 1];
-    const expectedStart = previous?.endWordExclusive ?? 0;
-    if (cue.startWord !== expectedStart) {
-      fail(
-        "locate_caption_cue_partition",
-        `Caption cue ${index + 1} starts at token ${cue.startWord}; expected ${expectedStart}.`,
-      );
-    }
-    const first = locatedWords[cue.startWord];
-    const last = locatedWords[cue.endWordExclusive - 1];
-    if (!first || !last || first.segmentId !== last.segmentId) {
-      fail("locate_caption_cue_segment", `Caption cue ${index + 1} crosses Script Segments.`);
-    }
-    for (const atom of locatedAtoms) {
-      const overlaps = cue.startWord < atom.endWordExclusive
-        && cue.endWordExclusive > atom.startWord;
-      const contains = cue.startWord <= atom.startWord
-        && cue.endWordExclusive >= atom.endWordExclusive;
-      if (overlaps && !contains) {
-        fail(
-          "locate_caption_partial_dual",
-          `Caption cue ${index + 1} cuts through Dual Text atom "${atom.id}".`,
-        );
-      }
-    }
-    return {
-      id: cue.id ?? `cue-${index + 1}`,
-      startWord: cue.startWord,
-      endWordExclusive: cue.endWordExclusive,
-      ...range(first.startFrame, last.endFrameExclusive, basis, `Caption cue ${index + 1}`),
-    };
-  });
-  if ((located.at(-1)?.endWordExclusive ?? 0) !== narrative.tokens.length) {
-    fail(
-      "locate_caption_cue_partition",
-      `Caption cues end at token ${located.at(-1)?.endWordExclusive ?? 0}; expected ${narrative.tokens.length}.`,
-    );
-  }
-  return located;
-}
-
 export function locateScript(
   narrative: NarrativeIR,
   basis: ProgramBasis,
-  map: ExactSemanticMap,
+  map: CompleteSemanticMap,
 ): LocatedScript {
-  if (map.contract !== "svml.exact-semantic-map.v1") {
-    fail("locate_exact_required", "Located HTML compilation requires ExactSemanticMap.");
+  if (map.contract !== "svml.complete-semantic-map.v1") {
+    fail("locate_complete_required", "HTML compilation requires CompleteSemanticMap.");
   }
   return bindSemanticMap(narrative, basis, map);
 }
@@ -194,8 +130,8 @@ export function bindSemanticMap(
     ],
   ));
   const captionAtoms = narrative.captionAtoms.map((atom) => {
-    const first = words[atom.startWord];
-    const last = words[atom.endWordExclusive - 1];
+    const first = words[atom.startToken];
+    const last = words[atom.endTokenExclusive - 1];
     if (!first || !last || first.segmentId !== last.segmentId) {
       fail("locate_caption_atom", `Caption atom "${atom.id}" has an invalid speech span.`);
     }
@@ -204,10 +140,8 @@ export function bindSemanticMap(
       ...range(first.startFrame, last.endFrameExclusive, basis, `Caption atom "${atom.id}"`),
     };
   });
-  const captionCues = validateCaptionCues(narrative, words, captionAtoms, map, basis);
   return {
     contract: "svml.temporal-binding.v1",
-    precision: map.contract === "svml.exact-semantic-map.v1" ? "exact" : "estimated",
     basisDigest: basis.basisDigest,
     semanticMapDigest: map.mapDigest,
     durationFrames: basis.durationFrames,
@@ -218,6 +152,5 @@ export function bindSemanticMap(
     selections,
     moments,
     captionAtoms,
-    ...(captionCues ? { captionCues } : {}),
   };
 }

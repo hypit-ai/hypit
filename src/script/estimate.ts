@@ -1,8 +1,7 @@
 import type {
-  AlignmentCaptionCue,
-  AlignmentEvidence,
   NarrativeIR,
   ScriptToken,
+  SpeechTimingEvidence,
 } from "../model.js";
 
 export type EstimateOptions = {
@@ -10,7 +9,6 @@ export type EstimateOptions = {
   wordGapSec?: number;
   segmentPaddingSec?: number;
   emptySegmentSec?: number;
-  maxCaptionWords?: number;
   fps?: number;
 };
 
@@ -27,33 +25,14 @@ function syllables(token: ScriptToken): number {
   return Math.max(1, groups - silentE);
 }
 
-function captionCues(narrative: NarrativeIR, maxWords: number): AlignmentCaptionCue[] {
-  const output: AlignmentCaptionCue[] = [];
-  for (const segment of narrative.segments) {
-    for (
-      let startWord = segment.tokenStart;
-      startWord < segment.tokenEnd;
-      startWord += maxWords
-    ) {
-      output.push({
-        id: `estimate-cue-${output.length + 1}`,
-        startWord,
-        endWordExclusive: Math.min(segment.tokenEnd, startWord + maxWords),
-      });
-    }
-  }
-  return output;
-}
-
-export function estimateAlignment(
+export function estimateSpeechTiming(
   narrative: NarrativeIR,
   options: EstimateOptions = {},
-): AlignmentEvidence {
+): SpeechTimingEvidence {
   const syllablesPerSecond = options.syllablesPerSecond ?? 6.5;
   const wordGapSec = options.wordGapSec ?? 0.045;
   const segmentPaddingSec = options.segmentPaddingSec ?? 0.12;
   const emptySegmentSec = options.emptySegmentSec ?? 1;
-  const maxCaptionWords = Math.max(1, Math.floor(options.maxCaptionWords ?? 3));
   const fps = Math.max(1, Math.round(options.fps ?? 30));
   for (const [name, value] of Object.entries({
     syllablesPerSecond,
@@ -67,8 +46,8 @@ export function estimateAlignment(
   }
 
   let cursor = 0;
-  const words: AlignmentEvidence["words"] = [];
-  const segments: AlignmentEvidence["segments"] = [];
+  const units: SpeechTimingEvidence["units"] = [];
+  const segments: SpeechTimingEvidence["segments"] = [];
   for (const segment of narrative.segments) {
     const segmentTokens = narrative.tokens.slice(segment.tokenStart, segment.tokenEnd);
     const startSec = cursor;
@@ -82,7 +61,7 @@ export function estimateAlignment(
     for (const [index, token] of segmentTokens.entries()) {
       const wordStart = cursor;
       cursor += syllables(token) / syllablesPerSecond;
-      words.push({
+      units.push({
         text: token.text,
         startSec: wordStart,
         endSec: cursor,
@@ -97,12 +76,12 @@ export function estimateAlignment(
   const durationFrames = Math.max(1, Math.ceil(cursor * fps));
   const durationSec = durationFrames / fps;
   return {
-    contract: "svml.speech-alignment.v1",
+    contract: "svml.speech-timing-evidence.v1",
     durationSec,
     fps,
-    words,
+    quality: "estimated",
+    units,
     segments,
-    captionCues: captionCues(narrative, maxCaptionWords),
     provenance: {
       method: "svml.syllable-estimate.v1",
       measured: false,
@@ -110,7 +89,6 @@ export function estimateAlignment(
       wordGapSec,
       segmentPaddingSec,
       emptySegmentSec,
-      maxCaptionWords,
     },
   };
 }

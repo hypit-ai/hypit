@@ -13,7 +13,7 @@ For `<speech-program id="voice">`, expansion creates:
 ```text
 voice::basis    → TemporalBasisProduction + ProgramBoundVideoSequence
        │
-       └──────────────> voice::locator → ExactSemanticMap
+       └──────────────> voice::locator → CompleteSemanticMap
 
 voice.production   = voice::basis.production
 voice.map          = voice::locator.map

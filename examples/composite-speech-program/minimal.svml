@@ -16,9 +16,9 @@
 
   <video id="host" src="../regen-ranking/assets/avatar-1.mp4"/>
   <audio id="host-audio" src="../regen-ranking/assets/avatar-1.mp3"/>
-  <alignment id="alignment" src="./alignment.json"/>
+  <timing id="timing" src="./alignment.json"/>
 
-  <speech-program id="voice" script={script} evidence={alignment} class="house.default">
+  <speech-program id="voice" script={script} evidence={timing} class="house.default">
     <segment id="intro" visual={host} audio={host-audio} sourceWindow="0s .. 5s"/>
     <segment id="close" visual={host} audio={host-audio} sourceWindow="5s .. 10s"/>
     <join after="intro" overlap="500ms" audio="crossfade" visual="dissolve"/>
