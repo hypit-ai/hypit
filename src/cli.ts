@@ -169,7 +169,7 @@ async function run(): Promise<void> {
     return;
   }
   if (args.command === "estimate") {
-    if (!file) throw new Error("usage: svml estimate <file.svml> [--out alignment.json]");
+    if (!file) throw new Error("usage: svml estimate <file.svml> [--out timing.json]");
     const numeric = (name: string): number | undefined => {
       const value = option(args, name);
       if (value === undefined) return undefined;
@@ -187,9 +187,6 @@ async function run(): Promise<void> {
         : {}),
       ...(numeric("empty-segment-duration") !== undefined
         ? { emptySegmentSec: numeric("empty-segment-duration")! }
-        : {}),
-      ...(numeric("max-caption-words") !== undefined
-        ? { maxCaptionWords: numeric("max-caption-words")! }
         : {}),
       ...(numeric("fps") !== undefined ? { fps: numeric("fps")! } : {}),
     });
@@ -288,7 +285,7 @@ usage:
   svml script <file.svml> [--out narrative.json]
   svml plan <file.svml> [--out plan.json]
   svml fmt <file.svml> [--check|--write|--out formatted.svml]
-  svml estimate <file.svml> [--out alignment.json] [--fps 30]
+  svml estimate <file.svml> [--out timing.json] [--fps 30]
   svml canvas <file.svml> [--out canvas.json]
   svml timeline <file.svml> [--out timeline.json] [--lock svml.lock] [--artifacts artifacts.json]
   svml compile <file.svml> --out index.html [--lock svml.lock] [--artifacts artifacts.json]

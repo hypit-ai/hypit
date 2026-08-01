@@ -11,12 +11,12 @@
   <video id="avatar" src="../presentation/long.mp4"/>
   <audio id="voice-audio" src="../presentation/long.mp4"/>
   <image id="icon" src="../collision/left/image.png"/>
-  <alignment id="alignment" src="./alignment.json"/>
+  <timing id="timing" src="./alignment.json"/>
 
   <speech-assemble id="speech" fps="30">
     <segment id="main" script={script.segment.main} visual={avatar} audio={voice-audio} sourceWindow="0s .. 3s"/>
   </speech-assemble>
-  <speech-locator id="location" script={script} basis={speech.production} evidence={alignment}/>
+  <speech-locator id="location" script={script} basis={speech.production} evidence={timing}/>
 
   <ranking-column id="ranking" z="1">
     <item id="picked" rank="1" image={icon} during={script.selection.pick}/>

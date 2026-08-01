@@ -15,8 +15,8 @@
   "plan": {
     "root": "regen-ranking",
     "values": 20,
-    "instances": 9,
-    "edges": 33
+    "instances": 10,
+    "edges": 35
   },
   "selectionFrames": {
     "handsome-1": [[791, 831]],
@@ -26,7 +26,7 @@
     "instagram-post": [[977, 1009]]
   },
   "locatedOutput": {
-    "visualFragments": 153,
+    "visualFragments": 154,
     "audioFragments": 14
   },
   "renderComparison": {

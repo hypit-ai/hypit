@@ -94,4 +94,18 @@ test("disconnected SelectionSet drives one caption style rule without losing occ
   assert.ok(captions.some((fragment) => /color:#ff0000/u.test(fragment.html ?? "")));
   assert.ok(captions.some((fragment) => /color:#00ff00/u.test(fragment.html ?? "")));
   assert.ok(captions.some((fragment) => /scale\(1\.1\)/u.test(fragment.html ?? "")));
+  assert.ok(captions.some((fragment) => /background:#0000ff/u.test(fragment.html ?? "")));
+  assert.ok(captions.every((fragment) => !/gap/u.test(fragment.html ?? "")));
+  const plan = compilation.projections.get("caption-plan")?.outputs.plan as {
+    annotations?: Array<{ kind: string }>;
+  };
+  assert.deepEqual(plan.annotations?.map((annotation) => annotation.kind), ["accent", "accent"]);
+});
+
+test("a Composition rejects a second CaptionTrack but permits no CaptionTrack", async () => {
+  const fixture = fileURLToPath(new URL("./fixtures/disconnected/", import.meta.url));
+  await assert.rejects(
+    compileSource({ file: `${fixture}/duplicate-captions.svml` }),
+    /caption_track_cardinality/u,
+  );
 });

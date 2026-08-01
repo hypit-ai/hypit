@@ -6,9 +6,9 @@
   <script><segment id="main">Hello.</segment></script>
   <video id="visual" src="../collision/avatar.mp4"/>
   <audio id="audio" src="../collision/avatar.mp4"/>
-  <alignment id="alignment" src="../artifacts/alignment.json"/>
+  <timing id="timing" src="../artifacts/alignment.json"/>
 
   <media-basis id="program" visual={visual} audio={audio} duration="1s"/>
-  <speech-locator id="location" script={script} basis={program.production} evidence={alignment}/>
+  <speech-locator id="location" script={script} basis={program.production} evidence={timing}/>
   <film id="film" basis={program.production} semantic={location.map}/>
 </svml>

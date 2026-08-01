@@ -1,12 +1,11 @@
 import { fail } from "./diagnostics.js";
 import type {
-  AlignmentEvidence,
-  ExactSemanticMap,
-  EstimatedSemanticMap,
+  CompleteSemanticMap,
   NarrativeIR,
   ProgramBasis,
   SemanticAnchorPoint,
   SemanticMap,
+  SpeechTimingEvidence,
   TemporalBasisProduction,
 } from "./model.js";
 import { normalizeWord, sha256, stableJson } from "./util.js";
@@ -222,17 +221,17 @@ function frameAt(seconds: number, basis: ProgramBasis): number {
   return Math.round(seconds * basisFps(basis));
 }
 
-function semanticMapDigest(map: Omit<SemanticMap, "mapDigest">): string {
+function semanticMapDigest(map: Omit<CompleteSemanticMap, "mapDigest">): string {
   return sha256(stableJson(map));
 }
 
-function validateAlignment(
+function validateSpeechTiming(
   narrative: NarrativeIR,
   basis: ProgramBasis,
-  evidence: AlignmentEvidence,
+  evidence: SpeechTimingEvidence,
 ): void {
-  if (evidence.contract !== "svml.speech-alignment.v1") {
-    fail("locator_evidence_contract", `Unsupported alignment contract "${evidence.contract}".`);
+  if (evidence.contract !== "svml.speech-timing-evidence.v1") {
+    fail("locator_evidence_contract", `Unsupported speech timing contract "${evidence.contract}".`);
   }
   if (
     !Number.isFinite(evidence.fps)
@@ -240,40 +239,37 @@ function validateAlignment(
     || !Number.isFinite(evidence.durationSec)
     || evidence.durationSec <= 0
   ) {
-    fail("locator_evidence_clock", "Alignment evidence requires positive fps and duration.");
+    fail("locator_evidence_clock", "SpeechTimingEvidence requires positive fps and duration.");
+  }
+  if (evidence.quality !== "measured" && evidence.quality !== "estimated") {
+    fail("locator_evidence_quality", "SpeechTimingEvidence quality must be measured or estimated.");
   }
   if (Math.abs(evidence.fps - basisFps(basis)) > EPSILON) {
     fail(
       "locator_basis_frame_rate",
-      `Alignment fps ${evidence.fps} does not match ProgramBasis fps ${basisFps(basis)}.`,
+      `Speech timing fps ${evidence.fps} does not match ProgramBasis fps ${basisFps(basis)}.`,
     );
   }
   if (frameAt(evidence.durationSec, basis) !== basis.durationFrames) {
     fail(
       "locator_basis_duration",
-      `Alignment duration resolves to ${frameAt(evidence.durationSec, basis)} frames; ProgramBasis has ${basis.durationFrames}.`,
-    );
-  }
-  if (evidence.words.length !== narrative.tokens.length) {
-    fail(
-      "locator_word_cardinality",
-      `Script has ${narrative.tokens.length} tokens but alignment has ${evidence.words.length}.`,
+      `Speech timing duration resolves to ${frameAt(evidence.durationSec, basis)} frames; ProgramBasis has ${basis.durationFrames}.`,
     );
   }
   if (evidence.segments.length !== narrative.segments.length) {
     fail(
       "locator_segment_cardinality",
-      `Script has ${narrative.segments.length} Segments but alignment has ${evidence.segments.length}.`,
+      `Script has ${narrative.segments.length} Segments but speech timing has ${evidence.segments.length}.`,
     );
   }
 
   const segments = new Map(evidence.segments.map((segment) => [segment.id, segment]));
   if (segments.size !== evidence.segments.length) {
-    fail("locator_segment_duplicate", "Alignment evidence repeats a Segment id.");
+    fail("locator_segment_duplicate", "SpeechTimingEvidence repeats a Segment id.");
   }
   for (const [index, segment] of narrative.segments.entries()) {
     const aligned = segments.get(segment.id);
-    if (!aligned) fail("locator_segment_missing", `Alignment is missing Segment "${segment.id}".`);
+    if (!aligned) fail("locator_segment_missing", `Speech timing is missing Segment "${segment.id}".`);
     if (
       !Number.isFinite(aligned.startSec)
       || !Number.isFinite(aligned.endSec)
@@ -302,99 +298,200 @@ function validateAlignment(
     }
   }
 
-  const previousBySegment = new Map<string, AlignmentEvidence["words"][number]>();
-  for (const [index, token] of narrative.tokens.entries()) {
-    const word = evidence.words[index];
-    if (!word) fail("locator_word_missing", `Alignment is missing token ${index + 1}.`);
-    if (normalizeWord(word.text) !== token.normalized || word.segmentId !== token.segmentId) {
-      fail(
-        "locator_word_mismatch",
-        `Token ${index + 1} does not match alignment word "${word.text}" in Segment "${word.segmentId}".`,
-      );
-    }
-    const segment = segments.get(word.segmentId);
+  const previousBySegment = new Map<string, SpeechTimingEvidence["units"][number]>();
+  for (const [index, unit] of evidence.units.entries()) {
+    const segment = segments.get(unit.segmentId);
     if (
       !segment
-      || !Number.isFinite(word.startSec)
-      || !Number.isFinite(word.endSec)
-      || word.startSec < segment.startSec - EPSILON
-      || word.endSec < word.startSec
-      || word.endSec > segment.endSec + EPSILON
+      || typeof unit.text !== "string"
+      || !Number.isFinite(unit.startSec)
+      || !Number.isFinite(unit.endSec)
+      || unit.startSec < segment.startSec - EPSILON
+      || unit.endSec < unit.startSec
+      || unit.endSec > segment.endSec + EPSILON
     ) {
       fail(
         "locator_word_window",
-        `Alignment token ${index + 1} falls outside Segment "${word.segmentId}".`,
+        `Speech timing unit ${index + 1} falls outside Segment "${unit.segmentId}".`,
       );
     }
-    const previous = previousBySegment.get(word.segmentId);
-    if (previous && word.startSec < previous.endSec - EPSILON) {
+    const previous = previousBySegment.get(unit.segmentId);
+    if (previous && unit.startSec < previous.endSec - EPSILON) {
       fail(
         "locator_word_overlap",
-        `Alignment token ${index + 1} overlaps the preceding token in Segment "${word.segmentId}".`,
+        `Speech timing unit ${index + 1} overlaps the preceding unit in Segment "${unit.segmentId}".`,
       );
     }
-    previousBySegment.set(word.segmentId, word);
+    previousBySegment.set(unit.segmentId, unit);
   }
 }
 
-export function semanticMapFromAlignment(
+type TokenFrame = {
+  startFrame: number;
+  endFrameExclusive: number;
+  quality: "estimated" | "derived" | "measured";
+};
+
+function lcsMatches(
+  tokens: NarrativeIR["tokens"],
+  units: SpeechTimingEvidence["units"],
+): Array<[number, number]> {
+  const rows = Array.from({ length: tokens.length + 1 }, () =>
+    Array<number>(units.length + 1).fill(0));
+  for (let left = tokens.length - 1; left >= 0; left -= 1) {
+    for (let right = units.length - 1; right >= 0; right -= 1) {
+      rows[left]![right] = tokens[left]!.normalized === normalizeWord(units[right]!.text)
+        ? rows[left + 1]![right + 1]! + 1
+        : Math.max(rows[left + 1]![right]!, rows[left]![right + 1]!);
+    }
+  }
+  const matches: Array<[number, number]> = [];
+  let left = 0;
+  let right = 0;
+  while (left < tokens.length && right < units.length) {
+    if (
+      tokens[left]!.normalized === normalizeWord(units[right]!.text)
+      && rows[left]![right] === rows[left + 1]![right + 1]! + 1
+    ) {
+      matches.push([left, right]);
+      left += 1;
+      right += 1;
+    } else if (rows[left + 1]![right]! >= rows[left]![right + 1]!) {
+      left += 1;
+    } else {
+      right += 1;
+    }
+  }
+  return matches;
+}
+
+function distributeFrames(
+  tokens: NarrativeIR["tokens"],
+  startFrame: number,
+  endFrameExclusive: number,
+  quality: TokenFrame["quality"],
+): TokenFrame[] {
+  if (!tokens.length) return [];
+  const weights = tokens.map((token) => Math.max(1, [...token.normalized].length));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  let accumulated = 0;
+  return tokens.map((_, index) => {
+    const start = startFrame + Math.round((endFrameExclusive - startFrame) * accumulated / total);
+    accumulated += weights[index]!;
+    const end = index === tokens.length - 1
+      ? endFrameExclusive
+      : startFrame + Math.round((endFrameExclusive - startFrame) * accumulated / total);
+    return { startFrame: start, endFrameExclusive: Math.max(start, end), quality };
+  });
+}
+
+function alignSegment(
+  tokens: NarrativeIR["tokens"],
+  units: SpeechTimingEvidence["units"],
+  segmentStartFrame: number,
+  segmentEndFrame: number,
+  basis: ProgramBasis,
+  evidenceQuality: SpeechTimingEvidence["quality"],
+): TokenFrame[] {
+  const output: Array<TokenFrame | undefined> = Array(tokens.length).fill(undefined);
+  const matches = lcsMatches(tokens, units);
+  let tokenCursor = 0;
+  let unitCursor = 0;
+  for (let matchIndex = 0; matchIndex <= matches.length; matchIndex += 1) {
+    const match = matches[matchIndex];
+    const tokenEnd = match?.[0] ?? tokens.length;
+    const unitEnd = match?.[1] ?? units.length;
+    const tokenRun = tokens.slice(tokenCursor, tokenEnd);
+    const unitRun = units.slice(unitCursor, unitEnd);
+    if (tokenRun.length) {
+      const previous = tokenCursor > 0 ? output[tokenCursor - 1] : undefined;
+      const nextUnit = match ? units[unitEnd] : undefined;
+      const startFrame = unitRun.length
+        ? frameAt(unitRun[0]!.startSec, basis)
+        : previous?.endFrameExclusive ?? segmentStartFrame;
+      const endFrame = unitRun.length
+        ? frameAt(unitRun.at(-1)!.endSec, basis)
+        : nextUnit
+          ? frameAt(nextUnit.startSec, basis)
+          : segmentEndFrame;
+      const quality = evidenceQuality === "estimated" || !unitRun.length
+        ? "estimated" as const
+        : "derived" as const;
+      for (const [offset, value] of distributeFrames(
+        tokenRun,
+        startFrame,
+        Math.max(startFrame, endFrame),
+        quality,
+      ).entries()) output[tokenCursor + offset] = value;
+    }
+    if (match) {
+      const [tokenIndex, unitIndex] = match;
+      const unit = units[unitIndex]!;
+      output[tokenIndex] = {
+        startFrame: frameAt(unit.startSec, basis),
+        endFrameExclusive: frameAt(unit.endSec, basis),
+        quality: evidenceQuality === "measured" ? "measured" : "estimated",
+      };
+      tokenCursor = tokenIndex + 1;
+      unitCursor = unitIndex + 1;
+    }
+  }
+  return output.map((value, index) => value
+    ?? fail("locator_token_unmapped", `Script token ${index + 1} could not be aligned.`));
+}
+
+export function semanticMapFromTiming(
   narrative: NarrativeIR,
   basis: ProgramBasis,
-  evidence: AlignmentEvidence,
-  options: { precision: "exact"; locatorDigest?: string },
-): ExactSemanticMap;
-export function semanticMapFromAlignment(
-  narrative: NarrativeIR,
-  basis: ProgramBasis,
-  evidence: AlignmentEvidence,
-  options: { precision: "estimated"; locatorDigest?: string },
-): EstimatedSemanticMap;
-export function semanticMapFromAlignment(
-  narrative: NarrativeIR,
-  basis: ProgramBasis,
-  evidence: AlignmentEvidence,
-  options: {
-    precision: "estimated" | "exact";
-    locatorDigest?: string;
-  },
-): EstimatedSemanticMap | ExactSemanticMap {
+  evidence: SpeechTimingEvidence,
+  options: { locatorDigest?: string; evidenceDigest?: string } = {},
+): CompleteSemanticMap {
   validateProgramBasis(basis);
-  validateAlignment(narrative, basis, evidence);
+  validateSpeechTiming(narrative, basis, evidence);
   const segmentEvidence = new Map(evidence.segments.map((segment) => [segment.id, segment]));
-  const wordEvidence = new Map(narrative.tokens.map((token, index) => [token.id, evidence.words[index]!]));
-  const quality = options.precision === "exact" ? "measured" : "estimated";
+  const tokenFrames = new Map<string, TokenFrame>();
+  for (const segment of narrative.segments) {
+    const measuredSegment = segmentEvidence.get(segment.id)!;
+    const tokens = narrative.tokens.slice(segment.tokenStart, segment.tokenEnd);
+    const units = evidence.units.filter((unit) => unit.segmentId === segment.id);
+    const aligned = alignSegment(
+      tokens,
+      units,
+      frameAt(measuredSegment.startSec, basis),
+      frameAt(measuredSegment.endSec, basis),
+      basis,
+      evidence.quality,
+    );
+    tokens.forEach((token, index) => tokenFrames.set(token.id, aligned[index]!));
+  }
   const anchors: SemanticAnchorPoint[] = narrative.semanticIndex.anchors.map((anchor) => {
     const segment = segmentEvidence.get(anchor.segmentId);
-    if (!segment) fail("locator_segment_missing", `Alignment is missing Segment "${anchor.segmentId}".`);
-    const word = anchor.tokenId ? wordEvidence.get(anchor.tokenId) : undefined;
-    const seconds = anchor.kind === "segment-start"
-      ? segment.startSec
+    if (!segment) fail("locator_segment_missing", `Speech timing is missing Segment "${anchor.segmentId}".`);
+    const token = anchor.tokenId ? tokenFrames.get(anchor.tokenId) : undefined;
+    const frame = anchor.kind === "segment-start"
+      ? frameAt(segment.startSec, basis)
       : anchor.kind === "segment-end"
-        ? segment.endSec
+        ? frameAt(segment.endSec, basis)
         : anchor.kind === "token-start"
-          ? word?.startSec
-          : word?.endSec;
-    if (seconds === undefined) {
-      fail("locator_anchor_missing", `No alignment time exists for anchor "${anchor.id}".`);
+          ? token?.startFrame
+          : token?.endFrameExclusive;
+    if (frame === undefined) {
+      fail("locator_anchor_missing", `No speech timing exists for anchor "${anchor.id}".`);
     }
     return {
       identity: anchor.id,
-      point: { basisDigest: basis.basisDigest, frame: frameAt(seconds, basis) },
-      quality,
+      point: { basisDigest: basis.basisDigest, frame },
+      quality: token?.quality ?? evidence.quality,
     };
   });
-  const contract = options.precision === "exact"
-    ? "svml.exact-semantic-map.v1" as const
-    : "svml.estimated-semantic-map.v1" as const;
   const payload = {
-    contract,
+    contract: "svml.complete-semantic-map.v1" as const,
     semanticIndexDigest: narrative.semanticIndex.digest,
     basisDigest: basis.basisDigest,
     anchors,
-    evidenceDigests: [sha256(stableJson(evidence))],
-    locatorDigest: options.locatorDigest ?? sha256(`svml.${options.precision}-speech-locator.v1`),
+    evidenceDigests: [options.evidenceDigest ?? sha256(stableJson(evidence))],
+    locatorDigest: options.locatorDigest ?? sha256("svml.script-timing-locator.v1"),
     quantizationPolicy: "nearest-frame" as const,
-    ...(evidence.captionCues ? { captionCues: evidence.captionCues } : {}),
   };
   const map = { ...payload, mapDigest: semanticMapDigest(payload) };
   validateSemanticMap(narrative, basis, map);
@@ -408,8 +505,7 @@ export function validateSemanticMap(
 ): void {
   validateProgramBasis(basis);
   if (
-    map.contract !== "svml.estimated-semantic-map.v1"
-    && map.contract !== "svml.exact-semantic-map.v1"
+    map.contract !== "svml.complete-semantic-map.v1"
   ) {
     fail("semantic_map_contract", "Unsupported SemanticMap contract.");
   }
@@ -446,8 +542,8 @@ export function validateSemanticMap(
     ) {
       fail("semantic_map_point", `SemanticMap anchor "${actual.identity}" is outside ProgramBasis.`);
     }
-    if (map.contract === "svml.exact-semantic-map.v1" && actual.quality === "estimated") {
-      fail("semantic_map_precision", `ExactSemanticMap anchor "${actual.identity}" is estimated.`);
+    if (!["measured", "derived", "estimated"].includes(actual.quality)) {
+      fail("semantic_map_quality", `SemanticMap anchor "${actual.identity}" has invalid quality.`);
     }
     if (pointById.has(actual.identity)) {
       fail("semantic_map_duplicate", `SemanticMap repeats anchor "${actual.identity}".`);

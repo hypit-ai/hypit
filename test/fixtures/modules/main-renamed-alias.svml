@@ -2,6 +2,7 @@
   <import from="../../../stdlib/speech-assemble.svk"/>
   <import from="../../../stdlib/speech-locator.svk"/>
   <import from="../../../stdlib/broll-track.svk"/>
+  <import from="../../../stdlib/caption-planner.svk"/>
   <import as="subtitles" from="../../../stdlib/caption-track.svk"/>
   <import from="../../../stdlib/film.svk"/>
   <import as="assets" from="./brand.svc"/>
@@ -15,19 +16,20 @@
 
   <video id="avatar" src="./avatar.mp4"/>
   <audio id="voice-audio" src="./avatar.mp4"/>
-  <alignment id="alignment" src="./alignment.json"/>
+  <timing id="timing" src="./alignment.json"/>
 
   <speech-assemble id="speech" fps="30">
     <segment id="main" script={script.segment.main} visual={avatar} audio={voice-audio} sourceWindow="0s .. 1s"/>
   </speech-assemble>
 
-  <speech-locator id="location" script={script} basis={speech.production} evidence={alignment}/>
+  <speech-locator id="location" script={script} basis={speech.production} evidence={timing}/>
 
   <broll-track id="broll" class="house.full">
     <item id="poster" source={assets.poster.image} during={script.selection.poster}/>
   </broll-track>
 
-  <subtitles id="captions" script={script} semantic={location.map} class="house.launch" size="48"/>
+  <caption-planner id="caption-plan" script={script} semantic={location.map}/>
+  <subtitles id="captions" script={script} semantic={location.map} plan={caption-plan.plan} class="house.launch" size="48"/>
 
   <film id="main-film" class="house.vertical" basis={speech.production} semantic={location.map}>
     <track ref={broll.track}/>

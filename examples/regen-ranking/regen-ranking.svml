@@ -6,6 +6,7 @@
   <import from="../../stdlib/ranking-column.svk"/>
   <import from="../../stdlib/broll-track.svk"/>
   <import from="../../stdlib/text-track.svk"/>
+  <import from="../../stdlib/caption-planner.svk"/>
   <import from="../../stdlib/caption-track.svk"/>
   <import from="../../stdlib/audio-track.svk"/>
   <import from="../../stdlib/film.svk"/>
@@ -62,7 +63,7 @@
   <audio id="ranking-appear" src="./assets/ranking-appear.wav"/>
   <audio id="ranking-move" src="./assets/ranking-move.wav"/>
   <audio id="background-music" src="./assets/background.mp3"/>
-  <alignment id="alignment" src="./evidence/alignment.json"/>
+  <timing id="timing" src="./evidence/alignment.json"/>
 
   <speech-assemble id="voice" fps="30" defaultJoin="cut">
     <segment id="scene-1" script={script.segment.scene-1} visual={avatar-1} audio={avatar-1-audio} sourceWindow="0s .. 12.033333333333333s"/>
@@ -70,7 +71,7 @@
     <segment id="scene-3" script={script.segment.scene-3} visual={avatar-3} audio={avatar-3-audio} sourceWindow="0s .. 12.033333333333333s"/>
   </speech-assemble>
 
-  <speech-locator id="location" script={script} basis={voice.production} evidence={alignment}/>
+  <speech-locator id="location" script={script} basis={voice.production} evidence={timing}/>
 
   <media-track id="base" z="20">
     <item id="scene-1" source={voice.segment.scene-1.visual} fit="cover"/>
@@ -129,15 +130,17 @@
     <item id="instagram-post"    source={broll-1} during={script.selection.instagram-post}    fit="contain" zoom="1.02"/>
   </broll-track>
 
+  <caption-planner id="caption-plan" script={script} semantic={location.map} maxWords="3"/>
+
   <caption-track
     id="captions"
     script={script}
     semantic={location.map}
+    plan={caption-plan.plan}
     z="500"
     x="0.37"
     y="0.54"
     width="0.64"
-    maxWords="3"
     hold="0.08"
     font="Poppins, Inter, Arial, sans-serif"
     size="50"

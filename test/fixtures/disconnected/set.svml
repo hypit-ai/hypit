@@ -10,12 +10,12 @@
 
   <video id="avatar" src="../presentation/long.mp4"/>
   <audio id="voice-audio" src="../presentation/long.mp4"/>
-  <alignment id="alignment" src="./alignment.json"/>
+  <timing id="timing" src="./alignment.json"/>
 
   <speech-assemble id="speech" fps="30">
     <segment id="main" script={script.segment.main} visual={avatar} audio={voice-audio} sourceWindow="0s .. 3s"/>
   </speech-assemble>
-  <speech-locator id="location" script={script} basis={speech.production} evidence={alignment}/>
+  <speech-locator id="location" script={script} basis={speech.production} evidence={timing}/>
 
   <selection-set id="styles">
     <item id="highlight" during={script.selection.pick}/>

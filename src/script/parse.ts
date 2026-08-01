@@ -291,13 +291,7 @@ export function parseScript(
       }
       return;
     }
-    current.atoms.push({
-      kind: "text",
-      speech,
-      caption,
-      start: sourceOffset + start,
-      end: sourceOffset + end,
-    });
+    const tokenStart = tokens.length;
     WORD.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = WORD.exec(speech))) {
@@ -318,6 +312,15 @@ export function parseScript(
         sourceEnd: sourceOffset + start + match.index + match[0].length,
       });
     }
+    current.atoms.push({
+      kind: "text",
+      speech,
+      caption,
+      start: sourceOffset + start,
+      end: sourceOffset + end,
+      tokenStart,
+      tokenEndExclusive: tokens.length,
+    });
   };
 
   const consumeSpeechSide = (
@@ -325,7 +328,7 @@ export function parseScript(
     absoluteStart: number,
     caption: string,
   ): void => {
-    const startWord = tokens.length;
+    const startToken = tokens.length;
     let partStart = 0;
     let index = 0;
     let emittedCaption = false;
@@ -370,14 +373,14 @@ export function parseScript(
       partStart = index;
     }
     addLiteral(raw.slice(partStart), absoluteStart + partStart);
-    const endWordExclusive = tokens.length;
-    if (endWordExclusive > startWord) {
+    const endTokenExclusive = tokens.length;
+    if (endTokenExclusive > startToken) {
       captionAtoms.push({
         id: `caption-atom-${captionAtoms.length + 1}`,
         display: cleanProjection(caption),
         segmentId: current!.id,
-        startWord,
-        endWordExclusive,
+        startToken,
+        endTokenExclusive,
         sourceStart: sourceOffset + absoluteStart,
         sourceEnd: sourceOffset + absoluteStart + raw.length,
       });
@@ -553,16 +556,39 @@ export function parseScript(
   const speechSegments: string[] = [];
   const captionSegments: string[] = [];
   const dialogueTurns: string[] = [];
+  const turns: NarrativeIR["turns"] = [];
   for (const segment of segments) {
     const speechParts: string[] = [];
     const captionParts: string[] = [];
     let activeRole: string | undefined;
     let turnParts: string[] = [];
+    let turnTokenStart: number | undefined;
+    let turnTokenEndExclusive: number | undefined;
+    let turnSourceStart: number | undefined;
+    let turnSourceEnd: number | undefined;
     const flushTurn = (): void => {
       const body = joinProjection(turnParts);
-      if (!body) return;
-      dialogueTurns.push(activeRole ? `${activeRole}: ${body}` : body);
+      if (body) dialogueTurns.push(activeRole ? `${activeRole}: ${body}` : body);
+      if (
+        turnTokenStart !== undefined
+        && turnTokenEndExclusive !== undefined
+        && turnTokenEndExclusive > turnTokenStart
+      ) {
+        turns.push({
+          id: `turn-${turns.length + 1}`,
+          segmentId: segment.id,
+          ...(activeRole ? { role: activeRole } : {}),
+          tokenStart: turnTokenStart,
+          tokenEndExclusive: turnTokenEndExclusive,
+          sourceStart: turnSourceStart ?? segment.sourceStart,
+          sourceEnd: turnSourceEnd ?? segment.sourceEnd,
+        });
+      }
       turnParts = [];
+      turnTokenStart = undefined;
+      turnTokenEndExclusive = undefined;
+      turnSourceStart = undefined;
+      turnSourceEnd = undefined;
     };
     for (const atom of segment.atoms) {
       if (atom.kind === "role") {
@@ -572,6 +598,12 @@ export function parseScript(
         speechParts.push(atom.speech);
         captionParts.push(atom.caption);
         turnParts.push(atom.speech);
+        if (atom.tokenEndExclusive > atom.tokenStart) {
+          turnTokenStart ??= atom.tokenStart;
+          turnTokenEndExclusive = atom.tokenEndExclusive;
+          turnSourceStart ??= atom.start;
+          turnSourceEnd = atom.end;
+        }
       }
     }
     flushTurn();
@@ -626,6 +658,7 @@ export function parseScript(
   return {
     segments,
     tokens,
+    turns,
     selections,
     moments,
     captionAtoms,
