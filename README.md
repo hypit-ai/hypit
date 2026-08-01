@@ -129,6 +129,7 @@ generation provider is invoked by tests or compilation.
 
 - [Script Surface v1](spec/script-surface-v1.md)
 - [Source Architecture v1 draft](spec/source-architecture-draft.md)
+- [Speech Program and Caption v1 target contract](docs/speech-program-caption-v1.md)
 - [Compiler implementation record](docs/compiler-prototype.md)
 - [External Runtime Host architecture](docs/runtime-host-architecture-draft.md)
 
