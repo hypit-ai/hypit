@@ -147,8 +147,9 @@ B: It’s 8:30.
 
 在 `speech` 和 `caption` 投影中，`<A>`、`<B>` 都被移除。Role Cue 不是
 speaker 数据模型，不建立人物实体，不选择音色，不成为可接线字段，也不对
-字幕隐式分组。若这些能力将来需要程序化表达，应放在外部 Program 中显式
-引用 Selection。
+字幕隐式分组。外部 Program 可以显式写 `role="A"` 查询这些 spoken turn；
+Compiler 将结果降低为一个可非连通的派生 SelectionSet。仅有 `<A>` 本身不触发
+任何样式、人物、音色或素材行为。
 
 为消除歧义：
 
@@ -160,6 +161,8 @@ speaker 数据模型，不建立人物实体，不选择音色，不成为可接
   正文开始的 Segment 不得在中途切换为有 Cue 模式。
 - 一个 Role Cue 的 turn 一直延续到下一个 Role Cue 或 Segment 结束。turn
   内的物理换行只是布局空白，不结束 turn，也不要求重复 Role Cue。
+- Role Cue 不是容器标签，没有 close syntax；`</A>`、`</B>` 等形式必须作为
+  未知尖括号构造失败，formatter 永不输出它们。
 - Role label 是 NFC 后 1–32 个 Unicode 字符的可读文本；可由 Unicode
   Letter、Mark、Number、内部空格、`_`、`-`、`.` 组成，首尾不得有空白。
   引号、`=`、`/`、换行、`<`、`>`、`|`、`:` 均非法，因此带属性的未知
@@ -513,12 +516,17 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 解析结果至少保留：
 
 - Segment 的顺序、id 和独立 start/end identity；
-- 每个 Segment 的有序 spoken turn，以及各 turn 的可选 Role Cue；
+- 每个 Segment 的有序 spoken turn，以及各 turn 的稳定 identity、可选 Role Cue、
+  token range 和 source range；
 - plain / Dual Text / Slot atom 及其源码范围；
 - caption atom 到一个或多个 speech token 的显式映射；
 - 每个 SelectionSet 的一个或多个有序 occurrence；
 - 每个端点的左右 affinity 和端点源码位置。
 - 每个 MomentSet 的一个或多个有序 point、左右 affinity 和源码位置。
+
+外部 Program 的 `role="label"` selector 从上述 turn token ranges 派生一个
+SelectionSet；同一 label 的多次 turn 成为同一集合的多个有序 occurrence。
+它是显式查询，不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。
 
 SelectionSet/MomentSet 是消费者边界，不是 Segment 的子对象。典型外部
 关系是：
