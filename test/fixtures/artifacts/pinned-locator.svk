@@ -1,6 +1,6 @@
 <kernel name="pinned-locator" abi="1" profile="capability-v1" capability="semantic-locate">
   <port name="script" direction="input" type="NarrativeIR" cardinality="one"/>
   <port name="basis" direction="input" type="TemporalBasisProduction" cardinality="one"/>
-  <port name="evidence" direction="input" type="AlignmentEvidence" cardinality="one"/>
-  <port name="map" direction="output" type="ExactSemanticMap" cardinality="one"/>
+  <port name="evidence" direction="input" type="SpeechTimingEvidence" cardinality="one"/>
+  <port name="map" direction="output" type="CompleteSemanticMap" cardinality="one"/>
 </kernel>

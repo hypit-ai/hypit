@@ -3,7 +3,6 @@
   <param name="x" type="number" default="0.37"/>
   <param name="y" type="number" default="0.54"/>
   <param name="width" type="number" default="0.64"/>
-  <param name="maxWords" style="max-words" type="number" default="3"/>
   <param name="hold" type="number" default="0.08"/>
   <param name="cueFade" style="cue-fade" type="number" default="0.12"/>
   <param name="font" style="font-family" type="string" default="Poppins, Inter, Arial, sans-serif"/>
@@ -16,15 +15,24 @@
   <param name="strokeColor" style="stroke-color" type="string" default="rgba(0,0,0,.82)"/>
   <param name="shadow" type="string" default="0 2px 9px rgba(0,0,0,.5), 0 0 2px rgba(0,0,0,.68)"/>
   <port name="script" direction="input" type="NarrativeIR" cardinality="one"/>
-  <port name="semantic" direction="input" type="ExactSemanticMap" cardinality="one"/>
-  <port name="track" direction="output" type="Track" cardinality="one"/>
+  <port name="semantic" direction="input" type="CompleteSemanticMap" cardinality="one"/>
+  <port name="plan" direction="input" type="CaptionPlan" cardinality="one"/>
+  <port name="track" direction="output" type="CaptionTrack" cardinality="one"/>
   <child name="style" cardinality="zero-or-more">
     <field name="id" type="id" required="true"/>
-    <field name="during" type="SelectionSet|ProgramSpan" consume="set" required="true"/>
+    <field name="during" type="SelectionSet|ProgramSpan" consume="set"/>
+    <field name="role" type="string"/>
+    <field name="annotation" type="string"/>
     <field name="color" style="fill" type="string"/>
     <field name="activeColor" style="active-fill" type="string"/>
     <field name="background" type="string"/>
     <field name="weight" type="number"/>
     <field name="scale" type="number"/>
+  </child>
+  <child name="mute" cardinality="zero-or-more">
+    <field name="id" type="id" required="true"/>
+    <field name="during" type="SelectionSet|ProgramSpan" consume="set"/>
+    <field name="role" type="string"/>
+    <field name="annotation" type="string"/>
   </child>
 </kernel>

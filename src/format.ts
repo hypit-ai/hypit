@@ -48,8 +48,8 @@ function semanticNarrative(narrative: NarrativeIR): unknown {
     captionAtoms: narrative.captionAtoms.map((atom) => ({
       display: atom.display,
       segmentId: atom.segmentId,
-      startWord: atom.startWord,
-      endWordExclusive: atom.endWordExclusive,
+      startToken: atom.startToken,
+      endTokenExclusive: atom.endTokenExclusive,
     })),
     projections: narrative.projections,
   };

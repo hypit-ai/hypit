@@ -1,8 +1,8 @@
 <kernel name="speech-program" abi="1" profile="composite-v1">
   <port name="script" direction="input" type="NarrativeIR" cardinality="one"/>
-  <port name="evidence" direction="input" type="AlignmentEvidence" cardinality="one"/>
+  <port name="evidence" direction="input" type="SpeechTimingEvidence" cardinality="one"/>
   <port name="production" direction="output" type="TemporalBasisProduction" cardinality="one"/>
-  <port name="map" direction="output" type="ExactSemanticMap" cardinality="one"/>
+  <port name="map" direction="output" type="CompleteSemanticMap" cardinality="one"/>
   <port name="facets.visual" direction="output" type="ProgramBoundVideoSequence" cardinality="one"/>
 
   <param name="join" type="enum(cut,crossfade,gap)" default="cut"/>

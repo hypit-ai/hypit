@@ -1,6 +1,6 @@
 {
-  "contract": "svml.alignment-overrides.v1",
-  "words": [
+  "contract": "svml.speech-timing-overrides.v1",
+  "units": [
     { "index": 69, "endSec": 20.000 },
     { "index": 70, "startSec": 20.000, "endSec": 20.033 },
     { "index": 71, "startSec": 20.033, "endSec": 20.133 },
