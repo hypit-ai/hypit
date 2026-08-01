@@ -52,6 +52,9 @@ test("regen ranking compiles to the frozen production timing contract", async ()
   assert.equal(document.audios?.length, reference.locatedOutput.audioFragments);
   assert.match(compilation.html, /data-composition-id="regen-ranking"/u);
   assert.match(compilation.html, /data-duration="36\.1"/u);
+  assert.match(compilation.html, />Powerful</u);
+  assert.doesNotMatch(compilation.html, /power full but|>uh</u);
+  assert.ok(compilation.semanticMap.anchors.some((anchor) => anchor.quality === "derived"));
 
   const canvas = projectCanvas(compilation.plan);
   assert.equal(canvas.root, reference.plan.root);

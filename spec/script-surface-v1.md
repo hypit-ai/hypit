@@ -356,9 +356,9 @@ gap        B.start >  A.end
 若未来需要真正重排或并行 speech，应发布显式的非线性叙事模型；v1 不让普通
 Range 在不同 Locator 下反向或消失。
 
-同一份 SelectionSet 可先在 `EstimatedSemanticMap` 上得到预览区间，再在
-`ExactSemanticMap` 上得到成片区间。两者使用完全相同的 identity、不同的精度
-类型。Script 本身不含秒数、帧号或采样点。
+同一份 SelectionSet 在不同 fulfillment 产生的 `CompleteSemanticMap` 上可得到
+预览或成片区间。Map 使用相同 identity；每个 anchor 以 `measured`、`derived` 或
+`estimated` 记录证据质量。Script 本身不含秒数、帧号或采样点。
 Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只
 量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
 
@@ -413,7 +413,7 @@ overlap 或 gap 落在不同点。
   Dual Text 的 speech 侧，但均不得切入 v1 speech token。
 - Moment 只选择 Semantic Anchor Index 中已有的一个候选点，不新增 anchor
   identity；因此 `2M + 2N` 的精确计数不因 Moment 数量改变。
-- MomentSet 与 SelectionSet 复用同一份 Estimated/Exact SemanticMap 和一次性
+- MomentSet 与 SelectionSet 复用同一份 CompleteSemanticMap 和一次性
   帧量化；区别只在最终载体是 `Point[]` 而不是 `Range[]`。
 
 消费端保持两个互不相混的类型：

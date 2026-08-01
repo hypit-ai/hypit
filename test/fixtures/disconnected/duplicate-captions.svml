@@ -5,30 +5,18 @@
   <import from="../../../stdlib/caption-track.svk"/>
   <import from="../../../stdlib/film.svk"/>
 
-  <script>
-    <segment id="main">
-      <A> @pick Alpha @/pick @silent gap @/silent
-      <B> @pick omega @/pick.
-    </segment>
-  </script>
-
+  <script><segment id="main">Alpha omega.</segment></script>
   <audio id="voice-audio" src="../presentation/long.mp4"/>
   <timing id="timing" src="./alignment.json"/>
   <speech-assemble id="speech" fps="30">
     <segment id="main" script={script.segment.main} audio={voice-audio} sourceWindow="0s .. 3s"/>
   </speech-assemble>
   <speech-locator id="location" script={script} basis={speech.production} evidence={timing}/>
-
-  <caption-planner id="caption-plan" script={script} semantic={location.map} maxWords="3">
-    <annotate id="picked" kind="accent" during={script.selection.pick}/>
-  </caption-planner>
-  <caption-track id="captions" script={script} semantic={location.map} plan={caption-plan.plan} z="10">
-    <style id="speaker-a" role="A" background="#0000ff"/>
-    <style id="picked" annotation="accent" color="#ff0000" activeColor="#00ff00" scale="1.1"/>
-    <mute id="silent" during={script.selection.silent}/>
-  </caption-track>
-
+  <caption-planner id="caption-plan" script={script} semantic={location.map}/>
+  <caption-track id="captions-a" script={script} semantic={location.map} plan={caption-plan.plan} z="10"/>
+  <caption-track id="captions-b" script={script} semantic={location.map} plan={caption-plan.plan} z="11"/>
   <film id="film" basis={speech.production} semantic={location.map}>
-    <track ref={captions.track}/>
+    <track ref={captions-a.track}/>
+    <track ref={captions-b.track}/>
   </film>
 </svml>

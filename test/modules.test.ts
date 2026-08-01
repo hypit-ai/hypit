@@ -16,11 +16,11 @@ test(".svc content DAG and .svs parameter classes bind into one source closure",
 
   assert.deepEqual(
     checked.plan.instances.map((instance) => instance.id).sort(),
-    ["brand.poster", "broll", "captions", "location", "main-film", "speech"],
+    ["brand.poster", "broll", "caption-plan", "captions", "location", "main-film", "speech"],
   );
   assert.deepEqual(
     checked.plan.values.map((value) => value.id).sort(),
-    ["alignment", "avatar", "brand.logo", "voice-audio"],
+    ["avatar", "brand.logo", "timing", "voice-audio"],
   );
   const logo = checked.plan.values.find((value) => value.id === "brand.logo");
   assert.equal(logo?.localId, "logo");

@@ -6,6 +6,7 @@
   <import from="../../stdlib/broll-track.svk"/>
   <import from="../../stdlib/ranking-column.svk"/>
   <import from="../../stdlib/text-track.svk"/>
+  <import from="../../stdlib/caption-planner.svk"/>
   <import from="../../stdlib/caption-track.svk"/>
   <import from="../../stdlib/audio-track.svk"/>
   <import from="../../stdlib/film.svk"/>
@@ -61,7 +62,7 @@
   <audio id="ranking-appear" src="../regen-ranking/assets/ranking-appear.wav"/>
   <audio id="ranking-move" src="../regen-ranking/assets/ranking-move.wav"/>
   <audio id="music" src="../regen-ranking/assets/background.mp3"/>
-  <alignment id="alignment" src="../regen-ranking/evidence/alignment.json"/>
+  <timing id="timing" src="../regen-ranking/evidence/alignment.json"/>
 
   <!-- The Basis Producer and Locator are replaceable Components with typed outputs. -->
   <speech-assemble id="voice" fps="30" defaultJoin="cut">
@@ -69,7 +70,7 @@
     <segment id="scene-2" script={script.segment.scene-2} visual={avatar-2} audio={avatar-2-audio} sourceWindow="0s .. 12.033333333333333s"/>
     <segment id="scene-3" script={script.segment.scene-3} visual={avatar-3} audio={avatar-3-audio} sourceWindow="0s .. 12.033333333333333s"/>
   </speech-assemble>
-  <speech-locator id="location" script={script} basis={voice.production} evidence={alignment}/>
+  <speech-locator id="location" script={script} basis={voice.production} evidence={timing}/>
 
   <!-- One source mapping; Present only changes its projection in ProgramSpace. -->
   <media-track id="aroll" z="20">
@@ -107,8 +108,10 @@
   </text-track>
 
   <!-- The repeated emphasis Selection is disconnected and consumed as one set. -->
-  <caption-track id="captions" z="500" script={script} semantic={location.map} class="house.captions">
+  <caption-planner id="caption-plan" script={script} semantic={location.map} maxWords="3"/>
+  <caption-track id="captions" z="500" script={script} semantic={location.map} plan={caption-plan.plan} class="house.captions">
     <style id="emphasis" during={script.selection.emphasis} class="house.caption-emphasis"/>
+    <style id="narrator" role="NARRATOR" activeColor="#73fbd3"/>
   </caption-track>
 
   <audio-track id="background-music">

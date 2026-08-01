@@ -24,7 +24,7 @@ const VALUE_TYPES: Record<string, PlanValue["type"]> = {
   video: "Video",
   audio: "Audio",
   text: "Text",
-  alignment: "AlignmentEvidence",
+  timing: "SpeechTimingEvidence",
 };
 
 function idOf(element: SourceElement): string {
@@ -507,7 +507,7 @@ export function buildPlan(
   const basisInputs = rootManifest.ports.filter((port) =>
     port.direction === "input" && port.type.split("|").includes("TemporalBasisProduction"));
   const semanticInputs = rootManifest.ports.filter((port) =>
-    port.direction === "input" && port.type.split("|").includes("ExactSemanticMap"));
+    port.direction === "input" && port.type.split("|").includes("CompleteSemanticMap"));
   if (
     basisInputs.length !== 1
     || basisInputs[0]?.cardinality !== "one"
@@ -516,10 +516,11 @@ export function buildPlan(
   ) {
     fail(
       "composition_temporal_contract",
-      `Composition Kernel "${rootManifest.name}" must select exactly one TemporalBasisProduction and one ExactSemanticMap.`,
+      `Composition Kernel "${rootManifest.name}" must select exactly one TemporalBasisProduction and one CompleteSemanticMap.`,
     );
   }
-  const trackEdges = reachableEdges.filter((edge) => edge.type === "Track");
+  const trackEdges = reachableEdges.filter((edge) =>
+    edge.type === "Track" || edge.type === "CaptionTrack");
   const illegalTrackConsumer = trackEdges.find((edge) => edge.to !== root);
   if (illegalTrackConsumer) {
     fail(
@@ -533,6 +534,15 @@ export function buildPlan(
     fail(
       "duplicate_track_in_composition",
       `Composition "${root}" references Track "${duplicateTrack.from}" more than once.`,
+    );
+  }
+  const captionTracks = reachableInstances.filter((instance) =>
+    kernels.get(instance.kernel)?.ports.some((port) =>
+      port.direction === "output" && port.type === "CaptionTrack"));
+  if (captionTracks.length > 1) {
+    fail(
+      "caption_track_cardinality",
+      `A Composition may contain at most one CaptionTrack; received ${captionTracks.length}.`,
     );
   }
   const usedKernels = new Set(reachableInstances.map((instance) => instance.kernel));

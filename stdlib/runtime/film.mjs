@@ -11,8 +11,8 @@ export default {
     if (production?.contract !== "svml.temporal-basis-production.v1") {
       throw new Error("film requires TemporalBasisProduction");
     }
-    if (semantic?.contract !== "svml.exact-semantic-map.v1") {
-      throw new Error("film requires ExactSemanticMap");
+    if (semantic?.contract !== "svml.complete-semantic-map.v1") {
+      throw new Error("film requires CompleteSemanticMap");
     }
     if (semantic.basisDigest !== production.basis.basisDigest) {
       throw new Error("film basis and SemanticMap do not share a basisDigest");

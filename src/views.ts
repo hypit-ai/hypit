@@ -31,7 +31,6 @@ export type TimelineView = {
   segments: Compilation["located"]["segments"];
   selections: Compilation["located"]["selections"];
   moments: Compilation["located"]["moments"];
-  captionCues: Compilation["located"]["captionCues"];
   visuals: Compilation["target"]["visuals"];
   audios: Compilation["target"]["audios"];
 };
@@ -71,7 +70,6 @@ export function projectTimeline(compilation: Compilation): TimelineView {
     segments: compilation.located.segments,
     selections: compilation.located.selections,
     moments: compilation.located.moments,
-    captionCues: compilation.located.captionCues,
     visuals: compilation.target.visuals,
     audios: compilation.target.audios,
   };
