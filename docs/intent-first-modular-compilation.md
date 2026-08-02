@@ -1,6 +1,6 @@
 # SVML 意图优先的模块化编译架构
 
-Date: 2026-08-02
+Date: 2026-08-03
 
 Status: architecture direction; interfaces are not frozen.
 
@@ -12,11 +12,16 @@ Basis/Map/Track/HyperFrames 编译路径，也修正了讨论过程中一度把�
 `runtime-host-architecture-draft.md` 和现有 specification 在迁移完成前继续描述
 当前实现；本文描述后续重写应当遵守的方向。
 
+2026-08-03 修订进一步收紧了语言边界：SVML Core 的输入不是 `.svml` 源码字节，
+而是 Frontend 已经产生的类型化 `IntentModule`。当前漂亮的 Script Surface 是
+官方具体语法的一部分，不是 Core 必须识别的语法；第三方可以用完全不同的文本、
+文件结构或可视化编辑器产生相同作者意图。
+
 ## 1. 一句话定义
 
-> SVML 代表且仅代表作者意图；作者可以选择具体的编译组件与配方，外部环境
-> 负责满足这些组件提出的外部需求，并可以在明确记录的前提下提供缓存或替代
-> 产物。
+> SVML 的规范语义代表且仅代表作者意图；任意 Author Frontend 可以把自己的
+> 具体写法降低为这个意图。作者可以选择具体的编译组件与配方，外部环境负责
+> 满足这些组件提出的外部需求，并可以在明确记录的前提下提供缓存或替代产物。
 
 因此，SVML 不是：
 
@@ -33,14 +38,16 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
 
 后续设计和代码必须满足以下约束。
 
-1. `.svml`、作者导入的 `.svc`、`.svs` 和 `.svk` 共同构成作者程序；它们不能
-   包含 credential、队列、Job 或产品数据库状态。
-2. 作者事实在编译和运行期间不可被修改。Kernel、LLM、Provider 和前端只能
-   追加派生事实、观察事实或作者明确接受的 source patch。
+1. Frontend 输出的 `IntentModule`、作者导入并锁定的模块以及作者材料共同构成
+   作者程序；官方 `.svml/.svc/.svs/.svk` 只是它的一种具体源码表示。作者程序
+   不能包含 credential、队列、Job 或产品数据库状态。
+2. Frontend 产生一个作者程序快照后，其中的作者事实在编译和运行期间不可被
+   修改。Kernel、LLM 和 Provider 只能追加派生事实或观察事实；编辑器或 Frontend
+   只能通过作者明确接受的 source patch 产生新的作者程序快照。
 3. SVML Core 不认识 Script、Seedance、Caption、Track、Film、SemanticMap、
    HyperFrames 或任何 Provider 名称。
-4. Script、`2M + 2N` 锚点等重要协议可以是官方标准模块，但不能成为 Core 中的
-   特判。
+4. Narrative、`2M + 2N` 锚点等重要领域协议可以是官方标准模块；漂亮 Script
+   可以是官方 Frontend Surface，但二者都不能成为 Core 中的特判。
 5. SVML 可以导入 SVK。作者有权选择组件语义、编译配方、模型家族或精确模型。
 6. 外部环境默认替换的是 Requirement 的满足方式，不是作者选择的 SVK。替换
    SVK 必须是显式 override，并进入推导记录。
@@ -52,46 +59,53 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
    替代关系产生。
 10. 官方标准库和官方 Host 只能使用公开扩展协议，不能拥有第三方无法使用的隐藏
     Core 通道。
+11. Core 的公开入口不接收源码字节，不认识 XML、Namespace、`<script>` 或任何
+    Frontend 语法。官方 CLI 可以默认捆绑 Frontend，但默认捆绑不等于 Core 特权。
 
-## 3. 我们创造的是语义，不是括号
+## 3. SVML 是抽象意图语言，不是一种被 Core 固定的源码写法
 
-任何通用语法都能表示 SVML Intent Graph。下面三段可以表达相同的作者事实。
+当前 v1 最珍贵的资产之一是漂亮、连续、接近稿件本身的 Script Surface：
 
-XML：
+```svml
+<script>
+  @whole
 
-```xml
-<script:Segment id="alice-line" role="#alice">
-  你好，<script:Selection id="subject">世界</script:Selection>。
-</script:Segment>
+  <segment id="scene-1">
+    <ALICE> 很多人以为，视频编译就是素材拼接。
+  </segment>
+
+  <segment id="scene-2">
+    <BOB> 但真正重要的是，
+          @architecture 作者意图和具体实现彼此分离 @/architecture。
+  </segment>
+
+  @/whole~
+</script>
 ```
 
-JSON：
+这套写法应被完整保留，但它属于官方 Author Frontend 的具体语法，不是 Core
+必须识别的抽象节点。另一位作者完全可以采用电影剧本风格：
 
-```json
-{
-  "type": "urn:svml:script:1#Segment",
-  "id": "alice-line",
-  "role": { "$ref": "alice" },
-  "content": [
-    { "text": "你好，" },
-    {
-      "type": "urn:svml:script:1#Selection",
-      "id": "subject",
-      "content": [{ "text": "世界" }]
-    },
-    { "text": "。" }
-  ]
-}
+```text
+SCENE scene-1
+
+ALICE:
+很多人以为，视频编译就是素材拼接。
+
+BOB:
+但真正重要的是，[architecture:
+作者意图和具体实现彼此分离
+]
 ```
 
-JSX：
+也可以采用 Markdown、JSX、另一种语言、数据库记录或可视化编辑器。不同
+Frontend 可以把这些输入降低成兼容的作者产物，例如由领域模块定义的
+`@svml/narrative#Narrative@1`。字幕、Seedance 和 B-roll 组件只消费这个合同，
+不应察觉它最初来自 Role Cue、电影剧本、表单还是 GUI。
 
-```tsx
-segment(
-  { id: "alice-line", role: ref("alice") },
-  ["你好，", selection({ id: "subject" }, "世界"), "。"],
-)
-```
+`Narrative@1` 本身同样不是 Core 内置类型。它属于 Narrative 领域模块。第三方
+Frontend 可以产生相同类型来获得生态互操作；也可以产生自己的类型，再显式导入
+适配 Kernel。
 
 SVML 的价值不是现有语法无法表达这些数据，而是定义：
 
@@ -103,33 +117,94 @@ SVML 的价值不是现有语法无法表达这些数据，而是定义：
 - 外部产物如何满足、缓存或替代某个 Requirement；
 - 相同意图的多个实现如何并存和追溯。
 
-推荐保留 XML 作为官方 reference frontend，因为它天然适合连续口播文本和内联
-语义标记。SVML 不需要重新发明 XML lexer/parser；它需要定义自己的抽象模型、
-静态语义和规范化规则。
-
-其他前端也可以合法存在：
+当前 XML-like 外壳与 Script 语言岛可以成为官方 reference frontend，因为它已经
+证明适合连续口播文本和内联语义标记。但“官方默认”不能成为 Core 中的解析分支：
 
 ```text
-official .svml/XML ─┐
-visual editor       ├──> Canonical Intent Graph
-CUE/Dhall/JSX       ┘
+official .svml frontend ───┐
+Alice screenplay frontend ─┼──> IntentModule ──> SVML Core
+visual editor frontend ─────┘
 ```
 
-只有产生的 Canonical Intent Graph 和作者 provenance 相同，这些前端才等价。
+只有产生的规范意图和作者 provenance 相同，这些 Frontend 才语义等价。官方
+Frontend 的价值来自它的可读性、稳定规范、Formatter、LSP 和生态采用，而不是
+第三方无法绕开的编译特权。
+
+### 3.1 Frontend 是 Core 之前的独立协议
+
+概念接口是：
+
+```ts
+type AuthorFrontend = {
+  id: FrontendRef;
+  decode(source: SourceUnit, context: FrontendContext): IntentModule;
+};
+
+type SvmlCore = {
+  evaluate(module: IntentModule, environment: EvaluationEnvironment): EvaluationResult;
+};
+```
+
+`evaluate()` 不接收 `.svml` 文本。Frontend 负责 parse、静态语法诊断、source map
+和 lowering；Core 从通用模块封装开始，负责链接、类型、引用、Kernel、Requirement
+和证明。
+
+Frontend 的选择属于“这些字节如何读取”，不是视频作者意图，原则上由项目清单、
+CLI 参数、文件类型关联或调用方 API 指定，并由锁记录精确版本和 digest：
+
+```text
+svml build main.svml
+  -> reference distribution 默认选择 @svml/official-frontend
+
+svml build main.story --frontend @alice/screenplay
+  -> 选择 @alice/screenplay
+```
+
+也可以由产品 Host 在调用 API 时注册和选择 Frontend。Frontend 不应依靠正文内部
+的一段尚未被解析的语法来声明“应该怎样解析我”，否则会产生循环自举。
+
+### 3.2 Namespace 和 SVK 都不是通用源码 Parser
+
+Namespace 是某一种具体 Frontend 的名字解析功能。官方 XML-like Frontend 可以用
+它解析 `seedance:*` 或第三方组件，但一个电影剧本 Frontend、Markdown Frontend
+或 GUI 根本不必有 Namespace。因此 Namespace 不能承担通用 Frontend 注册。
+
+SVK 在源码已被降低为类型化意图之后运行，负责：
+
+```text
+输入 Fact/Artifact -> 输出 Fact/Artifact 或 Requirement
+```
+
+它不负责解析主源码字节。一个发布包可以同时包含 Frontend、类型、Formatter、
+LSP 和若干 SVK，但这些是同包内的不同公开接口，不能因为物理上放在一起而合并
+生命周期。
+
+官方 Frontend 内仍可支持受约束的 embedded surface 或外部 source codec，例如
+把当前 `<script>` 正文交给 Script Parser，或让一个组件从 `speech.story` 产生
+`Narrative@1`。那只是官方 Frontend 提供的组合能力，不是所有 SVML Frontend
+必须实现的 Core 机制。
 
 ## 4. 总体分层
 
 ```text
-Author Frontends
-  .svml/XML · visual editor · other frontends
+Source Units
+  .svml · .story · editor document · other authoring formats
+                         │
+                         ▼  outside Core
+Selected Author Frontend
+  parse · diagnose · source-map · lower
+                         │
+                         ▼
+IntentModule(s)
+  typed authored nodes · component instances · refs · module requirements
                          │
                          ▼
 Author Program Closure
-  .svml + imported .svc/.svs/.svk + locked module contracts
+  IntentModule(s) + imported modules + locked contracts + author assets
                          │
                          ▼
-SVML Modular Compiler
-  parse · resolve · typecheck · elaborate · evaluate kernels
+SVML Core
+  link · resolve · typecheck · elaborate · evaluate kernels
                          │
                ┌─────────┴──────────┐
                ▼                    ▼
@@ -145,26 +220,32 @@ Runtime Host
                                     └──────> resume compiler
 ```
 
-需要区分四类扩展。
+需要区分五类扩展。
 
-### 4.1 Vocabulary/author module
+### 4.1 Author Frontend
+
+读取某一种作者源码格式，产生规范 `IntentModule`、诊断和 source provenance。
+Frontend 位于 Core 之前，可以是官方文本语法、第三方文本语法或可视化编辑器导出器。
+参考工具链可以提供默认 Frontend，Core API 本身不能依赖该默认值。
+
+### 4.2 Vocabulary/author module
 
 定义作者能够表达什么、参数和字段是什么、纯规范化或展开如何工作。它由作者导入
 并锁定，改变版本可能改变作者程序含义。
 
-### 4.2 SVK
+### 4.3 SVK
 
 定义一个可导入组件的公开 ABI、参数、子组件和模块化编译逻辑。SVK 可以纯计算，
 也可以产生类型化 Requirement。Prompt、领域 JSON schema、领域校验和编译配方
 可以属于 SVK。
 
-### 4.3 Handler/Fulfiller
+### 4.4 Handler/Fulfiller
 
 注册在 Runtime Host 中，负责满足某类 Requirement，例如 OpenAI、Gemini、
 Seedance、STT、本地 FFmpeg 或人工上传。它处理 credential、API 协议、网络、
 异步 operation 和 usage，不拥有上层组件的领域语义。
 
-### 4.4 Consumer/target/view
+### 4.5 Consumer/target/view
 
 向已编译事实提出自己需要的产物，例如编辑器 ViewModel、Timeline、HyperFrames
 Document、Remotion Composition 或 MP4。消费者可以提供目标 Kernel 和接受策略，
@@ -269,9 +350,13 @@ demand scheduling：
 - 暂停、Receipt 注入和恢复；
 - 多个候选并存。
 
-## 6. `.svml`、`.svc`、`.svs`、`.svk`
+## 6. 官方文本 Frontend 的 `.svml`、`.svc`、`.svs`、`.svk`
 
-### 6.1 `.svml`: 作品级作者意图
+这些后缀和语法是官方 Author Frontend 的源码组织约定，不是 Core ABI。第三方
+Frontend 可以采用其他文件、数据库或编辑器存储，只要最终产生规范
+`IntentModule` 并锁定同等依赖与 provenance。
+
+### 6.1 `.svml`: 官方作品级作者源码
 
 包含：
 
@@ -348,7 +433,7 @@ SVK 不直接持有：
 作者使用：
 
 ```text
-@svml/script@1
+@svml/narrative@1
 @svml/seedance-track@1
 @svml/subtitle-track@1
 @svml/film@1
@@ -516,62 +601,108 @@ Domain parser
 这个选择由作者导入的 SVK 版本和 digest 固定。若作者希望控制它，SVK 可以公开
 相应参数供 `.svml` 或 `.svs` 设置。
 
-LLM 输出只能产生 `CaptionGroupingCandidate`、annotation 或其他派生产物。Script
-仍然是唯一口播文字真相；领域 validator 必须拒绝修改、补写或删除 Script 文本的
-返回结果。
+LLM 输出只能产生 `CaptionGroupingCandidate`、annotation 或其他派生产物。
+Frontend 产生的权威 Narrative 作者文本仍然是唯一口播文字真相；领域 validator
+必须拒绝修改、补写或删除作者口播文本的返回结果。官方 Frontend 下它对应当前
+Script 正文，其他 Frontend 下则对应其降低出的同一权威字段。
 
-## 11. Script 是标准模块，不是 Core 特权
+## 11. 漂亮 Script 是官方 Frontend 资产，不是 Core 入口
 
-推荐将当前 Script Surface 归入官方模块 `@svml/script@1`。它定义：
+当前 Script Surface 应被完整保留在官方 Frontend 中，包括：
 
-- Script、Segment、Role；
-- mixed text；
-- Selection、Moment；
-- 文本规范化和 source range；
+- prose-first 的 `<segment>`；
+- 行首 Role Cue；
+- Dual Text；
+- Selection、Moment 和 Slot；
+- 文本规范化、Formatter 和 source map；
 - `2M + 2N` 独立锚点；
 - Segment 内顺序以及 Segment 之间的身份隔离；
 - Script 静态诊断。
 
-Core 只保证这个模块产生的作者身份稳定、可引用、不可被派生过程修改。
+官方 Frontend 可以把这些语法降低为 `@svml/narrative` 模块定义的作者节点和
+产物。`@svml/narrative` 提供稳定领域合同，当前 Script Parser 提供一种产生该
+合同的漂亮写法；二者不能被等同。
 
-Script 模块化不意味着运行环境可以重新解释同一个 Script。作者选择并锁定
-`@svml/script@1`；更换 Script 模块属于改变作者程序。SemanticMap、TimingEvidence
-和 CaptionPlan 才是对 Script 的派生或观察。
+第三方作者至少有三种平等路径：
+
+1. 使用官方 `.svml` Frontend 和当前漂亮 Script；
+2. 使用自己的整文档 Frontend，直接产生兼容 `Narrative@1` 和其他作者节点；
+3. 在官方 Frontend 中引用外部稿件或组件，由 source codec/producer 产生
+   `Narrative@1`。
+
+如果第三方不采用 Narrative 合同，也可以定义自己的作者类型，并提供与字幕、
+Seedance 或 Track 组件之间的显式适配 Kernel。Core 不强制每个作品存在 Script，
+也不强制每个 Frontend 产生 Narrative。
+
+当前 v1 已经隐约存在正确的实现接缝：外层 document parser 先把 `<script>` 正文
+作为 raw source 保存，再由独立 `parseScript()` 解析。但 `scriptSource`、单例
+cardinality 和 `if (name === "script")` 仍在编译入口硬编码。迁移时应把这两层都
+移入官方 Frontend，让 Core 只接收 lowering 后的 `IntentModule`。
+
+Frontend 的身份、版本、实现 digest 和输出 digest 必须进入 Author Program Lock。
+更换 Frontend 通常意味着改变作者程序的解释；只有两个 Frontend 产生相同规范
+意图并满足规定的 provenance 等价条件时，工具才能证明它们语义等价。
+
+SemanticMap、TimingEvidence 和 CaptionPlan 仍然只是对权威作者稿件意图的派生或
+观察。无论稿件由哪个 Frontend 产生，LLM 和外部 Provider 都不能借 Frontend
+可替换之名修改口播文字真相。
 
 ## 12. 两段 Seedance、双人对话和字幕的完整例子
 
-作者意图可以近似写成：
+使用官方 Frontend 时，稿件部分继续采用当前漂亮 Script Surface。下面只是一种
+候选 Program Surface；外层组件语法尚未冻结：
 
-```xml
-<Film id="main">
-  <Script id="dialogue">
-    <Segment id="alice-line" role="alice">Alice 要说的话。</Segment>
-    <Segment id="bob-line" role="bob">Bob 要说的话。</Segment>
-  </Script>
+```svml
+<svml>
+  <script>
+    @alice-shot
+    <segment id="alice-line">
+      <ALICE> Alice 要说的话。
+    </segment>
+    @/alice-shot
 
-  <Sequence>
-    <seedance:Shot
-      id="alice-shot"
-      during="#alice-line"
-      model="mini"
-      direction="Alice 在办公室里说话"
-    />
-    <seedance:Shot
-      id="bob-shot"
-      during="#bob-line"
-      model="mini"
-      direction="Bob 在街道上回应"
-    />
-  </Sequence>
+    @bob-shot
+    <segment id="bob-line">
+      <BOB> Bob 要说的话。
+    </segment>
+    @/bob-shot
+  </script>
 
-  <caption:Track id="captions" source="#dialogue" />
-</Film>
+  <Film id="main">
+    <Sequence>
+      <seedance:Shot
+        id="alice-video"
+        during={script.selection.alice-shot}
+        model="mini"
+        direction="Alice 在办公室里说话"
+      />
+      <seedance:Shot
+        id="bob-video"
+        during={script.selection.bob-shot}
+        model="mini"
+        direction="Bob 在街道上回应"
+      />
+    </Sequence>
+
+    <caption:Track id="captions" source={script} />
+  </Film>
+</svml>
 ```
 
-源闭包选择：
+这里的 `<script>`、Role Cue 和 Selection 由官方 Frontend 降低；Core 没有
+`script` 全局变量。若 lowering 产生了名为 `script` 的引用，那只是该 Frontend
+输出 `IntentModule` 中的普通 binding。
+
+工具配置和 Author Program Lock 记录 Frontend：
 
 ```text
-script.svk
+@svml/official-frontend
+```
+
+作者模块闭包选择：
+
+```text
+@svml/narrative
 seedance-track.svk
 subtitle-track.svk
 film.svk
@@ -619,9 +750,10 @@ Gemini Requirement         -> 缓存的 CaptionGrouping
 resolution、产物 delivery 来源和消费者接受的 `exact/substitute` 符合关系。两套
 候选还可以同时存在。
 
-## 13. Target、前端和 View
+## 13. Target、Editor 和 View
 
-目标和前端也使用公开模块协议，但不应被混同为作者语言模式。
+目标、编辑器和 View 也使用公开模块协议，但不应被混同为 Author Frontend 或
+作者语言模式。
 
 外部消费者可以请求：
 
@@ -636,9 +768,10 @@ RenderableDocument -> MP4 Artifact
 作者可以显式要求某个输出目标；若没有要求，输出工具可以选择目标 Kernel。这个
 选择及其实现 digest 进入 Derivation Record。
 
-前端可以读取作者事实、派生 Claim、Requirement 和候选产物。Canvas 坐标、面板
-展开状态、选中节点等 UI 状态不进入作者程序。前端修改作品时应生成显式 source
-patch，而不是将 ViewModel 变成第二份作者真相。
+编辑器可以读取作者事实、派生 Claim、Requirement 和候选产物。Canvas 坐标、
+面板展开状态、选中节点等 UI 状态不进入作者程序。编辑器修改作品时，可以更新
+它拥有的 source document，或通过对应 Author Frontend 重新产生 IntentModule；
+不能将 ViewModel 变成第二份作者真相。
 
 ## 14. 锁与可复现性
 
@@ -648,7 +781,9 @@ patch，而不是将 ViewModel 变成第二份作者真相。
 
 记录：
 
-- `.svml/.svc/.svs/.svk` 源闭包；
+- SourceUnit digest、Author Frontend 身份、版本和 implementation digest；
+- Frontend 输出的 `IntentModule` digest 与 source provenance；
+- 官方或第三方源码闭包以及导入模块闭包；
 - Vocabulary/SVK 版本与 implementation digest；
 - 纯 elaboration 结果；
 - 最终公开参数及逐值 provenance；
@@ -676,6 +811,7 @@ Prompt 和领域 parser 属于 SVK implementation digest。Credential secret 不
 下列概念即使非常重要，也不属于绝对 Core：
 
 ```text
+Author Frontend / XML / Namespace / Script concrete syntax
 Script / Segment / Role / 2M+2N anchors
 Film / Track / Caption
 SemanticMap / ProgramBasis / frame rate
@@ -698,7 +834,9 @@ Canvas / Timeline UI
 
 | 当前资产 | 下一代位置 |
 |---|---|
-| Script parser、文本模型和锚点 | `@svml/script` |
+| 外层 document parser | `@svml/official-frontend` |
+| Script parser、Formatter 和漂亮具体语法 | 官方 Frontend 的 Script Surface |
+| Narrative 文本模型和锚点合同 | `@svml/narrative` |
 | temporal alignment | `semantic-map.svk` |
 | ProgramBasis | timeline contract + basis kernels |
 | Caption planning/projector | caption intent + subtitle SVK |
@@ -710,6 +848,8 @@ Canvas / Timeline UI
 
 应替换而不是继续扩展：
 
+- Core/Compiler 直接接收源码字符串并选择 Parser；
+- document parser 对 `<script>`、`scriptSource` 和唯一 Script 的特判；
 - `compileSource()` 的固定领域阶段；
 - Compiler 对 SpeechTimingEvidence JSON 的特判；
 - CaptionTrack 的数量和类型特判；
@@ -723,20 +863,29 @@ Canvas / Timeline UI
 建议迁移顺序：
 
 1. 冻结当前 fixtures/goldens；
-2. 定义 Canonical Intent Model、Module ABI、Kernel/Requirement/Receipt；
-3. 实现通用 XML frontend；
-4. 把 Script 移为第一个标准模块；
-5. 实现有限、类型化、可暂停的模块编译微内核；
-6. 用本文双人 Seedance + Subtitle 例子做第一条竖切；
-7. 实现 local ArtifactStore、journal 和注册式 Handler；
-8. 逐个把当前算法移动到官方 SVK；
-9. 新竖切和必要 goldens 通过后删除旧固定编译器。
+2. 定义 `IntentModule`、Module ABI、Kernel/Requirement/Receipt；
+3. 定义 `AuthorFrontend.decode(SourceUnit) -> IntentModule` 公开协议和锁格式；
+4. 把当前外层 parser、Script parser 和 Formatter 提取为官方 Frontend，同时完整
+   保留 v1 漂亮 Script goldens；
+5. 让 Core 入口只接收 `IntentModule`，删除 `scriptSource` 和源码类型特判；
+6. 把 Narrative 文本模型与锚点归入 `@svml/narrative` 领域合同；
+7. 实现有限、类型化、可暂停的模块编译微内核；
+8. 用本文双人 Seedance + Subtitle 例子做第一条竖切；
+9. 实现 local ArtifactStore、journal 和注册式 Handler；
+10. 逐个把当前算法移动到官方 SVK；
+11. 新竖切和必要 goldens 通过后删除旧固定编译器。
 
 ## 17. 架构验收标准
 
 重写完成前至少应证明：
 
+- Core 的公开入口接收 `IntentModule`，不接收 `.svml` 源码字节；
+- Core 源码中不存在 XML、Namespace、`<script>`、Script parser 或具体文件后缀
+  分支；
 - Core 源码中不存在 Script/Caption/Film/Seedance/HyperFrames 类型分支；
+- 当前 v1 漂亮 Script 由官方 Frontend 完整保留；
+- 一个完全不使用 XML、Namespace 或 `<script>` 的第三方 Frontend 可以产生兼容
+  作者程序并参与同一后续编译；
 - 新增 Vocabulary 或 SVK 不需要修改 Core；
 - SVML 可以导入并锁定 SVK；
 - Host 不会为作者组件隐式挑选另一个 SVK；
@@ -759,6 +908,7 @@ SVML 后续不应被描述为“一个拥有插件系统的固定视频编译器
 正确边界是：
 
 ```text
+Author Frontend 把任意作者写法降低为规范 IntentModule
 作者选择意图、组件、公开参数和自己关心的实现约束
 SVK 定义模块化编译配方、Prompt、领域协议和外部 Requirement
 Host 注册调用器并补全剩余运行绑定
@@ -768,5 +918,6 @@ Core 负责身份、类型、不可变事实、调度、完整性和推导证明
 
 因此：
 
-> SVML 是一门可扩展的作者意图语言；SVK 是作者可选择的模块化编译组件；外部
-> Runtime 是这些组件所声明需求的开放满足环境。
+> SVML 的本体是一门可扩展的抽象作者意图语言；官方漂亮文本只是一个可替换
+> Author Frontend。SVK 是作者可选择的模块化编译组件；外部 Runtime 是这些组件
+> 所声明需求的开放满足环境。
