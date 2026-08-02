@@ -61,6 +61,9 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
     Core 通道。
 11. Core 的公开入口不接收源码字节，不认识 XML、Namespace、`<script>` 或任何
     Frontend 语法。官方 CLI 可以默认捆绑 Frontend，但默认捆绑不等于 Core 特权。
+12. 整个工具链不可约的启动根只有 `SourceUnit + AuthorFrontend` 的外部绑定和
+    Frontend ABI。官方 Text Frontend 可以再固定一个无领域语义的 Import Prologue，
+    但 Script、Component 和 SVK 都必须在该 Prologue 之后通过公开模块协议出现。
 
 ## 3. SVML 是抽象意图语言，不是一种被 Core 固定的源码写法
 
@@ -154,7 +157,7 @@ CLI 参数、文件类型关联或调用方 API 指定，并由锁记录精确�
 
 ```text
 svml build main.svml
-  -> reference distribution 默认选择 @svml/official-frontend
+  -> reference distribution 默认选择 @svml/text@2
 
 svml build main.story --frontend @alice/screenplay
   -> 选择 @alice/screenplay
@@ -183,6 +186,119 @@ LSP 和若干 SVK，但这些是同包内的不同公开接口，不能因为物
 把当前 `<script>` 正文交给 Script Parser，或让一个组件从 `speech.story` 产生
 `Narrative@1`。那只是官方 Frontend 提供的组合能力，不是所有 SVML Frontend
 必须实现的 Core 机制。
+
+### 3.3 真正不可约的 Bootstrap 根
+
+任何可扩展语法最终都必须停止递归。若源码必须先声明自己的 Frontend，系统就要
+先有另一个 Parser 读取这条声明；继续让该 Parser 也自我声明只会无限回归。
+
+不可约入口应当是调用方在源码之外已经提供的绑定：
+
+```ts
+decode({
+  source: SourceUnit,
+  frontend: AuthorFrontend,
+}): IntentModule;
+```
+
+或等价的 `SourceUnit + FrontendRef`，再由 Host 根据 lock 解析出实现。CLI 参数、
+项目清单和文件扩展名关联只是这个二元组的不同序列化或便利入口：
+
+```text
+svml build main.story --frontend @alice/screenplay@1
+
+svml.project@1
+  main.svml -> @svml/text@2
+```
+
+项目清单自身可以使用固定 JSON 等无聊格式；继续退到库 API 后，调用方甚至可以
+直接传结构化对象，因此 Manifest 文本并不是语言本体。真正不能消除的公理只有：
+
+```text
+Host 把一个 SourceUnit 和一个满足 Frontend ABI 的实现交给 Driver。
+```
+
+这形成两个不同层次：
+
+```text
+Level 0  Bootstrap Driver
+         SourceUnit + FrontendRef -> selected AuthorFrontend
+
+Level 1  selected AuthorFrontend
+         source bytes -> IntentModule
+
+Core     IntentModule -> Claims / Requirements
+```
+
+官方 Text Frontend 的 Header Scanner 可以固定，但整个 `@svml/text` 仍然可以被
+`@alice/screenplay`、JSON Frontend 或编辑器 Frontend 整体替换。对某个 Frontend
+内部根语法的改变应发布新 Frontend 版本，而不是让正文中途重新定义它。
+
+### 3.4 官方 Text Frontend 的 Import Prologue
+
+`@svml/text` 自己只需固定一个不含视频领域语义的最小外壳：
+
+```text
+Document := RootOpen Prologue Body RootClose
+Prologue := Import*
+Body     := Declaration*
+```
+
+Header Scanner 只认识 `<svml>`、`<import/>`、模块引用、alias、空白和注释。它先
+读取完整 Prologue，再执行以下阶段：
+
+```text
+1. 解析并锁定直接与传递模块闭包
+2. 读取 Module Manifest，不执行领域 Kernel
+3. 建立 Surface Registry、Component Registry 和名字绑定
+4. 检查冲突、digest、Frontend 权限与 parser capability
+5. 冻结本 SourceUnit 的语言环境
+6. 开始解析 Body
+```
+
+Body Parser 遇到元素时按完整模块身份分派，而不按字面名字特判：
+
+```ts
+const descriptor = scope.resolve(openingName);
+
+if (descriptor.kind === "surface") {
+  return descriptor.parser.parse(readRawBody());
+}
+
+return decodeComponent(parseStructuredBody(), descriptor.schema);
+```
+
+因此 `@svml/script` 的 Manifest 可以把某个导出声明为 raw Surface，而
+`@svml/seedance`、`@svml/film` 通常只导出使用通用结构 Parser 的 Component
+Schema 与 Kernel。没有导入或 re-export Script Surface 时，裸 `@svml/text`
+不认识 `<script>`。
+
+所有模块 import 都必须位于 Prologue，正文不得再 import。只限制会影响 Parser
+的 Surface import、却允许 Component import 出现在正文，会让作者必须预知包的
+内部 export kind，也会使包升级、IDE、权限审计和锁变得不稳定。Import 之间的
+源码顺序不携带语义；进入 Body 前得到的完整闭包才携带语义。
+
+这与 Go 的 `package -> imports -> declarations`、Java 的
+`package -> imports -> top-level declarations`、Haskell 的
+`module header -> imports -> declarations` 结构相近。SVML 的理由更强：import
+不仅可能改变名称和类型环境，还可能决定某个局部源码区域由哪个 Surface Parser
+读取。
+
+Module import 与作品内容引用必须分开：
+
+```text
+<import from="@svml/seedance@1"/>
+  -> 改变本 SourceUnit 可用的 Surface、词汇、类型、Component 和 Kernel
+  -> 只能位于 Prologue
+
+<media:image id="reference" src="./reference.png"/>
+  -> 声明一个作者材料或内容 Source
+  -> 可以位于 Body
+```
+
+官方 Standard Prelude 只是由项目配置预先加入 Prologue 闭包的一组普通模块和
+显式 re-export。它可以让作者直接写 `<script>`，但不能成为 `@svml/text` 的隐藏
+知识；裸 Text Frontend、显式导入和 Prelude 必须走同一公开 Registry 路径。
 
 ## 4. 总体分层
 
@@ -864,24 +980,33 @@ Canvas / Timeline UI
 
 1. 冻结当前 fixtures/goldens；
 2. 定义 `IntentModule`、Module ABI、Kernel/Requirement/Receipt；
-3. 定义 `AuthorFrontend.decode(SourceUnit) -> IntentModule` 公开协议和锁格式；
-4. 把当前外层 parser、Script parser 和 Formatter 提取为官方 Frontend，同时完整
+3. 定义不可约的 `SourceUnit + FrontendRef` Driver 绑定、
+   `AuthorFrontend.decode(SourceUnit) -> IntentModule` 公开协议和锁格式；
+4. 定义 `@svml/text` 的固定 Import Prologue、Module Manifest、Surface Registry
+   和 Component Registry 协议；
+5. 把当前外层 parser、Script parser 和 Formatter 提取为官方 Frontend，同时完整
    保留 v1 漂亮 Script goldens；
-5. 让 Core 入口只接收 `IntentModule`，删除 `scriptSource` 和源码类型特判；
-6. 把 Narrative 文本模型与锚点归入 `@svml/narrative` 领域合同；
-7. 实现有限、类型化、可暂停的模块编译微内核；
-8. 用本文双人 Seedance + Subtitle 例子做第一条竖切；
-9. 实现 local ArtifactStore、journal 和注册式 Handler；
-10. 逐个把当前算法移动到官方 SVK；
-11. 新竖切和必要 goldens 通过后删除旧固定编译器。
+6. 让 Core 入口只接收 `IntentModule`，删除 `scriptSource` 和源码类型特判；
+7. 把 Narrative 文本模型与锚点归入 `@svml/narrative` 领域合同；
+8. 实现有限、类型化、可暂停的模块编译微内核；
+9. 用本文双人 Seedance + Subtitle 例子做第一条竖切；
+10. 实现 local ArtifactStore、journal 和注册式 Handler；
+11. 逐个把当前算法移动到官方 SVK；
+12. 新竖切和必要 goldens 通过后删除旧固定编译器。
 
 ## 17. 架构验收标准
 
 重写完成前至少应证明：
 
+- Driver 可以通过显式 `SourceUnit + FrontendRef` 启动，不依赖源文件自我声明
+  Frontend；
 - Core 的公开入口接收 `IntentModule`，不接收 `.svml` 源码字节；
 - Core 源码中不存在 XML、Namespace、`<script>`、Script parser 或具体文件后缀
   分支；
+- 裸 `@svml/text` 不认识 `<script>`；只有显式 import、re-export 或 Standard
+  Prelude 把 Script Surface 放入冻结 Registry 后才可解析；
+- 官方 Text Frontend 拒绝 Body 中的 module import，且 import 排列顺序不改变
+  冻结后的模块闭包和语义；
 - Core 源码中不存在 Script/Caption/Film/Seedance/HyperFrames 类型分支；
 - 当前 v1 漂亮 Script 由官方 Frontend 完整保留；
 - 一个完全不使用 XML、Namespace 或 `<script>` 的第三方 Frontend 可以产生兼容
