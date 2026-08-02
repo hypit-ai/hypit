@@ -131,6 +131,11 @@ generation provider is invoked by tests or compilation.
 
 ## Specification and implementation record
 
+- [Intent-first modular compilation architecture](docs/intent-first-modular-compilation.md)
+  records the next architecture direction: SVML as author intent, source-selected
+  SVK compilation components, typed external requirements and provenance-preserving
+  fulfillment or substitution. The executable v1 documents below remain implementation
+  records until that migration is complete.
 - [Script Surface v1](spec/script-surface-v1.md)
 - [Source Architecture v1 draft](spec/source-architecture-draft.md)
 - [Speech Program and Caption v1 target contract](docs/speech-program-caption-v1.md)
