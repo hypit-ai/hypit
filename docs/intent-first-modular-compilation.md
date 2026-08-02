@@ -5,7 +5,7 @@ Date: 2026-08-03
 Status: architecture direction; interfaces are not frozen.
 
 本文记录 SVML 下一阶段的架构共识。它修正了当前 v1 原型中仍然存在的固定
-Basis/Map/Track/HyperFrames 编译路径，也修正了讨论过程中一度把所有 SVK 都
+Basis/Map/Track/HyperFrames 编译路径，也修正了讨论过程中一度把所有 Kernel 都
 交给外部环境选择的过度解耦。
 
 当前仓库仍然是可执行的 v1 研究原型。`compiler-prototype.md`、
@@ -13,9 +13,15 @@ Basis/Map/Track/HyperFrames 编译路径，也修正了讨论过程中一度把�
 当前实现；本文描述后续重写应当遵守的方向。
 
 2026-08-03 修订进一步收紧了语言边界：SVML Core 的输入不是 `.svml` 源码字节，
-而是 Frontend 已经产生的类型化 `IntentModule`。当前漂亮的 Script Surface 是
+而是 Frontend 已经产生的 `TypedModule`；官方作品 Frontend 通常产生其中的
+`IntentModule`。当前漂亮的 Script Surface 是
 官方具体语法的一部分，不是 Core 必须识别的语法；第三方可以用完全不同的文本、
 文件结构或可视化编辑器产生相同作者意图。
+
+同日后续修订进一步取消文件后缀的架构特权：v2 暂时只把 `.svml` 和 `.svs`
+保留为官方提供的两种人类友好源码语法；`.svc` 和 `.svk` 不再是 v2 基础文件类型。
+组件、Kernel、Frontend、Requirement 和 Recipe 都是包的导出能力，由固定的数据
+Manifest 描述，包的实现可以使用 JS、Wasm 或其他受 Host 支持的形式。
 
 ## 1. 一句话定义
 
@@ -38,9 +44,9 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
 
 后续设计和代码必须满足以下约束。
 
-1. Frontend 输出的 `IntentModule`、作者导入并锁定的模块以及作者材料共同构成
-   作者程序；官方 `.svml/.svc/.svs/.svk` 只是它的一种具体源码表示。作者程序
-   不能包含 credential、队列、Job 或产品数据库状态。
+1. Frontend 输出的 `TypedModule`、作者导入并锁定的模块以及作者材料共同构成
+   作者程序；官方 `.svml` 和 `.svs` 只是两种具体源码表示。作者程序不能包含
+   credential、队列、Job 或产品数据库状态。
 2. Frontend 产生一个作者程序快照后，其中的作者事实在编译和运行期间不可被
    修改。Kernel、LLM 和 Provider 只能追加派生事实或观察事实；编辑器或 Frontend
    只能通过作者明确接受的 source patch 产生新的作者程序快照。
@@ -48,9 +54,10 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
    HyperFrames 或任何 Provider 名称。
 4. Narrative、`2M + 2N` 锚点等重要领域协议可以是官方标准模块；漂亮 Script
    可以是官方 Frontend Surface，但二者都不能成为 Core 中的特判。
-5. SVML 可以导入 SVK。作者有权选择组件语义、编译配方、模型家族或精确模型。
-6. 外部环境默认替换的是 Requirement 的满足方式，不是作者选择的 SVK。替换
-   SVK 必须是显式 override，并进入推导记录。
+5. SVML 可以导入包以及包导出的组件、Kernel 和 Recipe。作者有权选择组件语义、
+   编译配方、模型家族或精确模型。
+6. 外部环境默认替换的是 Requirement 的满足方式，不是作者选择的模块或 Kernel。
+   替换 Kernel 必须是显式 override，并进入推导记录。
 7. 统一外部调用的生命周期和记录格式，不强迫不同 Provider 共享一个最低公分母
    的语义 API。
 8. 不存在全局 preview/run/production mode。同一作者程序可以被不同消费者以
@@ -63,7 +70,7 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
     Frontend 语法。官方 CLI 可以默认捆绑 Frontend，但默认捆绑不等于 Core 特权。
 12. 整个工具链不可约的启动根只有 `SourceUnit + AuthorFrontend` 的外部绑定和
     Frontend ABI。官方 Text Frontend 可以再固定一个无领域语义的 Import Prologue，
-    但 Script、Component 和 SVK 都必须在该 Prologue 之后通过公开模块协议出现。
+    但 Script、Component 和 Kernel 都必须在该 Prologue 之后通过公开模块协议出现。
 
 ## 3. SVML 是抽象意图语言，不是一种被 Core 固定的源码写法
 
@@ -140,17 +147,22 @@ Frontend 的价值来自它的可读性、稳定规范、Formatter、LSP 和生�
 ```ts
 type AuthorFrontend = {
   id: FrontendRef;
-  decode(source: SourceUnit, context: FrontendContext): IntentModule;
+  discover(source: SourceUnit, context: BootstrapContext): DependencyRequest[];
+  decode(source: SourceUnit, context: ResolvedFrontendContext): TypedModule;
 };
 
 type SvmlCore = {
-  evaluate(module: IntentModule, environment: EvaluationEnvironment): EvaluationResult;
+  link(closure: ResolvedModuleClosure, modules: TypedModule[]): LinkedWorld;
+  request(world: LinkedWorld, query: Query): BuildState;
+  next(build: BuildState): CoreCommand;
+  accept(build: BuildState, result: TypedResult | EffectReceipt): BuildState;
 };
 ```
 
-`evaluate()` 不接收 `.svml` 文本。Frontend 负责 parse、静态语法诊断、source map
+Core API 不接收 `.svml` 文本。Frontend 负责 parse、静态语法诊断、source map
 和 lowering；Core 从通用模块封装开始，负责链接、类型、引用、Kernel、Requirement
-和证明。
+和证明。`discover()` 只声明依赖请求，Driver 负责解析和锁定闭包；`decode()` 只能
+读取 Driver 交给它的同一份只读闭包。
 
 Frontend 的选择属于“这些字节如何读取”，不是视频作者意图，原则上由项目清单、
 CLI 参数、文件类型关联或调用方 API 指定，并由锁记录精确版本和 digest：
@@ -166,20 +178,20 @@ svml build main.story --frontend @alice/screenplay
 也可以由产品 Host 在调用 API 时注册和选择 Frontend。Frontend 不应依靠正文内部
 的一段尚未被解析的语法来声明“应该怎样解析我”，否则会产生循环自举。
 
-### 3.2 Namespace 和 SVK 都不是通用源码 Parser
+### 3.2 Namespace 和 Kernel 都不是通用源码 Parser
 
 Namespace 是某一种具体 Frontend 的名字解析功能。官方 XML-like Frontend 可以用
 它解析 `seedance:*` 或第三方组件，但一个电影剧本 Frontend、Markdown Frontend
 或 GUI 根本不必有 Namespace。因此 Namespace 不能承担通用 Frontend 注册。
 
-SVK 在源码已被降低为类型化意图之后运行，负责：
+Kernel 在源码已被降低为类型化意图之后运行，负责：
 
 ```text
 输入 Fact/Artifact -> 输出 Fact/Artifact 或 Requirement
 ```
 
 它不负责解析主源码字节。一个发布包可以同时包含 Frontend、类型、Formatter、
-LSP 和若干 SVK，但这些是同包内的不同公开接口，不能因为物理上放在一起而合并
+LSP 和若干 Kernel，但这些是同包内的不同公开接口，不能因为物理上放在一起而合并
 生命周期。
 
 官方 Frontend 内仍可支持受约束的 embedded surface 或外部 source codec，例如
@@ -198,7 +210,7 @@ LSP 和若干 SVK，但这些是同包内的不同公开接口，不能因为物
 decode({
   source: SourceUnit,
   frontend: AuthorFrontend,
-}): IntentModule;
+}): TypedModule;
 ```
 
 或等价的 `SourceUnit + FrontendRef`，再由 Host 根据 lock 解析出实现。CLI 参数、
@@ -225,9 +237,9 @@ Level 0  Bootstrap Driver
          SourceUnit + FrontendRef -> selected AuthorFrontend
 
 Level 1  selected AuthorFrontend
-         source bytes -> IntentModule
+         source bytes -> TypedModule
 
-Core     IntentModule -> Claims / Requirements
+Core     TypedModule[] -> Commands / Claims / Requirements
 ```
 
 官方 Text Frontend 的 Header Scanner 可以固定，但整个 `@svml/text` 仍然可以被
@@ -255,6 +267,11 @@ Header Scanner 只认识 `<svml>`、`<import/>`、模块引用、alias、空白�
 5. 冻结本 SourceUnit 的语言环境
 6. 开始解析 Body
 ```
+
+包发现阶段只读取固定、数据化的 `svml.module.json`，不能为了知道一个包导出了
+什么而先执行该包的 JS。Frontend 只负责发现依赖请求；Driver 负责解析、授权并锁定
+唯一的 `ResolvedModuleClosure`，再把这份闭包只读地交回 Frontend；Core 最后验证
+所有类型和实现引用都属于同一闭包，避免 Frontend 和 Core 各自维护一份模块事实。
 
 Body Parser 遇到元素时按完整模块身份分派，而不按字面名字特判：
 
@@ -296,9 +313,35 @@ Module import 与作品内容引用必须分开：
   -> 可以位于 Body
 ```
 
+Prologue 还可以导入“由指定 Parser 读取的另一个作者 SourceUnit”：
+
+```svml
+<import as="svs" from="@svml/svs@1" />
+<import as="brand" from="./brand.svs" using="svs:stylesheet" />
+```
+
+第一行导入读取规则语言的方法；第二行要求 Driver 用该方法把 `brand.svs` 降低为
+一个 `ParameterRuleModule`。Header Scanner 只需识别 `from/using/alias`，不需要懂
+SVS。Driver 对新发现的 SourceUnit 重复依赖发现和安全解析，直到得到唯一锁定闭包；
+Core 最终只看到类型化模块。`.svs` 后缀只提供默认关联，`using` 才是显式语义。
+
 官方 Standard Prelude 只是由项目配置预先加入 Prologue 闭包的一组普通模块和
 显式 re-export。它可以让作者直接写 `<script>`，但不能成为 `@svml/text` 的隐藏
 知识；裸 Text Frontend、显式导入和 Prelude 必须走同一公开 Registry 路径。
+
+### 3.5 Frontend 与 Surface Parser 的安全边界
+
+Frontend 和 Surface Parser 在 Core 之前运行，因此第三方 Parser 不能被当作普通
+可信库直接加载。参考 Driver 至少必须提供：
+
+- 默认无文件系统、网络、环境变量、进程、时钟和随机数权限；
+- 只读 SourceUnit 和已授权 `ResolvedModuleClosure` 的显式 capability；
+- CPU、墙钟、内存、递归深度、输入和输出大小限制；
+- 无 Host realm 对象或函数泄漏的隔离边界；
+- 确定性输出、实现 digest、诊断和完整 provenance。
+
+当前 v1 的 Node `vm`/worker 隔离不能未经安全审计直接作为第三方 Frontend 沙箱；
+Frontend 沙箱是 v2 Driver 的独立施工项，而不是 Core 类型检查可以补救的问题。
 
 ## 4. 总体分层
 
@@ -311,36 +354,38 @@ Selected Author Frontend
   parse · diagnose · source-map · lower
                          │
                          ▼
-IntentModule(s)
-  typed authored nodes · component instances · refs · module requirements
+TypedModule(s)
+  IntentModule · ParameterRuleModule · third-party typed modules
                          │
                          ▼
-Author Program Closure
-  IntentModule(s) + imported modules + locked contracts + author assets
+Bootstrap Driver
+  resolve · authorize · lock closure · run parsers in sandbox
                          │
                          ▼
 SVML Core
-  link · resolve · typecheck · elaborate · evaluate kernels
+  pure link · typecheck · derivation state machine · verify results
                          │
                ┌─────────┴──────────┐
                ▼                    ▼
-          Produced Claims       Requirements
-                                    │
-                                    ▼
-Runtime Host
-  registered handlers · credentials · journal · policy · artifact store
-                                    │
-                                    ▼
-                           Receipts + Observed Claims
-                                    │
-                                    └──────> resume compiler
+       Kernel Commands          Requirements
+               │                    │
+               └─────────┬──────────┘
+                         ▼
+Runtime Driver / Host
+  sandbox executor · registered handlers · credentials · journal · policy · artifact store
+                         │
+                         ▼
+              Receipts + typed results + observed claims
+                         │
+                         └──────> Core 验证并推进状态
 ```
 
 需要区分五类扩展。
 
 ### 4.1 Author Frontend
 
-读取某一种作者源码格式，产生规范 `IntentModule`、诊断和 source provenance。
+读取某一种作者源码格式，产生规范 `TypedModule`、诊断和 source provenance。官方
+`.svml` 通常产生 `IntentModule`，官方 `.svs` 产生 `ParameterRuleModule`。
 Frontend 位于 Core 之前，可以是官方文本语法、第三方文本语法或可视化编辑器导出器。
 参考工具链可以提供默认 Frontend，Core API 本身不能依赖该默认值。
 
@@ -349,11 +394,11 @@ Frontend 位于 Core 之前，可以是官方文本语法、第三方文本语�
 定义作者能够表达什么、参数和字段是什么、纯规范化或展开如何工作。它由作者导入
 并锁定，改变版本可能改变作者程序含义。
 
-### 4.3 SVK
+### 4.3 Module export / Kernel
 
-定义一个可导入组件的公开 ABI、参数、子组件和模块化编译逻辑。SVK 可以纯计算，
-也可以产生类型化 Requirement。Prompt、领域 JSON schema、领域校验和编译配方
-可以属于 SVK。
+包可以导出组件的公开 ABI、参数、子组件、Kernel 和模块化编译逻辑。Kernel 可以
+纯计算，也可以产生类型化 Requirement。Prompt、领域 JSON schema、领域校验和
+编译配方可以属于发出请求的模块。Kernel 是导出能力，不是文件类型。
 
 ### 4.4 Handler/Fulfiller
 
@@ -466,13 +511,40 @@ demand scheduling：
 - 暂停、Receipt 注入和恢复；
 - 多个候选并存。
 
-## 6. 官方文本 Frontend 的 `.svml`、`.svc`、`.svs`、`.svk`
+### 5.4 Core 是纯状态机，不是副作用执行器
 
-这些后缀和语法是官方 Author Frontend 的源码组织约定，不是 Core ABI。第三方
-Frontend 可以采用其他文件、数据库或编辑器存储，只要最终产生规范
-`IntentModule` 并锁定同等依赖与 provenance。
+Core 不读文件、不执行 JS、不访问网络、环境变量或时钟。概念 API 是：
 
-### 6.1 `.svml`: 官方作品级作者源码
+```ts
+const world = core.link(resolvedClosure, typedModules);
+let build = core.request(world, query);
+
+const command = core.next(build);
+// RunKernel | ResolveRequirement | Complete
+
+build = core.accept(build, typedResultOrReceipt);
+```
+
+Driver/Host 执行 `RunKernel` 或满足 `ResolveRequirement`，Core 只验证返回值是否满足
+声明的类型、身份、输入 digest 和闭包约束，并推进可重放的推导状态。这样安全沙箱、
+网络、缓存和 Provider 生命周期都不会渗入纯 Core。
+
+## 6. 官方源码语法与包格式
+
+文件后缀只负责作者体验、编辑器关联和默认 Frontend 选择，不定义 Core 本体。
+v2 初期只保留两种官方人类源码语法：
+
+```text
+.svml  官方作者意图语法，由 @svml/text 读取
+.svs   官方参数规则与 Recipe 语法，由 @svml/svs 读取
+```
+
+第三方 Frontend 可以采用其他后缀、数据库或编辑器存储，只要最终产生规范类型化
+模块，并锁定同等依赖与 provenance。显式 `using` 比扩展名优先；扩展名只是便利
+关联。例如同一份规则源码可以写成 `brand.rules`，并显式指定
+`using="svs:stylesheet"`。
+
+### 6.1 `.svml`: 官方作者意图源码
 
 包含：
 
@@ -491,67 +563,110 @@ Frontend 可以采用其他文件、数据库或编辑器存储，只要最终�
 - 缓存位置和对象存储 URL；
 - 前端面板状态和 Canvas 坐标。
 
-### 6.2 `.svc`: 纯作者内容与可复用意图片段
+同一种 `.svml` 既可以是作品入口，也可以是被导入的作者意图库。纯内容、人物、
+品牌、素材引用和可复用意图片段通过模块导出和权限 profile 区分，不需要新的
+`.svc` 基础后缀。若未来 `.svc` 具有独立且确实有价值的人类语法、Formatter 或
+安全 profile，可以作为便利 Frontend 重新评估，而不是预先写入 Core。
 
-用于无外部副作用的复用：
-
-- 人物、品牌、素材引用和设计 token；
-- 可复用文字与作品片段；
-- 纯内容子图；
-- 不需要运行时事实的作者侧组件展开。
-
-SVC 不持有作为实现逻辑的 LLM/Provider Prompt 模板、credential、Provider 调用
-或运行时选择。作者明确写下的镜头指示、生成方向或其他文本仍然是普通作者内容，
-可以放在 SVC 中复用。
-
-### 6.3 `.svs`: 类型化参数覆盖
+### 6.2 `.svs`: 类型化参数规则与 Recipe
 
 SVS 不应被限制为视觉 CSS。更准确的定义是：
 
 > 作者侧、带选择器和 provenance 的类型化公开参数覆盖表。
 
-只要 SVK 将参数声明为公开可配置，SVML 或作者导入的 SVS 都可以设置它：
+只要模块将参数声明为公开可配置，SVML 或作者导入的 SVS 都可以设置它：
 
 - 字体、颜色、位置；
 - Seedance `mini`/`pro` 模型；
 - 生成时长、宽高比和质量；
 - 字幕最大行数；
-- 如果 Kernel 选择公开它，也可以是字幕使用的 LLM。
+- 如果模块选择公开它，也可以是字幕使用的 LLM。
 
 由谁导入 SVS 比文件后缀更重要。作者导入的 SVS 是作者程序；Host 临时注入的
 参数不是作者事实，必须记录为外部 binding 或 override。
 
-### 6.4 `.svk`: 作者可导入的编译组件
+SVS 本身也不是 Core 的特殊输入。`@svml/svs` 的 Frontend 把它降低为类型化的
+`ParameterRuleModule`；同包的 Elaborator Kernel 消费该模块并产生带逐值来源的
+参数结果。Core 看不到选择器、级联或 `.svs` 后缀。
 
-SVK 包含：
+### 6.3 包、Manifest 与实现
 
-- 公开端口、参数、字段、子项和产物 contract；
-- 公开参数默认值和私有实现参数；
-- 纯 lowering/validation；
-- 需要哪些中间产物或外部调用；
-- Prompt 和领域返回 schema；
-- Provider 返回之后的领域解析与验证；
-- 如何把结果投影为下一种产物。
-
-SVK 不直接持有：
-
-- API key；
-- 产品数据库；
-- 全局队列；
-- 用户/Workspace；
-- 未声明的环境读取；
-- 隐式 Provider singleton。
-
-## 7. SVML 可以并且通常应该导入 SVK
-
-“Core 不认识某个 SVK”不等于“作者不能选择某个 SVK”。
-
-作者使用：
+组件、Kernel 和 Parser 不靠专属后缀分发。一个包使用固定的数据 Manifest 描述
+自己的导出：
 
 ```text
-@svml/narrative@1
-@svml/seedance-track@1
-@svml/subtitle-track@1
+@svml/seedance/
+├── package.json
+├── svml.module.json
+├── schemas/
+├── recipes/
+└── dist/                 # JS、Wasm 或其他 Host 支持的实现
+```
+
+`svml.module.json` 可以声明 `types`、`components`、`surfaces`、`kernels`、
+`requirements` 和 `recipes`。包作者可以用 TypeScript SDK 编写并由 `svml pack`
+产生规范 Manifest，但发布后的 Driver 不得通过执行 TypeScript 来发现导出。
+
+包可以是纯 Schema/Recipe，也可以包含实现。实现不得凭包身份自动获得网络、文件、
+环境变量或 credential；它只能在获授权沙箱中运行，或产生 Requirement 交给 Host。
+因此 `.svk` 不再是 v2 基础文件类型：Kernel 是包的一种导出能力，而不是一种语法。
+
+建议的固定工具文件是：
+
+```text
+svml.module.json   包的静态 Manifest
+svml.project.json  项目入口和 Frontend 绑定
+svml.lock          精确包版本与 digest
+```
+
+### 6.4 官方最小包分层
+
+第一批官方包应按责任分层，而不是把旧固定流程换名后重新装进 Core：
+
+```text
+@svml/core          纯链接、类型验证、推导状态机和 provenance
+@svml/driver-node   解析闭包、沙箱执行、缓存和 Handler 注册
+@svml/text          官方 .svml Frontend 与通用结构/Surface 分派
+@svml/svs           官方 .svs Frontend 与参数规则 Elaborator
+@svml/contracts     media/narrative/semantic/program 的窄腰协议
+@svml/script        当前漂亮 Script Surface -> Narrative
+@svml/film          一种可选的成片意图和输出合同
+```
+
+具体生产能力继续位于普通官方包中，例如 `@svml/seedance`、`@svml/whisperx`、
+`@svml/semantic-locator`、`@svml/caption` 和 `@svml/broll`。官方可以另给一个有观点的
+`@svml/talking-film` Recipe，把这些能力组合成推荐流程；它不能成为隐藏编译阶段。
+
+`@svml/contracts` 初期可以是一个带子命名空间的包，减少过早拆包导致的版本矩阵：
+
+```text
+media      Audio / Video / Image / Track
+narrative  Narrative / Segment / Utterance / authored selection
+semantic   SemanticEvidence / SemanticMap / resolved selection
+program    ProgramSpace / ProgramBoundAudio / ProgramSource
+```
+
+其中窄腰鸭子合同可以要求一个 A-roll 生产者直接提供同一 ProgramSpace 中的定位音频
+和视觉 Track：
+
+```ts
+type ProgramSource = {
+  locateAudio: ProgramBoundAudio;
+  visualTrack: Track;
+};
+```
+
+Seedance、已上传视频、人工产物或黑场 substitute 都可以满足它。Core 不认识这些
+类型的业务含义；它只验证闭包 Manifest 显式声明的类型兼容关系。
+
+## 7. SVML 可以并且通常应该导入模块包
+
+“Core 不认识某个领域模块”不等于“作者不能选择具体组件或 Kernel”。作者可以选择：
+
+```text
+@svml/contracts@1
+@svml/seedance@1
+@svml/caption@1
 @svml/film@1
 ```
 
@@ -561,7 +676,7 @@ Program Closure，并进入作者程序锁。
 默认 Kernel 集合来自：
 
 ```text
-K = source-selected kernels
+K = source-selected modules' kernels
   + their transitive dependencies
   + consumer-selected target/view kernels
   + explicit recorded overrides
@@ -571,9 +686,9 @@ K = source-selected kernels
 
 外部替换发生在三个不同层次：
 
-1. 正常 fulfillment：作者选择的 SVK 不变，外部满足它的 Requirement；
-2. exact cache：外部证明已有产物对应同一个输入和 SVK digest，直接复用；
-3. explicit override/substitute：替换 SVK 或提供非精确产物，必须记录原要求、
+1. 正常 fulfillment：作者选择的模块和 Kernel 不变，外部满足它的 Requirement；
+2. exact cache：外部证明已有产物对应同一个输入和 Kernel digest，直接复用；
+3. explicit override/substitute：替换 Kernel 或提供非精确产物，必须记录原要求、
    实际实现和兼容关系。
 
 ## 8. 外部调用：统一生命周期，不抹平语义
@@ -626,17 +741,17 @@ media.probe@1
 语义符合程度与产物从哪里取得是两个正交维度。缓存可以是精确缓存，也可以缓存过
 一个占位替代品，因此不能用同一个 `exact/cached/substitute` 枚举同时表达二者。
 
-Prompt、语义参数和领域输出仍然属于发出请求的 SVK。
+Prompt、语义参数和领域输出仍然属于发出请求的模块与 Kernel。
 
 ## 9. 参数与 Provider 选择不是固定归属
 
-不能规定“模型总是作者选择”“模型总是 SVK 选择”或“模型总是 Host 选择”。
+不能规定“模型总是作者选择”“模型总是 Kernel 选择”或“模型总是 Host 选择”。
 正确规则是逐层约束：
 
 ```text
 作者/SVS 声明自己关心的约束
             ↓
-SVK 为未决定部分增加实现约束或默认
+模块 Kernel 为未决定部分增加实现约束或默认
             ↓
 Host 绑定满足约束的 Handler、credential 和部署
             ↓
@@ -655,7 +770,7 @@ Gemini 某个模型家族或版本范围
 精确企业 deployment
 ```
 
-SVK 决定哪些参数公开给作者、哪些是私有实现决定、哪些留给 Host。
+模块决定哪些参数公开给作者、哪些是私有实现决定、哪些留给 Host。
 
 ```ts
 const seedanceParameters = {
@@ -679,9 +794,9 @@ const subtitleParameters = {
 
 ## 10. LLM 的正确边界
 
-LLM 不属于 Core，但完全可以、并且经常必须出现在 SVK 实现中。
+LLM 不属于 Core，但完全可以、并且经常必须出现在模块的 Kernel 实现中。
 
-以官方字幕 SVK 为例，它拥有：
+以官方字幕模块为例，它的分 Cue Kernel 拥有：
 
 - 是否使用 LLM；
 - Prompt；
@@ -710,11 +825,11 @@ Domain parser
   provider completion -> CaptionGrouping/CaptionPlan
 ```
 
-前者属于 Handler，后者属于 Subtitle SVK。
+前者属于 Handler，后者属于 Caption 模块的领域 Kernel。
 
-如果字幕 SVK 的 Prompt 明确针对 Gemini，它可以直接产生
+如果字幕 Kernel 的 Prompt 明确针对 Gemini，它可以直接产生
 `google.gemini.structured-generation@1` Requirement。作者不必关心 Gemini；
-这个选择由作者导入的 SVK 版本和 digest 固定。若作者希望控制它，SVK 可以公开
+这个选择由作者导入的模块版本和 Kernel digest 固定。若作者希望控制它，模块可以公开
 相应参数供 `.svml` 或 `.svs` 设置。
 
 LLM 输出只能产生 `CaptionGroupingCandidate`、annotation 或其他派生产物。
@@ -770,6 +885,11 @@ SemanticMap、TimingEvidence 和 CaptionPlan 仍然只是对权威作者稿件�
 
 ```svml
 <svml>
+  <import from="@svml/script@1" />
+  <import as="seedance" from="@svml/seedance@1" />
+  <import as="caption" from="@svml/caption@1" />
+  <import from="@svml/film@1" />
+
   <script>
     @alice-shot
     <segment id="alice-line">
@@ -812,16 +932,16 @@ SemanticMap、TimingEvidence 和 CaptionPlan 仍然只是对权威作者稿件�
 工具配置和 Author Program Lock 记录 Frontend：
 
 ```text
-@svml/official-frontend
+@svml/text@2
 ```
 
 作者模块闭包选择：
 
 ```text
 @svml/narrative
-seedance-track.svk
-subtitle-track.svk
-film.svk
+@svml/seedance@1
+@svml/caption@1
+@svml/film@1
 ```
 
 模块化编译可能产生：
@@ -835,7 +955,7 @@ SeedanceTrack(bob)
 
 SubtitleTrack
   -> Need<SemanticMap>
-  -> Need<GeminiStructuredGeneration>  # 由该 SVK 的内部实现决定
+  -> Need<GeminiStructuredGeneration>  # 由 Caption Kernel 的内部实现决定
   -> CaptionPlan
   -> SubtitleTrack
 
@@ -862,7 +982,7 @@ SemanticMap Requirement    -> 猜测 Map substitute
 Gemini Requirement         -> 缓存的 CaptionGrouping
 ```
 
-两者没有使用不同的 SVML mode，也没有重新选择字幕 SVK。变化的是外部 Requirement
+两者没有使用不同的 SVML mode，也没有重新选择字幕模块。变化的是外部 Requirement
 resolution、产物 delivery 来源和消费者接受的 `exact/substitute` 符合关系。两套
 候选还可以同时存在。
 
@@ -893,14 +1013,28 @@ RenderableDocument -> MP4 Artifact
 
 需要把“作者选了什么”和“这次实际怎么做的”分开记录。
 
+四种身份不能混成一个 digest：
+
+```text
+sourceDigest          原始 SourceUnit/源码闭包是什么
+frontendClosureDigest 由哪些整文档和 Surface Parser、配置来解释
+semanticDigest        规范化后作者最终表达了什么
+moduleClosureDigest   精确使用了哪些合同、模块和实现闭包
+```
+
+两个 Frontend 可以拥有不同的 source/frontend digest，却产生相同的 semantic digest。
+它们应保留各自 source provenance，同时允许下游在 module/kernel/input digest 也兼容
+时复用派生产物。Parse cache 使用 source + frontend closure；推导 cache 使用
+semantic + module closure + Kernel + 外部输入 digest。
+
 ### 14.1 Author Program Lock
 
 记录：
 
 - SourceUnit digest、Author Frontend 身份、版本和 implementation digest；
-- Frontend 输出的 `IntentModule` digest 与 source provenance；
+- Frontend 输出的 `TypedModule` digest 与 source provenance；
 - 官方或第三方源码闭包以及导入模块闭包；
-- Vocabulary/SVK 版本与 implementation digest；
+- Vocabulary、模块和 Kernel 版本与 implementation digest；
 - 纯 elaboration 结果；
 - 最终公开参数及逐值 provenance；
 - Canonical Intent Graph digest；
@@ -919,7 +1053,7 @@ RenderableDocument -> MP4 Artifact
 - 最终选中的候选及未选候选；
 - 输出产物 digest。
 
-Prompt 和领域 parser 属于 SVK implementation digest。Credential secret 不进入锁，
+Prompt 和领域 parser 属于相关 Kernel implementation digest。Credential secret 不进入锁，
 但 credential binding 的非秘密身份可以进入 Host journal 或 Receipt。
 
 ## 15. 不是 Core 的内容
@@ -950,15 +1084,17 @@ Canvas / Timeline UI
 
 | 当前资产 | 下一代位置 |
 |---|---|
-| 外层 document parser | `@svml/official-frontend` |
-| Script parser、Formatter 和漂亮具体语法 | 官方 Frontend 的 Script Surface |
-| Narrative 文本模型和锚点合同 | `@svml/narrative` |
-| temporal alignment | `semantic-map.svk` |
-| ProgramBasis | timeline contract + basis kernels |
-| Caption planning/projector | caption intent + subtitle SVK |
-| flat Track validation | `@svml/track` contract/validator |
-| Film/HyperFrames projector | composition/target kernels |
-| sandbox | Kernel/Handler Host |
+| 外层 document parser | `@svml/text` |
+| Script parser、Formatter 和漂亮具体语法 | `@svml/script` Surface |
+| Narrative 文本模型和锚点合同 | `@svml/contracts:narrative` |
+| temporal alignment | `@svml/semantic-locator` Kernel |
+| ProgramBasis | `@svml/contracts:program` + producer kernels |
+| Caption planning/projector | `@svml/caption` |
+| flat Track validation | `@svml/contracts:media` validator |
+| Film/HyperFrames projector | `@svml/film` 和 target modules |
+| `.svk` manifests | 一次性 legacy importer -> `svml.module.json` |
+| `.svc` content | `.svml` library module / content-only profile |
+| sandbox | Frontend/Kernel executor + Handler Host |
 | lock/digest | Author Program Lock + Derivation Lock |
 | examples/tests/goldens | v2 conformance suite |
 
@@ -979,19 +1115,19 @@ Canvas / Timeline UI
 建议迁移顺序：
 
 1. 冻结当前 fixtures/goldens；
-2. 定义 `IntentModule`、Module ABI、Kernel/Requirement/Receipt；
+2. 定义 `TypedModule`/`IntentModule`、Module ABI、Kernel/Requirement/Receipt；
 3. 定义不可约的 `SourceUnit + FrontendRef` Driver 绑定、
-   `AuthorFrontend.decode(SourceUnit) -> IntentModule` 公开协议和锁格式；
+   `AuthorFrontend.decode(SourceUnit) -> TypedModule` 公开协议和锁格式；
 4. 定义 `@svml/text` 的固定 Import Prologue、Module Manifest、Surface Registry
    和 Component Registry 协议；
 5. 把当前外层 parser、Script parser 和 Formatter 提取为官方 Frontend，同时完整
    保留 v1 漂亮 Script goldens；
-6. 让 Core 入口只接收 `IntentModule`，删除 `scriptSource` 和源码类型特判；
+6. 让 Core 入口只接收 `TypedModule[]`，删除 `scriptSource` 和源码类型特判；
 7. 把 Narrative 文本模型与锚点归入 `@svml/narrative` 领域合同；
 8. 实现有限、类型化、可暂停的模块编译微内核；
 9. 用本文双人 Seedance + Subtitle 例子做第一条竖切；
 10. 实现 local ArtifactStore、journal 和注册式 Handler；
-11. 逐个把当前算法移动到官方 SVK；
+11. 逐个把当前算法移动到官方模块导出的 Kernel；
 12. 新竖切和必要 goldens 通过后删除旧固定编译器。
 
 ## 17. 架构验收标准
@@ -1000,7 +1136,7 @@ Canvas / Timeline UI
 
 - Driver 可以通过显式 `SourceUnit + FrontendRef` 启动，不依赖源文件自我声明
   Frontend；
-- Core 的公开入口接收 `IntentModule`，不接收 `.svml` 源码字节；
+- Core 的公开入口接收 `TypedModule[]`，不接收 `.svml` 源码字节；
 - Core 源码中不存在 XML、Namespace、`<script>`、Script parser 或具体文件后缀
   分支；
 - 裸 `@svml/text` 不认识 `<script>`；只有显式 import、re-export 或 Standard
@@ -1011,15 +1147,15 @@ Canvas / Timeline UI
 - 当前 v1 漂亮 Script 由官方 Frontend 完整保留；
 - 一个完全不使用 XML、Namespace 或 `<script>` 的第三方 Frontend 可以产生兼容
   作者程序并参与同一后续编译；
-- 新增 Vocabulary 或 SVK 不需要修改 Core；
-- SVML 可以导入并锁定 SVK；
-- Host 不会为作者组件隐式挑选另一个 SVK；
+- 新增 Vocabulary、组件或 Kernel 不需要修改 Core；
+- SVML 可以导入并锁定提供这些导出的模块包；
+- Host 不会为作者组件隐式挑选另一个 Kernel；
 - 同一个 Requirement 可以由真实 Provider、缓存、人工或 substitute 解决；
 - 同一个作者程序可以同时保留多个候选结果；
 - Author Fact 无法被 Kernel 或 Handler 修改；
-- LLM Prompt 和领域 parser 位于相关 SVK，不进入 Core；
+- LLM Prompt 和领域 parser 位于相关模块的 Kernel，不进入 Core；
 - API key、队列和 Provider operation 位于 Host/Handler，不进入作者程序；
-- 模型选择可以来自作者、SVS、SVK 或 Host，并保留逐层 provenance；
+- 模型选择可以来自作者、SVS、Kernel 或 Host，并保留逐层 provenance；
 - 没有 `previewMode` 或 `productionMode` 语言分支；
 - 两段 Seedance + 双人 Script + Subtitle 示例能使用同一作者程序得到真实和替代
   实现；
@@ -1033,9 +1169,9 @@ SVML 后续不应被描述为“一个拥有插件系统的固定视频编译器
 正确边界是：
 
 ```text
-Author Frontend 把任意作者写法降低为规范 IntentModule
+Author Frontend 把任意作者写法降低为规范 TypedModule
 作者选择意图、组件、公开参数和自己关心的实现约束
-SVK 定义模块化编译配方、Prompt、领域协议和外部 Requirement
+模块导出的 Kernel 定义模块化编译配方、Prompt、领域协议和外部 Requirement
 Host 注册调用器并补全剩余运行绑定
 Provider/人工/缓存产生带 Receipt 的观察事实或替代产物
 Core 负责身份、类型、不可变事实、调度、完整性和推导证明
@@ -1044,5 +1180,6 @@ Core 负责身份、类型、不可变事实、调度、完整性和推导证明
 因此：
 
 > SVML 的本体是一门可扩展的抽象作者意图语言；官方漂亮文本只是一个可替换
-> Author Frontend。SVK 是作者可选择的模块化编译组件；外部 Runtime 是这些组件
-> 所声明需求的开放满足环境。
+> Author Frontend。模块包导出的 Kernel 是作者可选择的模块化编译能力；外部
+> Runtime 是这些能力所声明需求的开放满足环境。`.svml` 和 `.svs` 是官方语法，
+> 不是 Core 特权；`.svc` 和 `.svk` 暂不作为 v2 基础文件类型。
