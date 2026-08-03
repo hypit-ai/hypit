@@ -27,6 +27,7 @@ not indentation: the compact spelling
 `<opening><ALICE>我先说。<BOB>我回答。</opening>` has the same semantic value.
 
 The package exports its Manifest, `parseScript`, semantic/source-map projection helpers, a
-semantic-preserving formatter and the raw `decodeScriptSurface` handler. The first bootstrap keeps
-the Narrative contract in this package; it can be split into a domain-contract package later
-without changing Text or Core.
+semantic-preserving formatter and the raw `decodeScriptSurface` handler. Source ranges and parser
+state remain private to Script; its authored Narrative Record uses the Frontend-neutral type from
+`@svml/contracts`, so third-party author surfaces can feed the same WhisperX, locator and caption
+components without importing Script internals.

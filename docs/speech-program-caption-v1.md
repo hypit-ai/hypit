@@ -14,7 +14,7 @@ Script / Narrative ──────┤                                        
                                                                      │
                          Narrative ──────────────────────────────────┤
                                                                      ▼
-                                                   CompleteSpeechTimeMap
+                                                     CompleteSemanticMap
                                                                      │
                          CaptionProjection ──────────────────────────┤
                                                                      ▼
@@ -94,7 +94,12 @@ Role 只是稿件标签，不是 speaker entity，不绑定人物、音色或素
 
 ```text
 AlignedTranscriptEvidence {
-  contract: "svml.aligned-transcript-evidence@0"
+  contract: "svml.aligned-transcript-evidence@1"
+  basisDigest
+  audioArtifactDigest
+  programSpaceDigest
+  rawEvidenceArtifactDigest
+  evidenceDigest
   durationSec
   segments: [{ sourceSegmentId, startSec, endSec, words, chars, speechActivity? }]
 }
@@ -110,9 +115,12 @@ A.start <= B.start
 A.end   <= B.end
 ```
 
-WhisperX、其他 STT、人工表和已缓存证据都可提供同一鸭子合同。确定性 Locator 已经
-位于 provider-neutral 的 `@svml/speech-align`；WhisperX 只应出现在 Runtime adapter
-的注册、凭据与 provenance 中，不再成为 Locator 包名或公共时间图合同的一部分。
+WhisperX、其他 STT、人工表和已缓存证据最终都可降为同一鸭子合同，但调用什么外部
+能力必须由 SVML 导入的组件包明确决定。例如 `@svml/whisperx` 产生专有的
+`Need<WhisperXAlignmentEvidence>`，再由纯 Producer 降为本合同；Runtime 只能在
+`whisperx.local` 与 `hypit.whisperx` 等同类执行端之间做显式绑定，不能看见一个通用
+Evidence 需求后临时猜测 STT。确定性 Locator 位于 provider-neutral 的
+`@svml/speech-align`，不读取 WhisperX 配置，也不接触其 API。
 
 ### 2.3 CompleteSemanticMap
 
@@ -121,9 +129,12 @@ Locator 输入 Narrative、选中的 speech basis 与 `AlignedTranscriptEvidence
 
 ```text
 CompleteSemanticMap {
-  contract: "svml.complete-semantic-map.v1"
+  contract: "svml.complete-semantic-map@1"
   semanticIndexDigest
   basisDigest
+  audioArtifactDigest
+  programSpaceDigest
+  evidenceDigest
   anchors: [{ identity, ProgramPoint, quality }]
   evidenceDigests[]
   locatorDigest
@@ -139,7 +150,7 @@ basis affinity、Segment 内单调与源码顺序，preview 和 final 都消费�
 
 ### 2.4 TimedCaptionProjection 与 CaptionPresentationPlan
 
-`@svml/caption` 对 CaptionProjection 与 CompleteSpeechTimeMap 做纯组合：
+`@svml/caption` 对 CaptionProjection 与 CompleteSemanticMap 做纯组合：
 
 ```text
 TimedCaptionProjection {
@@ -252,18 +263,24 @@ exact refinement 才能在不造假的前提下细化。下游允许做局部估
 
 ## 5. Provider 注册与使用者分离
 
-Producer 只声明 typed Need 及其 constraints；它不读取 API key，不选择 endpoint，
-也不初始化 Python/CUDA。Node Runtime 的 `ProviderRegistry` 统一注册实际 adapter：
+组件包和最终 BuildPlan 必须明确选择外部能力；Runtime 不得从泛化的结果需求反推
+Seedance、Kling、WhisperX 或其他实现。Producer 只声明已经选定的 typed Need 及其
+constraints；它不读取 API key、不选择 endpoint，也不初始化 Python/CUDA。Node
+Runtime 的 `ProviderRegistry` 只注册同一能力的实际执行端：
 
 ```text
-registerProvider("runtime:seedance-mini", SpeechBasis, handler, { supports })
-registerProvider("runtime:whisperx", AlignedTranscriptEvidence, handler)
-bind(SpeechBasis, "runtime:seedance-mini")
+Need<SeedanceMiniGeneration> -> kie.seedance / volc.seedance / hypit.seedance
+Need<WhisperXAlignmentEvidence> -> whisperx.local / hypit.whisperx
+
+registerProvider("whisperx.local", WhisperXAlignmentEvidence, handler)
+bind(WhisperXAlignmentEvidence, "whisperx.local")
 ```
 
 同一个 Wants 只有一个匹配 Provider 时可直接运行；没有 Provider 就暂停；存在多个
 匹配 Provider 且 Runtime 没有显式绑定时必须报告 `ambiguous-provider`，绝不采用
-“第一个注册者”。Receipt 的 `fulfiller` 由 Registry 身份写入，不由 handler 自报。
+“第一个注册者”。不同能力的 Provider 即使能产生相似的媒体，也不能匹配该 Need。
+已有视频、黑场视频和人工时间稿只能作为显式 `substitute` fulfillment，不能改写 Need
+身份或冒充 `exact`。Receipt 的 `fulfiller` 由 Registry 身份写入，不由 handler 自报。
 
 ## 6. 唯一性
 

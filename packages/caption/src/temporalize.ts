@@ -1,6 +1,5 @@
 import { digestOf } from "@svml/core";
-import type { ParsedNarrative } from "@svml/script";
-import type { CompleteSpeechTimeMap, TimingQuality } from "@svml/speech-align";
+import type { CompleteSemanticMap, Narrative, TimingQuality } from "@svml/contracts";
 
 import { CaptionProjectionError } from "./error.js";
 import type {
@@ -20,8 +19,8 @@ function composedQuality(value: TimingQuality): TimingQuality {
 }
 
 export function temporalizeCaption(
-  narrative: ParsedNarrative,
-  map: CompleteSpeechTimeMap,
+  narrative: Narrative,
+  map: CompleteSemanticMap,
 ): TimedCaptionProjection {
   if (map.semanticIndexDigest !== narrative.semanticIndex.digest) {
     throw new CaptionProjectionError(
@@ -69,7 +68,7 @@ export function temporalizeCaption(
     };
   });
   const payload = {
-    contract: "svml.timed-caption-projection@0" as const,
+    contract: "svml.timed-caption-projection@1" as const,
     semanticIndexDigest: narrative.semanticIndex.digest,
     speechTimeMapDigest: map.mapDigest,
     text: narrative.captionProjection.text,

@@ -985,7 +985,11 @@ SeedanceTrack(bob)
   -> Need<SeedanceVideo model=mini>
 
 SubtitleTrack
-  -> Need<SemanticMap>
+  -> @svml/whisperx request Producer
+  -> Need<WhisperXAlignmentEvidence>
+  -> provider-neutral AlignedTranscriptEvidence
+  -> @svml/speech-align
+  -> CompleteSemanticMap
   -> Need<GeminiStructuredGeneration>  # 由 Caption Kernel 的内部实现决定
   -> CaptionPlan
   -> SubtitleTrack
@@ -1000,7 +1004,7 @@ Film
 ```text
 Alice Seedance Requirement -> 真实 Seedance Mini 视频
 Bob Seedance Requirement   -> 真实 Seedance Mini 视频
-SemanticMap Requirement    -> 实测语音证据和官方对齐
+WhisperX Requirement       -> 本地或托管 WhisperX 执行端
 Gemini Requirement         -> 注册好的 Gemini Handler
 ```
 
@@ -1009,13 +1013,18 @@ Gemini Requirement         -> 注册好的 Gemini Handler
 ```text
 Alice Seedance Requirement -> 缓存视频
 Bob Seedance Requirement   -> 黑场 TimedVisual substitute
-SemanticMap Requirement    -> 猜测 Map substitute
+WhisperX Requirement       -> 缓存或人工时间证据 substitute
 Gemini Requirement         -> 缓存的 CaptionGrouping
 ```
 
 两者没有使用不同的 SVML mode，也没有重新选择字幕模块。变化的是外部 Requirement
 resolution、产物 delivery 来源和消费者接受的 `exact/substitute` 符合关系。两套
 候选还可以同时存在。
+
+这里没有 `Need<SpeakerVideo>` 交给 Runtime 再猜 Seedance、Kling 或其他模型。作者
+SVML 或其显式导入的组件包必须在 BuildPlan 形成前决定外部能力；Runtime 只绑定同一
+能力的执行端。`substitute` 可以提供已有视频、黑场视频或人工时间证据，但不会改写
+Need 身份，也不会冒充 `exact`。
 
 ## 13. Target、Editor 和 View
 

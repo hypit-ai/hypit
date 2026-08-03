@@ -1,11 +1,12 @@
 import { digestOf } from "@svml/core";
+import type { Digest } from "@svml/protocol";
 
 import type {
   CaptionPresentationMode,
   CaptionPresentationPlan,
   CaptionPresentationUnit,
   TimedCaptionRegion,
-} from "./types.js";
+} from "@svml/contracts";
 
 const DISPLAY_WORD = /[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
 
@@ -121,7 +122,7 @@ function characterFlow(region: TimedCaptionRegion): CaptionPresentationUnit[] {
 }
 
 export function planCaptionPresentation(
-  projection: { readonly projectionDigest: string; readonly regions: readonly TimedCaptionRegion[] },
+  projection: { readonly projectionDigest: Digest; readonly regions: readonly TimedCaptionRegion[] },
   mode: CaptionPresentationMode = "whole",
 ): CaptionPresentationPlan {
   const units = projection.regions.flatMap((region) =>
