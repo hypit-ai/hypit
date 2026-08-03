@@ -1,0 +1,16 @@
+{
+  "name": "@svml/text",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/core": "workspace:*",
+    "@svml/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/script": "workspace:*"
+  }
+}

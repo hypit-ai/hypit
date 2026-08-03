@@ -23,6 +23,26 @@ Basis/Map/Track/HyperFrames 编译路径，也修正了讨论过程中一度把�
 组件、Kernel、Frontend、Requirement 和 Recipe 都是包的导出能力，由固定的数据
 Manifest 描述，包的实现可以使用 JS、Wasm 或其他受 Host 支持的形式。
 
+### 2026-08-03 首个 Frontend 竖切
+
+当前 v2 已实现 `@svml/text` 与 `@svml/script` 的第一条公开接缝：
+
+- `@svml/protocol` 的静态 Module Manifest 可以声明 raw/structured Surface 及其
+  被允许产出的 Record 类型；
+- Core 只通用验证 Surface 名称、tag、mode、输出类型与实现 digest，不解析任何 Surface；
+- `@svml/text` 固定 `<svml>`、leading Import Prologue、结构树和按 Manifest 分派；
+- `@svml/script` 普通地声明 raw `<script>` Surface，并产生 `Narrative` Typed Record；
+- 未 import Script 时，Text 不认识 `<script>`；紧凑排版和多行排版产生相同
+  semantic digest，但保留不同 source digest/source map；
+- Script 的 Segment 采用 `<opening>...</opening>` 具名块，Role Cue 由 Segment
+  body 解析状态识别，不依赖行首或换行。
+
+这一竖切仍只运行可信、显式注册的 Surface handler。第三方 Parser 沙箱、Driver
+解析 source import、完整包定位/lock 和通用 Component Surface 尚未实现，不能把
+当前 registry 当作最终安全边界。首个实现暂由 `@svml/script` 同时导出 Narrative
+合同和 Script Surface；只有在出现独立复用需求后再拆 `@svml/narrative`，不提前
+增加一个 Core 概念。
+
 ## 1. 一句话定义
 
 > SVML 的规范语义代表且仅代表作者意图；任意 Author Frontend 可以把自己的
@@ -80,14 +100,14 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
 <script>
   @whole
 
-  <segment id="scene-1">
+  <scene-1>
     <ALICE> 很多人以为，视频编译就是素材拼接。
-  </segment>
+  </scene-1>
 
-  <segment id="scene-2">
+  <scene-2>
     <BOB> 但真正重要的是，
           @architecture 作者意图和具体实现彼此分离 @/architecture。
-  </segment>
+  </scene-2>
 
   @/whole~
 </script>
@@ -285,10 +305,12 @@ if (descriptor.kind === "surface") {
 return decodeComponent(parseStructuredBody(), descriptor.schema);
 ```
 
-因此 `@svml/script` 的 Manifest 可以把某个导出声明为 raw Surface，而
+因此 `@svml/script` 的 Manifest 把 `script` 导出声明为 raw Surface；
 `@svml/seedance`、`@svml/film` 通常只导出使用通用结构 Parser 的 Component
 Schema 与 Kernel。没有导入或 re-export Script Surface 时，裸 `@svml/text`
-不认识 `<script>`。
+不认识 `<script>`。每个 Surface 还必须静态声明它可产生的 Record 类型；Text
+在 seal authored Record 前检查该集合，Core 再检查这些类型确实属于 Surface
+模块自身或其显式依赖，Parser 不能借先执行的位置冒充闭包中的其他模块。
 
 所有模块 import 都必须位于 Prologue，正文不得再 import。只限制会影响 Parser
 的 Surface import、却允许 Component import 出现在正文，会让作者必须预知包的
@@ -842,12 +864,12 @@ Frontend 产生的权威 Narrative 作者文本仍然是唯一口播文字真相
 必须拒绝修改、补写或删除作者口播文本的返回结果。官方 Frontend 下它对应当前
 Script 正文，其他 Frontend 下则对应其降低出的同一权威字段。
 
-## 11. 漂亮 Script 是官方 Frontend 资产，不是 Core 入口
+## 11. 漂亮 Script 是官方 Surface 资产，不是 Core 入口
 
-当前 Script Surface 应被完整保留在官方 Frontend 中，包括：
+当前 Script Surface 应被完整保留在普通官方包 `@svml/script` 中，包括：
 
-- prose-first 的 `<segment>`；
-- 行首 Role Cue；
+- prose-first 的具名 Segment，例如 `<answer>...</answer>`；
+- 由 Segment body 解析状态识别、与换行无关的 Role Cue；
 - Dual Text；
 - Selection、Moment 和 Slot；
 - 文本规范化、Formatter 和 source map；
@@ -855,9 +877,11 @@ Script 正文，其他 Frontend 下则对应其降低出的同一权威字段。
 - Segment 内顺序以及 Segment 之间的身份隔离；
 - Script 静态诊断。
 
-官方 Frontend 可以把这些语法降低为 `@svml/narrative` 模块定义的作者节点和
-产物。`@svml/narrative` 提供稳定领域合同，当前 Script Parser 提供一种产生该
-合同的漂亮写法；二者不能被等同。
+Text Frontend 只根据冻结 Manifest 把 raw region 交给 Script Surface；Script
+Surface 再把这些语法降低为 Narrative 作者 Record。当前首个竖切由
+`@svml/script` 同包导出 Narrative 合同和 Parser，但这两个导出不能被等同：未来
+电影剧本 Frontend 可以只产生同一 Narrative 类型，未来也可以在出现真实复用边界
+时把合同独立成 `@svml/narrative`，均不改变 Core。
 
 第三方作者至少有三种平等路径：
 
@@ -870,10 +894,10 @@ Script 正文，其他 Frontend 下则对应其降低出的同一权威字段。
 Seedance 或 Track 组件之间的显式适配 Kernel。Core 不强制每个作品存在 Script，
 也不强制每个 Frontend 产生 Narrative。
 
-当前 v1 已经隐约存在正确的实现接缝：外层 document parser 先把 `<script>` 正文
-作为 raw source 保存，再由独立 `parseScript()` 解析。但 `scriptSource`、单例
-cardinality 和 `if (name === "script")` 仍在编译入口硬编码。迁移时应把这两层都
-移入官方 Frontend，让 Core 只接收 lowering 后的 `IntentModule`。
+当前 v2 已把这条接缝实现为公开协议：Text 从导入模块的 Manifest 建立 Surface
+scope，Script handler 消费 raw region 并返回 Typed Record；Text 源码中没有
+`if (name === "script")`，Core 只接收 lowering 后的 `TypedModule`。当前仍缺的是
+不执行包代码的完整包定位和安全执行第三方 Surface Parser。
 
 Frontend 的身份、版本、实现 digest 和输出 digest 必须进入 Author Program Lock。
 更换 Frontend 通常意味着改变作者程序的解释；只有两个 Frontend 产生相同规范
@@ -885,8 +909,8 @@ SemanticMap、TimingEvidence 和 CaptionPlan 仍然只是对权威作者稿件�
 
 ## 12. 两段 Seedance、双人对话和字幕的完整例子
 
-使用官方 Frontend 时，稿件部分继续采用当前漂亮 Script Surface。下面只是一种
-候选 Program Surface；外层组件语法尚未冻结：
+使用官方 Text Frontend 并导入 Script 包时，稿件部分采用当前漂亮 Script
+Surface。下面只是一种候选 Program Surface；外层组件语法尚未冻结：
 
 ```svml
 <svml>
@@ -897,15 +921,15 @@ SemanticMap、TimingEvidence 和 CaptionPlan 仍然只是对权威作者稿件�
 
   <script>
     @alice-shot
-    <segment id="alice-line">
+    <alice-line>
       <ALICE> Alice 要说的话。
-    </segment>
+    </alice-line>
     @/alice-shot
 
     @bob-shot
-    <segment id="bob-line">
+    <bob-line>
       <BOB> Bob 要说的话。
-    </segment>
+    </bob-line>
     @/bob-shot
   </script>
 
@@ -930,7 +954,8 @@ SemanticMap、TimingEvidence 和 CaptionPlan 仍然只是对权威作者稿件�
 </svml>
 ```
 
-这里的 `<script>`、Role Cue 和 Selection 由官方 Frontend 降低；Core 没有
+这里的 `<script>` 先由 Text 按 `@svml/script` Manifest 分派，再由 Script
+Surface 降低 Role Cue 和 Selection；Core 没有
 `script` 全局变量。若 lowering 产生了名为 `script` 的引用，那只是该 Frontend
 输出 `IntentModule` 中的普通 binding。
 
@@ -1123,10 +1148,10 @@ Canvas / Timeline UI
 2. 定义 `TypedModule`/`IntentModule`、Module ABI、Kernel/Requirement/Receipt；
 3. 定义不可约的 `SourceUnit + FrontendRef` Driver 绑定、
    `AuthorFrontend.decode(SourceUnit) -> TypedModule` 公开协议和锁格式；
-4. 定义 `@svml/text` 的固定 Import Prologue、Module Manifest、Surface Registry
-   和 Component Registry 协议；
-5. 把当前外层 parser、Script parser 和 Formatter 提取为官方 Frontend，同时完整
-   保留 v1 漂亮 Script goldens；
+4. 完成 `@svml/text` 的固定 Import Prologue、Module Manifest、Surface Registry
+   与 raw/structured Surface 分派；首个可信 registry 竖切已实现，包解析和沙箱待补；
+5. 把 Script parser 和 Formatter 提取为普通 `@svml/script` Surface 包，同时完整
+   保留并更新漂亮 Script goldens；首个具名 Segment 竖切已实现；
 6. 让 Core 入口只接收 `TypedModule[]`，删除 `scriptSource` 和源码类型特判；
 7. 把 Narrative 文本模型与锚点归入 `@svml/narrative` 领域合同；
 8. 实现有限、类型化、可暂停的模块编译微内核；
@@ -1149,7 +1174,8 @@ Canvas / Timeline UI
 - 官方 Text Frontend 拒绝 Body 中的 module import，且 import 排列顺序不改变
   冻结后的模块闭包和语义；
 - Core 源码中不存在 Script/Caption/Film/Seedance/HyperFrames 类型分支；
-- 当前 v1 漂亮 Script 由官方 Frontend 完整保留；
+- 当前漂亮 Script 由普通 `@svml/script` Surface 包提供，并通过官方 Text
+  Frontend 的公开 Registry 路径解析；
 - 一个完全不使用 XML、Namespace 或 `<script>` 的第三方 Frontend 可以产生兼容
   作者程序并参与同一后续编译；
 - 新增 Vocabulary、组件或 Kernel 不需要修改 Core；
