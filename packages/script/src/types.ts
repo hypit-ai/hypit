@@ -1,12 +1,28 @@
+import type {
+  Affinity,
+  CaptionProjection,
+  CaptionRefinement,
+  CaptionRegion,
+  MarkerBoundary,
+  Narrative,
+  NarrativeMoment,
+  NarrativeMomentOccurrence,
+  NarrativeSegment,
+  NarrativeSelection,
+  NarrativeSelectionOccurrence,
+  NarrativeToken,
+  NarrativeTurn,
+  SemanticAnchor,
+} from "@svml/contracts";
 import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@svml/protocol";
 
-export type Affinity = "left" | "right";
-
-export type MarkerBoundary = {
-  readonly tokenIndex: number;
-  readonly structuralPosition: number;
-  readonly segmentId?: string;
-};
+export type {
+  Affinity,
+  CaptionProjection,
+  MarkerBoundary,
+  Narrative,
+  SemanticAnchor,
+} from "@svml/contracts";
 
 export type ParsedTextAtom = {
   readonly kind: "text";
@@ -25,120 +41,43 @@ export type ParsedRoleAtom = {
 
 export type ParsedAtom = ParsedTextAtom | ParsedRoleAtom;
 
-export type ParsedSegment = {
-  readonly id: string;
-  readonly index: number;
-  readonly startAnchorId: string;
-  readonly endAnchorId: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
+export type ParsedSegment = NarrativeSegment & {
   readonly atoms: readonly ParsedAtom[];
   readonly range: SourceRange;
   readonly selfClosing: boolean;
 };
 
-export type ParsedToken = {
-  readonly id: string;
-  readonly index: number;
-  readonly segmentId: string;
-  readonly segmentTokenIndex: number;
-  readonly startAnchorId: string;
-  readonly endAnchorId: string;
-  readonly text: string;
-  readonly normalized: string;
-  readonly range: SourceRange;
+export type ParsedToken = NarrativeToken & { readonly range: SourceRange };
+export type ParsedTurn = NarrativeTurn & { readonly range: SourceRange };
+
+export type ParsedSelectionOccurrence = NarrativeSelectionOccurrence & {
+  readonly open: NarrativeSelectionOccurrence["open"] & { readonly range: SourceRange };
+  readonly close: NarrativeSelectionOccurrence["close"] & { readonly range: SourceRange };
 };
 
-export type ParsedTurn = {
-  readonly id: string;
-  readonly segmentId: string;
-  readonly role?: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly range: SourceRange;
-};
-
-export type ParsedSelectionOccurrence = {
-  readonly occurrence: number;
-  readonly open: {
-    readonly affinity: Affinity;
-    readonly boundary: MarkerBoundary;
-    readonly range: SourceRange;
-  };
-  readonly close: {
-    readonly affinity: Affinity;
-    readonly boundary: MarkerBoundary;
-    readonly range: SourceRange;
-  };
-};
-
-export type ParsedSelection = {
-  readonly id: string;
+export type ParsedSelection = Omit<NarrativeSelection, "occurrences"> & {
   readonly occurrences: readonly ParsedSelectionOccurrence[];
 };
 
-export type ParsedMomentOccurrence = {
-  readonly occurrence: number;
-  readonly affinity: Affinity;
-  readonly boundary: MarkerBoundary;
-  readonly range: SourceRange;
-};
-
-export type ParsedMoment = {
-  readonly id: string;
+export type ParsedMomentOccurrence = NarrativeMomentOccurrence & { readonly range: SourceRange };
+export type ParsedMoment = Omit<NarrativeMoment, "occurrences"> & {
   readonly occurrences: readonly ParsedMomentOccurrence[];
 };
 
-export type ParsedCaptionRefinement = {
-  readonly id: string;
-  readonly display: string;
-  readonly displayStart: number;
-  readonly displayEnd: number;
-  readonly startToken: number;
-  readonly endTokenExclusive: number;
-  readonly relation: "exact";
-};
+export type ParsedCaptionRefinement = CaptionRefinement;
+export type ParsedCaptionRegion = CaptionRegion & { readonly range: SourceRange };
 
-export type ParsedCaptionRegion = {
-  readonly id: string;
-  readonly display: string;
-  readonly segmentId: string;
-  readonly startToken: number;
-  readonly endTokenExclusive: number;
-  readonly kind: "identity" | "alias" | "hidden";
-  readonly refinements: readonly ParsedCaptionRefinement[];
-  readonly range: SourceRange;
-};
-
-export type CaptionProjection = {
-  readonly contract: "svml.caption-projection@0";
-  readonly text: string;
-  readonly regions: readonly ParsedCaptionRegion[];
-};
-
-export type SemanticAnchor = {
-  readonly id: string;
-  readonly kind: "segment-start" | "token-start" | "token-end" | "segment-end";
-  readonly segmentId: string;
-  readonly tokenId?: string;
-  readonly segmentTokenIndex?: number;
-};
-
-export type ParsedNarrative = {
+export type ParsedNarrative = Omit<
+  Narrative,
+  "segments" | "tokens" | "turns" | "selections" | "moments" | "captionProjection"
+> & {
   readonly segments: readonly ParsedSegment[];
   readonly tokens: readonly ParsedToken[];
   readonly turns: readonly ParsedTurn[];
   readonly selections: readonly ParsedSelection[];
   readonly moments: readonly ParsedMoment[];
-  readonly captionProjection: CaptionProjection;
-  readonly semanticIndex: {
-    readonly contract: "svml.semantic-index@0";
-    readonly anchors: readonly SemanticAnchor[];
-    readonly digest: string;
-  };
-  readonly serializations: {
-    readonly dialogue: string;
-    readonly speech: string;
+  readonly captionProjection: Omit<CaptionProjection, "regions"> & {
+    readonly regions: readonly ParsedCaptionRegion[];
   };
 };
 

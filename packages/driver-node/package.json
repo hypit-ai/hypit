@@ -9,5 +9,12 @@
   "dependencies": {
     "@svml/core": "workspace:*",
     "@svml/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/caption": "workspace:*",
+    "@svml/contracts": "workspace:*",
+    "@svml/script": "workspace:*",
+    "@svml/speech-align": "workspace:*",
+    "@svml/whisperx": "workspace:*"
   }
 }

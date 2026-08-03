@@ -2,18 +2,64 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { planCaptionPresentation, temporalizeCaption } from "@svml/caption";
+import {
+  sealAlignedTranscriptEvidence,
+  sealProgramSpace,
+  sealSpeechBasis,
+} from "@svml/contracts";
+import type { AlignedTranscriptSegment, Narrative } from "@svml/contracts";
+import { digestOf } from "@svml/core";
 import { parseScript } from "@svml/script";
 import { locateSpeechTiming } from "@svml/speech-align";
+
+function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
+  const programSpace = sealProgramSpace({
+    contract: "svml.program-space@0",
+    durationSec,
+    frameRate: { numerator: 1_000, denominator: 1 },
+  });
+  const audioDigest = digestOf(`caption:audio:${narrative.semanticIndex.digest}`);
+  const basisSegments = narrative.segments.map((segment, index) => ({
+    segmentId: segment.id,
+    startSec: segments[index]!.startSec,
+    endSec: segments[index]!.endSec,
+    sourceArtifactDigest: digestOf(`caption:clip:${segment.id}`),
+  }));
+  const basis = sealSpeechBasis({
+    contract: "svml.speech-basis@1",
+    programSpace,
+    audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
+    visualTrack: { clips: basisSegments.map((segment) => ({
+      segmentId: segment.segmentId,
+      artifact: {
+        digest: segment.sourceArtifactDigest,
+        size: 1,
+        mediaType: "video/mp4",
+        durationSec: segment.endSec - segment.startSec,
+      },
+      startSec: segment.startSec,
+      endSec: segment.endSec,
+    })) },
+    segments: basisSegments,
+  });
+  const evidence = sealAlignedTranscriptEvidence({
+    contract: "svml.aligned-transcript-evidence@1",
+    basisDigest: basis.basisDigest,
+    audioArtifactDigest: basis.audio.digest,
+    programSpaceDigest: basis.programSpace.digest,
+    rawEvidenceArtifactDigest: digestOf("caption:raw-evidence"),
+    durationSec,
+    segments,
+  });
+  return locateSpeechTiming(narrative, basis, evidence);
+}
 
 test("Caption temporalization preserves evidence envelopes and labels local estimates", () => {
   const narrative = parseScript(
     "caption.svml",
     "<line><that was insane | what the fuck> <15% off | fifteen percent off></line>",
   );
-  const map = locateSpeechTiming(narrative, {
-    contract: "svml.aligned-transcript-evidence@0",
-    durationSec: 2,
-    segments: [{
+  const map = locate(narrative, 2, [{
       sourceSegmentId: "line",
       startSec: 0,
       endSec: 2,
@@ -26,8 +72,7 @@ test("Caption temporalization preserves evidence envelopes and labels local esti
         { text: "off", startSec: 1.48, endSec: 1.65 },
       ],
       chars: [],
-    }],
-  });
+    }]);
   const originalMap = structuredClone(map);
   const timed = temporalizeCaption(narrative, map);
 
@@ -57,10 +102,7 @@ test("Caption temporalization preserves evidence envelopes and labels local esti
 
 test("hidden speech owns time but emits no visible presentation unit", () => {
   const narrative = parseScript("hidden.svml", "<line>Hello < | um> world.</line>");
-  const map = locateSpeechTiming(narrative, {
-    contract: "svml.aligned-transcript-evidence@0",
-    durationSec: 1,
-    segments: [{
+  const map = locate(narrative, 1, [{
       sourceSegmentId: "line",
       startSec: 0,
       endSec: 1,
@@ -70,8 +112,7 @@ test("hidden speech owns time but emits no visible presentation unit", () => {
         { text: "world", startSec: 0.45, endSec: 0.7 },
       ],
       chars: [],
-    }],
-  });
+    }]);
   const timed = temporalizeCaption(narrative, map);
   const hidden = timed.regions.find((region) => region.kind === "hidden");
   assert.deepEqual([hidden?.startSec, hidden?.endSec], [0.3, 0.4]);

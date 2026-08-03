@@ -1,6 +1,6 @@
 # `@svml/caption`
 
-Pure composition between Script's untimed Caption Projection and a complete speech time map.
+Pure composition between the common Narrative's untimed Caption Projection and a CompleteSemanticMap.
 The authored display region receives the evidence-backed envelope of the speech tokens it owns.
 Exact internal correspondences may reuse evidence timing; unresolved display words remain untimed
 until a track explicitly chooses a local presentation policy.

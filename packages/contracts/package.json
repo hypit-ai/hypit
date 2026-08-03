@@ -1,5 +1,5 @@
 {
-  "name": "@svml/script",
+  "name": "@svml/contracts",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,7 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/contracts": "workspace:*",
     "@svml/core": "workspace:*",
     "@svml/protocol": "workspace:*"
   }
