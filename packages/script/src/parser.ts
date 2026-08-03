@@ -5,7 +5,8 @@ import type {
   Affinity,
   MarkerBoundary,
   ParsedAtom,
-  ParsedCaptionAtom,
+  ParsedCaptionRefinement,
+  ParsedCaptionRegion,
   ParsedMoment,
   ParsedNarrative,
   ParsedSegment,
@@ -44,6 +45,89 @@ function normalizeWord(value: string): string {
     .normalize("NFKC")
     .toLocaleLowerCase("en")
     .replace(/[^\p{L}\p{M}\p{N}]+/gu, "");
+}
+
+type WordLexeme = {
+  readonly text: string;
+  readonly normalized: string;
+  readonly start: number;
+  readonly end: number;
+};
+
+function wordLexemes(value: string): WordLexeme[] {
+  const lexemes: WordLexeme[] = [];
+  WORD.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = WORD.exec(value))) {
+    const normalized = normalizeWord(match[0]);
+    if (!normalized) continue;
+    lexemes.push({
+      text: match[0],
+      normalized,
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+  return lexemes;
+}
+
+function exactCaptionRefinements(
+  regionId: string,
+  display: string,
+  speechTokens: readonly ParsedToken[],
+): ParsedCaptionRefinement[] {
+  const displayWords = wordLexemes(display);
+  if (!displayWords.length || !speechTokens.length) return [];
+
+  let matches: Array<{ readonly displayIndex: number; readonly speechIndex: number }>;
+  if (
+    displayWords.length === speechTokens.length
+    && displayWords.every((word, index) => word.normalized === speechTokens[index]!.normalized)
+  ) {
+    matches = displayWords.map((_, index) => ({ displayIndex: index, speechIndex: index }));
+  } else {
+    const displayCounts = new Map<string, number>();
+    const speechCounts = new Map<string, number>();
+    for (const word of displayWords) displayCounts.set(word.normalized, (displayCounts.get(word.normalized) ?? 0) + 1);
+    for (const token of speechTokens) speechCounts.set(token.normalized, (speechCounts.get(token.normalized) ?? 0) + 1);
+    const candidates = displayWords.flatMap((word, displayIndex) => {
+      if (displayCounts.get(word.normalized) !== 1 || speechCounts.get(word.normalized) !== 1) return [];
+      const speechIndex = speechTokens.findIndex((token) => token.normalized === word.normalized);
+      return speechIndex < 0 ? [] : [{ displayIndex, speechIndex }];
+    });
+
+    // Keep a longest monotonic chain. Exact words that cross after an alias
+    // rewrite are individually plausible, but cannot form a temporal caption
+    // refinement without reversing display order.
+    const chains: Array<Array<{ readonly displayIndex: number; readonly speechIndex: number }>> = [];
+    for (let index = 0; index < candidates.length; index += 1) {
+      let best: Array<{ readonly displayIndex: number; readonly speechIndex: number }> = [];
+      for (let before = 0; before < index; before += 1) {
+        if (candidates[before]!.speechIndex < candidates[index]!.speechIndex && chains[before]!.length > best.length) {
+          best = chains[before]!;
+        }
+      }
+      chains.push([...best, candidates[index]!]);
+    }
+    matches = chains.reduce<typeof candidates>(
+      (best, chain) => chain.length > best.length ? chain : best,
+      [],
+    );
+  }
+
+  return matches.map(({ displayIndex, speechIndex }, index) => {
+    const word = displayWords[displayIndex]!;
+    const token = speechTokens[speechIndex]!;
+    return {
+      id: `${regionId}:exact:${index + 1}`,
+      display: word.text,
+      displayStart: word.start,
+      displayEnd: word.end,
+      startToken: token.index,
+      endTokenExclusive: token.index + 1,
+      relation: "exact",
+    };
+  });
 }
 
 function cleanProjection(value: string): string {
@@ -124,7 +208,7 @@ export function parseScript(
 
   const segments: ParsedSegment[] = [];
   const tokens: ParsedToken[] = [];
-  const captionAtoms: ParsedCaptionAtom[] = [];
+  const captionRegions: ParsedCaptionRegion[] = [];
   const selections = new Map<string, ParsedSelection["occurrences"] extends readonly (infer T)[] ? T[] : never>();
   const moments = new Map<string, ParsedMoment["occurrences"] extends readonly (infer T)[] ? T[] : never>();
   const openSelections = new Map<string, {
@@ -267,7 +351,13 @@ export function parseScript(
   const literalString = (raw: string, start: number, dual = false): string =>
     literalPieces(raw, start, dual).map((piece) => piece.value).join("");
 
-  const addText = (speech: string, caption: string, start: number, end: number): void => {
+  const addText = (
+    speech: string,
+    caption: string,
+    start: number,
+    end: number,
+    captureCaptionRegion = true,
+  ): void => {
     if (!current) {
       if (speech.trim() || caption.trim()) {
         fail("SCRIPT_TEXT_OUTSIDE_SEGMENT", "Natural-language text is only allowed inside a named Segment.", start);
@@ -307,6 +397,20 @@ export function parseScript(
       tokenEndExclusive: tokens.length,
       range: { start: sourceOffset + start, end: sourceOffset + end },
     });
+    const display = cleanProjection(caption);
+    if (captureCaptionRegion && display && tokens.length > tokenStart) {
+      const id = `caption-region:${captionRegions.length + 1}`;
+      captionRegions.push({
+        id,
+        display,
+        segmentId: current.id,
+        startToken: tokenStart,
+        endTokenExclusive: tokens.length,
+        kind: "identity",
+        refinements: exactCaptionRefinements(id, display, tokens.slice(tokenStart)),
+        range: { start: sourceOffset + start, end: sourceOffset + end },
+      });
+    }
   };
 
   const consumeSpeechSide = (raw: string, absoluteStart: number, caption: string): void => {
@@ -316,7 +420,7 @@ export function parseScript(
     let emittedCaption = false;
     const addLiteral = (part: string, start: number): void => {
       for (const piece of literalPieces(part, start, true)) {
-        addText(piece.value, emittedCaption ? "" : caption, piece.start, piece.end);
+        addText(piece.value, emittedCaption ? "" : caption, piece.start, piece.end, false);
         emittedCaption = true;
       }
     };
@@ -344,12 +448,17 @@ export function parseScript(
     }
     addLiteral(raw.slice(partStart), absoluteStart + partStart);
     if (tokens.length > startToken) {
-      captionAtoms.push({
-        id: `caption-atom:${captionAtoms.length + 1}`,
-        display: cleanProjection(caption),
+      const display = cleanProjection(caption);
+      const id = `caption-region:${captionRegions.length + 1}`;
+      const speechTokens = tokens.slice(startToken);
+      captionRegions.push({
+        id,
+        display,
         segmentId: current!.id,
         startToken,
         endTokenExclusive: tokens.length,
+        kind: display ? (cleanProjection(speechTokens.map((token) => token.text).join(" ")) === display ? "identity" : "alias") : "hidden",
+        refinements: exactCaptionRefinements(id, display, speechTokens),
         range: { start: sourceOffset + absoluteStart, end: sourceOffset + absoluteStart + raw.length },
       });
     }
@@ -590,16 +699,19 @@ export function parseScript(
     turns,
     selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({ id, occurrences })),
     moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({ id, occurrences })),
-    captionAtoms,
+    captionProjection: {
+      contract: "svml.caption-projection@0",
+      text: captionSegments.join("\n"),
+      regions: captionRegions,
+    },
     semanticIndex: {
       contract: "svml.semantic-index@0",
       anchors,
       digest: digestOf(semanticPayload),
     },
-    projections: {
+    serializations: {
       dialogue: dialogueTurns.join("\n"),
       speech: speechSegments.join("\n"),
-      caption: captionSegments.join("\n"),
     },
   };
 }

@@ -9,6 +9,7 @@ import {
   HostRegistry,
   MemoryArtifactStore,
   NodeDriver,
+  ProviderRegistry,
   loadResolvedClosure,
   parseBuildState,
   serializeBuildState,
@@ -36,9 +37,11 @@ type GreetingCalls = {
 
 function configuredRegistry(): {
   registry: HostRegistry;
+  providers: ProviderRegistry;
   calls: GreetingCalls;
 } {
   const registry = new HostRegistry();
+  const providers = new ProviderRegistry();
   const calls = { prompt: 0, request: 0, assemble: 0, fulfill: 0 };
 
   registry.registerProducer(producers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
@@ -81,25 +84,24 @@ function configuredRegistry(): {
     };
   });
 
-  return { registry, calls };
+  return { registry, providers, calls };
 }
 
 test("Driver pauses at an unbound Need, serializes, then resumes without rerunning producers", async () => {
-  const { registry, calls } = configuredRegistry();
-  const driver = new NodeDriver({ registry });
+  const { registry, providers, calls } = configuredRegistry();
+  const driver = new NodeDriver({ registry, providers });
   const paused = await driver.run(createGreetingBuild());
 
   assert.equal(paused.status, "paused");
-  assert.equal(paused.blocked[0]?.reason, "missing-handler");
+  assert.equal(paused.blocked[0]?.reason, "missing-provider");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 0 });
 
   const restored = parseBuildState(serializeBuildState(paused.state));
-  registry.registerRequirement(types.generated, ({ need }) => {
+  providers.registerProvider("example:generation", types.generated, ({ need }) => {
     calls.fulfill += 1;
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
     return {
       value: { kind: "inline", value: "Hello, Ada!" },
-      fulfiller: "example:generation",
       conformance: "exact",
       delivery: "executed",
       metadata: { provider: "fixture" },
@@ -110,19 +112,72 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
   assert.equal(completed.status, "complete");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 1, fulfill: 1 });
   assert.equal(completed.state.receipts[0]?.delivery, "executed");
+  assert.equal(completed.state.receipts[0]?.fulfiller, "example:generation");
   assert.equal(completed.state.records.find((record) => record.id === "document:root")?.conformance, "exact");
 });
 
+test("Provider Registry rejects ambiguity until the Runtime binds one provider", async () => {
+  const { registry, providers } = configuredRegistry();
+  providers.registerProvider("example:alpha", types.generated, () => ({
+    value: { kind: "inline", value: "Alpha" },
+    conformance: "exact",
+    delivery: "executed",
+    metadata: {},
+  }));
+  providers.registerProvider("example:beta", types.generated, () => ({
+    value: { kind: "inline", value: "Beta" },
+    conformance: "exact",
+    delivery: "executed",
+    metadata: {},
+  }));
+
+  const driver = new NodeDriver({ registry, providers });
+  const ambiguous = await driver.run(createGreetingBuild());
+  assert.equal(ambiguous.status, "paused");
+  assert.equal(ambiguous.blocked[0]?.reason, "ambiguous-provider");
+  assert.match(ambiguous.blocked[0]?.subject ?? "", /example:alpha, example:beta/u);
+
+  providers.bind(types.generated, "example:beta");
+  const completed = await driver.run(ambiguous.state);
+  assert.equal(completed.status, "complete");
+  assert.equal(completed.state.receipts[0]?.fulfiller, "example:beta");
+  assert.deepEqual(
+    completed.state.records.find((record) => record.id === "document:root")?.value,
+    { kind: "inline", value: { text: "Beta" } },
+  );
+});
+
+test("Provider capabilities may narrow themselves with typed Need constraints", async () => {
+  const { registry, providers } = configuredRegistry();
+  providers.registerProvider("example:wrong-model", types.generated, () => {
+    throw new Error("unsupported provider must never run");
+  }, { supports: () => false });
+  providers.registerProvider("example:compatible", types.generated, () => ({
+    value: { kind: "inline", value: "Compatible" },
+    conformance: "exact",
+    delivery: "executed",
+    metadata: {},
+  }), {
+    supports: (need) => {
+      const constraints = need.constraints as Readonly<Record<string, unknown>>;
+      return constraints.prompt === "Greet Ada";
+    },
+  });
+
+  const completed = await new NodeDriver({ registry, providers }).run(createGreetingBuild());
+  assert.equal(completed.status, "complete");
+  assert.equal(completed.state.receipts[0]?.fulfiller, "example:compatible");
+});
+
 test("substitute conformance propagates through later producer outputs", async () => {
-  const { registry } = configuredRegistry();
-  registry.registerRequirement(types.generated, () => ({
+  const { registry, providers } = configuredRegistry();
+  providers.registerProvider("example:placeholder", types.generated, () => ({
     value: { kind: "inline", value: "Placeholder" },
-    fulfiller: "example:placeholder",
     conformance: "substitute",
     delivery: "provided",
     metadata: { reason: "preview" },
   }));
-  const result = await new NodeDriver({ registry }).run(
+  const result = await new NodeDriver({ registry, providers }).run(
     createGreetingBuild({ needAccepts: "substitute", goalAccepts: "substitute" }),
   );
   assert.equal(result.status, "complete");
@@ -186,31 +241,29 @@ test("Driver reads static manifests without executing package code", async () =>
 });
 
 test("Core still owns scheduling when Driver has every implementation", async () => {
-  const { registry } = configuredRegistry();
-  registry.registerRequirement(types.generated, () => ({
+  const { registry, providers } = configuredRegistry();
+  providers.registerProvider("example:cache", types.generated, () => ({
     value: { kind: "inline", value: "Hello, Ada!" },
-    fulfiller: "example:cache",
     conformance: "exact",
     delivery: "cache",
     metadata: {},
   }));
   const start = createGreetingBuild();
   assert.equal(reduce(start).commands[0]?.kind, "invoke-producer");
-  const result = await new NodeDriver({ registry }).run(start);
+  const result = await new NodeDriver({ registry, providers }).run(start);
   assert.equal(result.status, "complete");
   assert.equal(result.state.receipts[0]?.delivery, "cache");
 });
 
 test("receipt metadata is covered by its identity during resume validation", async () => {
-  const { registry } = configuredRegistry();
-  registry.registerRequirement(types.generated, () => ({
+  const { registry, providers } = configuredRegistry();
+  providers.registerProvider("example:cache", types.generated, () => ({
     value: { kind: "inline", value: "Hello, Ada!" },
-    fulfiller: "example:cache",
     conformance: "exact",
     delivery: "cache",
     metadata: { cacheKey: "stable" },
   }));
-  const result = await new NodeDriver({ registry }).run(createGreetingBuild());
+  const result = await new NodeDriver({ registry, providers }).run(createGreetingBuild());
   assert.equal(result.status, "complete");
   const tampered = structuredClone(result.state);
   const receipt = tampered.receipts[0];
@@ -220,22 +273,21 @@ test("receipt metadata is covered by its identity during resume validation", asy
 });
 
 test("a transient Handler failure pauses and can resume without replaying completed producers", async () => {
-  const { registry, calls } = configuredRegistry();
+  const { registry, providers, calls } = configuredRegistry();
   let attempts = 0;
-  registry.registerRequirement(types.generated, () => {
+  providers.registerProvider("example:unstable", types.generated, () => {
     calls.fulfill += 1;
     attempts += 1;
     if (attempts === 1) throw new Error("temporary outage");
     return {
       value: { kind: "inline", value: "Hello after retry" },
-      fulfiller: "example:unstable",
       conformance: "exact",
       delivery: "executed",
       metadata: { attempt: attempts },
     };
   });
 
-  const driver = new NodeDriver({ registry });
+  const driver = new NodeDriver({ registry, providers });
   const paused = await driver.run(createGreetingBuild());
   assert.equal(paused.status, "paused");
   assert.match(paused.journal.at(-1)?.message ?? "", /temporary outage/u);

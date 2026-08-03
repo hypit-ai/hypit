@@ -22,6 +22,18 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/caption:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
+
   packages/core:
     dependencies:
       '@svml/protocol':
@@ -48,6 +60,15 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/speech-align:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
   packages/text:
     dependencies:
       '@svml/core':
@@ -57,15 +78,6 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
-      '@svml/script':
-        specifier: workspace:*
-        version: link:../script
-
-  packages/whisperx:
-    dependencies:
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
       '@svml/script':
         specifier: workspace:*
         version: link:../script

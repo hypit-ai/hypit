@@ -9,7 +9,8 @@ export {
 export { parseBuildState, serializeBuildState } from "./persistence.js";
 export {
   HostRegistry,
+  ProviderRegistry,
   producerRegistryKey,
-  requirementRegistryKey,
+  providerCapabilityKey,
 } from "./registry.js";
 export type * from "./types.js";
