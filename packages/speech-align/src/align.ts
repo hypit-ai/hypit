@@ -1,11 +1,6 @@
-import type { ParsedToken } from "@svml/script";
+import type { AlignmentGroup, AlignmentRelation, NarrativeToken, SpeechWordEvidence } from "@svml/contracts";
 
 import { editDistance, normalizeForAlignment } from "./normalize.js";
-import type {
-  AlignmentGroup,
-  AlignmentRelation,
-  SpeechWordEvidence,
-} from "./types.js";
 
 const EPSILON = 1e-9;
 const DEFAULT_MAX_GROUP = 4;
@@ -35,7 +30,7 @@ function evidenceReliability(words: readonly SpeechWordEvidence[]): number {
 }
 
 function exactWordLcs(
-  source: readonly ParsedToken[],
+  source: readonly NarrativeToken[],
   evidence: readonly SpeechWordEvidence[],
 ): number {
   const rows = Array.from({ length: source.length + 1 }, () =>
@@ -64,7 +59,7 @@ function relation(
 }
 
 function pairedCost(
-  source: readonly ParsedToken[],
+  source: readonly NarrativeToken[],
   evidence: readonly SpeechWordEvidence[],
 ): number {
   const sourceText = comparisonText(source);
@@ -108,7 +103,7 @@ function extend(
 
 export function alignWordGroups(
   sourceSegmentId: string,
-  source: readonly ParsedToken[],
+  source: readonly NarrativeToken[],
   evidence: readonly SpeechWordEvidence[],
   maxGroupSize = DEFAULT_MAX_GROUP,
 ): AlignmentGroup[] {

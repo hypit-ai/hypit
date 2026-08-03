@@ -11,6 +11,7 @@
     "@svml/protocol": "workspace:*"
   },
   "devDependencies": {
+    "@svml/contracts": "workspace:*",
     "@svml/script": "workspace:*"
   }
 }

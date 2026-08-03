@@ -24,15 +24,31 @@ importers:
 
   packages/caption:
     dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
       '@svml/script':
         specifier: workspace:*
         version: link:../script
       '@svml/speech-align':
         specifier: workspace:*
         version: link:../speech-align
+
+  packages/contracts:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/core:
     dependencies:
@@ -48,11 +64,30 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+    devDependencies:
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
+      '@svml/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
 
   packages/protocol: {}
 
   packages/script:
     dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@svml/core':
         specifier: workspace:*
         version: link:../core
@@ -62,9 +97,16 @@ importers:
 
   packages/speech-align:
     dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
       '@svml/script':
         specifier: workspace:*
         version: link:../script
@@ -78,9 +120,24 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@svml/script':
         specifier: workspace:*
         version: link:../script
+
+  packages/whisperx:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
 packages:
 

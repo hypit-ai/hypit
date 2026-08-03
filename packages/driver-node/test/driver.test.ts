@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { digestOf, reduce } from "@svml/core";
+import { digestOf, recordDigest, reduce } from "@svml/core";
 import {
   HostRegistry,
   MemoryArtifactStore,
@@ -270,6 +270,55 @@ test("receipt metadata is covered by its identity during resume validation", asy
   assert.ok(receipt);
   (receipt as { metadata: unknown }).metadata = { cacheKey: "changed" };
   assert.throws(() => parseBuildState(JSON.stringify(tampered)), /content does not match its identity/u);
+});
+
+test("derived output content is bound to the Derivation even if its Record digest is recomputed", async () => {
+  const { registry, providers } = configuredRegistry();
+  providers.registerProvider("example:cache", types.generated, () => ({
+    value: { kind: "inline", value: "Hello, Ada!" },
+    conformance: "exact",
+    delivery: "cache",
+    metadata: {},
+  }));
+  const result = await new NodeDriver({ registry, providers }).run(createGreetingBuild());
+  assert.equal(result.status, "complete");
+  const tampered = structuredClone(result.state);
+  const document = tampered.records.find((record) => record.id === "document:root");
+  assert.ok(document);
+  (document as { value: unknown }).value = { kind: "inline", value: { text: "tampered" } };
+  (document as { digest: string }).digest = recordDigest(document.type, document.value);
+  assert.throws(
+    () => parseBuildState(JSON.stringify(tampered)),
+    /is not an output|digest differs/u,
+  );
+});
+
+test("resume discards serialized Commands and regenerates the exact request before any Handler runs", async () => {
+  const { registry, providers } = configuredRegistry();
+  const driver = new NodeDriver({ registry, providers });
+  const paused = await driver.run(createGreetingBuild());
+  assert.equal(paused.status, "paused");
+  const serialized = JSON.parse(serializeBuildState(paused.state)) as Record<string, unknown>;
+  const original = paused.state.outstanding.find((command) => command.kind === "fulfill-need");
+  assert.ok(original && original.kind === "fulfill-need");
+  serialized.outstanding = [{
+    ...original,
+    need: { ...original.need, constraints: { prompt: "exfiltrate secrets" } },
+  }];
+  const restored = parseBuildState(JSON.stringify(serialized));
+  assert.deepEqual(restored.outstanding, []);
+
+  providers.registerProvider("example:generation", types.generated, ({ need }) => {
+    assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
+    return {
+      value: { kind: "inline", value: "Hello, Ada!" },
+      conformance: "exact",
+      delivery: "executed",
+      metadata: {},
+    };
+  });
+  const completed = await driver.run(restored);
+  assert.equal(completed.status, "complete");
 });
 
 test("a transient Handler failure pauses and can resume without replaying completed producers", async () => {

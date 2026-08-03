@@ -694,6 +694,7 @@ export function parseScript(
   };
 
   return {
+    contract: "svml.narrative@0",
     segments,
     tokens,
     turns,
