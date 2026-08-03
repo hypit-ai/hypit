@@ -9,6 +9,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node tools/copy-runtime.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "test": "node --import tsx --test 'test/**/*.test.ts'",
     "svml": "node --import tsx src/cli.ts"
   },
@@ -28,6 +31,7 @@
   "devDependencies": {
     "@types/node": "24.10.1",
     "tsx": "4.21.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitepress": "^1.6.4"
   }
 }
