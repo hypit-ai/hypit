@@ -29,5 +29,7 @@ The Node Driver owns manifest I/O, registered implementation execution, requirem
 artifact bytes, journaling and pause/resume orchestration. Core emits commands; it never executes
 them.
 
-Frontend selection, `.svml`, `.svs`, Import Prologue and Surface Parser behavior are explicitly
-outside Core v0 and Driver v0.
+Frontend selection, `.svml`, `.svs`, Import Prologue and Surface Parser execution are explicitly
+outside Core v0 and Driver v0. The data-only Protocol may declare a Surface in a Module Manifest,
+and Core verifies its identity/mode/digest as ordinary closure data; this does not give Core any
+source syntax or parser dispatch behavior.

@@ -12,6 +12,7 @@ import type {
   PortDeclaration,
   ProducerDeclaration,
   ResolvedModuleClosure,
+  SurfaceDeclaration,
   TypeDeclaration,
   TypeRef,
   ValueSchema,
@@ -216,6 +217,23 @@ function producer(value: unknown, path: string): ProducerDeclaration {
   };
 }
 
+function surface(value: unknown, path: string): SurfaceDeclaration {
+  const parsed = object(value, path);
+  const mode = string(parsed.mode, `${path}.mode`);
+  if (mode !== "raw" && mode !== "structured") {
+    throw new Error(`${path}.mode must be raw or structured`);
+  }
+  return {
+    name: string(parsed.name, `${path}.name`),
+    tag: string(parsed.tag, `${path}.tag`),
+    mode,
+    outputs: array(parsed.outputs, `${path}.outputs`).map((item, index) =>
+      typeRef(item, `${path}.outputs[${index}]`),
+    ),
+    implementation: implementation(parsed.implementation, `${path}.implementation`),
+  };
+}
+
 export function parseModuleManifest(value: unknown): ModuleManifest {
   const parsed = object(canonicalize(value), "$manifest");
   if (parsed.format !== "svml.module@0") throw new Error("$manifest.format must be svml.module@0");
@@ -228,6 +246,9 @@ export function parseModuleManifest(value: unknown): ModuleManifest {
     ),
     types: array(parsed.types, "$manifest.types").map((item, index) =>
       typeDeclaration(item, `$manifest.types[${index}]`),
+    ),
+    surfaces: array(parsed.surfaces, "$manifest.surfaces").map((item, index) =>
+      surface(item, `$manifest.surfaces[${index}]`),
     ),
     producers: array(parsed.producers, "$manifest.producers").map((item, index) =>
       producer(item, `$manifest.producers[${index}]`),

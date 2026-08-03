@@ -39,6 +39,28 @@ importers:
 
   packages/protocol: {}
 
+  packages/script:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/text:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
 packages:
 
   '@emnapi/runtime@1.11.3':

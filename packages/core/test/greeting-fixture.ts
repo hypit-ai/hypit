@@ -62,6 +62,7 @@ export const manifest: ModuleManifest = {
       },
     },
   ],
+  surfaces: [],
   producers: [
     {
       name: producers.makePrompt.name,

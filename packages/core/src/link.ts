@@ -88,6 +88,8 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       key,
     );
     ensureUniqueNames(module.manifest.types.map((item) => item.name), "type", key);
+    ensureUniqueNames(module.manifest.surfaces.map((item) => item.name), "surface", key);
+    ensureUniqueNames(module.manifest.surfaces.map((item) => item.tag), "surface tag", key);
     ensureUniqueNames(module.manifest.producers.map((item) => item.name), "producer", key);
     ensureUniqueNames(
       module.manifest.dependencies.map((item) => moduleKey(item.module)),
@@ -102,6 +104,24 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
         isDigest(producer.implementation.digest),
         "INVALID_DIGEST",
         `${key}#${producer.name} implementation digest is invalid`,
+      );
+    }
+    for (const surface of module.manifest.surfaces) {
+      invariant(surface.tag.length > 0, "EMPTY_NAME", `${key} surface tag is empty`);
+      ensureUniqueNames(
+        surface.outputs.map((output) => typeKey(output)),
+        "Surface output type",
+        `${key}#${surface.name}`,
+      );
+      invariant(
+        surface.mode === "raw" || surface.mode === "structured",
+        "UNSUPPORTED_SURFACE_MODE",
+        `${key}#${surface.name} has unsupported Surface mode ${surface.mode}`,
+      );
+      invariant(
+        isDigest(surface.implementation.digest),
+        "INVALID_DIGEST",
+        `${key}#${surface.name} Surface implementation digest is invalid`,
       );
     }
     modules.set(key, module);
@@ -134,6 +154,21 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       moduleKey(module.ref),
       ...module.manifest.dependencies.map((dependency) => moduleKey(dependency.module)),
     ]);
+    for (const surface of module.manifest.surfaces) {
+      for (const output of surface.outputs) {
+        invariant(
+          allowed.has(moduleKey(output.module)),
+          "UNDECLARED_TYPE_DEPENDENCY",
+          `${moduleKey(module.ref)}#${surface.name} Surface outputs ${typeKey(output)} without a dependency`,
+        );
+        const target = modules.get(moduleKey(output.module));
+        invariant(
+          target?.manifest.types.some((type) => type.name === output.name),
+          "UNKNOWN_TYPE",
+          `${moduleKey(module.ref)}#${surface.name} Surface outputs unknown type ${typeKey(output)}`,
+        );
+      }
+    }
     for (const producer of module.manifest.producers) {
       for (const port of [...producer.inputs, ...producer.outputs]) {
         invariant(
