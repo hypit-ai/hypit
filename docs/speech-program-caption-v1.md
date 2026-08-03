@@ -44,9 +44,9 @@ token 与 Segment 都有独立 start/end。
 Dual Text 同时给出显示词与实际读音：
 
 ```svml
-<segment id="demo">
+<demo>
   <A> I just <lmao | laughed my ass out>.
-</segment>
+</demo>
 ```
 
 `speech` 投影为 `I just laughed my ass out.`，`caption` 投影为 `I just lmao.`。
@@ -250,7 +250,7 @@ Timing provider、Locator 或 Caption Planner；作者或 Composite 最终只把
   <import from="@svml/std/film.svk"/>
 
   <script>
-    <segment id="intro"><HOST> Write the script, get the video.</segment>
+    <intro><HOST> Write the script, get the video.</intro>
   </script>
 
   <video id="host" src="./host.mp4"/>

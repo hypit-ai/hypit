@@ -28,6 +28,21 @@ export type ImplementationRef = {
   readonly digest: Digest;
 };
 
+/**
+ * A source Surface is an author-facing declaration exported by a module.
+ * `raw` delegates the complete region after its opening tag to the registered
+ * Surface implementation. `structured` first uses the selected Frontend's
+ * generic element parser and delegates only the resulting tree. `outputs`
+ * bounds which authored record types that parser is allowed to introduce.
+ */
+export type SurfaceDeclaration = {
+  readonly name: string;
+  readonly tag: string;
+  readonly mode: "raw" | "structured";
+  readonly outputs: readonly TypeRef[];
+  readonly implementation: ImplementationRef;
+};
+
 export type ProducerDeclaration = {
   readonly name: string;
   readonly inputs: readonly PortDeclaration[];
@@ -42,6 +57,7 @@ export type ModuleManifest = {
   readonly version: string;
   readonly dependencies: readonly ModuleDependency[];
   readonly types: readonly TypeDeclaration[];
+  readonly surfaces: readonly SurfaceDeclaration[];
   readonly producers: readonly ProducerDeclaration[];
 };
 
