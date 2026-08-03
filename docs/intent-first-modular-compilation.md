@@ -511,6 +511,11 @@ demand scheduling：
 - 暂停、Receipt 注入和恢复；
 - 多个候选并存。
 
+这里的 demand scheduling 只表示“在一个显式、有限的 Recipe/Plan 中调度已经就绪
+的节点”，不表示 Core 扫描所有已安装 Kernel 并自动搜索从输入到 Query 的路径。
+Producer 的选择必须已由作者、Recipe 或 Consumer 明确；存在多个未消歧候选时，
+Core 报告歧义或保留候选，不拥有隐藏排名策略。
+
 ### 5.4 Core 是纯状态机，不是副作用执行器
 
 Core 不读文件、不执行 JS、不访问网络、环境变量或时钟。概念 API 是：

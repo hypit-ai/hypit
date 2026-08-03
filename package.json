@@ -8,8 +8,12 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node tools/copy-runtime.mjs",
-    "check": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test 'test/**/*.test.ts'",
+    "check": "pnpm check:v1 && pnpm check:v2",
+    "check:v1": "tsc -p tsconfig.json --noEmit",
+    "check:v2": "tsc -p tsconfig.v2.json --noEmit",
+    "test": "pnpm test:v1 && pnpm test:v2",
+    "test:v1": "node --import tsx --test 'test/**/*.test.ts'",
+    "test:v2": "node --import tsx --test 'packages/*/test/**/*.test.ts'",
     "svml": "node --import tsx src/cli.ts"
   },
   "files": [
