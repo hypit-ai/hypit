@@ -2,7 +2,7 @@ import { digestOf } from "@svml/core";
 import type { ParsedNarrative, ParsedToken } from "@svml/script";
 
 import { alignWordGroups } from "./align.js";
-import { WhisperXAlignmentError } from "./error.js";
+import { SpeechAlignmentError } from "./error.js";
 import { alignCharacters, alignmentCharacters } from "./normalize.js";
 import type {
   AlignmentGroup,
@@ -11,10 +11,10 @@ import type {
   TimedSpeechSegment,
   TimedSpeechToken,
   TimingQuality,
-  WhisperXCharEvidence,
-  WhisperXEvidence,
-  WhisperXSegmentEvidence,
-  WhisperXWordEvidence,
+  AlignedTranscriptEvidence,
+  AlignedTranscriptSegment,
+  SpeechCharacterEvidence,
+  SpeechWordEvidence,
 } from "./types.js";
 
 const EPSILON = 1e-6;
@@ -34,7 +34,7 @@ type TimedEvidenceChar = {
 };
 
 function fail(code: string, message: string): never {
-  throw new WhisperXAlignmentError(code, message);
+  throw new SpeechAlignmentError(code, message);
 }
 
 function finite(value: number | undefined): value is number {
@@ -43,33 +43,33 @@ function finite(value: number | undefined): value is number {
 
 function validateWindow(start: number, end: number, limit: number, label: string): void {
   if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || end > limit + EPSILON) {
-    fail("WHISPERX_WINDOW", `${label} has invalid time window ${start}..${end}.`);
+    fail("SPEECH_WINDOW", `${label} has invalid time window ${start}..${end}.`);
   }
 }
 
-function validateEvidence(narrative: ParsedNarrative, evidence: WhisperXEvidence): void {
-  if (evidence.contract !== "svml.whisperx-evidence@0") {
-    fail("WHISPERX_CONTRACT", `Unsupported WhisperX evidence contract ${evidence.contract}.`);
+function validateEvidence(narrative: ParsedNarrative, evidence: AlignedTranscriptEvidence): void {
+  if (evidence.contract !== "svml.aligned-transcript-evidence@0") {
+    fail("SPEECH_CONTRACT", `Unsupported aligned-transcript contract ${evidence.contract}.`);
   }
   if (!Number.isFinite(evidence.durationSec) || evidence.durationSec <= 0) {
-    fail("WHISPERX_DURATION", "WhisperX evidence duration must be positive and finite.");
+    fail("SPEECH_DURATION", "Aligned-transcript duration must be positive and finite.");
   }
   const expected = new Set(narrative.segments.map((segment) => segment.id));
   const seen = new Set<string>();
   for (const segment of evidence.segments) {
     if (!expected.has(segment.sourceSegmentId)) {
-      fail("WHISPERX_SEGMENT_UNKNOWN", `WhisperX evidence references unknown Segment ${segment.sourceSegmentId}.`);
+      fail("SPEECH_SEGMENT_UNKNOWN", `Aligned transcript references unknown Segment ${segment.sourceSegmentId}.`);
     }
     if (seen.has(segment.sourceSegmentId)) {
-      fail("WHISPERX_SEGMENT_DUPLICATE", `WhisperX evidence repeats Segment ${segment.sourceSegmentId}.`);
+      fail("SPEECH_SEGMENT_DUPLICATE", `Aligned transcript repeats Segment ${segment.sourceSegmentId}.`);
     }
     seen.add(segment.sourceSegmentId);
     validateWindow(segment.startSec, segment.endSec, evidence.durationSec, `Segment ${segment.sourceSegmentId}`);
     let previousEnd = segment.startSec;
     for (const [index, word] of segment.words.entries()) {
-      if (typeof word.text !== "string") fail("WHISPERX_WORD_TEXT", `Word ${index + 1} has no text.`);
+      if (typeof word.text !== "string") fail("SPEECH_WORD_TEXT", `Word ${index + 1} has no text.`);
       if (finite(word.startSec) !== finite(word.endSec)) {
-        fail("WHISPERX_WORD_PARTIAL_TIME", `Word ${index + 1} must provide both start and end or neither.`);
+        fail("SPEECH_WORD_PARTIAL_TIME", `Word ${index + 1} must provide both start and end or neither.`);
       }
       if (finite(word.startSec) && finite(word.endSec)) {
         validateWindow(word.startSec, word.endSec, evidence.durationSec, `Word ${index + 1}`);
@@ -78,20 +78,20 @@ function validateEvidence(narrative: ParsedNarrative, evidence: WhisperXEvidence
           || word.endSec > segment.endSec + EPSILON
           || word.startSec < previousEnd - EPSILON
         ) {
-          fail("WHISPERX_WORD_ORDER", `Word ${index + 1} is outside or overlaps its Segment window.`);
+          fail("SPEECH_WORD_ORDER", `Word ${index + 1} is outside or overlaps its Segment window.`);
         }
         previousEnd = word.endSec;
       }
       if (word.score !== undefined && (!Number.isFinite(word.score) || word.score < 0 || word.score > 1)) {
-        fail("WHISPERX_SCORE", `Word ${index + 1} score must be between zero and one.`);
+        fail("SPEECH_SCORE", `Word ${index + 1} score must be between zero and one.`);
       }
     }
     for (const [index, char] of segment.chars.entries()) {
       if (!Number.isInteger(char.wordIndex) || char.wordIndex < 0 || char.wordIndex >= segment.words.length) {
-        fail("WHISPERX_CHAR_WORD", `Character ${index + 1} has an invalid wordIndex.`);
+        fail("SPEECH_CHAR_WORD", `Character ${index + 1} has an invalid wordIndex.`);
       }
       if (finite(char.startSec) !== finite(char.endSec)) {
-        fail("WHISPERX_CHAR_PARTIAL_TIME", `Character ${index + 1} must provide both start and end or neither.`);
+        fail("SPEECH_CHAR_PARTIAL_TIME", `Character ${index + 1} must provide both start and end or neither.`);
       }
       if (finite(char.startSec) && finite(char.endSec)) {
         validateWindow(char.startSec, char.endSec, evidence.durationSec, `Character ${index + 1}`);
@@ -102,28 +102,28 @@ function validateEvidence(narrative: ParsedNarrative, evidence: WhisperXEvidence
           || (finite(word.startSec) && char.startSec < word.startSec - EPSILON)
           || (finite(word.endSec) && char.endSec > word.endSec + EPSILON)
         ) {
-          fail("WHISPERX_CHAR_WINDOW", `Character ${index + 1} falls outside its Word or Segment window.`);
+          fail("SPEECH_CHAR_WINDOW", `Character ${index + 1} falls outside its Word or Segment window.`);
         }
       }
       if (char.score !== undefined && (!Number.isFinite(char.score) || char.score < 0 || char.score > 1)) {
-        fail("WHISPERX_SCORE", `Character ${index + 1} score must be between zero and one.`);
+        fail("SPEECH_SCORE", `Character ${index + 1} score must be between zero and one.`);
       }
     }
     let previousVadEnd = segment.startSec;
-    for (const [index, span] of (segment.vadSpans ?? []).entries()) {
+    for (const [index, span] of (segment.speechActivity ?? []).entries()) {
       validateWindow(span.startSec, span.endSec, evidence.durationSec, `VAD span ${index + 1}`);
       if (
         span.startSec < segment.startSec - EPSILON
         || span.endSec > segment.endSec + EPSILON
         || span.startSec < previousVadEnd - EPSILON
       ) {
-        fail("WHISPERX_VAD_WINDOW", `VAD span ${index + 1} falls outside Segment ${segment.sourceSegmentId}.`);
+        fail("SPEECH_ACTIVITY_WINDOW", `Speech activity ${index + 1} falls outside Segment ${segment.sourceSegmentId}.`);
       }
       previousVadEnd = span.endSec;
     }
   }
   for (const id of expected) {
-    if (!seen.has(id)) fail("WHISPERX_SEGMENT_MISSING", `WhisperX evidence is missing Segment ${id}.`);
+    if (!seen.has(id)) fail("SPEECH_SEGMENT_MISSING", `Aligned transcript is missing Segment ${id}.`);
   }
   const segmentsById = new Map(evidence.segments.map((segment) => [segment.sourceSegmentId, segment]));
   let previousSegmentStart = -Infinity;
@@ -134,7 +134,7 @@ function validateEvidence(narrative: ParsedNarrative, evidence: WhisperXEvidence
       segment.startSec < previousSegmentStart - EPSILON
       || segment.endSec < previousSegmentEnd - EPSILON
     ) {
-      fail("WHISPERX_SEGMENT_ORDER", `Segment ${segment.sourceSegmentId} violates Script source order.`);
+      fail("SPEECH_SEGMENT_ORDER", `Segment ${segment.sourceSegmentId} violates Script source order.`);
     }
     previousSegmentStart = segment.startSec;
     previousSegmentEnd = segment.endSec;
@@ -144,7 +144,7 @@ function validateEvidence(narrative: ParsedNarrative, evidence: WhisperXEvidence
 function syntheticCharTimes(
   characters: readonly string[],
   wordIndex: number,
-  word: WhisperXWordEvidence,
+  word: SpeechWordEvidence,
 ): TimedEvidenceChar[] {
   const hasWindow = finite(word.startSec) && finite(word.endSec);
   return characters.map((value, index) => ({
@@ -160,9 +160,9 @@ function syntheticCharTimes(
 }
 
 function timedCharsForWord(
-  word: WhisperXWordEvidence,
+  word: SpeechWordEvidence,
   wordIndex: number,
-  rawChars: readonly WhisperXCharEvidence[],
+  rawChars: readonly SpeechCharacterEvidence[],
 ): TimedEvidenceChar[] {
   const expected = alignmentCharacters(word.text);
   if (!expected.length) return [];
@@ -192,11 +192,11 @@ function timedCharsForWord(
   return fallback;
 }
 
-function timedChars(segment: WhisperXSegmentEvidence): TimedEvidenceChar[] {
+function timedChars(segment: AlignedTranscriptSegment): TimedEvidenceChar[] {
   return segment.words.flatMap((word, index) => timedCharsForWord(word, index, segment.chars));
 }
 
-function scoredWords(segment: WhisperXSegmentEvidence): WhisperXWordEvidence[] {
+function scoredWords(segment: AlignedTranscriptSegment): SpeechWordEvidence[] {
   return segment.words.map((word, wordIndex) => {
     const scores = [
       ...(word.score === undefined ? [] : [word.score]),
@@ -212,7 +212,7 @@ function scoredWords(segment: WhisperXSegmentEvidence): WhisperXWordEvidence[] {
 
 function groupWindow(
   group: AlignmentGroup,
-  words: readonly WhisperXWordEvidence[],
+  words: readonly SpeechWordEvidence[],
   chars: readonly TimedEvidenceChar[],
 ): { readonly startSec: number; readonly endSec: number } | undefined {
   const wordRun = words.slice(group.evidenceWordStart, group.evidenceWordEndExclusive);
@@ -233,7 +233,7 @@ function groupWindow(
 function locatePairedGroup(
   group: AlignmentGroup,
   source: readonly ParsedToken[],
-  words: readonly WhisperXWordEvidence[],
+  words: readonly SpeechWordEvidence[],
   chars: readonly TimedEvidenceChar[],
   output: Array<MutableTiming | undefined>,
 ): void {
@@ -276,8 +276,8 @@ function locatePairedGroup(
   }
 }
 
-function speechBounds(segment: WhisperXSegmentEvidence): { readonly start: number; readonly end: number } {
-  const spans = segment.vadSpans ?? [];
+function speechBounds(segment: AlignedTranscriptSegment): { readonly start: number; readonly end: number } {
+  const spans = segment.speechActivity ?? [];
   return spans.length
     ? { start: spans[0]!.startSec, end: spans.at(-1)!.endSec }
     : { start: segment.startSec, end: segment.endSec };
@@ -317,7 +317,7 @@ function assertMonotonic(tokens: readonly TimedSpeechToken[], segmentId: string)
   let previousEnd = -Infinity;
   for (const token of tokens) {
     if (token.startSec < previousEnd - EPSILON || token.endSec < token.startSec - EPSILON) {
-      fail("WHISPERX_MAP_ORDER", `Located token ${token.tokenId} violates time order in Segment ${segmentId}.`);
+      fail("SPEECH_MAP_ORDER", `Located token ${token.tokenId} violates time order in Segment ${segmentId}.`);
     }
     previousEnd = token.endSec;
   }
@@ -327,9 +327,9 @@ function mapDigest(map: Omit<CompleteSpeechTimeMap, "mapDigest">): string {
   return digestOf(map);
 }
 
-export function locateWhisperXTiming(
+export function locateSpeechTiming(
   narrative: ParsedNarrative,
-  evidence: WhisperXEvidence,
+  evidence: AlignedTranscriptEvidence,
 ): CompleteSpeechTimeMap {
   validateEvidence(narrative, evidence);
   const evidenceBySegment = new Map(evidence.segments.map((segment) => [segment.sourceSegmentId, segment]));
@@ -378,7 +378,7 @@ export function locateWhisperXTiming(
       : { identity: anchor.id, timeSec: token.endSec, quality: token.endQuality };
   });
   const payload = {
-    contract: "svml.whisperx-speech-time-map@0" as const,
+    contract: "svml.speech-time-map@0" as const,
     semanticIndexDigest: narrative.semanticIndex.digest,
     durationSec: evidence.durationSec,
     segments: timedSegments,

@@ -1,13 +1,13 @@
 export type TimingQuality = "measured" | "derived" | "estimated";
 
-export type WhisperXWordEvidence = {
+export type SpeechWordEvidence = {
   readonly text: string;
   readonly startSec?: number;
   readonly endSec?: number;
   readonly score?: number;
 };
 
-export type WhisperXCharEvidence = {
+export type SpeechCharacterEvidence = {
   readonly char: string;
   readonly wordIndex: number;
   readonly startSec?: number;
@@ -15,29 +15,29 @@ export type WhisperXCharEvidence = {
   readonly score?: number;
 };
 
-export type WhisperXVadSpan = {
+export type SpeechActivitySpan = {
   readonly startSec: number;
   readonly endSec: number;
 };
 
 /**
- * Normalized evidence from one ordinary WhisperX transcription + alignment run.
- * A host adapter keeps the raw provider result as an artifact and lowers the
+ * Provider-neutral evidence produced by a speech-recognition adapter. The
+ * adapter keeps its raw provider result as an artifact and lowers only the
  * fields used by this deterministic locator into this value.
  */
-export type WhisperXSegmentEvidence = {
+export type AlignedTranscriptSegment = {
   readonly sourceSegmentId: string;
   readonly startSec: number;
   readonly endSec: number;
-  readonly words: readonly WhisperXWordEvidence[];
-  readonly chars: readonly WhisperXCharEvidence[];
-  readonly vadSpans?: readonly WhisperXVadSpan[];
+  readonly words: readonly SpeechWordEvidence[];
+  readonly chars: readonly SpeechCharacterEvidence[];
+  readonly speechActivity?: readonly SpeechActivitySpan[];
 };
 
-export type WhisperXEvidence = {
-  readonly contract: "svml.whisperx-evidence@0";
+export type AlignedTranscriptEvidence = {
+  readonly contract: "svml.aligned-transcript-evidence@0";
   readonly durationSec: number;
-  readonly segments: readonly WhisperXSegmentEvidence[];
+  readonly segments: readonly AlignedTranscriptSegment[];
 };
 
 export type AlignmentRelation =
@@ -81,7 +81,7 @@ export type SemanticTimePoint = {
 };
 
 export type CompleteSpeechTimeMap = {
-  readonly contract: "svml.whisperx-speech-time-map@0";
+  readonly contract: "svml.speech-time-map@0";
   readonly semanticIndexDigest: string;
   readonly durationSec: number;
   readonly segments: readonly TimedSpeechSegment[];
@@ -89,15 +89,4 @@ export type CompleteSpeechTimeMap = {
   readonly anchors: readonly SemanticTimePoint[];
   readonly groups: readonly AlignmentGroup[];
   readonly mapDigest: string;
-};
-
-export type TimedCaptionAtom = {
-  readonly id: string;
-  readonly display: string;
-  readonly segmentId: string;
-  readonly sourceTokenIds: readonly string[];
-  readonly startSec: number;
-  readonly endSec: number;
-  readonly startQuality: TimingQuality;
-  readonly endQuality: TimingQuality;
 };

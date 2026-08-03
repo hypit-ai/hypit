@@ -6,24 +6,27 @@
 ## 1. 一条不可破坏的真相链
 
 ```text
-Script.speech                         唯一文字与实际读音真相
-     +
-SpeechTimingEvidence                  带噪声的声音位置测量
-     │
-     ▼  monotonic many-to-many alignment
-CompleteSemanticMap                   完整 2M + 2N 定位表
-     │
-     ├───────────────> 其他语义时间消费者
-     │
-     ▼
-CaptionPlan                           可选 cue 与 typed annotations
-     │
-     ▼
-zero or one CaptionTrack              字幕呈现
-     │
-     ▼
-Composition + other flat Tracks       HyperFrames HTML
+                         ┌─ serializeSpeech ─> SpeechSchedule ─> SpeechBasis(audio + visual)
+Script / Narrative ──────┤                                           │
+                         └─ CaptionProjection (display owns tokens)  │
+                                                                     ▼
+                                                   AlignedTranscriptEvidence
+                                                                     │
+                         Narrative ──────────────────────────────────┤
+                                                                     ▼
+                                                   CompleteSpeechTimeMap
+                                                                     │
+                         CaptionProjection ──────────────────────────┤
+                                                                     ▼
+                                                    TimedCaptionProjection
+                                                                     │
+                                                                     ▼
+                                  optional CaptionPresentationPlan / CaptionTrack
 ```
+
+`serializeSpeech`、`serializeDialogue` 与 `CaptionProjection` 不是三个异步任务；它们
+是同一个不可变 Narrative 的同步纯视图。异步只发生在后续 Need 被 Runtime 满足时。
+Estimate、生成、语音识别可以分别暂停、缓存、恢复，已经完成的上游 Producer 不重跑。
 
 这里没有 `correctedSpeech`、`CorrectedTranscript` 或
 `CanonicalTranscriptPlan`。所谓“按口播稿纠错”不是生成另一份文本，而是：
@@ -35,9 +38,9 @@ STT 输出的文字只帮助识别测量单位与 Script token 的对应关系�
 
 ## 2. 四个公共合同
 
-### 2.1 Script / NarrativeIR
+### 2.1 Script / Narrative
 
-Script 产生唯一 `NarrativeIR` 与 `SemanticIndex`。若有 `M` 个 speech token、
+Script 产生唯一 `Narrative` 与 `SemanticIndex`。若有 `M` 个 speech token、
 `N` 个 Segment，SemanticIndex 恰好有 `2M + 2N` 个稳定 anchor identity：每个
 token 与 Segment 都有独立 start/end。
 
@@ -49,12 +52,29 @@ Dual Text 同时给出显示词与实际读音：
 </demo>
 ```
 
-`speech` 投影为 `I just laughed my ass out.`，`caption` 投影为 `I just lmao.`。
-Locator 永远对齐 speech token；CaptionPlan 与 CaptionTrack 永远从 Script 的
-caption projection 取显示内容。
+`speech` 序列化为 `I just laughed my ass out.`。显示侧不是裸的 `I just lmao.`
+字符串端口，而是结构化 `CaptionProjection`：每个显示 region 都拥有一段 speech
+token 范围。Locator 永远只对齐 speech token；字幕再把 Projection 与时间图组合。
+
+```text
+CaptionProjection {
+  contract: "svml.caption-projection@0"
+  text
+  regions: [{
+    id, display, segmentId, startToken, endTokenExclusive,
+    kind: identity | alias | hidden,
+    refinements: [{ displayStart, displayEnd, startToken, endTokenExclusive, relation: exact }]
+  }]
+}
+```
+
+上游只记录可以证明的 exact correspondence。`<15% off | fifteen percent off>` 可以
+证明 `off ↔ off`；`<that was insane | what the fuck>` 只能证明整个显示短语拥有完整
+speech envelope，不能伪造三个显示词的测量时间。`< | um>` 则是有时间所有权但不可见
+的 hidden region。
 
 Role Cue 没有 close。`<A>` 从当前位置持续到下一个 Role Cue 或 Segment 结尾；
-`</A>` 非法。NarrativeIR 显式保存：
+`</A>` 非法。Narrative 显式保存：
 
 ```text
 SpokenTurn {
@@ -70,17 +90,13 @@ SpokenTurn {
 
 Role 只是稿件标签，不是 speaker entity，不绑定人物、音色或素材。
 
-### 2.2 SpeechTimingEvidence
+### 2.2 AlignedTranscriptEvidence
 
 ```text
-SpeechTimingEvidence {
-  contract: "svml.speech-timing-evidence.v1"
+AlignedTranscriptEvidence {
+  contract: "svml.aligned-transcript-evidence@0"
   durationSec
-  fps
-  quality: measured | estimated
-  units: [{ text, startSec, endSec, segmentId }]
-  segments: [{ id, startSec, endSec }]
-  provenance?
+  segments: [{ sourceSegmentId, startSec, endSec, words, chars, speechActivity? }]
 }
 ```
 
@@ -94,14 +110,14 @@ A.start <= B.start
 A.end   <= B.end
 ```
 
-WhisperX、其他 STT、人工表和音节 Estimate 都可提供同一鸭子合同。SVML import
-决定默认请求的能力，例如作者可把 WhisperX Component `as="timing"`；外部 Runtime
-仍可用 real、pin、manual、estimate 或 placeholder fulfillment 满足同一个端口。
+WhisperX、其他 STT、人工表和已缓存证据都可提供同一鸭子合同。确定性 Locator 已经
+位于 provider-neutral 的 `@svml/speech-align`；WhisperX 只应出现在 Runtime adapter
+的注册、凭据与 provenance 中，不再成为 Locator 包名或公共时间图合同的一部分。
 
 ### 2.3 CompleteSemanticMap
 
-Locator 输入 NarrativeIR、选中的 `TemporalBasisProduction` 与
-`SpeechTimingEvidence`，输出且只输出一份：
+Locator 输入 Narrative、选中的 speech basis 与 `AlignedTranscriptEvidence`，
+输出且只输出一份：
 
 ```text
 CompleteSemanticMap {
@@ -121,23 +137,33 @@ CompleteSemanticMap {
 basis affinity、Segment 内单调与源码顺序，preview 和 final 都消费同一个公共
 类型。执行策略是否接受估计点属于 Runtime policy，不属于 SVML 源语法。
 
-### 2.4 CaptionPlan
+### 2.4 TimedCaptionProjection 与 CaptionPresentationPlan
 
-CaptionPlan 在 CompleteSemanticMap 之后产生：
+`@svml/caption` 对 CaptionProjection 与 CompleteSpeechTimeMap 做纯组合：
 
 ```text
-CaptionPlan {
-  contract: "svml.caption-plan.v1"
+TimedCaptionProjection {
+  contract: "svml.timed-caption-projection@0"
   semanticIndexDigest
-  basisDigest
-  cues: [{ id, startToken, endTokenExclusive }]
-  annotations: [{ id, kind, startToken, endTokenExclusive, value? }]
-  plannerDigest
-  planDigest
+  speechTimeMapDigest
+  regions: [{ display, sourceTokenIds, startSec, endSec, quality, refinements }]
 }
 ```
 
-CaptionPlan 只能：
+整个 region 的 start/end 来自它所拥有 speech tokens 的 envelope，因此
+`that was insane` 确实拥有完整的开始和结束时间；只是它内部三个显示词没有声音证据。
+
+若具体 CaptionTrack 需要逐词高亮，它可以显式选择本地 Presentation policy：
+
+- `whole`：整段显示；
+- `proportional-word`：复用可证明的 exact refinement，其余词按区域局部估计；
+- `character-flow`：按字符做局部呈现估计。
+
+后两者输出的时间明确标记为 `estimated`，永远不反写全局 speech map。LLM 分 cue
+若之后加入，也只是 Caption 组件自己的可选 Producer/Need，不进入 Script、Locator
+或全局语义真相。
+
+Caption 规划只能：
 
 - 对正确 Script token 做 cue 分组；
 - 标注 emphasis、tone、speaker treatment 等 typed annotation；
@@ -145,13 +171,13 @@ CaptionPlan 只能：
 
 CaptionPlan 不能：
 
-- 输出或改写 speech/caption 文本；
+- 输出或改写 speech/caption 文本真相；
 - 输出 token 时间；
 - 增删、重排 Script token；
 - 触发第二次 STT 或产生第二份 SemanticMap。
 
 最简 cue 分组是确定性 Component，不需要 LLM。需要语言判断时，LLM 也只是另一
-个满足 `CaptionPlan` 输出合同的可选 Component；它只负责字幕组织/样式 annotation，
+个满足 `CaptionCuePlan` 输出合同的可选 Component；它只负责字幕组织/样式 annotation，
 不会进入语义定位正确性路径。
 
 ## 3. 直接多对多对齐
@@ -220,13 +246,30 @@ SelectionSet 本身永久允许非连通 occurrence。CaptionTrack 的 style/mut
 整个 set；其他 Track 是否接受 `one`、`each` 或 `set` 仍由各自端口声明。
 
 Mute 只改变字幕可见性，不删除 Script token、不改变 Map、不重跑 STT 或 Planner。
-Dual Text 是不可拆显示原子；CaptionPlan cue 不得切进它的 speech span 中间。
+Dual Text 始终保留一个不可丢失的整体 speech envelope；只有 Script 可以证明的
+exact refinement 才能在不造假的前提下细化。下游允许做局部估计，但不得把估计
+冒充全局语义证据。
 
-## 5. 唯一性
+## 5. Provider 注册与使用者分离
+
+Producer 只声明 typed Need 及其 constraints；它不读取 API key，不选择 endpoint，
+也不初始化 Python/CUDA。Node Runtime 的 `ProviderRegistry` 统一注册实际 adapter：
+
+```text
+registerProvider("runtime:seedance-mini", SpeechBasis, handler, { supports })
+registerProvider("runtime:whisperx", AlignedTranscriptEvidence, handler)
+bind(SpeechBasis, "runtime:seedance-mini")
+```
+
+同一个 Wants 只有一个匹配 Provider 时可直接运行；没有 Provider 就暂停；存在多个
+匹配 Provider 且 Runtime 没有显式绑定时必须报告 `ambiguous-provider`，绝不采用
+“第一个注册者”。Receipt 的 `fulfiller` 由 Registry 身份写入，不由 handler 自报。
+
+## 6. 唯一性
 
 | 对象 | 每个 Composition target | 含义 |
 |---|---:|---|
-| Script / NarrativeIR / SemanticIndex | exactly one | 唯一语义文字与地址源 |
+| Script / Narrative / SemanticIndex | exactly one | 唯一语义文字与地址源 |
 | selected TemporalBasisProduction | exactly one | 唯一 ProgramBasis binding |
 | selected CompleteSemanticMap | exactly one | 唯一完整语义定位表 |
 | CaptionPlan | zero or one when captions exist | 一套 cue/annotation 计划 |
@@ -238,7 +281,7 @@ Dual Text 是不可拆显示原子；CaptionPlan cue 不得切进它的 speech s
 Timing provider、Locator 或 Caption Planner；作者或 Composite 最终只把一个合法值
 接到 `one` 端口。
 
-## 6. 当前显式写法
+## 7. 当前显式写法（尚未实现的 author surface 草图）
 
 ```svml
 <svml version="1">
