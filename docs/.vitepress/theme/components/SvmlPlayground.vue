@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { wordCues, type WordCue } from "./regen-ranking-cues";
 
 type RankingSelectionId = "photoshop" | "facetune" | "remini" | "chatgpt" | "regen";
@@ -43,6 +43,13 @@ type SourceLine = {
   ranges?: SelectionId[];
   edge?: "start" | "end";
   tokens?: readonly [number, number];
+};
+
+type DisplayedSourceLine = {
+  key: string;
+  kind: "line" | "fold" | "spacer";
+  index: number | null;
+  line: SourceLine | null;
 };
 
 const TOTAL_DURATION = 36.1;
@@ -140,6 +147,15 @@ const semanticRangeBounds: SemanticRangeBounds[] = rawRangeBounds.map((range) =>
   )).length,
 }));
 
+const rankingBlock = {
+  start: lines.findIndex((line) => line.html.includes("&lt;ranking-column")),
+  end: lines.findIndex((line) => line.html.includes("&lt;/ranking-column")),
+};
+const brollBlock = {
+  start: lines.findIndex((line) => line.html.includes("&lt;broll-track")),
+  end: lines.findIndex((line) => line.html.includes("&lt;/broll-track")),
+};
+
 function decorateLine(line: SourceLine) {
   if (!line.tokens) return line.html;
   let cueIndex = line.tokens[0];
@@ -166,9 +182,13 @@ const decoratedLines = lines.map(decorateLine);
 const activeLine = ref<number | null>(null);
 const pinnedSelection = ref<SelectionId | null>(null);
 const pinnedLoopSelection = ref<SelectionId | null>(null);
+const sourceFollowEnabled = ref(true);
+const sourceViewportRows = ref(27);
+const sourceLineRows = ref<number[]>(lines.map(() => 1));
 const audioEnabled = ref(false);
 const stageElement = ref<HTMLElement | null>(null);
 const codeScrollElement = ref<HTMLElement | null>(null);
+const sourceMeasureElement = ref<HTMLElement | null>(null);
 const activeIconElement = ref<HTMLElement | null>(null);
 const playheadElement = ref<HTMLElement | null>(null);
 const rankCells: Array<HTMLElement | undefined> = [];
@@ -179,6 +199,7 @@ const activeWord = ref<WordCue | null>(null);
 const currentSceneIndex = ref(0);
 const activeBroll = ref<BrollItem | null>(null);
 const activeRankingSelection = ref<RankingSelection>(selections[0]);
+const automaticSourceSelections = ref<TimelineSelection[]>([selections[0]]);
 const activeRuntimeItem = ref<RankingSelection | null>(null);
 const settledIds = ref<Set<RankingSelectionId>>(new Set());
 let rangeResizeObserver: ResizeObserver | null = null;
@@ -186,6 +207,109 @@ let animationFrame = 0;
 let previousTimestamp = 0;
 let programTime = 0;
 let playbackSceneIndex = -1;
+
+const automaticScriptLineIndex = computed(() => {
+  const wordIndex = activeWord.value?.index;
+  if (wordIndex !== undefined) {
+    const lineIndex = lines.findIndex((line) => (
+      line.tokens && wordIndex >= line.tokens[0] && wordIndex < line.tokens[1]
+    ));
+    if (lineIndex >= 0) return lineIndex;
+  }
+  return semanticRangeBounds.find((range) => range.id === activeRankingSelection.value.id)?.start ?? 0;
+});
+
+const automaticTargetBlock = computed(() => activeBroll.value ? brollBlock : rankingBlock);
+
+const automaticBindingLineIndex = computed(() => {
+  const selectionId = activeBroll.value?.id ?? activeRankingSelection.value.id;
+  const block = automaticTargetBlock.value;
+  const lineIndex = lines.findIndex((line, index) => (
+    index >= block.start && index <= block.end && line.selection === selectionId
+  ));
+  return lineIndex >= 0 ? lineIndex : block.start;
+});
+
+const displayedLines = computed<DisplayedSourceLine[]>(() => {
+  if (!sourceFollowEnabled.value) {
+    return lines.map((line, index) => ({ key: `line-${index}`, kind: "line", index, line }));
+  }
+
+  const outerRange = semanticRangeBounds.find((range) => range.id === activeRankingSelection.value.id);
+  const sideRows = Math.max(3, Math.floor((sourceViewportRows.value - 1) / 2));
+  const rangeStart = outerRange?.start ?? automaticScriptLineIndex.value;
+  const rangeEnd = outerRange?.end ?? automaticScriptLineIndex.value;
+  const rowSpan = (index: number) => sourceLineRows.value[index] ?? 1;
+  const spanOf = (indices: number[]) => indices.reduce((sum, index) => sum + rowSpan(index), 0);
+
+  const bottomIndices = [automaticBindingLineIndex.value];
+  let bottomBefore = automaticBindingLineIndex.value - 1;
+  let bottomAfter = automaticBindingLineIndex.value + 1;
+  for (let context = 0; context < 3 && bottomBefore >= 0; context += 1) {
+    if (spanOf(bottomIndices) + rowSpan(bottomBefore) > sideRows) break;
+    bottomIndices.unshift(bottomBefore);
+    bottomBefore -= 1;
+  }
+  while (spanOf(bottomIndices) < sideRows && (bottomAfter < lines.length || bottomBefore >= 0)) {
+    if (bottomAfter < lines.length && spanOf(bottomIndices) + rowSpan(bottomAfter) <= sideRows) {
+      bottomIndices.push(bottomAfter);
+      bottomAfter += 1;
+      continue;
+    }
+    if (bottomBefore >= 0 && spanOf(bottomIndices) + rowSpan(bottomBefore) <= sideRows) {
+      bottomIndices.unshift(bottomBefore);
+      bottomBefore -= 1;
+      continue;
+    }
+    break;
+  }
+
+  const maximumTopIndex = Math.max(rangeEnd, (bottomIndices[0] ?? lines.length) - 2);
+  const topIndices = Array.from({ length: rangeEnd - rangeStart + 1 }, (_, offset) => rangeStart + offset);
+  let topBefore = rangeStart - 1;
+  let topAfter = rangeEnd + 1;
+  for (let context = 0; context < 3 && topAfter <= maximumTopIndex; context += 1) {
+    if (spanOf(topIndices) + rowSpan(topAfter) > sideRows) break;
+    topIndices.push(topAfter);
+    topAfter += 1;
+  }
+  while (spanOf(topIndices) < sideRows && (topBefore >= 0 || topAfter <= maximumTopIndex)) {
+    if (topBefore >= 0 && spanOf(topIndices) + rowSpan(topBefore) <= sideRows) {
+      topIndices.unshift(topBefore);
+      topBefore -= 1;
+      continue;
+    }
+    if (topAfter <= maximumTopIndex && spanOf(topIndices) + rowSpan(topAfter) <= sideRows) {
+      topIndices.push(topAfter);
+      topAfter += 1;
+      continue;
+    }
+    break;
+  }
+
+  const topSpacerRows = Math.max(0, sideRows - spanOf(topIndices));
+  const bottomSpacerRows = Math.max(0, sideRows - spanOf(bottomIndices));
+  const topSpacers = Array.from({ length: topSpacerRows }, (_, index) => ({
+    key: `top-spacer-${index}`,
+    kind: "spacer" as const,
+    index: null,
+    line: null,
+  }));
+  const bottomSpacers = Array.from({ length: bottomSpacerRows }, (_, index) => ({
+    key: `bottom-spacer-${index}`,
+    kind: "spacer" as const,
+    index: null,
+    line: null,
+  }));
+
+  return [
+    ...topSpacers,
+    ...topIndices.map((index) => ({ key: `line-${index}`, kind: "line" as const, index, line: lines[index] })),
+    { key: `fold-${topIndices.at(-1)}-${bottomIndices[0]}`, kind: "fold", index: null, line: null },
+    ...bottomIndices.map((index) => ({ key: `line-${index}`, kind: "line" as const, index, line: lines[index] })),
+    ...bottomSpacers,
+  ];
+});
 
 function wordAt(time: number): WordCue | null {
   for (const [index, cue] of wordCues.entries()) {
@@ -236,7 +360,13 @@ function updateRangeGeometry() {
   if (!container) return;
   const containerRect = container.getBoundingClientRect();
   const width = container.clientWidth;
-  const height = container.scrollHeight;
+  const renderedLines = Array.from(container.querySelectorAll<HTMLElement>(":scope > .code-line"));
+  const lastRenderedLine = renderedLines.at(-1);
+  const paddingBottom = Number.parseFloat(getComputedStyle(container).paddingBottom) || 0;
+  const contentHeight = lastRenderedLine
+    ? lastRenderedLine.offsetTop + lastRenderedLine.offsetHeight + paddingBottom
+    : container.clientHeight;
+  const height = Math.max(container.clientHeight, contentHeight);
   const geometry: Record<string, { path: string; depth: number }> = {};
   const markers = Array.from(container.querySelectorAll<HTMLElement>(".syn-marker[data-selection]"));
 
@@ -322,10 +452,13 @@ const resolvedBrollSelection = computed<BrollItem | null>(() => {
   return activeBroll.value;
 });
 
-const activeSourceSelections = computed<TimelineSelection[]>(() => [
-  resolvedSelection.value,
-  ...(resolvedBrollSelection.value ? [resolvedBrollSelection.value] : []),
-]);
+const activeSourceSelections = computed<TimelineSelection[]>(() => {
+  if (!pinnedSelection.value) return automaticSourceSelections.value;
+  return [
+    resolvedSelection.value,
+    ...(resolvedBrollSelection.value ? [resolvedBrollSelection.value] : []),
+  ];
+});
 
 function sceneIndexAt(time: number) {
   const index = baseScenes.findIndex((scene) => time >= scene.start && time < scene.end);
@@ -346,6 +479,11 @@ function syncDiscreteState(time: number, force = false) {
   if (force || activeRankingSelection.value.id !== nextRanking.id) {
     activeRankingSelection.value = nextRanking;
   }
+
+  const nextSourceSelections = semanticSelections.filter((item) => time >= item.start && time < item.end);
+  const sourceSelectionsChanged = nextSourceSelections.length !== automaticSourceSelections.value.length
+    || nextSourceSelections.some((item, index) => item.id !== automaticSourceSelections.value[index]?.id);
+  if (force || sourceSelectionsChanged) automaticSourceSelections.value = nextSourceSelections;
 
   const nextRuntimeItem = runtimeItems.find((item) => time >= item.start && time < item.end) ?? null;
   if (force || activeRuntimeItem.value?.id !== nextRuntimeItem?.id) {
@@ -509,6 +647,21 @@ function clearInspection() {
   pinnedLoopSelection.value = null;
 }
 
+function stopSourceFollow() {
+  if (!sourceFollowEnabled.value) return;
+  sourceFollowEnabled.value = false;
+}
+
+function resumeSourceFollow() {
+  clearInspection();
+  sourceFollowEnabled.value = true;
+}
+
+function handleDemoPointerMove(event: PointerEvent) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target?.closest(".source-panel")) resumeSourceFollow();
+}
+
 function renderFrame(timestamp: number) {
   if (!previousTimestamp) previousTimestamp = timestamp;
   const delta = Math.min(.05, (timestamp - previousTimestamp) / 1000);
@@ -536,11 +689,40 @@ function renderFrame(timestamp: number) {
   animationFrame = requestAnimationFrame(renderFrame);
 }
 
+function updateSourceViewportRows() {
+  const container = codeScrollElement.value;
+  if (!container) return;
+  let rows = Math.max(7, Math.floor(container.clientHeight / 26));
+  if (rows % 2 === 0) rows -= 1;
+  if (sourceViewportRows.value !== rows) sourceViewportRows.value = rows;
+  const padding = Math.max(0, (container.clientHeight - rows * 26) / 2);
+  container.style.setProperty("--source-vertical-padding", `${padding}px`);
+
+  const measuredRows = Array.from(
+    sourceMeasureElement.value?.querySelectorAll<HTMLElement>("[data-measure-line]") ?? [],
+  ).map((line) => Math.max(1, Math.ceil(line.getBoundingClientRect().height / 26)));
+  const measurementChanged = measuredRows.length === lines.length && measuredRows.some(
+    (rowSpan, index) => rowSpan !== sourceLineRows.value[index],
+  );
+  if (measurementChanged) sourceLineRows.value = measuredRows;
+}
+
 function updateLayoutGeometry() {
+  updateSourceViewportRows();
   updateRangeGeometry();
   updateRankTargets();
   updateContinuousVisuals(programTime);
 }
+
+watch(
+  [() => displayedLines.value.map((entry) => entry.key).join("|"), sourceFollowEnabled],
+  () => {
+    void nextTick().then(() => {
+      updateLayoutGeometry();
+    });
+  },
+  { flush: "post" },
+);
 
 onMounted(() => {
   window.addEventListener("pointerdown", enableAudio, { capture: true, once: true });
@@ -574,8 +756,34 @@ onBeforeUnmount(() => {
       <h2>悬停标记范围，查看对应画面</h2>
     </header>
 
-    <div class="demo-shell real-demo-shell" @mouseleave="clearInspection">
-      <div class="source-panel" @mouseleave="clearInspection">
+    <div
+      class="demo-shell real-demo-shell"
+      @pointermove="handleDemoPointerMove"
+      @mouseleave="clearInspection"
+    >
+      <div
+        class="source-panel"
+        :class="{ 'source-following': sourceFollowEnabled }"
+        @pointerenter="stopSourceFollow"
+        @pointermove="stopSourceFollow"
+        @pointerdown="stopSourceFollow"
+        @wheel="stopSourceFollow"
+        @pointerleave="resumeSourceFollow"
+      >
+        <div ref="sourceMeasureElement" class="source-measure" aria-hidden="true">
+          <div
+            v-for="(html, index) in decoratedLines"
+            :key="index"
+            class="code-line"
+            :data-measure-line="index"
+          >
+            <span class="line-number">{{ index + 1 }}</span>
+            <code v-html="html || '&nbsp;'" />
+          </div>
+        </div>
+        <div class="source-follow-hint">
+          {{ sourceFollowEnabled ? "移入展开全部源码" : "移出恢复精简视图" }}
+        </div>
         <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code">
           <svg
             v-if="rangeCanvas.width && rangeCanvas.height"
@@ -592,26 +800,32 @@ onBeforeUnmount(() => {
               :d="rangeGeometry[selection.id]?.path"
             />
           </svg>
-          <div
-            v-for="(line, index) in lines"
-            :key="index"
-            class="code-line"
-            :class="{
-              'binding-active': bindingDepth(line) >= 0,
-              'binding-depth-1': bindingDepth(line) === 1,
-            }"
-            @mouseover="inspectLine(line, index)"
-          >
-            <span class="line-number">{{ index + 1 }}</span>
-            <code
-              v-html="renderedLineHtml(index) || '&nbsp;'"
-              @mouseover="inspectToken($event, index)"
-              @focusin="inspectToken($event, index)"
-              @click="inspectToken($event, index)"
-              @keydown.enter.prevent="inspectToken($event, index)"
-              @keydown.space.prevent="inspectToken($event, index)"
-            />
-          </div>
+          <template v-for="entry in displayedLines" :key="entry.key">
+            <div v-if="entry.kind === 'fold'" class="code-line code-fold" aria-hidden="true">
+              <code>...</code>
+            </div>
+            <div v-else-if="entry.kind === 'spacer'" class="code-line code-spacer" aria-hidden="true"></div>
+            <div
+              v-else-if="entry.line"
+              class="code-line"
+              :data-source-line="entry.index"
+              :class="{
+                'binding-active': bindingDepth(entry.line) >= 0,
+                'binding-depth-1': bindingDepth(entry.line) === 1,
+              }"
+              @mouseover="inspectLine(entry.line, entry.index)"
+            >
+              <span class="line-number">{{ entry.index + 1 }}</span>
+              <code
+                v-html="renderedLineHtml(entry.index) || '&nbsp;'"
+                @mouseover="inspectToken($event, entry.index)"
+                @focusin="inspectToken($event, entry.index)"
+                @click="inspectToken($event, entry.index)"
+                @keydown.enter.prevent="inspectToken($event, entry.index)"
+                @keydown.space.prevent="inspectToken($event, entry.index)"
+              />
+            </div>
+          </template>
         </div>
       </div>
 
