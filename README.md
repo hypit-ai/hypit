@@ -1,5 +1,10 @@
 # SVML
 
+> **v2 bootstrap:** `packages/protocol`, `packages/core` and `packages/driver-node`
+> now implement the domain-free typed state kernel and an explicitly registered Node Host.
+> Frontend, `.svml` and `.svs` parsing are intentionally not part of this slice. The existing
+> root compiler and standard library remain the executable v1 research oracle during migration.
+
 Semantic Video Markup Language is a semantic source language for information-flow
 video. Script creates stable semantic addresses. A Composition selects one
 content-addressed `ProgramBasis` and one exact `SemanticMap`; flat Track
