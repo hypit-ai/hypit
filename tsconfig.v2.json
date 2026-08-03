@@ -9,7 +9,8 @@
       "@svml/core": ["packages/core/src/index.ts"],
       "@svml/driver-node": ["packages/driver-node/src/index.ts"],
       "@svml/script": ["packages/script/src/index.ts"],
-      "@svml/text": ["packages/text/src/index.ts"]
+      "@svml/text": ["packages/text/src/index.ts"],
+      "@svml/whisperx": ["packages/whisperx/src/index.ts"]
     }
   },
   "include": ["packages/**/*.ts"],
