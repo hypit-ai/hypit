@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { contractsManifest } from "@svml/contracts";
 import { createResolvedClosure, digestOf, isDigest, link } from "@svml/core";
 import type { ModuleManifest } from "@svml/protocol";
 import {
@@ -17,7 +18,7 @@ import {
 } from "@svml/text";
 
 function scriptContext() {
-  const closure = createResolvedClosure([scriptManifest]);
+  const closure = createResolvedClosure([contractsManifest, scriptManifest]);
   const registry = new TextSurfaceRegistry();
   registry.registerRaw(
     scriptModuleRef,
@@ -99,7 +100,7 @@ test("without the import, Text has no hard-coded knowledge of Script", () => {
 });
 
 test("a raw Surface cannot consume the Text document close", () => {
-  const closure = createResolvedClosure([scriptManifest]);
+  const closure = createResolvedClosure([contractsManifest, scriptManifest]);
   const registry = new TextSurfaceRegistry();
   registry.registerRaw(
     scriptModuleRef,

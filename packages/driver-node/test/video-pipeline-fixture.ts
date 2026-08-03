@@ -1,3 +1,10 @@
+import { captionManifest, captionProducers } from "@svml/caption";
+import {
+  contractTypes,
+  contractsManifest,
+  contractsManifestDigest,
+  contractsModuleRef,
+} from "@svml/contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -14,28 +21,29 @@ import type {
   TypeRef,
   ValueSchema,
 } from "@svml/protocol";
+import { narrativeValue, parseScript } from "@svml/script";
+import { speechAlignManifest, speechAlignProducers } from "@svml/speech-align";
+import {
+  whisperXManifest,
+  whisperXProducers,
+  whisperXTypes,
+} from "@svml/whisperx";
 
 export const videoModule = { name: "example.video-pipeline", version: "0.0.0" } as const;
 
 export const videoTypes = {
-  narrative: { module: videoModule, name: "Narrative" },
-  schedule: { module: videoModule, name: "SpeechSchedule" },
-  basis: { module: videoModule, name: "SpeechBasis" },
-  evidence: { module: videoModule, name: "AlignedTranscriptEvidence" },
-  speechMap: { module: videoModule, name: "CompleteSpeechTimeMap" },
-  caption: { module: videoModule, name: "TimedCaption" },
+  estimate: { module: videoModule, name: "OfficialSpeechDurationEstimate" },
+  seedanceMiniMedia: { module: videoModule, name: "SeedanceMiniSpeechMedia" },
 } satisfies Record<string, TypeRef>;
 
 export const videoProducers = {
-  requestEstimate: { module: videoModule, name: "request-estimate" },
-  requestGeneration: { module: videoModule, name: "request-generation" },
-  requestRecognition: { module: videoModule, name: "request-recognition" },
-  locateSpeech: { module: videoModule, name: "locate-speech" },
-  temporalizeCaption: { module: videoModule, name: "temporalize-caption" },
+  requestEstimate: { module: videoModule, name: "request-official-speech-estimate" },
+  requestSeedanceMini: { module: videoModule, name: "request-seedance-mini-speech" },
+  assembleBasis: { module: videoModule, name: "assemble-speech-basis" },
 } satisfies Record<string, ProducerRef>;
 
 export const videoImplementations = Object.fromEntries(
-  Object.entries(videoProducers).map(([name]) => [name, digestOf(`example.video-pipeline/${name}@0`)]),
+  Object.entries(videoProducers).map(([name]) => [name, digestOf(`example.video-pipeline/${name}@1`)]),
 ) as Readonly<Record<keyof typeof videoProducers, ReturnType<typeof digestOf>>>;
 
 const string = { kind: "string", minLength: 1 } as const;
@@ -49,25 +57,26 @@ export const videoManifest: ModuleManifest = {
   format: "svml.module@0",
   name: videoModule.name,
   version: videoModule.version,
-  dependencies: [],
+  dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
   types: [
-    { name: videoTypes.narrative.name, schema: object({ speech: { schema: string }, display: { schema: string } }) },
-    { name: videoTypes.schedule.name, schema: object({ durationSec: { schema: number } }) },
-    { name: videoTypes.basis.name, schema: object({ audio: { schema: string }, visual: { schema: string } }) },
-    { name: videoTypes.evidence.name, schema: object({ transcript: { schema: string } }) },
-    { name: videoTypes.speechMap.name, schema: object({ startSec: { schema: number }, endSec: { schema: number } }) },
+    { name: videoTypes.estimate.name, schema: object({ durationSec: { schema: number } }) },
     {
-      name: videoTypes.caption.name,
-      schema: object({ text: { schema: string }, startSec: { schema: number }, endSec: { schema: number } }),
+      name: videoTypes.seedanceMiniMedia.name,
+      schema: object({
+        model: { schema: { kind: "literal", value: "mini" } },
+        audioDigest: { schema: string },
+        visualDigest: { schema: string },
+        durationSec: { schema: number },
+      }),
     },
   ],
   surfaces: [],
   producers: [
     {
       name: videoProducers.requestEstimate.name,
-      inputs: [{ name: "narrative", type: videoTypes.narrative }],
+      inputs: [{ name: "narrative", type: contractTypes.narrative }],
       outputs: [],
-      needs: [{ name: "schedule", wants: videoTypes.schedule }],
+      needs: [{ name: "estimate", wants: videoTypes.estimate }],
       implementation: {
         kind: "registered",
         locator: "example.video-pipeline/request-estimate",
@@ -75,56 +84,28 @@ export const videoManifest: ModuleManifest = {
       },
     },
     {
-      name: videoProducers.requestGeneration.name,
+      name: videoProducers.requestSeedanceMini.name,
       inputs: [
-        { name: "narrative", type: videoTypes.narrative },
-        { name: "schedule", type: videoTypes.schedule },
+        { name: "narrative", type: contractTypes.narrative },
+        { name: "estimate", type: videoTypes.estimate },
       ],
       outputs: [],
-      needs: [{ name: "basis", wants: videoTypes.basis }],
+      needs: [{ name: "media", wants: videoTypes.seedanceMiniMedia }],
       implementation: {
         kind: "registered",
-        locator: "example.video-pipeline/request-generation",
-        digest: videoImplementations.requestGeneration,
+        locator: "example.video-pipeline/request-seedance-mini",
+        digest: videoImplementations.requestSeedanceMini,
       },
     },
     {
-      name: videoProducers.requestRecognition.name,
-      inputs: [{ name: "basis", type: videoTypes.basis }],
-      outputs: [],
-      needs: [{ name: "evidence", wants: videoTypes.evidence }],
-      implementation: {
-        kind: "registered",
-        locator: "example.video-pipeline/request-recognition",
-        digest: videoImplementations.requestRecognition,
-      },
-    },
-    {
-      name: videoProducers.locateSpeech.name,
-      inputs: [
-        { name: "narrative", type: videoTypes.narrative },
-        { name: "evidence", type: videoTypes.evidence },
-      ],
-      outputs: [{ name: "map", type: videoTypes.speechMap }],
+      name: videoProducers.assembleBasis.name,
+      inputs: [{ name: "media", type: videoTypes.seedanceMiniMedia }],
+      outputs: [{ name: "basis", type: contractTypes.speechBasis }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "example.video-pipeline/locate-speech",
-        digest: videoImplementations.locateSpeech,
-      },
-    },
-    {
-      name: videoProducers.temporalizeCaption.name,
-      inputs: [
-        { name: "narrative", type: videoTypes.narrative },
-        { name: "map", type: videoTypes.speechMap },
-      ],
-      outputs: [{ name: "caption", type: videoTypes.caption }],
-      needs: [],
-      implementation: {
-        kind: "registered",
-        locator: "example.video-pipeline/temporalize-caption",
-        digest: videoImplementations.temporalizeCaption,
+        locator: "example.video-pipeline/assemble-basis",
+        digest: videoImplementations.assembleBasis,
       },
     },
   ],
@@ -132,53 +113,78 @@ export const videoManifest: ModuleManifest = {
 
 export const videoPlan: BuildPlan = {
   format: "svml.plan@0",
-  id: "video-pipeline",
+  id: "explicit-whisperx-video-pipeline",
   steps: [
     {
       id: "request-estimate",
       producer: videoProducers.requestEstimate,
       inputs: { narrative: "narrative:root" },
       outputs: {},
-      needs: { schedule: { id: "need:schedule", result: "schedule:root", accepts: "exact" } },
+      needs: { estimate: { id: "need:estimate", result: "estimate:root", accepts: "exact" } },
     },
     {
-      id: "request-generation",
-      producer: videoProducers.requestGeneration,
-      inputs: { narrative: "narrative:root", schedule: "schedule:root" },
+      id: "request-seedance-mini",
+      producer: videoProducers.requestSeedanceMini,
+      inputs: { narrative: "narrative:root", estimate: "estimate:root" },
       outputs: {},
-      needs: { basis: { id: "need:basis", result: "basis:root", accepts: "exact" } },
+      needs: { media: { id: "need:seedance-mini", result: "seedance-media:root", accepts: "exact" } },
     },
     {
-      id: "request-recognition",
-      producer: videoProducers.requestRecognition,
+      id: "assemble-basis",
+      producer: videoProducers.assembleBasis,
+      inputs: { media: "seedance-media:root" },
+      outputs: { basis: "basis:root" },
+      needs: {},
+    },
+    {
+      id: "request-whisperx",
+      producer: whisperXProducers.request,
       inputs: { basis: "basis:root" },
       outputs: {},
-      needs: { evidence: { id: "need:evidence", result: "evidence:root", accepts: "exact" } },
+      needs: { alignment: { id: "need:whisperx", result: "whisperx:root", accepts: "exact" } },
+    },
+    {
+      id: "normalize-whisperx",
+      producer: whisperXProducers.normalize,
+      inputs: { whisperx: "whisperx:root" },
+      outputs: { evidence: "evidence:root" },
+      needs: {},
     },
     {
       id: "locate-speech",
-      producer: videoProducers.locateSpeech,
-      inputs: { narrative: "narrative:root", evidence: "evidence:root" },
+      producer: speechAlignProducers.locate,
+      inputs: { narrative: "narrative:root", basis: "basis:root", evidence: "evidence:root" },
       outputs: { map: "speech-map:root" },
       needs: {},
     },
     {
       id: "temporalize-caption",
-      producer: videoProducers.temporalizeCaption,
+      producer: captionProducers.temporalize,
       inputs: { narrative: "narrative:root", map: "speech-map:root" },
       outputs: { caption: "caption:root" },
       needs: {},
     },
   ],
-  goals: [{ record: "caption:root", type: videoTypes.caption, accepts: "exact" }],
+  goals: [{ record: "caption:root", type: contractTypes.timedCaptionProjection, accepts: "exact" }],
 };
 
+export const videoClosure = createResolvedClosure([
+  contractsManifest,
+  videoManifest,
+  whisperXManifest,
+  speechAlignManifest,
+  captionManifest,
+]);
+
 export function createVideoBuild(): BuildState {
-  const closure = createResolvedClosure([videoManifest]);
+  const parsed = parseScript(
+    "pipeline.svml",
+    "<line><that was insane | what the fuck></line>",
+  );
   const narrative = sealRecord({
     id: "narrative:root",
-    type: videoTypes.narrative,
-    value: { kind: "inline", value: { speech: "what the fuck", display: "that was insane" } },
+    type: contractTypes.narrative,
+    value: { kind: "inline", value: narrativeValue(parsed) },
     conformance: "exact",
     origin: {
       kind: "authored",
@@ -187,9 +193,11 @@ export function createVideoBuild(): BuildState {
       sourceName: "pipeline.svml",
     },
   });
-  return start(link(closure, [sealTypedModule({
+  return start(link(videoClosure, [sealTypedModule({
     id: "author:video-pipeline",
-    closureDigest: closure.digest,
+    closureDigest: videoClosure.digest,
     records: [narrative],
   })]), videoPlan);
 }
+
+export { contractTypes, whisperXTypes };

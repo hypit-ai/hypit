@@ -22,17 +22,16 @@ import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
 import { resolveProducer, resolveType, sealRecord } from "./link.js";
 import { producerStep, validatePlan } from "./plan.js";
+import {
+  commandId,
+  derivationId,
+  eventDigest,
+  needRequestDigest,
+  receiptId,
+} from "./provenance.js";
 import { producerKey } from "./reference.js";
 import { validateStoredValue } from "./schema.js";
 import { verifyBuildState } from "./verify.js";
-
-function commandId(build: string, kind: string, subject: string): string {
-  return `command:${digestOf({ build, kind, subject })}`;
-}
-
-function eventDigest(event: BuildEvent): ReturnType<typeof digestOf> {
-  return digestOf(event);
-}
 
 function withoutCommand(state: BuildState, id: string): readonly CoreCommand[] {
   return state.outstanding.filter((command) => command.id !== id);
@@ -44,6 +43,10 @@ function addAcceptedEvent(state: BuildState, event: BuildEvent): BuildState["acc
 
 function inheritedConformance(records: readonly TypedRecord[]): Conformance {
   return records.some((record) => record.conformance === "substitute") ? "substitute" : "exact";
+}
+
+function effectiveConformance(left: Conformance, right: Conformance): Conformance {
+  return left === "substitute" || right === "substitute" ? "substitute" : "exact";
 }
 
 function inputRecords(state: BuildState, command: InvokeProducerCommand): TypedRecord[] {
@@ -91,62 +94,55 @@ function acceptProducerEvent(
 
   const inputs = inputRecords(state, command);
   const conformance = inheritedConformance(inputs);
-  const derivationId = `derivation:${digestOf({
-    build: state.id,
-    command: command.id,
-    event: eventDigest(event),
-    inputs: inputs.map((record) => ({ id: record.id, digest: record.digest })),
-  })}`;
-
-  const outputs: TypedRecord[] = producer.outputs.map((port) => {
+  const outputDrafts = producer.outputs.map((port) => {
     const id = step.outputs[port.name];
     const rawValue = event.outputs[port.name];
     invariant(id !== undefined, "MISSING_OUTPUT_BINDING", `${step.id}.${port.name} is not bound`);
     invariant(rawValue !== undefined, "MISSING_OUTPUT_VALUE", `${step.id}.${port.name} returned no value`);
     const value = normalizeStoredValue(rawValue);
     validateStoredValue(value, resolveType(state.program.closure, port.type).schema, `$output.${step.id}.${port.name}`);
-    return sealRecord({
-      id,
-      type: port.type,
-      value,
-      conformance,
-      origin: { kind: "derived", derivation: derivationId },
-    });
+    return { id, type: port.type, value, digest: recordDigest(port.type, value) };
   });
 
-  const needs: Need[] = producer.needs.map((port) => {
+  const needDrafts = producer.needs.map((port) => {
     const binding = step.needs[port.name];
     const constraints = event.needs[port.name];
     invariant(binding !== undefined, "MISSING_NEED_BINDING", `${step.id}.${port.name} is not bound`);
     invariant(constraints !== undefined, "MISSING_NEED_VALUE", `${step.id}.${port.name} returned no constraints`);
     const normalized = canonicalize(constraints);
-    const requestDigest = digestOf({
+    const request = {
       wants: port.wants,
       constraints: normalized,
-      requestedBy: derivationId,
       result: binding.result,
       accepts: binding.accepts,
-    });
+      conformanceFloor: conformance,
+    } as const;
     return {
       id: binding.id,
-      wants: port.wants,
-      constraints: normalized,
-      requestedBy: derivationId,
-      result: binding.result,
-      accepts: binding.accepts,
-      requestDigest,
+      ...request,
+      requestDigest: needRequestDigest(request),
     };
   });
 
-  const derivation: Derivation = {
-    id: derivationId,
+  const derivationDraft: Omit<Derivation, "id"> = {
     step: step.id,
     producer: step.producer,
     implementationDigest: producer.implementation.digest,
-    inputs: inputs.map((record) => record.id),
-    outputs: outputs.map((record) => record.id),
-    needs: needs.map((need) => need.id),
+    inputs: inputs.map((record) => ({ id: record.id, digest: record.digest })),
+    outputs: outputDrafts.map(({ id, digest }) => ({ id, digest })),
+    needs: needDrafts.map((need) => ({ id: need.id, requestDigest: need.requestDigest })),
+    event: { id: event.id, digest: eventDigest(event) },
   };
+  const id = derivationId(derivationDraft);
+  const derivation: Derivation = { id, ...derivationDraft };
+  const outputs: TypedRecord[] = outputDrafts.map((output) => sealRecord({
+    id: output.id,
+    type: output.type,
+    value: output.value,
+    conformance,
+    origin: { kind: "derived", derivation: id },
+  }));
+  const needs: Need[] = needDrafts.map((need) => ({ ...need, requestedBy: id }));
 
   return {
     ...state,
@@ -154,7 +150,7 @@ function acceptProducerEvent(
     needs: [...state.needs, ...needs],
     derivations: [...state.derivations, derivation],
     steps: state.steps.map((item) =>
-      item.id === step.id ? { id: item.id, status: "complete", derivation: derivationId } : item,
+      item.id === step.id ? { id: item.id, status: "complete", derivation: id } : item,
     ),
     outstanding: withoutCommand(state, command.id),
     acceptedEvents: addAcceptedEvent(state, event),
@@ -181,7 +177,8 @@ function acceptNeedEvent(
     need.id,
   );
   invariant(
-    need.accepts === "substitute" || event.conformance === "exact",
+    need.accepts === "substitute"
+      || effectiveConformance(need.conformanceFloor, event.conformance) === "exact",
     "SUBSTITUTE_NOT_ACCEPTED",
     `${need.id} requires exact fulfillment`,
     need.id,
@@ -191,33 +188,26 @@ function acceptNeedEvent(
   validateStoredValue(value, resolveType(state.program.closure, need.wants).schema, `$need.${need.id}`);
   const outputDigest = recordDigest(need.wants, value);
   const metadata = canonicalize(event.metadata);
-  const receiptId = `receipt:${digestOf({
+  const conformance = effectiveConformance(need.conformanceFloor, event.conformance);
+  const receiptDraft: Omit<Receipt, "id"> = {
     need: need.id,
     requestDigest: event.requestDigest,
     fulfiller: event.fulfiller,
-    conformance: event.conformance,
+    fulfillmentConformance: event.conformance,
+    conformance,
     delivery: event.delivery,
     output: need.result,
     outputDigest,
     metadata,
-  })}`;
-  const receipt: Receipt = {
-    id: receiptId,
-    need: need.id,
-    requestDigest: need.requestDigest,
-    fulfiller: event.fulfiller,
-    conformance: event.conformance,
-    delivery: event.delivery,
-    output: need.result,
-    outputDigest,
-    metadata,
+    event: { id: event.id, digest: eventDigest(event) },
   };
+  const receipt: Receipt = { id: receiptId(receiptDraft), ...receiptDraft };
   const record: TypedRecord = {
     id: need.result,
     type: need.wants,
     value,
     digest: outputDigest,
-    conformance: event.conformance,
+    conformance,
     origin: { kind: "observed", receipt: receipt.id },
   };
 
@@ -283,6 +273,28 @@ function goalsComplete(state: BuildState): boolean {
 
 function schedule(state: BuildState): CoreTransition {
   if (state.status !== "active") return { state, commands: [] };
+  const impossibleNeed = state.needs.find((need) =>
+    need.accepts === "exact"
+    && need.conformanceFloor === "substitute"
+    && !state.records.some((record) => record.id === need.result));
+  if (impossibleNeed !== undefined) {
+    return {
+      state: {
+        ...state,
+        status: "failed",
+        outstanding: [],
+        diagnostics: [
+          ...state.diagnostics,
+          {
+            code: "CONFORMANCE_FLOOR_UNSATISFIABLE",
+            message: `${impossibleNeed.id} requires exact output from substitute inputs`,
+            subject: impossibleNeed.id,
+          },
+        ],
+      },
+      commands: [],
+    };
+  }
   if (state.outstanding.length > 0) return { state, commands: state.outstanding };
 
   if (goalsComplete(state)) {

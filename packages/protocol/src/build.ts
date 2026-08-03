@@ -67,6 +67,8 @@ export type Need = {
   readonly requestedBy: DerivationId;
   readonly result: RecordId;
   readonly accepts: NeedAcceptance;
+  /** Worst conformance inherited from the Producer inputs that requested this Need. */
+  readonly conformanceFloor: Conformance;
   readonly requestDigest: Digest;
 };
 
@@ -75,11 +77,28 @@ export type Receipt = {
   readonly need: NeedId;
   readonly requestDigest: Digest;
   readonly fulfiller: string;
+  /** Conformance reported by the external fulfiller before upstream quality is applied. */
+  readonly fulfillmentConformance: Conformance;
+  /** Effective conformance after applying the Need's inherited floor. */
   readonly conformance: Conformance;
   readonly delivery: Delivery;
   readonly output: RecordId;
   readonly outputDigest: Digest;
   readonly metadata: CanonicalValue;
+  readonly event: {
+    readonly id: EventId;
+    readonly digest: Digest;
+  };
+};
+
+export type RecordDigestBinding = {
+  readonly id: RecordId;
+  readonly digest: Digest;
+};
+
+export type NeedDigestBinding = {
+  readonly id: NeedId;
+  readonly requestDigest: Digest;
 };
 
 export type Derivation = {
@@ -87,9 +106,13 @@ export type Derivation = {
   readonly step: StepId;
   readonly producer: ProducerRef;
   readonly implementationDigest: Digest;
-  readonly inputs: readonly RecordId[];
-  readonly outputs: readonly RecordId[];
-  readonly needs: readonly NeedId[];
+  readonly inputs: readonly RecordDigestBinding[];
+  readonly outputs: readonly RecordDigestBinding[];
+  readonly needs: readonly NeedDigestBinding[];
+  readonly event: {
+    readonly id: EventId;
+    readonly digest: Digest;
+  };
 };
 
 export type NeedBinding = {

@@ -11,6 +11,7 @@ import { digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";
 import { link, resolveProducer, verifyRecord } from "./link.js";
 import { producerStep, validatePlan } from "./plan.js";
+import { commandId, derivationId, needRequestDigest, receiptId } from "./provenance.js";
 import { sameType } from "./reference.js";
 
 function unique<T>(items: readonly T[], key: (item: T) => string, kind: string): void {
@@ -22,18 +23,12 @@ function unique<T>(items: readonly T[], key: (item: T) => string, kind: string):
   }
 }
 
-function needDigest(need: Need): ReturnType<typeof digestOf> {
-  return digestOf({
-    wants: need.wants,
-    constraints: need.constraints,
-    requestedBy: need.requestedBy,
-    result: need.result,
-    accepts: need.accepts,
-  });
-}
-
 function findRecord(state: BuildState, id: string): TypedRecord | undefined {
   return state.records.find((record) => record.id === id);
+}
+
+function validConformance(value: string): boolean {
+  return value === "exact" || value === "substitute";
 }
 
 function verifyDerivation(state: BuildState, derivation: Derivation): void {
@@ -54,24 +49,53 @@ function verifyDerivation(state: BuildState, derivation: Derivation): void {
     derivation.id,
   );
   invariant(
-    JSON.stringify([...derivation.inputs].sort()) ===
+    JSON.stringify(derivation.inputs.map((item) => item.id).sort()) ===
       JSON.stringify(Object.values(step.inputs).sort()),
     "DERIVATION_INPUT_MISMATCH",
     `${derivation.id} input records do not match its step`,
     derivation.id,
   );
   invariant(
-    JSON.stringify([...derivation.outputs].sort()) ===
+    JSON.stringify(derivation.outputs.map((item) => item.id).sort()) ===
       JSON.stringify(Object.values(step.outputs).sort()),
     "DERIVATION_OUTPUT_MISMATCH",
     `${derivation.id} output records do not match its step`,
     derivation.id,
   );
   invariant(
-    JSON.stringify([...derivation.needs].sort()) ===
+    JSON.stringify(derivation.needs.map((item) => item.id).sort()) ===
       JSON.stringify(Object.values(step.needs).map((binding) => binding.id).sort()),
     "DERIVATION_NEED_MISMATCH",
     `${derivation.id} needs do not match its step`,
+    derivation.id,
+  );
+  for (const binding of [...derivation.inputs, ...derivation.outputs]) {
+    const record = findRecord(state, binding.id);
+    invariant(record !== undefined, "DERIVATION_RECORD_MISSING", `${binding.id} is missing`, derivation.id);
+    invariant(record.digest === binding.digest, "DERIVATION_RECORD_DIGEST", `${binding.id} digest differs`, derivation.id);
+  }
+  for (const binding of derivation.needs) {
+    const need = state.needs.find((item) => item.id === binding.id);
+    invariant(need !== undefined, "DERIVATION_NEED_MISSING", `${binding.id} is missing`, derivation.id);
+    invariant(
+      need.requestDigest === binding.requestDigest,
+      "DERIVATION_NEED_DIGEST",
+      `${binding.id} request digest differs`,
+      derivation.id,
+    );
+  }
+  const accepted = state.acceptedEvents.find((item) => item.id === derivation.event.id);
+  invariant(
+    accepted?.digest === derivation.event.digest,
+    "DERIVATION_EVENT_MISMATCH",
+    `${derivation.id} event differs`,
+    derivation.id,
+  );
+  const { id: _id, ...content } = derivation;
+  invariant(
+    derivation.id === derivationId(content),
+    "DERIVATION_DIGEST_MISMATCH",
+    `${derivation.id} content does not match its identity`,
     derivation.id,
   );
 }
@@ -79,10 +103,27 @@ function verifyDerivation(state: BuildState, derivation: Derivation): void {
 function verifyReceipt(state: BuildState, receipt: Receipt): void {
   const need = state.needs.find((item) => item.id === receipt.need);
   invariant(need !== undefined, "RECEIPT_UNKNOWN_NEED", `${receipt.id} references an unknown need`);
+  invariant(receipt.fulfiller.length > 0, "EMPTY_FULFILLER", `${receipt.id} fulfiller is empty`);
+  invariant(validConformance(receipt.fulfillmentConformance), "INVALID_CONFORMANCE", receipt.id);
+  invariant(validConformance(receipt.conformance), "INVALID_CONFORMANCE", receipt.id);
+  invariant(
+    ["executed", "cache", "manual", "provided"].includes(receipt.delivery),
+    "INVALID_DELIVERY",
+    receipt.id,
+  );
   invariant(
     receipt.requestDigest === need.requestDigest,
     "REQUEST_DIGEST_MISMATCH",
     `${receipt.id} request digest does not match`,
+  );
+  invariant(
+    receipt.conformance === (
+      need.conformanceFloor === "substitute" || receipt.fulfillmentConformance === "substitute"
+        ? "substitute"
+        : "exact"
+    ),
+    "CONFORMANCE_FLOOR_MISMATCH",
+    `${receipt.id} does not inherit its Need conformance floor`,
   );
   invariant(
     need.accepts === "substitute" || receipt.conformance === "exact",
@@ -91,6 +132,9 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
   );
   const record = findRecord(state, receipt.output);
   invariant(record !== undefined, "RECEIPT_OUTPUT_MISSING", `${receipt.id} output is missing`);
+  invariant(receipt.output === need.result, "RECEIPT_OUTPUT_BINDING", `${receipt.id} output is not its Need result`);
+  invariant(sameType(record.type, need.wants), "RECEIPT_OUTPUT_TYPE", `${receipt.id} output type differs`);
+  invariant(record.conformance === receipt.conformance, "RECEIPT_OUTPUT_CONFORMANCE", receipt.id);
   invariant(record.digest === receipt.outputDigest, "RECEIPT_OUTPUT_MISMATCH", `${receipt.id} output differs`);
   invariant(
     record.origin.kind === "observed" && record.origin.receipt === receipt.id,
@@ -98,17 +142,13 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
     `${receipt.id} output has another origin`,
   );
   invariant(
-    receipt.id ===
-      `receipt:${digestOf({
-        need: receipt.need,
-        requestDigest: receipt.requestDigest,
-        fulfiller: receipt.fulfiller,
-        conformance: receipt.conformance,
-        delivery: receipt.delivery,
-        output: receipt.output,
-        outputDigest: receipt.outputDigest,
-        metadata: receipt.metadata,
-      })}`,
+    state.acceptedEvents.some((item) => item.id === receipt.event.id && item.digest === receipt.event.digest),
+    "RECEIPT_EVENT_MISMATCH",
+    `${receipt.id} accepted event differs`,
+  );
+  const { id: _id, ...content } = receipt;
+  invariant(
+    receipt.id === receiptId(content),
     "RECEIPT_DIGEST_MISMATCH",
     `${receipt.id} content does not match its identity`,
   );
@@ -122,16 +162,34 @@ function verifyOutstanding(state: BuildState, command: CoreCommand): void {
     const step = state.steps.find((item) => item.id === command.step);
     invariant(step?.status === "pending", "OUTSTANDING_STEP_COMPLETE", `${command.step} is complete`);
     const planned = producerStep(state.plan, command.step);
-    invariant(planned.producer.name === command.producer.name, "COMMAND_PRODUCER_MISMATCH", command.id);
+    const expected: CoreCommand = {
+      kind: "invoke-producer",
+      id: commandId(state.id, "producer", planned.id),
+      step: planned.id,
+      producer: planned.producer,
+      inputs: planned.inputs,
+    };
+    invariant(digestOf(command) === digestOf(expected), "COMMAND_PRODUCER_MISMATCH", command.id);
     return;
   }
   const need = state.needs.find((item) => item.id === command.need.id);
   invariant(need !== undefined, "OUTSTANDING_NEED_UNKNOWN", `${command.need.id} is unknown`);
   invariant(findRecord(state, need.result) === undefined, "OUTSTANDING_NEED_COMPLETE", `${need.id} is fulfilled`);
+  const expected: CoreCommand = {
+    kind: "fulfill-need",
+    id: commandId(state.id, "need", need.id),
+    need,
+  };
+  invariant(digestOf(command) === digestOf(expected), "COMMAND_NEED_MISMATCH", command.id);
 }
 
 export function verifyBuildState(state: BuildState): void {
   invariant(state.format === "svml.build@0", "UNSUPPORTED_BUILD", "unsupported build state format");
+  invariant(
+    state.status === "active" || state.status === "complete" || state.status === "failed",
+    "INVALID_BUILD_STATUS",
+    "build status is invalid",
+  );
   invariant(isDigest(state.id), "INVALID_DIGEST", "build id is invalid");
 
   const linked = link(state.program.closure, state.program.modules);
@@ -181,7 +239,10 @@ export function verifyBuildState(state: BuildState): void {
     "build step state does not match the plan",
   );
 
-  for (const record of state.records) verifyRecord(state.program.closure, record);
+  for (const record of state.records) {
+    invariant(validConformance(record.conformance), "INVALID_CONFORMANCE", record.id);
+    verifyRecord(state.program.closure, record);
+  }
   for (const authored of state.program.records) {
     const record = findRecord(state, authored.id);
     invariant(record?.digest === authored.digest, "AUTHORED_RECORD_CHANGED", `${authored.id} changed`);
@@ -203,11 +264,11 @@ export function verifyBuildState(state: BuildState): void {
         `${record.id} has unknown derivation ${origin.derivation}`,
       );
       invariant(
-        derivation.outputs.includes(record.id),
+        derivation.outputs.some((item) => item.id === record.id && item.digest === record.digest),
         "DERIVED_ORIGIN_MISMATCH",
         `${record.id} is not an output of ${origin.derivation}`,
       );
-      const inputs = derivation.inputs.map((id) => findRecord(state, id));
+      const inputs = derivation.inputs.map((binding) => findRecord(state, binding.id));
       invariant(inputs.every((item) => item !== undefined), "DERIVATION_INPUT_MISSING", derivation.id);
       const expected = inputs.some((item) => item?.conformance === "substitute") ? "substitute" : "exact";
       invariant(record.conformance === expected, "CONFORMANCE_NOT_PROPAGATED", `${record.id} conformance differs`);
@@ -219,9 +280,27 @@ export function verifyBuildState(state: BuildState): void {
   }
 
   for (const need of state.needs) {
-    invariant(need.requestDigest === needDigest(need), "NEED_DIGEST_MISMATCH", `${need.id} digest differs`);
+    invariant(need.accepts === "exact" || need.accepts === "substitute", "INVALID_NEED_ACCEPTANCE", need.id);
+    invariant(validConformance(need.conformanceFloor), "INVALID_CONFORMANCE", need.id);
+    invariant(
+      need.requestDigest === needRequestDigest(need),
+      "NEED_DIGEST_MISMATCH",
+      `${need.id} digest differs`,
+    );
     const derivation = state.derivations.find((item) => item.id === need.requestedBy);
-    invariant(derivation?.needs.includes(need.id), "NEED_ORIGIN_MISMATCH", `${need.id} has no derivation`);
+    invariant(
+      derivation?.needs.some((item) => item.id === need.id && item.requestDigest === need.requestDigest),
+      "NEED_ORIGIN_MISMATCH",
+      `${need.id} has no derivation`,
+    );
+    const inherited = derivation?.inputs.some(
+      (binding) => findRecord(state, binding.id)?.conformance === "substitute",
+    ) ? "substitute" : "exact";
+    invariant(
+      need.conformanceFloor === inherited,
+      "CONFORMANCE_FLOOR_MISMATCH",
+      `${need.id} conformance floor differs from its Producer inputs`,
+    );
   }
   for (const receipt of state.receipts) verifyReceipt(state, receipt);
   for (const derivation of state.derivations) verifyDerivation(state, derivation);
