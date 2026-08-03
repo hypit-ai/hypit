@@ -4,7 +4,7 @@ import { editDistance, normalizeForAlignment } from "./normalize.js";
 import type {
   AlignmentGroup,
   AlignmentRelation,
-  WhisperXWordEvidence,
+  SpeechWordEvidence,
 } from "./types.js";
 
 const EPSILON = 1e-9;
@@ -25,7 +25,7 @@ function comparisonText(values: readonly { readonly text: string }[]): string {
   return values.map((value) => normalizeForAlignment(value.text)).join("");
 }
 
-function evidenceReliability(words: readonly WhisperXWordEvidence[]): number {
+function evidenceReliability(words: readonly SpeechWordEvidence[]): number {
   const scores = words
     .map((word) => word.score)
     .filter((score): score is number => score !== undefined && Number.isFinite(score));
@@ -36,7 +36,7 @@ function evidenceReliability(words: readonly WhisperXWordEvidence[]): number {
 
 function exactWordLcs(
   source: readonly ParsedToken[],
-  evidence: readonly WhisperXWordEvidence[],
+  evidence: readonly SpeechWordEvidence[],
 ): number {
   const rows = Array.from({ length: source.length + 1 }, () =>
     Array<number>(evidence.length + 1).fill(0));
@@ -65,7 +65,7 @@ function relation(
 
 function pairedCost(
   source: readonly ParsedToken[],
-  evidence: readonly WhisperXWordEvidence[],
+  evidence: readonly SpeechWordEvidence[],
 ): number {
   const sourceText = comparisonText(source);
   const evidenceText = comparisonText(evidence);
@@ -109,7 +109,7 @@ function extend(
 export function alignWordGroups(
   sourceSegmentId: string,
   source: readonly ParsedToken[],
-  evidence: readonly WhisperXWordEvidence[],
+  evidence: readonly SpeechWordEvidence[],
   maxGroupSize = DEFAULT_MAX_GROUP,
 ): AlignmentGroup[] {
   const rows = Array.from({ length: source.length + 1 }, () =>
