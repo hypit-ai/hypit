@@ -5,7 +5,9 @@
 > `packages/text` and `packages/script` now implement the first official authoring vertical:
 > a minimal Text Frontend that learns raw/structured Surfaces from locked module manifests, plus
 > an ordinary Script Surface package using named Segments such as `<opening>...</opening>`.
-> Third-party parser sandboxing, source imports and `.svs` are not implemented yet. The existing
+> `packages/whisperx` adds a pure, tested one-pass WhisperX timing locator; the Host adapter that
+> invokes WhisperX is intentionally still outside this slice. Third-party parser sandboxing,
+> source imports and `.svs` are not implemented yet. The existing
 > root compiler and standard library remain the executable v1 research oracle during migration.
 
 Semantic Video Markup Language is a semantic source language for information-flow

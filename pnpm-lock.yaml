@@ -61,6 +61,15 @@ importers:
         specifier: workspace:*
         version: link:../script
 
+  packages/whisperx:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
 packages:
 
   '@emnapi/runtime@1.11.3':
