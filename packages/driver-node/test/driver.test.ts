@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { reduce } from "@svml/core";
+import { digestOf, reduce } from "@svml/core";
 import {
   HostRegistry,
   MemoryArtifactStore,
@@ -159,10 +159,27 @@ test("Driver reads static manifests without executing package code", async () =>
   const directory = await mkdtemp(join(tmpdir(), "svml-driver-"));
   const path = join(directory, "svml.module.json");
   try {
-    await writeFile(path, JSON.stringify(manifest), "utf8");
+    const withSurface = {
+      ...manifest,
+      surfaces: [
+        {
+          name: "greeting",
+          tag: "greeting",
+          mode: "structured" as const,
+          outputs: [types.intent],
+          implementation: {
+            kind: "trusted-frontend-surface",
+            locator: "example.greeting/surface",
+            digest: digestOf("example.greeting/surface@0"),
+          },
+        },
+      ],
+    };
+    await writeFile(path, JSON.stringify(withSurface), "utf8");
     const closure = await loadResolvedClosure([path]);
     assert.equal(closure.modules.length, 1);
     assert.equal(closure.modules[0]?.manifest.name, "example.greeting");
+    assert.equal(closure.modules[0]?.manifest.surfaces[0]?.mode, "structured");
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
