@@ -89,13 +89,31 @@ export type ParsedMoment = {
   readonly occurrences: readonly ParsedMomentOccurrence[];
 };
 
-export type ParsedCaptionAtom = {
+export type ParsedCaptionRefinement = {
+  readonly id: string;
+  readonly display: string;
+  readonly displayStart: number;
+  readonly displayEnd: number;
+  readonly startToken: number;
+  readonly endTokenExclusive: number;
+  readonly relation: "exact";
+};
+
+export type ParsedCaptionRegion = {
   readonly id: string;
   readonly display: string;
   readonly segmentId: string;
   readonly startToken: number;
   readonly endTokenExclusive: number;
+  readonly kind: "identity" | "alias" | "hidden";
+  readonly refinements: readonly ParsedCaptionRefinement[];
   readonly range: SourceRange;
+};
+
+export type CaptionProjection = {
+  readonly contract: "svml.caption-projection@0";
+  readonly text: string;
+  readonly regions: readonly ParsedCaptionRegion[];
 };
 
 export type SemanticAnchor = {
@@ -112,16 +130,15 @@ export type ParsedNarrative = {
   readonly turns: readonly ParsedTurn[];
   readonly selections: readonly ParsedSelection[];
   readonly moments: readonly ParsedMoment[];
-  readonly captionAtoms: readonly ParsedCaptionAtom[];
+  readonly captionProjection: CaptionProjection;
   readonly semanticIndex: {
     readonly contract: "svml.semantic-index@0";
     readonly anchors: readonly SemanticAnchor[];
     readonly digest: string;
   };
-  readonly projections: {
+  readonly serializations: {
     readonly dialogue: string;
     readonly speech: string;
-    readonly caption: string;
   };
 };
 

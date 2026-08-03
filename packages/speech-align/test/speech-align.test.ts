@@ -3,27 +3,26 @@ import test from "node:test";
 
 import { parseScript } from "@svml/script";
 import {
-  WhisperXAlignmentError,
-  deriveCaptionAtomTiming,
-  locateWhisperXTiming,
-} from "@svml/whisperx";
+  SpeechAlignmentError,
+  locateSpeechTiming,
+} from "@svml/speech-align";
 import type {
-  WhisperXCharEvidence,
-  WhisperXEvidence,
-  WhisperXWordEvidence,
-} from "@svml/whisperx";
+  AlignedTranscriptEvidence,
+  SpeechCharacterEvidence,
+  SpeechWordEvidence,
+} from "@svml/speech-align";
 
 function evidence(args: {
   readonly segmentId?: string;
   readonly durationSec?: number;
   readonly startSec?: number;
   readonly endSec?: number;
-  readonly words: readonly WhisperXWordEvidence[];
-  readonly chars?: readonly WhisperXCharEvidence[];
+  readonly words: readonly SpeechWordEvidence[];
+  readonly chars?: readonly SpeechCharacterEvidence[];
   readonly vad?: readonly { readonly startSec: number; readonly endSec: number }[];
-}): WhisperXEvidence {
+}): AlignedTranscriptEvidence {
   return {
-    contract: "svml.whisperx-evidence@0",
+    contract: "svml.aligned-transcript-evidence@0",
     durationSec: args.durationSec ?? 2,
     segments: [
       {
@@ -32,7 +31,7 @@ function evidence(args: {
         endSec: args.endSec ?? 2,
         words: args.words,
         chars: args.chars ?? [],
-        ...(args.vad === undefined ? {} : { vadSpans: args.vad }),
+        ...(args.vad === undefined ? {} : { speechActivity: args.vad }),
       },
     ],
   };
@@ -43,7 +42,7 @@ function characters(
   starts: readonly number[],
   ends: readonly number[],
   wordIndex = 0,
-): WhisperXCharEvidence[] {
+): SpeechCharacterEvidence[] {
   return [...text].map((char, index) => ({
     char,
     wordIndex,
@@ -53,9 +52,9 @@ function characters(
   }));
 }
 
-test("exact WhisperX words cover every Script and Segment anchor", () => {
+test("exact transcript words cover every Script and Segment anchor", () => {
   const narrative = parseScript("exact.svml", "<line>Hello world.</line>");
-  const map = locateWhisperXTiming(narrative, evidence({
+  const map = locateSpeechTiming(narrative, evidence({
     words: [
       { text: "Hello", startSec: 0.1, endSec: 0.4, score: 0.97 },
       { text: "world", startSec: 0.5, endSec: 0.9, score: 0.96 },
@@ -75,9 +74,9 @@ test("exact WhisperX words cover every Script and Segment anchor", () => {
   assert.match(map.mapDigest, /^sha256:[a-f0-9]{64}$/u);
 });
 
-test("M:1 uses WhisperX character times instead of dividing a merged word by length", () => {
+test("M:1 uses evidence character times instead of dividing a merged word by length", () => {
   const narrative = parseScript("merge.svml", "<line>can not</line>");
-  const map = locateWhisperXTiming(narrative, evidence({
+  const map = locateSpeechTiming(narrative, evidence({
     endSec: 1,
     durationSec: 1,
     words: [{ text: "cannot", startSec: 0.1, endSec: 0.78, score: 0.93 }],
@@ -98,9 +97,9 @@ test("M:1 uses WhisperX character times instead of dividing a merged word by len
   );
 });
 
-test("1:N wraps all WhisperX words in one Script token", () => {
+test("1:N wraps all evidence words in one Script token", () => {
   const narrative = parseScript("split.svml", "<line>website</line>");
-  const map = locateWhisperXTiming(narrative, evidence({
+  const map = locateSpeechTiming(narrative, evidence({
     words: [
       { text: "web", startSec: 0.2, endSec: 0.45, score: 0.9 },
       { text: "site", startSec: 0.5, endSec: 0.82, score: 0.91 },
@@ -116,7 +115,7 @@ test("1:N wraps all WhisperX words in one Script token", () => {
 
 test("a recognized filler stays an insertion and does not absorb neighboring Script words", () => {
   const narrative = parseScript("insertion.svml", "<line>I really like it.</line>");
-  const map = locateWhisperXTiming(narrative, evidence({
+  const map = locateSpeechTiming(narrative, evidence({
     words: [
       { text: "I", startSec: 0.1, endSec: 0.2, score: 0.98 },
       { text: "uh", startSec: 0.24, endSec: 0.34, score: 0.88 },
@@ -146,7 +145,7 @@ test("a recognized filler stays an insertion and does not absorb neighboring Scr
 
 test("an omitted Script word gets a zero-width estimated point between measured neighbors", () => {
   const narrative = parseScript("omission.svml", "<line>This is very good.</line>");
-  const map = locateWhisperXTiming(narrative, evidence({
+  const map = locateSpeechTiming(narrative, evidence({
     words: [
       { text: "This", startSec: 0.1, endSec: 0.25, score: 0.98 },
       { text: "is", startSec: 0.3, endSec: 0.4, score: 0.97 },
@@ -168,7 +167,7 @@ test("an omitted Script word gets a zero-width estimated point between measured 
 
 test("VAD bounds contain estimates when an entire Script Segment has no recognized words", () => {
   const narrative = parseScript("vad.svml", "<line>One two.</line>");
-  const map = locateWhisperXTiming(narrative, evidence({
+  const map = locateSpeechTiming(narrative, evidence({
     words: [],
     vad: [{ startSec: 0.4, endSec: 1.2 }],
   }));
@@ -182,44 +181,10 @@ test("VAD bounds contain estimates when an entire Script Segment has no recogniz
   );
 });
 
-test("Dual Text display inherits one speech envelope without linear display-word timing", () => {
-  const narrative = parseScript(
-    "dual.svml",
-    "<line>That was <really funny | absolutely hilarious>.</line>",
-  );
-  const map = locateWhisperXTiming(narrative, evidence({
-    words: [
-      { text: "That", startSec: 0.1, endSec: 0.22 },
-      { text: "was", startSec: 0.25, endSec: 0.34 },
-      { text: "absolutely", startSec: 0.4, endSec: 0.72 },
-      { text: "hilarious", startSec: 0.75, endSec: 1.1 },
-    ],
-  }));
-  const captions = deriveCaptionAtomTiming(narrative, map);
-
-  assert.equal(captions.length, 1);
-  assert.deepEqual(
-    {
-      display: captions[0]?.display,
-      sourceTokenIds: captions[0]?.sourceTokenIds,
-      startSec: captions[0]?.startSec,
-      endSec: captions[0]?.endSec,
-      startQuality: captions[0]?.startQuality,
-    },
-    {
-      display: "really funny",
-      sourceTokenIds: narrative.tokens.slice(2, 4).map((token) => token.id),
-      startSec: 0.4,
-      endSec: 1.1,
-      startQuality: "derived",
-    },
-  );
-});
-
 test("multiple Script Segments stay independent even when evidence records arrive out of order", () => {
   const narrative = parseScript("segments.svml", "<one>Hello.</one><two>Goodbye.</two>");
-  const map = locateWhisperXTiming(narrative, {
-    contract: "svml.whisperx-evidence@0",
+  const map = locateSpeechTiming(narrative, {
+    contract: "svml.aligned-transcript-evidence@0",
     durationSec: 2,
     segments: [
       {
@@ -246,15 +211,15 @@ test("multiple Script Segments stay independent even when evidence records arriv
   assert.deepEqual(map.groups.map((group) => group.sourceSegmentId), ["one", "two"]);
 });
 
-test("invalid overlapping WhisperX word windows fail instead of producing a reversed map", () => {
+test("invalid overlapping evidence word windows fail instead of producing a reversed map", () => {
   const narrative = parseScript("bad.svml", "<line>one two</line>");
   assert.throws(
-    () => locateWhisperXTiming(narrative, evidence({
+    () => locateSpeechTiming(narrative, evidence({
       words: [
         { text: "one", startSec: 0.1, endSec: 0.5 },
         { text: "two", startSec: 0.4, endSec: 0.8 },
       ],
     })),
-    (error: unknown) => error instanceof WhisperXAlignmentError && error.code === "WHISPERX_WORD_ORDER",
+    (error: unknown) => error instanceof SpeechAlignmentError && error.code === "SPEECH_WORD_ORDER",
   );
 });

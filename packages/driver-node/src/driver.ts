@@ -9,18 +9,19 @@ import type {
 } from "@svml/protocol";
 
 import { MemoryArtifactStore } from "./artifacts.js";
-import { HostRegistry, producerRegistryKey, requirementRegistryKey } from "./registry.js";
+import { HostRegistry, ProviderRegistry, producerRegistryKey, providerCapabilityKey } from "./registry.js";
 import type {
   ArtifactStore,
   BlockedCommand,
   DriverJournalEntry,
   DriverRunResult,
   ProducerHandlerResult,
-  RequirementHandlerResult,
+  ProviderHandlerResult,
 } from "./types.js";
 
 export type NodeDriverOptions = {
   readonly registry?: HostRegistry;
+  readonly providers?: ProviderRegistry;
   readonly artifacts?: ArtifactStore;
   readonly maxEvents?: number;
 };
@@ -32,16 +33,19 @@ type Executable =
     }
   | {
       readonly command: FulfillNeedCommand;
-      readonly run: () => Promise<RequirementHandlerResult>;
+      readonly providerId: string;
+      readonly run: () => Promise<ProviderHandlerResult>;
     };
 
 export class NodeDriver {
   readonly registry: HostRegistry;
+  readonly providers: ProviderRegistry;
   readonly artifacts: ArtifactStore;
   readonly maxEvents: number;
 
   constructor(options: NodeDriverOptions = {}) {
     this.registry = options.registry ?? new HostRegistry();
+    this.providers = options.providers ?? new ProviderRegistry();
     this.artifacts = options.artifacts ?? new MemoryArtifactStore();
     this.maxEvents = options.maxEvents ?? 1_000;
   }
@@ -101,19 +105,32 @@ export class NodeDriver {
       };
     }
 
-    const registration = this.registry.requirement(command.need.wants);
-    if (registration === undefined) {
+    const resolution = this.providers.resolve(command.need);
+    if (resolution.status === "missing") {
       return {
         blocked: {
           command: command.id,
-          reason: "missing-handler",
-          subject: requirementRegistryKey(command.need.wants),
+          reason: "missing-provider",
+          subject: resolution.providerId === undefined
+            ? providerCapabilityKey(command.need.wants)
+            : `${providerCapabilityKey(command.need.wants)} -> ${resolution.providerId}`,
         },
       };
     }
+    if (resolution.status === "ambiguous") {
+      return {
+        blocked: {
+          command: command.id,
+          reason: "ambiguous-provider",
+          subject: `${providerCapabilityKey(command.need.wants)} -> ${resolution.providerIds.join(", ")}`,
+        },
+      };
+    }
+    const registration = resolution.registration;
     return {
       executable: {
         command,
+        providerId: registration.id,
         run: async () =>
           registration.handler({
             command: structuredClone(command),
@@ -125,7 +142,7 @@ export class NodeDriver {
   }
 
   async #execute(executable: Executable): Promise<BuildEvent> {
-    if (executable.command.kind === "invoke-producer") {
+    if (!("providerId" in executable)) {
       const result = (await executable.run()) as ProducerHandlerResult;
       return {
         kind: "producer-completed",
@@ -140,7 +157,7 @@ export class NodeDriver {
       };
     }
 
-    const result = (await executable.run()) as RequirementHandlerResult;
+    const result = (await executable.run()) as ProviderHandlerResult;
     return {
       kind: "need-fulfilled",
       id: `event:${digestOf({
@@ -151,7 +168,7 @@ export class NodeDriver {
       command: executable.command.id,
       value: result.value,
       requestDigest: executable.command.need.requestDigest,
-      fulfiller: result.fulfiller,
+      fulfiller: executable.providerId,
       conformance: result.conformance,
       delivery: result.delivery,
       metadata: result.metadata,

@@ -1,9 +1,9 @@
-export class WhisperXAlignmentError extends Error {
+export class SpeechAlignmentError extends Error {
   readonly code: string;
 
   constructor(code: string, message: string) {
     super(message);
-    this.name = "WhisperXAlignmentError";
+    this.name = "SpeechAlignmentError";
     this.code = code;
   }
 }

@@ -31,23 +31,22 @@ export type ProducerHandler = (
   context: ProducerHandlerContext,
 ) => ProducerHandlerResult | Promise<ProducerHandlerResult>;
 
-export type RequirementHandlerResult = {
+export type ProviderHandlerResult = {
   readonly value: StoredValue;
-  readonly fulfiller: string;
   readonly conformance: Conformance;
   readonly delivery: Delivery;
   readonly metadata: CanonicalValue;
 };
 
-export type RequirementHandlerContext = {
+export type ProviderHandlerContext = {
   readonly command: FulfillNeedCommand;
   readonly need: Need;
   readonly artifacts: ArtifactStore;
 };
 
-export type RequirementHandler = (
-  context: RequirementHandlerContext,
-) => RequirementHandlerResult | Promise<RequirementHandlerResult>;
+export type ProviderHandler = (
+  context: ProviderHandlerContext,
+) => ProviderHandlerResult | Promise<ProviderHandlerResult>;
 
 export type ArtifactStore = {
   put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
@@ -65,7 +64,11 @@ export type DriverJournalEntry = {
 
 export type BlockedCommand = {
   readonly command: string;
-  readonly reason: "missing-producer" | "implementation-mismatch" | "missing-handler";
+  readonly reason:
+    | "missing-producer"
+    | "implementation-mismatch"
+    | "missing-provider"
+    | "ambiguous-provider";
   readonly subject: string;
 };
 
@@ -82,7 +85,14 @@ export type ProducerRegistration = {
   readonly handler: ProducerHandler;
 };
 
-export type RequirementRegistration = {
-  readonly type: TypeRef;
-  readonly handler: RequirementHandler;
+export type ProviderRegistration = {
+  readonly id: string;
+  readonly wants: TypeRef;
+  readonly handler: ProviderHandler;
+  readonly supports?: (need: Need) => boolean;
 };
+
+export type ProviderResolution =
+  | { readonly status: "resolved"; readonly registration: ProviderRegistration }
+  | { readonly status: "missing"; readonly providerId?: string }
+  | { readonly status: "ambiguous"; readonly providerIds: readonly string[] };

@@ -132,17 +132,44 @@ export const narrativeSchema: ValueSchema = {
         },
       },
     },
-    captionAtoms: {
+    captionProjection: {
       schema: {
-        kind: "array",
-        items: {
-          kind: "object",
-          fields: {
-            id: { schema: stringSchema },
-            display: { schema: { kind: "string" } },
-            segmentId: { schema: stringSchema },
-            startToken: { schema: integerSchema },
-            endTokenExclusive: { schema: integerSchema },
+        kind: "object",
+        fields: {
+          contract: { schema: { kind: "literal", value: "svml.caption-projection@0" } },
+          text: { schema: { kind: "string" } },
+          regions: {
+            schema: {
+              kind: "array",
+              items: {
+                kind: "object",
+                fields: {
+                  id: { schema: stringSchema },
+                  display: { schema: { kind: "string" } },
+                  segmentId: { schema: stringSchema },
+                  startToken: { schema: integerSchema },
+                  endTokenExclusive: { schema: integerSchema },
+                  kind: { schema: { kind: "string", enum: ["identity", "alias", "hidden"] } },
+                  refinements: {
+                    schema: {
+                      kind: "array",
+                      items: {
+                        kind: "object",
+                        fields: {
+                          id: { schema: stringSchema },
+                          display: { schema: stringSchema },
+                          displayStart: { schema: integerSchema },
+                          displayEnd: { schema: integerSchema },
+                          startToken: { schema: integerSchema },
+                          endTokenExclusive: { schema: integerSchema },
+                          relation: { schema: { kind: "literal", value: "exact" } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -177,13 +204,12 @@ export const narrativeSchema: ValueSchema = {
         },
       },
     },
-    projections: {
+    serializations: {
       schema: {
         kind: "object",
         fields: {
           dialogue: { schema: { kind: "string" } },
           speech: { schema: { kind: "string" } },
-          caption: { schema: { kind: "string" } },
         },
       },
     },
@@ -199,7 +225,7 @@ export const scriptManifest: ModuleManifest = {
     {
       name: narrativeType.name,
       schema: narrativeSchema,
-      description: "Authoritative narrative, projections and 2M + 2N semantic identities.",
+      description: "Authoritative narrative, pure serializations, Caption Projection and 2M + 2N identities.",
     },
   ],
   surfaces: [

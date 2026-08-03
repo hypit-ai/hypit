@@ -61,16 +61,42 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
         boundary: semanticBoundary(occurrence.boundary),
       })),
     })),
-    captionAtoms: parsed.captionAtoms.map((atom) => ({
-      id: atom.id,
-      display: atom.display,
-      segmentId: atom.segmentId,
-      startToken: atom.startToken,
-      endTokenExclusive: atom.endTokenExclusive,
-    })),
+    captionProjection: {
+      contract: parsed.captionProjection.contract,
+      text: parsed.captionProjection.text,
+      regions: parsed.captionProjection.regions.map((region) => ({
+        id: region.id,
+        display: region.display,
+        segmentId: region.segmentId,
+        startToken: region.startToken,
+        endTokenExclusive: region.endTokenExclusive,
+        kind: region.kind,
+        refinements: region.refinements.map((refinement) => ({
+          id: refinement.id,
+          display: refinement.display,
+          displayStart: refinement.displayStart,
+          displayEnd: refinement.displayEnd,
+          startToken: refinement.startToken,
+          endTokenExclusive: refinement.endTokenExclusive,
+          relation: refinement.relation,
+        })),
+      })),
+    },
     semanticIndex: parsed.semanticIndex,
-    projections: parsed.projections,
+    serializations: parsed.serializations,
   });
+}
+
+export function serializeSpeech(parsed: ParsedNarrative): string {
+  return parsed.serializations.speech;
+}
+
+export function serializeDialogue(parsed: ParsedNarrative): string {
+  return parsed.serializations.dialogue;
+}
+
+export function serializeCaption(parsed: ParsedNarrative): string {
+  return parsed.captionProjection.text;
 }
 
 export function narrativeSourceMap(recordId: string, parsed: ParsedNarrative): CanonicalValue {

@@ -660,8 +660,9 @@ svml.lock          精确包版本与 digest
 @svml/film          一种可选的成片意图和输出合同
 ```
 
-具体生产能力继续位于普通官方包中，例如 `@svml/seedance`、`@svml/whisperx`、
-`@svml/semantic-locator`、`@svml/caption` 和 `@svml/broll`。官方可以另给一个有观点的
+具体生产能力继续位于普通官方包中，例如 `@svml/seedance-adapter`、
+`@svml/whisperx-adapter`、`@svml/speech-align`、`@svml/caption` 和 `@svml/broll`。
+官方可以另给一个有观点的
 `@svml/talking-film` Recipe，把这些能力组合成推荐流程；它不能成为隐藏编译阶段。
 
 `@svml/contracts` 初期可以是一个带子命名空间的包，减少过早拆包导致的版本矩阵：
