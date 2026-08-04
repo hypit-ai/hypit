@@ -15,5 +15,5 @@ hero:
 ---
 
 <ClientOnly>
-  <SvmlPlayground />
+  <SvmlDemoCarousel />
 </ClientOnly>
