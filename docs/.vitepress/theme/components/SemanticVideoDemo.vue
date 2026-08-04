@@ -212,6 +212,25 @@ function bindingDepth(line: DemoSourceLine) {
   return rangeBounds.find((range) => range.id === line.selection)?.depth ?? 0;
 }
 
+function roundedRangePath(points: Array<{ x: number; y: number }>, radius = 6) {
+  return points.map((point, index) => {
+    const previous = points[(index - 1 + points.length) % points.length];
+    const next = points[(index + 1) % points.length];
+    const previousLength = Math.hypot(previous.x - point.x, previous.y - point.y) || 1;
+    const nextLength = Math.hypot(next.x - point.x, next.y - point.y) || 1;
+    const cornerRadius = Math.min(radius, previousLength / 2, nextLength / 2);
+    const before = {
+      x: point.x + (previous.x - point.x) * cornerRadius / previousLength,
+      y: point.y + (previous.y - point.y) * cornerRadius / previousLength,
+    };
+    const after = {
+      x: point.x + (next.x - point.x) * cornerRadius / nextLength,
+      y: point.y + (next.y - point.y) * cornerRadius / nextLength,
+    };
+    return `${index === 0 ? "M" : "L"} ${before.x} ${before.y} Q ${point.x} ${point.y} ${after.x} ${after.y}`;
+  }).join(" ") + " Z";
+}
+
 function updateRangeGeometry() {
   const container = codeScrollElement.value;
   if (!container) return;
@@ -234,18 +253,38 @@ function updateRangeGeometry() {
     const offsetX = container.scrollLeft - containerRect.left;
     const offsetY = container.scrollTop - containerRect.top;
     const lineHeight = Number.parseFloat(getComputedStyle(startLine).lineHeight) || 26;
+    const blockPadding = 4;
     const startCenter = (startRect.top + startRect.bottom) / 2 + offsetY;
     const endCenter = (endRect.top + endRect.bottom) / 2 + offsetY;
-    const startX = Math.max(0, Math.min(width, startRect.left + offsetX));
-    const endX = Math.max(0, Math.min(width, endRect.right + offsetX));
-    const left = 44;
-    const right = width - 12;
-    const top = startCenter - lineHeight / 2;
-    const bottom = endCenter + lineHeight / 2;
+    const inlinePadding = 4;
+    const edgeOverhang = 4;
+    const startX = Math.max(4, Math.min(width - 4, startRect.left + offsetX - inlinePadding));
+    const endX = Math.max(4, Math.min(width - 4, endRect.right + offsetX + inlinePadding));
+    const left = 44 - edgeOverhang;
+    const right = width - 12 + edgeOverhang;
+    const top = startCenter - lineHeight / 2 - blockPadding;
+    const bottom = endCenter + lineHeight / 2 + blockPadding;
     const sameLine = Math.abs(startCenter - endCenter) < lineHeight / 2;
-    const path = sameLine
-      ? `M ${startX} ${top} H ${endX} V ${bottom} H ${startX} Z`
-      : `M ${startX} ${top} H ${right} V ${endCenter - lineHeight / 2} H ${endX} V ${bottom} H ${left} V ${startCenter + lineHeight / 2} H ${startX} Z`;
+    const endTop = endCenter - lineHeight / 2;
+    const startBottom = startCenter + lineHeight / 2;
+    const points = sameLine
+      ? [
+        { x: startX, y: top },
+        { x: endX, y: top },
+        { x: endX, y: bottom },
+        { x: startX, y: bottom },
+      ]
+      : [
+        { x: startX, y: top },
+        { x: right, y: top },
+        { x: right, y: endTop },
+        { x: endX, y: endTop },
+        { x: endX, y: bottom },
+        { x: left, y: bottom },
+        { x: left, y: startBottom },
+        { x: startX, y: startBottom },
+      ];
+    const path = roundedRangePath(points);
     geometry[range.id] = { path, depth: range.depth };
   }
 
@@ -446,9 +485,9 @@ onBeforeUnmount(() => {
         @pointerdown="stopSourceFollow"
         @wheel="stopSourceFollow"
         @pointerleave="resumeSourceFollow"
-      >
+        >
         <div class="source-follow-hint">
-          {{ sourceFollowEnabled ? "移入展开全部源码" : "移出恢复精简视图" }}
+          {{ sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图" }}
         </div>
         <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code">
           <svg
@@ -467,7 +506,7 @@ onBeforeUnmount(() => {
             />
           </svg>
           <template v-for="entry in displayedLines" :key="entry.key">
-            <div v-if="entry.kind === 'fold'" class="code-line code-fold" aria-hidden="true"><code>...</code></div>
+            <div v-if="entry.kind === 'fold'" class="code-line code-fold" aria-hidden="true"><code>···</code></div>
             <div v-else-if="entry.kind === 'spacer'" class="code-line code-spacer" aria-hidden="true"></div>
             <div
               v-else-if="entry.line"
