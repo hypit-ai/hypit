@@ -19,6 +19,7 @@ export const scriptManifest: ModuleManifest = {
   version: scriptModuleRef.version,
   dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
   types: [],
+  capabilities: [],
   surfaces: [
     {
       name: "script",

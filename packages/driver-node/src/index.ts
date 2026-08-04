@@ -12,5 +12,6 @@ export {
   ProviderRegistry,
   producerRegistryKey,
   providerCapabilityKey,
+  providerReturnKey,
 } from "./registry.js";
 export type * from "./types.js";

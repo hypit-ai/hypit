@@ -6,7 +6,7 @@ import {
   sealProgramSpace,
   sealSpeechBasis,
 } from "@svml/contracts";
-import type { Narrative, SpeechBasis } from "@svml/contracts";
+import type { Narrative, SpeechAudioBasis, SpeechBasis } from "@svml/contracts";
 import { digestOf } from "@svml/core";
 import { parseScript } from "@svml/script";
 import {
@@ -20,7 +20,7 @@ import type {
 } from "@svml/speech-align";
 
 function evidence(args: {
-  readonly basis: SpeechBasis;
+  readonly basis: SpeechAudioBasis;
   readonly segmentId?: string;
   readonly durationSec?: number;
   readonly startSec?: number;
@@ -53,7 +53,7 @@ function speechBasis(
   narrative: Narrative,
   durationSec = 2,
   windows?: readonly { readonly startSec: number; readonly endSec: number }[],
-): SpeechBasis {
+): SpeechAudioBasis {
   const programSpace = sealProgramSpace({
     contract: "svml.program-space@0",
     durationSec,
@@ -66,8 +66,9 @@ function speechBasis(
     endSec: windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length,
     sourceArtifactDigest: digestOf(`fixture:clip:${segment.id}`),
   }));
-  return sealSpeechBasis({
+  const take = sealSpeechBasis({
     contract: "svml.speech-basis@1",
+    narrativeDigest: narrative.semanticIndex.digest,
     programSpace,
     audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
     visualTrack: {
@@ -85,6 +86,18 @@ function speechBasis(
     },
     segments,
   });
+  return audioProjection(take);
+}
+
+function audioProjection(basis: SpeechBasis): SpeechAudioBasis {
+  return {
+    contract: "svml.speech-audio-basis@1",
+    basisDigest: basis.basisDigest,
+    narrativeDigest: basis.narrativeDigest,
+    programSpace: basis.programSpace,
+    audio: basis.audio,
+    segments: basis.segments,
+  };
 }
 
 function locate(
@@ -304,17 +317,11 @@ test("Evidence from another same-duration audio Basis is rejected before alignme
       { text: "world", startSec: 0.5, endSec: 0.9 },
     ],
   });
-  const secondProgram = sealProgramSpace({
-    contract: "svml.program-space@0",
-    durationSec: 2,
-    frameRate: { numerator: 1_000, denominator: 1 },
-  });
-  const { basisDigest: _firstDigest, ...firstContent } = firstBasis;
-  const secondBasis = sealSpeechBasis({
-    ...firstContent,
-    programSpace: secondProgram,
+  const secondBasis: SpeechAudioBasis = {
+    ...firstBasis,
+    basisDigest: digestOf("fixture:another-take"),
     audio: { ...firstBasis.audio, digest: digestOf("fixture:another-same-duration-audio") },
-  });
+  };
   assert.throws(
     () => locateSpeechTiming(narrative, secondBasis, firstEvidence),
     (error: unknown) => error instanceof SpeechAlignmentError && error.code === "SPEECH_EVIDENCE_BASIS",
@@ -329,8 +336,11 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const { basisDigest: _originalDigest, ...originalContent } = original;
-  const basis = sealSpeechBasis({ ...originalContent, programSpace });
+  const basis: SpeechAudioBasis = {
+    ...original,
+    basisDigest: digestOf("fixture:30fps-take"),
+    programSpace,
+  };
   const map = locateSpeechTiming(narrative, basis, evidence({
     basis,
     durationSec: 1,

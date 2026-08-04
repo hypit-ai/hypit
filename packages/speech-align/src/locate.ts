@@ -7,7 +7,7 @@ import type {
   Narrative,
   NarrativeToken,
   SemanticTimePoint,
-  SpeechBasis,
+  SpeechAudioBasis,
   SpeechCharacterEvidence,
   SpeechWordEvidence,
   TimedSpeechSegment,
@@ -17,7 +17,6 @@ import type {
 import {
   computeAlignedTranscriptEvidenceDigest,
   computeProgramSpaceDigest,
-  computeSpeechBasisDigest,
 } from "@svml/contracts";
 
 import { alignWordGroups } from "./align.js";
@@ -55,11 +54,15 @@ function validateWindow(start: number, end: number, limit: number, label: string
   }
 }
 
-function validateBasis(narrative: Narrative, basis: SpeechBasis): void {
-  if (basis.contract !== "svml.speech-basis@1") fail("SPEECH_BASIS_CONTRACT", "Unsupported SpeechBasis contract.");
-  const { basisDigest: _basisDigest, ...basisContent } = basis;
-  if (!isDigest(basis.basisDigest) || basis.basisDigest !== computeSpeechBasisDigest(basisContent)) {
-    fail("SPEECH_BASIS_DIGEST", "SpeechBasis digest does not match its canonical contents.");
+function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
+  if (basis.contract !== "svml.speech-audio-basis@1") {
+    fail("SPEECH_BASIS_CONTRACT", "Unsupported SpeechAudioBasis contract.");
+  }
+  if (!isDigest(basis.basisDigest) || !isDigest(basis.narrativeDigest)) {
+    fail("SPEECH_BASIS_DIGEST", "SpeechAudioBasis identity digest is invalid.");
+  }
+  if (basis.narrativeDigest !== narrative.semanticIndex.digest) {
+    fail("SPEECH_BASIS_NARRATIVE", "SpeechAudioBasis belongs to a different Narrative.");
   }
   const { digest: _programDigest, ...programContent } = basis.programSpace;
   if (!isDigest(basis.programSpace.digest) || basis.programSpace.digest !== computeProgramSpaceDigest(programContent)) {
@@ -74,21 +77,21 @@ function validateBasis(narrative: Narrative, basis: SpeechBasis): void {
     || basis.programSpace.durationSec <= 0
     || Math.abs(basis.audio.durationSec - basis.programSpace.durationSec) > EPSILON
   ) {
-    fail("SPEECH_BASIS_DURATION", "SpeechBasis audio and ProgramSpace must have the same positive duration.");
+    fail("SPEECH_BASIS_DURATION", "SpeechAudioBasis audio and ProgramSpace must have the same positive duration.");
   }
   if (!isDigest(basis.audio.digest)) fail("SPEECH_AUDIO_DIGEST", "SpeechBasis audio digest is invalid.");
   if (basis.segments.length !== narrative.segments.length) {
-    fail("SPEECH_BASIS_SEGMENTS", "SpeechBasis must cover every Narrative Segment exactly once.");
+    fail("SPEECH_BASIS_SEGMENTS", "SpeechAudioBasis must cover every Narrative Segment exactly once.");
   }
   let previousEnd = 0;
   for (const [index, segment] of basis.segments.entries()) {
     const expected = narrative.segments[index]!;
     if (segment.segmentId !== expected.id) {
-      fail("SPEECH_BASIS_SEGMENTS", `SpeechBasis Segment ${segment.segmentId} does not match ${expected.id}.`);
+      fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} does not match ${expected.id}.`);
     }
     validateWindow(segment.startSec, segment.endSec, basis.programSpace.durationSec, `Basis Segment ${segment.segmentId}`);
     if (segment.startSec < previousEnd - EPSILON) {
-      fail("SPEECH_BASIS_SEGMENTS", `SpeechBasis Segment ${segment.segmentId} overlaps its predecessor.`);
+      fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} overlaps its predecessor.`);
     }
     if (!isDigest(segment.sourceArtifactDigest)) {
       fail("SPEECH_BASIS_ARTIFACT", `SpeechBasis Segment ${segment.segmentId} artifact digest is invalid.`);
@@ -99,7 +102,7 @@ function validateBasis(narrative: Narrative, basis: SpeechBasis): void {
 
 function validateEvidence(
   narrative: Narrative,
-  basis: SpeechBasis,
+  basis: SpeechAudioBasis,
   evidence: AlignedTranscriptEvidence,
 ): void {
   if (evidence.contract !== "svml.aligned-transcript-evidence@1") {
@@ -419,19 +422,19 @@ function mapDigest(map: Omit<CompleteSemanticMap, "mapDigest">): CompleteSemanti
   return digestOf(map);
 }
 
-function frameFor(basis: SpeechBasis, timeSec: number): number {
+function frameFor(basis: SpeechAudioBasis, timeSec: number): number {
   const { numerator, denominator } = basis.programSpace.frameRate;
   return Math.round(timeSec * numerator / denominator);
 }
 
-function secondsFor(basis: SpeechBasis, frame: number): number {
+function secondsFor(basis: SpeechAudioBasis, frame: number): number {
   const { numerator, denominator } = basis.programSpace.frameRate;
   return frame * denominator / numerator;
 }
 
 export function locateSpeechTiming(
   narrative: Narrative,
-  basis: SpeechBasis,
+  basis: SpeechAudioBasis,
   evidence: AlignedTranscriptEvidence,
 ): CompleteSemanticMap {
   validateBasis(narrative, basis);

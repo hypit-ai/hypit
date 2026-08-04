@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 
 import { canonicalize, createResolvedClosure, isDigest } from "@svml/core";
 import type {
+  CapabilityDeclaration,
+  CapabilityRef,
   Digest,
   ImplementationRef,
   ModuleDependency,
@@ -60,6 +62,14 @@ function moduleRef(value: unknown, path: string): ModuleRef {
 }
 
 function typeRef(value: unknown, path: string): TypeRef {
+  const parsed = object(value, path);
+  return {
+    module: moduleRef(parsed.module, `${path}.module`),
+    name: string(parsed.name, `${path}.name`),
+  };
+}
+
+function capabilityRef(value: unknown, path: string): CapabilityRef {
   const parsed = object(value, path);
   return {
     module: moduleRef(parsed.module, `${path}.module`),
@@ -175,6 +185,17 @@ function typeDeclaration(value: unknown, path: string): TypeDeclaration {
   };
 }
 
+function capabilityDeclaration(value: unknown, path: string): CapabilityDeclaration {
+  const parsed = object(value, path);
+  return {
+    name: string(parsed.name, `${path}.name`),
+    returns: typeRef(parsed.returns, `${path}.returns`),
+    ...(parsed.description === undefined
+      ? {}
+      : { description: string(parsed.description, `${path}.description`) }),
+  };
+}
+
 function port(value: unknown, path: string): PortDeclaration {
   const parsed = object(value, path);
   return {
@@ -187,7 +208,8 @@ function needPort(value: unknown, path: string): NeedPortDeclaration {
   const parsed = object(value, path);
   return {
     name: string(parsed.name, `${path}.name`),
-    wants: typeRef(parsed.wants, `${path}.wants`),
+    capability: capabilityRef(parsed.capability, `${path}.capability`),
+    returns: typeRef(parsed.returns, `${path}.returns`),
   };
 }
 
@@ -246,6 +268,9 @@ export function parseModuleManifest(value: unknown): ModuleManifest {
     ),
     types: array(parsed.types, "$manifest.types").map((item, index) =>
       typeDeclaration(item, `$manifest.types[${index}]`),
+    ),
+    capabilities: array(parsed.capabilities, "$manifest.capabilities").map((item, index) =>
+      capabilityDeclaration(item, `$manifest.capabilities[${index}]`),
     ),
     surfaces: array(parsed.surfaces, "$manifest.surfaces").map((item, index) =>
       surface(item, `$manifest.surfaces[${index}]`),

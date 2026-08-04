@@ -1,5 +1,6 @@
 export type * from "./caption.js";
 export {
+  assertSpeechAudioBasisIdentity,
   assertSpeechBasisIdentity,
   computeAlignedTranscriptEvidenceDigest,
   computeProgramSpaceDigest,
@@ -17,7 +18,9 @@ export {
   contractsModuleRef,
   contractTypes,
   narrativeSchema,
+  speechAudioBasisSchema,
   speechBasisSchema,
+  speechVisualTrackSchema,
   timedCaptionProjectionSchema,
 } from "./manifest.js";
 export type * from "./narrative.js";
