@@ -1,5 +1,6 @@
 import streetTranscript from "../../../public/street-interview/transcript.json";
 import goodBetterBestTranscript from "../../../public/good-better-best/transcript.json";
+import { goodBetterBestMedia, streetMedia } from "./demo-media";
 
 export type DemoId = "street" | "good-better-best";
 
@@ -146,19 +147,19 @@ export const semanticVideoDemos: Record<DemoId, SemanticVideoDemoConfig> = {
     duration: 31.1333333333,
     words: streetWords,
     scenes: [
-      { src: "/street-interview/scene-1.mp4", start: 0, end: 5 },
-      { src: "/street-interview/scene-2.mp4", start: 5, end: 11 },
-      { src: "/street-interview/scene-3.mp4", start: 11, end: 22 },
-      { src: "/street-interview/scene-4.mp4", start: 22, end: 31.1333333333 },
+      { src: streetMedia.scenes[0], start: 0, end: 5 },
+      { src: streetMedia.scenes[1], start: 5, end: 11 },
+      { src: streetMedia.scenes[2], start: 11, end: 22 },
+      { src: streetMedia.scenes[3], start: 22, end: 31.1333333333 },
     ],
     selections: [
       { id: "hook", start: .04, end: 5.12, layer: "scene" },
       { id: "rainbow", start: 5.12, end: 11.12, layer: "scene" },
       { id: "fees", start: 11.12, end: 22.2, layer: "scene" },
       { id: "loan", start: 22.2, end: 31.13, layer: "scene" },
-      { id: "seven-bags", start: 7.08, end: 11.12, layer: "overlay", asset: "/street-interview/broll-2.mp4" },
-      { id: "receipt", start: 18.81, end: 22.2, layer: "overlay", asset: "/street-interview/broll-3.mp4" },
-      { id: "college", start: 26.22, end: 31.06, layer: "overlay", asset: "/street-interview/broll-4.mp4" },
+      { id: "seven-bags", start: 7.08, end: 11.12, layer: "overlay", asset: streetMedia.broll[0] },
+      { id: "receipt", start: 18.81, end: 22.2, layer: "overlay", asset: streetMedia.broll[1] },
+      { id: "college", start: 26.22, end: 31.06, layer: "overlay", asset: streetMedia.broll[2] },
     ],
     lines: streetLines,
   },
@@ -167,22 +168,22 @@ export const semanticVideoDemos: Record<DemoId, SemanticVideoDemoConfig> = {
     duration: 42.0333333333,
     words: goodBetterBestWords,
     scenes: [
-      { src: "/good-better-best/speaker-hook.mp4", start: 0, end: 4 },
-      { src: "/good-better-best/speaker-1.mp4", start: 4, end: 8 },
-      { src: "/good-better-best/speaker-good.mp4", start: 8, end: 14 },
-      { src: "/good-better-best/speaker-2.mp4", start: 14, end: 18.05 },
-      { src: "/good-better-best/speaker-better.mp4", start: 18.05, end: 23.05 },
-      { src: "/good-better-best/speaker-3.mp4", start: 23.05, end: 28.05 },
-      { src: "/good-better-best/speaker-best.mp4", start: 28.05, end: 42.0333333333 },
+      { src: goodBetterBestMedia.speakers[0], start: 0, end: 4 },
+      { src: goodBetterBestMedia.speakers[1], start: 4, end: 8 },
+      { src: goodBetterBestMedia.speakers[2], start: 8, end: 14 },
+      { src: goodBetterBestMedia.speakers[3], start: 14, end: 18.05 },
+      { src: goodBetterBestMedia.speakers[4], start: 18.05, end: 23.05 },
+      { src: goodBetterBestMedia.speakers[5], start: 23.05, end: 28.05 },
+      { src: goodBetterBestMedia.speakers[6], start: 28.05, end: 42.0333333333 },
     ],
     selections: [
       { id: "hook", start: .19, end: 4.01, layer: "scene" },
       { id: "good", start: 4.01, end: 14.12, layer: "scene" },
       { id: "better", start: 14.12, end: 23.12, layer: "scene" },
       { id: "best", start: 23.12, end: 41.34, layer: "scene" },
-      { id: "votes", start: 30.24, end: 33.45, layer: "overlay", asset: "/good-better-best/deck-votes.png" },
-      { id: "attract", start: 33.49, end: 36, layer: "overlay", asset: "/good-better-best/deck-attract.png" },
-      { id: "features", start: 36, end: 39.28, layer: "overlay", asset: "/good-better-best/deck-features.png" },
+      { id: "votes", start: 30.24, end: 33.45, layer: "overlay", asset: goodBetterBestMedia.decks[0] },
+      { id: "attract", start: 33.49, end: 36, layer: "overlay", asset: goodBetterBestMedia.decks[1] },
+      { id: "features", start: 36, end: 39.28, layer: "overlay", asset: goodBetterBestMedia.decks[2] },
     ],
     lines: goodBetterBestLines,
   },

@@ -36,10 +36,12 @@ body { letter-spacing: -0.012em; }
 .hero-statement-name { width: fit-content; margin: 0; border: 0; padding: 0; color: #f4f7f0; font-size: clamp(48px,7vw,92px); font-weight: 700; line-height: .98; letter-spacing: -.065em; }
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); }
 .hero-statement-viewport-en { height: clamp(108px,12vw,142px); margin-top: 8px; }
-.hero-statement-viewport-zh { height: 68px; margin-top: -12px; }
+.hero-statement-viewport-zh { height: 68px; margin-top: -20px; }
 .hero-statement-en, .hero-statement-zh { position: absolute; inset: 0; display: flex; align-items: center; margin: 0; padding-block: 20px; will-change: transform,filter,opacity; }
 .hero-statement-en { color: #f4f7f0; font-size: clamp(28px,4vw,52px); font-weight: 700; line-height: 1.04; letter-spacing: -.045em; }
 .hero-statement-zh { color: var(--vp-c-text-2); font-size: 18px; font-weight: 500; line-height: 1.65; }
+.hero-statement-line { display: inline; }
+.hero-statement-accent { color: var(--vp-c-brand-1); }
 .hero-statement-swap-enter-active, .hero-statement-swap-leave-active { transition: transform .9s cubic-bezier(.22,1,.36,1), filter .9s cubic-bezier(.22,1,.36,1), opacity .72s cubic-bezier(.22,1,.36,1); }
 .hero-statement-swap-enter-from { opacity: 0; filter: blur(12px); transform: translateY(72%); }
 .hero-statement-swap-leave-to { opacity: 0; filter: blur(12px); transform: translateY(-72%); }
@@ -245,7 +247,7 @@ body { letter-spacing: -0.012em; }
   .VPHero .text { font-size: 29px !important; }
   .hero-statement-name { font-size: 50px; }
   .hero-statement-viewport-en { height: 126px; margin-top: 6px; }
-  .hero-statement-viewport-zh { height: 62px; margin-top: -10px; }
+  .hero-statement-viewport-zh { height: 62px; margin-top: -18px; }
   .hero-statement-en { font-size: 29px; }
   .hero-statement-zh { font-size: 16px; }
   .demo-shell { margin-inline: -8px; border-radius: 12px; }
