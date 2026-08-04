@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { rankingMedia, resolveDemoMedia } from "./demo-media";
+import { demoPointerIsInside } from "./demo-pointer";
 import { wordCues, type WordCue } from "./regen-ranking-cues";
 import {
   buildFoldedSourceView,
@@ -194,6 +195,7 @@ const sourceViewportRows = ref(27);
 const sourceLineRows = ref<number[]>(lines.map(() => 1));
 const audioEnabled = ref(false);
 const stageElement = ref<HTMLElement | null>(null);
+const sourcePanelElement = ref<HTMLElement | null>(null);
 const codeScrollElement = ref<HTMLElement | null>(null);
 const sourceMeasureElement = ref<HTMLElement | null>(null);
 const activeIconElement = ref<HTMLElement | null>(null);
@@ -716,7 +718,14 @@ function startPlayback() {
   syncDiscreteState(programTime, true);
   syncBaseVideos(true);
   updateContinuousVisuals(programTime);
+  syncSourceHoverState();
   animationFrame = requestAnimationFrame(renderFrame);
+}
+
+function syncSourceHoverState() {
+  const sourceHovered = demoPointerIsInside(sourcePanelElement.value);
+  if (!sourceHovered) clearInspection();
+  sourceFollowEnabled.value = !sourceHovered;
 }
 
 function updateSourceViewportRows() {
@@ -799,6 +808,7 @@ onBeforeUnmount(() => {
       @mouseleave="clearInspection"
     >
       <div
+        ref="sourcePanelElement"
         class="source-panel"
         :class="{ 'source-following': sourceFollowEnabled }"
         @pointermove="stopSourceFollow"
