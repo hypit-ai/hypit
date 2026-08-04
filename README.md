@@ -56,8 +56,9 @@ architecture end to end:
   but cannot rewrite Script text or timing;
 - flat media, ranking, B-roll, caption, text and audio Tracks in one absolute
   ProgramSpace;
-- Film as the only `Track[]` consumer and HyperFrames HTML as the sole formal
-  video compilation target.
+- Film as the executable v1 slice's `Track[]` consumer and HyperFrames HTML as
+  its sole formal video compilation target. The v2 Kernel does not make Film or
+  final video the fixed root of every Build.
 
 There is no live provider adapter in this repository. A reachable
 `profile="capability-v1"` Component must be satisfied by an exact,
@@ -143,9 +144,13 @@ generation provider is invoked by tests or compilation.
 
 - [Intent-first modular compilation architecture](docs/intent-first-modular-compilation.md)
   records the next architecture direction: SVML as author intent, source-selected
-  SVK compilation components, typed external requirements and provenance-preserving
+  compilation modules, typed external requirements and provenance-preserving
   fulfillment or substitution. The executable v1 documents below remain implementation
   records until that migration is complete.
+- [Kernel graph and build intent v2](docs/kernel-graph-build-intent-v2.md)
+  is the current Kernel construction authority: complete typed Graph, arbitrary
+  Targets, Pins, reverse Demand, derived BuildPlans, Contract Packages and
+  open-world dynamic modules.
 - [Script Surface v1](spec/script-surface-v1.md)
 - [Source Architecture v1 draft](spec/source-architecture-draft.md)
 - [Speech Program and Caption v1 target contract](docs/speech-program-caption-v1.md)

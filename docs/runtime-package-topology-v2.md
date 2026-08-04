@@ -5,25 +5,34 @@
 > `.svk`、`ExecutionBundle`、`EffectRequest`、队列归属和 Runtime 装配的旧设计。
 > 当前实现只完成了其中的 Core、Node Driver 和进程内 Provider Registry；本文剩余
 > 内容是后续施工边界，不表示相应生产能力已经存在。
+>
+> Runtime 的所有实现必须建立在
+> [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md) 定义的完整
+> Graph、任意 Target、通用 Pin 与 Demand Closure 之上。Kernel Gate 未完成前，不先
+> 建设生产 Scheduler、真实 Provider 或 Hosted Runtime。
 
 ## 1. 决策摘要
 
-SVML 使用以下四条不可混淆的规则：
+SVML 使用以下五条不可混淆的规则：
 
-1. **作者源码决定创作方法。** Seedance Mini、WhisperX、Gemini Cue Planner 和
+1. **完整作者图不预设唯一终点。** Film、TrackSet、ImageSet、SemanticMap、
+   HyperFrames 和任意公开输出端口都可以成为一次 Build 的 Target；Pin 是一等作者
+   Build Intent，Core 据此反向计算 Demand。
+2. **作者源码决定创作方法。** Seedance Mini、WhisperX、Gemini Cue Planner 和
    HyperFrames 等选择，必须由 `.svml` 导入的作者模块或其锁定的传递依赖决定。
-2. **Runtime Profile 决定整条 Build 在哪里运行。** Core、权威 Build Scheduler、
+3. **Runtime Profile 决定整条 Build 在哪里运行。** Core、权威 Build Scheduler、
    BuildState 和 Artifact Store 可以位于开发者本机，也可以位于 Hypit。
-3. **Provider Binding 决定一个已经明确的 Need 在哪里执行。** 它只能绑定同一种
-   capability 的 Endpoint，不能把 Seedance 偷换成 Kling，也不能把 WhisperX 偷换成
-   任意 STT。
-4. **每个 Build 只有一个权威 Build Scheduler。** 远端 Provider 可以拥有自己的
+4. **Provider Binding 决定一个已经明确的 Need 在哪里执行。** Exact Endpoint 必须
+   匹配 Need capability；Kling、黑场或估计实现可以被显式选择为兼容结果的
+   `substitute`，但不能冒充 Seedance/WhisperX `exact`。
+5. **每个 Build 只有一个权威 Build Scheduler。** 远端 Provider 可以拥有自己的
    任务队列；该队列只负责其内部任务，不是第二个 SVML Build Scheduler。
 
 因此：
 
 ```text
 .svml import        决定做什么
+BuildIntent          决定这次 Target 什么、Pin 什么
 Runtime Profile     决定整条 Build 在哪里运行
 Provider Binding    决定某项明确能力在哪里执行
 ```
@@ -43,10 +52,15 @@ Provider Binding    决定某项明确能力在哪里执行
 一切都能自定义协议      不是互操作原则
 ```
 
-严格意义上的 Core 仍然垄断：
+严格意义上的 Core 垄断：
 
+- 类型化完整 Graph、Node/Port identity 与依赖边；
+- 任意 TargetSet、PinSet 与 BuildIntent identity；
+- 从 Target 反向求 Demand Closure，遇到 Pin 截断上游；
+- 多 Target 依赖并集、公共上游去重与 ready Command 计算；
+- 从 Graph + BuildIntent 派生有限 BuildPlan；
 - Record、Need、Command、Event、Receipt、Derivation 和 BuildState 的身份；
-- 有限 BuildPlan 的状态推进；
+- 有限 BuildPlan 的验证与状态推进；
 - 类型、内容摘要、模块闭包和实现摘要验证；
 - 输入、输出、Need、Event 与 Derivation 的因果绑定；
 - `exact` / `substitute` 的单调传播；
@@ -57,8 +71,8 @@ Provider Binding    决定某项明确能力在哪里执行
 ProgramSpace、Evidence、CompleteSemanticMap、Track 和 Composition。组件不能用
 私有 TypeScript 类型代替这些跨包合同。
 
-Core 不解析源码、不调用 Provider、不排队、不读取凭据、不处理媒体字节，也不渲染
-HyperFrames。它是一个纯的、内容寻址的编译状态机：
+Core 不解析源码、不调用 Provider、不保存队列、不读取凭据、不处理媒体字节，也不
+渲染 HyperFrames。它是一个纯的、内容寻址的图需求与编译状态机：
 
 ```ts
 reduce(previousState, acceptedEvent) -> {
@@ -86,14 +100,20 @@ reduce(previousState, acceptedEvent) -> {
 其中 `@svml/film` 也可以锁定地传递依赖 `@svml/hyperframes`，使最后一行不必显式
 出现。两种 Surface 选择都必须产生同一个事实：正式成片目标是 HyperFrames。
 
-`@svml/seedance-mini` 可以产生：
+`@svml/seedance-mini` 可以产生一个公开的中立 SpeechBasis 输出，并在该输出被 Demand
+且未被 Pin 时提出：
 
 ```text
-Need<seedance.mini.speech-video@1>
-Need<seedance.mini.broll-video@1>
+Need {
+  capability = seedance.mini.speech-video@1
+  returns    = svml.speech-basis@1
+}
 ```
 
-它不能产生含义不足的 `Need<speaker-video>`，再让 Runtime 猜 Seedance 或 Kling。
+它不能产生含义不足的 `Need<speaker-video>` 再让 Runtime 猜 exact 方法。Kling 可以被
+本次调用者显式选择为 SpeechBasis substitute，但不得 claim Seedance exact。若作者
+直接 Pin 该组件的 SpeechBasis 输出，原 Producer 被 Demand 裁掉，Seedance Need 根本
+不会产生。
 
 ### 3.2 Runtime Profile：Build 在哪里运行
 
@@ -119,26 +139,28 @@ Profile 可以是本地配置文件，也可以作为可复用的普通包发布
 ```
 
 它们类似类、装配方案和对象，不应为每次部署复制一套代码包。Runtime Profile 不进入
-作者 `semanticDigest`，但锁定的 Runtime Closure、Endpoint、实现摘要和实际结果必须
-进入 Run provenance、Receipt 和 Derivation；换了执行环境不是不可审计的隐形变化。
+`sourceSemanticDigest` 或 `buildIntentDigest`，但锁定的 Runtime Closure、Endpoint、
+实现摘要和实际结果必须进入 Run provenance、Receipt 和 Derivation；换了执行环境
+不是不可审计的隐形变化。
 
 ### 3.3 Provider Binding：明确能力在哪里执行
 
-Provider Endpoint 注册它能够满足的精确 TypeRef，并可以进一步检查 Need
-constraints。若存在多个匹配 Endpoint，Runtime 必须显式绑定，不能靠优先级、包名
-或注册顺序猜测。
+Provider Endpoint 注册它能够精确满足的 CapabilityRef、返回的 TypeRef，并可以
+进一步检查 Need constraints。若存在多个匹配 Endpoint，Runtime 必须显式绑定，不能
+靠优先级、包名或注册顺序猜测。
 
 ```text
-Need<seedance.mini.speech-video@1>
+capability seedance.mini.speech-video@1 -> SpeechBasis
           ├── kie.seedance-mini
           └── volcengine.seedance-mini
 
-Need<hyperframes.render@1>
+capability hyperframes.render@1 -> VideoArtifact
           ├── hyperframes.local
           └── hypit.hyperframes
 ```
 
-两个 Endpoint 返回相同外层媒体类型，不代表它们可以满足不同 capability。
+两个 Endpoint 返回相同外层媒体类型，不代表它们可以互相 claim exact capability；
+显式 substitute 只承诺兼容的返回 Contract。
 
 同样必须区分“Provider 包”和“Endpoint 实例”：
 
@@ -379,7 +401,8 @@ Provider Job Queue 不推进 BuildPlan，也不能接受其他步骤的 Event。
 @svml/talking-film
 ```
 
-它只锁定传递模块闭包和官方 BuildPlan，不获得 Runtime 权限。
+它只锁定传递模块闭包、Graph lowering 和官方组件词汇，不预先固定本次 Targets/Pins，
+也不获得 Runtime 权限。
 
 ### 9.2 本地 Runtime Services
 
@@ -452,7 +475,11 @@ artifacts-local 和 credentials-keychain，并提供一个简单的 Provider 配
 - Provider 多实现时要求显式 `bind()`；
 - 恢复时丢弃序列化 Command，由 Core 重新生成。
 
-接下来不应直接写生产队列，而应依次建立以下接口。
+当前实现尚未完成完整 Graph、任意 Target、通用 Pin、Demand Planner、Need
+capability/returns 分离和动态外部包加载。因此 Runtime 工作必须等待 Kernel 规范的
+K1-K4 Gate；不能用 Runtime Router 或数据库补偿缺失的 Core 语义。
+
+Kernel Gate 完成后，Runtime 再依次建立以下接口。
 
 ### 10.1 静态 Runtime Module Manifest
 
@@ -463,7 +490,7 @@ Manifest 不执行包代码。
 
 把一个 Profile 解析成锁定的 Runtime Closure，并在任何付费调用前验证：
 
-- 所有 Build Needs 都存在精确 Binding；
+- 所有 demanded Needs 都有符合本次 exact/substitute acceptance 的显式 Binding；
 - 不存在模糊的多个 Provider；
 - 运行时服务只存在一个权威 Scheduler；
 - 权限、凭据槽和实现摘要完整；
@@ -510,16 +537,27 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 
 ## 11. 分阶段施工顺序
 
-### Phase A：锁定协议，不接生产
+### Kernel prerequisite：先完成 K1-K4
+
+施工与验收以 Kernel 主规范为准：
+
+1. 完整 CompiledGraph、PortAddress、TargetSet、PinSet 和 BuildIntent；
+2. Pin 截断、多 Target 并集和 Core Demand Planner；
+3. Need capability/returns 分离；
+4. 事后安装的未知组件与 Provider 无需重发 Core 即可运行；
+5. 图片依赖、聚合终点和 Track Pin 规范测试全部通过。
+
+### Phase R1：锁定本地 Runtime 协议，不接生产
 
 1. 新增 Runtime Module Manifest 与 Profile Schema；
 2. 把现有 `ProviderRegistry.bind()` 变成从锁定 Profile 构造；
 3. 提供 `@svml/runtime-local` 参考发行包；
-4. 实现单一进程内 Scheduler 和 Operation Journal；
-5. 用 fake Seedance、fake WhisperX、fake HyperFrames 证明完整恢复；
-6. 增加“同一个 Build 不允许两个权威 Scheduler”的攻击性测试。
+4. 实现单一进程内 Scheduler、JSON Operation Journal 和本地 CAS；
+5. Scheduler 只调度 Core ready Commands，不自行搜索或裁剪图；
+6. 用 fake Seedance、fake WhisperX、fake HyperFrames 证明 Pin 后零付费调用和完整恢复；
+7. 增加“同一个 Build 不允许两个权威 Scheduler”的攻击性测试。
 
-### Phase B：真正本地纵向链路
+### Phase R2：真正本地纵向链路
 
 1. HyperFrames 本地 Endpoint；
 2. WhisperX 本地 Endpoint；
@@ -528,14 +566,14 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 5. 完成 Script → Seedance → Basis → WhisperX → Map → Caption/Tracks →
    HyperFrames 的单机 Build。
 
-### Phase C：Hypit 单能力远程 Endpoint
+### Phase R3：Hypit 单能力远程 Endpoint
 
 1. `@hypit/provider-hyperframes`；
 2. `@hypit/provider-seedance`；
 3. 本地 Scheduler 对远端 pending operation 的恢复；
 4. 验证本地 BuildState 不依赖 Hypit 数据库或队列类型。
 
-### Phase D：Hosted Runtime
+### Phase R4：Hosted Runtime
 
 1. 服务器 Build Scheduler 与 Journal；
 2. `@hypit/runtime-client`；
@@ -547,7 +585,8 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 
 - 不为 Brands、Customers、Developer Remote 各写一套 Provider 包；
 - 不在 `.svml` 中配置 queue name、API Key、数据库、Lambda ARN 或租户；
-- 不允许 Runtime 把 generic speaker 自动路由到 Seedance/Kling；
+- 不允许 Runtime 把 generic speaker 自动路由并 claim Seedance/Kling exact；显式
+  substitute 必须由本次 BuildIntent/fulfillment policy 选择并保留 provenance；
 - 不把 Provider 内部远端队列注册成第二个 Build Scheduler；
 - 不让源码 import 自动执行带网络或凭据权限的包；
 - 不引入 `.svk` 文件格式；
@@ -559,12 +598,15 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 此边界只有在以下条件同时满足时才算实现：
 
 1. 同一 `.svml` 和作者模块闭包可在 Local 与 Hosted Runtime 运行；
-2. 切换 Runtime Profile 不改变 `semanticDigest`；
-3. Seedance Mini Need 不能被 Kling 或 generic video Provider 满足；
-4. WhisperX Need 不能被 generic STT Provider 满足；
+2. 切换 Runtime Profile 不改变 sourceSemanticDigest 或 buildIntentDigest；
+3. 任意 Target/Pin 组合在 Local 与 Hosted Runtime 得到相同 DemandPlan；
+4. Seedance/Kling、WhisperX/generic STT 不能互相 claim exact，但兼容结果可被显式
+   标记为 substitute；
 5. 每个 Build 恰好一个权威 Scheduler；
 6. 本地 Build 使用 Hypit HyperFrames Endpoint 时，本地仍能独立恢复 BuildState；
 7. Remote Runtime Client 不需要安装服务器 Scheduler、数据库或 Lambda 包；
 8. Brands 与 Customers 只因 Profile/tenant policy 不同，不产生不同编译组件；
 9. Runtime 恢复不会信任序列化 outstanding Command，也不会重复付费 submit；
-10. 最终正式目标始终是锁定的 HyperFrames Program/Artifact。
+10. 一个事后安装的组件或 Provider 不需要重发 Core/CLI/Hosted 主服务；
+11. 当作者 Target 正式成片时，唯一正式视觉目标是锁定的 HyperFrames Program/Artifact；
+12. Target 图片、Track、SemanticMap 等中间输出时，不强制 Demand Film 或 HyperFrames。

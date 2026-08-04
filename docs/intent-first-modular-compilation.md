@@ -23,6 +23,19 @@ Basis/Map/Track/HyperFrames 编译路径，也修正了讨论过程中一度把�
 组件、Kernel、Frontend、Requirement 和 Recipe 都是包的导出能力，由固定的数据
 Manifest 描述，包的实现可以使用 JS、Wasm 或其他受 Host 支持的形式。
 
+### 2026-08-04 Kernel 修订
+
+后续讨论确认：Core 不能只被描述为“对预先给定 BuildPlan 推进事件的状态机”。SVML
+最重要的人性化编译语义是完整类型化 Graph、任意 Target、通用 Pin 和从 Target
+反向求 Demand。Film/HyperFrames 不是每次 Build 的固定根；BuildPlan 是
+`CompiledGraph + BuildIntent(Targets + Pins)` 的派生结果。
+
+同时确认：Track、SpeechBasis 等共同语言由独立 Contract Package 定义，Core 只
+拥有 TypeRef/Schema 元语言，不全局注册领域类型；一个 Core 构建完成后才发布的未知
+组件必须能通过 Manifest 与隔离 Worker 动态加入，而不重发 Core/CLI/Hosted 主服务。
+完整规范见 [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md)。若本文
+后续旧例与该规范冲突，以新 Kernel 规范为准。
+
 ### 2026-08-03 首个 Frontend 竖切
 
 当前 v2 已实现 `@svml/text` 与 `@svml/script` 的第一条公开接缝：
@@ -39,9 +52,9 @@ Manifest 描述，包的实现可以使用 JS、Wasm 或其他受 Host 支持的
 
 这一竖切仍只运行可信、显式注册的 Surface handler。第三方 Parser 沙箱、Driver
 解析 source import、完整包定位/lock 和通用 Component Surface 尚未实现，不能把
-当前 registry 当作最终安全边界。首个实现暂由 `@svml/script` 同时导出 Narrative
-合同和 Script Surface；只有在出现独立复用需求后再拆 `@svml/narrative`，不提前
-增加一个 Core 概念。
+当前 registry 当作最终安全边界。当前 `@svml/script` Surface 已输出
+`@svml/contracts#Narrative`；Narrative 是独立 Contract Package 中的领域共同语言，
+不是 Core 概念。
 
 ## 1. 一句话定义
 
@@ -54,7 +67,7 @@ Manifest 描述，包的实现可以使用 JS、Wasm 或其他受 Host 支持的
 - Provider 工作流 DSL；
 - 固定的视频生成流水线；
 - Hypit/Twinit 节点图的文本序列化；
-- HyperFrames 或 Remotion 的配置格式；
+- HyperFrames 的配置格式；
 - 把 preview、test、run、production 写进语言的多模式构建系统。
 
 SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭包、外部事实和运行
@@ -91,6 +104,13 @@ SVML 是一门作者意图语言。一次具体视频只是某个编译组件闭
 12. 整个工具链不可约的启动根只有 `SourceUnit + AuthorFrontend` 的外部绑定和
     Frontend ABI。官方 Text Frontend 可以再固定一个无领域语义的 Import Prologue，
     但 Script、Component 和 Kernel 都必须在该 Prologue 之后通过公开模块协议出现。
+13. 完整作者程序降低为不预设唯一终点的 CompiledGraph；任意公开输出都可以成为
+    Target，Pin 必须作为作者 BuildIntent 由 Core 验证并截断上游。
+14. Core 根据 Targets/Pins 派生有限 BuildPlan；Runtime 和组件不得覆盖 Demand 法律。
+15. Core 只认识通用 TypeRef/Schema。Track、Narrative、SpeechBasis、Composition 等
+    共同语言由版本化 Contract Package 定义，并作为模块传递依赖进入当前闭包。
+16. 新增组件、Contract 或 Provider 不需要修改中央 union、switch、数据库表或重发
+    Core；动态外部包纵向测试是开放扩展能力的必要验收。
 
 ## 3. SVML 是抽象意图语言，不是一种被 Core 固定的源码写法
 
@@ -428,11 +448,15 @@ Frontend 位于 Core 之前，可以是官方文本语法、第三方文本语�
 Seedance、STT、本地 FFmpeg 或人工上传。它处理 credential、API 协议、网络、
 异步 operation 和 usage，不拥有上层组件的领域语义。
 
-### 4.5 Consumer/target/view
+### 4.5 Target、Pin 与 View
 
-向已编译事实提出自己需要的产物，例如编辑器 ViewModel、Timeline、HyperFrames
-Document、Remotion Composition 或 MP4。消费者可以提供目标 Kernel 和接受策略，
-但它们不是源语言中的全局模式。
+完整 CompiledGraph 中任何合法输出端口都可以成为一次 Build 的 Target，例如 Image、
+ImageSet、SemanticMap、Track、Timeline View、HyperFrames Program 或 MP4。Target
+不是 Film 专属终点，也不是 Runtime 自动挑选的全局模式。
+
+Pin 是作者对某个输出端口的明确物化选择。Core 从所有 Targets 反向求 Demand，遇到
+Pin 截断该 Producer 的上游；多个 Targets 的公共上游只执行一次。View 可以消费同一
+图与 BuildState，但 Canvas 坐标、面板展开等纯 UI 状态仍不进入 BuildIntent。
 
 ## 5. 与模块无关的最小 Core
 
@@ -442,13 +466,15 @@ Document、Remotion Composition 或 MP4。消费者可以提供目标 Kernel 和
 Identity
 Type
 Value
+Typed Graph / Node / Port
+Target / Pin / BuildIntent
+Demand / finite BuildPlan
 Authored Fact
 Derived/Observed Claim
 Kernel
 Requirement
 Artifact
 Derivation/Provenance
-Query
 ```
 
 ### 5.1 Canonical value model
@@ -496,7 +522,7 @@ type Claim = {
 源文件、模块和参数的完整路径。外部 Kernel 和 Handler 无权产生伪装成 source
 provenance 的 Claim。
 
-### 5.3 Kernel、Requirement 与 Query
+### 5.3 Graph、BuildIntent、Kernel 与 Requirement
 
 ```ts
 type KernelManifest = {
@@ -509,16 +535,23 @@ type KernelManifest = {
 
 type Requirement = {
   id: RequirementId;
-  type: TypeRef;
+  capability: CapabilityRef;
+  returns: TypeRef;
   subject: NodeId;
   payload: Value;
   requestedBy: DerivationId;
 };
 
-type Query = {
-  subject: NodeId;
-  wants: TypeRef;
-  constraints?: Value;
+type BuildIntent = {
+  graph: Digest;
+  targets: Array<{
+    port: PortAddress;
+    accepts: "exact" | "substitute";
+  }>;
+  pins: Array<{
+    port: PortAddress;
+    record: TypedRecord;
+  }>;
 };
 ```
 
@@ -533,18 +566,18 @@ demand scheduling：
 - 暂停、Receipt 注入和恢复；
 - 多个候选并存。
 
-这里的 demand scheduling 只表示“在一个显式、有限的 Recipe/Plan 中调度已经就绪
-的节点”，不表示 Core 扫描所有已安装 Kernel 并自动搜索从输入到 Query 的路径。
-Producer 的选择必须已由作者、Recipe 或 Consumer 明确；存在多个未消歧候选时，
-Core 报告歧义或保留候选，不拥有隐藏排名策略。
+这里的 demand scheduling 表示：在 Author Modules 已经降低好的完整 CompiledGraph
+中，从 BuildIntent Targets 反向遍历显式依赖，遇到 Pins 截断，派生有限 BuildPlan。
+它不表示 Core 扫描所有已安装 Kernel 自动搜索未知工作流。Producer 的选择必须已经
+存在于图中；Core 只计算当前作者到底 demand 哪些已声明节点。
 
 ### 5.4 Core 是纯状态机，不是副作用执行器
 
 Core 不读文件、不执行 JS、不访问网络、环境变量或时钟。概念 API 是：
 
 ```ts
-const world = core.link(resolvedClosure, typedModules);
-let build = core.request(world, query);
+const graph = core.link(resolvedClosure, typedModules);
+let build = core.start(graph, buildIntent);
 
 const command = core.next(build);
 // RunKernel | ResolveRequirement | Complete
@@ -1022,32 +1055,33 @@ resolution、产物 delivery 来源和消费者接受的 `exact/substitute` 符�
 候选还可以同时存在。
 
 这里没有 `Need<SpeakerVideo>` 交给 Runtime 再猜 Seedance、Kling 或其他模型。作者
-SVML 或其显式导入的组件包必须在 BuildPlan 形成前决定外部能力；Runtime 只绑定同一
-能力的执行端。`substitute` 可以提供已有视频、黑场视频或人工时间证据，但不会改写
-Need 身份，也不会冒充 `exact`。
+SVML 或其显式导入的组件包必须在完整 Graph 形成前决定 exact capability；Runtime
+不能把 Kling 冒充 Seedance exact。Need 另行声明中立返回 Contract，例如 SpeechBasis。
+调用者可以显式选择 Kling、已有视频、黑场视频或人工时间证据作为兼容 Contract 的
+`substitute`，但不能改写 Need capability 或冒充 `exact`。若作者直接 Pin 组件公开
+输出，原 Producer 和 Need 会被 Demand 裁掉，这不是 substitute fulfillment。
 
 ## 13. Target、Editor 和 View
 
-目标、编辑器和 View 也使用公开模块协议，但不应被混同为 Author Frontend 或
-作者语言模式。
-
-外部消费者可以请求：
+Target 是 BuildIntent 的一等 Core 输入，不是 Film 专属根，也不是预览/生产模式。
+同一完整图可以被作者请求：
 
 ```text
-IntentGraph -> CanvasViewModel
-SemanticMap -> TimelineViewModel
-Film/Track facts -> HyperFramesDocument
-Film/Track facts -> RemotionComposition
-RenderableDocument -> MP4 Artifact
+Target ImageSet              -> 只物化图片及其依赖
+Target CompleteSemanticMap   -> 不 Demand Film
+Target CaptionTrack          -> 只物化字幕分支
+Target TrackSet              -> 物化被收集的所有 Track
+Target HyperFramesProgram    -> 物化正式视觉程序
+Target VideoArtifact         -> 继续执行 HyperFrames Render
 ```
 
-作者可以显式要求某个输出目标；若没有要求，输出工具可以选择目标 Kernel。这个
-选择及其实现 digest 进入 Derivation Record。
+多个 Targets 的 Demand Closure 取并集。Pin 任一公开输出会把该端口变成作者明确提供
+的事实，截断原 Producer 的纯上游。Target/Pin 及其 Record digest 进入
+buildIntentDigest；Runtime Profile 仍不改变作者图和 BuildIntent。
 
-编辑器可以读取作者事实、派生 Claim、Requirement 和候选产物。Canvas 坐标、
-面板展开状态、选中节点等 UI 状态不进入作者程序。编辑器修改作品时，可以更新
-它拥有的 source document，或通过对应 Author Frontend 重新产生 IntentModule；
-不能将 ViewModel 变成第二份作者真相。
+编辑器可以读取作者事实、完整 Graph、DemandPlan、派生 Claim、Requirement 和候选
+产物，并创建新的 BuildIntent。Canvas 坐标、面板展开状态等纯 UI 状态不进入作者图；
+但作者明确选择的 Target 和 Pin 不是普通 UI 状态，必须由 Core 哈希和验证。
 
 ## 14. 锁与可复现性
 
@@ -1084,7 +1118,7 @@ semantic + module closure + Kernel + 外部输入 digest。
 
 记录：
 
-- Query/target；
+- BuildIntent digest、Targets 与 Pins；
 - 每条 Derivation 的 Kernel 与输入输出；
 - 每个 Requirement 和 request digest；
 - Handler、Provider、实际模型和 operation id；
@@ -1108,7 +1142,7 @@ SemanticMap / ProgramBasis / frame rate
 Seedance / Gemini / OpenAI / STT
 Prompt / response schema
 SVS selector vocabulary
-HyperFrames / Remotion / browser renderer
+HyperFrames / browser renderer
 Provider credential / queue / retry policy
 Canvas / Timeline UI
 ```
@@ -1146,7 +1180,7 @@ Canvas / Timeline UI
 - Compiler 对 SpeechTimingEvidence JSON 的特判；
 - CaptionTrack 的数量和类型特判；
 - Film 对具体 Track 类型的认识；
-- HyperFrames 唯一正式目标；
+- 把 Film/HyperFrames 当作每次 Build 的固定根，而不是完整图中的普通可选 Target；
 - 中心硬编码 value type union；
 - SVS 重复应用和隐式默认；
 - 非传递 implementation hash；
@@ -1164,11 +1198,18 @@ Canvas / Timeline UI
    保留并更新漂亮 Script goldens；首个具名 Segment 竖切已实现；
 6. 让 Core 入口只接收 `TypedModule[]`，删除 `scriptSource` 和源码类型特判；
 7. 把 Narrative 文本模型与锚点归入 `@svml/narrative` 领域合同；
-8. 实现有限、类型化、可暂停的模块编译微内核；
-9. 用本文双人 Seedance + Subtitle 例子做第一条竖切；
-10. 实现 local ArtifactStore、journal 和注册式 Handler；
-11. 逐个把当前算法移动到官方模块导出的 Kernel；
-12. 新竖切和必要 goldens 通过后删除旧固定编译器。
+8. 定义完整 CompiledGraph、PortAddress、BuildIntent、TargetSet 和 PinSet；
+9. 在 Core 实现 Pin 截断、多 Target 并集和反向 Demand Closure，让 BuildPlan 成为
+   Graph + BuildIntent 的派生结果；
+10. 用图片依赖、聚合终点和 Track Pin 证明旧系统最优雅的“到此/Pin”能力；
+11. 拆分 Need capability/returns，验证 exact/substitute 与 Pin provenance；
+12. 证明一个 Core 构建后才发布的未知包可以动态加入 Type、Surface、Producer 和
+   Provider，而无需重发 Core/CLI；
+13. 定义 Track/Composition/HyperFrames Program 公共 Contract；
+14. 用本文双人 Seedance + Subtitle 例子做第一条视频竖切；
+15. 实现 local ArtifactStore、JSON journal、动态 Handler Loader 和 Runtime Profile；
+16. 逐个把当前算法移动到官方模块导出的 Producer；
+17. 新竖切和必要 goldens 通过后删除旧固定编译器。
 
 ## 17. 架构验收标准
 
@@ -1188,15 +1229,23 @@ Canvas / Timeline UI
   Frontend 的公开 Registry 路径解析；
 - 一个完全不使用 XML、Namespace 或 `<script>` 的第三方 Frontend 可以产生兼容
   作者程序并参与同一后续编译；
+- 同一完整 CompiledGraph 可以 Target 图片、SemanticMap、TrackSet、Film 或最终视频，
+  不存在 Film/HyperFrames 固定根；
+- Pin 任意合法公开输出会截断其 Producer 上游，多 Target 公共依赖只执行一次；
+- Target/Pin 在内存和 JSON Runtime 中具有相同语义，不要求数据库；
 - 新增 Vocabulary、组件或 Kernel 不需要修改 Core；
 - SVML 可以导入并锁定提供这些导出的模块包；
+- 一个在 Core 构建完成后才创建的外部包可以动态加入新 Contract、Surface、Producer
+  和 Provider，不修改中央 union、switch 或数据库表；
+- Track 等共同语言来自版本化 Contract Package，Core 不维护全局领域类型 registry；
 - Host 不会为作者组件隐式挑选另一个 Kernel；
 - 同一个 Requirement 可以由真实 Provider、缓存、人工或 substitute 解决；
 - 同一个作者程序可以同时保留多个候选结果；
 - Author Fact 无法被 Kernel 或 Handler 修改；
 - LLM Prompt 和领域 parser 位于相关模块的 Kernel，不进入 Core；
 - API key、队列和 Provider operation 位于 Host/Handler，不进入作者程序；
-- 模型选择可以来自作者、SVS、Kernel 或 Host，并保留逐层 provenance；
+- exact 模型/能力选择来自作者、SVS 或模块 Producer；Host 只绑定同 capability
+  Endpoint，或按本次调用者的显式策略提供带 provenance 的 substitute；
 - 没有 `previewMode` 或 `productionMode` 语言分支；
 - 两段 Seedance + 双人 Script + Subtitle 示例能使用同一作者程序得到真实和替代
   实现；
@@ -1215,7 +1264,8 @@ Author Frontend 把任意作者写法降低为规范 TypedModule
 模块导出的 Kernel 定义模块化编译配方、Prompt、领域协议和外部 Requirement
 Host 注册调用器并补全剩余运行绑定
 Provider/人工/缓存产生带 Receipt 的观察事实或替代产物
-Core 负责身份、类型、不可变事实、调度、完整性和推导证明
+Core 负责完整 Graph、Target、Pin、Demand、身份、类型、不可变事实、调度、完整性
+和推导证明
 ```
 
 因此：
