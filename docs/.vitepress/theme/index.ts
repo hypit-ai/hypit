@@ -1,11 +1,11 @@
 import DefaultTheme from "vitepress/theme";
 import type { Theme } from "vitepress";
-import SvmlPlayground from "./components/SvmlPlayground.vue";
+import SvmlDemoCarousel from "./components/SvmlDemoCarousel.vue";
 import "./style.css";
 
 export default {
   extends: DefaultTheme,
   enhanceApp({ app }) {
-    app.component("SvmlPlayground", SvmlPlayground);
+    app.component("SvmlDemoCarousel", SvmlDemoCarousel);
   },
 } satisfies Theme;
