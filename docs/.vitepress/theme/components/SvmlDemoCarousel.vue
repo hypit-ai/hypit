@@ -5,6 +5,7 @@ import {
   preloadDemoMedia,
   type DemoMediaManifest,
 } from "./demo-media";
+import { clearDemoPointer, updateDemoPointer } from "./demo-pointer";
 import SemanticVideoDemo from "./SemanticVideoDemo.vue";
 import SvmlPlayground from "./SvmlPlayground.vue";
 
@@ -99,7 +100,12 @@ onBeforeUnmount(() => { activationId += 1; });
 </script>
 
 <template>
-  <div class="svml-demo-carousel" :aria-busy="isLoading">
+  <div
+    class="svml-demo-carousel"
+    :aria-busy="isLoading"
+    @pointermove="updateDemoPointer"
+    @pointerleave="clearDemoPointer"
+  >
     <header class="demo-heading carousel-heading">
       <h2>悬停标记范围，查看对应画面</h2>
     </header>
