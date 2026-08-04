@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
 import {
   semanticVideoDemos,
   type DemoId,
@@ -7,8 +8,17 @@ import {
   type DemoSourceLine,
   type WordCue,
 } from "./semantic-video-demos";
+import {
+  buildFoldedSourceView,
+  buildFullSourceView,
+  type SourceDisplayEntry,
+} from "./source-display";
 
-const props = defineProps<{ demo: DemoId }>();
+const props = withDefaults(defineProps<{ demo: DemoId; active?: boolean; showHeading?: boolean }>(), {
+  active: true,
+  showHeading: true,
+});
+const emit = defineEmits<{ ended: [] }>();
 const config = semanticVideoDemos[props.demo];
 const sourceLines = config.lines;
 const sceneSelections = config.selections.filter((selection) => selection.layer === "scene");
@@ -21,12 +31,7 @@ type RangeBounds = {
   depth: number;
 };
 
-type DisplayLine = {
-  key: string;
-  kind: "line" | "fold" | "spacer";
-  index: number | null;
-  line: DemoSourceLine | null;
-};
+type DisplayLine = SourceDisplayEntry<DemoSourceLine>;
 
 const rawBounds = config.selections.map((selection) => ({
   id: selection.id,
@@ -74,7 +79,10 @@ const activeSceneSelection = ref(sceneSelections[0]);
 const activeOverlaySelection = ref<DemoSelection | null>(null);
 const visibleLogoCount = ref(0);
 const audioEnabled = ref(false);
+const sourceViewportRows = ref(27);
+const sourceLineRows = ref<number[]>(sourceLines.map(() => 1));
 const codeScrollElement = ref<HTMLElement | null>(null);
+const sourceMeasureElement = ref<HTMLElement | null>(null);
 const playheadElement = ref<HTMLElement | null>(null);
 const rangeCanvas = ref({ width: 0, height: 0 });
 const rangeGeometry = ref<Record<string, { path: string; depth: number }>>({});
@@ -86,6 +94,7 @@ let previousTimestamp = 0;
 let programTime = 0;
 let playbackSceneIndex = -1;
 let playbackOverlayId: string | null = null;
+let completedPass = false;
 
 function setBaseVideo(element: unknown, index: number) {
   if (element && typeof element === "object" && "currentTime" in element) {
@@ -149,44 +158,25 @@ const bindingLine = computed(() => {
   return Math.min(sourceLines.length - 1, scriptEnd + 2);
 });
 
-function windowAround(start: number, end: number, size: number) {
-  let first = Math.max(0, start - 2);
-  let last = Math.min(sourceLines.length - 1, end + 2);
-  while (last - first + 1 < size && (first > 0 || last < sourceLines.length - 1)) {
-    if (first > 0) first -= 1;
-    if (last - first + 1 < size && last < sourceLines.length - 1) last += 1;
-  }
-  if (last - first + 1 > size) {
-    const center = Math.max(start, Math.min(end, sourceWordLine.value));
-    first = Math.max(0, Math.min(sourceLines.length - size, center - Math.floor(size / 2)));
-    last = first + size - 1;
-  }
-  return Array.from({ length: last - first + 1 }, (_, offset) => first + offset);
-}
-
 const displayedLines = computed<DisplayLine[]>(() => {
   if (!sourceFollowEnabled.value) {
-    return sourceLines.map((line, index) => ({ key: `line-${index}`, kind: "line", index, line }));
+    return buildFullSourceView(sourceLines);
   }
 
-  const outerBounds = rangeBounds.find((range) => range.id === activeSceneSelection.value.id);
-  const top = windowAround(outerBounds?.start ?? sourceWordLine.value, outerBounds?.end ?? sourceWordLine.value, 13);
-  const bottom = windowAround(bindingLine.value, bindingLine.value, 13);
-  const toDisplay = (indices: number[]) => indices.map((index) => ({
-    key: `line-${index}`,
-    kind: "line" as const,
-    index,
-    line: sourceLines[index],
-  }));
-  const topRows = toDisplay(top);
-  const bottomRows = toDisplay(bottom);
-  while (topRows.length < 13) topRows.unshift({ key: `top-space-${topRows.length}`, kind: "spacer", index: null, line: null });
-  while (bottomRows.length < 13) bottomRows.push({ key: `bottom-space-${bottomRows.length}`, kind: "spacer", index: null, line: null });
-  return [
-    ...topRows,
-    { key: `fold-${top.at(-1)}-${bottom[0]}`, kind: "fold", index: null, line: null },
-    ...bottomRows,
-  ];
+  const sideRows = Math.max(3, Math.floor((sourceViewportRows.value - 1) / 2));
+  const activeRanges = sourceSelections.value
+    .map((selection) => rangeBounds.find((range) => range.id === selection.id))
+    .filter((range): range is RangeBounds => range !== undefined)
+    .sort((left, right) => left.depth - right.depth);
+
+  return buildFoldedSourceView({
+    lines: sourceLines,
+    rowSpans: sourceLineRows.value,
+    rowBudget: sideRows,
+    topRanges: activeRanges,
+    topFocus: sourceWordLine.value,
+    bottomLine: bindingLine.value,
+  });
 });
 
 function renderedLineHtml(index: number) {
@@ -253,13 +243,13 @@ function updateRangeGeometry() {
     const offsetX = container.scrollLeft - containerRect.left;
     const offsetY = container.scrollTop - containerRect.top;
     const lineHeight = Number.parseFloat(getComputedStyle(startLine).lineHeight) || 26;
-    const blockPadding = 4;
+    const blockPadding = 0;
     const startCenter = (startRect.top + startRect.bottom) / 2 + offsetY;
     const endCenter = (endRect.top + endRect.bottom) / 2 + offsetY;
-    const inlinePadding = 4;
-    const edgeOverhang = 4;
-    const startX = Math.max(4, Math.min(width - 4, startRect.left + offsetX - inlinePadding));
-    const endX = Math.max(4, Math.min(width - 4, endRect.right + offsetX + inlinePadding));
+    const inlinePadding = 3;
+    const edgeOverhang = 3;
+    const startX = Math.max(3, Math.min(width - 3, startRect.left + offsetX - inlinePadding));
+    const endX = Math.max(3, Math.min(width - 3, endRect.right + offsetX + inlinePadding));
     const left = 44 - edgeOverhang;
     const right = width - 12 + edgeOverhang;
     const top = startCenter - lineHeight / 2 - blockPadding;
@@ -329,7 +319,7 @@ function syncBaseVideos(force = false) {
       return;
     }
     if (force || sceneChanged || Math.abs(video.currentTime - localTime) > .2) video.currentTime = localTime;
-    if (video.paused) void video.play().catch(() => undefined);
+    if (props.active && video.paused) void video.play().catch(() => undefined);
   });
   playbackSceneIndex = activeIndex;
 }
@@ -346,7 +336,7 @@ function syncOverlayVideos(force = false) {
     }
     const localTime = Math.max(0, programTime - selection.start);
     if (force || playbackOverlayId !== selection.id || Math.abs(video.currentTime - localTime) > .2) video.currentTime = localTime;
-    if (video.paused) void video.play().catch(() => undefined);
+    if (props.active && video.paused) void video.play().catch(() => undefined);
   });
   playbackOverlayId = activeOverlaySelection.value?.id ?? null;
 }
@@ -401,8 +391,26 @@ function clearInspection() {
   pinnedLoopSelection.value = null;
 }
 
-function stopSourceFollow() {
+function stopSourceFollow(event?: MouseEvent) {
+  if (!sourceFollowEnabled.value) return;
+  const container = codeScrollElement.value;
+  const hoveredLine = event?.target instanceof Element && container
+    ? event.target.closest<HTMLElement>("[data-source-line]")
+    : null;
+  const lineIndex = Number(hoveredLine?.dataset.sourceLine);
+  const lineOffset = event && hoveredLine ? event.clientY - hoveredLine.getBoundingClientRect().top : 0;
+  const targetTop = event && hoveredLine ? event.clientY - lineOffset : null;
   sourceFollowEnabled.value = false;
+  if (!container || !Number.isInteger(lineIndex) || targetTop === null) return;
+  void nextTick().then(() => {
+    const expandedLine = container.querySelector<HTMLElement>(`[data-source-line="${lineIndex}"]`);
+    if (!expandedLine) return;
+    const previousBehavior = container.style.scrollBehavior;
+    container.style.scrollBehavior = "auto";
+    container.scrollTop += expandedLine.getBoundingClientRect().top - targetTop;
+    container.style.scrollBehavior = previousBehavior;
+    updateRangeGeometry();
+  });
 }
 
 function resumeSourceFollow() {
@@ -410,7 +418,34 @@ function resumeSourceFollow() {
   sourceFollowEnabled.value = true;
 }
 
+function updateSourceViewportRows() {
+  const container = codeScrollElement.value;
+  if (!container) return;
+  let rows = Math.max(7, Math.floor(container.clientHeight / 26));
+  if (rows % 2 === 0) rows -= 1;
+  if (sourceViewportRows.value !== rows) sourceViewportRows.value = rows;
+  const padding = Math.max(0, (container.clientHeight - rows * 26) / 2);
+  container.style.setProperty("--source-vertical-padding", `${padding}px`);
+
+  const measuredRows = Array.from(
+    sourceMeasureElement.value?.querySelectorAll<HTMLElement>("[data-measure-line]") ?? [],
+  ).map((line) => Math.max(1, Math.ceil(line.getBoundingClientRect().height / 26)));
+  const measurementChanged = measuredRows.length === sourceLines.length && measuredRows.some(
+    (rowSpan, index) => rowSpan !== sourceLineRows.value[index],
+  );
+  if (measurementChanged) sourceLineRows.value = measuredRows;
+}
+
+function updateLayoutGeometry() {
+  updateSourceViewportRows();
+  updateRangeGeometry();
+}
+
 function renderFrame(timestamp: number) {
+  if (!props.active) {
+    animationFrame = 0;
+    return;
+  }
   if (!previousTimestamp) previousTimestamp = timestamp;
   const delta = Math.min(.05, (timestamp - previousTimestamp) / 1000);
   previousTimestamp = timestamp;
@@ -425,6 +460,10 @@ function renderFrame(timestamp: number) {
       looped = true;
     }
   } else if (nextTime >= config.duration) {
+    if (!completedPass) {
+      completedPass = true;
+      emit("ended");
+    }
     nextTime = 0;
     looped = true;
   }
@@ -436,43 +475,71 @@ function renderFrame(timestamp: number) {
   animationFrame = requestAnimationFrame(renderFrame);
 }
 
+function stopPlayback() {
+  cancelAnimationFrame(animationFrame);
+  animationFrame = 0;
+  previousTimestamp = 0;
+  baseVideos.forEach((video) => video?.pause());
+  overlayVideos.forEach((video) => video?.pause());
+}
+
+function startPlayback() {
+  stopPlayback();
+  programTime = 0;
+  playbackSceneIndex = -1;
+  playbackOverlayId = null;
+  completedPass = false;
+  pinnedSelection.value = null;
+  pinnedLoopSelection.value = null;
+  syncState(programTime, true);
+  syncBaseVideos(true);
+  syncOverlayVideos(true);
+  animationFrame = requestAnimationFrame(renderFrame);
+}
+
 watch(
   [() => displayedLines.value.map((entry) => entry.key).join("|"), sourceFollowEnabled, sourceSelections],
-  () => void nextTick().then(updateRangeGeometry),
+  () => void nextTick().then(updateLayoutGeometry),
+  { flush: "post" },
+);
+
+watch(
+  () => props.active,
+  (active) => {
+    if (active) void nextTick().then(startPlayback);
+    else stopPlayback();
+  },
   { flush: "post" },
 );
 
 onMounted(() => {
   window.addEventListener("pointerdown", enableAudio, { capture: true, once: true });
   window.addEventListener("keydown", enableAudio, { capture: true, once: true });
-  window.addEventListener("resize", updateRangeGeometry);
+  window.addEventListener("resize", updateLayoutGeometry);
   if (navigator.userActivation?.hasBeenActive) enableAudio();
   void nextTick().then(() => {
     syncState(0, true);
-    syncBaseVideos(true);
-    updateRangeGeometry();
+    if (props.active) startPlayback();
+    updateLayoutGeometry();
     if (codeScrollElement.value) {
-      resizeObserver = new ResizeObserver(updateRangeGeometry);
+      resizeObserver = new ResizeObserver(updateLayoutGeometry);
       resizeObserver.observe(codeScrollElement.value);
     }
   });
-  animationFrame = requestAnimationFrame(renderFrame);
 });
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(animationFrame);
+  stopPlayback();
   window.removeEventListener("pointerdown", enableAudio, true);
   window.removeEventListener("keydown", enableAudio, true);
-  window.removeEventListener("resize", updateRangeGeometry);
+  window.removeEventListener("resize", updateLayoutGeometry);
   resizeObserver?.disconnect();
-  baseVideos.forEach((video) => video?.pause());
-  overlayVideos.forEach((video) => video?.pause());
 });
 </script>
 
 <template>
   <section class="svml-demo semantic-video-demo" aria-label="SVML 交互式实时渲染预览">
-    <header class="demo-heading">
+    <header v-if="props.showHeading" class="demo-heading">
       <h2>悬停标记范围，查看对应画面</h2>
     </header>
 
@@ -480,12 +547,22 @@ onBeforeUnmount(() => {
       <div
         class="source-panel"
         :class="{ 'source-following': sourceFollowEnabled }"
-        @pointerenter="stopSourceFollow"
         @pointermove="stopSourceFollow"
         @pointerdown="stopSourceFollow"
         @wheel="stopSourceFollow"
         @pointerleave="resumeSourceFollow"
-        >
+      >
+        <div ref="sourceMeasureElement" class="source-measure" aria-hidden="true">
+          <div
+            v-for="(html, index) in decoratedLines"
+            :key="index"
+            class="code-line"
+            :data-measure-line="index"
+          >
+            <span class="line-number">{{ index + 1 }}</span>
+            <code v-html="html || '&nbsp;'" />
+          </div>
+        </div>
         <div class="source-follow-hint">
           {{ sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图" }}
         </div>
@@ -506,11 +583,16 @@ onBeforeUnmount(() => {
             />
           </svg>
           <template v-for="entry in displayedLines" :key="entry.key">
-            <div v-if="entry.kind === 'fold'" class="code-line code-fold" aria-hidden="true"><code>···</code></div>
-            <div v-else-if="entry.kind === 'spacer'" class="code-line code-spacer" aria-hidden="true"></div>
+            <div
+              v-if="entry.kind === 'fold'"
+              class="code-line code-fold"
+              :data-source-line="entry.index"
+              aria-hidden="true"
+            ><code>···</code></div>
             <div
               v-else-if="entry.line"
               class="code-line"
+              :data-source-line="entry.index"
               :class="{
                 'binding-active': bindingDepth(entry.line) >= 0,
                 'binding-depth-1': bindingDepth(entry.line) === 1,
@@ -538,10 +620,10 @@ onBeforeUnmount(() => {
                 :key="scene.src"
                 :ref="(element) => setBaseVideo(element, index)"
                 :class="{ active: currentSceneIndex === index }"
-                :src="scene.src"
+                :src="resolveDemoMedia(scene.src)"
                 :muted="!audioEnabled || currentSceneIndex !== index"
                 playsinline
-                preload="metadata"
+                preload="auto"
                 @loadedmetadata="syncBaseVideos(true)"
               />
             </div>
@@ -553,10 +635,10 @@ onBeforeUnmount(() => {
                 :ref="(element) => setOverlayVideo(element, index)"
                 class="street-broll"
                 :class="{ active: activeOverlaySelection?.id === selection.id }"
-                :src="selection.asset"
+                :src="resolveDemoMedia(selection.asset!)"
                 muted
                 playsinline
-                preload="metadata"
+                preload="auto"
               />
               <div class="visual-outline street-scene-outline"></div>
               <div v-if="activeOverlaySelection" class="visual-outline street-broll-outline"></div>
@@ -566,15 +648,15 @@ onBeforeUnmount(() => {
               <div class="gbb-header">
                 <div
                   v-for="(item, index) in [
-                    { id: 'good', label: 'GOOD', src: '/good-better-best/logo-chatgpt.png' },
-                    { id: 'better', label: 'BETTER', src: '/good-better-best/logo-looksmax.png' },
-                    { id: 'best', label: 'BEST', src: '/good-better-best/logo-areum.png' },
+                    { id: 'good', label: 'GOOD', src: goodBetterBestMedia.logos[0] },
+                    { id: 'better', label: 'BETTER', src: goodBetterBestMedia.logos[1] },
+                    { id: 'best', label: 'BEST', src: goodBetterBestMedia.logos[2] },
                   ]"
                   :key="item.id"
                   class="gbb-slot"
                   :class="[{ visible: visibleLogoCount > index, selected: sourceSelections.some((selection) => selection.id === item.id) }, `slot-${item.id}`]"
                 >
-                  <img :src="item.src" alt="">
+                  <img :src="resolveDemoMedia(item.src)" alt="">
                   <strong>{{ item.label }}</strong>
                 </div>
               </div>
@@ -582,7 +664,7 @@ onBeforeUnmount(() => {
                 v-if="activeOverlaySelection"
                 class="gbb-deck"
                 :class="{ selected: sourceSelections.some((selection) => selection.id === activeOverlaySelection?.id) }"
-                :src="activeOverlaySelection.asset"
+                :src="resolveDemoMedia(activeOverlaySelection.asset!)"
                 alt=""
               >
             </template>
@@ -611,7 +693,13 @@ onBeforeUnmount(() => {
         <div class="real-semantic-controls">
           <div class="semantic-timeline">
             <div class="timeline-track demo-progress-track">
-              <span class="segment"></span>
+              <span
+                v-for="selection in sceneSelections"
+                :key="selection.id"
+                class="segment"
+                :class="{ active: activeSceneSelection.id === selection.id }"
+                :style="{ flexGrow: selection.end - selection.start }"
+              ></span>
               <i ref="playheadElement" class="playhead"></i>
             </div>
           </div>
@@ -646,8 +734,9 @@ onBeforeUnmount(() => {
 .caption-good-better-best { top: 65%; }
 .demo-caption span { display: inline-block; transition: color .08s linear, transform .08s linear; }
 .demo-caption span.active { color: #ffd34d; transform: scale(1.08); }
-.demo-progress-track { display: block; background: #303731; }
-.demo-progress-track .segment { display: block; width: 100%; height: 100%; background: #ec4899; opacity: .5; }
+.demo-progress-track { display: flex; grid-template-columns: none; gap: 2px; background: transparent; }
+.demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 2px; background: rgba(236,72,153,.32); transition: background-color .2s ease; }
+.demo-progress-track .segment.active { background: rgba(236,72,153,.76); }
 
 @media (max-width: 900px) {
   .semantic-live-stage { height: 520px; }
