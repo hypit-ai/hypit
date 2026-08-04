@@ -1,8 +1,8 @@
 import {
-  assertSpeechBasisIdentity,
+  assertSpeechAudioBasisIdentity,
   sealAlignedTranscriptEvidence,
 } from "@svml/contracts";
-import type { AlignedTranscriptEvidence, SpeechBasis } from "@svml/contracts";
+import type { AlignedTranscriptEvidence, SpeechAudioBasis } from "@svml/contracts";
 import { digestOf } from "@svml/core";
 
 import type {
@@ -11,11 +11,11 @@ import type {
   WhisperXEvidenceContent,
 } from "./types.js";
 
-export function whisperXRequestForBasis(
-  basis: SpeechBasis,
+export function whisperXRequestForAudioBasis(
+  basis: SpeechAudioBasis,
   options: { readonly language?: string } = {},
 ): WhisperXAlignmentRequest {
-  assertSpeechBasisIdentity(basis);
+  assertSpeechAudioBasisIdentity(basis);
   return {
     contract: "svml.whisperx-alignment-request@1",
     basisDigest: basis.basisDigest,

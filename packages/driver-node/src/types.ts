@@ -12,6 +12,7 @@ import type {
   ProducerRef,
   StoredValue,
   TypeRef,
+  CapabilityRef,
   TypedRecord,
 } from "@svml/protocol";
 
@@ -87,7 +88,8 @@ export type ProducerRegistration = {
 
 export type ProviderRegistration = {
   readonly id: string;
-  readonly wants: TypeRef;
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
   readonly handler: ProviderHandler;
   readonly supports?: (need: Need) => boolean;
 };

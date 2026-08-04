@@ -1,4 +1,4 @@
-import { computeModuleDigest } from "@svml/core";
+import { digestOf } from "@svml/protocol";
 import type { ModuleManifest, TypeRef, ValueSchema } from "@svml/protocol";
 
 export const contractsModuleRef = { name: "@svml/contracts", version: "0.0.0-dev" } as const;
@@ -6,6 +6,8 @@ export const contractsModuleRef = { name: "@svml/contracts", version: "0.0.0-dev
 export const contractTypes = {
   narrative: { module: contractsModuleRef, name: "Narrative" },
   speechBasis: { module: contractsModuleRef, name: "SpeechBasis" },
+  speechAudioBasis: { module: contractsModuleRef, name: "SpeechAudioBasis" },
+  speechVisualTrack: { module: contractsModuleRef, name: "SpeechVisualTrack" },
   alignedTranscriptEvidence: { module: contractsModuleRef, name: "AlignedTranscriptEvidence" },
   completeSemanticMap: { module: contractsModuleRef, name: "CompleteSemanticMap" },
   timedCaptionProjection: { module: contractsModuleRef, name: "TimedCaptionProjection" },
@@ -101,9 +103,28 @@ const basisSegment = object({
 
 export const speechBasisSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.speech-basis@1" } },
-  basisDigest: { schema: digest }, programSpace: { schema: programSpace }, audio: { schema: artifact },
+  basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
+  programSpace: { schema: programSpace }, audio: { schema: artifact },
   visualTrack: { schema: object({ clips: { schema: { kind: "array", items: object({
     segmentId: { schema: string }, artifact: { schema: artifact }, startSec: { schema: number }, endSec: { schema: number },
+  }) } } }) },
+  segments: { schema: { kind: "array", minItems: 1, items: basisSegment } },
+});
+
+export const speechAudioBasisSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.speech-audio-basis@1" } },
+  basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
+  programSpace: { schema: programSpace }, audio: { schema: artifact },
+  segments: { schema: { kind: "array", minItems: 1, items: basisSegment } },
+});
+
+export const speechVisualTrackSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.speech-visual-track@1" } },
+  basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
+  programSpace: { schema: programSpace },
+  visualTrack: { schema: object({ clips: { schema: { kind: "array", items: object({
+    segmentId: { schema: string }, artifact: { schema: artifact },
+    startSec: { schema: number }, endSec: { schema: number },
   }) } } }) },
   segments: { schema: { kind: "array", minItems: 1, items: basisSegment } },
 });
@@ -193,12 +214,15 @@ export const contractsManifest: ModuleManifest = {
   types: [
     { name: contractTypes.narrative.name, schema: narrativeSchema },
     { name: contractTypes.speechBasis.name, schema: speechBasisSchema },
+    { name: contractTypes.speechAudioBasis.name, schema: speechAudioBasisSchema },
+    { name: contractTypes.speechVisualTrack.name, schema: speechVisualTrackSchema },
     { name: contractTypes.alignedTranscriptEvidence.name, schema: alignedTranscriptEvidenceSchema },
     { name: contractTypes.completeSemanticMap.name, schema: completeSemanticMapSchema },
     { name: contractTypes.timedCaptionProjection.name, schema: timedCaptionProjectionSchema },
   ],
+  capabilities: [],
   surfaces: [],
   producers: [],
 };
 
-export const contractsManifestDigest = computeModuleDigest(contractsManifest);
+export const contractsManifestDigest = digestOf(contractsManifest);

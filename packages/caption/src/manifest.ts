@@ -18,6 +18,7 @@ export const captionManifest: ModuleManifest = {
   version: captionModuleRef.version,
   dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
   types: [],
+  capabilities: [],
   surfaces: [],
   producers: [{
     name: captionProducers.temporalize.name,
@@ -25,7 +26,14 @@ export const captionManifest: ModuleManifest = {
       { name: "narrative", type: contractTypes.narrative },
       { name: "map", type: contractTypes.completeSemanticMap },
     ],
-    outputs: [{ name: "caption", type: contractTypes.timedCaptionProjection }],
+    outputs: [{
+      name: "caption",
+      type: contractTypes.timedCaptionProjection,
+      affinity: [
+        { resultPointer: "/semanticIndexDigest", input: "narrative", inputPointer: "/semanticIndex/digest" },
+        { resultPointer: "/speechTimeMapDigest", input: "map", inputPointer: "/mapDigest" },
+      ],
+    }],
     needs: [],
     implementation: {
       kind: "registered",

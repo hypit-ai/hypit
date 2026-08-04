@@ -1,4 +1,10 @@
-import type { Digest, Need, ProducerRef, TypeRef } from "@svml/protocol";
+import type {
+  CapabilityRef,
+  Digest,
+  Need,
+  ProducerRef,
+  TypeRef,
+} from "@svml/protocol";
 
 import type {
   ProducerHandler,
@@ -12,11 +18,24 @@ function moduleKey(ref: { readonly name: string; readonly version: string }): st
   return `${ref.name}@${ref.version}`;
 }
 
+function sameRef(
+  left: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
+  right: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
+): boolean {
+  return left.module.name === right.module.name
+    && left.module.version === right.module.version
+    && left.name === right.name;
+}
+
 export function producerRegistryKey(ref: ProducerRef): string {
   return `${moduleKey(ref.module)}#${ref.name}`;
 }
 
-export function providerCapabilityKey(ref: TypeRef): string {
+export function providerCapabilityKey(ref: CapabilityRef): string {
+  return `${moduleKey(ref.module)}#${ref.name}`;
+}
+
+export function providerReturnKey(ref: TypeRef): string {
   return `${moduleKey(ref.module)}#${ref.name}`;
 }
 
@@ -38,39 +57,42 @@ export class HostRegistry {
   }
 }
 
+type ProviderOptions = { readonly supports?: (need: Need) => boolean };
+
 export class ProviderRegistry {
-  readonly #capabilities = new Map<string, ProviderRegistration[]>();
+  readonly #registrations: ProviderRegistration[] = [];
   readonly #bindings = new Map<string, string>();
 
   registerProvider(
     id: string,
-    wants: TypeRef,
+    capability: CapabilityRef,
+    returns: TypeRef,
     handler: ProviderHandler,
-    options: { readonly supports?: (need: Need) => boolean } = {},
+    options: ProviderOptions = {},
   ): void {
     if (!id.trim()) throw new Error("provider id must not be empty");
-    const key = providerCapabilityKey(wants);
-    const registrations = this.#capabilities.get(key) ?? [];
-    if (registrations.some((registration) => registration.id === id)) {
-      throw new Error(`provider ${id} already registers capability ${key}`);
-    }
-    registrations.push({ id, wants, handler, ...options });
-    this.#capabilities.set(key, registrations);
+    const duplicate = this.#registrations.some((candidate) =>
+      candidate.id === id && sameRef(candidate.capability, capability));
+    if (duplicate) throw new Error(`provider ${id} already registers ${providerCapabilityKey(capability)}`);
+    this.#registrations.push({ id, capability, returns, handler, ...options });
   }
 
-  bind(wants: TypeRef, providerId: string): void {
-    const key = providerCapabilityKey(wants);
-    if (!(this.#capabilities.get(key) ?? []).some((registration) => registration.id === providerId)) {
+  bind(capability: CapabilityRef, providerId: string): void {
+    const key = providerCapabilityKey(capability);
+    if (!this.#registrations.some((registration) =>
+      registration.id === providerId && sameRef(registration.capability, capability))) {
       throw new Error(`provider ${providerId} does not register capability ${key}`);
     }
     this.#bindings.set(key, providerId);
   }
 
   resolve(need: Need): ProviderResolution {
-    const key = providerCapabilityKey(need.wants);
+    const key = providerCapabilityKey(need.capability);
     const bound = this.#bindings.get(key);
-    const registrations = (this.#capabilities.get(key) ?? [])
-      .filter((registration) => registration.supports?.(need) ?? true);
+    const registrations = this.#registrations.filter((registration) =>
+      sameRef(registration.capability, need.capability)
+      && sameRef(registration.returns, need.returns)
+      && (registration.supports?.(need) ?? true));
     if (bound !== undefined) {
       const registration = registrations.find((candidate) => candidate.id === bound);
       return registration === undefined
@@ -87,7 +109,7 @@ export class ProviderRegistry {
     return { status: "resolved", registration: registrations[0]! };
   }
 
-  providers(wants: TypeRef): readonly ProviderRegistration[] {
-    return [...(this.#capabilities.get(providerCapabilityKey(wants)) ?? [])];
+  providers(capability: CapabilityRef): readonly ProviderRegistration[] {
+    return this.#registrations.filter((registration) => sameRef(registration.capability, capability));
   }
 }

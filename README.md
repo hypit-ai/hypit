@@ -1,12 +1,29 @@
 # SVML
 
 > **v2 bootstrap:** `packages/protocol`, `packages/core` and `packages/driver-node`
-> implement the domain-free typed state kernel and an explicitly registered Node Host.
+> implement the domain-free `LogicalOutput / Candidate / Operation / Target` kernel and an explicitly
+> registered Node Host. A single Build Compiler resolves each demanded Logical Output, selects its
+> Candidate from a `BuildRequest`, and memoizes the reverse closure by stable `OperationId` before the
+> Build Machine executes anything. Reuse and product-level “Pin” UI actions are ordinary
+> Existing-Value Candidates, not Core branches; Providers only execute already selected exact
+> CapabilityRefs. Declarative affinity prevents exact media evidence or provided values from being
+> attached to the wrong Narrative/Basis.
+> `packages/speech-take` proves atomic Product plus ordinary audio/visual Projection;
+> `packages/elaborator` expands content-addressed static Fragments with hygienic instance identities;
+> `packages/realization` attaches locked Existing-Value or Fragment Candidates without changing the
+> author graph identity. These are executable reference layers outside Core, not new Kernel magic.
+> `packages/video-fragments` now composes the first real speech vertical from static Fragments:
+> SpeechTake projections, one-pass WhisperX evidence, a provider-neutral SemanticMap and timed
+> captions. Producer-declared affinity protects internal Fragment results before they enter state;
+> Logical-Output affinity separately protects selected Candidates.
+> The next composition waist is intentionally flat: captions, text, speech video, B-roll and overlay
+> effects must become self-contained peer Tracks. Composition may layer them by time, space and z,
+> but no Track may mutate or intersect a sibling Track.
 > `packages/text` and `packages/script` now implement the first official authoring vertical:
 > a minimal Text Frontend that learns raw/structured Surfaces from locked module manifests, plus
 > an ordinary Script Surface package using named Segments such as `<opening>...</opening>`.
-> `packages/whisperx` adds a pure, tested one-pass WhisperX timing locator; the Host adapter that
-> invokes WhisperX is intentionally still outside this slice. Third-party parser sandboxing,
+> `packages/whisperx` declares the typed one-pass WhisperX Need; concrete local/Hypit adapters remain
+> Runtime packages outside this slice. Third-party parser sandboxing,
 > source imports and `.svs` are not implemented yet. The existing
 > root compiler and standard library remain the executable v1 research oracle during migration.
 
@@ -148,9 +165,9 @@ generation provider is invoked by tests or compilation.
   fulfillment or substitution. The executable v1 documents below remain implementation
   records until that migration is complete.
 - [Kernel graph and build intent v2](docs/kernel-graph-build-intent-v2.md)
-  is the current Kernel construction authority: complete typed Graph, arbitrary
-  Targets, Pins, reverse Demand, derived BuildPlans, Contract Packages and
-  open-world dynamic modules.
+  is the superseded `@0` Graph/Pin construction record.
+- [Logical Output, Candidate, Build Compiler and Graph Fragment v2](docs/logical-output-realization-fragment-draft.md)
+  is the current `@1` Kernel construction authority and implementation record.
 - [Script Surface v1](spec/script-surface-v1.md)
 - [Source Architecture v1 draft](spec/source-architecture-draft.md)
 - [Speech Program and Caption v1 target contract](docs/speech-program-caption-v1.md)

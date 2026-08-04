@@ -1,4 +1,5 @@
 import type {
+  CapabilityRef,
   Digest,
   LinkedProgram,
   ModuleManifest,
@@ -6,6 +7,7 @@ import type {
   ProducerRef,
   ResolvedModule,
   ResolvedModuleClosure,
+  ResolvedCapabilityDeclaration,
   ResolvedProducerDeclaration,
   ResolvedTypeDeclaration,
   TypeRef,
@@ -15,7 +17,7 @@ import type {
 
 import { digestOf, isDigest, recordDigest, semanticRecordsDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
-import { moduleKey, producerKey, sameModule, typeKey } from "./reference.js";
+import { capabilityKey, moduleKey, producerKey, sameModule, typeKey } from "./reference.js";
 import { validateStoredValue } from "./schema.js";
 
 export type TypedRecordDraft = Omit<TypedRecord, "digest">;
@@ -63,6 +65,23 @@ function ensureUniqueNames(names: readonly string[], kind: string, owner: string
   }
 }
 
+function verifyPointer(pointer: string, subject: string): void {
+  invariant(
+    pointer === "" || pointer.startsWith("/"),
+    "INVALID_AFFINITY_POINTER",
+    `${subject} has invalid JSON Pointer ${pointer}`,
+    subject,
+  );
+  for (const token of pointer === "" ? [] : pointer.slice(1).split("/")) {
+    invariant(
+      !/~(?:[^01]|$)/u.test(token),
+      "INVALID_AFFINITY_POINTER",
+      `${subject} has invalid JSON Pointer escape in ${pointer}`,
+      subject,
+    );
+  }
+}
+
 export function verifyClosure(closure: ResolvedModuleClosure): void {
   invariant(closure.format === "svml.closure@0", "UNSUPPORTED_CLOSURE", "unsupported closure format");
   invariant(isDigest(closure.digest), "INVALID_DIGEST", "closure digest is invalid");
@@ -88,6 +107,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       key,
     );
     ensureUniqueNames(module.manifest.types.map((item) => item.name), "type", key);
+    ensureUniqueNames(module.manifest.capabilities.map((item) => item.name), "capability", key);
     ensureUniqueNames(module.manifest.surfaces.map((item) => item.name), "surface", key);
     ensureUniqueNames(module.manifest.surfaces.map((item) => item.tag), "surface tag", key);
     ensureUniqueNames(module.manifest.producers.map((item) => item.name), "producer", key);
@@ -100,6 +120,32 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       ensureUniqueNames(producer.inputs.map((item) => item.name), "input port", `${key}#${producer.name}`);
       ensureUniqueNames(producer.outputs.map((item) => item.name), "output port", `${key}#${producer.name}`);
       ensureUniqueNames(producer.needs.map((item) => item.name), "need port", `${key}#${producer.name}`);
+      invariant(
+        producer.outputs.length + producer.needs.length === 1,
+        "PRODUCER_RESULT_NORMAL_FORM",
+        `${key}#${producer.name} must declare exactly one public result`,
+      );
+      const inputNames = new Set(producer.inputs.map((input) => input.name));
+      for (const result of [...producer.outputs, ...producer.needs]) {
+        const resultPointers = new Set<string>();
+        for (const affinity of result.affinity ?? []) {
+          invariant(
+            inputNames.has(affinity.input),
+            "UNKNOWN_AFFINITY_INPUT",
+            `${key}#${producer.name}.${result.name} references unknown input ${affinity.input}`,
+            producer.name,
+          );
+          verifyPointer(affinity.resultPointer, `${key}#${producer.name}.${result.name}`);
+          verifyPointer(affinity.inputPointer, `${key}#${producer.name}.${affinity.input}`);
+          invariant(
+            !resultPointers.has(affinity.resultPointer),
+            "DUPLICATE_AFFINITY",
+            `${key}#${producer.name}.${result.name} repeats ${affinity.resultPointer}`,
+            producer.name,
+          );
+          resultPointers.add(affinity.resultPointer);
+        }
+      }
       invariant(
         isDigest(producer.implementation.digest),
         "INVALID_DIGEST",
@@ -185,17 +231,50 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       }
       for (const port of producer.needs) {
         invariant(
-          allowed.has(moduleKey(port.wants.module)),
+          allowed.has(moduleKey(port.returns.module)),
           "UNDECLARED_TYPE_DEPENDENCY",
-          `${moduleKey(module.ref)}#${producer.name} references ${typeKey(port.wants)} without a dependency`,
+          `${moduleKey(module.ref)}#${producer.name} references ${typeKey(port.returns)} without a dependency`,
         );
-        const target = modules.get(moduleKey(port.wants.module));
+        const target = modules.get(moduleKey(port.returns.module));
         invariant(
-          target?.manifest.types.some((type) => type.name === port.wants.name),
+          target?.manifest.types.some((type) => type.name === port.returns.name),
           "UNKNOWN_TYPE",
-          `${moduleKey(module.ref)}#${producer.name} references unknown type ${typeKey(port.wants)}`,
+          `${moduleKey(module.ref)}#${producer.name} references unknown type ${typeKey(port.returns)}`,
+        );
+        invariant(
+          allowed.has(moduleKey(port.capability.module)),
+          "UNDECLARED_CAPABILITY_DEPENDENCY",
+          `${moduleKey(module.ref)}#${producer.name} references ${capabilityKey(port.capability)} without a dependency`,
+        );
+        const capabilityModule = modules.get(moduleKey(port.capability.module));
+        const capability = capabilityModule?.manifest.capabilities.find(
+          (item) => item.name === port.capability.name,
+        );
+        invariant(
+          capability !== undefined,
+          "UNKNOWN_CAPABILITY",
+          `${moduleKey(module.ref)}#${producer.name} references unknown capability ${capabilityKey(port.capability)}`,
+        );
+        invariant(
+          typeKey(capability.returns) === typeKey(port.returns),
+          "CAPABILITY_RETURN_MISMATCH",
+          `${capabilityKey(port.capability)} returns ${typeKey(capability.returns)}, not ${typeKey(port.returns)}`,
         );
       }
+    }
+    for (const capability of module.manifest.capabilities) {
+      const ref = { module: module.ref, name: capability.name };
+      invariant(
+        allowed.has(moduleKey(capability.returns.module)),
+        "UNDECLARED_TYPE_DEPENDENCY",
+        `${capabilityKey(ref)} returns ${typeKey(capability.returns)} without a dependency`,
+      );
+      const target = modules.get(moduleKey(capability.returns.module));
+      invariant(
+        target?.manifest.types.some((type) => type.name === capability.returns.name),
+        "UNKNOWN_TYPE",
+        `${capabilityKey(ref)} returns unknown type ${typeKey(capability.returns)}`,
+      );
     }
   }
 }
@@ -232,6 +311,27 @@ export function resolveProducer(
   return { ...declaration, ref };
 }
 
+export function resolveCapability(
+  closure: ResolvedModuleClosure,
+  ref: CapabilityRef,
+): ResolvedCapabilityDeclaration {
+  const module = closure.modules.find((item) => sameModule(item.ref, ref.module));
+  invariant(
+    module !== undefined,
+    "UNKNOWN_MODULE",
+    `unknown module ${moduleKey(ref.module)}`,
+    capabilityKey(ref),
+  );
+  const declaration = module.manifest.capabilities.find((item) => item.name === ref.name);
+  invariant(
+    declaration !== undefined,
+    "UNKNOWN_CAPABILITY",
+    `unknown capability ${capabilityKey(ref)}`,
+    capabilityKey(ref),
+  );
+  return { ...declaration, ref };
+}
+
 export function sealRecord(record: TypedRecordDraft): TypedRecord {
   return { ...record, digest: recordDigest(record.type, record.value) };
 }
@@ -258,6 +358,13 @@ export function verifyRecord(
       `${record.id} frontend closure digest is invalid`,
     );
     invariant(record.conformance === "exact", "AUTHORED_SUBSTITUTE", `${record.id} authored record is substitute`);
+  } else if (record.origin.kind === "provided") {
+    invariant(record.origin.candidate.length > 0, "EMPTY_CANDIDATE_ID", `${record.id} Candidate id is empty`);
+    invariant(
+      isDigest(record.origin.requestDigest),
+      "INVALID_DIGEST",
+      `${record.id} BuildRequest digest is invalid`,
+    );
   }
 }
 

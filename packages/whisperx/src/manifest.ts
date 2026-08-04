@@ -5,12 +5,15 @@ import {
   contractsModuleRef,
 } from "@svml/contracts";
 import { digestOf } from "@svml/core";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
 
 export const whisperXModuleRef = { name: "@svml/whisperx", version: "0.0.0-dev" } as const;
 export const whisperXTypes = {
   alignmentEvidence: { module: whisperXModuleRef, name: "WhisperXAlignmentEvidence" },
 } satisfies Record<string, TypeRef>;
+export const whisperXCapabilities = {
+  alignment: { module: whisperXModuleRef, name: "whisperx-alignment" },
+} satisfies Record<string, CapabilityRef>;
 export const whisperXProducers = {
   request: { module: whisperXModuleRef, name: "request-whisperx-alignment" },
   normalize: { module: whisperXModuleRef, name: "normalize-whisperx-alignment" },
@@ -38,13 +41,26 @@ export const whisperXManifest: ModuleManifest = {
   version: whisperXModuleRef.version,
   dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
   types: [{ name: whisperXTypes.alignmentEvidence.name, schema: whisperXAlignmentEvidenceSchema }],
+  capabilities: [{
+    name: whisperXCapabilities.alignment.name,
+    returns: whisperXTypes.alignmentEvidence,
+  }],
   surfaces: [],
   producers: [
     {
       name: whisperXProducers.request.name,
-      inputs: [{ name: "basis", type: contractTypes.speechBasis }],
+      inputs: [{ name: "audio", type: contractTypes.speechAudioBasis }],
       outputs: [],
-      needs: [{ name: "alignment", wants: whisperXTypes.alignmentEvidence }],
+      needs: [{
+        name: "alignment",
+        capability: whisperXCapabilities.alignment,
+        returns: whisperXTypes.alignmentEvidence,
+        affinity: [
+          { resultPointer: "/basisDigest", input: "audio", inputPointer: "/basisDigest" },
+          { resultPointer: "/audioArtifactDigest", input: "audio", inputPointer: "/audio/digest" },
+          { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpace/digest" },
+        ],
+      }],
       implementation: {
         kind: "registered",
         locator: "@svml/whisperx/request",
@@ -54,7 +70,15 @@ export const whisperXManifest: ModuleManifest = {
     {
       name: whisperXProducers.normalize.name,
       inputs: [{ name: "whisperx", type: whisperXTypes.alignmentEvidence }],
-      outputs: [{ name: "evidence", type: contractTypes.alignedTranscriptEvidence }],
+      outputs: [{
+        name: "evidence",
+        type: contractTypes.alignedTranscriptEvidence,
+        affinity: [
+          { resultPointer: "/basisDigest", input: "whisperx", inputPointer: "/basisDigest" },
+          { resultPointer: "/audioArtifactDigest", input: "whisperx", inputPointer: "/audioArtifactDigest" },
+          { resultPointer: "/programSpaceDigest", input: "whisperx", inputPointer: "/programSpaceDigest" },
+        ],
+      }],
       needs: [],
       implementation: {
         kind: "registered",

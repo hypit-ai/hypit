@@ -8,11 +8,12 @@ import type {
 } from "@svml/protocol";
 
 import { digestOf, isDigest } from "./canonical.js";
+import { verifyGraphRecordAffinity, verifyProducerRecordAffinity } from "./affinity.js";
 import { invariant } from "./error.js";
 import { link, resolveProducer, verifyRecord } from "./link.js";
 import { producerStep, validatePlan } from "./plan.js";
 import { commandId, derivationId, needRequestDigest, receiptId } from "./provenance.js";
-import { sameType } from "./reference.js";
+import { sameCapability, sameType } from "./reference.js";
 
 function unique<T>(items: readonly T[], key: (item: T) => string, kind: string): void {
   const seen = new Set<string>();
@@ -126,14 +127,14 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
     `${receipt.id} does not inherit its Need conformance floor`,
   );
   invariant(
-    need.accepts === "substitute" || receipt.conformance === "exact",
+    need.accepts === "substitute" || receipt.fulfillmentConformance === "exact",
     "SUBSTITUTE_NOT_ACCEPTED",
-    `${receipt.id} is a forbidden substitute`,
+    `${receipt.id} did not exactly fulfill the selected capability`,
   );
   const record = findRecord(state, receipt.output);
   invariant(record !== undefined, "RECEIPT_OUTPUT_MISSING", `${receipt.id} output is missing`);
   invariant(receipt.output === need.result, "RECEIPT_OUTPUT_BINDING", `${receipt.id} output is not its Need result`);
-  invariant(sameType(record.type, need.wants), "RECEIPT_OUTPUT_TYPE", `${receipt.id} output type differs`);
+  invariant(sameType(record.type, need.returns), "RECEIPT_OUTPUT_TYPE", `${receipt.id} output type differs`);
   invariant(record.conformance === receipt.conformance, "RECEIPT_OUTPUT_CONFORMANCE", receipt.id);
   invariant(record.digest === receipt.outputDigest, "RECEIPT_OUTPUT_MISMATCH", `${receipt.id} output differs`);
   invariant(
@@ -184,7 +185,7 @@ function verifyOutstanding(state: BuildState, command: CoreCommand): void {
 }
 
 export function verifyBuildState(state: BuildState): void {
-  invariant(state.format === "svml.build@0", "UNSUPPORTED_BUILD", "unsupported build state format");
+  invariant(state.format === "svml.build@1", "UNSUPPORTED_BUILD", "unsupported build state format");
   invariant(
     state.status === "active" || state.status === "complete" || state.status === "failed",
     "INVALID_BUILD_STATUS",
@@ -217,12 +218,14 @@ export function verifyBuildState(state: BuildState): void {
       digestOf({
         closure: state.program.closure.digest,
         semantic: state.program.semanticDigest,
-        plan: state.plan,
+        graph: state.graph.id,
+        request: state.request.digest,
+        plan: state.plan.id,
       }),
     "BUILD_ID_MISMATCH",
     "build id does not match its program and plan",
   );
-  validatePlan(state.program, state.plan);
+  validatePlan(state.program, state.graph, state.request, state.plan);
 
   unique(state.records, (item) => item.id, "record");
   unique(state.steps, (item) => item.id, "step state");
@@ -243,9 +246,23 @@ export function verifyBuildState(state: BuildState): void {
     invariant(validConformance(record.conformance), "INVALID_CONFORMANCE", record.id);
     verifyRecord(state.program.closure, record);
   }
+  const affinityRecords = new Map(state.records.map((record) => [record.id, record]));
+  state.records.forEach((record) => {
+    verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => affinityRecords.get(recordId));
+    verifyGraphRecordAffinity(state.graph, state.plan, record, (recordId) => affinityRecords.get(recordId));
+  });
   for (const authored of state.program.records) {
     const record = findRecord(state, authored.id);
     invariant(record?.digest === authored.digest, "AUTHORED_RECORD_CHANGED", `${authored.id} changed`);
+  }
+  for (const provided of state.plan.initialValues) {
+    const record = findRecord(state, provided.id);
+    invariant(
+      record !== undefined && digestOf(record) === digestOf(provided),
+      "PROVIDED_RECORD_CHANGED",
+      `${provided.id} differs from its compiled Provided Value`,
+      provided.id,
+    );
   }
 
   for (const record of state.records) {
@@ -270,12 +287,34 @@ export function verifyBuildState(state: BuildState): void {
       );
       const inputs = derivation.inputs.map((binding) => findRecord(state, binding.id));
       invariant(inputs.every((item) => item !== undefined), "DERIVATION_INPUT_MISSING", derivation.id);
-      const expected = inputs.some((item) => item?.conformance === "substitute") ? "substitute" : "exact";
+      const step = producerStep(state.plan, derivation.step);
+      const expected = step.fidelity === "substitute"
+        || inputs.some((item) => item?.conformance === "substitute")
+        ? "substitute"
+        : "exact";
       invariant(record.conformance === expected, "CONFORMANCE_NOT_PROPAGATED", `${record.id} conformance differs`);
-    } else {
+    } else if (record.origin.kind === "observed") {
       const origin = record.origin;
       const receipt = state.receipts.find((item) => item.id === origin.receipt);
       invariant(receipt?.output === record.id, "OBSERVED_ORIGIN_MISMATCH", `${record.id} has no receipt`);
+    } else {
+      const origin = record.origin;
+      const expected = state.plan.initialValues.find((item) => item.id === record.id);
+      invariant(
+        expected !== undefined && digestOf(expected) === digestOf(record),
+        "INJECTED_PROVIDED_RECORD",
+        `${record.id} was not supplied by this BuildRequest`,
+        record.id,
+      );
+      invariant(
+        origin.kind === "provided"
+          && origin.requestDigest === state.request.digest
+          && state.plan.selections.some((selection) =>
+            selection.record === record.id && selection.candidate === origin.candidate),
+        "PROVIDED_ORIGIN_MISMATCH",
+        `${record.id} is not bound to its selected Candidate`,
+        record.id,
+      );
     }
   }
 
@@ -293,7 +332,25 @@ export function verifyBuildState(state: BuildState): void {
       "NEED_ORIGIN_MISMATCH",
       `${need.id} has no derivation`,
     );
-    const inherited = derivation?.inputs.some(
+    const step = derivation === undefined ? undefined : producerStep(state.plan, derivation.step);
+    const producer = step === undefined ? undefined : resolveProducer(state.program.closure, step.producer);
+    const plannedPort = step === undefined
+      ? undefined
+      : Object.entries(step.needs).find(([, binding]) => binding.id === need.id);
+    const declaration = plannedPort === undefined
+      ? undefined
+      : producer?.needs.find((port) => port.name === plannedPort[0]);
+    invariant(
+      declaration !== undefined
+      && sameCapability(need.capability, declaration.capability)
+      && sameType(need.returns, declaration.returns)
+      && plannedPort?.[1].result === need.result
+      && plannedPort[1].accepts === need.accepts,
+      "NEED_PLAN_BINDING_MISMATCH",
+      `${need.id} differs from its locked Producer Need port`,
+      need.id,
+    );
+    const inherited = step?.fidelity === "substitute" || derivation?.inputs.some(
       (binding) => findRecord(state, binding.id)?.conformance === "substitute",
     ) ? "substitute" : "exact";
     invariant(

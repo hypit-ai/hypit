@@ -18,15 +18,26 @@ export const speechAlignManifest: ModuleManifest = {
   version: speechAlignModuleRef.version,
   dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
   types: [],
+  capabilities: [],
   surfaces: [],
   producers: [{
     name: speechAlignProducers.locate.name,
     inputs: [
       { name: "narrative", type: contractTypes.narrative },
-      { name: "basis", type: contractTypes.speechBasis },
+      { name: "audio", type: contractTypes.speechAudioBasis },
       { name: "evidence", type: contractTypes.alignedTranscriptEvidence },
     ],
-    outputs: [{ name: "map", type: contractTypes.completeSemanticMap }],
+    outputs: [{
+      name: "map",
+      type: contractTypes.completeSemanticMap,
+      affinity: [
+        { resultPointer: "/semanticIndexDigest", input: "narrative", inputPointer: "/semanticIndex/digest" },
+        { resultPointer: "/basisDigest", input: "audio", inputPointer: "/basisDigest" },
+        { resultPointer: "/audioArtifactDigest", input: "audio", inputPointer: "/audio/digest" },
+        { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpace/digest" },
+        { resultPointer: "/evidenceDigest", input: "evidence", inputPointer: "/evidenceDigest" },
+      ],
+    }],
     needs: [],
     implementation: {
       kind: "registered",

@@ -1,14 +1,6 @@
-export class CoreError extends Error {
-  readonly code: string;
-  readonly subject: string | undefined;
+import { SvmlError } from "@svml/protocol";
 
-  constructor(code: string, message: string, subject?: string) {
-    super(message);
-    this.name = "CoreError";
-    this.code = code;
-    this.subject = subject;
-  }
-}
+export { SvmlError as CoreError };
 
 export function invariant(
   condition: unknown,
@@ -17,6 +9,6 @@ export function invariant(
   subject?: string,
 ): asserts condition {
   if (!condition) {
-    throw new CoreError(code, message, subject);
+    throw new SvmlError(code, message, subject);
   }
 }

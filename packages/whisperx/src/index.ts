@@ -1,10 +1,11 @@
 export {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
-  whisperXRequestForBasis,
+  whisperXRequestForAudioBasis,
 } from "./evidence.js";
 export {
   whisperXAlignmentEvidenceSchema,
+  whisperXCapabilities,
   whisperXImplementationDigests,
   whisperXManifest,
   whisperXModuleRef,

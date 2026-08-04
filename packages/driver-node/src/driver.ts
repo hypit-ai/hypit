@@ -9,7 +9,13 @@ import type {
 } from "@svml/protocol";
 
 import { MemoryArtifactStore } from "./artifacts.js";
-import { HostRegistry, ProviderRegistry, producerRegistryKey, providerCapabilityKey } from "./registry.js";
+import {
+  HostRegistry,
+  ProviderRegistry,
+  producerRegistryKey,
+  providerCapabilityKey,
+  providerReturnKey,
+} from "./registry.js";
 import type {
   ArtifactStore,
   BlockedCommand,
@@ -112,8 +118,8 @@ export class NodeDriver {
           command: command.id,
           reason: "missing-provider",
           subject: resolution.providerId === undefined
-            ? providerCapabilityKey(command.need.wants)
-            : `${providerCapabilityKey(command.need.wants)} -> ${resolution.providerId}`,
+            ? `${providerCapabilityKey(command.need.capability)} -> ${providerReturnKey(command.need.returns)}`
+            : `${providerCapabilityKey(command.need.capability)} -> ${resolution.providerId}`,
         },
       };
     }
@@ -122,7 +128,7 @@ export class NodeDriver {
         blocked: {
           command: command.id,
           reason: "ambiguous-provider",
-          subject: `${providerCapabilityKey(command.need.wants)} -> ${resolution.providerIds.join(", ")}`,
+          subject: `${providerCapabilityKey(command.need.capability)} -> ${resolution.providerIds.join(", ")}`,
         },
       };
     }
