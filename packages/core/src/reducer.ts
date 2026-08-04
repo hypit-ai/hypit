@@ -1,11 +1,13 @@
 import type {
   BuildEvent,
   BuildPlan,
+  BuildRequest,
   BuildState,
   CanonicalValue,
   Conformance,
   CoreCommand,
   CoreTransition,
+  CompiledGraph,
   Derivation,
   FulfillNeedCommand,
   InvokeProducerCommand,
@@ -18,10 +20,15 @@ import type {
   TypedRecord,
 } from "@svml/protocol";
 
+import {
+  verifyGraphRecordAffinity,
+  verifyInitialAffinities,
+  verifyProducerRecordAffinity,
+} from "./affinity.js";
 import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
 import { resolveProducer, resolveType, sealRecord } from "./link.js";
-import { producerStep, validatePlan } from "./plan.js";
+import { compileBuild, producerStep } from "./plan.js";
 import {
   commandId,
   derivationId,
@@ -93,8 +100,10 @@ function acceptProducerEvent(
   exactPortKeys(event.needs, producer.needs.map((port) => port.name), `${step.id}.needs`);
 
   const inputs = inputRecords(state, command);
-  const conformance = inheritedConformance(inputs);
-  const outputDrafts = producer.outputs.map((port) => {
+  const conformance = effectiveConformance(inheritedConformance(inputs), step.fidelity);
+  const outputDrafts = producer.outputs
+    .filter((port) => step.outputs[port.name] !== undefined)
+    .map((port) => {
     const id = step.outputs[port.name];
     const rawValue = event.outputs[port.name];
     invariant(id !== undefined, "MISSING_OUTPUT_BINDING", `${step.id}.${port.name} is not bound`);
@@ -104,14 +113,17 @@ function acceptProducerEvent(
     return { id, type: port.type, value, digest: recordDigest(port.type, value) };
   });
 
-  const needDrafts = producer.needs.map((port) => {
+  const needDrafts = producer.needs
+    .filter((port) => step.needs[port.name] !== undefined)
+    .map((port) => {
     const binding = step.needs[port.name];
     const constraints = event.needs[port.name];
     invariant(binding !== undefined, "MISSING_NEED_BINDING", `${step.id}.${port.name} is not bound`);
     invariant(constraints !== undefined, "MISSING_NEED_VALUE", `${step.id}.${port.name} returned no constraints`);
     const normalized = canonicalize(constraints);
     const request = {
-      wants: port.wants,
+      capability: port.capability,
+      returns: port.returns,
       constraints: normalized,
       result: binding.result,
       accepts: binding.accepts,
@@ -142,6 +154,11 @@ function acceptProducerEvent(
     conformance,
     origin: { kind: "derived", derivation: id },
   }));
+  const outputLookup = new Map([...state.records, ...outputs].map((record) => [record.id, record]));
+  outputs.forEach((record) => {
+    verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => outputLookup.get(recordId));
+    verifyGraphRecordAffinity(state.graph, state.plan, record, (recordId) => outputLookup.get(recordId));
+  });
   const needs: Need[] = needDrafts.map((need) => ({ ...need, requestedBy: id }));
 
   return {
@@ -178,15 +195,15 @@ function acceptNeedEvent(
   );
   invariant(
     need.accepts === "substitute"
-      || effectiveConformance(need.conformanceFloor, event.conformance) === "exact",
+      || event.conformance === "exact",
     "SUBSTITUTE_NOT_ACCEPTED",
-    `${need.id} requires exact fulfillment`,
+    `${need.id} requires an exact fulfillment of its selected capability`,
     need.id,
   );
 
   const value = normalizeStoredValue(event.value);
-  validateStoredValue(value, resolveType(state.program.closure, need.wants).schema, `$need.${need.id}`);
-  const outputDigest = recordDigest(need.wants, value);
+  validateStoredValue(value, resolveType(state.program.closure, need.returns).schema, `$need.${need.id}`);
+  const outputDigest = recordDigest(need.returns, value);
   const metadata = canonicalize(event.metadata);
   const conformance = effectiveConformance(need.conformanceFloor, event.conformance);
   const receiptDraft: Omit<Receipt, "id"> = {
@@ -204,12 +221,15 @@ function acceptNeedEvent(
   const receipt: Receipt = { id: receiptId(receiptDraft), ...receiptDraft };
   const record: TypedRecord = {
     id: need.result,
-    type: need.wants,
+    type: need.returns,
     value,
     digest: outputDigest,
     conformance,
     origin: { kind: "observed", receipt: receipt.id },
   };
+  const recordLookup = new Map([...state.records, record].map((item) => [item.id, item]));
+  verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => recordLookup.get(recordId));
+  verifyGraphRecordAffinity(state.graph, state.plan, record, (recordId) => recordLookup.get(recordId));
 
   return {
     ...state,
@@ -273,28 +293,6 @@ function goalsComplete(state: BuildState): boolean {
 
 function schedule(state: BuildState): CoreTransition {
   if (state.status !== "active") return { state, commands: [] };
-  const impossibleNeed = state.needs.find((need) =>
-    need.accepts === "exact"
-    && need.conformanceFloor === "substitute"
-    && !state.records.some((record) => record.id === need.result));
-  if (impossibleNeed !== undefined) {
-    return {
-      state: {
-        ...state,
-        status: "failed",
-        outstanding: [],
-        diagnostics: [
-          ...state.diagnostics,
-          {
-            code: "CONFORMANCE_FLOOR_UNSATISFIABLE",
-            message: `${impossibleNeed.id} requires exact output from substitute inputs`,
-            subject: impossibleNeed.id,
-          },
-        ],
-      },
-      commands: [],
-    };
-  }
   if (state.outstanding.length > 0) return { state, commands: state.outstanding };
 
   if (goalsComplete(state)) {
@@ -359,19 +357,28 @@ function schedule(state: BuildState): CoreTransition {
   return { state: scheduled, commands };
 }
 
-export function start(program: LinkedProgram, plan: BuildPlan): BuildState {
-  validatePlan(program, plan);
+export function start(
+  program: LinkedProgram,
+  graph: CompiledGraph,
+  request: BuildRequest,
+): BuildState {
+  const plan: BuildPlan = compileBuild(program, graph, request);
+  verifyInitialAffinities(graph, plan, program.records);
   const state: BuildState = {
-    format: "svml.build@0",
+    format: "svml.build@1",
     id: digestOf({
       closure: program.closure.digest,
       semantic: program.semanticDigest,
-      plan,
+      graph: graph.id,
+      request: request.digest,
+      plan: plan.id,
     }),
     program,
+    graph,
+    request,
     plan,
     status: "active",
-    records: program.records,
+    records: [...program.records, ...plan.initialValues],
     steps: plan.steps.map((step) => ({ id: step.id, status: "pending" })),
     needs: [],
     receipts: [],

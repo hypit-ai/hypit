@@ -7,7 +7,7 @@ import {
   sealProgramSpace,
   sealSpeechBasis,
 } from "@svml/contracts";
-import type { AlignedTranscriptSegment, Narrative } from "@svml/contracts";
+import type { AlignedTranscriptSegment, Narrative, SpeechAudioBasis } from "@svml/contracts";
 import { digestOf } from "@svml/core";
 import { parseScript } from "@svml/script";
 import { locateSpeechTiming } from "@svml/speech-align";
@@ -27,6 +27,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
   }));
   const basis = sealSpeechBasis({
     contract: "svml.speech-basis@1",
+    narrativeDigest: narrative.semanticIndex.digest,
     programSpace,
     audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
     visualTrack: { clips: basisSegments.map((segment) => ({
@@ -51,7 +52,15 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     durationSec,
     segments,
   });
-  return locateSpeechTiming(narrative, basis, evidence);
+  const audioBasis: SpeechAudioBasis = {
+    contract: "svml.speech-audio-basis@1",
+    basisDigest: basis.basisDigest,
+    narrativeDigest: basis.narrativeDigest,
+    programSpace: basis.programSpace,
+    audio: basis.audio,
+    segments: basis.segments,
+  };
+  return locateSpeechTiming(narrative, audioBasis, evidence);
 }
 
 test("Caption temporalization preserves evidence envelopes and labels local estimates", () => {

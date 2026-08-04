@@ -6,7 +6,7 @@ export type {
   CompleteSemanticMap,
   SemanticTimePoint,
   SpeechActivitySpan,
-  SpeechBasis,
+  SpeechAudioBasis,
   SpeechCharacterEvidence,
   SpeechWordEvidence,
   TimedSpeechSegment,

@@ -1,15 +1,23 @@
 # SVML v2 Runtime、Package 与执行拓扑
 
+> **Kernel 术语更新，2026-08-05。** 本文的 Runtime/Provider/Queue 分层仍有效，但早期
+> `BuildIntent + Alternative/Pin` 表述应读作 `BuildRequest + Candidate binding`。Pin
+> 不是 Kernel primitive：宿主把历史值附着为 Existing-Value Candidate，再由
+> BuildRequest 明确选择。Kernel 的当前权威定义见
+> [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)。
+>
 > **v2 目标规范。** 本文取代
 > [`runtime-host-architecture-draft.md`](./runtime-host-architecture-draft.md) 中关于
 > `.svk`、`ExecutionBundle`、`EffectRequest`、队列归属和 Runtime 装配的旧设计。
-> 当前实现只完成了其中的 Core、Node Driver 和进程内 Provider Registry；本文剩余
-> 内容是后续施工边界，不表示相应生产能力已经存在。
+> 当前实现已经完成 LogicalOutput/Candidate/Operation/Target Core、Node Driver、进程内
+> Provider Registry、静态 Fragment Elaborator、Realization Overlay，以及
+> capability/returns 分离和 exact Provider 路由；本文关于生产 Queue、Credential、真实
+> Provider 和 Hosted Runtime 的内容仍是后续施工边界。
 >
 > Runtime 的所有实现必须建立在
-> [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md) 定义的完整
-> Graph、任意 Target、通用 Pin 与 Demand Closure 之上。Kernel Gate 未完成前，不先
-> 建设生产 Scheduler、真实 Provider 或 Hosted Runtime。
+> [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)
+> 定义的作者 Graph、Realization Closure、BuildRequest 与 Demand Closure 之上。以下
+> 正文尚未改写的旧 Pin/Alternative 术语只作为架构演进记录理解。
 
 ## 1. 决策摘要
 
@@ -22,9 +30,9 @@ SVML 使用以下五条不可混淆的规则：
    HyperFrames 等选择，必须由 `.svml` 导入的作者模块或其锁定的传递依赖决定。
 3. **Runtime Profile 决定整条 Build 在哪里运行。** Core、权威 Build Scheduler、
    BuildState 和 Artifact Store 可以位于开发者本机，也可以位于 Hypit。
-4. **Provider Binding 决定一个已经明确的 Need 在哪里执行。** Exact Endpoint 必须
-   匹配 Need capability；Kling、黑场或估计实现可以被显式选择为兼容结果的
-   `substitute`，但不能冒充 Seedance/WhisperX `exact`。
+4. **Provider Binding 决定一个已经明确的 Need 在哪里执行。** Endpoint 必须精确匹配
+   Need capability 与返回合同；Kling、黑场、估时或历史结果属于 BuildIntent 显式
+   选择的 Alternative/Pin，不属于 Provider 路由。
 5. **每个 Build 只有一个权威 Build Scheduler。** 远端 Provider 可以拥有自己的
    任务队列；该队列只负责其内部任务，不是第二个 SVML Build Scheduler。
 
@@ -32,7 +40,7 @@ SVML 使用以下五条不可混淆的规则：
 
 ```text
 .svml import        决定做什么
-BuildIntent          决定这次 Target 什么、Pin 什么
+BuildIntent          决定这次 Target 什么、选择哪个 Alternative 或 Pin
 Runtime Profile     决定整条 Build 在哪里运行
 Provider Binding    决定某项明确能力在哪里执行
 ```
@@ -55,7 +63,7 @@ Provider Binding    决定某项明确能力在哪里执行
 严格意义上的 Core 垄断：
 
 - 类型化完整 Graph、Node/Port identity 与依赖边；
-- 任意 TargetSet、PinSet 与 BuildIntent identity；
+- 任意 TargetSet、Realization/Pin Binding 与 BuildIntent identity；
 - 从 Target 反向求 Demand Closure，遇到 Pin 截断上游；
 - 多 Target 依赖并集、公共上游去重与 ready Command 计算；
 - 从 Graph + BuildIntent 派生有限 BuildPlan；
@@ -110,10 +118,10 @@ Need {
 }
 ```
 
-它不能产生含义不足的 `Need<speaker-video>` 再让 Runtime 猜 exact 方法。Kling 可以被
-本次调用者显式选择为 SpeechBasis substitute，但不得 claim Seedance exact。若作者
-直接 Pin 该组件的 SpeechBasis 输出，原 Producer 被 Demand 裁掉，Seedance Need 根本
-不会产生。
+它不能产生含义不足的 `Need<speaker-video>` 再让 Runtime 猜方法。该作者模块可同时
+声明输入更少的黑场、冻结帧或 Kling Alternative；BuildIntent 必须按 ProducerRef 明确
+选择其中之一。若作者直接 Pin SpeechBasis，原 Producer 被 Demand 裁掉，Seedance
+Need 根本不会产生。
 
 ### 3.2 Runtime Profile：Build 在哪里运行
 
@@ -159,8 +167,8 @@ capability hyperframes.render@1 -> VideoArtifact
           └── hypit.hyperframes
 ```
 
-两个 Endpoint 返回相同外层媒体类型，不代表它们可以互相 claim exact capability；
-显式 substitute 只承诺兼容的返回 Contract。
+两个 Endpoint 返回相同外层媒体类型，不代表它们可以互相 claim capability。Registry
+不会按返回 TypeRef 寻找替代者；同一 capability 存在多个 Endpoint 时 Profile 必须 bind。
 
 同样必须区分“Provider 包”和“Endpoint 实例”：
 
@@ -468,16 +476,22 @@ artifacts-local 和 credentials-keychain，并提供一个简单的 Provider 配
 
 当前实现已经有：
 
-- `@svml/protocol`：BuildState、Need、Command、Event、Receipt、Derivation；
-- `@svml/core`：纯状态推进和完整性验证；
+- `@svml/protocol`：统一 canonical/digest、Graph、BuildState、Need、Command、Event、
+  Receipt、Derivation；
+- `@svml/core`：Logical Output/Candidate 选择、反向 Demand、两层声明式 affinity、纯状态
+  推进和完整性验证；
 - `@svml/driver-node`：Producer/Provider Registry 与进程内执行；
-- `@svml/contracts`、Text、Script、WhisperX、Speech Align、Caption 的第一批合同；
-- Provider 多实现时要求显式 `bind()`；
+- `@svml/contracts`、Text、Script、SpeechTake、WhisperX、Speech Align、Caption 的第一批
+  合同与原子 Producer；
+- `@svml/elaborator`、`@svml/realization`：静态卫生 Fragment 与显式 Candidate Overlay；
+- `@svml/video-fragments`：已跑通 SpeechTake/WhisperX/SemanticMap/Caption 的官方静态组合；
+- Provider 只精确匹配 capability + returns，多实现时要求显式 `bind()`；
 - 恢复时丢弃序列化 Command，由 Core 重新生成。
 
-当前实现尚未完成完整 Graph、任意 Target、通用 Pin、Demand Planner、Need
-capability/returns 分离和动态外部包加载。因此 Runtime 工作必须等待 Kernel 规范的
-K1-K4 Gate；不能用 Runtime Router 或数据库补偿缺失的 Core 语义。
+当前实现尚未完成 Track/Composition/HyperFrames、动态外部包加载、安全 Worker、Artifact
+Store 验证和生产 Runtime。下一步先把已验证的语音纵向链路接入公共 Track 与
+HyperFrames 视频输出，再完成开放第三方执行；
+不能用 Runtime Router 或数据库补偿 Core 语义。
 
 Kernel Gate 完成后，Runtime 再依次建立以下接口。
 
@@ -490,7 +504,7 @@ Manifest 不执行包代码。
 
 把一个 Profile 解析成锁定的 Runtime Closure，并在任何付费调用前验证：
 
-- 所有 demanded Needs 都有符合本次 exact/substitute acceptance 的显式 Binding；
+- 所有 demanded Needs 都有精确 capability + returns Binding；
 - 不存在模糊的多个 Provider；
 - 运行时服务只存在一个权威 Scheduler；
 - 权限、凭据槽和实现摘要完整；
@@ -537,15 +551,15 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 
 ## 11. 分阶段施工顺序
 
-### Kernel prerequisite：先完成 K1-K4
+### Kernel prerequisite：K1-K3 已完成
 
 施工与验收以 Kernel 主规范为准：
 
-1. 完整 CompiledGraph、PortAddress、TargetSet、PinSet 和 BuildIntent；
-2. Pin 截断、多 Target 并集和 Core Demand Planner；
+1. 单结果 CompiledGraph、PortAddress、TargetSet、Realization/Pin Binding 和 BuildIntent；
+2. Pin 截断、Alternative 输入子集、多 Target 并集和 Core Demand Planner；
 3. Need capability/returns 分离；
-4. 事后安装的未知组件与 Provider 无需重发 Core 即可运行；
-5. 图片依赖、聚合终点和 Track Pin 规范测试全部通过。
+4. 图片依赖、聚合终点、Track Pin、亲和性与真实 WhisperX 规范测试全部通过；
+5. K4 的未知第三方动态加载与沙箱在真实官方视频链路之后完成。
 
 ### Phase R1：锁定本地 Runtime 协议，不接生产
 
@@ -585,8 +599,8 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 
 - 不为 Brands、Customers、Developer Remote 各写一套 Provider 包；
 - 不在 `.svml` 中配置 queue name、API Key、数据库、Lambda ARN 或租户；
-- 不允许 Runtime 把 generic speaker 自动路由并 claim Seedance/Kling exact；显式
-  substitute 必须由本次 BuildIntent/fulfillment policy 选择并保留 provenance；
+- 不允许 Runtime 把 generic speaker 自动路由为 Seedance/Kling；Alternative 必须由
+  作者模块声明并由本次 BuildIntent 选择；
 - 不把 Provider 内部远端队列注册成第二个 Build Scheduler；
 - 不让源码 import 自动执行带网络或凭据权限的包；
 - 不引入 `.svk` 文件格式；
@@ -600,8 +614,8 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 1. 同一 `.svml` 和作者模块闭包可在 Local 与 Hosted Runtime 运行；
 2. 切换 Runtime Profile 不改变 sourceSemanticDigest 或 buildIntentDigest；
 3. 任意 Target/Pin 组合在 Local 与 Hosted Runtime 得到相同 DemandPlan；
-4. Seedance/Kling、WhisperX/generic STT 不能互相 claim exact，但兼容结果可被显式
-   标记为 substitute；
+4. Seedance/Kling、WhisperX/generic STT 不能按相同返回 TypeRef 互相路由；兼容实现
+   必须是图中命名 Alternative，历史或预览值必须是 Pin；
 5. 每个 Build 恰好一个权威 Scheduler；
 6. 本地 Build 使用 Hypit HyperFrames Endpoint 时，本地仍能独立恢复 BuildState；
 7. Remote Runtime Client 不需要安装服务器 Scheduler、数据库或 Lambda 包；

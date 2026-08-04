@@ -1,5 +1,11 @@
 # SVML 意图优先的模块化编译架构
 
+> **架构演进记录。** 本文较早章节使用的 `BuildIntent + PinBinding + Alternative` Kernel
+> 模型已经被
+> [`LogicalOutput + Candidate + Build Compiler`](./logical-output-realization-fragment-draft.md)
+> 的 `@1` 模型替代。本文关于作者意图、Bootstrap、Surface、Script 和模块边界的讨论仍
+> 有效；涉及 Core wire format、Pin 或 Demand 算法时，以新文档与当前代码为准。
+
 Date: 2026-08-03
 
 Status: architecture direction; interfaces are not frozen.
@@ -33,6 +39,13 @@ Manifest 描述，包的实现可以使用 JS、Wasm 或其他受 Host 支持的
 同时确认：Track、SpeechBasis 等共同语言由独立 Contract Package 定义，Core 只
 拥有 TypeRef/Schema 元语言，不全局注册领域类型；一个 Core 构建完成后才发布的未知
 组件必须能通过 Manifest 与隔离 Worker 动态加入，而不重发 Core/CLI/Hosted 主服务。
+
+同日 Realization 修订进一步收紧“鸭子协议”：Runtime 不再按返回 TypeRef 为一个 Need
+挑 substitute。一个逻辑输出在完整 Graph 中声明 exact Primary 和零个或多个命名
+Alternatives；BuildIntent 显式选择 Alternative，且它只能使用 Primary 输入的子集。
+Pin 是零输入 Binding。Provider 只为被选中的 exact Capability 绑定执行 Endpoint。
+本文早期段落中“任意兼容 Claim/Provider 可直接满足 Requirement”的探索性表述，均由
+[`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md) 的现行规则取代。
 完整规范见 [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md)。若本文
 后续旧例与该规范冲突，以新 Kernel 规范为准。
 
@@ -548,10 +561,10 @@ type BuildIntent = {
     port: PortAddress;
     accepts: "exact" | "substitute";
   }>;
-  pins: Array<{
-    port: PortAddress;
-    record: TypedRecord;
-  }>;
+  bindings: Array<
+    | { kind: "realization"; port: PortAddress; realization: ProducerRef }
+    | { kind: "pin"; port: PortAddress; value: StoredValue; fidelity: "exact" | "substitute" }
+  >;
 };
 ```
 
@@ -717,8 +730,9 @@ type ProgramSource = {
 };
 ```
 
-Seedance、已上传视频、人工产物或黑场 substitute 都可以满足它。Core 不认识这些
-类型的业务含义；它只验证闭包 Manifest 显式声明的类型兼容关系。
+Seedance 可以作为 Primary；已上传视频、人工产物或黑场可以由模块声明为命名
+Alternative，或在本次 BuildIntent 中成为 Pin。相同外层类型本身不会触发替代路由。
+Core 不认识这些业务含义，只验证闭包、类型、输入子集、fidelity 与亲和性等式。
 
 ## 7. SVML 可以并且通常应该导入模块包
 
@@ -745,18 +759,18 @@ K = source-selected modules' kernels
 
 运行环境不能从一个全局 registry 中随便为 `<caption:Track>` 猜一个实现。
 
-外部替换发生在三个不同层次：
+复用或替代发生在三个不同层次：
 
 1. 正常 fulfillment：作者选择的模块和 Kernel 不变，外部满足它的 Requirement；
-2. exact cache：外部证明已有产物对应同一个输入和 Kernel digest，直接复用；
-3. explicit override/substitute：替换 Kernel 或提供非精确产物，必须记录原要求、
-   实际实现和兼容关系。
+2. exact Pin：调用者提供已有产物，并证明类型、内容和声明式亲和性；
+3. named Alternative / substitute Pin：BuildIntent 明确改变 Realization 或提供非精确
+   产物，选择和 fidelity 都进入摘要。
 
 ## 8. 外部调用：统一生命周期，不抹平语义
 
-Requirement 首先表示“当前缺少一种类型化产物”。它可能被已有 Claim、另一个已
-导入 Kernel、缓存、人工产物或外部 effect 满足。只有确定要交给 Host 执行外部
-副作用时，才降低成 Handler 可接收的 EffectRequest。
+Requirement 表示“被选中的 Producer 当前需要某个明确外部 Capability 的类型化产物”。
+历史产物、人工值和预览必须在 Requirement 出现前成为 Pin/Alternative；Host 不根据
+返回类型搜索它们。只有该 Requirement 被 Demand 时，才交给匹配 capability 的 Handler。
 
 Core 只需要通用外壳：
 
@@ -1041,25 +1055,25 @@ WhisperX Requirement       -> 本地或托管 WhisperX 执行端
 Gemini Requirement         -> 注册好的 Gemini Handler
 ```
 
-另一个消费者可以明确允许：
+另一次 BuildIntent 可以明确选择相应 Alternative/Pin：
 
 ```text
-Alice Seedance Requirement -> 缓存视频
-Bob Seedance Requirement   -> 黑场 TimedVisual substitute
-WhisperX Requirement       -> 缓存或人工时间证据 substitute
-Gemini Requirement         -> 缓存的 CaptionGrouping
+Alice SpeechBasis output -> exact Pin 缓存视频
+Bob SpeechBasis output   -> black-by-duration Alternative
+Evidence output          -> 人工证据 Pin
+CaptionGrouping output   -> 缓存 Pin
 ```
 
-两者没有使用不同的 SVML mode，也没有重新选择字幕模块。变化的是外部 Requirement
-resolution、产物 delivery 来源和消费者接受的 `exact/substitute` 符合关系。两套
-候选还可以同时存在。
+两者没有使用不同的 SVML mode，也没有重新选择字幕模块。变化的是 BuildIntent 的
+Realization/Pin Binding；不是 Runtime 的 Requirement 路由。不同候选可以同时存在于
+完整 Graph 中，但一次 Build 的选择必须确定并进入摘要。
 
 这里没有 `Need<SpeakerVideo>` 交给 Runtime 再猜 Seedance、Kling 或其他模型。作者
 SVML 或其显式导入的组件包必须在完整 Graph 形成前决定 exact capability；Runtime
 不能把 Kling 冒充 Seedance exact。Need 另行声明中立返回 Contract，例如 SpeechBasis。
-调用者可以显式选择 Kling、已有视频、黑场视频或人工时间证据作为兼容 Contract 的
-`substitute`，但不能改写 Need capability 或冒充 `exact`。若作者直接 Pin 组件公开
-输出，原 Producer 和 Need 会被 Demand 裁掉，这不是 substitute fulfillment。
+调用者可以显式选择模块已声明的 Kling/黑场 Alternative，或 Pin 已有视频/人工证据，
+但 Runtime 不能改写 Need capability。若 Pin 组件公开输出，原 Producer 和 Need 会被
+Demand 裁掉；若选择 Alternative，只 Demand 它声明的 Primary 输入子集。
 
 ## 13. Target、Editor 和 View
 
@@ -1239,13 +1253,13 @@ Canvas / Timeline UI
   和 Provider，不修改中央 union、switch 或数据库表；
 - Track 等共同语言来自版本化 Contract Package，Core 不维护全局领域类型 registry；
 - Host 不会为作者组件隐式挑选另一个 Kernel；
-- 同一个 Requirement 可以由真实 Provider、缓存、人工或 substitute 解决；
+- Provider 只精确执行被选中的 Requirement；缓存、人工和预览通过 Pin/Alternative 表达；
 - 同一个作者程序可以同时保留多个候选结果；
 - Author Fact 无法被 Kernel 或 Handler 修改；
 - LLM Prompt 和领域 parser 位于相关模块的 Kernel，不进入 Core；
 - API key、队列和 Provider operation 位于 Host/Handler，不进入作者程序；
-- exact 模型/能力选择来自作者、SVS 或模块 Producer；Host 只绑定同 capability
-  Endpoint，或按本次调用者的显式策略提供带 provenance 的 substitute；
+- exact 模型/能力选择来自作者、SVS 或模块 Producer；Host 只绑定同 capability 与
+  return Contract 的 Endpoint；
 - 没有 `previewMode` 或 `productionMode` 语言分支；
 - 两段 Seedance + 双人 Script + Subtitle 示例能使用同一作者程序得到真实和替代
   实现；

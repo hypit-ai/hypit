@@ -29,6 +29,8 @@ export type SpeechBasisSegment = {
 export type SpeechBasis = {
   readonly contract: "svml.speech-basis@1";
   readonly basisDigest: Digest;
+  /** Semantic identity of the authored Narrative whose speech this Basis realizes. */
+  readonly narrativeDigest: Digest;
   readonly programSpace: ProgramSpace;
   readonly audio: MediaArtifactRef;
   readonly visualTrack: {
@@ -39,6 +41,26 @@ export type SpeechBasis = {
       readonly endSec: number;
     }[];
   };
+  readonly segments: readonly SpeechBasisSegment[];
+};
+
+/** Deterministic audio projection of one atomic SpeechBasis/SpeechTake Product. */
+export type SpeechAudioBasis = {
+  readonly contract: "svml.speech-audio-basis@1";
+  readonly basisDigest: Digest;
+  readonly narrativeDigest: Digest;
+  readonly programSpace: ProgramSpace;
+  readonly audio: MediaArtifactRef;
+  readonly segments: readonly SpeechBasisSegment[];
+};
+
+/** Deterministic visual projection of one atomic SpeechBasis/SpeechTake Product. */
+export type SpeechVisualTrack = {
+  readonly contract: "svml.speech-visual-track@1";
+  readonly basisDigest: Digest;
+  readonly narrativeDigest: Digest;
+  readonly programSpace: ProgramSpace;
+  readonly visualTrack: SpeechBasis["visualTrack"];
   readonly segments: readonly SpeechBasisSegment[];
 };
 

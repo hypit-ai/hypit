@@ -1,4 +1,4 @@
-import type { Digest, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
+import type { CapabilityRef, Digest, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
 import type { ValueSchema } from "./value.js";
 
 export type ModuleDependency = {
@@ -12,14 +12,30 @@ export type TypeDeclaration = {
   readonly description?: string;
 };
 
+/** A domain-neutral equality promise from one result field to one Producer input field. */
+export type ResultAffinityDeclaration = {
+  readonly resultPointer: string;
+  readonly input: string;
+  readonly inputPointer: string;
+};
+
 export type PortDeclaration = {
   readonly name: string;
   readonly type: TypeRef;
+  readonly affinity?: readonly ResultAffinityDeclaration[];
 };
 
 export type NeedPortDeclaration = {
   readonly name: string;
-  readonly wants: TypeRef;
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
+  readonly affinity?: readonly ResultAffinityDeclaration[];
+};
+
+export type CapabilityDeclaration = {
+  readonly name: string;
+  readonly returns: TypeRef;
+  readonly description?: string;
 };
 
 export type ImplementationRef = {
@@ -57,6 +73,7 @@ export type ModuleManifest = {
   readonly version: string;
   readonly dependencies: readonly ModuleDependency[];
   readonly types: readonly TypeDeclaration[];
+  readonly capabilities: readonly CapabilityDeclaration[];
   readonly surfaces: readonly SurfaceDeclaration[];
   readonly producers: readonly ProducerDeclaration[];
 };
@@ -79,4 +96,8 @@ export type ResolvedTypeDeclaration = TypeDeclaration & {
 
 export type ResolvedProducerDeclaration = ProducerDeclaration & {
   readonly ref: ProducerRef;
+};
+
+export type ResolvedCapabilityDeclaration = CapabilityDeclaration & {
+  readonly ref: CapabilityRef;
 };
