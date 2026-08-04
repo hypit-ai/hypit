@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  demoAudioEnabled as audioEnabled,
+  enableDemoAudioAfterInteraction,
+  initializeDemoAudio,
+  toggleDemoAudio,
+} from "./demo-audio";
 import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
 import {
@@ -79,7 +85,6 @@ const currentSceneIndex = ref(0);
 const activeSceneSelection = ref(sceneSelections[0]);
 const activeOverlaySelection = ref<DemoSelection | null>(null);
 const visibleLogoCount = ref(0);
-const audioEnabled = ref(false);
 const sourceViewportRows = ref(27);
 const sourceLineRows = ref<number[]>(sourceLines.map(() => 1));
 const sourcePanelElement = ref<HTMLElement | null>(null);
@@ -345,13 +350,12 @@ function syncOverlayVideos(force = false) {
 
 function enableAudio(event?: Event) {
   if (event?.target instanceof Element && event.target.closest(".live-audio-toggle")) return;
-  if (audioEnabled.value) return;
-  audioEnabled.value = true;
+  if (!enableDemoAudioAfterInteraction()) return;
   syncBaseVideos();
 }
 
 function toggleAudio() {
-  audioEnabled.value = !audioEnabled.value;
+  toggleDemoAudio();
   syncBaseVideos();
 }
 
@@ -522,6 +526,7 @@ watch(
 );
 
 onMounted(() => {
+  initializeDemoAudio();
   window.addEventListener("pointerdown", enableAudio, { capture: true, once: true });
   window.addEventListener("keydown", enableAudio, { capture: true, once: true });
   window.addEventListener("resize", updateLayoutGeometry);
