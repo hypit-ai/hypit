@@ -1,5 +1,11 @@
 # External Runtime Host Architecture Draft
 
+> **Historical draft; superseded for v2.** 本文记录旧引擎到模块化 Runtime 的过渡
+> 思考，其中的 `.svk`、`ExecutionBundle`、`EffectRequest` 和 Runtime 装配不再是
+> v2 施工依据。当前规范见
+> [`runtime-package-topology-v2.md`](./runtime-package-topology-v2.md)。未完成迁移前
+> 保留本文只用于审计历史背景。
+>
 > **Draft; not frozen.**
 >
 > 本文定义 SVML 编译内核与外部运行时之间的候选边界。它不属于

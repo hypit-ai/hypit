@@ -151,6 +151,10 @@ generation provider is invoked by tests or compilation.
 - [Speech Program and Caption v1 target contract](docs/speech-program-caption-v1.md)
 - [Compiler implementation record](docs/compiler-prototype.md)
 - [External Runtime Host architecture](docs/runtime-host-architecture-draft.md)
+  is a historical pre-v2 audit record.
+- [Runtime, package and execution topology v2](docs/runtime-package-topology-v2.md)
+  specifies the current package, Runtime Profile, Provider Binding and scheduler
+  boundaries.
 
 VLM, bbox, face tracking and visual reverse-location are intentionally outside
 SVML v1. They may be implemented later as explicit post-processing extensions;
