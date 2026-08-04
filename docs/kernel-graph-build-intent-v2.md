@@ -1,14 +1,23 @@
 # SVML v2 Kernel：Graph、Target、Pin、Demand 与开放世界
 
+> **历史 `@0` 施工记录，已被替代。** 本文中的 `NodeInstance`、`RealizationInstance`、
+> `PinBinding`、`BuildIntent`、`svml.graph@0` 与“遇到 Pin 特殊截断”不再是当前模型。
+> 当前权威规范是
+> [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)：
+> `LogicalOutput + Candidate + Operation + BuildRequest`，Pin 只是宿主选择 Existing-Value
+> Candidate 的产品动作，Core 在一次反向遍历中按 OperationId 去重。以下正文保留用于
+> 解释架构演进，不应直接作为实现接口。
+>
 > **v2 Kernel 目标规范，2026-08-04。** 本文定义当前最高优先级的语言内核边界。
 > 它补充并修正 [`intent-first-modular-compilation.md`](./intent-first-modular-compilation.md)
 > 中把 Core 主要描述为类型化事件状态机、把 Target 主要描述为消费者 Query 的部分，
 > 也将 [`runtime-package-topology-v2.md`](./runtime-package-topology-v2.md) 的 Runtime
 > 施工置于本规范之后。
 >
-> 当前 v2 已实现不可变 Record、Need、Command、Event、Receipt、Derivation、有限
-> BuildPlan 和纯 Reducer，但尚未实现本文规定的完整 CompiledGraph、任意 Target、
-> 通用 Pin、Demand Planner 与动态外部包加载。
+> 当前 v2 已实现不可变 Record、Need、Command、Event、Receipt、Derivation、单结果
+> CompiledGraph、Primary/Alternative Realization、任意 Target、通用 Pin、反向 Demand
+> Planner、声明式亲和性验证、Core-sealed BuildPlan 和纯 Reducer。动态外部包加载、
+> 安全沙箱和生产 Runtime/Provider 仍未实现。
 
 ## 1. 决策摘要
 
@@ -28,15 +37,16 @@ SVML Kernel
 
 1. Source 编译得到完整类型化图，不预设 Film 或最终视频为唯一根；
 2. 图中任何合法输出端口都可以成为一次 Build 的 Target；
-3. Pin 是作者对某个输出端口的明确物化选择，是一等 Build Intent；
-4. Core 从 Targets 反向求依赖闭包，遇到 Pin 或合法已物化 Record 就截断上游；
-5. 有限 BuildPlan 是 `CompiledGraph + BuildIntent` 的派生结果，不是完整作者拓扑；
-6. Core 决定什么 ready，Runtime Scheduler 只决定何时和在哪里执行；
-7. Film、Track、Image、Seedance、WhisperX 和 HyperFrames 都不是 Core 内置概念；
-8. 类型化共同语言由 Contract Package 定义，不在 Core 中全局注册；
-9. 新组件、Surface、Producer、Provider 或 Contract 可以由事后安装的包提供，
+3. BuildIntent 可为端口显式选择 Primary、某个命名 Alternative 或 Pin；
+4. Alternative 只能删除 Primary 输入，不能偷偷增加或更换作者依赖；Pin 是零输入绑定；
+5. Core 从 Targets 反向求所选 Realization 的依赖闭包，遇到 Pin 就截断该端口上游；
+6. 有限 BuildPlan 是 `CompiledGraph + BuildIntent` 的派生结果，不是完整作者拓扑；
+7. Core 决定什么 ready，Runtime Scheduler 只决定何时和在哪里执行；
+8. Film、Track、Image、Seedance、WhisperX 和 HyperFrames 都不是 Core 内置概念；
+9. 类型化共同语言由 Contract Package 定义，不在 Core 中全局注册；
+10. 新组件、Surface、Producer、Provider 或 Contract 可以由事后安装的包提供，
    不得要求修改或重发 Core；
-10. 内存和普通文件足以实现 Target、Pin、Demand、恢复和本地队列；数据库不是前提。
+11. 内存和普通文件足以实现 Target、Pin、Demand、恢复和本地队列；数据库不是前提。
 
 ## 2. Kernel 不是普通组件
 
@@ -77,7 +87,7 @@ type KernelInput = {
 Kernel 输出可验证状态和 ready Commands：
 
 ```ts
-start(input) -> BuildState
+start(program, graph, intent) -> BuildState
 
 reduce(state, acceptedEvent?) -> {
   state: BuildState,
@@ -100,37 +110,57 @@ type PortAddress = {
 
 type NodeInstance = {
   id: NodeId;
-  producer: ProducerRef;
-  inputs: Record<string, PortAddress | RecordId>;
-  outputs: Record<string, {
+  output: {
     address: PortAddress;
     record: RecordId;
     type: TypeRef;
-  }>;
+    affinity?: readonly AffinityConstraint[];
+  };
+  primary: RealizationInstance;
+  alternatives: readonly RealizationInstance[];
+};
+
+type RealizationInstance = {
+  producer: ProducerRef;
+  inputs: Record<string, PortAddress | RecordId>;
+  result:
+    | { kind: "output"; name: string }
+    | { kind: "need"; name: string; id: NeedId };
+  fidelity: "exact" | "substitute";
 };
 
 type CompiledGraph = {
   format: "svml.graph@0";
   id: Digest;
+  program: Digest;
   nodes: readonly NodeInstance[];
-  authoredRecords: readonly TypedRecord[];
 };
 ```
+
+`program` 绑定 LinkedProgram semantic digest；authored Records 只由 LinkedProgram
+持有，Graph 通过 RecordId 引用，避免两个事实来源。一个 Node 只有一个逻辑公开输出，
+但它的 Realization 可以由 Producer 直接返回，也可以产生一个明确外部 Need。
+
+Producer 必须满足单公开结果范式：`outputs.length + needs.length === 1`。若一次底层操作
+自然产生音频和视频，应先返回一个原子的 `SpeechBasis` 合同；字段投影再由便宜的独立
+Producer 完成。这样 Pin 一个逻辑输出不会与同节点的另一个新输出发生冲突。
 
 最终字段会随实现收敛，但必须保留以下不变量：
 
 - Node 和 Port 地址稳定且唯一；
-- 每个非 authored output 至多有一个原始 Producer；
+- 每个非 authored output 只有一个逻辑身份、一个 Primary，并可声明多个命名 Alternative；
 - 每条依赖边显式、类型化并属于锁定模块闭包；
 - 图中不存在未声明依赖或运行时扫描得到的隐藏工作流；
 - Producer 的端口与静态 Manifest 完全一致；
+- Primary fidelity 必须是 exact；Alternative 的输入绑定必须是 Primary 输入绑定的子集；
 - 完整图可以包含多个互不相干的终端和中间检查点；
 - 图本身不选择本次要执行哪一个终端。
 
 ### 4.2 依赖边具有强制语义
 
-如果一个 Node 声明消费三个输入，那么 Target 该 Node 的输出时，三个输入都必须被
-Demand。Core 不做“这个输入看起来没被实现代码使用”的死参数优化。
+如果本次选中的 Realization 声明消费三个输入，那么 Target 该 Node 的输出时，三个
+输入都必须被 Demand。Core 不做“这个输入看起来没被实现代码使用”的死参数优化；
+只有显式选择输入更少的 Alternative 才会改变依赖闭包。
 
 因此一个普通聚合节点可以有意表达：
 
@@ -138,7 +168,7 @@ Demand。Core 不做“这个输入看起来没被实现代码使用”的死参
 
 这是作者图的一部分，不是假的执行技巧。
 
-## 5. BuildIntent：Targets 与 Pins
+## 5. BuildIntent：Targets 与 Bindings
 
 一次运行的作者选择由 Kernel 对象表达：
 
@@ -147,7 +177,7 @@ type BuildIntent = {
   format: "svml.build-intent@0";
   graph: Digest;
   targets: readonly BuildTarget[];
-  pins: readonly PinBinding[];
+  bindings: readonly (RealizationBinding | PinBinding)[];
   digest: Digest;
 };
 
@@ -156,11 +186,24 @@ type BuildTarget = {
   accepts: "exact" | "substitute";
 };
 
-type PinBinding = {
+type RealizationBinding = {
+  kind: "realization";
   port: PortAddress;
-  record: TypedRecord;
+  realization: ProducerRef;
+};
+
+type PinBinding = {
+  kind: "pin";
+  port: PortAddress;
+  value: StoredValue;
+  fidelity: "exact" | "substitute";
+  provenance?: CanonicalValue;
 };
 ```
+
+Pin 不重复携带 RecordId、TypeRef 或 Origin；这些身份来自锁定 Graph，Core 在验证完整
+BuildIntent 后生成 `PinnedOrigin`。这样避免 Pin 自己携带 `buildIntentDigest` 造成循环
+摘要，也防止调用者为端口伪造另一个类型或 Record identity。
 
 BuildIntent 可以来自 CLI、Canvas、编辑器、JSON 文件或 Hosted 产品，但其 canonical
 identity、类型验证和语义属于 Core。存储位置不决定其含义。
@@ -172,7 +215,7 @@ sourceSemanticDigest
   完整作者图表达了什么
 
 buildIntentDigest
-  这次选择哪些 Targets 和 Pins
+  这次选择哪些 Targets、Alternatives 和 Pins
 
 runtimeExecutionDigest
   用哪些实现、Endpoint 和运行环境执行
@@ -235,6 +278,7 @@ Core 必须验证：
 type PinnedOrigin = {
   kind: "pinned";
   selectionDigest: Digest;
+  bindingDigest: Digest;
   provenance?: CanonicalValue;
 };
 ```
@@ -242,23 +286,50 @@ type PinnedOrigin = {
 Pin 不能声称原 Producer 执行过。公开组件输出应尽可能采用中立 Contract，例如
 SpeechBasis、Image、Track，而不是把 Provider 品牌写进输出类型。
 
-### 7.2 Pin 与 Substitute Need 不同
+### 7.2 Pin、Alternative 与 Provider 是三个不同维度
 
-假设 Seedance 节点输出 SpeechBasis，内部运行时才提出 Seedance Mini Need：
+假设一个逻辑 SpeechBasis 输出有 Seedance Primary、黑场 Alternative 和历史 Pin：
 
 ```text
 Pin SpeechBasis output
   -> Seedance Producer 被裁掉
   -> Seedance Need 从未产生
 
-不 Pin output
+选择黑场 Alternative
+  -> 只 Demand 黑场声明使用的 duration 输入
+  -> 参考图等其余 Primary 上游被裁掉
+  -> 结果 fidelity 固定为 substitute
+
+选择 Seedance Primary
   -> Seedance Producer 被 Demand
   -> 产生 Seedance Mini Need
-  -> Runtime 可以 exact 或 substitute fulfillment
+  -> Runtime 只能绑定能够 exact claim 该 Capability 的 KIE/火山 Endpoint
 ```
 
-前者是作者覆盖，后者是对一个仍然活跃的外部要求进行近似满足。二者必须保留不同
-provenance。
+Kling 若真要替代 Seedance，必须是源码模块声明的命名 Alternative；它仍只可消费
+Primary 输入的子集。Runtime 不得看到 `returns = SpeechBasis` 就自行挑 Kling、黑场或
+缓存。Provider 只回答“已选中的精确能力在哪里执行”，不参与作品方法选择。
+
+### 7.3 精确 Pin 不能伪造亲和性
+
+端口可以声明领域无关的等式约束：
+
+```ts
+type AffinityConstraint = {
+  resultPointer: string;
+  source: PortAddress | RecordId;
+  sourcePointer: string;
+};
+```
+
+例如 SpeechBasis 的 `narrativeDigest` 必须等于 Narrative 的 semantic index digest；
+WhisperX Evidence 的 `basisDigest`、`audioArtifactDigest` 和 `programSpaceDigest` 必须等于
+当前 Basis 的对应字段。Core 只执行 JSON Pointer 等式，不认识这些视频概念。
+
+精确 Pin 必须能从 authored Record 或同次 BuildIntent 的另一个 Pin 证明这些等式。
+若它 Pin 了 Evidence 却没有物化或 Pin 相应 Basis，Core 不能预知一次非确定性生成将
+得到哪个 Basis，因此拒绝 `exact`。作者仍可明确选择 `substitute` Pin 来表示故意使用
+无亲和性保证的预览；这种结果及所有下游永远不能洗回 exact。
 
 ## 8. Demand 算法
 
@@ -269,20 +340,15 @@ visit(port):
   if port already visited:
     return
 
-  if port is pinned:
-    verify pinned Record
-    mark materialized
+  binding = buildIntent.bindingFor(port)
+  if binding is Pin:
+    verify value, fidelity and affinity
     return
 
-  if a valid authored/provided Record already satisfies port:
-    mark materialized
-    return
+  realization = binding.selectedAlternative ?? primaryOf(port)
+  mark realization.producer demanded
 
-  producer = producerOf(port)
-  require producer exists
-  mark producer demanded
-
-  for every declared producer input:
+  for every input bound by the selected realization:
     visit(input)
 ```
 
@@ -298,6 +364,8 @@ BuildPlan。
 - 图中的非 demanded Node 不进入 BuildPlan；
 - BuildPlan 中所有 Step 必须通往至少一个 Target；
 - Queue/ready Commands 可以完全从 BuildState 重新生成。
+- 其他 Build、普通缓存或外部文件不能环境式截断图；它们必须先成为显式 Pin 或带
+  Receipt 的本次履约事实。
 
 ## 9. 规范示例
 
@@ -349,28 +417,28 @@ CollectTracks。Target CaptionTrack 时不要求 Film、Composition 或 HyperFra
 
 ## 10. BuildPlan 的新定位
 
-当前 v2 的 BuildPlan 由调用者提前给出 Goals，并验证所有 Step 都通往 Goal。新定位是：
+当前实现中 BuildPlan 已不再由调用者提前给出，而采用以下定位：
 
 ```text
 Resolved Module Closure
   + Typed CompiledGraph
-  + BuildIntent(Targets + Pins)
+  + BuildIntent(Targets + Realization/Pin Bindings)
       ↓ Core Demand Planner
   finite BuildPlan
       ↓ Core Reducer
   BuildState + Commands
 ```
 
-现有 `validatePlan()`、拓扑检查、Reducer、Command/Event 完整性逻辑可以保留，但
-`start(program, plan)` 的公共入口需要前移为接受 Graph 和 BuildIntent，或只接受由
-同一 Core 版本 sealed 的 DemandPlan。
+公共入口已经切换为 `start(program, graph, intent)`。`deriveBuildPlan()` 是领域无关的
+纯函数；`validatePlan()` 会重新派生并进行 canonical 比较。拓扑检查、Reducer 和
+Command/Event 完整性逻辑继续作用于派生出的有限计划。
 
 Runtime 不能自行构造一份省略依赖的 BuildPlan 绕过 Demand 法律。
 
 ## 11. Need：精确能力与鸭子结果合同
 
-当前 `Need.wants` 同时被用作 Provider dispatch key 和结果 TypeRef，不足以表达
-“Kling 可以近似提供兼容视频，但不能声称自己是 Seedance”。目标协议应拆分：
+旧 `Need.wants` 同时被用作 Provider dispatch key 和结果 TypeRef，无法表达
+“Kling 可以近似提供兼容视频，但不能声称自己是 Seedance”。当前协议已经拆分为：
 
 ```ts
 type Need = {
@@ -392,15 +460,18 @@ returns    = @svml/contracts#SpeechBasis@1
 ```
 
 - KIE/火山的真实 Seedance Mini Endpoint 可以声明 exact；
-- Kling、黑场或估计实现可以被显式选择为 substitute；
-- substitute 必须返回完整 SpeechBasis，而不是裸 URL；
-- substitute 不能在下游重新变为 exact；
-- Runtime 默认不得在 exact Endpoint 失败后偷偷调用另一个付费模型；
-- Pin SpeechBasis 输出则直接裁掉 Producer，不属于 Need substitute。
+- KIE/火山 Endpoint 都可精确执行已经选中的 Seedance capability；多者存在时 Profile
+  必须显式 bind；
+- Kling、黑场或估计不是 Provider fallback，而是 Author Module 声明并由 BuildIntent
+  选中的 Alternative；
+- Alternative 仍必须返回完整 SpeechBasis，而不是裸 URL；
+- Realization fidelity 与 Provider fulfillment conformance 分开计算，并与所有上游
+  质量取最差值，不能在下游重新变为 exact；
+- Pin SpeechBasis 输出直接裁掉 Producer，不产生 Need 或 Receipt。
 
-官方外部视频编译能力应尽量提供无付费 placeholder/estimate fulfillers，使整条标准图
-能够构造 substitute preview closure；第三方自定义 Contract 若没有合法 placeholder，
-必须由 doctor 明确报告，而不是伪造值。
+官方作者模块可以提供命名的无付费 placeholder/estimate Alternatives，使标准图能够
+构造 substitute preview closure；第三方 Contract 若没有合法 Alternative，doctor 应
+明确报告，而不是由 Runtime 按 TypeRef 伪造一个。
 
 ## 12. Contract Package：共同语言不进入 Core
 
@@ -518,39 +589,47 @@ artifacts/refs。新增组件、Contract 或 Record Type 不创建新表，也�
 
 已经具备：
 
-- 通用 ModuleManifest types/surfaces/producers；
+- 通用 ModuleManifest types/capabilities/surfaces/producers；
+- Producer 单公开结果范式；
 - 锁定模块闭包与 TypeRef；
-- 有限 BuildPlan、Goal reachability 和 cycle validation；
+- 单逻辑输出 CompiledGraph、Primary/Alternative Realization、稳定 PortAddress 和 cycle validation；
+- BuildIntent、任意 TargetSet、显式 RealizationBinding、通用 PinBinding/PinnedOrigin；
+- Pin 截断、多 Target 并集和反向 Demand Closure；
+- Alternative 输入子集约束和按所选 Realization 求 Demand；
+- Core 派生并封存的有限 BuildPlan 与 Goal reachability；
 - ready Producer/Need Command 生成；
 - immutable Record、Receipt、Derivation 和 digest 验证；
 - outstanding Commands 恢复时重建；
 - conformance floor；
+- Need capability/returns 分离；
+- Provider 只按 exact capability + returns 路由；Alternative fidelity 与 Provider fulfillment
+  conformance 独立、单调传播；
+- Protocol 层的统一 canonical/digest 法则，Contract Package 不再依赖 Core；
+- 通用 JSON Pointer 亲和性等式、精确 Pin 证明以及 SpeechBasis/Evidence/Map 的媒体绑定；
 - Text/Script/WhisperX/Speech Align/Caption 第一批模块。
 
 尚未具备：
 
-- 完整 CompiledGraph 与稳定 PortAddress；
-- 任意 TargetSet；
-- 通用 PinBinding/PinnedOrigin；
-- 从 Target+Pin 派生 BuildPlan；
-- Pin 后的 demand pruning；
-- Need capability/returns 分离；
 - 动态包实现加载和安全沙箱；
 - 外部未知包纵向验收；
+- Pin Artifact bytes 的 Runtime Store 验证；
 - v2 Track/Composition/HyperFrames 公共 Contract 与纵向链路。
 
 ## 16. 实施顺序
 
-### Phase K1：Graph、Target、Pin、Demand
+### Phase K1：Graph、Target、Pin、Demand（已完成）
 
 1. 在 Protocol 定义 CompiledGraph、PortAddress、BuildIntent、BuildTarget、PinBinding；
 2. 实现 Core Demand Planner；
 3. 让 BuildPlan 只能由 Core seal 或验证为对应 BuildIntent 的派生结果；
-4. 增加 pinned Record origin、digest 和 affinity 验证；
+4. 增加 pinned Record origin、digest 和锁定输出 Schema 验证；
 5. 让 Reducer 只调度 demanded steps；
 6. 保持 JSON round-trip 与 Command 重建。
 
-### Phase K2：Kernel 规范测试
+Artifact bytes 可用性仍由 Runtime Store 验证；Basis/Evidence 等跨 Record 关系已经
+降低为 Core 可执行的通用声明式等式，没有视频类型分支。
+
+### Phase K2：Kernel 规范测试（已完成）
 
 必须先通过：
 
@@ -563,13 +642,22 @@ artifacts/refs。新增组件、Contract 或 Record Type 不创建新表，也�
 - 全 Pin 后无 Producer/Provider Command；
 - 内存与 JSON 恢复得到同一 ready commands。
 
-### Phase K3：Need 与鸭子结果
+### Phase K3：Realization 与鸭子结果（已完成）
 
 1. 将 Need 拆为 capability/returns；
 2. exact Endpoint 匹配 capability；
-3. substitute fulfiller 匹配 returns 并保留 provenance；
-4. 验证 Kling 不能 claim Seedance exact，但能显式 substitute SpeechBasis；
-5. 验证 Pin SpeechBasis 直接裁掉 Seedance Producer。
+3. 每个逻辑输出声明 Primary 与命名 Alternatives；
+4. Alternative 只能删减 Primary 依赖，并由 BuildIntent 显式选择；
+5. Provider Registry 不提供按返回 TypeRef 的 substitute 路由；
+6. 验证 Kling 不能 claim Seedance exact，黑场/冻结帧只保留自己声明的输入；
+7. 验证 Pin SpeechBasis 直接裁掉 Seedance Producer；
+8. 用声明式 affinity 拒绝来自另一 Basis 的精确 Evidence/Pin。
+
+### Phase V0：真实视频窄链（下一步）
+
+在建设任意第三方代码执行前，先补齐一个可信官方纵向链路：Script → Seedance
+SpeechBasis → WhisperX → SemanticMap → Caption/Track → HyperFrames。用真实 Artifact
+Store 验证 Pin、Alternative、恢复和部分 Target，避免项目长期停留在基础设施层。
 
 ### Phase K4：开放世界证明
 
@@ -583,13 +671,14 @@ artifacts/refs。新增组件、Contract 或 Record Type 不创建新表，也�
 
 ### Phase V1：视频公共窄腰
 
-在前述 Gate 通过后，定义 v2 Track、Composition 和 HyperFrames Program Contracts，
+与 V0 同步收敛 v2 Track、Composition 和 HyperFrames Program Contracts，
 并用一个事后安装的第三方 Track 组件证明 Film/HyperFrames 无中央 switch。
 
 ### Phase R1：本地 Runtime
 
-最后才实现 Runtime Profile、进程内 Scheduler、JSON Journal、本地 CAS、动态包 Loader
-和真实 Provider。随后再建设 Hosted Runtime、服务器数据库和分布式队列。
+实现 Runtime Profile、进程内 Scheduler、JSON Journal、本地 CAS 和可信官方 Provider；
+动态第三方包 Loader 与沙箱在真实纵向链路之后完成。随后再建设 Hosted Runtime、
+服务器数据库和分布式队列。
 
 ## 17. 验收标准
 

@@ -13,7 +13,7 @@ between their measured neighbors instead of invented point timestamps. The resul
 into the selected ProgramSpace and contains one timing for every Script token and all `2M + 2N`
 semantic anchors.
 
-The locator accepts Narrative, SpeechBasis and AlignedTranscriptEvidence together. It rejects
+The locator accepts Narrative, SpeechAudioBasis and AlignedTranscriptEvidence together. It rejects
 Evidence unless its Basis, audio Artifact and ProgramSpace digests match exactly, even when another
 audio file has the same duration and Segment ids.
 

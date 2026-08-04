@@ -2,13 +2,17 @@ import {
   createResolvedClosure,
   digestOf,
   link,
+  sealBuildRequest,
+  sealCompiledGraph,
   sealRecord,
   sealTypedModule,
   start,
 } from "@svml/core";
 import type {
-  BuildPlan,
   BuildState,
+  CapabilityRef,
+  CompiledGraph,
+  LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
@@ -23,15 +27,21 @@ export const types = {
   document: { module: moduleRef, name: "GreetingDocument" },
 } satisfies Record<string, TypeRef>;
 
+export const capabilities = {
+  generation: { module: moduleRef, name: "generate-greeting-text" },
+} satisfies Record<string, CapabilityRef>;
+
 export const producers = {
   makePrompt: { module: moduleRef, name: "make-prompt" },
   requestText: { module: moduleRef, name: "request-text" },
+  placeholderText: { module: moduleRef, name: "placeholder-text" },
   assemble: { module: moduleRef, name: "assemble" },
 } satisfies Record<string, ProducerRef>;
 
 export const implementationDigests = {
   makePrompt: digestOf("example.greeting/make-prompt@0"),
   requestText: digestOf("example.greeting/request-text@0"),
+  placeholderText: digestOf("example.greeting/placeholder-text@0"),
   assemble: digestOf("example.greeting/assemble@0"),
 };
 
@@ -62,6 +72,7 @@ export const manifest: ModuleManifest = {
       },
     },
   ],
+  capabilities: [{ name: capabilities.generation.name, returns: types.generated }],
   surfaces: [],
   producers: [
     {
@@ -79,7 +90,11 @@ export const manifest: ModuleManifest = {
       name: producers.requestText.name,
       inputs: [{ name: "prompt", type: types.prompt }],
       outputs: [],
-      needs: [{ name: "generation", wants: types.generated }],
+      needs: [{
+        name: "generation",
+        capability: capabilities.generation,
+        returns: types.generated,
+      }],
       implementation: {
         kind: "registered",
         locator: "example.greeting/request-text",
@@ -87,9 +102,24 @@ export const manifest: ModuleManifest = {
       },
     },
     {
+      name: producers.placeholderText.name,
+      inputs: [{ name: "prompt", type: types.prompt }],
+      outputs: [{ name: "generated", type: types.generated }],
+      needs: [],
+      implementation: {
+        kind: "registered",
+        locator: "example.greeting/placeholder-text",
+        digest: implementationDigests.placeholderText,
+      },
+    },
+    {
       name: producers.assemble.name,
       inputs: [{ name: "generated", type: types.generated }],
-      outputs: [{ name: "document", type: types.document }],
+      outputs: [{
+        name: "document",
+        type: types.document,
+        affinity: [{ resultPointer: "/text", input: "generated", inputPointer: "" }],
+      }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -100,53 +130,71 @@ export const manifest: ModuleManifest = {
   ],
 };
 
-export function greetingPlan(options?: {
-  readonly needAccepts?: "exact" | "substitute";
-  readonly goalAccepts?: "exact" | "substitute";
-}): BuildPlan {
-  return {
-    format: "svml.plan@0",
-    id: "greeting",
-    steps: [
+export function greetingGraph(program: LinkedProgram): CompiledGraph {
+  return sealCompiledGraph({
+    program: program.semanticDigest,
+    outputs: [
+      {
+        id: "prompt",
+        type: types.prompt,
+        primary: "make-prompt",
+        candidates: ["make-prompt"],
+        semanticInputs: [{ kind: "record", id: "intent:root" }],
+      },
+      {
+        id: "generated",
+        type: types.generated,
+        primary: "request-text",
+        candidates: ["request-text", "placeholder-text"],
+        semanticInputs: [{ kind: "logical-output", id: "prompt" }],
+      },
+      {
+        id: "document",
+        type: types.document,
+        primary: "assemble",
+        candidates: ["assemble"],
+        semanticInputs: [{ kind: "logical-output", id: "generated" }],
+      },
+    ],
+    candidates: [
+      { id: "make-prompt", output: "prompt", root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } }, fidelity: "exact" },
+      { id: "request-text", output: "generated", root: { kind: "operation", result: { kind: "operation-result", operation: "request-text" } }, fidelity: "exact" },
+      { id: "placeholder-text", output: "generated", root: { kind: "operation", result: { kind: "operation-result", operation: "placeholder-text" } }, fidelity: "substitute" },
+      { id: "assemble", output: "document", root: { kind: "operation", result: { kind: "operation-result", operation: "assemble" } }, fidelity: "exact" },
+    ],
+    operations: [
       {
         id: "make-prompt",
         producer: producers.makePrompt,
-        inputs: { intent: "intent:root" },
-        outputs: { prompt: "prompt:root" },
-        needs: {},
+        inputs: { intent: { kind: "record", id: "intent:root" } },
+        result: { kind: "output", name: "prompt", record: "prompt:root" },
       },
       {
         id: "request-text",
         producer: producers.requestText,
-        inputs: { prompt: "prompt:root" },
-        outputs: {},
-        needs: {
-          generation: {
-            id: "need:generation",
-            result: "generated:root",
-            accepts: options?.needAccepts ?? "exact",
-          },
-        },
+        inputs: { prompt: { kind: "logical-output", id: "prompt" } },
+        result: { kind: "need", name: "generation", id: "need:generation", record: "generated:root", accepts: "exact" },
+      },
+      {
+        id: "placeholder-text",
+        producer: producers.placeholderText,
+        inputs: { prompt: { kind: "logical-output", id: "prompt" } },
+        result: { kind: "output", name: "generated", record: "generated:placeholder" },
       },
       {
         id: "assemble",
         producer: producers.assemble,
-        inputs: { generated: "generated:root" },
-        outputs: { document: "document:root" },
-        needs: {},
+        inputs: { generated: { kind: "logical-output", id: "generated" } },
+        result: { kind: "output", name: "document", record: "document:root" },
       },
     ],
-    goals: [
-      {
-        record: "document:root",
-        type: types.document,
-        accepts: options?.goalAccepts ?? "exact",
-      },
-    ],
-  };
+  });
 }
 
-export function createGreetingBuild(options?: Parameters<typeof greetingPlan>[0]): BuildState {
+export function createGreetingBuild(options?: {
+  readonly generationRealization?: "primary" | "placeholder";
+  readonly goalAccepts?: "exact" | "substitute";
+}): BuildState {
   const closure = createResolvedClosure([manifest]);
   const authored = sealRecord({
     id: "intent:root",
@@ -165,5 +213,20 @@ export function createGreetingBuild(options?: Parameters<typeof greetingPlan>[0]
     closureDigest: closure.digest,
     records: [authored],
   });
-  return start(link(closure, [typedModule]), greetingPlan(options));
+  const program = link(closure, [typedModule]);
+  const graph = greetingGraph(program);
+  const request = sealBuildRequest({
+    graph: graph.id,
+    targets: [{
+      output: "document",
+      accepts: options?.goalAccepts ?? "exact",
+    }],
+    bindings: options?.generationRealization === "placeholder"
+      ? [{
+          output: "generated",
+          candidate: "placeholder-text",
+        }]
+      : [],
+  });
+  return start(program, graph, request);
 }

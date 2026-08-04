@@ -177,6 +177,7 @@ test("a module can use Text's generic structured parser without adding another p
         },
       },
     ],
+    capabilities: [],
     surfaces: [
       {
         name: "card",

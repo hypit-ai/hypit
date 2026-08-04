@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { sealProgramSpace, sealSpeechBasis } from "@svml/contracts";
+import type { SpeechAudioBasis, SpeechBasis } from "@svml/contracts";
 import { digestOf } from "@svml/core";
 import {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
-  whisperXRequestForBasis,
+  whisperXRequestForAudioBasis,
 } from "@svml/whisperx";
 
 function basis() {
@@ -18,6 +19,7 @@ function basis() {
   const visual = digestOf("whisperx-test:visual");
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
+    narrativeDigest: digestOf("whisperx-test:narrative"),
     programSpace,
     audio: { digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav", durationSec: 1 },
     visualTrack: { clips: [{
@@ -30,11 +32,22 @@ function basis() {
   });
 }
 
-test("WhisperX request construction rejects a self-inconsistent SpeechBasis before fulfillment", () => {
-  const valid = basis();
-  assert.equal(whisperXRequestForBasis(valid).basisDigest, valid.basisDigest);
-  const tampered = { ...valid, audio: { ...valid.audio, digest: digestOf("another-audio") } };
-  assert.throws(() => whisperXRequestForBasis(tampered), /SpeechBasis digest/u);
+function audioProjection(basis: SpeechBasis): SpeechAudioBasis {
+  return {
+    contract: "svml.speech-audio-basis@1",
+    basisDigest: basis.basisDigest,
+    narrativeDigest: basis.narrativeDigest,
+    programSpace: basis.programSpace,
+    audio: basis.audio,
+    segments: basis.segments,
+  };
+}
+
+test("WhisperX consumes only the validated audio projection of a SpeechBasis", () => {
+  const valid = audioProjection(basis());
+  assert.equal(whisperXRequestForAudioBasis(valid).basisDigest, valid.basisDigest);
+  const tampered = { ...valid, audio: { ...valid.audio, durationSec: 2 } };
+  assert.throws(() => whisperXRequestForAudioBasis(tampered), /SpeechAudioBasis audio/u);
 });
 
 test("WhisperX normalization verifies its model-specific result before lowering to common Evidence", () => {

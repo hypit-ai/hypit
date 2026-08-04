@@ -43,9 +43,6 @@ importers:
 
   packages/contracts:
     dependencies:
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -81,7 +78,36 @@ importers:
         specifier: workspace:*
         version: link:../whisperx
 
+  packages/elaborator:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/speech-take':
+        specifier: workspace:*
+        version: link:../speech-take
+
   packages/protocol: {}
+
+  packages/realization:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
 
   packages/script:
     dependencies:
@@ -111,6 +137,22 @@ importers:
         specifier: workspace:*
         version: link:../script
 
+  packages/speech-take:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
   packages/text:
     dependencies:
       '@svml/core':
@@ -123,6 +165,43 @@ importers:
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
+  packages/video-fragments:
+    dependencies:
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
+      '@svml/speech-take':
+        specifier: workspace:*
+        version: link:../speech-take
+      '@svml/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
       '@svml/script':
         specifier: workspace:*
         version: link:../script

@@ -13,7 +13,11 @@
       "@svml/text": ["packages/text/src/index.ts"],
       "@svml/speech-align": ["packages/speech-align/src/index.ts"],
       "@svml/whisperx": ["packages/whisperx/src/index.ts"],
-      "@svml/caption": ["packages/caption/src/index.ts"]
+      "@svml/caption": ["packages/caption/src/index.ts"],
+      "@svml/speech-take": ["packages/speech-take/src/index.ts"],
+      "@svml/elaborator": ["packages/elaborator/src/index.ts"],
+      "@svml/realization": ["packages/realization/src/index.ts"],
+      "@svml/video-fragments": ["packages/video-fragments/src/index.ts"]
     }
   },
   "include": ["packages/**/*.ts"],

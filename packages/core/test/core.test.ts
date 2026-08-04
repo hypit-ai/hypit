@@ -4,8 +4,8 @@ import test from "node:test";
 import {
   CoreError,
   canonicalize,
+  digestOf,
   reduce,
-  start,
   validatePlan,
   verifyBuildState,
 } from "@svml/core";
@@ -67,7 +67,7 @@ function reachNeed(initial = createGreetingBuild()): {
   return { state: transition.state, command };
 }
 
-test("Core executes an explicit finite plan through Need, Receipt and completion", () => {
+test("Core executes its derived finite plan through Need, Receipt and completion", () => {
   let current = reachNeed();
   let transition = reduce(current.state, {
     kind: "need-fulfilled",
@@ -136,6 +136,34 @@ test("schema-invalid producer output is rejected before it becomes a Record", ()
   );
 });
 
+test("Producer result affinity rejects an exact output that lies about its input", () => {
+  const current = reachNeed();
+  const fulfilled = reduce(current.state, {
+    kind: "need-fulfilled",
+    id: "event:affinity-fulfill",
+    command: current.command.id,
+    value: { kind: "inline", value: "Hello, Ada!" },
+    requestDigest: current.command.need.requestDigest,
+    fulfiller: "test:greeting",
+    conformance: "exact",
+    delivery: "executed",
+    metadata: {},
+  });
+  const assemble = fulfilled.commands.find(
+    (command): command is InvokeProducerCommand => command.kind === "invoke-producer",
+  );
+  assert.ok(assemble);
+  assert.throws(
+    () => reduce(
+      fulfilled.state,
+      producerEvent(assemble, "event:affinity-lie", {
+        document: { kind: "inline", value: { text: "Different text" } },
+      }),
+    ),
+    (error: unknown) => error instanceof CoreError && error.code === "AFFINITY_MISMATCH",
+  );
+});
+
 test("an exact Need rejects a substitute fulfillment", () => {
   const current = reachNeed();
   assert.throws(
@@ -162,6 +190,42 @@ test("serialized BuildState survives a JSON round trip", () => {
   assert.deepEqual(reduce(restored).commands, reduce(current.state).commands);
 });
 
+test("a recomputed Need cannot change the capability locked by its Producer port", () => {
+  const current = reachNeed();
+  const tampered = structuredClone(current.state);
+  const need = tampered.needs[0];
+  assert.ok(need);
+  (need as { capability: unknown }).capability = {
+    module: need.capability.module,
+    name: "different-operation",
+  };
+  const requestDigest = digestOf({
+    capability: need.capability,
+    returns: need.returns,
+    constraints: need.constraints,
+    result: need.result,
+    accepts: need.accepts,
+    conformanceFloor: need.conformanceFloor,
+  });
+  (need as { requestDigest: string }).requestDigest = requestDigest;
+
+  const derivation = tampered.derivations.find((item) => item.id === need.requestedBy);
+  assert.ok(derivation);
+  (derivation as { needs: unknown }).needs = [{ id: need.id, requestDigest }];
+  const { id: _oldId, ...derivationContent } = derivation;
+  const nextId = `derivation:${digestOf(derivationContent)}`;
+  (derivation as { id: string }).id = nextId;
+  (need as { requestedBy: string }).requestedBy = nextId;
+  const step = tampered.steps.find((item) => item.derivation === _oldId);
+  assert.ok(step);
+  (step as { derivation: string }).derivation = nextId;
+
+  assert.throws(
+    () => verifyBuildState(tampered),
+    (error: unknown) => error instanceof CoreError && error.code === "NEED_PLAN_BINDING_MISMATCH",
+  );
+});
+
 test("authored values cannot be changed inside a resumed BuildState", () => {
   const tampered = structuredClone(createGreetingBuild()) as BuildState;
   const authored = tampered.records[0];
@@ -175,7 +239,7 @@ test("authored values cannot be changed inside a resumed BuildState", () => {
   );
 });
 
-test("an explicit plan cannot hide producer steps unrelated to its goals", () => {
+test("a caller cannot replace Core's graph-derived plan", () => {
   const state = createGreetingBuild();
   const plan = {
     ...state.plan,
@@ -184,6 +248,7 @@ test("an explicit plan cannot hide producer steps unrelated to its goals", () =>
       {
         id: "unused",
         producer: producers.makePrompt,
+        fidelity: "exact" as const,
         inputs: { intent: "intent:root" },
         outputs: { prompt: "prompt:unused" },
         needs: {},
@@ -191,10 +256,11 @@ test("an explicit plan cannot hide producer steps unrelated to its goals", () =>
     ],
   };
   assert.throws(
-    () => validatePlan(state.program, plan),
-    (error: unknown) => error instanceof CoreError && error.code === "UNREACHABLE_STEP",
+    () => validatePlan(state.program, state.graph, state.request, plan),
+    (error: unknown) => error instanceof CoreError && error.code === "PLAN_NOT_DERIVED",
   );
-  assert.throws(() => start(state.program, plan), CoreError);
+  const tampered = { ...state, plan };
+  assert.throws(() => verifyBuildState(tampered), CoreError);
 });
 
 test("canonical values reject accessors and preserve hostile-looking keys as data", () => {

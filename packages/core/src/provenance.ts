@@ -18,10 +18,11 @@ export function eventDigest(event: unknown): Digest {
 }
 
 export function needRequestDigest(
-  need: Pick<Need, "wants" | "constraints" | "result" | "accepts" | "conformanceFloor">,
+  need: Pick<Need, "capability" | "returns" | "constraints" | "result" | "accepts" | "conformanceFloor">,
 ): Digest {
   return digestOf({
-    wants: need.wants,
+    capability: need.capability,
+    returns: need.returns,
     constraints: need.constraints,
     result: need.result,
     accepts: need.accepts,

@@ -1,9 +1,13 @@
 import type {
+  CandidateId,
   CommandId,
+  CapabilityRef,
   DerivationId,
   Digest,
   EventId,
+  LogicalOutputId,
   NeedId,
+  OperationId,
   ProducerRef,
   ReceiptId,
   RecordId,
@@ -39,7 +43,14 @@ export type ObservedOrigin = {
   readonly receipt: ReceiptId;
 };
 
-export type RecordOrigin = AuthoredOrigin | DerivedOrigin | ObservedOrigin;
+export type ProvidedOrigin = {
+  readonly kind: "provided";
+  readonly candidate: CandidateId;
+  readonly requestDigest: Digest;
+  readonly provenance?: CanonicalValue;
+};
+
+export type RecordOrigin = AuthoredOrigin | DerivedOrigin | ObservedOrigin | ProvidedOrigin;
 
 export type TypedRecord = {
   readonly id: RecordId;
@@ -62,7 +73,8 @@ export type NeedAcceptance = "exact" | "substitute";
 
 export type Need = {
   readonly id: NeedId;
-  readonly wants: TypeRef;
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
   readonly constraints: CanonicalValue;
   readonly requestedBy: DerivationId;
   readonly result: RecordId;
@@ -121,9 +133,120 @@ export type NeedBinding = {
   readonly accepts: NeedAcceptance;
 };
 
+export type RecordRef = {
+  readonly kind: "record";
+  readonly id: RecordId;
+};
+
+export type LogicalOutputRef = {
+  readonly kind: "logical-output";
+  readonly id: LogicalOutputId;
+};
+
+export type OperationResultRef = {
+  readonly kind: "operation-result";
+  readonly operation: OperationId;
+};
+
+export type GraphValueRef = RecordRef | LogicalOutputRef | OperationResultRef;
+
+/** A domain-neutral equality claim between a logical result and one source fact. */
+export type AffinityConstraint = {
+  readonly resultPointer: string;
+  readonly source: GraphValueRef;
+  readonly sourcePointer: string;
+};
+
+export type LogicalOutput = {
+  readonly id: LogicalOutputId;
+  readonly type: TypeRef;
+  readonly primary: CandidateId;
+  readonly candidates: readonly CandidateId[];
+  /** Author-visible facts that a Candidate may transitively depend upon. */
+  readonly semanticInputs: readonly GraphValueRef[];
+  readonly affinity?: readonly AffinityConstraint[];
+};
+
+export type OperationResult =
+  | {
+      readonly kind: "output";
+      readonly name: string;
+      readonly record: RecordId;
+    }
+  | {
+      readonly kind: "need";
+      readonly name: string;
+      readonly id: NeedId;
+      readonly record: RecordId;
+      readonly accepts: NeedAcceptance;
+    };
+
+export type OperationNode = {
+  readonly id: OperationId;
+  readonly producer: ProducerRef;
+  readonly inputs: Readonly<Record<string, GraphValueRef>>;
+  readonly result: OperationResult;
+};
+
+export type ProvidedValue = {
+  readonly id: RecordId;
+  readonly value: StoredValue;
+  readonly provenance?: CanonicalValue;
+};
+
+export type CandidateRoot =
+  | { readonly kind: "value"; readonly value: ProvidedValue }
+  | { readonly kind: "operation"; readonly result: OperationResultRef };
+
+export type Candidate = {
+  readonly id: CandidateId;
+  readonly output: LogicalOutputId;
+  readonly root: CandidateRoot;
+  /** Fidelity to the Logical Output promise, independent of Provider fulfillment. */
+  readonly fidelity: Conformance;
+};
+
+export type CompiledGraph = {
+  readonly format: "svml.graph@1";
+  readonly id: Digest;
+  readonly program: Digest;
+  /** Digest of the author graph before external Candidate attachment. */
+  readonly source: Digest;
+  /** Digest of the empty realization set or the locked Realization Closure. */
+  readonly realization: Digest;
+  readonly outputs: readonly LogicalOutput[];
+  readonly candidates: readonly Candidate[];
+  readonly operations: readonly OperationNode[];
+};
+
+export type BuildTarget = {
+  readonly output: LogicalOutputId;
+  readonly accepts: NeedAcceptance;
+};
+
+export type CandidateBinding = {
+  readonly output: LogicalOutputId;
+  readonly candidate: CandidateId;
+};
+
+export type BuildRequest = {
+  readonly format: "svml.build-request@1";
+  readonly graph: Digest;
+  readonly targets: readonly BuildTarget[];
+  readonly bindings: readonly CandidateBinding[];
+  readonly digest: Digest;
+};
+
+export type BuildSelection = {
+  readonly output: LogicalOutputId;
+  readonly candidate: CandidateId;
+  readonly record: RecordId;
+};
+
 export type ProducerStep = {
   readonly id: StepId;
   readonly producer: ProducerRef;
+  readonly fidelity: Conformance;
   readonly inputs: Readonly<Record<string, RecordId>>;
   readonly outputs: Readonly<Record<string, RecordId>>;
   readonly needs: Readonly<Record<string, NeedBinding>>;
@@ -136,10 +259,14 @@ export type BuildGoal = {
 };
 
 export type BuildPlan = {
-  readonly format: "svml.plan@0";
-  readonly id: string;
+  readonly format: "svml.plan@1";
+  readonly id: Digest;
+  readonly graph: Digest;
+  readonly request: Digest;
+  readonly initialValues: readonly TypedRecord[];
   readonly steps: readonly ProducerStep[];
   readonly goals: readonly BuildGoal[];
+  readonly selections: readonly BuildSelection[];
 };
 
 export type LinkedProgram = {
@@ -219,9 +346,11 @@ export type BuildDiagnostic = {
 };
 
 export type BuildState = {
-  readonly format: "svml.build@0";
+  readonly format: "svml.build@1";
   readonly id: Digest;
   readonly program: LinkedProgram;
+  readonly graph: CompiledGraph;
+  readonly request: BuildRequest;
   readonly plan: BuildPlan;
   readonly status: "active" | "complete" | "failed";
   readonly records: readonly TypedRecord[];
