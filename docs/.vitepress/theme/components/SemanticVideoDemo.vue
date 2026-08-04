@@ -692,6 +692,16 @@ onBeforeUnmount(() => {
 
         <div class="real-semantic-controls">
           <div class="semantic-timeline">
+            <div class="timeline-labels ranking-labels demo-progress-labels">
+              <button
+                v-for="selection in sceneSelections"
+                :key="selection.id"
+                type="button"
+                :class="{ current: activeSceneSelection.id === selection.id }"
+                :style="{ flexGrow: selection.end - selection.start }"
+                @click="seekTo(selection)"
+              >@{{ selection.id }}</button>
+            </div>
             <div class="timeline-track demo-progress-track">
               <span
                 v-for="selection in sceneSelections"
@@ -735,6 +745,7 @@ onBeforeUnmount(() => {
 .demo-caption span { display: inline-block; transition: color .08s linear, transform .08s linear; }
 .demo-caption span.active { color: #ffd34d; transform: scale(1.08); }
 .demo-progress-track { display: flex; grid-template-columns: none; gap: 2px; background: transparent; }
+.demo-progress-labels { gap: 2px; }
 .demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 2px; background: rgba(236,72,153,.32); transition: background-color .2s ease; }
 .demo-progress-track .segment.active { background: rgba(236,72,153,.76); }
 
