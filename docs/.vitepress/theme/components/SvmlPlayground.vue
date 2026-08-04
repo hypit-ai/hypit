@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { rankingMedia, resolveDemoMedia } from "./demo-media";
 import { wordCues, type WordCue } from "./regen-ranking-cues";
+import {
+  buildFoldedSourceView,
+  buildFullSourceView,
+  type SourceDisplayEntry,
+} from "./source-display";
+
+const props = withDefaults(defineProps<{ active?: boolean; showHeading?: boolean }>(), {
+  active: true,
+  showHeading: true,
+});
+const emit = defineEmits<{ ended: [] }>();
 
 type RankingSelectionId = "photoshop" | "facetune" | "remini" | "chatgpt" | "regen";
 type BrollSelectionId = "handsome-1" | "handsome-2" | "dating-photo" | "linkedin-headshot" | "instagram-post";
@@ -45,37 +57,32 @@ type SourceLine = {
   tokens?: readonly [number, number];
 };
 
-type DisplayedSourceLine = {
-  key: string;
-  kind: "line" | "fold" | "spacer";
-  index: number | null;
-  line: SourceLine | null;
-};
+type DisplayedSourceLine = SourceDisplayEntry<SourceLine>;
 
 const TOTAL_DURATION = 36.1;
 const ENTER_DURATION = .45;
 const MOVE_DURATION = .55;
 
 const selections: RankingSelection[] = [
-  { id: "photoshop", label: "Photoshop", rank: 5, start: .08, end: 6.4, color: "#31add0", icon: "/regen-ranking/ranking-icon-5.jpg" },
-  { id: "facetune", label: "Facetune", rank: 4, start: 6.4, end: 12, color: "rgb(132, 198, 84)", icon: "/regen-ranking/ranking-icon-4.jpg" },
-  { id: "remini", label: "Remini", rank: 3, start: 12.043333333333333, end: 18.184444444444445, color: "rgb(234, 220, 42)", icon: "/regen-ranking/ranking-icon-3.jpg" },
-  { id: "chatgpt", label: "ChatGPT", rank: 2, start: 18.184444444444445, end: 24.066666666666666, color: "rgb(255, 167, 45)", icon: "/regen-ranking/ranking-icon-2.jpg" },
-  { id: "regen", label: "ReGen", rank: 1, start: 24.076666666666668, end: 36.06666666666666, color: "#ff3f56", icon: "/regen-ranking/ranking-icon-1.jpg" },
+  { id: "photoshop", label: "Photoshop", rank: 5, start: .08, end: 6.4, color: "#31add0", icon: rankingMedia.icons[4] },
+  { id: "facetune", label: "Facetune", rank: 4, start: 6.4, end: 12, color: "rgb(132, 198, 84)", icon: rankingMedia.icons[3] },
+  { id: "remini", label: "Remini", rank: 3, start: 12.043333333333333, end: 18.184444444444445, color: "rgb(234, 220, 42)", icon: rankingMedia.icons[2] },
+  { id: "chatgpt", label: "ChatGPT", rank: 2, start: 18.184444444444445, end: 24.066666666666666, color: "rgb(255, 167, 45)", icon: rankingMedia.icons[1] },
+  { id: "regen", label: "ReGen", rank: 1, start: 24.076666666666668, end: 36.06666666666666, color: "#ff3f56", icon: rankingMedia.icons[0] },
 ];
 
 const baseScenes: BaseScene[] = [
-  { src: "/regen-ranking/avatar-1.mp4", start: 0, end: 12.033333333333333 },
-  { src: "/regen-ranking/avatar-2.mp4", start: 12.033333333333333, end: 24.066666666666666 },
-  { src: "/regen-ranking/avatar-3.mp4", start: 24.066666666666666, end: 36.1 },
+  { src: rankingMedia.avatars[0], start: 0, end: 12.033333333333333 },
+  { src: rankingMedia.avatars[1], start: 12.033333333333333, end: 24.066666666666666 },
+  { src: rankingMedia.avatars[2], start: 24.066666666666666, end: 36.1 },
 ];
 
 const brollItems: BrollItem[] = [
-  { id: "handsome-1", src: "/regen-ranking/broll-5.png", start: 791 / 30, end: 831 / 30, zoom: 1.02 },
-  { id: "handsome-2", src: "/regen-ranking/broll-4.png", start: 831 / 30, end: 888 / 30, zoom: 1.03 },
-  { id: "dating-photo", src: "/regen-ranking/broll-3.png", start: 925 / 30, end: 952 / 30, zoom: 1.02 },
-  { id: "linkedin-headshot", src: "/regen-ranking/broll-2.png", start: 952 / 30, end: 977 / 30, zoom: 1.03 },
-  { id: "instagram-post", src: "/regen-ranking/broll-1.png", start: 977 / 30, end: 1009 / 30, zoom: 1.02 },
+  { id: "handsome-1", src: rankingMedia.broll[4], start: 791 / 30, end: 831 / 30, zoom: 1.02 },
+  { id: "handsome-2", src: rankingMedia.broll[3], start: 831 / 30, end: 888 / 30, zoom: 1.03 },
+  { id: "dating-photo", src: rankingMedia.broll[2], start: 925 / 30, end: 952 / 30, zoom: 1.02 },
+  { id: "linkedin-headshot", src: rankingMedia.broll[1], start: 952 / 30, end: 977 / 30, zoom: 1.03 },
+  { id: "instagram-post", src: rankingMedia.broll[0], start: 977 / 30, end: 1009 / 30, zoom: 1.02 },
 ];
 
 const semanticSelections: TimelineSelection[] = [...selections, ...brollItems];
@@ -207,6 +214,7 @@ let animationFrame = 0;
 let previousTimestamp = 0;
 let programTime = 0;
 let playbackSceneIndex = -1;
+let completedPass = false;
 
 const automaticScriptLineIndex = computed(() => {
   const wordIndex = activeWord.value?.index;
@@ -232,83 +240,23 @@ const automaticBindingLineIndex = computed(() => {
 
 const displayedLines = computed<DisplayedSourceLine[]>(() => {
   if (!sourceFollowEnabled.value) {
-    return lines.map((line, index) => ({ key: `line-${index}`, kind: "line", index, line }));
+    return buildFullSourceView(lines);
   }
 
-  const outerRange = semanticRangeBounds.find((range) => range.id === activeRankingSelection.value.id);
   const sideRows = Math.max(3, Math.floor((sourceViewportRows.value - 1) / 2));
-  const rangeStart = outerRange?.start ?? automaticScriptLineIndex.value;
-  const rangeEnd = outerRange?.end ?? automaticScriptLineIndex.value;
-  const rowSpan = (index: number) => sourceLineRows.value[index] ?? 1;
-  const spanOf = (indices: number[]) => indices.reduce((sum, index) => sum + rowSpan(index), 0);
+  const activeRanges = activeSourceSelections.value
+    .map((selection) => semanticRangeBounds.find((range) => range.id === selection.id))
+    .filter((range): range is SemanticRangeBounds => range !== undefined)
+    .sort((left, right) => left.depth - right.depth);
 
-  const bottomIndices = [automaticBindingLineIndex.value];
-  let bottomBefore = automaticBindingLineIndex.value - 1;
-  let bottomAfter = automaticBindingLineIndex.value + 1;
-  for (let context = 0; context < 3 && bottomBefore >= 0; context += 1) {
-    if (spanOf(bottomIndices) + rowSpan(bottomBefore) > sideRows) break;
-    bottomIndices.unshift(bottomBefore);
-    bottomBefore -= 1;
-  }
-  while (spanOf(bottomIndices) < sideRows && (bottomAfter < lines.length || bottomBefore >= 0)) {
-    if (bottomAfter < lines.length && spanOf(bottomIndices) + rowSpan(bottomAfter) <= sideRows) {
-      bottomIndices.push(bottomAfter);
-      bottomAfter += 1;
-      continue;
-    }
-    if (bottomBefore >= 0 && spanOf(bottomIndices) + rowSpan(bottomBefore) <= sideRows) {
-      bottomIndices.unshift(bottomBefore);
-      bottomBefore -= 1;
-      continue;
-    }
-    break;
-  }
-
-  const maximumTopIndex = Math.max(rangeEnd, (bottomIndices[0] ?? lines.length) - 2);
-  const topIndices = Array.from({ length: rangeEnd - rangeStart + 1 }, (_, offset) => rangeStart + offset);
-  let topBefore = rangeStart - 1;
-  let topAfter = rangeEnd + 1;
-  for (let context = 0; context < 3 && topAfter <= maximumTopIndex; context += 1) {
-    if (spanOf(topIndices) + rowSpan(topAfter) > sideRows) break;
-    topIndices.push(topAfter);
-    topAfter += 1;
-  }
-  while (spanOf(topIndices) < sideRows && (topBefore >= 0 || topAfter <= maximumTopIndex)) {
-    if (topBefore >= 0 && spanOf(topIndices) + rowSpan(topBefore) <= sideRows) {
-      topIndices.unshift(topBefore);
-      topBefore -= 1;
-      continue;
-    }
-    if (topAfter <= maximumTopIndex && spanOf(topIndices) + rowSpan(topAfter) <= sideRows) {
-      topIndices.push(topAfter);
-      topAfter += 1;
-      continue;
-    }
-    break;
-  }
-
-  const topSpacerRows = Math.max(0, sideRows - spanOf(topIndices));
-  const bottomSpacerRows = Math.max(0, sideRows - spanOf(bottomIndices));
-  const topSpacers = Array.from({ length: topSpacerRows }, (_, index) => ({
-    key: `top-spacer-${index}`,
-    kind: "spacer" as const,
-    index: null,
-    line: null,
-  }));
-  const bottomSpacers = Array.from({ length: bottomSpacerRows }, (_, index) => ({
-    key: `bottom-spacer-${index}`,
-    kind: "spacer" as const,
-    index: null,
-    line: null,
-  }));
-
-  return [
-    ...topSpacers,
-    ...topIndices.map((index) => ({ key: `line-${index}`, kind: "line" as const, index, line: lines[index] })),
-    { key: `fold-${topIndices.at(-1)}-${bottomIndices[0]}`, kind: "fold", index: null, line: null },
-    ...bottomIndices.map((index) => ({ key: `line-${index}`, kind: "line" as const, index, line: lines[index] })),
-    ...bottomSpacers,
-  ];
+  return buildFoldedSourceView({
+    lines,
+    rowSpans: sourceLineRows.value,
+    rowBudget: sideRows,
+    topRanges: activeRanges,
+    topFocus: automaticScriptLineIndex.value,
+    bottomLine: automaticBindingLineIndex.value,
+  });
 });
 
 function wordAt(time: number): WordCue | null {
@@ -404,14 +352,14 @@ function updateRangeGeometry() {
     const endRect = endMarker.getBoundingClientRect();
     const offsetX = container.scrollLeft - containerRect.left;
     const offsetY = container.scrollTop - containerRect.top;
-    const inlinePadding = 4;
-    const edgeOverhang = 4;
+    const inlinePadding = 3;
+    const edgeOverhang = 3;
     const left = 44 - edgeOverhang;
     const right = width - 12 + edgeOverhang;
-    const startX = Math.max(4, Math.min(width - 4, startRect.left + offsetX - inlinePadding));
-    const endX = Math.max(4, Math.min(width - 4, endRect.right + offsetX + inlinePadding));
+    const startX = Math.max(3, Math.min(width - 3, startRect.left + offsetX - inlinePadding));
+    const endX = Math.max(3, Math.min(width - 3, endRect.right + offsetX + inlinePadding));
     const lineHeight = Number.parseFloat(getComputedStyle(startLine).lineHeight) || 26;
-    const blockPadding = 4;
+    const blockPadding = 0;
     const startCenter = (startRect.top + startRect.bottom) / 2 + offsetY;
     const endCenter = (endRect.top + endRect.bottom) / 2 + offsetY;
     const top = startCenter - lineHeight / 2 - blockPadding;
@@ -616,7 +564,7 @@ function syncBaseVideos(force = false) {
       return;
     }
     if (force || sceneChanged) video.currentTime = localTime;
-    if (video.paused) void video.play().catch(() => undefined);
+    if (props.active && video.paused) void video.play().catch(() => undefined);
   });
   playbackSceneIndex = activeIndex;
 }
@@ -684,9 +632,26 @@ function clearInspection() {
   pinnedLoopSelection.value = null;
 }
 
-function stopSourceFollow() {
+function stopSourceFollow(event?: MouseEvent) {
   if (!sourceFollowEnabled.value) return;
+  const container = codeScrollElement.value;
+  const hoveredLine = event?.target instanceof Element && container
+    ? event.target.closest<HTMLElement>("[data-source-line]")
+    : null;
+  const lineIndex = Number(hoveredLine?.dataset.sourceLine);
+  const lineOffset = event && hoveredLine ? event.clientY - hoveredLine.getBoundingClientRect().top : 0;
+  const targetTop = event && hoveredLine ? event.clientY - lineOffset : null;
   sourceFollowEnabled.value = false;
+  if (!container || !Number.isInteger(lineIndex) || targetTop === null) return;
+  void nextTick().then(() => {
+    const expandedLine = container.querySelector<HTMLElement>(`[data-source-line="${lineIndex}"]`);
+    if (!expandedLine) return;
+    const previousBehavior = container.style.scrollBehavior;
+    container.style.scrollBehavior = "auto";
+    container.scrollTop += expandedLine.getBoundingClientRect().top - targetTop;
+    container.style.scrollBehavior = previousBehavior;
+    updateRangeGeometry();
+  });
 }
 
 function resumeSourceFollow() {
@@ -700,6 +665,10 @@ function handleDemoPointerMove(event: PointerEvent) {
 }
 
 function renderFrame(timestamp: number) {
+  if (!props.active) {
+    animationFrame = 0;
+    return;
+  }
   if (!previousTimestamp) previousTimestamp = timestamp;
   const delta = Math.min(.05, (timestamp - previousTimestamp) / 1000);
   previousTimestamp = timestamp;
@@ -716,12 +685,36 @@ function renderFrame(timestamp: number) {
       looped = true;
     }
   } else if (nextTime >= TOTAL_DURATION) {
+    if (!completedPass) {
+      completedPass = true;
+      emit("ended");
+    }
     nextTime = 0;
     looped = true;
   }
   programTime = nextTime;
   const sceneChanged = syncDiscreteState(programTime, looped);
   if (looped || sceneChanged) syncBaseVideos(true);
+  updateContinuousVisuals(programTime);
+  animationFrame = requestAnimationFrame(renderFrame);
+}
+
+function stopPlayback() {
+  cancelAnimationFrame(animationFrame);
+  animationFrame = 0;
+  previousTimestamp = 0;
+  baseVideos.forEach((video) => video?.pause());
+}
+
+function startPlayback() {
+  stopPlayback();
+  programTime = 0;
+  playbackSceneIndex = -1;
+  completedPass = false;
+  pinnedSelection.value = null;
+  pinnedLoopSelection.value = null;
+  syncDiscreteState(programTime, true);
+  syncBaseVideos(true);
   updateContinuousVisuals(programTime);
   animationFrame = requestAnimationFrame(renderFrame);
 }
@@ -761,6 +754,15 @@ watch(
   { flush: "post" },
 );
 
+watch(
+  () => props.active,
+  (active) => {
+    if (active) void nextTick().then(startPlayback);
+    else stopPlayback();
+  },
+  { flush: "post" },
+);
+
 onMounted(() => {
   window.addEventListener("pointerdown", enableAudio, { capture: true, once: true });
   window.addEventListener("keydown", enableAudio, { capture: true, once: true });
@@ -768,28 +770,26 @@ onMounted(() => {
   void nextTick().then(() => {
     updateLayoutGeometry();
     syncDiscreteState(programTime, true);
-    syncBaseVideos(true);
+    if (props.active) startPlayback();
     if (codeScrollElement.value) {
       rangeResizeObserver = new ResizeObserver(updateLayoutGeometry);
       rangeResizeObserver.observe(codeScrollElement.value);
     }
   });
   window.addEventListener("resize", updateLayoutGeometry);
-  animationFrame = requestAnimationFrame(renderFrame);
 });
 onBeforeUnmount(() => {
-  cancelAnimationFrame(animationFrame);
+  stopPlayback();
   window.removeEventListener("pointerdown", enableAudio, true);
   window.removeEventListener("keydown", enableAudio, true);
   window.removeEventListener("resize", updateLayoutGeometry);
   rangeResizeObserver?.disconnect();
-  baseVideos.forEach((video) => video?.pause());
 });
 </script>
 
 <template>
   <section class="svml-demo" aria-label="SVML 交互式实时渲染预览">
-    <header class="demo-heading">
+    <header v-if="props.showHeading" class="demo-heading">
       <h2>悬停标记范围，查看对应画面</h2>
     </header>
 
@@ -801,7 +801,6 @@ onBeforeUnmount(() => {
       <div
         class="source-panel"
         :class="{ 'source-following': sourceFollowEnabled }"
-        @pointerenter="stopSourceFollow"
         @pointermove="stopSourceFollow"
         @pointerdown="stopSourceFollow"
         @wheel="stopSourceFollow"
@@ -838,10 +837,14 @@ onBeforeUnmount(() => {
             />
           </svg>
           <template v-for="entry in displayedLines" :key="entry.key">
-            <div v-if="entry.kind === 'fold'" class="code-line code-fold" aria-hidden="true">
+            <div
+              v-if="entry.kind === 'fold'"
+              class="code-line code-fold"
+              :data-source-line="entry.index"
+              aria-hidden="true"
+            >
               <code>···</code>
             </div>
-            <div v-else-if="entry.kind === 'spacer'" class="code-line code-spacer" aria-hidden="true"></div>
             <div
               v-else-if="entry.line"
               class="code-line"
@@ -875,7 +878,7 @@ onBeforeUnmount(() => {
                 :key="scene.src"
                 :ref="(element) => setBaseVideo(element, index)"
                 :class="{ active: currentSceneIndex === index }"
-                :src="scene.src"
+                :src="resolveDemoMedia(scene.src)"
                 :muted="!audioEnabled || currentSceneIndex !== index"
                 playsinline
                 preload="auto"
@@ -891,7 +894,7 @@ onBeforeUnmount(() => {
                 <span :ref="(element) => setRankCell(element, rank)">
                   <img
                     v-if="settledIds.has(runtimeItems[5 - rank].id)"
-                    :src="runtimeItems[5 - rank].icon"
+                    :src="resolveDemoMedia(runtimeItems[5 - rank].icon)"
                     :alt="runtimeItems[5 - rank].label"
                   >
                 </span>
@@ -899,14 +902,14 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-if="activeRuntimeItem" ref="activeIconElement" class="live-active-icon">
-              <img :src="activeRuntimeItem.icon" :alt="activeRuntimeItem.label">
+              <img :src="resolveDemoMedia(activeRuntimeItem.icon)" :alt="activeRuntimeItem.label">
               <i></i>
             </div>
 
             <img
               v-if="activeBroll"
               class="live-broll"
-              :src="activeBroll.src"
+              :src="resolveDemoMedia(activeBroll.src)"
               alt=""
               :style="{ transform: `scale(${activeBroll.zoom})` }"
             >

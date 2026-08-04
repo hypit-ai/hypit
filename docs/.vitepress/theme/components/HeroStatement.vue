@@ -3,16 +3,40 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 
 const statements = [
   {
-    en: "A high-level video language for developers.",
-    zh: "面向开发者的高级视频语言。",
+    enBefore: "A ",
+    enConcept: "high-level video language",
+    enConnector: " for ",
+    enAudience: "developers",
+    enAfter: ".",
+    zhBefore: "面向",
+    zhAudience: "开发者",
+    zhConnector: "的",
+    zhConcept: "高级视频语言",
+    zhAfter: "。",
   },
   {
-    en: "An editing-free production system for creative teams.",
-    zh: "面向创意团队的免剪辑制作系统。",
+    enBefore: "An ",
+    enConcept: "editing-free production system",
+    enConnector: " for ",
+    enAudience: "creative teams",
+    enAfter: ".",
+    zhBefore: "面向",
+    zhAudience: "创意团队",
+    zhConnector: "的",
+    zhConcept: "免剪辑制作系统",
+    zhAfter: "。",
   },
   {
-    en: "A scalable marketing video engine for brands.",
-    zh: "面向品牌的可规模化营销视频引擎。",
+    enBefore: "A ",
+    enConcept: "scalable marketing video engine",
+    enConnector: " for ",
+    enAudience: "brands",
+    enAfter: ".",
+    zhBefore: "面向",
+    zhAudience: "品牌",
+    zhConnector: "的",
+    zhConcept: "可规模化营销视频引擎",
+    zhAfter: "。",
   },
 ];
 
@@ -37,7 +61,7 @@ onBeforeUnmount(() => {
     <div class="hero-statement-viewport hero-statement-viewport-en">
       <Transition name="hero-statement-swap">
         <p :key="activeIndex" class="hero-statement-en">
-          {{ statements[activeIndex].en }}
+          <span class="hero-statement-line">{{ statements[activeIndex].enBefore }}{{ statements[activeIndex].enConcept }}{{ statements[activeIndex].enConnector }}<br><span class="hero-statement-accent">{{ statements[activeIndex].enAudience }}</span>{{ statements[activeIndex].enAfter }}</span>
         </p>
       </Transition>
     </div>
@@ -45,7 +69,7 @@ onBeforeUnmount(() => {
     <div class="hero-statement-viewport hero-statement-viewport-zh">
       <Transition name="hero-statement-swap">
         <p :key="activeIndex" class="hero-statement-zh">
-          {{ statements[activeIndex].zh }}
+          <span class="hero-statement-line">{{ statements[activeIndex].zhBefore }}<span class="hero-statement-accent">{{ statements[activeIndex].zhAudience }}</span>{{ statements[activeIndex].zhConnector }}{{ statements[activeIndex].zhConcept }}{{ statements[activeIndex].zhAfter }}</span>
         </p>
       </Transition>
     </div>
