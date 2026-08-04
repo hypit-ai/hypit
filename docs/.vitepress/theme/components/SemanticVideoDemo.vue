@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
+import { demoPointerIsInside } from "./demo-pointer";
 import {
   semanticVideoDemos,
   type DemoId,
@@ -81,6 +82,7 @@ const visibleLogoCount = ref(0);
 const audioEnabled = ref(false);
 const sourceViewportRows = ref(27);
 const sourceLineRows = ref<number[]>(sourceLines.map(() => 1));
+const sourcePanelElement = ref<HTMLElement | null>(null);
 const codeScrollElement = ref<HTMLElement | null>(null);
 const sourceMeasureElement = ref<HTMLElement | null>(null);
 const playheadElement = ref<HTMLElement | null>(null);
@@ -494,7 +496,14 @@ function startPlayback() {
   syncState(programTime, true);
   syncBaseVideos(true);
   syncOverlayVideos(true);
+  syncSourceHoverState();
   animationFrame = requestAnimationFrame(renderFrame);
+}
+
+function syncSourceHoverState() {
+  const sourceHovered = demoPointerIsInside(sourcePanelElement.value);
+  if (!sourceHovered) clearInspection();
+  sourceFollowEnabled.value = !sourceHovered;
 }
 
 watch(
@@ -545,6 +554,7 @@ onBeforeUnmount(() => {
 
     <div class="demo-shell real-demo-shell">
       <div
+        ref="sourcePanelElement"
         class="source-panel"
         :class="{ 'source-following': sourceFollowEnabled }"
         @pointermove="stopSourceFollow"
