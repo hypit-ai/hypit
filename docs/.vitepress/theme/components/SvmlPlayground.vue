@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  demoAudioEnabled as audioEnabled,
+  enableDemoAudioAfterInteraction,
+  initializeDemoAudio,
+  toggleDemoAudio,
+} from "./demo-audio";
 import { rankingMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
 import { wordCues, type WordCue } from "./regen-ranking-cues";
@@ -193,7 +199,6 @@ const pinnedLoopSelection = ref<SelectionId | null>(null);
 const sourceFollowEnabled = ref(true);
 const sourceViewportRows = ref(27);
 const sourceLineRows = ref<number[]>(lines.map(() => 1));
-const audioEnabled = ref(false);
 const stageElement = ref<HTMLElement | null>(null);
 const sourcePanelElement = ref<HTMLElement | null>(null);
 const codeScrollElement = ref<HTMLElement | null>(null);
@@ -573,13 +578,12 @@ function syncBaseVideos(force = false) {
 
 function enableAudio(event?: Event) {
   if (event?.target instanceof Element && event.target.closest(".live-audio-toggle")) return;
-  if (audioEnabled.value) return;
-  audioEnabled.value = true;
+  if (!enableDemoAudioAfterInteraction()) return;
   syncBaseVideos();
 }
 
 function toggleAudio() {
-  audioEnabled.value = !audioEnabled.value;
+  toggleDemoAudio();
   syncBaseVideos();
 }
 
@@ -773,6 +777,7 @@ watch(
 );
 
 onMounted(() => {
+  initializeDemoAudio();
   window.addEventListener("pointerdown", enableAudio, { capture: true, once: true });
   window.addEventListener("keydown", enableAudio, { capture: true, once: true });
   if (navigator.userActivation?.hasBeenActive) enableAudio();
