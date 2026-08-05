@@ -5,11 +5,12 @@ export type DemoMediaManifest = {
 
 type DemoMediaKind = "image" | "video";
 
+const demoMediaVersion = "20260805-compact";
 const resolvedMedia = new Map<string, string>();
 const preloadPromises = new Map<string, Promise<void>>();
 
 export function publicAsset(relativePath: string) {
-  return `${import.meta.env.BASE_URL}${relativePath.replace(/^\/+/, "")}`;
+  return `${import.meta.env.BASE_URL}${relativePath.replace(/^\/+/, "")}?v=${demoMediaVersion}`;
 }
 
 export function resolveDemoMedia(source: string) {
