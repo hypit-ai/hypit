@@ -768,10 +768,16 @@ onBeforeUnmount(() => {
 .caption-good-better-best { top: 65%; }
 .demo-caption span { display: inline-block; transition: color .08s linear, transform .08s linear; }
 .demo-caption span.active { color: #ffd34d; transform: scale(1.08); }
-.demo-progress-track { display: flex; grid-template-columns: none; gap: 2px; background: transparent; }
+.demo-progress-track { display: flex; grid-template-columns: none; gap: 0; background: transparent; }
 .demo-progress-labels { gap: 2px; }
-.demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 2px; background: rgba(236,72,153,.32); transition: background-color .2s ease; }
-.demo-progress-track .segment.active { background: rgba(236,72,153,.76); }
+.demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 0; box-shadow: inset -1px 0 rgba(11,13,16,.55); transition: filter .2s ease; }
+.demo-progress-track .segment:first-child { border-radius: 3px 0 0 3px; }
+.demo-progress-track .segment:nth-child(4) { border-radius: 0 3px 3px 0; box-shadow: none; }
+.demo-progress-track .segment:nth-child(1) { background: #31add0; }
+.demo-progress-track .segment:nth-child(2) { background: rgb(132,198,84); }
+.demo-progress-track .segment:nth-child(3) { background: rgb(234,220,42); }
+.demo-progress-track .segment:nth-child(4) { background: #ff3f56; }
+.demo-progress-track .segment.active { filter: brightness(1.2); }
 
 @media (max-width: 900px) {
   .semantic-live-stage { height: 520px; }
