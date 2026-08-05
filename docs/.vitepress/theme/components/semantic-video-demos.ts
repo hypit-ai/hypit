@@ -1,7 +1,7 @@
 import streetTranscript from "../../../public/street-interview/transcript.json";
 import goodBetterBestTranscript from "../../../public/good-better-best/transcript.json";
 import { goodBetterBestMedia, streetMedia } from "./demo-media";
-import { createTrimmedDemoTimeline } from "./demo-video-trim";
+import { createDemoTimeline } from "./demo-timeline";
 
 export type DemoId = "street" | "good-better-best";
 
@@ -143,14 +143,14 @@ const goodBetterBestLines: DemoSourceLine[] = [
   { html: '<span class="syn-tag">&lt;/deck&gt;</span>' },
 ];
 
-const streetTimeline = createTrimmedDemoTimeline([
+const streetTimeline = createDemoTimeline([
   { src: streetMedia.scenes[0], start: 0, end: 5 },
   { src: streetMedia.scenes[1], start: 5, end: 11 },
   { src: streetMedia.scenes[2], start: 11, end: 22 },
   { src: streetMedia.scenes[3], start: 22, end: 31.1333333333 },
 ]);
 
-const goodBetterBestTimeline = createTrimmedDemoTimeline([
+const goodBetterBestTimeline = createDemoTimeline([
   { src: goodBetterBestMedia.speakers[0], start: 0, end: 4 },
   { src: goodBetterBestMedia.speakers[1], start: 4, end: 8 },
   { src: goodBetterBestMedia.speakers[2], start: 8, end: 14 },
