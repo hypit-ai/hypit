@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
+  base: "/docs/",
   title: "SVML",
   description: "Write the story. Compile the video.",
   appearance: "force-dark",
