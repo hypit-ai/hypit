@@ -10,6 +10,13 @@ export type TypeDeclaration = {
   readonly name: string;
   readonly schema: ValueSchema;
   readonly description?: string;
+  /** Optional package-owned semantic refinement beyond the structural Schema. */
+  readonly validator?: TypeValidatorDeclaration;
+};
+
+export type TypeValidatorDeclaration = {
+  readonly abi: "svml.type-validator@1";
+  readonly implementation: ImplementationRef;
 };
 
 /** A domain-neutral equality promise from one result field to one Producer input field. */

@@ -875,7 +875,7 @@ packages/core/test/demand.test.ts 反例与 Case G
 packages/speech-take             SpeechBasis Product 的 audio/visual 普通 Projection
 packages/elaborator              静态 Graph Fragment seal、验证、卫生实例化与 export binding
 packages/realization             Provided/Fragment Candidate Overlay 与 Realization Closure
-packages/video-fragments         SpeechTake、WhisperX/SemanticMap、Caption 官方静态 Fragment
+packages/speech-program          SpeechTake、WhisperX/SemanticMap、Caption 官方口播组合
 ```
 
 ## 9. 尚未定案的问题

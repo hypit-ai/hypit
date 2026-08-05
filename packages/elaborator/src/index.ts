@@ -1,4 +1,45 @@
 export {
+  AuthorModuleError,
+  elaborateAuthorModule,
+  sealAuthorModule,
+} from "./author.js";
+export type {
+  AuthorComponent,
+  AuthorComponentOutputRef,
+  AuthorElaboration,
+  AuthorModule,
+  AuthorOutputBinding,
+  AuthorRecordRef,
+  AuthorValueRef,
+  GraphFragmentResolver,
+} from "./author.js";
+export {
+  AuthorFrontendRegistry,
+  SourceClosureError,
+  compileSourceClosure,
+  resolveCompiledSourceExport,
+  verifySourceClosure,
+} from "./source.js";
+export type {
+  AuthorFrontend,
+  AuthorFrontendRegistryLike,
+  AuthorSourceDecodeContext,
+  AuthorSourceDiscovery,
+  AuthorSourceExport,
+  AuthorSourceImport,
+  AuthorSourceResolver,
+  AuthorSourceUnit,
+  AuthorRecordAdmitter,
+  Awaitable,
+  CompileSourceClosureRequest,
+  CompiledSourceClosure,
+  CompiledSourceExport,
+  DecodedAuthorSource,
+  ResolvedAuthorSourceImport,
+  SourceClosure,
+  SourceClosureUnit,
+} from "./source.js";
+export {
   bindAuthorFragment,
   bindCandidateFragment,
   elaborateGraphFragment,

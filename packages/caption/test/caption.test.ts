@@ -1,14 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { planCaptionPresentation, temporalizeCaption } from "@svml/caption";
+import {
+  defaultCaptionTrackProgram,
+  planCaptionPresentation,
+  renderCaptionTrack,
+  sealCaptionTrackProgram,
+  temporalizeCaption,
+} from "@svml/caption";
 import {
   sealAlignedTranscriptEvidence,
   sealProgramSpace,
   sealSpeechBasis,
 } from "@svml/contracts";
 import type { AlignedTranscriptSegment, Narrative, SpeechAudioBasis } from "@svml/contracts";
-import { digestOf } from "@svml/core";
+import { digestOf } from "@svml/protocol";
 import { parseScript } from "@svml/script";
 import { locateSpeechTiming } from "@svml/speech-align";
 
@@ -126,4 +132,56 @@ test("hidden speech owns time but emits no visible presentation unit", () => {
   const hidden = timed.regions.find((region) => region.kind === "hidden");
   assert.deepEqual([hidden?.startSec, hidden?.endSec], [0.3, 0.4]);
   assert.equal(planCaptionPresentation(timed).units.some((unit) => unit.regionId === hidden?.id), false);
+});
+
+test("official caption styling lowers to an ordinary self-contained VisualTrack", () => {
+  const narrative = parseScript("track.svml", "<line>Hello world.</line>");
+  const map = locate(narrative, 1, [{
+    sourceSegmentId: "line",
+    startSec: 0,
+    endSec: 1,
+    words: [
+      { text: "Hello", startSec: 0.1, endSec: 0.35 },
+      { text: "world", startSec: 0.4, endSec: 0.75 },
+    ],
+    chars: [],
+  }]);
+  const projection = temporalizeCaption(narrative, map);
+  const program = defaultCaptionTrackProgram("primary-caption");
+  const track = renderCaptionTrack(projection, program);
+
+  assert.equal(track.contract, "svml.visual-track@1");
+  assert.equal(track.programSpaceDigest, map.programSpace.digest);
+  assert.deepEqual(track.sources.map((source) => source.name), ["program", "projection"]);
+  assert.equal(track.presents[0]?.elements.some((element) => element.kind === "text"), true);
+  assert.equal(
+    track.presents.flatMap((present) => present.elements).some((element) => "text" in element && element.text.includes("Hello")),
+    true,
+  );
+});
+
+test("two caption styles become two peer Tracks without mutating one another", () => {
+  const narrative = parseScript("two-tracks.svml", "<line>Hello world.</line>");
+  const projection = temporalizeCaption(narrative, locate(narrative, 1, [{
+    sourceSegmentId: "line",
+    startSec: 0,
+    endSec: 1,
+    words: [{ text: "Hello", startSec: 0.1, endSec: 0.35 }, { text: "world", startSec: 0.4, endSec: 0.75 }],
+    chars: [],
+  }]));
+  const first = defaultCaptionTrackProgram("speaker-a");
+  const second = sealCaptionTrackProgram({
+    ...first,
+    id: "speaker-b",
+    stacking: { order: 101, tieBreak: "speaker-b" },
+    style: { ...first.style, color: "#00ff00", bottomPercent: 20 },
+  });
+  const firstTrack = renderCaptionTrack(projection, first);
+  const secondTrack = renderCaptionTrack(projection, second);
+
+  assert.notEqual(firstTrack.digest, secondTrack.digest);
+  assert.equal(firstTrack.sources.find((source) => source.name === "projection")?.digest, projection.projectionDigest);
+  assert.equal(secondTrack.sources.find((source) => source.name === "projection")?.digest, projection.projectionDigest);
+  assert.equal(firstTrack.presents[0]?.stacking.order, 100);
+  assert.equal(secondTrack.presents[0]?.stacking.order, 101);
 });

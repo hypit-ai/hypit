@@ -8,11 +8,10 @@
 > Candidate 的产品动作，Core 在一次反向遍历中按 OperationId 去重。以下正文保留用于
 > 解释架构演进，不应直接作为实现接口。
 >
-> **v2 Kernel 目标规范，2026-08-04。** 本文定义当前最高优先级的语言内核边界。
-> 它补充并修正 [`intent-first-modular-compilation.md`](./intent-first-modular-compilation.md)
-> 中把 Core 主要描述为类型化事件状态机、把 Target 主要描述为消费者 Query 的部分，
-> 也将 [`runtime-package-topology-v2.md`](./runtime-package-topology-v2.md) 的 Runtime
-> 施工置于本规范之后。
+> **2026-08-04 历史目标。** 以下正文曾补充
+> [`intent-first-modular-compilation.md`](./intent-first-modular-compilation.md) 并指导 `@0`
+> 实现；它现在只用于解释为什么继续演化到 `@1`。当前规范见
+> [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md)。
 >
 > 当前 v2 已实现不可变 Record、Need、Command、Event、Receipt、Derivation、单结果
 > CompiledGraph、Primary/Alternative Realization、任意 Target、通用 Pin、反向 Demand
@@ -542,6 +541,11 @@ Package Resolver
   -> dynamic Producer Worker Registry
   -> dynamic Provider Endpoint Registry
 ```
+
+其中静态注册 Manifest、精确传递 Module Closure 和受控本地 Source Resolver 已由
+`@svml/compiler-node` 实现；它故意不把 import 字符串当作执行 npm 代码的权限。静态
+Manifest Loader、lock-aware 包定位、隔离 Surface/Producer Loader 与动态 Worker
+Registry 仍是开放第三方包之前的缺口。
 
 现有 Node Driver 的手工 `registerProducer()` 只是测试 Bootstrap，不是最终开放世界加载
 机制。官方 CLI 和服务器不得演变为静态注册所有包的大 Bundle。

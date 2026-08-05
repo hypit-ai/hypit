@@ -70,6 +70,8 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
         range: { start: input.openingStart, end: close.end },
       },
     ],
+    components: [],
+    fragments: [],
     sourceMaps: [canonicalize(narrativeSourceMap(rawId, parsed))],
   };
 }

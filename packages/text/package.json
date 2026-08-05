@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@svml/core": "workspace:*",
+    "@svml/elaborator": "workspace:*",
     "@svml/protocol": "workspace:*"
   },
   "devDependencies": {

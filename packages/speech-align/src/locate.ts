@@ -504,6 +504,7 @@ export function locateSpeechTiming(
     basisDigest: basis.basisDigest,
     audioArtifactDigest: basis.audio.digest,
     programSpaceDigest: basis.programSpace.digest,
+    programSpace: basis.programSpace,
     evidenceDigest: evidence.evidenceDigest,
     locatorDigest: speechLocatorDigest,
     quantizationPolicy: "nearest-frame" as const,

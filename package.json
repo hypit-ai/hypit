@@ -14,7 +14,8 @@
     "test": "pnpm test:v1 && pnpm test:v2",
     "test:v1": "node --import tsx --test 'test/**/*.test.ts'",
     "test:v2": "node --import tsx --test 'packages/*/test/**/*.test.ts'",
-    "svml": "node --import tsx src/cli.ts"
+    "svml": "node --import tsx src/cli.ts",
+    "svml:v2": "node --import tsx packages/cli/src/cli.ts"
   },
   "files": [
     "dist/src",
