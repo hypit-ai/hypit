@@ -255,7 +255,7 @@ body { letter-spacing: -0.012em; }
   .real-preview-body { grid-template-columns: 1fr; gap: 16px; padding: 16px 12px; }
   .real-video-frame { height: 480px; }
   .binding-card { width: 100%; }
-  .real-semantic-controls { margin-inline: 12px; grid-template-columns: 30px minmax(0,1fr); }
+  .real-semantic-controls { margin-inline: 12px; grid-template-columns: minmax(0,1fr); }
   .real-semantic-controls .semantic-readout { display: none; }
   .inspection-note { padding-inline: 12px; }
   .inspection-note small { display: none; }
