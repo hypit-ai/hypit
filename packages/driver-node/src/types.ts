@@ -15,6 +15,10 @@ import type {
   CapabilityRef,
   TypedRecord,
 } from "@svml/protocol";
+import type {
+  OperationIdentity,
+  RuntimeFacetRef,
+} from "@svml/runtime";
 
 export type ProducerHandlerResult = {
   readonly outputs: Readonly<Record<string, StoredValue>>;
@@ -49,6 +53,25 @@ export type ProviderHandler = (
   context: ProviderHandlerContext,
 ) => ProviderHandlerResult | Promise<ProviderHandlerResult>;
 
+export type ProviderEndpointResult =
+  | { readonly status: "pending"; readonly checkpoint: CanonicalValue }
+  | { readonly status: "completed"; readonly result: ProviderHandlerResult };
+
+export type ProviderEndpointStartContext = ProviderHandlerContext & {
+  readonly operation: OperationIdentity;
+};
+
+export type ProviderEndpointResumeContext = ProviderEndpointStartContext & {
+  /** Undefined means the process stopped after intent was journaled but before a checkpoint existed. */
+  readonly checkpoint: CanonicalValue | undefined;
+};
+
+export type ProviderEndpoint = {
+  start(context: ProviderEndpointStartContext): ProviderEndpointResult | Promise<ProviderEndpointResult>;
+  resume(context: ProviderEndpointResumeContext): ProviderEndpointResult | Promise<ProviderEndpointResult>;
+  cancel?(context: ProviderEndpointResumeContext): void | Promise<void>;
+};
+
 export type ArtifactStore = {
   put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
   get(digest: Digest): Promise<Uint8Array | undefined>;
@@ -58,8 +81,9 @@ export type ArtifactStore = {
 export type DriverJournalEntry = {
   readonly command: string;
   readonly kind: CoreCommand["kind"];
-  readonly status: "completed" | "blocked" | "error";
+  readonly status: "completed" | "pending" | "blocked" | "error";
   readonly event?: string;
+  readonly operation?: Digest;
   readonly message?: string;
 };
 
@@ -69,7 +93,9 @@ export type BlockedCommand = {
     | "missing-producer"
     | "implementation-mismatch"
     | "missing-provider"
-    | "ambiguous-provider";
+    | "ambiguous-provider"
+    | "missing-operation-store"
+    | "missing-runtime-closure";
   readonly subject: string;
 };
 
@@ -80,19 +106,37 @@ export type DriverRunResult = {
   readonly blocked: readonly BlockedCommand[];
 };
 
+/** Endpoint/implementation scheduling metadata; it never changes Core demand or command identity. */
+export type SchedulingHint = {
+  readonly lane?: string;
+  readonly maxConcurrency?: number;
+};
+
+export type RuntimeProviderImplementation = {
+  readonly facet: RuntimeFacetRef;
+  readonly digest: Digest;
+};
+
 export type ProducerRegistration = {
   readonly producer: ProducerRef;
   readonly implementationDigest: Digest;
   readonly handler: ProducerHandler;
+  readonly scheduling?: SchedulingHint;
 };
 
-export type ProviderRegistration = {
+type ProviderRegistrationBase = {
   readonly id: string;
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
-  readonly handler: ProviderHandler;
   readonly supports?: (need: Need) => boolean;
+  readonly scheduling?: SchedulingHint;
+  readonly runtimeImplementation?: RuntimeProviderImplementation;
 };
+
+export type ProviderRegistration = ProviderRegistrationBase & (
+  | { readonly kind: "handler"; readonly handler: ProviderHandler }
+  | { readonly kind: "endpoint"; readonly endpoint: ProviderEndpoint }
+);
 
 export type ProviderResolution =
   | { readonly status: "resolved"; readonly registration: ProviderRegistration }

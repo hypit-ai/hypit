@@ -27,7 +27,7 @@ import {
 } from "./affinity.js";
 import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
-import { resolveProducer, resolveType, sealRecord } from "./link.js";
+import { resolveProducer, resolveType, sealRecord, verifyRecord } from "./link.js";
 import { compileBuild, producerStep } from "./plan.js";
 import {
   commandId,
@@ -98,6 +98,13 @@ function acceptProducerEvent(
   const producer = resolveProducer(state.program.closure, step.producer);
   exactPortKeys(event.outputs, producer.outputs.map((port) => port.name), `${step.id}.outputs`);
   exactPortKeys(event.needs, producer.needs.map((port) => port.name), `${step.id}.needs`);
+  exactPortKeys(
+    event.validations ?? {},
+    producer.outputs
+      .filter((port) => resolveType(state.program.closure, port.type).validator !== undefined)
+      .map((port) => port.name),
+    `${step.id}.validations`,
+  );
 
   const inputs = inputRecords(state, command);
   const conformance = effectiveConformance(inheritedConformance(inputs), step.fidelity);
@@ -110,7 +117,15 @@ function acceptProducerEvent(
     invariant(rawValue !== undefined, "MISSING_OUTPUT_VALUE", `${step.id}.${port.name} returned no value`);
     const value = normalizeStoredValue(rawValue);
     validateStoredValue(value, resolveType(state.program.closure, port.type).schema, `$output.${step.id}.${port.name}`);
-    return { id, type: port.type, value, digest: recordDigest(port.type, value) };
+    return {
+      id,
+      type: port.type,
+      value,
+      digest: recordDigest(port.type, value),
+      ...(event.validations?.[port.name] === undefined
+        ? {}
+        : { validation: event.validations[port.name] }),
+    };
   });
 
   const needDrafts = producer.needs
@@ -153,7 +168,9 @@ function acceptProducerEvent(
     value: output.value,
     conformance,
     origin: { kind: "derived", derivation: id },
+    ...(output.validation === undefined ? {} : { validation: output.validation }),
   }));
+  outputs.forEach((record) => verifyRecord(state.program.closure, record));
   const outputLookup = new Map([...state.records, ...outputs].map((record) => [record.id, record]));
   outputs.forEach((record) => {
     verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => outputLookup.get(recordId));
@@ -226,7 +243,9 @@ function acceptNeedEvent(
     digest: outputDigest,
     conformance,
     origin: { kind: "observed", receipt: receipt.id },
+    ...(event.validation === undefined ? {} : { validation: event.validation }),
   };
+  verifyRecord(state.program.closure, record);
   const recordLookup = new Map([...state.records, record].map((item) => [item.id, item]));
   verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => recordLookup.get(recordId));
   verifyGraphRecordAffinity(state.graph, state.plan, record, (recordId) => recordLookup.get(recordId));

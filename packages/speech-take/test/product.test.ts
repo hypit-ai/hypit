@@ -3,11 +3,10 @@ import test from "node:test";
 
 import {
   contractTypes,
-  contractsManifest,
-  contractsManifestDigest,
-  contractsModuleRef,
   sealProgramSpace,
   sealSpeechBasis,
+  videoContractDependencies,
+  videoContractManifests,
 } from "@svml/contracts";
 import type { SpeechBasis } from "@svml/contracts";
 import {
@@ -32,6 +31,8 @@ import type {
 import {
   projectSpeechAudioImplementationDigest,
   projectSpeechAudio,
+  projectSpeechAudioTrack,
+  projectSpeechProgramSpace,
   projectSpeechVisualImplementationDigest,
   projectSpeechVisual,
   speechTakeManifest,
@@ -47,7 +48,7 @@ const testManifest: ModuleManifest = {
   format: "svml.module@0",
   name: testModule.name,
   version: testModule.version,
-  dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
+  dependencies: [videoContractDependencies.speech],
   types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
   surfaces: [],
@@ -64,7 +65,7 @@ const testManifest: ModuleManifest = {
   }],
 };
 
-const closure = createResolvedClosure([contractsManifest, speechTakeManifest, testManifest]);
+const closure = createResolvedClosure([...videoContractManifests, speechTakeManifest, testManifest]);
 
 function sampleTake(label = "generated"): SpeechBasis {
   const durationSec = 2;
@@ -151,12 +152,12 @@ function createGraph(program: LinkedProgram): CompiledGraph {
       },
       {
         id: "opening.visual",
-        type: contractTypes.speechVisualTrack,
+        type: contractTypes.visualTrack,
         primary: "opening.visual.project",
         candidates: ["opening.visual.project", "opening.visual.existing"],
         semanticInputs: [output("opening.take")],
         affinity: [{
-          resultPointer: "/basisDigest",
+          resultPointer: "/sources/0/digest",
           source: output("opening.take"),
           sourcePointer: "/basisDigest",
         }],
@@ -265,6 +266,19 @@ test("SpeechBasis is one Product and audio/visual are ordinary shared projection
     state.plan.steps.find((step) => step.id === "project-opening-visual")?.inputs.basis,
     "take:opening",
   );
+});
+
+test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
+  const take = sampleTake();
+  const visual = projectSpeechVisual(take);
+  const audio = projectSpeechAudioTrack(take);
+  const programSpace = projectSpeechProgramSpace(take);
+  assert.equal(visual.contract, "svml.visual-track@1");
+  assert.equal(audio.contract, "svml.audio-track@1");
+  assert.equal(visual.programSpaceDigest, take.programSpace.digest);
+  assert.equal(audio.programSpaceDigest, take.programSpace.digest);
+  assert.equal(programSpace.digest, take.programSpace.digest);
+  assert.deepEqual(visual.sources, audio.sources);
 });
 
 test("a substitute visual Candidate does not contaminate an independent exact audio path", () => {

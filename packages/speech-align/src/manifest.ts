@@ -1,7 +1,6 @@
 import {
   contractTypes,
-  contractsManifestDigest,
-  contractsModuleRef,
+  videoContractDependencies,
 } from "@svml/contracts";
 import type { ModuleManifest, ProducerRef } from "@svml/protocol";
 
@@ -16,7 +15,11 @@ export const speechAlignManifest: ModuleManifest = {
   format: "svml.module@0",
   name: speechAlignModuleRef.name,
   version: speechAlignModuleRef.version,
-  dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
+  dependencies: [
+    videoContractDependencies.narrative,
+    videoContractDependencies.speech,
+    videoContractDependencies.semanticTime,
+  ],
   types: [],
   capabilities: [],
   surfaces: [],

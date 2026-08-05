@@ -22,14 +22,24 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/broll:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+
   packages/caption:
     dependencies:
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -40,6 +50,55 @@ importers:
       '@svml/speech-align':
         specifier: workspace:*
         version: link:../speech-align
+
+  packages/cli:
+    dependencies:
+      '@svml/compiler-node':
+        specifier: workspace:*
+        version: link:../compiler-node
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/film':
+        specifier: workspace:*
+        version: link:../film
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@svml/hyperframes-render':
+        specifier: workspace:*
+        version: link:../hyperframes-render
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/compiler-node:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/contracts:
     dependencies:
@@ -61,6 +120,12 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
     devDependencies:
       '@svml/caption':
         specifier: workspace:*
@@ -94,6 +159,74 @@ importers:
         specifier: workspace:*
         version: link:../speech-take
 
+  packages/film:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@svml/text-track':
+        specifier: workspace:*
+        version: link:../text-track
+
+  packages/hyperframes:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/hyperframes-render:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
   packages/protocol: {}
 
   packages/realization:
@@ -108,6 +241,18 @@ importers:
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/runtime:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/script:
     dependencies:
@@ -137,39 +282,7 @@ importers:
         specifier: workspace:*
         version: link:../script
 
-  packages/speech-take:
-    dependencies:
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-    devDependencies:
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-
-  packages/text:
-    dependencies:
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
-      '@svml/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-    devDependencies:
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/script':
-        specifier: workspace:*
-        version: link:../script
-
-  packages/video-fragments:
+  packages/speech-program:
     dependencies:
       '@svml/caption':
         specifier: workspace:*
@@ -205,6 +318,82 @@ importers:
       '@svml/script':
         specifier: workspace:*
         version: link:../script
+
+  packages/speech-take:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
+  packages/svs:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/text:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
+  packages/text-track:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+
+  packages/validation:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/whisperx:
     dependencies:
