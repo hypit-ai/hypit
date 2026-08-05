@@ -1,8 +1,7 @@
 import {
   contractTypes,
-  contractsManifestDigest,
-  contractsModuleRef,
   narrativeSchema,
+  videoContractDependencies,
 } from "@svml/contracts";
 import { digestOf } from "@svml/core";
 import type { ModuleManifest, TypeRef } from "@svml/protocol";
@@ -17,7 +16,7 @@ export const scriptManifest: ModuleManifest = {
   format: "svml.module@0",
   name: scriptModuleRef.name,
   version: scriptModuleRef.version,
-  dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
+  dependencies: [videoContractDependencies.narrative],
   types: [],
   capabilities: [],
   surfaces: [

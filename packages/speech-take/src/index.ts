@@ -7,6 +7,10 @@ export {
 export {
   projectSpeechAudio,
   projectSpeechAudioImplementationDigest,
+  projectSpeechAudioTrack,
+  projectSpeechAudioTrackImplementationDigest,
+  projectSpeechProgramSpace,
+  projectSpeechProgramSpaceImplementationDigest,
   projectSpeechVisual,
   projectSpeechVisualImplementationDigest,
 } from "./projection.js";

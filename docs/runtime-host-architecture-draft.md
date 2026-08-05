@@ -3,7 +3,7 @@
 > **Historical draft; superseded for v2.** 本文记录旧引擎到模块化 Runtime 的过渡
 > 思考，其中的 `.svk`、`ExecutionBundle`、`EffectRequest` 和 Runtime 装配不再是
 > v2 施工依据。当前规范见
-> [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md) 与
+> [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md) 与
 > [`runtime-package-topology-v2.md`](./runtime-package-topology-v2.md)。未完成迁移前保留
 > 本文只用于审计历史背景。
 >

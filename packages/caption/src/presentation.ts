@@ -1,4 +1,4 @@
-import { digestOf } from "@svml/core";
+import { digestOf } from "@svml/protocol";
 import type { Digest } from "@svml/protocol";
 
 import type {
@@ -6,7 +6,7 @@ import type {
   CaptionPresentationPlan,
   CaptionPresentationUnit,
   TimedCaptionRegion,
-} from "@svml/contracts";
+} from "./types.js";
 
 const DISPLAY_WORD = /[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
 

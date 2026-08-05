@@ -11,8 +11,19 @@
 > `.svk`、`ExecutionBundle`、`EffectRequest`、队列归属和 Runtime 装配的旧设计。
 > 当前实现已经完成 LogicalOutput/Candidate/Operation/Target Core、Node Driver、进程内
 > Provider Registry、静态 Fragment Elaborator、Realization Overlay，以及
-> capability/returns 分离和 exact Provider 路由；本文关于生产 Queue、Credential、真实
-> Provider 和 Hosted Runtime 的内容仍是后续施工边界。
+> capability/returns 分离、exact Provider 路由、注册式 Manifest Resolver、受控 Node
+> Source Host、最小官方 CLI、环境无关 Runtime 端口、静态 Runtime facet、Profile/Closure
+> 解析、Build/Operation 内存 CAS，以及跨 Build/Build 内共享并发 lane 的单进程
+> Scheduler 和 recoverable Endpoint start/resume；durable adapters、leases、自动安装并
+> 隔离执行未知包仍未实现。本文关于生产 Queue、
+> Credential、真实 Provider 和 Hosted Runtime 的内容仍是后续施工边界。
+> 类型所有者的可选语义 Validator、统一 Record Admission 与内容绑定校验回执已经实现；
+> 当前只允许 Host 注册的可信进程内实现，未知第三方 Validator 的沙箱仍未实现。
+>
+> **命名说明。** 本文关于 Scheduler、Provider、Queue 与存储的职责分层仍有效；第 9 节
+> 的早期示例包名不再作为目标命名。当前统一词汇、逻辑模块所有权、Runtime ports、
+> Queue 和数据库边界见
+> [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md)。
 >
 > Runtime 的所有实现必须建立在
 > [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)
@@ -24,15 +35,15 @@
 SVML 使用以下五条不可混淆的规则：
 
 1. **完整作者图不预设唯一终点。** Film、TrackSet、ImageSet、SemanticMap、
-   HyperFrames 和任意公开输出端口都可以成为一次 Build 的 Target；Pin 是一等作者
-   Build Intent，Core 据此反向计算 Demand。
+   HyperFrames 和任意公开 Logical Output 都可以成为一次 Build 的 Target；BuildRequest
+   为非默认路径显式选择 Candidate，Core 据此反向计算 Demand。
 2. **作者源码决定创作方法。** Seedance Mini、WhisperX、Gemini Cue Planner 和
    HyperFrames 等选择，必须由 `.svml` 导入的作者模块或其锁定的传递依赖决定。
 3. **Runtime Profile 决定整条 Build 在哪里运行。** Core、权威 Build Scheduler、
    BuildState 和 Artifact Store 可以位于开发者本机，也可以位于 Hypit。
 4. **Provider Binding 决定一个已经明确的 Need 在哪里执行。** Endpoint 必须精确匹配
-   Need capability 与返回合同；Kling、黑场、估时或历史结果属于 BuildIntent 显式
-   选择的 Alternative/Pin，不属于 Provider 路由。
+   Need capability 与返回合同；黑场、估时或历史结果必须先成为锁定 Candidate，再由
+   BuildRequest 显式选择，不属于 Provider 路由。
 5. **每个 Build 只有一个权威 Build Scheduler。** 远端 Provider 可以拥有自己的
    任务队列；该队列只负责其内部任务，不是第二个 SVML Build Scheduler。
 
@@ -40,7 +51,7 @@ SVML 使用以下五条不可混淆的规则：
 
 ```text
 .svml import        决定做什么
-BuildIntent          决定这次 Target 什么、选择哪个 Alternative 或 Pin
+BuildRequest        决定这次 Target 什么、为输出选择哪个 Candidate
 Runtime Profile     决定整条 Build 在哪里运行
 Provider Binding    决定某项明确能力在哪里执行
 ```
@@ -101,15 +112,16 @@ reduce(previousState, acceptedEvent) -> {
 ```xml
 <import from="@svml/script@1"/>
 <import from="@svml/film@1"/>
-<import as="seedance" from="@svml/seedance-mini@1"/>
+<import as="seedance" from="@svml/seedance@1"/>
 <import from="@svml/hyperframes@1"/>
 ```
 
 其中 `@svml/film` 也可以锁定地传递依赖 `@svml/hyperframes`，使最后一行不必显式
 出现。两种 Surface 选择都必须产生同一个事实：正式成片目标是 HyperFrames。
 
-`@svml/seedance-mini` 可以产生一个公开的中立 SpeechBasis 输出，并在该输出被 Demand
-且未被 Pin 时提出：
+`@svml/seedance` 的作者 Surface 必须通过组件形状或 `model="mini"` 之类的显式参数
+锁定具体生成能力。它可以产生一个公开的中立 SpeechBasis 输出，并在该输出被 Demand
+且未被已有值 Candidate 截断时提出：
 
 ```text
 Need {
@@ -118,10 +130,12 @@ Need {
 }
 ```
 
-它不能产生含义不足的 `Need<speaker-video>` 再让 Runtime 猜方法。该作者模块可同时
-声明输入更少的黑场、冻结帧或 Kling Alternative；BuildIntent 必须按 ProducerRef 明确
-选择其中之一。若作者直接 Pin SpeechBasis，原 Producer 被 Demand 裁掉，Seedance
-Need 根本不会产生。
+它不能产生含义不足的 `Need<speaker-video>` 再让 Runtime 猜方法。把多个 Seedance
+模型放在一个作者包里只是共享词汇与 lowering，不是把模型选择交给 Runtime；Endpoint
+包仍按 KIE、Volcengine、Hypit 等实际提供方组织。该作者模块可同时
+声明输入更少的黑场、冻结帧或 Kling Candidate；BuildRequest 必须按 CandidateRef 明确
+选择其中之一。若作者选择一个 Existing-Value SpeechBasis Candidate，原生成 Operation
+被 Demand 裁掉，Seedance Need 根本不会产生。
 
 ### 3.2 Runtime Profile：Build 在哪里运行
 
@@ -186,7 +200,8 @@ kie.hypit-production    使用 Hypit 生产账户创建的 Endpoint 实例
 | Package role | `.svml` 可 import | 被谁加载 | 权限与职责 |
 |---|---:|---|---|
 | Author Module | 是 | Frontend/Module Resolver | Surface、Intent、Producer 声明；默认零网络和零凭据权限 |
-| Contracts | 否 | 普通代码依赖 | 公共类型、Schema 和不变量 |
+| Contracts | 否 | Module Resolver/普通代码依赖 | 公共名义 Type、Schema、可选 Validator 摘要和不变量 |
+| Type Validator | 否 | Compiler/Runtime Host | 只接受或拒绝某个精确 Type 的值；不得改写值、选择 Provider 或获得凭据 |
 | Core/Protocol | 否 | Launcher/Runtime | 系统状态与验证法律 |
 | Runtime Service | 否 | Runtime Profile | Scheduler、Journal、Store、Cache、Credentials |
 | Provider Endpoint | 否 | Runtime Profile | 本地执行或外部 API；只能满足声明的 Need |
@@ -233,6 +248,33 @@ v2 不需要 `.svk`。
 
 Manifest 必须能在不执行包代码的情况下读取。真正的实现只有在 Host allowlist、摘要
 和权限检查完成后才能加载。
+
+### 5.1 去中心化组件通信与校验归属
+
+新包不向 Core 注册 `Track`、`Measurement` 或其他业务类，也不要求 Core 发布新版本。
+通信按精确的名义 `TypeRef = module + version + type name` 发生：
+
+```text
+类型所有者  声明 TypeRef、结构 Schema、可选语义 Validator 摘要
+生产者      在 Manifest 输出端口引用该 TypeRef
+消费者      在 Manifest 输入端口引用同一 TypeRef
+Resolver    锁定包闭包、依赖摘要与 Validator 实现摘要
+Host        在 Record Admission 中执行类型所有者的 Validator
+Core        校验端口类型、Schema、回执绑定、图因果和状态完整性
+```
+
+Schema 处理 JSON 结构等通用事实；Validator 只补充 Schema 无法表达的领域关系，例如
+多个字段之间的相等、范围或媒体亲和性。Validator 只能 accept/reject，不能把一种值
+转换成另一种值；转换必须是图中可见的 Producer。
+
+所有来源共用一个入口：Frontend 产生的 authored Record、Producer 输出、Provider
+返回、历史值/上传值形成的 provided Candidate，都必须先通过同一类型所有者校验，再
+成为 Core 可接受的 Record。这样不存在“源码严格、Pin 绕过”或“Provider 自称合法”
+的旁路。
+
+当前 `svml.type-validation@1` 回执绑定精确 Type、Record digest 和闭包锁定的 Validator
+digest。它是可信 Host 内的内容一致性断言，不是任意第三方代码可以自证安全的签名。
+社区实现开放前仍需代码字节摘要、Worker 隔离、超时、内存和权限限制。
 
 ## 6. 两种基本运行拓扑
 
@@ -283,6 +325,13 @@ bindings:
 
 此时 Hypit 的远端渲染队列只是 `hypit.hyperframes` Endpoint 的实现细节，本地
 Scheduler 仍负责整个 Build 图。
+
+HyperFrames 渲染内部还有第二层并行，但它不成为第二个 Build Scheduler：Core 只产生
+一个完整视频 render Need；Endpoint 从锁定的 HyperframesDocument 读取明确的
+`programSpaceDigest + rational frameRate + frameCount + canvas`，将 `[0, frameCount)` 任意
+切成半开 chunk，在本地 Chrome workers 或 Lambda 中并行计算，最后统一组装画面并 mux
+音频。worker 数、chunk 大小和重试属于 Runtime Profile/Endpoint policy，不进入 `.svml`
+作者意图，也不膨胀成 Core Graph 节点。
 
 ### 6.2 Hosted Runtime：整个 Build 在服务器
 
@@ -383,17 +432,20 @@ Local Build Scheduler
 Provider Job Queue 不推进 BuildPlan，也不能接受其他步骤的 Event。Provider 包可以
 声明并发/限流建议，最终本地 lane 仍由权威 Build Scheduler 管理。
 
-## 9. 建议包边界
+## 9. 历史包边界示例
 
-名称可以在实现前调整，角色不能混合。
+以下名称只保留为 Runtime 拆分过程的历史例子。角色边界仍有效，目标名称以
+[`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md) 为准。
 
 ### 9.1 作者与编译语义
 
 ```text
 @svml/text
 @svml/script
+@svml/media
+@svml/speech
 @svml/film
-@svml/seedance-mini
+@svml/seedance
 @svml/whisperx
 @svml/speech-align
 @svml/caption
@@ -401,6 +453,7 @@ Provider Job Queue 不推进 BuildPlan，也不能接受其他步骤的 Event。
 @svml/text-track
 @svml/svs
 @svml/hyperframes
+@svml/hyperframes-render
 ```
 
 可以再提供一个 Standard Prelude：
@@ -481,16 +534,17 @@ artifacts-local 和 credentials-keychain，并提供一个简单的 Provider 配
 - `@svml/core`：Logical Output/Candidate 选择、反向 Demand、两层声明式 affinity、纯状态
   推进和完整性验证；
 - `@svml/driver-node`：Producer/Provider Registry 与进程内执行；
+- `@svml/validation`：Type-owner Validator Registry 与统一 Record Admission；
 - `@svml/contracts`、Text、Script、SpeechTake、WhisperX、Speech Align、Caption 的第一批
   合同与原子 Producer；
 - `@svml/elaborator`、`@svml/realization`：静态卫生 Fragment 与显式 Candidate Overlay；
-- `@svml/video-fragments`：已跑通 SpeechTake/WhisperX/SemanticMap/Caption 的官方静态组合；
+- `@svml/speech-program`：已跑通 SpeechTake/WhisperX/SemanticMap/Caption 的官方口播组合；
 - Provider 只精确匹配 capability + returns，多实现时要求显式 `bind()`；
 - 恢复时丢弃序列化 Command，由 Core 重新生成。
 
-当前实现尚未完成 Track/Composition/HyperFrames、动态外部包加载、安全 Worker、Artifact
-Store 验证和生产 Runtime。下一步先把已验证的语音纵向链路接入公共 Track 与
-HyperFrames 视频输出，再完成开放第三方执行；
+当前实现尚未完成动态外部包加载、安全 Worker、Artifact Store 验证和生产 Runtime。
+Track/Composition/HyperFrames 的通用合同与参考 lowering 已有实现，但作者侧完整视频
+Surface 和真实渲染 Provider 仍未接通；
 不能用 Runtime Router 或数据库补偿 Core 语义。
 
 Kernel Gate 完成后，Runtime 再依次建立以下接口。
@@ -526,7 +580,7 @@ Command 当成可信恢复输入。
 
 ### 10.4 Async Provider Endpoint
 
-在当前一次性 `ProviderHandler` 之上增加可持久化生命周期：
+当前参考实现已在一次性 `ProviderHandler` 之外提供可恢复生命周期：
 
 ```ts
 interface ProviderEndpoint {
@@ -538,6 +592,12 @@ interface ProviderEndpoint {
 
 Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，完成后产生
 `NeedFulfilledEvent`。Core 仍负责接受或拒绝该 Event。
+
+`OperationStore.create()` 必须发生在 `start()` 之前。`resume(undefined)` 覆盖“远端可能
+已经提交，但 checkpoint 尚未来得及保存”的崩溃窗口；Endpoint 必须用稳定
+`submissionKey` 执行 find-or-submit。若 completion 已经写入 OperationStore 而 Event 尚未
+进入 BuildState，恢复时直接重建同一个 Event，不得再次调用 Endpoint。当前内存实现
+证明这些状态转换，但不冒充 durable store、lease 或远端 API 的 exactly-once 保证。
 
 ### 10.5 两个参考发行版
 
@@ -563,12 +623,23 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 
 ### Phase R1：锁定本地 Runtime 协议，不接生产
 
-1. 新增 Runtime Module Manifest 与 Profile Schema；
-2. 把现有 `ProviderRegistry.bind()` 变成从锁定 Profile 构造；
+当前已完成 executor/BuildStore/OperationStore 接口、静态 Runtime facet、Profile 到
+内容寻址 Closure 的解析、实现/权限/Provider coverage 锁定、内存 CAS，以及只消费 Core
+ready Commands 的 queue-free Scheduler。recoverable Endpoint 会在 `start` 前建立稳定
+Operation/submission identity、保存 pending checkpoint，并在恢复后执行 `resume`；已记录的
+completion 会直接重放为 Core Event，不会再调用外部 Endpoint。测试证明跨 Build 共享
+Provider lane、同一 Build 内独立付费命令并行且公共上游只执行一次。持久化 adapter、
+lease/wakeup 和完整发行包仍待实现。
+
+1. **已完成：**新增 Runtime Module facet representation 与 Profile/Closure identity；
+2. **已完成：**ProviderRegistry 可由锁定 Closure 原子装配并核对实现摘要；
 3. 提供 `@svml/runtime-local` 参考发行包；
-4. 实现单一进程内 Scheduler、JSON Operation Journal 和本地 CAS；
-5. Scheduler 只调度 Core ready Commands，不自行搜索或裁剪图；
-6. 用 fake Seedance、fake WhisperX、fake HyperFrames 证明 Pin 后零付费调用和完整恢复；
+4. **部分完成：**单一进程内 Scheduler、内存 Operation Journal 和本地 CAS 已有；JSON/
+   SQLite durable adapter 尚无；
+5. **已完成：**Scheduler 只调度 Core ready Commands，不自行搜索或裁剪图；
+6. **部分完成：**通用 fake Endpoint 已证明 pending 恢复、submission crash window 与
+   completion 重放；仍需用 fake Seedance、fake WhisperX、fake HyperFrames 证明 Pin 后
+   零付费调用和完整视频链恢复；
 7. 增加“同一个 Build 不允许两个权威 Scheduler”的攻击性测试。
 
 ### Phase R2：真正本地纵向链路

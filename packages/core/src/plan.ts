@@ -164,6 +164,9 @@ export function compileBuild(
             ? {}
             : { provenance: candidate.root.value.provenance }),
         },
+        ...(candidate.root.value.validation === undefined
+          ? {}
+          : { validation: candidate.root.value.validation }),
       });
       verifyRecord(program.closure, record);
       invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`);

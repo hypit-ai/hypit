@@ -1,8 +1,7 @@
 import {
   alignedTranscriptEvidenceFields,
   contractTypes,
-  contractsManifestDigest,
-  contractsModuleRef,
+  videoContractDependencies,
 } from "@svml/contracts";
 import { digestOf } from "@svml/core";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
@@ -39,7 +38,10 @@ export const whisperXManifest: ModuleManifest = {
   format: "svml.module@0",
   name: whisperXModuleRef.name,
   version: whisperXModuleRef.version,
-  dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
+  dependencies: [
+    videoContractDependencies.speech,
+    videoContractDependencies.semanticTime,
+  ],
   types: [{ name: whisperXTypes.alignmentEvidence.name, schema: whisperXAlignmentEvidenceSchema }],
   capabilities: [{
     name: whisperXCapabilities.alignment.name,

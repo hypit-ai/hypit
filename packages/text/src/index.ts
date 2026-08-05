@@ -1,6 +1,8 @@
 export { TextFrontendError } from "./error.js";
 export {
   decodeText,
+  createTextAuthorFrontend,
+  textAuthorFrontendId,
   textFrontend,
   textFrontendImplementationDigest,
   textFrontendRef,

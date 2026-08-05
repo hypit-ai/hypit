@@ -15,9 +15,12 @@ export {
   resolveProducer,
   resolveType,
   sealRecord,
+  sealTypeValidationReceipt,
   sealTypedModule,
   verifyClosure,
   verifyRecord,
+  verifyRecordStructure,
+  verifyTypeValidationReceipt,
 } from "./link.js";
 export {
   EMPTY_REALIZATION_DIGEST,

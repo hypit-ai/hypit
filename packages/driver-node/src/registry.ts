@@ -5,13 +5,23 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@svml/protocol";
+import { isDigest } from "@svml/protocol";
+import {
+  RuntimeModuleRegistry,
+  runtimeProvider,
+  verifyRuntimeClosure,
+} from "@svml/runtime";
+import type { ResolveRuntimeProfileOptions, RuntimeClosure } from "@svml/runtime";
 
 import type {
   ProducerHandler,
   ProducerRegistration,
+  ProviderEndpoint,
   ProviderHandler,
   ProviderRegistration,
   ProviderResolution,
+  RuntimeProviderImplementation,
+  SchedulingHint,
 } from "./types.js";
 
 function moduleKey(ref: { readonly name: string; readonly version: string }): string {
@@ -25,6 +35,17 @@ function sameRef(
   return left.module.name === right.module.name
     && left.module.version === right.module.version
     && left.name === right.name;
+}
+
+function verifyScheduling(scheduling: SchedulingHint | undefined): void {
+  if (scheduling === undefined) return;
+  if (scheduling.lane !== undefined && scheduling.lane.trim().length === 0) {
+    throw new Error("scheduling lane must not be empty");
+  }
+  if (scheduling.maxConcurrency !== undefined
+    && (!Number.isSafeInteger(scheduling.maxConcurrency) || scheduling.maxConcurrency < 1)) {
+    throw new Error("scheduling maxConcurrency must be a positive safe integer");
+  }
 }
 
 export function producerRegistryKey(ref: ProducerRef): string {
@@ -46,10 +67,12 @@ export class HostRegistry {
     producer: ProducerRef,
     implementationDigest: Digest,
     handler: ProducerHandler,
+    options: { readonly scheduling?: SchedulingHint } = {},
   ): void {
     const key = producerRegistryKey(producer);
     if (this.#producers.has(key)) throw new Error(`producer ${key} is already registered`);
-    this.#producers.set(key, { producer, implementationDigest, handler });
+    verifyScheduling(options.scheduling);
+    this.#producers.set(key, { producer, implementationDigest, handler, ...options });
   }
 
   producer(ref: ProducerRef): ProducerRegistration | undefined {
@@ -57,11 +80,17 @@ export class HostRegistry {
   }
 }
 
-type ProviderOptions = { readonly supports?: (need: Need) => boolean };
+type ProviderOptions = {
+  readonly supports?: (need: Need) => boolean;
+  readonly scheduling?: SchedulingHint;
+  readonly runtimeImplementation?: RuntimeProviderImplementation;
+};
 
 export class ProviderRegistry {
   readonly #registrations: ProviderRegistration[] = [];
   readonly #bindings = new Map<string, string>();
+  readonly #runtimeScheduling = new Map<string, SchedulingHint>();
+  #runtimeClosure: Digest | undefined;
 
   registerProvider(
     id: string,
@@ -71,10 +100,46 @@ export class ProviderRegistry {
     options: ProviderOptions = {},
   ): void {
     if (!id.trim()) throw new Error("provider id must not be empty");
+    verifyScheduling(options.scheduling);
+    if (options.runtimeImplementation !== undefined) {
+      if (!isDigest(options.runtimeImplementation.digest)) {
+        throw new Error("Provider runtime implementation digest is invalid");
+      }
+      const facet = options.runtimeImplementation.facet;
+      if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
+        throw new Error("Provider runtime implementation facet is invalid");
+      }
+    }
     const duplicate = this.#registrations.some((candidate) =>
       candidate.id === id && sameRef(candidate.capability, capability));
     if (duplicate) throw new Error(`provider ${id} already registers ${providerCapabilityKey(capability)}`);
-    this.#registrations.push({ id, capability, returns, handler, ...options });
+    this.#registrations.push({ kind: "handler", id, capability, returns, handler, ...options });
+  }
+
+  registerProviderEndpoint(
+    id: string,
+    capability: CapabilityRef,
+    returns: TypeRef,
+    endpoint: ProviderEndpoint,
+    options: ProviderOptions = {},
+  ): void {
+    if (!id.trim()) throw new Error("provider id must not be empty");
+    verifyScheduling(options.scheduling);
+    if (options.runtimeImplementation === undefined || !isDigest(options.runtimeImplementation.digest)) {
+      throw new Error("recoverable Provider Endpoint requires a valid Runtime implementation identity");
+    }
+    const facet = options.runtimeImplementation.facet;
+    if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
+      throw new Error("Provider runtime implementation facet is invalid");
+    }
+    const duplicate = this.#registrations.some((candidate) =>
+      candidate.id === id && sameRef(candidate.capability, capability));
+    if (duplicate) throw new Error(`provider ${id} already registers ${providerCapabilityKey(capability)}`);
+    this.#registrations.push({ kind: "endpoint", id, capability, returns, endpoint, ...options });
+  }
+
+  runtimeClosureDigest(): Digest | undefined {
+    return this.#runtimeClosure;
   }
 
   bind(capability: CapabilityRef, providerId: string): void {
@@ -86,6 +151,47 @@ export class ProviderRegistry {
     this.#bindings.set(key, providerId);
   }
 
+  /** Bind only implementation-verified Endpoint instances from one locked Runtime Closure. */
+  applyRuntimeClosure(
+    closure: RuntimeClosure,
+    modules: RuntimeModuleRegistry,
+    options: ResolveRuntimeProfileOptions = {},
+  ): void {
+    verifyRuntimeClosure(closure);
+    modules.verifyClosure(closure, options);
+    if (this.#runtimeClosure !== undefined && this.#runtimeClosure !== closure.digest) {
+      throw new Error("Provider Registry is already bound to another Runtime Closure");
+    }
+    const pending: { readonly key: string; readonly endpoint: string; readonly scheduling: SchedulingHint }[] = [];
+    for (const binding of closure.providers) {
+      const endpoint = runtimeProvider(closure, binding.endpoint);
+      if (endpoint === undefined) throw new Error(`Runtime Endpoint ${binding.endpoint} is unavailable`);
+      const registration = this.#registrations.find((candidate) =>
+        candidate.id === endpoint.id
+        && sameRef(candidate.capability, binding.capability)
+        && sameRef(candidate.returns, binding.returns));
+      if (registration === undefined) {
+        throw new Error(`Provider ${endpoint.id} is not registered for ${providerCapabilityKey(binding.capability)}`);
+      }
+      const implementation = registration.runtimeImplementation;
+      if (implementation === undefined
+        || implementation.digest !== endpoint.implementation.digest
+        || !sameRef(implementation.facet, endpoint.facet)) {
+        throw new Error(`Provider ${endpoint.id} implementation does not match the Runtime Closure`);
+      }
+      pending.push({
+        key: providerCapabilityKey(binding.capability),
+        endpoint: endpoint.id,
+        scheduling: { lane: endpoint.lane, maxConcurrency: endpoint.maxConcurrency },
+      });
+    }
+    for (const item of pending) {
+      this.#bindings.set(item.key, item.endpoint);
+      this.#runtimeScheduling.set(item.endpoint, item.scheduling);
+    }
+    this.#runtimeClosure = closure.digest;
+  }
+
   resolve(need: Need): ProviderResolution {
     const key = providerCapabilityKey(need.capability);
     const bound = this.#bindings.get(key);
@@ -95,9 +201,15 @@ export class ProviderRegistry {
       && (registration.supports?.(need) ?? true));
     if (bound !== undefined) {
       const registration = registrations.find((candidate) => candidate.id === bound);
+      const scheduling = registration === undefined
+        ? undefined
+        : this.#runtimeScheduling.get(registration.id) ?? registration.scheduling;
       return registration === undefined
         ? { status: "missing", providerId: bound }
-        : { status: "resolved", registration };
+        : {
+            status: "resolved",
+            registration: scheduling === undefined ? registration : { ...registration, scheduling },
+          };
     }
     if (registrations.length === 0) return { status: "missing" };
     if (registrations.length > 1) {
@@ -106,7 +218,12 @@ export class ProviderRegistry {
         providerIds: registrations.map((registration) => registration.id).sort(),
       };
     }
-    return { status: "resolved", registration: registrations[0]! };
+    const registration = registrations[0]!;
+    const scheduling = this.#runtimeScheduling.get(registration.id) ?? registration.scheduling;
+    return {
+      status: "resolved",
+      registration: scheduling === undefined ? registration : { ...registration, scheduling },
+    };
   }
 
   providers(capability: CapabilityRef): readonly ProviderRegistration[] {

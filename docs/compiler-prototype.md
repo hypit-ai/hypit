@@ -2,7 +2,7 @@
 
 Date: 2026-08-01
 
-This record describes the executable v1 slice. SVML has not been publicly
+This historical implementation record describes the executable v1 research slice. SVML has not been publicly
 released; the removed shared-cut Speech Spine prototype is not a compatibility
 contract. The implementation targets `spec/script-surface-v1.md` and
 `spec/source-architecture-draft.md` directly.

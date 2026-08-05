@@ -9,23 +9,56 @@
 > CapabilityRefs. Declarative affinity prevents exact media evidence or provided values from being
 > attached to the wrong Narrative/Basis.
 > `packages/speech-take` proves atomic Product plus ordinary audio/visual Projection;
-> `packages/elaborator` expands content-addressed static Fragments with hygienic instance identities;
+> `packages/elaborator` now links parser-independent Author Modules in two phases—predeclaring every
+> component output before resolving forward references—and expands content-addressed static
+> Fragments with hygienic instance identities;
 > `packages/realization` attaches locked Existing-Value or Fragment Candidates without changing the
 > author graph identity. These are executable reference layers outside Core, not new Kernel magic.
-> `packages/video-fragments` now composes the first real speech vertical from static Fragments:
+> `packages/speech-program` now composes the first real speech vertical from static Fragments:
 > SpeechTake projections, one-pass WhisperX evidence, a provider-neutral SemanticMap and timed
 > captions. Producer-declared affinity protects internal Fragment results before they enter state;
 > Logical-Output affinity separately protects selected Candidates.
-> The next composition waist is intentionally flat: captions, text, speech video, B-roll and overlay
+> `packages/broll` lowers provider-neutral B-roll Programs into independently stacked visual
+> Presents and ordinary source-audio/SFX tracks. Local pop/fade/slide motion and push/page-turn
+> handoffs stay package-owned; neither Composition nor HyperFrames learns what B-roll means.
+> `packages/text-track` lowers persistent or timed editorial text into the same peer VisualTrack
+> contract. `packages/film` folds any number of visual/audio Track references into Composition
+> through ordinary fixed-port Operations; Film remains an optional Target and does not become a
+> Core root. `packages/hyperframes-render` separately turns any Composition into an explicit exact
+> render Need and a final MediaArtifact projection.
+> The v2 composition waist is intentionally flat: captions, text, speech video, B-roll and overlay
 > effects must become self-contained peer Tracks. Composition may layer them by time, space and z,
 > but no Track may mutate or intersect a sibling Track.
 > `packages/text` and `packages/script` now implement the first official authoring vertical:
 > a minimal Text Frontend that learns raw/structured Surfaces from locked module manifests, plus
-> an ordinary Script Surface package using named Segments such as `<opening>...</opening>`.
+> an ordinary Script Surface package using named Segments such as `<opening>...</opening>`. Text
+> Surfaces can now return inert Record, Author Component and Graph Fragment declarations; Text
+> collects the complete document before Elaborator resolves forward references into a Core Graph.
 > `packages/whisperx` declares the typed one-pass WhisperX Need; concrete local/Hypit adapters remain
-> Runtime packages outside this slice. Third-party parser sandboxing,
-> source imports and `.svs` are not implemented yet. The existing
+> Runtime packages outside this slice. `packages/elaborator` now compiles recursive Source Closures,
+> while `packages/svs` implements a deliberately generic record-only Recipe Frontend; package-owned
+> video Recipe validation remains undecided. `packages/compiler-node` now supplies the domain-free
+> registered-manifest resolver, root-confined/read-once filesystem Source Host and file-to-Graph/
+> BuildPlan facade; `packages/cli` assembles the first trusted Text + Script + SVS + Film + Render
+> command-line prelude. `packages/validation` now supplies package-owned semantic Type admission: authored,
+> provided, Producer and Provider values use the same exact-Type validator gate while Core verifies
+> only the locked receipt. `packages/runtime` now supplies the environment-neutral executor and
+> BuildStore/OperationStore ports, static Runtime facets, sealed Profile/Closure resolution,
+> in-memory CAS, and a queue-free local Scheduler whose concurrency lanes are shared across Builds
+> and independent commands inside one Build. Recoverable Provider Endpoints now journal a stable
+> submission identity before `start`, persist pending checkpoints, and use `resume` after restart;
+> completed operations are replayed into Core without another external call. Automatic third-party
+> package installation, parser/validator sandboxing, durable stores, leases and production Endpoint
+> adapters are not implemented yet. The existing
 > root compiler and standard library remain the executable v1 research oracle during migration.
+
+The reusable non-video stack is intentionally smaller than the video distribution:
+`@svml/protocol + @svml/core` are the irreducible Kernel, `@svml/elaborator` is the normal optional
+author-to-Graph compiler, `@svml/compiler-node` is the optional reference file/package-registration
+Host, and a Driver/Runtime executes Commands. Text, Realization overlays and all video packages
+remain optional. There is no privileged `@svml/author` package or required `.svk` suffix.
+If a domain Type declares a semantic validator, the Host additionally uses `@svml/validation` (or
+an equivalent implementation); the Type still does not enter Core.
 
 Semantic Video Markup Language is a semantic source language for information-flow
 video. Script creates stable semantic addresses. A Composition selects one
@@ -96,6 +129,9 @@ pnpm check
 pnpm test
 pnpm build
 
+# v2: real Source Closure check through the trusted Text + Script + SVS prelude.
+pnpm svml:v2 check examples/v2-bootstrap/main.svml
+
 pnpm svml check examples/regen-ranking/regen-ranking.svml
 pnpm svml script examples/regen-ranking/regen-ranking.svml --out narrative.json
 pnpm svml plan examples/regen-ranking/regen-ranking.svml --out plan.json
@@ -157,8 +193,22 @@ Canvas owns only a human-readable view.
 The local media used by the examples are already-materialized artifacts; no
 generation provider is invoked by tests or compilation.
 
+## v2 authoring target
+
+[`examples/talking-film-golden`](examples/talking-film-golden/README.md) preserves the implemented
+Script Surface and specifies the complete namespaced author experience for two Seedance Mini speech
+takes, Seedance B-roll, explicit WhisperX alignment, two speaker caption styles, editorial text,
+peer Tracks, Film and Hyperframes rendering. Its README marks every implemented and missing lowering;
+Script, Film and Render are accepted by the current compiler, while the intervening generation,
+Speech and Track Surfaces remain a design target.
+
 ## Specification and implementation record
 
+Start with the [documentation map](docs/README.md) and
+[current implementation status](docs/implementation-status.md). In particular, long architecture
+records preserve rejected models and are not all normative.
+
+- [Core Kernel v1](spec/core-kernel-v1.md) is the compact normative `@1` Kernel contract.
 - [Intent-first modular compilation architecture](docs/intent-first-modular-compilation.md)
   records the next architecture direction: SVML as author intent, source-selected
   compilation modules, typed external requirements and provenance-preserving
