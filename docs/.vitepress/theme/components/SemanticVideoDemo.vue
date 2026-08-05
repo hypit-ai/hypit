@@ -8,6 +8,7 @@ import {
 } from "./demo-audio";
 import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
+import { DEMO_VIDEO_TRIM_SECONDS } from "./demo-video-trim";
 import {
   semanticVideoDemos,
   type DemoId,
@@ -325,7 +326,7 @@ function syncState(time: number, force = false) {
 function syncBaseVideos(force = false) {
   const activeIndex = sceneIndexAt(programTime);
   const scene = config.scenes[activeIndex];
-  const localTime = Math.max(0, programTime - scene.start);
+  const localTime = scene.sourceStart + Math.max(0, programTime - scene.start);
   const sceneChanged = playbackSceneIndex !== activeIndex;
   baseVideos.forEach((video, index) => {
     if (!video) return;
@@ -350,8 +351,16 @@ function syncOverlayVideos(force = false) {
       video.pause();
       return;
     }
-    const localTime = Math.max(0, programTime - selection.start);
+    const requestedTime = DEMO_VIDEO_TRIM_SECONDS + Math.max(0, programTime - selection.start);
+    const sourceEnd = Number.isFinite(video.duration)
+      ? Math.max(DEMO_VIDEO_TRIM_SECONDS, video.duration - DEMO_VIDEO_TRIM_SECONDS)
+      : requestedTime;
+    const localTime = Math.min(requestedTime, sourceEnd);
     if (force || playbackOverlayId !== selection.id || Math.abs(video.currentTime - localTime) > .2) video.currentTime = localTime;
+    if (requestedTime >= sourceEnd) {
+      video.pause();
+      return;
+    }
     if (props.active && video.paused) void video.play().catch(() => undefined);
   });
   playbackOverlayId = activeOverlaySelection.value?.id ?? null;
@@ -466,7 +475,9 @@ function renderFrame(timestamp: number) {
   previousTimestamp = timestamp;
   const scene = config.scenes[currentSceneIndex.value];
   const video = baseVideos[currentSceneIndex.value];
-  let nextTime = video && !video.paused && video.readyState >= 2 ? scene.start + video.currentTime : programTime + delta;
+  let nextTime = video && !video.paused && video.readyState >= 2
+    ? scene.start + video.currentTime - scene.sourceStart
+    : programTime + delta;
   let looped = false;
   if (pinnedLoopSelection.value) {
     const loopSelection = config.selections.find((selection) => selection.id === pinnedLoopSelection.value);

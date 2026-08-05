@@ -1,6 +1,7 @@
 import streetTranscript from "../../../public/street-interview/transcript.json";
 import goodBetterBestTranscript from "../../../public/good-better-best/transcript.json";
 import { goodBetterBestMedia, streetMedia } from "./demo-media";
+import { createTrimmedDemoTimeline } from "./demo-video-trim";
 
 export type DemoId = "street" | "good-better-best";
 
@@ -23,6 +24,7 @@ export type DemoScene = {
   src: string;
   start: number;
   end: number;
+  sourceStart: number;
 };
 
 export type DemoSourceLine = {
@@ -141,17 +143,29 @@ const goodBetterBestLines: DemoSourceLine[] = [
   { html: '<span class="syn-tag">&lt;/deck&gt;</span>' },
 ];
 
+const streetTimeline = createTrimmedDemoTimeline([
+  { src: streetMedia.scenes[0], start: 0, end: 5 },
+  { src: streetMedia.scenes[1], start: 5, end: 11 },
+  { src: streetMedia.scenes[2], start: 11, end: 22 },
+  { src: streetMedia.scenes[3], start: 22, end: 31.1333333333 },
+]);
+
+const goodBetterBestTimeline = createTrimmedDemoTimeline([
+  { src: goodBetterBestMedia.speakers[0], start: 0, end: 4 },
+  { src: goodBetterBestMedia.speakers[1], start: 4, end: 8 },
+  { src: goodBetterBestMedia.speakers[2], start: 8, end: 14 },
+  { src: goodBetterBestMedia.speakers[3], start: 14, end: 18.05 },
+  { src: goodBetterBestMedia.speakers[4], start: 18.05, end: 23.05 },
+  { src: goodBetterBestMedia.speakers[5], start: 23.05, end: 28.05 },
+  { src: goodBetterBestMedia.speakers[6], start: 28.05, end: 42.0333333333 },
+]);
+
 export const semanticVideoDemos: Record<DemoId, SemanticVideoDemoConfig> = {
   street: {
     id: "street",
-    duration: 31.1333333333,
-    words: streetWords,
-    scenes: [
-      { src: streetMedia.scenes[0], start: 0, end: 5 },
-      { src: streetMedia.scenes[1], start: 5, end: 11 },
-      { src: streetMedia.scenes[2], start: 11, end: 22 },
-      { src: streetMedia.scenes[3], start: 22, end: 31.1333333333 },
-    ],
+    duration: streetTimeline.duration,
+    words: streetWords.map((cue) => streetTimeline.mapRange(cue)),
+    scenes: streetTimeline.scenes,
     selections: [
       { id: "hook", start: .04, end: 5.12, layer: "scene" },
       { id: "rainbow", start: 5.12, end: 11.12, layer: "scene" },
@@ -160,22 +174,14 @@ export const semanticVideoDemos: Record<DemoId, SemanticVideoDemoConfig> = {
       { id: "seven-bags", start: 7.08, end: 11.12, layer: "overlay", asset: streetMedia.broll[0] },
       { id: "receipt", start: 18.81, end: 22.2, layer: "overlay", asset: streetMedia.broll[1] },
       { id: "college", start: 26.22, end: 31.06, layer: "overlay", asset: streetMedia.broll[2] },
-    ],
+    ].map((selection) => streetTimeline.mapRange(selection)),
     lines: streetLines,
   },
   "good-better-best": {
     id: "good-better-best",
-    duration: 42.0333333333,
-    words: goodBetterBestWords,
-    scenes: [
-      { src: goodBetterBestMedia.speakers[0], start: 0, end: 4 },
-      { src: goodBetterBestMedia.speakers[1], start: 4, end: 8 },
-      { src: goodBetterBestMedia.speakers[2], start: 8, end: 14 },
-      { src: goodBetterBestMedia.speakers[3], start: 14, end: 18.05 },
-      { src: goodBetterBestMedia.speakers[4], start: 18.05, end: 23.05 },
-      { src: goodBetterBestMedia.speakers[5], start: 23.05, end: 28.05 },
-      { src: goodBetterBestMedia.speakers[6], start: 28.05, end: 42.0333333333 },
-    ],
+    duration: goodBetterBestTimeline.duration,
+    words: goodBetterBestWords.map((cue) => goodBetterBestTimeline.mapRange(cue)),
+    scenes: goodBetterBestTimeline.scenes,
     selections: [
       { id: "hook", start: .19, end: 4.01, layer: "scene" },
       { id: "good", start: 4.01, end: 14.12, layer: "scene" },
@@ -184,7 +190,7 @@ export const semanticVideoDemos: Record<DemoId, SemanticVideoDemoConfig> = {
       { id: "votes", start: 30.24, end: 33.45, layer: "overlay", asset: goodBetterBestMedia.decks[0] },
       { id: "attract", start: 33.49, end: 36, layer: "overlay", asset: goodBetterBestMedia.decks[1] },
       { id: "features", start: 36, end: 39.28, layer: "overlay", asset: goodBetterBestMedia.decks[2] },
-    ],
+    ].map((selection) => goodBetterBestTimeline.mapRange(selection)),
     lines: goodBetterBestLines,
   },
 };
