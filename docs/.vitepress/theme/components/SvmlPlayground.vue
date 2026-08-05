@@ -933,14 +933,11 @@ onBeforeUnmount(() => {
             <img
               v-if="activeBroll"
               class="live-broll"
+              :class="{ 'semantic-selected': activeSourceSelections.some((selection) => selection.id === activeBroll.id) }"
               :src="resolveDemoMedia(activeBroll.src)"
               alt=""
               :style="{ transform: `scale(${activeBroll.zoom})` }"
             >
-            <template v-if="activeBroll">
-              <div class="live-visual-outline live-scene-outline"></div>
-              <div class="live-visual-outline live-broll-outline"></div>
-            </template>
 
             <div v-if="activeCaptionWords.length" class="live-caption" aria-hidden="true">
               <span
@@ -996,49 +993,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.live-active-icon.semantic-selected,
 .live-rank-cell.semantic-selected {
   outline: 1px solid #ec4899;
   outline-offset: 3px;
 }
 
-.live-active-icon.semantic-selected {
-  overflow: visible;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.live-active-icon.semantic-selected img,
-.live-active-icon.semantic-selected > i {
-  border-radius: 23%;
-}
-
-.live-active-icon.semantic-selected img {
-  background: rgba(255, 255, 255, .98);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, .38);
-}
-
-.live-active-icon.semantic-selected::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border: 1px solid #ec4899;
-  pointer-events: none;
-}
-
-.live-visual-outline {
-  position: absolute;
-  z-index: 24;
-  pointer-events: none;
-}
-
-.live-scene-outline {
-  inset: 4px;
-  border: 1px solid rgba(236, 72, 153, .92);
-}
-
-.live-broll-outline {
-  inset: 9px;
-  border: 1px solid rgba(99, 216, 255, .95);
+.live-broll.semantic-selected {
+  outline: 1px solid rgba(99, 216, 255, .95);
+  outline-offset: -5px;
 }
 </style>
