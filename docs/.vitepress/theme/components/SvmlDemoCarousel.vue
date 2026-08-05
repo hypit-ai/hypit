@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
+  demoMediaVersion,
   demoMediaManifests,
   preloadDemoMedia,
   type DemoMediaManifest,
@@ -18,6 +19,7 @@ const selectedIndex = ref(0);
 const playingIndex = ref<number | null>(null);
 const loadedIndices = ref<Set<number>>(new Set());
 const manifestPromises = new Map<number, Promise<void>>();
+const mediaCacheVersionKey = "svml-demo-media-version";
 let activationId = 0;
 let backgroundPreloadStarted = false;
 
@@ -38,6 +40,8 @@ function loadManifest(manifest: DemoMediaManifest) {
 }
 
 function preloadDemo(index: number) {
+  if (loadedIndices.value.has(index)) return Promise.resolve();
+
   const existing = manifestPromises.get(index);
   if (existing) return existing;
 
@@ -52,6 +56,25 @@ async function preloadRemainingDemos(initialIndex: number) {
   for (let offset = 1; offset < cards.length; offset += 1) {
     await preloadDemo((initialIndex + offset) % cards.length);
   }
+
+  try {
+    window.localStorage.setItem(mediaCacheVersionKey, demoMediaVersion);
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
+
+function restoreCachedDemos() {
+  try {
+    if (window.localStorage.getItem(mediaCacheVersionKey) !== demoMediaVersion) return false;
+  } catch {
+    return false;
+  }
+
+  loadedIndices.value = new Set(cards.map((_, index) => index));
+  playingIndex.value = selectedIndex.value;
+  backgroundPreloadStarted = true;
+  return true;
 }
 
 function transitionDelay(immediate: boolean) {
@@ -95,7 +118,9 @@ function handleEnded(index: number) {
   move(1);
 }
 
-onMounted(() => void activateDemo(0, true));
+onMounted(() => {
+  if (!restoreCachedDemos()) void activateDemo(0, true);
+});
 onBeforeUnmount(() => { activationId += 1; });
 </script>
 
