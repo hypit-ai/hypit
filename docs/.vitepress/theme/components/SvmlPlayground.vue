@@ -906,7 +906,11 @@ onBeforeUnmount(() => {
             <div class="live-ranking-board">
               <div v-for="rank in 5" :key="rank" class="live-rank-row">
                 <strong :style="{ background: runtimeItems[5 - rank].color }">{{ rank }}</strong>
-                <span :ref="(element) => setRankCell(element, rank)">
+                <span
+                  :ref="(element) => setRankCell(element, rank)"
+                  class="live-rank-cell"
+                  :class="{ 'semantic-selected': !activeRuntimeItem && resolvedSelection.id === runtimeItems[5 - rank].id }"
+                >
                   <img
                     v-if="settledIds.has(runtimeItems[5 - rank].id)"
                     :src="resolveDemoMedia(runtimeItems[5 - rank].icon)"
@@ -916,7 +920,12 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div v-if="activeRuntimeItem" ref="activeIconElement" class="live-active-icon">
+            <div
+              v-if="activeRuntimeItem"
+              ref="activeIconElement"
+              class="live-active-icon"
+              :class="{ 'semantic-selected': resolvedSelection.id === activeRuntimeItem.id }"
+            >
               <img :src="resolveDemoMedia(activeRuntimeItem.icon)" :alt="activeRuntimeItem.label">
               <i></i>
             </div>
@@ -928,6 +937,10 @@ onBeforeUnmount(() => {
               alt=""
               :style="{ transform: `scale(${activeBroll.zoom})` }"
             >
+            <template v-if="activeBroll">
+              <div class="live-visual-outline live-scene-outline"></div>
+              <div class="live-visual-outline live-broll-outline"></div>
+            </template>
 
             <div v-if="activeCaptionWords.length" class="live-caption" aria-hidden="true">
               <span
@@ -981,3 +994,51 @@ onBeforeUnmount(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.live-rank-cell.semantic-selected {
+  outline: 1px solid #ec4899;
+  outline-offset: 3px;
+}
+
+.live-active-icon.semantic-selected {
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.live-active-icon.semantic-selected img,
+.live-active-icon.semantic-selected > i {
+  border-radius: 23%;
+}
+
+.live-active-icon.semantic-selected img {
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .38);
+}
+
+.live-active-icon.semantic-selected::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid #ec4899;
+  pointer-events: none;
+}
+
+.live-visual-outline {
+  position: absolute;
+  z-index: 24;
+  pointer-events: none;
+}
+
+.live-scene-outline {
+  inset: 4px;
+  border: 1px solid rgba(236, 72, 153, .92);
+}
+
+.live-broll-outline {
+  inset: 9px;
+  border: 1px solid rgba(99, 216, 255, .95);
+}
+</style>
