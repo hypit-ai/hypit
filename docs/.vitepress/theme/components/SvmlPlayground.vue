@@ -8,7 +8,8 @@ import {
 } from "./demo-audio";
 import { rankingMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
-import { wordCues, type WordCue } from "./regen-ranking-cues";
+import { createTrimmedDemoTimeline } from "./demo-video-trim";
+import { wordCues as rawWordCues, type WordCue } from "./regen-ranking-cues";
 import {
   buildFoldedSourceView,
   buildFullSourceView,
@@ -45,6 +46,7 @@ type BaseScene = {
   src: string;
   start: number;
   end: number;
+  sourceStart: number;
 };
 
 type BrollItem = {
@@ -66,9 +68,17 @@ type SourceLine = {
 
 type DisplayedSourceLine = SourceDisplayEntry<SourceLine>;
 
-const TOTAL_DURATION = 36.1;
 const ENTER_DURATION = .45;
 const MOVE_DURATION = .55;
+
+const rankingTimeline = createTrimmedDemoTimeline([
+  { src: rankingMedia.avatars[0], start: 0, end: 12.033333333333333 },
+  { src: rankingMedia.avatars[1], start: 12.033333333333333, end: 24.066666666666666 },
+  { src: rankingMedia.avatars[2], start: 24.066666666666666, end: 36.1 },
+]);
+const TOTAL_DURATION = rankingTimeline.duration;
+const baseScenes: BaseScene[] = rankingTimeline.scenes;
+const wordCues = rawWordCues.map((cue) => rankingTimeline.mapRange(cue));
 
 const selections: RankingSelection[] = [
   { id: "photoshop", label: "Photoshop", rank: 5, start: .08, end: 6.4, color: "#31add0", icon: rankingMedia.icons[4] },
@@ -76,13 +86,7 @@ const selections: RankingSelection[] = [
   { id: "remini", label: "Remini", rank: 3, start: 12.043333333333333, end: 18.184444444444445, color: "rgb(234, 220, 42)", icon: rankingMedia.icons[2] },
   { id: "chatgpt", label: "ChatGPT", rank: 2, start: 18.184444444444445, end: 24.066666666666666, color: "rgb(255, 167, 45)", icon: rankingMedia.icons[1] },
   { id: "regen", label: "ReGen", rank: 1, start: 24.076666666666668, end: 36.06666666666666, color: "#ff3f56", icon: rankingMedia.icons[0] },
-];
-
-const baseScenes: BaseScene[] = [
-  { src: rankingMedia.avatars[0], start: 0, end: 12.033333333333333 },
-  { src: rankingMedia.avatars[1], start: 12.033333333333333, end: 24.066666666666666 },
-  { src: rankingMedia.avatars[2], start: 24.066666666666666, end: 36.1 },
-];
+].map((selection) => rankingTimeline.mapRange(selection));
 
 const brollItems: BrollItem[] = [
   { id: "handsome-1", src: rankingMedia.broll[4], start: 791 / 30, end: 831 / 30, zoom: 1.02 },
@@ -90,7 +94,7 @@ const brollItems: BrollItem[] = [
   { id: "dating-photo", src: rankingMedia.broll[2], start: 925 / 30, end: 952 / 30, zoom: 1.02 },
   { id: "linkedin-headshot", src: rankingMedia.broll[1], start: 952 / 30, end: 977 / 30, zoom: 1.03 },
   { id: "instagram-post", src: rankingMedia.broll[0], start: 977 / 30, end: 1009 / 30, zoom: 1.02 },
-];
+].map((selection) => rankingTimeline.mapRange(selection));
 
 const semanticSelections: TimelineSelection[] = [...selections, ...brollItems];
 
@@ -560,7 +564,7 @@ function updateContinuousVisuals(time: number) {
 function syncBaseVideos(force = false) {
   const activeIndex = sceneIndexAt(programTime);
   const scene = baseScenes[activeIndex];
-  const localTime = Math.max(0, programTime - scene.start);
+  const localTime = scene.sourceStart + Math.max(0, programTime - scene.start);
   const sceneChanged = playbackSceneIndex !== activeIndex;
 
   baseVideos.forEach((video, index) => {
@@ -681,7 +685,7 @@ function renderFrame(timestamp: number) {
   const scene = baseScenes[currentSceneIndex.value];
   const video = baseVideos[currentSceneIndex.value];
   let nextTime = video && !video.paused && video.readyState >= 2
-    ? scene.start + video.currentTime
+    ? scene.start + video.currentTime - scene.sourceStart
     : programTime + delta;
   let looped = false;
   if (pinnedLoopSelection.value) {
