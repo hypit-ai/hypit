@@ -8,7 +8,6 @@ import {
 } from "./demo-audio";
 import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
-import { DEMO_VIDEO_TRIM_SECONDS } from "./demo-video-trim";
 import {
   semanticVideoDemos,
   type DemoId,
@@ -351,9 +350,9 @@ function syncOverlayVideos(force = false) {
       video.pause();
       return;
     }
-    const requestedTime = DEMO_VIDEO_TRIM_SECONDS + Math.max(0, programTime - selection.start);
+    const requestedTime = Math.max(0, programTime - selection.start);
     const sourceEnd = Number.isFinite(video.duration)
-      ? Math.max(DEMO_VIDEO_TRIM_SECONDS, video.duration - DEMO_VIDEO_TRIM_SECONDS)
+      ? Math.max(0, video.duration)
       : requestedTime;
     const localTime = Math.min(requestedTime, sourceEnd);
     if (force || playbackOverlayId !== selection.id || Math.abs(video.currentTime - localTime) > .2) video.currentTime = localTime;
