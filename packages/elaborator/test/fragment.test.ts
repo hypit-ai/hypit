@@ -3,9 +3,8 @@ import test from "node:test";
 
 import {
   contractTypes,
-  contractsManifest,
-  contractsManifestDigest,
-  contractsModuleRef,
+  videoContractDependencies,
+  videoContractManifests,
 } from "@svml/contracts";
 import {
   createResolvedClosure,
@@ -49,7 +48,7 @@ const manifest: ModuleManifest = {
   format: "svml.module@0",
   name: testModule.name,
   version: testModule.version,
-  dependencies: [{ module: contractsModuleRef, digest: contractsManifestDigest }],
+  dependencies: [videoContractDependencies.speech],
   types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
   surfaces: [],
@@ -69,7 +68,7 @@ const manifest: ModuleManifest = {
   }],
 };
 
-const closure = createResolvedClosure([contractsManifest, speechTakeManifest, manifest]);
+const closure = createResolvedClosure([...videoContractManifests, speechTakeManifest, manifest]);
 
 function program(): LinkedProgram {
   const origin = {
@@ -150,11 +149,11 @@ function speechFragment(): GraphFragment {
       },
       {
         name: "visual",
-        type: contractTypes.speechVisualTrack,
+        type: contractTypes.visualTrack,
         root: operation("visual"),
         semanticInputs: ["request", "style"],
         affinity: [{
-          resultPointer: "/basisDigest",
+          resultPointer: "/sources/0/digest",
           source: operation("generate"),
           sourcePointer: "/basisDigest",
         }],

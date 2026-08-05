@@ -1,4 +1,4 @@
-import { digestOf } from "@svml/core";
+import { digestOf } from "@svml/protocol";
 import type { CompleteSemanticMap, Narrative, TimingQuality } from "@svml/contracts";
 
 import { CaptionProjectionError } from "./error.js";
@@ -71,6 +71,7 @@ export function temporalizeCaption(
     contract: "svml.timed-caption-projection@1" as const,
     semanticIndexDigest: narrative.semanticIndex.digest,
     speechTimeMapDigest: map.mapDigest,
+    programSpace: map.programSpace,
     text: narrative.captionProjection.text,
     regions,
   };

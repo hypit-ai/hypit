@@ -1,0 +1,20 @@
+{
+  "name": "@svml/cli",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/compiler-node": "workspace:*",
+    "@svml/contracts": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/film": "workspace:*",
+    "@svml/hyperframes": "workspace:*",
+    "@svml/hyperframes-render": "workspace:*",
+    "@svml/script": "workspace:*",
+    "@svml/svs": "workspace:*",
+    "@svml/text": "workspace:*"
+  }
+}

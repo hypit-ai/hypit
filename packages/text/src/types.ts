@@ -8,7 +8,17 @@ import type {
   SurfaceDeclaration,
   TypeRef,
   TypedModule,
+  TypedRecord,
 } from "@svml/protocol";
+import type {
+  AuthorComponent,
+  AuthorFrontend,
+  AuthorModule,
+  AuthorSourceExport,
+  AuthorValueRef,
+  GraphFragment,
+  ResolvedAuthorSourceImport,
+} from "@svml/elaborator";
 
 export type SourceUnit = {
   readonly name: string;
@@ -57,8 +67,15 @@ export type SurfaceRecordDraft = {
   readonly range: SourceRange;
 };
 
+/** Source-local diagnostics are removed before the component enters the semantic AuthorModule. */
+export type SurfaceComponentDraft = AuthorComponent & {
+  readonly range: SourceRange;
+};
+
 export type SurfaceDecodeOutput = {
   readonly records: readonly SurfaceRecordDraft[];
+  readonly components: readonly SurfaceComponentDraft[];
+  readonly fragments: readonly GraphFragment[];
   readonly sourceMaps?: readonly CanonicalValue[];
 };
 
@@ -78,6 +95,19 @@ export type RawSurfaceOutput = SurfaceDecodeOutput & {
 export type StructuredSurfaceInput = {
   readonly sourceName: string;
   readonly element: StructuredElement;
+  /**
+   * Resolve an explicitly written author reference. Imported record values are
+   * available because their SourceUnit has already been compiled and admitted.
+   * A component output has a ref and Type but no compile-time Record value.
+   */
+  readonly resolveReference: (path: string) => SurfaceResolvedReference | undefined;
+};
+
+export type SurfaceResolvedReference = {
+  readonly path: string;
+  readonly ref: AuthorValueRef;
+  readonly type: TypeRef;
+  readonly record?: TypedRecord;
 };
 
 export type RawSurfaceHandler = (input: RawSurfaceInput) => RawSurfaceOutput;
@@ -95,14 +125,25 @@ export type TextDecodeContext = {
   readonly closure: ResolvedModuleClosure;
   readonly registry: TextSurfaceRegistryLike;
   readonly resolveModule: (request: TextImportRequest) => ModuleRef;
+  readonly sourceImports?: readonly ResolvedAuthorSourceImport[];
 };
 
 export type TextDecodeResult = {
   readonly module: TypedModule;
+  readonly author: AuthorModule;
+  readonly fragments: readonly GraphFragment[];
+  readonly exports: readonly AuthorSourceExport[];
   readonly imports: readonly TextImportRequest[];
   readonly frontendClosureDigest: Digest;
   readonly sourceMaps: readonly CanonicalValue[];
 };
+
+export type TextAuthorFrontendOptions = {
+  readonly registry: TextSurfaceRegistryLike;
+  readonly resolveModule: (request: TextImportRequest) => ModuleRef;
+};
+
+export type TextAuthorFrontend = AuthorFrontend;
 
 export interface TextSurfaceRegistryLike {
   resolve(module: ModuleRef, surface: string): RegisteredSurface | undefined;

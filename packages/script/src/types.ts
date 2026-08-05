@@ -100,5 +100,8 @@ export type ScriptSurfaceInput = {
 export type ScriptSurfaceOutput = {
   readonly nextOffset: number;
   readonly records: readonly ScriptSurfaceRecordDraft[];
+  /** Script is a record-only Surface; it cannot smuggle executable graph declarations. */
+  readonly components: readonly never[];
+  readonly fragments: readonly never[];
   readonly sourceMaps: readonly CanonicalValue[];
 };

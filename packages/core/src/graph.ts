@@ -48,10 +48,10 @@ function normalizeRoot(root: CandidateRoot): CandidateRoot {
   const value = {
     id: root.value.id,
     value: normalizedStoredValue(root.value.value),
+    ...(root.value.validation === undefined ? {} : { validation: root.value.validation }),
+    ...(root.value.provenance === undefined ? {} : { provenance: canonicalize(root.value.provenance) }),
   };
-  return root.value.provenance === undefined
-    ? { kind: "value", value }
-    : { kind: "value", value: { ...value, provenance: canonicalize(root.value.provenance) } };
+  return { kind: "value", value };
 }
 
 function normalizeOutput(output: LogicalOutput): LogicalOutput {
@@ -337,6 +337,9 @@ function candidateType(program: LinkedProgram, graph: CompiledGraph, candidate: 
         ? {}
         : { provenance: candidate.root.value.provenance }),
     },
+    ...(candidate.root.value.validation === undefined
+      ? {}
+      : { validation: candidate.root.value.validation }),
   });
   verifyRecord(program.closure, provisional);
   return provisional.type;

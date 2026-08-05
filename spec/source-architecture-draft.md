@@ -1,6 +1,6 @@
 # SVML Source Architecture Draft
 
-> **Executable v1 candidate; not yet publicly frozen.**
+> **Executable v1 research oracle; superseded as the v2 architecture target.**
 >
 > 本文记录截至 2026-07-31 的首个公开目标 SVML v1 源码架构。SVML 尚未发布，
 > 因此不为仓库中的早期原型保留兼容层；独立 Segment 端点与 `2M + 2N` 直接属于

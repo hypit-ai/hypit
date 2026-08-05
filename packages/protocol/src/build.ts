@@ -52,6 +52,15 @@ export type ProvidedOrigin = {
 
 export type RecordOrigin = AuthoredOrigin | DerivedOrigin | ObservedOrigin | ProvidedOrigin;
 
+/** Content-bound Host assertion that the Type owner's locked validator accepted this exact value. */
+export type TypeValidationReceipt = {
+  readonly format: "svml.type-validation@1";
+  readonly id: Digest;
+  readonly type: TypeRef;
+  readonly recordDigest: Digest;
+  readonly validatorDigest: Digest;
+};
+
 export type TypedRecord = {
   readonly id: RecordId;
   readonly type: TypeRef;
@@ -59,6 +68,7 @@ export type TypedRecord = {
   readonly digest: Digest;
   readonly conformance: Conformance;
   readonly origin: RecordOrigin;
+  readonly validation?: TypeValidationReceipt;
 };
 
 export type TypedModule = {
@@ -192,6 +202,7 @@ export type ProvidedValue = {
   readonly id: RecordId;
   readonly value: StoredValue;
   readonly provenance?: CanonicalValue;
+  readonly validation?: TypeValidationReceipt;
 };
 
 export type CandidateRoot =
@@ -310,6 +321,7 @@ export type ProducerCompletedEvent = {
   readonly command: CommandId;
   readonly outputs: Readonly<Record<string, StoredValue>>;
   readonly needs: Readonly<Record<string, CanonicalValue>>;
+  readonly validations?: Readonly<Record<string, TypeValidationReceipt>>;
 };
 
 export type NeedFulfilledEvent = {
@@ -322,6 +334,7 @@ export type NeedFulfilledEvent = {
   readonly conformance: Conformance;
   readonly delivery: Delivery;
   readonly metadata: CanonicalValue;
+  readonly validation?: TypeValidationReceipt;
 };
 
 export type CommandFailedEvent = {

@@ -26,6 +26,37 @@ export function sealProgramSpace(value: Omit<ProgramSpace, "digest">): ProgramSp
   return { ...value, digest: computeProgramSpaceDigest(value) };
 }
 
+export function programSpaceFrameCount(programSpace: ProgramSpace): number {
+  const frames = programSpace.durationSec
+    * programSpace.frameRate.numerator
+    / programSpace.frameRate.denominator;
+  const rounded = Math.round(frames);
+  if (!Number.isSafeInteger(rounded) || rounded < 1 || Math.abs(frames - rounded) > 1e-7) {
+    throw new Error("ProgramSpace duration must end on an exact frame boundary.");
+  }
+  return rounded;
+}
+
+export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {
+  if (programSpace.contract !== "svml.program-space@0") throw new Error("Unsupported ProgramSpace contract.");
+  const { digest: _digest, ...content } = programSpace;
+  if (!isDigest(programSpace.digest) || programSpace.digest !== computeProgramSpaceDigest(content)) {
+    throw new Error("ProgramSpace digest does not match its canonical contents.");
+  }
+  const { numerator, denominator } = programSpace.frameRate;
+  if (
+    !Number.isSafeInteger(numerator)
+    || numerator <= 0
+    || !Number.isSafeInteger(denominator)
+    || denominator <= 0
+    || !Number.isFinite(programSpace.durationSec)
+    || programSpace.durationSec <= 0
+  ) {
+    throw new Error("ProgramSpace is invalid.");
+  }
+  programSpaceFrameCount(programSpace);
+}
+
 export function sealSpeechBasis(value: Omit<SpeechBasis, "basisDigest">): SpeechBasis {
   return { ...value, basisDigest: computeSpeechBasisDigest(value) };
 }
@@ -38,25 +69,10 @@ export function sealAlignedTranscriptEvidence(
 
 export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
   if (basis.contract !== "svml.speech-basis@1") throw new Error("Unsupported SpeechBasis contract.");
-  const { digest: _programDigest, ...programContent } = basis.programSpace;
-  if (
-    !isDigest(basis.programSpace.digest)
-    || basis.programSpace.digest !== computeProgramSpaceDigest(programContent)
-  ) {
-    throw new Error("ProgramSpace digest does not match its canonical contents.");
-  }
+  assertProgramSpaceIdentity(basis.programSpace);
   const { basisDigest: _basisDigest, ...basisContent } = basis;
   if (!isDigest(basis.basisDigest) || basis.basisDigest !== computeSpeechBasisDigest(basisContent)) {
     throw new Error("SpeechBasis digest does not match its canonical contents.");
-  }
-  const { numerator, denominator } = basis.programSpace.frameRate;
-  if (
-    !Number.isSafeInteger(numerator)
-    || numerator <= 0
-    || !Number.isSafeInteger(denominator)
-    || denominator <= 0
-  ) {
-    throw new Error("ProgramSpace frame rate must be a positive rational number.");
   }
   if (
     !Number.isFinite(basis.programSpace.durationSec)
@@ -82,22 +98,7 @@ export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
   if (!isDigest(basis.basisDigest) || !isDigest(basis.narrativeDigest)) {
     throw new Error("SpeechAudioBasis identity digest is invalid.");
   }
-  const { digest: _programDigest, ...programContent } = basis.programSpace;
-  if (
-    !isDigest(basis.programSpace.digest)
-    || basis.programSpace.digest !== computeProgramSpaceDigest(programContent)
-  ) {
-    throw new Error("ProgramSpace digest does not match its canonical contents.");
-  }
-  const { numerator, denominator } = basis.programSpace.frameRate;
-  if (
-    !Number.isSafeInteger(numerator)
-    || numerator <= 0
-    || !Number.isSafeInteger(denominator)
-    || denominator <= 0
-  ) {
-    throw new Error("ProgramSpace frame rate must be a positive rational number.");
-  }
+  assertProgramSpaceIdentity(basis.programSpace);
   if (
     !Number.isFinite(basis.programSpace.durationSec)
     || basis.programSpace.durationSec <= 0

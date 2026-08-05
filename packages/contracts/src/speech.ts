@@ -54,16 +54,6 @@ export type SpeechAudioBasis = {
   readonly segments: readonly SpeechBasisSegment[];
 };
 
-/** Deterministic visual projection of one atomic SpeechBasis/SpeechTake Product. */
-export type SpeechVisualTrack = {
-  readonly contract: "svml.speech-visual-track@1";
-  readonly basisDigest: Digest;
-  readonly narrativeDigest: Digest;
-  readonly programSpace: ProgramSpace;
-  readonly visualTrack: SpeechBasis["visualTrack"];
-  readonly segments: readonly SpeechBasisSegment[];
-};
-
 export type SpeechWordEvidence = {
   readonly text: string;
   readonly startSec?: number;
@@ -155,6 +145,7 @@ export type CompleteSemanticMap = {
   readonly basisDigest: Digest;
   readonly audioArtifactDigest: Digest;
   readonly programSpaceDigest: Digest;
+  readonly programSpace: ProgramSpace;
   readonly evidenceDigest: Digest;
   readonly locatorDigest: Digest;
   readonly quantizationPolicy: "nearest-frame";

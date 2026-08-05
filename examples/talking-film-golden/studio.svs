@@ -1,0 +1,87 @@
+<sheet version="1" id="studio">
+
+  /* Exact font bytes become FontArtifactRef values during author lowering. */
+  font.inter-semibold {
+    src: ./assets/Inter-SemiBold.woff2;
+    weight: 600;
+    style: normal;
+  }
+
+  font.inter-black {
+    src: ./assets/Inter-Black.woff2;
+    weight: 900;
+    style: normal;
+  }
+
+  film.vertical {
+    width: 1080;
+    height: 1920;
+    frame-rate: 30;
+    background: #09090B;
+  }
+
+  speech.full {
+    stack-order: 10;
+    x: 0;
+    y: 0;
+    width: 1;
+    height: 1;
+    fit: cover;
+  }
+
+  broll.product {
+    stack-order: 40;
+    x: 0.08;
+    y: 0.20;
+    width: 0.84;
+    height: 0.48;
+    fit: contain;
+    background: #111116;
+    radius: 28;
+    enter: slide-up 8f;
+    exit: fade 6f;
+  }
+
+  caption.short-cues {
+    model: gemini-2.5-flash;
+    max-words: 5;
+    max-lines: 2;
+  }
+
+  caption.dialogue {
+    stack-order: 70;
+    x: 0.08;
+    y: 0.76;
+    width: 0.84;
+    font: inter-semibold;
+    size: 58;
+    line-height: 0.96;
+    align: center;
+    fill: #FFFFFF;
+    background: #09090BCC;
+    padding: 16 24;
+    radius: 18;
+  }
+
+  caption.alice {
+    active-fill: #73FBD3;
+  }
+
+  caption.bob {
+    active-fill: #FFD166;
+  }
+
+  text.title {
+    stack-order: 90;
+    x: 0.06;
+    y: 0.06;
+    width: 0.88;
+    height: 0.10;
+    font: inter-black;
+    size: 64;
+    align: center;
+    fill: #FFFFFF;
+    tracking: -1;
+  }
+
+</sheet>

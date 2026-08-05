@@ -1,5 +1,8 @@
 # Speech Program and Caption v1
 
+> **Executable v1 research record.** v2 retains the authoritative-Script and measured-evidence
+> principles, but its Kernel and final Track contracts are specified separately.
+
 本文定义尚未公开发布的 SVML v1 标准口播路径。它不创建 v2，也不保留仓库早期
 原型的兼容层。翻译、多语言、后剪辑、VLM、bbox 与视觉反向定位不属于 v1。
 
@@ -339,7 +342,7 @@ Timing provider、Locator 或 Caption Planner；作者或 Composite 最终只把
 接线；它不能把 Timing、Map 或 CaptionPlan 变成运行时黑盒。Compiler 不认识
 `speech-program` 这个名字，只验证展开后的类型、唯一性和完整性。
 
-## 7. Compiler、Library、Runtime 边界
+## 8. Compiler、Library、Runtime 边界
 
 Compiler 内建：Script parse、SemanticIndex、typed Plan、唯一 basis/map/root 与
 零或一 CaptionTrack 验证、Map 完整性、TemporalBinding、隔离 Component ABI 和

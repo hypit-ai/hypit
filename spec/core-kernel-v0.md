@@ -1,6 +1,7 @@
 # SVML Core Kernel v0
 
-Status: executable bootstrap contract; deliberately incomplete.
+Status: historical bootstrap contract; superseded by
+[`core-kernel-v1.md`](./core-kernel-v1.md).
 
 Core v0 is a domain-free verifier and deterministic state reducer. It does not parse source,
 resolve package locations, execute implementations, access an artifact store, call providers,

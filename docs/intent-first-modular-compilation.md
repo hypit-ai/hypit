@@ -29,25 +29,24 @@ Basis/Map/Track/HyperFrames 编译路径，也修正了讨论过程中一度把�
 组件、Kernel、Frontend、Requirement 和 Recipe 都是包的导出能力，由固定的数据
 Manifest 描述，包的实现可以使用 JS、Wasm 或其他受 Host 支持的形式。
 
-### 2026-08-04 Kernel 修订
+### 历史 Kernel 修订及当前替代
 
-后续讨论确认：Core 不能只被描述为“对预先给定 BuildPlan 推进事件的状态机”。SVML
-最重要的人性化编译语义是完整类型化 Graph、任意 Target、通用 Pin 和从 Target
-反向求 Demand。Film/HyperFrames 不是每次 Build 的固定根；BuildPlan 是
-`CompiledGraph + BuildIntent(Targets + Pins)` 的派生结果。
+2026-08-04 的讨论首先确认：Core 不能只被描述为“对预先给定 BuildPlan 推进事件的
+状态机”。Film/HyperFrames 不是每次 Build 的固定根，BuildPlan 必须从完整 Graph 和本次
+Target 选择反向派生。次日实现进一步把当时的 `BuildIntent + PinBinding + Alternative`
+替换为当前 `BuildRequest + Candidate` 模型；Pin 只是宿主选择 Existing-Value Candidate
+的产品动作。
 
 同时确认：Track、SpeechBasis 等共同语言由独立 Contract Package 定义，Core 只
 拥有 TypeRef/Schema 元语言，不全局注册领域类型；一个 Core 构建完成后才发布的未知
 组件必须能通过 Manifest 与隔离 Worker 动态加入，而不重发 Core/CLI/Hosted 主服务。
 
-同日 Realization 修订进一步收紧“鸭子协议”：Runtime 不再按返回 TypeRef 为一个 Need
-挑 substitute。一个逻辑输出在完整 Graph 中声明 exact Primary 和零个或多个命名
-Alternatives；BuildIntent 显式选择 Alternative，且它只能使用 Primary 输入的子集。
-Pin 是零输入 Binding。Provider 只为被选中的 exact Capability 绑定执行 Endpoint。
-本文早期段落中“任意兼容 Claim/Provider 可直接满足 Requirement”的探索性表述，均由
-[`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md) 的现行规则取代。
-完整规范见 [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md)。若本文
-后续旧例与该规范冲突，以新 Kernel 规范为准。
+当前模型中，一个 Logical Output 声明 Primary 和零个或多个 Candidate；BuildRequest
+按 CandidateId 显式选择。Candidate 可以由 Operation 或 Existing Value 实现，Core 不再
+拥有 Alternative/Pin 两套分支。Provider 只为已经被选中 Operation 提出的 exact
+Capability 绑定 Endpoint。完整规范见 [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md)
+和 [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)。
+本文后续旧例若与它们冲突，以规范和当前代码为准。
 
 ### 2026-08-03 首个 Frontend 竖切
 
@@ -957,6 +956,12 @@ SemanticMap、TimingEvidence 和 CaptionPlan 仍然只是对权威作者稿件�
 
 ## 12. 两段 Seedance、双人对话和字幕的完整例子
 
+> 本节保留早期最小草图以解释模块分派。当前完整作者目标已经收敛到
+> [`examples/talking-film-golden`](../examples/talking-film-golden/README.md)：它复用已实现的
+> Script Surface，并补齐声明后使用的 Prompt/参考图、Speech Spine、显式 WhisperX、
+> Gemini 字幕、Seedance B-roll、Text、平级 Track、Film 与显式 Hyperframes render。
+> 两处不再各自发明不同的外层语法；后续实现以黄金示例为准。
+
 使用官方 Text Frontend 并导入 Script 包时，稿件部分采用当前漂亮 Script
 Surface。下面只是一种候选 Program Surface；外层组件语法尚未冻结：
 
@@ -1207,7 +1212,8 @@ Canvas / Timeline UI
 3. 定义不可约的 `SourceUnit + FrontendRef` Driver 绑定、
    `AuthorFrontend.decode(SourceUnit) -> TypedModule` 公开协议和锁格式；
 4. 完成 `@svml/text` 的固定 Import Prologue、Module Manifest、Surface Registry
-   与 raw/structured Surface 分派；首个可信 registry 竖切已实现，包解析和沙箱待补；
+   与 raw/structured Surface 分派；可信 registry、精确传递 Manifest 闭包、Node 文件系统
+   Source Host 和 `check/plan` 门面已经实现，自动包安装、锁定代码加载和沙箱待补；
 5. 把 Script parser 和 Formatter 提取为普通 `@svml/script` Surface 包，同时完整
    保留并更新漂亮 Script goldens；首个具名 Segment 竖切已实现；
 6. 让 Core 入口只接收 `TypedModule[]`，删除 `scriptSource` 和源码类型特判；

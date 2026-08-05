@@ -1,0 +1,83 @@
+import { contractTypes } from "@svml/contracts";
+import { sealGraphFragment } from "@svml/elaborator";
+import type { FragmentOperation } from "@svml/elaborator";
+
+import { filmProducers, filmTypes } from "./manifest.js";
+import type { FilmAssemblyFragmentOptions, FilmTrackInput } from "./types.js";
+
+const input = (name: string) => ({ kind: "fragment-input" as const, name });
+const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
+
+function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] {
+  const names = new Set(["program", "space"]);
+  return [...tracks]
+    .map((track) => ({ name: track.name.trim(), kind: track.kind }))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((track) => {
+      if (!track.name) throw new Error("Film Track input name must not be empty.");
+      if (names.has(track.name)) throw new Error(`Film Track input name ${track.name} is reserved or duplicated.`);
+      names.add(track.name);
+      return track;
+    });
+}
+
+/**
+ * Create one hygienic, finite Fragment for a concrete Film declaration. The
+ * author module decides how many Track references it has; Core still receives
+ * ordinary fixed-port Operations after this lowering.
+ */
+export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions) {
+  const tracks = assertTrackInputs(options.tracks);
+  const operations: FragmentOperation[] = [{
+    id: "track-set:empty",
+    producer: filmProducers.createTrackSet,
+    inputs: { space: input("space") },
+    result: { kind: "output" as const, name: "set" },
+  }];
+  let current = "track-set:empty";
+  tracks.forEach((track, index) => {
+    const id = `track-set:append:${String(index).padStart(4, "0")}`;
+    operations.push({
+      id,
+      producer: track.kind === "visual" ? filmProducers.appendVisualTrack : filmProducers.appendAudioTrack,
+      inputs: { set: operation(current), track: input(track.name) },
+      result: { kind: "output" as const, name: "set" },
+    });
+    current = id;
+  });
+  operations.push({
+    id: "film:composition",
+    producer: filmProducers.compileComposition,
+    inputs: { program: input("program"), set: operation(current) },
+    result: { kind: "output" as const, name: "composition" },
+  });
+  const semanticInputs = ["program", "space", ...tracks.map((track) => track.name)];
+  return sealGraphFragment({
+    name: options.name?.trim() || "@svml/film/assembly@1",
+    inputs: [
+      { name: "program", type: filmTypes.program },
+      { name: "space", type: contractTypes.programSpace },
+      ...tracks.map((track) => ({
+        name: track.name,
+        type: track.kind === "visual" ? contractTypes.visualTrack : contractTypes.audioTrack,
+      })),
+    ],
+    operations,
+    exports: [
+      {
+        name: "composition",
+        type: contractTypes.composition,
+        root: operation("film:composition"),
+        semanticInputs,
+        affinity: [
+          { resultPointer: "/id", source: input("program"), sourcePointer: "/id" },
+          { resultPointer: "/programSpace/digest", source: input("space"), sourcePointer: "/digest" },
+          { resultPointer: "/canvas/width", source: input("program"), sourcePointer: "/canvas/width" },
+          { resultPointer: "/canvas/height", source: input("program"), sourcePointer: "/canvas/height" },
+          { resultPointer: "/canvas/clearColor", source: input("program"), sourcePointer: "/canvas/clearColor" },
+        ],
+        fidelity: "exact",
+      },
+    ],
+  });
+}

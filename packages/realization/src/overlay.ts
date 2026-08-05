@@ -16,6 +16,7 @@ import type {
   LinkedProgram,
   OperationNode,
   StoredValue,
+  TypeValidationReceipt,
 } from "@svml/protocol";
 
 export type RealizationOverlay = {
@@ -45,6 +46,7 @@ export type ProvidedCandidateInput = {
   readonly fidelity: Conformance;
   readonly record?: string;
   readonly provenance?: CanonicalValue;
+  readonly validation?: TypeValidationReceipt;
 };
 
 export class RealizationError extends Error {
@@ -101,6 +103,7 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
     value,
     fidelity: input.fidelity,
     ...(input.provenance === undefined ? {} : { provenance: canonicalize(input.provenance) }),
+    ...(input.validation === undefined ? {} : { validation: input.validation }),
   };
   const suffix = digestOf(identity).slice("sha256:".length);
   return {
@@ -112,6 +115,7 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
         id: input.record ?? `provided:${suffix}`,
         value,
         ...(input.provenance === undefined ? {} : { provenance: canonicalize(input.provenance) }),
+        ...(input.validation === undefined ? {} : { validation: input.validation }),
       },
     },
     fidelity: input.fidelity,
