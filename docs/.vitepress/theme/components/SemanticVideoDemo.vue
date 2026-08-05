@@ -147,7 +147,16 @@ const sourceSelections = computed(() => {
       .sort((left, right) => left.depth - right.depth)[0]
     : undefined;
   const outerSelection = config.selections.find((selection) => selection.id === outer?.id);
-  return outerSelection && outerSelection.id !== pinned.id ? [outerSelection, pinned] : [pinned];
+  const pinnedSelections = outerSelection && outerSelection.id !== pinned.id
+    ? [outerSelection, pinned]
+    : [pinned];
+  const activeNestedOverlay = pinned.layer === "scene"
+    && activeOverlaySelection.value
+    && activeOverlaySelection.value.start >= pinned.start
+    && activeOverlaySelection.value.end <= pinned.end
+    ? activeOverlaySelection.value
+    : null;
+  return activeNestedOverlay ? [...pinnedSelections, activeNestedOverlay] : pinnedSelections;
 });
 
 const sourceWordLine = computed(() => {
