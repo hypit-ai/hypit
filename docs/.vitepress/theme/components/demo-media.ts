@@ -5,7 +5,7 @@ export type DemoMediaManifest = {
 
 type DemoMediaKind = "image" | "video";
 
-const demoMediaVersion = "20260805-lowbitrate";
+export const demoMediaVersion = "20260805-lowbitrate";
 const resolvedMedia = new Map<string, string>();
 const preloadPromises = new Map<string, Promise<void>>();
 
