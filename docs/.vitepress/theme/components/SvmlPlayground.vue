@@ -8,7 +8,7 @@ import {
 } from "./demo-audio";
 import { rankingMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
-import { createTrimmedDemoTimeline } from "./demo-video-trim";
+import { createDemoTimeline } from "./demo-timeline";
 import { wordCues as rawWordCues, type WordCue } from "./regen-ranking-cues";
 import {
   buildFoldedSourceView,
@@ -71,7 +71,7 @@ type DisplayedSourceLine = SourceDisplayEntry<SourceLine>;
 const ENTER_DURATION = .45;
 const MOVE_DURATION = .55;
 
-const rankingTimeline = createTrimmedDemoTimeline([
+const rankingTimeline = createDemoTimeline([
   { src: rankingMedia.avatars[0], start: 0, end: 12.033333333333333 },
   { src: rankingMedia.avatars[1], start: 12.033333333333333, end: 24.066666666666666 },
   { src: rankingMedia.avatars[2], start: 24.066666666666666, end: 36.1 },
