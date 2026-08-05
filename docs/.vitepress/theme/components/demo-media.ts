@@ -90,18 +90,18 @@ export const rankingMedia = {
     publicAsset("regen-ranking/avatar-3.mp4"),
   ],
   icons: [
-    publicAsset("regen-ranking/ranking-icon-1.jpg"),
-    publicAsset("regen-ranking/ranking-icon-2.jpg"),
-    publicAsset("regen-ranking/ranking-icon-3.jpg"),
-    publicAsset("regen-ranking/ranking-icon-4.jpg"),
-    publicAsset("regen-ranking/ranking-icon-5.jpg"),
+    publicAsset("regen-ranking/ranking-icon-1.webp"),
+    publicAsset("regen-ranking/ranking-icon-2.webp"),
+    publicAsset("regen-ranking/ranking-icon-3.webp"),
+    publicAsset("regen-ranking/ranking-icon-4.webp"),
+    publicAsset("regen-ranking/ranking-icon-5.webp"),
   ],
   broll: [
-    publicAsset("regen-ranking/broll-1.png"),
-    publicAsset("regen-ranking/broll-2.png"),
-    publicAsset("regen-ranking/broll-3.png"),
-    publicAsset("regen-ranking/broll-4.png"),
-    publicAsset("regen-ranking/broll-5.png"),
+    publicAsset("regen-ranking/broll-1.webp"),
+    publicAsset("regen-ranking/broll-2.webp"),
+    publicAsset("regen-ranking/broll-3.webp"),
+    publicAsset("regen-ranking/broll-4.webp"),
+    publicAsset("regen-ranking/broll-5.webp"),
   ],
 } as const;
 
@@ -130,14 +130,14 @@ export const goodBetterBestMedia = {
     publicAsset("good-better-best/speaker-best.mp4"),
   ],
   decks: [
-    publicAsset("good-better-best/deck-votes.png"),
-    publicAsset("good-better-best/deck-attract.png"),
-    publicAsset("good-better-best/deck-features.png"),
+    publicAsset("good-better-best/deck-votes.webp"),
+    publicAsset("good-better-best/deck-attract.webp"),
+    publicAsset("good-better-best/deck-features.webp"),
   ],
   logos: [
-    publicAsset("good-better-best/logo-chatgpt.png"),
-    publicAsset("good-better-best/logo-looksmax.png"),
-    publicAsset("good-better-best/logo-areum.png"),
+    publicAsset("good-better-best/logo-chatgpt.webp"),
+    publicAsset("good-better-best/logo-looksmax.webp"),
+    publicAsset("good-better-best/logo-areum.webp"),
   ],
 } as const;
 
