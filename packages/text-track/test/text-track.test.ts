@@ -57,7 +57,6 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
   assert.doesNotThrow(() => assertTextTrackProgramIdentity(program, space));
   const track = renderTextTrack(space, program);
   assert.deepEqual(track.presents.map((present) => present.id), ["watermark", "callout"]);
-  assert.equal(track.sources[0]?.digest, program.digest);
   assert.equal(track.presents[0]?.span.endFrameExclusive, 150);
   assert.equal(track.presents[1]?.span.endFrameExclusive, 90);
 
@@ -66,7 +65,6 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "lower",
     programSpaceDigest: space.digest,
-    sources: [{ name: "fixture", digest: digestOf("lower") }],
     presents: [{
       id: "lower",
       span: { startFrame: 0, endFrameExclusive: 150 },

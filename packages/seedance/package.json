@@ -7,8 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@svml/contracts": "workspace:*",
+    "@svml/elaborator": "workspace:*",
     "@svml/generation": "workspace:*",
     "@svml/model-kit": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@svml/protocol": "workspace:*",
+    "@svml/text": "workspace:*"
   }
 }

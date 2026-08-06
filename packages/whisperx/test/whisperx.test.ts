@@ -26,7 +26,6 @@ function basis() {
   const visual = digestOf("whisperx-test:visual");
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
-    narrativeDigest: digestOf("whisperx-test:narrative"),
     programSpace,
     audio: { digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav", durationSec: 1 },
     visualTrack: { clips: [{
@@ -35,15 +34,13 @@ function basis() {
       startSec: 0,
       endSec: 1,
     }] },
-    segments: [{ segmentId: "line", startSec: 0, endSec: 1, sourceArtifactDigest: visual }],
+    segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
   });
 }
 
 function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
   return sealSpeechEvidenceAudio({
     contract: "svml.speech-evidence-audio@1",
-    basisDigest: basis.basisDigest,
-    narrativeDigest: basis.narrativeDigest,
     programSpaceDigest: basis.programSpace.digest,
     sourceAudioArtifactDigest: basis.audio.digest,
     artifact: {
@@ -73,7 +70,7 @@ function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
 
 test("WhisperX consumes only the canonical 16 kHz evidence projection", () => {
   const valid = evidenceAudio(basis());
-  assert.equal(whisperXRequestForEvidenceAudio(valid).basisDigest, valid.basisDigest);
+  assert.equal(whisperXRequestForEvidenceAudio(valid).audio.digest, valid.artifact.digest);
   const tampered = { ...valid, sampleFrames: 16_001 };
   assert.throws(() => whisperXRequestForEvidenceAudio(tampered), /sample map|digest/u);
 });
@@ -83,11 +80,8 @@ test("WhisperX normalization verifies its model-specific result before lowering 
   const measured = sealWhisperXAlignmentEvidence({
     contract: "svml.whisperx-alignment-evidence@2",
     engine: "whisperx",
-    basisDigest: source.basisDigest,
-    audioArtifactDigest: source.audio.digest,
-    evidenceAudioDigest: evidenceAudio(source).evidenceAudioDigest,
+    audioArtifactDigest: evidenceAudio(source).artifact.digest,
     programSpaceDigest: source.programSpace.digest,
-    rawEvidenceArtifactDigest: digestOf("whisperx-test:raw"),
     durationSec: 1,
     segments: [{
       sourceSegmentId: "line",
@@ -99,7 +93,7 @@ test("WhisperX normalization verifies its model-specific result before lowering 
   });
   const normalized = normalizeWhisperXAlignment(measured);
   assert.equal(normalized.contract, "svml.aligned-transcript-evidence@1");
-  assert.equal(normalized.basisDigest, source.basisDigest);
+  assert.equal(normalized.audioArtifactDigest, evidenceAudio(source).artifact.digest);
   assert.throws(
     () => normalizeWhisperXAlignment({
       ...measured,

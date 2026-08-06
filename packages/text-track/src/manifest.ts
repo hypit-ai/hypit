@@ -86,7 +86,6 @@ export const textTrackManifest: ModuleManifest = {
       type: contractTypes.visualTrack,
       affinity: [
         { resultPointer: "/programSpaceDigest", input: "space", inputPointer: "/digest" },
-        { resultPointer: "/sources/0/digest", input: "program", inputPointer: "/digest" },
       ],
     }],
     needs: [],

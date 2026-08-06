@@ -31,3 +31,7 @@ semantic-preserving formatter and the raw `decodeScriptSurface` handler. Source 
 state remain private to Script; its authored Narrative Record uses the Frontend-neutral type from
 `@svml/contracts`, so third-party author surfaces can feed the same WhisperX, locator and caption
 components without importing Script internals.
+
+Every named Segment is additionally exported as `script.segment.<id>` with the shared
+`NarrativeExcerpt` type. Seedance and future speech packages consume that narrow value rather than
+Script's parser AST; another authoring package may produce the same contract.

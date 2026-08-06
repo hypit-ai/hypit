@@ -12,6 +12,7 @@ import {
   captionComponent,
   captionManifest,
 } from "@svml/caption";
+import { generationComponent } from "@svml/generation";
 import {
   createNodePackageLock,
   loadNodePackages,
@@ -26,6 +27,7 @@ import {
   speechTakeComponent,
   speechTakeManifest,
 } from "@svml/speech-take";
+import { seedanceComponent } from "@svml/seedance";
 
 import { svmlPackage } from "../src/index.js";
 
@@ -81,12 +83,17 @@ test("the installed official package lock physically contains speech and Caption
     assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/speech-take"), true);
     assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/speech-align"), true);
     assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/caption"), true);
+    assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/media"), true);
+    assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/generation"), true);
+    assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/seedance"), true);
     await writeNodePackageLock(lockPath, lock);
     const packages = await loadNodePackages(lockPath, installedRoot);
     const components = nodePackageComponents(packages);
     assert.equal(components.some((component) => component.name === "@svml/speech-take"), true);
     assert.equal(components.some((component) => component.name === "@svml/speech-align"), true);
     assert.equal(components.some((component) => component.name === "@svml/caption"), true);
+    assert.equal(components.includes(generationComponent), true);
+    assert.equal(components.includes(seedanceComponent), true);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -1,7 +1,61 @@
-import { canonicalize } from "@svml/core";
+import { canonicalize, digestOf } from "@svml/core";
 import type { CanonicalValue } from "@svml/protocol";
 
 import type { ParsedNarrative } from "./types.js";
+
+function cleanProjection(value: string): string {
+  return value
+    .replace(/\s+/gu, " ")
+    .replace(/\s+([,.;:!?])/gu, "$1")
+    .replace(/([([{])\s+/gu, "$1")
+    .replace(/\s+([)\]}])/gu, "$1")
+    .trim();
+}
+
+function joinProjection(parts: readonly string[]): string {
+  return cleanProjection(parts.filter((part) => part.trim()).join(" "));
+}
+
+function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
+  readonly dialogue: string;
+  readonly speech: string;
+} {
+  const speechParts: string[] = [];
+  const dialogue: string[] = [];
+  let role: string | undefined;
+  let turn: string[] = [];
+  const flush = (): void => {
+    const body = joinProjection(turn);
+    if (body) dialogue.push(role === undefined ? body : `${role}: ${body}`);
+    turn = [];
+  };
+  for (const atom of segment.atoms) {
+    if (atom.kind === "role") {
+      flush();
+      role = atom.label;
+      continue;
+    }
+    speechParts.push(atom.speech);
+    turn.push(atom.speech);
+  }
+  flush();
+  return { dialogue: dialogue.join("\n"), speech: joinProjection(speechParts) };
+}
+
+export function narrativeSegmentExcerptValue(
+  parsed: ParsedNarrative,
+  segment: ParsedNarrative["segments"][number],
+): CanonicalValue {
+  const content = {
+    contract: "svml.narrative-excerpt@1",
+    kind: "segment",
+    id: segment.id,
+    tokenStart: segment.tokenStart,
+    tokenEndExclusive: segment.tokenEndExclusive,
+    serializations: segmentSerializations(segment),
+  } as const;
+  return canonicalize({ ...content, excerptDigest: digestOf(canonicalize(content)) });
+}
 
 function semanticBoundary(boundary: {
   readonly tokenIndex: number;

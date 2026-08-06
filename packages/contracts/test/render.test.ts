@@ -86,7 +86,6 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "invalid-font-track",
     programSpaceDigest: space.digest,
-    sources: [{ name: "fixture", digest: digestOf("invalid-font-track") }],
     presents: [{
       id: "title",
       span: { startFrame: 0, endFrameExclusive: 60 },
@@ -119,7 +118,6 @@ test("animated materialized Surfaces must exactly share the Present frame domain
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "surface-track",
     programSpaceDigest: space.digest,
-    sources: [{ name: "receipt", digest: digestOf("surface-receipt") }],
     presents: [{
       id: "surface",
       span: { startFrame: 0, endFrameExclusive: 60 },

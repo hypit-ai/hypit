@@ -29,21 +29,20 @@ duration or becomes a privileged Base.
 
 ## VisualTrack
 
-A VisualTrack is an author-package ownership and provenance boundary. It explicitly binds the
+A VisualTrack is one self-contained render contribution owned by an author package. It explicitly binds the
 [`svml.hyperframes-visual-ir@1`](./hyperframes-visual-ir-v1.md) terminal language and owns zero or
 more frame-exact `VisualPresent` values; every Present owns its own absolute `(order, tieBreak)`
 stacking key and one self-contained, code-free element tree made from box, text, ordinary media and
 typed compositable-Surface primitives. Parent references are Present-local. Media and exact font
 faces enter through content-addressed Artifact references rather than CSS URLs or environment font
 names.
-Every Track also carries named semantic source digests. Producer affinity declarations bind those
-generic commitments to upstream facts without adding Caption, Speech or B-roll fields to the Track
-contract.
+Its ProgramSpace identity is intrinsic because the Track cannot be interpreted without a clock.
+Which Records produced it is Graph/Derivation truth and is deliberately absent from the Track.
 
 Composition flattens Presents across every Track before ordering them. One B-roll package may
 therefore own a board at z=30 and an icon at z=80 while a Text Present from another Track sits at
 z=50. A z change over time is represented by two non-overlapping Presents with different stacking
-keys. Track ownership never creates a render stacking context.
+keys. Track ownership never creates a render stacking context or a provenance chain.
 
 Every element may optionally carry frame-exact local keyframes over opacity, transform, filter or
 clip-path. Those keyframes operate only on that Present's element tree. A B-roll package may lower a

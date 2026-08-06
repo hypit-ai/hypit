@@ -13,6 +13,10 @@ implementation names rather than a public compatibility freeze.
 - `@svml/protocol`: immutable module, graph, build, event and provenance wire data.
 - `@svml/core`: graph/request verification, Candidate selection, reverse Demand compilation,
   OperationId deduplication, finite-plan validation and verified BuildState reduction.
+- the graph-first value audit now keeps dependency truth in `CompiledGraph`, direct execution
+  lineage in `Derivation` and external fulfillment in `Receipt`. Shared result contracts retain only
+  intrinsic interpretation facts: transitive Narrative/request identities, generic Track sources
+  and normalization-stage ancestry are no longer copied through the audiovisual graph.
 - `@svml/component-kit`: the minimal host-neutral deterministic compute SDK. Producer packages
   register against one structural port and receive only command identity plus typed inputs; artifact
   bytes, credentials, network, queues and stores are absent. HyperFrames, HyperFrames Render,
@@ -77,8 +81,8 @@ implementation names rather than a public compatibility freeze.
   canvas, rational frame rate and frame count. A real two-worker MP4 render passes.
 - `@svml/provider-whisperx-local`: model-pinned loopback adapter for the warm WhisperX sidecar. It
   rejects any input other than the canonical evidence WAV, stages those exact bytes without a
-  conversion branch, stores raw sidecar JSON as an Artifact and binds specialist evidence to both
-  the original speech master and `SpeechEvidenceAudio` identity. It now locks and verifies the
+  conversion branch, stores raw sidecar JSON as an Artifact and returns evidence bound to the exact
+  acoustic Artifact and ProgramSpace it measured. It now locks and verifies the
   sidecar protocol, service version, WhisperX version, model, device, compute type and batch size.
 - `services/whisperx`: independently installable Python 3.10–3.13 warm model service locked to
   WhisperX 3.8.6. It is loopback-only, confines staged paths to configured roots, revalidates the
@@ -133,7 +137,7 @@ implementation names rather than a public compatibility freeze.
   activate only their respective facets; the CLI no longer enumerates domain packages.
 - `@svml/cli`: the trusted v2 application host. `check` compiles real Text sources using either the
   default video prelude or an exact external package lock. `plan` is wired directly to Core; the
-  remaining full-video gap is package-local generation, Speech and Track Surfaces, not CLI logic.
+  remaining full-video gap is package-local Speech assembly and Track Surfaces, not CLI logic.
 - the physical `@svml/contracts` workspace distribution now carries independently digested logical
   `@svml/narrative`, `@svml/media`, `@svml/program-space`, `@svml/speech`, `@svml/semantic-time`
   and `@svml/composition` Manifests. Caption timing is owned by `@svml/caption`, not the shared waist.
@@ -143,6 +147,11 @@ implementation names rather than a public compatibility freeze.
   the whole document is collected before forward references are resolved. Script remains an
   explicitly record-only Surface. Surface handlers are awaitable and may request a source asset
   only through the Host capability; they receive neither filesystem paths nor ambient I/O.
+- `@svml/media` and `@svml/seedance`: authored Image bytes, immutable Prompt values and exact
+  Seedance Speech/Video requests now lower through ordinary package Surfaces. Script exports each
+  named Segment as the shared `NarrativeExcerpt` contract, so Seedance consumes no Script parser
+  structure. GeneratedVideoSet stays atomic and the shared generation package deterministically
+  projects its first ordered Blob with exact digest affinity.
 - package-owned Structured Surfaces can resolve explicitly referenced public Records from already
   compiled source imports. This lets a consuming package validate a generic SVS Recipe and emit its
   own nominal typed Program during `check`; component outputs remain symbolic and forward-resolved.
@@ -255,10 +264,9 @@ reference media Endpoint, local HyperFrames Endpoint and local WhisperX Endpoint
 The representative seven-family KIE live suite, one real synthetic-reference upload and the
 retained KIE media replay have passed. Real tests also cover exact 48 kHz → 16 kHz evidence
 projection, byte-identical sidecar staging and a two-worker silent HyperFrames MP4.
-Because the team is prioritizing external capability plumbing before additional video vocabulary,
-the next work is:
+The external capability boundary is now sufficient for the first vertical video. The next work is:
 
-1. implement the namespaced generation, Speech and Track Surfaces specified by
+1. implement the namespaced Speech assembly and Track Surfaces specified by
    `examples/talking-film-golden`; audit production Caption styling/positioning before freezing its
    package-owned SVS Recipe and author Surface;
 2. wire those installed components and local Endpoints into one real source-to-final-video build;
@@ -275,10 +283,11 @@ the next work is:
 - production keychain/Vault credentials, hosted scheduling or distributed workers;
 - AWS/hosted WhisperX, HyperFrames or media Endpoints;
 - production multipart/ranged Artifact streaming and distributed execution adapters;
-- official generation, Speech, Caption, B-roll and Text Track Surfaces and their package-owned SVS
+- official Speech assembly, Caption, B-roll and Text Track Surfaces and their package-owned SVS
   Recipe schemas;
-- the complete `examples/talking-film-golden` source; Script, Film and HyperFrames Render are
-  executable individually, while the intervening producer/Track Surfaces are still missing;
+- the complete `examples/talking-film-golden` source; Script, authored Image, Seedance generation,
+  Film and HyperFrames Render are executable individually, while Speech assembly and Track Surfaces
+  are still missing;
 - a cross-Track effect or adjustment-layer model.
 - a dedicated Base FX model or compatibility placeholder.
 

@@ -44,7 +44,6 @@ function fixture() {
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "caption",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "projection", digest: digestOf("caption-projection") }],
     presents: [{
       id: "cue-1",
       span: { startFrame: 0, endFrameExclusive: 60 },
@@ -59,7 +58,6 @@ function fixture() {
     contract: "svml.audio-track@1",
     id: "speech",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "basis", digest: digestOf("speech-basis") }],
     clips: [{ id: "speech", span: { startFrame: 0, endFrameExclusive: 120 }, artifact: audio, bus: "speech" }],
   });
   return { programSpace, visual, sound };

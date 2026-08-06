@@ -132,7 +132,6 @@ test("Text three-box and frame/content/line/word paint semantics lower without p
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "text-three-box-witness",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "text-program", digest: digestOf("text-layout-v2-program") }],
     presents: [
       textPresent("frame-paint", 0, "frame"),
       textPresent("content-paint", 1, "content"),
@@ -183,10 +182,6 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "caption-three-box-witness",
     programSpaceDigest: programSpace.digest,
-    sources: [
-      { name: "caption-program", digest: digestOf("dual-font-caption-program") },
-      { name: "timed-projection", digest: digestOf("caption-projection") },
-    ],
     presents: [{
       id: "cue-1",
       span: { startFrame: 30, endFrameExclusive: 90 },
@@ -271,7 +266,6 @@ test("one content box lowers independent backdrop and foreground samples of one 
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "media-two-box-witness",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "media-program", digest: digestOf("media-box-style-v1") }],
     presents: [{
       id: "media-card",
       span: { startFrame: 60, endFrameExclusive: 180 },
@@ -346,7 +340,6 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "ranking-witness",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "ranking-program", digest: digestOf("ranking-program") }],
     presents: [
       {
         id: "board",
@@ -373,7 +366,6 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "peer-text",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "text-program", digest: digestOf("peer-text") }],
     presents: [{
       id: "peer",
       span: { startFrame: 0, endFrameExclusive: 300 },
@@ -414,7 +406,6 @@ test("a complex owned visual may materialize as a typed compositable Surface wit
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "materialized-visual-witness",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "materialization-receipt", digest: digestOf("particle-render-receipt") }],
     presents: [{
       id: "surface",
       span: { startFrame: 120, endFrameExclusive: 180 },

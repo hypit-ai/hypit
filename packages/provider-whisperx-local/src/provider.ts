@@ -338,11 +338,8 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
           const evidence: WhisperXAlignmentEvidence = sealWhisperXAlignmentEvidence({
             contract: "svml.whisperx-alignment-evidence@2",
             engine: "whisperx",
-            basisDigest: request.basisDigest,
-            audioArtifactDigest: request.sourceAudioArtifactDigest,
-            evidenceAudioDigest: request.evidenceAudioDigest,
+            audioArtifactDigest: request.audio.digest,
             programSpaceDigest: request.programSpaceDigest,
-            rawEvidenceArtifactDigest: rawArtifact.digest,
             durationSec: request.durationSec,
             segments,
           });
@@ -355,6 +352,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             serviceVersion: expectedServiceVersion,
             whisperxVersion: expectedWhisperXVersion,
             punktTabDigest: expectedPunktTabDigest,
+            rawEvidenceArtifact: rawArtifact,
             language: typeof response.language === "string" ? response.language : request.language ?? "unknown",
             inputTranscoded: false,
           }));

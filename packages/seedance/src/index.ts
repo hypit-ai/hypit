@@ -8,7 +8,11 @@ import {
   verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, Digest, ValueSchema } from "@svml/protocol";
+import {
+  videoContractDependencies,
+} from "@svml/contracts";
+import { canonicalize, digestOf } from "@svml/protocol";
+import type { BlobRef, Digest, TypeRef, ValueSchema } from "@svml/protocol";
 
 export const seedanceModuleRef = { name: "@svml/seedance", version: "0.0.0-dev" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini"] as const;
@@ -39,6 +43,40 @@ export type SeedanceRequestContent<M extends SeedanceModel = SeedanceModel> = {
 export type SeedanceRequest<M extends SeedanceModel = SeedanceModel> = SeedanceRequestContent<M> & {
   readonly requestDigest: Digest;
 };
+
+export type SeedancePrompt = {
+  readonly contract: "svml.seedance-prompt@1";
+  readonly text: string;
+  readonly promptDigest: Digest;
+};
+
+export const seedanceTypes = {
+  prompt: { module: seedanceModuleRef, name: "Prompt" },
+} satisfies Record<string, TypeRef>;
+
+export const seedanceSurfaceImplementationDigests = {
+  prompt: digestOf("@svml/seedance/prompt-surface@1"),
+  speech: digestOf("@svml/seedance/speech-surface@1"),
+  video: digestOf("@svml/seedance/video-surface@1"),
+} as const;
+
+export function sealSeedancePrompt(text: string): SeedancePrompt {
+  const normalized = text.trim();
+  if (normalized.length === 0 || normalized.length > 20_000) {
+    throw new Error("Seedance Prompt must contain 1 to 20,000 characters");
+  }
+  const content = { contract: "svml.seedance-prompt@1" as const, text: normalized };
+  return { ...content, promptDigest: digestOf(canonicalize(content)) };
+}
+
+export function verifySeedancePrompt(value: unknown): asserts value is SeedancePrompt {
+  assertObject(value);
+  if (value.contract !== "svml.seedance-prompt@1" || typeof value.text !== "string" || value.text.length === 0) {
+    throw new Error("Seedance Prompt is invalid");
+  }
+  const content = canonicalize({ contract: value.contract, text: value.text });
+  if (value.promptDigest !== digestOf(content)) throw new Error("Seedance Prompt digest differs");
+}
 
 const referenceSchema: ValueSchema = {
   kind: "oneOf",
@@ -128,7 +166,7 @@ export function sealSeedanceRequest<M extends SeedanceModel>(
   return request;
 }
 
-export const seedanceDefinition = defineExactModelModule({
+const seedanceBaseDefinition = defineExactModelModule({
   module: seedanceModuleRef,
   endpoints: [
     ["standard", "seedance-2"],
@@ -145,7 +183,72 @@ export const seedanceDefinition = defineExactModelModule({
   })),
 });
 
-export const seedanceManifest = seedanceDefinition.manifest;
-export const seedanceManifestDigest = seedanceDefinition.manifestDigest;
-export const seedanceEndpoints = seedanceDefinition.endpoints;
-export const seedanceComponent = seedanceDefinition.component;
+export const seedanceEndpoints = seedanceBaseDefinition.endpoints;
+
+export const seedanceManifest = {
+  ...seedanceBaseDefinition.manifest,
+  dependencies: [
+    ...seedanceBaseDefinition.manifest.dependencies,
+    videoContractDependencies.narrative,
+  ],
+  types: [
+    ...seedanceBaseDefinition.manifest.types,
+    {
+      name: seedanceTypes.prompt.name,
+      schema: generationObjectSchema({
+        contract: { schema: { kind: "literal", value: "svml.seedance-prompt@1" } },
+        text: { schema: generationPromptSchema },
+        promptDigest: { schema: generationDigestSchema },
+      }),
+    },
+  ],
+  surfaces: [
+    {
+      name: "prompt",
+      tag: "Prompt",
+      mode: "structured",
+      outputs: [seedanceTypes.prompt],
+      implementation: {
+        kind: "trusted-frontend-surface",
+        locator: "@svml/seedance/prompt-surface",
+        digest: seedanceSurfaceImplementationDigests.prompt,
+      },
+    },
+    {
+      name: "speech",
+      tag: "Speech",
+      mode: "structured",
+      outputs: Object.values(seedanceEndpoints).map((endpoint) => endpoint.requestType),
+      implementation: {
+        kind: "trusted-frontend-surface",
+        locator: "@svml/seedance/speech-surface",
+        digest: seedanceSurfaceImplementationDigests.speech,
+      },
+    },
+    {
+      name: "video",
+      tag: "Video",
+      mode: "structured",
+      outputs: Object.values(seedanceEndpoints).map((endpoint) => endpoint.requestType),
+      implementation: {
+        kind: "trusted-frontend-surface",
+        locator: "@svml/seedance/video-surface",
+        digest: seedanceSurfaceImplementationDigests.video,
+      },
+    },
+  ],
+} as const;
+export const seedanceManifestDigest = digestOf(seedanceManifest);
+export const seedanceComponent = seedanceBaseDefinition.component;
+export const seedanceDefinition = {
+  ...seedanceBaseDefinition,
+  manifest: seedanceManifest,
+  manifestDigest: seedanceManifestDigest,
+};
+
+export { createSeedanceGenerationFragment } from "./fragment.js";
+export {
+  decodeSeedancePromptSurface,
+  decodeSeedanceSpeechSurface,
+  decodeSeedanceVideoSurface,
+} from "./surface.js";

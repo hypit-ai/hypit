@@ -102,7 +102,6 @@ function sampleTake(label = "generated"): SpeechBasis {
   };
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
-    narrativeDigest: digestOf("narrative:product-test"),
     programSpace,
     audio,
     visualTrack: {
@@ -112,7 +111,6 @@ function sampleTake(label = "generated"): SpeechBasis {
       segmentId: "opening",
       startSec: 0,
       endSec: durationSec,
-      sourceArtifactDigest: audio.digest,
     }],
   });
 }
@@ -164,11 +162,18 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         primary: "opening.audio.project",
         candidates: ["opening.audio.project"],
         semanticInputs: [output("opening.take")],
-        affinity: [{
-          resultPointer: "/basisDigest",
-          source: output("opening.take"),
-          sourcePointer: "/basisDigest",
-        }],
+        affinity: [
+          {
+            resultPointer: "/programSpace/digest",
+            source: output("opening.take"),
+            sourcePointer: "/programSpace/digest",
+          },
+          {
+            resultPointer: "/audio/digest",
+            source: output("opening.take"),
+            sourcePointer: "/audio/digest",
+          },
+        ],
       },
       {
         id: "opening.visual",
@@ -177,9 +182,9 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         candidates: ["opening.visual.project", "opening.visual.existing"],
         semanticInputs: [output("opening.take")],
         affinity: [{
-          resultPointer: "/sources/0/digest",
+          resultPointer: "/programSpaceDigest",
           source: output("opening.take"),
-          sourcePointer: "/basisDigest",
+          sourcePointer: "/programSpace/digest",
         }],
       },
     ],
@@ -311,7 +316,7 @@ test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   assert.equal(visual.programSpaceDigest, take.programSpace.digest);
   assert.equal(audio.programSpaceDigest, take.programSpace.digest);
   assert.equal(programSpace.digest, take.programSpace.digest);
-  assert.deepEqual(visual.sources, audio.sources);
+  assert.equal(visual.presents[0]?.span.endFrameExclusive, audio.clips[0]?.span.endFrameExclusive);
 });
 
 test("a substitute visual Candidate does not contaminate an independent exact audio path", () => {

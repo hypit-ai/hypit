@@ -1,0 +1,13 @@
+{
+  "name": "@svml/media",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/contracts": "workspace:*",
+    "@svml/text": "workspace:*"
+  }
+}

@@ -37,10 +37,12 @@ Store and an S3 Artifact Store therefore produce the same author request digest.
 
 Provider results are atomic `GeneratedImageSet` or `GeneratedVideoSet` Products. They bind:
 
-- provider-neutral author model identity;
-- exact request content digest;
 - one or more content-addressed result artifacts;
 - a digest over the complete Product.
+
+The exact model, mode, requested duration and request digest remain on the selected author
+request/Need and its Receipt. Repeating them in the provider-neutral Product would create a second
+lineage channel beside the Graph and Derivation.
 
 The set is one Product, not a Producer with independently pinnable output ports. A later explicit
 projection component may select one variant. This preserves the Core rule that Candidate selection

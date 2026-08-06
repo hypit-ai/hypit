@@ -58,12 +58,6 @@ function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
   if (basis.contract !== "svml.speech-audio-basis@1") {
     fail("SPEECH_BASIS_CONTRACT", "Unsupported SpeechAudioBasis contract.");
   }
-  if (!isDigest(basis.basisDigest) || !isDigest(basis.narrativeDigest)) {
-    fail("SPEECH_BASIS_DIGEST", "SpeechAudioBasis identity digest is invalid.");
-  }
-  if (basis.narrativeDigest !== narrative.semanticIndex.digest) {
-    fail("SPEECH_BASIS_NARRATIVE", "SpeechAudioBasis belongs to a different Narrative.");
-  }
   const { digest: _programDigest, ...programContent } = basis.programSpace;
   if (!isDigest(basis.programSpace.digest) || basis.programSpace.digest !== computeProgramSpaceDigest(programContent)) {
     fail("SPEECH_PROGRAM_DIGEST", "ProgramSpace digest does not match its canonical contents.");
@@ -93,9 +87,6 @@ function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
     if (segment.startSec < previousEnd - EPSILON) {
       fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} overlaps its predecessor.`);
     }
-    if (!isDigest(segment.sourceArtifactDigest)) {
-      fail("SPEECH_BASIS_ARTIFACT", `SpeechBasis Segment ${segment.segmentId} artifact digest is invalid.`);
-    }
     previousEnd = segment.endSec;
   }
 }
@@ -111,20 +102,14 @@ function validateEvidence(
   if (!Number.isFinite(evidence.durationSec) || evidence.durationSec <= 0) {
     fail("SPEECH_DURATION", "Aligned-transcript duration must be positive and finite.");
   }
-  if (evidence.basisDigest !== basis.basisDigest) {
-    fail("SPEECH_EVIDENCE_BASIS", "Aligned transcript was measured from a different SpeechBasis.");
-  }
-  if (evidence.audioArtifactDigest !== basis.audio.digest) {
-    fail("SPEECH_EVIDENCE_AUDIO", "Aligned transcript was measured from a different audio Artifact.");
+  if (!isDigest(evidence.audioArtifactDigest)) {
+    fail("SPEECH_EVIDENCE_AUDIO", "Aligned transcript has no acoustic Artifact identity.");
   }
   if (evidence.programSpaceDigest !== basis.programSpace.digest) {
     fail("SPEECH_EVIDENCE_PROGRAM", "Aligned transcript uses a different ProgramSpace.");
   }
   if (Math.abs(evidence.durationSec - basis.programSpace.durationSec) > EPSILON) {
     fail("SPEECH_EVIDENCE_DURATION", "Aligned transcript duration differs from SpeechBasis.");
-  }
-  if (!isDigest(evidence.rawEvidenceArtifactDigest)) {
-    fail("SPEECH_EVIDENCE_RAW", "Aligned transcript raw Artifact digest is invalid.");
   }
   const { evidenceDigest: _evidenceDigest, ...evidenceContent } = evidence;
   if (
@@ -500,13 +485,7 @@ export function locateSpeechTiming(
   });
   const payload = {
     contract: "svml.complete-semantic-map@1" as const,
-    semanticIndexDigest: narrative.semanticIndex.digest,
-    basisDigest: basis.basisDigest,
-    audioArtifactDigest: basis.audio.digest,
-    programSpaceDigest: basis.programSpace.digest,
     programSpace: basis.programSpace,
-    evidenceDigest: evidence.evidenceDigest,
-    locatorDigest: speechLocatorDigest,
     quantizationPolicy: "nearest-frame" as const,
     durationSec: evidence.durationSec,
     segments: timedSegments,

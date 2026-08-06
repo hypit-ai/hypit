@@ -39,8 +39,6 @@ export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
   assertSpeechBasisIdentity(basis);
   return {
     contract: "svml.speech-audio-basis@1",
-    basisDigest: basis.basisDigest,
-    narrativeDigest: basis.narrativeDigest,
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -59,10 +57,6 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
     visualIr: "svml.hyperframes-visual-ir@1",
     id: `speech-visual:${basis.basisDigest}`,
     programSpaceDigest: basis.programSpace.digest,
-    sources: [
-      { name: "basis", digest: basis.basisDigest },
-      { name: "narrative", digest: basis.narrativeDigest },
-    ],
     presents: basis.visualTrack.clips.map((clip, index) => {
       const startFrame = frameAt(basis, clip.startSec);
       const endFrameExclusive = Math.min(totalFrames, frameAt(basis, clip.endSec));
@@ -99,10 +93,6 @@ export function projectSpeechAudioTrack(basis: SpeechBasis): AudioTrack {
     contract: "svml.audio-track@1",
     id: `speech-audio:${basis.basisDigest}`,
     programSpaceDigest: basis.programSpace.digest,
-    sources: [
-      { name: "basis", digest: basis.basisDigest },
-      { name: "narrative", digest: basis.narrativeDigest },
-    ],
     clips: [{
       id: "speech",
       span: { startFrame: 0, endFrameExclusive: programSpaceFrameCount(basis.programSpace) },

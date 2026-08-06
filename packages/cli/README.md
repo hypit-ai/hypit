@@ -27,10 +27,10 @@ pnpm svml:v2 status <build-id> --runtime ./svml.runtime.ts
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
 ```
 
-`check` is usable for the implemented Script, Film, Render and recursively imported `.svs` sources.
-`plan` is fully implemented by the generic Node compiler. A complete author video still awaits the
-generation, Speech and Track Surfaces that produce Film's inputs; the CLI does not fabricate those
-missing facts.
+`check` is usable for the implemented Script, authored Image, Seedance generation, Film, Render and
+recursively imported `.svs` sources. `plan` is fully implemented by the generic Node compiler. A
+complete author video still awaits Speech assembly and Track Surfaces that produce Film's inputs;
+the CLI does not fabricate those missing facts.
 
 `build` compiles the same locked BuildState and passes it to a trusted local Runtime config module.
 The default Build identity is content-derived, so the same invocation resumes durable local state;

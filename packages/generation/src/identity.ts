@@ -55,8 +55,6 @@ export function verifyGenerationRequestDigest(value: unknown): asserts value is 
 
 export function sealGeneratedImageSet(content: GeneratedImageSetContent): GeneratedImageSet {
   assert(content.contract === "svml.generated-image-set@1", "Generated image contract is invalid");
-  assert(content.model.trim().length > 0, "Generated image model is empty");
-  assert(isDigest(content.requestDigest), "Generated image request digest is invalid");
   assert(content.images.length > 0, "Generated image set is empty");
   content.images.forEach((artifact) => assertGenerationBlobRef(artifact, "image/"));
   const normalized = canonicalize(content) as unknown as GeneratedImageSetContent;
@@ -66,8 +64,6 @@ export function sealGeneratedImageSet(content: GeneratedImageSetContent): Genera
 export function verifyGeneratedImageSet(value: unknown): asserts value is GeneratedImageSet {
   const object = plainObject(value, "Generated image set") as unknown as GeneratedImageSet;
   assert(object.contract === "svml.generated-image-set@1", "Generated image contract is invalid");
-  assert(typeof object.model === "string" && object.model.length > 0, "Generated image model is empty");
-  assert(isDigest(object.requestDigest), "Generated image request digest is invalid");
   assert(Array.isArray(object.images) && object.images.length > 0, "Generated image set is empty");
   object.images.forEach((artifact) => assertGenerationBlobRef(artifact, "image/"));
   const { resultDigest, ...content } = object;
@@ -76,10 +72,6 @@ export function verifyGeneratedImageSet(value: unknown): asserts value is Genera
 
 export function sealGeneratedVideoSet(content: GeneratedVideoSetContent): GeneratedVideoSet {
   assert(content.contract === "svml.generated-video-set@1", "Generated video contract is invalid");
-  assert(content.model.trim().length > 0, "Generated video model is empty");
-  assert(isDigest(content.requestDigest), "Generated video request digest is invalid");
-  assert(Number.isFinite(content.requestedDurationSec) && content.requestedDurationSec >= 0,
-    "Generated video requested duration is invalid");
   assert(content.videos.length > 0, "Generated video set is empty");
   content.videos.forEach((artifact) => assertGenerationBlobRef(artifact, "video/"));
   const normalized = canonicalize(content) as unknown as GeneratedVideoSetContent;
@@ -89,10 +81,6 @@ export function sealGeneratedVideoSet(content: GeneratedVideoSetContent): Genera
 export function verifyGeneratedVideoSet(value: unknown): asserts value is GeneratedVideoSet {
   const object = plainObject(value, "Generated video set") as unknown as GeneratedVideoSet;
   assert(object.contract === "svml.generated-video-set@1", "Generated video contract is invalid");
-  assert(typeof object.model === "string" && object.model.length > 0, "Generated video model is empty");
-  assert(isDigest(object.requestDigest), "Generated video request digest is invalid");
-  assert(Number.isFinite(object.requestedDurationSec) && object.requestedDurationSec >= 0,
-    "Generated video requested duration is invalid");
   assert(Array.isArray(object.videos) && object.videos.length > 0, "Generated video set is empty");
   object.videos.forEach((artifact) => assertGenerationBlobRef(artifact, "video/"));
   const { resultDigest, ...content } = object;

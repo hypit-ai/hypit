@@ -196,10 +196,6 @@ export const mediaPipelineManifest: ModuleManifest = {
       outputs: [{
         name: "selection",
         type: contractTypes.mediaStreamSelection,
-        affinity: [
-          { resultPointer: "/sourceArtifactDigest", input: "inspection", inputPointer: "/source/digest" },
-          { resultPointer: "/inspectionDigest", input: "inspection", inputPointer: "/inspectionDigest" },
-        ],
       }],
       needs: [],
       implementation: {
@@ -221,11 +217,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         name: "media",
         capability: mediaPipelineCapabilities.normalize,
         returns: contractTypes.synchronizedMedia,
-        affinity: [
-          { resultPointer: "/sourceArtifactDigest", input: "source", inputPointer: "/digest" },
-          { resultPointer: "/inspectionDigest", input: "inspection", inputPointer: "/inspectionDigest" },
-          { resultPointer: "/selectionDigest", input: "selection", inputPointer: "/selectionDigest" },
-        ],
       }],
       implementation: {
         kind: "registered",
@@ -242,8 +233,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
         returns: contractTypes.speechEvidenceAudio,
         affinity: [
-          { resultPointer: "/basisDigest", input: "audio", inputPointer: "/basisDigest" },
-          { resultPointer: "/narrativeDigest", input: "audio", inputPointer: "/narrativeDigest" },
           { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpace/digest" },
           { resultPointer: "/sourceAudioArtifactDigest", input: "audio", inputPointer: "/audio/digest" },
         ],

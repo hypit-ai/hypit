@@ -258,7 +258,8 @@ video build still requires:
 
 1. keep the credentialed KIE smoke suite opt-in as Provider contracts evolve (the representative
    seven-family run and synthetic-reference upload passed on 2026-08-06);
-2. official generation, Speech, Caption, B-roll and Text Track Surfaces;
+2. official Speech assembly, Caption, B-roll and Text Track Surfaces; authored Image and exact
+   Seedance Prompt/Speech/Video Surfaces are implemented;
 3. audit and implement the complete package-owned Caption style/positioning Recipe before freezing
    its author Surface; SpeechTake, Speech Align and the current deterministic Caption facets are
    already locked and activated from the official implementation package;

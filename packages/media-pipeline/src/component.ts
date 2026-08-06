@@ -107,11 +107,8 @@ export const mediaPipelineComponent = {
         verifyMediaInspection(inspection);
         verifyMediaStreamSelection(selection);
         verifyMediaSelectionRequest(request);
-        if (inspection.source.digest !== source.digest || selection.sourceArtifactDigest !== source.digest) {
-          throw new Error("Media normalization inputs belong to different source artifacts");
-        }
-        if (selection.inspectionDigest !== inspection.inspectionDigest) {
-          throw new Error("Media normalization selection belongs to another inspection");
+        if (inspection.source.digest !== source.digest) {
+          throw new Error("Media normalization inspection belongs to another source artifact");
         }
         const need: NormalizeMediaNeed = {
           contract: "svml.normalize-media-request@1",
@@ -138,8 +135,6 @@ export const mediaPipelineComponent = {
         }
         const need: ProjectSpeechEvidenceAudioNeed = {
           contract: "svml.project-speech-evidence-audio-request@1",
-          basisDigest: audio.basisDigest,
-          narrativeDigest: audio.narrativeDigest,
           programSpaceDigest: audio.programSpace.digest,
           source: {
             kind: "blob",

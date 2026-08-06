@@ -34,11 +34,7 @@ export const speechAlignManifest: ModuleManifest = {
       name: "map",
       type: contractTypes.completeSemanticMap,
       affinity: [
-        { resultPointer: "/semanticIndexDigest", input: "narrative", inputPointer: "/semanticIndex/digest" },
-        { resultPointer: "/basisDigest", input: "audio", inputPointer: "/basisDigest" },
-        { resultPointer: "/audioArtifactDigest", input: "audio", inputPointer: "/audio/digest" },
-        { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpace/digest" },
-        { resultPointer: "/evidenceDigest", input: "evidence", inputPointer: "/evidenceDigest" },
+        { resultPointer: "/programSpace/digest", input: "audio", inputPointer: "/programSpace/digest" },
       ],
     }],
     needs: [],

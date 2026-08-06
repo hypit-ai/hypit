@@ -132,10 +132,6 @@ export function renderCaptionTrack(
     visualIr: "svml.hyperframes-visual-ir@1",
     id: program.id,
     programSpaceDigest: projection.programSpace.digest,
-    sources: [
-      { name: "program", digest: program.digest },
-      { name: "projection", digest: projection.projectionDigest },
-    ],
     presents: plan.units.flatMap((unit) => {
       const startFrame = Math.max(0, frameAt(projection, unit.startSec));
       const measuredEnd = Math.min(totalFrames, frameAt(projection, unit.endSec));
