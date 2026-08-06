@@ -31,6 +31,7 @@ import type { TypeValidatorRegistryLike } from "@svml/validation";
 import { NodeCompilerError } from "./error.js";
 import type { ModulePackageRegistryLike } from "./modules.js";
 import { NodeSourceHost } from "./source.js";
+import type { NodeSourceArtifact } from "./source.js";
 
 type DiscoveredUnit = {
   readonly source: AuthorSourceUnit;
@@ -88,10 +89,15 @@ export type PlanFileOptions = {
 };
 
 export type PlannedSource = {
-  readonly compilation: CompiledSourceClosure;
+  readonly compilation: NodeCompiledSourceClosure;
   readonly request: BuildRequest;
   readonly plan: BuildPlan;
   readonly state: BuildState;
+};
+
+export type NodeCompiledSourceClosure = CompiledSourceClosure & {
+  /** Host-side transfer bundle; bytes are not serialized into Core BuildState. */
+  readonly sourceArtifacts: readonly NodeSourceArtifact[];
 };
 
 /** Domain-neutral Node facade from a real source file to a verified Source Closure or BuildPlan. */
@@ -111,7 +117,7 @@ export class NodeCompiler {
       ?? createRecordAdmitter(options.validators ?? new TypeValidatorRegistry());
   }
 
-  async compileFile(file: string): Promise<CompiledSourceClosure> {
+  async compileFile(file: string): Promise<NodeCompiledSourceClosure> {
     const entryPath = resolve(file);
     const sources = await NodeSourceHost.create(this.#options.root ?? dirname(entryPath));
     const entry = await sources.load(entryPath);
@@ -124,14 +130,16 @@ export class NodeCompiler {
     const closure = this.#options.modules.createClosure(
       discovered.flatMap((unit) => unit.discovery.modules),
     );
-    return await compileSourceClosure({
+    const compilation = await compileSourceClosure({
       entry,
       frontend: this.#options.entryFrontend,
       closure,
       frontends: this.#options.frontends,
       resolveSource: sources.resolveSource,
+      resolveAsset: sources.resolveAsset,
       admitRecord: this.#admitRecord,
     });
+    return { ...compilation, sourceArtifacts: sources.sourceArtifacts() };
   }
 
   async planFile(file: string, options: PlanFileOptions): Promise<PlannedSource> {

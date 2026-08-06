@@ -26,13 +26,21 @@ Source resolver. Source compilation discovers dependencies before decoding, reje
 duplicate aliases, decodes dependencies first, hygienically qualifies private Record/component
 identities and binds only declared public exports into importer namespaces. Host filesystem paths
 are excluded from Source Closure identity; source contents, Frontend digests and written import
-edges remain covered.
+edges remain covered. Every source asset actually requested during decode is also covered by its
+author-written locator and exact content-addressed `BlobRef`; raw bytes remain a Host transfer
+concern and never enter the parser-independent AuthorModule or Core BuildState.
 
 The orchestration ABI is asynchronous even when a local Text/SVS implementation is synchronous.
 This lets a browser, sandbox or remote repository provide SourceUnits without changing the
 compilation contract. The Host resolver is the authority for path canonicalization, workspace
 containment, symlink policy and I/O; Elaborator receives bytes and identities but never opens files
 or grants filesystem access itself.
+
+Asset resolution follows the same inversion of authority. The decode context exposes only an
+asynchronous `resolveAsset({ from, mediaType })` capability. Elaborator validates the returned
+identity, rejects conflicting media assignments for one written locator and folds the dependency
+into Source Closure identity. It does not know whether a Host obtained the bytes from a filesystem,
+browser upload, repository object or remote content store.
 
 Frontend output passes a Host-owned Record admission hook before linking. The hook is permitted to
 attach validation evidence but is forbidden to rewrite Record identity, Type, value, digest,

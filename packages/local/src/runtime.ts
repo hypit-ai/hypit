@@ -190,17 +190,30 @@ export async function createLocalRuntime(
     ...(options.scheduling ?? {}),
     buildStore: options.buildStore,
   });
+  const stageSourceArtifacts = async (request: LocalBuildRequest): Promise<void> => {
+    for (const item of request.sourceArtifacts ?? []) {
+      const stored = await options.artifactStore.put(Uint8Array.from(item.bytes), item.artifact.mediaType);
+      assert(
+        stored.digest === item.artifact.digest
+          && stored.size === item.artifact.size
+          && stored.mediaType === item.artifact.mediaType,
+        `Source Artifact ${item.artifact.digest} does not match its staged bytes`,
+      );
+    }
+  };
+  const scheduled = (request: LocalBuildRequest) => ({ id: request.id, state: request.state });
   const runBuild = async (
     request: LocalBuildRequest,
     follow: LocalBuildOptions = {},
   ) => {
+    await stageSourceArtifacts(request);
     const startedAt = Date.now();
     const pollIntervalMs = nonNegativeInteger(follow.pollIntervalMs ?? 1_000, "pollIntervalMs");
     const maxWaitMs = follow.maxWaitMs === undefined
       ? undefined
       : nonNegativeInteger(follow.maxWaitMs, "maxWaitMs");
     while (true) {
-      const [result] = await scheduler.run([request]);
+      const [result] = await scheduler.run([scheduled(request)]);
       if (result === undefined) throw new Error(`Local Scheduler returned no result for ${request.id}`);
       if (follow.follow !== true || result.status !== "paused") return result;
       const pending = result.journal.filter((item) => item.status === "pending");
@@ -214,7 +227,10 @@ export async function createLocalRuntime(
   };
   return {
     build: runBuild,
-    buildMany: (requests) => scheduler.run(requests),
+    async buildMany(requests) {
+      await Promise.all(requests.map(stageSourceArtifacts));
+      return await scheduler.run(requests.map(scheduled));
+    },
     async status(build) {
       return {
         build: await options.buildStore.read(build),

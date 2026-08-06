@@ -31,6 +31,12 @@ A Surface may contribute three kinds of inert data:
 - parser-independent Author Component drafts;
 - content-addressed Graph Fragments used by those components.
 
+Raw and Structured Surface handlers are asynchronous and receive one narrow `resolveAsset()`
+capability. This is the only way a Surface can turn an author-written asset locator into a
+content-addressed `BlobRef`; Text never exposes filesystem APIs or a resolved local path. The
+Compiler Host, not the Surface, owns containment, read-once behavior and byte transfer. A handler
+that does not request assets remains unchanged apart from being awaitable.
+
 Text validates source ranges, duplicate identities, Manifest-declared Record types and complete
 Fragment references. It strips diagnostic ranges before sealing one `svml.author-module@1`, so
 source reflow does not change author semantics. It never expands a Fragment or resolves a component
