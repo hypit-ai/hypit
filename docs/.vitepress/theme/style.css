@@ -84,11 +84,10 @@ body { letter-spacing: -0.012em; }
 .wordmark-cursor {
   display: inline-block;
   margin-left: -.02em;
-  animation: wordmark-cursor-blink .48s step-end 1.42s 3, wordmark-cursor-hide .01s linear 2.86s forwards;
+  animation: wordmark-cursor-blink .48s step-end 1.42s infinite;
 }
 @keyframes wordmark-type { to { width: calc(9ch - .45em); } }
 @keyframes wordmark-cursor-blink { 50% { opacity: 0; } }
-@keyframes wordmark-cursor-hide { to { opacity: 0; } }
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); }
 .hero-statement-viewport-en { height: clamp(108px,12vw,142px); margin-top: 0; }
 .hero-statement-viewport-zh { height: 68px; margin-top: -20px; }
