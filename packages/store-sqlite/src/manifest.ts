@@ -25,7 +25,7 @@ export const sqliteOperationStoreImplementationDigest = digestOf(
 );
 
 export const sqliteStoreRuntimeManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@1",
+  format: "svml.runtime-module@2",
   name: sqliteStoreModuleRef.name,
   version: sqliteStoreModuleRef.version,
   facets: [

@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { AlignedTranscriptSegment, SpeechBasisSegment } from "@svml/contracts";
-import type { ProviderHandlerContext, ProviderHandlerResult } from "@svml/driver-node";
+import type { EndpointInvocationContext, EndpointFulfillment } from "@svml/endpoint-kit";
 import { canonicalize, digestOf } from "@svml/protocol";
 import type { CanonicalValue } from "@svml/protocol";
-import { defineProviderPackage } from "@svml/provider-kit";
+import { defineEndpointPackage } from "@svml/endpoint-kit";
 import {
   sealWhisperXAlignmentEvidence,
   whisperXCapabilities,
@@ -224,7 +224,7 @@ async function limitedJson(response: Response, maxBytes: number, subject: string
   }
 }
 
-function result(value: CanonicalValue, metadata: CanonicalValue): ProviderHandlerResult {
+function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
   return {
     value: { kind: "inline", value },
     conformance: "exact",
@@ -254,7 +254,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
   const requestTimeoutMs = positiveInteger(config.requestTimeoutMs ?? 10 * 60_000, "requestTimeoutMs");
   const maxResponseBytes = positiveInteger(config.maxResponseBytes ?? 64 * 1024 * 1024, "maxResponseBytes");
 
-  return defineProviderPackage({
+  return defineEndpointPackage({
     module: localWhisperXProviderModuleRef,
     facet: "alignment",
     instance: config.instance ?? "whisperx.local",
@@ -284,7 +284,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
       supports: (need) => need.constraints !== null && typeof need.constraints === "object"
         && !Array.isArray(need.constraints)
         && (need.constraints as { readonly contract?: unknown }).contract === "svml.whisperx-alignment-request@2",
-      handler: async (context: ProviderHandlerContext) => {
+      handler: async (context: EndpointInvocationContext) => {
         const request = alignmentRequest(context.need.constraints);
         const audio = await context.artifacts.get(request.audio.digest);
         assert(audio !== undefined && audio.byteLength === request.audio.size,

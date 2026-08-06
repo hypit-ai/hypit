@@ -27,9 +27,9 @@ import {
   start,
 } from "@svml/core";
 import {
-  HostRegistry,
+  ProducerRegistry,
   NodeDriver,
-  ProviderRegistry,
+  EndpointRegistry,
 } from "@svml/driver-node";
 import {
   AuthorFrontendRegistry,
@@ -140,8 +140,8 @@ function build() {
   }));
 }
 
-function producerRegistry(): HostRegistry {
-  const registry = new HostRegistry();
+function producerRegistry(): ProducerRegistry {
+  const registry = new ProducerRegistry();
   registerProducerFacets(registry, mediaPipelineComponent.producers);
   registerProducerFacets(registry, hyperframesComponent.producers);
   registerProducerFacets(registry, hyperframesRenderComponent.producers);
@@ -167,7 +167,7 @@ test("HyperFrames rendering is an explicit exact Need after ordinary document co
     mediaPipelineProducers.projectMuxed.name,
   ].sort());
 
-  const result = await new NodeDriver({ registry: producerRegistry(), validators: validatorRegistry() }).run(build());
+  const result = await new NodeDriver({ producers: producerRegistry(), validators: validatorRegistry() }).run(build());
   assert.equal(result.status, "paused");
   assert.equal(result.state.needs.length, 2);
   const visual = result.state.needs.find((need) => need.capability.name === hyperframesRenderCapabilities.renderVisual.name)!;
@@ -176,10 +176,10 @@ test("HyperFrames rendering is an explicit exact Need after ordinary document co
   assert.deepEqual(visual.constraints, hyperframesVisualRequest(compileHyperframesDocument(composition)));
   const audio = result.state.needs.find((need) => need.capability.name === "render-timeline-audio")!;
   assert.equal(audio.returns.name, contractTypes.timelineAudio.name);
-  assert.equal(result.blocked.every((item) => item.reason === "missing-provider"), true);
+  assert.equal(result.blocked.every((item) => item.reason === "missing-endpoint"), true);
 });
 
-test("separate visual, audio and mux Providers complete one author-visible render", async () => {
+test("separate visual, audio and mux Endpoints complete one author-visible render", async () => {
   const visualArtifact = {
     kind: "blob" as const,
     digest: digestOf("hyperframes-render:visual"),
@@ -198,8 +198,8 @@ test("separate visual, audio and mux Providers complete one author-visible rende
     size: 16_441,
     mediaType: "video/mp4",
   };
-  const providers = new ProviderRegistry();
-  providers.registerProvider(
+  const endpoints = new EndpointRegistry();
+  endpoints.registerImmediateEndpoint(
     "example.hyperframes.local",
     hyperframesRenderCapabilities.renderVisual,
     contractTypes.renderedVisual,
@@ -226,7 +226,7 @@ test("separate visual, audio and mux Providers complete one author-visible rende
       };
     },
   );
-  providers.registerProvider(
+  endpoints.registerImmediateEndpoint(
     "example.media.audio-real",
     mediaPipelineCapabilities.renderAudio,
     contractTypes.timelineAudio,
@@ -250,7 +250,7 @@ test("separate visual, audio and mux Providers complete one author-visible rende
       };
     },
   );
-  providers.registerProvider(
+  endpoints.registerImmediateEndpoint(
     "example.media.mux",
     mediaPipelineCapabilities.mux,
     contractTypes.muxedMedia,
@@ -274,13 +274,13 @@ test("separate visual, audio and mux Providers complete one author-visible rende
       };
     },
   );
-  providers.bind(hyperframesRenderCapabilities.renderVisual, "example.hyperframes.local");
-  providers.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-real");
-  providers.bind(mediaPipelineCapabilities.mux, "example.media.mux");
+  endpoints.bind(hyperframesRenderCapabilities.renderVisual, "example.hyperframes.local");
+  endpoints.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-real");
+  endpoints.bind(mediaPipelineCapabilities.mux, "example.media.mux");
 
   const result = await new NodeDriver({
-    registry: producerRegistry(),
-    providers,
+    producers: producerRegistry(),
+    endpoints,
     validators: validatorRegistry(),
   }).run(build());
   assert.equal(result.status, "complete");
@@ -297,8 +297,8 @@ test("separate visual, audio and mux Providers complete one author-visible rende
 
 test("a render Product cannot claim another frame domain while keeping the requested document", async () => {
   const document = compileHyperframesDocument(composition);
-  const providers = new ProviderRegistry();
-  providers.registerProvider(
+  const endpoints = new EndpointRegistry();
+  endpoints.registerImmediateEndpoint(
     "example.hyperframes.wrong-domain",
     hyperframesRenderCapabilities.renderVisual,
     contractTypes.renderedVisual,
@@ -323,11 +323,11 @@ test("a render Product cannot claim another frame domain while keeping the reque
       metadata: {},
     }),
   );
-  providers.bind(hyperframesRenderCapabilities.renderVisual, "example.hyperframes.wrong-domain");
+  endpoints.bind(hyperframesRenderCapabilities.renderVisual, "example.hyperframes.wrong-domain");
 
   const result = await new NodeDriver({
-    registry: producerRegistry(),
-    providers,
+    producers: producerRegistry(),
+    endpoints,
     validators: validatorRegistry(),
   }).run(build());
   assert.equal(result.status, "paused");

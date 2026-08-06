@@ -24,9 +24,10 @@ import type {
 } from "@svml/contracts";
 import {
   MemoryArtifactStore,
-  ProviderRegistry,
+  EndpointRegistry,
 } from "@svml/driver-node";
-import type { ProviderHandler, ProviderRegistration } from "@svml/driver-node";
+import type { EndpointRegistration } from "@svml/driver-node";
+import type { ImmediateEndpointHandler } from "@svml/endpoint-kit";
 import {
   mediaPipelineCapabilities,
   sealAudioProgramPlan,
@@ -117,12 +118,12 @@ async function fulfillInline(artifacts: MemoryArtifactStore, request: Need): Pro
   return result.value.kind === "inline" ? result.value.value : null;
 }
 
-async function handlerFor(request: Need): Promise<{ handler: ProviderHandler; registration: ProviderRegistration }> {
-  const registry = new ProviderRegistry();
+async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHandler; registration: EndpointRegistration }> {
+  const registry = new EndpointRegistry();
   await createLocalMediaProvider({ processTimeoutMs: 30_000 }).install(registry);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "handler");
+  assert.equal(resolution.registration.kind, "immediate");
   return { handler: resolution.registration.handler, registration: resolution.registration };
 }
 

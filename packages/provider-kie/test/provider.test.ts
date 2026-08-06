@@ -3,9 +3,10 @@ import test from "node:test";
 
 import {
   MemoryArtifactStore,
-  ProviderRegistry,
+  EndpointRegistry,
 } from "@svml/driver-node";
-import type { ProviderEndpoint, ProviderRegistration } from "@svml/driver-node";
+import type { EndpointRegistration } from "@svml/driver-node";
+import type { RecoverableEndpoint } from "@svml/endpoint-kit";
 import { seedanceEndpoints, sealSeedanceRequest } from "@svml/seedance";
 import { digestOf } from "@svml/protocol";
 import type { CanonicalValue, Need } from "@svml/protocol";
@@ -33,8 +34,8 @@ async function endpointFor(
   request: Need,
   fetch: typeof globalThis.fetch,
   now = () => 1_000,
-): Promise<{ endpoint: ProviderEndpoint; registration: ProviderRegistration }> {
-  const registry = new ProviderRegistry();
+): Promise<{ endpoint: RecoverableEndpoint; registration: EndpointRegistration }> {
+  const registry = new EndpointRegistry();
   const provider = createKieProvider({
     fetch,
     fetchImplementationDigest: digestOf("provider-kie:test-fetch"),
@@ -47,7 +48,7 @@ async function endpointFor(
   await provider.install(registry);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "endpoint");
+  assert.equal(resolution.registration.kind, "recoverable");
   return { endpoint: resolution.registration.endpoint, registration: resolution.registration };
 }
 

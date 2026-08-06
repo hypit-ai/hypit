@@ -20,7 +20,7 @@ import {
   sealTypedModule,
   start,
 } from "@svml/core";
-import { HostRegistry, NodeDriver } from "@svml/driver-node";
+import { ProducerRegistry, NodeDriver } from "@svml/driver-node";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
@@ -226,7 +226,7 @@ test("Film stops at Composition and Hyperframes remains an ordinary downstream F
 });
 
 test("the Driver folds peer Tracks, then independently compiles the Composition", async () => {
-  const registry = new HostRegistry();
+  const registry = new ProducerRegistry();
   registry.registerProducer(textTrackProducers.render, renderTextTrackImplementationDigest, ({ inputs }) => ({
     outputs: { track: stored(renderTextTrack(inline(inputs.space) as typeof space, inline(inputs.program) as typeof textProgram)) },
     needs: {},
@@ -252,7 +252,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     needs: {},
   }));
 
-  const result = await new NodeDriver({ registry, validators: validatorRegistry() }).run(build("main.document"));
+  const result = await new NodeDriver({ producers: registry, validators: validatorRegistry() }).run(build("main.document"));
   assert.equal(result.status, "complete");
   const documentRecord = result.state.records.find((record) => record.type.module.name === hyperframesTypes.document.module.name);
   assert(documentRecord);

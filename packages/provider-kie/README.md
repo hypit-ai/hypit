@@ -50,7 +50,7 @@ export default await createProjectLocalRuntime({
     nanoBananaComponent,
     seedreamComponent,
   ],
-  providers: [createKieProvider({
+  endpoints: [createKieProvider({
     instance: "kie.personal",
     apiKey: credentialRef("env", "KIE_API_KEY"),
     defaultConcurrency: 2,

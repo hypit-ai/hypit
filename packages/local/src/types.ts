@@ -1,6 +1,6 @@
 import type { Awaitable, ComponentPackage } from "@svml/component-kit";
 import type { ArtifactAttachment } from "@svml/host";
-import type { NodeProviderPackage } from "@svml/provider-kit";
+import type { EndpointPackage } from "@svml/endpoint-kit";
 import type { BuildState } from "@svml/protocol";
 import type {
   ArtifactStore,
@@ -13,7 +13,6 @@ import type {
   RuntimeModuleManifest,
   RuntimeModuleRegistry,
   RuntimeProfileInstance,
-  RuntimeProviderBinding,
   ScheduledBuildResult,
 } from "@svml/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@svml/validation";
@@ -32,7 +31,7 @@ export type NodeArtifactStorePackage = {
   readonly store: ArtifactStore;
 };
 
-export type { NodeProviderPackage } from "@svml/provider-kit";
+export type { EndpointPackage } from "@svml/endpoint-kit";
 
 export type LocalRuntimeClosureOptions = {
   readonly modules: RuntimeModuleRegistry;
@@ -46,7 +45,7 @@ export type CreateLocalRuntimeOptions = {
   readonly artifactStore: ArtifactStore;
   readonly credentialStore?: CredentialStore;
   readonly components?: readonly ComponentPackage[];
-  readonly providers?: readonly NodeProviderPackage[];
+  readonly endpoints?: readonly EndpointPackage[];
   readonly closure?: LocalRuntimeClosureOptions;
   readonly scheduling?: Omit<LocalBuildSchedulerOptions, "buildStore" | "runtimeClosure">;
   readonly validators?: LocalTypeValidatorRegistry;
@@ -64,7 +63,7 @@ export type ProjectLocalRuntimeOptions = {
   /** Replaces the default project filesystem ArtifactStore without changing Scheduler/Core. */
   readonly artifacts?: NodeArtifactStorePackage;
   readonly components?: readonly ComponentPackage[];
-  readonly providers?: readonly NodeProviderPackage[];
+  readonly endpoints?: readonly EndpointPackage[];
   readonly allowedPermissions?: readonly string[];
   readonly scheduling?: {
     readonly maxConcurrency?: number;

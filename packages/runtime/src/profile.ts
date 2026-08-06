@@ -14,7 +14,7 @@ export type RuntimeFacetRole =
   | "operation-store"
   | "artifact-store"
   | "credential-store"
-  | "provider-endpoint";
+  | "capability-endpoint";
 
 export type RuntimeFacetRef = {
   readonly module: ModuleRef;
@@ -33,14 +33,14 @@ export type RuntimeCapability = {
 
 type RuntimeServiceFacet = {
   readonly name: string;
-  readonly role: Exclude<RuntimeFacetRole, "provider-endpoint">;
+  readonly role: Exclude<RuntimeFacetRole, "capability-endpoint">;
   readonly implementation: RuntimeImplementation;
   readonly permissions: readonly string[];
 };
 
-export type RuntimeProviderFacet = {
+export type RuntimeEndpointFacet = {
   readonly name: string;
-  readonly role: "provider-endpoint";
+  readonly role: "capability-endpoint";
   readonly implementation: RuntimeImplementation;
   readonly permissions: readonly string[];
   readonly fulfills: readonly RuntimeCapability[];
@@ -50,11 +50,11 @@ export type RuntimeProviderFacet = {
   readonly credentialSlots?: readonly string[];
 };
 
-export type RuntimeFacet = RuntimeServiceFacet | RuntimeProviderFacet;
+export type RuntimeFacet = RuntimeServiceFacet | RuntimeEndpointFacet;
 
 /** Static package metadata. Reading it must never execute the implementation it describes. */
 export type RuntimeModuleManifest = {
-  readonly format: "svml.runtime-module@1";
+  readonly format: "svml.runtime-module@2";
   readonly name: string;
   readonly version: string;
   readonly facets: readonly RuntimeFacet[];
@@ -63,18 +63,18 @@ export type RuntimeModuleManifest = {
 export type RuntimeProfileInstance = {
   readonly id: string;
   readonly facet: RuntimeFacetRef;
-  /** Optional authority-wide lane name. The default is provider:<instance id>. */
+  /** Optional authority-wide lane name. The default is endpoint:<instance id>. */
   readonly lane?: string;
   /** Digest of non-secret endpoint/store configuration. Secret bytes must never enter it. */
   readonly configurationDigest?: Digest;
 };
 
-export type RuntimeProviderBinding = RuntimeCapability & {
+export type RuntimeEndpointBinding = RuntimeCapability & {
   readonly endpoint: string;
 };
 
 export type RuntimeProfile = {
-  readonly format: "svml.runtime-profile@1";
+  readonly format: "svml.runtime-profile@2";
   readonly digest: Digest;
   readonly name: string;
   readonly instances: readonly RuntimeProfileInstance[];
@@ -85,7 +85,7 @@ export type RuntimeProfile = {
     readonly artifacts?: string;
     readonly credentials?: string;
   };
-  readonly providers: readonly RuntimeProviderBinding[];
+  readonly endpoints: readonly RuntimeEndpointBinding[];
   readonly scheduling: {
     readonly maxConcurrency: number;
     readonly lanes: readonly { readonly name: string; readonly maxConcurrency: number }[];
@@ -94,16 +94,16 @@ export type RuntimeProfile = {
 
 export type ResolvedRuntimeService = {
   readonly id: string;
-  readonly role: Exclude<RuntimeFacetRole, "provider-endpoint">;
+  readonly role: Exclude<RuntimeFacetRole, "capability-endpoint">;
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
   readonly configurationDigest: Digest;
   readonly permissions: readonly string[];
 };
 
-export type ResolvedRuntimeProvider = {
+export type ResolvedRuntimeEndpoint = {
   readonly id: string;
-  readonly role: "provider-endpoint";
+  readonly role: "capability-endpoint";
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
   readonly configurationDigest: Digest;
@@ -115,17 +115,17 @@ export type ResolvedRuntimeProvider = {
   readonly maxConcurrency: number;
 };
 
-export type ResolvedRuntimeInstance = ResolvedRuntimeService | ResolvedRuntimeProvider;
+export type ResolvedRuntimeInstance = ResolvedRuntimeService | ResolvedRuntimeEndpoint;
 
 export type RuntimeClosure = {
-  readonly format: "svml.runtime-closure@1";
+  readonly format: "svml.runtime-closure@2";
   readonly digest: Digest;
   readonly profile: Digest;
   readonly modules: readonly { readonly module: ModuleRef; readonly digest: Digest }[];
   readonly instances: readonly ResolvedRuntimeInstance[];
   readonly scheduler: string;
   readonly stores: RuntimeProfile["stores"];
-  readonly providers: readonly RuntimeProviderBinding[];
+  readonly endpoints: readonly RuntimeEndpointBinding[];
   readonly scheduling: RuntimeProfile["scheduling"];
 };
 
@@ -215,7 +215,7 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
     implementation: normalizeImplementation(facet.implementation, facet.name),
     permissions: sortedUniqueStrings(facet.permissions, `${facet.name} permissions`),
   };
-  if (facet.role !== "provider-endpoint") return { ...common, role: facet.role };
+  if (facet.role !== "capability-endpoint") return { ...common, role: facet.role };
   const fulfills = facet.fulfills.map(normalizeCapability)
     .sort((left, right) => bindingKey(left).localeCompare(bindingKey(right)));
   assert(fulfills.length > 0, `${facet.name} must fulfill at least one exact capability`);
@@ -223,7 +223,7 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
   assert(facet.lifecycle === "immediate" || facet.lifecycle === "recoverable", `${facet.name} lifecycle is invalid`);
   return {
     ...common,
-    role: "provider-endpoint",
+    role: "capability-endpoint",
     fulfills,
     lifecycle: facet.lifecycle,
     defaultConcurrency: positiveInteger(facet.defaultConcurrency, `${facet.name} defaultConcurrency`),
@@ -232,12 +232,12 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
 }
 
 function normalizeManifest(manifest: RuntimeModuleManifest): RuntimeModuleManifest {
-  assert(manifest.format === "svml.runtime-module@1", "unsupported Runtime Module Manifest format");
+  assert(manifest.format === "svml.runtime-module@2", "unsupported Runtime Module Manifest format");
   assert(manifest.name.trim().length > 0 && manifest.version.trim().length > 0, "runtime module identity is invalid");
   const facets = manifest.facets.map(normalizeFacet).sort((left, right) => left.name.localeCompare(right.name));
   assert(new Set(facets.map((facet) => facet.name)).size === facets.length, `${manifest.name} repeats a Runtime facet`);
   return {
-    format: "svml.runtime-module@1",
+    format: "svml.runtime-module@2",
     name: manifest.name,
     version: manifest.version,
     facets,
@@ -280,15 +280,15 @@ export class RuntimeModuleRegistry {
       for (const permission of instance.permissions) {
         assert(allowed.has(permission), `${instance.id} requires disallowed Runtime permission ${permission}`);
       }
-      if (instance.role === "provider-endpoint" && resolved.facet.role === "provider-endpoint") {
-        assert(instance.lifecycle === resolved.facet.lifecycle, `${instance.id} Provider lifecycle differs`);
+      if (instance.role === "capability-endpoint" && resolved.facet.role === "capability-endpoint") {
+        assert(instance.lifecycle === resolved.facet.lifecycle, `${instance.id} Endpoint lifecycle differs`);
         assert(JSON.stringify(instance.credentialSlots)
-          === JSON.stringify(resolved.facet.credentialSlots ?? []), `${instance.id} Provider credential slots differ`);
+          === JSON.stringify(resolved.facet.credentialSlots ?? []), `${instance.id} Endpoint credential slots differ`);
         assert(JSON.stringify(instance.fulfills.map(bindingKey))
-          === JSON.stringify(resolved.facet.fulfills.map(bindingKey)), `${instance.id} Provider capabilities differ`);
+          === JSON.stringify(resolved.facet.fulfills.map(bindingKey)), `${instance.id} Endpoint capabilities differ`);
         const override = closure.scheduling.lanes.find((lane) => lane.name === instance.lane)?.maxConcurrency;
         assert(instance.maxConcurrency === (override ?? resolved.facet.defaultConcurrency),
-          `${instance.id} Provider concurrency differs`);
+          `${instance.id} Endpoint concurrency differs`);
       }
     }
   }
@@ -296,7 +296,7 @@ export class RuntimeModuleRegistry {
 
 function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest"> {
   return {
-    format: "svml.runtime-profile@1",
+    format: "svml.runtime-profile@2",
     name: profile.name,
     instances: [...profile.instances]
       .map((instance) => ({
@@ -315,7 +315,7 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
       ...(profile.stores.artifacts === undefined ? {} : { artifacts: profile.stores.artifacts }),
       ...(profile.stores.credentials === undefined ? {} : { credentials: profile.stores.credentials }),
     },
-    providers: [...profile.providers]
+    endpoints: [...profile.endpoints]
       .map((binding) => ({ ...normalizeCapability(binding), endpoint: binding.endpoint }))
       .sort((left, right) => bindingKey(left).localeCompare(bindingKey(right))),
     scheduling: {
@@ -328,7 +328,7 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
 }
 
 function verifyProfileShape(profile: RuntimeProfile): void {
-  assert(profile.format === "svml.runtime-profile@1", "unsupported Runtime Profile format");
+  assert(profile.format === "svml.runtime-profile@2", "unsupported Runtime Profile format");
   assert(profile.name.trim().length > 0, "Runtime Profile name is empty");
   assert(profile.scheduler.trim().length > 0, "Runtime Profile scheduler is empty");
   positiveInteger(profile.scheduling.maxConcurrency, "Runtime Profile maxConcurrency");
@@ -343,11 +343,11 @@ function verifyProfileShape(profile: RuntimeProfile): void {
     return instance.id;
   });
   assert(new Set(ids).size === ids.length, "Runtime Profile repeats an instance id");
-  const bindings = profile.providers.map((binding) => {
-    assert(binding.endpoint.trim().length > 0, "Runtime Provider binding endpoint is empty");
+  const bindings = profile.endpoints.map((binding) => {
+    assert(binding.endpoint.trim().length > 0, "Runtime Endpoint binding endpoint is empty");
     return bindingKey(normalizeCapability(binding));
   });
-  assert(new Set(bindings).size === bindings.length, "Runtime Profile repeats a Provider binding");
+  assert(new Set(bindings).size === bindings.length, "Runtime Profile repeats an Endpoint binding");
   const laneNames = profile.scheduling.lanes.map((lane) => {
     assert(lane.name.trim().length > 0, "Runtime Profile lane name is empty");
     positiveInteger(lane.maxConcurrency, `Runtime lane ${lane.name}`);
@@ -360,7 +360,7 @@ export function sealRuntimeProfile(
   value: Omit<RuntimeProfile, "format" | "digest">,
 ): RuntimeProfile {
   const draft: RuntimeProfile = {
-    format: "svml.runtime-profile@1",
+    format: "svml.runtime-profile@2",
     digest: digestOf("unsealed-runtime-profile"),
     ...value,
   };
@@ -376,7 +376,7 @@ export function verifyRuntimeProfile(profile: RuntimeProfile): void {
 
 function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest"> {
   return {
-    format: "svml.runtime-closure@1",
+    format: "svml.runtime-closure@2",
     profile: closure.profile,
     modules: [...closure.modules].map((item) => ({ module: { ...item.module }, digest: item.digest }))
       .sort((left, right) => moduleKey(left.module).localeCompare(moduleKey(right.module))),
@@ -384,7 +384,7 @@ function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest">
       .sort((left, right) => left.id.localeCompare(right.id)),
     scheduler: closure.scheduler,
     stores: { ...closure.stores },
-    providers: [...closure.providers].map((binding) => structuredClone(binding))
+    endpoints: [...closure.endpoints].map((binding) => structuredClone(binding))
       .sort((left, right) => bindingKey(left).localeCompare(bindingKey(right))),
     scheduling: {
       maxConcurrency: closure.scheduling.maxConcurrency,
@@ -394,7 +394,7 @@ function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest">
 }
 
 export function verifyRuntimeClosure(closure: RuntimeClosure): void {
-  assert(closure.format === "svml.runtime-closure@1", "unsupported Runtime Closure format");
+  assert(closure.format === "svml.runtime-closure@2", "unsupported Runtime Closure format");
   assert(isDigest(closure.profile), "Runtime Closure profile digest is invalid");
   assert(isDigest(closure.digest) && closure.digest === digestOf(closureContent(closure)), "Runtime Closure digest differs");
   positiveInteger(closure.scheduling.maxConcurrency, "Runtime Closure maxConcurrency");
@@ -417,13 +417,13 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     assert(isDigest(instance.configurationDigest), `${instance.id} configuration digest is invalid`);
     assert(moduleKeys.includes(moduleKey(instance.facet.module)), `${instance.id} refers to an unlocked Runtime module`);
     sortedUniqueStrings(instance.permissions, `${instance.id} permissions`);
-    if (instance.role === "provider-endpoint") {
-      assert(instance.lane.trim().length > 0, `${instance.id} Provider lane is empty`);
-      positiveInteger(instance.maxConcurrency, `${instance.id} Provider maxConcurrency`);
-      assert(instance.fulfills.length > 0, `${instance.id} Provider fulfills nothing`);
+    if (instance.role === "capability-endpoint") {
+      assert(instance.lane.trim().length > 0, `${instance.id} Endpoint lane is empty`);
+      positiveInteger(instance.maxConcurrency, `${instance.id} Endpoint maxConcurrency`);
+      assert(instance.fulfills.length > 0, `${instance.id} Endpoint fulfills nothing`);
       assert(new Set(instance.fulfills.map(bindingKey)).size === instance.fulfills.length,
-        `${instance.id} Provider repeats a capability`);
-      sortedUniqueStrings(instance.credentialSlots, `${instance.id} Provider credential slots`);
+        `${instance.id} Endpoint repeats a capability`);
+      sortedUniqueStrings(instance.credentialSlots, `${instance.id} Endpoint credential slots`);
     }
     instances.set(instance.id, instance);
   }
@@ -439,18 +439,18 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     const id = closure.stores[name];
     if (id !== undefined) assert(instances.get(id)?.role === role, `Runtime Closure ${name} store has the wrong role`);
   }
-  for (const binding of closure.providers) {
+  for (const binding of closure.endpoints) {
     const endpoint = instances.get(binding.endpoint);
-    assert(endpoint?.role === "provider-endpoint", `${binding.endpoint} is not a Provider Endpoint`);
+    assert(endpoint?.role === "capability-endpoint", `${binding.endpoint} is not a capability Endpoint`);
     assert(endpoint.fulfills.some((item) => sameCapability(item, binding)), `${binding.endpoint} does not fulfill ${bindingKey(binding)}`);
   }
-  assert(new Set(closure.providers.map(bindingKey)).size === closure.providers.length,
-    "Runtime Closure repeats a Provider binding");
-  if (closure.instances.some((instance) => instance.role === "provider-endpoint" && instance.lifecycle === "recoverable")) {
-    assert(closure.stores.operations !== undefined, "recoverable Provider Endpoints require an OperationStore");
+  assert(new Set(closure.endpoints.map(bindingKey)).size === closure.endpoints.length,
+    "Runtime Closure repeats an Endpoint binding");
+  if (closure.instances.some((instance) => instance.role === "capability-endpoint" && instance.lifecycle === "recoverable")) {
+    assert(closure.stores.operations !== undefined, "recoverable Endpoints require an OperationStore");
   }
-  if (closure.instances.some((instance) => instance.role === "provider-endpoint" && instance.credentialSlots.length > 0)) {
-    assert(closure.stores.credentials !== undefined, "credentialed Provider Endpoints require a CredentialStore");
+  if (closure.instances.some((instance) => instance.role === "capability-endpoint" && instance.credentialSlots.length > 0)) {
+    assert(closure.stores.credentials !== undefined, "credentialed Endpoints require a CredentialStore");
   }
 }
 
@@ -476,12 +476,12 @@ export function resolveRuntimeProfile(
       configurationDigest: instance.configurationDigest ?? digestOf({}),
       permissions: [...resolved.facet.permissions],
     };
-    if (resolved.facet.role !== "provider-endpoint") return { ...common, role: resolved.facet.role };
-    const lane = instance.lane ?? `provider:${instance.id}`;
+    if (resolved.facet.role !== "capability-endpoint") return { ...common, role: resolved.facet.role };
+    const lane = instance.lane ?? `endpoint:${instance.id}`;
     const override = profile.scheduling.lanes.find((candidate) => candidate.name === lane)?.maxConcurrency;
     return {
       ...common,
-      role: "provider-endpoint",
+      role: "capability-endpoint",
       fulfills: resolved.facet.fulfills.map((item) => structuredClone(item)),
       lifecycle: resolved.facet.lifecycle,
       credentialSlots: [...(resolved.facet.credentialSlots ?? [])],
@@ -503,26 +503,26 @@ export function resolveRuntimeProfile(
     const id = profile.stores[name];
     if (id !== undefined) assert(byId.get(id)?.role === role, `Runtime Profile ${name} store ${id} has the wrong role`);
   }
-  for (const binding of profile.providers) {
+  for (const binding of profile.endpoints) {
     const endpoint = byId.get(binding.endpoint);
-    assert(endpoint?.role === "provider-endpoint", `${binding.endpoint} is not an active Provider Endpoint`);
+    assert(endpoint?.role === "capability-endpoint", `${binding.endpoint} is not an active capability Endpoint`);
     assert(endpoint.fulfills.some((item) => sameCapability(item, binding)), `${binding.endpoint} does not fulfill ${bindingKey(binding)}`);
   }
-  if (instances.some((instance) => instance.role === "provider-endpoint" && instance.lifecycle === "recoverable")) {
-    assert(profile.stores.operations !== undefined, "recoverable Provider Endpoints require an OperationStore");
+  if (instances.some((instance) => instance.role === "capability-endpoint" && instance.lifecycle === "recoverable")) {
+    assert(profile.stores.operations !== undefined, "recoverable Endpoints require an OperationStore");
   }
-  if (instances.some((instance) => instance.role === "provider-endpoint" && instance.credentialSlots.length > 0)) {
-    assert(profile.stores.credentials !== undefined, "credentialed Provider Endpoints require a CredentialStore");
+  if (instances.some((instance) => instance.role === "capability-endpoint" && instance.credentialSlots.length > 0)) {
+    assert(profile.stores.credentials !== undefined, "credentialed Endpoints require a CredentialStore");
   }
   const draft: RuntimeClosure = {
-    format: "svml.runtime-closure@1",
+    format: "svml.runtime-closure@2",
     digest: digestOf("unsealed-runtime-closure"),
     profile: profile.digest,
     modules: [...modules.values()],
     instances,
     scheduler: profile.scheduler,
     stores: { ...profile.stores },
-    providers: profile.providers.map((binding) => structuredClone(binding)),
+    endpoints: profile.endpoints.map((binding) => structuredClone(binding)),
     scheduling: structuredClone(profile.scheduling),
   };
   const content = closureContent(draft);
@@ -531,13 +531,13 @@ export function resolveRuntimeProfile(
   return closure;
 }
 
-export function runtimeProvider(
+export function runtimeEndpoint(
   closure: RuntimeClosure,
   id: string,
-): ResolvedRuntimeProvider | undefined {
+): ResolvedRuntimeEndpoint | undefined {
   verifyRuntimeClosure(closure);
   const instance = closure.instances.find((candidate) => candidate.id === id);
-  return instance?.role === "provider-endpoint" ? instance : undefined;
+  return instance?.role === "capability-endpoint" ? instance : undefined;
 }
 
 /** Fail before execution if the selected finite BuildPlan has an unbound external requirement. */
@@ -553,7 +553,7 @@ export function verifyRuntimeCoverage(closure: RuntimeClosure, state: BuildState
   }
   for (const requirement of required.values()) {
     assert(
-      closure.providers.some((binding) => sameCapability(binding, requirement)),
+      closure.endpoints.some((binding) => sameCapability(binding, requirement)),
       `Runtime Closure does not bind demanded capability ${bindingKey(requirement)}`,
     );
   }

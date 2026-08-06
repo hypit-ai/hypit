@@ -30,7 +30,7 @@ import type {
   SpeechEvidenceAudio,
   TimelineAudio,
 } from "@svml/contracts";
-import type { ProviderHandlerContext, ProviderHandlerResult } from "@svml/driver-node";
+import type { EndpointInvocationContext, EndpointFulfillment } from "@svml/endpoint-kit";
 import {
   mediaPipelineCapabilities,
   verifyAudioProgramPlan,
@@ -46,7 +46,7 @@ import {
   digestOf,
 } from "@svml/protocol";
 import type { BlobRef, CanonicalValue } from "@svml/protocol";
-import { defineProviderPackage } from "@svml/provider-kit";
+import { defineEndpointPackage } from "@svml/endpoint-kit";
 
 import { parseMediaInspection } from "./probe.js";
 
@@ -136,7 +136,7 @@ async function version(executable: string, timeoutMs: number): Promise<string> {
   return line;
 }
 
-async function sourceBytes(context: ProviderHandlerContext, source: BlobRef): Promise<Uint8Array> {
+async function sourceBytes(context: EndpointInvocationContext, source: BlobRef): Promise<Uint8Array> {
   const bytes = await context.artifacts.get(source.digest);
   assert(bytes !== undefined, `Media source ${source.digest} is unavailable`);
   assert(bytes.byteLength === source.size, `Media source ${source.digest} size differs`);
@@ -144,7 +144,7 @@ async function sourceBytes(context: ProviderHandlerContext, source: BlobRef): Pr
 }
 
 async function stageArtifact(
-  context: ProviderHandlerContext,
+  context: EndpointInvocationContext,
   source: BlobRef,
   path: string,
 ): Promise<void> {
@@ -329,7 +329,7 @@ async function outputInspection(args: {
     timeoutMs: args.timeoutMs, maxProbeOutputBytes: args.maxProbeOutputBytes });
 }
 
-function result(value: CanonicalValue, metadata: CanonicalValue): ProviderHandlerResult {
+function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
   return {
     value: { kind: "inline", value },
     conformance: "exact",
@@ -461,7 +461,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
   const maxProbeOutputBytes = positiveInteger(config.maxProbeOutputBytes ?? 256 * 1024 * 1024,
     "maxProbeOutputBytes");
   const common = { ffmpegPath, ffprobePath, processTimeoutMs, maxProbeOutputBytes };
-  return defineProviderPackage({
+  return defineEndpointPackage({
     module: localMediaProviderModuleRef,
     facet: "media",
     instance: config.instance ?? "media.local",

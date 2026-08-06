@@ -1,5 +1,6 @@
 import { digestOf, reduce, resolveProducer } from "@svml/core";
 import type { ProducerHandlerResult } from "@svml/component-kit";
+import type { EndpointFulfillment } from "@svml/endpoint-kit";
 import type {
   BuildEvent,
   BuildState,
@@ -31,24 +32,23 @@ import type {
 
 import { MemoryArtifactStore } from "./artifacts.js";
 import {
-  HostRegistry,
-  ProviderRegistry,
+  ProducerRegistry,
+  EndpointRegistry,
   producerRegistryKey,
-  providerCapabilityKey,
-  providerReturnKey,
+  endpointCapabilityKey,
+  endpointReturnKey,
 } from "./registry.js";
 import type {
   ArtifactStore,
   BlockedCommand,
   DriverJournalEntry,
   DriverRunResult,
-  ProviderRegistration,
-  ProviderHandlerResult,
+  EndpointRegistration,
 } from "./types.js";
 
 export type NodeDriverOptions = {
-  readonly registry?: HostRegistry;
-  readonly providers?: ProviderRegistry;
+  readonly producers?: ProducerRegistry;
+  readonly endpoints?: EndpointRegistry;
   readonly artifacts?: ArtifactStore;
   readonly operations?: OperationStore;
   readonly credentials?: CredentialStore;
@@ -66,15 +66,15 @@ type Executable =
     }
   | {
       readonly command: FulfillNeedCommand;
-      readonly providerId: string;
+      readonly endpointId: string;
       readonly lane: string;
       readonly maxConcurrency: number;
-      readonly registration: ProviderRegistration;
+      readonly registration: EndpointRegistration;
     };
 
 export class NodeDriver {
-  readonly registry: HostRegistry;
-  readonly providers: ProviderRegistry;
+  readonly producers: ProducerRegistry;
+  readonly endpoints: EndpointRegistry;
   readonly artifacts: ArtifactStore;
   readonly operations: OperationStore | undefined;
   readonly credentials: CredentialStore | undefined;
@@ -83,8 +83,8 @@ export class NodeDriver {
   readonly implementationClosure: Digest | undefined;
 
   constructor(options: NodeDriverOptions = {}) {
-    this.registry = options.registry ?? new HostRegistry();
-    this.providers = options.providers ?? new ProviderRegistry();
+    this.producers = options.producers ?? new ProducerRegistry();
+    this.endpoints = options.endpoints ?? new EndpointRegistry();
     this.artifacts = options.artifacts ?? new MemoryArtifactStore();
     this.operations = options.operations;
     this.credentials = options.credentials;
@@ -105,20 +105,20 @@ export class NodeDriver {
     }
   }
 
-  async #providerCredentials(
-    registration: ProviderRegistration,
+  async #endpointCredentials(
+    registration: EndpointRegistration,
   ): Promise<Readonly<Record<string, CredentialValue>>> {
     const requested = registration.credentials ?? {};
     if (Object.keys(requested).length === 0) return {};
     if (this.credentials === undefined) {
-      throw new Error(`Provider ${registration.id} requires a CredentialStore`);
+      throw new Error(`Endpoint ${registration.id} requires a CredentialStore`);
     }
     const resolved: Record<string, CredentialValue> = {};
     for (const slot of Object.keys(requested).sort()) {
       const ref = requested[slot]!;
       const value = await this.credentials.resolve(ref);
       if (value === undefined) {
-        throw new Error(`Provider ${registration.id} credential ${slot} is unavailable from ${ref.store}:${ref.key}`);
+        throw new Error(`Endpoint ${registration.id} credential ${slot} is unavailable from ${ref.store}:${ref.key}`);
       }
       resolved[slot] = value;
     }
@@ -146,7 +146,7 @@ export class NodeDriver {
   ): { readonly executable?: Executable; readonly blocked?: BlockedCommand } {
     if (command.kind === "complete") return {};
     if (command.kind === "invoke-producer") {
-      const registration = this.registry.producer(command.producer);
+      const registration = this.producers.producer(command.producer);
       if (registration === undefined) {
         return {
           blocked: {
@@ -181,15 +181,15 @@ export class NodeDriver {
       };
     }
 
-    const resolution = this.providers.resolve(command.need);
+    const resolution = this.endpoints.resolve(command.need);
     if (resolution.status === "missing") {
       return {
         blocked: {
           command: command.id,
-          reason: "missing-provider",
-          subject: resolution.providerId === undefined
-            ? `${providerCapabilityKey(command.need.capability)} -> ${providerReturnKey(command.need.returns)}`
-            : `${providerCapabilityKey(command.need.capability)} -> ${resolution.providerId}`,
+          reason: "missing-endpoint",
+          subject: resolution.endpointId === undefined
+            ? `${endpointCapabilityKey(command.need.capability)} -> ${endpointReturnKey(command.need.returns)}`
+            : `${endpointCapabilityKey(command.need.capability)} -> ${resolution.endpointId}`,
         },
       };
     }
@@ -197,13 +197,13 @@ export class NodeDriver {
       return {
         blocked: {
           command: command.id,
-          reason: "ambiguous-provider",
-          subject: `${providerCapabilityKey(command.need.capability)} -> ${resolution.providerIds.join(", ")}`,
+          reason: "ambiguous-endpoint",
+          subject: `${endpointCapabilityKey(command.need.capability)} -> ${resolution.endpointIds.join(", ")}`,
         },
       };
     }
     const registration = resolution.registration;
-    if (registration.kind === "endpoint" && this.operations === undefined) {
+    if (registration.kind === "recoverable" && this.operations === undefined) {
       return {
         blocked: {
           command: command.id,
@@ -212,7 +212,7 @@ export class NodeDriver {
         },
       };
     }
-    if (registration.kind === "endpoint" && this.providers.runtimeClosureDigest() === undefined) {
+    if (registration.kind === "recoverable" && this.endpoints.runtimeClosureDigest() === undefined) {
       return {
         blocked: {
           command: command.id,
@@ -224,18 +224,18 @@ export class NodeDriver {
     return {
       executable: {
         command,
-        providerId: registration.id,
-        lane: registration.scheduling?.lane ?? `provider:${registration.id}`,
+        endpointId: registration.id,
+        lane: registration.scheduling?.lane ?? `endpoint:${registration.id}`,
         maxConcurrency: registration.scheduling?.maxConcurrency ?? 1,
         registration,
       },
     };
   }
 
-  async #providerEvent(
+  async #endpointEvent(
     state: BuildState,
-    executable: Extract<Executable, { readonly providerId: string }>,
-    result: ProviderHandlerResult,
+    executable: Extract<Executable, { readonly endpointId: string }>,
+    result: EndpointFulfillment,
   ): Promise<BuildEvent> {
     const validation = await validateValue(
       state.program.closure,
@@ -248,7 +248,7 @@ export class NodeDriver {
       command: executable.command.id,
       value: result.value,
       requestDigest: executable.command.need.requestDigest,
-      fulfiller: executable.providerId,
+      fulfiller: executable.endpointId,
       conformance: result.conformance,
       delivery: result.delivery,
       metadata: result.metadata,
@@ -259,7 +259,7 @@ export class NodeDriver {
 
   async #completedOperation(
     state: BuildState,
-    executable: Extract<Executable, { readonly providerId: string }>,
+    executable: Extract<Executable, { readonly endpointId: string }>,
     snapshot: OperationSnapshot,
     expectedOperation: string,
     maxAttempts: number,
@@ -271,7 +271,7 @@ export class NodeDriver {
     if (snapshot.status === "completed" && snapshot.completion !== undefined) {
       return {
         status: "completed",
-        event: await this.#providerEvent(state, executable, snapshot.completion),
+        event: await this.#endpointEvent(state, executable, snapshot.completion),
       };
     }
     if (snapshot.status === "failed") {
@@ -322,20 +322,20 @@ export class NodeDriver {
 
   async #executeEndpoint(
     state: BuildState,
-    executable: Extract<Executable, { readonly providerId: string }>,
+    executable: Extract<Executable, { readonly endpointId: string }>,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
-    if (executable.registration.kind !== "endpoint") throw new Error("Provider is not a recoverable Endpoint");
+    if (executable.registration.kind !== "recoverable") throw new Error("Endpoint is not recoverable");
     const operations = this.operations;
-    if (operations === undefined) throw new Error("recoverable Provider Endpoint requires OperationStore");
-    const runtimeClosure = this.providers.runtimeClosureDigest();
-    if (runtimeClosure === undefined) throw new Error("recoverable Provider Endpoint requires Runtime Closure");
+    if (operations === undefined) throw new Error("recoverable Endpoint requires OperationStore");
+    const runtimeClosure = this.endpoints.runtimeClosureDigest();
+    if (runtimeClosure === undefined) throw new Error("recoverable Endpoint requires Runtime Closure");
     const implementation = executable.registration.runtimeImplementation;
-    if (implementation === undefined) throw new Error("recoverable Provider Endpoint has no implementation identity");
+    if (implementation === undefined) throw new Error("recoverable Endpoint has no implementation identity");
     const base = {
       build: context.build,
       command: executable.command.id,
-      endpoint: executable.providerId,
+      endpoint: executable.endpointId,
       implementationDigest: implementation.digest,
       runtimeClosure,
       requestDigest: executable.command.need.requestDigest,
@@ -381,7 +381,7 @@ export class NodeDriver {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
-      credentials: await this.#providerCredentials(executable.registration),
+      credentials: await this.#endpointCredentials(executable.registration),
       operation: structuredClone(identity),
     };
     const outcome = created.status === "created"
@@ -417,7 +417,7 @@ export class NodeDriver {
         maxAttempts,
       );
     }
-    const result: ProviderHandlerResult = {
+    const result: EndpointFulfillment = {
       ...outcome.result,
       metadata: {
         endpoint: structuredClone(outcome.result.metadata),
@@ -447,7 +447,7 @@ export class NodeDriver {
     executable: Executable,
     context?: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
-    if (!("providerId" in executable)) {
+    if (!("endpointId" in executable)) {
       const result = (await executable.run()) as ProducerHandlerResult;
       const producer = resolveProducer(state.program.closure, executable.command.producer);
       const validations: Record<string, NonNullable<Awaited<ReturnType<typeof validateValue>>>> = {};
@@ -469,7 +469,7 @@ export class NodeDriver {
         event: { ...content, id: `event:${digestOf(content)}` },
       };
     }
-    if (executable.registration.kind === "endpoint") {
+    if (executable.registration.kind === "recoverable") {
       if (context === undefined) throw new Error("recoverable Endpoint execution requires a stable Build id");
       return await this.#executeEndpoint(state, executable, context);
     }
@@ -477,9 +477,9 @@ export class NodeDriver {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
-      credentials: await this.#providerCredentials(executable.registration),
+      credentials: await this.#endpointCredentials(executable.registration),
     });
-    return { status: "completed", event: await this.#providerEvent(state, executable, result) };
+    return { status: "completed", event: await this.#endpointEvent(state, executable, result) };
   }
 
   /** Regenerate Core commands, then classify only what this Host can execute. */
@@ -532,13 +532,13 @@ export class NodeDriver {
     if (descriptor === undefined) throw new Error(`Operation ${operation.id} Command is not currently runnable`);
     const classified = this.#classify(prepared.state, descriptor.command);
     const executable = classified.executable;
-    if (executable === undefined || !("providerId" in executable)
-      || executable.providerId !== operation.endpoint
-      || executable.registration.kind !== "endpoint") {
-      throw new Error(`Operation ${operation.id} does not match the regenerated Provider Command`);
+    if (executable === undefined || !("endpointId" in executable)
+      || executable.endpointId !== operation.endpoint
+      || executable.registration.kind !== "recoverable") {
+      throw new Error(`Operation ${operation.id} does not match the regenerated Endpoint Command`);
     }
     if (executable.registration.endpoint.cancel === undefined) {
-      throw new Error(`Provider ${executable.providerId} does not support cancellation`);
+      throw new Error(`Endpoint ${executable.endpointId} does not support cancellation`);
     }
     const identity: OperationIdentity = {
       format: operation.format,
@@ -556,7 +556,7 @@ export class NodeDriver {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
-      credentials: await this.#providerCredentials(executable.registration),
+      credentials: await this.#endpointCredentials(executable.registration),
       operation: identity,
       checkpoint: operation.status === "pending" ? structuredClone(operation.checkpoint) : undefined,
     });

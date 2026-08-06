@@ -8,14 +8,14 @@
   },
   "dependencies": {
     "@svml/contracts": "workspace:*",
-    "@svml/driver-node": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
     "@svml/media-pipeline": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/provider-kit": "workspace:*"
+    "@svml/protocol": "workspace:*"
   },
   "devDependencies": {
     "@svml/artifact-store-fs": "workspace:*",
     "@svml/core": "workspace:*",
+    "@svml/driver-node": "workspace:*",
     "@svml/elaborator": "workspace:*",
     "@svml/local": "workspace:*",
     "@svml/validation": "workspace:*"
