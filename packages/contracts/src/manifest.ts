@@ -16,6 +16,7 @@ export const compositionModuleRef = { name: "@svml/composition", version: "0.0.0
 
 export const contractTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },
+  narrativeExcerpt: { module: narrativeModuleRef, name: "NarrativeExcerpt" },
   blobArtifact: { module: mediaModuleRef, name: "BlobArtifact" },
   mediaArtifact: { module: mediaModuleRef, name: "MediaArtifactRef" },
   mediaInspection: { module: mediaModuleRef, name: "MediaInspection" },
@@ -113,6 +114,19 @@ export const narrativeSchema: ValueSchema = object({
   }) },
 });
 
+export const narrativeExcerptSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.narrative-excerpt@1" } },
+  kind: { schema: { kind: "literal", value: "segment" } },
+  id: { schema: string },
+  tokenStart: { schema: integer },
+  tokenEndExclusive: { schema: integer },
+  serializations: { schema: object({
+    dialogue: { schema: { kind: "string" } },
+    speech: { schema: { kind: "string" } },
+  }) },
+  excerptDigest: { schema: digest },
+});
+
 export const mediaArtifactSchema = object({
   digest: { schema: digest }, size: { schema: integer }, mediaType: { schema: string }, durationSec: { schema: number },
 });
@@ -190,8 +204,6 @@ export const mediaInspectionSchema: ValueSchema = object({
 
 export const mediaStreamSelectionSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.media-stream-selection@1" } },
-  sourceArtifactDigest: { schema: digest },
-  inspectionDigest: { schema: digest },
   videoStreamIndex: { schema: integer, optional: true },
   audioStreamIndex: { schema: integer, optional: true },
   spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
@@ -203,9 +215,6 @@ export const mediaStreamSelectionSchema: ValueSchema = object({
 
 export const synchronizedMediaSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.synchronized-media@1" } },
-  sourceArtifactDigest: { schema: digest },
-  inspectionDigest: { schema: digest },
-  selectionDigest: { schema: digest },
   timeline: { schema: object({
     spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
     frameRate: { schema: mediaRationalSchema },
@@ -323,12 +332,11 @@ export const programSpaceSchema = object({
 });
 const basisSegment = object({
   segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number },
-  sourceArtifactDigest: { schema: digest },
 });
 
 export const speechBasisSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.speech-basis@1" } },
-  basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
+  basisDigest: { schema: digest },
   programSpace: { schema: programSpaceSchema }, audio: { schema: mediaArtifactSchema },
   visualTrack: { schema: object({ clips: { schema: { kind: "array", items: object({
     segmentId: { schema: string }, artifact: { schema: mediaArtifactSchema }, startSec: { schema: number }, endSec: { schema: number },
@@ -338,14 +346,12 @@ export const speechBasisSchema: ValueSchema = object({
 
 export const speechAudioBasisSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.speech-audio-basis@1" } },
-  basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
   programSpace: { schema: programSpaceSchema }, audio: { schema: mediaArtifactSchema },
   segments: { schema: { kind: "array", minItems: 1, items: basisSegment } },
 });
 
 export const speechEvidenceAudioSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.speech-evidence-audio@1" } },
-  basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
   programSpaceDigest: { schema: digest }, sourceAudioArtifactDigest: { schema: digest },
   artifact: { schema: blobArtifactSchema(["audio/wav"]) },
   codec: { schema: { kind: "literal", value: "pcm_s16le" } },
@@ -377,8 +383,8 @@ const charEvidence = object({
 });
 export const alignedTranscriptEvidenceFields = {
   contract: { schema: { kind: "literal", value: "svml.aligned-transcript-evidence@1" } },
-  basisDigest: { schema: digest }, audioArtifactDigest: { schema: digest }, programSpaceDigest: { schema: digest },
-  rawEvidenceArtifactDigest: { schema: digest }, evidenceDigest: { schema: digest }, durationSec: { schema: number },
+  audioArtifactDigest: { schema: digest }, programSpaceDigest: { schema: digest },
+  evidenceDigest: { schema: digest }, durationSec: { schema: number },
   segments: { schema: { kind: "array", minItems: 1, items: object({
     sourceSegmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number },
     words: { schema: { kind: "array", items: wordEvidence } },
@@ -416,9 +422,7 @@ const alignmentGroup = object({
 
 export const completeSemanticMapSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.complete-semantic-map@1" } },
-  semanticIndexDigest: { schema: digest }, basisDigest: { schema: digest }, audioArtifactDigest: { schema: digest },
-  programSpaceDigest: { schema: digest }, programSpace: { schema: programSpaceSchema },
-  evidenceDigest: { schema: digest }, locatorDigest: { schema: digest },
+  programSpace: { schema: programSpaceSchema },
   quantizationPolicy: { schema: { kind: "literal", value: "nearest-frame" } }, durationSec: { schema: number },
   segments: { schema: { kind: "array", items: timedSegment } },
   tokens: { schema: { kind: "array", items: timedToken } },
@@ -489,15 +493,12 @@ const visualPresent = object({
   stacking: { schema: object({ order: { schema: signedInteger }, tieBreak: { schema: string } }) },
   elements: { schema: { kind: "array", minItems: 1, items: visualElement } },
 });
-const trackSource = object({ name: { schema: string }, digest: { schema: digest } });
-
 export const visualTrackSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.visual-track@1" } },
   visualIr: { schema: { kind: "literal", value: HYPERFRAMES_VISUAL_IR_V1 } },
   digest: { schema: digest },
   id: { schema: string },
   programSpaceDigest: { schema: digest },
-  sources: { schema: { kind: "array", items: trackSource } },
   presents: { schema: { kind: "array", items: visualPresent } },
 });
 
@@ -518,7 +519,6 @@ export const audioTrackSchema: ValueSchema = object({
   digest: { schema: digest },
   id: { schema: string },
   programSpaceDigest: { schema: digest },
-  sources: { schema: { kind: "array", items: trackSource } },
   clips: { schema: { kind: "array", items: audioClip } },
 });
 
@@ -540,7 +540,10 @@ export const narrativeManifest: ModuleManifest = {
   name: narrativeModuleRef.name,
   version: narrativeModuleRef.version,
   dependencies: [],
-  types: [{ name: contractTypes.narrative.name, schema: narrativeSchema }],
+  types: [
+    { name: contractTypes.narrative.name, schema: narrativeSchema },
+    { name: contractTypes.narrativeExcerpt.name, schema: narrativeExcerptSchema },
+  ],
   capabilities: [],
   surfaces: [],
   producers: [],
@@ -553,6 +556,10 @@ export const mediaValidatorDigests = {
   renderedVisual: digestOf("@svml/media/validate-rendered-visual@1"),
   timelineAudio: digestOf("@svml/media/validate-timeline-audio@1"),
   muxedMedia: digestOf("@svml/media/validate-muxed-media@1"),
+} as const;
+
+export const mediaSurfaceImplementationDigests = {
+  image: digestOf("@svml/media/image-surface@1"),
 } as const;
 
 export const mediaManifest: ModuleManifest = {
@@ -639,7 +646,17 @@ export const mediaManifest: ModuleManifest = {
     { name: contractTypes.compositableSurface.name, schema: compositableSurfaceSchema },
   ],
   capabilities: [],
-  surfaces: [],
+  surfaces: [{
+    name: "image",
+    tag: "Image",
+    mode: "structured",
+    outputs: [contractTypes.blobArtifact],
+    implementation: {
+      kind: "trusted-frontend-surface",
+      locator: "@svml/media/image-surface",
+      digest: mediaSurfaceImplementationDigests.image,
+    },
+  }],
   producers: [],
 };
 

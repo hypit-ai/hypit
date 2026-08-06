@@ -1,8 +1,8 @@
 # Talking-film authoring golden fixture
 
-Status: **v2 authoring target, not executable end to end yet.** Script, Film, generic SVS and the
-explicit HyperFrames Render Surface are implemented. The intervening generation, Speech and Track
-components are the concrete package-local work remaining.
+Status: **v2 authoring target, not executable end to end yet.** Script, authored Image, Seedance
+generation, Film, generic SVS and the explicit HyperFrames Render Surface are implemented. Speech
+assembly and Track components are the concrete package-local work remaining.
 
 This example replaces neither the executable v1 fixtures nor their regression value. In particular,
 `examples/flat-track-launch` remains the capability oracle for selections, moments, B-roll motion,
@@ -71,12 +71,12 @@ Candidates and Operations.
 | Author syntax | Owning package | Lowered meaning | Repository state |
 |---|---|---|---|
 | `<script>` | `@svml/script` | authored `Narrative` and projections | implemented |
-| `media:Image` | `@svml/media` | content-addressed authored Artifact | package/Surface missing |
-| `seedance:Prompt` | `@svml/seedance` | package-private immutable direction value | missing |
-| `seedance:Speech model="mini"` | `@svml/seedance` | explicit Seedance Mini Need returning one speech clip Product | missing |
+| `media:Image` | `@svml/media` | content-addressed authored Artifact | implemented |
+| `seedance:Prompt` | `@svml/seedance` | package-private immutable direction value | implemented |
+| `seedance:Speech model="mini"` | `@svml/seedance` | explicit Seedance Mini Need plus primary-video projection | implemented; explicit duration remains authored until Speech scheduling exists |
 | `speech:Spine` | `@svml/speech` | ordered clips -> one `SpeechBasis`, then ordinary projections | basis and four locked projection facets implemented; author assembly missing |
 | `whisperx:Alignment` | `@svml/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@svml/speech-align` -> Map | Graph Fragment, locked deterministic components, local media projection and local Provider/service implemented; Surface missing |
-| `seedance:Video model="mini"` | `@svml/seedance` | explicit Seedance Mini video Need | missing |
+| `seedance:Video model="mini"` | `@svml/seedance` | explicit Seedance Mini video Need plus primary-video projection | implemented |
 | `broll:Track` | `@svml/broll` | semantic windows + media + recipe -> peer Visual/Audio Tracks | Program/lowering implemented; Surface missing |
 | `caption:Track` | `@svml/caption-gemini` | timed projection + Gemini cue grouping + role recipe -> VisualTrack | timing/lowering and owner validators are locked components; complete Recipe audit and Gemini/role Surface missing |
 | `text:Track` | `@svml/text-track` | package Program -> VisualTrack | Program/lowering implemented; Surface/exact-font use missing |
@@ -84,7 +84,7 @@ Candidates and Operations.
 | `render:Video` | `@svml/hyperframes-render` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
 | `studio.svs` | `@svml/svs` | generic immutable Recipe Records; consuming packages must validate and lower them | parser and recursive source import implemented; video recipe consumers/exact font lowering missing |
 
-The missing work is intentionally package-local. None of these rows requires a new Core video type,
+The remaining work is intentionally package-local. None of these rows requires a new Core video type,
 a component-family registry in Core, a privileged Film root or another Track kind.
 
 ## Expected Provider bindings

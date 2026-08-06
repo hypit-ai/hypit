@@ -45,11 +45,6 @@ export const synchronizedMediaFragment = sealGraphFragment({
     type: contractTypes.synchronizedMedia,
     root: operation("normalize"),
     semanticInputs: ["request", "source"],
-    affinity: [
-      { resultPointer: "/sourceArtifactDigest", source: input("source"), sourcePointer: "/digest" },
-      { resultPointer: "/inspectionDigest", source: operation("inspect"), sourcePointer: "/inspectionDigest" },
-      { resultPointer: "/selectionDigest", source: operation("select"), sourcePointer: "/selectionDigest" },
-    ],
     fidelity: "exact",
   }],
 });

@@ -23,14 +23,11 @@ export type SpeechBasisSegment = {
   readonly segmentId: string;
   readonly startSec: number;
   readonly endSec: number;
-  readonly sourceArtifactDigest: Digest;
 };
 
 export type SpeechBasis = {
   readonly contract: "svml.speech-basis@1";
   readonly basisDigest: Digest;
-  /** Semantic identity of the authored Narrative whose speech this Basis realizes. */
-  readonly narrativeDigest: Digest;
   readonly programSpace: ProgramSpace;
   readonly audio: MediaArtifactRef;
   readonly visualTrack: {
@@ -47,8 +44,6 @@ export type SpeechBasis = {
 /** Deterministic audio projection of one atomic SpeechBasis/SpeechTake Product. */
 export type SpeechAudioBasis = {
   readonly contract: "svml.speech-audio-basis@1";
-  readonly basisDigest: Digest;
-  readonly narrativeDigest: Digest;
   readonly programSpace: ProgramSpace;
   readonly audio: MediaArtifactRef;
   readonly segments: readonly SpeechBasisSegment[];
@@ -57,8 +52,6 @@ export type SpeechAudioBasis = {
 /** Canonical 16 kHz mono PCM projection used only for acoustic alignment evidence. */
 export type SpeechEvidenceAudio = {
   readonly contract: "svml.speech-evidence-audio@1";
-  readonly basisDigest: Digest;
-  readonly narrativeDigest: Digest;
   readonly programSpaceDigest: Digest;
   /** The 48 kHz speech-master bytes from which this projection was derived. */
   readonly sourceAudioArtifactDigest: Digest;
@@ -113,10 +106,9 @@ export type AlignedTranscriptSegment = {
 
 export type AlignedTranscriptEvidence = {
   readonly contract: "svml.aligned-transcript-evidence@1";
-  readonly basisDigest: Digest;
+  /** Exact acoustic Artifact measured by the recognizer. */
   readonly audioArtifactDigest: Digest;
   readonly programSpaceDigest: Digest;
-  readonly rawEvidenceArtifactDigest: Digest;
   readonly evidenceDigest: Digest;
   readonly durationSec: number;
   readonly segments: readonly AlignedTranscriptSegment[];
@@ -169,13 +161,7 @@ export type SemanticTimePoint = {
 
 export type CompleteSemanticMap = {
   readonly contract: "svml.complete-semantic-map@1";
-  readonly semanticIndexDigest: Digest;
-  readonly basisDigest: Digest;
-  readonly audioArtifactDigest: Digest;
-  readonly programSpaceDigest: Digest;
   readonly programSpace: ProgramSpace;
-  readonly evidenceDigest: Digest;
-  readonly locatorDigest: Digest;
   readonly quantizationPolicy: "nearest-frame";
   readonly durationSec: number;
   readonly segments: readonly TimedSpeechSegment[];

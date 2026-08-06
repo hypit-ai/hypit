@@ -54,8 +54,6 @@ export const speechTakeProjectionFragment = sealGraphFragment({
       root: operation("project-audio"),
       semanticInputs: ["take"],
       affinity: [
-        { resultPointer: "/basisDigest", source: input("take"), sourcePointer: "/basisDigest" },
-        { resultPointer: "/narrativeDigest", source: input("take"), sourcePointer: "/narrativeDigest" },
         { resultPointer: "/programSpace/digest", source: input("take"), sourcePointer: "/programSpace/digest" },
         { resultPointer: "/audio/digest", source: input("take"), sourcePointer: "/audio/digest" },
       ],
@@ -67,8 +65,6 @@ export const speechTakeProjectionFragment = sealGraphFragment({
       root: operation("project-visual"),
       semanticInputs: ["take"],
       affinity: [
-        { resultPointer: "/sources/0/digest", source: input("take"), sourcePointer: "/basisDigest" },
-        { resultPointer: "/sources/1/digest", source: input("take"), sourcePointer: "/narrativeDigest" },
         { resultPointer: "/programSpaceDigest", source: input("take"), sourcePointer: "/programSpace/digest" },
       ],
       fidelity: "exact",
@@ -79,8 +75,6 @@ export const speechTakeProjectionFragment = sealGraphFragment({
       root: operation("project-audio-track"),
       semanticInputs: ["take"],
       affinity: [
-        { resultPointer: "/sources/0/digest", source: input("take"), sourcePointer: "/basisDigest" },
-        { resultPointer: "/sources/1/digest", source: input("take"), sourcePointer: "/narrativeDigest" },
         { resultPointer: "/programSpaceDigest", source: input("take"), sourcePointer: "/programSpace/digest" },
       ],
       fidelity: "exact",
@@ -132,9 +126,7 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       root: operation("request-whisperx"),
       semanticInputs: ["audio"],
       affinity: [
-        { resultPointer: "/basisDigest", source: input("audio"), sourcePointer: "/basisDigest" },
-        { resultPointer: "/audioArtifactDigest", source: input("audio"), sourcePointer: "/audio/digest" },
-        { resultPointer: "/evidenceAudioDigest", source: operation("prepare-evidence-audio"), sourcePointer: "/evidenceAudioDigest" },
+        { resultPointer: "/audioArtifactDigest", source: operation("prepare-evidence-audio"), sourcePointer: "/artifact/digest" },
         { resultPointer: "/programSpaceDigest", source: input("audio"), sourcePointer: "/programSpace/digest" },
       ],
       fidelity: "exact",
@@ -145,8 +137,7 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       root: operation("normalize-evidence"),
       semanticInputs: ["audio"],
       affinity: [
-        { resultPointer: "/basisDigest", source: input("audio"), sourcePointer: "/basisDigest" },
-        { resultPointer: "/audioArtifactDigest", source: input("audio"), sourcePointer: "/audio/digest" },
+        { resultPointer: "/audioArtifactDigest", source: operation("prepare-evidence-audio"), sourcePointer: "/artifact/digest" },
         { resultPointer: "/programSpaceDigest", source: input("audio"), sourcePointer: "/programSpace/digest" },
       ],
       fidelity: "exact",
@@ -157,12 +148,7 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       root: operation("locate-speech"),
       semanticInputs: ["narrative", "audio"],
       affinity: [
-        { resultPointer: "/semanticIndexDigest", source: input("narrative"), sourcePointer: "/semanticIndex/digest" },
-        { resultPointer: "/basisDigest", source: input("audio"), sourcePointer: "/basisDigest" },
-        { resultPointer: "/audioArtifactDigest", source: input("audio"), sourcePointer: "/audio/digest" },
-        { resultPointer: "/programSpaceDigest", source: input("audio"), sourcePointer: "/programSpace/digest" },
         { resultPointer: "/programSpace/digest", source: input("audio"), sourcePointer: "/programSpace/digest" },
-        { resultPointer: "/evidenceDigest", source: operation("normalize-evidence"), sourcePointer: "/evidenceDigest" },
       ],
       fidelity: "exact",
     },
@@ -187,8 +173,6 @@ export const captionTimingFragment = sealGraphFragment({
     root: operation("temporalize-caption"),
     semanticInputs: ["narrative", "map"],
     affinity: [
-      { resultPointer: "/semanticIndexDigest", source: input("narrative"), sourcePointer: "/semanticIndex/digest" },
-      { resultPointer: "/speechTimeMapDigest", source: input("map"), sourcePointer: "/mapDigest" },
       { resultPointer: "/programSpace/digest", source: input("map"), sourcePointer: "/programSpace/digest" },
     ],
     fidelity: "exact",
@@ -215,8 +199,6 @@ export const captionTrackFragment = sealGraphFragment({
     semanticInputs: ["caption", "program"],
     affinity: [
       { resultPointer: "/programSpaceDigest", source: input("caption"), sourcePointer: "/programSpace/digest" },
-      { resultPointer: "/sources/0/digest", source: input("program"), sourcePointer: "/digest" },
-      { resultPointer: "/sources/1/digest", source: input("caption"), sourcePointer: "/projectionDigest" },
     ],
     fidelity: "exact",
   }],

@@ -3,6 +3,10 @@ import {
   videoContractsComponents,
 } from "@svml/contracts";
 import {
+  generationComponent,
+  generationManifest,
+} from "@svml/generation";
+import {
   captionComponent,
   captionManifest,
 } from "@svml/caption";
@@ -27,6 +31,11 @@ import {
   mediaPipelineComponent,
   mediaPipelineManifest,
 } from "@svml/media-pipeline";
+import {
+  decodeMediaImageSurface,
+  mediaModuleRef,
+  mediaSurfaceImplementationDigests,
+} from "@svml/media";
 import type { NodePackageActivation } from "@svml/package-loader-node";
 import {
   decodeScriptSurface,
@@ -34,6 +43,15 @@ import {
   scriptModuleRef,
   scriptSurfaceImplementationDigest,
 } from "@svml/script";
+import {
+  decodeSeedancePromptSurface,
+  decodeSeedanceSpeechSurface,
+  decodeSeedanceVideoSurface,
+  seedanceComponent,
+  seedanceManifest,
+  seedanceModuleRef,
+  seedanceSurfaceImplementationDigests,
+} from "@svml/seedance";
 import {
   speechAlignComponent,
   speechAlignManifest,
@@ -48,7 +66,14 @@ export const svmlPackage: NodePackageActivation = {
   format: "svml.node-package@1",
   name: "@svml/prelude-video",
   modules: [
-    ...videoContractManifests.map((manifest) => ({ manifest })),
+    ...videoContractManifests.map((manifest) => ({
+      manifest,
+      ...(manifest.name === mediaModuleRef.name
+        ? { specifiers: ["@svml/media", "@svml/media@1"] }
+        : {}),
+    })),
+    { manifest: generationManifest },
+    { manifest: seedanceManifest, specifiers: ["@svml/seedance", "@svml/seedance@1"] },
     { manifest: scriptManifest, specifiers: ["@svml/script", "@svml/script@1"] },
     { manifest: svsManifest },
     { manifest: hyperframesManifest },
@@ -65,6 +90,8 @@ export const svmlPackage: NodePackageActivation = {
   frontends: [svsFrontend],
   components: [
     ...videoContractsComponents,
+    generationComponent,
+    seedanceComponent,
     captionComponent,
     mediaPipelineComponent,
     speechAlignComponent,
@@ -73,6 +100,34 @@ export const svmlPackage: NodePackageActivation = {
     hyperframesRenderComponent,
   ],
   textSurfaces: [
+    {
+      module: mediaModuleRef,
+      surface: "image",
+      mode: "structured",
+      implementationDigest: mediaSurfaceImplementationDigests.image,
+      handler: decodeMediaImageSurface,
+    },
+    {
+      module: seedanceModuleRef,
+      surface: "prompt",
+      mode: "structured",
+      implementationDigest: seedanceSurfaceImplementationDigests.prompt,
+      handler: decodeSeedancePromptSurface,
+    },
+    {
+      module: seedanceModuleRef,
+      surface: "speech",
+      mode: "structured",
+      implementationDigest: seedanceSurfaceImplementationDigests.speech,
+      handler: decodeSeedanceSpeechSurface,
+    },
+    {
+      module: seedanceModuleRef,
+      surface: "video",
+      mode: "structured",
+      implementationDigest: seedanceSurfaceImplementationDigests.video,
+      handler: decodeSeedanceVideoSurface,
+    },
     {
       module: scriptModuleRef,
       surface: "script",

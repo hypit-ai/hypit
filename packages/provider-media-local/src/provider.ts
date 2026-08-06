@@ -351,10 +351,7 @@ function normalizeNeed(value: CanonicalValue): NormalizeMediaNeed {
     "NormalizeMediaNeed is invalid");
   verifyMediaInspection(item.inspection);
   verifyMediaStreamSelection(item.selection);
-  assert(item.inspection.source.digest === item.source.digest
-    && item.selection.sourceArtifactDigest === item.source.digest
-    && item.selection.inspectionDigest === item.inspection.inspectionDigest,
-  "NormalizeMediaNeed affinity is invalid");
+  assert(item.inspection.source.digest === item.source.digest, "NormalizeMediaNeed source is invalid");
   assert(item.audio.sampleRate === 48_000 && item.audio.channels === 2
     && item.audio.codec === "pcm_s16le" && item.audio.loudness === "preserve",
   "NormalizeMediaNeed audio profile is unsupported");
@@ -582,9 +579,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
             }
             const media = sealSynchronizedMedia({
               contract: "svml.synchronized-media@1",
-              sourceArtifactDigest: need.source.digest,
-              inspectionDigest: need.inspection.inspectionDigest,
-              selectionDigest: need.selection.selectionDigest,
               timeline: {
                 spanAuthority: need.selection.spanAuthority,
                 frameRate: need.frameRate,
@@ -689,8 +683,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
             const artifact = await context.artifacts.put(await readFile(output), "audio/wav");
             const evidence: SpeechEvidenceAudio = sealSpeechEvidenceAudio({
               contract: "svml.speech-evidence-audio@1",
-              basisDigest: need.basisDigest,
-              narrativeDigest: need.narrativeDigest,
               programSpaceDigest: need.programSpaceDigest,
               sourceAudioArtifactDigest: need.source.digest,
               artifact,

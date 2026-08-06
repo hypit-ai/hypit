@@ -98,7 +98,6 @@ const background = sealVisualTrack({
   visualIr: "svml.hyperframes-visual-ir@1",
   id: "background-track",
   programSpaceDigest: space.digest,
-  sources: [{ name: "fixture", digest: digestOf("background") }],
   presents: [{
     id: "background",
     span: { startFrame: 0, endFrameExclusive: 120 },
@@ -110,7 +109,6 @@ const audio = sealAudioTrack({
   contract: "svml.audio-track@1",
   id: "empty-audio-track",
   programSpaceDigest: space.digest,
-  sources: [{ name: "fixture", digest: digestOf("audio") }],
   clips: [],
 });
 
@@ -264,6 +262,6 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
 
 test("Film rejects duplicate Track ids before Composition", () => {
   const set = appendFilmVisualTrack(createFilmTrackSet(space), background);
-  const duplicate = sealVisualTrack({ ...background, sources: [{ name: "other", digest: digestOf("other") }] });
+  const duplicate = sealVisualTrack({ ...background });
   assert.throws(() => appendFilmVisualTrack(set, duplicate), /already contains Track id/u);
 });

@@ -53,6 +53,9 @@ external Candidates. None of those reference packages is required by this Kernel
 12. A BuildPlan is a deterministic, finite derivative of the verified Graph and BuildRequest. A
    Driver may schedule ready Commands, but cannot redefine Candidate selection or Demand.
 13. A Build completes only when every Target's selected result exists with an accepted conformance.
+14. The Graph is the only dependency truth. A domain Record contains only facts needed to interpret
+    that value; Derivation and Receipt contain lineage. Core affinity may compare intrinsic facts on
+    directly connected values, but must not require values to copy transitive ancestry.
 
 ## Boundary
 
@@ -71,3 +74,6 @@ authenticity of arbitrary plugin code. Sandboxing and attestation are Runtime co
 Neither a package suffix nor a TypeScript class grants Kernel privilege. A domain package can be
 released after Core and participate through manifests, schemas and ordinary Operations without a
 Core release.
+
+SVML source is one optional author-facing notation that lowers to this graph. The Kernel has no
+canonical pipeline direction, privileged terminal output, Film root or single-output Build rule.

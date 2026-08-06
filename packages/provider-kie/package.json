@@ -22,6 +22,7 @@
   "devDependencies": {
     "@svml/artifact-store-fs": "workspace:*",
     "@svml/component-kit": "workspace:*",
+    "@svml/contracts": "workspace:*",
     "@svml/core": "workspace:*",
     "@svml/driver-node": "workspace:*",
     "@svml/elaborator": "workspace:*",

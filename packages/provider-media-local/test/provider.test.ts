@@ -268,8 +268,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const source = await artifacts.put(await readFile(sourcePath), "audio/wav");
     const constraints = canonicalize({
       contract: "svml.project-speech-evidence-audio-request@1",
-      basisDigest: digestOf("evidence:basis"),
-      narrativeDigest: digestOf("evidence:narrative"),
       programSpaceDigest: digestOf("evidence:program-space"),
       source,
       sourceSampleRate: 48_000,
@@ -285,7 +283,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
         segmentId: "line",
         startSec: 0,
         endSec: 48_001 / 48_000,
-        sourceArtifactDigest: digestOf("evidence:visual"),
       }],
     });
     const request = need(

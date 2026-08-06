@@ -175,7 +175,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     const visualDigest = media.visualDigest as SpeechBasis["audio"]["digest"];
     const basis = sealSpeechBasis({
       contract: "svml.speech-basis@1",
-      narrativeDigest: narrative.semanticIndex.digest,
       programSpace,
       audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
       visualTrack: { clips: [{
@@ -184,7 +183,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
         startSec: 0,
         endSec: durationSec,
       }] },
-      segments: [{ segmentId: "line", startSec: 0, endSec: durationSec, sourceArtifactDigest: visualDigest }],
+      segments: [{ segmentId: "line", startSec: 0, endSec: durationSec }],
     });
     return { outputs: { basis: { kind: "inline", value: basis } }, needs: {} };
   });
@@ -215,8 +214,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
       const sourceSampleFrames = Math.round(audio.programSpace.durationSec * 48_000);
       const need: ProjectSpeechEvidenceAudioNeed = {
         contract: "svml.project-speech-evidence-audio-request@1",
-        basisDigest: audio.basisDigest,
-        narrativeDigest: audio.narrativeDigest,
         programSpaceDigest: audio.programSpace.digest,
         source: {
           kind: "blob",
@@ -331,8 +328,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
       return {
         value: { kind: "inline", value: sealSpeechEvidenceAudio({
           contract: "svml.speech-evidence-audio@1",
-          basisDigest: request.basisDigest,
-          narrativeDigest: request.narrativeDigest,
           programSpaceDigest: request.programSpaceDigest,
           sourceAudioArtifactDigest: request.source.digest,
           artifact: {
@@ -368,9 +363,9 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
   assert.equal(atWhisperX.blocked[0]?.reason, "missing-endpoint");
   assert.match(atWhisperX.blocked[0]?.subject ?? "", /WhisperXAlignmentEvidence/u);
 
-  const wrongBasisEndpoints = new EndpointRegistry();
-  wrongBasisEndpoints.registerImmediateEndpoint(
-    "runtime:wrong-basis-whisperx",
+  const wrongMeasurementEndpoints = new EndpointRegistry();
+  wrongMeasurementEndpoints.registerImmediateEndpoint(
+    "runtime:wrong-measurement-whisperx",
     whisperXCapabilities.alignment,
     whisperXTypes.alignmentEvidence,
     () => ({
@@ -379,11 +374,8 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
         value: sealWhisperXAlignmentEvidence({
           contract: "svml.whisperx-alignment-evidence@2",
           engine: "whisperx",
-          basisDigest: digestOf("another-project:basis"),
           audioArtifactDigest: digestOf("another-project:audio"),
-          evidenceAudioDigest: digestOf("another-project:evidence-audio"),
           programSpaceDigest: digestOf("another-project:program-space"),
-          rawEvidenceArtifactDigest: digestOf("another-project:whisperx-json"),
           durationSec: 1,
           segments: [{ sourceSegmentId: "line", startSec: 0, endSec: 1, words: [], chars: [] }],
         }),
@@ -395,13 +387,13 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
   );
   const rejectedEvidence = await new NodeDriver({
     producers: host,
-    endpoints: wrongBasisEndpoints,
+    endpoints: wrongMeasurementEndpoints,
     validators: validatorRegistry(),
   }).run(
     parseBuildState(serializeBuildState(atWhisperX.state)),
   );
   assert.equal(rejectedEvidence.status, "paused");
-  assert.match(rejectedEvidence.journal.at(-1)?.message ?? "", /different SpeechBasis|does not match/u);
+  assert.match(rejectedEvidence.journal.at(-1)?.message ?? "", /does not match/u);
   const rejectedWhisperNeed = rejectedEvidence.state.needs.find((need) =>
     sameCapability(need.capability, whisperXCapabilities.alignment));
   assert(rejectedWhisperNeed);
@@ -409,7 +401,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     rejectedEvidence.state.records.some((record) =>
       record.id === rejectedWhisperNeed.result),
     false,
-    "Evidence for another same-duration audio projection must not enter BuildState",
+    "Evidence claiming another measured Artifact must not enter BuildState",
   );
 
   endpoints.registerImmediateEndpoint(
@@ -424,11 +416,8 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
           value: sealWhisperXAlignmentEvidence({
             contract: "svml.whisperx-alignment-evidence@2",
             engine: "whisperx",
-            basisDigest: request.basisDigest as WhisperXAlignmentEvidence["basisDigest"],
-            audioArtifactDigest: request.sourceAudioArtifactDigest as WhisperXAlignmentEvidence["audioArtifactDigest"],
-            evidenceAudioDigest: request.evidenceAudioDigest as WhisperXAlignmentEvidence["evidenceAudioDigest"],
+            audioArtifactDigest: (request.audio as { readonly digest: WhisperXAlignmentEvidence["audioArtifactDigest"] }).digest,
             programSpaceDigest: request.programSpaceDigest as WhisperXAlignmentEvidence["programSpaceDigest"],
-            rawEvidenceArtifactDigest: digestOf("artifact:whisperx-json"),
             durationSec: 1,
             segments: [{
               sourceSegmentId: "line",
@@ -478,6 +467,45 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     [value.text, value.regions[0]?.display, value.regions[0]?.startSec, value.regions[0]?.endSec],
     ["that was insane", "that was insane", 0.1, 0.72],
   );
+
+  const mapRecordId = selectedRecord(completed.state, videoOutputs.map);
+  const mapRecord = completed.state.records.find((record) => record.id === mapRecordId);
+  assert.equal(mapRecord?.value.kind, "inline");
+  const mapValue = inlineObject(mapRecord?.value.kind === "inline" ? mapRecord.value.value : {});
+  for (const forbiddenLineageField of [
+    "narrativeDigest",
+    "semanticIndexDigest",
+    "basisDigest",
+    "audioArtifactDigest",
+    "evidenceDigest",
+    "locatorDigest",
+  ]) {
+    assert.equal(
+      forbiddenLineageField in mapValue,
+      false,
+      `SemanticMap must not serialize Graph lineage as ${forbiddenLineageField}`,
+    );
+  }
+  assert.equal(mapRecord?.origin.kind, "derived");
+  const mapDerivation = completed.state.derivations.find((derivation) =>
+    derivation.id === (mapRecord?.origin.kind === "derived" ? mapRecord.origin.derivation : undefined));
+  assert(mapDerivation);
+  const evidenceInput = mapDerivation.inputs.find((input) => {
+    const record = completed.state.records.find((candidate) => candidate.id === input.id);
+    return record?.type.name === contractTypes.alignedTranscriptEvidence.name
+      && record.type.module.name === contractTypes.alignedTranscriptEvidence.module.name
+      && record.type.module.version === contractTypes.alignedTranscriptEvidence.module.version;
+  });
+  assert(evidenceInput, "the Map fan-in must include the internal normalized Evidence Record");
+  assert.deepEqual(
+    new Set(mapDerivation.inputs.map((input) => input.id)),
+    new Set([
+      "narrative:root",
+      selectedRecord(completed.state, videoOutputs.audio),
+      evidenceInput.id,
+    ]),
+    "the fan-in belongs to the executed Graph/Derivation, not the SemanticMap payload",
+  );
 });
 
 test("Targets prune official Fragments while shared SpeechTake generation stays singular", () => {
@@ -525,7 +553,6 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
   const visualDigest = digestOf("existing-take:visual");
   const existingTake = sealSpeechBasis({
     contract: "svml.speech-basis@1",
-    narrativeDigest: narrative.semanticIndex.digest,
     programSpace,
     audio: {
       digest: digestOf("existing-take:audio"),
@@ -539,7 +566,7 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
       startSec: 0,
       endSec: 1,
     }] },
-    segments: [{ segmentId: "line", startSec: 0, endSec: 1, sourceArtifactDigest: visualDigest }],
+    segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
   });
   const takeCandidate = createProvidedCandidate({
     output: videoOutputs.take,
@@ -575,10 +602,6 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "preview:black",
     programSpaceDigest: blackProgram.digest,
-    sources: [
-      { name: "basis", digest: digestOf("preview:black-basis") },
-      { name: "narrative", digest: narrative.semanticIndex.digest },
-    ],
     presents: [],
   });
   const blackValue = { kind: "inline" as const, value: black };

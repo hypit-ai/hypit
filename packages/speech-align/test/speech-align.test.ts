@@ -33,10 +33,8 @@ function evidence(args: {
 }): AlignedTranscriptEvidence {
   return sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    basisDigest: args.basis.basisDigest,
-    audioArtifactDigest: args.basis.audio.digest,
+    audioArtifactDigest: digestOf("fixture:whisperx:acoustic-input"),
     programSpaceDigest: args.basis.programSpace.digest,
-    rawEvidenceArtifactDigest: digestOf("fixture:whisperx:raw"),
     durationSec: args.basis.programSpace.durationSec,
     segments: [
       {
@@ -66,18 +64,16 @@ function speechBasis(
     segmentId: segment.id,
     startSec: windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length,
     endSec: windows?.[index]?.endSec ?? durationSec * (index + 1) / narrative.segments.length,
-    sourceArtifactDigest: digestOf(`fixture:clip:${segment.id}`),
   }));
   const take = sealSpeechBasis({
     contract: "svml.speech-basis@1",
-    narrativeDigest: narrative.semanticIndex.digest,
     programSpace,
     audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
     visualTrack: {
       clips: segments.map((segment) => ({
         segmentId: segment.segmentId,
         artifact: {
-          digest: segment.sourceArtifactDigest,
+          digest: digestOf(`fixture:clip:${segment.segmentId}`),
           size: 1,
           mediaType: "video/mp4",
           durationSec: segment.endSec - segment.startSec,
@@ -94,8 +90,6 @@ function speechBasis(
 function audioProjection(basis: SpeechBasis): SpeechAudioBasis {
   return {
     contract: "svml.speech-audio-basis@1",
-    basisDigest: basis.basisDigest,
-    narrativeDigest: basis.narrativeDigest,
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -279,10 +273,8 @@ test("multiple Script Segments stay independent even when evidence records arriv
   ]);
   const map = locateSpeechTiming(narrative, basis, sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    basisDigest: basis.basisDigest,
-    audioArtifactDigest: basis.audio.digest,
+    audioArtifactDigest: digestOf("fixture:segments:acoustic-input"),
     programSpaceDigest: basis.programSpace.digest,
-    rawEvidenceArtifactDigest: digestOf("fixture:segments:raw"),
     durationSec: 2,
     segments: [
       {
@@ -322,24 +314,21 @@ test("invalid overlapping evidence word windows fail instead of producing a reve
   );
 });
 
-test("Evidence from another same-duration audio Basis is rejected before alignment", () => {
+test("Evidence is rejected for another coordinate space without replaying hidden provenance", () => {
   const narrative = parseScript("affinity.svml", "<line>Hello world.</line>");
-  const firstBasis = speechBasis(narrative, 2);
-  const firstEvidence = evidence({
-    basis: firstBasis,
-    words: [
-      { text: "Hello", startSec: 0.1, endSec: 0.4 },
-      { text: "world", startSec: 0.5, endSec: 0.9 },
-    ],
+  const basis = speechBasis(narrative, 2);
+  const mismatched = evidence({
+    basis,
+    words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
-  const secondBasis: SpeechAudioBasis = {
-    ...firstBasis,
-    basisDigest: digestOf("fixture:another-take"),
-    audio: { ...firstBasis.audio, digest: digestOf("fixture:another-same-duration-audio") },
-  };
+  const anotherSpace = sealProgramSpace({
+    contract: "svml.program-space@0",
+    durationSec: 2,
+    frameRate: { numerator: 30, denominator: 1 },
+  });
   assert.throws(
-    () => locateSpeechTiming(narrative, secondBasis, firstEvidence),
-    (error: unknown) => error instanceof SpeechAlignmentError && error.code === "SPEECH_EVIDENCE_BASIS",
+    () => locateSpeechTiming(narrative, basis, { ...mismatched, programSpaceDigest: anotherSpace.digest }),
+    (error: unknown) => error instanceof SpeechAlignmentError && error.code === "SPEECH_EVIDENCE_PROGRAM",
   );
 });
 
@@ -353,7 +342,6 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
   });
   const basis: SpeechAudioBasis = {
     ...original,
-    basisDigest: digestOf("fixture:30fps-take"),
     programSpace,
   };
   const map = locateSpeechTiming(narrative, basis, evidence({

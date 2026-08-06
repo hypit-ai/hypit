@@ -112,9 +112,7 @@ export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): v
     throw new Error("Unsupported SpeechEvidenceAudio contract.");
   }
   if (
-    !isDigest(value.basisDigest)
-    || !isDigest(value.narrativeDigest)
-    || !isDigest(value.programSpaceDigest)
+    !isDigest(value.programSpaceDigest)
     || !isDigest(value.sourceAudioArtifactDigest)
     || value.artifact.kind !== "blob"
     || !isDigest(value.artifact.digest)
@@ -181,9 +179,6 @@ export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
   if (basis.contract !== "svml.speech-audio-basis@1") {
     throw new Error("Unsupported SpeechAudioBasis contract.");
   }
-  if (!isDigest(basis.basisDigest) || !isDigest(basis.narrativeDigest)) {
-    throw new Error("SpeechAudioBasis identity digest is invalid.");
-  }
   assertProgramSpaceIdentity(basis.programSpace);
   if (
     !Number.isFinite(basis.programSpace.durationSec)
@@ -205,7 +200,6 @@ export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
       || segment.startSec < previousEnd
       || segment.endSec < segment.startSec
       || segment.endSec > basis.programSpace.durationSec
-      || !isDigest(segment.sourceArtifactDigest)
     ) {
       throw new Error("SpeechAudioBasis Segment is invalid or out of order.");
     }

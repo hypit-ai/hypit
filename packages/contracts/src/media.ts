@@ -71,8 +71,6 @@ export type MediaInspection = {
 
 export type MediaStreamSelection = {
   readonly contract: "svml.media-stream-selection@1";
-  readonly sourceArtifactDigest: Digest;
-  readonly inspectionDigest: Digest;
   readonly videoStreamIndex?: number;
   readonly audioStreamIndex?: number;
   readonly spanAuthority: "video" | "audio";
@@ -86,9 +84,6 @@ export type MediaStreamSelection = {
 
 export type SynchronizedMedia = {
   readonly contract: "svml.synchronized-media@1";
-  readonly sourceArtifactDigest: Digest;
-  readonly inspectionDigest: Digest;
-  readonly selectionDigest: Digest;
   readonly timeline: {
     readonly spanAuthority: "video" | "audio";
     readonly frameRate: MediaRational;

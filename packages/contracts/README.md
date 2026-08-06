@@ -14,11 +14,18 @@ and may later become `@svml/video` without changing those logical identities. Th
 contains Provider- and Frontend-neutral data contracts, identity validators and static schemas
 only. It does not parse SVML, execute external services, align speech or render Tracks.
 
+`NarrativeExcerpt` is the shared contiguous author-selection contract used by
+`script.segment.<id>` and speech-capable generation packages. It keeps model packages independent
+of the official Script parser; the actual `<media:Image>` Surface implementation likewise lives in
+the separate physical `@svml/media` package.
+
 `VisualTrack`, `AudioTrack` and `Composition` implement the flat composition law in
 [`../../spec/track-composition-v1.md`](../../spec/track-composition-v1.md). Caption, Speech and
 B-roll are upstream package concerns; the final Composition contract contains no family field.
-`VisualTrack` is an ownership/provenance aggregate, while each `VisualPresent` owns its own frame
-span and absolute z so Presents from different Tracks may interleave without cross-Track access.
+`VisualTrack` is one self-contained render contribution, while each `VisualPresent` owns its own
+frame span and absolute z so Presents from different Tracks may interleave without cross-Track
+access. Upstream ownership and provenance live in the Graph and Derivation rather than a generic
+`sources[]` field copied into every Track.
 
 Every VisualTrack explicitly binds the closed
 [`svml.hyperframes-visual-ir@1`](../../spec/hyperframes-visual-ir-v1.md) target. This is the common

@@ -177,8 +177,10 @@ Primary 已声明的某些语义输入；它们都不能偷偷捕获一个无关
 ### R10：有时必须保持多输出的共同来源
 
 如果 audio 与 visual 必须来自同一次口播生成，仅仅让它们类型都合法还不够。系统需要
-保留 `takeDigest`、`basisDigest` 或其他通用亲和性证明。否则“Seedance audio + Kling
-visual”可能被错误宣称为 exact。
+把这份不可分割的事实建模成一个原子 `SpeechBasis` Product，再由共享的 Product Record
+投影出 audio 与 visual。两条投影的 Derivation 都指向同一 Product，因此共同来源由图和
+执行证明，而不是把 `basisDigest` 沿每条下游分支反复复制。若某个消费者本身要求原子
+共同来源，它应直接消费 Product；若只消费两个普通 Track，就不应偷偷附加这一语义。
 
 ### R11：已安装不等于已附着，已附着不等于已选择
 
@@ -211,8 +213,9 @@ Logical Output affinity
 ```
 
 Producer Manifest 声明字段关系，Core 对所有派生输出和 Need fulfillment 统一执行 JSON
-Pointer 比较。`WhisperXEvidence.basisDigest` 必须在进入 BuildState 时就匹配输入的
-`SpeechAudioBasis.basisDigest`；不能依赖下游包事后补救。
+Pointer 比较。`WhisperXEvidence.audioArtifactDigest` 必须在进入 BuildState 时就匹配
+本次直接提交的 evidence-audio Blob，ProgramSpace 也必须匹配；不能依赖下游包事后
+补救。Narrative 与 Basis 的血缘由图和 Derivation 证明，不再作为 Evidence 字段透传。
 
 ### R13：Composition 只接收平级、自包含的 Track 贡献
 

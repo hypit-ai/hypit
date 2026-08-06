@@ -44,8 +44,6 @@ export type NormalizeMediaNeed = {
 
 export type ProjectSpeechEvidenceAudioNeed = {
   readonly contract: "svml.project-speech-evidence-audio-request@1";
-  readonly basisDigest: Digest;
-  readonly narrativeDigest: Digest;
   readonly programSpaceDigest: Digest;
   readonly source: BlobRef;
   readonly sourceSampleRate: 48_000;

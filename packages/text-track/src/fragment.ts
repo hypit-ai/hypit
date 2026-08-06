@@ -26,7 +26,6 @@ export const textTrackFragment = sealGraphFragment({
     semanticInputs: ["space", "program"],
     affinity: [
       { resultPointer: "/programSpaceDigest", source: input("space"), sourcePointer: "/digest" },
-      { resultPointer: "/sources/0/digest", source: input("program"), sourcePointer: "/digest" },
     ],
     fidelity: "exact",
   }],

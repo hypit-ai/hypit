@@ -30,8 +30,6 @@ export function generationObjectSchema(
 
 export const generatedImageSetSchema = generationObjectSchema({
   contract: { schema: { kind: "literal", value: "svml.generated-image-set@1" } },
-  model: { schema: { kind: "string", minLength: 1, maxLength: 255 } },
-  requestDigest: { schema: generationDigestSchema },
   images: {
     schema: {
       kind: "array",
@@ -45,9 +43,6 @@ export const generatedImageSetSchema = generationObjectSchema({
 
 export const generatedVideoSetSchema = generationObjectSchema({
   contract: { schema: { kind: "literal", value: "svml.generated-video-set@1" } },
-  model: { schema: { kind: "string", minLength: 1, maxLength: 255 } },
-  requestDigest: { schema: generationDigestSchema },
-  requestedDurationSec: { schema: { kind: "number", minimum: 0 } },
   videos: {
     schema: {
       kind: "array",
