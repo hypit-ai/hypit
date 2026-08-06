@@ -1,4 +1,4 @@
-import type { FrameSpan } from "@svml/contracts";
+import type { FrameSpan, ProgramSpace } from "@svml/contracts";
 import type { Digest } from "@svml/protocol";
 
 export type TextBox = {
@@ -53,4 +53,37 @@ export type TextTrackSpec = {
     readonly box: TextBox;
     readonly appearance: TextAppearance;
   }[];
+};
+
+/** Stable Track identity used by the graph-first Surface fold. */
+export type TextTrackHeader = {
+  readonly contract: "svml.text-track-header@1";
+  readonly id: string;
+  readonly digest: Digest;
+};
+
+/** Appearance and content are authored here; timing remains an explicit graph input. */
+export type TextItemSpec = {
+  readonly contract: "svml.text-item-spec@1";
+  readonly id: string;
+  readonly text: string;
+  readonly z: number;
+  readonly box: TextBox;
+  readonly appearance: TextAppearance;
+  readonly digest: Digest;
+};
+
+/** Package-private immutable fold value for any number of full or selected Items. */
+export type TextTrackSet = {
+  readonly contract: "svml.text-track-set@1";
+  readonly id: string;
+  readonly programSpace: ProgramSpace;
+  readonly items: readonly TextItem[];
+  readonly lastAddition?: {
+    readonly previousSetDigest: Digest;
+    readonly itemSpecDigest: Digest;
+    readonly selectionDigest?: Digest;
+    readonly mapDigest?: Digest;
+  };
+  readonly digest: Digest;
 };

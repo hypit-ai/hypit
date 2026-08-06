@@ -3,6 +3,8 @@ dist/
 .svml-cache/
 examples/**/assets/
 examples/**/build/
+examples/**/output/
+examples/**/.svml/
 examples/**/evidence/generated/
 services/whisperx/.venv/
 services/whisperx/**/__pycache__/

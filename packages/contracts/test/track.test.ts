@@ -77,6 +77,18 @@ test("Composition accepts self-contained peer VisualTrack and AudioTrack values"
   assert.deepEqual(composition.tracks.map((track) => track.id), ["speech", "caption"]);
 });
 
+test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
+  const { programSpace, visual } = fixture();
+  const composition = sealComposition({
+    contract: "svml.composition@1",
+    id: "uppercase-color",
+    programSpace,
+    canvas: { width: 480, height: 854, clearColor: "#09090B" },
+    tracks: [visual],
+  });
+  assert.doesNotThrow(() => assertCompositionIdentity(composition));
+});
+
 test("VisualTrack rejects cross-Track pixel sampling styles", () => {
   const { programSpace, visual, sound } = fixture();
   const content = structuredClone(visual) as VisualTrack;

@@ -9,10 +9,17 @@ import {
 import { compileHyperframesDocument } from "@svml/hyperframes";
 import { digestOf } from "@svml/protocol";
 import {
+  appendSelectedTextItem,
+  createTextTrackSet,
+  finalizeTextTrack,
   assertTextTrackProgramIdentity,
   renderTextTrack,
   sealTextTrackProgram,
+  sealTextItemSpec,
+  sealTextTrackHeader,
 } from "@svml/text-track";
+import type { CompleteSemanticMap, NarrativeSelectionRef } from "@svml/contracts";
+import { canonicalize } from "@svml/protocol";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@0",
@@ -100,4 +107,62 @@ test("TextTrackProgram rejects a frame span outside its ProgramSpace", () => {
     }],
   });
   assert.throws(() => renderTextTrack(space, program), /outside ProgramSpace/u);
+});
+
+test("a selected Text Item is located only through explicit Selection and SemanticMap edges", () => {
+  const mapContent = {
+    contract: "svml.complete-semantic-map@1" as const,
+    programSpace: space,
+    quantizationPolicy: "nearest-frame" as const,
+    durationSec: 5,
+    segments: [{
+      segmentId: "opening", startSec: 0, endSec: 3, startFrame: 0, endFrame: 90,
+      startQuality: "measured" as const, endQuality: "measured" as const,
+    }],
+    tokens: [0, 1, 2].map((index) => ({
+      tokenId: `token-${index}`,
+      segmentId: "opening",
+      startSec: index,
+      endSec: index + 1,
+      startFrame: index * 30,
+      endFrame: (index + 1) * 30,
+      startQuality: "measured" as const,
+      endQuality: "measured" as const,
+    })),
+    anchors: [],
+    groups: [],
+  };
+  const map: CompleteSemanticMap = {
+    ...mapContent,
+    mapDigest: digestOf(canonicalize(mapContent)),
+  };
+  const selectionContent = {
+    contract: "svml.narrative-selection@1" as const,
+    id: "callout",
+    occurrences: [{
+      occurrence: 1,
+      open: { affinity: "right" as const, boundary: { tokenIndex: 1, structuralPosition: 1, segmentId: "opening" } },
+      close: { affinity: "left" as const, boundary: { tokenIndex: 2, structuralPosition: 2, segmentId: "opening" } },
+    }],
+  };
+  const selection: NarrativeSelectionRef = {
+    ...selectionContent,
+    selectionDigest: digestOf(canonicalize(selectionContent)),
+  };
+  const header = sealTextTrackHeader({ contract: "svml.text-track-header@1", id: "selected-text" });
+  const spec = sealTextItemSpec({
+    contract: "svml.text-item-spec@1",
+    id: "meaning",
+    text: "MEANING",
+    z: 80,
+    box: { xPercent: 10, yPercent: 10, widthPercent: 80, heightPercent: 10 },
+    appearance: { color: "#ffffff", fontSizePx: 48 },
+  });
+  const program = finalizeTextTrack(appendSelectedTextItem(
+    createTextTrackSet(space, header),
+    map,
+    selection,
+    spec,
+  ));
+  assert.deepEqual(program.items.map((item) => item.span), [{ startFrame: 30, endFrameExclusive: 60 }]);
 });

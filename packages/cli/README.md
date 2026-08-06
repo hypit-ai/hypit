@@ -25,6 +25,7 @@ pnpm svml:v2 plan path/to/main.svml --target component.result
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts --follow
 pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --follow --out ./final.mp4
+pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --pin shot=<prior-build-id> --follow --out ./variant.mp4
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.ts
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
 ```
@@ -48,6 +49,13 @@ these commands creates a second ready-command queue.
 `--out` accepts exactly one completed media target, reads its content-addressed bytes through the
 selected Runtime ArtifactStore and writes the requested file. It does not treat a CAS path as a
 public filename or bypass Record identity verification.
+
+`--pin output=<prior-build-id>` is intentionally CLI language, not a Core primitive. The trusted
+Host verifies the prior Build and output Record, attaches it as an Existing-Value realization, and
+adds an explicit binding to a newly compiled BuildRequest. Upstream work behind that output is not
+demanded, while every unbound reachable output follows the ordinary graph. The prior artifact must
+still exist in the ArtifactStore selected by the Runtime. This is a new Build with a new identity;
+it never resumes or copies the prior Build's outstanding Commands.
 
 `@svml/package-loader-node` supports explicitly trusted installed implementation packages. It
 verifies the complete physical dependency closure before executing an activation entry, then checks

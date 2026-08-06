@@ -11,3 +11,9 @@ An attached Candidate is inert. It enters a finite BuildPlan only when a `BuildR
 selects it and a Target reaches its Logical Output. Product UI actions such as “Pin” create or locate
 an Existing-Value Candidate and then write that ordinary selection; they do not mutate Core state or
 require a database.
+
+`createHistoricalCandidate()` is the trusted Host helper for this common case. It verifies the
+complete prior `BuildState`, requires the same author Graph and the same semantic Logical Output,
+then issues a content-addressed output-validation receipt binding the prior Record digest to that
+output. The result is still an ordinary zero-input Existing-Value Candidate: no historical
+Operation, Command or outstanding work is copied into the new Build.
