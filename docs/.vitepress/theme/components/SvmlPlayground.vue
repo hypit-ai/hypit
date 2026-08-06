@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   demoAudioEnabled as audioEnabled,
+  demoAudioPlaybackEnabled as audioPlaybackEnabled,
   enableDemoAudioAfterInteraction,
   initializeDemoAudio,
   toggleDemoAudio,
@@ -223,6 +224,7 @@ const automaticSourceSelections = ref<TimelineSelection[]>([selections[0]]);
 const activeRuntimeItem = ref<RankingSelection | null>(null);
 const settledIds = ref<Set<RankingSelectionId>>(new Set());
 let rangeResizeObserver: ResizeObserver | null = null;
+let rangeMutationObserver: MutationObserver | null = null;
 let animationFrame = 0;
 let previousTimestamp = 0;
 let programTime = 0;
@@ -335,6 +337,8 @@ function updateRangeGeometry() {
   if (!container) return;
   const containerRect = container.getBoundingClientRect();
   const width = container.clientWidth;
+  const scaleX = container.offsetWidth ? containerRect.width / container.offsetWidth : 1;
+  const scaleY = container.offsetHeight ? containerRect.height / container.offsetHeight : 1;
   const renderedLines = Array.from(container.querySelectorAll<HTMLElement>(":scope > .code-line"));
   const lastRenderedLine = renderedLines.at(-1);
   const paddingBottom = Number.parseFloat(getComputedStyle(container).paddingBottom) || 0;
@@ -356,20 +360,20 @@ function updateRangeGeometry() {
     const endLine = endMarker?.closest<HTMLElement>(".code-line");
     if (!startMarker || !endMarker || !startLine || !endLine) continue;
 
-    const startRect = startMarker.getBoundingClientRect();
-    const endRect = endMarker.getBoundingClientRect();
-    const offsetX = container.scrollLeft - containerRect.left;
-    const offsetY = container.scrollTop - containerRect.top;
+    const startFragments = Array.from(startMarker.getClientRects());
+    const endFragments = Array.from(endMarker.getClientRects());
+    const startRect = startFragments[0] ?? startMarker.getBoundingClientRect();
+    const endRect = endFragments.at(-1) ?? endMarker.getBoundingClientRect();
     const inlinePadding = 3;
     const edgeOverhang = 3;
     const left = 44 - edgeOverhang;
     const right = width - 12 + edgeOverhang;
-    const startX = Math.max(3, Math.min(width - 3, startRect.left + offsetX - inlinePadding));
-    const endX = Math.max(3, Math.min(width - 3, endRect.right + offsetX + inlinePadding));
+    const startX = Math.max(3, Math.min(width - 3, (startRect.left - containerRect.left) / scaleX + container.scrollLeft - inlinePadding));
+    const endX = Math.max(3, Math.min(width - 3, (endRect.right - containerRect.left) / scaleX + container.scrollLeft + inlinePadding));
     const lineHeight = Number.parseFloat(getComputedStyle(startLine).lineHeight) || 26;
     const blockPadding = 0;
-    const startCenter = (startRect.top + startRect.bottom) / 2 + offsetY;
-    const endCenter = (endRect.top + endRect.bottom) / 2 + offsetY;
+    const startCenter = ((startRect.top + startRect.bottom) / 2 - containerRect.top) / scaleY + container.scrollTop;
+    const endCenter = ((endRect.top + endRect.bottom) / 2 - containerRect.top) / scaleY + container.scrollTop;
     const top = startCenter - lineHeight / 2 - blockPadding;
     const startBottom = startCenter + lineHeight / 2;
     const endTop = endCenter - lineHeight / 2;
@@ -566,7 +570,7 @@ function syncBaseVideos(force = false) {
 
   baseVideos.forEach((video, index) => {
     if (!video) return;
-    video.muted = !audioEnabled.value || index !== activeIndex;
+    video.muted = !audioPlaybackEnabled.value || index !== activeIndex;
     if (index !== activeIndex) {
       video.pause();
       return;
@@ -784,7 +788,11 @@ watch(
   [() => displayedLines.value.map((entry) => entry.key).join("|"), sourceFollowEnabled],
   () => {
     void nextTick().then(() => {
-      updateLayoutGeometry();
+      updateSourceViewportRows();
+      void nextTick().then(() => {
+        updateLayoutGeometry();
+        requestAnimationFrame(updateLayoutGeometry);
+      });
     });
   },
   { flush: "post" },
@@ -811,6 +819,8 @@ onMounted(() => {
     if (codeScrollElement.value) {
       rangeResizeObserver = new ResizeObserver(updateLayoutGeometry);
       rangeResizeObserver.observe(codeScrollElement.value);
+      rangeMutationObserver = new MutationObserver(() => requestAnimationFrame(updateRangeGeometry));
+      rangeMutationObserver.observe(codeScrollElement.value, { childList: true, subtree: true });
     }
   });
   window.addEventListener("resize", updateLayoutGeometry);
@@ -821,6 +831,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", enableAudio, true);
   window.removeEventListener("resize", updateLayoutGeometry);
   rangeResizeObserver?.disconnect();
+  rangeMutationObserver?.disconnect();
 });
 </script>
 
@@ -861,7 +872,7 @@ onBeforeUnmount(() => {
             ? (sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图")
             : (sourceFollowEnabled ? "点击代码查看所有源码" : "点击空白处返回精简视图") }}
         </div>
-        <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code">
+        <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code" @scroll="updateRangeGeometry">
           <svg
             v-if="rangeCanvas.width && rangeCanvas.height"
             class="semantic-range-canvas"
@@ -893,6 +904,7 @@ onBeforeUnmount(() => {
               :class="{
                 'binding-active': bindingDepth(entry.line) >= 0,
                 'binding-depth-1': bindingDepth(entry.line) === 1,
+                'binding-depth-2': bindingDepth(entry.line) === 2,
               }"
               @mouseover="inspectLine(entry.line, entry.index)"
             >
@@ -920,7 +932,7 @@ onBeforeUnmount(() => {
                 :ref="(element) => setBaseVideo(element, index)"
                 :class="{ active: currentSceneIndex === index }"
                 :src="resolveDemoMedia(scene.src)"
-                :muted="!audioEnabled || currentSceneIndex !== index"
+                :muted="!audioPlaybackEnabled || currentSceneIndex !== index"
                 playsinline
                 preload="auto"
                 @loadedmetadata="syncBaseVideos(true)"
@@ -980,12 +992,7 @@ onBeforeUnmount(() => {
               :title="audioEnabled ? '静音' : '取消静音'"
               @click.stop="toggleAudio"
             >
-              <svg v-if="audioEnabled" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.25-3.9v7.8A4.5 4.5 0 0 0 16.5 12zm-2.25-8.6v2.1a7 7 0 0 1 0 13v2.1a9 9 0 0 0 0-17.2z"/>
-              </svg>
-              <svg v-else viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 9v6h4l5 4V5L8 9H4zm12.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4-2.7-2.7z"/>
-              </svg>
+              <span class="material-symbols-rounded" aria-hidden="true">{{ audioEnabled ? "volume_up" : "volume_off" }}</span>
             </button>
           </div>
         </div>
@@ -1021,7 +1028,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .live-active-icon.semantic-selected,
 .live-rank-cell.semantic-selected {
-  outline: 1px solid #C85F7D;
+  outline: 1px solid #EE7B62;
   outline-offset: 3px;
 }
 
