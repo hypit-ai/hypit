@@ -470,6 +470,9 @@ importers:
       '@svml/script':
         specifier: workspace:*
         version: link:../script
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
       '@svml/speech-take':
         specifier: workspace:*
         version: link:../speech-take
@@ -700,12 +703,12 @@ importers:
 
   packages/speech-align:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol

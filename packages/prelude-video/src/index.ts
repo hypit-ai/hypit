@@ -31,6 +31,10 @@ import {
   scriptSurfaceImplementationDigest,
 } from "@svml/script";
 import {
+  speechAlignComponent,
+  speechAlignManifest,
+} from "@svml/speech-align";
+import {
   speechTakeComponent,
   speechTakeManifest,
 } from "@svml/speech-take";
@@ -45,6 +49,7 @@ export const svmlPackage: NodePackageActivation = {
     { manifest: svsManifest },
     { manifest: hyperframesManifest },
     { manifest: mediaPipelineManifest },
+    { manifest: speechAlignManifest },
     { manifest: speechTakeManifest },
     { manifest: filmManifest, specifiers: ["@svml/film", "@svml/film@1"] },
     {
@@ -56,6 +61,7 @@ export const svmlPackage: NodePackageActivation = {
   components: [
     ...videoContractsComponents,
     mediaPipelineComponent,
+    speechAlignComponent,
     speechTakeComponent,
     hyperframesComponent,
     hyperframesRenderComponent,
