@@ -7,9 +7,11 @@ export type {
   RegisteredModulePackage,
 } from "./modules.js";
 export { NodeSourceHost } from "./source.js";
+export type { NodeSourceArtifact } from "./source.js";
 export { NodeCompiler } from "./compiler.js";
 export type {
   NodeCompilerOptions,
+  NodeCompiledSourceClosure,
   PlannedSource,
   PlanFileOptions,
 } from "./compiler.js";
