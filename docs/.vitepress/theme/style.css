@@ -13,9 +13,9 @@
   --vp-c-text-2: #a3a3a3;
   --vp-c-text-3: #737373;
   --vp-c-divider: #262626;
-  --narratage-gold-light: #f3e4b5;
-  --narratage-gold: #d3ad65;
-  --narratage-gold-deep: #a87937;
+  --narratage-rose-light: #f8c8dc;
+  --narratage-rose: #df7eaa;
+  --narratage-rose-deep: #a83d70;
   --vp-nav-bg-color: rgba(0, 0, 0, 0.86);
   --vp-sidebar-bg-color: #000;
   --vp-code-block-bg: #0a0a0a;
@@ -26,14 +26,15 @@ body { letter-spacing: -0.012em; }
 .VPHome { margin-bottom: 0 !important; }
 .VPNav { backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,.08); }
 .VPNavBarTitle .title {
-  color: var(--narratage-gold-light);
-  background: linear-gradient(105deg, var(--narratage-gold-light), var(--narratage-gold) 58%, #ead397);
+  color: var(--narratage-rose-light);
+  background: linear-gradient(105deg, #f7c7dc, var(--narratage-rose) 58%, #efb1ce);
   background-clip: text;
   font-family: "Newsreader", Georgia, serif;
   font-size: 21px;
+  font-style: italic;
   font-optical-sizing: auto;
-  font-weight: 600;
-  letter-spacing: -.025em;
+  font-weight: 500;
+  letter-spacing: -.018em;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -51,16 +52,17 @@ body { letter-spacing: -0.012em; }
   margin: 0;
   border: 0;
   padding: 0 .025em .06em 0;
-  color: var(--narratage-gold-light);
-  background: linear-gradient(106deg, #f7ecc9 0%, var(--narratage-gold) 43%, #efd99d 72%, var(--narratage-gold-deep) 108%);
+  color: var(--narratage-rose-light);
+  background: linear-gradient(106deg, #fbd4e5 0%, var(--narratage-rose) 43%, #f2afcd 72%, var(--narratage-rose-deep) 108%);
   background-clip: text;
-  filter: drop-shadow(0 10px 28px rgba(190,145,62,.1));
+  filter: drop-shadow(0 10px 28px rgba(190,72,129,.1));
   font-family: "Newsreader", Georgia, serif;
   font-size: clamp(54px,7.5vw,98px);
+  font-style: italic;
   font-optical-sizing: auto;
   font-weight: 500;
   line-height: .92;
-  letter-spacing: -.048em;
+  letter-spacing: -.036em;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
