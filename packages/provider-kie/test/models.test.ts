@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createResolvedClosure, digestOf } from "@svml/core";
-import { mediaManifest, narrativeManifest } from "@svml/contracts";
+import { videoContractManifests } from "@svml/contracts";
 import { verifyGraphFragment } from "@svml/elaborator";
 import {
   geminiOmniDefinition,
@@ -40,8 +40,7 @@ test("all model manifests close over the shared generation contract and every Fr
     seedreamDefinition,
   ];
   const closure = createResolvedClosure([
-    mediaManifest,
-    narrativeManifest,
+    ...videoContractManifests,
     generationManifest,
     seedanceManifest,
     minimaxH3Manifest,

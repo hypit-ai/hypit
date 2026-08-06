@@ -270,15 +270,21 @@ reference media Endpoint, local HyperFrames Endpoint and local WhisperX Endpoint
 The representative seven-family KIE live suite, one real synthetic-reference upload and the
 retained KIE media replay have passed. Real tests also cover exact 48 kHz → 16 kHz evidence
 projection, byte-identical sidecar staging and a two-worker silent HyperFrames MP4.
-The external capability boundary and the complete Caption Gemini/Vertex split are now sufficient
-for the first vertical video. The next work is:
+The first complete paid vertical-video chain now passes in `examples/talking-film-live`: two real
+KIE Seedance Mini 480p clips, deterministic estimate, local media normalization, local WhisperX,
+Vertex Gemini Caption planning, SemanticMap, Caption and Selection Text Tracks, Film, local
+HyperFrames rendering, audio mix and final mux. The ten-second output contains H.264 video and AAC
+audio. A second independent Build also reused both paid shot Records through explicit historical
+realizations, issued no KIE Need, and rebuilt the complete downstream graph.
 
-1. add real source assets and a trusted local Runtime profile, then execute the already-checkable
-   graph in `examples/talking-film-graph-check` through `--out` as one source-to-final-video build;
-2. run the first real Google Vertex Caption request and the local WhisperX/HyperFrames Providers in
-   the same paid Build, then retain the resulting deployment evidence;
-3. add AWS media/HyperFrames/WhisperX Endpoints only when the team needs Lambda execution; they must return the same
-   inspection/normalization contracts rather than define another media meaning;
+The next work is:
+
+1. turn this deployment witness into an opt-in live acceptance test without committing credentials,
+   paid media or generated outputs;
+2. finish the official Caption/Text visual capability and exact-font acceptance matrix before
+   freezing those author-facing packages;
+3. add AWS media/HyperFrames/WhisperX Endpoints only when the team needs Lambda execution; they must
+   return the same inspection/normalization contracts rather than define another media meaning;
 
 ## Deliberately not implemented
 
@@ -292,9 +298,9 @@ for the first vertical video. The next work is:
 - production multipart/ranged Artifact streaming and distributed execution adapters;
 - production exact-font author assets; Caption, B-roll and Text Surfaces remain pre-freeze vertical
   slices even though display-only Gemini planning and the Vertex Endpoint are implemented;
-- execution of the production `examples/talking-film-golden` source; its real local assets,
-  credentials and selected Runtime profile are still missing, while
-  `examples/talking-film-graph-check` compiles the complete graph;
+- checked-in paid credentials, generated presenter assets or live-build outputs; the executable
+  source and trusted Runtime profile live in `examples/talking-film-live`, while its private inputs
+  and outputs remain ignored;
 - a cross-Track effect or adjustment-layer model.
 - a dedicated Base FX model or compatibility placeholder.
 

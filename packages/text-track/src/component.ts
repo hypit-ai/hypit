@@ -1,16 +1,34 @@
 import type { ComponentPackage } from "@svml/component-kit";
-import type { ProgramSpace } from "@svml/contracts";
+import type {
+  CompleteSemanticMap,
+  NarrativeSelectionRef,
+  ProgramSpace,
+} from "@svml/contracts";
 import type { StoredValue } from "@svml/protocol";
 import { canonicalize } from "@svml/protocol";
 
 import { textTrackProducers } from "./manifest.js";
 import {
+  appendFullTextItem,
+  appendFullTextItemImplementationDigest,
+  appendSelectedTextItem,
+  appendSelectedTextItemImplementationDigest,
   compileTextTrackImplementationDigest,
   compileTextTrackProgram,
+  createTextTrackSet,
+  createTextTrackSetImplementationDigest,
+  finalizeTextTrack,
+  finalizeTextTrackImplementationDigest,
   renderTextTrack,
   renderTextTrackImplementationDigest,
 } from "./program.js";
-import type { TextTrackProgram, TextTrackSpec } from "./types.js";
+import type {
+  TextItemSpec,
+  TextTrackHeader,
+  TextTrackProgram,
+  TextTrackSet,
+  TextTrackSpec,
+} from "./types.js";
 
 function inline<T>(value: StoredValue | undefined, subject: string): T {
   if (value?.kind !== "inline") throw new Error(`${subject} must be inline`);
@@ -20,6 +38,43 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 export const textTrackComponent = {
   name: "@svml/text-track",
   producers: [{
+    producer: textTrackProducers.createSet,
+    implementationDigest: createTextTrackSetImplementationDigest,
+    handler: ({ inputs }) => ({
+      outputs: { set: { kind: "inline", value: canonicalize(createTextTrackSet(
+        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        inline<TextTrackHeader>(inputs.header?.value, "TextTrackHeader"),
+      )) } }, needs: {},
+    }),
+  }, {
+    producer: textTrackProducers.appendFull,
+    implementationDigest: appendFullTextItemImplementationDigest,
+    handler: ({ inputs }) => ({
+      outputs: { set: { kind: "inline", value: canonicalize(appendFullTextItem(
+        inline<TextTrackSet>(inputs.set?.value, "TextTrackSet"),
+        inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
+      )) } }, needs: {},
+    }),
+  }, {
+    producer: textTrackProducers.appendSelected,
+    implementationDigest: appendSelectedTextItemImplementationDigest,
+    handler: ({ inputs }) => ({
+      outputs: { set: { kind: "inline", value: canonicalize(appendSelectedTextItem(
+        inline<TextTrackSet>(inputs.set?.value, "TextTrackSet"),
+        inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+        inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelection"),
+        inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
+      )) } }, needs: {},
+    }),
+  }, {
+    producer: textTrackProducers.finalize,
+    implementationDigest: finalizeTextTrackImplementationDigest,
+    handler: ({ inputs }) => ({
+      outputs: { program: { kind: "inline", value: canonicalize(finalizeTextTrack(
+        inline<TextTrackSet>(inputs.set?.value, "TextTrackSet"),
+      )) } }, needs: {},
+    }),
+  }, {
     producer: textTrackProducers.compile,
     implementationDigest: compileTextTrackImplementationDigest,
     handler: ({ inputs }) => ({

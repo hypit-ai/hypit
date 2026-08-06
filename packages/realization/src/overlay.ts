@@ -3,11 +3,14 @@ import {
   digestOf,
   EMPTY_REALIZATION_DIGEST,
   isDigest,
+  sealOutputValidationReceipt,
   resolveLogicalOutput,
   sealCompiledGraph,
+  verifyBuildState,
   verifyCompiledGraph,
 } from "@svml/core";
 import type {
+  BuildState,
   Candidate,
   CanonicalValue,
   CompiledGraph,
@@ -17,6 +20,7 @@ import type {
   OperationNode,
   StoredValue,
   TypeValidationReceipt,
+  OutputValidationReceipt,
 } from "@svml/protocol";
 
 export type RealizationOverlay = {
@@ -47,6 +51,15 @@ export type ProvidedCandidateInput = {
   readonly record?: string;
   readonly provenance?: CanonicalValue;
   readonly validation?: TypeValidationReceipt;
+  readonly outputValidation?: OutputValidationReceipt;
+};
+
+export type HistoricalCandidateInput = {
+  /** Current author graph before any external Realization Overlay. */
+  readonly source: CompiledGraph;
+  /** A previously verified BuildState using this exact author graph source. */
+  readonly build: BuildState;
+  readonly output: string;
 };
 
 export class RealizationError extends Error {
@@ -104,6 +117,7 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
     fidelity: input.fidelity,
     ...(input.provenance === undefined ? {} : { provenance: canonicalize(input.provenance) }),
     ...(input.validation === undefined ? {} : { validation: input.validation }),
+    ...(input.outputValidation === undefined ? {} : { outputValidation: input.outputValidation }),
   };
   const suffix = digestOf(identity).slice("sha256:".length);
   return {
@@ -116,10 +130,82 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
         value,
         ...(input.provenance === undefined ? {} : { provenance: canonicalize(input.provenance) }),
         ...(input.validation === undefined ? {} : { validation: input.validation }),
+        ...(input.outputValidation === undefined ? {} : { outputValidation: input.outputValidation }),
       },
     },
     fidelity: input.fidelity,
   };
+}
+
+/**
+ * Admit one already verified historical Logical Output as an inert Existing Value Candidate.
+ * The new Build is unrelated to recovery: only the exact Record value and its admission receipt
+ * cross the boundary. No prior outstanding Command or execution state is reused.
+ */
+export function createHistoricalCandidate(input: HistoricalCandidateInput): Candidate {
+  verifyCompiledGraph(input.build.program, input.source);
+  verifyBuildState(input.build);
+  assert(
+    input.build.graph.source === input.source.source,
+    "HISTORICAL_GRAPH_MISMATCH",
+    "historical Build belongs to another author graph source",
+    input.output,
+  );
+  const currentOutput = resolveLogicalOutput(input.source, input.output);
+  const historicalOutput = resolveLogicalOutput(input.build.graph, input.output);
+  assert(
+    digestOf({
+      id: currentOutput.id,
+      type: currentOutput.type,
+      semanticInputs: currentOutput.semanticInputs,
+      affinity: currentOutput.affinity ?? [],
+    }) === digestOf({
+      id: historicalOutput.id,
+      type: historicalOutput.type,
+      semanticInputs: historicalOutput.semanticInputs,
+      affinity: historicalOutput.affinity ?? [],
+    }),
+    "HISTORICAL_OUTPUT_MISMATCH",
+    "historical Build has another Logical Output definition",
+    input.output,
+  );
+  const selection = input.build.plan.selections.find((item) => item.output === input.output);
+  assert(selection !== undefined, "HISTORICAL_OUTPUT_UNSELECTED", "historical Build did not select this Logical Output", input.output);
+  const record = input.build.records.find((item) => item.id === selection.record);
+  assert(record !== undefined, "HISTORICAL_RECORD_MISSING", "historical Output Record is absent", selection.record);
+  assert(
+    record.type.module.name === currentOutput.type.module.name
+      && record.type.module.version === currentOutput.type.module.version
+      && record.type.name === currentOutput.type.name,
+    "HISTORICAL_TYPE_MISMATCH",
+    "historical Output Record has another Type",
+    record.id,
+  );
+  const outputValidation = record.conformance === "exact"
+    ? sealOutputValidationReceipt({
+        graphSource: input.source.source,
+        output: input.output,
+        recordDigest: record.digest,
+        sourceBuild: input.build.id,
+        sourceRequest: input.build.request.digest,
+        sourceCandidate: selection.candidate,
+      })
+    : undefined;
+  return createProvidedCandidate({
+    output: input.output,
+    value: record.value,
+    fidelity: record.conformance,
+    provenance: {
+      format: "svml.historical-output@1",
+      sourceBuild: input.build.id,
+      sourceRequest: input.build.request.digest,
+      sourceCandidate: selection.candidate,
+      sourceRecord: record.id,
+      sourceRecordDigest: record.digest,
+    },
+    ...(record.validation === undefined ? {} : { validation: record.validation }),
+    ...(outputValidation === undefined ? {} : { outputValidation }),
+  });
 }
 
 export function verifyRealizationOverlay(

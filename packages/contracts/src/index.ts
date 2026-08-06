@@ -1,16 +1,19 @@
 export {
   assertProgramSpaceIdentity,
+  assertSpeechDurationIdentity,
   assertSpeechAudioBasisIdentity,
   assertSpeechBasisIdentity,
   assertSpeechEvidenceAudioIdentity,
   computeAlignedTranscriptEvidenceDigest,
   computeProgramSpaceDigest,
+  computeSpeechDurationDigest,
   computeSpeechBasisDigest,
   computeSpeechEvidenceAudioDigest,
   programSpaceFrameCount,
   programSpaceSampleFrames,
   sealAlignedTranscriptEvidence,
   sealProgramSpace,
+  sealSpeechDuration,
   sealSpeechBasis,
   sealSpeechEvidenceAudio,
   speechEvidenceSampleBoundary,
@@ -88,6 +91,7 @@ export {
   speechAudioBasisSchema,
   speechEvidenceAudioSchema,
   speechBasisSchema,
+  speechDurationSchema,
   visualTrackSchema,
   audioTrackSchema,
   compositionSchema,
@@ -100,6 +104,11 @@ export {
   assertFontArtifactRef,
 } from "./render.js";
 export type * from "./render.js";
+export {
+  assertCompleteSemanticMapIdentity,
+  assertNarrativeSelectionIdentity,
+  selectionFrameSpans,
+} from "./semantic-location.js";
 export type * from "./speech.js";
 export {
   assertAudioTrackIdentity,

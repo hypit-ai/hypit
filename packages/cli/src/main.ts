@@ -5,6 +5,10 @@ import { pathToFileURL } from "node:url";
 import type { LocalRuntime } from "@svml/local";
 import { isDigest } from "@svml/protocol";
 import {
+  createHistoricalCandidate,
+  sealRealizationOverlay,
+} from "@svml/realization";
+import {
   createNodePackageLock,
   loadNodePackageSet,
   writeNodePackageLock,
@@ -29,6 +33,7 @@ type ParsedArgs = {
   readonly packageLock: string | undefined;
   readonly packages: readonly string[];
   readonly out: string | undefined;
+  readonly pins: readonly { readonly output: string; readonly build: string }[];
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -43,6 +48,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   const packages: string[] = [];
   let substitute = false;
   let out: string | undefined;
+  const pins: { output: string; build: string }[] = [];
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
     if (item === "--target") {
@@ -98,6 +104,15 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
+    if (item === "--pin") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--pin requires output=build-id");
+      const separator = value.indexOf("=");
+      if (separator <= 0 || separator === value.length - 1) throw new Error("--pin requires output=build-id");
+      pins.push({ output: value.slice(0, separator), build: value.slice(separator + 1) });
+      index += 1;
+      continue;
+    }
     if (item === "--follow") {
       follow = true;
       continue;
@@ -127,6 +142,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     packageLock,
     packages,
     out,
+    pins,
   };
 }
 
@@ -136,7 +152,7 @@ function usage(): string {
     "  svml-v2 lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
     "  svml-v2 check <file.svml> [--package-lock file] [--root directory]",
     "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--package-lock file]",
-    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--package-lock file] [--follow] [--out video.mp4]",
+    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build] [--follow] [--out video.mp4]",
     "  svml-v2 status <build-id> --runtime ./svml.runtime.ts",
     "  svml-v2 cancel <build-id> --runtime ./svml.runtime.ts",
   ].join("\n");
@@ -213,6 +229,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     return;
   }
   if (args.out !== undefined && args.command !== "build") throw new Error("--out is only valid for build");
+  if (args.pins.length > 0 && args.command !== "build") throw new Error("--pin is only valid for build");
   if (args.command === "status" || args.command === "cancel") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
     const runtime = await loadLocalRuntime(args.runtime);
@@ -273,15 +290,55 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     }, null, 2)}\n`);
     return;
   }
-  const result = await compiler.planFile(args.file, {
-    targets: args.targets,
-    accepts: args.substitute ? "substitute" : "exact",
-    ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
-  });
   if (args.command === "build") {
     if (args.runtime === undefined) throw new Error("build requires --runtime with a trusted local config module");
     const runtime = await loadLocalRuntime(args.runtime);
     try {
+      const planOptions = {
+        targets: args.targets,
+        accepts: args.substitute ? "substitute" as const : "exact" as const,
+        ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
+      };
+      let pinSummary: readonly { readonly output: string; readonly build: string; readonly candidate: string }[] = [];
+      const result = args.pins.length === 0
+        ? await compiler.planFile(args.file, planOptions)
+        : await (async () => {
+            const compilation = await compiler.compileFile(args.file!);
+            const seen = new Set<string>();
+            const candidates = [];
+            const bindings = [];
+            const summary = [];
+            for (const pin of args.pins) {
+              if (seen.has(pin.output)) throw new Error(`--pin repeats output ${pin.output}`);
+              seen.add(pin.output);
+              const exported = compilation.exports.find((item) => item.name === pin.output);
+              if (exported === undefined) throw new Error(`--pin refers to unknown public output ${pin.output}`);
+              if (exported.ref.kind !== "logical-output") {
+                throw new Error(`--pin ${pin.output} is an authored Record, not a realizable output`);
+              }
+              const historical = await runtime.status(pin.build);
+              if (historical.build === undefined) throw new Error(`--pin source Build ${pin.build} does not exist`);
+              const candidate = createHistoricalCandidate({
+                source: compilation.elaboration.graph,
+                build: historical.build.state,
+                output: exported.ref.id,
+              });
+              candidates.push(candidate);
+              bindings.push({ output: exported.ref.id, candidate: candidate.id });
+              summary.push({ output: pin.output, build: pin.build, candidate: candidate.id });
+            }
+            const overlay = sealRealizationOverlay({
+              sourceGraph: compilation.elaboration.graph.id,
+              candidates,
+              operations: [],
+            });
+            pinSummary = summary;
+            return compiler.planCompilation(compilation, {
+              ...planOptions,
+              bindings,
+              realizations: [overlay],
+            });
+          })();
       const built = await runtime.build({
         id: args.buildId ?? result.state.id,
         state: result.state,
@@ -291,7 +348,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
       });
       let materialized: { readonly path: string; readonly digest: string; readonly size: number } | undefined;
-      if (args.out !== undefined) {
+      if (args.out !== undefined && built.status === "complete") {
         materialized = await materializeSingleGoal(runtime, built, args.out);
       }
       io.write(`${JSON.stringify({
@@ -309,6 +366,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
         }),
         blocked: built.blocked,
         journal: built.journal,
+        ...(pinSummary.length === 0 ? {} : { pins: pinSummary }),
+        ...(args.out !== undefined && materialized === undefined ? { pendingOutput: args.out } : {}),
         ...(materialized === undefined ? {} : { output: materialized }),
       }, null, 2)}\n`);
     } finally {
@@ -316,5 +375,10 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     }
     return;
   }
+  const result = await compiler.planFile(args.file, {
+    targets: args.targets,
+    accepts: args.substitute ? "substitute" : "exact",
+    ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
+  });
   io.write(`${JSON.stringify(result.plan, null, 2)}\n`);
 }

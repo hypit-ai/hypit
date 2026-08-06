@@ -14,6 +14,7 @@
     "@svml/caption": "workspace:*",
     "@svml/caption-gemini": "workspace:*",
     "@svml/contracts": "workspace:*",
+    "@svml/estimate": "workspace:*",
     "@svml/generation": "workspace:*",
     "@svml/film": "workspace:*",
     "@svml/hyperframes": "workspace:*",

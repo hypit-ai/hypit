@@ -32,6 +32,13 @@ import {
   decodeCaptionGeminiPlannerSurface,
 } from "@svml/caption-gemini";
 import {
+  decodeSpeechEstimateSurface,
+  estimateComponent,
+  estimateManifest,
+  estimateModuleRef,
+  estimateSurfaceImplementationDigest,
+} from "@svml/estimate";
+import {
   decodeFilmSurface,
   filmComponent,
   filmManifest,
@@ -116,6 +123,7 @@ export const svmlPackage: NodePackageActivation = {
         : {}),
     })),
     { manifest: generationManifest },
+    { manifest: estimateManifest, specifiers: ["@svml/estimate", "@svml/estimate@1"] },
     { manifest: seedanceManifest, specifiers: ["@svml/seedance", "@svml/seedance@1"] },
     { manifest: scriptManifest, specifiers: ["@svml/script", "@svml/script@1"] },
     { manifest: svsManifest },
@@ -142,6 +150,7 @@ export const svmlPackage: NodePackageActivation = {
   components: [
     ...videoContractsComponents,
     generationComponent,
+    estimateComponent,
     seedanceComponent,
     captionComponent,
     captionGeminiComponent,
@@ -157,6 +166,13 @@ export const svmlPackage: NodePackageActivation = {
     hyperframesRenderComponent,
   ],
   textSurfaces: [
+    {
+      module: estimateModuleRef,
+      surface: "speech",
+      mode: "structured",
+      implementationDigest: estimateSurfaceImplementationDigest,
+      handler: decodeSpeechEstimateSurface,
+    },
     {
       module: mediaModuleRef,
       surface: "image",

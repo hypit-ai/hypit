@@ -33,6 +33,13 @@
     "hyperframes": "0.7.84"
   },
   "devDependencies": {
+    "@svml/local": "workspace:*",
+    "@svml/prelude-video": "workspace:*",
+    "@svml/provider-google-vertex": "workspace:*",
+    "@svml/provider-hyperframes-local": "workspace:*",
+    "@svml/provider-kie": "workspace:*",
+    "@svml/provider-media-local": "workspace:*",
+    "@svml/provider-whisperx-local": "workspace:*",
     "@types/node": "24.10.1",
     "tsx": "4.21.0",
     "typescript": "5.9.3"

@@ -23,6 +23,8 @@ import type {
   CandidateBinding,
   NeedAcceptance,
 } from "@svml/protocol";
+import { resolveRealization } from "@svml/realization";
+import type { RealizationOverlay } from "@svml/realization";
 import {
   TypeValidatorRegistry,
   createRecordAdmitter,
@@ -88,6 +90,8 @@ export type PlanFileOptions = {
   readonly accepts?: NeedAcceptance;
   readonly bindings?: readonly CandidateBinding[];
   readonly implementationClosure?: import("@svml/protocol").Digest;
+  /** External Candidate attachments; never discovered from the author source. */
+  readonly realizations?: readonly RealizationOverlay[];
 };
 
 export type PlannedSource = {
@@ -158,6 +162,20 @@ export class NodeCompiler {
       throw new NodeCompilerError("EMPTY_BUILD_TARGETS", "plan requires at least one public source export");
     }
     const compilation = await this.compileFile(file);
+    return this.planCompilation(compilation, options);
+  }
+
+  planCompilation(compilation: NodeCompiledSourceClosure, options: PlanFileOptions): PlannedSource {
+    if (options.targets.length === 0) {
+      throw new NodeCompilerError("EMPTY_BUILD_TARGETS", "plan requires at least one public source export");
+    }
+    const graph = options.realizations === undefined || options.realizations.length === 0
+      ? compilation.elaboration.graph
+      : resolveRealization(
+          compilation.program,
+          compilation.elaboration.graph,
+          options.realizations,
+        ).graph;
     const targets = options.targets.map((name) => {
       const exported = resolveCompiledSourceExport(compilation, name);
       if (exported.ref.kind !== "logical-output") {
@@ -170,7 +188,7 @@ export class NodeCompiler {
       return { output: exported.ref.id, accepts: options.accepts ?? "exact" } as const;
     });
     const request = sealBuildRequest({
-      graph: compilation.elaboration.graph.id,
+      graph: graph.id,
       ...(options.implementationClosure === undefined
         ? {}
         : { implementationClosure: options.implementationClosure }),
@@ -179,7 +197,7 @@ export class NodeCompiler {
     });
     const state = start(
       compilation.program,
-      compilation.elaboration.graph,
+      graph,
       request,
     );
     return { compilation, request, plan: state.plan, state };

@@ -10,11 +10,16 @@ import type {
   TextAttributeValue,
 } from "@svml/text";
 
-import { createSeedanceGenerationFragment } from "./fragment.js";
+import {
+  createSeedanceGenerationFragment,
+  createSeedanceSpeechGenerationFragment,
+} from "./fragment.js";
 import {
   sealSeedancePrompt,
   sealSeedanceRequest,
+  sealSeedanceSpeechProgram,
   seedanceEndpoints,
+  seedanceSpeechCompileProducers,
   seedanceTypes,
   verifySeedancePrompt,
 } from "./index.js";
@@ -148,13 +153,17 @@ function booleanAttribute(element: StructuredElement, name: string, fallback: bo
   throw new Error(`${element.name}.${name} must be true or false`);
 }
 
-function generationSettings(element: StructuredElement, model: SeedanceModel): {
+function generationSettings(
+  element: StructuredElement,
+  model: SeedanceModel,
+  suppliedDurationSec?: number,
+): {
   readonly durationSec: number;
   readonly resolution: "480p" | "720p" | "1080p";
   readonly aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive";
   readonly webSearch: boolean;
 } {
-  const durationSec = integerAttribute(element, "duration");
+  const durationSec = suppliedDurationSec ?? integerAttribute(element, "duration");
   if (durationSec < 4 || durationSec > 15) {
     throw new Error(`${element.name}.duration must be between 4 and 15 seconds`);
   }
@@ -212,7 +221,11 @@ function referencePrompt(values: readonly ReferenceInput[]): string {
 }
 
 function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): {
+  readonly id: string;
+  readonly tokenStart: number;
+  readonly tokenEndExclusive: number;
   readonly dialogue: string;
+  readonly excerptDigest: string;
 } {
   if (!sameType(reference.type, contractTypes.narrativeDialogueExcerpt)) {
     throw new Error(`${subject} must reference a NarrativeDialogueExcerpt such as script.segment.opening.dialogue`);
@@ -223,13 +236,37 @@ function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): 
     readonly dialogue?: string;
     readonly [key: string]: CanonicalValue | undefined;
   };
-  if (value.contract !== "svml.narrative-dialogue-excerpt@1" || typeof value.dialogue !== "string") {
+  if (
+    value.contract !== "svml.narrative-dialogue-excerpt@1"
+    || typeof value.dialogue !== "string"
+    || typeof value.id !== "string"
+    || !Number.isSafeInteger(value.tokenStart)
+    || !Number.isSafeInteger(value.tokenEndExclusive)
+  ) {
     throw new Error(`${subject} NarrativeDialogueExcerpt is invalid`);
   }
   const { excerptDigest: _digest, ...content } = value;
   if (value.excerptDigest !== digestOf(content)) throw new Error(`${subject} NarrativeDialogueExcerpt digest differs`);
   if (value.dialogue.trim().length === 0) throw new Error(`${subject} contains no spoken text`);
-  return value as { readonly dialogue: string };
+  return {
+    id: value.id,
+    tokenStart: value.tokenStart as number,
+    tokenEndExclusive: value.tokenEndExclusive as number,
+    dialogue: value.dialogue,
+    excerptDigest: value.excerptDigest,
+  };
+}
+
+function speechDurationReference(
+  element: StructuredElement,
+  resolveReference: (path: string) => SurfaceResolvedReference | undefined,
+): SurfaceResolvedReference | undefined {
+  if (typeof element.attributes.duration === "string") return undefined;
+  const result = resolved(element, "duration", resolveReference);
+  if (!sameType(result.type, contractTypes.speechDuration)) {
+    throw new Error(`${element.name}.duration must reference a SpeechDuration`);
+  }
+  return result;
 }
 
 function generationOutput(
@@ -303,13 +340,60 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
   const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
   const spoken = dialogueExcerpt(resolved(element, "dialogue", resolveReference), `${element.name}.dialogue`);
   const refs = references(element, resolveReference);
+  const duration = speechDurationReference(element, resolveReference);
+  const promptText = `${declaredPrompt.text}${referencePrompt(refs)}\n\nSpoken dialogue — say exactly:\n${spoken.dialogue}`;
+  const mode = refs.length === 0
+    ? { kind: "text" as const }
+    : { kind: "reference" as const, items: refs.map(({ role: _role, ...item }) => item) };
+  if (duration !== undefined) {
+    const settings = generationSettings(element, selected.model, 4);
+    const program = sealSeedanceSpeechProgram({
+      contract: "svml.seedance-speech-program@1",
+      model: selected.model,
+      prompt: promptText,
+      mode,
+      resolution: settings.resolution,
+      aspectRatio: settings.aspectRatio,
+      generateAudio: true,
+      webSearch: settings.webSearch,
+      segment: {
+        id: spoken.id,
+        tokenStart: spoken.tokenStart,
+        tokenEndExclusive: spoken.tokenEndExclusive,
+        dialogueExcerptDigest: spoken.excerptDigest as ReturnType<typeof digestOf>,
+      },
+    });
+    const id = stringAttribute(element, "id");
+    const programId = `${id}.program`;
+    const fragment = createSeedanceSpeechGenerationFragment(
+      selected.endpoint,
+      seedanceSpeechCompileProducers[selected.model],
+    );
+    return {
+      records: [{
+        id: programId,
+        type: seedanceTypes.speechProgram,
+        value: { kind: "inline", value: program as unknown as CanonicalValue },
+        range: element.range,
+      }],
+      components: [{
+        id,
+        fragment: fragment.id,
+        inputs: {
+          program: { kind: "record", id: programId },
+          duration: duration.ref,
+        },
+        outputs: { video: id },
+        range: element.range,
+      }],
+      fragments: [fragment],
+    };
+  }
   const request = sealSeedanceRequest({
     contract: "svml.seedance-request@1",
     model: selected.model as SeedanceModel,
-    prompt: `${declaredPrompt.text}${referencePrompt(refs)}\n\nSpoken dialogue — say exactly:\n${spoken.dialogue}`,
-    mode: refs.length === 0
-      ? { kind: "text" }
-      : { kind: "reference", items: refs.map(({ role: _role, ...item }) => item) },
+    prompt: promptText,
+    mode,
     ...generationSettings(element, selected.model),
     generateAudio: true,
   });

@@ -6,8 +6,37 @@ import type {
   ProgramSpace,
   SpeechAudioBasis,
   SpeechBasis,
+  SpeechDuration,
   SpeechEvidenceAudio,
 } from "./speech.js";
+
+export function computeSpeechDurationDigest(value: Omit<SpeechDuration, "durationDigest">): Digest {
+  return digestOf(value);
+}
+
+export function sealSpeechDuration(value: Omit<SpeechDuration, "durationDigest">): SpeechDuration {
+  return { ...value, durationDigest: computeSpeechDurationDigest(value) };
+}
+
+export function assertSpeechDurationIdentity(value: SpeechDuration): void {
+  if (value.contract !== "svml.speech-duration@1") throw new Error("Unsupported SpeechDuration contract.");
+  if (
+    value.segmentId.length === 0
+    || !Number.isSafeInteger(value.tokenStart)
+    || !Number.isSafeInteger(value.tokenEndExclusive)
+    || value.tokenStart < 0
+    || value.tokenEndExclusive <= value.tokenStart
+    || !isDigest(value.sourceSpeechExcerptDigest)
+    || !Number.isFinite(value.durationSec)
+    || value.durationSec <= 0
+  ) {
+    throw new Error("SpeechDuration is invalid.");
+  }
+  const { durationDigest: _digest, ...content } = value;
+  if (!isDigest(value.durationDigest) || value.durationDigest !== computeSpeechDurationDigest(content)) {
+    throw new Error("SpeechDuration digest does not match its canonical contents.");
+  }
+}
 
 export function computeProgramSpaceDigest(value: Omit<ProgramSpace, "digest">): Digest {
   return digestOf(value);
