@@ -1,4 +1,4 @@
-import { digestOf, isDigest } from "@svml/core";
+import { digestOf, isDigest } from "@svml/protocol";
 import type {
   AlignedTranscriptEvidence,
   AlignedTranscriptSegment,
