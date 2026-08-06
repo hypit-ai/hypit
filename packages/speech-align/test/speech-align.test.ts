@@ -7,11 +7,13 @@ import {
   sealSpeechBasis,
 } from "@svml/contracts";
 import type { Narrative, SpeechAudioBasis, SpeechBasis } from "@svml/contracts";
-import { digestOf } from "@svml/core";
+import { digestOf } from "@svml/protocol";
 import { parseScript } from "@svml/script";
 import {
   SpeechAlignmentError,
   locateSpeechTiming,
+  speechAlignComponent,
+  speechAlignManifest,
 } from "@svml/speech-align";
 import type {
   AlignedTranscriptEvidence,
@@ -126,6 +128,19 @@ function characters(
     score: 0.95,
   }));
 }
+
+test("the component enumerates the exact Manifest-declared locator", () => {
+  assert.deepEqual(
+    speechAlignComponent.producers.map((facet) => ({
+      name: facet.producer.name,
+      digest: facet.implementationDigest,
+    })),
+    speechAlignManifest.producers.map((producer) => ({
+      name: producer.name,
+      digest: producer.implementation.digest,
+    })),
+  );
+});
 
 test("exact transcript words cover every Script and Segment anchor", () => {
   const narrative = parseScript("exact.svml", "<line>Hello world.</line>");
