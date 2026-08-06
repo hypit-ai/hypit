@@ -132,7 +132,7 @@ onBeforeUnmount(() => { activationId += 1; });
     @pointerleave="clearDemoPointer"
   >
     <header class="demo-heading carousel-heading">
-      <h2>悬停标记范围，查看对应画面</h2>
+      <h2><span class="hover-interaction-copy">悬停标记范围，查看对应画面</span><span class="touch-interaction-copy">点击标记范围，查看对应画面</span></h2>
     </header>
 
     <div class="demo-carousel-stage">
