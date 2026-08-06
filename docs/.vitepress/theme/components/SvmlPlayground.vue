@@ -9,6 +9,7 @@ import {
 import { rankingMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
 import { createDemoTimeline } from "./demo-timeline";
+import { wordAtTime } from "./demo-word-timing";
 import { wordCues as rawWordCues, type WordCue } from "./regen-ranking-cues";
 import {
   buildFoldedSourceView,
@@ -271,12 +272,7 @@ const displayedLines = computed<DisplayedSourceLine[]>(() => {
 });
 
 function wordAt(time: number): WordCue | null {
-  for (const [index, cue] of wordCues.entries()) {
-    if (time >= cue.start && time < cue.end) return cue;
-    const nextStart = wordCues[index + 1]?.start ?? TOTAL_DURATION;
-    if (time >= cue.end && time < Math.min(nextStart, cue.end + .08)) return cue;
-  }
-  return null;
+  return wordAtTime(wordCues, time);
 }
 
 const activeCaptionWords = computed(() => {

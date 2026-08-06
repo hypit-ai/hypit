@@ -8,6 +8,7 @@ import {
 } from "./demo-audio";
 import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
+import { wordAtTime } from "./demo-word-timing";
 import {
   semanticVideoDemos,
   type DemoId,
@@ -116,12 +117,7 @@ function setOverlayVideo(element: unknown, index: number) {
 }
 
 function wordAt(time: number) {
-  for (const [index, cue] of config.words.entries()) {
-    if (time >= cue.start && time < cue.end) return cue;
-    const nextStart = config.words[index + 1]?.start ?? config.duration;
-    if (time >= cue.end && time < Math.min(nextStart, cue.end + .09)) return cue;
-  }
-  return null;
+  return wordAtTime(config.words, time);
 }
 
 const activeCaptionWords = computed(() => {
