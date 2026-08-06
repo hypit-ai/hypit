@@ -43,8 +43,9 @@ non-retryable failure, cancellation or `--max-wait-ms`. `status` reads durable v
 `cancel` invokes active endpoints and then records the resulting terminal Build failure. None of
 these commands creates a second ready-command queue.
 
-`@svml/package-loader-node` now supports explicitly trusted installed author packages. It verifies
-the complete physical dependency closure before executing an activation entry, then checks exact
-Module, Frontend and Surface identities. It never installs a package because source requested it and
-does not activate Provider or Runtime facets. Arbitrary untrusted community execution remains
-absent until an isolated Worker and real permission boundary exist.
+`@svml/package-loader-node` supports explicitly trusted installed implementation packages. It
+verifies the complete physical dependency closure before executing an activation entry, then checks
+exact Module, Frontend, Surface, Producer and Validator identities. `plan` and `build` bind the lock
+digest into `BuildRequest.implementationClosure`. It never installs a package because source
+requested it and does not activate Provider or privileged Runtime facets. Arbitrary untrusted
+community execution remains absent until an isolated Worker and real permission boundary exist.

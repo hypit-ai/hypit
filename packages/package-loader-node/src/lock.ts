@@ -19,11 +19,13 @@ import { pathToFileURL } from "node:url";
 
 import { digestOf, isDigest } from "@svml/protocol";
 
+import { nodePackageComponents } from "./activation.js";
 import type {
-  LockedAuthorPackage,
+  LockedNodePackage,
   LockedPackageArtifact,
-  NodeAuthorPackage,
-  NodeAuthorPackageLock,
+  LoadedNodePackageSet,
+  NodePackageActivation,
+  NodePackageLock,
 } from "./types.js";
 
 type PackageJson = {
@@ -33,7 +35,7 @@ type PackageJson = {
   readonly optionalDependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
   readonly svml?: {
-    readonly authorActivation?: string;
+    readonly activation?: string;
   };
 };
 
@@ -71,9 +73,11 @@ function parsePackageJson(value: unknown, subject: string): PackageJson {
     ...(parsed.peerDependencies === undefined
       ? {}
       : { peerDependencies: object(parsed.peerDependencies, `${subject}.peerDependencies`) as Readonly<Record<string, string>> }),
-    ...(svml?.authorActivation === undefined
-      ? {}
-      : { svml: { authorActivation: string(svml.authorActivation, `${subject}.svml.authorActivation`) } }),
+    ...(svml === undefined ? {} : { svml: {
+      ...(svml.activation === undefined
+        ? {}
+        : { activation: string(svml.activation, `${subject}.svml.activation`) }),
+    } }),
   };
 }
 
@@ -167,22 +171,22 @@ async function artifactDigest(root: string): Promise<LockedPackageArtifact["dige
 }
 
 function activationPath(item: ResolvedPhysicalPackage): string {
-  const path = item.json.svml?.authorActivation;
-  assert(path !== undefined, `${item.json.name} does not declare svml.authorActivation`);
-  assert(!isAbsolute(path), `${item.json.name} authorActivation must be package-relative`);
+  const path = item.json.svml?.activation;
+  assert(path !== undefined, `${item.json.name} does not declare svml.activation`);
+  assert(!isAbsolute(path), `${item.json.name} activation must be package-relative`);
   const target = resolve(item.root, path);
   const within = relative(item.root, target);
-  assert(within !== "" && within !== ".." && !within.startsWith(`..${sep}`), `${item.json.name} authorActivation escapes its package`);
+  assert(within !== "" && within !== ".." && !within.startsWith(`..${sep}`), `${item.json.name} activation escapes its package`);
   return target;
 }
 
-function activationMetadata(value: NodeAuthorPackage): unknown {
-  assert(value.format === "svml.node-author-package@1", "author activation has an unsupported format");
-  assert(value.name.trim().length > 0, "author activation name is empty");
+function activationMetadata(value: NodePackageActivation): unknown {
+  assert(value.format === "svml.node-package@1", "Node package activation has an unsupported format");
+  assert(value.name.trim().length > 0, "Node package activation name is empty");
   return {
     format: value.format,
     name: value.name,
-    modules: value.modules.map((item) => ({
+    modules: (value.modules ?? []).map((item) => ({
       manifestDigest: digestOf(item.manifest),
       specifiers: [...(item.specifiers ?? [])].sort(),
     })).sort((left, right) => left.manifestDigest.localeCompare(right.manifestDigest)),
@@ -199,32 +203,43 @@ function activationMetadata(value: NodeAuthorPackage): unknown {
       `${left.module.name}@${left.module.version}#${left.surface}`
         .localeCompare(`${right.module.name}@${right.module.version}#${right.surface}`),
     ),
-    validators: [...(value.validators ?? [])].map((item) => ({
-      type: item.type,
-      implementationDigest: item.implementationDigest,
-    })).sort((left, right) =>
-      `${left.type.module.name}@${left.type.module.version}#${left.type.name}`
-        .localeCompare(`${right.type.module.name}@${right.type.module.version}#${right.type.name}`),
-    ),
+    components: [...(value.components ?? [])].map((component) => ({
+      name: component.name,
+      producers: [...(component.producers ?? [])].map((item) => ({
+        producer: item.producer,
+        implementationDigest: item.implementationDigest,
+      })).sort((left, right) =>
+        `${left.producer.module.name}@${left.producer.module.version}#${left.producer.name}`
+          .localeCompare(`${right.producer.module.name}@${right.producer.module.version}#${right.producer.name}`),
+      ),
+      validators: [...(component.validators ?? [])].map((item) => ({
+        type: item.type,
+        implementationDigest: item.implementationDigest,
+      })).sort((left, right) =>
+        `${left.type.module.name}@${left.type.module.version}#${left.type.name}`
+          .localeCompare(`${right.type.module.name}@${right.type.module.version}#${right.type.name}`),
+      ),
+    })).sort((left, right) => left.name.localeCompare(right.name)),
   };
 }
 
-async function importActivation(item: ResolvedPhysicalPackage): Promise<NodeAuthorPackage> {
+async function importActivation(item: ResolvedPhysicalPackage): Promise<NodePackageActivation> {
   const target = activationPath(item);
-  assert((await stat(target)).isFile(), `${item.json.name} authorActivation is not a file`);
+  assert((await stat(target)).isFile(), `${item.json.name} activation is not a file`);
   const imported = await import(pathToFileURL(target).href) as {
     readonly default?: unknown;
-    readonly svmlAuthorPackage?: unknown;
+    readonly svmlPackage?: unknown;
   };
-  const value = imported.default ?? imported.svmlAuthorPackage;
-  assert(value !== null && typeof value === "object", `${item.json.name} authorActivation exports no package`);
-  const activation = value as NodeAuthorPackage;
+  const value = imported.default ?? imported.svmlPackage;
+  assert(value !== null && typeof value === "object", `${item.json.name} activation exports no package`);
+  const activation = value as NodePackageActivation;
   assert(activation.name === item.json.name,
-    `${item.json.name} authorActivation claims physical package ${activation.name}`);
+    `${item.json.name} activation claims physical package ${activation.name}`);
+  nodePackageComponents([activation]);
   return activation;
 }
 
-function lockContent(lock: Omit<NodeAuthorPackageLock, "digest">): Omit<NodeAuthorPackageLock, "digest"> {
+function lockContent(lock: Omit<NodePackageLock, "digest">): Omit<NodePackageLock, "digest"> {
   return {
     format: lock.format,
     artifacts: [...lock.artifacts].sort((left, right) =>
@@ -234,14 +249,14 @@ function lockContent(lock: Omit<NodeAuthorPackageLock, "digest">): Omit<NodeAuth
   };
 }
 
-function sealLock(content: Omit<NodeAuthorPackageLock, "digest">): NodeAuthorPackageLock {
+function sealLock(content: Omit<NodePackageLock, "digest">): NodePackageLock {
   const normalized = lockContent(content);
   return { ...normalized, digest: digestOf(normalized) };
 }
 
-function parseLock(value: unknown): NodeAuthorPackageLock {
+function parseLock(value: unknown): NodePackageLock {
   const parsed = object(value, "$lock");
-  assert(parsed.format === "svml.node-author-lock@1", "$lock.format must be svml.node-author-lock@1");
+  assert(parsed.format === "svml.node-package-lock@1", "$lock.format must be svml.node-package-lock@1");
   assert(Array.isArray(parsed.artifacts), "$lock.artifacts must be an array");
   assert(Array.isArray(parsed.packages), "$lock.packages must be an array");
   const artifacts = parsed.artifacts.map((raw, index) => {
@@ -270,8 +285,8 @@ function parseLock(value: unknown): NodeAuthorPackageLock {
   });
   const digest = string(parsed.digest, "$lock.digest");
   assert(isDigest(digest), "$lock.digest is invalid");
-  const lock = sealLock({ format: "svml.node-author-lock@1", artifacts, packages });
-  assert(lock.digest === digest, "Node author package lock digest is invalid");
+  const lock = sealLock({ format: "svml.node-package-lock@1", artifacts, packages });
+  assert(lock.digest === digest, "Node package lock digest is invalid");
   return lock;
 }
 
@@ -289,14 +304,14 @@ function sameArtifacts(left: readonly LockedPackageArtifact[], right: readonly L
 }
 
 /** Lock creation is the explicit trust action and therefore may inspect the selected package exports. */
-export async function createNodeAuthorPackageLock(
+export async function createNodePackageLock(
   specifiers: readonly string[],
   root: string,
-): Promise<NodeAuthorPackageLock> {
+): Promise<NodePackageLock> {
   const unique = [...new Set(specifiers)].sort();
-  assert(unique.length > 0, "at least one author package is required");
+  assert(unique.length > 0, "at least one Node package is required");
   const closure = await packageClosure(unique, root);
-  const packages: LockedAuthorPackage[] = [];
+  const packages: LockedNodePackage[] = [];
   for (const specifier of unique) {
     const physical = await resolvePhysicalPackage(specifier, root);
     const activation = await importActivation(physical);
@@ -307,36 +322,43 @@ export async function createNodeAuthorPackageLock(
     });
   }
   return sealLock({
-    format: "svml.node-author-lock@1",
+    format: "svml.node-package-lock@1",
     artifacts: await resolvedArtifacts(closure),
     packages,
   });
 }
 
-export async function writeNodeAuthorPackageLock(path: string, lock: NodeAuthorPackageLock): Promise<void> {
+export async function writeNodePackageLock(path: string, lock: NodePackageLock): Promise<void> {
   await writeFile(path, `${JSON.stringify(lock, null, 2)}\n`, { encoding: "utf8", flag: "w" });
 }
 
 /** Verify every selected physical artifact before executing any package activation code. */
-export async function loadNodeAuthorPackages(
+export async function loadNodePackageSet(
   path: string,
   root = dirname(resolve(path)),
-): Promise<readonly NodeAuthorPackage[]> {
+): Promise<LoadedNodePackageSet> {
   const lock = parseLock(JSON.parse(await readFile(path, "utf8")));
   const specifiers = lock.packages.map((item) => item.specifier);
   const closure = await packageClosure(specifiers, root);
   const artifacts = await resolvedArtifacts(closure);
-  assert(sameArtifacts(artifacts, lock.artifacts), "installed author package bytes do not match the lock");
+  assert(sameArtifacts(artifacts, lock.artifacts), "installed Node package bytes do not match the lock");
   const byName = new Map(closure.map((item) => [`${item.json.name}@${item.json.version}`, item]));
-  const values: NodeAuthorPackage[] = [];
+  const values: NodePackageActivation[] = [];
   for (const expected of lock.packages) {
     const physical = byName.get(`${expected.package.name}@${expected.package.version}`);
     assert(physical !== undefined, `${expected.package.name}@${expected.package.version} is not installed`);
     assert(physical.json.name === expected.specifier, `${expected.specifier} resolved to another package`);
     const activation = await importActivation(physical);
     assert(digestOf(activationMetadata(activation)) === expected.facetsDigest,
-      `${expected.specifier} author facets do not match the lock`);
+      `${expected.specifier} facets do not match the lock`);
     values.push(activation);
   }
-  return values;
+  return { lock, packages: values };
+}
+
+export async function loadNodePackages(
+  path: string,
+  root = dirname(resolve(path)),
+): Promise<readonly NodePackageActivation[]> {
+  return (await loadNodePackageSet(path, root)).packages;
 }

@@ -83,33 +83,20 @@ does not become author intent:
 import { createProjectLocalRuntime } from "@svml/local";
 import { createS3ArtifactStorePackage } from "@svml/artifact-store-s3";
 import { credentialRef } from "@svml/runtime";
-import { generationComponent } from "@svml/generation";
-import { mediaPipelineComponents } from "@svml/media-pipeline";
-import { seedanceComponent } from "@svml/seedance";
 import { createKieProvider } from "@svml/provider-kie";
 import { createLocalMediaProvider } from "@svml/provider-media-local";
 import { createLocalWhisperXProvider } from "@svml/provider-whisperx-local";
 import { createLocalHyperframesProvider } from "@svml/provider-hyperframes-local";
-import { whisperXComponent } from "@svml/whisperx";
-import { hyperframesComponent } from "@svml/hyperframes";
-import { hyperframesRenderComponent } from "@svml/hyperframes-render";
 
 export default await createProjectLocalRuntime({
   root: import.meta.dirname,
+  packageLock: "./svml.packages.lock",
   artifacts: createS3ArtifactStorePackage({
     instance: "artifacts.team",
     bucket: "hypit-svml-artifacts",
     prefix: "development",
     region: "us-east-1",
   }),
-  components: [
-    generationComponent,
-    seedanceComponent,
-    ...mediaPipelineComponents,
-    whisperXComponent,
-    hyperframesComponent,
-    hyperframesRenderComponent,
-  ],
   providers: [
     createKieProvider({ instance: "kie.personal", apiKey: credentialRef("env", "KIE_API_KEY") }),
     createLocalMediaProvider({ instance: "media.local", defaultConcurrency: 1 }),
@@ -147,6 +134,13 @@ export default await createProjectLocalRuntime({
   },
 });
 ```
+
+`svml.packages.lock` is created from explicitly installed component aggregates with
+`svml-v2 lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
+Runtime config no longer imports each component by name. Its digest must equal the
+`BuildRequest.implementationClosure` produced by `plan`/`build` with the same lock, so durable work
+cannot resume after an unnoticed component-closure swap. The low-level `components` option remains
+available for trusted embedding and tests, but is not the reproducible project default.
 
 The KIE, local media, local WhisperX and local HyperFrames Provider functions in this example are
 implemented. `@svml/provider-kit` implements the
@@ -253,9 +247,8 @@ video build still requires:
 1. keep the credentialed KIE smoke suite opt-in as Provider contracts evolve (the representative
    seven-family run and synthetic-reference upload passed on 2026-08-06);
 2. official generation, Speech, Caption, B-roll and Text Track Surfaces;
-3. finish the official deterministic Speech/Align/Caption component installers;
-4. stable JavaScript package activation from an install lock;
-5. add Lambda-backed variants only when deployment pressure justifies them.
+3. finish the official deterministic Speech/Align/Caption component facets;
+4. add Lambda-backed variants only when deployment pressure justifies them.
 
 Hosted tenant auth, credits, Redis, a distributed queue and Hypit-wide Build hosting remain outside
 this phase.

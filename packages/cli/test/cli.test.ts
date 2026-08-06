@@ -82,13 +82,13 @@ test("CLI package lock activates an installed package without changing the offic
     version: "1.0.0",
     type: "module",
     exports: "./activation.mjs",
-    svml: { authorActivation: "./activation.mjs" },
+    svml: { activation: "./activation.mjs" },
   }), "utf8");
   await writeFile(join(packageRoot, "activation.mjs"), `
     const module = { name: "example.empty", version: "1" };
     const digest = ${JSON.stringify(implementationDigest)};
     export default {
-      format: "svml.node-author-package@1",
+      format: "svml.node-package@1",
       name: "example-empty",
       modules: [{ manifest: {
         format: "svml.module@0", name: module.name, version: module.version,
