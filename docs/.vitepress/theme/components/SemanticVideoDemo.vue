@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   demoAudioEnabled as audioEnabled,
+  demoAudioPlaybackEnabled as audioPlaybackEnabled,
   enableDemoAudioAfterInteraction,
   initializeDemoAudio,
   toggleDemoAudio,
@@ -98,6 +99,7 @@ const rangeGeometry = ref<Record<string, { path: string; depth: number }>>({});
 const baseVideos: HTMLVideoElement[] = [];
 const overlayVideos: HTMLVideoElement[] = [];
 let resizeObserver: ResizeObserver | null = null;
+let rangeMutationObserver: MutationObserver | null = null;
 let animationFrame = 0;
 let previousTimestamp = 0;
 let programTime = 0;
@@ -239,6 +241,8 @@ function updateRangeGeometry() {
   if (!container) return;
   const containerRect = container.getBoundingClientRect();
   const width = container.clientWidth;
+  const scaleX = container.offsetWidth ? containerRect.width / container.offsetWidth : 1;
+  const scaleY = container.offsetHeight ? containerRect.height / container.offsetHeight : 1;
   const renderedLines = Array.from(container.querySelectorAll<HTMLElement>(":scope > .code-line"));
   const lastLine = renderedLines.at(-1);
   const height = Math.max(container.clientHeight, lastLine ? lastLine.offsetTop + lastLine.offsetHeight : container.clientHeight);
@@ -251,18 +255,18 @@ function updateRangeGeometry() {
     const startLine = startMarker?.closest<HTMLElement>(".code-line");
     const endLine = endMarker?.closest<HTMLElement>(".code-line");
     if (!startMarker || !endMarker || !startLine || !endLine) continue;
-    const startRect = startMarker.getBoundingClientRect();
-    const endRect = endMarker.getBoundingClientRect();
-    const offsetX = container.scrollLeft - containerRect.left;
-    const offsetY = container.scrollTop - containerRect.top;
+    const startFragments = Array.from(startMarker.getClientRects());
+    const endFragments = Array.from(endMarker.getClientRects());
+    const startRect = startFragments[0] ?? startMarker.getBoundingClientRect();
+    const endRect = endFragments.at(-1) ?? endMarker.getBoundingClientRect();
     const lineHeight = Number.parseFloat(getComputedStyle(startLine).lineHeight) || 26;
     const blockPadding = 0;
-    const startCenter = (startRect.top + startRect.bottom) / 2 + offsetY;
-    const endCenter = (endRect.top + endRect.bottom) / 2 + offsetY;
+    const startCenter = ((startRect.top + startRect.bottom) / 2 - containerRect.top) / scaleY + container.scrollTop;
+    const endCenter = ((endRect.top + endRect.bottom) / 2 - containerRect.top) / scaleY + container.scrollTop;
     const inlinePadding = 3;
     const edgeOverhang = 3;
-    const startX = Math.max(3, Math.min(width - 3, startRect.left + offsetX - inlinePadding));
-    const endX = Math.max(3, Math.min(width - 3, endRect.right + offsetX + inlinePadding));
+    const startX = Math.max(3, Math.min(width - 3, (startRect.left - containerRect.left) / scaleX + container.scrollLeft - inlinePadding));
+    const endX = Math.max(3, Math.min(width - 3, (endRect.right - containerRect.left) / scaleX + container.scrollLeft + inlinePadding));
     const left = 44 - edgeOverhang;
     const right = width - 12 + edgeOverhang;
     const top = startCenter - lineHeight / 2 - blockPadding;
@@ -326,7 +330,7 @@ function syncBaseVideos(force = false) {
   const sceneChanged = playbackSceneIndex !== activeIndex;
   baseVideos.forEach((video, index) => {
     if (!video) return;
-    video.muted = !audioEnabled.value || index !== activeIndex;
+    video.muted = !audioPlaybackEnabled.value || index !== activeIndex;
     if (index !== activeIndex) {
       video.pause();
       return;
@@ -397,13 +401,13 @@ function inspectLine(line: DemoSourceLine, index: number) {
     return;
   }
   const selection = config.selections.find((candidate) => candidate.id === id);
-  if (selection) seekTo(selection, index);
+  if (selection && pinnedSelection.value !== selection.id) seekTo(selection, index);
 }
 
 function inspectToken(event: Event, index: number) {
   const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-selection]") : null;
   const selection = config.selections.find((candidate) => candidate.id === target?.dataset.selection);
-  if (selection) seekTo(selection, index);
+  if (selection && pinnedSelection.value !== selection.id) seekTo(selection, index);
 }
 
 function clearInspection() {
@@ -545,7 +549,13 @@ const {
 
 watch(
   [() => displayedLines.value.map((entry) => entry.key).join("|"), sourceFollowEnabled, sourceSelections],
-  () => void nextTick().then(updateLayoutGeometry),
+  () => void nextTick().then(() => {
+    updateSourceViewportRows();
+    void nextTick().then(() => {
+      updateLayoutGeometry();
+      requestAnimationFrame(updateLayoutGeometry);
+    });
+  }),
   { flush: "post" },
 );
 
@@ -571,6 +581,8 @@ onMounted(() => {
     if (codeScrollElement.value) {
       resizeObserver = new ResizeObserver(updateLayoutGeometry);
       resizeObserver.observe(codeScrollElement.value);
+      rangeMutationObserver = new MutationObserver(() => requestAnimationFrame(updateRangeGeometry));
+      rangeMutationObserver.observe(codeScrollElement.value, { childList: true, subtree: true });
     }
   });
 });
@@ -581,6 +593,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", enableAudio, true);
   window.removeEventListener("resize", updateLayoutGeometry);
   resizeObserver?.disconnect();
+  rangeMutationObserver?.disconnect();
 });
 </script>
 
@@ -617,7 +630,7 @@ onBeforeUnmount(() => {
             ? (sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图")
             : (sourceFollowEnabled ? "点击代码查看所有源码" : "点击空白处返回精简视图") }}
         </div>
-        <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code">
+        <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code" @scroll="updateRangeGeometry">
           <svg
             v-if="rangeCanvas.width && rangeCanvas.height"
             class="semantic-range-canvas"
@@ -647,6 +660,7 @@ onBeforeUnmount(() => {
               :class="{
                 'binding-active': bindingDepth(entry.line) >= 0,
                 'binding-depth-1': bindingDepth(entry.line) === 1,
+                'binding-depth-2': bindingDepth(entry.line) === 2,
               }"
               @mouseover="inspectLine(entry.line, entry.index!)"
             >
@@ -672,7 +686,7 @@ onBeforeUnmount(() => {
                 :ref="(element) => setBaseVideo(element, index)"
                 :class="{ active: currentSceneIndex === index }"
                 :src="resolveDemoMedia(scene.src)"
-                :muted="!audioEnabled || currentSceneIndex !== index"
+                :muted="!audioPlaybackEnabled || currentSceneIndex !== index"
                 playsinline
                 preload="auto"
                 @loadedmetadata="syncBaseVideos(true)"
@@ -735,8 +749,7 @@ onBeforeUnmount(() => {
               :title="audioEnabled ? '静音' : '取消静音'"
               @click.stop="toggleAudio"
             >
-              <svg v-if="audioEnabled" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.25-3.9v7.8A4.5 4.5 0 0 0 16.5 12zm-2.25-8.6v2.1a7 7 0 0 1 0 13v2.1a9 9 0 0 0 0-17.2z"/></svg>
-              <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4-2.7-2.7z"/></svg>
+              <span class="material-symbols-rounded" aria-hidden="true">{{ audioEnabled ? "volume_up" : "volume_off" }}</span>
             </button>
           </div>
         </div>
@@ -777,7 +790,7 @@ onBeforeUnmount(() => {
 .street-broll { position: absolute; inset: 0; z-index: 10; display: none; width: 100%; height: 100%; object-fit: cover; }
 .street-broll.active { display: block; }
 .visual-outline { position: absolute; z-index: 24; pointer-events: none; }
-.street-scene-outline { inset: 4px; border: 1px solid rgba(200,95,125,.92); }
+.street-scene-outline { inset: 4px; border: 1px solid rgba(238,123,98,.92); }
 .street-broll-outline { inset: 9px; border: 1px solid rgba(99,216,255,.95); }
 .gbb-header { position: absolute; z-index: 8; top: 8.9%; left: 5.8%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7.2%; width: 88.4%; }
 .gbb-slot { position: relative; display: grid; justify-items: center; opacity: 1; }
@@ -787,7 +800,7 @@ onBeforeUnmount(() => {
 .slot-good strong { color: #ff1749; }
 .slot-better strong { color: #ffb300; }
 .slot-best strong { color: #00b96b; }
-.gbb-slot.selected::after { content: ""; position: absolute; inset: -4px -2px -5px; border: 1px solid #C85F7D; pointer-events: none; }
+.gbb-slot.selected::after { content: ""; position: absolute; inset: -4px -2px -5px; border: 1px solid #EE7B62; pointer-events: none; }
 .gbb-deck { position: absolute; z-index: 12; top: 61.7%; left: 11%; width: 78%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; box-shadow: 0 9px 28px rgba(0,0,0,.28); }
 .gbb-deck.selected { outline: 1px solid #63d8ff; outline-offset: 3px; }
 .demo-caption { position: absolute; z-index: 30; left: 5%; display: flex; align-items: baseline; justify-content: center; width: 90%; column-gap: 4px; color: #fff; font-family: Arial Black, Poppins, Inter, sans-serif; font-size: 16px; font-weight: 900; line-height: 1.08; text-align: center; white-space: nowrap; pointer-events: none; -webkit-text-stroke: .75px #000; paint-order: stroke fill; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
@@ -797,14 +810,14 @@ onBeforeUnmount(() => {
 .demo-caption span.active { color: #ffd34d; transform: scale(1.08); }
 .demo-progress-track { display: flex; grid-template-columns: none; gap: 0; background: transparent; }
 .demo-progress-labels { gap: 2px; }
-.demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 0; box-shadow: inset -1px 0 rgba(11,13,16,.55); transition: filter .2s ease; }
+.demo-progress-track .segment { min-width: 0; height: 100%; flex-basis: 0; border-radius: 0; box-shadow: inset -1px 0 #1F191B; transition: box-shadow .2s ease; }
 .demo-progress-track .segment:first-child { border-radius: 3px 0 0 3px; }
 .demo-progress-track .segment:nth-child(4) { border-radius: 0 3px 3px 0; box-shadow: none; }
-.demo-progress-track .segment:nth-child(1) { background: #31add0; }
-.demo-progress-track .segment:nth-child(2) { background: rgb(132,198,84); }
-.demo-progress-track .segment:nth-child(3) { background: rgb(234,220,42); }
-.demo-progress-track .segment:nth-child(4) { background: #ff3f56; }
-.demo-progress-track .segment.active { filter: brightness(1.2); }
+.demo-progress-track .segment:nth-child(1) { background: var(--demo-segment-cyan); }
+.demo-progress-track .segment:nth-child(2) { background: var(--demo-segment-green); }
+.demo-progress-track .segment:nth-child(3) { background: var(--demo-segment-gold); }
+.demo-progress-track .segment:nth-child(4) { background: var(--demo-segment-pink); }
+.demo-progress-track .segment.active { box-shadow: inset 0 -2px var(--demo-cursor), inset -1px 0 #1F191B; }
 
 @media (max-width: 900px) {
   .semantic-live-stage { height: 520px; }
