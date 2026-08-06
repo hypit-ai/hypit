@@ -12,8 +12,14 @@ selects it and a Target reaches its Logical Output. Product UI actions such as â
 an Existing-Value Candidate and then write that ordinary selection; they do not mutate Core state or
 require a database.
 
-`createHistoricalCandidate()` is the trusted Host helper for this common case. It verifies the
-complete prior `BuildState`, requires the same author Graph and the same semantic Logical Output,
-then issues a content-addressed output-validation receipt binding the prior Record digest to that
-output. The result is still an ordinary zero-input Existing-Value Candidate: no historical
-Operation, Command or outstanding work is copied into the new Build.
+`createHistoricalCandidate()` is a Host convenience for this common case. It verifies the complete
+prior `BuildState` only to extract a trusted typed Record, its type-validation receipt and optional
+provenance. It then reattaches that value to the current Logical Output as an ordinary zero-input
+`substitute` Candidate. The previous author Graph, prompt, semantic inputs and affinity are not
+compatibility evidence and are not compared. No historical Operation, Command or outstanding work
+is copied into the new Build.
+
+The same model covers an uploaded video, a fixed black clip and any other already materialized
+value. Core checks the current output Type and value structure. A `substitute` Candidate need not
+prove the current output's author affinity; the BuildRequest must explicitly select it and the
+Target must explicitly accept substitute fidelity.

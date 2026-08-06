@@ -274,8 +274,9 @@ The first complete paid vertical-video chain now passes in `examples/talking-fil
 KIE Seedance Mini 480p clips, deterministic estimate, local media normalization, local WhisperX,
 Vertex Gemini Caption planning, SemanticMap, Caption and Selection Text Tracks, Film, local
 HyperFrames rendering, audio mix and final mux. The ten-second output contains H.264 video and AAC
-audio. A second independent Build also reused both paid shot Records through explicit historical
-realizations, issued no KIE Need, and rebuilt the complete downstream graph.
+audio. A second independent Build also reused both paid shot Records as explicitly selected
+zero-input substitute Candidates, issued no KIE Need, and rebuilt the complete downstream graph
+without promoting substitute fidelity back to exact.
 
 The next work is:
 

@@ -25,7 +25,7 @@ pnpm svml:v2 plan path/to/main.svml --target component.result
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts --follow
 pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --follow --out ./final.mp4
-pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --pin shot=<prior-build-id> --follow --out ./variant.mp4
+pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --pin shot=<prior-build-id> --accept-substitute --follow --out ./variant.mp4
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.ts
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
 ```
@@ -50,9 +50,11 @@ these commands creates a second ready-command queue.
 selected Runtime ArtifactStore and writes the requested file. It does not treat a CAS path as a
 public filename or bypass Record identity verification.
 
-`--pin output=<prior-build-id>` is intentionally CLI language, not a Core primitive. The trusted
-Host verifies the prior Build and output Record, attaches it as an Existing-Value realization, and
-adds an explicit binding to a newly compiled BuildRequest. Upstream work behind that output is not
+`--pin output=<prior-build-id>` is intentionally CLI language, not a Core primitive. The Host
+verifies the prior Build only to extract a typed Record, attaches it as an ordinary zero-input
+`substitute` Candidate, and adds an explicit binding to a newly compiled BuildRequest. It does not
+prove that the old Graph, prompt or semantic meaning matches the current output. Consequently the
+command requires `--accept-substitute`. Upstream work behind that selected Candidate is not
 demanded, while every unbound reachable output follows the ordinary graph. The prior artifact must
 still exist in the ArtifactStore selected by the Runtime. This is a new Build with a new identity;
 it never resumes or copies the prior Build's outstanding Commands.

@@ -203,24 +203,6 @@ export type ProvidedValue = {
   readonly value: StoredValue;
   readonly provenance?: CanonicalValue;
   readonly validation?: TypeValidationReceipt;
-  /** Trusted Host proof that this exact historical Record already realized this Output. */
-  readonly outputValidation?: OutputValidationReceipt;
-};
-
-/**
- * A content-bound admission receipt issued after a trusted Host verifies a prior BuildState.
- * It is deliberately generic: Core learns neither "pin" nor any media/domain concept.
- */
-export type OutputValidationReceipt = {
-  readonly format: "svml.output-validation@1";
-  readonly id: Digest;
-  /** Author-graph source digest before any external Realization Overlay. */
-  readonly graphSource: Digest;
-  readonly output: LogicalOutputId;
-  readonly recordDigest: Digest;
-  readonly sourceBuild: Digest;
-  readonly sourceRequest: Digest;
-  readonly sourceCandidate: CandidateId;
 };
 
 export type CandidateRoot =
