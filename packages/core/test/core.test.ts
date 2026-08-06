@@ -8,12 +8,16 @@ import {
   reduce,
   validatePlan,
   verifyBuildState,
+  verifyRecordAffinity,
 } from "@svml/core";
 import type {
   BuildEvent,
+  BuildPlan,
   BuildState,
+  CompiledGraph,
   FulfillNeedCommand,
   InvokeProducerCommand,
+  TypedRecord,
 } from "@svml/protocol";
 
 import { createGreetingBuild, producers } from "./greeting-fixture.js";
@@ -159,6 +163,53 @@ test("Producer result affinity rejects an exact output that lies about its input
       producerEvent(assemble, "event:affinity-lie", {
         document: { kind: "inline", value: { text: "Different text" } },
       }),
+    ),
+    (error: unknown) => error instanceof CoreError && error.code === "AFFINITY_MISMATCH",
+  );
+});
+
+test("affinity can prove a first-class BlobRef without a domain wrapper", () => {
+  const selected = {
+    kind: "blob",
+    digest: digestOf("selected-image"),
+    size: 3,
+    mediaType: "image/png",
+  } as const;
+  const source = {
+    id: "set",
+    value: { kind: "inline", value: { images: [selected] } },
+  } as unknown as TypedRecord;
+  const output = {
+    id: "image",
+    conformance: "exact",
+    value: selected,
+  } as unknown as TypedRecord;
+  const graph = {
+    outputs: [{
+      id: "primary-image",
+      affinity: [{
+        resultPointer: "/digest",
+        source: { kind: "record", id: source.id },
+        sourcePointer: "/images/0/digest",
+      }],
+    }],
+  } as unknown as CompiledGraph;
+  const plan = { selections: [] } as unknown as BuildPlan;
+
+  assert.doesNotThrow(() => verifyRecordAffinity(
+    graph,
+    plan,
+    "primary-image",
+    output,
+    (id) => id === source.id ? source : undefined,
+  ));
+  assert.throws(
+    () => verifyRecordAffinity(
+      graph,
+      plan,
+      "primary-image",
+      { ...output, value: { ...selected, digest: digestOf("different-image") } },
+      (id) => id === source.id ? source : undefined,
     ),
     (error: unknown) => error instanceof CoreError && error.code === "AFFINITY_MISMATCH",
   );

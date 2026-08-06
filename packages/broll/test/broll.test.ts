@@ -88,7 +88,6 @@ test("B-roll owns local motion while every item remains an independently stacked
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "middle-overlay",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "request", digest: digestOf("middle-overlay") }],
     presents: [{
       id: "middle",
       span: { startFrame: 0, endFrameExclusive: 300 },
@@ -186,7 +185,6 @@ test("an Existing BrollProduct cannot recompute its own digest around an out-of-
   });
   const content = {
     contract: product.contract,
-    programDigest: product.programDigest,
     programSpace: product.programSpace,
     visualTrack: invalidVisual,
     audioTrack: product.audioTrack,

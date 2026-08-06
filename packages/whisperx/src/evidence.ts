@@ -18,11 +18,7 @@ export function whisperXRequestForEvidenceAudio(
   assertSpeechEvidenceAudioIdentity(basis);
   return {
     contract: "svml.whisperx-alignment-request@2",
-    basisDigest: basis.basisDigest,
-    narrativeDigest: basis.narrativeDigest,
     programSpaceDigest: basis.programSpaceDigest,
-    sourceAudioArtifactDigest: basis.sourceAudioArtifactDigest,
-    evidenceAudioDigest: basis.evidenceAudioDigest,
     audio: basis.artifact,
     sampleFrames: basis.sampleFrames,
     durationSec: basis.durationSec,
@@ -48,7 +44,6 @@ export function normalizeWhisperXAlignment(
   }
   const {
     alignmentDigest: _alignmentDigest,
-    evidenceAudioDigest: _evidenceAudioDigest,
     engine: _engine,
     contract: _contract,
     ...shared

@@ -29,7 +29,6 @@ export const whisperXAlignmentEvidenceSchema: ValueSchema = {
   fields: {
     contract: { schema: { kind: "literal", value: "svml.whisperx-alignment-evidence@2" } },
     engine: { schema: { kind: "literal", value: "whisperx" } },
-    evidenceAudioDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
     ...sharedEvidenceFields,
     alignmentDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
   },
@@ -59,9 +58,7 @@ export const whisperXManifest: ModuleManifest = {
         capability: whisperXCapabilities.alignment,
         returns: whisperXTypes.alignmentEvidence,
         affinity: [
-          { resultPointer: "/basisDigest", input: "audio", inputPointer: "/basisDigest" },
-          { resultPointer: "/audioArtifactDigest", input: "audio", inputPointer: "/sourceAudioArtifactDigest" },
-          { resultPointer: "/evidenceAudioDigest", input: "audio", inputPointer: "/evidenceAudioDigest" },
+          { resultPointer: "/audioArtifactDigest", input: "audio", inputPointer: "/artifact/digest" },
           { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpaceDigest" },
         ],
       }],
@@ -78,7 +75,6 @@ export const whisperXManifest: ModuleManifest = {
         name: "evidence",
         type: contractTypes.alignedTranscriptEvidence,
         affinity: [
-          { resultPointer: "/basisDigest", input: "whisperx", inputPointer: "/basisDigest" },
           { resultPointer: "/audioArtifactDigest", input: "whisperx", inputPointer: "/audioArtifactDigest" },
           { resultPointer: "/programSpaceDigest", input: "whisperx", inputPointer: "/programSpaceDigest" },
         ],

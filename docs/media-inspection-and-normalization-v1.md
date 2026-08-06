@@ -69,9 +69,10 @@ Default audio uses the same unique-default/unique-candidate rule over admitted a
 selection request may instead name an exact stream index. It may never force an attached picture
 through the moving-video path.
 
-`MediaStreamSelection` records source and inspection affinity, selected indexes, span authority and
-policy digest. It contains no Narrative, Segment or Speech identity. Observing AAC is therefore
-incapable of satisfying `SpeechAudioBasis` by itself.
+`MediaStreamSelection` records selected indexes, span authority, selection policy and its own
+digest. Its direct Graph inputs are the source and inspection; their ancestry is not repeated in
+the selection value. It contains no Narrative, Segment or Speech identity. Observing AAC is
+therefore incapable of satisfying `SpeechAudioBasis` by itself.
 
 ## One source presentation origin
 

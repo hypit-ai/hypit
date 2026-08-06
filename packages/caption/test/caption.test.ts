@@ -54,17 +54,15 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     segmentId: segment.id,
     startSec: segments[index]!.startSec,
     endSec: segments[index]!.endSec,
-    sourceArtifactDigest: digestOf(`caption:clip:${segment.id}`),
   }));
   const basis = sealSpeechBasis({
     contract: "svml.speech-basis@1",
-    narrativeDigest: narrative.semanticIndex.digest,
     programSpace,
     audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
     visualTrack: { clips: basisSegments.map((segment) => ({
       segmentId: segment.segmentId,
       artifact: {
-        digest: segment.sourceArtifactDigest,
+        digest: digestOf(`caption:clip:${segment.segmentId}`),
         size: 1,
         mediaType: "video/mp4",
         durationSec: segment.endSec - segment.startSec,
@@ -76,17 +74,13 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
   });
   const evidence = sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    basisDigest: basis.basisDigest,
-    audioArtifactDigest: basis.audio.digest,
+    audioArtifactDigest: digestOf("caption:acoustic-evidence"),
     programSpaceDigest: basis.programSpace.digest,
-    rawEvidenceArtifactDigest: digestOf("caption:raw-evidence"),
     durationSec,
     segments,
   });
   const audioBasis: SpeechAudioBasis = {
     contract: "svml.speech-audio-basis@1",
-    basisDigest: basis.basisDigest,
-    narrativeDigest: basis.narrativeDigest,
     programSpace: basis.programSpace,
     audio: basis.audio,
     segments: basis.segments,
@@ -209,7 +203,6 @@ test("official caption styling lowers to an ordinary self-contained VisualTrack"
 
   assert.equal(track.contract, "svml.visual-track@1");
   assert.equal(track.programSpaceDigest, map.programSpace.digest);
-  assert.deepEqual(track.sources.map((source) => source.name), ["program", "projection"]);
   assert.equal(track.presents[0]?.elements.some((element) => element.kind === "text"), true);
   assert.equal(
     track.presents.flatMap((present) => present.elements).some((element) => "text" in element && element.text.includes("Hello")),
@@ -237,8 +230,10 @@ test("two caption styles become two peer Tracks without mutating one another", (
   const secondTrack = renderCaptionTrack(projection, second);
 
   assert.notEqual(firstTrack.digest, secondTrack.digest);
-  assert.equal(firstTrack.sources.find((source) => source.name === "projection")?.digest, projection.projectionDigest);
-  assert.equal(secondTrack.sources.find((source) => source.name === "projection")?.digest, projection.projectionDigest);
+  assert.deepEqual(
+    firstTrack.presents.map((present) => present.span),
+    secondTrack.presents.map((present) => present.span),
+  );
   assert.equal(firstTrack.presents[0]?.stacking.order, 100);
   assert.equal(secondTrack.presents[0]?.stacking.order, 101);
 });

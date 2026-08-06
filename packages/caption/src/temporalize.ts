@@ -22,12 +22,6 @@ export function temporalizeCaption(
   narrative: Narrative,
   map: CompleteSemanticMap,
 ): TimedCaptionProjection {
-  if (map.semanticIndexDigest !== narrative.semanticIndex.digest) {
-    throw new CaptionProjectionError(
-      "CAPTION_SEMANTIC_INDEX",
-      "Caption Projection and speech time map use different Semantic Indexes.",
-    );
-  }
   const timingByToken = new Map(map.tokens.map((token) => [token.tokenId, token]));
   const sourceTiming = (startToken: number, endTokenExclusive: number, owner: string) => {
     const source = narrative.tokens.slice(startToken, endTokenExclusive);
@@ -69,8 +63,6 @@ export function temporalizeCaption(
   });
   const payload = {
     contract: "svml.timed-caption-projection@1" as const,
-    semanticIndexDigest: narrative.semanticIndex.digest,
-    speechTimeMapDigest: map.mapDigest,
     programSpace: map.programSpace,
     text: narrative.captionProjection.text,
     regions,

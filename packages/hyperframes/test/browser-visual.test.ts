@@ -112,7 +112,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       visualIr: "svml.hyperframes-visual-ir@1",
       id: "blue",
       programSpaceDigest: space.digest,
-      sources: [{ name: "fixture", digest: digest(Buffer.from("blue")) }],
       presents: [{
         id: "blue",
         span: { startFrame: 0, endFrameExclusive: 1 },
@@ -134,7 +133,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       visualIr: "svml.hyperframes-visual-ir@1",
       id: "surface",
       programSpaceDigest: space.digest,
-      sources: [{ name: "receipt", digest: digest(Buffer.from("surface")) }],
       presents: [{
         id: "surface",
         span: { startFrame: 0, endFrameExclusive: 1 },
@@ -161,7 +159,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       visualIr: "svml.hyperframes-visual-ir@1",
       id: "text",
       programSpaceDigest: space.digest,
-      sources: [{ name: "fixture", digest: digest(Buffer.from("text")) }],
       presents: [{
         id: "text",
         span: { startFrame: 0, endFrameExclusive: 1 },

@@ -66,7 +66,6 @@ export type BrollProgram = {
 export type BrollProduct = {
   readonly contract: "svml.broll-product@1";
   readonly productDigest: Digest;
-  readonly programDigest: Digest;
   readonly programSpace: ProgramSpace;
   readonly visualTrack: VisualTrack;
   readonly audioTrack: AudioTrack;

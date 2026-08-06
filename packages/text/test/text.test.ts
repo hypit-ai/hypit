@@ -51,9 +51,11 @@ test("Text learns <script> only from an imported Script Manifest", async () => {
     scriptContext(),
   );
 
-  assert.equal(result.module.records.length, 1);
+  assert.equal(result.module.records.length, 2);
   assert.equal(result.module.records[0]?.id, "story");
   assert.equal(result.module.records[0]?.type.name, "Narrative");
+  assert.equal(result.module.records[1]?.id, "story.segment.opening");
+  assert.equal(result.module.records[1]?.type.name, "NarrativeExcerpt");
   assert.equal(result.sourceMaps.length, 1);
   assert.doesNotThrow(() => link(scriptContext().closure, [result.module]));
 });
@@ -83,6 +85,7 @@ test("the same Script meaning has the same authored Record digest across reflow"
   );
 
   assert.equal(compact.module.records[0]?.digest, multiline.module.records[0]?.digest);
+  assert.equal(compact.module.records[1]?.digest, multiline.module.records[1]?.digest);
   assert.notEqual(
     compact.module.records[0]?.origin.kind === "authored" ? compact.module.records[0].origin.sourceDigest : undefined,
     multiline.module.records[0]?.origin.kind === "authored" ? multiline.module.records[0].origin.sourceDigest : undefined,

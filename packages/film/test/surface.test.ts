@@ -71,14 +71,12 @@ const visual = sealVisualTrack({
   visualIr: "svml.hyperframes-visual-ir@1",
   id: "visual",
   programSpaceDigest: space.digest,
-  sources: [{ name: "fixture", digest: digestOf("film-surface-visual") }],
   presents: [],
 });
 const audio = sealAudioTrack({
   contract: "svml.audio-track@1",
   id: "audio",
   programSpaceDigest: space.digest,
-  sources: [{ name: "fixture", digest: digestOf("film-surface-audio") }],
   clips: [],
 });
 

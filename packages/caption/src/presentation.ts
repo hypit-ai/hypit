@@ -133,7 +133,6 @@ export function planCaptionPresentation(
         : characterFlow(region));
   const payload = {
     contract: "svml.caption-presentation-plan@0" as const,
-    sourceProjectionDigest: projection.projectionDigest,
     mode,
     units,
   };

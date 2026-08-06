@@ -146,8 +146,8 @@ test("KIE uploads content-addressed references, resumes one task, and persists g
   const result = completed.result.value.kind === "inline"
     ? completed.result.value.value as Record<string, unknown> : {};
   assert.equal(result.contract, "svml.generated-video-set@1");
-  assert.equal(result.model, "seedance-2-mini");
-  assert.equal(result.requestDigest, requestValue.requestDigest);
+  assert.equal("model" in result, false, "model choice belongs to the request graph and Receipt");
+  assert.equal("requestDigest" in result, false, "request lineage belongs to the Need Receipt, not generated media");
   const videos = result.videos as Array<{ digest: string }>;
   assert.equal(videos.length, 1);
   assert.equal(await artifacts.has(videos[0]!.digest as `sha256:${string}`), true);

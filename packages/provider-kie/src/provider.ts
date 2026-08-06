@@ -64,11 +64,9 @@ type KieCheckpoint = {
   readonly taskId: string;
   readonly catalogKey: string;
   readonly model: string;
-  readonly authorModel: string;
   readonly result: "image" | "video";
   readonly requestDigest: Digest;
   readonly contentRequestDigest: Digest;
-  readonly requestedDurationSec?: number;
   readonly startedAt: number;
   readonly polls: number;
   readonly pollFailures: number;
@@ -445,11 +443,9 @@ function endpoint(options: {
           taskId,
           catalogKey: adapter.key,
           model: task.model,
-          authorModel: task.authorModel,
           result: task.result,
           requestDigest: context.need.requestDigest,
           contentRequestDigest: contentRequestDigest(context.need.constraints),
-          ...(task.requestedDurationSec === undefined ? {} : { requestedDurationSec: task.requestedDurationSec }),
           startedAt: options.now(),
           polls: 0,
           pollFailures: 0,
@@ -509,15 +505,10 @@ function endpoint(options: {
         const result = checkpoint.result === "image"
           ? sealGeneratedImageSet({
               contract: "svml.generated-image-set@1",
-              model: checkpoint.authorModel,
-              requestDigest: checkpoint.contentRequestDigest,
               images: artifacts,
             })
           : sealGeneratedVideoSet({
               contract: "svml.generated-video-set@1",
-              model: checkpoint.authorModel,
-              requestDigest: checkpoint.contentRequestDigest,
-              requestedDurationSec: checkpoint.requestedDurationSec ?? 0,
               videos: artifacts,
             });
         const vendorMetrics: Record<string, CanonicalValue> = {};

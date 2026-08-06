@@ -42,7 +42,6 @@ function fixture() {
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "lower",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "request", digest: digestOf("lower:request") }],
     presents: [{
       id: "picture",
       span: { startFrame: 0, endFrameExclusive: 30 },
@@ -61,7 +60,6 @@ function fixture() {
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "upper",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "projection", digest: digestOf("upper:projection") }],
     presents: [{
       id: "words",
       span: { startFrame: 3, endFrameExclusive: 20 },
@@ -76,7 +74,6 @@ function fixture() {
     contract: "svml.audio-track@1",
     id: "sound",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "basis", digest: digestOf("sound:basis") }],
     clips: [{ id: "main", span: { startFrame: 0, endFrameExclusive: 30 }, artifact: sound, bus: "speech" }],
   });
   const composition = sealComposition({
@@ -219,7 +216,6 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "bound-render-dependencies",
     programSpaceDigest: space.digest,
-    sources: [{ name: "fixture", digest: digestOf("bound-render-dependencies") }],
     presents: [{
       id: "bound",
       span: { startFrame: 0, endFrameExclusive: 30 },

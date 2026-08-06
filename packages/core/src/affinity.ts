@@ -51,9 +51,12 @@ function atPointer(value: unknown, pointer: string, subject: string): unknown {
   return current;
 }
 
-function inlineValue(value: StoredValue, subject: string): unknown {
-  invariant(value.kind === "inline", "AFFINITY_REQUIRES_INLINE_VALUE", `${subject} must be inline`, subject);
-  return value.value;
+function affinityValue(value: StoredValue): unknown {
+  // BlobRef is a first-class StoredValue and has stable JSON fields. Treating it
+  // as its own affinity value lets generic packages prove that a projected
+  // artifact is the exact member of an inline Product without wrapping bytes in
+  // a domain-specific object.
+  return value.kind === "inline" ? value.value : value;
 }
 
 function sourceRecordId(graph: CompiledGraph, plan: BuildPlan, source: GraphValueRef): string {
@@ -87,8 +90,8 @@ export function verifyRecordAffinity(
       `${outputId} cannot prove affinity to ${sourceId}; provide that source or mark this Candidate substitute`,
       outputId,
     );
-    const resultValue = atPointer(inlineValue(record.value, record.id), constraint.resultPointer, record.id);
-    const sourceValue = atPointer(inlineValue(source.value, source.id), constraint.sourcePointer, source.id);
+    const resultValue = atPointer(affinityValue(record.value), constraint.resultPointer, record.id);
+    const sourceValue = atPointer(affinityValue(source.value), constraint.sourcePointer, source.id);
     invariant(
       canonicalStringify(resultValue) === canonicalStringify(sourceValue),
       "AFFINITY_MISMATCH",
@@ -161,8 +164,8 @@ export function verifyProducerRecordAffinity(
       `${record.id} cannot prove affinity to ${inputId}`,
       record.id,
     );
-    const resultValue = atPointer(inlineValue(record.value, record.id), affinity.resultPointer, record.id);
-    const inputValue = atPointer(inlineValue(input.value, input.id), affinity.inputPointer, input.id);
+    const resultValue = atPointer(affinityValue(record.value), affinity.resultPointer, record.id);
+    const inputValue = atPointer(affinityValue(input.value), affinity.inputPointer, input.id);
     invariant(
       canonicalStringify(resultValue) === canonicalStringify(inputValue),
       "AFFINITY_MISMATCH",

@@ -34,7 +34,6 @@ function documentFixture() {
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "provider-proof",
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "fixture", digest: digestOf("provider-proof") }],
     presents: [{
       id: "card",
       span: { startFrame: 0, endFrameExclusive: 12 },

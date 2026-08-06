@@ -2,8 +2,9 @@
 
 Reference Product/Projection package for an atomic speech take.
 
-`SpeechBasis` is the indivisible Product that binds audio, visual clips, ProgramSpace and
-`basisDigest`. Four ordinary deterministic Producers project it into `ProgramSpace`,
+`SpeechBasis` is the indivisible Product that binds audio, visual clips and ProgramSpace; its
+`basisDigest` is the Product's own content identity, not an upstream lineage token. Four ordinary
+deterministic Producers project it into `ProgramSpace`,
 `SpeechAudioBasis`, `VisualTrack` and `AudioTrack`. Core has no Projection primitive and never treats
 these outputs as ports of one mutable workflow node.
 

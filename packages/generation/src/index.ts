@@ -12,6 +12,8 @@ export {
   generationManifest,
   generationManifestDigest,
   generationModuleRef,
+  generationProducerDigests,
+  generationProducers,
   generationTypes,
   generationValidatorDigests,
 } from "./manifest.js";

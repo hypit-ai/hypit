@@ -58,8 +58,6 @@ const timedCaptionRegion = object({
 });
 export const timedCaptionProjectionSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.timed-caption-projection@1" } },
-  semanticIndexDigest: { schema: digest },
-  speechTimeMapDigest: { schema: digest },
   programSpace: { schema: programSpaceSchema },
   text: { schema: { kind: "string" } },
   regions: { schema: { kind: "array", items: timedCaptionRegion } },
@@ -136,8 +134,6 @@ export const captionManifest: ModuleManifest = {
         name: "caption",
         type: captionTypes.timedProjection,
         affinity: [
-          { resultPointer: "/semanticIndexDigest", input: "narrative", inputPointer: "/semanticIndex/digest" },
-          { resultPointer: "/speechTimeMapDigest", input: "map", inputPointer: "/mapDigest" },
           { resultPointer: "/programSpace/digest", input: "map", inputPointer: "/programSpace/digest" },
         ],
       }],
@@ -159,8 +155,6 @@ export const captionManifest: ModuleManifest = {
         type: contractTypes.visualTrack,
         affinity: [
           { resultPointer: "/programSpaceDigest", input: "caption", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/sources/0/digest", input: "program", inputPointer: "/digest" },
-          { resultPointer: "/sources/1/digest", input: "caption", inputPointer: "/projectionDigest" },
         ],
       }],
       needs: [],
