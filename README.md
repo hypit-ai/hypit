@@ -103,12 +103,12 @@ pnpm svml:v2 plan examples/talking-film-graph-check/main.svml \
   --target final.video
 ```
 
-The live example uses explicit local Runtime assembly and external credentials:
+The live example uses an explicit Run Graph, declarative local Runtime Profile and external
+credentials:
 
 ```bash
-pnpm svml:v2 build examples/talking-film-live/main.svml \
-  --target final.video \
-  --runtime examples/talking-film-live/svml.runtime.ts \
+pnpm svml:v2 build examples/talking-film-live/build.svrun \
+  --runtime examples/talking-film-live/svml.runtime.json \
   --follow \
   --out examples/talking-film-live/output/final.mp4
 ```
@@ -124,8 +124,8 @@ These inputs are separate by design:
 |---|---|
 | `.svml` | author meaning, explicit model/component choices and graph references |
 | `.svs` | reusable package-defined Recipe values |
-| planned `.svrun` | Targets, Candidates and explicit Satisfaction edges for one reusable Run |
-| Runtime Profile / `svml.runtime.ts` | Scheduler, Stores, credentials, Endpoints and concurrency |
+| `.svrun` | Targets, Candidates and explicit Satisfaction edges for one reusable Run |
+| `svml.runtime.json` / `svml.runtime.ts` | Scheduler, Stores, credential references, Endpoints and concurrency |
 
 Source imports activate author vocabulary only. They never authorize network, filesystem, process,
 credential or queue access.
@@ -155,6 +155,7 @@ packages/protocol        immutable wire contracts
 packages/core            domain-neutral Demand compiler and Build state machine
 packages/elaborator      author declarations and hygienic Fragment expansion
 packages/compiler-node   reference Node compiler Host
+packages/run             official human-readable Run Graph frontend
 packages/runtime         environment-neutral scheduling and Store ports
 packages/driver-node     trusted Node command execution
 packages/local           zero-service SQLite/filesystem developer assembly
@@ -185,7 +186,7 @@ rewritten under `packages/`. They are not the public v2 package taxonomy or sour
 
 Work is intentionally focused on two layers:
 
-1. domain-neutral `.svrun`, Runtime Profile usability, package lifecycle and inspection;
+1. Run/Runtime diagnostics, package lifecycle and developer inspection;
 2. repeatable live acceptance and replaceable local/cloud Endpoint environments.
 
 Broader Text, Caption, B-roll and Ranking visual behavior is deferred until those foundations are

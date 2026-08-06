@@ -55,7 +55,8 @@ The reference local assembly creates only private Runtime state:
 client-video/
   main.svml
   studio.svs
-  svml.runtime.ts
+  build.svrun
+  svml.runtime.json
   assets/
   .svml/
     runtime.sqlite
@@ -77,8 +78,31 @@ source files or the database.
 
 ## 4. Runtime configuration
 
-The configuration module is trusted developer/deployment code. It is not imported by `.svml` and
-does not become author intent:
+The ordinary CLI path is closed declarative deployment data. Exact adapter names are resolved by a
+Host-owned registry; unknown adapters fail and the file cannot contain callbacks or secret values:
+
+```json
+{
+  "format": "svml.runtime-config@1",
+  "services": [],
+  "endpoints": [
+    {
+      "use": "@svml/provider-kie",
+      "instance": "kie.personal",
+      "lane": "generation",
+      "config": { "apiKeyEnv": "KIE_API_KEY", "defaultConcurrency": 2 }
+    }
+  ],
+  "permissions": [
+    "network:api.kie.ai",
+    "network:kieai.redpandaai.co"
+  ],
+  "scheduling": { "maxConcurrency": 8, "lanes": { "generation": 2 } }
+}
+```
+
+Executable TypeScript remains the advanced embedding form for private transports and adapters not
+yet registered in the reference CLI. It is trusted developer/deployment code, not author intent:
 
 ```ts
 import { createProjectLocalRuntime } from "@svml/local";
@@ -199,13 +223,12 @@ any of those capabilities by themselves.
 The v2 CLI now accepts:
 
 ```bash
-pnpm svml:v2 build main.svml \
-  --target final.video \
-  --runtime ./svml.runtime.ts \
+pnpm svml:v2 build build.svrun \
+  --runtime ./svml.runtime.json \
   --follow
 
-pnpm svml:v2 status <build-id> --runtime ./svml.runtime.ts
-pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
+pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
+pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
 ```
 
 The default local Build id is the content-derived Core Build id. Repeating the same command resumes

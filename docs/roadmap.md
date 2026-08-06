@@ -8,9 +8,9 @@ environments replaceable. Video-style breadth is deliberately deferred.
 
 ## A. Domain-neutral system
 
-### A1. Human-readable Run Graph
+### A1. Human-readable Run Graph — first public slice implemented
 
-Implement the `.svrun` Frontend for:
+The `.svrun` Frontend now implements:
 
 - named Targets and reusable Target sets;
 - Provided-Value and Fragment Candidates;
@@ -19,16 +19,17 @@ Implement the `.svrun` Frontend for:
 - separately instantiated identical implementations;
 - imports of trusted Run packages.
 
-The Frontend must compile completely before execution. It cannot contain credentials, Endpoint
-bindings or an inline unversioned execution callback. The existing CLI `--pin` option remains only
-temporary compatibility sugar until `.svrun` can express the same action.
+The Frontend compiles completely before execution. It cannot contain credentials, Endpoint bindings
+or an inline unversioned execution callback. The existing CLI `--pin` option remains temporary
+compatibility sugar and can be removed after examples and users migrate.
 
-### A2. Runtime Profile usability
+### A2. Runtime Profile usability — first public slice implemented
 
-The typed Runtime Profile/Closure API is implemented, but normal developers still assemble a
-`svml.runtime.ts` module. Add a declarative profile form for Scheduler, Stores, credentials,
-Endpoints, concurrency lanes and permissions. Keep executable TypeScript as the advanced embedding
-API.
+The typed Runtime Profile/Closure API now has a declarative `svml.runtime.json` Host frontend for
+Scheduler defaults, replacement services, credential references, Endpoints, lanes and permissions.
+Adapter names resolve through an explicit trusted registry. Executable TypeScript remains the
+advanced embedding API. Next work is package-locking third-party Runtime adapters and richer
+diagnostics, not adding Provider knowledge to Core.
 
 Runtime Profile is deployment configuration. It must not enter author semantic identity or
 `.svrun` creative choices.

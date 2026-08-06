@@ -220,6 +220,9 @@ function activationMetadata(value: NodePackageActivation): unknown {
           .localeCompare(`${right.type.module.name}@${right.type.module.version}#${right.type.name}`),
       ),
     })).sort((left, right) => left.name.localeCompare(right.name)),
+    runFragments: Object.entries(value.runFragments ?? {})
+      .map(([name, fragment]) => ({ name, digest: fragment.id }))
+      .sort((left, right) => left.name.localeCompare(right.name)),
   };
 }
 

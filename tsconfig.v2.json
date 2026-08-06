@@ -20,6 +20,7 @@
       "@svml/speech-take": ["packages/speech-take/src/index.ts"],
       "@svml/elaborator": ["packages/elaborator/src/index.ts"],
       "@svml/realization": ["packages/realization/src/index.ts"],
+      "@svml/run": ["packages/run/src/index.ts"],
       "@svml/runtime": ["packages/runtime/src/index.ts"],
       "@svml/store-sqlite": ["packages/store-sqlite/src/index.ts"],
       "@svml/artifact-store-fs": ["packages/artifact-store-fs/src/index.ts"],

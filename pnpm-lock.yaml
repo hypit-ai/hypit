@@ -147,6 +147,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@svml/artifact-store-s3':
+        specifier: workspace:*
+        version: link:../artifact-store-s3
       '@svml/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
@@ -162,9 +165,30 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/provider-google-vertex':
+        specifier: workspace:*
+        version: link:../provider-google-vertex
+      '@svml/provider-hyperframes-local':
+        specifier: workspace:*
+        version: link:../provider-hyperframes-local
+      '@svml/provider-kie':
+        specifier: workspace:*
+        version: link:../provider-kie
+      '@svml/provider-media-local':
+        specifier: workspace:*
+        version: link:../provider-media-local
+      '@svml/provider-whisperx-local':
+        specifier: workspace:*
+        version: link:../provider-whisperx-local
       '@svml/realization':
         specifier: workspace:*
         version: link:../realization
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
 
   packages/compiler-node:
     dependencies:
@@ -846,6 +870,25 @@ importers:
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
+
+  packages/run:
+    dependencies:
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/runtime:
     dependencies:

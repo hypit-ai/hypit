@@ -103,13 +103,29 @@ Product UI words such as *pin*, *reuse*, *preview* and *black frame* are not Cor
 ways to author a Run Graph and Satisfaction edges. A historical file is normally a zero-input
 Provided-Value Candidate. A generated placeholder is normally an Operation Candidate.
 
-The planned `.svrun` Frontend will be the human-readable form of:
+The `@svml/run` `.svrun` Frontend is the human-readable form of:
 
 ```text
 Run Graph + Satisfaction[] + Target[]
 ```
 
 It will not contain credentials, queue configuration or Runtime placement.
+
+The two source graphs are compiled before execution:
+
+```text
+.svml  ──Frontend/Elaborator──> Author Graph
+.svrun ──Run Frontend─────────> Run Graphs + Satisfaction edges + Targets
+                                      │
+                         deterministic graph composition
+                                      │
+                                finite BuildPlan
+```
+
+Named target sets make a useful stopping point reusable. `<value>` and `<build-record>` declare
+zero-input Candidates. Imported trusted Run Fragments declare Operation-backed Candidates; several
+exports from one Fragment declaration share one instance, while separate declarations remain
+separate executions.
 
 ## 5. Multi-result components
 
@@ -174,6 +190,11 @@ runtime   Scheduler and Store implementation
 A source `<import>` activates only author meaning. It never grants network, filesystem, process,
 credential or queue authority. Provider and Runtime facets are selected by the Host's locked Runtime
 Profile.
+
+The reference local Host accepts `svml.runtime.json`. It resolves exact adapter names through a
+Host-owned `RuntimeConfigRegistry`, constructs package Manifests, locks the resulting Runtime
+Profile/Closure, and only then installs Endpoints and services. The JSON contains non-secret
+configuration and credential references; executable `svml.runtime.ts` remains an advanced host API.
 
 Cross-package communication is decentralized. A type-owning module publishes a nominal `TypeRef`,
 schema and optional semantic validator digest. Producers and consumers refer to that TypeRef. Core
