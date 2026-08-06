@@ -161,7 +161,7 @@ estimate -> Seedance -> SpeechTake -> WhisperX -> Evidence -> SemanticMap
 Hypit 等精确 Endpoint。它不能因为 Kling 也返回视频，就自行换成 Kling。
 
 但一次 Build 可以在不改作者正文的情况下，显式选择一个已安装的黑场 Candidate，或
-把某个历史 Value 包装成安全、无代码的 Provided Candidate。这个动作应类似“给一个
+把某个历史 Value 包装成已验证类型、无代码的 Provided Candidate。这个动作应类似“给一个
 Logical Output 附着并选择一个实现”，但不能和源码 `<import>`、Provider 路由混成
 一件事。
 
@@ -456,8 +456,10 @@ Producer 仍是 Operation；一个内容摘要已知且已经物化的 Artifact 
 Derivation。
 
 因此 Pin 和黑场没有类别差异：一个黑场可以是已有值 Candidate，也可以是需要 duration
-的 Operation Candidate。Core 只验证 Value/Operation、类型、摘要、亲和性和 conformance，
-从不按“Pin”或“Preview”分支。
+的 Operation Candidate。Core 只验证 Value/Operation、类型与结构、输入包络和 conformance，
+从不按“Pin”或“Preview”分支。只有声称 `exact` 的结果才需要证明 Logical Output 声明的
+affinity；`substitute` 的本义就是允许外部值不忠实于原始作者输入，因此跳过该语义亲和
+证明，但其较低 fidelity 必须沿下游单调传播。
 
 ### 3.6 Candidate 的输入约束改为 Semantic Input Envelope
 
@@ -611,18 +613,21 @@ Overlay 负责：
 独立 Graph digest。Overlay 顺序不影响身份，Overlay 内容、Provided Value 或源作者图
 任何一项变化都会改变相应下游摘要。
 
-初期建议保守：外部附着 Candidate 默认为 `substitute`。真正语义等价的 Endpoint 差异
-交给 Provider Binding；历史结果通过带类型、摘要和亲和性证明的 Provided Candidate
-表达。以后若要允许第三方 exact Candidate，必须先定义更强的 Contract conformance
-与签名规则。
+外部附着的任意已有值——历史结果、上传视频、固定黑场或人工交付物——都可以成为普通
+Provided Candidate。它只需满足当前 Logical Output 的精确 TypeRef 和值结构，不需要来自
+相同作者图、相同 prompt、相同历史输出，也不需要证明当前输出的 affinity。其 provenance
+只用于审计，不是语义兼容证明。此类 Host 便利入口默认产生 `substitute` Candidate；真正
+声称 `exact` 的 Candidate 必须通过普通输入边和 Contract affinity 证明，不能再建立一条
+“历史产物特批”旁路。
 
 ### 5.3 Pin 状态由宿主维护，但选择必须进入 BuildRequest
 
 Canvas、CLI 或 Hosted 产品可以在 JSON、SQLite、Postgres 或浏览器状态里维护：收藏、
 版本名、用户备注、“已 Pin”图标和历史 take。这些不是 Core 真相，也不要求中央数据库。
 
-构建开始时，宿主必须把人类状态解析为明确的 CandidateId、Value digest、TypeRef、
-conformance 和 affinity 声明，并写入本次 BuildRequest/Realization Closure。普通缓存、
+构建开始时，宿主必须把人类状态解析为明确的 CandidateId、Value digest、TypeRef 和
+conformance，并写入本次 BuildRequest/Realization Closure。若 Candidate 声称 `exact`，
+它还必须经由普通图边满足 Logical Output 声明的 affinity；普通缓存、
 已安装包或外部数据库状态不能环境式改变 Build：
 
 ```text
@@ -861,8 +866,8 @@ Frontend、Fragment Elaborator、Runtime、Provider、Scheduler、Store 和 UI �
 - Derivation、Command、Receipt 的摘要完整性；
 - 恢复时重建 Commands；
 - 通用 JSON Pointer affinity；
-- Producer result affinity 会保护 Fragment 内部中间结果，Logical Output affinity 会保护
-  外部 Candidate；
+- Producer result affinity 会保护 Fragment 内部中间结果；Logical Output affinity 只约束
+  声称 `exact` 的外部 Candidate，`substitute` 刻意跳过语义证明并传播较低 fidelity；
 - Contract 独立于 Core；
 - 普通文件/CAS 即可支持本地已有值复用与恢复，不要求数据库。
 

@@ -32,10 +32,12 @@ pnpm svml:v2 build examples/talking-film-live/main.svml \
   --runtime examples/talking-film-live/svml.runtime.ts \
   --pin opening-take=<prior-build-id> \
   --pin answer-take=<prior-build-id> \
+  --accept-substitute \
   --follow \
   --out examples/talking-film-live/output/final-pinned.mp4
 ```
 
-The second command compiles a new Build whose two shot outputs are Existing values. It therefore
-contains no Seedance Operations or KIE Needs, while Caption, media normalization, WhisperX,
-SemanticMap, Tracks, Film and HyperFrames remain ordinary demanded graph work.
+The second command compiles a new Build whose two shot outputs are explicitly selected substitute
+Existing values. It therefore contains no Seedance Operations or KIE Needs. Substitute fidelity
+propagates through the rebuilt media normalization, WhisperX, SemanticMap, Tracks, Film and
+HyperFrames path instead of being washed back to exact.
