@@ -4,7 +4,7 @@ export default defineConfig({
   base: "/docs/",
   title: "Narratage",
   description: "Write the story. Compile the video.",
-  appearance: "force-dark",
+  appearance: false,
   cleanUrls: true,
   markdown: {
     languageAlias: {
@@ -15,14 +15,14 @@ export default defineConfig({
     },
   },
   head: [
-    ["meta", { name: "theme-color", content: "#0b0d10" }],
+    ["meta", { name: "theme-color", content: "#4A2E25" }],
     ["link", { rel: "preconnect", href: "https://fonts.googleapis.com" }],
     ["link", { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" }],
     [
       "link",
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Cutive+Mono&family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&display=swap",
       },
     ],
   ],
