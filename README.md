@@ -49,8 +49,10 @@
 > in-memory CAS, and a queue-free local Scheduler whose concurrency lanes are shared across Builds
 > and independent commands inside one Build. Recoverable Provider Endpoints now journal a stable
 > submission identity before `start`, persist pending checkpoints, and use `resume` after restart;
-> completed operations are replayed into Core without another external call. Automatic third-party
-> package installation, parser/validator sandboxing, distributed leases and hosted WhisperX /
+> completed operations are replayed into Core without another external call. Trusted installed
+> author packages can now be activated from a byte-locked physical dependency closure without
+> changing Core or the official CLI; automatic installation, untrusted parser/validator sandboxing,
+> distributed leases and hosted WhisperX /
 > HyperFrames Endpoint adapters are not implemented yet. The first KIE generation Provider and its
 > seven explicit model families are implemented. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
 > `@svml/local` now provide the durable zero-service developer assembly.
@@ -149,6 +151,10 @@ uv run --project services/whisperx --frozen svml-whisperx-service
 
 # v2: real Source Closure check through the trusted Text + Script + SVS prelude.
 pnpm svml:v2 check examples/v2-bootstrap/main.svml
+
+# v2: explicitly trust and activate an installed third-party author package.
+pnpm svml:v2 lock-packages ./svml.packages.lock --package @example/cards --root .
+pnpm svml:v2 check ./main.svml --package-lock ./svml.packages.lock --root .
 
 pnpm svml check examples/regen-ranking/regen-ranking.svml
 pnpm svml script examples/regen-ranking/regen-ranking.svml --out narrative.json

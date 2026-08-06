@@ -48,6 +48,8 @@
       "@svml/text-track": ["packages/text-track/src/index.ts"],
       "@svml/svs": ["packages/svs/src/index.ts"],
       "@svml/compiler-node": ["packages/compiler-node/src/index.ts"],
+      "@svml/package-loader-node": ["packages/package-loader-node/src/index.ts"],
+      "@svml/prelude-video": ["packages/prelude-video/src/index.ts"],
       "@svml/cli": ["packages/cli/src/index.ts"],
       "@svml/validation": ["packages/validation/src/index.ts"]
     }

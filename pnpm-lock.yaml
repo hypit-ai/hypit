@@ -77,36 +77,15 @@ importers:
       '@svml/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@svml/film':
-        specifier: workspace:*
-        version: link:../film
-      '@svml/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
-      '@svml/hyperframes-render':
-        specifier: workspace:*
-        version: link:../hyperframes-render
       '@svml/local':
         specifier: workspace:*
         version: link:../local
-      '@svml/media-pipeline':
+      '@svml/package-loader-node':
         specifier: workspace:*
-        version: link:../media-pipeline
-      '@svml/script':
+        version: link:../package-loader-node
+      '@svml/prelude-video':
         specifier: workspace:*
-        version: link:../script
-      '@svml/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@svml/text':
-        specifier: workspace:*
-        version: link:../text
+        version: link:../prelude-video
 
   packages/compiler-node:
     dependencies:
@@ -411,6 +390,49 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/package-loader-node:
+    dependencies:
+      '@svml/compiler-node':
+        specifier: workspace:*
+        version: link:../compiler-node
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/prelude-video:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/film':
+        specifier: workspace:*
+        version: link:../film
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@svml/hyperframes-render':
+        specifier: workspace:*
+        version: link:../hyperframes-render
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+    devDependencies:
+      '@svml/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
 
   packages/protocol: {}
 
