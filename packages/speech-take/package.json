@@ -7,11 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@svml/component-kit": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/component-kit": "workspace:*",
     "@svml/core": "workspace:*",
     "@svml/driver-node": "workspace:*",
     "@svml/validation": "workspace:*"
