@@ -22,7 +22,6 @@ html { background: #000; }
 body { letter-spacing: -0.012em; }
 .VPHome { margin-bottom: 0 !important; }
 .VPNav { backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,.08); }
-.VPNavBarTitle .logo { width: 26px; height: 26px; }
 .VPNavBarTitle .title { font-weight: 800; letter-spacing: -.04em; }
 .VPButton.brand { color: #fff !important; border-color: #ec4899 !important; background: #ec4899 !important; }
 .VPButton.brand:hover { border-color: #db2777 !important; background: #db2777 !important; }

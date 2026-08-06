@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   base: "/docs/",
-  title: "SVML",
+  title: "Narratage",
   description: "Write the story. Compile the video.",
   appearance: "force-dark",
   cleanUrls: true,
@@ -27,7 +27,6 @@ export default defineConfig({
     ],
   ],
   themeConfig: {
-    logo: { src: "/logo-mark.svg", alt: "SVML" },
     nav: [
       { text: "快速开始", link: "/quickstart" },
       { text: "开发指南", link: "/guide/components" },
