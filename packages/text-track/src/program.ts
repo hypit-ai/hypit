@@ -8,9 +8,10 @@ import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@svml/co
 import { digestOf, isDigest } from "@svml/protocol";
 import type { Digest } from "@svml/protocol";
 
-import type { TextAppearance, TextItem, TextTrackProgram } from "./types.js";
+import type { TextAppearance, TextItem, TextTrackProgram, TextTrackSpec } from "./types.js";
 
 export const renderTextTrackImplementationDigest = digestOf("@svml/text-track/render@1");
+export const compileTextTrackImplementationDigest = digestOf("@svml/text-track/compile@1");
 
 function assertNonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);
@@ -80,6 +81,7 @@ function assertAppearance(appearance: TextAppearance, label: string): void {
     }
   }
   if (appearance.backgroundColor !== undefined) assertNonEmpty(appearance.backgroundColor, `${label} backgroundColor`);
+  if (appearance.letterSpacingPx !== undefined) assertFinite(appearance.letterSpacingPx, `${label} letterSpacingPx`);
 }
 
 export function assertTextTrackProgramIdentity(program: TextTrackProgram, programSpace: ProgramSpace): void {
@@ -154,7 +156,66 @@ function textStyle(appearance: TextAppearance): VisualStyleDeclaration[] {
     { name: "line-height", value: appearance.lineHeight ?? 1.2 },
     { name: "text-align", value: appearance.align ?? "center" },
     ...(appearance.fontFamily === undefined ? [] : [{ name: "font-family", value: appearance.fontFamily }]),
+    ...(appearance.letterSpacingPx === undefined ? [] : [{ name: "letter-spacing", value: `${appearance.letterSpacingPx}px` }]),
   ];
+}
+
+export function sealTextTrackSpec(value: Omit<TextTrackSpec, "digest">): TextTrackSpec {
+  const content = canonicalSpec(value);
+  return { ...content, digest: digestOf(content) };
+}
+
+function canonicalSpec(value: Omit<TextTrackSpec, "digest">): Omit<TextTrackSpec, "digest"> {
+  return {
+    contract: "svml.text-track-spec@1",
+    id: value.id,
+    items: value.items.map((item) => ({
+      id: item.id,
+      text: item.text,
+      during: "full",
+      z: item.z,
+      box: { ...item.box },
+      appearance: { ...item.appearance },
+    })),
+  };
+}
+
+export function assertTextTrackSpec(spec: TextTrackSpec): void {
+  if (spec.contract !== "svml.text-track-spec@1" || !spec.id || spec.items.length === 0) {
+    throw new Error("TextTrackSpec identity or items are invalid.");
+  }
+  const { digest: _digest, ...content } = spec;
+  if (!isDigest(spec.digest) || spec.digest !== digestOf(canonicalSpec(content))) {
+    throw new Error("TextTrackSpec digest differs from its contents.");
+  }
+  const ids = new Set<string>();
+  for (const item of spec.items) {
+    if (!item.id || !item.text || item.during !== "full" || ids.has(item.id) || !Number.isSafeInteger(item.z)) {
+      throw new Error("TextTrackSpec contains an invalid item.");
+    }
+    ids.add(item.id);
+    for (const value of Object.values(item.box)) assertFinite(value, `${item.id} box`);
+    assertAppearance(item.appearance, `${item.id} appearance`);
+  }
+}
+
+export function compileTextTrackProgram(programSpace: ProgramSpace, spec: TextTrackSpec): TextTrackProgram {
+  assertProgramSpaceIdentity(programSpace);
+  assertTextTrackSpec(spec);
+  return sealTextTrackProgram({
+    contract: "svml.text-track-program@1",
+    id: spec.id,
+    programSpaceDigest: programSpace.digest,
+    items: spec.items.map((item) => ({
+      id: item.id,
+      text: item.text,
+      span: { startFrame: 0, endFrameExclusive: programSpaceFrameCount(programSpace) },
+      z: item.z,
+      tieBreak: `${spec.id}:${item.id}`,
+      box: item.box,
+      appearance: item.appearance,
+    })),
+  });
 }
 
 export function renderTextTrack(programSpace: ProgramSpace, program: TextTrackProgram): VisualTrack {

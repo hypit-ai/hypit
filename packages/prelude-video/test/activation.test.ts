@@ -66,11 +66,11 @@ test("the official prelude activates Caption compute and owner validators withou
   assert.equal(components.includes(captionComponent), true);
   assert.deepEqual(
     captionComponent.producers.map((facet) => facet.producer.name),
-    ["temporalize-caption", "render-caption-track"],
+    ["temporalize-caption", "temporalize-caption-plan", "render-caption-program", "render-caption-track"],
   );
   assert.deepEqual(
     captionComponent.validators?.map((facet) => facet.type.name),
-    ["TimedCaptionProjection", "CaptionTrackProgram"],
+    ["CaptionStyle", "CaptionProgram", "CaptionPlan", "TimedCaptionProjection", "CaptionTrackProgram"],
   );
 });
 

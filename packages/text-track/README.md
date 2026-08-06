@@ -11,5 +11,7 @@ An item spanning the complete ProgramSpace is a persistent overlay; a shorter it
 are not different Track kinds. The package exposes semantic typography and box parameters rather
 than a rendering callback, arbitrary CSS or cross-Track access.
 
-No author-facing Surface is frozen yet. A future Text Surface and `.svs` recipes can produce the
-same TextTrackProgram without changing Core, Film, Composition or HyperFrames.
+The provider-free `<text:Track>` Surface now validates `.svs` Recipes, compiles `during="full"`
+against an explicitly connected ProgramSpace and produces the same TextTrackProgram without
+changing Core, Film, Composition or HyperFrames. Timed semantic windows and exact FontArtifact
+lowering remain pre-freeze work.

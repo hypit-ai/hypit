@@ -42,6 +42,29 @@ function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
   return { dialogue: dialogue.join("\n"), speech: joinProjection(speechParts) };
 }
 
+function excerptContent(
+  segment: ParsedNarrative["segments"][number],
+  projection: "dialogue" | "speech",
+): {
+  readonly kind: "segment";
+  readonly id: string;
+  readonly tokenStart: number;
+  readonly tokenEndExclusive: number;
+  readonly dialogue?: string;
+  readonly speech?: string;
+} {
+  const serializations = segmentSerializations(segment);
+  return {
+    kind: "segment",
+    id: segment.id,
+    tokenStart: segment.tokenStart,
+    tokenEndExclusive: segment.tokenEndExclusive,
+    ...(projection === "dialogue"
+      ? { dialogue: serializations.dialogue }
+      : { speech: serializations.speech }),
+  };
+}
+
 export function narrativeSegmentExcerptValue(
   parsed: ParsedNarrative,
   segment: ParsedNarrative["segments"][number],
@@ -55,6 +78,48 @@ export function narrativeSegmentExcerptValue(
     serializations: segmentSerializations(segment),
   } as const;
   return canonicalize({ ...content, excerptDigest: digestOf(canonicalize(content)) });
+}
+
+export function narrativeDialogueExcerptValue(
+  segment: ParsedNarrative["segments"][number],
+): CanonicalValue {
+  const content = {
+    contract: "svml.narrative-dialogue-excerpt@1",
+    ...excerptContent(segment, "dialogue"),
+  } as const;
+  return canonicalize({ ...content, excerptDigest: digestOf(canonicalize(content)) });
+}
+
+export function narrativeSpeechExcerptValue(
+  segment: ParsedNarrative["segments"][number],
+): CanonicalValue {
+  const content = {
+    contract: "svml.narrative-speech-excerpt@1",
+    ...excerptContent(segment, "speech"),
+  } as const;
+  return canonicalize({ ...content, excerptDigest: digestOf(canonicalize(content)) });
+}
+
+export function captionProjectionValue(parsed: ParsedNarrative): CanonicalValue {
+  const content = {
+    contract: parsed.captionProjection.contract,
+    text: parsed.captionProjection.text,
+    regions: parsed.captionProjection.regions.map(({ range: _range, ...region }) => region),
+  } as const;
+  return canonicalize({ ...content, projectionDigest: digestOf(canonicalize(content)) });
+}
+
+export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
+  const content = {
+    contract: "svml.narrative-selection@1",
+    id: selection.id,
+    occurrences: selection.occurrences.map((occurrence) => ({
+      occurrence: occurrence.occurrence,
+      open: { affinity: occurrence.open.affinity, boundary: semanticBoundary(occurrence.open.boundary) },
+      close: { affinity: occurrence.close.affinity, boundary: semanticBoundary(occurrence.close.boundary) },
+    })),
+  } as const;
+  return canonicalize({ ...content, selectionDigest: digestOf(canonicalize(content)) });
 }
 
 function semanticBoundary(boundary: {

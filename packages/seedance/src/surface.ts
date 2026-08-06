@@ -211,26 +211,25 @@ function referencePrompt(values: readonly ReferenceInput[]): string {
   return roles.length === 0 ? "" : `\n\nReference roles:\n${roles.join("\n")}`;
 }
 
-function excerpt(reference: SurfaceResolvedReference, subject: string): {
-  readonly serializations: { readonly dialogue: string; readonly speech: string };
+function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): {
+  readonly dialogue: string;
 } {
-  if (!sameType(reference.type, contractTypes.narrativeExcerpt)) {
-    throw new Error(`${subject} must reference a NarrativeExcerpt such as script.segment.opening`);
+  if (!sameType(reference.type, contractTypes.narrativeDialogueExcerpt)) {
+    throw new Error(`${subject} must reference a NarrativeDialogueExcerpt such as script.segment.opening.dialogue`);
   }
   const value = inline(reference, subject) as unknown as {
     readonly contract: string;
     readonly excerptDigest: string;
-    readonly serializations?: { readonly dialogue?: string; readonly speech?: string };
+    readonly dialogue?: string;
     readonly [key: string]: CanonicalValue | undefined;
   };
-  if (value.contract !== "svml.narrative-excerpt@1" || value.serializations === undefined
-    || typeof value.serializations.dialogue !== "string" || typeof value.serializations.speech !== "string") {
-    throw new Error(`${subject} NarrativeExcerpt is invalid`);
+  if (value.contract !== "svml.narrative-dialogue-excerpt@1" || typeof value.dialogue !== "string") {
+    throw new Error(`${subject} NarrativeDialogueExcerpt is invalid`);
   }
   const { excerptDigest: _digest, ...content } = value;
-  if (value.excerptDigest !== digestOf(content)) throw new Error(`${subject} NarrativeExcerpt digest differs`);
-  if (value.serializations.speech.trim().length === 0) throw new Error(`${subject} contains no spoken text`);
-  return value as { readonly serializations: { readonly dialogue: string; readonly speech: string } };
+  if (value.excerptDigest !== digestOf(content)) throw new Error(`${subject} NarrativeDialogueExcerpt digest differs`);
+  if (value.dialogue.trim().length === 0) throw new Error(`${subject} contains no spoken text`);
+  return value as { readonly dialogue: string };
 }
 
 function generationOutput(
@@ -297,17 +296,17 @@ export const decodeSeedanceVideoSurface: StructuredSurfaceHandler = ({ element, 
 };
 
 export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "model", "script", "prompt", "duration"], [
+  attributes(element, ["id", "model", "dialogue", "prompt", "duration"], [
     "resolution", "aspect-ratio", "web-search",
   ]);
   const selected = modelSelection(element);
   const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
-  const spoken = excerpt(resolved(element, "script", resolveReference), `${element.name}.script`);
+  const spoken = dialogueExcerpt(resolved(element, "dialogue", resolveReference), `${element.name}.dialogue`);
   const refs = references(element, resolveReference);
   const request = sealSeedanceRequest({
     contract: "svml.seedance-request@1",
     model: selected.model as SeedanceModel,
-    prompt: `${declaredPrompt.text}${referencePrompt(refs)}\n\nSpoken dialogue — say exactly:\n${spoken.serializations.dialogue}`,
+    prompt: `${declaredPrompt.text}${referencePrompt(refs)}\n\nSpoken dialogue — say exactly:\n${spoken.dialogue}`,
     mode: refs.length === 0
       ? { kind: "text" }
       : { kind: "reference", items: refs.map(({ role: _role, ...item }) => item) },

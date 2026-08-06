@@ -14,9 +14,10 @@
 > Fragments with hygienic instance identities;
 > `packages/realization` attaches locked Existing-Value or Fragment Candidates without changing the
 > author graph identity. These are executable reference layers outside Core, not new Kernel magic.
-> `packages/speech-program` now composes the first real speech vertical from static Fragments:
-> SpeechTake projections, one-pass WhisperX evidence, a provider-neutral SemanticMap and timed
-> captions. Producer-declared affinity protects internal Fragment results before they enter state;
+> `packages/speech-program` now owns the namespaced Speech Spine Surface and composes normalized
+> generated Takes into one audio master, one ProgramSpace and peer Tracks. `packages/whisperx`
+> owns the explicit alignment Surface; provider-neutral SemanticMap and Caption timing remain
+> separately auditable Operations. Producer-declared affinity protects internal Fragment results before they enter state;
 > Logical-Output affinity separately protects selected Candidates.
 > `packages/broll` lowers provider-neutral B-roll Programs into independently stacked visual
 > Presents and ordinary source-audio/SFX tracks. Local pop/fade/slide motion and push/page-turn
@@ -39,7 +40,7 @@
 > distribution implement the trusted local path. Hosted adapters remain Runtime packages outside
 > this slice. `packages/elaborator` now compiles recursive Source Closures,
 > while `packages/svs` implements a deliberately generic record-only Recipe Frontend; package-owned
-> video Recipe validation remains undecided. `packages/compiler-node` now supplies the domain-free
+> video Recipe validation is package-owned rather than built into SVS. `packages/compiler-node` now supplies the domain-free
 > registered-manifest resolver, injected Workspace compiler and file-to-Graph/
 > BuildPlan facade; `packages/cli` assembles the first trusted Text + Script + SVS + Film + Render
 > command-line prelude. `packages/validation` now supplies package-owned semantic Type admission: authored,
@@ -53,8 +54,10 @@
 > author packages can now be activated from a byte-locked physical dependency closure without
 > changing Core or the official CLI; automatic installation, untrusted parser/validator sandboxing,
 > distributed leases and hosted WhisperX /
-> HyperFrames Endpoint adapters are not implemented yet. The first KIE generation Provider and its
-> seven explicit model families are implemented. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
+> HyperFrames Endpoint adapters are not implemented yet; the local WhisperX and HyperFrames
+> Providers are. The KIE generation Provider and its seven explicit model families are implemented,
+> as are display-only Gemini Caption planning and its Google Vertex Provider.
+> `@svml/store-sqlite`, `@svml/artifact-store-fs` and
 > `@svml/local` now provide the durable zero-service developer assembly.
 > `@svml/endpoint-kit` and `@svml/credential-store-env` now bind static Endpoint identity,
 > non-secret configuration, exact credential slots and recoverable wake/retry/cancel behavior;
@@ -66,7 +69,7 @@
 > `@svml/media-pipeline` and `@svml/provider-media-local` now provide all-stream ffprobe inspection,
 > attached-picture-safe stream selection and shared-origin A/V normalization. Embedded AAC remains
 > an ordinary media fact until an explicit Narrative-bound speech component promotes it;
-> the v2 CLI exposes local follow, status and cancel without adding another authoritative queue. The existing
+> the v2 CLI exposes local follow, status, cancel and content-addressed final Artifact export without adding another authoritative queue. The existing
 > root compiler and standard library remain the executable v1 research oracle during migration.
 
 `@svml/component-kit` is the narrow compute-host port: deterministic model, media, WhisperX and
@@ -229,9 +232,11 @@ generation provider is invoked by tests or compilation.
 [`examples/talking-film-golden`](examples/talking-film-golden/README.md) preserves the implemented
 Script Surface and specifies the complete namespaced author experience for two Seedance Mini speech
 takes, Seedance B-roll, explicit WhisperX alignment, two speaker caption styles, editorial text,
-peer Tracks, Film and Hyperframes rendering. Its README marks every implemented and missing lowering;
-Script, authored Image, Seedance generation, Film and Render are accepted by the current compiler,
-while Speech assembly and Track Surfaces remain the next target.
+peer Tracks, Film and Hyperframes rendering. Provider-free Speech, WhisperX, Caption, B-roll and
+Text Surfaces now compile. Display-only Gemini planning, the ordered Caption Style cascade and the
+Google Vertex Provider are also implemented;
+[`examples/talking-film-graph-check`](examples/talking-film-graph-check/README.md) is the fully
+checkable graph counterpart without production assets or paid execution.
 
 ## Specification and implementation record
 

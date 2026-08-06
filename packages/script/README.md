@@ -26,12 +26,25 @@ parser is inside a Segment, a valid bare tag such as `<ALICE>` is a Role Cue. Th
 not indentation: the compact spelling
 `<opening><ALICE>我先说。<BOB>我回答。</opening>` has the same semantic value.
 
+A Role Cue is optional. Text before the first Role Cue is a roleless Turn, and Role state is reset
+when every Segment closes; a Role can never leak into the following Segment.
+
 The package exports its Manifest, `parseScript`, semantic/source-map projection helpers, a
 semantic-preserving formatter and the raw `decodeScriptSurface` handler. Source ranges and parser
 state remain private to Script; its authored Narrative Record uses the Frontend-neutral type from
 `@svml/contracts`, so third-party author surfaces can feed the same WhisperX, locator and caption
 components without importing Script internals.
 
-Every named Segment is additionally exported as `script.segment.<id>` with the shared
-`NarrativeExcerpt` type. Seedance and future speech packages consume that narrow value rather than
-Script's parser AST; another authoring package may produce the same contract.
+The Surface exports one full Narrative plus narrow, immutable views:
+
+- `script.segment.<id>` is a `NarrativeExcerpt` used to associate a generated Take with one Segment;
+- `script.segment.<id>.dialogue` is display-independent dialogue, including optional Role cues and
+  right-side Dual Text pronunciation, for a speech-video model;
+- `script.segment.<id>.speech` is pronunciation-only text for duration estimation;
+- `script.caption` is the whole left-side `CaptionProjection` and is not split by Segment for the
+  Caption planner;
+- `script.selection.<id>` is a reusable explicit Selection.
+
+Seedance consumes the dialogue excerpt, Speech Spine consumes the Segment excerpt, and Caption
+consumes the whole Narrative/Caption projection. None imports Script's parser AST. Another authoring
+package may produce the same contracts.

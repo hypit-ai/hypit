@@ -536,9 +536,10 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 - 每个端点的左右 affinity 和端点源码位置。
 - 每个 MomentSet 的一个或多个有序 point、左右 affinity 和源码位置。
 
-外部 Program 的 `role="label"` selector 从上述 turn token ranges 派生一个
-SelectionSet；同一 label 的多次 turn 成为同一集合的多个有序 occurrence。
-它是显式查询，不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。
+外部 Program 的 `role="label"` selector 可以从上述 Turn 范围投影自己的选择集合；
+同一 label 的多次 Turn 是多个有序、互不相邻的命中。它是消费组件内部的显式查询，
+不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。当前 Caption Program 直接把
+该查询投影到可见 Display Atom，不伪造一个作者写下的 Selection Record。
 
 SelectionSet/MomentSet 是消费者边界，不是 Segment 的子对象。典型外部
 关系是：
@@ -562,6 +563,11 @@ Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
 都属于 Caption Program。Caption consumer 若要求互斥 token ownership，重叠必须作为该消费者的
 编译错误；这不是 Script 禁止 Selection 重叠。未来 Caption 若支持 overlay，
 只扩展 Caption Program，不扩展正文语法。
+
+当前 Caption Program 使用一个覆盖全部可见词的默认 Style，再按源码顺序应用 Role
+或显式 Selection 的整 Style 替换，最后命中的规则获胜。无 Role 的 Turn 自动保留默认
+Style；修改一个局部区间不要求作者书写它的补集。完整规则见
+[`caption-program-v1.md`](./caption-program-v1.md)。
 
 ## 9. v1 明确不在 Script 中表达
 

@@ -36,6 +36,18 @@ test("named blocks are Segments and Role Cues do not depend on line breaks", () 
   assert.equal(serializeDialogue(compact), "ALICE: Hello there.\nBOB: Good morning.");
 });
 
+test("Role is optional per Turn and never leaks across Segment boundaries", () => {
+  const parsed = parseScript(
+    "optional-role.svml",
+    "<intro>Roleless narration.</intro><answer><ALICE>Named reply.</answer><close>Roleless close.</close>",
+  );
+  assert.deepEqual(parsed.turns.map((turn) => turn.role), [undefined, "ALICE", undefined]);
+  assert.equal(
+    serializeDialogue(parsed),
+    "Roleless narration.\nALICE: Named reply.\nRoleless close.",
+  );
+});
+
 test("Script produces exactly 2M + 2N independent semantic anchors", () => {
   const parsed = parseScript("anchors.svml", "<one>One two.</one><silence/><two>Three.</two>");
   assert.equal(

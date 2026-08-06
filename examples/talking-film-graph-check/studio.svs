@@ -1,0 +1,16 @@
+<sheet version="1">
+  film.vertical { width: 1080; height: 1920; frame-rate: 30; background: #09090B; }
+  broll.card {
+    stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5; fit: cover;
+    background: #111116; radius: 20; enter: slide-up 4f; exit: fade 4f;
+  }
+  caption.base {
+    stack-order: 70; x: 0.08; y: 0.76; width: 0.84; font: Inter; weight: 600;
+    size: 58; line-height: 1; align: center; fill: #FFFFFF;
+    background: #09090BCC; padding: 16 24; radius: 18;
+  }
+  text.title {
+    stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1; font: Inter;
+    weight: 900; size: 64; align: center; fill: #FFFFFF; tracking: -1;
+  }
+</sheet>

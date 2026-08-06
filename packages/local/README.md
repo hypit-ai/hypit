@@ -46,6 +46,9 @@ When several instances provide the same role, `runtimeSelection` must name the e
 The same mechanism covers Postgres, S3, keychains and replacement Schedulers; none requires a
 change to `@svml/local`. Advanced hosts may still call `createLocalRuntime` with raw ports.
 
+`LocalRuntime.readArtifact(digest)` is the generic egress seam used by CLI `--out`. It exposes
+content-addressed bytes, not filesystem layout, so filesystem and S3 stores remain interchangeable.
+
 `LocalBuildRequest.attachments` is the explicit ingress from a trusted Host into the selected
 ArtifactStore. Each attachment carries claimed `BlobRef` metadata plus bytes; Local Runtime copies
 the bytes, stores them content-addressably and requires the Store's returned digest, size and media

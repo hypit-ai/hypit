@@ -54,6 +54,7 @@
     y: 0.76;
     width: 0.84;
     font: inter-semibold;
+    weight: 600;
     size: 58;
     line-height: 0.96;
     align: center;
@@ -64,11 +65,35 @@
   }
 
   caption.alice {
-    active-fill: #73FBD3;
+    stack-order: 70;
+    x: 0.08;
+    y: 0.76;
+    width: 0.84;
+    font: inter-semibold;
+    weight: 600;
+    size: 58;
+    line-height: 0.96;
+    align: center;
+    fill: #73FBD3;
+    background: #09090BCC;
+    padding: 16 24;
+    radius: 18;
   }
 
   caption.bob {
-    active-fill: #FFD166;
+    stack-order: 70;
+    x: 0.08;
+    y: 0.76;
+    width: 0.84;
+    font: inter-semibold;
+    weight: 600;
+    size: 58;
+    line-height: 0.96;
+    align: center;
+    fill: #FFD166;
+    background: #09090BCC;
+    padding: 16 24;
+    radius: 18;
   }
 
   text.title {
@@ -78,6 +103,7 @@
     width: 0.88;
     height: 0.10;
     font: inter-black;
+    weight: 900;
     size: 64;
     align: center;
     fill: #FFFFFF;
