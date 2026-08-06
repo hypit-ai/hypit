@@ -206,48 +206,78 @@ test("an attached Existing Value is inert until BuildRequest explicitly selects 
   assert.equal(selected.plan.selections[0]?.candidate, candidate.id);
 });
 
-test("a verified historical Output becomes an exact zero-edge Candidate without replaying its Producer", () => {
+test("a historical Record becomes an ordinary substitute zero-edge Candidate", () => {
   const { program, source, state: historical } = completedAffinityBuild();
   const candidate = createHistoricalCandidate({ source, build: historical, output: "shot.visual" });
   assert.equal(candidate.root.kind, "value");
-  assert.equal(candidate.fidelity, "exact");
+  assert.equal(candidate.fidelity, "substitute");
   const overlay = sealRealizationOverlay({ sourceGraph: source.id, candidates: [candidate], operations: [] });
   const realized = resolveRealization(program, source, [overlay]);
   const fresh = start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
-    targets: [{ output: "shot.visual", accepts: "exact" }],
+    targets: [{ output: "shot.visual", accepts: "substitute" }],
     bindings: [{ output: "shot.visual", candidate: candidate.id }],
   }));
   assert.deepEqual(fresh.plan.steps, []);
   assert.equal(fresh.plan.initialValues.length, 1);
+  assert.equal(fresh.plan.initialValues[0]?.conformance, "substitute");
   assert.notEqual(fresh.id, historical.id);
 });
 
-test("historical admission rejects another graph and a content-tampered value", () => {
+test("a fixed black value substitutes an affined Output without any history or semantic proof", () => {
+  const { program, source } = completedAffinityBuild();
+  const candidate = createProvidedCandidate({
+    output: "shot.visual",
+    value: { kind: "inline", value: "UNRELATED FIXED BLACK VIDEO" },
+    fidelity: "substitute",
+  });
+  const overlay = sealRealizationOverlay({ sourceGraph: source.id, candidates: [candidate], operations: [] });
+  const realized = resolveRealization(program, source, [overlay]);
+  const fresh = start(program, realized.graph, sealBuildRequest({
+    graph: realized.graph.id,
+    targets: [{ output: "shot.visual", accepts: "substitute" }],
+    bindings: [{ output: "shot.visual", candidate: candidate.id }],
+  }));
+  assert.deepEqual(fresh.plan.steps, []);
+  assert.equal(fresh.plan.initialValues.length, 1);
+  assert.deepEqual(fresh.plan.initialValues[0]?.value, {
+    kind: "inline",
+    value: "UNRELATED FIXED BLACK VIDEO",
+  });
+  assert.equal(fresh.plan.initialValues[0]?.conformance, "substitute");
+});
+
+test("a historical Record may substitute another author graph and Output without semantic or affinity proof", () => {
   const { program, source, state: historical } = completedAffinityBuild();
   const other = sealCompiledGraph({
     program: source.program,
-    outputs: source.outputs.map((output) => ({ ...output, affinity: [] })),
-    candidates: source.candidates,
+    outputs: source.outputs.map((output) => ({ ...output, id: "replacement.visual" })),
+    candidates: source.candidates.map((candidate) => ({ ...candidate, output: "replacement.visual" })),
     operations: source.operations,
   });
-  assert.throws(
-    () => createHistoricalCandidate({ source: other, build: historical, output: "shot.visual" }),
-    /another author graph source/u,
-  );
-
-  const admitted = createHistoricalCandidate({ source, build: historical, output: "shot.visual" });
-  assert.equal(admitted.root.kind, "value");
-  const outputValidation = admitted.root.value.outputValidation;
-  assert.notEqual(outputValidation, undefined);
-  const tampered = createProvidedCandidate({
-    output: admitted.output,
-    value: { kind: "inline", value: "tampered" },
-    fidelity: "exact",
-    outputValidation: outputValidation!,
+  const candidate = createHistoricalCandidate({
+    source: other,
+    build: historical,
+    output: "replacement.visual",
+    sourceOutput: "shot.visual",
   });
-  const overlay = sealRealizationOverlay({ sourceGraph: source.id, candidates: [tampered], operations: [] });
-  assert.throws(() => resolveRealization(program, source, [overlay]), /belongs to another value/u);
+  assert.equal(candidate.fidelity, "substitute");
+  const overlay = sealRealizationOverlay({ sourceGraph: other.id, candidates: [candidate], operations: [] });
+  const realized = resolveRealization(program, other, [overlay]);
+
+  assert.throws(() => start(program, realized.graph, sealBuildRequest({
+    graph: realized.graph.id,
+    targets: [{ output: "replacement.visual", accepts: "exact" }],
+    bindings: [{ output: "replacement.visual", candidate: candidate.id }],
+  })), /selects a substitute path/u);
+
+  const fresh = start(program, realized.graph, sealBuildRequest({
+    graph: realized.graph.id,
+    targets: [{ output: "replacement.visual", accepts: "substitute" }],
+    bindings: [{ output: "replacement.visual", candidate: candidate.id }],
+  }));
+  assert.deepEqual(fresh.plan.steps, []);
+  assert.equal(fresh.plan.initialValues[0]?.conformance, "substitute");
 });
 
 test("changing the attached Value changes Overlay, realized Graph and BuildRequest identity", () => {

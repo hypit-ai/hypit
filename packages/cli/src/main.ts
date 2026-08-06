@@ -152,7 +152,7 @@ function usage(): string {
     "  svml-v2 lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
     "  svml-v2 check <file.svml> [--package-lock file] [--root directory]",
     "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--package-lock file]",
-    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build] [--follow] [--out video.mp4]",
+    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build --accept-substitute] [--follow] [--out video.mp4]",
     "  svml-v2 status <build-id> --runtime ./svml.runtime.ts",
     "  svml-v2 cancel <build-id> --runtime ./svml.runtime.ts",
   ].join("\n");
@@ -230,6 +230,9 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
   }
   if (args.out !== undefined && args.command !== "build") throw new Error("--out is only valid for build");
   if (args.pins.length > 0 && args.command !== "build") throw new Error("--pin is only valid for build");
+  if (args.pins.length > 0 && !args.substitute) {
+    throw new Error("--pin attaches substitute Candidates; add --accept-substitute");
+  }
   if (args.command === "status" || args.command === "cancel") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
     const runtime = await loadLocalRuntime(args.runtime);

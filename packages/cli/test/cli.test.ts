@@ -7,6 +7,18 @@ import test from "node:test";
 
 import { materializeSingleGoal, runCli } from "@svml/cli";
 
+test("CLI Pin is explicit substitute selection rather than an exact-history privilege", async () => {
+  await assert.rejects(
+    async () => await runCli([
+      "build", "unused.svml",
+      "--target", "shot",
+      "--runtime", "unused-runtime.ts",
+      "--pin", "shot=sha256:historical",
+    ], { write() {} }),
+    /--pin attaches substitute Candidates; add --accept-substitute/u,
+  );
+});
+
 test("official v2 CLI checks a real Script source through the Node compiler host", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-"));
   const file = join(root, "main.svml");
