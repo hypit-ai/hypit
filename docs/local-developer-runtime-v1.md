@@ -21,21 +21,21 @@ main.svml
 
 durable facts       .svml/runtime.sqlite
 artifact bytes      .svml/artifacts/ (or an S3 ArtifactStore)
-provider jobs       owned by each Endpoint
+external jobs       owned by each Endpoint
 ```
 
-The Provider may be remote without making the Build remote. The local process remains the only
+An Endpoint may be remote without making the Build remote. The local process remains the only
 authority that asks Core what is ready and accepts returned Events.
 
 ## 2. Physical packages
 
 | Package | Owns | Does not own |
 |---|---|---|
-| `@svml/runtime` | environment-neutral Scheduler, Store and Endpoint ports | Node, SQLite, files, video |
+| `@svml/runtime` | environment-neutral Scheduler, Store and Endpoint ports plus Runtime service-package ABI | Node, SQLite, files, video |
 | `@svml/store-sqlite` | durable BuildStore and OperationStore adapters | ready queue, artifacts, credentials |
 | `@svml/artifact-store-fs` | content-addressed project bytes | BuildState, cache policy, author library |
-| `@svml/artifact-store-s3` | conditionally written and digest-verified S3 bytes | BuildState, Provider jobs, automatic reuse |
-| `@svml/local` | developer convenience assembly and trusted package activation | author syntax, Provider APIs, hosted auth |
+| `@svml/artifact-store-s3` | conditionally written and digest-verified S3 bytes | BuildState, Endpoint jobs, automatic reuse |
+| `@svml/local` | developer convenience assembly and trusted package activation | author syntax, Endpoint APIs, hosted auth |
 | `@svml/endpoint-kit` | host-neutral Endpoint contract and one-source package definition | any concrete vendor API or Driver |
 | `@svml/transport` | canonical request/response transport seam | capability identity, recovery or scheduling |
 | `@svml/credential-store-env` | explicitly requested local environment secrets | enumeration, persistence or author imports |
@@ -44,7 +44,7 @@ authority that asks Core what is ready and accepts returned Events.
 | `@svml/provider-*` | one exact external implementation and its polling/recovery | Core graph traversal, author parsing |
 
 SQLite is deliberately optional. `createLocalRuntime()` accepts any implementation of the same
-ports, so an internal server can use Postgres and S3 without changing Core or Provider packages.
+ports, so an internal server can use Postgres and S3 without changing Core or Endpoint packages.
 `createProjectLocalRuntime()` selects the zero-service SQLite/filesystem defaults.
 
 ## 3. Project entities
@@ -92,12 +92,12 @@ import { createLocalHyperframesProvider } from "@svml/provider-hyperframes-local
 export default await createProjectLocalRuntime({
   root: import.meta.dirname,
   packageLock: "./svml.packages.lock",
-  artifacts: createS3ArtifactStorePackage({
+  runtimeServices: [createS3ArtifactStorePackage({
     instance: "artifacts.team",
     bucket: "hypit-svml-artifacts",
     prefix: "development",
     region: "us-east-1",
-  }),
+  })],
   endpoints: [
     createKieProvider({ instance: "kie.personal", apiKey: credentialRef("env", "KIE_API_KEY") }),
     createLocalMediaProvider({ instance: "media.local", defaultConcurrency: 1 }),
@@ -135,6 +135,17 @@ export default await createProjectLocalRuntime({
   },
 });
 ```
+
+`runtimeServices` is not a bag of callbacks. Every package binds its actual service object to a
+static Manifest facet, configured instance digest, role and permission set. If exactly one supplied
+service implements a role, the local assembly selects it. If several do, `runtimeSelection` must
+name the exact instance. Unselected alternatives never gain scheduling or storage authority.
+Built-in local services receive only their known local permissions automatically; permissions from
+supplied packages remain explicit Host allowlist decisions.
+The created Runtime owns every supplied configured package until `close()`: selected packages serve
+requests, while all supplied packages are closed exactly once so an unselected database/client
+cannot leak resources. Package code is still trusted deployment code and is never activated by
+author imports.
 
 `svml.packages.lock` is created from explicitly installed component aggregates with
 `svml-v2 lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
@@ -229,7 +240,7 @@ the SQLite file on S3 or a network filesystem.
 | Change | Replace | Unchanged |
 |---|---|---|
 | laptop to internal server | Runtime config paths and deployment | `.svml`, Core, components |
-| files to S3 | ArtifactStore adapter | BuildStore, Provider packages |
+| files to S3 | ArtifactStore service package | BuildStore, Endpoint packages |
 | SQLite to Postgres | Build/Operation Store adapters | Scheduler law, Core |
 | WhisperX local to Lambda | exact WhisperX Provider package | author-declared WhisperX method |
 | KIE to Volcengine for an explicitly supported method | Provider package and locked binding | source unless author parameters differ |

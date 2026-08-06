@@ -5,16 +5,6 @@ import {
   registerTypeValidatorFacets,
 } from "@svml/component-kit";
 import {
-  FileArtifactStore,
-  fileArtifactStoreFacet,
-  fileArtifactStoreRuntimeManifest,
-} from "@svml/artifact-store-fs";
-import {
-  EnvironmentCredentialStore,
-  environmentCredentialStoreFacet,
-  environmentCredentialStoreRuntimeManifest,
-} from "@svml/credential-store-env";
-import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
@@ -35,23 +25,13 @@ import type {
   RuntimeModuleManifest,
   RuntimeProfileInstance,
 } from "@svml/runtime";
-import {
-  SqliteRuntimeState,
-  sqliteBuildStoreFacet,
-  sqliteOperationStoreFacet,
-  sqliteStoreRuntimeManifest,
-} from "@svml/store-sqlite";
 
-import {
-  localRuntimeManifest,
-  localSchedulerFacet,
-} from "./manifest.js";
+import { createProjectRuntimeServices } from "./project-services.js";
 import type {
   CreateLocalRuntimeOptions,
   LocalBuildOptions,
   LocalBuildRequest,
   LocalRuntime,
-  NodeArtifactStorePackage,
   EndpointPackage,
   ProjectLocalRuntimeOptions,
 } from "./types.js";
@@ -134,16 +114,6 @@ function verifyEndpointPackages(packages: readonly EndpointPackage[]): void {
   }
 }
 
-function verifyArtifactPackage(item: NodeArtifactStorePackage): void {
-  assert(item.name.trim().length > 0, "ArtifactStore package name must not be empty");
-  assert(item.instance.id.trim().length > 0, `${item.name} ArtifactStore instance id is empty`);
-  assert(item.manifest.name === item.instance.facet.module.name
-    && item.manifest.version === item.instance.facet.module.version,
-  `${item.name} instance ${facetKey(item.instance)} is outside its Runtime Manifest`);
-  const facet = item.manifest.facets.find((candidate) => candidate.name === item.instance.facet.name);
-  assert(facet?.role === "artifact-store", `${item.name} instance is not an artifact-store facet`);
-}
-
 export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
@@ -185,7 +155,11 @@ export async function createLocalRuntime(
   const closureScheduling = options.closure === undefined
     ? {}
     : localSchedulerOptionsFromClosure(options.closure.value);
-  const scheduler = new LocalBuildScheduler(driver, {
+  const scheduler = (options.scheduler ?? {
+    create(executor, schedulerOptions) {
+      return new LocalBuildScheduler(executor, schedulerOptions);
+    },
+  }).create(driver, {
     ...closureScheduling,
     ...(options.scheduling ?? {}),
     buildStore: options.buildStore,
@@ -259,9 +233,6 @@ export async function createLocalRuntime(
 export async function createProjectLocalRuntime(
   options: ProjectLocalRuntimeOptions = {},
 ): Promise<LocalRuntime> {
-  if (options.artifacts !== undefined && options.artifactPath !== undefined) {
-    throw new Error("artifactPath configures the default filesystem store and cannot accompany artifacts");
-  }
   const root = resolve(options.root ?? process.cwd());
   const lockedPackageSet = options.packageLock === undefined
     ? undefined
@@ -270,43 +241,30 @@ export async function createProjectLocalRuntime(
     ? []
     : nodePackageComponents(lockedPackageSet.packages);
   const configuredComponents = [...lockedComponents, ...(options.components ?? [])];
-  const state = new SqliteRuntimeState(resolve(root, options.statePath ?? ".svml/runtime.sqlite"));
-  const defaultArtifacts: NodeArtifactStorePackage = {
-    name: "@svml/artifact-store-fs",
-    manifest: fileArtifactStoreRuntimeManifest,
-    instance: { id: "artifacts.fs", facet: fileArtifactStoreFacet },
-    store: new FileArtifactStore(resolve(root, options.artifactPath ?? ".svml/artifacts")),
-  };
-  const artifacts = options.artifacts ?? defaultArtifacts;
-  verifyArtifactPackage(artifacts);
+  const projectServices = await createProjectRuntimeServices(root, options);
+  const services = projectServices.assembly;
+  const selection = projectServices.selection;
   const endpointPackages = options.endpoints ?? [];
-  verifyEndpointPackages(endpointPackages);
 
   try {
+    verifyEndpointPackages(endpointPackages);
     const modules = new RuntimeModuleRegistry();
     registerManifests(modules, [
-      localRuntimeManifest,
-      sqliteStoreRuntimeManifest,
-      artifacts.manifest,
-      environmentCredentialStoreRuntimeManifest,
+      ...services.manifests,
       ...endpointPackages.map((item) => item.manifest),
     ]);
     const profile = sealRuntimeProfile({
       name: "svml.local.project",
       instances: [
-        { id: "scheduler.local", facet: localSchedulerFacet },
-        { id: "builds.sqlite", facet: sqliteBuildStoreFacet },
-        { id: "operations.sqlite", facet: sqliteOperationStoreFacet },
-        artifacts.instance,
-        { id: "credentials.env", facet: environmentCredentialStoreFacet },
+        ...services.instances,
         ...endpointPackages.map((item) => item.instance),
       ],
-      scheduler: "scheduler.local",
+      scheduler: selection.scheduler,
       stores: {
-        build: "builds.sqlite",
-        operations: "operations.sqlite",
-        artifacts: artifacts.instance.id,
-        credentials: "credentials.env",
+        build: selection.stores.build,
+        operations: selection.stores.operations,
+        artifacts: selection.stores.artifacts,
+        credentials: selection.stores.credentials,
       },
       endpoints: endpointPackages.flatMap((item) => item.bindings),
       scheduling: {
@@ -317,23 +275,20 @@ export async function createProjectLocalRuntime(
         })),
       },
     });
-    const allowedPermissions = [
-      "filesystem:state",
-      ...(options.artifacts === undefined ? ["filesystem:artifacts"] : []),
-      "environment:credentials",
-      ...(options.allowedPermissions ?? []),
-    ];
-    const closure = resolveRuntimeProfile(modules, profile, { allowedPermissions });
+    const closure = resolveRuntimeProfile(modules, profile, {
+      allowedPermissions: projectServices.allowedPermissions,
+    });
     const runtime = await createLocalRuntime({
-      buildStore: state.builds,
-      operationStore: state.operations,
-      artifactStore: artifacts.store,
-      credentialStore: new EnvironmentCredentialStore(),
+      buildStore: services.buildStore,
+      operationStore: services.operationStore,
+      artifactStore: services.artifactStore,
+      credentialStore: services.credentialStore,
+      scheduler: services.scheduler,
       ...(configuredComponents.length === 0
         ? {}
         : { components: configuredComponents }),
       endpoints: endpointPackages,
-      closure: { modules, value: closure, allowedPermissions },
+      closure: { modules, value: closure, allowedPermissions: projectServices.allowedPermissions },
       scheduling: {
         ...(options.scheduling?.maxEventsPerBuild === undefined
           ? {}
@@ -348,11 +303,11 @@ export async function createProjectLocalRuntime(
       status: runtime.status,
       cancel: runtime.cancel,
       close() {
-        state.close();
+        return services.close();
       },
     };
   } catch (error) {
-    state.close();
+    await services.close();
     throw error;
   }
 }

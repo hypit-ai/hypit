@@ -23,5 +23,11 @@ export {
   verifyRuntimeProfile,
 } from "./profile.js";
 export type * from "./profile.js";
+export {
+  assembleRuntimeServices,
+  defineRuntimeServicePackage,
+  verifyRuntimeServicePackage,
+} from "./services.js";
+export type * from "./services.js";
 export { LocalBuildScheduler } from "./scheduler.js";
 export type * from "./types.js";

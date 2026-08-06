@@ -24,7 +24,7 @@ const artifacts = createS3ArtifactStorePackage({
 
 export default createProjectLocalRuntime({
   root: import.meta.dirname,
-  artifacts,
+  runtimeServices: [artifacts],
   allowedPermissions: ["network:aws:s3"],
   endpoints: [],
 });

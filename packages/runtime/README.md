@@ -13,6 +13,13 @@ The first implementation contains:
 - a recoverable Endpoint lifecycle that journals before `start`, checkpoints `pending`,
   calls `resume` after a restart, and records wake, retry, failure and cancellation state;
 - a narrow `CredentialStore`/`CredentialRef` port that keeps secrets out of framework facts.
+- one host-neutral `RuntimeServicePackage` ABI that binds configured Scheduler, BuildStore,
+  OperationStore, ArtifactStore and CredentialStore implementations to their exact Manifest facet;
+  one physical package may expose several separately selected services.
+
+A Runtime assembly owns the lifecycle of the configured packages passed to it and closes each once.
+Selection grants service authority; merely being installed never grants scheduling, storage or
+credential authority. These remain trusted deployment packages, not author-importable modules.
 
 The Scheduler does not traverse Graphs, choose Candidates, rewrite Needs or accept arbitrary
 serialized commands. Core remains the sole source of readiness and the sole Event acceptance law.

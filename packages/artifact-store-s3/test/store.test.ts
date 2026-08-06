@@ -54,7 +54,7 @@ test("configured S3 service locks location without putting AWS credentials in th
     region: "us-east-1",
     expectedBucketOwner: "123456789012",
   });
-  assert.equal(configured.instance.id, "artifacts.team");
-  assert.ok(configured.instance.configurationDigest);
+  assert.equal(configured.services[0]?.instance.id, "artifacts.team");
+  assert.ok(configured.services[0]?.instance.configurationDigest);
   assert.equal(JSON.stringify(configured).includes("AWS_SECRET_ACCESS_KEY"), false);
 });

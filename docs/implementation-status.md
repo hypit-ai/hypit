@@ -32,6 +32,10 @@ implementation names rather than a public compatibility freeze.
   failure/cancellation. The neutral `capability-endpoint` role and `endpoints` bindings are a real
   schema change, so Runtime Module/Profile/Closure wire formats are now `@2` rather than silently
   reinterpreting persisted `@1` data.
+- configured Scheduler, BuildStore, OperationStore, ArtifactStore and CredentialStore values now
+  use one `RuntimeServicePackage` ABI. Runtime selection binds exact instances and roles; one
+  physical package may expose several logical services and one lifecycle. The local assembly no
+  longer imports concrete Runtime Manifests or contains ArtifactStore-specific replacement logic.
 - `@svml/endpoint-kit`: the host-neutral external-capability ABI plus a one-source Endpoint package
   definition that emits a static Manifest, configured instance identity, exact bindings and
   immediate or recoverable installation through a structural registrar. It imports no Node Driver.
@@ -86,7 +90,8 @@ implementation names rather than a public compatibility freeze.
   SQLite through framework code.
 - `@svml/store-sqlite`: durable local BuildStore and OperationStore adapters with private schema
   versioning, verified JSON facts and compare-and-swap revisions. It deliberately stores no ready
-  queue, artifact bytes, credentials or component tables.
+  queue, artifact bytes, credentials or component tables. One configured package exposes both
+  logical services over one physical connection and close lifecycle.
 - `@svml/artifact-store-fs`: project-local content-addressed ArtifactStore. Its SHA-256 identities
   remain valid when an environment later replaces files with S3.
 - `@svml/artifact-store-s3`: whole-object S3 ArtifactStore with deterministic keys, conditional
@@ -101,7 +106,8 @@ implementation names rather than a public compatibility freeze.
   package closure and exact Endpoint contributions over SQLite/filesystem defaults. The
   Scheduler persists every accepted Event, resumes the same Build and Operation across process
   restarts, rejects reuse of one local Build id for another Core Build, follows endpoint wake hints,
-  exposes durable status and performs endpoint-aware cancellation.
+  exposes durable status and performs endpoint-aware cancellation. Supplied Runtime service
+  packages can independently replace its Scheduler or any Store without another local release.
 - `@svml/validation`: exact-Type semantic validator registry and the common Record admission gate.
   A Type owner may lock a validator digest in its static Manifest; Producer, Endpoint, authored and
   provided values then require a receipt bound to that exact Type and content. Core verifies the

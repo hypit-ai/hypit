@@ -4,15 +4,15 @@ import type { EndpointPackage } from "@svml/endpoint-kit";
 import type { BuildState } from "@svml/protocol";
 import type {
   ArtifactStore,
+  BuildSchedulerFactory,
+  BuildSchedulerOptions,
   BuildSnapshot,
   BuildStore,
   CredentialStore,
-  LocalBuildSchedulerOptions,
   OperationStore,
   OperationSnapshot,
-  RuntimeModuleManifest,
   RuntimeModuleRegistry,
-  RuntimeProfileInstance,
+  RuntimeServicePackage,
   ScheduledBuildResult,
 } from "@svml/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@svml/validation";
@@ -23,15 +23,8 @@ export type { ComponentPackage } from "@svml/component-kit";
 
 export type LocalTypeValidatorRegistry = TypeValidatorRegistryLike & TypeValidatorRegistrar;
 
-/** One configured ArtifactStore service selected by trusted deployment code. */
-export type NodeArtifactStorePackage = {
-  readonly name: string;
-  readonly manifest: RuntimeModuleManifest;
-  readonly instance: RuntimeProfileInstance;
-  readonly store: ArtifactStore;
-};
-
 export type { EndpointPackage } from "@svml/endpoint-kit";
+export type { RuntimeServicePackage } from "@svml/runtime";
 
 export type LocalRuntimeClosureOptions = {
   readonly modules: RuntimeModuleRegistry;
@@ -44,10 +37,11 @@ export type CreateLocalRuntimeOptions = {
   readonly operationStore?: OperationStore;
   readonly artifactStore: ArtifactStore;
   readonly credentialStore?: CredentialStore;
+  readonly scheduler?: BuildSchedulerFactory;
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
   readonly closure?: LocalRuntimeClosureOptions;
-  readonly scheduling?: Omit<LocalBuildSchedulerOptions, "buildStore" | "runtimeClosure">;
+  readonly scheduling?: Omit<BuildSchedulerOptions, "buildStore" | "runtimeClosure">;
   readonly validators?: LocalTypeValidatorRegistry;
   /** Expected implementation package closure already bound into BuildRequest. */
   readonly implementationClosure?: import("@svml/protocol").Digest;
@@ -60,8 +54,18 @@ export type ProjectLocalRuntimeOptions = {
   readonly artifactPath?: string;
   /** Exact installed implementation package lock. Source imports cannot change this selection. */
   readonly packageLock?: string;
-  /** Replaces the default project filesystem ArtifactStore without changing Scheduler/Core. */
-  readonly artifacts?: NodeArtifactStorePackage;
+  /** Additional configured Runtime services. A unique supplied role replaces that role's local default. */
+  readonly runtimeServices?: readonly RuntimeServicePackage[];
+  /** Required only when more than one supplied instance can fulfill the same Runtime service role. */
+  readonly runtimeSelection?: {
+    readonly scheduler?: string;
+    readonly stores?: {
+      readonly build?: string;
+      readonly operations?: string;
+      readonly artifacts?: string;
+      readonly credentials?: string;
+    };
+  };
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
   readonly allowedPermissions?: readonly string[];
