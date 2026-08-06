@@ -7,7 +7,7 @@ export type CredentialRef = {
 };
 
 export type CredentialValue = {
-  /** Opaque secret revealed only to the selected Provider invocation. */
+  /** Opaque secret revealed only to the selected Endpoint invocation. */
   readonly secret: string;
   readonly expiresAt?: number;
 };

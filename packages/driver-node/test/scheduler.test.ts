@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  HostRegistry,
+  ProducerRegistry,
   NodeDriver,
   parseBuildState,
-  ProviderRegistry,
+  EndpointRegistry,
   serializeBuildState,
 } from "@svml/driver-node";
 import type {
-  ProviderEndpoint,
-  RuntimeProviderImplementation,
-} from "@svml/driver-node";
+  RecoverableEndpoint,
+  RuntimeEndpointImplementation,
+} from "@svml/endpoint-kit";
 import {
   LocalBuildScheduler,
   MemoryBuildStore,
@@ -42,7 +42,7 @@ import {
   createGreetingBuild,
   implementationDigests,
   manifest,
-  producers,
+  producers as greetingProducers,
   types,
 } from "../../core/test/greeting-fixture.js";
 
@@ -112,13 +112,13 @@ function createParallelGreetingBuild() {
     operations: [
       {
         id: "make-prompt",
-        producer: producers.makePrompt,
+        producer: greetingProducers.makePrompt,
         inputs: { intent: { kind: "record", id: "intent:root" } },
         result: { kind: "output", name: "prompt", record: "prompt:root" },
       },
       {
         id: "generate-a",
-        producer: producers.requestText,
+        producer: greetingProducers.requestText,
         inputs: { prompt: { kind: "logical-output", id: "prompt" } },
         result: {
           kind: "need",
@@ -130,7 +130,7 @@ function createParallelGreetingBuild() {
       },
       {
         id: "generate-b",
-        producer: producers.requestText,
+        producer: greetingProducers.requestText,
         inputs: { prompt: { kind: "logical-output", id: "prompt" } },
         result: {
           kind: "need",
@@ -156,16 +156,16 @@ function configuredExecutor(options: {
   readonly lane: string;
   readonly defaultConcurrency: number;
   readonly observe: (active: number) => void;
-  readonly runtimeImplementation?: RuntimeProviderImplementation;
-  readonly providerId?: string;
+  readonly runtimeImplementation?: RuntimeEndpointImplementation;
+  readonly endpointId?: string;
 }) {
-  const registry = new HostRegistry();
-  const providers = new ProviderRegistry();
-  registerGreetingProducers(registry);
+  const producers = new ProducerRegistry();
+  const endpoints = new EndpointRegistry();
+  registerGreetingProducers(producers);
   let active = 0;
   let calls = 0;
-  providers.registerProvider(
-    options.providerId ?? "fixture.seedance",
+  endpoints.registerImmediateEndpoint(
+    options.endpointId ?? "fixture.seedance",
     capabilities.generation,
     types.generated,
     async () => {
@@ -191,22 +191,22 @@ function configuredExecutor(options: {
         : { runtimeImplementation: options.runtimeImplementation }),
     },
   );
-  return { executor: new NodeDriver({ registry, providers }), providers, getCalls: () => calls };
+  return { executor: new NodeDriver({ producers, endpoints }), endpoints, getCalls: () => calls };
 }
 
-function registerGreetingProducers(registry: HostRegistry): void {
-  registry.registerProducer(producers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
+function registerGreetingProducers(producers: ProducerRegistry): void {
+  producers.registerProducer(greetingProducers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
     const intent = inputs.intent;
     assert.equal(intent?.value.kind, "inline");
     const name = (intent.value.value as { readonly name: string }).name;
     return { outputs: { prompt: { kind: "inline", value: `Greet ${name}` } }, needs: {} };
   });
-  registry.registerProducer(producers.requestText, implementationDigests.requestText, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.requestText, implementationDigests.requestText, ({ inputs }) => {
     const prompt = inputs.prompt;
     assert.equal(prompt?.value.kind, "inline");
     return { outputs: {}, needs: { generation: { prompt: prompt.value.value } } };
   });
-  registry.registerProducer(producers.assemble, implementationDigests.assemble, ({ inputs }) => {
+  producers.registerProducer(greetingProducers.assemble, implementationDigests.assemble, ({ inputs }) => {
     const generated = inputs.generated;
     assert.equal(generated?.value.kind, "inline");
     return {
@@ -222,7 +222,7 @@ const providerImplementationDigest = digestOf("example.scheduler-runtime/generat
 
 function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverable" = "immediate") {
   const manifest: RuntimeModuleManifest = {
-    format: "svml.runtime-module@1",
+    format: "svml.runtime-module@2",
     name: runtimeModule.name,
     version: runtimeModule.version,
     facets: [
@@ -246,7 +246,7 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
       },
       {
         name: providerFacet.name,
-        role: "provider-endpoint",
+        role: "capability-endpoint",
         implementation: {
           locator: "example.scheduler-runtime/generation-endpoint",
           digest: providerImplementationDigest,
@@ -265,33 +265,33 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
     instances: [
       { id: "scheduler.local", facet: { module: runtimeModule, name: "scheduler" } },
       { id: "operations.memory", facet: { module: runtimeModule, name: "operations" } },
-      { id: "generation.local", facet: providerFacet, lane: "provider:generation.local" },
+      { id: "generation.local", facet: providerFacet, lane: "endpoint:generation.local" },
     ],
     scheduler: "scheduler.local",
     stores: { operations: "operations.memory" },
-    providers: [{
+    endpoints: [{
       capability: capabilities.generation,
       returns: types.generated,
       endpoint: "generation.local",
     }],
     scheduling: {
       maxConcurrency: 8,
-      lanes: [{ name: "provider:generation.local", maxConcurrency: laneLimit }],
+      lanes: [{ name: "endpoint:generation.local", maxConcurrency: laneLimit }],
     },
   }));
   return { closure, modules };
 }
 
 function recoverableExecutor(
-  endpoint: ProviderEndpoint,
+  endpoint: RecoverableEndpoint,
   operations: OperationStore,
   runtime = resolvedRuntime(1, "recoverable"),
   retry?: { readonly maxAttempts: number },
 ) {
-  const registry = new HostRegistry();
-  registerGreetingProducers(registry);
-  const providers = new ProviderRegistry();
-  providers.registerProviderEndpoint(
+  const producers = new ProducerRegistry();
+  registerGreetingProducers(producers);
+  const endpoints = new EndpointRegistry();
+  endpoints.registerRecoverableEndpoint(
     "generation.local",
     capabilities.generation,
     types.generated,
@@ -305,14 +305,14 @@ function recoverableExecutor(
       ...(retry === undefined ? {} : { retry }),
     },
   );
-  providers.applyRuntimeClosure(runtime.closure, runtime.modules);
+  endpoints.applyRuntimeClosure(runtime.closure, runtime.modules);
   return {
-    executor: new NodeDriver({ registry, providers, operations }),
+    executor: new NodeDriver({ producers, endpoints, operations }),
     runtime,
   };
 }
 
-test("one local Scheduler shares a Provider lane across multiple Builds", async () => {
+test("one local Scheduler shares an Endpoint lane across multiple Builds", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
     lane: "seedance:fixture.account",
@@ -376,14 +376,14 @@ test("independent paid commands inside one Build may fill the same lane without 
   assert.equal(result?.status, "complete");
   assert.equal(getCalls(), 2);
   assert.equal(maximumActive, 2);
-  assert.equal(result?.state.derivations.filter((item) => item.producer.name === producers.makePrompt.name).length, 1);
+  assert.equal(result?.state.derivations.filter((item) => item.producer.name === greetingProducers.makePrompt.name).length, 1);
   assert.equal(result?.state.receipts.length, 2);
 });
 
-test("a locked Runtime Closure assembles exact Provider code and Scheduler policy without manual bind", async () => {
+test("a locked Runtime Closure assembles exact Endpoint code and Scheduler policy without manual bind", async () => {
   let maximumActive = 0;
   const { closure, modules } = resolvedRuntime(2);
-  const { executor, providers } = configuredExecutor({
+  const { executor, endpoints } = configuredExecutor({
     lane: "ignored-registration-lane",
     defaultConcurrency: 1,
     runtimeImplementation: {
@@ -391,12 +391,12 @@ test("a locked Runtime Closure assembles exact Provider code and Scheduler polic
       digest: providerImplementationDigest,
       configurationDigest: digestOf({}),
     },
-    providerId: "generation.local",
+    endpointId: "generation.local",
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
     },
   });
-  providers.applyRuntimeClosure(closure, modules);
+  endpoints.applyRuntimeClosure(closure, modules);
   const results = await new LocalBuildScheduler(
     executor,
     localSchedulerOptionsFromClosure(closure),
@@ -410,54 +410,54 @@ test("a locked Runtime Closure assembles exact Provider code and Scheduler polic
   assert.equal(results.every((result) => result.state.receipts[0]?.fulfiller === "generation.local"), true);
 });
 
-test("a same-name Provider with different implementation bytes is rejected before execution", () => {
+test("a same-name Endpoint with different implementation bytes is rejected before execution", () => {
   const { closure, modules } = resolvedRuntime(1);
-  const { providers, getCalls } = configuredExecutor({
-    lane: "provider:generation.local",
+  const { endpoints, getCalls } = configuredExecutor({
+    lane: "endpoint:generation.local",
     defaultConcurrency: 1,
     runtimeImplementation: {
       facet: providerFacet,
-      digest: digestOf("tampered-provider-implementation"),
+      digest: digestOf("tampered-endpoint-implementation"),
       configurationDigest: digestOf({}),
     },
-    providerId: "generation.local",
+    endpointId: "generation.local",
     observe() {},
   });
-  assert.throws(() => providers.applyRuntimeClosure(closure, modules), /implementation does not match/u);
+  assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /implementation does not match/u);
   assert.equal(getCalls(), 0);
 });
 
-test("a same-name Provider with different configured-instance identity is rejected", () => {
+test("a same-name Endpoint with different configured-instance identity is rejected", () => {
   const { closure, modules } = resolvedRuntime(1);
-  const { providers, getCalls } = configuredExecutor({
-    lane: "provider:generation.local",
+  const { endpoints, getCalls } = configuredExecutor({
+    lane: "endpoint:generation.local",
     defaultConcurrency: 1,
     runtimeImplementation: {
       facet: providerFacet,
       digest: providerImplementationDigest,
       configurationDigest: digestOf({ baseUrl: "https://another-endpoint.test" }),
     },
-    providerId: "generation.local",
+    endpointId: "generation.local",
     observe() {},
   });
-  assert.throws(() => providers.applyRuntimeClosure(closure, modules), /implementation does not match/u);
+  assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /implementation does not match/u);
   assert.equal(getCalls(), 0);
 });
 
 test("a recoverable Runtime facet cannot be activated by a one-shot Handler", () => {
   const { closure, modules } = resolvedRuntime(1, "recoverable");
-  const { providers, getCalls } = configuredExecutor({
-    lane: "provider:generation.local",
+  const { endpoints, getCalls } = configuredExecutor({
+    lane: "endpoint:generation.local",
     defaultConcurrency: 1,
     runtimeImplementation: {
       facet: providerFacet,
       digest: providerImplementationDigest,
       configurationDigest: digestOf({}),
     },
-    providerId: "generation.local",
+    endpointId: "generation.local",
     observe() {},
   });
-  assert.throws(() => providers.applyRuntimeClosure(closure, modules), /lifecycle does not match/u);
+  assert.throws(() => endpoints.applyRuntimeClosure(closure, modules), /lifecycle does not match/u);
   assert.equal(getCalls(), 0);
 });
 
@@ -481,7 +481,7 @@ test("a recoverable Endpoint resumes its journaled Operation after restart witho
   let starts = 0;
   let resumes = 0;
   let submissionKey: string | undefined;
-  const endpoint: ProviderEndpoint = {
+  const endpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
       submissionKey = operation.submissionKey;
@@ -550,7 +550,7 @@ test("a crash after Operation intent but before checkpoint resumes with the same
   let resumes = 0;
   let submissionKey: string | undefined;
   let operationId: Digest | undefined;
-  const endpoint: ProviderEndpoint = {
+  const endpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
       submissionKey = operation.submissionKey;
@@ -617,7 +617,7 @@ test("a completion journaled before a crash is replayed into Core without callin
       return result;
     },
   };
-  const endpoint: ProviderEndpoint = {
+  const endpoint: RecoverableEndpoint = {
     start() {
       starts += 1;
       return {
@@ -663,7 +663,7 @@ test("a retryable terminal failure creates a new attempt and submission key", as
   const runtime = resolvedRuntime(1, "recoverable");
   const attempts: number[] = [];
   const keys: string[] = [];
-  const endpoint: ProviderEndpoint = {
+  const endpoint: RecoverableEndpoint = {
     start({ operation }) {
       attempts.push(operation.attempt);
       keys.push(operation.submissionKey);
@@ -712,7 +712,7 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
   let resumes = 0;
   let cancels = 0;
   const wakeAt = Date.now() + 60_000;
-  const endpoint: ProviderEndpoint = {
+  const endpoint: RecoverableEndpoint = {
     start() {
       return { status: "pending", checkpoint: { remoteJob: "job-wait" }, wakeAt };
     },

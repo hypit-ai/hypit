@@ -6,7 +6,7 @@ import {
 } from "@svml/transport-aws-lambda";
 import type { LambdaInvocationClient } from "@svml/transport-aws-lambda";
 
-test("Lambda transport uses synchronous JSON and leaves Provider semantics to its caller", async () => {
+test("Lambda transport uses synchronous JSON and leaves Endpoint semantics to its caller", async () => {
   let invocation: Parameters<LambdaInvocationClient["invoke"]>[0] | undefined;
   const client: LambdaInvocationClient = {
     async invoke(input) {

@@ -36,7 +36,8 @@ authority that asks Core what is ready and accepts returned Events.
 | `@svml/artifact-store-fs` | content-addressed project bytes | BuildState, cache policy, author library |
 | `@svml/artifact-store-s3` | conditionally written and digest-verified S3 bytes | BuildState, Provider jobs, automatic reuse |
 | `@svml/local` | developer convenience assembly and trusted package activation | author syntax, Provider APIs, hosted auth |
-| `@svml/provider-kit` | one-source definition of Manifest, configured instance, binding and Node registration | any concrete vendor API |
+| `@svml/endpoint-kit` | host-neutral Endpoint contract and one-source package definition | any concrete vendor API or Driver |
+| `@svml/transport` | canonical request/response transport seam | capability identity, recovery or scheduling |
 | `@svml/credential-store-env` | explicitly requested local environment secrets | enumeration, persistence or author imports |
 | `@svml/transport-aws-lambda` | synchronous bounded JSON invocation | capability identity or remote job semantics |
 | `@svml/transport-process` | shell-free, bounded, no-ambient-env local JSON process | capability identity or executable choice from source |
@@ -97,7 +98,7 @@ export default await createProjectLocalRuntime({
     prefix: "development",
     region: "us-east-1",
   }),
-  providers: [
+  endpoints: [
     createKieProvider({ instance: "kie.personal", apiKey: credentialRef("env", "KIE_API_KEY") }),
     createLocalMediaProvider({ instance: "media.local", defaultConcurrency: 1 }),
     createLocalWhisperXProvider({
@@ -127,9 +128,9 @@ export default await createProjectLocalRuntime({
   scheduling: {
     maxConcurrency: 8,
     lanes: {
-      "provider:kie.personal": 2,
-      "provider:whisperx.local": 1,
-      "provider:hyperframes.local": 1,
+      "endpoint:kie.personal": 2,
+      "endpoint:whisperx.local": 1,
+      "endpoint:hyperframes.local": 1,
     },
   },
 });
@@ -142,9 +143,9 @@ Runtime config no longer imports each component by name. Its digest must equal t
 cannot resume after an unnoticed component-closure swap. The low-level `components` option remains
 available for trusted embedding and tests, but is not the reproducible project default.
 
-The KIE, local media, local WhisperX and local HyperFrames Provider functions in this example are
-implemented. `@svml/provider-kit` implements the
-`NodeProviderPackage` definition path and lets those packages contribute:
+The KIE, local media, local WhisperX and local HyperFrames package functions in this example are
+implemented. `@svml/endpoint-kit` implements the host-neutral
+`EndpointPackage` definition path and lets those packages contribute:
 
 1. a static Runtime Manifest and implementation digest;
 2. one configured Endpoint instance;

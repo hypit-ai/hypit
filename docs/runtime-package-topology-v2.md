@@ -15,7 +15,7 @@
 > Source Host、最小官方 CLI、环境无关 Runtime 端口、静态 Runtime facet、Profile/Closure
 > 解析、Build/Operation 内存 CAS，以及跨 Build/Build 内共享并发 lane 的单进程
 > Scheduler、recoverable Endpoint start/resume/wake/retry/cancel、SQLite Build/Operation Store、
-> filesystem Artifact Store、环境变量 Credential Store、Provider Kit 和本地 follow/status
+> filesystem Artifact Store、环境变量 Credential Store、Endpoint Kit 和本地 follow/status
 > 控制面已经实现；leases、S3/AWS 适配器、真实 Provider、自动安装并隔离执行未知包仍未
 > 实现。本文关于生产 Queue、Hosted Runtime 的内容仍是后续施工边界。
 > 类型所有者的可选语义 Validator、统一 Record Admission 与内容绑定校验回执已经实现；
@@ -583,12 +583,12 @@ submissionKey   Provider 网络重试是否属于同一次提交
 Scheduler 只接收 Core 已经产生的 Command，不搜索工作流、不修改 Need，也不把旧
 Command 当成可信恢复输入。
 
-### 10.4 Async Provider Endpoint
+### 10.4 Async Capability Endpoint
 
-当前参考实现已在一次性 `ProviderHandler` 之外提供可恢复生命周期：
+当前参考实现已在一次性 `ImmediateEndpointHandler` 之外提供可恢复生命周期：
 
 ```ts
-interface ProviderEndpoint {
+interface RecoverableEndpoint {
   start(operation, context): Promise<Pending | Completed>;
   resume(operation, checkpoint, context): Promise<Pending | Completed>;
   cancel?(operation, context): Promise<void>;
@@ -634,17 +634,17 @@ failure 后交给 Core 接受。
 ### Phase R1：锁定本地 Runtime 协议，不接生产
 
 当前已完成 executor/BuildStore/OperationStore 接口、静态 Runtime facet、Profile 到
-内容寻址 Closure 的解析、实现/权限/Provider coverage 锁定、内存 CAS，以及只消费 Core
+内容寻址 Closure 的解析、实现/权限/Endpoint coverage 锁定、内存 CAS，以及只消费 Core
 ready Commands 的 queue-free Scheduler。recoverable Endpoint 会在 `start` 前建立稳定
 Operation/submission identity、保存 pending checkpoint，并在恢复后执行 `resume`；已记录的
 completion 会直接重放为 Core Event，不会再调用外部 Endpoint。测试证明跨 Build 共享
-Provider lane、同一 Build 内独立付费命令并行且公共上游只执行一次。SQLite 持久化、
-filesystem/S3 ArtifactStore、环境变量 CredentialStore、Provider Kit、Lambda/process
+Endpoint lane、同一 Build 内独立付费命令并行且公共上游只执行一次。SQLite 持久化、
+filesystem/S3 ArtifactStore、环境变量 CredentialStore、Endpoint Kit、Lambda/process
 transport、`@svml/local` 发行包和
 单进程 wake/follow/status/cancel 已经实现；distributed lease/dispatcher 仍待实现。
 
 1. **已完成：**新增 Runtime Module facet representation 与 Profile/Closure identity；
-2. **已完成：**ProviderRegistry 可由锁定 Closure 原子装配并核对实现摘要；
+2. **已完成：**EndpointRegistry 可由锁定 Closure 原子装配并核对实现摘要；
 3. **已完成：**按目标命名提供 `@svml/local` 参考发行包；
 4. **已完成：**单一进程内 Scheduler、SQLite Build/Operation Store、本地 CAS 和 filesystem
    ArtifactStore；

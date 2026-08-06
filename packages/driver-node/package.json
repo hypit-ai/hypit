@@ -9,6 +9,7 @@
   "dependencies": {
     "@svml/component-kit": "workspace:*",
     "@svml/core": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/runtime": "workspace:*",
     "@svml/validation": "workspace:*"

@@ -72,7 +72,8 @@ module.
 1. Framework packages use familiar compiler/runtime nouns: `protocol`, `core`, `compiler`,
    `runtime`, `cli`.
 2. Domain modules use the concept they own: `narrative`, `speech`, `caption`, `composition`.
-3. Privileged external Endpoint packages use the `provider-` prefix.
+3. The framework role is `Endpoint`. A real vendor integration may use the `provider-` prefix;
+   local, device or human implementations need not pretend to be vendors.
 4. An environment suffix such as `-node`, `-browser` or `-worker` is used only for a real environment
    adapter.
 5. A storage implementation uses `role-backend`, such as `artifact-store-fs` or
@@ -94,6 +95,8 @@ module.
 | `@svml/realization` | external Candidate attachment | keep as `@svml/compiler/candidates`, not a physical package |
 | `@svml/validation` | semantic value admission before trusted state | rename to `@svml/admission` |
 | `@svml/component-kit` | host-neutral deterministic Producer and validator registration port | keep |
+| `@svml/endpoint-kit` | host-neutral capability Endpoint ABI, registrar and package definition | keep |
+| `@svml/transport` | capability-free canonical request/response transport seam | keep |
 | `@svml/host` | domain-neutral contracts for concrete definition environments | keep deliberately small |
 | `@svml/workspace-fs-node` | root-confined Node filesystem Workspace implementation | keep |
 | `@svml/compiler-node` | Node compiler facade and registered-module assembly over an injected Workspace | keep |
@@ -111,11 +114,13 @@ protocol -> core
 core -> compiler
 core -> admission
 protocol + admission -> component-kit
+protocol + runtime -> endpoint-kit
+protocol -> transport
 compiler -> host
 host -> workspace-fs-node
 compiler + admission + host + workspace-fs-node -> compiler-node
 core -> runtime
-runtime + admission + component-kit -> runtime-node
+runtime + admission + component-kit + endpoint-kit -> runtime-node
 compiler-node + runtime-node + selected domain packages -> cli
 ```
 
@@ -332,7 +337,7 @@ compiler without teaching any author package about that environment. `@svml/host
 small contract; `@svml/workspace-fs-node` is only the convenient Node implementation. Selecting a
 Workspace is Host configuration, never author syntax or a module import.
 
-## 7. Provider naming
+## 7. Endpoint and provider naming
 
 Author method and execution endpoint are different namespaces.
 
@@ -351,10 +356,14 @@ Author method and execution endpoint are different namespaces.
 @hypit/svml-provider     Hypit endpoints for several exact capabilities
 ```
 
-Provider packages are organized by the actual service or execution backend, not by every model.
+Endpoint packages are organized by the actual service or execution backend, not by every model.
 One KIE package may expose several exact capabilities. Runtime Profile binding chooses an Endpoint
 instance for an already explicit Need; it never decides whether author intent meant Seedance,
 Kling or another method.
+
+`provider-*` is a legitimate distribution name only when a real supplier/service is the organizing
+identity, such as KIE. The current local WhisperX, media and HyperFrames package names retain the
+prototype prefix temporarily; their framework ABI is already the neutral `@svml/endpoint-kit`.
 
 An Endpoint instance id identifies account and deployment configuration:
 
@@ -367,7 +376,7 @@ whisperx.local-gpu
 
 Accounts and tenants do not produce new package names.
 
-Transport libraries sit below Provider packages and never appear in Provider Binding:
+Transport libraries sit below Endpoint packages and never appear in Endpoint Binding:
 
 ```text
 @svml/transport-aws-lambda   bounded synchronous JSON invocation
@@ -471,14 +480,14 @@ Possible backend packages, only when actually required, use names such as:
 
 They are transports behind `CommandDispatcher`, not Build schedulers.
 
-### 9.3 Provider job systems are Endpoint internals
+### 9.3 External job systems are Endpoint internals
 
 KIE, Volcengine, Fal, HyperFrames Lambda or Hypit may have submit/poll/webhook queues. Those queues
-are private implementation details of the Provider Endpoint and OperationStore reconciliation.
+are private implementation details of the Endpoint and OperationStore reconciliation.
 They are not registered as SVML queues and never advance the Build graph.
 
 Therefore the local reference Runtime needs no message queue. Hosted deployment may have a command
-dispatch transport and many Provider-internal job systems while still having exactly one Build
+dispatch transport and many Endpoint-internal job systems while still having exactly one Build
 Scheduler per Build.
 
 ## 10. Storage implementations and database ownership
@@ -542,7 +551,7 @@ stores:
   cache: sqlite.workspace
   catalog: sqlite.workspace
 credentials: keychain.user
-providers:
+endpoints:
   seedance.mini.speech-video@1: kie.personal
   whisperx.alignment@1: whisperx.local-gpu
   hyperframes.render@1: hyperframes.local
@@ -571,16 +580,16 @@ trust boundaries.
 
 ## 12. Dependency laws
 
-1. `protocol` and `core` never import domain, Frontend, Provider, store or queue packages.
-2. `compiler` never imports Runtime services or Provider Endpoints.
+1. `protocol` and `core` never import domain, Frontend, Endpoint, store or queue packages.
+2. `compiler` never imports Runtime services or capability Endpoints.
 3. `runtime` and its stores never import official video modules.
 4. Domain components depend on the smallest logical type-owner modules they consume, not a global
    contracts digest.
 5. Composition owns the HyperFrames Visual IR schema but does not depend on the
    `@svml/hyperframes` implementation package; Film does not depend on that implementation either.
-6. Source imports cannot activate Provider, store, credential, dispatcher or worker facets.
+6. Source imports cannot activate Endpoint, store, credential, dispatcher or worker facets.
 7. ResultCache and RecordCatalog cannot silently alter Candidate selection.
-8. Provider packages match exact CapabilityRef and return TypeRef; equal return shape is not routing
+8. Endpoint packages match exact CapabilityRef and return TypeRef; equal return shape is not routing
    authority.
 9. Store and queue adapters cannot generate Core Commands or accept Build Events.
 10. Prelude and Distribution are convenience aggregates, never privileged semantics.
@@ -592,7 +601,7 @@ completed and partial steps below distinguish API laws from unfinished distribut
 
 1. **completed:** static Manifest parsing preserves Producer/Need affinity across JSON loading and
    pure parsing lives in Protocol while Node filesystem loading remains in the Driver;
-2. **completed:** register Type-owner validators and route authored, provided, Producer and Provider
+2. **completed:** register Type-owner validators and route authored, provided, Producer and Endpoint
    values through the same Admission path;
 3. **completed:** the physical `@svml/contracts` distribution carries independently digested
    Narrative, Media, ProgramSpace, Speech, SemanticTime and Composition logical modules;
@@ -612,8 +621,8 @@ completed and partial steps below distinguish API laws from unfinished distribut
    Validator facets without package-specific CLI or local Runtime registration;
    `@svml/component-kit` exposes enumerable host-neutral compute facets and BuildRequest binds the
    implementation closure. Untrusted isolation remains;
-8. **partially completed:** add real Provider Endpoints; KIE generation, reference local media,
-   local HyperFrames, the local WhisperX Provider and its locked Python service are implemented,
+8. **partially completed:** add real capability Endpoints; KIE generation, reference local media,
+   local HyperFrames, the local WhisperX Endpoint and its locked Python service are implemented,
    while AWS/hosted equivalents remain;
 9. add Hosted CommandDispatcher and durable server adapters only when a real multi-process Runtime
    requires them.

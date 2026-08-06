@@ -7,7 +7,7 @@ import type {
 } from "@aws-sdk/client-lambda";
 import { canonicalize } from "@svml/protocol";
 import type { CanonicalValue } from "@svml/protocol";
-import type { JsonInvoker } from "@svml/provider-kit";
+import type { JsonInvoker } from "@svml/transport";
 
 export type LambdaInvocationInput = {
   readonly functionName: string;
@@ -74,8 +74,8 @@ export class AwsSdkLambdaInvocationClient implements LambdaInvocationClient {
 }
 
 /**
- * Synchronous JSON transport. Provider-specific packages still own request shape, checkpoint law,
- * capability identity and conversion into ProviderEndpointResult.
+ * Synchronous JSON transport. Endpoint packages still own request shape, checkpoint law,
+ * capability identity and conversion into an Endpoint outcome.
  */
 export class AwsLambdaJsonInvoker implements JsonInvoker {
   readonly #client: LambdaInvocationClient;

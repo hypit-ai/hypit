@@ -163,6 +163,9 @@ importers:
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -201,6 +204,15 @@ importers:
       '@svml/speech-take':
         specifier: workspace:*
         version: link:../speech-take
+
+  packages/endpoint-kit:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
 
   packages/film:
     dependencies:
@@ -363,6 +375,9 @@ importers:
       '@svml/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
       '@svml/host':
         specifier: workspace:*
         version: link:../host
@@ -372,9 +387,6 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-kit':
-        specifier: workspace:*
-        version: link:../provider-kit
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -518,9 +530,9 @@ importers:
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/driver-node':
+      '@svml/endpoint-kit':
         specifier: workspace:*
-        version: link:../driver-node
+        version: link:../endpoint-kit
       '@svml/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
@@ -530,9 +542,6 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-kit':
-        specifier: workspace:*
-        version: link:../provider-kit
       hyperframes:
         specifier: 0.7.84
         version: 0.7.84(@types/node@24.10.1)
@@ -540,12 +549,15 @@ importers:
       '@svml/core':
         specifier: workspace:*
         version: link:../core
-
-  packages/provider-kie:
-    dependencies:
       '@svml/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+
+  packages/provider-kie:
+    dependencies:
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
       '@svml/gemini-omni':
         specifier: workspace:*
         version: link:../gemini-omni
@@ -567,9 +579,6 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-kit':
-        specifier: workspace:*
-        version: link:../provider-kit
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -589,6 +598,9 @@ importers:
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -599,39 +611,20 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
-  packages/provider-kit:
-    dependencies:
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@svml/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@svml/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-    devDependencies:
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
-
   packages/provider-media-local:
     dependencies:
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/driver-node':
+      '@svml/endpoint-kit':
         specifier: workspace:*
-        version: link:../driver-node
+        version: link:../endpoint-kit
       '@svml/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-kit':
-        specifier: workspace:*
-        version: link:../provider-kit
     devDependencies:
       '@svml/artifact-store-fs':
         specifier: workspace:*
@@ -639,6 +632,9 @@ importers:
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -654,18 +650,19 @@ importers:
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/driver-node':
+      '@svml/endpoint-kit':
         specifier: workspace:*
-        version: link:../driver-node
+        version: link:../endpoint-kit
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-kit':
-        specifier: workspace:*
-        version: link:../provider-kit
       '@svml/whisperx':
         specifier: workspace:*
         version: link:../whisperx
+    devDependencies:
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
 
   packages/realization:
     dependencies:
@@ -875,6 +872,12 @@ importers:
         specifier: workspace:*
         version: link:../hyperframes
 
+  packages/transport:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/transport-aws-lambda:
     dependencies:
       '@aws-sdk/client-lambda':
@@ -883,18 +886,18 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-kit':
+      '@svml/transport':
         specifier: workspace:*
-        version: link:../provider-kit
+        version: link:../transport
 
   packages/transport-process:
     dependencies:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-kit':
+      '@svml/transport':
         specifier: workspace:*
-        version: link:../provider-kit
+        version: link:../transport
 
   packages/validation:
     dependencies:

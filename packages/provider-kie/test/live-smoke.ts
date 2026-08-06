@@ -450,7 +450,7 @@ async function main(): Promise<void> {
       generationComponent,
       ...[...new Map(selected.map((item) => [item.component.name, item.component])).values()],
     ],
-    providers: [provider],
+    endpoints: [provider],
     allowedPermissions: provider.manifest.facets.flatMap((facet) => facet.permissions),
   });
   const failures: string[] = [];

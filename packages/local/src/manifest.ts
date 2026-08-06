@@ -14,7 +14,7 @@ export const localSchedulerFacet = {
 export const localSchedulerImplementationDigest = digestOf("@svml/local/scheduler@1");
 
 export const localRuntimeManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@1",
+  format: "svml.runtime-module@2",
   name: localRuntimeModuleRef.name,
   version: localRuntimeModuleRef.version,
   facets: [
