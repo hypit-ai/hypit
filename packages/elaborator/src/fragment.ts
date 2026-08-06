@@ -7,6 +7,7 @@ import {
 import type {
   AffinityConstraint,
   Candidate,
+  Satisfaction,
   CandidateRoot,
   CompiledGraph,
   Conformance,
@@ -100,6 +101,20 @@ export type FragmentContribution = {
   readonly outputs: readonly LogicalOutput[];
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
+  /** Explicit Run-Graph satisfactions; Author contributions leave this absent. */
+  readonly satisfactions?: readonly Satisfaction[];
+};
+
+export type RunFragmentExport = {
+  readonly name: string;
+  readonly candidate: string;
+  readonly type: TypeRef;
+  /** Package default for authoring a Satisfaction; not intrinsic Candidate identity. */
+  readonly suggestedFidelity: Conformance;
+};
+
+export type RunFragmentContribution = FragmentContribution & {
+  readonly exports: readonly RunFragmentExport[];
 };
 
 export class FragmentError extends Error {
@@ -503,10 +518,9 @@ function bindExports(
     const output = bindings[item.name] as string;
     assert(output.length > 0, "EMPTY_LOGICAL_OUTPUT_ID", `${instance.instance}.${item.name} output is empty`);
     return {
-      id: hygienicId("candidate", instance.fragment, instance.instance, `${item.name}\u0000${output}`),
-      output,
+      id: hygienicId("candidate", instance.fragment, instance.instance, item.name),
+      type: item.type,
       root: item.root,
-      fidelity: item.fidelity,
     };
   });
   const outputs: LogicalOutput[] = requireAll
@@ -514,7 +528,6 @@ function bindExports(
         id: bindings[item.name] as string,
         type: item.type,
         primary: candidates[index]!.id,
-        candidates: [candidates[index]!.id],
         semanticInputs: item.semanticInputs,
         ...(item.affinity === undefined ? {} : { affinity: item.affinity }),
       }))
@@ -524,6 +537,51 @@ function bindExports(
     outputs,
     candidates,
     operations: instance.operations.filter((operation) => reachable.has(operation.id)),
+    ...(requireAll
+      ? {}
+      : {
+          satisfactions: selected.map((item, index) => ({
+            output: bindings[item.name] as string,
+            candidate: candidates[index]!.id,
+            fidelity: item.fidelity,
+          })),
+        }),
+  };
+}
+
+/**
+ * Instantiate a Run-Graph Fragment without deciding which Author Logical Outputs it will satisfy.
+ * Multiple exports share the instance's internal Operations; separate calls always create separate
+ * instances because identity comes from the already elaborated `instance.instance` path.
+ */
+export function exportRunFragment(
+  instance: ElaboratedFragment,
+  names: readonly string[] = instance.exports.map((item) => item.name),
+): RunFragmentContribution {
+  assert(names.length > 0, "EMPTY_FRAGMENT_BINDING", `${instance.instance} exports no Run values`);
+  assert(new Set(names).size === names.length, "DUPLICATE_FRAGMENT_EXPORT", `${instance.instance} repeats a Run export`);
+  const available = exportMap(instance);
+  const selected = names.map((name) => {
+    const item = available.get(name);
+    assert(item !== undefined, "UNKNOWN_FRAGMENT_EXPORT", `${instance.instance} has no export ${name}`);
+    return item;
+  });
+  const candidates: Candidate[] = selected.map((item) => ({
+    id: hygienicId("candidate", instance.fragment, instance.instance, item.name),
+    type: item.type,
+    root: item.root,
+  }));
+  const reachable = reachableOperationIds(instance, selected);
+  return {
+    outputs: [],
+    candidates,
+    operations: instance.operations.filter((operation) => reachable.has(operation.id)),
+    exports: selected.map((item, index) => ({
+      name: item.name,
+      candidate: candidates[index]!.id,
+      type: item.type,
+      suggestedFidelity: item.fidelity,
+    })),
   };
 }
 
@@ -535,12 +593,25 @@ export function bindAuthorFragment(
   return bindExports(instance, outputs, true);
 }
 
-/** Bind selected Fragment exports as Candidate attachments for existing Logical Outputs. */
+/**
+ * Export selected Run-Graph values and their explicit Satisfaction edges.
+ * The Candidate identity is independent of the Logical Output named by `outputs`.
+ */
 export function bindCandidateFragment(
   instance: ElaboratedFragment,
   outputs: Readonly<Record<string, string>>,
 ): FragmentContribution {
-  return bindExports(instance, outputs, false);
+  const contribution = exportRunFragment(instance, Object.keys(outputs));
+  return {
+    outputs: [],
+    candidates: contribution.candidates,
+    operations: contribution.operations,
+    satisfactions: contribution.exports.map((item) => ({
+      output: outputs[item.name] as string,
+      candidate: item.candidate,
+      fidelity: item.suggestedFidelity,
+    })),
+  };
 }
 
 /** Merge already elaborated contributions; final Graph validation remains Core's authority. */

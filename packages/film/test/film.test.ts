@@ -197,7 +197,7 @@ function build(target: string) {
   return start(linked, graph, sealBuildRequest({
     graph: graph.id,
     targets: [{ output: target, accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
 }
 

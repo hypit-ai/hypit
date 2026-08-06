@@ -384,7 +384,7 @@ export function start(
   const plan: BuildPlan = compileBuild(program, graph, request);
   verifyInitialAffinities(graph, plan, program.records);
   const state: BuildState = {
-    format: "svml.build@1",
+    format: "svml.build@2",
     id: digestOf({
       closure: program.closure.digest,
       semantic: program.semanticDigest,

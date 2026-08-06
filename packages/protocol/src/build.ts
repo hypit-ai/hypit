@@ -171,7 +171,6 @@ export type LogicalOutput = {
   readonly id: LogicalOutputId;
   readonly type: TypeRef;
   readonly primary: CandidateId;
-  readonly candidates: readonly CandidateId[];
   /** Author-visible facts that a Candidate may transitively depend upon. */
   readonly semanticInputs: readonly GraphValueRef[];
   readonly affinity?: readonly AffinityConstraint[];
@@ -211,14 +210,13 @@ export type CandidateRoot =
 
 export type Candidate = {
   readonly id: CandidateId;
-  readonly output: LogicalOutputId;
+  /** Type of the independent value exported by the Author or Run Graph. */
+  readonly type: TypeRef;
   readonly root: CandidateRoot;
-  /** Fidelity to the Logical Output promise, independent of Provider fulfillment. */
-  readonly fidelity: Conformance;
 };
 
 export type CompiledGraph = {
-  readonly format: "svml.graph@1";
+  readonly format: "svml.graph@2";
   readonly id: Digest;
   readonly program: Digest;
   /** Digest of the author graph before external Candidate attachment. */
@@ -235,24 +233,30 @@ export type BuildTarget = {
   readonly accepts: NeedAcceptance;
 };
 
-export type CandidateBinding = {
+export type Satisfaction = {
   readonly output: LogicalOutputId;
   readonly candidate: CandidateId;
+  /** Fidelity of this Candidate to this Logical Output promise. */
+  readonly fidelity: Conformance;
 };
 
+/** @deprecated Use Satisfaction. */
+export type CandidateBinding = Satisfaction;
+
 export type BuildRequest = {
-  readonly format: "svml.build-request@1";
+  readonly format: "svml.build-request@2";
   readonly graph: Digest;
   /** Exact trusted implementation-package closure selected outside author source. */
   readonly implementationClosure?: Digest;
   readonly targets: readonly BuildTarget[];
-  readonly bindings: readonly CandidateBinding[];
+  readonly satisfactions: readonly Satisfaction[];
   readonly digest: Digest;
 };
 
 export type BuildSelection = {
   readonly output: LogicalOutputId;
   readonly candidate: CandidateId;
+  readonly fidelity: Conformance;
   readonly record: RecordId;
 };
 
@@ -272,7 +276,7 @@ export type BuildGoal = {
 };
 
 export type BuildPlan = {
-  readonly format: "svml.plan@1";
+  readonly format: "svml.plan@2";
   readonly id: Digest;
   readonly graph: Digest;
   readonly request: Digest;
@@ -361,7 +365,7 @@ export type BuildDiagnostic = {
 };
 
 export type BuildState = {
-  readonly format: "svml.build@1";
+  readonly format: "svml.build@2";
   readonly id: Digest;
   readonly program: LinkedProgram;
   readonly graph: CompiledGraph;
