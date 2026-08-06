@@ -29,7 +29,7 @@ body { letter-spacing: -0.012em; }
   font-family: "Cutive Mono", "DM Mono", monospace;
   font-size: 19px;
   font-weight: 400;
-  letter-spacing: .035em;
+  letter-spacing: -.03em;
   padding-right: .12em;
   -webkit-text-stroke: .25px var(--narratage-neon-tube);
   paint-order: stroke fill;
@@ -66,13 +66,29 @@ body { letter-spacing: -0.012em; }
   font-size: clamp(52px,7.2vw,92px);
   font-weight: 400;
   line-height: 1;
-  letter-spacing: .035em;
+  letter-spacing: -.05em;
   -webkit-text-stroke: .3px var(--narratage-neon-tube);
   paint-order: stroke fill;
   text-rendering: geometricPrecision;
   text-shadow: 0 0 1px #fff, 0 0 4px rgba(255,255,255,.68), 0 0 10px rgba(255,255,255,.24), 0 0 22px rgba(255,255,255,.08);
   text-transform: uppercase;
 }
+.wordmark-reveal {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  vertical-align: bottom;
+  white-space: nowrap;
+  animation: wordmark-type 1.2s steps(9,end) .18s forwards;
+}
+.wordmark-cursor {
+  display: inline-block;
+  margin-left: -.02em;
+  animation: wordmark-cursor-blink .48s step-end 1.42s 3, wordmark-cursor-hide .01s linear 2.86s forwards;
+}
+@keyframes wordmark-type { to { width: calc(9ch - .45em); } }
+@keyframes wordmark-cursor-blink { 50% { opacity: 0; } }
+@keyframes wordmark-cursor-hide { to { opacity: 0; } }
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); }
 .hero-statement-viewport-en { height: clamp(108px,12vw,142px); margin-top: 0; }
 .hero-statement-viewport-zh { height: 68px; margin-top: -20px; }
@@ -303,5 +319,7 @@ body { letter-spacing: -0.012em; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .wordmark-reveal { width: calc(9ch - .45em); animation: none !important; }
+  .wordmark-cursor { display: none; animation: none !important; }
   .hero-statement-swap-enter-from, .hero-statement-swap-leave-to { filter: none; transform: none; }
 }
