@@ -236,6 +236,11 @@ The reusable domain-neutral stack is:
 `@svml/text`, `@svml/script`, `@svml/svs`, video contracts and every Provider are optional domain or
 application packages.
 
+The current `@svml/package-loader-node` convenience assembly installs the official Text entry
+Frontend while activating trusted packages. This is a reference Text-authoring Host, not a Core
+requirement. Generic package byte-locking and facet activation must be split from that convenience
+assembly, or the package renamed, before it is advertised as frontend-neutral.
+
 ## 9. Trust boundary
 
 The current loader supports explicitly installed, byte-locked, trusted packages. It does not claim
@@ -254,3 +259,6 @@ ordinary downstream implementation; neither is a Core root.
 
 The current audiovisual narrow waist remains pre-freeze. Its expressiveness work is intentionally
 deferred while the domain-neutral run language and deployment paths are completed.
+
+See [`open-source-distribution.md`](./open-source-distribution.md) for independent publication,
+restart and current release-readiness boundaries.

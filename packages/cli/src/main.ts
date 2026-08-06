@@ -22,6 +22,7 @@ import {
   materializeArtifact,
   materializeRecord,
   selectArchivedRecord,
+  summarizeBuildCatalog,
 } from "./archive.js";
 import { loadRunFile } from "./run-file.js";
 import { createOfficialRuntimeFromConfig } from "./runtime-config.js";
@@ -316,9 +317,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             createdAt: entry.createdAt,
             updatedAt: entry.updatedAt,
             status: status.build?.state.status,
-            source: entry.source,
-            ...(entry.run === undefined ? {} : { run: entry.run }),
-            outputs: entry.aliases.map((alias) => alias.name),
+            ...summarizeBuildCatalog(entry, status.build?.state),
           };
         }));
         io.write(`${JSON.stringify({ builds }, null, 2)}\n`);
@@ -332,7 +331,9 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             status: status.build.state.status,
             diagnostics: status.build.state.diagnostics,
           },
-          catalog: status.catalog,
+          catalog: status.catalog === undefined
+            ? undefined
+            : summarizeBuildCatalog(status.catalog, status.build?.state),
           operations: status.operations.map((operation) => ({
             id: operation.id,
             command: operation.command,
