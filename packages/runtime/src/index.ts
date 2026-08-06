@@ -16,7 +16,7 @@ export {
   RuntimeModuleRegistry,
   localSchedulerOptionsFromClosure,
   resolveRuntimeProfile,
-  runtimeProvider,
+  runtimeEndpoint,
   sealRuntimeProfile,
   verifyRuntimeClosure,
   verifyRuntimeCoverage,

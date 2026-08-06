@@ -10,8 +10,9 @@ import {
   verifyRenderedVisual,
 } from "@svml/contracts";
 import type { RenderedVisual } from "@svml/contracts";
-import { MemoryArtifactStore, ProviderRegistry } from "@svml/driver-node";
-import type { ProviderHandler, ProviderRegistration } from "@svml/driver-node";
+import { MemoryArtifactStore, EndpointRegistry } from "@svml/driver-node";
+import type { EndpointRegistration } from "@svml/driver-node";
+import type { ImmediateEndpointHandler } from "@svml/endpoint-kit";
 import { compileHyperframesDocument } from "@svml/hyperframes";
 import { hyperframesRenderCapabilities, hyperframesVisualRequest } from "@svml/hyperframes-render";
 import { canonicalize, digestOf } from "@svml/protocol";
@@ -97,10 +98,10 @@ function requestNeed(): Need {
 }
 
 async function handlerFor(request: Need): Promise<{
-  readonly handler: ProviderHandler;
-  readonly registration: ProviderRegistration;
+  readonly handler: ImmediateEndpointHandler;
+  readonly registration: EndpointRegistration;
 }> {
-  const registry = new ProviderRegistry();
+  const registry = new EndpointRegistry();
   await createLocalHyperframesProvider({
     workers: 2,
     defaultConcurrency: 1,
@@ -108,7 +109,7 @@ async function handlerFor(request: Need): Promise<{
   }).install(registry);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
-  assert.equal(resolution.registration.kind, "handler");
+  assert.equal(resolution.registration.kind, "immediate");
   return { handler: resolution.registration.handler, registration: resolution.registration };
 }
 
@@ -116,8 +117,8 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
   const provider = createLocalHyperframesProvider({ workers: 4, defaultConcurrency: 2 });
   assert.equal(provider.name, "hyperframes.local");
   const facet = provider.manifest.facets[0];
-  assert.equal(facet?.role, "provider-endpoint");
-  assert(facet?.role === "provider-endpoint");
+  assert.equal(facet?.role, "capability-endpoint");
+  assert(facet?.role === "capability-endpoint");
   assert.deepEqual(facet.permissions, ["process:hyperframes"]);
   assert.equal(facet.defaultConcurrency, 2);
   assert.deepEqual(provider.bindings, [{

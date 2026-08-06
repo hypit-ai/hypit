@@ -11,11 +11,11 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { MemoryArtifactStore } from "@svml/driver-node";
-import type { ProviderEndpoint } from "@svml/driver-node";
+import type { RecoverableEndpoint } from "@svml/endpoint-kit";
 import type {
   NodeArtifactStorePackage,
   NodeComponentPackage,
-  NodeProviderPackage,
+  EndpointPackage,
 } from "@svml/local";
 import { createProjectLocalRuntime } from "@svml/local";
 import { digestOf } from "@svml/core";
@@ -34,17 +34,17 @@ import {
   types,
 } from "../../core/test/greeting-fixture.js";
 
-const providerModule = { name: "example.local-provider", version: "1" } as const;
+const providerModule = { name: "example.local-endpoint", version: "1" } as const;
 const providerFacet = { module: providerModule, name: "generation" } as const;
-const providerDigest = digestOf("example.local-provider/generation@1");
+const providerDigest = digestOf("example.local-endpoint/generation@1");
 const providerManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@1",
+  format: "svml.runtime-module@2",
   name: providerModule.name,
   version: providerModule.version,
   facets: [{
     name: providerFacet.name,
-    role: "provider-endpoint",
-    implementation: { locator: "example.local-provider/generation", digest: providerDigest },
+    role: "capability-endpoint",
+    implementation: { locator: "example.local-endpoint/generation", digest: providerDigest },
     permissions: [],
     fulfills: [{ capability: capabilities.generation, returns: types.generated }],
     lifecycle: "recoverable",
@@ -52,7 +52,7 @@ const providerManifest: RuntimeModuleManifest = {
   }],
 };
 
-test("project local runtime resumes durable work while component and provider packages stay replaceable", async () => {
+test("project local runtime resumes durable work while component and endpoint packages stay replaceable", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-"));
   let promptCalls = 0;
   let requestCalls = 0;
@@ -97,7 +97,7 @@ test("project local runtime resumes durable work while component and provider pa
       },
     ],
   };
-  const endpoint: ProviderEndpoint = {
+  const recoverableEndpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
       return { status: "pending", checkpoint: { remoteJob: operation.submissionKey } };
@@ -119,8 +119,8 @@ test("project local runtime resumes durable work while component and provider pa
       cancels += 1;
     },
   };
-  const provider: NodeProviderPackage = {
-    name: "example.provider.personal",
+  const endpointPackage: EndpointPackage = {
+    name: "example.endpoint.personal",
     manifest: providerManifest,
     instance: { id: "generation.personal", facet: providerFacet },
     bindings: [{
@@ -129,11 +129,11 @@ test("project local runtime resumes durable work while component and provider pa
       endpoint: "generation.personal",
     }],
     install(registry) {
-      registry.registerProviderEndpoint(
+      registry.registerRecoverableEndpoint(
         "generation.personal",
         capabilities.generation,
         types.generated,
-        endpoint,
+        recoverableEndpoint,
         {
           runtimeImplementation: {
             facet: providerFacet,
@@ -149,7 +149,7 @@ test("project local runtime resumes durable work while component and provider pa
     const firstRuntime = await createProjectLocalRuntime({
       root: directory,
       components: [components],
-      providers: [provider],
+      endpoints: [endpointPackage],
     });
     const first = await firstRuntime.build({ id: "client-video", state: createGreetingBuild() });
     assert.equal(first.status, "paused");
@@ -160,7 +160,7 @@ test("project local runtime resumes durable work while component and provider pa
     const secondRuntime = await createProjectLocalRuntime({
       root: directory,
       components: [components],
-      providers: [provider],
+      endpoints: [endpointPackage],
     });
     const second = await secondRuntime.build({ id: "client-video", state: createGreetingBuild() });
     assert.equal(second.status, "complete");
@@ -279,7 +279,7 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
   const artifacts: NodeArtifactStorePackage = {
     name: "example.remote-artifacts",
     manifest: {
-      format: "svml.runtime-module@1",
+      format: "svml.runtime-module@2",
       name: module.name,
       version: module.version,
       facets: [{

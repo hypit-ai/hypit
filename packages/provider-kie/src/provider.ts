@@ -1,9 +1,9 @@
 import type {
-  ProviderEndpoint,
-  ProviderEndpointResumeContext,
-  ProviderEndpointStartContext,
-  ProviderEndpointResult,
-} from "@svml/driver-node";
+  RecoverableEndpoint,
+  EndpointResumeContext,
+  EndpointStartContext,
+  EndpointOutcome,
+} from "@svml/endpoint-kit";
 import {
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
@@ -19,9 +19,9 @@ import type {
   Digest,
 } from "@svml/protocol";
 import {
-  defineProviderPackage,
+  defineEndpointPackage,
   wakeAfter,
-} from "@svml/provider-kit";
+} from "@svml/endpoint-kit";
 import { credentialRef } from "@svml/runtime";
 import type { ArtifactStore, CredentialRef } from "@svml/runtime";
 
@@ -121,7 +121,7 @@ function contentRequestDigest(value: unknown): Digest {
   return request.requestDigest;
 }
 
-function secret(context: ProviderEndpointStartContext | ProviderEndpointResumeContext): string {
+function secret(context: EndpointStartContext | EndpointResumeContext): string {
   const value = context.credentials.apiKey?.secret;
   if (value === undefined || value.length === 0) throw new KieError("KIE_MISSING_CREDENTIAL", "KIE API key is unavailable");
   return value;
@@ -372,7 +372,7 @@ function resultUrls(data: Record<string, unknown>): string[] {
   });
 }
 
-function verifyCheckpoint(value: CanonicalValue | undefined, context: ProviderEndpointResumeContext): KieCheckpoint {
+function verifyCheckpoint(value: CanonicalValue | undefined, context: EndpointResumeContext): KieCheckpoint {
   if (value === undefined) {
     throw new KieError(
       "KIE_SUBMISSION_CHECKPOINT_MISSING",
@@ -401,8 +401,8 @@ function endpoint(options: {
   readonly pollIntervalMs: number;
   readonly maxOperationMs: number;
   readonly now: () => number;
-}): ProviderEndpoint {
-  const failure = (error: unknown): ProviderEndpointResult => {
+}): RecoverableEndpoint {
+  const failure = (error: unknown): EndpointOutcome => {
     const known = error instanceof KieError ? error : new KieError("KIE_INTERNAL_ERROR", error instanceof Error ? error.message : String(error));
     return {
       status: "failed",
@@ -414,7 +414,7 @@ function endpoint(options: {
       },
     };
   };
-  const pendingAfterError = (checkpoint: KieCheckpoint, error: unknown): ProviderEndpointResult => {
+  const pendingAfterError = (checkpoint: KieCheckpoint, error: unknown): EndpointOutcome => {
     const failures = checkpoint.pollFailures + 1;
     if (options.now() - checkpoint.startedAt >= options.maxOperationMs) {
       return failure(new KieError("KIE_OPERATION_TIMEOUT", "KIE task did not become durably available before the deadline"));
@@ -590,7 +590,7 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
     maxOperationMs,
     now,
   });
-  return defineProviderPackage({
+  return defineEndpointPackage({
     module: kieProviderModuleRef,
     facet: "market",
     instance: config.instance ?? "kie.default",

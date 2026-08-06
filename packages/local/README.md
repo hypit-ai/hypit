@@ -1,7 +1,7 @@
 # `@svml/local`
 
 The trusted, zero-service developer distribution. It keeps Core and the authoritative Build
-Scheduler in the current Node process while allowing every Provider Endpoint to run in a different
+Scheduler in the current Node process while allowing every capability Endpoint to run in a different
 place.
 
 The convenience assembly uses:
@@ -12,10 +12,10 @@ The convenience assembly uses:
   `@svml/artifact-store-s3`;
 - an in-process, queue-free Scheduler whose ready work always comes from Core;
 - an exact implementation package lock for deterministic component packages;
-- separately selected external Provider packages.
+- separately selected external Endpoint packages.
 
 Deterministic packages implement the host-neutral `@svml/component-kit` contract. `@svml/local`
-adapts them to `HostRegistry`; the component never imports the Node Driver or receives Runtime
+adapts them to `ProducerRegistry`; the component never imports the Node Driver or receives Runtime
 services.
 
 ```ts
@@ -27,11 +27,11 @@ export default await createProjectLocalRuntime({
     prefix: "development",
     region: "us-east-1",
   }),
-  providers: [createKieProvider({ apiKey: credentialRef("env", "KIE_API_KEY") })],
+  endpoints: [createKieProvider({ apiKey: credentialRef("env", "KIE_API_KEY") })],
   allowedPermissions: ["network:aws:s3", "network:api.kie.ai", "network:kieai.redpandaai.co"],
   scheduling: {
     maxConcurrency: 8,
-    lanes: { "provider:kie.personal": 2 },
+    lanes: { "endpoint:kie.personal": 2 },
   },
 });
 ```
@@ -39,7 +39,7 @@ export default await createProjectLocalRuntime({
 The implementation lock may contain `generationComponent`, exact-model components and media
 pipeline Producers without adding imports to this deployment source. Its digest is bound into the
 BuildRequest, so a persisted Build cannot resume under another deterministic component closure.
-The KIE Provider remains an independently selected privileged endpoint; swapping it changes an
+The KIE Endpoint remains an independently selected privileged endpoint; swapping it changes an
 Endpoint implementation and lane, not the `.svml` author document.
 `createProjectLocalRuntime` accepts a configured ArtifactStore package directly;
 advanced hosts may call `createLocalRuntime` with Postgres or other implementations of the same

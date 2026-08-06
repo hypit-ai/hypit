@@ -26,7 +26,7 @@ export default createProjectLocalRuntime({
   root: import.meta.dirname,
   artifacts,
   allowedPermissions: ["network:aws:s3"],
-  providers: [],
+  endpoints: [],
 });
 ```
 

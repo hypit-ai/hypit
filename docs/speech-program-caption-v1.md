@@ -269,18 +269,18 @@ exact refinement 才能在不造假的前提下细化。下游允许做局部估
 组件包和最终 BuildPlan 必须明确选择外部能力；Runtime 不得从泛化的结果需求反推
 Seedance、Kling、WhisperX 或其他实现。Producer 只声明已经选定的 typed Need 及其
 constraints；它不读取 API key、不选择 endpoint，也不初始化 Python/CUDA。Node
-Runtime 的 `ProviderRegistry` 只注册同一能力的实际执行端：
+Runtime 的 `EndpointRegistry` 只注册同一能力的实际执行端：
 
 ```text
 Need<SeedanceMiniGeneration> -> kie.seedance / volc.seedance / hypit.seedance
 Need<WhisperXAlignmentEvidence> -> whisperx.local / hypit.whisperx
 
-registerProvider("whisperx.local", WhisperXAlignmentEvidence, handler)
+registerImmediateEndpoint("whisperx.local", WhisperXAlignmentEvidence, handler)
 bind(WhisperXAlignmentEvidence, "whisperx.local")
 ```
 
 同一个 Wants 只有一个匹配 Provider 时可直接运行；没有 Provider 就暂停；存在多个
-匹配 Provider 且 Runtime 没有显式绑定时必须报告 `ambiguous-provider`，绝不采用
+匹配 Endpoint 且 Runtime 没有显式绑定时必须报告 `ambiguous-endpoint`，绝不采用
 “第一个注册者”。不同能力的 Provider 即使能产生相似的媒体，也不能匹配该 Need。
 已有视频、黑场视频和人工时间稿只能作为显式 `substitute` fulfillment，不能改写 Need
 身份或冒充 `exact`。Receipt 的 `fulfiller` 由 Registry 身份写入，不由 handler 自报。

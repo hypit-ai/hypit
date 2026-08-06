@@ -15,9 +15,9 @@ import {
   environmentCredentialStoreRuntimeManifest,
 } from "@svml/credential-store-env";
 import {
-  HostRegistry,
+  ProducerRegistry,
   NodeDriver,
-  ProviderRegistry,
+  EndpointRegistry,
 } from "@svml/driver-node";
 import {
   loadNodePackageSet,
@@ -52,7 +52,7 @@ import type {
   LocalBuildRequest,
   LocalRuntime,
   NodeArtifactStorePackage,
-  NodeProviderPackage,
+  EndpointPackage,
   ProjectLocalRuntimeOptions,
 } from "./types.js";
 
@@ -113,15 +113,15 @@ function registerManifests(
   }
 }
 
-function verifyProviderPackages(packages: readonly NodeProviderPackage[]): void {
+function verifyEndpointPackages(packages: readonly EndpointPackage[]): void {
   const names = new Set<string>();
   const instances = new Set<string>();
   for (const item of packages) {
-    assert(item.name.trim().length > 0, "Provider package name must not be empty");
-    assert(!names.has(item.name), `Provider package ${item.name} is configured twice`);
+    assert(item.name.trim().length > 0, "Endpoint package name must not be empty");
+    assert(!names.has(item.name), `Endpoint package ${item.name} is configured twice`);
     names.add(item.name);
-    assert(item.instance.id.trim().length > 0, `${item.name} Provider instance id is empty`);
-    assert(!instances.has(item.instance.id), `Provider instance ${item.instance.id} is configured twice`);
+    assert(item.instance.id.trim().length > 0, `${item.name} Endpoint instance id is empty`);
+    assert(!instances.has(item.instance.id), `Endpoint instance ${item.instance.id} is configured twice`);
     instances.add(item.instance.id);
     assert(item.manifest.name === item.instance.facet.module.name
       && item.manifest.version === item.instance.facet.module.version,
@@ -152,8 +152,8 @@ export async function createLocalRuntime(
       || options.scheduling?.laneLimits !== undefined)) {
     throw new Error("a locked Runtime Closure owns maxConcurrency and lane limits");
   }
-  const hosts = new HostRegistry();
-  const providers = new ProviderRegistry();
+  const producers = new ProducerRegistry();
+  const endpoints = new EndpointRegistry();
   const validators = options.validators ?? new TypeValidatorRegistry();
   const componentNames = new Set<string>();
   for (const component of options.components ?? []) {
@@ -161,19 +161,19 @@ export async function createLocalRuntime(
     assert(!componentNames.has(component.name), `Component package ${component.name} is configured twice`);
     componentNames.add(component.name);
     registerTypeValidatorFacets(validators, component.validators ?? []);
-    registerProducerFacets(hosts, component.producers ?? []);
+    registerProducerFacets(producers, component.producers ?? []);
   }
-  for (const provider of options.providers ?? []) await provider.install(providers);
+  for (const endpoint of options.endpoints ?? []) await endpoint.install(endpoints);
   if (options.closure !== undefined) {
-    providers.applyRuntimeClosure(
+    endpoints.applyRuntimeClosure(
       options.closure.value,
       options.closure.modules,
       { allowedPermissions: options.closure.allowedPermissions ?? [] },
     );
   }
   const driver = new NodeDriver({
-    registry: hosts,
-    providers,
+    producers,
+    endpoints,
     artifacts: options.artifactStore,
     ...(options.credentialStore === undefined ? {} : { credentials: options.credentialStore }),
     ...(options.operationStore === undefined ? {} : { operations: options.operationStore }),
@@ -254,7 +254,7 @@ export async function createLocalRuntime(
 
 /**
  * Zero-service local distribution. The Runtime authority stays in this process while configured
- * Provider Endpoints may execute locally, in a vendor API, in Lambda, or on Hypit.
+ * Capability Endpoints may execute locally, in a vendor API, in Lambda, or on Hypit.
  */
 export async function createProjectLocalRuntime(
   options: ProjectLocalRuntimeOptions = {},
@@ -279,8 +279,8 @@ export async function createProjectLocalRuntime(
   };
   const artifacts = options.artifacts ?? defaultArtifacts;
   verifyArtifactPackage(artifacts);
-  const providerPackages = options.providers ?? [];
-  verifyProviderPackages(providerPackages);
+  const endpointPackages = options.endpoints ?? [];
+  verifyEndpointPackages(endpointPackages);
 
   try {
     const modules = new RuntimeModuleRegistry();
@@ -289,7 +289,7 @@ export async function createProjectLocalRuntime(
       sqliteStoreRuntimeManifest,
       artifacts.manifest,
       environmentCredentialStoreRuntimeManifest,
-      ...providerPackages.map((item) => item.manifest),
+      ...endpointPackages.map((item) => item.manifest),
     ]);
     const profile = sealRuntimeProfile({
       name: "svml.local.project",
@@ -299,7 +299,7 @@ export async function createProjectLocalRuntime(
         { id: "operations.sqlite", facet: sqliteOperationStoreFacet },
         artifacts.instance,
         { id: "credentials.env", facet: environmentCredentialStoreFacet },
-        ...providerPackages.map((item) => item.instance),
+        ...endpointPackages.map((item) => item.instance),
       ],
       scheduler: "scheduler.local",
       stores: {
@@ -308,7 +308,7 @@ export async function createProjectLocalRuntime(
         artifacts: artifacts.instance.id,
         credentials: "credentials.env",
       },
-      providers: providerPackages.flatMap((item) => item.bindings),
+      endpoints: endpointPackages.flatMap((item) => item.bindings),
       scheduling: {
         maxConcurrency: options.scheduling?.maxConcurrency ?? 4,
         lanes: Object.entries(options.scheduling?.lanes ?? {}).map(([name, maxConcurrency]) => ({
@@ -332,7 +332,7 @@ export async function createProjectLocalRuntime(
       ...(configuredComponents.length === 0
         ? {}
         : { components: configuredComponents }),
-      providers: providerPackages,
+      endpoints: endpointPackages,
       closure: { modules, value: closure, allowedPermissions },
       scheduling: {
         ...(options.scheduling?.maxEventsPerBuild === undefined

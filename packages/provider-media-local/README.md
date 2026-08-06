@@ -9,12 +9,12 @@ import { createLocalMediaProvider } from "@svml/provider-media-local";
 
 const runtime = await createProjectLocalRuntime({
   packageLock: "./svml.packages.lock",
-  providers: [createLocalMediaProvider({ defaultConcurrency: 1 })],
+  endpoints: [createLocalMediaProvider({ defaultConcurrency: 1 })],
   allowedPermissions: ["process:media"],
 });
 ```
 
-The Provider:
+The Endpoint:
 
 - bounds subprocess duration and ffprobe JSON size;
 - invokes binaries without a shell;

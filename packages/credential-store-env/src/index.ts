@@ -22,7 +22,7 @@ export const environmentCredentialStoreImplementationDigest = digestOf(
 );
 
 export const environmentCredentialStoreRuntimeManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@1",
+  format: "svml.runtime-module@2",
   name: environmentCredentialStoreModuleRef.name,
   version: environmentCredentialStoreModuleRef.version,
   facets: [{

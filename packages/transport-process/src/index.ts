@@ -3,7 +3,7 @@ import { isAbsolute, resolve } from "node:path";
 
 import { canonicalize } from "@svml/protocol";
 import type { CanonicalValue } from "@svml/protocol";
-import type { JsonInvoker } from "@svml/provider-kit";
+import type { JsonInvoker } from "@svml/transport";
 
 export type ProcessJsonInvokerOptions = {
   /** Must be absolute; shell lookup and shell interpolation are never used. */

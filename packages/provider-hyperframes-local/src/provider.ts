@@ -6,13 +6,13 @@ import { dirname, join } from "node:path";
 
 import { contractTypes, sealRenderedVisual } from "@svml/contracts";
 import type { RenderedVisual } from "@svml/contracts";
-import type { ProviderHandlerContext, ProviderHandlerResult } from "@svml/driver-node";
+import type { EndpointInvocationContext, EndpointFulfillment } from "@svml/endpoint-kit";
 import { assertHyperframesDocument, materializeHyperframesHtml } from "@svml/hyperframes";
 import type { HyperframesDocument } from "@svml/hyperframes";
 import { hyperframesRenderCapabilities } from "@svml/hyperframes-render";
 import { canonicalize, digestOf } from "@svml/protocol";
 import type { BlobRef, CanonicalValue } from "@svml/protocol";
-import { defineProviderPackage } from "@svml/provider-kit";
+import { defineEndpointPackage } from "@svml/endpoint-kit";
 
 const HYPERFRAMES_VERSION = "0.7.84";
 
@@ -154,7 +154,7 @@ function extension(mediaType: string): string {
   return result;
 }
 
-async function artifactBytes(context: ProviderHandlerContext, artifact: BlobRef): Promise<Uint8Array> {
+async function artifactBytes(context: EndpointInvocationContext, artifact: BlobRef): Promise<Uint8Array> {
   const bytes = await context.artifacts.get(artifact.digest);
   assert(bytes !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
   assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.digest} size differs`);
@@ -229,7 +229,7 @@ function visualRequest(value: CanonicalValue): HyperframesDocument {
   return item.document as HyperframesDocument;
 }
 
-function result(value: CanonicalValue, metadata: CanonicalValue): ProviderHandlerResult {
+function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
   return {
     value: { kind: "inline", value },
     conformance: "exact",
@@ -267,7 +267,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     maxRenderedBytes,
   });
 
-  return defineProviderPackage({
+  return defineEndpointPackage({
     module: localHyperframesProviderModuleRef,
     facet: "render",
     instance: config.instance ?? "hyperframes.local",

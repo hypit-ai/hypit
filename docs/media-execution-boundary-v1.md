@@ -76,7 +76,7 @@ with separate inputs, results, digests, retry histories and scheduling identitie
 `@svml/provider-media-local` currently fulfills inspection, normalization, canonical speech-
 evidence projection, timeline-audio rendering and mux with bounded shell-free ffprobe/ffmpeg
 subprocesses. `@svml/provider-hyperframes-local` fulfills the independent silent visual Need. One
-Runtime Scheduler applies configured Provider lane concurrency across Builds, while HyperFrames'
+Runtime Scheduler applies configured Endpoint lane concurrency across Builds, while HyperFrames'
 own `workers` option partitions frames inside one admitted render.
 
 A future AWS package may fulfill the same Needs through Lambda. Lambda invocation, internal worker

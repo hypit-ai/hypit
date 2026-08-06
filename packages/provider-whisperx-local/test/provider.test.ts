@@ -7,7 +7,7 @@ import {
   contractTypes,
   sealSpeechEvidenceAudio,
 } from "@svml/contracts";
-import { MemoryArtifactStore, ProviderRegistry } from "@svml/driver-node";
+import { MemoryArtifactStore, EndpointRegistry } from "@svml/driver-node";
 import { digestOf } from "@svml/protocol";
 import type { Need } from "@svml/protocol";
 import {
@@ -53,8 +53,8 @@ test("local WhisperX Provider pins the complete sidecar runtime and is independe
   const provider = createLocalWhisperXProvider({ expectedModel: "small", defaultConcurrency: 2 });
   assert.equal(provider.name, "whisperx.local");
   const facet = provider.manifest.facets[0];
-  assert.equal(facet?.role, "provider-endpoint");
-  assert(facet?.role === "provider-endpoint");
+  assert.equal(facet?.role, "capability-endpoint");
+  assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 2);
   assert.deepEqual(facet.permissions, ["filesystem:whisperx-staging", "network:whisperx-loopback"]);
   assert.throws(
@@ -174,7 +174,7 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
         constraints,
       }),
     };
-    const registry = new ProviderRegistry();
+    const registry = new EndpointRegistry();
     await createLocalWhisperXProvider({
       baseUrl: `http://127.0.0.1:${address.port}`,
       expectedModel: "small",
@@ -182,7 +182,7 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
     }).install(registry);
     const resolved = registry.resolve(need);
     assert.equal(resolved.status, "resolved");
-    assert.equal(resolved.registration.kind, "handler");
+    assert.equal(resolved.registration.kind, "immediate");
     const output = await resolved.registration.handler({
       command: { kind: "fulfill-need", id: "command:whisperx-loopback", need },
       need,

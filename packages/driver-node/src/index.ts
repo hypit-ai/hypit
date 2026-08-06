@@ -8,10 +8,10 @@ export {
 } from "./manifest.js";
 export { parseBuildState, serializeBuildState } from "./persistence.js";
 export {
-  HostRegistry,
-  ProviderRegistry,
+  ProducerRegistry,
+  EndpointRegistry,
   producerRegistryKey,
-  providerCapabilityKey,
-  providerReturnKey,
+  endpointCapabilityKey,
+  endpointReturnKey,
 } from "./registry.js";
 export type * from "./types.js";
