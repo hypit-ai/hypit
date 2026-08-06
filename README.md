@@ -58,6 +58,9 @@
 > `@svml/local` now provide the durable zero-service developer assembly.
 > `@svml/endpoint-kit` and `@svml/credential-store-env` now bind static Endpoint identity,
 > non-secret configuration, exact credential slots and recoverable wake/retry/cancel behavior;
+> Runtime service packages now bind Scheduler and Store implementations through the same exact
+> Manifest/instance selection law, so `@svml/local` no longer contains package-specific store
+> registration;
 > `@svml/artifact-store-s3` plus bounded Lambda/process transports provide replaceable external
 > execution plumbing without claiming any video capability;
 > `@svml/media-pipeline` and `@svml/provider-media-local` now provide all-stream ffprobe inspection,

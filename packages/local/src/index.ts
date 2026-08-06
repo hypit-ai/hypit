@@ -1,9 +1,8 @@
 export {
-  localRuntimeManifest,
+  createLocalSchedulerPackage,
   localRuntimeModuleRef,
-  localSchedulerFacet,
   localSchedulerImplementationDigest,
-} from "./manifest.js";
+} from "./scheduler-package.js";
 export {
   createLocalRuntime,
   createProjectLocalRuntime,

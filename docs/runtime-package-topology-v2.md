@@ -642,6 +642,10 @@ Endpoint lane、同一 Build 内独立付费命令并行且公共上游只执行
 filesystem/S3 ArtifactStore、环境变量 CredentialStore、Endpoint Kit、Lambda/process
 transport、`@svml/local` 发行包和
 单进程 wake/follow/status/cancel 已经实现；distributed lease/dispatcher 仍待实现。
+Scheduler、BuildStore、OperationStore、ArtifactStore 与 CredentialStore 已统一通过
+`RuntimeServicePackage` 绑定静态 facet、配置身份和实际服务对象；`@svml/local` 只做实例
+选择与组合，不再按具体包名注册这些环境能力。同一个 SQLite 包可以贡献两个独立角色，
+同时共享一个物理连接和关闭生命周期。
 
 1. **已完成：**新增 Runtime Module facet representation 与 Profile/Closure identity；
 2. **已完成：**EndpointRegistry 可由锁定 Closure 原子装配并核对实现摘要；

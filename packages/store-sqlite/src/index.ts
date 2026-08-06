@@ -1,9 +1,8 @@
 export {
-  sqliteBuildStoreFacet,
+  SqliteRuntimeState,
+  createSqliteRuntimeServicePackage,
   sqliteBuildStoreImplementationDigest,
-  sqliteOperationStoreFacet,
   sqliteOperationStoreImplementationDigest,
   sqliteStoreModuleRef,
-  sqliteStoreRuntimeManifest,
-} from "./manifest.js";
-export { SqliteRuntimeState } from "./store.js";
+} from "./store.js";
+export type * from "./store.js";

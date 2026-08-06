@@ -97,7 +97,7 @@ export type ScheduledBuildResult = {
   readonly blocked: readonly RuntimeBlockedCommand[];
 };
 
-export type LocalBuildSchedulerOptions = {
+export type BuildSchedulerOptions = {
   readonly maxConcurrency?: number;
   readonly laneLimits?: Readonly<Record<string, number>>;
   readonly maxEventsPerBuild?: number;
@@ -105,3 +105,16 @@ export type LocalBuildSchedulerOptions = {
   /** Optional durable authority. When present, every accepted Core Event is persisted by CAS. */
   readonly buildStore?: BuildStore;
 };
+
+/** Environment-neutral scheduling authority selected by the Runtime Profile. */
+export type BuildScheduler = {
+  run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]>;
+};
+
+/** Installed Scheduler implementation. It receives policy only after Runtime Closure resolution. */
+export type BuildSchedulerFactory = {
+  create(executor: RuntimeCommandExecutor, options?: BuildSchedulerOptions): BuildScheduler;
+};
+
+/** @deprecated The options are not specific to the reference local implementation. */
+export type LocalBuildSchedulerOptions = BuildSchedulerOptions;
