@@ -196,7 +196,7 @@ onBeforeUnmount(() => { activationId += 1; });
 <style scoped>
 .svml-demo-carousel { width: 100%; }
 .demo-carousel-stage { display: grid; width: 100%; overflow: hidden; perspective: 1600px; }
-.carousel-heading { width: calc(100% - 64px); margin-inline: auto; }
+.carousel-heading { width: calc(100% - 78px); margin-right: 64px; margin-left: 14px; }
 .demo-card { position: relative; grid-area: 1 / 1; justify-self: center; width: calc(100% - 64px); overflow: hidden; border-radius: 16px; transform-origin: center center; will-change: transform, opacity, filter; transition: transform 850ms cubic-bezier(.16,1,.3,1), opacity 650ms cubic-bezier(.16,1,.3,1), filter 650ms cubic-bezier(.16,1,.3,1); }
 .demo-card.is-center { z-index: 3; opacity: 1; filter: brightness(1); transform: translateX(0) scale(1); }
 .demo-card.is-left { z-index: 1; opacity: .56; filter: brightness(.58) saturate(.75); transform: translateX(calc(-100% + 58px)) scale(.955); }
@@ -221,14 +221,16 @@ onBeforeUnmount(() => { activationId += 1; });
 @keyframes demo-loading-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 900px) {
-  .carousel-heading, .demo-card { width: calc(100% - 40px); }
+  .carousel-heading { width: calc(100% - 54px); margin-right: 40px; margin-left: 14px; }
+  .demo-card { width: calc(100% - 40px); }
   .demo-card.is-left { transform: translateX(calc(-100% + 34px)) scale(.97); }
   .demo-card.is-right { transform: translateX(calc(100% - 34px)) scale(.97); }
   .demo-loading { min-height: 990px; }
 }
 
 @media (max-width: 520px) {
-  .carousel-heading, .demo-card { width: calc(100% - 20px); }
+  .carousel-heading { width: calc(100% - 34px); margin-right: 20px; margin-left: 14px; }
+  .demo-card { width: calc(100% - 20px); }
   .demo-card.is-left { transform: translateX(calc(-100% + 20px)) scale(.98); }
   .demo-card.is-right { transform: translateX(calc(100% - 20px)) scale(.98); }
 }
