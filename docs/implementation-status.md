@@ -105,9 +105,10 @@ names.
   Closure construction, root-confined/read-once Node Source resolver, real-file compiler facade and
   named-export-to-BuildPlan entrypoint. The discovery pass and decode pass share locked SourceUnits.
 - `@svml/package-loader-node`: lock-aware trusted Node activation for installed author packages. It
-  binds every physical package and declared-dependency file plus declared Module, Frontend and Text Surface
-  identities, verifies all bytes before executing activation code and installs no Provider or
-  Runtime facet. Its external fixture proves a new namespaced Surface needs no Core or CLI change.
+  binds every physical package and declared-dependency file plus declared Module, Frontend, Text
+  Surface and Type Validator identities, verifies all bytes before executing activation code and
+  installs no Provider or Runtime facet. Its external fixture proves a new namespaced Surface and
+  its authored Type admission need no Core or CLI change.
 - `@svml/prelude-video`: an ordinary replaceable aggregate of the current official author Modules,
   SVS Frontend and Text Surfaces. The CLI no longer enumerates Script, Film or HyperFrames packages.
 - `@svml/cli`: the trusted v2 application host. `check` compiles real Text sources using either the
@@ -243,8 +244,8 @@ the next work is:
 - sandboxed or remotely attested third-party Type validator execution (the current registry accepts
   trusted in-process implementations only);
 - automatic npm/workspace package installation, locked compute-facet loading and community package
-  discovery (trusted locked author facets are implemented; compute components still enter through
-  explicit deployment assembly);
+  discovery (trusted locked author facets, including validator identities, are implemented; compute
+  Producers still enter through explicit deployment assembly);
 - production keychain/Vault credentials, hosted scheduling or distributed workers;
 - AWS/hosted WhisperX, HyperFrames or media Provider endpoints;
 - production multipart/ranged Artifact streaming and distributed execution adapters;

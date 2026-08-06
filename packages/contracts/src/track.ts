@@ -261,8 +261,8 @@ function assertAnimation(animation: VisualAnimation | undefined, durationFrames:
   }
 }
 
-function assertPresent(present: VisualPresent, programSpace: ProgramSpace, trackId: string): void {
-  const totalFrames = programSpaceFrameCount(programSpace);
+function assertPresent(present: VisualPresent, programSpace: ProgramSpace | undefined, trackId: string): void {
+  const totalFrames = programSpace === undefined ? Number.MAX_SAFE_INTEGER : programSpaceFrameCount(programSpace);
   assertNonEmpty(present.id, `${trackId} Present id`);
   assertFrameSpan(present.span, totalFrames, `${trackId}.${present.id}.span`);
   assertNonEmpty(present.stacking.tieBreak, `${trackId}.${present.id} stacking tieBreak`);
@@ -324,13 +324,13 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace, track
       assertCompositableSurfaceRef(element.surface, `${trackId}.${present.id}.${element.id}.surface`);
       if (element.surface.timing.kind === "frames") {
         const durationFrames = present.span.endFrameExclusive - present.span.startFrame;
-        if (
-          element.surface.timing.frameRate.numerator !== programSpace.frameRate.numerator
-          || element.surface.timing.frameRate.denominator !== programSpace.frameRate.denominator
-          || element.surface.timing.frameCount !== durationFrames
-        ) {
+        if (element.surface.timing.frameCount !== durationFrames) {
           throw new Error(`${trackId}.${present.id}.${element.id} Surface must exactly match its Present frame domain.`);
         }
+        if (programSpace !== undefined && (
+          element.surface.timing.frameRate.numerator !== programSpace.frameRate.numerator
+          || element.surface.timing.frameRate.denominator !== programSpace.frameRate.denominator
+        )) throw new Error(`${trackId}.${present.id}.${element.id} Surface must exactly match its Present frame domain.`);
       }
     }
   }
@@ -486,13 +486,16 @@ export function sealAudioTrack(value: Omit<AudioTrack, "digest">): AudioTrack {
   return { ...content, digest: digestOf(content) };
 }
 
-export function assertVisualTrackIdentity(track: VisualTrack, programSpace: ProgramSpace): void {
-  assertProgramSpaceIdentity(programSpace);
+export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: ProgramSpace): void {
+  if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (track.contract !== "svml.visual-track@1") throw new Error("Unsupported VisualTrack contract.");
   if (track.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
   assertNonEmpty(track.id, "VisualTrack id");
   assertSources(track.sources, track.id);
-  if (track.programSpaceDigest !== programSpace.digest) throw new Error(`${track.id} belongs to another ProgramSpace.`);
+  if (!isDigest(track.programSpaceDigest)) throw new Error(`${track.id} has an invalid ProgramSpace digest.`);
+  if (programSpace !== undefined && track.programSpaceDigest !== programSpace.digest) {
+    throw new Error(`${track.id} belongs to another ProgramSpace.`);
+  }
   const { digest: _digest, ...content } = track;
   if (!isDigest(track.digest) || track.digest !== computeVisualTrackDigest(content)) {
     throw new Error(`${track.id} VisualTrack digest does not match its contents.`);
@@ -505,17 +508,20 @@ export function assertVisualTrackIdentity(track: VisualTrack, programSpace: Prog
   }
 }
 
-export function assertAudioTrackIdentity(track: AudioTrack, programSpace: ProgramSpace): void {
-  assertProgramSpaceIdentity(programSpace);
+export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: ProgramSpace): void {
+  if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (track.contract !== "svml.audio-track@1") throw new Error("Unsupported AudioTrack contract.");
   assertNonEmpty(track.id, "AudioTrack id");
   assertSources(track.sources, track.id);
-  if (track.programSpaceDigest !== programSpace.digest) throw new Error(`${track.id} belongs to another ProgramSpace.`);
+  if (!isDigest(track.programSpaceDigest)) throw new Error(`${track.id} has an invalid ProgramSpace digest.`);
+  if (programSpace !== undefined && track.programSpaceDigest !== programSpace.digest) {
+    throw new Error(`${track.id} belongs to another ProgramSpace.`);
+  }
   const { digest: _digest, ...content } = track;
   if (!isDigest(track.digest) || track.digest !== computeAudioTrackDigest(content)) {
     throw new Error(`${track.id} AudioTrack digest does not match its contents.`);
   }
-  const totalFrames = programSpaceFrameCount(programSpace);
+  const totalFrames = programSpace === undefined ? Number.MAX_SAFE_INTEGER : programSpaceFrameCount(programSpace);
   const clipIds = new Set<string>();
   for (const clip of track.clips) {
     if (clipIds.has(clip.id)) throw new Error(`${track.id} has duplicate clip ${clip.id}.`);

@@ -15,7 +15,11 @@ export {
   sealSpeechEvidenceAudio,
   speechEvidenceSampleBoundary,
 } from "./identity.js";
-export { mediaContractsComponent } from "./component.js";
+export {
+  compositionContractsComponent,
+  mediaContractsComponent,
+  videoContractsComponents,
+} from "./component.js";
 export {
   sealMediaInspection,
   sealMediaStreamSelection,
@@ -44,6 +48,7 @@ export {
   completeSemanticMapSchema,
   compositionManifest,
   compositionManifestDigest,
+  compositionValidatorDigests,
   compositionModuleRef,
   contractTypes,
   mediaManifest,

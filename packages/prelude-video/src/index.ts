@@ -1,4 +1,8 @@
-import { videoContractManifests } from "@svml/contracts";
+import {
+  compositionContractsComponent,
+  mediaContractsComponent,
+  videoContractManifests,
+} from "@svml/contracts";
 import {
   decodeFilmSurface,
   filmManifest,
@@ -12,7 +16,10 @@ import {
   hyperframesRenderModuleRef,
   hyperframesRenderSurfaceImplementationDigest,
 } from "@svml/hyperframes-render";
-import { mediaPipelineManifest } from "@svml/media-pipeline";
+import {
+  mediaPipelineComponent,
+  mediaPipelineManifest,
+} from "@svml/media-pipeline";
 import type { NodeAuthorPackage } from "@svml/package-loader-node";
 import {
   decodeScriptSurface,
@@ -38,6 +45,11 @@ export const svmlAuthorPackage: NodeAuthorPackage = {
     },
   ],
   frontends: [svsFrontend],
+  validators: [
+    ...mediaContractsComponent.validators,
+    ...compositionContractsComponent.validators,
+    ...mediaPipelineComponent.validators,
+  ],
   textSurfaces: [
     {
       module: scriptModuleRef,

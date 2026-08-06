@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import { MemoryArtifactStore } from "@svml/driver-node";
 import {
   generationComponent,
@@ -22,6 +23,6 @@ test("generated media validators bind artifacts and result contents", async () =
   verifyGeneratedImageSet(result);
   assert.throws(() => verifyGeneratedImageSet({ ...result, model: "tampered" }), /result digest differs/u);
   const validators = new TypeValidatorRegistry();
-  generationComponent.installValidators(validators);
+  registerTypeValidatorFacets(validators, generationComponent.validators);
   assert.ok(validators.resolve(generationTypes.imageSet));
 });

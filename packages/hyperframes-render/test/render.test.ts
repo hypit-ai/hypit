@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
+  compositionContractsComponent,
   contractTypes,
   sealComposition,
   sealMuxedMedia,
@@ -59,7 +61,11 @@ import {
   mediaPipelineManifest,
   mediaPipelineProducers,
 } from "@svml/media-pipeline";
-import { TypeValidatorRegistry } from "@svml/validation";
+import {
+  admitRecord,
+  createRecordAdmitter,
+  TypeValidatorRegistry,
+} from "@svml/validation";
 import type {
   CanonicalValue,
   ModuleManifest,
@@ -103,13 +109,13 @@ const origin = {
   sourceDigest: digestOf("source:hyperframes-render-test"),
   frontendClosureDigest: digestOf("frontend:hyperframes-render-test"),
 };
-const compositionRecord = sealRecord({
+const compositionRecord = await admitRecord(closure, sealRecord({
   id: "composition",
   type: contractTypes.composition,
   value: stored(composition),
   conformance: "exact",
   origin,
-});
+}), validatorRegistry());
 const linked = link(closure, [sealTypedModule({
   id: "author:hyperframes-render-test",
   closureDigest: closure.digest,
@@ -141,7 +147,10 @@ function producerRegistry(): HostRegistry {
 
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
-  for (const component of mediaPipelineComponents) component.installValidators(registry);
+  registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
+  for (const component of mediaPipelineComponents) {
+    registerTypeValidatorFacets(registry, component.validators);
+  }
   return registry;
 }
 
@@ -397,6 +406,7 @@ test("the official render Surface lowers real author source to the same BuildPla
     resolveSource() {
       throw new Error("the fixture has no source imports");
     },
+    admitRecord: createRecordAdmitter(validatorRegistry()),
   });
   const target = resolveCompiledSourceExport(compiled, "final.video", contractTypes.mediaArtifact);
   assert.equal(target.ref.kind, "logical-output");

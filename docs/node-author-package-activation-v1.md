@@ -1,7 +1,7 @@
 # Node author package activation v1
 
-Status: implemented for trusted installed author facets. Compute, Provider and Runtime facet
-activation remain separate work.
+Status: implemented for trusted installed author facets, including Type-owner validator identities.
+Compute, Provider and Runtime facet activation remain separate work.
 
 ## 1. Purpose
 
@@ -12,7 +12,7 @@ package loader turns an explicit developer trust decision into a reproducible lo
 installed package bytes
   -> explicit lock-packages command
   -> physical declared-dependency-closure digests
-  -> declared Module / Frontend / Text Surface identities
+  -> declared Module / Frontend / Text Surface / Type Validator identities
   -> verified activation
   -> ordinary Node Compiler registries
 ```
@@ -38,7 +38,8 @@ That entry exports one `svml.node-author-package@1` object containing any number
 
 - immutable Module Manifests and author import specifiers;
 - Author Frontends;
-- Text Surface handlers with exact implementation digests.
+- Text Surface handlers with exact implementation digests;
+- Type-owner validator handlers with exact nominal Type and implementation digests.
 
 One physical package may aggregate multiple logical modules. Logical module identity and physical
 package identity remain different facts.
@@ -66,8 +67,13 @@ Lock creation is the trust action and may inspect the selected activation export
 3. hashes every package file except nested `node_modules` and `.git` directories;
 4. compares the exact artifact set before importing activation code;
 5. imports each activation entry;
-6. compares its Module, Frontend and Surface identity digest;
+6. compares its Module, Frontend, Surface and Type Validator identity digest;
 7. installs the verified facets into otherwise domain-neutral registries.
+
+The validator handler is still executable trusted code, but its identity is no longer hidden inside
+an imperative install hook. The package lock fingerprints the nominal Type and validator digest;
+the Manifest independently requires the same digest; author Record admission then executes that
+exact registered facet and writes a content-bound validation receipt before linking.
 
 Changing any locked package or dependency file requires creating a new lock. A Source import never
 updates this lock and cannot download a package.
@@ -93,8 +99,10 @@ boundary; integrity and trust are separate questions.
 ## 5. Executable proof
 
 The loader and CLI tests create an installed package unknown to the repository, lock it, compile a
-new namespaced Surface and then mutate the package bytes. The first build succeeds without changing
-the official host; the mutated package is rejected before its activation entry is reused.
+new namespaced Surface, admit its authored value through the package's Type validator and then
+mutate the package bytes. The first build succeeds without changing the official host; the authored
+Record carries the expected validator receipt; the mutated package is rejected before its activation
+entry is reused.
 
 This proves the intended update blast radius:
 
@@ -116,7 +124,9 @@ Package Activation is being completed one facet class at a time:
 
 1. **completed:** `@svml/component-kit` provides the host-neutral compute installer and official
    deterministic Producer packages no longer import `@svml/driver-node`;
-2. **next:** activate Type-owner validators through exact locked declarations;
-3. add isolation before accepting untrusted community Frontend or Surface code.
+2. **completed:** Type-owner validators are enumerable facets, their identities enter the author
+   package lock, and authored, provided, Producer and Provider values share one admission rule;
+3. **next:** extend locked activation to deterministic compute facets;
+4. add isolation before accepting untrusted community Frontend, Surface, validator or Producer code.
 
 Those steps must extend the package descriptor without granting author imports Runtime authority.

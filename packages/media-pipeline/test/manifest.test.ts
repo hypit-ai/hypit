@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
   contractTypes,
   videoContractManifests,
@@ -31,7 +32,9 @@ test("the media pipeline is an ordinary Fragment over public media contracts", (
 
 test("media identities and selection requests have package-owned semantic validators", () => {
   const registry = new TypeValidatorRegistry();
-  for (const component of mediaPipelineComponents) component.installValidators(registry);
+  for (const component of mediaPipelineComponents) {
+    registerTypeValidatorFacets(registry, component.validators);
+  }
   assert.ok(registry.resolve(contractTypes.mediaInspection));
   assert.ok(registry.resolve(contractTypes.mediaStreamSelection));
   assert.ok(registry.resolve(contractTypes.synchronizedMedia));
