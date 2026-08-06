@@ -5,6 +5,11 @@ package lock binds every selected physical package and declared dependency byte 
 Frontend, Text Surface, Producer and Type Validator identities. Loading verifies all artifacts and
 checks compute facets against their static Manifests before granting a Host registry.
 
+The current convenience assembly always installs the official `@svml/text` entry Frontend and Text
+Surface registry. Its lock/verification rules are domain-neutral, but its assembled compiler is a
+Text-authoring Node Host. Core and `@svml/compiler-node` do not require Text; this package must be
+split or named more narrowly before claiming a frontend-neutral public loader.
+
 This package is deliberately not an npm client and does not activate Provider or privileged Runtime
 services. Source `<import>` can select only an already activated author module; trusted deployment
 configuration independently chooses whether to grant author or deterministic compute registries.

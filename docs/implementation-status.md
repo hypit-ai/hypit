@@ -5,7 +5,8 @@ executes. SVML is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
 
-The v2 branch has completed one real paid vertical-video Build:
+On 2026-08-07 the v2 branch completed a real paid vertical-video acceptance sequence covering the
+combined path:
 
 ```text
 Script → Estimate → two KIE Seedance Mini generations
@@ -16,11 +17,20 @@ Script → Estimate → two KIE Seedance Mini generations
        → audio program → mux → H.264/AAC MP4
 ```
 
-The checked-in source and Runtime assembly are in
+The acceptance used two explicit Build identities. The first submitted the two real paid KIE shots
+and paused when its selected Vertex project lacked service access. After correcting deployment
+configuration, a second Build reused those accepted take Records through explicit Build-Record
+Candidates, issued no KIE Operation, ran the reachable media/WhisperX/Vertex/HyperFrames path and
+preserved `substitute` through the final Record. This is the intended recovery/substitution model,
+not an implicit cache or continuation under changed Runtime identity.
+
+The resulting artifact is a 10.07-second 480×854 H.264/AAC MP4. Frame inspection confirmed the
+speech visual, planned Caption Track and selection-located Text Track in the final Composition. The
+checked-in source and Runtime assembly are in
 [`examples/talking-film-live`](../examples/talking-film-live/README.md). Credentials, presenter
-assets and generated outputs are intentionally ignored. A second verified Build has also reused the
-two paid take Records through explicit Existing-Value Candidates, issued no KIE Need and rebuilt the
-reachable downstream graph without washing `substitute` back to `exact`.
+assets and generated outputs are intentionally ignored. A fresh uninterrupted all-`exact` paid
+acceptance remains part of automating the opt-in live harness; no implementation gap was bypassed by
+the completed Candidate Build.
 
 ## Domain-neutral system
 
@@ -62,6 +72,11 @@ Implemented:
 
 The current CLI `--pin` flag remains temporary compatibility sugar for legacy commands. New reusable
 runs should use `.svrun`; the Core still has no Pin primitive.
+
+One Host-periphery caveat remains: `@svml/package-loader-node` currently assembles the official Text
+entry Frontend as well as generic locked facets. Core and `@svml/compiler-node` do not require Text,
+but this convenience loader must be split or named more narrowly before being described as a fully
+frontend-neutral public loader.
 
 ## Environment and Provider packages
 
@@ -141,6 +156,10 @@ permission enforcement and loaded-code attestation remain release work.
 - v2: 303 passing, 3 environment-gated skips, 0 failures;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
 - generated credentials, media outputs and local databases are ignored by Git.
+
+All v2 workspace packages are currently private development packages that export TypeScript source.
+The repository is usable from a checkout, but no npm-ready package distribution exists yet. See
+[`open-source-distribution.md`](./open-source-distribution.md).
 
 The v1 root compiler and fixtures remain only as executable regression evidence during the rewrite.
 They are not the public v2 syntax, package taxonomy or compilation path.

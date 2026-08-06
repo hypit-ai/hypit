@@ -205,3 +205,19 @@ export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
     }),
   };
 }
+
+/** Compact Host presentation for routine list/status output. Detailed aliases belong to inspect. */
+export function summarizeBuildCatalog(catalog: BuildCatalogEntry, state?: BuildState) {
+  const targetOutputs = new Set(state?.request.targets.map((target) => target.output) ?? []);
+  const targetRecords = new Set(state?.plan.goals.map((goal) => goal.record) ?? []);
+  return {
+    source: catalog.source,
+    ...(catalog.run === undefined ? {} : { run: catalog.run }),
+    aliasCount: catalog.aliases.length,
+    targets: catalog.aliases
+      .filter((alias) => alias.ref.kind === "logical-output"
+        ? targetOutputs.has(alias.ref.id)
+        : targetRecords.has(alias.ref.id))
+      .map((alias) => alias.name),
+  };
+}

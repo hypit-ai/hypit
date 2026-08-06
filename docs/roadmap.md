@@ -39,11 +39,14 @@ Runtime Profile is deployment configuration. It must not enter author semantic i
 - generate implementation locks through supported CLI commands;
 - replace development implementation labels with release-built code identities;
 - settle public package names without changing logical module identity;
-- document install/update/restart behavior by facet;
+- split generic Node package activation from the convenience Text-authoring Host, or rename it;
+- emit compiled ESM/declarations and verify npm, pnpm, Yarn and Bun consumer fixtures;
 - add `LICENSE`, contribution and security policy after the project chooses its license.
 
 Explicit installation of trusted packages already works. Automatic package discovery and a package
 marketplace are not prerequisites for the first developer release.
+The current release and restart boundary is documented in
+[`open-source-distribution.md`](./open-source-distribution.md).
 
 ### A4. Trusted and untrusted extension levels
 
@@ -75,9 +78,11 @@ automatic result reuse or hidden Candidate selection.
 
 ## B. Environment and Provider work
 
-### B1. Repeatable live acceptance
+### B1. Repeatable live acceptance — manual path passed
 
-Turn `examples/talking-film-live` into an opt-in acceptance suite that:
+One paid-generation Build plus one explicit Candidate-reuse Build covered the complete combined path
+manually on 2026-08-07. Turn `examples/talking-film-live` into a credential-safe opt-in acceptance
+command that can also run a fresh uninterrupted all-`exact` Build:
 
 - never commits credentials or paid output;
 - verifies exact Endpoint coverage before spending money;
