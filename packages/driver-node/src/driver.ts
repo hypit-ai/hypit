@@ -1,4 +1,5 @@
 import { digestOf, reduce, resolveProducer } from "@svml/core";
+import type { ProducerHandlerResult } from "@svml/component-kit";
 import type {
   BuildEvent,
   BuildState,
@@ -40,7 +41,6 @@ import type {
   BlockedCommand,
   DriverJournalEntry,
   DriverRunResult,
-  ProducerHandlerResult,
   ProviderRegistration,
   ProviderHandlerResult,
 } from "./types.js";
@@ -160,7 +160,6 @@ export class NodeDriver {
               command: structuredClone(command),
               producer: structuredClone(command.producer),
               inputs: this.#producerInputs(state, command),
-              artifacts: this.artifacts,
             }),
         },
       };

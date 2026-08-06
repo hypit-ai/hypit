@@ -66,6 +66,12 @@
 > the v2 CLI exposes local follow, status and cancel without adding another authoritative queue. The existing
 > root compiler and standard library remain the executable v1 research oracle during migration.
 
+`@svml/component-kit` is the narrow compute-host port: deterministic model, media, WhisperX and
+HyperFrames packages register Producers without importing `@svml/driver-node`. Their handler
+interface provides only typed inputs and value/Need outputs—no ArtifactStore, credentials, network,
+queue or store handle. The Node Driver is one implementation of that port; trusted in-process code
+is not yet a security sandbox.
+
 The reusable non-video stack is intentionally smaller than the video distribution:
 `@svml/protocol + @svml/core` are the irreducible Kernel, `@svml/elaborator` is the normal optional
 author-to-Graph compiler, `@svml/compiler-node` is the optional reference file/package-registration

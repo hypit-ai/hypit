@@ -7,8 +7,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@svml/component-kit": "workspace:*",
     "@svml/contracts": "workspace:*",
-    "@svml/driver-node": "workspace:*",
     "@svml/elaborator": "workspace:*",
     "@svml/protocol": "workspace:*"
   }

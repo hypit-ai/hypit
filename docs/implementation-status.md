@@ -13,6 +13,10 @@ names.
 - `@svml/protocol`: immutable module, graph, build, event and provenance wire data.
 - `@svml/core`: graph/request verification, Candidate selection, reverse Demand compilation,
   OperationId deduplication, finite-plan validation and verified BuildState reduction.
+- `@svml/component-kit`: the minimal host-neutral deterministic compute SDK. Producer packages
+  register against one structural port and receive only command identity plus typed inputs; artifact
+  bytes, credentials, network, queues and stores are absent. HyperFrames, HyperFrames Render,
+  WhisperX, Media Pipeline and every exact generation model no longer import the Node Driver.
 - `@svml/driver-node`: trusted in-process Producer and Provider execution, artifact access, JSON
   persistence and command regeneration on resume. It now exposes the minimal regenerated-command
   executor port used by an external Scheduler.
@@ -235,12 +239,12 @@ the next work is:
 
 ## Deliberately not implemented
 
-- arbitrary third-party parser or Producer execution;
+- arbitrary untrusted third-party parser or Producer execution;
 - sandboxed or remotely attested third-party Type validator execution (the current registry accepts
   trusted in-process implementations only);
-- automatic npm/workspace package installation, lock-aware executable facet loading and community
-  package discovery (the registered-manifest resolver and production-style local Source resolver
-  are implemented);
+- automatic npm/workspace package installation, locked compute-facet loading and community package
+  discovery (trusted locked author facets are implemented; compute components still enter through
+  explicit deployment assembly);
 - production keychain/Vault credentials, hosted scheduling or distributed workers;
 - AWS/hosted WhisperX, HyperFrames or media Provider endpoints;
 - production multipart/ranged Artifact streaming and distributed execution adapters;

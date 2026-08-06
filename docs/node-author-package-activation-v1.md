@@ -112,11 +112,11 @@ no Provider reconfiguration
 
 ## 6. Deliberately remaining work
 
-Package Activation is being completed one facet class at a time. The next independent steps are:
+Package Activation is being completed one facet class at a time:
 
-1. extract a host-neutral compute component installer so Producer packages do not import
-   `@svml/driver-node`;
-2. activate Type-owner validators through exact locked declarations;
+1. **completed:** `@svml/component-kit` provides the host-neutral compute installer and official
+   deterministic Producer packages no longer import `@svml/driver-node`;
+2. **next:** activate Type-owner validators through exact locked declarations;
 3. add isolation before accepting untrusted community Frontend or Surface code.
 
 Those steps must extend the package descriptor without granting author imports Runtime authority.
