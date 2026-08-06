@@ -2,8 +2,9 @@
 
 Official v2 command-line assembly.
 
-Unlike `@svml/compiler-node`, this application is allowed to choose a trusted default prelude. The
-current prelude registers:
+Unlike `@svml/compiler-node`, this application is allowed to choose a trusted default prelude. It
+depends on the one ordinary `@svml/prelude-video` aggregate rather than importing each video package
+itself. The current prelude contributes:
 
 - the official Text Frontend;
 - the Script raw Surface and its audiovisual Narrative contract dependency;
@@ -17,6 +18,8 @@ From the repository:
 
 ```bash
 pnpm svml:v2 check path/to/main.svml
+pnpm svml:v2 lock-packages ./svml.packages.lock --package @example/cards --root .
+pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root .
 pnpm svml:v2 plan path/to/main.svml --target component.result
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts --follow
@@ -40,6 +43,8 @@ non-retryable failure, cancellation or `--max-wait-ms`. `status` reads durable v
 `cancel` invokes active endpoints and then records the resulting terminal Build failure. None of
 these commands creates a second ready-command queue.
 
-Automatic installation/loading of arbitrary community packages is deliberately absent. The first
-CLI runs only trusted official code; a future lock-aware loader and isolated Worker must extend the
-Host without changing Core or the Source Closure ABI.
+`@svml/package-loader-node` now supports explicitly trusted installed author packages. It verifies
+the complete physical dependency closure before executing an activation entry, then checks exact
+Module, Frontend and Surface identities. It never installs a package because source requested it and
+does not activate Provider or Runtime facets. Arbitrary untrusted community execution remains
+absent until an isolated Worker and real permission boundary exist.

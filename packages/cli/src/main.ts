@@ -1,7 +1,12 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { LocalRuntime } from "@svml/local";
+import {
+  createNodeAuthorPackageLock,
+  loadNodeAuthorPackages,
+  writeNodeAuthorPackageLock,
+} from "@svml/package-loader-node";
 
 import { createOfficialNodeCompiler } from "./host.js";
 
@@ -19,6 +24,8 @@ type ParsedArgs = {
   readonly buildId: string | undefined;
   readonly follow: boolean;
   readonly maxWaitMs: number | undefined;
+  readonly packageLock: string | undefined;
+  readonly packages: readonly string[];
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -29,6 +36,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let buildId: string | undefined;
   let follow = false;
   let maxWaitMs: number | undefined;
+  let packageLock: string | undefined;
+  const packages: string[] = [];
   let substitute = false;
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
@@ -43,6 +52,20 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--root requires a directory");
       root = resolve(value);
+      index += 1;
+      continue;
+    }
+    if (item === "--package-lock") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--package-lock requires a lock file");
+      packageLock = resolve(value);
+      index += 1;
+      continue;
+    }
+    if (item === "--package") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--package requires an installed package name");
+      packages.push(value);
       index += 1;
       continue;
     }
@@ -80,15 +103,28 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
     throw new Error(`unknown option ${item}`);
   }
-  return { command, file, root, targets, substitute, runtime, buildId, follow, maxWaitMs };
+  return {
+    command,
+    file,
+    root,
+    targets,
+    substitute,
+    runtime,
+    buildId,
+    follow,
+    maxWaitMs,
+    packageLock,
+    packages,
+  };
 }
 
 function usage(): string {
   return [
     "usage:",
-    "  svml-v2 check <file.svml> [--root directory]",
-    "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--root directory]",
-    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--build-id id] [--follow]",
+    "  svml-v2 lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
+    "  svml-v2 check <file.svml> [--package-lock file] [--root directory]",
+    "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--package-lock file]",
+    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--package-lock file] [--follow]",
     "  svml-v2 status <build-id> --runtime ./svml.runtime.ts",
     "  svml-v2 cancel <build-id> --runtime ./svml.runtime.ts",
   ].join("\n");
@@ -121,9 +157,19 @@ async function loadLocalRuntime(path: string): Promise<LocalRuntime> {
 export async function runCli(argv: readonly string[], io: CliIo): Promise<void> {
   const args = parseArgs(argv);
   if (args.file === undefined
-    || (args.command !== "check" && args.command !== "plan" && args.command !== "build"
+    || (args.command !== "lock-packages" && args.command !== "check" && args.command !== "plan" && args.command !== "build"
       && args.command !== "status" && args.command !== "cancel")) {
     throw new Error(usage());
+  }
+  if (args.command === "lock-packages") {
+    if (args.packages.length === 0) throw new Error("lock-packages requires at least one --package");
+    if (args.packageLock !== undefined) throw new Error("lock-packages does not accept --package-lock");
+    const output = resolve(args.file);
+    const root = args.root ?? dirname(output);
+    const lock = await createNodeAuthorPackageLock(args.packages, root);
+    await writeNodeAuthorPackageLock(output, lock);
+    io.write(`${JSON.stringify({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages }, null, 2)}\n`);
+    return;
   }
   if (args.command === "status" || args.command === "cancel") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
@@ -163,7 +209,14 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     }
     return;
   }
-  const compiler = createOfficialNodeCompiler({ ...(args.root === undefined ? {} : { root: args.root }) });
+  if (args.packages.length > 0) throw new Error("--package is only valid for lock-packages");
+  const activated = args.packageLock === undefined
+    ? undefined
+    : await loadNodeAuthorPackages(args.packageLock, args.root ?? dirname(args.packageLock));
+  const compiler = createOfficialNodeCompiler({
+    ...(args.root === undefined ? {} : { root: args.root }),
+    ...(activated === undefined ? {} : { packages: activated }),
+  });
   if (args.command === "check") {
     const result = await compiler.compileFile(args.file);
     io.write(`${JSON.stringify({

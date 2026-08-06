@@ -1,0 +1,24 @@
+{
+  "name": "@svml/prelude-video",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "authorActivation": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/contracts": "workspace:*",
+    "@svml/film": "workspace:*",
+    "@svml/hyperframes": "workspace:*",
+    "@svml/hyperframes-render": "workspace:*",
+    "@svml/media-pipeline": "workspace:*",
+    "@svml/script": "workspace:*",
+    "@svml/svs": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/package-loader-node": "workspace:*"
+  }
+}

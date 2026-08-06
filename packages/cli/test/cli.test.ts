@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -70,4 +70,59 @@ test("official v2 CLI closes the explicit HyperFrames render package without loa
     "@svml/speech@0.0.0-dev",
   ]);
   assert.deepEqual(result.exports, []);
+});
+
+test("CLI package lock activates an installed package without changing the official host", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-package-lock-"));
+  const packageRoot = join(root, "node_modules", "example-empty");
+  await mkdir(packageRoot, { recursive: true });
+  const implementationDigest = `sha256:${"2".repeat(64)}`;
+  await writeFile(join(packageRoot, "package.json"), JSON.stringify({
+    name: "example-empty",
+    version: "1.0.0",
+    type: "module",
+    exports: "./activation.mjs",
+    svml: { authorActivation: "./activation.mjs" },
+  }), "utf8");
+  await writeFile(join(packageRoot, "activation.mjs"), `
+    const module = { name: "example.empty", version: "1" };
+    const digest = ${JSON.stringify(implementationDigest)};
+    export default {
+      format: "svml.node-author-package@1",
+      name: "example-empty",
+      modules: [{ manifest: {
+        format: "svml.module@0", name: module.name, version: module.version,
+        dependencies: [], types: [], capabilities: [], producers: [],
+        surfaces: [{ name: "empty", tag: "Empty", mode: "structured", outputs: [],
+          implementation: { kind: "trusted-frontend-surface", locator: "example/empty", digest } }],
+      }, specifiers: ["example.empty@1"] }],
+      textSurfaces: [{ module, surface: "empty", mode: "structured", implementationDigest: digest,
+        handler() { return { records: [], components: [], fragments: [] }; } }],
+    };
+  `, "utf8");
+  const file = join(root, "main.svml");
+  const lockPath = join(root, "svml.packages.lock");
+  await writeFile(file, `<svml>
+    <import as="example" from="example.empty@1"/>
+    <example:Empty/>
+  </svml>`, "utf8");
+
+  await assert.rejects(
+    async () => await runCli(["check", file, "--root", root], { write() {} }),
+    /No registered module satisfies example\.empty@1/,
+  );
+
+  let lockOutput = "";
+  await runCli(["lock-packages", lockPath, "--package", "example-empty", "--root", root], {
+    write: (text) => { lockOutput += text; },
+  });
+  assert.equal(JSON.parse(lockOutput).ok, true);
+
+  let checkOutput = "";
+  await runCli(["check", file, "--package-lock", lockPath, "--root", root], {
+    write: (text) => { checkOutput += text; },
+  });
+  const checked = JSON.parse(checkOutput) as { readonly ok: boolean; readonly modules: readonly string[] };
+  assert.equal(checked.ok, true);
+  assert.deepEqual(checked.modules, ["example.empty@1"]);
 });

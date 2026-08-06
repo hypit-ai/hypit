@@ -44,11 +44,16 @@ inside a historical design record does not make that record normative.
     and implemented local Providers.
 17. [`../services/whisperx/README.md`](../services/whisperx/README.md) — installation, runtime
     identity, path confinement and queue boundary for the implemented warm local WhisperX service.
+18. [`node-author-package-activation-v1.md`](./node-author-package-activation-v1.md) — implemented
+    lock-aware activation for trusted installed Module, Frontend and Text Surface facets, including
+    the exact boundary that keeps source imports away from Provider and Runtime authority.
 
 The executable v2 Node entrypoints are documented in
-[`../packages/compiler-node/README.md`](../packages/compiler-node/README.md) and
+[`../packages/compiler-node/README.md`](../packages/compiler-node/README.md),
+[`../packages/package-loader-node/README.md`](../packages/package-loader-node/README.md) and
 [`../packages/cli/README.md`](../packages/cli/README.md). The former is domain-neutral compiler-host
-infrastructure; the latter is the official trusted application assembly.
+infrastructure; the loader is the trusted installed-package boundary; the latter is the official
+application assembly.
 
 ## Current architecture records
 
