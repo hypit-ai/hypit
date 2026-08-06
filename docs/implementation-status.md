@@ -131,8 +131,10 @@ names.
 - `@svml/svs`: a minimal record-only alternate Frontend for `<sheet version="1">`. It parses dotted
   rule names and primitive Recipe properties into generic immutable Recipe Records. It deliberately
   has no video property vocabulary, selector cascade or inheritance.
-- `@svml/speech-take`: one atomic speech Product with deterministic audio-basis, generic VisualTrack
-  and generic AudioTrack projections.
+- `@svml/speech-take`: one atomic speech Product with deterministic ProgramSpace, audio-basis,
+  generic VisualTrack and generic AudioTrack projections. All four Producers are enumerable
+  compute facets, checked against the package Manifest and physically included in the official
+  prelude lock without a Core, Driver or Runtime registration.
 - `@svml/whisperx`, `@svml/speech-align`, `@svml/caption`: one-pass evidence, direct authoritative
   Script alignment, timed-caption planning and official style-to-VisualTrack lowering.
 - `@svml/hyperframes`: deterministic generic Composition-to-HTML compilation with content-addressed
@@ -234,7 +236,7 @@ projection, byte-identical sidecar staging and a two-worker silent HyperFrames M
 Because the team is prioritizing external capability plumbing before additional video vocabulary,
 the next work is:
 
-1. implement the remaining official deterministic Speech/Align/Caption component facets and
+1. implement the remaining official deterministic Speech Align/Caption component facets and
    namespaced generation, Speech and Track Surfaces specified by `examples/talking-film-golden`;
 2. wire those installed components and local Providers into one real source-to-final-video build;
 3. add AWS media/HyperFrames/WhisperX Providers only when the team needs Lambda execution; they must return the same
