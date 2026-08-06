@@ -23,14 +23,14 @@ body { letter-spacing: -0.012em; }
 .VPHome { margin-bottom: 0 !important; }
 .VPNav { backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,.08); }
 .VPNavBarTitle .title {
-  color: #fff;
-  font-family: "Newsreader", Georgia, serif;
-  font-size: 21px;
-  font-style: italic;
-  font-optical-sizing: auto;
-  font-weight: 500;
-  letter-spacing: -.018em;
+  color: #dcfbff;
+  font-family: "Cutive Mono", "DM Mono", monospace;
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: .07em;
   padding-right: .12em;
+  text-shadow: 0 0 1px rgba(255,255,255,.9), 0 0 7px rgba(103,232,249,.38), 0 0 18px rgba(34,211,238,.18);
+  text-transform: uppercase;
 }
 .VPButton.brand { color: #fff !important; border-color: #ec4899 !important; background: #ec4899 !important; }
 .VPButton.brand:hover { border-color: #db2777 !important; background: #db2777 !important; }
@@ -56,14 +56,14 @@ body { letter-spacing: -0.012em; }
   margin: 0;
   border: 0;
   padding: 0 .18em .08em .035em;
-  color: #fff;
-  font-family: "Newsreader", Georgia, serif;
-  font-size: clamp(54px,7.5vw,98px);
-  font-style: italic;
-  font-optical-sizing: auto;
-  font-weight: 500;
-  line-height: .92;
-  letter-spacing: -.036em;
+  color: #dcfbff;
+  font-family: "Cutive Mono", "DM Mono", monospace;
+  font-size: clamp(52px,7.2vw,92px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .07em;
+  text-shadow: 0 0 1px rgba(255,255,255,.95), 0 0 10px rgba(103,232,249,.42), 0 0 30px rgba(34,211,238,.22);
+  text-transform: uppercase;
 }
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); }
 .hero-statement-viewport-en { height: clamp(108px,12vw,142px); margin-top: 8px; }
