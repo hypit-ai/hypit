@@ -11,9 +11,15 @@ export type OfficialCompilerOptions = {
   readonly packages?: readonly NodePackageActivation[];
 };
 
+export function officialNodePackages(
+  packages?: readonly NodePackageActivation[],
+): readonly NodePackageActivation[] {
+  return packages ?? [videoPrelude];
+}
+
 /** The CLI names only an ordinary replaceable prelude; no domain package is registered here. */
 export function createOfficialNodeCompiler(options: OfficialCompilerOptions = {}): NodeCompiler {
-  return createActivatedNodeCompiler(options.packages ?? [videoPrelude], {
+  return createActivatedNodeCompiler(officialNodePackages(options.packages), {
     ...(options.root === undefined ? {} : { root: options.root }),
   });
 }
