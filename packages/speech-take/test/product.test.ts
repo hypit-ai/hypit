@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import {
+  registerProducerFacets,
+  registerTypeValidatorFacets,
+} from "@svml/component-kit";
 import {
   compositionContractsComponent,
   compositionValidatorDigests,
@@ -34,12 +37,11 @@ import type {
   TypeRef,
 } from "@svml/protocol";
 import {
-  projectSpeechAudioImplementationDigest,
   projectSpeechAudio,
   projectSpeechAudioTrack,
   projectSpeechProgramSpace,
-  projectSpeechVisualImplementationDigest,
   projectSpeechVisual,
+  speechTakeComponent,
   speechTakeManifest,
   speechTakeProducers,
 } from "@svml/speech-take";
@@ -287,6 +289,18 @@ test("SpeechBasis is one Product and audio/visual are ordinary shared projection
   );
 });
 
+test("the component enumerates every Manifest-declared SpeechTake projection", () => {
+  const declared = speechTakeManifest.producers.map((producer) => ({
+    name: producer.name,
+    digest: producer.implementation.digest,
+  })).sort((left, right) => left.name.localeCompare(right.name));
+  const implemented = speechTakeComponent.producers.map((facet) => ({
+    name: facet.producer.name,
+    digest: facet.implementationDigest,
+  })).sort((left, right) => left.name.localeCompare(right.name));
+  assert.deepEqual(implemented, declared);
+});
+
 test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   const take = sampleTake();
   const visual = projectSpeechVisual(take);
@@ -336,30 +350,7 @@ test("the Build Machine executes one shared generation for both projected output
     generations += 1;
     return { outputs: { take: { kind: "inline", value: sampleTake() } }, needs: {} };
   });
-  registry.registerProducer(
-    speechTakeProducers.projectAudio,
-    projectSpeechAudioImplementationDigest,
-    ({ inputs }) => {
-      const value = inputs.basis?.value;
-      assert.equal(value?.kind, "inline");
-      return {
-        outputs: { audio: { kind: "inline", value: projectSpeechAudio(value.value as unknown as SpeechBasis) } },
-        needs: {},
-      };
-    },
-  );
-  registry.registerProducer(
-    speechTakeProducers.projectVisual,
-    projectSpeechVisualImplementationDigest,
-    ({ inputs }) => {
-      const value = inputs.basis?.value;
-      assert.equal(value?.kind, "inline");
-      return {
-        outputs: { visual: { kind: "inline", value: projectSpeechVisual(value.value as unknown as SpeechBasis) } },
-        needs: {},
-      };
-    },
-  );
+  registerProducerFacets(registry, speechTakeComponent.producers);
   const result = await new NodeDriver({ registry, validators: validatorRegistry() }).run(
     build({ "opening.audio": "exact", "opening.visual": "exact" }),
   );

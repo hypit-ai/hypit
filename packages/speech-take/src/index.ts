@@ -1,3 +1,4 @@
+export { speechTakeComponent } from "./component.js";
 export {
   speechTakeManifest,
   speechTakeManifestDigest,

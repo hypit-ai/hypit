@@ -30,6 +30,10 @@ import {
   scriptModuleRef,
   scriptSurfaceImplementationDigest,
 } from "@svml/script";
+import {
+  speechTakeComponent,
+  speechTakeManifest,
+} from "@svml/speech-take";
 import { svsFrontend, svsManifest } from "@svml/svs";
 
 export const svmlPackage: NodePackageActivation = {
@@ -41,6 +45,7 @@ export const svmlPackage: NodePackageActivation = {
     { manifest: svsManifest },
     { manifest: hyperframesManifest },
     { manifest: mediaPipelineManifest },
+    { manifest: speechTakeManifest },
     { manifest: filmManifest, specifiers: ["@svml/film", "@svml/film@1"] },
     {
       manifest: hyperframesRenderManifest,
@@ -51,6 +56,7 @@ export const svmlPackage: NodePackageActivation = {
   components: [
     ...videoContractsComponents,
     mediaPipelineComponent,
+    speechTakeComponent,
     hyperframesComponent,
     hyperframesRenderComponent,
   ],

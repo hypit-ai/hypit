@@ -470,6 +470,9 @@ importers:
       '@svml/script':
         specifier: workspace:*
         version: link:../script
+      '@svml/speech-take':
+        specifier: workspace:*
+        version: link:../speech-take
       '@svml/svs':
         specifier: workspace:*
         version: link:../svs
@@ -759,6 +762,9 @@ importers:
 
   packages/speech-take:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -766,9 +772,6 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
-      '@svml/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
       '@svml/core':
         specifier: workspace:*
         version: link:../core

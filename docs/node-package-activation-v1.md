@@ -124,6 +124,8 @@ Tests create installed packages unknown to the repository and prove all of the f
 - a namespaced Surface compiles without a Core or CLI registration change;
 - its authored value passes its locked Type-owner Validator and carries a validation receipt;
 - its deterministic Producer is discovered as enumerable locked data;
+- the installed official video prelude physically closes over `@svml/speech-take` and exposes its
+  four deterministic Product projections without a Host registration list;
 - `createProjectLocalRuntime({ packageLock })` executes that Producer without a deployment-source
   component list;
 - an unlocked or differently locked BuildRequest is rejected by that Host;
