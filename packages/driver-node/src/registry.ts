@@ -1,4 +1,7 @@
 import type {
+  ProducerRegistrar,
+} from "@svml/component-kit";
+import type {
   CapabilityRef,
   Digest,
   Need,
@@ -61,7 +64,7 @@ export function providerReturnKey(ref: TypeRef): string {
   return `${moduleKey(ref.module)}#${ref.name}`;
 }
 
-export class HostRegistry {
+export class HostRegistry implements ProducerRegistrar {
   readonly #producers = new Map<string, ProducerRegistration>();
 
   registerProducer(

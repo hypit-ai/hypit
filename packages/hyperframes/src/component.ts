@@ -16,7 +16,7 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 /** Trusted deterministic lowering only; this component never renders frames or reads Artifacts. */
 export const hyperframesComponent = {
   name: "@svml/hyperframes",
-  install(registry: import("@svml/driver-node").HostRegistry): void {
+  install(registry: import("@svml/component-kit").ProducerRegistrar): void {
     registry.registerProducer(
       hyperframesProducers.compile,
       compileHyperframesImplementationDigest,

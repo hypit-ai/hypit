@@ -19,7 +19,7 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 
 export const whisperXComponent = {
   name: "@svml/whisperx",
-  install(registry: import("@svml/driver-node").HostRegistry): void {
+  install(registry: import("@svml/component-kit").ProducerRegistrar): void {
     registry.registerProducer(
       whisperXProducers.request,
       whisperXImplementationDigests.request,

@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { ProducerRegistrar } from "@svml/component-kit";
 import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@svml/contracts";
 import type { SpeechBasis, SpeechEvidenceAudio } from "@svml/contracts";
 import { digestOf } from "@svml/protocol";
+import type { Digest, ProducerRef } from "@svml/protocol";
 import {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
+  whisperXComponent,
+  whisperXProducers,
   whisperXRequestForEvidenceAudio,
 } from "@svml/whisperx";
 
@@ -100,4 +104,20 @@ test("WhisperX normalization verifies its model-specific result before lowering 
     }),
     /alignment digest/u,
   );
+});
+
+test("WhisperX installs into the host-neutral compute port without a Node Driver", () => {
+  const registrations: { readonly producer: ProducerRef; readonly digest: Digest }[] = [];
+  const registrar: ProducerRegistrar = {
+    registerProducer(producer, implementationDigest) {
+      registrations.push({ producer, digest: implementationDigest });
+    },
+  };
+
+  whisperXComponent.install(registrar);
+
+  assert.deepEqual(registrations.map((item) => item.producer), [
+    whisperXProducers.request,
+    whisperXProducers.normalize,
+  ]);
 });

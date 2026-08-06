@@ -1,4 +1,3 @@
-import type { HostRegistry } from "@svml/driver-node";
 import type { TypeValidatorRegistrar } from "@svml/validation";
 
 import {
@@ -18,7 +17,6 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
 /** Host-side semantic refinements for the shared generated-media contracts. */
 export const generationComponent = {
   name: "@svml/generation",
-  install(_registry: HostRegistry): void {},
   installValidators(registry: TypeValidatorRegistrar): void {
     registry.register(generationTypes.imageSet, generationValidatorDigests.imageSet, ({ value }) => {
       verifyGeneratedImageSet(inline(value, "GeneratedImageSet"));

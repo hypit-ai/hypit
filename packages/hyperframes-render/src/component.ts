@@ -9,7 +9,7 @@ import { hyperframesRenderProducers } from "./manifest.js";
 /** Declares the visual Need. It contains no renderer, queue, credentials or deployment choice. */
 export const hyperframesRenderComponent = {
   name: "@svml/hyperframes-render",
-  install(registry: import("@svml/driver-node").HostRegistry): void {
+  install(registry: import("@svml/component-kit").ProducerRegistrar): void {
     registry.registerProducer(
       hyperframesRenderProducers.requestVisual,
       requestHyperframesVisualImplementationDigest,
