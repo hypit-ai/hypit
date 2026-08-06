@@ -15,6 +15,7 @@ import {
 } from "@svml/package-loader-node";
 import {
   LocalBuildScheduler,
+  MemoryBuildCatalog,
   RuntimeModuleRegistry,
   localSchedulerOptionsFromClosure,
   resolveRuntimeProfile,
@@ -117,6 +118,7 @@ function verifyEndpointPackages(packages: readonly EndpointPackage[]): void {
 export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
+  const buildCatalog = options.buildCatalog ?? new MemoryBuildCatalog();
   if (options.closure !== undefined
     && (options.scheduling?.maxConcurrency !== undefined
       || options.scheduling?.laneLimits !== undefined)) {
@@ -181,14 +183,19 @@ export async function createLocalRuntime(
     follow: LocalBuildOptions = {},
   ) => {
     await stageAttachments(request);
+    if (request.catalog !== undefined) {
+      assert(request.catalog.core === request.state.id,
+        `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
+    }
     const startedAt = Date.now();
     const pollIntervalMs = nonNegativeInteger(follow.pollIntervalMs ?? 1_000, "pollIntervalMs");
     const maxWaitMs = follow.maxWaitMs === undefined
       ? undefined
       : nonNegativeInteger(follow.maxWaitMs, "maxWaitMs");
+    let [result] = await scheduler.run([scheduled(request)]);
+    if (result === undefined) throw new Error(`Local Scheduler returned no result for ${request.id}`);
+    if (request.catalog !== undefined) await buildCatalog.record(request.id, request.catalog);
     while (true) {
-      const [result] = await scheduler.run([scheduled(request)]);
-      if (result === undefined) throw new Error(`Local Scheduler returned no result for ${request.id}`);
       if (follow.follow !== true || result.status !== "paused") return result;
       const pending = result.journal.filter((item) => item.status === "pending");
       if (pending.length === 0) return result;
@@ -197,19 +204,34 @@ export async function createLocalRuntime(
       const delay = Math.max(0, wakeAt - now);
       if (maxWaitMs !== undefined && now - startedAt + delay > maxWaitMs) return result;
       await wait(delay, follow.signal);
+      [result] = await scheduler.run([scheduled(request)]);
+      if (result === undefined) throw new Error(`Local Scheduler returned no result for ${request.id}`);
     }
   };
   return {
     build: runBuild,
     async buildMany(requests) {
       await Promise.all(requests.map(stageAttachments));
-      return await scheduler.run(requests.map(scheduled));
+      for (const request of requests) {
+        if (request.catalog === undefined) continue;
+        assert(request.catalog.core === request.state.id,
+          `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
+      }
+      const results = await scheduler.run(requests.map(scheduled));
+      await Promise.all(requests.map(async (request) => {
+        if (request.catalog !== undefined) await buildCatalog.record(request.id, request.catalog);
+      }));
+      return results;
     },
     async status(build) {
       return {
         build: await options.buildStore.read(build),
+        catalog: await buildCatalog.read(build),
         operations: options.operationStore === undefined ? [] : await options.operationStore.list({ build }),
       };
+    },
+    async builds() {
+      return await buildCatalog.list();
     },
     async cancel(build) {
       if (options.operationStore === undefined) throw new Error("Local Runtime has no OperationStore");
@@ -283,6 +305,7 @@ export async function createProjectLocalRuntime(
     });
     const runtime = await createLocalRuntime({
       buildStore: services.buildStore,
+      buildCatalog: projectServices.catalog,
       operationStore: services.operationStore,
       artifactStore: services.artifactStore,
       credentialStore: services.credentialStore,
@@ -304,14 +327,15 @@ export async function createProjectLocalRuntime(
       build: runtime.build,
       buildMany: runtime.buildMany,
       status: runtime.status,
+      builds: runtime.builds,
       cancel: runtime.cancel,
       readArtifact: runtime.readArtifact,
       close() {
-        return services.close();
+        return projectServices.close();
       },
     };
   } catch (error) {
-    await services.close();
+    await projectServices.close();
     throw error;
   }
 }

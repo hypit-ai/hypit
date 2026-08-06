@@ -29,6 +29,13 @@ test("declarative Runtime config starts the domain-neutral local defaults", asyn
 });
 
 test("Runtime config is closed data and rejects unknown environment authority", () => {
+  assert.equal(parseRuntimeConfig({
+    format: "svml.runtime-config@1",
+    catalogPath: ".svml/catalog.sqlite",
+    services: [],
+    endpoints: [],
+    permissions: [],
+  }).catalogPath, ".svml/catalog.sqlite");
   assert.throws(() => parseRuntimeConfig({
     format: "svml.runtime-config@1",
     services: [],
