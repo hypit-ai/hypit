@@ -32,8 +32,8 @@ pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
 
 `check` is usable for the complete provider-free author graph in
 `examples/talking-film-graph-check`. `plan` is fully implemented by the generic Node compiler. The
-production golden still awaits the explicit Gemini Caption package and real assets; the CLI does
-not fabricate those missing facts.
+live example now executes the explicit Vertex Gemini Caption package and real local/remote
+Endpoints; the CLI never fabricates missing facts.
 
 `build` compiles the same locked BuildState and passes it to a trusted local Runtime config module.
 The default Build identity is content-derived, so the same invocation resumes durable local state;
@@ -50,14 +50,15 @@ these commands creates a second ready-command queue.
 selected Runtime ArtifactStore and writes the requested file. It does not treat a CAS path as a
 public filename or bypass Record identity verification.
 
-`--pin output=<prior-build-id>` is intentionally CLI language, not a Core primitive. The Host
+`--pin output=<prior-build-id>` is temporary CLI compatibility language, not a Core primitive. The Host
 verifies the prior Build only to extract a typed Record, attaches it as an ordinary zero-input
-`substitute` Candidate, and adds an explicit binding to a newly compiled BuildRequest. It does not
+`substitute` Candidate, and adds an explicit Satisfaction to a newly compiled BuildRequest. It does not
 prove that the old Graph, prompt or semantic meaning matches the current output. Consequently the
 command requires `--accept-substitute`. Upstream work behind that selected Candidate is not
 demanded, while every unbound reachable output follows the ordinary graph. The prior artifact must
 still exist in the ArtifactStore selected by the Runtime. This is a new Build with a new identity;
-it never resumes or copies the prior Build's outstanding Commands.
+it never resumes or copies the prior Build's outstanding Commands. The planned `.svrun` Frontend
+will replace this narrow flag with the general Run Graph, Target and Satisfaction language.
 
 `@svml/package-loader-node` supports explicitly trusted installed implementation packages. It
 verifies the complete physical dependency closure before executing an activation entry, then checks

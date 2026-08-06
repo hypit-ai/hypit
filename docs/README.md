@@ -1,118 +1,56 @@
-# SVML documentation map
+# Documentation
 
-SVML separates normative contracts, implementation status, architecture decisions and historical
-evidence. A document's directory and the table below determine its authority; a newer-looking date
-inside a historical design record does not make that record normative.
+SVML documentation is intentionally split by authority. Git history preserves discarded designs;
+the working tree contains only documents that should inform current implementation or public use.
 
-## Read this first
+## Start here
 
-1. [`../README.md`](../README.md) — project purpose, supported commands and repository entrypoint.
-2. [`implementation-status.md`](./implementation-status.md) — what the v2 rewrite actually
-   implements now and what remains planned.
-3. [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md) — current domain-free Kernel laws.
-4. [`graph-first-value-boundary-v1.md`](./graph-first-value-boundary-v1.md) — the implemented law
-   that SVML lowers to a graph and that values contain intrinsic meaning while Graph, Derivation and
-   Receipt own relationships and lineage.
-5. [`implementation-status.md#domain-neutral-package-boundary`](./implementation-status.md#domain-neutral-package-boundary)
-   — the minimal package stack for video and non-video domains.
-6. [`../spec/script-surface-v1.md`](../spec/script-surface-v1.md) — current official Script Surface
-   target.
-7. [`../spec/track-composition-v1.md`](../spec/track-composition-v1.md) — implemented flat Track and
-   Composition law and the generic HyperFrames lowering boundary.
-8. [`../spec/track-expressiveness-v1.md`](../spec/track-expressiveness-v1.md) — executable freeze gate
-   for old-system Text, Caption, media-box, stacking and materialization behavior. It explains why
-   the current Track is a contract candidate rather than a public compatibility promise.
-9. [`../spec/hyperframes-visual-ir-v1.md`](../spec/hyperframes-visual-ir-v1.md) — the one versioned,
-   closed terminal visual language shared by video components; not a Core or author-component API.
-10. [`../spec/caption-program-v1.md`](../spec/caption-program-v1.md) — implemented total default
-    Style, ordered Role/Selection replacement, display-atom planner and timing-join laws.
-11. [`../examples/talking-film-golden/README.md`](../examples/talking-film-golden/README.md) — the
-   canonical two-speaker v2 authoring target. Its Script projections, Caption Style cascade,
-   display-only Gemini planning and graph lowering are implemented; real assets and credentials
-   remain deployment inputs.
-12. [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md) — target
-   naming and ownership for framework, video, Provider, Runtime, queues, stores and distributions.
-13. [`../spec/author-surface-binding-v1.md`](../spec/author-surface-binding-v1.md) — implemented
-    package-owned binding from generic imported Records such as SVS Recipes into typed Programs,
-    AuthorComponents and Graph Fragments.
-14. [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — implemented local
-    SQLite/filesystem Runtime assembly, trusted configuration, recovery law and environment swaps.
-15. [`kie-generation-modules-v1.md`](./kie-generation-modules-v1.md) — implemented seven exact
-    generation model modules, shared generated-media Products and the recoverable KIE Provider.
-16. [`kie-live-smoke-2026-08-06.md`](./kie-live-smoke-2026-08-06.md) — credential-free deployment
-    evidence from seven representative live model calls and one synthetic-reference upload.
-17. [`media-inspection-and-normalization-v1.md`](./media-inspection-and-normalization-v1.md) —
-    implemented all-stream inspection, attached-picture-safe selection, shared-origin A/V
-    normalization and the boundary that prevents embedded AAC from becoming speech by inference.
-18. [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md) — the implemented rule that
-    planning is ordinary code while probe/decode/mix/render/mux are explicit Provider Needs, plus
-    the visual/audio/mux split for final HyperFrames output, canonical WhisperX evidence-audio path
-    and implemented local Providers.
-19. [`../services/whisperx/README.md`](../services/whisperx/README.md) — installation, runtime
-    identity, path confinement and queue boundary for the implemented warm local WhisperX service.
-20. [`node-package-activation-v1.md`](./node-package-activation-v1.md) — implemented trusted author
-    and deterministic compute facet locking, with the exact boundary that keeps source imports away
-    from Provider and Runtime authority.
-21. [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md) — implemented
-    display-atom planning boundary, old Vertex execution evidence and no-text-rewrite contract.
+1. [`../README.md`](../README.md) — project overview and development entrypoint.
+2. [`architecture.md`](./architecture.md) — current Author Graph, Run Graph, Satisfaction, Runtime
+   and package boundaries.
+3. [`implementation-status.md`](./implementation-status.md) — what actually executes today.
+4. [`roadmap.md`](./roadmap.md) — active domain-neutral and environment/Provider work; deferred video
+   work is separated explicitly.
+5. [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md) — compact normative Kernel laws for the
+   current `@2` wire data.
 
-The executable v2 Node entrypoints are documented in
-[`../packages/compiler-node/README.md`](../packages/compiler-node/README.md),
-[`../packages/package-loader-node/README.md`](../packages/package-loader-node/README.md) and
-[`../packages/cli/README.md`](../packages/cli/README.md). The former is domain-neutral compiler-host
-infrastructure; the loader is the trusted installed-package boundary; the latter is the official
-application assembly.
+## Domain-neutral implementation records
 
-## Current architecture records
+- [`graph-first-value-boundary-v1.md`](./graph-first-value-boundary-v1.md) — graph edges own
+  dependency truth; values contain only intrinsic meaning.
+- [`node-package-activation-v1.md`](./node-package-activation-v1.md) — trusted installed package
+  locking and facet activation.
+- [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — local SQLite/filesystem
+  Runtime, recovery and environment replacement.
+- package READMEs under [`../packages`](../packages) — executable APIs and ownership.
 
-- [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)
-  records why the `LogicalOutput / Candidate / Operation / BuildRequest` model replaced the earlier
-  Node/Pin model. It also contains the current implementation ledger. It is not a substitute for the
-  compact normative Kernel specification.
-- [`runtime-package-topology-v2.md`](./runtime-package-topology-v2.md) defines the target separation
-  among Runtime Profile, one authoritative Build Scheduler, Provider Endpoints, queues, credentials
-  and stores. The environment-neutral executor, sealed Runtime Profile/Closure, in-memory
-  BuildStore/OperationStore CAS, queue-free local Scheduler and recoverable Endpoint lifecycle are
-  implemented. SQLite Build/Operation stores, filesystem/S3 artifacts and the `@svml/local`
-  developer assembly are now implemented together with the generic Runtime service-package ABI,
-  Endpoint Kit, environment credential
-  injection, bounded Lambda/process transports, wake/follow, retry, status and cancellation, plus
-  local KIE/media/HyperFrames/WhisperX execution packages; distributed leases and production hosted
-  endpoints are not. Its older example package
-  names are superseded by
-  [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md).
-- [`intent-first-modular-compilation.md`](./intent-first-modular-compilation.md) records the language,
-  Frontend, Bootstrap, Surface and module-boundary reasoning. Its older Kernel terminology is
-  historical.
+## Video-domain specifications
 
-## Executable v1 research oracle
+- [`../spec/script-surface-v1.md`](../spec/script-surface-v1.md)
+- [`../spec/author-surface-binding-v1.md`](../spec/author-surface-binding-v1.md)
+- [`../spec/caption-program-v1.md`](../spec/caption-program-v1.md)
+- [`../spec/track-composition-v1.md`](../spec/track-composition-v1.md)
+- [`../spec/track-expressiveness-v1.md`](../spec/track-expressiveness-v1.md)
+- [`../spec/hyperframes-visual-ir-v1.md`](../spec/hyperframes-visual-ir-v1.md)
 
-These files explain the root compiler and standard library that remain executable while v2 is
-rebuilt. They are not the v2 Kernel contract:
+These video contracts are executable candidates, not yet an open-source compatibility freeze.
 
-- [`../spec/source-architecture-draft.md`](../spec/source-architecture-draft.md)
-- [`compiler-prototype.md`](./compiler-prototype.md)
-- [`speech-program-caption-v1.md`](./speech-program-caption-v1.md)
-- [`../spec/core-kernel-v0.md`](../spec/core-kernel-v0.md)
+## Video execution records
 
-## Superseded design records
+- [`kie-generation-modules-v1.md`](./kie-generation-modules-v1.md)
+- [`media-inspection-and-normalization-v1.md`](./media-inspection-and-normalization-v1.md)
+- [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md)
+- [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
+- [`../services/whisperx/README.md`](../services/whisperx/README.md)
+- [`../examples/talking-film-live/README.md`](../examples/talking-film-live/README.md)
 
-- [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md) — historical `@0`
-  Graph/Alternative/Pin construction.
-- [`runtime-host-architecture-draft.md`](./runtime-host-architecture-draft.md) — historical
-  ExecutionBundle/EffectRequest host design.
+## Documentation rules
 
-Historical documents stay in the repository because they explain rejected designs and migration
-decisions. New implementation work must not copy an interface from them unless a current
-specification explicitly adopts it.
+- `spec/` states normative laws and versioned contracts.
+- `docs/architecture.md` states current ownership and boundaries.
+- `docs/implementation-status.md` states repository reality.
+- `docs/roadmap.md` states planned work and non-goals.
+- package and example READMEs explain one executable unit.
 
-## Documentation rule
-
-- `spec/` states stable laws and public data contracts.
-- `docs/implementation-status.md` states what exists now.
-- current architecture records explain decisions and future boundaries.
-- superseded records are evidence only.
-
-Do not append a new design generation to an old document. Change a current specification when the
-law changes, add a focused architecture decision when the reason matters, and update the status
-page when implementation moves.
+Do not preserve a superseded design in the current tree merely as a discussion log. Keep durable
+decisions in the current architecture/specification, and rely on Git history for rejected drafts.
