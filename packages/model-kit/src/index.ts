@@ -1,6 +1,6 @@
 import type {
   ComponentPackage,
-  ProducerRegistrar,
+  ProducerFacet,
   TypeValidatorFacet,
 } from "@svml/component-kit";
 import { sealGraphFragment } from "@svml/elaborator";
@@ -53,7 +53,7 @@ export type ExactModelModule = {
   readonly endpoints: Readonly<Record<string, ExactModelEndpoint>>;
   readonly component: ComponentPackage & {
     readonly validators: readonly TypeValidatorFacet[];
-    install(registry: ProducerRegistrar): void;
+    readonly producers: readonly ProducerFacet[];
   };
 };
 
@@ -185,21 +185,17 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
           item.spec.verifyRequest(inlineRequest(value, item.spec.key));
         },
       })),
-      install(registry) {
-        for (const item of endpointData) {
-          registry.registerProducer(
-            item.producer,
-            item.implementationDigest,
-            ({ inputs }) => {
-              const requestRecord = inputs.request;
-              assert(requestRecord !== undefined, `${item.spec.key} request input is missing`);
-              const request = inlineRequest(requestRecord.value, item.spec.key);
-              item.spec.verifyRequest(request);
-              return { outputs: {}, needs: { generation: request } };
-            },
-          );
-        }
-      },
+      producers: endpointData.map((item) => ({
+        producer: item.producer,
+        implementationDigest: item.implementationDigest,
+        handler: ({ inputs }) => {
+          const requestRecord = inputs.request;
+          assert(requestRecord !== undefined, `${item.spec.key} request input is missing`);
+          const request = inlineRequest(requestRecord.value, item.spec.key);
+          item.spec.verifyRequest(request);
+          return { outputs: {}, needs: { generation: request } };
+        },
+      })),
     },
   };
 }

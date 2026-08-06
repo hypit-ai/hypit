@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
 import {
+  registerProducerFacets,
   registerTypeValidatorFacets,
 } from "@svml/component-kit";
 import {
@@ -18,6 +19,10 @@ import {
   NodeDriver,
   ProviderRegistry,
 } from "@svml/driver-node";
+import {
+  loadNodePackageSet,
+  nodePackageComponents,
+} from "@svml/package-loader-node";
 import {
   LocalBuildScheduler,
   RuntimeModuleRegistry,
@@ -150,9 +155,13 @@ export async function createLocalRuntime(
   const hosts = new HostRegistry();
   const providers = new ProviderRegistry();
   const validators = options.validators ?? new TypeValidatorRegistry();
+  const componentNames = new Set<string>();
   for (const component of options.components ?? []) {
+    assert(component.name.trim().length > 0, "Component package name must not be empty");
+    assert(!componentNames.has(component.name), `Component package ${component.name} is configured twice`);
+    componentNames.add(component.name);
     registerTypeValidatorFacets(validators, component.validators ?? []);
-    await component.install?.(hosts);
+    registerProducerFacets(hosts, component.producers ?? []);
   }
   for (const provider of options.providers ?? []) await provider.install(providers);
   if (options.closure !== undefined) {
@@ -169,6 +178,9 @@ export async function createLocalRuntime(
     ...(options.credentialStore === undefined ? {} : { credentials: options.credentialStore }),
     ...(options.operationStore === undefined ? {} : { operations: options.operationStore }),
     validators,
+    ...(options.implementationClosure === undefined
+      ? {}
+      : { implementationClosure: options.implementationClosure }),
   });
   const closureScheduling = options.closure === undefined
     ? {}
@@ -235,6 +247,13 @@ export async function createProjectLocalRuntime(
     throw new Error("artifactPath configures the default filesystem store and cannot accompany artifacts");
   }
   const root = resolve(options.root ?? process.cwd());
+  const lockedPackageSet = options.packageLock === undefined
+    ? undefined
+    : await loadNodePackageSet(resolve(root, options.packageLock), root);
+  const lockedComponents = lockedPackageSet === undefined
+    ? []
+    : nodePackageComponents(lockedPackageSet.packages);
+  const configuredComponents = [...lockedComponents, ...(options.components ?? [])];
   const state = new SqliteRuntimeState(resolve(root, options.statePath ?? ".svml/runtime.sqlite"));
   const defaultArtifacts: NodeArtifactStorePackage = {
     name: "@svml/artifact-store-fs",
@@ -294,7 +313,9 @@ export async function createProjectLocalRuntime(
       operationStore: state.operations,
       artifactStore: artifacts.store,
       credentialStore: new EnvironmentCredentialStore(),
-      ...(options.components === undefined ? {} : { components: options.components }),
+      ...(configuredComponents.length === 0
+        ? {}
+        : { components: configuredComponents }),
       providers: providerPackages,
       closure: { modules, value: closure, allowedPermissions },
       scheduling: {
@@ -303,6 +324,7 @@ export async function createProjectLocalRuntime(
           : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
       },
       ...(options.validators === undefined ? {} : { validators: options.validators }),
+      ...(lockedPackageSet === undefined ? {} : { implementationClosure: lockedPackageSet.lock.digest }),
     });
     return {
       build: runtime.build,

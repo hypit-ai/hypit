@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "svml": {
-    "authorActivation": "./src/index.ts"
+    "activation": "./src/index.ts"
   },
   "dependencies": {
     "@svml/contracts": "workspace:*",

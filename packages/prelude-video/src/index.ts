@@ -1,7 +1,6 @@
 import {
-  compositionContractsComponent,
-  mediaContractsComponent,
   videoContractManifests,
+  videoContractsComponents,
 } from "@svml/contracts";
 import {
   decodeFilmSurface,
@@ -9,9 +8,13 @@ import {
   filmModuleRef,
   filmSurfaceImplementationDigest,
 } from "@svml/film";
-import { hyperframesManifest } from "@svml/hyperframes";
+import {
+  hyperframesComponent,
+  hyperframesManifest,
+} from "@svml/hyperframes";
 import {
   decodeHyperframesRenderSurface,
+  hyperframesRenderComponent,
   hyperframesRenderManifest,
   hyperframesRenderModuleRef,
   hyperframesRenderSurfaceImplementationDigest,
@@ -20,7 +23,7 @@ import {
   mediaPipelineComponent,
   mediaPipelineManifest,
 } from "@svml/media-pipeline";
-import type { NodeAuthorPackage } from "@svml/package-loader-node";
+import type { NodePackageActivation } from "@svml/package-loader-node";
 import {
   decodeScriptSurface,
   scriptManifest,
@@ -29,8 +32,8 @@ import {
 } from "@svml/script";
 import { svsFrontend, svsManifest } from "@svml/svs";
 
-export const svmlAuthorPackage: NodeAuthorPackage = {
-  format: "svml.node-author-package@1",
+export const svmlPackage: NodePackageActivation = {
+  format: "svml.node-package@1",
   name: "@svml/prelude-video",
   modules: [
     ...videoContractManifests.map((manifest) => ({ manifest })),
@@ -45,10 +48,11 @@ export const svmlAuthorPackage: NodeAuthorPackage = {
     },
   ],
   frontends: [svsFrontend],
-  validators: [
-    ...mediaContractsComponent.validators,
-    ...compositionContractsComponent.validators,
-    ...mediaPipelineComponent.validators,
+  components: [
+    ...videoContractsComponents,
+    mediaPipelineComponent,
+    hyperframesComponent,
+    hyperframesRenderComponent,
   ],
   textSurfaces: [
     {
@@ -75,4 +79,4 @@ export const svmlAuthorPackage: NodeAuthorPackage = {
   ],
 };
 
-export default svmlAuthorPackage;
+export default svmlPackage;

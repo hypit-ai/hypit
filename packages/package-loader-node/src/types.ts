@@ -1,6 +1,6 @@
 import type { RegisteredModulePackage } from "@svml/compiler-node";
+import type { ComponentPackage } from "@svml/component-kit";
 import type { AuthorFrontend } from "@svml/elaborator";
-import type { TypeValidatorFacet } from "@svml/component-kit";
 import type { Digest, ModuleRef } from "@svml/protocol";
 import type {
   RawSurfaceHandler,
@@ -24,16 +24,17 @@ export type NodeTextSurfaceFacet =
     };
 
 /**
- * Trusted executable author-compiler facets exported by one installed physical package.
- * It intentionally has no Provider, credential, store, queue or Runtime facet.
+ * Trusted executable facets exported by one installed physical package. The Host independently
+ * grants author registries or deterministic compute registries; this descriptor has no Provider,
+ * credential, store, queue or Runtime facet.
  */
-export type NodeAuthorPackage = {
-  readonly format: "svml.node-author-package@1";
+export type NodePackageActivation = {
+  readonly format: "svml.node-package@1";
   readonly name: string;
-  readonly modules: readonly RegisteredModulePackage[];
+  readonly modules?: readonly RegisteredModulePackage[];
   readonly frontends?: readonly AuthorFrontend[];
   readonly textSurfaces?: readonly NodeTextSurfaceFacet[];
-  readonly validators?: readonly TypeValidatorFacet[];
+  readonly components?: readonly ComponentPackage[];
 };
 
 export type LockedPackageArtifact = {
@@ -42,20 +43,25 @@ export type LockedPackageArtifact = {
   readonly digest: Digest;
 };
 
-export type LockedAuthorPackage = {
+export type LockedNodePackage = {
   /** Node package name used only for installed-package resolution. */
   readonly specifier: string;
   readonly package: {
     readonly name: string;
     readonly version: string;
   };
-  /** Digest of declared module/frontend/surface identities, excluding executable functions. */
+  /** Digest of declared Module, author and compute facet identities, excluding function objects. */
   readonly facetsDigest: Digest;
 };
 
-export type NodeAuthorPackageLock = {
-  readonly format: "svml.node-author-lock@1";
+export type NodePackageLock = {
+  readonly format: "svml.node-package-lock@1";
   readonly digest: Digest;
   readonly artifacts: readonly LockedPackageArtifact[];
-  readonly packages: readonly LockedAuthorPackage[];
+  readonly packages: readonly LockedNodePackage[];
+};
+
+export type LoadedNodePackageSet = {
+  readonly lock: NodePackageLock;
+  readonly packages: readonly NodePackageActivation[];
 };
