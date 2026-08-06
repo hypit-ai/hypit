@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: "SVML"
+  name: "Narratage"
   actions:
     - theme: brand
       text: 快速开始
