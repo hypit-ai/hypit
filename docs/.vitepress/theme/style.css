@@ -279,7 +279,7 @@ body { letter-spacing: -0.012em; }
 .feature-strip span { color: #ec4899; font-family: var(--vp-font-family-mono); font-size: 10px; }.feature-strip h3 { margin: 16px 0 8px; font-size: 18px; }.feature-strip p { margin: 0; color: #a3a3a3; font-size: 13px; line-height: 1.65; }
 
 @media (max-width: 900px) {
-  .VPHero { padding-top: 64px !important; }
+  .VPHero { padding-top: 92px !important; }
   .home-statement { grid-template-columns: 1fr; gap: 20px; }
   .demo-heading { align-items: start; flex-direction: column; gap: 10px; }
   .demo-shell { grid-template-columns: 1fr; }
