@@ -555,7 +555,13 @@ export default {
 
   let buildsOutput = "";
   await runCli(["builds", "--runtime", runtimePath], { write: (text) => { buildsOutput += text; } });
-  const listed = JSON.parse(buildsOutput) as { readonly builds: readonly { readonly build: string; readonly outputs: readonly string[] }[] };
+  const listed = JSON.parse(buildsOutput) as {
+    readonly builds: readonly {
+      readonly build: string;
+      readonly aliasCount: number;
+      readonly targets: readonly string[];
+    }[];
+  };
   assert.deepEqual(listed.builds, [{
     build: "archive-1",
     core: buildDigest,
@@ -564,8 +570,23 @@ export default {
     status: "active",
     source: catalog.source,
     run: catalog.run,
-    outputs: ["final.video", "timing.rawEvidence"],
+    aliasCount: 2,
+    targets: ["final.video"],
   }]);
+
+  let statusOutput = "";
+  await runCli(["status", "archive-1", "--runtime", runtimePath], {
+    write: (text) => { statusOutput += text; },
+  });
+  const status = JSON.parse(statusOutput) as {
+    readonly catalog: { readonly aliasCount: number; readonly targets: readonly string[] };
+  };
+  assert.deepEqual(status.catalog, {
+    source: catalog.source,
+    run: catalog.run,
+    aliasCount: 2,
+    targets: ["final.video"],
+  });
 
   let getOutput = "";
   await runCli([

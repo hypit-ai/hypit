@@ -7,8 +7,9 @@ Its reference video distribution lets an author address a video with words rathe
 Script defines the semantic truth, generated speech supplies acoustic evidence, and independent
 packages lower captions, B-roll, text and speech into peer Tracks.
 
-SVML is currently a pre-release v2 rewrite. It has completed one real paid talking-video Build, but
-its public package names and video authoring ABI are not frozen yet.
+SVML is currently a pre-release v2 rewrite. It has completed a real paid talking-video acceptance
+sequence, but the repository is currently a source-checkout workspace rather than a published npm
+distribution; its public package names and video authoring ABI are not frozen yet.
 
 ## Why a graph language
 
@@ -176,6 +177,8 @@ examples                 v2 checks/live witness plus retained v1 regression fixt
 ```
 
 Start with the [documentation map](docs/README.md) and [roadmap](docs/roadmap.md).
+The [open-source distribution plan](docs/open-source-distribution.md) records what can ship
+independently and what remains before the first public package release.
 
 ## Development
 
