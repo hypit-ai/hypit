@@ -56,7 +56,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="hero-statement">
-    <h1 class="hero-statement-name">Narratage</h1>
+    <div class="hero-wordmark">
+      <h1 class="hero-statement-name" data-text="Narratage">Narratage</h1>
+    </div>
 
     <div class="hero-statement-viewport hero-statement-viewport-en">
       <Transition name="hero-statement-swap">
