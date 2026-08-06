@@ -10,6 +10,7 @@
     "activation": "./src/index.ts"
   },
   "dependencies": {
+    "@svml/caption": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/film": "workspace:*",
     "@svml/hyperframes": "workspace:*",

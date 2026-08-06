@@ -137,8 +137,9 @@ names.
   prelude lock without a Core, Driver or Runtime registration.
 - `@svml/whisperx`, `@svml/speech-align`, `@svml/caption`: one-pass evidence, direct authoritative
   Script alignment, timed-caption planning and official style-to-VisualTrack lowering. WhisperX
-  normalization and Speech Align are enumerable locked compute facets; Caption remains the
-  deterministic facet still to package.
+  normalization, Speech Align, Caption temporalization and Caption Track rendering are enumerable
+  locked compute facets. Caption also supplies package-owned validators for its timed projection
+  and current vertical-slice Track Program.
 - `@svml/hyperframes`: deterministic generic Composition-to-HTML compilation with content-addressed
   Artifact placeholders and a separate Runtime materialization boundary. HyperframesDocument now
   binds ProgramSpace, exact rational frame rate, integer frame count and canvas outside HTML; any
@@ -238,8 +239,9 @@ projection, byte-identical sidecar staging and a two-worker silent HyperFrames M
 Because the team is prioritizing external capability plumbing before additional video vocabulary,
 the next work is:
 
-1. implement the remaining official deterministic Caption component facets and namespaced
-   generation, Speech and Track Surfaces specified by `examples/talking-film-golden`;
+1. implement the namespaced generation, Speech and Track Surfaces specified by
+   `examples/talking-film-golden`; audit production Caption styling/positioning before freezing its
+   package-owned SVS Recipe and author Surface;
 2. wire those installed components and local Providers into one real source-to-final-video build;
 3. add AWS media/HyperFrames/WhisperX Providers only when the team needs Lambda execution; they must return the same
    inspection/normalization contracts rather than define another media meaning;

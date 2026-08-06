@@ -6,9 +6,8 @@ import {
   registerTypeValidatorFacets,
 } from "@svml/component-kit";
 import {
-  captionImplementationDigest,
+  captionComponent,
   captionProducers,
-  temporalizeCaption,
 } from "@svml/caption";
 import type { TimedCaptionProjection } from "@svml/caption";
 import {
@@ -20,7 +19,6 @@ import {
   sealVisualTrack,
 } from "@svml/contracts";
 import type {
-  CompleteSemanticMap,
   Narrative,
   SpeechAudioBasis,
   SpeechBasis,
@@ -87,6 +85,7 @@ function inlineObject(value: unknown): Readonly<Record<string, unknown>> {
 
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(registry, captionComponent.validators ?? []);
   registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
   return registry;
 }
@@ -126,7 +125,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     evidenceAudioRequest: 0,
     whisperRequest: 0,
     whisperNormalize: 0,
-    caption: 0,
   };
 
   host.registerProducer(videoProducers.requestEstimate, videoImplementations.requestEstimate, ({ inputs }) => {
@@ -279,16 +277,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     return { outputs: { evidence: { kind: "inline", value: evidence } }, needs: {} };
   });
   registerProducerFacets(host, speechAlignComponent.producers);
-  host.registerProducer(captionProducers.temporalize, captionImplementationDigest, ({ inputs }) => {
-    calls.caption += 1;
-    assert.equal(inputs.narrative?.value.kind, "inline");
-    assert.equal(inputs.map?.value.kind, "inline");
-    const caption = temporalizeCaption(
-      inlineValue<Narrative>(inputs.narrative.value.value),
-      inlineValue<CompleteSemanticMap>(inputs.map.value.value),
-    );
-    return { outputs: { caption: { kind: "inline", value: caption } }, needs: {} };
-  });
+  registerProducerFacets(host, captionComponent.producers);
 
   const driver = new NodeDriver({ registry: host, providers, validators: validatorRegistry() });
   const atEstimate = await driver.run(createVideoBuild());
@@ -472,7 +461,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     evidenceAudioRequest: 1,
     whisperRequest: 1,
     whisperNormalize: 1,
-    caption: 1,
   });
   assert.deepEqual(completed.state.receipts.map((receipt) => receipt.fulfiller), [
     "runtime:official-estimate",

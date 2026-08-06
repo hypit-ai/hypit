@@ -1,4 +1,5 @@
 export { CaptionProjectionError } from "./error.js";
+export { captionComponent } from "./component.js";
 export {
   captionImplementationDigest,
   captionManifest,
@@ -6,12 +7,14 @@ export {
   captionProducers,
   captionTrackProgramSchema,
   captionTypes,
+  captionValidatorDigests,
   timedCaptionProjectionSchema,
 } from "./manifest.js";
 export { planCaptionPresentation } from "./presentation.js";
 export { temporalizeCaption } from "./temporalize.js";
 export {
   assertCaptionTrackProgram,
+  assertTimedCaptionProjection,
   computeCaptionTrackProgramDigest,
   defaultCaptionTrackProgram,
   renderCaptionTrack,
