@@ -22,6 +22,7 @@ export type RuntimeConfigDocument = {
   /** Resolved relative to the configuration file. Defaults to its directory. */
   readonly root?: string;
   readonly statePath?: string;
+  readonly catalogPath?: string;
   readonly artifactPath?: string;
   readonly packageLock?: string;
   readonly services: readonly RuntimeConfigEntry[];
@@ -172,7 +173,7 @@ function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
 export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
   exactKeys(item, [
-    "format", "root", "statePath", "artifactPath", "packageLock", "services", "endpoints",
+    "format", "root", "statePath", "catalogPath", "artifactPath", "packageLock", "services", "endpoints",
     "selection", "permissions", "scheduling",
   ], "$runtime");
   if (item.format !== "svml.runtime-config@1") throw new Error("$runtime.format must be svml.runtime-config@1");
@@ -192,6 +193,7 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     format: "svml.runtime-config@1",
     ...(optionalString(item.root, "$runtime.root") === undefined ? {} : { root: item.root as string }),
     ...(optionalString(item.statePath, "$runtime.statePath") === undefined ? {} : { statePath: item.statePath as string }),
+    ...(optionalString(item.catalogPath, "$runtime.catalogPath") === undefined ? {} : { catalogPath: item.catalogPath as string }),
     ...(optionalString(item.artifactPath, "$runtime.artifactPath") === undefined ? {} : { artifactPath: item.artifactPath as string }),
     ...(optionalString(item.packageLock, "$runtime.packageLock") === undefined ? {} : { packageLock: item.packageLock as string }),
     services,
@@ -236,6 +238,7 @@ export async function createRuntimeFromConfig(
   return await createProjectLocalRuntime({
     root,
     ...(document.statePath === undefined ? {} : { statePath: document.statePath }),
+    ...(document.catalogPath === undefined ? {} : { catalogPath: document.catalogPath }),
     ...(document.artifactPath === undefined ? {} : { artifactPath: document.artifactPath }),
     ...(document.packageLock === undefined ? {} : { packageLock: document.packageLock }),
     runtimeServices: services,

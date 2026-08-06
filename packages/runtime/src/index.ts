@@ -1,5 +1,11 @@
 export { MemoryBuildStore } from "./memory.js";
 export {
+  MemoryBuildCatalog,
+  verifyBuildCatalogDescriptor,
+  verifyBuildCatalogEntry,
+} from "./catalog.js";
+export type * from "./catalog.js";
+export {
   credentialRef,
   verifyCredentialRef,
 } from "./credentials.js";

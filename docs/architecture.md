@@ -170,6 +170,11 @@ The Runtime executes an already frozen plan. Its environment-neutral ports are:
 There is no universal Queue package. One Build has one authoritative Scheduler. KIE, Lambda and
 other remote services may have private job queues, but those queues cannot advance the SVML graph.
 
+`BuildCatalog` is intentionally absent from this table. It is an optional Host presentation index
+from a user-facing Build id to Core identity, source/run provenance and source output aliases. It is
+not an execution service, does not enter Runtime Closure, and can never satisfy or schedule graph
+work. Alias reads are revalidated against the authoritative BuildState.
+
 Targets determine demand only. Every accepted output in the demanded closure is a durable Record,
 not only the target results. BuildStore archives structured facts and provenance, OperationStore
 archives recoverable external attempts, and ArtifactStore archives content-addressed bytes. Values

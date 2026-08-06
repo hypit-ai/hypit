@@ -500,11 +500,31 @@ test("CLI inspect and get read the durable Build archive independently of build 
     derivations: [],
     diagnostics: [],
   };
+  const catalog = {
+    format: "svml.build-catalog-descriptor@1",
+    build: "archive-1",
+    core: buildDigest,
+    source: { path: join(root, "main.svml"), closure: `sha256:${"6".repeat(64)}` },
+    run: { path: join(root, "delivery.svrun"), targetSet: "delivery" },
+    aliases: [{
+      name: "final.video",
+      type: state.records[0]!.type,
+      ref: { kind: "logical-output", id: "logical:final" },
+    }, {
+      name: "timing.rawEvidence",
+      type: state.records[1]!.type,
+      ref: { kind: "record", id: "record:whisperx" },
+    }],
+    createdAt: 100,
+    updatedAt: 100,
+  };
   await writeFile(runtimePath, `const bytes = Buffer.from(${JSON.stringify(bytes.toString("base64"))}, "base64");
 const rawBytes = Buffer.from(${JSON.stringify(rawBytes.toString("base64"))}, "base64");
+const catalog = ${JSON.stringify(catalog)};
 export default {
   async build() { throw new Error("not used"); },
-  async status(id) { return { build: id === "archive-1" ? { build: id, revision: 7, state: ${JSON.stringify(state)} } : undefined, operations: [] }; },
+  async builds() { return [catalog]; },
+  async status(id) { return { build: id === "archive-1" ? { build: id, revision: 7, state: ${JSON.stringify(state)} } : undefined, catalog: id === "archive-1" ? catalog : undefined, operations: [] }; },
   async readArtifact(digest) {
     if (digest === ${JSON.stringify(artifactDigest)}) return bytes;
     if (digest === ${JSON.stringify(rawDigest)}) return rawBytes;
@@ -522,16 +542,35 @@ export default {
       readonly status: string;
       readonly targets: readonly { readonly accepted: boolean }[];
       readonly records: readonly { readonly artifacts: readonly { readonly digest: string }[] }[];
+      readonly presentation: { readonly aliases: readonly { readonly name: string; readonly accepted: boolean }[] };
     };
   };
   assert.equal(inspected.archive.status, "active");
   assert.equal(inspected.archive.targets[0]?.accepted, true);
   assert.equal(inspected.archive.records[0]?.artifacts[0]?.digest, artifactDigest);
+  assert.deepEqual(inspected.archive.presentation.aliases.map((item) => [item.name, item.accepted]), [
+    ["final.video", true],
+    ["timing.rawEvidence", true],
+  ]);
+
+  let buildsOutput = "";
+  await runCli(["builds", "--runtime", runtimePath], { write: (text) => { buildsOutput += text; } });
+  const listed = JSON.parse(buildsOutput) as { readonly builds: readonly { readonly build: string; readonly outputs: readonly string[] }[] };
+  assert.deepEqual(listed.builds, [{
+    build: "archive-1",
+    core: buildDigest,
+    createdAt: 100,
+    updatedAt: 100,
+    status: "active",
+    source: catalog.source,
+    run: catalog.run,
+    outputs: ["final.video", "timing.rawEvidence"],
+  }]);
 
   let getOutput = "";
   await runCli([
     "get", "archive-1", "--runtime", runtimePath,
-    "--output", "logical:final", "--to", destination,
+    "--name", "final.video", "--to", destination,
   ], { write: (text) => { getOutput += text; } });
   assert.deepEqual(await readFile(destination), bytes);
   const got = JSON.parse(getOutput) as { readonly materialized: { readonly kind: string; readonly digest: string } };

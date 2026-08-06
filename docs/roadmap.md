@@ -65,11 +65,12 @@ path:
 - `get` reads any accepted Record or Build-referenced nested Artifact and optionally materializes
   its bytes or JSON;
 - building without a path still archives the complete demanded closure;
-- later Build-catalog aliases may improve source-name lookup without entering Core identity;
+- the Host-only Build Catalog powers `builds`, `inspect` presentation and `get --name` without
+  entering Core identity or Runtime Closure;
 - explicit release and reachability-based Artifact garbage collection remain Runtime Store policy.
 
-Add `doctor`, richer graph/plan views and structured diagnostics after this slice. A Record catalog
-may support history search, but it must only help the user author explicit Candidates. There is no
+Add `doctor`, richer graph/plan views and structured diagnostics after this slice. The Catalog may
+later support richer history search, but it must only help the user author explicit Candidates. There is no
 automatic result reuse or hidden Candidate selection.
 
 ## B. Environment and Provider work
