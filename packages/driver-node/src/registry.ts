@@ -1,4 +1,10 @@
 import type {
+  EndpointRegistrar,
+  EndpointRegistrationOptions,
+  ImmediateEndpointHandler,
+  RecoverableEndpoint,
+} from "@svml/endpoint-kit";
+import type {
   ProducerRegistrar,
 } from "@svml/component-kit";
 import type {
@@ -11,7 +17,7 @@ import type {
 import { isDigest } from "@svml/protocol";
 import {
   RuntimeModuleRegistry,
-  runtimeProvider,
+  runtimeEndpoint,
   verifyCredentialRef,
   verifyRuntimeClosure,
 } from "@svml/runtime";
@@ -20,11 +26,8 @@ import type { ResolveRuntimeProfileOptions, RuntimeClosure } from "@svml/runtime
 import type {
   ProducerHandler,
   ProducerRegistration,
-  ProviderEndpoint,
-  ProviderHandler,
-  ProviderRegistration,
-  ProviderResolution,
-  RuntimeProviderImplementation,
+  EndpointRegistration,
+  EndpointResolution,
   SchedulingHint,
 } from "./types.js";
 
@@ -56,15 +59,15 @@ export function producerRegistryKey(ref: ProducerRef): string {
   return `${moduleKey(ref.module)}#${ref.name}`;
 }
 
-export function providerCapabilityKey(ref: CapabilityRef): string {
+export function endpointCapabilityKey(ref: CapabilityRef): string {
   return `${moduleKey(ref.module)}#${ref.name}`;
 }
 
-export function providerReturnKey(ref: TypeRef): string {
+export function endpointReturnKey(ref: TypeRef): string {
   return `${moduleKey(ref.module)}#${ref.name}`;
 }
 
-export class HostRegistry implements ProducerRegistrar {
+export class ProducerRegistry implements ProducerRegistrar {
   readonly #producers = new Map<string, ProducerRegistration>();
 
   registerProducer(
@@ -84,95 +87,89 @@ export class HostRegistry implements ProducerRegistrar {
   }
 }
 
-type ProviderOptions = {
-  readonly supports?: (need: Need) => boolean;
-  readonly scheduling?: SchedulingHint;
-  readonly runtimeImplementation?: RuntimeProviderImplementation;
-  readonly credentials?: NonNullable<ProviderRegistration["credentials"]>;
-  readonly retry?: NonNullable<ProviderRegistration["retry"]>;
-};
+type EndpointOptions = EndpointRegistrationOptions;
 
-function verifyProviderOptions(options: ProviderOptions): void {
+function verifyEndpointOptions(options: EndpointOptions): void {
   verifyScheduling(options.scheduling);
   for (const [slot, ref] of Object.entries(options.credentials ?? {})) {
-    if (slot.trim().length === 0) throw new Error("Provider credential slot must not be empty");
+    if (slot.trim().length === 0) throw new Error("Endpoint credential slot must not be empty");
     verifyCredentialRef(ref);
   }
   if (options.retry !== undefined
     && (!Number.isSafeInteger(options.retry.maxAttempts) || options.retry.maxAttempts < 1)) {
-    throw new Error("Provider retry maxAttempts must be a positive safe integer");
+    throw new Error("Endpoint retry maxAttempts must be a positive safe integer");
   }
 }
 
-export class ProviderRegistry {
-  readonly #registrations: ProviderRegistration[] = [];
+export class EndpointRegistry implements EndpointRegistrar {
+  readonly #registrations: EndpointRegistration[] = [];
   readonly #bindings = new Map<string, string>();
   readonly #runtimeScheduling = new Map<string, SchedulingHint>();
   #runtimeClosure: Digest | undefined;
 
-  registerProvider(
+  registerImmediateEndpoint(
     id: string,
     capability: CapabilityRef,
     returns: TypeRef,
-    handler: ProviderHandler,
-    options: ProviderOptions = {},
+    handler: ImmediateEndpointHandler,
+    options: EndpointOptions = {},
   ): void {
-    if (!id.trim()) throw new Error("provider id must not be empty");
-    verifyProviderOptions(options);
+    if (!id.trim()) throw new Error("endpoint id must not be empty");
+    verifyEndpointOptions(options);
     if (options.runtimeImplementation !== undefined) {
       if (!isDigest(options.runtimeImplementation.digest)) {
-        throw new Error("Provider runtime implementation digest is invalid");
+        throw new Error("Endpoint runtime implementation digest is invalid");
       }
       if (!isDigest(options.runtimeImplementation.configurationDigest)) {
-        throw new Error("Provider runtime configuration digest is invalid");
+        throw new Error("Endpoint runtime configuration digest is invalid");
       }
       const facet = options.runtimeImplementation.facet;
       if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
-        throw new Error("Provider runtime implementation facet is invalid");
+        throw new Error("Endpoint runtime implementation facet is invalid");
       }
     }
     const duplicate = this.#registrations.some((candidate) =>
       candidate.id === id && sameRef(candidate.capability, capability));
-    if (duplicate) throw new Error(`provider ${id} already registers ${providerCapabilityKey(capability)}`);
-    this.#registrations.push({ kind: "handler", id, capability, returns, handler, ...options });
+    if (duplicate) throw new Error(`endpoint ${id} already registers ${endpointCapabilityKey(capability)}`);
+    this.#registrations.push({ kind: "immediate", id, capability, returns, handler, ...options });
   }
 
-  registerProviderEndpoint(
+  registerRecoverableEndpoint(
     id: string,
     capability: CapabilityRef,
     returns: TypeRef,
-    endpoint: ProviderEndpoint,
-    options: ProviderOptions = {},
+    endpoint: RecoverableEndpoint,
+    options: EndpointOptions = {},
   ): void {
-    if (!id.trim()) throw new Error("provider id must not be empty");
-    verifyProviderOptions(options);
+    if (!id.trim()) throw new Error("endpoint id must not be empty");
+    verifyEndpointOptions(options);
     if (options.runtimeImplementation === undefined || !isDigest(options.runtimeImplementation.digest)) {
-      throw new Error("recoverable Provider Endpoint requires a valid Runtime implementation identity");
+      throw new Error("recoverable Endpoint requires a valid Runtime implementation identity");
     }
     if (!isDigest(options.runtimeImplementation.configurationDigest)) {
-      throw new Error("recoverable Provider Endpoint requires a valid Runtime configuration identity");
+      throw new Error("recoverable Endpoint requires a valid Runtime configuration identity");
     }
     const facet = options.runtimeImplementation.facet;
     if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
-      throw new Error("Provider runtime implementation facet is invalid");
+      throw new Error("Endpoint runtime implementation facet is invalid");
     }
     const duplicate = this.#registrations.some((candidate) =>
       candidate.id === id && sameRef(candidate.capability, capability));
-    if (duplicate) throw new Error(`provider ${id} already registers ${providerCapabilityKey(capability)}`);
-    this.#registrations.push({ kind: "endpoint", id, capability, returns, endpoint, ...options });
+    if (duplicate) throw new Error(`endpoint ${id} already registers ${endpointCapabilityKey(capability)}`);
+    this.#registrations.push({ kind: "recoverable", id, capability, returns, endpoint, ...options });
   }
 
   runtimeClosureDigest(): Digest | undefined {
     return this.#runtimeClosure;
   }
 
-  bind(capability: CapabilityRef, providerId: string): void {
-    const key = providerCapabilityKey(capability);
+  bind(capability: CapabilityRef, endpointId: string): void {
+    const key = endpointCapabilityKey(capability);
     if (!this.#registrations.some((registration) =>
-      registration.id === providerId && sameRef(registration.capability, capability))) {
-      throw new Error(`provider ${providerId} does not register capability ${key}`);
+      registration.id === endpointId && sameRef(registration.capability, capability))) {
+      throw new Error(`endpoint ${endpointId} does not register capability ${key}`);
     }
-    this.#bindings.set(key, providerId);
+    this.#bindings.set(key, endpointId);
   }
 
   /** Bind only implementation-verified Endpoint instances from one locked Runtime Closure. */
@@ -184,36 +181,36 @@ export class ProviderRegistry {
     verifyRuntimeClosure(closure);
     modules.verifyClosure(closure, options);
     if (this.#runtimeClosure !== undefined && this.#runtimeClosure !== closure.digest) {
-      throw new Error("Provider Registry is already bound to another Runtime Closure");
+      throw new Error("Endpoint Registry is already bound to another Runtime Closure");
     }
     const pending: { readonly key: string; readonly endpoint: string; readonly scheduling: SchedulingHint }[] = [];
-    for (const binding of closure.providers) {
-      const endpoint = runtimeProvider(closure, binding.endpoint);
+    for (const binding of closure.endpoints) {
+      const endpoint = runtimeEndpoint(closure, binding.endpoint);
       if (endpoint === undefined) throw new Error(`Runtime Endpoint ${binding.endpoint} is unavailable`);
       const registration = this.#registrations.find((candidate) =>
         candidate.id === endpoint.id
         && sameRef(candidate.capability, binding.capability)
         && sameRef(candidate.returns, binding.returns));
       if (registration === undefined) {
-        throw new Error(`Provider ${endpoint.id} is not registered for ${providerCapabilityKey(binding.capability)}`);
+        throw new Error(`Endpoint ${endpoint.id} is not registered for ${endpointCapabilityKey(binding.capability)}`);
       }
-      const expectedKind = endpoint.lifecycle === "recoverable" ? "endpoint" : "handler";
+      const expectedKind = endpoint.lifecycle;
       if (registration.kind !== expectedKind) {
-        throw new Error(`Provider ${endpoint.id} lifecycle does not match the Runtime Closure`);
+        throw new Error(`Endpoint ${endpoint.id} lifecycle does not match the Runtime Closure`);
       }
       const implementation = registration.runtimeImplementation;
       if (implementation === undefined
         || implementation.digest !== endpoint.implementation.digest
         || implementation.configurationDigest !== endpoint.configurationDigest
         || !sameRef(implementation.facet, endpoint.facet)) {
-        throw new Error(`Provider ${endpoint.id} implementation does not match the Runtime Closure`);
+        throw new Error(`Endpoint ${endpoint.id} implementation does not match the Runtime Closure`);
       }
       const credentialSlots = Object.keys(registration.credentials ?? {}).sort();
       if (JSON.stringify(credentialSlots) !== JSON.stringify(endpoint.credentialSlots)) {
-        throw new Error(`Provider ${endpoint.id} credential slots do not match the Runtime Closure`);
+        throw new Error(`Endpoint ${endpoint.id} credential slots do not match the Runtime Closure`);
       }
       pending.push({
-        key: providerCapabilityKey(binding.capability),
+        key: endpointCapabilityKey(binding.capability),
         endpoint: endpoint.id,
         scheduling: { lane: endpoint.lane, maxConcurrency: endpoint.maxConcurrency },
       });
@@ -225,8 +222,8 @@ export class ProviderRegistry {
     this.#runtimeClosure = closure.digest;
   }
 
-  resolve(need: Need): ProviderResolution {
-    const key = providerCapabilityKey(need.capability);
+  resolve(need: Need): EndpointResolution {
+    const key = endpointCapabilityKey(need.capability);
     const bound = this.#bindings.get(key);
     const registrations = this.#registrations.filter((registration) =>
       sameRef(registration.capability, need.capability)
@@ -238,7 +235,7 @@ export class ProviderRegistry {
         ? undefined
         : this.#runtimeScheduling.get(registration.id) ?? registration.scheduling;
       return registration === undefined
-        ? { status: "missing", providerId: bound }
+        ? { status: "missing", endpointId: bound }
         : {
             status: "resolved",
             registration: scheduling === undefined ? registration : { ...registration, scheduling },
@@ -248,7 +245,7 @@ export class ProviderRegistry {
     if (registrations.length > 1) {
       return {
         status: "ambiguous",
-        providerIds: registrations.map((registration) => registration.id).sort(),
+        endpointIds: registrations.map((registration) => registration.id).sort(),
       };
     }
     const registration = registrations[0]!;
@@ -259,7 +256,7 @@ export class ProviderRegistry {
     };
   }
 
-  providers(capability: CapabilityRef): readonly ProviderRegistration[] {
+  endpoints(capability: CapabilityRef): readonly EndpointRegistration[] {
     return this.#registrations.filter((registration) => sameRef(registration.capability, capability));
   }
 }

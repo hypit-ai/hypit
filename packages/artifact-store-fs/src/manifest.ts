@@ -16,7 +16,7 @@ export const fileArtifactStoreImplementationDigest = digestOf(
 );
 
 export const fileArtifactStoreRuntimeManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@1",
+  format: "svml.runtime-module@2",
   name: fileArtifactStoreModuleRef.name,
   version: fileArtifactStoreModuleRef.version,
   facets: [

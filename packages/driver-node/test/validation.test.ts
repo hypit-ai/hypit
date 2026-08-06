@@ -14,9 +14,9 @@ import {
   verifyRecord,
 } from "@svml/core";
 import {
-  HostRegistry,
+  ProducerRegistry,
   NodeDriver,
-  ProviderRegistry,
+  EndpointRegistry,
   parseBuildState,
   parseModuleManifestText,
   serializeBuildState,
@@ -231,8 +231,8 @@ function outputBuild(linked: LinkedProgram, graph = outputGraph(linked)) {
   }));
 }
 
-function hosts(measured: number): HostRegistry {
-  const hosts = new HostRegistry();
+function hosts(measured: number): ProducerRegistry {
+  const hosts = new ProducerRegistry();
   hosts.registerProducer(measureProducer, producerDigests.measure, () => ({
     outputs: { measurement: { kind: "inline", value: { value: measured, unit: "ticks" } } },
     needs: {},
@@ -252,7 +252,7 @@ function hosts(measured: number): HostRegistry {
 test("three independent packages communicate through an owner-validated nominal Type", async () => {
   const linked = program();
   const result = await new NodeDriver({
-    registry: hosts(4),
+    producers: hosts(4),
     validators: registry(),
   }).run(outputBuild(linked));
 
@@ -272,7 +272,7 @@ test("three independent packages communicate through an owner-validated nominal 
 test("a structurally valid but semantically invalid Producer value never enters BuildState", async () => {
   const linked = program();
   const result = await new NodeDriver({
-    registry: hosts(3),
+    producers: hosts(3),
     validators: registry(),
   }).run(outputBuild(linked));
 
@@ -285,14 +285,14 @@ test("a structurally valid but semantically invalid Producer value never enters 
 test("missing or digest-mismatched validator implementations fail before record admission", async () => {
   const linked = program();
   const missing = await new NodeDriver({
-    registry: hosts(4),
+    producers: hosts(4),
     validators: new TypeValidatorRegistry(),
   }).run(outputBuild(linked));
   assert.equal(missing.status, "paused");
   assert.match(missing.journal[0]?.message ?? "", /validator is not registered/u);
 
   const mismatched = await new NodeDriver({
-    registry: hosts(4),
+    producers: hosts(4),
     validators: registry(digestOf("wrong-validator")),
   }).run(outputBuild(linked));
   assert.equal(mismatched.status, "paused");
@@ -323,7 +323,7 @@ function providerGraph(linked: LinkedProgram): CompiledGraph {
         kind: "need",
         name: "measurement",
         id: "need:measurement",
-        record: "measurement:provider",
+        record: "measurement:endpoint",
         accepts: "exact",
       },
     }],
@@ -333,14 +333,14 @@ function providerGraph(linked: LinkedProgram): CompiledGraph {
 async function providerBuild(measured: number) {
   const linked = program();
   const graph = providerGraph(linked);
-  const hosts = new HostRegistry();
+  const hosts = new ProducerRegistry();
   hosts.registerProducer(requestProducer, producerDigests.request, () => ({
     outputs: {},
     needs: { measurement: { sample: "latest" } },
   }));
-  const providers = new ProviderRegistry();
-  providers.registerProvider(
-    "example:measurement-provider",
+  const endpoints = new EndpointRegistry();
+  endpoints.registerImmediateEndpoint(
+    "example:measurement-endpoint",
     measurementCapability,
     measurementType,
     () => ({
@@ -350,7 +350,7 @@ async function providerBuild(measured: number) {
       metadata: {},
     }),
   );
-  return await new NodeDriver({ registry: hosts, providers, validators: registry() }).run(start(
+  return await new NodeDriver({ producers: hosts, endpoints, validators: registry() }).run(start(
     linked,
     graph,
     sealBuildRequest({
@@ -361,7 +361,7 @@ async function providerBuild(measured: number) {
   ));
 }
 
-test("Provider results pass the same Type-owner validation gate as Producer results", async () => {
+test("Endpoint results pass the same Type-owner validation gate as Producer results", async () => {
   const valid = await providerBuild(8);
   assert.equal(valid.status, "complete");
   assert.equal(valid.state.records[0]?.validation?.validatorDigest, validatorDigest);
@@ -369,7 +369,7 @@ test("Provider results pass the same Type-owner validation gate as Producer resu
   const invalid = await providerBuild(7);
   assert.equal(invalid.status, "paused");
   assert.match(invalid.journal.at(-1)?.message ?? "", /measurement must be even/u);
-  assert.equal(invalid.state.records.some((record) => record.id === "measurement:provider"), false);
+  assert.equal(invalid.state.records.some((record) => record.id === "measurement:endpoint"), false);
 });
 
 test("authored values require a receipt bound to their exact Type and content", async () => {

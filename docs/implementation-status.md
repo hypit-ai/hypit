@@ -5,8 +5,8 @@ why they exist.
 
 Target package names and Runtime service ownership are now recorded in
 [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md). The repository
-has not yet performed those renames or splits; the package names below remain current implementation
-names.
+has performed only the completed splits listed below; the package names below remain current
+implementation names rather than a public compatibility freeze.
 
 ## v2 implemented
 
@@ -17,22 +17,27 @@ names.
   register against one structural port and receive only command identity plus typed inputs; artifact
   bytes, credentials, network, queues and stores are absent. HyperFrames, HyperFrames Render,
   WhisperX, Media Pipeline and every exact generation model no longer import the Node Driver.
-- `@svml/driver-node`: trusted in-process Producer and Provider execution, artifact access, JSON
+- `@svml/driver-node`: trusted in-process Producer and Endpoint execution, artifact access, JSON
   persistence and command regeneration on resume. It now exposes the minimal regenerated-command
   executor port used by an external Scheduler.
 - `@svml/runtime`: environment-neutral Runtime executor, BuildStore and OperationStore contracts;
   static Runtime Module facets; sealed Runtime Profile/Closure resolution; implementation and
-  permission locking; exact Provider coverage checks; verified in-memory CAS stores; and the first
+  permission locking; exact Endpoint coverage checks; verified in-memory CAS stores; and the first
   queue-free `LocalBuildScheduler`. One Scheduler shares named concurrency lanes across multiple
   Builds and independent commands inside one Build. Operation identity binds Build, Command,
   Endpoint implementation, Runtime Closure, request, attempt and stable submission key without
-  entering BuildState. Recoverable Provider Endpoints journal that identity before `start`, persist
+  entering BuildState. Recoverable Endpoints journal that identity before `start`, persist
   pending checkpoints and wake hints, use `resume` after restart, replay a stored completion into
   Core without another Endpoint call, create new identities for finite retries and preserve explicit
-  failure/cancellation.
-- `@svml/provider-kit`: one-source trusted Node Provider definition that emits a static Manifest,
-  configured instance identity, exact bindings and immediate or recoverable Driver registration.
+  failure/cancellation. The neutral `capability-endpoint` role and `endpoints` bindings are a real
+  schema change, so Runtime Module/Profile/Closure wire formats are now `@2` rather than silently
+  reinterpreting persisted `@1` data.
+- `@svml/endpoint-kit`: the host-neutral external-capability ABI plus a one-source Endpoint package
+  definition that emits a static Manifest, configured instance identity, exact bindings and
+  immediate or recoverable installation through a structural registrar. It imports no Node Driver.
   Non-secret configuration, credential references/slots and retry policy are identity-bound.
+- `@svml/transport`: the tiny canonical JSON invocation seam. Process and Lambda implementations
+  depend on it directly and no longer reverse-depend on Endpoint or Provider packages.
 - `@svml/generation`, `@svml/model-kit`: provider-neutral generated image/video Product contracts
   plus a reusable exact-model shell. Type owners publish their own request validators, Need
   Producers and Graph Fragments without adding model knowledge to Core.
@@ -63,7 +68,7 @@ names.
   Synthetic attacks and all four retained KIE video outputs pass the new parser/selection laws.
 - `@svml/provider-hyperframes-local`: trusted local realization of the exact silent visual Need.
   `HyperframesDocument` now declares full `BlobRef` dependencies rather than untyped hashes; the
-  Provider verifies/stages them, lets HyperFrames partition the finite frame domain across Chrome
+  Endpoint verifies/stages them, lets HyperFrames partition the finite frame domain across Chrome
   workers and accepts output only after ffprobe proves one silent H.264 stream with the declared
   canvas, rational frame rate and frame count. A real two-worker MP4 render passes.
 - `@svml/provider-whisperx-local`: model-pinned loopback adapter for the warm WhisperX sidecar. It
@@ -76,7 +81,7 @@ names.
   canonical WAV, serializes access to one warm model set, lazily caches per-language alignment
   models and preserves missing acoustic word time as missing evidence. Its package/runtime ABI
   check passes under the locked Python 3.13 environment; model weights remain deployment cache.
-- `@svml/credential-store-env`: an explicit-key local CredentialStore. Provider invocations receive
+- `@svml/credential-store-env`: an explicit-key local CredentialStore. Endpoint invocations receive
   only declared slots; secret values do not enter Runtime Closure, BuildState, Operation state or
   SQLite through framework code.
 - `@svml/store-sqlite`: durable local BuildStore and OperationStore adapters with private schema
@@ -87,18 +92,18 @@ names.
 - `@svml/artifact-store-s3`: whole-object S3 ArtifactStore with deterministic keys, conditional
   immutable writes, bounded conflict retry and SHA-256 verification after every download. Bucket,
   prefix, region/endpoint and expected owner are non-secret Runtime instance identity.
-- `@svml/transport-aws-lambda`: bounded synchronous JSON invocation for AWS-backed Provider
-  packages. It intentionally does not standardize a Provider capability or pretend Lambda `Event`
+- `@svml/transport-aws-lambda`: bounded synchronous JSON invocation for AWS-backed Endpoint
+  packages. It intentionally does not standardize a capability or pretend Lambda `Event`
   invocation is a recoverable result protocol.
 - `@svml/transport-process`: bounded shell-free JSON child-process invocation using an absolute
   executable and no inherited environment. Author source cannot select its executable or arguments.
 - `@svml/local`: trusted developer distribution that assembles a digest-bound implementation
-  package closure and exact Provider contributions over SQLite/filesystem defaults. The
+  package closure and exact Endpoint contributions over SQLite/filesystem defaults. The
   Scheduler persists every accepted Event, resumes the same Build and Operation across process
   restarts, rejects reuse of one local Build id for another Core Build, follows endpoint wake hints,
   exposes durable status and performs endpoint-aware cancellation.
 - `@svml/validation`: exact-Type semantic validator registry and the common Record admission gate.
-  A Type owner may lock a validator digest in its static Manifest; Producer, Provider, authored and
+  A Type owner may lock a validator digest in its static Manifest; Producer, Endpoint, authored and
   provided values then require a receipt bound to that exact Type and content. Core verifies the
   receipt without knowing the domain meaning.
 - `@svml/host`: the small domain-neutral `Workspace`/`WorkspaceSession` contract and generic
@@ -116,7 +121,7 @@ names.
   Text Surface, Producer and Type Validator identities. Producer/Validator facets are enumerable
   and checked against their Manifests before Host registration. The package-lock digest enters
   `BuildRequest.implementationClosure`, preventing a persisted Build from resuming under another
-  deterministic implementation closure. It installs no Provider or privileged Runtime facet.
+  deterministic implementation closure. It installs no Endpoint or privileged Runtime facet.
 - `@svml/prelude-video`: an ordinary replaceable aggregate of the current official author Modules,
   SVS Frontend, Text Surfaces and available deterministic compute facets. Compiler and Runtime
   activate only their respective facets; the CLI no longer enumerates domain packages.
@@ -151,7 +156,7 @@ names.
 - `@svml/hyperframes`: deterministic generic Composition-to-HTML compilation with content-addressed
   Artifact placeholders and a separate Runtime materialization boundary. HyperframesDocument now
   binds ProgramSpace, exact rational frame rate, integer frame count and canvas outside HTML; any
-  legal frame or half-open Provider chunk can be addressed independently without entering Core.
+  legal frame or half-open Endpoint chunk can be addressed independently without entering Core.
 - `@svml/hyperframes-render`: an explicit author Surface whose Fragment expands one author-visible
   video into separate visual-render, timeline-audio and mux Needs. HyperFrames receives a silent
   visual document; the generic media pipeline owns audio planning and final mux. Affinity binds the
@@ -190,15 +195,15 @@ pre-discovery, resolves only registered exact manifests and their digest-bound d
 filesystem/symlink escape, and produces the same verified Source Closure and Core BuildPlan used by
 in-memory tests. A separate non-video three-package fixture proves decentralized communication:
 one package owns a nominal Measurement contract and validator, another produces it, a third consumes
-it; structurally valid but semantically invalid Producer/Provider values, missing or mismatched
+it; structurally valid but semantically invalid Producer/Endpoint values, missing or mismatched
 validators, receipt-free provided values and tampered receipts are rejected before state admission.
 The first real rendering vertical also proves that author source lowers to the same finite plan,
-that execution pauses at the exact HyperFrames capability when no Provider exists, and that a bound
-Provider completes without entering Film or source parsing.
+that execution pauses at the exact HyperFrames capability when no Endpoint exists, and that a bound
+Endpoint completes without entering Film or source parsing.
 It also proves that two author-declared paid operations inside one Build execute in parallel up to
-their shared Provider lane limit while their common upstream Producer executes exactly once; the
+their shared Endpoint lane limit while their common upstream Producer executes exactly once; the
 same lane is shared fairly by multiple Builds, and CAS rejects stale Scheduler state writes.
-Runtime assembly tests additionally prove that same-name Provider code with another implementation
+Runtime assembly tests additionally prove that same-name Endpoint code with another implementation
 or configured-instance digest is rejected before execution, credential slots match the static
 Manifest, recoverable Endpoints require OperationStore, credentialed endpoints require
 CredentialStore, permissions need an explicit Host allowlist, an unbound demanded Need fails before scheduling, and restart discovers
@@ -240,7 +245,7 @@ plus a renderer receipt/validation rule that binds the exact layout implementati
 declared Surface media facts in local and hosted Runtime endpoints.
 
 The implementation-package boundary, reusable local Runtime chassis, first real generation Provider,
-reference media Provider, local HyperFrames Provider and local WhisperX adapter are now executable.
+reference media Endpoint, local HyperFrames Endpoint and local WhisperX Endpoint are now executable.
 The representative seven-family KIE live suite, one real synthetic-reference upload and the
 retained KIE media replay have passed. Real tests also cover exact 48 kHz → 16 kHz evidence
 projection, byte-identical sidecar staging and a two-worker silent HyperFrames MP4.
@@ -250,8 +255,8 @@ the next work is:
 1. implement the namespaced generation, Speech and Track Surfaces specified by
    `examples/talking-film-golden`; audit production Caption styling/positioning before freezing its
    package-owned SVS Recipe and author Surface;
-2. wire those installed components and local Providers into one real source-to-final-video build;
-3. add AWS media/HyperFrames/WhisperX Providers only when the team needs Lambda execution; they must return the same
+2. wire those installed components and local Endpoints into one real source-to-final-video build;
+3. add AWS media/HyperFrames/WhisperX Endpoints only when the team needs Lambda execution; they must return the same
    inspection/normalization contracts rather than define another media meaning;
 
 ## Deliberately not implemented
@@ -262,7 +267,7 @@ the next work is:
 - automatic npm/workspace package installation and community package discovery (trusted locked
   author and deterministic compute facets are implemented for explicit installed packages);
 - production keychain/Vault credentials, hosted scheduling or distributed workers;
-- AWS/hosted WhisperX, HyperFrames or media Provider endpoints;
+- AWS/hosted WhisperX, HyperFrames or media Endpoints;
 - production multipart/ranged Artifact streaming and distributed execution adapters;
 - official generation, Speech, Caption, B-roll and Text Track Surfaces and their package-owned SVS
   Recipe schemas;
@@ -291,7 +296,7 @@ Core registration or require a Core release.
 
 `@svml/realization` is needed only for externally supplied Candidates such as reuse, preview or
 manual values. `@svml/text` is needed only when the author chooses the official XML-like syntax.
-Script, video contracts, Film, Tracks, HyperFrames and Providers are domain/application packages.
+Script, video contracts, Film, Tracks, HyperFrames and capability Endpoints are domain/application packages.
 There is deliberately no `@svml/author` package and no mandatory `.svk` suffix.
 
 The current package named `@svml/contracts` is audiovisual vocabulary despite its generic name. It

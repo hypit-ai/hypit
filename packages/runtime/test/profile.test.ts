@@ -9,6 +9,7 @@ import {
   sealRuntimeProfile,
   verifyRuntimeClosure,
   verifyRuntimeCoverage,
+  verifyRuntimeProfile,
 } from "@svml/runtime";
 import type { RuntimeModuleManifest } from "@svml/runtime";
 
@@ -24,7 +25,7 @@ const endpointImplementationDigest = digestOf("example.runtime-fixture/greeting-
 
 function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
   return {
-    format: "svml.runtime-module@1",
+    format: "svml.runtime-module@2",
     name: runtimeModule.name,
     version: runtimeModule.version,
     facets: [
@@ -57,7 +58,7 @@ function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
       },
       {
         name: endpointFacet.name,
-        role: "provider-endpoint",
+        role: "capability-endpoint",
         implementation: {
           locator: "example.runtime-fixture/greeting-endpoint",
           digest: endpointImplementationDigest,
@@ -84,7 +85,7 @@ function profile(options: { readonly operations?: boolean; readonly lane?: numbe
       {
         id: "greeting.local",
         facet: endpointFacet,
-        lane: "provider:greeting.local",
+        lane: "endpoint:greeting.local",
       },
     ],
     scheduler: "scheduler.local",
@@ -92,14 +93,14 @@ function profile(options: { readonly operations?: boolean; readonly lane?: numbe
       build: "build.memory",
       ...(options.operations === false ? {} : { operations: "operations.memory" }),
     },
-    providers: [{
+    endpoints: [{
       capability: capabilities.generation,
       returns: types.generated,
       endpoint: "greeting.local",
     }],
     scheduling: {
       maxConcurrency: 8,
-      lanes: [{ name: "provider:greeting.local", maxConcurrency: options.lane ?? 2 }],
+      lanes: [{ name: "endpoint:greeting.local", maxConcurrency: options.lane ?? 2 }],
     },
   });
 }
@@ -113,14 +114,14 @@ test("Runtime Profile resolves installed static facets into one deterministic lo
   assert.equal(first.modules[0]?.digest, manifestDigest);
   assert.equal(first.instances.filter((instance) => instance.role === "scheduler").length, 1);
   const endpoint = first.instances.find((instance) => instance.id === "greeting.local");
-  assert.equal(endpoint?.role, "provider-endpoint");
-  if (endpoint?.role === "provider-endpoint") {
+  assert.equal(endpoint?.role, "capability-endpoint");
+  if (endpoint?.role === "capability-endpoint") {
     assert.equal(endpoint.implementation.digest, endpointImplementationDigest);
-    assert.equal(endpoint.lane, "provider:greeting.local");
+    assert.equal(endpoint.lane, "endpoint:greeting.local");
     assert.equal(endpoint.maxConcurrency, 2);
   }
   assert.deepEqual(localSchedulerOptionsFromClosure(first).laneLimits, {
-    "provider:greeting.local": 2,
+    "endpoint:greeting.local": 2,
   });
   assert.doesNotThrow(() => verifyRuntimeCoverage(first, createGreetingBuild()));
 });
@@ -132,7 +133,7 @@ test("Profile order is not identity but an execution-policy change is", () => {
   const reordered = sealRuntimeProfile({
     ...normal,
     instances: [...normal.instances].reverse(),
-    providers: [...normal.providers].reverse(),
+    endpoints: [...normal.endpoints].reverse(),
     scheduling: { ...normal.scheduling, lanes: [...normal.scheduling.lanes].reverse() },
   });
   assert.equal(normal.digest, reordered.digest);
@@ -173,7 +174,7 @@ test("credentialed Endpoints require an explicitly selected CredentialStore", ()
   const configured = manifest();
   registry.register({
     ...configured,
-    facets: configured.facets.map((facet) => facet.role === "provider-endpoint"
+    facets: configured.facets.map((facet) => facet.role === "capability-endpoint"
       ? { ...facet, credentialSlots: ["apiKey"] }
       : facet),
   });
@@ -196,7 +197,7 @@ test("Coverage rejects an unbound demanded Need before the Scheduler starts", ()
   const registry = new RuntimeModuleRegistry();
   registry.register(manifest());
   const configured = profile();
-  const unbound = sealRuntimeProfile({ ...configured, providers: [] });
+  const unbound = sealRuntimeProfile({ ...configured, endpoints: [] });
   const closure = resolveRuntimeProfile(registry, unbound);
   assert.throws(
     () => verifyRuntimeCoverage(closure, createGreetingBuild()),
@@ -211,4 +212,25 @@ test("Runtime Closure content cannot be changed without invalidating its digest"
   const tampered = structuredClone(closure);
   (tampered.scheduling as { maxConcurrency: number }).maxConcurrency = 999;
   assert.throws(() => verifyRuntimeClosure(tampered), /digest differs/u);
+});
+
+test("Runtime @1 facts are rejected instead of being reinterpreted as Endpoint bindings", () => {
+  const registry = new RuntimeModuleRegistry();
+  assert.throws(
+    () => registry.register({ ...manifest(), format: "svml.runtime-module@1" } as never),
+    /unsupported Runtime Module Manifest format/u,
+  );
+
+  const configured = profile();
+  assert.throws(
+    () => verifyRuntimeProfile({ ...configured, format: "svml.runtime-profile@1" } as never),
+    /unsupported Runtime Profile format/u,
+  );
+
+  registry.register(manifest());
+  const closure = resolveRuntimeProfile(registry, configured);
+  assert.throws(
+    () => verifyRuntimeClosure({ ...closure, format: "svml.runtime-closure@1" } as never),
+    /unsupported Runtime Closure format/u,
+  );
 });

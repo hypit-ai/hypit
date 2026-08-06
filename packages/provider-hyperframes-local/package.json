@@ -8,14 +8,14 @@
   },
   "dependencies": {
     "@svml/contracts": "workspace:*",
-    "@svml/driver-node": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
     "@svml/hyperframes": "workspace:*",
     "@svml/hyperframes-render": "workspace:*",
     "@svml/protocol": "workspace:*",
-    "@svml/provider-kit": "workspace:*",
     "hyperframes": "0.7.84"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*"
+    "@svml/core": "workspace:*",
+    "@svml/driver-node": "workspace:*"
   }
 }

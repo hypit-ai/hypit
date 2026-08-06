@@ -14,7 +14,7 @@
     "@svml/driver-node": "workspace:*",
     "@svml/package-loader-node": "workspace:*",
     "@svml/protocol": "workspace:*",
-    "@svml/provider-kit": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
     "@svml/runtime": "workspace:*",
     "@svml/store-sqlite": "workspace:*",
     "@svml/validation": "workspace:*"

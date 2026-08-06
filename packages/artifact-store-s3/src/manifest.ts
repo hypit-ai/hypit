@@ -16,7 +16,7 @@ export const s3ArtifactStoreImplementationDigest = digestOf(
 );
 
 export const s3ArtifactStoreRuntimeManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@1",
+  format: "svml.runtime-module@2",
   name: s3ArtifactStoreModuleRef.name,
   version: s3ArtifactStoreModuleRef.version,
   facets: [{

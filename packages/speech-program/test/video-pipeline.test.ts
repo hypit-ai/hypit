@@ -27,9 +27,9 @@ import type {
 } from "@svml/contracts";
 import { digestOf, sealBuildRequest, start } from "@svml/core";
 import {
-  HostRegistry,
+  ProducerRegistry,
   NodeDriver,
-  ProviderRegistry,
+  EndpointRegistry,
   parseBuildState,
   serializeBuildState,
 } from "@svml/driver-node";
@@ -114,8 +114,8 @@ function producerCount(state: BuildState, producer: ProducerRef): number {
 }
 
 test("the Speech Program pipeline resumes without repeating paid calls", async () => {
-  const host = new HostRegistry();
-  const providers = new ProviderRegistry();
+  const host = new ProducerRegistry();
+  const endpoints = new EndpointRegistry();
   const calls = {
     estimate: 0,
     seedance: 0,
@@ -279,22 +279,22 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
   registerProducerFacets(host, speechAlignComponent.producers);
   registerProducerFacets(host, captionComponent.producers);
 
-  const driver = new NodeDriver({ registry: host, providers, validators: validatorRegistry() });
+  const driver = new NodeDriver({ producers: host, endpoints, validators: validatorRegistry() });
   const atEstimate = await driver.run(createVideoBuild());
-  assert.equal(atEstimate.blocked[0]?.reason, "missing-provider");
+  assert.equal(atEstimate.blocked[0]?.reason, "missing-endpoint");
   assert.match(atEstimate.blocked[0]?.subject ?? "", /OfficialSpeechDurationEstimate/u);
 
-  providers.registerProvider("runtime:official-estimate", videoCapabilities.estimate, videoTypes.estimate, () => ({
+  endpoints.registerImmediateEndpoint("runtime:official-estimate", videoCapabilities.estimate, videoTypes.estimate, () => ({
     value: { kind: "inline", value: { durationSec: 1 } },
     conformance: "exact",
     delivery: "executed",
     metadata: {},
   }));
   const atSeedance = await driver.run(parseBuildState(serializeBuildState(atEstimate.state)));
-  assert.equal(atSeedance.blocked[0]?.reason, "missing-provider");
+  assert.equal(atSeedance.blocked[0]?.reason, "missing-endpoint");
   assert.match(atSeedance.blocked[0]?.subject ?? "", /SeedanceMiniSpeechMedia/u);
 
-  providers.registerProvider(
+  endpoints.registerImmediateEndpoint(
     "runtime:kie-seedance-mini",
     videoCapabilities.seedanceMini,
     videoTypes.seedanceMiniMedia,
@@ -314,15 +314,15 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
         } },
         conformance: "exact",
         delivery: "executed",
-        metadata: { provider: "kie", model: "seedance-mini" },
+        metadata: { endpoint: "kie", model: "seedance-mini" },
       };
     },
   );
   const atEvidenceAudio = await driver.run(parseBuildState(serializeBuildState(atSeedance.state)));
-  assert.equal(atEvidenceAudio.blocked[0]?.reason, "missing-provider");
+  assert.equal(atEvidenceAudio.blocked[0]?.reason, "missing-endpoint");
   assert.match(atEvidenceAudio.blocked[0]?.subject ?? "", /SpeechEvidenceAudio/u);
 
-  providers.registerProvider(
+  endpoints.registerImmediateEndpoint(
     "runtime:media-local",
     mediaPipelineCapabilities.projectSpeechEvidenceAudio,
     contractTypes.speechEvidenceAudio,
@@ -365,11 +365,11 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     },
   );
   const atWhisperX = await driver.run(parseBuildState(serializeBuildState(atEvidenceAudio.state)));
-  assert.equal(atWhisperX.blocked[0]?.reason, "missing-provider");
+  assert.equal(atWhisperX.blocked[0]?.reason, "missing-endpoint");
   assert.match(atWhisperX.blocked[0]?.subject ?? "", /WhisperXAlignmentEvidence/u);
 
-  const wrongBasisProviders = new ProviderRegistry();
-  wrongBasisProviders.registerProvider(
+  const wrongBasisEndpoints = new EndpointRegistry();
+  wrongBasisEndpoints.registerImmediateEndpoint(
     "runtime:wrong-basis-whisperx",
     whisperXCapabilities.alignment,
     whisperXTypes.alignmentEvidence,
@@ -394,8 +394,8 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     }),
   );
   const rejectedEvidence = await new NodeDriver({
-    registry: host,
-    providers: wrongBasisProviders,
+    producers: host,
+    endpoints: wrongBasisEndpoints,
     validators: validatorRegistry(),
   }).run(
     parseBuildState(serializeBuildState(atWhisperX.state)),
@@ -412,7 +412,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     "Evidence for another same-duration audio projection must not enter BuildState",
   );
 
-  providers.registerProvider(
+  endpoints.registerImmediateEndpoint(
     "runtime:whisperx-local",
     whisperXCapabilities.alignment,
     whisperXTypes.alignmentEvidence,
@@ -610,12 +610,12 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
   assert.equal(preview.plan.initialValues.length, 1);
 });
 
-test("an exact Provider result cannot wash a substitute input back to exact", async () => {
+test("an exact Endpoint result cannot wash a substitute input back to exact", async () => {
   const initial = createVideoBuild({
     estimateRealization: "placeholder",
     goalAccepts: "substitute",
   });
-  const host = new HostRegistry();
+  const host = new ProducerRegistry();
   host.registerProducer(
     videoProducers.placeholderEstimate,
     videoImplementations.placeholderEstimate,
@@ -625,8 +625,8 @@ test("an exact Provider result cannot wash a substitute input back to exact", as
     outputs: {},
     needs: { media: { model: "mini" } },
   }));
-  const providers = new ProviderRegistry();
-  providers.registerProvider(
+  const endpoints = new EndpointRegistry();
+  endpoints.registerImmediateEndpoint(
     "runtime:exact-seedance",
     videoCapabilities.seedanceMini,
     videoTypes.seedanceMiniMedia,
@@ -644,8 +644,8 @@ test("an exact Provider result cannot wash a substitute input back to exact", as
   );
 
   const result = await new NodeDriver({
-    registry: host,
-    providers,
+    producers: host,
+    endpoints,
     validators: validatorRegistry(),
   }).run(initial);
   assert.equal(result.status, "paused", "the unregistered Basis assembler should pause after Seedance");

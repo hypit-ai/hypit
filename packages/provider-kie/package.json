@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/driver-node": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
     "@svml/gemini-omni": "workspace:*",
     "@svml/generation": "workspace:*",
     "@svml/gpt-image": "workspace:*",
@@ -15,7 +15,6 @@
     "@svml/minimax-h3": "workspace:*",
     "@svml/nano-banana": "workspace:*",
     "@svml/protocol": "workspace:*",
-    "@svml/provider-kit": "workspace:*",
     "@svml/runtime": "workspace:*",
     "@svml/seedance": "workspace:*",
     "@svml/seedream": "workspace:*"
@@ -24,6 +23,7 @@
     "@svml/artifact-store-fs": "workspace:*",
     "@svml/component-kit": "workspace:*",
     "@svml/core": "workspace:*",
+    "@svml/driver-node": "workspace:*",
     "@svml/elaborator": "workspace:*",
     "@svml/local": "workspace:*",
     "@svml/validation": "workspace:*"

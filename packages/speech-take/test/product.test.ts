@@ -27,7 +27,7 @@ import {
   sealTypedModule,
   start,
 } from "@svml/core";
-import { HostRegistry, NodeDriver } from "@svml/driver-node";
+import { ProducerRegistry, NodeDriver } from "@svml/driver-node";
 import type {
   BuildRequest,
   CompiledGraph,
@@ -345,13 +345,13 @@ test("selecting an Existing SpeechTake stops generation but keeps both projectio
 
 test("the Build Machine executes one shared generation for both projected outputs", async () => {
   let generations = 0;
-  const registry = new HostRegistry();
+  const registry = new ProducerRegistry();
   registry.registerProducer(generateProducer, generateImplementationDigest, () => {
     generations += 1;
     return { outputs: { take: { kind: "inline", value: sampleTake() } }, needs: {} };
   });
   registerProducerFacets(registry, speechTakeComponent.producers);
-  const result = await new NodeDriver({ registry, validators: validatorRegistry() }).run(
+  const result = await new NodeDriver({ producers: registry, validators: validatorRegistry() }).run(
     build({ "opening.audio": "exact", "opening.visual": "exact" }),
   );
   assert.equal(result.status, "complete");
