@@ -170,6 +170,17 @@ The Runtime executes an already frozen plan. Its environment-neutral ports are:
 There is no universal Queue package. One Build has one authoritative Scheduler. KIE, Lambda and
 other remote services may have private job queues, but those queues cannot advance the SVML graph.
 
+Targets determine demand only. Every accepted output in the demanded closure is a durable Record,
+not only the target results. BuildStore archives structured facts and provenance, OperationStore
+archives recoverable external attempts, and ArtifactStore archives content-addressed bytes. Values
+inside one Producer invocation remain ephemeral unless the package exposes them through a typed
+output. This structural boundary avoids a Core list of "important intermediates."
+
+A destination path is optional Host egress after archival. Omitting it never discards a Render,
+WhisperX result or another accepted Record. Convenience copying, retention and garbage collection
+are Runtime/Host policy and do not enter author or Run graph identity. See
+[`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md).
+
 An author package selects an exact capability such as Seedance Mini or WhisperX. A Runtime Profile
 binds that already explicit capability to one exact Endpoint instance. Runtime may select KIE versus
 Volcengine for the same declared Seedance capability; it may not reinterpret a generic `speaker`

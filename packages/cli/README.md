@@ -24,9 +24,11 @@ pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root 
 pnpm svml:v2 plan path/to/main.svml --target component.result
 pnpm svml:v2 check path/to/build.svrun
 pnpm svml:v2 plan path/to/build.svrun
-pnpm svml:v2 build path/to/build.svrun --runtime ./svml.runtime.json --follow --out ./final.mp4
-pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --pin shot=<prior-build-id> --accept-substitute --follow --out ./variant.mp4
+pnpm svml:v2 build path/to/build.svrun --runtime ./svml.runtime.json --build-id delivery-01 --follow
+pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --pin shot=<prior-build-id> --accept-substitute --build-id variant-01 --follow
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
+pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json
+pnpm svml:v2 get <build-id> --runtime ./svml.runtime.json --to ./final.mp4
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
 ```
 
@@ -47,9 +49,13 @@ non-retryable failure, cancellation or `--max-wait-ms`. `status` reads durable v
 `cancel` invokes active endpoints and then records the resulting terminal Build failure. None of
 these commands creates a second ready-command queue.
 
-`--out` accepts exactly one completed media target, reads its content-addressed bytes through the
-selected Runtime ArtifactStore and writes the requested file. It does not treat a CAS path as a
-public filename or bypass Record identity verification.
+`build` archives every accepted Record in the demanded closure and every referenced byte Artifact,
+whether or not the user wants a conventional filesystem copy. `inspect` lists Targets, demanded
+Logical Outputs, accepted Records and their Artifact references. `get` reads one accepted Record;
+without a selector it requires one distinct target, while `--record` and `--output` select any
+accepted Record or demanded Logical Output. `--artifact` selects any nested BlobRef that the Build
+actually references. `--to` copies an Artifact or writes an inline structured value as JSON. It is
+Host egress only and never changes Build identity or retention.
 
 `--pin output=<prior-build-id>` is temporary CLI compatibility language, not a Core primitive. The Host
 verifies the prior Build only to extract a typed Record, attaches it as an ordinary zero-input

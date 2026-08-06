@@ -53,6 +53,8 @@ Implemented:
 - `@svml/local`: zero-service developer assembly over SQLite and filesystem defaults;
 - declarative `svml.runtime.json` loading through an explicit adapter registry, with TypeScript
   Runtime assembly retained as the advanced embedding API;
+- domain-neutral Build archive inspection and Record egress: accepted intermediate Records remain
+  durable independently of optional `inspect` / `get --to` Host reads;
 - `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
   invocation seams.
 
