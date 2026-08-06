@@ -3,7 +3,6 @@ import {
   digestOf,
   EMPTY_REALIZATION_DIGEST,
   isDigest,
-  sealOutputValidationReceipt,
   resolveLogicalOutput,
   sealCompiledGraph,
   verifyBuildState,
@@ -20,7 +19,6 @@ import type {
   OperationNode,
   StoredValue,
   TypeValidationReceipt,
-  OutputValidationReceipt,
 } from "@svml/protocol";
 
 export type RealizationOverlay = {
@@ -51,15 +49,17 @@ export type ProvidedCandidateInput = {
   readonly record?: string;
   readonly provenance?: CanonicalValue;
   readonly validation?: TypeValidationReceipt;
-  readonly outputValidation?: OutputValidationReceipt;
 };
 
 export type HistoricalCandidateInput = {
   /** Current author graph before any external Realization Overlay. */
   readonly source: CompiledGraph;
-  /** A previously verified BuildState using this exact author graph source. */
+  /** A previously verified BuildState used only as a source of one typed value. */
   readonly build: BuildState;
+  /** Current Logical Output to which the value will be attached. */
   readonly output: string;
+  /** Historical Logical Output to read; defaults to `output` only as a Host convenience. */
+  readonly sourceOutput?: string;
 };
 
 export class RealizationError extends Error {
@@ -117,7 +117,6 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
     fidelity: input.fidelity,
     ...(input.provenance === undefined ? {} : { provenance: canonicalize(input.provenance) }),
     ...(input.validation === undefined ? {} : { validation: input.validation }),
-    ...(input.outputValidation === undefined ? {} : { outputValidation: input.outputValidation }),
   };
   const suffix = digestOf(identity).slice("sha256:".length);
   return {
@@ -130,7 +129,6 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
         value,
         ...(input.provenance === undefined ? {} : { provenance: canonicalize(input.provenance) }),
         ...(input.validation === undefined ? {} : { validation: input.validation }),
-        ...(input.outputValidation === undefined ? {} : { outputValidation: input.outputValidation }),
       },
     },
     fidelity: input.fidelity,
@@ -138,39 +136,17 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
 }
 
 /**
- * Admit one already verified historical Logical Output as an inert Existing Value Candidate.
- * The new Build is unrelated to recovery: only the exact Record value and its admission receipt
- * cross the boundary. No prior outstanding Command or execution state is reused.
+ * Reattach one typed historical Record as an ordinary inert substitute Candidate.
+ * The prior Build is verified only so the Host can safely extract the value, Type receipt and
+ * provenance. History makes no claim that the value satisfies the current author's meaning.
+ * No prior Operation, Command or outstanding execution state crosses the boundary.
  */
 export function createHistoricalCandidate(input: HistoricalCandidateInput): Candidate {
-  verifyCompiledGraph(input.build.program, input.source);
   verifyBuildState(input.build);
-  assert(
-    input.build.graph.source === input.source.source,
-    "HISTORICAL_GRAPH_MISMATCH",
-    "historical Build belongs to another author graph source",
-    input.output,
-  );
   const currentOutput = resolveLogicalOutput(input.source, input.output);
-  const historicalOutput = resolveLogicalOutput(input.build.graph, input.output);
-  assert(
-    digestOf({
-      id: currentOutput.id,
-      type: currentOutput.type,
-      semanticInputs: currentOutput.semanticInputs,
-      affinity: currentOutput.affinity ?? [],
-    }) === digestOf({
-      id: historicalOutput.id,
-      type: historicalOutput.type,
-      semanticInputs: historicalOutput.semanticInputs,
-      affinity: historicalOutput.affinity ?? [],
-    }),
-    "HISTORICAL_OUTPUT_MISMATCH",
-    "historical Build has another Logical Output definition",
-    input.output,
-  );
-  const selection = input.build.plan.selections.find((item) => item.output === input.output);
-  assert(selection !== undefined, "HISTORICAL_OUTPUT_UNSELECTED", "historical Build did not select this Logical Output", input.output);
+  const sourceOutput = input.sourceOutput ?? input.output;
+  const selection = input.build.plan.selections.find((item) => item.output === sourceOutput);
+  assert(selection !== undefined, "HISTORICAL_OUTPUT_UNSELECTED", "historical Build did not select this Logical Output", sourceOutput);
   const record = input.build.records.find((item) => item.id === selection.record);
   assert(record !== undefined, "HISTORICAL_RECORD_MISSING", "historical Output Record is absent", selection.record);
   assert(
@@ -181,30 +157,20 @@ export function createHistoricalCandidate(input: HistoricalCandidateInput): Cand
     "historical Output Record has another Type",
     record.id,
   );
-  const outputValidation = record.conformance === "exact"
-    ? sealOutputValidationReceipt({
-        graphSource: input.source.source,
-        output: input.output,
-        recordDigest: record.digest,
-        sourceBuild: input.build.id,
-        sourceRequest: input.build.request.digest,
-        sourceCandidate: selection.candidate,
-      })
-    : undefined;
   return createProvidedCandidate({
     output: input.output,
     value: record.value,
-    fidelity: record.conformance,
+    fidelity: "substitute",
     provenance: {
       format: "svml.historical-output@1",
       sourceBuild: input.build.id,
       sourceRequest: input.build.request.digest,
+      sourceOutput,
       sourceCandidate: selection.candidate,
       sourceRecord: record.id,
       sourceRecordDigest: record.digest,
     },
     ...(record.validation === undefined ? {} : { validation: record.validation }),
-    ...(outputValidation === undefined ? {} : { outputValidation }),
   });
 }
 
