@@ -32,10 +32,12 @@ export {
   resolveOperation,
   sealBuildRequest,
   sealCompiledGraph,
+  sealOutputValidationReceipt,
   selectedCandidate,
   valueRefKey,
   verifyBuildRequest,
   verifyCompiledGraph,
+  verifyOutputValidationReceipt,
 } from "./graph.js";
 export { compileBuild, deriveBuildPlan, validatePlan } from "./plan.js";
 export { reduce, start } from "./reducer.js";

@@ -2,6 +2,23 @@ import type { BlobRef, Digest } from "@svml/protocol";
 
 export type TimingQuality = "measured" | "derived" | "estimated";
 
+/**
+ * One planned duration for one exact Narrative speech excerpt.
+ *
+ * The value is intentionally provider-neutral: a deterministic estimator,
+ * an authored constant or another realization may produce it. Consumers such
+ * as Seedance decide which numeric subset they accept.
+ */
+export type SpeechDuration = {
+  readonly contract: "svml.speech-duration@1";
+  readonly segmentId: string;
+  readonly tokenStart: number;
+  readonly tokenEndExclusive: number;
+  readonly sourceSpeechExcerptDigest: Digest;
+  readonly durationSec: number;
+  readonly durationDigest: Digest;
+};
+
 export type ProgramSpace = {
   readonly contract: "svml.program-space@0";
   readonly digest: Digest;

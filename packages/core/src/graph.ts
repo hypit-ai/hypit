@@ -4,17 +4,19 @@ import type {
   CandidateBinding,
   CandidateRoot,
   CompiledGraph,
+  Digest,
   GraphValueRef,
   LinkedProgram,
   LogicalOutput,
   OperationNode,
   OperationResult,
+  OutputValidationReceipt,
   ProducerRef,
   StoredValue,
   TypeRef,
 } from "@svml/protocol";
 
-import { canonicalize, digestOf, isDigest } from "./canonical.js";
+import { canonicalize, digestOf, isDigest, recordDigest } from "./canonical.js";
 import { invariant } from "./error.js";
 import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
@@ -49,9 +51,65 @@ function normalizeRoot(root: CandidateRoot): CandidateRoot {
     id: root.value.id,
     value: normalizedStoredValue(root.value.value),
     ...(root.value.validation === undefined ? {} : { validation: root.value.validation }),
+    ...(root.value.outputValidation === undefined
+      ? {}
+      : { outputValidation: normalizeOutputValidationReceipt(root.value.outputValidation) }),
     ...(root.value.provenance === undefined ? {} : { provenance: canonicalize(root.value.provenance) }),
   };
   return { kind: "value", value };
+}
+
+function outputValidationContent(
+  receipt: Omit<OutputValidationReceipt, "id">,
+): Omit<OutputValidationReceipt, "id"> {
+  return {
+    format: "svml.output-validation@1",
+    graphSource: receipt.graphSource,
+    output: receipt.output,
+    recordDigest: receipt.recordDigest,
+    sourceBuild: receipt.sourceBuild,
+    sourceRequest: receipt.sourceRequest,
+    sourceCandidate: receipt.sourceCandidate,
+  };
+}
+
+function normalizeOutputValidationReceipt(receipt: OutputValidationReceipt): OutputValidationReceipt {
+  const content = outputValidationContent(receipt);
+  return { ...content, id: receipt.id };
+}
+
+export function sealOutputValidationReceipt(
+  receipt: Omit<OutputValidationReceipt, "format" | "id">,
+): OutputValidationReceipt {
+  const content = outputValidationContent({ format: "svml.output-validation@1", ...receipt });
+  return { ...content, id: digestOf(content) };
+}
+
+export function verifyOutputValidationReceipt(
+  receipt: OutputValidationReceipt,
+  graphSource: Digest,
+  output: string,
+  type: TypeRef,
+  value: StoredValue,
+): void {
+  invariant(
+    receipt.format === "svml.output-validation@1",
+    "UNSUPPORTED_OUTPUT_VALIDATION",
+    "unsupported Output validation receipt",
+  );
+  invariant(isDigest(receipt.id), "INVALID_DIGEST", "Output validation receipt id is invalid");
+  invariant(receipt.graphSource === graphSource, "OUTPUT_VALIDATION_GRAPH_MISMATCH", "Output validation belongs to another author graph");
+  invariant(receipt.output === output, "OUTPUT_VALIDATION_OUTPUT_MISMATCH", "Output validation belongs to another Logical Output");
+  invariant(
+    receipt.recordDigest === recordDigest(type, value),
+    "OUTPUT_VALIDATION_RECORD_MISMATCH",
+    "Output validation belongs to another value",
+  );
+  invariant(isDigest(receipt.sourceBuild), "INVALID_DIGEST", "Output validation source Build is invalid");
+  invariant(isDigest(receipt.sourceRequest), "INVALID_DIGEST", "Output validation source request is invalid");
+  invariant(receipt.sourceCandidate.length > 0, "EMPTY_CANDIDATE_ID", "Output validation source Candidate is empty");
+  const { id: _id, ...content } = receipt;
+  invariant(receipt.id === digestOf(outputValidationContent(content)), "OUTPUT_VALIDATION_DIGEST_MISMATCH", "Output validation receipt differs");
 }
 
 function normalizeOutput(output: LogicalOutput): LogicalOutput {
@@ -441,6 +499,16 @@ export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph
       `${candidate.id} returns ${typeKey(supplied)}, not ${typeKey(output.type)}`,
       candidate.id,
     );
+    if (candidate.root.kind === "value" && candidate.root.value.outputValidation !== undefined) {
+      invariant(candidate.fidelity === "exact", "SUBSTITUTE_OUTPUT_VALIDATION", "a substitute Candidate cannot carry exact Output validation");
+      verifyOutputValidationReceipt(
+        candidate.root.value.outputValidation,
+        graph.source,
+        output.id,
+        output.type,
+        candidate.root.value.value,
+      );
+    }
     const allowed = new Set(output.semanticInputs.map(valueRefKey));
     for (const leaf of semanticLeaves(graph, candidate.root)) {
       invariant(

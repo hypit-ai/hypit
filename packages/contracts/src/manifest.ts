@@ -33,6 +33,7 @@ export const contractTypes = {
   compositableSurface: { module: mediaModuleRef, name: "CompositableSurfaceRef" },
   programSpace: { module: programSpaceModuleRef, name: "ProgramSpace" },
   speechBasis: { module: speechModuleRef, name: "SpeechBasis" },
+  speechDuration: { module: speechModuleRef, name: "SpeechDuration" },
   speechAudioBasis: { module: speechModuleRef, name: "SpeechAudioBasis" },
   speechEvidenceAudio: { module: speechModuleRef, name: "SpeechEvidenceAudio" },
   alignedTranscriptEvidence: { module: semanticTimeModuleRef, name: "AlignedTranscriptEvidence" },
@@ -393,6 +394,16 @@ export const speechBasisSchema: ValueSchema = object({
   segments: { schema: { kind: "array", minItems: 1, items: basisSegment } },
 });
 
+export const speechDurationSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.speech-duration@1" } },
+  segmentId: { schema: string },
+  tokenStart: { schema: integer },
+  tokenEndExclusive: { schema: integer },
+  sourceSpeechExcerptDigest: { schema: digest },
+  durationSec: { schema: { kind: "number", minimum: 0.000001 } },
+  durationDigest: { schema: digest },
+});
+
 export const speechAudioBasisSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.speech-audio-basis@1" } },
   programSpace: { schema: programSpaceSchema }, audio: { schema: mediaArtifactSchema },
@@ -738,6 +749,7 @@ export const speechManifest: ModuleManifest = {
     { module: programSpaceModuleRef, digest: programSpaceManifestDigest },
   ],
   types: [
+    { name: contractTypes.speechDuration.name, schema: speechDurationSchema },
     { name: contractTypes.speechBasis.name, schema: speechBasisSchema },
     { name: contractTypes.speechAudioBasis.name, schema: speechAudioBasisSchema },
     { name: contractTypes.speechEvidenceAudio.name, schema: speechEvidenceAudioSchema },

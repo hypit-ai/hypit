@@ -11,7 +11,18 @@ export {
   textTrackTypes,
 } from "./manifest.js";
 export {
+  appendFullTextItem,
+  appendFullTextItemImplementationDigest,
+  appendSelectedTextItem,
+  appendSelectedTextItemImplementationDigest,
+  assertTextItemSpec,
+  assertTextTrackHeader,
   assertTextTrackProgramIdentity,
+  assertTextTrackSet,
+  createTextTrackSet,
+  createTextTrackSetImplementationDigest,
+  finalizeTextTrack,
+  finalizeTextTrackImplementationDigest,
   assertTextTrackSpec,
   compileTextTrackImplementationDigest,
   compileTextTrackProgram,
@@ -19,6 +30,8 @@ export {
   renderTextTrack,
   renderTextTrackImplementationDigest,
   sealTextTrackProgram,
+  sealTextTrackHeader,
+  sealTextItemSpec,
   sealTextTrackSpec,
 } from "./program.js";
 export { decodeTextTrackSurface } from "./surface.js";

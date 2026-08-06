@@ -1,0 +1,38 @@
+<sheet version="1">
+  film.vertical {
+    width: 480;
+    height: 854;
+    frame-rate: 30;
+    background: #09090B;
+  }
+
+  caption.primary {
+    stack-order: 70;
+    x: 0.08;
+    y: 0.74;
+    width: 0.84;
+    font: Inter;
+    weight: 700;
+    size: 30;
+    line-height: 1;
+    align: center;
+    fill: #FFFFFF;
+    background: #09090BCC;
+    padding: 10 14;
+    radius: 12;
+  }
+
+  text.callout {
+    stack-order: 85;
+    x: 0.08;
+    y: 0.10;
+    width: 0.84;
+    height: 0.10;
+    font: Inter;
+    weight: 900;
+    size: 27;
+    align: center;
+    fill: #FFF16A;
+    tracking: -0.5;
+  }
+</sheet>

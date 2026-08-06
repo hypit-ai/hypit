@@ -1,4 +1,5 @@
 export {
+  createHistoricalCandidate,
   createProvidedCandidate,
   RealizationError,
   resolveRealization,
@@ -7,6 +8,7 @@ export {
   verifyResolvedRealization,
 } from "./overlay.js";
 export type {
+  HistoricalCandidateInput,
   ProvidedCandidateInput,
   RealizationClosure,
   RealizationOverlay,
