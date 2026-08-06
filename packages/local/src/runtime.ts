@@ -1,6 +1,9 @@
 import { resolve } from "node:path";
 
 import {
+  registerTypeValidatorFacets,
+} from "@svml/component-kit";
+import {
   FileArtifactStore,
   fileArtifactStoreFacet,
   fileArtifactStoreRuntimeManifest,
@@ -148,7 +151,7 @@ export async function createLocalRuntime(
   const providers = new ProviderRegistry();
   const validators = options.validators ?? new TypeValidatorRegistry();
   for (const component of options.components ?? []) {
-    await component.installValidators?.(validators);
+    registerTypeValidatorFacets(validators, component.validators ?? []);
     await component.install?.(hosts);
   }
   for (const provider of options.providers ?? []) await provider.install(providers);

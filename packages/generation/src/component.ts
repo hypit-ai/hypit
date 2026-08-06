@@ -1,4 +1,4 @@
-import type { TypeValidatorRegistrar } from "@svml/validation";
+import type { ComponentPackage } from "@svml/component-kit";
 
 import {
   verifyGeneratedImageSet,
@@ -17,12 +17,20 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
 /** Host-side semantic refinements for the shared generated-media contracts. */
 export const generationComponent = {
   name: "@svml/generation",
-  installValidators(registry: TypeValidatorRegistrar): void {
-    registry.register(generationTypes.imageSet, generationValidatorDigests.imageSet, ({ value }) => {
-      verifyGeneratedImageSet(inline(value, "GeneratedImageSet"));
-    });
-    registry.register(generationTypes.videoSet, generationValidatorDigests.videoSet, ({ value }) => {
-      verifyGeneratedVideoSet(inline(value, "GeneratedVideoSet"));
-    });
-  },
-};
+  validators: [
+    {
+      type: generationTypes.imageSet,
+      implementationDigest: generationValidatorDigests.imageSet,
+      handler: ({ value }) => {
+        verifyGeneratedImageSet(inline(value, "GeneratedImageSet"));
+      },
+    },
+    {
+      type: generationTypes.videoSet,
+      implementationDigest: generationValidatorDigests.videoSet,
+      handler: ({ value }) => {
+        verifyGeneratedVideoSet(inline(value, "GeneratedVideoSet"));
+      },
+    },
+  ],
+} satisfies ComponentPackage;

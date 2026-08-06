@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
+  compositionContractsComponent,
+  compositionValidatorDigests,
   contractTypes,
   sealProgramSpace,
   sealSpeechBasis,
@@ -13,9 +16,11 @@ import {
   createResolvedClosure,
   digestOf,
   link,
+  recordDigest,
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
+  sealTypeValidationReceipt,
   sealTypedModule,
   start,
 } from "@svml/core";
@@ -38,6 +43,7 @@ import {
   speechTakeManifest,
   speechTakeProducers,
 } from "@svml/speech-take";
+import { TypeValidatorRegistry } from "@svml/validation";
 
 const testModule = { name: "example.speech-take-product", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "SpeechRequest" } satisfies TypeRef;
@@ -66,6 +72,12 @@ const testManifest: ModuleManifest = {
 };
 
 const closure = createResolvedClosure([...videoContractManifests, speechTakeManifest, testManifest]);
+
+function validatorRegistry(): TypeValidatorRegistry {
+  const registry = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
+  return registry;
+}
 
 function sampleTake(label = "generated"): SpeechBasis {
   const durationSec = 2;
@@ -128,6 +140,12 @@ function createGraph(program: LinkedProgram): CompiledGraph {
   const operation = (id: string) => ({ kind: "operation-result" as const, operation: id });
   const existingTake = sampleTake("approved");
   const existingVisual = projectSpeechVisual(existingTake);
+  const existingVisualValue = { kind: "inline" as const, value: existingVisual };
+  const existingVisualValidation = sealTypeValidationReceipt({
+    type: contractTypes.visualTrack,
+    recordDigest: recordDigest(contractTypes.visualTrack, existingVisualValue),
+    validatorDigest: compositionValidatorDigests.visualTrack,
+  });
   return sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [
@@ -202,8 +220,9 @@ function createGraph(program: LinkedProgram): CompiledGraph {
           kind: "value",
           value: {
             id: "provided:opening-visual",
-            value: { kind: "inline", value: existingVisual },
+            value: existingVisualValue,
             provenance: { library: "approved-clips", clip: "opening-v3" },
+            validation: existingVisualValidation,
           },
         },
         fidelity: "substitute",
@@ -341,7 +360,7 @@ test("the Build Machine executes one shared generation for both projected output
       };
     },
   );
-  const result = await new NodeDriver({ registry }).run(
+  const result = await new NodeDriver({ registry, validators: validatorRegistry() }).run(
     build({ "opening.audio": "exact", "opening.visual": "exact" }),
   );
   assert.equal(result.status, "complete");

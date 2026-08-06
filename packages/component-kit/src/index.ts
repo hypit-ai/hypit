@@ -4,9 +4,13 @@ import type {
   InvokeProducerCommand,
   ProducerRef,
   StoredValue,
+  TypeRef,
   TypedRecord,
 } from "@svml/protocol";
-import type { TypeValidatorRegistrar } from "@svml/validation";
+import type {
+  TypeValidatorHandler,
+  TypeValidatorRegistrar,
+} from "@svml/validation";
 
 export type Awaitable<T> = T | Promise<T>;
 
@@ -38,9 +42,25 @@ export interface ProducerRegistrar {
   ): void;
 }
 
+/** Enumerable validator identity. Package locks can bind this without serializing its handler. */
+export type TypeValidatorFacet = {
+  readonly type: TypeRef;
+  readonly implementationDigest: Digest;
+  readonly handler: TypeValidatorHandler;
+};
+
+export function registerTypeValidatorFacets(
+  registry: TypeValidatorRegistrar,
+  facets: readonly TypeValidatorFacet[],
+): void {
+  for (const facet of facets) {
+    registry.register(facet.type, facet.implementationDigest, facet.handler);
+  }
+}
+
 /** Trusted deterministic implementation package; it selects no Provider or Runtime service. */
 export type ComponentPackage = {
   readonly name: string;
+  readonly validators?: readonly TypeValidatorFacet[];
   install?(registry: ProducerRegistrar): Awaitable<void>;
-  installValidators?(registry: TypeValidatorRegistrar): Awaitable<void>;
 };

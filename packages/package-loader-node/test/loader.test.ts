@@ -50,6 +50,7 @@ async function fixture(): Promise<{
   await writeFile(activation, `
     const module = { name: "example.card", version: "1" };
     const digest = ${JSON.stringify(implementationDigest)};
+    const resultType = { module, name: "CardResult" };
     export default {
       format: "svml.node-author-package@1",
       name: "example-card",
@@ -59,13 +60,24 @@ async function fixture(): Promise<{
           name: module.name,
           version: module.version,
           dependencies: [],
-          types: [],
+          types: [{
+            name: resultType.name,
+            schema: { kind: "string", minLength: 1 },
+            validator: {
+              abi: "svml.type-validator@1",
+              implementation: {
+                kind: "registered",
+                locator: "example-card/validate-card-result",
+                digest,
+              },
+            },
+          }],
           capabilities: [],
           surfaces: [{
             name: "card",
             tag: "Card",
             mode: "structured",
-            outputs: [],
+            outputs: [resultType],
             implementation: {
               kind: "trusted-frontend-surface",
               locator: "example-card/card",
@@ -81,7 +93,27 @@ async function fixture(): Promise<{
         surface: "card",
         mode: "structured",
         implementationDigest: digest,
-        handler() { return { records: [], components: [], fragments: [] }; },
+        handler({ element }) {
+          return {
+            records: [{
+              id: "card-result",
+              type: resultType,
+              value: { kind: "inline", value: "accepted" },
+              range: element.range,
+            }],
+            components: [],
+            fragments: [],
+          };
+        },
+      }],
+      validators: [{
+        type: resultType,
+        implementationDigest: digest,
+        handler({ value }) {
+          if (value.kind !== "inline" || value.value !== "accepted") {
+            throw new Error("CardResult is not accepted");
+          }
+        },
       }],
     };
   `, "utf8");
@@ -106,6 +138,8 @@ test("an installed locked package adds a Surface without an official CLI registr
   assert.deepEqual(result.program.closure.modules.map((module) => module.ref), [
     { name: "example.card", version: "1" },
   ]);
+  assert.equal(result.module.records[0]?.value.kind, "inline");
+  assert.equal(result.module.records[0]?.validation?.validatorDigest, implementationDigest);
   assert.equal(result.elaboration.graph.operations.length, 0);
 });
 
