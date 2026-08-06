@@ -228,6 +228,8 @@ pnpm svml:v2 build build.svrun \
   --follow
 
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
+pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json
+pnpm svml:v2 get <build-id> --runtime ./svml.runtime.json --to ./result.bin
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
 ```
 
@@ -245,6 +247,12 @@ already saved before a crash is replayed into Core without calling the Endpoint 
 Endpoint's optional cancellation hook, journals a non-retryable `CANCELLED` failure and lets Core
 accept that terminal fact. Retryable failures create a new attempt and submission key only when the
 package's finite retry policy allows it; recovering one existing attempt never changes its key.
+
+Every accepted output in the demanded closure remains in BuildState, not only the Targets.
+Referenced bytes remain in ArtifactStore. `inspect` exposes that archive without reading private
+Store paths; `get` optionally copies one direct Artifact or writes one structured Record as JSON.
+Neither command resumes execution, and omitting `get` never discards a result. See
+[`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md).
 
 ## 6. Queue law
 

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { materializeSingleGoal, runCli } from "@svml/cli";
+import { materializeRecord, runCli } from "@svml/cli";
 
 test("CLI Pin is explicit substitute selection rather than an exact-history privilege", async () => {
   await assert.rejects(
@@ -16,6 +16,15 @@ test("CLI Pin is explicit substitute selection rather than an exact-history priv
       "--pin", "shot=sha256:historical",
     ], { write() {} }),
     /--pin attaches substitute Candidates; add --accept-substitute/u,
+  );
+});
+
+test("CLI does not confuse Build persistence with the removed --out convenience", async () => {
+  await assert.rejects(
+    async () => await runCli([
+      "build", "unused.svrun", "--runtime", "unused-runtime.ts", "--out", "final.mp4",
+    ], { write() {} }),
+    /Build always archives accepted Records/u,
   );
 });
 
@@ -404,25 +413,134 @@ test("CLI package lock activates an installed package without changing the offic
   assert.deepEqual(checked.modules, ["example.empty@1"]);
 });
 
-test("materializeSingleGoal writes one verified target through the Runtime ArtifactStore seam", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-out-"));
+test("materializeRecord copies an archived Artifact without requiring a completed Build", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-get-"));
   const bytes = Buffer.from("final-video-bytes");
   const artifactDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   const output = join(root, "out", "final.mp4");
   const runtime = {
     async readArtifact(digest: string) { return digest === artifactDigest ? bytes : undefined; },
-  } as Parameters<typeof materializeSingleGoal>[0];
-  const built = {
-    status: "complete",
-    state: {
-      plan: { goals: [{ record: "final.video" }] },
-      records: [{
-        id: "final.video",
-        value: { kind: "inline", value: { digest: artifactDigest, size: bytes.byteLength, mediaType: "video/mp4" } },
+  } as Parameters<typeof materializeRecord>[0];
+  const record = {
+    id: "final.video",
+    value: { kind: "inline", value: { digest: artifactDigest, size: bytes.byteLength, mediaType: "video/mp4" } },
+  } as unknown as Parameters<typeof materializeRecord>[1];
+  const result = await materializeRecord(runtime, record, output);
+  assert.deepEqual(await readFile(output), bytes);
+  assert.deepEqual(result, {
+    kind: "artifact",
+    path: output,
+    digest: artifactDigest,
+    size: bytes.byteLength,
+    mediaType: "video/mp4",
+  });
+});
+
+test("materializeRecord writes structured intermediate facts as JSON", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-get-json-"));
+  const output = join(root, "evidence.json");
+  const record = {
+    id: "whisperx.evidence",
+    value: { kind: "inline", value: { words: [{ text: "hello", start: 0, end: 0.4 }] } },
+  } as unknown as Parameters<typeof materializeRecord>[1];
+  const result = await materializeRecord({ async readArtifact() { return undefined; } }, record, output);
+  assert.equal(result.kind, "json");
+  if (record.value.kind !== "inline") assert.fail("fixture must be inline");
+  assert.deepEqual(JSON.parse(await readFile(output, "utf8")), record.value.value);
+});
+
+test("CLI inspect and get read the durable Build archive independently of build execution", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-archive-"));
+  const runtimePath = join(root, "runtime.mjs");
+  const destination = join(root, "final.mp4");
+  const rawDestination = join(root, "whisperx-raw.json");
+  const bytes = Buffer.from("archived-video");
+  const rawBytes = Buffer.from('{"segments":[]}');
+  const artifactDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+  const rawDigest = `sha256:${createHash("sha256").update(rawBytes).digest("hex")}`;
+  const recordDigest = `sha256:${"1".repeat(64)}`;
+  const buildDigest = `sha256:${"2".repeat(64)}`;
+  const requestDigest = `sha256:${"3".repeat(64)}`;
+  const state = {
+    id: buildDigest,
+    status: "active",
+    graph: { id: `sha256:${"4".repeat(64)}` },
+    request: {
+      digest: requestDigest,
+      targets: [{ output: "logical:final", accepts: "exact" }],
+    },
+    plan: {
+      goals: [{ record: "record:final" }],
+      selections: [{
+        output: "logical:final",
+        candidate: "candidate:render",
+        fidelity: "exact",
+        record: "record:final",
       }],
     },
-  } as unknown as Parameters<typeof materializeSingleGoal>[1];
-  const result = await materializeSingleGoal(runtime, built, output);
-  assert.deepEqual(await readFile(output), bytes);
-  assert.deepEqual(result, { path: output, digest: artifactDigest, size: bytes.byteLength });
+    records: [{
+      id: "record:final",
+      type: { module: { name: "example", version: "1" }, name: "Artifact" },
+      value: { kind: "inline", value: { digest: artifactDigest, size: bytes.byteLength, mediaType: "video/mp4" } },
+      digest: recordDigest,
+      conformance: "exact",
+      origin: { kind: "authored", module: "example" },
+    }, {
+      id: "record:whisperx",
+      type: { module: { name: "example", version: "1" }, name: "Evidence" },
+      value: { kind: "inline", value: {
+        words: [],
+        rawEvidenceArtifact: { kind: "blob", digest: rawDigest, size: rawBytes.byteLength, mediaType: "application/json" },
+      } },
+      digest: `sha256:${"5".repeat(64)}`,
+      conformance: "exact",
+      origin: { kind: "authored", module: "example" },
+    }],
+    receipts: [],
+    derivations: [],
+    diagnostics: [],
+  };
+  await writeFile(runtimePath, `const bytes = Buffer.from(${JSON.stringify(bytes.toString("base64"))}, "base64");
+const rawBytes = Buffer.from(${JSON.stringify(rawBytes.toString("base64"))}, "base64");
+export default {
+  async build() { throw new Error("not used"); },
+  async status(id) { return { build: id === "archive-1" ? { build: id, revision: 7, state: ${JSON.stringify(state)} } : undefined, operations: [] }; },
+  async readArtifact(digest) {
+    if (digest === ${JSON.stringify(artifactDigest)}) return bytes;
+    if (digest === ${JSON.stringify(rawDigest)}) return rawBytes;
+    return undefined;
+  },
+  async close() {},
+};\n`, "utf8");
+
+  let inspectedOutput = "";
+  await runCli(["inspect", "archive-1", "--runtime", runtimePath], {
+    write: (text) => { inspectedOutput += text; },
+  });
+  const inspected = JSON.parse(inspectedOutput) as {
+    readonly archive: {
+      readonly status: string;
+      readonly targets: readonly { readonly accepted: boolean }[];
+      readonly records: readonly { readonly artifacts: readonly { readonly digest: string }[] }[];
+    };
+  };
+  assert.equal(inspected.archive.status, "active");
+  assert.equal(inspected.archive.targets[0]?.accepted, true);
+  assert.equal(inspected.archive.records[0]?.artifacts[0]?.digest, artifactDigest);
+
+  let getOutput = "";
+  await runCli([
+    "get", "archive-1", "--runtime", runtimePath,
+    "--output", "logical:final", "--to", destination,
+  ], { write: (text) => { getOutput += text; } });
+  assert.deepEqual(await readFile(destination), bytes);
+  const got = JSON.parse(getOutput) as { readonly materialized: { readonly kind: string; readonly digest: string } };
+  assert.equal(got.materialized.kind, "artifact");
+  assert.equal(got.materialized.digest, artifactDigest);
+
+  await runCli([
+    "get", "archive-1", "--runtime", runtimePath,
+    "--artifact", rawDigest, "--to", rawDestination,
+  ], { write() {} });
+  assert.deepEqual(await readFile(rawDestination), rawBytes);
 });

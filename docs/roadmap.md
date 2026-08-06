@@ -56,10 +56,20 @@ community Frontends, Producers and Validators:
 - actual loaded-code digest verification;
 - validator isolation or remote attestation.
 
-### A5. Developer inspection
+### A5. Build archive inspection and egress — first CLI slice implemented
 
-Add domain-neutral `doctor`, graph/plan inspection and structured diagnostics. A Record catalog may
-support history search, but it must only help the user author explicit Candidates. There is no
+Make the already durable Build archive usable without confusing persistence with a destination
+path:
+
+- `inspect` lists target bindings, demanded Logical Outputs and every accepted Record;
+- `get` reads any accepted Record or Build-referenced nested Artifact and optionally materializes
+  its bytes or JSON;
+- building without a path still archives the complete demanded closure;
+- later Build-catalog aliases may improve source-name lookup without entering Core identity;
+- explicit release and reachability-based Artifact garbage collection remain Runtime Store policy.
+
+Add `doctor`, richer graph/plan views and structured diagnostics after this slice. A Record catalog
+may support history search, but it must only help the user author explicit Candidates. There is no
 automatic result reuse or hidden Candidate selection.
 
 ## B. Environment and Provider work

@@ -109,9 +109,16 @@ credentials:
 ```bash
 pnpm svml:v2 build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
-  --follow \
-  --out examples/talking-film-live/output/final.mp4
+  --build-id talking-film-live \
+  --follow
+
+pnpm svml:v2 get talking-film-live \
+  --runtime examples/talking-film-live/svml.runtime.json \
+  --to examples/talking-film-live/output/final.mp4
 ```
+
+The Build archives every accepted intermediate Record and Artifact before `get` makes an optional
+human-readable copy of the sole target.
 
 Read its [deployment requirements](examples/talking-film-live/README.md) before running it. Paid
 credentials, presenter assets, local databases and generated outputs are not committed.
