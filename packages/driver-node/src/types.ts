@@ -6,14 +6,15 @@ import type {
   Delivery,
   Digest,
   FulfillNeedCommand,
-  InvokeProducerCommand,
   Need,
   ProducerRef,
   StoredValue,
   TypeRef,
   CapabilityRef,
-  TypedRecord,
 } from "@svml/protocol";
+import type {
+  ProducerHandler,
+} from "@svml/component-kit";
 import type {
   ArtifactStore,
   CredentialRef,
@@ -25,21 +26,12 @@ import type {
 
 export type { ArtifactStore } from "@svml/runtime";
 
-export type ProducerHandlerResult = {
-  readonly outputs: Readonly<Record<string, StoredValue>>;
-  readonly needs: Readonly<Record<string, CanonicalValue>>;
-};
-
-export type ProducerHandlerContext = {
-  readonly command: InvokeProducerCommand;
-  readonly producer: ProducerRef;
-  readonly inputs: Readonly<Record<string, TypedRecord>>;
-  readonly artifacts: ArtifactStore;
-};
-
-export type ProducerHandler = (
-  context: ProducerHandlerContext,
-) => ProducerHandlerResult | Promise<ProducerHandlerResult>;
+export type {
+  ProducerHandler,
+  ProducerHandlerContext,
+  ProducerHandlerResult,
+  ProducerRegistrar,
+} from "@svml/component-kit";
 
 export type ProviderHandlerResult = {
   readonly value: StoredValue;

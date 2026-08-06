@@ -1,6 +1,4 @@
-import type {
-  HostRegistry,
-} from "@svml/driver-node";
+import type { Awaitable, ComponentPackage } from "@svml/component-kit";
 import type { NodeProviderPackage } from "@svml/provider-kit";
 import type {
   BuildState,
@@ -21,15 +19,9 @@ import type {
 } from "@svml/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@svml/validation";
 
-export type Awaitable<T> = T | Promise<T>;
-
-/** Trusted deterministic component code. It cannot select Provider endpoints or stores. */
-export type NodeComponentPackage = {
-  readonly name: string;
-  install(registry: HostRegistry): Awaitable<void>;
-  /** Optional package-owned semantic validators for the Types it publishes. */
-  installValidators?(registry: TypeValidatorRegistrar): Awaitable<void>;
-};
+/** @deprecated Use the host-neutral ComponentPackage name. */
+export type NodeComponentPackage = ComponentPackage;
+export type { ComponentPackage } from "@svml/component-kit";
 
 export type LocalTypeValidatorRegistry = TypeValidatorRegistryLike & TypeValidatorRegistrar;
 
@@ -54,7 +46,7 @@ export type CreateLocalRuntimeOptions = {
   readonly operationStore?: OperationStore;
   readonly artifactStore: ArtifactStore;
   readonly credentialStore?: CredentialStore;
-  readonly components?: readonly NodeComponentPackage[];
+  readonly components?: readonly ComponentPackage[];
   readonly providers?: readonly NodeProviderPackage[];
   readonly closure?: LocalRuntimeClosureOptions;
   readonly scheduling?: Omit<LocalBuildSchedulerOptions, "buildStore" | "runtimeClosure">;
@@ -68,7 +60,7 @@ export type ProjectLocalRuntimeOptions = {
   readonly artifactPath?: string;
   /** Replaces the default project filesystem ArtifactStore without changing Scheduler/Core. */
   readonly artifacts?: NodeArtifactStorePackage;
-  readonly components?: readonly NodeComponentPackage[];
+  readonly components?: readonly ComponentPackage[];
   readonly providers?: readonly NodeProviderPackage[];
   readonly allowedPermissions?: readonly string[];
   readonly scheduling?: {

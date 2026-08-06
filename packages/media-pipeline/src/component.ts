@@ -53,7 +53,7 @@ function blob(value: StoredValue, subject: string): BlobRef {
 
 export const mediaPipelineComponent = {
   name: "@svml/media-pipeline",
-  install(registry: import("@svml/driver-node").HostRegistry): void {
+  install(registry: import("@svml/component-kit").ProducerRegistrar): void {
     registry.registerProducer(
       mediaPipelineProducers.inspect,
       mediaPipelineImplementationDigests.inspect,

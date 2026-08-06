@@ -21,7 +21,6 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
 /** Semantic refinements for digest-bound public media facts. */
 export const mediaContractsComponent = {
   name: "@svml/media",
-  install(_registry: unknown): void {},
   installValidators(registry: {
     register(
       type: TypeRef,
