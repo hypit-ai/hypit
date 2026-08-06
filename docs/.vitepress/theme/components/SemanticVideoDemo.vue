@@ -777,7 +777,7 @@ onBeforeUnmount(() => {
 .street-broll { position: absolute; inset: 0; z-index: 10; display: none; width: 100%; height: 100%; object-fit: cover; }
 .street-broll.active { display: block; }
 .visual-outline { position: absolute; z-index: 24; pointer-events: none; }
-.street-scene-outline { inset: 4px; border: 1px solid rgba(236,72,153,.92); }
+.street-scene-outline { inset: 4px; border: 1px solid rgba(200,95,125,.92); }
 .street-broll-outline { inset: 9px; border: 1px solid rgba(99,216,255,.95); }
 .gbb-header { position: absolute; z-index: 8; top: 8.9%; left: 5.8%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7.2%; width: 88.4%; }
 .gbb-slot { position: relative; display: grid; justify-items: center; opacity: 1; }
@@ -787,7 +787,7 @@ onBeforeUnmount(() => {
 .slot-good strong { color: #ff1749; }
 .slot-better strong { color: #ffb300; }
 .slot-best strong { color: #00b96b; }
-.gbb-slot.selected::after { content: ""; position: absolute; inset: -4px -2px -5px; border: 1px solid #ec4899; pointer-events: none; }
+.gbb-slot.selected::after { content: ""; position: absolute; inset: -4px -2px -5px; border: 1px solid #C85F7D; pointer-events: none; }
 .gbb-deck { position: absolute; z-index: 12; top: 61.7%; left: 11%; width: 78%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; box-shadow: 0 9px 28px rgba(0,0,0,.28); }
 .gbb-deck.selected { outline: 1px solid #63d8ff; outline-offset: 3px; }
 .demo-caption { position: absolute; z-index: 30; left: 5%; display: flex; align-items: baseline; justify-content: center; width: 90%; column-gap: 4px; color: #fff; font-family: Arial Black, Poppins, Inter, sans-serif; font-size: 16px; font-weight: 900; line-height: 1.08; text-align: center; white-space: nowrap; pointer-events: none; -webkit-text-stroke: .75px #000; paint-order: stroke fill; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
