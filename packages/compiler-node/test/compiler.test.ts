@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -14,7 +15,6 @@ import {
   ModulePackageRegistry,
   NodeCompiler,
   NodeCompilerError,
-  NodeSourceHost,
 } from "@svml/compiler-node";
 import {
   computeModuleDigest,
@@ -26,16 +26,25 @@ import {
   verifySourceClosure,
 } from "@svml/elaborator";
 import type {
+  AuthorSourceAssetRequest,
+  AuthorSourceImport,
+  AuthorSourceUnit,
+} from "@svml/elaborator";
+import type {
+  BlobRef,
   ModuleManifest,
   ModuleRef,
   ProducerRef,
   TypeRef,
 } from "@svml/protocol";
+import type { Workspace } from "@svml/host";
+import { WorkspaceError } from "@svml/host";
 import {
   createTextAuthorFrontend,
   TextSurfaceRegistry,
   textAuthorFrontendId,
 } from "@svml/text";
+import { NodeFilesystemWorkspace } from "@svml/workspace-fs-node";
 
 function emptyManifest(name: string, version = "1"): ModuleManifest {
   return {
@@ -198,7 +207,7 @@ function compiler(root: string): NodeCompiler {
   return new NodeCompiler({ modules, frontends, entryFrontend: textAuthorFrontendId, root });
 }
 
-function assetCompiler(root: string): NodeCompiler {
+function assetCompiler(environment: { readonly root: string } | { readonly workspace: Workspace }): NodeCompiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: assetManifest });
   const surfaces = new TextSurfaceRegistry();
@@ -222,7 +231,41 @@ function assetCompiler(root: string): NodeCompiler {
       return resolved;
     },
   }));
-  return new NodeCompiler({ modules, frontends, entryFrontend: textAuthorFrontendId, root });
+  return new NodeCompiler({ modules, frontends, entryFrontend: textAuthorFrontendId, ...environment });
+}
+
+function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace {
+  return {
+    async open(entryLocator) {
+      const entry: AuthorSourceUnit = { id: entryLocator, name: "main.svml", text: sourceText };
+      let attachment: { readonly artifact: BlobRef; readonly bytes: Uint8Array } | undefined;
+      return {
+        entry,
+        async resolveSource(_importer: AuthorSourceUnit, request: AuthorSourceImport) {
+          throw new WorkspaceError("UNKNOWN_MEMORY_SOURCE", `No memory source satisfies ${request.from}`, request.from);
+        },
+        async resolveAsset(importer: AuthorSourceUnit, request: AuthorSourceAssetRequest) {
+          if (importer !== entry || request.from !== "./reference.bin") {
+            throw new WorkspaceError("UNKNOWN_MEMORY_ASSET", `No memory asset satisfies ${request.from}`, request.from);
+          }
+          const bytes = Uint8Array.from(assetBytes);
+          const artifact: BlobRef = {
+            kind: "blob",
+            digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+            size: bytes.byteLength,
+            mediaType: request.mediaType,
+          };
+          attachment = { artifact, bytes };
+          return { artifact: { ...artifact } };
+        },
+        attachments() {
+          return attachment === undefined
+            ? []
+            : [{ artifact: { ...attachment.artifact }, bytes: Uint8Array.from(attachment.bytes) }];
+        },
+      };
+    },
+  };
 }
 
 test("Node Compiler discovers real imports and plans a named public export", async () => {
@@ -253,9 +296,9 @@ test("source assets are content addressed, closure-bound and returned as a Host 
   </svml>`, "utf8");
   await writeFile(asset, new Uint8Array([1, 2, 3, 4]));
 
-  const first = await assetCompiler(root).compileFile(file);
+  const first = await assetCompiler({ root }).compileFile(file);
   const unit = first.closure.units.find((item) => item.assets.length > 0);
-  const attachment = first.sourceArtifacts[0];
+  const attachment = first.attachments[0];
   assert.equal(unit?.assets[0]?.from, "./reference.bin");
   assert.equal(unit?.assets[0]?.artifact.digest, attachment?.artifact.digest);
   assert.deepEqual(attachment?.bytes, new Uint8Array([1, 2, 3, 4]));
@@ -276,47 +319,75 @@ test("source assets are content addressed, closure-bound and returned as a Host 
   );
 
   await writeFile(asset, new Uint8Array([9, 8, 7]));
-  const second = await assetCompiler(root).compileFile(file);
+  const second = await assetCompiler({ root }).compileFile(file);
   assert.notEqual(second.closure.id, first.closure.id);
-  assert.notEqual(second.sourceArtifacts[0]?.artifact.digest, attachment?.artifact.digest);
+  assert.notEqual(second.attachments[0]?.artifact.digest, attachment?.artifact.digest);
 });
 
-test("Node Source Host contains symlinks and reads each canonical source only once", async () => {
+test("filesystem Workspace contains symlinks and reads each canonical source only once", async () => {
   const parent = await mkdtemp(join(tmpdir(), "svml-source-host-"));
   const root = join(parent, "project");
   await mkdir(root);
   const entryPath = join(root, "main.svml");
+  const includedPath = join(root, "included.svs");
   const outsidePath = join(parent, "outside.svs");
   const assetPath = join(root, "asset.bin");
   await writeFile(entryPath, "first", "utf8");
+  await writeFile(includedPath, "included-first", "utf8");
   await writeFile(outsidePath, "outside", "utf8");
   await writeFile(assetPath, new Uint8Array([1, 2, 3]));
   await symlink(outsidePath, join(root, "escaped.svs"));
-  const host = await NodeSourceHost.create(root);
-  const entry = await host.load(entryPath);
+  const workspace = await new NodeFilesystemWorkspace({ root }).open(entryPath);
+  const entry = workspace.entry;
   await writeFile(entryPath, "second", "utf8");
-  assert.equal((await host.load(entryPath)).text, "first");
+  assert.equal((await new NodeFilesystemWorkspace({ root }).open(entryPath)).entry.text, "second");
+  assert.equal(entry.text, "first");
   assert.equal(await readFile(entryPath, "utf8"), "second");
-  const firstAsset = await host.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
+  const sourceRequest = { from: "./included.svs", alias: "included", frontend: "example.frontend@1" };
+  const firstIncluded = await workspace.resolveSource(entry, sourceRequest);
+  await writeFile(includedPath, "included-second", "utf8");
+  assert.deepEqual(await workspace.resolveSource(entry, sourceRequest), firstIncluded);
+  assert.equal(firstIncluded.text, "included-first");
+  const firstAsset = await workspace.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
   await writeFile(assetPath, new Uint8Array([4, 5, 6, 7]));
-  const lockedAsset = await host.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
+  const lockedAsset = await workspace.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
   assert.deepEqual(lockedAsset, firstAsset, "one Host locks an asset edge to the first bytes read");
-  const detached = host.sourceArtifacts();
+  const detached = await workspace.attachments();
   detached[0]?.bytes.fill(0);
-  assert.deepEqual(host.sourceArtifacts()[0]?.bytes, new Uint8Array([1, 2, 3]));
+  assert.deepEqual((await workspace.attachments())[0]?.bytes, new Uint8Array([1, 2, 3]));
   await assert.rejects(
-    async () => await host.resolveSource(entry, {
+    async () => await workspace.resolveSource(entry, {
       from: "./escaped.svs",
       alias: "escaped",
       frontend: "example.frontend@1",
     }),
-    (error: unknown) => error instanceof NodeCompilerError && error.code === "SOURCE_OUTSIDE_ROOT",
+    (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT",
   );
   await assert.rejects(
-    async () => await host.resolveAsset(entry, {
+    async () => await workspace.resolveAsset(entry, {
       from: "./escaped.svs",
       mediaType: "application/octet-stream",
     }),
-    (error: unknown) => error instanceof NodeCompilerError && error.code === "SOURCE_ASSET_OUTSIDE_ROOT",
+    (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_ASSET_OUTSIDE_ROOT",
   );
+});
+
+test("filesystem and in-memory Workspaces compile identical source and bytes to one semantic result", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-workspace-equivalence-"));
+  const file = join(root, "main.svml");
+  const source = `<svml>
+    <import as="asset" from="example.asset-lab@1"/>
+    <asset:Asset id="reference" src="./reference.bin"/>
+  </svml>`;
+  const bytes = new Uint8Array([3, 1, 4, 1, 5]);
+  await writeFile(file, source, "utf8");
+  await writeFile(join(root, "reference.bin"), bytes);
+
+  const filesystem = await assetCompiler({ root }).compileFile(file);
+  const memory = await assetCompiler({ workspace: memoryWorkspace(source, bytes) }).compileFile("memory:main");
+
+  assert.equal(memory.closure.id, filesystem.closure.id);
+  assert.equal(memory.module.semanticDigest, filesystem.module.semanticDigest);
+  assert.equal(memory.elaboration.graph.id, filesystem.elaboration.graph.id);
+  assert.deepEqual(memory.attachments, filesystem.attachments);
 });

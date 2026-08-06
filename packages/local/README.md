@@ -45,9 +45,10 @@ Endpoint implementation and lane, not the `.svml` author document.
 advanced hosts may call `createLocalRuntime` with Postgres or other implementations of the same
 ports instead of using the project defaults.
 
-`LocalBuildRequest.sourceArtifacts` is the explicit ingress from a Compiler Host into the selected
+`LocalBuildRequest.attachments` is the explicit ingress from a trusted Host into the selected
 ArtifactStore. Each attachment carries claimed `BlobRef` metadata plus bytes; Local Runtime copies
 the bytes, stores them content-addressably and requires the Store's returned digest, size and media
 type to match before any Core command can consume the reference. Attachments never enter
-BuildState, SQLite or author source. Reusing a Build after restart needs no reattachment when the
+BuildState, SQLite or author source, and Runtime does not know whether they came from source assets,
+an upload, a provided Candidate, Git or an API. Reusing a Build after restart needs no reattachment when the
 chosen durable ArtifactStore still contains those digests.

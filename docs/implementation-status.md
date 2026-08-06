@@ -101,12 +101,16 @@ names.
   A Type owner may lock a validator digest in its static Manifest; Producer, Provider, authored and
   provided values then require a receipt bound to that exact Type and content. Core verifies the
   receipt without knowing the domain meaning.
+- `@svml/host`: the small domain-neutral `Workspace`/`WorkspaceSession` contract and generic
+  `ArtifactAttachment` transfer envelope. It owns no filesystem, parser, Runtime or domain behavior.
+- `@svml/workspace-fs-node`: the root-confined/read-once Node filesystem Workspace. Each compile
+  opens an isolated session, rejects symlink escapes and returns defensive content-addressed
+  attachments.
 - `@svml/compiler-node`: a domain-neutral registered-manifest resolver, exact transitive Module
-  Closure construction, root-confined/read-once Node Source resolver, real-file compiler facade and
-  named-export-to-BuildPlan entrypoint. The discovery pass and decode pass share locked SourceUnits.
-  It also owns the generic Source Asset boundary: relative/root-confined asset reads become
-  content-addressed BlobRefs covered by Source Closure, while defensive byte attachments remain
-  outside Core and are staged only by `build`.
+  Closure construction, injected-Workspace compiler facade and named-export-to-BuildPlan entrypoint.
+  Its convenient default is `workspace-fs-node`; browser, Git, memory and remote Workspaces can
+  replace it without changing source semantics. Source asset BlobRefs remain covered by Source
+  Closure, while attachment bytes remain outside Core and are staged only by `build`.
 - `@svml/package-loader-node`: lock-aware trusted Node activation for installed implementation
   packages. It binds every physical package and declared-dependency byte plus Module, Frontend,
   Text Surface, Producer and Type Validator identities. Producer/Validator facets are enumerable
@@ -274,7 +278,8 @@ A non-video language reusing the build system needs only:
 1. `@svml/protocol` for immutable wire data;
 2. `@svml/core` for verification, reverse Demand compilation and the Build state machine;
 3. normally `@svml/elaborator` for modular author declarations and Graph Fragment expansion;
-4. `@svml/compiler-node` when it wants the reference filesystem/registered-package compiler Host;
+4. `@svml/compiler-node` for the reference registered-package compiler facade, plus either its
+   default `@svml/workspace-fs-node` or another implementation of `@svml/host`'s Workspace contract;
 5. a Driver/Runtime implementation when it wants to execute the resulting Commands.
 
 `@svml/runtime` supplies the reference environment-neutral scheduling and BuildStore ports;

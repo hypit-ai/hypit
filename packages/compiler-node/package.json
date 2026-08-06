@@ -9,8 +9,10 @@
   "dependencies": {
     "@svml/core": "workspace:*",
     "@svml/elaborator": "workspace:*",
+    "@svml/host": "workspace:*",
     "@svml/protocol": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@svml/validation": "workspace:*",
+    "@svml/workspace-fs-node": "workspace:*"
   },
   "devDependencies": {
     "@svml/text": "workspace:*"

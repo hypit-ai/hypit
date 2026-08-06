@@ -190,8 +190,8 @@ export async function createLocalRuntime(
     ...(options.scheduling ?? {}),
     buildStore: options.buildStore,
   });
-  const stageSourceArtifacts = async (request: LocalBuildRequest): Promise<void> => {
-    for (const item of request.sourceArtifacts ?? []) {
+  const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
+    for (const item of request.attachments ?? []) {
       const stored = await options.artifactStore.put(Uint8Array.from(item.bytes), item.artifact.mediaType);
       assert(
         stored.digest === item.artifact.digest
@@ -206,7 +206,7 @@ export async function createLocalRuntime(
     request: LocalBuildRequest,
     follow: LocalBuildOptions = {},
   ) => {
-    await stageSourceArtifacts(request);
+    await stageAttachments(request);
     const startedAt = Date.now();
     const pollIntervalMs = nonNegativeInteger(follow.pollIntervalMs ?? 1_000, "pollIntervalMs");
     const maxWaitMs = follow.maxWaitMs === undefined
@@ -228,7 +228,7 @@ export async function createLocalRuntime(
   return {
     build: runBuild,
     async buildMany(requests) {
-      await Promise.all(requests.map(stageSourceArtifacts));
+      await Promise.all(requests.map(stageAttachments));
       return await scheduler.run(requests.map(scheduled));
     },
     async status(build) {
