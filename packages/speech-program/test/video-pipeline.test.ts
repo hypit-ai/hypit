@@ -569,9 +569,8 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
     segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
   });
   const takeCandidate = createProvidedCandidate({
-    output: videoOutputs.take,
+    type: contractTypes.speechBasis,
     value: { kind: "inline", value: existingTake },
-    fidelity: "exact",
     provenance: { source: "approved-library", name: "opening-v3" },
   });
   const takeOverlay = sealRealizationOverlay({
@@ -583,7 +582,7 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
   const captionFromExisting = start(fixture.program, withExistingTake.graph, sealBuildRequest({
     graph: withExistingTake.graph.id,
     targets: [{ output: videoOutputs.caption, accepts: "exact" }],
-    bindings: [{ output: videoOutputs.take, candidate: takeCandidate.id }],
+    satisfactions: [{ output: videoOutputs.take, candidate: takeCandidate.id, fidelity: "exact" }],
   }));
   assert.equal(producerCount(captionFromExisting, videoProducers.requestEstimate), 0);
   assert.equal(producerCount(captionFromExisting, videoProducers.requestSeedanceMini), 0);
@@ -612,9 +611,8 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
     validatorRegistry(),
   );
   const blackCandidate = createProvidedCandidate({
-    output: videoOutputs.visual,
+    type: contractTypes.visualTrack,
     value: blackValue,
-    fidelity: "substitute",
     provenance: { method: "black-preview" },
     ...(blackValidation === undefined ? {} : { validation: blackValidation }),
   });
@@ -627,7 +625,7 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
   const preview = start(fixture.program, withBlack.graph, sealBuildRequest({
     graph: withBlack.graph.id,
     targets: [{ output: videoOutputs.visual, accepts: "substitute" }],
-    bindings: [{ output: videoOutputs.visual, candidate: blackCandidate.id }],
+    satisfactions: [{ output: videoOutputs.visual, candidate: blackCandidate.id, fidelity: "substitute" }],
   }));
   assert.deepEqual(preview.plan.steps, []);
   assert.equal(preview.plan.initialValues.length, 1);

@@ -4,9 +4,10 @@
 > `PinBinding`、`BuildIntent`、`svml.graph@0` 与“遇到 Pin 特殊截断”不再是当前模型。
 > 当前权威规范是
 > [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)：
-> `LogicalOutput + Candidate + Operation + BuildRequest`，Pin 只是宿主选择 Existing-Value
-> Candidate 的产品动作，Core 在一次反向遍历中按 OperationId 去重。以下正文保留用于
-> 解释架构演进，不应直接作为实现接口。
+> `LogicalOutput + Candidate + Satisfaction + Operation + BuildRequest`，Pin 只是宿主公开
+> Existing-Value Candidate 并建立 Satisfaction 的产品动作；Core 在一次反向遍历中按
+> Operation 实例身份收集，不做内容去重。以下正文保留用于
+> 解释架构演进，不应直接作为实现接口。当前 wire format 为 `@2`。
 >
 > **2026-08-04 历史目标。** 以下正文曾补充
 > [`intent-first-modular-compilation.md`](./intent-first-modular-compilation.md) 并指导 `@0`

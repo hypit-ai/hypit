@@ -11,8 +11,12 @@ implementation names rather than a public compatibility freeze.
 ## v2 implemented
 
 - `@svml/protocol`: immutable module, graph, build, event and provenance wire data.
-- `@svml/core`: graph/request verification, Candidate selection, reverse Demand compilation,
-  OperationId deduplication, finite-plan validation and verified BuildState reduction.
+- `@svml/core`: Author/Run Graph verification, explicit Satisfaction resolution, reverse Demand
+  compilation, Operation-instance reachability, finite-plan validation and verified BuildState
+  reduction. Candidate is now an independent typed supply; fidelity belongs to the Satisfaction
+  edge, and execution never performs content deduplication or implementation selection.
+- Candidate/Satisfaction changed persisted identity, so Graph, BuildRequest, Plan, BuildState and
+  Realization Overlay/Closure are now `@2`; old `@1` data is rejected rather than reinterpreted.
 - the graph-first value audit now keeps dependency truth in `CompiledGraph`, direct execution
   lineage in `Derivation` and external fulfillment in `Receipt`. Shared result contracts retain only
   intrinsic interpretation facts: transitive Narrative/request identities, generic Track sources

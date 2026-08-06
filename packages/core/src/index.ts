@@ -33,6 +33,8 @@ export {
   sealBuildRequest,
   sealCompiledGraph,
   selectedCandidate,
+  selectedSatisfaction,
+  satisfactionForOutput,
   valueRefKey,
   verifyBuildRequest,
   verifyCompiledGraph,

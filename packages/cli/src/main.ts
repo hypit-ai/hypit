@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import type { LocalRuntime } from "@svml/local";
 import { isDigest } from "@svml/protocol";
 import {
-  createHistoricalCandidate,
+  createBuildRecordCandidate,
   sealRealizationOverlay,
 } from "@svml/realization";
 import {
@@ -309,7 +309,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             const compilation = await compiler.compileFile(args.file!);
             const seen = new Set<string>();
             const candidates = [];
-            const bindings = [];
+            const satisfactions = [];
             const summary = [];
             for (const pin of args.pins) {
               if (seen.has(pin.output)) throw new Error(`--pin repeats output ${pin.output}`);
@@ -321,13 +321,12 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
               }
               const historical = await runtime.status(pin.build);
               if (historical.build === undefined) throw new Error(`--pin source Build ${pin.build} does not exist`);
-              const candidate = createHistoricalCandidate({
-                source: compilation.elaboration.graph,
+              const candidate = createBuildRecordCandidate({
                 build: historical.build.state,
-                output: exported.ref.id,
+                sourceOutput: exported.ref.id,
               });
               candidates.push(candidate);
-              bindings.push({ output: exported.ref.id, candidate: candidate.id });
+              satisfactions.push({ output: exported.ref.id, candidate: candidate.id, fidelity: "substitute" as const });
               summary.push({ output: pin.output, build: pin.build, candidate: candidate.id });
             }
             const overlay = sealRealizationOverlay({
@@ -338,7 +337,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             pinSummary = summary;
             return compiler.planCompilation(compilation, {
               ...planOptions,
-              bindings,
+              satisfactions,
               realizations: [overlay],
             });
           })();

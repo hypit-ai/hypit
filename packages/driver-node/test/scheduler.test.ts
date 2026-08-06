@@ -71,42 +71,36 @@ function createParallelGreetingBuild() {
         id: "prompt",
         type: types.prompt,
         primary: "make-prompt",
-        candidates: ["make-prompt"],
         semanticInputs: [{ kind: "record", id: "intent:root" }],
       },
       {
         id: "generated-a",
         type: types.generated,
         primary: "generate-a",
-        candidates: ["generate-a"],
         semanticInputs: [{ kind: "logical-output", id: "prompt" }],
       },
       {
         id: "generated-b",
         type: types.generated,
         primary: "generate-b",
-        candidates: ["generate-b"],
         semanticInputs: [{ kind: "logical-output", id: "prompt" }],
       },
     ],
     candidates: [
       {
         id: "make-prompt",
-        output: "prompt",
+        type: types.prompt,
         root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } },
-        fidelity: "exact",
       },
       {
         id: "generate-a",
-        output: "generated-a",
+        type: types.generated,
         root: { kind: "operation", result: { kind: "operation-result", operation: "generate-a" } },
-        fidelity: "exact",
       },
       {
         id: "generate-b",
-        output: "generated-b",
+        type: types.generated,
         root: { kind: "operation", result: { kind: "operation-result", operation: "generate-b" } },
-        fidelity: "exact",
       },
     ],
     operations: [
@@ -148,7 +142,7 @@ function createParallelGreetingBuild() {
       { output: "generated-a", accepts: "exact" },
       { output: "generated-b", accepts: "exact" },
     ],
-    bindings: [],
+    satisfactions: [],
   }));
 }
 

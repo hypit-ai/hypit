@@ -201,7 +201,7 @@ test("Author linking resolves forward component references without Text or video
   const request = sealBuildRequest({
     graph: elaborated.graph.id,
     targets: [{ output: "report:final", accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   });
   const state = start(linked, elaborated.graph, request);
   assert.deepEqual(

@@ -258,7 +258,7 @@ test("Text Surfaces compile forward author references into a Core BuildPlan", as
   const state = start(program, elaborated.graph, sealBuildRequest({
     graph: elaborated.graph.id,
     targets: [{ output: "final.result", accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
 
   assert.deepEqual(

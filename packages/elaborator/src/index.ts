@@ -47,6 +47,7 @@ export {
   bindAuthorFragment,
   bindCandidateFragment,
   elaborateGraphFragment,
+  exportRunFragment,
   FragmentError,
   mergeFragmentContributions,
   sameFragmentInstance,
@@ -65,5 +66,7 @@ export type {
   FragmentOperationRef,
   FragmentOperationResult,
   FragmentValueRef,
+  RunFragmentContribution,
+  RunFragmentExport,
   GraphFragment,
 } from "./fragment.js";

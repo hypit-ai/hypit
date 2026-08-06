@@ -1,12 +1,12 @@
-# SVML v2：Logical Output、Candidate、Build Compiler 与 Graph Fragment
+# SVML v2：Author Graph、Run Graph、Satisfaction 与冻结执行图
 
-> **Kernel 施工规范与实现记录，2026-08-05。** `LogicalOutput`、`Candidate`、
-> `OperationNode`、`BuildRequest`、单遍 Build Compiler 和新 Build Machine 已按本文
-> 落地为 `@1` wire format。SpeechTake Product/Projection、静态卫生 Graph Fragment 与
-> 内容寻址 Realization Overlay 也已完成第一版可执行原型。真实纵向链路目前已通过
-> `SpeechTake -> audio projection -> WhisperX -> Evidence -> SemanticMap -> Caption`，并以
-> 官方静态 Fragment 验证 Target 裁剪、共享调用、Existing Value、Substitute 和恢复；
-> Track、Composition、HyperFrames 与公开包加载 ABI 仍是下一阶段，不能提前视为稳定 API。
+> **Kernel 施工规范与实现记录，更新于 2026-08-07。** `LogicalOutput`、单结果
+> `OperationNode`、有限 `BuildPlan` 和 Build Machine 已落地；本次更新进一步把 Candidate
+> 从 Logical Output 上拆开：Candidate 是 Author/Run Graph 中独立的类型化供给值，
+> `Satisfaction` 才表达“本次用它满足哪个 Logical Output”以及相对 fidelity。外部
+> Realization 不再回写作者输出的候选白名单。当前实现已用攻击性测试验证同一多出口
+> Fragment 共享一次 Product、两个相同 Fragment 实例各执行一次、部分替换、完全替换和
+> Target 可达性剪枝。`.svrun` 仍应等 IR 稳定后再实现，不能反向塑造 Kernel。
 >
 > 本文尤其修正两个过早收敛：旧
 > [`kernel-graph-build-intent-v2.md`](./kernel-graph-build-intent-v2.md) 把一个
@@ -19,14 +19,20 @@
 
 本轮收敛结论：
 
-1. Candidate 是 Logical Output 唯一的实现选择单位；
-2. Candidate root 统一为 Existing Value 或 Operation Result；
-3. Pin 只是外部工具创建/引用 Existing-Value Candidate 并选中它的动作，不进入 Core
+1. Author Graph 与 Run Graph 使用同一种 typed graph 代数；前者定义 Logical Output
+   及默认供给，后者定义本次额外的 Value、Operation、Fragment Instance 与 Export；
+2. Candidate 是与 Logical Output 无关的独立类型化供给值，root 统一为 Existing Value
+   或 Operation Result；
+3. Satisfaction 是唯一选择边：`Logical Output -> Candidate + fidelity`；一个 Candidate
+   可显式满足多个同类型输出，一个 Fragment Instance 也可导出多个 Candidate；
+4. Pin 只是外部工具创建/引用 Existing-Value Candidate 并建立 Satisfaction 的动作，不进入 Core
    词汇；
-4. Existing Value 没有入边，所以反向 Demand 自然停止，不存在 Pin 专用裁剪法则；
-5. Candidate 选择和 Demand 是两个语义问题，但由同一个 Build Compiler 从 Targets
-   出发，在一次遍历中共同求解。
-6. Logical Output affinity 约束任意 Candidate 对作者承诺的结果；Producer result affinity
+5. Existing Value 没有入边，所以反向 Demand 自然停止，不存在 Pin 专用裁剪法则；
+6. Build Compiler 在任何外部调用前把 Author Graph、Run Graph、Satisfaction 与 Targets
+   链接成不可变有限 BuildPlan；执行器不选择 Candidate、不改图、不做内容去重；
+7. 同一 Operation Instance 被多条边引用是普通 fan-out；不同实例即使参数完全相同也
+   必须分别执行；
+8. Logical Output affinity 约束任意 exact Satisfaction 对作者承诺的结果；Producer result affinity
    约束 Fragment 内部每个 Operation Result 对其输入的事实关系。两者都只是声明式 JSON
    Pointer 等式，Core 不认识视频领域。
 
@@ -50,7 +56,7 @@ Target      迫使我们区分“完整作者图”和“本次真正需要的�
 已有值复用  迫使我们区分“逻辑结果身份”和“产生它的操作”
 Alternative 迫使我们区分“要什么”和“这次怎样得到”
 多输出      迫使我们区分“作者组件”“一次原子操作”和“公开结果”
-AIGC        迫使我们按操作实例去重，不能按参数或内容猜相同
+AIGC        迫使我们按操作实例身份构图，不能按参数或内容猜相同
 外部包      迫使我们区分源码语义、Build 选择和 Runtime Endpoint
 漂亮语法    迫使我们允许封装，但封装必须可静态展开且不能捕获隐藏依赖
 ```
@@ -97,8 +103,8 @@ WhisperX 调用也可能自然得到原始 transcript、词级证据和诊断信
 ```
 
 因此 Pin 操作的目标确实是稳定 Logical Output，而不是内部执行节点；但 Core 不需要
-`PinBinding`、`PinnedOrigin` 或专用 Pin pruning。UI 中的“Pin 整个组件”可以创建多个
-Candidate bindings，或为一个公开原子 Bundle 选择 Existing Value Candidate。
+`PinBinding`、`PinnedOrigin` 或专用 Pin pruning。UI 中的“固定整个组件”可以创建多个
+Satisfaction，或为一个公开原子 Bundle 选择 Existing Value Candidate。
 
 ### R3：一个输出改用 Existing Value，不能让同一操作的其他输出语义不明
 
@@ -174,13 +180,18 @@ Logical Output 附着并选择一个实现”，但不能和源码 `<import>`、
 黑场可以只消费 duration，冻结帧可以消费 duration + reference image，Kling 可以消费
 Primary 已声明的某些语义输入；它们都不能偷偷捕获一个无关项目的素材。
 
-### R10：有时必须保持多输出的共同来源
+### R10：共同来源必须显式，但 Product 不制定替换纪律
 
 如果 audio 与 visual 必须来自同一次口播生成，仅仅让它们类型都合法还不够。系统需要
 把这份不可分割的事实建模成一个原子 `SpeechBasis` Product，再由共享的 Product Record
 投影出 audio 与 visual。两条投影的 Derivation 都指向同一 Product，因此共同来源由图和
 执行证明，而不是把 `basisDigest` 沿每条下游分支反复复制。若某个消费者本身要求原子
 共同来源，它应直接消费 Product；若只消费两个普通 Track，就不应偷偷附加这一语义。
+
+Product 只说明多个信息来自同一个事实，不要求它们永远共同使用或共同替换。Run Graph
+仍可只为 `opening.visual` 建立 Satisfaction，保留 `opening.audio` 的默认投影；也可以为
+两个投影分别选择两个不同实例。是否保留默认 Product 完全由 Targets 的反向可达性决定，
+不能增加 `mustReplaceTogether`、`allExportsRequired` 或“整体替换节点”规则。
 
 ### R11：已安装不等于已附着，已附着不等于已选择
 
@@ -284,18 +295,60 @@ Logical Output 表示“这个位置需要什么”，不绑定某个 Producer�
 
 #### Candidate / Realization
 
-某个 Logical Output 的一种可选来源。Candidate 的 root 可以是全局 Operation DAG 中的
-一个结果、一个经卫生展开后接入全局 DAG 的 Graph Fragment export，或一个已经物化的
-不可变 Value。它不是 Provider Endpoint，也不天然拥有或复制整条上游图。
+Author Graph 或 Run Graph 中一个独立、类型化的可供值。Candidate 的 root 可以是全局
+Operation DAG 中的一个结果、一个经卫生展开后接入全局 DAG 的 Graph Fragment export，
+或一个已经物化的不可变 Value。它不是 Provider Endpoint，也不预先属于任何 Logical
+Output，更不天然拥有或复制整条上游图。
 
 ```ts
 type CandidateRoot =
   | { kind: "value"; value: ProvidedValue }
   | { kind: "operation"; result: OperationResultRef };
+
+type Candidate = {
+  id: CandidateId;
+  type: TypeRef;
+  root: CandidateRoot;
+};
+
+type Satisfaction = {
+  output: LogicalOutputId;
+  candidate: CandidateId;
+  fidelity: "exact" | "substitute";
+};
 ```
 
 这两种 root 地位平等：Operation Result 表示尚需执行的实现；Provided Value 表示已经
-存在的事实。产品所谓 Pin，只是创建/引用后一种 Candidate 并在本次 Build 中选择它。
+存在的事实。fidelity 是供给值相对于某个作者承诺的关系，因此属于 Satisfaction，而不
+属于 Candidate。产品所谓 Pin，只是创建/引用后一种 Candidate 并建立一条 substitute
+Satisfaction。
+
+同一个 Candidate 实例若被多条 Satisfaction 引用，表示它们共享**同一个物化事实**，因此
+该 Record 在一次冻结计划里只有一个、取所有路径最保守值的 conformance。若同一实现即使
+参数相同也需要分别运行、分别拥有来源或可信度，就必须在 Run Graph 中声明两个实例；若只
+需要给同一份字节建立两条独立语义路径，则显式增加两个 identity projection。Core 不根据
+内容、参数或 digest 猜测这些实例是否“其实一样”。
+
+#### Author Graph、Run Graph 与 Satisfaction Map
+
+二者使用同一种 Operation/Value/Fragment 图代数，但权限不同：
+
+```text
+Author Graph                         Run Graph
+定义 Logical Output                 定义额外 Candidate Export
+定义 Primary Candidate              定义 Provided Value
+定义作者语义输入边界                定义替代 Operation/Fragment
+          \                         /
+           \--- Satisfaction Map --/
+                         │
+                         ▼
+              Frozen Execution Graph
+```
+
+Run Graph 无权改写 prompt、样式、Logical Output Type 或作者语义；它只能提供值并由显式
+Satisfaction 连接。没有映射的 demanded Logical Output 使用 Author Graph 的 Primary。
+所谓“替换整个节点”不是 Core 操作：若一个公共 Product 被满足，它的所有默认投影会自然
+读取新 Product；若所有被需求的投影分别被满足，原 Product 因不可达而被剪枝。
 
 ### 3.2 一次多产物操作用 Product + Projection 表达
 
@@ -313,7 +366,7 @@ ProjectAudio(SpeechTake)       -> Audio Product
 ProjectProgramSpace(SpeechTake)-> ProgramSpace Product
 ```
 
-投影是便宜、确定、可缓存的普通 Operation。Author Component 可以继续对外展示三个漂亮
+投影是便宜、确定的普通 Operation。Author Component 可以继续对外展示三个漂亮
 Logical Output，不要求作者看到投影节点。
 
 这解决 R3：
@@ -326,8 +379,8 @@ Logical Output，不要求作者看到投影节点。
   不发生重复逻辑结果冲突；
 - 如果没有任何其他 demanded output 使用 `SpeechTake`，Existing Value root 没有入边，
   整条生成上游自然不会被 Demand；
-- 如果作者要求整组结果都来自历史 take，应让 `opening.take` 选择一个 Existing
-  SpeechTake Candidate，而不是分别拼接端口。
+- 如果作者要求整组结果都来自历史 take，可以让 `opening.take` 满足于一个 Existing
+  SpeechTake Candidate；若作者明确要混合来源，也可以分别满足投影出口。
 
 所以最底层的准确规律不是“Pin 会裁剪”：
 
@@ -335,6 +388,18 @@ Logical Output，不要求作者看到投影节点。
 > 自然停止，但仍被其他 demanded output 引用的共享 Operation 继续保留。
 
 外部 UI 的“Pin 一个端口”不是“无条件停掉整个作者组件”。
+
+同一套图可以无特殊分支地表达四种情况：
+
+```text
+满足 opening.take                 一个替代 Product，默认投影继续使用
+分别满足 visual/audio，共享实例   一个替代 Product，两条替代投影
+分别满足 visual/audio，不同实例   两个替代 Product，各取一个投影
+只满足 visual                     替代 visual；audio 若被需求则保留默认路径
+```
+
+一个 Operation 只产生一个原子 Record；一个 Component 或 Fragment 则可以导出任意多个
+Candidate。多出口是封装边界，单结果是执行边界，两者不能再混为“多输出节点”。
 
 ### 3.3 完整候选图是 AND/OR 图，选完后仍是普通 DAG
 
@@ -346,10 +411,9 @@ Selected Operation
   AND: 它声明的全部输入依赖
 ```
 
-完整 Author Graph 带有选择关系，可以把它理解为 AND/OR graph；这不是视频的 z 轴，
-也不是同时执行多套图。Build Compiler 从 Targets 出发，只在访问某个 Logical Output
-时解析本次 Candidate，然后继续反向 Demand。最终得到的有限 Operation Graph 仍是
-普通 DAG。
+Author Graph、Run Graph 与 Satisfaction Map 合起来可以理解为 AND/OR graph；这不是
+视频的 z 轴，也不是同时执行多套图。Build Compiler 从 Targets 出发解析确定供给并计算
+可达闭包。任何外部调用发生前，结果已经冻结为一个普通有限 DAG。
 
 Existing-Value、黑场、冻结帧、Kling 和 Primary 都是平等 Candidate。区别只在 root：
 已有值是没有入边的事实；其他 Candidate 的 root 通常是需要执行的 Operation Result。
@@ -360,16 +424,17 @@ Existing-Value、黑场、冻结帧、Kling 和 Primary 都是平等 Candidate�
 究竟会访问哪些 Logical Outputs”。两者语义正交，但不应实现成“先全局选择所有输出，
 再进行第二遍 Demand”的两个割裂阶段。
 
-同一个 Build Compiler 从 Targets 开始，边访问、边选择、边展开、边去重：
+同一个 Build Compiler 从 Targets 开始，在纯编译阶段完成访问、选择、展开和按实例身份
+收集：
 
 ```ts
 type BuildRequest = {
   targets: readonly LogicalOutputId[];
-  bindings: Readonly<Record<LogicalOutputId, CandidateId>>;
+  satisfactions: readonly Satisfaction[];
 };
 ```
 
-`bindings` 只保存统一 CandidateId；不存在 Pin variant。没有显式 binding 的输出使用
+`satisfactions` 保存 LogicalOutputId、CandidateId 与 fidelity；不存在 Pin variant。没有显式 Satisfaction 的输出使用
 Author Graph 声明的 Primary Candidate。
 
 当前实现算法（伪代码省略类型和错误处理）：
@@ -382,8 +447,9 @@ resolveOutput(logicalOutputId):
     reject cycle
   mark logicalOutputId resolving
 
-  candidate = explicit binding or Primary Candidate
-  result = resolveRoot(candidate.root, candidate.fidelity)
+  satisfaction = explicit binding or (Primary Candidate, exact)
+  candidate = resolveCandidate(satisfaction.candidate)
+  result = resolveRoot(candidate.root, satisfaction.fidelity)
   verify result TypeRef
   resolvedOutputs[logicalOutputId] = result
   record SelectionTrace(logicalOutputId, candidate, result)
@@ -418,10 +484,10 @@ demandOperation(OperationId, fidelity):
   return its result RecordId
 ```
 
-编译结果直接是有限 BuildPlan；不需要先持久化一份“全局 SelectedGraph”。关键是按稳定
-`OperationId` 去重，而不是按 Candidate、Producer 类型或内容参数去重。这里不是运行后
-发现重复再合并，而是在反向展开时通过两张 memo 表保证：一个 LogicalOutputId 只解析
-一次，一个 OperationId 只进入计划一次。
+编译结果直接是不可变有限 BuildPlan，它本身就是本次 Execution Graph。这里没有运行时
+去重，也没有 Common Subexpression Elimination。反向展开时的两张 memo 表只是在构造
+一张按稳定实例身份寻址的图：一个 LogicalOutputId 解析一次，同一个 OperationId 只成为
+一个节点；两个不同 OperationId 即使 Producer、输入和参数全部相同，也保留为两个节点。
 
 因此 R5 的例子中：
 
@@ -587,57 +653,60 @@ wire identity 当前使用 `fragment digest + instance id + local operation id` 
 ### 5.2 Realization Overlay：本次 Build 可以选择哪些外部 Candidate
 
 外部 Realization 需要一个独立、内容寻址、可锁定的 Overlay。它可以来自 CLI、UI、
-JSON BuildRequest 或宿主 API，例如概念上：
+未来 `.svrun`、JSON BuildRequest 或宿主 API 都应降低为同一关系，例如概念上：
 
-```text
-svml build main.svml \
-  --realize opening.visual=@alice/preview#black \
-  --pin opening.audio=./approved-audio.json
+```xml
+<graph>
+  <asset:audio id="approved-audio" src="./approved-audio.json"/>
+  <preview:black id="black" duration={opening.duration}/>
+</graph>
+
+<satisfy output={opening.visual} with={black.video}/>
+<satisfy output={opening.audio} with={approved-audio.value}/>
 ```
 
-第二行只是 CLI 的人类化动词。CLI 实际上会把文件解析为一个无代码、root 为 Existing
-Value 的 Provided Candidate，再像第一行一样为 Logical Output 选择 Candidate。Core
-不会收到 `pin: true`。
+CLI/UI 可以继续显示“固定”“复用”之类的人类化动词，但 Core 只收到独立 Candidate 与
+Satisfaction，不会收到 `pin: true`。
 
-Overlay 负责：
+Run/Realization Closure 负责：
 
-- 把一个已锁定 Candidate export 附着到指定 Logical Output；
-- 验证输出 Contract 和 Semantic Input Envelope；
+- 锁定本次 Run Graph 的 Candidate exports、Provided Values、Operations 与 Fragments；
+- 在 BuildRequest 的 Satisfaction 被选中时验证输出 Contract 和 Semantic Input Envelope；
 - 形成独立的 `realizationClosureDigest`，绑定包版本、Manifest、Fragment 和实现摘要；
 - 把最终选择写入 BuildRequest digest；
 - 不改变 Author Closure 的 Surface、默认 Primary 或原始 semantic digest；
 - 不扫描所有已安装包，不按优先级自动选择。
 
 当前实现中，作者 Graph 的 `CompiledGraph.source` 保持不变；Overlay 集合被排序并封存为
-`svml.realization-closure@1`，其摘要进入 `CompiledGraph.realization`，最终合并图再获得
+`svml.realization-closure@2`，其摘要进入 `CompiledGraph.realization`，最终合并图再获得
 独立 Graph digest。Overlay 顺序不影响身份，Overlay 内容、Provided Value 或源作者图
 任何一项变化都会改变相应下游摘要。
 
-外部附着的任意已有值——历史结果、上传视频、固定黑场或人工交付物——都可以成为普通
+外部声明的任意已有值——历史结果、上传视频、固定黑场或人工交付物——都可以成为普通
 Provided Candidate。它只需满足当前 Logical Output 的精确 TypeRef 和值结构，不需要来自
 相同作者图、相同 prompt、相同历史输出，也不需要证明当前输出的 affinity。其 provenance
-只用于审计，不是语义兼容证明。此类 Host 便利入口默认产生 `substitute` Candidate；真正
-声称 `exact` 的 Candidate 必须通过普通输入边和 Contract affinity 证明，不能再建立一条
+只用于审计，不是语义兼容证明。此类 Host 便利入口建立的 Satisfaction 默认是
+`substitute`；真正声称 `exact` 的 Satisfaction 必须通过普通输入边和 Contract affinity 证明，不能再建立一条
 “历史产物特批”旁路。
 
-### 5.3 Pin 状态由宿主维护，但选择必须进入 BuildRequest
+### 5.3 产品状态由宿主维护，但 Satisfaction 必须进入 BuildRequest
 
 Canvas、CLI 或 Hosted 产品可以在 JSON、SQLite、Postgres 或浏览器状态里维护：收藏、
 版本名、用户备注、“已 Pin”图标和历史 take。这些不是 Core 真相，也不要求中央数据库。
 
 构建开始时，宿主必须把人类状态解析为明确的 CandidateId、Value digest、TypeRef 和
-conformance，并写入本次 BuildRequest/Realization Closure。若 Candidate 声称 `exact`，
+Satisfaction fidelity，并写入本次 BuildRequest/Realization Closure。若 Satisfaction 声称 `exact`，
 它还必须经由普通图边满足 Logical Output 声明的 affinity；普通缓存、
 已安装包或外部数据库状态不能环境式改变 Build：
 
 ```text
 Value 在 Store 中存在             不影响图
-宿主把它注册成 Provided Candidate  使其成为可选实现
-BuildRequest 明确选择 Candidate     改变本次 Build
+宿主把它注册成 Provided Candidate  使其成为 Run Graph 中的可供值
+BuildRequest 建立 Satisfaction       改变本次 Build
 Build Compiler/Core 验证             接受为没有入边的事实
 ```
 
-因此 Pin 的用户体验可以完全由外部维护，但“本次选中了哪个 Value”绝不能游离于系统摘要
+因此固定/复用的用户体验可以完全由外部维护，但“本次选中了哪个 Value”绝不能游离于系统摘要
 之外。否则同一 BuildRequest 会随着外部 Pin 表变化而产生不同作品。
 
 ### 5.4 Runtime Closure：选中的能力在哪里执行
@@ -648,7 +717,7 @@ Runtime Profile 只负责：
 - Scheduler、Store、Credential、Queue、并发和重试；
 - 记录真实 implementation digest、Receipt 和 Derivation。
 
-它不能选择 Kling/黑场/冻结帧，也不能改 Logical Output 的 Candidate。KIE 与火山若都
+它不能选择 Kling/黑场/冻结帧，也不能改 Logical Output 的 Satisfaction。KIE 与火山若都
 精确提供 Seedance Mini，属于 Endpoint 选择；Kling 替代 Seedance 属于 BuildRequest。
 
 因此至少要保留四个不同身份：
@@ -661,7 +730,7 @@ realizationClosureDigest
   本次允许附着哪些锁定 Candidate/Fragment
 
 buildRequestDigest
-  本次 Target 了什么，并为各 Logical Output 选择了哪个 Candidate
+  本次 Target 了什么，并建立了哪些 Satisfaction
 
 runtimeExecutionDigest
   实际使用哪些实现、Endpoint 和运行环境执行
@@ -732,6 +801,42 @@ a.B -> Candidate(a2) ─┴─> Candidate(b2, full inputs A+B) -> b.D ─┴─>
 复制一份 A/B。如果 `a1/a2` 是无入边 Existing Value，反向遍历在那里停止；如果是
 零输入但尚未执行的 Operation，则各产生一个 Command，而不是被误判成已有值。
 
+### Case H：同一个 Run Fragment 同时满足 C、D
+
+```text
+a.A ─┐
+     ├─> Kling Instance -> Product ─┬─> ProjectC -> b.C ─┐
+a.B ─┘                              └─> ProjectD -> b.D ─┴─> c
+```
+
+Run Graph 只实例化一次 Kling Fragment，并为两个 Export 分别建立普通 Satisfaction：
+
+```xml
+<satisfy output={b.C} with={kling.C}/>
+<satisfy output={b.D} with={kling.D}/>
+```
+
+两个 Satisfaction 引用同一实例的不同 Export。冻结 BuildPlan 中只有一个 Product
+Operation；这不是运行时发现重复后合并，而是输入图本来就只有一个实例。
+
+### Case I：两个 Run Fragment 实例分别满足 C、D
+
+```text
+a.A/a.B -> Kling Instance 1 -> Product 1 -> ProjectC -> b.C
+a.A/a.B -> Kling Instance 2 -> Product 2 -> ProjectD -> b.D
+```
+
+即使两个实例使用相同包、Provider、模型、prompt 和输入，只要实例身份不同，冻结计划就
+包含两次调用。未使用的 `Instance 1.audio` 与 `Instance 2.video` 只是未导出的内部事实，
+不会成为重复 Logical Output，也不能被内容摘要自动合并。
+
+### Case J：部分 Satisfaction 与默认 Product 并存
+
+若只让 `b.C` 使用 Kling，而 `b.D` 仍走默认实现，最终闭包同时包含 Kling Product 和默认
+Product，但只保留各自被需求的投影。若 C、D 都被外部满足，默认 Product 不再可达，整体
+剪枝；若只 Target C，则未绑定的 D 也不能把默认 Product 留在计划里。剪枝只看 Targets 的
+反向可达性，不统计“一个作者节点有几个端口被替换”。
+
 ## 7. Core 最终应该剩下什么
 
 ### 7.1 最小代数
@@ -746,10 +851,10 @@ Operation
   稳定实例身份 + 显式 typed inputs -> 一个原子 Value
 
 Choice
-  Logical Output + Primary/Candidates + BuildRequest selection
+  Logical Output + Primary + explicit Satisfaction
 
 Demand
-  从 Targets 出发，边选择 Candidate 边反向遍历，按 OperationId 去重，得到有限 DAG
+  从 Targets 出发解析 Satisfaction 并收集 Operation Instance 的可达闭包，得到有限 DAG
 
 State
   对 Commands、Events、Receipts、Derivations 和恢复进行完整性验证
@@ -780,8 +885,10 @@ SVML / SVS / Author Modules
             ▼
         Author Graph
             │
+            │                Run Graph
+            │                   │
             │ + Realization Closure
-            │ + BuildRequest(Targets + Candidate bindings)
+            │ + BuildRequest(Targets + Satisfaction Map)
             │
             │ Build Compiler
             ▼
@@ -801,11 +908,10 @@ Graph。它回答“作者表达了什么”，不读取 Runtime Credential，�
 
 #### Build Compiler
 
-接收 Author Graph、Realization Closure 与 BuildRequest，从 Targets 出发，在一次遍历中
-完成 Candidate 选择、Existing Value 验证、反向 Demand 和 OperationId 去重。静态
-Fragment 已由 Core 外的 Elaborator 卫生展开为普通 Candidate/Operation；Build Compiler
-只会 Demand 被选择 export 的反向闭包。它直接输出普通的有限 Operation DAG，不先生成
-全局 SelectedGraph。
+接收 Author Graph、Run/Realization Closure 与 BuildRequest，从 Targets 出发，在纯编译
+阶段完成 Satisfaction 解析、Existing Value 验证和反向可达闭包收集。静态 Fragment 已由
+Core 外的 Elaborator 卫生展开为普通 Candidate/Operation；Build Compiler 只会保留被选择
+export 的反向闭包。它在任何外部调用前封存普通有限 Operation DAG。
 
 概念输出：
 
@@ -855,7 +961,11 @@ Frontend、Fragment Elaborator、Runtime、Provider、Scheduler、Store 和 UI �
    source identity；
 8. Demand 现在分别 memoize Logical Output 与 Operation；
 9. 已删除 Pin 专用 origin、验证和 pruning 分支，改为普通 Provided Candidate；
-10. 实现选择与 Demand 已合并到同一 Build Compiler 的一次遍历。
+10. 实现选择与 Demand 已合并到同一 Build Compiler 的一次遍历；执行器不再参与选择；
+11. Candidate 已从 Logical Output 上拆下，Type 属于 Candidate，fidelity 属于
+    Satisfaction；外部 Run Graph 不再改写作者输出候选白名单；
+12. 共享实例多出口、两个相同实例分别执行、部分 Satisfaction 与完全剪枝均已有攻击性
+    测试。
 
 以下已有成果不应丢弃：
 
@@ -888,24 +998,25 @@ packages/speech-program          SpeechTake、WhisperX/SemanticMap、Caption 官
 
 ## 9. 尚未定案的问题
 
-以下内容不能在没有进一步反例和测试前写死：
+以下内容仍不能在没有进一步反例和测试前写死：
 
-1. `@1` wire format 在本分支已经固定用于原型；公开发布前仍可做一次命名审计；
+1. Candidate/Satisfaction 变更已经触发 `@2` wire format；公开发布前仍可做一次命名审计；
 2. 已决定并实现：Projection 是显式、普通、确定性的 Producer，不是 Core 内建步骤；
 3. 已决定：只有不可分割的共同来源需要先形成 Bundle Product；普通多 export Fragment
    可以共享内部 Operation，不强制制造无意义 Bundle；
 4. 当前 Fragment Elaborator 会证明每个 export 的传递输入闭包没有越过声明 envelope，
    展开后 Core 再按全局 Graph 做第二次验证；公开 lock 是否保存独立证明尚未定案；
 5. 第三方 exact Candidate 的 conformance 与签名机制；
-6. 多个 Logical Output 必须协同选同一 Candidate 时，优先用 Bundle 还是需要显式
-   choice group；第一版倾向只用 Bundle，避免引入约束求解器；
-7. `svml.fragment@1`、`svml.realization-overlay@1` 与 closure 已有原型 wire format；
+6. 不引入多个 Logical Output 必须协同选择的 choice group；Product 表达共同事实但不
+   制定替换纪律，Satisfaction 始终可以落在公开投影上；
+7. `svml.fragment@1` 保持不变；Candidate shape 改变后 Realization Overlay/Closure 已升到
+   `@2`；
    与包 Manifest、lockfile 的最终组合仍未定案；
 8. 外部 Candidate 的安全加载、权限和沙箱；
-9. UI 对 projection 执行 Pin 动作时，如何提示共享 Product 仍会因其他 output 而运行；
-10. 已统一为 `svml.graph@1`、`svml.build-request@1`、`svml.plan@1`、`svml.build@1`，
-    公共名称为 BuildRequest；
-11. Source import 能否显式附着额外非默认 Candidate，还是只允许 Author Module 定义；
+9. UI 对 projection 建立外部 Satisfaction 时，如何提示共享 Product 仍会因其他 output 而运行；
+10. 当前统一为 `svml.graph@2`、`svml.build-request@2`、`svml.plan@2`、`svml.build@2`，
+    旧 `@1` 不得被静默重解释；
+11. `.svrun` 如何导入 Run Fragment 包并形成独立 Realization Module Closure；
 12. `.svs` 能描述到何种程度：只存数据配方，还是可引用版本化 Fragment；它不应获得
     匿名代码执行能力。
 
@@ -924,8 +1035,8 @@ packages/speech-program          SpeechTake、WhisperX/SemanticMap、Caption 官
 7. [x] 一个多-export WhisperX Fragment 只发出一次外部 request；
 8. [x] Fragment 捕获未声明祖先或塞入原始 Graph 引用时被拒绝；
 9. [x] 同一 OperationId 共享执行，不同 OperationId 不被内容去重；
-10. [x] 已附着但未选择的 Candidate 不进入 InitialValues、Steps 或 Need；“安装但未
-    attach”仍属于后续 Module Resolver 测试；
+10. [x] 已进入 Run Graph 但未建立 Satisfaction 的 Candidate 不进入 InitialValues、Steps
+    或 Need；“安装但未进入 closure”仍属于后续 Module Resolver 测试；
 11. [x] Candidate 选择进入 BuildRequest digest，JSON 恢复得到同一有限计划；
 12. [x] Runtime 不能用相同 returns TypeRef 的 Endpoint 冒充另一 CapabilityRef；
 13. [x] Logical Output 与 Producer result 两层 JSON Pointer affinity 都会拒绝不匹配的
@@ -933,6 +1044,13 @@ packages/speech-program          SpeechTake、WhisperX/SemanticMap、Caption 官
 14. [x] Provided Value 或 Substitute 的 conformance 不能被下游洗回 exact；
 15. [x] JSON round-trip 会验证并重建 Command；真实纵向链路逐个 Provider 暂停/恢复时，
     已完成的付费 Operation 不会重发。
+16. [x] 一个 Run Fragment Instance 的两个 Export 可分别满足两个 Logical Output，但共享
+    Product Operation 只进入冻结计划一次；
+17. [x] 两个配置完全相同但身份不同的 Run Fragment Instance 可各取一个 Export，并分别
+    执行一次；
+18. [x] 只满足一个投影时默认 Product 可与替代 Product 并存；所有 demanded 投影均被
+    满足或未被 Target 时，默认 Product 完整剪枝；
+19. [x] 同一个独立 Candidate 可显式满足多个同类型 Logical Output。
 
 ## 11. 建议的收敛顺序
 
@@ -946,8 +1064,8 @@ packages/speech-program          SpeechTake、WhisperX/SemanticMap、Caption 官
 2. 固定 `LogicalOutput`、`Candidate`、`CandidateRoot`、`OperationNode`、`BuildRequest`、
    `FiniteBuildPlan` 的最小字段；
 3. Candidate root 只允许 Existing Value 或 Operation Result；
-4. 内部 wire format 升为 `svml.graph@1`、`svml.build-request@1`、
-   `svml.build-plan@1`，不在实验阶段维持错误的 `@0` 兼容层；
+4. Candidate/Satisfaction shape 改变后，内部 wire format 同步升为 `svml.graph@2`、
+   `svml.build-request@2`、`svml.plan@2`、`svml.build@2`，不静默重解释旧状态；
 5. 明确 OperationId 是卫生实例身份，implementation/request digest 是另外两个身份。
 
 ### Phase T：先写失败的规范测试（Kernel 部分完成）
@@ -959,7 +1077,8 @@ Demand、共享 GPTImage 只运行一次、显式 A1/A2 运行两次、SpeechTak
 ### Phase P：重写 Protocol 对象（完成）
 
 1. 分开 `OperationNode`、`LogicalOutput`、`Candidate`；
-2. 删除 `RealizationBinding | PinBinding`，BuildRequest 只保存 CandidateId；
+2. 删除 `RealizationBinding | PinBinding`；Candidate 保存独立 Type/root，BuildRequest 的
+   Satisfaction 保存 LogicalOutputId、CandidateId 与 fidelity；
 3. 删除 `PinnedOrigin`，改用通用 Provided Value origin/provenance；
 4. Producer 单原子 Product 只约束 Kernel Operation，不限制 Author Component 多 export；
 5. Existing Value 作为初始事实，零输入但尚未执行的 Producer 仍是 Operation。
@@ -968,7 +1087,8 @@ Demand、共享 GPTImage 只运行一次、显式 A1/A2 运行两次、SpeechTak
 
 1. 从 Targets 开始，访问 Logical Output 时才解析显式 Candidate 或 Primary；
 2. 消费 Elaborator 已卫生展开的 Candidate root，不处理未 demanded Candidate；
-3. 分别维护 visited Logical Outputs 与 demanded OperationIds；
+3. 分别维护 visited Logical Outputs 与 collected OperationIds；这些是构图 memo，不是
+   运行时内容去重；
 4. 验证输出 TypeRef、Semantic Input Envelope、静态 affinity 与 conformance；
 5. 直接封存 FiniteBuildPlan 与 SelectionTrace，不保存全局 SelectedGraph；
 6. Existing Value 因没有入边自然结束遍历，不存在 Pin 专用 pruning。
@@ -988,15 +1108,18 @@ Receipt、Derivation、摘要完整性、conformance floor、affinity 和恢复�
 5. 真实 WhisperX 多步、多-export Fragment 已验证：同时 Target raw Evidence 与 Map 时
    只发出一次外部 request；未 Target 的 visual projection 不进入计划。
 
-### Phase O：Realization Overlay（原型完成）
+### Phase O：Run Graph / Realization Closure（第二版完成）
 
-1. Provided Value 和静态 Fragment export 都能作为外部 Candidate 附着；
+1. Provided Value 和静态 Fragment export 都能成为独立外部 Candidate；
 2. Overlay 锁定精确作者 Graph，跨 Graph 复用被拒绝；
 3. 多 Overlay 的顺序不影响 Realization Closure 或最终 Graph identity；
-4. 附着本身不执行任何工作，只有 BuildRequest 显式选择且 Target 可达才会 Demand；
+4. Candidate 不回写作者 Logical Output；只有 BuildRequest 显式建立 Satisfaction 且 Target
+   可达才会 Demand；
 5. 作者 source digest、realization closure digest、最终 Graph digest 与 BuildRequest digest
    已分离并互相绑定；
-6. Overlay 内容或 Existing Value 改变时，后续所有相关身份都会改变。
+6. Overlay 内容或 Existing Value 改变时，后续所有相关身份都会改变；
+7. `exportRunFragment()` 已将“实例化 Run 子图”和“满足哪个作者输出”拆开；旧
+   `bindCandidateFragment()` 只保留为兼容糖。
 
 ### Phase V：迁移真实视频纵向链路（语音到字幕完成）
 
