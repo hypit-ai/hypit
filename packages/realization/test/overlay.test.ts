@@ -6,6 +6,7 @@ import {
   digestOf,
   EMPTY_REALIZATION_DIGEST,
   link,
+  reduce,
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
@@ -18,13 +19,16 @@ import {
   sealGraphFragment,
 } from "@svml/elaborator";
 import type {
+  BuildState,
   CompiledGraph,
   LinkedProgram,
+  InvokeProducerCommand,
   ModuleManifest,
   ProducerRef,
   TypeRef,
 } from "@svml/protocol";
 import {
+  createHistoricalCandidate,
   createProvidedCandidate,
   resolveRealization,
   sealRealizationOverlay,
@@ -141,6 +145,40 @@ function providedOverlay(source: CompiledGraph, value: string, label: string) {
   };
 }
 
+function completedAffinityBuild(): { readonly program: LinkedProgram; readonly source: CompiledGraph; readonly state: BuildState } {
+  const base = fixture();
+  const source = sealCompiledGraph({
+    program: base.source.program,
+    outputs: base.source.outputs.map((output) => ({
+      ...output,
+      affinity: [{
+        resultPointer: "",
+        source: { kind: "record" as const, id: "prompt:shot" },
+        sourcePointer: "",
+      }],
+    })),
+    candidates: base.source.candidates,
+    operations: base.source.operations,
+  });
+  const initial = start(base.program, source, sealBuildRequest({
+    graph: source.id,
+    targets: [{ output: "shot.visual", accepts: "exact" }],
+    bindings: [],
+  }));
+  const ready = reduce(initial);
+  const command = ready.commands.find((item): item is InvokeProducerCommand => item.kind === "invoke-producer");
+  assert.ok(command);
+  const completed = reduce(ready.state, {
+    kind: "producer-completed",
+    id: "event:historical-media",
+    command: command.id,
+    outputs: { media: { kind: "inline", value: "A founder speaking to camera." } },
+    needs: {},
+  });
+  assert.equal(completed.state.status, "complete");
+  return { program: base.program, source, state: completed.state };
+}
+
 test("an attached Existing Value is inert until BuildRequest explicitly selects it", () => {
   const { program, source } = fixture();
   const { overlay, candidate } = providedOverlay(source, "approved video", "v1");
@@ -166,6 +204,50 @@ test("an attached Existing Value is inert until BuildRequest explicitly selects 
   assert.deepEqual(selected.plan.steps, []);
   assert.equal(selected.plan.initialValues[0]?.value.kind, "inline");
   assert.equal(selected.plan.selections[0]?.candidate, candidate.id);
+});
+
+test("a verified historical Output becomes an exact zero-edge Candidate without replaying its Producer", () => {
+  const { program, source, state: historical } = completedAffinityBuild();
+  const candidate = createHistoricalCandidate({ source, build: historical, output: "shot.visual" });
+  assert.equal(candidate.root.kind, "value");
+  assert.equal(candidate.fidelity, "exact");
+  const overlay = sealRealizationOverlay({ sourceGraph: source.id, candidates: [candidate], operations: [] });
+  const realized = resolveRealization(program, source, [overlay]);
+  const fresh = start(program, realized.graph, sealBuildRequest({
+    graph: realized.graph.id,
+    targets: [{ output: "shot.visual", accepts: "exact" }],
+    bindings: [{ output: "shot.visual", candidate: candidate.id }],
+  }));
+  assert.deepEqual(fresh.plan.steps, []);
+  assert.equal(fresh.plan.initialValues.length, 1);
+  assert.notEqual(fresh.id, historical.id);
+});
+
+test("historical admission rejects another graph and a content-tampered value", () => {
+  const { program, source, state: historical } = completedAffinityBuild();
+  const other = sealCompiledGraph({
+    program: source.program,
+    outputs: source.outputs.map((output) => ({ ...output, affinity: [] })),
+    candidates: source.candidates,
+    operations: source.operations,
+  });
+  assert.throws(
+    () => createHistoricalCandidate({ source: other, build: historical, output: "shot.visual" }),
+    /another author graph source/u,
+  );
+
+  const admitted = createHistoricalCandidate({ source, build: historical, output: "shot.visual" });
+  assert.equal(admitted.root.kind, "value");
+  const outputValidation = admitted.root.value.outputValidation;
+  assert.notEqual(outputValidation, undefined);
+  const tampered = createProvidedCandidate({
+    output: admitted.output,
+    value: { kind: "inline", value: "tampered" },
+    fidelity: "exact",
+    outputValidation: outputValidation!,
+  });
+  const overlay = sealRealizationOverlay({ sourceGraph: source.id, candidates: [tampered], operations: [] });
+  assert.throws(() => resolveRealization(program, source, [overlay]), /belongs to another value/u);
 });
 
 test("changing the attached Value changes Overlay, realized Graph and BuildRequest identity", () => {

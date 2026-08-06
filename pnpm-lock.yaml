@@ -12,6 +12,27 @@ importers:
         specifier: 0.7.84
         version: 0.7.84(@types/node@24.10.1)
     devDependencies:
+      '@svml/local':
+        specifier: workspace:*
+        version: link:packages/local
+      '@svml/prelude-video':
+        specifier: workspace:*
+        version: link:packages/prelude-video
+      '@svml/provider-google-vertex':
+        specifier: workspace:*
+        version: link:packages/provider-google-vertex
+      '@svml/provider-hyperframes-local':
+        specifier: workspace:*
+        version: link:packages/provider-hyperframes-local
+      '@svml/provider-kie':
+        specifier: workspace:*
+        version: link:packages/provider-kie
+      '@svml/provider-media-local':
+        specifier: workspace:*
+        version: link:packages/provider-media-local
+      '@svml/provider-whisperx-local':
+        specifier: workspace:*
+        version: link:packages/provider-whisperx-local
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
@@ -141,6 +162,9 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
 
   packages/compiler-node:
     dependencies:
@@ -156,6 +180,9 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
@@ -265,6 +292,24 @@ importers:
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
+
+  packages/estimate:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/film:
     dependencies:
@@ -564,6 +609,9 @@ importers:
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@svml/estimate':
+        specifier: workspace:*
+        version: link:../estimate
       '@svml/film':
         specifier: workspace:*
         version: link:../film

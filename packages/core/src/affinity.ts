@@ -10,7 +10,12 @@ import type {
 
 import { canonicalStringify } from "./canonical.js";
 import { invariant } from "./error.js";
-import { resolveLogicalOutput, resolveOperation } from "./graph.js";
+import {
+  resolveCandidate,
+  resolveLogicalOutput,
+  resolveOperation,
+  verifyOutputValidationReceipt,
+} from "./graph.js";
 import { resolveProducer } from "./link.js";
 
 function pointerTokens(pointer: string): string[] {
@@ -81,6 +86,20 @@ export function verifyRecordAffinity(
 ): void {
   if (record.conformance === "substitute") return;
   const output = resolveLogicalOutput(graph, outputId);
+  const selection = plan.selections.find((item) => item.output === outputId && item.record === record.id);
+  if (selection !== undefined) {
+    const candidate = resolveCandidate(graph, selection.candidate);
+    if (candidate.root.kind === "value" && candidate.root.value.outputValidation !== undefined) {
+      verifyOutputValidationReceipt(
+        candidate.root.value.outputValidation,
+        graph.source,
+        output.id,
+        output.type,
+        record.value,
+      );
+      return;
+    }
+  }
   for (const constraint of output.affinity ?? []) {
     const sourceId = sourceRecordId(graph, plan, constraint.source);
     const source = lookup(sourceId);

@@ -556,7 +556,7 @@ export function assertCompositionIdentity(composition: Composition): void {
     || composition.canvas.width <= 0
     || !Number.isSafeInteger(composition.canvas.height)
     || composition.canvas.height <= 0
-    || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/u.test(composition.canvas.clearColor)
+    || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(composition.canvas.clearColor)
   ) {
     throw new Error("Composition canvas is invalid.");
   }
