@@ -78,6 +78,12 @@ change to `@svml/local`. Advanced hosts may still call `createLocalRuntime` with
 Record and content identities, not private filesystem layout, so filesystem and S3 stores remain
 interchangeable. Egress never determines whether a Build result is retained.
 
+`LocalRuntime.builds()` reads a separate Host `BuildCatalog`. With the default local assembly the
+catalog shares the SQLite file physically; deployments with replacement execution Stores default
+to `.svml/catalog.sqlite` or may select `catalogPath`/inject a `BuildCatalog`. This index is kept out
+of Runtime service selection and Closure identity because changing a source path or display alias
+must not invalidate or resume a different execution.
+
 `LocalBuildRequest.attachments` is the explicit ingress from a trusted Host into the selected
 ArtifactStore. Each attachment carries claimed `BlobRef` metadata plus bytes; Local Runtime copies
 the bytes, stores them content-addressably and requires the Store's returned digest, size and media

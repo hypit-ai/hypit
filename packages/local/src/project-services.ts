@@ -8,6 +8,7 @@ import {
 } from "@svml/runtime";
 import type {
   ArtifactStore,
+  BuildCatalog,
   BuildStore,
   CredentialStore,
   OperationStore,
@@ -15,7 +16,7 @@ import type {
   RuntimeServiceFacetRole,
   RuntimeServicePackage,
 } from "@svml/runtime";
-import { createSqliteRuntimeServicePackage } from "@svml/store-sqlite";
+import { createSqliteRuntimeServicePackage, SqliteRuntimeState } from "@svml/store-sqlite";
 
 import { createLocalSchedulerPackage } from "./scheduler-package.js";
 import type { ProjectLocalRuntimeOptions } from "./types.js";
@@ -39,8 +40,10 @@ export type ProjectRuntimeServiceAssembly = RuntimeServiceAssembly & {
 
 export type AssembledProjectRuntimeServices = {
   readonly assembly: ProjectRuntimeServiceAssembly;
+  readonly catalog: BuildCatalog;
   readonly selection: ProjectRuntimeServiceSelection;
   readonly allowedPermissions: readonly string[];
+  close(): Promise<void>;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -156,6 +159,8 @@ export async function createProjectRuntimeServices(
   }
 
   const defaults: RuntimeServicePackage[] = [];
+  let defaultCatalog: BuildCatalog | undefined;
+  let standaloneCatalog: SqliteRuntimeState | undefined;
   try {
     if (!hasConfiguredService(configured, selection.scheduler)) {
       assert(selection.scheduler === "scheduler.local", `unknown selected scheduler ${selection.scheduler}`);
@@ -167,11 +172,13 @@ export async function createProjectRuntimeServices(
       assert((!needsDefaultBuild || selection.stores.build === "builds.sqlite")
         && (!needsDefaultOperations || selection.stores.operations === "operations.sqlite"),
       "unknown selected BuildStore or OperationStore");
-      defaults.push(createSqliteRuntimeServicePackage({
+      const sqlite = createSqliteRuntimeServicePackage({
         path: resolve(root, options.statePath ?? ".svml/runtime.sqlite"),
         buildInstance: "builds.sqlite",
         operationInstance: "operations.sqlite",
-      }));
+      });
+      defaults.push(sqlite);
+      defaultCatalog = sqlite.catalog;
     } else if (options.statePath !== undefined) {
       throw new Error("statePath configures the default SQLite services, but neither was selected");
     }
@@ -190,6 +197,19 @@ export async function createProjectRuntimeServices(
         `unknown selected CredentialStore ${selection.stores.credentials}`);
       defaults.push(createEnvironmentCredentialStorePackage({ instance: selection.stores.credentials }));
     }
+    if (options.buildCatalog !== undefined && options.catalogPath !== undefined) {
+      throw new Error("buildCatalog and catalogPath are mutually exclusive");
+    }
+    let catalog = options.buildCatalog;
+    if (catalog === undefined && options.catalogPath !== undefined) {
+      standaloneCatalog = new SqliteRuntimeState(resolve(root, options.catalogPath));
+      catalog = standaloneCatalog.catalog;
+    }
+    if (catalog === undefined) catalog = defaultCatalog;
+    if (catalog === undefined) {
+      standaloneCatalog = new SqliteRuntimeState(resolve(root, ".svml/catalog.sqlite"));
+      catalog = standaloneCatalog.catalog;
+    }
     const assembly = assembleRuntimeServices([...configured, ...defaults], selection);
     assert(assembly.buildStore !== undefined, "project Runtime requires a BuildStore");
     assert(assembly.operationStore !== undefined, "project Runtime requires an OperationStore");
@@ -204,13 +224,22 @@ export async function createProjectRuntimeServices(
     };
     return {
       assembly: complete,
+      catalog,
       selection,
       allowedPermissions: [
         ...manifestPermissions(defaults),
         ...(options.allowedPermissions ?? []),
       ],
+      async close() {
+        try {
+          await complete.close();
+        } finally {
+          standaloneCatalog?.close();
+        }
+      },
     };
   } catch (error) {
+    standaloneCatalog?.close();
     return await closeAfterFailure([...configured, ...defaults], error);
   }
 }

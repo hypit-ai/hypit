@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import type { LocalRuntime } from "@svml/local";
 import { isDigest } from "@svml/protocol";
 import type { BuildState, Digest, TypedRecord } from "@svml/protocol";
+import type { BuildCatalogEntry } from "@svml/runtime";
 
 type ArtifactIdentity = {
   readonly digest: Digest;
@@ -108,21 +109,36 @@ function summarizeRecord(record: TypedRecord) {
 
 export function selectArchivedRecord(
   state: BuildState,
-  options: { readonly record?: string; readonly output?: string },
+  options: {
+    readonly record?: string;
+    readonly output?: string;
+    readonly name?: string;
+    readonly catalog?: BuildCatalogEntry;
+  },
 ): TypedRecord {
-  if (options.record !== undefined && options.output !== undefined) {
-    throw new Error("get accepts either --record or --output, not both");
+  const selectors = [options.record, options.output, options.name].filter((item) => item !== undefined);
+  if (selectors.length > 1) {
+    throw new Error("get accepts one of --name, --record or --output");
   }
   let id = options.record;
-  if (options.output !== undefined) {
-    const selection = state.plan.selections.find((item) => item.output === options.output);
-    if (selection === undefined) throw new Error(`Build has no demanded Logical Output ${options.output}`);
+  let output = options.output;
+  if (options.name !== undefined) {
+    if (options.catalog === undefined) throw new Error("Build has no Host Catalog aliases");
+    if (options.catalog.core !== state.id) throw new Error("Build Catalog entry names another Core Build");
+    const alias = options.catalog.aliases.find((item) => item.name === options.name);
+    if (alias === undefined) throw new Error(`Build Catalog has no output named ${options.name}`);
+    if (alias.ref.kind === "record") id = alias.ref.id;
+    else output = alias.ref.id;
+  }
+  if (output !== undefined) {
+    const selection = state.plan.selections.find((item) => item.output === output);
+    if (selection === undefined) throw new Error(`Build has no demanded Logical Output ${output}`);
     id = selection.record;
   }
   if (id === undefined) {
     const goals = [...new Set(state.plan.goals.map((goal) => goal.record))];
     if (goals.length !== 1) {
-      throw new Error("get without --record or --output requires exactly one distinct target Record");
+      throw new Error("get without a selector requires exactly one distinct target Record");
     }
     [id] = goals;
   }
@@ -131,7 +147,10 @@ export function selectArchivedRecord(
   return record;
 }
 
-export function inspectBuild(state: BuildState) {
+export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
+  if (catalog !== undefined && catalog.core !== state.id) {
+    throw new Error("Build Catalog entry names another Core Build");
+  }
   const records = new Map(state.records.map((record) => [record.id, record]));
   const selections = new Map(state.plan.selections.map((selection) => [selection.output, selection]));
   return {
@@ -164,5 +183,25 @@ export function inspectBuild(state: BuildState) {
     receipts: state.receipts.length,
     derivations: state.derivations.length,
     diagnostics: state.diagnostics,
+    ...(catalog === undefined ? {} : {
+      presentation: {
+        source: catalog.source,
+        ...(catalog.run === undefined ? {} : { run: catalog.run }),
+        aliases: catalog.aliases.map((alias) => {
+          const record = alias.ref.kind === "record"
+            ? records.get(alias.ref.id)
+            : (() => {
+                const selection = selections.get(alias.ref.id);
+                return selection === undefined ? undefined : records.get(selection.record);
+              })();
+          return {
+            name: alias.name,
+            type: alias.type,
+            ref: alias.ref,
+            ...(record === undefined ? { accepted: false } : { accepted: true, record: record.id }),
+          };
+        }),
+      },
+    }),
   };
 }

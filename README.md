@@ -113,12 +113,14 @@ pnpm svml:v2 build examples/talking-film-live/build.svrun \
   --follow
 
 pnpm svml:v2 get talking-film-live \
+  --name final.video \
   --runtime examples/talking-film-live/svml.runtime.json \
   --to examples/talking-film-live/output/final.mp4
 ```
 
 The Build archives every accepted intermediate Record and Artifact before `get` makes an optional
-human-readable copy of the sole target.
+human-readable copy. `builds`, `inspect` and `get --name` use a Host-only catalog of source aliases;
+the selected Record is still verified against the authoritative BuildState.
 
 Read its [deployment requirements](examples/talking-film-live/README.md) before running it. Paid
 credentials, presenter assets, local databases and generated outputs are not committed.

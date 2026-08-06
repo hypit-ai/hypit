@@ -12,12 +12,17 @@ import type {
   Digest,
 } from "@svml/protocol";
 import {
+  verifyBuildCatalogDescriptor,
+  verifyBuildCatalogEntry,
   defineRuntimeServicePackage,
   sealOperationCompletion,
   verifyOperationIdentity,
   verifyOperationSnapshot,
 } from "@svml/runtime";
 import type {
+  BuildCatalog,
+  BuildCatalogDescriptor,
+  BuildCatalogEntry,
   BuildSnapshot,
   BuildStore,
   BuildStoreWrite,
@@ -31,7 +36,9 @@ import type {
   RuntimeServicePackage,
 } from "@svml/runtime";
 
-const schemaVersion = 1;
+const databaseSchemaVersion = 2;
+/** Build/Operation table semantics are unchanged by the Host-only Catalog migration. */
+const executionStoreSchemaVersion = 1;
 
 export const sqliteStoreModuleRef = {
   name: "@svml/store-sqlite",
@@ -189,6 +196,70 @@ class SqliteBuildStore implements BuildStore {
   }
 }
 
+function parseCatalogEntry(row: Row): BuildCatalogEntry {
+  assert(typeof row.build_id === "string", "SQLite Build Catalog row has no build id");
+  assert(typeof row.created_at === "number", "SQLite Build Catalog row has no creation time");
+  assert(typeof row.updated_at === "number", "SQLite Build Catalog row has no update time");
+  assert(typeof row.descriptor_json === "string", "SQLite Build Catalog row has no descriptor");
+  const descriptor = JSON.parse(row.descriptor_json) as BuildCatalogDescriptor;
+  const entry = {
+    ...descriptor,
+    build: row.build_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+  verifyBuildCatalogEntry(entry);
+  return entry;
+}
+
+class SqliteBuildCatalog implements BuildCatalog {
+  readonly #database: DatabaseSync;
+
+  constructor(database: DatabaseSync) {
+    this.#database = database;
+  }
+
+  async record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry> {
+    assert(build.trim().length > 0, "Build Catalog build id must not be empty");
+    verifyBuildCatalogDescriptor(descriptor);
+    const now = Date.now();
+    const inserted = this.#database.prepare(`
+      INSERT OR IGNORE INTO svml_build_catalog (
+        build_id, core_id, created_at, updated_at, descriptor_json
+      ) VALUES (?, ?, ?, ?, ?)
+    `).run(build, descriptor.core, now, now, canonicalStringify(descriptor));
+    if (inserted.changes !== 1) {
+      const updated = this.#database.prepare(`
+        UPDATE svml_build_catalog
+        SET updated_at = MAX(updated_at, ?), descriptor_json = ?
+        WHERE build_id = ? AND core_id = ?
+      `).run(now, canonicalStringify(descriptor), build, descriptor.core);
+      assert(updated.changes === 1, `Build Catalog ${build} already names another Core Build`);
+    }
+    const stored = await this.read(build);
+    if (stored === undefined) throw new Error(`Build Catalog ${build} disappeared after record`);
+    return stored;
+  }
+
+  async read(build: string): Promise<BuildCatalogEntry | undefined> {
+    const row = this.#database.prepare(`
+      SELECT build_id, created_at, updated_at, descriptor_json
+      FROM svml_build_catalog
+      WHERE build_id = ?
+    `).get(build) as Row | undefined;
+    return row === undefined ? undefined : parseCatalogEntry(row);
+  }
+
+  async list(): Promise<readonly BuildCatalogEntry[]> {
+    const rows = this.#database.prepare(`
+      SELECT build_id, created_at, updated_at, descriptor_json
+      FROM svml_build_catalog
+      ORDER BY created_at DESC, build_id ASC
+    `).all() as Row[];
+    return rows.map(parseCatalogEntry);
+  }
+}
+
 class SqliteOperationStore implements OperationStore {
   readonly #database: DatabaseSync;
 
@@ -276,11 +347,12 @@ class SqliteOperationStore implements OperationStore {
   }
 }
 
-/** One local database, two deliberately separate persistence ports, and no durable ready queue. */
+/** One local database, two execution stores, one Host catalog, and no durable ready queue. */
 export class SqliteRuntimeState {
   readonly path: string;
   readonly builds: BuildStore;
   readonly operations: OperationStore;
+  readonly catalog: BuildCatalog;
   readonly #database: DatabaseSync;
 
   constructor(path: string, options: SqliteRuntimeStateOptions = {}) {
@@ -313,15 +385,35 @@ export class SqliteRuntimeState {
         failure_json TEXT
       ) STRICT;
     `);
+    const catalogSchema = `
+      CREATE TABLE svml_build_catalog (
+        build_id TEXT PRIMARY KEY,
+        core_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        descriptor_json TEXT NOT NULL
+      ) STRICT;
+    `;
     const version = this.#database.prepare("SELECT schema_version FROM svml_store_meta WHERE singleton = 1").get() as Row | undefined;
     if (version === undefined) {
-      this.#database.prepare("INSERT OR IGNORE INTO svml_store_meta (singleton, schema_version) VALUES (1, ?)").run(schemaVersion);
+      this.#database.exec(`BEGIN IMMEDIATE; ${catalogSchema}`);
+      this.#database.prepare("INSERT INTO svml_store_meta (singleton, schema_version) VALUES (1, ?)").run(databaseSchemaVersion);
+      this.#database.exec("COMMIT");
+    } else if (version.schema_version === 1) {
+      this.#database.exec(`BEGIN IMMEDIATE; ${catalogSchema}`);
+      this.#database.prepare("UPDATE svml_store_meta SET schema_version = ? WHERE singleton = 1").run(databaseSchemaVersion);
+      this.#database.exec("COMMIT");
     } else {
-      assert(version.schema_version === schemaVersion,
+      assert(version.schema_version === databaseSchemaVersion,
         `unsupported @svml/store-sqlite schema ${String(version.schema_version)}`);
+      const catalog = this.#database.prepare(`
+        SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'svml_build_catalog'
+      `).get() as Row | undefined;
+      assert(catalog?.name === "svml_build_catalog", "SQLite v2 database is missing the Build Catalog table");
     }
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
+    this.catalog = new SqliteBuildCatalog(database);
   }
 
   close(): void {
@@ -331,14 +423,14 @@ export class SqliteRuntimeState {
 
 export function createSqliteRuntimeServicePackage(
   options: CreateSqliteRuntimeServicePackageOptions,
-): RuntimeServicePackage {
+): RuntimeServicePackage & { readonly catalog: BuildCatalog } {
   const state = new SqliteRuntimeState(options.path, {
     ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs }),
   });
   const buildInstance = options.buildInstance ?? "builds.sqlite";
   const operationInstance = options.operationInstance ?? "operations.sqlite";
   try {
-    return defineRuntimeServicePackage({
+    return Object.assign(defineRuntimeServicePackage({
       name: options.name ?? "state.sqlite",
       module: sqliteStoreModuleRef,
       services: [
@@ -353,7 +445,7 @@ export function createSqliteRuntimeServicePackage(
           permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
-            schemaVersion,
+            schemaVersion: executionStoreSchemaVersion,
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
           service: state.builds,
@@ -369,14 +461,14 @@ export function createSqliteRuntimeServicePackage(
           permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
-            schemaVersion,
+            schemaVersion: executionStoreSchemaVersion,
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
           service: state.operations,
         },
       ],
       close: () => state.close(),
-    });
+    }), { catalog: state.catalog });
   } catch (error) {
     state.close();
     throw error;
