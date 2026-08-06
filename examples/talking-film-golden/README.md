@@ -74,7 +74,7 @@ Candidates and Operations.
 | `media:Image` | `@svml/media` | content-addressed authored Artifact | package/Surface missing |
 | `seedance:Prompt` | `@svml/seedance` | package-private immutable direction value | missing |
 | `seedance:Speech model="mini"` | `@svml/seedance` | explicit Seedance Mini Need returning one speech clip Product | missing |
-| `speech:Spine` | `@svml/speech` | ordered clips -> one `SpeechBasis`, then ordinary projections | basis/projections implemented; author assembly missing |
+| `speech:Spine` | `@svml/speech` | ordered clips -> one `SpeechBasis`, then ordinary projections | basis and four locked projection facets implemented; author assembly missing |
 | `whisperx:Alignment` | `@svml/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@svml/speech-align` -> Map | Graph Fragment, local media projection and local Provider adapter implemented; Surface/sidecar packaging missing |
 | `seedance:Video model="mini"` | `@svml/seedance` | explicit Seedance Mini video Need | missing |
 | `broll:Track` | `@svml/broll` | semantic windows + media + recipe -> peer Visual/Audio Tracks | Program/lowering implemented; Surface missing |
