@@ -11,6 +11,7 @@ import { demoPointerIsInside } from "./demo-pointer";
 import { createDemoTimeline } from "./demo-timeline";
 import { wordAtTime } from "./demo-word-timing";
 import { wordCues as rawWordCues, type WordCue } from "./regen-ranking-cues";
+import { useSourcePanelInteraction } from "./source-panel-interaction";
 import {
   buildFoldedSourceView,
   buildFullSourceView,
@@ -666,8 +667,13 @@ function resumeSourceFollow() {
 }
 
 function handleDemoPointerMove(event: PointerEvent) {
+  if (!sourceUsesHover.value) return;
   const target = event.target instanceof Element ? event.target : null;
   if (!target?.closest(".source-panel")) resumeSourceFollow();
+}
+
+function handleDemoPointerLeave() {
+  if (sourceUsesHover.value) clearInspection();
 }
 
 function renderFrame(timestamp: number) {
@@ -727,10 +733,27 @@ function startPlayback() {
 }
 
 function syncSourceHoverState() {
+  if (!sourceUsesHover.value) {
+    resumeSourceFollow();
+    return;
+  }
   const sourceHovered = demoPointerIsInside(sourcePanelElement.value);
   if (!sourceHovered) clearInspection();
   sourceFollowEnabled.value = !sourceHovered;
 }
+
+const {
+  sourceUsesHover,
+  handleSourcePointerMove,
+  handleSourcePointerDown,
+  handleSourceClick,
+  handleSourceWheel,
+  handleSourcePointerLeave,
+} = useSourcePanelInteraction(sourcePanelElement, {
+  active: () => props.active,
+  expand: stopSourceFollow,
+  collapse: resumeSourceFollow,
+});
 
 function updateSourceViewportRows() {
   const container = codeScrollElement.value;
@@ -804,22 +827,23 @@ onBeforeUnmount(() => {
 <template>
   <section class="svml-demo" aria-label="SVML 交互式实时渲染预览">
     <header v-if="props.showHeading" class="demo-heading">
-      <h2>悬停标记范围，查看对应画面</h2>
+      <h2><span class="hover-interaction-copy">悬停标记范围，查看对应画面</span><span class="touch-interaction-copy">点击标记范围，查看对应画面</span></h2>
     </header>
 
     <div
       class="demo-shell real-demo-shell"
       @pointermove="handleDemoPointerMove"
-      @mouseleave="clearInspection"
+      @mouseleave="handleDemoPointerLeave"
     >
       <div
         ref="sourcePanelElement"
         class="source-panel"
         :class="{ 'source-following': sourceFollowEnabled }"
-        @pointermove="stopSourceFollow"
-        @pointerdown="stopSourceFollow"
-        @wheel="stopSourceFollow"
-        @pointerleave="resumeSourceFollow"
+        @pointermove="handleSourcePointerMove"
+        @pointerdown="handleSourcePointerDown"
+        @click="handleSourceClick"
+        @wheel="handleSourceWheel"
+        @pointerleave="handleSourcePointerLeave"
       >
         <div ref="sourceMeasureElement" class="source-measure" aria-hidden="true">
           <div
@@ -833,7 +857,9 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="source-follow-hint">
-          {{ sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图" }}
+          {{ sourceUsesHover
+            ? (sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图")
+            : (sourceFollowEnabled ? "点击代码查看所有源码" : "点击空白处返回精简视图") }}
         </div>
         <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code">
           <svg

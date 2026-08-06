@@ -9,6 +9,7 @@ import {
 import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
 import { wordAtTime } from "./demo-word-timing";
+import { useSourcePanelInteraction } from "./source-panel-interaction";
 import {
   semanticVideoDemos,
   type DemoId,
@@ -520,10 +521,27 @@ function startPlayback() {
 }
 
 function syncSourceHoverState() {
+  if (!sourceUsesHover.value) {
+    resumeSourceFollow();
+    return;
+  }
   const sourceHovered = demoPointerIsInside(sourcePanelElement.value);
   if (!sourceHovered) clearInspection();
   sourceFollowEnabled.value = !sourceHovered;
 }
+
+const {
+  sourceUsesHover,
+  handleSourcePointerMove,
+  handleSourcePointerDown,
+  handleSourceClick,
+  handleSourceWheel,
+  handleSourcePointerLeave,
+} = useSourcePanelInteraction(sourcePanelElement, {
+  active: () => props.active,
+  expand: stopSourceFollow,
+  collapse: resumeSourceFollow,
+});
 
 watch(
   [() => displayedLines.value.map((entry) => entry.key).join("|"), sourceFollowEnabled, sourceSelections],
@@ -569,7 +587,7 @@ onBeforeUnmount(() => {
 <template>
   <section class="svml-demo semantic-video-demo" aria-label="SVML 交互式实时渲染预览">
     <header v-if="props.showHeading" class="demo-heading">
-      <h2>悬停标记范围，查看对应画面</h2>
+      <h2><span class="hover-interaction-copy">悬停标记范围，查看对应画面</span><span class="touch-interaction-copy">点击标记范围，查看对应画面</span></h2>
     </header>
 
     <div class="demo-shell real-demo-shell">
@@ -577,10 +595,11 @@ onBeforeUnmount(() => {
         ref="sourcePanelElement"
         class="source-panel"
         :class="{ 'source-following': sourceFollowEnabled }"
-        @pointermove="stopSourceFollow"
-        @pointerdown="stopSourceFollow"
-        @wheel="stopSourceFollow"
-        @pointerleave="resumeSourceFollow"
+        @pointermove="handleSourcePointerMove"
+        @pointerdown="handleSourcePointerDown"
+        @click="handleSourceClick"
+        @wheel="handleSourceWheel"
+        @pointerleave="handleSourcePointerLeave"
       >
         <div ref="sourceMeasureElement" class="source-measure" aria-hidden="true">
           <div
@@ -594,7 +613,9 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="source-follow-hint">
-          {{ sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图" }}
+          {{ sourceUsesHover
+            ? (sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图")
+            : (sourceFollowEnabled ? "点击代码查看所有源码" : "点击空白处返回精简视图") }}
         </div>
         <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code">
           <svg
