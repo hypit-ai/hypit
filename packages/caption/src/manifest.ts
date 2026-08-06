@@ -18,6 +18,10 @@ export const captionTypes = {
   trackProgram: { module: captionModuleRef, name: "CaptionTrackProgram" },
 } satisfies Record<string, TypeRef>;
 export const captionImplementationDigest = digestOf("@svml/caption/temporalize@1");
+export const captionValidatorDigests = {
+  timedProjection: digestOf("@svml/caption/validate-timed-projection@1"),
+  trackProgram: digestOf("@svml/caption/validate-track-program@1"),
+} as const;
 
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
@@ -94,8 +98,30 @@ export const captionManifest: ModuleManifest = {
     videoContractDependencies.composition,
   ],
   types: [
-    { name: captionTypes.timedProjection.name, schema: timedCaptionProjectionSchema },
-    { name: captionTypes.trackProgram.name, schema: captionTrackProgramSchema },
+    {
+      name: captionTypes.timedProjection.name,
+      schema: timedCaptionProjectionSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/caption/validate-timed-projection",
+          digest: captionValidatorDigests.timedProjection,
+        },
+      },
+    },
+    {
+      name: captionTypes.trackProgram.name,
+      schema: captionTrackProgramSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/caption/validate-track-program",
+          digest: captionValidatorDigests.trackProgram,
+        },
+      },
+    },
   ],
   capabilities: [],
   surfaces: [],
