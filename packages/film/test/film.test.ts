@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
+  compositionContractsComponent,
   contractTypes,
   sealAudioTrack,
   sealProgramSpace,
@@ -58,12 +60,19 @@ import {
   textTrackProducers,
   textTrackTypes,
 } from "@svml/text-track";
+import { admitRecord, TypeValidatorRegistry } from "@svml/validation";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@0",
   durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });
+
+function validatorRegistry(): TypeValidatorRegistry {
+  const registry = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
+  return registry;
+}
 const filmProgram = sealFilmProgram({
   contract: "svml.film-program@1",
   id: "main-film",
@@ -127,13 +136,13 @@ const origin = {
   sourceDigest: digestOf("source:film-test"),
   frontendClosureDigest: digestOf("frontend:film-test"),
 };
-const records = [
+const records = await Promise.all([
   sealRecord({ id: "space", type: contractTypes.programSpace, value: stored(space), conformance: "exact", origin }),
   sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram), conformance: "exact", origin }),
   sealRecord({ id: "text-program", type: textTrackTypes.program, value: stored(textProgram), conformance: "exact", origin }),
   sealRecord({ id: "background", type: contractTypes.visualTrack, value: stored(background), conformance: "exact", origin }),
   sealRecord({ id: "audio", type: contractTypes.audioTrack, value: stored(audio), conformance: "exact", origin }),
-];
+].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
 const linked = link(closure, [sealTypedModule({ id: "author:film-test", closureDigest: closure.digest, records })]);
 
 const textInstance = elaborateGraphFragment(linked, textTrackFragment, {
@@ -243,7 +252,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     needs: {},
   }));
 
-  const result = await new NodeDriver({ registry }).run(build("main.document"));
+  const result = await new NodeDriver({ registry, validators: validatorRegistry() }).run(build("main.document"));
   assert.equal(result.status, "complete");
   const documentRecord = result.state.records.find((record) => record.type.module.name === hyperframesTypes.document.module.name);
   assert(documentRecord);

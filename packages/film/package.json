@@ -14,9 +14,11 @@
     "@svml/text": "workspace:*"
   },
   "devDependencies": {
+    "@svml/component-kit": "workspace:*",
     "@svml/core": "workspace:*",
     "@svml/driver-node": "workspace:*",
     "@svml/hyperframes": "workspace:*",
-    "@svml/text-track": "workspace:*"
+    "@svml/text-track": "workspace:*",
+    "@svml/validation": "workspace:*"
   }
 }

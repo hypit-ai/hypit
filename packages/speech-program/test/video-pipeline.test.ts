@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
   captionImplementationDigest,
   captionProducers,
@@ -8,6 +9,7 @@ import {
 } from "@svml/caption";
 import type { TimedCaptionProjection } from "@svml/caption";
 import {
+  compositionContractsComponent,
   contractTypes,
   sealProgramSpace,
   sealSpeechBasis,
@@ -60,6 +62,7 @@ import {
   whisperXRequestForEvidenceAudio,
 } from "@svml/whisperx";
 import type { WhisperXAlignmentEvidence } from "@svml/whisperx";
+import { TypeValidatorRegistry, validateValue } from "@svml/validation";
 
 import {
   createVideoBuild,
@@ -75,6 +78,12 @@ import {
 function inlineObject(value: unknown): Readonly<Record<string, unknown>> {
   if (value === null || Array.isArray(value) || typeof value !== "object") throw new Error("expected object");
   return value as Readonly<Record<string, unknown>>;
+}
+
+function validatorRegistry(): TypeValidatorRegistry {
+  const registry = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
+  return registry;
 }
 
 function inlineValue<T>(value: unknown): T {
@@ -288,7 +297,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     return { outputs: { caption: { kind: "inline", value: caption } }, needs: {} };
   });
 
-  const driver = new NodeDriver({ registry: host, providers });
+  const driver = new NodeDriver({ registry: host, providers, validators: validatorRegistry() });
   const atEstimate = await driver.run(createVideoBuild());
   assert.equal(atEstimate.blocked[0]?.reason, "missing-provider");
   assert.match(atEstimate.blocked[0]?.subject ?? "", /OfficialSpeechDurationEstimate/u);
@@ -402,7 +411,11 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
       metadata: {},
     }),
   );
-  const rejectedEvidence = await new NodeDriver({ registry: host, providers: wrongBasisProviders }).run(
+  const rejectedEvidence = await new NodeDriver({
+    registry: host,
+    providers: wrongBasisProviders,
+    validators: validatorRegistry(),
+  }).run(
     parseBuildState(serializeBuildState(atWhisperX.state)),
   );
   assert.equal(rejectedEvidence.status, "paused");
@@ -517,7 +530,7 @@ test("Targets prune official Fragments while shared SpeechTake generation stays 
   assert.equal(producerCount(bothEvidenceExports, speechAlignProducers.locate), 1);
 });
 
-test("an Existing SpeechTake cuts generation while a visual substitute cuts the whole upstream", () => {
+test("an Existing SpeechTake cuts generation while a visual substitute cuts the whole upstream", async () => {
   const fixture = createVideoFixture();
   const narrativeRecord = fixture.program.records.find((record) => record.id === "narrative:root");
   assert.equal(narrativeRecord?.value.kind, "inline");
@@ -588,11 +601,19 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
     ],
     presents: [],
   });
+  const blackValue = { kind: "inline" as const, value: black };
+  const blackValidation = await validateValue(
+    fixture.program.closure,
+    contractTypes.visualTrack,
+    blackValue,
+    validatorRegistry(),
+  );
   const blackCandidate = createProvidedCandidate({
     output: videoOutputs.visual,
-    value: { kind: "inline", value: black },
+    value: blackValue,
     fidelity: "substitute",
     provenance: { method: "black-preview" },
+    ...(blackValidation === undefined ? {} : { validation: blackValidation }),
   });
   const blackOverlay = sealRealizationOverlay({
     sourceGraph: fixture.source.id,
@@ -642,7 +663,11 @@ test("an exact Provider result cannot wash a substitute input back to exact", as
     }),
   );
 
-  const result = await new NodeDriver({ registry: host, providers }).run(initial);
+  const result = await new NodeDriver({
+    registry: host,
+    providers,
+    validators: validatorRegistry(),
+  }).run(initial);
   assert.equal(result.status, "paused", "the unregistered Basis assembler should pause after Seedance");
   const seedanceNeed = result.state.needs.find((need) =>
     sameCapability(need.capability, videoCapabilities.seedanceMini));

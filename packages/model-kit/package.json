@@ -10,7 +10,6 @@
     "@svml/component-kit": "workspace:*",
     "@svml/elaborator": "workspace:*",
     "@svml/generation": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@svml/protocol": "workspace:*"
   }
 }

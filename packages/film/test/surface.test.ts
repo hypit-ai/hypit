@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
+  compositionContractsComponent,
   contractTypes,
   sealAudioTrack,
   sealProgramSpace,
@@ -31,6 +33,7 @@ import {
   createTextAuthorFrontend,
   textAuthorFrontendId,
 } from "@svml/text";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@svml/validation";
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.film-fixture/inputs-surface@1");
@@ -90,6 +93,12 @@ function source(id: string, text: string): AuthorSourceUnit {
   return { id, name: id.split("/").at(-1) ?? id, text };
 }
 
+function validatorRegistry(): TypeValidatorRegistry {
+  const registry = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
+  return registry;
+}
+
 const validStyles = `<sheet version="1">
   film.vertical {
     width: 1080;
@@ -142,6 +151,7 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
     resolveSource() {
       return source("/project/studio.svs", options.styles ?? validStyles);
     },
+    admitRecord: createRecordAdmitter(validatorRegistry()),
   });
 }
 

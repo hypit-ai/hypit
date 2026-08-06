@@ -1,5 +1,6 @@
 import type { RegisteredModulePackage } from "@svml/compiler-node";
 import type { AuthorFrontend } from "@svml/elaborator";
+import type { TypeValidatorFacet } from "@svml/component-kit";
 import type { Digest, ModuleRef } from "@svml/protocol";
 import type {
   RawSurfaceHandler,
@@ -32,6 +33,7 @@ export type NodeAuthorPackage = {
   readonly modules: readonly RegisteredModulePackage[];
   readonly frontends?: readonly AuthorFrontend[];
   readonly textSurfaces?: readonly NodeTextSurfaceFacet[];
+  readonly validators?: readonly TypeValidatorFacet[];
 };
 
 export type LockedPackageArtifact = {

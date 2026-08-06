@@ -1,3 +1,4 @@
+import type { ComponentPackage } from "@svml/component-kit";
 import {
   mediaContractsComponent,
   assertSpeechAudioBasisIdentity,
@@ -53,6 +54,22 @@ function blob(value: StoredValue, subject: string): BlobRef {
 
 export const mediaPipelineComponent = {
   name: "@svml/media-pipeline",
+  validators: [
+    {
+      type: mediaPipelineTypes.selectionRequest,
+      implementationDigest: mediaPipelineImplementationDigests.requestValidator,
+      handler: ({ value }) => {
+        verifyMediaSelectionRequest(inline(value, "MediaSelectionRequest"));
+      },
+    },
+    {
+      type: mediaPipelineTypes.audioProgramPlan,
+      implementationDigest: mediaPipelineImplementationDigests.audioPlanValidator,
+      handler: ({ value }) => {
+        verifyAudioProgramPlan(inline(value, "AudioProgramPlan"));
+      },
+    },
+  ],
   install(registry: import("@svml/component-kit").ProducerRegistrar): void {
     registry.registerProducer(
       mediaPipelineProducers.inspect,
@@ -204,15 +221,7 @@ export const mediaPipelineComponent = {
       },
     );
   },
-  installValidators(registry: import("@svml/validation").TypeValidatorRegistrar): void {
-    registry.register(mediaPipelineTypes.selectionRequest, mediaPipelineImplementationDigests.requestValidator, ({ value }) => {
-      verifyMediaSelectionRequest(inline(value, "MediaSelectionRequest"));
-    });
-    registry.register(mediaPipelineTypes.audioProgramPlan, mediaPipelineImplementationDigests.audioPlanValidator, ({ value }) => {
-      verifyAudioProgramPlan(inline(value, "AudioProgramPlan"));
-    });
-  },
-};
+} satisfies ComponentPackage;
 
 /** Convenience set: public media validators must accompany the pipeline Producers. */
 export const mediaPipelineComponents = [mediaContractsComponent, mediaPipelineComponent] as const;

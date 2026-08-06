@@ -199,6 +199,13 @@ function activationMetadata(value: NodeAuthorPackage): unknown {
       `${left.module.name}@${left.module.version}#${left.surface}`
         .localeCompare(`${right.module.name}@${right.module.version}#${right.surface}`),
     ),
+    validators: [...(value.validators ?? [])].map((item) => ({
+      type: item.type,
+      implementationDigest: item.implementationDigest,
+    })).sort((left, right) =>
+      `${left.type.module.name}@${left.type.module.version}#${left.type.name}`
+        .localeCompare(`${right.type.module.name}@${right.type.module.version}#${right.type.name}`),
+    ),
   };
 }
 

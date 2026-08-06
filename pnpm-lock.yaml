@@ -117,9 +117,19 @@ importers:
 
   packages/contracts:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/core:
     dependencies:
@@ -201,6 +211,9 @@ importers:
         specifier: workspace:*
         version: link:../text
     devDependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/core':
         specifier: workspace:*
         version: link:../core
@@ -213,6 +226,9 @@ importers:
       '@svml/text-track':
         specifier: workspace:*
         version: link:../text-track
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/gemini-omni:
     dependencies:
@@ -228,16 +244,19 @@ importers:
 
   packages/generation:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/validation':
-        specifier: workspace:*
-        version: link:../validation
     devDependencies:
       '@svml/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/gpt-image:
     dependencies:
@@ -360,13 +379,13 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/validation':
-        specifier: workspace:*
-        version: link:../validation
     devDependencies:
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/minimax-h3:
     dependencies:
@@ -394,9 +413,6 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/validation':
-        specifier: workspace:*
-        version: link:../validation
 
   packages/nano-banana:
     dependencies:
@@ -415,6 +431,9 @@ importers:
       '@svml/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -424,6 +443,9 @@ importers:
       '@svml/text':
         specifier: workspace:*
         version: link:../text
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/prelude-video:
     dependencies:
@@ -525,6 +547,9 @@ importers:
       '@svml/artifact-store-fs':
         specifier: workspace:*
         version: link:../artifact-store-fs
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/core':
         specifier: workspace:*
         version: link:../core
@@ -707,6 +732,9 @@ importers:
         specifier: workspace:*
         version: link:../whisperx
     devDependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/core':
         specifier: workspace:*
         version: link:../core
@@ -722,6 +750,9 @@ importers:
       '@svml/script':
         specifier: workspace:*
         version: link:../script
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/speech-take:
     dependencies:
@@ -732,12 +763,18 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/core':
         specifier: workspace:*
         version: link:../core
       '@svml/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/store-sqlite:
     dependencies:

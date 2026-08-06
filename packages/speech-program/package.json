@@ -16,10 +16,12 @@
     "@svml/whisperx": "workspace:*"
   },
   "devDependencies": {
+    "@svml/component-kit": "workspace:*",
     "@svml/core": "workspace:*",
     "@svml/driver-node": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/realization": "workspace:*",
-    "@svml/script": "workspace:*"
+    "@svml/script": "workspace:*",
+    "@svml/validation": "workspace:*"
   }
 }

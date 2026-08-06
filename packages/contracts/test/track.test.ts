@@ -1,16 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/protocol";
+import { registerTypeValidatorFacets } from "@svml/component-kit";
+import { createResolvedClosure } from "@svml/core";
+import { canonicalize, digestOf } from "@svml/protocol";
+import { TypeValidatorRegistry, validateValue } from "@svml/validation";
 
 import {
   assertCompositionIdentity,
   assertVisualTrackIdentity,
+  compositionContractsComponent,
+  contractTypes,
   HYPERFRAMES_VISUAL_IR_V1,
   sealAudioTrack,
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
+  videoContractManifests,
 } from "../src/index.js";
 import type { MediaArtifactRef, VisualTrack } from "../src/index.js";
 
@@ -171,6 +177,33 @@ test("VisualTrack explicitly binds the visual IR instead of trusting the Runtime
       visualIr: "third-party.browser-css@9",
     } as unknown as VisualTrack, programSpace),
     /Unsupported VisualTrack visual IR/u,
+  );
+});
+
+test("the Type owner rejects an invalid VisualTrack at the shared admission gate", async () => {
+  const { visual } = fixture();
+  const present = visual.presents[0]!;
+  const invalid = sealVisualTrack({
+    ...visual,
+    presents: [{
+      ...present,
+      elements: [
+        ...present.elements,
+        { id: "second-root", order: 2, kind: "box", style: [] },
+      ],
+    }],
+  });
+  const validators = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(validators, compositionContractsComponent.validators);
+
+  await assert.rejects(
+    async () => await validateValue(
+      createResolvedClosure(videoContractManifests),
+      contractTypes.visualTrack,
+      { kind: "inline", value: canonicalize(invalid) },
+      validators,
+    ),
+    /must contain exactly one root element/u,
   );
 });
 

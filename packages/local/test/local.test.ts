@@ -49,12 +49,8 @@ test("project local runtime resumes durable work while component and provider pa
   let starts = 0;
   let resumes = 0;
   let cancels = 0;
-  let validatorInstalls = 0;
   const components: NodeComponentPackage = {
     name: "example.components",
-    installValidators() {
-      validatorInstalls += 1;
-    },
     install(registry) {
       registry.registerProducer(producers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
         promptCalls += 1;
@@ -167,7 +163,6 @@ test("project local runtime resumes durable work while component and provider pa
     const cancelled = await secondRuntime.cancel("cancel-video");
     assert.equal(cancelled?.status, "failed");
     assert.equal(cancels, 1);
-    assert.equal(validatorInstalls, 2, "each fresh Runtime installs package-owned Type validators");
     await secondRuntime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

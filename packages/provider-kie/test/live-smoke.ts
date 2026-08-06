@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { FileArtifactStore } from "@svml/artifact-store-fs";
+import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
   createResolvedClosure,
   digestOf,
@@ -340,8 +341,8 @@ function selectCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
 async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
   const closure = createResolvedClosure([generationManifest, item.manifest]);
   const validators = new TypeValidatorRegistry();
-  generationComponent.installValidators(validators);
-  item.component.installValidators(validators);
+  registerTypeValidatorFacets(validators, generationComponent.validators);
+  registerTypeValidatorFacets(validators, item.component.validators);
   const draft = sealRecord({
     id: item.ids.request,
     type: item.endpoint.requestType,
