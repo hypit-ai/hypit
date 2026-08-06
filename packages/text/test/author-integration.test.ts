@@ -238,8 +238,8 @@ function decode(text: string, surfaceRegistry = registry()) {
   );
 }
 
-test("Text Surfaces compile forward author references into a Core BuildPlan", () => {
-  const decoded = decode(`<svml>
+test("Text Surfaces compile forward author references into a Core BuildPlan", async () => {
+  const decoded = await decode(`<svml>
     <import as="lab" from="example.text-laboratory@1"/>
     <lab:Sample id="soil" value="soil"/>
     <lab:Report id="final" measurement={measurement.result}/>
@@ -270,9 +270,9 @@ test("Text Surfaces compile forward author references into a Core BuildPlan", ()
   assert.equal(reportStep?.inputs.measurement, measurementStep?.outputs.measurement);
 });
 
-test("component source reflow does not change AuthorModule semantic identity", () => {
-  const compact = decode(`<svml><import as="lab" from="example.text-laboratory@1"/><lab:Sample id="soil" value="soil"/><lab:Measure id="measurement" sample={soil}/></svml>`);
-  const multiline = decode(`<svml>
+test("component source reflow does not change AuthorModule semantic identity", async () => {
+  const compact = await decode(`<svml><import as="lab" from="example.text-laboratory@1"/><lab:Sample id="soil" value="soil"/><lab:Measure id="measurement" sample={soil}/></svml>`);
+  const multiline = await decode(`<svml>
     <import as="lab" from="example.text-laboratory@1"/>
     <lab:Sample
       id="soil"
@@ -286,9 +286,9 @@ test("component source reflow does not change AuthorModule semantic identity", (
   assert.equal(compact.author.id, multiline.author.id);
 });
 
-test("Text rejects a component whose Surface omits its Fragment definition", () => {
-  assert.throws(
-    () => decode(`<svml>
+test("Text rejects a component whose Surface omits its Fragment definition", async () => {
+  await assert.rejects(
+    decode(`<svml>
       <import as="lab" from="example.text-laboratory@1"/>
       <lab:Sample id="soil" value="soil"/>
       <lab:Measure id="measurement" sample={soil}/>
@@ -298,8 +298,8 @@ test("Text rejects a component whose Surface omits its Fragment definition", () 
   );
 });
 
-test("unknown component references remain inert until whole-document Author linking", () => {
-  const decoded = decode(`<svml>
+test("unknown component references remain inert until whole-document Author linking", async () => {
+  const decoded = await decode(`<svml>
     <import as="lab" from="example.text-laboratory@1"/>
     <lab:Report id="final" measurement={missing.result}/>
   </svml>`);
@@ -312,9 +312,9 @@ test("unknown component references remain inert until whole-document Author link
   );
 });
 
-test("Text rejects duplicate component identities before Author linking", () => {
-  assert.throws(
-    () => decode(`<svml>
+test("Text rejects duplicate component identities before Author linking", async () => {
+  await assert.rejects(
+    decode(`<svml>
       <import as="lab" from="example.text-laboratory@1"/>
       <lab:Sample id="soil" value="soil"/>
       <lab:Measure id="measurement" sample={soil}/>

@@ -8,6 +8,7 @@ import {
   verifyRecord,
 } from "@svml/core";
 import type {
+  BlobRef,
   Digest,
   GraphValueRef,
   LinkedProgram,
@@ -49,6 +50,19 @@ export type AuthorSourceDiscovery = {
   readonly sources: readonly AuthorSourceImport[];
 };
 
+/** A semantic source dependency requested by a Frontend or package-owned Surface. */
+export type AuthorSourceAssetRequest = {
+  /** Author-written path or Host-specific asset locator. */
+  readonly from: string;
+  /** Exact media type the consuming Surface assigns to these bytes. */
+  readonly mediaType: string;
+  readonly range?: SourceRange;
+};
+
+export type ResolvedAuthorSourceAsset = {
+  readonly artifact: BlobRef;
+};
+
 export type AuthorSourceExport = {
   /** Relative public name. The importing source contributes its own alias. */
   readonly name: string;
@@ -67,6 +81,8 @@ export type ResolvedAuthorSourceImport = {
 export type AuthorSourceDecodeContext = {
   readonly closure: ResolvedModuleClosure;
   readonly imports: readonly ResolvedAuthorSourceImport[];
+  /** Host authority: Frontends declare asset dependencies but never open files themselves. */
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<ResolvedAuthorSourceAsset>;
 };
 
 export type DecodedAuthorSource = {
@@ -113,6 +129,16 @@ export type AuthorSourceResolver = (
   request: AuthorSourceImport,
 ) => Awaitable<AuthorSourceUnit>;
 
+export type AuthorSourceAssetResolver = (
+  importer: AuthorSourceUnit,
+  request: AuthorSourceAssetRequest,
+) => Awaitable<ResolvedAuthorSourceAsset>;
+
+export type SourceClosureAsset = {
+  readonly from: string;
+  readonly artifact: BlobRef;
+};
+
 /** Host-owned admission hook; it may attach validation evidence but cannot rewrite author meaning. */
 export type AuthorRecordAdmitter = (
   closure: ResolvedModuleClosure,
@@ -127,6 +153,7 @@ export type SourceClosureUnit = {
   readonly sourceDigest: Digest;
   readonly semanticDigest: Digest;
   readonly modules: readonly string[];
+  readonly assets: readonly SourceClosureAsset[];
   readonly imports: readonly {
     readonly alias: string;
     readonly from: string;
@@ -164,6 +191,7 @@ export type CompileSourceClosureRequest = {
   readonly closure: ResolvedModuleClosure;
   readonly frontends: AuthorFrontendRegistryLike;
   readonly resolveSource: AuthorSourceResolver;
+  readonly resolveAsset?: AuthorSourceAssetResolver;
   readonly admitRecord?: AuthorRecordAdmitter;
 };
 
@@ -187,6 +215,9 @@ function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id
     sourceDigest: unit.sourceDigest,
     semanticDigest: unit.semanticDigest,
     modules: [...unit.modules].sort(),
+    assets: [...unit.assets]
+      .map((item) => ({ from: item.from, artifact: item.artifact }))
+      .sort((left, right) => left.from.localeCompare(right.from)),
     imports: [...unit.imports]
       .map((item) => ({
         alias: item.alias,
@@ -247,6 +278,7 @@ function hygienizeSource(
   discovery: AuthorSourceDiscovery,
   decoded: DecodedAuthorSource,
   imports: readonly ResolvedAuthorSourceImport[],
+  assets: readonly SourceClosureAsset[],
 ): HygienicSource {
   assert(decoded.module.closureDigest.length > 0, "INVALID_SOURCE_MODULE", `${source.name} returned no closure identity`);
   const fragmentIds = new Set<string>();
@@ -297,6 +329,7 @@ function hygienizeSource(
     components: decoded.author.components,
     fragments: [...decoded.fragments].map((fragment) => fragment.id).sort(),
     exports: [...decoded.exports].sort((left, right) => left.name.localeCompare(right.name)),
+    assets: [...assets].sort((left, right) => left.from.localeCompare(right.from)),
   });
   const recordIds = new Map(decoded.module.records.map((record) => [
     record.id,
@@ -343,6 +376,7 @@ function hygienizeSource(
     sourceDigest: digestOf(source.text),
     semanticDigest,
     modules: [...discovery.modules].sort(),
+    assets: [...assets].sort((left, right) => left.from.localeCompare(right.from)),
     imports: discovery.sources
       .map((request) => {
         const resolved = imports.find((item) => item.request === request);
@@ -365,6 +399,7 @@ function hygienizeSource(
       sourceDigest: unitContent.sourceDigest,
       semanticDigest,
       modules: unitContent.modules,
+      assets: unitContent.assets,
       imports: unitContent.imports,
     },
     records,
@@ -428,9 +463,44 @@ export async function compileSourceClosure(
         records: compiled.records.filter((record) => publicRecordIds.has(record.id)),
       });
     }
+    const assets = new Map<string, SourceClosureAsset>();
     const rawDecoded = await frontend.decode(source, {
       closure: request.closure,
       imports: canonicalize(imports) as unknown as readonly ResolvedAuthorSourceImport[],
+      async resolveAsset(assetRequest) {
+        assert(assetRequest.from.trim().length > 0, "EMPTY_SOURCE_ASSET", `${source.name} requested an empty asset`);
+        assert(assetRequest.mediaType.trim().length > 0, "EMPTY_SOURCE_ASSET_MEDIA_TYPE", `${source.name} requested an asset without a media type`);
+        const existing = assets.get(assetRequest.from);
+        if (existing !== undefined) {
+          assert(
+            existing.artifact.mediaType === assetRequest.mediaType,
+            "SOURCE_ASSET_MEDIA_TYPE_CONFLICT",
+            `${source.name} assigns conflicting media types to ${assetRequest.from}`,
+            assetRequest.from,
+          );
+          return { artifact: existing.artifact };
+        }
+        assert(
+          request.resolveAsset !== undefined,
+          "SOURCE_ASSET_RESOLVER_MISSING",
+          `${source.name} requires source asset ${assetRequest.from}, but the Host has no asset resolver`,
+          assetRequest.from,
+        );
+        const resolved = await request.resolveAsset(source, assetRequest);
+        const artifact = resolved.artifact;
+        assert(artifact.kind === "blob", "INVALID_SOURCE_ASSET", `${assetRequest.from} did not resolve to a BlobRef`);
+        assert(isDigest(artifact.digest), "INVALID_SOURCE_ASSET_DIGEST", `${assetRequest.from} has an invalid digest`);
+        assert(Number.isSafeInteger(artifact.size) && artifact.size >= 0, "INVALID_SOURCE_ASSET_SIZE", `${assetRequest.from} has an invalid size`);
+        assert(
+          artifact.mediaType === assetRequest.mediaType,
+          "SOURCE_ASSET_MEDIA_TYPE_MISMATCH",
+          `${assetRequest.from} resolved as ${artifact.mediaType}, expected ${assetRequest.mediaType}`,
+          assetRequest.from,
+        );
+        const item = { from: assetRequest.from, artifact } as const;
+        assets.set(assetRequest.from, item);
+        return { artifact };
+      },
     });
     assert(
       rawDecoded.module.closureDigest === request.closure.digest,
@@ -474,7 +544,7 @@ export async function compileSourceClosure(
       }),
     };
     link(request.closure, [decoded.module]);
-    const result = hygienizeSource(source, frontend, discovery, decoded, imports);
+    const result = hygienizeSource(source, frontend, discovery, decoded, imports, [...assets.values()]);
     visiting.pop();
     cache.set(key, result);
     ordered.push(result);
@@ -549,6 +619,20 @@ export function verifySourceClosure(closure: SourceClosure): void {
     assert(isDigest(unit.frontendDigest), "INVALID_FRONTEND_DIGEST", `${unit.id} Frontend digest is invalid`);
     assert(isDigest(unit.sourceDigest), "INVALID_SOURCE_DIGEST", `${unit.id} source digest is invalid`);
     assert(isDigest(unit.semanticDigest), "INVALID_SOURCE_SEMANTIC_DIGEST", `${unit.id} semantic digest is invalid`);
+    const assetPaths = new Set<string>();
+    for (const asset of unit.assets) {
+      assert(asset.from.length > 0, "EMPTY_SOURCE_ASSET", `${unit.id} contains an empty asset path`);
+      assert(!assetPaths.has(asset.from), "DUPLICATE_SOURCE_ASSET", `${unit.id} repeats asset ${asset.from}`);
+      assetPaths.add(asset.from);
+      assert(asset.artifact.kind === "blob", "INVALID_SOURCE_ASSET", `${unit.id}:${asset.from} is not a BlobRef`);
+      assert(isDigest(asset.artifact.digest), "INVALID_SOURCE_ASSET_DIGEST", `${unit.id}:${asset.from} digest is invalid`);
+      assert(
+        Number.isSafeInteger(asset.artifact.size) && asset.artifact.size >= 0,
+        "INVALID_SOURCE_ASSET_SIZE",
+        `${unit.id}:${asset.from} size is invalid`,
+      );
+      assert(asset.artifact.mediaType.length > 0, "EMPTY_SOURCE_ASSET_MEDIA_TYPE", `${unit.id}:${asset.from} media type is empty`);
+    }
     units.set(unit.id, unit);
   }
   assert(units.has(closure.entry), "UNKNOWN_SOURCE_ENTRY", `Source Closure entry ${closure.entry} is absent`);

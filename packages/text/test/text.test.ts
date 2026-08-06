@@ -33,8 +33,8 @@ function scriptContext() {
   } as const;
 }
 
-test("Text learns <script> only from an imported Script Manifest", () => {
-  const result = decodeText(
+test("Text learns <script> only from an imported Script Manifest", async () => {
+  const result = await decodeText(
     {
       name: "talk.svml",
       text: `<svml>
@@ -58,15 +58,15 @@ test("Text learns <script> only from an imported Script Manifest", () => {
   assert.doesNotThrow(() => link(scriptContext().closure, [result.module]));
 });
 
-test("the same Script meaning has the same authored Record digest across reflow", () => {
-  const compact = decodeText(
+test("the same Script meaning has the same authored Record digest across reflow", async () => {
+  const compact = await decodeText(
     {
       name: "compact.svml",
       text: `<svml><import from="@svml/script"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
     },
     scriptContext(),
   );
-  const multiline = decodeText(
+  const multiline = await decodeText(
     {
       name: "multiline.svml",
       text: `<svml>
@@ -89,9 +89,9 @@ test("the same Script meaning has the same authored Record digest across reflow"
   );
 });
 
-test("without the import, Text has no hard-coded knowledge of Script", () => {
-  assert.throws(
-    () => decodeText(
+test("without the import, Text has no hard-coded knowledge of Script", async () => {
+  await assert.rejects(
+    decodeText(
       { name: "unknown.svml", text: "<svml><script><opening>Hello.</opening></script></svml>" },
       scriptContext(),
     ),
@@ -99,7 +99,7 @@ test("without the import, Text has no hard-coded knowledge of Script", () => {
   );
 });
 
-test("a raw Surface cannot consume the Text document close", () => {
+test("a raw Surface cannot consume the Text document close", async () => {
   const closure = createResolvedClosure([narrativeManifest, scriptManifest]);
   const registry = new TextSurfaceRegistry();
   registry.registerRaw(
@@ -113,8 +113,8 @@ test("a raw Surface cannot consume the Text document close", () => {
       fragments: [],
     }),
   );
-  assert.throws(
-    () => decodeText(
+  await assert.rejects(
+    decodeText(
       {
         name: "swallowed.svml",
         text: `<svml><import from="@svml/script"/><script><opening>Hello.</opening></script></svml>`,
@@ -125,9 +125,9 @@ test("a raw Surface cannot consume the Text document close", () => {
   );
 });
 
-test("imports are frozen before body decoding", () => {
-  assert.throws(
-    () => decodeText(
+test("imports are frozen before body decoding", async () => {
+  await assert.rejects(
+    decodeText(
       {
         name: "late.svml",
         text: `<svml>
@@ -142,9 +142,9 @@ test("imports are frozen before body decoding", () => {
   );
 });
 
-test("a body tag whose name merely starts with import is not treated as an import", () => {
-  assert.throws(
-    () => decodeText(
+test("a body tag whose name merely starts with import is not treated as an import", async () => {
+  await assert.rejects(
+    decodeText(
       { name: "important.svml", text: "<svml><important/></svml>" },
       scriptContext(),
     ),
@@ -164,7 +164,7 @@ test("Text also exposes a generic structured Surface tree", () => {
   assert.equal(parsed.element.children[0]?.kind, "element");
 });
 
-test("a module can use Text's generic structured parser without adding another parser", () => {
+test("a module can use Text's generic structured parser without adding another parser", async () => {
   const module = { name: "example.card", version: "1" } as const;
   const type = { module, name: "Card" } as const;
   const implementationDigest = digestOf("example.card/surface@1");
@@ -212,7 +212,7 @@ test("a module can use Text's generic structured parser without adding another p
     components: [],
     fragments: [],
   }));
-  const result = decodeText(
+  const result = await decodeText(
     {
       name: "card.svml",
       text: `<svml><import from="example.card@1"/><card title="Hello"><line>World</line></card></svml>`,
@@ -236,8 +236,8 @@ test("a module can use Text's generic structured parser without adding another p
     components: [],
     fragments: [],
   }));
-  assert.throws(
-    () => decodeText(
+  await assert.rejects(
+    decodeText(
       { name: "overreach.svml", text: `<svml><import from="example.card@1"/><card/></svml>` },
       { closure, registry: overreachingRegistry, resolveModule: () => module },
     ),

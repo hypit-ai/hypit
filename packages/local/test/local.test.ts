@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
@@ -308,6 +309,31 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
       artifacts,
       allowedPermissions: ["network:remote-artifacts"],
     });
+    const bytes = new Uint8Array([7, 8, 9]);
+    const sourceArtifact = {
+      kind: "blob" as const,
+      digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const,
+      size: bytes.byteLength,
+      mediaType: "application/octet-stream",
+    };
+    assert.equal(await artifacts.store.has(sourceArtifact.digest), false);
+    await assert.rejects(
+      runtime.build({
+        id: "source-artifact-staging",
+        state: createGreetingBuild(),
+        sourceArtifacts: [{ artifact: sourceArtifact, bytes }],
+      }),
+      /does not bind demanded capability/u,
+    );
+    assert.deepEqual(await artifacts.store.get(sourceArtifact.digest), bytes);
+    await assert.rejects(
+      runtime.build({
+        id: "tampered-source-artifact",
+        state: createGreetingBuild(),
+        sourceArtifacts: [{ artifact: sourceArtifact, bytes: new Uint8Array([0]) }],
+      }),
+      /does not match its staged bytes/u,
+    );
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

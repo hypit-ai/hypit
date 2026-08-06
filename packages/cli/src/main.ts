@@ -225,6 +225,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
       moduleClosure: result.program.closure.digest,
       graph: result.elaboration.graph.id,
       units: result.closure.units.length,
+      sourceAssets: result.sourceArtifacts.map((item) => item.artifact),
       modules: result.program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`),
       exports: result.exports.map((item) => ({ name: item.name, type: item.type, kind: item.ref.kind })),
     }, null, 2)}\n`);
@@ -242,6 +243,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
       const built = await runtime.build({
         id: args.buildId ?? result.state.id,
         state: result.state,
+        sourceArtifacts: result.compilation.sourceArtifacts,
       }, {
         follow: args.follow,
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),

@@ -14,8 +14,10 @@ import type {
   AuthorComponent,
   AuthorFrontend,
   AuthorModule,
+  AuthorSourceAssetRequest,
   AuthorSourceExport,
   AuthorValueRef,
+  Awaitable,
   GraphFragment,
   ResolvedAuthorSourceImport,
 } from "@svml/elaborator";
@@ -86,6 +88,7 @@ export type RawSurfaceInput = {
   readonly openingStart: number;
   readonly contentStart: number;
   readonly attributes: Readonly<Record<string, TextAttributeValue>>;
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@svml/elaborator").ResolvedAuthorSourceAsset>;
 };
 
 export type RawSurfaceOutput = SurfaceDecodeOutput & {
@@ -101,6 +104,7 @@ export type StructuredSurfaceInput = {
    * A component output has a ref and Type but no compile-time Record value.
    */
   readonly resolveReference: (path: string) => SurfaceResolvedReference | undefined;
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@svml/elaborator").ResolvedAuthorSourceAsset>;
 };
 
 export type SurfaceResolvedReference = {
@@ -110,8 +114,8 @@ export type SurfaceResolvedReference = {
   readonly record?: TypedRecord;
 };
 
-export type RawSurfaceHandler = (input: RawSurfaceInput) => RawSurfaceOutput;
-export type StructuredSurfaceHandler = (input: StructuredSurfaceInput) => SurfaceDecodeOutput;
+export type RawSurfaceHandler = (input: RawSurfaceInput) => Awaitable<RawSurfaceOutput>;
+export type StructuredSurfaceHandler = (input: StructuredSurfaceInput) => Awaitable<SurfaceDecodeOutput>;
 
 export type RegisteredSurface = {
   readonly module: ModuleRef;
@@ -126,6 +130,7 @@ export type TextDecodeContext = {
   readonly registry: TextSurfaceRegistryLike;
   readonly resolveModule: (request: TextImportRequest) => ModuleRef;
   readonly sourceImports?: readonly ResolvedAuthorSourceImport[];
+  readonly resolveAsset?: (request: AuthorSourceAssetRequest) => Awaitable<import("@svml/elaborator").ResolvedAuthorSourceAsset>;
 };
 
 export type TextDecodeResult = {

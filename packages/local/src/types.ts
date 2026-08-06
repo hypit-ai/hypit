@@ -1,6 +1,7 @@
 import type { Awaitable, ComponentPackage } from "@svml/component-kit";
 import type { NodeProviderPackage } from "@svml/provider-kit";
 import type {
+  BlobRef,
   BuildState,
 } from "@svml/protocol";
 import type {
@@ -79,6 +80,13 @@ export type LocalBuildRequest = {
   /** Stable user/run identity. Reusing it resumes only the same Core Build identity. */
   readonly id: string;
   readonly state: BuildState;
+  /** Host transfer bundle. It is staged before Core commands run and never enters BuildState. */
+  readonly sourceArtifacts?: readonly LocalSourceArtifact[];
+};
+
+export type LocalSourceArtifact = {
+  readonly artifact: BlobRef;
+  readonly bytes: Uint8Array;
 };
 
 export type LocalBuildOptions = {

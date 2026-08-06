@@ -25,6 +25,8 @@ export type {
   AuthorFrontendRegistryLike,
   AuthorSourceDecodeContext,
   AuthorSourceDiscovery,
+  AuthorSourceAssetRequest,
+  AuthorSourceAssetResolver,
   AuthorSourceExport,
   AuthorSourceImport,
   AuthorSourceResolver,
@@ -35,8 +37,10 @@ export type {
   CompiledSourceClosure,
   CompiledSourceExport,
   DecodedAuthorSource,
+  ResolvedAuthorSourceAsset,
   ResolvedAuthorSourceImport,
   SourceClosure,
+  SourceClosureAsset,
   SourceClosureUnit,
 } from "./source.js";
 export {
