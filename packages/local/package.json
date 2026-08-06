@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@svml/artifact-store-fs": "workspace:*",
+    "@svml/component-kit": "workspace:*",
     "@svml/credential-store-env": "workspace:*",
     "@svml/driver-node": "workspace:*",
     "@svml/protocol": "workspace:*",

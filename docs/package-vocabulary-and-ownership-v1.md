@@ -93,7 +93,9 @@ module.
 | `@svml/elaborator` | environment-neutral author-to-Graph compiler | rename to `@svml/compiler` |
 | `@svml/realization` | external Candidate attachment | keep as `@svml/compiler/candidates`, not a physical package |
 | `@svml/validation` | semantic value admission before trusted state | rename to `@svml/admission` |
+| `@svml/component-kit` | host-neutral deterministic Producer and validator registration port | keep |
 | `@svml/compiler-node` | Node Source, filesystem and installed-module compiler Host | keep |
+| `@svml/package-loader-node` | locked activation of trusted installed package facets | keep |
 | `@svml/driver-node` | Node Runtime execution of Core Commands | rename to `@svml/runtime-node` |
 | `@svml/text` | official markup document Frontend and Surface dispatch | rename to `@svml/markup` |
 | `@svml/script` | official Script Surface | keep |
@@ -106,9 +108,10 @@ The target dependency direction is below. `A -> B` means B depends on A:
 protocol -> core
 core -> compiler
 core -> admission
+protocol + admission -> component-kit
 core -> runtime
 compiler + admission -> compiler-node
-runtime + admission -> runtime-node
+runtime + admission + component-kit -> runtime-node
 compiler-node + runtime-node + selected domain packages -> cli
 ```
 
@@ -576,10 +579,10 @@ completed and partial steps below distinguish API laws from unfinished distribut
    start/resume lifecycle is complete. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
    `@svml/local` now provide durable project recovery and package-based local assembly; distributed
    leases and wake-up polling remain;
-7. **partially completed:** `@svml/package-loader-node` locks the full physical dependency closure
+7. **partially completed:** `@svml/package-loader-node` locks the full physical declared-dependency closure
    and activates trusted Module, Frontend and Text Surface facets without package-specific CLI
-   registration; host-neutral Producer and Type Validator activation plus untrusted isolation
-   remain;
+   registration; `@svml/component-kit` now removes direct Node Driver dependencies from deterministic
+   packages, while locked compute/Type Validator activation plus untrusted isolation remain;
 8. **partially completed:** add real Provider Endpoints; KIE generation, reference local media,
    local HyperFrames, the local WhisperX Provider and its locked Python service are implemented,
    while AWS/hosted equivalents remain;

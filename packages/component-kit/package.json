@@ -1,5 +1,5 @@
 {
-  "name": "@svml/model-kit",
+  "name": "@svml/component-kit",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,9 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/generation": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/validation": "workspace:*"
   }

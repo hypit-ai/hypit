@@ -13,6 +13,10 @@ The convenience assembly uses:
 - an in-process, queue-free Scheduler whose ready work always comes from Core;
 - separately installed deterministic component packages and external Provider packages.
 
+Deterministic packages implement the host-neutral `@svml/component-kit` contract. `@svml/local`
+adapts them to `HostRegistry`; the component never imports the Node Driver or receives Runtime
+services.
+
 ```ts
 export default await createProjectLocalRuntime({
   root: import.meta.dirname,

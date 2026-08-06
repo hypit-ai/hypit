@@ -106,6 +106,15 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/component-kit:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
   packages/contracts:
     dependencies:
       '@svml/protocol':
@@ -129,6 +138,9 @@ importers:
 
   packages/driver-node:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/core':
         specifier: workspace:*
         version: link:../core
@@ -216,15 +228,16 @@ importers:
 
   packages/generation:
     dependencies:
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
+    devDependencies:
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
 
   packages/gpt-image:
     dependencies:
@@ -252,12 +265,12 @@ importers:
 
   packages/hyperframes:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -267,12 +280,12 @@ importers:
 
   packages/hyperframes-render:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -292,6 +305,9 @@ importers:
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
@@ -301,6 +317,9 @@ importers:
       '@svml/artifact-store-fs':
         specifier: workspace:*
         version: link:../artifact-store-fs
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
@@ -329,12 +348,12 @@ importers:
 
   packages/media-pipeline:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -363,9 +382,9 @@ importers:
 
   packages/model-kit:
     dependencies:
-      '@svml/driver-node':
+      '@svml/component-kit':
         specifier: workspace:*
-        version: link:../driver-node
+        version: link:../component-kit
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -815,12 +834,12 @@ importers:
 
   packages/whisperx:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol

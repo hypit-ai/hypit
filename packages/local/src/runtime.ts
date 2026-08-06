@@ -149,7 +149,7 @@ export async function createLocalRuntime(
   const validators = options.validators ?? new TypeValidatorRegistry();
   for (const component of options.components ?? []) {
     await component.installValidators?.(validators);
-    await component.install(hosts);
+    await component.install?.(hosts);
   }
   for (const provider of options.providers ?? []) await provider.install(providers);
   if (options.closure !== undefined) {

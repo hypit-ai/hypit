@@ -1,4 +1,4 @@
-import type { HostRegistry } from "@svml/driver-node";
+import type { ProducerRegistrar } from "@svml/component-kit";
 import { sealGraphFragment } from "@svml/elaborator";
 import {
   generationManifestDigest,
@@ -50,7 +50,7 @@ export type ExactModelModule = {
   readonly endpoints: Readonly<Record<string, ExactModelEndpoint>>;
   readonly component: {
     readonly name: string;
-    install(registry: HostRegistry): void;
+    install(registry: ProducerRegistrar): void;
     installValidators(registry: TypeValidatorRegistrar): void;
   };
 };

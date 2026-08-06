@@ -6,11 +6,13 @@ Its Manifest helpers only read Node filesystem paths and construct a verified Cl
 Manifest JSON parsing belongs to `@svml/protocol` and is re-exported here temporarily for callers of
 the prototype API.
 
-- `HostRegistry` registers deterministic Producer implementations locked by implementation digest.
+- `HostRegistry` implements the host-neutral `@svml/component-kit` Producer registrar. Deterministic
+  component packages depend on that tiny structural port, not on this Node Driver.
 - `ProviderRegistry` binds an already explicit external capability to endpoints that may use APIs, credentials, queues or local runtimes.
 - Registrations may declare a scheduling lane and default concurrency. The environment-neutral
   `@svml/runtime` Scheduler shares that lane across Builds; a Runtime Profile may override its limit.
-- A Producer emits a typed `Need`; it never reads provider configuration directly.
+- A Producer receives only its command identity and immutable typed inputs. It has no ArtifactStore,
+  credentials, network, queue or store handle; external work must be emitted as a typed `Need`.
 - Providers match the locked `CapabilityRef` and return `TypeRef`. Multiple exact endpoints require
   `bind()`. The Registry never routes by return type alone.
 - Production-style assembly uses `applyRuntimeClosure()`: Endpoint instance, exact capability and
