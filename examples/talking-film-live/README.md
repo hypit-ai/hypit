@@ -13,31 +13,35 @@ Both English lines resolve to five seconds with `pace="normal"`, `padding="0.3"`
 minimum and `ceil` rounding. The generated presenter image is intentionally ignored by Git under
 `assets/`; supply or regenerate `assets/presenter.png` before checking or building.
 
-Run the complete graph with the explicitly trusted local Runtime:
+Run the complete graph through the explicit Run Graph and declarative local Runtime Profile:
 
 ```bash
-pnpm svml:v2 build examples/talking-film-live/main.svml \
-  --target final.video \
-  --runtime examples/talking-film-live/svml.runtime.ts \
+pnpm svml:v2 build examples/talking-film-live/build.svrun \
+  --runtime examples/talking-film-live/svml.runtime.json \
   --follow \
   --out examples/talking-film-live/output/final.mp4
 ```
 
-Reuse the paid shot outputs from a verified earlier Build while rebuilding every reachable
-downstream result:
+`build.svrun` owns the selected Target and fidelity. `svml.runtime.json` owns Provider instances,
+permissions and concurrency. The existing `svml.runtime.ts` shows the advanced executable embedding
+API and remains supported.
 
-```bash
-pnpm svml:v2 build examples/talking-film-live/main.svml \
-  --target final.video \
-  --runtime examples/talking-film-live/svml.runtime.ts \
-  --pin opening-take=<prior-build-id> \
-  --pin answer-take=<prior-build-id> \
-  --accept-substitute \
-  --follow \
-  --out examples/talking-film-live/output/final-pinned.mp4
+To reuse the paid shot outputs from a verified earlier Build, add two zero-input Build Record
+Candidates and their explicit Satisfaction edges to another `.svrun`:
+
+```xml
+<svrun version="1" source="./main.svml" targets="delivery">
+  <target-set id="delivery">
+    <target output="final.video" accepts="substitute"/>
+  </target-set>
+  <build-record id="opening" build="prior-build-id" output="opening-take"/>
+  <build-record id="answer" build="prior-build-id" output="answer-take"/>
+  <satisfy output="opening-take" candidate="opening" fidelity="substitute"/>
+  <satisfy output="answer-take" candidate="answer" fidelity="substitute"/>
+</svrun>
 ```
 
-The second command compiles a new Build whose two shot outputs are explicitly selected substitute
+The second Run compiles a new Build whose two shot outputs are explicitly selected substitute
 Existing values. It therefore contains no Seedance Operations or KIE Needs. Substitute fidelity
 propagates through the rebuilt media normalization, WhisperX, SemanticMap, Tracks, Film and
 HyperFrames path instead of being washed back to exact.

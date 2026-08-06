@@ -1,0 +1,5 @@
+<svrun version="1" source="./main.svml" targets="delivery">
+  <target-set id="delivery">
+    <target output="final.video" accepts="exact"/>
+  </target-set>
+</svrun>

@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { LocalRuntime } from "@svml/local";
@@ -14,7 +14,9 @@ import {
   writeNodePackageLock,
 } from "@svml/package-loader-node";
 
-import { createOfficialNodeCompiler } from "./host.js";
+import { createOfficialNodeCompiler, officialNodePackages } from "./host.js";
+import { loadRunFile } from "./run-file.js";
+import { createOfficialRuntimeFromConfig } from "./runtime-config.js";
 
 type CliIo = {
   readonly write: (text: string) => void;
@@ -85,7 +87,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
     if (item === "--runtime") {
       const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--runtime requires a trusted config module");
+      if (value === undefined || value.startsWith("--")) throw new Error("--runtime requires a Runtime Profile or trusted config module");
       runtime = resolve(value);
       index += 1;
       continue;
@@ -150,11 +152,13 @@ function usage(): string {
   return [
     "usage:",
     "  svml-v2 lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
-    "  svml-v2 check <file.svml> [--package-lock file] [--root directory]",
+    "  svml-v2 check <file.svml|file.svrun> [--runtime profile.json] [--package-lock file] [--root directory]",
     "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--package-lock file]",
+    "  svml-v2 plan <file.svrun> [--runtime profile.json] [--package-lock file]",
     "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build --accept-substitute] [--follow] [--out video.mp4]",
-    "  svml-v2 status <build-id> --runtime ./svml.runtime.ts",
-    "  svml-v2 cancel <build-id> --runtime ./svml.runtime.ts",
+    "  svml-v2 build <file.svrun> --runtime profile.json [--follow] [--out video.mp4]",
+    "  svml-v2 status <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  svml-v2 cancel <build-id> --runtime profile.json|./svml.runtime.ts",
   ].join("\n");
 }
 
@@ -170,6 +174,7 @@ function isLocalRuntime(value: unknown): value is LocalRuntime {
 }
 
 async function loadLocalRuntime(path: string): Promise<LocalRuntime> {
+  if (extname(path) === ".json") return await createOfficialRuntimeFromConfig(path);
   // A Runtime config is trusted executable deployment code, never an Author Frontend or .svml import.
   const imported = await import(pathToFileURL(path).href) as {
     readonly default?: unknown;
@@ -272,29 +277,67 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     return;
   }
   if (args.packages.length > 0) throw new Error("--package is only valid for lock-packages");
+  const runMode = extname(args.file) === ".svrun";
+  if (runMode && (args.targets.length > 0 || args.substitute || args.pins.length > 0)) {
+    throw new Error(".svrun owns Targets, Candidate selections and fidelity; do not combine it with --target, --pin or --accept-substitute");
+  }
   const activated = args.packageLock === undefined
     ? undefined
     : await loadNodePackageSet(args.packageLock, args.root ?? dirname(args.packageLock));
+  const packages = officialNodePackages(activated?.packages);
   const compiler = createOfficialNodeCompiler({
     ...(args.root === undefined ? {} : { root: args.root }),
-    ...(activated === undefined ? {} : { packages: activated.packages }),
+    packages,
   });
   if (args.command === "check") {
-    const result = await compiler.compileFile(args.file);
-    io.write(`${JSON.stringify({
-      ok: true,
-      sourceClosure: result.closure.id,
-      moduleClosure: result.program.closure.digest,
-      graph: result.elaboration.graph.id,
-      units: result.closure.units.length,
-      sourceAssets: result.attachments.map((item) => item.artifact),
-      modules: result.program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`),
-      exports: result.exports.map((item) => ({ name: item.name, type: item.type, kind: item.ref.kind })),
-    }, null, 2)}\n`);
-    return;
+    let runtime: LocalRuntime | undefined;
+    try {
+      runtime = args.runtime === undefined ? undefined : await loadLocalRuntime(args.runtime);
+      if (runMode) {
+        const loaded = await loadRunFile({
+          path: args.file,
+          compiler,
+          packages,
+          ...(runtime === undefined ? {} : { runtime }),
+        });
+        const planned = compiler.planCompilation(loaded.compilation, {
+          targets: loaded.run.targets,
+          satisfactions: loaded.run.satisfactions,
+          realizations: loaded.run.graphs,
+          ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
+        });
+        io.write(`${JSON.stringify({
+          ok: true,
+          run: loaded.path,
+          source: loaded.source,
+          sourceClosure: loaded.compilation.closure.id,
+          graph: planned.request.graph,
+          targetSet: loaded.document.selectedTargets,
+          targets: loaded.run.targets,
+          candidates: loaded.run.candidates,
+          satisfactions: loaded.run.satisfactions,
+          steps: planned.plan.steps.length,
+        }, null, 2)}\n`);
+        return;
+      }
+      const result = await compiler.compileFile(args.file);
+      io.write(`${JSON.stringify({
+        ok: true,
+        sourceClosure: result.closure.id,
+        moduleClosure: result.program.closure.digest,
+        graph: result.elaboration.graph.id,
+        units: result.closure.units.length,
+        sourceAssets: result.attachments.map((item) => item.artifact),
+        modules: result.program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`),
+        exports: result.exports.map((item) => ({ name: item.name, type: item.type, kind: item.ref.kind })),
+      }, null, 2)}\n`);
+      return;
+    } finally {
+      await runtime?.close();
+    }
   }
   if (args.command === "build") {
-    if (args.runtime === undefined) throw new Error("build requires --runtime with a trusted local config module");
+    if (args.runtime === undefined) throw new Error("build requires --runtime with a Runtime Profile or trusted local config module");
     const runtime = await loadLocalRuntime(args.runtime);
     try {
       const planOptions = {
@@ -303,9 +346,19 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
         ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
       };
       let pinSummary: readonly { readonly output: string; readonly build: string; readonly candidate: string }[] = [];
-      const result = args.pins.length === 0
-        ? await compiler.planFile(args.file, planOptions)
-        : await (async () => {
+      const loadedRun = runMode
+        ? await loadRunFile({ path: args.file, compiler, packages, runtime })
+        : undefined;
+      const result = loadedRun !== undefined
+        ? compiler.planCompilation(loadedRun.compilation, {
+            targets: loadedRun.run.targets,
+            satisfactions: loadedRun.run.satisfactions,
+            realizations: loadedRun.run.graphs,
+            ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
+          })
+        : args.pins.length === 0
+          ? await compiler.planFile(args.file, planOptions)
+          : await (async () => {
             const compilation = await compiler.compileFile(args.file!);
             const seen = new Set<string>();
             const candidates = [];
@@ -377,10 +430,31 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     }
     return;
   }
-  const result = await compiler.planFile(args.file, {
-    targets: args.targets,
-    accepts: args.substitute ? "substitute" : "exact",
-    ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
-  });
-  io.write(`${JSON.stringify(result.plan, null, 2)}\n`);
+  let runtime: LocalRuntime | undefined;
+  try {
+    runtime = args.runtime === undefined ? undefined : await loadLocalRuntime(args.runtime);
+    const result = runMode
+      ? await (async () => {
+          const loaded = await loadRunFile({
+            path: args.file!,
+            compiler,
+            packages,
+            ...(runtime === undefined ? {} : { runtime }),
+          });
+          return compiler.planCompilation(loaded.compilation, {
+            targets: loaded.run.targets,
+            satisfactions: loaded.run.satisfactions,
+            realizations: loaded.run.graphs,
+            ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
+          });
+        })()
+      : await compiler.planFile(args.file, {
+          targets: args.targets,
+          accepts: args.substitute ? "substitute" : "exact",
+          ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
+        });
+    io.write(`${JSON.stringify(result.plan, null, 2)}\n`);
+  } finally {
+    await runtime?.close();
+  }
 }

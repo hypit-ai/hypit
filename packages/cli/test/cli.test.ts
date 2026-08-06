@@ -141,6 +141,61 @@ test("official media and Seedance Surfaces lower author intent into exact genera
   );
 });
 
+test(".svrun is the complete human-readable Target graph used by plan", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-run-"));
+  const source = join(root, "main.svml");
+  const run = join(root, "preview.svrun");
+  await writeFile(source, `<svml>
+    <import as="seedance" from="@svml/seedance@1"/>
+    <seedance:Prompt id="direction">A quiet locked-off studio shot.</seedance:Prompt>
+    <seedance:Video id="motion" model="mini" prompt={direction} duration="4"/>
+  </svml>`, "utf8");
+  await writeFile(run, `<svrun version="1" source="./main.svml" targets="preview">
+    <target-set id="preview">
+      <target output="motion.video" accepts="exact"/>
+    </target-set>
+  </svrun>`, "utf8");
+
+  let output = "";
+  await runCli(["plan", run], { write: (text) => { output += text; } });
+  const plan = JSON.parse(output) as {
+    readonly goals: readonly unknown[];
+    readonly steps: readonly { readonly producer: { readonly name: string } }[];
+  };
+  assert.equal(plan.goals.length, 1);
+  assert.deepEqual(plan.steps.map((item) => item.producer.name), [
+    "request-seedance-2-mini",
+    "select-primary-video",
+  ]);
+  await assert.rejects(
+    async () => await runCli(["plan", run, "--target", "motion.video"], { write() {} }),
+    /.svrun owns Targets/u,
+  );
+});
+
+test("CLI accepts a declarative Runtime Profile without an executable config module", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-runtime-profile-"));
+  const profile = join(root, "svml.runtime.json");
+  await writeFile(profile, JSON.stringify({
+    format: "svml.runtime-config@1",
+    services: [],
+    endpoints: [{
+      use: "@svml/provider-kie",
+      instance: "kie.cli-test",
+      lane: "generation",
+      config: { apiKeyEnv: "KIE_API_KEY", defaultConcurrency: 2 },
+    }],
+    permissions: ["network:api.kie.ai", "network:kieai.redpandaai.co"],
+    scheduling: { lanes: { generation: 2 } },
+  }), "utf8");
+  let output = "";
+  await runCli(["status", "missing-build", "--runtime", profile], {
+    write: (text) => { output += text; },
+  });
+  const status = JSON.parse(output) as { readonly operations: readonly unknown[] };
+  assert.deepEqual(status.operations, []);
+});
+
 test("official prelude lowers Speech Spine and explicit WhisperX alignment without provider calls", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-speech-spine-"));
   const file = join(root, "main.svml");
