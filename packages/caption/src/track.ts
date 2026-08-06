@@ -88,7 +88,7 @@ export function assertCaptionTrackProgram(program: CaptionTrackProgram): void {
   }
 }
 
-function assertProjection(projection: TimedCaptionProjection): void {
+export function assertTimedCaptionProjection(projection: TimedCaptionProjection): void {
   if (projection.contract !== "svml.timed-caption-projection@1") {
     throw new Error("Unsupported TimedCaptionProjection contract.");
   }
@@ -123,7 +123,7 @@ export function renderCaptionTrack(
   projection: TimedCaptionProjection,
   program: CaptionTrackProgram,
 ): VisualTrack {
-  assertProjection(projection);
+  assertTimedCaptionProjection(projection);
   assertCaptionTrackProgram(program);
   const totalFrames = programSpaceFrameCount(projection.programSpace);
   const plan = planCaptionPresentation(projection, program.mode);

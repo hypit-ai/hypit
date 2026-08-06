@@ -125,8 +125,8 @@ Tests create installed packages unknown to the repository and prove all of the f
 - its authored value passes its locked Type-owner Validator and carries a validation receipt;
 - its deterministic Producer is discovered as enumerable locked data;
 - the installed official video prelude physically closes over `@svml/speech-take` and
-  `@svml/speech-align`, exposing four Product projections and the timing locator without a Host
-  registration list;
+  `@svml/speech-align` plus `@svml/caption`, exposing four Product projections, the timing locator,
+  Caption lowering and Caption-owned validators without a Host registration list;
 - `createProjectLocalRuntime({ packageLock })` executes that Producer without a deployment-source
   component list;
 - an unlocked or differently locked BuildRequest is rejected by that Host;

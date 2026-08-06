@@ -3,6 +3,10 @@ import {
   videoContractsComponents,
 } from "@svml/contracts";
 import {
+  captionComponent,
+  captionManifest,
+} from "@svml/caption";
+import {
   decodeFilmSurface,
   filmManifest,
   filmModuleRef,
@@ -49,6 +53,7 @@ export const svmlPackage: NodePackageActivation = {
     { manifest: svsManifest },
     { manifest: hyperframesManifest },
     { manifest: mediaPipelineManifest },
+    { manifest: captionManifest },
     { manifest: speechAlignManifest },
     { manifest: speechTakeManifest },
     { manifest: filmManifest, specifiers: ["@svml/film", "@svml/film@1"] },
@@ -60,6 +65,7 @@ export const svmlPackage: NodePackageActivation = {
   frontends: [svsFrontend],
   components: [
     ...videoContractsComponents,
+    captionComponent,
     mediaPipelineComponent,
     speechAlignComponent,
     speechTakeComponent,

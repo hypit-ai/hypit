@@ -9,6 +9,10 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
+  captionComponent,
+  captionManifest,
+} from "@svml/caption";
+import {
   createNodePackageLock,
   loadNodePackages,
   nodePackageComponents,
@@ -51,7 +55,24 @@ test("the official prelude activates Speech Align compute without teaching the H
   );
 });
 
-test("the installed official package lock physically contains deterministic speech compute", async () => {
+test("the official prelude activates Caption compute and owner validators without Host special cases", () => {
+  const components = nodePackageComponents([svmlPackage]);
+  assert.equal(
+    svmlPackage.modules?.some((module) => module.manifest === captionManifest),
+    true,
+  );
+  assert.equal(components.includes(captionComponent), true);
+  assert.deepEqual(
+    captionComponent.producers.map((facet) => facet.producer.name),
+    ["temporalize-caption", "render-caption-track"],
+  );
+  assert.deepEqual(
+    captionComponent.validators?.map((facet) => facet.type.name),
+    ["TimedCaptionProjection", "CaptionTrackProgram"],
+  );
+});
+
+test("the installed official package lock physically contains speech and Caption compute", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-prelude-lock-"));
   const lockPath = join(directory, "svml.packages.lock");
   const installedRoot = fileURLToPath(new URL("../../cli/", import.meta.url));
@@ -59,11 +80,13 @@ test("the installed official package lock physically contains deterministic spee
     const lock = await createNodePackageLock(["@svml/prelude-video"], installedRoot);
     assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/speech-take"), true);
     assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/speech-align"), true);
+    assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/caption"), true);
     await writeNodePackageLock(lockPath, lock);
     const packages = await loadNodePackages(lockPath, installedRoot);
     const components = nodePackageComponents(packages);
     assert.equal(components.some((component) => component.name === "@svml/speech-take"), true);
     assert.equal(components.some((component) => component.name === "@svml/speech-align"), true);
+    assert.equal(components.some((component) => component.name === "@svml/caption"), true);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

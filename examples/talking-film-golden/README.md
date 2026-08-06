@@ -78,7 +78,7 @@ Candidates and Operations.
 | `whisperx:Alignment` | `@svml/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@svml/speech-align` -> Map | Graph Fragment, locked deterministic components, local media projection and local Provider/service implemented; Surface missing |
 | `seedance:Video model="mini"` | `@svml/seedance` | explicit Seedance Mini video Need | missing |
 | `broll:Track` | `@svml/broll` | semantic windows + media + recipe -> peer Visual/Audio Tracks | Program/lowering implemented; Surface missing |
-| `caption:Track` | `@svml/caption-gemini` | timed projection + Gemini cue grouping + role recipe -> VisualTrack | base timing/lowering implemented; Gemini/role Surface missing |
+| `caption:Track` | `@svml/caption-gemini` | timed projection + Gemini cue grouping + role recipe -> VisualTrack | timing/lowering and owner validators are locked components; complete Recipe audit and Gemini/role Surface missing |
 | `text:Track` | `@svml/text-track` | package Program -> VisualTrack | Program/lowering implemented; Surface/exact-font use missing |
 | `film:Film` | `@svml/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
 | `render:Video` | `@svml/hyperframes-render` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
