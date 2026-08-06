@@ -18,13 +18,22 @@ Run the complete graph through the explicit Run Graph and declarative local Runt
 ```bash
 pnpm svml:v2 build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
-  --follow \
-  --out examples/talking-film-live/output/final.mp4
+  --build-id talking-film-live \
+  --follow
+
+pnpm svml:v2 inspect talking-film-live \
+  --runtime examples/talking-film-live/svml.runtime.json
+
+pnpm svml:v2 get talking-film-live \
+  --runtime examples/talking-film-live/svml.runtime.json \
+  --to examples/talking-film-live/output/final.mp4
 ```
 
 `build.svrun` owns the selected Target and fidelity. `svml.runtime.json` owns Provider instances,
-permissions and concurrency. The existing `svml.runtime.ts` shows the advanced executable embedding
-API and remains supported.
+permissions and concurrency. The Build archives all accepted intermediate Records and referenced
+Artifacts even when no destination path is requested. `get` only makes an optional copy of the
+already archived sole target. The existing `svml.runtime.ts` shows the advanced executable
+embedding API and remains supported.
 
 To reuse the paid shot outputs from a verified earlier Build, add two zero-input Build Record
 Candidates and their explicit Satisfaction edges to another `.svrun`:
