@@ -1,9 +1,7 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { LocalRuntime } from "@svml/local";
-import { isDigest } from "@svml/protocol";
 import {
   createBuildRecordCandidate,
   sealRealizationOverlay,
@@ -15,6 +13,14 @@ import {
 } from "@svml/package-loader-node";
 
 import { createOfficialNodeCompiler, officialNodePackages } from "./host.js";
+import {
+  collectArtifacts,
+  findArchivedArtifact,
+  inspectBuild,
+  materializeArtifact,
+  materializeRecord,
+  selectArchivedRecord,
+} from "./archive.js";
 import { loadRunFile } from "./run-file.js";
 import { createOfficialRuntimeFromConfig } from "./runtime-config.js";
 
@@ -34,7 +40,10 @@ type ParsedArgs = {
   readonly maxWaitMs: number | undefined;
   readonly packageLock: string | undefined;
   readonly packages: readonly string[];
-  readonly out: string | undefined;
+  readonly record: string | undefined;
+  readonly output: string | undefined;
+  readonly artifact: string | undefined;
+  readonly to: string | undefined;
   readonly pins: readonly { readonly output: string; readonly build: string }[];
 };
 
@@ -49,7 +58,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let packageLock: string | undefined;
   const packages: string[] = [];
   let substitute = false;
-  let out: string | undefined;
+  let record: string | undefined;
+  let output: string | undefined;
+  let artifact: string | undefined;
+  let to: string | undefined;
   const pins: { output: string; build: string }[] = [];
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
@@ -93,9 +105,33 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       continue;
     }
     if (item === "--out") {
+      throw new Error("--out was removed: Build always archives accepted Records; use `get <build-id> --to <path>` for an optional copy");
+    }
+    if (item === "--record") {
       const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--out requires a file path");
-      out = resolve(value);
+      if (value === undefined || value.startsWith("--")) throw new Error("--record requires a Record id");
+      record = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--output") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--output requires a Logical Output id");
+      output = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--artifact") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--artifact requires a content digest");
+      artifact = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--to") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--to requires a file path");
+      to = resolve(value);
       index += 1;
       continue;
     }
@@ -143,7 +179,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     maxWaitMs,
     packageLock,
     packages,
-    out,
+    record,
+    output,
+    artifact,
+    to,
     pins,
   };
 }
@@ -155,9 +194,11 @@ function usage(): string {
     "  svml-v2 check <file.svml|file.svrun> [--runtime profile.json] [--package-lock file] [--root directory]",
     "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--package-lock file]",
     "  svml-v2 plan <file.svrun> [--runtime profile.json] [--package-lock file]",
-    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build --accept-substitute] [--follow] [--out video.mp4]",
-    "  svml-v2 build <file.svrun> --runtime profile.json [--follow] [--out video.mp4]",
+    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build --accept-substitute] [--follow]",
+    "  svml-v2 build <file.svrun> --runtime profile.json [--follow]",
     "  svml-v2 status <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  svml-v2 inspect <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  svml-v2 get <build-id> --runtime profile.json|./svml.runtime.ts [--record record-id|--output logical-output-id|--artifact digest] [--to path]",
     "  svml-v2 cancel <build-id> --runtime profile.json|./svml.runtime.ts",
   ].join("\n");
 }
@@ -189,38 +230,11 @@ async function loadLocalRuntime(path: string): Promise<LocalRuntime> {
   return candidate;
 }
 
-export async function materializeSingleGoal(
-  runtime: Pick<LocalRuntime, "readArtifact">,
-  built: Awaited<ReturnType<LocalRuntime["build"]>>,
-  output: string,
-): Promise<{ readonly path: string; readonly digest: string; readonly size: number }> {
-  if (built.status !== "complete") throw new Error("--out requires a completed Build");
-  if (built.state.plan.goals.length !== 1) throw new Error("--out requires exactly one target");
-  const goal = built.state.plan.goals[0]!;
-  const record = built.state.records.find((item) => item.id === goal.record);
-  const value = record?.value.kind === "inline" ? record.value.value : undefined;
-  if (value === null || Array.isArray(value) || typeof value !== "object") {
-    throw new Error("--out target is not a materializable media Artifact");
-  }
-  const artifact = value as Readonly<Record<string, unknown>>;
-  const digest = artifact.digest;
-  const size = artifact.size;
-  if (typeof digest !== "string" || !isDigest(digest) || typeof size !== "number" || !Number.isSafeInteger(size)) {
-    throw new Error("--out target has no valid Artifact identity");
-  }
-  const bytes = await runtime.readArtifact(digest);
-  if (bytes === undefined) throw new Error(`Artifact ${digest} is absent from the selected ArtifactStore`);
-  if (bytes.byteLength !== size) throw new Error(`Artifact ${digest} size differs from its target Record`);
-  await mkdir(dirname(output), { recursive: true });
-  await writeFile(output, bytes);
-  return { path: output, digest, size };
-}
-
 export async function runCli(argv: readonly string[], io: CliIo): Promise<void> {
   const args = parseArgs(argv);
   if (args.file === undefined
     || (args.command !== "lock-packages" && args.command !== "check" && args.command !== "plan" && args.command !== "build"
-      && args.command !== "status" && args.command !== "cancel")) {
+      && args.command !== "status" && args.command !== "inspect" && args.command !== "get" && args.command !== "cancel")) {
     throw new Error(usage());
   }
   if (args.command === "lock-packages") {
@@ -233,12 +247,15 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     io.write(`${JSON.stringify({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages }, null, 2)}\n`);
     return;
   }
-  if (args.out !== undefined && args.command !== "build") throw new Error("--out is only valid for build");
+  if ((args.record !== undefined || args.output !== undefined || args.artifact !== undefined || args.to !== undefined)
+    && args.command !== "get") {
+    throw new Error("--record, --output, --artifact and --to are only valid for get");
+  }
   if (args.pins.length > 0 && args.command !== "build") throw new Error("--pin is only valid for build");
   if (args.pins.length > 0 && !args.substitute) {
     throw new Error("--pin attaches substitute Candidates; add --accept-substitute");
   }
-  if (args.command === "status" || args.command === "cancel") {
+  if (args.command === "status" || args.command === "inspect" || args.command === "get" || args.command === "cancel") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
     const runtime = await loadLocalRuntime(args.runtime);
     try {
@@ -262,6 +279,66 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             ...(operation.failure === undefined ? {} : { failure: operation.failure }),
           })),
         }, null, 2)}\n`);
+      } else if (args.command === "inspect") {
+        const status = await runtime.status(args.file);
+        if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
+        io.write(`${JSON.stringify({
+          build: status.build.build,
+          revision: status.build.revision,
+          archive: inspectBuild(status.build.state),
+          operations: status.operations.map((operation) => ({
+            id: operation.id,
+            command: operation.command,
+            endpoint: operation.endpoint,
+            attempt: operation.attempt,
+            status: operation.status,
+            ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
+            ...(operation.failure === undefined ? {} : { failure: operation.failure }),
+          })),
+        }, null, 2)}\n`);
+      } else if (args.command === "get") {
+        const status = await runtime.status(args.file);
+        if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
+        if (args.artifact !== undefined && (args.record !== undefined || args.output !== undefined)) {
+          throw new Error("get accepts one of --record, --output or --artifact");
+        }
+        if (args.artifact !== undefined) {
+          const references = findArchivedArtifact(status.build.state, args.artifact);
+          if (references.length === 0) throw new Error(`Build ${args.file} does not reference Artifact ${args.artifact}`);
+          if (args.to === undefined) {
+            io.write(`${JSON.stringify({ build: status.build.build, artifact: args.artifact, references }, null, 2)}\n`);
+          } else {
+            const [first] = references;
+            if (first === undefined) throw new Error(`Build ${args.file} does not reference Artifact ${args.artifact}`);
+            const materialized = await materializeArtifact(runtime, first, args.to, `Build ${args.file}`);
+            io.write(`${JSON.stringify({
+              build: status.build.build,
+              artifact: args.artifact,
+              references,
+              materialized,
+            }, null, 2)}\n`);
+          }
+          return;
+        }
+        const record = selectArchivedRecord(status.build.state, {
+          ...(args.record === undefined ? {} : { record: args.record }),
+          ...(args.output === undefined ? {} : { output: args.output }),
+        });
+        if (args.to === undefined) {
+          io.write(`${JSON.stringify({
+            build: status.build.build,
+            revision: status.build.revision,
+            record,
+            artifacts: collectArtifacts(record.value.kind === "blob" ? record.value : record.value.value),
+          }, null, 2)}\n`);
+        } else {
+          const materialized = await materializeRecord(runtime, record, args.to);
+          io.write(`${JSON.stringify({
+            build: status.build.build,
+            record: record.id,
+            materialized,
+          }, null, 2)}\n`);
+        }
       } else {
         const result = await runtime.cancel(args.file);
         io.write(`${JSON.stringify({
@@ -402,10 +479,6 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
         follow: args.follow,
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
       });
-      let materialized: { readonly path: string; readonly digest: string; readonly size: number } | undefined;
-      if (args.out !== undefined && built.status === "complete") {
-        materialized = await materializeSingleGoal(runtime, built, args.out);
-      }
       io.write(`${JSON.stringify({
         build: built.id,
         core: built.state.id,
@@ -422,8 +495,6 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
         blocked: built.blocked,
         journal: built.journal,
         ...(pinSummary.length === 0 ? {} : { pins: pinSummary }),
-        ...(args.out !== undefined && materialized === undefined ? { pendingOutput: args.out } : {}),
-        ...(materialized === undefined ? {} : { output: materialized }),
       }, null, 2)}\n`);
     } finally {
       await runtime.close();

@@ -22,6 +22,8 @@ the working tree contains only documents that should inform current implementati
   locking and facet activation.
 - [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — local SQLite/filesystem
   Runtime, recovery and environment replacement.
+- [`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md) — Targets, durable Records,
+  Artifact retention and optional Host materialization as four separate concerns.
 - package READMEs under [`../packages`](../packages) — executable APIs and ownership.
 
 ## Video-domain specifications
