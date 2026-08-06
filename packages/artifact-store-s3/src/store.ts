@@ -2,18 +2,20 @@ import { createHash } from "node:crypto";
 
 import { digestOf, isDigest } from "@svml/protocol";
 import type { BlobRef, Digest } from "@svml/protocol";
-import type {
-  ArtifactStore,
-  RuntimeModuleManifest,
-  RuntimeProfileInstance,
-} from "@svml/runtime";
+import { defineRuntimeServicePackage } from "@svml/runtime";
+import type { ArtifactStore, RuntimeServicePackage } from "@svml/runtime";
 
 import { AwsS3ObjectClient } from "./client.js";
 import type { S3ObjectClient } from "./client.js";
-import {
-  s3ArtifactStoreFacet,
-  s3ArtifactStoreRuntimeManifest,
-} from "./manifest.js";
+
+export const s3ArtifactStoreModuleRef = {
+  name: "@svml/artifact-store-s3",
+  version: "1",
+} as const;
+
+export const s3ArtifactStoreImplementationDigest = digestOf(
+  "@svml/artifact-store-s3/artifact-store@1",
+);
 
 type S3Location = {
   readonly bucket: string;
@@ -35,12 +37,7 @@ export type CreateS3ArtifactStorePackageOptions = S3Location & {
   readonly client?: S3ObjectClient;
 };
 
-export type S3ArtifactStorePackage = {
-  readonly name: string;
-  readonly manifest: RuntimeModuleManifest;
-  readonly instance: RuntimeProfileInstance;
-  readonly store: ArtifactStore;
-};
+export type S3ArtifactStorePackage = RuntimeServicePackage;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -173,21 +170,27 @@ export function createS3ArtifactStorePackage(
     ...(options.endpoint === undefined ? {} : { endpoint: options.endpoint }),
     ...(options.forcePathStyle === undefined ? {} : { forcePathStyle: options.forcePathStyle }),
   });
-  return {
+  return defineRuntimeServicePackage({
     name: instance,
-    manifest: s3ArtifactStoreRuntimeManifest,
-    instance: {
-      id: instance,
-      facet: s3ArtifactStoreFacet,
-      configurationDigest: digestOf(configuration),
-    },
-    store: new S3ArtifactStore({
-      client,
-      bucket: options.bucket,
-      ...(prefix.length === 0 ? {} : { prefix }),
-      ...(options.expectedBucketOwner === undefined
-        ? {}
-        : { expectedBucketOwner: options.expectedBucketOwner }),
-    }),
-  };
+    module: s3ArtifactStoreModuleRef,
+    services: [{
+      role: "artifact-store",
+      facet: "artifact-store",
+      instance,
+      implementation: {
+        locator: "@svml/artifact-store-s3/artifact-store",
+        digest: s3ArtifactStoreImplementationDigest,
+      },
+      permissions: ["network:aws:s3"],
+      configuration,
+      service: new S3ArtifactStore({
+        client,
+        bucket: options.bucket,
+        ...(prefix.length === 0 ? {} : { prefix }),
+        ...(options.expectedBucketOwner === undefined
+          ? {}
+          : { expectedBucketOwner: options.expectedBucketOwner }),
+      }),
+    }],
+  });
 }

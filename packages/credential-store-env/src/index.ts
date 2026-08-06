@@ -1,9 +1,10 @@
 import { digestOf } from "@svml/protocol";
+import { defineRuntimeServicePackage } from "@svml/runtime";
 import type {
   CredentialRef,
   CredentialStore,
   CredentialValue,
-  RuntimeModuleManifest,
+  RuntimeServicePackage,
 } from "@svml/runtime";
 import { verifyCredentialRef } from "@svml/runtime";
 
@@ -12,28 +13,13 @@ export const environmentCredentialStoreModuleRef = {
   version: "1",
 } as const;
 
-export const environmentCredentialStoreFacet = {
-  module: environmentCredentialStoreModuleRef,
-  name: "credential-store",
-} as const;
-
 export const environmentCredentialStoreImplementationDigest = digestOf(
   "@svml/credential-store-env/credential-store@1",
 );
 
-export const environmentCredentialStoreRuntimeManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@2",
-  name: environmentCredentialStoreModuleRef.name,
-  version: environmentCredentialStoreModuleRef.version,
-  facets: [{
-    name: environmentCredentialStoreFacet.name,
-    role: "credential-store",
-    implementation: {
-      locator: "@svml/credential-store-env",
-      digest: environmentCredentialStoreImplementationDigest,
-    },
-    permissions: ["environment:credentials"],
-  }],
+export type CreateEnvironmentCredentialStorePackageOptions = {
+  readonly instance?: string;
+  readonly environment?: NodeJS.ProcessEnv;
 };
 
 /** Resolves only explicitly requested environment variables and never snapshots or enumerates env. */
@@ -51,4 +37,26 @@ export class EnvironmentCredentialStore implements CredentialStore {
     if (secret === undefined || secret.length === 0) return undefined;
     return { secret };
   }
+}
+
+export function createEnvironmentCredentialStorePackage(
+  options: CreateEnvironmentCredentialStorePackageOptions = {},
+): RuntimeServicePackage {
+  const instance = options.instance ?? "credentials.env";
+  return defineRuntimeServicePackage({
+    name: instance,
+    module: environmentCredentialStoreModuleRef,
+    services: [{
+      role: "credential-store",
+      facet: "credential-store",
+      instance,
+      implementation: {
+        locator: "@svml/credential-store-env",
+        digest: environmentCredentialStoreImplementationDigest,
+      },
+      permissions: ["environment:credentials"],
+      configuration: { source: "process-environment", explicitKeysOnly: true },
+      service: new EnvironmentCredentialStore(options.environment),
+    }],
+  });
 }

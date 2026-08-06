@@ -8,8 +8,8 @@ The convenience assembly uses:
 
 - `@svml/store-sqlite` for durable Build and Operation facts;
 - `@svml/artifact-store-fs` for content-addressed project bytes;
-- optional replacement by any permission-checked ArtifactStore contribution, including
-  `@svml/artifact-store-s3`;
+- optional replacement of Scheduler, BuildStore, OperationStore, ArtifactStore or CredentialStore
+  by permission-checked Runtime service packages;
 - an in-process, queue-free Scheduler whose ready work always comes from Core;
 - an exact implementation package lock for deterministic component packages;
 - separately selected external Endpoint packages.
@@ -22,11 +22,11 @@ services.
 export default await createProjectLocalRuntime({
   root: import.meta.dirname,
   packageLock: "./svml.packages.lock",
-  artifacts: createS3ArtifactStorePackage({
+  runtimeServices: [createS3ArtifactStorePackage({
     bucket: "hypit-svml-artifacts",
     prefix: "development",
     region: "us-east-1",
-  }),
+  })],
   endpoints: [createKieProvider({ apiKey: credentialRef("env", "KIE_API_KEY") })],
   allowedPermissions: ["network:aws:s3", "network:api.kie.ai", "network:kieai.redpandaai.co"],
   scheduling: {
@@ -41,9 +41,10 @@ pipeline Producers without adding imports to this deployment source. Its digest 
 BuildRequest, so a persisted Build cannot resume under another deterministic component closure.
 The KIE Endpoint remains an independently selected privileged endpoint; swapping it changes an
 Endpoint implementation and lane, not the `.svml` author document.
-`createProjectLocalRuntime` accepts a configured ArtifactStore package directly;
-advanced hosts may call `createLocalRuntime` with Postgres or other implementations of the same
-ports instead of using the project defaults.
+`createProjectLocalRuntime` infers a role when exactly one configured service package supplies it.
+When several instances provide the same role, `runtimeSelection` must name the exact instance.
+The same mechanism covers Postgres, S3, keychains and replacement Schedulers; none requires a
+change to `@svml/local`. Advanced hosts may still call `createLocalRuntime` with raw ports.
 
 `LocalBuildRequest.attachments` is the explicit ingress from a trusted Host into the selected
 ArtifactStore. Each attachment carries claimed `BlobRef` metadata plus bytes; Local Runtime copies

@@ -2,9 +2,24 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { isDigest } from "@svml/protocol";
+import { digestOf, isDigest } from "@svml/protocol";
 import type { BlobRef, Digest } from "@svml/protocol";
-import type { ArtifactStore } from "@svml/runtime";
+import { defineRuntimeServicePackage } from "@svml/runtime";
+import type { ArtifactStore, RuntimeServicePackage } from "@svml/runtime";
+
+export const fileArtifactStoreModuleRef = {
+  name: "@svml/artifact-store-fs",
+  version: "1",
+} as const;
+
+export const fileArtifactStoreImplementationDigest = digestOf(
+  "@svml/artifact-store-fs/artifact-store@1",
+);
+
+export type CreateFileArtifactStorePackageOptions = {
+  readonly root: string;
+  readonly instance?: string;
+};
 
 function digestPath(root: string, digest: Digest): string {
   if (!isDigest(digest)) throw new Error("Artifact digest is invalid");
@@ -57,4 +72,26 @@ export class FileArtifactStore implements ArtifactStore {
   async has(digest: Digest): Promise<boolean> {
     return (await this.get(digest)) !== undefined;
   }
+}
+
+export function createFileArtifactStorePackage(
+  options: CreateFileArtifactStorePackageOptions,
+): RuntimeServicePackage {
+  const instance = options.instance ?? "artifacts.fs";
+  return defineRuntimeServicePackage({
+    name: instance,
+    module: fileArtifactStoreModuleRef,
+    services: [{
+      role: "artifact-store",
+      facet: "artifact-store",
+      instance,
+      implementation: {
+        locator: "@svml/artifact-store-fs/artifact-store",
+        digest: fileArtifactStoreImplementationDigest,
+      },
+      permissions: ["filesystem:artifacts"],
+      configuration: { root: resolve(options.root) },
+      service: new FileArtifactStore(options.root),
+    }],
+  });
 }

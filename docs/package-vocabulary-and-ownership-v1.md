@@ -393,7 +393,7 @@ The environment-neutral Runtime layer should expose ports with these exact respo
 | Port | Required? | Owns | Does not own |
 |---|---:|---|---|
 | `BuildScheduler` | yes | asks Core for ready Commands; concurrency, fairness, cancellation and retry policy | Graph search or next-step semantics |
-| `BuildStore` | durable Runtime only | verified BuildState snapshots/events and optimistic concurrency | Provider checkpoints or artifact bytes |
+| `BuildStore` | durable Runtime only | verified BuildState snapshots/events and optimistic concurrency | Endpoint checkpoints or artifact bytes |
 | `OperationStore` | whenever side effects may outlive one call | attempts, submission keys, checkpoints, reconciliation and completion per Command | Core BuildState facts |
 | `ArtifactStore` | whenever Blob values exist | content-addressed bytes and media metadata | Result reuse policy or author library semantics |
 | `ResultCache` | optional | execution-key to previously verified result/Receipt mappings | implicit Candidate selection |
@@ -404,6 +404,12 @@ The environment-neutral Runtime layer should expose ports with these exact respo
 
 The interface names above do not imply one package, process, database or table per port. One trusted
 adapter may implement several ports while declaring each facet separately.
+
+The implemented `RuntimeServicePackage` is the common installation envelope for Scheduler,
+BuildStore, OperationStore, ArtifactStore and CredentialStore values. It binds each configured
+instance to one exact static Manifest facet and non-secret configuration digest. A physical SQLite
+package may therefore expose two separately selected logical services and one shared close
+lifecycle. Runtime selection—not source imports and not package code—chooses the active instance.
 
 ### 8.1 BuildStore versus OperationStore
 
@@ -612,7 +618,9 @@ completed and partial steps below distinguish API laws from unfinished distribut
 6. **completed for the one-process reference:** `@svml/runtime` owns executor, ArtifactStore,
    BuildStore and OperationStore ports; static
    Runtime facets; sealed Profile/Closure resolution; in-memory CAS stores; and one queue-free
-   multi-Build Scheduler with shared concurrency lanes. The reference recoverable Endpoint
+   multi-Build Scheduler with shared concurrency lanes. Its generic Runtime service-package ABI
+   installs Scheduler and Store implementations without `@svml/local` knowing their package names.
+   The reference recoverable Endpoint
    start/resume lifecycle is complete. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
    `@svml/local` now provide durable project recovery and package-based local assembly; distributed
    leases and wake-up polling remain;
