@@ -22,12 +22,12 @@ pnpm svml:v2 check path/to/main.svml
 pnpm svml:v2 lock-packages ./svml.packages.lock --package @example/cards --root .
 pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root .
 pnpm svml:v2 plan path/to/main.svml --target component.result
-pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts
-pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts --follow
-pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --follow --out ./final.mp4
+pnpm svml:v2 check path/to/build.svrun
+pnpm svml:v2 plan path/to/build.svrun
+pnpm svml:v2 build path/to/build.svrun --runtime ./svml.runtime.json --follow --out ./final.mp4
 pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --pin shot=<prior-build-id> --accept-substitute --follow --out ./variant.mp4
-pnpm svml:v2 status <build-id> --runtime ./svml.runtime.ts
-pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
+pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
+pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
 ```
 
 `check` is usable for the complete provider-free author graph in
@@ -35,10 +35,11 @@ pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
 live example now executes the explicit Vertex Gemini Caption package and real local/remote
 Endpoints; the CLI never fabricates missing facts.
 
-`build` compiles the same locked BuildState and passes it to a trusted local Runtime config module.
+`build` compiles the same locked BuildState and passes it to a trusted local Runtime Profile.
 The default Build identity is content-derived, so the same invocation resumes durable local state;
-`--build-id take-02` names an explicit take. The config module is deployment code with normal Node
-authority. It is never discovered from a source import and should not be used for untrusted code.
+`--build-id take-02` names an explicit take. JSON Profiles resolve only adapters registered by the
+Host and contain no executable callback. A TypeScript config module remains trusted deployment code
+with normal Node authority. Neither form is discovered from a source import.
 
 Without `--follow`, a pending remote job returns `paused` and a later identical command resumes it.
 With `--follow`, the CLI stays attached and follows endpoint `wakeAt` hints until completion, a
@@ -57,8 +58,8 @@ prove that the old Graph, prompt or semantic meaning matches the current output.
 command requires `--accept-substitute`. Upstream work behind that selected Candidate is not
 demanded, while every unbound reachable output follows the ordinary graph. The prior artifact must
 still exist in the ArtifactStore selected by the Runtime. This is a new Build with a new identity;
-it never resumes or copies the prior Build's outstanding Commands. The planned `.svrun` Frontend
-will replace this narrow flag with the general Run Graph, Target and Satisfaction language.
+it never resumes or copies the prior Build's outstanding Commands. `.svrun` is now the general Run
+Graph, Target and Satisfaction language; this narrow flag remains only migration compatibility.
 
 `@svml/package-loader-node` supports explicitly trusted installed implementation packages. It
 verifies the complete physical dependency closure before executing an activation entry, then checks

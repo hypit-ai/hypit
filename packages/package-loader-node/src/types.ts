@@ -1,6 +1,7 @@
 import type { RegisteredModulePackage } from "@svml/compiler-node";
 import type { ComponentPackage } from "@svml/component-kit";
 import type { AuthorFrontend } from "@svml/elaborator";
+import type { GraphFragment } from "@svml/elaborator";
 import type { Digest, ModuleRef } from "@svml/protocol";
 import type {
   RawSurfaceHandler,
@@ -35,6 +36,8 @@ export type NodePackageActivation = {
   readonly frontends?: readonly AuthorFrontend[];
   readonly textSurfaces?: readonly NodeTextSurfaceFacet[];
   readonly components?: readonly ComponentPackage[];
+  /** Trusted Run-Graph Fragments, addressable from `.svrun` imports by package and export name. */
+  readonly runFragments?: Readonly<Record<string, GraphFragment>>;
 };
 
 export type LockedPackageArtifact = {

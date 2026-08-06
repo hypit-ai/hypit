@@ -35,6 +35,8 @@ Implemented:
   Commands;
 - `@svml/elaborator`: two-phase forward-reference linking and hygienic static Fragment expansion;
 - `@svml/realization`: typed Run Graph overlays and inert Build-Record Candidates;
+- `@svml/run`: `.svrun` parsing, named Target sets, Provided/Build-Record/Fragment Candidates,
+  explicit Satisfaction edges and trusted Run-package imports;
 - `@svml/validation`: package-owned semantic validators and common Record admission;
 - `@svml/component-kit`: host-neutral deterministic Producer/validator registration;
 - `@svml/host`, `@svml/workspace-fs-node`, `@svml/compiler-node`: replaceable Workspace and the
@@ -49,12 +51,13 @@ Implemented:
 - `@svml/artifact-store-fs`, `@svml/artifact-store-s3`: interchangeable content-addressed bytes;
 - `@svml/credential-store-env`: explicit credential slots without secrets in BuildState;
 - `@svml/local`: zero-service developer assembly over SQLite and filesystem defaults;
+- declarative `svml.runtime.json` loading through an explicit adapter registry, with TypeScript
+  Runtime assembly retained as the advanced embedding API;
 - `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
   invocation seams.
 
-The public human-readable Run Graph Frontend (`.svrun`) is not implemented yet. The current CLI
-`--pin` flag is temporary compatibility sugar for one Provided-Value Candidate plus one substitute
-Satisfaction.
+The current CLI `--pin` flag remains temporary compatibility sugar for legacy commands. New reusable
+runs should use `.svrun`; the Core still has no Pin primitive.
 
 ## Environment and Provider packages
 

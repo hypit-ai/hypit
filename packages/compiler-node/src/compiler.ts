@@ -86,7 +86,10 @@ export type NodeCompilerOptions = {
 };
 
 export type PlanFileOptions = {
-  readonly targets: readonly string[];
+  readonly targets: readonly (string | {
+    readonly name: string;
+    readonly accepts: NeedAcceptance;
+  })[];
   readonly accepts?: NeedAcceptance;
   readonly satisfactions?: readonly Satisfaction[];
   readonly implementationClosure?: import("@svml/protocol").Digest;
@@ -176,7 +179,8 @@ export class NodeCompiler {
           compilation.elaboration.graph,
           options.realizations,
         ).graph;
-    const targets = options.targets.map((name) => {
+    const targets = options.targets.map((target) => {
+      const name = typeof target === "string" ? target : target.name;
       const exported = resolveCompiledSourceExport(compilation, name);
       if (exported.ref.kind !== "logical-output") {
         throw new NodeCompilerError(
@@ -185,7 +189,10 @@ export class NodeCompiler {
           name,
         );
       }
-      return { output: exported.ref.id, accepts: options.accepts ?? "exact" } as const;
+      return {
+        output: exported.ref.id,
+        accepts: typeof target === "string" ? options.accepts ?? "exact" : target.accepts,
+      } as const;
     });
     const request = sealBuildRequest({
       graph: graph.id,

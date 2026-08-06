@@ -14,6 +14,33 @@ The convenience assembly uses:
 - an exact implementation package lock for deterministic component packages;
 - separately selected external Endpoint packages.
 
+Normal CLI projects may express the same assembly as closed data:
+
+```json
+{
+  "format": "svml.runtime-config@1",
+  "services": [],
+  "endpoints": [
+    {
+      "use": "@svml/provider-kie",
+      "instance": "kie.project",
+      "lane": "generation",
+      "config": { "apiKeyEnv": "KIE_API_KEY", "defaultConcurrency": 2 }
+    }
+  ],
+  "permissions": [
+    "network:api.kie.ai",
+    "network:kieai.redpandaai.co"
+  ],
+  "scheduling": { "maxConcurrency": 4, "lanes": { "generation": 2 } }
+}
+```
+
+`RuntimeConfigRegistry` maps each exact `use` name to a trusted package factory. The data file can
+choose instances, non-secret configuration, permissions and concurrency, but it cannot embed code
+or secrets. Unknown adapters fail rather than being guessed. `createProjectLocalRuntime(...)`
+remains the advanced TypeScript embedding API.
+
 Deterministic packages implement the host-neutral `@svml/component-kit` contract. `@svml/local`
 adapts them to `ProducerRegistry`; the component never imports the Node Driver or receives Runtime
 services.
