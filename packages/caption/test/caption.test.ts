@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  captionComponent,
+  captionManifest,
   defaultCaptionTrackProgram,
   planCaptionPresentation,
   renderCaptionTrack,
@@ -17,6 +19,29 @@ import type { AlignedTranscriptSegment, Narrative, SpeechAudioBasis } from "@svm
 import { digestOf } from "@svml/protocol";
 import { parseScript } from "@svml/script";
 import { locateSpeechTiming } from "@svml/speech-align";
+
+test("the component enumerates every Manifest Producer and owned Type validator", () => {
+  assert.deepEqual(
+    captionComponent.producers.map((facet) => ({
+      name: facet.producer.name,
+      digest: facet.implementationDigest,
+    })),
+    captionManifest.producers.map((producer) => ({
+      name: producer.name,
+      digest: producer.implementation.digest,
+    })),
+  );
+  assert.deepEqual(
+    captionComponent.validators?.map((facet) => ({
+      name: facet.type.name,
+      digest: facet.implementationDigest,
+    })),
+    captionManifest.types.map((type) => ({
+      name: type.name,
+      digest: type.validator?.implementation.digest,
+    })),
+  );
+});
 
 function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
   const programSpace = sealProgramSpace({
@@ -68,6 +93,38 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
   };
   return locateSpeechTiming(narrative, audioBasis, evidence);
 }
+
+test("Caption-owned validators reject digest-preserving shape tampering", () => {
+  const narrative = parseScript("validator.svml", "<line>Hello.</line>");
+  const projection = temporalizeCaption(narrative, locate(narrative, 1, [{
+    sourceSegmentId: "line",
+    startSec: 0,
+    endSec: 1,
+    words: [{ text: "Hello", startSec: 0.1, endSec: 0.6 }],
+    chars: [],
+  }]));
+  const program = defaultCaptionTrackProgram("validator-caption");
+  const projectionValidator = captionComponent.validators?.find((facet) =>
+    facet.type.name === "TimedCaptionProjection");
+  const programValidator = captionComponent.validators?.find((facet) =>
+    facet.type.name === "CaptionTrackProgram");
+  assert(projectionValidator);
+  assert(programValidator);
+  assert.throws(
+    () => projectionValidator.handler({
+      type: projectionValidator.type,
+      value: { kind: "inline", value: { ...projection, text: "tampered" } },
+    }),
+    /digest does not match/u,
+  );
+  assert.throws(
+    () => programValidator.handler({
+      type: programValidator.type,
+      value: { kind: "inline", value: { ...program, id: "tampered" } },
+    }),
+    /digest does not match/u,
+  );
+});
 
 test("Caption temporalization preserves evidence envelopes and labels local estimates", () => {
   const narrative = parseScript(

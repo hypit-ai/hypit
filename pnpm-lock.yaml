@@ -58,6 +58,9 @@ importers:
 
   packages/caption:
     dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -452,6 +455,9 @@ importers:
 
   packages/prelude-video:
     dependencies:
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:../caption
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts

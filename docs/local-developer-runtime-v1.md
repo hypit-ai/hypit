@@ -247,8 +247,9 @@ video build still requires:
 1. keep the credentialed KIE smoke suite opt-in as Provider contracts evolve (the representative
    seven-family run and synthetic-reference upload passed on 2026-08-06);
 2. official generation, Speech, Caption, B-roll and Text Track Surfaces;
-3. finish the official deterministic Caption component facets; SpeechTake projections and Speech
-   Align are already locked and activated from the official implementation package;
+3. audit and implement the complete package-owned Caption style/positioning Recipe before freezing
+   its author Surface; SpeechTake, Speech Align and the current deterministic Caption facets are
+   already locked and activated from the official implementation package;
 4. add Lambda-backed variants only when deployment pressure justifies them.
 
 Hosted tenant auth, credits, Redis, a distributed queue and Hypit-wide Build hosting remain outside
