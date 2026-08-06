@@ -12,6 +12,7 @@ import {
 } from "@svml/compiler-node";
 import type { RegisteredModulePackage } from "@svml/compiler-node";
 import { AuthorFrontendRegistry } from "@svml/elaborator";
+import type { Workspace } from "@svml/host";
 import { isDigest } from "@svml/protocol";
 import {
   createTextAuthorFrontend,
@@ -25,6 +26,7 @@ import type { NodePackageActivation } from "./types.js";
 
 export type CreateActivatedNodeCompilerOptions = {
   readonly root?: string;
+  readonly workspace?: Workspace;
 };
 
 function assertPackage(value: NodePackageActivation): void {
@@ -166,5 +168,6 @@ export function createActivatedNodeCompiler(
     validators,
     entryFrontend: textAuthorFrontendId,
     ...(options.root === undefined ? {} : { root: options.root }),
+    ...(options.workspace === undefined ? {} : { workspace: options.workspace }),
   });
 }

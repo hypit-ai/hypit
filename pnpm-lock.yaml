@@ -98,12 +98,18 @@ importers:
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
+      '@svml/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
     devDependencies:
       '@svml/text':
         specifier: workspace:*
@@ -285,6 +291,15 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/host:
+    dependencies:
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/hyperframes:
     dependencies:
       '@svml/component-kit':
@@ -348,6 +363,9 @@ importers:
       '@svml/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
       '@svml/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
@@ -443,6 +461,9 @@ importers:
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -892,6 +913,18 @@ importers:
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/workspace-fs-node:
+    dependencies:
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol

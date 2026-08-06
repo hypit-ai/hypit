@@ -94,7 +94,9 @@ module.
 | `@svml/realization` | external Candidate attachment | keep as `@svml/compiler/candidates`, not a physical package |
 | `@svml/validation` | semantic value admission before trusted state | rename to `@svml/admission` |
 | `@svml/component-kit` | host-neutral deterministic Producer and validator registration port | keep |
-| `@svml/compiler-node` | Node Source, filesystem and installed-module compiler Host | keep |
+| `@svml/host` | domain-neutral contracts for concrete definition environments | keep deliberately small |
+| `@svml/workspace-fs-node` | root-confined Node filesystem Workspace implementation | keep |
+| `@svml/compiler-node` | Node compiler facade and registered-module assembly over an injected Workspace | keep |
 | `@svml/package-loader-node` | locked activation of trusted installed package facets | keep |
 | `@svml/driver-node` | Node Runtime execution of Core Commands | rename to `@svml/runtime-node` |
 | `@svml/text` | official markup document Frontend and Surface dispatch | rename to `@svml/markup` |
@@ -109,8 +111,10 @@ protocol -> core
 core -> compiler
 core -> admission
 protocol + admission -> component-kit
+compiler -> host
+host -> workspace-fs-node
+compiler + admission + host + workspace-fs-node -> compiler-node
 core -> runtime
-compiler + admission -> compiler-node
 runtime + admission + component-kit -> runtime-node
 compiler-node + runtime-node + selected domain packages -> cli
 ```
@@ -314,7 +318,7 @@ does not grant its Surface filesystem access. The division is:
 
 ```text
 Surface                 declares { from, exact mediaType }
-Compiler Host           resolves safely, reads once, hashes bytes
+Workspace session       resolves under its own authority and locks observations
 Source Closure          binds written locator + BlobRef
 Host transfer bundle    carries defensive bytes outside Core state
 Runtime build ingress   verifies and stages bytes into its ArtifactStore
@@ -324,7 +328,9 @@ Runtime build ingress   verifies and stages bytes into its ArtifactStore
 Runtime store. `build` performs explicit ingress. Core sees only ordinary authored Records whose
 values may contain BlobRefs; it never sees paths, open handles, transfer bytes or staging policy.
 The same ABI therefore works for a local filesystem, browser upload, repository object or remote
-compiler without teaching any author package about that environment.
+compiler without teaching any author package about that environment. `@svml/host` defines this
+small contract; `@svml/workspace-fs-node` is only the convenient Node implementation. Selecting a
+Workspace is Host configuration, never author syntax or a module import.
 
 ## 7. Provider naming
 
