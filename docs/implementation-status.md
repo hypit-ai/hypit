@@ -104,6 +104,9 @@ names.
 - `@svml/compiler-node`: a domain-neutral registered-manifest resolver, exact transitive Module
   Closure construction, root-confined/read-once Node Source resolver, real-file compiler facade and
   named-export-to-BuildPlan entrypoint. The discovery pass and decode pass share locked SourceUnits.
+  It also owns the generic Source Asset boundary: relative/root-confined asset reads become
+  content-addressed BlobRefs covered by Source Closure, while defensive byte attachments remain
+  outside Core and are staged only by `build`.
 - `@svml/package-loader-node`: lock-aware trusted Node activation for installed implementation
   packages. It binds every physical package and declared-dependency byte plus Module, Frontend,
   Text Surface, Producer and Type Validator identities. Producer/Validator facets are enumerable
@@ -123,7 +126,8 @@ names.
 - `@svml/text` and `@svml/script`: manifest-driven Text Frontend plus the official Script Surface.
   Text Surfaces may now contribute authored Records, Author Components and locked Graph Fragments;
   the whole document is collected before forward references are resolved. Script remains an
-  explicitly record-only Surface.
+  explicitly record-only Surface. Surface handlers are awaitable and may request a source asset
+  only through the Host capability; they receive neither filesystem paths nor ambient I/O.
 - package-owned Structured Surfaces can resolve explicitly referenced public Records from already
   compiled source imports. This lets a consuming package validate a generic SVS Recipe and emit its
   own nominal typed Program during `check`; component outputs remain symbolic and forward-resolved.

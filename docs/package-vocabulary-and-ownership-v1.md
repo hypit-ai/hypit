@@ -307,6 +307,25 @@ The system must not use one overloaded `svml.lock` to answer unrelated questions
 `implementationClosure = packageLock.digest`. Runtime Profile is editable configuration; Runtime
 Closure is its resolved, digest-locked privileged-service form.
 
+### 6.2 Source Assets are dependencies, not parser authority
+
+An author file may name a local image, video, audio file, font or other package-defined asset. That
+does not grant its Surface filesystem access. The division is:
+
+```text
+Surface                 declares { from, exact mediaType }
+Compiler Host           resolves safely, reads once, hashes bytes
+Source Closure          binds written locator + BlobRef
+Host transfer bundle    carries defensive bytes outside Core state
+Runtime build ingress   verifies and stages bytes into its ArtifactStore
+```
+
+`check` and `plan` resolve identities so their result is reproducible, but they do not write the
+Runtime store. `build` performs explicit ingress. Core sees only ordinary authored Records whose
+values may contain BlobRefs; it never sees paths, open handles, transfer bytes or staging policy.
+The same ABI therefore works for a local filesystem, browser upload, repository object or remote
+compiler without teaching any author package about that environment.
+
 ## 7. Provider naming
 
 Author method and execution endpoint are different namespaces.

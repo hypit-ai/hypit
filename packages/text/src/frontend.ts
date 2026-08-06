@@ -48,7 +48,7 @@ import type {
 } from "./types.js";
 
 export const textFrontendRef = { module: "@svml/text", version: "0.0.0-dev", name: "text" } as const;
-export const textFrontendImplementationDigest = digestOf("@svml/text/frontend@0");
+export const textFrontendImplementationDigest = digestOf("@svml/text/frontend@1");
 export const textAuthorFrontendId = "@svml/text@1";
 
 type BoundSurface = {
@@ -105,7 +105,7 @@ function surfaceScope(
   return scope;
 }
 
-export function decodeText(source: SourceUnit, context: TextDecodeContext): TextDecodeResult {
+export async function decodeText(source: SourceUnit, context: TextDecodeContext): Promise<TextDecodeResult> {
   verifyClosure(context.closure);
   const discovery = discoverText(source);
   const sourceImports = context.sourceImports ?? [];
@@ -203,13 +203,19 @@ export function decodeText(source: SourceUnit, context: TextDecodeContext): Text
     let output: SurfaceDecodeOutput;
     if (bound.declaration.mode === "raw") {
       if (opening.selfClosing) fail(source, "TEXT_RAW_SELF_CLOSING", `Raw Surface <${opening.name}> cannot be self-closing.`, cursor);
-      const rawOutput = (registered.handler as RawSurfaceHandler)({
+      const rawOutput = await (registered.handler as RawSurfaceHandler)({
         sourceName: source.name,
         source: source.text,
         tag: opening.name,
         openingStart: opening.start,
         contentStart: opening.end,
         attributes: opening.attributes,
+        resolveAsset(request) {
+          if (context.resolveAsset === undefined) {
+            fail(source, "TEXT_ASSET_RESOLVER_MISSING", `Surface <${opening.name}> requested ${request.from}, but this Text Host has no asset resolver.`, request.range?.start ?? opening.start);
+          }
+          return context.resolveAsset(request);
+        },
       });
       if (!Number.isInteger(rawOutput.nextOffset) || rawOutput.nextOffset <= opening.end || rawOutput.nextOffset > source.text.length) {
         fail(source, "TEXT_SURFACE_CURSOR", `Raw Surface <${opening.name}> returned an invalid cursor.`, cursor);
@@ -218,7 +224,7 @@ export function decodeText(source: SourceUnit, context: TextDecodeContext): Text
       output = rawOutput;
     } else {
       const parsed = parseStructuredElement(source, cursor);
-      output = (registered.handler as StructuredSurfaceHandler)({
+      output = await (registered.handler as StructuredSurfaceHandler)({
         sourceName: source.name,
         element: parsed.element,
         resolveReference(path) {
@@ -250,6 +256,12 @@ export function decodeText(source: SourceUnit, context: TextDecodeContext): Text
             };
           }
           return undefined;
+        },
+        resolveAsset(request) {
+          if (context.resolveAsset === undefined) {
+            fail(source, "TEXT_ASSET_RESOLVER_MISSING", `Surface <${opening.name}> requested ${request.from}, but this Text Host has no asset resolver.`, request.range?.start ?? opening.start);
+          }
+          return context.resolveAsset(request);
         },
       });
       cursor = parsed.nextOffset;
@@ -435,14 +447,15 @@ export function createTextAuthorFrontend(options: TextAuthorFrontendOptions): Te
           })),
       };
     },
-    decode(source, context) {
-      const result = decodeText(
+    async decode(source, context) {
+      const result = await decodeText(
         { name: source.name, text: source.text },
         {
           closure: context.closure,
           registry: options.registry,
           resolveModule: options.resolveModule,
           sourceImports: context.imports,
+          resolveAsset: context.resolveAsset,
         },
       );
       return {
