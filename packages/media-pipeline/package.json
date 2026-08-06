@@ -10,10 +10,10 @@
     "@svml/component-kit": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@svml/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*"
+    "@svml/core": "workspace:*",
+    "@svml/validation": "workspace:*"
   }
 }

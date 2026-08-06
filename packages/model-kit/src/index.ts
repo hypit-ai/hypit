@@ -1,4 +1,8 @@
-import type { ProducerRegistrar } from "@svml/component-kit";
+import type {
+  ComponentPackage,
+  ProducerRegistrar,
+  TypeValidatorFacet,
+} from "@svml/component-kit";
 import { sealGraphFragment } from "@svml/elaborator";
 import {
   generationManifestDigest,
@@ -19,7 +23,6 @@ import type {
   TypeRef,
   ValueSchema,
 } from "@svml/protocol";
-import type { TypeValidatorRegistrar } from "@svml/validation";
 
 export type ExactModelEndpointSpec = {
   readonly key: string;
@@ -48,10 +51,9 @@ export type ExactModelModule = {
   readonly manifest: ModuleManifest;
   readonly manifestDigest: Digest;
   readonly endpoints: Readonly<Record<string, ExactModelEndpoint>>;
-  readonly component: {
-    readonly name: string;
+  readonly component: ComponentPackage & {
+    readonly validators: readonly TypeValidatorFacet[];
     install(registry: ProducerRegistrar): void;
-    installValidators(registry: TypeValidatorRegistrar): void;
   };
 };
 
@@ -176,6 +178,13 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
     endpoints,
     component: {
       name: options.module.name,
+      validators: endpointData.map((item) => ({
+        type: item.requestType,
+        implementationDigest: item.validatorDigest,
+        handler({ value }) {
+          item.spec.verifyRequest(inlineRequest(value, item.spec.key));
+        },
+      })),
       install(registry) {
         for (const item of endpointData) {
           registry.registerProducer(
@@ -189,13 +198,6 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
               return { outputs: {}, needs: { generation: request } };
             },
           );
-        }
-      },
-      installValidators(registry) {
-        for (const item of endpointData) {
-          registry.register(item.requestType, item.validatorDigest, ({ value }) => {
-            item.spec.verifyRequest(inlineRequest(value, item.spec.key));
-          });
         }
       },
     },

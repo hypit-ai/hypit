@@ -697,6 +697,12 @@ export const semanticTimeManifest: ModuleManifest = {
   producers: [],
 };
 
+export const compositionValidatorDigests = {
+  visualTrack: digestOf("@svml/composition/validate-visual-track@1"),
+  audioTrack: digestOf("@svml/composition/validate-audio-track@1"),
+  composition: digestOf("@svml/composition/validate-composition@1"),
+} as const;
+
 export const compositionManifest: ModuleManifest = {
   format: "svml.module@0",
   name: compositionModuleRef.name,
@@ -706,9 +712,42 @@ export const compositionManifest: ModuleManifest = {
     { module: programSpaceModuleRef, digest: programSpaceManifestDigest },
   ],
   types: [
-    { name: contractTypes.visualTrack.name, schema: visualTrackSchema },
-    { name: contractTypes.audioTrack.name, schema: audioTrackSchema },
-    { name: contractTypes.composition.name, schema: compositionSchema },
+    {
+      name: contractTypes.visualTrack.name,
+      schema: visualTrackSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/composition/validate-visual-track",
+          digest: compositionValidatorDigests.visualTrack,
+        },
+      },
+    },
+    {
+      name: contractTypes.audioTrack.name,
+      schema: audioTrackSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/composition/validate-audio-track",
+          digest: compositionValidatorDigests.audioTrack,
+        },
+      },
+    },
+    {
+      name: contractTypes.composition.name,
+      schema: compositionSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/composition/validate-composition",
+          digest: compositionValidatorDigests.composition,
+        },
+      },
+    },
   ],
   capabilities: [],
   surfaces: [],

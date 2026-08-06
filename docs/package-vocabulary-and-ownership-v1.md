@@ -277,7 +277,8 @@ declared permissions.
 The implemented Node author-facet loader is named `@svml/package-loader-node`. It loads already
 installed trusted packages; it is not an npm client and does not install packages because a source
 file requested them. Its current lock covers physical declared-dependency bytes plus Module,
-Frontend and Text Surface identities. Compute-facet activation and untrusted isolation remain.
+Frontend, Text Surface and Type Validator identities. Compute-facet activation and untrusted
+isolation remain.
 
 The package descriptor and lock must bind:
 
@@ -580,9 +581,10 @@ completed and partial steps below distinguish API laws from unfinished distribut
    `@svml/local` now provide durable project recovery and package-based local assembly; distributed
    leases and wake-up polling remain;
 7. **partially completed:** `@svml/package-loader-node` locks the full physical declared-dependency closure
-   and activates trusted Module, Frontend and Text Surface facets without package-specific CLI
-   registration; `@svml/component-kit` now removes direct Node Driver dependencies from deterministic
-   packages, while locked compute/Type Validator activation plus untrusted isolation remain;
+   and activates trusted Module, Frontend, Text Surface and Type Validator facets without
+   package-specific CLI registration; `@svml/component-kit` now removes direct Node Driver
+   dependencies from deterministic packages, while locked compute activation plus untrusted
+   isolation remain;
 8. **partially completed:** add real Provider Endpoints; KIE generation, reference local media,
    local HyperFrames, the local WhisperX Provider and its locked Python service are implemented,
    while AWS/hosted equivalents remain;

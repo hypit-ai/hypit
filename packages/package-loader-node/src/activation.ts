@@ -1,4 +1,7 @@
 import {
+  registerTypeValidatorFacets,
+} from "@svml/component-kit";
+import {
   ModulePackageRegistry,
   NodeCompiler,
 } from "@svml/compiler-node";
@@ -9,6 +12,7 @@ import {
   TextSurfaceRegistry,
   textAuthorFrontendId,
 } from "@svml/text";
+import { TypeValidatorRegistry } from "@svml/validation";
 
 import type { NodeAuthorPackage } from "./types.js";
 
@@ -32,6 +36,7 @@ export function createActivatedNodeCompiler(
   const modules = new ModulePackageRegistry();
   const surfaces = new TextSurfaceRegistry();
   const frontends = new AuthorFrontendRegistry();
+  const validators = new TypeValidatorRegistry();
 
   for (const item of packages) {
     assertPackage(item);
@@ -59,6 +64,7 @@ export function createActivatedNodeCompiler(
       }
     }
     for (const frontend of item.frontends ?? []) frontends.register(frontend);
+    registerTypeValidatorFacets(validators, item.validators ?? []);
   }
 
   frontends.register(createTextAuthorFrontend({
@@ -73,6 +79,7 @@ export function createActivatedNodeCompiler(
   return new NodeCompiler({
     modules,
     frontends,
+    validators,
     entryFrontend: textAuthorFrontendId,
     ...(options.root === undefined ? {} : { root: options.root }),
   });
