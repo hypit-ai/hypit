@@ -321,7 +321,7 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
       runtime.build({
         id: "source-artifact-staging",
         state: createGreetingBuild(),
-        sourceArtifacts: [{ artifact: sourceArtifact, bytes }],
+        attachments: [{ artifact: sourceArtifact, bytes }],
       }),
       /does not bind demanded capability/u,
     );
@@ -330,7 +330,7 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
       runtime.build({
         id: "tampered-source-artifact",
         state: createGreetingBuild(),
-        sourceArtifacts: [{ artifact: sourceArtifact, bytes: new Uint8Array([0]) }],
+        attachments: [{ artifact: sourceArtifact, bytes: new Uint8Array([0]) }],
       }),
       /does not match its staged bytes/u,
     );

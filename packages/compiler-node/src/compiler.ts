@@ -1,4 +1,4 @@
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
   sealBuildRequest,
@@ -15,6 +15,7 @@ import type {
   CompiledSourceClosure,
   AuthorRecordAdmitter,
 } from "@svml/elaborator";
+import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@svml/host";
 import type {
   BuildPlan,
   BuildRequest,
@@ -27,11 +28,10 @@ import {
   createRecordAdmitter,
 } from "@svml/validation";
 import type { TypeValidatorRegistryLike } from "@svml/validation";
+import { NodeFilesystemWorkspace } from "@svml/workspace-fs-node";
 
 import { NodeCompilerError } from "./error.js";
 import type { ModulePackageRegistryLike } from "./modules.js";
-import { NodeSourceHost } from "./source.js";
-import type { NodeSourceArtifact } from "./source.js";
 
 type DiscoveredUnit = {
   readonly source: AuthorSourceUnit;
@@ -43,7 +43,7 @@ async function discoverClosure(
   entry: AuthorSourceUnit,
   frontendId: string,
   frontends: AuthorFrontendRegistryLike,
-  sources: NodeSourceHost,
+  workspace: WorkspaceSession,
 ): Promise<readonly DiscoveredUnit[]> {
   const units = new Map<string, DiscoveredUnit>();
   const visiting = new Set<string>();
@@ -60,7 +60,7 @@ async function discoverClosure(
     visiting.add(key);
     const discovery = await frontend.discover(source);
     for (const request of discovery.sources) {
-      await visit(await sources.resolveSource(source, request), request.frontend);
+      await visit(await workspace.resolveSource(source, request), request.frontend);
     }
     visiting.delete(key);
     units.set(key, { source, frontend: selectedFrontend, discovery });
@@ -75,6 +75,8 @@ export type NodeCompilerOptions = {
   readonly entryFrontend: string;
   /** Files reachable through source imports must resolve inside this root. Defaults to entry dirname. */
   readonly root?: string;
+  /** Replaces the default Node filesystem definition environment. */
+  readonly workspace?: Workspace;
   /** Trusted Type-owner validators used to admit authored Records before linking. */
   readonly validators?: TypeValidatorRegistryLike;
   /** Low-level Host hook for a sandboxed or remote admission implementation. */
@@ -97,7 +99,7 @@ export type PlannedSource = {
 
 export type NodeCompiledSourceClosure = CompiledSourceClosure & {
   /** Host-side transfer bundle; bytes are not serialized into Core BuildState. */
-  readonly sourceArtifacts: readonly NodeSourceArtifact[];
+  readonly attachments: readonly ArtifactAttachment[];
 };
 
 /** Domain-neutral Node facade from a real source file to a verified Source Closure or BuildPlan. */
@@ -112,20 +114,29 @@ export class NodeCompiler {
         "NodeCompiler accepts validators or a custom Record admitter, not both",
       );
     }
+    if (options.workspace !== undefined && options.root !== undefined) {
+      throw new NodeCompilerError(
+        "AMBIGUOUS_WORKSPACE",
+        "NodeCompiler accepts a Workspace or the root option for its default filesystem Workspace, not both",
+      );
+    }
     this.#options = options;
     this.#admitRecord = options.admitRecord
       ?? createRecordAdmitter(options.validators ?? new TypeValidatorRegistry());
   }
 
   async compileFile(file: string): Promise<NodeCompiledSourceClosure> {
-    const entryPath = resolve(file);
-    const sources = await NodeSourceHost.create(this.#options.root ?? dirname(entryPath));
-    const entry = await sources.load(entryPath);
+    const workspace = this.#options.workspace === undefined
+      ? await new NodeFilesystemWorkspace({
+          ...(this.#options.root === undefined ? {} : { root: this.#options.root }),
+        }).open(resolve(file))
+      : await this.#options.workspace.open(file);
+    const entry = workspace.entry;
     const discovered = await discoverClosure(
       entry,
       this.#options.entryFrontend,
       this.#options.frontends,
-      sources,
+      workspace,
     );
     const closure = this.#options.modules.createClosure(
       discovered.flatMap((unit) => unit.discovery.modules),
@@ -135,11 +146,11 @@ export class NodeCompiler {
       frontend: this.#options.entryFrontend,
       closure,
       frontends: this.#options.frontends,
-      resolveSource: sources.resolveSource,
-      resolveAsset: sources.resolveAsset,
+      resolveSource: workspace.resolveSource,
+      resolveAsset: workspace.resolveAsset,
       admitRecord: this.#admitRecord,
     });
-    return { ...compilation, sourceArtifacts: sources.sourceArtifacts() };
+    return { ...compilation, attachments: await workspace.attachments() };
   }
 
   async planFile(file: string, options: PlanFileOptions): Promise<PlannedSource> {

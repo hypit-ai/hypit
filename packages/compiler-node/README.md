@@ -2,8 +2,8 @@
 
 Domain-neutral Node.js compiler host for v2.
 
-This package is outside Core. It owns the environmental work required to turn a real file into the
-already implemented compiler IR:
+This package is outside Core. It connects a replaceable definition-time `Workspace` to the already
+implemented compiler IR:
 
 ```text
 file + registered Frontends + registered manifests
@@ -18,15 +18,16 @@ their digest-bound dependencies. It does not install npm packages or execute mod
 embedding application must register the manifests and matching Frontend/Surface implementations it
 has chosen to trust.
 
-`NodeSourceHost` is the filesystem authority. It accepts only relative recursive Source imports,
-canonicalizes real paths, confines reads to one declared root, rejects symlink escapes and locks
-each import edge to the first bytes read for the whole compilation. Source paths are diagnostics and
-cache keys; Source Closure semantic identity still depends on content rather than machine location.
+`NodeCompiler` accepts the host-neutral `Workspace` contract. With no explicit Workspace it creates
+the convenient `@svml/workspace-fs-node` default: relative recursive Source imports are confined to
+one canonical root, symlink escapes are rejected and each edge is locked to the first bytes read for
+that compilation. A browser, Git, memory or remote Host can inject another Workspace without
+changing Frontends, Surfaces, Source Closure identity or Core.
 
-The same Host owns a separate Source Asset capability. A Frontend/Surface may request a relative
-asset and assign its exact media type, but it never receives a path or filesystem handle. The Host
-reads each canonical asset once, rejects root and symlink escapes, returns a `BlobRef`, binds that
-reference into the requesting SourceUnit and exposes defensive byte attachments on the Node
+The Workspace session owns a separate Source Asset capability. A Frontend/Surface may request an
+asset and assign its exact media type, but it never receives a path, filesystem handle or ambient
+read authority. The Workspace returns a `BlobRef`, the compiler binds that reference into the
+requesting SourceUnit, and the session exposes defensive generic `ArtifactAttachment`s on the Node
 compilation result. `check` and `plan` perform no ArtifactStore write. `build` passes the attachments
 to the selected Runtime for digest-checked staging.
 
@@ -40,7 +41,8 @@ the ordinary Elaborator Source Closure implementation. `planFile()` resolves aut
 names to Logical Outputs and asks Core to derive the finite reverse-demand plan.
 
 The package contains no Script, video, Provider, queue, credentials or rendering knowledge. A
-non-video application can use it with only its own manifests, Frontends and Surfaces.
+non-video application can use it with only its own manifests, Frontends, Surfaces and chosen
+Workspace implementation.
 
 Package installation, lockfile-based third-party code loading and sandbox execution remain Host
 features above this registry; treating an import string as permission to execute npm code would
