@@ -9,7 +9,8 @@ itself. The current prelude contributes:
 - the official Text Frontend;
 - the Script raw Surface and its audiovisual Narrative contract dependency;
 - the SVS alternate Frontend and generic Recipe manifest;
-- the official Film and HyperFrames Render Structured Surfaces plus their exact static dependencies.
+- the official Speech, WhisperX, provider-free Caption, B-roll, Text, Film and HyperFrames Render
+  Structured Surfaces plus their exact static dependencies.
 
 It does not place these packages in Core and does not grant source imports network, credential or
 process permissions.
@@ -23,14 +24,15 @@ pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root 
 pnpm svml:v2 plan path/to/main.svml --target component.result
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts
 pnpm svml:v2 build path/to/main.svml --target component.result --runtime ./svml.runtime.ts --follow
+pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --follow --out ./final.mp4
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.ts
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.ts
 ```
 
-`check` is usable for the implemented Script, authored Image, Seedance generation, Film, Render and
-recursively imported `.svs` sources. `plan` is fully implemented by the generic Node compiler. A
-complete author video still awaits Speech assembly and Track Surfaces that produce Film's inputs;
-the CLI does not fabricate those missing facts.
+`check` is usable for the complete provider-free author graph in
+`examples/talking-film-graph-check`. `plan` is fully implemented by the generic Node compiler. The
+production golden still awaits the explicit Gemini Caption package and real assets; the CLI does
+not fabricate those missing facts.
 
 `build` compiles the same locked BuildState and passes it to a trusted local Runtime config module.
 The default Build identity is content-derived, so the same invocation resumes durable local state;
@@ -42,6 +44,10 @@ With `--follow`, the CLI stays attached and follows endpoint `wakeAt` hints unti
 non-retryable failure, cancellation or `--max-wait-ms`. `status` reads durable verified state;
 `cancel` invokes active endpoints and then records the resulting terminal Build failure. None of
 these commands creates a second ready-command queue.
+
+`--out` accepts exactly one completed media target, reads its content-addressed bytes through the
+selected Runtime ArtifactStore and writes the requested file. It does not treat a CAS path as a
+public filename or bypass Record identity verification.
 
 `@svml/package-loader-node` supports explicitly trusted installed implementation packages. It
 verifies the complete physical dependency closure before executing an activation entry, then checks

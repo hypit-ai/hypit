@@ -7,9 +7,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@svml/component-kit": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@svml/protocol": "workspace:*",
+    "@svml/svs": "workspace:*",
+    "@svml/text": "workspace:*"
   },
   "devDependencies": {
     "@svml/hyperframes": "workspace:*"

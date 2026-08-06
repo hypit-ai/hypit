@@ -116,6 +116,12 @@ function assertItem(item: BrollItem, totalFrames: number): void {
   if (item.audioGain !== undefined && (!Number.isFinite(item.audioGain) || item.audioGain < 0)) {
     throw new Error(`B-roll item ${item.id} audioGain is invalid.`);
   }
+  if (item.backgroundColor !== undefined && !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(item.backgroundColor)) {
+    throw new Error(`B-roll item ${item.id} background color is invalid.`);
+  }
+  if (item.borderRadiusPx !== undefined && (!Number.isFinite(item.borderRadiusPx) || item.borderRadiusPx < 0)) {
+    throw new Error(`B-roll item ${item.id} border radius is invalid.`);
+  }
   if (item.includeAudio && isImage) throw new Error(`B-roll image ${item.id} cannot contribute source audio.`);
   if (item.includeAudio && item.playback === "loop") {
     throw new Error(`B-roll item ${item.id} cannot loop source audio in the v1 AudioTrack contract.`);
@@ -311,6 +317,8 @@ function itemElements(
     { name: "top", value: `${item.box.yPercent}%` },
     { name: "transform-origin", value: "center center" },
     { name: "width", value: `${item.box.widthPercent}%` },
+    ...(item.backgroundColor === undefined ? [] : [{ name: "background-color", value: item.backgroundColor }]),
+    ...(item.borderRadiusPx === undefined ? [] : [{ name: "border-radius", value: `${item.borderRadiusPx}px` }]),
   ];
   return [
     {

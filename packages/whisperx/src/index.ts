@@ -1,6 +1,7 @@
 export {
   whisperXComponent,
 } from "./component.js";
+export { whisperXSpeechAlignmentFragment } from "./fragment.js";
 export {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
@@ -15,4 +16,5 @@ export {
   whisperXProducers,
   whisperXTypes,
 } from "./manifest.js";
+export { decodeWhisperXAlignmentSurface } from "./surface.js";
 export type * from "./types.js";

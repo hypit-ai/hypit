@@ -19,6 +19,7 @@ export type TextAppearance = {
   readonly backgroundColor?: string;
   readonly borderRadiusPx?: number;
   readonly paddingPx?: number;
+  readonly letterSpacingPx?: number;
 };
 
 export type TextItem = {
@@ -38,4 +39,18 @@ export type TextTrackProgram = {
   readonly id: string;
   readonly programSpaceDigest: Digest;
   readonly items: readonly TextItem[];
+};
+
+export type TextTrackSpec = {
+  readonly contract: "svml.text-track-spec@1";
+  readonly digest: Digest;
+  readonly id: string;
+  readonly items: readonly {
+    readonly id: string;
+    readonly text: string;
+    readonly during: "full";
+    readonly z: number;
+    readonly box: TextBox;
+    readonly appearance: TextAppearance;
+  }[];
 };

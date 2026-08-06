@@ -9,10 +9,11 @@ import { digestOf, isDigest } from "@svml/protocol";
 import type { Digest } from "@svml/protocol";
 
 import { planCaptionPresentation } from "./presentation.js";
-import type { TimedCaptionProjection } from "./types.js";
-import type { CaptionTrackProgram } from "./types.js";
+import { assertCaptionProgram } from "./style.js";
+import type { CaptionProgram, CaptionTrackProgram, TimedCaptionProjection } from "./types.js";
 
 export const renderCaptionTrackImplementationDigest = digestOf("@svml/caption/render-track@1");
+export const renderCaptionProgramImplementationDigest = digestOf("@svml/caption/render-program@1");
 
 function normalizedProgram(value: Omit<CaptionTrackProgram, "digest">): Omit<CaptionTrackProgram, "digest"> {
   return {
@@ -75,6 +76,10 @@ export function assertCaptionTrackProgram(program: CaptionTrackProgram): void {
     borderRadiusPx: program.style.borderRadiusPx,
     bottomPercent: program.style.bottomPercent,
     maxWidthPercent: program.style.maxWidthPercent,
+    ...(program.style.leftPercent === undefined ? {} : { leftPercent: program.style.leftPercent }),
+    ...(program.style.topPercent === undefined ? {} : { topPercent: program.style.topPercent }),
+    ...(program.style.widthPercent === undefined ? {} : { widthPercent: program.style.widthPercent }),
+    ...(program.style.lineHeight === undefined ? {} : { lineHeight: program.style.lineHeight }),
   };
   for (const [name, value] of Object.entries(numeric)) {
     if (!Number.isFinite(value) || value < 0) throw new Error(`CaptionTrackProgram ${name} is invalid.`);
@@ -84,7 +89,7 @@ export function assertCaptionTrackProgram(program: CaptionTrackProgram): void {
   }
   if (program.style.bottomPercent > 100) throw new Error("CaptionTrackProgram bottomPercent is invalid.");
   for (const color of [program.style.color, program.style.backgroundColor].filter((value): value is string => value !== undefined)) {
-    if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/u.test(color)) throw new Error(`CaptionTrackProgram color ${color} is invalid.`);
+    if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(color)) throw new Error(`CaptionTrackProgram color ${color} is invalid.`);
   }
 }
 
@@ -105,16 +110,17 @@ function frameAt(projection: TimedCaptionProjection, seconds: number): number {
     / projection.programSpace.frameRate.denominator);
 }
 
-function textStyle(program: CaptionTrackProgram): VisualStyleDeclaration[] {
+function textStyle(style: CaptionTrackProgram["style"]): VisualStyleDeclaration[] {
   return [
-    { name: "background", value: program.style.backgroundColor ?? "transparent" },
-    { name: "border-radius", value: `${program.style.borderRadiusPx}px` },
-    { name: "color", value: program.style.color },
-    { name: "font-family", value: program.style.fontFamily },
-    { name: "font-size", value: `${program.style.fontSizePx}px` },
-    { name: "font-weight", value: program.style.fontWeight },
-    { name: "padding", value: `${program.style.paddingYPx}px ${program.style.paddingXPx}px` },
-    { name: "text-align", value: program.style.textAlign },
+    { name: "background", value: style.backgroundColor ?? "transparent" },
+    { name: "border-radius", value: `${style.borderRadiusPx}px` },
+    { name: "color", value: style.color },
+    { name: "font-family", value: style.fontFamily },
+    { name: "font-size", value: `${style.fontSizePx}px` },
+    { name: "font-weight", value: style.fontWeight },
+    ...(style.lineHeight === undefined ? [] : [{ name: "line-height", value: style.lineHeight }]),
+    { name: "padding", value: `${style.paddingYPx}px ${style.paddingXPx}px` },
+    { name: "text-align", value: style.textAlign },
     { name: "white-space", value: "pre-wrap" },
   ];
 }
@@ -146,7 +152,7 @@ export function renderCaptionTrack(
             id: "root",
             order: 0,
             kind: "box" as const,
-            style: [
+            style: program.style.leftPercent === undefined || program.style.topPercent === undefined || program.style.widthPercent === undefined ? [
               { name: "align-items", value: "center" },
               { name: "bottom", value: `${program.style.bottomPercent}%` },
               { name: "display", value: "flex" },
@@ -155,6 +161,14 @@ export function renderCaptionTrack(
               { name: "max-width", value: `${program.style.maxWidthPercent}%` },
               { name: "position", value: "absolute" },
               { name: "transform", value: "translateX(-50%)" },
+            ] : [
+              { name: "align-items", value: "center" },
+              { name: "display", value: "flex" },
+              { name: "justify-content", value: "center" },
+              { name: "left", value: `${program.style.leftPercent}%` },
+              { name: "position", value: "absolute" },
+              { name: "top", value: `${program.style.topPercent}%` },
+              { name: "width", value: `${program.style.widthPercent}%` },
             ],
           },
           {
@@ -163,10 +177,92 @@ export function renderCaptionTrack(
             order: 1,
             kind: "text" as const,
             text: unit.display,
-            style: textStyle(program),
+            style: textStyle(program.style),
             attributes: [
               { name: "data-caption-basis", value: unit.basis },
               { name: "data-caption-quality", value: unit.timingQuality },
+              ...(unit.runId === undefined ? [] : [{ name: "data-caption-run", value: unit.runId }]),
+              ...(unit.fields === undefined ? [] : [{ name: "data-caption-fields", value: JSON.stringify(unit.fields) }]),
+            ],
+          },
+        ],
+      }];
+    }),
+  });
+  assertVisualTrackIdentity(track, projection.programSpace);
+  return track;
+}
+
+/** Render one peer Track whose Presents may each select a complete, resolved Caption Style. */
+export function renderCaptionProgram(
+  projection: TimedCaptionProjection,
+  program: CaptionProgram,
+): VisualTrack {
+  assertTimedCaptionProjection(projection);
+  assertCaptionProgram(program);
+  const styles = new Map(program.styles.map((style) => [style.id, style]));
+  const totalFrames = programSpaceFrameCount(projection.programSpace);
+  const units = projection.regions.flatMap((region) => {
+    const styleId = region.styleId ?? program.defaultStyleId;
+    const style = styles.get(styleId);
+    if (style === undefined) throw new Error(`Caption region ${region.id} references unknown Style ${styleId}`);
+    return planCaptionPresentation(
+      { projectionDigest: projection.projectionDigest, regions: [region] },
+      style.presentation.mode,
+    ).units.map((unit) => ({ unit, style }));
+  });
+  const track = sealVisualTrack({
+    contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
+    id: program.id,
+    programSpaceDigest: projection.programSpace.digest,
+    presents: units.flatMap(({ unit, style }) => {
+      const startFrame = Math.max(0, frameAt(projection, unit.startSec));
+      const measuredEnd = Math.min(totalFrames, frameAt(projection, unit.endSec));
+      const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
+      if (!unit.display || startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
+      const appearance = style.presentation.style;
+      return [{
+        id: unit.id,
+        span: { startFrame, endFrameExclusive },
+        stacking: { order: style.presentation.stackingOrder, tieBreak: `${program.id}:${unit.id}` },
+        elements: [
+          {
+            id: "root",
+            order: 0,
+            kind: "box" as const,
+            style: appearance.leftPercent === undefined || appearance.topPercent === undefined || appearance.widthPercent === undefined ? [
+              { name: "align-items", value: "center" },
+              { name: "bottom", value: `${appearance.bottomPercent}%` },
+              { name: "display", value: "flex" },
+              { name: "justify-content", value: "center" },
+              { name: "left", value: "50%" },
+              { name: "max-width", value: `${appearance.maxWidthPercent}%` },
+              { name: "position", value: "absolute" },
+              { name: "transform", value: "translateX(-50%)" },
+            ] : [
+              { name: "align-items", value: "center" },
+              { name: "display", value: "flex" },
+              { name: "justify-content", value: "center" },
+              { name: "left", value: `${appearance.leftPercent}%` },
+              { name: "position", value: "absolute" },
+              { name: "top", value: `${appearance.topPercent}%` },
+              { name: "width", value: `${appearance.widthPercent}%` },
+            ],
+          },
+          {
+            id: "text",
+            parent: "root",
+            order: 1,
+            kind: "text" as const,
+            text: unit.display,
+            style: textStyle(appearance),
+            attributes: [
+              { name: "data-caption-basis", value: unit.basis },
+              { name: "data-caption-quality", value: unit.timingQuality },
+              { name: "data-caption-style", value: style.id },
+              ...(unit.runId === undefined ? [] : [{ name: "data-caption-run", value: unit.runId }]),
+              ...(unit.fields === undefined ? [] : [{ name: "data-caption-fields", value: JSON.stringify(unit.fields) }]),
             ],
           },
         ],

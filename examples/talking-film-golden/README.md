@@ -1,8 +1,8 @@
 # Talking-film authoring golden fixture
 
-Status: **v2 authoring target, not executable end to end yet.** Script, authored Image, Seedance
-generation, Film, generic SVS and the explicit HyperFrames Render Surface are implemented. Speech
-assembly and Track components are the concrete package-local work remaining.
+Status: **two-speaker production target, not executable end to end with the checked-in fixture.**
+Every author Surface and the Gemini planning/Vertex execution package now exists. Real image/font
+assets, credentials and a selected local Runtime profile are not checked into this fixture.
 
 This example replaces neither the executable v1 fixtures nor their regression value. In particular,
 `examples/flat-track-launch` remains the capability oracle for selections, moments, B-roll motion,
@@ -38,23 +38,21 @@ Frontend named by `using`.
 ## Author data flow
 
 ```text
-Script ────────────────────────────────────────────────┐
-  ├─ Segment + Prompt + reference -> Seedance Speech ─┤
-  ├─ Segment + Prompt + reference -> Seedance Speech ─┤
-  │                                                    ▼
-  │                                              Speech Spine
-  │                                         ┌──────────┴──────────┐
-  │                                         │                     │
-  │                                  audio basis          visual/audio Tracks
-  │                                         │
-  ├──────────────────────────────> WhisperX + speech-align
-  │                                         │
-  │                                  CompleteSemanticMap
-  │                                  ┌───────┴────────┐
-  │                                  │                │
-  │                             Caption Track     B-roll Track
-  │
-  └─ caption display projection
+Script dialogue + Prompt + reference ──> two Seedance Speech Needs
+                                                   │
+                                                   ▼
+                                              Speech Spine
+                                         ┌─────────┴─────────┐
+                                         │                   │
+                                  audio basis       visual/audio Tracks
+                                         │
+                                         ▼
+                                  WhisperX + align ───────────┐
+                                  CompleteSemanticMap         │
+                                                              ▼
+Script left display + Caption Program ──> Gemini Plan ──> Caption Track
+
+Script selections + generated B-roll ───────────────────> B-roll Track
 
 Seedance B-roll + Text Track + every Track above
                          -> Film Composition
@@ -74,15 +72,17 @@ Candidates and Operations.
 | `media:Image` | `@svml/media` | content-addressed authored Artifact | implemented |
 | `seedance:Prompt` | `@svml/seedance` | package-private immutable direction value | implemented |
 | `seedance:Speech model="mini"` | `@svml/seedance` | explicit Seedance Mini Need plus primary-video projection | implemented; explicit duration remains authored until Speech scheduling exists |
-| `speech:Spine` | `@svml/speech` | ordered clips -> one `SpeechBasis`, then ordinary projections | basis and four locked projection facets implemented; author assembly missing |
-| `whisperx:Alignment` | `@svml/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@svml/speech-align` -> Map | Graph Fragment, locked deterministic components, local media projection and local Provider/service implemented; Surface missing |
+| `speech:Spine` | `@svml/speech` | ordered clips -> normalized Takes, one `SpeechBasis`, then ordinary projections | Surface, fold, media normalization and projection components implemented |
+| `whisperx:Alignment` | `@svml/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@svml/speech-align` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
 | `seedance:Video model="mini"` | `@svml/seedance` | explicit Seedance Mini video Need plus primary-video projection | implemented |
-| `broll:Track` | `@svml/broll` | semantic windows + media + recipe -> peer Visual/Audio Tracks | Program/lowering implemented; Surface missing |
-| `caption:Track` | `@svml/caption-gemini` | timed projection + Gemini cue grouping + role recipe -> VisualTrack | timing/lowering and owner validators are locked components; complete Recipe audit and Gemini/role Surface missing |
-| `text:Track` | `@svml/text-track` | package Program -> VisualTrack | Program/lowering implemented; Surface/exact-font use missing |
+| `broll:Track` | `@svml/broll` | semantic windows + normalized media + recipe -> peer Visual/Audio Tracks | Surface and deterministic lowering implemented |
+| `caption:Style` / `caption:Program` | `@svml/caption` | default total Style + ordered whole-Style replacement by Role or Selection | implemented |
+| `caption-ai:Planner` | `@svml/caption-gemini` | immutable display atoms + per-run requirements -> cue cuts and per-atom fields | implemented; Google Vertex Endpoint implemented separately |
+| `caption:Track` | `@svml/caption` | CaptionPlan + independent SemanticMap + complete Styles -> VisualTrack | implemented |
+| `text:Track` | `@svml/text-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
 | `film:Film` | `@svml/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
 | `render:Video` | `@svml/hyperframes-render` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
-| `studio.svs` | `@svml/svs` | generic immutable Recipe Records; consuming packages must validate and lower them | parser and recursive source import implemented; video recipe consumers/exact font lowering missing |
+| `studio.svs` | `@svml/svs` | generic immutable Recipe Records; consuming packages validate and lower them | parser, imports and current package consumers implemented; exact font assets remain |
 
 The remaining work is intentionally package-local. None of these rows requires a new Core video type,
 a component-family registry in Core, a privileged Film root or another Track kind.
@@ -110,5 +110,6 @@ The intended final command is:
 svml build main.svml --target final.video
 ```
 
-Before the remaining Surfaces and Providers are implemented, tools must report that the complete
-file is a design fixture rather than pretending to compile it with the v1 engine.
+Until real assets, credentials and a Runtime profile are supplied, tools must report this file as a
+production design fixture rather than promise a rendered file. `../talking-film-graph-check` is the
+fully checkable graph today.

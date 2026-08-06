@@ -10,5 +10,9 @@ auditable reusable graph contributions:
 - WhisperX evidence plus the provider-neutral speech SemanticMap;
 - timed caption projection.
 
-The author frontend may expose these Fragments through concise surface syntax.
+The package also owns `<speech:Spine>`. Each `<speech:Take>` explicitly connects a generated Blob
+and its `NarrativeExcerpt`; the Surface expands per-Take media normalization, an immutable append
+fold, one timeline-audio render and ordinary SpeechBasis projections. Whitespace and child layout
+do not create ports, and Core receives no variadic node or Speech special case.
+
 The Elaborator expands them hygienically before SVML Core sees the graph.

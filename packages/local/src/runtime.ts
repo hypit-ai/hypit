@@ -222,6 +222,9 @@ export async function createLocalRuntime(
       const [result] = await scheduler.run([{ id: build, state: snapshot.state }]);
       return result;
     },
+    async readArtifact(digest) {
+      return await options.artifactStore.get(digest);
+    },
     close() {},
   };
 }
@@ -302,6 +305,7 @@ export async function createProjectLocalRuntime(
       buildMany: runtime.buildMany,
       status: runtime.status,
       cancel: runtime.cancel,
+      readArtifact: runtime.readArtifact,
       close() {
         return services.close();
       },

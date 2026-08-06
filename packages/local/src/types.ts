@@ -2,6 +2,7 @@ import type { Awaitable, ComponentPackage } from "@svml/component-kit";
 import type { ArtifactAttachment } from "@svml/host";
 import type { EndpointPackage } from "@svml/endpoint-kit";
 import type { BuildState } from "@svml/protocol";
+import type { Digest } from "@svml/protocol";
 import type {
   ArtifactStore,
   BuildSchedulerFactory,
@@ -103,5 +104,6 @@ export type LocalRuntime = {
   buildMany(requests: readonly LocalBuildRequest[]): Promise<readonly ScheduledBuildResult[]>;
   status(build: string): Promise<LocalRuntimeStatus>;
   cancel(build: string): Promise<ScheduledBuildResult | undefined>;
+  readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
   close(): Awaitable<void>;
 };
