@@ -29,8 +29,6 @@ export type TimedCaptionRegion = {
 
 export type TimedCaptionProjection = {
   readonly contract: "svml.timed-caption-projection@1";
-  readonly semanticIndexDigest: Digest;
-  readonly speechTimeMapDigest: Digest;
   readonly programSpace: ProgramSpace;
   readonly text: string;
   readonly regions: readonly TimedCaptionRegion[];
@@ -53,7 +51,6 @@ export type CaptionPresentationUnit = {
 
 export type CaptionPresentationPlan = {
   readonly contract: "svml.caption-presentation-plan@0";
-  readonly sourceProjectionDigest: Digest;
   readonly mode: CaptionPresentationMode;
   readonly units: readonly CaptionPresentationUnit[];
   readonly planDigest: Digest;

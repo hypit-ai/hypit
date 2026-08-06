@@ -155,8 +155,6 @@ export function sealMediaStreamSelection(
 export function verifyMediaStreamSelection(value: unknown): asserts value is MediaStreamSelection {
   const item = object(value, "MediaStreamSelection") as unknown as MediaStreamSelection;
   assert(item.contract === "svml.media-stream-selection@1", "MediaStreamSelection contract is invalid");
-  assert(isDigest(item.sourceArtifactDigest), "MediaStreamSelection source digest is invalid");
-  assert(isDigest(item.inspectionDigest), "MediaStreamSelection inspection digest is invalid");
   if (item.videoStreamIndex !== undefined) nonNegativeInteger(item.videoStreamIndex, "MediaStreamSelection.videoStreamIndex");
   if (item.audioStreamIndex !== undefined) nonNegativeInteger(item.audioStreamIndex, "MediaStreamSelection.audioStreamIndex");
   assert(item.videoStreamIndex !== undefined || item.audioStreamIndex !== undefined,
@@ -181,9 +179,6 @@ export function sealSynchronizedMedia(
 export function verifySynchronizedMedia(value: unknown): asserts value is SynchronizedMedia {
   const item = object(value, "SynchronizedMedia") as unknown as SynchronizedMedia;
   assert(item.contract === "svml.synchronized-media@1", "SynchronizedMedia contract is invalid");
-  assert(isDigest(item.sourceArtifactDigest), "SynchronizedMedia source digest is invalid");
-  assert(isDigest(item.inspectionDigest), "SynchronizedMedia inspection digest is invalid");
-  assert(isDigest(item.selectionDigest), "SynchronizedMedia selection digest is invalid");
   assert(item.timeline.spanAuthority === "video" || item.timeline.spanAuthority === "audio",
     "SynchronizedMedia authority is invalid");
   verifyRational(item.timeline.frameRate, "SynchronizedMedia.timeline.frameRate");

@@ -152,11 +152,6 @@ export const videoManifest: ModuleManifest = {
       outputs: [{
         name: "basis",
         type: contractTypes.speechBasis,
-        affinity: [{
-          resultPointer: "/narrativeDigest",
-          input: "narrative",
-          inputPointer: "/semanticIndex/digest",
-        }],
       }],
       needs: [],
       implementation: {
@@ -214,11 +209,6 @@ const speechTakeGenerationFragment = sealGraphFragment({
     type: contractTypes.speechBasis,
     root: operation("assemble-take"),
     semanticInputs: ["narrative", "estimate"],
-    affinity: [{
-      resultPointer: "/narrativeDigest",
-      source: input("narrative"),
-      sourcePointer: "/semanticIndex/digest",
-    }],
     fidelity: "exact",
   }],
 });

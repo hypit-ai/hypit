@@ -56,8 +56,6 @@ export const speechTakeManifest: ModuleManifest = {
         name: "audio",
         type: contractTypes.speechAudioBasis,
         affinity: [
-          { resultPointer: "/basisDigest", input: "basis", inputPointer: "/basisDigest" },
-          { resultPointer: "/narrativeDigest", input: "basis", inputPointer: "/narrativeDigest" },
           { resultPointer: "/programSpace/digest", input: "basis", inputPointer: "/programSpace/digest" },
           { resultPointer: "/audio/digest", input: "basis", inputPointer: "/audio/digest" },
         ],
@@ -76,8 +74,6 @@ export const speechTakeManifest: ModuleManifest = {
         name: "visual",
         type: contractTypes.visualTrack,
         affinity: [
-          { resultPointer: "/sources/0/digest", input: "basis", inputPointer: "/basisDigest" },
-          { resultPointer: "/sources/1/digest", input: "basis", inputPointer: "/narrativeDigest" },
           { resultPointer: "/programSpaceDigest", input: "basis", inputPointer: "/programSpace/digest" },
         ],
       }],
@@ -95,8 +91,6 @@ export const speechTakeManifest: ModuleManifest = {
         name: "track",
         type: contractTypes.audioTrack,
         affinity: [
-          { resultPointer: "/sources/0/digest", input: "basis", inputPointer: "/basisDigest" },
-          { resultPointer: "/sources/1/digest", input: "basis", inputPointer: "/narrativeDigest" },
           { resultPointer: "/programSpaceDigest", input: "basis", inputPointer: "/programSpace/digest" },
         ],
       }],

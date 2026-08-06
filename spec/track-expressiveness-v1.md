@@ -71,8 +71,9 @@ dependency collection must deduplicate the shared content digest.
 ### E4 — Independent absolute stacking
 
 One package may emit a board at one absolute stack position and icons or labels at other positions.
-A Present from another Track must be able to appear between them. Track identity is ownership and
-provenance, never a render stacking context.
+A Present from another Track must be able to appear between them. Track identity groups one
+self-contained render contribution; provenance lives in the Graph/Derivation and Track never forms
+a render stacking context.
 
 ### E5 — Local motion and handoff
 

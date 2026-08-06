@@ -97,11 +97,6 @@ export type VisualPresent = {
   readonly elements: readonly VisualElement[];
 };
 
-export type TrackSource = {
-  readonly name: string;
-  readonly digest: Digest;
-};
-
 export type VisualTrack = {
   readonly contract: "svml.visual-track@1";
   /** The one terminal visual language shared by official video components. */
@@ -109,8 +104,6 @@ export type VisualTrack = {
   readonly digest: Digest;
   readonly id: string;
   readonly programSpaceDigest: Digest;
-  /** Domain-neutral semantic commitments bound by Producer affinity declarations. */
-  readonly sources: readonly TrackSource[];
   /** Author-owned contributions that Composition may interleave by absolute z. */
   readonly presents: readonly VisualPresent[];
 };
@@ -132,7 +125,6 @@ export type AudioTrack = {
   readonly digest: Digest;
   readonly id: string;
   readonly programSpaceDigest: Digest;
-  readonly sources: readonly TrackSource[];
   readonly clips: readonly AudioClip[];
 };
 
@@ -197,22 +189,6 @@ function assertStyle(style: readonly VisualStyleDeclaration[], label: string): v
     names.add(declaration.name);
     assertHyperframesVisualStyleV1(declaration.name, declaration.value, label);
   }
-}
-
-function assertSources(sources: readonly TrackSource[], label: string): void {
-  const names = new Set<string>();
-  for (const source of sources) {
-    assertNonEmpty(source.name, `${label} source name`);
-    if (names.has(source.name)) throw new Error(`${label} contains duplicate source ${source.name}.`);
-    names.add(source.name);
-    if (!isDigest(source.digest)) throw new Error(`${label}.${source.name} source digest is invalid.`);
-  }
-}
-
-function normalizeSources(sources: readonly TrackSource[]): TrackSource[] {
-  return [...sources]
-    .map((source) => ({ name: source.name, digest: source.digest }))
-    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function assertAttributes(attributes: readonly VisualAttribute[] | undefined, label: string): void {
@@ -431,7 +407,6 @@ function visualTrackContent(value: Omit<VisualTrack, "digest">): Omit<VisualTrac
     visualIr: value.visualIr,
     id: value.id,
     programSpaceDigest: value.programSpaceDigest,
-    sources: normalizeSources(value.sources),
     presents: [...value.presents]
       .map((present) => ({
         id: present.id,
@@ -451,7 +426,6 @@ function audioTrackContent(value: Omit<AudioTrack, "digest">): Omit<AudioTrack, 
     contract: "svml.audio-track@1",
     id: value.id,
     programSpaceDigest: value.programSpaceDigest,
-    sources: normalizeSources(value.sources),
     clips: [...value.clips]
       .map((clip) => ({
         id: clip.id,
@@ -491,7 +465,6 @@ export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: Pro
   if (track.contract !== "svml.visual-track@1") throw new Error("Unsupported VisualTrack contract.");
   if (track.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
   assertNonEmpty(track.id, "VisualTrack id");
-  assertSources(track.sources, track.id);
   if (!isDigest(track.programSpaceDigest)) throw new Error(`${track.id} has an invalid ProgramSpace digest.`);
   if (programSpace !== undefined && track.programSpaceDigest !== programSpace.digest) {
     throw new Error(`${track.id} belongs to another ProgramSpace.`);
@@ -512,7 +485,6 @@ export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: Progr
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (track.contract !== "svml.audio-track@1") throw new Error("Unsupported AudioTrack contract.");
   assertNonEmpty(track.id, "AudioTrack id");
-  assertSources(track.sources, track.id);
   if (!isDigest(track.programSpaceDigest)) throw new Error(`${track.id} has an invalid ProgramSpace digest.`);
   if (programSpace !== undefined && track.programSpaceDigest !== programSpace.digest) {
     throw new Error(`${track.id} belongs to another ProgramSpace.`);

@@ -10,6 +10,7 @@
       "@svml/component-kit": ["packages/component-kit/src/index.ts"],
       "@svml/endpoint-kit": ["packages/endpoint-kit/src/index.ts"],
       "@svml/contracts": ["packages/contracts/src/index.ts"],
+      "@svml/media": ["packages/media/src/index.ts"],
       "@svml/driver-node": ["packages/driver-node/src/index.ts"],
       "@svml/script": ["packages/script/src/index.ts"],
       "@svml/text": ["packages/text/src/index.ts"],

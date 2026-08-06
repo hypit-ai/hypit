@@ -164,7 +164,6 @@ export function renderTextTrack(programSpace: ProgramSpace, program: TextTrackPr
     visualIr: "svml.hyperframes-visual-ir@1",
     id: program.id,
     programSpaceDigest: programSpace.digest,
-    sources: [{ name: "program", digest: program.digest }],
     presents: program.items.map((item) => ({
       id: item.id,
       span: { ...item.span },

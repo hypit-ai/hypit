@@ -22,8 +22,8 @@ import {
 } from "../src/index.js";
 
 const sourceSegments = [
-  { segmentId: "opening", startSec: 0, endSec: 1, sourceArtifactDigest: digestOf("opening") },
-  { segmentId: "answer", startSec: 1, endSec: 2, sourceArtifactDigest: digestOf("answer") },
+  { segmentId: "opening", startSec: 0, endSec: 1 },
+  { segmentId: "answer", startSec: 1, endSec: 2 },
 ];
 const loopbackEnabled = process.env.SVML_LOOPBACK_TESTS === "1";
 
@@ -136,8 +136,6 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
     const artifact = await artifacts.put(expected, "audio/wav");
     const evidenceAudio = sealSpeechEvidenceAudio({
       contract: "svml.speech-evidence-audio@1",
-      basisDigest: digestOf("loopback:basis"),
-      narrativeDigest: digestOf("loopback:narrative"),
       programSpaceDigest: digestOf("loopback:program"),
       sourceAudioArtifactDigest: digestOf("loopback:speech-master"),
       artifact,
@@ -193,9 +191,7 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
     assert.equal(output.value.kind, "inline");
     const value = output.value.kind === "inline" ? output.value.value : null;
     assert.equal((value as { readonly audioArtifactDigest?: unknown }).audioArtifactDigest,
-      evidenceAudio.sourceAudioArtifactDigest);
-    assert.equal((value as { readonly evidenceAudioDigest?: unknown }).evidenceAudioDigest,
-      evidenceAudio.evidenceAudioDigest);
+      evidenceAudio.artifact.digest);
     assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
     assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@2");
     assert.equal(contractTypes.speechEvidenceAudio.name, "SpeechEvidenceAudio");

@@ -1,8 +1,12 @@
 import { canonicalize } from "@svml/core";
 
 import { ScriptSyntaxError } from "./error.js";
-import { narrativeSourceMap, narrativeValue } from "./narrative.js";
-import { narrativeType } from "./manifest.js";
+import {
+  narrativeSegmentExcerptValue,
+  narrativeSourceMap,
+  narrativeValue,
+} from "./narrative.js";
+import { narrativeExcerptType, narrativeType } from "./manifest.js";
 import { parseScript } from "./parser.js";
 import type { ScriptSurfaceInput, ScriptSurfaceOutput } from "./types.js";
 
@@ -69,6 +73,12 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
         value: { kind: "inline", value: narrativeValue(parsed) },
         range: { start: input.openingStart, end: close.end },
       },
+      ...parsed.segments.map((segment) => ({
+        id: `${rawId}.segment.${segment.id}`,
+        type: narrativeExcerptType,
+        value: { kind: "inline" as const, value: narrativeSegmentExcerptValue(parsed, segment) },
+        range: segment.range,
+      })),
     ],
     components: [],
     fragments: [],

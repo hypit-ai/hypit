@@ -26,8 +26,6 @@ test("speech evidence uses integer rational boundary projection rather than floa
 test("SpeechEvidenceAudio binds source bytes, evidence bytes and the complete sample map", () => {
   const value = sealSpeechEvidenceAudio({
     contract: "svml.speech-evidence-audio@1",
-    basisDigest: digestOf("basis"),
-    narrativeDigest: digestOf("narrative"),
     programSpaceDigest: digestOf("program"),
     sourceAudioArtifactDigest: digestOf("master"),
     artifact: {
@@ -41,7 +39,7 @@ test("SpeechEvidenceAudio binds source bytes, evidence bytes and the complete sa
     channels: 1,
     sampleFrames: 16_000,
     durationSec: 1,
-    segments: [{ segmentId: "line", startSec: 0, endSec: 1, sourceArtifactDigest: digestOf("visual") }],
+    segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
     sampleMap: {
       algorithm: "rational-boundary-round@1",
       sourceSampleRate: 48_000,

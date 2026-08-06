@@ -126,7 +126,6 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
         name: "generation",
         capability: item.capability,
         returns: item.returns,
-        affinity: [{ resultPointer: "/requestDigest", input: "request", inputPointer: "/requestDigest" }],
       }],
       implementation: {
         kind: "registered",
@@ -151,11 +150,6 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
         type: item.returns,
         root: { kind: "fragment-operation", operation: "generate" },
         semanticInputs: ["request"],
-        affinity: [{
-          resultPointer: "/requestDigest",
-          source: { kind: "fragment-input", name: "request" },
-          sourcePointer: "/requestDigest",
-        }],
         fidelity: "exact",
       }],
     });

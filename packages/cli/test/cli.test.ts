@@ -39,10 +39,78 @@ test("official v2 CLI checks a real Script source through the Node compiler host
     "@svml/script@0.0.0-dev",
     "@svml/svs@1",
   ]);
-  assert.deepEqual(result.exports, [{ name: "story", type: {
-    module: { name: "@svml/narrative", version: "0.0.0-dev" },
-    name: "Narrative",
-  }, kind: "record" }]);
+  assert.deepEqual(result.exports, [
+    { name: "story", type: {
+      module: { name: "@svml/narrative", version: "0.0.0-dev" },
+      name: "Narrative",
+    }, kind: "record" },
+    { name: "story.segment.opening", type: {
+      module: { name: "@svml/narrative", version: "0.0.0-dev" },
+      name: "NarrativeExcerpt",
+    }, kind: "record" },
+  ]);
+});
+
+test("official media and Seedance Surfaces lower author intent into exact generation steps", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-generation-"));
+  const file = join(root, "main.svml");
+  await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
+  await writeFile(file, `<svml>
+    <import from="@svml/script@1"/>
+    <import as="media" from="@svml/media@1"/>
+    <import as="seedance" from="@svml/seedance@1"/>
+    <script id="story"><opening><HOST>Say exactly these words.</opening></script>
+    <media:Image id="host" src="./host.png"/>
+    <seedance:Prompt id="direction">
+      Locked medium close-up in a quiet daylight studio.
+    </seedance:Prompt>
+    <seedance:Speech id="take" model="mini" script={story.segment.opening}
+      prompt={direction} duration="5">
+      <seedance:Reference image={host} role="character"/>
+    </seedance:Speech>
+    <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
+  </svml>`, "utf8");
+
+  let checkedOutput = "";
+  await runCli(["check", file], { write: (text) => { checkedOutput += text; } });
+  const checked = JSON.parse(checkedOutput) as {
+    readonly ok: boolean;
+    readonly sourceAssets: readonly { readonly mediaType: string }[];
+    readonly exports: readonly { readonly name: string }[];
+  };
+  assert.equal(checked.ok, true);
+  assert.deepEqual(checked.sourceAssets.map((item) => item.mediaType), ["image/png"]);
+  assert.deepEqual(checked.exports.map((item) => item.name), [
+    "direction",
+    "host",
+    "motion.request",
+    "motion.video",
+    "story",
+    "story.segment.opening",
+    "take",
+    "take.request",
+  ]);
+
+  let planOutput = "";
+  await runCli([
+    "plan", file,
+    "--target", "take",
+    "--target", "motion.video",
+  ], { write: (text) => { planOutput += text; } });
+  const plan = JSON.parse(planOutput) as {
+    readonly goals: readonly unknown[];
+    readonly steps: readonly { readonly producer: { readonly name: string } }[];
+  };
+  assert.equal(plan.goals.length, 2);
+  assert.deepEqual(
+    plan.steps.map((step) => step.producer.name).sort(),
+    [
+      "request-seedance-2-mini",
+      "request-seedance-2-mini",
+      "select-primary-video",
+      "select-primary-video",
+    ],
+  );
 });
 
 test("official v2 CLI closes the explicit HyperFrames render package without loading a Provider", async () => {

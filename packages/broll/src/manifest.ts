@@ -91,7 +91,6 @@ export const brollProgramSchema: ValueSchema = object({
 export const brollProductSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.broll-product@1" } },
   productDigest: { schema: digest },
-  programDigest: { schema: digest },
   programSpace: { schema: programSpaceSchema },
   visualTrack: { schema: visualTrackSchema },
   audioTrack: { schema: audioTrackSchema },
@@ -122,7 +121,6 @@ export const brollManifest: ModuleManifest = {
         name: "product",
         type: brollTypes.product,
         affinity: [
-          { resultPointer: "/programDigest", input: "program", inputPointer: "/digest" },
           { resultPointer: "/programSpace/digest", input: "space", inputPointer: "/digest" },
         ],
       }],
@@ -141,7 +139,6 @@ export const brollManifest: ModuleManifest = {
         type: contractTypes.visualTrack,
         affinity: [
           { resultPointer: "/programSpaceDigest", input: "product", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/sources/0/digest", input: "product", inputPointer: "/programDigest" },
         ],
       }],
       needs: [],
@@ -159,7 +156,6 @@ export const brollManifest: ModuleManifest = {
         type: contractTypes.audioTrack,
         affinity: [
           { resultPointer: "/programSpaceDigest", input: "product", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/sources/0/digest", input: "product", inputPointer: "/programDigest" },
         ],
       }],
       needs: [],

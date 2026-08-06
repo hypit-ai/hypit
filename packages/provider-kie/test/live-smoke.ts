@@ -14,6 +14,7 @@ import {
   sealTypedModule,
   start,
 } from "@svml/core";
+import { mediaManifest, narrativeManifest } from "@svml/contracts";
 import {
   geminiOmniComponent,
   geminiOmniEndpoints,
@@ -339,7 +340,7 @@ function selectCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
 }
 
 async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
-  const closure = createResolvedClosure([generationManifest, item.manifest]);
+  const closure = createResolvedClosure([mediaManifest, narrativeManifest, generationManifest, item.manifest]);
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, generationComponent.validators);
   registerTypeValidatorFacets(validators, item.component.validators);

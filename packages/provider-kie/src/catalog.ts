@@ -44,11 +44,9 @@ import type { SeedreamRequest } from "@svml/seedream";
 export type KieArtifactUrlResolver = (artifact: BlobRef) => Promise<string>;
 
 export type KieTask = {
-  readonly authorModel: string;
   readonly model: string;
   readonly input: CanonicalValue;
   readonly result: "image" | "video";
-  readonly requestedDurationSec?: number;
 };
 
 export type KieModelAdapter = {
@@ -105,10 +103,8 @@ const seedanceAdapters = ([
       if (groups.audio.length > 0) modeInput.reference_audio_urls = await urls(groups.audio, resolve);
     }
     return {
-      authorModel,
       model: kieModel,
       result: "video",
-      requestedDurationSec: request.durationSec,
       input: canonicalize({
         prompt: request.prompt,
         ...modeInput,
@@ -154,11 +150,9 @@ const minimaxAdapters = ([
       if (audios.length > 0) input.reference_audio_urls = await urls(audios, resolve);
     }
     return {
-      authorModel: "minimax-h3",
       model: kieModel,
       input: canonicalize(input),
       result: "video",
-      requestedDurationSec: request.durationSec,
     };
   },
 ));
@@ -189,11 +183,9 @@ const geminiAdapter = adapter(
       })));
     }
     return {
-      authorModel: request.model,
       model: "gemini-omni-video",
       input: canonicalize(input),
       result: "video",
-      requestedDurationSec: request.durationSec,
     };
   },
 );
@@ -221,12 +213,10 @@ const grokAdapters = (["text", "image", "preview-1.5"] as const).map((mode) => a
       input.image_urls = await urls(request.images, resolve);
     }
     return {
-      authorModel: request.model,
       model: request.mode === "text" ? "grok-imagine/text-to-video"
         : request.mode === "image" ? "grok-imagine/image-to-video" : "grok-imagine-video-1-5-preview",
       input: canonicalize(input),
       result: "video",
-      requestedDurationSec: request.durationSec,
     };
   },
 ));
@@ -245,7 +235,6 @@ const gptImageAdapters = (["text", "image"] as const).map((mode) => adapter(
     };
     if (request.mode === "image") input.input_urls = await urls(request.images, resolve);
     return {
-      authorModel: request.model,
       model: request.mode === "text" ? "gpt-image-2-text-to-image" : "gpt-image-2-image-to-image",
       input: canonicalize(input),
       result: "image",
@@ -263,7 +252,6 @@ const nanoAdapters = (["v2", "pro"] as const).map((key) => adapter(
     verifyNanoBananaRequest(value, model);
     const request = value as NanoBananaRequest;
     return {
-      authorModel: request.model,
       model,
       result: "image",
       input: canonicalize({
@@ -294,7 +282,6 @@ const seedreamAdapters = (["text", "image"] as const).map((mode) => adapter(
     };
     if (request.mode === "image") input.image_urls = await urls(request.images, resolve);
     return {
-      authorModel: request.model,
       model: request.mode === "text" ? "seedream/5-lite-text-to-image" : "seedream/5-lite-image-to-image",
       input: canonicalize(input),
       result: "image",

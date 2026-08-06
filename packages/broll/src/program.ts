@@ -383,7 +383,6 @@ function audioClips(program: BrollProgram, programSpace: ProgramSpace): AudioCli
 function productContent(value: Omit<BrollProduct, "productDigest">): Omit<BrollProduct, "productDigest"> {
   return {
     contract: "svml.broll-product@1",
-    programDigest: value.programDigest,
     programSpace: structuredClone(value.programSpace),
     visualTrack: structuredClone(value.visualTrack),
     audioTrack: structuredClone(value.audioTrack),
@@ -397,13 +396,11 @@ export function computeBrollProductDigest(value: Omit<BrollProduct, "productDige
 export function compileBrollProduct(programSpace: ProgramSpace, program: BrollProgram): BrollProduct {
   assertBrollProgramIdentity(program, programSpace);
   const { incoming, outgoing } = transitionMaps(program, programSpaceFrameCount(programSpace));
-  const sources = [{ name: "program", digest: program.digest }];
   const visualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: `${program.id}:visual`,
     programSpaceDigest: programSpace.digest,
-    sources,
     presents: program.items.map((item) => ({
       id: item.id,
       span: { ...item.span },
@@ -415,12 +412,10 @@ export function compileBrollProduct(programSpace: ProgramSpace, program: BrollPr
     contract: "svml.audio-track@1",
     id: `${program.id}:audio`,
     programSpaceDigest: programSpace.digest,
-    sources,
     clips: audioClips(program, programSpace),
   });
   const content = productContent({
     contract: "svml.broll-product@1",
-    programDigest: program.digest,
     programSpace,
     visualTrack,
     audioTrack,
@@ -435,10 +430,7 @@ export function assertBrollProductIdentity(product: BrollProduct, programSpace: 
   assertProgramSpaceIdentity(product.programSpace);
   if (product.contract !== "svml.broll-product@1") throw new Error("Unsupported BrollProduct contract.");
   if (
-    !isDigest(product.programDigest)
-    || product.programSpace.digest !== programSpace.digest
-    || product.visualTrack.sources.find((source) => source.name === "program")?.digest !== product.programDigest
-    || product.audioTrack.sources.find((source) => source.name === "program")?.digest !== product.programDigest
+    product.programSpace.digest !== programSpace.digest
   ) throw new Error("BrollProduct affinity is invalid.");
   const { productDigest: _digest, ...content } = product;
   if (!isDigest(product.productDigest) || product.productDigest !== computeBrollProductDigest(content)) {

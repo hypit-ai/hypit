@@ -1,7 +1,8 @@
 <!--
   SVML authoring golden fixture.
-  Script, Film and HyperFrames Render Surfaces are implemented. The intervening
-  generation, Speech and Track Surfaces remain the package-local design target.
+  Script, authored media, Seedance generation, Film and HyperFrames Render
+  Surfaces are implemented. Speech assembly and Track Surfaces remain the
+  package-local design target.
 -->
 <svml>
   <import from="@svml/script@1"/>
@@ -58,6 +59,7 @@
     model="mini"
     script={script.segment.opening}
     prompt={alice-direction}
+    duration="8"
   >
     <seedance:Reference image={alice-reference} role="character"/>
   </seedance:Speech>
@@ -67,6 +69,7 @@
     model="mini"
     script={script.segment.answer}
     prompt={bob-direction}
+    duration="8"
   >
     <seedance:Reference image={bob-reference} role="character"/>
   </seedance:Speech>
@@ -84,6 +87,7 @@
     id="product-motion"
     model="mini"
     prompt={product-direction}
+    duration="5"
   >
     <seedance:Reference image={product-reference} role="subject"/>
   </seedance:Video>

@@ -108,4 +108,22 @@ export type Narrative = {
     readonly speech: string;
   };
 };
+
+/**
+ * One author-selected contiguous excerpt. Script is one possible producer;
+ * generation and speech packages consume this shared value without importing
+ * Script's parser or source representation.
+ */
+export type NarrativeExcerpt = {
+  readonly contract: "svml.narrative-excerpt@1";
+  readonly kind: "segment";
+  readonly id: string;
+  readonly tokenStart: number;
+  readonly tokenEndExclusive: number;
+  readonly serializations: {
+    readonly dialogue: string;
+    readonly speech: string;
+  };
+  readonly excerptDigest: Digest;
+};
 import type { Digest } from "@svml/protocol";

@@ -6,8 +6,8 @@
 > Candidate from a `BuildRequest`, and memoizes the reverse closure by stable `OperationId` before the
 > Build Machine executes anything. Reuse and product-level “Pin” UI actions are ordinary
 > Existing-Value Candidates, not Core branches; Providers only execute already selected exact
-> CapabilityRefs. Declarative affinity prevents exact media evidence or provided values from being
-> attached to the wrong Narrative/Basis.
+> CapabilityRefs. Declarative affinity compares intrinsic identities such as ProgramSpace and the
+> exact acoustic Blob; dependency and provenance truth stay in Graph, Derivation and Receipt.
 > `packages/speech-take` proves atomic Product plus ordinary audio/visual Projection;
 > `packages/elaborator` now links parser-independent Author Modules in two phases—predeclaring every
 > component output before resolving forward references—and expands content-addressed static
@@ -83,25 +83,23 @@ remain optional. There is no privileged `@svml/author` package or required `.svk
 If a domain Type declares a semantic validator, the Host additionally uses `@svml/validation` (or
 an equivalent implementation); the Type still does not enter Core.
 
-Semantic Video Markup Language is a semantic source language for information-flow
-video. Script creates stable semantic addresses. A Composition selects one
-content-addressed `ProgramBasis` and one exact `SemanticMap`; flat Track
-Components then lower every audiovisual contribution into one deterministic
-HyperFrames HTML document.
+Semantic Video Markup Language is a graph language for semantic, information-flow video. `.svml`
+is the pleasant author notation; package Surfaces lower it into peer Logical Outputs, Candidates
+and Operations. Script creates stable semantic addresses, while optional Film, Track and render
+packages are ordinary graph regions rather than a mandatory one-way compiler pipeline.
 
 ```text
-.svml + transitive .svk/.svs/.svc imports + lock + evidence
-        │
-        ├─ typed Plan IR ─────────────────────────────> Canvas view
-        ├─ Basis Producer ─────> TemporalBasisProduction
-        ├─ Locator ────────────> CompleteSemanticMap
-        ├─ Basis + Map ────────> TemporalBinding ─────> Timeline view
-        └─ flat Track[] ───────> Composition ─────────> HyperFrames HTML
+                                    ┌─> visual Track ───────────┐
+.svml ─> typed Records + Graph ─> Take                           ├─> optional Composition ─> render
+          │                         └─> audio ─> evidence ─> Map ─┘
+          ├────────────────────────────────────────────> any Map/Track Target
+          └─> another independent branch ──────────────> another Target
 ```
 
-Canvas and Timeline are views of the same source closure, not additional
-authoring truths. Provider tasks, pins, takes, caches and queue state belong to a
-Runtime Host and do not enter the source language.
+Reverse Demand starts from whichever Targets the user asks for, deduplicates shared Operations and
+never grants final Film/render special status. Canvas and Timeline are views of the same source
+closure, not additional authoring truths. Provider tasks, reused values, caches and queue state
+belong to Graph realization or Runtime state and do not become hidden fields in the author source.
 
 ## Implemented v1 slice
 
@@ -232,8 +230,8 @@ generation provider is invoked by tests or compilation.
 Script Surface and specifies the complete namespaced author experience for two Seedance Mini speech
 takes, Seedance B-roll, explicit WhisperX alignment, two speaker caption styles, editorial text,
 peer Tracks, Film and Hyperframes rendering. Its README marks every implemented and missing lowering;
-Script, Film and Render are accepted by the current compiler, while the intervening generation,
-Speech and Track Surfaces remain a design target.
+Script, authored Image, Seedance generation, Film and Render are accepted by the current compiler,
+while Speech assembly and Track Surfaces remain the next target.
 
 ## Specification and implementation record
 

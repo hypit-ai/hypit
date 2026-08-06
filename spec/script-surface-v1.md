@@ -337,7 +337,7 @@ Segment 仍有独立 start/end，即使二者最终重合；任意不同 identit
 Locator 必须提交覆盖全部 `2M + 2N` identity 的总映射：
 
 ```text
-SemanticAnchorIdentity → ProgramPoint(basisDigest)
+SemanticAnchorIdentity → ProgramPoint(ProgramSpace)
 ```
 
 完整性与精度正交：每个点都必须存在，同时可以标记为 `estimated`、`derived`
