@@ -5,6 +5,9 @@ import type { BuildState } from "@svml/protocol";
 import type { Digest } from "@svml/protocol";
 import type {
   ArtifactStore,
+  BuildCatalog,
+  BuildCatalogDescriptor,
+  BuildCatalogEntry,
   BuildSchedulerFactory,
   BuildSchedulerOptions,
   BuildSnapshot,
@@ -35,6 +38,8 @@ export type LocalRuntimeClosureOptions = {
 
 export type CreateLocalRuntimeOptions = {
   readonly buildStore: BuildStore;
+  /** Host presentation metadata only; never part of Runtime Closure or Core state. */
+  readonly buildCatalog?: BuildCatalog;
   readonly operationStore?: OperationStore;
   readonly artifactStore: ArtifactStore;
   readonly credentialStore?: CredentialStore;
@@ -52,7 +57,10 @@ export type ProjectLocalRuntimeOptions = {
   /** Project directory containing the private .svml Runtime directory. Defaults to cwd. */
   readonly root?: string;
   readonly statePath?: string;
+  /** Optional separate Host catalog database. Defaults to statePath when using local SQLite state. */
+  readonly catalogPath?: string;
   readonly artifactPath?: string;
+  readonly buildCatalog?: BuildCatalog;
   /** Exact installed implementation package lock. Source imports cannot change this selection. */
   readonly packageLock?: string;
   /** Additional configured Runtime services. A unique supplied role replaces that role's local default. */
@@ -82,6 +90,8 @@ export type LocalBuildRequest = {
   /** Stable user/run identity. Reusing it resumes only the same Core Build identity. */
   readonly id: string;
   readonly state: BuildState;
+  /** Source aliases and paths for Host inspection. Not trusted Build input. */
+  readonly catalog?: BuildCatalogDescriptor;
   /** Host transfer bundle. It is staged before Core commands run and never enters BuildState. */
   readonly attachments?: readonly ArtifactAttachment[];
 };
@@ -96,6 +106,7 @@ export type LocalBuildOptions = {
 
 export type LocalRuntimeStatus = {
   readonly build: BuildSnapshot | undefined;
+  readonly catalog: BuildCatalogEntry | undefined;
   readonly operations: readonly OperationSnapshot[];
 };
 
@@ -103,6 +114,7 @@ export type LocalRuntime = {
   build(request: LocalBuildRequest, options?: LocalBuildOptions): Promise<ScheduledBuildResult>;
   buildMany(requests: readonly LocalBuildRequest[]): Promise<readonly ScheduledBuildResult[]>;
   status(build: string): Promise<LocalRuntimeStatus>;
+  builds(): Promise<readonly BuildCatalogEntry[]>;
   cancel(build: string): Promise<ScheduledBuildResult | undefined>;
   readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
   close(): Awaitable<void>;

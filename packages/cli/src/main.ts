@@ -2,6 +2,8 @@ import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { LocalRuntime } from "@svml/local";
+import type { NodeCompiledSourceClosure } from "@svml/compiler-node";
+import type { BuildCatalogDescriptor } from "@svml/runtime";
 import {
   createBuildRecordCandidate,
   sealRealizationOverlay,
@@ -42,13 +44,16 @@ type ParsedArgs = {
   readonly packages: readonly string[];
   readonly record: string | undefined;
   readonly output: string | undefined;
+  readonly name: string | undefined;
   readonly artifact: string | undefined;
   readonly to: string | undefined;
   readonly pins: readonly { readonly output: string; readonly build: string }[];
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
-  const [command, file, ...rest] = argv;
+  const [command, ...tail] = argv;
+  const file = command === "builds" ? undefined : tail[0];
+  const rest = command === "builds" ? tail : tail.slice(1);
   const targets: string[] = [];
   let root: string | undefined;
   let runtime: string | undefined;
@@ -60,6 +65,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let substitute = false;
   let record: string | undefined;
   let output: string | undefined;
+  let name: string | undefined;
   let artifact: string | undefined;
   let to: string | undefined;
   const pins: { output: string; build: string }[] = [];
@@ -118,6 +124,13 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--output requires a Logical Output id");
       output = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--name") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--name requires a source output name");
+      name = value;
       index += 1;
       continue;
     }
@@ -181,6 +194,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     packages,
     record,
     output,
+    name,
     artifact,
     to,
     pins,
@@ -197,8 +211,9 @@ function usage(): string {
     "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build --accept-substitute] [--follow]",
     "  svml-v2 build <file.svrun> --runtime profile.json [--follow]",
     "  svml-v2 status <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  svml-v2 builds --runtime profile.json|./svml.runtime.ts",
     "  svml-v2 inspect <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  svml-v2 get <build-id> --runtime profile.json|./svml.runtime.ts [--record record-id|--output logical-output-id|--artifact digest] [--to path]",
+    "  svml-v2 get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
     "  svml-v2 cancel <build-id> --runtime profile.json|./svml.runtime.ts",
   ].join("\n");
 }
@@ -208,10 +223,39 @@ function isLocalRuntime(value: unknown): value is LocalRuntime {
     && value !== null
     && "build" in value
     && typeof value.build === "function"
+    && "builds" in value
+    && typeof value.builds === "function"
     && "readArtifact" in value
     && typeof value.readArtifact === "function"
     && "close" in value
     && typeof value.close === "function";
+}
+
+function createCatalogDescriptor(options: {
+  readonly core: BuildCatalogDescriptor["core"];
+  readonly source: string;
+  readonly compilation: NodeCompiledSourceClosure;
+  readonly run?: { readonly path: string; readonly targetSet?: string };
+}): BuildCatalogDescriptor {
+  const aliases = options.compilation.exports.map((item) => {
+    if (item.ref.kind === "operation-result") {
+      throw new Error(`public output ${item.name} was not lowered to a stable Record or Logical Output`);
+    }
+    return { name: item.name, type: item.type, ref: item.ref };
+  });
+  return {
+    format: "svml.build-catalog-descriptor@1",
+    core: options.core,
+    source: {
+      path: resolve(options.source),
+      closure: options.compilation.closure.id,
+    },
+    ...(options.run === undefined ? {} : { run: {
+      path: resolve(options.run.path),
+      ...(options.run.targetSet === undefined ? {} : { targetSet: options.run.targetSet }),
+    } }),
+    aliases,
+  };
 }
 
 async function loadLocalRuntime(path: string): Promise<LocalRuntime> {
@@ -232,35 +276,54 @@ async function loadLocalRuntime(path: string): Promise<LocalRuntime> {
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<void> {
   const args = parseArgs(argv);
-  if (args.file === undefined
-    || (args.command !== "lock-packages" && args.command !== "check" && args.command !== "plan" && args.command !== "build"
-      && args.command !== "status" && args.command !== "inspect" && args.command !== "get" && args.command !== "cancel")) {
+  const known = args.command === "lock-packages" || args.command === "check" || args.command === "plan"
+    || args.command === "build" || args.command === "status" || args.command === "builds"
+    || args.command === "inspect" || args.command === "get" || args.command === "cancel";
+  if (!known || (args.command !== "builds" && args.file === undefined)) {
     throw new Error(usage());
   }
   if (args.command === "lock-packages") {
     if (args.packages.length === 0) throw new Error("lock-packages requires at least one --package");
     if (args.packageLock !== undefined) throw new Error("lock-packages does not accept --package-lock");
-    const output = resolve(args.file);
+    const output = resolve(args.file!);
     const root = args.root ?? dirname(output);
     const lock = await createNodePackageLock(args.packages, root);
     await writeNodePackageLock(output, lock);
     io.write(`${JSON.stringify({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages }, null, 2)}\n`);
     return;
   }
-  if ((args.record !== undefined || args.output !== undefined || args.artifact !== undefined || args.to !== undefined)
+  if ((args.record !== undefined || args.output !== undefined || args.name !== undefined
+    || args.artifact !== undefined || args.to !== undefined)
     && args.command !== "get") {
-    throw new Error("--record, --output, --artifact and --to are only valid for get");
+    throw new Error("--name, --record, --output, --artifact and --to are only valid for get");
   }
   if (args.pins.length > 0 && args.command !== "build") throw new Error("--pin is only valid for build");
   if (args.pins.length > 0 && !args.substitute) {
     throw new Error("--pin attaches substitute Candidates; add --accept-substitute");
   }
-  if (args.command === "status" || args.command === "inspect" || args.command === "get" || args.command === "cancel") {
+  if (args.command === "status" || args.command === "builds" || args.command === "inspect"
+    || args.command === "get" || args.command === "cancel") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
     const runtime = await loadLocalRuntime(args.runtime);
     try {
-      if (args.command === "status") {
-        const status = await runtime.status(args.file);
+      if (args.command === "builds") {
+        const entries = await runtime.builds();
+        const builds = await Promise.all(entries.map(async (entry) => {
+          const status = await runtime.status(entry.build);
+          return {
+            build: entry.build,
+            core: entry.core,
+            createdAt: entry.createdAt,
+            updatedAt: entry.updatedAt,
+            status: status.build?.state.status,
+            source: entry.source,
+            ...(entry.run === undefined ? {} : { run: entry.run }),
+            outputs: entry.aliases.map((alias) => alias.name),
+          };
+        }));
+        io.write(`${JSON.stringify({ builds }, null, 2)}\n`);
+      } else if (args.command === "status") {
+        const status = await runtime.status(args.file!);
         io.write(`${JSON.stringify({
           build: status.build === undefined ? undefined : {
             id: status.build.build,
@@ -269,6 +332,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             status: status.build.state.status,
             diagnostics: status.build.state.diagnostics,
           },
+          catalog: status.catalog,
           operations: status.operations.map((operation) => ({
             id: operation.id,
             command: operation.command,
@@ -280,12 +344,12 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
           })),
         }, null, 2)}\n`);
       } else if (args.command === "inspect") {
-        const status = await runtime.status(args.file);
+        const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
         io.write(`${JSON.stringify({
           build: status.build.build,
           revision: status.build.revision,
-          archive: inspectBuild(status.build.state),
+          archive: inspectBuild(status.build.state, status.catalog),
           operations: status.operations.map((operation) => ({
             id: operation.id,
             command: operation.command,
@@ -297,10 +361,10 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
           })),
         }, null, 2)}\n`);
       } else if (args.command === "get") {
-        const status = await runtime.status(args.file);
+        const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
-        if (args.artifact !== undefined && (args.record !== undefined || args.output !== undefined)) {
-          throw new Error("get accepts one of --record, --output or --artifact");
+        if (args.artifact !== undefined && (args.name !== undefined || args.record !== undefined || args.output !== undefined)) {
+          throw new Error("get accepts one of --name, --record, --output or --artifact");
         }
         if (args.artifact !== undefined) {
           const references = findArchivedArtifact(status.build.state, args.artifact);
@@ -321,8 +385,10 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
           return;
         }
         const record = selectArchivedRecord(status.build.state, {
+          ...(args.name === undefined ? {} : { name: args.name }),
           ...(args.record === undefined ? {} : { record: args.record }),
           ...(args.output === undefined ? {} : { output: args.output }),
+          ...(status.catalog === undefined ? {} : { catalog: status.catalog }),
         });
         if (args.to === undefined) {
           io.write(`${JSON.stringify({
@@ -340,7 +406,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
           }, null, 2)}\n`);
         }
       } else {
-        const result = await runtime.cancel(args.file);
+        const result = await runtime.cancel(args.file!);
         io.write(`${JSON.stringify({
           build: args.file,
           cancelled: result !== undefined,
@@ -354,7 +420,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     return;
   }
   if (args.packages.length > 0) throw new Error("--package is only valid for lock-packages");
-  const runMode = extname(args.file) === ".svrun";
+  const runMode = extname(args.file!) === ".svrun";
   if (runMode && (args.targets.length > 0 || args.substitute || args.pins.length > 0)) {
     throw new Error(".svrun owns Targets, Candidate selections and fidelity; do not combine it with --target, --pin or --accept-substitute");
   }
@@ -372,7 +438,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
       runtime = args.runtime === undefined ? undefined : await loadLocalRuntime(args.runtime);
       if (runMode) {
         const loaded = await loadRunFile({
-          path: args.file,
+          path: args.file!,
           compiler,
           packages,
           ...(runtime === undefined ? {} : { runtime }),
@@ -397,7 +463,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
         }, null, 2)}\n`);
         return;
       }
-      const result = await compiler.compileFile(args.file);
+      const result = await compiler.compileFile(args.file!);
       io.write(`${JSON.stringify({
         ok: true,
         sourceClosure: result.closure.id,
@@ -424,7 +490,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
       };
       let pinSummary: readonly { readonly output: string; readonly build: string; readonly candidate: string }[] = [];
       const loadedRun = runMode
-        ? await loadRunFile({ path: args.file, compiler, packages, runtime })
+        ? await loadRunFile({ path: args.file!, compiler, packages, runtime })
         : undefined;
       const result = loadedRun !== undefined
         ? compiler.planCompilation(loadedRun.compilation, {
@@ -434,7 +500,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
           })
         : args.pins.length === 0
-          ? await compiler.planFile(args.file, planOptions)
+          ? await compiler.planFile(args.file!, planOptions)
           : await (async () => {
             const compilation = await compiler.compileFile(args.file!);
             const seen = new Set<string>();
@@ -474,6 +540,15 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
       const built = await runtime.build({
         id: args.buildId ?? result.state.id,
         state: result.state,
+        catalog: createCatalogDescriptor({
+          core: result.state.id,
+          source: loadedRun?.source ?? args.file!,
+          compilation: result.compilation,
+          ...(loadedRun === undefined ? {} : { run: {
+            path: loadedRun.path,
+            targetSet: loadedRun.document.selectedTargets,
+          } }),
+        }),
         attachments: result.compilation.attachments,
       }, {
         follow: args.follow,
@@ -519,7 +594,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
             ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
           });
         })()
-      : await compiler.planFile(args.file, {
+      : await compiler.planFile(args.file!, {
           targets: args.targets,
           accepts: args.substitute ? "substitute" : "exact",
           ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),

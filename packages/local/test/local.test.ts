@@ -54,6 +54,17 @@ const providerManifest: RuntimeModuleManifest = {
 
 test("project local runtime resumes durable work while component and endpoint packages stay replaceable", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-"));
+  const initial = createGreetingBuild();
+  const catalog = {
+    format: "svml.build-catalog-descriptor@1" as const,
+    core: initial.id,
+    source: { path: join(directory, "main.svml"), closure: digestOf("source:greeting") },
+    aliases: [{
+      name: "final.document",
+      type: initial.plan.goals[0]!.type,
+      ref: { kind: "logical-output" as const, id: initial.request.targets[0]!.output },
+    }],
+  };
   let promptCalls = 0;
   let requestCalls = 0;
   let assembleCalls = 0;
@@ -151,7 +162,7 @@ test("project local runtime resumes durable work while component and endpoint pa
       components: [components],
       endpoints: [endpointPackage],
     });
-    const first = await firstRuntime.build({ id: "client-video", state: createGreetingBuild() });
+    const first = await firstRuntime.build({ id: "client-video", state: initial, catalog });
     assert.equal(first.status, "paused");
     assert.equal(starts, 1);
     assert.equal(resumes, 0);
@@ -162,13 +173,17 @@ test("project local runtime resumes durable work while component and endpoint pa
       components: [components],
       endpoints: [endpointPackage],
     });
-    const second = await secondRuntime.build({ id: "client-video", state: createGreetingBuild() });
+    const second = await secondRuntime.build({ id: "client-video", state: createGreetingBuild(), catalog });
     assert.equal(second.status, "complete");
     assert.equal(starts, 1);
     assert.equal(resumes, 1);
     assert.equal(promptCalls, 1, "persisted Core facts stop deterministic upstream replay");
     assert.equal(requestCalls, 1, "the Need request Producer is also persisted");
     assert.equal(assembleCalls, 1);
+    const clientStatus = await secondRuntime.status("client-video");
+    assert.equal(clientStatus.catalog?.core, initial.id);
+    assert.equal(clientStatus.catalog?.aliases[0]?.name, "final.document");
+    assert.deepEqual((await secondRuntime.builds()).map((item) => item.build), ["client-video"]);
 
     const followed = await secondRuntime.build(
       { id: "follow-video", state: createGreetingBuild() },

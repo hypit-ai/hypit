@@ -55,6 +55,8 @@ Implemented:
   Runtime assembly retained as the advanced embedding API;
 - domain-neutral Build archive inspection and Record egress: accepted intermediate Records remain
   durable independently of optional `inspect` / `get --to` Host reads;
+- Host-only Build Catalog history and source output aliases through `builds`, `inspect` and
+  `get --name`, without changing Core Build identity or Runtime Closure;
 - `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
   invocation seams.
 
@@ -136,7 +138,7 @@ permission enforcement and loaded-code attestation remain release work.
 
 - TypeScript v1 and v2 checks pass;
 - v1 research oracle: 35/35 tests;
-- v2: 287 passing, 3 environment-gated skips, 0 failures;
+- v2: 303 passing, 3 environment-gated skips, 0 failures;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
 - generated credentials, media outputs and local databases are ignored by Git.
 
