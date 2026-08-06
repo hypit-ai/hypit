@@ -70,20 +70,20 @@ export const mediaPipelineComponent = {
       },
     },
   ],
-  install(registry: import("@svml/component-kit").ProducerRegistrar): void {
-    registry.registerProducer(
-      mediaPipelineProducers.inspect,
-      mediaPipelineImplementationDigests.inspect,
-      ({ inputs }) => {
+  producers: [
+    {
+      producer: mediaPipelineProducers.inspect,
+      implementationDigest: mediaPipelineImplementationDigests.inspect,
+      handler: ({ inputs }) => {
         const source = blob(inputs.source!.value, "Media inspection source");
         const need: InspectMediaNeed = { contract: "svml.inspect-media-request@1", source };
         return { outputs: {}, needs: { inspection: canonicalize(need) } };
       },
-    );
-    registry.registerProducer(
-      mediaPipelineProducers.select,
-      mediaPipelineImplementationDigests.select,
-      ({ inputs }) => {
+    },
+    {
+      producer: mediaPipelineProducers.select,
+      implementationDigest: mediaPipelineImplementationDigests.select,
+      handler: ({ inputs }) => {
         const inspection = inline(inputs.inspection!.value, "MediaInspection");
         const request = inline(inputs.request!.value, "MediaSelectionRequest");
         verifyMediaInspection(inspection);
@@ -95,11 +95,11 @@ export const mediaPipelineComponent = {
           needs: {},
         };
       },
-    );
-    registry.registerProducer(
-      mediaPipelineProducers.normalize,
-      mediaPipelineImplementationDigests.normalize,
-      ({ inputs }) => {
+    },
+    {
+      producer: mediaPipelineProducers.normalize,
+      implementationDigest: mediaPipelineImplementationDigests.normalize,
+      handler: ({ inputs }) => {
         const source = blob(inputs.source!.value, "Media normalization source");
         const inspection = inline(inputs.inspection!.value, "MediaInspection");
         const selection = inline(inputs.selection!.value, "MediaStreamSelection");
@@ -123,11 +123,11 @@ export const mediaPipelineComponent = {
         };
         return { outputs: {}, needs: { media: canonicalize(need) } };
       },
-    );
-    registry.registerProducer(
-      mediaPipelineProducers.projectSpeechEvidenceAudio,
-      mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
-      ({ inputs }) => {
+    },
+    {
+      producer: mediaPipelineProducers.projectSpeechEvidenceAudio,
+      implementationDigest: mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
+      handler: ({ inputs }) => {
         const audio = inline(inputs.audio!.value, "SpeechAudioBasis") as unknown as SpeechAudioBasis;
         assertSpeechAudioBasisIdentity(audio);
         const sourceSampleFrames = programSpaceSampleFrames(audio.programSpace, 48_000);
@@ -160,32 +160,32 @@ export const mediaPipelineComponent = {
         };
         return { outputs: {}, needs: { evidenceAudio: canonicalize(need) } };
       },
-    );
-    registry.registerProducer(
-      mediaPipelineProducers.planAudio,
-      mediaPipelineImplementationDigests.planAudio,
-      ({ inputs }) => {
+    },
+    {
+      producer: mediaPipelineProducers.planAudio,
+      implementationDigest: mediaPipelineImplementationDigests.planAudio,
+      handler: ({ inputs }) => {
         const composition = inline(inputs.composition!.value, "Composition") as unknown as Composition;
         return {
           outputs: { plan: { kind: "inline", value: canonicalize(compileAudioProgramPlan(composition)) } },
           needs: {},
         };
       },
-    );
-    registry.registerProducer(
-      mediaPipelineProducers.renderAudio,
-      mediaPipelineImplementationDigests.renderAudio,
-      ({ inputs }) => {
+    },
+    {
+      producer: mediaPipelineProducers.renderAudio,
+      implementationDigest: mediaPipelineImplementationDigests.renderAudio,
+      handler: ({ inputs }) => {
         const plan = inline(inputs.plan!.value, "AudioProgramPlan");
         verifyAudioProgramPlan(plan);
         const need: RenderAudioNeed = { contract: "svml.render-audio-request@1", plan };
         return { outputs: {}, needs: { audio: canonicalize(need) } };
       },
-    );
-    registry.registerProducer(
-      mediaPipelineProducers.mux,
-      mediaPipelineImplementationDigests.mux,
-      ({ inputs }) => {
+    },
+    {
+      producer: mediaPipelineProducers.mux,
+      implementationDigest: mediaPipelineImplementationDigests.mux,
+      handler: ({ inputs }) => {
         const visual = inline(inputs.visual!.value, "RenderedVisual");
         const audio = inline(inputs.audio!.value, "TimelineAudio");
         verifyRenderedVisual(visual);
@@ -196,11 +196,11 @@ export const mediaPipelineComponent = {
         const need: MuxMediaNeed = { contract: "svml.mux-media-request@1", visual, audio };
         return { outputs: {}, needs: { media: canonicalize(need) } };
       },
-    );
-    registry.registerProducer(
-      mediaPipelineProducers.projectMuxed,
-      mediaPipelineImplementationDigests.projectMuxed,
-      ({ inputs }) => {
+    },
+    {
+      producer: mediaPipelineProducers.projectMuxed,
+      implementationDigest: mediaPipelineImplementationDigests.projectMuxed,
+      handler: ({ inputs }) => {
         const media = inline(inputs.media!.value, "MuxedMedia");
         verifyMuxedMedia(media);
         const durationSec = media.frameCount * media.frameRate.denominator / media.frameRate.numerator;
@@ -219,8 +219,8 @@ export const mediaPipelineComponent = {
           needs: {},
         };
       },
-    );
-  },
+    },
+  ],
 } satisfies ComponentPackage;
 
 /** Convenience set: public media validators must accompany the pipeline Producers. */

@@ -243,6 +243,8 @@ export type CandidateBinding = {
 export type BuildRequest = {
   readonly format: "svml.build-request@1";
   readonly graph: Digest;
+  /** Exact trusted implementation-package closure selected outside author source. */
+  readonly implementationClosure?: Digest;
   readonly targets: readonly BuildTarget[];
   readonly bindings: readonly CandidateBinding[];
   readonly digest: Digest;

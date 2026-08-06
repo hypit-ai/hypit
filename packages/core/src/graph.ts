@@ -145,6 +145,9 @@ export function sealBuildRequest(
   const content = {
     format: "svml.build-request@1" as const,
     graph: request.graph,
+    ...(request.implementationClosure === undefined
+      ? {}
+      : { implementationClosure: request.implementationClosure }),
     targets,
     bindings,
   };
@@ -481,6 +484,11 @@ export function verifyBuildRequest(
   );
   invariant(isDigest(request.digest), "INVALID_DIGEST", "BuildRequest digest is invalid");
   invariant(request.graph === graph.id, "BUILD_REQUEST_GRAPH_MISMATCH", "BuildRequest belongs to another graph");
+  invariant(
+    request.implementationClosure === undefined || isDigest(request.implementationClosure),
+    "INVALID_IMPLEMENTATION_CLOSURE_DIGEST",
+    "BuildRequest implementation closure digest is invalid",
+  );
   const { digest: _digest, ...content } = request;
   invariant(request.digest === digestOf(content), "BUILD_REQUEST_DIGEST_MISMATCH", "BuildRequest digest differs");
   invariant(request.targets.length > 0, "EMPTY_BUILD_TARGETS", "BuildRequest has no Targets");

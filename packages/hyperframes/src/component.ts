@@ -1,3 +1,4 @@
+import type { ComponentPackage } from "@svml/component-kit";
 import type { Composition } from "@svml/contracts";
 import type { CanonicalValue, StoredValue } from "@svml/protocol";
 import { canonicalize } from "@svml/protocol";
@@ -16,21 +17,19 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 /** Trusted deterministic lowering only; this component never renders frames or reads Artifacts. */
 export const hyperframesComponent = {
   name: "@svml/hyperframes",
-  install(registry: import("@svml/component-kit").ProducerRegistrar): void {
-    registry.registerProducer(
-      hyperframesProducers.compile,
-      compileHyperframesImplementationDigest,
-      ({ inputs }) => ({
-        outputs: {
-          document: {
-            kind: "inline",
-            value: canonicalize(compileHyperframesDocument(
-              inline(inputs.composition!.value, "Composition") as unknown as Composition,
-            )),
-          },
+  producers: [{
+    producer: hyperframesProducers.compile,
+    implementationDigest: compileHyperframesImplementationDigest,
+    handler: ({ inputs }) => ({
+      outputs: {
+        document: {
+          kind: "inline",
+          value: canonicalize(compileHyperframesDocument(
+            inline(inputs.composition!.value, "Composition") as unknown as Composition,
+          )),
         },
-        needs: {},
-      }),
-    );
-  },
-};
+      },
+      needs: {},
+    }),
+  }],
+} satisfies ComponentPackage;

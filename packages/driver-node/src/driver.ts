@@ -4,6 +4,7 @@ import type {
   BuildEvent,
   BuildState,
   CoreCommand,
+  Digest,
   FulfillNeedCommand,
   InvokeProducerCommand,
   TypedRecord,
@@ -53,6 +54,7 @@ export type NodeDriverOptions = {
   readonly credentials?: CredentialStore;
   readonly maxEvents?: number;
   readonly validators?: TypeValidatorRegistryLike;
+  readonly implementationClosure?: Digest;
 };
 
 type Executable =
@@ -78,6 +80,7 @@ export class NodeDriver {
   readonly credentials: CredentialStore | undefined;
   readonly maxEvents: number;
   readonly validators: TypeValidatorRegistryLike;
+  readonly implementationClosure: Digest | undefined;
 
   constructor(options: NodeDriverOptions = {}) {
     this.registry = options.registry ?? new HostRegistry();
@@ -87,6 +90,19 @@ export class NodeDriver {
     this.credentials = options.credentials;
     this.maxEvents = options.maxEvents ?? 1_000;
     this.validators = options.validators ?? new TypeValidatorRegistry();
+    this.implementationClosure = options.implementationClosure;
+  }
+
+  #verifyImplementationClosure(state: BuildState): void {
+    if (state.request.implementationClosure !== this.implementationClosure) {
+      if (state.request.implementationClosure === undefined) {
+        throw new Error("BuildRequest does not bind this Host's implementation package closure");
+      }
+      if (this.implementationClosure === undefined) {
+        throw new Error("BuildRequest requires an implementation package closure that this Host did not load");
+      }
+      throw new Error("BuildRequest implementation package closure differs from this Host");
+    }
   }
 
   async #providerCredentials(
@@ -468,6 +484,7 @@ export class NodeDriver {
 
   /** Regenerate Core commands, then classify only what this Host can execute. */
   prepare(initial: BuildState): RuntimePreparation {
+    this.#verifyImplementationClosure(initial);
     const transition = reduce(initial);
     const state = transition.state;
     if (state.status === "complete" || state.status === "failed") {
@@ -555,6 +572,7 @@ export class NodeDriver {
   }
 
   async run(initial: BuildState, context?: RuntimeExecutionContext): Promise<DriverRunResult> {
+    this.#verifyImplementationClosure(initial);
     let state = initial;
     const journal: DriverJournalEntry[] = [];
 

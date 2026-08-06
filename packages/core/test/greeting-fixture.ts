@@ -194,6 +194,7 @@ export function greetingGraph(program: LinkedProgram): CompiledGraph {
 export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
   readonly goalAccepts?: "exact" | "substitute";
+  readonly implementationClosure?: import("@svml/protocol").Digest;
 }): BuildState {
   const closure = createResolvedClosure([manifest]);
   const authored = sealRecord({
@@ -217,6 +218,9 @@ export function createGreetingBuild(options?: {
   const graph = greetingGraph(program);
   const request = sealBuildRequest({
     graph: graph.id,
+    ...(options?.implementationClosure === undefined
+      ? {}
+      : { implementationClosure: options.implementationClosure }),
     targets: [{
       output: "document",
       accepts: options?.goalAccepts ?? "exact",

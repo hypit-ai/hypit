@@ -51,6 +51,8 @@ export type CreateLocalRuntimeOptions = {
   readonly closure?: LocalRuntimeClosureOptions;
   readonly scheduling?: Omit<LocalBuildSchedulerOptions, "buildStore" | "runtimeClosure">;
   readonly validators?: LocalTypeValidatorRegistry;
+  /** Expected implementation package closure already bound into BuildRequest. */
+  readonly implementationClosure?: import("@svml/protocol").Digest;
 };
 
 export type ProjectLocalRuntimeOptions = {
@@ -58,6 +60,8 @@ export type ProjectLocalRuntimeOptions = {
   readonly root?: string;
   readonly statePath?: string;
   readonly artifactPath?: string;
+  /** Exact installed implementation package lock. Source imports cannot change this selection. */
+  readonly packageLock?: string;
   /** Replaces the default project filesystem ArtifactStore without changing Scheduler/Core. */
   readonly artifacts?: NodeArtifactStorePackage;
   readonly components?: readonly ComponentPackage[];

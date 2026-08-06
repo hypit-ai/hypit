@@ -345,6 +345,9 @@ importers:
       '@svml/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@svml/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol

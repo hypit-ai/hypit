@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import {
+  registerProducerFacets,
+} from "@svml/component-kit";
 import type { ProducerRegistrar } from "@svml/component-kit";
 import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@svml/contracts";
 import type { SpeechBasis, SpeechEvidenceAudio } from "@svml/contracts";
@@ -114,7 +117,7 @@ test("WhisperX installs into the host-neutral compute port without a Node Driver
     },
   };
 
-  whisperXComponent.install(registrar);
+  registerProducerFacets(registrar, whisperXComponent.producers);
 
   assert.deepEqual(registrations.map((item) => item.producer), [
     whisperXProducers.request,

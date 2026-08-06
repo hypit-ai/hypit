@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -13,12 +18,17 @@ import type {
 } from "@svml/local";
 import { createProjectLocalRuntime } from "@svml/local";
 import { digestOf } from "@svml/core";
+import {
+  createNodePackageLock,
+  writeNodePackageLock,
+} from "@svml/package-loader-node";
 import type { RuntimeModuleManifest } from "@svml/runtime";
 
 import {
   capabilities,
   createGreetingBuild,
   implementationDigests,
+  manifest as greetingManifest,
   producers,
   types,
 } from "../../core/test/greeting-fixture.js";
@@ -51,28 +61,40 @@ test("project local runtime resumes durable work while component and provider pa
   let cancels = 0;
   const components: NodeComponentPackage = {
     name: "example.components",
-    install(registry) {
-      registry.registerProducer(producers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
+    producers: [
+      {
+        producer: producers.makePrompt,
+        implementationDigest: implementationDigests.makePrompt,
+        handler: ({ inputs }) => {
         promptCalls += 1;
         const intent = inputs.intent;
         assert.equal(intent?.value.kind, "inline");
         const name = (intent.value.value as { readonly name: string }).name;
         return { outputs: { prompt: { kind: "inline", value: `Greet ${name}` } }, needs: {} };
-      });
-      registry.registerProducer(producers.requestText, implementationDigests.requestText, ({ inputs }) => {
+        },
+      },
+      {
+        producer: producers.requestText,
+        implementationDigest: implementationDigests.requestText,
+        handler: ({ inputs }) => {
         requestCalls += 1;
         assert.equal(inputs.prompt?.value.kind, "inline");
         return { outputs: {}, needs: { generation: { prompt: inputs.prompt.value.value } } };
-      });
-      registry.registerProducer(producers.assemble, implementationDigests.assemble, ({ inputs }) => {
+        },
+      },
+      {
+        producer: producers.assemble,
+        implementationDigest: implementationDigests.assemble,
+        handler: ({ inputs }) => {
         assembleCalls += 1;
         assert.equal(inputs.generated?.value.kind, "inline");
         return {
           outputs: { document: { kind: "inline", value: { text: inputs.generated.value.value } } },
           needs: {},
         };
-      });
-    },
+        },
+      },
+    ],
   };
   const endpoint: ProviderEndpoint = {
     start({ operation }) {
@@ -164,6 +186,86 @@ test("project local runtime resumes durable work while component and provider pa
     assert.equal(cancelled?.status, "failed");
     assert.equal(cancels, 1);
     await secondRuntime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("project local runtime activates locked compute facets without deployment source registration", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-local-locked-components-"));
+  const packageRoot = join(directory, "node_modules", "example-greeting-components");
+  const lockPath = join(directory, "svml.packages.lock");
+  await mkdir(packageRoot, { recursive: true });
+  await writeFile(join(packageRoot, "package.json"), JSON.stringify({
+    name: "example-greeting-components",
+    version: "1.0.0",
+    type: "module",
+    exports: "./activation.mjs",
+    svml: { activation: "./activation.mjs" },
+  }), "utf8");
+  await writeFile(join(packageRoot, "activation.mjs"), `
+    const manifest = ${JSON.stringify(greetingManifest)};
+    const module = { name: manifest.name, version: manifest.version };
+    const producer = (name) => ({ module, name });
+    export default {
+      format: "svml.node-package@1",
+      name: "example-greeting-components",
+      modules: [{ manifest }],
+      components: [{
+        name: "example-greeting-components/compute",
+        producers: [
+          {
+            producer: producer("make-prompt"),
+            implementationDigest: ${JSON.stringify(implementationDigests.makePrompt)},
+            handler({ inputs }) {
+              const intent = inputs.intent.value.value;
+              return { outputs: { prompt: { kind: "inline", value: "Greet " + intent.name } }, needs: {} };
+            },
+          },
+          {
+            producer: producer("placeholder-text"),
+            implementationDigest: ${JSON.stringify(implementationDigests.placeholderText)},
+            handler() {
+              return { outputs: { generated: { kind: "inline", value: "Preview greeting" } }, needs: {} };
+            },
+          },
+          {
+            producer: producer("assemble"),
+            implementationDigest: ${JSON.stringify(implementationDigests.assemble)},
+            handler({ inputs }) {
+              return { outputs: { document: { kind: "inline", value: { text: inputs.generated.value.value } } }, needs: {} };
+            },
+          },
+        ],
+      }],
+    };
+  `, "utf8");
+
+  try {
+    const lock = await createNodePackageLock(["example-greeting-components"], directory);
+    await writeNodePackageLock(lockPath, lock);
+    const runtime = await createProjectLocalRuntime({
+      root: directory,
+      packageLock: "svml.packages.lock",
+    });
+    await assert.rejects(
+      async () => await runtime.build({
+        id: "unlocked-preview",
+        state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+      }),
+      /does not bind this Host's implementation package closure/u,
+    );
+    const result = await runtime.build({
+      id: "locked-preview",
+      state: createGreetingBuild({
+        generationRealization: "placeholder",
+        goalAccepts: "substitute",
+        implementationClosure: lock.digest,
+      }),
+    });
+    assert.equal(result.status, "complete");
+    assert.equal(result.state.records.some((record) => record.id === "document:root"), true);
+    await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -62,7 +62,9 @@ export default await createProjectLocalRuntime({
 });
 ```
 
-The shared `generationComponent` installs semantic validators for generated-media Products. Each
+The explicit `components` list above is the low-level embedding form; a reproducible project should
+publish the same set through an installed aggregate and select it with `packageLock`. The shared
+`generationComponent` publishes semantic validators for generated-media Products. Each
 model component installs its exact request validators and deterministic request-to-Need Producers.
 The `.svml` Module Closure separately contains only the model Manifests actually imported by the
 author document; installing Runtime code does not implicitly add author intent.

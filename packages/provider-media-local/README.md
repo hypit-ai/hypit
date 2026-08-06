@@ -5,11 +5,10 @@ capabilities. It is Runtime configuration and is never imported by author `.svml
 
 ```ts
 import { createProjectLocalRuntime } from "@svml/local";
-import { mediaPipelineComponents } from "@svml/media-pipeline";
 import { createLocalMediaProvider } from "@svml/provider-media-local";
 
 const runtime = await createProjectLocalRuntime({
-  components: mediaPipelineComponents,
+  packageLock: "./svml.packages.lock",
   providers: [createLocalMediaProvider({ defaultConcurrency: 1 })],
   allowedPermissions: ["process:media"],
 });

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import {
+  registerProducerFacets,
+  registerTypeValidatorFacets,
+} from "@svml/component-kit";
 import {
   compositionContractsComponent,
   contractTypes,
@@ -139,9 +142,9 @@ function build() {
 
 function producerRegistry(): HostRegistry {
   const registry = new HostRegistry();
-  mediaPipelineComponent.install(registry);
-  hyperframesComponent.install(registry);
-  hyperframesRenderComponent.install(registry);
+  registerProducerFacets(registry, mediaPipelineComponent.producers);
+  registerProducerFacets(registry, hyperframesComponent.producers);
+  registerProducerFacets(registry, hyperframesRenderComponent.producers);
   return registry;
 }
 

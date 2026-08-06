@@ -274,11 +274,11 @@ network, credential, process, store or queue access. Installed code becomes exec
 the Host resolves a lock, verifies implementation bytes, checks an allowlist and grants the facet's
 declared permissions.
 
-The implemented Node author-facet loader is named `@svml/package-loader-node`. It loads already
-installed trusted packages; it is not an npm client and does not install packages because a source
-file requested them. Its current lock covers physical declared-dependency bytes plus Module,
-Frontend, Text Surface and Type Validator identities. Compute-facet activation and untrusted
-isolation remain.
+The implemented trusted Node facet loader is named `@svml/package-loader-node`. It loads already
+installed packages; it is not an npm client and does not install packages because a source file
+requested them. One implementation lock covers physical declared-dependency bytes plus Module,
+Frontend, Text Surface, Producer and Type Validator identities. The Compiler and compute Host grant
+different registries from the same verified activation; Provider/Runtime authority is absent.
 
 The package descriptor and lock must bind:
 
@@ -289,8 +289,9 @@ every Frontend/Surface/Producer/Validator implementation digest
 every privileged Provider/Runtime facet digest and permission declaration
 ```
 
-The current `digestOf("implementation-name@version")` placeholders are not code-byte identity and
-must not survive the loader security boundary.
+Development `digestOf("implementation-name@version")` labels are interpreted only inside the exact
+physical package closure that the implementation lock binds. Release-built facet identities remain
+future work, but a locked Host will not accept the same Build under different package bytes.
 
 ### 6.1 Three locks, three questions
 
@@ -302,8 +303,9 @@ The system must not use one overloaded `svml.lock` to answer unrelated questions
 | Package/Implementation Lock | which installed artifact bytes implement locked Frontends, Surfaces, Producers and Validators | account instances or author Targets |
 | Runtime Closure Lock | which Scheduler, stores, dispatchers and Provider implementation digests are permitted for this Run | raw secrets or author meaning |
 
-`BuildRequest.digest` separately identifies Targets and Candidate bindings for one Build. Runtime
-Profile is editable configuration; Runtime Closure is its resolved, digest-locked executable form.
+`BuildRequest.digest` identifies Targets and Candidate bindings and, for locked execution, carries
+`implementationClosure = packageLock.digest`. Runtime Profile is editable configuration; Runtime
+Closure is its resolved, digest-locked privileged-service form.
 
 ## 7. Provider naming
 
@@ -580,11 +582,11 @@ completed and partial steps below distinguish API laws from unfinished distribut
    start/resume lifecycle is complete. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
    `@svml/local` now provide durable project recovery and package-based local assembly; distributed
    leases and wake-up polling remain;
-7. **partially completed:** `@svml/package-loader-node` locks the full physical declared-dependency closure
-   and activates trusted Module, Frontend, Text Surface and Type Validator facets without
-   package-specific CLI registration; `@svml/component-kit` now removes direct Node Driver
-   dependencies from deterministic packages, while locked compute activation plus untrusted
-   isolation remain;
+7. **completed for trusted in-process packages:** `@svml/package-loader-node` locks the full physical
+   declared-dependency closure and activates Module, Frontend, Text Surface, Producer and Type
+   Validator facets without package-specific CLI or local Runtime registration;
+   `@svml/component-kit` exposes enumerable host-neutral compute facets and BuildRequest binds the
+   implementation closure. Untrusted isolation remains;
 8. **partially completed:** add real Provider Endpoints; KIE generation, reference local media,
    local HyperFrames, the local WhisperX Provider and its locked Python service are implemented,
    while AWS/hosted equivalents remain;

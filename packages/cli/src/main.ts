@@ -3,9 +3,9 @@ import { pathToFileURL } from "node:url";
 
 import type { LocalRuntime } from "@svml/local";
 import {
-  createNodeAuthorPackageLock,
-  loadNodeAuthorPackages,
-  writeNodeAuthorPackageLock,
+  createNodePackageLock,
+  loadNodePackageSet,
+  writeNodePackageLock,
 } from "@svml/package-loader-node";
 
 import { createOfficialNodeCompiler } from "./host.js";
@@ -166,8 +166,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     if (args.packageLock !== undefined) throw new Error("lock-packages does not accept --package-lock");
     const output = resolve(args.file);
     const root = args.root ?? dirname(output);
-    const lock = await createNodeAuthorPackageLock(args.packages, root);
-    await writeNodeAuthorPackageLock(output, lock);
+    const lock = await createNodePackageLock(args.packages, root);
+    await writeNodePackageLock(output, lock);
     io.write(`${JSON.stringify({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages }, null, 2)}\n`);
     return;
   }
@@ -212,10 +212,10 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
   if (args.packages.length > 0) throw new Error("--package is only valid for lock-packages");
   const activated = args.packageLock === undefined
     ? undefined
-    : await loadNodeAuthorPackages(args.packageLock, args.root ?? dirname(args.packageLock));
+    : await loadNodePackageSet(args.packageLock, args.root ?? dirname(args.packageLock));
   const compiler = createOfficialNodeCompiler({
     ...(args.root === undefined ? {} : { root: args.root }),
-    ...(activated === undefined ? {} : { packages: activated }),
+    ...(activated === undefined ? {} : { packages: activated.packages }),
   });
   if (args.command === "check") {
     const result = await compiler.compileFile(args.file);
@@ -233,6 +233,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
   const result = await compiler.planFile(args.file, {
     targets: args.targets,
     accepts: args.substitute ? "substitute" : "exact",
+    ...(activated === undefined ? {} : { implementationClosure: activated.lock.digest }),
   });
   if (args.command === "build") {
     if (args.runtime === undefined) throw new Error("build requires --runtime with a trusted local config module");

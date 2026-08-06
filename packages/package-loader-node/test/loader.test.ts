@@ -10,13 +10,17 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  activateNodeComponents,
   createActivatedNodeCompiler,
-  createNodeAuthorPackageLock,
-  loadNodeAuthorPackages,
-  writeNodeAuthorPackageLock,
+  createNodePackageLock,
+  loadNodePackages,
+  writeNodePackageLock,
 } from "@svml/package-loader-node";
+import { TypeValidatorRegistry } from "@svml/validation";
+import type { ProducerRef } from "@svml/protocol";
 
 const implementationDigest = `sha256:${"1".repeat(64)}`;
+const producerDigest = `sha256:${"3".repeat(64)}`;
 
 async function fixture(): Promise<{
   readonly root: string;
@@ -45,14 +49,16 @@ async function fixture(): Promise<{
     type: "module",
     exports: "./activation.mjs",
     dependencies: { "example-helper": "1.0.0" },
-    svml: { authorActivation: "./activation.mjs" },
+    svml: { activation: "./activation.mjs" },
   }, null, 2), "utf8");
   await writeFile(activation, `
     const module = { name: "example.card", version: "1" };
     const digest = ${JSON.stringify(implementationDigest)};
+    const producerDigest = ${JSON.stringify(producerDigest)};
     const resultType = { module, name: "CardResult" };
+    const producer = { module, name: "make-card" };
     export default {
-      format: "svml.node-author-package@1",
+      format: "svml.node-package@1",
       name: "example-card",
       modules: [{
         manifest: {
@@ -84,7 +90,17 @@ async function fixture(): Promise<{
               digest,
             },
           }],
-          producers: [],
+          producers: [{
+            name: producer.name,
+            inputs: [],
+            outputs: [{ name: "result", type: resultType }],
+            needs: [],
+            implementation: {
+              kind: "registered",
+              locator: "example-card/make-card",
+              digest: producerDigest,
+            },
+          }],
         },
         specifiers: ["example.card@1"],
       }],
@@ -106,15 +122,30 @@ async function fixture(): Promise<{
           };
         },
       }],
-      validators: [{
-        type: resultType,
-        implementationDigest: digest,
-        handler({ value }) {
-          if (value.kind !== "inline" || value.value !== "accepted") {
-            throw new Error("CardResult is not accepted");
-          }
+      components: [
+        {
+          name: "example-card/contracts",
+          validators: [{
+            type: resultType,
+            implementationDigest: digest,
+            handler({ value }) {
+              if (value.kind !== "inline" || value.value !== "accepted") {
+                throw new Error("CardResult is not accepted");
+              }
+            },
+          }],
         },
-      }],
+        {
+          name: "example-card/compute",
+          producers: [{
+            producer,
+            implementationDigest: producerDigest,
+            handler() {
+              return { outputs: { result: { kind: "inline", value: "accepted" } }, needs: {} };
+            },
+          }],
+        },
+      ],
     };
   `, "utf8");
   const source = join(root, "main.svml");
@@ -127,10 +158,10 @@ async function fixture(): Promise<{
 
 test("an installed locked package adds a Surface without an official CLI registration", async () => {
   const item = await fixture();
-  const lock = await createNodeAuthorPackageLock(["example-card"], item.root);
+  const lock = await createNodePackageLock(["example-card"], item.root);
   assert.deepEqual(lock.artifacts.map((artifact) => artifact.name), ["example-card", "example-helper"]);
-  await writeNodeAuthorPackageLock(item.lock, lock);
-  const packages = await loadNodeAuthorPackages(item.lock, item.root);
+  await writeNodePackageLock(item.lock, lock);
+  const packages = await loadNodePackages(item.lock, item.root);
   const compiler = createActivatedNodeCompiler(packages, { root: item.root });
   const result = await compiler.compileFile(item.source);
 
@@ -141,16 +172,45 @@ test("an installed locked package adds a Surface without an official CLI registr
   assert.equal(result.module.records[0]?.value.kind, "inline");
   assert.equal(result.module.records[0]?.validation?.validatorDigest, implementationDigest);
   assert.equal(result.elaboration.graph.operations.length, 0);
+
+  const registered: Array<{ readonly producer: ProducerRef; readonly digest: string }> = [];
+  activateNodeComponents(packages, {
+    registerProducer(producer, digest) {
+      registered.push({ producer, digest });
+    },
+  }, new TypeValidatorRegistry());
+  assert.deepEqual(registered, [{
+    producer: { module: { name: "example.card", version: "1" }, name: "make-card" },
+    digest: producerDigest,
+  }]);
 });
 
 test("dependency bytes are rejected before a locked activation is reused", async () => {
   const item = await fixture();
-  const lock = await createNodeAuthorPackageLock(["example-card"], item.root);
-  await writeNodeAuthorPackageLock(item.lock, lock);
+  const lock = await createNodePackageLock(["example-card"], item.root);
+  await writeNodePackageLock(item.lock, lock);
   await writeFile(item.dependency, `${await readFile(item.dependency, "utf8")}\n// changed bytes\n`, "utf8");
 
   await assert.rejects(
-    async () => await loadNodeAuthorPackages(item.lock, item.root),
-    /installed author package bytes do not match the lock/,
+    async () => await loadNodePackages(item.lock, item.root),
+    /installed Node package bytes do not match the lock/,
+  );
+});
+
+test("a compute facet cannot claim another implementation than its static Manifest", async () => {
+  const item = await fixture();
+  const source = await readFile(item.activation, "utf8");
+  await writeFile(
+    item.activation,
+    source.replace(
+      "implementationDigest: producerDigest,\n            handler()",
+      `implementationDigest: ${JSON.stringify(`sha256:${"4".repeat(64)}`)},\n            handler()`,
+    ),
+    "utf8",
+  );
+
+  await assert.rejects(
+    async () => await createNodePackageLock(["example-card"], item.root),
+    /Producer .* differs from its Manifest/u,
   );
 });
