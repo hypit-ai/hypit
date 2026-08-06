@@ -368,14 +368,12 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
       id: item.ids.output,
       type: item.endpoint.returns,
       primary: item.ids.candidate,
-      candidates: [item.ids.candidate],
       semanticInputs: [{ kind: "record", id: authored.id }],
     }],
     candidates: [{
       id: item.ids.candidate,
-      output: item.ids.output,
+      type: item.endpoint.returns,
       root: { kind: "operation", result: { kind: "operation-result", operation: item.ids.operation } },
-      fidelity: "exact",
     }],
     operations: [{
       id: item.ids.operation,
@@ -393,7 +391,7 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
   return start(program, graph, sealBuildRequest({
     graph: graph.id,
     targets: [{ output: item.ids.output, accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
 }
 

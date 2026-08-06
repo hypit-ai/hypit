@@ -2,8 +2,8 @@
 
 > **架构演进记录。** 本文较早章节使用的 `BuildIntent + PinBinding + Alternative` Kernel
 > 模型已经被
-> [`LogicalOutput + Candidate + Build Compiler`](./logical-output-realization-fragment-draft.md)
-> 的 `@1` 模型替代。本文关于作者意图、Bootstrap、Surface、Script 和模块边界的讨论仍
+> [`LogicalOutput + Candidate + Satisfaction + Build Compiler`](./logical-output-realization-fragment-draft.md)
+> 的 `@2` 模型替代。本文关于作者意图、Bootstrap、Surface、Script 和模块边界的讨论仍
 > 有效；涉及 Core wire format、Pin 或 Demand 算法时，以新文档与当前代码为准。
 
 Date: 2026-08-03

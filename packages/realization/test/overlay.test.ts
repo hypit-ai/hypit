@@ -14,8 +14,8 @@ import {
   start,
 } from "@svml/core";
 import {
-  bindCandidateFragment,
   elaborateGraphFragment,
+  exportRunFragment,
   sealGraphFragment,
 } from "@svml/elaborator";
 import type {
@@ -28,7 +28,7 @@ import type {
   TypeRef,
 } from "@svml/protocol";
 import {
-  createHistoricalCandidate,
+  createBuildRecordCandidate,
   createProvidedCandidate,
   resolveRealization,
   sealRealizationOverlay,
@@ -106,17 +106,15 @@ function fixture(): { readonly program: LinkedProgram; readonly source: Compiled
       id: "shot.visual",
       type: types.media,
       primary: "shot.generate",
-      candidates: ["shot.generate"],
       semanticInputs: [{ kind: "record", id: "prompt:shot" }],
     }],
     candidates: [{
       id: "shot.generate",
-      output: "shot.visual",
+      type: types.media,
       root: {
         kind: "operation",
         result: { kind: "operation-result", operation: "generate-shot" },
       },
-      fidelity: "exact",
     }],
     operations: [{
       id: "generate-shot",
@@ -130,9 +128,8 @@ function fixture(): { readonly program: LinkedProgram; readonly source: Compiled
 
 function providedOverlay(source: CompiledGraph, value: string, label: string) {
   const candidate = createProvidedCandidate({
-    output: "shot.visual",
+    type: types.media,
     value: { kind: "inline", value },
-    fidelity: "exact",
     provenance: { library: "approved-shots", label },
   });
   return {
@@ -163,7 +160,7 @@ function completedAffinityBuild(): { readonly program: LinkedProgram; readonly s
   const initial = start(base.program, source, sealBuildRequest({
     graph: source.id,
     targets: [{ output: "shot.visual", accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
   const ready = reduce(initial);
   const command = ready.commands.find((item): item is InvokeProducerCommand => item.kind === "invoke-producer");
@@ -191,7 +188,7 @@ test("an attached Existing Value is inert until BuildRequest explicitly selects 
   const primary = start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
     targets: [{ output: "shot.visual", accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
   assert.deepEqual(primary.plan.steps.map((step) => step.id), ["generate-shot"]);
   assert.deepEqual(primary.plan.initialValues, []);
@@ -199,7 +196,7 @@ test("an attached Existing Value is inert until BuildRequest explicitly selects 
   const selected = start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
     targets: [{ output: "shot.visual", accepts: "exact" }],
-    bindings: [{ output: "shot.visual", candidate: candidate.id }],
+    satisfactions: [{ output: "shot.visual", candidate: candidate.id, fidelity: "exact" }],
   }));
   assert.deepEqual(selected.plan.steps, []);
   assert.equal(selected.plan.initialValues[0]?.value.kind, "inline");
@@ -208,15 +205,15 @@ test("an attached Existing Value is inert until BuildRequest explicitly selects 
 
 test("a historical Record becomes an ordinary substitute zero-edge Candidate", () => {
   const { program, source, state: historical } = completedAffinityBuild();
-  const candidate = createHistoricalCandidate({ source, build: historical, output: "shot.visual" });
+  const candidate = createBuildRecordCandidate({ build: historical, sourceOutput: "shot.visual" });
   assert.equal(candidate.root.kind, "value");
-  assert.equal(candidate.fidelity, "substitute");
+  assert.deepEqual(candidate.type, types.media);
   const overlay = sealRealizationOverlay({ sourceGraph: source.id, candidates: [candidate], operations: [] });
   const realized = resolveRealization(program, source, [overlay]);
   const fresh = start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
     targets: [{ output: "shot.visual", accepts: "substitute" }],
-    bindings: [{ output: "shot.visual", candidate: candidate.id }],
+    satisfactions: [{ output: "shot.visual", candidate: candidate.id, fidelity: "substitute" }],
   }));
   assert.deepEqual(fresh.plan.steps, []);
   assert.equal(fresh.plan.initialValues.length, 1);
@@ -227,16 +224,15 @@ test("a historical Record becomes an ordinary substitute zero-edge Candidate", (
 test("a fixed black value substitutes an affined Output without any history or semantic proof", () => {
   const { program, source } = completedAffinityBuild();
   const candidate = createProvidedCandidate({
-    output: "shot.visual",
+    type: types.media,
     value: { kind: "inline", value: "UNRELATED FIXED BLACK VIDEO" },
-    fidelity: "substitute",
   });
   const overlay = sealRealizationOverlay({ sourceGraph: source.id, candidates: [candidate], operations: [] });
   const realized = resolveRealization(program, source, [overlay]);
   const fresh = start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
     targets: [{ output: "shot.visual", accepts: "substitute" }],
-    bindings: [{ output: "shot.visual", candidate: candidate.id }],
+    satisfactions: [{ output: "shot.visual", candidate: candidate.id, fidelity: "substitute" }],
   }));
   assert.deepEqual(fresh.plan.steps, []);
   assert.equal(fresh.plan.initialValues.length, 1);
@@ -252,29 +248,27 @@ test("a historical Record may substitute another author graph and Output without
   const other = sealCompiledGraph({
     program: source.program,
     outputs: source.outputs.map((output) => ({ ...output, id: "replacement.visual" })),
-    candidates: source.candidates.map((candidate) => ({ ...candidate, output: "replacement.visual" })),
+    candidates: source.candidates,
     operations: source.operations,
   });
-  const candidate = createHistoricalCandidate({
-    source: other,
+  const candidate = createBuildRecordCandidate({
     build: historical,
-    output: "replacement.visual",
     sourceOutput: "shot.visual",
   });
-  assert.equal(candidate.fidelity, "substitute");
+  assert.deepEqual(candidate.type, types.media);
   const overlay = sealRealizationOverlay({ sourceGraph: other.id, candidates: [candidate], operations: [] });
   const realized = resolveRealization(program, other, [overlay]);
 
   assert.throws(() => start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
     targets: [{ output: "replacement.visual", accepts: "exact" }],
-    bindings: [{ output: "replacement.visual", candidate: candidate.id }],
+    satisfactions: [{ output: "replacement.visual", candidate: candidate.id, fidelity: "substitute" }],
   })), /selects a substitute path/u);
 
   const fresh = start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
     targets: [{ output: "replacement.visual", accepts: "substitute" }],
-    bindings: [{ output: "replacement.visual", candidate: candidate.id }],
+    satisfactions: [{ output: "replacement.visual", candidate: candidate.id, fidelity: "substitute" }],
   }));
   assert.deepEqual(fresh.plan.steps, []);
   assert.equal(fresh.plan.initialValues[0]?.conformance, "substitute");
@@ -292,12 +286,12 @@ test("changing the attached Value changes Overlay, realized Graph and BuildReque
   const requestLeft = sealBuildRequest({
     graph: realizedLeft.graph.id,
     targets: [{ output: "shot.visual", accepts: "exact" }],
-    bindings: [{ output: "shot.visual", candidate: left.candidate.id }],
+    satisfactions: [{ output: "shot.visual", candidate: left.candidate.id, fidelity: "exact" }],
   });
   const requestRight = sealBuildRequest({
     graph: realizedRight.graph.id,
     targets: [{ output: "shot.visual", accepts: "exact" }],
-    bindings: [{ output: "shot.visual", candidate: right.candidate.id }],
+    satisfactions: [{ output: "shot.visual", candidate: right.candidate.id, fidelity: "exact" }],
   });
   assert.notEqual(requestLeft.digest, requestRight.digest);
 });
@@ -337,18 +331,22 @@ test("a static Fragment export can be attached as an external Candidate", () => 
     fragment: fragment.id,
     inputs: { prompt: { kind: "record", id: "prompt:shot" } },
   });
-  const contribution = bindCandidateFragment(instance, { visual: "shot.visual" });
+  const contribution = exportRunFragment(instance, ["visual"]);
   const overlay = sealRealizationOverlay({
     sourceGraph: source.id,
     candidates: contribution.candidates,
     operations: contribution.operations,
   });
   const realized = resolveRealization(program, source, [overlay]);
-  const candidate = contribution.candidates[0]!;
+  const exported = contribution.exports[0]!;
   const state = start(program, realized.graph, sealBuildRequest({
     graph: realized.graph.id,
     targets: [{ output: "shot.visual", accepts: "substitute" }],
-    bindings: [{ output: "shot.visual", candidate: candidate.id }],
+    satisfactions: [{
+      output: "shot.visual",
+      candidate: exported.candidate,
+      fidelity: exported.suggestedFidelity,
+    }],
   }));
   assert.equal(state.plan.steps.length, 1);
   assert.equal(state.plan.steps[0]?.producer.name, "preview");
@@ -360,14 +358,14 @@ test("tampered and cross-graph Overlays are rejected before Candidate selection"
   const { overlay } = providedOverlay(source, "approved video", "v1");
   const tampered = {
     ...overlay,
-    candidates: overlay.candidates.map((candidate) => ({ ...candidate, fidelity: "substitute" as const })),
+    candidates: overlay.candidates.map((candidate) => ({ ...candidate, type: types.prompt })),
   };
   assert.throws(() => resolveRealization(program, source, [tampered]), /Overlay digest differs/u);
 
   const otherSource = sealCompiledGraph({
     program: source.program,
     outputs: source.outputs.map((output) => ({ ...output, id: "other.visual" })),
-    candidates: source.candidates.map((candidate) => ({ ...candidate, output: "other.visual" })),
+    candidates: source.candidates,
     operations: source.operations,
   });
   assert.throws(

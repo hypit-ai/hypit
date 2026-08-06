@@ -22,6 +22,7 @@ import {
   sealGraphFragment,
 } from "@svml/elaborator";
 import type {
+  CandidateBinding,
   BuildState,
   CapabilityRef,
   CompiledGraph,
@@ -343,14 +344,14 @@ export type VideoFixture = {
   readonly program: LinkedProgram;
   readonly source: CompiledGraph;
   readonly graph: CompiledGraph;
-  readonly bindings: readonly { readonly output: string; readonly candidate: string }[];
+  readonly satisfactions: readonly CandidateBinding[];
 };
 
 export function createVideoFixture(options: VideoBuildOptions = {}): VideoFixture {
   const program = authorProgram();
   const source = createVideoGraph(program);
   if (options.estimateRealization !== "placeholder") {
-    return { program, source, graph: source, bindings: [] };
+    return { program, source, graph: source, satisfactions: [] };
   }
   const placeholder = elaborateGraphFragment(program, placeholderEstimateFragment, {
     id: "opening.placeholder-estimate",
@@ -368,7 +369,7 @@ export function createVideoFixture(options: VideoBuildOptions = {}): VideoFixtur
     program,
     source,
     graph: realized.graph,
-    bindings: [{ output: videoOutputs.estimate, candidate: contribution.candidates[0]!.id }],
+    satisfactions: contribution.satisfactions ?? [],
   };
 }
 
@@ -379,7 +380,7 @@ export function createVideoBuild(options: VideoBuildOptions = {}): BuildState {
   const request = sealBuildRequest({
     graph: fixture.graph.id,
     targets: targets.map((name) => ({ output: videoOutputs[name], accepts })),
-    bindings: fixture.bindings,
+    satisfactions: fixture.satisfactions,
   });
   return start(fixture.program, fixture.graph, request);
 }

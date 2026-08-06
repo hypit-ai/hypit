@@ -198,7 +198,7 @@ test("one FragmentInstance shares its generation Operation across all exports", 
       { output: "opening.audio", accepts: "exact" },
       { output: "opening.visual", accepts: "exact" },
     ],
-    bindings: [],
+    satisfactions: [],
   });
   const state = start(linked, compiled, request);
   assert.equal(
@@ -248,7 +248,7 @@ test("the same Fragment instance is deterministic while distinct instances never
       { output: "opening.audio", accepts: "exact" },
       { output: "closing.audio", accepts: "exact" },
     ],
-    bindings: [],
+    satisfactions: [],
   }));
   assert.equal(
     state.plan.steps.filter((step) => step.producer.name === generateProducer.name).length,

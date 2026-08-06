@@ -312,7 +312,7 @@ The system must not use one overloaded `svml.lock` to answer unrelated questions
 | Package/Implementation Lock | which installed artifact bytes implement locked Frontends, Surfaces, Producers and Validators | account instances or author Targets |
 | Runtime Closure Lock | which Scheduler, stores, dispatchers and Provider implementation digests are permitted for this Run | raw secrets or author meaning |
 
-`BuildRequest.digest` identifies Targets and Candidate bindings and, for locked execution, carries
+`BuildRequest.digest` identifies Targets and explicit Satisfaction edges and, for locked execution, carries
 `implementationClosure = packageLock.digest`. Runtime Profile is editable configuration; Runtime
 Closure is its resolved, digest-locked privileged-service form.
 

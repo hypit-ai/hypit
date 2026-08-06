@@ -1,9 +1,9 @@
 # SVML v2 Runtime、Package 与执行拓扑
 
 > **Kernel 术语更新，2026-08-05。** 本文的 Runtime/Provider/Queue 分层仍有效，但早期
-> `BuildIntent + Alternative/Pin` 表述应读作 `BuildRequest + Candidate binding`。Pin
-> 不是 Kernel primitive：宿主把历史值附着为 Existing-Value Candidate，再由
-> BuildRequest 明确选择。Kernel 的当前权威定义见
+> `BuildIntent + Alternative/Pin` 表述应读作 `BuildRequest + Satisfaction`。Pin
+> 不是 Kernel primitive：宿主把历史值公开为独立的 Existing-Value Candidate，再由
+> Satisfaction 显式连接到 Logical Output。Kernel 的当前权威定义见
 > [`logical-output-realization-fragment-draft.md`](./logical-output-realization-fragment-draft.md)。
 >
 > **v2 目标规范。** 本文取代

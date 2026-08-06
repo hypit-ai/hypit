@@ -153,14 +153,12 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         id: "opening.take",
         type: contractTypes.speechBasis,
         primary: "opening.take.generate",
-        candidates: ["opening.take.generate", "opening.take.existing"],
         semanticInputs: [record("request:opening")],
       },
       {
         id: "opening.audio",
         type: contractTypes.speechAudioBasis,
         primary: "opening.audio.project",
-        candidates: ["opening.audio.project"],
         semanticInputs: [output("opening.take")],
         affinity: [
           {
@@ -179,7 +177,6 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         id: "opening.visual",
         type: contractTypes.visualTrack,
         primary: "opening.visual.project",
-        candidates: ["opening.visual.project", "opening.visual.existing"],
         semanticInputs: [output("opening.take")],
         affinity: [{
           resultPointer: "/programSpaceDigest",
@@ -191,13 +188,12 @@ function createGraph(program: LinkedProgram): CompiledGraph {
     candidates: [
       {
         id: "opening.take.generate",
-        output: "opening.take",
+        type: contractTypes.speechBasis,
         root: { kind: "operation", result: operation("generate-opening") },
-        fidelity: "exact",
       },
       {
         id: "opening.take.existing",
-        output: "opening.take",
+        type: contractTypes.speechBasis,
         root: {
           kind: "value",
           value: {
@@ -206,23 +202,20 @@ function createGraph(program: LinkedProgram): CompiledGraph {
             provenance: { library: "approved-takes", take: "opening-v2" },
           },
         },
-        fidelity: "exact",
       },
       {
         id: "opening.audio.project",
-        output: "opening.audio",
+        type: contractTypes.speechAudioBasis,
         root: { kind: "operation", result: operation("project-opening-audio") },
-        fidelity: "exact",
       },
       {
         id: "opening.visual.project",
-        output: "opening.visual",
+        type: contractTypes.visualTrack,
         root: { kind: "operation", result: operation("project-opening-visual") },
-        fidelity: "exact",
       },
       {
         id: "opening.visual.existing",
-        output: "opening.visual",
+        type: contractTypes.visualTrack,
         root: {
           kind: "value",
           value: {
@@ -232,7 +225,6 @@ function createGraph(program: LinkedProgram): CompiledGraph {
             validation: existingVisualValidation,
           },
         },
-        fidelity: "substitute",
       },
     ],
     operations: [
@@ -260,14 +252,18 @@ function createGraph(program: LinkedProgram): CompiledGraph {
 
 function build(
   targetAccepts: Readonly<Record<string, "exact" | "substitute">>,
-  bindings: Readonly<Record<string, string>> = {},
+  satisfactionMap: Readonly<Record<string, string>> = {},
 ) {
   const program = createProgram();
   const graph = createGraph(program);
   const request: BuildRequest = sealBuildRequest({
     graph: graph.id,
     targets: Object.entries(targetAccepts).map(([outputId, accepts]) => ({ output: outputId, accepts })),
-    bindings: Object.entries(bindings).map(([outputId, candidate]) => ({ output: outputId, candidate })),
+    satisfactions: Object.entries(satisfactionMap).map(([outputId, candidate]) => ({
+      output: outputId,
+      candidate,
+      fidelity: candidate === "opening.visual.existing" ? "substitute" as const : "exact" as const,
+    })),
   });
   return start(program, graph, request);
 }

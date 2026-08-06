@@ -3,7 +3,6 @@ import {
   digestOf,
   EMPTY_REALIZATION_DIGEST,
   isDigest,
-  resolveLogicalOutput,
   sealCompiledGraph,
   verifyBuildState,
   verifyCompiledGraph,
@@ -13,25 +12,28 @@ import type {
   Candidate,
   CanonicalValue,
   CompiledGraph,
-  Conformance,
   Digest,
   LinkedProgram,
   OperationNode,
   StoredValue,
   TypeValidationReceipt,
+  TypeRef,
 } from "@svml/protocol";
 
 export type RealizationOverlay = {
-  readonly format: "svml.realization-overlay@1";
+  readonly format: "svml.realization-overlay@2";
   readonly id: Digest;
-  /** Exact author graph to which these Candidates may be attached. */
+  /** Exact Author Graph whose Logical Outputs may be referenced by this Run Graph. */
   readonly sourceGraph: Digest;
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
 };
 
+/** Canonical name for the external typed graph. */
+export type RunGraph = RealizationOverlay;
+
 export type RealizationClosure = {
-  readonly format: "svml.realization-closure@1";
+  readonly format: "svml.realization-closure@2";
   readonly id: Digest;
   readonly sourceGraph: Digest;
   readonly overlays: readonly Digest[];
@@ -43,24 +45,22 @@ export type ResolvedRealization = {
 };
 
 export type ProvidedCandidateInput = {
-  readonly output: string;
+  readonly type: TypeRef;
   readonly value: StoredValue;
-  readonly fidelity: Conformance;
   readonly record?: string;
   readonly provenance?: CanonicalValue;
   readonly validation?: TypeValidationReceipt;
 };
 
-export type HistoricalCandidateInput = {
-  /** Current author graph before any external Realization Overlay. */
-  readonly source: CompiledGraph;
+export type BuildRecordCandidateInput = {
   /** A previously verified BuildState used only as a source of one typed value. */
   readonly build: BuildState;
-  /** Current Logical Output to which the value will be attached. */
-  readonly output: string;
-  /** Historical Logical Output to read; defaults to `output` only as a Host convenience. */
-  readonly sourceOutput?: string;
+  /** Historical Logical Output whose selected Record becomes an independent Candidate. */
+  readonly sourceOutput: string;
 };
+
+/** @deprecated Use BuildRecordCandidateInput. */
+export type HistoricalCandidateInput = BuildRecordCandidateInput;
 
 export class RealizationError extends Error {
   readonly code: string;
@@ -80,7 +80,7 @@ function assert(condition: unknown, code: string, message: string, subject?: str
 
 function overlayContent(overlay: RealizationOverlay): Omit<RealizationOverlay, "id"> {
   return {
-    format: "svml.realization-overlay@1",
+    format: "svml.realization-overlay@2",
     sourceGraph: overlay.sourceGraph,
     candidates: [...overlay.candidates].sort((left, right) => left.id.localeCompare(right.id)),
     operations: [...overlay.operations].sort((left, right) => left.id.localeCompare(right.id)),
@@ -91,7 +91,7 @@ export function sealRealizationOverlay(
   overlay: Omit<RealizationOverlay, "format" | "id">,
 ): RealizationOverlay {
   const draft = {
-    format: "svml.realization-overlay@1" as const,
+    format: "svml.realization-overlay@2" as const,
     id: digestOf("unsealed-realization-overlay"),
     ...overlay,
   };
@@ -100,28 +100,24 @@ export function sealRealizationOverlay(
   return { ...content, id: digestOf(content) };
 }
 
+/** Canonical Run-Graph name; retained alongside the Overlay API name. */
+export const sealRunGraph = sealRealizationOverlay;
+
 export function createProvidedCandidate(input: ProvidedCandidateInput): Candidate {
-  assert(input.output.length > 0, "EMPTY_LOGICAL_OUTPUT_ID", "Provided Candidate output is empty");
-  assert(
-    input.fidelity === "exact" || input.fidelity === "substitute",
-    "INVALID_CONFORMANCE",
-    "Provided Candidate fidelity is invalid",
-  );
   const value = input.value.kind === "inline"
     ? { kind: "inline" as const, value: canonicalize(input.value.value) }
     : { ...input.value };
   const identity = {
     kind: "provided-candidate@1",
-    output: input.output,
+    type: input.type,
     value,
-    fidelity: input.fidelity,
     ...(input.provenance === undefined ? {} : { provenance: canonicalize(input.provenance) }),
     ...(input.validation === undefined ? {} : { validation: input.validation }),
   };
   const suffix = digestOf(identity).slice("sha256:".length);
   return {
     id: `candidate:${suffix}`,
-    output: input.output,
+    type: input.type,
     root: {
       kind: "value",
       value: {
@@ -131,7 +127,6 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
         ...(input.validation === undefined ? {} : { validation: input.validation }),
       },
     },
-    fidelity: input.fidelity,
   };
 }
 
@@ -141,26 +136,16 @@ export function createProvidedCandidate(input: ProvidedCandidateInput): Candidat
  * provenance. History makes no claim that the value satisfies the current author's meaning.
  * No prior Operation, Command or outstanding execution state crosses the boundary.
  */
-export function createHistoricalCandidate(input: HistoricalCandidateInput): Candidate {
+export function createBuildRecordCandidate(input: BuildRecordCandidateInput): Candidate {
   verifyBuildState(input.build);
-  const currentOutput = resolveLogicalOutput(input.source, input.output);
-  const sourceOutput = input.sourceOutput ?? input.output;
+  const sourceOutput = input.sourceOutput;
   const selection = input.build.plan.selections.find((item) => item.output === sourceOutput);
   assert(selection !== undefined, "HISTORICAL_OUTPUT_UNSELECTED", "historical Build did not select this Logical Output", sourceOutput);
   const record = input.build.records.find((item) => item.id === selection.record);
   assert(record !== undefined, "HISTORICAL_RECORD_MISSING", "historical Output Record is absent", selection.record);
-  assert(
-    record.type.module.name === currentOutput.type.module.name
-      && record.type.module.version === currentOutput.type.module.version
-      && record.type.name === currentOutput.type.name,
-    "HISTORICAL_TYPE_MISMATCH",
-    "historical Output Record has another Type",
-    record.id,
-  );
   return createProvidedCandidate({
-    output: input.output,
+    type: record.type,
     value: record.value,
-    fidelity: "substitute",
     provenance: {
       format: "svml.historical-output@1",
       sourceBuild: input.build.id,
@@ -174,6 +159,9 @@ export function createHistoricalCandidate(input: HistoricalCandidateInput): Cand
   });
 }
 
+/** @deprecated Use createBuildRecordCandidate. */
+export const createHistoricalCandidate = createBuildRecordCandidate;
+
 export function verifyRealizationOverlay(
   program: LinkedProgram,
   source: CompiledGraph,
@@ -185,7 +173,7 @@ export function verifyRealizationOverlay(
     "OVERLAY_REQUIRES_AUTHOR_GRAPH",
     "Realization Overlays attach to an author graph, not an already realized graph",
   );
-  assert(overlay.format === "svml.realization-overlay@1", "UNSUPPORTED_REALIZATION_OVERLAY", "unsupported Overlay format");
+  assert(overlay.format === "svml.realization-overlay@2", "UNSUPPORTED_REALIZATION_OVERLAY", "unsupported Overlay format");
   assert(isDigest(overlay.id), "INVALID_OVERLAY_DIGEST", "Realization Overlay id is not a digest");
   assert(overlay.id === digestOf(overlayContent(overlay)), "OVERLAY_DIGEST_MISMATCH", "Realization Overlay digest differs");
   assert(overlay.sourceGraph === source.id, "OVERLAY_SOURCE_MISMATCH", "Realization Overlay targets another author graph");
@@ -193,7 +181,6 @@ export function verifyRealizationOverlay(
 
   const candidateIds = new Set(source.candidates.map((candidate) => candidate.id));
   for (const candidate of overlay.candidates) {
-    resolveLogicalOutput(source, candidate.output);
     assert(!candidateIds.has(candidate.id), "OVERLAY_CANDIDATE_CONFLICT", `Candidate ${candidate.id} already exists`);
     assert(candidate.id.length > 0, "EMPTY_CANDIDATE_ID", "Overlay Candidate id is empty");
     candidateIds.add(candidate.id);
@@ -205,7 +192,7 @@ function sealRealizationClosure(
   overlays: readonly RealizationOverlay[],
 ): RealizationClosure {
   const content = {
-    format: "svml.realization-closure@1" as const,
+    format: "svml.realization-closure@2" as const,
     sourceGraph,
     overlays: overlays.map((overlay) => overlay.id).sort(),
   };
@@ -222,20 +209,11 @@ export function resolveRealization(
   const closure = sealRealizationClosure(source.id, overlays);
   const candidates = overlays.flatMap((overlay) => overlay.candidates);
   const operations = overlays.flatMap((overlay) => overlay.operations);
-  const attachments = new Map<string, string[]>();
-  for (const candidate of candidates) {
-    const attached = attachments.get(candidate.output) ?? [];
-    attached.push(candidate.id);
-    attachments.set(candidate.output, attached);
-  }
   const graph = sealCompiledGraph({
     program: source.program,
     source: source.source,
     realization: closure.id,
-    outputs: source.outputs.map((output) => ({
-      ...output,
-      candidates: [...output.candidates, ...(attachments.get(output.id) ?? [])],
-    })),
+    outputs: source.outputs,
     candidates: [...source.candidates, ...candidates],
     operations: [...source.operations, ...operations],
   });

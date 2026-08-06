@@ -18,7 +18,7 @@ import {
   operationResultRecord,
   resolveLogicalOutput,
   resolveOperation,
-  selectedCandidate,
+  selectedSatisfaction,
   verifyBuildRequest,
 } from "./graph.js";
 import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
@@ -79,7 +79,7 @@ function planContent(
   selections: BuildPlan["selections"],
 ): Omit<BuildPlan, "id"> {
   return {
-    format: "svml.plan@1",
+    format: "svml.plan@2",
     graph: graph.id,
     request: request.digest,
     initialValues,
@@ -148,14 +148,15 @@ export function compileBuild(
     invariant(!resolvingOutputs.has(id), "SELECTED_GRAPH_CYCLE", `selected graph cycles through ${id}`, id);
     resolvingOutputs.add(id);
     const output = resolveLogicalOutput(graph, id);
-    const candidate = selectedCandidate(graph, request, id);
+    const selected = selectedSatisfaction(graph, request, id);
+    const { candidate, fidelity } = selected;
     let resolved: ResolvedSource;
     if (candidate.root.kind === "value") {
       const record = sealRecord({
         id: candidate.root.value.id,
-        type: output.type,
+        type: candidate.type,
         value: candidate.root.value.value,
-        conformance: candidate.fidelity,
+        conformance: fidelity,
         origin: {
           kind: "provided",
           candidate: candidate.id,
@@ -171,16 +172,24 @@ export function compileBuild(
       verifyRecord(program.closure, record);
       invariant(!authored.has(record.id), "PROVIDED_RECORD_CONFLICT", `${record.id} conflicts with authored input`);
       const previous = initialValues.get(record.id);
-      invariant(
-        previous === undefined || canonicalStringify(previous) === canonicalStringify(record),
-        "PROVIDED_RECORD_CONFLICT",
-        `${record.id} has conflicting Provided Values`,
-        record.id,
-      );
-      initialValues.set(record.id, record);
+      if (previous === undefined) {
+        initialValues.set(record.id, record);
+      } else {
+        const { conformance: _previousConformance, ...previousFact } = previous;
+        const { conformance: _recordConformance, ...currentFact } = record;
+        invariant(
+          canonicalStringify(previousFact) === canonicalStringify(currentFact),
+          "PROVIDED_RECORD_CONFLICT",
+          `${record.id} has conflicting Provided Values`,
+          record.id,
+        );
+        // One materialized fact has one plan-wide conformance. If callers need the same bytes with
+        // independent path fidelity, the Run Graph must expose explicit identity projections.
+        initialValues.set(record.id, { ...previous, conformance: worst(previous.conformance, fidelity) });
+      }
       resolved = { record: record.id, type: record.type };
     } else {
-      resolved = demandOperation(candidate.root.result.operation, candidate.fidelity);
+      resolved = demandOperation(candidate.root.result.operation, fidelity);
     }
     invariant(
       sameType(resolved.type, output.type),
@@ -190,7 +199,7 @@ export function compileBuild(
     );
     resolvingOutputs.delete(id);
     resolvedOutputs.set(id, resolved);
-    selections.set(id, { output: id, candidate: candidate.id, record: resolved.record });
+    selections.set(id, { output: id, candidate: candidate.id, fidelity, record: resolved.record });
     return resolved;
   };
 
@@ -235,7 +244,7 @@ function validatePlanStructure(
   request: BuildRequest,
   plan: BuildPlan,
 ): void {
-  invariant(plan.format === "svml.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
+  invariant(plan.format === "svml.plan@2", "UNSUPPORTED_PLAN", "unsupported build plan format");
   invariant(plan.graph === graph.id, "PLAN_GRAPH_MISMATCH", "build plan belongs to another graph");
   invariant(plan.request === request.digest, "PLAN_REQUEST_MISMATCH", "build plan belongs to another request");
   const { id: _id, ...content } = plan;
