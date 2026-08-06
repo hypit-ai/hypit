@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "X Typewriter";
+  src: url("./fonts/x-typewriter/XTypewriter-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --vp-font-family-base: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --vp-font-family-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
@@ -26,7 +34,7 @@ body { letter-spacing: -0.012em; }
 .VPNav { backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,.08); }
 .VPNavBarTitle .title {
   color: var(--narratage-neon-core);
-  font-family: "Cutive Mono", "DM Mono", monospace;
+  font-family: "X Typewriter", "DM Mono", monospace;
   font-size: 19px;
   font-weight: 400;
   letter-spacing: -.03em;
@@ -62,7 +70,7 @@ body { letter-spacing: -0.012em; }
   border: 0;
   padding: 0 .18em .08em .035em;
   color: var(--narratage-neon-core);
-  font-family: "Cutive Mono", "DM Mono", monospace;
+  font-family: "X Typewriter", "DM Mono", monospace;
   font-size: clamp(52px,7.2vw,92px);
   font-weight: 400;
   line-height: 1;
