@@ -77,29 +77,6 @@ body { letter-spacing: -0.012em; }
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-.hero-statement-name::after {
-  content: attr(data-text);
-  position: absolute;
-  inset: 0;
-  padding: inherit;
-  background:
-    radial-gradient(circle, rgba(255,250,252,1) 0 1.25px, transparent 2.1px) 7px 3px / 39px 29px,
-    radial-gradient(circle, rgba(255,224,239,.9) 0 1px, transparent 1.9px) 21px 14px / 57px 41px,
-    linear-gradient(108deg, transparent 36%, rgba(255,246,251,0) 43%, rgba(255,246,251,.78) 49%, rgba(255,246,251,.18) 54%, transparent 61%) -160% 0 / 250% 100% no-repeat;
-  background-clip: text;
-  opacity: .48;
-  pointer-events: none;
-  animation: narratage-inlay-shimmer 8.5s cubic-bezier(.45,0,.2,1) infinite;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-@keyframes narratage-inlay-shimmer {
-  0%, 16% { opacity: .34; background-position: 7px 3px, 21px 14px, -160% 0; }
-  48% { opacity: .58; }
-  78%, 100% { opacity: .38; background-position: 21px -4px, 7px 24px, 125% 0; }
-}
-
 @media (forced-colors: active) {
   .VPNavBarTitle .title,
   .hero-statement-name {
@@ -107,9 +84,6 @@ body { letter-spacing: -0.012em; }
     background: none;
     -webkit-text-fill-color: currentColor;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-statement-name::after { animation: none; opacity: .4; }
 }
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); }
 .hero-statement-viewport-en { height: clamp(108px,12vw,142px); margin-top: 8px; }
