@@ -13,8 +13,8 @@
   --vp-c-text-2: #a3a3a3;
   --vp-c-text-3: #737373;
   --vp-c-divider: #262626;
-  --narratage-neon-core: #fafaff;
-  --narratage-neon-tube: #dce1ff;
+  --narratage-neon-core: #fff;
+  --narratage-neon-tube: #f5f5f5;
   --vp-nav-bg-color: rgba(0, 0, 0, 0.86);
   --vp-sidebar-bg-color: #000;
   --vp-code-block-bg: #0a0a0a;
@@ -34,7 +34,7 @@ body { letter-spacing: -0.012em; }
   -webkit-text-stroke: .25px var(--narratage-neon-tube);
   paint-order: stroke fill;
   text-rendering: geometricPrecision;
-  text-shadow: 0 0 1px #fff, 0 0 4px rgba(220,225,255,.58), 0 0 12px rgba(111,126,255,.2);
+  text-shadow: 0 0 1px #fff, 0 0 4px rgba(255,255,255,.48), 0 0 12px rgba(255,255,255,.14);
   text-transform: uppercase;
 }
 .VPButton.brand { color: #fff !important; border-color: #ec4899 !important; background: #ec4899 !important; }
@@ -70,7 +70,7 @@ body { letter-spacing: -0.012em; }
   -webkit-text-stroke: .3px var(--narratage-neon-tube);
   paint-order: stroke fill;
   text-rendering: geometricPrecision;
-  text-shadow: 0 0 1px #fff, 0 0 4px rgba(220,225,255,.72), 0 0 10px rgba(132,144,255,.3), 0 0 22px rgba(91,105,255,.12);
+  text-shadow: 0 0 1px #fff, 0 0 4px rgba(255,255,255,.68), 0 0 10px rgba(255,255,255,.24), 0 0 22px rgba(255,255,255,.08);
   text-transform: uppercase;
 }
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); mask-image: linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%); }
