@@ -11,7 +11,8 @@ The first implementation contains:
 - exact Provider capability/return bindings, implementation digests and permission allowlists;
 - `BuildStore` and `OperationStore` ports with compare-and-swap in-memory references;
 - a recoverable Provider Endpoint lifecycle that journals before `start`, checkpoints `pending`,
-  and calls `resume` after a restart.
+  calls `resume` after a restart, and records wake, retry, failure and cancellation state;
+- a narrow `CredentialStore`/`CredentialRef` port that keeps secrets out of framework facts.
 
 The Scheduler does not traverse Graphs, choose Candidates, rewrite Needs or accept arbitrary
 serialized commands. Core remains the sole source of readiness and the sole Event acceptance law.
@@ -26,8 +27,9 @@ validated and reduced by Core. If a process stops after completion is journaled 
 accepts its Event, the next run reconstructs the same Event from the stored completion and does not
 call the Endpoint again.
 
-This is an in-process reference, not a durable queue. File/SQLite stores, attempt leases, wake-up
-polling, credentials and production Provider adapters remain separate Runtime packages. An Endpoint
+This package is an environment-neutral reference, not a durable queue. SQLite/filesystem adapters,
+environment credentials, the local follow loop and the Provider SDK live in separate packages;
+distributed attempt leases and production Provider adapters remain future work. An Endpoint
 whose upstream API cannot look up or deduplicate the supplied `submissionKey` cannot promise
 exactly-once remote work across the crash window; its `resume(undefined)` must explicitly reconcile
 that uncertainty.

@@ -86,6 +86,7 @@ const textProgram = sealTextTrackProgram({
 });
 const background = sealVisualTrack({
   contract: "svml.visual-track@1",
+  visualIr: "svml.hyperframes-visual-ir@1",
   id: "background-track",
   programSpaceDigest: space.digest,
   sources: [{ name: "fixture", digest: digestOf("background") }],

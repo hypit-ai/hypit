@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@svml/contracts": "workspace:*",
-    "@svml/core": "workspace:*",
+    "@svml/driver-node": "workspace:*",
     "@svml/protocol": "workspace:*"
   }
 }

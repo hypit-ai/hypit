@@ -161,6 +161,7 @@ export function renderTextTrack(programSpace: ProgramSpace, program: TextTrackPr
   assertTextTrackProgramIdentity(program, programSpace);
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: program.id,
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "program", digest: program.digest }],

@@ -1,4 +1,5 @@
 import type {
+  BlobRef,
   BuildEvent,
   BuildState,
   CoreCommand,
@@ -33,7 +34,7 @@ export type RuntimeExecutionContext = {
 
 export type RuntimeExecutionResult =
   | { readonly status: "completed"; readonly event: BuildEvent }
-  | { readonly status: "pending"; readonly operation: Digest };
+  | { readonly status: "pending"; readonly operation: Digest; readonly wakeAt?: number };
 
 /**
  * Minimal execution port used by a Scheduler. Implementations must regenerate the command from
@@ -46,6 +47,13 @@ export type RuntimeCommandExecutor = {
     commandId: string,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult>;
+};
+
+/** Content-addressed bytes. Location, retention and remote transport are adapter policy. */
+export type ArtifactStore = {
+  put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
+  get(digest: Digest): Promise<Uint8Array | undefined>;
+  has(digest: Digest): Promise<boolean>;
 };
 
 export type BuildSnapshot = {
@@ -77,6 +85,7 @@ export type SchedulerJournalEntry = {
   readonly status: "completed" | "pending" | "error";
   readonly event?: string;
   readonly operation?: Digest;
+  readonly wakeAt?: number;
   readonly message?: string;
 };
 
@@ -93,4 +102,6 @@ export type LocalBuildSchedulerOptions = {
   readonly laneLimits?: Readonly<Record<string, number>>;
   readonly maxEventsPerBuild?: number;
   readonly runtimeClosure?: RuntimeClosure;
+  /** Optional durable authority. When present, every accepted Core Event is persisted by CAS. */
+  readonly buildStore?: BuildStore;
 };

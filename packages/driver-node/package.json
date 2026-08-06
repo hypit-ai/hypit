@@ -16,7 +16,6 @@
     "@svml/caption": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/script": "workspace:*",
-    "@svml/speech-align": "workspace:*",
-    "@svml/whisperx": "workspace:*"
+    "@svml/speech-align": "workspace:*"
   }
 }

@@ -1,7 +1,10 @@
 export {
+  whisperXComponent,
+} from "./component.js";
+export {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
-  whisperXRequestForAudioBasis,
+  whisperXRequestForEvidenceAudio,
 } from "./evidence.js";
 export {
   whisperXAlignmentEvidenceSchema,

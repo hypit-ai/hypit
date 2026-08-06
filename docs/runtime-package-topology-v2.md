@@ -14,9 +14,10 @@
 > capability/returns 分离、exact Provider 路由、注册式 Manifest Resolver、受控 Node
 > Source Host、最小官方 CLI、环境无关 Runtime 端口、静态 Runtime facet、Profile/Closure
 > 解析、Build/Operation 内存 CAS，以及跨 Build/Build 内共享并发 lane 的单进程
-> Scheduler 和 recoverable Endpoint start/resume；durable adapters、leases、自动安装并
-> 隔离执行未知包仍未实现。本文关于生产 Queue、
-> Credential、真实 Provider 和 Hosted Runtime 的内容仍是后续施工边界。
+> Scheduler、recoverable Endpoint start/resume/wake/retry/cancel、SQLite Build/Operation Store、
+> filesystem Artifact Store、环境变量 Credential Store、Provider Kit 和本地 follow/status
+> 控制面已经实现；leases、S3/AWS 适配器、真实 Provider、自动安装并隔离执行未知包仍未
+> 实现。本文关于生产 Queue、Hosted Runtime 的内容仍是后续施工边界。
 > 类型所有者的可选语义 Validator、统一 Record Admission 与内容绑定校验回执已经实现；
 > 当前只允许 Host 注册的可信进程内实现，未知第三方 Validator 的沙箱仍未实现。
 >
@@ -472,15 +473,18 @@ Provider Job Queue 不推进 BuildPlan，也不能接受其他步骤的 Event。
 @svml/scheduler-local
 @svml/state-file
 @svml/artifacts-local
+@svml/artifact-store-s3
 @svml/cache-local
-@svml/credentials-keychain
+@svml/credential-store-env
 ```
 
 ### 9.3 Endpoint 包
 
 ```text
-@svml/hyperframes-local
+@svml/provider-hyperframes-local
+@svml/provider-hyperframes-aws
 @svml/provider-whisperx-local
+@svml/provider-whisperx-aws
 @svml/provider-kie
 @svml/provider-volcengine
 @svml/provider-gemini
@@ -542,9 +546,10 @@ artifacts-local 和 credentials-keychain，并提供一个简单的 Provider 配
 - Provider 只精确匹配 capability + returns，多实现时要求显式 `bind()`；
 - 恢复时丢弃序列化 Command，由 Core 重新生成。
 
-当前实现尚未完成动态外部包加载、安全 Worker、Artifact Store 验证和生产 Runtime。
-Track/Composition/HyperFrames 的通用合同与参考 lowering 已有实现，但作者侧完整视频
-Surface 和真实渲染 Provider 仍未接通；
+当前实现尚未完成动态外部包加载、安全 Worker 和生产 Runtime。文件系统与 S3
+Artifact Store、SQLite Store、本地媒体执行、真实 HyperFrames 渲染、本地 WhisperX
+Provider 及其锁定的 Python sidecar service 已经落地。Track/Composition/HyperFrames 的通用合同与参考 lowering
+也已有实现；当前纵向缺口主要是作者侧完整视频 Surface、官方组件安装器和稳定的包激活；
 不能用 Runtime Router 或数据库补偿 Core 语义。
 
 Kernel Gate 完成后，Runtime 再依次建立以下接口。
@@ -596,8 +601,11 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 `OperationStore.create()` 必须发生在 `start()` 之前。`resume(undefined)` 覆盖“远端可能
 已经提交，但 checkpoint 尚未来得及保存”的崩溃窗口；Endpoint 必须用稳定
 `submissionKey` 执行 find-or-submit。若 completion 已经写入 OperationStore 而 Event 尚未
-进入 BuildState，恢复时直接重建同一个 Event，不得再次调用 Endpoint。当前内存实现
-证明这些状态转换，但不冒充 durable store、lease 或远端 API 的 exactly-once 保证。
+进入 BuildState，恢复时直接重建同一个 Event，不得再次调用 Endpoint。当前内存与
+SQLite 实现证明这些状态转换，但不冒充分布式 lease 或远端 API 的 exactly-once 保证。
+Endpoint 还可返回 `wakeAt`，由本地 follow 循环决定何时再次调用；retryable terminal
+failure 在有限策略内创建新 attempt 和新 submission key，显式取消则成为普通 terminal
+failure 后交给 Core 接受。
 
 ### 10.5 两个参考发行版
 
@@ -607,7 +615,9 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
    Providers；
 2. Hosted fixture：持久 Scheduler、独立 Endpoint worker、同一 Core 和 Contracts。
 
-完成这一步之后，才接 KIE/火山、HyperFrames Lambda 和生产队列。
+这一步已经完成；KIE generation、local media、local HyperFrames 与 local WhisperX adapter
+均已接入。下一步是把现有作者组件补齐成一条真实单机视频链；Lambda 和生产队列只在
+真实部署需要时建设。
 
 ## 11. 分阶段施工顺序
 
@@ -628,27 +638,32 @@ Endpoint 只能得到当前 Need 所需的最小 Credential/Artifact 权限，�
 ready Commands 的 queue-free Scheduler。recoverable Endpoint 会在 `start` 前建立稳定
 Operation/submission identity、保存 pending checkpoint，并在恢复后执行 `resume`；已记录的
 completion 会直接重放为 Core Event，不会再调用外部 Endpoint。测试证明跨 Build 共享
-Provider lane、同一 Build 内独立付费命令并行且公共上游只执行一次。持久化 adapter、
-lease/wakeup 和完整发行包仍待实现。
+Provider lane、同一 Build 内独立付费命令并行且公共上游只执行一次。SQLite 持久化、
+filesystem/S3 ArtifactStore、环境变量 CredentialStore、Provider Kit、Lambda/process
+transport、`@svml/local` 发行包和
+单进程 wake/follow/status/cancel 已经实现；distributed lease/dispatcher 仍待实现。
 
 1. **已完成：**新增 Runtime Module facet representation 与 Profile/Closure identity；
 2. **已完成：**ProviderRegistry 可由锁定 Closure 原子装配并核对实现摘要；
-3. 提供 `@svml/runtime-local` 参考发行包；
-4. **部分完成：**单一进程内 Scheduler、内存 Operation Journal 和本地 CAS 已有；JSON/
-   SQLite durable adapter 尚无；
+3. **已完成：**按目标命名提供 `@svml/local` 参考发行包；
+4. **已完成：**单一进程内 Scheduler、SQLite Build/Operation Store、本地 CAS 和 filesystem
+   ArtifactStore；
 5. **已完成：**Scheduler 只调度 Core ready Commands，不自行搜索或裁剪图；
-6. **部分完成：**通用 fake Endpoint 已证明 pending 恢复、submission crash window 与
-   completion 重放；仍需用 fake Seedance、fake WhisperX、fake HyperFrames 证明 Pin 后
-   零付费调用和完整视频链恢复；
+6. **部分完成：**通用 fake Endpoint 已证明 pending 恢复、submission crash window、
+   completion 重放、wake、有限 retry、credential isolation 与 cancel；KIE generation
+   已通过七个模型族的 credentialed smoke 和一次真实合成参考图上传，并证明完成 Build
+   重跑不额外扣费；本地 WhisperX 与 HyperFrames exact Provider 已证明，远端
+   WhisperX/HyperFrames 的 pending 恢复仍待真正 Lambda/Hypit Endpoint；
 7. 增加“同一个 Build 不允许两个权威 Scheduler”的攻击性测试。
 
 ### Phase R2：真正本地纵向链路
 
-1. HyperFrames 本地 Endpoint；
-2. WhisperX 本地 Endpoint；
-3. 本地 Artifact Store 与 Credential Store；
-4. Seedance KIE 或火山中的一个真实 Endpoint；
-5. 完成 Script → Seedance → Basis → WhisperX → Map → Caption/Tracks →
+1. **本地已实现：**HyperFrames exact visual Endpoint；Lambda 版本按需；
+2. **本地已实现：**canonical evidence audio、WhisperX sidecar adapter 和锁定的 Python
+   service；Lambda 版本按需；
+3. **已实现：**KIE 对选定 Seedance 与其他六个模型族的真实 Endpoint 合同；真实账号
+   smoke 已于 2026-08-06 通过；
+4. 完成 Script → Seedance → Basis → WhisperX → Map → Caption/Tracks →
    HyperFrames 的单机 Build。
 
 ### Phase R3：Hypit 单能力远程 Endpoint

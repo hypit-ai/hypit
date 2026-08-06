@@ -144,13 +144,18 @@ authoritative speech/display projections that are part of Narrative
 Owns already-materialized media facts:
 
 ```text
-MediaArtifact
 BlobArtifact
+MediaArtifact
 FontArtifact
 CompositableSurface
+MediaInspection and every enumerated container stream
+MediaStreamSelection
+SynchronizedMedia and its source presentation transform
 ```
 
-It does not own Seedance, upload, caching, rendering or Provider choices.
+It does not own Seedance, upload, caching, rendering, ffmpeg deployment or Provider choices. An
+embedded audio stream is an observed media fact; only `@svml/speech` may bind it to a Narrative and
+promote it into a SpeechBasis.
 
 ### 4.3 `@svml/program-space`
 
@@ -201,11 +206,13 @@ VisualTrack
 AudioTrack
 Present
 VisualElement
+HyperFrames Visual IR v1 schema and validation
 Composition
 ```
 
-It may depend on `media` and `program-space`. It must not recognize Caption, B-roll, Film,
-Seedance or HyperFrames families.
+It may depend on `media` and `program-space`. It must not recognize Caption, B-roll, Film or
+Seedance families, nor import a HyperFrames compiler or Provider. The named Visual IR is the common
+video target protocol owned here; `@svml/hyperframes` is its implementation.
 
 `TimedCaptionProjection` belongs to `@svml/caption`, not to a global contract module.
 
@@ -224,7 +231,7 @@ Their independent Manifest identities are more important than their physical pac
 | `@svml/broll` | B-roll Programs, owned motion/transitions and peer Tracks | mutation of sibling Tracks |
 | `@svml/text-track` | editorial text Programs and VisualTrack lowering | markup Frontend |
 | `@svml/film` | arbitrary Track assembly into Composition | HyperFrames compilation or rendering |
-| `@svml/hyperframes` | Composition to HyperframesDocument | Film semantics or render deployment |
+| `@svml/hyperframes` | HyperFrames Visual IR implementation; Composition to HyperframesDocument | protocol ownership, Film semantics or render deployment |
 | `@svml/speech-program` | official reusable speech pipeline composition | universal video workflow |
 
 The current `@svml/video-fragments` package is a prototype of `@svml/speech-program`, not a public
@@ -303,8 +310,12 @@ Author method and execution endpoint are different namespaces.
 @svml/provider-volcengine
 @svml/provider-fal
 @svml/provider-google
-@svml/provider-whisperx  local/reference WhisperX execution
-@svml/provider-hyperframes local/reference rendering
+@svml/provider-whisperx-local    local/reference WhisperX execution
+@svml/provider-whisperx-aws      our WhisperX Lambda/coordinator implementation
+@svml/provider-hyperframes-local local/reference rendering
+@svml/provider-hyperframes-aws   our Lambda rendering implementation
+@svml/provider-media-local       local ffprobe/ffmpeg inspection and normalization
+@svml/provider-media-aws         future equivalent Media Pipeline Lambda implementation
 @hypit/svml-provider     Hypit endpoints for several exact capabilities
 ```
 
@@ -323,6 +334,16 @@ whisperx.local-gpu
 ```
 
 Accounts and tenants do not produce new package names.
+
+Transport libraries sit below Provider packages and never appear in Provider Binding:
+
+```text
+@svml/transport-aws-lambda   bounded synchronous JSON invocation
+@svml/transport-process      bounded shell-free local JSON invocation
+```
+
+For example, `provider-whisperx-aws` may depend on `transport-aws-lambda`, but only the former owns
+the WhisperX capability, request schema, checkpoint interpretation and result validation.
 
 ## 8. Runtime service vocabulary
 
@@ -439,7 +460,9 @@ Reference local implementations may be delivered as:
   facets: BuildStore, OperationStore, ResultCache, optional RecordCatalog
 
 @svml/artifact-store-fs
-@svml/credential-store-keychain
+@svml/artifact-store-s3
+@svml/credential-store-env
+@svml/credential-store-keychain   optional production local adapter
 ```
 
 An all-file development profile may instead use BuildStore and OperationStore JSON adapters. No
@@ -449,7 +472,7 @@ Hosted implementations may be delivered as internal packages:
 
 ```text
 @hypit/svml-store-postgres
-@hypit/artifact-store-s3
+@svml/artifact-store-s3 configured for a Hypit bucket/namespace
 @hypit/credential-store
 ```
 
@@ -501,7 +524,8 @@ Recommended distributions:
 
 ```text
 @svml/local
-  reference local assembly: runtime-node + SQLite/file stores + filesystem artifacts
+  reference local assembly: Scheduler + SQLite Build/Operation stores + filesystem artifacts
+  + environment credentials
 
 @hypit/svml-client
   thin client that submits a complete locked Build to Hosted Runtime
@@ -520,7 +544,8 @@ trust boundaries.
 3. `runtime` and its stores never import official video modules.
 4. Domain components depend on the smallest logical type-owner modules they consume, not a global
    contracts digest.
-5. Composition does not depend on HyperFrames; Film does not depend on HyperFrames.
+5. Composition owns the HyperFrames Visual IR schema but does not depend on the
+   `@svml/hyperframes` implementation package; Film does not depend on that implementation either.
 6. Source imports cannot activate Provider, store, credential, dispatcher or worker facets.
 7. ResultCache and RecordCatalog cannot silently alter Candidate selection.
 8. Provider packages match exact CapabilityRef and return TypeRef; equal return shape is not routing
@@ -543,13 +568,17 @@ completed and partial steps below distinguish API laws from unfinished distribut
    explicit `speech-program` composition;
 5. atomically rename `elaborator`, `realization`, `validation`, `driver-node` and `text` at the
    package API boundary;
-6. **in progress:** `@svml/runtime` now owns executor, BuildStore and OperationStore ports; static
+6. **completed for the one-process reference:** `@svml/runtime` owns executor, ArtifactStore,
+   BuildStore and OperationStore ports; static
    Runtime facets; sealed Profile/Closure resolution; in-memory CAS stores; and one queue-free
    multi-Build Scheduler with shared concurrency lanes. The reference recoverable Endpoint
-   start/resume lifecycle is complete; durable adapters, leases, wake-up polling and the complete
-   local distribution remain;
+   start/resume lifecycle is complete. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
+   `@svml/local` now provide durable project recovery and package-based local assembly; distributed
+   leases and wake-up polling remain;
 7. implement locked Package Activation for trusted installed packages;
-8. only then add real WhisperX, Seedance and HyperFrames Provider Endpoints;
+8. **partially completed:** add real Provider Endpoints; KIE generation, reference local media,
+   local HyperFrames, the local WhisperX Provider and its locked Python service are implemented,
+   while AWS/hosted equivalents remain;
 9. add Hosted CommandDispatcher and durable server adapters only when a real multi-process Runtime
    requires them.
 

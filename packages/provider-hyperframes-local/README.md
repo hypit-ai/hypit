@@ -1,0 +1,24 @@
+# @svml/provider-hyperframes-local
+
+Trusted local Provider for the `@svml/hyperframes-render#render-visual` capability. It stages the
+content-addressed dependencies declared by a `HyperframesDocument`, renders a silent MP4 with the
+HyperFrames CLI, probes the bytes, and returns a verified `RenderedVisual`.
+
+There are deliberately two concurrency controls:
+
+- `defaultConcurrency` limits whole render requests admitted by the Runtime lane.
+- `workers` controls HyperFrames' parallel Chrome frame workers inside one admitted render.
+
+The Provider owns both controls because they are deployment policy, not author intent. It never
+renders program audio; `@svml/provider-media-local` separately prepares `TimelineAudio` and muxes
+the final media.
+
+```ts
+const provider = createLocalHyperframesProvider({
+  workers: 4,
+  defaultConcurrency: 1,
+});
+```
+
+The current package executes trusted official code in a local process. It is not a sandbox for
+untrusted documents or community renderer implementations.

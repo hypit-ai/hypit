@@ -16,6 +16,7 @@ import type {
 type MutableBuild = {
   readonly id: string;
   state: BuildState;
+  revision: number | undefined;
   readonly journal: SchedulerJournalEntry[];
   blocked: ScheduledBuildResult["blocked"];
   stopped: boolean;
@@ -55,6 +56,7 @@ export class LocalBuildScheduler {
   readonly #laneLimits: Readonly<Record<string, number>>;
   readonly #maxEventsPerBuild: number;
   readonly #runtimeClosure: RuntimeClosure | undefined;
+  readonly #buildStore: LocalBuildSchedulerOptions["buildStore"];
 
   constructor(executor: RuntimeCommandExecutor, options: LocalBuildSchedulerOptions = {}) {
     this.#executor = executor;
@@ -63,6 +65,7 @@ export class LocalBuildScheduler {
     this.#runtimeClosure = options.runtimeClosure === undefined
       ? undefined
       : structuredClone(options.runtimeClosure);
+    this.#buildStore = options.buildStore;
     if (this.#runtimeClosure !== undefined) verifyRuntimeClosure(this.#runtimeClosure);
     for (const [lane, limit] of Object.entries(options.laneLimits ?? {})) {
       if (lane.trim().length === 0) throw new Error("lane override name must not be empty");
@@ -73,20 +76,40 @@ export class LocalBuildScheduler {
 
   async run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]> {
     const ids = new Set<string>();
-    const builds: MutableBuild[] = requests.map((request) => {
+    const builds: MutableBuild[] = [];
+    for (const request of requests) {
       if (request.id.trim().length === 0) throw new Error("scheduled build id must not be empty");
       if (ids.has(request.id)) throw new Error(`scheduled build ${request.id} is duplicated`);
       ids.add(request.id);
-      if (this.#runtimeClosure !== undefined) verifyRuntimeCoverage(this.#runtimeClosure, request.state);
-      return {
+      let state = structuredClone(request.state);
+      let revision: number | undefined;
+      if (this.#buildStore !== undefined) {
+        let snapshot = await this.#buildStore.read(request.id);
+        if (snapshot === undefined) {
+          try {
+            snapshot = await this.#buildStore.create(request.id, state);
+          } catch (error) {
+            snapshot = await this.#buildStore.read(request.id);
+            if (snapshot === undefined) throw error;
+          }
+        }
+        if (snapshot.state.id !== state.id) {
+          throw new Error(`scheduled build ${request.id} already names a different Core Build`);
+        }
+        state = snapshot.state;
+        revision = snapshot.revision;
+      }
+      if (this.#runtimeClosure !== undefined) verifyRuntimeCoverage(this.#runtimeClosure, state);
+      builds.push({
         id: request.id,
-        state: structuredClone(request.state),
+        state,
+        revision,
         journal: [],
         blocked: [],
         stopped: false,
         completedEvents: 0,
-      };
-    });
+      });
+    }
     const active = new Map<string, ActiveCommand>();
     const laneDefaults = new Map<string, number>();
     let cursor = 0;
@@ -103,7 +126,23 @@ export class LocalBuildScheduler {
       return proposed;
     };
 
-    const preparations = (): Map<string, readonly RuntimeRunnableCommand[]> => {
+    const persist = async (build: MutableBuild, state: BuildState): Promise<void> => {
+      if (this.#buildStore === undefined) {
+        build.state = state;
+        return;
+      }
+      if (build.revision === undefined) throw new Error(`Build ${build.id} has no durable revision`);
+      const written = await this.#buildStore.compareAndSwap(build.id, build.revision, state);
+      if (written.status === "conflict") {
+        build.state = written.current.state;
+        build.revision = written.current.revision;
+        throw new Error(`Build ${build.id} lost its authoritative Store revision`);
+      }
+      build.state = written.snapshot.state;
+      build.revision = written.snapshot.revision;
+    };
+
+    const preparations = async (): Promise<Map<string, readonly RuntimeRunnableCommand[]>> => {
       const ready = new Map<string, readonly RuntimeRunnableCommand[]>();
       for (const build of builds) {
         if (build.stopped || build.state.status === "complete" || build.state.status === "failed") {
@@ -111,7 +150,8 @@ export class LocalBuildScheduler {
           continue;
         }
         const prepared = this.#executor.prepare(build.state);
-        build.state = prepared.state;
+        if (prepared.state.status !== build.state.status) await persist(build, prepared.state);
+        else build.state = prepared.state;
         build.blocked = prepared.blocked;
         ready.set(build.id, prepared.runnable.filter((item) =>
           !active.has(buildCommandKey(build.id, item.command.id))));
@@ -136,7 +176,7 @@ export class LocalBuildScheduler {
     };
 
     while (true) {
-      const ready = preparations();
+      const ready = await preparations();
       const counts = laneCounts();
       let slots = this.#maxConcurrency - active.size;
 
@@ -183,12 +223,14 @@ export class LocalBuildScheduler {
           lane: settled.command.lane,
           status: "pending",
           operation: settled.execution.operation,
+          ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
         });
         continue;
       }
       const event = settled.execution.event;
       try {
-        build.state = reduce(build.state, event).state;
+        const next = reduce(build.state, event).state;
+        await persist(build, next);
         build.completedEvents += 1;
         build.journal.push({
           command: settled.command.command.id,

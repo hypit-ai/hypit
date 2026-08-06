@@ -1,4 +1,7 @@
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import type { LocalRuntime } from "@svml/local";
 
 import { createOfficialNodeCompiler } from "./host.js";
 
@@ -12,12 +15,20 @@ type ParsedArgs = {
   readonly root: string | undefined;
   readonly targets: readonly string[];
   readonly substitute: boolean;
+  readonly runtime: string | undefined;
+  readonly buildId: string | undefined;
+  readonly follow: boolean;
+  readonly maxWaitMs: number | undefined;
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, file, ...rest] = argv;
   const targets: string[] = [];
   let root: string | undefined;
+  let runtime: string | undefined;
+  let buildId: string | undefined;
+  let follow = false;
+  let maxWaitMs: number | undefined;
   let substitute = false;
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
@@ -39,9 +50,37 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       substitute = true;
       continue;
     }
+    if (item === "--runtime") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--runtime requires a trusted config module");
+      runtime = resolve(value);
+      index += 1;
+      continue;
+    }
+    if (item === "--build-id") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--build-id requires a stable identity");
+      buildId = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--follow") {
+      follow = true;
+      continue;
+    }
+    if (item === "--max-wait-ms") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--max-wait-ms requires milliseconds");
+      maxWaitMs = Number(value);
+      if (!Number.isSafeInteger(maxWaitMs) || maxWaitMs < 0) {
+        throw new Error("--max-wait-ms must be a non-negative safe integer");
+      }
+      index += 1;
+      continue;
+    }
     throw new Error(`unknown option ${item}`);
   }
-  return { command, file, root, targets, substitute };
+  return { command, file, root, targets, substitute, runtime, buildId, follow, maxWaitMs };
 }
 
 function usage(): string {
@@ -49,13 +88,80 @@ function usage(): string {
     "usage:",
     "  svml-v2 check <file.svml> [--root directory]",
     "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--root directory]",
+    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--build-id id] [--follow]",
+    "  svml-v2 status <build-id> --runtime ./svml.runtime.ts",
+    "  svml-v2 cancel <build-id> --runtime ./svml.runtime.ts",
   ].join("\n");
+}
+
+function isLocalRuntime(value: unknown): value is LocalRuntime {
+  return typeof value === "object"
+    && value !== null
+    && "build" in value
+    && typeof value.build === "function"
+    && "close" in value
+    && typeof value.close === "function";
+}
+
+async function loadLocalRuntime(path: string): Promise<LocalRuntime> {
+  // A Runtime config is trusted executable deployment code, never an Author Frontend or .svml import.
+  const imported = await import(pathToFileURL(path).href) as {
+    readonly default?: unknown;
+    readonly runtime?: unknown;
+  };
+  let candidate = imported.default ?? imported.runtime;
+  if (typeof candidate === "function") candidate = await candidate();
+  else candidate = await candidate;
+  if (!isLocalRuntime(candidate)) {
+    throw new Error(`Runtime config ${path} must export a LocalRuntime or a function that creates one`);
+  }
+  return candidate;
 }
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<void> {
   const args = parseArgs(argv);
-  if (args.file === undefined || (args.command !== "check" && args.command !== "plan")) {
+  if (args.file === undefined
+    || (args.command !== "check" && args.command !== "plan" && args.command !== "build"
+      && args.command !== "status" && args.command !== "cancel")) {
     throw new Error(usage());
+  }
+  if (args.command === "status" || args.command === "cancel") {
+    if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
+    const runtime = await loadLocalRuntime(args.runtime);
+    try {
+      if (args.command === "status") {
+        const status = await runtime.status(args.file);
+        io.write(`${JSON.stringify({
+          build: status.build === undefined ? undefined : {
+            id: status.build.build,
+            revision: status.build.revision,
+            core: status.build.state.id,
+            status: status.build.state.status,
+            diagnostics: status.build.state.diagnostics,
+          },
+          operations: status.operations.map((operation) => ({
+            id: operation.id,
+            command: operation.command,
+            endpoint: operation.endpoint,
+            attempt: operation.attempt,
+            status: operation.status,
+            ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
+            ...(operation.failure === undefined ? {} : { failure: operation.failure }),
+          })),
+        }, null, 2)}\n`);
+      } else {
+        const result = await runtime.cancel(args.file);
+        io.write(`${JSON.stringify({
+          build: args.file,
+          cancelled: result !== undefined,
+          status: result?.status,
+          diagnostics: result?.state.diagnostics ?? [],
+        }, null, 2)}\n`);
+      }
+    } finally {
+      await runtime.close();
+    }
+    return;
   }
   const compiler = createOfficialNodeCompiler({ ...(args.root === undefined ? {} : { root: args.root }) });
   if (args.command === "check") {
@@ -75,5 +181,37 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<void> 
     targets: args.targets,
     accepts: args.substitute ? "substitute" : "exact",
   });
+  if (args.command === "build") {
+    if (args.runtime === undefined) throw new Error("build requires --runtime with a trusted local config module");
+    const runtime = await loadLocalRuntime(args.runtime);
+    try {
+      const built = await runtime.build({
+        id: args.buildId ?? result.state.id,
+        state: result.state,
+      }, {
+        follow: args.follow,
+        ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+      });
+      io.write(`${JSON.stringify({
+        build: built.id,
+        core: built.state.id,
+        status: built.status,
+        goals: built.state.plan.goals.map((goal) => {
+          const record = built.state.records.find((item) => item.id === goal.record);
+          return {
+            record: goal.record,
+            type: goal.type,
+            accepts: goal.accepts,
+            ...(record === undefined ? {} : { digest: record.digest, value: record.value }),
+          };
+        }),
+        blocked: built.blocked,
+        journal: built.journal,
+      }, null, 2)}\n`);
+    } finally {
+      await runtime.close();
+    }
+    return;
+  }
   io.write(`${JSON.stringify(result.plan, null, 2)}\n`);
 }

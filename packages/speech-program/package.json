@@ -10,6 +10,7 @@
     "@svml/caption": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/elaborator": "workspace:*",
+    "@svml/media-pipeline": "workspace:*",
     "@svml/speech-align": "workspace:*",
     "@svml/speech-take": "workspace:*",
     "@svml/whisperx": "workspace:*"

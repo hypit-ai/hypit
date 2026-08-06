@@ -4,7 +4,10 @@ import test from "node:test";
 import {
   contractTypes,
   sealComposition,
+  sealMuxedMedia,
   sealProgramSpace,
+  sealRenderedVisual,
+  sealTimelineAudio,
   videoContractDependencies,
   videoContractManifests,
 } from "@svml/contracts";
@@ -33,25 +36,30 @@ import {
 import type { AuthorSourceUnit } from "@svml/elaborator";
 import {
   compileHyperframesDocument,
-  compileHyperframesImplementationDigest,
+  hyperframesComponent,
   hyperframesManifest,
   hyperframesProducers,
 } from "@svml/hyperframes";
 import {
   decodeHyperframesRenderSurface,
   hyperframesRenderCapabilities,
+  hyperframesRenderComponent,
   hyperframesRenderFragment,
   hyperframesRenderManifest,
   hyperframesRenderModuleRef,
   hyperframesRenderProducers,
-  hyperframesRenderRequest,
+  hyperframesVisualRequest,
   hyperframesRenderSurfaceImplementationDigest,
-  hyperframesRenderTypes,
-  projectHyperframesVideo,
-  projectHyperframesVideoImplementationDigest,
-  requestHyperframesRenderImplementationDigest,
-  sealHyperframesRenderedVideo,
 } from "@svml/hyperframes-render";
+import {
+  compileAudioProgramPlan,
+  mediaPipelineComponent,
+  mediaPipelineComponents,
+  mediaPipelineCapabilities,
+  mediaPipelineManifest,
+  mediaPipelineProducers,
+} from "@svml/media-pipeline";
+import { TypeValidatorRegistry } from "@svml/validation";
 import type {
   CanonicalValue,
   ModuleManifest,
@@ -87,6 +95,7 @@ function inline(record: TypedRecord | undefined): CanonicalValue {
 const closure = createResolvedClosure([
   ...videoContractManifests,
   hyperframesManifest,
+  mediaPipelineManifest,
   hyperframesRenderManifest,
 ]);
 const origin = {
@@ -124,74 +133,80 @@ function build() {
 
 function producerRegistry(): HostRegistry {
   const registry = new HostRegistry();
-  registry.registerProducer(hyperframesProducers.compile, compileHyperframesImplementationDigest, ({ inputs }) => ({
-    outputs: { document: stored(compileHyperframesDocument(inline(inputs.composition) as typeof composition)) },
-    needs: {},
-  }));
-  registry.registerProducer(
-    hyperframesRenderProducers.request,
-    requestHyperframesRenderImplementationDigest,
-    ({ inputs }) => ({
-      outputs: {},
-      needs: { product: hyperframesRenderRequest(inline(inputs.document) as never) },
-    }),
-  );
-  registry.registerProducer(
-    hyperframesRenderProducers.projectVideo,
-    projectHyperframesVideoImplementationDigest,
-    ({ inputs }) => ({
-      outputs: { video: stored(projectHyperframesVideo(inline(inputs.product) as never)) },
-      needs: {},
-    }),
-  );
+  mediaPipelineComponent.install(registry);
+  hyperframesComponent.install(registry);
+  hyperframesRenderComponent.install(registry);
+  return registry;
+}
+
+function validatorRegistry(): TypeValidatorRegistry {
+  const registry = new TypeValidatorRegistry();
+  for (const component of mediaPipelineComponents) component.installValidators(registry);
   return registry;
 }
 
 test("HyperFrames rendering is an explicit exact Need after ordinary document compilation", async () => {
   assert.deepEqual(build().plan.steps.map((step) => step.producer.name).sort(), [
     hyperframesProducers.compile.name,
-    hyperframesRenderProducers.request.name,
-    hyperframesRenderProducers.projectVideo.name,
+    hyperframesRenderProducers.requestVisual.name,
+    mediaPipelineProducers.planAudio.name,
+    mediaPipelineProducers.renderAudio.name,
+    mediaPipelineProducers.mux.name,
+    mediaPipelineProducers.projectMuxed.name,
   ].sort());
 
-  const result = await new NodeDriver({ registry: producerRegistry() }).run(build());
+  const result = await new NodeDriver({ registry: producerRegistry(), validators: validatorRegistry() }).run(build());
   assert.equal(result.status, "paused");
-  assert.equal(result.state.needs.length, 1);
-  const need = result.state.needs[0]!;
-  assert.equal(need.capability.name, hyperframesRenderCapabilities.render.name);
-  assert.equal(need.returns.name, hyperframesRenderTypes.product.name);
-  assert.equal(need.accepts, "exact");
-  assert.deepEqual(need.constraints, hyperframesRenderRequest(compileHyperframesDocument(composition)));
-  assert.equal(result.blocked[0]?.reason, "missing-provider");
+  assert.equal(result.state.needs.length, 2);
+  const visual = result.state.needs.find((need) => need.capability.name === hyperframesRenderCapabilities.renderVisual.name)!;
+  assert.equal(visual.returns.name, contractTypes.renderedVisual.name);
+  assert.equal(visual.accepts, "exact");
+  assert.deepEqual(visual.constraints, hyperframesVisualRequest(compileHyperframesDocument(composition)));
+  const audio = result.state.needs.find((need) => need.capability.name === "render-timeline-audio")!;
+  assert.equal(audio.returns.name, contractTypes.timelineAudio.name);
+  assert.equal(result.blocked.every((item) => item.reason === "missing-provider"), true);
 });
 
-test("a bound Provider fulfills the render Need without entering Film or HyperFrames compilation", async () => {
-  const artifact = {
-    digest: digestOf("hyperframes-render:final-video"),
+test("separate visual, audio and mux Providers complete one author-visible render", async () => {
+  const visualArtifact = {
+    kind: "blob" as const,
+    digest: digestOf("hyperframes-render:visual"),
     size: 12_345,
     mediaType: "video/mp4",
-    durationSec: space.durationSec,
+  };
+  const audioArtifact = {
+    kind: "blob" as const,
+    digest: digestOf("hyperframes-render:audio"),
+    size: 4_096,
+    mediaType: "audio/wav",
+  };
+  const finalArtifact = {
+    kind: "blob" as const,
+    digest: digestOf("hyperframes-render:final-video"),
+    size: 16_441,
+    mediaType: "video/mp4",
   };
   const providers = new ProviderRegistry();
   providers.registerProvider(
     "example.hyperframes.local",
-    hyperframesRenderCapabilities.render,
-    hyperframesRenderTypes.product,
+    hyperframesRenderCapabilities.renderVisual,
+    contractTypes.renderedVisual,
     ({ need }) => {
       const request = need.constraints as {
         readonly contract: string;
         readonly document: ReturnType<typeof compileHyperframesDocument>;
       };
-      assert.equal(request.contract, "svml.hyperframes-render-request@2");
+      assert.equal(request.contract, "svml.hyperframes-visual-render-request@1");
       return {
-        value: stored(sealHyperframesRenderedVideo({
-          contract: "svml.hyperframes-rendered-video@2",
-          documentDigest: request.document.digest,
+        value: stored(sealRenderedVisual({
+          contract: "svml.rendered-visual@1",
+          renderInputDigest: request.document.digest,
           programSpaceDigest: request.document.programSpaceDigest,
           frameRate: request.document.frameRate,
           frameCount: request.document.frameCount,
           canvas: request.document.canvas,
-          artifact,
+          artifact: visualArtifact,
+          muted: true,
         })),
         conformance: "exact",
         delivery: "executed",
@@ -199,14 +214,73 @@ test("a bound Provider fulfills the render Need without entering Film or HyperFr
       };
     },
   );
-  providers.bind(hyperframesRenderCapabilities.render, "example.hyperframes.local");
+  providers.registerProvider(
+    "example.media.audio-real",
+    mediaPipelineCapabilities.renderAudio,
+    contractTypes.timelineAudio,
+    ({ need }) => {
+      const request = need.constraints as { contract: string; plan: ReturnType<typeof compileAudioProgramPlan> };
+      return {
+        value: stored(sealTimelineAudio({
+          contract: "svml.timeline-audio@1",
+          planDigest: request.plan.planDigest,
+          programSpaceDigest: request.plan.programSpaceDigest,
+          artifact: audioArtifact,
+          codec: "pcm_s16le",
+          sampleRate: 48_000,
+          channels: 2,
+          sampleFrames: request.plan.sampleFrames,
+          loudness: "planned",
+        })),
+        conformance: "exact",
+        delivery: "executed",
+        metadata: {},
+      };
+    },
+  );
+  providers.registerProvider(
+    "example.media.mux",
+    mediaPipelineCapabilities.mux,
+    contractTypes.muxedMedia,
+    ({ need }) => {
+      const request = need.constraints as { visual: ReturnType<typeof sealRenderedVisual>; audio: ReturnType<typeof sealTimelineAudio> };
+      return {
+        value: stored(sealMuxedMedia({
+          contract: "svml.muxed-media@1",
+          visualDigest: request.visual.visualDigest,
+          audioDigest: request.audio.audioDigest,
+          programSpaceDigest: request.visual.programSpaceDigest,
+          frameRate: request.visual.frameRate,
+          frameCount: request.visual.frameCount,
+          canvas: request.visual.canvas,
+          presentationSampleFrames: request.audio.sampleFrames,
+          artifact: finalArtifact,
+        })),
+        conformance: "exact",
+        delivery: "executed",
+        metadata: {},
+      };
+    },
+  );
+  providers.bind(hyperframesRenderCapabilities.renderVisual, "example.hyperframes.local");
+  providers.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-real");
+  providers.bind(mediaPipelineCapabilities.mux, "example.media.mux");
 
-  const result = await new NodeDriver({ registry: producerRegistry(), providers }).run(build());
+  const result = await new NodeDriver({
+    registry: producerRegistry(),
+    providers,
+    validators: validatorRegistry(),
+  }).run(build());
   assert.equal(result.status, "complete");
   const video = result.state.records.find((record) =>
     record.type.module.name === contractTypes.mediaArtifact.module.name
     && record.type.name === contractTypes.mediaArtifact.name);
-  assert.deepEqual(inline(video), artifact);
+  assert.deepEqual(inline(video), {
+    digest: finalArtifact.digest,
+    size: finalArtifact.size,
+    mediaType: finalArtifact.mediaType,
+    durationSec: space.durationSec,
+  });
 });
 
 test("a render Product cannot claim another frame domain while keeping the requested document", async () => {
@@ -214,31 +288,36 @@ test("a render Product cannot claim another frame domain while keeping the reque
   const providers = new ProviderRegistry();
   providers.registerProvider(
     "example.hyperframes.wrong-domain",
-    hyperframesRenderCapabilities.render,
-    hyperframesRenderTypes.product,
+    hyperframesRenderCapabilities.renderVisual,
+    contractTypes.renderedVisual,
     () => ({
-      value: stored(sealHyperframesRenderedVideo({
-        contract: "svml.hyperframes-rendered-video@2",
-        documentDigest: document.digest,
+      value: stored(sealRenderedVisual({
+        contract: "svml.rendered-visual@1",
+        renderInputDigest: document.digest,
         programSpaceDigest: document.programSpaceDigest,
         frameRate: document.frameRate,
         frameCount: document.frameCount + 1,
         canvas: document.canvas,
         artifact: {
+          kind: "blob",
           digest: digestOf("hyperframes-render:wrong-domain"),
           size: 1,
           mediaType: "video/mp4",
-          durationSec: space.durationSec,
         },
+        muted: true,
       })),
       conformance: "exact",
       delivery: "executed",
       metadata: {},
     }),
   );
-  providers.bind(hyperframesRenderCapabilities.render, "example.hyperframes.wrong-domain");
+  providers.bind(hyperframesRenderCapabilities.renderVisual, "example.hyperframes.wrong-domain");
 
-  const result = await new NodeDriver({ registry: producerRegistry(), providers }).run(build());
+  const result = await new NodeDriver({
+    registry: producerRegistry(),
+    providers,
+    validators: validatorRegistry(),
+  }).run(build());
   assert.equal(result.status, "paused");
   assert.match(result.journal.at(-1)?.message ?? "", /frameCount|does not match/u);
   assert.equal(result.state.receipts.length, 0);
@@ -275,6 +354,7 @@ test("the official render Surface lowers real author source to the same BuildPla
   const sourceClosure = createResolvedClosure([
     ...videoContractManifests,
     hyperframesManifest,
+    mediaPipelineManifest,
     hyperframesRenderManifest,
     fixtureManifest,
   ]);
@@ -327,7 +407,10 @@ test("the official render Surface lowers real author source to the same BuildPla
   }));
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
     hyperframesProducers.compile.name,
-    hyperframesRenderProducers.request.name,
-    hyperframesRenderProducers.projectVideo.name,
+    hyperframesRenderProducers.requestVisual.name,
+    mediaPipelineProducers.planAudio.name,
+    mediaPipelineProducers.renderAudio.name,
+    mediaPipelineProducers.mux.name,
+    mediaPipelineProducers.projectMuxed.name,
   ].sort());
 });
