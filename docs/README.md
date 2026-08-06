@@ -11,7 +11,9 @@ the working tree contains only documents that should inform current implementati
 3. [`implementation-status.md`](./implementation-status.md) — what actually executes today.
 4. [`roadmap.md`](./roadmap.md) — active domain-neutral and environment/Provider work; deferred video
    work is separated explicitly.
-5. [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md) — compact normative Kernel laws for the
+5. [`open-source-distribution.md`](./open-source-distribution.md) — what can ship independently,
+   current packaging truth and public-release gates.
+6. [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md) — compact normative Kernel laws for the
    current `@2` wire data.
 
 ## Domain-neutral implementation records

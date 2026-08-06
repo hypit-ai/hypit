@@ -13,6 +13,19 @@ Both English lines resolve to five seconds with `pace="normal"`, `padding="0.3"`
 minimum and `ceil` rounding. The generated presenter image is intentionally ignored by Git under
 `assets/`; supply or regenerate `assets/presenter.png` before checking or building.
 
+Prerequisites for the exact checked-in Runtime Profile:
+
+- `KIE_API_KEY` for the two paid Seedance Mini generations;
+- `GOOGLE_CLOUD_PROJECT` naming a project with Vertex AI enabled;
+- `GOOGLE_APPLICATION_CREDENTIALS_JSON` containing the credential JSON, not a committed path or
+  secret file;
+- `ffmpeg`, `ffprobe`, Chrome/HyperFrames and the prepared local WhisperX sidecar.
+
+Prepare and health-check WhisperX as described in
+[`../../services/whisperx/README.md`](../../services/whisperx/README.md). `svml-v2 check` validates
+source, Run Graph and exact Runtime capability coverage before scheduling, but it does not make a
+paid Provider request or promise that remote credentials and service health are valid.
+
 Run the complete graph through the explicit Run Graph and declarative local Runtime Profile:
 
 ```bash
@@ -26,13 +39,14 @@ pnpm svml:v2 inspect talking-film-live \
 
 pnpm svml:v2 get talking-film-live \
   --runtime examples/talking-film-live/svml.runtime.json \
+  --name final.video \
   --to examples/talking-film-live/output/final.mp4
 ```
 
 `build.svrun` owns the selected Target and fidelity. `svml.runtime.json` owns Provider instances,
 permissions and concurrency. The Build archives all accepted intermediate Records and referenced
 Artifacts even when no destination path is requested. `get` only makes an optional copy of the
-already archived sole target. The existing `svml.runtime.ts` shows the advanced executable
+already archived named target. The existing `svml.runtime.ts` shows the advanced executable
 embedding API and remains supported.
 
 To reuse the paid shot outputs from a verified earlier Build, add two zero-input Build Record
