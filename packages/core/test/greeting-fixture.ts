@@ -138,29 +138,26 @@ export function greetingGraph(program: LinkedProgram): CompiledGraph {
         id: "prompt",
         type: types.prompt,
         primary: "make-prompt",
-        candidates: ["make-prompt"],
         semanticInputs: [{ kind: "record", id: "intent:root" }],
       },
       {
         id: "generated",
         type: types.generated,
         primary: "request-text",
-        candidates: ["request-text", "placeholder-text"],
         semanticInputs: [{ kind: "logical-output", id: "prompt" }],
       },
       {
         id: "document",
         type: types.document,
         primary: "assemble",
-        candidates: ["assemble"],
         semanticInputs: [{ kind: "logical-output", id: "generated" }],
       },
     ],
     candidates: [
-      { id: "make-prompt", output: "prompt", root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } }, fidelity: "exact" },
-      { id: "request-text", output: "generated", root: { kind: "operation", result: { kind: "operation-result", operation: "request-text" } }, fidelity: "exact" },
-      { id: "placeholder-text", output: "generated", root: { kind: "operation", result: { kind: "operation-result", operation: "placeholder-text" } }, fidelity: "substitute" },
-      { id: "assemble", output: "document", root: { kind: "operation", result: { kind: "operation-result", operation: "assemble" } }, fidelity: "exact" },
+      { id: "make-prompt", type: types.prompt, root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } } },
+      { id: "request-text", type: types.generated, root: { kind: "operation", result: { kind: "operation-result", operation: "request-text" } } },
+      { id: "placeholder-text", type: types.generated, root: { kind: "operation", result: { kind: "operation-result", operation: "placeholder-text" } } },
+      { id: "assemble", type: types.document, root: { kind: "operation", result: { kind: "operation-result", operation: "assemble" } } },
     ],
     operations: [
       {
@@ -225,10 +222,11 @@ export function createGreetingBuild(options?: {
       output: "document",
       accepts: options?.goalAccepts ?? "exact",
     }],
-    bindings: options?.generationRealization === "placeholder"
+    satisfactions: options?.generationRealization === "placeholder"
       ? [{
           output: "generated",
           candidate: "placeholder-text",
+          fidelity: "substitute",
         }]
       : [],
   });

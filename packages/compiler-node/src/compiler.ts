@@ -20,7 +20,7 @@ import type {
   BuildPlan,
   BuildRequest,
   BuildState,
-  CandidateBinding,
+  Satisfaction,
   NeedAcceptance,
 } from "@svml/protocol";
 import { resolveRealization } from "@svml/realization";
@@ -88,7 +88,7 @@ export type NodeCompilerOptions = {
 export type PlanFileOptions = {
   readonly targets: readonly string[];
   readonly accepts?: NeedAcceptance;
-  readonly bindings?: readonly CandidateBinding[];
+  readonly satisfactions?: readonly Satisfaction[];
   readonly implementationClosure?: import("@svml/protocol").Digest;
   /** External Candidate attachments; never discovered from the author source. */
   readonly realizations?: readonly RealizationOverlay[];
@@ -193,7 +193,7 @@ export class NodeCompiler {
         ? {}
         : { implementationClosure: options.implementationClosure }),
       targets,
-      bindings: options.bindings ?? [],
+      satisfactions: options.satisfactions ?? [],
     });
     const state = start(
       compilation.program,

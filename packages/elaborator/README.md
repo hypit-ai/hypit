@@ -9,7 +9,7 @@ phases:
 
 1. lock every referenced Fragment and predeclare every component export;
 2. resolve references, reject missing values, type mismatches and cycles, hygienically instantiate
-   Fragments, then emit one ordinary `svml.graph@1` for Core.
+   Fragments, then emit one ordinary `svml.graph@2` for Core.
 
 Because all exports are collected before any input is resolved, declaration order has no meaning
 and a component may reference a later component. The linker itself does not parse `.svml`, execute
@@ -54,8 +54,14 @@ Envelopes and affinity sources.
 
 Expansion assigns hygienic identities from `fragment digest + author instance id + local id`.
 Multiple exports of one instance therefore share internal Operations, while two explicit instances
-are never content-deduplicated. The result is ordinary `LogicalOutput`, `Candidate` and
-`OperationNode` data that Core validates again.
+remain two nodes even when their content is identical. Author exports become Logical Outputs with
+Primary Candidates; Run exports become independent typed Candidates plus explicit Satisfaction
+edges. The result is ordinary graph data that Core validates again before freezing a BuildPlan.
+
+`exportRunFragment()` is the canonical Run-Graph boundary: it exports independent Candidates and
+does not name an Author Logical Output. `bindCandidateFragment()` remains compatibility sugar that
+additionally creates Satisfaction edges; new Run frontends should keep graph declaration and
+`output -> candidate + fidelity` selection separate.
 
 `@svml/elaborator` is not a public `@svml/author` subsystem. It is a reusable graph-construction
 library. A domain normally adds its own contract and component packages; Text remains only one

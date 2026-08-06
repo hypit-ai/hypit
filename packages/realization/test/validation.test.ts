@@ -67,14 +67,12 @@ function fixture() {
       id: "media",
       type: mediaType,
       primary: "generated",
-      candidates: ["generated"],
       semanticInputs: [],
     }],
     candidates: [{
       id: "generated",
-      output: "media",
+      type: mediaType,
       root: { kind: "operation", result: { kind: "operation-result", operation: "generate" } },
-      fidelity: "exact",
     }],
     operations: [{
       id: "generate",
@@ -102,9 +100,8 @@ test("provided Candidates pass the same Type-owner admission gate", async () => 
   const validation = await validateValue(program.closure, mediaType, value, validators());
   assert.ok(validation);
   const accepted = createProvidedCandidate({
-    output: "media",
+    type: mediaType,
     value,
-    fidelity: "exact",
     validation,
   });
   assert.doesNotThrow(() => resolveRealization(program, source, [sealRealizationOverlay({
@@ -113,7 +110,7 @@ test("provided Candidates pass the same Type-owner admission gate", async () => 
     operations: [],
   })]));
 
-  const missing = createProvidedCandidate({ output: "media", value, fidelity: "exact" });
+  const missing = createProvidedCandidate({ type: mediaType, value });
   assert.throws(
     () => resolveRealization(program, source, [sealRealizationOverlay({
       sourceGraph: source.id,
@@ -124,9 +121,8 @@ test("provided Candidates pass the same Type-owner admission gate", async () => 
   );
 
   const tampered = createProvidedCandidate({
-    output: "media",
+    type: mediaType,
     value,
-    fidelity: "exact",
     validation: { ...validation, recordDigest: digestOf("another-value") },
   });
   assert.throws(

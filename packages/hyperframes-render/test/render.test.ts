@@ -136,7 +136,7 @@ function build() {
   return start(linked, graph, sealBuildRequest({
     graph: graph.id,
     targets: [{ output: "final.video", accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
 }
 
@@ -416,7 +416,7 @@ test("the official render Surface lowers real author source to the same BuildPla
   const state = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
     targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "", accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
     hyperframesProducers.compile.name,

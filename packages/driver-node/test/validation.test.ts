@@ -181,29 +181,25 @@ function outputGraph(linked: LinkedProgram): CompiledGraph {
         id: "measurement",
         type: measurementType,
         primary: "measure",
-        candidates: ["measure"],
         semanticInputs: [],
       },
       {
         id: "report",
         type: reportType,
         primary: "report",
-        candidates: ["report"],
         semanticInputs: [{ kind: "logical-output", id: "measurement" }],
       },
     ],
     candidates: [
       {
         id: "measure",
-        output: "measurement",
+        type: measurementType,
         root: { kind: "operation", result: { kind: "operation-result", operation: "measure" } },
-        fidelity: "exact",
       },
       {
         id: "report",
-        output: "report",
+        type: reportType,
         root: { kind: "operation", result: { kind: "operation-result", operation: "report" } },
-        fidelity: "exact",
       },
     ],
     operations: [
@@ -227,7 +223,7 @@ function outputBuild(linked: LinkedProgram, graph = outputGraph(linked)) {
   return start(linked, graph, sealBuildRequest({
     graph: graph.id,
     targets: [{ output: "report", accepts: "exact" }],
-    bindings: [],
+    satisfactions: [],
   }));
 }
 
@@ -306,14 +302,12 @@ function providerGraph(linked: LinkedProgram): CompiledGraph {
       id: "measurement",
       type: measurementType,
       primary: "request",
-      candidates: ["request"],
       semanticInputs: [],
     }],
     candidates: [{
       id: "request",
-      output: "measurement",
+      type: measurementType,
       root: { kind: "operation", result: { kind: "operation-result", operation: "request" } },
-      fidelity: "exact",
     }],
     operations: [{
       id: "request",
@@ -356,7 +350,7 @@ async function providerBuild(measured: number) {
     sealBuildRequest({
       graph: graph.id,
       targets: [{ output: "measurement", accepts: "exact" }],
-      bindings: [],
+      satisfactions: [],
     }),
   ));
 }
