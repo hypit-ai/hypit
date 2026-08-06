@@ -8,18 +8,19 @@
   },
   "dependencies": {
     "@svml/caption": "workspace:*",
+    "@svml/component-kit": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/elaborator": "workspace:*",
     "@svml/media-pipeline": "workspace:*",
+    "@svml/protocol": "workspace:*",
     "@svml/speech-align": "workspace:*",
     "@svml/speech-take": "workspace:*",
+    "@svml/text": "workspace:*",
     "@svml/whisperx": "workspace:*"
   },
   "devDependencies": {
-    "@svml/component-kit": "workspace:*",
     "@svml/core": "workspace:*",
     "@svml/driver-node": "workspace:*",
-    "@svml/protocol": "workspace:*",
     "@svml/realization": "workspace:*",
     "@svml/script": "workspace:*",
     "@svml/validation": "workspace:*"

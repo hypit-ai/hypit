@@ -9,6 +9,10 @@
   "dependencies": {
     "@svml/component-kit": "workspace:*",
     "@svml/contracts": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@svml/elaborator": "workspace:*",
+    "@svml/media-pipeline": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/speech-align": "workspace:*",
+    "@svml/text": "workspace:*"
   }
 }

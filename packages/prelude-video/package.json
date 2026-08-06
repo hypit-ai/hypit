@@ -10,7 +10,9 @@
     "activation": "./src/index.ts"
   },
   "dependencies": {
+    "@svml/broll": "workspace:*",
     "@svml/caption": "workspace:*",
+    "@svml/caption-gemini": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/generation": "workspace:*",
     "@svml/film": "workspace:*",
@@ -21,8 +23,11 @@
     "@svml/script": "workspace:*",
     "@svml/seedance": "workspace:*",
     "@svml/speech-align": "workspace:*",
+    "@svml/speech-program": "workspace:*",
     "@svml/speech-take": "workspace:*",
-    "@svml/svs": "workspace:*"
+    "@svml/svs": "workspace:*",
+    "@svml/text-track": "workspace:*",
+    "@svml/whisperx": "workspace:*"
   },
   "devDependencies": {
     "@svml/package-loader-node": "workspace:*"

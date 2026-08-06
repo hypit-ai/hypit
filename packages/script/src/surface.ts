@@ -2,11 +2,22 @@ import { canonicalize } from "@svml/core";
 
 import { ScriptSyntaxError } from "./error.js";
 import {
+  captionProjectionValue,
+  narrativeDialogueExcerptValue,
   narrativeSegmentExcerptValue,
+  narrativeSelectionValue,
+  narrativeSpeechExcerptValue,
   narrativeSourceMap,
   narrativeValue,
 } from "./narrative.js";
-import { narrativeExcerptType, narrativeType } from "./manifest.js";
+import {
+  captionProjectionType,
+  narrativeDialogueExcerptType,
+  narrativeExcerptType,
+  narrativeSelectionType,
+  narrativeSpeechExcerptType,
+  narrativeType,
+} from "./manifest.js";
 import { parseScript } from "./parser.js";
 import type { ScriptSurfaceInput, ScriptSurfaceOutput } from "./types.js";
 
@@ -78,6 +89,35 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
         type: narrativeExcerptType,
         value: { kind: "inline" as const, value: narrativeSegmentExcerptValue(parsed, segment) },
         range: segment.range,
+      })),
+      ...parsed.segments.flatMap((segment) => [
+        {
+          id: `${rawId}.segment.${segment.id}.dialogue`,
+          type: narrativeDialogueExcerptType,
+          value: { kind: "inline" as const, value: narrativeDialogueExcerptValue(segment) },
+          range: segment.range,
+        },
+        {
+          id: `${rawId}.segment.${segment.id}.speech`,
+          type: narrativeSpeechExcerptType,
+          value: { kind: "inline" as const, value: narrativeSpeechExcerptValue(segment) },
+          range: segment.range,
+        },
+      ]),
+      {
+        id: `${rawId}.caption`,
+        type: captionProjectionType,
+        value: { kind: "inline" as const, value: captionProjectionValue(parsed) },
+        range: { start: input.openingStart, end: close.end },
+      },
+      ...parsed.selections.map((selection) => ({
+        id: `${rawId}.selection.${selection.id}`,
+        type: narrativeSelectionType,
+        value: { kind: "inline" as const, value: narrativeSelectionValue(selection) },
+        range: {
+          start: selection.occurrences[0]!.open.range.start,
+          end: selection.occurrences.at(-1)!.close.range.end,
+        },
       })),
     ],
     components: [],

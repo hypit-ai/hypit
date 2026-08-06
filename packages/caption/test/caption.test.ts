@@ -6,18 +6,23 @@ import {
   captionManifest,
   defaultCaptionTrackProgram,
   planCaptionPresentation,
+  renderCaptionProgram,
   renderCaptionTrack,
+  resolveCaptionProgram,
+  sealCaptionPlan,
+  sealCaptionStyle,
   sealCaptionTrackProgram,
   temporalizeCaption,
+  temporalizeCaptionPlan,
 } from "@svml/caption";
 import {
   sealAlignedTranscriptEvidence,
   sealProgramSpace,
   sealSpeechBasis,
 } from "@svml/contracts";
-import type { AlignedTranscriptSegment, Narrative, SpeechAudioBasis } from "@svml/contracts";
+import type { AlignedTranscriptSegment, Narrative, NarrativeSelectionRef, SpeechAudioBasis } from "@svml/contracts";
 import { digestOf } from "@svml/protocol";
-import { parseScript } from "@svml/script";
+import { narrativeSelectionValue, parseScript } from "@svml/script";
 import { locateSpeechTiming } from "@svml/speech-align";
 
 test("the component enumerates every Manifest Producer and owned Type validator", () => {
@@ -166,6 +171,52 @@ test("Caption temporalization preserves evidence envelopes and labels local esti
   assert.deepEqual(map, originalMap, "caption presentation must not modify the global speech map");
 });
 
+test("multiple Cues inside one display alias receive ordered local estimates, not duplicate envelopes", () => {
+  const narrative = parseScript("alias-plan.svml", "<line><that was insane | what the fuck></line>");
+  const map = locate(narrative, 1, [{
+    sourceSegmentId: "line",
+    startSec: 0,
+    endSec: 1,
+    words: [
+      { text: "what", startSec: 0.1, endSec: 0.25 },
+      { text: "the", startSec: 0.3, endSec: 0.42 },
+      { text: "fuck", startSec: 0.48, endSec: 0.72 },
+    ],
+    chars: [],
+  }]);
+  const base = defaultCaptionTrackProgram("alias-base");
+  const style = sealCaptionStyle({
+    contract: "svml.caption-style@1",
+    id: "alias-style",
+    planning: { cueInstruction: "One word per Cue for this test.", fields: [] },
+    presentation: { mode: "whole", stackingOrder: 100, style: base.style },
+  });
+  const program = resolveCaptionProgram(narrative, "alias-caption", style, []);
+  const run = program.runs[0]!;
+  const plan = sealCaptionPlan({
+    contract: "svml.caption-plan@1",
+    narrativeDigest: digestOf(narrative),
+    captionProgramDigest: program.digest,
+    planningRequestDigest: digestOf("alias-plan-request"),
+    runs: [{
+      id: run.id,
+      styleId: run.styleId,
+      cues: run.atomIds.map((atomId, index) => ({ id: `alias-cue:${index + 1}`, atomIds: [atomId], fields: [] })),
+    }],
+  });
+  const projection = temporalizeCaptionPlan(narrative, map, program, plan);
+
+  assert.deepEqual(projection.regions.map((region) => region.display), ["that", "was", "insane"]);
+  assert.equal(projection.regions.every((region) =>
+    region.startQuality === "estimated" && region.endQuality === "estimated"), true);
+  assert.equal(projection.regions[0]!.endSec <= projection.regions[1]!.startSec, true);
+  assert.equal(projection.regions[1]!.endSec <= projection.regions[2]!.startSec, true);
+  assert.deepEqual(
+    [projection.regions[0]!.startSec, projection.regions[2]!.endSec],
+    [0.1, 0.72],
+  );
+});
+
 test("hidden speech owns time but emits no visible presentation unit", () => {
   const narrative = parseScript("hidden.svml", "<line>Hello < | um> world.</line>");
   const map = locate(narrative, 1, [{
@@ -236,4 +287,120 @@ test("two caption styles become two peer Tracks without mutating one another", (
   );
   assert.equal(firstTrack.presents[0]?.stacking.order, 100);
   assert.equal(secondTrack.presents[0]?.stacking.order, 101);
+});
+
+test("a planner-neutral CaptionPlan joins SemanticMap only after Cue and field planning", () => {
+  const narrative = parseScript("planned.svml", "<line><ALICE>Meaning becomes the source.</line>");
+  const map = locate(narrative, 2, [{
+    sourceSegmentId: "line",
+    startSec: 0,
+    endSec: 2,
+    words: [
+      { text: "Meaning", startSec: 0.1, endSec: 0.35 },
+      { text: "becomes", startSec: 0.4, endSec: 0.7 },
+      { text: "the", startSec: 0.8, endSec: 1.0 },
+      { text: "source", startSec: 1.1, endSec: 1.5 },
+    ],
+    chars: [],
+  }]);
+  const base = defaultCaptionTrackProgram("planned-caption");
+  const style = sealCaptionStyle({
+    contract: "svml.caption-style@1",
+    id: "alice",
+    planning: {
+      cueInstruction: "Use short semantic phrases.",
+      fields: [{
+        id: "important",
+        value: { kind: "boolean" },
+        instruction: "Select at most one important word.",
+        minimumPerCue: 0,
+        maximumPerCue: 1,
+      }],
+    },
+    presentation: { mode: "whole", stackingOrder: 100, style: base.style },
+  });
+  const program = resolveCaptionProgram(narrative, "planned-caption", style, []);
+  const ids = program.atoms.map((atom) => atom.id);
+  const plan = sealCaptionPlan({
+    contract: "svml.caption-plan@1",
+    narrativeDigest: digestOf(narrative),
+    captionProgramDigest: program.digest,
+    planningRequestDigest: digestOf("planned-caption-request"),
+    runs: [{
+      id: program.runs[0]!.id,
+      styleId: style.id,
+      cues: [
+        {
+          id: "cue:1",
+          atomIds: ids.slice(0, 2),
+          fields: [{ declarationId: "important", atomId: ids[0]!, value: "true" }],
+        },
+        { id: "cue:2", atomIds: ids.slice(2), fields: [] },
+      ],
+    }],
+  });
+  const projection = temporalizeCaptionPlan(narrative, map, program, plan);
+  assert.deepEqual(projection.regions.map((region) => region.display), ["Meaning becomes", "the source."]);
+  assert.deepEqual(projection.regions[0]?.fields?.map((field) => field.declarationId), ["important"]);
+  const track = renderCaptionProgram(projection, program);
+  const firstText = track.presents[0]?.elements.find((element) => element.kind === "text");
+  assert.equal(firstText?.attributes?.some((attribute) =>
+    attribute.name === "data-caption-style" && attribute.value === "alice"), true);
+  assert.equal(firstText?.attributes?.some((attribute) =>
+    attribute.name === "data-caption-fields" && attribute.value.includes("important")), true);
+});
+
+test("a default Style covers roleless text and ordered whole-style overrides use last match", () => {
+  const narrative = parseScript("cascade.svml", `
+    <intro>Roleless words stay readable.</intro>
+    <answer><ALICE>Only this sentence changes.</answer>
+  `);
+  const base = defaultCaptionTrackProgram("base");
+  const make = (id: string, color: string) => sealCaptionStyle({
+    contract: "svml.caption-style@1",
+    id,
+    planning: { cueInstruction: `Plan ${id}.`, fields: [] },
+    presentation: { mode: "whole", stackingOrder: 100, style: { ...base.style, color } },
+  });
+  const normal = make("normal", "#ffffff");
+  const alice = make("alice", "#00ff00");
+  const final = make("final", "#ff00ff");
+  const program = resolveCaptionProgram(narrative, "captions", normal, [
+    { id: "alice", selector: { kind: "role", role: "ALICE" }, style: alice },
+    { id: "alice-later", selector: { kind: "role", role: "ALICE" }, style: final },
+  ]);
+  assert.deepEqual(program.runs.map((run) => run.styleId), ["normal", "final"]);
+  assert.equal(program.styles.some((style) => style.id === "alice"), true, "declared overrides stay auditable");
+  assert.throws(() => resolveCaptionProgram(narrative, "invalid", normal, [{
+    id: "typo",
+    selector: { kind: "role", role: "ALIEC" },
+    style: alice,
+  }]), /selects no visible display atom/u);
+});
+
+test("an explicit Selection replaces only its words without authoring the complement", () => {
+  const narrative = parseScript(
+    "selection-style.svml",
+    "<line>Keep this @special one sentence different @/special and return.</line>",
+  );
+  const base = defaultCaptionTrackProgram("base");
+  const make = (id: string, color: string) => sealCaptionStyle({
+    contract: "svml.caption-style@1",
+    id,
+    planning: { cueInstruction: `Plan ${id}.`, fields: [] },
+    presentation: { mode: "whole", stackingOrder: 100, style: { ...base.style, color } },
+  });
+  const normal = make("normal", "#ffffff");
+  const special = make("special", "#ff00ff");
+  const selection = narrativeSelectionValue(narrative.selections[0]!) as unknown as NarrativeSelectionRef;
+  const program = resolveCaptionProgram(narrative, "captions", normal, [{
+    id: "special-use",
+    selector: { kind: "selection", selection },
+    style: special,
+  }]);
+  assert.deepEqual(program.runs.map((run) => [run.styleId, run.atomIds.length]), [
+    ["normal", 2],
+    ["special", 3],
+    ["normal", 2],
+  ]);
 });

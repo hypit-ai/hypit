@@ -14,10 +14,13 @@ and may later become `@svml/video` without changing those logical identities. Th
 contains Provider- and Frontend-neutral data contracts, identity validators and static schemas
 only. It does not parse SVML, execute external services, align speech or render Tracks.
 
-`NarrativeExcerpt` is the shared contiguous author-selection contract used by
-`script.segment.<id>` and speech-capable generation packages. It keeps model packages independent
-of the official Script parser; the actual `<media:Image>` Surface implementation likewise lives in
-the separate physical `@svml/media` package.
+The Narrative module provides distinct narrow views instead of making every consumer depend on one
+parser-specific object: `NarrativeExcerpt` associates a Take with a Segment,
+`NarrativeDialogueExcerpt` carries Role-aware spoken prompt text,
+`NarrativeSpeechExcerpt` carries pronunciation-only estimate text, and `CaptionProjectionRef`
+identifies the whole display-side Caption truth. They keep model and Caption packages independent of
+the official Script parser. The actual `<media:Image>` Surface implementation likewise lives in the
+separate physical `@svml/media` package.
 
 `VisualTrack`, `AudioTrack` and `Composition` implement the flat composition law in
 [`../../spec/track-composition-v1.md`](../../spec/track-composition-v1.md). Caption, Speech and

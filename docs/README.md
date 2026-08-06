@@ -24,33 +24,37 @@ inside a historical design record does not make that record normative.
    the current Track is a contract candidate rather than a public compatibility promise.
 9. [`../spec/hyperframes-visual-ir-v1.md`](../spec/hyperframes-visual-ir-v1.md) — the one versioned,
    closed terminal visual language shared by video components; not a Core or author-component API.
-10. [`../examples/talking-film-golden/README.md`](../examples/talking-film-golden/README.md) — the
-   canonical v2 authoring target: implemented Script, authored Image, Seedance generation, Film,
-   SVS and render syntax surrounded by Speech assembly, WhisperX, Caption, B-roll and Text Surfaces
-   that remain to be completed.
-11. [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md) — target
+10. [`../spec/caption-program-v1.md`](../spec/caption-program-v1.md) — implemented total default
+    Style, ordered Role/Selection replacement, display-atom planner and timing-join laws.
+11. [`../examples/talking-film-golden/README.md`](../examples/talking-film-golden/README.md) — the
+   canonical two-speaker v2 authoring target. Its Script projections, Caption Style cascade,
+   display-only Gemini planning and graph lowering are implemented; real assets and credentials
+   remain deployment inputs.
+12. [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md) — target
    naming and ownership for framework, video, Provider, Runtime, queues, stores and distributions.
-12. [`../spec/author-surface-binding-v1.md`](../spec/author-surface-binding-v1.md) — implemented
+13. [`../spec/author-surface-binding-v1.md`](../spec/author-surface-binding-v1.md) — implemented
     package-owned binding from generic imported Records such as SVS Recipes into typed Programs,
     AuthorComponents and Graph Fragments.
-13. [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — implemented local
+14. [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — implemented local
     SQLite/filesystem Runtime assembly, trusted configuration, recovery law and environment swaps.
-14. [`kie-generation-modules-v1.md`](./kie-generation-modules-v1.md) — implemented seven exact
+15. [`kie-generation-modules-v1.md`](./kie-generation-modules-v1.md) — implemented seven exact
     generation model modules, shared generated-media Products and the recoverable KIE Provider.
-15. [`kie-live-smoke-2026-08-06.md`](./kie-live-smoke-2026-08-06.md) — credential-free deployment
+16. [`kie-live-smoke-2026-08-06.md`](./kie-live-smoke-2026-08-06.md) — credential-free deployment
     evidence from seven representative live model calls and one synthetic-reference upload.
-16. [`media-inspection-and-normalization-v1.md`](./media-inspection-and-normalization-v1.md) —
+17. [`media-inspection-and-normalization-v1.md`](./media-inspection-and-normalization-v1.md) —
     implemented all-stream inspection, attached-picture-safe selection, shared-origin A/V
     normalization and the boundary that prevents embedded AAC from becoming speech by inference.
-17. [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md) — the implemented rule that
+18. [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md) — the implemented rule that
     planning is ordinary code while probe/decode/mix/render/mux are explicit Provider Needs, plus
     the visual/audio/mux split for final HyperFrames output, canonical WhisperX evidence-audio path
     and implemented local Providers.
-18. [`../services/whisperx/README.md`](../services/whisperx/README.md) — installation, runtime
+19. [`../services/whisperx/README.md`](../services/whisperx/README.md) — installation, runtime
     identity, path confinement and queue boundary for the implemented warm local WhisperX service.
-19. [`node-package-activation-v1.md`](./node-package-activation-v1.md) — implemented trusted author
+20. [`node-package-activation-v1.md`](./node-package-activation-v1.md) — implemented trusted author
     and deterministic compute facet locking, with the exact boundary that keeps source imports away
     from Provider and Runtime authority.
+21. [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md) — implemented
+    display-atom planning boundary, old Vertex execution evidence and no-text-rewrite contract.
 
 The executable v2 Node entrypoints are documented in
 [`../packages/compiler-node/README.md`](../packages/compiler-node/README.md),
