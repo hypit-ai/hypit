@@ -1021,7 +1021,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .live-active-icon.semantic-selected,
 .live-rank-cell.semantic-selected {
-  outline: 1px solid #ec4899;
+  outline: 1px solid #C85F7D;
   outline-offset: 3px;
 }
 
