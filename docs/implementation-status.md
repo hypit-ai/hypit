@@ -92,8 +92,8 @@ names.
   invocation is a recoverable result protocol.
 - `@svml/transport-process`: bounded shell-free JSON child-process invocation using an absolute
   executable and no inherited environment. Author source cannot select its executable or arguments.
-- `@svml/local`: trusted developer distribution that assembles component installers and exact
-  Provider contributions into a locked Runtime Closure over SQLite/filesystem defaults. The
+- `@svml/local`: trusted developer distribution that assembles a digest-bound implementation
+  package closure and exact Provider contributions over SQLite/filesystem defaults. The
   Scheduler persists every accepted Event, resumes the same Build and Operation across process
   restarts, rejects reuse of one local Build id for another Core Build, follows endpoint wake hints,
   exposes durable status and performs endpoint-aware cancellation.
@@ -104,13 +104,15 @@ names.
 - `@svml/compiler-node`: a domain-neutral registered-manifest resolver, exact transitive Module
   Closure construction, root-confined/read-once Node Source resolver, real-file compiler facade and
   named-export-to-BuildPlan entrypoint. The discovery pass and decode pass share locked SourceUnits.
-- `@svml/package-loader-node`: lock-aware trusted Node activation for installed author packages. It
-  binds every physical package and declared-dependency file plus declared Module, Frontend, Text
-  Surface and Type Validator identities, verifies all bytes before executing activation code and
-  installs no Provider or Runtime facet. Its external fixture proves a new namespaced Surface and
-  its authored Type admission need no Core or CLI change.
+- `@svml/package-loader-node`: lock-aware trusted Node activation for installed implementation
+  packages. It binds every physical package and declared-dependency byte plus Module, Frontend,
+  Text Surface, Producer and Type Validator identities. Producer/Validator facets are enumerable
+  and checked against their Manifests before Host registration. The package-lock digest enters
+  `BuildRequest.implementationClosure`, preventing a persisted Build from resuming under another
+  deterministic implementation closure. It installs no Provider or privileged Runtime facet.
 - `@svml/prelude-video`: an ordinary replaceable aggregate of the current official author Modules,
-  SVS Frontend and Text Surfaces. The CLI no longer enumerates Script, Film or HyperFrames packages.
+  SVS Frontend, Text Surfaces and available deterministic compute facets. Compiler and Runtime
+  activate only their respective facets; the CLI no longer enumerates domain packages.
 - `@svml/cli`: the trusted v2 application host. `check` compiles real Text sources using either the
   default video prelude or an exact external package lock. `plan` is wired directly to Core; the
   remaining full-video gap is package-local generation, Speech and Track Surfaces, not CLI logic.
@@ -224,7 +226,7 @@ Public freeze still requires official Text/Caption components to stop relying on
 plus a renderer receipt/validation rule that binds the exact layout implementation and verifies
 declared Surface media facts in local and hosted Runtime endpoints.
 
-The author-package boundary, reusable local Runtime chassis, first real generation Provider,
+The implementation-package boundary, reusable local Runtime chassis, first real generation Provider,
 reference media Provider, local HyperFrames Provider and local WhisperX adapter are now executable.
 The representative seven-family KIE live suite, one real synthetic-reference upload and the
 retained KIE media replay have passed. Real tests also cover exact 48 kHz → 16 kHz evidence
@@ -232,7 +234,7 @@ projection, byte-identical sidecar staging and a two-worker silent HyperFrames M
 Because the team is prioritizing external capability plumbing before additional video vocabulary,
 the next work is:
 
-1. implement the remaining official deterministic Speech/Align/Caption component installers and
+1. implement the remaining official deterministic Speech/Align/Caption component facets and
    namespaced generation, Speech and Track Surfaces specified by `examples/talking-film-golden`;
 2. wire those installed components and local Providers into one real source-to-final-video build;
 3. add AWS media/HyperFrames/WhisperX Providers only when the team needs Lambda execution; they must return the same
@@ -243,9 +245,8 @@ the next work is:
 - arbitrary untrusted third-party parser or Producer execution;
 - sandboxed or remotely attested third-party Type validator execution (the current registry accepts
   trusted in-process implementations only);
-- automatic npm/workspace package installation, locked compute-facet loading and community package
-  discovery (trusted locked author facets, including validator identities, are implemented; compute
-  Producers still enter through explicit deployment assembly);
+- automatic npm/workspace package installation and community package discovery (trusted locked
+  author and deterministic compute facets are implemented for explicit installed packages);
 - production keychain/Vault credentials, hosted scheduling or distributed workers;
 - AWS/hosted WhisperX, HyperFrames or media Provider endpoints;
 - production multipart/ranged Artifact streaming and distributed execution adapters;

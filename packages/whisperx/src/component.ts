@@ -1,3 +1,4 @@
+import type { ComponentPackage } from "@svml/component-kit";
 import type { SpeechEvidenceAudio } from "@svml/contracts";
 import type { CanonicalValue, StoredValue } from "@svml/protocol";
 import { canonicalize } from "@svml/protocol";
@@ -19,22 +20,22 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 
 export const whisperXComponent = {
   name: "@svml/whisperx",
-  install(registry: import("@svml/component-kit").ProducerRegistrar): void {
-    registry.registerProducer(
-      whisperXProducers.request,
-      whisperXImplementationDigests.request,
-      ({ inputs }) => {
+  producers: [
+    {
+      producer: whisperXProducers.request,
+      implementationDigest: whisperXImplementationDigests.request,
+      handler: ({ inputs }) => {
         const audio = inline(inputs.audio!.value, "SpeechEvidenceAudio") as unknown as SpeechEvidenceAudio;
         return {
           outputs: {},
           needs: { alignment: canonicalize(whisperXRequestForEvidenceAudio(audio)) },
         };
       },
-    );
-    registry.registerProducer(
-      whisperXProducers.normalize,
-      whisperXImplementationDigests.normalize,
-      ({ inputs }) => {
+    },
+    {
+      producer: whisperXProducers.normalize,
+      implementationDigest: whisperXImplementationDigests.normalize,
+      handler: ({ inputs }) => {
         const evidence = inline(inputs.whisperx!.value, "WhisperXAlignmentEvidence") as unknown as WhisperXAlignmentEvidence;
         return {
           outputs: {
@@ -43,6 +44,6 @@ export const whisperXComponent = {
           needs: {},
         };
       },
-    );
-  },
-};
+    },
+  ],
+} satisfies ComponentPackage;

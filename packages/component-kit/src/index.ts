@@ -42,6 +42,22 @@ export interface ProducerRegistrar {
   ): void;
 }
 
+/** Enumerable deterministic Producer identity and its trusted implementation. */
+export type ProducerFacet = {
+  readonly producer: ProducerRef;
+  readonly implementationDigest: Digest;
+  readonly handler: ProducerHandler;
+};
+
+export function registerProducerFacets(
+  registry: ProducerRegistrar,
+  facets: readonly ProducerFacet[],
+): void {
+  for (const facet of facets) {
+    registry.registerProducer(facet.producer, facet.implementationDigest, facet.handler);
+  }
+}
+
 /** Enumerable validator identity. Package locks can bind this without serializing its handler. */
 export type TypeValidatorFacet = {
   readonly type: TypeRef;
@@ -61,6 +77,6 @@ export function registerTypeValidatorFacets(
 /** Trusted deterministic implementation package; it selects no Provider or Runtime service. */
 export type ComponentPackage = {
   readonly name: string;
+  readonly producers?: readonly ProducerFacet[];
   readonly validators?: readonly TypeValidatorFacet[];
-  install?(registry: ProducerRegistrar): Awaitable<void>;
 };

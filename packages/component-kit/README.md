@@ -1,10 +1,10 @@
 # `@svml/component-kit`
 
 The minimal host-neutral SDK for trusted deterministic compute components. A package exports
-enumerable Producer installation and Type-owner validator facets. Validator identity is data
-(`TypeRef` plus implementation digest), so package locks and Hosts can inspect it without serializing
-the handler. Producer handlers receive only the Core command, Producer identity and immutable typed
-inputs.
+enumerable Producer and Type-owner Validator facets. Both identities are data: an exact nominal
+reference plus implementation digest and handler. Package locks and Hosts can inspect and compare
+the identities without running an opaque `install()` callback. Producer handlers receive only the
+Core command, Producer identity and immutable typed inputs.
 
 They receive no ArtifactStore, credentials, network client, queue or Runtime service. Work that
 needs those authorities must emit an explicit Need and be implemented by a separately selected

@@ -84,6 +84,7 @@ export type PlanFileOptions = {
   readonly targets: readonly string[];
   readonly accepts?: NeedAcceptance;
   readonly bindings?: readonly CandidateBinding[];
+  readonly implementationClosure?: import("@svml/protocol").Digest;
 };
 
 export type PlannedSource = {
@@ -151,6 +152,9 @@ export class NodeCompiler {
     });
     const request = sealBuildRequest({
       graph: compilation.elaboration.graph.id,
+      ...(options.implementationClosure === undefined
+        ? {}
+        : { implementationClosure: options.implementationClosure }),
       targets,
       bindings: options.bindings ?? [],
     });

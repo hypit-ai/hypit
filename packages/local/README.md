@@ -11,7 +11,8 @@ The convenience assembly uses:
 - optional replacement by any permission-checked ArtifactStore contribution, including
   `@svml/artifact-store-s3`;
 - an in-process, queue-free Scheduler whose ready work always comes from Core;
-- separately installed deterministic component packages and external Provider packages.
+- an exact implementation package lock for deterministic component packages;
+- separately selected external Provider packages.
 
 Deterministic packages implement the host-neutral `@svml/component-kit` contract. `@svml/local`
 adapts them to `HostRegistry`; the component never imports the Node Driver or receives Runtime
@@ -20,12 +21,12 @@ services.
 ```ts
 export default await createProjectLocalRuntime({
   root: import.meta.dirname,
+  packageLock: "./svml.packages.lock",
   artifacts: createS3ArtifactStorePackage({
     bucket: "hypit-svml-artifacts",
     prefix: "development",
     region: "us-east-1",
   }),
-  components: [generationComponent, seedanceComponent],
   providers: [createKieProvider({ apiKey: credentialRef("env", "KIE_API_KEY") })],
   allowedPermissions: ["network:aws:s3", "network:api.kie.ai", "network:kieai.redpandaai.co"],
   scheduling: {
@@ -35,9 +36,11 @@ export default await createProjectLocalRuntime({
 });
 ```
 
-The KIE Provider shown above is implemented; `generationComponent` owns common result validators
-and `seedanceComponent` owns exact request validators and deterministic Need Producers. Swapping a
-Provider package changes an Endpoint implementation and its lane, not the `.svml` author document.
+The implementation lock may contain `generationComponent`, exact-model components and media
+pipeline Producers without adding imports to this deployment source. Its digest is bound into the
+BuildRequest, so a persisted Build cannot resume under another deterministic component closure.
+The KIE Provider remains an independently selected privileged endpoint; swapping it changes an
+Endpoint implementation and lane, not the `.svml` author document.
 `createProjectLocalRuntime` accepts a configured ArtifactStore package directly;
 advanced hosts may call `createLocalRuntime` with Postgres or other implementations of the same
 ports instead of using the project defaults.

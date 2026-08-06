@@ -11,6 +11,7 @@
     "@svml/component-kit": "workspace:*",
     "@svml/credential-store-env": "workspace:*",
     "@svml/driver-node": "workspace:*",
+    "@svml/package-loader-node": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/provider-kit": "workspace:*",
     "@svml/runtime": "workspace:*",
