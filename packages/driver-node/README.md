@@ -14,13 +14,19 @@ the prototype API.
 - Providers match the locked `CapabilityRef` and return `TypeRef`. Multiple exact endpoints require
   `bind()`. The Registry never routes by return type alone.
 - Production-style assembly uses `applyRuntimeClosure()`: Endpoint instance, exact capability and
-  return Type, implementation facet digest and Profile-owned scheduling must all match atomically.
+  return Type, implementation digest, non-secret configuration digest, declared credential slots
+  and Profile-owned scheduling must all match atomically.
   Legacy direct `bind()` remains only as the low-level trusted test/embedding API.
 - Long-lived external work uses `registerProviderEndpoint()`, not an immediate Handler. The Driver
   creates a content-addressed Operation before `start()`, persists pending checkpoints, calls
   `resume()` for an existing Operation, and replays a journaled completion without another external
   call. A recoverable Endpoint is blocked unless both its locked Runtime Closure and an
   `OperationStore` are present.
+- Provider credentials are resolved only for the slots declared by that locked endpoint, immediately
+  before `start/resume/cancel`; secret bytes never become Driver journal or Core state.
+- A pending Endpoint may publish `wakeAt`. Retryable terminal failure creates a new attempt and
+  submission key under the endpoint's finite retry policy; cancellation becomes an explicit terminal
+  failure that Core accepts through its ordinary command-failed Event.
 - Preview, fallback and reuse are graph-level Candidates selected by BuildRequest, not Provider
   modes. A reused value is an Existing-Value Candidate; “Pin” is only the host UI action that selects
   it. Candidate fidelity is sealed into the Core-derived plan before execution.

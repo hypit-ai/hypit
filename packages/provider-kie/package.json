@@ -1,0 +1,30 @@
+{
+  "name": "@svml/provider-kie",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/driver-node": "workspace:*",
+    "@svml/gemini-omni": "workspace:*",
+    "@svml/generation": "workspace:*",
+    "@svml/gpt-image": "workspace:*",
+    "@svml/grok-imagine": "workspace:*",
+    "@svml/minimax-h3": "workspace:*",
+    "@svml/nano-banana": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/provider-kit": "workspace:*",
+    "@svml/runtime": "workspace:*",
+    "@svml/seedance": "workspace:*",
+    "@svml/seedream": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/artifact-store-fs": "workspace:*",
+    "@svml/core": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/local": "workspace:*",
+    "@svml/validation": "workspace:*"
+  }
+}

@@ -35,6 +35,7 @@ import { resolveRealization, sealRealizationOverlay } from "@svml/realization";
 import { narrativeValue, parseScript } from "@svml/script";
 import { speechAlignManifest } from "@svml/speech-align";
 import { speechTakeManifest } from "@svml/speech-take";
+import { mediaPipelineManifest } from "@svml/media-pipeline";
 import {
   captionTimingFragment,
   speechTakeProjectionFragment,
@@ -259,6 +260,7 @@ export const videoClosure = createResolvedClosure([
   ...videoContractManifests,
   videoManifest,
   speechTakeManifest,
+  mediaPipelineManifest,
   whisperXManifest,
   speechAlignManifest,
   captionManifest,

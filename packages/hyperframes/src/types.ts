@@ -1,4 +1,5 @@
-import type { Digest } from "@svml/protocol";
+import type { HYPERFRAMES_VISUAL_IR_V1 } from "@svml/contracts";
+import type { BlobRef, Digest } from "@svml/protocol";
 
 export type HyperframesFrameDomain = {
   /** Exact ProgramSpace whose integer frame domain this document renders. */
@@ -18,12 +19,13 @@ export type HyperframesCanvas = {
 
 /** Deterministic, portable input to a local or remote HyperFrames renderer. */
 export type HyperframesDocument = HyperframesFrameDomain & {
-  readonly contract: "svml.hyperframes-document@2";
+  readonly contract: "svml.hyperframes-document@4";
+  readonly visualIr: typeof HYPERFRAMES_VISUAL_IR_V1;
   readonly digest: Digest;
   readonly compositionDigest: Digest;
   readonly canvas: HyperframesCanvas;
-  /** Every content-addressed media dependency referenced by the HTML template. */
-  readonly artifactDigests: readonly Digest[];
+  /** Every content-addressed byte dependency referenced by the HTML template. */
+  readonly artifacts: readonly BlobRef[];
   /** Media URLs remain svml-artifact:// placeholders until a Runtime materializes them. */
   readonly html: string;
 };
@@ -34,4 +36,4 @@ export type HyperframesFrameSpan = {
   readonly endFrameExclusive: number;
 };
 
-export type ArtifactUrlResolver = (digest: Digest) => string;
+export type ArtifactUrlResolver = (artifact: BlobRef) => string;

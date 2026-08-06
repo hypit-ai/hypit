@@ -46,11 +46,14 @@ test("pending checkpoints and completion advance by CAS without entering BuildSt
   const pending = await store.compareAndSwap(operation.id, 0, {
     status: "pending",
     checkpoint: { remoteJob: "job-123", pollAfterMs: 5_000 },
+    wakeAt: 10_000,
   });
   assert.equal(pending.status, "stored");
   if (pending.status !== "stored") return;
   assert.equal(pending.snapshot.status, "pending");
   assert.deepEqual(pending.snapshot.checkpoint, { remoteJob: "job-123", pollAfterMs: 5_000 });
+  assert.equal(pending.snapshot.wakeAt, 10_000);
+  assert.deepEqual((await store.list({ build: "video-42" })).map((item) => item.id), [operation.id]);
 
   const stale = await store.compareAndSwap(operation.id, 0, {
     status: "failed",

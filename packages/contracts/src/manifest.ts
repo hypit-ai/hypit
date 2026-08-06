@@ -1,6 +1,12 @@
 import { digestOf } from "@svml/protocol";
 import type { ModuleManifest, TypeRef, ValueSchema } from "@svml/protocol";
 
+import {
+  HYPERFRAMES_VISUAL_IR_V1,
+  HYPERFRAMES_VISUAL_STYLE_ENUM_VALUES_V1,
+  HYPERFRAMES_VISUAL_STYLE_NAMES_V1,
+} from "./hyperframes-visual-ir.js";
+
 export const narrativeModuleRef = { name: "@svml/narrative", version: "0.0.0-dev" } as const;
 export const mediaModuleRef = { name: "@svml/media", version: "0.0.0-dev" } as const;
 export const programSpaceModuleRef = { name: "@svml/program-space", version: "0.0.0-dev" } as const;
@@ -10,12 +16,20 @@ export const compositionModuleRef = { name: "@svml/composition", version: "0.0.0
 
 export const contractTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },
+  blobArtifact: { module: mediaModuleRef, name: "BlobArtifact" },
   mediaArtifact: { module: mediaModuleRef, name: "MediaArtifactRef" },
+  mediaInspection: { module: mediaModuleRef, name: "MediaInspection" },
+  mediaStreamSelection: { module: mediaModuleRef, name: "MediaStreamSelection" },
+  synchronizedMedia: { module: mediaModuleRef, name: "SynchronizedMedia" },
+  renderedVisual: { module: mediaModuleRef, name: "RenderedVisual" },
+  timelineAudio: { module: mediaModuleRef, name: "TimelineAudio" },
+  muxedMedia: { module: mediaModuleRef, name: "MuxedMedia" },
   fontArtifact: { module: mediaModuleRef, name: "FontArtifactRef" },
   compositableSurface: { module: mediaModuleRef, name: "CompositableSurfaceRef" },
   programSpace: { module: programSpaceModuleRef, name: "ProgramSpace" },
   speechBasis: { module: speechModuleRef, name: "SpeechBasis" },
   speechAudioBasis: { module: speechModuleRef, name: "SpeechAudioBasis" },
+  speechEvidenceAudio: { module: speechModuleRef, name: "SpeechEvidenceAudio" },
   alignedTranscriptEvidence: { module: semanticTimeModuleRef, name: "AlignedTranscriptEvidence" },
   completeSemanticMap: { module: semanticTimeModuleRef, name: "CompleteSemanticMap" },
   visualTrack: { module: compositionModuleRef, name: "VisualTrack" },
@@ -108,6 +122,174 @@ const blobArtifactSchema = (mediaTypes?: readonly string[]): ValueSchema => obje
   size: { schema: integer },
   mediaType: { schema: mediaTypes === undefined ? string : { kind: "string", enum: mediaTypes } },
 });
+export const blobArtifactValueSchema: ValueSchema = { kind: "blob" };
+
+const mediaRationalSchema = object({
+  numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
+  denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+});
+const mediaTimestampSchema = object({
+  ticks: { schema: { kind: "string", minLength: 1, maxLength: 128 } },
+  timeBase: { schema: mediaRationalSchema },
+});
+const mediaDispositionSchema = object({
+  default: { schema: { kind: "boolean" } },
+  attachedPicture: { schema: { kind: "boolean" } },
+});
+const mediaStreamBaseFields = {
+  index: { schema: integer },
+  codecType: { schema: string },
+  codecName: { schema: string },
+  disposition: { schema: mediaDispositionSchema },
+  timingStatus: { schema: { kind: "string", enum: ["admissible", "missing", "non-monotonic", "discontinuous"] } },
+  timeBase: { schema: mediaRationalSchema, optional: true },
+  startPts: { schema: mediaTimestampSchema, optional: true },
+  endPts: { schema: mediaTimestampSchema, optional: true },
+  decodedUnitCount: { schema: integer },
+} as const;
+const mediaVideoStreamSchema = object({
+  ...mediaStreamBaseFields,
+  kind: { schema: { kind: "literal", value: "video" } },
+  codecType: { schema: { kind: "literal", value: "video" } },
+  role: { schema: { kind: "string", enum: ["moving", "attached-picture", "still"] } },
+  width: { schema: { kind: "number", integer: true, minimum: 1 } },
+  height: { schema: { kind: "number", integer: true, minimum: 1 } },
+  averageFrameRate: { schema: mediaRationalSchema, optional: true },
+  nominalFrameRate: { schema: mediaRationalSchema, optional: true },
+});
+const mediaAudioStreamSchema = object({
+  ...mediaStreamBaseFields,
+  kind: { schema: { kind: "literal", value: "audio" } },
+  codecType: { schema: { kind: "literal", value: "audio" } },
+  sampleRate: { schema: { kind: "number", integer: true, minimum: 1 } },
+  channels: { schema: { kind: "number", integer: true, minimum: 1 } },
+  channelLayout: { schema: string, optional: true },
+  decodedSampleFrames: { schema: integer },
+});
+const mediaOtherStreamSchema = object({
+  ...mediaStreamBaseFields,
+  kind: { schema: { kind: "literal", value: "other" } },
+});
+
+export const mediaInspectionSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.media-inspection@1" } },
+  source: { schema: blobArtifactSchema() },
+  container: { schema: object({
+    formatNames: { schema: { kind: "array", minItems: 1, items: string } },
+  }) },
+  streams: { schema: {
+    kind: "array",
+    items: { kind: "oneOf", variants: [mediaVideoStreamSchema, mediaAudioStreamSchema, mediaOtherStreamSchema] },
+  } },
+  probe: { schema: object({
+    algorithm: { schema: { kind: "literal", value: "ffprobe-decoded-units-json@1" } },
+    implementation: { schema: string },
+  }) },
+  inspectionDigest: { schema: digest },
+});
+
+export const mediaStreamSelectionSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.media-stream-selection@1" } },
+  sourceArtifactDigest: { schema: digest },
+  inspectionDigest: { schema: digest },
+  videoStreamIndex: { schema: integer, optional: true },
+  audioStreamIndex: { schema: integer, optional: true },
+  spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
+  policy: { schema: { kind: "string", enum: [
+    "primary-moving@1", "default-audio@1", "primary-moving-default-audio@1", "explicit-streams@1",
+  ] } },
+  selectionDigest: { schema: digest },
+});
+
+export const synchronizedMediaSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.synchronized-media@1" } },
+  sourceArtifactDigest: { schema: digest },
+  inspectionDigest: { schema: digest },
+  selectionDigest: { schema: digest },
+  timeline: { schema: object({
+    spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
+    frameRate: { schema: mediaRationalSchema },
+    frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+    sampleRate: { schema: { kind: "literal", value: 48_000 } },
+    sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+  }) },
+  sourceMap: { schema: object({
+    sourceOriginPts: { schema: mediaTimestampSchema },
+    sourceEndPts: { schema: mediaTimestampSchema },
+    audioTrimStartSamples: { schema: integer },
+    audioTrimEndSamples: { schema: integer },
+    audioHeadSamples: { schema: integer },
+    audioContentSamples: { schema: integer },
+    audioTailSamples: { schema: integer },
+  }) },
+  visual: { schema: object({
+    artifact: { schema: blobArtifactSchema() },
+    sourceStreamIndex: { schema: integer },
+    width: { schema: { kind: "number", integer: true, minimum: 1 } },
+    height: { schema: { kind: "number", integer: true, minimum: 1 } },
+    frameRate: { schema: mediaRationalSchema },
+    frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+    muted: { schema: { kind: "literal", value: true } },
+  }), optional: true },
+  audio: { schema: object({
+    artifact: { schema: blobArtifactSchema(["audio/wav"]) },
+    sourceStreamIndex: { schema: integer },
+    codec: { schema: { kind: "literal", value: "pcm_s16le" } },
+    sampleRate: { schema: { kind: "literal", value: 48_000 } },
+    channels: { schema: { kind: "literal", value: 2 } },
+    sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+    loudness: { schema: { kind: "literal", value: "preserved" } },
+  }), optional: true },
+  normalization: { schema: object({
+    algorithm: { schema: { kind: "literal", value: "shared-presentation-origin@1" } },
+    implementation: { schema: string },
+  }) },
+  synchronizedMediaDigest: { schema: digest },
+});
+
+export const renderedVisualSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.rendered-visual@1" } },
+  renderInputDigest: { schema: digest },
+  programSpaceDigest: { schema: digest },
+  frameRate: { schema: mediaRationalSchema },
+  frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+  canvas: { schema: object({
+    width: { schema: { kind: "number", integer: true, minimum: 1 } },
+    height: { schema: { kind: "number", integer: true, minimum: 1 } },
+  }) },
+  artifact: { schema: blobArtifactSchema() },
+  muted: { schema: { kind: "literal", value: true } },
+  visualDigest: { schema: digest },
+});
+
+export const timelineAudioSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.timeline-audio@1" } },
+  planDigest: { schema: digest },
+  programSpaceDigest: { schema: digest },
+  artifact: { schema: blobArtifactSchema(["audio/wav"]) },
+  codec: { schema: { kind: "literal", value: "pcm_s16le" } },
+  sampleRate: { schema: { kind: "literal", value: 48_000 } },
+  channels: { schema: { kind: "literal", value: 2 } },
+  sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+  loudness: { schema: { kind: "literal", value: "planned" } },
+  audioDigest: { schema: digest },
+});
+
+export const muxedMediaSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.muxed-media@1" } },
+  visualDigest: { schema: digest },
+  audioDigest: { schema: digest },
+  programSpaceDigest: { schema: digest },
+  frameRate: { schema: mediaRationalSchema },
+  frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
+  canvas: { schema: object({
+    width: { schema: { kind: "number", integer: true, minimum: 1 } },
+    height: { schema: { kind: "number", integer: true, minimum: 1 } },
+  }) },
+  presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+  artifact: { schema: blobArtifactSchema(["video/mp4"]) },
+  muxDigest: { schema: digest },
+});
 export const fontArtifactSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.font-artifact@1" } },
   artifact: { schema: blobArtifactSchema(["font/otf", "font/ttf", "font/woff", "font/woff2"]) },
@@ -159,6 +341,30 @@ export const speechAudioBasisSchema: ValueSchema = object({
   basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
   programSpace: { schema: programSpaceSchema }, audio: { schema: mediaArtifactSchema },
   segments: { schema: { kind: "array", minItems: 1, items: basisSegment } },
+});
+
+export const speechEvidenceAudioSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.speech-evidence-audio@1" } },
+  basisDigest: { schema: digest }, narrativeDigest: { schema: digest },
+  programSpaceDigest: { schema: digest }, sourceAudioArtifactDigest: { schema: digest },
+  artifact: { schema: blobArtifactSchema(["audio/wav"]) },
+  codec: { schema: { kind: "literal", value: "pcm_s16le" } },
+  sampleRate: { schema: { kind: "literal", value: 16_000 } },
+  channels: { schema: { kind: "literal", value: 1 } },
+  sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+  durationSec: { schema: number },
+  segments: { schema: { kind: "array", minItems: 1, items: basisSegment } },
+  sampleMap: { schema: object({
+    algorithm: { schema: { kind: "literal", value: "rational-boundary-round@1" } },
+    sourceSampleRate: { schema: { kind: "literal", value: 48_000 } },
+    evidenceSampleRate: { schema: { kind: "literal", value: 16_000 } },
+    sourceSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+    evidenceSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+    sourceOriginSample: { schema: { kind: "literal", value: 0 } },
+    evidenceOriginSample: { schema: { kind: "literal", value: 0 } },
+    resamplerImplementation: { schema: string },
+  }) },
+  evidenceAudioDigest: { schema: digest },
 });
 
 const wordEvidence = object({
@@ -220,10 +426,20 @@ export const completeSemanticMapSchema: ValueSchema = object({
   groups: { schema: { kind: "array", items: alignmentGroup } }, mapDigest: { schema: digest },
 });
 
-const styleDeclaration = object({
-  name: { schema: string },
-  value: { schema: { kind: "oneOf", variants: [{ kind: "string" }, { kind: "number" }] } },
-});
+const styleDeclaration: ValueSchema = {
+  kind: "oneOf",
+  variants: HYPERFRAMES_VISUAL_STYLE_NAMES_V1.map((name) => object({
+    name: { schema: { kind: "literal", value: name } },
+    value: { schema: Object.hasOwn(HYPERFRAMES_VISUAL_STYLE_ENUM_VALUES_V1, name)
+      ? {
+          kind: "string",
+          enum: HYPERFRAMES_VISUAL_STYLE_ENUM_VALUES_V1[
+            name as keyof typeof HYPERFRAMES_VISUAL_STYLE_ENUM_VALUES_V1
+          ],
+        }
+      : { kind: "oneOf", variants: [{ kind: "string" }, { kind: "number" }] } },
+  })),
+};
 const visualAttribute = object({ name: { schema: string }, value: { schema: { kind: "string" } } });
 const visualKeyframe = object({
   atFrame: { schema: integer },
@@ -277,6 +493,7 @@ const trackSource = object({ name: { schema: string }, digest: { schema: digest 
 
 export const visualTrackSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.visual-track@1" } },
+  visualIr: { schema: { kind: "literal", value: HYPERFRAMES_VISUAL_IR_V1 } },
   digest: { schema: digest },
   id: { schema: string },
   programSpaceDigest: { schema: digest },
@@ -329,13 +546,95 @@ export const narrativeManifest: ModuleManifest = {
   producers: [],
 };
 
+export const mediaValidatorDigests = {
+  inspection: digestOf("@svml/media/validate-media-inspection@1"),
+  selection: digestOf("@svml/media/validate-media-stream-selection@1"),
+  synchronized: digestOf("@svml/media/validate-synchronized-media@1"),
+  renderedVisual: digestOf("@svml/media/validate-rendered-visual@1"),
+  timelineAudio: digestOf("@svml/media/validate-timeline-audio@1"),
+  muxedMedia: digestOf("@svml/media/validate-muxed-media@1"),
+} as const;
+
 export const mediaManifest: ModuleManifest = {
   format: "svml.module@0",
   name: mediaModuleRef.name,
   version: mediaModuleRef.version,
   dependencies: [],
   types: [
+    { name: contractTypes.blobArtifact.name, schema: blobArtifactValueSchema },
     { name: contractTypes.mediaArtifact.name, schema: mediaArtifactSchema },
+    {
+      name: contractTypes.mediaInspection.name,
+      schema: mediaInspectionSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/media/validate-media-inspection",
+          digest: mediaValidatorDigests.inspection,
+        },
+      },
+    },
+    {
+      name: contractTypes.mediaStreamSelection.name,
+      schema: mediaStreamSelectionSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/media/validate-media-stream-selection",
+          digest: mediaValidatorDigests.selection,
+        },
+      },
+    },
+    {
+      name: contractTypes.synchronizedMedia.name,
+      schema: synchronizedMediaSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/media/validate-synchronized-media",
+          digest: mediaValidatorDigests.synchronized,
+        },
+      },
+    },
+    {
+      name: contractTypes.renderedVisual.name,
+      schema: renderedVisualSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/media/validate-rendered-visual",
+          digest: mediaValidatorDigests.renderedVisual,
+        },
+      },
+    },
+    {
+      name: contractTypes.timelineAudio.name,
+      schema: timelineAudioSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/media/validate-timeline-audio",
+          digest: mediaValidatorDigests.timelineAudio,
+        },
+      },
+    },
+    {
+      name: contractTypes.muxedMedia.name,
+      schema: muxedMediaSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: "@svml/media/validate-muxed-media",
+          digest: mediaValidatorDigests.muxedMedia,
+        },
+      },
+    },
     { name: contractTypes.fontArtifact.name, schema: fontArtifactSchema },
     { name: contractTypes.compositableSurface.name, schema: compositableSurfaceSchema },
   ],
@@ -371,6 +670,7 @@ export const speechManifest: ModuleManifest = {
   types: [
     { name: contractTypes.speechBasis.name, schema: speechBasisSchema },
     { name: contractTypes.speechAudioBasis.name, schema: speechAudioBasisSchema },
+    { name: contractTypes.speechEvidenceAudio.name, schema: speechEvidenceAudioSchema },
   ],
   capabilities: [],
   surfaces: [],

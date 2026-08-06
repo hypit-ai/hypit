@@ -5,6 +5,8 @@ import { digestOf } from "@svml/protocol";
 
 import {
   assertCompositionIdentity,
+  assertVisualTrackIdentity,
+  HYPERFRAMES_VISUAL_IR_V1,
   sealAudioTrack,
   sealComposition,
   sealProgramSpace,
@@ -33,6 +35,7 @@ function fixture() {
   });
   const visual = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "caption",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "projection", digest: digestOf("caption-projection") }],
@@ -58,6 +61,7 @@ function fixture() {
 
 test("Composition accepts self-contained peer VisualTrack and AudioTrack values", () => {
   const { programSpace, visual, sound } = fixture();
+  assert.equal(visual.visualIr, HYPERFRAMES_VISUAL_IR_V1);
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "main",
@@ -110,6 +114,63 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
       tracks: [smuggled],
     })),
     /escapes its declaration/,
+  );
+});
+
+test("VisualTrack cannot silently extend the versioned HyperFrames Visual IR", () => {
+  const { programSpace, visual } = fixture();
+  const first = visual.presents[0]!.elements[0]!;
+  const unknownStyle = sealVisualTrack({
+    ...visual,
+    presents: [{
+      ...visual.presents[0]!,
+      elements: [{ ...first, style: [{ name: "mask-image", value: "linear-gradient(black, transparent)" }] }],
+    }],
+  });
+  assert.throws(
+    () => assertCompositionIdentity(sealComposition({
+      contract: "svml.composition@1",
+      id: "unknown-style",
+      programSpace,
+      canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+      tracks: [unknownStyle],
+    })),
+    /outside svml\.hyperframes-visual-ir@1/u,
+  );
+
+  const fixedPosition = sealVisualTrack({
+    ...visual,
+    presents: [{
+      ...visual.presents[0]!,
+      elements: [{ ...first, style: [{ name: "position", value: "fixed" }] }],
+    }],
+  });
+  assert.throws(
+    () => assertVisualTrackIdentity(fixedPosition, programSpace),
+    /position has unsupported value fixed/u,
+  );
+
+  const environmentBound = sealVisualTrack({
+    ...visual,
+    presents: [{
+      ...visual.presents[0]!,
+      elements: [{ ...first, style: [{ name: "color", value: "var(--host-color)" }] }],
+    }],
+  });
+  assert.throws(
+    () => assertVisualTrackIdentity(environmentBound, programSpace),
+    /environment-dependent style value/u,
+  );
+});
+
+test("VisualTrack explicitly binds the visual IR instead of trusting the Runtime", () => {
+  const { programSpace, visual } = fixture();
+  assert.throws(
+    () => assertVisualTrackIdentity({
+      ...visual,
+      visualIr: "third-party.browser-css@9",
+    } as unknown as VisualTrack, programSpace),
+    /Unsupported VisualTrack visual IR/u,
   );
 });
 

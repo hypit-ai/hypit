@@ -1,16 +1,21 @@
 import type {
   AlignedTranscriptEvidence,
   AlignedTranscriptSegment,
-  MediaArtifactRef,
+  SpeechEvidenceAudio,
   SpeechBasisSegment,
 } from "@svml/contracts";
 import type { Digest } from "@svml/protocol";
 
 export type WhisperXAlignmentRequest = {
-  readonly contract: "svml.whisperx-alignment-request@1";
+  readonly contract: "svml.whisperx-alignment-request@2";
   readonly basisDigest: Digest;
+  readonly narrativeDigest: Digest;
   readonly programSpaceDigest: Digest;
-  readonly audio: MediaArtifactRef;
+  readonly sourceAudioArtifactDigest: Digest;
+  readonly evidenceAudioDigest: Digest;
+  readonly audio: SpeechEvidenceAudio["artifact"];
+  readonly sampleFrames: number;
+  readonly durationSec: number;
   readonly segments: readonly SpeechBasisSegment[];
   readonly language?: string;
   readonly wordAlignment: true;
@@ -18,10 +23,11 @@ export type WhisperXAlignmentRequest = {
 };
 
 export type WhisperXAlignmentEvidence = {
-  readonly contract: "svml.whisperx-alignment-evidence@1";
+  readonly contract: "svml.whisperx-alignment-evidence@2";
   readonly engine: "whisperx";
   readonly basisDigest: Digest;
   readonly audioArtifactDigest: Digest;
+  readonly evidenceAudioDigest: Digest;
   readonly programSpaceDigest: Digest;
   readonly rawEvidenceArtifactDigest: Digest;
   readonly durationSec: number;

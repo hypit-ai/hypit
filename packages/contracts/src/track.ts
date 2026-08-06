@@ -1,6 +1,10 @@
 import { digestOf, isDigest } from "@svml/protocol";
 import type { Digest } from "@svml/protocol";
 
+import {
+  assertHyperframesVisualStyleV1,
+  HYPERFRAMES_VISUAL_IR_V1,
+} from "./hyperframes-visual-ir.js";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "./identity.js";
 import { assertCompositableSurfaceRef, assertFontArtifactRef } from "./render.js";
 import type { CompositableSurfaceRef, FontArtifactRef } from "./render.js";
@@ -100,6 +104,8 @@ export type TrackSource = {
 
 export type VisualTrack = {
   readonly contract: "svml.visual-track@1";
+  /** The one terminal visual language shared by official video components. */
+  readonly visualIr: typeof HYPERFRAMES_VISUAL_IR_V1;
   readonly digest: Digest;
   readonly id: string;
   readonly programSpaceDigest: Digest;
@@ -146,11 +152,6 @@ export type Composition = {
   readonly tracks: readonly Track[];
 };
 
-const FORBIDDEN_CROSS_TRACK_STYLES = new Set([
-  "backdrop-filter",
-  "mix-blend-mode",
-]);
-
 const ANIMATABLE_LOCAL_STYLES = new Set([
   "clip-path",
   "filter",
@@ -190,25 +191,11 @@ function assertArtifact(artifact: MediaArtifactRef, label: string): void {
 function assertStyle(style: readonly VisualStyleDeclaration[], label: string): void {
   const names = new Set<string>();
   for (const declaration of style) {
-    if (!/^(?:--)?[a-z][a-z0-9-]*$/u.test(declaration.name)) {
-      throw new Error(`${label} contains invalid style name ${declaration.name}.`);
-    }
     if (names.has(declaration.name)) {
       throw new Error(`${label} contains duplicate style ${declaration.name}.`);
     }
     names.add(declaration.name);
-    if (FORBIDDEN_CROSS_TRACK_STYLES.has(declaration.name)) {
-      throw new Error(`${label} contains cross-Track style ${declaration.name}.`);
-    }
-    if (typeof declaration.value === "string" && /url\s*\(/iu.test(declaration.value)) {
-      throw new Error(`${label} must use typed Artifact references instead of CSS url().`);
-    }
-    if (typeof declaration.value === "string" && /[;{}]/u.test(declaration.value)) {
-      throw new Error(`${label} contains a style value that escapes its declaration.`);
-    }
-    if (typeof declaration.value === "number" && !Number.isFinite(declaration.value)) {
-      throw new Error(`${label} contains a non-finite style value.`);
-    }
+    assertHyperframesVisualStyleV1(declaration.name, declaration.value, label);
   }
 }
 
@@ -328,7 +315,7 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace, track
         if (faces.has(face)) throw new Error(`${trackId}.${present.id}.${element.id} has a duplicate font face.`);
         faces.add(face);
       }
-      const ownedFontStyles = new Set(["font-family", "font-style", "font-synthesis", "font-weight"]);
+      const ownedFontStyles = new Set(["font", "font-family", "font-style", "font-synthesis", "font-weight"]);
       if (element.style.some((declaration) => ownedFontStyles.has(declaration.name))) {
         throw new Error(`${trackId}.${present.id}.${element.id} exact fonts conflict with a raw font style.`);
       }
@@ -441,6 +428,7 @@ function normalizeElement(element: VisualElement): VisualElement {
 function visualTrackContent(value: Omit<VisualTrack, "digest">): Omit<VisualTrack, "digest"> {
   return {
     contract: "svml.visual-track@1",
+    visualIr: value.visualIr,
     id: value.id,
     programSpaceDigest: value.programSpaceDigest,
     sources: normalizeSources(value.sources),
@@ -501,6 +489,7 @@ export function sealAudioTrack(value: Omit<AudioTrack, "digest">): AudioTrack {
 export function assertVisualTrackIdentity(track: VisualTrack, programSpace: ProgramSpace): void {
   assertProgramSpaceIdentity(programSpace);
   if (track.contract !== "svml.visual-track@1") throw new Error("Unsupported VisualTrack contract.");
+  if (track.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
   assertNonEmpty(track.id, "VisualTrack id");
   assertSources(track.sources, track.id);
   if (track.programSpaceDigest !== programSpace.digest) throw new Error(`${track.id} belongs to another ProgramSpace.`);

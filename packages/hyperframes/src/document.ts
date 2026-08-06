@@ -1,9 +1,9 @@
 import {
   assertCompositionIdentity,
+  HYPERFRAMES_VISUAL_IR_V1,
   programSpaceFrameCount,
 } from "@svml/contracts";
 import type {
-  AudioTrack,
   Composition,
   FontArtifactRef,
   Track,
@@ -14,7 +14,7 @@ import type {
   VisualTrack,
 } from "@svml/contracts";
 import { digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import type { BlobRef, Digest } from "@svml/protocol";
 
 import type {
   ArtifactUrlResolver,
@@ -22,7 +22,7 @@ import type {
   HyperframesFrameSpan,
 } from "./types.js";
 
-export const compileHyperframesImplementationDigest = digestOf("@svml/hyperframes/compile@3");
+export const compileHyperframesImplementationDigest = digestOf("@svml/hyperframes/compile@5");
 
 const NANOSECONDS = 1_000_000_000n;
 const ARTIFACT_URI = /svml-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
@@ -200,33 +200,6 @@ function renderAnimationRules(track: VisualTrack, present: VisualPresent): strin
   });
 }
 
-function renderAudioTrack(
-  track: AudioTrack,
-  trackIndex: number,
-  numerator: number,
-  denominator: number,
-): string {
-  return track.clips.map((clip) => {
-    const start = frameSeconds(clip.span.startFrame, numerator, denominator);
-    const duration = frameSeconds(clip.span.endFrameExclusive - clip.span.startFrame, numerator, denominator);
-    return [
-      `<audio id="${stableDomId([track.id, clip.id])}"`,
-      `data-svml-track-id="${escapeHtml(track.id)}"`,
-      `data-svml-clip-id="${escapeHtml(clip.id)}"`,
-      `data-track-index="${trackIndex}"`,
-      `data-start="${start}"`,
-      `data-duration="${duration}"`,
-      clip.mediaStartSec === undefined ? "" : `data-media-start="${clip.mediaStartSec}"`,
-      clip.playbackRate === undefined ? "" : `data-playback-rate="${clip.playbackRate}"`,
-      clip.gain === undefined ? "" : `data-volume="${clip.gain}"`,
-      clip.fadeInSec === undefined ? "" : `data-fade-in="${clip.fadeInSec}"`,
-      clip.fadeOutSec === undefined ? "" : `data-fade-out="${clip.fadeOutSec}"`,
-      clip.bus === undefined ? "" : `data-bus="${clip.bus}"`,
-      `src="${escapeHtml(hyperframesArtifactUri(clip.artifact.digest))}"></audio>`,
-    ].filter(Boolean).join(" ");
-  }).join("");
-}
-
 function orderedVisualPresents(tracks: readonly Track[]): Array<{ readonly track: VisualTrack; readonly present: VisualPresent }> {
   return tracks
     .filter((track): track is VisualTrack => track.contract === "svml.visual-track@1")
@@ -238,24 +211,34 @@ function orderedVisualPresents(tracks: readonly Track[]): Array<{ readonly track
       || left.present.id.localeCompare(right.present.id));
 }
 
-function collectArtifactDigests(composition: Composition): Digest[] {
-  const digests = new Set<Digest>();
-  for (const track of composition.tracks) {
-    if (track.contract === "svml.audio-track@1") {
-      for (const clip of track.clips) digests.add(clip.artifact.digest);
-      continue;
+function collectArtifacts(composition: Composition): BlobRef[] {
+  const artifacts = new Map<Digest, BlobRef>();
+  const add = (artifact: { readonly digest: Digest; readonly size: number; readonly mediaType: string }): void => {
+    const next: BlobRef = {
+      kind: "blob",
+      digest: artifact.digest,
+      size: artifact.size,
+      mediaType: artifact.mediaType,
+    };
+    const existing = artifacts.get(artifact.digest);
+    if (existing !== undefined && (existing.size !== next.size || existing.mediaType !== next.mediaType)) {
+      throw new Error(`HyperFrames Artifact ${artifact.digest} has conflicting metadata.`);
     }
+    artifacts.set(artifact.digest, next);
+  };
+  for (const track of composition.tracks) {
+    if (track.contract === "svml.audio-track@1") continue;
     for (const present of track.presents) {
       for (const element of present.elements) {
-        if (element.kind === "image" || element.kind === "video") digests.add(element.artifact.digest);
-        if (element.kind === "surface") digests.add(element.surface.artifact.digest);
+        if (element.kind === "image" || element.kind === "video") add(element.artifact);
+        if (element.kind === "surface") add(element.surface.artifact);
         if (element.kind === "text") {
-          for (const font of element.fonts ?? []) digests.add(font.artifact.digest);
+          for (const font of element.fonts ?? []) add(font.artifact);
         }
       }
     }
   }
-  return [...digests].sort();
+  return [...artifacts.values()].sort((left, right) => left.digest.localeCompare(right.digest));
 }
 
 function collectFonts(composition: Composition): FontArtifactRef[] {
@@ -294,11 +277,9 @@ function renderFontFaces(composition: Composition): string {
 function emitHtml(composition: Composition): string {
   const { numerator, denominator } = composition.programSpace.frameRate;
   const visuals = orderedVisualPresents(composition.tracks);
-  const audios = composition.tracks.filter((track): track is AudioTrack => track.contract === "svml.audio-track@1");
   const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator)).join("\n    ");
   const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present)).join("\n    ");
   const fontCss = renderFontFaces(composition);
-  const audioHtml = audios.map((track, index) => renderAudioTrack(track, visuals.length + index, numerator, denominator)).join("\n    ");
   const duration = frameSeconds(programSpaceFrameCount(composition.programSpace), numerator, denominator);
   const fps = fpsRational(numerator, denominator);
   const frameCount = programSpaceFrameCount(composition.programSpace);
@@ -318,7 +299,6 @@ function emitHtml(composition: Composition): string {
 <body>
   <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-svml-frame-count="${frameCount}" data-svml-program-space="${composition.programSpace.digest}">
     ${visualHtml}
-    ${audioHtml}
   </div>
 </body>
 </html>
@@ -327,13 +307,16 @@ function emitHtml(composition: Composition): string {
 
 function normalizedDocument(value: Omit<HyperframesDocument, "digest">): Omit<HyperframesDocument, "digest"> {
   return {
-    contract: "svml.hyperframes-document@2",
+    contract: "svml.hyperframes-document@4",
+    visualIr: value.visualIr,
     compositionDigest: value.compositionDigest,
     programSpaceDigest: value.programSpaceDigest,
     frameRate: { ...value.frameRate },
     frameCount: value.frameCount,
     canvas: { ...value.canvas },
-    artifactDigests: [...value.artifactDigests].sort(),
+    artifacts: [...value.artifacts]
+      .map((artifact) => ({ ...artifact }))
+      .sort((left, right) => left.digest.localeCompare(right.digest)),
     html: value.html,
   };
 }
@@ -341,7 +324,8 @@ function normalizedDocument(value: Omit<HyperframesDocument, "digest">): Omit<Hy
 export function compileHyperframesDocument(composition: Composition): HyperframesDocument {
   assertCompositionIdentity(composition);
   const content = normalizedDocument({
-    contract: "svml.hyperframes-document@2",
+    contract: "svml.hyperframes-document@4",
+    visualIr: HYPERFRAMES_VISUAL_IR_V1,
     compositionDigest: composition.digest,
     programSpaceDigest: composition.programSpace.digest,
     frameRate: { ...composition.programSpace.frameRate },
@@ -350,14 +334,15 @@ export function compileHyperframesDocument(composition: Composition): Hyperframe
       width: composition.canvas.width,
       height: composition.canvas.height,
     },
-    artifactDigests: collectArtifactDigests(composition),
+    artifacts: collectArtifacts(composition),
     html: emitHtml(composition),
   });
   return { ...content, digest: digestOf(content) };
 }
 
 export function assertHyperframesDocument(document: HyperframesDocument): void {
-  if (document.contract !== "svml.hyperframes-document@2") throw new Error("Unsupported HyperframesDocument contract.");
+  if (document.contract !== "svml.hyperframes-document@4") throw new Error("Unsupported HyperframesDocument contract.");
+  if (document.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported HyperframesDocument visual IR.");
   if (
     !isDigest(document.compositionDigest)
     || !isDigest(document.programSpaceDigest)
@@ -382,13 +367,15 @@ export function assertHyperframesDocument(document: HyperframesDocument): void {
   const { digest, ...content } = document;
   if (digest !== digestOf(normalizedDocument(content))) throw new Error("HyperframesDocument digest does not match its contents.");
   if (!document.html.startsWith("<!doctype html>")) throw new Error("HyperframesDocument HTML is invalid.");
-  const declared = [...document.artifactDigests];
-  if (declared.some((item) => !isDigest(item)) || new Set(declared).size !== declared.length) {
+  const declared = [...document.artifacts];
+  if (declared.some((item) => item.kind !== "blob" || !isDigest(item.digest)
+    || !Number.isSafeInteger(item.size) || item.size < 0 || item.mediaType.length === 0)
+    || new Set(declared.map((item) => item.digest)).size !== declared.length) {
     throw new Error("HyperframesDocument Artifact set is invalid.");
   }
   const referenced = [...document.html.matchAll(ARTIFACT_URI)].map((match) => `sha256:${match[1]}` as Digest);
   const actual = [...new Set(referenced)].sort();
-  if (JSON.stringify(actual) !== JSON.stringify([...declared].sort())) {
+  if (JSON.stringify(actual) !== JSON.stringify(declared.map((item) => item.digest).sort())) {
     throw new Error("HyperframesDocument Artifact placeholders do not match its declared dependencies.");
   }
 }
@@ -426,9 +413,12 @@ export function materializeHyperframesHtml(
   resolve: ArtifactUrlResolver,
 ): string {
   assertHyperframesDocument(document);
+  const artifacts = new Map(document.artifacts.map((artifact) => [artifact.digest, artifact]));
   return document.html.replace(ARTIFACT_URI, (_uri, hash: string) => {
     const digest = `sha256:${hash}` as Digest;
-    return escapeHtml(resolve(digest));
+    const artifact = artifacts.get(digest);
+    if (artifact === undefined) throw new Error(`HyperFrames Artifact ${digest} is undeclared.`);
+    return escapeHtml(resolve(artifact));
   });
 }
 

@@ -1,5 +1,4 @@
 import type {
-  BlobRef,
   BuildState,
   CanonicalValue,
   Conformance,
@@ -16,9 +15,15 @@ import type {
   TypedRecord,
 } from "@svml/protocol";
 import type {
+  ArtifactStore,
+  CredentialRef,
+  CredentialValue,
   OperationIdentity,
+  OperationFailure,
   RuntimeFacetRef,
 } from "@svml/runtime";
+
+export type { ArtifactStore } from "@svml/runtime";
 
 export type ProducerHandlerResult = {
   readonly outputs: Readonly<Record<string, StoredValue>>;
@@ -47,6 +52,8 @@ export type ProviderHandlerContext = {
   readonly command: FulfillNeedCommand;
   readonly need: Need;
   readonly artifacts: ArtifactStore;
+  /** Only slots explicitly declared by this configured Provider instance are present. */
+  readonly credentials: Readonly<Record<string, CredentialValue>>;
 };
 
 export type ProviderHandler = (
@@ -54,8 +61,9 @@ export type ProviderHandler = (
 ) => ProviderHandlerResult | Promise<ProviderHandlerResult>;
 
 export type ProviderEndpointResult =
-  | { readonly status: "pending"; readonly checkpoint: CanonicalValue }
-  | { readonly status: "completed"; readonly result: ProviderHandlerResult };
+  | { readonly status: "pending"; readonly checkpoint: CanonicalValue; readonly wakeAt?: number }
+  | { readonly status: "completed"; readonly result: ProviderHandlerResult }
+  | { readonly status: "failed"; readonly failure: OperationFailure };
 
 export type ProviderEndpointStartContext = ProviderHandlerContext & {
   readonly operation: OperationIdentity;
@@ -72,18 +80,13 @@ export type ProviderEndpoint = {
   cancel?(context: ProviderEndpointResumeContext): void | Promise<void>;
 };
 
-export type ArtifactStore = {
-  put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
-  get(digest: Digest): Promise<Uint8Array | undefined>;
-  has(digest: Digest): Promise<boolean>;
-};
-
 export type DriverJournalEntry = {
   readonly command: string;
   readonly kind: CoreCommand["kind"];
   readonly status: "completed" | "pending" | "blocked" | "error";
   readonly event?: string;
   readonly operation?: Digest;
+  readonly wakeAt?: number;
   readonly message?: string;
 };
 
@@ -112,9 +115,16 @@ export type SchedulingHint = {
   readonly maxConcurrency?: number;
 };
 
+export type ProviderRetryPolicy = {
+  /** Includes the first submission. A new attempt receives a new submission key. */
+  readonly maxAttempts: number;
+};
+
 export type RuntimeProviderImplementation = {
   readonly facet: RuntimeFacetRef;
   readonly digest: Digest;
+  /** Identity of the configured endpoint instance; secret values are never part of it. */
+  readonly configurationDigest: Digest;
 };
 
 export type ProducerRegistration = {
@@ -131,6 +141,8 @@ type ProviderRegistrationBase = {
   readonly supports?: (need: Need) => boolean;
   readonly scheduling?: SchedulingHint;
   readonly runtimeImplementation?: RuntimeProviderImplementation;
+  readonly credentials?: Readonly<Record<string, CredentialRef>>;
+  readonly retry?: ProviderRetryPolicy;
 };
 
 export type ProviderRegistration = ProviderRegistrationBase & (

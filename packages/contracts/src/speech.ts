@@ -1,4 +1,4 @@
-import type { Digest } from "@svml/protocol";
+import type { BlobRef, Digest } from "@svml/protocol";
 
 export type TimingQuality = "measured" | "derived" | "estimated";
 
@@ -52,6 +52,34 @@ export type SpeechAudioBasis = {
   readonly programSpace: ProgramSpace;
   readonly audio: MediaArtifactRef;
   readonly segments: readonly SpeechBasisSegment[];
+};
+
+/** Canonical 16 kHz mono PCM projection used only for acoustic alignment evidence. */
+export type SpeechEvidenceAudio = {
+  readonly contract: "svml.speech-evidence-audio@1";
+  readonly basisDigest: Digest;
+  readonly narrativeDigest: Digest;
+  readonly programSpaceDigest: Digest;
+  /** The 48 kHz speech-master bytes from which this projection was derived. */
+  readonly sourceAudioArtifactDigest: Digest;
+  readonly artifact: BlobRef;
+  readonly codec: "pcm_s16le";
+  readonly sampleRate: 16_000;
+  readonly channels: 1;
+  readonly sampleFrames: number;
+  readonly durationSec: number;
+  readonly segments: readonly SpeechBasisSegment[];
+  readonly sampleMap: {
+    readonly algorithm: "rational-boundary-round@1";
+    readonly sourceSampleRate: 48_000;
+    readonly evidenceSampleRate: 16_000;
+    readonly sourceSampleFrames: number;
+    readonly evidenceSampleFrames: number;
+    readonly sourceOriginSample: 0;
+    readonly evidenceOriginSample: 0;
+    readonly resamplerImplementation: string;
+  };
+  readonly evidenceAudioDigest: Digest;
 };
 
 export type SpeechWordEvidence = {

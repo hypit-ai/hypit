@@ -1,4 +1,5 @@
 export { hyperframesDocumentFragment } from "./fragment.js";
+export { hyperframesComponent } from "./component.js";
 export {
   assertHyperframesDocument,
   assertHyperframesFrameIndex,

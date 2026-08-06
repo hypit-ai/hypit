@@ -1,5 +1,10 @@
 export { MemoryBuildStore } from "./memory.js";
 export {
+  credentialRef,
+  verifyCredentialRef,
+} from "./credentials.js";
+export type * from "./credentials.js";
+export {
   MemoryOperationStore,
   sealOperationCompletion,
   sealOperationIdentity,

@@ -1,4 +1,5 @@
 export { hyperframesRenderFragment } from "./fragment.js";
+export { hyperframesRenderComponent } from "./component.js";
 export {
   hyperframesRenderCapabilities,
   hyperframesRenderManifest,
@@ -6,17 +7,10 @@ export {
   hyperframesRenderModuleRef,
   hyperframesRenderProducers,
   hyperframesRenderSurfaceImplementationDigest,
-  hyperframesRenderTypes,
-  hyperframesRenderedVideoSchema,
 } from "./manifest.js";
 export {
-  assertHyperframesRenderedVideo,
-  computeHyperframesRenderedVideoDigest,
-  hyperframesRenderRequest,
-  projectHyperframesVideo,
-  projectHyperframesVideoImplementationDigest,
-  requestHyperframesRenderImplementationDigest,
-  sealHyperframesRenderedVideo,
+  hyperframesVisualRequest,
+  requestHyperframesVisualImplementationDigest,
 } from "./product.js";
 export { decodeHyperframesRenderSurface } from "./surface.js";
 export type * from "./types.js";

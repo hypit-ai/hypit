@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { BlobRef, Digest } from "@svml/protocol";
 
-import type { ArtifactStore } from "./types.js";
+import type { ArtifactStore } from "@svml/runtime";
 
 export class MemoryArtifactStore implements ArtifactStore {
   readonly #values = new Map<Digest, Uint8Array>();

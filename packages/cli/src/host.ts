@@ -24,6 +24,7 @@ import {
   scriptModuleRef,
   scriptSurfaceImplementationDigest,
 } from "@svml/script";
+import { mediaPipelineManifest } from "@svml/media-pipeline";
 import { svsFrontend, svsManifest } from "@svml/svs";
 import {
   createTextAuthorFrontend,
@@ -45,6 +46,7 @@ export function createOfficialNodeCompiler(options: OfficialCompilerOptions = {}
   });
   modules.register({ manifest: svsManifest });
   modules.register({ manifest: hyperframesManifest });
+  modules.register({ manifest: mediaPipelineManifest });
   modules.register({
     manifest: filmManifest,
     specifiers: ["@svml/film", "@svml/film@1"],

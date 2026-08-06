@@ -3,7 +3,7 @@ import {
   contractTypes,
   videoContractDependencies,
 } from "@svml/contracts";
-import { digestOf } from "@svml/core";
+import { digestOf } from "@svml/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
 
 export const whisperXModuleRef = { name: "@svml/whisperx", version: "0.0.0-dev" } as const;
@@ -18,8 +18,8 @@ export const whisperXProducers = {
   normalize: { module: whisperXModuleRef, name: "normalize-whisperx-alignment" },
 } satisfies Record<string, ProducerRef>;
 export const whisperXImplementationDigests = {
-  request: digestOf("@svml/whisperx/request@1"),
-  normalize: digestOf("@svml/whisperx/normalize@1"),
+  request: digestOf("@svml/whisperx/request@2"),
+  normalize: digestOf("@svml/whisperx/normalize@2"),
 };
 
 const { contract: _commonContract, evidenceDigest: _commonDigest, ...sharedEvidenceFields } =
@@ -27,8 +27,9 @@ const { contract: _commonContract, evidenceDigest: _commonDigest, ...sharedEvide
 export const whisperXAlignmentEvidenceSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.whisperx-alignment-evidence@1" } },
+    contract: { schema: { kind: "literal", value: "svml.whisperx-alignment-evidence@2" } },
     engine: { schema: { kind: "literal", value: "whisperx" } },
+    evidenceAudioDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
     ...sharedEvidenceFields,
     alignmentDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
   },
@@ -51,7 +52,7 @@ export const whisperXManifest: ModuleManifest = {
   producers: [
     {
       name: whisperXProducers.request.name,
-      inputs: [{ name: "audio", type: contractTypes.speechAudioBasis }],
+      inputs: [{ name: "audio", type: contractTypes.speechEvidenceAudio }],
       outputs: [],
       needs: [{
         name: "alignment",
@@ -59,8 +60,9 @@ export const whisperXManifest: ModuleManifest = {
         returns: whisperXTypes.alignmentEvidence,
         affinity: [
           { resultPointer: "/basisDigest", input: "audio", inputPointer: "/basisDigest" },
-          { resultPointer: "/audioArtifactDigest", input: "audio", inputPointer: "/audio/digest" },
-          { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpace/digest" },
+          { resultPointer: "/audioArtifactDigest", input: "audio", inputPointer: "/sourceAudioArtifactDigest" },
+          { resultPointer: "/evidenceAudioDigest", input: "audio", inputPointer: "/evidenceAudioDigest" },
+          { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpaceDigest" },
         ],
       }],
       implementation: {

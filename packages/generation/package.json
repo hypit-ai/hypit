@@ -1,0 +1,14 @@
+{
+  "name": "@svml/generation",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/driver-node": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/validation": "workspace:*"
+  }
+}

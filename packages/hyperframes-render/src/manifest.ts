@@ -1,6 +1,5 @@
 import {
   contractTypes,
-  mediaArtifactSchema,
   videoContractDependencies,
 } from "@svml/contracts";
 import {
@@ -14,55 +13,24 @@ import type {
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
-  TypeRef,
-  ValueSchema,
 } from "@svml/protocol";
+import {
+  mediaPipelineManifestDigest,
+  mediaPipelineModuleRef,
+} from "@svml/media-pipeline";
 
 import {
-  projectHyperframesVideoImplementationDigest,
-  requestHyperframesRenderImplementationDigest,
+  requestHyperframesVisualImplementationDigest,
 } from "./product.js";
 
 export const hyperframesRenderModuleRef = { name: "@svml/hyperframes-render", version: "0.0.0-dev" } as const;
 export const hyperframesRenderSurfaceImplementationDigest = digestOf("@svml/hyperframes-render/surface@1");
-export const hyperframesRenderTypes = {
-  product: { module: hyperframesRenderModuleRef, name: "HyperframesRenderedVideo" },
-} satisfies Record<string, TypeRef>;
 export const hyperframesRenderCapabilities = {
-  render: { module: hyperframesRenderModuleRef, name: "render-video" },
+  renderVisual: { module: hyperframesRenderModuleRef, name: "render-visual" },
 } satisfies Record<string, CapabilityRef>;
 export const hyperframesRenderProducers = {
-  request: { module: hyperframesRenderModuleRef, name: "request-render" },
-  projectVideo: { module: hyperframesRenderModuleRef, name: "project-video" },
+  requestVisual: { module: hyperframesRenderModuleRef, name: "request-visual-render" },
 } satisfies Record<string, ProducerRef>;
-
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
-const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
-export const hyperframesRenderedVideoSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    contract: { schema: { kind: "literal", value: "svml.hyperframes-rendered-video@2" } },
-    digest: { schema: digest },
-    documentDigest: { schema: digest },
-    programSpaceDigest: { schema: digest },
-    frameRate: { schema: {
-      kind: "object",
-      fields: {
-        numerator: { schema: positiveInteger },
-        denominator: { schema: positiveInteger },
-      },
-    } },
-    frameCount: { schema: positiveInteger },
-    canvas: { schema: {
-      kind: "object",
-      fields: {
-        width: { schema: positiveInteger },
-        height: { schema: positiveInteger },
-      },
-    } },
-    artifact: { schema: mediaArtifactSchema },
-  },
-};
 
 export const hyperframesRenderManifest: ModuleManifest = {
   format: "svml.module@0",
@@ -72,11 +40,12 @@ export const hyperframesRenderManifest: ModuleManifest = {
     videoContractDependencies.media,
     videoContractDependencies.composition,
     { module: hyperframesModuleRef, digest: hyperframesManifestDigest },
+    { module: mediaPipelineModuleRef, digest: mediaPipelineManifestDigest },
   ],
-  types: [{ name: hyperframesRenderTypes.product.name, schema: hyperframesRenderedVideoSchema }],
+  types: [],
   capabilities: [{
-    name: hyperframesRenderCapabilities.render.name,
-    returns: hyperframesRenderTypes.product,
+    name: hyperframesRenderCapabilities.renderVisual.name,
+    returns: contractTypes.renderedVisual,
   }],
   surfaces: [{
     name: "video",
@@ -91,15 +60,15 @@ export const hyperframesRenderManifest: ModuleManifest = {
   }],
   producers: [
     {
-      name: hyperframesRenderProducers.request.name,
+      name: hyperframesRenderProducers.requestVisual.name,
       inputs: [{ name: "document", type: hyperframesTypes.document }],
       outputs: [],
       needs: [{
-        name: "product",
-        capability: hyperframesRenderCapabilities.render,
-        returns: hyperframesRenderTypes.product,
+        name: "visual",
+        capability: hyperframesRenderCapabilities.renderVisual,
+        returns: contractTypes.renderedVisual,
         affinity: [
-          { resultPointer: "/documentDigest", input: "document", inputPointer: "/digest" },
+          { resultPointer: "/renderInputDigest", input: "document", inputPointer: "/digest" },
           { resultPointer: "/programSpaceDigest", input: "document", inputPointer: "/programSpaceDigest" },
           { resultPointer: "/frameRate/numerator", input: "document", inputPointer: "/frameRate/numerator" },
           { resultPointer: "/frameRate/denominator", input: "document", inputPointer: "/frameRate/denominator" },
@@ -110,23 +79,8 @@ export const hyperframesRenderManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/hyperframes-render/request",
-        digest: requestHyperframesRenderImplementationDigest,
-      },
-    },
-    {
-      name: hyperframesRenderProducers.projectVideo.name,
-      inputs: [{ name: "product", type: hyperframesRenderTypes.product }],
-      outputs: [{
-        name: "video",
-        type: contractTypes.mediaArtifact,
-        affinity: [{ resultPointer: "/digest", input: "product", inputPointer: "/artifact/digest" }],
-      }],
-      needs: [],
-      implementation: {
-        kind: "registered",
-        locator: "@svml/hyperframes-render/project-video",
-        digest: projectHyperframesVideoImplementationDigest,
+        locator: "@svml/hyperframes-render/request-visual",
+        digest: requestHyperframesVisualImplementationDigest,
       },
     },
   ],

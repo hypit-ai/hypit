@@ -1,0 +1,26 @@
+[project]
+name = "svml-whisperx-service"
+version = "0.1.0"
+description = "Warm, loopback-only WhisperX alignment service for the SVML local Provider"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "numpy>=2.1,<3",
+  "whisperx==3.8.6",
+]
+
+[project.scripts]
+svml-whisperx-service = "svml_whisperx_service.__main__:main"
+svml-whisperx-check = "svml_whisperx_service.check:main"
+svml-whisperx-prepare = "svml_whisperx_service.prepare:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+package = true

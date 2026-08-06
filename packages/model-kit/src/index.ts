@@ -1,0 +1,203 @@
+import type { HostRegistry } from "@svml/driver-node";
+import { sealGraphFragment } from "@svml/elaborator";
+import {
+  generationManifestDigest,
+  generationModuleRef,
+  generationTypes,
+} from "@svml/generation";
+import {
+  canonicalize,
+  digestOf,
+} from "@svml/protocol";
+import type {
+  CanonicalValue,
+  CapabilityRef,
+  Digest,
+  ModuleManifest,
+  ModuleRef,
+  ProducerRef,
+  TypeRef,
+  ValueSchema,
+} from "@svml/protocol";
+import type { TypeValidatorRegistrar } from "@svml/validation";
+
+export type ExactModelEndpointSpec = {
+  readonly key: string;
+  readonly requestTypeName: string;
+  readonly capabilityName: string;
+  readonly producerName: string;
+  readonly result: "image" | "video";
+  readonly requestSchema: ValueSchema;
+  /** Checks digest identity and model-specific constraints after structural validation. */
+  readonly verifyRequest: (value: unknown) => void;
+};
+
+export type ExactModelEndpoint = {
+  readonly key: string;
+  readonly requestType: TypeRef;
+  readonly capability: CapabilityRef;
+  readonly producer: ProducerRef;
+  readonly returns: TypeRef;
+  readonly implementationDigest: Digest;
+  readonly validatorDigest: Digest;
+  readonly fragment: ReturnType<typeof sealGraphFragment>;
+};
+
+export type ExactModelModule = {
+  readonly module: ModuleRef;
+  readonly manifest: ModuleManifest;
+  readonly manifestDigest: Digest;
+  readonly endpoints: Readonly<Record<string, ExactModelEndpoint>>;
+  readonly component: {
+    readonly name: string;
+    install(registry: HostRegistry): void;
+    installValidators(registry: TypeValidatorRegistrar): void;
+  };
+};
+
+export type DefineExactModelModuleOptions = {
+  readonly module: ModuleRef;
+  readonly endpoints: readonly ExactModelEndpointSpec[];
+};
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
+function endpointRef(module: ModuleRef, spec: ExactModelEndpointSpec) {
+  const requestType = { module, name: spec.requestTypeName };
+  const capability = { module, name: spec.capabilityName };
+  const producer = { module, name: spec.producerName };
+  const returns = spec.result === "image" ? generationTypes.imageSet : generationTypes.videoSet;
+  const implementationDigest = digestOf(`${module.name}/${spec.producerName}@1`);
+  const validatorDigest = digestOf(`${module.name}/validate-${spec.requestTypeName}@1`);
+  return { requestType, capability, producer, returns, implementationDigest, validatorDigest };
+}
+
+function inlineRequest(
+  value: { readonly kind: string; readonly value?: CanonicalValue },
+  subject: string,
+): CanonicalValue {
+  assert(value.kind === "inline" && value.value !== undefined, `${subject} must be an inline request`);
+  return canonicalize(value.value);
+}
+
+/**
+ * Builds the repetitive nominal shell around an exact model request. The model package still owns
+ * every field, constraint and model name; this helper only wires Type -> Producer -> Need -> Fragment.
+ */
+export function defineExactModelModule(options: DefineExactModelModuleOptions): ExactModelModule {
+  assert(options.module.name.trim().length > 0 && options.module.version.trim().length > 0,
+    "Exact model module identity is invalid");
+  assert(options.endpoints.length > 0, `${options.module.name} declares no exact model endpoint`);
+  const keys = options.endpoints.map((item) => item.key);
+  assert(new Set(keys).size === keys.length, `${options.module.name} repeats an endpoint key`);
+  const endpointData = options.endpoints.map((spec) => ({ spec, ...endpointRef(options.module, spec) }));
+
+  const manifest: ModuleManifest = {
+    format: "svml.module@0",
+    name: options.module.name,
+    version: options.module.version,
+    dependencies: [{ module: generationModuleRef, digest: generationManifestDigest }],
+    types: endpointData.map((item) => ({
+      name: item.requestType.name,
+      schema: item.spec.requestSchema,
+      validator: {
+        abi: "svml.type-validator@1",
+        implementation: {
+          kind: "registered",
+          locator: `${options.module.name}/validate-${item.spec.key}`,
+          digest: item.validatorDigest,
+        },
+      },
+    })),
+    capabilities: endpointData.map((item) => ({
+      name: item.capability.name,
+      returns: item.returns,
+    })),
+    surfaces: [],
+    producers: endpointData.map((item) => ({
+      name: item.producer.name,
+      inputs: [{ name: "request", type: item.requestType }],
+      outputs: [],
+      needs: [{
+        name: "generation",
+        capability: item.capability,
+        returns: item.returns,
+        affinity: [{ resultPointer: "/requestDigest", input: "request", inputPointer: "/requestDigest" }],
+      }],
+      implementation: {
+        kind: "registered",
+        locator: `${options.module.name}/${item.spec.key}`,
+        digest: item.implementationDigest,
+      },
+    })),
+  };
+
+  const endpoints = Object.fromEntries(endpointData.map((item) => {
+    const fragment = sealGraphFragment({
+      name: `${options.module.name}/${item.spec.key}@1`,
+      inputs: [{ name: "request", type: item.requestType }],
+      operations: [{
+        id: "generate",
+        producer: item.producer,
+        inputs: { request: { kind: "fragment-input", name: "request" } },
+        result: { kind: "need", name: "generation", accepts: "exact" },
+      }],
+      exports: [{
+        name: "result",
+        type: item.returns,
+        root: { kind: "fragment-operation", operation: "generate" },
+        semanticInputs: ["request"],
+        affinity: [{
+          resultPointer: "/requestDigest",
+          source: { kind: "fragment-input", name: "request" },
+          sourcePointer: "/requestDigest",
+        }],
+        fidelity: "exact",
+      }],
+    });
+    return [item.spec.key, {
+      key: item.spec.key,
+      requestType: item.requestType,
+      capability: item.capability,
+      producer: item.producer,
+      returns: item.returns,
+      implementationDigest: item.implementationDigest,
+      validatorDigest: item.validatorDigest,
+      fragment,
+    } satisfies ExactModelEndpoint];
+  }));
+
+  return {
+    module: { ...options.module },
+    manifest,
+    manifestDigest: digestOf(manifest),
+    endpoints,
+    component: {
+      name: options.module.name,
+      install(registry) {
+        for (const item of endpointData) {
+          registry.registerProducer(
+            item.producer,
+            item.implementationDigest,
+            ({ inputs }) => {
+              const requestRecord = inputs.request;
+              assert(requestRecord !== undefined, `${item.spec.key} request input is missing`);
+              const request = inlineRequest(requestRecord.value, item.spec.key);
+              item.spec.verifyRequest(request);
+              return { outputs: {}, needs: { generation: request } };
+            },
+          );
+        }
+      },
+      installValidators(registry) {
+        for (const item of endpointData) {
+          registry.register(item.requestType, item.validatorDigest, ({ value }) => {
+            item.spec.verifyRequest(inlineRequest(value, item.spec.key));
+          });
+        }
+      },
+    },
+  };
+}
