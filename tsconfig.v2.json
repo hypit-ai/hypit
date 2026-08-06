@@ -52,7 +52,9 @@
       "@svml/package-loader-node": ["packages/package-loader-node/src/index.ts"],
       "@svml/prelude-video": ["packages/prelude-video/src/index.ts"],
       "@svml/cli": ["packages/cli/src/index.ts"],
-      "@svml/validation": ["packages/validation/src/index.ts"]
+      "@svml/validation": ["packages/validation/src/index.ts"],
+      "@svml/host": ["packages/host/src/index.ts"],
+      "@svml/workspace-fs-node": ["packages/workspace-fs-node/src/index.ts"]
     }
   },
   "include": ["packages/**/*.ts"],

@@ -1,9 +1,7 @@
 import type { Awaitable, ComponentPackage } from "@svml/component-kit";
+import type { ArtifactAttachment } from "@svml/host";
 import type { NodeProviderPackage } from "@svml/provider-kit";
-import type {
-  BlobRef,
-  BuildState,
-} from "@svml/protocol";
+import type { BuildState } from "@svml/protocol";
 import type {
   ArtifactStore,
   BuildSnapshot,
@@ -81,12 +79,7 @@ export type LocalBuildRequest = {
   readonly id: string;
   readonly state: BuildState;
   /** Host transfer bundle. It is staged before Core commands run and never enters BuildState. */
-  readonly sourceArtifacts?: readonly LocalSourceArtifact[];
-};
-
-export type LocalSourceArtifact = {
-  readonly artifact: BlobRef;
-  readonly bytes: Uint8Array;
+  readonly attachments?: readonly ArtifactAttachment[];
 };
 
 export type LocalBuildOptions = {

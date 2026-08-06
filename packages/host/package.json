@@ -1,0 +1,13 @@
+{
+  "name": "@svml/host",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/elaborator": "workspace:*",
+    "@svml/protocol": "workspace:*"
+  }
+}
