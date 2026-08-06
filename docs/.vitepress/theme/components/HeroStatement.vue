@@ -57,7 +57,9 @@ onBeforeUnmount(() => {
 <template>
   <div class="hero-statement">
     <div class="hero-wordmark">
-      <h1 class="hero-statement-name">Narratage</h1>
+      <h1 class="hero-statement-name" aria-label="Narratage">
+        <span class="wordmark-reveal" aria-hidden="true">NARRATAGE</span><span class="wordmark-cursor" aria-hidden="true">_</span>
+      </h1>
     </div>
 
     <div class="hero-statement-viewport hero-statement-viewport-en">
