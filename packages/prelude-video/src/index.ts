@@ -7,11 +7,33 @@ import {
   generationManifest,
 } from "@svml/generation";
 import {
+  brollComponent,
+  brollManifest,
+  brollModuleRef,
+  brollSurfaceImplementationDigest,
+  decodeBrollTrackSurface,
+} from "@svml/broll";
+import {
   captionComponent,
   captionManifest,
+  captionModuleRef,
+  captionProgramSurfaceImplementationDigest,
+  captionSurfaceImplementationDigest,
+  captionStyleSurfaceImplementationDigest,
+  decodeCaptionProgramSurface,
+  decodeCaptionStyleSurface,
+  decodeCaptionTrackSurface,
 } from "@svml/caption";
 import {
+  captionGeminiComponent,
+  captionGeminiImplementationDigests,
+  captionGeminiManifest,
+  captionGeminiModuleRef,
+  decodeCaptionGeminiPlannerSurface,
+} from "@svml/caption-gemini";
+import {
   decodeFilmSurface,
+  filmComponent,
   filmManifest,
   filmModuleRef,
   filmSurfaceImplementationDigest,
@@ -60,7 +82,28 @@ import {
   speechTakeComponent,
   speechTakeManifest,
 } from "@svml/speech-take";
+import {
+  decodeSpeechSpineSurface,
+  speechProgramComponent,
+  speechProgramManifest,
+  speechProgramModuleRef,
+  speechSpineSurfaceImplementationDigest,
+} from "@svml/speech-program";
 import { svsFrontend, svsManifest } from "@svml/svs";
+import {
+  decodeTextTrackSurface,
+  textTrackComponent,
+  textTrackManifest,
+  textTrackModuleRef,
+  textTrackSurfaceImplementationDigest,
+} from "@svml/text-track";
+import {
+  decodeWhisperXAlignmentSurface,
+  whisperXComponent,
+  whisperXImplementationDigests,
+  whisperXManifest,
+  whisperXModuleRef,
+} from "@svml/whisperx";
 
 export const svmlPackage: NodePackageActivation = {
   format: "svml.node-package@1",
@@ -78,9 +121,17 @@ export const svmlPackage: NodePackageActivation = {
     { manifest: svsManifest },
     { manifest: hyperframesManifest },
     { manifest: mediaPipelineManifest },
-    { manifest: captionManifest },
+    { manifest: captionManifest, specifiers: ["@svml/caption", "@svml/caption@1"] },
+    {
+      manifest: captionGeminiManifest,
+      specifiers: ["@svml/caption-gemini", "@svml/caption-gemini@1"],
+    },
     { manifest: speechAlignManifest },
     { manifest: speechTakeManifest },
+    { manifest: speechProgramManifest, specifiers: ["@svml/speech", "@svml/speech@1"] },
+    { manifest: whisperXManifest, specifiers: ["@svml/whisperx", "@svml/whisperx@1"] },
+    { manifest: textTrackManifest, specifiers: ["@svml/text-track", "@svml/text-track@1"] },
+    { manifest: brollManifest, specifiers: ["@svml/broll", "@svml/broll@1"] },
     { manifest: filmManifest, specifiers: ["@svml/film", "@svml/film@1"] },
     {
       manifest: hyperframesRenderManifest,
@@ -93,9 +144,15 @@ export const svmlPackage: NodePackageActivation = {
     generationComponent,
     seedanceComponent,
     captionComponent,
+    captionGeminiComponent,
     mediaPipelineComponent,
     speechAlignComponent,
     speechTakeComponent,
+    speechProgramComponent,
+    whisperXComponent,
+    textTrackComponent,
+    brollComponent,
+    filmComponent,
     hyperframesComponent,
     hyperframesRenderComponent,
   ],
@@ -134,6 +191,62 @@ export const svmlPackage: NodePackageActivation = {
       mode: "raw",
       implementationDigest: scriptSurfaceImplementationDigest,
       handler: decodeScriptSurface,
+    },
+    {
+      module: captionModuleRef,
+      surface: "style",
+      mode: "structured",
+      implementationDigest: captionStyleSurfaceImplementationDigest,
+      handler: decodeCaptionStyleSurface,
+    },
+    {
+      module: captionModuleRef,
+      surface: "program",
+      mode: "structured",
+      implementationDigest: captionProgramSurfaceImplementationDigest,
+      handler: decodeCaptionProgramSurface,
+    },
+    {
+      module: captionModuleRef,
+      surface: "track",
+      mode: "structured",
+      implementationDigest: captionSurfaceImplementationDigest,
+      handler: decodeCaptionTrackSurface,
+    },
+    {
+      module: captionGeminiModuleRef,
+      surface: "planner",
+      mode: "structured",
+      implementationDigest: captionGeminiImplementationDigests.plannerSurface,
+      handler: decodeCaptionGeminiPlannerSurface,
+    },
+    {
+      module: speechProgramModuleRef,
+      surface: "spine",
+      mode: "structured",
+      implementationDigest: speechSpineSurfaceImplementationDigest,
+      handler: decodeSpeechSpineSurface,
+    },
+    {
+      module: whisperXModuleRef,
+      surface: "alignment",
+      mode: "structured",
+      implementationDigest: whisperXImplementationDigests.surface,
+      handler: decodeWhisperXAlignmentSurface,
+    },
+    {
+      module: brollModuleRef,
+      surface: "track",
+      mode: "structured",
+      implementationDigest: brollSurfaceImplementationDigest,
+      handler: decodeBrollTrackSurface,
+    },
+    {
+      module: textTrackModuleRef,
+      surface: "track",
+      mode: "structured",
+      implementationDigest: textTrackSurfaceImplementationDigest,
+      handler: decodeTextTrackSurface,
     },
     {
       module: filmModuleRef,

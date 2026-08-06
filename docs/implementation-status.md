@@ -136,8 +136,8 @@ implementation names rather than a public compatibility freeze.
   SVS Frontend, Text Surfaces and available deterministic compute facets. Compiler and Runtime
   activate only their respective facets; the CLI no longer enumerates domain packages.
 - `@svml/cli`: the trusted v2 application host. `check` compiles real Text sources using either the
-  default video prelude or an exact external package lock. `plan` is wired directly to Core; the
-  remaining full-video gap is package-local Speech assembly and Track Surfaces, not CLI logic.
+  default video prelude or an exact external package lock. `plan` is wired directly to Core;
+  `build --out` materializes one verified final media Record through the selected ArtifactStore.
 - the physical `@svml/contracts` workspace distribution now carries independently digested logical
   `@svml/narrative`, `@svml/media`, `@svml/program-space`, `@svml/speech`, `@svml/semantic-time`
   and `@svml/composition` Manifests. Caption timing is owned by `@svml/caption`, not the shared waist.
@@ -149,7 +149,8 @@ implementation names rather than a public compatibility freeze.
   only through the Host capability; they receive neither filesystem paths nor ambient I/O.
 - `@svml/media` and `@svml/seedance`: authored Image bytes, immutable Prompt values and exact
   Seedance Speech/Video requests now lower through ordinary package Surfaces. Script exports each
-  named Segment as the shared `NarrativeExcerpt` contract, so Seedance consumes no Script parser
+  named Segment as separate Segment, dialogue and speech-estimate contracts. Seedance consumes the
+  Role-aware dialogue view (including right-side Dual Text pronunciation), not Script parser
   structure. GeneratedVideoSet stays atomic and the shared generation package deterministically
   projects its first ordered Blob with exact digest affinity.
 - package-owned Structured Surfaces can resolve explicitly referenced public Records from already
@@ -163,11 +164,13 @@ implementation names rather than a public compatibility freeze.
   generic VisualTrack and generic AudioTrack projections. All four Producers are enumerable
   compute facets, checked against the package Manifest and physically included in the official
   prelude lock without a Core, Driver or Runtime registration.
-- `@svml/whisperx`, `@svml/speech-align`, `@svml/caption`: one-pass evidence, direct authoritative
-  Script alignment, timed-caption planning and official style-to-VisualTrack lowering. WhisperX
-  normalization, Speech Align, Caption temporalization and Caption Track rendering are enumerable
-  locked compute facets. Caption also supplies package-owned validators for its timed projection
-  and current vertical-slice Track Program.
+- `@svml/whisperx`, `@svml/speech-align`, `@svml/caption`, `@svml/caption-gemini`: one-pass evidence,
+  direct authoritative Script alignment, display-only Caption planning and official
+  Style-to-VisualTrack lowering. A Caption Program assigns a total default Style and ordered
+  whole-Style overrides by Role or Selection. Gemini may only partition resolved display-atom runs
+  and assign declared per-atom fields; it sees neither WhisperX text nor Dual Text pronunciation.
+  Timing joins only downstream. Every compute facet and owned validator is enumerable and locked;
+  Google Vertex remains a separate Runtime Provider.
 - `@svml/hyperframes`: deterministic generic Composition-to-HTML compilation with content-addressed
   Artifact placeholders and a separate Runtime materialization boundary. HyperframesDocument now
   binds ProgramSpace, exact rational frame rate, integer frame count and canvas outside HTML; any
@@ -179,9 +182,11 @@ implementation names rather than a public compatibility freeze.
   Endpoint detail.
 - `@svml/broll`: provider-neutral B-roll Programs lowered into independently stacked Presents plus
   source-audio/SFX AudioTrack clips; production-used pop/fade/slide motion and push/page-turn pair
-  transitions remain package-owned and never sample another Track.
+  transitions remain package-owned and never sample another Track. Its Surface connects an
+  explicit Script selection, SemanticMap, normalized media and package-owned Recipe.
 - `@svml/text-track`: provider-free persistent or timed editorial text lowered into ordinary,
-  independently stacked VisualTrack Presents.
+  independently stacked VisualTrack Presents. Its current Surface supports explicit ProgramSpace
+  and full-span authored items through package-owned SVS validation.
 - `@svml/film`: package-owned arbitrary-arity Track assembly. A concrete Film declaration lowers to
   a finite immutable TrackSet fold and stops at ordinary Composition. The separate HyperFrames
   Fragment may consume that Composition; Core receives no variadic port, Track-family switch or
@@ -191,8 +196,9 @@ implementation names rather than a public compatibility freeze.
   Fragments. It first predeclares every component output, then resolves forward references, types
   and cycles before emitting an ordinary verified Core Graph. A non-video laboratory fixture proves
   that this layer does not require Text or audiovisual contracts.
-- `@svml/realization`, `@svml/speech-program`: explicit Candidate overlays and the first end-to-end
-  speech Demand fixture.
+- `@svml/realization`, `@svml/speech-program`: explicit Candidate overlays plus the installed
+  Speech Spine Surface. Ordered Takes expand into per-source media normalization, an immutable
+  fold, one timeline-audio Need, one SpeechBasis and ordinary peer projections.
 
 The test suite proves arbitrary Targets, selected Existing-Value and substitute Candidates, shared
 Operation execution once, affinity rejection, monotonic conformance, derivation integrity and
@@ -264,12 +270,13 @@ reference media Endpoint, local HyperFrames Endpoint and local WhisperX Endpoint
 The representative seven-family KIE live suite, one real synthetic-reference upload and the
 retained KIE media replay have passed. Real tests also cover exact 48 kHz → 16 kHz evidence
 projection, byte-identical sidecar staging and a two-worker silent HyperFrames MP4.
-The external capability boundary is now sufficient for the first vertical video. The next work is:
+The external capability boundary and the complete Caption Gemini/Vertex split are now sufficient
+for the first vertical video. The next work is:
 
-1. implement the namespaced Speech assembly and Track Surfaces specified by
-   `examples/talking-film-golden`; audit production Caption styling/positioning before freezing its
-   package-owned SVS Recipe and author Surface;
-2. wire those installed components and local Endpoints into one real source-to-final-video build;
+1. add real source assets and a trusted local Runtime profile, then execute the already-checkable
+   graph in `examples/talking-film-graph-check` through `--out` as one source-to-final-video build;
+2. run the first real Google Vertex Caption request and the local WhisperX/HyperFrames Providers in
+   the same paid Build, then retain the resulting deployment evidence;
 3. add AWS media/HyperFrames/WhisperX Endpoints only when the team needs Lambda execution; they must return the same
    inspection/normalization contracts rather than define another media meaning;
 
@@ -283,11 +290,11 @@ The external capability boundary is now sufficient for the first vertical video.
 - production keychain/Vault credentials, hosted scheduling or distributed workers;
 - AWS/hosted WhisperX, HyperFrames or media Endpoints;
 - production multipart/ranged Artifact streaming and distributed execution adapters;
-- official Speech assembly, Caption, B-roll and Text Track Surfaces and their package-owned SVS
-  Recipe schemas;
-- the complete `examples/talking-film-golden` source; Script, authored Image, Seedance generation,
-  Film and HyperFrames Render are executable individually, while Speech assembly and Track Surfaces
-  are still missing;
+- production exact-font author assets; Caption, B-roll and Text Surfaces remain pre-freeze vertical
+  slices even though display-only Gemini planning and the Vertex Endpoint are implemented;
+- execution of the production `examples/talking-film-golden` source; its real local assets,
+  credentials and selected Runtime profile are still missing, while
+  `examples/talking-film-graph-check` compiles the complete graph;
 - a cross-Track effect or adjustment-layer model.
 - a dedicated Base FX model or compatibility placeholder.
 

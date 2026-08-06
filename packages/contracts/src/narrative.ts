@@ -45,6 +45,12 @@ export type NarrativeSelection = {
   readonly occurrences: readonly NarrativeSelectionOccurrence[];
 };
 
+/** One explicitly authored semantic window, independently referenceable by graph edges. */
+export type NarrativeSelectionRef = NarrativeSelection & {
+  readonly contract: "svml.narrative-selection@1";
+  readonly selectionDigest: Digest;
+};
+
 export type NarrativeMomentOccurrence = {
   readonly occurrence: number;
   readonly affinity: Affinity;
@@ -80,6 +86,11 @@ export type CaptionProjection = {
   readonly contract: "svml.caption-projection@0";
   readonly text: string;
   readonly regions: readonly CaptionRegion[];
+};
+
+/** Whole authored display projection. It contains no pronunciation replacement text. */
+export type CaptionProjectionRef = CaptionProjection & {
+  readonly projectionDigest: Digest;
 };
 
 export type SemanticAnchor = {
@@ -124,6 +135,28 @@ export type NarrativeExcerpt = {
     readonly dialogue: string;
     readonly speech: string;
   };
+  readonly excerptDigest: Digest;
+};
+
+/** The exact dialogue prompt for one Segment, including only explicitly authored Role prefixes. */
+export type NarrativeDialogueExcerpt = {
+  readonly contract: "svml.narrative-dialogue-excerpt@1";
+  readonly kind: "segment";
+  readonly id: string;
+  readonly tokenStart: number;
+  readonly tokenEndExclusive: number;
+  readonly dialogue: string;
+  readonly excerptDigest: Digest;
+};
+
+/** The exact spoken wording for one Segment, without Role prefixes. */
+export type NarrativeSpeechExcerpt = {
+  readonly contract: "svml.narrative-speech-excerpt@1";
+  readonly kind: "segment";
+  readonly id: string;
+  readonly tokenStart: number;
+  readonly tokenEndExclusive: number;
+  readonly speech: string;
   readonly excerptDigest: Digest;
 };
 import type { Digest } from "@svml/protocol";

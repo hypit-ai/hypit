@@ -56,7 +56,7 @@ export const seedanceTypes = {
 
 export const seedanceSurfaceImplementationDigests = {
   prompt: digestOf("@svml/seedance/prompt-surface@1"),
-  speech: digestOf("@svml/seedance/speech-surface@1"),
+  speech: digestOf("@svml/seedance/speech-surface@2"),
   video: digestOf("@svml/seedance/video-surface@1"),
 } as const;
 

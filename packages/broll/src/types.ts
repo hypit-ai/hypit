@@ -37,6 +37,8 @@ export type BrollItem = {
   readonly audioGain?: number;
   readonly enter?: BrollMotion;
   readonly exit?: BrollMotion;
+  readonly backgroundColor?: string;
+  readonly borderRadiusPx?: number;
 };
 
 export type BrollPairTransition = {
@@ -69,4 +71,43 @@ export type BrollProduct = {
   readonly programSpace: ProgramSpace;
   readonly visualTrack: VisualTrack;
   readonly audioTrack: AudioTrack;
+};
+
+export type BrollItemSpec = {
+  readonly contract: "svml.broll-item-spec@1";
+  readonly digest: Digest;
+  readonly id: string;
+  readonly z: number;
+  readonly box: BrollBox;
+  readonly fit: "contain" | "cover";
+  readonly backgroundColor?: string;
+  readonly borderRadiusPx?: number;
+  readonly enter?: BrollMotion;
+  readonly exit?: BrollMotion;
+};
+
+export type BrollTrackSpec = {
+  readonly contract: "svml.broll-track-spec@1";
+  readonly digest: Digest;
+  readonly id: string;
+};
+
+export type BrollSet = {
+  readonly contract: "svml.broll-set@1";
+  readonly digest: Digest;
+  readonly id: string;
+  readonly map: import("@svml/contracts").CompleteSemanticMap;
+  readonly items: readonly BrollItem[];
+  readonly lastAddition?: {
+    readonly previousSetDigest: Digest;
+    readonly mediaDigest: Digest;
+    readonly selectionDigest: Digest;
+    readonly specDigest: Digest;
+  };
+};
+
+export type BrollSurfaceItemInput = {
+  readonly mediaName: string;
+  readonly selectionName: string;
+  readonly specName: string;
 };

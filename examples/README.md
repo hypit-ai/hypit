@@ -8,12 +8,14 @@ and the complete v2 authoring target.
 - [`v2-bootstrap/main.svml`](./v2-bootstrap/main.svml) is accepted by `pnpm svml:v2 check`. It
   exercises the real Node Source Host, official Text/Script prelude and recursive SVS Frontend. It
   deliberately stops before package-owned Recipe consumption and component Graph construction.
+- [`talking-film-graph-check/main.svml`](./talking-film-graph-check/main.svml) is the complete
+  provider-free author graph through Speech, WhisperX, B-roll, Caption, Text, Film and Render.
 
 ## v2 authoring target
 
 - [`talking-film-golden/main.svml`](./talking-film-golden/main.svml) is the canonical visual and
-  semantic target for the next author-facing Surfaces. Its Script syntax is implemented; its outer
-  package Surfaces are tracked line by line in the adjacent README and are not executable yet.
+  semantic target for two-speaker Gemini captions. Its author and paid Caption packages are
+  implemented; the adjacent README tracks real assets and deployment bindings.
 
 ## Executable v1 research fixtures
 

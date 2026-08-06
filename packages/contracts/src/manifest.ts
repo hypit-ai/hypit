@@ -17,6 +17,10 @@ export const compositionModuleRef = { name: "@svml/composition", version: "0.0.0
 export const contractTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },
   narrativeExcerpt: { module: narrativeModuleRef, name: "NarrativeExcerpt" },
+  narrativeDialogueExcerpt: { module: narrativeModuleRef, name: "NarrativeDialogueExcerpt" },
+  narrativeSpeechExcerpt: { module: narrativeModuleRef, name: "NarrativeSpeechExcerpt" },
+  narrativeSelection: { module: narrativeModuleRef, name: "NarrativeSelection" },
+  captionProjection: { module: narrativeModuleRef, name: "CaptionProjection" },
   blobArtifact: { module: mediaModuleRef, name: "BlobArtifact" },
   mediaArtifact: { module: mediaModuleRef, name: "MediaArtifactRef" },
   mediaInspection: { module: mediaModuleRef, name: "MediaInspection" },
@@ -125,6 +129,51 @@ export const narrativeExcerptSchema: ValueSchema = object({
     speech: { schema: { kind: "string" } },
   }) },
   excerptDigest: { schema: digest },
+});
+
+export const narrativeDialogueExcerptSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.narrative-dialogue-excerpt@1" } },
+  kind: { schema: { kind: "literal", value: "segment" } },
+  id: { schema: string },
+  tokenStart: { schema: integer },
+  tokenEndExclusive: { schema: integer },
+  dialogue: { schema: string },
+  excerptDigest: { schema: digest },
+});
+
+export const narrativeSpeechExcerptSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.narrative-speech-excerpt@1" } },
+  kind: { schema: { kind: "literal", value: "segment" } },
+  id: { schema: string },
+  tokenStart: { schema: integer },
+  tokenEndExclusive: { schema: integer },
+  speech: { schema: string },
+  excerptDigest: { schema: digest },
+});
+
+export const captionProjectionSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.caption-projection@0" } },
+  text: { schema: { kind: "string" } },
+  regions: { schema: { kind: "array", items: object({
+    id: { schema: string }, display: { schema: { kind: "string" } }, segmentId: { schema: string },
+    startToken: { schema: integer }, endTokenExclusive: { schema: integer },
+    kind: { schema: { kind: "string", enum: ["identity", "alias", "hidden"] } },
+    refinements: { schema: { kind: "array", items: object({
+      id: { schema: string }, display: { schema: string }, displayStart: { schema: integer },
+      displayEnd: { schema: integer }, startToken: { schema: integer }, endTokenExclusive: { schema: integer },
+      relation: { schema: { kind: "literal", value: "exact" } },
+    }) } },
+  }) } },
+  projectionDigest: { schema: digest },
+});
+
+export const narrativeSelectionSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.narrative-selection@1" } },
+  id: { schema: string },
+  occurrences: { schema: { kind: "array", minItems: 1, items: object({
+    occurrence: { schema: integer }, open: { schema: markerEdge }, close: { schema: markerEdge },
+  }) } },
+  selectionDigest: { schema: digest },
 });
 
 export const mediaArtifactSchema = object({
@@ -543,6 +592,10 @@ export const narrativeManifest: ModuleManifest = {
   types: [
     { name: contractTypes.narrative.name, schema: narrativeSchema },
     { name: contractTypes.narrativeExcerpt.name, schema: narrativeExcerptSchema },
+    { name: contractTypes.narrativeDialogueExcerpt.name, schema: narrativeDialogueExcerptSchema },
+    { name: contractTypes.narrativeSpeechExcerpt.name, schema: narrativeSpeechExcerptSchema },
+    { name: contractTypes.narrativeSelection.name, schema: narrativeSelectionSchema },
+    { name: contractTypes.captionProjection.name, schema: captionProjectionSchema },
   ],
   capabilities: [],
   surfaces: [],

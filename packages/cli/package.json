@@ -10,6 +10,7 @@
     "@svml/compiler-node": "workspace:*",
     "@svml/local": "workspace:*",
     "@svml/package-loader-node": "workspace:*",
-    "@svml/prelude-video": "workspace:*"
+    "@svml/prelude-video": "workspace:*",
+    "@svml/protocol": "workspace:*"
   }
 }

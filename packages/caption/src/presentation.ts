@@ -31,6 +31,8 @@ function wholeRegion(region: TimedCaptionRegion): CaptionPresentationUnit[] {
   return [{
     id: `${region.id}:whole`,
     regionId: region.id,
+    ...(region.runId === undefined ? {} : { runId: region.runId }),
+    ...(region.styleId === undefined ? {} : { styleId: region.styleId }),
     display: region.display,
     displayStart: 0,
     displayEnd: region.display.length,
@@ -38,6 +40,7 @@ function wholeRegion(region: TimedCaptionRegion): CaptionPresentationUnit[] {
     endSec: region.endSec,
     basis: "region-envelope",
     timingQuality: region.startQuality === "estimated" || region.endQuality === "estimated" ? "estimated" : "derived",
+    ...(region.fields === undefined ? {} : { fields: region.fields.map((field) => ({ ...field })) }),
   }];
 }
 
@@ -50,6 +53,8 @@ function proportionalWords(region: TimedCaptionRegion): CaptionPresentationUnit[
     return refinement ? {
       id: `${region.id}:word:${index + 1}`,
       regionId: region.id,
+      ...(region.runId === undefined ? {} : { runId: region.runId }),
+      ...(region.styleId === undefined ? {} : { styleId: region.styleId }),
       display: word.display,
       displayStart: word.start,
       displayEnd: word.end,
@@ -83,6 +88,8 @@ function proportionalWords(region: TimedCaptionRegion): CaptionPresentationUnit[
       units[index] = {
         id: `${region.id}:word:${index + 1}`,
         regionId: region.id,
+        ...(region.runId === undefined ? {} : { runId: region.runId }),
+        ...(region.styleId === undefined ? {} : { styleId: region.styleId }),
         display: word.display,
         displayStart: word.start,
         displayEnd: word.end,
@@ -109,6 +116,8 @@ function characterFlow(region: TimedCaptionRegion): CaptionPresentationUnit[] {
     units.push({
       id: `${region.id}:character:${index + 1}`,
       regionId: region.id,
+      ...(region.runId === undefined ? {} : { runId: region.runId }),
+      ...(region.styleId === undefined ? {} : { styleId: region.styleId }),
       display: character,
       displayStart: start,
       displayEnd: sourceOffset,
