@@ -16,6 +16,7 @@
     "@svml/hyperframes-render": "workspace:*",
     "@svml/media-pipeline": "workspace:*",
     "@svml/script": "workspace:*",
+    "@svml/speech-align": "workspace:*",
     "@svml/speech-take": "workspace:*",
     "@svml/svs": "workspace:*"
   },

@@ -17,5 +17,11 @@ The locator accepts Narrative, SpeechAudioBasis and AlignedTranscriptEvidence to
 Evidence unless its Basis, audio Artifact and ProgramSpace digests match exactly, even when another
 audio file has the same duration and Segment ids.
 
+`speechAlignComponent` exposes the locator as one enumerable deterministic Producer facet. Its
+identity is checked against `speechAlignManifest`, enters the installed implementation package
+lock and executes through the host-neutral compute port. The package depends only on public video
+contracts and protocol utilities; it has no Core, Driver, Provider, Artifact, queue or credential
+authority.
+
 Caption display is outside this package. `@svml/caption` composes the resulting complete speech
 map with Script's authored Caption Projection and keeps presentation estimates local to the track.

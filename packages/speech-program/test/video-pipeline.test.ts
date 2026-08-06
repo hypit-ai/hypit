@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import {
+  registerProducerFacets,
+  registerTypeValidatorFacets,
+} from "@svml/component-kit";
 import {
   captionImplementationDigest,
   captionProducers,
@@ -17,7 +20,6 @@ import {
   sealVisualTrack,
 } from "@svml/contracts";
 import type {
-  AlignedTranscriptEvidence,
   CompleteSemanticMap,
   Narrative,
   SpeechAudioBasis,
@@ -39,7 +41,10 @@ import {
   resolveRealization,
   sealRealizationOverlay,
 } from "@svml/realization";
-import { locateSpeechTiming, speechAlignProducers, speechLocatorDigest } from "@svml/speech-align";
+import {
+  speechAlignComponent,
+  speechAlignProducers,
+} from "@svml/speech-align";
 import {
   mediaPipelineCapabilities,
   mediaPipelineImplementationDigests,
@@ -121,7 +126,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     evidenceAudioRequest: 0,
     whisperRequest: 0,
     whisperNormalize: 0,
-    locate: 0,
     caption: 0,
   };
 
@@ -274,18 +278,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     );
     return { outputs: { evidence: { kind: "inline", value: evidence } }, needs: {} };
   });
-  host.registerProducer(speechAlignProducers.locate, speechLocatorDigest, ({ inputs }) => {
-    calls.locate += 1;
-    assert.equal(inputs.narrative?.value.kind, "inline");
-    assert.equal(inputs.audio?.value.kind, "inline");
-    assert.equal(inputs.evidence?.value.kind, "inline");
-    const map = locateSpeechTiming(
-      inlineValue<Narrative>(inputs.narrative.value.value),
-      inlineValue<SpeechAudioBasis>(inputs.audio.value.value),
-      inlineValue<AlignedTranscriptEvidence>(inputs.evidence.value.value),
-    );
-    return { outputs: { map: { kind: "inline", value: map } }, needs: {} };
-  });
+  registerProducerFacets(host, speechAlignComponent.producers);
   host.registerProducer(captionProducers.temporalize, captionImplementationDigest, ({ inputs }) => {
     calls.caption += 1;
     assert.equal(inputs.narrative?.value.kind, "inline");
@@ -479,7 +472,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     evidenceAudioRequest: 1,
     whisperRequest: 1,
     whisperNormalize: 1,
-    locate: 1,
     caption: 1,
   });
   assert.deepEqual(completed.state.receipts.map((receipt) => receipt.fulfiller), [
