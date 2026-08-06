@@ -271,9 +271,10 @@ network, credential, process, store or queue access. Installed code becomes exec
 the Host resolves a lock, verifies implementation bytes, checks an allowlist and grants the facet's
 declared permissions.
 
-A future Node loader, if it warrants a separate distribution, should be named
-`@svml/package-loader-node`. It loads already installed trusted packages; it is not an npm client and
-does not install packages because a source file requested them.
+The implemented Node author-facet loader is named `@svml/package-loader-node`. It loads already
+installed trusted packages; it is not an npm client and does not install packages because a source
+file requested them. Its current lock covers physical declared-dependency bytes plus Module,
+Frontend and Text Surface identities. Compute-facet activation and untrusted isolation remain.
 
 The package descriptor and lock must bind:
 
@@ -575,7 +576,10 @@ completed and partial steps below distinguish API laws from unfinished distribut
    start/resume lifecycle is complete. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
    `@svml/local` now provide durable project recovery and package-based local assembly; distributed
    leases and wake-up polling remain;
-7. implement locked Package Activation for trusted installed packages;
+7. **partially completed:** `@svml/package-loader-node` locks the full physical dependency closure
+   and activates trusted Module, Frontend and Text Surface facets without package-specific CLI
+   registration; host-neutral Producer and Type Validator activation plus untrusted isolation
+   remain;
 8. **partially completed:** add real Provider Endpoints; KIE generation, reference local media,
    local HyperFrames, the local WhisperX Provider and its locked Python service are implemented,
    while AWS/hosted equivalents remain;
