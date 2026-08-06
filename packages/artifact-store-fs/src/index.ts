@@ -1,7 +1,7 @@
 export {
-  fileArtifactStoreFacet,
+  FileArtifactStore,
+  createFileArtifactStorePackage,
   fileArtifactStoreImplementationDigest,
   fileArtifactStoreModuleRef,
-  fileArtifactStoreRuntimeManifest,
-} from "./manifest.js";
-export { FileArtifactStore } from "./store.js";
+} from "./store.js";
+export type * from "./store.js";

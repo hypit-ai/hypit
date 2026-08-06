@@ -6,11 +6,13 @@ import {
   canonicalStringify,
   verifyBuildState,
 } from "@svml/core";
+import { digestOf } from "@svml/protocol";
 import type {
   BuildState,
   Digest,
 } from "@svml/protocol";
 import {
+  defineRuntimeServicePackage,
   sealOperationCompletion,
   verifyOperationIdentity,
   verifyOperationSnapshot,
@@ -26,12 +28,33 @@ import type {
   OperationStore,
   OperationStoreWrite,
   OperationUpdate,
+  RuntimeServicePackage,
 } from "@svml/runtime";
 
 const schemaVersion = 1;
 
-type SqliteRuntimeStateOptions = {
+export const sqliteStoreModuleRef = {
+  name: "@svml/store-sqlite",
+  version: "1",
+} as const;
+
+export const sqliteBuildStoreImplementationDigest = digestOf(
+  "@svml/store-sqlite/build-store@1",
+);
+
+export const sqliteOperationStoreImplementationDigest = digestOf(
+  "@svml/store-sqlite/operation-store@1",
+);
+
+export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
+};
+
+export type CreateSqliteRuntimeServicePackageOptions = SqliteRuntimeStateOptions & {
+  readonly path: string;
+  readonly name?: string;
+  readonly buildInstance?: string;
+  readonly operationInstance?: string;
 };
 
 type Row = Record<string, unknown>;
@@ -303,5 +326,59 @@ export class SqliteRuntimeState {
 
   close(): void {
     this.#database.close();
+  }
+}
+
+export function createSqliteRuntimeServicePackage(
+  options: CreateSqliteRuntimeServicePackageOptions,
+): RuntimeServicePackage {
+  const state = new SqliteRuntimeState(options.path, {
+    ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs }),
+  });
+  const buildInstance = options.buildInstance ?? "builds.sqlite";
+  const operationInstance = options.operationInstance ?? "operations.sqlite";
+  try {
+    return defineRuntimeServicePackage({
+      name: options.name ?? "state.sqlite",
+      module: sqliteStoreModuleRef,
+      services: [
+        {
+          role: "build-store",
+          facet: "build-store",
+          instance: buildInstance,
+          implementation: {
+            locator: "@svml/store-sqlite/build-store",
+            digest: sqliteBuildStoreImplementationDigest,
+          },
+          permissions: ["filesystem:state"],
+          configuration: {
+            path: state.path,
+            schemaVersion,
+            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
+          },
+          service: state.builds,
+        },
+        {
+          role: "operation-store",
+          facet: "operation-store",
+          instance: operationInstance,
+          implementation: {
+            locator: "@svml/store-sqlite/operation-store",
+            digest: sqliteOperationStoreImplementationDigest,
+          },
+          permissions: ["filesystem:state"],
+          configuration: {
+            path: state.path,
+            schemaVersion,
+            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
+          },
+          service: state.operations,
+        },
+      ],
+      close: () => state.close(),
+    });
+  } catch (error) {
+    state.close();
+    throw error;
   }
 }

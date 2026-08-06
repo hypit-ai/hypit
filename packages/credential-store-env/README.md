@@ -6,9 +6,11 @@ Minimal local `CredentialStore` backed by explicitly named environment variables
 credentialRef("env", "KIE_API_KEY")
 ```
 
-The store resolves only the requested key at Provider invocation time. It never enumerates or
-serializes the environment. Secret values are handed only to that Provider call and do not enter
+The store resolves only the requested key at Endpoint invocation time. It never enumerates or
+serializes the environment. Secret values are handed only to that Endpoint call and do not enter
 BuildState, Runtime Closure, Operation checkpoints, logs or SQLite through framework code.
 
-`createProjectLocalRuntime()` activates this store by default. Production deployments may replace
+`createEnvironmentCredentialStorePackage()` exposes it through the same generic Runtime service
+package ABI as every other CredentialStore. `createProjectLocalRuntime()` activates it by default.
+Production deployments may replace
 it with a keychain, Vault, KMS or tenant-scoped implementation of the same `CredentialStore` port.

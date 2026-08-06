@@ -13,7 +13,6 @@ import test from "node:test";
 import { MemoryArtifactStore } from "@svml/driver-node";
 import type { RecoverableEndpoint } from "@svml/endpoint-kit";
 import type {
-  NodeArtifactStorePackage,
   NodeComponentPackage,
   EndpointPackage,
 } from "@svml/local";
@@ -23,6 +22,7 @@ import {
   createNodePackageLock,
   writeNodePackageLock,
 } from "@svml/package-loader-node";
+import { LocalBuildScheduler, defineRuntimeServicePackage } from "@svml/runtime";
 import type { RuntimeModuleManifest } from "@svml/runtime";
 
 import {
@@ -272,41 +272,114 @@ test("project local runtime activates locked compute facets without deployment s
   }
 });
 
+test("project local runtime infers one supplied Scheduler service without knowing its package", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-local-scheduler-service-"));
+  let creates = 0;
+  const scheduler = defineRuntimeServicePackage({
+    module: { name: "example.scheduler", version: "1" },
+    services: [{
+      role: "scheduler",
+      facet: "scheduler",
+      instance: "scheduler.example",
+      implementation: {
+        locator: "example.scheduler/fair",
+        digest: digestOf("example.scheduler/fair@1"),
+      },
+      service: {
+        create(executor, options) {
+          creates += 1;
+          return new LocalBuildScheduler(executor, options);
+        },
+      },
+    }],
+  });
+  try {
+    const runtime = await createProjectLocalRuntime({
+      root: directory,
+      runtimeServices: [scheduler],
+    });
+    assert.equal(creates, 1);
+    await runtime.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("multiple Scheduler services require exact selection and unselected code never gains authority", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-local-scheduler-selection-"));
+  const creates = { one: 0, two: 0 };
+  const closes = { one: 0, two: 0 };
+  const scheduler = (name: "one" | "two") => defineRuntimeServicePackage({
+    name: `example.scheduler.${name}`,
+    module: { name: `example.scheduler.${name}`, version: "1" },
+    services: [{
+      role: "scheduler",
+      facet: "scheduler",
+      instance: `scheduler.${name}`,
+      implementation: {
+        locator: `example.scheduler.${name}/fair`,
+        digest: digestOf(`example.scheduler.${name}/fair@1`),
+      },
+      service: {
+        create(executor, options) {
+          creates[name] += 1;
+          return new LocalBuildScheduler(executor, options);
+        },
+      },
+    }],
+    close() { closes[name] += 1; },
+  });
+  try {
+    await assert.rejects(
+      createProjectLocalRuntime({
+        root: directory,
+        runtimeServices: [scheduler("one"), scheduler("two")],
+      }),
+      /runtimeSelection must choose one/u,
+    );
+    assert.deepEqual(closes, { one: 1, two: 1 });
+
+    const runtime = await createProjectLocalRuntime({
+      root: directory,
+      runtimeServices: [scheduler("one"), scheduler("two")],
+      runtimeSelection: { scheduler: "scheduler.two" },
+    });
+    assert.deepEqual(creates, { one: 0, two: 1 });
+    await runtime.close();
+    assert.deepEqual(closes, { one: 2, two: 2 });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("project local runtime accepts a permission-checked replacement ArtifactStore package", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-artifacts-"));
   const module = { name: "example.remote-artifacts", version: "1" } as const;
-  const facet = { module, name: "artifact-store" } as const;
-  const artifacts: NodeArtifactStorePackage = {
+  const artifactStore = new MemoryArtifactStore();
+  const artifacts = defineRuntimeServicePackage({
     name: "example.remote-artifacts",
-    manifest: {
-      format: "svml.runtime-module@2",
-      name: module.name,
-      version: module.version,
-      facets: [{
-        name: facet.name,
+    module,
+    services: [{
+        facet: "artifact-store",
+        instance: "artifacts.remote",
         role: "artifact-store",
         implementation: {
           locator: "example.remote-artifacts",
           digest: digestOf("example.remote-artifacts@1"),
         },
         permissions: ["network:remote-artifacts"],
-      }],
-    },
-    instance: {
-      id: "artifacts.remote",
-      facet,
-      configurationDigest: digestOf({ bucket: "fixture" }),
-    },
-    store: new MemoryArtifactStore(),
-  };
+        configuration: { bucket: "fixture" },
+        service: artifactStore,
+    }],
+  });
   try {
     await assert.rejects(
-      createProjectLocalRuntime({ root: directory, artifacts }),
+      createProjectLocalRuntime({ root: directory, runtimeServices: [artifacts] }),
       /disallowed Runtime permission network:remote-artifacts/u,
     );
     const runtime = await createProjectLocalRuntime({
       root: directory,
-      artifacts,
+      runtimeServices: [artifacts],
       allowedPermissions: ["network:remote-artifacts"],
     });
     const bytes = new Uint8Array([7, 8, 9]);
@@ -316,7 +389,7 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
       size: bytes.byteLength,
       mediaType: "application/octet-stream",
     };
-    assert.equal(await artifacts.store.has(sourceArtifact.digest), false);
+    assert.equal(await artifactStore.has(sourceArtifact.digest), false);
     await assert.rejects(
       runtime.build({
         id: "source-artifact-staging",
@@ -325,7 +398,7 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
       }),
       /does not bind demanded capability/u,
     );
-    assert.deepEqual(await artifacts.store.get(sourceArtifact.digest), bytes);
+    assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
     await assert.rejects(
       runtime.build({
         id: "tampered-source-artifact",

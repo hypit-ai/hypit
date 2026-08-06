@@ -66,7 +66,8 @@ application assembly.
   and stores. The environment-neutral executor, sealed Runtime Profile/Closure, in-memory
   BuildStore/OperationStore CAS, queue-free local Scheduler and recoverable Endpoint lifecycle are
   implemented. SQLite Build/Operation stores, filesystem/S3 artifacts and the `@svml/local`
-  developer assembly are now implemented together with Endpoint Kit, environment credential
+  developer assembly are now implemented together with the generic Runtime service-package ABI,
+  Endpoint Kit, environment credential
   injection, bounded Lambda/process transports, wake/follow, retry, status and cancellation, plus
   local KIE/media/HyperFrames/WhisperX execution packages; distributed leases and production hosted
   endpoints are not. Its older example package

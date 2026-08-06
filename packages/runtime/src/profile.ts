@@ -16,6 +16,8 @@ export type RuntimeFacetRole =
   | "credential-store"
   | "capability-endpoint";
 
+export type RuntimeServiceFacetRole = Exclude<RuntimeFacetRole, "capability-endpoint">;
+
 export type RuntimeFacetRef = {
   readonly module: ModuleRef;
   readonly name: string;
@@ -31,9 +33,9 @@ export type RuntimeCapability = {
   readonly returns: TypeRef;
 };
 
-type RuntimeServiceFacet = {
+export type RuntimeServiceFacet = {
   readonly name: string;
-  readonly role: Exclude<RuntimeFacetRole, "capability-endpoint">;
+  readonly role: RuntimeServiceFacetRole;
   readonly implementation: RuntimeImplementation;
   readonly permissions: readonly string[];
 };
@@ -94,7 +96,7 @@ export type RuntimeProfile = {
 
 export type ResolvedRuntimeService = {
   readonly id: string;
-  readonly role: Exclude<RuntimeFacetRole, "capability-endpoint">;
+  readonly role: RuntimeServiceFacetRole;
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
   readonly configurationDigest: Digest;
