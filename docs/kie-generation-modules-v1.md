@@ -44,9 +44,9 @@ The exact model, mode, requested duration and request digest remain on the selec
 request/Need and its Receipt. Repeating them in the provider-neutral Product would create a second
 lineage channel beside the Graph and Derivation.
 
-The set is one Product, not a Producer with independently pinnable output ports. A later explicit
-projection component may select one variant. This preserves the Core rule that Candidate selection
-operates on Logical Outputs rather than mutating half of an atomic remote result.
+The set is one Product, not a Producer with independently replaceable fields. A later explicit
+Projection may expose one variant as its own Candidate. Satisfaction operates on Logical Outputs;
+it never mutates part of an atomic remote Product.
 
 ## Safety and customer Recipes
 
@@ -65,7 +65,8 @@ no-retry behavior.
 
 An opt-in credentialed run passed one representative endpoint from all seven families plus one
 real synthetic-reference upload. It also proved that rerunning the same completed Build consumes no
-additional credits. See [`kie-live-smoke-2026-08-06.md`](./kie-live-smoke-2026-08-06.md).
+additional credits. The repeatable command and supported case names live in the Provider package
+README rather than a dated result transcript.
 
 The repository contains no credential. One live run cannot guarantee future availability, prices,
 moderation behavior or undocumented enum changes, and eight of the sixteen exact endpoint variants

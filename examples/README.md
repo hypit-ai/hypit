@@ -1,27 +1,24 @@
-# SVML examples
+# Examples
 
-The repository deliberately separates the executable v2 bootstrap, executable research fixtures
-and the complete v2 authoring target.
+## Current v2 examples
 
-## Executable v2 bootstrap
+- [`talking-film-graph-check`](./talking-film-graph-check/README.md) compiles the complete
+  provider-free author graph through Speech, WhisperX, Caption, B-roll, Text, Film and final render
+  requirements.
+- [`talking-film-live`](./talking-film-live/README.md) executes the real paid two-take path with KIE,
+  local media processing, local WhisperX, Vertex Caption planning and local HyperFrames rendering.
+- [`talking-film-golden`](./talking-film-golden/README.md) is the larger authoring and visual design
+  fixture used while video packages remain pre-freeze.
+- [`v2-bootstrap`](./v2-bootstrap/README.md) is the smallest official Text/Script/SVS source-closure
+  check.
 
-- [`v2-bootstrap/main.svml`](./v2-bootstrap/main.svml) is accepted by `pnpm svml:v2 check`. It
-  exercises the real Node Source Host, official Text/Script prelude and recursive SVS Frontend. It
-  deliberately stops before package-owned Recipe consumption and component Graph construction.
-- [`talking-film-graph-check/main.svml`](./talking-film-graph-check/main.svml) is the complete
-  provider-free author graph through Speech, WhisperX, B-roll, Caption, Text, Film and Render.
+Generated assets, local Runtime databases and output media are ignored by Git.
 
-## v2 authoring target
+## Retained v1 regression fixtures
 
-- [`talking-film-golden/main.svml`](./talking-film-golden/main.svml) is the canonical visual and
-  semantic target for two-speaker Gemini captions. Its author and paid Caption packages are
-  implemented; the adjacent README tracks real assets and deployment bindings.
+- `flat-track-launch`
+- `regen-ranking`
+- `composite-speech-program`
 
-## Executable v1 research fixtures
-
-- `flat-track-launch` is the broad language/capability regression fixture.
-- `regen-ranking` reconstructs a real pinned production edit.
-- `composite-speech-program` proves that an author component can hide repeated internal wiring.
-
-The v1 examples are evidence, not syntax that new v2 packages must preserve. The golden fixture is
-a design target, not evidence that its missing Provider and Surface packages already exist.
+These fixtures are still consumed by the root v1 test suite. They preserve behavior that the v2
+rewrite can attack and re-prove, but they are not public v2 syntax or recommended starting points.

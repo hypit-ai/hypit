@@ -9,7 +9,7 @@ deterministically, retains the author source digest, records a separate Realizat
 and produces the graph universe consumed by Build Compiler.
 
 A Candidate is inert. It enters a finite BuildPlan only when a `BuildRequest` establishes an
-explicit Satisfaction from a demanded Logical Output to that Candidate. The binding owns fidelity;
+explicit Satisfaction from a demanded Logical Output to that Candidate. The Satisfaction owns fidelity;
 the Candidate owns only its Type and value/operation root. Product UI actions such as “Pin” create
 or locate an Existing-Value Candidate and then write an ordinary substitute Satisfaction; they do
 not mutate Core state or require a database.

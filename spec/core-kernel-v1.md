@@ -1,79 +1,89 @@
 # SVML Core Kernel v1
 
-Status: current executable v2 contract.
+Status: current executable contract. The specification version is v1; current persisted Graph,
+BuildRequest, Plan and BuildState wire formats are `@2`.
 
-Core is a domain-free Build compiler and verified state machine. It does not parse `.svml`, know
-video concepts, execute implementations, choose a Provider endpoint, access credentials or own a
-queue.
+Core is a domain-free graph-demand compiler and verified Build state machine. It does not parse
+source, load packages, execute implementations, choose an Endpoint, access credentials, persist
+artifacts or know video vocabulary.
 
 ## Inputs
 
-Core accepts immutable data:
+Core accepts immutable, already linked data:
 
-- a resolved module closure and typed authored records;
-- a complete `svml.graph@1` containing Logical Outputs, Candidates and atomic Operations;
-- a `svml.build-request@1` containing one or more Targets and explicit non-primary Candidate
-  bindings.
+- a resolved module closure and typed authored Records;
+- a complete `svml.graph@2` containing Logical Outputs, independent Candidates and atomic
+  Operations from the Author and Run Graphs;
+- a `svml.build-request@2` containing Targets and explicit Satisfaction edges.
 
-Graph construction, package resolution, source parsing, static Fragment expansion and runtime
-Candidate attachment happen outside Core. Core verifies their results before using them.
+Graph construction, source parsing, package resolution, Fragment expansion and Run Graph authoring
+happen outside Core. Core verifies the resulting data before deriving a plan.
 
-The reference construction path is deliberately layered: an optional Frontend produces typed
-authored Records and parser-independent component declarations; `@svml/elaborator` resolves those
-declarations and expands locked Graph Fragments; `@svml/realization` may attach explicitly selected
-external Candidates. None of those reference packages is required by this Kernel contract.
+## Graph values
 
-## Laws
+1. A `LogicalOutput` is a stable author-visible promise: identity, nominal Type, Primary Candidate,
+   semantic input envelope and optional affinity constraints.
+2. A `Candidate` is an independent typed supply. Its root is one immutable Provided Value or one
+   atomic Operation result. It does not belong to an output and does not carry fidelity.
+3. A `Satisfaction` connects one Logical Output to one Candidate with `exact` or `substitute`
+   fidelity. An output without an explicit Satisfaction uses its Primary Candidate as `exact`.
+4. A `Target` names an output required by this Build and the worst conformance it accepts.
+5. An `Operation` has stable instance identity, declared typed inputs and exactly one atomic result.
+   Multi-result components use one Product followed by deterministic Projection Operations.
 
-1. A Logical Output is the stable author-visible result identity. Every Candidate belongs to one
-   Logical Output and has exactly one root.
-2. A Candidate root is either one immutable provided Value or one atomic Operation result. Core has
-   no Pin, preview or provider-fallback branch.
-3. A BuildRequest selects a Candidate by id. An unbound output selects its declared primary
-   Candidate. Runtime state cannot silently change that choice.
-4. Core compiles Demand backwards from all Targets. It resolves selected Candidates and their input
-   references in one traversal and memoizes every demanded Operation by stable OperationId.
-5. An Existing-Value Candidate has no input edge, so Demand ends naturally. Multiple Targets and
-   multiple Candidates sharing one Operation demand that Operation once.
-6. Every public Operation has one atomic result. Multi-value products are represented by one Product
-   result followed by deterministic Projection Operations.
-7. Graph types, structural schemas and declared affinity constraints are verified without teaching
-   Core the meaning of a domain type.
-8. A Type is nominally owned by its declaring module. Its structural Schema is always checked by
-   Core. The owner may additionally lock a semantic validator digest; if it does, every admitted
-   Record of that Type must carry a receipt bound to the exact Type, Record digest and validator
-   digest. The Host executes the validator; Core only verifies the declaration and receipt.
-9. Exactness is monotonic. Candidate fidelity and the worst input conformance form a floor that no
-   later exact Producer or Provider response may improve.
-10. Records, Needs, Commands, Events, Receipts and Derivations are content-bound immutable facts.
-   Derivations bind implementation, input/output digests, Need request digests and accepted event
-   digest.
-11. Serialized outstanding Commands are not trusted. Resume verifies accepted state and regenerates
-   the next Command from that state.
-12. A BuildPlan is a deterministic, finite derivative of the verified Graph and BuildRequest. A
-   Driver may schedule ready Commands, but cannot redefine Candidate selection or Demand.
-13. A Build completes only when every Target's selected result exists with an accepted conformance.
-14. The Graph is the only dependency truth. A domain Record contains only facts needed to interpret
-    that value; Derivation and Receipt contain lineage. Core affinity may compare intrinsic facts on
-    directly connected values, but must not require values to copy transitive ancestry.
+## Compilation laws
+
+1. Core derives Demand backwards from all Targets through selected Candidates and Operation inputs.
+2. Selection and reachability are resolved together; an undemanded Satisfaction does not create
+   work.
+3. One Operation instance referenced by several edges is included once. Different instances are
+   never content-deduplicated, even when implementation, parameters or input Records match.
+4. A Provided-Value Candidate has no input edge, so traversal stops naturally. Core has no Pin,
+   preview, cache or historical-result branch.
+5. A Candidate must produce the exact nominal Type required by every Satisfaction using it.
+6. A Candidate's authored leaves must remain within that Logical Output's semantic input envelope.
+7. Cycles, missing references, undeclared ports, duplicate identities and incompatible Types fail
+   before execution.
+8. The resulting `svml.plan@2` is finite, deterministic and content-bound to the verified Graph and
+   BuildRequest.
+
+## Execution laws
+
+1. Core emits Commands from the frozen BuildPlan. Driver and Runtime cannot change Candidate
+   selection, dependency topology or Target meaning.
+2. Exactness is monotonic. Satisfaction fidelity, input conformance and external fulfillment form a
+   floor that no later exact Producer can improve.
+3. A Target accepting only `exact` rejects a selected or inherited `substitute` before completion.
+4. Records, Needs, Commands, Events, Receipts and Derivations are immutable content-bound facts.
+5. A Derivation binds implementation identity, input and output digests, Need request digests and
+   the accepted Event digest.
+6. An external Receipt binds the exact Need, request digest, fulfillment implementation, output
+   digest, delivery mode, conformance and accepted Event.
+7. Serialized outstanding Commands are not trusted. Resume verifies accepted state, discards old
+   commands and deterministically regenerates the next commands.
+8. A Build completes only when every Target Record exists with accepted conformance.
+
+## Type and affinity laws
+
+1. Types are nominally owned by modules, not registered in a central Core union.
+2. Core checks the locked structural Schema for every admitted Record.
+3. A Type owner may lock a semantic validator digest. When present, every Record of that Type needs
+   a receipt bound to the exact Type, value digest and validator implementation.
+4. Core affinity is a domain-neutral declared equality between JSON Pointer values on directly
+   connected facts. It may not require every downstream value to copy transitive provenance.
+5. The Graph owns dependencies, Derivation owns deterministic lineage and Receipt owns external
+   fulfillment provenance.
 
 ## Boundary
 
-The data-only Protocol owns identities and wire shapes. Core owns their canonical verification,
-Demand compilation and state transitions. Drivers own execution and persistence. Runtime Profiles
-own scheduler placement, stores and credentials. Provider packages bind an already explicit
-CapabilityRef to one exact endpoint. Domain contract packages own shared vocabulary such as
-Narrative, ProgramSpace and Track.
+`@svml/protocol` owns wire data and identity. `@svml/core` owns verification, Demand compilation and
+state transitions. Compiler packages own source and graph construction. Runtime owns scheduling,
+persistence and placement. Endpoint packages fulfill exact Capabilities. Domain packages own shared
+vocabulary and validators.
 
-Type validation does not centralize domain Types in Core. The declaring package owns the Schema and
-optional validator identity; Producers and Consumers communicate only through the exact `TypeRef`.
-The reference `@svml/validation` Host executes trusted validators and issues deterministic receipts.
-Such a receipt proves consistency inside the trusted Host boundary, not execution safety or remote
-authenticity of arbitrary plugin code. Sandboxing and attestation are Runtime concerns.
+Neither a file suffix, package name nor TypeScript class grants Kernel privilege. A domain package
+released after Core can participate through manifests, nominal Types and ordinary Operations without
+a Core release.
 
-Neither a package suffix nor a TypeScript class grants Kernel privilege. A domain package can be
-released after Core and participate through manifests, schemas and ordinary Operations without a
-Core release.
-
-SVML source is one optional author-facing notation that lowers to this graph. The Kernel has no
-canonical pipeline direction, privileged terminal output, Film root or single-output Build rule.
+The Kernel has no privileged terminal output, Film root, video pipeline direction or single-Target
+restriction.
