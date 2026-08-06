@@ -100,8 +100,14 @@ names.
 - `@svml/compiler-node`: a domain-neutral registered-manifest resolver, exact transitive Module
   Closure construction, root-confined/read-once Node Source resolver, real-file compiler facade and
   named-export-to-BuildPlan entrypoint. The discovery pass and decode pass share locked SourceUnits.
-- `@svml/cli`: the first trusted official v2 assembly. `check` compiles real Text sources with Script,
-  Film, HyperFrames Render and recursively imported SVS. `plan` is wired directly to Core; the
+- `@svml/package-loader-node`: lock-aware trusted Node activation for installed author packages. It
+  binds every physical package and declared-dependency file plus declared Module, Frontend and Text Surface
+  identities, verifies all bytes before executing activation code and installs no Provider or
+  Runtime facet. Its external fixture proves a new namespaced Surface needs no Core or CLI change.
+- `@svml/prelude-video`: an ordinary replaceable aggregate of the current official author Modules,
+  SVS Frontend and Text Surfaces. The CLI no longer enumerates Script, Film or HyperFrames packages.
+- `@svml/cli`: the trusted v2 application host. `check` compiles real Text sources using either the
+  default video prelude or an exact external package lock. `plan` is wired directly to Core; the
   remaining full-video gap is package-local generation, Speech and Track Surfaces, not CLI logic.
 - the physical `@svml/contracts` workspace distribution now carries independently digested logical
   `@svml/narrative`, `@svml/media`, `@svml/program-space`, `@svml/speech`, `@svml/semantic-time`
