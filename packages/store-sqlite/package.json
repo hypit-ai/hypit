@@ -1,0 +1,17 @@
+{
+  "name": "@svml/store-sqlite",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/core": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/runtime": "workspace:*"
+  }
+}

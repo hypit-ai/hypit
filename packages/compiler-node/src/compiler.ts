@@ -1,8 +1,8 @@
 import { dirname, resolve } from "node:path";
 
 import {
-  compileBuild,
   sealBuildRequest,
+  start,
 } from "@svml/core";
 import {
   compileSourceClosure,
@@ -17,6 +17,8 @@ import type {
 } from "@svml/elaborator";
 import type {
   BuildPlan,
+  BuildRequest,
+  BuildState,
   CandidateBinding,
   NeedAcceptance,
 } from "@svml/protocol";
@@ -86,7 +88,9 @@ export type PlanFileOptions = {
 
 export type PlannedSource = {
   readonly compilation: CompiledSourceClosure;
+  readonly request: BuildRequest;
   readonly plan: BuildPlan;
+  readonly state: BuildState;
 };
 
 /** Domain-neutral Node facade from a real source file to a verified Source Closure or BuildPlan. */
@@ -150,13 +154,11 @@ export class NodeCompiler {
       targets,
       bindings: options.bindings ?? [],
     });
-    return {
-      compilation,
-      plan: compileBuild(
-        compilation.program,
-        compilation.elaboration.graph,
-        request,
-      ),
-    };
+    const state = start(
+      compilation.program,
+      compilation.elaboration.graph,
+      request,
+    );
+    return { compilation, request, plan: state.plan, state };
   }
 }

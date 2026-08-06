@@ -13,6 +13,7 @@ export type RuntimeFacetRole =
   | "build-store"
   | "operation-store"
   | "artifact-store"
+  | "credential-store"
   | "provider-endpoint";
 
 export type RuntimeFacetRef = {
@@ -45,6 +46,8 @@ export type RuntimeProviderFacet = {
   readonly fulfills: readonly RuntimeCapability[];
   readonly lifecycle: "immediate" | "recoverable";
   readonly defaultConcurrency: number;
+  /** Named secret inputs. Values are resolved by the selected CredentialStore only at invocation. */
+  readonly credentialSlots?: readonly string[];
 };
 
 export type RuntimeFacet = RuntimeServiceFacet | RuntimeProviderFacet;
@@ -62,6 +65,8 @@ export type RuntimeProfileInstance = {
   readonly facet: RuntimeFacetRef;
   /** Optional authority-wide lane name. The default is provider:<instance id>. */
   readonly lane?: string;
+  /** Digest of non-secret endpoint/store configuration. Secret bytes must never enter it. */
+  readonly configurationDigest?: Digest;
 };
 
 export type RuntimeProviderBinding = RuntimeCapability & {
@@ -78,6 +83,7 @@ export type RuntimeProfile = {
     readonly build?: string;
     readonly operations?: string;
     readonly artifacts?: string;
+    readonly credentials?: string;
   };
   readonly providers: readonly RuntimeProviderBinding[];
   readonly scheduling: {
@@ -91,6 +97,7 @@ export type ResolvedRuntimeService = {
   readonly role: Exclude<RuntimeFacetRole, "provider-endpoint">;
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
+  readonly configurationDigest: Digest;
   readonly permissions: readonly string[];
 };
 
@@ -99,9 +106,11 @@ export type ResolvedRuntimeProvider = {
   readonly role: "provider-endpoint";
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
+  readonly configurationDigest: Digest;
   readonly permissions: readonly string[];
   readonly fulfills: readonly RuntimeCapability[];
   readonly lifecycle: "immediate" | "recoverable";
+  readonly credentialSlots: readonly string[];
   readonly lane: string;
   readonly maxConcurrency: number;
 };
@@ -218,6 +227,7 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
     fulfills,
     lifecycle: facet.lifecycle,
     defaultConcurrency: positiveInteger(facet.defaultConcurrency, `${facet.name} defaultConcurrency`),
+    credentialSlots: sortedUniqueStrings(facet.credentialSlots ?? [], `${facet.name} credential slots`),
   };
 }
 
@@ -272,6 +282,8 @@ export class RuntimeModuleRegistry {
       }
       if (instance.role === "provider-endpoint" && resolved.facet.role === "provider-endpoint") {
         assert(instance.lifecycle === resolved.facet.lifecycle, `${instance.id} Provider lifecycle differs`);
+        assert(JSON.stringify(instance.credentialSlots)
+          === JSON.stringify(resolved.facet.credentialSlots ?? []), `${instance.id} Provider credential slots differ`);
         assert(JSON.stringify(instance.fulfills.map(bindingKey))
           === JSON.stringify(resolved.facet.fulfills.map(bindingKey)), `${instance.id} Provider capabilities differ`);
         const override = closure.scheduling.lanes.find((lane) => lane.name === instance.lane)?.maxConcurrency;
@@ -291,6 +303,9 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
         id: instance.id,
         facet: { module: { ...instance.facet.module }, name: instance.facet.name },
         ...(instance.lane === undefined ? {} : { lane: instance.lane }),
+        ...(instance.configurationDigest === undefined
+          ? {}
+          : { configurationDigest: instance.configurationDigest }),
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     scheduler: profile.scheduler,
@@ -298,6 +313,7 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
       ...(profile.stores.build === undefined ? {} : { build: profile.stores.build }),
       ...(profile.stores.operations === undefined ? {} : { operations: profile.stores.operations }),
       ...(profile.stores.artifacts === undefined ? {} : { artifacts: profile.stores.artifacts }),
+      ...(profile.stores.credentials === undefined ? {} : { credentials: profile.stores.credentials }),
     },
     providers: [...profile.providers]
       .map((binding) => ({ ...normalizeCapability(binding), endpoint: binding.endpoint }))
@@ -321,6 +337,9 @@ function verifyProfileShape(profile: RuntimeProfile): void {
     assert(instance.facet.name.trim().length > 0, `${instance.id} facet name is empty`);
     assert(instance.facet.module.name.length > 0 && instance.facet.module.version.length > 0, `${instance.id} facet module is invalid`);
     if (instance.lane !== undefined) assert(instance.lane.trim().length > 0, `${instance.id} lane is empty`);
+    if (instance.configurationDigest !== undefined) {
+      assert(isDigest(instance.configurationDigest), `${instance.id} configuration digest is invalid`);
+    }
     return instance.id;
   });
   assert(new Set(ids).size === ids.length, "Runtime Profile repeats an instance id");
@@ -395,6 +414,7 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
   for (const instance of closure.instances) {
     assert(!instances.has(instance.id), `Runtime Closure repeats instance ${instance.id}`);
     assert(isDigest(instance.implementation.digest), `${instance.id} implementation digest is invalid`);
+    assert(isDigest(instance.configurationDigest), `${instance.id} configuration digest is invalid`);
     assert(moduleKeys.includes(moduleKey(instance.facet.module)), `${instance.id} refers to an unlocked Runtime module`);
     sortedUniqueStrings(instance.permissions, `${instance.id} permissions`);
     if (instance.role === "provider-endpoint") {
@@ -403,6 +423,7 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
       assert(instance.fulfills.length > 0, `${instance.id} Provider fulfills nothing`);
       assert(new Set(instance.fulfills.map(bindingKey)).size === instance.fulfills.length,
         `${instance.id} Provider repeats a capability`);
+      sortedUniqueStrings(instance.credentialSlots, `${instance.id} Provider credential slots`);
     }
     instances.set(instance.id, instance);
   }
@@ -412,6 +433,7 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     build: "build-store",
     operations: "operation-store",
     artifacts: "artifact-store",
+    credentials: "credential-store",
   } as const;
   for (const [name, role] of Object.entries(roles) as [keyof typeof roles, typeof roles[keyof typeof roles]][]) {
     const id = closure.stores[name];
@@ -426,6 +448,9 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     "Runtime Closure repeats a Provider binding");
   if (closure.instances.some((instance) => instance.role === "provider-endpoint" && instance.lifecycle === "recoverable")) {
     assert(closure.stores.operations !== undefined, "recoverable Provider Endpoints require an OperationStore");
+  }
+  if (closure.instances.some((instance) => instance.role === "provider-endpoint" && instance.credentialSlots.length > 0)) {
+    assert(closure.stores.credentials !== undefined, "credentialed Provider Endpoints require a CredentialStore");
   }
 }
 
@@ -448,6 +473,7 @@ export function resolveRuntimeProfile(
       id: instance.id,
       facet: { module: { ...instance.facet.module }, name: instance.facet.name },
       implementation: { ...resolved.facet.implementation },
+      configurationDigest: instance.configurationDigest ?? digestOf({}),
       permissions: [...resolved.facet.permissions],
     };
     if (resolved.facet.role !== "provider-endpoint") return { ...common, role: resolved.facet.role };
@@ -458,6 +484,7 @@ export function resolveRuntimeProfile(
       role: "provider-endpoint",
       fulfills: resolved.facet.fulfills.map((item) => structuredClone(item)),
       lifecycle: resolved.facet.lifecycle,
+      credentialSlots: [...(resolved.facet.credentialSlots ?? [])],
       lane,
       maxConcurrency: override ?? resolved.facet.defaultConcurrency,
     };
@@ -470,6 +497,7 @@ export function resolveRuntimeProfile(
     build: "build-store",
     operations: "operation-store",
     artifacts: "artifact-store",
+    credentials: "credential-store",
   } as const;
   for (const [name, role] of Object.entries(storeRoles) as [keyof typeof storeRoles, typeof storeRoles[keyof typeof storeRoles]][]) {
     const id = profile.stores[name];
@@ -482,6 +510,9 @@ export function resolveRuntimeProfile(
   }
   if (instances.some((instance) => instance.role === "provider-endpoint" && instance.lifecycle === "recoverable")) {
     assert(profile.stores.operations !== undefined, "recoverable Provider Endpoints require an OperationStore");
+  }
+  if (instances.some((instance) => instance.role === "provider-endpoint" && instance.credentialSlots.length > 0)) {
+    assert(profile.stores.credentials !== undefined, "credentialed Provider Endpoints require a CredentialStore");
   }
   const draft: RuntimeClosure = {
     format: "svml.runtime-closure@1",

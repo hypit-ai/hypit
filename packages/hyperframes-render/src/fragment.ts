@@ -1,10 +1,10 @@
 import { contractTypes } from "@svml/contracts";
 import { sealGraphFragment } from "@svml/elaborator";
 import { hyperframesProducers } from "@svml/hyperframes";
+import { mediaPipelineProducers } from "@svml/media-pipeline";
 
 import {
   hyperframesRenderProducers,
-  hyperframesRenderTypes,
 } from "./manifest.js";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
@@ -21,15 +21,36 @@ export const hyperframesRenderFragment = sealGraphFragment({
       result: { kind: "output", name: "document" },
     },
     {
-      id: "request-render",
-      producer: hyperframesRenderProducers.request,
+      id: "request-visual-render",
+      producer: hyperframesRenderProducers.requestVisual,
       inputs: { document: operation("compile-document") },
-      result: { kind: "need", name: "product", accepts: "exact" },
+      result: { kind: "need", name: "visual", accepts: "exact" },
+    },
+    {
+      id: "compile-audio-program",
+      producer: mediaPipelineProducers.planAudio,
+      inputs: { composition: input("composition") },
+      result: { kind: "output", name: "plan" },
+    },
+    {
+      id: "request-audio-render",
+      producer: mediaPipelineProducers.renderAudio,
+      inputs: { plan: operation("compile-audio-program") },
+      result: { kind: "need", name: "audio", accepts: "exact" },
+    },
+    {
+      id: "request-mux",
+      producer: mediaPipelineProducers.mux,
+      inputs: {
+        visual: operation("request-visual-render"),
+        audio: operation("request-audio-render"),
+      },
+      result: { kind: "need", name: "media", accepts: "exact" },
     },
     {
       id: "project-video",
-      producer: hyperframesRenderProducers.projectVideo,
-      inputs: { product: operation("request-render") },
+      producer: mediaPipelineProducers.projectMuxed,
+      inputs: { media: operation("request-mux") },
       result: { kind: "output", name: "video" },
     },
   ],
@@ -40,7 +61,7 @@ export const hyperframesRenderFragment = sealGraphFragment({
     semanticInputs: ["composition"],
     affinity: [{
       resultPointer: "/digest",
-      source: operation("request-render"),
+      source: operation("request-mux"),
       sourcePointer: "/artifact/digest",
     }],
     fidelity: "exact",

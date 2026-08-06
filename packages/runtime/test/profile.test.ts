@@ -142,12 +142,44 @@ test("Profile order is not identity but an execution-policy change is", () => {
   );
 });
 
+test("non-secret instance configuration is locked independently from implementation bytes", () => {
+  const registry = new RuntimeModuleRegistry();
+  registry.register(manifest());
+  const original = profile();
+  const configured = sealRuntimeProfile({
+    ...original,
+    instances: original.instances.map((instance) => instance.id === "greeting.local"
+      ? { ...instance, configurationDigest: digestOf({ baseUrl: "https://provider.example" }) }
+      : instance),
+  });
+  assert.notEqual(original.digest, configured.digest);
+  assert.notEqual(
+    resolveRuntimeProfile(registry, original).digest,
+    resolveRuntimeProfile(registry, configured).digest,
+  );
+});
+
 test("recoverable Endpoints require an OperationStore before any paid execution", () => {
   const registry = new RuntimeModuleRegistry();
   registry.register(manifest());
   assert.throws(
     () => resolveRuntimeProfile(registry, profile({ operations: false })),
     /require an OperationStore/u,
+  );
+});
+
+test("credentialed Endpoints require an explicitly selected CredentialStore", () => {
+  const registry = new RuntimeModuleRegistry();
+  const configured = manifest();
+  registry.register({
+    ...configured,
+    facets: configured.facets.map((facet) => facet.role === "provider-endpoint"
+      ? { ...facet, credentialSlots: ["apiKey"] }
+      : facet),
+  });
+  assert.throws(
+    () => resolveRuntimeProfile(registry, profile()),
+    /require a CredentialStore/u,
   );
 });
 

@@ -83,6 +83,7 @@ test("CompositableSurfaceRef distinguishes a typed alpha surface from an ordinar
 test("exact fonts own font selection and cannot conflict with raw CSS font facts", () => {
   const invalid = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "invalid-font-track",
     programSpaceDigest: space.digest,
     sources: [{ name: "fixture", digest: digestOf("invalid-font-track") }],
@@ -115,6 +116,7 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
 test("animated materialized Surfaces must exactly share the Present frame domain", () => {
   const valid = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "surface-track",
     programSpaceDigest: space.digest,
     sources: [{ name: "receipt", digest: digestOf("surface-receipt") }],

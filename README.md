@@ -34,8 +34,10 @@
 > an ordinary Script Surface package using named Segments such as `<opening>...</opening>`. Text
 > Surfaces can now return inert Record, Author Component and Graph Fragment declarations; Text
 > collects the complete document before Elaborator resolves forward references into a Core Graph.
-> `packages/whisperx` declares the typed one-pass WhisperX Need; concrete local/Hypit adapters remain
-> Runtime packages outside this slice. `packages/elaborator` now compiles recursive Source Closures,
+> `packages/whisperx` declares the typed one-pass WhisperX Need;
+> `packages/provider-whisperx-local` and the independently locked `services/whisperx` Python
+> distribution implement the trusted local path. Hosted adapters remain Runtime packages outside
+> this slice. `packages/elaborator` now compiles recursive Source Closures,
 > while `packages/svs` implements a deliberately generic record-only Recipe Frontend; package-owned
 > video Recipe validation remains undecided. `packages/compiler-node` now supplies the domain-free
 > registered-manifest resolver, root-confined/read-once filesystem Source Host and file-to-Graph/
@@ -48,8 +50,18 @@
 > and independent commands inside one Build. Recoverable Provider Endpoints now journal a stable
 > submission identity before `start`, persist pending checkpoints, and use `resume` after restart;
 > completed operations are replayed into Core without another external call. Automatic third-party
-> package installation, parser/validator sandboxing, durable stores, leases and production Endpoint
-> adapters are not implemented yet. The existing
+> package installation, parser/validator sandboxing, distributed leases and hosted WhisperX /
+> HyperFrames Endpoint adapters are not implemented yet. The first KIE generation Provider and its
+> seven explicit model families are implemented. `@svml/store-sqlite`, `@svml/artifact-store-fs` and
+> `@svml/local` now provide the durable zero-service developer assembly.
+> `@svml/provider-kit` and `@svml/credential-store-env` now bind static Provider identity,
+> non-secret configuration, exact credential slots and recoverable wake/retry/cancel behavior;
+> `@svml/artifact-store-s3` plus bounded Lambda/process transports provide replaceable external
+> execution plumbing without claiming any video capability;
+> `@svml/media-pipeline` and `@svml/provider-media-local` now provide all-stream ffprobe inspection,
+> attached-picture-safe stream selection and shared-origin A/V normalization. Embedded AAC remains
+> an ordinary media fact until an explicit Narrative-bound speech component promotes it;
+> the v2 CLI exposes local follow, status and cancel without adding another authoritative queue. The existing
 > root compiler and standard library remain the executable v1 research oracle during migration.
 
 The reusable non-video stack is intentionally smaller than the video distribution:
@@ -128,6 +140,12 @@ pnpm install
 pnpm check
 pnpm test
 pnpm build
+
+# Optional local WhisperX Runtime service (Python 3.10–3.13).
+uv sync --project services/whisperx --frozen
+uv run --project services/whisperx --frozen svml-whisperx-prepare
+uv run --project services/whisperx --frozen svml-whisperx-check
+uv run --project services/whisperx --frozen svml-whisperx-service
 
 # v2: real Source Closure check through the trusted Text + Script + SVS prelude.
 pnpm svml:v2 check examples/v2-bootstrap/main.svml

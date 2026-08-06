@@ -13,6 +13,8 @@
     "@svml/film": "workspace:*",
     "@svml/hyperframes": "workspace:*",
     "@svml/hyperframes-render": "workspace:*",
+    "@svml/local": "workspace:*",
+    "@svml/media-pipeline": "workspace:*",
     "@svml/script": "workspace:*",
     "@svml/svs": "workspace:*",
     "@svml/text": "workspace:*"

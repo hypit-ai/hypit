@@ -1,5 +1,6 @@
 import {
   contractTypes,
+  HYPERFRAMES_VISUAL_IR_V1,
   videoContractDependencies,
 } from "@svml/contracts";
 import { digestOf } from "@svml/protocol";
@@ -17,10 +18,12 @@ export const hyperframesProducers = {
 
 const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
+const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as const;
 export const hyperframesDocumentSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.hyperframes-document@2" } },
+    contract: { schema: { kind: "literal", value: "svml.hyperframes-document@4" } },
+    visualIr: { schema: { kind: "literal", value: HYPERFRAMES_VISUAL_IR_V1 } },
     digest: { schema: digest },
     compositionDigest: { schema: digest },
     programSpaceDigest: { schema: digest },
@@ -39,7 +42,15 @@ export const hyperframesDocumentSchema: ValueSchema = {
         height: { schema: positiveInteger },
       },
     } },
-    artifactDigests: { schema: { kind: "array", items: digest } },
+    artifacts: { schema: { kind: "array", items: {
+      kind: "object",
+      fields: {
+        kind: { schema: { kind: "literal", value: "blob" } },
+        digest: { schema: digest },
+        size: { schema: nonNegativeInteger },
+        mediaType: { schema: { kind: "string", minLength: 1 } },
+      },
+    } } },
     html: { schema: { kind: "string", minLength: 1 } },
   },
 };

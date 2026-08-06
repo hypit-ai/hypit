@@ -109,8 +109,9 @@ witnesses rather than adding Text, Caption, B-roll or Ranking fields to public c
 package tests separately prove ordinary Text, Caption and B-roll Programs lower through the same
 Track and Composition path.
 
-The current `VisualTrack / VisualPresent / VisualElement` candidate can encode the structural
-three-box, two-box, word-local and absolute-stack cases. Two generic terminal facts are now
+The current `VisualTrack / VisualPresent / VisualElement` candidate explicitly binds
+`svml.hyperframes-visual-ir@1` and can encode the structural three-box, two-box, word-local and
+absolute-stack cases. Two generic terminal facts are now
 executable rather than package-family patches:
 
 1. `FontArtifactRef` binds each exact fallback face, weight and style to Blob bytes. Exact text
@@ -124,7 +125,9 @@ frame: a real content-addressed font paints glyphs and a 50% straight-alpha PNG 
 blue Track at the expected pixel values. This opt-in host test is run with
 `SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future hosted Runtime.
 
-The candidate is intentionally still not frozen. Unbound text remains temporarily legal for
+The IR style vocabulary is now closed rather than arbitrary CSS: components cannot add an unknown
+property, environment-dependent value or alternate browser language without changing the protocol
+version. The candidate is intentionally still not frozen. Unbound text remains temporarily legal for
 candidate-era package migration, and a production Runtime still needs to bind its exact renderer
 implementation and validate that Surface bytes satisfy the declared metadata. Those remaining
 facts must stay generic; they must not be patched with Caption-, Text- or B-roll-specific fields.

@@ -1,9 +1,9 @@
 import {
-  assertSpeechAudioBasisIdentity,
+  assertSpeechEvidenceAudioIdentity,
   sealAlignedTranscriptEvidence,
 } from "@svml/contracts";
-import type { AlignedTranscriptEvidence, SpeechAudioBasis } from "@svml/contracts";
-import { digestOf } from "@svml/core";
+import type { AlignedTranscriptEvidence, SpeechEvidenceAudio } from "@svml/contracts";
+import { digestOf } from "@svml/protocol";
 
 import type {
   WhisperXAlignmentEvidence,
@@ -11,16 +11,21 @@ import type {
   WhisperXEvidenceContent,
 } from "./types.js";
 
-export function whisperXRequestForAudioBasis(
-  basis: SpeechAudioBasis,
+export function whisperXRequestForEvidenceAudio(
+  basis: SpeechEvidenceAudio,
   options: { readonly language?: string } = {},
 ): WhisperXAlignmentRequest {
-  assertSpeechAudioBasisIdentity(basis);
+  assertSpeechEvidenceAudioIdentity(basis);
   return {
-    contract: "svml.whisperx-alignment-request@1",
+    contract: "svml.whisperx-alignment-request@2",
     basisDigest: basis.basisDigest,
-    programSpaceDigest: basis.programSpace.digest,
-    audio: basis.audio,
+    narrativeDigest: basis.narrativeDigest,
+    programSpaceDigest: basis.programSpaceDigest,
+    sourceAudioArtifactDigest: basis.sourceAudioArtifactDigest,
+    evidenceAudioDigest: basis.evidenceAudioDigest,
+    audio: basis.artifact,
+    sampleFrames: basis.sampleFrames,
+    durationSec: basis.durationSec,
     segments: basis.segments,
     ...(options.language === undefined ? {} : { language: options.language }),
     wordAlignment: true,
@@ -41,7 +46,13 @@ export function normalizeWhisperXAlignment(
   if (alignmentDigest !== digestOf(content)) {
     throw new Error("WhisperX alignment digest does not match its canonical contents.");
   }
-  const { alignmentDigest: _alignmentDigest, engine: _engine, contract: _contract, ...shared } = evidence;
+  const {
+    alignmentDigest: _alignmentDigest,
+    evidenceAudioDigest: _evidenceAudioDigest,
+    engine: _engine,
+    contract: _contract,
+    ...shared
+  } = evidence;
   return sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
     ...shared,

@@ -75,13 +75,13 @@ Candidates and Operations.
 | `seedance:Prompt` | `@svml/seedance` | package-private immutable direction value | missing |
 | `seedance:Speech model="mini"` | `@svml/seedance` | explicit Seedance Mini Need returning one speech clip Product | missing |
 | `speech:Spine` | `@svml/speech` | ordered clips -> one `SpeechBasis`, then ordinary projections | basis/projections implemented; author assembly missing |
-| `whisperx:Alignment` | `@svml/whisperx` | request -> normalize -> provider-neutral `@svml/speech-align` -> Map | Graph Fragment implemented; Surface/endpoint missing |
+| `whisperx:Alignment` | `@svml/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@svml/speech-align` -> Map | Graph Fragment, local media projection and local Provider adapter implemented; Surface/sidecar packaging missing |
 | `seedance:Video model="mini"` | `@svml/seedance` | explicit Seedance Mini video Need | missing |
 | `broll:Track` | `@svml/broll` | semantic windows + media + recipe -> peer Visual/Audio Tracks | Program/lowering implemented; Surface missing |
 | `caption:Track` | `@svml/caption-gemini` | timed projection + Gemini cue grouping + role recipe -> VisualTrack | base timing/lowering implemented; Gemini/role Surface missing |
 | `text:Track` | `@svml/text-track` | package Program -> VisualTrack | Program/lowering implemented; Surface/exact-font use missing |
 | `film:Film` | `@svml/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
-| `render:Video` | `@svml/hyperframes-render` | Composition -> HyperframesDocument -> explicit render Need -> final video Artifact + Receipt | Surface, Fragment, Need and Product projection implemented; real Providers missing |
+| `render:Video` | `@svml/hyperframes-render` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
 | `studio.svs` | `@svml/svs` | generic immutable Recipe Records; consuming packages must validate and lower them | parser and recursive source import implemented; video recipe consumers/exact font lowering missing |
 
 The missing work is intentionally package-local. None of these rows requires a new Core video type,

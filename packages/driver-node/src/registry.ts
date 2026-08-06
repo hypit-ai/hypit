@@ -9,6 +9,7 @@ import { isDigest } from "@svml/protocol";
 import {
   RuntimeModuleRegistry,
   runtimeProvider,
+  verifyCredentialRef,
   verifyRuntimeClosure,
 } from "@svml/runtime";
 import type { ResolveRuntimeProfileOptions, RuntimeClosure } from "@svml/runtime";
@@ -84,7 +85,21 @@ type ProviderOptions = {
   readonly supports?: (need: Need) => boolean;
   readonly scheduling?: SchedulingHint;
   readonly runtimeImplementation?: RuntimeProviderImplementation;
+  readonly credentials?: NonNullable<ProviderRegistration["credentials"]>;
+  readonly retry?: NonNullable<ProviderRegistration["retry"]>;
 };
+
+function verifyProviderOptions(options: ProviderOptions): void {
+  verifyScheduling(options.scheduling);
+  for (const [slot, ref] of Object.entries(options.credentials ?? {})) {
+    if (slot.trim().length === 0) throw new Error("Provider credential slot must not be empty");
+    verifyCredentialRef(ref);
+  }
+  if (options.retry !== undefined
+    && (!Number.isSafeInteger(options.retry.maxAttempts) || options.retry.maxAttempts < 1)) {
+    throw new Error("Provider retry maxAttempts must be a positive safe integer");
+  }
+}
 
 export class ProviderRegistry {
   readonly #registrations: ProviderRegistration[] = [];
@@ -100,10 +115,13 @@ export class ProviderRegistry {
     options: ProviderOptions = {},
   ): void {
     if (!id.trim()) throw new Error("provider id must not be empty");
-    verifyScheduling(options.scheduling);
+    verifyProviderOptions(options);
     if (options.runtimeImplementation !== undefined) {
       if (!isDigest(options.runtimeImplementation.digest)) {
         throw new Error("Provider runtime implementation digest is invalid");
+      }
+      if (!isDigest(options.runtimeImplementation.configurationDigest)) {
+        throw new Error("Provider runtime configuration digest is invalid");
       }
       const facet = options.runtimeImplementation.facet;
       if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
@@ -124,9 +142,12 @@ export class ProviderRegistry {
     options: ProviderOptions = {},
   ): void {
     if (!id.trim()) throw new Error("provider id must not be empty");
-    verifyScheduling(options.scheduling);
+    verifyProviderOptions(options);
     if (options.runtimeImplementation === undefined || !isDigest(options.runtimeImplementation.digest)) {
       throw new Error("recoverable Provider Endpoint requires a valid Runtime implementation identity");
+    }
+    if (!isDigest(options.runtimeImplementation.configurationDigest)) {
+      throw new Error("recoverable Provider Endpoint requires a valid Runtime configuration identity");
     }
     const facet = options.runtimeImplementation.facet;
     if (!facet.name.trim() || !facet.module.name.trim() || !facet.module.version.trim()) {
@@ -173,11 +194,20 @@ export class ProviderRegistry {
       if (registration === undefined) {
         throw new Error(`Provider ${endpoint.id} is not registered for ${providerCapabilityKey(binding.capability)}`);
       }
+      const expectedKind = endpoint.lifecycle === "recoverable" ? "endpoint" : "handler";
+      if (registration.kind !== expectedKind) {
+        throw new Error(`Provider ${endpoint.id} lifecycle does not match the Runtime Closure`);
+      }
       const implementation = registration.runtimeImplementation;
       if (implementation === undefined
         || implementation.digest !== endpoint.implementation.digest
+        || implementation.configurationDigest !== endpoint.configurationDigest
         || !sameRef(implementation.facet, endpoint.facet)) {
         throw new Error(`Provider ${endpoint.id} implementation does not match the Runtime Closure`);
+      }
+      const credentialSlots = Object.keys(registration.credentials ?? {}).sort();
+      if (JSON.stringify(credentialSlots) !== JSON.stringify(endpoint.credentialSlots)) {
+        throw new Error(`Provider ${endpoint.id} credential slots do not match the Runtime Closure`);
       }
       pending.push({
         key: providerCapabilityKey(binding.capability),

@@ -19,14 +19,31 @@ inside a historical design record does not make that record normative.
 7. [`../spec/track-expressiveness-v1.md`](../spec/track-expressiveness-v1.md) — executable freeze gate
    for old-system Text, Caption, media-box, stacking and materialization behavior. It explains why
    the current Track is a contract candidate rather than a public compatibility promise.
-8. [`../examples/talking-film-golden/README.md`](../examples/talking-film-golden/README.md) — the
+8. [`../spec/hyperframes-visual-ir-v1.md`](../spec/hyperframes-visual-ir-v1.md) — the one versioned,
+   closed terminal visual language shared by video components; not a Core or author-component API.
+9. [`../examples/talking-film-golden/README.md`](../examples/talking-film-golden/README.md) — the
    canonical v2 authoring target: implemented Script syntax surrounded by the Film, Seedance,
    WhisperX, Caption, B-roll, Text, SVS and render Surfaces that must be built next.
-9. [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md) — target
+10. [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md) — target
    naming and ownership for framework, video, Provider, Runtime, queues, stores and distributions.
-10. [`../spec/author-surface-binding-v1.md`](../spec/author-surface-binding-v1.md) — implemented
+11. [`../spec/author-surface-binding-v1.md`](../spec/author-surface-binding-v1.md) — implemented
     package-owned binding from generic imported Records such as SVS Recipes into typed Programs,
     AuthorComponents and Graph Fragments.
+12. [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — implemented local
+    SQLite/filesystem Runtime assembly, trusted configuration, recovery law and environment swaps.
+13. [`kie-generation-modules-v1.md`](./kie-generation-modules-v1.md) — implemented seven exact
+    generation model modules, shared generated-media Products and the recoverable KIE Provider.
+14. [`kie-live-smoke-2026-08-06.md`](./kie-live-smoke-2026-08-06.md) — credential-free deployment
+    evidence from seven representative live model calls and one synthetic-reference upload.
+15. [`media-inspection-and-normalization-v1.md`](./media-inspection-and-normalization-v1.md) —
+    implemented all-stream inspection, attached-picture-safe selection, shared-origin A/V
+    normalization and the boundary that prevents embedded AAC from becoming speech by inference.
+16. [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md) — the implemented rule that
+    planning is ordinary code while probe/decode/mix/render/mux are explicit Provider Needs, plus
+    the visual/audio/mux split for final HyperFrames output, canonical WhisperX evidence-audio path
+    and implemented local Providers.
+17. [`../services/whisperx/README.md`](../services/whisperx/README.md) — installation, runtime
+    identity, path confinement and queue boundary for the implemented warm local WhisperX service.
 
 The executable v2 Node entrypoints are documented in
 [`../packages/compiler-node/README.md`](../packages/compiler-node/README.md) and
@@ -43,7 +60,11 @@ infrastructure; the latter is the official trusted application assembly.
   among Runtime Profile, one authoritative Build Scheduler, Provider Endpoints, queues, credentials
   and stores. The environment-neutral executor, sealed Runtime Profile/Closure, in-memory
   BuildStore/OperationStore CAS, queue-free local Scheduler and recoverable Endpoint lifecycle are
-  implemented; durable adapters, leases and production endpoints are not. Its older example package
+  implemented. SQLite Build/Operation stores, filesystem/S3 artifacts and the `@svml/local`
+  developer assembly are now implemented together with Provider Kit, environment credential
+  injection, bounded Lambda/process transports, wake/follow, retry, status and cancellation, plus
+  local KIE/media/HyperFrames/WhisperX execution packages; distributed leases and production hosted
+  endpoints are not. Its older example package
   names are superseded by
   [`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md).
 - [`intent-first-modular-compilation.md`](./intent-first-modular-compilation.md) records the language,

@@ -1,0 +1,19 @@
+{
+  "name": "@svml/media-pipeline",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/contracts": "workspace:*",
+    "@svml/driver-node": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/core": "workspace:*"
+  }
+}

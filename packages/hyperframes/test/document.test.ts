@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  HYPERFRAMES_VISUAL_IR_V1,
   sealAudioTrack,
   sealComposition,
   sealProgramSpace,
@@ -38,6 +39,7 @@ function fixture() {
   };
   const lower = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "lower",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "request", digest: digestOf("lower:request") }],
@@ -56,6 +58,7 @@ function fixture() {
   });
   const upper = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "upper",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "projection", digest: digestOf("upper:projection") }],
@@ -86,27 +89,36 @@ function fixture() {
   return { composition, picture, sound };
 }
 
-test("HyperFrames flattens generic peer Track Presents in deterministic absolute stack order", () => {
+test("HyperFrames flattens generic peer visual Track Presents without absorbing audio rendering", () => {
   const { composition, picture, sound } = fixture();
   const document = compileHyperframesDocument(composition);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.equal(document.compositionDigest, composition.digest);
-  assert.deepEqual(document.artifactDigests, [picture.digest, sound.digest].sort());
+  assert.equal(document.visualIr, HYPERFRAMES_VISUAL_IR_V1);
+  assert.deepEqual(document.artifacts, [{
+    kind: "blob",
+    digest: picture.digest,
+    size: picture.size,
+    mediaType: picture.mediaType,
+  }]);
   assert.ok(document.html.indexOf('data-svml-track-id="lower"') < document.html.indexOf('data-svml-track-id="upper"'));
   assert.equal((document.html.match(/class="clip svml-visual-present"/gu) ?? []).length, 2);
+  assert.doesNotMatch(document.html, /<audio/u);
+  assert.doesNotMatch(document.html, new RegExp(sound.digest, "u"));
   assert.doesNotMatch(document.html, /isolation:isolate|svml-visual-track/u);
   assert.match(document.html, /Hello &lt;world&gt;/u);
   assert.doesNotMatch(document.html, /speech-visual-track|caption-track/u);
 });
 
-test("compiled Artifact placeholders are materialized only by the Runtime boundary", () => {
+test("visual Artifact placeholders are materialized only by the Runtime boundary", () => {
   const { composition, picture, sound } = fixture();
   const document = compileHyperframesDocument(composition);
   assert.match(document.html, /svml-artifact:\/\/sha256\//u);
-  const resolved = materializeHyperframesHtml(document, (digest) => `https://assets.example/${digest}?x=1&y=2`);
+  const resolved = materializeHyperframesHtml(document,
+    (artifact) => `https://assets.example/${artifact.digest}?x=1&y=2`);
   assert.doesNotMatch(resolved, /svml-artifact:\/\//u);
   assert.match(resolved, new RegExp(`https://assets\\.example/${picture.digest}\\?x=1&amp;y=2`, "u"));
-  assert.match(resolved, new RegExp(`https://assets\\.example/${sound.digest}\\?x=1&amp;y=2`, "u"));
+  assert.doesNotMatch(resolved, new RegExp(sound.digest, "u"));
   assert.equal(document.html.includes("assets.example"), false, "materialization must not mutate the compiled document");
 });
 
@@ -204,6 +216,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   const surfaceDigest = digestOf("hyperframes:alpha-surface");
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "bound-render-dependencies",
     programSpaceDigest: space.digest,
     sources: [{ name: "fixture", digest: digestOf("bound-render-dependencies") }],
@@ -253,13 +266,14 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     tracks: [track],
   }));
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.deepEqual(document.artifactDigests, [font.artifact.digest, surfaceDigest].sort());
+  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [font.artifact.digest, surfaceDigest].sort());
   assert.match(document.html, /@font-face\{/u);
   assert.match(document.html, /format\("woff2"\)/u);
   assert.match(document.html, /font-synthesis:none/u);
   assert.match(document.html, /data-svml-alpha-mode="straight"/u);
   assert.match(document.html, /data-svml-color-space="srgb"/u);
-  const materialized = materializeHyperframesHtml(document, (digest) => `https://assets.example/${digest}?token=1&part=2`);
+  const materialized = materializeHyperframesHtml(document,
+    (artifact) => `https://assets.example/${artifact.digest}?token=1&part=2`);
   assert.doesNotMatch(materialized, /svml-artifact:\/\//u);
   assert.match(materialized, new RegExp(font.artifact.digest, "u"));
   assert.match(materialized, new RegExp(surfaceDigest, "u"));

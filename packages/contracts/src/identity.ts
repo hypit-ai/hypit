@@ -6,6 +6,7 @@ import type {
   ProgramSpace,
   SpeechAudioBasis,
   SpeechBasis,
+  SpeechEvidenceAudio,
 } from "./speech.js";
 
 export function computeProgramSpaceDigest(value: Omit<ProgramSpace, "digest">): Digest {
@@ -22,6 +23,24 @@ export function computeAlignedTranscriptEvidenceDigest(
   return digestOf(value);
 }
 
+export function computeSpeechEvidenceAudioDigest(
+  value: Omit<SpeechEvidenceAudio, "evidenceAudioDigest">,
+): Digest {
+  return digestOf(value);
+}
+
+/** Round one 48 kHz master-sample boundary onto the canonical 16 kHz evidence clock. */
+export function speechEvidenceSampleBoundary(masterSampleBoundary: number): number {
+  if (!Number.isSafeInteger(masterSampleBoundary) || masterSampleBoundary < 0) {
+    throw new Error("Speech evidence source sample boundary is invalid.");
+  }
+  const value = (BigInt(masterSampleBoundary) * 16_000n * 2n + 48_000n) / (48_000n * 2n);
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error("Speech evidence sample boundary exceeds safe arithmetic.");
+  }
+  return Number(value);
+}
+
 export function sealProgramSpace(value: Omit<ProgramSpace, "digest">): ProgramSpace {
   return { ...value, digest: computeProgramSpaceDigest(value) };
 }
@@ -35,6 +54,21 @@ export function programSpaceFrameCount(programSpace: ProgramSpace): number {
     throw new Error("ProgramSpace duration must end on an exact frame boundary.");
   }
   return rounded;
+}
+
+/** Nearest sample boundary at the exact terminal frame of one ProgramSpace. */
+export function programSpaceSampleFrames(programSpace: ProgramSpace, sampleRate: number): number {
+  const frames = programSpaceFrameCount(programSpace);
+  if (!Number.isSafeInteger(sampleRate) || sampleRate <= 0) {
+    throw new Error("ProgramSpace sample rate is invalid.");
+  }
+  const numerator = BigInt(frames) * BigInt(sampleRate) * BigInt(programSpace.frameRate.denominator);
+  const denominator = BigInt(programSpace.frameRate.numerator);
+  const value = (numerator * 2n + denominator) / (denominator * 2n);
+  if (value < 1n || value > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error("ProgramSpace sample domain exceeds safe arithmetic.");
+  }
+  return Number(value);
 }
 
 export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {
@@ -65,6 +99,58 @@ export function sealAlignedTranscriptEvidence(
   value: Omit<AlignedTranscriptEvidence, "evidenceDigest">,
 ): AlignedTranscriptEvidence {
   return { ...value, evidenceDigest: computeAlignedTranscriptEvidenceDigest(value) };
+}
+
+export function sealSpeechEvidenceAudio(
+  value: Omit<SpeechEvidenceAudio, "evidenceAudioDigest">,
+): SpeechEvidenceAudio {
+  return { ...value, evidenceAudioDigest: computeSpeechEvidenceAudioDigest(value) };
+}
+
+export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {
+  if (value.contract !== "svml.speech-evidence-audio@1") {
+    throw new Error("Unsupported SpeechEvidenceAudio contract.");
+  }
+  if (
+    !isDigest(value.basisDigest)
+    || !isDigest(value.narrativeDigest)
+    || !isDigest(value.programSpaceDigest)
+    || !isDigest(value.sourceAudioArtifactDigest)
+    || value.artifact.kind !== "blob"
+    || !isDigest(value.artifact.digest)
+    || !Number.isSafeInteger(value.artifact.size)
+    || value.artifact.size < 0
+    || value.artifact.mediaType !== "audio/wav"
+    || value.codec !== "pcm_s16le"
+    || value.sampleRate !== 16_000
+    || value.channels !== 1
+    || !Number.isSafeInteger(value.sampleFrames)
+    || value.sampleFrames < 1
+    || !Number.isFinite(value.durationSec)
+    || value.durationSec <= 0
+  ) {
+    throw new Error("SpeechEvidenceAudio media identity is invalid.");
+  }
+  if (
+    value.sampleMap.algorithm !== "rational-boundary-round@1"
+    || value.sampleMap.sourceSampleRate !== 48_000
+    || value.sampleMap.evidenceSampleRate !== 16_000
+    || !Number.isSafeInteger(value.sampleMap.sourceSampleFrames)
+    || value.sampleMap.sourceSampleFrames < 1
+    || value.sampleMap.evidenceSampleFrames !== value.sampleFrames
+    || value.sampleMap.sourceOriginSample !== 0
+    || value.sampleMap.evidenceOriginSample !== 0
+    || value.sampleMap.resamplerImplementation.length === 0
+    || speechEvidenceSampleBoundary(value.sampleMap.sourceSampleFrames) !== value.sampleFrames
+  ) {
+    throw new Error("SpeechEvidenceAudio sample map is invalid.");
+  }
+  if (value.segments.length === 0) throw new Error("SpeechEvidenceAudio has no Segment identity.");
+  const { evidenceAudioDigest: _digest, ...content } = value;
+  if (!isDigest(value.evidenceAudioDigest)
+    || value.evidenceAudioDigest !== computeSpeechEvidenceAudioDigest(content)) {
+    throw new Error("SpeechEvidenceAudio digest does not match its canonical contents.");
+  }
 }
 
 export function assertSpeechBasisIdentity(basis: SpeechBasis): void {

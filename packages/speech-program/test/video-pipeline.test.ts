@@ -8,8 +8,10 @@ import {
 } from "@svml/caption";
 import type { TimedCaptionProjection } from "@svml/caption";
 import {
+  contractTypes,
   sealProgramSpace,
   sealSpeechBasis,
+  sealSpeechEvidenceAudio,
   sealVisualTrack,
 } from "@svml/contracts";
 import type {
@@ -18,6 +20,7 @@ import type {
   Narrative,
   SpeechAudioBasis,
   SpeechBasis,
+  SpeechEvidenceAudio,
   VisualTrack,
 } from "@svml/contracts";
 import { digestOf, sealBuildRequest, start } from "@svml/core";
@@ -36,6 +39,12 @@ import {
 } from "@svml/realization";
 import { locateSpeechTiming, speechAlignProducers, speechLocatorDigest } from "@svml/speech-align";
 import {
+  mediaPipelineCapabilities,
+  mediaPipelineImplementationDigests,
+  mediaPipelineProducers,
+} from "@svml/media-pipeline";
+import type { ProjectSpeechEvidenceAudioNeed } from "@svml/media-pipeline";
+import {
   projectSpeechAudio,
   projectSpeechAudioImplementationDigest,
   projectSpeechVisual,
@@ -48,7 +57,7 @@ import {
   whisperXCapabilities,
   whisperXImplementationDigests,
   whisperXProducers,
-  whisperXRequestForAudioBasis,
+  whisperXRequestForEvidenceAudio,
 } from "@svml/whisperx";
 import type { WhisperXAlignmentEvidence } from "@svml/whisperx";
 
@@ -100,6 +109,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     assemble: 0,
     projectAudio: 0,
     projectVisual: 0,
+    evidenceAudioRequest: 0,
     whisperRequest: 0,
     whisperNormalize: 0,
     locate: 0,
@@ -185,6 +195,39 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     },
   );
   host.registerProducer(
+    mediaPipelineProducers.projectSpeechEvidenceAudio,
+    mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
+    ({ inputs }) => {
+      calls.evidenceAudioRequest += 1;
+      assert.equal(inputs.audio?.value.kind, "inline");
+      const audio = inlineValue<SpeechAudioBasis>(inputs.audio.value.value);
+      const sourceSampleFrames = Math.round(audio.programSpace.durationSec * 48_000);
+      const need: ProjectSpeechEvidenceAudioNeed = {
+        contract: "svml.project-speech-evidence-audio-request@1",
+        basisDigest: audio.basisDigest,
+        narrativeDigest: audio.narrativeDigest,
+        programSpaceDigest: audio.programSpace.digest,
+        source: {
+          kind: "blob",
+          digest: audio.audio.digest,
+          size: audio.audio.size,
+          mediaType: audio.audio.mediaType,
+        },
+        sourceSampleRate: 48_000,
+        sourceChannels: 2,
+        sourceCodec: "pcm_s16le",
+        sourceSampleFrames,
+        evidenceSampleRate: 16_000,
+        evidenceChannels: 1,
+        evidenceCodec: "pcm_s16le",
+        evidenceSampleFrames: Math.round(sourceSampleFrames / 3),
+        durationSec: audio.programSpace.durationSec,
+        segments: audio.segments,
+      };
+      return { outputs: {}, needs: { evidenceAudio: need } };
+    },
+  );
+  host.registerProducer(
     speechTakeProducers.projectVisual,
     projectSpeechVisualImplementationDigest,
     ({ inputs }) => {
@@ -207,8 +250,8 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     return {
       outputs: {},
       needs: {
-        alignment: whisperXRequestForAudioBasis(
-          inlineValue<SpeechAudioBasis>(inputs.audio.value.value),
+        alignment: whisperXRequestForEvidenceAudio(
+          inlineValue<SpeechEvidenceAudio>(inputs.audio.value.value),
           { language: "en" },
         ),
       },
@@ -284,7 +327,53 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
       };
     },
   );
-  const atWhisperX = await driver.run(parseBuildState(serializeBuildState(atSeedance.state)));
+  const atEvidenceAudio = await driver.run(parseBuildState(serializeBuildState(atSeedance.state)));
+  assert.equal(atEvidenceAudio.blocked[0]?.reason, "missing-provider");
+  assert.match(atEvidenceAudio.blocked[0]?.subject ?? "", /SpeechEvidenceAudio/u);
+
+  providers.registerProvider(
+    "runtime:media-local",
+    mediaPipelineCapabilities.projectSpeechEvidenceAudio,
+    contractTypes.speechEvidenceAudio,
+    ({ need }) => {
+      const request = inlineValue<ProjectSpeechEvidenceAudioNeed>(need.constraints);
+      return {
+        value: { kind: "inline", value: sealSpeechEvidenceAudio({
+          contract: "svml.speech-evidence-audio@1",
+          basisDigest: request.basisDigest,
+          narrativeDigest: request.narrativeDigest,
+          programSpaceDigest: request.programSpaceDigest,
+          sourceAudioArtifactDigest: request.source.digest,
+          artifact: {
+            kind: "blob",
+            digest: digestOf("artifact:evidence-audio"),
+            size: 32_044,
+            mediaType: "audio/wav",
+          },
+          codec: "pcm_s16le",
+          sampleRate: 16_000,
+          channels: 1,
+          sampleFrames: request.evidenceSampleFrames,
+          durationSec: request.durationSec,
+          segments: request.segments,
+          sampleMap: {
+            algorithm: "rational-boundary-round@1",
+            sourceSampleRate: 48_000,
+            evidenceSampleRate: 16_000,
+            sourceSampleFrames: request.sourceSampleFrames,
+            evidenceSampleFrames: request.evidenceSampleFrames,
+            sourceOriginSample: 0,
+            evidenceOriginSample: 0,
+            resamplerImplementation: "fixture",
+          },
+        }) },
+        conformance: "exact",
+        delivery: "executed",
+        metadata: {},
+      };
+    },
+  );
+  const atWhisperX = await driver.run(parseBuildState(serializeBuildState(atEvidenceAudio.state)));
   assert.equal(atWhisperX.blocked[0]?.reason, "missing-provider");
   assert.match(atWhisperX.blocked[0]?.subject ?? "", /WhisperXAlignmentEvidence/u);
 
@@ -297,10 +386,11 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
       value: {
         kind: "inline",
         value: sealWhisperXAlignmentEvidence({
-          contract: "svml.whisperx-alignment-evidence@1",
+          contract: "svml.whisperx-alignment-evidence@2",
           engine: "whisperx",
           basisDigest: digestOf("another-project:basis"),
           audioArtifactDigest: digestOf("another-project:audio"),
+          evidenceAudioDigest: digestOf("another-project:evidence-audio"),
           programSpaceDigest: digestOf("another-project:program-space"),
           rawEvidenceArtifactDigest: digestOf("another-project:whisperx-json"),
           durationSec: 1,
@@ -333,15 +423,15 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     whisperXTypes.alignmentEvidence,
     ({ need }) => {
       const request = inlineObject(need.constraints);
-      const audio = inlineObject(request.audio);
       return {
         value: {
           kind: "inline",
           value: sealWhisperXAlignmentEvidence({
-            contract: "svml.whisperx-alignment-evidence@1",
+            contract: "svml.whisperx-alignment-evidence@2",
             engine: "whisperx",
             basisDigest: request.basisDigest as WhisperXAlignmentEvidence["basisDigest"],
-            audioArtifactDigest: audio.digest as WhisperXAlignmentEvidence["audioArtifactDigest"],
+            audioArtifactDigest: request.sourceAudioArtifactDigest as WhisperXAlignmentEvidence["audioArtifactDigest"],
+            evidenceAudioDigest: request.evidenceAudioDigest as WhisperXAlignmentEvidence["evidenceAudioDigest"],
             programSpaceDigest: request.programSpaceDigest as WhisperXAlignmentEvidence["programSpaceDigest"],
             rawEvidenceArtifactDigest: digestOf("artifact:whisperx-json"),
             durationSec: 1,
@@ -373,6 +463,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     assemble: 1,
     projectAudio: 1,
     projectVisual: 0,
+    evidenceAudioRequest: 1,
     whisperRequest: 1,
     whisperNormalize: 1,
     locate: 1,
@@ -381,6 +472,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
   assert.deepEqual(completed.state.receipts.map((receipt) => receipt.fulfiller), [
     "runtime:official-estimate",
     "runtime:kie-seedance-mini",
+    "runtime:media-local",
     "runtime:whisperx-local",
   ]);
   const captionRecord = completed.state.records.find((record) =>
@@ -487,6 +579,7 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
   });
   const black: VisualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "preview:black",
     programSpaceDigest: blackProgram.digest,
     sources: [
