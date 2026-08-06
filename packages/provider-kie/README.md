@@ -99,5 +99,5 @@ that is explicitly approved for external upload.
 
 `KIE_BASE_URL` and `SVML_KIE_SMOKE_ROOT` are optional deployment overrides. The command prints
 credit usage, the content digest and a local inspection copy, but never prints or persists the key.
-The checked-in 2026-08-06 representative results are recorded in
-[`docs/kie-live-smoke-2026-08-06.md`](../../docs/kie-live-smoke-2026-08-06.md).
+A representative run of all seven families and the optional upload case has passed. Generated
+results are deployment evidence and are intentionally not committed as a dated transcript.

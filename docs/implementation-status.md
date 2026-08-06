@@ -1,340 +1,142 @@
-# SVML implementation status
+# Implementation status
 
-This page describes repository reality. Specifications describe laws; architecture records explain
-why they exist.
+Repository reality as of 2026-08-07. Specifications define laws; this page says what currently
+executes. SVML is pre-release and no author-facing video ABI is frozen.
 
-Target package names and Runtime service ownership are now recorded in
-[`package-vocabulary-and-ownership-v1.md`](./package-vocabulary-and-ownership-v1.md). The repository
-has performed only the completed splits listed below; the package names below remain current
-implementation names rather than a public compatibility freeze.
+## End-to-end status
 
-## v2 implemented
+The v2 branch has completed one real paid vertical-video Build:
 
-- `@svml/protocol`: immutable module, graph, build, event and provenance wire data.
-- `@svml/core`: Author/Run Graph verification, explicit Satisfaction resolution, reverse Demand
-  compilation, Operation-instance reachability, finite-plan validation and verified BuildState
-  reduction. Candidate is now an independent typed supply; fidelity belongs to the Satisfaction
-  edge, and execution never performs content deduplication or implementation selection.
-- Candidate/Satisfaction changed persisted identity, so Graph, BuildRequest, Plan, BuildState and
-  Realization Overlay/Closure are now `@2`; old `@1` data is rejected rather than reinterpreted.
-- the graph-first value audit now keeps dependency truth in `CompiledGraph`, direct execution
-  lineage in `Derivation` and external fulfillment in `Receipt`. Shared result contracts retain only
-  intrinsic interpretation facts: transitive Narrative/request identities, generic Track sources
-  and normalization-stage ancestry are no longer copied through the audiovisual graph.
-- `@svml/component-kit`: the minimal host-neutral deterministic compute SDK. Producer packages
-  register against one structural port and receive only command identity plus typed inputs; artifact
-  bytes, credentials, network, queues and stores are absent. HyperFrames, HyperFrames Render,
-  WhisperX, Media Pipeline and every exact generation model no longer import the Node Driver.
-- `@svml/driver-node`: trusted in-process Producer and Endpoint execution, artifact access, JSON
-  persistence and command regeneration on resume. It now exposes the minimal regenerated-command
-  executor port used by an external Scheduler.
-- `@svml/runtime`: environment-neutral Runtime executor, BuildStore and OperationStore contracts;
-  static Runtime Module facets; sealed Runtime Profile/Closure resolution; implementation and
-  permission locking; exact Endpoint coverage checks; verified in-memory CAS stores; and the first
-  queue-free `LocalBuildScheduler`. One Scheduler shares named concurrency lanes across multiple
-  Builds and independent commands inside one Build. Operation identity binds Build, Command,
-  Endpoint implementation, Runtime Closure, request, attempt and stable submission key without
-  entering BuildState. Recoverable Endpoints journal that identity before `start`, persist
-  pending checkpoints and wake hints, use `resume` after restart, replay a stored completion into
-  Core without another Endpoint call, create new identities for finite retries and preserve explicit
-  failure/cancellation. The neutral `capability-endpoint` role and `endpoints` bindings are a real
-  schema change, so Runtime Module/Profile/Closure wire formats are now `@2` rather than silently
-  reinterpreting persisted `@1` data.
-- configured Scheduler, BuildStore, OperationStore, ArtifactStore and CredentialStore values now
-  use one `RuntimeServicePackage` ABI. Runtime selection binds exact instances and roles; one
-  physical package may expose several logical services and one lifecycle. The local assembly no
-  longer imports concrete Runtime Manifests or contains ArtifactStore-specific replacement logic.
-- `@svml/endpoint-kit`: the host-neutral external-capability ABI plus a one-source Endpoint package
-  definition that emits a static Manifest, configured instance identity, exact bindings and
-  immediate or recoverable installation through a structural registrar. It imports no Node Driver.
-  Non-secret configuration, credential references/slots and retry policy are identity-bound.
-- `@svml/transport`: the tiny canonical JSON invocation seam. Process and Lambda implementations
-  depend on it directly and no longer reverse-depend on Endpoint or Provider packages.
-- `@svml/generation`, `@svml/model-kit`: provider-neutral generated image/video Product contracts
-  plus a reusable exact-model shell. Type owners publish their own request validators, Need
-  Producers and Graph Fragments without adding model knowledge to Core.
-- `@svml/seedance`, `@svml/minimax-h3`, `@svml/gemini-omni`, `@svml/grok-imagine`,
-  `@svml/gpt-image`, `@svml/nano-banana`, `@svml/seedream`: the first seven explicit generation
-  model families. Together they expose sixteen exact text/image/frame/reference capabilities.
-  Grok is video-only; Seedream safety checking is explicit request content; MiMo is absent.
-- `@svml/provider-kie`: one recoverable KIE Market Provider for those exact capabilities. It stages
-  content-addressed references through KIE's file API, refuses ambiguous paid resubmission, resumes
-  checkpointed task ids, bounds result downloads and persists generated bytes immediately into the
-  selected ArtifactStore.
-- logical `@svml/media` contracts now distinguish opaque Blob bytes, all-stream `MediaInspection`,
-  deterministic `MediaStreamSelection` and jointly normalized `SynchronizedMedia`. The digest-bound
-  inspection enumerates attached pictures and malformed timing instead of hiding them; none of
-  these Types can imply Speech merely because a container has AAC.
-- `@svml/media-pipeline`: one ordinary inspect → select → normalize Graph Fragment plus pure
-  `AudioProgramPlan` compilation and explicit timeline-audio/mux Needs. Its default
-  moving-video policy excludes `attached_pic`, requires a unique default/candidate and fails closed
-  on alternate-angle ambiguity; explicit stream indexes remain available to an author package.
-- `@svml/provider-media-local`: bounded shell-free ffprobe/ffmpeg execution for those exact
-  capabilities. It preserves one source A/V presentation origin, emits silent CFR H.264 plus an
-  optional exact-length 48 kHz stereo PCM stem, trims AAC packet tails at the final picture and
-  performs no hidden loudness mastering. It now also renders exact `AudioProgramPlan` PCM output
-  and muxes one verified silent visual with that audio while respecting AAC presentation padding.
-  It also projects a Narrative-bound 48 kHz stereo PCM speech master exactly once into a digest-
-  bound 16 kHz mono PCM `SpeechEvidenceAudio`, recording source/output sample counts, zero origins
-  and resampler identity.
-  Synthetic attacks and all four retained KIE video outputs pass the new parser/selection laws.
-- `@svml/provider-hyperframes-local`: trusted local realization of the exact silent visual Need.
-  `HyperframesDocument` now declares full `BlobRef` dependencies rather than untyped hashes; the
-  Endpoint verifies/stages them, lets HyperFrames partition the finite frame domain across Chrome
-  workers and accepts output only after ffprobe proves one silent H.264 stream with the declared
-  canvas, rational frame rate and frame count. A real two-worker MP4 render passes.
-- `@svml/provider-whisperx-local`: model-pinned loopback adapter for the warm WhisperX sidecar. It
-  rejects any input other than the canonical evidence WAV, stages those exact bytes without a
-  conversion branch, stores raw sidecar JSON as an Artifact and returns evidence bound to the exact
-  acoustic Artifact and ProgramSpace it measured. It now locks and verifies the
-  sidecar protocol, service version, WhisperX version, model, device, compute type and batch size.
-- `services/whisperx`: independently installable Python 3.10–3.13 warm model service locked to
-  WhisperX 3.8.6. It is loopback-only, confines staged paths to configured roots, revalidates the
-  canonical WAV, serializes access to one warm model set, lazily caches per-language alignment
-  models and preserves missing acoustic word time as missing evidence. Its package/runtime ABI
-  check passes under the locked Python 3.13 environment; model weights remain deployment cache.
-- `@svml/credential-store-env`: an explicit-key local CredentialStore. Endpoint invocations receive
-  only declared slots; secret values do not enter Runtime Closure, BuildState, Operation state or
-  SQLite through framework code.
-- `@svml/store-sqlite`: durable local BuildStore and OperationStore adapters with private schema
-  versioning, verified JSON facts and compare-and-swap revisions. It deliberately stores no ready
-  queue, artifact bytes, credentials or component tables. One configured package exposes both
-  logical services over one physical connection and close lifecycle.
-- `@svml/artifact-store-fs`: project-local content-addressed ArtifactStore. Its SHA-256 identities
-  remain valid when an environment later replaces files with S3.
-- `@svml/artifact-store-s3`: whole-object S3 ArtifactStore with deterministic keys, conditional
-  immutable writes, bounded conflict retry and SHA-256 verification after every download. Bucket,
-  prefix, region/endpoint and expected owner are non-secret Runtime instance identity.
-- `@svml/transport-aws-lambda`: bounded synchronous JSON invocation for AWS-backed Endpoint
-  packages. It intentionally does not standardize a capability or pretend Lambda `Event`
-  invocation is a recoverable result protocol.
-- `@svml/transport-process`: bounded shell-free JSON child-process invocation using an absolute
-  executable and no inherited environment. Author source cannot select its executable or arguments.
-- `@svml/local`: trusted developer distribution that assembles a digest-bound implementation
-  package closure and exact Endpoint contributions over SQLite/filesystem defaults. The
-  Scheduler persists every accepted Event, resumes the same Build and Operation across process
-  restarts, rejects reuse of one local Build id for another Core Build, follows endpoint wake hints,
-  exposes durable status and performs endpoint-aware cancellation. Supplied Runtime service
-  packages can independently replace its Scheduler or any Store without another local release.
-- `@svml/validation`: exact-Type semantic validator registry and the common Record admission gate.
-  A Type owner may lock a validator digest in its static Manifest; Producer, Endpoint, authored and
-  provided values then require a receipt bound to that exact Type and content. Core verifies the
-  receipt without knowing the domain meaning.
-- `@svml/host`: the small domain-neutral `Workspace`/`WorkspaceSession` contract and generic
-  `ArtifactAttachment` transfer envelope. It owns no filesystem, parser, Runtime or domain behavior.
-- `@svml/workspace-fs-node`: the root-confined/read-once Node filesystem Workspace. Each compile
-  opens an isolated session, rejects symlink escapes and returns defensive content-addressed
-  attachments.
-- `@svml/compiler-node`: a domain-neutral registered-manifest resolver, exact transitive Module
-  Closure construction, injected-Workspace compiler facade and named-export-to-BuildPlan entrypoint.
-  Its convenient default is `workspace-fs-node`; browser, Git, memory and remote Workspaces can
-  replace it without changing source semantics. Source asset BlobRefs remain covered by Source
-  Closure, while attachment bytes remain outside Core and are staged only by `build`.
-- `@svml/package-loader-node`: lock-aware trusted Node activation for installed implementation
-  packages. It binds every physical package and declared-dependency byte plus Module, Frontend,
-  Text Surface, Producer and Type Validator identities. Producer/Validator facets are enumerable
-  and checked against their Manifests before Host registration. The package-lock digest enters
-  `BuildRequest.implementationClosure`, preventing a persisted Build from resuming under another
-  deterministic implementation closure. It installs no Endpoint or privileged Runtime facet.
-- `@svml/prelude-video`: an ordinary replaceable aggregate of the current official author Modules,
-  SVS Frontend, Text Surfaces and available deterministic compute facets. Compiler and Runtime
-  activate only their respective facets; the CLI no longer enumerates domain packages.
-- `@svml/cli`: the trusted v2 application host. `check` compiles real Text sources using either the
-  default video prelude or an exact external package lock. `plan` is wired directly to Core;
-  `build --out` materializes one verified final media Record through the selected ArtifactStore.
-- the physical `@svml/contracts` workspace distribution now carries independently digested logical
-  `@svml/narrative`, `@svml/media`, `@svml/program-space`, `@svml/speech`, `@svml/semantic-time`
-  and `@svml/composition` Manifests. Caption timing is owned by `@svml/caption`, not the shared waist.
-  A future physical rename to `@svml/video` does not change those nominal identities.
-- `@svml/text` and `@svml/script`: manifest-driven Text Frontend plus the official Script Surface.
-  Text Surfaces may now contribute authored Records, Author Components and locked Graph Fragments;
-  the whole document is collected before forward references are resolved. Script remains an
-  explicitly record-only Surface. Surface handlers are awaitable and may request a source asset
-  only through the Host capability; they receive neither filesystem paths nor ambient I/O.
-- `@svml/media` and `@svml/seedance`: authored Image bytes, immutable Prompt values and exact
-  Seedance Speech/Video requests now lower through ordinary package Surfaces. Script exports each
-  named Segment as separate Segment, dialogue and speech-estimate contracts. Seedance consumes the
-  Role-aware dialogue view (including right-side Dual Text pronunciation), not Script parser
-  structure. GeneratedVideoSet stays atomic and the shared generation package deterministically
-  projects its first ordered Blob with exact digest affinity.
-- package-owned Structured Surfaces can resolve explicitly referenced public Records from already
-  compiled source imports. This lets a consuming package validate a generic SVS Recipe and emit its
-  own nominal typed Program during `check`; component outputs remain symbolic and forward-resolved.
-  Imported Records are exposed as defensive copies and private child Records remain inaccessible.
-- `@svml/svs`: a minimal record-only alternate Frontend for `<sheet version="1">`. It parses dotted
-  rule names and primitive Recipe properties into generic immutable Recipe Records. It deliberately
-  has no video property vocabulary, selector cascade or inheritance.
-- `@svml/speech-take`: one atomic speech Product with deterministic ProgramSpace, audio-basis,
-  generic VisualTrack and generic AudioTrack projections. All four Producers are enumerable
-  compute facets, checked against the package Manifest and physically included in the official
-  prelude lock without a Core, Driver or Runtime registration.
-- `@svml/whisperx`, `@svml/speech-align`, `@svml/caption`, `@svml/caption-gemini`: one-pass evidence,
-  direct authoritative Script alignment, display-only Caption planning and official
-  Style-to-VisualTrack lowering. A Caption Program assigns a total default Style and ordered
-  whole-Style overrides by Role or Selection. Gemini may only partition resolved display-atom runs
-  and assign declared per-atom fields; it sees neither WhisperX text nor Dual Text pronunciation.
-  Timing joins only downstream. Every compute facet and owned validator is enumerable and locked;
-  Google Vertex remains a separate Runtime Provider.
-- `@svml/hyperframes`: deterministic generic Composition-to-HTML compilation with content-addressed
-  Artifact placeholders and a separate Runtime materialization boundary. HyperframesDocument now
-  binds ProgramSpace, exact rational frame rate, integer frame count and canvas outside HTML; any
-  legal frame or half-open Endpoint chunk can be addressed independently without entering Core.
-- `@svml/hyperframes-render`: an explicit author Surface whose Fragment expands one author-visible
-  video into separate visual-render, timeline-audio and mux Needs. HyperFrames receives a silent
-  visual document; the generic media pipeline owns audio planning and final mux. Affinity binds the
-  same ProgramSpace, frame/sample domain and canvas, while local workers/Lambda chunking remains an
-  Endpoint detail.
-- `@svml/broll`: provider-neutral B-roll Programs lowered into independently stacked Presents plus
-  source-audio/SFX AudioTrack clips; production-used pop/fade/slide motion and push/page-turn pair
-  transitions remain package-owned and never sample another Track. Its Surface connects an
-  explicit Script selection, SemanticMap, normalized media and package-owned Recipe.
-- `@svml/text-track`: provider-free persistent or timed editorial text lowered into ordinary,
-  independently stacked VisualTrack Presents. Its current Surface supports explicit ProgramSpace
-  and full-span authored items through package-owned SVS validation.
-- `@svml/film`: package-owned arbitrary-arity Track assembly. A concrete Film declaration lowers to
-  a finite immutable TrackSet fold and stops at ordinary Composition. The separate HyperFrames
-  Fragment may consume that Composition; Core receives no variadic port, Track-family switch or
-  privileged Film root. Its official Structured Surface now validates the generic `film.*` SVS
-  Recipe into a typed FilmProgram and type-checks an arbitrary list of peer Track references.
-- `@svml/elaborator`: a parser-independent two-phase Author Module linker plus hygienic static Graph
-  Fragments. It first predeclares every component output, then resolves forward references, types
-  and cycles before emitting an ordinary verified Core Graph. A non-video laboratory fixture proves
-  that this layer does not require Text or audiovisual contracts.
-- `@svml/realization`, `@svml/speech-program`: explicit Candidate overlays plus the installed
-  Speech Spine Surface. Ordered Takes expand into per-source media normalization, an immutable
-  fold, one timeline-audio Need, one SpeechBasis and ordinary peer projections.
+```text
+Script → Estimate → two KIE Seedance Mini generations
+       → media inspection and normalization → Speech Spine
+       → local WhisperX → SemanticMap
+       → Vertex Gemini CaptionPlan → Caption and Text Tracks
+       → Film → local parallel HyperFrames render
+       → audio program → mux → H.264/AAC MP4
+```
 
-The test suite proves arbitrary Targets, selected Existing-Value and substitute Candidates, shared
-Operation execution once, affinity rejection, monotonic conformance, derivation integrity and
-resume without repeating completed paid work. It also proves that targeting a Text Track does not
-demand Film, targeting Composition does not demand HyperFrames, and only the final document Target
-collects every selected Track branch. A real non-video text source can declare a report before the
-measurement it consumes, then pass through Text, Surface lowering, Author linking and Core
-BuildPlan derivation. Component source reflow preserves AuthorModule identity; missing Fragment
-definitions, duplicate components and unresolved references fail at their owning boundary.
-Recursive Source Closure compilation now selects exact `using` Frontends, decodes dependencies
-before importers, binds public exports through aliases, rejects cycles/conflicts and hygienically
-keeps private identities independent of aliases and Host filesystem locations. The checked-in
-`studio.svs` parses completely as ten generic Recipes. A real Node Host now performs the required
-pre-discovery, resolves only registered exact manifests and their digest-bound dependencies, rejects
-filesystem/symlink escape, and produces the same verified Source Closure and Core BuildPlan used by
-in-memory tests. A separate non-video three-package fixture proves decentralized communication:
-one package owns a nominal Measurement contract and validator, another produces it, a third consumes
-it; structurally valid but semantically invalid Producer/Endpoint values, missing or mismatched
-validators, receipt-free provided values and tampered receipts are rejected before state admission.
-The first real rendering vertical also proves that author source lowers to the same finite plan,
-that execution pauses at the exact HyperFrames capability when no Endpoint exists, and that a bound
-Endpoint completes without entering Film or source parsing.
-It also proves that two author-declared paid operations inside one Build execute in parallel up to
-their shared Endpoint lane limit while their common upstream Producer executes exactly once; the
-same lane is shared fairly by multiple Builds, and CAS rejects stale Scheduler state writes.
-Runtime assembly tests additionally prove that same-name Endpoint code with another implementation
-or configured-instance digest is rejected before execution, credential slots match the static
-Manifest, recoverable Endpoints require OperationStore, credentialed endpoints require
-CredentialStore, permissions need an explicit Host allowlist, an unbound demanded Need fails before scheduling, and restart discovers
-the same pending Operation/submission identity rather than inventing another request. They cover
-both crash windows: after remote submission but before a checkpoint, and after completion is
-journaled but before Core accepts the Event. They additionally cover wake-aware polling, finite
-attempt retry, explicit cancellation, credential isolation and local cross-process status/recovery.
+The checked-in source and Runtime assembly are in
+[`examples/talking-film-live`](../examples/talking-film-live/README.md). Credentials, presenter
+assets and generated outputs are intentionally ignored. A second verified Build has also reused the
+two paid take Records through explicit Existing-Value Candidates, issued no KIE Need and rebuilt the
+reachable downstream graph without washing `substitute` back to `exact`.
 
-## Implemented audiovisual waist candidate
+## Domain-neutral system
 
-All final audiovisual contributions lower to self-contained peer Tracks in one ProgramSpace.
-Visual Tracks contain independently stacked Presents, so one author package can contribute multiple
-absolute z positions without turning the complete Track into a stacking boundary. Composition may
-not identify Caption, Speech or B-roll families and may not let one Track read, mask, transform or
-reinterpret a sibling. Timed captions are an intermediate value; styled captions must become an
-ordinary VisualTrack.
+Implemented:
 
-The implemented order is:
+- `@svml/protocol`: immutable Manifests, Types, Graph, Build and provenance wire data;
+- `@svml/core`: `svml.graph@2`, independent Candidate, explicit Satisfaction, arbitrary Targets,
+  reverse reachability, finite `svml.plan@2` derivation and verified `svml.build@2` state machine;
+- one Operation instance fans out once; distinct instances never content-deduplicate;
+- Provided Values, multi-export Run Fragments, partial substitution and fully pruned defaults;
+- digest-bound Derivation and Receipt integrity, monotonic conformance and regenerated resume
+  Commands;
+- `@svml/elaborator`: two-phase forward-reference linking and hygienic static Fragment expansion;
+- `@svml/realization`: typed Run Graph overlays and inert Build-Record Candidates;
+- `@svml/validation`: package-owned semantic validators and common Record admission;
+- `@svml/component-kit`: host-neutral deterministic Producer/validator registration;
+- `@svml/host`, `@svml/workspace-fs-node`, `@svml/compiler-node`: replaceable Workspace and the
+  reference Node compiler Host;
+- `@svml/package-loader-node`: explicitly installed, byte-locked trusted author and compute facets;
+- `@svml/text`, `@svml/script`, `@svml/svs`: official markup, Script and Recipe Frontends without
+  Core parser branches;
+- `@svml/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
+  recoverable Endpoint lifecycle;
+- `@svml/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
+- `@svml/store-sqlite`: durable CAS BuildStore and OperationStore;
+- `@svml/artifact-store-fs`, `@svml/artifact-store-s3`: interchangeable content-addressed bytes;
+- `@svml/credential-store-env`: explicit credential slots without secrets in BuildState;
+- `@svml/local`: zero-service developer assembly over SQLite and filesystem defaults;
+- `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
+  invocation seams.
 
-1. implement the first `ProgramSpace / VisualTrack / AudioTrack / Composition` contract candidate;
-2. lower Speech and Caption into the generic Track waist;
-3. add a HyperFrames Composition reference implementation;
-4. lower B-roll and Text through the same Track contracts;
-5. assemble arbitrary Track references through an ordinary Film Graph Fragment.
+The public human-readable Run Graph Frontend (`.svrun`) is not implemented yet. The current CLI
+`--pin` flag is temporary compatibility sugar for one Provided-Value Candidate plus one substitute
+Satisfaction.
 
-The candidate is not yet an open-source compatibility promise. The executable gate in
-`spec/track-expressiveness-v1.md` proves structural Text three-box, Caption range/cue/content,
-media foreground/backdrop sampling and cross-Track absolute stacking without domain fields. It now
-also proves content-addressed exact-font lowering and a typed sRGB/alpha/timing Surface path. An
-opt-in real-browser test verifies one local Hyperframes frame at the pixel level. Every VisualTrack
-now explicitly binds `svml.hyperframes-visual-ir@1`; its style names and critical enum values are a
-closed Type schema, deeper identity validation rejects alternate IRs, unknown or environment-bound
-CSS, and the resulting HyperframesDocument repeats the IR identity. `@svml/text-track@1` and
-`@svml/broll@1` remain vertical-slice fixtures rather than frozen author Programs until the old
-text/content-box capability matrix passes real browser witnesses.
+## Environment and Provider packages
 
-Public freeze still requires official Text/Caption components to stop relying on environment fonts,
-plus a renderer receipt/validation rule that binds the exact layout implementation and verifies
-declared Surface media facts in local and hosted Runtime endpoints.
+Implemented:
 
-The implementation-package boundary, reusable local Runtime chassis, first real generation Provider,
-reference media Endpoint, local HyperFrames Endpoint and local WhisperX Endpoint are now executable.
-The representative seven-family KIE live suite, one real synthetic-reference upload and the
-retained KIE media replay have passed. Real tests also cover exact 48 kHz → 16 kHz evidence
-projection, byte-identical sidecar staging and a two-worker silent HyperFrames MP4.
-The first complete paid vertical-video chain now passes in `examples/talking-film-live`: two real
-KIE Seedance Mini 480p clips, deterministic estimate, local media normalization, local WhisperX,
-Vertex Gemini Caption planning, SemanticMap, Caption and Selection Text Tracks, Film, local
-HyperFrames rendering, audio mix and final mux. The ten-second output contains H.264 video and AAC
-audio. A second independent Build also reused both paid shot Records as explicitly selected
-zero-input substitute Candidates, issued no KIE Need, and rebuilt the complete downstream graph
-without promoting substitute fidelity back to exact.
+- provider-neutral generated image/video Product contracts and exact-model shell;
+- author model packages for Seedance, MiniMax H3, Gemini Omni, Grok Imagine, GPT Image,
+  Nano Banana and Seedream;
+- `@svml/provider-kie`: upload, recoverable paid submission, checkpointed polling, bounded download
+  and immediate ArtifactStore persistence for sixteen exact model capabilities;
+- `@svml/provider-google-vertex`: display-only Gemini Caption planning;
+- provider-neutral all-stream media inspection, attached-picture-safe selection, synchronized A/V
+  normalization, audio-program rendering and final mux contracts;
+- `@svml/provider-media-local`: bounded shell-free ffprobe/ffmpeg realization;
+- canonical 48 kHz speech master to digest-bound 16 kHz mono evidence-audio projection;
+- `@svml/provider-whisperx-local` and `services/whisperx`: pinned warm local WhisperX execution;
+- `@svml/provider-hyperframes-local`: finite-frame parallel Chrome rendering with output probe
+  validation;
+- one Scheduler with global and named lane concurrency shared across Builds.
 
-The next work is:
+Not implemented:
 
-1. turn this deployment witness into an opt-in live acceptance test without committing credentials,
-   paid media or generated outputs;
-2. finish the official Caption/Text visual capability and exact-font acceptance matrix before
-   freezing those author-facing packages;
-3. add AWS media/HyperFrames/WhisperX Endpoints only when the team needs Lambda execution; they must
-   return the same inspection/normalization contracts rather than define another media meaning;
+- the opt-in, credential-free-by-default live acceptance harness around the real talking-film Build;
+- AWS media, WhisperX and HyperFrames Endpoint packages—the generic Lambda transport exists;
+- Keychain, Secrets Manager or Vault credential adapters;
+- production multipart/ranged Artifact transfer and retention/garbage collection;
+- hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
+- arbitrary Volcengine, Fal, API-key Gemini or Hypit Endpoint packages.
 
-## Deliberately not implemented
+These are environment adapters. They must implement existing Capabilities and Types rather than
+define alternate Core or video semantics.
 
-- arbitrary untrusted third-party parser or Producer execution;
-- sandboxed or remotely attested third-party Type validator execution (the current registry accepts
-  trusted in-process implementations only);
-- automatic npm/workspace package installation and community package discovery (trusted locked
-  author and deterministic compute facets are implemented for explicit installed packages);
-- production keychain/Vault credentials, hosted scheduling or distributed workers;
-- AWS/hosted WhisperX, HyperFrames or media Endpoints;
-- production multipart/ranged Artifact streaming and distributed execution adapters;
-- production exact-font author assets; Caption, B-roll and Text Surfaces remain pre-freeze vertical
-  slices even though display-only Gemini planning and the Vertex Endpoint are implemented;
-- checked-in paid credentials, generated presenter assets or live-build outputs; the executable
-  source and trusted Runtime profile live in `examples/talking-film-live`, while its private inputs
-  and outputs remain ignored;
-- a cross-Track effect or adjustment-layer model.
-- a dedicated Base FX model or compatibility placeholder.
+## Video-domain slice
 
-## Domain-neutral package boundary
+Implemented and executable:
 
-A non-video language reusing the build system needs only:
+- independently digested Narrative, Media, ProgramSpace, Speech, SemanticTime and Composition
+  logical modules;
+- Script Segments, optional Role Cues, Dual Text, Selection/Moment anchors and display/speech
+  projections;
+- deterministic speech estimate, atomic SpeechTake/SpeechBasis and peer VisualTrack/AudioTrack
+  projections;
+- one-pass WhisperX evidence and direct Script-to-evidence many-to-many alignment;
+- planner-neutral CaptionPlan: ordered Cue cuts plus zero or more declared attributes per display
+  atom, with no text rewrite or timing authority;
+- total default Caption Style plus ordered Role/Selection whole-style overrides;
+- Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
+- arbitrary Track folding into Composition and separate HyperFrames rendering;
+- B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
+- frame-addressable HyperFrames Visual IR, exact Artifact references and compositable Surface path.
 
-1. `@svml/protocol` for immutable wire data;
-2. `@svml/core` for verification, reverse Demand compilation and the Build state machine;
-3. normally `@svml/elaborator` for modular author declarations and Graph Fragment expansion;
-4. `@svml/compiler-node` for the reference registered-package compiler facade, plus either its
-   default `@svml/workspace-fs-node` or another implementation of `@svml/host`'s Workspace contract;
-5. a Driver/Runtime implementation when it wants to execute the resulting Commands.
+Still pre-freeze and deliberately deferred:
 
-`@svml/runtime` supplies the reference environment-neutral scheduling and BuildStore ports;
-`@svml/driver-node` is still the provisionally named trusted Node executor implementation.
+- complete Text three-box, exact-font and layered-decoration behavior;
+- Caption CJK/emoji/multiline/pixel acceptance;
+- B-roll foreground/backdrop sampling and focal media-box acceptance;
+- Ranking and other old production author packages;
+- renderer receipts and complete Surface-byte validation;
+- final Track and HyperFrames Visual IR compatibility promise.
 
-If one of its Types declares a semantic refinement, the Host also needs a validator/admission
-implementation; `@svml/validation` is the reference package. This does not make that domain Type a
-Core registration or require a Core release.
+There is intentionally no cross-Track sampling/effect model and no Base FX placeholder.
 
-`@svml/realization` is needed only for externally supplied Candidates such as reuse, preview or
-manual values. `@svml/text` is needed only when the author chooses the official XML-like syntax.
-Script, video contracts, Film, Tracks, HyperFrames and capability Endpoints are domain/application packages.
-There is deliberately no `@svml/author` package and no mandatory `.svk` suffix.
+## Extension and security boundary
 
-The current package named `@svml/contracts` is audiovisual vocabulary despite its generic name. It
-must be migrated atomically to an explicitly video-scoped public name before compatibility freeze;
-its types are not part of Core and are not required by other domains.
+Installing a trusted package can add a nominal Type, Surface, Fragment, deterministic Producer,
+validator or Endpoint without a Core release. Source imports activate author facets only; Provider,
+credential, process and Runtime authority require an explicit Host profile and allowlist.
 
-The root v1 compiler and `stdlib/` remain an executable research oracle. Their fixed compilation
-path and legacy `.svk/.svc` file taxonomy are not v2 compatibility promises.
+Arbitrary untrusted community Parser, Producer and Validator execution is not implemented. The
+current in-process registry is suitable only for trusted locked code. Isolation, resource limits,
+permission enforcement and loaded-code attestation remain release work.
+
+## Current verification
+
+- TypeScript v1 and v2 checks pass;
+- v1 research oracle: 35/35 tests;
+- v2: 287 passing, 3 environment-gated skips, 0 failures;
+- live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
+- generated credentials, media outputs and local databases are ignored by Git.
+
+The v1 root compiler and fixtures remain only as executable regression evidence during the rewrite.
+They are not the public v2 syntax, package taxonomy or compilation path.
+
+See [`architecture.md`](./architecture.md) for boundaries and [`roadmap.md`](./roadmap.md) for the
+two active workstreams.
