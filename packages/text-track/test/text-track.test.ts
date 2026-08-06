@@ -63,6 +63,7 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
 
   const lower = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "lower",
     programSpaceDigest: space.digest,
     sources: [{ name: "fixture", digest: digestOf("lower") }],

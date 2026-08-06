@@ -85,6 +85,7 @@ test("B-roll owns local motion while every item remains an independently stacked
 
   const middle = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "middle-overlay",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "request", digest: digestOf("middle-overlay") }],
@@ -146,6 +147,7 @@ test("page-turn and transition SFX remain B-roll-owned and lower to generic visu
   const product = compileBrollProduct(programSpace, authored);
   assert.equal(product.audioTrack.clips[0]?.id, "transition:turn");
   assert.deepEqual(product.audioTrack.clips[0]?.span, { startFrame: 75, endFrameExclusive: 81 });
+  assert.equal(product.audioTrack.clips[0]?.artifact.digest, sfx.digest);
   const document = compileHyperframesDocument(sealComposition({
     contract: "svml.composition@1",
     id: "page-turn",
@@ -154,7 +156,8 @@ test("page-turn and transition SFX remain B-roll-owned and lower to generic visu
     tracks: [product.visualTrack, product.audioTrack],
   }));
   assert.match(document.html, /perspective\(1200px\) rotateY/u);
-  assert.match(document.html, new RegExp(sfx.digest.slice("sha256:".length), "u"));
+  assert.doesNotMatch(document.html, new RegExp(sfx.digest.slice("sha256:".length), "u"),
+    "HyperFrames is visual-only; the media pipeline renders this proven AudioTrack separately");
 });
 
 test("B-roll rejects a pair transition that is not both items' exact shared boundary", () => {

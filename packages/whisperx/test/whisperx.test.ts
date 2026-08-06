@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sealProgramSpace, sealSpeechBasis } from "@svml/contracts";
-import type { SpeechAudioBasis, SpeechBasis } from "@svml/contracts";
-import { digestOf } from "@svml/core";
+import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@svml/contracts";
+import type { SpeechBasis, SpeechEvidenceAudio } from "@svml/contracts";
+import { digestOf } from "@svml/protocol";
 import {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
-  whisperXRequestForAudioBasis,
+  whisperXRequestForEvidenceAudio,
 } from "@svml/whisperx";
 
 function basis() {
@@ -32,31 +32,53 @@ function basis() {
   });
 }
 
-function audioProjection(basis: SpeechBasis): SpeechAudioBasis {
-  return {
-    contract: "svml.speech-audio-basis@1",
+function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
+  return sealSpeechEvidenceAudio({
+    contract: "svml.speech-evidence-audio@1",
     basisDigest: basis.basisDigest,
     narrativeDigest: basis.narrativeDigest,
-    programSpace: basis.programSpace,
-    audio: basis.audio,
+    programSpaceDigest: basis.programSpace.digest,
+    sourceAudioArtifactDigest: basis.audio.digest,
+    artifact: {
+      kind: "blob",
+      digest: digestOf("whisperx-test:evidence-audio"),
+      size: 32_044,
+      mediaType: "audio/wav",
+    },
+    codec: "pcm_s16le",
+    sampleRate: 16_000,
+    channels: 1,
+    sampleFrames: 16_000,
+    durationSec: 1,
     segments: basis.segments,
-  };
+    sampleMap: {
+      algorithm: "rational-boundary-round@1",
+      sourceSampleRate: 48_000,
+      evidenceSampleRate: 16_000,
+      sourceSampleFrames: 48_000,
+      evidenceSampleFrames: 16_000,
+      sourceOriginSample: 0,
+      evidenceOriginSample: 0,
+      resamplerImplementation: "fixture",
+    },
+  });
 }
 
-test("WhisperX consumes only the validated audio projection of a SpeechBasis", () => {
-  const valid = audioProjection(basis());
-  assert.equal(whisperXRequestForAudioBasis(valid).basisDigest, valid.basisDigest);
-  const tampered = { ...valid, audio: { ...valid.audio, durationSec: 2 } };
-  assert.throws(() => whisperXRequestForAudioBasis(tampered), /SpeechAudioBasis audio/u);
+test("WhisperX consumes only the canonical 16 kHz evidence projection", () => {
+  const valid = evidenceAudio(basis());
+  assert.equal(whisperXRequestForEvidenceAudio(valid).basisDigest, valid.basisDigest);
+  const tampered = { ...valid, sampleFrames: 16_001 };
+  assert.throws(() => whisperXRequestForEvidenceAudio(tampered), /sample map|digest/u);
 });
 
 test("WhisperX normalization verifies its model-specific result before lowering to common Evidence", () => {
   const source = basis();
   const measured = sealWhisperXAlignmentEvidence({
-    contract: "svml.whisperx-alignment-evidence@1",
+    contract: "svml.whisperx-alignment-evidence@2",
     engine: "whisperx",
     basisDigest: source.basisDigest,
     audioArtifactDigest: source.audio.digest,
+    evidenceAudioDigest: evidenceAudio(source).evidenceAudioDigest,
     programSpaceDigest: source.programSpace.digest,
     rawEvidenceArtifactDigest: digestOf("whisperx-test:raw"),
     durationSec: 1,

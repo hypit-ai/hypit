@@ -17,6 +17,9 @@ import {
   verifyOperationSnapshot,
 } from "@svml/runtime";
 import type {
+  OperationIdentity,
+  CredentialStore,
+  CredentialValue,
   OperationSnapshot,
   OperationStore,
   RuntimeExecutionContext,
@@ -47,6 +50,7 @@ export type NodeDriverOptions = {
   readonly providers?: ProviderRegistry;
   readonly artifacts?: ArtifactStore;
   readonly operations?: OperationStore;
+  readonly credentials?: CredentialStore;
   readonly maxEvents?: number;
   readonly validators?: TypeValidatorRegistryLike;
 };
@@ -71,6 +75,7 @@ export class NodeDriver {
   readonly providers: ProviderRegistry;
   readonly artifacts: ArtifactStore;
   readonly operations: OperationStore | undefined;
+  readonly credentials: CredentialStore | undefined;
   readonly maxEvents: number;
   readonly validators: TypeValidatorRegistryLike;
 
@@ -79,8 +84,29 @@ export class NodeDriver {
     this.providers = options.providers ?? new ProviderRegistry();
     this.artifacts = options.artifacts ?? new MemoryArtifactStore();
     this.operations = options.operations;
+    this.credentials = options.credentials;
     this.maxEvents = options.maxEvents ?? 1_000;
     this.validators = options.validators ?? new TypeValidatorRegistry();
+  }
+
+  async #providerCredentials(
+    registration: ProviderRegistration,
+  ): Promise<Readonly<Record<string, CredentialValue>>> {
+    const requested = registration.credentials ?? {};
+    if (Object.keys(requested).length === 0) return {};
+    if (this.credentials === undefined) {
+      throw new Error(`Provider ${registration.id} requires a CredentialStore`);
+    }
+    const resolved: Record<string, CredentialValue> = {};
+    for (const slot of Object.keys(requested).sort()) {
+      const ref = requested[slot]!;
+      const value = await this.credentials.resolve(ref);
+      if (value === undefined) {
+        throw new Error(`Provider ${registration.id} credential ${slot} is unavailable from ${ref.store}:${ref.key}`);
+      }
+      resolved[slot] = value;
+    }
+    return resolved;
   }
 
   #producerInputs(state: BuildState, command: InvokeProducerCommand): Record<string, TypedRecord> {
@@ -221,6 +247,7 @@ export class NodeDriver {
     executable: Extract<Executable, { readonly providerId: string }>,
     snapshot: OperationSnapshot,
     expectedOperation: string,
+    maxAttempts: number,
   ): Promise<RuntimeExecutionResult> {
     verifyOperationSnapshot(snapshot);
     if (snapshot.id !== expectedOperation) {
@@ -233,9 +260,49 @@ export class NodeDriver {
       };
     }
     if (snapshot.status === "failed") {
-      throw new Error(`Operation ${snapshot.id} failed: ${snapshot.failure?.code ?? "UNKNOWN"}`);
+      const failure = snapshot.failure;
+      if (failure === undefined) throw new Error(`Operation ${snapshot.id} has no failure`);
+      if (failure.retryable && snapshot.attempt < maxAttempts) {
+        return {
+          status: "pending",
+          operation: snapshot.id,
+          ...(failure.retryAt === undefined ? {} : { wakeAt: failure.retryAt }),
+        };
+      }
+      const content = {
+        kind: "command-failed",
+        command: executable.command.id,
+        code: failure.code,
+        message: failure.message,
+      } as const;
+      return {
+        status: "completed",
+        event: { ...content, id: `event:${digestOf(content)}` },
+      };
     }
-    return { status: "pending", operation: snapshot.id };
+    return {
+      status: "pending",
+      operation: snapshot.id,
+      ...(snapshot.wakeAt === undefined ? {} : { wakeAt: snapshot.wakeAt }),
+    };
+  }
+
+  #assertOperationHistory(
+    history: readonly OperationSnapshot[],
+    expected: Omit<OperationIdentity, "format" | "id" | "attempt" | "submissionKey">,
+  ): void {
+    history.forEach((snapshot, index) => {
+      verifyOperationSnapshot(snapshot);
+      if (snapshot.attempt !== index + 1
+        || snapshot.build !== expected.build
+        || snapshot.command !== expected.command
+        || snapshot.endpoint !== expected.endpoint
+        || snapshot.implementationDigest !== expected.implementationDigest
+        || snapshot.runtimeClosure !== expected.runtimeClosure
+        || snapshot.requestDigest !== expected.requestDigest) {
+        throw new Error(`Operation history for ${expected.command} is not one contiguous retry chain`);
+      }
+    });
   }
 
   async #executeEndpoint(
@@ -250,15 +317,42 @@ export class NodeDriver {
     if (runtimeClosure === undefined) throw new Error("recoverable Provider Endpoint requires Runtime Closure");
     const implementation = executable.registration.runtimeImplementation;
     if (implementation === undefined) throw new Error("recoverable Provider Endpoint has no implementation identity");
-    const identity = sealOperationIdentity({
+    const base = {
       build: context.build,
       command: executable.command.id,
       endpoint: executable.providerId,
       implementationDigest: implementation.digest,
       runtimeClosure,
       requestDigest: executable.command.need.requestDigest,
-      attempt: 1,
+    } as const;
+    const maxAttempts = executable.registration.retry?.maxAttempts ?? 1;
+    const history = await operations.list({
+      build: base.build,
+      command: base.command,
+      endpoint: base.endpoint,
+      runtimeClosure: base.runtimeClosure,
+      requestDigest: base.requestDigest,
     });
+    this.#assertOperationHistory(history, base);
+    let latest = history.at(-1);
+    if (latest?.status === "completed") {
+      return await this.#completedOperation(state, executable, latest, latest.id, maxAttempts);
+    }
+    if (latest?.status === "pending" && latest.wakeAt !== undefined && latest.wakeAt > Date.now()) {
+      return { status: "pending", operation: latest.id, wakeAt: latest.wakeAt };
+    }
+    if (latest?.status === "failed") {
+      const failure = latest.failure;
+      if (failure === undefined || !failure.retryable || latest.attempt >= maxAttempts) {
+        return await this.#completedOperation(state, executable, latest, latest.id, maxAttempts);
+      }
+      if (failure.retryAt !== undefined && failure.retryAt > Date.now()) {
+        return { status: "pending", operation: latest.id, wakeAt: failure.retryAt };
+      }
+      latest = undefined;
+    }
+    const attempt = history.length + (latest === undefined ? 1 : 0);
+    const identity = sealOperationIdentity({ ...base, attempt });
     const created = await operations.create(identity);
     const current = created.snapshot;
     verifyOperationSnapshot(current);
@@ -266,12 +360,13 @@ export class NodeDriver {
       throw new Error(`OperationStore returned ${current.id} for ${identity.id}`);
     }
     if (current.status === "completed" || current.status === "failed") {
-      return await this.#completedOperation(state, executable, current, identity.id);
+      return await this.#completedOperation(state, executable, current, identity.id, maxAttempts);
     }
     const endpointContext = {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
+      credentials: await this.#providerCredentials(executable.registration),
       operation: structuredClone(identity),
     };
     const outcome = created.status === "created"
@@ -284,12 +379,27 @@ export class NodeDriver {
       const written = await operations.compareAndSwap(identity.id, current.revision, {
         status: "pending",
         checkpoint: outcome.checkpoint,
+        ...(outcome.wakeAt === undefined ? {} : { wakeAt: outcome.wakeAt }),
       });
       return await this.#completedOperation(
         state,
         executable,
         written.status === "stored" ? written.snapshot : written.current,
         identity.id,
+        maxAttempts,
+      );
+    }
+    if (outcome.status === "failed") {
+      const written = await operations.compareAndSwap(identity.id, current.revision, {
+        status: "failed",
+        failure: outcome.failure,
+      });
+      return await this.#completedOperation(
+        state,
+        executable,
+        written.status === "stored" ? written.snapshot : written.current,
+        identity.id,
+        maxAttempts,
       );
     }
     const result: ProviderHandlerResult = {
@@ -313,6 +423,7 @@ export class NodeDriver {
       executable,
       written.status === "stored" ? written.snapshot : written.current,
       identity.id,
+      maxAttempts,
     );
   }
 
@@ -351,6 +462,7 @@ export class NodeDriver {
       command: structuredClone(executable.command),
       need: structuredClone(executable.command.need),
       artifacts: this.artifacts,
+      credentials: await this.#providerCredentials(executable.registration),
     });
     return { status: "completed", event: await this.#providerEvent(state, executable, result) };
   }
@@ -391,6 +503,56 @@ export class NodeDriver {
     const classified = this.#classify(prepared.state, descriptor.command);
     if (classified.executable === undefined) throw new Error(`command ${commandId} is no longer executable`);
     return await this.#execute(prepared.state, classified.executable, context);
+  }
+
+  /** Cancel one journaled external Operation without trusting serialized Command content. */
+  async cancelOperation(initial: BuildState, operation: OperationSnapshot): Promise<OperationSnapshot> {
+    verifyOperationSnapshot(operation);
+    if (operation.status === "completed" || operation.status === "failed") return operation;
+    const operations = this.operations;
+    if (operations === undefined) throw new Error("cancelling an Operation requires OperationStore");
+    const prepared = this.prepare(initial);
+    const descriptor = prepared.runnable.find((item) => item.command.id === operation.command);
+    if (descriptor === undefined) throw new Error(`Operation ${operation.id} Command is not currently runnable`);
+    const classified = this.#classify(prepared.state, descriptor.command);
+    const executable = classified.executable;
+    if (executable === undefined || !("providerId" in executable)
+      || executable.providerId !== operation.endpoint
+      || executable.registration.kind !== "endpoint") {
+      throw new Error(`Operation ${operation.id} does not match the regenerated Provider Command`);
+    }
+    if (executable.registration.endpoint.cancel === undefined) {
+      throw new Error(`Provider ${executable.providerId} does not support cancellation`);
+    }
+    const identity: OperationIdentity = {
+      format: operation.format,
+      id: operation.id,
+      build: operation.build,
+      command: operation.command,
+      endpoint: operation.endpoint,
+      implementationDigest: operation.implementationDigest,
+      runtimeClosure: operation.runtimeClosure,
+      requestDigest: operation.requestDigest,
+      attempt: operation.attempt,
+      submissionKey: operation.submissionKey,
+    };
+    await executable.registration.endpoint.cancel({
+      command: structuredClone(executable.command),
+      need: structuredClone(executable.command.need),
+      artifacts: this.artifacts,
+      credentials: await this.#providerCredentials(executable.registration),
+      operation: identity,
+      checkpoint: operation.status === "pending" ? structuredClone(operation.checkpoint) : undefined,
+    });
+    const written = await operations.compareAndSwap(operation.id, operation.revision, {
+      status: "failed",
+      failure: {
+        code: "CANCELLED",
+        message: `Operation ${operation.id} was cancelled by the Runtime authority`,
+        retryable: false,
+      },
+    });
+    return written.status === "stored" ? written.snapshot : written.current;
   }
 
   async run(initial: BuildState, context?: RuntimeExecutionContext): Promise<DriverRunResult> {
@@ -435,6 +597,7 @@ export class NodeDriver {
             kind: selected.command.kind,
             status: "pending",
             operation: execution.operation,
+            ...(execution.wakeAt === undefined ? {} : { wakeAt: execution.wakeAt }),
           });
           return { status: "paused", state, journal, blocked: [] };
         }

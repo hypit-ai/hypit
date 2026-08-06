@@ -65,6 +65,7 @@ const space = sealProgramSpace({
 });
 const visual = sealVisualTrack({
   contract: "svml.visual-track@1",
+  visualIr: "svml.hyperframes-visual-ir@1",
   id: "visual",
   programSpaceDigest: space.digest,
   sources: [{ name: "fixture", digest: digestOf("film-surface-visual") }],

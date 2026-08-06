@@ -20,7 +20,13 @@ B-roll are upstream package concerns; the final Composition contract contains no
 `VisualTrack` is an ownership/provenance aggregate, while each `VisualPresent` owns its own frame
 span and absolute z so Presents from different Tracks may interleave without cross-Track access.
 
-Two renderer-neutral terminal dependencies close otherwise leaky rendering assumptions:
+Every VisualTrack explicitly binds the closed
+[`svml.hyperframes-visual-ir@1`](../../spec/hyperframes-visual-ir-v1.md) target. This is the common
+video rendering protocol, not a component "dialect": packages may lower their private Programs to
+it, but may not extend it with arbitrary CSS. The physical contracts distribution owns its schema
+and identity validation; Core does not know that it exists.
+
+Two content-bound terminal dependencies close otherwise leaky rendering assumptions:
 
 - `FontArtifactRef` binds an exact font face, weight and style to content-addressed bytes;
 - `CompositableSurfaceRef` binds a materialized visual's dimensions, sRGB color space, alpha mode

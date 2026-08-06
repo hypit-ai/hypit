@@ -4,6 +4,7 @@ import { sealGraphFragment } from "@svml/elaborator";
 import { speechAlignProducers } from "@svml/speech-align";
 import { speechTakeProducers } from "@svml/speech-take";
 import { whisperXProducers, whisperXTypes } from "@svml/whisperx";
+import { mediaPipelineProducers } from "@svml/media-pipeline";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -96,9 +97,15 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
   ],
   operations: [
     {
+      id: "prepare-evidence-audio",
+      producer: mediaPipelineProducers.projectSpeechEvidenceAudio,
+      inputs: { audio: input("audio") },
+      result: { kind: "need", name: "evidenceAudio", accepts: "exact" },
+    },
+    {
       id: "request-whisperx",
       producer: whisperXProducers.request,
-      inputs: { audio: input("audio") },
+      inputs: { audio: operation("prepare-evidence-audio") },
       result: { kind: "need", name: "alignment", accepts: "exact" },
     },
     {
@@ -127,6 +134,7 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       affinity: [
         { resultPointer: "/basisDigest", source: input("audio"), sourcePointer: "/basisDigest" },
         { resultPointer: "/audioArtifactDigest", source: input("audio"), sourcePointer: "/audio/digest" },
+        { resultPointer: "/evidenceAudioDigest", source: operation("prepare-evidence-audio"), sourcePointer: "/evidenceAudioDigest" },
         { resultPointer: "/programSpaceDigest", source: input("audio"), sourcePointer: "/programSpace/digest" },
       ],
       fidelity: "exact",

@@ -1,0 +1,23 @@
+{
+  "name": "@svml/provider-media-local",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/contracts": "workspace:*",
+    "@svml/driver-node": "workspace:*",
+    "@svml/media-pipeline": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/provider-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/artifact-store-fs": "workspace:*",
+    "@svml/core": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/local": "workspace:*",
+    "@svml/validation": "workspace:*"
+  }
+}

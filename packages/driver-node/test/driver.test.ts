@@ -14,6 +14,7 @@ import {
   parseBuildState,
   serializeBuildState,
 } from "@svml/driver-node";
+import { credentialRef } from "@svml/runtime";
 
 import {
   capabilities,
@@ -146,6 +147,40 @@ test("Provider Registry rejects ambiguity until the Runtime binds one provider",
     completed.state.records.find((record) => record.id === "document:root")?.value,
     { kind: "inline", value: { text: "Beta" } },
   );
+});
+
+test("a Provider receives only declared credential slots and secrets never enter BuildState", async () => {
+  const { registry, providers } = configuredRegistry();
+  providers.registerProvider(
+    "example:credentialed",
+    capabilities.generation,
+    types.generated,
+    ({ credentials }) => {
+      assert.deepEqual(Object.keys(credentials), ["apiKey"]);
+      assert.equal(credentials.apiKey?.secret, "top-secret-value");
+      return {
+        value: { kind: "inline", value: "Credentialed result" },
+        conformance: "exact",
+        delivery: "executed",
+        metadata: { authenticated: true },
+      };
+    },
+    { credentials: { apiKey: credentialRef("test", "provider-key") } },
+  );
+  const driver = new NodeDriver({
+    registry,
+    providers,
+    credentials: {
+      async resolve(ref) {
+        return ref.store === "test" && ref.key === "provider-key"
+          ? { secret: "top-secret-value" }
+          : undefined;
+      },
+    },
+  });
+  const completed = await driver.run(createGreetingBuild());
+  assert.equal(completed.status, "complete");
+  assert.equal(JSON.stringify(completed.state).includes("top-secret-value"), false);
 });
 
 test("Provider capabilities may narrow themselves with typed Need constraints", async () => {

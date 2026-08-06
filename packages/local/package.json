@@ -1,0 +1,22 @@
+{
+  "name": "@svml/local",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/artifact-store-fs": "workspace:*",
+    "@svml/credential-store-env": "workspace:*",
+    "@svml/driver-node": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/provider-kit": "workspace:*",
+    "@svml/runtime": "workspace:*",
+    "@svml/store-sqlite": "workspace:*",
+    "@svml/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/core": "workspace:*"
+  }
+}

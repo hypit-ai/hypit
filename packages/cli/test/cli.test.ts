@@ -63,8 +63,11 @@ test("official v2 CLI closes the explicit HyperFrames render package without loa
     "@svml/composition@0.0.0-dev",
     "@svml/hyperframes-render@0.0.0-dev",
     "@svml/hyperframes@0.0.0-dev",
+    "@svml/media-pipeline@0.0.0-dev",
     "@svml/media@0.0.0-dev",
+    "@svml/narrative@0.0.0-dev",
     "@svml/program-space@0.0.0-dev",
+    "@svml/speech@0.0.0-dev",
   ]);
   assert.deepEqual(result.exports, []);
 });

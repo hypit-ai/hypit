@@ -56,6 +56,7 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
   const totalFrames = programSpaceFrameCount(basis.programSpace);
   return sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: `speech-visual:${basis.basisDigest}`,
     programSpaceDigest: basis.programSpace.digest,
     sources: [

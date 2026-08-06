@@ -129,6 +129,7 @@ function textPresent(
 test("Text three-box and frame/content/line/word paint semantics lower without public Text fields", () => {
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "text-three-box-witness",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "text-program", digest: digestOf("text-layout-v2-program") }],
@@ -179,6 +180,7 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
   });
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "caption-three-box-witness",
     programSpaceDigest: programSpace.digest,
     sources: [
@@ -266,6 +268,7 @@ test("one content box lowers independent backdrop and foreground samples of one 
   };
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "media-two-box-witness",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "media-program", digest: digestOf("media-box-style-v1") }],
@@ -327,7 +330,8 @@ test("one content box lowers independent backdrop and foreground samples of one 
   });
   const document = compileHyperframesDocument(composition("media-two-box", [track]));
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.deepEqual(document.artifactDigests, [media.digest], "two samples must retain one content dependency");
+  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [media.digest],
+    "two samples must retain one content dependency");
   assert.equal((document.html.match(new RegExp(media.digest.slice("sha256:".length), "gu")) ?? []).length, 2);
   assert.match(document.html, /object-fit:cover/u);
   assert.match(document.html, /object-fit:contain/u);
@@ -339,6 +343,7 @@ test("one content box lowers independent backdrop and foreground samples of one 
 test("Presents from one authoring Track interleave with a peer Track by absolute stacking", () => {
   const ranking = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "ranking-witness",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "ranking-program", digest: digestOf("ranking-program") }],
@@ -365,6 +370,7 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
   });
   const peer = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "peer-text",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "text-program", digest: digestOf("peer-text") }],
@@ -405,6 +411,7 @@ test("a complex owned visual may materialize as a typed compositable Surface wit
   };
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: "materialized-visual-witness",
     programSpaceDigest: programSpace.digest,
     sources: [{ name: "materialization-receipt", digest: digestOf("particle-render-receipt") }],
@@ -423,7 +430,7 @@ test("a complex owned visual may materialize as a typed compositable Surface wit
   });
   const document = compileHyperframesDocument(composition("materialized-visual", [track]));
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.deepEqual(document.artifactDigests, [materialized.artifact.digest]);
+  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [materialized.artifact.digest]);
   assert.match(document.html, /<video/u);
   assert.match(document.html, /data-svml-alpha-mode="straight"/u);
   assert.equal("renderer" in track, false);

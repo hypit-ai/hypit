@@ -29,11 +29,13 @@ duration or becomes a privileged Base.
 
 ## VisualTrack
 
-A VisualTrack is an author-package ownership and provenance boundary. It owns zero or more
-frame-exact `VisualPresent` values; every Present owns its own absolute `(order, tieBreak)` stacking
-key and one self-contained, code-free element tree made from box, text, ordinary media and typed
-compositable-Surface primitives. Parent references are Present-local. Media and exact font faces
-enter through content-addressed Artifact references rather than CSS URLs or environment font names.
+A VisualTrack is an author-package ownership and provenance boundary. It explicitly binds the
+[`svml.hyperframes-visual-ir@1`](./hyperframes-visual-ir-v1.md) terminal language and owns zero or
+more frame-exact `VisualPresent` values; every Present owns its own absolute `(order, tieBreak)`
+stacking key and one self-contained, code-free element tree made from box, text, ordinary media and
+typed compositable-Surface primitives. Parent references are Present-local. Media and exact font
+faces enter through content-addressed Artifact references rather than CSS URLs or environment font
+names.
 Every Track also carries named semantic source digests. Producer affinity declarations bind those
 generic commitments to upstream facts without adding Caption, Speech or B-roll fields to the Track
 contract.
@@ -86,11 +88,12 @@ lowering must finish before the caption enters Composition as an ordinary Visual
 
 ## HyperFrames boundary
 
-`@svml/hyperframes` consumes only the generic Composition contract. It never switches on Speech,
-Caption, B-roll or author-package identity. It deterministically emits a content-addressed
-`HyperframesDocument` whose HTML interleaves VisualPresents by absolute stacking key and carries
-AudioTrack clips on the same ProgramSpace. It must not mount an authoring Track as one isolated
-visual wrapper.
+`@svml/hyperframes` consumes only Composition and its one versioned HyperFrames Visual IR. It never
+switches on Speech, Caption, B-roll or author-package identity. It deterministically emits a
+content-addressed `HyperframesDocument` whose HTML interleaves VisualPresents by absolute stacking
+key. It must not mount an authoring Track as one isolated visual wrapper. AudioTrack compilation
+and final mux are separate media operations over the same ProgramSpace; HyperFrames is a silent
+visual target.
 
 The document MUST bind `programSpaceDigest`, exact rational frame rate, positive integer frame
 count, canvas dimensions, Artifact set and generated HTML. Its complete visual frame domain is the

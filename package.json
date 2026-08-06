@@ -14,6 +14,8 @@
     "test": "pnpm test:v1 && pnpm test:v2",
     "test:v1": "node --import tsx --test 'test/**/*.test.ts'",
     "test:v2": "node --import tsx --test 'packages/*/test/**/*.test.ts'",
+    "test:whisperx-service": "uv run --project services/whisperx --frozen python -m unittest discover -s services/whisperx/tests -p 'test_*.py'",
+    "smoke:kie": "node --import tsx packages/provider-kie/test/live-smoke.ts",
     "svml": "node --import tsx src/cli.ts",
     "svml:v2": "node --import tsx packages/cli/src/cli.ts"
   },

@@ -46,6 +46,15 @@ export interface TypeValidatorRegistryLike {
   resolve(type: TypeRef): TypeValidatorRegistration | undefined;
 }
 
+/** Mutable package-install seam. Type owners register refinements; Core stays type-agnostic. */
+export interface TypeValidatorRegistrar {
+  register(
+    type: TypeRef,
+    implementationDigest: Digest,
+    handler: TypeValidatorHandler,
+  ): void;
+}
+
 export class TypeValidationError extends Error {
   readonly code: string;
   readonly subject: string | undefined;
@@ -58,7 +67,7 @@ export class TypeValidationError extends Error {
   }
 }
 
-export class TypeValidatorRegistry implements TypeValidatorRegistryLike {
+export class TypeValidatorRegistry implements TypeValidatorRegistryLike, TypeValidatorRegistrar {
   readonly #validators = new Map<string, TypeValidatorRegistration>();
 
   register(

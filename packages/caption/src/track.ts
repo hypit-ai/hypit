@@ -129,6 +129,7 @@ export function renderCaptionTrack(
   const plan = planCaptionPresentation(projection, program.mode);
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: program.id,
     programSpaceDigest: projection.programSpace.digest,
     sources: [

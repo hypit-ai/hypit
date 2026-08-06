@@ -4,3 +4,6 @@ dist/
 examples/**/assets/
 examples/**/build/
 examples/**/evidence/generated/
+services/whisperx/.venv/
+services/whisperx/**/__pycache__/
+services/whisperx/src/*.egg-info/

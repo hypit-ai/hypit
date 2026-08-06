@@ -220,7 +220,7 @@ const runtimeModule = { name: "example.scheduler-runtime", version: "1" } as con
 const providerFacet = { module: runtimeModule, name: "generation-endpoint" } as const;
 const providerImplementationDigest = digestOf("example.scheduler-runtime/generation-endpoint@1");
 
-function resolvedRuntime(laneLimit: number) {
+function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverable" = "immediate") {
   const manifest: RuntimeModuleManifest = {
     format: "svml.runtime-module@1",
     name: runtimeModule.name,
@@ -253,7 +253,7 @@ function resolvedRuntime(laneLimit: number) {
         },
         permissions: [],
         fulfills: [{ capability: capabilities.generation, returns: types.generated }],
-        lifecycle: "recoverable",
+        lifecycle,
         defaultConcurrency: 1,
       },
     ],
@@ -285,7 +285,8 @@ function resolvedRuntime(laneLimit: number) {
 function recoverableExecutor(
   endpoint: ProviderEndpoint,
   operations: OperationStore,
-  runtime = resolvedRuntime(1),
+  runtime = resolvedRuntime(1, "recoverable"),
+  retry?: { readonly maxAttempts: number },
 ) {
   const registry = new HostRegistry();
   registerGreetingProducers(registry);
@@ -299,7 +300,9 @@ function recoverableExecutor(
       runtimeImplementation: {
         facet: providerFacet,
         digest: providerImplementationDigest,
+        configurationDigest: digestOf({}),
       },
+      ...(retry === undefined ? {} : { retry }),
     },
   );
   providers.applyRuntimeClosure(runtime.closure, runtime.modules);
@@ -386,6 +389,7 @@ test("a locked Runtime Closure assembles exact Provider code and Scheduler polic
     runtimeImplementation: {
       facet: providerFacet,
       digest: providerImplementationDigest,
+      configurationDigest: digestOf({}),
     },
     providerId: "generation.local",
     observe(active) {
@@ -414,11 +418,46 @@ test("a same-name Provider with different implementation bytes is rejected befor
     runtimeImplementation: {
       facet: providerFacet,
       digest: digestOf("tampered-provider-implementation"),
+      configurationDigest: digestOf({}),
     },
     providerId: "generation.local",
     observe() {},
   });
   assert.throws(() => providers.applyRuntimeClosure(closure, modules), /implementation does not match/u);
+  assert.equal(getCalls(), 0);
+});
+
+test("a same-name Provider with different configured-instance identity is rejected", () => {
+  const { closure, modules } = resolvedRuntime(1);
+  const { providers, getCalls } = configuredExecutor({
+    lane: "provider:generation.local",
+    defaultConcurrency: 1,
+    runtimeImplementation: {
+      facet: providerFacet,
+      digest: providerImplementationDigest,
+      configurationDigest: digestOf({ baseUrl: "https://another-endpoint.test" }),
+    },
+    providerId: "generation.local",
+    observe() {},
+  });
+  assert.throws(() => providers.applyRuntimeClosure(closure, modules), /implementation does not match/u);
+  assert.equal(getCalls(), 0);
+});
+
+test("a recoverable Runtime facet cannot be activated by a one-shot Handler", () => {
+  const { closure, modules } = resolvedRuntime(1, "recoverable");
+  const { providers, getCalls } = configuredExecutor({
+    lane: "provider:generation.local",
+    defaultConcurrency: 1,
+    runtimeImplementation: {
+      facet: providerFacet,
+      digest: providerImplementationDigest,
+      configurationDigest: digestOf({}),
+    },
+    providerId: "generation.local",
+    observe() {},
+  });
+  assert.throws(() => providers.applyRuntimeClosure(closure, modules), /lifecycle does not match/u);
   assert.equal(getCalls(), 0);
 });
 
@@ -438,7 +477,7 @@ test("BuildStore CAS prevents two Scheduler revisions from silently overwriting 
 
 test("a recoverable Endpoint resumes its journaled Operation after restart without submitting twice", async () => {
   const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1);
+  const runtime = resolvedRuntime(1, "recoverable");
   let starts = 0;
   let resumes = 0;
   let submissionKey: string | undefined;
@@ -506,7 +545,7 @@ test("a recoverable Endpoint resumes its journaled Operation after restart witho
 
 test("a crash after Operation intent but before checkpoint resumes with the same submission key", async () => {
   const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1);
+  const runtime = resolvedRuntime(1, "recoverable");
   let starts = 0;
   let resumes = 0;
   let submissionKey: string | undefined;
@@ -561,13 +600,14 @@ test("a crash after Operation intent but before checkpoint resumes with the same
 
 test("a completion journaled before a crash is replayed into Core without calling the Endpoint again", async () => {
   const operations = new MemoryOperationStore();
-  const runtime = resolvedRuntime(1);
+  const runtime = resolvedRuntime(1, "recoverable");
   let starts = 0;
   let resumes = 0;
   let crashOnce = true;
   const crashingStore: OperationStore = {
     create: (identity) => operations.create(identity),
     read: (id) => operations.read(id),
+    list: (query) => operations.list(query),
     async compareAndSwap(id, revision, update) {
       const result = await operations.compareAndSwap(id, revision, update);
       if (update.status === "completed" && crashOnce) {
@@ -616,4 +656,90 @@ test("a completion journaled before a crash is replayed into Core without callin
   assert.equal(second?.state.receipts[0]?.metadata !== undefined, true);
   assert.equal(starts, 1);
   assert.equal(resumes, 0);
+});
+
+test("a retryable terminal failure creates a new attempt and submission key", async () => {
+  const operations = new MemoryOperationStore();
+  const runtime = resolvedRuntime(1, "recoverable");
+  const attempts: number[] = [];
+  const keys: string[] = [];
+  const endpoint: ProviderEndpoint = {
+    start({ operation }) {
+      attempts.push(operation.attempt);
+      keys.push(operation.submissionKey);
+      if (operation.attempt === 1) {
+        return {
+          status: "failed",
+          failure: { code: "RATE_LIMITED", message: "retry this request", retryable: true, retryAt: 0 },
+        };
+      }
+      return {
+        status: "completed",
+        result: {
+          value: { kind: "inline", value: "Succeeded on attempt two" },
+          conformance: "exact",
+          delivery: "executed",
+          metadata: {},
+        },
+      };
+    },
+    resume() {
+      throw new Error("terminal attempts must not resume");
+    },
+  };
+  const executor = recoverableExecutor(endpoint, operations, runtime, { maxAttempts: 2 }).executor;
+  const [first] = await new LocalBuildScheduler(executor, {
+    ...localSchedulerOptionsFromClosure(runtime.closure),
+  }).run([{ id: "retry-video", state: createGreetingBuild() }]);
+  assert.equal(first?.status, "paused");
+  assert.deepEqual(attempts, [1]);
+
+  const [second] = await new LocalBuildScheduler(executor, {
+    ...localSchedulerOptionsFromClosure(runtime.closure),
+  }).run([{ id: "retry-video", state: first!.state }]);
+  assert.equal(second?.status, "complete");
+  assert.deepEqual(attempts, [1, 2]);
+  assert.notEqual(keys[0], keys[1]);
+  assert.deepEqual((await operations.list({ build: "retry-video" })).map((item) => item.status), [
+    "failed",
+    "completed",
+  ]);
+});
+
+test("wakeAt prevents early polling and Runtime cancellation becomes a terminal Core failure", async () => {
+  const operations = new MemoryOperationStore();
+  const runtime = resolvedRuntime(1, "recoverable");
+  let resumes = 0;
+  let cancels = 0;
+  const wakeAt = Date.now() + 60_000;
+  const endpoint: ProviderEndpoint = {
+    start() {
+      return { status: "pending", checkpoint: { remoteJob: "job-wait" }, wakeAt };
+    },
+    resume() {
+      resumes += 1;
+      throw new Error("wakeAt must stop early polling");
+    },
+    cancel({ checkpoint }) {
+      cancels += 1;
+      assert.deepEqual(checkpoint, { remoteJob: "job-wait" });
+    },
+  };
+  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
+  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
+  const [first] = await scheduler.run([{ id: "cancel-video", state: createGreetingBuild() }]);
+  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  assert.ok(operationId);
+
+  const [early] = await scheduler.run([{ id: "cancel-video", state: first!.state }]);
+  assert.equal(early?.journal.at(-1)?.wakeAt, wakeAt);
+  assert.equal(resumes, 0);
+
+  const operation = await operations.read(operationId);
+  assert.ok(operation);
+  await executor.cancelOperation(early!.state, operation);
+  assert.equal(cancels, 1);
+  const [cancelled] = await scheduler.run([{ id: "cancel-video", state: early!.state }]);
+  assert.equal(cancelled?.status, "failed");
+  assert.equal(cancelled?.state.diagnostics.at(-1)?.code, "CANCELLED");
 });

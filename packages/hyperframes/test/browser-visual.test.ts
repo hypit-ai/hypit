@@ -109,6 +109,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     });
     const lower = sealVisualTrack({
       contract: "svml.visual-track@1",
+      visualIr: "svml.hyperframes-visual-ir@1",
       id: "blue",
       programSpaceDigest: space.digest,
       sources: [{ name: "fixture", digest: digest(Buffer.from("blue")) }],
@@ -130,6 +131,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     });
     const surface = sealVisualTrack({
       contract: "svml.visual-track@1",
+      visualIr: "svml.hyperframes-visual-ir@1",
       id: "surface",
       programSpaceDigest: space.digest,
       sources: [{ name: "receipt", digest: digest(Buffer.from("surface")) }],
@@ -156,6 +158,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     });
     const text = sealVisualTrack({
       contract: "svml.visual-track@1",
+      visualIr: "svml.hyperframes-visual-ir@1",
       id: "text",
       programSpaceDigest: space.digest,
       sources: [{ name: "fixture", digest: digest(Buffer.from("text")) }],
@@ -190,10 +193,10 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
 
     await copyFile(localFont, path.join(temp, "font.ttf"));
     await writeFile(path.join(temp, "surface.png"), surfaceBytes);
-    const html = materializeHyperframesHtml(document, (artifactDigest) => {
-      if (artifactDigest === fontDigest) return "./font.ttf";
-      if (artifactDigest === surfaceDigest) return "./surface.png";
-      throw new Error(`Unexpected visual-test Artifact ${artifactDigest}`);
+    const html = materializeHyperframesHtml(document, (artifact) => {
+      if (artifact.digest === fontDigest) return "./font.ttf";
+      if (artifact.digest === surfaceDigest) return "./surface.png";
+      throw new Error(`Unexpected visual-test Artifact ${artifact.digest}`);
     });
     await writeFile(path.join(temp, "index.html"), html);
     const output = path.join(temp, "frames");

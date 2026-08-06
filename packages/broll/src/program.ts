@@ -400,6 +400,7 @@ export function compileBrollProduct(programSpace: ProgramSpace, program: BrollPr
   const sources = [{ name: "program", digest: program.digest }];
   const visualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",
+    visualIr: "svml.hyperframes-visual-ir@1",
     id: `${program.id}:visual`,
     programSpaceDigest: programSpace.digest,
     sources,
