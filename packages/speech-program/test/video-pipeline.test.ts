@@ -4,12 +4,12 @@ import test from "node:test";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@svml/component-kit";
+} from "@narratage/component-kit";
 import {
   captionComponent,
   captionProducers,
-} from "@svml/caption";
-import type { TimedCaptionProjection } from "@svml/caption";
+} from "@narratage/caption";
+import type { TimedCaptionProjection } from "@narratage/caption";
 import {
   compositionContractsComponent,
   contractTypes,
@@ -17,45 +17,45 @@ import {
   sealSpeechBasis,
   sealSpeechEvidenceAudio,
   sealVisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   Narrative,
   SpeechAudioBasis,
   SpeechBasis,
   SpeechEvidenceAudio,
   VisualTrack,
-} from "@svml/contracts";
-import { digestOf, sealBuildRequest, start } from "@svml/core";
+} from "@narratage/contracts";
+import { digestOf, sealBuildRequest, start } from "@narratage/core";
 import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
   parseBuildState,
   serializeBuildState,
-} from "@svml/driver-node";
-import type { BuildState, CapabilityRef, ProducerRef } from "@svml/protocol";
+} from "@narratage/driver-node";
+import type { BuildState, CapabilityRef, ProducerRef } from "@narratage/protocol";
 import {
   createProvidedCandidate,
   resolveRealization,
   sealRealizationOverlay,
-} from "@svml/realization";
+} from "@narratage/realization";
 import {
   speechAlignComponent,
   speechAlignProducers,
-} from "@svml/speech-align";
+} from "@narratage/speech-align";
 import {
   mediaPipelineCapabilities,
   mediaPipelineImplementationDigests,
   mediaPipelineProducers,
-} from "@svml/media-pipeline";
-import type { ProjectSpeechEvidenceAudioNeed } from "@svml/media-pipeline";
+} from "@narratage/media-pipeline";
+import type { ProjectSpeechEvidenceAudioNeed } from "@narratage/media-pipeline";
 import {
   projectSpeechAudio,
   projectSpeechAudioImplementationDigest,
   projectSpeechVisual,
   projectSpeechVisualImplementationDigest,
   speechTakeProducers,
-} from "@svml/speech-take";
+} from "@narratage/speech-take";
 import {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
@@ -63,9 +63,9 @@ import {
   whisperXImplementationDigests,
   whisperXProducers,
   whisperXRequestForEvidenceAudio,
-} from "@svml/whisperx";
-import type { WhisperXAlignmentEvidence } from "@svml/whisperx";
-import { TypeValidatorRegistry, validateValue } from "@svml/validation";
+} from "@narratage/whisperx";
+import type { WhisperXAlignmentEvidence } from "@narratage/whisperx";
+import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
 
 import {
   createVideoBuild,

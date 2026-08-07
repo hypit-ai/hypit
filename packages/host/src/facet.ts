@@ -1,4 +1,4 @@
-import type { CanonicalValue } from "@svml/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 
 /**
  * One executable package facet understood by an exact Host ABI.

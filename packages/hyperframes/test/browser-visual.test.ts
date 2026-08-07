@@ -11,13 +11,13 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@svml/contracts";
-import type { FontArtifactRef } from "@svml/contracts";
+} from "@narratage/contracts";
+import type { FontArtifactRef } from "@narratage/contracts";
 import {
   compileHyperframesDocument,
   materializeHyperframesHtml,
-} from "@svml/hyperframes";
-import type { Digest } from "@svml/protocol";
+} from "@narratage/hyperframes";
+import type { Digest } from "@narratage/protocol";
 
 const enabled = process.env.SVML_BROWSER_TESTS === "1";
 const localFont = process.env.SVML_TEST_FONT_PATH

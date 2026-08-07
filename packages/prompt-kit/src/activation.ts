@@ -6,10 +6,10 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/prompt-kit",
+  name: "@narratage/prompt-kit",
   modules: [{
     manifest: promptKitManifest,
-    specifiers: ["@svml/prompt-kit", "@svml/prompt-kit@1"],
+    specifiers: ["@narratage/prompt-kit", "@narratage/prompt-kit@1"],
   }],
   authorFrontends: [promptKitSvsFrontend],
   components: [promptKitComponent],

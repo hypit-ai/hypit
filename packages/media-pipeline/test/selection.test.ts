@@ -4,9 +4,9 @@ import test from "node:test";
 import {
   sealMediaInspection,
   verifyMediaStreamSelection,
-} from "@svml/contracts";
-import type { MediaInspection, MediaVideoStream } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { MediaInspection, MediaVideoStream } from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
 
 import {
   sealMediaSelectionRequest,

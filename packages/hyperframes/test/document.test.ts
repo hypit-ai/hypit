@@ -7,7 +7,7 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   assertHyperframesDocument,
   assertHyperframesFrameIndex,
@@ -15,9 +15,9 @@ import {
   compileHyperframesDocument,
   hyperframesTime,
   materializeHyperframesHtml,
-} from "@svml/hyperframes";
-import { digestOf } from "@svml/protocol";
-import type { FontArtifactRef } from "@svml/contracts";
+} from "@narratage/hyperframes";
+import { digestOf } from "@narratage/protocol";
+import type { FontArtifactRef } from "@narratage/contracts";
 
 function fixture() {
   const programSpace = sealProgramSpace({

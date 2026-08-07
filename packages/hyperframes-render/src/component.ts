@@ -1,5 +1,5 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { StoredValue } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { StoredValue } from "@narratage/protocol";
 
 import {
   hyperframesVisualRequest,
@@ -9,7 +9,7 @@ import { hyperframesRenderProducers } from "./manifest.js";
 
 /** Declares the visual Need. It contains no renderer, queue, credentials or deployment choice. */
 export const hyperframesRenderComponent = {
-  name: "@svml/hyperframes-render",
+  name: "@narratage/hyperframes-render",
   producers: [{
     producer: hyperframesRenderProducers.requestVisual,
     implementationDigest: requestHyperframesVisualImplementationDigest,

@@ -12,4 +12,4 @@ export type {
   TimedSpeechSegment,
   TimedSpeechToken,
   TimingQuality,
-} from "@svml/contracts";
+} from "@narratage/contracts";

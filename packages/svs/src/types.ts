@@ -1,4 +1,4 @@
-import type { CanonicalValue, SourceRange } from "@svml/protocol";
+import type { CanonicalValue, SourceRange } from "@narratage/protocol";
 
 export type SvsRecipe = {
   readonly contract: "svml.svs-recipe@1";

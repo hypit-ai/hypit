@@ -8,7 +8,7 @@ import {
   createRuntimeFromConfig,
   parseRuntimeConfig,
   RuntimeConfigRegistry,
-} from "@svml/local";
+} from "@narratage/local";
 
 test("declarative Runtime config starts the domain-neutral local defaults", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-runtime-config-"));

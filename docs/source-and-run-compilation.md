@@ -22,10 +22,10 @@ Target, Candidate, Satisfaction or author component.
 The suffix is never parser authority. Every Author or Run Source begins with exactly one Header:
 
 ```xml
-<?svml using="@svml/text@1"?>
+<?svml using="@narratage/text@1"?>
 ```
 
-`@svml/source` recognizes only this bounded bootstrap grammar. It does not recognize `<svml>`,
+`@narratage/source` recognizes only this bounded bootstrap grammar. It does not recognize `<svml>`,
 `<script>`, `<svrun>`, an import or any domain type. It selects an already trusted Frontend by exact
 id, then masks the Header while preserving source offsets. Missing, duplicate, malformed or unknown
 Headers fail closed; there is no default Frontend.
@@ -35,9 +35,9 @@ Headers fail closed; there is no default Frontend.
 A Text-authored entry may import logical modules and other Author Sources:
 
 ```xml
-<?svml using="@svml/text@1"?>
+<?svml using="@narratage/text@1"?>
 <svml>
-  <import from="@svml/script@1"/>
+  <import from="@narratage/script@1"/>
   <import as="studio" source="./studio.svs"/>
   <!-- author body -->
 </svml>
@@ -49,7 +49,7 @@ The two imports are intentionally different:
 - `source=` asks the Workspace for another source unit.
 
 The importer does not choose the imported source's parser. `studio.svs` must carry its own Header,
-for example `<?svml using="@svml/svs@1"?>`. Recursive discovery therefore produces one closure in
+for example `<?svml using="@narratage/svs@1"?>`. Recursive discovery therefore produces one closure in
 which every source unit independently binds:
 
 - requested Frontend id;
@@ -66,7 +66,7 @@ may produce the same semantic graph while retaining a different source and Front
 The official Text Run Source is likewise self-described:
 
 ```xml
-<?svml using="@svml/run-text@1"?>
+<?svml using="@narratage/run-text@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
 
@@ -79,7 +79,7 @@ The official Text Run Source is likewise self-described:
 `<author>` is mandatory and is the first declaration. It names the Author Source but does not
 select its Frontend; `main.svml` selects itself through its Header.
 
-The Run Frontend produces a syntax-neutral `RunDocument`. `@svml/run` binds the Run source bytes,
+The Run Frontend produces a syntax-neutral `RunDocument`. `@narratage/run` binds the Run source bytes,
 Frontend implementation and semantic digest into a `RunSourceClosure`, resolves author export
 names, instantiates imported Run Fragments, and seals one complete `RunGraph` containing:
 

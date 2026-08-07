@@ -1,4 +1,4 @@
-import { canonicalize } from "@svml/core";
+import { canonicalize } from "@narratage/core";
 
 import { ScriptSyntaxError } from "./error.js";
 import {

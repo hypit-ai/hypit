@@ -1,6 +1,6 @@
-import type { GraphFragment } from "@svml/elaborator";
-import type { HostFacet } from "@svml/host";
-import { canonicalStringify, isDigest } from "@svml/protocol";
+import type { GraphFragment } from "@narratage/elaborator";
+import type { HostFacet } from "@narratage/host";
+import { canonicalStringify, isDigest } from "@narratage/protocol";
 
 import type {
   RunFragmentPackage,

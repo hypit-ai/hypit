@@ -1,4 +1,4 @@
-import type { TypeRef } from "@svml/protocol";
+import type { TypeRef } from "@narratage/protocol";
 import type {
   RunBuildRecord,
   RunCandidateDeclaration,
@@ -8,15 +8,15 @@ import type {
   RunProvidedValue,
   RunSatisfaction,
   RunTargetSet,
-} from "@svml/run";
+} from "@narratage/run";
 import {
   parseStructuredElement,
   skipTextTrivia,
-} from "@svml/text";
+} from "@narratage/text";
 import type {
   SourceUnit,
   StructuredElement,
-} from "@svml/text";
+} from "@narratage/text";
 
 export class RunSyntaxError extends Error {
   readonly code: string;

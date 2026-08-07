@@ -5,7 +5,7 @@ import {
   programSpaceFrameCount,
   sealAudioTrack,
   sealVisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   AudioClip,
   MediaArtifactRef,
@@ -13,8 +13,8 @@ import type {
   VisualAnimation,
   VisualElement,
   VisualStyleDeclaration,
-} from "@svml/contracts";
-import { digestOf, isDigest } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf, isDigest } from "@narratage/protocol";
 
 import type {
   BrollItem,
@@ -24,9 +24,9 @@ import type {
   BrollProgram,
 } from "./types.js";
 
-export const compileBrollImplementationDigest = digestOf("@svml/broll/compile@1");
-export const projectBrollVisualImplementationDigest = digestOf("@svml/broll/project-visual@1");
-export const projectBrollAudioImplementationDigest = digestOf("@svml/broll/project-audio@1");
+export const compileBrollImplementationDigest = digestOf("@narratage/broll/compile@1");
+export const projectBrollVisualImplementationDigest = digestOf("@narratage/broll/project-visual@1");
+export const projectBrollAudioImplementationDigest = digestOf("@narratage/broll/project-audio@1");
 
 type MotionState = {
   readonly opacity: number;

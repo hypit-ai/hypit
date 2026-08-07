@@ -1,4 +1,4 @@
-# `@svml/transport`
+# `@narratage/transport`
 
 Tiny transport contracts with no capability identity, scheduling or recovery authority.
 

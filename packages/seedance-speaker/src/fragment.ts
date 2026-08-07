@@ -1,10 +1,10 @@
-import { artifactTypes } from "@svml/artifact";
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import { generationProducers } from "@svml/generation";
-import type { ExactModelEndpoint } from "@svml/model-kit";
-import type { ProducerRef } from "@svml/protocol";
-import { seedanceTypes } from "@svml/seedance";
+import { artifactTypes } from "@narratage/artifact";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import { generationProducers } from "@narratage/generation";
+import type { ExactModelEndpoint } from "@narratage/model-kit";
+import type { ProducerRef } from "@narratage/protocol";
+import { seedanceTypes } from "@narratage/seedance";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -14,7 +14,7 @@ export function createSeedanceSpeakerTakeFragment(
   compileRequestProducer: ProducerRef,
 ) {
   return sealGraphFragment({
-    name: `@svml/seedance-speaker/${endpoint.key}-take@1`,
+    name: `@narratage/seedance-speaker/${endpoint.key}-take@1`,
     inputs: [
       { name: "program", type: seedanceTypes.speechProgram },
       { name: "duration", type: contractTypes.speechDuration },

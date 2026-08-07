@@ -1,5 +1,5 @@
 {
-  "name": "@svml/run-text",
+  "name": "@narratage/run-text",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/protocol": "workspace:*",
-    "@svml/run": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/run": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

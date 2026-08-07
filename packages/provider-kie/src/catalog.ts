@@ -1,45 +1,45 @@
 import {
   geminiOmniEndpoints,
   verifyGeminiOmniRequest,
-} from "@svml/gemini-omni";
-import type { GeminiOmniRequest } from "@svml/gemini-omni";
+} from "@narratage/gemini-omni";
+import type { GeminiOmniRequest } from "@narratage/gemini-omni";
 import {
   gptImageEndpoints,
   verifyGptImage2Request,
-} from "@svml/gpt-image";
-import type { GptImage2Request } from "@svml/gpt-image";
+} from "@narratage/gpt-image";
+import type { GptImage2Request } from "@narratage/gpt-image";
 import {
   grokImagineEndpoints,
   verifyGrokImagineRequest,
-} from "@svml/grok-imagine";
-import type { GrokImagineRequest } from "@svml/grok-imagine";
+} from "@narratage/grok-imagine";
+import type { GrokImagineRequest } from "@narratage/grok-imagine";
 import {
   minimaxH3Endpoints,
   verifyMinimaxH3Request,
-} from "@svml/minimax-h3";
-import type { MinimaxH3Request } from "@svml/minimax-h3";
+} from "@narratage/minimax-h3";
+import type { MinimaxH3Request } from "@narratage/minimax-h3";
 import {
   nanoBananaEndpoints,
   verifyNanoBananaRequest,
-} from "@svml/nano-banana";
-import type { NanoBananaRequest } from "@svml/nano-banana";
-import { canonicalize } from "@svml/protocol";
+} from "@narratage/nano-banana";
+import type { NanoBananaRequest } from "@narratage/nano-banana";
+import { canonicalize } from "@narratage/protocol";
 import type {
   BlobRef,
   CanonicalValue,
   CapabilityRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   seedanceEndpoints,
   verifySeedanceRequest,
-} from "@svml/seedance";
-import type { SeedanceRequest } from "@svml/seedance";
+} from "@narratage/seedance";
+import type { SeedanceRequest } from "@narratage/seedance";
 import {
   seedreamEndpoints,
   verifySeedreamRequest,
-} from "@svml/seedream";
-import type { SeedreamRequest } from "@svml/seedream";
+} from "@narratage/seedream";
+import type { SeedreamRequest } from "@narratage/seedream";
 
 export type KieArtifactUrlResolver = (artifact: BlobRef) => Promise<string>;
 

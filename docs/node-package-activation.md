@@ -55,7 +55,7 @@ logical modules; physical package identity and logical Module identity remain di
 Create the lock only after installing and reviewing the selected packages:
 
 ```bash
-svml lock-packages ./svml.packages.lock \
+narratage lock-packages ./svml.packages.lock \
   --package @example/cards \
   --root .
 ```
@@ -63,7 +63,7 @@ svml lock-packages ./svml.packages.lock \
 Use it for compilation:
 
 ```bash
-svml check ./main.svml --package-lock ./svml.packages.lock --root .
+narratage check ./main.svml --package-lock ./svml.packages.lock --root .
 ```
 
 Use the same lock in a local Runtime configuration:
@@ -111,7 +111,7 @@ The package lock is an implementation lock, not a Runtime Profile. It contains n
 - Candidate selection or Build Target;
 - network, process or filesystem-write grant.
 
-The syntax-neutral Loader does not install any Host facet. `@svml/compiler-text-node` explicitly
+The syntax-neutral Loader does not install any Host facet. `@narratage/compiler-text-node` explicitly
 selects the official Text Surface ABI; another compiler may select another ABI. The local compute
 Host receives only Producer and Validator registries and does not depend on Text. Source `<import>`
 merely selects an already activated logical author module for a Source Closure; it cannot cause
@@ -130,8 +130,8 @@ Tests create installed packages unknown to the repository and prove all of the f
 - unrelated Host-facet ABIs remain inert;
 - its authored value passes its locked Type-owner Validator and carries a validation receipt;
 - its deterministic Producer is discovered as enumerable locked data;
-- independently activated official packages close over `@svml/speech-take`,
-  `@svml/speech-align` and `@svml/caption`, exposing Product projections, the timing locator,
+- independently activated official packages close over `@narratage/speech-take`,
+  `@narratage/speech-align` and `@narratage/caption`, exposing Product projections, the timing locator,
   Caption lowering and Caption-owned validators without a CLI registration list;
 - `createProjectLocalRuntime({ packageLock })` executes that Producer without a deployment-source
   component list;
@@ -147,7 +147,7 @@ new or updated component package
   -> restart only the Compiler/Runtime process that loads that facet
 
 no Core change
-no CLI or @svml/local source change
+no CLI or @narratage/local source change
 no database migration
 no Provider reconfiguration
 ```

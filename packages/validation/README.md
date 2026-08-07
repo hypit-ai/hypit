@@ -1,4 +1,4 @@
-# `@svml/validation`
+# `@narratage/validation`
 
 Host-side admission for package-owned semantic Types.
 

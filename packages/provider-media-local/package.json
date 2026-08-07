@@ -1,5 +1,5 @@
 {
-  "name": "@svml/provider-media-local",
+  "name": "@narratage/provider-media-local",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,19 +8,19 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/contracts": "workspace:*",
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/media-pipeline": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/runtime-adapter-node": "workspace:*"
+    "@narratage/contracts": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*"
   },
   "devDependencies": {
-    "@svml/artifact-store-fs": "workspace:*",
-    "@svml/core": "workspace:*",
-    "@svml/driver-node": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/local": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/artifact-store-fs": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/local": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

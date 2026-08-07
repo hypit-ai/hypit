@@ -5,4 +5,4 @@ export {
   isDigest,
   recordDigest,
   semanticRecordsDigest,
-} from "@svml/protocol";
+} from "@narratage/protocol";

@@ -1,6 +1,6 @@
-import type { HostFacet } from "@svml/host";
-import { isDigest } from "@svml/protocol";
-import type { Digest, ModuleRef } from "@svml/protocol";
+import type { HostFacet } from "@narratage/host";
+import { isDigest } from "@narratage/protocol";
+import type { Digest, ModuleRef } from "@narratage/protocol";
 
 import type {
   RawSurfaceHandler,

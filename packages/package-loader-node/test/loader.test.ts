@@ -15,10 +15,10 @@ import {
   loadNodePackageSet,
   loadNodePackageContributions,
   writeNodePackageLock,
-} from "@svml/package-loader-node";
-import { RuntimeAdapterRegistry } from "@svml/runtime-adapter";
-import { TypeValidatorRegistry } from "@svml/validation";
-import type { ProducerRef } from "@svml/protocol";
+} from "@narratage/package-loader-node";
+import { RuntimeAdapterRegistry } from "@narratage/runtime-adapter";
+import { TypeValidatorRegistry } from "@narratage/validation";
+import type { ProducerRef } from "@narratage/protocol";
 
 const implementationDigest = `sha256:${"1".repeat(64)}`;
 const producerDigest = `sha256:${"3".repeat(64)}`;
@@ -178,7 +178,7 @@ async function fixture(): Promise<{
     };
   `, "utf8");
   const source = join(root, "main.svml");
-  await writeFile(source, `<?svml using="@svml/text@1"?>
+  await writeFile(source, `<?svml using="@narratage/text@1"?>
 <svml>
     <import as="example" from="example.card@1"/>
     <example:Card/>

@@ -1,5 +1,5 @@
 {
-  "name": "@svml/host",
+  "name": "@narratage/host",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   }
 }

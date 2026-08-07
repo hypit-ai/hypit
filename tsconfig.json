@@ -18,187 +18,187 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@svml/protocol": [
+      "@narratage/protocol": [
         "packages/protocol/src/index.ts"
       ],
-      "@svml/core": [
+      "@narratage/core": [
         "packages/core/src/index.ts"
       ],
-      "@svml/component-kit": [
+      "@narratage/component-kit": [
         "packages/component-kit/src/index.ts"
       ],
-      "@svml/endpoint-kit": [
+      "@narratage/endpoint-kit": [
         "packages/endpoint-kit/src/index.ts"
       ],
-      "@svml/contracts": [
+      "@narratage/contracts": [
         "packages/contracts/src/index.ts"
       ],
-      "@svml/media": [
+      "@narratage/media": [
         "packages/media/src/index.ts"
       ],
-      "@svml/driver-node": [
+      "@narratage/driver-node": [
         "packages/driver-node/src/index.ts"
       ],
-      "@svml/script": [
+      "@narratage/script": [
         "packages/script/src/index.ts"
       ],
-      "@svml/text": [
+      "@narratage/text": [
         "packages/text/src/index.ts"
       ],
-      "@svml/speech-align": [
+      "@narratage/speech-align": [
         "packages/speech-align/src/index.ts"
       ],
-      "@svml/whisperx": [
+      "@narratage/whisperx": [
         "packages/whisperx/src/index.ts"
       ],
-      "@svml/caption": [
+      "@narratage/caption": [
         "packages/caption/src/index.ts"
       ],
-      "@svml/speech-take": [
+      "@narratage/speech-take": [
         "packages/speech-take/src/index.ts"
       ],
-      "@svml/elaborator": [
+      "@narratage/elaborator": [
         "packages/elaborator/src/index.ts"
       ],
-      "@svml/realization": [
+      "@narratage/realization": [
         "packages/realization/src/index.ts"
       ],
-      "@svml/run": [
+      "@narratage/run": [
         "packages/run/src/index.ts"
       ],
-      "@svml/run-text": [
+      "@narratage/run-text": [
         "packages/run-text/src/index.ts"
       ],
-      "@svml/runtime": [
+      "@narratage/runtime": [
         "packages/runtime/src/index.ts"
       ],
-      "@svml/runtime-adapter": [
+      "@narratage/runtime-adapter": [
         "packages/runtime-adapter/src/index.ts"
       ],
-      "@svml/runtime-adapter-node": [
+      "@narratage/runtime-adapter-node": [
         "packages/runtime-adapter-node/src/index.ts"
       ],
-      "@svml/store-sqlite": [
+      "@narratage/store-sqlite": [
         "packages/store-sqlite/src/index.ts"
       ],
-      "@svml/artifact-store-fs": [
+      "@narratage/artifact-store-fs": [
         "packages/artifact-store-fs/src/index.ts"
       ],
-      "@svml/artifact-store-s3": [
+      "@narratage/artifact-store-s3": [
         "packages/artifact-store-s3/src/index.ts"
       ],
-      "@svml/credential-store-env": [
+      "@narratage/credential-store-env": [
         "packages/credential-store-env/src/index.ts"
       ],
-      "@svml/local": [
+      "@narratage/local": [
         "packages/local/src/index.ts"
       ],
-      "@svml/generation": [
+      "@narratage/generation": [
         "packages/generation/src/index.ts"
       ],
-      "@svml/model-kit": [
+      "@narratage/model-kit": [
         "packages/model-kit/src/index.ts"
       ],
-      "@svml/prompt-kit": [
+      "@narratage/prompt-kit": [
         "packages/prompt-kit/src/index.ts"
       ],
-      "@svml/seedance": [
+      "@narratage/seedance": [
         "packages/seedance/src/index.ts"
       ],
-      "@svml/minimax-h3": [
+      "@narratage/minimax-h3": [
         "packages/minimax-h3/src/index.ts"
       ],
-      "@svml/gemini-omni": [
+      "@narratage/gemini-omni": [
         "packages/gemini-omni/src/index.ts"
       ],
-      "@svml/grok-imagine": [
+      "@narratage/grok-imagine": [
         "packages/grok-imagine/src/index.ts"
       ],
-      "@svml/gpt-image": [
+      "@narratage/gpt-image": [
         "packages/gpt-image/src/index.ts"
       ],
-      "@svml/nano-banana": [
+      "@narratage/nano-banana": [
         "packages/nano-banana/src/index.ts"
       ],
-      "@svml/seedream": [
+      "@narratage/seedream": [
         "packages/seedream/src/index.ts"
       ],
-      "@svml/provider-kie": [
+      "@narratage/provider-kie": [
         "packages/provider-kie/src/index.ts"
       ],
-      "@svml/media-pipeline": [
+      "@narratage/media-pipeline": [
         "packages/media-pipeline/src/index.ts"
       ],
-      "@svml/provider-media-local": [
+      "@narratage/provider-media-local": [
         "packages/provider-media-local/src/index.ts"
       ],
-      "@svml/provider-hyperframes-local": [
+      "@narratage/provider-hyperframes-local": [
         "packages/provider-hyperframes-local/src/index.ts"
       ],
-      "@svml/provider-whisperx-local": [
+      "@narratage/provider-whisperx-local": [
         "packages/provider-whisperx-local/src/index.ts"
       ],
-      "@svml/provider-google-vertex": [
+      "@narratage/provider-google-vertex": [
         "packages/provider-google-vertex/src/index.ts"
       ],
-      "@svml/image-transform": [
+      "@narratage/image-transform": [
         "packages/image-transform/src/index.ts"
       ],
-      "@svml/provider-image-opencv-local": [
+      "@narratage/provider-image-opencv-local": [
         "packages/provider-image-opencv-local/src/index.ts"
       ],
-      "@svml/transport-aws-lambda": [
+      "@narratage/transport-aws-lambda": [
         "packages/transport-aws-lambda/src/index.ts"
       ],
-      "@svml/transport-process": [
+      "@narratage/transport-process": [
         "packages/transport-process/src/index.ts"
       ],
-      "@svml/transport": [
+      "@narratage/transport": [
         "packages/transport/src/index.ts"
       ],
-      "@svml/speech-program": [
+      "@narratage/speech-program": [
         "packages/speech-program/src/index.ts"
       ],
-      "@svml/estimate": [
+      "@narratage/estimate": [
         "packages/estimate/src/index.ts"
       ],
-      "@svml/hyperframes": [
+      "@narratage/hyperframes": [
         "packages/hyperframes/src/index.ts"
       ],
-      "@svml/hyperframes-render": [
+      "@narratage/hyperframes-render": [
         "packages/hyperframes-render/src/index.ts"
       ],
-      "@svml/broll": [
+      "@narratage/broll": [
         "packages/broll/src/index.ts"
       ],
-      "@svml/film": [
+      "@narratage/film": [
         "packages/film/src/index.ts"
       ],
-      "@svml/text-track": [
+      "@narratage/text-track": [
         "packages/text-track/src/index.ts"
       ],
-      "@svml/svs": [
+      "@narratage/svs": [
         "packages/svs/src/index.ts"
       ],
-      "@svml/compiler-node": [
+      "@narratage/compiler-node": [
         "packages/compiler-node/src/index.ts"
       ],
-      "@svml/package-loader-node": [
+      "@narratage/package-loader-node": [
         "packages/package-loader-node/src/index.ts"
       ],
-      "@svml/cli": [
+      "@narratage/cli": [
         "packages/cli/src/index.ts"
       ],
-      "@svml/validation": [
+      "@narratage/validation": [
         "packages/validation/src/index.ts"
       ],
-      "@svml/host": [
+      "@narratage/host": [
         "packages/host/src/index.ts"
       ],
-      "@svml/source": [
+      "@narratage/source": [
         "packages/source/src/index.ts"
       ],
-      "@svml/workspace-fs-node": [
+      "@narratage/workspace-fs-node": [
         "packages/workspace-fs-node/src/index.ts"
       ]
     }

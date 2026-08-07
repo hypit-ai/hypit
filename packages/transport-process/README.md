@@ -1,4 +1,4 @@
-# `@svml/transport-process`
+# `@narratage/transport-process`
 
 Least-authority JSON child-process transport for trusted local Endpoint packages. It is not an
 Endpoint and declares no capability.

@@ -1,4 +1,4 @@
-import type { ComponentPackage } from "@svml/component-kit";
+import type { ComponentPackage } from "@narratage/component-kit";
 import {
   mediaContractsComponent,
   assertSpeechAudioBasisIdentity,
@@ -9,7 +9,7 @@ import {
   verifyMediaStreamSelection,
   verifyRenderedVisual,
   verifyTimelineAudio,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   Composition,
   MuxedMedia,
@@ -17,9 +17,9 @@ import type {
   RenderedVisual,
   SpeechAudioBasis,
   TimelineAudio,
-} from "@svml/contracts";
-import type { BlobRef, CanonicalValue, StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import {
   compileAudioProgramPlan,
@@ -54,7 +54,7 @@ function blob(value: StoredValue, subject: string): BlobRef {
 }
 
 export const mediaPipelineComponent = {
-  name: "@svml/media-pipeline",
+  name: "@narratage/media-pipeline",
   validators: [
     {
       type: mediaPipelineTypes.selectionRequest,

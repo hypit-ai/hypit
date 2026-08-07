@@ -12,12 +12,12 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   elaborateGraphFragment,
   exportRunFragment,
   sealGraphFragment,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   BuildState,
   CompiledGraph,
@@ -26,14 +26,14 @@ import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   createBuildRecordCandidate,
   createProvidedCandidate,
   resolveRealization,
   sealRealizationOverlay,
   verifyResolvedRealization,
-} from "@svml/realization";
+} from "@narratage/realization";
 
 const moduleRef = { name: "example.realization", version: "0.0.0" } as const;
 const types = {

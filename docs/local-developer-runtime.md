@@ -6,14 +6,14 @@ service. Hosted/AWS variants remain optional.
 
 ## 1. Outcome
 
-A developer owns one authoritative SVML Runtime process and may independently choose where every
+A developer owns one authoritative Narratage Runtime process and may independently choose where every
 external capability executes:
 
 ```text
 build.svrun -> main.svml
   -> self-described Run + Author compilation
   -> Core BuildState
-  -> @svml/local Scheduler
+  -> @narratage/local Scheduler
        -> local deterministic component code
        -> KIE / Volcengine / Hypit Seedance Endpoint
        -> local OpenCV image-transform Endpoint
@@ -32,19 +32,19 @@ authority that asks Core what is ready and accepts returned Events.
 
 | Package | Owns | Does not own |
 |---|---|---|
-| `@svml/runtime` | environment-neutral Scheduler, Store and Endpoint ports plus Runtime service-package ABI | Node, SQLite, files, video |
-| `@svml/runtime-adapter` | locked Host facet that constructs one configured Endpoint or service package | package discovery, author imports, Provider routing |
-| `@svml/runtime-adapter-node` | project-root executable resolution and read-only Node diagnostics | capability semantics or process execution |
-| `@svml/store-sqlite` | durable BuildStore and OperationStore adapters | ready queue, artifacts, credentials |
-| `@svml/artifact-store-fs` | content-addressed project bytes | BuildState, cache policy, author library |
-| `@svml/artifact-store-s3` | conditionally written and digest-verified S3 bytes | BuildState, Endpoint jobs, automatic reuse |
-| `@svml/local` | developer convenience assembly and trusted package activation | author syntax, Endpoint APIs, hosted auth |
-| `@svml/endpoint-kit` | host-neutral Endpoint contract and one-source package definition | any concrete vendor API or Driver |
-| `@svml/transport` | canonical request/response transport seam | capability identity, recovery or scheduling |
-| `@svml/credential-store-env` | explicitly requested local environment secrets | enumeration, persistence or author imports |
-| `@svml/transport-aws-lambda` | synchronous bounded JSON invocation | capability identity or remote job semantics |
-| `@svml/transport-process` | shell-free, bounded, no-ambient-env local JSON process | capability identity or executable choice from source |
-| `@svml/provider-*` | one exact external implementation and its polling/recovery | Core graph traversal, author parsing |
+| `@narratage/runtime` | environment-neutral Scheduler, Store and Endpoint ports plus Runtime service-package ABI | Node, SQLite, files, video |
+| `@narratage/runtime-adapter` | locked Host facet that constructs one configured Endpoint or service package | package discovery, author imports, Provider routing |
+| `@narratage/runtime-adapter-node` | project-root executable resolution and read-only Node diagnostics | capability semantics or process execution |
+| `@narratage/store-sqlite` | durable BuildStore and OperationStore adapters | ready queue, artifacts, credentials |
+| `@narratage/artifact-store-fs` | content-addressed project bytes | BuildState, cache policy, author library |
+| `@narratage/artifact-store-s3` | conditionally written and digest-verified S3 bytes | BuildState, Endpoint jobs, automatic reuse |
+| `@narratage/local` | developer convenience assembly and trusted package activation | author syntax, Endpoint APIs, hosted auth |
+| `@narratage/endpoint-kit` | host-neutral Endpoint contract and one-source package definition | any concrete vendor API or Driver |
+| `@narratage/transport` | canonical request/response transport seam | capability identity, recovery or scheduling |
+| `@narratage/credential-store-env` | explicitly requested local environment secrets | enumeration, persistence or author imports |
+| `@narratage/transport-aws-lambda` | synchronous bounded JSON invocation | capability identity or remote job semantics |
+| `@narratage/transport-process` | shell-free, bounded, no-ambient-env local JSON process | capability identity or executable choice from source |
+| `@narratage/provider-*` | one exact external implementation and its polling/recovery | Core graph traversal, author parsing |
 
 SQLite is deliberately optional. `createLocalRuntime()` accepts any implementation of the same
 ports, so an internal server can use Postgres and S3 without changing Core or Endpoint packages.
@@ -93,7 +93,7 @@ callbacks or secret values:
   "services": [],
   "endpoints": [
     {
-      "use": "@svml/provider-kie",
+      "use": "@narratage/provider-kie",
       "instance": "kie.personal",
       "lane": "generation",
       "config": { "apiKeyEnv": "KIE_API_KEY", "defaultConcurrency": 2 }
@@ -110,36 +110,36 @@ callbacks or secret values:
 Create the two closures explicitly:
 
 ```bash
-svml lock-packages ./svml.packages.lock \
-  --package @svml/script --package @svml/seedance --root .
+narratage lock-packages ./svml.packages.lock \
+  --package @narratage/script --package @narratage/seedance --root .
 
-svml lock-packages ./svml.runtime-packages.lock \
-  --package @svml/provider-kie \
-  --package @svml/provider-media-local \
-  --package @svml/provider-whisperx-local \
-  --package @svml/provider-hyperframes-local \
+narratage lock-packages ./svml.runtime-packages.lock \
+  --package @narratage/provider-kie \
+  --package @narratage/provider-media-local \
+  --package @narratage/provider-whisperx-local \
+  --package @narratage/provider-hyperframes-local \
   --root .
 
-svml doctor ./svml.runtime.json
+narratage doctor ./svml.runtime.json
 ```
 
 The same generic lock format is reused, but the two references grant different Host ABIs.
 `packageLock` activates deterministic compute facets. `runtimePackageLock` activates only Runtime
 Adapter facets; author and Surface facets found in those packages stay inert. Provider packages are
-therefore installable without adding imports or CI changes to `@svml/video-cli`.
+therefore installable without adding imports or CI changes to `@narratage/video-cli`.
 
 Executable TypeScript remains the advanced embedding form for private transports and adapters not
 yet registered in the reference CLI. It is trusted developer/deployment code, not author intent:
 
 ```ts
-import { createProjectLocalRuntime } from "@svml/local";
-import { createS3ArtifactStorePackage } from "@svml/artifact-store-s3";
-import { credentialRef } from "@svml/runtime";
-import { createKieProvider } from "@svml/provider-kie";
-import { createLocalMediaProvider } from "@svml/provider-media-local";
-import { createLocalOpenCvImageProvider } from "@svml/provider-image-opencv-local";
-import { createLocalWhisperXProvider } from "@svml/provider-whisperx-local";
-import { createLocalHyperframesProvider } from "@svml/provider-hyperframes-local";
+import { createProjectLocalRuntime } from "@narratage/local";
+import { createS3ArtifactStorePackage } from "@narratage/artifact-store-s3";
+import { credentialRef } from "@narratage/runtime";
+import { createKieProvider } from "@narratage/provider-kie";
+import { createLocalMediaProvider } from "@narratage/provider-media-local";
+import { createLocalOpenCvImageProvider } from "@narratage/provider-image-opencv-local";
+import { createLocalWhisperXProvider } from "@narratage/provider-whisperx-local";
+import { createLocalHyperframesProvider } from "@narratage/provider-hyperframes-local";
 
 export default await createProjectLocalRuntime({
   root: import.meta.dirname,
@@ -207,7 +207,7 @@ cannot leak resources. Package code is still trusted deployment code and is neve
 author imports.
 
 `svml.packages.lock` is created from explicitly selected physical packages with
-`svml lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
+`narratage lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
 Runtime config no longer imports each component by name. Its digest must equal the
 `BuildRequest.implementationClosure` produced by `plan`/`build` with the same lock, so durable work
 cannot resume after an unnoticed component-closure swap. The low-level `components` option remains
@@ -220,7 +220,7 @@ dependency closure, adapter identity and declared facet. Editing implementation 
 before any Provider call. Source `<import>` cannot add an adapter to this closure.
 
 The KIE, local media, local OpenCV image-transform, local WhisperX and local HyperFrames package
-functions in this example are implemented. `@svml/endpoint-kit` implements the host-neutral
+functions in this example are implemented. `@narratage/endpoint-kit` implements the host-neutral
 `EndpointPackage` definition path and lets those packages contribute:
 
 1. a static Runtime Manifest and implementation digest;
@@ -265,19 +265,19 @@ capabilities by themselves.
 The CLI accepts:
 
 ```bash
-pnpm svml build build.svrun \
+pnpm narratage build build.svrun \
   --runtime ./svml.runtime.json \
   --package-lock ./svml.packages.lock \
   --root . \
   --follow
 
-pnpm svml status <build-id> --runtime ./svml.runtime.json
-pnpm svml inspect <build-id> --runtime ./svml.runtime.json
-pnpm svml get <build-id> --runtime ./svml.runtime.json --to ./result.bin
-pnpm svml cancel <build-id> --runtime ./svml.runtime.json
-pnpm svml doctor ./svml.runtime.json
-pnpm svml gc ./svml.runtime.json
-pnpm svml gc ./svml.runtime.json --apply
+pnpm narratage status <build-id> --runtime ./svml.runtime.json
+pnpm narratage inspect <build-id> --runtime ./svml.runtime.json
+pnpm narratage get <build-id> --runtime ./svml.runtime.json --to ./result.bin
+pnpm narratage cancel <build-id> --runtime ./svml.runtime.json
+pnpm narratage doctor ./svml.runtime.json
+pnpm narratage gc ./svml.runtime.json
+pnpm narratage gc ./svml.runtime.json --apply
 ```
 
 The default local Build id is the content-derived Core Build id. Repeating the same command resumes

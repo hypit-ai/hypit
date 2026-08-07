@@ -4,7 +4,7 @@ export {
   artifactModuleRef,
   artifactTypes,
   blobArtifactValueSchema,
-} from "@svml/artifact";
+} from "@narratage/artifact";
 export {
   assertProgramSpaceIdentity,
   assertSpeechDurationIdentity,

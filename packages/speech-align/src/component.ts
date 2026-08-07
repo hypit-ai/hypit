@@ -1,11 +1,11 @@
-import type { ComponentPackage } from "@svml/component-kit";
+import type { ComponentPackage } from "@narratage/component-kit";
 import type {
   AlignedTranscriptEvidence,
   Narrative,
   SpeechAudioBasis,
-} from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import {
   locateSpeechTiming,
@@ -20,7 +20,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 
 /** Provider-neutral deterministic alignment; acoustic measurement remains an explicit upstream Need. */
 export const speechAlignComponent = {
-  name: "@svml/speech-align",
+  name: "@narratage/speech-align",
   producers: [{
     producer: speechAlignProducers.locate,
     implementationDigest: speechLocatorDigest,

@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 
 import {
   decodeSeedanceSpeakerTakeSurface,
@@ -9,10 +9,10 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/seedance-speaker",
+  name: "@narratage/seedance-speaker",
   modules: [{
     manifest: seedanceSpeakerManifest,
-    specifiers: ["@svml/seedance-speaker", "@svml/seedance-speaker@1"],
+    specifiers: ["@narratage/seedance-speaker", "@narratage/seedance-speaker@1"],
   }],
   hostFacets: [createTextSurfaceHostFacet({
     module: seedanceSpeakerModuleRef,

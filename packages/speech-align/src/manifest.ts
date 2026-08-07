@@ -1,12 +1,12 @@
 import {
   contractTypes,
   videoContractDependencies,
-} from "@svml/contracts";
-import type { ModuleManifest, ProducerRef } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 import { speechLocatorDigest } from "./locate.js";
 
-export const speechAlignModuleRef = { name: "@svml/speech-align", version: "0.0.0-dev" } as const;
+export const speechAlignModuleRef = { name: "@narratage/speech-align", version: "0.0.0-dev" } as const;
 export const speechAlignProducers = {
   locate: { module: speechAlignModuleRef, name: "locate-speech" },
 } satisfies Record<string, ProducerRef>;
@@ -34,7 +34,7 @@ export const speechAlignManifest: ModuleManifest = {
     needs: [],
     implementation: {
       kind: "registered",
-      locator: "@svml/speech-align/locate",
+      locator: "@narratage/speech-align/locate",
       digest: speechLocatorDigest,
     },
   }],

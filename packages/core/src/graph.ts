@@ -13,7 +13,7 @@ import type {
   Satisfaction,
   StoredValue,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { canonicalize, digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";

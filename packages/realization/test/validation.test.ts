@@ -7,17 +7,17 @@ import {
   link,
   sealCompiledGraph,
   sealTypedModule,
-} from "@svml/core";
-import type { ModuleManifest, TypeRef } from "@svml/protocol";
+} from "@narratage/core";
+import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 import {
   createProvidedCandidate,
   resolveRealization,
   sealRealizationOverlay,
-} from "@svml/realization";
+} from "@narratage/realization";
 import {
   TypeValidatorRegistry,
   validateValue,
-} from "@svml/validation";
+} from "@narratage/validation";
 
 const moduleRef = { name: "example.validated-existing", version: "1" } as const;
 const mediaType = { module: moduleRef, name: "Media" } satisfies TypeRef;

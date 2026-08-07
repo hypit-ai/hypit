@@ -6,15 +6,15 @@ import {
   programSpaceFrameCount,
   selectionFrameSpans,
   sealVisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   CompleteSemanticMap,
   NarrativeSelectionRef,
   ProgramSpace,
   VisualStyleDeclaration,
   VisualTrack,
-} from "@svml/contracts";
-import { canonicalize, digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import { canonicalize, digestOf } from "@narratage/protocol";
 
 import type {
   TextAppearance,
@@ -26,12 +26,12 @@ import type {
   TextTrackSpec,
 } from "./types.js";
 
-export const renderTextTrackImplementationDigest = digestOf("@svml/text-track/render@1");
-export const compileTextTrackImplementationDigest = digestOf("@svml/text-track/compile@1");
-export const createTextTrackSetImplementationDigest = digestOf("@svml/text-track/create-set@1");
-export const appendFullTextItemImplementationDigest = digestOf("@svml/text-track/append-full-item@1");
-export const appendSelectedTextItemImplementationDigest = digestOf("@svml/text-track/append-selected-item@1");
-export const finalizeTextTrackImplementationDigest = digestOf("@svml/text-track/finalize@1");
+export const renderTextTrackImplementationDigest = digestOf("@narratage/text-track/render@1");
+export const compileTextTrackImplementationDigest = digestOf("@narratage/text-track/compile@1");
+export const createTextTrackSetImplementationDigest = digestOf("@narratage/text-track/create-set@1");
+export const appendFullTextItemImplementationDigest = digestOf("@narratage/text-track/append-full-item@1");
+export const appendSelectedTextItemImplementationDigest = digestOf("@narratage/text-track/append-selected-item@1");
+export const finalizeTextTrackImplementationDigest = digestOf("@narratage/text-track/finalize@1");
 
 function assertNonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);

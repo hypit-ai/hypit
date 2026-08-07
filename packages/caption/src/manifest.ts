@@ -1,13 +1,13 @@
-import { contractTypes, videoContractDependencies } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+import { contractTypes, videoContractDependencies } from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 import {
   renderCaptionProgramImplementationDigest,
   renderCaptionTrackImplementationDigest,
 } from "./track.js";
 
-export const captionModuleRef = { name: "@svml/caption", version: "0.0.0-dev" } as const;
+export const captionModuleRef = { name: "@narratage/caption", version: "0.0.0-dev" } as const;
 export const captionProducers = {
   temporalize: { module: captionModuleRef, name: "temporalize-caption" },
   temporalizePlan: { module: captionModuleRef, name: "temporalize-caption-plan" },
@@ -21,18 +21,18 @@ export const captionTypes = {
   timedProjection: { module: captionModuleRef, name: "TimedCaptionProjection" },
   trackProgram: { module: captionModuleRef, name: "CaptionTrackProgram" },
 } satisfies Record<string, TypeRef>;
-export const captionImplementationDigest = digestOf("@svml/caption/temporalize@1");
-export const captionPlanImplementationDigest = digestOf("@svml/caption/temporalize-plan@2");
+export const captionImplementationDigest = digestOf("@narratage/caption/temporalize@1");
+export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-plan@2");
 export const captionValidatorDigests = {
-  style: digestOf("@svml/caption/validate-style@2"),
-  program: digestOf("@svml/caption/validate-program@2"),
-  plan: digestOf("@svml/caption/validate-plan@2"),
-  timedProjection: digestOf("@svml/caption/validate-timed-projection@2"),
-  trackProgram: digestOf("@svml/caption/validate-track-program@1"),
+  style: digestOf("@narratage/caption/validate-style@2"),
+  program: digestOf("@narratage/caption/validate-program@2"),
+  plan: digestOf("@narratage/caption/validate-plan@2"),
+  timedProjection: digestOf("@narratage/caption/validate-timed-projection@2"),
+  trackProgram: digestOf("@narratage/caption/validate-track-program@1"),
 } as const;
-export const captionSurfaceImplementationDigest = digestOf("@svml/caption/track-surface@2");
-export const captionStyleSurfaceImplementationDigest = digestOf("@svml/caption/style-surface@1");
-export const captionProgramSurfaceImplementationDigest = digestOf("@svml/caption/program-surface@1");
+export const captionSurfaceImplementationDigest = digestOf("@narratage/caption/track-surface@2");
+export const captionStyleSurfaceImplementationDigest = digestOf("@narratage/caption/style-surface@1");
+export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/caption/program-surface@1");
 
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
@@ -193,14 +193,14 @@ export const captionManifest: ModuleManifest = {
       name: captionTypes.style.name,
       schema: captionStyleSchema,
       validator: { abi: "svml.type-validator@1", implementation: {
-        kind: "registered", locator: "@svml/caption/validate-style", digest: captionValidatorDigests.style,
+        kind: "registered", locator: "@narratage/caption/validate-style", digest: captionValidatorDigests.style,
       } },
     },
     {
       name: captionTypes.program.name,
       schema: captionProgramSchema,
       validator: { abi: "svml.type-validator@1", implementation: {
-        kind: "registered", locator: "@svml/caption/validate-program", digest: captionValidatorDigests.program,
+        kind: "registered", locator: "@narratage/caption/validate-program", digest: captionValidatorDigests.program,
       } },
     },
     {
@@ -210,7 +210,7 @@ export const captionManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/caption/validate-plan",
+          locator: "@narratage/caption/validate-plan",
           digest: captionValidatorDigests.plan,
         },
       },
@@ -222,7 +222,7 @@ export const captionManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/caption/validate-timed-projection",
+          locator: "@narratage/caption/validate-timed-projection",
           digest: captionValidatorDigests.timedProjection,
         },
       },
@@ -234,7 +234,7 @@ export const captionManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/caption/validate-track-program",
+          locator: "@narratage/caption/validate-track-program",
           digest: captionValidatorDigests.trackProgram,
         },
       },
@@ -244,16 +244,16 @@ export const captionManifest: ModuleManifest = {
   surfaces: [
     {
       name: "style", tag: "Style", mode: "structured", outputs: [captionTypes.style],
-      implementation: { kind: "trusted-frontend-surface", locator: "@svml/caption/style-surface", digest: captionStyleSurfaceImplementationDigest },
+      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/caption/style-surface", digest: captionStyleSurfaceImplementationDigest },
     },
     {
       name: "program", tag: "Program", mode: "structured", outputs: [captionTypes.program],
-      implementation: { kind: "trusted-frontend-surface", locator: "@svml/caption/program-surface", digest: captionProgramSurfaceImplementationDigest },
+      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/caption/program-surface", digest: captionProgramSurfaceImplementationDigest },
     },
     {
       name: "track", tag: "Track", mode: "structured",
       outputs: [captionTypes.trackProgram, contractTypes.visualTrack],
-      implementation: { kind: "trusted-frontend-surface", locator: "@svml/caption/track-surface", digest: captionSurfaceImplementationDigest },
+      implementation: { kind: "trusted-frontend-surface", locator: "@narratage/caption/track-surface", digest: captionSurfaceImplementationDigest },
     },
   ],
   producers: [
@@ -267,7 +267,7 @@ export const captionManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/caption/temporalize",
+        locator: "@narratage/caption/temporalize",
         digest: captionImplementationDigest,
       },
     },
@@ -283,7 +283,7 @@ export const captionManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/caption/temporalize-plan",
+        locator: "@narratage/caption/temporalize-plan",
         digest: captionPlanImplementationDigest,
       },
     },
@@ -296,7 +296,7 @@ export const captionManifest: ModuleManifest = {
       ],
       outputs: [{ name: "track", type: contractTypes.visualTrack }],
       needs: [],
-      implementation: { kind: "registered", locator: "@svml/caption/render-program", digest: renderCaptionProgramImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/caption/render-program", digest: renderCaptionProgramImplementationDigest },
     },
     {
       name: captionProducers.renderTrack.name,
@@ -309,7 +309,7 @@ export const captionManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/caption/render-track",
+        locator: "@narratage/caption/render-track",
         digest: renderCaptionTrackImplementationDigest,
       },
     },

@@ -1,5 +1,5 @@
-import { verifyBuildState } from "@svml/core";
-import type { BuildState } from "@svml/protocol";
+import { verifyBuildState } from "@narratage/core";
+import type { BuildState } from "@narratage/protocol";
 
 import type {
   BuildSnapshot,

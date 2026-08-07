@@ -1,15 +1,15 @@
 import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { LocalRuntime } from "@svml/local";
-import type { NodeCompiledSourceClosure } from "@svml/compiler-node";
-import type { BuildCatalogDescriptor } from "@svml/runtime";
-import { parseSourceHeader } from "@svml/source";
+import type { LocalRuntime } from "@narratage/local";
+import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
+import type { BuildCatalogDescriptor } from "@narratage/runtime";
+import { parseSourceHeader } from "@narratage/source";
 import {
   createNodePackageLock,
   loadNodePackageSet,
   writeNodePackageLock,
-} from "@svml/package-loader-node";
+} from "@narratage/package-loader-node";
 
 import {
   collectArtifacts,
@@ -208,17 +208,17 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
 function usage(): string {
   return [
     "usage:",
-    "  svml lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
-    "  svml doctor <runtime-profile.json>",
-    "  svml gc <runtime-profile.json> [--apply]",
-    "  svml check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
-    "  svml plan <run-source> [--runtime profile.json] [--package-lock file]",
-    "  svml build <run-source> --runtime profile.json|./svml.runtime.ts [--follow]",
-    "  svml status <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  svml builds --runtime profile.json|./svml.runtime.ts",
-    "  svml inspect <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  svml get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
-    "  svml cancel <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  narratage lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
+    "  narratage doctor <runtime-profile.json>",
+    "  narratage gc <runtime-profile.json> [--apply]",
+    "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
+    "  narratage plan <run-source> [--runtime profile.json] [--package-lock file]",
+    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--follow]",
+    "  narratage status <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  narratage builds --runtime profile.json|./svml.runtime.ts",
+    "  narratage inspect <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  narratage get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
+    "  narratage cancel <build-id> --runtime profile.json|./svml.runtime.ts",
   ].join("\n");
 }
 

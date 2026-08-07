@@ -1,5 +1,5 @@
-import { isDigest } from "@svml/core";
-import type { Digest, ModuleRef } from "@svml/protocol";
+import { isDigest } from "@narratage/core";
+import type { Digest, ModuleRef } from "@narratage/protocol";
 
 import type {
   RawSurfaceHandler,

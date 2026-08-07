@@ -3,10 +3,10 @@ import {
   sealTypedModule,
   verifyClosure,
   verifyRecordStructure,
-} from "@svml/core";
-import { sealAuthorModule } from "@svml/elaborator";
-import type { AuthorFrontend, AuthorSourceExport } from "@svml/elaborator";
-import { parseSvs } from "@svml/svs";
+} from "@narratage/core";
+import { sealAuthorModule } from "@narratage/elaborator";
+import type { AuthorFrontend, AuthorSourceExport } from "@narratage/elaborator";
+import { parseSvs } from "@narratage/svs";
 
 import {
   promptKitImplementationDigests,
@@ -15,7 +15,7 @@ import {
 } from "./manifest.js";
 import { promptKitSpecFromSvsRecipes } from "./svs.js";
 
-export const promptKitSvsFrontendId = "@svml/prompt-kit/svs@1";
+export const promptKitSvsFrontendId = "@narratage/prompt-kit/svs@1";
 
 /**
  * A self-described Prompt Kit source is ordinary SVS syntax with Prompt Kit semantics.
@@ -44,7 +44,7 @@ export const promptKitSvsFrontend: AuthorFrontend = {
     const record = sealRecord({
       id: spec.id,
       type: promptKitTypes.spec,
-      value: { kind: "inline", value: spec as unknown as import("@svml/protocol").CanonicalValue },
+      value: { kind: "inline", value: spec as unknown as import("@narratage/protocol").CanonicalValue },
       conformance: "exact",
       origin: {
         kind: "authored",

@@ -1,5 +1,5 @@
-import { isDigest } from "@svml/protocol";
-import type { BlobRef } from "@svml/protocol";
+import { isDigest } from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 
 const FONT_MEDIA_TYPES = new Set([
   "font/otf",

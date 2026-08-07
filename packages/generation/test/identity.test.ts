@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
-import { MemoryArtifactStore } from "@svml/driver-node";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
+import { MemoryArtifactStore } from "@narratage/driver-node";
 import {
   generationComponent,
   generationProducers,
@@ -10,8 +10,8 @@ import {
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
   verifyGeneratedImageSet,
-} from "@svml/generation";
-import { TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/generation";
+import { TypeValidatorRegistry } from "@narratage/validation";
 
 test("generated media validators bind artifacts and result contents", async () => {
   const store = new MemoryArtifactStore();

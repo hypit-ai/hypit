@@ -1,17 +1,17 @@
-# `@svml/driver-node`
+# `@narratage/driver-node`
 
 Node runtime for executing Core commands without adding workflow semantics to Core.
 
 Its Manifest helpers only read Node filesystem paths and construct a verified Closure. Pure static
-Manifest JSON parsing belongs to `@svml/protocol` and is re-exported here temporarily for callers of
+Manifest JSON parsing belongs to `@narratage/protocol` and is re-exported here temporarily for callers of
 the prototype API.
 
-- `ProducerRegistry` implements the host-neutral `@svml/component-kit` Producer registrar. Deterministic
+- `ProducerRegistry` implements the host-neutral `@narratage/component-kit` Producer registrar. Deterministic
   component packages depend on that tiny structural port, not on this Node Driver.
 - `EndpointRegistry` binds an already explicit external capability to implementations that may use
   APIs, credentials, queues, local runtimes, devices or human services.
 - Registrations may declare a scheduling lane and default concurrency. The environment-neutral
-  `@svml/runtime` Scheduler shares that lane across Builds; a Runtime Profile may override its limit.
+  `@narratage/runtime` Scheduler shares that lane across Builds; a Runtime Profile may override its limit.
 - A Producer receives only its command identity and immutable typed inputs. It has no ArtifactStore,
   credentials, network, queue or store handle; external work must be emitted as a typed `Need`.
 - Endpoints match the locked `CapabilityRef` and return `TypeRef`. Multiple exact endpoints require

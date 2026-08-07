@@ -8,16 +8,16 @@ import {
   projectBrollAudio,
   projectBrollVisual,
   sealBrollProgram,
-} from "@svml/broll";
+} from "@narratage/broll";
 import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@svml/contracts";
-import type { MediaArtifactRef } from "@svml/contracts";
-import type { BrollItem, BrollPairTransition } from "@svml/broll";
-import { compileHyperframesDocument } from "@svml/hyperframes";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { MediaArtifactRef } from "@narratage/contracts";
+import type { BrollItem, BrollPairTransition } from "@narratage/broll";
+import { compileHyperframesDocument } from "@narratage/hyperframes";
+import { digestOf } from "@narratage/protocol";
 
 const programSpace = sealProgramSpace({
   contract: "svml.program-space@1",

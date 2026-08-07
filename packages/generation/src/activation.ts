@@ -2,7 +2,7 @@ import { generationComponent, generationManifest } from "./index.js";
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/generation",
+  name: "@narratage/generation",
   modules: [{ manifest: generationManifest }],
   components: [generationComponent],
 };

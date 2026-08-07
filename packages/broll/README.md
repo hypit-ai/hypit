@@ -1,4 +1,4 @@
-# `@svml/broll`
+# `@narratage/broll`
 
 Official B-roll authoring and lowering package. It owns B-roll items, local
 entrance/exit motion, pair transitions, source audio and transition SFX. It

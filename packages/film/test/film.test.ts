@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   compositionContractsComponent,
   contractTypes,
@@ -9,7 +9,7 @@ import {
   sealProgramSpace,
   sealVisualTrack,
   videoContractManifests,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -19,13 +19,13 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
-import { ProducerRegistry, NodeDriver } from "@svml/driver-node";
+} from "@narratage/core";
+import { ProducerRegistry, NodeDriver } from "@narratage/driver-node";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import {
   appendFilmAudioTrack,
   appendFilmAudioTrackImplementationDigest,
@@ -40,7 +40,7 @@ import {
   filmProducers,
   filmTypes,
   sealFilmProgram,
-} from "@svml/film";
+} from "@narratage/film";
 import {
   compileHyperframesDocument,
   compileHyperframesImplementationDigest,
@@ -48,9 +48,9 @@ import {
   hyperframesManifest,
   hyperframesProducers,
   hyperframesTypes,
-} from "@svml/hyperframes";
-import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@svml/protocol";
-import { svsManifest } from "@svml/svs";
+} from "@narratage/hyperframes";
+import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@narratage/protocol";
+import { svsManifest } from "@narratage/svs";
 import {
   renderTextTrack,
   renderTextTrackImplementationDigest,
@@ -59,8 +59,8 @@ import {
   textTrackManifest,
   textTrackProducers,
   textTrackTypes,
-} from "@svml/text-track";
-import { admitRecord, TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/text-track";
+import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",

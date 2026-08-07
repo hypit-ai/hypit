@@ -28,7 +28,7 @@ Provider Need
 ```
 
 This does not add media knowledge to Core. Core still sees only typed Records, finite Operations,
-Needs, selected Candidates, content digests and derivation history. `@svml/media-pipeline` owns
+Needs, selected Candidates, content digests and derivation history. `@narratage/media-pipeline` owns
 the domain contracts; a Runtime Profile chooses concrete Provider implementations.
 
 ## Final video path
@@ -59,7 +59,7 @@ Twinit's `SpeechSpineMediaPipelineAdapterV1` correctly recognized four remote-ca
 source normalization, spine assembly, audio preparation and mux. The old interface coupled those
 operations to Speech and put all four behind one large adapter.
 
-SVML preserves the execution insight but changes the vocabulary:
+Narratage preserves the execution insight but changes the vocabulary:
 
 | Twinit operation | SVML boundary |
 |---|---|
@@ -73,9 +73,9 @@ with separate inputs, results, digests, retry histories and scheduling identitie
 
 ## Local, Lambda and queues
 
-`@svml/provider-media-local` currently fulfills inspection, normalization, canonical speech-
+`@narratage/provider-media-local` currently fulfills inspection, normalization, canonical speech-
 evidence projection, timeline-audio rendering and mux with bounded shell-free ffprobe/ffmpeg
-subprocesses. `@svml/provider-hyperframes-local` fulfills the independent silent visual Need. One
+subprocesses. `@narratage/provider-hyperframes-local` fulfills the independent silent visual Need. One
 Runtime Scheduler applies configured Endpoint lane concurrency across Builds, while HyperFrames'
 own `workers` option partitions frames inside one admitted render.
 

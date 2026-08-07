@@ -3,25 +3,25 @@ import type {
   EndpointRegistrationOptions,
   ImmediateEndpointHandler,
   RecoverableEndpoint,
-} from "@svml/endpoint-kit";
+} from "@narratage/endpoint-kit";
 import type {
   ProducerRegistrar,
-} from "@svml/component-kit";
+} from "@narratage/component-kit";
 import type {
   CapabilityRef,
   Digest,
   Need,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
-import { isDigest } from "@svml/protocol";
+} from "@narratage/protocol";
+import { isDigest } from "@narratage/protocol";
 import {
   RuntimeModuleRegistry,
   runtimeEndpoint,
   verifyCredentialRef,
   verifyRuntimeClosure,
-} from "@svml/runtime";
-import type { ResolveRuntimeProfileOptions, RuntimeClosure } from "@svml/runtime";
+} from "@narratage/runtime";
+import type { ResolveRuntimeProfileOptions, RuntimeClosure } from "@narratage/runtime";
 
 import type {
   ProducerHandler,

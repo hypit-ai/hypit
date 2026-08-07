@@ -5,21 +5,21 @@ import {
   sealAlignedTranscriptEvidence,
   sealProgramSpace,
   sealSpeechBasis,
-} from "@svml/contracts";
-import type { Narrative, SpeechAudioBasis, SpeechBasis } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import { parseScript } from "@svml/script";
+} from "@narratage/contracts";
+import type { Narrative, SpeechAudioBasis, SpeechBasis } from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import { parseScript } from "@narratage/script";
 import {
   SpeechAlignmentError,
   locateSpeechTiming,
   speechAlignComponent,
   speechAlignManifest,
-} from "@svml/speech-align";
+} from "@narratage/speech-align";
 import type {
   AlignedTranscriptEvidence,
   SpeechCharacterEvidence,
   SpeechWordEvidence,
-} from "@svml/speech-align";
+} from "@narratage/speech-align";
 
 function evidence(args: {
   readonly basis: SpeechAudioBasis;

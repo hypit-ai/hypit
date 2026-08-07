@@ -3,7 +3,7 @@ import type {
   FrameSpan,
   MediaArtifactRef,
   VisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 
 export type BrollBox = {
   readonly xPercent: number;

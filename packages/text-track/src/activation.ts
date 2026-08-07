@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 import {
   decodeTextTrackSurface, textTrackComponent, textTrackManifest, textTrackModuleRef,
   textTrackSurfaceImplementationDigest,
@@ -6,8 +6,8 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/text-track",
-  modules: [{ manifest: textTrackManifest, specifiers: ["@svml/text-track", "@svml/text-track@1"] }],
+  name: "@narratage/text-track",
+  modules: [{ manifest: textTrackManifest, specifiers: ["@narratage/text-track", "@narratage/text-track@1"] }],
   components: [textTrackComponent],
   hostFacets: [createTextSurfaceHostFacet({
     module: textTrackModuleRef, surface: "track", mode: "structured",

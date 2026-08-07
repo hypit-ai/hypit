@@ -1,5 +1,5 @@
 {
-  "name": "@svml/hyperframes-render",
+  "name": "@narratage/hyperframes-render",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,17 +8,17 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/hyperframes": "workspace:*",
-    "@svml/media-pipeline": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/hyperframes": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/driver-node": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

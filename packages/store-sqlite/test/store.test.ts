@@ -5,14 +5,14 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 
-import { digestOf } from "@svml/core";
+import { digestOf } from "@narratage/core";
 import {
   sealOperationIdentity,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 import {
   createSqliteRuntimeServicePackage,
   SqliteRuntimeState,
-} from "@svml/store-sqlite";
+} from "@narratage/store-sqlite";
 
 import { createGreetingBuild } from "../../core/test/greeting-fixture.js";
 

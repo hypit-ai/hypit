@@ -1,4 +1,4 @@
-# `@svml/host`
+# `@narratage/host`
 
 Domain-neutral contracts for concrete environments surrounding Core. This package currently owns
 only the definition-time `Workspace` session and generic `ArtifactAttachment` transfer envelope.

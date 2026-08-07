@@ -1,4 +1,4 @@
-import type { BlobRef, Digest } from "@svml/protocol";
+import type { BlobRef, Digest } from "@narratage/protocol";
 
 export type TimingQuality = "measured" | "derived" | "estimated";
 

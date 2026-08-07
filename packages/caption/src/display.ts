@@ -2,7 +2,7 @@ import type {
   CaptionRegion,
   Narrative,
   NarrativeSelectionRef,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 
 import type { CaptionDisplayAtom } from "./types.js";
 

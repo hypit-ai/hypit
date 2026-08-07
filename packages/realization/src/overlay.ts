@@ -6,7 +6,7 @@ import {
   sealCompiledGraph,
   verifyBuildState,
   verifyCompiledGraph,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   BuildState,
   Candidate,
@@ -18,7 +18,7 @@ import type {
   StoredValue,
   TypeValidationReceipt,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export type RealizationOverlay = {
   readonly format: "svml.realization-overlay@1";

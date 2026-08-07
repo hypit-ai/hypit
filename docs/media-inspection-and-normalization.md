@@ -34,7 +34,7 @@ raw BlobArtifact
   -> domain component         optional semantic promotion, e.g. Narrative-bound SpeechBasis
 ```
 
-Core does not know any of these Types. They are nominal Types in the logical `@svml/media` module,
+Core does not know any of these Types. They are nominal Types in the logical `@narratage/media` module,
 with digest validators registered by the media component.
 
 ## MediaInspection
@@ -133,8 +133,8 @@ hidden transcode.
 
 ## Provider boundary
 
-`@svml/media-pipeline` owns the provider-neutral Fragment and exact capabilities.
-`@svml/provider-media-local` realizes them with bounded local ffprobe/ffmpeg processes.
+`@narratage/media-pipeline` owns the provider-neutral Fragment and exact capabilities.
+`@narratage/provider-media-local` realizes them with bounded local ffprobe/ffmpeg processes.
 
 ```text
 .svml/imported author package  chooses that a generated result is used as visual or speech media

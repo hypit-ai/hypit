@@ -1,9 +1,9 @@
-import { captionManifest } from "@svml/caption";
+import { captionManifest } from "@narratage/caption";
 import {
   contractTypes,
   videoContractDependencies,
   videoContractManifests,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -13,14 +13,14 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   bindAuthorFragment,
   bindCandidateFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
   sealGraphFragment,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   CandidateBinding,
   BuildState,
@@ -31,18 +31,18 @@ import type {
   ProducerRef,
   TypeRef,
   ValueSchema,
-} from "@svml/protocol";
-import { resolveRealization, sealRealizationOverlay } from "@svml/realization";
-import { narrativeValue, parseScript } from "@svml/script";
-import { speechAlignManifest } from "@svml/speech-align";
-import { speechTakeManifest } from "@svml/speech-take";
-import { mediaPipelineManifest } from "@svml/media-pipeline";
+} from "@narratage/protocol";
+import { resolveRealization, sealRealizationOverlay } from "@narratage/realization";
+import { narrativeValue, parseScript } from "@narratage/script";
+import { speechAlignManifest } from "@narratage/speech-align";
+import { speechTakeManifest } from "@narratage/speech-take";
+import { mediaPipelineManifest } from "@narratage/media-pipeline";
 import {
   captionTimingFragment,
   speechTakeProjectionFragment,
   whisperXSpeechAlignmentFragment,
-} from "@svml/speech-program";
-import { whisperXManifest, whisperXTypes } from "@svml/whisperx";
+} from "@narratage/speech-program";
+import { whisperXManifest, whisperXTypes } from "@narratage/whisperx";
 
 export const videoModule = { name: "example.video-pipeline", version: "0.0.0" } as const;
 

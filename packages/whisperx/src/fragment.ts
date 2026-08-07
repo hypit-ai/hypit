@@ -1,7 +1,7 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import { mediaPipelineProducers } from "@svml/media-pipeline";
-import { speechAlignProducers } from "@svml/speech-align";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import { mediaPipelineProducers } from "@narratage/media-pipeline";
+import { speechAlignProducers } from "@narratage/speech-align";
 
 import { whisperXProducers, whisperXTypes } from "./manifest.js";
 
@@ -10,7 +10,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** One measured acoustic pass followed by provider-neutral deterministic Script alignment. */
 export const whisperXSpeechAlignmentFragment = sealGraphFragment({
-  name: "@svml/whisperx/speech-alignment@1",
+  name: "@narratage/whisperx/speech-alignment@1",
   inputs: [
     { name: "narrative", type: contractTypes.narrative },
     { name: "audio", type: contractTypes.speechAudioBasis },

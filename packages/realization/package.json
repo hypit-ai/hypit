@@ -1,5 +1,5 @@
 {
-  "name": "@svml/realization",
+  "name": "@narratage/realization",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,11 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/elaborator": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

@@ -1,25 +1,25 @@
-import { artifactDependency, artifactTypes } from "@svml/artifact";
+import { artifactDependency, artifactTypes } from "@narratage/artifact";
 import {
   videoContractDependencies,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   promptKitManifestDigest,
   promptKitModuleRef,
   promptKitTypes,
-} from "@svml/prompt-kit";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest } from "@svml/protocol";
+} from "@narratage/prompt-kit";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest } from "@narratage/protocol";
 import {
   seedanceManifestDigest,
   seedanceModuleRef,
   seedanceTypes,
-} from "@svml/seedance";
-import { svsManifest, svsRecipeType } from "@svml/svs";
+} from "@narratage/seedance";
+import { svsManifest, svsRecipeType } from "@narratage/svs";
 
-export const seedanceSpeakerModuleRef = { name: "@svml/seedance-speaker", version: "0.0.0-dev" } as const;
+export const seedanceSpeakerModuleRef = { name: "@narratage/seedance-speaker", version: "0.0.0-dev" } as const;
 
 export const seedanceSpeakerImplementationDigests = {
-  takeSurface: digestOf("@svml/seedance-speaker/take-surface@3"),
+  takeSurface: digestOf("@narratage/seedance-speaker/take-surface@3"),
 } as const;
 
 export const seedanceSpeakerManifest: ModuleManifest = {
@@ -43,7 +43,7 @@ export const seedanceSpeakerManifest: ModuleManifest = {
     outputs: [promptKitTypes.program, seedanceTypes.speechProgram, artifactTypes.blob],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/seedance-speaker/take-surface",
+      locator: "@narratage/seedance-speaker/take-surface",
       digest: seedanceSpeakerImplementationDigests.takeSurface,
     },
   }],

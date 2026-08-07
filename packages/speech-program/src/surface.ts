@@ -1,15 +1,15 @@
-import { artifactTypes } from "@svml/artifact";
-import { contractTypes } from "@svml/contracts";
+import { artifactTypes } from "@narratage/artifact";
+import { contractTypes } from "@narratage/contracts";
 import {
   sealMediaSelectionRequest,
   synchronizedMediaFragment,
-} from "@svml/media-pipeline";
+} from "@narratage/media-pipeline";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { createSpeechSpineFragment } from "./fragment.js";
 import { speechProgramTypes } from "./manifest.js";
@@ -96,7 +96,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
     frameRate: { numerator: 30, denominator: 1 },
   });
   const assembly = createSpeechSpineFragment({
-    name: `@svml/speech-program/surface/${id}@1`,
+    name: `@narratage/speech-program/surface/${id}@1`,
     takes: declaredTakes.map(({ mediaName, segmentName }) => ({ mediaName, segmentName })),
   });
   const normalizationComponents = declaredTakes.map((take, index) => ({
@@ -109,7 +109,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
   return {
     records: [
       { id: programId, type: speechProgramTypes.spineProgram, value: { kind: "inline", value: program }, range: element.range },
-      { id: requestId, type: { module: { name: "@svml/media-pipeline", version: "0.0.0-dev" }, name: "MediaSelectionRequest" }, value: { kind: "inline", value: request }, range: element.range },
+      { id: requestId, type: { module: { name: "@narratage/media-pipeline", version: "0.0.0-dev" }, name: "MediaSelectionRequest" }, value: { kind: "inline", value: request }, range: element.range },
     ],
     components: [
       ...normalizationComponents,

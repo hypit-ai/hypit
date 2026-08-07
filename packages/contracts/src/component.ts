@@ -1,4 +1,4 @@
-import type { ComponentPackage } from "@svml/component-kit";
+import type { ComponentPackage } from "@narratage/component-kit";
 
 import {
   verifyMediaInspection,
@@ -31,7 +31,7 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
 
 /** Semantic validation for public media facts. Core Records own value integrity. */
 export const mediaContractsComponent = {
-  name: "@svml/media",
+  name: "@narratage/media",
   validators: [
     {
       type: contractTypes.mediaInspection,
@@ -68,7 +68,7 @@ export const mediaContractsComponent = {
 
 /** Track values are self-validated; Composition repeats validation with the exact ProgramSpace. */
 export const compositionContractsComponent = {
-  name: "@svml/composition",
+  name: "@narratage/composition",
   validators: [
     {
       type: contractTypes.visualTrack,

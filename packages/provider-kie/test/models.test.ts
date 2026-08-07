@@ -1,24 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createResolvedClosure, digestOf } from "@svml/core";
-import { videoContractManifests } from "@svml/contracts";
-import { verifyGraphFragment } from "@svml/elaborator";
+import { createResolvedClosure, digestOf } from "@narratage/core";
+import { videoContractManifests } from "@narratage/contracts";
+import { verifyGraphFragment } from "@narratage/elaborator";
 import {
   geminiOmniDefinition,
   geminiOmniManifest,
   sealGeminiOmniRequest,
-} from "@svml/gemini-omni";
-import { MemoryArtifactStore } from "@svml/driver-node";
-import { generationManifest } from "@svml/generation";
-import { gptImageDefinition, gptImageManifest, sealGptImage2Request } from "@svml/gpt-image";
-import { grokImagineDefinition, grokImagineManifest, sealGrokImagineRequest } from "@svml/grok-imagine";
-import { minimaxH3Definition, minimaxH3Manifest, sealMinimaxH3Request } from "@svml/minimax-h3";
-import { nanoBananaDefinition, nanoBananaManifest, sealNanoBananaRequest } from "@svml/nano-banana";
-import { kieModelCatalog } from "@svml/provider-kie";
-import { seedanceDefinition, seedanceManifest, sealSeedanceRequest } from "@svml/seedance";
-import { seedreamDefinition, seedreamManifest, sealSeedreamRequest } from "@svml/seedream";
-import type { LinkedProgram } from "@svml/protocol";
+} from "@narratage/gemini-omni";
+import { MemoryArtifactStore } from "@narratage/driver-node";
+import { generationManifest } from "@narratage/generation";
+import { gptImageDefinition, gptImageManifest, sealGptImage2Request } from "@narratage/gpt-image";
+import { grokImagineDefinition, grokImagineManifest, sealGrokImagineRequest } from "@narratage/grok-imagine";
+import { minimaxH3Definition, minimaxH3Manifest, sealMinimaxH3Request } from "@narratage/minimax-h3";
+import { nanoBananaDefinition, nanoBananaManifest, sealNanoBananaRequest } from "@narratage/nano-banana";
+import { kieModelCatalog } from "@narratage/provider-kie";
+import { seedanceDefinition, seedanceManifest, sealSeedanceRequest } from "@narratage/seedance";
+import { seedreamDefinition, seedreamManifest, sealSeedreamRequest } from "@narratage/seedream";
+import type { LinkedProgram } from "@narratage/protocol";
 
 test("the selected KIE release is seven exact model families and no Grok image capability", () => {
   assert.equal(kieModelCatalog.length, 16);

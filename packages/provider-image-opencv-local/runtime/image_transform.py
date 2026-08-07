@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded closed-data image transforms for @svml/provider-image-opencv-local."""
+"""Bounded closed-data image transforms for @narratage/provider-image-opencv-local."""
 
 import json
 import sys

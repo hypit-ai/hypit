@@ -1,12 +1,12 @@
-import { resolveProducer } from "@svml/core";
-import { digestOf, isDigest } from "@svml/protocol";
+import { resolveProducer } from "@narratage/core";
+import { digestOf, isDigest } from "@narratage/protocol";
 import type {
   BuildState,
   CapabilityRef,
   Digest,
   ModuleRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export type RuntimeFacetRole =
   | "scheduler"

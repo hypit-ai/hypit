@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   contractTypes,
   videoContractManifests,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   createResolvedClosure,
   link,
-} from "@svml/core";
-import { verifyGraphFragment } from "@svml/elaborator";
-import { TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/core";
+import { verifyGraphFragment } from "@narratage/elaborator";
+import { TypeValidatorRegistry } from "@narratage/validation";
 
 import {
   mediaPipelineComponents,

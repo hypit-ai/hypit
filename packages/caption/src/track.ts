@@ -3,16 +3,16 @@ import {
   assertVisualTrackIdentity,
   programSpaceFrameCount,
   sealVisualTrack,
-} from "@svml/contracts";
-import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
 
 import { planCaptionPresentation } from "./presentation.js";
 import { assertCaptionProgram } from "./style.js";
 import type { CaptionProgram, CaptionTrackProgram, TimedCaptionProjection } from "./types.js";
 
-export const renderCaptionTrackImplementationDigest = digestOf("@svml/caption/render-track@1");
-export const renderCaptionProgramImplementationDigest = digestOf("@svml/caption/render-program@1");
+export const renderCaptionTrackImplementationDigest = digestOf("@narratage/caption/render-track@1");
+export const renderCaptionProgramImplementationDigest = digestOf("@narratage/caption/render-program@1");
 
 function normalizedProgram(value: CaptionTrackProgram): CaptionTrackProgram {
   return {

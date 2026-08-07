@@ -1,4 +1,4 @@
-# `@svml/elaborator`
+# `@narratage/elaborator`
 
 Parser-independent author linking and static Graph Fragment elaboration outside SVML Core.
 
@@ -14,7 +14,7 @@ phases:
 Because all exports are collected before any input is resolved, declaration order has no meaning
 and a component may reference a later component. The linker itself does not parse `.svml`, execute
 package code or know any domain vocabulary. The non-video laboratory test demonstrates that the
-same layer works without `@svml/text` or audiovisual contracts.
+same layer works without `@narratage/text` or audiovisual contracts.
 
 The official Text adapter now emits this exact Author Module format. Its separate non-video
 integration fixture proves the complete `source → Surface → AuthorModule → Graph → BuildPlan` path;
@@ -44,7 +44,7 @@ browser upload, repository object or remote content store.
 
 Frontend output passes a Host-owned Record admission hook before linking. The hook is permitted to
 attach validation evidence but is forbidden to rewrite Record identity, Type, value, digest,
-conformance or origin. `@svml/compiler-node` wires this to `@svml/validation` by default, so authored
+conformance or origin. `@narratage/compiler-node` wires this to `@narratage/validation` by default, so authored
 values use the same Type-owner gate as Producer, Provider and provided Candidate values.
 
 A `svml.fragment@1` value may reference only declared Fragment inputs and local Operations. It
@@ -63,6 +63,6 @@ does not name an Author Logical Output. `bindCandidateFragment()` remains compat
 additionally creates Satisfaction edges; new Run frontends should keep graph declaration and
 `output -> candidate + fidelity` selection separate.
 
-`@svml/elaborator` is not a public `@svml/author` subsystem. It is a reusable graph-construction
+`@narratage/elaborator` is not a public `@narratage/author` subsystem. It is a reusable graph-construction
 library. A domain normally adds its own contract and component packages; Text remains only one
 optional frontend capable of producing the same Author Module data.

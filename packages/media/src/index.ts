@@ -7,4 +7,4 @@ export {
   mediaManifestDigest,
   mediaModuleRef,
   mediaSurfaceImplementationDigests,
-} from "@svml/contracts";
+} from "@narratage/contracts";
