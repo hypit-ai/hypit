@@ -1,4 +1,7 @@
-export { decodeMediaImageSurface } from "./surface.js";
+export {
+  decodeMediaAudioSurface,
+  decodeMediaImageSurface,
+} from "./surface.js";
 export {
   mediaManifest,
   mediaManifestDigest,

@@ -4,6 +4,7 @@ import {
 } from "@svml/contracts";
 import { digestOf } from "@svml/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+import { svsManifest, svsRecipeType } from "@svml/svs";
 
 import { estimateSpeechImplementationDigest } from "./program.js";
 
@@ -14,7 +15,7 @@ export const estimateTypes = {
 export const estimateProducers = {
   speech: { module: estimateModuleRef, name: "estimate-speech-duration" },
 } satisfies Record<string, ProducerRef>;
-export const estimateSurfaceImplementationDigest = digestOf("@svml/estimate/speech-surface@1");
+export const estimateSurfaceImplementationDigest = digestOf("@svml/estimate/speech-surface@2");
 
 const number = { kind: "number" } as const satisfies ValueSchema;
 const digest = { kind: "string", minLength: 71, maxLength: 71 } as const satisfies ValueSchema;
@@ -39,6 +40,7 @@ export const estimateManifest: ModuleManifest = {
   dependencies: [
     videoContractDependencies.narrative,
     videoContractDependencies.speech,
+    { module: svsRecipeType.module, digest: digestOf(svsManifest) },
   ],
   types: [{ name: estimateTypes.speechPolicy.name, schema: speechEstimatePolicySchema }],
   capabilities: [],

@@ -171,7 +171,7 @@ requests, while all supplied packages are closed exactly once so an unselected d
 cannot leak resources. Package code is still trusted deployment code and is never activated by
 author imports.
 
-`svml.packages.lock` is created from explicitly installed component aggregates with
+`svml.packages.lock` is created from explicitly selected physical packages with
 `svml-v2 lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
 Runtime config no longer imports each component by name. Its digest must equal the
 `BuildRequest.implementationClosure` produced by `plan`/`build` with the same lock, so durable work
@@ -225,6 +225,8 @@ The v2 CLI now accepts:
 ```bash
 pnpm svml:v2 build build.svrun \
   --runtime ./svml.runtime.json \
+  --package-lock ./svml.packages.lock \
+  --root . \
   --follow
 
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
@@ -289,8 +291,8 @@ video build still requires:
 
 1. keep the credentialed KIE smoke suite opt-in as Provider contracts evolve (the representative
    seven-family run and synthetic-reference upload passed on 2026-08-06);
-2. official Speech assembly, Caption, B-roll and Text Track Surfaces; authored Image and exact
-   Seedance Prompt/Speech/Video Surfaces are implemented;
+2. official Speech assembly, Caption, B-roll and Text Track Surfaces; authored Image/Audio, exact
+   Seedance Prompt/Speech/Video Surfaces and the SVS-backed Seedance Speaker Kit are implemented;
 3. audit and implement the complete package-owned Caption style/positioning Recipe before freezing
    its author Surface; SpeechTake, Speech Align and the current deterministic Caption facets are
    already locked and activated from the official implementation package;

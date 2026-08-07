@@ -41,6 +41,10 @@ export type NodeRunCompilerOptions = {
   readonly root?: string;
   readonly workspace?: Workspace;
   readonly readBuild?: (id: string) => Promise<ArchivedBuildState | undefined> | ArchivedBuildState | undefined;
+  readonly resolveBuildOutput?: (
+    build: string,
+    output: string,
+  ) => Promise<string | undefined> | string | undefined;
 };
 
 export type NodeCompiledRun = {
@@ -122,6 +126,7 @@ export class NodeRunCompiler {
     );
     const executionCompilation = program === author.program ? author : { ...author, program };
     const readBuild = this.#options.readBuild;
+    const resolveBuildOutput = this.#options.resolveBuildOutput;
     const run = await resolveRunDocument(decoded.document, {
       compilation: executionCompilation,
       sourceClosure: decoded.closure,
@@ -131,6 +136,11 @@ export class NodeRunCompiler {
         if (readBuild === undefined) throw new Error(`Run refers to Build ${id}, but the Host has no BuildArchive`);
         return await readBuild(id);
       },
+      ...(resolveBuildOutput === undefined ? {} : {
+        async resolveBuildOutput(build: string, output: string) {
+          return await resolveBuildOutput(build, output);
+        },
+      }),
     });
     return {
       source: source.id,

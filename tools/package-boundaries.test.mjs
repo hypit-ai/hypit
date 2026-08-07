@@ -108,11 +108,10 @@ test("Text compilation is one explicit leaf assembly, not a Package Loader or Lo
   assert.ok(!transitive(graph, "@svml/local").has("@svml/text"));
 });
 
-test("the generic CLI engine reaches no video Prelude or Endpoint package", async () => {
+test("the generic CLI reaches no Endpoint package and video CLI activates no author aggregate", async () => {
   const graph = productionGraph(await workspacePackages());
   const dependencies = transitive(graph, "@svml/cli");
   const videoAssembly = [
-    "@svml/prelude-video",
     "@svml/provider-google-vertex",
     "@svml/provider-hyperframes-local",
     "@svml/provider-kie",
@@ -120,6 +119,11 @@ test("the generic CLI engine reaches no video Prelude or Endpoint package", asyn
     "@svml/provider-whisperx-local",
   ];
   assert.deepEqual(videoAssembly.filter((name) => dependencies.has(name)), []);
-  assert.ok(transitive(graph, "@svml/video-cli").has("@svml/prelude-video"));
-  assert.ok(transitive(graph, "@svml/video-cli").has("@svml/cli"));
+  const videoDependencies = transitive(graph, "@svml/video-cli");
+  assert.ok(!videoDependencies.has("@svml/script"));
+  assert.ok(!videoDependencies.has("@svml/seedance-speaker"));
+  assert.ok(!videoDependencies.has("@svml/broll"));
+  assert.ok(!videoDependencies.has("@svml/text-track"));
+  assert.ok(!videoDependencies.has("@svml/film"));
+  assert.ok(videoDependencies.has("@svml/cli"));
 });

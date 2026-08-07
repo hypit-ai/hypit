@@ -6,6 +6,7 @@ import {
   canonicalize,
   digestOf,
   reduce,
+  validateStoredValue,
   validatePlan,
   verifyBuildState,
   verifyRecordAffinity,
@@ -18,6 +19,7 @@ import type {
   FulfillNeedCommand,
   InvokeProducerCommand,
   TypedRecord,
+  ValueSchema,
 } from "@svml/protocol";
 
 import { createGreetingBuild, producers } from "./greeting-fixture.js";
@@ -136,6 +138,35 @@ test("schema-invalid producer output is rejected before it becomes a Record", ()
         outputs: { prompt: { kind: "inline", value: 42 } },
         needs: {},
       }),
+    (error: unknown) => error instanceof CoreError && error.code === "VALUE_SCHEMA_MISMATCH",
+  );
+});
+
+test("oneOf literal discrimination preserves exact-one semantics", () => {
+  const tagged = (tag: string): ValueSchema => ({
+    kind: "object",
+    fields: {
+      kind: { schema: { kind: "literal", value: tag } },
+      payload: { schema: { kind: "string" } },
+    },
+  });
+  const generic: ValueSchema = {
+    kind: "object",
+    fields: {
+      kind: { schema: { kind: "string" } },
+      payload: { schema: { kind: "string" } },
+    },
+  };
+
+  assert.doesNotThrow(() => validateStoredValue(
+    { kind: "inline", value: { kind: "alpha", payload: "hello" } },
+    { kind: "oneOf", variants: [tagged("alpha"), tagged("beta")] },
+  ));
+  assert.throws(
+    () => validateStoredValue(
+      { kind: "inline", value: { kind: "alpha", payload: "hello" } },
+      { kind: "oneOf", variants: [tagged("alpha"), generic] },
+    ),
     (error: unknown) => error instanceof CoreError && error.code === "VALUE_SCHEMA_MISMATCH",
   );
 });

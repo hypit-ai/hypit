@@ -1,10 +1,10 @@
 import type { CliCompilerOptions } from "@svml/cli";
 import { createTextNodeCompiler } from "@svml/compiler-text-node";
-import { svmlPackage as videoPrelude } from "@svml/prelude-video";
 
-export const videoBuiltInPackageContributions = [videoPrelude] as const;
+/** Video authoring packages are selected by an explicit package lock; none are implicit here. */
+export const videoBuiltInPackageContributions = [] as const;
 
-/** Video Distribution chooses Text authoring and one ordinary replaceable video Prelude. */
+/** Assemble the Text compiler Host from only the packages selected for this invocation. */
 export function createVideoCompiler(options: CliCompilerOptions) {
   return createTextNodeCompiler(options.packageContributions, {
     ...(options.root === undefined ? {} : { root: options.root }),

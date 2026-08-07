@@ -77,7 +77,7 @@ The repository implements:
 The complete live path is:
 
 ```text
-Script → Estimate → Seedance × 2 → media normalization → WhisperX → SemanticMap
+Script → Estimate → Seedance × N → media normalization → WhisperX → SemanticMap
        → Gemini CaptionPlan → peer Tracks → Film → HyperFrames → audio mix → MP4
 ```
 
@@ -98,10 +98,12 @@ pnpm check
 pnpm test
 
 # Compile a complete provider-free v2 author graph.
-pnpm svml:v2 check examples/talking-film-graph-check/main.svml
+pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
 # Compile the self-described Run Graph and inspect its finite plan.
-pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun
+pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
 The live example uses an explicit Run Graph, declarative local Runtime Profile and external
@@ -110,6 +112,8 @@ credentials:
 ```bash
 pnpm svml:v2 build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
+  --package-lock examples/talking-film-live/svml.packages.lock \
+  --root . \
   --build-id talking-film-live \
   --follow
 
@@ -170,7 +174,7 @@ packages/compiler-node   reference Node compiler Host
 packages/compiler-text-node  optional official Text compiler assembly
 packages/package-loader-node syntax-neutral trusted physical-package loading
 packages/cli             generic commands requiring an explicit Distribution
-packages/video-cli       official Text/video command Distribution
+packages/video-cli       official video command application; no author-package aggregate
 packages/run             syntax-neutral Run Source closure and complete Run Graph compiler
 packages/run-text        optional official human-readable Run Frontend
 packages/runtime         environment-neutral scheduling and Store ports

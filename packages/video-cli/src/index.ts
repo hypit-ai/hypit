@@ -3,6 +3,7 @@ import {
   materializeRecord,
   runCli,
 } from "@svml/cli";
+import type { NodePackageContribution } from "@svml/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
 
@@ -20,6 +21,10 @@ export { videoCliDistribution } from "./distribution.js";
 export function runVideoCli(
   argv: readonly string[],
   io: { readonly write: (text: string) => void },
+  packageContributions: readonly NodePackageContribution[] = [],
 ): Promise<void> {
-  return runCli(argv, io, videoCliDistribution);
+  return runCli(argv, io, {
+    ...videoCliDistribution,
+    builtInPackageContributions: packageContributions,
+  });
 }

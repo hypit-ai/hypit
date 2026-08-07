@@ -28,9 +28,15 @@ paid Provider request or promise that remote credentials and service health are 
 
 Run the complete graph through the explicit Run Graph and declarative local Runtime Profile:
 
+The checked-in `svml.packages.lock` selects each author, Run and deterministic compute package
+independently; there is no implicit video bundle. Regenerate it after changing one of those package
+implementations with the package list documented in the lock file.
+
 ```bash
 pnpm svml:v2 build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
+  --package-lock examples/talking-film-live/svml.packages.lock \
+  --root . \
   --build-id talking-film-live \
   --follow
 
@@ -59,10 +65,10 @@ Candidates and their explicit Satisfaction edges to another `.svrun`:
   <target-set id="delivery">
     <target output="final.video" accepts="substitute"/>
   </target-set>
-  <build-record id="opening" build="prior-build-id" output="opening-take"/>
-  <build-record id="answer" build="prior-build-id" output="answer-take"/>
-  <satisfy output="opening-take" candidate="opening" fidelity="substitute"/>
-  <satisfy output="answer-take" candidate="answer" fidelity="substitute"/>
+  <build-record id="opening" build="prior-build-id" output="opening-take.video"/>
+  <build-record id="answer" build="prior-build-id" output="answer-take.video"/>
+  <satisfy output="opening-take.video" candidate="opening" fidelity="substitute"/>
+  <satisfy output="answer-take.video" candidate="answer" fidelity="substitute"/>
 </svrun>
 ```
 

@@ -18,8 +18,9 @@ installed package bytes
   -> Host grants only the selected author or compute registries
 ```
 
-The official CLI names one replaceable `@svml/prelude-video` package. The local Runtime can consume
-the same package lock without hard-coding any of that package's Producers.
+The official video CLI starts with no author-package aggregate. Each selected package contributes
+its own Manifest, Frontend, Surface, Producer and Validator facets, and the local Runtime consumes
+the same package lock without a hard-coded component list.
 
 ## 2. Package contract
 
@@ -129,9 +130,9 @@ Tests create installed packages unknown to the repository and prove all of the f
 - unrelated Host-facet ABIs remain inert;
 - its authored value passes its locked Type-owner Validator and carries a validation receipt;
 - its deterministic Producer is discovered as enumerable locked data;
-- the installed official video prelude physically closes over `@svml/speech-take` and
-  `@svml/speech-align` plus `@svml/caption`, exposing four Product projections, the timing locator,
-  Caption lowering and Caption-owned validators without a Host registration list;
+- independently activated official packages close over `@svml/speech-take`,
+  `@svml/speech-align` and `@svml/caption`, exposing Product projections, the timing locator,
+  Caption lowering and Caption-owned validators without a CLI registration list;
 - `createProjectLocalRuntime({ packageLock })` executes that Producer without a deployment-source
   component list;
 - an unlocked or differently locked BuildRequest is rejected by that Host;

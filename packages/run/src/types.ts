@@ -175,6 +175,11 @@ export type ResolveRunDocumentContext = {
   readonly fragments: RunFragmentRegistryLike;
   readonly readStoredValue: (from: string) => Promise<StoredValue> | StoredValue;
   readonly readBuild: (id: string) => Promise<BuildState | undefined> | BuildState | undefined;
+  /** Host presentation lookup: resolve a prior Build's public output alias to its Logical Output id. */
+  readonly resolveBuildOutput?: (
+    build: string,
+    output: string,
+  ) => Promise<string | undefined> | string | undefined;
 };
 
 export type RunCompilation = {

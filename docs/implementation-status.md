@@ -5,32 +5,33 @@ executes. SVML is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
 
-On 2026-08-07 the v2 branch completed a real paid vertical-video acceptance sequence covering the
-combined path:
+On 2026-08-07 the v2 branch completed a real paid four-take vertical-video acceptance sequence
+covering the combined path:
 
 ```text
-Script → Estimate → two KIE Seedance Mini generations
+Script → Estimate → four KIE Seedance Mini generations
        → media inspection and normalization → Speech Spine
        → local WhisperX → SemanticMap
-       → Vertex Gemini CaptionPlan → Caption and Text Tracks
+       → Vertex Gemini CaptionPlan → Caption Track
        → Film → local parallel HyperFrames render
        → audio program → mux → H.264/AAC MP4
 ```
 
-The acceptance used two explicit Build identities. The first submitted the two real paid KIE shots
-and paused when its selected Vertex project lacked service access. After correcting deployment
-configuration, a second Build reused those accepted take Records through explicit Build-Record
-Candidates, issued no KIE Operation, ran the reachable media/WhisperX/Vertex/HyperFrames path and
-preserved `substitute` through the final Record. This is the intended recovery/substitution model,
-not an implicit cache or continuation under changed Runtime identity.
+The acceptance used two explicit Build identities. The first submitted the four real paid KIE
+shots. The second used `reuse-generated.svrun` to expose those verified Records as four zero-input
+Build-Record Candidates and selected them through explicit Satisfaction edges. Its compiled plan
+contained no Seedance Operation or KIE Need, while the reachable
+media/WhisperX/Vertex/Film/HyperFrames path executed normally and preserved `substitute` through the
+final Record. This is the intended realization model—not an implicit cache, mutable resume or
+Runtime-selected fallback.
 
-The resulting artifact is a 10.07-second 480×854 H.264/AAC MP4. Frame inspection confirmed the
-speech visual, planned Caption Track and selection-located Text Track in the final Composition. The
-checked-in source and Runtime assembly are in
-[`examples/talking-film-live`](../examples/talking-film-live/README.md). Credentials, presenter
-assets and generated outputs are intentionally ignored. A fresh uninterrupted all-`exact` paid
-acceptance remains part of automating the opt-in live harness; no implementation gap was bypassed by
-the completed Candidate Build.
+The resulting artifact is a 57.13-second 720×1280, 30 fps H.264/AAC MP4. Frame inspection confirmed
+the four ordered speech visuals and measured Caption Track in the final Composition. The checked-in
+source, exact Run, reuse Run and Runtime assembly are in
+[`examples/echo-pro-aroll`](../examples/echo-pro-aroll/README.md). Credentials, presenter assets,
+Build databases and generated outputs are intentionally ignored. A fresh uninterrupted all-`exact`
+acceptance remains part of automating the opt-in live harness; the explicit Candidate Build did not
+bypass any downstream implementation gap.
 
 ## Domain-neutral system
 
@@ -60,14 +61,16 @@ Implemented:
   changing Author imports or Author Graph identity;
 - `@svml/validation`: package-owned semantic validators and common Record admission;
 - `@svml/component-kit`: host-neutral deterministic Producer/validator registration;
+- `@svml/prompt-kit`: digest-bound author-time compilation of declarative fixed/axis/variant/slot
+  Kit Specs and Invocations into authored ordered Prompt Programs;
 - `@svml/host`, `@svml/workspace-fs-node`, `@svml/compiler-node`: replaceable Workspace and the
   reference Node compiler Host;
 - `@svml/package-loader-node`: syntax-neutral installed-package byte locking and trusted facet
   loading;
 - `@svml/compiler-text-node`: the explicit official Text Frontend and Text Surface Host assembly;
 - `@svml/cli`: a generic command engine requiring one explicit `CliDistribution`;
-- `@svml/video-cli`: the current video Distribution selecting the Text compiler, video Prelude and
-  video Runtime-config adapter registry;
+- `@svml/video-cli`: the current video command application selecting the Text compiler and video
+  Runtime-config adapter registry, with no built-in author-package aggregate;
 - `@svml/text`, `@svml/script`, `@svml/svs`: official markup, Script and Recipe Frontends without
   Core parser branches; `.svml` and `.svs` remain human suffix conventions only;
 - `@svml/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
@@ -135,6 +138,12 @@ Implemented and executable:
   projections;
 - deterministic speech estimate, atomic SpeechTake/SpeechBasis and peer VisualTrack/AudioTrack
   projections;
+- authored image/audio Blob references and reusable SVS-backed speech-estimate policies;
+- `@svml/seedance-speaker`: a thin official UGC binding from Script dialogue, explicit image/audio
+  references, an inert project SVS Recipe and one explicitly imported PromptKitSpec; the
+  self-described `official-ugc-v1.svs` Source Module contains defaults, ordering,
+  parameter-to-Prompt mappings and finite reference-count branches, all lowered during author
+  compilation before the existing exact Seedance request path;
 - one-pass WhisperX evidence and direct Script-to-evidence many-to-many alignment;
 - planner-neutral CaptionPlan: ordered Cue cuts plus zero or more declared attributes per display
   atom, with no text rewrite or timing authority;
@@ -169,16 +178,11 @@ permission enforcement and loaded-code attestation remain release work.
 
 - TypeScript v1 and v2 checks pass;
 - v1 research oracle: 35/35 tests;
-- v2: 316 passing, 3 environment-gated skips, 0 failures;
+- the v2 suite passes with three environment-gated browser/service tests skipped by default;
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
 - generated credentials, media outputs and local databases are ignored by Git.
-
-The paid acceptance above predates the mandatory Source Header and complete Run Graph migration.
-The same video graph now closes and plans through the new path, but a fresh paid all-`exact` Build
-has not yet been run after this compiler refactor. This is an acceptance gap, not a hidden
-implementation claim.
 
 All v2 workspace packages are currently private development packages that export TypeScript source.
 The repository is usable from a checkout, but no npm-ready package distribution exists yet. See

@@ -6,6 +6,7 @@ import {
   countSpeechEstimateUnits,
   estimateSpeechDuration,
   sealSpeechEstimatePolicy,
+  speechEstimatePolicyFromRecipe,
 } from "@svml/estimate";
 import { canonicalize, digestOf } from "@svml/protocol";
 
@@ -48,4 +49,26 @@ test("the minimum applies before rounding and the maximum applies after rounding
   const { policyDigest: _digest, ...normalContent } = normal;
   const bounded = sealSpeechEstimatePolicy({ ...normalContent, maximumSec: 4.5 });
   assert.equal(estimateSpeechDuration(excerpt("long", "This sentence intentionally contains far more spoken syllables than the selected model duration allows."), bounded).durationSec, 4.5);
+});
+
+test("an SVS Recipe configures one reusable estimate policy without becoming executable", () => {
+  const policy = speechEstimatePolicyFromRecipe({
+    contract: "svml.svs-recipe@1",
+    path: "speech.normal",
+    properties: {
+      language: "en",
+      pace: "normal",
+      padding: 0.3,
+      min: 4,
+      max: 15,
+      rounding: "ceil",
+    },
+  });
+  assert.equal(policy.language, "en");
+  assert.equal(policy.maximumSec, 15);
+  assert.throws(() => speechEstimatePolicyFromRecipe({
+    contract: "svml.svs-recipe@1",
+    path: "speech.invalid",
+    properties: { provider: "gemini" },
+  }), /unknown property provider/u);
 });

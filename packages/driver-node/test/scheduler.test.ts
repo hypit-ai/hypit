@@ -46,7 +46,8 @@ import {
   types,
 } from "../../core/test/greeting-fixture.js";
 
-function createParallelGreetingBuild() {
+function createParallelGreetingBuild(generationCount = 2) {
+  const generations = ["a", "b", "c"].slice(0, generationCount);
   const closure = createResolvedClosure([manifest]);
   const authored = sealRecord({
     id: "intent:root",
@@ -73,18 +74,12 @@ function createParallelGreetingBuild() {
         primary: "make-prompt",
         semanticInputs: [{ kind: "record", id: "intent:root" }],
       },
-      {
-        id: "generated-a",
+      ...generations.map((suffix) => ({
+        id: `generated-${suffix}`,
         type: types.generated,
-        primary: "generate-a",
-        semanticInputs: [{ kind: "logical-output", id: "prompt" }],
-      },
-      {
-        id: "generated-b",
-        type: types.generated,
-        primary: "generate-b",
-        semanticInputs: [{ kind: "logical-output", id: "prompt" }],
-      },
+        primary: `generate-${suffix}`,
+        semanticInputs: [{ kind: "logical-output" as const, id: "prompt" }],
+      })),
     ],
     candidates: [
       {
@@ -92,16 +87,14 @@ function createParallelGreetingBuild() {
         type: types.prompt,
         root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } },
       },
-      {
-        id: "generate-a",
+      ...generations.map((suffix) => ({
+        id: `generate-${suffix}`,
         type: types.generated,
-        root: { kind: "operation", result: { kind: "operation-result", operation: "generate-a" } },
-      },
-      {
-        id: "generate-b",
-        type: types.generated,
-        root: { kind: "operation", result: { kind: "operation-result", operation: "generate-b" } },
-      },
+        root: {
+          kind: "operation" as const,
+          result: { kind: "operation-result" as const, operation: `generate-${suffix}` },
+        },
+      })),
     ],
     operations: [
       {
@@ -110,38 +103,23 @@ function createParallelGreetingBuild() {
         inputs: { intent: { kind: "record", id: "intent:root" } },
         result: { kind: "output", name: "prompt", record: "prompt:root" },
       },
-      {
-        id: "generate-a",
+      ...generations.map((suffix) => ({
+        id: `generate-${suffix}`,
         producer: greetingProducers.requestText,
-        inputs: { prompt: { kind: "logical-output", id: "prompt" } },
+        inputs: { prompt: { kind: "logical-output" as const, id: "prompt" } },
         result: {
-          kind: "need",
+          kind: "need" as const,
           name: "generation",
-          id: "need:generation-a",
-          record: "generated:a",
-          accepts: "exact",
+          id: `need:generation-${suffix}`,
+          record: `generated:${suffix}`,
+          accepts: "exact" as const,
         },
-      },
-      {
-        id: "generate-b",
-        producer: greetingProducers.requestText,
-        inputs: { prompt: { kind: "logical-output", id: "prompt" } },
-        result: {
-          kind: "need",
-          name: "generation",
-          id: "need:generation-b",
-          record: "generated:b",
-          accepts: "exact",
-        },
-      },
+      })),
     ],
   });
   return start(program, graph, sealBuildRequest({
     graph: graph.id,
-    targets: [
-      { output: "generated-a", accepts: "exact" },
-      { output: "generated-b", accepts: "exact" },
-    ],
+    targets: generations.map((suffix) => ({ output: `generated-${suffix}`, accepts: "exact" as const })),
     satisfactions: [],
   }));
 }
@@ -372,6 +350,66 @@ test("independent paid commands inside one Build may fill the same lane without 
   assert.equal(maximumActive, 2);
   assert.equal(result?.state.derivations.filter((item) => item.producer.name === greetingProducers.makePrompt.name).length, 1);
   assert.equal(result?.state.receipts.length, 2);
+});
+
+test("durable scheduling keeps the rest of an in-flight command batch after one event is stored", async () => {
+  let maximumActive = 0;
+  const { executor, getCalls } = configuredExecutor({
+    lane: "seedance:fixture.account",
+    defaultConcurrency: 2,
+    observe(active) {
+      maximumActive = Math.max(maximumActive, active);
+    },
+  });
+  const store = new MemoryBuildStore();
+  const [result] = await new LocalBuildScheduler(executor, {
+    buildStore: store,
+    maxConcurrency: 8,
+  }).run([{
+    id: "durable-two-shots",
+    state: createParallelGreetingBuild(),
+  }]);
+
+  assert.equal(result?.status, "complete");
+  assert.equal(getCalls(), 2);
+  assert.equal(maximumActive, 2);
+  assert.equal(result?.journal.some((entry) =>
+    entry.status === "error" && entry.message?.includes("event references command")), false);
+  assert.equal((await store.read("durable-two-shots"))?.state.status, "complete");
+});
+
+test("durable scheduling can drain successful sibling commands after another sibling errors", async () => {
+  const producers = new ProducerRegistry();
+  producers.registerProducer(greetingProducers.makePrompt, implementationDigests.makePrompt, ({ inputs }) => {
+    const intent = inputs.intent;
+    assert.equal(intent?.value.kind, "inline");
+    return { outputs: { prompt: { kind: "inline", value: "Greet Ada" } }, needs: {} };
+  });
+  let calls = 0;
+  producers.registerProducer(greetingProducers.requestText, implementationDigests.requestText, async () => {
+    calls += 1;
+    const call = calls;
+    if (call === 1) throw new Error("fixture producer failed");
+    await new Promise<void>((resolve) => setTimeout(resolve, call * 5));
+    return { outputs: {}, needs: { generation: { prompt: `request ${call}` } } };
+  });
+  const store = new MemoryBuildStore();
+  const [result] = await new LocalBuildScheduler(new NodeDriver({ producers }), {
+    buildStore: store,
+    maxConcurrency: 8,
+  }).run([{
+    id: "durable-error-with-siblings",
+    state: createParallelGreetingBuild(3),
+  }]);
+
+  assert.equal(result?.status, "paused");
+  assert.equal(calls, 3);
+  assert.equal(result?.journal.filter((entry) => entry.status === "completed"
+    && entry.kind === "invoke-producer").length, 3, "the prompt and both successful requests are accepted");
+  assert.equal(result?.journal.some((entry) =>
+    entry.status === "error" && entry.message?.includes("event references command")), false);
+  assert.equal(result?.state.derivations.filter((item) =>
+    item.producer.name === greetingProducers.requestText.name).length, 2);
 });
 
 test("a locked Runtime Closure assembles exact Endpoint code and Scheduler policy without manual bind", async () => {

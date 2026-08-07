@@ -12,12 +12,48 @@ importers:
         specifier: 0.7.84
         version: 0.7.84(@types/node@24.10.1)
     devDependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:packages/artifact
+      '@svml/broll':
+        specifier: workspace:*
+        version: link:packages/broll
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:packages/caption
+      '@svml/caption-gemini':
+        specifier: workspace:*
+        version: link:packages/caption-gemini
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:packages/contracts
+      '@svml/estimate':
+        specifier: workspace:*
+        version: link:packages/estimate
+      '@svml/film':
+        specifier: workspace:*
+        version: link:packages/film
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:packages/generation
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:packages/hyperframes
+      '@svml/hyperframes-render':
+        specifier: workspace:*
+        version: link:packages/hyperframes-render
       '@svml/local':
         specifier: workspace:*
         version: link:packages/local
-      '@svml/prelude-video':
+      '@svml/media':
         specifier: workspace:*
-        version: link:packages/prelude-video
+        version: link:packages/media
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:packages/media-pipeline
+      '@svml/prompt-kit':
+        specifier: workspace:*
+        version: link:packages/prompt-kit
       '@svml/provider-google-vertex':
         specifier: workspace:*
         version: link:packages/provider-google-vertex
@@ -36,6 +72,33 @@ importers:
       '@svml/run-text':
         specifier: workspace:*
         version: link:packages/run-text
+      '@svml/script':
+        specifier: workspace:*
+        version: link:packages/script
+      '@svml/seedance':
+        specifier: workspace:*
+        version: link:packages/seedance
+      '@svml/seedance-speaker':
+        specifier: workspace:*
+        version: link:packages/seedance-speaker
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:packages/speech-align
+      '@svml/speech-program':
+        specifier: workspace:*
+        version: link:packages/speech-program
+      '@svml/speech-take':
+        specifier: workspace:*
+        version: link:packages/speech-take
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:packages/svs
+      '@svml/text-track':
+        specifier: workspace:*
+        version: link:packages/text-track
+      '@svml/whisperx':
+        specifier: workspace:*
+        version: link:packages/whisperx
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
@@ -365,6 +428,9 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
       '@svml/text':
         specifier: workspace:*
         version: link:../text
@@ -659,72 +725,23 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
-  packages/prelude-video:
+  packages/prompt-kit:
     dependencies:
-      '@svml/broll':
+      '@svml/component-kit':
         specifier: workspace:*
-        version: link:../broll
-      '@svml/caption':
+        version: link:../component-kit
+      '@svml/core':
         specifier: workspace:*
-        version: link:../caption
-      '@svml/caption-gemini':
+        version: link:../core
+      '@svml/elaborator':
         specifier: workspace:*
-        version: link:../caption-gemini
-      '@svml/contracts':
+        version: link:../elaborator
+      '@svml/protocol':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/estimate':
-        specifier: workspace:*
-        version: link:../estimate
-      '@svml/film':
-        specifier: workspace:*
-        version: link:../film
-      '@svml/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@svml/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
-      '@svml/hyperframes-render':
-        specifier: workspace:*
-        version: link:../hyperframes-render
-      '@svml/media':
-        specifier: workspace:*
-        version: link:../media
-      '@svml/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@svml/script':
-        specifier: workspace:*
-        version: link:../script
-      '@svml/seedance':
-        specifier: workspace:*
-        version: link:../seedance
-      '@svml/speech-align':
-        specifier: workspace:*
-        version: link:../speech-align
-      '@svml/speech-program':
-        specifier: workspace:*
-        version: link:../speech-program
-      '@svml/speech-take':
-        specifier: workspace:*
-        version: link:../speech-take
+        version: link:../protocol
       '@svml/svs':
         specifier: workspace:*
         version: link:../svs
-      '@svml/text':
-        specifier: workspace:*
-        version: link:../text
-      '@svml/text-track':
-        specifier: workspace:*
-        version: link:../text-track
-      '@svml/whisperx':
-        specifier: workspace:*
-        version: link:../whisperx
-    devDependencies:
-      '@svml/package-loader-node':
-        specifier: workspace:*
-        version: link:../package-loader-node
 
   packages/protocol: {}
 
@@ -967,6 +984,9 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/seedance:
     dependencies:
@@ -988,6 +1008,39 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/seedance-speaker:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/prompt-kit':
+        specifier: workspace:*
+        version: link:../prompt-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
       '@svml/text':
         specifier: workspace:*
         version: link:../text
@@ -1224,9 +1277,6 @@ importers:
       '@svml/local':
         specifier: workspace:*
         version: link:../local
-      '@svml/prelude-video':
-        specifier: workspace:*
-        version: link:../prelude-video
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1245,9 +1295,6 @@ importers:
       '@svml/provider-whisperx-local':
         specifier: workspace:*
         version: link:../provider-whisperx-local
-      '@svml/run-text':
-        specifier: workspace:*
-        version: link:../run-text
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
