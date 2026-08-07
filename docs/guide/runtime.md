@@ -1,21 +1,21 @@
 ---
-title: 运行时与 Provider
-description: 组件怎样连接 Seedance 等外部生成服务。
+title: Runtime & Providers
+description: How components connect to external generation services such as Seedance.
 ---
 
-# 运行时与 Provider
+# Runtime & Providers
 
-普通视频作者不需要初始化 Runtime，也不需要在项目文件里写 API Key。
+Ordinary video authors should not need to initialize a Runtime or put API keys in project files.
 
-## 作者怎么用
+## Author workflow
 
-登录一次 Provider：
+Sign in to a Provider once:
 
 ```bash
 svml provider login seedance
 ```
 
-然后在视频里导入和使用组件：
+Then import and use its component in a video:
 
 ```xml
 <svml>
@@ -24,23 +24,23 @@ svml provider login seedance
   <seedance:speaker
     script={story.segment.opening}
     character="./host.png"
-    direction="正对镜头自然说话"
+    direction="Speak naturally to camera"
   />
 </svml>
 ```
 
-最后正常构建：
+Build normally:
 
 ```bash
 svml build main.svml
 ```
 
-## 谁负责请求 API
+## Who calls the API
 
-`@svml/seedance` 包自己携带 Runtime 实现，负责排队、请求、轮询和下载。官方 CLI 在看到这个组件后自动加载它。Key 保存在系统钥匙串或用户的全局 SVML 配置里，不进入 `.svml`、锁文件或 Git。
+The `@svml/seedance` package carries its own Runtime implementation for queueing, requesting, polling, and downloading. The official CLI loads it automatically when it encounters the component. Keys remain in the system keychain or the user's global SVML configuration; they never enter `.svml` files, lockfiles, or Git.
 
-::: info 尚未实现
-这是计划中的普通用户体验，不是当前仓库已经提供的命令。现有实现只接受已经准备好的本地媒体与能力产物。
+::: info Not implemented yet
+This is the planned author workflow, not a command set already provided by the current repository. The existing implementation accepts prepared local media and capability artifacts only.
 :::
 
-只有把 SVML 嵌入自己产品的开发者，才需要接触 `createRuntime()` 之类的开发接口。
+Only developers embedding SVML inside another product need to work directly with APIs such as `createRuntime()`.

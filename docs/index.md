@@ -5,10 +5,10 @@ hero:
   name: "Narratage"
   actions:
     - theme: brand
-      text: 快速开始
+      text: Quickstart
       link: /quickstart
     - theme: alt
-      text: 开发指南
+      text: Develop
       link: /guide/components
 ---
 
