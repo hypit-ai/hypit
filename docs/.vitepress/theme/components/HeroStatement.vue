@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { useData } from "vitepress";
 
 const statements = [
   {
@@ -41,6 +42,8 @@ const statements = [
 ];
 
 const activeIndex = ref(0);
+const { lang } = useData();
+const showChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
 let rotationTimer: ReturnType<typeof setInterval> | undefined;
 
 onMounted(() => {
@@ -70,7 +73,7 @@ onBeforeUnmount(() => {
       </Transition>
     </div>
 
-    <div class="hero-statement-viewport hero-statement-viewport-zh">
+    <div class="hero-statement-viewport hero-statement-viewport-zh" :class="{ 'is-locale-hidden': !showChinese }">
       <Transition name="hero-statement-swap">
         <p :key="activeIndex" class="hero-statement-zh">
           <span class="hero-statement-line">{{ statements[activeIndex].zhBefore }}<span class="hero-statement-accent">{{ statements[activeIndex].zhAudience }}</span>{{ statements[activeIndex].zhConnector }}{{ statements[activeIndex].zhConcept }}{{ statements[activeIndex].zhAfter }}</span>
