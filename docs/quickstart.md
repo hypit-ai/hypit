@@ -37,17 +37,15 @@ Every Build takes three separate inputs:
 
 Author Source says *what*. Run Source says *which*. Runtime Profile says *where*.
 
-## Check a video graph (free)
+## Your first graph check
 
 The `talking-film-graph-check` example compiles a complete video graph — Script, Seedance, Speech,
 WhisperX, Gemini Caption, B-roll, Text, Film, HyperFrames — without calling any external service.
 
 ```bash
-# Compile the Author Source.
 pnpm narratage check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
-# Compile the Run Source and inspect the frozen plan.
 pnpm narratage plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
@@ -56,84 +54,17 @@ pnpm narratage plan examples/talking-film-graph-check/build.svrun \
 and outputs the frozen BuildPlan — every Operation and Needs the Scheduler would issue. Inspect it
 before spending money.
 
-## Run a real Build (paid)
+## Guide contents
 
-The `echo-pro-aroll` example is a four-take Seedance Mini talking-head film.
-
-Prerequisites:
-
-- `KIE_API_KEY`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS_JSON` in env
-- `ffmpeg`, `ffprobe`, Chrome
-- Local WhisperX service running (see `services/whisperx/README.md`)
-- Local assets in `examples/echo-pro-aroll/assets/` (not committed)
-
-```bash
-# Diagnose the Runtime environment.
-pnpm narratage doctor examples/echo-pro-aroll/svml.runtime.json
-
-# Submit the Build.
-pnpm narratage build examples/echo-pro-aroll/build.svrun \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock \
-  --root . \
-  --build-id echo-pro-film-001 \
-  --follow
-
-# Retrieve the final video.
-pnpm narratage get echo-pro-film-001 \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
-  --name final.video \
-  --to examples/echo-pro-aroll/output/final.mp4
-```
-
-Every accepted intermediate Record and Artifact is archived before the Build completes. `get`
-makes an optional copy of an already durable Record.
-
-## Reuse previous results
-
-Narratage has no implicit cache. Reusing a result is explicit Run Graph authoring — declare zero-input
-Candidates backed by historical Records and connect them through Satisfaction edges:
-
-```xml
-<?svml using="@narratage/run-text@1"?>
-<svrun version="1" targets="delivery">
-  <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="substitute"/>
-  </target-set>
-
-  <build-record id="hook-video"
-    build="echo-pro-film-001" output="hook-take.video"/>
-  <satisfy output="hook-take.video"
-    candidate="hook-video" fidelity="substitute"/>
-</svrun>
-```
-
-The compiled plan prunes all upstream Operations that the substitute Candidates replace. This is a
-new Build, not a continuation.
-
-```bash
-pnpm narratage build examples/echo-pro-aroll/reuse-generated.svrun \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock \
-  --root . --build-id echo-pro-film-reuse-001 --follow
-```
-
-## CLI reference
-
-```text
-narratage lock-packages <lock> --package name [--package name ...] [--root dir]
-narratage doctor <runtime.json>
-narratage gc <runtime.json> [--apply]
-narratage check <source> [--package-lock file] [--root dir]
-narratage plan <run-source> [--package-lock file] [--root dir]
-narratage build <run-source> --runtime profile [--build-id id] [--follow]
-narratage status <build-id> --runtime profile
-narratage builds --runtime profile
-narratage inspect <build-id> --runtime profile
-narratage get <build-id> --runtime profile [--name x|--record x|--output x|--artifact x] [--to path]
-narratage cancel <build-id> --runtime profile
-```
+| Guide | Topic |
+|---|---|
+| [Script](./quickstart/script.md) | Segments, Role Cues, Dual Text, Selections, Moments, text projections |
+| [SVS Stylesheets](./quickstart/styles.md) | CSS-like Recipes for film, caption, B-roll, text, speech and fonts |
+| [Media & Generation](./quickstart/generation.md) | media:Image, media:Audio, estimate:Speech, Seedance, speaker:Take |
+| [Timing & Assembly](./quickstart/timing.md) | speech:Spine, whisperx:Alignment, ProgramSpace, SemanticMap |
+| [Caption, B-roll & Text](./quickstart/tracks.md) | caption:Style/Program/Planner/Track, broll:Track, text:Track |
+| [Film & Rendering](./quickstart/composition.md) | film:Film, render:Video, full pipeline walkthrough |
+| [Run Source & Builds](./quickstart/run.md) | .svrun syntax, targets, reuse, runtime profile, build workflow |
 
 ## Next
 

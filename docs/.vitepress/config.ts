@@ -14,7 +14,19 @@ const enTheme = {
   ],
   sidebar: {
     "/quickstart": [
-      { text: "Getting Started", items: [{ text: "Quickstart", link: "/quickstart" }] },
+      {
+        text: "Getting Started",
+        items: [
+          { text: "Overview", link: "/quickstart" },
+          { text: "Script", link: "/quickstart/script" },
+          { text: "SVS Stylesheets", link: "/quickstart/styles" },
+          { text: "Media & Generation", link: "/quickstart/generation" },
+          { text: "Timing & Assembly", link: "/quickstart/timing" },
+          { text: "Caption, B-roll & Text", link: "/quickstart/tracks" },
+          { text: "Film & Rendering", link: "/quickstart/composition" },
+          { text: "Run Source & Builds", link: "/quickstart/run" },
+        ],
+      },
     ],
     "/guide/": [
       {
@@ -44,7 +56,19 @@ const zhTheme = {
   ],
   sidebar: {
     "/zh/quickstart": [
-      { text: "开始使用", items: [{ text: "Quickstart", link: "/zh/quickstart" }] },
+      {
+        text: "开始使用",
+        items: [
+          { text: "概览", link: "/zh/quickstart" },
+          { text: "Script", link: "/zh/quickstart/script" },
+          { text: "SVS 样式表", link: "/zh/quickstart/styles" },
+          { text: "媒体与生成", link: "/zh/quickstart/generation" },
+          { text: "时序与装配", link: "/zh/quickstart/timing" },
+          { text: "字幕、B-roll 与文字", link: "/zh/quickstart/tracks" },
+          { text: "Film 与渲染", link: "/zh/quickstart/composition" },
+          { text: "Run Source 与 Build", link: "/zh/quickstart/run" },
+        ],
+      },
     ],
     "/zh/guide/": [
       {
