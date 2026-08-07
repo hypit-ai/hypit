@@ -1,6 +1,6 @@
-# Graph-first value boundary v1
+# Graph-first value boundary
 
-Status: current architecture law implemented by the v2 contracts and BuildState.
+Status: current architecture law implemented by the shipped contracts and BuildState.
 
 ## The sentence to remember
 

@@ -1,6 +1,6 @@
 # `@svml/video-cli`
 
-Official v2 video command application. It selects the Text compiler Host, but deliberately carries
+Official video command application. It selects the Text compiler Host, but deliberately carries
 no built-in author, Run, Provider or Store package.
 
 Every Frontend, Surface, deterministic Producer and Validator is activated from an explicit
@@ -11,22 +11,22 @@ the corresponding physical package. They never grant network, credential or proc
 From the repository:
 
 ```bash
-pnpm svml:v2 lock-packages ./svml.packages.lock \
+pnpm svml lock-packages ./svml.packages.lock \
   --package @svml/run-text --package @svml/script --package @example/cards --root .
-pnpm svml:v2 lock-packages ./svml.runtime-packages.lock \
+pnpm svml lock-packages ./svml.runtime-packages.lock \
   --package @svml/provider-kie --package @svml/provider-media-local --root .
-pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 check path/to/build.svrun --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 plan path/to/build.svrun --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 build path/to/build.svrun --package-lock ./svml.packages.lock \
+pnpm svml check path/to/main.svml --package-lock ./svml.packages.lock --root .
+pnpm svml check path/to/build.svrun --package-lock ./svml.packages.lock --root .
+pnpm svml plan path/to/build.svrun --package-lock ./svml.packages.lock --root .
+pnpm svml build path/to/build.svrun --package-lock ./svml.packages.lock \
   --runtime ./svml.runtime.json --build-id delivery-01 --follow --root .
-pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 builds --runtime ./svml.runtime.json
-pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
-pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 doctor ./svml.runtime.json
-pnpm svml:v2 gc ./svml.runtime.json
+pnpm svml status <build-id> --runtime ./svml.runtime.json
+pnpm svml builds --runtime ./svml.runtime.json
+pnpm svml inspect <build-id> --runtime ./svml.runtime.json
+pnpm svml get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
+pnpm svml cancel <build-id> --runtime ./svml.runtime.json
+pnpm svml doctor ./svml.runtime.json
+pnpm svml gc ./svml.runtime.json
 ```
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run

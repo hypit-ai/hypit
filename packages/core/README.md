@@ -1,6 +1,6 @@
 # `@svml/core`
 
-Experimental v2 bootstrap microkernel.
+The domain-neutral Demand compiler and verified Build state machine.
 
 The package accepts an already resolved module closure, typed authored modules, a complete
 `svml.graph@1` and a `svml.build-request@1`. It verifies explicit Satisfaction and compiles the finite
@@ -26,7 +26,7 @@ It generically verifies Surface declarations in the same immutable module closur
 parses or dispatches one. It does not parse source, resolve package locations, execute
 implementations, access artifact bytes, select Provider endpoints or discover undeclared graph
 structure. Those responsibilities remain outside Core. The normative laws are in
-[`../../spec/core-kernel-v1.md`](../../spec/core-kernel-v1.md).
+[`../../spec/core-kernel.md`](../../spec/core-kernel.md).
 
 For a non-video domain, the irreducible reusable base is only `@svml/protocol` plus `@svml/core`.
 Most source languages will also use `@svml/elaborator` to turn modular component declarations into a

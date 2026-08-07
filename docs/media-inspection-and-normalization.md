@@ -1,4 +1,4 @@
-# Media Inspection and Normalization v1
+# Media Inspection and Normalization
 
 Status: implemented public contracts, reference local Provider and adversarial fixtures; not yet a
 public compatibility freeze.

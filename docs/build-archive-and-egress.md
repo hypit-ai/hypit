@@ -163,8 +163,8 @@ policy. They are not Core transitions and are never inferred from whether a user
 human-readable path. The reference local Runtime now exposes explicit reachability maintenance:
 
 ```bash
-svml-v2 gc ./svml.runtime.json          # dry-run
-svml-v2 gc ./svml.runtime.json --apply  # delete reported unreachable objects
+svml gc ./svml.runtime.json          # dry-run
+svml gc ./svml.runtime.json --apply  # delete reported unreachable objects
 ```
 
 Every retained BuildState and Operation is a root. The command therefore collects only orphan

@@ -1,6 +1,6 @@
 # Self-described Source and dual-graph compilation
 
-Status: implemented v1 boundary, 2026-08-07.
+Status: implemented boundary, 2026-08-07.
 
 This document defines the domain-neutral path from human files to a frozen Build. It exists to make
 one rule unambiguous:
@@ -19,7 +19,7 @@ one rule unambiguous:
 Only the first two compile into graphs. Runtime Profile is deployment configuration and cannot add a
 Target, Candidate, Satisfaction or author component.
 
-The suffix is never parser authority. Every v2 Author or Run Source begins with exactly one Header:
+The suffix is never parser authority. Every Author or Run Source begins with exactly one Header:
 
 ```xml
 <?svml using="@svml/text@1"?>

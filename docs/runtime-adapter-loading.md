@@ -1,4 +1,4 @@
-# Runtime Adapter loading v1
+# Runtime Adapter loading
 
 Status: implemented for the trusted local Node Host. Public package publication and untrusted-code
 isolation are intentionally deferred.
@@ -67,7 +67,7 @@ executable names remain PATH lookups. This makes a project relocatable and remov
 absolute paths from checked-in configuration.
 
 ```bash
-svml-v2 doctor ./svml.runtime.json
+svml doctor ./svml.runtime.json
 ```
 
 Doctor is read-only. It verifies package bytes and adapter configuration, then asks each selected
@@ -89,8 +89,8 @@ The local filesystem implementation supports all three relevant capabilities. Ex
 every retained BuildState and Operation for BlobRefs; all other stored digests are unreachable.
 
 ```bash
-svml-v2 gc ./svml.runtime.json          # report only
-svml-v2 gc ./svml.runtime.json --apply  # delete unreachable bytes
+svml gc ./svml.runtime.json          # report only
+svml gc ./svml.runtime.json --apply  # delete unreachable bytes
 ```
 
 GC does not release Builds, choose Candidates, infer reuse or implement a cache. A deployment with

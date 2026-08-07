@@ -92,9 +92,9 @@ Record and content identities, not private filesystem layout, so filesystem and 
 interchangeable. Egress never determines whether a Build result is retained.
 
 The filesystem ArtifactStore additionally implements optional streaming transfer and explicit
-retention capabilities. `svml-v2 gc <runtime-profile.json>` is read-only by default; `--apply`
+retention capabilities. `svml gc <runtime-profile.json>` is read-only by default; `--apply`
 deletes only objects unreachable from every retained BuildState and Operation. This is Host
-maintenance, never a Core transition or automatic cache policy. `svml-v2 doctor
+maintenance, never a Core transition or automatic cache policy. `svml doctor
 <runtime-profile.json>` verifies package bytes, closed adapter configuration, required environment
 credentials and local executable availability without running a Build.
 

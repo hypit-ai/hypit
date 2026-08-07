@@ -1,4 +1,4 @@
-# KIE generation modules v1
+# KIE generation modules
 
 Status: implemented model contracts and recoverable Provider; representative live-account smoke
 passed on 2026-08-06.
@@ -74,7 +74,7 @@ have not received a paid live call.
 
 Generated video bytes remain raw Provider Products. Their all-stream inspection, attached-picture
 selection and shared-origin A/V normalization are owned by the separate
-[`Media Inspection and Normalization v1`](./media-inspection-and-normalization-v1.md) pipeline.
+[`Media Inspection and Normalization`](./media-inspection-and-normalization.md) pipeline.
 
 ## Documentation references
 

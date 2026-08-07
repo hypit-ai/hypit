@@ -3,9 +3,8 @@
 Status: release boundary and packaging plan, 2026-08-07.
 
 The repository is usable today as a checked-out developer workspace. It is not yet a published npm
-distribution: every v2 workspace package is private, exports TypeScript source directly and uses a
-development version. The root `@svml/compiler` package still builds the retained v1 regression CLI.
-These facts are packaging state, not hidden requirements of Core.
+distribution: every workspace package is private, exports TypeScript source directly and uses a
+development version. These facts are packaging state, not hidden requirements of Core.
 
 ## 1. What can be distributed independently
 
@@ -100,8 +99,7 @@ The repository should not claim npm-ready open-source distribution until it has:
    labels;
 6. a documented trusted-extension level and an honest statement that arbitrary community code is
    not sandboxed;
-7. published binaries that map the generic command engine and explicit video Distribution without
-   exposing the retained v1 root as the new public compiler.
+7. published binaries that map the generic command engine and explicit video Distribution.
 
 Untrusted extension isolation, a marketplace and hosted multi-tenant services may follow later.
 They are not prerequisites for a useful trusted-developer release.
