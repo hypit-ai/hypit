@@ -1,70 +1,136 @@
 ---
 title: Quickstart
-description: 在几分钟内检查并编译第一支 SVML 视频。
+description: 搭建 Narratage 并编译你的第一张视频图。
 ---
 
 # Quickstart
 
-从一份口播稿开始，编译出可交给 HyperFrames 渲染的视频页面。
+**Narratage** 这个名字来自 1933 年《*New York Times*》对电影《*The Power and the
+Glory*》的一篇影评。那位影评人造出这个词，用来描述当时的一种新兴电影手法：
+**Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
+
+这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
+文字与音频组装成一部完成的影片。内部的包作用域是 `@svml`（Semantic Video Markup Language）。
 
 ## 安装
 
-SVML 目前需要 Node.js 22 和 pnpm。
+需要 Node.js 22+ 与 pnpm。
 
 ```bash
 pnpm install
-pnpm build
+pnpm check
+pnpm test
 ```
 
-## 先看一个真实例子
+## 三份输入
 
-仓库里的 Ranking 示例用 `@name … @/name` 在口播稿中声明语义范围，再让组件消费这个范围。下面是核心节选：
+每一次 Build 都接受三份彼此独立的输入：
+
+| 输入 | 各自负责什么 | 典型文件 |
+|---|---|---|
+| **Author Source** | 口播稿、模型选择、轨道构成、输出图 | `.svml` |
+| **Run Source** | 要产出哪些输出、备选 candidates、satisfaction edges | `.svrun` |
+| **Runtime Profile** | endpoints、凭据、并发、权限 | `svml.runtime.json` |
+
+Author Source 说明*做什么*。Run Source 说明*要哪些*。Runtime Profile 说明*在哪里做*。
+
+## 检查一张视频图（免费）
+
+`talking-film-graph-check` 示例会编译一张完整的视频图 —— Script、Seedance、Speech、
+WhisperX、Gemini Caption、B-roll、Text、Film、HyperFrames —— 全程不调用任何外部服务。
+
+```bash
+# 编译 Author Source。
+pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+
+# 编译 Run Source 并查看冻结后的 plan。
+pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+```
+
+`check` 产出带类型的 Author Graph。`plan` 绑定 Author Graph 与 Run Graph，解析 Targets，
+并输出冻结的 BuildPlan —— 其中包含 Scheduler 将会发出的每一个 Operation 与 Needs。花钱之前先检查它。
+
+## 跑一次真实的 Build（付费）
+
+`echo-pro-aroll` 示例是一部由四条 take 构成的 Seedance Mini 口播人像影片。
+
+前置条件：
+
+- 环境变量中配置 `KIE_API_KEY`、`GOOGLE_CLOUD_PROJECT`、`GOOGLE_APPLICATION_CREDENTIALS_JSON`
+- `ffmpeg`、`ffprobe`、Chrome
+- 本地 WhisperX 服务正在运行（参见 `services/whisperx/README.md`）
+- `examples/echo-pro-aroll/assets/` 下的本地素材（未纳入版本库）
+
+```bash
+# 诊断 Runtime 环境。
+pnpm svml:v2 doctor examples/echo-pro-aroll/svml.runtime.json
+
+# 提交 Build。
+pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
+  --runtime examples/echo-pro-aroll/svml.runtime.json \
+  --package-lock examples/echo-pro-aroll/svml.packages.lock \
+  --root . \
+  --build-id echo-pro-film-001 \
+  --follow
+
+# 取回最终视频。
+pnpm svml:v2 get echo-pro-film-001 \
+  --runtime examples/echo-pro-aroll/svml.runtime.json \
+  --name final.video \
+  --to examples/echo-pro-aroll/output/final.mp4
+```
+
+每一个被接受的中间 Record 与 Artifact 都会在 Build 完成之前归档。`get` 只是对一个已经持久化的
+Record 做一次可选的复制。
+
+## 复用既有结果
+
+SVML 没有隐式缓存。复用结果是显式的 Run Graph 编写工作 —— 声明由历史 Records 支撑的零输入
+Candidates，再用 Satisfaction edges 把它们接起来：
 
 ```xml
-<svml version="1">
-  <import from="../../stdlib/ranking-column.svk"/>
+<?svml using="@svml/run-text@1"?>
+<svrun version="1" targets="delivery">
+  <author source="./main.svml"/>
+  <target-set id="delivery">
+    <target output="final.video" accepts="substitute"/>
+  </target-set>
 
-  <script>
-    <segment id="ranking">
-      <NARRATOR> @photoshop Photoshop.
-      <SPEAKER> Powerful, but only if you know how to use it.
-                Otherwise it becomes a three-hour project @/photoshop.
-    </segment>
-  </script>
-
-  <ranking-column id="ranking" z="42">
-    <item
-      id="photoshop"
-      rank="5"
-      image={ranking-icon-5}
-      during={script.selection.photoshop}
-    />
-  </ranking-column>
-</svml>
+  <build-record id="hook-video"
+    build="echo-pro-film-001" output="hook-take.video"/>
+  <satisfy output="hook-take.video"
+    candidate="hook-video" fidelity="substitute"/>
+</svrun>
 ```
 
-这里没有手写“第 3 秒到第 7 秒”。定位器会根据口播与媒体，把 `photoshop` Selection 解析成这次构建的真实时间。
-
-## 检查与编译
+编译出的 plan 会剪掉所有被 substitute Candidates 取代的上游 Operations。这是一次新的 Build，
+而不是对上一次的续跑。
 
 ```bash
-pnpm svml check examples/regen-ranking/regen-ranking.svml
-pnpm svml lock examples/regen-ranking/regen-ranking.svml --out svml.lock
-pnpm svml compile examples/regen-ranking/regen-ranking.svml \
-  --lock svml.lock \
-  --out build/index.html
+pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
+  --runtime examples/echo-pro-aroll/svml.runtime.json \
+  --package-lock examples/echo-pro-aroll/svml.packages.lock \
+  --root . --build-id echo-pro-film-reuse-001 --follow
 ```
 
-`check` 检查声明是否完整；`lock` 固定本次构建实际使用的输入；`compile` 生成确定的 HyperFrames HTML。
+## CLI 参考
 
-## 渲染
-
-```bash
-pnpm svml render build/index.html --out build/video.mp4
+```text
+svml-v2 lock-packages <lock> --package name [--package name ...] [--root dir]
+svml-v2 doctor <runtime.json>
+svml-v2 gc <runtime.json> [--apply]
+svml-v2 check <source> [--package-lock file] [--root dir]
+svml-v2 plan <run-source> [--package-lock file] [--root dir]
+svml-v2 build <run-source> --runtime profile [--build-id id] [--follow]
+svml-v2 status <build-id> --runtime profile
+svml-v2 builds --runtime profile
+svml-v2 inspect <build-id> --runtime profile
+svml-v2 get <build-id> --runtime profile [--name x|--record x|--output x|--artifact x] [--to path]
+svml-v2 cancel <build-id> --runtime profile
 ```
 
-::: warning 当前状态
-可执行示例需要其本地媒体和对齐证据。在线 Provider 自动加载尚未实现。
-:::
+## 下一步
 
-接下来可以去[开发指南](/zh/guide/components)，了解怎样把常用视觉封装成 SVK 组件。
+- [开发指南](./guide/develop.md) —— 仓库结构、包架构、扩展模式。
