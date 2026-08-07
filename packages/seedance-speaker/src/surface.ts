@@ -1,5 +1,8 @@
+import { narrativeTypes } from "@narratage/narrative";
+import type { NarrativeDialogueExcerpt } from "@narratage/narrative";
+import { speechTypes } from "@narratage/speech";
+import type { SpeechDuration } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
-import { contractTypes } from "@narratage/video-contracts";
 import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import {
   compilePromptKit,
@@ -123,7 +126,7 @@ function dialogueValue(
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ) {
   const reference = resolved(element, "dialogue", resolveReference);
-  if (!sameType(reference.type, contractTypes.narrativeDialogueExcerpt)) {
+  if (!sameType(reference.type, narrativeTypes.dialogueExcerpt)) {
     throw new Error(`${element.name}.dialogue must reference a NarrativeDialogueExcerpt`);
   }
   const value = inline<{
@@ -252,7 +255,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   const prompt = compilePromptKit(kit, bindSpeakerPromptKit(intent));
   const program = renderSpeakerSpeechProgram(prompt, intent);
   const duration = resolved(element, "duration", resolveReference);
-  if (!sameType(duration.type, contractTypes.speechDuration)) {
+  if (!sameType(duration.type, speechTypes.duration)) {
     throw new Error(`${element.name}.duration must reference a SpeechDuration`);
   }
   const promptId = `${id}.prompt`;
@@ -269,7 +272,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
       range: element.range,
     }, {
       id: programId,
-      type: seedanceTypes.speechProgram,
+      type: seedanceTypes.speechSpine,
       value: { kind: "inline", value: program as unknown as CanonicalValue },
       range: element.range,
     }],

@@ -5,12 +5,12 @@
   <import as="media" from="@narratage/media@1"/>
   <import as="estimate" from="@narratage/estimate@1"/>
   <import as="speaker" from="@narratage/seedance-speaker@1"/>
-  <import as="speech" from="@narratage/speech@1"/>
+  <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="film" from="@narratage/film@1"/>
-  <import as="render" from="@narratage/hyperframes-render@1"/>
+  <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
   <import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
 

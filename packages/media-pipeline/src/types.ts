@@ -1,12 +1,6 @@
 import type { BlobRef } from "@narratage/protocol";
-import type {
-  MediaInspection,
-  MediaRational,
-  MediaStreamSelection,
-  RenderedVisual,
-  TimelineAudio,
-  SpeechBasisSegment,
-} from "@narratage/video-contracts";
+import type { MediaInspection, MediaRational, MediaStreamSelection, RenderedVisual, TimelineAudio } from "@narratage/media";
+import type { SpeechBasisSegment } from "@narratage/speech";
 
 export type MediaSelectionRequest = {
   readonly contract: "svml.media-selection-request@1";

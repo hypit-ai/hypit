@@ -1,16 +1,11 @@
+import { compositionComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
+import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
+import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
+import type { Track } from "@narratage/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import {
-  compositionContractsComponent,
-  contractTypes,
-  sealAudioTrack,
-  sealProgramSpace,
-  sealVisualTrack,
-  videoContractDependencies,
-  videoContractManifests,
-} from "@narratage/video-contracts";
 import { createResolvedClosure, digestOf, sealBuildRequest, start } from "@narratage/core";
 import {
   AuthorFrontendRegistry,
@@ -41,8 +36,8 @@ const fixtureManifest: ModuleManifest = {
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [
-    videoContractDependencies.programSpace,
-    videoContractDependencies.composition,
+    programSpaceDependency,
+    compositionDependency,
   ],
   types: [],
   capabilities: [],
@@ -50,7 +45,7 @@ const fixtureManifest: ModuleManifest = {
     name: "inputs",
     tag: "Inputs",
     mode: "structured",
-    outputs: [contractTypes.programSpace, contractTypes.visualTrack, contractTypes.audioTrack],
+    outputs: [programSpaceTypes.programSpace, compositionTypes.visualTrack, compositionTypes.audioTrack],
     implementation: {
       kind: "trusted-frontend-surface",
       locator: "example.film-fixture/inputs-surface",
@@ -67,7 +62,7 @@ const space = sealProgramSpace({
 });
 const visual = sealVisualTrack({
   contract: "svml.visual-track@1",
-  visualIr: "svml.hyperframes-visual-ir@1",
+  visualIr: "svml.visual-ir@1",
   id: "visual",
   presents: [],
 });
@@ -95,7 +90,7 @@ function source(id: string, text: string): AuthorSourceUnit {
 
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
+  registerTypeValidatorFacets(registry, compositionComponent.validators);
   return registry;
 }
 
@@ -112,9 +107,9 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
   const surfaces = new TextSurfaceRegistry();
   surfaces.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
     records: [
-      { id: "space", type: contractTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
-      { id: "visual", type: contractTypes.visualTrack, value: { kind: "inline", value: visual }, range: element.range },
-      { id: "audio", type: contractTypes.audioTrack, value: { kind: "inline", value: audio }, range: element.range },
+      { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
+      { id: "visual", type: compositionTypes.visualTrack, value: { kind: "inline", value: visual }, range: element.range },
+      { id: "audio", type: compositionTypes.audioTrack, value: { kind: "inline", value: audio }, range: element.range },
     ],
     components: [],
     fragments: [],
@@ -163,7 +158,7 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
     frameRate: { numerator: 30, denominator: 1 },
     canvas: { width: 1080, height: 1920, clearColor: "#09090B" },
   });
-  const target = resolveCompiledSourceExport(compiled, "main.composition", contractTypes.composition);
+  const target = resolveCompiledSourceExport(compiled, "main.composition", compositionTypes.composition);
   assert.equal(target.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,

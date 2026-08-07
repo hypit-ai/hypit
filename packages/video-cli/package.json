@@ -9,7 +9,8 @@
   "dependencies": {
     "@narratage/cli": "workspace:*",
     "@narratage/compiler-text-node": "workspace:*",
-    "@narratage/local": "workspace:*"
+    "@narratage/local": "workspace:*",
+    "@narratage/package-loader-node": "workspace:*"
   },
   "devDependencies": {
     "@narratage/package-loader-node": "workspace:*"

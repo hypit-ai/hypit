@@ -17,7 +17,7 @@ import {
 } from "@narratage/elaborator";
 import type { CompiledSourceClosure } from "@narratage/elaborator";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
-import { resolveRealization } from "@narratage/realization";
+import { resolveRealization } from "@narratage/run";
 import {
   compileRunSource,
   createRunFragmentHostFacet,

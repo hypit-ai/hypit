@@ -6,17 +6,24 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@narratage/component-kit": "workspace:*",
-    "@narratage/video-contracts": "workspace:*",
+    "@narratage/composition": "workspace:*",
     "@narratage/elaborator": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
+    "@narratage/semantic-map": "workspace:*",
     "@narratage/svs": "workspace:*",
     "@narratage/text": "workspace:*"
   },
   "devDependencies": {
     "@narratage/script": "workspace:*",
-    "@narratage/speech-align": "workspace:*"
+    "@narratage/speech": "workspace:*",
+    "@narratage/speech-alignment": "workspace:*",
+    "@narratage/speech-evidence": "workspace:*"
   }
 }

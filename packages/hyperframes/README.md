@@ -3,8 +3,9 @@
 Deterministic reference lowering from the generic `Composition` contract to a portable
 `HyperframesDocument`.
 
-This package implements the one closed `svml.hyperframes-visual-ir@1` target declared by every
-VisualTrack. The IR is a public video protocol owned by `@narratage/composition`, not an author component
+This package implements the one closed `svml.visual-ir@1` target declared by every
+VisualTrack. The vocabulary is owned by `@narratage/visual-ir`; Track and Composition values are
+owned by `@narratage/composition`. Neither is an author component
 and not arbitrary CSS. Unknown properties and alternate browser semantics fail before document
 compilation; visuals outside the structural vocabulary enter as typed `CompositableSurface` values.
 

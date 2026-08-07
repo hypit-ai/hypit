@@ -1,4 +1,4 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { narrativeTypes } from "@narratage/narrative";
 import { captionTypes } from "@narratage/caption";
 import { sealGraphFragment } from "@narratage/elaborator";
 
@@ -10,7 +10,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const captionGeminiPlanningFragment = sealGraphFragment({
   name: "@narratage/caption-gemini/planning@1",
   inputs: [
-    { name: "narrative", type: contractTypes.narrative },
+    { name: "narrative", type: narrativeTypes.narrative },
     { name: "captionProgram", type: captionTypes.program },
     { name: "program", type: captionGeminiTypes.program },
   ],

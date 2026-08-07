@@ -1,12 +1,13 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-
 import {
   registerProducerFacets,
 } from "@narratage/component-kit";
 import type { ProducerRegistrar } from "@narratage/component-kit";
-import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/video-contracts";
-import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/video-contracts";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/speech";
+import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
+import assert from "node:assert/strict";
+import test from "node:test";
+
 import { digestOf } from "@narratage/protocol";
 import type { Digest, ProducerRef } from "@narratage/protocol";
 import {

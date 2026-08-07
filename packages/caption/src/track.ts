@@ -1,10 +1,7 @@
-import {
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  programSpaceFrameCount,
-  sealVisualTrack,
-} from "@narratage/video-contracts";
-import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@narratage/video-contracts";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
+import type { Track, VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 
 import { planCaptionPresentation } from "./presentation.js";
@@ -122,7 +119,7 @@ export function renderCaptionTrack(
   const plan = planCaptionPresentation(projection, program.mode);
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: plan.units.flatMap((unit) => {
       const startFrame = Math.max(0, frameAt(programSpace, unit.startSec));
@@ -201,7 +198,7 @@ export function renderCaptionProgram(
   });
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: units.flatMap(({ unit, style }) => {
       const startFrame = Math.max(0, frameAt(programSpace, unit.startSec));

@@ -1,4 +1,6 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { programSpaceTypes } from "@narratage/program-space";
+import { compositionTypes } from "@narratage/composition";
+import type { Track } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
 import type { FragmentOperation } from "@narratage/elaborator";
 
@@ -56,17 +58,17 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     name: options.name?.trim() || "@narratage/film/assembly@1",
     inputs: [
       { name: "program", type: filmTypes.program },
-      { name: "space", type: contractTypes.programSpace },
+      { name: "space", type: programSpaceTypes.programSpace },
       ...tracks.map((track) => ({
         name: track.name,
-        type: track.kind === "visual" ? contractTypes.visualTrack : contractTypes.audioTrack,
+        type: track.kind === "visual" ? compositionTypes.visualTrack : compositionTypes.audioTrack,
       })),
     ],
     operations,
     exports: [
       {
         name: "composition",
-        type: contractTypes.composition,
+        type: compositionTypes.composition,
         root: operation("film:composition"),
         semanticInputs,
         fidelity: "exact",

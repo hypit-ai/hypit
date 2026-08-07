@@ -6,19 +6,23 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
-    "@narratage/video-contracts": "workspace:*",
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/hyperframes": "workspace:*",
-    "@narratage/hyperframes-render": "workspace:*",
+    "@narratage/media": "workspace:*",
     "@narratage/protocol": "workspace:*",
+    "@narratage/render-hyperframes": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
     "@narratage/runtime-adapter-node": "workspace:*",
     "hyperframes": "0.7.84"
   },
   "devDependencies": {
+    "@narratage/composition": "workspace:*",
     "@narratage/core": "workspace:*",
-    "@narratage/driver-node": "workspace:*"
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/program-space": "workspace:*"
   }
 }

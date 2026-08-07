@@ -1,20 +1,15 @@
-import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-
-import {
-  contractTypes,
-  sealComposition,
-  sealProgramSpace,
-  sealVisualTrack,
-  verifyRenderedVisual,
-} from "@narratage/video-contracts";
-import type { RenderedVisual } from "@narratage/video-contracts";
+import { mediaTypes, verifyRenderedVisual } from "@narratage/media";
+import type { RenderedVisual } from "@narratage/media";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import assert from "node:assert/strict";
 import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
 import type { EndpointRegistration } from "@narratage/driver-node";
 import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
-import { hyperframesRenderCapabilities, hyperframesVisualRequest } from "@narratage/hyperframes-render";
+import { renderHyperframesCapabilities, hyperframesVisualRequest } from "@narratage/render-hyperframes";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 
@@ -31,7 +26,7 @@ function documentFixture() {
   });
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "provider-proof",
     presents: [{
       id: "card",
@@ -79,16 +74,16 @@ function requestNeed(): Need {
   const constraints = hyperframesVisualRequest(documentFixture());
   return {
     id: "need:local-hyperframes-proof",
-    capability: hyperframesRenderCapabilities.renderVisual,
-    returns: contractTypes.renderedVisual,
+    capability: renderHyperframesCapabilities.renderVisual,
+    returns: mediaTypes.renderedVisual,
     constraints,
     requestedBy: "derivation:local-hyperframes-proof",
     result: "record:local-hyperframes-proof",
     accepts: "exact",
     conformanceFloor: "exact",
     requestDigest: digestOf({
-      capability: hyperframesRenderCapabilities.renderVisual,
-      returns: contractTypes.renderedVisual,
+      capability: renderHyperframesCapabilities.renderVisual,
+      returns: mediaTypes.renderedVisual,
       constraints,
     }),
   };
@@ -119,8 +114,8 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
   assert.deepEqual(facet.permissions, ["process:hyperframes"]);
   assert.equal(facet.defaultConcurrency, 2);
   assert.deepEqual(provider.bindings, [{
-    capability: hyperframesRenderCapabilities.renderVisual,
-    returns: contractTypes.renderedVisual,
+    capability: renderHyperframesCapabilities.renderVisual,
+    returns: mediaTypes.renderedVisual,
     endpoint: "hyperframes.local",
   }]);
   const resolved = await handlerFor(requestNeed());

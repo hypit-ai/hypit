@@ -1,6 +1,6 @@
 # Implementation status
 
-Repository reality as of 2026-08-07. Specifications define laws; this page says what currently
+Repository reality as of 2026-08-08. Specifications define laws; this page says what currently
 executes. Narratage is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
@@ -51,8 +51,8 @@ Implemented:
   Distribution defaults;
 - digest-separated Author Source Closure identity for original bytes, Frontend implementation and
   decoded semantics; every recursively imported source selects its own Frontend;
-- `@narratage/realization`: internal typed realization overlays and inert Build-Record Candidates;
-- `@narratage/run`: syntax-neutral Run Source Closure, complete mandatory Run Graph, named Target sets,
+- `@narratage/run`: syntax-neutral Run Source Closure, complete mandatory Run Graph, typed Candidate
+  fragments, inert Build-Record Candidates, named Target sets,
   Provided/Build-Record/Fragment Candidates and explicit Satisfaction edges;
 - `@narratage/run-text`: optional official `.svrun` Text Frontend;
 - official compilation binds both Author Graph and Run Graph identities before deriving a finite
@@ -106,8 +106,8 @@ an external Need, recovery and final Record assembly through that distribution.
 Implemented:
 
 - provider-neutral generated image/video Product contracts and exact-model shell;
-- author model packages for Seedance, MiniMax H3, Gemini Omni, Grok Imagine, GPT Image,
-  Nano Banana and Seedream;
+- independently activatable exact-model packages for Seedance, MiniMax H3, Gemini Omni,
+  Grok Imagine, GPT Image, Nano Banana and Seedream;
 - `@narratage/provider-kie`: upload, recoverable paid submission, checkpointed polling, bounded download
   and immediate ArtifactStore persistence for sixteen exact model capabilities;
 - `@narratage/provider-google-vertex`: display-only Gemini Caption planning;
@@ -140,11 +140,11 @@ define alternate Core or video semantics.
 
 Implemented and executable:
 
-- independently digested Narrative, Media, ProgramSpace, Speech, SemanticTime and Composition
-  logical modules;
+- independently digested Narrative, Media, ProgramSpace, Speech, SpeechEvidence, SemanticMap,
+  VisualIR and Composition logical modules; the former `video-contracts` umbrella is gone;
 - Script Segments, optional Role Cues, Dual Text, Selection/Moment anchors and display/speech
   projections;
-- deterministic speech estimate, atomic SpeechTake/SpeechBasis and peer VisualTrack/AudioTrack
+- deterministic speech estimate, atomic SpeechBasis and peer VisualTrack/AudioTrack
   projections;
 - authored image/audio Blob references and reusable SVS-backed speech-estimate policies;
 - `@narratage/seedance-speaker`: a thin official UGC binding from Script dialogue, explicit image/audio
@@ -157,9 +157,10 @@ Implemented and executable:
   atom, with no text rewrite or timing authority;
 - total default Caption Style plus ordered Role/Selection whole-style overrides;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
-- arbitrary Track folding into Composition and separate HyperFrames rendering;
+- arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
-- frame-addressable HyperFrames Visual IR, exact Artifact references and compositable Surface path.
+- renderer-neutral, frame-addressable Visual IR, exact Artifact references and compositable Surface
+  path; HyperFrames is its current reference compiler/renderer route rather than the IR owner.
 
 Still pre-freeze and deliberately deferred:
 
@@ -170,7 +171,9 @@ Still pre-freeze and deliberately deferred:
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
 - Ranking and other old production author packages;
 - renderer receipts and complete Surface-byte validation;
-- final Track and HyperFrames Visual IR compatibility promise.
+- final Track and Visual IR compatibility promise;
+- Remotion or API-backed final render packages; these can be added beside `render-hyperframes`
+  without changing Composition or Core.
 
 There is intentionally no cross-Track sampling/effect model and no Base FX placeholder.
 

@@ -1,4 +1,8 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { narrativeTypes } from "@narratage/narrative";
+import { programSpaceTypes } from "@narratage/program-space";
+import { semanticMapTypes } from "@narratage/semantic-map";
+import { compositionTypes } from "@narratage/composition";
+import type { VisualTrack } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
 
 import { captionProducers, captionTypes } from "./manifest.js";
@@ -10,10 +14,10 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const captionTrackSurfaceFragment = sealGraphFragment({
   name: "@narratage/caption/track-surface@1",
   inputs: [
-    { name: "narrative", type: contractTypes.narrative },
-    { name: "map", type: contractTypes.completeSemanticMap },
+    { name: "narrative", type: narrativeTypes.narrative },
+    { name: "map", type: semanticMapTypes.complete },
     { name: "program", type: captionTypes.trackProgram },
-    { name: "space", type: contractTypes.programSpace },
+    { name: "space", type: programSpaceTypes.programSpace },
   ],
   operations: [
     {
@@ -31,7 +35,7 @@ export const captionTrackSurfaceFragment = sealGraphFragment({
   ],
   exports: [{
     name: "track",
-    type: contractTypes.visualTrack,
+    type: compositionTypes.visualTrack,
     root: operation("caption:render"),
     semanticInputs: ["narrative", "map", "program", "space"],
     fidelity: "exact",
@@ -42,11 +46,11 @@ export const captionTrackSurfaceFragment = sealGraphFragment({
 export const plannedCaptionTrackSurfaceFragment = sealGraphFragment({
   name: "@narratage/caption/planned-track-surface@2",
   inputs: [
-    { name: "narrative", type: contractTypes.narrative },
-    { name: "map", type: contractTypes.completeSemanticMap },
+    { name: "narrative", type: narrativeTypes.narrative },
+    { name: "map", type: semanticMapTypes.complete },
     { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
-    { name: "space", type: contractTypes.programSpace },
+    { name: "space", type: programSpaceTypes.programSpace },
   ],
   operations: [
     {
@@ -64,9 +68,53 @@ export const plannedCaptionTrackSurfaceFragment = sealGraphFragment({
   ],
   exports: [{
     name: "track",
-    type: contractTypes.visualTrack,
+    type: compositionTypes.visualTrack,
     root: operation("caption:render-plan"),
     semanticInputs: ["narrative", "map", "plan", "program", "space"],
+    fidelity: "exact",
+  }],
+});
+
+export const captionTimingFragment = sealGraphFragment({
+  name: "@narratage/caption/timing@1",
+  inputs: [
+    { name: "narrative", type: narrativeTypes.narrative },
+    { name: "map", type: semanticMapTypes.complete },
+  ],
+  operations: [{
+    id: "temporalize-caption",
+    producer: captionProducers.temporalize,
+    inputs: { narrative: input("narrative"), map: input("map") },
+    result: { kind: "output", name: "caption" },
+  }],
+  exports: [{
+    name: "caption",
+    type: captionTypes.timedProjection,
+    root: operation("temporalize-caption"),
+    semanticInputs: ["narrative", "map"],
+    fidelity: "exact",
+  }],
+});
+
+/** Official caption lowering; the exported result is an ordinary peer VisualTrack. */
+export const captionTrackFragment = sealGraphFragment({
+  name: "@narratage/caption/track@1",
+  inputs: [
+    { name: "caption", type: captionTypes.timedProjection },
+    { name: "program", type: captionTypes.trackProgram },
+    { name: "space", type: programSpaceTypes.programSpace },
+  ],
+  operations: [{
+    id: "render-caption-track",
+    producer: captionProducers.renderTrack,
+    inputs: { caption: input("caption"), program: input("program"), space: input("space") },
+    result: { kind: "output", name: "track" },
+  }],
+  exports: [{
+    name: "track",
+    type: compositionTypes.visualTrack,
+    root: operation("render-caption-track"),
+    semanticInputs: ["caption", "program", "space"],
     fidelity: "exact",
   }],
 });

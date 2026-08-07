@@ -21,8 +21,9 @@ Speech audio / BGM / SFX ────> AudioTrack ──┘
 ## ProgramSpace
 
 ProgramSpace owns duration and exact rational frame rate. Its duration must end on an integer frame
-boundary. Every Track carries the digest of exactly one ProgramSpace; Composition rejects a Track
-from another space even when duration and type happen to look compatible.
+boundary. A Track does not copy a ProgramSpace digest into every value. The graph connects the Track
+and ProgramSpace explicitly wherever their relationship is validated; the validator rejects frame
+windows outside that supplied space.
 
 Canvas width, height and clear color are structural Composition facts. No video Track defines
 duration or becomes a privileged Base.
@@ -30,7 +31,7 @@ duration or becomes a privileged Base.
 ## VisualTrack
 
 A VisualTrack is one self-contained render contribution owned by an author package. It explicitly binds the
-[`svml.hyperframes-visual-ir@1`](./hyperframes-visual-ir.md) terminal language and owns zero or
+[`svml.visual-ir@1`](./visual-ir.md) terminal language and owns zero or
 more frame-exact `VisualPresent` values; every Present owns its own absolute `(order, tieBreak)`
 stacking key and one self-contained, code-free element tree made from box, text, ordinary media and
 typed compositable-Surface primitives. Parent references are Present-local. Media and exact font
@@ -70,13 +71,14 @@ music, source audio and sound effects use the same contract.
 
 ## Composition
 
-Composition contains one ProgramSpace, one canvas and a set of VisualTrack/AudioTrack values. It:
+Composition contains one canvas and a set of VisualTrack/AudioTrack values. ProgramSpace is a peer
+input edge to Film and final-render Operations rather than repeated lineage metadata. Composition:
 
-1. validates every Track digest and ProgramSpace affinity;
+1. validates every Track against the ProgramSpace supplied by an explicit graph edge;
 2. rejects duplicate Track identities and duplicate visual stacking keys;
 3. flattens every VisualPresent and mounts it by absolute `(order, tieBreak)`;
 4. mixes AudioTrack clips in ProgramSpace;
-5. produces the input to the HyperFrames compilation package.
+5. produces a renderer-neutral input for an explicitly selected final-render package.
 
 Composition must not switch on an author-domain family or grant a Track special access to accumulated
 lower pixels. A global shatter, adjustment layer, Base FX lane or B-roll underlay transition is
@@ -85,17 +87,24 @@ therefore not part of this version. No dedicated Base FX placeholder is reserved
 TimedCaptionProjection remains an intermediate semantic value. Caption grouping, style and cue
 lowering must finish before the caption enters Composition as an ordinary VisualTrack.
 
-## HyperFrames boundary
+## Final-render boundary
 
-`@narratage/hyperframes` consumes only Composition and its one versioned HyperFrames Visual IR. It never
+`@narratage/hyperframes` is the current reference compiler for Composition and its one versioned
+SVML Visual IR. It never
 switches on Speech, Caption, B-roll or author-package identity. It deterministically emits a
 content-addressed `HyperframesDocument` whose HTML interleaves VisualPresents by absolute stacking
 key. It must not mount an authoring Track as one isolated visual wrapper. AudioTrack compilation
 and final mux are separate media operations over the same ProgramSpace; HyperFrames is a silent
 visual target.
 
-The document MUST bind `programSpaceDigest`, exact rational frame rate, positive integer frame
-count, canvas dimensions, Artifact set and generated HTML. Its complete visual frame domain is the
+This is not an exclusive boundary. A future `render-remotion` or API-backed render package may
+consume the same Composition and ProgramSpace, compile another immutable renderer document and
+return the same media contract. Author Source selects that path by importing its package; Core and
+Runtime do not guess a renderer. The current examples select `render-hyperframes` explicitly.
+
+The document MUST bind exact rational frame rate, positive integer frame count, canvas dimensions,
+Artifact set and generated HTML. ProgramSpace relationship remains visible in the Producer's input
+edges and Derivation rather than being copied into document content. Its complete visual frame domain is the
 half-open interval `[0, frameCount)`. Rendering frame `n` must depend only on this immutable document,
 its exact Artifacts, the locked renderer implementation and `n`; it must not require sequentially
 evaluating frames `0..n-1`. Stateful author effects must therefore be materialized into a typed
@@ -115,9 +124,9 @@ compiled identity. Exact text becomes generated `@font-face` rules with font syn
 Typed Surfaces preserve declared dimensions, color space, alpha mode and still/frame timing across
 the same Artifact boundary; they are not inferred from filename extensions.
 
-`@narratage/film` now implements package-level arbitrary-arity assembly as a finite immutable TrackSet
-fold followed by ordinary Composition and HyperFrames Operations. Core receives only fixed-port,
-single-result Operations, and Targeting an intermediate Track or Composition does not demand the
-rest of the Film chain. This specification still does not define the author-facing Film Surface;
-that Surface must lower into the implemented Fragment without adding Track families to Core or
-making one Track depend on accumulated sibling pixels.
+`@narratage/film` implements package-level arbitrary-arity assembly as a finite immutable TrackSet
+fold followed by ordinary Composition. Rendering is a separate explicitly imported downstream
+Fragment. Core receives only fixed-port, single-result Operations, and targeting an intermediate
+Track or Composition does not demand a renderer. The Film Surface must lower into the implemented
+Fragment without adding Track families to Core or making one Track depend on accumulated sibling
+pixels.

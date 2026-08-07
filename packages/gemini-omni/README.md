@@ -8,3 +8,6 @@ provider-neutral `GeneratedVideoSet` contract from `@narratage/generation`.
 
 The package does not call an API. `@narratage/provider-kie` is one separately selected Runtime Endpoint
 implementation; another Provider can implement the same exact capability without changing Core.
+
+The package is directly activatable and currently offers exact compute Fragments rather than a bundled
+high-level author Surface.

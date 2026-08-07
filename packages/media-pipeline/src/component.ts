@@ -1,23 +1,12 @@
+import { mediaComponent } from "@narratage/media";
 import type { ComponentPackage } from "@narratage/component-kit";
-import {
-  mediaContractsComponent,
-  assertSpeechAudioBasisIdentity,
-  speechEvidenceSampleBoundary,
-  programSpaceSampleFrames,
-  verifyMuxedMedia,
-  verifyMediaInspection,
-  verifyMediaStreamSelection,
-  verifyRenderedVisual,
-  verifyTimelineAudio,
-} from "@narratage/video-contracts";
-import type {
-  Composition,
-  MuxedMedia,
-  ProgramSpace,
-  RenderedVisual,
-  SpeechAudioBasis,
-  TimelineAudio,
-} from "@narratage/video-contracts";
+import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifyTimelineAudio } from "@narratage/media";
+import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
+import { programSpaceSampleFrames } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertSpeechAudioBasisIdentity, speechEvidenceSampleBoundary } from "@narratage/speech";
+import type { SpeechAudioBasis } from "@narratage/speech";
+import type { Composition } from "@narratage/composition";
 import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
@@ -218,4 +207,4 @@ export const mediaPipelineComponent = {
 } satisfies ComponentPackage;
 
 /** Convenience set: public media validators must accompany the pipeline Producers. */
-export const mediaPipelineComponents = [mediaContractsComponent, mediaPipelineComponent] as const;
+export const mediaPipelineComponents = [mediaComponent, mediaPipelineComponent] as const;

@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/gemini-omni": "workspace:*",
@@ -25,11 +27,13 @@
   "devDependencies": {
     "@narratage/artifact-store-fs": "workspace:*",
     "@narratage/component-kit": "workspace:*",
-    "@narratage/video-contracts": "workspace:*",
     "@narratage/core": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/local": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/model-kit": "workspace:*",
+    "@narratage/narrative": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }

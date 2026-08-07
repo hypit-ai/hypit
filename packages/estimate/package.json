@@ -11,9 +11,10 @@
   },
   "dependencies": {
     "@narratage/component-kit": "workspace:*",
-    "@narratage/video-contracts": "workspace:*",
     "@narratage/elaborator": "workspace:*",
+    "@narratage/narrative": "workspace:*",
     "@narratage/protocol": "workspace:*",
+    "@narratage/speech": "workspace:*",
     "@narratage/svs": "workspace:*",
     "@narratage/text": "workspace:*"
   }

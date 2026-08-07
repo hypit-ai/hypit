@@ -1,5 +1,5 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { SpeechEvidenceAudio } from "@narratage/video-contracts";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
 import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 

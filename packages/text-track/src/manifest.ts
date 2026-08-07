@@ -1,8 +1,8 @@
-import {
-  contractTypes,
-  videoContractDependencies,
-  visualTrackSchema,
-} from "@narratage/video-contracts";
+import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
+import { compositionDependency, compositionTypes } from "@narratage/composition";
+import type { Track } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
@@ -125,10 +125,10 @@ export const textTrackManifest: ModuleManifest = {
   name: textTrackModuleRef.name,
   version: textTrackModuleRef.version,
   dependencies: [
-    videoContractDependencies.programSpace,
-    videoContractDependencies.narrative,
-    videoContractDependencies.semanticTime,
-    videoContractDependencies.composition,
+    programSpaceDependency,
+    narrativeDependency,
+    semanticMapDependency,
+    compositionDependency,
   ],
   types: [
     { name: textTrackTypes.program.name, schema: textTrackProgramSchema },
@@ -141,7 +141,7 @@ export const textTrackManifest: ModuleManifest = {
   surfaces: [{
     name: "track", tag: "Track", mode: "structured",
     outputs: [textTrackTypes.spec, textTrackTypes.header, textTrackTypes.itemSpec,
-      textTrackTypes.set, textTrackTypes.program, contractTypes.visualTrack],
+      textTrackTypes.set, textTrackTypes.program, compositionTypes.visualTrack],
     implementation: { kind: "trusted-frontend-surface", locator: "@narratage/text-track/track-surface", digest: textTrackSurfaceImplementationDigest },
   }],
   producers: [{
@@ -155,7 +155,7 @@ export const textTrackManifest: ModuleManifest = {
     inputs: [
       { name: "set", type: textTrackTypes.set },
       { name: "header", type: textTrackTypes.header },
-      { name: "space", type: contractTypes.programSpace },
+      { name: "space", type: programSpaceTypes.programSpace },
       { name: "spec", type: textTrackTypes.itemSpec },
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],
@@ -166,9 +166,9 @@ export const textTrackManifest: ModuleManifest = {
     inputs: [
       { name: "set", type: textTrackTypes.set },
       { name: "header", type: textTrackTypes.header },
-      { name: "map", type: contractTypes.completeSemanticMap },
-      { name: "selection", type: contractTypes.narrativeSelection },
-      { name: "space", type: contractTypes.programSpace },
+      { name: "map", type: semanticMapTypes.complete },
+      { name: "selection", type: narrativeTypes.selection },
+      { name: "space", type: programSpaceTypes.programSpace },
       { name: "spec", type: textTrackTypes.itemSpec },
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],
@@ -186,7 +186,7 @@ export const textTrackManifest: ModuleManifest = {
   }, {
     name: textTrackProducers.compile.name,
     inputs: [
-      { name: "space", type: contractTypes.programSpace },
+      { name: "space", type: programSpaceTypes.programSpace },
       { name: "spec", type: textTrackTypes.spec },
     ],
     outputs: [{ name: "program", type: textTrackTypes.program }],
@@ -195,10 +195,10 @@ export const textTrackManifest: ModuleManifest = {
   }, {
     name: textTrackProducers.render.name,
     inputs: [
-      { name: "space", type: contractTypes.programSpace },
+      { name: "space", type: programSpaceTypes.programSpace },
       { name: "program", type: textTrackTypes.program },
     ],
-    outputs: [{ name: "track", type: contractTypes.visualTrack }],
+    outputs: [{ name: "track", type: compositionTypes.visualTrack }],
     needs: [],
     implementation: {
       kind: "registered",

@@ -11,7 +11,10 @@
     "@narratage/elaborator": "workspace:*",
     "@narratage/host": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/realization": "workspace:*",
     "@narratage/source": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/run-text": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

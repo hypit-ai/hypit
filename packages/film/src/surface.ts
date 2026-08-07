@@ -1,4 +1,7 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { programSpaceTypes } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { compositionTypes } from "@narratage/composition";
+import type { AudioTrack, Track, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
@@ -100,8 +103,8 @@ function trackChildren(element: StructuredElement): StructuredElement[] {
 }
 
 function trackKind(reference: SurfaceResolvedReference): "visual" | "audio" {
-  if (sameType(reference.type, contractTypes.visualTrack)) return "visual";
-  if (sameType(reference.type, contractTypes.audioTrack)) return "audio";
+  if (sameType(reference.type, compositionTypes.visualTrack)) return "visual";
+  if (sameType(reference.type, compositionTypes.audioTrack)) return "audio";
   throw new Error(`Film Track ${reference.path} must be a VisualTrack or AudioTrack`);
 }
 
@@ -109,7 +112,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
   exactAttributes(element, ["id", "space", "appearance"]);
   const id = stringAttribute(element, "id");
   const space = requiredReference(element, "space", resolveReference);
-  if (!sameType(space.type, contractTypes.programSpace)) {
+  if (!sameType(space.type, programSpaceTypes.programSpace)) {
     throw new Error(`${element.name}.space must reference ProgramSpace`);
   }
   const appearanceReference = requiredReference(element, "appearance", resolveReference);
