@@ -466,6 +466,7 @@ body {
   .hero-statement-break { display: none; }
   .vp-doc .demo-heading h2 { font-size: 20px; }
   .VPHome .vp-doc .demo-heading h2 { font-size: 16px; }
+  .VPHome .VPHero .action .VPButton { display: inline-flex; align-items: center; justify-content: center; height: 42px; box-sizing: border-box; line-height: 1; }
   .demo-shell { margin-inline: 0; border-radius: 2px; }
   .real-preview-body { grid-template-columns: 1fr; gap: 16px; padding: 16px 12px; }
   .real-video-frame { height: 480px; }
