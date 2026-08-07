@@ -4,9 +4,8 @@ import {
   programSpaceFrameCount,
   sealVisualTrack,
 } from "@svml/contracts";
-import type { VisualStyleDeclaration, VisualTrack } from "@svml/contracts";
-import { digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@svml/contracts";
+import { digestOf } from "@svml/protocol";
 
 import { planCaptionPresentation } from "./presentation.js";
 import { assertCaptionProgram } from "./style.js";
@@ -15,7 +14,7 @@ import type { CaptionProgram, CaptionTrackProgram, TimedCaptionProjection } from
 export const renderCaptionTrackImplementationDigest = digestOf("@svml/caption/render-track@1");
 export const renderCaptionProgramImplementationDigest = digestOf("@svml/caption/render-program@1");
 
-function normalizedProgram(value: Omit<CaptionTrackProgram, "digest">): Omit<CaptionTrackProgram, "digest"> {
+function normalizedProgram(value: CaptionTrackProgram): CaptionTrackProgram {
   return {
     contract: "svml.caption-track-program@1",
     id: value.id,
@@ -25,13 +24,8 @@ function normalizedProgram(value: Omit<CaptionTrackProgram, "digest">): Omit<Cap
   };
 }
 
-export function computeCaptionTrackProgramDigest(value: Omit<CaptionTrackProgram, "digest">): Digest {
-  return digestOf(normalizedProgram(value));
-}
-
-export function sealCaptionTrackProgram(value: Omit<CaptionTrackProgram, "digest">): CaptionTrackProgram {
-  const content = normalizedProgram(value);
-  return { ...content, digest: digestOf(content) };
+export function sealCaptionTrackProgram(value: CaptionTrackProgram): CaptionTrackProgram {
+  return normalizedProgram(value);
 }
 
 export function defaultCaptionTrackProgram(id = "captions"): CaptionTrackProgram {
@@ -58,10 +52,6 @@ export function defaultCaptionTrackProgram(id = "captions"): CaptionTrackProgram
 
 export function assertCaptionTrackProgram(program: CaptionTrackProgram): void {
   if (program.contract !== "svml.caption-track-program@1") throw new Error("Unsupported CaptionTrackProgram contract.");
-  const { digest: _digest, ...content } = program;
-  if (!isDigest(program.digest) || program.digest !== computeCaptionTrackProgramDigest(content)) {
-    throw new Error("CaptionTrackProgram digest does not match its contents.");
-  }
   if (!program.id || !program.stacking.tieBreak || !program.style.fontFamily) {
     throw new Error("CaptionTrackProgram identity and font family must not be empty.");
   }
@@ -97,17 +87,12 @@ export function assertTimedCaptionProjection(projection: TimedCaptionProjection)
   if (projection.contract !== "svml.timed-caption-projection@1") {
     throw new Error("Unsupported TimedCaptionProjection contract.");
   }
-  assertProgramSpaceIdentity(projection.programSpace);
-  const { projectionDigest: _digest, ...content } = projection;
-  if (!isDigest(projection.projectionDigest) || projection.projectionDigest !== digestOf(content)) {
-    throw new Error("TimedCaptionProjection digest does not match its contents.");
-  }
 }
 
-function frameAt(projection: TimedCaptionProjection, seconds: number): number {
+function frameAt(programSpace: ProgramSpace, seconds: number): number {
   return Math.round(seconds
-    * projection.programSpace.frameRate.numerator
-    / projection.programSpace.frameRate.denominator);
+    * programSpace.frameRate.numerator
+    / programSpace.frameRate.denominator);
 }
 
 function textStyle(style: CaptionTrackProgram["style"]): VisualStyleDeclaration[] {
@@ -128,19 +113,20 @@ function textStyle(style: CaptionTrackProgram["style"]): VisualStyleDeclaration[
 export function renderCaptionTrack(
   projection: TimedCaptionProjection,
   program: CaptionTrackProgram,
+  programSpace: ProgramSpace,
 ): VisualTrack {
   assertTimedCaptionProjection(projection);
   assertCaptionTrackProgram(program);
-  const totalFrames = programSpaceFrameCount(projection.programSpace);
+  assertProgramSpaceIdentity(programSpace);
+  const totalFrames = programSpaceFrameCount(programSpace);
   const plan = planCaptionPresentation(projection, program.mode);
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: program.id,
-    programSpaceDigest: projection.programSpace.digest,
     presents: plan.units.flatMap((unit) => {
-      const startFrame = Math.max(0, frameAt(projection, unit.startSec));
-      const measuredEnd = Math.min(totalFrames, frameAt(projection, unit.endSec));
+      const startFrame = Math.max(0, frameAt(programSpace, unit.startSec));
+      const measuredEnd = Math.min(totalFrames, frameAt(programSpace, unit.endSec));
       const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
       if (!unit.display || startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
       return [{
@@ -189,7 +175,7 @@ export function renderCaptionTrack(
       }];
     }),
   });
-  assertVisualTrackIdentity(track, projection.programSpace);
+  assertVisualTrackIdentity(track, programSpace);
   return track;
 }
 
@@ -197,17 +183,19 @@ export function renderCaptionTrack(
 export function renderCaptionProgram(
   projection: TimedCaptionProjection,
   program: CaptionProgram,
+  programSpace: ProgramSpace,
 ): VisualTrack {
   assertTimedCaptionProjection(projection);
   assertCaptionProgram(program);
   const styles = new Map(program.styles.map((style) => [style.id, style]));
-  const totalFrames = programSpaceFrameCount(projection.programSpace);
+  assertProgramSpaceIdentity(programSpace);
+  const totalFrames = programSpaceFrameCount(programSpace);
   const units = projection.regions.flatMap((region) => {
     const styleId = region.styleId ?? program.defaultStyleId;
     const style = styles.get(styleId);
     if (style === undefined) throw new Error(`Caption region ${region.id} references unknown Style ${styleId}`);
     return planCaptionPresentation(
-      { projectionDigest: projection.projectionDigest, regions: [region] },
+      { regions: [region] },
       style.presentation.mode,
     ).units.map((unit) => ({ unit, style }));
   });
@@ -215,10 +203,9 @@ export function renderCaptionProgram(
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: program.id,
-    programSpaceDigest: projection.programSpace.digest,
     presents: units.flatMap(({ unit, style }) => {
-      const startFrame = Math.max(0, frameAt(projection, unit.startSec));
-      const measuredEnd = Math.min(totalFrames, frameAt(projection, unit.endSec));
+      const startFrame = Math.max(0, frameAt(programSpace, unit.startSec));
+      const measuredEnd = Math.min(totalFrames, frameAt(programSpace, unit.endSec));
       const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
       if (!unit.display || startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
       const appearance = style.presentation.style;
@@ -269,6 +256,6 @@ export function renderCaptionProgram(
       }];
     }),
   });
-  assertVisualTrackIdentity(track, projection.programSpace);
+  assertVisualTrackIdentity(track, programSpace);
   return track;
 }

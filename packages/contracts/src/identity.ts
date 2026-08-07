@@ -1,5 +1,4 @@
-import { digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import { isDigest } from "@svml/protocol";
 
 import type {
   AlignedTranscriptEvidence,
@@ -10,52 +9,18 @@ import type {
   SpeechEvidenceAudio,
 } from "./speech.js";
 
-export function computeSpeechDurationDigest(value: Omit<SpeechDuration, "durationDigest">): Digest {
-  return digestOf(value);
-}
-
-export function sealSpeechDuration(value: Omit<SpeechDuration, "durationDigest">): SpeechDuration {
-  return { ...value, durationDigest: computeSpeechDurationDigest(value) };
+export function sealSpeechDuration(value: SpeechDuration): SpeechDuration {
+  return structuredClone(value);
 }
 
 export function assertSpeechDurationIdentity(value: SpeechDuration): void {
   if (value.contract !== "svml.speech-duration@1") throw new Error("Unsupported SpeechDuration contract.");
   if (
-    value.segmentId.length === 0
-    || !Number.isSafeInteger(value.tokenStart)
-    || !Number.isSafeInteger(value.tokenEndExclusive)
-    || value.tokenStart < 0
-    || value.tokenEndExclusive <= value.tokenStart
-    || !isDigest(value.sourceSpeechExcerptDigest)
-    || !Number.isFinite(value.durationSec)
+    !Number.isFinite(value.durationSec)
     || value.durationSec <= 0
   ) {
     throw new Error("SpeechDuration is invalid.");
   }
-  const { durationDigest: _digest, ...content } = value;
-  if (!isDigest(value.durationDigest) || value.durationDigest !== computeSpeechDurationDigest(content)) {
-    throw new Error("SpeechDuration digest does not match its canonical contents.");
-  }
-}
-
-export function computeProgramSpaceDigest(value: Omit<ProgramSpace, "digest">): Digest {
-  return digestOf(value);
-}
-
-export function computeSpeechBasisDigest(value: Omit<SpeechBasis, "basisDigest">): Digest {
-  return digestOf(value);
-}
-
-export function computeAlignedTranscriptEvidenceDigest(
-  value: Omit<AlignedTranscriptEvidence, "evidenceDigest">,
-): Digest {
-  return digestOf(value);
-}
-
-export function computeSpeechEvidenceAudioDigest(
-  value: Omit<SpeechEvidenceAudio, "evidenceAudioDigest">,
-): Digest {
-  return digestOf(value);
 }
 
 /** Round one 48 kHz master-sample boundary onto the canonical 16 kHz evidence clock. */
@@ -70,8 +35,8 @@ export function speechEvidenceSampleBoundary(masterSampleBoundary: number): numb
   return Number(value);
 }
 
-export function sealProgramSpace(value: Omit<ProgramSpace, "digest">): ProgramSpace {
-  return { ...value, digest: computeProgramSpaceDigest(value) };
+export function sealProgramSpace(value: ProgramSpace): ProgramSpace {
+  return structuredClone(value);
 }
 
 export function programSpaceFrameCount(programSpace: ProgramSpace): number {
@@ -102,10 +67,6 @@ export function programSpaceSampleFrames(programSpace: ProgramSpace, sampleRate:
 
 export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {
   if (programSpace.contract !== "svml.program-space@0") throw new Error("Unsupported ProgramSpace contract.");
-  const { digest: _digest, ...content } = programSpace;
-  if (!isDigest(programSpace.digest) || programSpace.digest !== computeProgramSpaceDigest(content)) {
-    throw new Error("ProgramSpace digest does not match its canonical contents.");
-  }
   const { numerator, denominator } = programSpace.frameRate;
   if (
     !Number.isSafeInteger(numerator)
@@ -120,20 +81,20 @@ export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {
   programSpaceFrameCount(programSpace);
 }
 
-export function sealSpeechBasis(value: Omit<SpeechBasis, "basisDigest">): SpeechBasis {
-  return { ...value, basisDigest: computeSpeechBasisDigest(value) };
+export function sealSpeechBasis(value: SpeechBasis): SpeechBasis {
+  return structuredClone(value);
 }
 
 export function sealAlignedTranscriptEvidence(
-  value: Omit<AlignedTranscriptEvidence, "evidenceDigest">,
+  value: AlignedTranscriptEvidence,
 ): AlignedTranscriptEvidence {
-  return { ...value, evidenceDigest: computeAlignedTranscriptEvidenceDigest(value) };
+  return structuredClone(value);
 }
 
 export function sealSpeechEvidenceAudio(
-  value: Omit<SpeechEvidenceAudio, "evidenceAudioDigest">,
+  value: SpeechEvidenceAudio,
 ): SpeechEvidenceAudio {
-  return { ...value, evidenceAudioDigest: computeSpeechEvidenceAudioDigest(value) };
+  return structuredClone(value);
 }
 
 export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {
@@ -141,9 +102,7 @@ export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): v
     throw new Error("Unsupported SpeechEvidenceAudio contract.");
   }
   if (
-    !isDigest(value.programSpaceDigest)
-    || !isDigest(value.sourceAudioArtifactDigest)
-    || value.artifact.kind !== "blob"
+    value.artifact.kind !== "blob"
     || !isDigest(value.artifact.digest)
     || !Number.isSafeInteger(value.artifact.size)
     || value.artifact.size < 0
@@ -167,26 +126,16 @@ export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): v
     || value.sampleMap.evidenceSampleFrames !== value.sampleFrames
     || value.sampleMap.sourceOriginSample !== 0
     || value.sampleMap.evidenceOriginSample !== 0
-    || value.sampleMap.resamplerImplementation.length === 0
     || speechEvidenceSampleBoundary(value.sampleMap.sourceSampleFrames) !== value.sampleFrames
   ) {
     throw new Error("SpeechEvidenceAudio sample map is invalid.");
   }
   if (value.segments.length === 0) throw new Error("SpeechEvidenceAudio has no Segment identity.");
-  const { evidenceAudioDigest: _digest, ...content } = value;
-  if (!isDigest(value.evidenceAudioDigest)
-    || value.evidenceAudioDigest !== computeSpeechEvidenceAudioDigest(content)) {
-    throw new Error("SpeechEvidenceAudio digest does not match its canonical contents.");
-  }
 }
 
 export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
   if (basis.contract !== "svml.speech-basis@1") throw new Error("Unsupported SpeechBasis contract.");
   assertProgramSpaceIdentity(basis.programSpace);
-  const { basisDigest: _basisDigest, ...basisContent } = basis;
-  if (!isDigest(basis.basisDigest) || basis.basisDigest !== computeSpeechBasisDigest(basisContent)) {
-    throw new Error("SpeechBasis digest does not match its canonical contents.");
-  }
   if (
     !Number.isFinite(basis.programSpace.durationSec)
     || basis.programSpace.durationSec <= 0
@@ -198,11 +147,8 @@ export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
 }
 
 /**
- * Validate the self-contained identity claims of an audio projection.
- *
- * `basisDigest` names the complete SpeechBasis Product, so it intentionally
- * cannot be recomputed from this projection after the visual fields have been
- * removed. The graph-level affinity constraints prove that relationship.
+ * Validate the intrinsic content of an audio projection. Its relationship to
+ * a SpeechBasis is an explicit graph edge recorded by Core.
  */
 export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
   if (basis.contract !== "svml.speech-audio-basis@1") {

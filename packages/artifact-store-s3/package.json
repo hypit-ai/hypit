@@ -6,9 +6,11 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1103.0",
     "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*"
+    "@svml/runtime": "workspace:*",
+    "@svml/runtime-adapter": "workspace:*"
   }
 }

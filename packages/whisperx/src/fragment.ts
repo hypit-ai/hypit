@@ -47,10 +47,6 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       type: whisperXTypes.alignmentEvidence,
       root: operation("request-whisperx"),
       semanticInputs: ["audio"],
-      affinity: [
-        { resultPointer: "/audioArtifactDigest", source: operation("prepare-evidence-audio"), sourcePointer: "/artifact/digest" },
-        { resultPointer: "/programSpaceDigest", source: input("audio"), sourcePointer: "/programSpace/digest" },
-      ],
       fidelity: "exact",
     },
     {
@@ -58,10 +54,6 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       type: contractTypes.alignedTranscriptEvidence,
       root: operation("normalize-evidence"),
       semanticInputs: ["audio"],
-      affinity: [
-        { resultPointer: "/audioArtifactDigest", source: operation("prepare-evidence-audio"), sourcePointer: "/artifact/digest" },
-        { resultPointer: "/programSpaceDigest", source: input("audio"), sourcePointer: "/programSpace/digest" },
-      ],
       fidelity: "exact",
     },
     {
@@ -69,7 +61,6 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       type: contractTypes.completeSemanticMap,
       root: operation("locate-speech"),
       semanticInputs: ["narrative", "audio"],
-      affinity: [{ resultPointer: "/programSpace/digest", source: input("audio"), sourcePointer: "/programSpace/digest" }],
       fidelity: "exact",
     },
   ],

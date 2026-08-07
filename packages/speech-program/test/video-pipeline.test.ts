@@ -214,7 +214,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
       const sourceSampleFrames = Math.round(audio.programSpace.durationSec * 48_000);
       const need: ProjectSpeechEvidenceAudioNeed = {
         contract: "svml.project-speech-evidence-audio-request@1",
-        programSpaceDigest: audio.programSpace.digest,
         source: {
           kind: "blob",
           digest: audio.audio.digest,
@@ -328,8 +327,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
       return {
         value: { kind: "inline", value: sealSpeechEvidenceAudio({
           contract: "svml.speech-evidence-audio@1",
-          programSpaceDigest: request.programSpaceDigest,
-          sourceAudioArtifactDigest: request.source.digest,
           artifact: {
             kind: "blob",
             digest: digestOf("artifact:evidence-audio"),
@@ -350,7 +347,6 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
             evidenceSampleFrames: request.evidenceSampleFrames,
             sourceOriginSample: 0,
             evidenceOriginSample: 0,
-            resamplerImplementation: "fixture",
           },
         }) },
         conformance: "exact",
@@ -371,14 +367,11 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     () => ({
       value: {
         kind: "inline",
-        value: sealWhisperXAlignmentEvidence({
-          contract: "svml.whisperx-alignment-evidence@2",
-          engine: "whisperx",
-          audioArtifactDigest: digestOf("another-project:audio"),
-          programSpaceDigest: digestOf("another-project:program-space"),
+        value: {
+          contract: "invalid-whisperx-evidence",
           durationSec: 1,
           segments: [{ sourceSegmentId: "line", startSec: 0, endSec: 1, words: [], chars: [] }],
-        }),
+        },
       },
       conformance: "exact",
       delivery: "executed",
@@ -393,7 +386,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     parseBuildState(serializeBuildState(atWhisperX.state)),
   );
   assert.equal(rejectedEvidence.status, "paused");
-  assert.match(rejectedEvidence.journal.at(-1)?.message ?? "", /does not match/u);
+  assert.match(rejectedEvidence.journal.at(-1)?.message ?? "", /contract/u);
   const rejectedWhisperNeed = rejectedEvidence.state.needs.find((need) =>
     sameCapability(need.capability, whisperXCapabilities.alignment));
   assert(rejectedWhisperNeed);
@@ -401,23 +394,19 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     rejectedEvidence.state.records.some((record) =>
       record.id === rejectedWhisperNeed.result),
     false,
-    "Evidence claiming another measured Artifact must not enter BuildState",
+    "Invalid Evidence must not enter BuildState",
   );
 
   endpoints.registerImmediateEndpoint(
     "runtime:whisperx-local",
     whisperXCapabilities.alignment,
     whisperXTypes.alignmentEvidence,
-    ({ need }) => {
-      const request = inlineObject(need.constraints);
+    () => {
       return {
         value: {
           kind: "inline",
           value: sealWhisperXAlignmentEvidence({
             contract: "svml.whisperx-alignment-evidence@2",
-            engine: "whisperx",
-            audioArtifactDigest: (request.audio as { readonly digest: WhisperXAlignmentEvidence["audioArtifactDigest"] }).digest,
-            programSpaceDigest: request.programSpaceDigest as WhisperXAlignmentEvidence["programSpaceDigest"],
             durationSec: 1,
             segments: [{
               sourceSegmentId: "line",
@@ -591,16 +580,10 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
   assert.equal(producerCount(captionFromExisting, whisperXProducers.request), 1);
   assert.equal(producerCount(captionFromExisting, captionProducers.temporalize), 1);
 
-  const blackProgram = sealProgramSpace({
-    contract: "svml.program-space@0",
-    durationSec: 1,
-    frameRate: { numerator: 30, denominator: 1 },
-  });
   const black: VisualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "preview:black",
-    programSpaceDigest: blackProgram.digest,
     presents: [],
   });
   const blackValue = { kind: "inline" as const, value: black };

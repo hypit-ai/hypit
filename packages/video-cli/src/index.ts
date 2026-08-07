@@ -13,7 +13,6 @@ export {
   videoBuiltInPackageContributions,
 } from "./compiler.js";
 export {
-  createVideoRuntimeConfigRegistry,
   createVideoRuntimeFromConfig,
 } from "./runtime-config.js";
 export { videoCliDistribution } from "./distribution.js";

@@ -23,12 +23,6 @@ export const speechEstimateFragment = sealGraphFragment({
     type: contractTypes.speechDuration,
     root: operation("estimate"),
     semanticInputs: ["speech", "policy"],
-    affinity: [
-      { resultPointer: "/sourceSpeechExcerptDigest", source: input("speech"), sourcePointer: "/excerptDigest" },
-      { resultPointer: "/segmentId", source: input("speech"), sourcePointer: "/id" },
-      { resultPointer: "/tokenStart", source: input("speech"), sourcePointer: "/tokenStart" },
-      { resultPointer: "/tokenEndExclusive", source: input("speech"), sourcePointer: "/tokenEndExclusive" },
-    ],
     fidelity: "exact",
   }],
 });

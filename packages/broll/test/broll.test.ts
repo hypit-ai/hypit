@@ -5,7 +5,6 @@ import {
   assertBrollProductIdentity,
   assertBrollProgramIdentity,
   compileBrollProduct,
-  computeBrollProductDigest,
   projectBrollAudio,
   projectBrollVisual,
   sealBrollProgram,
@@ -45,7 +44,6 @@ function program(items: readonly BrollItem[], transitions: readonly BrollPairTra
   return sealBrollProgram({
     contract: "svml.broll-program@1",
     id: "story-broll",
-    programSpaceDigest: programSpace.digest,
     items,
     transitions,
   });
@@ -87,7 +85,6 @@ test("B-roll owns local motion while every item remains an independently stacked
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "middle-overlay",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "middle",
       span: { startFrame: 0, endFrameExclusive: 300 },
@@ -98,10 +95,9 @@ test("B-roll owns local motion while every item remains an independently stacked
   const document = compileHyperframesDocument(sealComposition({
     contract: "svml.composition@1",
     id: "interleaved-broll",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [projectBrollVisual(product), middle, projectBrollAudio(product)],
-  }));
+  }), programSpace);
   const boardAt = document.html.indexOf('data-svml-present-id="board"');
   const middleAt = document.html.indexOf('data-svml-present-id="middle"');
   const cutawayAt = document.html.indexOf('data-svml-present-id="cutaway"');
@@ -150,10 +146,9 @@ test("page-turn and transition SFX remain B-roll-owned and lower to generic visu
   const document = compileHyperframesDocument(sealComposition({
     contract: "svml.composition@1",
     id: "page-turn",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [product.visualTrack, product.audioTrack],
-  }));
+  }), programSpace);
   assert.match(document.html, /perspective\(1200px\) rotateY/u);
   assert.doesNotMatch(document.html, new RegExp(sfx.digest.slice("sha256:".length), "u"),
     "HyperFrames is visual-only; the media pipeline renders this proven AudioTrack separately");
@@ -174,7 +169,7 @@ test("B-roll rejects a pair transition that is not both items' exact shared boun
   assert.throws(() => compileBrollProduct(programSpace, authored), /must be the outgoing and incoming boundary/);
 });
 
-test("an Existing BrollProduct cannot recompute its own digest around an out-of-space Present", () => {
+test("a BrollProduct is validated against the explicitly connected ProgramSpace", () => {
   const product = compileBrollProduct(programSpace, program([
     item({ id: "bounded", span: { startFrame: 0, endFrameExclusive: 120 }, z: 20 }),
   ]));
@@ -183,12 +178,10 @@ test("an Existing BrollProduct cannot recompute its own digest around an out-of-
     ...product.visualTrack,
     presents: [{ ...present, span: { startFrame: 0, endFrameExclusive: 301 } }],
   });
-  const content = {
+  const tampered = {
     contract: product.contract,
-    programSpace: product.programSpace,
     visualTrack: invalidVisual,
     audioTrack: product.audioTrack,
   };
-  const tampered = { ...content, productDigest: computeBrollProductDigest(content) };
-  assert.throws(() => projectBrollVisual(tampered), /outside ProgramSpace/);
+  assert.throws(() => assertBrollProductIdentity(tampered, programSpace), /outside ProgramSpace/);
 });

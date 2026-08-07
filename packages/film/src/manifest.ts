@@ -2,7 +2,6 @@ import {
   audioTrackSchema,
   compositionSchema,
   contractTypes,
-  programSpaceSchema,
   videoContractDependencies,
   visualTrackSchema,
 } from "@svml/contracts";
@@ -32,7 +31,6 @@ export const filmProducers = {
 
 const string = { kind: "string", minLength: 1 } as const;
 const integer = { kind: "number", integer: true, minimum: 1 } as const;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({
   kind: "object",
   fields,
@@ -50,7 +48,6 @@ const frameRateSchema = object({
 
 export const filmProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.film-program@1" } },
-  digest: { schema: digest },
   id: { schema: string },
   frameRate: { schema: frameRateSchema },
   canvas: { schema: canvasSchema },
@@ -58,20 +55,11 @@ export const filmProgramSchema: ValueSchema = object({
 
 export const filmTrackSetSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.film-track-set@1" } },
-  digest: { schema: digest },
-  programSpace: { schema: programSpaceSchema },
   tracks: {
     schema: {
       kind: "array",
       items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema] },
     },
-  },
-  lastAddition: {
-    schema: object({
-      previousSetDigest: { schema: digest },
-      trackDigest: { schema: digest },
-    }),
-    optional: true,
   },
 });
 
@@ -103,12 +91,8 @@ export const filmManifest: ModuleManifest = {
   producers: [
     {
       name: filmProducers.createTrackSet.name,
-      inputs: [{ name: "space", type: contractTypes.programSpace }],
-      outputs: [{
-        name: "set",
-        type: filmTypes.trackSet,
-        affinity: [{ resultPointer: "/programSpace/digest", input: "space", inputPointer: "/digest" }],
-      }],
+      inputs: [],
+      outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -120,17 +104,10 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendVisualTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
+        { name: "space", type: contractTypes.programSpace },
         { name: "track", type: contractTypes.visualTrack },
       ],
-      outputs: [{
-        name: "set",
-        type: filmTypes.trackSet,
-        affinity: [
-          { resultPointer: "/programSpace/digest", input: "set", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/lastAddition/previousSetDigest", input: "set", inputPointer: "/digest" },
-          { resultPointer: "/lastAddition/trackDigest", input: "track", inputPointer: "/digest" },
-        ],
-      }],
+      outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -142,17 +119,10 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendAudioTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
+        { name: "space", type: contractTypes.programSpace },
         { name: "track", type: contractTypes.audioTrack },
       ],
-      outputs: [{
-        name: "set",
-        type: filmTypes.trackSet,
-        affinity: [
-          { resultPointer: "/programSpace/digest", input: "set", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/lastAddition/previousSetDigest", input: "set", inputPointer: "/digest" },
-          { resultPointer: "/lastAddition/trackDigest", input: "track", inputPointer: "/digest" },
-        ],
-      }],
+      outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -164,20 +134,10 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.compileComposition.name,
       inputs: [
         { name: "program", type: filmTypes.program },
+        { name: "space", type: contractTypes.programSpace },
         { name: "set", type: filmTypes.trackSet },
       ],
-      outputs: [{
-        name: "composition",
-        type: contractTypes.composition,
-        affinity: [
-          { resultPointer: "/id", input: "program", inputPointer: "/id" },
-          { resultPointer: "/programSpace/digest", input: "set", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/canvas/width", input: "program", inputPointer: "/canvas/width" },
-          { resultPointer: "/canvas/height", input: "program", inputPointer: "/canvas/height" },
-          { resultPointer: "/canvas/clearColor", input: "program", inputPointer: "/canvas/clearColor" },
-          { resultPointer: "/programSpace/frameRate", input: "program", inputPointer: "/frameRate" },
-        ],
-      }],
+      outputs: [{ name: "composition", type: contractTypes.composition }],
       needs: [],
       implementation: {
         kind: "registered",

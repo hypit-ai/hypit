@@ -42,7 +42,6 @@ export const speechTakeProjectionFragment = sealGraphFragment({
       type: contractTypes.programSpace,
       root: operation("project-program-space"),
       semanticInputs: ["take"],
-      affinity: [{ resultPointer: "/digest", source: input("take"), sourcePointer: "/programSpace/digest" }],
       fidelity: "exact",
     },
     {
@@ -50,10 +49,6 @@ export const speechTakeProjectionFragment = sealGraphFragment({
       type: contractTypes.speechAudioBasis,
       root: operation("project-audio"),
       semanticInputs: ["take"],
-      affinity: [
-        { resultPointer: "/programSpace/digest", source: input("take"), sourcePointer: "/programSpace/digest" },
-        { resultPointer: "/audio/digest", source: input("take"), sourcePointer: "/audio/digest" },
-      ],
       fidelity: "exact",
     },
     {
@@ -61,9 +56,6 @@ export const speechTakeProjectionFragment = sealGraphFragment({
       type: contractTypes.visualTrack,
       root: operation("project-visual"),
       semanticInputs: ["take"],
-      affinity: [
-        { resultPointer: "/programSpaceDigest", source: input("take"), sourcePointer: "/programSpace/digest" },
-      ],
       fidelity: "exact",
     },
     {
@@ -71,9 +63,6 @@ export const speechTakeProjectionFragment = sealGraphFragment({
       type: contractTypes.audioTrack,
       root: operation("project-audio-track"),
       semanticInputs: ["take"],
-      affinity: [
-        { resultPointer: "/programSpaceDigest", source: input("take"), sourcePointer: "/programSpace/digest" },
-      ],
       fidelity: "exact",
     },
   ],
@@ -96,9 +85,6 @@ export const captionTimingFragment = sealGraphFragment({
       type: captionTypes.timedProjection,
     root: operation("temporalize-caption"),
     semanticInputs: ["narrative", "map"],
-    affinity: [
-      { resultPointer: "/programSpace/digest", source: input("map"), sourcePointer: "/programSpace/digest" },
-    ],
     fidelity: "exact",
   }],
 });
@@ -109,21 +95,19 @@ export const captionTrackFragment = sealGraphFragment({
   inputs: [
     { name: "caption", type: captionTypes.timedProjection },
     { name: "program", type: captionTypes.trackProgram },
+    { name: "space", type: contractTypes.programSpace },
   ],
   operations: [{
     id: "render-caption-track",
     producer: captionProducers.renderTrack,
-    inputs: { caption: input("caption"), program: input("program") },
+    inputs: { caption: input("caption"), program: input("program"), space: input("space") },
     result: { kind: "output", name: "track" },
   }],
   exports: [{
     name: "track",
     type: contractTypes.visualTrack,
     root: operation("render-caption-track"),
-    semanticInputs: ["caption", "program"],
-    affinity: [
-      { resultPointer: "/programSpaceDigest", source: input("caption"), sourcePointer: "/programSpace/digest" },
-    ],
+    semanticInputs: ["caption", "program", "space"],
     fidelity: "exact",
   }],
 });

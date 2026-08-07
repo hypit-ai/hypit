@@ -89,8 +89,10 @@ execute
 ```
 
 A crash between ArtifactStore `put` and BuildStore CAS can leave an unreferenced CAS object; it
-must never leave a committed Record pointing at bytes that were never stored. A later garbage
-collector may remove the orphan after a grace period.
+must never leave a committed Record pointing at bytes that were never stored. Runtime maintenance
+can now enumerate every retained BuildState and Operation, compute Artifact reachability, and
+remove such orphans explicitly. `gc` dry-runs by default; retention windows and the decision to
+release a Build remain deployment policy rather than Core semantics.
 
 Durable BuildState never trusts serialized outstanding Commands. On recovery, Core regenerates
 Commands from the verified facts. OperationStore reconciliation then resumes an existing external
@@ -158,8 +160,15 @@ bytes while the new Build remains a root.
 
 Retention, grace periods and garbage collection belong to Runtime Store adapters and deployment
 policy. They are not Core transitions and are never inferred from whether a user copied a file to a
-human-readable path. Until explicit release and garbage collection are implemented, the reference
-local Runtime is intentionally append-only.
+human-readable path. The reference local Runtime now exposes explicit reachability maintenance:
+
+```bash
+svml-v2 gc ./svml.runtime.json          # dry-run
+svml-v2 gc ./svml.runtime.json --apply  # delete reported unreachable objects
+```
+
+Every retained BuildState and Operation is a root. The command therefore collects only orphan
+objects; Build release/retention windows remain deployment policy and are not silently inferred.
 
 ## 6. Non-goals
 

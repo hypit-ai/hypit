@@ -1,14 +1,12 @@
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
-  generationDigestSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-  verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, Digest, ValueSchema } from "@svml/protocol";
+import type { BlobRef, ValueSchema } from "@svml/protocol";
 
 export const nanoBananaModuleRef = { name: "@svml/nano-banana", version: "0.0.0-dev" } as const;
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;
@@ -22,9 +20,7 @@ export type NanoBananaRequestContent<M extends NanoBananaModel = NanoBananaModel
   readonly resolution: "1K" | "2K" | "4K";
   readonly outputFormat: "png" | "jpg";
 };
-export type NanoBananaRequest<M extends NanoBananaModel = NanoBananaModel> = NanoBananaRequestContent<M> & {
-  readonly requestDigest: Digest;
-};
+export type NanoBananaRequest<M extends NanoBananaModel = NanoBananaModel> = NanoBananaRequestContent<M>;
 
 function requestSchema(model: NanoBananaModel): ValueSchema {
   return generationObjectSchema({
@@ -38,7 +34,6 @@ function requestSchema(model: NanoBananaModel): ValueSchema {
     aspectRatio: { schema: { kind: "string", minLength: 3, maxLength: 16 } },
     resolution: { schema: { kind: "string", enum: ["1K", "2K", "4K"] } },
     outputFormat: { schema: { kind: "string", enum: ["png", "jpg"] } },
-    requestDigest: { schema: generationDigestSchema },
   });
 }
 
@@ -48,7 +43,6 @@ function object(value: unknown): Record<string, unknown> {
 }
 
 export function verifyNanoBananaRequest(value: unknown, expectedModel?: NanoBananaModel): asserts value is NanoBananaRequest {
-  verifyGenerationRequestDigest(value);
   const request = object(value);
   if (request.contract !== "svml.nano-banana-request@1"
     || !nanoBananaModels.includes(request.model as NanoBananaModel)) {

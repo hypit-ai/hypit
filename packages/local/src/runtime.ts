@@ -13,10 +13,14 @@ import {
   loadNodePackageSet,
   collectNodePackageComponents,
 } from "@svml/package-loader-node";
+import { isDigest } from "@svml/protocol";
 import {
   LocalBuildScheduler,
   MemoryBuildCatalog,
   RuntimeModuleRegistry,
+  isEnumerableBuildStore,
+  isManagedArtifactStore,
+  isStreamingArtifactStore,
   localSchedulerOptionsFromClosure,
   resolveRuntimeProfile,
   sealRuntimeProfile,
@@ -57,6 +61,25 @@ function manifestDigest(manifest: RuntimeModuleManifest): string {
 function nonNegativeInteger(value: number, subject: string): number {
   assert(Number.isSafeInteger(value) && value >= 0, `${subject} must be a non-negative safe integer`);
   return value;
+}
+
+function collectArtifactDigests(
+  value: unknown,
+  digests: Set<import("@svml/protocol").Digest>,
+  seen = new WeakSet<object>(),
+): void {
+  if (value === null || typeof value !== "object") return;
+  if (seen.has(value)) return;
+  seen.add(value);
+  if (!Array.isArray(value)) {
+    const item = value as Record<string, unknown>;
+    if (item.kind === "blob" && typeof item.digest === "string" && isDigest(item.digest)) {
+      digests.add(item.digest);
+    }
+  }
+  for (const nested of Array.isArray(value) ? value : Object.values(value)) {
+    collectArtifactDigests(nested, digests, seen);
+  }
 }
 
 async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<void> {
@@ -247,6 +270,35 @@ export async function createLocalRuntime(
     async readArtifact(digest) {
       return await options.artifactStore.get(digest);
     },
+    async openArtifact(digest) {
+      if (isStreamingArtifactStore(options.artifactStore)) return await options.artifactStore.open(digest);
+      const bytes = await options.artifactStore.get(digest);
+      return bytes === undefined ? undefined : (async function* () { yield bytes; })();
+    },
+    async garbageCollectArtifacts(gc = {}) {
+      assert(isManagedArtifactStore(options.artifactStore),
+        "selected ArtifactStore does not expose explicit retention management");
+      assert(isEnumerableBuildStore(options.buildStore),
+        "selected BuildStore does not expose the maintenance index required for Artifact GC");
+      const reachable = new Set<import("@svml/protocol").Digest>();
+      for (const snapshot of await options.buildStore.list()) collectArtifactDigests(snapshot.state, reachable);
+      if (options.operationStore !== undefined) {
+        for (const operation of await options.operationStore.list({})) collectArtifactDigests(operation, reachable);
+      }
+      const stored = await options.artifactStore.list();
+      const unreachable = stored.filter((digest) => !reachable.has(digest)).sort();
+      const deleted: import("@svml/protocol").Digest[] = [];
+      if (gc.apply === true) {
+        for (const digest of unreachable) {
+          if (await options.artifactStore.delete(digest)) deleted.push(digest);
+        }
+      }
+      return {
+        reachable: [...reachable].sort(),
+        unreachable,
+        deleted,
+      };
+    },
     close() {},
   };
 }
@@ -330,6 +382,8 @@ export async function createProjectLocalRuntime(
       builds: runtime.builds,
       cancel: runtime.cancel,
       readArtifact: runtime.readArtifact,
+      openArtifact: runtime.openArtifact,
+      garbageCollectArtifacts: runtime.garbageCollectArtifacts,
       close() {
         return projectServices.close();
       },

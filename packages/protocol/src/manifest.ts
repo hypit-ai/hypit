@@ -213,25 +213,7 @@ function port(value: unknown, path: string): PortDeclaration {
   return {
     name: string(parsed.name, `${path}.name`),
     type: typeRef(parsed.type, `${path}.type`),
-    ...(parsed.affinity === undefined
-      ? {}
-      : { affinity: resultAffinityList(parsed.affinity, `${path}.affinity`) }),
   };
-}
-
-function resultAffinityList(
-  value: unknown,
-  path: string,
-): NonNullable<PortDeclaration["affinity"]> {
-  return array(value, path).map((item, index) => {
-    const itemPath = `${path}[${index}]`;
-    const parsed = object(item, itemPath);
-    return {
-      resultPointer: possiblyEmptyString(parsed.resultPointer, `${itemPath}.resultPointer`),
-      input: string(parsed.input, `${itemPath}.input`),
-      inputPointer: possiblyEmptyString(parsed.inputPointer, `${itemPath}.inputPointer`),
-    };
-  });
 }
 
 function needPort(value: unknown, path: string): NeedPortDeclaration {
@@ -240,9 +222,6 @@ function needPort(value: unknown, path: string): NeedPortDeclaration {
     name: string(parsed.name, `${path}.name`),
     capability: capabilityRef(parsed.capability, `${path}.capability`),
     returns: typeRef(parsed.returns, `${path}.returns`),
-    ...(parsed.affinity === undefined
-      ? {}
-      : { affinity: resultAffinityList(parsed.affinity, `${path}.affinity`) }),
   };
 }
 

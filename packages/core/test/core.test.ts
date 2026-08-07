@@ -9,16 +9,12 @@ import {
   validateStoredValue,
   validatePlan,
   verifyBuildState,
-  verifyRecordAffinity,
 } from "@svml/core";
 import type {
   BuildEvent,
-  BuildPlan,
   BuildState,
-  CompiledGraph,
   FulfillNeedCommand,
   InvokeProducerCommand,
-  TypedRecord,
   ValueSchema,
 } from "@svml/protocol";
 
@@ -168,81 +164,6 @@ test("oneOf literal discrimination preserves exact-one semantics", () => {
       { kind: "oneOf", variants: [tagged("alpha"), generic] },
     ),
     (error: unknown) => error instanceof CoreError && error.code === "VALUE_SCHEMA_MISMATCH",
-  );
-});
-
-test("Producer result affinity rejects an exact output that lies about its input", () => {
-  const current = reachNeed();
-  const fulfilled = reduce(current.state, {
-    kind: "need-fulfilled",
-    id: "event:affinity-fulfill",
-    command: current.command.id,
-    value: { kind: "inline", value: "Hello, Ada!" },
-    requestDigest: current.command.need.requestDigest,
-    fulfiller: "test:greeting",
-    conformance: "exact",
-    delivery: "executed",
-    metadata: {},
-  });
-  const assemble = fulfilled.commands.find(
-    (command): command is InvokeProducerCommand => command.kind === "invoke-producer",
-  );
-  assert.ok(assemble);
-  assert.throws(
-    () => reduce(
-      fulfilled.state,
-      producerEvent(assemble, "event:affinity-lie", {
-        document: { kind: "inline", value: { text: "Different text" } },
-      }),
-    ),
-    (error: unknown) => error instanceof CoreError && error.code === "AFFINITY_MISMATCH",
-  );
-});
-
-test("affinity can prove a first-class BlobRef without a domain wrapper", () => {
-  const selected = {
-    kind: "blob",
-    digest: digestOf("selected-image"),
-    size: 3,
-    mediaType: "image/png",
-  } as const;
-  const source = {
-    id: "set",
-    value: { kind: "inline", value: { images: [selected] } },
-  } as unknown as TypedRecord;
-  const output = {
-    id: "image",
-    conformance: "exact",
-    value: selected,
-  } as unknown as TypedRecord;
-  const graph = {
-    outputs: [{
-      id: "primary-image",
-      affinity: [{
-        resultPointer: "/digest",
-        source: { kind: "record", id: source.id },
-        sourcePointer: "/images/0/digest",
-      }],
-    }],
-  } as unknown as CompiledGraph;
-  const plan = { selections: [] } as unknown as BuildPlan;
-
-  assert.doesNotThrow(() => verifyRecordAffinity(
-    graph,
-    plan,
-    "primary-image",
-    output,
-    (id) => id === source.id ? source : undefined,
-  ));
-  assert.throws(
-    () => verifyRecordAffinity(
-      graph,
-      plan,
-      "primary-image",
-      { ...output, value: { ...selected, digest: digestOf("different-image") } },
-      (id) => id === source.id ? source : undefined,
-    ),
-    (error: unknown) => error instanceof CoreError && error.code === "AFFINITY_MISMATCH",
   );
 });
 

@@ -14,10 +14,6 @@ import type {
   TimedSpeechToken,
   TimingQuality,
 } from "@svml/contracts";
-import {
-  computeAlignedTranscriptEvidenceDigest,
-  computeProgramSpaceDigest,
-} from "@svml/contracts";
 
 import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";
@@ -57,10 +53,6 @@ function validateWindow(start: number, end: number, limit: number, label: string
 function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
   if (basis.contract !== "svml.speech-audio-basis@1") {
     fail("SPEECH_BASIS_CONTRACT", "Unsupported SpeechAudioBasis contract.");
-  }
-  const { digest: _programDigest, ...programContent } = basis.programSpace;
-  if (!isDigest(basis.programSpace.digest) || basis.programSpace.digest !== computeProgramSpaceDigest(programContent)) {
-    fail("SPEECH_PROGRAM_DIGEST", "ProgramSpace digest does not match its canonical contents.");
   }
   const { numerator, denominator } = basis.programSpace.frameRate;
   if (!Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator) || denominator <= 0) {
@@ -102,21 +94,8 @@ function validateEvidence(
   if (!Number.isFinite(evidence.durationSec) || evidence.durationSec <= 0) {
     fail("SPEECH_DURATION", "Aligned-transcript duration must be positive and finite.");
   }
-  if (!isDigest(evidence.audioArtifactDigest)) {
-    fail("SPEECH_EVIDENCE_AUDIO", "Aligned transcript has no acoustic Artifact identity.");
-  }
-  if (evidence.programSpaceDigest !== basis.programSpace.digest) {
-    fail("SPEECH_EVIDENCE_PROGRAM", "Aligned transcript uses a different ProgramSpace.");
-  }
   if (Math.abs(evidence.durationSec - basis.programSpace.durationSec) > EPSILON) {
     fail("SPEECH_EVIDENCE_DURATION", "Aligned transcript duration differs from SpeechBasis.");
-  }
-  const { evidenceDigest: _evidenceDigest, ...evidenceContent } = evidence;
-  if (
-    !isDigest(evidence.evidenceDigest)
-    || evidence.evidenceDigest !== computeAlignedTranscriptEvidenceDigest(evidenceContent)
-  ) {
-    fail("SPEECH_EVIDENCE_DIGEST", "Aligned transcript digest does not match its canonical contents.");
   }
   const expected = new Set(narrative.segments.map((segment) => segment.id));
   const seen = new Set<string>();
@@ -403,10 +382,6 @@ function assertMonotonic(tokens: readonly TimedSpeechToken[], segmentId: string)
   }
 }
 
-function mapDigest(map: Omit<CompleteSemanticMap, "mapDigest">): CompleteSemanticMap["mapDigest"] {
-  return digestOf(map);
-}
-
 function frameFor(basis: SpeechAudioBasis, timeSec: number): number {
   const { numerator, denominator } = basis.programSpace.frameRate;
   return Math.round(timeSec * numerator / denominator);
@@ -485,7 +460,6 @@ export function locateSpeechTiming(
   });
   const payload = {
     contract: "svml.complete-semantic-map@1" as const,
-    programSpace: basis.programSpace,
     quantizationPolicy: "nearest-frame" as const,
     durationSec: evidence.durationSec,
     segments: timedSegments,
@@ -493,5 +467,5 @@ export function locateSpeechTiming(
     anchors,
     groups,
   };
-  return { ...payload, mapDigest: mapDigest(payload) };
+  return payload;
 }

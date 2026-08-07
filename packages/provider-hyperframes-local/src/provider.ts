@@ -345,8 +345,6 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
           const artifact = await context.artifacts.put(await readFile(output), "video/mp4");
           const value: RenderedVisual = sealRenderedVisual({
             contract: "svml.rendered-visual@1",
-            renderInputDigest: document.digest,
-            programSpaceDigest: document.programSpaceDigest,
             frameRate: document.frameRate,
             frameCount: document.frameCount,
             canvas: document.canvas,

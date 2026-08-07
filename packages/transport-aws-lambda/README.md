@@ -8,7 +8,7 @@ Endpoint-specific code owns:
 - the request/response schema;
 - whether one call completes work or returns a remote checkpoint;
 - conversion into `EndpointOutcome`;
-- artifact locations and affinity validation;
+- artifact locations and intrinsic result validation;
 - the function name, version/alias and retry semantics included in Endpoint configuration identity.
 
 The transport always uses `RequestResponse`. Lambda `Event` invocation has its own at-least-once

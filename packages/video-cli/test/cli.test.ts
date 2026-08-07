@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { createNodePackageLock, writeNodePackageLock } from "@svml/package-loader-node";
 import { materializeRecord, runVideoCli } from "@svml/video-cli";
 
 import { videoTestPackages } from "./packages.js";
@@ -282,10 +283,10 @@ test(".svrun is the complete human-readable Target graph used by plan", async ()
     readonly steps: readonly { readonly producer: { readonly name: string } }[];
   };
   assert.equal(plan.goals.length, 1);
-  assert.deepEqual(plan.steps.map((item) => item.producer.name), [
+  assert.deepEqual(plan.steps.map((item) => item.producer.name).sort(), [
     "request-seedance-2-mini",
     "select-primary-video",
-  ]);
+  ].sort());
   await assert.rejects(
     async () => await runCli(["plan", run, "--target", "motion.video"], { write() {} }),
     /belong in a self-described Run Source/u,
@@ -295,14 +296,24 @@ test(".svrun is the complete human-readable Target graph used by plan", async ()
 test("CLI accepts a declarative Runtime Profile without an executable config module", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-runtime-profile-"));
   const profile = join(root, "svml.runtime.json");
+  const runtimePackageLock = join(root, "runtime.packages.lock.json");
+  await writeNodePackageLock(
+    runtimePackageLock,
+    await createNodePackageLock(["@svml/provider-kie"], process.cwd()),
+  );
   await writeFile(profile, JSON.stringify({
     format: "svml.runtime-config@1",
+    root: process.cwd(),
+    statePath: join(root, "state.sqlite"),
+    catalogPath: join(root, "catalog.sqlite"),
+    artifactPath: join(root, "artifacts"),
+    runtimePackageLock,
     services: [],
     endpoints: [{
       use: "@svml/provider-kie",
       instance: "kie.cli-test",
       lane: "generation",
-      config: { apiKeyEnv: "KIE_API_KEY", defaultConcurrency: 2 },
+      config: { apiKeyEnv: "SVML_TEST_MISSING_KIE_KEY", defaultConcurrency: 2 },
     }],
     permissions: ["network:api.kie.ai", "network:kieai.redpandaai.co"],
     scheduling: { lanes: { generation: 2 } },
@@ -313,6 +324,15 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
   });
   const status = JSON.parse(output) as { readonly operations: readonly unknown[] };
   assert.deepEqual(status.operations, []);
+  output = "";
+  await runCli(["doctor", profile], { write: (text) => { output += text; } });
+  const diagnosis = JSON.parse(output) as {
+    readonly ok: boolean;
+    readonly diagnostics: readonly { readonly code: string; readonly subject?: string }[];
+  };
+  assert.equal(diagnosis.ok, false);
+  assert.equal(diagnosis.diagnostics.some((item) =>
+    item.code === "RUNTIME_CREDENTIAL_MISSING" && item.subject === "SVML_TEST_MISSING_KIE_KEY"), true);
 });
 
 test("independent packages lower Speech Spine and explicit WhisperX alignment without provider calls", async () => {
@@ -426,10 +446,10 @@ test("Track Surfaces close one complete author graph before any external executi
     </caption:Style>
     <caption:Program id="caption-program" narrative={story} default={base-caption}/>
     <caption-ai:Planner id="cue-plan" narrative={story} program={caption-program} model="gemini-2.5-flash"/>
-    <broll:Track id="cards" map={timing.map}>
+    <broll:Track id="cards" map={timing.map} space={speech.space}>
       <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
     </broll:Track>
-    <caption:Track id="captions" narrative={story} map={timing.map} plan={cue-plan.plan} program={caption-program}/>
+    <caption:Track id="captions" narrative={story} map={timing.map} plan={cue-plan.plan} program={caption-program} space={speech.space}/>
     <text:Track id="titles" space={speech.space}>
       <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
     </text:Track>
@@ -437,7 +457,7 @@ test("Track Surfaces close one complete author graph before any external executi
       <film:Track source={speech.visual}/><film:Track source={speech.audioTrack}/>
       <film:Track source={cards.visual}/><film:Track source={captions.track}/><film:Track source={titles.track}/>
     </film:Film>
-    <render:Video id="final" composition={main.composition}/>
+    <render:Video id="final" composition={main.composition} space={speech.space}/>
   </svml>`, "utf8");
   let output = "";
   await runCli(["check", file], { write: (text) => { output += text; } });

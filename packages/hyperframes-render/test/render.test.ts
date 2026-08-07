@@ -88,7 +88,6 @@ const space = sealProgramSpace({
 const composition = sealComposition({
   contract: "svml.composition@1",
   id: "render-test",
-  programSpace: space,
   canvas: { width: 1080, height: 1920, clearColor: "#000000" },
   tracks: [],
 });
@@ -118,15 +117,25 @@ const compositionRecord = await admitRecord(closure, sealRecord({
   conformance: "exact",
   origin,
 }), validatorRegistry());
+const spaceRecord = await admitRecord(closure, sealRecord({
+  id: "space",
+  type: contractTypes.programSpace,
+  value: stored(space),
+  conformance: "exact",
+  origin,
+}), validatorRegistry());
 const linked = link(closure, [sealTypedModule({
   id: "author:hyperframes-render-test",
   closureDigest: closure.digest,
-  records: [compositionRecord],
+  records: [compositionRecord, spaceRecord],
 })]);
 const instance = elaborateGraphFragment(linked, hyperframesRenderFragment, {
   id: "final",
   fragment: hyperframesRenderFragment.id,
-  inputs: { composition: { kind: "record", id: compositionRecord.id } },
+  inputs: {
+    composition: { kind: "record", id: compositionRecord.id },
+    space: { kind: "record", id: spaceRecord.id },
+  },
 });
 const contribution = bindAuthorFragment(instance, { video: "final.video" });
 const graph = sealCompiledGraph({ program: linked.semanticDigest, ...contribution });
@@ -172,7 +181,7 @@ test("HyperFrames rendering is an explicit exact Need after ordinary document co
   const visual = result.state.needs.find((need) => need.capability.name === hyperframesRenderCapabilities.renderVisual.name)!;
   assert.equal(visual.returns.name, contractTypes.renderedVisual.name);
   assert.equal(visual.accepts, "exact");
-  assert.deepEqual(visual.constraints, hyperframesVisualRequest(compileHyperframesDocument(composition)));
+  assert.deepEqual(visual.constraints, hyperframesVisualRequest(compileHyperframesDocument(composition, space)));
   const audio = result.state.needs.find((need) => need.capability.name === "render-timeline-audio")!;
   assert.equal(audio.returns.name, contractTypes.timelineAudio.name);
   assert.equal(result.blocked.every((item) => item.reason === "missing-endpoint"), true);
@@ -211,8 +220,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       return {
         value: stored(sealRenderedVisual({
           contract: "svml.rendered-visual@1",
-          renderInputDigest: request.document.digest,
-          programSpaceDigest: request.document.programSpaceDigest,
           frameRate: request.document.frameRate,
           frameCount: request.document.frameCount,
           canvas: request.document.canvas,
@@ -234,8 +241,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       return {
         value: stored(sealTimelineAudio({
           contract: "svml.timeline-audio@1",
-          planDigest: request.plan.planDigest,
-          programSpaceDigest: request.plan.programSpaceDigest,
           artifact: audioArtifact,
           codec: "pcm_s16le",
           sampleRate: 48_000,
@@ -258,9 +263,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       return {
         value: stored(sealMuxedMedia({
           contract: "svml.muxed-media@1",
-          visualDigest: request.visual.visualDigest,
-          audioDigest: request.audio.audioDigest,
-          programSpaceDigest: request.visual.programSpaceDigest,
           frameRate: request.visual.frameRate,
           frameCount: request.visual.frameCount,
           canvas: request.visual.canvas,
@@ -294,8 +296,8 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
   });
 });
 
-test("a render Product cannot claim another frame domain while keeping the requested document", async () => {
-  const document = compileHyperframesDocument(composition);
+test("a render Product with another frame domain is rejected by the explicit downstream join", async () => {
+  const document = compileHyperframesDocument(composition, space);
   const endpoints = new EndpointRegistry();
   endpoints.registerImmediateEndpoint(
     "example.hyperframes.wrong-domain",
@@ -304,8 +306,6 @@ test("a render Product cannot claim another frame domain while keeping the reque
     () => ({
       value: stored(sealRenderedVisual({
         contract: "svml.rendered-visual@1",
-        renderInputDigest: document.digest,
-        programSpaceDigest: document.programSpaceDigest,
         frameRate: document.frameRate,
         frameCount: document.frameCount + 1,
         canvas: document.canvas,
@@ -322,7 +322,35 @@ test("a render Product cannot claim another frame domain while keeping the reque
       metadata: {},
     }),
   );
+  endpoints.registerImmediateEndpoint(
+    "example.media.audio-for-domain-check",
+    mediaPipelineCapabilities.renderAudio,
+    contractTypes.timelineAudio,
+    ({ need }) => {
+      const request = need.constraints as { readonly plan: ReturnType<typeof compileAudioProgramPlan> };
+      return {
+        value: stored(sealTimelineAudio({
+          contract: "svml.timeline-audio@1",
+          artifact: {
+            kind: "blob",
+            digest: digestOf("hyperframes-render:domain-check-audio"),
+            size: 1,
+            mediaType: "audio/wav",
+          },
+          codec: "pcm_s16le",
+          sampleRate: request.plan.sampleRate,
+          channels: 2,
+          sampleFrames: request.plan.sampleFrames,
+          loudness: "planned",
+        })),
+        conformance: "exact",
+        delivery: "executed",
+        metadata: {},
+      };
+    },
+  );
   endpoints.bind(hyperframesRenderCapabilities.renderVisual, "example.hyperframes.wrong-domain");
+  endpoints.bind(mediaPipelineCapabilities.renderAudio, "example.media.audio-for-domain-check");
 
   const result = await new NodeDriver({
     producers: producerRegistry(),
@@ -330,8 +358,8 @@ test("a render Product cannot claim another frame domain while keeping the reque
     validators: validatorRegistry(),
   }).run(build());
   assert.equal(result.status, "paused");
-  assert.match(result.journal.at(-1)?.message ?? "", /frameCount|does not match/u);
-  assert.equal(result.state.receipts.length, 0);
+  assert.match(result.journal.at(-1)?.message ?? "", /different presentation durations/u);
+  assert.equal(result.state.receipts.length, 2);
 });
 
 const fixtureModule = { name: "example.composition-fixture", version: "1" } as const;
@@ -340,14 +368,14 @@ const fixtureManifest: ModuleManifest = {
   format: "svml.module@0",
   name: fixtureModule.name,
   version: fixtureModule.version,
-  dependencies: [videoContractDependencies.composition],
+  dependencies: [videoContractDependencies.composition, videoContractDependencies.programSpace],
   types: [],
   capabilities: [],
   surfaces: [{
     name: "composition",
     tag: "Composition",
     mode: "structured",
-    outputs: [contractTypes.composition],
+    outputs: [contractTypes.composition, contractTypes.programSpace],
     implementation: {
       kind: "trusted-frontend-surface",
       locator: "example.composition-fixture/surface",
@@ -375,12 +403,10 @@ test("the official render Surface lowers real author source to the same BuildPla
   ]);
   const surfaces = new TextSurfaceRegistry();
   surfaces.registerStructured(fixtureModule, "composition", fixtureSurfaceDigest, ({ element }) => ({
-    records: [{
-      id: "composition",
-      type: contractTypes.composition,
-      value: stored(composition),
-      range: element.range,
-    }],
+    records: [
+      { id: "composition", type: contractTypes.composition, value: stored(composition), range: element.range },
+      { id: "space", type: contractTypes.programSpace, value: stored(space), range: element.range },
+    ],
     components: [],
     fragments: [],
   }));
@@ -404,7 +430,7 @@ test("the official render Surface lowers real author source to the same BuildPla
       <import as="fixture" from="example.composition-fixture@1"/>
       <import as="render" from="@svml/hyperframes-render@1"/>
       <fixture:Composition/>
-      <render:Video id="final" composition={composition}/>
+      <render:Video id="final" composition={composition} space={space}/>
     </svml>`),
     closure: sourceClosure,
     frontends,

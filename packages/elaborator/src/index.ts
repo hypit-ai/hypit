@@ -59,7 +59,6 @@ export {
 export type {
   ElaboratedFragment,
   ElaboratedFragmentExport,
-  FragmentAffinityConstraint,
   FragmentContribution,
   FragmentExport,
   FragmentInputRef,

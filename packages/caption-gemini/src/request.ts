@@ -1,7 +1,6 @@
 import { assertCaptionProgramForNarrative } from "@svml/caption";
 import type { CaptionFieldDeclaration, CaptionProgram } from "@svml/caption";
 import type { Narrative } from "@svml/contracts";
-import { digestOf, isDigest } from "@svml/protocol";
 
 import { verifyCaptionGeminiProgram } from "./program.js";
 import type {
@@ -53,12 +52,10 @@ function promptContent(request: Pick<CaptionGeminiRequest, "atoms" | "runs">): s
   }, null, 2);
 }
 
-function requestContent(value: Omit<CaptionGeminiRequest, "requestDigest">) {
+function requestContent(value: CaptionGeminiRequest) {
   return {
     contract: "svml.caption-gemini-request@1" as const,
     model: value.model,
-    narrativeDigest: value.narrativeDigest,
-    captionProgramDigest: value.captionProgramDigest,
     atoms: value.atoms.map((atom) => ({ ...atom })),
     runs: value.runs.map((run) => ({
       id: run.id,
@@ -95,15 +92,12 @@ export function compileCaptionGeminiRequest(
   const base = {
     contract: "svml.caption-gemini-request@1" as const,
     model: program.model,
-    narrativeDigest: captionProgram.narrativeDigest,
-    captionProgramDigest: captionProgram.digest,
     atoms: captionProgram.atoms.map((atom) => ({ id: atom.id, text: atom.text })),
     runs,
   };
   const systemInstruction = captionGeminiSystemInstruction(runs);
   const prompt = promptContent(base);
-  const content = requestContent({ ...base, systemInstruction, prompt, temperature: 0.2 });
-  const request = { ...content, requestDigest: digestOf(content) };
+  const request = requestContent({ ...base, systemInstruction, prompt, temperature: 0.2 });
   verifyCaptionGeminiRequest(request);
   return request;
 }
@@ -113,8 +107,6 @@ export function verifyCaptionGeminiRequest(value: unknown): asserts value is Cap
   const request = value as CaptionGeminiRequest;
   assert(request.contract === "svml.caption-gemini-request@1", "Caption Gemini request contract is invalid");
   assert(request.model === "gemini-2.5-flash" || request.model === "gemini-3.1-pro-preview", "Caption Gemini request model is unsupported");
-  assert(isDigest(request.narrativeDigest) && isDigest(request.captionProgramDigest) && isDigest(request.requestDigest),
-    "Caption Gemini request identity is invalid");
   assert(request.temperature === 0.2, "Caption Gemini temperature is not the package-owned value");
   assert(Array.isArray(request.atoms) && request.atoms.length > 0, "Caption Gemini request atoms are empty");
   const atomIds = request.atoms.map((atom) => atom.id);
@@ -131,6 +123,4 @@ export function verifyCaptionGeminiRequest(value: unknown): asserts value is Cap
   assert(request.systemInstruction === captionGeminiSystemInstruction(request.runs),
     "Caption Gemini system instruction differs from the model package");
   assert(request.prompt === promptContent(request), "Caption Gemini prompt differs from immutable display facts");
-  const { requestDigest: _digest, ...withoutDigest } = request;
-  assert(request.requestDigest === digestOf(requestContent(withoutDigest)), "Caption Gemini request digest does not match its contents");
 }

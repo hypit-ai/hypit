@@ -45,6 +45,7 @@ type ParsedArgs = {
   readonly artifact: string | undefined;
   readonly to: string | undefined;
   readonly pins: readonly { readonly output: string; readonly build: string }[];
+  readonly apply: boolean;
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -66,6 +67,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let artifact: string | undefined;
   let to: string | undefined;
   const pins: { output: string; build: string }[] = [];
+  let apply = false;
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
     if (item === "--target") {
@@ -165,6 +167,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       follow = true;
       continue;
     }
+    if (item === "--apply") {
+      apply = true;
+      continue;
+    }
     if (item === "--max-wait-ms") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--max-wait-ms requires milliseconds");
@@ -195,6 +201,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     artifact,
     to,
     pins,
+    apply,
   };
 }
 
@@ -202,6 +209,8 @@ function usage(): string {
   return [
     "usage:",
     "  svml-v2 lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
+    "  svml-v2 doctor <runtime-profile.json>",
+    "  svml-v2 gc <runtime-profile.json> [--apply]",
     "  svml-v2 check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
     "  svml-v2 plan <run-source> [--runtime profile.json] [--package-lock file]",
     "  svml-v2 build <run-source> --runtime profile.json|./svml.runtime.ts [--follow]",
@@ -277,7 +286,8 @@ export async function runCli(
   const args = parseArgs(argv);
   const known = args.command === "lock-packages" || args.command === "check" || args.command === "plan"
     || args.command === "build" || args.command === "status" || args.command === "builds"
-    || args.command === "inspect" || args.command === "get" || args.command === "cancel";
+    || args.command === "inspect" || args.command === "get" || args.command === "cancel"
+    || args.command === "doctor" || args.command === "gc";
   if (!known || (args.command !== "builds" && args.file === undefined)) {
     throw new Error(usage());
   }
@@ -291,6 +301,40 @@ export async function runCli(
     io.write(`${JSON.stringify({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages }, null, 2)}\n`);
     return;
   }
+  if (args.command === "doctor") {
+    if (args.runtime !== undefined || args.packageLock !== undefined || args.packages.length > 0 || args.apply) {
+      throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
+    }
+    const result = await distribution.doctorRuntimeConfig(resolve(args.file!));
+    io.write(`${JSON.stringify({
+      ok: !result.diagnostics.some((item) => item.severity === "error"),
+      root: result.root,
+      diagnostics: result.diagnostics,
+    }, null, 2)}\n`);
+    return;
+  }
+  if (args.command === "gc") {
+    if (args.runtime !== undefined || args.packageLock !== undefined || args.packages.length > 0) {
+      throw new Error("gc reads all deployment selection from the Runtime Profile itself");
+    }
+    const runtime = await loadLocalRuntime(resolve(args.file!), distribution);
+    try {
+      if (!("garbageCollectArtifacts" in runtime) || typeof runtime.garbageCollectArtifacts !== "function") {
+        throw new Error("selected Runtime does not expose Artifact maintenance");
+      }
+      const report = await runtime.garbageCollectArtifacts({ apply: args.apply });
+      io.write(`${JSON.stringify({
+        applied: args.apply,
+        reachable: report.reachable,
+        unreachable: report.unreachable,
+        deleted: report.deleted,
+      }, null, 2)}\n`);
+    } finally {
+      await runtime.close();
+    }
+    return;
+  }
+  if (args.apply) throw new Error("--apply is only valid for gc");
   if ((args.record !== undefined || args.output !== undefined || args.name !== undefined
     || args.artifact !== undefined || args.to !== undefined)
     && args.command !== "get") {

@@ -2,6 +2,7 @@ import type { ComponentPackage } from "@svml/component-kit";
 import type {
   CompleteSemanticMap,
   Narrative,
+  ProgramSpace,
 } from "@svml/contracts";
 import type { StoredValue } from "@svml/protocol";
 import { canonicalize } from "@svml/protocol";
@@ -85,6 +86,7 @@ export const captionComponent = {
             value: canonicalize(renderCaptionProgram(
               inline<TimedCaptionProjection>(inputs.caption?.value, "TimedCaptionProjection"),
               inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
+              inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
             )),
           },
         },
@@ -101,6 +103,7 @@ export const captionComponent = {
             value: canonicalize(renderCaptionTrack(
               inline<TimedCaptionProjection>(inputs.caption?.value, "TimedCaptionProjection"),
               inline<CaptionTrackProgram>(inputs.program?.value, "CaptionTrackProgram"),
+              inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
             )),
           },
         },

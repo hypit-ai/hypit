@@ -1,14 +1,12 @@
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
-  generationDigestSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-  verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, Digest, ValueSchema } from "@svml/protocol";
+import type { BlobRef, ValueSchema } from "@svml/protocol";
 
 export const geminiOmniModuleRef = { name: "@svml/gemini-omni", version: "0.0.0-dev" } as const;
 
@@ -32,7 +30,7 @@ export type GeminiOmniRequestContent = {
   readonly videos?: readonly GeminiOmniVideoReference[];
   readonly characterIds?: readonly string[];
 };
-export type GeminiOmniRequest = GeminiOmniRequestContent & { readonly requestDigest: Digest };
+export type GeminiOmniRequest = GeminiOmniRequestContent;
 
 const idSchema = { kind: "string", minLength: 1, maxLength: 255 } as const satisfies ValueSchema;
 export const geminiOmniRequestSchema = generationObjectSchema({
@@ -67,7 +65,6 @@ export const geminiOmniRequestSchema = generationObjectSchema({
     optional: true,
   },
   characterIds: { schema: { kind: "array", minItems: 1, maxItems: 3, items: idSchema }, optional: true },
-  requestDigest: { schema: generationDigestSchema },
 });
 
 function object(value: unknown, subject: string): Record<string, unknown> {
@@ -76,7 +73,6 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 }
 
 export function verifyGeminiOmniRequest(value: unknown): asserts value is GeminiOmniRequest {
-  verifyGenerationRequestDigest(value);
   const request = object(value, "Gemini Omni request");
   if (request.contract !== "svml.gemini-omni-request@1" || request.model !== "gemini-omni-video") {
     throw new Error("Gemini Omni request identity is invalid");

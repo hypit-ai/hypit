@@ -35,8 +35,9 @@ accepts its Event, the next run reconstructs the same Event from the stored comp
 call the Endpoint again.
 
 This package is an environment-neutral reference, not a durable queue. SQLite/filesystem adapters,
-environment credentials, the local follow loop and `@svml/endpoint-kit` live in separate packages;
-distributed attempt leases and production Endpoint adapters remain future work. An Endpoint
-whose upstream API cannot look up or deduplicate the supplied `submissionKey` cannot promise
-exactly-once remote work across the crash window; its `resume(undefined)` must explicitly reconcile
-that uncertainty.
+environment credentials, the local follow loop, Endpoint implementations and
+`@svml/endpoint-kit` live in separate packages. The repository already contains KIE, Vertex and
+several local media/service Endpoint packages; distributed attempt leases and additional hosted
+adapters remain deployment work. An Endpoint whose upstream API cannot look up or deduplicate the
+supplied `submissionKey` cannot promise exactly-once remote work across the crash window; its
+`resume(undefined)` must explicitly reconcile that uncertainty.

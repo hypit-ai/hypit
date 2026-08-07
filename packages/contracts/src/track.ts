@@ -1,5 +1,4 @@
-import { digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import { isDigest } from "@svml/protocol";
 
 import {
   assertHyperframesVisualStyleV1,
@@ -101,9 +100,7 @@ export type VisualTrack = {
   readonly contract: "svml.visual-track@1";
   /** The one terminal visual language shared by official video components. */
   readonly visualIr: typeof HYPERFRAMES_VISUAL_IR_V1;
-  readonly digest: Digest;
   readonly id: string;
-  readonly programSpaceDigest: Digest;
   /** Author-owned contributions that Composition may interleave by absolute z. */
   readonly presents: readonly VisualPresent[];
 };
@@ -122,9 +119,7 @@ export type AudioClip = {
 
 export type AudioTrack = {
   readonly contract: "svml.audio-track@1";
-  readonly digest: Digest;
   readonly id: string;
-  readonly programSpaceDigest: Digest;
   readonly clips: readonly AudioClip[];
 };
 
@@ -132,9 +127,7 @@ export type Track = VisualTrack | AudioTrack;
 
 export type Composition = {
   readonly contract: "svml.composition@1";
-  readonly digest: Digest;
   readonly id: string;
-  readonly programSpace: ProgramSpace;
   readonly canvas: {
     readonly width: number;
     readonly height: number;
@@ -401,12 +394,11 @@ function normalizeElement(element: VisualElement): VisualElement {
   };
 }
 
-function visualTrackContent(value: Omit<VisualTrack, "digest">): Omit<VisualTrack, "digest"> {
+function visualTrackContent(value: VisualTrack): VisualTrack {
   return {
     contract: "svml.visual-track@1",
     visualIr: value.visualIr,
     id: value.id,
-    programSpaceDigest: value.programSpaceDigest,
     presents: [...value.presents]
       .map((present) => ({
         id: present.id,
@@ -421,11 +413,10 @@ function visualTrackContent(value: Omit<VisualTrack, "digest">): Omit<VisualTrac
   };
 }
 
-function audioTrackContent(value: Omit<AudioTrack, "digest">): Omit<AudioTrack, "digest"> {
+function audioTrackContent(value: AudioTrack): AudioTrack {
   return {
     contract: "svml.audio-track@1",
     id: value.id,
-    programSpaceDigest: value.programSpaceDigest,
     clips: [...value.clips]
       .map((clip) => ({
         id: clip.id,
@@ -442,22 +433,12 @@ function audioTrackContent(value: Omit<AudioTrack, "digest">): Omit<AudioTrack, 
   };
 }
 
-export function computeVisualTrackDigest(value: Omit<VisualTrack, "digest">): Digest {
-  return digestOf(visualTrackContent(value));
+export function sealVisualTrack(value: VisualTrack): VisualTrack {
+  return visualTrackContent(value);
 }
 
-export function computeAudioTrackDigest(value: Omit<AudioTrack, "digest">): Digest {
-  return digestOf(audioTrackContent(value));
-}
-
-export function sealVisualTrack(value: Omit<VisualTrack, "digest">): VisualTrack {
-  const content = visualTrackContent(value);
-  return { ...content, digest: digestOf(content) };
-}
-
-export function sealAudioTrack(value: Omit<AudioTrack, "digest">): AudioTrack {
-  const content = audioTrackContent(value);
-  return { ...content, digest: digestOf(content) };
+export function sealAudioTrack(value: AudioTrack): AudioTrack {
+  return audioTrackContent(value);
 }
 
 export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: ProgramSpace): void {
@@ -465,14 +446,6 @@ export function assertVisualTrackIdentity(track: VisualTrack, programSpace?: Pro
   if (track.contract !== "svml.visual-track@1") throw new Error("Unsupported VisualTrack contract.");
   if (track.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
   assertNonEmpty(track.id, "VisualTrack id");
-  if (!isDigest(track.programSpaceDigest)) throw new Error(`${track.id} has an invalid ProgramSpace digest.`);
-  if (programSpace !== undefined && track.programSpaceDigest !== programSpace.digest) {
-    throw new Error(`${track.id} belongs to another ProgramSpace.`);
-  }
-  const { digest: _digest, ...content } = track;
-  if (!isDigest(track.digest) || track.digest !== computeVisualTrackDigest(content)) {
-    throw new Error(`${track.id} VisualTrack digest does not match its contents.`);
-  }
   const presentIds = new Set<string>();
   for (const present of track.presents) {
     if (presentIds.has(present.id)) throw new Error(`${track.id} has duplicate Present ${present.id}.`);
@@ -485,14 +458,6 @@ export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: Progr
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (track.contract !== "svml.audio-track@1") throw new Error("Unsupported AudioTrack contract.");
   assertNonEmpty(track.id, "AudioTrack id");
-  if (!isDigest(track.programSpaceDigest)) throw new Error(`${track.id} has an invalid ProgramSpace digest.`);
-  if (programSpace !== undefined && track.programSpaceDigest !== programSpace.digest) {
-    throw new Error(`${track.id} belongs to another ProgramSpace.`);
-  }
-  const { digest: _digest, ...content } = track;
-  if (!isDigest(track.digest) || track.digest !== computeAudioTrackDigest(content)) {
-    throw new Error(`${track.id} AudioTrack digest does not match its contents.`);
-  }
   const totalFrames = programSpace === undefined ? Number.MAX_SAFE_INTEGER : programSpaceFrameCount(programSpace);
   const clipIds = new Set<string>();
   for (const clip of track.clips) {
@@ -524,33 +489,23 @@ function trackKey(track: Track): string {
   return `${track.contract}\u0000${track.id}`;
 }
 
-function compositionContent(value: Omit<Composition, "digest">): Omit<Composition, "digest"> {
+function compositionContent(value: Composition): Composition {
   return {
     contract: "svml.composition@1",
     id: value.id,
-    programSpace: { ...value.programSpace, frameRate: { ...value.programSpace.frameRate } },
     canvas: { ...value.canvas },
     tracks: [...value.tracks].map((track) => structuredClone(track)).sort((a, b) => trackKey(a).localeCompare(trackKey(b))),
   };
 }
 
-export function computeCompositionDigest(value: Omit<Composition, "digest">): Digest {
-  return digestOf(compositionContent(value));
+export function sealComposition(value: Composition): Composition {
+  return compositionContent(value);
 }
 
-export function sealComposition(value: Omit<Composition, "digest">): Composition {
-  const content = compositionContent(value);
-  return { ...content, digest: digestOf(content) };
-}
-
-export function assertCompositionIdentity(composition: Composition): void {
+export function assertCompositionIdentity(composition: Composition, programSpace?: ProgramSpace): void {
   if (composition.contract !== "svml.composition@1") throw new Error("Unsupported Composition contract.");
   assertNonEmpty(composition.id, "Composition id");
-  assertProgramSpaceIdentity(composition.programSpace);
-  const { digest: _digest, ...content } = composition;
-  if (!isDigest(composition.digest) || composition.digest !== computeCompositionDigest(content)) {
-    throw new Error("Composition digest does not match its contents.");
-  }
+  if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (
     !Number.isSafeInteger(composition.canvas.width)
     || composition.canvas.width <= 0
@@ -566,7 +521,7 @@ export function assertCompositionIdentity(composition: Composition): void {
     if (ids.has(track.id)) throw new Error(`Composition contains duplicate Track id ${track.id}.`);
     ids.add(track.id);
     if (track.contract === "svml.visual-track@1") {
-      assertVisualTrackIdentity(track, composition.programSpace);
+      assertVisualTrackIdentity(track, programSpace);
       for (const present of track.presents) {
         const key = `${present.stacking.order}\u0000${present.stacking.tieBreak}`;
         const peers = stacking.get(key) ?? [];
@@ -583,7 +538,7 @@ export function assertCompositionIdentity(composition: Composition): void {
         stacking.set(key, peers);
       }
     } else {
-      assertAudioTrackIdentity(track, composition.programSpace);
+      assertAudioTrackIdentity(track, programSpace);
     }
   }
 }

@@ -140,11 +140,6 @@ function speechFragment(): GraphFragment {
         type: contractTypes.speechAudioBasis,
         root: operation("audio"),
         semanticInputs: ["request", "style"],
-        affinity: [{
-          resultPointer: "/basisDigest",
-          source: operation("generate"),
-          sourcePointer: "/basisDigest",
-        }],
         fidelity: "exact",
       },
       {
@@ -152,11 +147,6 @@ function speechFragment(): GraphFragment {
         type: contractTypes.visualTrack,
         root: operation("visual"),
         semanticInputs: ["request", "style"],
-        affinity: [{
-          resultPointer: "/sources/0/digest",
-          source: operation("generate"),
-          sourcePointer: "/basisDigest",
-        }],
         fidelity: "exact",
       },
     ],

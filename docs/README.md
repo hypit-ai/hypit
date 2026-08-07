@@ -24,6 +24,8 @@ the working tree contains only documents that should inform current implementati
   locking, contributions and Host-selected facet activation.
 - [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — local SQLite/filesystem
   Runtime, recovery and environment replacement.
+- [`runtime-adapter-loading-v1.md`](./runtime-adapter-loading-v1.md) — separately locked Provider
+  and Store activation, physical-code identity, diagnostics and explicit Artifact maintenance.
 - [`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md) — Targets, durable Records,
   Artifact retention and optional Host materialization as four separate concerns.
 - [`source-and-run-compilation-v1.md`](./source-and-run-compilation-v1.md) — mandatory Source Header,
@@ -46,6 +48,7 @@ These video contracts are executable candidates, not yet an open-source compatib
 - [`kie-generation-modules-v1.md`](./kie-generation-modules-v1.md)
 - [`media-inspection-and-normalization-v1.md`](./media-inspection-and-normalization-v1.md)
 - [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md)
+- [`image-transform-v1.md`](./image-transform-v1.md)
 - [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
 - [`../services/whisperx/README.md`](../services/whisperx/README.md)
 - [`../examples/echo-pro-aroll/README.md`](../examples/echo-pro-aroll/README.md) — current four-take

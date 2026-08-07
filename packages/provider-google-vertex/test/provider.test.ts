@@ -110,7 +110,6 @@ test("Vertex transports the exact model request while the model package validate
   assert.equal(result.value.kind, "inline");
   const plan = result.value.kind === "inline" ? result.value.value as Record<string, unknown> : {};
   assert.equal(plan.contract, "svml.caption-plan@1");
-  assert.equal(plan.planningRequestDigest, requestValue.requestDigest);
   assert.equal((result.metadata as Record<string, unknown>).provider, "google-vertex");
 });
 

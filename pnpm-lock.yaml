@@ -42,6 +42,9 @@ importers:
       '@svml/hyperframes-render':
         specifier: workspace:*
         version: link:packages/hyperframes-render
+      '@svml/image-transform':
+        specifier: workspace:*
+        version: link:packages/image-transform
       '@svml/local':
         specifier: workspace:*
         version: link:packages/local
@@ -60,6 +63,9 @@ importers:
       '@svml/provider-hyperframes-local':
         specifier: workspace:*
         version: link:packages/provider-hyperframes-local
+      '@svml/provider-image-opencv-local':
+        specifier: workspace:*
+        version: link:packages/provider-image-opencv-local
       '@svml/provider-kie':
         specifier: workspace:*
         version: link:packages/provider-kie
@@ -72,6 +78,12 @@ importers:
       '@svml/run-text':
         specifier: workspace:*
         version: link:packages/run-text
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:packages/runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:packages/runtime-adapter-node
       '@svml/script':
         specifier: workspace:*
         version: link:packages/script
@@ -135,6 +147,9 @@ importers:
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
 
   packages/broll:
     dependencies:
@@ -585,6 +600,24 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
+  packages/image-transform:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/local:
     dependencies:
       '@svml/artifact-store-fs':
@@ -614,6 +647,9 @@ importers:
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
       '@svml/store-sqlite':
         specifier: workspace:*
         version: link:../store-sqlite
@@ -724,6 +760,10 @@ importers:
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
+    devDependencies:
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
 
   packages/prompt-kit:
     dependencies:
@@ -765,6 +805,12 @@ importers:
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
     devDependencies:
       '@svml/driver-node':
         specifier: workspace:*
@@ -790,6 +836,12 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
       hyperframes:
         specifier: 0.7.84
         version: 0.7.84(@types/node@24.10.1)
@@ -797,6 +849,31 @@ importers:
       '@svml/core':
         specifier: workspace:*
         version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
+  packages/provider-image-opencv-local:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/image-transform':
+        specifier: workspace:*
+        version: link:../image-transform
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
+    devDependencies:
       '@svml/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -830,6 +907,12 @@ importers:
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
       '@svml/seedance':
         specifier: workspace:*
         version: link:../seedance
@@ -876,6 +959,12 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
     devDependencies:
       '@svml/artifact-store-fs':
         specifier: workspace:*
@@ -907,6 +996,9 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
       '@svml/whisperx':
         specifier: workspace:*
         version: link:../whisperx
@@ -972,6 +1064,27 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/runtime-adapter:
+    dependencies:
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/runtime-adapter-node:
+    dependencies:
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
 
   packages/script:
     dependencies:
@@ -1265,9 +1378,6 @@ importers:
 
   packages/video-cli:
     dependencies:
-      '@svml/artifact-store-s3':
-        specifier: workspace:*
-        version: link:../artifact-store-s3
       '@svml/cli':
         specifier: workspace:*
         version: link:../cli
@@ -1277,27 +1387,10 @@ importers:
       '@svml/local':
         specifier: workspace:*
         version: link:../local
-      '@svml/protocol':
+    devDependencies:
+      '@svml/package-loader-node':
         specifier: workspace:*
-        version: link:../protocol
-      '@svml/provider-google-vertex':
-        specifier: workspace:*
-        version: link:../provider-google-vertex
-      '@svml/provider-hyperframes-local':
-        specifier: workspace:*
-        version: link:../provider-hyperframes-local
-      '@svml/provider-kie':
-        specifier: workspace:*
-        version: link:../provider-kie
-      '@svml/provider-media-local':
-        specifier: workspace:*
-        version: link:../provider-media-local
-      '@svml/provider-whisperx-local':
-        specifier: workspace:*
-        version: link:../provider-whisperx-local
-      '@svml/runtime':
-        specifier: workspace:*
-        version: link:../runtime
+        version: link:../package-loader-node
 
   packages/whisperx:
     dependencies:

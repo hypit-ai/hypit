@@ -68,7 +68,6 @@ export const generationManifest: ModuleManifest = {
       outputs: [{
         name: "image",
         type: artifactTypes.blob,
-        affinity: [{ resultPointer: "/digest", input: "set", inputPointer: "/images/0/digest" }],
       }],
       needs: [],
       implementation: {
@@ -83,7 +82,6 @@ export const generationManifest: ModuleManifest = {
       outputs: [{
         name: "video",
         type: artifactTypes.blob,
-        affinity: [{ resultPointer: "/digest", input: "set", inputPointer: "/videos/0/digest" }],
       }],
       needs: [],
       implementation: {

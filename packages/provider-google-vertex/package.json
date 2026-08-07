@@ -6,13 +6,16 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@google/genai": "1.52.0",
     "@svml/caption": "workspace:*",
     "@svml/caption-gemini": "workspace:*",
     "@svml/endpoint-kit": "workspace:*",
     "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*"
+    "@svml/runtime": "workspace:*",
+    "@svml/runtime-adapter": "workspace:*",
+    "@svml/runtime-adapter-node": "workspace:*"
   },
   "devDependencies": {
     "@svml/driver-node": "workspace:*",

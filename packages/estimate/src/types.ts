@@ -1,5 +1,3 @@
-import type { Digest } from "@svml/protocol";
-
 export type SpeechEstimateLanguage = "auto" | "en" | "zh" | "ja" | "es";
 export type ResolvedSpeechEstimateLanguage = Exclude<SpeechEstimateLanguage, "auto">;
 export type SpeechEstimatePace = "slow" | "normal" | "fast";
@@ -13,5 +11,4 @@ export type SpeechEstimatePolicy = {
   readonly minimumSec: number;
   readonly maximumSec: number;
   readonly rounding: SpeechEstimateRounding;
-  readonly policyDigest: Digest;
 };

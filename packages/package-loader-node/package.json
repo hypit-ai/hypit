@@ -14,5 +14,8 @@
     "@svml/protocol": "workspace:*",
     "@svml/run": "workspace:*",
     "@svml/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/runtime-adapter": "workspace:*"
   }
 }

@@ -16,6 +16,7 @@
     "@svml/protocol": "workspace:*",
     "@svml/endpoint-kit": "workspace:*",
     "@svml/runtime": "workspace:*",
+    "@svml/runtime-adapter": "workspace:*",
     "@svml/store-sqlite": "workspace:*",
     "@svml/validation": "workspace:*"
   },

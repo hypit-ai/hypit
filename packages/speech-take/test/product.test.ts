@@ -160,29 +160,12 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         type: contractTypes.speechAudioBasis,
         primary: "opening.audio.project",
         semanticInputs: [output("opening.take")],
-        affinity: [
-          {
-            resultPointer: "/programSpace/digest",
-            source: output("opening.take"),
-            sourcePointer: "/programSpace/digest",
-          },
-          {
-            resultPointer: "/audio/digest",
-            source: output("opening.take"),
-            sourcePointer: "/audio/digest",
-          },
-        ],
       },
       {
         id: "opening.visual",
         type: contractTypes.visualTrack,
         primary: "opening.visual.project",
         semanticInputs: [output("opening.take")],
-        affinity: [{
-          resultPointer: "/programSpaceDigest",
-          source: output("opening.take"),
-          sourcePointer: "/programSpace/digest",
-        }],
       },
     ],
     candidates: [
@@ -309,9 +292,7 @@ test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   const programSpace = projectSpeechProgramSpace(take);
   assert.equal(visual.contract, "svml.visual-track@1");
   assert.equal(audio.contract, "svml.audio-track@1");
-  assert.equal(visual.programSpaceDigest, take.programSpace.digest);
-  assert.equal(audio.programSpaceDigest, take.programSpace.digest);
-  assert.equal(programSpace.digest, take.programSpace.digest);
+  assert.deepEqual(programSpace, take.programSpace);
   assert.equal(visual.presents[0]?.span.endFrameExclusive, audio.clips[0]?.span.endFrameExclusive);
 });
 

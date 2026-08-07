@@ -1,4 +1,4 @@
-import type { CanonicalValue, BlobRef, Digest } from "@svml/protocol";
+import type { CanonicalValue, BlobRef } from "@svml/protocol";
 import type { SeedanceModel } from "@svml/seedance";
 
 export type SpeakerReference = {
@@ -10,24 +10,16 @@ export type SpeakerReference = {
 export type SpeakerTakeIntent = {
   readonly contract: "svml.seedance-speaker-take-intent@1";
   readonly kit: string;
-  readonly recipe: {
-    readonly path: string;
-    readonly recordDigest: Digest;
-  };
+  readonly recipe: { readonly path: string };
   readonly model: SeedanceModel;
   readonly resolution: "480p" | "720p" | "1080p";
   readonly aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive";
   readonly webSearch: boolean;
   readonly promptParameters: Readonly<Record<string, CanonicalValue>>;
   readonly segment: {
-    readonly id: string;
-    readonly tokenStart: number;
-    readonly tokenEndExclusive: number;
-    readonly dialogueExcerptDigest: Digest;
     readonly dialogue: string;
   };
   readonly references: readonly SpeakerReference[];
   readonly actionPrompt?: string;
   readonly extraPrompt?: string;
-  readonly intentDigest: Digest;
 };

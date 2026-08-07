@@ -19,24 +19,15 @@ export type TypeValidatorDeclaration = {
   readonly implementation: ImplementationRef;
 };
 
-/** A domain-neutral equality promise from one result field to one Producer input field. */
-export type ResultAffinityDeclaration = {
-  readonly resultPointer: string;
-  readonly input: string;
-  readonly inputPointer: string;
-};
-
 export type PortDeclaration = {
   readonly name: string;
   readonly type: TypeRef;
-  readonly affinity?: readonly ResultAffinityDeclaration[];
 };
 
 export type NeedPortDeclaration = {
   readonly name: string;
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
-  readonly affinity?: readonly ResultAffinityDeclaration[];
 };
 
 export type CapabilityDeclaration = {

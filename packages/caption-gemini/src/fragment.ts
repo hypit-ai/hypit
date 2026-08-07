@@ -33,11 +33,6 @@ export const captionGeminiPlanningFragment = sealGraphFragment({
     type: captionTypes.plan,
     root: operation("caption-gemini:plan"),
     semanticInputs: ["narrative", "captionProgram", "program"],
-    affinity: [{
-      resultPointer: "/planningRequestDigest",
-      source: operation("caption-gemini:compile"),
-      sourcePointer: "/requestDigest",
-    }],
     fidelity: "exact",
   }],
 });

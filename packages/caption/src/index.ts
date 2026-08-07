@@ -39,7 +39,6 @@ export { temporalizeCaption, temporalizeCaptionPlan } from "./temporalize.js";
 export {
   assertCaptionTrackProgram,
   assertTimedCaptionProjection,
-  computeCaptionTrackProgramDigest,
   defaultCaptionTrackProgram,
   renderCaptionTrack,
   renderCaptionProgram,

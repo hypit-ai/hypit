@@ -112,9 +112,6 @@ export function sealCaptionGeminiPlan(
   });
   return sealCaptionPlan({
     contract: "svml.caption-plan@1",
-    narrativeDigest: request.narrativeDigest,
-    captionProgramDigest: request.captionProgramDigest,
-    planningRequestDigest: request.requestDigest,
     runs,
   });
 }

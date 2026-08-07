@@ -1,14 +1,12 @@
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
-  generationDigestSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-  verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, Digest, ValueSchema } from "@svml/protocol";
+import type { BlobRef, ValueSchema } from "@svml/protocol";
 
 export const seedreamModuleRef = { name: "@svml/seedream", version: "0.0.0-dev" } as const;
 export type SeedreamMode = "text" | "image";
@@ -28,7 +26,7 @@ export type SeedreamImageRequestContent = Common & {
   readonly images: readonly BlobRef[];
 };
 export type SeedreamRequestContent = SeedreamTextRequestContent | SeedreamImageRequestContent;
-export type SeedreamRequest = SeedreamRequestContent & { readonly requestDigest: Digest };
+export type SeedreamRequest = SeedreamRequestContent;
 
 const commonFields = {
   contract: { schema: { kind: "literal", value: "svml.seedream-5-lite-request@1" } },
@@ -38,7 +36,6 @@ const commonFields = {
   quality: { schema: { kind: "literal", value: "basic" } },
   outputFormat: { schema: { kind: "string", enum: ["png", "jpg"] } },
   nsfwCheck: { schema: { kind: "boolean" } },
-  requestDigest: { schema: generationDigestSchema },
 } as const;
 const schemas: Record<SeedreamMode, ValueSchema> = {
   text: generationObjectSchema({
@@ -58,7 +55,6 @@ function object(value: unknown): Record<string, unknown> {
 }
 
 export function verifySeedreamRequest(value: unknown, expectedMode?: SeedreamMode): asserts value is SeedreamRequest {
-  verifyGenerationRequestDigest(value);
   const request = object(value);
   if (request.contract !== "svml.seedream-5-lite-request@1" || request.model !== "seedream-5-lite") {
     throw new Error("Seedream request identity is invalid");
@@ -74,7 +70,7 @@ export function verifySeedreamRequest(value: unknown, expectedMode?: SeedreamMod
 
 export function sealSeedreamRequest<T extends SeedreamRequestContent>(
   content: T,
-): T & { readonly requestDigest: Digest } {
+): T {
   const request = sealGenerationRequest(content);
   verifySeedreamRequest(request, content.mode);
   return request;

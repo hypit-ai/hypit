@@ -29,7 +29,6 @@ function composition(id: string, tracks: readonly VisualTrack[]) {
   return sealComposition({
     contract: "svml.composition@1",
     id,
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks,
   });
@@ -131,7 +130,6 @@ test("Text three-box and frame/content/line/word paint semantics lower without p
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "text-three-box-witness",
-    programSpaceDigest: programSpace.digest,
     presents: [
       textPresent("frame-paint", 0, "frame"),
       textPresent("content-paint", 1, "content"),
@@ -139,7 +137,7 @@ test("Text three-box and frame/content/line/word paint semantics lower without p
       textPresent("word-paint", 3, "word"),
     ],
   });
-  const document = compileHyperframesDocument(composition("text-three-box", [track]));
+  const document = compileHyperframesDocument(composition("text-three-box", [track]), programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.deepEqual(track.presents[0]!.elements.map((element) => element.id), [
     "placement",
@@ -181,7 +179,6 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "caption-three-box-witness",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "cue-1",
       span: { startFrame: 30, endFrameExclusive: 90 },
@@ -243,7 +240,7 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
       ],
     }],
   });
-  const document = compileHyperframesDocument(composition("caption-three-box", [track]));
+  const document = compileHyperframesDocument(composition("caption-three-box", [track]), programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.equal("captionMode" in track, false);
   assert.match(document.html, /data-svml-element-id="range"/u);
@@ -265,7 +262,6 @@ test("one content box lowers independent backdrop and foreground samples of one 
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "media-two-box-witness",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "media-card",
       span: { startFrame: 60, endFrameExclusive: 180 },
@@ -322,7 +318,7 @@ test("one content box lowers independent backdrop and foreground samples of one 
       ],
     }],
   });
-  const document = compileHyperframesDocument(composition("media-two-box", [track]));
+  const document = compileHyperframesDocument(composition("media-two-box", [track]), programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [media.digest],
     "two samples must retain one content dependency");
@@ -339,7 +335,6 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "ranking-witness",
-    programSpaceDigest: programSpace.digest,
     presents: [
       {
         id: "board",
@@ -365,7 +360,6 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "peer-text",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "peer",
       span: { startFrame: 0, endFrameExclusive: 300 },
@@ -373,7 +367,7 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
       elements: [{ id: "peer", order: 0, kind: "text", text: "between", style: [] }],
     }],
   });
-  const document = compileHyperframesDocument(composition("interleaved-ranking", [ranking, peer]));
+  const document = compileHyperframesDocument(composition("interleaved-ranking", [ranking, peer]), programSpace);
   const boardAt = document.html.indexOf('data-svml-present-id="board"');
   const peerAt = document.html.indexOf('data-svml-present-id="peer"');
   const icon1At = document.html.indexOf('data-svml-present-id="icon-1"');
@@ -405,7 +399,6 @@ test("a complex owned visual may materialize as a typed compositable Surface wit
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "materialized-visual-witness",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "surface",
       span: { startFrame: 120, endFrameExclusive: 180 },
@@ -419,7 +412,7 @@ test("a complex owned visual may materialize as a typed compositable Surface wit
       }],
     }],
   });
-  const document = compileHyperframesDocument(composition("materialized-visual", [track]));
+  const document = compileHyperframesDocument(composition("materialized-visual", [track]), programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [materialized.artifact.digest]);
   assert.match(document.html, /<video/u);

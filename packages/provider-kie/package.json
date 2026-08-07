@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@svml/endpoint-kit": "workspace:*",
     "@svml/gemini-omni": "workspace:*",
@@ -16,6 +17,8 @@
     "@svml/nano-banana": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/runtime": "workspace:*",
+    "@svml/runtime-adapter": "workspace:*",
+    "@svml/runtime-adapter-node": "workspace:*",
     "@svml/seedance": "workspace:*",
     "@svml/seedream": "workspace:*"
   },

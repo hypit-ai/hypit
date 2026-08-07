@@ -1,9 +1,8 @@
 import {
   canonicalize,
-  digestOf,
   isDigest,
 } from "@svml/protocol";
-import type { BlobRef, CanonicalValue, Digest } from "@svml/protocol";
+import type { BlobRef } from "@svml/protocol";
 
 import type {
   GeneratedImageSet,
@@ -35,30 +34,18 @@ export function assertGenerationBlobRef(
   }
 }
 
-/** Content identity used by every exact model request Type. */
+/** Canonical request value; Core supplies the enclosing Need identity. */
 export function sealGenerationRequest<T extends object>(
   content: T,
-): T & { readonly requestDigest: Digest } {
-  const normalized = canonicalize(content) as unknown as T;
-  return { ...normalized, requestDigest: digestOf(normalized) };
-}
-
-export function verifyGenerationRequestDigest(value: unknown): asserts value is Record<string, CanonicalValue> & {
-  readonly requestDigest: Digest;
-} {
-  const object = plainObject(value, "Generation request");
-  const requestDigest = object.requestDigest;
-  assert(typeof requestDigest === "string" && isDigest(requestDigest), "Generation request digest is invalid");
-  const { requestDigest: _requestDigest, ...content } = object;
-  assert(requestDigest === digestOf(content), "Generation request digest differs from its canonical contents");
+): T {
+  return canonicalize(content) as unknown as T;
 }
 
 export function sealGeneratedImageSet(content: GeneratedImageSetContent): GeneratedImageSet {
   assert(content.contract === "svml.generated-image-set@1", "Generated image contract is invalid");
   assert(content.images.length > 0, "Generated image set is empty");
   content.images.forEach((artifact) => assertGenerationBlobRef(artifact, "image/"));
-  const normalized = canonicalize(content) as unknown as GeneratedImageSetContent;
-  return { ...normalized, resultDigest: digestOf(normalized) };
+  return canonicalize(content) as unknown as GeneratedImageSet;
 }
 
 export function verifyGeneratedImageSet(value: unknown): asserts value is GeneratedImageSet {
@@ -66,16 +53,13 @@ export function verifyGeneratedImageSet(value: unknown): asserts value is Genera
   assert(object.contract === "svml.generated-image-set@1", "Generated image contract is invalid");
   assert(Array.isArray(object.images) && object.images.length > 0, "Generated image set is empty");
   object.images.forEach((artifact) => assertGenerationBlobRef(artifact, "image/"));
-  const { resultDigest, ...content } = object;
-  assert(isDigest(resultDigest) && resultDigest === digestOf(content), "Generated image result digest differs");
 }
 
 export function sealGeneratedVideoSet(content: GeneratedVideoSetContent): GeneratedVideoSet {
   assert(content.contract === "svml.generated-video-set@1", "Generated video contract is invalid");
   assert(content.videos.length > 0, "Generated video set is empty");
   content.videos.forEach((artifact) => assertGenerationBlobRef(artifact, "video/"));
-  const normalized = canonicalize(content) as unknown as GeneratedVideoSetContent;
-  return { ...normalized, resultDigest: digestOf(normalized) };
+  return canonicalize(content) as unknown as GeneratedVideoSet;
 }
 
 export function verifyGeneratedVideoSet(value: unknown): asserts value is GeneratedVideoSet {
@@ -83,6 +67,4 @@ export function verifyGeneratedVideoSet(value: unknown): asserts value is Genera
   assert(object.contract === "svml.generated-video-set@1", "Generated video contract is invalid");
   assert(Array.isArray(object.videos) && object.videos.length > 0, "Generated video set is empty");
   object.videos.forEach((artifact) => assertGenerationBlobRef(artifact, "video/"));
-  const { resultDigest, ...content } = object;
-  assert(isDigest(resultDigest) && resultDigest === digestOf(content), "Generated video result digest differs");
 }

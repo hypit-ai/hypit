@@ -111,7 +111,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       contract: "svml.visual-track@1",
       visualIr: "svml.hyperframes-visual-ir@1",
       id: "blue",
-      programSpaceDigest: space.digest,
       presents: [{
         id: "blue",
         span: { startFrame: 0, endFrameExclusive: 1 },
@@ -132,7 +131,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       contract: "svml.visual-track@1",
       visualIr: "svml.hyperframes-visual-ir@1",
       id: "surface",
-      programSpaceDigest: space.digest,
       presents: [{
         id: "surface",
         span: { startFrame: 0, endFrameExclusive: 1 },
@@ -158,7 +156,6 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       contract: "svml.visual-track@1",
       visualIr: "svml.hyperframes-visual-ir@1",
       id: "text",
-      programSpaceDigest: space.digest,
       presents: [{
         id: "text",
         span: { startFrame: 0, endFrameExclusive: 1 },
@@ -183,10 +180,9 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     const document = compileHyperframesDocument(sealComposition({
       contract: "svml.composition@1",
       id: "visual-proof",
-      programSpace: space,
       canvas: { width: 64, height: 64, clearColor: "#000000" },
       tracks: [text, lower, surface],
-    }));
+    }), space);
 
     await copyFile(localFont, path.join(temp, "font.ttf"));
     await writeFile(path.join(temp, "surface.png"), surfaceBytes);

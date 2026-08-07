@@ -31,7 +31,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
   const operations: FragmentOperation[] = [{
     id: "track-set:empty",
     producer: filmProducers.createTrackSet,
-    inputs: { space: input("space") },
+    inputs: {},
     result: { kind: "output" as const, name: "set" },
   }];
   let current = "track-set:empty";
@@ -40,7 +40,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     operations.push({
       id,
       producer: track.kind === "visual" ? filmProducers.appendVisualTrack : filmProducers.appendAudioTrack,
-      inputs: { set: operation(current), track: input(track.name) },
+      inputs: { set: operation(current), space: input("space"), track: input(track.name) },
       result: { kind: "output" as const, name: "set" },
     });
     current = id;
@@ -48,7 +48,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
   operations.push({
     id: "film:composition",
     producer: filmProducers.compileComposition,
-    inputs: { program: input("program"), set: operation(current) },
+    inputs: { program: input("program"), space: input("space"), set: operation(current) },
     result: { kind: "output" as const, name: "composition" },
   });
   const semanticInputs = ["program", "space", ...tracks.map((track) => track.name)];
@@ -69,13 +69,6 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
         type: contractTypes.composition,
         root: operation("film:composition"),
         semanticInputs,
-        affinity: [
-          { resultPointer: "/id", source: input("program"), sourcePointer: "/id" },
-          { resultPointer: "/programSpace/digest", source: input("space"), sourcePointer: "/digest" },
-          { resultPointer: "/canvas/width", source: input("program"), sourcePointer: "/canvas/width" },
-          { resultPointer: "/canvas/height", source: input("program"), sourcePointer: "/canvas/height" },
-          { resultPointer: "/canvas/clearColor", source: input("program"), sourcePointer: "/canvas/clearColor" },
-        ],
         fidelity: "exact",
       },
     ],
