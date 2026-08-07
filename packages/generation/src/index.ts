@@ -32,10 +32,8 @@ export type {
 } from "./mapping.js";
 export {
   assertGenerationPortTable,
-  GENERATION_MEDIA_ROLES,
   GENERATION_PORTS_V1,
   generationPort,
-  isMediaPort,
   sealGenerationPortTable,
 } from "./ports.js";
 export type {
@@ -55,10 +53,7 @@ export type {
 } from "./ports.js";
 export {
   GENERATION_REQUEST_V1,
-  mediaValues,
   portsObjectSchema,
-  portValues,
-  presentPorts,
   requestSchemaFromPorts,
   sealGenerationPortRequest,
   verifyPortsAgainstTable,
