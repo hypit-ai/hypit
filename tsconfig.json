@@ -3,7 +3,10 @@
     "target": "ES2023",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2023", "DOM"],
+    "lib": [
+      "ES2023",
+      "DOM"
+    ],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -11,9 +14,201 @@
     "declaration": true,
     "sourceMap": true,
     "rootDir": ".",
-    "outDir": "dist",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@svml/protocol": [
+        "packages/protocol/src/index.ts"
+      ],
+      "@svml/core": [
+        "packages/core/src/index.ts"
+      ],
+      "@svml/component-kit": [
+        "packages/component-kit/src/index.ts"
+      ],
+      "@svml/endpoint-kit": [
+        "packages/endpoint-kit/src/index.ts"
+      ],
+      "@svml/contracts": [
+        "packages/contracts/src/index.ts"
+      ],
+      "@svml/media": [
+        "packages/media/src/index.ts"
+      ],
+      "@svml/driver-node": [
+        "packages/driver-node/src/index.ts"
+      ],
+      "@svml/script": [
+        "packages/script/src/index.ts"
+      ],
+      "@svml/text": [
+        "packages/text/src/index.ts"
+      ],
+      "@svml/speech-align": [
+        "packages/speech-align/src/index.ts"
+      ],
+      "@svml/whisperx": [
+        "packages/whisperx/src/index.ts"
+      ],
+      "@svml/caption": [
+        "packages/caption/src/index.ts"
+      ],
+      "@svml/speech-take": [
+        "packages/speech-take/src/index.ts"
+      ],
+      "@svml/elaborator": [
+        "packages/elaborator/src/index.ts"
+      ],
+      "@svml/realization": [
+        "packages/realization/src/index.ts"
+      ],
+      "@svml/run": [
+        "packages/run/src/index.ts"
+      ],
+      "@svml/run-text": [
+        "packages/run-text/src/index.ts"
+      ],
+      "@svml/runtime": [
+        "packages/runtime/src/index.ts"
+      ],
+      "@svml/runtime-adapter": [
+        "packages/runtime-adapter/src/index.ts"
+      ],
+      "@svml/runtime-adapter-node": [
+        "packages/runtime-adapter-node/src/index.ts"
+      ],
+      "@svml/store-sqlite": [
+        "packages/store-sqlite/src/index.ts"
+      ],
+      "@svml/artifact-store-fs": [
+        "packages/artifact-store-fs/src/index.ts"
+      ],
+      "@svml/artifact-store-s3": [
+        "packages/artifact-store-s3/src/index.ts"
+      ],
+      "@svml/credential-store-env": [
+        "packages/credential-store-env/src/index.ts"
+      ],
+      "@svml/local": [
+        "packages/local/src/index.ts"
+      ],
+      "@svml/generation": [
+        "packages/generation/src/index.ts"
+      ],
+      "@svml/model-kit": [
+        "packages/model-kit/src/index.ts"
+      ],
+      "@svml/prompt-kit": [
+        "packages/prompt-kit/src/index.ts"
+      ],
+      "@svml/seedance": [
+        "packages/seedance/src/index.ts"
+      ],
+      "@svml/minimax-h3": [
+        "packages/minimax-h3/src/index.ts"
+      ],
+      "@svml/gemini-omni": [
+        "packages/gemini-omni/src/index.ts"
+      ],
+      "@svml/grok-imagine": [
+        "packages/grok-imagine/src/index.ts"
+      ],
+      "@svml/gpt-image": [
+        "packages/gpt-image/src/index.ts"
+      ],
+      "@svml/nano-banana": [
+        "packages/nano-banana/src/index.ts"
+      ],
+      "@svml/seedream": [
+        "packages/seedream/src/index.ts"
+      ],
+      "@svml/provider-kie": [
+        "packages/provider-kie/src/index.ts"
+      ],
+      "@svml/media-pipeline": [
+        "packages/media-pipeline/src/index.ts"
+      ],
+      "@svml/provider-media-local": [
+        "packages/provider-media-local/src/index.ts"
+      ],
+      "@svml/provider-hyperframes-local": [
+        "packages/provider-hyperframes-local/src/index.ts"
+      ],
+      "@svml/provider-whisperx-local": [
+        "packages/provider-whisperx-local/src/index.ts"
+      ],
+      "@svml/provider-google-vertex": [
+        "packages/provider-google-vertex/src/index.ts"
+      ],
+      "@svml/image-transform": [
+        "packages/image-transform/src/index.ts"
+      ],
+      "@svml/provider-image-opencv-local": [
+        "packages/provider-image-opencv-local/src/index.ts"
+      ],
+      "@svml/transport-aws-lambda": [
+        "packages/transport-aws-lambda/src/index.ts"
+      ],
+      "@svml/transport-process": [
+        "packages/transport-process/src/index.ts"
+      ],
+      "@svml/transport": [
+        "packages/transport/src/index.ts"
+      ],
+      "@svml/speech-program": [
+        "packages/speech-program/src/index.ts"
+      ],
+      "@svml/estimate": [
+        "packages/estimate/src/index.ts"
+      ],
+      "@svml/hyperframes": [
+        "packages/hyperframes/src/index.ts"
+      ],
+      "@svml/hyperframes-render": [
+        "packages/hyperframes-render/src/index.ts"
+      ],
+      "@svml/broll": [
+        "packages/broll/src/index.ts"
+      ],
+      "@svml/film": [
+        "packages/film/src/index.ts"
+      ],
+      "@svml/text-track": [
+        "packages/text-track/src/index.ts"
+      ],
+      "@svml/svs": [
+        "packages/svs/src/index.ts"
+      ],
+      "@svml/compiler-node": [
+        "packages/compiler-node/src/index.ts"
+      ],
+      "@svml/package-loader-node": [
+        "packages/package-loader-node/src/index.ts"
+      ],
+      "@svml/cli": [
+        "packages/cli/src/index.ts"
+      ],
+      "@svml/validation": [
+        "packages/validation/src/index.ts"
+      ],
+      "@svml/host": [
+        "packages/host/src/index.ts"
+      ],
+      "@svml/source": [
+        "packages/source/src/index.ts"
+      ],
+      "@svml/workspace-fs-node": [
+        "packages/workspace-fs-node/src/index.ts"
+      ]
+    }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["dist", "node_modules"]
+  "include": [
+    "packages/**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "packages/*/dist"
+  ]
 }

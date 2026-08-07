@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      hyperframes:
-        specifier: 0.7.84
-        version: 0.7.84(@types/node@24.10.1)
     devDependencies:
       '@svml/artifact':
         specifier: workspace:*
