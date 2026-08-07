@@ -9,7 +9,6 @@ const timedSegment = object({ segmentId: { schema: string }, startSec: { schema:
 const timedToken = object({ tokenId: { schema: string }, segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number }, startFrame: { schema: integer }, endFrame: { schema: integer } });
 const point = object({ identity: { schema: string }, timeSec: { schema: number }, frame: { schema: integer } });
 export const completeSemanticMapSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.complete-semantic-map@1" } },
-  segments: { schema: { kind: "array", items: timedSegment } },
   tokens: { schema: { kind: "array", items: timedToken } }, anchors: { schema: { kind: "array", items: point } } });
 export const semanticMapModuleRef = { name: "@narratage/semantic-map", version: "0.0.0-dev" } as const;
 export const semanticMapTypes = { complete: { module: semanticMapModuleRef, name: "CompleteSemanticMap" } } satisfies Record<string, TypeRef>;

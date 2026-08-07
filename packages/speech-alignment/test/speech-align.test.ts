@@ -359,3 +359,28 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
   );
   assert.equal(map.anchors.every((anchor) => anchor.timeSec === anchor.frame / 30), true);
 });
+
+test("a backwards character measurement reaches the map backwards, uncorrected", () => {
+  // WhisperX character times need not be ordered. The locator reports what it
+  // measured; deciding what a backwards window means belongs to whoever renders
+  // it, and silently flattening it here would hide the evidence. Three Script
+  // words merge into one spoken word, so the middle one inherits neither edge of
+  // the group envelope and its own characters decide its window.
+  const narrative = parseScript("backwards.svml", "<line>can not now</line>");
+  const map = locate(narrative, {
+    endSec: 1,
+    durationSec: 1,
+    words: [{ text: "cannotnow", startSec: 0.1, endSec: 0.9 }],
+    chars: characters(
+      "cannotnow",
+      [0.10, 0.15, 0.20, /* backwards: */ 0.50, 0.45, 0.40, 0.60, 0.65, 0.70],
+      [0.15, 0.20, 0.25, /* backwards: */ 0.55, 0.50, 0.45, 0.65, 0.70, 0.75],
+    ),
+  });
+  const middle = map.tokens[1]!;
+  assert.equal(
+    middle.startSec > middle.endSec,
+    true,
+    `the inverted measurement survived, got ${middle.startSec}..${middle.endSec}`,
+  );
+});
