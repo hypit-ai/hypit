@@ -190,6 +190,13 @@ body {
 }
 @keyframes wordmark-type { to { width: calc(9ch - .495em); } }
 @keyframes wordmark-cursor-blink { 50% { opacity: 0; } }
+.hero-intro-seen .wordmark-reveal {
+  width: calc(9ch - .495em);
+  animation: none;
+}
+.hero-intro-seen .wordmark-cursor {
+  animation: wordmark-cursor-blink .48s step-end infinite;
+}
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; }
 .hero-statement-viewport-en { height: clamp(61.2px,8.16vw,106.08px); }
 .hero-statement-viewport-zh { height: var(--hero-zh-line); margin-top: var(--hero-zh-gap); }
@@ -209,6 +216,16 @@ body {
 .VPHome .carousel-heading { animation-delay: 1.45s; }
 .VPHome .demo-carousel-stage { animation-delay: 1.59s; }
 .VPHome .demo-carousel-controls { animation-delay: 1.73s; }
+.hero-intro-seen .hero-statement-viewport-en,
+.hero-intro-seen .hero-statement-viewport-zh,
+.hero-intro-seen .VPHome .VPHero .actions,
+.hero-intro-seen .VPHome .carousel-heading,
+.hero-intro-seen .VPHome .demo-carousel-stage,
+.hero-intro-seen .VPHome .demo-carousel-controls {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
 @keyframes hero-content-rise {
   to { opacity: 1; transform: translateY(0); }
 }
