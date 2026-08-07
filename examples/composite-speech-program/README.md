@@ -1,4 +1,9 @@
-# Composite Speech Program executable fixture
+# Legacy v1 Composite Speech Program executable fixture
+
+This directory is retained as executable v1 regression evidence while the rewrite proceeds. Its
+`.svk` filename is a fixture-local legacy convention, not a v2 package kind, import rule or public
+file suffix. Current v2 sources use self-described Frontend Headers and ordinary package facets;
+see [`../../docs/source-and-run-compilation-v1.md`](../../docs/source-and-run-compilation-v1.md).
 
 This directory proves the implemented `composite-v1` profile.
 

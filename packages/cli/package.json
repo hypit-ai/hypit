@@ -1,0 +1,19 @@
+{
+  "name": "@svml/cli",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/compiler-node": "workspace:*",
+    "@svml/local": "workspace:*",
+    "@svml/package-loader-node": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/realization": "workspace:*",
+    "@svml/run": "workspace:*",
+    "@svml/source": "workspace:*",
+    "@svml/runtime": "workspace:*"
+  }
+}

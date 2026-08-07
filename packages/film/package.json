@@ -1,0 +1,26 @@
+{
+  "name": "@svml/film",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@svml/component-kit": "workspace:*",
+    "@svml/contracts": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/svs": "workspace:*",
+    "@svml/text": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/component-kit": "workspace:*",
+    "@svml/core": "workspace:*",
+    "@svml/driver-node": "workspace:*",
+    "@svml/hyperframes": "workspace:*",
+    "@svml/text-track": "workspace:*",
+    "@svml/validation": "workspace:*"
+  }
+}

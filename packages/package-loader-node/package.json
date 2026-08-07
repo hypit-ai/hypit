@@ -1,0 +1,21 @@
+{
+  "name": "@svml/package-loader-node",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/component-kit": "workspace:*",
+    "@svml/compiler-node": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/host": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/run": "workspace:*",
+    "@svml/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/runtime-adapter": "workspace:*"
+  }
+}

@@ -1,0 +1,898 @@
+{
+  "format": "svml.node-package-lock@1",
+  "artifacts": [
+    {
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.25.12",
+      "digest": "sha256:db9d414d5c92d188d53dd0e100d3e104543f4b272037beb258edc2ead0d28998"
+    },
+    {
+      "name": "@google/genai",
+      "version": "1.52.0",
+      "digest": "sha256:ccae11f511dd32659ff165bb7f1086574ec919e45b4a72df1756c3464e3f8050"
+    },
+    {
+      "name": "@hono/node-server",
+      "version": "2.0.12",
+      "digest": "sha256:87fdbb42f820648585a5837efaaeb60ec591224edec033de67a13f2b28eb63eb"
+    },
+    {
+      "name": "@img/colour",
+      "version": "1.1.0",
+      "digest": "sha256:87ff399e23a6a25336858a0dbd64f7b83720c5e801e05b4c6309af6d12521c45"
+    },
+    {
+      "name": "@isaacs/fs-minipass",
+      "version": "4.0.1",
+      "digest": "sha256:9004aaba5f83bb21b33ede79ad6420cef93105d4e7347622c2bf778407152b88"
+    },
+    {
+      "name": "@protobufjs/aspromise",
+      "version": "1.1.2",
+      "digest": "sha256:b26d2da7a85f408d36a1e5cf7653f1b315c7f86e24a94a7ca90adfce78a52259"
+    },
+    {
+      "name": "@protobufjs/base64",
+      "version": "1.1.2",
+      "digest": "sha256:03d093e51f450fc70ab0d38e5feb3ff3009db4caa1400aa89f77312be60dbd4e"
+    },
+    {
+      "name": "@protobufjs/codegen",
+      "version": "2.0.5",
+      "digest": "sha256:a51d648a01c9e4b1ce86aeaa7b3580d6736872d85ca2708a265a7a3d5db60e47"
+    },
+    {
+      "name": "@protobufjs/eventemitter",
+      "version": "1.1.1",
+      "digest": "sha256:9b70b7b43a6dc11270198eddb75e741ffa22aa6ae1e907480d3fb923956d44b6"
+    },
+    {
+      "name": "@protobufjs/fetch",
+      "version": "1.1.1",
+      "digest": "sha256:9b4fa3a53ebb883c1d711aab0196745351c385eac35dd57aa5e8d943edc621ed"
+    },
+    {
+      "name": "@protobufjs/float",
+      "version": "1.0.2",
+      "digest": "sha256:6ed05c3181c9ea4a8516b3561541a7b7d32cd6e8e7746fbaadf0aee3ead9804e"
+    },
+    {
+      "name": "@protobufjs/path",
+      "version": "1.1.2",
+      "digest": "sha256:c90aff98ba0fefc2e509a3e31f87bd8c0d300b5321613281a569a97d336217db"
+    },
+    {
+      "name": "@protobufjs/pool",
+      "version": "1.1.0",
+      "digest": "sha256:898bf407a5251b1fcacc5ba59d491b465249dcbe985b30b907d6a8efe929e015"
+    },
+    {
+      "name": "@protobufjs/utf8",
+      "version": "1.1.2",
+      "digest": "sha256:8a0bcf97df0a7807dc0ad71e46fb349b11d3f7f6fbb5d9e4d8227a7361c43fbb"
+    },
+    {
+      "name": "@puppeteer/browsers",
+      "version": "3.0.6",
+      "digest": "sha256:1fc1212e7cf17104bd0e45e8e63c90b984df83e9a2b11ef8104b162bb140893f"
+    },
+    {
+      "name": "@svml/artifact",
+      "version": "0.0.0-dev",
+      "digest": "sha256:368270c5c19f9300599a4a1ee9f7525f39b1e3e2c036bf0b03317fa2dc32a303"
+    },
+    {
+      "name": "@svml/caption-gemini",
+      "version": "0.0.0-dev",
+      "digest": "sha256:9627669c488f9df22fef6a27f74d2bf5d499e3a0ba651eb594a9b47fe82cd21f"
+    },
+    {
+      "name": "@svml/caption",
+      "version": "0.0.0-dev",
+      "digest": "sha256:a7f225fee5e57574f3f0d874a3ebaaca896126bee9a1ba420a022b560aaffc53"
+    },
+    {
+      "name": "@svml/component-kit",
+      "version": "0.0.0-dev",
+      "digest": "sha256:789d38bf44d7d40cf13734e09f68c8fd8302807fcd9b20a9ef0439f488af1ae2"
+    },
+    {
+      "name": "@svml/contracts",
+      "version": "0.0.0-dev",
+      "digest": "sha256:b3a9eea0f89a6c0a5920fb055f919a123c9a45b268b31f029e466415565059d3"
+    },
+    {
+      "name": "@svml/core",
+      "version": "0.0.0-dev",
+      "digest": "sha256:7b8af092e472c43f2b990d92cd7f0b0d426e19f4003582f50ca7aaefd3ec6007"
+    },
+    {
+      "name": "@svml/elaborator",
+      "version": "0.0.0-dev",
+      "digest": "sha256:d5987b778a5bc3c4b2f734140bb8fd520f5abcb86ce85391464643d59c45f78a"
+    },
+    {
+      "name": "@svml/endpoint-kit",
+      "version": "0.0.0-dev",
+      "digest": "sha256:49ba39c758614bba5c473601cbc0d36b7d38e823031b2d3dfdd76f95c6b6702e"
+    },
+    {
+      "name": "@svml/gemini-omni",
+      "version": "0.0.0-dev",
+      "digest": "sha256:d50e807fac4ebb56d157a871d714d7c1ed33b0825fef9b2612782c4c8d7de81c"
+    },
+    {
+      "name": "@svml/generation",
+      "version": "0.0.0-dev",
+      "digest": "sha256:7cbe6e3c8db1bbe3c084bbdac82fe672908f3f8ec7f1585de28349d8711e1843"
+    },
+    {
+      "name": "@svml/gpt-image",
+      "version": "0.0.0-dev",
+      "digest": "sha256:5df4a843ea5421cd32368e1e3c3874d02245efa3d9b46e261b90a267059db5a6"
+    },
+    {
+      "name": "@svml/grok-imagine",
+      "version": "0.0.0-dev",
+      "digest": "sha256:88113fd6ee317e00a191129c0e44b1c9c08637859a25e01bc4020546b9e7a306"
+    },
+    {
+      "name": "@svml/host",
+      "version": "0.0.0-dev",
+      "digest": "sha256:a59a3ac2647bebd223b6ebb4d2830a1c86a19d427d49095ae3479de79519f815"
+    },
+    {
+      "name": "@svml/hyperframes-render",
+      "version": "0.0.0-dev",
+      "digest": "sha256:6f0dcd08108987e1dd9a5701ee5d2f21d42c4559def713539f3103a19b4d5d3b"
+    },
+    {
+      "name": "@svml/hyperframes",
+      "version": "0.0.0-dev",
+      "digest": "sha256:c121a31f96d6e5c3205040c58a3a5b03d52ceb31ba584975df2d9b8ceb720ebb"
+    },
+    {
+      "name": "@svml/media-pipeline",
+      "version": "0.0.0-dev",
+      "digest": "sha256:4bea3929ab3efabda5748ba897bd597bcfd571ce25459cb387630dfa2a23110a"
+    },
+    {
+      "name": "@svml/minimax-h3",
+      "version": "0.0.0-dev",
+      "digest": "sha256:aebb4ccc3d376f5f766dea05132eb30c7bb9dbf71224bfcea1c5d2d53a5293c1"
+    },
+    {
+      "name": "@svml/model-kit",
+      "version": "0.0.0-dev",
+      "digest": "sha256:51c71bac3365c6811b27d0aa345b63ff64cee26047bd33b524ad6aa969cc02de"
+    },
+    {
+      "name": "@svml/nano-banana",
+      "version": "0.0.0-dev",
+      "digest": "sha256:0f7de960105c3889ba5a53be86eb0cc9e2c18ab7d8f7047250fd903752f4c0c0"
+    },
+    {
+      "name": "@svml/protocol",
+      "version": "0.0.0-dev",
+      "digest": "sha256:cdede72e3612684f37302267a757cdfde7cd7d474c671e738969b10268e2e7fe"
+    },
+    {
+      "name": "@svml/provider-google-vertex",
+      "version": "0.0.0-dev",
+      "digest": "sha256:7084e3278a7a9c987f8c7c58ffabdaa2c908d2a42af2de5d31b590a19a1dbf94"
+    },
+    {
+      "name": "@svml/provider-hyperframes-local",
+      "version": "0.0.0-dev",
+      "digest": "sha256:f94e3d0e32fe4b43d4e72ddf1a1f3233fc8a470004c0589b7eb7c3b4bac3bbc5"
+    },
+    {
+      "name": "@svml/provider-kie",
+      "version": "0.0.0-dev",
+      "digest": "sha256:ca7a6cc1ab96011c68ec20d82847e7bb92287735a34c3110181430db34e35035"
+    },
+    {
+      "name": "@svml/provider-media-local",
+      "version": "0.0.0-dev",
+      "digest": "sha256:8b25af7a32644b6a5c1d168ab487e18ba5f97dc9b148887aac289fc83e5b9242"
+    },
+    {
+      "name": "@svml/provider-whisperx-local",
+      "version": "0.0.0-dev",
+      "digest": "sha256:fc69b1beb7c726ad93a337365c7e7106c6e23752021118d05fcdf4f9b845285b"
+    },
+    {
+      "name": "@svml/runtime-adapter-node",
+      "version": "0.0.0-dev",
+      "digest": "sha256:a298036b5c46dd8e2bb4c76db9c9e024e8e8738f0e442176dd36d63a9b24aced"
+    },
+    {
+      "name": "@svml/runtime-adapter",
+      "version": "0.0.0-dev",
+      "digest": "sha256:d900d18ab1fd68d4b6a1ddcfb84f3c1323092346e6d056fbd67a4ea48cd53c45"
+    },
+    {
+      "name": "@svml/runtime",
+      "version": "0.0.0-dev",
+      "digest": "sha256:276aabd6a0f955ecfa630ea104c959f1a4fdae30d320f91cfa21cc9023f49169"
+    },
+    {
+      "name": "@svml/seedance",
+      "version": "0.0.0-dev",
+      "digest": "sha256:495f6a66fecf255ee806c79c37c0c093be3ea3449c7d8bc57e6808b4823cb528"
+    },
+    {
+      "name": "@svml/seedream",
+      "version": "0.0.0-dev",
+      "digest": "sha256:5c50cd0e4d015c669f1d398dd46d65cf8eb9f4fcc511f14b7083e55f57446a54"
+    },
+    {
+      "name": "@svml/source",
+      "version": "0.0.0-dev",
+      "digest": "sha256:2ab24d6e0a392e602f99573166ce3d48a8c561fa55f9ee425a25361077b8c483"
+    },
+    {
+      "name": "@svml/speech-align",
+      "version": "0.0.0-dev",
+      "digest": "sha256:1ae65828af4e46e1e8b4065c28451ee08109fe5e5d58e60e457ff0a610c02d90"
+    },
+    {
+      "name": "@svml/svs",
+      "version": "0.0.0-dev",
+      "digest": "sha256:a336db7f075cab5357a96ba0d3b079c213c93fa0a4f95c39926c2e1b784d3d24"
+    },
+    {
+      "name": "@svml/text",
+      "version": "0.0.0-dev",
+      "digest": "sha256:03985ce5c8bf04fc8dcfc474b4b80133a5bffbb6965604bdc0f9f8fb64ad0524"
+    },
+    {
+      "name": "@svml/validation",
+      "version": "0.0.0-dev",
+      "digest": "sha256:4322dffd7ea245484a12fb674a0d2f70f25d1287b9f7aa67ed5714431035e9dd"
+    },
+    {
+      "name": "@svml/whisperx",
+      "version": "0.0.0-dev",
+      "digest": "sha256:9047e6ed3c9d88dcce16f05d273eb2295692e274b68b6d7ea1835031ef55bebf"
+    },
+    {
+      "name": "@swc/helpers",
+      "version": "0.5.23",
+      "digest": "sha256:214421c9be182a986122710fe7e3a3f6f435a9972eb5ea6c172faaafb73b2d66"
+    },
+    {
+      "name": "@types/node",
+      "version": "24.10.1",
+      "digest": "sha256:6a669a3423310fae21be2be89f593626f2c9c78a0e0262c13224599953bc4cd7"
+    },
+    {
+      "name": "@types/retry",
+      "version": "0.12.0",
+      "digest": "sha256:941f2577dd499b89987ea6f2d1d3d9b5f0e34527a9357f551681d6ff3520e2ec"
+    },
+    {
+      "name": "adm-zip",
+      "version": "0.6.0",
+      "digest": "sha256:13cb7236751a108755ee3e5305ea44c69c78d0c9605ace0f072ac0c536f37f97"
+    },
+    {
+      "name": "agent-base",
+      "version": "7.1.4",
+      "digest": "sha256:40ec8d2a7b552e0874da733e43ef2cb08353bed9895af6b45e036818dcb4e40c"
+    },
+    {
+      "name": "ansi-regex",
+      "version": "6.2.2",
+      "digest": "sha256:62301d8f03e735d1d229572aa95ad59bcdee77e489a38a73fc8e4401fdd7cc7e"
+    },
+    {
+      "name": "ansi-styles",
+      "version": "6.2.3",
+      "digest": "sha256:0dc17a9cb94edba0e52788414fc0ba0e21d8fdbfec928a114be1a94e69abbd59"
+    },
+    {
+      "name": "base64-js",
+      "version": "1.5.1",
+      "digest": "sha256:4984816098020b94228c9a7946ea80ab4795078d5de3d484e818baa246f77f79"
+    },
+    {
+      "name": "bignumber.js",
+      "version": "9.3.1",
+      "digest": "sha256:32e6ecaf68aa121da8203fe69aa7e0096de221a0de5fd2bcfbb3de891d675503"
+    },
+    {
+      "name": "boolean",
+      "version": "3.2.0",
+      "digest": "sha256:36e3dbee991cf3a736740c6a3eaf5d49b85b3e40fe8113a1b763741788616e6f"
+    },
+    {
+      "name": "brotli",
+      "version": "1.3.3",
+      "digest": "sha256:0ffd76410e1b12c33d8d464b5df349ddb2e2e1de062cda48901824448a84104c"
+    },
+    {
+      "name": "buffer-equal-constant-time",
+      "version": "1.0.1",
+      "digest": "sha256:7f7ae10c48a0ccc45a8375101ba92708aab7129c66d1918309ed37cea429d0fd"
+    },
+    {
+      "name": "bundle-name",
+      "version": "4.1.0",
+      "digest": "sha256:eb752be0b969cbebab06b6bb9f46976b6e0032173aefdc179687ebccaa44f94b"
+    },
+    {
+      "name": "chownr",
+      "version": "3.0.0",
+      "digest": "sha256:7b88dbf0df1f298d83c0849c84aeefc5a396d54ca1fc01a28f244f8c1be025af"
+    },
+    {
+      "name": "chromium-bidi",
+      "version": "17.0.2",
+      "digest": "sha256:ec8999a0a291d02fe51b7121eb971a35f1e3a1fd2a2d1324629c96f9a75b20a8"
+    },
+    {
+      "name": "citty",
+      "version": "0.2.2",
+      "digest": "sha256:25a8b490b976cb9292d67c47be01866caa98425a4e33d70ac258db9743a88df6"
+    },
+    {
+      "name": "cliui",
+      "version": "9.0.1",
+      "digest": "sha256:da1fca6a22fbf931ced1655f040e2b3076adf433e2150dbb5071a69c33e70ba9"
+    },
+    {
+      "name": "clone",
+      "version": "2.1.2",
+      "digest": "sha256:282ee2f216faaed203b56bd9cfd4da5a18605fe65810757d2a9ea5ecd9500125"
+    },
+    {
+      "name": "compare-versions",
+      "version": "6.1.1",
+      "digest": "sha256:66cedeff9e100ea3d24eedbf263b076e6baa3c499e4651994fff66f1dea5877e"
+    },
+    {
+      "name": "data-uri-to-buffer",
+      "version": "4.0.1",
+      "digest": "sha256:0dc22fd9c89bd8380616b2ee17155470f8783b41ba89789b075dc4ba484080df"
+    },
+    {
+      "name": "debug",
+      "version": "4.4.3",
+      "digest": "sha256:1a7cc10a8613e2472b802c38eaf47c489bd798e9ce0f412184f695107c3fa3a0"
+    },
+    {
+      "name": "default-browser-id",
+      "version": "5.0.1",
+      "digest": "sha256:b4bdd210d24cb1f62b83c77ae731ab1da073e45245baad0de1d6f5f02c9d466e"
+    },
+    {
+      "name": "default-browser",
+      "version": "5.5.0",
+      "digest": "sha256:d81632b25bc8f83bb1a14add53d9fb0ee271842b09569169dcef10b92e9a2fa5"
+    },
+    {
+      "name": "define-data-property",
+      "version": "1.1.4",
+      "digest": "sha256:221f75bd851a964e7942385ada443570929f69196d6c784630639984385fc5ad"
+    },
+    {
+      "name": "define-lazy-prop",
+      "version": "3.0.0",
+      "digest": "sha256:c3dd5983fde9b61f7808753874e319d0e05f91adf5a55b95c599413a4cf86f93"
+    },
+    {
+      "name": "define-properties",
+      "version": "1.2.1",
+      "digest": "sha256:eedbb9184b6426f20f1442ed7a62a98015182bffa41bba4fa4dba63471ba7417"
+    },
+    {
+      "name": "detect-libc",
+      "version": "2.1.2",
+      "digest": "sha256:39e893aa920fb3a1af7ab5e2fac8d037485d6e43a28acc27097e0ddc44977388"
+    },
+    {
+      "name": "detect-node",
+      "version": "2.1.0",
+      "digest": "sha256:996c11b800375bcbe83c7e3fef5bf22d1a968b70084d044f056d54a2b6d5378c"
+    },
+    {
+      "name": "devtools-protocol",
+      "version": "0.0.1653615",
+      "digest": "sha256:1378e3705558176026ae9eb2d219ab359032f2a5d5bddeafa530cbe8bc14a7df"
+    },
+    {
+      "name": "dfa",
+      "version": "1.2.0",
+      "digest": "sha256:9e6dd4727a3c3b8ba07bd03137d6f98ef7103486608131967b45d863b438bd1a"
+    },
+    {
+      "name": "ecdsa-sig-formatter",
+      "version": "1.0.11",
+      "digest": "sha256:c0abf8e5fedfdc933291df29898bb186dd642cc997b37cfbb8b44f63f65a2574"
+    },
+    {
+      "name": "emoji-regex",
+      "version": "10.6.0",
+      "digest": "sha256:eb9d30ffe6019e2863afc186ae442367b68e72d4324119953136cc052a8a853d"
+    },
+    {
+      "name": "es-define-property",
+      "version": "1.0.1",
+      "digest": "sha256:4f1993238f7a037bd0efcc84bd55b144be286b0d5093f9d1d9ba6bd923e8b23b"
+    },
+    {
+      "name": "es-errors",
+      "version": "1.3.0",
+      "digest": "sha256:0aace4cb4e9b4c30867fcf2ab951b5ba67e74bf0d9ae01e1af44997b88100b0d"
+    },
+    {
+      "name": "es6-error",
+      "version": "4.1.1",
+      "digest": "sha256:018f98c8351e95bbd0673def8b129d81140abb73bc15d4aff0da457352b19611"
+    },
+    {
+      "name": "esbuild",
+      "version": "0.25.12",
+      "digest": "sha256:d45f05635279ab74b586ef526256666bf06353c35733ba7265669098f7b0f221"
+    },
+    {
+      "name": "escalade",
+      "version": "3.2.0",
+      "digest": "sha256:b90bb70c6aefd3efa34f4b7cbabe08ddc3685453fa7de431d8f239e61f14949f"
+    },
+    {
+      "name": "escape-string-regexp",
+      "version": "4.0.0",
+      "digest": "sha256:cf7484214bba7d92b7520e80e260071e172ccb2bc5980dc546874f9fee41c41c"
+    },
+    {
+      "name": "extend",
+      "version": "3.0.2",
+      "digest": "sha256:4a27fbfbe686002e72b43f558129c99bb8033c46d34d5ed3ce65579818b120aa"
+    },
+    {
+      "name": "fast-deep-equal",
+      "version": "3.1.3",
+      "digest": "sha256:a9b29965b98994618171ac2981b88f385f2299bbfc0c3831c5cd259aa8ca999c"
+    },
+    {
+      "name": "fetch-blob",
+      "version": "3.2.0",
+      "digest": "sha256:c99727d97c6d1d689a0927c8366aa3236fac687f1b32b5a4a6fb50f1a9475ca1"
+    },
+    {
+      "name": "fontkit",
+      "version": "2.0.4",
+      "digest": "sha256:b600e103edaad329a12b5f391be8e51208493460317dd49ba162a807c854b63f"
+    },
+    {
+      "name": "formdata-polyfill",
+      "version": "4.0.10",
+      "digest": "sha256:f00e63dcfc33f8409f8dac1c27ce16668955a9649c0cd9660eafbd5133b094f3"
+    },
+    {
+      "name": "gaxios",
+      "version": "7.3.0",
+      "digest": "sha256:d02991d60ba0d7190905094252a65eea21fc14e3d6d80a263d3640f9b3120c9b"
+    },
+    {
+      "name": "gcp-metadata",
+      "version": "8.1.2",
+      "digest": "sha256:e5cea6539cb0339595392f03548e2a6550fe494a8b37abd647045cb574b498b3"
+    },
+    {
+      "name": "get-caller-file",
+      "version": "2.0.5",
+      "digest": "sha256:6941f3900745f48cec5e064bce86d053920ff1bcc26f67847aeaa4466218dc25"
+    },
+    {
+      "name": "get-east-asian-width",
+      "version": "1.6.0",
+      "digest": "sha256:48e7876000807ad55fa5b5a3d8fdd49b1f56ec6e321532a674b6c33646bcad81"
+    },
+    {
+      "name": "giget",
+      "version": "3.3.1",
+      "digest": "sha256:ceaa8a1b7b1c1d30bc6d1b90929808c92ada2ec01883bb47f6d6c9bce7322073"
+    },
+    {
+      "name": "global-agent",
+      "version": "3.0.0",
+      "digest": "sha256:43eb33eb0f491ad69fe8ed6cb589b13d5722292c6ed9119c887ddb030e2b47f3"
+    },
+    {
+      "name": "globalthis",
+      "version": "1.0.4",
+      "digest": "sha256:e469a050f10ae6e41c118f1e9f948265f5d85fee6e53c141836ec9815cf14324"
+    },
+    {
+      "name": "google-auth-library",
+      "version": "10.9.1",
+      "digest": "sha256:f693bc5dfb6daa4f3c10f067794a1561b281497b0bb60635b0c915d86e4daa9a"
+    },
+    {
+      "name": "google-logging-utils",
+      "version": "1.1.3",
+      "digest": "sha256:d9972e61745d9340c9a7268e380b0799e2bfcadc65c650d94c3c0c7cab4b7701"
+    },
+    {
+      "name": "gopd",
+      "version": "1.2.0",
+      "digest": "sha256:84538a63b1ad06917107969f8f5a7614a69810d5d8deb9ec1ecbc0f7c7d5ca38"
+    },
+    {
+      "name": "has-property-descriptors",
+      "version": "1.0.2",
+      "digest": "sha256:30760526550c3bf973432235801143320cc22f41e02b79083c765636c72400f6"
+    },
+    {
+      "name": "hono",
+      "version": "4.12.32",
+      "digest": "sha256:0ef54794c02fe4aaec727b7e44836dfaf91c58c375ff768c846d774e93c4eba8"
+    },
+    {
+      "name": "https-proxy-agent",
+      "version": "7.0.6",
+      "digest": "sha256:1b462b0f25b3cee2a682b3bbe1b23fe75e52cce450c4648bb234ff4dd3af2408"
+    },
+    {
+      "name": "hyperframes",
+      "version": "0.7.84",
+      "digest": "sha256:d61bdd821dc513adcddeb339559f6a165ab7a0e8702ace8e97b6494f51d92b6e"
+    },
+    {
+      "name": "ignore",
+      "version": "5.3.2",
+      "digest": "sha256:d0aaa6cad4117a885aed4794fe66735498437f1c878dbf2ef66ef1ab1c2a660b"
+    },
+    {
+      "name": "is-docker",
+      "version": "3.0.0",
+      "digest": "sha256:97eb5b5b8156bd00c384fb9fb307a45910aecf095dd6184f111d4b8e0bd666f7"
+    },
+    {
+      "name": "is-inside-container",
+      "version": "1.0.0",
+      "digest": "sha256:08f265e1b3b219c2952c5b859210a3713bade08013c5b27f96ad36661988342f"
+    },
+    {
+      "name": "is-wsl",
+      "version": "3.1.1",
+      "digest": "sha256:86436e3a243b5f8271667ea3d022de5c1600ac3cb7d8b2d34668ffa9df3d0ecb"
+    },
+    {
+      "name": "json-bigint",
+      "version": "1.0.0",
+      "digest": "sha256:c274e017d82fbbbf324909b464ea5442142bb962df9dc6f71ab13ef8e163c491"
+    },
+    {
+      "name": "json-stringify-safe",
+      "version": "5.0.1",
+      "digest": "sha256:d1db83cd2e4b320c31d6ef03ebf7f325af566a6131016b350b4fbbd3fff12fec"
+    },
+    {
+      "name": "jwa",
+      "version": "2.0.1",
+      "digest": "sha256:ac936dbe43949b68ffae751c977fef81fd45bb030ce84f0757b921bd7b1d7b0e"
+    },
+    {
+      "name": "jws",
+      "version": "4.0.1",
+      "digest": "sha256:542221db2029af0e55aa1eed9d420843756437acfa8a97534c5f4c96d6f1306f"
+    },
+    {
+      "name": "long",
+      "version": "5.3.2",
+      "digest": "sha256:da45a5f60cb1e4dc5384f5c168cd8849944eff998463390386d6459fe10e5aba"
+    },
+    {
+      "name": "matcher",
+      "version": "3.0.0",
+      "digest": "sha256:9912f19359607c866d9f618d168c50f3b0833a254d2e985eba691fd6bf0e6fbd"
+    },
+    {
+      "name": "minipass",
+      "version": "7.1.3",
+      "digest": "sha256:f59781ced29dbfc5853800d2d200e7fae7f76bb23c6ea9e1976104000d9dd87f"
+    },
+    {
+      "name": "minizlib",
+      "version": "3.1.0",
+      "digest": "sha256:8b215413f5f55261d07815e90335340aabd1c48bee5f1b2b20eadbb35541d6e2"
+    },
+    {
+      "name": "mitt",
+      "version": "3.0.1",
+      "digest": "sha256:f05aee474033331f89fb4e3834c2ee96574fa107232539fa61135a16fe788c9b"
+    },
+    {
+      "name": "modern-tar",
+      "version": "0.7.7",
+      "digest": "sha256:f99563f38a7ba7212a3ad5592a6967bf69a086457d0321d289c466ab5f6688aa"
+    },
+    {
+      "name": "ms",
+      "version": "2.1.3",
+      "digest": "sha256:51788e2027fa4e83998d090b3784acc85ccb83543a250426e757b7ac4fd9f3c3"
+    },
+    {
+      "name": "nanoid",
+      "version": "3.3.16",
+      "digest": "sha256:78922068150a563f9ae6689fe393acd229b74e661a92d5a4a98e1f4e0bd67712"
+    },
+    {
+      "name": "node-domexception",
+      "version": "1.0.0",
+      "digest": "sha256:aca17999c243a93f48bdba070cb2ac2d0ab8d24c297dfdecb0183556ce8a7b45"
+    },
+    {
+      "name": "node-fetch",
+      "version": "3.3.2",
+      "digest": "sha256:7d33e270006e72c9480c0d4fe42c78308ee40927929c8673b1f0668ff5a6f7a6"
+    },
+    {
+      "name": "object-keys",
+      "version": "1.1.1",
+      "digest": "sha256:7a85215ee04e41d0cc498beb263ef7a2f07b15c18983cb520e49e51c38b9dd3c"
+    },
+    {
+      "name": "onnxruntime-common",
+      "version": "1.21.1",
+      "digest": "sha256:c230c9b0663d360829c4b0ee3499a0282b5fc7c47f382a5003d2119954bea3c2"
+    },
+    {
+      "name": "onnxruntime-node",
+      "version": "1.21.1",
+      "digest": "sha256:91cbee2cc2ba08b97fea94cc191c025ad9bbe0fdcc5f71f94e0c99ab6b611387"
+    },
+    {
+      "name": "open",
+      "version": "10.2.0",
+      "digest": "sha256:97cd19c76498bd518d4ee951b0692ba49b5a3371fac07db619538b35797afa57"
+    },
+    {
+      "name": "p-retry",
+      "version": "4.6.2",
+      "digest": "sha256:1cc6fd01ff96d9710043c74f822a86ea35c9645cf84123cbb716d96298ac6cdc"
+    },
+    {
+      "name": "pako",
+      "version": "0.2.9",
+      "digest": "sha256:9a4c993683c0c9b1aa01669a2154bac931eecc0f194064f6b5504560ac5e0d55"
+    },
+    {
+      "name": "picocolors",
+      "version": "1.1.1",
+      "digest": "sha256:be79e912ac3251b3baada9dd6510c98f59bb9d8d0ef70366aba9c760a92e1584"
+    },
+    {
+      "name": "postcss",
+      "version": "8.5.25",
+      "digest": "sha256:a2996a4d94a0f4d48217455b5a56c5c255a127bb0f7acbb5c61b0d45529340c2"
+    },
+    {
+      "name": "prettier",
+      "version": "3.9.6",
+      "digest": "sha256:e9878409caf16dffcdb6f3547433bcb9659cca36809e9a82384c726250c3d28d"
+    },
+    {
+      "name": "protobufjs",
+      "version": "7.6.5",
+      "digest": "sha256:407aa02e41f2a2b955161421650589ee8fa3c12a8c99cd311538c9ffb6bc62ff"
+    },
+    {
+      "name": "puppeteer-core",
+      "version": "25.4.0",
+      "digest": "sha256:05bbe4cff28c147c6f78aa83edfd1180321d4734ec4180077ab4ac5f8e8c031e"
+    },
+    {
+      "name": "restructure",
+      "version": "3.0.2",
+      "digest": "sha256:697be69079ad312005d5f42a1eb8d8e90fc0fd4721ecece8cd6089f5b0cee68d"
+    },
+    {
+      "name": "retry",
+      "version": "0.13.1",
+      "digest": "sha256:7dd16334cc998c2e292625c3db61a03f47d9c35fb1a0217cb5380541b1e59f0e"
+    },
+    {
+      "name": "roarr",
+      "version": "2.15.4",
+      "digest": "sha256:84e973663fbcd064f7546e5b39ac50017c3435f1186c3fc0ca3e3957f7d8642d"
+    },
+    {
+      "name": "run-applescript",
+      "version": "7.1.0",
+      "digest": "sha256:502309607976bcc8530d116d33d3d61a5bede9d8b1b4f6f81d88d1b76cc5b95c"
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.2.1",
+      "digest": "sha256:57d787833c2ccd7b189cf242bac30e4e3be2ab597559d8113276aade4a860ac3"
+    },
+    {
+      "name": "semver-compare",
+      "version": "1.0.0",
+      "digest": "sha256:fc913ea3bc4d170b92adfc1e71b75139dd3ff9f39ca46c6e5356b37d6c1f32b5"
+    },
+    {
+      "name": "semver",
+      "version": "7.8.5",
+      "digest": "sha256:ef73ed8133cddb85ccddd94ef34bb01bb417b4e184747774f30c78c319c84ccc"
+    },
+    {
+      "name": "serialize-error",
+      "version": "7.0.1",
+      "digest": "sha256:77c0f2fdbcaca5ab782715da3396a6fecb61fda30844daacaeec05d33c2d113e"
+    },
+    {
+      "name": "sharp",
+      "version": "0.35.3",
+      "digest": "sha256:b943672e75a83d4ce475cfe16c407972840d29dbcc2c9edf8d28511eddd0f996"
+    },
+    {
+      "name": "source-map-js",
+      "version": "1.2.1",
+      "digest": "sha256:76abd20d0fd81fc684e8b3c0e41177269f09197dea71fa1d50a0364fa280acda"
+    },
+    {
+      "name": "sprintf-js",
+      "version": "1.1.3",
+      "digest": "sha256:883f379f24694afcb093f47aaafadec3ca1065af1ae652c364a3d7bf25bc9e0c"
+    },
+    {
+      "name": "string-width",
+      "version": "7.2.0",
+      "digest": "sha256:b85382c244e9fc739740d7bfdca4b539778bf65e713907ea6d3c6d07e4103717"
+    },
+    {
+      "name": "string-width",
+      "version": "8.2.2",
+      "digest": "sha256:c36ee62911778723e34c511189e61080c218ccb11f4d64b0d6b8d9efb6aa5c10"
+    },
+    {
+      "name": "strip-ansi",
+      "version": "7.2.0",
+      "digest": "sha256:9bfa39730e152200258d6623078e19aff00644acc6459ecf20aacfc8bc63fa6c"
+    },
+    {
+      "name": "tar",
+      "version": "7.5.22",
+      "digest": "sha256:8285067e1b8a820fecc8a03b20a9904a288e5d298ba928b4b377edb9b3ef0a41"
+    },
+    {
+      "name": "tiny-inflate",
+      "version": "1.0.3",
+      "digest": "sha256:fcb3bb3ffe45f8dc5844f3e2c80f06ce91f60866813679d0735de089e09ca233"
+    },
+    {
+      "name": "tslib",
+      "version": "2.8.1",
+      "digest": "sha256:2db6bb6e55b98eedaeb183f273e1b7fad3c08de082494bf8e8fbc3d4599e8dcb"
+    },
+    {
+      "name": "type-fest",
+      "version": "0.13.1",
+      "digest": "sha256:31da441957382bff5162a9d6ffdfeb100dce2436a07278ca92743c313d228389"
+    },
+    {
+      "name": "typed-query-selector",
+      "version": "2.12.2",
+      "digest": "sha256:6aff4c63a83048d09bec7d3702255d5eafbac4a966590f1917c51e7032f69369"
+    },
+    {
+      "name": "undici-types",
+      "version": "7.16.0",
+      "digest": "sha256:869dec90f6b507a2d71916dbc8d4ef3d75c0dd8d4066548bfbe8d77cc41315bb"
+    },
+    {
+      "name": "unicode-properties",
+      "version": "1.4.1",
+      "digest": "sha256:a48f8ca2a9a65b41b892be726a9c760d57cef21e60888238744a446727adcf20"
+    },
+    {
+      "name": "unicode-trie",
+      "version": "2.0.0",
+      "digest": "sha256:0f4491fc7a325bc7399549046667da7c336ad0cf2b5999fcab1650757d2858e4"
+    },
+    {
+      "name": "web-streams-polyfill",
+      "version": "3.3.3",
+      "digest": "sha256:8cd5924d7a979dfe8364c3261be7293152443167076fa5f170564e6a3222af13"
+    },
+    {
+      "name": "webdriver-bidi-protocol",
+      "version": "0.4.2",
+      "digest": "sha256:ab82a782e1679affa6248e33acbe4fd1e0651a9eaa9e34d4469a913df64a3ff3"
+    },
+    {
+      "name": "wrap-ansi",
+      "version": "9.0.2",
+      "digest": "sha256:d2622e49ecb221d551ea0069ffeb684c7c2d4115401d021bfee3e51d89c7eabd"
+    },
+    {
+      "name": "ws",
+      "version": "8.21.1",
+      "digest": "sha256:484620e51cb5015d111e52294ed54dcfd66ed3284999fc16093a35d58a0af996"
+    },
+    {
+      "name": "wsl-utils",
+      "version": "0.1.0",
+      "digest": "sha256:b236cc5813fd4493aa17be0792e3b180df65a4ea3907da05dd799bb15804e4fb"
+    },
+    {
+      "name": "y18n",
+      "version": "5.0.8",
+      "digest": "sha256:54af894eda0fbc193d9e5d289a7af3631dafe2f5fcff4f060e2c9a2c2cb798bf"
+    },
+    {
+      "name": "yallist",
+      "version": "5.0.0",
+      "digest": "sha256:406bf2ad99d27deda9d73249b4ecacc1bee1a45f33afdf2cd648fe6725207326"
+    },
+    {
+      "name": "yargs-parser",
+      "version": "22.0.0",
+      "digest": "sha256:ad4401f08168f7c51334eb97b13667bdd3b480c0aa39adc76c3e73e893af82b6"
+    },
+    {
+      "name": "yargs",
+      "version": "18.1.0",
+      "digest": "sha256:1a9af827f13ab17a8a1a9375359cfdfac0ea7ffd4230ca62b80c300d5c2bf523"
+    },
+    {
+      "name": "zod",
+      "version": "3.25.76",
+      "digest": "sha256:7c6dc5843a1ea330f776a13cf573ed8f41718bb461bb15fa071ec1abcd801e63"
+    }
+  ],
+  "packages": [
+    {
+      "specifier": "@svml/provider-google-vertex",
+      "package": {
+        "name": "@svml/provider-google-vertex",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:a1fe53038e8c6c126a1325f15a23061263d85ea4ff7067e36fb9855e77cf4a40",
+      "closureDigest": "sha256:599ed165d800fa2a29d36291f1861c6c4a8dd35d75a85dbec004de584cfec8ad"
+    },
+    {
+      "specifier": "@svml/provider-hyperframes-local",
+      "package": {
+        "name": "@svml/provider-hyperframes-local",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:6dbd880063eb20cfd7e1eee749184c1935c353a0cdb732b188508a2410e04eb2",
+      "closureDigest": "sha256:80315b164819acd9d88b2000c6ab7c6720521d76b673cbd7aaf0e635abdc6fec"
+    },
+    {
+      "specifier": "@svml/provider-kie",
+      "package": {
+        "name": "@svml/provider-kie",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:bfdc56dd5b01deb5da2c8cfe20e039387b0a9ffb1ce66fceae11378f28cb1bdb",
+      "closureDigest": "sha256:995ae3e691362edd7c7678f69e0f4845c5fdaa4a4d0a44da1d0c0fbe37140c00"
+    },
+    {
+      "specifier": "@svml/provider-media-local",
+      "package": {
+        "name": "@svml/provider-media-local",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:e232139c8339387f3404c29d9ea0829b7be78fb742ee48671727d9c7f899a30b",
+      "closureDigest": "sha256:b57bca51e0aa39f20bc2894d569f5815dcad14800e89487cef4eefaee456d92a"
+    },
+    {
+      "specifier": "@svml/provider-whisperx-local",
+      "package": {
+        "name": "@svml/provider-whisperx-local",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:8a1b222a41c2b8a119c973c783f14efb103745f3ff960c1d8f04aaff534918c9",
+      "closureDigest": "sha256:6d4abbe0d5215a78fe108fec15c5577f73b55c8a5a1049027aaf33d54af964e5"
+    }
+  ],
+  "digest": "sha256:1de4569c947957d0e633edb8d6c472746ce63edc5076ce2d1ad24a86161abf38"
+}
