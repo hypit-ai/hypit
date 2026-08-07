@@ -6,7 +6,7 @@
   "endpoints": [
     {
       "use": "@narratage/provider-kie",
-      "instance": "kie.echo-pro-aroll",
+      "instance": "kie.talking-head-aroll",
       "lane": "generation",
       "config": {
         "apiKeyEnv": "KIE_API_KEY",
@@ -15,7 +15,7 @@
     },
     {
       "use": "@narratage/provider-media-local",
-      "instance": "media.echo-pro-aroll",
+      "instance": "media.talking-head-aroll",
       "lane": "media",
       "config": {
         "defaultConcurrency": 2
@@ -23,7 +23,7 @@
     },
     {
       "use": "@narratage/provider-whisperx-local",
-      "instance": "whisperx.echo-pro-aroll",
+      "instance": "whisperx.talking-head-aroll",
       "lane": "alignment",
       "config": {
         "defaultConcurrency": 1
@@ -31,7 +31,7 @@
     },
     {
       "use": "@narratage/provider-google-vertex",
-      "instance": "vertex.echo-pro-aroll",
+      "instance": "vertex.talking-head-aroll",
       "lane": "planning",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
@@ -42,7 +42,7 @@
     },
     {
       "use": "@narratage/provider-hyperframes-local",
-      "instance": "hyperframes.echo-pro-aroll",
+      "instance": "hyperframes.talking-head-aroll",
       "lane": "render",
       "config": {
         "workers": 2,

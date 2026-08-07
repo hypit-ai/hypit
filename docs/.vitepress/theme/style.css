@@ -6,6 +6,12 @@
  * script in config.ts and kept in sync across navigation by theme/Layout.vue.
  */
 
+.svml-selection {
+  --shiki-light: #8250DF !important;
+  --shiki-dark: #D2A8FF !important;
+  font-weight: 600;
+}
+
 html.home-page {
   --paper: #2C2126;
   --paper-light: #3D2A33;

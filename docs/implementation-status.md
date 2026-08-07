@@ -28,7 +28,7 @@ Runtime-selected fallback.
 The resulting artifact is a 57.13-second 720×1280, 30 fps H.264/AAC MP4. Frame inspection confirmed
 the four ordered speech visuals and measured Caption Track in the final Composition. The checked-in
 source, exact Run, reuse Run and Runtime assembly are in
-[`examples/echo-pro-aroll`](../examples/echo-pro-aroll/README.md). Credentials, presenter assets,
+[`examples/talking-head-aroll`](../examples/talking-head-aroll/README.md). Credentials, presenter assets,
 Build databases and generated outputs are intentionally ignored. A fresh uninterrupted all-`exact`
 acceptance remains part of automating the opt-in live harness; the explicit Candidate Build did not
 bypass any downstream implementation gap.
