@@ -1,29 +1,23 @@
 # `@svml/video-cli`
 
-Official v2 video command-line Distribution.
+Official v2 video command application. It selects the Text compiler Host and the video
+Runtime-config adapter registry, but deliberately carries no built-in author or Run package.
 
-Unlike the generic `@svml/cli` engine, this application is an explicit trusted video assembly. It
-depends on the one ordinary `@svml/prelude-video` aggregate rather than importing each video package
-itself, and registers the optional `@svml/run-text` Frontend. The current prelude contributes:
-
-- package-owned Text Surface Host facets consumed by `@svml/compiler-text-node`;
-- the Script raw Surface and its audiovisual Narrative contract dependency;
-- the SVS alternate Frontend and generic Recipe manifest;
-- the official Speech, WhisperX, provider-free Caption, B-roll, Text, Film and HyperFrames Render
-  Structured Surfaces plus their exact static dependencies.
-
-It does not place these packages in Core and does not grant source imports network, credential or
-process permissions.
+Every Frontend, Surface, deterministic Producer and Validator is activated from an explicit
+`svml.packages.lock`. Installing a new author package therefore does not require a video CLI or Core
+release. Source imports select logical author meaning only after the Host has reviewed and locked
+the corresponding physical package. They never grant network, credential or process authority.
 
 From the repository:
 
 ```bash
-pnpm svml:v2 check path/to/main.svml
-pnpm svml:v2 lock-packages ./svml.packages.lock --package @example/cards --root .
+pnpm svml:v2 lock-packages ./svml.packages.lock \
+  --package @svml/run-text --package @svml/script --package @example/cards --root .
 pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 check path/to/build.svrun
-pnpm svml:v2 plan path/to/build.svrun
-pnpm svml:v2 build path/to/build.svrun --runtime ./svml.runtime.json --build-id delivery-01 --follow
+pnpm svml:v2 check path/to/build.svrun --package-lock ./svml.packages.lock --root .
+pnpm svml:v2 plan path/to/build.svrun --package-lock ./svml.packages.lock --root .
+pnpm svml:v2 build path/to/build.svrun --package-lock ./svml.packages.lock \
+  --runtime ./svml.runtime.json --build-id delivery-01 --follow --root .
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
 pnpm svml:v2 builds --runtime ./svml.runtime.json
 pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json

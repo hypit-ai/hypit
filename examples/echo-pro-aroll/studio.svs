@@ -1,0 +1,49 @@
+<?svml using="@svml/svs@1"?>
+
+<sheet version="1">
+  speech.normal {
+    language: en;
+    pace: normal;
+    padding: 0.3;
+    min: 4;
+    max: 15;
+    rounding: ceil;
+  }
+
+  speaker.echo-pro {
+    kind: ugc-talking-head;
+    model: mini;
+    resolution: 720p;
+    aspect-ratio: 9:16;
+
+    composition-stability: soft-locked;
+    camera-motion: none;
+    edit-rhythm: continuous-take;
+    performance: natural-explainer;
+    gesture: natural;
+    voice-mode: single-speaker;
+  }
+
+  film.vertical {
+    width: 720;
+    height: 1280;
+    frame-rate: 30;
+    background: #09090B;
+  }
+
+  caption.primary {
+    stack-order: 70;
+    x: 0.08;
+    y: 0.74;
+    width: 0.84;
+    font: Inter;
+    weight: 800;
+    size: 44;
+    line-height: 1;
+    align: center;
+    fill: #FFFFFF;
+    background: #09090BCC;
+    padding: 14 20;
+    radius: 16;
+  }
+</sheet>

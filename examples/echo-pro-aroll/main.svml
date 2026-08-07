@@ -1,0 +1,137 @@
+<?svml using="@svml/text@1"?>
+
+<svml>
+  <import from="@svml/script@1"/>
+  <import as="media" from="@svml/media@1"/>
+  <import as="estimate" from="@svml/estimate@1"/>
+  <import as="speaker" from="@svml/seedance-speaker@1"/>
+  <import as="speech" from="@svml/speech@1"/>
+  <import as="whisperx" from="@svml/whisperx@1"/>
+  <import as="caption" from="@svml/caption@1"/>
+  <import as="caption-ai" from="@svml/caption-gemini@1"/>
+  <import as="film" from="@svml/film@1"/>
+  <import as="render" from="@svml/hyperframes-render@1"/>
+  <import as="studio" source="./studio.svs"/>
+  <import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
+
+  <script id="story">
+    <hook>
+      <HOST>Girls, you need to hear this. Never let anyone take credit for your work. For years, my boss presented my ideas as his, and I kept telling myself I needed proof—but the truth is, I was too scared to speak up.
+    </hook>
+
+    <meeting>
+      <HOST>Then I found Echo Pro: a card-sized recorder that snaps onto the back of my phone, paired with an AI agent. I brought it to one meeting. It captured every word, organized the minutes, and showed exactly where my work had been overlooked. For once, I felt seen.
+    </meeting>
+
+    <evidence>
+      <HOST>That gave me the courage I was missing. Before our month-end review, I gave Echo Pro the meeting notes and my actual work files. It connected the dots and turned everything into one clear, evidence-backed report of what I had really delivered.
+    </evidence>
+
+    <payoff>
+      <HOST>And guess what? I’m sitting in my old boss’s chair now. The first thing I did was give every person on my team an Echo Pro—so work gets easier, achievements stay visible, and no one has to fight alone just to get the credit they’ve earned.
+    </payoff>
+  </script>
+
+  <!-- Author-owned reference material. -->
+  <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
+  <media:Image id="presenter-with-echo" src="./assets/presenter-with-echo.png"/>
+  <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
+
+  <!-- Duration remains an explicit graph fact derived from the pronunciation projection. -->
+  <estimate:Speech id="hook-duration" source={story.segment.hook.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="meeting-duration" source={story.segment.meeting.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="evidence-duration" source={story.segment.evidence.speech} policy={studio.speech.normal}/>
+  <estimate:Speech id="payoff-duration" source={story.segment.payoff.speech} policy={studio.speech.normal}/>
+
+  <!-- Clean → product → product → clean; all four share the same voice reference. -->
+  <speaker:Take
+    id="hook-take"
+    dialogue={story.segment.hook.dialogue}
+    duration={hook-duration.duration}
+    recipe={studio.speaker.echo-pro}
+    kit={ugc.official-ugc-v1}
+  >
+    <speaker:Reference image={presenter-clean} role="character-and-scene"/>
+    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
+  </speaker:Take>
+
+  <speaker:Take
+    id="meeting-take"
+    dialogue={story.segment.meeting.dialogue}
+    duration={meeting-duration.duration}
+    recipe={studio.speaker.echo-pro}
+    kit={ugc.official-ugc-v1}
+  >
+    <speaker:Reference image={presenter-with-echo} role="character-and-scene"/>
+    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
+  </speaker:Take>
+
+  <speaker:Take
+    id="evidence-take"
+    dialogue={story.segment.evidence.dialogue}
+    duration={evidence-duration.duration}
+    recipe={studio.speaker.echo-pro}
+    kit={ugc.official-ugc-v1}
+  >
+    <speaker:Reference image={presenter-with-echo} role="character-and-scene"/>
+    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
+  </speaker:Take>
+
+  <speaker:Take
+    id="payoff-take"
+    dialogue={story.segment.payoff.dialogue}
+    duration={payoff-duration.duration}
+    recipe={studio.speaker.echo-pro}
+    kit={ugc.official-ugc-v1}
+  >
+    <speaker:Reference image={presenter-clean} role="character-and-scene"/>
+    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
+  </speaker:Take>
+
+  <!-- Four equal Takes become one ordered speech coordinate space and two peer Tracks. -->
+  <speech:Spine id="speech">
+    <speech:Take source={hook-take.video} segment={story.segment.hook}/>
+    <speech:Take source={meeting-take.video} segment={story.segment.meeting}/>
+    <speech:Take source={evidence-take.video} segment={story.segment.evidence}/>
+    <speech:Take source={payoff-take.video} segment={story.segment.payoff}/>
+  </speech:Spine>
+
+  <!-- One measured evidence pass locates the complete authored Script. -->
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+
+  <!-- Gemini sees display atoms and these requirements, never audio or timing. -->
+  <caption:Style id="primary-caption" appearance={studio.caption.primary} mode="proportional-word">
+    <caption:Cues>
+      Split each Script Segment into short complete semantic phrases of two to seven words.
+      Never cross a sentence or Segment boundary.
+    </caption:Cues>
+    <caption:Field id="important" type="boolean" min-per-cue="1" max-per-cue="2">
+      Select one or two words whose emphasis best communicates this Cue.
+    </caption:Field>
+  </caption:Style>
+
+  <caption:Program id="caption-program" narrative={story} default={primary-caption}/>
+  <caption-ai:Planner
+    id="caption-plan"
+    narrative={story}
+    program={caption-program}
+    model="gemini-2.5-flash"
+  />
+
+  <!-- Caption becomes an ordinary self-contained VisualTrack after joining the measured map. -->
+  <caption:Track
+    id="captions"
+    narrative={story}
+    map={timing.map}
+    program={caption-program}
+    plan={caption-plan.plan}
+  />
+
+  <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audioTrack}/>
+    <film:Track source={captions.track}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition}/>
+</svml>

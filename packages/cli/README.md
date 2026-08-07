@@ -17,9 +17,9 @@ type CliDistribution = {
 ```
 
 A Distribution is trusted application assembly, not Core data or source-import authority. The
-official `@svml/video-cli` selects `@svml/compiler-text-node`, `@svml/prelude-video` and the current
-video Runtime adapters. Another domain can reuse this command engine without installing those
-packages.
+official `@svml/video-cli` selects `@svml/compiler-text-node` and the current video Runtime
+adapters, but no author-package aggregate. A package lock selects the exact Author/Run packages.
+Another domain can reuse this command engine without installing any video package.
 
 `check` accepts any self-described Author or Run Source whose Header names a trusted Frontend.
 `plan` and `build` require a Run Source. Targets, Candidate selections and substitute fidelity may

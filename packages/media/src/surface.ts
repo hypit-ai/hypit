@@ -4,13 +4,24 @@ import type {
   StructuredSurfaceHandler,
 } from "@svml/text";
 
-const MEDIA_TYPES = new Map([
+const IMAGE_MEDIA_TYPES = new Map([
   [".avif", "image/avif"],
   [".gif", "image/gif"],
   [".jpeg", "image/jpeg"],
   [".jpg", "image/jpeg"],
   [".png", "image/png"],
   [".webp", "image/webp"],
+]);
+
+const AUDIO_MEDIA_TYPES = new Map([
+  [".aac", "audio/aac"],
+  [".flac", "audio/flac"],
+  [".m4a", "audio/mp4"],
+  [".mp3", "audio/mpeg"],
+  [".oga", "audio/ogg"],
+  [".ogg", "audio/ogg"],
+  [".opus", "audio/opus"],
+  [".wav", "audio/wav"],
 ]);
 
 function stringAttribute(element: StructuredElement, name: string): string {
@@ -27,25 +38,35 @@ function assertChildrenEmpty(element: StructuredElement): void {
   }
 }
 
-function mediaTypeFor(element: StructuredElement, source: string): string {
+function mediaTypeFor(
+  element: StructuredElement,
+  source: string,
+  kind: "image" | "audio",
+  known: ReadonlyMap<string, string>,
+): string {
   const explicit = element.attributes["media-type"];
   if (explicit !== undefined) {
-    if (typeof explicit !== "string" || !explicit.startsWith("image/")) {
-      throw new Error(`${element.name}.media-type must be an image media type`);
+    if (typeof explicit !== "string" || !explicit.startsWith(`${kind}/`)) {
+      throw new Error(`${element.name}.media-type must be an ${kind} media type`);
     }
     return explicit;
   }
   const clean = source.split(/[?#]/u, 1)[0]!.toLocaleLowerCase("en");
   const dot = clean.lastIndexOf(".");
-  const inferred = dot < 0 ? undefined : MEDIA_TYPES.get(clean.slice(dot));
+  const inferred = dot < 0 ? undefined : known.get(clean.slice(dot));
   if (inferred === undefined) {
-    throw new Error(`${element.name}.src needs a known image extension or an explicit media-type`);
+    throw new Error(`${element.name}.src needs a known ${kind} extension or an explicit media-type`);
   }
   return inferred;
 }
 
 /** Host resolves and stages the bytes; this Surface only declares their authored media meaning. */
-export const decodeMediaImageSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) => {
+async function decodeMediaAssetSurface(
+  element: StructuredElement,
+  resolveAsset: Parameters<StructuredSurfaceHandler>[0]["resolveAsset"],
+  kind: "image" | "audio",
+  known: ReadonlyMap<string, string>,
+) {
   const names = Object.keys(element.attributes).sort();
   if (names.join(",") !== "id,src" && names.join(",") !== "id,media-type,src") {
     throw new Error(`${element.name} requires id and src, with optional media-type`);
@@ -53,10 +74,10 @@ export const decodeMediaImageSurface: StructuredSurfaceHandler = async ({ elemen
   assertChildrenEmpty(element);
   const id = stringAttribute(element, "id");
   const source = stringAttribute(element, "src");
-  const mediaType = mediaTypeFor(element, source);
+  const mediaType = mediaTypeFor(element, source, kind, known);
   const resolved = await resolveAsset({ from: source, mediaType, range: element.range });
-  if (!resolved.artifact.mediaType.startsWith("image/")) {
-    throw new Error(`${element.name}.src did not resolve to an image artifact`);
+  if (!resolved.artifact.mediaType.startsWith(`${kind}/`)) {
+    throw new Error(`${element.name}.src did not resolve to an ${kind} artifact`);
   }
   return {
     records: [{
@@ -68,4 +89,10 @@ export const decodeMediaImageSurface: StructuredSurfaceHandler = async ({ elemen
     components: [],
     fragments: [],
   };
-};
+}
+
+export const decodeMediaImageSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) =>
+  await decodeMediaAssetSurface(element, resolveAsset, "image", IMAGE_MEDIA_TYPES);
+
+export const decodeMediaAudioSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) =>
+  await decodeMediaAssetSurface(element, resolveAsset, "audio", AUDIO_MEDIA_TYPES);

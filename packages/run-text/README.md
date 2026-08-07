@@ -25,6 +25,11 @@ Build Record as a zero-input Candidate. `<fragment>` instantiates a trusted pack
 export several Candidates backed by shared Operations. Two declarations are two instances; one
 declaration with several exports is one instance.
 
+The `output` on `<build-record>` may be the prior source's public output alias. The Host resolves it
+through its Build Catalog to the verified logical Record before Run compilation. Core never sees or
+trusts the presentation alias, and the historical value receives no automatic semantic-affinity
+claim against the output it is selected to satisfy.
+
 Imports form the opening prologue. They name Fragment libraries already admitted by the Host; they
 do not install packages. Provider credentials, queues, Stores, Endpoint bindings and inline
 callbacks are not Run language elements.

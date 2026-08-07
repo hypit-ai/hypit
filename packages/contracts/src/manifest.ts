@@ -628,6 +628,7 @@ export const mediaValidatorDigests = {
 
 export const mediaSurfaceImplementationDigests = {
   image: digestOf("@svml/media/image-surface@1"),
+  audio: digestOf("@svml/media/audio-surface@1"),
 } as const;
 
 export const mediaManifest: ModuleManifest = {
@@ -713,17 +714,30 @@ export const mediaManifest: ModuleManifest = {
     { name: contractTypes.compositableSurface.name, schema: compositableSurfaceSchema },
   ],
   capabilities: [],
-  surfaces: [{
-    name: "image",
-    tag: "Image",
-    mode: "structured",
-    outputs: [contractTypes.blobArtifact],
-    implementation: {
-      kind: "trusted-frontend-surface",
-      locator: "@svml/media/image-surface",
-      digest: mediaSurfaceImplementationDigests.image,
+  surfaces: [
+    {
+      name: "image",
+      tag: "Image",
+      mode: "structured",
+      outputs: [contractTypes.blobArtifact],
+      implementation: {
+        kind: "trusted-frontend-surface",
+        locator: "@svml/media/image-surface",
+        digest: mediaSurfaceImplementationDigests.image,
+      },
     },
-  }],
+    {
+      name: "audio",
+      tag: "Audio",
+      mode: "structured",
+      outputs: [contractTypes.blobArtifact],
+      implementation: {
+        kind: "trusted-frontend-surface",
+        locator: "@svml/media/audio-surface",
+        digest: mediaSurfaceImplementationDigests.audio,
+      },
+    },
+  ],
   producers: [],
 };
 
