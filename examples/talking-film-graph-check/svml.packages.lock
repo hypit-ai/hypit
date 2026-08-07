@@ -49,7 +49,7 @@
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:517aa8e72c832175bd09fb711a091fcab5e8d16af3fa0e6c302dc4b73afe277f"
+      "digest": "sha256:a9d0db9e25f2667602a3cc8735d6317b5ea821a187739d75c4f2c24d06a91381"
     },
     {
       "name": "@narratage/host",
@@ -244,7 +244,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:c52730036a392448eb17cada1dd16b22be9ecb721ba47fb8d8a8633f74e4e039",
-      "closureDigest": "sha256:74985d499a527c256c23191b188ca3d061d25f1e5fae91136460918438090b5b"
+      "closureDigest": "sha256:4bc35fc3ab4e4808586f26601acc3c72beec98806aeaa0f11d98781e123ca93c"
     },
     {
       "specifier": "@narratage/hyperframes",
@@ -325,7 +325,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:33c8544ab99b77c94af25a4620bf17e0b1b994cc505616933878c8ece586f666",
-      "closureDigest": "sha256:4afcf602ed33934feaaec18babbcebe016b51a310ef6c56f5a94363201cfd393"
+      "closureDigest": "sha256:b0a54d63ab4459257885d87cc247e86b9fed0c9d1bd704fd6fca8ce8f0a36a75"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -418,5 +418,5 @@
       "closureDigest": "sha256:777e0f036d3213461c2d441c30869e26206e1cbaea318dc213244a224444fcf3"
     }
   ],
-  "digest": "sha256:1a445f5c6c074683776245b048ce1ad4fec53e1e0d7b178560fff431a9e3b77b"
+  "digest": "sha256:080eaaa7628ed9d0a0beb719b1af83a0850a0792d858ed5fcb199394ec8471b9"
 }
