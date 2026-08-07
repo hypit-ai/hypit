@@ -56,25 +56,13 @@ function normalizeRoot(root: CandidateRoot): CandidateRoot {
 }
 
 function normalizeOutput(output: LogicalOutput): LogicalOutput {
-  const base = {
+  return {
     id: output.id,
     type: output.type,
     primary: output.primary,
     semanticInputs: [...output.semanticInputs].map(normalizeRef).sort((a, b) =>
       valueRefKey(a).localeCompare(valueRefKey(b))),
   };
-  return output.affinity === undefined
-    ? base
-    : {
-        ...base,
-        affinity: [...output.affinity]
-          .map((constraint) => ({
-            resultPointer: constraint.resultPointer,
-            source: normalizeRef(constraint.source),
-            sourcePointer: constraint.sourcePointer,
-          }))
-          .sort((a, b) => a.resultPointer.localeCompare(b.resultPointer)),
-      };
 }
 
 function normalizeCandidate(candidate: Candidate): Candidate {
@@ -233,23 +221,6 @@ function graphValueType(program: LinkedProgram, graph: CompiledGraph, ref: Graph
   }
   if (ref.kind === "logical-output") return resolveLogicalOutput(graph, ref.id).type;
   return operationResultType(program, resolveOperation(graph, ref.operation));
-}
-
-function verifyAffinityPointer(pointer: string, subject: string): void {
-  invariant(
-    pointer === "" || pointer.startsWith("/"),
-    "INVALID_AFFINITY_POINTER",
-    `${subject} has invalid JSON Pointer ${pointer}`,
-    subject,
-  );
-  for (const token of pointer === "" ? [] : pointer.slice(1).split("/")) {
-    invariant(
-      !/~(?:[^01]|$)/u.test(token),
-      "INVALID_AFFINITY_POINTER",
-      `${subject} has invalid JSON Pointer escape in ${pointer}`,
-      subject,
-    );
-  }
 }
 
 function exactKeys(
@@ -429,14 +400,6 @@ export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph
       `${output.id} repeats a Semantic Input`,
       output.id,
     );
-    const pointers = new Set<string>();
-    for (const constraint of output.affinity ?? []) {
-      verifyAffinityPointer(constraint.resultPointer, output.id);
-      verifyAffinityPointer(constraint.sourcePointer, output.id);
-      invariant(!pointers.has(constraint.resultPointer), "DUPLICATE_AFFINITY", `${output.id} repeats affinity`);
-      pointers.add(constraint.resultPointer);
-      graphValueType(program, graph, constraint.source);
-    }
   }
 
   for (const operation of graph.operations) {

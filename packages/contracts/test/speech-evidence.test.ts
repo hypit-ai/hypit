@@ -23,11 +23,9 @@ test("speech evidence uses integer rational boundary projection rather than floa
   assert.equal(programSpaceSampleFrames(ntsc, 48_000), 48_048);
 });
 
-test("SpeechEvidenceAudio binds source bytes, evidence bytes and the complete sample map", () => {
+test("SpeechEvidenceAudio records evidence bytes and the complete source-to-evidence sample map", () => {
   const value = sealSpeechEvidenceAudio({
     contract: "svml.speech-evidence-audio@1",
-    programSpaceDigest: digestOf("program"),
-    sourceAudioArtifactDigest: digestOf("master"),
     artifact: {
       kind: "blob",
       digest: digestOf("evidence"),
@@ -48,7 +46,6 @@ test("SpeechEvidenceAudio binds source bytes, evidence bytes and the complete sa
       evidenceSampleFrames: 16_000,
       sourceOriginSample: 0,
       evidenceOriginSample: 0,
-      resamplerImplementation: "fixture",
     },
   });
   assert.doesNotThrow(() => assertSpeechEvidenceAudioIdentity(value));

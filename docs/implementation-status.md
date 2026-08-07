@@ -61,7 +61,7 @@ Implemented:
   changing Author imports or Author Graph identity;
 - `@svml/validation`: package-owned semantic validators and common Record admission;
 - `@svml/component-kit`: host-neutral deterministic Producer/validator registration;
-- `@svml/prompt-kit`: digest-bound author-time compilation of declarative fixed/axis/variant/slot
+- `@svml/prompt-kit`: immutable author-time compilation of declarative fixed/axis/variant/slot
   Kit Specs and Invocations into authored ordered Prompt Programs;
 - `@svml/host`, `@svml/workspace-fs-node`, `@svml/compiler-node`: replaceable Workspace and the
   reference Node compiler Host;
@@ -69,23 +69,27 @@ Implemented:
   loading;
 - `@svml/compiler-text-node`: the explicit official Text Frontend and Text Surface Host assembly;
 - `@svml/cli`: a generic command engine requiring one explicit `CliDistribution`;
-- `@svml/video-cli`: the current video command application selecting the Text compiler and video
-  Runtime-config adapter registry, with no built-in author-package aggregate;
+- `@svml/video-cli`: the current video command application selecting the Text compiler, with no
+  built-in author-package aggregate or Provider registry;
 - `@svml/text`, `@svml/script`, `@svml/svs`: official markup, Script and Recipe Frontends without
   Core parser branches; `.svml` and `.svs` remain human suffix conventions only;
 - `@svml/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
   recoverable Endpoint lifecycle;
+- `@svml/runtime-adapter`, `@svml/runtime-adapter-node`: locked deployment-adapter ABI, physical
+  package-byte identity, project-root executable resolution and read-only diagnostics;
 - `@svml/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
 - `@svml/store-sqlite`: durable CAS BuildStore and OperationStore;
 - `@svml/artifact-store-fs`, `@svml/artifact-store-s3`: interchangeable content-addressed bytes;
 - `@svml/credential-store-env`: explicit credential slots without secrets in BuildState;
 - `@svml/local`: zero-service developer assembly over SQLite and filesystem defaults;
-- declarative `svml.runtime.json` loading through an explicit adapter registry, with TypeScript
-  Runtime assembly retained as the advanced embedding API;
+- declarative `svml.runtime.json` loading through a separate locked Runtime Adapter package closure,
+  with TypeScript Runtime assembly retained as the advanced embedding API;
 - domain-neutral Build archive inspection and Record egress: accepted intermediate Records remain
   durable independently of optional `inspect` / `get --to` Host reads;
 - Host-only Build Catalog history and source output aliases through `builds`, `inspect` and
   `get --name`, without changing Core Build identity or Runtime Closure;
+- read-only `doctor`, filesystem streaming Artifact transfer and explicit dry-run/apply reachability
+  GC over every retained BuildState and Operation;
 - `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
   invocation seams.
 
@@ -110,10 +114,14 @@ Implemented:
 - provider-neutral all-stream media inspection, attached-picture-safe selection, synchronized A/V
   normalization, audio-program rendering and final mux contracts;
 - `@svml/provider-media-local`: bounded shell-free ffprobe/ffmpeg realization;
-- canonical 48 kHz speech master to digest-bound 16 kHz mono evidence-audio projection;
+- canonical 48 kHz speech master to content-addressed 16 kHz mono evidence-audio projection;
 - `@svml/provider-whisperx-local` and `services/whisperx`: pinned warm local WhisperX execution;
 - `@svml/provider-hyperframes-local`: finite-frame parallel Chrome rendering with output probe
   validation;
+- `@svml/image-transform`: explicit image-plus-Program to image graph component, including the
+  extracted Twinit GPT Image YCrCb denoise preset;
+- `@svml/provider-image-opencv-local` and `services/image-opencv`: bounded OpenCV/NumPy execution
+  with a locked Python 3.13 environment that returns only a new content-addressed image Blob;
 - one Scheduler with global and named lane concurrency shared across Builds.
 
 Not implemented:
@@ -121,7 +129,7 @@ Not implemented:
 - the opt-in, credential-free-by-default live acceptance harness around the real talking-film Build;
 - AWS media, WhisperX and HyperFrames Endpoint packages—the generic Lambda transport exists;
 - Keychain, Secrets Manager or Vault credential adapters;
-- production multipart/ranged Artifact transfer and retention/garbage collection;
+- production S3 multipart/ranged Artifact transfer and deployment-specific Build release policy;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
 - arbitrary Volcengine, Fal, API-key Gemini or Hypit Endpoint packages.
 
@@ -178,7 +186,8 @@ permission enforcement and loaded-code attestation remain release work.
 
 - TypeScript v1 and v2 checks pass;
 - v1 research oracle: 35/35 tests;
-- the v2 suite passes with three environment-gated browser/service tests skipped by default;
+- the v2 suite passes; browser, paid-Provider and heavyweight local-service acceptance tests remain
+  environment-gated and are skipped when their prerequisites are absent;
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;

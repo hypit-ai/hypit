@@ -82,7 +82,6 @@ const filmProgram = sealFilmProgram({
 const textProgram = sealTextTrackProgram({
   contract: "svml.text-track-program@1",
   id: "title-track",
-  programSpaceDigest: space.digest,
   items: [{
     id: "title",
     text: "Semantic Video Markup Language",
@@ -97,7 +96,6 @@ const background = sealVisualTrack({
   contract: "svml.visual-track@1",
   visualIr: "svml.hyperframes-visual-ir@1",
   id: "background-track",
-  programSpaceDigest: space.digest,
   presents: [{
     id: "background",
     span: { startFrame: 0, endFrameExclusive: 120 },
@@ -108,7 +106,6 @@ const background = sealVisualTrack({
 const audio = sealAudioTrack({
   contract: "svml.audio-track@1",
   id: "empty-audio-track",
-  programSpaceDigest: space.digest,
   clips: [],
 });
 
@@ -180,6 +177,7 @@ const hyperframesInstance = elaborateGraphFragment(linked, hyperframesDocumentFr
   fragment: hyperframesDocumentFragment.id,
   inputs: {
     composition: { kind: "logical-output", id: "main.composition" },
+    space: { kind: "record", id: "space" },
   },
 });
 const hyperframesContribution = bindAuthorFragment(hyperframesInstance, {
@@ -229,24 +227,39 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
     outputs: { track: stored(renderTextTrack(inline(inputs.space) as typeof space, inline(inputs.program) as typeof textProgram)) },
     needs: {},
   }));
-  registry.registerProducer(filmProducers.createTrackSet, createFilmTrackSetImplementationDigest, ({ inputs }) => ({
-    outputs: { set: stored(createFilmTrackSet(inline(inputs.space) as typeof space)) },
+  registry.registerProducer(filmProducers.createTrackSet, createFilmTrackSetImplementationDigest, () => ({
+    outputs: { set: stored(createFilmTrackSet()) },
     needs: {},
   }));
   registry.registerProducer(filmProducers.appendVisualTrack, appendFilmVisualTrackImplementationDigest, ({ inputs }) => ({
-    outputs: { set: stored(appendFilmVisualTrack(inline(inputs.set) as never, inline(inputs.track) as never)) },
+    outputs: { set: stored(appendFilmVisualTrack(
+      inline(inputs.set) as never,
+      inline(inputs.space) as typeof space,
+      inline(inputs.track) as never,
+    )) },
     needs: {},
   }));
   registry.registerProducer(filmProducers.appendAudioTrack, appendFilmAudioTrackImplementationDigest, ({ inputs }) => ({
-    outputs: { set: stored(appendFilmAudioTrack(inline(inputs.set) as never, inline(inputs.track) as never)) },
+    outputs: { set: stored(appendFilmAudioTrack(
+      inline(inputs.set) as never,
+      inline(inputs.space) as typeof space,
+      inline(inputs.track) as never,
+    )) },
     needs: {},
   }));
   registry.registerProducer(filmProducers.compileComposition, compileFilmCompositionImplementationDigest, ({ inputs }) => ({
-    outputs: { composition: stored(compileFilmComposition(inline(inputs.program) as never, inline(inputs.set) as never)) },
+    outputs: { composition: stored(compileFilmComposition(
+      inline(inputs.program) as never,
+      inline(inputs.space) as typeof space,
+      inline(inputs.set) as never,
+    )) },
     needs: {},
   }));
   registry.registerProducer(hyperframesProducers.compile, compileHyperframesImplementationDigest, ({ inputs }) => ({
-    outputs: { document: stored(compileHyperframesDocument(inline(inputs.composition) as never)) },
+    outputs: { document: stored(compileHyperframesDocument(
+      inline(inputs.composition) as never,
+      inline(inputs.space) as typeof space,
+    )) },
     needs: {},
   }));
 
@@ -261,7 +274,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
 });
 
 test("Film rejects duplicate Track ids before Composition", () => {
-  const set = appendFilmVisualTrack(createFilmTrackSet(space), background);
+  const set = appendFilmVisualTrack(createFilmTrackSet(), space, background);
   const duplicate = sealVisualTrack({ ...background });
-  assert.throws(() => appendFilmVisualTrack(set, duplicate), /already contains Track id/u);
+  assert.throws(() => appendFilmVisualTrack(set, space, duplicate), /already contains Track id/u);
 });

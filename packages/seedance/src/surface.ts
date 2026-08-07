@@ -1,6 +1,5 @@
 import { artifactTypes } from "@svml/artifact";
 import { contractTypes } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
 import type { BlobRef, CanonicalValue } from "@svml/protocol";
 import type {
   StructuredElement,
@@ -219,19 +218,12 @@ function referencePrompt(values: readonly ReferenceInput[]): string {
   return roles.length === 0 ? "" : `\n\nReference roles:\n${roles.join("\n")}`;
 }
 
-function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): {
-  readonly id: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly dialogue: string;
-  readonly excerptDigest: string;
-} {
+function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): { readonly dialogue: string } {
   if (!sameType(reference.type, contractTypes.narrativeDialogueExcerpt)) {
     throw new Error(`${subject} must reference a NarrativeDialogueExcerpt such as script.segment.opening.dialogue`);
   }
   const value = inline(reference, subject) as unknown as {
     readonly contract: string;
-    readonly excerptDigest: string;
     readonly dialogue?: string;
     readonly [key: string]: CanonicalValue | undefined;
   };
@@ -244,16 +236,8 @@ function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): 
   ) {
     throw new Error(`${subject} NarrativeDialogueExcerpt is invalid`);
   }
-  const { excerptDigest: _digest, ...content } = value;
-  if (value.excerptDigest !== digestOf(content)) throw new Error(`${subject} NarrativeDialogueExcerpt digest differs`);
   if (value.dialogue.trim().length === 0) throw new Error(`${subject} contains no spoken text`);
-  return {
-    id: value.id,
-    tokenStart: value.tokenStart as number,
-    tokenEndExclusive: value.tokenEndExclusive as number,
-    dialogue: value.dialogue,
-    excerptDigest: value.excerptDigest,
-  };
+  return { dialogue: value.dialogue };
 }
 
 function speechDurationReference(
@@ -355,12 +339,6 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
       aspectRatio: settings.aspectRatio,
       generateAudio: true,
       webSearch: settings.webSearch,
-      segment: {
-        id: spoken.id,
-        tokenStart: spoken.tokenStart,
-        tokenEndExclusive: spoken.tokenEndExclusive,
-        dialogueExcerptDigest: spoken.excerptDigest as ReturnType<typeof digestOf>,
-      },
     });
     const id = stringAttribute(element, "id");
     const programId = `${id}.program`;

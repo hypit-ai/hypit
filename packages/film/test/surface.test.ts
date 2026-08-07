@@ -69,13 +69,11 @@ const visual = sealVisualTrack({
   contract: "svml.visual-track@1",
   visualIr: "svml.hyperframes-visual-ir@1",
   id: "visual",
-  programSpaceDigest: space.digest,
   presents: [],
 });
 const audio = sealAudioTrack({
   contract: "svml.audio-track@1",
   id: "audio",
-  programSpaceDigest: space.digest,
   clips: [],
 });
 
@@ -161,9 +159,6 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
   const program = compiled.module.records.find((record) => record.type.name === filmTypes.program.name);
   assert.deepEqual(program?.value.kind === "inline" ? program.value.value : undefined, {
     contract: "svml.film-program@1",
-    digest: program?.value.kind === "inline"
-      ? (program.value.value as { readonly digest: string }).digest
-      : undefined,
     id: "main",
     frameRate: { numerator: 30, denominator: 1 },
     canvas: { width: 1080, height: 1920, clearColor: "#09090B" },

@@ -1,5 +1,4 @@
-import type { ProgramSpace, TimingQuality } from "@svml/contracts";
-import type { Digest } from "@svml/protocol";
+import type { TimingQuality } from "@svml/contracts";
 
 export type CaptionFieldValueSchema =
   | { readonly kind: "boolean" }
@@ -55,11 +54,7 @@ export type CaptionPlannedRun = {
 /** Planner-neutral result. Model/provider identity remains in the producing Graph and Receipt. */
 export type CaptionPlan = {
   readonly contract: "svml.caption-plan@1";
-  readonly narrativeDigest: Digest;
-  readonly captionProgramDigest: Digest;
-  readonly planningRequestDigest: Digest;
   readonly runs: readonly CaptionPlannedRun[];
-  readonly planDigest: Digest;
 };
 
 export type CaptionStyleIntent = {
@@ -71,7 +66,6 @@ export type CaptionStyleIntent = {
     readonly stackingOrder: number;
     readonly style: CaptionTrackProgram["style"];
   };
-  readonly digest: Digest;
 };
 
 export type CaptionProgramRun = {
@@ -84,12 +78,10 @@ export type CaptionProgramRun = {
 export type CaptionProgram = {
   readonly contract: "svml.caption-program@1";
   readonly id: string;
-  readonly narrativeDigest: Digest;
   readonly defaultStyleId: string;
   readonly styles: readonly CaptionStyleIntent[];
   readonly atoms: readonly CaptionDisplayAtom[];
   readonly runs: readonly CaptionProgramRun[];
-  readonly digest: Digest;
 };
 
 export type TimedCaptionRefinement = {
@@ -123,10 +115,8 @@ export type TimedCaptionRegion = {
 
 export type TimedCaptionProjection = {
   readonly contract: "svml.timed-caption-projection@1";
-  readonly programSpace: ProgramSpace;
   readonly text: string;
   readonly regions: readonly TimedCaptionRegion[];
-  readonly projectionDigest: Digest;
 };
 
 export type CaptionPresentationMode = "whole" | "proportional-word" | "character-flow";
@@ -150,13 +140,11 @@ export type CaptionPresentationPlan = {
   readonly contract: "svml.caption-presentation-plan@0";
   readonly mode: CaptionPresentationMode;
   readonly units: readonly CaptionPresentationUnit[];
-  readonly planDigest: Digest;
 };
 
 /** Official caption package's author-facing lowering program, not a Core type. */
 export type CaptionTrackProgram = {
   readonly contract: "svml.caption-track-program@1";
-  readonly digest: Digest;
   readonly id: string;
   readonly mode: CaptionPresentationMode;
   readonly stacking: {

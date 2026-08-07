@@ -680,19 +680,6 @@ export function parseScript(
   if (anchors.length !== 2 * tokens.length + 2 * segments.length) {
     fail("SCRIPT_ANCHOR_CARDINALITY", "Semantic anchor cardinality is not 2M + 2N.");
   }
-  const semanticPayload = {
-    contract: "svml.semantic-index@0" as const,
-    anchors,
-    tokens: tokens.map((token) => ({
-      id: token.id,
-      segmentId: token.segmentId,
-      segmentTokenIndex: token.segmentTokenIndex,
-      normalized: token.normalized,
-      startAnchorId: token.startAnchorId,
-      endAnchorId: token.endAnchorId,
-    })),
-  };
-
   return {
     contract: "svml.narrative@0",
     segments,
@@ -708,7 +695,6 @@ export function parseScript(
     semanticIndex: {
       contract: "svml.semantic-index@0",
       anchors,
-      digest: digestOf(semanticPayload),
     },
     serializations: {
       dialogue: dialogueTurns.join("\n"),

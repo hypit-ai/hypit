@@ -278,12 +278,7 @@ export function parseMediaInspection(args: {
     : ["unknown"];
   return sealMediaInspection({
     contract: "svml.media-inspection@1",
-    source: args.source,
     container: { formatNames: formatNames.length === 0 ? ["unknown"] : formatNames },
     streams: parsed.sort((left, right) => left.index - right.index),
-    probe: {
-      algorithm: "ffprobe-decoded-units-json@1",
-      implementation: args.ffprobeVersion,
-    },
   });
 }

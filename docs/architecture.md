@@ -66,8 +66,7 @@ An Author Graph is the typed meaning produced from author source. Its public res
 
 - the nominal Type it promises;
 - a Primary Candidate;
-- the author-visible semantic inputs an implementation may depend on;
-- optional declarative affinity constraints.
+- the author-visible semantic inputs an implementation may depend on.
 
 The Author Graph may contain authored Records, Candidates and Operations. A source Surface may hide
 an arbitrary finite internal Fragment while still exporting a small, readable component interface.
@@ -172,8 +171,8 @@ separate executions.
 `<build-record>` may name a prior output by the human alias recorded in the Host Catalog. Alias
 resolution is a Host convenience gate: before Core compilation the Host reopens the verified prior
 BuildState and resolves the alias to its logical Record identity. Core receives only the typed
-Provided Value and Candidate graph; catalog names never become execution truth, semantic affinity
-proof or an automatic reuse policy.
+Provided Value and Candidate graph; catalog names never become execution truth, dependency proof
+or an automatic reuse policy.
 
 ## 5. Multi-result components
 
@@ -264,10 +263,12 @@ Fragments use the `svml.run-fragment-host@1` facet ABI: the generic Package Load
 identity, and only the Run Host validates and installs its Fragment exports. The Loader has no
 special `runFragments` branch and does not interpret Run syntax.
 
-The reference local Host accepts `svml.runtime.json`. It resolves exact adapter names through a
-Host-owned `RuntimeConfigRegistry`, constructs package Manifests, locks the resulting Runtime
-Profile/Closure, and only then installs Endpoints and services. The JSON contains non-secret
-configuration and credential references; executable `svml.runtime.ts` remains an advanced host API.
+The reference local Host accepts `svml.runtime.json`. A separate `runtimePackageLock` selects
+physical packages whose verified `svml.runtime-adapter-host@1` facets may construct Endpoints and
+services. Exact `use` names resolve only inside that locked inventory. The Host rebinds each Runtime
+implementation identity to the package Artifact digest and that package's transitive dependency closure before
+resolving the Runtime Profile/Closure. The JSON contains non-secret configuration and credential
+references; executable `svml.runtime.ts` remains an advanced trusted embedding API.
 
 Cross-package communication is decentralized. A type-owning module publishes a nominal `TypeRef`,
 schema and optional semantic validator digest. Producers and consumers refer to that TypeRef. Core
@@ -284,7 +285,7 @@ The public nouns are intentionally narrow:
 | Facet | one ABI-selected executable contribution | whole-package activation |
 | Host | process/application that selects and installs facets | Core |
 | Compiler | source-to-frozen-graph/plan assembly | Provider execution |
-| Distribution | trusted application choice of compiler host and config adapters | author package aggregate |
+| Distribution | trusted application choice of compiler Host | Provider registry or author package aggregate |
 | Runtime | execution services for an already frozen BuildPlan | author-language interpreter |
 | Endpoint | one configured implementation of an exact Capability | model-routing guess |
 | Provider package | Endpoint implementations for one external service boundary | semantic component |
@@ -309,6 +310,8 @@ The reusable domain-neutral stack is:
 @svml/compiler-node       reference source/package compiler Host
 @svml/package-loader-node locked physical-package loading; no syntax selection
 @svml/runtime             Scheduler and Store ports
+@svml/runtime-adapter     locked deployment-adapter Host facet ABI
+@svml/runtime-adapter-node project-root executable resolution and diagnostics
 @svml/driver-node         trusted Node command executor
 @svml/validation          semantic admission Host
 @svml/local               SQLite/filesystem developer assembly
@@ -324,9 +327,9 @@ may carry deterministic compute facets into `@svml/local` without either the Loa
 depending on Text. Other Host-facet ABIs remain inert until another explicit Host selects them.
 
 `@svml/video-cli` is the optional video command application. It supplies the generic CLI with the
-Text compiler assembly and video Runtime-config adapter registry, but starts with no author or Run
-package contribution. A reviewed package lock independently activates `@svml/run-text`, Script,
-SVS, Prompt Kit, Track or any third-party package. Thus adding an author package requires no Core,
+Text compiler assembly, but starts with no author, Run or Provider package contribution. One
+reviewed implementation lock activates deterministic compute; a separate Runtime package lock
+activates only deployment adapters. Thus adding an author package or Provider requires no Core,
 CLI or aggregate-package release.
 
 The exact bootstrap and data gates are specified in

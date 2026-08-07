@@ -2,8 +2,8 @@ import {
   assertCompositionIdentity,
   programSpaceFrameCount,
 } from "@svml/contracts";
-import type { Composition } from "@svml/contracts";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
+import type { Composition, ProgramSpace } from "@svml/contracts";
+import { canonicalize, isDigest } from "@svml/protocol";
 
 import type { AudioProgramPlan } from "./types.js";
 
@@ -26,16 +26,14 @@ function samplesFromSeconds(seconds: number, subject: string): number {
   return result;
 }
 
-export function sealAudioProgramPlan(value: Omit<AudioProgramPlan, "planDigest">): AudioProgramPlan {
-  const normalized = canonicalize(value) as unknown as Omit<AudioProgramPlan, "planDigest">;
-  return { ...normalized, planDigest: digestOf(normalized) };
+export function sealAudioProgramPlan(value: AudioProgramPlan): AudioProgramPlan {
+  return canonicalize(value) as unknown as AudioProgramPlan;
 }
 
 export function verifyAudioProgramPlan(value: unknown): asserts value is AudioProgramPlan {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "AudioProgramPlan must be an object");
   const item = value as AudioProgramPlan;
   assert(item.contract === "svml.audio-program-plan@1", "AudioProgramPlan contract is invalid");
-  assert(isDigest(item.programSpaceDigest), "AudioProgramPlan ProgramSpace digest is invalid");
   assert(Number.isSafeInteger(item.frameRate?.numerator) && item.frameRate.numerator > 0
     && Number.isSafeInteger(item.frameRate?.denominator) && item.frameRate.denominator > 0,
   "AudioProgramPlan frame rate is invalid");
@@ -73,15 +71,12 @@ export function verifyAudioProgramPlan(value: unknown): asserts value is AudioPr
   }
   assert(item.mix?.normalize === false && item.mix?.limiter === "none",
     "AudioProgramPlan cannot hide normalization or limiting");
-  assert(isDigest(item.planDigest), "AudioProgramPlan digest is invalid");
-  const { planDigest: _digest, ...content } = item;
-  assert(item.planDigest === digestOf(canonicalize(content)), "AudioProgramPlan digest differs from its contents");
 }
 
-export function compileAudioProgramPlan(composition: Composition): AudioProgramPlan {
-  assertCompositionIdentity(composition);
-  const frameCount = programSpaceFrameCount(composition.programSpace);
-  const { numerator, denominator } = composition.programSpace.frameRate;
+export function compileAudioProgramPlan(composition: Composition, programSpace: ProgramSpace): AudioProgramPlan {
+  assertCompositionIdentity(composition, programSpace);
+  const frameCount = programSpaceFrameCount(programSpace);
+  const { numerator, denominator } = programSpace.frameRate;
   const clips = composition.tracks
     .filter((track) => track.contract === "svml.audio-track@1")
     .flatMap((track) => track.clips.map((clip) => {
@@ -110,8 +105,7 @@ export function compileAudioProgramPlan(composition: Composition): AudioProgramP
     }));
   return sealAudioProgramPlan({
     contract: "svml.audio-program-plan@1",
-    programSpaceDigest: composition.programSpace.digest,
-    frameRate: { ...composition.programSpace.frameRate },
+    frameRate: { ...programSpace.frameRate },
     frameCount,
     sampleRate: 48_000,
     sampleFrames: sampleBoundary(frameCount, numerator, denominator),

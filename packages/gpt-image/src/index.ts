@@ -1,14 +1,12 @@
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
-  generationDigestSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-  verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, Digest, ValueSchema } from "@svml/protocol";
+import type { BlobRef, ValueSchema } from "@svml/protocol";
 
 export const gptImageModuleRef = { name: "@svml/gpt-image", version: "0.0.0-dev" } as const;
 export type GptImage2Mode = "text" | "image";
@@ -24,14 +22,13 @@ export type GptImage2ImageRequestContent = Common & {
   readonly images: readonly BlobRef[];
 };
 export type GptImage2RequestContent = GptImage2TextRequestContent | GptImage2ImageRequestContent;
-export type GptImage2Request = GptImage2RequestContent & { readonly requestDigest: Digest };
+export type GptImage2Request = GptImage2RequestContent;
 
 const commonFields = {
   contract: { schema: { kind: "literal", value: "svml.gpt-image-2-request@1" } },
   model: { schema: { kind: "literal", value: "gpt-image-2" } },
   prompt: { schema: generationPromptSchema },
   aspectRatio: { schema: { kind: "string", minLength: 3, maxLength: 16 } },
-  requestDigest: { schema: generationDigestSchema },
 } as const;
 const schemas: Record<GptImage2Mode, ValueSchema> = {
   text: generationObjectSchema({
@@ -51,7 +48,6 @@ function object(value: unknown): Record<string, unknown> {
 }
 
 export function verifyGptImage2Request(value: unknown, expectedMode?: GptImage2Mode): asserts value is GptImage2Request {
-  verifyGenerationRequestDigest(value);
   const request = object(value);
   if (request.contract !== "svml.gpt-image-2-request@1" || request.model !== "gpt-image-2") {
     throw new Error("GPT Image 2 request identity is invalid");
@@ -67,7 +63,7 @@ export function verifyGptImage2Request(value: unknown, expectedMode?: GptImage2M
 
 export function sealGptImage2Request<T extends GptImage2RequestContent>(
   content: T,
-): T & { readonly requestDigest: Digest } {
+): T {
   const request = sealGenerationRequest(content);
   verifyGptImage2Request(request, content.mode);
   return request;

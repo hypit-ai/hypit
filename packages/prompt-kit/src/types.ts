@@ -1,5 +1,3 @@
-import type { Digest } from "@svml/protocol";
-
 export type PromptKitScalar = string | number | boolean;
 
 export type PromptKitConditions = {
@@ -56,30 +54,22 @@ export type PromptKitSpec = {
   readonly separator: "\n\n";
   readonly defaults: Readonly<Record<string, PromptKitScalar>>;
   readonly blocks: readonly PromptKitBlockSpec[];
-  readonly specDigest: Digest;
 };
 
 export type PromptKitInvocation = {
   readonly contract: "svml.prompt-kit-invocation@1";
-  readonly kit: string;
   readonly parameters: Readonly<Record<string, PromptKitScalar>>;
   readonly selectors: Readonly<Record<string, string>>;
   readonly slots: Readonly<Record<string, string>>;
-  readonly invocationDigest: Digest;
 };
 
 export type PromptProgramBlock = {
   readonly id: string;
-  readonly origin: string;
   readonly text: string;
 };
 
 export type PromptProgram = {
   readonly contract: "svml.prompt-program@1";
-  readonly kit: string;
-  readonly specDigest: Digest;
-  readonly invocationDigest: Digest;
   readonly separator: "\n\n";
   readonly blocks: readonly PromptProgramBlock[];
-  readonly programDigest: Digest;
 };

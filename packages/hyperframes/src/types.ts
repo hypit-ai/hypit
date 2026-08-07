@@ -2,8 +2,6 @@ import type { HYPERFRAMES_VISUAL_IR_V1 } from "@svml/contracts";
 import type { BlobRef, Digest } from "@svml/protocol";
 
 export type HyperframesFrameDomain = {
-  /** Exact ProgramSpace whose integer frame domain this document renders. */
-  readonly programSpaceDigest: Digest;
   readonly frameRate: {
     readonly numerator: number;
     readonly denominator: number;
@@ -21,8 +19,6 @@ export type HyperframesCanvas = {
 export type HyperframesDocument = HyperframesFrameDomain & {
   readonly contract: "svml.hyperframes-document@4";
   readonly visualIr: typeof HYPERFRAMES_VISUAL_IR_V1;
-  readonly digest: Digest;
-  readonly compositionDigest: Digest;
   readonly canvas: HyperframesCanvas;
   /** Every content-addressed byte dependency referenced by the HTML template. */
   readonly artifacts: readonly BlobRef[];

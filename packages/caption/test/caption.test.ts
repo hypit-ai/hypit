@@ -49,12 +49,8 @@ test("the component enumerates every Manifest Producer and owned Type validator"
 });
 
 function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
-  const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
-    durationSec,
-    frameRate: { numerator: 1_000, denominator: 1 },
-  });
-  const audioDigest = digestOf(`caption:audio:${narrative.semanticIndex.digest}`);
+  const programSpace = captionSpace(durationSec);
+  const audioDigest = digestOf(`caption:audio:${narrative.segments.map((segment) => segment.id).join("+")}`);
   const basisSegments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
     startSec: segments[index]!.startSec,
@@ -79,8 +75,6 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
   });
   const evidence = sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    audioArtifactDigest: digestOf("caption:acoustic-evidence"),
-    programSpaceDigest: basis.programSpace.digest,
     durationSec,
     segments,
   });
@@ -93,7 +87,15 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
   return locateSpeechTiming(narrative, audioBasis, evidence);
 }
 
-test("Caption-owned validators reject digest-preserving shape tampering", () => {
+function captionSpace(durationSec: number) {
+  return sealProgramSpace({
+    contract: "svml.program-space@0",
+    durationSec,
+    frameRate: { numerator: 1_000, denominator: 1 },
+  });
+}
+
+test("Caption-owned validators reject semantically invalid values", () => {
   const narrative = parseScript("validator.svml", "<line>Hello.</line>");
   const projection = temporalizeCaption(narrative, locate(narrative, 1, [{
     sourceSegmentId: "line",
@@ -112,16 +114,16 @@ test("Caption-owned validators reject digest-preserving shape tampering", () => 
   assert.throws(
     () => projectionValidator.handler({
       type: projectionValidator.type,
-      value: { kind: "inline", value: { ...projection, text: "tampered" } },
+      value: { kind: "inline", value: { ...projection, contract: "invalid" } },
     }),
-    /digest does not match/u,
+    /Unsupported TimedCaptionProjection/u,
   );
   assert.throws(
     () => programValidator.handler({
       type: programValidator.type,
-      value: { kind: "inline", value: { ...program, id: "tampered" } },
+      value: { kind: "inline", value: { ...program, id: "" } },
     }),
-    /digest does not match/u,
+    /identity and font family must not be empty/u,
   );
 });
 
@@ -195,9 +197,6 @@ test("multiple Cues inside one display alias receive ordered local estimates, no
   const run = program.runs[0]!;
   const plan = sealCaptionPlan({
     contract: "svml.caption-plan@1",
-    narrativeDigest: digestOf(narrative),
-    captionProgramDigest: program.digest,
-    planningRequestDigest: digestOf("alias-plan-request"),
     runs: [{
       id: run.id,
       styleId: run.styleId,
@@ -250,10 +249,9 @@ test("official caption styling lowers to an ordinary self-contained VisualTrack"
   }]);
   const projection = temporalizeCaption(narrative, map);
   const program = defaultCaptionTrackProgram("primary-caption");
-  const track = renderCaptionTrack(projection, program);
+  const track = renderCaptionTrack(projection, program, captionSpace(1));
 
   assert.equal(track.contract, "svml.visual-track@1");
-  assert.equal(track.programSpaceDigest, map.programSpace.digest);
   assert.equal(track.presents[0]?.elements.some((element) => element.kind === "text"), true);
   assert.equal(
     track.presents.flatMap((present) => present.elements).some((element) => "text" in element && element.text.includes("Hello")),
@@ -277,10 +275,10 @@ test("two caption styles become two peer Tracks without mutating one another", (
     stacking: { order: 101, tieBreak: "speaker-b" },
     style: { ...first.style, color: "#00ff00", bottomPercent: 20 },
   });
-  const firstTrack = renderCaptionTrack(projection, first);
-  const secondTrack = renderCaptionTrack(projection, second);
+  const firstTrack = renderCaptionTrack(projection, first, captionSpace(1));
+  const secondTrack = renderCaptionTrack(projection, second, captionSpace(1));
 
-  assert.notEqual(firstTrack.digest, secondTrack.digest);
+  assert.notDeepEqual(firstTrack, secondTrack);
   assert.deepEqual(
     firstTrack.presents.map((present) => present.span),
     secondTrack.presents.map((present) => present.span),
@@ -323,9 +321,6 @@ test("a planner-neutral CaptionPlan joins SemanticMap only after Cue and field p
   const ids = program.atoms.map((atom) => atom.id);
   const plan = sealCaptionPlan({
     contract: "svml.caption-plan@1",
-    narrativeDigest: digestOf(narrative),
-    captionProgramDigest: program.digest,
-    planningRequestDigest: digestOf("planned-caption-request"),
     runs: [{
       id: program.runs[0]!.id,
       styleId: style.id,
@@ -342,7 +337,7 @@ test("a planner-neutral CaptionPlan joins SemanticMap only after Cue and field p
   const projection = temporalizeCaptionPlan(narrative, map, program, plan);
   assert.deepEqual(projection.regions.map((region) => region.display), ["Meaning becomes", "the source."]);
   assert.deepEqual(projection.regions[0]?.fields?.map((field) => field.declarationId), ["important"]);
-  const track = renderCaptionProgram(projection, program);
+  const track = renderCaptionProgram(projection, program, captionSpace(2));
   const firstText = track.presents[0]?.elements.find((element) => element.kind === "text");
   assert.equal(firstText?.attributes?.some((attribute) =>
     attribute.name === "data-caption-style" && attribute.value === "alice"), true);

@@ -41,8 +41,6 @@ function basis() {
 function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
   return sealSpeechEvidenceAudio({
     contract: "svml.speech-evidence-audio@1",
-    programSpaceDigest: basis.programSpace.digest,
-    sourceAudioArtifactDigest: basis.audio.digest,
     artifact: {
       kind: "blob",
       digest: digestOf("whisperx-test:evidence-audio"),
@@ -63,7 +61,6 @@ function evidenceAudio(basis: SpeechBasis): SpeechEvidenceAudio {
       evidenceSampleFrames: 16_000,
       sourceOriginSample: 0,
       evidenceOriginSample: 0,
-      resamplerImplementation: "fixture",
     },
   });
 }
@@ -75,13 +72,9 @@ test("WhisperX consumes only the canonical 16 kHz evidence projection", () => {
   assert.throws(() => whisperXRequestForEvidenceAudio(tampered), /sample map|digest/u);
 });
 
-test("WhisperX normalization verifies its model-specific result before lowering to common Evidence", () => {
-  const source = basis();
+test("WhisperX normalization lowers model-specific evidence without leaking provider metadata", () => {
   const measured = sealWhisperXAlignmentEvidence({
     contract: "svml.whisperx-alignment-evidence@2",
-    engine: "whisperx",
-    audioArtifactDigest: evidenceAudio(source).artifact.digest,
-    programSpaceDigest: source.programSpace.digest,
     durationSec: 1,
     segments: [{
       sourceSegmentId: "line",
@@ -93,14 +86,8 @@ test("WhisperX normalization verifies its model-specific result before lowering 
   });
   const normalized = normalizeWhisperXAlignment(measured);
   assert.equal(normalized.contract, "svml.aligned-transcript-evidence@1");
-  assert.equal(normalized.audioArtifactDigest, evidenceAudio(source).artifact.digest);
-  assert.throws(
-    () => normalizeWhisperXAlignment({
-      ...measured,
-      segments: [{ ...measured.segments[0]!, words: [{ text: "tampered", startSec: 0.1, endSec: 0.4 }] }],
-    }),
-    /alignment digest/u,
-  );
+  assert.equal("engine" in normalized, false);
+  assert.deepEqual(normalized.segments, measured.segments);
 });
 
 test("WhisperX installs into the host-neutral compute port without a Node Driver", () => {

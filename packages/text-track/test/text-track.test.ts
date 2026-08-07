@@ -7,7 +7,6 @@ import {
   sealVisualTrack,
 } from "@svml/contracts";
 import { compileHyperframesDocument } from "@svml/hyperframes";
-import { digestOf } from "@svml/protocol";
 import {
   appendSelectedTextItem,
   createTextTrackSet,
@@ -19,7 +18,6 @@ import {
   sealTextTrackHeader,
 } from "@svml/text-track";
 import type { CompleteSemanticMap, NarrativeSelectionRef } from "@svml/contracts";
-import { canonicalize } from "@svml/protocol";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@0",
@@ -31,7 +29,6 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
   const program = sealTextTrackProgram({
     contract: "svml.text-track-program@1",
     id: "editorial-text",
-    programSpaceDigest: space.digest,
     items: [
       {
         id: "watermark",
@@ -71,7 +68,6 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "lower",
-    programSpaceDigest: space.digest,
     presents: [{
       id: "lower",
       span: { startFrame: 0, endFrameExclusive: 150 },
@@ -82,10 +78,9 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
   const document = compileHyperframesDocument(sealComposition({
     contract: "svml.composition@1",
     id: "text-film",
-    programSpace: space,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track, lower],
-  }));
+  }), space);
   assert.match(document.html, /Intent, not timeline/u);
   assert.match(document.html, /font-family:Inter, sans-serif/u);
   assert.ok(document.html.indexOf('data-svml-present-id="lower"') < document.html.indexOf('data-svml-present-id="callout"'));
@@ -95,7 +90,6 @@ test("TextTrackProgram rejects a frame span outside its ProgramSpace", () => {
   const program = sealTextTrackProgram({
     contract: "svml.text-track-program@1",
     id: "invalid-text",
-    programSpaceDigest: space.digest,
     items: [{
       id: "late",
       text: "Too late",
@@ -112,7 +106,6 @@ test("TextTrackProgram rejects a frame span outside its ProgramSpace", () => {
 test("a selected Text Item is located only through explicit Selection and SemanticMap edges", () => {
   const mapContent = {
     contract: "svml.complete-semantic-map@1" as const,
-    programSpace: space,
     quantizationPolicy: "nearest-frame" as const,
     durationSec: 5,
     segments: [{
@@ -132,10 +125,7 @@ test("a selected Text Item is located only through explicit Selection and Semant
     anchors: [],
     groups: [],
   };
-  const map: CompleteSemanticMap = {
-    ...mapContent,
-    mapDigest: digestOf(canonicalize(mapContent)),
-  };
+  const map: CompleteSemanticMap = mapContent;
   const selectionContent = {
     contract: "svml.narrative-selection@1" as const,
     id: "callout",
@@ -145,10 +135,7 @@ test("a selected Text Item is located only through explicit Selection and Semant
       close: { affinity: "left" as const, boundary: { tokenIndex: 2, structuralPosition: 2, segmentId: "opening" } },
     }],
   };
-  const selection: NarrativeSelectionRef = {
-    ...selectionContent,
-    selectionDigest: digestOf(canonicalize(selectionContent)),
-  };
+  const selection: NarrativeSelectionRef = selectionContent;
   const header = sealTextTrackHeader({ contract: "svml.text-track-header@1", id: "selected-text" });
   const spec = sealTextItemSpec({
     contract: "svml.text-item-spec@1",
@@ -158,10 +145,12 @@ test("a selected Text Item is located only through explicit Selection and Semant
     box: { xPercent: 10, yPercent: 10, widthPercent: 80, heightPercent: 10 },
     appearance: { color: "#ffffff", fontSizePx: 48 },
   });
-  const program = finalizeTextTrack(appendSelectedTextItem(
-    createTextTrackSet(space, header),
+  const program = finalizeTextTrack(header, appendSelectedTextItem(
+    createTextTrackSet(),
+    header,
     map,
     selection,
+    space,
     spec,
   ));
   assert.deepEqual(program.items.map((item) => item.span), [{ startFrame: 30, endFrameExclusive: 60 }]);

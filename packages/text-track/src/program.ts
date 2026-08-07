@@ -14,8 +14,7 @@ import type {
   VisualStyleDeclaration,
   VisualTrack,
 } from "@svml/contracts";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import { canonicalize, digestOf } from "@svml/protocol";
 
 import type {
   TextAppearance,
@@ -54,11 +53,10 @@ function normalizeItem(item: TextItem): TextItem {
   };
 }
 
-function textTrackProgramContent(value: Omit<TextTrackProgram, "digest">): Omit<TextTrackProgram, "digest"> {
+function textTrackProgramContent(value: TextTrackProgram): TextTrackProgram {
   return {
     contract: "svml.text-track-program@1",
     id: value.id,
-    programSpaceDigest: value.programSpaceDigest,
     items: [...value.items]
       .map(normalizeItem)
       .sort((left, right) => left.span.startFrame - right.span.startFrame
@@ -68,13 +66,8 @@ function textTrackProgramContent(value: Omit<TextTrackProgram, "digest">): Omit<
   };
 }
 
-export function computeTextTrackProgramDigest(value: Omit<TextTrackProgram, "digest">): Digest {
-  return digestOf(textTrackProgramContent(value));
-}
-
-export function sealTextTrackProgram(value: Omit<TextTrackProgram, "digest">): TextTrackProgram {
-  const content = textTrackProgramContent(value);
-  return { ...content, digest: digestOf(content) };
+export function sealTextTrackProgram(value: TextTrackProgram): TextTrackProgram {
+  return textTrackProgramContent(value);
 }
 
 function assertAppearance(appearance: TextAppearance, label: string): void {
@@ -109,13 +102,6 @@ export function assertTextTrackProgramIdentity(program: TextTrackProgram, progra
   assertProgramSpaceIdentity(programSpace);
   if (program.contract !== "svml.text-track-program@1") throw new Error("Unsupported TextTrackProgram contract.");
   assertNonEmpty(program.id, "TextTrackProgram id");
-  if (program.programSpaceDigest !== programSpace.digest) {
-    throw new Error("TextTrackProgram belongs to another ProgramSpace.");
-  }
-  const { digest: _digest, ...content } = program;
-  if (!isDigest(program.digest) || program.digest !== computeTextTrackProgramDigest(content)) {
-    throw new Error("TextTrackProgram digest does not match its contents.");
-  }
   if (program.items.length === 0) throw new Error("TextTrackProgram must contain at least one item.");
   const totalFrames = programSpaceFrameCount(programSpace);
   const ids = new Set<string>();
@@ -181,12 +167,11 @@ function textStyle(appearance: TextAppearance): VisualStyleDeclaration[] {
   ];
 }
 
-export function sealTextTrackSpec(value: Omit<TextTrackSpec, "digest">): TextTrackSpec {
-  const content = canonicalSpec(value);
-  return { ...content, digest: digestOf(content) };
+export function sealTextTrackSpec(value: TextTrackSpec): TextTrackSpec {
+  return canonicalSpec(value);
 }
 
-function canonicalSpec(value: Omit<TextTrackSpec, "digest">): Omit<TextTrackSpec, "digest"> {
+function canonicalSpec(value: TextTrackSpec): TextTrackSpec {
   return {
     contract: "svml.text-track-spec@1",
     id: value.id,
@@ -205,10 +190,6 @@ export function assertTextTrackSpec(spec: TextTrackSpec): void {
   if (spec.contract !== "svml.text-track-spec@1" || !spec.id || spec.items.length === 0) {
     throw new Error("TextTrackSpec identity or items are invalid.");
   }
-  const { digest: _digest, ...content } = spec;
-  if (!isDigest(spec.digest) || spec.digest !== digestOf(canonicalSpec(content))) {
-    throw new Error("TextTrackSpec digest differs from its contents.");
-  }
   const ids = new Set<string>();
   for (const item of spec.items) {
     if (!item.id || !item.text || item.during !== "full" || ids.has(item.id) || !Number.isSafeInteger(item.z)) {
@@ -226,7 +207,6 @@ export function compileTextTrackProgram(programSpace: ProgramSpace, spec: TextTr
   return sealTextTrackProgram({
     contract: "svml.text-track-program@1",
     id: spec.id,
-    programSpaceDigest: programSpace.digest,
     items: spec.items.map((item) => ({
       id: item.id,
       text: item.text,
@@ -245,7 +225,6 @@ export function renderTextTrack(programSpace: ProgramSpace, program: TextTrackPr
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: program.id,
-    programSpaceDigest: programSpace.digest,
     presents: program.items.map((item) => ({
       id: item.id,
       span: { ...item.span },
@@ -260,70 +239,39 @@ export function renderTextTrack(programSpace: ProgramSpace, program: TextTrackPr
   return track;
 }
 
-function contentDigest<T extends object>(value: T): Digest {
-  return digestOf(canonicalize(value));
-}
-
-export function sealTextTrackHeader(value: Omit<TextTrackHeader, "digest">): TextTrackHeader {
-  const content = canonicalize(value) as unknown as Omit<TextTrackHeader, "digest">;
-  const result = { ...content, digest: digestOf(content) };
+export function sealTextTrackHeader(value: TextTrackHeader): TextTrackHeader {
+  const result = canonicalize(value) as unknown as TextTrackHeader;
   assertTextTrackHeader(result);
   return result;
 }
 
 export function assertTextTrackHeader(value: TextTrackHeader): void {
-  const { digest: _digest, ...content } = value;
   if (
     value.contract !== "svml.text-track-header@1"
     || value.id.length === 0
-    || !isDigest(value.digest)
-    || value.digest !== contentDigest(content)
   ) throw new Error("TextTrackHeader is invalid");
 }
 
-export function sealTextItemSpec(value: Omit<TextItemSpec, "digest">): TextItemSpec {
-  const content = canonicalize(value) as unknown as Omit<TextItemSpec, "digest">;
-  const result = { ...content, digest: digestOf(content) };
+export function sealTextItemSpec(value: TextItemSpec): TextItemSpec {
+  const result = canonicalize(value) as unknown as TextItemSpec;
   assertTextItemSpec(result);
   return result;
 }
 
 export function assertTextItemSpec(value: TextItemSpec): void {
-  const { digest: _digest, ...content } = value;
   if (
     value.contract !== "svml.text-item-spec@1"
     || value.id.length === 0
     || value.text.length === 0
     || !Number.isSafeInteger(value.z)
-    || !isDigest(value.digest)
-    || value.digest !== contentDigest(content)
   ) throw new Error("TextItemSpec is invalid");
   for (const [name, number] of Object.entries(value.box)) assertFinite(number, `${value.id} box.${name}`);
   if (value.box.widthPercent <= 0 || value.box.heightPercent <= 0) throw new Error("TextItemSpec box is invalid");
   assertAppearance(value.appearance, `${value.id} appearance`);
 }
 
-function setContent(value: Omit<TextTrackSet, "digest">): Omit<TextTrackSet, "digest"> {
-  return canonicalize(value) as unknown as Omit<TextTrackSet, "digest">;
-}
-
-function sealTextTrackSet(value: Omit<TextTrackSet, "digest">): TextTrackSet {
-  const content = setContent(value);
-  return { ...content, digest: digestOf(content) };
-}
-
 export function assertTextTrackSet(value: TextTrackSet): void {
-  if (value.contract !== "svml.text-track-set@1" || value.id.length === 0) {
-    throw new Error("TextTrackSet identity is invalid");
-  }
-  assertProgramSpaceIdentity(value.programSpace);
-  const { digest: _digest, ...content } = value;
-  if (!isDigest(value.digest) || value.digest !== digestOf(setContent(content))) {
-    throw new Error("TextTrackSet digest differs from its contents");
-  }
-  if (value.items.length === 0 ? value.lastAddition !== undefined : value.lastAddition === undefined) {
-    throw new Error("TextTrackSet last addition is inconsistent");
-  }
+  if (value.contract !== "svml.text-track-set@1") throw new Error("TextTrackSet is invalid");
   const ids = new Set<string>();
   for (const item of value.items) {
     if (ids.has(item.id)) throw new Error(`TextTrackSet repeats Item ${item.id}`);
@@ -331,38 +279,26 @@ export function assertTextTrackSet(value: TextTrackSet): void {
   }
 }
 
-export function createTextTrackSet(space: ProgramSpace, header: TextTrackHeader): TextTrackSet {
-  assertProgramSpaceIdentity(space);
-  assertTextTrackHeader(header);
-  return sealTextTrackSet({
+export function createTextTrackSet(): TextTrackSet {
+  return {
     contract: "svml.text-track-set@1",
-    id: header.id,
-    programSpace: space,
     items: [],
-  });
+  };
 }
 
 function appendItems(
   set: TextTrackSet,
   spec: TextItemSpec,
   additions: readonly TextItem[],
-  affinity: { readonly selectionDigest?: Digest; readonly mapDigest?: Digest } = {},
 ): TextTrackSet {
   assertTextTrackSet(set);
   assertTextItemSpec(spec);
   const existing = new Set(set.items.map((item) => item.id));
   if (additions.some((item) => existing.has(item.id))) throw new Error(`Text Item ${spec.id} is duplicated`);
-  return sealTextTrackSet({
+  return {
     contract: "svml.text-track-set@1",
-    id: set.id,
-    programSpace: set.programSpace,
     items: [...set.items, ...additions],
-    lastAddition: {
-      previousSetDigest: set.digest,
-      itemSpecDigest: spec.digest,
-      ...affinity,
-    },
-  });
+  };
 }
 
 function itemFromSpec(spec: TextItemSpec, id: string, span: TextItem["span"], tieBreak: string): TextItem {
@@ -377,46 +313,53 @@ function itemFromSpec(spec: TextItemSpec, id: string, span: TextItem["span"], ti
   };
 }
 
-export function appendFullTextItem(set: TextTrackSet, spec: TextItemSpec): TextTrackSet {
+export function appendFullTextItem(
+  set: TextTrackSet,
+  header: TextTrackHeader,
+  space: ProgramSpace,
+  spec: TextItemSpec,
+): TextTrackSet {
   assertTextTrackSet(set);
+  assertTextTrackHeader(header);
+  assertProgramSpaceIdentity(space);
   return appendItems(set, spec, [itemFromSpec(
     spec,
     spec.id,
-    { startFrame: 0, endFrameExclusive: programSpaceFrameCount(set.programSpace) },
-    `${set.id}:${spec.id}:1`,
+    { startFrame: 0, endFrameExclusive: programSpaceFrameCount(space) },
+    `${header.id}:${spec.id}:1`,
   )]);
 }
 
 export function appendSelectedTextItem(
   set: TextTrackSet,
+  header: TextTrackHeader,
   map: CompleteSemanticMap,
   selection: NarrativeSelectionRef,
+  space: ProgramSpace,
   spec: TextItemSpec,
 ): TextTrackSet {
   assertTextTrackSet(set);
+  assertTextTrackHeader(header);
   assertCompleteSemanticMapIdentity(map);
   assertNarrativeSelectionIdentity(selection);
-  if (map.programSpace.digest !== set.programSpace.digest) {
-    throw new Error("Text Selection map belongs to another ProgramSpace");
-  }
-  const spans = selectionFrameSpans(map, selection);
+  assertProgramSpaceIdentity(space);
+  const spans = selectionFrameSpans(map, selection, space);
   return appendItems(set, spec, spans.map((span, index) => itemFromSpec(
     spec,
     spans.length === 1 ? spec.id : `${spec.id}:${index + 1}`,
     span,
-    `${set.id}:${spec.id}:${index + 1}`,
-  )), { selectionDigest: selection.selectionDigest, mapDigest: map.mapDigest });
+    `${header.id}:${spec.id}:${index + 1}`,
+  )));
 }
 
-export function finalizeTextTrack(set: TextTrackSet): TextTrackProgram {
+export function finalizeTextTrack(header: TextTrackHeader, set: TextTrackSet): TextTrackProgram {
+  assertTextTrackHeader(header);
   assertTextTrackSet(set);
   if (set.items.length === 0) throw new Error("TextTrack requires at least one Item");
   const program = sealTextTrackProgram({
     contract: "svml.text-track-program@1",
-    id: set.id,
-    programSpaceDigest: set.programSpace.digest,
+    id: header.id,
     items: set.items,
   });
-  assertTextTrackProgramIdentity(program, set.programSpace);
   return program;
 }

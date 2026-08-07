@@ -24,9 +24,6 @@ export const hyperframesDocumentSchema: ValueSchema = {
   fields: {
     contract: { schema: { kind: "literal", value: "svml.hyperframes-document@4" } },
     visualIr: { schema: { kind: "literal", value: HYPERFRAMES_VISUAL_IR_V1 } },
-    digest: { schema: digest },
-    compositionDigest: { schema: digest },
-    programSpaceDigest: { schema: digest },
     frameRate: { schema: {
       kind: "object",
       fields: {
@@ -59,25 +56,17 @@ export const hyperframesManifest: ModuleManifest = {
   format: "svml.module@0",
   name: hyperframesModuleRef.name,
   version: hyperframesModuleRef.version,
-  dependencies: [videoContractDependencies.composition],
+  dependencies: [videoContractDependencies.composition, videoContractDependencies.programSpace],
   types: [{ name: hyperframesTypes.document.name, schema: hyperframesDocumentSchema }],
   capabilities: [],
   surfaces: [],
   producers: [{
     name: hyperframesProducers.compile.name,
-    inputs: [{ name: "composition", type: contractTypes.composition }],
-    outputs: [{
-      name: "document",
-      type: hyperframesTypes.document,
-      affinity: [
-        { resultPointer: "/compositionDigest", input: "composition", inputPointer: "/digest" },
-        { resultPointer: "/programSpaceDigest", input: "composition", inputPointer: "/programSpace/digest" },
-        { resultPointer: "/frameRate/numerator", input: "composition", inputPointer: "/programSpace/frameRate/numerator" },
-        { resultPointer: "/frameRate/denominator", input: "composition", inputPointer: "/programSpace/frameRate/denominator" },
-        { resultPointer: "/canvas/width", input: "composition", inputPointer: "/canvas/width" },
-        { resultPointer: "/canvas/height", input: "composition", inputPointer: "/canvas/height" },
-      ],
-    }],
+    inputs: [
+      { name: "composition", type: contractTypes.composition },
+      { name: "space", type: contractTypes.programSpace },
+    ],
+    outputs: [{ name: "document", type: hyperframesTypes.document }],
     needs: [],
     implementation: {
       kind: "registered",

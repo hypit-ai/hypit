@@ -17,8 +17,7 @@ import {
   verifyAudioProgramPlan,
 } from "@svml/media-pipeline";
 import type { AudioProgramPlan } from "@svml/media-pipeline";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import { canonicalize, digestOf } from "@svml/protocol";
 
 import type {
   SpeechSpineProgram,
@@ -35,7 +34,7 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function programContent(value: Omit<SpeechSpineProgram, "digest">): Omit<SpeechSpineProgram, "digest"> {
+function programContent(value: SpeechSpineProgram): SpeechSpineProgram {
   return {
     contract: "svml.speech-spine-program@1",
     id: value.id,
@@ -43,9 +42,8 @@ function programContent(value: Omit<SpeechSpineProgram, "digest">): Omit<SpeechS
   };
 }
 
-export function sealSpeechSpineProgram(value: Omit<SpeechSpineProgram, "digest">): SpeechSpineProgram {
-  const content = programContent(value);
-  return { ...content, digest: digestOf(content) };
+export function sealSpeechSpineProgram(value: SpeechSpineProgram): SpeechSpineProgram {
+  return programContent(value);
 }
 
 export function assertSpeechSpineProgram(value: SpeechSpineProgram): void {
@@ -54,9 +52,6 @@ export function assertSpeechSpineProgram(value: SpeechSpineProgram): void {
   assert(Number.isSafeInteger(value.frameRate.numerator) && value.frameRate.numerator > 0
     && Number.isSafeInteger(value.frameRate.denominator) && value.frameRate.denominator > 0,
   "SpeechSpineProgram frame rate is invalid");
-  const { digest: _digest, ...content } = value;
-  assert(isDigest(value.digest) && value.digest === digestOf(canonicalize(content)),
-    "SpeechSpineProgram digest differs from its contents");
 }
 
 function verifyExcerpt(value: NarrativeExcerpt): void {
@@ -65,23 +60,17 @@ function verifyExcerpt(value: NarrativeExcerpt): void {
   assert(value.id.length > 0 && Number.isSafeInteger(value.tokenStart)
     && Number.isSafeInteger(value.tokenEndExclusive) && value.tokenEndExclusive > value.tokenStart,
   "Speech Spine Segment excerpt is invalid");
-  const { excerptDigest: _digest, ...content } = value;
-  assert(isDigest(value.excerptDigest) && value.excerptDigest === digestOf(canonicalize(content)),
-    "Speech Spine Segment excerpt digest differs from its contents");
 }
 
-function setContent(value: Omit<SpeechSpineSet, "digest">): Omit<SpeechSpineSet, "digest"> {
+function setContent(value: SpeechSpineSet): SpeechSpineSet {
   return canonicalize({
     contract: "svml.speech-spine-set@1",
-    program: value.program,
     takes: value.takes,
-    ...(value.lastAddition === undefined ? {} : { lastAddition: value.lastAddition }),
-  }) as unknown as Omit<SpeechSpineSet, "digest">;
+  }) as unknown as SpeechSpineSet;
 }
 
-function sealSpeechSpineSet(value: Omit<SpeechSpineSet, "digest">): SpeechSpineSet {
-  const content = setContent(value);
-  return { ...content, digest: digestOf(content) };
+function sealSpeechSpineSet(value: SpeechSpineSet): SpeechSpineSet {
+  return setContent(value);
 }
 
 function assertTake(take: SpeechSpineTake, program: SpeechSpineProgram): void {
@@ -96,54 +85,36 @@ function assertTake(take: SpeechSpineTake, program: SpeechSpineProgram): void {
 
 export function assertSpeechSpineSet(value: SpeechSpineSet): void {
   assert(value.contract === "svml.speech-spine-set@1", "Unsupported SpeechSpineSet contract");
-  assertSpeechSpineProgram(value.program);
-  const { digest: _digest, ...content } = value;
-  assert(isDigest(value.digest) && value.digest === digestOf(setContent(content)),
-    "SpeechSpineSet digest differs from its contents");
   const segments = new Set<string>();
   for (const take of value.takes) {
-    assertTake(take, value.program);
+    verifyExcerpt(take.segment);
+    verifySynchronizedMedia(take.media);
     assert(!segments.has(take.segment.id), `Speech Spine repeats Segment ${take.segment.id}`);
     segments.add(take.segment.id);
   }
-  assert(value.takes.length === 0 ? value.lastAddition === undefined : value.lastAddition !== undefined,
-    "SpeechSpineSet last addition is inconsistent");
-  if (value.lastAddition !== undefined) {
-    const last = value.takes.at(-1)!;
-    assert(isDigest(value.lastAddition.previousSetDigest)
-      && value.lastAddition.segmentDigest === last.segment.excerptDigest
-      && value.lastAddition.mediaDigest === last.media.synchronizedMediaDigest,
-    "SpeechSpineSet last addition is invalid");
-  }
 }
 
-export function createSpeechSpineSet(program: SpeechSpineProgram): SpeechSpineSet {
-  assertSpeechSpineProgram(program);
+export function createSpeechSpineSet(): SpeechSpineSet {
   return sealSpeechSpineSet({
     contract: "svml.speech-spine-set@1",
-    program,
     takes: [],
   });
 }
 
 export function appendSpeechSpineTake(
   set: SpeechSpineSet,
+  program: SpeechSpineProgram,
   media: SynchronizedMedia,
   segment: NarrativeExcerpt,
 ): SpeechSpineSet {
   assertSpeechSpineSet(set);
+  assertSpeechSpineProgram(program);
   const take = { media, segment } satisfies SpeechSpineTake;
-  assertTake(take, set.program);
+  assertTake(take, program);
   assert(!set.takes.some((item) => item.segment.id === segment.id), `Speech Spine repeats Segment ${segment.id}`);
   return sealSpeechSpineSet({
     contract: "svml.speech-spine-set@1",
-    program: set.program,
     takes: [...set.takes, take],
-    lastAddition: {
-      previousSetDigest: set.digest,
-      segmentDigest: segment.excerptDigest,
-      mediaDigest: media.synchronizedMediaDigest,
-    },
   });
 }
 
@@ -155,28 +126,30 @@ function frameSample(frame: number, frameRate: SpeechSpineProgram["frameRate"]):
   return Number(rounded);
 }
 
-function programSpace(set: SpeechSpineSet): ProgramSpace {
+function programSpace(program: SpeechSpineProgram, set: SpeechSpineSet): ProgramSpace {
+  assertSpeechSpineProgram(program);
   assertSpeechSpineSet(set);
   assert(set.takes.length > 0, "Speech Spine must contain at least one Take");
+  for (const take of set.takes) assertTake(take, program);
   const frameCount = set.takes.reduce((sum, take) => sum + take.media.timeline.frameCount, 0);
   const space = sealProgramSpace({
     contract: "svml.program-space@0",
-    durationSec: frameCount * set.program.frameRate.denominator / set.program.frameRate.numerator,
-    frameRate: { ...set.program.frameRate },
+    durationSec: frameCount * program.frameRate.denominator / program.frameRate.numerator,
+    frameRate: { ...program.frameRate },
   });
   assertProgramSpaceIdentity(space);
   return space;
 }
 
-export function compileSpeechSpineAudio(set: SpeechSpineSet): AudioProgramPlan {
-  const space = programSpace(set);
+export function compileSpeechSpineAudio(program: SpeechSpineProgram, set: SpeechSpineSet): AudioProgramPlan {
+  const space = programSpace(program, set);
   let frame = 0;
   const clips = set.takes.map((take, index) => {
     const audio = take.media.audio!;
     const startFrame = frame;
     frame += take.media.timeline.frameCount;
-    const targetStartSample = frameSample(startFrame, set.program.frameRate);
-    const targetEndSampleExclusive = frameSample(frame, set.program.frameRate);
+    const targetStartSample = frameSample(startFrame, program.frameRate);
+    const targetEndSampleExclusive = frameSample(frame, program.frameRate);
     assert(targetEndSampleExclusive - targetStartSample === audio.sampleFrames,
       `Speech Segment ${take.segment.id} audio does not exactly cover its normalized frame span`);
     return {
@@ -194,11 +167,10 @@ export function compileSpeechSpineAudio(set: SpeechSpineSet): AudioProgramPlan {
   });
   const plan = sealAudioProgramPlan({
     contract: "svml.audio-program-plan@1",
-    programSpaceDigest: space.digest,
     frameRate: { ...space.frameRate },
     frameCount: frame,
     sampleRate: 48_000,
-    sampleFrames: frameSample(frame, set.program.frameRate),
+    sampleFrames: frameSample(frame, program.frameRate),
     clips,
     mix: { normalize: false, limiter: "none" },
   });
@@ -206,12 +178,17 @@ export function compileSpeechSpineAudio(set: SpeechSpineSet): AudioProgramPlan {
   return plan;
 }
 
-export function assembleSpeechBasis(set: SpeechSpineSet, audio: TimelineAudio): SpeechBasis {
-  const space = programSpace(set);
-  const plan = compileSpeechSpineAudio(set);
+export function assembleSpeechBasis(
+  program: SpeechSpineProgram,
+  set: SpeechSpineSet,
+  audio: TimelineAudio,
+): SpeechBasis {
+  const space = programSpace(program, set);
   verifyTimelineAudio(audio);
-  assert(audio.planDigest === plan.planDigest && audio.programSpaceDigest === space.digest,
-    "TimelineAudio does not realize this Speech Spine plan");
+  assert(audio.sampleFrames === frameSample(
+    set.takes.reduce((sum, take) => sum + take.media.timeline.frameCount, 0),
+    program.frameRate,
+  ), "TimelineAudio does not cover this Speech Spine");
   let frame = 0;
   const seconds = (value: number): number => value * space.frameRate.denominator / space.frameRate.numerator;
   const segments = set.takes.map((take) => {

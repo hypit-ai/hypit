@@ -35,6 +35,12 @@ export class MemoryBuildStore implements BuildStore {
     return snapshot === undefined ? undefined : copy(snapshot);
   }
 
+  async list(): Promise<readonly BuildSnapshot[]> {
+    return [...this.#builds.values()]
+      .sort((left, right) => left.build.localeCompare(right.build))
+      .map(copy);
+  }
+
   async compareAndSwap(
     build: string,
     expectedRevision: number,

@@ -68,23 +68,6 @@ function ensureUniqueNames(names: readonly string[], kind: string, owner: string
   }
 }
 
-function verifyPointer(pointer: string, subject: string): void {
-  invariant(
-    pointer === "" || pointer.startsWith("/"),
-    "INVALID_AFFINITY_POINTER",
-    `${subject} has invalid JSON Pointer ${pointer}`,
-    subject,
-  );
-  for (const token of pointer === "" ? [] : pointer.slice(1).split("/")) {
-    invariant(
-      !/~(?:[^01]|$)/u.test(token),
-      "INVALID_AFFINITY_POINTER",
-      `${subject} has invalid JSON Pointer escape in ${pointer}`,
-      subject,
-    );
-  }
-}
-
 export function verifyClosure(closure: ResolvedModuleClosure): void {
   invariant(closure.format === "svml.closure@0", "UNSUPPORTED_CLOSURE", "unsupported closure format");
   invariant(isDigest(closure.digest), "INVALID_DIGEST", "closure digest is invalid");
@@ -147,27 +130,6 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
         "PRODUCER_RESULT_NORMAL_FORM",
         `${key}#${producer.name} must declare exactly one public result`,
       );
-      const inputNames = new Set(producer.inputs.map((input) => input.name));
-      for (const result of [...producer.outputs, ...producer.needs]) {
-        const resultPointers = new Set<string>();
-        for (const affinity of result.affinity ?? []) {
-          invariant(
-            inputNames.has(affinity.input),
-            "UNKNOWN_AFFINITY_INPUT",
-            `${key}#${producer.name}.${result.name} references unknown input ${affinity.input}`,
-            producer.name,
-          );
-          verifyPointer(affinity.resultPointer, `${key}#${producer.name}.${result.name}`);
-          verifyPointer(affinity.inputPointer, `${key}#${producer.name}.${affinity.input}`);
-          invariant(
-            !resultPointers.has(affinity.resultPointer),
-            "DUPLICATE_AFFINITY",
-            `${key}#${producer.name}.${result.name} repeats ${affinity.resultPointer}`,
-            producer.name,
-          );
-          resultPointers.add(affinity.resultPointer);
-        }
-      }
       invariant(
         isDigest(producer.implementation.digest),
         "INVALID_DIGEST",

@@ -142,18 +142,11 @@ function providedOverlay(source: CompiledGraph, value: string, label: string) {
   };
 }
 
-function completedAffinityBuild(): { readonly program: LinkedProgram; readonly source: CompiledGraph; readonly state: BuildState } {
+function completedBuild(): { readonly program: LinkedProgram; readonly source: CompiledGraph; readonly state: BuildState } {
   const base = fixture();
   const source = sealCompiledGraph({
     program: base.source.program,
-    outputs: base.source.outputs.map((output) => ({
-      ...output,
-      affinity: [{
-        resultPointer: "",
-        source: { kind: "record" as const, id: "prompt:shot" },
-        sourcePointer: "",
-      }],
-    })),
+    outputs: base.source.outputs,
     candidates: base.source.candidates,
     operations: base.source.operations,
   });
@@ -204,7 +197,7 @@ test("an attached Existing Value is inert until BuildRequest explicitly selects 
 });
 
 test("a historical Record becomes an ordinary substitute zero-edge Candidate", () => {
-  const { program, source, state: historical } = completedAffinityBuild();
+  const { program, source, state: historical } = completedBuild();
   const candidate = createBuildRecordCandidate({ build: historical, sourceOutput: "shot.visual" });
   assert.equal(candidate.root.kind, "value");
   assert.deepEqual(candidate.type, types.media);
@@ -221,8 +214,8 @@ test("a historical Record becomes an ordinary substitute zero-edge Candidate", (
   assert.notEqual(fresh.id, historical.id);
 });
 
-test("a fixed black value substitutes an affined Output without any history or semantic proof", () => {
-  const { program, source } = completedAffinityBuild();
+test("a fixed black value substitutes an Output without any history or semantic proof", () => {
+  const { program, source } = completedBuild();
   const candidate = createProvidedCandidate({
     type: types.media,
     value: { kind: "inline", value: "UNRELATED FIXED BLACK VIDEO" },
@@ -243,8 +236,8 @@ test("a fixed black value substitutes an affined Output without any history or s
   assert.equal(fresh.plan.initialValues[0]?.conformance, "substitute");
 });
 
-test("a historical Record may substitute another author graph and Output without semantic or affinity proof", () => {
-  const { program, source, state: historical } = completedAffinityBuild();
+test("a historical Record may substitute another author graph and Output without semantic proof", () => {
+  const { program, source, state: historical } = completedBuild();
   const other = sealCompiledGraph({
     program: source.program,
     outputs: source.outputs.map((output) => ({ ...output, id: "replacement.visual" })),

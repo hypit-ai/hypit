@@ -1,6 +1,3 @@
-import { digestOf } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
-
 import type {
   CaptionPresentationMode,
   CaptionPresentationPlan,
@@ -131,7 +128,7 @@ function characterFlow(region: TimedCaptionRegion): CaptionPresentationUnit[] {
 }
 
 export function planCaptionPresentation(
-  projection: { readonly projectionDigest: Digest; readonly regions: readonly TimedCaptionRegion[] },
+  projection: { readonly regions: readonly TimedCaptionRegion[] },
   mode: CaptionPresentationMode = "whole",
 ): CaptionPresentationPlan {
   const units = projection.regions.flatMap((region) =>
@@ -140,10 +137,9 @@ export function planCaptionPresentation(
       : mode === "proportional-word"
         ? proportionalWords(region)
         : characterFlow(region));
-  const payload = {
+  return {
     contract: "svml.caption-presentation-plan@0" as const,
     mode,
     units,
   };
-  return { ...payload, planDigest: digestOf(payload) };
 }

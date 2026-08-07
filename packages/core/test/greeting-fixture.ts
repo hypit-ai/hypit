@@ -115,11 +115,7 @@ export const manifest: ModuleManifest = {
     {
       name: producers.assemble.name,
       inputs: [{ name: "generated", type: types.generated }],
-      outputs: [{
-        name: "document",
-        type: types.document,
-        affinity: [{ resultPointer: "/text", input: "generated", inputPointer: "" }],
-      }],
+      outputs: [{ name: "document", type: types.document }],
       needs: [],
       implementation: {
         kind: "registered",

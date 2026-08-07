@@ -50,6 +50,14 @@ pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.packages.lock \
   --package @svml/hyperframes-render \
   --package @svml/run-text \
   --root .
+
+pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.runtime-packages.lock \
+  --package @svml/provider-kie \
+  --package @svml/provider-media-local \
+  --package @svml/provider-whisperx-local \
+  --package @svml/provider-google-vertex \
+  --package @svml/provider-hyperframes-local \
+  --root .
 ```
 
 Inspect all authored outputs—including `*.prompt` and `*.program`—without a paid call:

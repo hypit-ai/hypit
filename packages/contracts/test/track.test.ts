@@ -43,7 +43,6 @@ function fixture() {
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "caption",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "cue-1",
       span: { startFrame: 0, endFrameExclusive: 60 },
@@ -57,7 +56,6 @@ function fixture() {
   const sound = sealAudioTrack({
     contract: "svml.audio-track@1",
     id: "speech",
-    programSpaceDigest: programSpace.digest,
     clips: [{ id: "speech", span: { startFrame: 0, endFrameExclusive: 120 }, artifact: audio, bus: "speech" }],
   });
   return { programSpace, visual, sound };
@@ -69,11 +67,10 @@ test("Composition accepts self-contained peer VisualTrack and AudioTrack values"
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "main",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [sound, visual],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(composition));
+  assert.doesNotThrow(() => assertCompositionIdentity(composition, programSpace));
   assert.deepEqual(composition.tracks.map((track) => track.id), ["speech", "caption"]);
 });
 
@@ -82,11 +79,10 @@ test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "uppercase-color",
-    programSpace,
     canvas: { width: 480, height: 854, clearColor: "#09090B" },
     tracks: [visual],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(composition));
+  assert.doesNotThrow(() => assertCompositionIdentity(composition, programSpace));
 });
 
 test("VisualTrack rejects cross-Track pixel sampling styles", () => {
@@ -103,11 +99,10 @@ test("VisualTrack rejects cross-Track pixel sampling styles", () => {
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "invasive",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [sound, invasive],
   });
-  assert.throws(() => assertCompositionIdentity(composition), /cross-Track style backdrop-filter/);
+  assert.throws(() => assertCompositionIdentity(composition, programSpace), /cross-Track style backdrop-filter/);
 });
 
 test("VisualTrack style values cannot smuggle a second declaration", () => {
@@ -125,10 +120,9 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
     () => assertCompositionIdentity(sealComposition({
       contract: "svml.composition@1",
       id: "smuggled",
-      programSpace,
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [smuggled],
-    })),
+    }), programSpace),
     /escapes its declaration/,
   );
 });
@@ -147,10 +141,9 @@ test("VisualTrack cannot silently extend the versioned HyperFrames Visual IR", (
     () => assertCompositionIdentity(sealComposition({
       contract: "svml.composition@1",
       id: "unknown-style",
-      programSpace,
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [unknownStyle],
-    })),
+    }), programSpace),
     /outside svml\.hyperframes-visual-ir@1/u,
   );
 
@@ -217,36 +210,35 @@ test("the Type owner rejects an invalid VisualTrack at the shared admission gate
   );
 });
 
-test("Composition rejects a Track from another ProgramSpace even when its shape is valid", () => {
+test("Composition validates Track frame ranges against the explicitly connected ProgramSpace", () => {
   const { programSpace, visual } = fixture();
   const foreign = sealProgramSpace({
     contract: "svml.program-space@0",
-    durationSec: 4,
+    durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   });
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "foreign",
-    programSpace: foreign,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [visual],
   });
-  assert.throws(() => assertCompositionIdentity(composition), /belongs to another ProgramSpace/);
-  assert.notEqual(programSpace.digest, foreign.digest);
+  assert.throws(() => assertCompositionIdentity(composition, foreign), /outside ProgramSpace/);
+  assert.notDeepEqual(programSpace, foreign);
 });
 
-test("Composition identity binds every Track digest and rejects tampering", () => {
+test("Composition is a plain product value; the enclosing Record binds its integrity", () => {
   const { programSpace, visual } = fixture();
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "main",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [visual],
   });
   const tampered = structuredClone(composition);
   (tampered.tracks[0] as { id: string }).id = "changed";
-  assert.throws(() => assertCompositionIdentity(tampered), /Composition digest does not match/);
+  assert.doesNotThrow(() => assertCompositionIdentity(tampered, programSpace));
+  assert.equal(tampered.tracks[0]?.id, "changed");
 });
 
 test("one authoring Track may contribute independently stacked Presents", () => {
@@ -267,11 +259,10 @@ test("one authoring Track may contribute independently stacked Presents", () => 
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "interleaved",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [interleaved],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(composition));
+  assert.doesNotThrow(() => assertCompositionIdentity(composition, programSpace));
   assert.deepEqual(interleaved.presents.map((present) => present.stacking.order), [30, 80]);
 });
 
@@ -297,10 +288,9 @@ test("Visual Present animations are frame-exact and cannot animate cross-Track s
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
     contract: "svml.composition@1",
     id: "animated",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [animated],
-  })));
+  }), programSpace));
   const invasive = sealVisualTrack({
     ...visual,
     presents: [{
@@ -319,8 +309,7 @@ test("Visual Present animations are frame-exact and cannot animate cross-Track s
   assert.throws(() => assertCompositionIdentity(sealComposition({
     contract: "svml.composition@1",
     id: "animated-invasive",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [invasive],
-  })), /cross-Track style backdrop-filter/);
+  }), programSpace), /cross-Track style backdrop-filter/);
 });

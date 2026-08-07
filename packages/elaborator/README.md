@@ -49,8 +49,8 @@ values use the same Type-owner gate as Producer, Provider and provided Candidate
 
 A `svml.fragment@1` value may reference only declared Fragment inputs and local Operations. It
 contains no JavaScript callback, ambient file lookup, credential access or Runtime endpoint. Before
-expansion the Elaborator verifies producer ports, types, cycles, reachable exports, Semantic Input
-Envelopes and affinity sources.
+expansion the Elaborator verifies producer ports, types, cycles, reachable exports and Semantic
+Input Envelopes.
 
 Expansion assigns hygienic identities from `fragment digest + author instance id + local id`.
 Multiple exports of one instance therefore share internal Operations, while two explicit instances

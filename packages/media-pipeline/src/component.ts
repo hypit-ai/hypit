@@ -13,6 +13,7 @@ import {
 import type {
   Composition,
   MuxedMedia,
+  ProgramSpace,
   RenderedVisual,
   SpeechAudioBasis,
   TimelineAudio,
@@ -107,9 +108,6 @@ export const mediaPipelineComponent = {
         verifyMediaInspection(inspection);
         verifyMediaStreamSelection(selection);
         verifyMediaSelectionRequest(request);
-        if (inspection.source.digest !== source.digest) {
-          throw new Error("Media normalization inspection belongs to another source artifact");
-        }
         const need: NormalizeMediaNeed = {
           contract: "svml.normalize-media-request@1",
           source,
@@ -135,7 +133,6 @@ export const mediaPipelineComponent = {
         }
         const need: ProjectSpeechEvidenceAudioNeed = {
           contract: "svml.project-speech-evidence-audio-request@1",
-          programSpaceDigest: audio.programSpace.digest,
           source: {
             kind: "blob",
             digest: audio.audio.digest,
@@ -161,8 +158,9 @@ export const mediaPipelineComponent = {
       implementationDigest: mediaPipelineImplementationDigests.planAudio,
       handler: ({ inputs }) => {
         const composition = inline(inputs.composition!.value, "Composition") as unknown as Composition;
+        const space = inline(inputs.space!.value, "ProgramSpace") as unknown as ProgramSpace;
         return {
-          outputs: { plan: { kind: "inline", value: canonicalize(compileAudioProgramPlan(composition)) } },
+          outputs: { plan: { kind: "inline", value: canonicalize(compileAudioProgramPlan(composition, space)) } },
           needs: {},
         };
       },
@@ -185,8 +183,9 @@ export const mediaPipelineComponent = {
         const audio = inline(inputs.audio!.value, "TimelineAudio");
         verifyRenderedVisual(visual);
         verifyTimelineAudio(audio);
-        if (visual.programSpaceDigest !== audio.programSpaceDigest) {
-          throw new Error("Rendered visual and TimelineAudio belong to different ProgramSpaces");
+        if (visual.frameCount * visual.frameRate.denominator * 48_000
+          !== audio.sampleFrames * visual.frameRate.numerator) {
+          throw new Error("Rendered visual and TimelineAudio have different presentation durations");
         }
         const need: MuxMediaNeed = { contract: "svml.mux-media-request@1", visual, audio };
         return { outputs: {}, needs: { media: canonicalize(need) } };

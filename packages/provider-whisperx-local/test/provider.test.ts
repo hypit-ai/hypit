@@ -136,8 +136,6 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
     const artifact = await artifacts.put(expected, "audio/wav");
     const evidenceAudio = sealSpeechEvidenceAudio({
       contract: "svml.speech-evidence-audio@1",
-      programSpaceDigest: digestOf("loopback:program"),
-      sourceAudioArtifactDigest: digestOf("loopback:speech-master"),
       artifact,
       codec: "pcm_s16le",
       sampleRate: 16_000,
@@ -153,7 +151,6 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
         evidenceSampleFrames: 32_000,
         sourceOriginSample: 0,
         evidenceOriginSample: 0,
-        resamplerImplementation: "fixture",
       },
     });
     const constraints = whisperXRequestForEvidenceAudio(evidenceAudio, { language: "en" });

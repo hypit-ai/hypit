@@ -44,17 +44,13 @@ function intent() {
   return sealSpeakerTakeIntent({
     contract: "svml.seedance-speaker-take-intent@1",
     kit: "official-ugc-v1",
-    recipe: { path: "speaker.default", recordDigest: digestOf("recipe") },
+    recipe: { path: "speaker.default" },
     model: speakerMethodDefaults.model,
     resolution: speakerMethodDefaults.resolution,
     aspectRatio: speakerMethodDefaults.aspectRatio,
     webSearch: speakerMethodDefaults.webSearch,
     promptParameters: {},
     segment: {
-      id: "opening",
-      tokenStart: 0,
-      tokenEndExclusive: 4,
-      dialogueExcerptDigest: digestOf("dialogue"),
       dialogue: "HOST: Say exactly these words.",
     },
     references: [
@@ -88,9 +84,7 @@ test("official UGC Kit emits an ordered generic Prompt Program", () => {
     "visible-text",
     "dialogue",
   ]);
-  assert.equal(prompt.blocks[3]?.origin, "variant:voice-map:single-with-audio");
   assert.match(prompt.blocks[3]?.text ?? "", /@audio1/u);
-  assert.equal(prompt.blocks[4]?.origin, "parameter:composition-stability:soft-locked");
 });
 
 test("rendering the generic Prompt Program preserves exact Seedance method and references", () => {
@@ -108,13 +102,12 @@ test("rendering the generic Prompt Program preserves exact Seedance method and r
 
 test("Speaker rejects invalid media while Prompt Kit rejects unknown parameters", () => {
   const base = intent();
-  const { intentDigest: _digest, ...content } = base;
   assert.throws(() => sealSpeakerTakeIntent({
-    ...content,
+    ...base,
     references: [{ kind: "audio", artifact: audio, role: "voice-timbre" }],
   }), /requires 1-9 image references/u);
-  assert.throws(() => sealSpeakerTakeIntent({ ...content, resolution: "1080p" }), /at most 720p/u);
-  const unknown = sealSpeakerTakeIntent({ ...content, promptParameters: { "imaginary-axis": "value" } });
+  assert.throws(() => sealSpeakerTakeIntent({ ...base, resolution: "1080p" }), /at most 720p/u);
+  const unknown = sealSpeakerTakeIntent({ ...base, promptParameters: { "imaginary-axis": "value" } });
   assert.throws(
     () => compilePromptKit(officialUgcV1KitSpec, bindSpeakerPromptKit(unknown)),
     /parameter imaginary-axis is not declared/u,

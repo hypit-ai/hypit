@@ -15,7 +15,7 @@ ordinary Producer
   stream-selection policy
   frame/sample arithmetic
   AudioProgramPlan construction
-  Graph wiring and affinity checks
+  Graph wiring and intrinsic value checks
 
 Provider Need
   Artifact read
@@ -28,7 +28,7 @@ Provider Need
 ```
 
 This does not add media knowledge to Core. Core still sees only typed Records, finite Operations,
-Needs, selected Candidates, content digests, affinity and provenance. `@svml/media-pipeline` owns
+Needs, selected Candidates, content digests and derivation history. `@svml/media-pipeline` owns
 the domain contracts; a Runtime Profile chooses concrete Provider implementations.
 
 ## Final video path

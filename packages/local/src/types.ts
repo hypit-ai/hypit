@@ -110,6 +110,12 @@ export type LocalRuntimeStatus = {
   readonly operations: readonly OperationSnapshot[];
 };
 
+export type ArtifactGarbageCollection = {
+  readonly reachable: readonly Digest[];
+  readonly unreachable: readonly Digest[];
+  readonly deleted: readonly Digest[];
+};
+
 export type LocalRuntime = {
   build(request: LocalBuildRequest, options?: LocalBuildOptions): Promise<ScheduledBuildResult>;
   buildMany(requests: readonly LocalBuildRequest[]): Promise<readonly ScheduledBuildResult[]>;
@@ -117,5 +123,8 @@ export type LocalRuntime = {
   builds(): Promise<readonly BuildCatalogEntry[]>;
   cancel(build: string): Promise<ScheduledBuildResult | undefined>;
   readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
+  openArtifact(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
+  /** Explicit maintenance only. apply=false is a read-only reachability report. */
+  garbageCollectArtifacts(options?: { readonly apply?: boolean }): Promise<ArtifactGarbageCollection>;
   close(): Awaitable<void>;
 };

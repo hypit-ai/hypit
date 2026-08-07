@@ -1,4 +1,4 @@
-import type { BlobRef, Digest } from "@svml/protocol";
+import type { BlobRef } from "@svml/protocol";
 
 export type MediaRational = {
   readonly numerator: number;
@@ -57,16 +57,10 @@ export type MediaStream = MediaVideoStream | MediaAudioStream | MediaOtherStream
 /** Immutable observed facts about one exact content-addressed container. */
 export type MediaInspection = {
   readonly contract: "svml.media-inspection@1";
-  readonly source: BlobRef;
   readonly container: {
     readonly formatNames: readonly string[];
   };
   readonly streams: readonly MediaStream[];
-  readonly probe: {
-    readonly algorithm: "ffprobe-decoded-units-json@1";
-    readonly implementation: string;
-  };
-  readonly inspectionDigest: Digest;
 };
 
 export type MediaStreamSelection = {
@@ -79,7 +73,6 @@ export type MediaStreamSelection = {
     | "default-audio@1"
     | "primary-moving-default-audio@1"
     | "explicit-streams@1";
-  readonly selectionDigest: Digest;
 };
 
 export type SynchronizedMedia = {
@@ -119,19 +112,11 @@ export type SynchronizedMedia = {
     /** Media normalization preserves level. Loudness/mastering is a separate author policy. */
     readonly loudness: "preserved";
   };
-  readonly normalization: {
-    readonly algorithm: "shared-presentation-origin@1";
-    readonly implementation: string;
-  };
-  readonly synchronizedMediaDigest: Digest;
 };
 
 /** Silent, frame-exact visual output from a renderer such as HyperFrames. */
 export type RenderedVisual = {
   readonly contract: "svml.rendered-visual@1";
-  /** Digest of the exact renderer input document/program. */
-  readonly renderInputDigest: Digest;
-  readonly programSpaceDigest: Digest;
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly canvas: {
@@ -140,29 +125,22 @@ export type RenderedVisual = {
   };
   readonly artifact: BlobRef;
   readonly muted: true;
-  readonly visualDigest: Digest;
 };
 
 /** Exact 48 kHz stereo PCM result of one explicit timeline-audio plan. */
 export type TimelineAudio = {
   readonly contract: "svml.timeline-audio@1";
-  readonly planDigest: Digest;
-  readonly programSpaceDigest: Digest;
   readonly artifact: BlobRef;
   readonly codec: "pcm_s16le";
   readonly sampleRate: 48_000;
   readonly channels: 2;
   readonly sampleFrames: number;
   readonly loudness: "planned";
-  readonly audioDigest: Digest;
 };
 
 /** Final mux result; visual rendering and program-audio preparation remain separate facts. */
 export type MuxedMedia = {
   readonly contract: "svml.muxed-media@1";
-  readonly visualDigest: Digest;
-  readonly audioDigest: Digest;
-  readonly programSpaceDigest: Digest;
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly canvas: {
@@ -171,5 +149,4 @@ export type MuxedMedia = {
   };
   readonly presentationSampleFrames: number;
   readonly artifact: BlobRef;
-  readonly muxDigest: Digest;
 };

@@ -20,11 +20,6 @@ import type {
   TypedRecord,
 } from "@svml/protocol";
 
-import {
-  verifyGraphRecordAffinity,
-  verifyInitialAffinities,
-  verifyProducerRecordAffinity,
-} from "./affinity.js";
 import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";
 import { resolveProducer, resolveType, sealRecord, verifyRecord } from "./link.js";
@@ -171,11 +166,6 @@ function acceptProducerEvent(
     ...(output.validation === undefined ? {} : { validation: output.validation }),
   }));
   outputs.forEach((record) => verifyRecord(state.program.closure, record));
-  const outputLookup = new Map([...state.records, ...outputs].map((record) => [record.id, record]));
-  outputs.forEach((record) => {
-    verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => outputLookup.get(recordId));
-    verifyGraphRecordAffinity(state.graph, state.plan, record, (recordId) => outputLookup.get(recordId));
-  });
   const needs: Need[] = needDrafts.map((need) => ({ ...need, requestedBy: id }));
 
   return {
@@ -246,9 +236,6 @@ function acceptNeedEvent(
     ...(event.validation === undefined ? {} : { validation: event.validation }),
   };
   verifyRecord(state.program.closure, record);
-  const recordLookup = new Map([...state.records, record].map((item) => [item.id, item]));
-  verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => recordLookup.get(recordId));
-  verifyGraphRecordAffinity(state.graph, state.plan, record, (recordId) => recordLookup.get(recordId));
 
   return {
     ...state,
@@ -382,7 +369,6 @@ export function start(
   request: BuildRequest,
 ): BuildState {
   const plan: BuildPlan = compileBuild(program, graph, request);
-  verifyInitialAffinities(graph, plan, program.records);
   const state: BuildState = {
     format: "svml.build@2",
     id: digestOf({

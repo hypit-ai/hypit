@@ -67,15 +67,6 @@ export const hyperframesRenderManifest: ModuleManifest = {
         name: "visual",
         capability: hyperframesRenderCapabilities.renderVisual,
         returns: contractTypes.renderedVisual,
-        affinity: [
-          { resultPointer: "/renderInputDigest", input: "document", inputPointer: "/digest" },
-          { resultPointer: "/programSpaceDigest", input: "document", inputPointer: "/programSpaceDigest" },
-          { resultPointer: "/frameRate/numerator", input: "document", inputPointer: "/frameRate/numerator" },
-          { resultPointer: "/frameRate/denominator", input: "document", inputPointer: "/frameRate/denominator" },
-          { resultPointer: "/frameCount", input: "document", inputPointer: "/frameCount" },
-          { resultPointer: "/canvas/width", input: "document", inputPointer: "/canvas/width" },
-          { resultPointer: "/canvas/height", input: "document", inputPointer: "/canvas/height" },
-        ],
       }],
       implementation: {
         kind: "registered",

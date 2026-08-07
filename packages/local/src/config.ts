@@ -1,11 +1,15 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import type { ComponentPackage } from "@svml/component-kit";
-import type { EndpointPackage } from "@svml/endpoint-kit";
+import { loadNodePackageSet } from "@svml/package-loader-node";
 import { canonicalize } from "@svml/protocol";
 import type { CanonicalValue } from "@svml/protocol";
-import type { RuntimeServicePackage } from "@svml/runtime";
+import {
+  isRuntimeAdapterHostFacet,
+  RuntimeAdapterRegistry,
+} from "@svml/runtime-adapter";
+import type { RuntimeDoctorDiagnostic } from "@svml/runtime-adapter";
 
 import { createProjectLocalRuntime } from "./runtime.js";
 import type { LocalRuntime } from "./types.js";
@@ -25,6 +29,8 @@ export type RuntimeConfigDocument = {
   readonly catalogPath?: string;
   readonly artifactPath?: string;
   readonly packageLock?: string;
+  /** Locked physical packages allowed to configure privileged Runtime adapters. */
+  readonly runtimePackageLock?: string;
   readonly services: readonly RuntimeConfigEntry[];
   readonly endpoints: readonly RuntimeConfigEntry[];
   readonly selection?: {
@@ -43,46 +49,6 @@ export type RuntimeConfigDocument = {
     readonly maxEventsPerBuild?: number;
   };
 };
-
-export type RuntimeConfigFactoryContext = {
-  readonly root: string;
-  readonly instance: string;
-  readonly lane?: string;
-  readonly config: CanonicalValue;
-};
-
-export type RuntimeEndpointFactory = (
-  context: RuntimeConfigFactoryContext,
-) => Promise<EndpointPackage> | EndpointPackage;
-
-export type RuntimeServiceFactory = (
-  context: RuntimeConfigFactoryContext,
-) => Promise<RuntimeServicePackage> | RuntimeServicePackage;
-
-export class RuntimeConfigRegistry {
-  readonly #endpoints = new Map<string, RuntimeEndpointFactory>();
-  readonly #services = new Map<string, RuntimeServiceFactory>();
-
-  registerEndpoint(use: string, factory: RuntimeEndpointFactory): void {
-    if (use.trim().length === 0) throw new Error("Runtime Endpoint adapter name must not be empty");
-    if (this.#endpoints.has(use) || this.#services.has(use)) throw new Error(`Runtime adapter ${use} is already registered`);
-    this.#endpoints.set(use, factory);
-  }
-
-  registerService(use: string, factory: RuntimeServiceFactory): void {
-    if (use.trim().length === 0) throw new Error("Runtime service adapter name must not be empty");
-    if (this.#endpoints.has(use) || this.#services.has(use)) throw new Error(`Runtime adapter ${use} is already registered`);
-    this.#services.set(use, factory);
-  }
-
-  endpoint(use: string): RuntimeEndpointFactory | undefined {
-    return this.#endpoints.get(use);
-  }
-
-  service(use: string): RuntimeServiceFactory | undefined {
-    return this.#services.get(use);
-  }
-}
 
 function object(value: unknown, subject: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`${subject} must be an object`);
@@ -173,7 +139,8 @@ function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
 export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
   exactKeys(item, [
-    "format", "root", "statePath", "catalogPath", "artifactPath", "packageLock", "services", "endpoints",
+    "format", "root", "statePath", "catalogPath", "artifactPath", "packageLock", "runtimePackageLock",
+    "services", "endpoints",
     "selection", "permissions", "scheduling",
   ], "$runtime");
   if (item.format !== "svml.runtime-config@1") throw new Error("$runtime.format must be svml.runtime-config@1");
@@ -196,6 +163,9 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     ...(optionalString(item.catalogPath, "$runtime.catalogPath") === undefined ? {} : { catalogPath: item.catalogPath as string }),
     ...(optionalString(item.artifactPath, "$runtime.artifactPath") === undefined ? {} : { artifactPath: item.artifactPath as string }),
     ...(optionalString(item.packageLock, "$runtime.packageLock") === undefined ? {} : { packageLock: item.packageLock as string }),
+    ...(optionalString(item.runtimePackageLock, "$runtime.runtimePackageLock") === undefined
+      ? {}
+      : { runtimePackageLock: item.runtimePackageLock as string }),
     services,
     endpoints,
     ...(selected === undefined ? {} : { selection: selected }),
@@ -205,30 +175,133 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
 }
 
 export type LoadRuntimeConfigOptions = {
-  readonly registry: RuntimeConfigRegistry;
+  /** Trusted embedding adapters. Locked installed adapters are normally selected by runtimePackageLock. */
+  readonly registry?: RuntimeAdapterRegistry;
   readonly components?: readonly ComponentPackage[];
 };
 
+export type RuntimeConfigDoctorResult = {
+  readonly root: string;
+  readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
+};
+
+async function installLockedRuntimeAdapters(
+  registry: RuntimeAdapterRegistry,
+  path: string | undefined,
+  root: string,
+): Promise<void> {
+  if (path === undefined) return;
+  const loaded = await loadNodePackageSet(resolve(root, path), root);
+  const lockedPackages = new Map(loaded.lock.packages.map((item) => [item.package.name, item]));
+  const artifacts = new Map(loaded.lock.artifacts.map((item) => [`${item.name}@${item.version}`, item]));
+  for (const contribution of loaded.contributions) {
+    const locked = lockedPackages.get(contribution.name);
+    if (locked === undefined) throw new Error(`Runtime package ${contribution.name} is absent from its verified lock`);
+    const artifact = artifacts.get(`${locked.package.name}@${locked.package.version}`);
+    if (artifact === undefined) throw new Error(`Runtime package ${contribution.name} has no verified physical Artifact`);
+    for (const facet of contribution.hostFacets ?? []) {
+      if (!isRuntimeAdapterHostFacet(facet)) continue;
+      registry.registerFacet(facet, {
+        packageName: contribution.name,
+        packageArtifactDigest: artifact.digest,
+        packageClosureDigest: locked.closureDigest,
+      });
+    }
+  }
+}
+
+function diagnostic(error: unknown, code: string, subject?: string): RuntimeDoctorDiagnostic {
+  return {
+    severity: "error",
+    code,
+    message: error instanceof Error ? error.message : String(error),
+    ...(subject === undefined ? {} : { subject }),
+  };
+}
+
+/** Read-only validation of package bytes, adapter config, credentials and local executable prerequisites. */
+export async function doctorRuntimeConfig(
+  path: string,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<RuntimeConfigDoctorResult> {
+  const absolute = resolve(path);
+  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
+  const root = resolve(dirname(absolute), document.root ?? ".");
+  const diagnostics: RuntimeDoctorDiagnostic[] = [];
+  try {
+    if (!(await stat(root)).isDirectory()) throw new Error(`Runtime root ${root} is not a directory`);
+  } catch (error) {
+    diagnostics.push(diagnostic(error, "RUNTIME_ROOT_INVALID", root));
+    return { root, diagnostics };
+  }
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  try {
+    await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root);
+  } catch (error) {
+    diagnostics.push(diagnostic(error, "RUNTIME_PACKAGE_LOCK_INVALID", document.runtimePackageLock));
+    return { root, diagnostics };
+  }
+  if (document.packageLock !== undefined) {
+    try {
+      await loadNodePackageSet(resolve(root, document.packageLock), root);
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "IMPLEMENTATION_PACKAGE_LOCK_INVALID", document.packageLock));
+    }
+  }
+  for (const item of document.services) {
+    const context = { root, instance: item.instance, config: item.config ?? {} };
+    try {
+      diagnostics.push(...await registry.doctor(item.use, "service", context));
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
+    }
+    if (!registry.has(item.use, "service")) continue;
+    try {
+      await registry.createService(item.use, context);
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "RUNTIME_SERVICE_CONFIG_INVALID", item.instance));
+    }
+  }
+  for (const item of document.endpoints) {
+    const context = {
+      root,
+      instance: item.instance,
+      ...(item.lane === undefined ? {} : { lane: item.lane }),
+      config: item.config ?? {},
+    };
+    try {
+      diagnostics.push(...await registry.doctor(item.use, "endpoint", context));
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
+    }
+    if (!registry.has(item.use, "endpoint")) continue;
+    try {
+      await registry.createEndpoint(item.use, context);
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
+    }
+  }
+  return { root, diagnostics };
+}
+
 export async function createRuntimeFromConfig(
   path: string,
-  options: LoadRuntimeConfigOptions,
+  options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalRuntime> {
   const absolute = resolve(path);
   const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
   const root = resolve(dirname(absolute), document.root ?? ".");
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root);
   const services = await Promise.all(document.services.map(async (item) => {
-    const factory = options.registry.service(item.use);
-    if (factory === undefined) throw new Error(`Runtime service adapter ${item.use} is not registered`);
-    return await factory({
+    return await registry.createService(item.use, {
       root,
       instance: item.instance,
       config: item.config ?? {},
     });
   }));
   const endpoints = await Promise.all(document.endpoints.map(async (item) => {
-    const factory = options.registry.endpoint(item.use);
-    if (factory === undefined) throw new Error(`Runtime Endpoint adapter ${item.use} is not registered`);
-    return await factory({
+    return await registry.createEndpoint(item.use, {
       root,
       instance: item.instance,
       ...(item.lane === undefined ? {} : { lane: item.lane }),

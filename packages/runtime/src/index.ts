@@ -36,4 +36,9 @@ export {
 } from "./services.js";
 export type * from "./services.js";
 export { LocalBuildScheduler } from "./scheduler.js";
+export {
+  isEnumerableBuildStore,
+  isManagedArtifactStore,
+  isStreamingArtifactStore,
+} from "./types.js";
 export type * from "./types.js";

@@ -43,8 +43,8 @@ easily inconsistent account of the graph.
 A field belongs in a shared value contract only when at least one of these is true:
 
 1. a consumer needs it to interpret that value without reconstructing its producer;
-2. it identifies the coordinate space or exact physical subject the value describes;
-3. it is the value's own content identity and the value may be embedded outside a Core Record.
+2. it is actual authored or measured content of that value;
+3. it is a content-addressed byte reference that a consumer must be able to retrieve.
 
 If the only justification is “this proves the producer received input X”, the field belongs in the
 Graph/Derivation instead.
@@ -52,11 +52,11 @@ Graph/Derivation instead.
 Therefore these are intrinsic and remain:
 
 - Blob digests, dimensions, codecs and exact durations;
-- ProgramSpace identity on time-based values and Tracks;
-- the exact acoustic Artifact measured by STT evidence;
-- `MediaInspection.source`, because an inspection is a claim about those exact bytes;
+- ProgramSpace inside an atomic SpeechBasis, because the Basis itself defines that synchronized
+  coordinate system;
+- frame/sample maps that are the actual output of a projection;
 - deterministic source-to-normalized time/sample maps when consumers may project coordinates;
-- a Product's own digest when it is projected or transported as an embedded value.
+- the concrete Tracks or Takes accumulated by a fold value.
 
 These are transitive lineage and are forbidden from generic result values:
 
@@ -64,23 +64,30 @@ These are transitive lineage and are forbidden from generic result values:
 - model choice and requested duration repeated in generated-media results;
 - generic `Track.sources[]` provenance lists;
 - input inspection/selection digests repeated in normalized media;
-- Map, Caption or B-roll fields whose only meaning is “came from this upstream Record”.
+- Map, Caption or B-roll fields whose only meaning is “came from this upstream Record”;
+- a domain Product's own digest—the enclosing Core Record already has one;
+- policy or coordinate context copied into a fold/set merely so later append Operations can find it.
 
 Provider diagnostics and raw external responses belong in Receipt metadata or content-addressed
 Artifacts, not in a provider-neutral result contract.
 
-## Affinity is not provenance
+## Edges and Derivations are the relationship mechanism
 
-Core's generic affinity comparison remains necessary, but only for an intrinsic equality that must
-hold between two directly connected values. Examples include:
+Core deliberately has no generic JSON-Pointer “affinity” mechanism. A Producer receives every value
+whose relationship it must validate as an explicit typed input. For example:
 
-- a projected Blob must actually be a member of its generated Product;
-- a Track and Composition must occupy the same ProgramSpace;
-- WhisperX evidence must describe the exact evidence-audio Blob submitted to the Endpoint;
-- a normalized result must use the selected stream and shared presentation origin it claims.
+- Track creation and Film compilation receive ProgramSpace explicitly;
+- media normalization receives source, inspection, selection and frame-rate inputs explicitly;
+- WhisperX fulfillment is bound to the exact audio request by Need and Receipt;
+- a Projection receives the atomic Product it projects.
 
-Adding a field to an output solely so an affinity can compare it with an input recreates hidden
-lineage and is not allowed.
+The Producer validates intrinsic compatibility while it runs. Core records the exact input/output
+Record digests in the Derivation. Adding comparison-only fields to the output would recreate a
+second, incomplete graph and is not allowed.
+
+An immutable fold value may retain the actual members accumulated so far. It must not retain policy,
+ProgramSpace, source identity or the previous fold digest. Every append and finalization Operation
+receives that context through ordinary graph edges.
 
 ## Candidates, provided values and partial builds
 

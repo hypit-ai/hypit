@@ -56,6 +56,28 @@ export type ArtifactStore = {
   has(digest: Digest): Promise<boolean>;
 };
 
+/** Optional transfer capability. Core and components never require storage to expose it. */
+export type StreamingArtifactStore = ArtifactStore & {
+  putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef>;
+  open(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
+};
+
+/** Optional retention capability used only by explicit deployment maintenance. */
+export type ManagedArtifactStore = ArtifactStore & {
+  list(): Promise<readonly Digest[]>;
+  delete(digest: Digest): Promise<boolean>;
+};
+
+export function isStreamingArtifactStore(value: ArtifactStore): value is StreamingArtifactStore {
+  return "putStream" in value && typeof value.putStream === "function"
+    && "open" in value && typeof value.open === "function";
+}
+
+export function isManagedArtifactStore(value: ArtifactStore): value is ManagedArtifactStore {
+  return "list" in value && typeof value.list === "function"
+    && "delete" in value && typeof value.delete === "function";
+}
+
 export type BuildSnapshot = {
   readonly build: string;
   readonly revision: number;
@@ -72,6 +94,15 @@ export type BuildStore = {
   read(build: string): Promise<BuildSnapshot | undefined>;
   compareAndSwap(build: string, expectedRevision: number, state: BuildState): Promise<BuildStoreWrite>;
 };
+
+/** Optional maintenance index; execution still depends only on BuildStore's three CAS operations. */
+export type EnumerableBuildStore = BuildStore & {
+  list(): Promise<readonly BuildSnapshot[]>;
+};
+
+export function isEnumerableBuildStore(value: BuildStore): value is EnumerableBuildStore {
+  return "list" in value && typeof value.list === "function";
+}
 
 export type ScheduledBuild = {
   readonly id: string;

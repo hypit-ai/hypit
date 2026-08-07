@@ -1,6 +1,6 @@
 import { artifactTypes } from "@svml/artifact";
 import { contractTypes } from "@svml/contracts";
-import type { CanonicalValue, Digest, StoredValue } from "@svml/protocol";
+import type { CanonicalValue, StoredValue } from "@svml/protocol";
 import {
   compilePromptKit,
   promptKitTypes,
@@ -102,9 +102,7 @@ function recipeValue(
   }
   const recipe = inline<SvsRecipe>(reference, `${element.name}.recipe`);
   if (recipe.contract !== "svml.svs-recipe@1") throw new Error(`${element.name}.recipe is invalid`);
-  const digest = reference.record?.digest;
-  if (digest === undefined) throw new Error(`${element.name}.recipe has no Record digest`);
-  return { recipe, digest };
+  return recipe;
 }
 
 function kitValue(
@@ -134,7 +132,6 @@ function dialogueValue(
     readonly tokenStart: number;
     readonly tokenEndExclusive: number;
     readonly dialogue: string;
-    readonly excerptDigest: string;
   }>(reference, `${element.name}.dialogue`);
   if (
     value.contract !== "svml.narrative-dialogue-excerpt@1"
@@ -207,8 +204,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   attributes(element, ["id", "dialogue", "duration", "recipe", "kit"]);
   const id = stringAttribute(element, "id");
   const kit = kitValue(element, resolveReference);
-  const selectedRecipe = recipeValue(element, resolveReference);
-  const recipe = selectedRecipe.recipe;
+  const recipe = recipeValue(element, resolveReference);
   const reserved = new Set([
     "kind", "model", "resolution", "aspect-ratio", "web-search", "action", "extra",
   ]);
@@ -239,17 +235,13 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   const intent = sealSpeakerTakeIntent({
     contract: "svml.seedance-speaker-take-intent@1",
     kit: kit.id,
-    recipe: { path: recipe.path, recordDigest: selectedRecipe.digest },
+    recipe: { path: recipe.path },
     model: selectedModel,
     resolution: recipeString(recipe, "resolution", speakerMethodDefaults.resolution) as "480p" | "720p" | "1080p",
     aspectRatio: recipeString(recipe, "aspect-ratio", speakerMethodDefaults.aspectRatio) as "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive",
     webSearch: recipeBoolean(recipe, "web-search", speakerMethodDefaults.webSearch),
     promptParameters,
     segment: {
-      id: dialogue.id,
-      tokenStart: dialogue.tokenStart,
-      tokenEndExclusive: dialogue.tokenEndExclusive,
-      dialogueExcerptDigest: dialogue.excerptDigest as Digest,
       dialogue: dialogue.dialogue,
     },
     references: refs,

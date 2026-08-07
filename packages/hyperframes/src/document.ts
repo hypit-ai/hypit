@@ -6,6 +6,7 @@ import {
 import type {
   Composition,
   FontArtifactRef,
+  ProgramSpace,
   Track,
   VisualAttribute,
   VisualElement,
@@ -213,7 +214,7 @@ function orderedVisualPresents(tracks: readonly Track[]): Array<{ readonly track
 
 function collectArtifacts(composition: Composition): BlobRef[] {
   const artifacts = new Map<Digest, BlobRef>();
-  const add = (artifact: { readonly digest: Digest; readonly size: number; readonly mediaType: string }): void => {
+  const add = (artifact: Pick<BlobRef, "digest" | "size" | "mediaType">): void => {
     const next: BlobRef = {
       kind: "blob",
       digest: artifact.digest,
@@ -274,15 +275,15 @@ function renderFontFaces(composition: Composition): string {
   ].join("")).join("\n    ");
 }
 
-function emitHtml(composition: Composition): string {
-  const { numerator, denominator } = composition.programSpace.frameRate;
+function emitHtml(composition: Composition, programSpace: ProgramSpace): string {
+  const { numerator, denominator } = programSpace.frameRate;
   const visuals = orderedVisualPresents(composition.tracks);
   const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index, numerator, denominator)).join("\n    ");
   const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present)).join("\n    ");
   const fontCss = renderFontFaces(composition);
-  const duration = frameSeconds(programSpaceFrameCount(composition.programSpace), numerator, denominator);
+  const duration = frameSeconds(programSpaceFrameCount(programSpace), numerator, denominator);
   const fps = fpsRational(numerator, denominator);
-  const frameCount = programSpaceFrameCount(composition.programSpace);
+  const frameCount = programSpaceFrameCount(programSpace);
   return `<!doctype html>
 <html>
 <head>
@@ -297,7 +298,7 @@ function emitHtml(composition: Composition): string {
   </style>
 </head>
 <body>
-  <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-svml-frame-count="${frameCount}" data-svml-program-space="${composition.programSpace.digest}">
+  <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-svml-frame-count="${frameCount}">
     ${visualHtml}
   </div>
 </body>
@@ -305,12 +306,10 @@ function emitHtml(composition: Composition): string {
 `;
 }
 
-function normalizedDocument(value: Omit<HyperframesDocument, "digest">): Omit<HyperframesDocument, "digest"> {
+function normalizedDocument(value: HyperframesDocument): HyperframesDocument {
   return {
     contract: "svml.hyperframes-document@4",
     visualIr: value.visualIr,
-    compositionDigest: value.compositionDigest,
-    programSpaceDigest: value.programSpaceDigest,
     frameRate: { ...value.frameRate },
     frameCount: value.frameCount,
     canvas: { ...value.canvas },
@@ -321,35 +320,26 @@ function normalizedDocument(value: Omit<HyperframesDocument, "digest">): Omit<Hy
   };
 }
 
-export function compileHyperframesDocument(composition: Composition): HyperframesDocument {
-  assertCompositionIdentity(composition);
+export function compileHyperframesDocument(composition: Composition, programSpace: ProgramSpace): HyperframesDocument {
+  assertCompositionIdentity(composition, programSpace);
   const content = normalizedDocument({
     contract: "svml.hyperframes-document@4",
     visualIr: HYPERFRAMES_VISUAL_IR_V1,
-    compositionDigest: composition.digest,
-    programSpaceDigest: composition.programSpace.digest,
-    frameRate: { ...composition.programSpace.frameRate },
-    frameCount: programSpaceFrameCount(composition.programSpace),
+    frameRate: { ...programSpace.frameRate },
+    frameCount: programSpaceFrameCount(programSpace),
     canvas: {
       width: composition.canvas.width,
       height: composition.canvas.height,
     },
     artifacts: collectArtifacts(composition),
-    html: emitHtml(composition),
+    html: emitHtml(composition, programSpace),
   });
-  return { ...content, digest: digestOf(content) };
+  return content;
 }
 
 export function assertHyperframesDocument(document: HyperframesDocument): void {
   if (document.contract !== "svml.hyperframes-document@4") throw new Error("Unsupported HyperframesDocument contract.");
   if (document.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported HyperframesDocument visual IR.");
-  if (
-    !isDigest(document.compositionDigest)
-    || !isDigest(document.programSpaceDigest)
-    || !isDigest(document.digest)
-  ) {
-    throw new Error("HyperframesDocument digest is invalid.");
-  }
   if (
     !Number.isSafeInteger(document.frameRate.numerator)
     || document.frameRate.numerator <= 0
@@ -364,8 +354,6 @@ export function assertHyperframesDocument(document: HyperframesDocument): void {
   ) {
     throw new Error("HyperframesDocument frame domain or canvas is invalid.");
   }
-  const { digest, ...content } = document;
-  if (digest !== digestOf(normalizedDocument(content))) throw new Error("HyperframesDocument digest does not match its contents.");
   if (!document.html.startsWith("<!doctype html>")) throw new Error("HyperframesDocument HTML is invalid.");
   const declared = [...document.artifacts];
   if (declared.some((item) => item.kind !== "blob" || !isDigest(item.digest)

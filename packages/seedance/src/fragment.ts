@@ -35,11 +35,6 @@ export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
       type: artifactTypes.blob,
       root: operation("select-primary-video"),
       semanticInputs: ["request"],
-      affinity: [{
-        resultPointer: "/digest",
-        source: operation("generate"),
-        sourcePointer: "/videos/0/digest",
-      }],
       fidelity: "exact",
     }],
   });
@@ -80,11 +75,6 @@ export function createSeedanceSpeechGenerationFragment(
       type: artifactTypes.blob,
       root: operation("select-primary-video"),
       semanticInputs: ["program", "duration"],
-      affinity: [{
-        resultPointer: "/digest",
-        source: operation("generate"),
-        sourcePointer: "/videos/0/digest",
-      }],
       fidelity: "exact",
     }],
   });
