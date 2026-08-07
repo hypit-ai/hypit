@@ -199,8 +199,8 @@ onBeforeUnmount(() => { activationId += 1; });
 .carousel-heading { width: min(100%, 1000px); margin-right: 0; margin-left: 0; }
 .demo-card { position: relative; grid-area: 1 / 1; justify-self: center; width: 100%; overflow: hidden; border-radius: 2px; background: #272022; transform-origin: center center; will-change: transform, opacity, filter; transition: transform 850ms cubic-bezier(.16,1,.3,1), opacity 850ms cubic-bezier(.16,1,.3,1), filter 850ms cubic-bezier(.16,1,.3,1); }
 .demo-card.is-center { z-index: 3; opacity: 1; filter: brightness(1); transform: translateX(0) scale(1); }
-.demo-card.is-left { z-index: 1; opacity: .5; filter: brightness(.82) saturate(.68); transform: translateX(calc(-100% + 58px)) scale(.93); }
-.demo-card.is-right { z-index: 1; opacity: .5; filter: brightness(.82) saturate(.68); transform: translateX(calc(100% - 58px)) scale(.93); }
+.demo-card.is-left { z-index: 1; opacity: .3; filter: brightness(.82) saturate(.68); transform: translateX(calc(-100% + 58px)) scale(.86); }
+.demo-card.is-right { z-index: 1; opacity: .3; filter: brightness(.82) saturate(.68); transform: translateX(calc(100% - 58px)) scale(.86); }
 .demo-card-select { position: absolute; z-index: 10; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; cursor: pointer; }
 .demo-card-select:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; border-radius: 2px; }
 .demo-card-content { min-width: 0; }
@@ -223,8 +223,8 @@ onBeforeUnmount(() => { activationId += 1; });
 
 @media (max-width: 959px) {
   .svml-demo-carousel { width: calc(100% - 96px); }
-  .demo-card.is-left { transform: translateX(calc(-100% + 34px)) scale(.95); }
-  .demo-card.is-right { transform: translateX(calc(100% - 34px)) scale(.95); }
+  .demo-card.is-left { transform: translateX(calc(-100% + 34px)) scale(.88); }
+  .demo-card.is-right { transform: translateX(calc(100% - 34px)) scale(.88); }
   .demo-loading { min-height: 990px; }
 }
 
@@ -234,8 +234,8 @@ onBeforeUnmount(() => { activationId += 1; });
 
 @media (max-width: 520px) {
   .svml-demo-carousel { padding: 48px 24px 72px; }
-  .demo-card.is-left { transform: translateX(calc(-100% + 20px)) scale(.96); }
-  .demo-card.is-right { transform: translateX(calc(100% - 20px)) scale(.96); }
+  .demo-card.is-left { transform: translateX(calc(-100% + 20px)) scale(.9); }
+  .demo-card.is-right { transform: translateX(calc(100% - 20px)) scale(.9); }
 }
 
 @media (prefers-reduced-motion: reduce) {
