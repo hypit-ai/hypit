@@ -1,3 +1,4 @@
+import { artifactTypes } from "@svml/artifact";
 import { contractTypes } from "@svml/contracts";
 import { sealGraphFragment } from "@svml/elaborator";
 import { generationProducers } from "@svml/generation";
@@ -31,7 +32,7 @@ export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
     ],
     exports: [{
       name: "video",
-      type: contractTypes.blobArtifact,
+      type: artifactTypes.blob,
       root: operation("select-primary-video"),
       semanticInputs: ["request"],
       affinity: [{
@@ -76,7 +77,7 @@ export function createSeedanceSpeechGenerationFragment(
     ],
     exports: [{
       name: "video",
-      type: contractTypes.blobArtifact,
+      type: artifactTypes.blob,
       root: operation("select-primary-video"),
       semanticInputs: ["program", "duration"],
       affinity: [{

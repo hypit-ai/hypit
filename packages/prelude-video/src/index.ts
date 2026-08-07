@@ -65,7 +65,7 @@ import {
   mediaModuleRef,
   mediaSurfaceImplementationDigests,
 } from "@svml/media";
-import type { NodePackageActivation } from "@svml/package-loader-node";
+import type { NodePackageContribution } from "@svml/package-loader-node";
 import {
   decodeScriptSurface,
   scriptManifest,
@@ -98,6 +98,10 @@ import {
 } from "@svml/speech-program";
 import { svsFrontend, svsManifest } from "@svml/svs";
 import {
+  createTextSurfaceHostFacet,
+} from "@svml/text";
+import type { TextSurfaceHostFacetOptions } from "@svml/text";
+import {
   decodeTextTrackSurface,
   textTrackComponent,
   textTrackManifest,
@@ -112,7 +116,7 @@ import {
   whisperXModuleRef,
 } from "@svml/whisperx";
 
-export const svmlPackage: NodePackageActivation = {
+export const svmlPackage: NodePackageContribution = {
   format: "svml.node-package@1",
   name: "@svml/prelude-video",
   modules: [
@@ -165,7 +169,7 @@ export const svmlPackage: NodePackageActivation = {
     hyperframesComponent,
     hyperframesRenderComponent,
   ],
-  textSurfaces: [
+  hostFacets: ([
     {
       module: estimateModuleRef,
       surface: "speech",
@@ -278,7 +282,7 @@ export const svmlPackage: NodePackageActivation = {
       implementationDigest: hyperframesRenderSurfaceImplementationDigest,
       handler: decodeHyperframesRenderSurface,
     },
-  ],
+  ] satisfies readonly TextSurfaceHostFacetOptions[]).map(createTextSurfaceHostFacet),
 };
 
 export default svmlPackage;

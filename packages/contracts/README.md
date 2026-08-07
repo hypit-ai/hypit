@@ -14,6 +14,10 @@ and may later become `@svml/video` without changing those logical identities. Th
 contains Provider- and Frontend-neutral data contracts, identity validators and static schemas
 only. It does not parse SVML, execute external services, align speech or render Tracks.
 
+The domain-neutral `BlobArtifact` owner is `@svml/artifact`, not `@svml/media`. This video
+distribution depends on that module and re-exports its symbols only as a migration convenience;
+video packages that put byte Artifacts on Graph edges declare the Artifact dependency directly.
+
 The Narrative module provides distinct narrow views instead of making every consumer depend on one
 parser-specific object: `NarrativeExcerpt` associates a Take with a Segment,
 `NarrativeDialogueExcerpt` carries Role-aware spoken prompt text,

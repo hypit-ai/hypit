@@ -39,7 +39,7 @@ Runtime Profile is deployment configuration. It must not enter author semantic i
 - generate implementation locks through supported CLI commands;
 - replace development implementation labels with release-built code identities;
 - settle public package names without changing logical module identity;
-- split generic Node package activation from the convenience Text-authoring Host, or rename it;
+- publish the already separated generic CLI engine and explicit video CLI Distribution;
 - emit compiled ESM/declarations and verify npm, pnpm, Yarn and Bun consumer fixtures;
 - add `LICENSE`, contribution and security policy after the project chooses its license.
 

@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 import type { NodeCompiler, NodeCompiledSourceClosure } from "@svml/compiler-node";
 import type { LocalRuntime } from "@svml/local";
-import type { NodePackageActivation } from "@svml/package-loader-node";
+import type { NodePackageContribution } from "@svml/package-loader-node";
 import {
   parseRunDocument,
   resolveRunDocument,
@@ -22,7 +22,7 @@ export type LoadedRunFile = {
 export async function loadRunFile(options: {
   readonly path: string;
   readonly compiler: NodeCompiler;
-  readonly packages: readonly NodePackageActivation[];
+  readonly packageContributions: readonly NodePackageContribution[];
   readonly runtime?: Pick<LocalRuntime, "status">;
 }): Promise<LoadedRunFile> {
   const path = resolve(options.path);
@@ -31,7 +31,7 @@ export async function loadRunFile(options: {
   const source = resolve(directory, document.source);
   const compilation = await options.compiler.compileFile(source);
   const fragments = new RunFragmentRegistry();
-  for (const item of options.packages) {
+  for (const item of options.packageContributions) {
     if (item.runFragments === undefined || Object.keys(item.runFragments).length === 0) continue;
     fragments.register({ name: item.name, fragments: item.runFragments });
   }

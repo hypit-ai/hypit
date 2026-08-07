@@ -43,6 +43,12 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/artifact:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/artifact-store-fs:
     dependencies:
       '@svml/protocol':
@@ -66,6 +72,9 @@ importers:
 
   packages/broll:
     dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@svml/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -147,9 +156,6 @@ importers:
 
   packages/cli:
     dependencies:
-      '@svml/artifact-store-s3':
-        specifier: workspace:*
-        version: link:../artifact-store-s3
       '@svml/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
@@ -159,27 +165,9 @@ importers:
       '@svml/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@svml/prelude-video':
-        specifier: workspace:*
-        version: link:../prelude-video
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/provider-google-vertex':
-        specifier: workspace:*
-        version: link:../provider-google-vertex
-      '@svml/provider-hyperframes-local':
-        specifier: workspace:*
-        version: link:../provider-hyperframes-local
-      '@svml/provider-kie':
-        specifier: workspace:*
-        version: link:../provider-kie
-      '@svml/provider-media-local':
-        specifier: workspace:*
-        version: link:../provider-media-local
-      '@svml/provider-whisperx-local':
-        specifier: workspace:*
-        version: link:../provider-whisperx-local
       '@svml/realization':
         specifier: workspace:*
         version: link:../realization
@@ -218,6 +206,34 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/compiler-text-node:
+    dependencies:
+      '@svml/compiler-node':
+        specifier: workspace:*
+        version: link:../compiler-node
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/component-kit:
     dependencies:
       '@svml/protocol':
@@ -229,6 +245,9 @@ importers:
 
   packages/contracts:
     dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@svml/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -386,12 +405,12 @@ importers:
 
   packages/generation:
     dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@svml/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -527,6 +546,9 @@ importers:
 
   packages/media:
     dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -536,6 +558,9 @@ importers:
 
   packages/media-pipeline:
     dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@svml/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -612,9 +637,6 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/text':
-        specifier: workspace:*
-        version: link:../text
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
@@ -672,6 +694,9 @@ importers:
       '@svml/svs':
         specifier: workspace:*
         version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
       '@svml/text-track':
         specifier: workspace:*
         version: link:../text-track
@@ -913,6 +938,9 @@ importers:
 
   packages/seedance:
     dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@svml/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -962,6 +990,9 @@ importers:
 
   packages/speech-program:
     dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@svml/caption':
         specifier: workspace:*
         version: link:../caption
@@ -1067,6 +1098,9 @@ importers:
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1138,6 +1172,45 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/video-cli:
+    dependencies:
+      '@svml/artifact-store-s3':
+        specifier: workspace:*
+        version: link:../artifact-store-s3
+      '@svml/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@svml/compiler-text-node':
+        specifier: workspace:*
+        version: link:../compiler-text-node
+      '@svml/local':
+        specifier: workspace:*
+        version: link:../local
+      '@svml/prelude-video':
+        specifier: workspace:*
+        version: link:../prelude-video
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/provider-google-vertex':
+        specifier: workspace:*
+        version: link:../provider-google-vertex
+      '@svml/provider-hyperframes-local':
+        specifier: workspace:*
+        version: link:../provider-hyperframes-local
+      '@svml/provider-kie':
+        specifier: workspace:*
+        version: link:../provider-kie
+      '@svml/provider-media-local':
+        specifier: workspace:*
+        version: link:../provider-media-local
+      '@svml/provider-whisperx-local':
+        specifier: workspace:*
+        version: link:../provider-whisperx-local
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
 
   packages/whisperx:
     dependencies:

@@ -197,11 +197,15 @@ A physical package may expose independently activated facets:
 
 ```text
 static    Manifest and identity
-author    Frontend, Surface and Graph Fragment
+author    Frontend, Host-specific Surface facet and Graph Fragment
 compute   deterministic Producer and Type Validator
 endpoint  privileged external capability implementation
 runtime   Scheduler and Store implementation
 ```
+
+After byte-lock verification, the Loader returns a `NodePackageContribution`: a description of
+what that physical package offers. It is not an authority token. A compiler or Runtime installs
+only the exact facet ABIs it has explicitly selected.
 
 A source `<import>` activates only author meaning. It never grants network, filesystem, process,
 credential or queue authority. Provider and Runtime facets are selected by the Host's locked Runtime
@@ -217,29 +221,57 @@ schema and optional semantic validator digest. Producers and consumers refer to 
 does not maintain a registry of every domain type and does not require a release when a new package
 is installed.
 
+The public nouns are intentionally narrow:
+
+| Name | Means | Does not mean |
+|---|---|---|
+| Module | logical versioned owner of Types, Producers and Surfaces | npm package or running code |
+| Package | physical install/release unit | automatic authority |
+| Contribution | passive inventory returned by a locked package entry | installed or executable permission |
+| Facet | one ABI-selected executable contribution | whole-package activation |
+| Host | process/application that selects and installs facets | Core |
+| Compiler | source-to-frozen-graph/plan assembly | Provider execution |
+| Distribution | trusted application choice of compiler, built-ins and config adapters | wire contract |
+| Runtime | execution services for an already frozen BuildPlan | author-language interpreter |
+| Endpoint | one configured implementation of an exact Capability | model-routing guess |
+| Provider package | Endpoint implementations for one external service boundary | semantic component |
+| Prelude | curated built-in author package contribution | mandatory Core vocabulary |
+
+These terms also drive physical names: `compiler-text-node` selects Text compilation,
+`package-loader-node` locks and loads physical Node packages, `video-cli` is a video Distribution,
+and `provider-kie` implements KIE Endpoints. A new package should not use one noun while owning the
+authority of another.
+
 ## 8. Reference host packages
 
 The reusable domain-neutral stack is:
 
 ```text
 @svml/protocol
+@svml/artifact            domain-neutral nominal type for content-addressed bytes
 @svml/core
 @svml/elaborator          author declarations and hygienic Fragment expansion
-@svml/host                Workspace contract
+@svml/host                Host-facing interfaces and generic facet envelope
 @svml/compiler-node       reference source/package compiler Host
+@svml/package-loader-node locked physical-package loading; no syntax selection
 @svml/runtime             Scheduler and Store ports
 @svml/driver-node         trusted Node command executor
 @svml/validation          semantic admission Host
 @svml/local               SQLite/filesystem developer assembly
+@svml/cli                 generic command engine; requires an explicit Distribution
 ```
 
-`@svml/text`, `@svml/script`, `@svml/svs`, video contracts and every Provider are optional domain or
-application packages.
+`@svml/text`, `@svml/script`, `@svml/svs`, video contracts and every Provider are optional language,
+domain or application packages.
 
-The current `@svml/package-loader-node` convenience assembly installs the official Text entry
-Frontend while activating trusted packages. This is a reference Text-authoring Host, not a Core
-requirement. Generic package byte-locking and facet activation must be split from that convenience
-assembly, or the package renamed, before it is advertised as frontend-neutral.
+`@svml/compiler-text-node` is the optional reference assembly that selects the official Text entry
+Frontend and installs only `svml.text-surface-host@1` Host facets. The same locked physical package
+may carry deterministic compute facets into `@svml/local` without either the Loader or Runtime
+depending on Text. Other Host-facet ABIs remain inert until another explicit Host selects them.
+
+`@svml/video-cli` is the optional video Distribution. It supplies the generic CLI with the Text
+compiler assembly, built-in video package contributions and the video Runtime-config adapter
+registry. Thus neither `@svml/cli` nor `@svml/local` names a video package or Provider.
 
 ## 9. Trust boundary
 

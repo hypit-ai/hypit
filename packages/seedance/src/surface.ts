@@ -1,6 +1,5 @@
-import {
-  contractTypes,
-} from "@svml/contracts";
+import { artifactTypes } from "@svml/artifact";
+import { contractTypes } from "@svml/contracts";
 import { digestOf } from "@svml/protocol";
 import type { BlobRef, CanonicalValue } from "@svml/protocol";
 import type {
@@ -106,7 +105,7 @@ function prompt(reference: SurfaceResolvedReference, subject: string): SeedanceP
 }
 
 function blob(reference: SurfaceResolvedReference, subject: string): BlobRef {
-  if (!sameType(reference.type, contractTypes.blobArtifact)) throw new Error(`${subject} must reference a BlobArtifact`);
+  if (!sameType(reference.type, artifactTypes.blob)) throw new Error(`${subject} must reference a BlobArtifact`);
   const value = reference.record?.value;
   if (value?.kind !== "blob") throw new Error(`${subject} must reference an authored artifact declared before use`);
   return value;

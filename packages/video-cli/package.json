@@ -1,0 +1,23 @@
+{
+  "name": "@svml/video-cli",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/artifact-store-s3": "workspace:*",
+    "@svml/cli": "workspace:*",
+    "@svml/compiler-text-node": "workspace:*",
+    "@svml/local": "workspace:*",
+    "@svml/prelude-video": "workspace:*",
+    "@svml/provider-google-vertex": "workspace:*",
+    "@svml/provider-hyperframes-local": "workspace:*",
+    "@svml/provider-kie": "workspace:*",
+    "@svml/provider-media-local": "workspace:*",
+    "@svml/provider-whisperx-local": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/runtime": "workspace:*"
+  }
+}

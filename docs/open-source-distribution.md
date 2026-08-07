@@ -41,16 +41,22 @@ No `<import>` installs an npm package, opens the network, reads a credential or 
 new author component therefore does not require a monolithic application release, while a new
 privileged implementation still requires the relevant Host to trust, lock and restart with it.
 
-## 3. Current reference-host caveat
+## 3. Reference Host assemblies
 
-`@svml/compiler-node` accepts an arbitrary registered entry Frontend. The current
-`@svml/package-loader-node` convenience assembly is narrower: it always constructs the official
-`@svml/text` entry Frontend and its Text Surface registry while activating locked packages. It is a
-Text-authoring Node Host today, despite its generic package name.
+`@svml/compiler-node` accepts an arbitrary registered entry Frontend. `@svml/package-loader-node`
+only locks and loads physical package facets; it does not select an author syntax. Host-specific
+executable facets carry an exact ABI and canonical identity, and stay inert until a matching Host
+selects them.
 
-This does not couple Text to Core. Before presenting that loader as a frontend-neutral public API,
-split generic byte-lock/facet activation from the official Text Host assembly, or rename the
-convenience package so the dependency is explicit.
+`@svml/compiler-text-node` is the explicitly named Text assembly. It installs only Text Surface
+Host facets and combines them with the syntax-neutral compiler. `@svml/cli` is now the generic
+command engine and has no video Prelude or video Endpoint dependency. `@svml/video-cli` is the
+explicit application Distribution that supplies the Text compiler, built-in video package
+contributions and video Runtime-config adapters.
+
+`@svml/artifact` owns the domain-neutral nominal `BlobArtifact` Graph type. Filesystem and S3
+packages implement the separate Runtime `ArtifactStore` port. This avoids making a non-video domain
+depend on `@svml/media` merely to pass immutable bytes between Operations.
 
 ## 4. Package-manager and container policy
 
@@ -76,7 +82,8 @@ The repository should not claim npm-ready open-source distribution until it has:
    labels;
 6. a documented trusted-extension level and an honest statement that arbitrary community code is
    not sandboxed;
-7. a v2 CLI package that does not publish the retained v1 root as the new public compiler.
+7. published binaries that map the generic command engine and explicit video Distribution without
+   exposing the retained v1 root as the new public compiler.
 
 Untrusted extension isolation, a marketplace and hosted multi-tenant services may follow later.
 They are not prerequisites for a useful trusted-developer release.

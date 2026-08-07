@@ -1,3 +1,4 @@
+import { artifactDependency, artifactTypes } from "@svml/artifact";
 import {
   contractTypes,
   videoContractDependencies,
@@ -132,6 +133,7 @@ export const mediaPipelineManifest: ModuleManifest = {
   name: mediaPipelineModuleRef.name,
   version: mediaPipelineModuleRef.version,
   dependencies: [
+    artifactDependency,
     videoContractDependencies.media,
     videoContractDependencies.speech,
     videoContractDependencies.composition,
@@ -173,7 +175,7 @@ export const mediaPipelineManifest: ModuleManifest = {
   producers: [
     {
       name: mediaPipelineProducers.inspect.name,
-      inputs: [{ name: "source", type: contractTypes.blobArtifact }],
+      inputs: [{ name: "source", type: artifactTypes.blob }],
       outputs: [],
       needs: [{
         name: "inspection",
@@ -207,7 +209,7 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.normalize.name,
       inputs: [
-        { name: "source", type: contractTypes.blobArtifact },
+        { name: "source", type: artifactTypes.blob },
         { name: "inspection", type: contractTypes.mediaInspection },
         { name: "selection", type: contractTypes.mediaStreamSelection },
         { name: "request", type: mediaPipelineTypes.selectionRequest },

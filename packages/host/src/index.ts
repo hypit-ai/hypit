@@ -6,6 +6,8 @@ import type {
 } from "@svml/elaborator";
 import type { BlobRef } from "@svml/protocol";
 
+export type { HostFacet } from "./facet.js";
+
 /** Host transfer bytes. Their origin is deliberately absent from the Runtime contract. */
 export type ArtifactAttachment = {
   readonly artifact: BlobRef;

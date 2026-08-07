@@ -1,3 +1,4 @@
+import { artifactTypes } from "@svml/artifact";
 import { contractTypes } from "@svml/contracts";
 import { sealGraphFragment } from "@svml/elaborator";
 
@@ -12,7 +13,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const synchronizedMediaFragment = sealGraphFragment({
   name: "@svml/media-pipeline/synchronized-media@1",
   inputs: [
-    { name: "source", type: contractTypes.blobArtifact },
+    { name: "source", type: artifactTypes.blob },
     { name: "request", type: mediaPipelineTypes.selectionRequest },
   ],
   operations: [

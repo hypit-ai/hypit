@@ -10,10 +10,9 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
-  activateNodeComponents,
-  createActivatedNodeCompiler,
   createNodePackageLock,
-  loadNodePackages,
+  installNodePackageComponents,
+  loadNodePackageContributions,
   writeNodePackageLock,
 } from "@svml/package-loader-node";
 import { TypeValidatorRegistry } from "@svml/validation";
@@ -104,12 +103,16 @@ async function fixture(): Promise<{
         },
         specifiers: ["example.card@1"],
       }],
-      textSurfaces: [{
-        module,
-        surface: "card",
-        mode: "structured",
-        implementationDigest: digest,
-        handler({ element }) {
+      hostFacets: [{
+        abi: "svml.text-surface-host@1",
+        identity: {
+          contract: "svml.text-surface-host-facet@1",
+          module,
+          surface: "card",
+          mode: "structured",
+          implementationDigest: digest,
+        },
+        implementation({ element }) {
           return {
             records: [{
               id: "card-result",
@@ -156,25 +159,18 @@ async function fixture(): Promise<{
   return { root, activation, dependency, source, lock: join(root, "svml.packages.lock") };
 }
 
-test("an installed locked package adds a Surface without an official CLI registration", async () => {
+test("an installed locked package carries inert Host facets and activatable compute", async () => {
   const item = await fixture();
   const lock = await createNodePackageLock(["example-card"], item.root);
   assert.deepEqual(lock.artifacts.map((artifact) => artifact.name), ["example-card", "example-helper"]);
   await writeNodePackageLock(item.lock, lock);
-  const packages = await loadNodePackages(item.lock, item.root);
-  const compiler = createActivatedNodeCompiler(packages, { root: item.root });
-  const result = await compiler.compileFile(item.source);
+  const packages = await loadNodePackageContributions(item.lock, item.root);
 
   assert.equal(packages[0]?.name, "example-card");
-  assert.deepEqual(result.program.closure.modules.map((module) => module.ref), [
-    { name: "example.card", version: "1" },
-  ]);
-  assert.equal(result.module.records[0]?.value.kind, "inline");
-  assert.equal(result.module.records[0]?.validation?.validatorDigest, implementationDigest);
-  assert.equal(result.elaboration.graph.operations.length, 0);
+  assert.equal(packages[0]?.hostFacets?.[0]?.abi, "svml.text-surface-host@1");
 
   const registered: Array<{ readonly producer: ProducerRef; readonly digest: string }> = [];
-  activateNodeComponents(packages, {
+  installNodePackageComponents(packages, {
     registerProducer(producer, digest) {
       registered.push({ producer, digest });
     },
@@ -185,14 +181,14 @@ test("an installed locked package adds a Surface without an official CLI registr
   }]);
 });
 
-test("dependency bytes are rejected before a locked activation is reused", async () => {
+test("dependency bytes are rejected before a locked contribution entry is reused", async () => {
   const item = await fixture();
   const lock = await createNodePackageLock(["example-card"], item.root);
   await writeNodePackageLock(item.lock, lock);
   await writeFile(item.dependency, `${await readFile(item.dependency, "utf8")}\n// changed bytes\n`, "utf8");
 
   await assert.rejects(
-    async () => await loadNodePackages(item.lock, item.root),
+    async () => await loadNodePackageContributions(item.lock, item.root),
     /installed Node package bytes do not match the lock/,
   );
 });
