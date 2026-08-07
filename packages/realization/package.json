@@ -1,0 +1,17 @@
+{
+  "name": "@svml/realization",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/core": "workspace:*",
+    "@svml/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/elaborator": "workspace:*",
+    "@svml/validation": "workspace:*"
+  }
+}

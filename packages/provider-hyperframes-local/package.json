@@ -1,0 +1,24 @@
+{
+  "name": "@svml/provider-hyperframes-local",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@svml/contracts": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
+    "@svml/hyperframes": "workspace:*",
+    "@svml/hyperframes-render": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/runtime-adapter": "workspace:*",
+    "@svml/runtime-adapter-node": "workspace:*",
+    "hyperframes": "0.7.84"
+  },
+  "devDependencies": {
+    "@svml/core": "workspace:*",
+    "@svml/driver-node": "workspace:*"
+  }
+}

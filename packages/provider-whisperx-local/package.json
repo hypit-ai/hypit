@@ -1,0 +1,20 @@
+{
+  "name": "@svml/provider-whisperx-local",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@svml/contracts": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/whisperx": "workspace:*",
+    "@svml/runtime-adapter": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/driver-node": "workspace:*"
+  }
+}

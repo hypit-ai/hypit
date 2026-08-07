@@ -1,0 +1,73 @@
+{
+  "format": "svml.runtime-config@1",
+  "packageLock": "./svml.packages.lock",
+  "runtimePackageLock": "./svml.runtime-packages.lock",
+  "services": [],
+  "endpoints": [
+    {
+      "use": "@svml/provider-kie",
+      "instance": "kie.echo-pro-aroll",
+      "lane": "generation",
+      "config": {
+        "apiKeyEnv": "KIE_API_KEY",
+        "defaultConcurrency": 2
+      }
+    },
+    {
+      "use": "@svml/provider-media-local",
+      "instance": "media.echo-pro-aroll",
+      "lane": "media",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    {
+      "use": "@svml/provider-whisperx-local",
+      "instance": "whisperx.echo-pro-aroll",
+      "lane": "alignment",
+      "config": {
+        "defaultConcurrency": 1
+      }
+    },
+    {
+      "use": "@svml/provider-google-vertex",
+      "instance": "vertex.echo-pro-aroll",
+      "lane": "planning",
+      "config": {
+        "projectEnv": "GOOGLE_CLOUD_PROJECT",
+        "credentialsEnv": "GOOGLE_APPLICATION_CREDENTIALS_JSON",
+        "location": "global",
+        "defaultConcurrency": 1
+      }
+    },
+    {
+      "use": "@svml/provider-hyperframes-local",
+      "instance": "hyperframes.echo-pro-aroll",
+      "lane": "render",
+      "config": {
+        "workers": 2,
+        "quality": "standard",
+        "defaultConcurrency": 1
+      }
+    }
+  ],
+  "permissions": [
+    "filesystem:whisperx-staging",
+    "network:aiplatform.googleapis.com",
+    "network:api.kie.ai",
+    "network:kieai.redpandaai.co",
+    "network:whisperx-loopback",
+    "process:hyperframes",
+    "process:media"
+  ],
+  "scheduling": {
+    "maxConcurrency": 4,
+    "lanes": {
+      "generation": 2,
+      "media": 2,
+      "alignment": 1,
+      "planning": 1,
+      "render": 1
+    }
+  }
+}

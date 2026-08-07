@@ -1,0 +1,23 @@
+{
+  "name": "@svml/compiler-node",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/core": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/host": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/realization": "workspace:*",
+    "@svml/run": "workspace:*",
+    "@svml/source": "workspace:*",
+    "@svml/validation": "workspace:*",
+    "@svml/workspace-fs-node": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/text": "workspace:*"
+  }
+}

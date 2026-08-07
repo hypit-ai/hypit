@@ -12,6 +12,105 @@ importers:
         specifier: 0.7.84
         version: 0.7.84(@types/node@24.10.1)
     devDependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:packages/artifact
+      '@svml/broll':
+        specifier: workspace:*
+        version: link:packages/broll
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:packages/caption
+      '@svml/caption-gemini':
+        specifier: workspace:*
+        version: link:packages/caption-gemini
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:packages/contracts
+      '@svml/estimate':
+        specifier: workspace:*
+        version: link:packages/estimate
+      '@svml/film':
+        specifier: workspace:*
+        version: link:packages/film
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:packages/generation
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:packages/hyperframes
+      '@svml/hyperframes-render':
+        specifier: workspace:*
+        version: link:packages/hyperframes-render
+      '@svml/image-transform':
+        specifier: workspace:*
+        version: link:packages/image-transform
+      '@svml/local':
+        specifier: workspace:*
+        version: link:packages/local
+      '@svml/media':
+        specifier: workspace:*
+        version: link:packages/media
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:packages/media-pipeline
+      '@svml/prompt-kit':
+        specifier: workspace:*
+        version: link:packages/prompt-kit
+      '@svml/provider-google-vertex':
+        specifier: workspace:*
+        version: link:packages/provider-google-vertex
+      '@svml/provider-hyperframes-local':
+        specifier: workspace:*
+        version: link:packages/provider-hyperframes-local
+      '@svml/provider-image-opencv-local':
+        specifier: workspace:*
+        version: link:packages/provider-image-opencv-local
+      '@svml/provider-kie':
+        specifier: workspace:*
+        version: link:packages/provider-kie
+      '@svml/provider-media-local':
+        specifier: workspace:*
+        version: link:packages/provider-media-local
+      '@svml/provider-whisperx-local':
+        specifier: workspace:*
+        version: link:packages/provider-whisperx-local
+      '@svml/run-text':
+        specifier: workspace:*
+        version: link:packages/run-text
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:packages/runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:packages/runtime-adapter-node
+      '@svml/script':
+        specifier: workspace:*
+        version: link:packages/script
+      '@svml/seedance':
+        specifier: workspace:*
+        version: link:packages/seedance
+      '@svml/seedance-speaker':
+        specifier: workspace:*
+        version: link:packages/seedance-speaker
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:packages/speech-align
+      '@svml/speech-program':
+        specifier: workspace:*
+        version: link:packages/speech-program
+      '@svml/speech-take':
+        specifier: workspace:*
+        version: link:packages/speech-take
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:packages/svs
+      '@svml/text-track':
+        specifier: workspace:*
+        version: link:packages/text-track
+      '@svml/whisperx':
+        specifier: workspace:*
+        version: link:packages/whisperx
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
@@ -24,6 +123,1313 @@ importers:
       vitepress:
         specifier: ^1.6.4
         version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@24.10.1)(postcss@8.5.25)(search-insights@2.17.3)(typescript@5.9.3)
+
+  packages/artifact:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/artifact-store-fs:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/artifact-store-s3:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1103.0
+        version: 3.1103.0
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+
+  packages/broll:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+
+  packages/caption:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
+
+  packages/caption-gemini:
+    dependencies:
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
+  packages/cli:
+    dependencies:
+      '@svml/compiler-node':
+        specifier: workspace:*
+        version: link:../compiler-node
+      '@svml/local':
+        specifier: workspace:*
+        version: link:../local
+      '@svml/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
+
+  packages/compiler-node:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+      '@svml/workspace-fs-node':
+        specifier: workspace:*
+        version: link:../workspace-fs-node
+    devDependencies:
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/compiler-text-node:
+    dependencies:
+      '@svml/compiler-node':
+        specifier: workspace:*
+        version: link:../compiler-node
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/component-kit:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/contracts:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/core:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/credential-store-env:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/driver-node:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
+
+  packages/elaborator:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
+    devDependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/speech-take':
+        specifier: workspace:*
+        version: link:../speech-take
+
+  packages/endpoint-kit:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/estimate:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/film:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@svml/text-track':
+        specifier: workspace:*
+        version: link:../text-track
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/gemini-omni:
+    dependencies:
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/generation:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/gpt-image:
+    dependencies:
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/grok-imagine:
+    dependencies:
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/host:
+    dependencies:
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/hyperframes:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/hyperframes-render:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/image-transform:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/local:
+    dependencies:
+      '@svml/artifact-store-fs':
+        specifier: workspace:*
+        version: link:../artifact-store-fs
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/credential-store-env':
+        specifier: workspace:*
+        version: link:../credential-store-env
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/store-sqlite':
+        specifier: workspace:*
+        version: link:../store-sqlite
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/media:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/media-pipeline:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/minimax-h3:
+    dependencies:
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/model-kit:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/nano-banana:
+    dependencies:
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/package-loader-node:
+    dependencies:
+      '@svml/compiler-node':
+        specifier: workspace:*
+        version: link:../compiler-node
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+
+  packages/prompt-kit:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+
+  packages/protocol: {}
+
+  packages/provider-google-vertex:
+    dependencies:
+      '@google/genai':
+        specifier: 1.52.0
+        version: 1.52.0
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@svml/caption-gemini':
+        specifier: workspace:*
+        version: link:../caption-gemini
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
+    devDependencies:
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
+  packages/provider-hyperframes-local:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@svml/hyperframes-render':
+        specifier: workspace:*
+        version: link:../hyperframes-render
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
+      hyperframes:
+        specifier: 0.7.84
+        version: 0.7.84(@types/node@24.10.1)
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
+  packages/provider-image-opencv-local:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/image-transform':
+        specifier: workspace:*
+        version: link:../image-transform
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
+    devDependencies:
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
+  packages/provider-kie:
+    dependencies:
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/gemini-omni':
+        specifier: workspace:*
+        version: link:../gemini-omni
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/gpt-image':
+        specifier: workspace:*
+        version: link:../gpt-image
+      '@svml/grok-imagine':
+        specifier: workspace:*
+        version: link:../grok-imagine
+      '@svml/minimax-h3':
+        specifier: workspace:*
+        version: link:../minimax-h3
+      '@svml/nano-banana':
+        specifier: workspace:*
+        version: link:../nano-banana
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
+      '@svml/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+      '@svml/seedream':
+        specifier: workspace:*
+        version: link:../seedream
+    devDependencies:
+      '@svml/artifact-store-fs':
+        specifier: workspace:*
+        version: link:../artifact-store-fs
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/local':
+        specifier: workspace:*
+        version: link:../local
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/provider-media-local:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
+    devDependencies:
+      '@svml/artifact-store-fs':
+        specifier: workspace:*
+        version: link:../artifact-store-fs
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/local':
+        specifier: workspace:*
+        version: link:../local
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/provider-whisperx-local:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@svml/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
+    devDependencies:
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
+  packages/realization:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/run:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
+
+  packages/run-text:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/runtime:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/runtime-adapter:
+    dependencies:
+      '@svml/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/runtime-adapter-node:
+    dependencies:
+      '@svml/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+
+  packages/script:
+    dependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/seedance:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/seedance-speaker:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/prompt-kit':
+        specifier: workspace:*
+        version: link:../prompt-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/seedream:
+    dependencies:
+      '@svml/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@svml/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/source: {}
+
+  packages/speech-align:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
+  packages/speech-program:
+    dependencies:
+      '@svml/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@svml/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
+      '@svml/speech-take':
+        specifier: workspace:*
+        version: link:../speech-take
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+      '@svml/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/realization':
+        specifier: workspace:*
+        version: link:../realization
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/speech-take:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@svml/validation':
+        specifier: workspace:*
+        version: link:../validation
+
+  packages/store-sqlite:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+
+  packages/svs:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/text:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/script':
+        specifier: workspace:*
+        version: link:../script
+
+  packages/text-track:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@svml/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+
+  packages/transport:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/transport-aws-lambda:
+    dependencies:
+      '@aws-sdk/client-lambda':
+        specifier: ^3.1103.0
+        version: 3.1103.0
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/transport':
+        specifier: workspace:*
+        version: link:../transport
+
+  packages/transport-process:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/transport':
+        specifier: workspace:*
+        version: link:../transport
+
+  packages/validation:
+    dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/video-cli:
+    dependencies:
+      '@svml/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@svml/compiler-text-node':
+        specifier: workspace:*
+        version: link:../compiler-text-node
+      '@svml/local':
+        specifier: workspace:*
+        version: link:../local
+    devDependencies:
+      '@svml/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
+
+  packages/whisperx:
+    dependencies:
+      '@svml/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@svml/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/speech-align':
+        specifier: workspace:*
+        version: link:../speech-align
+      '@svml/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/workspace-fs-node:
+    dependencies:
+      '@svml/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
 packages:
 
@@ -102,6 +1508,82 @@ packages:
   '@algolia/requester-node-http@5.56.0':
     resolution: {integrity: sha512-PIOUXlSnrqM0S+WOgDRb4RzotydJH7ZoT6tOyL7tAO7qJOfvX5wsEW8Pe+PMKMwvuI4/gIyK9cg2H7lJXqnc4Q==}
     engines: {node: '>= 14.0.0'}
+
+  '@aws-sdk/checksums@3.1000.26':
+    resolution: {integrity: sha512-CGznePoL+1oWCSzqmkvlYMpWQEZohPR3LntjKXXfVH+oh6Kd8d+yHLkjpiAGwPIHAxFe4OAq3aKfRnv/wqWIyA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-lambda@3.1103.0':
+    resolution: {integrity: sha512-BQfSgfqwurp6hISzJQt163cTg/EDXEWfkBTry6ZXTa8ofFxGUu8L9CL/euUOhcK6pvV3DRDaWofkd9EuYBZ2/Q==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-s3@3.1103.0':
+    resolution: {integrity: sha512-FO7SB2vLhZRN3lBHVhMhRm3YKSHK8e917qjB8LMEEhU69cQ0Ahd/OMyezu+KqNANqEtyxfSnFVvYt81x6ZKGZA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/core@3.977.6':
+    resolution: {integrity: sha512-QiaJV4/zDrB4ZY2mfeSXSzSTc36W16sZXcGz+SPFk0CJ26gziO0cS+4LjJUMAbdeeBOvS0k0Aq1cZpfGdUXxSw==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-env@3.972.67':
+    resolution: {integrity: sha512-rcIpk5kxUqDaaNa6Xk23pQ6ViY7jlqzmfFWCahQcBT97ddXaXYYwzCen9Tz1Jvo6aJft6wDl5bN44/Jw5B4oLA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-http@3.972.69':
+    resolution: {integrity: sha512-nggwJtZ4eeNsUw5IeWBMXsi1ryct5idi0K+/SCRF3kybLubOMaNTb3XCihXpWMiVpyzyPeIrl0zTkzhBH9porA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-ini@3.973.12':
+    resolution: {integrity: sha512-pNEf/OeyN5X3VmLKlgSO6TqaWmW10CvI3TfwL1XhsuhYjSLT2VDaxFnCPHnOeQXSaFisMX4jNhpETriqN8DOmg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-login@3.972.74':
+    resolution: {integrity: sha512-0AQfDcf99TNmqVKv0owHrw/TQs6i4ZE5t9qmz6NvO53bE/sA/tpXhXL9AAcEP1qHc6Zzjd1UMb69+/9zdhvY3g==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-node@3.972.78':
+    resolution: {integrity: sha512-OgPAnfvbGAMWac6yvxJ1ihslrvDpPVwR68D2csospdNCCyPvHk9JLzYKwz48SNiS1T2znDwHauywRKRFfpyYng==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-process@3.972.67':
+    resolution: {integrity: sha512-IlUEejorGTWKb4/Dm7K5Yw4QxUmXLThLhrvBmzVBqZFTbW72cv9LTcITmo1dsnYriALE4h68mOq4LB99x6sQ7Q==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-sso@3.973.11':
+    resolution: {integrity: sha512-gAQBkBZxUB84d71+pPcI9L+jh2ujhuAVxc/4FgGiWFDjkPBlMKxzd5XDtkSXTFX8Ro7ansnT88+XadasxMeCRw==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-web-identity@3.972.73':
+    resolution: {integrity: sha512-SnlEmQa6SjOgs6iOPLUQl1Eyq4AKiAdPQlkOhFhqNfDtDCwibMGvL6QlkSmf3o6vAUSImzdPCxowT5dfQUZP1A==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/middleware-sdk-s3@3.972.72':
+    resolution: {integrity: sha512-lSAoVPvQxX1d8TOM6waKDBQrvvZcm4w6pCldFAsRUffEaXq6lYY0pPyew3KlLu6Xqb74DXI42hGvSsbGBLljlw==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/nested-clients@3.997.41':
+    resolution: {integrity: sha512-RDHqPGQWlF6tatA/Tp3rg6oIwtgN9IVderxE+9av2Y93Dfyu+mO1hZ5Bu2jpfZg2rwdNbsssnwM+sLafIczMlQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/signature-v4-multi-region@3.996.43':
+    resolution: {integrity: sha512-lKekx8bLBXSv4O+cslk9Zfnw2XKSkWBs3uWL5QGhH2ZAQfNS7FE0vcSSN2vD/AhxX54ZTywWxR4STThoeOXlBA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/token-providers@3.1103.0':
+    resolution: {integrity: sha512-N4wy26MNn31ItGVHYHPrEuCIFY4MBBjC+C5v1lJKqIUSA7OZBdhleCY53zCCrXn27hsk7YNOaTuhQu807S4AfQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/types@3.974.2':
+    resolution: {integrity: sha512-3W6IUtSxFbH6X7Wb7DzGCV5QiFQsd0g8bOfntpmDxQlzBoKWUMBu/JPQR0DwkE+Hpnxd6db1tXbOwdeHddG6cA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/xml-builder@3.972.37':
+    resolution: {integrity: sha512-zKq4HQum8JwDyEuyfuI4bbiAcU0KxP6qy+9PR/IsR92IyE/DaBAikzAS50tjxip4bqIIANpCcG+Yyj6CVhXupg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws/lambda-invoke-store@0.3.0':
+    resolution: {integrity: sha512-sl4Bm6yiMNYrZKkqqDFWN0UfnWhlS8ivKxrYl+6t0gCLrqr8y3B2IqZZbFRkfaVVp7C/baApyh71P+LeE1A2sQ==}
+    engines: {node: '>=18.0.0'}
 
   '@babel/helper-string-parser@7.29.7':
     resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
@@ -965,6 +2447,30 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
+  '@smithy/core@3.31.1':
+    resolution: {integrity: sha512-CyogUINxvi7C7LDsh8Syo6hVJOT9ckz4rG8dRZfTJ8r91HkMY59PnNooaj7WcHyxEkxPfBAmbgztZU+xTo76lg==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/credential-provider-imds@4.4.16':
+    resolution: {integrity: sha512-QfuLWAkLzptffFW980AFeHZFdqds2B64rpEd3uJ6lgs3xVn9QegGMUgUcj+4d7dRrAsya3r58ZKpku97WcFb4w==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/fetch-http-handler@5.6.13':
+    resolution: {integrity: sha512-4fW86pEUOMbrD5nkbyl/tTvPHHWJFbuB2odl6ps9lWfHoXf9HWh3Q/Smh59qH1g7+c/BSZghX6bbUk4gsiMs8A==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/node-http-handler@4.9.13':
+    resolution: {integrity: sha512-Nmd/Nl35zfYrd+a6OO2cDJb3GPh9bgTjIUhcM+JFfjpp8/osCgboDV5nCT1I01Pv6R13eSKDKLSoVa5ZB6Zsfw==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/signature-v4@5.6.12':
+    resolution: {integrity: sha512-I6KLtq3H0qqSuV9vLglfi8puHqzygzWHOnI4z/Rdoo+q50vvo18vBRdPAvvEtcaKROz7Zn6qnPa14kRfPH6PcQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/types@4.16.1':
+    resolution: {integrity: sha512-0JFs3V2y2M9tKW5na/qxe69Zv+uxLMO7QBbhxF/FHu/Gp2NFZAAL9tWl9PU02xxo07pb3G9FTyjNc6D5uZrJIg==}
+    engines: {node: '>=18.0.0'}
+
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
@@ -1008,17 +2514,17 @@ packages:
       vite: ^5.0.0 || ^6.0.0
       vue: ^3.2.25
 
-  '@vue/compiler-core@3.5.40':
-    resolution: {integrity: sha512-39E8IgOhTbVDnoJFMKc2DvYnypcZwUqgUhQkccva/0m6FUwtIKSGV7n1hpVmYcFaoRAwf9pBcwnKlCEsN63ZEQ==}
+  '@vue/compiler-core@3.5.41':
+    resolution: {integrity: sha512-q0Xtv/F9w2YO/7htQhtiL+Ev2WCJbe5N2hc+XfgyKkEKqWpSxknmT8QOuGdEKNdjPq0c3F7rNpFkTo3Kfrm7pg==}
 
-  '@vue/compiler-dom@3.5.40':
-    resolution: {integrity: sha512-pwkx4vqlqOspFstrcmzwkKLePVMD3PT65imRzLhanU2V1Fj4K13g6OXjanOyzw3aTAuRk84BOmY8f3rEHqPaVA==}
+  '@vue/compiler-dom@3.5.41':
+    resolution: {integrity: sha512-oKacVfNglLvGjnS6BXOlGL7EyG2h8X03pqXCjzotRZUaXGjbrTJUnVAQjrCqUnS+lyu31nwQjZY/d817GmCnfw==}
 
-  '@vue/compiler-sfc@3.5.40':
-    resolution: {integrity: sha512-gIf497P4kpuALcvs5n3AEg1Vdn0pSY4XbjASIfHNYF1/MP3T2Mf2STERTubysBxCRxzJGJYtF/O7vwJrxFB3Vw==}
+  '@vue/compiler-sfc@3.5.41':
+    resolution: {integrity: sha512-XJhip7R2wy6vX3knCxdZN4KracFaZUef58s1KYewqluedHIJaPIVfXoYT7MF1F8nCvv6k8bWWxDC8opMkg1VTQ==}
 
-  '@vue/compiler-ssr@3.5.40':
-    resolution: {integrity: sha512-rrE5xiXG663+vHCHa3J9p2z5OcBRjXmoqenprJxAFQxg5pSshzeBiCE6pu46axapRJ2Adk0YDA2BRZVjiHXnhg==}
+  '@vue/compiler-ssr@3.5.41':
+    resolution: {integrity: sha512-U3v5OejKEGqOI0Wy0+Sz7hGuIFZHA4LSXzrNM3IMIeDyJEBBfTpX26n3SDgToRpP2bLc9FfI2j/kSgcJ8Emq5A==}
 
   '@vue/devtools-api@7.7.10':
     resolution: {integrity: sha512-KxtEpUOOpFz/qOGRrAwA36QF7DqIA+FXgCYit9mk9wjbaZt0sXOFz81ElOZtKA4HbWHUdwNjZHBFsFFyp5BZiA==}
@@ -1029,20 +2535,20 @@ packages:
   '@vue/devtools-shared@7.7.10':
     resolution: {integrity: sha512-wOPslzB8vTvpxwdaOcR2qAbwmuSP0L+rhpoC6Cf56V3Jip+HWb7PQQXOUPgBNQARpXsbQX/+mvi8kKucmBGRwQ==}
 
-  '@vue/reactivity@3.5.40':
-    resolution: {integrity: sha512-B7ot9UlUZOi1zbq61/LvE88ZLTV8IlajTdiZTAEiDQgrnIMIZoPr9kGw0Zw46ObW62O9+H/Be3kMbfb7kYPQZA==}
+  '@vue/reactivity@3.5.41':
+    resolution: {integrity: sha512-rznsqKM0np0x18EjzF8x88MpEhdNsffbvFbckLL5+oUKz1BxAImEmO7J1ArRYSyo6aQaVoBDp7jEkT91OOxydA==}
 
-  '@vue/runtime-core@3.5.40':
-    resolution: {integrity: sha512-KAZLweuZ6uUJPK1PMSQPgBU5gCjgrrfjUhSglmU9NhH+Zjepa8cnwSydPWDWHDwOgY4g3VcZ+PljbiHlURNCbw==}
+  '@vue/runtime-core@3.5.41':
+    resolution: {integrity: sha512-Vcry58hiAKwGen9Z1jUZE0feFsNArPCMOImYI8el48A9Idf6DuQYD0U05zZIF2Iad1hGhPSvcbBbAOhNr55fhg==}
 
-  '@vue/runtime-dom@3.5.40':
-    resolution: {integrity: sha512-ZfrX8ssZQds900L9pr8AuK05ddnMsR4MPMZr8cPN9GoqoPWcXLhjvvbIA2SMv+7a97sJ1vv9pj/zxK0Cq/eEFQ==}
+  '@vue/runtime-dom@3.5.41':
+    resolution: {integrity: sha512-3vVBahVBS9+U6cmXBLyb8nE6/yYo4J/CGI9eVFs3KiMc0YHuudwKyShTD65jtJy/L9PUUxNAFu4cj4LiJ0UFbw==}
 
-  '@vue/server-renderer@3.5.40':
-    resolution: {integrity: sha512-XNJym9WpevhTVt1HuwOrCRJ5Q+9z4BjTMrDtjTrvx74SmUll8spNTw6whWJa9mEkO4PKn5TihI/bm/8ds2QVJw==}
+  '@vue/server-renderer@3.5.41':
+    resolution: {integrity: sha512-n6hx/pNFfbD6SuyeuMVkvqox8bwf/ET9JlA/kAz/imw8sw++wkqKe2mHX5KutjPpbKE4Z56yTHszoOjGMI9igQ==}
 
-  '@vue/shared@3.5.40':
-    resolution: {integrity: sha512-WxnBtruIqOoV3rA4jeKDWzrYI5h7Cp4+pjwDi8kWGHz+IslhiN+wguLVVhtv2l8VoU02rzDCVfDjgCl1lNpZVg==}
+  '@vue/shared@3.5.41':
+    resolution: {integrity: sha512-IOnwSCma8j+9xJT6b8H0dEYidC80NsYmNMlZxRsukYcSoGaDBohog5hDxzeUXdFeGWFA++vWvxqOmrr96VlqMA==}
 
   '@vueuse/core@12.8.2':
     resolution: {integrity: sha512-HbvCmZdzAu3VGi/pWYm5Ut+Kd9mn1ZHnn4L5G8kOQTPs/IwIAmJoBrmYk2ckLArgMXZj0AW3n5CAejLUO+PhdQ==}
@@ -1126,6 +2632,9 @@ packages:
   boolean@3.2.0:
     resolution: {integrity: sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw==}
     deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+
+  bowser@2.14.1:
+    resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
 
   brotli@1.3.3:
     resolution: {integrity: sha512-oTKjJdShmDuGW94SyyaoQvAjf30dZaHnjJ8uAF+u2/vGJkJbJPJAT1gDiOJP5v1Zb6f9KEyW/1HpuaWIXtGHPg==}
@@ -1742,8 +3251,8 @@ packages:
       postcss:
         optional: true
 
-  vue@3.5.40:
-    resolution: {integrity: sha512-+8PJ4SJXdn/cHGImF4CKdxlWHIN5Dkt7DoufRREM6h6uVCx2m7QxgcEQmmzyOK8A9mcafg7sFbJFYsdFVubTig==}
+  vue@3.5.41:
+    resolution: {integrity: sha512-2laE0p+aK+/AOPG/XL/WepOs/GlK755LJ1XECi9kDUrz1FKNw8rb2Xzlw9JS1rqEV55nb0ttsKxVlTCcd+R5cg==}
     peerDependencies:
       typescript: '*'
     peerDependenciesMeta:
@@ -1912,6 +3421,182 @@ snapshots:
   '@algolia/requester-node-http@5.56.0':
     dependencies:
       '@algolia/client-common': 5.56.0
+
+  '@aws-sdk/checksums@3.1000.26':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/client-lambda@3.1103.0':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/credential-provider-node': 3.972.78
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/client-s3@3.1103.0':
+    dependencies:
+      '@aws-sdk/checksums': 3.1000.26
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/credential-provider-node': 3.972.78
+      '@aws-sdk/middleware-sdk-s3': 3.972.72
+      '@aws-sdk/signature-v4-multi-region': 3.996.43
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/core@3.977.6':
+    dependencies:
+      '@aws-sdk/types': 3.974.2
+      '@aws-sdk/xml-builder': 3.972.37
+      '@aws/lambda-invoke-store': 0.3.0
+      '@smithy/core': 3.31.1
+      '@smithy/signature-v4': 5.6.12
+      '@smithy/types': 4.16.1
+      bowser: 2.14.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-env@3.972.67':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-http@3.972.69':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-ini@3.973.12':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/credential-provider-env': 3.972.67
+      '@aws-sdk/credential-provider-http': 3.972.69
+      '@aws-sdk/credential-provider-login': 3.972.74
+      '@aws-sdk/credential-provider-process': 3.972.67
+      '@aws-sdk/credential-provider-sso': 3.973.11
+      '@aws-sdk/credential-provider-web-identity': 3.972.73
+      '@aws-sdk/nested-clients': 3.997.41
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/credential-provider-imds': 4.4.16
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-login@3.972.74':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/nested-clients': 3.997.41
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-node@3.972.78':
+    dependencies:
+      '@aws-sdk/credential-provider-env': 3.972.67
+      '@aws-sdk/credential-provider-http': 3.972.69
+      '@aws-sdk/credential-provider-ini': 3.973.12
+      '@aws-sdk/credential-provider-process': 3.972.67
+      '@aws-sdk/credential-provider-sso': 3.973.11
+      '@aws-sdk/credential-provider-web-identity': 3.972.73
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/credential-provider-imds': 4.4.16
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-process@3.972.67':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-sso@3.973.11':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/nested-clients': 3.997.41
+      '@aws-sdk/token-providers': 3.1103.0
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-web-identity@3.972.73':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/nested-clients': 3.997.41
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/middleware-sdk-s3@3.972.72':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/signature-v4-multi-region': 3.996.43
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/nested-clients@3.997.41':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/signature-v4-multi-region': 3.996.43
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/signature-v4-multi-region@3.996.43':
+    dependencies:
+      '@aws-sdk/types': 3.974.2
+      '@smithy/signature-v4': 5.6.12
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/token-providers@3.1103.0':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/nested-clients': 3.997.41
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/types@3.974.2':
+    dependencies:
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/xml-builder@3.972.37':
+    dependencies:
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws/lambda-invoke-store@0.3.0': {}
 
   '@babel/helper-string-parser@7.29.7': {}
 
@@ -2191,7 +3876,6 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
-    optional: true
 
   '@hono/node-server@2.0.12(hono@4.12.32)':
     dependencies:
@@ -2318,34 +4002,25 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@protobufjs/aspromise@1.1.2':
-    optional: true
+  '@protobufjs/aspromise@1.1.2': {}
 
-  '@protobufjs/base64@1.1.2':
-    optional: true
+  '@protobufjs/base64@1.1.2': {}
 
-  '@protobufjs/codegen@2.0.5':
-    optional: true
+  '@protobufjs/codegen@2.0.5': {}
 
-  '@protobufjs/eventemitter@1.1.1':
-    optional: true
+  '@protobufjs/eventemitter@1.1.1': {}
 
   '@protobufjs/fetch@1.1.1':
     dependencies:
       '@protobufjs/aspromise': 1.1.2
-    optional: true
 
-  '@protobufjs/float@1.0.2':
-    optional: true
+  '@protobufjs/float@1.0.2': {}
 
-  '@protobufjs/path@1.1.2':
-    optional: true
+  '@protobufjs/path@1.1.2': {}
 
-  '@protobufjs/pool@1.1.0':
-    optional: true
+  '@protobufjs/pool@1.1.0': {}
 
-  '@protobufjs/utf8@1.1.2':
-    optional: true
+  '@protobufjs/utf8@1.1.2': {}
 
   '@puppeteer/browsers@3.0.6':
     dependencies:
@@ -2467,6 +4142,39 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
+  '@smithy/core@3.31.1':
+    dependencies:
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/credential-provider-imds@4.4.16':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/fetch-http-handler@5.6.13':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/node-http-handler@4.9.13':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/signature-v4@5.6.12':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/types@4.16.1':
+    dependencies:
+      tslib: 2.8.1
+
   '@swc/helpers@0.5.23':
     dependencies:
       tslib: 2.8.1
@@ -2494,8 +4202,7 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/retry@0.12.0':
-    optional: true
+  '@types/retry@0.12.0': {}
 
   '@types/unist@3.0.3': {}
 
@@ -2503,40 +4210,40 @@ snapshots:
 
   '@ungap/structured-clone@1.3.3': {}
 
-  '@vitejs/plugin-vue@5.2.4(vite@5.4.21(@types/node@24.10.1))(vue@3.5.40(typescript@5.9.3))':
+  '@vitejs/plugin-vue@5.2.4(vite@5.4.21(@types/node@24.10.1))(vue@3.5.41(typescript@5.9.3))':
     dependencies:
       vite: 5.4.21(@types/node@24.10.1)
-      vue: 3.5.40(typescript@5.9.3)
+      vue: 3.5.41(typescript@5.9.3)
 
-  '@vue/compiler-core@3.5.40':
+  '@vue/compiler-core@3.5.41':
     dependencies:
       '@babel/parser': 7.29.8
-      '@vue/shared': 3.5.40
+      '@vue/shared': 3.5.41
       entities: 7.0.1
       estree-walker: 2.0.2
       source-map-js: 1.2.1
 
-  '@vue/compiler-dom@3.5.40':
+  '@vue/compiler-dom@3.5.41':
     dependencies:
-      '@vue/compiler-core': 3.5.40
-      '@vue/shared': 3.5.40
+      '@vue/compiler-core': 3.5.41
+      '@vue/shared': 3.5.41
 
-  '@vue/compiler-sfc@3.5.40':
+  '@vue/compiler-sfc@3.5.41':
     dependencies:
       '@babel/parser': 7.29.8
-      '@vue/compiler-core': 3.5.40
-      '@vue/compiler-dom': 3.5.40
-      '@vue/compiler-ssr': 3.5.40
-      '@vue/shared': 3.5.40
+      '@vue/compiler-core': 3.5.41
+      '@vue/compiler-dom': 3.5.41
+      '@vue/compiler-ssr': 3.5.41
+      '@vue/shared': 3.5.41
       estree-walker: 2.0.2
       magic-string: 0.30.21
       postcss: 8.5.25
       source-map-js: 1.2.1
 
-  '@vue/compiler-ssr@3.5.40':
+  '@vue/compiler-ssr@3.5.41':
     dependencies:
-      '@vue/compiler-dom': 3.5.40
-      '@vue/shared': 3.5.40
+      '@vue/compiler-dom': 3.5.41
+      '@vue/shared': 3.5.41
 
   '@vue/devtools-api@7.7.10':
     dependencies:
@@ -2556,36 +4263,36 @@ snapshots:
     dependencies:
       rfdc: 1.4.1
 
-  '@vue/reactivity@3.5.40':
+  '@vue/reactivity@3.5.41':
     dependencies:
-      '@vue/shared': 3.5.40
+      '@vue/shared': 3.5.41
 
-  '@vue/runtime-core@3.5.40':
+  '@vue/runtime-core@3.5.41':
     dependencies:
-      '@vue/reactivity': 3.5.40
-      '@vue/shared': 3.5.40
+      '@vue/reactivity': 3.5.41
+      '@vue/shared': 3.5.41
 
-  '@vue/runtime-dom@3.5.40':
+  '@vue/runtime-dom@3.5.41':
     dependencies:
-      '@vue/reactivity': 3.5.40
-      '@vue/runtime-core': 3.5.40
-      '@vue/shared': 3.5.40
+      '@vue/reactivity': 3.5.41
+      '@vue/runtime-core': 3.5.41
+      '@vue/shared': 3.5.41
       csstype: 3.2.3
 
-  '@vue/server-renderer@3.5.40':
+  '@vue/server-renderer@3.5.41':
     dependencies:
-      '@vue/compiler-ssr': 3.5.40
-      '@vue/runtime-dom': 3.5.40
-      '@vue/shared': 3.5.40
+      '@vue/compiler-ssr': 3.5.41
+      '@vue/runtime-dom': 3.5.41
+      '@vue/shared': 3.5.41
 
-  '@vue/shared@3.5.40': {}
+  '@vue/shared@3.5.41': {}
 
   '@vueuse/core@12.8.2(typescript@5.9.3)':
     dependencies:
       '@types/web-bluetooth': 0.0.21
       '@vueuse/metadata': 12.8.2
       '@vueuse/shared': 12.8.2(typescript@5.9.3)
-      vue: 3.5.40(typescript@5.9.3)
+      vue: 3.5.41(typescript@5.9.3)
     transitivePeerDependencies:
       - typescript
 
@@ -2593,7 +4300,7 @@ snapshots:
     dependencies:
       '@vueuse/core': 12.8.2(typescript@5.9.3)
       '@vueuse/shared': 12.8.2(typescript@5.9.3)
-      vue: 3.5.40(typescript@5.9.3)
+      vue: 3.5.41(typescript@5.9.3)
     optionalDependencies:
       focus-trap: 7.8.0
     transitivePeerDependencies:
@@ -2603,14 +4310,13 @@ snapshots:
 
   '@vueuse/shared@12.8.2(typescript@5.9.3)':
     dependencies:
-      vue: 3.5.40(typescript@5.9.3)
+      vue: 3.5.41(typescript@5.9.3)
     transitivePeerDependencies:
       - typescript
 
   adm-zip@0.6.0: {}
 
-  agent-base@7.1.4:
-    optional: true
+  agent-base@7.1.4: {}
 
   algoliasearch@5.56.0:
     dependencies:
@@ -2635,19 +4341,19 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  bignumber.js@9.3.1:
-    optional: true
+  bignumber.js@9.3.1: {}
 
   birpc@2.9.0: {}
 
   boolean@3.2.0: {}
 
+  bowser@2.14.1: {}
+
   brotli@1.3.3:
     dependencies:
       base64-js: 1.5.1
 
-  buffer-equal-constant-time@1.0.1:
-    optional: true
+  buffer-equal-constant-time@1.0.1: {}
 
   bundle-name@4.1.0:
     dependencies:
@@ -2687,8 +4393,7 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  data-uri-to-buffer@4.0.1:
-    optional: true
+  data-uri-to-buffer@4.0.1: {}
 
   debug@4.4.3:
     dependencies:
@@ -2732,7 +4437,6 @@ snapshots:
   ecdsa-sig-formatter@1.0.11:
     dependencies:
       safe-buffer: 5.2.1
-    optional: true
 
   emoji-regex-xs@1.0.0: {}
 
@@ -2836,8 +4540,7 @@ snapshots:
 
   estree-walker@2.0.2: {}
 
-  extend@3.0.2:
-    optional: true
+  extend@3.0.2: {}
 
   fast-deep-equal@3.1.3: {}
 
@@ -2845,7 +4548,6 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
-    optional: true
 
   focus-trap@7.8.0:
     dependencies:
@@ -2866,7 +4568,6 @@ snapshots:
   formdata-polyfill@4.0.10:
     dependencies:
       fetch-blob: 3.2.0
-    optional: true
 
   fsevents@2.3.3:
     optional: true
@@ -2878,7 +4579,6 @@ snapshots:
       node-fetch: 3.3.2
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   gcp-metadata@8.1.2:
     dependencies:
@@ -2887,7 +4587,6 @@ snapshots:
       json-bigint: 1.0.0
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   get-caller-file@2.0.5: {}
 
@@ -2923,10 +4622,8 @@ snapshots:
       jws: 4.0.1
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
-  google-logging-utils@1.1.3:
-    optional: true
+  google-logging-utils@1.1.3: {}
 
   gopd@1.2.0: {}
 
@@ -2964,7 +4661,6 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   hyperframes@0.7.84(@types/node@24.10.1):
     dependencies:
@@ -3013,7 +4709,6 @@ snapshots:
   json-bigint@1.0.0:
     dependencies:
       bignumber.js: 9.3.1
-    optional: true
 
   json-stringify-safe@5.0.1: {}
 
@@ -3022,16 +4717,13 @@ snapshots:
       buffer-equal-constant-time: 1.0.1
       ecdsa-sig-formatter: 1.0.11
       safe-buffer: 5.2.1
-    optional: true
 
   jws@4.0.1:
     dependencies:
       jwa: 2.0.1
       safe-buffer: 5.2.1
-    optional: true
 
-  long@5.3.2:
-    optional: true
+  long@5.3.2: {}
 
   magic-string@0.30.21:
     dependencies:
@@ -3088,15 +4780,13 @@ snapshots:
 
   nanoid@3.3.16: {}
 
-  node-domexception@1.0.0:
-    optional: true
+  node-domexception@1.0.0: {}
 
   node-fetch@3.3.2:
     dependencies:
       data-uri-to-buffer: 4.0.1
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
-    optional: true
 
   object-keys@1.1.1: {}
 
@@ -3125,7 +4815,6 @@ snapshots:
     dependencies:
       '@types/retry': 0.12.0
       retry: 0.13.1
-    optional: true
 
   pako@0.2.9: {}
 
@@ -3158,7 +4847,6 @@ snapshots:
       '@protobufjs/utf8': 1.1.2
       '@types/node': 24.10.1
       long: 5.3.2
-    optional: true
 
   puppeteer-core@25.4.0:
     dependencies:
@@ -3188,8 +4876,7 @@ snapshots:
 
   restructure@3.0.2: {}
 
-  retry@0.13.1:
-    optional: true
+  retry@0.13.1: {}
 
   rfdc@1.4.1: {}
 
@@ -3236,8 +4923,7 @@ snapshots:
 
   run-applescript@7.1.0: {}
 
-  safe-buffer@5.2.1:
-    optional: true
+  safe-buffer@5.2.1: {}
 
   search-insights@2.17.3: {}
 
@@ -3417,9 +5103,9 @@ snapshots:
       '@shikijs/transformers': 2.5.0
       '@shikijs/types': 2.5.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@24.10.1))(vue@3.5.40(typescript@5.9.3))
+      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@24.10.1))(vue@3.5.41(typescript@5.9.3))
       '@vue/devtools-api': 7.7.10
-      '@vue/shared': 3.5.40
+      '@vue/shared': 3.5.41
       '@vueuse/core': 12.8.2(typescript@5.9.3)
       '@vueuse/integrations': 12.8.2(focus-trap@7.8.0)(typescript@5.9.3)
       focus-trap: 7.8.0
@@ -3427,7 +5113,7 @@ snapshots:
       minisearch: 7.2.0
       shiki: 2.5.0
       vite: 5.4.21(@types/node@24.10.1)
-      vue: 3.5.40(typescript@5.9.3)
+      vue: 3.5.41(typescript@5.9.3)
     optionalDependencies:
       postcss: 8.5.25
     transitivePeerDependencies:
@@ -3458,18 +5144,17 @@ snapshots:
       - typescript
       - universal-cookie
 
-  vue@3.5.40(typescript@5.9.3):
+  vue@3.5.41(typescript@5.9.3):
     dependencies:
-      '@vue/compiler-dom': 3.5.40
-      '@vue/compiler-sfc': 3.5.40
-      '@vue/runtime-dom': 3.5.40
-      '@vue/server-renderer': 3.5.40
-      '@vue/shared': 3.5.40
+      '@vue/compiler-dom': 3.5.41
+      '@vue/compiler-sfc': 3.5.41
+      '@vue/runtime-dom': 3.5.41
+      '@vue/server-renderer': 3.5.41
+      '@vue/shared': 3.5.41
     optionalDependencies:
       typescript: 5.9.3
 
-  web-streams-polyfill@3.3.3:
-    optional: true
+  web-streams-polyfill@3.3.3: {}
 
   webdriver-bidi-protocol@0.4.2: {}
 

@@ -1,0 +1,23 @@
+{
+  "name": "@svml/driver-node",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/component-kit": "workspace:*",
+    "@svml/core": "workspace:*",
+    "@svml/endpoint-kit": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/runtime": "workspace:*",
+    "@svml/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/caption": "workspace:*",
+    "@svml/contracts": "workspace:*",
+    "@svml/script": "workspace:*",
+    "@svml/speech-align": "workspace:*"
+  }
+}

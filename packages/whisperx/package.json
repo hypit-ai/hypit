@@ -1,0 +1,19 @@
+{
+  "name": "@svml/whisperx",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@svml/component-kit": "workspace:*",
+    "@svml/contracts": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/media-pipeline": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/speech-align": "workspace:*",
+    "@svml/text": "workspace:*"
+  }
+}

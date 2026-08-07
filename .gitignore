@@ -5,4 +5,11 @@ docs/.vitepress/dist/
 .svml-cache/
 examples/**/assets/
 examples/**/build/
+examples/**/output/
+examples/**/.svml/
 examples/**/evidence/generated/
+services/whisperx/.venv/
+services/whisperx/**/__pycache__/
+services/whisperx/src/*.egg-info/
+services/image-opencv/.venv/
+services/image-opencv/**/__pycache__/

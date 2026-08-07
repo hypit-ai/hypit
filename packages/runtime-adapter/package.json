@@ -1,0 +1,15 @@
+{
+  "name": "@svml/runtime-adapter",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@svml/endpoint-kit": "workspace:*",
+    "@svml/host": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/runtime": "workspace:*"
+  }
+}

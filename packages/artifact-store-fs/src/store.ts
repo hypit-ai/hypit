@@ -1,0 +1,207 @@
+import { createHash, randomUUID } from "node:crypto";
+import {
+  link,
+  mkdir,
+  open as openFile,
+  readdir,
+  stat,
+  unlink,
+} from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+
+import { digestOf, isDigest } from "@svml/protocol";
+import type { BlobRef, Digest } from "@svml/protocol";
+import { defineRuntimeServicePackage } from "@svml/runtime";
+import type { ArtifactStore, RuntimeServicePackage } from "@svml/runtime";
+
+export const fileArtifactStoreModuleRef = {
+  name: "@svml/artifact-store-fs",
+  version: "1",
+} as const;
+
+export const fileArtifactStoreImplementationDigest = digestOf(
+  "@svml/artifact-store-fs/artifact-store@1",
+);
+
+export type CreateFileArtifactStorePackageOptions = {
+  readonly root: string;
+  readonly instance?: string;
+};
+
+function digestPath(root: string, digest: Digest): string {
+  if (!isDigest(digest)) throw new Error("Artifact digest is invalid");
+  const [algorithm, hex] = digest.split(":");
+  if (algorithm !== "sha256" || hex === undefined) throw new Error(`unsupported Artifact digest ${digest}`);
+  return join(root, algorithm, hex.slice(0, 2), hex);
+}
+
+function isNodeError(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
+/** Project-local content-addressed bytes. Metadata remains in the typed BlobRef that names them. */
+export class FileArtifactStore implements ArtifactStore {
+  readonly root: string;
+
+  constructor(root: string) {
+    if (root.trim().length === 0) throw new Error("Artifact root must not be empty");
+    this.root = resolve(root);
+  }
+
+  async put(bytes: Uint8Array, mediaType: string): Promise<BlobRef> {
+    const copy = Uint8Array.from(bytes);
+    return await this.putStream((async function* () { yield copy; })(), mediaType);
+  }
+
+  async putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef> {
+    if (mediaType.trim().length === 0) throw new Error("Artifact mediaType must not be empty");
+    const incoming = join(this.root, ".incoming");
+    await mkdir(incoming, { recursive: true });
+    const temporary = join(incoming, randomUUID());
+    const handle = await openFile(temporary, "wx");
+    const hash = createHash("sha256");
+    let size = 0;
+    try {
+      try {
+        for await (const value of chunks) {
+          if (!(value instanceof Uint8Array)) throw new Error("Artifact stream yielded non-bytes");
+          const chunk = Uint8Array.from(value);
+          hash.update(chunk);
+          size += chunk.byteLength;
+          if (!Number.isSafeInteger(size)) throw new Error("Artifact stream exceeds the supported size");
+          let offset = 0;
+          while (offset < chunk.byteLength) {
+            const written = await handle.write(chunk, offset, chunk.byteLength - offset);
+            offset += written.bytesWritten;
+          }
+        }
+      } finally {
+        await handle.close();
+      }
+    } catch (error) {
+      await unlink(temporary).catch(() => undefined);
+      throw error;
+    }
+    const digest = `sha256:${hash.digest("hex")}` as Digest;
+    const path = digestPath(this.root, digest);
+    await mkdir(dirname(path), { recursive: true });
+    try {
+      await link(temporary, path);
+    } catch (error) {
+      if (!isNodeError(error, "EEXIST")) {
+        await unlink(temporary).catch(() => undefined);
+        throw error;
+      }
+    }
+    await unlink(temporary).catch(() => undefined);
+    if ((await this.get(digest)) === undefined) {
+      throw new Error(`Artifact ${digest} disappeared after storage`);
+    }
+    return { kind: "blob", digest, size, mediaType };
+  }
+
+  async get(digest: Digest): Promise<Uint8Array | undefined> {
+    const stream = await this.open(digest);
+    if (stream === undefined) return undefined;
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+      size += chunk.byteLength;
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return bytes;
+  }
+
+  async open(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined> {
+    const path = digestPath(this.root, digest);
+    try {
+      if (!(await stat(path)).isFile()) throw new Error(`Artifact ${digest} is not a file`);
+    } catch (error) {
+      if (isNodeError(error, "ENOENT")) return undefined;
+      throw error;
+    }
+    return (async function* () {
+      const handle = await openFile(path, "r");
+      const hash = createHash("sha256");
+      try {
+        const buffer = new Uint8Array(1024 * 1024);
+        let position = 0;
+        while (true) {
+          const result = await handle.read(buffer, 0, buffer.byteLength, position);
+          if (result.bytesRead === 0) break;
+          position += result.bytesRead;
+          const chunk = buffer.slice(0, result.bytesRead);
+          hash.update(chunk);
+          yield chunk;
+        }
+      } finally {
+        await handle.close();
+      }
+      const actual = `sha256:${hash.digest("hex")}`;
+      if (actual !== digest) throw new Error(`Artifact ${digest} content digest differs`);
+    })();
+  }
+
+  async has(digest: Digest): Promise<boolean> {
+    return (await this.get(digest)) !== undefined;
+  }
+
+  async list(): Promise<readonly Digest[]> {
+    const algorithm = join(this.root, "sha256");
+    let prefixes;
+    try {
+      prefixes = await readdir(algorithm, { withFileTypes: true });
+    } catch (error) {
+      if (isNodeError(error, "ENOENT")) return [];
+      throw error;
+    }
+    const digests: Digest[] = [];
+    for (const prefix of prefixes) {
+      if (!prefix.isDirectory() || !/^[0-9a-f]{2}$/u.test(prefix.name)) continue;
+      for (const entry of await readdir(join(algorithm, prefix.name), { withFileTypes: true })) {
+        if (entry.isFile() && /^[0-9a-f]{64}$/u.test(entry.name) && entry.name.startsWith(prefix.name)) {
+          digests.push(`sha256:${entry.name}` as Digest);
+        }
+      }
+    }
+    return digests.sort();
+  }
+
+  async delete(digest: Digest): Promise<boolean> {
+    try {
+      await unlink(digestPath(this.root, digest));
+      return true;
+    } catch (error) {
+      if (isNodeError(error, "ENOENT")) return false;
+      throw error;
+    }
+  }
+}
+
+export function createFileArtifactStorePackage(
+  options: CreateFileArtifactStorePackageOptions,
+): RuntimeServicePackage {
+  const instance = options.instance ?? "artifacts.fs";
+  return defineRuntimeServicePackage({
+    name: instance,
+    module: fileArtifactStoreModuleRef,
+    services: [{
+      role: "artifact-store",
+      facet: "artifact-store",
+      instance,
+      implementation: {
+        locator: "@svml/artifact-store-fs/artifact-store",
+        digest: fileArtifactStoreImplementationDigest,
+      },
+      permissions: ["filesystem:artifacts"],
+      configuration: { root: resolve(options.root) },
+      service: new FileArtifactStore(options.root),
+    }],
+  });
+}
