@@ -1,0 +1,64 @@
+import {
+  createRuntimeEndpointAdapterFacet,
+  runtimeConfigExact,
+  runtimeConfigObject,
+  runtimeConfigPositiveInteger,
+  runtimeConfigString,
+} from "@svml/runtime-adapter";
+import {
+  diagnoseRuntimeExecutable,
+  resolveRuntimeExecutable,
+} from "@svml/runtime-adapter-node";
+
+import { createLocalMediaProvider } from "./provider.js";
+
+const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
+  use: "@svml/provider-media-local",
+  create(context) {
+    const config = runtimeConfigObject(context.config, "local media");
+    runtimeConfigExact(config, [
+      "ffmpegPath", "ffprobePath", "defaultConcurrency", "processTimeoutMs", "maxProbeOutputBytes",
+    ], "local media");
+    const configuredFfmpeg = runtimeConfigString(config.ffmpegPath, "media ffmpegPath");
+    const configuredFfprobe = runtimeConfigString(config.ffprobePath, "media ffprobePath");
+    const ffmpegPath = configuredFfmpeg === undefined ? undefined : resolveRuntimeExecutable(context.root, configuredFfmpeg);
+    const ffprobePath = configuredFfprobe === undefined ? undefined : resolveRuntimeExecutable(context.root, configuredFfprobe);
+    return createLocalMediaProvider({
+      instance: context.instance,
+      ...(context.lane === undefined ? {} : { lane: context.lane }),
+      ...(ffmpegPath === undefined ? {} : { ffmpegPath }),
+      ...(ffprobePath === undefined ? {} : { ffprobePath }),
+      ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "media defaultConcurrency") === undefined
+        ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
+      ...(runtimeConfigPositiveInteger(config.processTimeoutMs, "media processTimeoutMs") === undefined
+        ? {} : { processTimeoutMs: config.processTimeoutMs as number }),
+      ...(runtimeConfigPositiveInteger(config.maxProbeOutputBytes, "media maxProbeOutputBytes") === undefined
+        ? {} : { maxProbeOutputBytes: config.maxProbeOutputBytes as number }),
+    });
+  },
+  async doctor(context) {
+    const config = runtimeConfigObject(context.config, "local media");
+    return [
+      ...await diagnoseRuntimeExecutable({
+        root: context.root,
+        configured: runtimeConfigString(config.ffmpegPath, "media ffmpegPath"),
+        fallback: "ffmpeg",
+        subject: "FFmpeg",
+      }),
+      ...await diagnoseRuntimeExecutable({
+        root: context.root,
+        configured: runtimeConfigString(config.ffprobePath, "media ffprobePath"),
+        fallback: "ffprobe",
+        subject: "FFprobe",
+      }),
+    ];
+  },
+});
+
+export const svmlPackage = {
+  format: "svml.node-package@1" as const,
+  name: "@svml/provider-media-local",
+  hostFacets: [localMediaRuntimeAdapter],
+};
+
+export default svmlPackage;

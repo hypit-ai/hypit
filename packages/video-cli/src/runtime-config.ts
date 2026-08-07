@@ -1,0 +1,9 @@
+import { createRuntimeFromConfig } from "@svml/local";
+
+/**
+ * Video CLI assembly adds no privileged Provider registry. The Runtime Profile selects
+ * locked Runtime Adapter packages, so installing a new adapter never changes this CLI.
+ */
+export async function createVideoRuntimeFromConfig(path: string) {
+  return await createRuntimeFromConfig(path);
+}

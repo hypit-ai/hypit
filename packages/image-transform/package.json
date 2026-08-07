@@ -1,0 +1,17 @@
+{
+  "name": "@svml/image-transform",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@svml/artifact": "workspace:*",
+    "@svml/component-kit": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/text": "workspace:*"
+  }
+}

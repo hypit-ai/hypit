@@ -1,0 +1,35 @@
+import { mediaContractsComponent } from "@svml/contracts";
+import { createTextSurfaceHostFacet } from "@svml/text";
+
+import {
+  decodeMediaAudioSurface,
+  decodeMediaImageSurface,
+  mediaManifest,
+  mediaModuleRef,
+  mediaSurfaceImplementationDigests,
+} from "./index.js";
+
+export const svmlPackage = {
+  format: "svml.node-package@1" as const,
+  name: "@svml/media",
+  modules: [{ manifest: mediaManifest, specifiers: ["@svml/media", "@svml/media@1"] }],
+  components: [mediaContractsComponent],
+  hostFacets: [
+    createTextSurfaceHostFacet({
+      module: mediaModuleRef,
+      surface: "image",
+      mode: "structured",
+      implementationDigest: mediaSurfaceImplementationDigests.image,
+      handler: decodeMediaImageSurface,
+    }),
+    createTextSurfaceHostFacet({
+      module: mediaModuleRef,
+      surface: "audio",
+      mode: "structured",
+      implementationDigest: mediaSurfaceImplementationDigests.audio,
+      handler: decodeMediaAudioSurface,
+    }),
+  ],
+};
+
+export default svmlPackage;

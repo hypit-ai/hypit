@@ -1,0 +1,14 @@
+{
+  "name": "@svml/transport-aws-lambda",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.1103.0",
+    "@svml/protocol": "workspace:*",
+    "@svml/transport": "workspace:*"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@svml/caption-gemini",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@svml/caption": "workspace:*",
+    "@svml/component-kit": "workspace:*",
+    "@svml/contracts": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/text": "workspace:*"
+  },
+  "devDependencies": {
+    "@svml/script": "workspace:*"
+  }
+}
