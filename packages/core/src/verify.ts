@@ -8,7 +8,6 @@ import type {
 } from "@svml/protocol";
 
 import { digestOf, isDigest } from "./canonical.js";
-import { verifyGraphRecordAffinity, verifyProducerRecordAffinity } from "./affinity.js";
 import { invariant } from "./error.js";
 import { link, resolveProducer, verifyRecord } from "./link.js";
 import { producerStep, validatePlan } from "./plan.js";
@@ -246,11 +245,6 @@ export function verifyBuildState(state: BuildState): void {
     invariant(validConformance(record.conformance), "INVALID_CONFORMANCE", record.id);
     verifyRecord(state.program.closure, record);
   }
-  const affinityRecords = new Map(state.records.map((record) => [record.id, record]));
-  state.records.forEach((record) => {
-    verifyProducerRecordAffinity(state.program, state.plan, record, (recordId) => affinityRecords.get(recordId));
-    verifyGraphRecordAffinity(state.graph, state.plan, record, (recordId) => affinityRecords.get(recordId));
-  });
   for (const authored of state.program.records) {
     const record = findRecord(state, authored.id);
     invariant(record?.digest === authored.digest, "AUTHORED_RECORD_CHANGED", `${authored.id} changed`);

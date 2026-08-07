@@ -30,13 +30,7 @@ export const speechAlignManifest: ModuleManifest = {
       { name: "audio", type: contractTypes.speechAudioBasis },
       { name: "evidence", type: contractTypes.alignedTranscriptEvidence },
     ],
-    outputs: [{
-      name: "map",
-      type: contractTypes.completeSemanticMap,
-      affinity: [
-        { resultPointer: "/programSpace/digest", input: "audio", inputPointer: "/programSpace/digest" },
-      ],
-    }],
+    outputs: [{ name: "map", type: contractTypes.completeSemanticMap }],
     needs: [],
     implementation: {
       kind: "registered",

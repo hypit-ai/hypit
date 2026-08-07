@@ -1,8 +1,4 @@
-import {
-  contractTypes,
-  programSpaceSchema,
-  videoContractDependencies,
-} from "@svml/contracts";
+import { contractTypes, videoContractDependencies } from "@svml/contracts";
 import { digestOf } from "@svml/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
 
@@ -41,7 +37,6 @@ export const captionProgramSurfaceImplementationDigest = digestOf("@svml/caption
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
 const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
 ): ValueSchema => ({ kind: "object", fields });
@@ -95,18 +90,12 @@ const captionPlannedRun = object({
 });
 export const captionPlanSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-plan@1" } },
-  narrativeDigest: { schema: digest },
-  captionProgramDigest: { schema: digest },
-  planningRequestDigest: { schema: digest },
   runs: { schema: { kind: "array", minItems: 1, items: captionPlannedRun } },
-  planDigest: { schema: digest },
 });
 export const timedCaptionProjectionSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.timed-caption-projection@1" } },
-  programSpace: { schema: programSpaceSchema },
   text: { schema: { kind: "string" } },
   regions: { schema: { kind: "array", items: timedCaptionRegion } },
-  projectionDigest: { schema: digest },
 });
 
 const captionTrackStyleSchema = object({
@@ -129,7 +118,6 @@ const captionTrackStyleSchema = object({
 
 export const captionTrackProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-track-program@1" } },
-  digest: { schema: digest },
   id: { schema: string },
   mode: { schema: { kind: "string", enum: ["whole", "proportional-word", "character-flow"] } },
   stacking: { schema: object({ order: { schema: integer }, tieBreak: { schema: string } }) },
@@ -170,7 +158,6 @@ export const captionStyleSchema: ValueSchema = object({
     stackingOrder: { schema: integer },
     style: { schema: captionTrackStyleSchema },
   }) },
-  digest: { schema: digest },
 });
 const captionDisplayAtom = object({
   id: { schema: string }, index: { schema: integer }, regionId: { schema: string }, segmentId: { schema: string },
@@ -185,11 +172,10 @@ const captionProgramRun = object({
 });
 export const captionProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-program@1" } },
-  id: { schema: string }, narrativeDigest: { schema: digest }, defaultStyleId: { schema: string },
+  id: { schema: string }, defaultStyleId: { schema: string },
   styles: { schema: { kind: "array", minItems: 1, items: captionStyleSchema } },
   atoms: { schema: { kind: "array", minItems: 1, items: captionDisplayAtom } },
   runs: { schema: { kind: "array", minItems: 1, items: captionProgramRun } },
-  digest: { schema: digest },
 });
 
 export const captionManifest: ModuleManifest = {
@@ -277,13 +263,7 @@ export const captionManifest: ModuleManifest = {
         { name: "narrative", type: contractTypes.narrative },
         { name: "map", type: contractTypes.completeSemanticMap },
       ],
-      outputs: [{
-        name: "caption",
-        type: captionTypes.timedProjection,
-        affinity: [
-          { resultPointer: "/programSpace/digest", input: "map", inputPointer: "/programSpace/digest" },
-        ],
-      }],
+      outputs: [{ name: "caption", type: captionTypes.timedProjection }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -299,13 +279,7 @@ export const captionManifest: ModuleManifest = {
         { name: "program", type: captionTypes.program },
         { name: "plan", type: captionTypes.plan },
       ],
-      outputs: [{
-        name: "caption",
-        type: captionTypes.timedProjection,
-        affinity: [
-          { resultPointer: "/programSpace/digest", input: "map", inputPointer: "/programSpace/digest" },
-        ],
-      }],
+      outputs: [{ name: "caption", type: captionTypes.timedProjection }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -318,11 +292,9 @@ export const captionManifest: ModuleManifest = {
       inputs: [
         { name: "caption", type: captionTypes.timedProjection },
         { name: "program", type: captionTypes.program },
+        { name: "space", type: contractTypes.programSpace },
       ],
-      outputs: [{
-        name: "track", type: contractTypes.visualTrack,
-        affinity: [{ resultPointer: "/programSpaceDigest", input: "caption", inputPointer: "/programSpace/digest" }],
-      }],
+      outputs: [{ name: "track", type: contractTypes.visualTrack }],
       needs: [],
       implementation: { kind: "registered", locator: "@svml/caption/render-program", digest: renderCaptionProgramImplementationDigest },
     },
@@ -331,14 +303,9 @@ export const captionManifest: ModuleManifest = {
       inputs: [
         { name: "caption", type: captionTypes.timedProjection },
         { name: "program", type: captionTypes.trackProgram },
+        { name: "space", type: contractTypes.programSpace },
       ],
-      outputs: [{
-        name: "track",
-        type: contractTypes.visualTrack,
-        affinity: [
-          { resultPointer: "/programSpaceDigest", input: "caption", inputPointer: "/programSpace/digest" },
-        ],
-      }],
+      outputs: [{ name: "track", type: contractTypes.visualTrack }],
       needs: [],
       implementation: {
         kind: "registered",

@@ -5,7 +5,6 @@ import {
   resolveProducer,
 } from "@svml/core";
 import type {
-  AffinityConstraint,
   Candidate,
   Satisfaction,
   CandidateRoot,
@@ -47,18 +46,11 @@ export type FragmentOperation = {
   readonly result: FragmentOperationResult;
 };
 
-export type FragmentAffinityConstraint = {
-  readonly resultPointer: string;
-  readonly source: FragmentValueRef;
-  readonly sourcePointer: string;
-};
-
 export type FragmentExport = {
   readonly name: string;
   readonly type: TypeRef;
   readonly root: FragmentOperationRef;
   readonly semanticInputs: readonly string[];
-  readonly affinity?: readonly FragmentAffinityConstraint[];
   readonly fidelity: Conformance;
 };
 
@@ -83,7 +75,6 @@ export type ElaboratedFragmentExport = {
   readonly type: TypeRef;
   readonly root: CandidateRoot;
   readonly semanticInputs: readonly GraphValueRef[];
-  readonly affinity?: readonly AffinityConstraint[];
   readonly fidelity: Conformance;
 };
 
@@ -192,25 +183,13 @@ function normalizeOperation(operation: FragmentOperation): FragmentOperation {
 }
 
 function normalizeExport(item: FragmentExport): FragmentExport {
-  const base = {
+  return {
     name: item.name,
     type: item.type,
     root: normalizeFragmentRef(item.root) as FragmentOperationRef,
     semanticInputs: [...item.semanticInputs].sort(),
     fidelity: item.fidelity,
   };
-  return item.affinity === undefined
-    ? base
-    : {
-        ...base,
-        affinity: [...item.affinity]
-          .map((constraint) => ({
-            resultPointer: constraint.resultPointer,
-            source: normalizeFragmentRef(constraint.source),
-            sourcePointer: constraint.sourcePointer,
-          }))
-          .sort((left, right) => left.resultPointer.localeCompare(right.resultPointer)),
-      };
 }
 
 function fragmentContent(fragment: GraphFragment): Omit<GraphFragment, "id"> {
@@ -363,14 +342,6 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
         item.name,
       );
     }
-    for (const constraint of item.affinity ?? []) {
-      assert(
-        dependencies.has(fragmentRefKey(constraint.source)),
-        "FRAGMENT_AFFINITY_NOT_DEMANDED",
-        `${fragment.name}.${item.name} affinity source is outside its demanded closure`,
-        item.name,
-      );
-    }
   }
   for (const id of operations.keys()) {
     assert(
@@ -446,23 +417,13 @@ export function elaborateGraphFragment(
   const exports: ElaboratedFragmentExport[] = fragment.exports.map((item) => {
     const root = mapRef(item.root);
     assert(root.kind === "operation-result", "INVALID_FRAGMENT_EXPORT_ROOT", item.name);
-    const base = {
+    return {
       name: item.name,
       type: item.type,
       root: { kind: "operation" as const, result: root },
       semanticInputs: item.semanticInputs.map((name) => inputs[name] as GraphValueRef),
       fidelity: item.fidelity,
     };
-    return item.affinity === undefined
-      ? base
-      : {
-          ...base,
-          affinity: item.affinity.map((constraint) => ({
-            resultPointer: constraint.resultPointer,
-            source: mapRef(constraint.source),
-            sourcePointer: constraint.sourcePointer,
-          })),
-        };
   });
   const content = {
     format: "svml.fragment-instance@1" as const,
@@ -529,7 +490,6 @@ function bindExports(
         type: item.type,
         primary: candidates[index]!.id,
         semanticInputs: item.semanticInputs,
-        ...(item.affinity === undefined ? {} : { affinity: item.affinity }),
       }))
     : [];
   const reachable = reachableOperationIds(instance, selected);

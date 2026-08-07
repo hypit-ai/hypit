@@ -7,7 +7,6 @@ import type {
   CaptionPlannedRun,
   CaptionProgram,
 } from "@svml/caption";
-import type { Digest } from "@svml/protocol";
 
 export type {
   CaptionFieldAssignment,
@@ -25,7 +24,6 @@ export type CaptionGeminiModel = "gemini-2.5-flash" | "gemini-3.1-pro-preview";
 export type CaptionGeminiProgram = {
   readonly contract: "svml.caption-gemini-program@1";
   readonly model: CaptionGeminiModel;
-  readonly programDigest: Digest;
 };
 
 export type CaptionPlanningAtom = {
@@ -44,14 +42,11 @@ export type CaptionPlanningRun = {
 export type CaptionGeminiRequest = {
   readonly contract: "svml.caption-gemini-request@1";
   readonly model: CaptionGeminiModel;
-  readonly narrativeDigest: Digest;
-  readonly captionProgramDigest: Digest;
   readonly atoms: readonly CaptionPlanningAtom[];
   readonly runs: readonly CaptionPlanningRun[];
   readonly systemInstruction: string;
   readonly prompt: string;
   readonly temperature: 0.2;
-  readonly requestDigest: Digest;
 };
 
 export type RawCaptionGeminiResponse = {

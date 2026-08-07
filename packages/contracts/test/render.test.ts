@@ -85,7 +85,6 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "invalid-font-track",
-    programSpaceDigest: space.digest,
     presents: [{
       id: "title",
       span: { startFrame: 0, endFrameExclusive: 60 },
@@ -104,10 +103,9 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
     () => assertCompositionIdentity(sealComposition({
       contract: "svml.composition@1",
       id: "invalid-font-composition",
-      programSpace: space,
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       tracks: [invalid],
-    })),
+    }), space),
     /exact fonts conflict with a raw font style/u,
   );
 });
@@ -117,7 +115,6 @@ test("animated materialized Surfaces must exactly share the Present frame domain
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "surface-track",
-    programSpaceDigest: space.digest,
     presents: [{
       id: "surface",
       span: { startFrame: 0, endFrameExclusive: 60 },
@@ -128,10 +125,9 @@ test("animated materialized Surfaces must exactly share the Present frame domain
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
     contract: "svml.composition@1",
     id: "surface-composition",
-    programSpace: space,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [valid],
-  })));
+  }), space));
 
   const content = structuredClone(valid) as VisualTrack;
   const surface = content.presents[0]!.elements[0]!;
@@ -153,8 +149,7 @@ test("animated materialized Surfaces must exactly share the Present frame domain
   assert.throws(() => assertCompositionIdentity(sealComposition({
     contract: "svml.composition@1",
     id: "invalid-surface-composition",
-    programSpace: space,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [invalid],
-  })), /must exactly match its Present frame domain/u);
+  }), space), /must exactly match its Present frame domain/u);
 });

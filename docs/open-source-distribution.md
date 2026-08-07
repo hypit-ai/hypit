@@ -62,8 +62,10 @@ selects them.
 `@svml/compiler-text-node` is the explicitly named Text assembly. It installs only Text Surface
 Host facets and combines them with the syntax-neutral compiler. `@svml/cli` is now the generic
 command engine and has no video author-package aggregate or video Endpoint dependency.
-`@svml/video-cli` supplies the Text compiler and video Runtime-config adapters, while an explicit
-package lock selects every Author/Run Frontend, Surface and deterministic component package.
+`@svml/video-cli` supplies the Text compiler only. One explicit package lock selects every
+Author/Run Frontend, Surface and deterministic component package; a separate Runtime package lock
+selects Provider and Store adapter facets. Public publication of those already separated packages
+remains deferred work.
 
 Run Fragment packages use the ordinary Host Facet envelope with ABI
 `svml.run-fragment-host@1`. The generic Loader locks that opaque identity; only the Run Host

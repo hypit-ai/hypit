@@ -26,7 +26,6 @@ export {
   assertTextTrackSpec,
   compileTextTrackImplementationDigest,
   compileTextTrackProgram,
-  computeTextTrackProgramDigest,
   renderTextTrack,
   renderTextTrackImplementationDigest,
   sealTextTrackProgram,

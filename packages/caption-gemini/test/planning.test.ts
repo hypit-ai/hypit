@@ -82,9 +82,8 @@ test("Gemini sees only immutable display atoms while Role and roleless runs come
   assert.equal("whisperx" in request, false);
   assert.equal("transcript" in request, false);
 
-  const { digest: _digest, ...content } = program;
   const tampered = sealCaptionProgram({
-    ...content,
+    ...program,
     atoms: program.atoms.map((atom, index) => index === 0 ? { ...atom, text: "TAMPERED" } : atom),
   });
   assert.throws(() => compileCaptionGeminiRequest(narrative, tampered, options()),
@@ -103,7 +102,6 @@ test("Gemini may only cut each resolved run and assign declared attributes to at
   const program = resolveCaptionProgram(narrative, "captions", emphasis, []);
   const request = compileCaptionGeminiRequest(narrative, program, options());
   const plan = sealCaptionGeminiPlan(request, validResponse(request));
-  assert.equal(plan.captionProgramDigest, program.digest);
   assert.deepEqual(
     plan.runs.flatMap((run) => run.cues.flatMap((cue) => cue.atomIds)),
     request.runs.flatMap((run) => run.atomIds),

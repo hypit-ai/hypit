@@ -1,9 +1,8 @@
 import {
   canonicalize,
-  digestOf,
   isDigest,
 } from "@svml/protocol";
-import type { BlobRef, Digest } from "@svml/protocol";
+import type { BlobRef } from "@svml/protocol";
 
 import type {
   MediaInspection,
@@ -109,11 +108,6 @@ function verifyStream(value: unknown, subject: string): asserts value is MediaSt
   }
 }
 
-function contentDigest<T extends object, K extends keyof T>(value: T, key: K): Digest {
-  const { [key]: _digest, ...content } = value;
-  return digestOf(canonicalize(content));
-}
-
 function expectedSampleFrames(frameCount: number, frameRate: MediaRational): number {
   const numerator = BigInt(frameCount) * 48_000n * BigInt(frameRate.denominator);
   const denominator = BigInt(frameRate.numerator);
@@ -122,15 +116,13 @@ function expectedSampleFrames(frameCount: number, frameRate: MediaRational): num
   return Number(rounded);
 }
 
-export function sealMediaInspection(value: Omit<MediaInspection, "inspectionDigest">): MediaInspection {
-  const normalized = canonicalize(value) as unknown as Omit<MediaInspection, "inspectionDigest">;
-  return { ...normalized, inspectionDigest: digestOf(normalized) };
+export function sealMediaInspection(value: MediaInspection): MediaInspection {
+  return canonicalize(value) as unknown as MediaInspection;
 }
 
 export function verifyMediaInspection(value: unknown): asserts value is MediaInspection {
   const item = object(value, "MediaInspection") as unknown as MediaInspection;
   assert(item.contract === "svml.media-inspection@1", "MediaInspection contract is invalid");
-  verifyBlob(item.source, "MediaInspection.source");
   assert(Array.isArray(item.container?.formatNames), "MediaInspection container formats are invalid");
   item.container.formatNames.forEach((format) => assert(typeof format === "string" && format.length > 0,
     "MediaInspection container format is invalid"));
@@ -138,18 +130,10 @@ export function verifyMediaInspection(value: unknown): asserts value is MediaIns
   item.streams.forEach((stream, index) => verifyStream(stream, `MediaInspection.streams[${index}]`));
   assert(new Set(item.streams.map((stream) => stream.index)).size === item.streams.length,
     "MediaInspection repeats a stream index");
-  assert(item.probe?.algorithm === "ffprobe-decoded-units-json@1", "MediaInspection probe algorithm is invalid");
-  assert(typeof item.probe.implementation === "string" && item.probe.implementation.length > 0,
-    "MediaInspection probe implementation is invalid");
-  assert(isDigest(item.inspectionDigest) && item.inspectionDigest === contentDigest(item, "inspectionDigest"),
-    "MediaInspection digest differs from its canonical contents");
 }
 
-export function sealMediaStreamSelection(
-  value: Omit<MediaStreamSelection, "selectionDigest">,
-): MediaStreamSelection {
-  const normalized = canonicalize(value) as unknown as Omit<MediaStreamSelection, "selectionDigest">;
-  return { ...normalized, selectionDigest: digestOf(normalized) };
+export function sealMediaStreamSelection(value: MediaStreamSelection): MediaStreamSelection {
+  return canonicalize(value) as unknown as MediaStreamSelection;
 }
 
 export function verifyMediaStreamSelection(value: unknown): asserts value is MediaStreamSelection {
@@ -165,15 +149,10 @@ export function verifyMediaStreamSelection(value: unknown): asserts value is Med
   assert(item.policy === "primary-moving@1" || item.policy === "default-audio@1"
     || item.policy === "primary-moving-default-audio@1" || item.policy === "explicit-streams@1",
     "MediaStreamSelection policy is invalid");
-  assert(isDigest(item.selectionDigest) && item.selectionDigest === contentDigest(item, "selectionDigest"),
-    "MediaStreamSelection digest differs from its canonical contents");
 }
 
-export function sealSynchronizedMedia(
-  value: Omit<SynchronizedMedia, "synchronizedMediaDigest">,
-): SynchronizedMedia {
-  const normalized = canonicalize(value) as unknown as Omit<SynchronizedMedia, "synchronizedMediaDigest">;
-  return { ...normalized, synchronizedMediaDigest: digestOf(normalized) };
+export function sealSynchronizedMedia(value: SynchronizedMedia): SynchronizedMedia {
+  return canonicalize(value) as unknown as SynchronizedMedia;
 }
 
 export function verifySynchronizedMedia(value: unknown): asserts value is SynchronizedMedia {
@@ -232,25 +211,15 @@ export function verifySynchronizedMedia(value: unknown): asserts value is Synchr
     "SynchronizedMedia video authority has no visual projection");
   assert(item.timeline.spanAuthority !== "audio" || item.audio !== undefined,
     "SynchronizedMedia audio authority has no audio projection");
-  assert(item.normalization.algorithm === "shared-presentation-origin@1",
-    "SynchronizedMedia normalization algorithm is invalid");
-  assert(typeof item.normalization.implementation === "string" && item.normalization.implementation.length > 0,
-    "SynchronizedMedia normalization implementation is invalid");
-  assert(isDigest(item.synchronizedMediaDigest)
-    && item.synchronizedMediaDigest === contentDigest(item, "synchronizedMediaDigest"),
-  "SynchronizedMedia digest differs from its canonical contents");
 }
 
-export function sealRenderedVisual(value: Omit<RenderedVisual, "visualDigest">): RenderedVisual {
-  const normalized = canonicalize(value) as unknown as Omit<RenderedVisual, "visualDigest">;
-  return { ...normalized, visualDigest: digestOf(normalized) };
+export function sealRenderedVisual(value: RenderedVisual): RenderedVisual {
+  return canonicalize(value) as unknown as RenderedVisual;
 }
 
 export function verifyRenderedVisual(value: unknown): asserts value is RenderedVisual {
   const item = object(value, "RenderedVisual") as unknown as RenderedVisual;
   assert(item.contract === "svml.rendered-visual@1", "RenderedVisual contract is invalid");
-  assert(isDigest(item.renderInputDigest), "RenderedVisual input digest is invalid");
-  assert(isDigest(item.programSpaceDigest), "RenderedVisual ProgramSpace digest is invalid");
   verifyRational(item.frameRate, "RenderedVisual.frameRate");
   positiveInteger(item.frameCount, "RenderedVisual.frameCount");
   positiveInteger(item.canvas?.width, "RenderedVisual.canvas.width");
@@ -258,41 +227,30 @@ export function verifyRenderedVisual(value: unknown): asserts value is RenderedV
   verifyBlob(item.artifact, "RenderedVisual.artifact");
   assert(item.artifact.mediaType.startsWith("video/"), "RenderedVisual Artifact must be video");
   assert(item.muted === true, "RenderedVisual must be silent");
-  assert(isDigest(item.visualDigest) && item.visualDigest === contentDigest(item, "visualDigest"),
-    "RenderedVisual digest differs from its canonical contents");
 }
 
-export function sealTimelineAudio(value: Omit<TimelineAudio, "audioDigest">): TimelineAudio {
-  const normalized = canonicalize(value) as unknown as Omit<TimelineAudio, "audioDigest">;
-  return { ...normalized, audioDigest: digestOf(normalized) };
+export function sealTimelineAudio(value: TimelineAudio): TimelineAudio {
+  return canonicalize(value) as unknown as TimelineAudio;
 }
 
 export function verifyTimelineAudio(value: unknown): asserts value is TimelineAudio {
   const item = object(value, "TimelineAudio") as unknown as TimelineAudio;
   assert(item.contract === "svml.timeline-audio@1", "TimelineAudio contract is invalid");
-  assert(isDigest(item.planDigest), "TimelineAudio plan digest is invalid");
-  assert(isDigest(item.programSpaceDigest), "TimelineAudio ProgramSpace digest is invalid");
   verifyBlob(item.artifact, "TimelineAudio.artifact");
   assert(item.artifact.mediaType === "audio/wav", "TimelineAudio Artifact must be WAV");
   assert(item.codec === "pcm_s16le" && item.sampleRate === 48_000 && item.channels === 2,
     "TimelineAudio PCM shape is invalid");
   positiveInteger(item.sampleFrames, "TimelineAudio.sampleFrames");
   assert(item.loudness === "planned", "TimelineAudio loudness claim is invalid");
-  assert(isDigest(item.audioDigest) && item.audioDigest === contentDigest(item, "audioDigest"),
-    "TimelineAudio digest differs from its canonical contents");
 }
 
-export function sealMuxedMedia(value: Omit<MuxedMedia, "muxDigest">): MuxedMedia {
-  const normalized = canonicalize(value) as unknown as Omit<MuxedMedia, "muxDigest">;
-  return { ...normalized, muxDigest: digestOf(normalized) };
+export function sealMuxedMedia(value: MuxedMedia): MuxedMedia {
+  return canonicalize(value) as unknown as MuxedMedia;
 }
 
 export function verifyMuxedMedia(value: unknown): asserts value is MuxedMedia {
   const item = object(value, "MuxedMedia") as unknown as MuxedMedia;
   assert(item.contract === "svml.muxed-media@1", "MuxedMedia contract is invalid");
-  assert(isDigest(item.visualDigest), "MuxedMedia visual digest is invalid");
-  assert(isDigest(item.audioDigest), "MuxedMedia audio digest is invalid");
-  assert(isDigest(item.programSpaceDigest), "MuxedMedia ProgramSpace digest is invalid");
   verifyRational(item.frameRate, "MuxedMedia.frameRate");
   positiveInteger(item.frameCount, "MuxedMedia.frameCount");
   positiveInteger(item.canvas?.width, "MuxedMedia.canvas.width");
@@ -301,6 +259,4 @@ export function verifyMuxedMedia(value: unknown): asserts value is MuxedMedia {
     "MuxedMedia presentation sample count differs from its frame domain");
   verifyBlob(item.artifact, "MuxedMedia.artifact");
   assert(item.artifact.mediaType === "video/mp4", "MuxedMedia Artifact must be MP4");
-  assert(isDigest(item.muxDigest) && item.muxDigest === contentDigest(item, "muxDigest"),
-    "MuxedMedia digest differs from its canonical contents");
 }

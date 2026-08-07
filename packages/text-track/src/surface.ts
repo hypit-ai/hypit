@@ -23,7 +23,7 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
   const operations: FragmentOperation[] = [{
     id: "text:set:empty",
     producer: textTrackProducers.createSet,
-    inputs: { space: input("space"), header: input("header") },
+    inputs: {},
     result: { kind: "output", name: "set" },
   }];
   let current = "text:set:empty";
@@ -32,15 +32,17 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
     operations.push(item.selectionName === undefined ? {
       id: operationId,
       producer: textTrackProducers.appendFull,
-      inputs: { set: operation(current), spec: input(item.specName) },
+      inputs: { set: operation(current), header: input("header"), space: input("space"), spec: input(item.specName) },
       result: { kind: "output", name: "set" },
     } : {
       id: operationId,
       producer: textTrackProducers.appendSelected,
       inputs: {
         set: operation(current),
+        header: input("header"),
         map: input("map"),
         selection: input(item.selectionName),
+        space: input("space"),
         spec: input(item.specName),
       },
       result: { kind: "output", name: "set" },
@@ -48,7 +50,7 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
     current = operationId;
   });
   operations.push(
-    { id: "text:finalize", producer: textTrackProducers.finalize, inputs: { set: operation(current) }, result: { kind: "output", name: "program" } },
+    { id: "text:finalize", producer: textTrackProducers.finalize, inputs: { header: input("header"), set: operation(current) }, result: { kind: "output", name: "program" } },
     { id: "text:render", producer: textTrackProducers.render, inputs: { space: input("space"), program: operation("text:finalize") }, result: { kind: "output", name: "track" } },
   );
   const semanticInputs = ["space", "header", ...(selected.length === 0 ? [] : ["map"]),
@@ -66,8 +68,7 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
     ],
     operations,
     exports: [{
-      name: "track", type: contractTypes.visualTrack, root: operation("text:render"), semanticInputs,
-      affinity: [{ resultPointer: "/programSpaceDigest", source: input("space"), sourcePointer: "/digest" }], fidelity: "exact",
+      name: "track", type: contractTypes.visualTrack, root: operation("text:render"), semanticInputs, fidelity: "exact",
     }],
   });
 }

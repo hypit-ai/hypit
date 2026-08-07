@@ -45,11 +45,6 @@ export function createSeedanceSpeakerTakeFragment(
         type: artifactTypes.blob,
         root: operation("select-primary-video"),
         semanticInputs: ["program", "duration"],
-        affinity: [{
-          resultPointer: "/digest",
-          source: operation("generate"),
-          sourcePointer: "/videos/0/digest",
-        }],
         fidelity: "exact",
       },
     ],

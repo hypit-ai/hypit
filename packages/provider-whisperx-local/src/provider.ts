@@ -337,9 +337,6 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
           const rawArtifact = await context.artifacts.put(raw.bytes, "application/json");
           const evidence: WhisperXAlignmentEvidence = sealWhisperXAlignmentEvidence({
             contract: "svml.whisperx-alignment-evidence@2",
-            engine: "whisperx",
-            audioArtifactDigest: request.audio.digest,
-            programSpaceDigest: request.programSpaceDigest,
             durationSec: request.durationSec,
             segments,
           });

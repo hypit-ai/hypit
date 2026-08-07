@@ -5,7 +5,6 @@ import {
   verifyPromptProgram,
 } from "@svml/prompt-kit";
 import type { PromptKitInvocation, PromptKitScalar, PromptProgram } from "@svml/prompt-kit";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
 import {
   sealSeedanceSpeechProgram,
   seedanceModels,
@@ -21,14 +20,8 @@ export const speakerMethodDefaults = {
   webSearch: false,
 } as const;
 
-function intentContent(value: Omit<SpeakerTakeIntent, "intentDigest">) {
-  return canonicalize(value);
-}
-
-export function sealSpeakerTakeIntent(
-  value: Omit<SpeakerTakeIntent, "intentDigest">,
-): SpeakerTakeIntent {
-  const intent = { ...value, intentDigest: digestOf(intentContent(value)) };
+export function sealSpeakerTakeIntent(value: SpeakerTakeIntent): SpeakerTakeIntent {
+  const intent = structuredClone(value);
   verifySpeakerTakeIntent(intent);
   return intent;
 }
@@ -54,17 +47,10 @@ export function verifySpeakerTakeIntent(value: unknown): asserts value is Speake
   if (
     typeof intent.recipe?.path !== "string"
     || intent.recipe.path.length === 0
-    || !isDigest(intent.recipe.recordDigest)
     || intent.promptParameters === null
     || typeof intent.promptParameters !== "object"
     || Array.isArray(intent.promptParameters)
-    || typeof intent.segment?.id !== "string"
-    || intent.segment.id.length === 0
-    || !Number.isSafeInteger(intent.segment.tokenStart)
-    || !Number.isSafeInteger(intent.segment.tokenEndExclusive)
-    || intent.segment.tokenEndExclusive <= intent.segment.tokenStart
-    || !isDigest(intent.segment.dialogueExcerptDigest)
-    || typeof intent.segment.dialogue !== "string"
+    || typeof intent.segment?.dialogue !== "string"
     || intent.segment.dialogue.trim().length === 0
   ) {
     throw new Error("Speaker TakeIntent identity, parameters or dialogue is invalid");
@@ -86,11 +72,6 @@ export function verifySpeakerTakeIntent(value: unknown): asserts value is Speake
     }
     assertGenerationBlobRef(item.artifact, `${item.kind}/` as "image/" | "audio/");
   }
-  if (!isDigest(intent.intentDigest)) throw new Error("Speaker TakeIntent digest is invalid");
-  const { intentDigest: _digest, ...content } = intent;
-  if (intent.intentDigest !== digestOf(intentContent(content))) {
-    throw new Error("Speaker TakeIntent digest differs from its contents");
-  }
 }
 
 function audioCount(intent: SpeakerTakeIntent): "zero" | "one" | "many" {
@@ -106,7 +87,6 @@ export function bindSpeakerPromptKit(intent: SpeakerTakeIntent): PromptKitInvoca
   }
   const invocation = sealPromptKitInvocation({
     contract: "svml.prompt-kit-invocation@1",
-    kit: intent.kit,
     parameters,
     selectors: {
       "image-count": intent.references.filter((item) => item.kind === "image").length === 1 ? "one" : "many",
@@ -128,11 +108,6 @@ export function renderSpeakerSpeechProgram(
 ): SeedanceSpeechProgram {
   verifyPromptProgram(program);
   verifySpeakerTakeIntent(intent);
-  if (program.kit !== intent.kit) throw new Error("Speaker PromptProgram uses another Kit");
-  const invocation = bindSpeakerPromptKit(intent);
-  if (program.invocationDigest !== invocation.invocationDigest) {
-    throw new Error("Speaker PromptProgram does not bind this TakeIntent");
-  }
   return sealSeedanceSpeechProgram({
     contract: "svml.seedance-speech-program@1",
     model: intent.model,
@@ -145,11 +120,5 @@ export function renderSpeakerSpeechProgram(
     aspectRatio: intent.aspectRatio,
     generateAudio: true,
     webSearch: intent.webSearch,
-    segment: {
-      id: intent.segment.id,
-      tokenStart: intent.segment.tokenStart,
-      tokenEndExclusive: intent.segment.tokenEndExclusive,
-      dialogueExcerptDigest: intent.segment.dialogueExcerptDigest,
-    },
   });
 }

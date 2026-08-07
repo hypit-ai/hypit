@@ -1,8 +1,8 @@
 # Local developer Runtime v1
 
-Status: implemented reference assembly, KIE generation Provider, local media Provider, local
-HyperFrames Provider, local WhisperX Provider and its locked Python service. Hosted/AWS variants
-remain optional.
+Status: implemented reference assembly, KIE generation Provider, local media Provider, local image
+transform Provider, local HyperFrames Provider, local WhisperX Provider and its locked Python
+service. Hosted/AWS variants remain optional.
 
 ## 1. Outcome
 
@@ -16,6 +16,7 @@ build.svrun -> main.svml
   -> @svml/local Scheduler
        -> local deterministic component code
        -> KIE / Volcengine / Hypit Seedance Endpoint
+       -> local OpenCV image-transform Endpoint
        -> local / Lambda / Hypit WhisperX Endpoint
        -> local workers / Lambda / Hypit HyperFrames Endpoint
 
@@ -32,6 +33,8 @@ authority that asks Core what is ready and accepts returned Events.
 | Package | Owns | Does not own |
 |---|---|---|
 | `@svml/runtime` | environment-neutral Scheduler, Store and Endpoint ports plus Runtime service-package ABI | Node, SQLite, files, video |
+| `@svml/runtime-adapter` | locked Host facet that constructs one configured Endpoint or service package | package discovery, author imports, Provider routing |
+| `@svml/runtime-adapter-node` | project-root executable resolution and read-only Node diagnostics | capability semantics or process execution |
 | `@svml/store-sqlite` | durable BuildStore and OperationStore adapters | ready queue, artifacts, credentials |
 | `@svml/artifact-store-fs` | content-addressed project bytes | BuildState, cache policy, author library |
 | `@svml/artifact-store-s3` | conditionally written and digest-verified S3 bytes | BuildState, Endpoint jobs, automatic reuse |
@@ -78,12 +81,15 @@ source files or the database.
 
 ## 4. Runtime configuration
 
-The ordinary CLI path is closed declarative deployment data. Exact adapter names are resolved by a
-Host-owned registry; unknown adapters fail and the file cannot contain callbacks or secret values:
+The ordinary CLI path is closed declarative deployment data. Exact adapter names are resolved from
+a separately locked physical package inventory; unknown adapters fail and the file cannot contain
+callbacks or secret values:
 
 ```json
 {
   "format": "svml.runtime-config@1",
+  "packageLock": "./svml.packages.lock",
+  "runtimePackageLock": "./svml.runtime-packages.lock",
   "services": [],
   "endpoints": [
     {
@@ -101,6 +107,27 @@ Host-owned registry; unknown adapters fail and the file cannot contain callbacks
 }
 ```
 
+Create the two closures explicitly:
+
+```bash
+svml-v2 lock-packages ./svml.packages.lock \
+  --package @svml/script --package @svml/seedance --root .
+
+svml-v2 lock-packages ./svml.runtime-packages.lock \
+  --package @svml/provider-kie \
+  --package @svml/provider-media-local \
+  --package @svml/provider-whisperx-local \
+  --package @svml/provider-hyperframes-local \
+  --root .
+
+svml-v2 doctor ./svml.runtime.json
+```
+
+The same generic lock format is reused, but the two references grant different Host ABIs.
+`packageLock` activates deterministic compute facets. `runtimePackageLock` activates only Runtime
+Adapter facets; author and Surface facets found in those packages stay inert. Provider packages are
+therefore installable without adding imports or CI changes to `@svml/video-cli`.
+
 Executable TypeScript remains the advanced embedding form for private transports and adapters not
 yet registered in the reference CLI. It is trusted developer/deployment code, not author intent:
 
@@ -110,6 +137,7 @@ import { createS3ArtifactStorePackage } from "@svml/artifact-store-s3";
 import { credentialRef } from "@svml/runtime";
 import { createKieProvider } from "@svml/provider-kie";
 import { createLocalMediaProvider } from "@svml/provider-media-local";
+import { createLocalOpenCvImageProvider } from "@svml/provider-image-opencv-local";
 import { createLocalWhisperXProvider } from "@svml/provider-whisperx-local";
 import { createLocalHyperframesProvider } from "@svml/provider-hyperframes-local";
 
@@ -125,6 +153,11 @@ export default await createProjectLocalRuntime({
   endpoints: [
     createKieProvider({ instance: "kie.personal", apiKey: credentialRef("env", "KIE_API_KEY") }),
     createLocalMediaProvider({ instance: "media.local", defaultConcurrency: 1 }),
+    createLocalOpenCvImageProvider({
+      instance: "image.opencv.local",
+      pythonExecutable: "./services/image-opencv/.venv/bin/python",
+      defaultConcurrency: 2,
+    }),
     createLocalWhisperXProvider({
       instance: "whisperx.local",
       baseUrl: "http://127.0.0.1:8765",
@@ -145,6 +178,7 @@ export default await createProjectLocalRuntime({
     "network:api.kie.ai",
     "network:kieai.redpandaai.co",
     "process:media",
+    "process:image",
     "filesystem:whisperx-staging",
     "network:whisperx-loopback",
     "process:hyperframes",
@@ -153,6 +187,7 @@ export default await createProjectLocalRuntime({
     maxConcurrency: 8,
     lanes: {
       "endpoint:kie.personal": 2,
+      "endpoint:image.opencv.local": 2,
       "endpoint:whisperx.local": 1,
       "endpoint:hyperframes.local": 1,
     },
@@ -178,8 +213,14 @@ Runtime config no longer imports each component by name. Its digest must equal t
 cannot resume after an unnoticed component-closure swap. The low-level `components` option remains
 available for trusted embedding and tests, but is not the reproducible project default.
 
-The KIE, local media, local WhisperX and local HyperFrames package functions in this example are
-implemented. `@svml/endpoint-kit` implements the host-neutral
+`svml.runtime-packages.lock` independently binds privileged deployment adapters. The Host hashes
+every file in their dependency closure before importing activation code, then derives the effective
+Endpoint/Store implementation digest from the physical package Artifact, that package's transitive
+dependency closure, adapter identity and declared facet. Editing implementation bytes without regenerating the lock fails
+before any Provider call. Source `<import>` cannot add an adapter to this closure.
+
+The KIE, local media, local OpenCV image-transform, local WhisperX and local HyperFrames package
+functions in this example are implemented. `@svml/endpoint-kit` implements the host-neutral
 `EndpointPackage` definition path and lets those packages contribute:
 
 1. a static Runtime Manifest and implementation digest;
@@ -212,11 +253,12 @@ reads only canonical evidence WAVs below `SVML_WHISPERX_INPUT_ROOTS`; it has no 
 script/caption semantics.
 
 Provider naming follows execution reality. Seedance is an author-selected method, while KIE and
-Volcengine are Provider packages that may each fulfill explicit Seedance capabilities. WhisperX and
-HyperFrames are implementations we may run locally or on AWS. The local packages now exist as
-`provider-whisperx-local` and `provider-hyperframes-local`; matching `*-aws` packages remain
-deployment targets. Lambda and process transports remain lower-level helpers and cannot register
-any of those capabilities by themselves.
+Volcengine are Provider packages that may each fulfill explicit Seedance capabilities. OpenCV,
+WhisperX and HyperFrames are concrete implementations we may run locally or replace at deployment.
+The local packages exist as `provider-image-opencv-local`, `provider-whisperx-local` and
+`provider-hyperframes-local`; matching remote packages may be added without changing author syntax
+or Core. Lambda and process transports remain lower-level helpers and cannot register any of those
+capabilities by themselves.
 
 ## 5. Build command and recovery
 
@@ -233,6 +275,9 @@ pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
 pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json
 pnpm svml:v2 get <build-id> --runtime ./svml.runtime.json --to ./result.bin
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
+pnpm svml:v2 doctor ./svml.runtime.json
+pnpm svml:v2 gc ./svml.runtime.json
+pnpm svml:v2 gc ./svml.runtime.json --apply
 ```
 
 The default local Build id is the content-derived Core Build id. Repeating the same command resumes
@@ -255,6 +300,12 @@ Referenced bytes remain in ArtifactStore. `inspect` exposes that archive without
 Store paths; `get` optionally copies one direct Artifact or writes one structured Record as JSON.
 Neither command resumes execution, and omitting `get` never discards a result. See
 [`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md).
+
+`gc` is explicit deployment maintenance. Its default is a dry-run report. The local implementation
+enumerates every retained BuildState and Operation, recursively finds their BlobRefs and only then
+offers deletion of unreachable objects from a managed ArtifactStore. There is no age heuristic,
+automatic cache hit or hidden Candidate selection. The filesystem Store also exposes a streaming
+port so large-object adapters can avoid making whole-object transfer a framework requirement.
 
 ## 6. Queue law
 

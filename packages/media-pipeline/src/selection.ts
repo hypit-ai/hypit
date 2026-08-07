@@ -10,8 +10,6 @@ import type {
 } from "@svml/contracts";
 import {
   canonicalize,
-  digestOf,
-  isDigest,
 } from "@svml/protocol";
 
 import type { MediaSelectionRequest } from "./types.js";
@@ -20,11 +18,8 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-export function sealMediaSelectionRequest(
-  value: Omit<MediaSelectionRequest, "requestDigest">,
-): MediaSelectionRequest {
-  const normalized = canonicalize(value) as unknown as Omit<MediaSelectionRequest, "requestDigest">;
-  return { ...normalized, requestDigest: digestOf(normalized) };
+export function sealMediaSelectionRequest(value: MediaSelectionRequest): MediaSelectionRequest {
+  return canonicalize(value) as unknown as MediaSelectionRequest;
 }
 
 export function verifyMediaSelectionRequest(value: unknown): asserts value is MediaSelectionRequest {
@@ -49,11 +44,6 @@ export function verifyMediaSelectionRequest(value: unknown): asserts value is Me
   assert(Number.isSafeInteger(item.frameRate?.numerator) && item.frameRate.numerator > 0
     && Number.isSafeInteger(item.frameRate?.denominator) && item.frameRate.denominator > 0,
   "MediaSelectionRequest frame rate is invalid");
-  assert(typeof item.requestDigest === "string" && isDigest(item.requestDigest),
-    "MediaSelectionRequest digest is invalid");
-  const { requestDigest: _requestDigest, ...content } = item;
-  assert(item.requestDigest === digestOf(canonicalize(content)),
-    "MediaSelectionRequest digest differs from its canonical contents");
 }
 
 function selectUniqueDefault<T extends { readonly disposition: { readonly default: boolean }; readonly index: number }>(
@@ -104,7 +94,7 @@ function selectedAudio(inspection: MediaInspection, request: MediaSelectionReque
 
 /**
  * Selects container streams only. Choosing an audio stream never claims that it is narrated speech;
- * SpeechBasis construction remains a separate semantic Producer with Narrative affinity.
+ * SpeechBasis construction remains a separate semantic Producer with an explicit Narrative edge.
  */
 export function selectMediaStreams(
   inspection: MediaInspection,

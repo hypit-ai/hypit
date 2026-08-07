@@ -3,8 +3,6 @@ export {
   assertBrollProgramIdentity,
   compileBrollImplementationDigest,
   compileBrollProduct,
-  computeBrollProductDigest,
-  computeBrollProgramDigest,
   projectBrollAudio,
   projectBrollAudioImplementationDigest,
   projectBrollVisual,
@@ -21,8 +19,6 @@ export {
   createBrollSetImplementationDigest,
   finalizeBrollProgram,
   finalizeBrollProgramImplementationDigest,
-  projectBrollProgramSpace,
-  projectBrollProgramSpaceImplementationDigest,
   sealBrollItemSpec,
   sealBrollTrackSpec,
 } from "./author.js";

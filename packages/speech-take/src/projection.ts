@@ -52,11 +52,11 @@ function frameAt(basis: SpeechBasis, seconds: number): number {
 export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
   assertSpeechBasisIdentity(basis);
   const totalFrames = programSpaceFrameCount(basis.programSpace);
+  const trackId = `speech-visual:${basis.segments.map((segment) => segment.segmentId).join("+")}`;
   return sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
-    id: `speech-visual:${basis.basisDigest}`,
-    programSpaceDigest: basis.programSpace.digest,
+    id: trackId,
     presents: basis.visualTrack.clips.map((clip, index) => {
       const startFrame = frameAt(basis, clip.startSec);
       const endFrameExclusive = Math.min(totalFrames, frameAt(basis, clip.endSec));
@@ -68,7 +68,7 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
       return {
         id: `${clip.segmentId}:${index + 1}`,
         span: { startFrame, endFrameExclusive },
-        stacking: { order: 0, tieBreak: `speech-visual:${basis.basisDigest}:${clip.segmentId}:${index + 1}` },
+        stacking: { order: 0, tieBreak: `${trackId}:${clip.segmentId}:${index + 1}` },
         elements: [{
           id: "media",
           order: 0,
@@ -91,8 +91,7 @@ export function projectSpeechAudioTrack(basis: SpeechBasis): AudioTrack {
   assertSpeechBasisIdentity(basis);
   return sealAudioTrack({
     contract: "svml.audio-track@1",
-    id: `speech-audio:${basis.basisDigest}`,
-    programSpaceDigest: basis.programSpace.digest,
+    id: `speech-audio:${basis.segments.map((segment) => segment.segmentId).join("+")}`,
     clips: [{
       id: "speech",
       span: { startFrame: 0, endFrameExclusive: programSpaceFrameCount(basis.programSpace) },

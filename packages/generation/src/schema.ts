@@ -38,7 +38,6 @@ export const generatedImageSetSchema = generationObjectSchema({
       items: generationBlobRefSchema,
     },
   },
-  resultDigest: { schema: generationDigestSchema },
 });
 
 export const generatedVideoSetSchema = generationObjectSchema({
@@ -51,5 +50,4 @@ export const generatedVideoSetSchema = generationObjectSchema({
       items: generationBlobRefSchema,
     },
   },
-  resultDigest: { schema: generationDigestSchema },
 });

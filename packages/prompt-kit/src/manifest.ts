@@ -14,7 +14,6 @@ export const promptKitImplementationDigests = {
   programValidator: digestOf("@svml/prompt-kit/validate-program@1"),
 } as const;
 
-const digest: ValueSchema = { kind: "string", minLength: 71, maxLength: 71 };
 const openObject: ValueSchema = { kind: "object", fields: {}, allowUnknown: true };
 const block: ValueSchema = { kind: "object", fields: {}, allowUnknown: true };
 const specSchema: ValueSchema = {
@@ -25,30 +24,23 @@ const specSchema: ValueSchema = {
     separator: { schema: { kind: "literal", value: "\n\n" } },
     defaults: { schema: openObject },
     blocks: { schema: { kind: "array", minItems: 1, items: block } },
-    specDigest: { schema: digest },
   },
 };
 const invocationSchema: ValueSchema = {
   kind: "object",
   fields: {
     contract: { schema: { kind: "literal", value: "svml.prompt-kit-invocation@1" } },
-    kit: { schema: { kind: "string", minLength: 1 } },
     parameters: { schema: openObject },
     selectors: { schema: openObject },
     slots: { schema: openObject },
-    invocationDigest: { schema: digest },
   },
 };
 const programSchema: ValueSchema = {
   kind: "object",
   fields: {
     contract: { schema: { kind: "literal", value: "svml.prompt-program@1" } },
-    kit: { schema: { kind: "string", minLength: 1 } },
-    specDigest: { schema: digest },
-    invocationDigest: { schema: digest },
     separator: { schema: { kind: "literal", value: "\n\n" } },
     blocks: { schema: { kind: "array", minItems: 1, items: block } },
-    programDigest: { schema: digest },
   },
 };
 

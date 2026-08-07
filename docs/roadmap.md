@@ -34,9 +34,11 @@ graph model.
 
 The typed Runtime Profile/Closure API now has a declarative `svml.runtime.json` Host frontend for
 Scheduler defaults, replacement services, credential references, Endpoints, lanes and permissions.
-Adapter names resolve through an explicit trusted registry. Executable TypeScript remains the
-advanced embedding API. Next work is package-locking third-party Runtime adapters and richer
-diagnostics, not adding Provider knowledge to Core.
+Adapter names resolve from a separately verified physical package closure; the generic and video
+CLIs import no Provider implementation. Effective Runtime implementation identity binds actual
+package bytes, not a self-asserted development label. `doctor` checks locks, configuration,
+credentials and executables without running a Build. Executable TypeScript remains the advanced
+trusted embedding API.
 
 Runtime Profile is deployment configuration. It must not enter author semantic identity or
 `.svrun` creative choices.
@@ -77,11 +79,12 @@ path:
 - building without a path still archives the complete demanded closure;
 - the Host-only Build Catalog powers `builds`, `inspect` presentation and `get --name` without
   entering Core identity or Runtime Closure;
-- explicit release and reachability-based Artifact garbage collection remain Runtime Store policy.
+- reachability-based orphan Artifact collection is explicit Runtime maintenance and dry-runs by
+  default; Build release/retention windows remain deployment policy.
 
-Add `doctor`, richer graph/plan views and structured diagnostics after this slice. The Catalog may
-later support richer history search, but it must only help the user author explicit Candidates. There is no
-automatic result reuse or hidden Candidate selection.
+Add richer graph/plan views and structured diagnostics after this slice. The Catalog may
+later support richer history search, but it must only help the user author explicit Candidates.
+There is no automatic result reuse or hidden Candidate selection.
 
 ## B. Environment and Provider work
 
@@ -113,16 +116,16 @@ contract; Lambda placement cannot define another media meaning.
 - Keychain, Secrets Manager or Vault CredentialStore;
 - production S3 streaming/multipart behavior when object size requires it;
 - hosted Build/Operation stores and distributed leases only for a real multi-process deployment;
-- artifact retention and garbage collection as deployment policy.
+- Build release/retention windows and S3 lifecycle policy.
 
 Authentication, tenants, credits, billing and dashboards belong to an embedding product such as
 Hypit, not to open-source Core.
 
 ### B4. Additional Providers
 
-KIE generation, Vertex Caption planning, local media, local WhisperX and local HyperFrames are
-implemented. Volcengine, Fal, API-key Gemini or Hypit can be added as independent Endpoint packages.
-They do not require changes to author model packages or Core.
+KIE generation, Vertex Caption planning, local media, local OpenCV image transforms, local WhisperX
+and local HyperFrames are implemented. Volcengine, Fal, API-key Gemini or Hypit can be added as
+independent Endpoint packages. They do not require changes to author model packages or Core.
 
 ## C. Deferred video-domain work
 

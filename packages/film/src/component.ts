@@ -27,8 +27,8 @@ export const filmComponent = {
     {
       producer: filmProducers.createTrackSet,
       implementationDigest: createFilmTrackSetImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: { set: { kind: "inline", value: canonicalize(createFilmTrackSet(inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"))) } },
+      handler: () => ({
+        outputs: { set: { kind: "inline", value: canonicalize(createFilmTrackSet()) } },
         needs: {},
       }),
     },
@@ -37,7 +37,9 @@ export const filmComponent = {
       implementationDigest: appendFilmVisualTrackImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendFilmVisualTrack(
-          inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"), inline<VisualTrack>(inputs.track?.value, "VisualTrack"),
+          inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+          inline<VisualTrack>(inputs.track?.value, "VisualTrack"),
         )) } },
         needs: {},
       }),
@@ -47,7 +49,9 @@ export const filmComponent = {
       implementationDigest: appendFilmAudioTrackImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendFilmAudioTrack(
-          inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"), inline<AudioTrack>(inputs.track?.value, "AudioTrack"),
+          inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+          inline<AudioTrack>(inputs.track?.value, "AudioTrack"),
         )) } },
         needs: {},
       }),
@@ -57,7 +61,9 @@ export const filmComponent = {
       implementationDigest: compileFilmCompositionImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { composition: { kind: "inline", value: canonicalize(compileFilmComposition(
-          inline<FilmProgram>(inputs.program?.value, "FilmProgram"), inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
+          inline<FilmProgram>(inputs.program?.value, "FilmProgram"),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+          inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
         )) } },
         needs: {},
       }),

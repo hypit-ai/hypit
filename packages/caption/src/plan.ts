@@ -1,17 +1,12 @@
-import { digestOf, isDigest } from "@svml/protocol";
-
 import type { CaptionFieldDeclaration, CaptionPlan, CaptionProgram } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function content(value: Omit<CaptionPlan, "planDigest">) {
+function content(value: CaptionPlan) {
   return {
     contract: "svml.caption-plan@1" as const,
-    narrativeDigest: value.narrativeDigest,
-    captionProgramDigest: value.captionProgramDigest,
-    planningRequestDigest: value.planningRequestDigest,
     runs: value.runs.map((run) => ({
       id: run.id,
       styleId: run.styleId,
@@ -24,9 +19,9 @@ function content(value: Omit<CaptionPlan, "planDigest">) {
   };
 }
 
-export function sealCaptionPlan(value: Omit<CaptionPlan, "planDigest">): CaptionPlan {
+export function sealCaptionPlan(value: CaptionPlan): CaptionPlan {
   const normalized = content(value);
-  const plan = { ...normalized, planDigest: digestOf(normalized) };
+  const plan = normalized;
   assertCaptionPlan(plan);
   return plan;
 }
@@ -35,8 +30,6 @@ export function assertCaptionPlan(value: unknown): asserts value is CaptionPlan 
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "CaptionPlan must be an object");
   const plan = value as CaptionPlan;
   assert(plan.contract === "svml.caption-plan@1", "Unsupported CaptionPlan contract");
-  assert(isDigest(plan.narrativeDigest) && isDigest(plan.captionProgramDigest)
-    && isDigest(plan.planningRequestDigest) && isDigest(plan.planDigest), "CaptionPlan identity is invalid");
   assert(Array.isArray(plan.runs) && plan.runs.length > 0, "CaptionPlan runs are empty");
   const runIds = new Set<string>();
   const atomIds = new Set<string>();
@@ -62,8 +55,6 @@ export function assertCaptionPlan(value: unknown): asserts value is CaptionPlan 
       }
     }
   }
-  const { planDigest: _digest, ...withoutDigest } = plan;
-  assert(plan.planDigest === digestOf(content(withoutDigest)), "CaptionPlan digest does not match its contents");
 }
 
 function assertFieldValue(declaration: CaptionFieldDeclaration, value: string): void {
@@ -84,8 +75,6 @@ function assertFieldValue(declaration: CaptionFieldDeclaration, value: string): 
 /** Validate planner freedom against one resolved Program; no Provider-specific assumptions. */
 export function assertCaptionPlanForProgram(plan: CaptionPlan, program: CaptionProgram): void {
   assertCaptionPlan(plan);
-  assert(plan.narrativeDigest === program.narrativeDigest && plan.captionProgramDigest === program.digest,
-    "CaptionPlan belongs to another Caption Program");
   assert(plan.runs.length === program.runs.length, "CaptionPlan does not contain the exact Program run set");
   const styles = new Map(program.styles.map((style) => [style.id, style]));
   for (let index = 0; index < program.runs.length; index += 1) {

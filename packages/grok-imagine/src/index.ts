@@ -1,14 +1,12 @@
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
-  generationDigestSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-  verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, Digest, ValueSchema } from "@svml/protocol";
+import type { BlobRef, ValueSchema } from "@svml/protocol";
 
 export const grokImagineModuleRef = { name: "@svml/grok-imagine", version: "0.0.0-dev" } as const;
 export type GrokImagineMode = "text" | "image" | "preview-1.5";
@@ -40,7 +38,7 @@ export type GrokImagineRequestContent =
   | GrokImagineTextRequestContent
   | GrokImagineImageRequestContent
   | GrokImaginePreviewRequestContent;
-export type GrokImagineRequest = GrokImagineRequestContent & { readonly requestDigest: Digest };
+export type GrokImagineRequest = GrokImagineRequestContent;
 
 const aspectSchema = { kind: "string", minLength: 3, maxLength: 16 } as const satisfies ValueSchema;
 const commonFields = {
@@ -49,7 +47,6 @@ const commonFields = {
   aspectRatio: { schema: aspectSchema },
   resolution: { schema: { kind: "string", enum: ["480p", "720p"] } },
   durationSec: { schema: { kind: "number", integer: true, minimum: 1, maximum: 15 } },
-  requestDigest: { schema: generationDigestSchema },
 } as const;
 const schemas: Record<GrokImagineMode, ValueSchema> = {
   text: generationObjectSchema({
@@ -81,7 +78,6 @@ function object(value: unknown): Record<string, unknown> {
 }
 
 export function verifyGrokImagineRequest(value: unknown, expectedMode?: GrokImagineMode): asserts value is GrokImagineRequest {
-  verifyGenerationRequestDigest(value);
   const request = object(value);
   if (request.contract !== "svml.grok-imagine-video-request@1") throw new Error("Grok Imagine request contract is invalid");
   if (expectedMode !== undefined && request.mode !== expectedMode) throw new Error(`Expected Grok Imagine ${expectedMode}`);
@@ -105,7 +101,7 @@ export function verifyGrokImagineRequest(value: unknown, expectedMode?: GrokImag
 
 export function sealGrokImagineRequest<T extends GrokImagineRequestContent>(
   content: T,
-): T & { readonly requestDigest: Digest } {
+): T {
   const request = sealGenerationRequest(content);
   verifyGrokImagineRequest(request, content.mode);
   return request;

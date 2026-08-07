@@ -20,30 +20,30 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 function createBrollSurfaceFragment(items: readonly BrollSurfaceItemInput[], name: string) {
   const operations: FragmentOperation[] = [
-    { id: "broll:space", producer: brollProducers.projectSpace, inputs: { map: input("map") }, result: { kind: "output", name: "space" } },
-    { id: "broll:set:empty", producer: brollProducers.createSet, inputs: { map: input("map"), spec: input("track-spec") }, result: { kind: "output", name: "set" } },
+    { id: "broll:set:empty", producer: brollProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
   ];
   let current = "broll:set:empty";
   items.forEach((item, index) => {
     const id = `broll:set:append:${String(index + 1).padStart(4, "0")}`;
     operations.push({
       id, producer: brollProducers.appendItem,
-      inputs: { set: operation(current), media: input(item.mediaName), selection: input(item.selectionName), spec: input(item.specName) },
+      inputs: { set: operation(current), track: input("track-spec"), map: input("map"), space: input("space"), media: input(item.mediaName), selection: input(item.selectionName), spec: input(item.specName) },
       result: { kind: "output", name: "set" },
     });
     current = id;
   });
   operations.push(
-    { id: "broll:program", producer: brollProducers.finalize, inputs: { set: operation(current) }, result: { kind: "output", name: "program" } },
-    { id: "broll:product", producer: brollProducers.compile, inputs: { space: operation("broll:space"), program: operation("broll:program") }, result: { kind: "output", name: "product" } },
+    { id: "broll:program", producer: brollProducers.finalize, inputs: { set: operation(current), track: input("track-spec") }, result: { kind: "output", name: "program" } },
+    { id: "broll:product", producer: brollProducers.compile, inputs: { space: input("space"), program: operation("broll:program") }, result: { kind: "output", name: "product" } },
     { id: "broll:visual", producer: brollProducers.projectVisual, inputs: { product: operation("broll:product") }, result: { kind: "output", name: "visual" } },
     { id: "broll:audio", producer: brollProducers.projectAudio, inputs: { product: operation("broll:product") }, result: { kind: "output", name: "audio" } },
   );
-  const semanticInputs = ["map", "track-spec", ...items.flatMap((item) => [item.mediaName, item.selectionName, item.specName])];
+  const semanticInputs = ["map", "space", "track-spec", ...items.flatMap((item) => [item.mediaName, item.selectionName, item.specName])];
   return sealGraphFragment({
     name,
     inputs: [
       { name: "map", type: contractTypes.completeSemanticMap },
+      { name: "space", type: contractTypes.programSpace },
       { name: "track-spec", type: brollTypes.trackSpec },
       ...items.flatMap((item) => [
         { name: item.mediaName, type: contractTypes.synchronizedMedia },
@@ -53,10 +53,8 @@ function createBrollSurfaceFragment(items: readonly BrollSurfaceItemInput[], nam
     ],
     operations,
     exports: [
-      { name: "visual", type: contractTypes.visualTrack, root: operation("broll:visual"), semanticInputs,
-        affinity: [{ resultPointer: "/programSpaceDigest", source: input("map"), sourcePointer: "/programSpace/digest" }], fidelity: "exact" },
-      { name: "audio", type: contractTypes.audioTrack, root: operation("broll:audio"), semanticInputs,
-        affinity: [{ resultPointer: "/programSpaceDigest", source: input("map"), sourcePointer: "/programSpace/digest" }], fidelity: "exact" },
+      { name: "visual", type: contractTypes.visualTrack, root: operation("broll:visual"), semanticInputs, fidelity: "exact" },
+      { name: "audio", type: contractTypes.audioTrack, root: operation("broll:audio"), semanticInputs, fidelity: "exact" },
     ],
   });
 }
@@ -100,9 +98,10 @@ function motion(value: string): BrollMotion {
 }
 
 export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exact(element, ["id", "map"]);
+  exact(element, ["id", "map", "space"]);
   const id = text(element, "id");
   const map = ref(element, "map", contractTypes.completeSemanticMap, resolveReference);
+  const space = ref(element, "space", contractTypes.programSpace, resolveReference);
   const trackSpecId = `${id}.spec`;
   const requestId = `${id}.selection`;
   const records: Array<{ id: string; type: typeof brollTypes.itemSpec | typeof brollTypes.trackSpec | typeof mediaPipelineTypes.selectionRequest; value: { kind: "inline"; value: ReturnType<typeof sealBrollItemSpec> | ReturnType<typeof sealBrollTrackSpec> | ReturnType<typeof sealMediaSelectionRequest> }; range: typeof element.range }> = [
@@ -155,7 +154,7 @@ export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, res
     components: [
       ...normalization,
       { id, fragment: fragment.id, inputs: {
-        map: map.ref, "track-spec": { kind: "record", id: trackSpecId },
+        map: map.ref, space: space.ref, "track-spec": { kind: "record", id: trackSpecId },
         ...Object.fromEntries(declared.flatMap((item, index) => [
           [item.input.mediaName, { kind: "component-output" as const, component: normalization[index]!.id, output: "media" }],
           [item.input.selectionName, item.selection.ref],

@@ -15,7 +15,6 @@ import type {
   VisualStyleDeclaration,
 } from "@svml/contracts";
 import { digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
 
 import type {
   BrollItem,
@@ -41,23 +40,17 @@ type StateMark = MotionState & {
 
 const STABLE: MotionState = { opacity: 1, transform: "translate3d(0%,0%,0) scale(1) rotateX(0deg) rotateY(0deg)" };
 
-function normalizeProgram(value: Omit<BrollProgram, "digest">): Omit<BrollProgram, "digest"> {
+function normalizeProgram(value: BrollProgram): BrollProgram {
   return {
     contract: "svml.broll-program@1",
     id: value.id,
-    programSpaceDigest: value.programSpaceDigest,
     items: [...value.items].map((item) => structuredClone(item)).sort((left, right) => left.id.localeCompare(right.id)),
     transitions: [...value.transitions].map((transition) => structuredClone(transition)).sort((left, right) => left.id.localeCompare(right.id)),
   };
 }
 
-export function computeBrollProgramDigest(value: Omit<BrollProgram, "digest">): Digest {
-  return digestOf(normalizeProgram(value));
-}
-
-export function sealBrollProgram(value: Omit<BrollProgram, "digest">): BrollProgram {
-  const content = normalizeProgram(value);
-  return { ...content, digest: digestOf(content) };
+export function sealBrollProgram(value: BrollProgram): BrollProgram {
+  return normalizeProgram(value);
 }
 
 function assertArtifact(artifact: MediaArtifactRef, label: string, kinds: readonly string[]): void {
@@ -190,11 +183,7 @@ function transitionMaps(program: BrollProgram, totalFrames: number) {
 export function assertBrollProgramIdentity(program: BrollProgram, programSpace: ProgramSpace): void {
   assertProgramSpaceIdentity(programSpace);
   if (program.contract !== "svml.broll-program@1") throw new Error("Unsupported BrollProgram contract.");
-  if (!program.id || program.programSpaceDigest !== programSpace.digest) throw new Error("BrollProgram identity or ProgramSpace affinity is invalid.");
-  const { digest: _digest, ...content } = program;
-  if (!isDigest(program.digest) || program.digest !== computeBrollProgramDigest(content)) {
-    throw new Error("BrollProgram digest does not match its contents.");
-  }
+  if (!program.id) throw new Error("BrollProgram identity is invalid.");
   if (program.items.length === 0) throw new Error("BrollProgram must contain at least one item.");
   const totalFrames = programSpaceFrameCount(programSpace);
   const ids = new Set<string>();
@@ -388,17 +377,12 @@ function audioClips(program: BrollProgram, programSpace: ProgramSpace): AudioCli
   return clips;
 }
 
-function productContent(value: Omit<BrollProduct, "productDigest">): Omit<BrollProduct, "productDigest"> {
+function productContent(value: BrollProduct): BrollProduct {
   return {
     contract: "svml.broll-product@1",
-    programSpace: structuredClone(value.programSpace),
     visualTrack: structuredClone(value.visualTrack),
     audioTrack: structuredClone(value.audioTrack),
   };
-}
-
-export function computeBrollProductDigest(value: Omit<BrollProduct, "productDigest">): Digest {
-  return digestOf(productContent(value));
 }
 
 export function compileBrollProduct(programSpace: ProgramSpace, program: BrollProgram): BrollProduct {
@@ -408,7 +392,6 @@ export function compileBrollProduct(programSpace: ProgramSpace, program: BrollPr
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: `${program.id}:visual`,
-    programSpaceDigest: programSpace.digest,
     presents: program.items.map((item) => ({
       id: item.id,
       span: { ...item.span },
@@ -419,51 +402,37 @@ export function compileBrollProduct(programSpace: ProgramSpace, program: BrollPr
   const audioTrack = sealAudioTrack({
     contract: "svml.audio-track@1",
     id: `${program.id}:audio`,
-    programSpaceDigest: programSpace.digest,
     clips: audioClips(program, programSpace),
   });
   const content = productContent({
     contract: "svml.broll-product@1",
-    programSpace,
     visualTrack,
     audioTrack,
   });
-  const product = { ...content, productDigest: digestOf(content) };
+  const product = content;
   assertBrollProductIdentity(product, programSpace);
   return product;
 }
 
 export function assertBrollProductIdentity(product: BrollProduct, programSpace: ProgramSpace): void {
   assertProgramSpaceIdentity(programSpace);
-  assertProgramSpaceIdentity(product.programSpace);
   if (product.contract !== "svml.broll-product@1") throw new Error("Unsupported BrollProduct contract.");
-  if (
-    product.programSpace.digest !== programSpace.digest
-  ) throw new Error("BrollProduct affinity is invalid.");
-  const { productDigest: _digest, ...content } = product;
-  if (!isDigest(product.productDigest) || product.productDigest !== computeBrollProductDigest(content)) {
-    throw new Error("BrollProduct digest does not match its contents.");
-  }
   assertVisualTrackIdentity(product.visualTrack, programSpace);
   assertAudioTrackIdentity(product.audioTrack, programSpace);
 }
 
-function assertStandaloneProductDigest(product: BrollProduct): void {
-  const { productDigest: _digest, ...content } = product;
-  if (!isDigest(product.productDigest) || product.productDigest !== computeBrollProductDigest(content)) {
-    throw new Error("BrollProduct digest does not match its contents.");
-  }
-  assertProgramSpaceIdentity(product.programSpace);
-  assertVisualTrackIdentity(product.visualTrack, product.programSpace);
-  assertAudioTrackIdentity(product.audioTrack, product.programSpace);
+function assertStandaloneProduct(product: BrollProduct): void {
+  if (product.contract !== "svml.broll-product@1") throw new Error("Unsupported BrollProduct contract.");
+  assertVisualTrackIdentity(product.visualTrack);
+  assertAudioTrackIdentity(product.audioTrack);
 }
 
 export function projectBrollVisual(product: BrollProduct) {
-  assertStandaloneProductDigest(product);
+  assertStandaloneProduct(product);
   return product.visualTrack;
 }
 
 export function projectBrollAudio(product: BrollProduct) {
-  assertStandaloneProductDigest(product);
+  assertStandaloneProduct(product);
   return product.audioTrack;
 }

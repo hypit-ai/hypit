@@ -6,7 +6,6 @@ export {
   sealGenerationRequest,
   verifyGeneratedImageSet,
   verifyGeneratedVideoSet,
-  verifyGenerationRequestDigest,
 } from "./identity.js";
 export {
   generationManifest,

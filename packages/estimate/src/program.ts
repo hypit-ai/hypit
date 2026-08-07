@@ -6,7 +6,7 @@ import type {
   NarrativeSpeechExcerpt,
   SpeechDuration,
 } from "@svml/contracts";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
+import { digestOf } from "@svml/protocol";
 
 import type {
   ResolvedSpeechEstimateLanguage,
@@ -106,15 +106,8 @@ export function countSpeechEstimateUnits(
   return words(text).reduce((sum, word) => sum + englishSyllables(word), 0);
 }
 
-function policyContent(value: Omit<SpeechEstimatePolicy, "policyDigest">) {
-  return canonicalize(value);
-}
-
-export function sealSpeechEstimatePolicy(
-  value: Omit<SpeechEstimatePolicy, "policyDigest">,
-): SpeechEstimatePolicy {
-  const content = policyContent(value);
-  const policy: SpeechEstimatePolicy = { ...value, policyDigest: digestOf(content) };
+export function sealSpeechEstimatePolicy(value: SpeechEstimatePolicy): SpeechEstimatePolicy {
+  const policy = structuredClone(value);
   assertSpeechEstimatePolicy(policy);
   return policy;
 }
@@ -135,11 +128,6 @@ export function assertSpeechEstimatePolicy(value: SpeechEstimatePolicy): void {
   ) {
     throw new Error("SpeechEstimatePolicy is invalid");
   }
-  const { policyDigest: _digest, ...raw } = value;
-  const content = policyContent(raw);
-  if (!isDigest(value.policyDigest) || value.policyDigest !== digestOf(content)) {
-    throw new Error("SpeechEstimatePolicy digest differs from its contents");
-  }
 }
 
 function assertSpeechExcerpt(value: NarrativeSpeechExcerpt): void {
@@ -153,10 +141,6 @@ function assertSpeechExcerpt(value: NarrativeSpeechExcerpt): void {
     || value.speech.trim().length === 0
   ) {
     throw new Error("NarrativeSpeechExcerpt is invalid");
-  }
-  const { excerptDigest: _digest, ...content } = value;
-  if (!isDigest(value.excerptDigest) || value.excerptDigest !== digestOf(canonicalize(content))) {
-    throw new Error("NarrativeSpeechExcerpt digest differs from its contents");
   }
 }
 
@@ -180,10 +164,6 @@ export function estimateSpeechDuration(
   const durationSec = Math.min(policy.maximumSec, Math.max(policy.minimumSec, rounded(firstClamp, policy.rounding)));
   const duration = sealSpeechDuration({
     contract: "svml.speech-duration@1",
-    segmentId: excerpt.id,
-    tokenStart: excerpt.tokenStart,
-    tokenEndExclusive: excerpt.tokenEndExclusive,
-    sourceSpeechExcerptDigest: excerpt.excerptDigest,
     durationSec,
   });
   assertSpeechDurationIdentity(duration);

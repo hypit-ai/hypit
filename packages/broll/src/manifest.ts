@@ -1,11 +1,9 @@
 import { artifactDependency } from "@svml/artifact";
 import {
   audioTrackSchema,
-  completeSemanticMapSchema,
   contractTypes,
   mediaArtifactSchema,
   narrativeSelectionSchema,
-  programSpaceSchema,
   synchronizedMediaSchema,
   videoContractDependencies,
   visualTrackSchema,
@@ -19,7 +17,6 @@ import {
   appendBrollItemImplementationDigest,
   createBrollSetImplementationDigest,
   finalizeBrollProgramImplementationDigest,
-  projectBrollProgramSpaceImplementationDigest,
 } from "./author.js";
 
 import {
@@ -40,7 +37,6 @@ export const brollProducers = {
   createSet: { module: brollModuleRef, name: "create-broll-set" },
   appendItem: { module: brollModuleRef, name: "append-broll-item" },
   finalize: { module: brollModuleRef, name: "finalize-broll-program" },
-  projectSpace: { module: brollModuleRef, name: "project-broll-program-space" },
   compile: { module: brollModuleRef, name: "compile-broll" },
   projectVisual: { module: brollModuleRef, name: "project-broll-visual" },
   projectAudio: { module: brollModuleRef, name: "project-broll-audio" },
@@ -50,7 +46,6 @@ const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number" } as const;
 const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
 const signedInteger = { kind: "number", integer: true } as const;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({
   kind: "object",
   fields,
@@ -90,7 +85,6 @@ const item = object({
 });
 const itemSpec = object({
   contract: { schema: { kind: "literal", value: "svml.broll-item-spec@1" } },
-  digest: { schema: digest },
   id: { schema: string },
   z: { schema: signedInteger },
   box: { schema: box },
@@ -115,37 +109,25 @@ const transition = object({
 
 export const brollProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.broll-program@1" } },
-  digest: { schema: digest },
   id: { schema: string },
-  programSpaceDigest: { schema: digest },
   items: { schema: { kind: "array", minItems: 1, items: item } },
   transitions: { schema: { kind: "array", items: transition } },
 });
 
 export const brollProductSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.broll-product@1" } },
-  productDigest: { schema: digest },
-  programSpace: { schema: programSpaceSchema },
   visualTrack: { schema: visualTrackSchema },
   audioTrack: { schema: audioTrackSchema },
 });
 
 export const brollTrackSpecSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.broll-track-spec@1" } },
-  digest: { schema: digest },
   id: { schema: string },
 });
 export const brollItemSpecSchema: ValueSchema = itemSpec;
 export const brollSetSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.broll-set@1" } },
-  digest: { schema: digest },
-  id: { schema: string },
-  map: { schema: completeSemanticMapSchema },
   items: { schema: { kind: "array", items: item } },
-  lastAddition: { schema: object({
-    previousSetDigest: { schema: digest }, mediaDigest: { schema: digest },
-    selectionDigest: { schema: digest }, specDigest: { schema: digest },
-  }), optional: true },
 });
 
 export const brollSurfaceImplementationDigest = digestOf("@svml/broll/track-surface@1");
@@ -180,19 +162,8 @@ export const brollManifest: ModuleManifest = {
   }],
   producers: [
     {
-      name: brollProducers.projectSpace.name,
-      inputs: [{ name: "map", type: contractTypes.completeSemanticMap }],
-      outputs: [{ name: "space", type: contractTypes.programSpace, affinity: [
-        { resultPointer: "/digest", input: "map", inputPointer: "/programSpace/digest" },
-      ] }], needs: [],
-      implementation: { kind: "registered", locator: "@svml/broll/project-program-space", digest: projectBrollProgramSpaceImplementationDigest },
-    },
-    {
       name: brollProducers.createSet.name,
-      inputs: [
-        { name: "map", type: contractTypes.completeSemanticMap },
-        { name: "spec", type: brollTypes.trackSpec },
-      ],
+      inputs: [],
       outputs: [{ name: "set", type: brollTypes.set }], needs: [],
       implementation: { kind: "registered", locator: "@svml/broll/create-set", digest: createBrollSetImplementationDigest },
     },
@@ -200,24 +171,23 @@ export const brollManifest: ModuleManifest = {
       name: brollProducers.appendItem.name,
       inputs: [
         { name: "set", type: brollTypes.set },
+        { name: "track", type: brollTypes.trackSpec },
+        { name: "map", type: contractTypes.completeSemanticMap },
+        { name: "space", type: contractTypes.programSpace },
         { name: "media", type: contractTypes.synchronizedMedia },
         { name: "selection", type: contractTypes.narrativeSelection },
         { name: "spec", type: brollTypes.itemSpec },
       ],
-      outputs: [{ name: "set", type: brollTypes.set, affinity: [
-        { resultPointer: "/lastAddition/previousSetDigest", input: "set", inputPointer: "/digest" },
-        { resultPointer: "/lastAddition/mediaDigest", input: "media", inputPointer: "/synchronizedMediaDigest" },
-        { resultPointer: "/lastAddition/selectionDigest", input: "selection", inputPointer: "/selectionDigest" },
-        { resultPointer: "/lastAddition/specDigest", input: "spec", inputPointer: "/digest" },
-      ] }], needs: [],
+      outputs: [{ name: "set", type: brollTypes.set }], needs: [],
       implementation: { kind: "registered", locator: "@svml/broll/append-item", digest: appendBrollItemImplementationDigest },
     },
     {
       name: brollProducers.finalize.name,
-      inputs: [{ name: "set", type: brollTypes.set }],
-      outputs: [{ name: "program", type: brollTypes.program, affinity: [
-        { resultPointer: "/programSpaceDigest", input: "set", inputPointer: "/map/programSpace/digest" },
-      ] }], needs: [],
+      inputs: [
+        { name: "set", type: brollTypes.set },
+        { name: "track", type: brollTypes.trackSpec },
+      ],
+      outputs: [{ name: "program", type: brollTypes.program }], needs: [],
       implementation: { kind: "registered", locator: "@svml/broll/finalize-program", digest: finalizeBrollProgramImplementationDigest },
     },
     {
@@ -226,13 +196,7 @@ export const brollManifest: ModuleManifest = {
         { name: "space", type: contractTypes.programSpace },
         { name: "program", type: brollTypes.program },
       ],
-      outputs: [{
-        name: "product",
-        type: brollTypes.product,
-        affinity: [
-          { resultPointer: "/programSpace/digest", input: "space", inputPointer: "/digest" },
-        ],
-      }],
+      outputs: [{ name: "product", type: brollTypes.product }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -243,13 +207,7 @@ export const brollManifest: ModuleManifest = {
     {
       name: brollProducers.projectVisual.name,
       inputs: [{ name: "product", type: brollTypes.product }],
-      outputs: [{
-        name: "visual",
-        type: contractTypes.visualTrack,
-        affinity: [
-          { resultPointer: "/programSpaceDigest", input: "product", inputPointer: "/programSpace/digest" },
-        ],
-      }],
+      outputs: [{ name: "visual", type: contractTypes.visualTrack }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -260,13 +218,7 @@ export const brollManifest: ModuleManifest = {
     {
       name: brollProducers.projectAudio.name,
       inputs: [{ name: "product", type: brollTypes.product }],
-      outputs: [{
-        name: "audio",
-        type: contractTypes.audioTrack,
-        affinity: [
-          { resultPointer: "/programSpaceDigest", input: "product", inputPointer: "/programSpace/digest" },
-        ],
-      }],
+      outputs: [{ name: "audio", type: contractTypes.audioTrack }],
       needs: [],
       implementation: {
         kind: "registered",

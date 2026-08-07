@@ -29,7 +29,7 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
   return value.value;
 }
 
-/** Semantic refinements for digest-bound public media facts. */
+/** Semantic validation for public media facts. Core Records own value integrity. */
 export const mediaContractsComponent = {
   name: "@svml/media",
   validators: [

@@ -33,7 +33,6 @@ function documentFixture() {
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "provider-proof",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "card",
       span: { startFrame: 0, endFrameExclusive: 12 },
@@ -71,10 +70,9 @@ function documentFixture() {
   return compileHyperframesDocument(sealComposition({
     contract: "svml.composition@1",
     id: "local-hyperframes-provider-proof",
-    programSpace,
     canvas: { width: 160, height: 96, clearColor: "#000000" },
     tracks: [track],
-  }));
+  }), programSpace);
 }
 
 function requestNeed(): Need {
@@ -148,7 +146,6 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   const value: CanonicalValue = output.value.kind === "inline" ? output.value.value : canonicalize(null);
   verifyRenderedVisual(value);
   const visual = value as unknown as RenderedVisual;
-  assert.equal(visual.renderInputDigest, documentFixture().digest);
   assert.equal(visual.frameCount, 12);
   assert.deepEqual(visual.canvas, { width: 160, height: 96 });
   assert.equal(visual.muted, true);

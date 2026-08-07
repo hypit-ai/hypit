@@ -1,4 +1,4 @@
-import type { BlobRef, Digest } from "@svml/protocol";
+import type { BlobRef } from "@svml/protocol";
 import type {
   MediaInspection,
   MediaRational,
@@ -20,7 +20,6 @@ export type MediaSelectionRequest = {
     | { readonly mode: "none" };
   readonly spanAuthority: "video" | "audio";
   readonly frameRate: MediaRational;
-  readonly requestDigest: Digest;
 };
 
 export type InspectMediaNeed = {
@@ -44,7 +43,6 @@ export type NormalizeMediaNeed = {
 
 export type ProjectSpeechEvidenceAudioNeed = {
   readonly contract: "svml.project-speech-evidence-audio-request@1";
-  readonly programSpaceDigest: Digest;
   readonly source: BlobRef;
   readonly sourceSampleRate: 48_000;
   readonly sourceChannels: 2;
@@ -74,7 +72,6 @@ export type AudioProgramClip = {
 /** Pure, content-addressed plan. Executing it is always a Provider Need. */
 export type AudioProgramPlan = {
   readonly contract: "svml.audio-program-plan@1";
-  readonly programSpaceDigest: Digest;
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly sampleRate: 48_000;
@@ -84,7 +81,6 @@ export type AudioProgramPlan = {
     readonly normalize: false;
     readonly limiter: "none";
   };
-  readonly planDigest: Digest;
 };
 
 export type RenderAudioNeed = {

@@ -1,4 +1,3 @@
-import { digestOf } from "@svml/protocol";
 import type { CompleteSemanticMap, Narrative, TimingQuality } from "@svml/contracts";
 
 import { CaptionProjectionError } from "./error.js";
@@ -69,11 +68,10 @@ export function temporalizeCaption(
   });
   const payload = {
     contract: "svml.timed-caption-projection@1" as const,
-    programSpace: map.programSpace,
     text: narrative.captionProjection.text,
     regions,
   };
-  return { ...payload, projectionDigest: digestOf(payload) };
+  return payload;
 }
 
 function cleanDisplay(value: string): string {
@@ -89,12 +87,6 @@ export function temporalizeCaptionPlan(
 ): TimedCaptionProjection {
   assertCaptionProgramForNarrative(program, narrative);
   assertCaptionPlanForProgram(plan, program);
-  if (plan.narrativeDigest !== digestOf(narrative)) {
-    throw new CaptionProjectionError("CAPTION_PLAN_NARRATIVE", "CaptionPlan belongs to another Narrative.");
-  }
-  if (program.narrativeDigest !== plan.narrativeDigest || plan.captionProgramDigest !== program.digest) {
-    throw new CaptionProjectionError("CAPTION_PLAN_PROGRAM", "CaptionPlan belongs to another Caption Program.");
-  }
   const atomById = new Map(program.atoms.map((atom) => [atom.id, atom]));
   const timingById = new Map(map.tokens.map((token) => [token.tokenId, token]));
   const regionById = new Map(narrative.captionProjection.regions.map((region) => [region.id, region]));
@@ -200,9 +192,8 @@ export function temporalizeCaptionPlan(
   }
   const payload = {
     contract: "svml.timed-caption-projection@1" as const,
-    programSpace: map.programSpace,
     text: cleanDisplay(regions.map((region) => region.display).join(" ")),
     regions,
   };
-  return { ...payload, projectionDigest: digestOf(payload) };
+  return payload;
 }

@@ -73,7 +73,6 @@ export const mediaSelectionRequestSchema: ValueSchema = {
         denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
       },
     } },
-    requestDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
   },
 };
 
@@ -91,7 +90,6 @@ export const audioProgramPlanSchema: ValueSchema = {
   kind: "object",
   fields: {
     contract: { schema: { kind: "literal", value: "svml.audio-program-plan@1" } },
-    programSpaceDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
     frameRate: { schema: {
       kind: "object",
       fields: {
@@ -124,7 +122,6 @@ export const audioProgramPlanSchema: ValueSchema = {
         limiter: { schema: { kind: "literal", value: "none" } },
       },
     } },
-    planDigest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
   },
 };
 
@@ -136,6 +133,7 @@ export const mediaPipelineManifest: ModuleManifest = {
     artifactDependency,
     videoContractDependencies.media,
     videoContractDependencies.speech,
+    videoContractDependencies.programSpace,
     videoContractDependencies.composition,
   ],
   types: [
@@ -181,7 +179,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         name: "inspection",
         capability: mediaPipelineCapabilities.inspect,
         returns: contractTypes.mediaInspection,
-        affinity: [{ resultPointer: "/source/digest", input: "source", inputPointer: "/digest" }],
       }],
       implementation: {
         kind: "registered",
@@ -234,10 +231,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         name: "evidenceAudio",
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
         returns: contractTypes.speechEvidenceAudio,
-        affinity: [
-          { resultPointer: "/programSpaceDigest", input: "audio", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/sourceAudioArtifactDigest", input: "audio", inputPointer: "/audio/digest" },
-        ],
       }],
       implementation: {
         kind: "registered",
@@ -247,12 +240,11 @@ export const mediaPipelineManifest: ModuleManifest = {
     },
     {
       name: mediaPipelineProducers.planAudio.name,
-      inputs: [{ name: "composition", type: contractTypes.composition }],
-      outputs: [{
-        name: "plan",
-        type: mediaPipelineTypes.audioProgramPlan,
-        affinity: [{ resultPointer: "/programSpaceDigest", input: "composition", inputPointer: "/programSpace/digest" }],
-      }],
+      inputs: [
+        { name: "composition", type: contractTypes.composition },
+        { name: "space", type: contractTypes.programSpace },
+      ],
+      outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -268,11 +260,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         name: "audio",
         capability: mediaPipelineCapabilities.renderAudio,
         returns: contractTypes.timelineAudio,
-        affinity: [
-          { resultPointer: "/planDigest", input: "plan", inputPointer: "/planDigest" },
-          { resultPointer: "/programSpaceDigest", input: "plan", inputPointer: "/programSpaceDigest" },
-          { resultPointer: "/sampleFrames", input: "plan", inputPointer: "/sampleFrames" },
-        ],
       }],
       implementation: {
         kind: "registered",
@@ -291,17 +278,6 @@ export const mediaPipelineManifest: ModuleManifest = {
         name: "media",
         capability: mediaPipelineCapabilities.mux,
         returns: contractTypes.muxedMedia,
-        affinity: [
-          { resultPointer: "/visualDigest", input: "visual", inputPointer: "/visualDigest" },
-          { resultPointer: "/audioDigest", input: "audio", inputPointer: "/audioDigest" },
-          { resultPointer: "/programSpaceDigest", input: "visual", inputPointer: "/programSpaceDigest" },
-          { resultPointer: "/frameRate/numerator", input: "visual", inputPointer: "/frameRate/numerator" },
-          { resultPointer: "/frameRate/denominator", input: "visual", inputPointer: "/frameRate/denominator" },
-          { resultPointer: "/frameCount", input: "visual", inputPointer: "/frameCount" },
-          { resultPointer: "/canvas/width", input: "visual", inputPointer: "/canvas/width" },
-          { resultPointer: "/canvas/height", input: "visual", inputPointer: "/canvas/height" },
-          { resultPointer: "/presentationSampleFrames", input: "audio", inputPointer: "/sampleFrames" },
-        ],
       }],
       implementation: {
         kind: "registered",
@@ -312,11 +288,7 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.projectMuxed.name,
       inputs: [{ name: "media", type: contractTypes.muxedMedia }],
-      outputs: [{
-        name: "video",
-        type: contractTypes.mediaArtifact,
-        affinity: [{ resultPointer: "/digest", input: "media", inputPointer: "/artifact/digest" }],
-      }],
+      outputs: [{ name: "video", type: contractTypes.mediaArtifact }],
       needs: [],
       implementation: {
         kind: "registered",

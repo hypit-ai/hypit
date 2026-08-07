@@ -12,8 +12,6 @@ import {
   createBrollSetImplementationDigest,
   finalizeBrollProgram,
   finalizeBrollProgramImplementationDigest,
-  projectBrollProgramSpace,
-  projectBrollProgramSpaceImplementationDigest,
 } from "./author.js";
 import {
   compileBrollImplementationDigest,
@@ -34,22 +32,10 @@ export const brollComponent = {
   name: "@svml/broll",
   producers: [
     {
-      producer: brollProducers.projectSpace,
-      implementationDigest: projectBrollProgramSpaceImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: { space: { kind: "inline", value: canonicalize(projectBrollProgramSpace(
-          inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
-        )) } }, needs: {},
-      }),
-    },
-    {
       producer: brollProducers.createSet,
       implementationDigest: createBrollSetImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: { set: { kind: "inline", value: canonicalize(createBrollSet(
-          inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
-          inline<BrollTrackSpec>(inputs.spec?.value, "BrollTrackSpec"),
-        )) } }, needs: {},
+      handler: () => ({
+        outputs: { set: { kind: "inline", value: canonicalize(createBrollSet()) } }, needs: {},
       }),
     },
     {
@@ -58,6 +44,9 @@ export const brollComponent = {
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendBrollItem(
           inline<BrollSet>(inputs.set?.value, "BrollSet"),
+          inline<BrollTrackSpec>(inputs.track?.value, "BrollTrackSpec"),
+          inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+          inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
           inline<SynchronizedMedia>(inputs.media?.value, "SynchronizedMedia"),
           inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelection"),
           inline<BrollItemSpec>(inputs.spec?.value, "BrollItemSpec"),
@@ -70,6 +59,7 @@ export const brollComponent = {
       handler: ({ inputs }) => ({
         outputs: { program: { kind: "inline", value: canonicalize(finalizeBrollProgram(
           inline<BrollSet>(inputs.set?.value, "BrollSet"),
+          inline<BrollTrackSpec>(inputs.track?.value, "BrollTrackSpec"),
         )) } }, needs: {},
       }),
     },
