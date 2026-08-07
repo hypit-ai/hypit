@@ -1,5 +1,5 @@
-import type { NarrativeSelectionRef } from "@narratage/narrative";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import { assertProgramSpaceIdentity } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { CompleteSemanticMap } from "./types.js";
 
@@ -21,21 +21,31 @@ export function assertNarrativeSelectionIdentity(selection: NarrativeSelectionRe
   }
 }
 
-function boundaryFrame(
-  map: CompleteSemanticMap,
-  programSpace: ProgramSpace,
-  edge: NarrativeSelectionRef["occurrences"][number]["open"],
-  side: "open" | "close",
-): number {
-  const index = edge.boundary.tokenIndex;
-  if (side === "open") {
-    if (edge.affinity === "left" && index > 0) return map.tokens[index - 1]?.startFrame ?? 0;
-    return map.tokens[index]?.startFrame ?? programSpaceFrameCount(programSpace);
+export function assertNarrativeMomentIdentity(moment: NarrativeMomentRef): void {
+  if (
+    moment.contract !== "svml.narrative-moment@1"
+    || moment.id.length === 0
+    || moment.occurrences.length === 0
+  ) {
+    throw new Error("NarrativeMoment is invalid");
   }
-  if (edge.affinity === "right" && index < map.tokens.length) {
-    return map.tokens[index]?.endFrame ?? programSpaceFrameCount(programSpace);
+}
+
+/**
+ * Every marker resolved its affinity to one of the map's 2M+2N anchors while the
+ * Script was parsed, where the surrounding structure was known. Locating is a
+ * lookup: Token cuts and Segment cuts are equal citizens here.
+ */
+function anchorFrames(map: CompleteSemanticMap): ReadonlyMap<string, number> {
+  return new Map(map.anchors.map((anchor) => [anchor.identity, anchor.frame]));
+}
+
+function frameFor(frames: ReadonlyMap<string, number>, anchorId: string, owner: string): number {
+  const frame = frames.get(anchorId);
+  if (frame === undefined) {
+    throw new Error(`${owner} names anchor ${anchorId}, which this SemanticMap does not contain`);
   }
-  return index > 0 ? map.tokens[index - 1]?.endFrame ?? 0 : 0;
+  return frame;
 }
 
 /** Project every occurrence of one Script Selection onto one measured SemanticMap. */
@@ -47,12 +57,27 @@ export function selectionFrameSpans(
   assertCompleteSemanticMapIdentity(map);
   assertNarrativeSelectionIdentity(selection);
   assertProgramSpaceIdentity(programSpace);
+  const frames = anchorFrames(map);
   return selection.occurrences.map((occurrence) => {
-    const startFrame = boundaryFrame(map, programSpace, occurrence.open, "open");
-    const endFrameExclusive = boundaryFrame(map, programSpace, occurrence.close, "close");
+    const startFrame = frameFor(frames, occurrence.open.boundary.anchorId, `NarrativeSelection ${selection.id}`);
+    const endFrameExclusive = frameFor(frames, occurrence.close.boundary.anchorId, `NarrativeSelection ${selection.id}`);
     if (endFrameExclusive <= startFrame) {
       throw new Error(`NarrativeSelection ${selection.id} contains an empty located occurrence`);
     }
     return { startFrame, endFrameExclusive };
   });
+}
+
+/** Project every occurrence of one Script Moment onto one measured SemanticMap. */
+export function momentFrames(
+  map: CompleteSemanticMap,
+  moment: NarrativeMomentRef,
+  programSpace: ProgramSpace,
+): readonly number[] {
+  assertCompleteSemanticMapIdentity(map);
+  assertNarrativeMomentIdentity(moment);
+  assertProgramSpaceIdentity(programSpace);
+  const frames = anchorFrames(map);
+  return moment.occurrences.map((occurrence) =>
+    frameFor(frames, occurrence.boundary.anchorId, `NarrativeMoment ${moment.id}`));
 }

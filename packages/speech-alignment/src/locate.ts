@@ -386,7 +386,6 @@ export function locateSpeechTiming(
   const evidenceBySegment = new Map(evidence.segments.map((segment) => [segment.sourceSegmentId, segment]));
   const timedSegments: TimedSpeechSegment[] = [];
   const timedTokens: TimedSpeechToken[] = [];
-  const groups: AlignmentGroup[] = [];
 
   for (const segment of narrative.segments) {
     const aligned = evidenceBySegment.get(segment.id)!;
@@ -421,7 +420,6 @@ export function locateSpeechTiming(
       startFrame,
       endFrame,
     });
-    groups.push(...segmentGroups);
   }
 
   const tokensById = new Map(timedTokens.map((token) => [token.tokenId, token]));
@@ -438,14 +436,10 @@ export function locateSpeechTiming(
       ? { identity: anchor.id, timeSec: token.startSec, frame: token.startFrame }
       : { identity: anchor.id, timeSec: token.endSec, frame: token.endFrame };
   });
-  const payload = {
+  return {
     contract: "svml.complete-semantic-map@1" as const,
-    quantizationPolicy: "nearest-frame" as const,
-    durationSec: evidence.durationSec,
     segments: timedSegments,
     tokens: timedTokens,
     anchors,
-    groups,
   };
-  return payload;
 }

@@ -340,6 +340,10 @@ Locator 必须提交覆盖全部 `2M + 2N` identity 的总映射：
 SemanticAnchorIdentity → ProgramPoint(ProgramSpace)
 ```
 
+标记的左右吸附在 Script 解析时就确定到唯一一个 anchor。Token 切点与 Segment
+切点在此完全平等：段首标记左吸附取该 Segment 自己的起始切点，绝不越到前一个
+Segment 的词尾。下游拿到的是 anchor 身份，不再自行做下标推算。
+
 每个点都必须存在。消费者不得补点、移动点或从相邻 occurrence 借点。每个 Segment
 内部必须非降序：
 

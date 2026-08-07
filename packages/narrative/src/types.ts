@@ -4,6 +4,8 @@ export type MarkerBoundary = {
   readonly tokenIndex: number;
   readonly structuralPosition: number;
   readonly segmentId?: string;
+  /** The exact 2M+2N anchor this marker's affinity resolves to, fixed at parse time. */
+  readonly anchorId: string;
 };
 
 export type NarrativeSegment = {
@@ -59,6 +61,11 @@ export type NarrativeMomentOccurrence = {
 export type NarrativeMoment = {
   readonly id: string;
   readonly occurrences: readonly NarrativeMomentOccurrence[];
+};
+
+/** One explicitly authored semantic instant, independently referenceable by graph edges. */
+export type NarrativeMomentRef = NarrativeMoment & {
+  readonly contract: "svml.narrative-moment@1";
 };
 
 export type CaptionRefinement = {

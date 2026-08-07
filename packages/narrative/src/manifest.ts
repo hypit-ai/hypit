@@ -5,6 +5,7 @@ import {
   narrativeDialogueExcerptSchema,
   narrativeExcerptSchema,
   narrativeSchema,
+  narrativeMomentSchema,
   narrativeSelectionSchema,
   narrativeSpeechExcerptSchema,
 } from "./schema.js";
@@ -16,6 +17,7 @@ export const narrativeTypes = {
   dialogueExcerpt: { module: narrativeModuleRef, name: "NarrativeDialogueExcerpt" },
   speechExcerpt: { module: narrativeModuleRef, name: "NarrativeSpeechExcerpt" },
   selection: { module: narrativeModuleRef, name: "NarrativeSelection" },
+  moment: { module: narrativeModuleRef, name: "NarrativeMoment" },
   captionProjection: { module: narrativeModuleRef, name: "CaptionProjection" },
 } satisfies Record<string, TypeRef>;
 export const narrativeManifest: ModuleManifest = {
@@ -27,6 +29,7 @@ export const narrativeManifest: ModuleManifest = {
     { name: narrativeTypes.dialogueExcerpt.name, schema: narrativeDialogueExcerptSchema },
     { name: narrativeTypes.speechExcerpt.name, schema: narrativeSpeechExcerptSchema },
     { name: narrativeTypes.selection.name, schema: narrativeSelectionSchema },
+    { name: narrativeTypes.moment.name, schema: narrativeMomentSchema },
     { name: narrativeTypes.captionProjection.name, schema: captionProjectionSchema },
   ],
   capabilities: [], surfaces: [], producers: [],
