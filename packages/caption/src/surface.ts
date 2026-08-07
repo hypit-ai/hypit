@@ -1,5 +1,5 @@
-import { contractTypes } from "@narratage/contracts";
-import type { Narrative, NarrativeSelectionRef } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
+import type { Narrative, NarrativeSelectionRef } from "@narratage/video-contracts";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
 import type {

@@ -5,7 +5,7 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import {
   appendSelectedTextItem,
@@ -17,7 +17,7 @@ import {
   sealTextItemSpec,
   sealTextTrackHeader,
 } from "@narratage/text-track";
-import type { CompleteSemanticMap, NarrativeSelectionRef } from "@narratage/contracts";
+import type { CompleteSemanticMap, NarrativeSelectionRef } from "@narratage/video-contracts";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",

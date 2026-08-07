@@ -1,4 +1,4 @@
-# `@narratage/contracts` physical video distribution
+# `@narratage/video-contracts` physical video distribution
 
 This transitional physical workspace package delivers six independently identified logical modules:
 

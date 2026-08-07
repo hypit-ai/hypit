@@ -4,7 +4,7 @@ import {
   narrativeExcerptSchema,
   synchronizedMediaSchema,
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   mediaPipelineManifest,
   mediaPipelineModuleRef,

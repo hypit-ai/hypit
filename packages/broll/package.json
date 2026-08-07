@@ -10,7 +10,7 @@
   "dependencies": {
     "@narratage/artifact": "workspace:*",
     "@narratage/component-kit": "workspace:*",
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/media-pipeline": "workspace:*",
     "@narratage/protocol": "workspace:*",

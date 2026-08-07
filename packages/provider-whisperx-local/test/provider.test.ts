@@ -6,7 +6,7 @@ import test from "node:test";
 import {
   contractTypes,
   sealSpeechEvidenceAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
 import { digestOf } from "@narratage/protocol";
 import type { Need } from "@narratage/protocol";

@@ -76,7 +76,7 @@ serialized instruction vocabulary of the locked browser target.
 
 Validation has three separate owners:
 
-1. `@narratage/contracts` owns the IR schema, closed vocabulary, identity and self-containment validator;
+1. `@narratage/video-contracts` owns the IR schema, closed vocabulary, identity and self-containment validator;
 2. Track producers, Film and `@narratage/hyperframes` invoke that owner validator before a Track reaches
    document compilation;
 3. a local or hosted HyperFrames Provider locks the actual renderer implementation and validates

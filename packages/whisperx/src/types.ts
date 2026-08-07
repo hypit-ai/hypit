@@ -3,7 +3,7 @@ import type {
   AlignedTranscriptSegment,
   SpeechEvidenceAudio,
   SpeechBasisSegment,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 
 export type WhisperXAlignmentRequest = {
   readonly contract: "svml.whisperx-alignment-request@1";

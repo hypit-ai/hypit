@@ -1,4 +1,4 @@
-import type { TimingQuality } from "@narratage/contracts";
+import type { TimingQuality } from "@narratage/video-contracts";
 
 export type CaptionFieldValueSchema =
   | { readonly kind: "boolean" }

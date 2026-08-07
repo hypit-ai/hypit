@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@narratage/artifact": "workspace:*",
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/text": "workspace:*"
   }
 }

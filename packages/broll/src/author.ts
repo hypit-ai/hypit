@@ -3,13 +3,13 @@ import {
   assertNarrativeSelectionIdentity,
   selectionFrameSpans,
   verifySynchronizedMedia,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   CompleteSemanticMap,
   NarrativeSelectionRef,
   ProgramSpace,
   SynchronizedMedia,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { canonicalize, digestOf } from "@narratage/protocol";
 
 import { sealBrollProgram } from "./program.js";

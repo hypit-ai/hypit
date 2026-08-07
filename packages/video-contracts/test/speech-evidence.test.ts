@@ -7,7 +7,7 @@ import {
   sealProgramSpace,
   sealSpeechEvidenceAudio,
   speechEvidenceSampleBoundary,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 
 test("speech evidence uses integer rational boundary projection rather than floating duration arithmetic", () => {

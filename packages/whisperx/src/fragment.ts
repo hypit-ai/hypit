@@ -1,4 +1,4 @@
-import { contractTypes } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
 import { sealGraphFragment } from "@narratage/elaborator";
 import { mediaPipelineProducers } from "@narratage/media-pipeline";
 import { speechAlignProducers } from "@narratage/speech-align";

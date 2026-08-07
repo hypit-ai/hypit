@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { AlignedTranscriptSegment, SpeechBasisSegment } from "@narratage/contracts";
+import type { AlignedTranscriptSegment, SpeechBasisSegment } from "@narratage/video-contracts";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";

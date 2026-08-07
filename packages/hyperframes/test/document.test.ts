@@ -7,7 +7,7 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   assertHyperframesDocument,
   assertHyperframesFrameIndex,
@@ -17,7 +17,7 @@ import {
   materializeHyperframesHtml,
 } from "@narratage/hyperframes";
 import { digestOf } from "@narratage/protocol";
-import type { FontArtifactRef } from "@narratage/contracts";
+import type { FontArtifactRef } from "@narratage/video-contracts";
 
 function fixture() {
   const programSpace = sealProgramSpace({

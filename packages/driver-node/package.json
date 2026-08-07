@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@narratage/caption": "workspace:*",
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/script": "workspace:*",
     "@narratage/speech-align": "workspace:*"
   }

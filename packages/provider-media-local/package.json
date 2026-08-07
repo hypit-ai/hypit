@@ -8,7 +8,7 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/media-pipeline": "workspace:*",
     "@narratage/protocol": "workspace:*",
