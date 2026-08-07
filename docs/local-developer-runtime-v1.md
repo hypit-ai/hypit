@@ -337,16 +337,15 @@ exact implementation endpoint or an explicit Candidate chosen outside the source
 
 ## 8. Remaining vertical work
 
-The durable local chassis and first local external execution set are implemented. A real talking-
-video build still requires:
+The durable local chassis and one real talking-video path are implemented. Remaining work is to:
 
-1. keep the credentialed KIE smoke suite opt-in as Provider contracts evolve (the representative
-   seven-family run and synthetic-reference upload passed on 2026-08-06);
-2. official Speech assembly, Caption, B-roll and Text Track Surfaces; authored Image/Audio, exact
-   Seedance Prompt/Speech/Video Surfaces and the SVS-backed Seedance Speaker Kit are implemented;
-3. audit and implement the complete package-owned Caption style/positioning Recipe before freezing
-   its author Surface; SpeechTake, Speech Align and the current deterministic Caption facets are
-   already locked and activated from the official implementation package;
+1. turn the credentialed path into a repeatable opt-in acceptance command while keeping paid output
+   and credentials outside Git (the representative KIE family run and synthetic-reference upload
+   passed on 2026-08-06; the four-take combined film passed on 2026-08-07);
+2. finish package-owned Caption field-to-word painting, Text three-box/exact-font authoring and
+   B-roll content-frame behavior before freezing those author Surfaces;
+3. migrate Ranking and other production components only after their meanings fit the peer-Track
+   contract;
 4. add Lambda-backed variants only when deployment pressure justifies them.
 
 Hosted tenant auth, credits, Redis, a distributed queue and Hypit-wide Build hosting remain outside

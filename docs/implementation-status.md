@@ -164,6 +164,8 @@ Implemented and executable:
 Still pre-freeze and deliberately deferred:
 
 - complete Text three-box, exact-font and layered-decoration behavior;
+- field-dependent Caption word painting—the current renderer preserves planned fields as typed
+  Track data attributes but does not yet map them to distinct word visuals;
 - Caption CJK/emoji/multiline/pixel acceptance;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
 - Ranking and other old production author packages;
