@@ -1,0 +1,21 @@
+{
+  "name": "@svml/seedance",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@svml/artifact": "workspace:*",
+    "@svml/contracts": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/generation": "workspace:*",
+    "@svml/model-kit": "workspace:*",
+    "@svml/protocol": "workspace:*",
+    "@svml/text": "workspace:*"
+  }
+}

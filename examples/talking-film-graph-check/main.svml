@@ -1,0 +1,56 @@
+<?svml using="@svml/text@1"?>
+
+<svml>
+  <import from="@svml/script@1"/>
+  <import as="seedance" from="@svml/seedance@1"/>
+  <import as="speech" from="@svml/speech@1"/>
+  <import as="whisperx" from="@svml/whisperx@1"/>
+  <import as="broll" from="@svml/broll@1"/>
+  <import as="caption" from="@svml/caption@1"/>
+  <import as="caption-ai" from="@svml/caption-gemini@1"/>
+  <import as="text" from="@svml/text-track@1"/>
+  <import as="film" from="@svml/film@1"/>
+  <import as="render" from="@svml/hyperframes-render@1"/>
+  <import as="studio" source="./studio.svs"/>
+
+  <script id="story">
+    <opening><HOST>Meaning @demo becomes the source @/demo.</opening>
+  </script>
+
+  <seedance:Prompt id="direction">Locked medium close-up in a quiet daylight studio.</seedance:Prompt>
+  <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue} prompt={direction} duration="5"/>
+  <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
+
+  <speech:Spine id="speech">
+    <speech:Take source={take} segment={story.segment.opening}/>
+  </speech:Spine>
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+
+  <caption:Style id="base-caption" appearance={studio.caption.base}>
+    <caption:Cues>Prefer short complete semantic phrases. Never cross clause punctuation.</caption:Cues>
+    <caption:Field id="important" type="boolean"
+      min-per-cue="0" max-per-cue="2">
+      Select zero, one, or two words whose emphasis best communicates this Cue.
+    </caption:Field>
+  </caption:Style>
+  <caption:Program id="caption-program" narrative={story} default={base-caption}/>
+  <caption-ai:Planner id="cue-plan" narrative={story} program={caption-program} model="gemini-2.5-flash"/>
+
+  <broll:Track id="cards" map={timing.map} space={speech.space}>
+    <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
+  </broll:Track>
+  <caption:Track id="captions" narrative={story} map={timing.map} space={speech.space}
+    plan={cue-plan.plan} program={caption-program}/>
+  <text:Track id="titles" space={speech.space}>
+    <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+  </text:Track>
+
+  <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audioTrack}/>
+    <film:Track source={cards.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={titles.track}/>
+  </film:Film>
+  <render:Video id="final" composition={main.composition} space={speech.space}/>
+</svml>

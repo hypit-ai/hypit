@@ -1,0 +1,8 @@
+<?svml using="@svml/svs@1"?>
+
+<sheet version="1" id="studio">
+  caption.host {
+    fill: #FFFFFF;
+    size: 72;
+  }
+</sheet>

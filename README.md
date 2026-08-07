@@ -1,147 +1,217 @@
 # SVML
 
-Semantic Video Markup Language is a semantic source language for information-flow
-video. Script creates stable semantic addresses. A Composition selects one
-content-addressed `ProgramBasis` and one exact `SemanticMap`; flat Track
-Components then lower every audiovisual contribution into one deterministic
-HyperFrames HTML document.
+SVML is a graph language and runtime for building expensive, recoverable creative workflows from
+human-readable intent.
+
+Its reference video distribution lets an author address a video with words rather than timecodes:
+Script defines the semantic truth, generated speech supplies acoustic evidence, and independent
+packages lower captions, B-roll, text and speech into peer Tracks.
+
+SVML is currently a pre-release v2 rewrite. It has completed a real paid talking-video acceptance
+sequence, but the repository is currently a source-checkout workspace rather than a published npm
+distribution; its public package names and video authoring ABI are not frozen yet.
+
+## Why a graph language
+
+AIGC operations are slow, costly, fallible and non-deterministic. Their results frequently become
+inputs to later compilation. A usable system must therefore distinguish:
+
+- what the author requested;
+- which implementation is used for this Run;
+- which results are actually demanded;
+- what has already been materialized;
+- where an external capability executes;
+- which facts and code produced every accepted result.
+
+SVML compiles those decisions before execution:
 
 ```text
-.svml + transitive .svk/.svs/.svc imports + lock + evidence
-        │
-        ├─ typed Plan IR ─────────────────────────────> Canvas view
-        ├─ Basis Producer ─────> TemporalBasisProduction
-        ├─ Locator ────────────> CompleteSemanticMap
-        ├─ Basis + Map ────────> TemporalBinding ─────> Timeline view
-        └─ flat Track[] ───────> Composition ─────────> HyperFrames HTML
+Author Graph + Run Graph + Satisfaction edges + Targets
+                              │
+                              ▼
+                       frozen BuildPlan
+                              │
+                              ▼
+                 recoverable verified execution
 ```
 
-Canvas and Timeline are views of the same source closure, not additional
-authoring truths. Provider tasks, pins, takes, caches and queue state belong to a
-Runtime Host and do not enter the source language.
+There is no privileged final-video root. Any public Logical Output can be a Target.
 
-## Implemented v1 slice
+## Core model
 
-The TypeScript compiler and local standard library implement the current v1
-architecture end to end:
+- A **Logical Output** is an author-visible typed result promise.
+- A **Candidate** is an independent typed supply backed by a Provided Value or Operation result.
+- A **Satisfaction** explicitly connects a Candidate to a Logical Output as `exact` or
+  `substitute`.
+- A **Target** says which outputs this Build requires.
+- An **Operation** is one atomic execution instance. Shared identity means one execution; separate
+  instances execute separately even when their parameters match.
+- Core resolves the selected reverse closure and freezes a finite BuildPlan before any external
+  command runs.
 
-- readable Script with Role Cues, Dual Text, Slots, closed/disconnected
-  Selections and zero-width Moments;
-- an exact `SemanticIndex` with independent word and Segment endpoints
-  (`2M + 2N` identities);
-- replaceable `TemporalBasisProduction` and `CompleteSemanticMap` Components,
-  validated and bound before any Track lowering;
-- direct monotonic many-to-many alignment from authoritative Script tokens to
-  noisy `SpeechTimingEvidence`, without a corrected-transcript stage;
-- hard cut, gap and audio/visual crossfade joins with distinct source-to-program
-  maps;
-- typed `.svc` content modules and `.svs` classes, including nested Component
-  fields;
-- stable Plan identity, separate execution digests and a full temporal
-  `svml.lock`;
-- isolated `.svk` projectors, verified offline capability artifacts and finite,
-  auditable `composite-v1` expansion;
-- manifest-enforced temporal `one` / `each` / `set` consumption;
-- a post-locate `CaptionPlan` that may group cues and add typed style annotations
-  but cannot rewrite Script text or timing;
-- flat media, ranking, B-roll, caption, text and audio Tracks in one absolute
-  ProgramSpace;
-- Film as the only `Track[]` consumer and HyperFrames HTML as the sole formal
-  video compilation target.
+Product actions such as pinning a previous video, using a black preview or selecting an alternate
+fragment are ordinary Run Graph authoring. Core contains no Pin, preview mode, automatic cache or
+Provider fallback branch.
 
-There is no live provider adapter in this repository. A reachable
-`profile="capability-v1"` Component must be satisfied by an exact,
-content-verified `svml.artifacts.v1` binding; compilation never falls back to a
-provider call. Existing local `Image`, `Video`, `Audio` and Evidence values work
-directly.
+See [the architecture](docs/architecture.md) and
+[Core Kernel specification](spec/core-kernel-v1.md).
 
-SVML has not been publicly released. There is no legacy v1 compatibility layer:
-the current architecture and Script Surface are the only v1 target.
+## What works today
+
+The repository implements:
+
+- domain-neutral Protocol, Core, graph elaboration and Node compiler Host;
+- mandatory self-described Author/Run sources with no suffix-selected or default parser;
+- official `.svml` markup, Script Surface, `.svs` Recipes and `.svrun` execution intent;
+- locked trusted package activation without package-specific Core registration;
+- recoverable Runtime scheduling with concurrency lanes, retries and cancellation;
+- SQLite Build/Operation stores and filesystem/S3 Artifact stores;
+- exact Endpoint binding and scoped credentials;
+- seven explicit image/video model families through the KIE Provider;
+- local ffprobe/ffmpeg media processing;
+- local pinned WhisperX service;
+- Vertex Gemini display-only Caption planning;
+- local frame-parallel HyperFrames rendering;
+- Speech, Caption, Text, B-roll, Film, audio and final mux vertical slices.
+
+The complete live path is:
+
+```text
+Script → Estimate → Seedance × N → media normalization → WhisperX → SemanticMap
+       → Gemini CaptionPlan → peer Tracks → Film → HyperFrames → audio mix → MP4
+```
+
+Details and current gaps are maintained in
+[implementation status](docs/implementation-status.md).
 
 ## Quick start
 
-Requires Node.js 22 and pnpm.
+Requirements:
+
+- Node.js 22+
+- pnpm
+- Python 3.10–3.13 only when running the local WhisperX service
 
 ```bash
 pnpm install
 pnpm check
 pnpm test
-pnpm build
 
-pnpm svml check examples/regen-ranking/regen-ranking.svml
-pnpm svml script examples/regen-ranking/regen-ranking.svml --out narrative.json
-pnpm svml plan examples/regen-ranking/regen-ranking.svml --out plan.json
-pnpm svml canvas examples/regen-ranking/regen-ranking.svml --out canvas.json
-pnpm svml estimate examples/regen-ranking/regen-ranking.svml --out estimate.json
-pnpm svml timeline examples/regen-ranking/regen-ranking.svml --out timeline.json
+# Compile a complete provider-free v2 author graph.
+pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
-# Produce a full frozen lock, including the selected Basis, Map and Evidence.
-pnpm svml lock examples/regen-ranking/regen-ranking.svml --out svml.lock
-
-pnpm svml compile examples/regen-ranking/regen-ranking.svml \
-  --lock svml.lock \
-  --out build/index.html
-pnpm svml render build/index.html --out build/video.mp4
+# Compile the self-described Run Graph and inspect its finite plan.
+pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
-`--artifacts` is required only when the reachable Plan contains capability
-Components. Speech timing is an explicit typed value referenced by the Locator
-in source; it is not an ambient CLI argument. `estimate` produces estimated
-timing evidence and the same structurally complete `CompleteSemanticMap` type;
-per-anchor quality records what was measured, derived or estimated.
+The live example uses an explicit Run Graph, declarative local Runtime Profile and external
+credentials:
 
-`fmt` currently canonicalizes only the Script body and refuses a rewrite if the
-reparsed semantic IR differs. `canvas` needs no materialized time evidence.
-`timeline`, `compile` and `lock` execute the deterministic local Plan and validate
-the selected Basis/Map pair.
+```bash
+pnpm svml:v2 build examples/talking-film-live/build.svrun \
+  --runtime examples/talking-film-live/svml.runtime.json \
+  --package-lock examples/talking-film-live/svml.packages.lock \
+  --root . \
+  --build-id talking-film-live \
+  --follow
 
-## Four source files
+pnpm svml:v2 get talking-film-live \
+  --name final.video \
+  --runtime examples/talking-film-live/svml.runtime.json \
+  --to examples/talking-film-live/output/final.mp4
+```
 
-| Suffix | Responsibility |
+The Build archives every accepted intermediate Record and Artifact before `get` makes an optional
+human-readable copy. `builds`, `inspect` and `get --name` use a Host-only catalog of source aliases;
+the selected Record is still verified against the authoritative BuildState.
+
+Read its [deployment requirements](examples/talking-film-live/README.md) before running it. Paid
+credentials, presenter assets, local databases and generated outputs are not committed.
+
+## Author source versus execution environment
+
+These inputs are separate by design:
+
+| Input | Owns |
 |---|---|
-| `.svml` | One film's Script, local values, Component calls, Tracks and Composition |
-| `.svk` | An importable Component vocabulary, public typed ABI and lowering |
-| `.svs` | Typed parameter classes for public Component parameters and fields |
-| `.svc` | Context-free reusable content values and content subgraphs |
+| `.svml` | author meaning, explicit model/component choices and graph references |
+| `.svs` | reusable package-defined Recipe values |
+| `.svrun` | Targets, Candidates and explicit Satisfaction edges for one reusable Run |
+| `svml.runtime.json` / `svml.runtime.ts` | Scheduler, Stores, credential references, Endpoints and concurrency |
+| `svml.packages.lock` | physical author/compute implementation closure |
+| `svml.runtime-packages.lock` | physical Provider/Store adapter closure and privileged code identity |
 
-The compiler owns universal language laws. Libraries own replaceable vocabulary
-and algorithms. A Runtime Host owns effects, credentials, queues and storage.
-Canvas owns only a human-readable view.
+Source imports activate author vocabulary only. They never authorize network, filesystem, process,
+credential or queue access.
 
-## Executable examples
+## Packages and extension
 
-- [`examples/regen-ranking/regen-ranking.svml`](examples/regen-ranking/regen-ranking.svml)
-  reconstructs a pinned production video with five ranking items, five B-roll
-  items, captions, title, BGM and sound effects. It compiles to 30 Plan nodes,
-  35 typed edges and 1083 frames.
-- [`examples/flat-track-launch/flat-track-launch.svml`](examples/flat-track-launch/flat-track-launch.svml)
-  is the comprehensive language fixture: explicit Basis/Locator, nested SVS,
-  overlapping Presents, manual ProgramSpans, a Moment, B-roll source audio and
-  transition SFX, disconnected caption styling and absolute z.
-- [`examples/composite-speech-program/minimal.svml`](examples/composite-speech-program/minimal.svml)
-  proves that an author-facing `speech-program` can hide repetitive wiring while
-  expanding to separately auditable `voice::basis` and `voice::locator`
-  instances. The compiler has no special knowledge of that Component name.
-- [`examples/media-basis`](test/fixtures/media-basis) proves that precomposed
-  media can implement the same Basis contract and reuse the same Locator and
-  Composition path.
+A physical package may expose separately locked facets:
 
-The local media used by the examples are already-materialized artifacts; no
-generation provider is invoked by tests or compilation.
+```text
+author    Frontend, Surface, Graph Fragment
+compute   deterministic Producer or Type Validator
+endpoint  privileged local/remote capability implementation
+runtime   Scheduler or Store implementation
+```
 
-## Specification and implementation record
+Packages communicate through nominal Types published by their owners. Core does not contain a
+central union of Narrative, Track, Seedance or any other domain type. Installing a trusted package
+can add a new component or Endpoint without republishing Core.
 
-- [Intent-first modular compilation architecture](docs/intent-first-modular-compilation.md)
-  records the next architecture direction: SVML as author intent, source-selected
-  SVK compilation components, typed external requirements and provenance-preserving
-  fulfillment or substitution. The executable v1 documents below remain implementation
-  records until that migration is complete.
-- [Script Surface v1](spec/script-surface-v1.md)
-- [Source Architecture v1 draft](spec/source-architecture-draft.md)
-- [Speech Program and Caption v1 target contract](docs/speech-program-caption-v1.md)
-- [Compiler implementation record](docs/compiler-prototype.md)
-- [External Runtime Host architecture](docs/runtime-host-architecture-draft.md)
+Current package execution is for explicitly installed, byte-locked trusted code. Arbitrary
+community Parser/Producer/Validator execution still needs a real isolation and permission boundary.
 
-VLM, bbox, face tracking and visual reverse-location are intentionally outside
-SVML v1. They may be implemented later as explicit post-processing extensions;
-the semantic audio timeline remains the language's locating foundation.
+## Repository map
+
+```text
+packages/protocol        immutable wire contracts
+packages/artifact        domain-neutral content-addressed byte Type
+packages/core            domain-neutral Demand compiler and Build state machine
+packages/source          mandatory Source Header; no syntax default
+packages/elaborator      author declarations and hygienic Fragment expansion
+packages/compiler-node   reference Node compiler Host
+packages/compiler-text-node  optional official Text compiler assembly
+packages/package-loader-node syntax-neutral trusted physical-package loading
+packages/cli             generic commands requiring an explicit Distribution
+packages/video-cli       official video command application; no author-package aggregate
+packages/run             syntax-neutral Run Source closure and complete Run Graph compiler
+packages/run-text        optional official human-readable Run Frontend
+packages/runtime         environment-neutral scheduling and Store ports
+packages/driver-node     trusted Node command execution
+packages/local           zero-service SQLite/filesystem developer assembly
+packages/*               optional Frontend, domain, Endpoint and adapter packages
+services/whisperx        pinned local WhisperX sidecar
+spec                     current normative contracts
+docs                     architecture, status, roadmap and focused implementation records
+examples                 v2 checks/live witness plus retained v1 regression fixtures
+```
+
+Start with the [documentation map](docs/README.md) and [roadmap](docs/roadmap.md).
+The [open-source distribution plan](docs/open-source-distribution.md) records what can ship
+independently and what remains before the first public package release.
+
+## Development
+
+```bash
+pnpm check       # v1 research oracle + v2 TypeScript
+pnpm test        # v1 regression tests + v2 package tests
+pnpm build       # build the retained root v1 CLI during migration
+
+pnpm test:whisperx-service
+pnpm smoke:kie   # opt-in paid Provider smoke test; requires credentials
+```
+
+The root `src/`, `stdlib/` and legacy examples remain executable regression evidence while v2 is
+rewritten under `packages/`. They are not the public v2 package taxonomy or source contract.
+
+## Current priorities
+
+The domain-neutral Run/Runtime foundation, developer inspection path and the first replaceable local
+Endpoint environments are implemented. Current work is split between making that foundation ready
+for trusted-developer distribution and turning the real talking-film acceptance path into a
+repeatable harness. Text, Caption and B-roll already execute as vertical slices; their full visual
+breadth, Ranking and the final video compatibility freeze remain deferred. See the
+[implementation status](docs/implementation-status.md) and [roadmap](docs/roadmap.md).

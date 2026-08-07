@@ -46,17 +46,17 @@ Script 编译必须先生成保留源码映射的 Narrative IR，再从同一份
 <script>
   @whole
 
-  <segment id="hook">
+  <hook>
     <A> I just @laugh @pop! <lmao | laughed my @punch ass out @/punch> @/laugh.
-  </segment>
+  </hook>
 
   @silence
-  <segment id="pause"/>
+  <pause/>
   @/silence
 
-  <segment id="close">
+  <close>
     <B> Meet <${product} | ${product_pronunciation}>.
-  </segment>
+  </close>
 
   @/whole~
 </script>
@@ -86,20 +86,24 @@ Segment 的两个独立结构端点；真正的静音或素材行为由外部 Pr
 
 ## 1. 文档与 Segment
 
-一个 Script 有且仅有一个 `<script>` 根。v1 的 Segment 形式只有：
+在官方 Text Frontend 中，一个 `<script>` Surface 实例产生一份 Narrative；
+`<script>` 外壳由 Text 根据导入后的 Surface Registry 分派，Script Parser 接收的
+只是它的 raw body。Script body 的 Segment 形式只有具名块和具名空块：
 
 ```svml
-<segment id="intro">
+<intro>
   Hello.
-</segment>
+</intro>
 
-<segment id="pause"/>
+<pause/>
 ```
 
 规范规则：
 
 - Script 包含一个或多个按源码顺序排列的 Segment。
-- Segment id 在文档内唯一，Segment 不允许嵌套。
+- Segment 的标签名就是 id；id 在当前 Script 内唯一，Segment 不允许嵌套。
+- Segment opening 不接受 attribute；`script` 是外层 raw Surface 的保留名，不能
+  作为 Segment id。
 - 自然语言只能出现在 Segment 内；Segment 之间只允许空白、Selection/Moment
   标记和注释。
 - 空 Segment 使用自闭合形式。它有结构开始/结束切点，但没有词法锚点。
@@ -115,27 +119,33 @@ Segment 的两个独立结构端点；真正的静音或素材行为由外部 Pr
 
 ```svml
 @chapter
-<segment id="one">
+<one>
   One.
-</segment>
-<segment id="pause"/>
-<segment id="two">
+</one>
+<pause/>
+<two>
   Two.
-</segment>
+</two>
 @/chapter
 ```
 
 ## 2. Role Cue
 
-Role Cue 只在 Segment 内的逻辑行首（忽略规范缩进）出现，并开启一个
-spoken turn：
+Role Cue 只在 Parser 已进入某个 Segment body 后出现，并开启一个 spoken turn。
+它的识别由解析状态决定，与逻辑行首和物理换行无关：
 
 ```svml
-<segment id="dialogue">
+<dialogue>
   <A> What time
       is it?
   <B> It’s 8:30.
-</segment>
+</dialogue>
+```
+
+下列紧凑写法具有完全相同的 Narrative 语义：
+
+```svml
+<dialogue><A> What time is it?<B> It’s 8:30.</dialogue>
 ```
 
 它在 `dialogue` 投影中由规范 serializer 输出为：
@@ -153,8 +163,9 @@ Compiler 将结果降低为一个可非连通的派生 SelectionSet。仅有 `<A
 
 为消除歧义：
 
-- Role Cue 只由“逻辑行首、合法尖括号内容、且不含未转义 `|`”这一位置识别，
-  并且同一行必须跟随非空 spoken content。
+- 在 Segment body 状态中，不含未转义 `|`、没有属性或 `/`、且满足 Role label
+  字符约束的裸尖括号构造被识别为 Role Cue；它必须在下一个 Role Cue 或 Segment
+  结束前跟随非空 spoken content。
 - 正文里的冒号永远是正文；解析器不通过 `A:` 猜说话人。
 - 同一个非空 Segment 要么完全无 Role Cue，要么第一个 spoken atom 必须由
   Role Cue 开启。时间标记、注释和布局空白不算 spoken atom；已经以无 Cue
@@ -253,7 +264,7 @@ before ~@x hello @/x~ after
 
 ```svml
 @pause
-<segment id="empty"/>
+<empty/>
 @/pause
 ```
 
@@ -326,7 +337,7 @@ Segment 仍有独立 start/end，即使二者最终重合；任意不同 identit
 Locator 必须提交覆盖全部 `2M + 2N` identity 的总映射：
 
 ```text
-SemanticAnchorIdentity → ProgramPoint(basisDigest)
+SemanticAnchorIdentity → ProgramPoint(ProgramSpace)
 ```
 
 完整性与精度正交：每个点都必须存在，同时可以标记为 `estimated`、`derived`
@@ -483,10 +494,11 @@ Dual Text 内另有：
 
 未知反斜杠转义必须报错。解析优先级固定为：
 
-1. 已知结构标签与注释；
-2. Segment 内逻辑行首、不含未转义 `|` 的 `<Role>`;
-3. 含一个未转义分隔 `|` 的 inline `<display | speech>`;
-4. 其他尖括号结构报错。
+1. Script body 状态中的注释、temporal marker 与具名 Segment open；
+2. Segment body 状态中的当前 Segment close；
+3. Segment body 中含一个未转义分隔 `|` 的 inline `<display | speech>`；
+4. Segment body 中满足 Role label 合同的裸 `<Role>`；
+5. 其他尖括号结构报错。
 
 Segment 与 temporal name 使用独立命名空间；Selection 和 Moment 共享
 temporal name namespace。三者的 id 均满足：
@@ -495,8 +507,8 @@ temporal name namespace。三者的 id 均满足：
 [a-z][a-z0-9_-]{0,63}
 ```
 
-除“逻辑行首可识别 Role Cue”这一词法作用外，源码缩进、换行和连续空白都
-是 authoring layout，不是 turn、字幕换行或停顿指令。编译投影在 atom
+源码缩进、换行和连续空白全部是 authoring layout，不参与 Segment、Role Cue
+或 turn 的识别，也不是字幕换行或停顿指令。编译投影在 atom
 边界保留必要分隔并规范化布局空白；字幕 cue 切分与硬换行由外部 Caption
 Program 决定。
 
@@ -524,9 +536,10 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 - 每个端点的左右 affinity 和端点源码位置。
 - 每个 MomentSet 的一个或多个有序 point、左右 affinity 和源码位置。
 
-外部 Program 的 `role="label"` selector 从上述 turn token ranges 派生一个
-SelectionSet；同一 label 的多次 turn 成为同一集合的多个有序 occurrence。
-它是显式查询，不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。
+外部 Program 的 `role="label"` selector 可以从上述 Turn 范围投影自己的选择集合；
+同一 label 的多次 Turn 是多个有序、互不相邻的命中。它是消费组件内部的显式查询，
+不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。当前 Caption Program 直接把
+该查询投影到可见 Display Atom，不伪造一个作者写下的 Selection Record。
 
 SelectionSet/MomentSet 是消费者边界，不是 Segment 的子对象。典型外部
 关系是：
@@ -550,6 +563,11 @@ Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
 都属于 Caption Program。Caption consumer 若要求互斥 token ownership，重叠必须作为该消费者的
 编译错误；这不是 Script 禁止 Selection 重叠。未来 Caption 若支持 overlay，
 只扩展 Caption Program，不扩展正文语法。
+
+当前 Caption Program 使用一个覆盖全部可见词的默认 Style，再按源码顺序应用 Role
+或显式 Selection 的整 Style 替换，最后命中的规则获胜。无 Role 的 Turn 自动保留默认
+Style；修改一个局部区间不要求作者书写它的补集。完整规则见
+[`caption-program-v1.md`](./caption-program-v1.md)。
 
 ## 9. v1 明确不在 Script 中表达
 
