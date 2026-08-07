@@ -1,15 +1,11 @@
+import { compositionComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
+import { programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
+import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
+import type { Composition, Track } from "@narratage/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@narratage/component-kit";
-import {
-  compositionContractsComponent,
-  contractTypes,
-  sealAudioTrack,
-  sealProgramSpace,
-  sealVisualTrack,
-  videoContractManifests,
-} from "@narratage/video-contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -70,7 +66,7 @@ const space = sealProgramSpace({
 
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(registry, compositionContractsComponent.validators);
+  registerTypeValidatorFacets(registry, compositionComponent.validators);
   return registry;
 }
 const filmProgram = sealFilmProgram({
@@ -94,7 +90,7 @@ const textProgram = sealTextTrackProgram({
 });
 const background = sealVisualTrack({
   contract: "svml.visual-track@1",
-  visualIr: "svml.hyperframes-visual-ir@1",
+  visualIr: "svml.visual-ir@1",
   id: "background-track",
   presents: [{
     id: "background",
@@ -132,11 +128,11 @@ const origin = {
   frontendClosureDigest: digestOf("frontend:film-test"),
 };
 const records = await Promise.all([
-  sealRecord({ id: "space", type: contractTypes.programSpace, value: stored(space), conformance: "exact", origin }),
+  sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space), conformance: "exact", origin }),
   sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram), conformance: "exact", origin }),
   sealRecord({ id: "text-program", type: textTrackTypes.program, value: stored(textProgram), conformance: "exact", origin }),
-  sealRecord({ id: "background", type: contractTypes.visualTrack, value: stored(background), conformance: "exact", origin }),
-  sealRecord({ id: "audio", type: contractTypes.audioTrack, value: stored(audio), conformance: "exact", origin }),
+  sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), conformance: "exact", origin }),
+  sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), conformance: "exact", origin }),
 ].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
 const linked = link(closure, [sealTypedModule({ id: "author:film-test", closureDigest: closure.digest, records })]);
 

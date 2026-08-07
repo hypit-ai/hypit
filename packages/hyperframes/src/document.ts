@@ -1,21 +1,11 @@
-import {
-  assertCompositionIdentity,
-  HYPERFRAMES_VISUAL_IR_V1,
-  programSpaceFrameCount,
-} from "@narratage/video-contracts";
-import type {
-  Composition,
-  FontArtifactRef,
-  ProgramSpace,
-  Track,
-  VisualAttribute,
-  VisualElement,
-  VisualPresent,
-  VisualStyleDeclaration,
-  VisualTrack,
-} from "@narratage/video-contracts";
+import type { FontArtifactRef } from "@narratage/media";
+import { programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertCompositionIdentity } from "@narratage/composition";
+import type { Composition, Track, VisualAttribute, VisualElement, VisualPresent, VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
 import { digestOf, isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
+import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 
 import type {
   ArtifactUrlResolver,
@@ -324,7 +314,7 @@ export function compileHyperframesDocument(composition: Composition, programSpac
   assertCompositionIdentity(composition, programSpace);
   const content = normalizedDocument({
     contract: "svml.hyperframes-document@1",
-    visualIr: HYPERFRAMES_VISUAL_IR_V1,
+    visualIr: VISUAL_IR_V1,
     frameRate: { ...programSpace.frameRate },
     frameCount: programSpaceFrameCount(programSpace),
     canvas: {
@@ -339,7 +329,7 @@ export function compileHyperframesDocument(composition: Composition, programSpac
 
 export function assertHyperframesDocument(document: HyperframesDocument): void {
   if (document.contract !== "svml.hyperframes-document@1") throw new Error("Unsupported HyperframesDocument contract.");
-  if (document.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported HyperframesDocument visual IR.");
+  if (document.visualIr !== VISUAL_IR_V1) throw new Error("Unsupported HyperframesDocument visual IR.");
   if (
     !Number.isSafeInteger(document.frameRate.numerator)
     || document.frameRate.numerator <= 0

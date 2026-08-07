@@ -1,17 +1,7 @@
-import {
-  assertAudioTrackIdentity,
-  assertCompositionIdentity,
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  sealComposition,
-} from "@narratage/video-contracts";
-import type {
-  AudioTrack,
-  Composition,
-  ProgramSpace,
-  Track,
-  VisualTrack,
-} from "@narratage/video-contracts";
+import { assertProgramSpaceIdentity } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealComposition } from "@narratage/composition";
+import type { AudioTrack, Composition, Track, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 
 import type { FilmProgram, FilmTrackSet } from "./types.js";

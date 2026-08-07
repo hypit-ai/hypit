@@ -71,7 +71,7 @@ Candidates and Operations.
 | `seedance:Prompt` | `@narratage/seedance` | package-private immutable direction value | implemented |
 | `seedance:Speech model="mini"` | `@narratage/seedance` | explicit Seedance Mini Need plus primary-video projection | implemented; explicit duration remains authored until Speech scheduling exists |
 | `speech:Spine` | `@narratage/speech` | ordered clips -> normalized Takes, one `SpeechBasis`, then ordinary projections | Surface, fold, media normalization and projection components implemented |
-| `whisperx:Alignment` | `@narratage/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@narratage/speech-align` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
+| `whisperx:Alignment` | `@narratage/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@narratage/speech-alignment` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
 | `seedance:Video model="mini"` | `@narratage/seedance` | explicit Seedance Mini video Need plus primary-video projection | implemented |
 | `broll:Track` | `@narratage/broll` | semantic windows + normalized media + recipe -> peer Visual/Audio Tracks | Surface and deterministic lowering implemented |
 | `caption:Style` / `caption:Program` | `@narratage/caption` | default total Style + ordered whole-Style replacement by Role or Selection | implemented |
@@ -79,7 +79,7 @@ Candidates and Operations.
 | `caption:Track` | `@narratage/caption` | CaptionPlan + independent SemanticMap + complete Styles -> VisualTrack | implemented |
 | `text:Track` | `@narratage/text-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
 | `film:Film` | `@narratage/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
-| `render:Video` | `@narratage/hyperframes-render` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
+| `render:Video` | `@narratage/render-hyperframes` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
 | `studio.svs` | `@narratage/svs` | generic immutable Recipe Records; consuming packages validate and lower them | parser, imports and current package consumers implemented; exact font assets remain |
 
 The remaining work is intentionally package-local. None of these rows requires a new Core video type,

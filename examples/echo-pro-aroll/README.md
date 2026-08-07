@@ -29,8 +29,14 @@ Create the explicit package lock used by this development-workspace example:
 ```sh
 pnpm narratage lock-packages examples/echo-pro-aroll/svml.packages.lock \
   --package @narratage/artifact \
-  --package @narratage/video-contracts \
+  --package @narratage/narrative \
   --package @narratage/media \
+  --package @narratage/program-space \
+  --package @narratage/speech \
+  --package @narratage/speech-evidence \
+  --package @narratage/semantic-map \
+  --package @narratage/visual-ir \
+  --package @narratage/composition \
   --package @narratage/svs \
   --package @narratage/script \
   --package @narratage/estimate \
@@ -38,16 +44,16 @@ pnpm narratage lock-packages examples/echo-pro-aroll/svml.packages.lock \
   --package @narratage/generation \
   --package @narratage/seedance \
   --package @narratage/seedance-speaker \
-  --package @narratage/speech-align \
-  --package @narratage/speech-take \
-  --package @narratage/speech-program \
+  --package @narratage/speech-alignment \
+  --package @narratage/speech-basis \
+  --package @narratage/speech-spine \
   --package @narratage/whisperx \
   --package @narratage/caption \
   --package @narratage/caption-gemini \
   --package @narratage/film \
   --package @narratage/hyperframes \
   --package @narratage/media-pipeline \
-  --package @narratage/hyperframes-render \
+  --package @narratage/render-hyperframes \
   --package @narratage/run-text \
   --root .
 

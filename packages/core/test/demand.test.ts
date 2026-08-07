@@ -17,7 +17,6 @@ import type {
   BuildRequest,
   BuildState,
   Candidate,
-  CandidateBinding,
   CanonicalValue,
   CompiledGraph,
   GraphValueRef,
@@ -27,6 +26,7 @@ import type {
   OperationNode,
   OperationResultRef,
   ProducerRef,
+  Satisfaction,
   TypeRef,
 } from "@narratage/protocol";
 
@@ -324,7 +324,7 @@ function createImageGraph(program: LinkedProgram): CompiledGraph {
 function request(
   graph: CompiledGraph,
   targets: readonly string[],
-  satisfactions: readonly CandidateBinding[] = [],
+  satisfactions: readonly Satisfaction[] = [],
   accepts: "exact" | "substitute" = "substitute",
 ): BuildRequest {
   return sealBuildRequest({
@@ -334,13 +334,13 @@ function request(
   });
 }
 
-function fixture(targets: readonly string[], satisfactions: readonly CandidateBinding[] = []): BuildState {
+function fixture(targets: readonly string[], satisfactions: readonly Satisfaction[] = []): BuildState {
   const program = createProgram();
   const graph = createImageGraph(program);
   return start(program, graph, request(graph, targets, satisfactions));
 }
 
-function choose(outputId: string, candidateId: string): CandidateBinding {
+function choose(outputId: string, candidateId: string): Satisfaction {
   return { output: outputId, candidate: candidateId, fidelity: "substitute" };
 }
 
@@ -349,7 +349,7 @@ function stepIds(state: BuildState): string[] {
 }
 
 test("Targets and Existing-Value Candidates derive the exact image closure", () => {
-  const cases: readonly [string, readonly CandidateBinding[], readonly string[]][] = [
+  const cases: readonly [string, readonly Satisfaction[], readonly string[]][] = [
     ["image3", [], ["p1", "p2", "p3"]],
     ["image3", [choose("image1", "existing-image1")], ["p2", "p3"]],
     ["image3", [choose("image1", "existing-image1"), choose("image2", "existing-image2")], ["p3"]],
@@ -638,7 +638,7 @@ function createProductReplacementGraph(
   });
 }
 
-const substitute = (outputId: string, candidateId: string): CandidateBinding => ({
+const substitute = (outputId: string, candidateId: string): Satisfaction => ({
   output: outputId,
   candidate: candidateId,
   fidelity: "substitute",

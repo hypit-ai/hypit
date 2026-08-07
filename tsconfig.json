@@ -27,11 +27,29 @@
       "@narratage/component-kit": [
         "packages/component-kit/src/index.ts"
       ],
+      "@narratage/narrative": [
+        "packages/narrative/src/index.ts"
+      ],
+      "@narratage/program-space": [
+        "packages/program-space/src/index.ts"
+      ],
+      "@narratage/speech": [
+        "packages/speech/src/index.ts"
+      ],
+      "@narratage/speech-evidence": [
+        "packages/speech-evidence/src/index.ts"
+      ],
+      "@narratage/semantic-map": [
+        "packages/semantic-map/src/index.ts"
+      ],
+      "@narratage/composition": [
+        "packages/composition/src/index.ts"
+      ],
+      "@narratage/visual-ir": [
+        "packages/visual-ir/src/index.ts"
+      ],
       "@narratage/endpoint-kit": [
         "packages/endpoint-kit/src/index.ts"
-      ],
-      "@narratage/video-contracts": [
-        "packages/video-contracts/src/index.ts"
       ],
       "@narratage/media": [
         "packages/media/src/index.ts"
@@ -45,8 +63,8 @@
       "@narratage/text": [
         "packages/text/src/index.ts"
       ],
-      "@narratage/speech-align": [
-        "packages/speech-align/src/index.ts"
+      "@narratage/speech-alignment": [
+        "packages/speech-alignment/src/index.ts"
       ],
       "@narratage/whisperx": [
         "packages/whisperx/src/index.ts"
@@ -54,14 +72,11 @@
       "@narratage/caption": [
         "packages/caption/src/index.ts"
       ],
-      "@narratage/speech-take": [
-        "packages/speech-take/src/index.ts"
+      "@narratage/speech-basis": [
+        "packages/speech-basis/src/index.ts"
       ],
       "@narratage/elaborator": [
         "packages/elaborator/src/index.ts"
-      ],
-      "@narratage/realization": [
-        "packages/realization/src/index.ts"
       ],
       "@narratage/run": [
         "packages/run/src/index.ts"
@@ -156,8 +171,8 @@
       "@narratage/transport": [
         "packages/transport/src/index.ts"
       ],
-      "@narratage/speech-program": [
-        "packages/speech-program/src/index.ts"
+      "@narratage/speech-spine": [
+        "packages/speech-spine/src/index.ts"
       ],
       "@narratage/estimate": [
         "packages/estimate/src/index.ts"
@@ -165,8 +180,8 @@
       "@narratage/hyperframes": [
         "packages/hyperframes/src/index.ts"
       ],
-      "@narratage/hyperframes-render": [
-        "packages/hyperframes-render/src/index.ts"
+      "@narratage/render-hyperframes": [
+        "packages/render-hyperframes/src/index.ts"
       ],
       "@narratage/broll": [
         "packages/broll/src/index.ts"

@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@google/genai": "1.52.0",
     "@narratage/caption": "workspace:*",

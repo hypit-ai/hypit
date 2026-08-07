@@ -1,4 +1,5 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { narrativeTypes } from "@narratage/narrative";
+import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
 import type { CanonicalValue } from "@narratage/protocol";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
@@ -125,7 +126,7 @@ function reference(
     throw new Error(`${element.name}.source must be a whole-value reference`);
   }
   const result = resolveReference(raw.path);
-  if (result === undefined || !sameType(result.type, contractTypes.narrativeSpeechExcerpt)) {
+  if (result === undefined || !sameType(result.type, narrativeTypes.speechExcerpt)) {
     throw new Error(`${element.name}.source must reference a NarrativeSpeechExcerpt`);
   }
   return result;

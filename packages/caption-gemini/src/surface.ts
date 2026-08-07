@@ -1,5 +1,5 @@
 import { captionTypes } from "@narratage/caption";
-import { contractTypes } from "@narratage/video-contracts";
+import { narrativeTypes } from "@narratage/narrative";
 import type {
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
@@ -43,7 +43,7 @@ export const decodeCaptionGeminiPlannerSurface: StructuredSurfaceHandler = ({ el
   if (model !== "gemini-2.5-flash" && model !== "gemini-3.1-pro-preview") {
     throw new Error(`${element.name}.model is unsupported`);
   }
-  const narrative = reference(element, "narrative", contractTypes.narrative, resolveReference);
+  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
   const captionProgram = reference(element, "program", captionTypes.program, resolveReference);
   const optionsId = `${id}.gemini`;
   const options = sealCaptionGeminiProgram({

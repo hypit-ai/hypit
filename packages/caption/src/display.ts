@@ -1,8 +1,4 @@
-import type {
-  CaptionRegion,
-  Narrative,
-  NarrativeSelectionRef,
-} from "@narratage/video-contracts";
+import type { CaptionRegion, Narrative, NarrativeSelectionRef } from "@narratage/narrative";
 
 import type { CaptionDisplayAtom } from "./types.js";
 

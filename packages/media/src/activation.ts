@@ -1,9 +1,7 @@
-import { mediaContractsComponent } from "@narratage/video-contracts";
 import { createTextSurfaceHostFacet } from "@narratage/text";
 
 import {
-  decodeMediaAudioSurface,
-  decodeMediaImageSurface,
+  decodeMediaAudioSurface, decodeMediaImageSurface, mediaComponent,
   mediaManifest,
   mediaModuleRef,
   mediaSurfaceImplementationDigests,
@@ -13,7 +11,7 @@ export const svmlPackage = {
   format: "svml.node-package@1" as const,
   name: "@narratage/media",
   modules: [{ manifest: mediaManifest, specifiers: ["@narratage/media", "@narratage/media@1"] }],
-  components: [mediaContractsComponent],
+  components: [mediaComponent],
   hostFacets: [
     createTextSurfaceHostFacet({
       module: mediaModuleRef,

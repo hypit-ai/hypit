@@ -1,4 +1,5 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { narrativeTypes } from "@narratage/narrative";
+import { speechTypes } from "@narratage/speech";
 import { sealGraphFragment } from "@narratage/elaborator";
 
 import { estimateProducers, estimateTypes } from "./manifest.js";
@@ -9,7 +10,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const speechEstimateFragment = sealGraphFragment({
   name: "@narratage/estimate/speech@1",
   inputs: [
-    { name: "speech", type: contractTypes.narrativeSpeechExcerpt },
+    { name: "speech", type: narrativeTypes.speechExcerpt },
     { name: "policy", type: estimateTypes.speechPolicy },
   ],
   operations: [{
@@ -20,7 +21,7 @@ export const speechEstimateFragment = sealGraphFragment({
   }],
   exports: [{
     name: "duration",
-    type: contractTypes.speechDuration,
+    type: speechTypes.duration,
     root: operation("estimate"),
     semanticInputs: ["speech", "policy"],
     fidelity: "exact",

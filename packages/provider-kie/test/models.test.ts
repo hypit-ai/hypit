@@ -1,8 +1,9 @@
+import { videoContractManifests } from "../../test-support/video-domain.js";
+
 import assert from "node:assert/strict";
 import test from "node:test";
-
 import { createResolvedClosure, digestOf } from "@narratage/core";
-import { videoContractManifests } from "@narratage/video-contracts";
+
 import { verifyGraphFragment } from "@narratage/elaborator";
 import {
   geminiOmniDefinition,

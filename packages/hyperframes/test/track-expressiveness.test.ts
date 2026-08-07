@@ -1,18 +1,10 @@
+import type { CompositableSurfaceRef, MediaArtifactRef } from "@narratage/media";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import type { Track, VisualElement, VisualPresent, VisualTrack } from "@narratage/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  sealComposition,
-  sealProgramSpace,
-  sealVisualTrack,
-} from "@narratage/video-contracts";
-import type {
-  CompositableSurfaceRef,
-  MediaArtifactRef,
-  VisualElement,
-  VisualPresent,
-  VisualTrack,
-} from "@narratage/video-contracts";
 import {
   assertHyperframesDocument,
   compileHyperframesDocument,
@@ -128,7 +120,7 @@ function textPresent(
 test("Text three-box and frame/content/line/word paint semantics lower without public Text fields", () => {
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "text-three-box-witness",
     presents: [
       textPresent("frame-paint", 0, "frame"),
@@ -177,7 +169,7 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
   });
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "caption-three-box-witness",
     presents: [{
       id: "cue-1",
@@ -260,7 +252,7 @@ test("one content box lowers independent backdrop and foreground samples of one 
   };
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "media-two-box-witness",
     presents: [{
       id: "media-card",
@@ -333,7 +325,7 @@ test("one content box lowers independent backdrop and foreground samples of one 
 test("Presents from one authoring Track interleave with a peer Track by absolute stacking", () => {
   const ranking = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "ranking-witness",
     presents: [
       {
@@ -358,7 +350,7 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
   });
   const peer = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "peer-text",
     presents: [{
       id: "peer",
@@ -397,7 +389,7 @@ test("a complex owned visual may materialize as a typed compositable Surface wit
   };
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "materialized-visual-witness",
     presents: [{
       id: "surface",

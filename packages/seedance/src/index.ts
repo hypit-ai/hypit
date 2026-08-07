@@ -7,12 +7,9 @@ import {
   sealGenerationRequest,
 } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import {
-  assertSpeechDurationIdentity,
-  contractTypes,
-  videoContractDependencies,
-} from "@narratage/video-contracts";
-import type { SpeechDuration } from "@narratage/video-contracts";
+import { narrativeDependency } from "@narratage/narrative";
+import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@narratage/speech";
+import type { SpeechDuration } from "@narratage/speech";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { BlobRef, Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
@@ -50,7 +47,7 @@ export type SeedancePrompt = {
 };
 
 export type SeedanceSpeechProgram = {
-  readonly contract: "svml.seedance-speech-program@1";
+  readonly contract: "svml.seedance-speech-spine@1";
   readonly model: SeedanceModel;
   readonly prompt: string;
   readonly mode: SeedanceMode;
@@ -62,7 +59,7 @@ export type SeedanceSpeechProgram = {
 
 export const seedanceTypes = {
   prompt: { module: seedanceModuleRef, name: "Prompt" },
-  speechProgram: { module: seedanceModuleRef, name: "SpeechProgram" },
+  speechSpine: { module: seedanceModuleRef, name: "SpeechProgram" },
 } satisfies Record<string, TypeRef>;
 
 export const seedanceSpeechCompileProducers = Object.fromEntries(
@@ -107,7 +104,7 @@ export function sealSeedanceSpeechProgram(value: SeedanceSpeechProgram): Seedanc
 export function verifySeedanceSpeechProgram(value: unknown): asserts value is SeedanceSpeechProgram {
   assertObject(value);
   if (
-    value.contract !== "svml.seedance-speech-program@1"
+    value.contract !== "svml.seedance-speech-spine@1"
     || !seedanceModels.includes(value.model as SeedanceModel)
     || typeof value.prompt !== "string"
     || value.prompt.trim().length === 0
@@ -183,8 +180,8 @@ const aspectRatioSchema = {
   enum: ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9", "adaptive"],
 } as const satisfies ValueSchema;
 
-const speechProgramSchema: ValueSchema = generationObjectSchema({
-  contract: { schema: { kind: "literal", value: "svml.seedance-speech-program@1" } },
+const speechSpineSchema: ValueSchema = generationObjectSchema({
+  contract: { schema: { kind: "literal", value: "svml.seedance-speech-spine@1" } },
   model: { schema: { kind: "string", enum: [...seedanceModels] } },
   prompt: { schema: generationPromptSchema },
   mode: { schema: modeSchema },
@@ -280,12 +277,12 @@ export const seedanceManifest = {
   dependencies: [
     ...seedanceBaseDefinition.manifest.dependencies,
     artifactDependency,
-    videoContractDependencies.narrative,
-    videoContractDependencies.speech,
+    narrativeDependency,
+    speechDependency,
   ],
   types: [
     ...seedanceBaseDefinition.manifest.types,
-    { name: seedanceTypes.speechProgram.name, schema: speechProgramSchema },
+    { name: seedanceTypes.speechSpine.name, schema: speechSpineSchema },
     {
       name: seedanceTypes.prompt.name,
       schema: generationObjectSchema({
@@ -310,7 +307,7 @@ export const seedanceManifest = {
       name: "speech",
       tag: "Speech",
       mode: "structured",
-      outputs: [seedanceTypes.speechProgram, ...Object.values(seedanceEndpoints).map((endpoint) => endpoint.requestType)],
+      outputs: [seedanceTypes.speechSpine, ...Object.values(seedanceEndpoints).map((endpoint) => endpoint.requestType)],
       implementation: {
         kind: "trusted-frontend-surface",
         locator: "@narratage/seedance/speech-surface",
@@ -334,8 +331,8 @@ export const seedanceManifest = {
     ...seedanceModels.map((model) => ({
       name: seedanceSpeechCompileProducers[model].name,
       inputs: [
-        { name: "program", type: seedanceTypes.speechProgram },
-        { name: "duration", type: contractTypes.speechDuration },
+        { name: "program", type: seedanceTypes.speechSpine },
+        { name: "duration", type: speechTypes.duration },
       ],
       outputs: [{ name: "request", type: seedanceEndpointsByModel[model].requestType }],
       needs: [],

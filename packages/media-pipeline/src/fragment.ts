@@ -1,5 +1,5 @@
+import { mediaTypes } from "@narratage/media";
 import { artifactTypes } from "@narratage/artifact";
-import { contractTypes } from "@narratage/video-contracts";
 import { sealGraphFragment } from "@narratage/elaborator";
 
 import {
@@ -43,7 +43,7 @@ export const synchronizedMediaFragment = sealGraphFragment({
   ],
   exports: [{
     name: "media",
-    type: contractTypes.synchronizedMedia,
+    type: mediaTypes.synchronized,
     root: operation("normalize"),
     semanticInputs: ["request", "source"],
     fidelity: "exact",

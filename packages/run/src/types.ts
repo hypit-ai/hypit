@@ -13,7 +13,7 @@ import type {
   StoredValue,
   TypeRef,
 } from "@narratage/protocol";
-import type { RealizationOverlay } from "@narratage/realization";
+import type { RealizationOverlay } from "./realization.js";
 import type { SourceHeader } from "@narratage/source";
 
 export type RunSourceUnit = {

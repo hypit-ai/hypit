@@ -1,4 +1,4 @@
-import type { Narrative, NarrativeSelectionRef } from "@narratage/video-contracts";
+import type { Narrative, NarrativeSelectionRef } from "@narratage/narrative";
 import { canonicalize, digestOf } from "@narratage/protocol";
 
 import { captionDisplayAtoms, displayAtomMatchesSelection } from "./display.js";

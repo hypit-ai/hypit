@@ -12,7 +12,8 @@
     "@narratage/source": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/video-contracts": "workspace:*",
-    "@narratage/speech-take": "workspace:*"
+    "@narratage/composition": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/speech-basis": "workspace:*"
   }
 }

@@ -1,12 +1,10 @@
-import {
-  alignedTranscriptEvidenceFields,
-  contractTypes,
-  videoContractDependencies,
-} from "@narratage/video-contracts";
+import { speechDependency, speechTypes } from "@narratage/speech";
+import { alignedTranscriptEvidenceFields, speechEvidenceDependency, speechEvidenceTypes } from "@narratage/speech-evidence";
+import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
-import { speechAlignManifest, speechAlignModuleRef } from "@narratage/speech-align";
+import { speechAlignmentManifest, speechAlignmentModuleRef } from "@narratage/speech-alignment";
 
 export const whisperXModuleRef = { name: "@narratage/whisperx", version: "0.0.0-dev" } as const;
 export const whisperXTypes = {
@@ -40,10 +38,11 @@ export const whisperXManifest: ModuleManifest = {
   name: whisperXModuleRef.name,
   version: whisperXModuleRef.version,
   dependencies: [
-    videoContractDependencies.speech,
-    videoContractDependencies.semanticTime,
+    speechDependency,
+    speechEvidenceDependency,
+    semanticMapDependency,
     { module: mediaPipelineModuleRef, digest: digestOf(mediaPipelineManifest) },
-    { module: speechAlignModuleRef, digest: digestOf(speechAlignManifest) },
+    { module: speechAlignmentModuleRef, digest: digestOf(speechAlignmentManifest) },
   ],
   types: [{ name: whisperXTypes.alignmentEvidence.name, schema: whisperXAlignmentEvidenceSchema }],
   capabilities: [{
@@ -54,7 +53,7 @@ export const whisperXManifest: ModuleManifest = {
     name: "alignment",
     tag: "Alignment",
     mode: "structured",
-    outputs: [whisperXTypes.alignmentEvidence, contractTypes.alignedTranscriptEvidence, contractTypes.completeSemanticMap],
+    outputs: [whisperXTypes.alignmentEvidence, speechEvidenceTypes.alignedTranscript, semanticMapTypes.complete],
     implementation: {
       kind: "trusted-frontend-surface",
       locator: "@narratage/whisperx/alignment-surface",
@@ -64,7 +63,7 @@ export const whisperXManifest: ModuleManifest = {
   producers: [
     {
       name: whisperXProducers.request.name,
-      inputs: [{ name: "audio", type: contractTypes.speechEvidenceAudio }],
+      inputs: [{ name: "audio", type: speechTypes.evidenceAudio }],
       outputs: [],
       needs: [{
         name: "alignment",
@@ -80,7 +79,7 @@ export const whisperXManifest: ModuleManifest = {
     {
       name: whisperXProducers.normalize.name,
       inputs: [{ name: "whisperx", type: whisperXTypes.alignmentEvidence }],
-      outputs: [{ name: "evidence", type: contractTypes.alignedTranscriptEvidence }],
+      outputs: [{ name: "evidence", type: speechEvidenceTypes.alignedTranscript }],
       needs: [],
       implementation: {
         kind: "registered",

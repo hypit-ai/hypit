@@ -3,33 +3,11 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-import {
-  contractTypes,
-  sealMuxedMedia,
-  sealSpeechEvidenceAudio,
-  speechEvidenceSampleBoundary,
-  sealSynchronizedMedia,
-  sealTimelineAudio,
-  verifyMediaInspection,
-  verifyMediaStreamSelection,
-  verifyRenderedVisual,
-  assertSpeechEvidenceAudioIdentity,
-  verifyTimelineAudio,
-} from "@narratage/video-contracts";
-import type {
-  MediaAudioStream,
-  MediaInspection,
-  MediaRational,
-  MediaStream,
-  MediaStreamSelection,
-  MediaTimestamp,
-  MediaVideoStream,
-  MuxedMedia,
-  SynchronizedMedia,
-  SpeechEvidenceAudio,
-  TimelineAudio,
-} from "@narratage/video-contracts";
+import { mediaTypes, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifyTimelineAudio } from "@narratage/media";
+import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary, speechTypes } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import {
   mediaPipelineCapabilities,
@@ -471,7 +449,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.inspect,
-        returns: contractTypes.mediaInspection,
+        returns: mediaTypes.inspection,
         supports: (need) => hasContract(need.constraints, "svml.inspect-media-request@1"),
         handler: async (context) => {
           const need = inspectNeed(context.need.constraints);
@@ -495,7 +473,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.normalize,
-        returns: contractTypes.synchronizedMedia,
+        returns: mediaTypes.synchronized,
         supports: (need) => hasContract(need.constraints, "svml.normalize-media-request@1"),
         handler: async (context) => {
           const need = normalizeNeed(context.need.constraints);
@@ -624,7 +602,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
-        returns: contractTypes.speechEvidenceAudio,
+        returns: speechTypes.evidenceAudio,
         supports: (need) => hasContract(need.constraints, "svml.project-speech-evidence-audio-request@1"),
         handler: async (context) => {
           const need = evidenceAudioNeed(context.need.constraints);
@@ -706,7 +684,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.renderAudio,
-        returns: contractTypes.timelineAudio,
+        returns: mediaTypes.timelineAudio,
         supports: (need) => hasContract(need.constraints, "svml.render-audio-request@1"),
         handler: async (context) => {
           const need = renderAudioNeed(context.need.constraints);
@@ -791,7 +769,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         capability: mediaPipelineCapabilities.mux,
-        returns: contractTypes.muxedMedia,
+        returns: mediaTypes.muxed,
         supports: (need) => hasContract(need.constraints, "svml.mux-media-request@1"),
         handler: async (context) => {
           const need = muxMediaNeed(context.need.constraints);

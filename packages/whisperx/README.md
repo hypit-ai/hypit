@@ -8,7 +8,7 @@ The package contains no credentials, Python environment or queue. Providers tran
 request constraints and return the canonical WhisperX result contract. A deterministic Producer
 then lowers that result to provider-neutral `AlignedTranscriptEvidence`.
 
-The request Producer consumes only canonical `SpeechEvidenceAudio`, never the visual SpeechTake
+The request Producer consumes only canonical `SpeechEvidenceAudio`, never the visual SpeechBasis
 projection and never an arbitrary container audio stream. `@narratage/media-pipeline` first requests the
 explicit 48 kHz stereo speech-master → 16 kHz mono evidence projection. That Record binds the
 zero-origin rational sample map and exact evidence bytes. The Producer Derivation binds the source

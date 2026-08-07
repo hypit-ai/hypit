@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
@@ -6,13 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { deflateSync } from "node:zlib";
-
-import {
-  sealComposition,
-  sealProgramSpace,
-  sealVisualTrack,
-} from "@narratage/video-contracts";
-import type { FontArtifactRef } from "@narratage/video-contracts";
+import type { FontArtifactRef } from "@narratage/media";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import assert from "node:assert/strict";
 import {
   compileHyperframesDocument,
   materializeHyperframesHtml,
@@ -109,7 +105,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     });
     const lower = sealVisualTrack({
       contract: "svml.visual-track@1",
-      visualIr: "svml.hyperframes-visual-ir@1",
+      visualIr: "svml.visual-ir@1",
       id: "blue",
       presents: [{
         id: "blue",
@@ -129,7 +125,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     });
     const surface = sealVisualTrack({
       contract: "svml.visual-track@1",
-      visualIr: "svml.hyperframes-visual-ir@1",
+      visualIr: "svml.visual-ir@1",
       id: "surface",
       presents: [{
         id: "surface",
@@ -154,7 +150,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     });
     const text = sealVisualTrack({
       contract: "svml.visual-track@1",
-      visualIr: "svml.hyperframes-visual-ir@1",
+      visualIr: "svml.visual-ir@1",
       id: "text",
       presents: [{
         id: "text",

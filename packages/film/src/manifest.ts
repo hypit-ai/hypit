@@ -1,10 +1,5 @@
-import {
-  audioTrackSchema,
-  compositionSchema,
-  contractTypes,
-  videoContractDependencies,
-  visualTrackSchema,
-} from "@narratage/video-contracts";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { svsManifest, svsModuleRef } from "@narratage/svs";
@@ -68,8 +63,8 @@ export const filmManifest: ModuleManifest = {
   name: filmModuleRef.name,
   version: filmModuleRef.version,
   dependencies: [
-    videoContractDependencies.programSpace,
-    videoContractDependencies.composition,
+    programSpaceDependency,
+    compositionDependency,
     { module: svsModuleRef, digest: digestOf(svsManifest) },
   ],
   types: [
@@ -104,8 +99,8 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendVisualTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "space", type: contractTypes.programSpace },
-        { name: "track", type: contractTypes.visualTrack },
+        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "track", type: compositionTypes.visualTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
@@ -119,8 +114,8 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendAudioTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "space", type: contractTypes.programSpace },
-        { name: "track", type: contractTypes.audioTrack },
+        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "track", type: compositionTypes.audioTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
@@ -134,10 +129,10 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.compileComposition.name,
       inputs: [
         { name: "program", type: filmTypes.program },
-        { name: "space", type: contractTypes.programSpace },
+        { name: "space", type: programSpaceTypes.programSpace },
         { name: "set", type: filmTypes.trackSet },
       ],
-      outputs: [{ name: "composition", type: contractTypes.composition }],
+      outputs: [{ name: "composition", type: compositionTypes.composition }],
       needs: [],
       implementation: {
         kind: "registered",

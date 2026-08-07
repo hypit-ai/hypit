@@ -1,15 +1,10 @@
-import {
-  assertCompleteSemanticMapIdentity,
-  assertNarrativeSelectionIdentity,
-  selectionFrameSpans,
-  verifySynchronizedMedia,
-} from "@narratage/video-contracts";
-import type {
-  CompleteSemanticMap,
-  NarrativeSelectionRef,
-  ProgramSpace,
-  SynchronizedMedia,
-} from "@narratage/video-contracts";
+import type { NarrativeSelectionRef } from "@narratage/narrative";
+import { verifySynchronizedMedia } from "@narratage/media";
+import type { SynchronizedMedia } from "@narratage/media";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertCompleteSemanticMapIdentity, assertNarrativeSelectionIdentity, selectionFrameSpans } from "@narratage/semantic-map";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { Track } from "@narratage/composition";
 import { canonicalize, digestOf } from "@narratage/protocol";
 
 import { sealBrollProgram } from "./program.js";

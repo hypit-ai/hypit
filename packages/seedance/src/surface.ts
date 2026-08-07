@@ -1,5 +1,8 @@
+import { narrativeTypes } from "@narratage/narrative";
+import type { NarrativeDialogueExcerpt } from "@narratage/narrative";
+import { speechTypes } from "@narratage/speech";
+import type { SpeechDuration } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
-import { contractTypes } from "@narratage/video-contracts";
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import type {
   StructuredElement,
@@ -219,7 +222,7 @@ function referencePrompt(values: readonly ReferenceInput[]): string {
 }
 
 function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): { readonly dialogue: string } {
-  if (!sameType(reference.type, contractTypes.narrativeDialogueExcerpt)) {
+  if (!sameType(reference.type, narrativeTypes.dialogueExcerpt)) {
     throw new Error(`${subject} must reference a NarrativeDialogueExcerpt such as script.segment.opening.dialogue`);
   }
   const value = inline(reference, subject) as unknown as {
@@ -246,7 +249,7 @@ function speechDurationReference(
 ): SurfaceResolvedReference | undefined {
   if (typeof element.attributes.duration === "string") return undefined;
   const result = resolved(element, "duration", resolveReference);
-  if (!sameType(result.type, contractTypes.speechDuration)) {
+  if (!sameType(result.type, speechTypes.duration)) {
     throw new Error(`${element.name}.duration must reference a SpeechDuration`);
   }
   return result;
@@ -331,7 +334,7 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
   if (duration !== undefined) {
     const settings = generationSettings(element, selected.model, 4);
     const program = sealSeedanceSpeechProgram({
-      contract: "svml.seedance-speech-program@1",
+      contract: "svml.seedance-speech-spine@1",
       model: selected.model,
       prompt: promptText,
       mode,
@@ -349,7 +352,7 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
     return {
       records: [{
         id: programId,
-        type: seedanceTypes.speechProgram,
+        type: seedanceTypes.speechSpine,
         value: { kind: "inline", value: program as unknown as CanonicalValue },
         range: element.range,
       }],
