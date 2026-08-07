@@ -102,6 +102,13 @@ Therefore adding a new domain-specific author compiler means installing and lock
 package contribution. It does not mean adding a switch branch to Core, Text, the video CLI or a
 global graph-rewrite hook.
 
+A domain package that contributes a Text Surface therefore depends on `@narratage/text` in exactly
+two places: its Surface decoder consumes the structured-element types, and its activation entry
+wraps that decoder with the `svml.text-surface-host@1` facet constructor. Domain contracts,
+Producers and Fragments do not import Text. A future second Frontend would publish its own Surface
+ABI and receive a parallel activation entry; it does not require rewriting domain logic or an
+anticipatory Frontend-neutral Surface abstraction today.
+
 ## 4. Run Graph and Satisfaction
 
 A Run Graph uses the same typed Value/Operation/Fragment algebra to expose additional independent
