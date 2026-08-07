@@ -106,3 +106,55 @@ test("an anchor the map does not contain names the Selection that asked for it",
     /NarrativeSelection x names anchor segment:missing:start/u,
   );
 });
+
+test("overlapping occurrences pass through untouched, in Script order", () => {
+  // `@beat one @/beat … @beat three @/beat` where the two Segments overlap in
+  // time. Locating never sorts, merges or clips occurrences against each other:
+  // reconciling them is the caller's decision about its own material.
+  const overlapping = {
+    contract: "svml.narrative-selection@1",
+    id: "beat",
+    occurrences: [
+      {
+        occurrence: 0,
+        open: { affinity: "right", boundary: boundary("segment:opening:token:1:start") },
+        close: { affinity: "left", boundary: boundary("segment:opening:end") },
+      },
+      {
+        occurrence: 1,
+        open: { affinity: "right", boundary: boundary("segment:second:token:1:end") },
+        close: { affinity: "left", boundary: boundary("segment:second:end") },
+      },
+    ],
+  } as NarrativeSelectionRef;
+  // opening:token1:start = 0, opening:end = 4, second:token1:end = 6, second:end = 9
+  assert.deepEqual(selectionFrameSpans(map, overlapping, space), [
+    { startFrame: 0, endFrameExclusive: 4 },
+    { startFrame: 6, endFrameExclusive: 9 },
+  ]);
+});
+
+test("Script order is preserved even when it runs backwards in time", () => {
+  // Overlapping Segments make the second occurrence start before the first ends.
+  // The array still follows the Script; a caller that needs time order sorts.
+  const crossing = {
+    contract: "svml.narrative-selection@1",
+    id: "beat",
+    occurrences: [
+      {
+        occurrence: 0,
+        open: { affinity: "right", boundary: boundary("segment:second:token:1:start") },
+        close: { affinity: "left", boundary: boundary("segment:second:end") },
+      },
+      {
+        occurrence: 1,
+        open: { affinity: "right", boundary: boundary("segment:opening:token:1:start") },
+        close: { affinity: "left", boundary: boundary("segment:opening:end") },
+      },
+    ],
+  } as NarrativeSelectionRef;
+  assert.deepEqual(selectionFrameSpans(map, crossing, space), [
+    { startFrame: 5, endFrameExclusive: 9 },
+    { startFrame: 0, endFrameExclusive: 4 },
+  ]);
+});

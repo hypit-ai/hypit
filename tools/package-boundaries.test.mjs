@@ -127,6 +127,31 @@ test("a Provider reaches no exact-model package, so models and services stay N+M
   assert.ok(transitive(graph, "@narratage/seedance").has("@narratage/generation"));
 });
 
+test("the speech time map is an opaque handle: no consumer reads its fields", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const packages = new URL("../packages/", import.meta.url);
+  // Locating is a lookup through semantic-map. A consumer that destructured the
+  // map could sort, merge or clip located spans against one another; those are
+  // the caller's decisions to make on its own values, never the map's to make
+  // for it.
+  const reach = /\bmap\.(tokens|anchors|segments)\b/u;
+  for (const entry of await readdir(packages, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === "semantic-map" || entry.name === "speech-alignment") continue;
+    const source = new URL(`./${entry.name}/src/`, packages);
+    let files = [];
+    try {
+      files = await readdir(source);
+    } catch {
+      continue;
+    }
+    for (const file of files.filter((name) => name.endsWith(".ts"))) {
+      const content = await readFile(new URL(file, source), "utf8");
+      assert.ok(!reach.test(content),
+        `${entry.name}/src/${file} reads a SemanticMap field directly; call a semantic-map lookup instead`);
+    }
+  }
+});
+
 test("Text compilation is one explicit leaf assembly, not a Package Loader or Local Runtime dependency", async () => {
   const graph = productionGraph(await workspacePackages());
   assert.ok(transitive(graph, "@narratage/compiler-text-node").has("@narratage/text"));
