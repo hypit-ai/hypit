@@ -1,8 +1,8 @@
-import type { Awaitable, ComponentPackage } from "@svml/component-kit";
-import type { ArtifactAttachment } from "@svml/host";
-import type { EndpointPackage } from "@svml/endpoint-kit";
-import type { BuildState } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import type { Awaitable, ComponentPackage } from "@narratage/component-kit";
+import type { ArtifactAttachment } from "@narratage/host";
+import type { EndpointPackage } from "@narratage/endpoint-kit";
+import type { BuildState } from "@narratage/protocol";
+import type { Digest } from "@narratage/protocol";
 import type {
   ArtifactStore,
   BuildCatalog,
@@ -18,21 +18,21 @@ import type {
   RuntimeModuleRegistry,
   RuntimeServicePackage,
   ScheduledBuildResult,
-} from "@svml/runtime";
-import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@svml/validation";
+} from "@narratage/runtime";
+import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
 
 /** @deprecated Use the host-neutral ComponentPackage name. */
 export type NodeComponentPackage = ComponentPackage;
-export type { ComponentPackage } from "@svml/component-kit";
+export type { ComponentPackage } from "@narratage/component-kit";
 
 export type LocalTypeValidatorRegistry = TypeValidatorRegistryLike & TypeValidatorRegistrar;
 
-export type { EndpointPackage } from "@svml/endpoint-kit";
-export type { RuntimeServicePackage } from "@svml/runtime";
+export type { EndpointPackage } from "@narratage/endpoint-kit";
+export type { RuntimeServicePackage } from "@narratage/runtime";
 
 export type LocalRuntimeClosureOptions = {
   readonly modules: RuntimeModuleRegistry;
-  readonly value: import("@svml/runtime").RuntimeClosure;
+  readonly value: import("@narratage/runtime").RuntimeClosure;
   readonly allowedPermissions?: readonly string[];
 };
 
@@ -50,7 +50,7 @@ export type CreateLocalRuntimeOptions = {
   readonly scheduling?: Omit<BuildSchedulerOptions, "buildStore" | "runtimeClosure">;
   readonly validators?: LocalTypeValidatorRegistry;
   /** Expected implementation package closure already bound into BuildRequest. */
-  readonly implementationClosure?: import("@svml/protocol").Digest;
+  readonly implementationClosure?: import("@narratage/protocol").Digest;
 };
 
 export type ProjectLocalRuntimeOptions = {

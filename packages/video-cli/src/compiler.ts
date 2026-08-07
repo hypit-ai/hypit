@@ -1,5 +1,5 @@
-import type { CliCompilerOptions } from "@svml/cli";
-import { createTextNodeCompiler } from "@svml/compiler-text-node";
+import type { CliCompilerOptions } from "@narratage/cli";
+import { createTextNodeCompiler } from "@narratage/compiler-text-node";
 
 /** Video authoring packages are selected by an explicit package lock; none are implicit here. */
 export const videoBuiltInPackageContributions = [] as const;

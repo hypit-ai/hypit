@@ -6,7 +6,7 @@ import {
   sealPromptKitInvocation,
   sealPromptKitSpec,
   verifyPromptProgram,
-} from "@svml/prompt-kit";
+} from "@narratage/prompt-kit";
 
 const emptyWhen = { parameters: {}, selectors: {} } as const;
 

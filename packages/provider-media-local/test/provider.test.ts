@@ -13,7 +13,7 @@ import {
   verifyMediaInspection,
   verifySynchronizedMedia,
   verifyTimelineAudio,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   MediaAudioStream,
   MediaInspection,
@@ -21,21 +21,21 @@ import type {
   SynchronizedMedia,
   TimelineAudio,
   SpeechEvidenceAudio,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   MemoryArtifactStore,
   EndpointRegistry,
-} from "@svml/driver-node";
-import type { EndpointRegistration } from "@svml/driver-node";
-import type { ImmediateEndpointHandler } from "@svml/endpoint-kit";
+} from "@narratage/driver-node";
+import type { EndpointRegistration } from "@narratage/driver-node";
+import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
 import {
   mediaPipelineCapabilities,
   sealAudioProgramPlan,
   sealMediaSelectionRequest,
   selectMediaStreams,
-} from "@svml/media-pipeline";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@svml/protocol";
+} from "@narratage/media-pipeline";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@narratage/protocol";
 
 import { createLocalMediaProvider } from "../src/index.js";
 

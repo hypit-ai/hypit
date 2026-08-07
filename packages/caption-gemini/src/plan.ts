@@ -1,5 +1,5 @@
-import { assertCaptionPlan, sealCaptionPlan } from "@svml/caption";
-import type { CaptionFieldDeclaration, CaptionPlannedCue } from "@svml/caption";
+import { assertCaptionPlan, sealCaptionPlan } from "@narratage/caption";
+import type { CaptionFieldDeclaration, CaptionPlannedCue } from "@narratage/caption";
 
 import { verifyCaptionGeminiRequest } from "./request.js";
 import type {

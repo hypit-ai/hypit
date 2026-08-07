@@ -93,7 +93,7 @@ The result must contain every Program run exactly once. Cues must preserve order
 run's atoms exactly once. Field ids, atom ids, value schemas and per-Cue cardinalities fail closed.
 There is no response field for text, pronunciation, time or Style.
 
-`@svml/caption-gemini` is one explicit implementation of this contract. It is not part of the
+`@narratage/caption-gemini` is one explicit implementation of this contract. It is not part of the
 Caption package or Core. Other packages may implement the same output law without being called
 Gemini, but the author graph must explicitly choose them.
 

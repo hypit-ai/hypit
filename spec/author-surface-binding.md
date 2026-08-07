@@ -63,18 +63,18 @@ For this source:
 the responsibilities are:
 
 ```text
-@svml/svs
+@narratage/svs
   parses studio.svs
-  produces generic @svml/svs#Recipe
+  produces generic @narratage/svs#Recipe
 
-@svml/markup
+@narratage/markup
   parses the element and the whole-value reference
   resolves only the public imported binding
 
-@svml/caption Surface
-  requires @svml/svs#Recipe
+@narratage/caption Surface
+  requires @narratage/svs#Recipe
   validates Caption-owned properties
-  emits nominal @svml/caption#CaptionTrackProgram
+  emits nominal @narratage/caption#CaptionTrackProgram
   emits the AuthorComponent and locked GraphFragment
 
 Author compiler

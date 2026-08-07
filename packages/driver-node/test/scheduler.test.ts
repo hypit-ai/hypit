@@ -7,11 +7,11 @@ import {
   parseBuildState,
   EndpointRegistry,
   serializeBuildState,
-} from "@svml/driver-node";
+} from "@narratage/driver-node";
 import type {
   RecoverableEndpoint,
   RuntimeEndpointImplementation,
-} from "@svml/endpoint-kit";
+} from "@narratage/endpoint-kit";
 import {
   LocalBuildScheduler,
   MemoryBuildStore,
@@ -20,12 +20,12 @@ import {
   localSchedulerOptionsFromClosure,
   resolveRuntimeProfile,
   sealRuntimeProfile,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 import type {
   OperationStore,
   RuntimeModuleManifest,
-} from "@svml/runtime";
-import type { Digest } from "@svml/protocol";
+} from "@narratage/runtime";
+import type { Digest } from "@narratage/protocol";
 import {
   createResolvedClosure,
   digestOf,
@@ -35,7 +35,7 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 
 import {
   capabilities,

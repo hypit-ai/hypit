@@ -1,10 +1,10 @@
-import { isDigest } from "@svml/protocol";
+import { isDigest } from "@narratage/protocol";
 import type {
   Digest,
   LogicalOutputRef,
   RecordRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export type BuildCatalogAlias = {
   readonly name: string;

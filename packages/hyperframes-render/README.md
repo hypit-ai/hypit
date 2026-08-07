@@ -1,4 +1,4 @@
-# `@svml/hyperframes-render`
+# `@narratage/hyperframes-render`
 
 Explicit author and capability boundary for final HyperFrames video rendering.
 
@@ -27,7 +27,7 @@ Film is not a dependency of this author meaning. Any package that produces the c
 contract can feed the render Surface. Conversely, targeting Composition never demands this package;
 rendering exists only when the author declares and the Build targets the video output.
 
-`@svml/provider-hyperframes-local` is the first concrete visual implementation. It stages the
+`@narratage/provider-hyperframes-local` is the first concrete visual implementation. It stages the
 document's exact `BlobRef` dependencies, lets HyperFrames partition the finite frame domain across
 configured Chrome workers, emits a silent MP4 and rejects output unless ffprobe proves one H.264
 stream with the declared canvas, rational frame rate and frame count.

@@ -9,7 +9,7 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/contracts",
+  name: "@narratage/contracts",
   modules: [
     { manifest: narrativeManifest },
     { manifest: programSpaceManifest },

@@ -1,45 +1,45 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { artifactDependency, artifactTypes } from "@svml/artifact";
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import { artifactDependency, artifactTypes } from "@narratage/artifact";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   contractTypes,
   videoContractDependencies,
   videoContractManifests,
-} from "@svml/contracts";
-import { createResolvedClosure, digestOf, sealBuildRequest, start } from "@svml/core";
+} from "@narratage/contracts";
+import { createResolvedClosure, digestOf, sealBuildRequest, start } from "@narratage/core";
 import {
   AuthorFrontendRegistry,
   compileSourceClosure,
   resolveCompiledSourceExport,
-} from "@svml/elaborator";
-import type { AuthorSourceUnit } from "@svml/elaborator";
+} from "@narratage/elaborator";
+import type { AuthorSourceUnit } from "@narratage/elaborator";
 import {
   mediaPipelineComponent,
   mediaPipelineManifest,
   mediaPipelineProducers,
-} from "@svml/media-pipeline";
-import type { ModuleManifest } from "@svml/protocol";
+} from "@narratage/media-pipeline";
+import type { ModuleManifest } from "@narratage/protocol";
 import {
   decodeScriptSurface,
   scriptManifest,
   scriptModuleRef,
   scriptSurfaceImplementationDigest,
-} from "@svml/script";
-import { speechTakeManifest, speechTakeProducers } from "@svml/speech-take";
+} from "@narratage/script";
+import { speechTakeManifest, speechTakeProducers } from "@narratage/speech-take";
 import {
   decodeSpeechSpineSurface,
   speechProgramManifest,
   speechProgramModuleRef,
   speechProgramProducers,
   speechSpineSurfaceImplementationDigest,
-} from "@svml/speech-program";
+} from "@narratage/speech-program";
 import {
   TextSurfaceRegistry,
   createTextAuthorFrontend,
-} from "@svml/text";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/text";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const fixtureModule = { name: "example.speech-media", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.speech-media/surface@1");
@@ -59,7 +59,7 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@svml/text@1"?>\n${text}`,
+    text: `<?svml using="@narratage/text@1"?>\n${text}`,
   };
 }
 
@@ -87,8 +87,8 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   frontends.register(createTextAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      if (request.from.startsWith("@svml/script")) return scriptModuleRef;
-      if (request.from.startsWith("@svml/speech")) return speechProgramModuleRef;
+      if (request.from.startsWith("@narratage/script")) return scriptModuleRef;
+      if (request.from.startsWith("@narratage/speech")) return speechProgramModuleRef;
       return fixtureModule;
     },
   }));
@@ -96,9 +96,9 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   registerTypeValidatorFacets(validators, mediaPipelineComponent.validators ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
-      <import from="@svml/script@1"/>
+      <import from="@narratage/script@1"/>
       <import as="fixture" from="example.speech-media@1"/>
-      <import as="speech" from="@svml/speech@1"/>
+      <import as="speech" from="@narratage/speech@1"/>
       <script id="story">
         <opening><ALICE> Hello from Alice.</opening>
         <answer><BOB> Hello from Bob.</answer>

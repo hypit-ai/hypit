@@ -1,5 +1,5 @@
 {
-  "name": "@svml/store-sqlite",
+  "name": "@narratage/store-sqlite",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*"
   }
 }

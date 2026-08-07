@@ -1,7 +1,7 @@
 # Implementation status
 
 Repository reality as of 2026-08-07. Specifications define laws; this page says what currently
-executes. SVML is pre-release and no author-facing video ABI is frozen.
+executes. Narratage is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
 
@@ -37,51 +37,51 @@ bypass any downstream implementation gap.
 
 Implemented:
 
-- `@svml/protocol`: immutable Manifests, Types, Graph, Build and provenance wire data;
-- `@svml/artifact`: domain-neutral nominal `BlobArtifact` contract, independent of video Media and
+- `@narratage/protocol`: immutable Manifests, Types, Graph, Build and provenance wire data;
+- `@narratage/artifact`: domain-neutral nominal `BlobArtifact` contract, independent of video Media and
   Runtime ArtifactStore implementations;
-- `@svml/core`: `svml.graph@1`, independent Candidate, explicit Satisfaction, arbitrary Targets,
+- `@narratage/core`: `svml.graph@1`, independent Candidate, explicit Satisfaction, arbitrary Targets,
   reverse reachability, finite `svml.plan@1` derivation and verified `svml.build@1` state machine;
 - one Operation instance fans out once; distinct instances never content-deduplicate;
 - Provided Values, multi-export Run Fragments, partial substitution and fully pruned defaults;
 - digest-bound Derivation and Receipt integrity, monotonic conformance and regenerated resume
   Commands;
-- `@svml/elaborator`: two-phase forward-reference linking and hygienic static Fragment expansion;
-- `@svml/source`: mandatory bounded Source Header selecting an exact Frontend without suffix or
+- `@narratage/elaborator`: two-phase forward-reference linking and hygienic static Fragment expansion;
+- `@narratage/source`: mandatory bounded Source Header selecting an exact Frontend without suffix or
   Distribution defaults;
 - digest-separated Author Source Closure identity for original bytes, Frontend implementation and
   decoded semantics; every recursively imported source selects its own Frontend;
-- `@svml/realization`: internal typed realization overlays and inert Build-Record Candidates;
-- `@svml/run`: syntax-neutral Run Source Closure, complete mandatory Run Graph, named Target sets,
+- `@narratage/realization`: internal typed realization overlays and inert Build-Record Candidates;
+- `@narratage/run`: syntax-neutral Run Source Closure, complete mandatory Run Graph, named Target sets,
   Provided/Build-Record/Fragment Candidates and explicit Satisfaction edges;
-- `@svml/run-text`: optional official `.svrun` Text Frontend;
+- `@narratage/run-text`: optional official `.svrun` Text Frontend;
 - official compilation binds both Author Graph and Run Graph identities before deriving a finite
   BuildPlan; `plan` and `build` accept no hidden Target/Pin CLI intent;
 - Run-only Fragment Producer Modules extend a separately bound execution Program Closure without
   changing Author imports or Author Graph identity;
-- `@svml/validation`: package-owned semantic validators and common Record admission;
-- `@svml/component-kit`: host-neutral deterministic Producer/validator registration;
-- `@svml/prompt-kit`: immutable author-time compilation of declarative fixed/axis/variant/slot
+- `@narratage/validation`: package-owned semantic validators and common Record admission;
+- `@narratage/component-kit`: host-neutral deterministic Producer/validator registration;
+- `@narratage/prompt-kit`: immutable author-time compilation of declarative fixed/axis/variant/slot
   Kit Specs and Invocations into authored ordered Prompt Programs;
-- `@svml/host`, `@svml/workspace-fs-node`, `@svml/compiler-node`: replaceable Workspace and the
+- `@narratage/host`, `@narratage/workspace-fs-node`, `@narratage/compiler-node`: replaceable Workspace and the
   reference Node compiler Host;
-- `@svml/package-loader-node`: syntax-neutral installed-package byte locking and trusted facet
+- `@narratage/package-loader-node`: syntax-neutral installed-package byte locking and trusted facet
   loading;
-- `@svml/compiler-text-node`: the explicit official Text Frontend and Text Surface Host assembly;
-- `@svml/cli`: a generic command engine requiring one explicit `CliDistribution`;
-- `@svml/video-cli`: the current video command application selecting the Text compiler, with no
+- `@narratage/compiler-text-node`: the explicit official Text Frontend and Text Surface Host assembly;
+- `@narratage/cli`: a generic command engine requiring one explicit `CliDistribution`;
+- `@narratage/video-cli`: the current video command application selecting the Text compiler, with no
   built-in author-package aggregate or Provider registry;
-- `@svml/text`, `@svml/script`, `@svml/svs`: official markup, Script and Recipe Frontends without
+- `@narratage/text`, `@narratage/script`, `@narratage/svs`: official markup, Script and Recipe Frontends without
   Core parser branches; `.svml` and `.svs` remain human suffix conventions only;
-- `@svml/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
+- `@narratage/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
   recoverable Endpoint lifecycle;
-- `@svml/runtime-adapter`, `@svml/runtime-adapter-node`: locked deployment-adapter ABI, physical
+- `@narratage/runtime-adapter`, `@narratage/runtime-adapter-node`: locked deployment-adapter ABI, physical
   package-byte identity, project-root executable resolution and diagnostic hooks;
-- `@svml/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
-- `@svml/store-sqlite`: durable CAS BuildStore and OperationStore;
-- `@svml/artifact-store-fs`, `@svml/artifact-store-s3`: interchangeable content-addressed bytes;
-- `@svml/credential-store-env`: explicit credential slots without secrets in BuildState;
-- `@svml/local`: zero-service developer assembly over SQLite and filesystem defaults;
+- `@narratage/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
+- `@narratage/store-sqlite`: durable CAS BuildStore and OperationStore;
+- `@narratage/artifact-store-fs`, `@narratage/artifact-store-s3`: interchangeable content-addressed bytes;
+- `@narratage/credential-store-env`: explicit credential slots without secrets in BuildState;
+- `@narratage/local`: zero-service developer assembly over SQLite and filesystem defaults;
 - declarative `svml.runtime.json` loading through a separate locked Runtime Adapter package closure,
   with TypeScript Runtime assembly retained as the advanced embedding API;
 - domain-neutral Build archive inspection and Record egress: accepted intermediate Records remain
@@ -90,14 +90,14 @@ Implemented:
   `get --name`, without changing Core Build identity or Runtime Closure;
 - `doctor` configuration diagnostics for the current trusted adapters, filesystem streaming Artifact
   transfer and explicit dry-run/apply reachability GC over every retained BuildState and Operation;
-- `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
+- `@narratage/transport`, `@narratage/transport-process`, `@narratage/transport-aws-lambda`: capability-neutral
   invocation seams.
 
 The removed CLI `--pin`, `--target` and `--accept-substitute` path cannot synthesize hidden execution
 intent. Reusable run choices live in a self-described Run Source; Core still has no Pin primitive.
 
 Repository-level dependency tests now enforce an acyclic production graph and prove that the
-declared domain-neutral distribution—including `@svml/local` and `@svml/package-loader-node`—closes
+declared domain-neutral distribution—including `@narratage/local` and `@narratage/package-loader-node`—closes
 without Text, AIGC or video packages. A non-video Greeting Build exercises persistent scheduling,
 an external Need, recovery and final Record assembly through that distribution.
 
@@ -108,19 +108,19 @@ Implemented:
 - provider-neutral generated image/video Product contracts and exact-model shell;
 - author model packages for Seedance, MiniMax H3, Gemini Omni, Grok Imagine, GPT Image,
   Nano Banana and Seedream;
-- `@svml/provider-kie`: upload, recoverable paid submission, checkpointed polling, bounded download
+- `@narratage/provider-kie`: upload, recoverable paid submission, checkpointed polling, bounded download
   and immediate ArtifactStore persistence for sixteen exact model capabilities;
-- `@svml/provider-google-vertex`: display-only Gemini Caption planning;
+- `@narratage/provider-google-vertex`: display-only Gemini Caption planning;
 - provider-neutral all-stream media inspection, attached-picture-safe selection, synchronized A/V
   normalization, audio-program rendering and final mux contracts;
-- `@svml/provider-media-local`: bounded shell-free ffprobe/ffmpeg realization;
+- `@narratage/provider-media-local`: bounded shell-free ffprobe/ffmpeg realization;
 - canonical 48 kHz speech master to content-addressed 16 kHz mono evidence-audio projection;
-- `@svml/provider-whisperx-local` and `services/whisperx`: pinned warm local WhisperX execution;
-- `@svml/provider-hyperframes-local`: finite-frame parallel Chrome rendering with output probe
+- `@narratage/provider-whisperx-local` and `services/whisperx`: pinned warm local WhisperX execution;
+- `@narratage/provider-hyperframes-local`: finite-frame parallel Chrome rendering with output probe
   validation;
-- `@svml/image-transform`: explicit image-plus-Program to image graph component, including the
+- `@narratage/image-transform`: explicit image-plus-Program to image graph component, including the
   extracted Twinit GPT Image YCrCb denoise preset;
-- `@svml/provider-image-opencv-local` and `services/image-opencv`: bounded OpenCV/NumPy execution
+- `@narratage/provider-image-opencv-local` and `services/image-opencv`: bounded OpenCV/NumPy execution
   with a locked Python 3.13 environment that returns only a new content-addressed image Blob;
 - one Scheduler with global and named lane concurrency shared across Builds.
 
@@ -147,7 +147,7 @@ Implemented and executable:
 - deterministic speech estimate, atomic SpeechTake/SpeechBasis and peer VisualTrack/AudioTrack
   projections;
 - authored image/audio Blob references and reusable SVS-backed speech-estimate policies;
-- `@svml/seedance-speaker`: a thin official UGC binding from Script dialogue, explicit image/audio
+- `@narratage/seedance-speaker`: a thin official UGC binding from Script dialogue, explicit image/audio
   references, an inert project SVS Recipe and one explicitly imported PromptKitSpec; the
   self-described `official-ugc-v1.svs` Source Module contains defaults, ordering,
   parameter-to-Prompt mappings and finite reference-count branches, all lowered during author

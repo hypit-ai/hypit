@@ -1,4 +1,4 @@
-import { SvmlError } from "@svml/protocol";
+import { SvmlError } from "@narratage/protocol";
 
 export { SvmlError as CoreError };
 

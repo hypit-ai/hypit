@@ -1,7 +1,7 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { SpeechBasis } from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { SpeechBasis } from "@narratage/contracts";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import {
   speechTakeProducers,
@@ -24,7 +24,7 @@ function speechBasis(value: StoredValue | undefined): SpeechBasis {
 
 /** Pure projections of one atomic SpeechBasis; no Artifact read or external capability is hidden here. */
 export const speechTakeComponent = {
-  name: "@svml/speech-take",
+  name: "@narratage/speech-take",
   producers: [
     {
       producer: speechTakeProducers.projectProgramSpace,

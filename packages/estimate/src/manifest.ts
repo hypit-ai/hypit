@@ -1,21 +1,21 @@
 import {
   contractTypes,
   videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { svsManifest, svsRecipeType } from "@svml/svs";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { svsManifest, svsRecipeType } from "@narratage/svs";
 
 import { estimateSpeechImplementationDigest } from "./program.js";
 
-export const estimateModuleRef = { name: "@svml/estimate", version: "0.0.0-dev" } as const;
+export const estimateModuleRef = { name: "@narratage/estimate", version: "0.0.0-dev" } as const;
 export const estimateTypes = {
   speechPolicy: { module: estimateModuleRef, name: "SpeechEstimatePolicy" },
 } satisfies Record<string, TypeRef>;
 export const estimateProducers = {
   speech: { module: estimateModuleRef, name: "estimate-speech-duration" },
 } satisfies Record<string, ProducerRef>;
-export const estimateSurfaceImplementationDigest = digestOf("@svml/estimate/speech-surface@2");
+export const estimateSurfaceImplementationDigest = digestOf("@narratage/estimate/speech-surface@2");
 
 const number = { kind: "number" } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {
@@ -49,7 +49,7 @@ export const estimateManifest: ModuleManifest = {
     outputs: [estimateTypes.speechPolicy, contractTypes.speechDuration],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/estimate/speech-surface",
+      locator: "@narratage/estimate/speech-surface",
       digest: estimateSurfaceImplementationDigest,
     },
   }],
@@ -63,7 +63,7 @@ export const estimateManifest: ModuleManifest = {
     needs: [],
     implementation: {
       kind: "registered",
-      locator: "@svml/estimate/estimate-speech",
+      locator: "@narratage/estimate/estimate-speech",
       digest: estimateSpeechImplementationDigest,
     },
   }],

@@ -1,4 +1,4 @@
-# `@svml/image-transform`
+# `@narratage/image-transform`
 
 An ordinary graph component with two inputs and one result:
 

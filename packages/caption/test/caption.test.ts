@@ -14,16 +14,16 @@ import {
   sealCaptionTrackProgram,
   temporalizeCaption,
   temporalizeCaptionPlan,
-} from "@svml/caption";
+} from "@narratage/caption";
 import {
   sealAlignedTranscriptEvidence,
   sealProgramSpace,
   sealSpeechBasis,
-} from "@svml/contracts";
-import type { AlignedTranscriptSegment, Narrative, NarrativeSelectionRef, SpeechAudioBasis } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import { narrativeSelectionValue, parseScript } from "@svml/script";
-import { locateSpeechTiming } from "@svml/speech-align";
+} from "@narratage/contracts";
+import type { AlignedTranscriptSegment, Narrative, NarrativeSelectionRef, SpeechAudioBasis } from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import { narrativeSelectionValue, parseScript } from "@narratage/script";
+import { locateSpeechTiming } from "@narratage/speech-align";
 
 test("the component enumerates every Manifest Producer and owned Type validator", () => {
   assert.deepEqual(

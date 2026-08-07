@@ -1,4 +1,4 @@
-# `@svml/speech-take`
+# `@narratage/speech-take`
 
 Reference Product/Projection package for an atomic speech take.
 
@@ -18,5 +18,5 @@ any compatible compute Host without a Driver or Runtime source change. The compo
 Artifact access, queue or credentials.
 
 The package intentionally publishes no Type validators: it does not own any of its input or output
-Types. `@svml/contracts` remains the semantic owner of `SpeechBasis`, `ProgramSpace` and the generic
+Types. `@narratage/contracts` remains the semantic owner of `SpeechBasis`, `ProgramSpace` and the generic
 Track Types and supplies any owner validators required by those contracts.

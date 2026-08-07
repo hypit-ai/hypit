@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ProcessJsonInvoker } from "@svml/transport-process";
+import { ProcessJsonInvoker } from "@narratage/transport-process";
 
 test("process transport uses an absolute executable, no shell and no inherited environment", async () => {
   const script = [

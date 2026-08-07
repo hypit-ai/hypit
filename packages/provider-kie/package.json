@@ -1,5 +1,5 @@
 {
-  "name": "@svml/provider-kie",
+  "name": "@narratage/provider-kie",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,28 +8,28 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/gemini-omni": "workspace:*",
-    "@svml/generation": "workspace:*",
-    "@svml/gpt-image": "workspace:*",
-    "@svml/grok-imagine": "workspace:*",
-    "@svml/minimax-h3": "workspace:*",
-    "@svml/nano-banana": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/runtime-adapter-node": "workspace:*",
-    "@svml/seedance": "workspace:*",
-    "@svml/seedream": "workspace:*"
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/gemini-omni": "workspace:*",
+    "@narratage/generation": "workspace:*",
+    "@narratage/gpt-image": "workspace:*",
+    "@narratage/grok-imagine": "workspace:*",
+    "@narratage/minimax-h3": "workspace:*",
+    "@narratage/nano-banana": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*",
+    "@narratage/seedance": "workspace:*",
+    "@narratage/seedream": "workspace:*"
   },
   "devDependencies": {
-    "@svml/artifact-store-fs": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/core": "workspace:*",
-    "@svml/driver-node": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/local": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/artifact-store-fs": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/local": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

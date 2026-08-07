@@ -17,8 +17,8 @@ provider field, diagnostic field or inspection envelope. The source relationship
 Producer input edge; Core's Derivation binds that input Record to the result Record; Need and
 Receipt bind the external execution.
 
-OpenCV is not part of the authored meaning. `@svml/image-transform` owns the closed transformation
-vocabulary and `@svml/provider-image-opencv-local` is one replaceable execution Endpoint. A future
+OpenCV is not part of the authored meaning. `@narratage/image-transform` owns the closed transformation
+vocabulary and `@narratage/provider-image-opencv-local` is one replaceable execution Endpoint. A future
 Wasm, Sharp, libvips or Lambda Endpoint can fulfill the same exact capability.
 
 ## Author form
@@ -26,7 +26,7 @@ Wasm, Sharp, libvips or Lambda Endpoint can fulfill the same exact capability.
 Declaration and use are separate:
 
 ```xml
-<import as="image" from="@svml/image-transform@1"/>
+<import as="image" from="@narratage/image-transform@1"/>
 
 <image:Program id="clean-gpt-image">
   <image:Denoise
@@ -74,7 +74,7 @@ The developer opts into the local Endpoint in `svml.runtime.json`:
   "runtimePackageLock": "./svml.runtime-packages.lock",
   "endpoints": [
     {
-      "use": "@svml/provider-image-opencv-local",
+      "use": "@narratage/provider-image-opencv-local",
       "instance": "image.opencv.local",
       "config": {
         "pythonExecutable": "./services/image-opencv/.venv/bin/python",

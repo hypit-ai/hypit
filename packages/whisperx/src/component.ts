@@ -1,7 +1,7 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { SpeechEvidenceAudio } from "@svml/contracts";
-import type { CanonicalValue, StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { SpeechEvidenceAudio } from "@narratage/contracts";
+import type { CanonicalValue, StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import {
   normalizeWhisperXAlignment,
@@ -19,7 +19,7 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 }
 
 export const whisperXComponent = {
-  name: "@svml/whisperx",
+  name: "@narratage/whisperx",
   producers: [
     {
       producer: whisperXProducers.request,

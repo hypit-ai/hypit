@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { digestOf, recordDigest, reduce } from "@svml/core";
+import { digestOf, recordDigest, reduce } from "@narratage/core";
 import {
   ProducerRegistry,
   MemoryArtifactStore,
@@ -13,8 +13,8 @@ import {
   loadResolvedClosure,
   parseBuildState,
   serializeBuildState,
-} from "@svml/driver-node";
-import { credentialRef } from "@svml/runtime";
+} from "@narratage/driver-node";
+import { credentialRef } from "@narratage/runtime";
 
 import {
   capabilities,

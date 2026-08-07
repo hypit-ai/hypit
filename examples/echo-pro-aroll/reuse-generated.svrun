@@ -1,4 +1,4 @@
-<?svml using="@svml/run-text@1"?>
+<?svml using="@narratage/run-text@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
 

@@ -13,8 +13,8 @@ import type {
   NarrativeToken,
   NarrativeTurn,
   SemanticAnchor,
-} from "@svml/contracts";
-import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@narratage/protocol";
 
 export type {
   Affinity,
@@ -22,7 +22,7 @@ export type {
   MarkerBoundary,
   Narrative,
   SemanticAnchor,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 
 export type ParsedTextAtom = {
   readonly kind: "text";

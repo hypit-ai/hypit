@@ -1,16 +1,16 @@
 import {
   sealMediaStreamSelection,
   verifyMediaInspection,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   MediaAudioStream,
   MediaInspection,
   MediaStreamSelection,
   MediaVideoStream,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   canonicalize,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import type { MediaSelectionRequest } from "./types.js";
 

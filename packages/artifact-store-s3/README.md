@@ -1,4 +1,4 @@
-# `@svml/artifact-store-s3`
+# `@narratage/artifact-store-s3`
 
 S3 implementation of the environment-neutral Runtime `ArtifactStore` port.
 

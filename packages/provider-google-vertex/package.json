@@ -1,5 +1,5 @@
 {
-  "name": "@svml/provider-google-vertex",
+  "name": "@narratage/provider-google-vertex",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -9,16 +9,16 @@
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@google/genai": "1.52.0",
-    "@svml/caption": "workspace:*",
-    "@svml/caption-gemini": "workspace:*",
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/runtime-adapter-node": "workspace:*"
+    "@narratage/caption": "workspace:*",
+    "@narratage/caption-gemini": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*"
   },
   "devDependencies": {
-    "@svml/driver-node": "workspace:*",
-    "@svml/script": "workspace:*"
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/script": "workspace:*"
   }
 }

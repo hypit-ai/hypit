@@ -1,10 +1,10 @@
-import { digestOf } from "@svml/core";
-import type { ModuleManifest, TypeRef } from "@svml/protocol";
+import { digestOf } from "@narratage/core";
+import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 
-export const svsModuleRef = { name: "@svml/svs", version: "1" } as const;
+export const svsModuleRef = { name: "@narratage/svs", version: "1" } as const;
 export const svsRecipeType = { module: svsModuleRef, name: "Recipe" } satisfies TypeRef;
-export const svsFrontendId = "@svml/svs@1";
-export const svsFrontendImplementationDigest = digestOf("@svml/svs/frontend@1");
+export const svsFrontendId = "@narratage/svs@1";
+export const svsFrontendImplementationDigest = digestOf("@narratage/svs/frontend@1");
 
 export const svsManifest: ModuleManifest = {
   format: "svml.module@1",

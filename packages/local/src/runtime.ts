@@ -3,17 +3,17 @@ import { resolve } from "node:path";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@svml/component-kit";
+} from "@narratage/component-kit";
 import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
-} from "@svml/driver-node";
+} from "@narratage/driver-node";
 import {
   loadNodePackageSet,
   collectNodePackageComponents,
-} from "@svml/package-loader-node";
-import { isDigest } from "@svml/protocol";
+} from "@narratage/package-loader-node";
+import { isDigest } from "@narratage/protocol";
 import {
   LocalBuildScheduler,
   MemoryBuildCatalog,
@@ -24,12 +24,12 @@ import {
   localSchedulerOptionsFromClosure,
   resolveRuntimeProfile,
   sealRuntimeProfile,
-} from "@svml/runtime";
-import { TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/runtime";
+import { TypeValidatorRegistry } from "@narratage/validation";
 import type {
   RuntimeModuleManifest,
   RuntimeProfileInstance,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 
 import { createProjectRuntimeServices } from "./project-services.js";
 import type {
@@ -65,7 +65,7 @@ function nonNegativeInteger(value: number, subject: string): number {
 
 function collectArtifactDigests(
   value: unknown,
-  digests: Set<import("@svml/protocol").Digest>,
+  digests: Set<import("@narratage/protocol").Digest>,
   seen = new WeakSet<object>(),
 ): void {
   if (value === null || typeof value !== "object") return;
@@ -280,14 +280,14 @@ export async function createLocalRuntime(
         "selected ArtifactStore does not expose explicit retention management");
       assert(isEnumerableBuildStore(options.buildStore),
         "selected BuildStore does not expose the maintenance index required for Artifact GC");
-      const reachable = new Set<import("@svml/protocol").Digest>();
+      const reachable = new Set<import("@narratage/protocol").Digest>();
       for (const snapshot of await options.buildStore.list()) collectArtifactDigests(snapshot.state, reachable);
       if (options.operationStore !== undefined) {
         for (const operation of await options.operationStore.list({})) collectArtifactDigests(operation, reachable);
       }
       const stored = await options.artifactStore.list();
       const unreachable = stored.filter((digest) => !reachable.has(digest)).sort();
-      const deleted: import("@svml/protocol").Digest[] = [];
+      const deleted: import("@narratage/protocol").Digest[] = [];
       if (gc.apply === true) {
         for (const digest of unreachable) {
           if (await options.artifactStore.delete(digest)) deleted.push(digest);

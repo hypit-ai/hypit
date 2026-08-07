@@ -9,8 +9,8 @@ The release contains three separate kinds of package:
 
 ```text
 author model module      exact request Type + Capability + Need Producer + Fragment
-@svml/generation         shared generated image/video Product contracts
-@svml/provider-kie       KIE upload, submission, recovery, download and exact bindings
+@narratage/generation         shared generated image/video Product contracts
+@narratage/provider-kie       KIE upload, submission, recovery, download and exact bindings
 ```
 
 An author module says which model and mode is intended. The KIE package says how KIE realizes that

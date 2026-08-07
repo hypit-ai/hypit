@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 import {
   decodeWhisperXAlignmentSurface, whisperXComponent, whisperXImplementationDigests,
   whisperXManifest, whisperXModuleRef,
@@ -6,8 +6,8 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/whisperx",
-  modules: [{ manifest: whisperXManifest, specifiers: ["@svml/whisperx", "@svml/whisperx@1"] }],
+  name: "@narratage/whisperx",
+  modules: [{ manifest: whisperXManifest, specifiers: ["@narratage/whisperx", "@narratage/whisperx@1"] }],
   components: [whisperXComponent],
   hostFacets: [createTextSurfaceHostFacet({
     module: whisperXModuleRef, surface: "alignment", mode: "structured",

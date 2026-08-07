@@ -1,4 +1,4 @@
-import { createRuntimeFromConfig } from "@svml/local";
+import { createRuntimeFromConfig } from "@narratage/local";
 
 /**
  * Video CLI assembly adds no privileged Provider registry. The Runtime Profile selects

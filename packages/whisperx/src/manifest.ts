@@ -2,13 +2,13 @@ import {
   alignedTranscriptEvidenceFields,
   contractTypes,
   videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { mediaPipelineManifest, mediaPipelineModuleRef } from "@svml/media-pipeline";
-import { speechAlignManifest, speechAlignModuleRef } from "@svml/speech-align";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
+import { speechAlignManifest, speechAlignModuleRef } from "@narratage/speech-align";
 
-export const whisperXModuleRef = { name: "@svml/whisperx", version: "0.0.0-dev" } as const;
+export const whisperXModuleRef = { name: "@narratage/whisperx", version: "0.0.0-dev" } as const;
 export const whisperXTypes = {
   alignmentEvidence: { module: whisperXModuleRef, name: "WhisperXAlignmentEvidence" },
 } satisfies Record<string, TypeRef>;
@@ -20,9 +20,9 @@ export const whisperXProducers = {
   normalize: { module: whisperXModuleRef, name: "normalize-whisperx-alignment" },
 } satisfies Record<string, ProducerRef>;
 export const whisperXImplementationDigests = {
-  request: digestOf("@svml/whisperx/request@2"),
-  normalize: digestOf("@svml/whisperx/normalize@2"),
-  surface: digestOf("@svml/whisperx/alignment-surface@1"),
+  request: digestOf("@narratage/whisperx/request@2"),
+  normalize: digestOf("@narratage/whisperx/normalize@2"),
+  surface: digestOf("@narratage/whisperx/alignment-surface@1"),
 };
 
 const { contract: _commonContract, ...sharedEvidenceFields } =
@@ -57,7 +57,7 @@ export const whisperXManifest: ModuleManifest = {
     outputs: [whisperXTypes.alignmentEvidence, contractTypes.alignedTranscriptEvidence, contractTypes.completeSemanticMap],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/whisperx/alignment-surface",
+      locator: "@narratage/whisperx/alignment-surface",
       digest: whisperXImplementationDigests.surface,
     },
   }],
@@ -73,7 +73,7 @@ export const whisperXManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/whisperx/request",
+        locator: "@narratage/whisperx/request",
         digest: whisperXImplementationDigests.request,
       },
     },
@@ -84,7 +84,7 @@ export const whisperXManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/whisperx/normalize",
+        locator: "@narratage/whisperx/normalize",
         digest: whisperXImplementationDigests.normalize,
       },
     },

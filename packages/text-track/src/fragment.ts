@@ -1,5 +1,5 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
 
 import { textTrackProducers, textTrackTypes } from "./manifest.js";
 
@@ -8,7 +8,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** Provider-free official lowering from TextTrackProgram to one peer VisualTrack. */
 export const textTrackFragment = sealGraphFragment({
-  name: "@svml/text-track/render@1",
+  name: "@narratage/text-track/render@1",
   inputs: [
     { name: "space", type: contractTypes.programSpace },
     { name: "program", type: textTrackTypes.program },

@@ -1,4 +1,4 @@
-# `@svml/endpoint-kit`
+# `@narratage/endpoint-kit`
 
 Host-neutral SDK for exact external capability endpoints.
 
@@ -7,7 +7,7 @@ process, Lambda function, human service or device. `defineEndpointPackage()` pro
 Runtime Manifest, configured instance, exact bindings and installation facet from one source of
 truth. It depends on no Driver, Node filesystem, queue or domain package.
 
-Concrete distributions may still be named after a real provider, such as `@svml/provider-kie`.
+Concrete distributions may still be named after a real provider, such as `@narratage/provider-kie`.
 Local WhisperX and HyperFrames use the same Endpoint contract without pretending to be vendors.
 Endpoint packages are trusted Host configuration and are never activated by author imports.
 

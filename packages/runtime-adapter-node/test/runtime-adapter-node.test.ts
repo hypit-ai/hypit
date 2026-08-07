@@ -7,7 +7,7 @@ import test from "node:test";
 import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
-} from "@svml/runtime-adapter-node";
+} from "@narratage/runtime-adapter-node";
 
 test("configured executable paths are rooted at the Runtime Profile project", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-runtime-adapter-node-"));

@@ -1,4 +1,4 @@
-# `@svml/text-track`
+# `@narratage/text-track`
 
 Official provider-free Text overlay package. It owns a typed `TextTrackProgram` and lowers every
 item into an independently timed and stacked Present in the public VisualTrack contract.

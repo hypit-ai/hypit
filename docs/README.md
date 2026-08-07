@@ -1,6 +1,6 @@
 # Documentation
 
-SVML documentation is intentionally split by authority. Git history preserves discarded designs;
+Narratage documentation is intentionally split by authority. Git history preserves discarded designs;
 the working tree contains only documents that should inform current implementation or public use.
 
 ## Start here

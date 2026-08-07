@@ -1,4 +1,4 @@
-import type { CanonicalValue } from "@svml/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 
 /** One canonical JSON exchange; it owns no capability routing or operation semantics. */
 export interface JsonInvoker {

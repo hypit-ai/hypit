@@ -1,18 +1,18 @@
-import { artifactDependency, artifactTypes } from "@svml/artifact";
+import { artifactDependency, artifactTypes } from "@narratage/artifact";
 import {
   contractTypes,
   videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
   TypeRef,
   ValueSchema,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
-export const mediaPipelineModuleRef = { name: "@svml/media-pipeline", version: "0.0.0-dev" } as const;
+export const mediaPipelineModuleRef = { name: "@narratage/media-pipeline", version: "0.0.0-dev" } as const;
 export const mediaPipelineTypes = {
   selectionRequest: { module: mediaPipelineModuleRef, name: "MediaSelectionRequest" },
   audioProgramPlan: { module: mediaPipelineModuleRef, name: "AudioProgramPlan" },
@@ -35,16 +35,16 @@ export const mediaPipelineProducers = {
   projectMuxed: { module: mediaPipelineModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
 export const mediaPipelineImplementationDigests = {
-  inspect: digestOf("@svml/media-pipeline/request-media-inspection@1"),
-  select: digestOf("@svml/media-pipeline/select-media-streams@1"),
-  normalize: digestOf("@svml/media-pipeline/request-media-normalization@1"),
-  projectSpeechEvidenceAudio: digestOf("@svml/media-pipeline/request-speech-evidence-audio@1"),
-  requestValidator: digestOf("@svml/media-pipeline/validate-selection-request@1"),
-  planAudio: digestOf("@svml/media-pipeline/compile-audio-program@1"),
-  renderAudio: digestOf("@svml/media-pipeline/request-audio-render@1"),
-  mux: digestOf("@svml/media-pipeline/request-media-mux@1"),
-  projectMuxed: digestOf("@svml/media-pipeline/project-muxed-media@1"),
-  audioPlanValidator: digestOf("@svml/media-pipeline/validate-audio-program-plan@1"),
+  inspect: digestOf("@narratage/media-pipeline/request-media-inspection@1"),
+  select: digestOf("@narratage/media-pipeline/select-media-streams@1"),
+  normalize: digestOf("@narratage/media-pipeline/request-media-normalization@1"),
+  projectSpeechEvidenceAudio: digestOf("@narratage/media-pipeline/request-speech-evidence-audio@1"),
+  requestValidator: digestOf("@narratage/media-pipeline/validate-selection-request@1"),
+  planAudio: digestOf("@narratage/media-pipeline/compile-audio-program@1"),
+  renderAudio: digestOf("@narratage/media-pipeline/request-audio-render@1"),
+  mux: digestOf("@narratage/media-pipeline/request-media-mux@1"),
+  projectMuxed: digestOf("@narratage/media-pipeline/project-muxed-media@1"),
+  audioPlanValidator: digestOf("@narratage/media-pipeline/validate-audio-program-plan@1"),
 } as const;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
@@ -144,7 +144,7 @@ export const mediaPipelineManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media-pipeline/validate-selection-request",
+          locator: "@narratage/media-pipeline/validate-selection-request",
           digest: mediaPipelineImplementationDigests.requestValidator,
         },
       },
@@ -156,7 +156,7 @@ export const mediaPipelineManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media-pipeline/validate-audio-program-plan",
+          locator: "@narratage/media-pipeline/validate-audio-program-plan",
           digest: mediaPipelineImplementationDigests.audioPlanValidator,
         },
       },
@@ -182,7 +182,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-media-inspection",
+        locator: "@narratage/media-pipeline/request-media-inspection",
         digest: mediaPipelineImplementationDigests.inspect,
       },
     },
@@ -199,7 +199,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/select-media-streams",
+        locator: "@narratage/media-pipeline/select-media-streams",
         digest: mediaPipelineImplementationDigests.select,
       },
     },
@@ -219,7 +219,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-media-normalization",
+        locator: "@narratage/media-pipeline/request-media-normalization",
         digest: mediaPipelineImplementationDigests.normalize,
       },
     },
@@ -234,7 +234,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-speech-evidence-audio",
+        locator: "@narratage/media-pipeline/request-speech-evidence-audio",
         digest: mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
       },
     },
@@ -248,7 +248,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/compile-audio-program",
+        locator: "@narratage/media-pipeline/compile-audio-program",
         digest: mediaPipelineImplementationDigests.planAudio,
       },
     },
@@ -263,7 +263,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-audio-render",
+        locator: "@narratage/media-pipeline/request-audio-render",
         digest: mediaPipelineImplementationDigests.renderAudio,
       },
     },
@@ -281,7 +281,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-media-mux",
+        locator: "@narratage/media-pipeline/request-media-mux",
         digest: mediaPipelineImplementationDigests.mux,
       },
     },
@@ -292,7 +292,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/project-muxed-media",
+        locator: "@narratage/media-pipeline/project-muxed-media",
         digest: mediaPipelineImplementationDigests.projectMuxed,
       },
     },

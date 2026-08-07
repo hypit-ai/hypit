@@ -1,5 +1,5 @@
-import type { HYPERFRAMES_VISUAL_IR_V1 } from "@svml/contracts";
-import type { BlobRef, Digest } from "@svml/protocol";
+import type { HYPERFRAMES_VISUAL_IR_V1 } from "@narratage/contracts";
+import type { BlobRef, Digest } from "@narratage/protocol";
 
 export type HyperframesFrameDomain = {
   readonly frameRate: {

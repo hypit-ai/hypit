@@ -1,7 +1,7 @@
 import type {
   NarrativeExcerpt,
   SynchronizedMedia,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 
 /** Author-owned policy for one ordered Speech Spine. */
 export type SpeechSpineProgram = {

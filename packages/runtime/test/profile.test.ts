@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/core";
+import { digestOf } from "@narratage/core";
 import {
   RuntimeModuleRegistry,
   localSchedulerOptionsFromClosure,
@@ -10,8 +10,8 @@ import {
   verifyRuntimeClosure,
   verifyRuntimeCoverage,
   verifyRuntimeProfile,
-} from "@svml/runtime";
-import type { RuntimeModuleManifest } from "@svml/runtime";
+} from "@narratage/runtime";
+import type { RuntimeModuleManifest } from "@narratage/runtime";
 
 import {
   capabilities,

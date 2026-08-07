@@ -5,20 +5,20 @@ import type {
   ProducerRef,
   TypeRef,
   CapabilityRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import type {
   ProducerHandler,
-} from "@svml/component-kit";
-import type { EndpointRegistrationOptions, EndpointScheduling, ImmediateEndpointHandler, RecoverableEndpoint } from "@svml/endpoint-kit";
+} from "@narratage/component-kit";
+import type { EndpointRegistrationOptions, EndpointScheduling, ImmediateEndpointHandler, RecoverableEndpoint } from "@narratage/endpoint-kit";
 
-export type { ArtifactStore } from "@svml/runtime";
+export type { ArtifactStore } from "@narratage/runtime";
 
 export type {
   ProducerHandler,
   ProducerHandlerContext,
   ProducerHandlerResult,
   ProducerRegistrar,
-} from "@svml/component-kit";
+} from "@narratage/component-kit";
 
 export type DriverJournalEntry = {
   readonly command: string;

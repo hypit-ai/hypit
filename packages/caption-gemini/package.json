@@ -1,5 +1,5 @@
 {
-  "name": "@svml/caption-gemini",
+  "name": "@narratage/caption-gemini",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,14 +8,14 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/caption": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/caption": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   },
   "devDependencies": {
-    "@svml/script": "workspace:*"
+    "@narratage/script": "workspace:*"
   }
 }

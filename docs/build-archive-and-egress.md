@@ -103,19 +103,19 @@ attempt instead of submitting it again.
 Building without any destination path still archives the complete demanded execution:
 
 ```bash
-svml build production.svrun --runtime svml.runtime.json --follow
+narratage build production.svrun --runtime svml.runtime.json --follow
 ```
 
 The command returns a Build identity. A separate Host read can inspect or materialize any accepted
 Record:
 
 ```bash
-svml inspect <build-id> --runtime svml.runtime.json
-svml builds --runtime svml.runtime.json
-svml get <build-id> --name final.video --runtime svml.runtime.json
-svml get <build-id> --record <record-id> --runtime svml.runtime.json
-svml get <build-id> --record <record-id> --runtime svml.runtime.json --to ./final.mp4
-svml get <build-id> --artifact <digest> --runtime svml.runtime.json --to ./whisperx-raw.json
+narratage inspect <build-id> --runtime svml.runtime.json
+narratage builds --runtime svml.runtime.json
+narratage get <build-id> --name final.video --runtime svml.runtime.json
+narratage get <build-id> --record <record-id> --runtime svml.runtime.json
+narratage get <build-id> --record <record-id> --runtime svml.runtime.json --to ./final.mp4
+narratage get <build-id> --artifact <digest> --runtime svml.runtime.json --to ./whisperx-raw.json
 ```
 
 `get --to` copies or downloads already archived bytes. For an inline structured Record it writes a
@@ -163,8 +163,8 @@ policy. They are not Core transitions and are never inferred from whether a user
 human-readable path. The reference local Runtime now exposes explicit reachability maintenance:
 
 ```bash
-svml gc ./svml.runtime.json          # dry-run
-svml gc ./svml.runtime.json --apply  # delete reported unreachable objects
+narratage gc ./svml.runtime.json          # dry-run
+narratage gc ./svml.runtime.json --apply  # delete reported unreachable objects
 ```
 
 Every retained BuildState and Operation is a root. The command therefore collects only orphan

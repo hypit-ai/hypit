@@ -3,14 +3,14 @@ import {
   assertNarrativeSelectionIdentity,
   selectionFrameSpans,
   verifySynchronizedMedia,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   CompleteSemanticMap,
   NarrativeSelectionRef,
   ProgramSpace,
   SynchronizedMedia,
-} from "@svml/contracts";
-import { canonicalize, digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import { canonicalize, digestOf } from "@narratage/protocol";
 
 import { sealBrollProgram } from "./program.js";
 import type {
@@ -20,9 +20,9 @@ import type {
   BrollTrackSpec,
 } from "./types.js";
 
-export const createBrollSetImplementationDigest = digestOf("@svml/broll/create-set@1");
-export const appendBrollItemImplementationDigest = digestOf("@svml/broll/append-item@1");
-export const finalizeBrollProgramImplementationDigest = digestOf("@svml/broll/finalize-program@1");
+export const createBrollSetImplementationDigest = digestOf("@narratage/broll/create-set@1");
+export const appendBrollItemImplementationDigest = digestOf("@narratage/broll/append-item@1");
+export const finalizeBrollProgramImplementationDigest = digestOf("@narratage/broll/finalize-program@1");
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

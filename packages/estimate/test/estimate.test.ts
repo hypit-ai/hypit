@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { NarrativeSpeechExcerpt } from "@svml/contracts";
+import type { NarrativeSpeechExcerpt } from "@narratage/contracts";
 import {
   countSpeechEstimateUnits,
   estimateSpeechDuration,
   sealSpeechEstimatePolicy,
   speechEstimatePolicyFromRecipe,
-} from "@svml/estimate";
+} from "@narratage/estimate";
 
 function excerpt(id: string, speech: string): NarrativeSpeechExcerpt {
   return {

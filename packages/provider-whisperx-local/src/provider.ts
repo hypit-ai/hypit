@@ -2,27 +2,27 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { AlignedTranscriptSegment, SpeechBasisSegment } from "@svml/contracts";
-import type { EndpointInvocationContext, EndpointFulfillment } from "@svml/endpoint-kit";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { CanonicalValue } from "@svml/protocol";
-import { defineEndpointPackage } from "@svml/endpoint-kit";
+import type { AlignedTranscriptSegment, SpeechBasisSegment } from "@narratage/contracts";
+import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import {
   sealWhisperXAlignmentEvidence,
   whisperXCapabilities,
   whisperXTypes,
-} from "@svml/whisperx";
+} from "@narratage/whisperx";
 import type {
   WhisperXAlignmentEvidence,
   WhisperXAlignmentRequest,
-} from "@svml/whisperx";
+} from "@narratage/whisperx";
 
 export const localWhisperXProviderModuleRef = {
-  name: "@svml/provider-whisperx-local",
+  name: "@narratage/provider-whisperx-local",
   version: "0.0.0-dev",
 } as const;
 export const localWhisperXProviderImplementationDigest = digestOf(
-  "@svml/provider-whisperx-local/svml-sidecar@4",
+  "@narratage/provider-whisperx-local/svml-sidecar@4",
 );
 export const localWhisperXPunktTabDigest =
   "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106";
@@ -260,7 +260,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     instance: config.instance ?? "whisperx.local",
     ...(config.lane === undefined ? {} : { lane: config.lane }),
     implementation: {
-      locator: "@svml/provider-whisperx-local/svml-sidecar",
+      locator: "@narratage/provider-whisperx-local/svml-sidecar",
       digest: localWhisperXProviderImplementationDigest,
     },
     permissions: ["filesystem:whisperx-staging", "network:whisperx-loopback"],

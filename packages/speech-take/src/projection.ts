@@ -3,7 +3,7 @@ import {
   programSpaceFrameCount,
   sealAudioTrack,
   sealVisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   AudioTrack,
   ProgramSpace,
@@ -11,23 +11,23 @@ import type {
   SpeechBasis,
   VisualElement,
   VisualTrack,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
 
 export const projectSpeechAudioImplementationDigest = digestOf(
-  "@svml/speech-take/project-audio@1",
+  "@narratage/speech-take/project-audio@1",
 );
 
 export const projectSpeechVisualImplementationDigest = digestOf(
-  "@svml/speech-take/project-visual@2",
+  "@narratage/speech-take/project-visual@2",
 );
 
 export const projectSpeechAudioTrackImplementationDigest = digestOf(
-  "@svml/speech-take/project-audio-track@1",
+  "@narratage/speech-take/project-audio-track@1",
 );
 
 export const projectSpeechProgramSpaceImplementationDigest = digestOf(
-  "@svml/speech-take/project-program-space@1",
+  "@narratage/speech-take/project-program-space@1",
 );
 
 export function projectSpeechProgramSpace(basis: SpeechBasis): ProgramSpace {

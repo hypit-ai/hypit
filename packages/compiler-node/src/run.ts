@@ -1,12 +1,12 @@
-import type { Workspace, WorkspaceSession } from "@svml/host";
+import type { Workspace, WorkspaceSession } from "@narratage/host";
 import {
   sealBuildRequest,
   sealCompiledGraph,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   ArtifactAttachment,
-} from "@svml/host";
+} from "@narratage/host";
 import type {
   BuildPlan,
   BuildRequest,
@@ -14,21 +14,21 @@ import type {
   BuildState as ArchivedBuildState,
   Digest,
   StoredValue,
-} from "@svml/protocol";
-import { resolveRealization } from "@svml/realization";
+} from "@narratage/protocol";
+import { resolveRealization } from "@narratage/realization";
 import {
   collectRunModuleRequests,
   compileRunSource,
   resolveRunDocument,
-} from "@svml/run";
+} from "@narratage/run";
 import type {
   RunCompilation,
   RunFragmentRegistryLike,
   RunFrontendRegistryLike,
   RunSourceUnit,
-} from "@svml/run";
-import type { LinkedProgram } from "@svml/protocol";
-import { NodeFilesystemWorkspace } from "@svml/workspace-fs-node";
+} from "@narratage/run";
+import type { LinkedProgram } from "@narratage/protocol";
+import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 import { resolve } from "node:path";
 
 import type { NodeCompiledSourceClosure } from "./compiler.js";

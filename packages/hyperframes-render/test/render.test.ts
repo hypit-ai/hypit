@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@svml/component-kit";
+} from "@narratage/component-kit";
 import {
   compositionContractsComponent,
   contractTypes,
@@ -15,7 +15,7 @@ import {
   sealTimelineAudio,
   videoContractDependencies,
   videoContractManifests,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -25,26 +25,26 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   ProducerRegistry,
   NodeDriver,
   EndpointRegistry,
-} from "@svml/driver-node";
+} from "@narratage/driver-node";
 import {
   AuthorFrontendRegistry,
   bindAuthorFragment,
   compileSourceClosure,
   elaborateGraphFragment,
   resolveCompiledSourceExport,
-} from "@svml/elaborator";
-import type { AuthorSourceUnit } from "@svml/elaborator";
+} from "@narratage/elaborator";
+import type { AuthorSourceUnit } from "@narratage/elaborator";
 import {
   compileHyperframesDocument,
   hyperframesComponent,
   hyperframesManifest,
   hyperframesProducers,
-} from "@svml/hyperframes";
+} from "@narratage/hyperframes";
 import {
   decodeHyperframesRenderSurface,
   hyperframesRenderCapabilities,
@@ -55,7 +55,7 @@ import {
   hyperframesRenderProducers,
   hyperframesVisualRequest,
   hyperframesRenderSurfaceImplementationDigest,
-} from "@svml/hyperframes-render";
+} from "@narratage/hyperframes-render";
 import {
   compileAudioProgramPlan,
   mediaPipelineComponent,
@@ -63,22 +63,22 @@ import {
   mediaPipelineCapabilities,
   mediaPipelineManifest,
   mediaPipelineProducers,
-} from "@svml/media-pipeline";
+} from "@narratage/media-pipeline";
 import {
   admitRecord,
   createRecordAdmitter,
   TypeValidatorRegistry,
-} from "@svml/validation";
+} from "@narratage/validation";
 import type {
   CanonicalValue,
   ModuleManifest,
   StoredValue,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   createTextAuthorFrontend,
   TextSurfaceRegistry,
-} from "@svml/text";
+} from "@narratage/text";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",
@@ -389,7 +389,7 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@svml/text@1"?>\n${text}`,
+    text: `<?svml using="@narratage/text@1"?>\n${text}`,
   };
 }
 
@@ -420,7 +420,7 @@ test("the official render Surface lowers real author source to the same BuildPla
   frontends.register(createTextAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      return request.from.startsWith("@svml/hyperframes-render")
+      return request.from.startsWith("@narratage/hyperframes-render")
         ? hyperframesRenderModuleRef
         : fixtureModule;
     },
@@ -428,7 +428,7 @@ test("the official render Surface lowers real author source to the same BuildPla
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import as="fixture" from="example.composition-fixture@1"/>
-      <import as="render" from="@svml/hyperframes-render@1"/>
+      <import as="render" from="@narratage/hyperframes-render@1"/>
       <fixture:Composition/>
       <render:Video id="final" composition={composition} space={space}/>
     </svml>`),

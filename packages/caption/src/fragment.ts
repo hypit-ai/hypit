@@ -1,5 +1,5 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
 
 import { captionProducers, captionTypes } from "./manifest.js";
 
@@ -8,7 +8,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 /** Provider-free Caption base: authored display text + measured map -> peer VisualTrack. */
 export const captionTrackSurfaceFragment = sealGraphFragment({
-  name: "@svml/caption/track-surface@1",
+  name: "@narratage/caption/track-surface@1",
   inputs: [
     { name: "narrative", type: contractTypes.narrative },
     { name: "map", type: contractTypes.completeSemanticMap },
@@ -40,7 +40,7 @@ export const captionTrackSurfaceFragment = sealGraphFragment({
 
 /** Planner-neutral Cue/field facts join the independent measured map only at Caption lowering. */
 export const plannedCaptionTrackSurfaceFragment = sealGraphFragment({
-  name: "@svml/caption/planned-track-surface@2",
+  name: "@narratage/caption/planned-track-surface@2",
   inputs: [
     { name: "narrative", type: contractTypes.narrative },
     { name: "map", type: contractTypes.completeSemanticMap },

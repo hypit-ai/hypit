@@ -4,8 +4,8 @@ import test from "node:test";
 import {
   S3ArtifactStore,
   createS3ArtifactStorePackage,
-} from "@svml/artifact-store-s3";
-import type { S3ObjectClient } from "@svml/artifact-store-s3";
+} from "@narratage/artifact-store-s3";
+import type { S3ObjectClient } from "@narratage/artifact-store-s3";
 
 class FakeS3 implements S3ObjectClient {
   readonly values = new Map<string, Uint8Array>();

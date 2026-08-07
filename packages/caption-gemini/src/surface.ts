@@ -1,10 +1,10 @@
-import { captionTypes } from "@svml/caption";
-import { contractTypes } from "@svml/contracts";
+import { captionTypes } from "@narratage/caption";
+import { contractTypes } from "@narratage/contracts";
 import type {
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { captionGeminiPlanningFragment } from "./fragment.js";
 import { captionGeminiTypes } from "./manifest.js";

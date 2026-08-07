@@ -1,6 +1,6 @@
-import { contractTypes } from "@svml/contracts";
-import { captionTypes } from "@svml/caption";
-import { sealGraphFragment } from "@svml/elaborator";
+import { contractTypes } from "@narratage/contracts";
+import { captionTypes } from "@narratage/caption";
+import { sealGraphFragment } from "@narratage/elaborator";
 
 import { captionGeminiProducers, captionGeminiTypes } from "./manifest.js";
 
@@ -8,7 +8,7 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const captionGeminiPlanningFragment = sealGraphFragment({
-  name: "@svml/caption-gemini/planning@1",
+  name: "@narratage/caption-gemini/planning@1",
   inputs: [
     { name: "narrative", type: contractTypes.narrative },
     { name: "captionProgram", type: captionTypes.program },

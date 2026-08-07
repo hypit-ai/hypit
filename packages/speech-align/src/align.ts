@@ -1,4 +1,4 @@
-import type { AlignmentGroup, AlignmentRelation, NarrativeToken, SpeechWordEvidence } from "@svml/contracts";
+import type { AlignmentGroup, AlignmentRelation, NarrativeToken, SpeechWordEvidence } from "@narratage/contracts";
 
 import { editDistance, normalizeForAlignment } from "./normalize.js";
 

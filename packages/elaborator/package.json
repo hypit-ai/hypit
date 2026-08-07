@@ -1,5 +1,5 @@
 {
-  "name": "@svml/elaborator",
+  "name": "@narratage/elaborator",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,12 +7,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/source": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/source": "workspace:*"
   },
   "devDependencies": {
-    "@svml/contracts": "workspace:*",
-    "@svml/speech-take": "workspace:*"
+    "@narratage/contracts": "workspace:*",
+    "@narratage/speech-take": "workspace:*"
   }
 }

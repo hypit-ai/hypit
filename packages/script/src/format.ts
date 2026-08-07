@@ -1,4 +1,4 @@
-import { digestOf } from "@svml/core";
+import { digestOf } from "@narratage/core";
 
 import { ScriptSyntaxError } from "./error.js";
 import { narrativeValue } from "./narrative.js";

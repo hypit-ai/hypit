@@ -1,13 +1,13 @@
-import { contractTypes } from "@svml/contracts";
-import type { CanonicalValue } from "@svml/protocol";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
+import { contractTypes } from "@narratage/contracts";
+import type { CanonicalValue } from "@narratage/protocol";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { speechEstimateFragment } from "./fragment.js";
 import { estimateTypes } from "./manifest.js";

@@ -1,9 +1,9 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import type { FragmentOperation } from "@svml/elaborator";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@svml/text";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import type { FragmentOperation } from "@narratage/elaborator";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
 
 import { textTrackProducers, textTrackTypes } from "./manifest.js";
 import { sealTextItemSpec, sealTextTrackHeader } from "./program.js";
@@ -56,7 +56,7 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
   const semanticInputs = ["space", "header", ...(selected.length === 0 ? [] : ["map"]),
     ...items.flatMap((item) => [item.specName, ...(item.selectionName === undefined ? [] : [item.selectionName])])];
   return sealGraphFragment({
-    name: `@svml/text-track/surface/${id}@2`,
+    name: `@narratage/text-track/surface/${id}@2`,
     inputs: [
       { name: "space", type: contractTypes.programSpace },
       { name: "header", type: textTrackTypes.header },

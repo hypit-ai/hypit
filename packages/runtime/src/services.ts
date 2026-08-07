@@ -1,5 +1,5 @@
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
-import type { CanonicalValue, Digest, ModuleRef } from "@svml/protocol";
+import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
+import type { CanonicalValue, Digest, ModuleRef } from "@narratage/protocol";
 
 import type { CredentialStore } from "./credentials.js";
 import type { OperationStore } from "./operations.js";
