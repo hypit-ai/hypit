@@ -11,6 +11,7 @@ import { goodBetterBestMedia, resolveDemoMedia } from "./demo-media";
 import { demoPointerIsInside } from "./demo-pointer";
 import { wordAtTime } from "./demo-word-timing";
 import { useSourcePanelInteraction } from "./source-panel-interaction";
+import { useData } from "vitepress";
 import {
   semanticVideoDemos,
   type DemoId,
@@ -29,6 +30,8 @@ const props = withDefaults(defineProps<{ demo: DemoId; active?: boolean; showHea
   showHeading: true,
 });
 const emit = defineEmits<{ ended: [] }>();
+const { lang } = useData();
+const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
 const config = semanticVideoDemos[props.demo];
 const sourceLines = config.lines;
 const sceneSelections = config.selections.filter((selection) => selection.layer === "scene");
@@ -598,9 +601,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="svml-demo semantic-video-demo" aria-label="SVML 交互式实时渲染预览">
+  <section class="svml-demo semantic-video-demo" :aria-label="isChinese ? 'SVML 交互式实时渲染预览' : 'Interactive SVML live-render preview'">
     <header v-if="props.showHeading" class="demo-heading">
-      <h2><span class="hover-interaction-copy">悬停标记范围，查看对应画面</span><span class="touch-interaction-copy">点击标记范围，查看对应画面</span></h2>
+      <h2><span class="hover-interaction-copy">{{ isChinese ? "悬停标记范围，查看对应画面" : "Hover a marked range to see the corresponding frame" }}</span><span class="touch-interaction-copy">{{ isChinese ? "点击标记范围，查看对应画面" : "Tap a marked range to see the corresponding frame" }}</span></h2>
     </header>
 
     <div class="demo-shell real-demo-shell">
@@ -626,9 +629,13 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="source-follow-hint">
-          {{ sourceUsesHover
-            ? (sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图")
-            : (sourceFollowEnabled ? "点击代码查看所有源码" : "点击空白处返回精简视图") }}
+          {{ isChinese
+            ? (sourceUsesHover
+              ? (sourceFollowEnabled ? "移入查看所有源码" : "移出查看精简视图")
+              : (sourceFollowEnabled ? "点击代码查看所有源码" : "点击空白处返回精简视图"))
+            : (sourceUsesHover
+              ? (sourceFollowEnabled ? "Move in to view all source" : "Move out for the compact view")
+              : (sourceFollowEnabled ? "Tap the code to view all source" : "Tap outside for the compact view")) }}
         </div>
         <div ref="codeScrollElement" class="code-scroll" aria-label="SVML source code" @scroll="updateRangeGeometry">
           <svg
