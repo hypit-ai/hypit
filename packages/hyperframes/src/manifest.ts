@@ -2,13 +2,13 @@ import {
   contractTypes,
   HYPERFRAMES_VISUAL_IR_V1,
   videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 import { compileHyperframesImplementationDigest } from "./document.js";
 
-export const hyperframesModuleRef = { name: "@svml/hyperframes", version: "0.0.0-dev" } as const;
+export const hyperframesModuleRef = { name: "@narratage/hyperframes", version: "0.0.0-dev" } as const;
 export const hyperframesTypes = {
   document: { module: hyperframesModuleRef, name: "HyperframesDocument" },
 } satisfies Record<string, TypeRef>;
@@ -70,7 +70,7 @@ export const hyperframesManifest: ModuleManifest = {
     needs: [],
     implementation: {
       kind: "registered",
-      locator: "@svml/hyperframes/compile",
+      locator: "@narratage/hyperframes/compile",
       digest: compileHyperframesImplementationDigest,
     },
   }],

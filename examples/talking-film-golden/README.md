@@ -27,10 +27,10 @@ different model family.
 Prompt declarations, media declarations and `.svs` recipes appear before their uses. The Script
 remains prose-first and contains no generation, styling or Track configuration.
 
-The outer namespaced `.svml` tags do not each require a custom parser. `@svml/text` reads them with
+The outer namespaced `.svml` tags do not each require a custom parser. `@narratage/text` reads them with
 one generic structured parser and validates them against the imported package Manifest; the owning
 package supplies its schema and lowerer. Only the prose-first Script body needs the imported raw
-Script Surface, while the CSS-like `.svs` source deliberately uses the separate `@svml/svs`
+Script Surface, while the CSS-like `.svs` source deliberately uses the separate `@narratage/svs`
 Frontend named by `using`.
 
 ## Author data flow
@@ -66,21 +66,21 @@ Candidates and Operations.
 
 | Author syntax | Owning package | Lowered meaning | Repository state |
 |---|---|---|---|
-| `<script>` | `@svml/script` | authored `Narrative` and projections | implemented |
-| `media:Image` | `@svml/media` | content-addressed authored Artifact | implemented |
-| `seedance:Prompt` | `@svml/seedance` | package-private immutable direction value | implemented |
-| `seedance:Speech model="mini"` | `@svml/seedance` | explicit Seedance Mini Need plus primary-video projection | implemented; explicit duration remains authored until Speech scheduling exists |
-| `speech:Spine` | `@svml/speech` | ordered clips -> normalized Takes, one `SpeechBasis`, then ordinary projections | Surface, fold, media normalization and projection components implemented |
-| `whisperx:Alignment` | `@svml/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@svml/speech-align` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
-| `seedance:Video model="mini"` | `@svml/seedance` | explicit Seedance Mini video Need plus primary-video projection | implemented |
-| `broll:Track` | `@svml/broll` | semantic windows + normalized media + recipe -> peer Visual/Audio Tracks | Surface and deterministic lowering implemented |
-| `caption:Style` / `caption:Program` | `@svml/caption` | default total Style + ordered whole-Style replacement by Role or Selection | implemented |
-| `caption-ai:Planner` | `@svml/caption-gemini` | immutable display atoms + per-run requirements -> cue cuts and per-atom fields | implemented; Google Vertex Endpoint implemented separately |
-| `caption:Track` | `@svml/caption` | CaptionPlan + independent SemanticMap + complete Styles -> VisualTrack | implemented |
-| `text:Track` | `@svml/text-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
-| `film:Film` | `@svml/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
-| `render:Video` | `@svml/hyperframes-render` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
-| `studio.svs` | `@svml/svs` | generic immutable Recipe Records; consuming packages validate and lower them | parser, imports and current package consumers implemented; exact font assets remain |
+| `<script>` | `@narratage/script` | authored `Narrative` and projections | implemented |
+| `media:Image` | `@narratage/media` | content-addressed authored Artifact | implemented |
+| `seedance:Prompt` | `@narratage/seedance` | package-private immutable direction value | implemented |
+| `seedance:Speech model="mini"` | `@narratage/seedance` | explicit Seedance Mini Need plus primary-video projection | implemented; explicit duration remains authored until Speech scheduling exists |
+| `speech:Spine` | `@narratage/speech` | ordered clips -> normalized Takes, one `SpeechBasis`, then ordinary projections | Surface, fold, media normalization and projection components implemented |
+| `whisperx:Alignment` | `@narratage/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@narratage/speech-align` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
+| `seedance:Video model="mini"` | `@narratage/seedance` | explicit Seedance Mini video Need plus primary-video projection | implemented |
+| `broll:Track` | `@narratage/broll` | semantic windows + normalized media + recipe -> peer Visual/Audio Tracks | Surface and deterministic lowering implemented |
+| `caption:Style` / `caption:Program` | `@narratage/caption` | default total Style + ordered whole-Style replacement by Role or Selection | implemented |
+| `caption-ai:Planner` | `@narratage/caption-gemini` | immutable display atoms + per-run requirements -> cue cuts and per-atom fields | implemented; Google Vertex Endpoint implemented separately |
+| `caption:Track` | `@narratage/caption` | CaptionPlan + independent SemanticMap + complete Styles -> VisualTrack | implemented |
+| `text:Track` | `@narratage/text-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
+| `film:Film` | `@narratage/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
+| `render:Video` | `@narratage/hyperframes-render` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
+| `studio.svs` | `@narratage/svs` | generic immutable Recipe Records; consuming packages validate and lower them | parser, imports and current package consumers implemented; exact font assets remain |
 
 The remaining work is intentionally package-local. None of these rows requires a new Core video type,
 a component-family registry in Core, a privileged Film root or another Track kind.
@@ -105,7 +105,7 @@ the author source or teach Runtime to guess a creative method.
 The intended final command uses the checked-in self-described Run Source:
 
 ```bash
-svml build build.svrun --runtime ./svml.runtime.json
+narratage build build.svrun --runtime ./svml.runtime.json
 ```
 
 Until real assets, credentials and a Runtime profile are supplied, tools must report this file as a

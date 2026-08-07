@@ -1,7 +1,7 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import { hyperframesProducers } from "@svml/hyperframes";
-import { mediaPipelineProducers } from "@svml/media-pipeline";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import { hyperframesProducers } from "@narratage/hyperframes";
+import { mediaPipelineProducers } from "@narratage/media-pipeline";
 
 import {
   hyperframesRenderProducers,
@@ -11,7 +11,7 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const hyperframesRenderFragment = sealGraphFragment({
-  name: "@svml/hyperframes-render/video@1",
+  name: "@narratage/hyperframes-render/video@1",
   inputs: [
     { name: "composition", type: contractTypes.composition },
     { name: "space", type: contractTypes.programSpace },

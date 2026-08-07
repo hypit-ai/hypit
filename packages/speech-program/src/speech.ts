@@ -1,14 +1,14 @@
-import { captionProducers, captionTypes } from "@svml/caption";
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import { speechTakeProducers } from "@svml/speech-take";
+import { captionProducers, captionTypes } from "@narratage/caption";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import { speechTakeProducers } from "@narratage/speech-take";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 /** Project one atomic SpeechTake Product without turning its fields into mutable node ports. */
 export const speechTakeProjectionFragment = sealGraphFragment({
-  name: "@svml/speech-program/speech-take-projections@1",
+  name: "@narratage/speech-program/speech-take-projections@1",
   inputs: [{ name: "take", type: contractTypes.speechBasis }],
   operations: [
     {
@@ -69,7 +69,7 @@ export const speechTakeProjectionFragment = sealGraphFragment({
 });
 
 export const captionTimingFragment = sealGraphFragment({
-  name: "@svml/speech-program/caption-timing@1",
+  name: "@narratage/speech-program/caption-timing@1",
   inputs: [
     { name: "narrative", type: contractTypes.narrative },
     { name: "map", type: contractTypes.completeSemanticMap },
@@ -91,7 +91,7 @@ export const captionTimingFragment = sealGraphFragment({
 
 /** Official caption lowering; the exported result is an ordinary peer VisualTrack. */
 export const captionTrackFragment = sealGraphFragment({
-  name: "@svml/speech-program/caption-track@1",
+  name: "@narratage/speech-program/caption-track@1",
   inputs: [
     { name: "caption", type: captionTypes.timedProjection },
     { name: "program", type: captionTypes.trackProgram },

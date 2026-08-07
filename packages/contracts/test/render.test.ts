@@ -14,7 +14,7 @@ import type {
   FontArtifactRef,
   VisualTrack,
 } from "../src/index.js";
-import { digestOf } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",

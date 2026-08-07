@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
 
 import { parseMediaInspection } from "../src/index.js";
 

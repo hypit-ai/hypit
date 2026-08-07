@@ -1,4 +1,4 @@
-import type { CanonicalValue, StoredValue, ValueSchema } from "@svml/protocol";
+import type { CanonicalValue, StoredValue, ValueSchema } from "@narratage/protocol";
 
 import { canonicalStringify, isDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";

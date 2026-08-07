@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 import {
   decodeSpeechSpineSurface, speechProgramComponent, speechProgramManifest,
   speechProgramModuleRef, speechSpineSurfaceImplementationDigest,
@@ -6,8 +6,8 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/speech-program",
-  modules: [{ manifest: speechProgramManifest, specifiers: ["@svml/speech", "@svml/speech@1"] }],
+  name: "@narratage/speech-program",
+  modules: [{ manifest: speechProgramManifest, specifiers: ["@narratage/speech", "@narratage/speech@1"] }],
   components: [speechProgramComponent],
   hostFacets: [createTextSurfaceHostFacet({
     module: speechProgramModuleRef, surface: "spine", mode: "structured",

@@ -1,5 +1,5 @@
 {
-  "name": "@svml/speech-program",
+  "name": "@narratage/speech-program",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,23 +8,23 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/caption": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/media-pipeline": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/speech-align": "workspace:*",
-    "@svml/speech-take": "workspace:*",
-    "@svml/text": "workspace:*",
-    "@svml/whisperx": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/caption": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/speech-align": "workspace:*",
+    "@narratage/speech-take": "workspace:*",
+    "@narratage/text": "workspace:*",
+    "@narratage/whisperx": "workspace:*"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/driver-node": "workspace:*",
-    "@svml/realization": "workspace:*",
-    "@svml/script": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/realization": "workspace:*",
+    "@narratage/script": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

@@ -3,8 +3,8 @@ import type {
   AuthorSourceResolver,
   AuthorSourceUnit,
   Awaitable,
-} from "@svml/elaborator";
-import type { BlobRef } from "@svml/protocol";
+} from "@narratage/elaborator";
+import type { BlobRef } from "@narratage/protocol";
 
 export type { HostFacet } from "./facet.js";
 

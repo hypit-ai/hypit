@@ -1,11 +1,11 @@
-import { digestOf, isDigest } from "@svml/protocol";
+import { digestOf, isDigest } from "@narratage/protocol";
 import type {
   CanonicalValue,
   Conformance,
   Delivery,
   Digest,
   StoredValue,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export type OperationIdentity = {
   readonly format: "svml.operation-identity@1";

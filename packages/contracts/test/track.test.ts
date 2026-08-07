@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
-import { createResolvedClosure } from "@svml/core";
-import { canonicalize, digestOf } from "@svml/protocol";
-import { TypeValidatorRegistry, validateValue } from "@svml/validation";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
+import { createResolvedClosure } from "@narratage/core";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
 
 import {
   assertCompositionIdentity,

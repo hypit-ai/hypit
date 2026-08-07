@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
 
 import {
   compositionManifest,
@@ -13,12 +13,12 @@ import {
 
 test("the physical video distribution carries six independently identified logical modules", () => {
   assert.deepEqual(videoDomainManifests.map((manifest) => manifest.name), [
-    "@svml/narrative",
-    "@svml/media",
-    "@svml/program-space",
-    "@svml/speech",
-    "@svml/semantic-time",
-    "@svml/composition",
+    "@narratage/narrative",
+    "@narratage/media",
+    "@narratage/program-space",
+    "@narratage/speech",
+    "@narratage/semantic-time",
+    "@narratage/composition",
   ]);
   assert.equal(new Set(videoDomainManifests.map((manifest) => digestOf(manifest))).size, 6);
   assert.equal(narrativeManifestDigest, digestOf(narrativeManifest));

@@ -1,4 +1,4 @@
-# `@svml/artifact-store-fs`
+# `@narratage/artifact-store-fs`
 
 A project-local, content-addressed implementation of the Runtime `ArtifactStore` port.
 

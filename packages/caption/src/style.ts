@@ -1,5 +1,5 @@
-import type { Narrative, NarrativeSelectionRef } from "@svml/contracts";
-import { canonicalize, digestOf } from "@svml/protocol";
+import type { Narrative, NarrativeSelectionRef } from "@narratage/contracts";
+import { canonicalize, digestOf } from "@narratage/protocol";
 
 import { captionDisplayAtoms, displayAtomMatchesSelection } from "./display.js";
 import type {

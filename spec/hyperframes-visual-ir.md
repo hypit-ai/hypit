@@ -14,14 +14,14 @@ SVML video stack. It is:
 
 Text, Caption, B-roll, Ranking and third-party visual packages may own unrelated author Programs.
 Before entering a `Composition`, each package must lower its resolved result into a `VisualTrack`
-that explicitly names this IR. `@svml/hyperframes` validates and compiles that common language; it
+that explicitly names this IR. `@narratage/hyperframes` validates and compiles that common language; it
 never learns the originating component family.
 
 ```text
 author Program                 shared terminal protocol              implementation
 ─────────────────────         ─────────────────────────             ───────────────────
-Text / Caption / B-roll  ───>  HyperFrames Visual IR in Track  ───>  @svml/hyperframes
-custom visual renderer   ───>  typed CompositableSurface       ───>  @svml/hyperframes
+Text / Caption / B-roll  ───>  HyperFrames Visual IR in Track  ───>  @narratage/hyperframes
+custom visual renderer   ───>  typed CompositableSurface       ───>  @narratage/hyperframes
 ```
 
 Calling this a component "dialect" is misleading. There is one official target protocol for the
@@ -76,8 +76,8 @@ serialized instruction vocabulary of the locked browser target.
 
 Validation has three separate owners:
 
-1. `@svml/contracts` owns the IR schema, closed vocabulary, identity and self-containment validator;
-2. Track producers, Film and `@svml/hyperframes` invoke that owner validator before a Track reaches
+1. `@narratage/contracts` owns the IR schema, closed vocabulary, identity and self-containment validator;
+2. Track producers, Film and `@narratage/hyperframes` invoke that owner validator before a Track reaches
    document compilation;
 3. a local or hosted HyperFrames Provider locks the actual renderer implementation and validates
    the produced media fact.

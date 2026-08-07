@@ -14,7 +14,7 @@ import type {
   TypedModule,
   TypedRecord,
   TypeValidationReceipt,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { digestOf, isDigest, recordDigest, semanticRecordsDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";

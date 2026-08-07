@@ -1,8 +1,8 @@
 import {
   assertSpeechEvidenceAudioIdentity,
   sealAlignedTranscriptEvidence,
-} from "@svml/contracts";
-import type { AlignedTranscriptEvidence, SpeechEvidenceAudio } from "@svml/contracts";
+} from "@narratage/contracts";
+import type { AlignedTranscriptEvidence, SpeechEvidenceAudio } from "@narratage/contracts";
 
 import type {
   WhisperXAlignmentEvidence,

@@ -87,7 +87,7 @@ lowering must finish before the caption enters Composition as an ordinary Visual
 
 ## HyperFrames boundary
 
-`@svml/hyperframes` consumes only Composition and its one versioned HyperFrames Visual IR. It never
+`@narratage/hyperframes` consumes only Composition and its one versioned HyperFrames Visual IR. It never
 switches on Speech, Caption, B-roll or author-package identity. It deterministically emits a
 content-addressed `HyperframesDocument` whose HTML interleaves VisualPresents by absolute stacking
 key. It must not mount an authoring Track as one isolated visual wrapper. AudioTrack compilation
@@ -115,7 +115,7 @@ compiled identity. Exact text becomes generated `@font-face` rules with font syn
 Typed Surfaces preserve declared dimensions, color space, alpha mode and still/frame timing across
 the same Artifact boundary; they are not inferred from filename extensions.
 
-`@svml/film` now implements package-level arbitrary-arity assembly as a finite immutable TrackSet
+`@narratage/film` now implements package-level arbitrary-arity assembly as a finite immutable TrackSet
 fold followed by ordinary Composition and HyperFrames Operations. Core receives only fixed-port,
 single-result Operations, and Targeting an intermediate Track or Composition does not demand the
 rest of the Film chain. This specification still does not define the author-facing Film Surface;

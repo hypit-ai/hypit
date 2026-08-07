@@ -1,9 +1,9 @@
-# SVML architecture
+# Narratage architecture
 
 Status: current architecture, 2026-08-07. Wire formats mentioned here are executable `@1`
 contracts, not sketches.
 
-SVML has two deliberately separate ideas:
+Narratage has two deliberately separate ideas:
 
 1. a domain-neutral system for compiling an authored graph plus explicit run choices into a
    finite, recoverable execution; and
@@ -37,7 +37,7 @@ Author Source + author packages
 ```
 
 Every source starts with a mandatory self-description such as
-`<?svml using="@svml/text@1"?>`. The suffix is only an editor and human convention; the Header
+`<?svml using="@narratage/text@1"?>`. The suffix is only an editor and human convention; the Header
 selects the exact trusted Frontend. There is no implicit Text, SVS or Run parser.
 
 No external command is issued before the BuildPlan is frozen. Execution never chooses a Candidate,
@@ -45,7 +45,7 @@ changes graph topology or performs content-based common-subexpression eliminatio
 
 ## 2. The irreducible Core
 
-`@svml/protocol` defines immutable wire data and identity. `@svml/core` owns only:
+`@narratage/protocol` defines immutable wire data and identity. `@narratage/core` owns only:
 
 - nominal type and schema verification;
 - typed compiled-graph verification;
@@ -72,18 +72,18 @@ The Author Graph may contain authored Records, Candidates and Operations. A sour
 an arbitrary finite internal Fragment while still exporting a small, readable component interface.
 That is ordinary static expansion, not a privileged macro path in Core.
 
-`@svml/text` is the official markup Frontend normally used by `.svml`. `@svml/svs` is the official
+`@narratage/text` is the official markup Frontend normally used by `.svml`. `@narratage/svs` is the official
 reusable Recipe Frontend normally used by `.svs`. Neither suffix selects a parser, neither syntax is
 built into Core, and another Frontend may produce the same typed Author Graph. A source-to-source
 import names only a locator and alias; the imported source's own Header selects how it is read.
 
-SVS Recipes are inert typed values, not executable templates. `@svml/prompt-kit` supplies an
+SVS Recipes are inert typed values, not executable templates. `@narratage/prompt-kit` supplies an
 optional self-described SVS Frontend plus a bounded pure compiler over four declarative block
 forms: fixed text, a parameter axis, a finite conditional variant and a required/optional text
 slot. A Prompt Kit source compiles to one authored `PromptKitSpec`. A package-owned Surface binds
 domain inputs into one `PromptKitInvocation` and lowers it during author compilation to an ordered
 `PromptProgram`; no Prompt axis, branch or concatenation becomes a Runtime Operation. For example,
-`@svml/seedance-speaker` binds Script dialogue, explicit media references, one project Recipe and
+`@narratage/seedance-speaker` binds Script dialogue, explicit media references, one project Recipe and
 the explicitly referenced `official-ugc-v1.svs` Source Module, then emits authored PromptProgram
 and Seedance SpeechProgram Records. The Run Graph begins at duration-dependent Seedance request
 compilation. SVS never executes conditions, Prompt Kit has no Speaker or Seedance knowledge, and
@@ -133,7 +133,7 @@ Product UI words such as *pin*, *reuse*, *preview* and *black frame* are not Cor
 ways to author a Run Graph and Satisfaction edges. A historical file is normally a zero-input
 Provided-Value Candidate. A generated placeholder is normally an Operation Candidate.
 
-`@svml/run` owns the syntax-neutral Run Graph model and compiler. The optional `@svml/run-text`
+`@narratage/run` owns the syntax-neutral Run Graph model and compiler. The optional `@narratage/run-text`
 Frontend is the official human-readable form of one complete:
 
 ```text
@@ -215,7 +215,7 @@ The Runtime executes an already frozen plan. Its environment-neutral ports are:
 | `CommandDispatcher` | optional distributed delivery after scheduling authority has decided |
 
 There is no universal Queue package. One Build has one authoritative Scheduler. KIE, Lambda and
-other remote services may have private job queues, but those queues cannot advance the SVML graph.
+other remote services may have private job queues, but those queues cannot advance the Narratage graph.
 
 `BuildCatalog` is intentionally absent from this table. It is an optional Host presentation index
 from a user-facing Build id to Core identity, source/run provenance and source output aliases. It is
@@ -300,33 +300,33 @@ authority of another.
 The reusable domain-neutral stack is:
 
 ```text
-@svml/protocol
-@svml/artifact            domain-neutral nominal type for content-addressed bytes
-@svml/core
-@svml/source              mandatory self-describing Source Header; no syntax default
-@svml/elaborator          author declarations and hygienic Fragment expansion
-@svml/run                 syntax-neutral Run Source closure and complete Run Graph compiler
-@svml/host                Host-facing interfaces and generic facet envelope
-@svml/compiler-node       reference source/package compiler Host
-@svml/package-loader-node locked physical-package loading; no syntax selection
-@svml/runtime             Scheduler and Store ports
-@svml/runtime-adapter     locked deployment-adapter Host facet ABI
-@svml/runtime-adapter-node project-root executable resolution and diagnostics
-@svml/driver-node         trusted Node command executor
-@svml/validation          semantic admission Host
-@svml/local               SQLite/filesystem developer assembly
-@svml/cli                 generic command engine; requires an explicit Distribution
+@narratage/protocol
+@narratage/artifact            domain-neutral nominal type for content-addressed bytes
+@narratage/core
+@narratage/source              mandatory self-describing Source Header; no syntax default
+@narratage/elaborator          author declarations and hygienic Fragment expansion
+@narratage/run                 syntax-neutral Run Source closure and complete Run Graph compiler
+@narratage/host                Host-facing interfaces and generic facet envelope
+@narratage/compiler-node       reference source/package compiler Host
+@narratage/package-loader-node locked physical-package loading; no syntax selection
+@narratage/runtime             Scheduler and Store ports
+@narratage/runtime-adapter     locked deployment-adapter Host facet ABI
+@narratage/runtime-adapter-node project-root executable resolution and diagnostics
+@narratage/driver-node         trusted Node command executor
+@narratage/validation          semantic admission Host
+@narratage/local               SQLite/filesystem developer assembly
+@narratage/cli                 generic command engine; requires an explicit Distribution
 ```
 
-`@svml/run-text`, `@svml/text`, `@svml/script`, `@svml/svs`, video contracts and every Provider are
+`@narratage/run-text`, `@narratage/text`, `@narratage/script`, `@narratage/svs`, video contracts and every Provider are
 optional language, domain or application packages.
 
-`@svml/compiler-text-node` is the optional reference assembly that selects the official Text entry
+`@narratage/compiler-text-node` is the optional reference assembly that selects the official Text entry
 Frontend and installs only `svml.text-surface-host@1` Host facets. The same locked physical package
-may carry deterministic compute facets into `@svml/local` without either the Loader or Runtime
+may carry deterministic compute facets into `@narratage/local` without either the Loader or Runtime
 depending on Text. Other Host-facet ABIs remain inert until another explicit Host selects them.
 
-`@svml/video-cli` is the optional video command application. It supplies the generic CLI with the
+`@narratage/video-cli` is the optional video command application. It supplies the generic CLI with the
 Text compiler assembly, but starts with no author, Run or Provider package contribution. One
 reviewed implementation lock activates deterministic compute; a separate Runtime package lock
 activates only deployment adapters. Thus adding an author package or Provider requires no Core,

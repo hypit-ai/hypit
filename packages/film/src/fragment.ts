@@ -1,6 +1,6 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import type { FragmentOperation } from "@svml/elaborator";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import type { FragmentOperation } from "@narratage/elaborator";
 
 import { filmProducers, filmTypes } from "./manifest.js";
 import type { FilmAssemblyFragmentOptions, FilmTrackInput } from "./types.js";
@@ -53,7 +53,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
   });
   const semanticInputs = ["program", "space", ...tracks.map((track) => track.name)];
   return sealGraphFragment({
-    name: options.name?.trim() || "@svml/film/assembly@1",
+    name: options.name?.trim() || "@narratage/film/assembly@1",
     inputs: [
       { name: "program", type: filmTypes.program },
       { name: "space", type: contractTypes.programSpace },

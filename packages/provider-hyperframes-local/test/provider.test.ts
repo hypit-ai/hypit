@@ -8,15 +8,15 @@ import {
   sealProgramSpace,
   sealVisualTrack,
   verifyRenderedVisual,
-} from "@svml/contracts";
-import type { RenderedVisual } from "@svml/contracts";
-import { MemoryArtifactStore, EndpointRegistry } from "@svml/driver-node";
-import type { EndpointRegistration } from "@svml/driver-node";
-import type { ImmediateEndpointHandler } from "@svml/endpoint-kit";
-import { compileHyperframesDocument } from "@svml/hyperframes";
-import { hyperframesRenderCapabilities, hyperframesVisualRequest } from "@svml/hyperframes-render";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { CanonicalValue, Need } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { RenderedVisual } from "@narratage/contracts";
+import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
+import type { EndpointRegistration } from "@narratage/driver-node";
+import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
+import { compileHyperframesDocument } from "@narratage/hyperframes";
+import { hyperframesRenderCapabilities, hyperframesVisualRequest } from "@narratage/hyperframes-render";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { CanonicalValue, Need } from "@narratage/protocol";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
 

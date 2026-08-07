@@ -1,6 +1,6 @@
-import { digestOf, reduce, resolveProducer } from "@svml/core";
-import type { ProducerHandlerResult } from "@svml/component-kit";
-import type { EndpointFulfillment } from "@svml/endpoint-kit";
+import { digestOf, reduce, resolveProducer } from "@narratage/core";
+import type { ProducerHandlerResult } from "@narratage/component-kit";
+import type { EndpointFulfillment } from "@narratage/endpoint-kit";
 import type {
   BuildEvent,
   BuildState,
@@ -9,16 +9,16 @@ import type {
   FulfillNeedCommand,
   InvokeProducerCommand,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   TypeValidatorRegistry,
   validateValue,
-} from "@svml/validation";
-import type { TypeValidatorRegistryLike } from "@svml/validation";
+} from "@narratage/validation";
+import type { TypeValidatorRegistryLike } from "@narratage/validation";
 import {
   sealOperationIdentity,
   verifyOperationSnapshot,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 import type {
   OperationIdentity,
   CredentialStore,
@@ -28,7 +28,7 @@ import type {
   RuntimeExecutionContext,
   RuntimeExecutionResult,
   RuntimePreparation,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 
 import { MemoryArtifactStore } from "./artifacts.js";
 import {

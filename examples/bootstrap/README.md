@@ -5,7 +5,7 @@ self-described Text entry source can import the Script Surface and recursively c
 source selected by another Header. There is no built-in video prelude or suffix-selected parser:
 
 ```bash
-pnpm svml check examples/bootstrap/main.svml \
+pnpm narratage check examples/bootstrap/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 

@@ -1,9 +1,9 @@
-import { contractTypes } from "@svml/contracts";
+import { contractTypes } from "@narratage/contracts";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { hyperframesRenderFragment } from "./fragment.js";
 

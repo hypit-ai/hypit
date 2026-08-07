@@ -1,4 +1,4 @@
-import type { FrameSpan } from "@svml/contracts";
+import type { FrameSpan } from "@narratage/contracts";
 
 export type TextBox = {
   readonly xPercent: number;

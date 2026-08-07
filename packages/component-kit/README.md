@@ -1,4 +1,4 @@
-# `@svml/component-kit`
+# `@narratage/component-kit`
 
 The minimal host-neutral SDK for trusted deterministic compute components. A package exports
 enumerable Producer and Type-owner Validator facets. Both identities are data: an exact nominal
@@ -8,7 +8,7 @@ Core command, Producer identity and immutable typed inputs.
 
 They receive no ArtifactStore, credentials, network client, queue or Runtime service. Work that
 needs those authorities must emit an explicit Need and be implemented by a separately selected
-Endpoint package. `@svml/driver-node` implements the structural registrar but is not part of this
+Endpoint package. `@narratage/driver-node` implements the structural registrar but is not part of this
 SDK.
 
 This is dependency inversion, not a sandbox. Until components run in an isolated Worker, selected

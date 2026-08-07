@@ -6,15 +6,15 @@ import test from "node:test";
 import {
   contractTypes,
   sealSpeechEvidenceAudio,
-} from "@svml/contracts";
-import { MemoryArtifactStore, EndpointRegistry } from "@svml/driver-node";
-import { digestOf } from "@svml/protocol";
-import type { Need } from "@svml/protocol";
+} from "@narratage/contracts";
+import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
+import { digestOf } from "@narratage/protocol";
+import type { Need } from "@narratage/protocol";
 import {
   whisperXCapabilities,
   whisperXRequestForEvidenceAudio,
   whisperXTypes,
-} from "@svml/whisperx";
+} from "@narratage/whisperx";
 
 import {
   createLocalWhisperXProvider,

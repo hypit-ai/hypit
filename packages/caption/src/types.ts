@@ -1,4 +1,4 @@
-import type { TimingQuality } from "@svml/contracts";
+import type { TimingQuality } from "@narratage/contracts";
 
 export type CaptionFieldValueSchema =
   | { readonly kind: "boolean" }

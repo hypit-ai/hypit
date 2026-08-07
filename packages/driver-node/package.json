@@ -1,5 +1,5 @@
 {
-  "name": "@svml/driver-node",
+  "name": "@narratage/driver-node",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,17 +7,17 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/core": "workspace:*",
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/validation": "workspace:*"
   },
   "devDependencies": {
-    "@svml/caption": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/script": "workspace:*",
-    "@svml/speech-align": "workspace:*"
+    "@narratage/caption": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/script": "workspace:*",
+    "@narratage/speech-align": "workspace:*"
   }
 }

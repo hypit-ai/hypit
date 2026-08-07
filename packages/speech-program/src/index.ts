@@ -4,7 +4,7 @@ export {
   captionTimingFragment,
   speechTakeProjectionFragment,
 } from "./speech.js";
-export { whisperXSpeechAlignmentFragment } from "@svml/whisperx";
+export { whisperXSpeechAlignmentFragment } from "@narratage/whisperx";
 export { speechProgramComponent } from "./component.js";
 export { createSpeechSpineFragment } from "./fragment.js";
 export {

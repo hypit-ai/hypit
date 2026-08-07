@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EnvironmentCredentialStore } from "@svml/credential-store-env";
-import { credentialRef } from "@svml/runtime";
+import { EnvironmentCredentialStore } from "@narratage/credential-store-env";
+import { credentialRef } from "@narratage/runtime";
 
 test("environment credentials resolve only the explicitly requested key", async () => {
   const store = new EnvironmentCredentialStore({

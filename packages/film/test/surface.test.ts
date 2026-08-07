@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   compositionContractsComponent,
   contractTypes,
@@ -10,14 +10,14 @@ import {
   sealVisualTrack,
   videoContractDependencies,
   videoContractManifests,
-} from "@svml/contracts";
-import { createResolvedClosure, digestOf, sealBuildRequest, start } from "@svml/core";
+} from "@narratage/contracts";
+import { createResolvedClosure, digestOf, sealBuildRequest, start } from "@narratage/core";
 import {
   AuthorFrontendRegistry,
   compileSourceClosure,
   resolveCompiledSourceExport,
-} from "@svml/elaborator";
-import type { AuthorSourceUnit } from "@svml/elaborator";
+} from "@narratage/elaborator";
+import type { AuthorSourceUnit } from "@narratage/elaborator";
 import {
   decodeFilmSurface,
   filmManifest,
@@ -25,14 +25,14 @@ import {
   filmProducers,
   filmSurfaceImplementationDigest,
   filmTypes,
-} from "@svml/film";
-import type { ModuleManifest } from "@svml/protocol";
-import { svsFrontend, svsManifest } from "@svml/svs";
+} from "@narratage/film";
+import type { ModuleManifest } from "@narratage/protocol";
+import { svsFrontend, svsManifest } from "@narratage/svs";
 import {
   TextSurfaceRegistry,
   createTextAuthorFrontend,
-} from "@svml/text";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/text";
+import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.film-fixture/inputs-surface@1");
@@ -85,7 +85,7 @@ const closure = createResolvedClosure([
 ]);
 
 function source(id: string, text: string): AuthorSourceUnit {
-  const frontend = id.endsWith(".svs") ? "@svml/svs@1" : "@svml/text@1";
+  const frontend = id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/text@1";
   return {
     id,
     name: id.split("/").at(-1) ?? id,
@@ -129,7 +129,7 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
   frontends.register(createTextAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      return request.from.startsWith("@svml/film") ? filmModuleRef : fixtureModule;
+      return request.from.startsWith("@narratage/film") ? filmModuleRef : fixtureModule;
     },
   }));
   frontends.register(svsFrontend);
@@ -140,7 +140,7 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
   return await compileSourceClosure({
     entry: source("/project/main.svml", `<svml>
       <import as="fixture" from="example.film-fixture@1"/>
-      <import as="film" from="@svml/film@1"/>
+      <import as="film" from="@narratage/film@1"/>
       <import as="studio" source="./studio.svs"/>
       <fixture:Inputs/>
       <film:Film id="main" space={space} appearance={studio.film.vertical}>${tracks}</film:Film>

@@ -18,7 +18,7 @@ import type {
   Receipt,
   StoredValue,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { canonicalize, digestOf, recordDigest } from "./canonical.js";
 import { CoreError, invariant } from "./error.js";

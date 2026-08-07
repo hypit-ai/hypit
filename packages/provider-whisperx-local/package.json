@@ -1,5 +1,5 @@
 {
-  "name": "@svml/provider-whisperx-local",
+  "name": "@narratage/provider-whisperx-local",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,13 +8,13 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/contracts": "workspace:*",
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/whisperx": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*"
+    "@narratage/contracts": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/whisperx": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*"
   },
   "devDependencies": {
-    "@svml/driver-node": "workspace:*"
+    "@narratage/driver-node": "workspace:*"
   }
 }

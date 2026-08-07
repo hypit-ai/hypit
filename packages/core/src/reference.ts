@@ -1,4 +1,4 @@
-import type { CapabilityRef, ModuleRef, ProducerRef, TypeRef } from "@svml/protocol";
+import type { CapabilityRef, ModuleRef, ProducerRef, TypeRef } from "@narratage/protocol";
 
 export function moduleKey(ref: ModuleRef): string {
   return `${ref.name}@${ref.version}`;

@@ -1,9 +1,9 @@
-import { digestOf } from "@svml/protocol";
-import type { CanonicalValue } from "@svml/protocol";
-import { assertHyperframesDocument } from "@svml/hyperframes";
-import type { HyperframesDocument } from "@svml/hyperframes";
+import { digestOf } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
+import { assertHyperframesDocument } from "@narratage/hyperframes";
+import type { HyperframesDocument } from "@narratage/hyperframes";
 
-export const requestHyperframesVisualImplementationDigest = digestOf("@svml/hyperframes-render/request-visual@1");
+export const requestHyperframesVisualImplementationDigest = digestOf("@narratage/hyperframes-render/request-visual@1");
 
 export function hyperframesVisualRequest(document: HyperframesDocument): CanonicalValue {
   assertHyperframesDocument(document);

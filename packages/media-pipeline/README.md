@@ -1,4 +1,4 @@
-# `@svml/media-pipeline`
+# `@narratage/media-pipeline`
 
 Provider-neutral media execution vocabulary. Ingestion contributes one ordinary finite Fragment:
 

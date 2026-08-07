@@ -4,10 +4,10 @@ import {
   contractTypes,
   videoContractDependencies,
   visualTrackSchema,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { svsManifest, svsModuleRef } from "@svml/svs";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { svsManifest, svsModuleRef } from "@narratage/svs";
 
 import {
   appendFilmAudioTrackImplementationDigest,
@@ -16,8 +16,8 @@ import {
   createFilmTrackSetImplementationDigest,
 } from "./program.js";
 
-export const filmModuleRef = { name: "@svml/film", version: "0.0.0-dev" } as const;
-export const filmSurfaceImplementationDigest = digestOf("@svml/film/surface@1");
+export const filmModuleRef = { name: "@narratage/film", version: "0.0.0-dev" } as const;
+export const filmSurfaceImplementationDigest = digestOf("@narratage/film/surface@1");
 export const filmTypes = {
   program: { module: filmModuleRef, name: "FilmProgram" },
   trackSet: { module: filmModuleRef, name: "FilmTrackSet" },
@@ -84,7 +84,7 @@ export const filmManifest: ModuleManifest = {
     outputs: [filmTypes.program],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/film/surface",
+      locator: "@narratage/film/surface",
       digest: filmSurfaceImplementationDigest,
     },
   }],
@@ -96,7 +96,7 @@ export const filmManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/create-track-set",
+        locator: "@narratage/film/create-track-set",
         digest: createFilmTrackSetImplementationDigest,
       },
     },
@@ -111,7 +111,7 @@ export const filmManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/append-visual-track",
+        locator: "@narratage/film/append-visual-track",
         digest: appendFilmVisualTrackImplementationDigest,
       },
     },
@@ -126,7 +126,7 @@ export const filmManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/append-audio-track",
+        locator: "@narratage/film/append-audio-track",
         digest: appendFilmAudioTrackImplementationDigest,
       },
     },
@@ -141,7 +141,7 @@ export const filmManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/compile-composition",
+        locator: "@narratage/film/compile-composition",
         digest: compileFilmCompositionImplementationDigest,
       },
     },

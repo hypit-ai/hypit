@@ -1,6 +1,6 @@
-# `@svml/provider-image-opencv-local`
+# `@narratage/provider-image-opencv-local`
 
-Local OpenCV/NumPy realization of `@svml/image-transform`.
+Local OpenCV/NumPy realization of `@narratage/image-transform`.
 
 It reads one content-addressed image Artifact, runs the closed-data operation list in a bounded
 child process and stores one new image Artifact. Temporary paths, OpenCV details and diagnostics

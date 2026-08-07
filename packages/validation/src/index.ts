@@ -7,7 +7,7 @@ import {
   validateStoredValue,
   verifyRecord,
   verifyRecordStructure,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   Digest,
   ResolvedModuleClosure,
@@ -15,7 +15,7 @@ import type {
   TypeRef,
   TypeValidationReceipt,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 function typeKey(type: TypeRef): string {
   return `${type.module.name}@${type.module.version}#${type.name}`;

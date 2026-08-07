@@ -4,11 +4,11 @@ import {
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-} from "@svml/generation";
-import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/generation";
+import { defineExactModelModule } from "@narratage/model-kit";
+import type { BlobRef, ValueSchema } from "@narratage/protocol";
 
-export const minimaxH3ModuleRef = { name: "@svml/minimax-h3", version: "0.0.0-dev" } as const;
+export const minimaxH3ModuleRef = { name: "@narratage/minimax-h3", version: "0.0.0-dev" } as const;
 export type MinimaxH3Mode = "text" | "frames" | "reference";
 export type MinimaxH3Reference =
   | { readonly kind: "image"; readonly artifact: BlobRef }

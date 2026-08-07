@@ -10,7 +10,7 @@ import type {
   RecordId,
   TypeRef,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { canonicalStringify, digestOf } from "./canonical.js";
 import { invariant } from "./error.js";

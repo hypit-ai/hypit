@@ -1,8 +1,8 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { ProgramSpace } from "@svml/contracts";
-import type { CompleteSemanticMap, NarrativeSelectionRef, SynchronizedMedia } from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { ProgramSpace } from "@narratage/contracts";
+import type { CompleteSemanticMap, NarrativeSelectionRef, SynchronizedMedia } from "@narratage/contracts";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import { brollProducers } from "./manifest.js";
 import {
@@ -29,7 +29,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const brollComponent = {
-  name: "@svml/broll",
+  name: "@narratage/broll",
   producers: [
     {
       producer: brollProducers.createSet,

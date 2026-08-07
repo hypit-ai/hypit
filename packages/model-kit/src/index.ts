@@ -2,17 +2,17 @@ import type {
   ComponentPackage,
   ProducerFacet,
   TypeValidatorFacet,
-} from "@svml/component-kit";
-import { sealGraphFragment } from "@svml/elaborator";
+} from "@narratage/component-kit";
+import { sealGraphFragment } from "@narratage/elaborator";
 import {
   generationManifestDigest,
   generationModuleRef,
   generationTypes,
-} from "@svml/generation";
+} from "@narratage/generation";
 import {
   canonicalize,
   digestOf,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import type {
   CanonicalValue,
   CapabilityRef,
@@ -22,7 +22,7 @@ import type {
   ProducerRef,
   TypeRef,
   ValueSchema,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export type ExactModelEndpointSpec = {
   readonly key: string;

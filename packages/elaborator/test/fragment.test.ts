@@ -5,7 +5,7 @@ import {
   contractTypes,
   videoContractDependencies,
   videoContractManifests,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -15,7 +15,7 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
@@ -23,22 +23,22 @@ import {
   sameFragmentInstance,
   sealGraphFragment,
   verifyGraphFragment,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   FragmentContribution,
   GraphFragment,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   CompiledGraph,
   LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   speechTakeManifest,
   speechTakeProducers,
-} from "@svml/speech-take";
+} from "@narratage/speech-take";
 
 const testModule = { name: "example.fragment-speech", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "Request" } satisfies TypeRef;

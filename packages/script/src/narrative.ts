@@ -1,5 +1,5 @@
-import { canonicalize } from "@svml/core";
-import type { CanonicalValue } from "@svml/protocol";
+import { canonicalize } from "@narratage/core";
+import type { CanonicalValue } from "@narratage/protocol";
 
 import type { ParsedNarrative } from "./types.js";
 

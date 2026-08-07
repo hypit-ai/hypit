@@ -8,11 +8,11 @@ development version. These facts are packaging state, not hidden requirements of
 
 ## 1. What can be distributed independently
 
-The release unit is a package facet, not the whole SVML system:
+The release unit is a package facet, not the whole Narratage system:
 
 | Layer | Typical packages | Required restart after an update |
 |---|---|---|
-| Wire/Kernel | `@svml/protocol`, `@svml/core` | compiler and Runtime processes using that version |
+| Wire/Kernel | `@narratage/protocol`, `@narratage/core` | compiler and Runtime processes using that version |
 | Author/compiler | Frontend, Surface, Elaborator, trusted loader | compiler process only |
 | Deterministic compute | Producer or validator facet | worker/Runtime process that loaded it |
 | Runtime service | Scheduler, Store, credential or transport adapter | Runtime process selecting it |
@@ -27,12 +27,12 @@ A logical Module is not required to become one physical npm package. Author mean
 Seedance Speaker, B-roll and Podcast should retain separate Manifests and import identities, while a
 public Seedance distribution may ship all of those facets and their static Kit data from one
 physical package. Internal private workspace packages remain convenient development boundaries and
-do not settle the public package topology. Shared mechanics such as `@svml/prompt-kit` prevent those
+do not settle the public package topology. Shared mechanics such as `@narratage/prompt-kit` prevent those
 logical modules from duplicating Prompt assembly code without collapsing them into one mode-heavy
 component.
 
-Another domain needs only `@svml/protocol` and `@svml/core` for the irreducible state machine. It
-will usually also choose `@svml/source`, an Elaborator, `@svml/run`, a compiler Host, Driver and
+Another domain needs only `@narratage/protocol` and `@narratage/core` for the irreducible state machine. It
+will usually also choose `@narratage/source`, an Elaborator, `@narratage/run`, a compiler Host, Driver and
 Runtime adapters. It does not need the official Text, SVS or Run Text Frontends, video contracts or
 any video Endpoint.
 
@@ -51,17 +51,17 @@ privileged implementation still requires the relevant Host to trust, lock and re
 
 ## 3. Reference Host assemblies
 
-`@svml/compiler-node` exposes separate Author and Run compiler hosts for arbitrary registered
+`@narratage/compiler-node` exposes separate Author and Run compiler hosts for arbitrary registered
 Frontends; each source selects its exact Frontend through a mandatory Header.
-`@svml/package-loader-node` only locks and loads physical package facets; it does not select a
+`@narratage/package-loader-node` only locks and loads physical package facets; it does not select a
 syntax. Host-specific
 executable facets carry an exact ABI and canonical identity, and stay inert until a matching Host
 selects them.
 
-`@svml/compiler-text-node` is the explicitly named Text assembly. It installs only Text Surface
-Host facets and combines them with the syntax-neutral compiler. `@svml/cli` is now the generic
+`@narratage/compiler-text-node` is the explicitly named Text assembly. It installs only Text Surface
+Host facets and combines them with the syntax-neutral compiler. `@narratage/cli` is now the generic
 command engine and has no video author-package aggregate or video Endpoint dependency.
-`@svml/video-cli` supplies the Text compiler only. One explicit package lock selects every
+`@narratage/video-cli` supplies the Text compiler only. One explicit package lock selects every
 Author/Run Frontend, Surface and deterministic component package; a separate Runtime package lock
 selects Provider and Store adapter facets. Public publication of those already separated packages
 remains deferred work.
@@ -71,9 +71,9 @@ Run Fragment packages use the ordinary Host Facet envelope with ABI
 interprets and registers its Fragment exports. New Run capabilities therefore do not add another
 field or branch to the Loader.
 
-`@svml/artifact` owns the domain-neutral nominal `BlobArtifact` Graph type. Filesystem and S3
+`@narratage/artifact` owns the domain-neutral nominal `BlobArtifact` Graph type. Filesystem and S3
 packages implement the separate Runtime `ArtifactStore` port. This avoids making a non-video domain
-depend on `@svml/media` merely to pass immutable bytes between Operations.
+depend on `@narratage/media` merely to pass immutable bytes between Operations.
 
 ## 4. Package-manager and container policy
 

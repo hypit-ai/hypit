@@ -1,30 +1,30 @@
 import {
   contractTypes,
   videoContractDependencies,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   hyperframesManifest,
   hyperframesManifestDigest,
   hyperframesModuleRef,
   hyperframesTypes,
-} from "@svml/hyperframes";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/hyperframes";
+import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   mediaPipelineManifestDigest,
   mediaPipelineModuleRef,
-} from "@svml/media-pipeline";
+} from "@narratage/media-pipeline";
 
 import {
   requestHyperframesVisualImplementationDigest,
 } from "./product.js";
 
-export const hyperframesRenderModuleRef = { name: "@svml/hyperframes-render", version: "0.0.0-dev" } as const;
-export const hyperframesRenderSurfaceImplementationDigest = digestOf("@svml/hyperframes-render/surface@1");
+export const hyperframesRenderModuleRef = { name: "@narratage/hyperframes-render", version: "0.0.0-dev" } as const;
+export const hyperframesRenderSurfaceImplementationDigest = digestOf("@narratage/hyperframes-render/surface@1");
 export const hyperframesRenderCapabilities = {
   renderVisual: { module: hyperframesRenderModuleRef, name: "render-visual" },
 } satisfies Record<string, CapabilityRef>;
@@ -54,7 +54,7 @@ export const hyperframesRenderManifest: ModuleManifest = {
     outputs: [],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/hyperframes-render/surface",
+      locator: "@narratage/hyperframes-render/surface",
       digest: hyperframesRenderSurfaceImplementationDigest,
     },
   }],
@@ -70,7 +70,7 @@ export const hyperframesRenderManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/hyperframes-render/request-visual",
+        locator: "@narratage/hyperframes-render/request-visual",
         digest: requestHyperframesVisualImplementationDigest,
       },
     },

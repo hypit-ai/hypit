@@ -1,5 +1,5 @@
 {
-  "name": "@svml/media-pipeline",
+  "name": "@narratage/media-pipeline",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,14 +8,14 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

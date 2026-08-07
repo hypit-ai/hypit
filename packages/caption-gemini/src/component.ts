@@ -1,8 +1,8 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { CaptionProgram } from "@svml/caption";
-import type { Narrative } from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { CaptionProgram } from "@narratage/caption";
+import type { Narrative } from "@narratage/contracts";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import { captionGeminiImplementationDigests, captionGeminiProducers, captionGeminiTypes } from "./manifest.js";
 import { verifyCaptionGeminiProgram } from "./program.js";
@@ -15,7 +15,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const captionGeminiComponent = {
-  name: "@svml/caption-gemini",
+  name: "@narratage/caption-gemini",
   producers: [
     {
       producer: captionGeminiProducers.compile,

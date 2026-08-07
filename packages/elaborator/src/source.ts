@@ -6,7 +6,7 @@ import {
   link,
   sealTypedModule,
   verifyRecord,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   BlobRef,
   Digest,
@@ -17,12 +17,12 @@ import type {
   TypeRef,
   TypedModule,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   maskSourceHeader,
   parseSourceHeader,
-} from "@svml/source";
-import type { SourceHeader } from "@svml/source";
+} from "@narratage/source";
+import type { SourceHeader } from "@narratage/source";
 
 import {
   elaborateAuthorModule,

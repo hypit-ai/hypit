@@ -8,10 +8,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createTextNodeCompiler } from "@svml/compiler-text-node";
-import type { NodePackageContribution } from "@svml/package-loader-node";
-import { digestOf } from "@svml/protocol";
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextNodeCompiler } from "@narratage/compiler-text-node";
+import type { NodePackageContribution } from "@narratage/package-loader-node";
+import { digestOf } from "@narratage/protocol";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 
 const module = { name: "example.card", version: "1" } as const;
 const resultType = { module, name: "CardResult" } as const;
@@ -76,7 +76,7 @@ test("Text compiler alone selects Text Surface Host facets from a generic packag
   const root = await mkdtemp(join(tmpdir(), "svml-text-compiler-"));
   try {
     const source = join(root, "main.svml");
-    await writeFile(source, `<?svml using="@svml/text@1"?>
+    await writeFile(source, `<?svml using="@narratage/text@1"?>
     <svml>
       <import as="example" from="example.card@1"/>
       <example:Card/>

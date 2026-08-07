@@ -1,15 +1,15 @@
-import { artifactTypes } from "@svml/artifact";
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import type { FragmentOperation } from "@svml/elaborator";
+import { artifactTypes } from "@narratage/artifact";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import type { FragmentOperation } from "@narratage/elaborator";
 import {
   mediaPipelineTypes,
   sealMediaSelectionRequest,
   synchronizedMediaFragment,
-} from "@svml/media-pipeline";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@svml/text";
+} from "@narratage/media-pipeline";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
 
 import { sealBrollItemSpec, sealBrollTrackSpec } from "./author.js";
 import { brollProducers, brollTypes } from "./manifest.js";
@@ -143,7 +143,7 @@ export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, res
       input: { mediaName: `item-${suffix}-media`, selectionName: `item-${suffix}-selection`, specName: `item-${suffix}-spec` } }];
   });
   if (declared.length === 0) throw new Error(`${element.name} requires at least one Item`);
-  const fragment = createBrollSurfaceFragment(declared.map((item) => item.input), `@svml/broll/surface/${id}@1`);
+  const fragment = createBrollSurfaceFragment(declared.map((item) => item.input), `@narratage/broll/surface/${id}@1`);
   const normalization = declared.map((item) => ({
     id: `${id}.normalize.${item.suffix}`, fragment: synchronizedMediaFragment.id,
     inputs: { source: item.source.ref, request: { kind: "record" as const, id: requestId } },

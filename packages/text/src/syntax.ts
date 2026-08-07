@@ -1,4 +1,4 @@
-import type { SourceRange } from "@svml/protocol";
+import type { SourceRange } from "@narratage/protocol";
 
 import { TextFrontendError } from "./error.js";
 import type {

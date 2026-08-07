@@ -3,19 +3,19 @@ import test from "node:test";
 
 import {
   registerProducerFacets,
-} from "@svml/component-kit";
-import type { ProducerRegistrar } from "@svml/component-kit";
-import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@svml/contracts";
-import type { SpeechBasis, SpeechEvidenceAudio } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { Digest, ProducerRef } from "@svml/protocol";
+} from "@narratage/component-kit";
+import type { ProducerRegistrar } from "@narratage/component-kit";
+import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/contracts";
+import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { Digest, ProducerRef } from "@narratage/protocol";
 import {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
   whisperXComponent,
   whisperXProducers,
   whisperXRequestForEvidenceAudio,
-} from "@svml/whisperx";
+} from "@narratage/whisperx";
 
 function basis() {
   const programSpace = sealProgramSpace({

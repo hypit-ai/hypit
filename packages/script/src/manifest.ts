@@ -2,11 +2,11 @@ import {
   contractTypes,
   narrativeSchema,
   videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/core";
-import type { ModuleManifest, TypeRef } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/core";
+import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 
-export const scriptModuleRef = { name: "@svml/script", version: "0.0.0-dev" } as const;
+export const scriptModuleRef = { name: "@narratage/script", version: "0.0.0-dev" } as const;
 export const narrativeType: TypeRef = contractTypes.narrative;
 export const narrativeExcerptType: TypeRef = contractTypes.narrativeExcerpt;
 export const narrativeDialogueExcerptType: TypeRef = contractTypes.narrativeDialogueExcerpt;
@@ -15,7 +15,7 @@ export const narrativeSelectionType: TypeRef = contractTypes.narrativeSelection;
 export const captionProjectionType: TypeRef = contractTypes.captionProjection;
 export { narrativeSchema };
 
-export const scriptSurfaceImplementationDigest = digestOf("@svml/script/surface@2");
+export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/surface@2");
 
 export const scriptManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -39,7 +39,7 @@ export const scriptManifest: ModuleManifest = {
       ],
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@svml/script/surface",
+        locator: "@narratage/script/surface",
         digest: scriptSurfaceImplementationDigest,
       },
     },

@@ -1,13 +1,15 @@
-# SVML
+# Narratage
 
-SVML is a graph language and runtime for building expensive, recoverable creative workflows from
-human-readable intent.
+Narratage is a compiler and runtime for building expensive, recoverable creative workflows from
+human-readable intent. Its sources are written in SVML, its graph markup language.
 
-Its reference video distribution lets an author address a video with words rather than timecodes:
-Script defines the semantic truth, generated speech supplies acoustic evidence, and independent
-packages lower captions, B-roll, text and speech into peer Tracks.
+The name is a 1930s film-industry term — narration plus montage: narration-driven storytelling
+with montage in a supporting role. The reference video distribution follows that technique. An
+author addresses a video with words rather than timecodes: Script defines the semantic truth,
+generated speech supplies acoustic evidence, and independent packages lower captions, B-roll,
+text and speech into peer Tracks.
 
-SVML is pre-release. It has completed a real paid talking-video acceptance sequence, but the
+Narratage is pre-release. It has completed a real paid talking-video acceptance sequence, but the
 repository is currently a source-checkout workspace rather than a published npm distribution; its
 public package names and video authoring ABI are not frozen yet.
 
@@ -23,7 +25,7 @@ inputs to later compilation. A usable system must therefore distinguish:
 - where an external capability executes;
 - which facts and code produced every accepted result.
 
-SVML compiles those decisions before execution:
+Narratage compiles those decisions before execution:
 
 ```text
 Author Graph + Run Graph + Satisfaction edges + Targets
@@ -98,11 +100,11 @@ pnpm check
 pnpm test
 
 # Compile a complete provider-free author graph.
-pnpm svml check examples/talking-film-graph-check/main.svml \
+pnpm narratage check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
 # Compile the self-described Run Graph and inspect its finite plan.
-pnpm svml plan examples/talking-film-graph-check/build.svrun \
+pnpm narratage plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
@@ -110,14 +112,14 @@ The live example uses an explicit Run Graph, declarative local Runtime Profile a
 credentials:
 
 ```bash
-pnpm svml build examples/talking-film-live/build.svrun \
+pnpm narratage build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
   --package-lock examples/talking-film-live/svml.packages.lock \
   --root . \
   --build-id talking-film-live \
   --follow
 
-pnpm svml get talking-film-live \
+pnpm narratage get talking-film-live \
   --name final.video \
   --runtime examples/talking-film-live/svml.runtime.json \
   --to examples/talking-film-live/output/final.mp4

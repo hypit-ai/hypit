@@ -1,4 +1,4 @@
-# SVML Core Kernel
+# Narratage Core Kernel
 
 Status: current executable contract. Persisted Graph, BuildRequest, Plan and BuildState wire
 formats are `@1`.
@@ -76,7 +76,7 @@ happen outside Core. Core verifies the resulting data before deriving a plan.
 
 ## Boundary
 
-`@svml/protocol` owns wire data and identity. `@svml/core` owns verification, Demand compilation and
+`@narratage/protocol` owns wire data and identity. `@narratage/core` owns verification, Demand compilation and
 state transitions. Compiler packages own source and graph construction. Runtime owns scheduling,
 persistence and placement. Endpoint packages fulfill exact Capabilities. Domain packages own shared
 vocabulary and validators.

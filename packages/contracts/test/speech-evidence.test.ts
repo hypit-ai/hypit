@@ -7,8 +7,8 @@ import {
   sealProgramSpace,
   sealSpeechEvidenceAudio,
   speechEvidenceSampleBoundary,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
 
 test("speech evidence uses integer rational boundary projection rather than floating duration arithmetic", () => {
   assert.equal(speechEvidenceSampleBoundary(0), 0);

@@ -5,7 +5,7 @@
   "services": [],
   "endpoints": [
     {
-      "use": "@svml/provider-kie",
+      "use": "@narratage/provider-kie",
       "instance": "kie.talking-film",
       "lane": "generation",
       "config": {
@@ -14,7 +14,7 @@
       }
     },
     {
-      "use": "@svml/provider-media-local",
+      "use": "@narratage/provider-media-local",
       "instance": "media.talking-film",
       "lane": "media",
       "config": {
@@ -22,7 +22,7 @@
       }
     },
     {
-      "use": "@svml/provider-whisperx-local",
+      "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.talking-film",
       "lane": "alignment",
       "config": {
@@ -30,7 +30,7 @@
       }
     },
     {
-      "use": "@svml/provider-google-vertex",
+      "use": "@narratage/provider-google-vertex",
       "instance": "vertex.talking-film",
       "lane": "planning",
       "config": {
@@ -40,7 +40,7 @@
       }
     },
     {
-      "use": "@svml/provider-hyperframes-local",
+      "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.talking-film",
       "lane": "render",
       "config": {

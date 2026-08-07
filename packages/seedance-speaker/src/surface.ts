@@ -1,26 +1,26 @@
-import { artifactTypes } from "@svml/artifact";
-import { contractTypes } from "@svml/contracts";
-import type { CanonicalValue, StoredValue } from "@svml/protocol";
+import { artifactTypes } from "@narratage/artifact";
+import { contractTypes } from "@narratage/contracts";
+import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import {
   compilePromptKit,
   promptKitTypes,
   verifyPromptKitSpec,
-} from "@svml/prompt-kit";
-import type { PromptKitSpec } from "@svml/prompt-kit";
+} from "@narratage/prompt-kit";
+import type { PromptKitSpec } from "@narratage/prompt-kit";
 import {
   seedanceEndpointsByModel,
   seedanceSpeechCompileProducers,
   seedanceTypes,
-} from "@svml/seedance";
-import type { SeedanceModel } from "@svml/seedance";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
+} from "@narratage/seedance";
+import type { SeedanceModel } from "@narratage/seedance";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { createSeedanceSpeakerTakeFragment } from "./fragment.js";
 import {
