@@ -119,9 +119,11 @@ export async function resolveRunDocument(
     if (declaration.kind === "build-record") {
       const build = await context.readBuild(declaration.build);
       if (build === undefined) throw new Error(`Build ${declaration.build} does not exist`);
+      const sourceOutput = await context.resolveBuildOutput?.(declaration.build, declaration.output)
+        ?? declaration.output;
       const candidate = createBuildRecordCandidate({
         build,
-        sourceOutput: declaration.output,
+        sourceOutput,
       });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);

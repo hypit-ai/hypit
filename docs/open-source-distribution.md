@@ -24,6 +24,14 @@ An active Build remains bound to its source closure, implementation closure and 
 Updating an installed package does not silently change or resume that Build under a new identity.
 New Builds can use the newly locked package without a Core release.
 
+A logical Module is not required to become one physical npm package. Author meanings such as
+Seedance Speaker, B-roll and Podcast should retain separate Manifests and import identities, while a
+public Seedance distribution may ship all of those facets and their static Kit data from one
+physical package. Internal private workspace packages remain convenient development boundaries and
+do not settle the public package topology. Shared mechanics such as `@svml/prompt-kit` prevent those
+logical modules from duplicating Prompt assembly code without collapsing them into one mode-heavy
+component.
+
 Another domain needs only `@svml/protocol` and `@svml/core` for the irreducible state machine. It
 will usually also choose `@svml/source`, an Elaborator, `@svml/run`, a compiler Host, Driver and
 Runtime adapters. It does not need the official Text, SVS or Run Text Frontends, video contracts or
@@ -53,9 +61,9 @@ selects them.
 
 `@svml/compiler-text-node` is the explicitly named Text assembly. It installs only Text Surface
 Host facets and combines them with the syntax-neutral compiler. `@svml/cli` is now the generic
-command engine and has no video Prelude or video Endpoint dependency. `@svml/video-cli` is the
-explicit application Distribution that supplies the Text compiler, built-in video package
-contributions and video Runtime-config adapters.
+command engine and has no video author-package aggregate or video Endpoint dependency.
+`@svml/video-cli` supplies the Text compiler and video Runtime-config adapters, while an explicit
+package lock selects every Author/Run Frontend, Surface and deterministic component package.
 
 Run Fragment packages use the ordinary Host Facet envelope with ABI
 `svml.run-fragment-host@1`. The generic Loader locks that opaque identity; only the Run Host

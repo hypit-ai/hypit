@@ -5,6 +5,7 @@ import {
   createResolvedClosure,
   digestOf,
   link,
+  reduce,
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
@@ -256,6 +257,60 @@ test("a Provided Value is an ordinary zero-input Candidate selected by Satisfact
   }));
   assert.equal(state.plan.steps.length, 0);
   assert.equal(state.records.find((item) => item.id === state.plan.goals[0]!.record)?.value.kind, "inline");
+});
+
+test("a Build Record uses the Host Catalog alias without putting presentation names in Core", async () => {
+  const compilation = fixture();
+  let historical = start(compilation.program, compilation.elaboration.graph, sealBuildRequest({
+    graph: compilation.elaboration.graph.id,
+    targets: [{ output: "left", accepts: "exact" }],
+    satisfactions: [],
+  }));
+  historical = reduce(historical).state;
+  const command = historical.outstanding.find((item) => item.kind === "invoke-producer");
+  assert.ok(command);
+  const content = {
+    kind: "producer-completed" as const,
+    command: command.id,
+    outputs: { media: { kind: "inline" as const, value: "archived media" } },
+    needs: {},
+    validations: {},
+  };
+  historical = reduce(historical, { ...content, id: `event:${digestOf(content)}` }).state;
+  assert.equal(historical.status, "complete");
+
+  const compiledRunSource = await compileDocument(`<svrun version="1" targets="delivery">
+    <author source="./main.svml"/>
+    <target-set id="delivery"><target output="right" accepts="substitute"/></target-set>
+    <build-record id="prior" build="prior-build" output="friendly-shot"/>
+    <satisfy output="right" candidate="prior" fidelity="substitute"/>
+  </svrun>`);
+  let resolvedAlias = false;
+  const run = await resolveRunDocument(compiledRunSource.document, {
+    compilation,
+    sourceClosure: compiledRunSource.closure,
+    fragments: new RunFragmentRegistry(),
+    readStoredValue() { throw new Error("not used"); },
+    readBuild(id) {
+      assert.equal(id, "prior-build");
+      return historical;
+    },
+    resolveBuildOutput(id, output) {
+      assert.equal(id, "prior-build");
+      assert.equal(output, "friendly-shot");
+      resolvedAlias = true;
+      return "left";
+    },
+  });
+  assert.equal(resolvedAlias, true);
+  const realized = resolveRealization(compilation.program, compilation.elaboration.graph, [run.overlay!]);
+  const state = start(compilation.program, realized.graph, sealBuildRequest({
+    graph: realized.graph.id,
+    targets: run.graph.targetSets[0]!.targets,
+    satisfactions: run.graph.satisfactions,
+  }));
+  assert.equal(state.plan.steps.length, 0);
+  assert.equal(state.plan.initialValues[0]?.conformance, "substitute");
 });
 
 test("Run imports are a prologue and Runtime settings are not language elements", () => {

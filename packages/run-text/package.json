@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@svml/protocol": "workspace:*",
     "@svml/run": "workspace:*",

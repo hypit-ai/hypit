@@ -43,13 +43,29 @@ export async function loadRunFile(options: {
   }
   const frontends = new RunFrontendRegistry();
   for (const frontend of options.frontends) frontends.register(frontend);
+  const archive = new Map<string, Awaited<ReturnType<LocalRuntime["status"]>>>();
+  const archived = async (id: string) => {
+    const existing = archive.get(id);
+    if (existing !== undefined) return existing;
+    const status = await options.runtime!.status(id);
+    archive.set(id, status);
+    return status;
+  };
   const compiler = new NodeRunCompiler({
     authorCompiler: options.authorCompiler,
     frontends,
     fragments,
     ...(options.runtime === undefined ? {} : {
       async readBuild(id: string) {
-        return (await options.runtime!.status(id)).build?.state;
+        return (await archived(id)).build?.state;
+      },
+      async resolveBuildOutput(id: string, output: string) {
+        const alias = (await archived(id)).catalog?.aliases.find((item) => item.name === output);
+        if (alias === undefined) return output;
+        if (alias.ref.kind !== "logical-output") {
+          throw new Error(`Build ${id} alias ${output} is an authored Record, not a Logical Output`);
+        }
+        return alias.ref.id;
       },
     }),
   });

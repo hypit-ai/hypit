@@ -139,7 +139,12 @@ export class LocalBuildScheduler implements BuildScheduler {
         build.revision = written.current.revision;
         throw new Error(`Build ${build.id} lost its authoritative Store revision`);
       }
-      build.state = written.snapshot.state;
+      // Stores deliberately remove derived outstanding Commands from their durable snapshot.
+      // The state supplied here has already passed Core verification and remains the authority
+      // for this live scheduling turn; replacing it with the durable projection would forget
+      // sibling Commands which are still executing. A restarted Scheduler will regenerate those
+      // Commands from the stored facts instead.
+      build.state = state;
       build.revision = written.snapshot.revision;
     };
 

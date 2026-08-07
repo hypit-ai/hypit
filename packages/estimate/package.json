@@ -6,11 +6,15 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@svml/component-kit": "workspace:*",
     "@svml/contracts": "workspace:*",
     "@svml/elaborator": "workspace:*",
     "@svml/protocol": "workspace:*",
+    "@svml/svs": "workspace:*",
     "@svml/text": "workspace:*"
   }
 }

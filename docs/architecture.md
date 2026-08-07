@@ -78,6 +78,31 @@ reusable Recipe Frontend normally used by `.svs`. Neither suffix selects a parse
 built into Core, and another Frontend may produce the same typed Author Graph. A source-to-source
 import names only a locator and alias; the imported source's own Header selects how it is read.
 
+SVS Recipes are inert typed values, not executable templates. `@svml/prompt-kit` supplies an
+optional self-described SVS Frontend plus a bounded pure compiler over four declarative block
+forms: fixed text, a parameter axis, a finite conditional variant and a required/optional text
+slot. A Prompt Kit source compiles to one authored `PromptKitSpec`. A package-owned Surface binds
+domain inputs into one `PromptKitInvocation` and lowers it during author compilation to an ordered
+`PromptProgram`; no Prompt axis, branch or concatenation becomes a Runtime Operation. For example,
+`@svml/seedance-speaker` binds Script dialogue, explicit media references, one project Recipe and
+the explicitly referenced `official-ugc-v1.svs` Source Module, then emits authored PromptProgram
+and Seedance SpeechProgram Records. The Run Graph begins at duration-dependent Seedance request
+compilation. SVS never executes conditions, Prompt Kit has no Speaker or Seedance knowledge, and
+Provider code never sees the higher-level mapping.
+
+This extension boundary is deliberately smaller than a general compiler-plugin API:
+
+- an `AuthorFrontend` owns one complete source grammar and is selected only by that source's Header;
+- a Text `Surface` owns one imported module declaration and may lower only that declaration;
+- a pure compile library such as Prompt Kit may be called by a Frontend or Surface but receives no
+  Host registry, source filesystem, Runtime or whole-graph mutation authority;
+- the Elaborator links all returned typed declarations and is the only layer that freezes the
+  complete Author Graph.
+
+Therefore adding a new domain-specific author compiler means installing and locking an ordinary
+package contribution. It does not mean adding a switch branch to Core, Text, the video CLI or a
+global graph-rewrite hook.
+
 ## 4. Run Graph and Satisfaction
 
 A Run Graph uses the same typed Value/Operation/Fragment algebra to expose additional independent
@@ -143,6 +168,12 @@ Named target sets make a useful stopping point reusable. `<value>` and `<build-r
 zero-input Candidates. Imported trusted Run Fragments declare Operation-backed Candidates; several
 exports from one Fragment declaration share one instance, while separate declarations remain
 separate executions.
+
+`<build-record>` may name a prior output by the human alias recorded in the Host Catalog. Alias
+resolution is a Host convenience gate: before Core compilation the Host reopens the verified prior
+BuildState and resolves the alias to its logical Record identity. Core receives only the typed
+Provided Value and Candidate graph; catalog names never become execution truth, semantic affinity
+proof or an automatic reuse policy.
 
 ## 5. Multi-result components
 
@@ -253,11 +284,10 @@ The public nouns are intentionally narrow:
 | Facet | one ABI-selected executable contribution | whole-package activation |
 | Host | process/application that selects and installs facets | Core |
 | Compiler | source-to-frozen-graph/plan assembly | Provider execution |
-| Distribution | trusted application choice of compiler, built-ins and config adapters | wire contract |
+| Distribution | trusted application choice of compiler host and config adapters | author package aggregate |
 | Runtime | execution services for an already frozen BuildPlan | author-language interpreter |
 | Endpoint | one configured implementation of an exact Capability | model-routing guess |
 | Provider package | Endpoint implementations for one external service boundary | semantic component |
-| Prelude | curated built-in author package contribution | mandatory Core vocabulary |
 
 These terms also drive physical names: `compiler-text-node` selects Text compilation,
 `package-loader-node` locks and loads physical Node packages, `video-cli` is a video Distribution,
@@ -293,10 +323,11 @@ Frontend and installs only `svml.text-surface-host@1` Host facets. The same lock
 may carry deterministic compute facets into `@svml/local` without either the Loader or Runtime
 depending on Text. Other Host-facet ABIs remain inert until another explicit Host selects them.
 
-`@svml/video-cli` is the optional video Distribution. It supplies the generic CLI with the Text
-compiler assembly, the explicit Run Text Frontend, built-in video package contributions and the
-video Runtime-config adapter registry. Thus neither `@svml/cli` nor `@svml/local` names a video
-package or Provider.
+`@svml/video-cli` is the optional video command application. It supplies the generic CLI with the
+Text compiler assembly and video Runtime-config adapter registry, but starts with no author or Run
+package contribution. A reviewed package lock independently activates `@svml/run-text`, Script,
+SVS, Prompt Kit, Track or any third-party package. Thus adding an author package requires no Core,
+CLI or aggregate-package release.
 
 The exact bootstrap and data gates are specified in
 [`source-and-run-compilation-v1.md`](./source-and-run-compilation-v1.md).

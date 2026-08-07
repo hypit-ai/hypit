@@ -1,0 +1,10 @@
+<?svml using="@svml/run-text@1"?>
+
+<svrun version="1" targets="delivery">
+  <author source="./main.svml"/>
+
+  <target-set id="delivery">
+    <target output="final.video" accepts="exact"/>
+  </target-set>
+
+</svrun>

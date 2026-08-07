@@ -1,7 +1,6 @@
 import { fileURLToPath } from "node:url";
 
 import { createProjectLocalRuntime } from "@svml/local";
-import { svmlPackage } from "@svml/prelude-video";
 import { createGoogleVertexCaptionProvider } from "@svml/provider-google-vertex";
 import { createLocalHyperframesProvider } from "@svml/provider-hyperframes-local";
 import { createKieProvider } from "@svml/provider-kie";
@@ -45,7 +44,7 @@ export default async function createTalkingFilmRuntime() {
 
   return await createProjectLocalRuntime({
     root: fileURLToPath(new URL(".", import.meta.url)),
-    components: svmlPackage.components,
+    packageLock: "./svml.packages.lock",
     endpoints,
     allowedPermissions: [...new Set(endpoints.flatMap((endpoint) =>
       endpoint.manifest.facets.flatMap((facet) => facet.permissions)))],

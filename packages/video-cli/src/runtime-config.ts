@@ -9,7 +9,6 @@ import { createLocalHyperframesProvider } from "@svml/provider-hyperframes-local
 import { createKieProvider } from "@svml/provider-kie";
 import { createLocalMediaProvider } from "@svml/provider-media-local";
 import { createLocalWhisperXProvider } from "@svml/provider-whisperx-local";
-import { svmlPackage as videoPrelude } from "@svml/prelude-video";
 import type { CanonicalValue } from "@svml/protocol";
 import { credentialRef } from "@svml/runtime";
 
@@ -167,6 +166,5 @@ export function createVideoRuntimeConfigRegistry(): RuntimeConfigRegistry {
 export async function createVideoRuntimeFromConfig(path: string) {
   return await createRuntimeFromConfig(path, {
     registry: createVideoRuntimeConfigRegistry(),
-    components: videoPrelude.components ?? [],
   });
 }

@@ -1,6 +1,4 @@
 import type { CliDistribution } from "@svml/cli";
-import { runTextFrontend } from "@svml/run-text";
-
 import {
   createVideoCompiler,
   videoBuiltInPackageContributions,
@@ -11,7 +9,7 @@ import { createVideoRuntimeFromConfig } from "./runtime-config.js";
 export const videoCliDistribution: CliDistribution = {
   name: "@svml/video-cli",
   builtInPackageContributions: videoBuiltInPackageContributions,
-  runFrontends: [runTextFrontend],
+  runFrontends: [],
   createCompiler: createVideoCompiler,
   createRuntimeFromConfig: createVideoRuntimeFromConfig,
 };

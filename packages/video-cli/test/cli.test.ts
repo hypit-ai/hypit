@@ -5,7 +5,29 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { materializeRecord, runVideoCli as runCli } from "@svml/video-cli";
+import { materializeRecord, runVideoCli } from "@svml/video-cli";
+
+import { videoTestPackages } from "./packages.js";
+
+const runCli = (
+  argv: readonly string[],
+  io: { readonly write: (text: string) => void },
+) => runVideoCli(argv, io, videoTestPackages);
+
+test("production video CLI has no implicit author or Run packages", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-empty-distribution-"));
+  const file = join(root, "main.svml");
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
+  <import from="@svml/script@1"/>
+  <script id="story"><opening><HOST>No hidden package.</opening></script>
+</svml>`, "utf8");
+
+  await assert.rejects(
+    async () => await runVideoCli(["check", file], { write() {} }),
+    /No registered module satisfies @svml\/script@1/u,
+  );
+});
 
 async function writeRun(
   root: string,
@@ -107,6 +129,7 @@ test("official media and Seedance Surfaces lower author intent into exact genera
   const root = await mkdtemp(join(tmpdir(), "svml-cli-generation-"));
   const file = join(root, "main.svml");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
+  await writeFile(join(root, "voice.mp3"), new Uint8Array([73, 68, 51]));
   await writeFile(file, `<?svml using="@svml/text@1"?>
 <svml>
     <import from="@svml/script@1"/>
@@ -114,12 +137,14 @@ test("official media and Seedance Surfaces lower author intent into exact genera
     <import as="seedance" from="@svml/seedance@1"/>
     <script id="story"><opening><HOST>Say exactly these words.</opening></script>
     <media:Image id="host" src="./host.png"/>
+    <media:Audio id="voice" src="./voice.mp3"/>
     <seedance:Prompt id="direction">
       Locked medium close-up in a quiet daylight studio.
     </seedance:Prompt>
     <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue}
       prompt={direction} duration="5">
       <seedance:Reference image={host} role="character"/>
+      <seedance:Reference audio={voice} role="voice-timbre"/>
     </seedance:Speech>
     <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
   </svml>`, "utf8");
@@ -132,7 +157,7 @@ test("official media and Seedance Surfaces lower author intent into exact genera
     readonly exports: readonly { readonly name: string }[];
   };
   assert.equal(checked.ok, true);
-  assert.deepEqual(checked.sourceAssets.map((item) => item.mediaType), ["image/png"]);
+  assert.deepEqual(checked.sourceAssets.map((item) => item.mediaType), ["audio/mpeg", "image/png"]);
   assert.deepEqual(checked.exports.map((item) => item.name), [
     "direction",
     "host",
@@ -145,6 +170,7 @@ test("official media and Seedance Surfaces lower author intent into exact genera
     "story.segment.opening.speech",
     "take",
     "take.request",
+    "voice",
   ]);
 
   let planOutput = "";
@@ -168,6 +194,66 @@ test("official media and Seedance Surfaces lower author intent into exact genera
       "select-primary-video",
       "select-primary-video",
     ],
+  );
+});
+
+test("Prompt Kit source and Speaker Surface finish prompt assembly before the Run Graph", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-prompt-kit-"));
+  const file = join(root, "main.svml");
+  const kitSource = await readFile(
+    new URL("../../seedance-speaker/kits/official-ugc-v1.svs", import.meta.url),
+    "utf8",
+  );
+  await writeFile(join(root, "official-ugc-v1.svs"), kitSource, "utf8");
+  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+<sheet version="1">
+  speech.normal { language: en; pace: normal; padding: 0.3; min: 4; max: 15; rounding: ceil; }
+  speaker.default { kind: ugc-talking-head; model: mini; resolution: 720p; aspect-ratio: 9:16; }
+</sheet>`, "utf8");
+  await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
+  <import from="@svml/script@1"/>
+  <import as="media" from="@svml/media@1"/>
+  <import as="estimate" from="@svml/estimate@1"/>
+  <import as="speaker" from="@svml/seedance-speaker@1"/>
+  <import as="studio" source="./studio.svs"/>
+  <import as="ugc" source="./official-ugc-v1.svs"/>
+
+  <script id="story"><opening><HOST>Meaning becomes the source.</opening></script>
+  <media:Image id="host" src="./host.png"/>
+  <estimate:Speech id="duration" source={story.segment.opening.speech} policy={studio.speech.normal}/>
+  <speaker:Take id="take" dialogue={story.segment.opening.dialogue}
+    duration={duration.duration} recipe={studio.speaker.default} kit={ugc.official-ugc-v1}>
+    <speaker:Reference image={host} role="character-and-scene"/>
+  </speaker:Take>
+</svml>`, "utf8");
+
+  let checkedOutput = "";
+  await runCli(["check", file], { write: (text) => { checkedOutput += text; } });
+  const checked = JSON.parse(checkedOutput) as {
+    readonly exports: readonly { readonly name: string }[];
+  };
+  const names = checked.exports.map((item) => item.name);
+  assert.equal(names.includes("take.prompt"), true);
+  assert.equal(names.includes("take.program"), true);
+  assert.equal(names.includes("take.video"), true);
+
+  const run = await writeRun(root, "build.svrun", [{ output: "take.video" }]);
+  let planOutput = "";
+  await runCli(["plan", run], { write: (text) => { planOutput += text; } });
+  const plan = JSON.parse(planOutput) as {
+    readonly steps: readonly { readonly producer: { readonly name: string } }[];
+  };
+  assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
+    "compile-seedance-2-mini-speech-request",
+    "estimate-speech-duration",
+    "request-seedance-2-mini",
+    "select-primary-video",
+  ].sort());
+  assert.equal(
+    plan.steps.some((step) => /prompt|speaker/u.test(step.producer.name)),
+    false,
   );
 });
 
@@ -229,7 +315,7 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
   assert.deepEqual(status.operations, []);
 });
 
-test("official prelude lowers Speech Spine and explicit WhisperX alignment without provider calls", async () => {
+test("independent packages lower Speech Spine and explicit WhisperX alignment without provider calls", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-speech-spine-"));
   const file = join(root, "main.svml");
   await writeFile(file, `<?svml using="@svml/text@1"?>
