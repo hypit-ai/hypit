@@ -61,7 +61,8 @@ See [the architecture](docs/architecture.md) and
 The repository implements:
 
 - domain-neutral Protocol, Core, graph elaboration and Node compiler Host;
-- official `.svml` markup, Script Surface and `.svs` Recipes;
+- mandatory self-described Author/Run sources with no suffix-selected or default parser;
+- official `.svml` markup, Script Surface, `.svs` Recipes and `.svrun` execution intent;
 - locked trusted package activation without package-specific Core registration;
 - recoverable Runtime scheduling with concurrency lanes, retries and cancellation;
 - SQLite Build/Operation stores and filesystem/S3 Artifact stores;
@@ -99,9 +100,8 @@ pnpm test
 # Compile a complete provider-free v2 author graph.
 pnpm svml:v2 check examples/talking-film-graph-check/main.svml
 
-# Inspect a named target without executing external capabilities.
-pnpm svml:v2 plan examples/talking-film-graph-check/main.svml \
-  --target final.video
+# Compile the self-described Run Graph and inspect its finite plan.
+pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun
 ```
 
 The live example uses an explicit Run Graph, declarative local Runtime Profile and external
@@ -164,13 +164,15 @@ community Parser/Producer/Validator execution still needs a real isolation and p
 packages/protocol        immutable wire contracts
 packages/artifact        domain-neutral content-addressed byte Type
 packages/core            domain-neutral Demand compiler and Build state machine
+packages/source          mandatory Source Header; no syntax default
 packages/elaborator      author declarations and hygienic Fragment expansion
 packages/compiler-node   reference Node compiler Host
 packages/compiler-text-node  optional official Text compiler assembly
 packages/package-loader-node syntax-neutral trusted physical-package loading
 packages/cli             generic commands requiring an explicit Distribution
 packages/video-cli       official Text/video command Distribution
-packages/run             official human-readable Run Graph frontend
+packages/run             syntax-neutral Run Source closure and complete Run Graph compiler
+packages/run-text        optional official human-readable Run Frontend
 packages/runtime         environment-neutral scheduling and Store ports
 packages/driver-node     trusted Node command execution
 packages/local           zero-service SQLite/filesystem developer assembly

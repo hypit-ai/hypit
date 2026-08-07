@@ -150,7 +150,7 @@ export const svmlPackage: NodePackageContribution = {
       specifiers: ["@svml/hyperframes-render", "@svml/hyperframes-render@1"],
     },
   ],
-  frontends: [svsFrontend],
+  authorFrontends: [svsFrontend],
   components: [
     ...videoContractsComponents,
     generationComponent,

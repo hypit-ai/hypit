@@ -38,7 +38,6 @@ import {
 import {
   TextSurfaceRegistry,
   createTextAuthorFrontend,
-  textAuthorFrontendId,
 } from "@svml/text";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@svml/validation";
 
@@ -57,7 +56,11 @@ const fixtureManifest: ModuleManifest = {
 };
 
 function source(text: string): AuthorSourceUnit {
-  return { id: "/project/main.svml", name: "main.svml", text };
+  return {
+    id: "/project/main.svml",
+    name: "main.svml",
+    text: `<?svml using="@svml/text@1"?>\n${text}`,
+  };
 }
 
 test("Speech Spine lowers ordered Takes into media normalization, one audio plan and peer projections", async () => {
@@ -106,7 +109,6 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
         <speech:Take source={take-two} segment={story.segment.answer}/>
       </speech:Spine>
     </svml>`),
-    frontend: textAuthorFrontendId,
     closure,
     frontends,
     admitRecord: createRecordAdmitter(validators),

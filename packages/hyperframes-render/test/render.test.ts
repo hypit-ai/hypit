@@ -78,7 +78,6 @@ import type {
 import {
   createTextAuthorFrontend,
   TextSurfaceRegistry,
-  textAuthorFrontendId,
 } from "@svml/text";
 
 const space = sealProgramSpace({
@@ -359,7 +358,11 @@ const fixtureManifest: ModuleManifest = {
 };
 
 function source(text: string): AuthorSourceUnit {
-  return { id: "/project/main.svml", name: "main.svml", text };
+  return {
+    id: "/project/main.svml",
+    name: "main.svml",
+    text: `<?svml using="@svml/text@1"?>\n${text}`,
+  };
 }
 
 test("the official render Surface lowers real author source to the same BuildPlan", async () => {
@@ -403,7 +406,6 @@ test("the official render Surface lowers real author source to the same BuildPla
       <fixture:Composition/>
       <render:Video id="final" composition={composition}/>
     </svml>`),
-    frontend: textAuthorFrontendId,
     closure: sourceClosure,
     frontends,
     resolveSource() {

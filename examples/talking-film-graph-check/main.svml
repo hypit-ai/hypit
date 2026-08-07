@@ -1,3 +1,5 @@
+<?svml using="@svml/text@1"?>
+
 <svml>
   <import from="@svml/script@1"/>
   <import as="seedance" from="@svml/seedance@1"/>
@@ -9,7 +11,7 @@
   <import as="text" from="@svml/text-track@1"/>
   <import as="film" from="@svml/film@1"/>
   <import as="render" from="@svml/hyperframes-render@1"/>
-  <import as="studio" from="./studio.svs" using="@svml/svs@1"/>
+  <import as="studio" source="./studio.svs"/>
 
   <script id="story">
     <opening><HOST>Meaning @demo becomes the source @/demo.</opening>

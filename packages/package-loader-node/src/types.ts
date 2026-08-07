@@ -1,9 +1,9 @@
 import type { RegisteredModulePackage } from "@svml/compiler-node";
 import type { ComponentPackage } from "@svml/component-kit";
 import type { AuthorFrontend } from "@svml/elaborator";
-import type { GraphFragment } from "@svml/elaborator";
 import type { HostFacet } from "@svml/host";
 import type { Digest } from "@svml/protocol";
+import type { RunFrontend } from "@svml/run";
 
 /**
  * Trusted executable facets exported by one installed physical package. The Host independently
@@ -14,12 +14,11 @@ export type NodePackageContribution = {
   readonly format: "svml.node-package@1";
   readonly name: string;
   readonly modules?: readonly RegisteredModulePackage[];
-  readonly frontends?: readonly AuthorFrontend[];
+  readonly authorFrontends?: readonly AuthorFrontend[];
+  readonly runFrontends?: readonly RunFrontend[];
   /** Syntax- or Host-specific executable facets, inert until their exact Host ABI selects them. */
   readonly hostFacets?: readonly HostFacet[];
   readonly components?: readonly ComponentPackage[];
-  /** Trusted Run-Graph Fragments, addressable from `.svrun` imports by package and export name. */
-  readonly runFragments?: Readonly<Record<string, GraphFragment>>;
 };
 
 export type LockedPackageArtifact = {

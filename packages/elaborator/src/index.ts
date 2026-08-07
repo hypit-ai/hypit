@@ -17,11 +17,13 @@ export {
   AuthorFrontendRegistry,
   SourceClosureError,
   compileSourceClosure,
+  prepareAuthorSource,
   resolveCompiledSourceExport,
   verifySourceClosure,
 } from "./source.js";
 export type {
   AuthorFrontend,
+  AuthorFrontendSourceUnit,
   AuthorFrontendRegistryLike,
   AuthorSourceDecodeContext,
   AuthorSourceDiscovery,

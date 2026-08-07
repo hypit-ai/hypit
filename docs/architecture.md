@@ -15,11 +15,11 @@ HyperFrames.
 ## 1. The complete flow
 
 ```text
-author source + author packages
+Author Source + author packages
              │
              ▼
         Author Graph                  Run source + run packages
-   authored facts and defaults        values and alternate fragments
+   authored facts and defaults        targets, values and alternate fragments
              │                                  │
              └──────────────┬───────────────────┘
                             │  Satisfaction edges + Targets
@@ -36,6 +36,10 @@ author source + author packages
               Event → verified BuildState transition
 ```
 
+Every v2 source starts with a mandatory self-description such as
+`<?svml using="@svml/text@1"?>`. The suffix is only an editor and human convention; the Header
+selects the exact trusted Frontend. There is no implicit Text, SVS or Run parser.
+
 No external command is issued before the BuildPlan is frozen. Execution never chooses a Candidate,
 changes graph topology or performs content-based common-subexpression elimination.
 
@@ -44,7 +48,7 @@ changes graph topology or performs content-based common-subexpression eliminatio
 `@svml/protocol` defines immutable wire data and identity. `@svml/core` owns only:
 
 - nominal type and schema verification;
-- Author/Run Graph verification;
+- typed compiled-graph verification;
 - explicit Satisfaction resolution;
 - reverse reachability from arbitrary Targets;
 - finite BuildPlan derivation;
@@ -69,8 +73,10 @@ The Author Graph may contain authored Records, Candidates and Operations. A sour
 an arbitrary finite internal Fragment while still exporting a small, readable component interface.
 That is ordinary static expansion, not a privileged macro path in Core.
 
-`.svml` is the official markup Frontend. `.svs` is the official reusable Recipe Frontend. Neither
-syntax is built into Core, and another Frontend may produce the same typed Author Graph.
+`@svml/text` is the official markup Frontend normally used by `.svml`. `@svml/svs` is the official
+reusable Recipe Frontend normally used by `.svs`. Neither suffix selects a parser, neither syntax is
+built into Core, and another Frontend may produce the same typed Author Graph. A source-to-source
+import names only a locator and alias; the imported source's own Header selects how it is read.
 
 ## 4. Run Graph and Satisfaction
 
@@ -103,10 +109,12 @@ Product UI words such as *pin*, *reuse*, *preview* and *black frame* are not Cor
 ways to author a Run Graph and Satisfaction edges. A historical file is normally a zero-input
 Provided-Value Candidate. A generated placeholder is normally an Operation Candidate.
 
-The `@svml/run` `.svrun` Frontend is the human-readable form of:
+`@svml/run` owns the syntax-neutral Run Graph model and compiler. The optional `@svml/run-text`
+Frontend is the official human-readable form of one complete:
 
 ```text
-Run Graph + Satisfaction[] + Target[]
+Run Graph = Author Graph binding + Candidate/Operation graph
+          + Satisfaction[] + named Target sets + selected Target set
 ```
 
 It will not contain credentials, queue configuration or Runtime placement.
@@ -114,13 +122,22 @@ It will not contain credentials, queue configuration or Runtime placement.
 The two source graphs are compiled before execution:
 
 ```text
-.svml  ──Frontend/Elaborator──> Author Graph
-.svrun ──Run Frontend─────────> Run Graphs + Satisfaction edges + Targets
+Author Source ──Frontend/Elaborator──> Author Graph
+Run Source    ──Run Frontend─────────> one complete Run Graph
                                       │
                          deterministic graph composition
                                       │
                                 finite BuildPlan
 ```
+
+The Run Source names its Author Source explicitly. Both graphs are mandatory in the official build
+path, even when the Run Graph selects only primary Candidates. Their digests are both bound into the
+final compiled graph before planning; changing either source cannot silently resume the same Core
+Build.
+
+Run-only Fragment Producers extend the execution Program Closure without entering Author imports or
+changing the Author Graph. The final Build identity binds that closure digest in addition to both
+graph identities.
 
 Named target sets make a useful stopping point reusable. `<value>` and `<build-record>` declare
 zero-input Candidates. Imported trusted Run Fragments declare Operation-backed Candidates; several
@@ -211,6 +228,11 @@ A source `<import>` activates only author meaning. It never grants network, file
 credential or queue authority. Provider and Runtime facets are selected by the Host's locked Runtime
 Profile.
 
+Run Frontends are locked by id and implementation digest just like Author Frontends. Trusted Run
+Fragments use the `svml.run-fragment-host@1` facet ABI: the generic Package Loader locks the opaque
+identity, and only the Run Host validates and installs its Fragment exports. The Loader has no
+special `runFragments` branch and does not interpret Run syntax.
+
 The reference local Host accepts `svml.runtime.json`. It resolves exact adapter names through a
 Host-owned `RuntimeConfigRegistry`, constructs package Manifests, locks the resulting Runtime
 Profile/Closure, and only then installs Endpoints and services. The JSON contains non-secret
@@ -250,7 +272,9 @@ The reusable domain-neutral stack is:
 @svml/protocol
 @svml/artifact            domain-neutral nominal type for content-addressed bytes
 @svml/core
+@svml/source              mandatory self-describing Source Header; no syntax default
 @svml/elaborator          author declarations and hygienic Fragment expansion
+@svml/run                 syntax-neutral Run Source closure and complete Run Graph compiler
 @svml/host                Host-facing interfaces and generic facet envelope
 @svml/compiler-node       reference source/package compiler Host
 @svml/package-loader-node locked physical-package loading; no syntax selection
@@ -261,8 +285,8 @@ The reusable domain-neutral stack is:
 @svml/cli                 generic command engine; requires an explicit Distribution
 ```
 
-`@svml/text`, `@svml/script`, `@svml/svs`, video contracts and every Provider are optional language,
-domain or application packages.
+`@svml/run-text`, `@svml/text`, `@svml/script`, `@svml/svs`, video contracts and every Provider are
+optional language, domain or application packages.
 
 `@svml/compiler-text-node` is the optional reference assembly that selects the official Text entry
 Frontend and installs only `svml.text-surface-host@1` Host facets. The same locked physical package
@@ -270,8 +294,12 @@ may carry deterministic compute facets into `@svml/local` without either the Loa
 depending on Text. Other Host-facet ABIs remain inert until another explicit Host selects them.
 
 `@svml/video-cli` is the optional video Distribution. It supplies the generic CLI with the Text
-compiler assembly, built-in video package contributions and the video Runtime-config adapter
-registry. Thus neither `@svml/cli` nor `@svml/local` names a video package or Provider.
+compiler assembly, the explicit Run Text Frontend, built-in video package contributions and the
+video Runtime-config adapter registry. Thus neither `@svml/cli` nor `@svml/local` names a video
+package or Provider.
+
+The exact bootstrap and data gates are specified in
+[`source-and-run-compilation-v1.md`](./source-and-run-compilation-v1.md).
 
 ## 9. Trust boundary
 

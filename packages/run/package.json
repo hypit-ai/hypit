@@ -7,12 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@svml/core": "workspace:*",
     "@svml/elaborator": "workspace:*",
+    "@svml/host": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/realization": "workspace:*",
-    "@svml/text": "workspace:*"
-  },
-  "devDependencies": {
-    "@svml/core": "workspace:*"
+    "@svml/source": "workspace:*"
   }
 }

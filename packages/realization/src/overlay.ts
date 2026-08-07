@@ -29,9 +29,6 @@ export type RealizationOverlay = {
   readonly operations: readonly OperationNode[];
 };
 
-/** Canonical name for the external typed graph. */
-export type RunGraph = RealizationOverlay;
-
 export type RealizationClosure = {
   readonly format: "svml.realization-closure@2";
   readonly id: Digest;
@@ -101,7 +98,6 @@ export function sealRealizationOverlay(
 }
 
 /** Canonical Run-Graph name; retained alongside the Overlay API name. */
-export const sealRunGraph = sealRealizationOverlay;
 
 export function createProvidedCandidate(input: ProvidedCandidateInput): Candidate {
   const value = input.value.kind === "inline"

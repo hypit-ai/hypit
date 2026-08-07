@@ -53,7 +53,9 @@ To reuse the paid shot outputs from a verified earlier Build, add two zero-input
 Candidates and their explicit Satisfaction edges to another `.svrun`:
 
 ```xml
-<svrun version="1" source="./main.svml" targets="delivery">
+<?svml using="@svml/run-text@1"?>
+<svrun version="1" targets="delivery">
+  <author source="./main.svml"/>
   <target-set id="delivery">
     <target output="final.video" accepts="substitute"/>
   </target-set>

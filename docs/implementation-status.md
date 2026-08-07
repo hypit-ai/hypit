@@ -46,9 +46,18 @@ Implemented:
 - digest-bound Derivation and Receipt integrity, monotonic conformance and regenerated resume
   Commands;
 - `@svml/elaborator`: two-phase forward-reference linking and hygienic static Fragment expansion;
-- `@svml/realization`: typed Run Graph overlays and inert Build-Record Candidates;
-- `@svml/run`: `.svrun` parsing, named Target sets, Provided/Build-Record/Fragment Candidates,
-  explicit Satisfaction edges and trusted Run-package imports;
+- `@svml/source`: mandatory bounded Source Header selecting an exact Frontend without suffix or
+  Distribution defaults;
+- digest-separated Author Source Closure identity for original bytes, Frontend implementation and
+  decoded semantics; every recursively imported source selects its own Frontend;
+- `@svml/realization`: internal typed realization overlays and inert Build-Record Candidates;
+- `@svml/run`: syntax-neutral Run Source Closure, complete mandatory Run Graph, named Target sets,
+  Provided/Build-Record/Fragment Candidates and explicit Satisfaction edges;
+- `@svml/run-text`: optional official `.svrun` Text Frontend;
+- official compilation binds both Author Graph and Run Graph identities before deriving a finite
+  BuildPlan; `plan` and `build` accept no hidden Target/Pin CLI intent;
+- Run-only Fragment Producer Modules extend a separately bound execution Program Closure without
+  changing Author imports or Author Graph identity;
 - `@svml/validation`: package-owned semantic validators and common Record admission;
 - `@svml/component-kit`: host-neutral deterministic Producer/validator registration;
 - `@svml/host`, `@svml/workspace-fs-node`, `@svml/compiler-node`: replaceable Workspace and the
@@ -60,7 +69,7 @@ Implemented:
 - `@svml/video-cli`: the current video Distribution selecting the Text compiler, video Prelude and
   video Runtime-config adapter registry;
 - `@svml/text`, `@svml/script`, `@svml/svs`: official markup, Script and Recipe Frontends without
-  Core parser branches;
+  Core parser branches; `.svml` and `.svs` remain human suffix conventions only;
 - `@svml/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
   recoverable Endpoint lifecycle;
 - `@svml/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
@@ -77,8 +86,8 @@ Implemented:
 - `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
   invocation seams.
 
-The current CLI `--pin` flag remains temporary compatibility sugar for legacy commands. New reusable
-runs should use `.svrun`; the Core still has no Pin primitive.
+The removed CLI `--pin`, `--target` and `--accept-substitute` path cannot synthesize hidden execution
+intent. Reusable run choices live in a self-described Run Source; Core still has no Pin primitive.
 
 Repository-level dependency tests now enforce an acyclic production graph and prove that the
 declared domain-neutral distribution—including `@svml/local` and `@svml/package-loader-node`—closes
@@ -160,9 +169,16 @@ permission enforcement and loaded-code attestation remain release work.
 
 - TypeScript v1 and v2 checks pass;
 - v1 research oracle: 35/35 tests;
-- v2: 308 passing, 3 environment-gated skips, 0 failures;
+- v2: 316 passing, 3 environment-gated skips, 0 failures;
+- the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
+  Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
 - generated credentials, media outputs and local databases are ignored by Git.
+
+The paid acceptance above predates the mandatory Source Header and complete Run Graph migration.
+The same video graph now closes and plans through the new path, but a fresh paid all-`exact` Build
+has not yet been run after this compiler refactor. This is an acceptance gap, not a hidden
+implementation claim.
 
 All v2 workspace packages are currently private development packages that export TypeScript source.
 The repository is usable from a checkout, but no npm-ready package distribution exists yet. See

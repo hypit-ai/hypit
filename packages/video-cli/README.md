@@ -2,9 +2,9 @@
 
 Official v2 video command-line Distribution.
 
-Unlike the generic `@svml/cli` engine, this application is allowed to choose a trusted default prelude. It
+Unlike the generic `@svml/cli` engine, this application is an explicit trusted video assembly. It
 depends on the one ordinary `@svml/prelude-video` aggregate rather than importing each video package
-itself. The current prelude contributes:
+itself, and registers the optional `@svml/run-text` Frontend. The current prelude contributes:
 
 - package-owned Text Surface Host facets consumed by `@svml/compiler-text-node`;
 - the Script raw Surface and its audiovisual Narrative contract dependency;
@@ -21,11 +21,9 @@ From the repository:
 pnpm svml:v2 check path/to/main.svml
 pnpm svml:v2 lock-packages ./svml.packages.lock --package @example/cards --root .
 pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 plan path/to/main.svml --target component.result
 pnpm svml:v2 check path/to/build.svrun
 pnpm svml:v2 plan path/to/build.svrun
 pnpm svml:v2 build path/to/build.svrun --runtime ./svml.runtime.json --build-id delivery-01 --follow
-pnpm svml:v2 build path/to/main.svml --target final.video --runtime ./svml.runtime.ts --pin shot=<prior-build-id> --accept-substitute --build-id variant-01 --follow
 pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
 pnpm svml:v2 builds --runtime ./svml.runtime.json
 pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json
@@ -33,10 +31,10 @@ pnpm svml:v2 get <build-id> --name final.video --runtime ./svml.runtime.json --t
 pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
 ```
 
-`check` is usable for the complete provider-free author graph in
-`examples/talking-film-graph-check`. `plan` is fully implemented by the generic Node compiler. The
-live example now executes the explicit Vertex Gemini Caption package and real local/remote
-Endpoints; the CLI never fabricates missing facts.
+`check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run
+Source because an Author Graph without execution intent is not a Build. The live example executes
+the explicit Vertex Gemini Caption package and real local/remote Endpoints; the CLI never
+fabricates a Target, Candidate or missing fact.
 
 `build` compiles the same locked BuildState and passes it to a trusted local Runtime Profile.
 The default Build identity is content-derived, so the same invocation resumes durable local state;
@@ -62,20 +60,18 @@ value as JSON. It is Host egress only and never changes Build identity or retent
 and presentation names only. It is not Core truth or a Runtime Closure facet; `inspect` and `get`
 always resolve the alias back through the verified BuildState before accepting it.
 
-`--pin output=<prior-build-id>` is temporary CLI compatibility language, not a Core primitive. The Host
-verifies the prior Build only to extract a typed Record, attaches it as an ordinary zero-input
-`substitute` Candidate, and adds an explicit Satisfaction to a newly compiled BuildRequest. It does not
-prove that the old Graph, prompt or semantic meaning matches the current output. Consequently the
-command requires `--accept-substitute`. Upstream work behind that selected Candidate is not
-demanded, while every unbound reachable output follows the ordinary graph. The prior artifact must
-still exist in the ArtifactStore selected by the Runtime. This is a new Build with a new identity;
-it never resumes or copies the prior Build's outstanding Commands. `.svrun` is now the general Run
-Graph, Target and Satisfaction language; this narrow flag remains only migration compatibility.
+Historical Records, fixed files and generated previews are declared as ordinary Candidates in the
+Run Source and selected by explicit Satisfaction edges. The Host verifies a referenced prior Build
+only to extract the declared typed Record; it does not prove semantic affinity with the current
+output. Upstream work behind the selected Candidate is pruned by reverse reachability, while every
+unbound reachable output follows the ordinary graph. This is a new Build identity and never resumes
+or copies the prior Build's outstanding Commands.
 
 `@svml/package-loader-node` supports explicitly trusted installed implementation packages. It
 verifies the complete physical dependency closure before executing an activation entry, then checks
-exact Module, Frontend, Host-facet, Producer and Validator identities. The Loader does not select a
-syntax; this Distribution explicitly chooses `@svml/compiler-text-node`. `plan` and `build` bind the
-lock digest into `BuildRequest.implementationClosure`. Source cannot install a package or activate
-Provider/Runtime authority. Arbitrary untrusted community execution remains absent until an
-isolated Worker and real permission boundary exist.
+exact Module, Author/Run Frontend, Host-facet, Producer and Validator identities. The Loader does not
+select a syntax; each Source Header selects among Frontends trusted by this Distribution and its
+locked packages. Run Fragment libraries enter only through the `svml.run-fragment-host@1` facet.
+`plan` and `build` bind the lock digest into `BuildRequest.implementationClosure`. Source cannot
+install a package or activate Provider/Runtime authority. Arbitrary untrusted community execution
+remains absent until an isolated Worker and real permission boundary exist.
