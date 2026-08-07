@@ -49,9 +49,9 @@ curl http://127.0.0.1:8765/health
 
 ### 并发
 
-该服务同一时刻只接纳一次推理。第二个请求会收到 `503 BUSY`。并发由 SVML Runtime Scheduler 的 lane 配置管控，而不是由服务自身管控。
+该服务同一时刻只接纳一次推理。第二个请求会收到 `503 BUSY`。并发由 Narratage Runtime Scheduler 的 lane 配置管控，而不是由服务自身管控。
 
-Node Provider（`@svml/provider-whisperx-local`）必须配置与之匹配的模型、设备、计算类型和批大小。一旦不匹配，会在结果被接受之前失败。
+Node Provider（`@narratage/provider-whisperx-local`）必须配置与之匹配的模型、设备、计算类型和批大小。一旦不匹配，会在结果被接受之前失败。
 
 ### 测试
 
@@ -61,7 +61,7 @@ pnpm test:whisperx-service
 
 ## OpenCV 图像服务
 
-通过 `@svml/provider-image-opencv-local` 提供有上界的图像变换（例如 GPT Image 的 YCrCb 降噪预设）。
+通过 `@narratage/provider-image-opencv-local` 提供有上界的图像变换（例如 GPT Image 的 YCrCb 降噪预设）。
 
 ### 安装
 

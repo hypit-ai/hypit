@@ -7,12 +7,10 @@ description: Test runner, patterns and environment-gated tests.
 
 ## Test runner
 
-SVML uses the Node.js built-in test runner (`node:test`), not Jest, Vitest or Mocha.
+Narratage uses the Node.js built-in test runner (`node:test`), not Jest, Vitest or Mocha.
 
 ```bash
-pnpm test          # everything: v1 + v2
-pnpm test:v1       # v1 regression tests
-pnpm test:v2       # v2 package tests + boundary tests
+pnpm test          # package tests + boundary tests
 ```
 
 Test files live in `packages/<name>/test/` with the `.test.ts` extension. They are discovered by
@@ -24,7 +22,7 @@ the glob `packages/*/test/**/*.test.ts`.
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { someFunction } from "@svml/example";
+import { someFunction } from "@narratage/example";
 
 describe("someFunction", () => {
   test("returns the expected result", () => {
@@ -74,7 +72,7 @@ structural invariants across the entire workspace:
 - Domain-neutral closure contains only domain-neutral packages
 - CLI has no Provider or author-package dependency
 
-These run as part of `pnpm test:v2` on every commit.
+These run as part of `pnpm test` on every commit.
 
 ## Environment-gated tests
 
@@ -86,10 +84,10 @@ These run as part of `pnpm test:v2` on every commit.
 
 ## Test fixtures
 
-Test fixtures go in `packages/<name>/test/fixtures/` or `test/fixtures/` (v1). They are
+Test fixtures go in `packages/<name>/test/fixtures/`. They are
 ordinary `.svml`, `.svs` and `.svrun` files that exercise specific compilation paths.
 
 The `examples/` directory also serves as integration-level fixtures:
-- `examples/v2-bootstrap/` — smallest source closure check
+- `examples/bootstrap/` — smallest source closure check
 - `examples/talking-film-graph-check/` — complete graph compilation without Providers
 - `examples/echo-pro-aroll/` — live acceptance with explicit historical-Candidate reuse

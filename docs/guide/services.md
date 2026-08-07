@@ -54,10 +54,10 @@ curl http://127.0.0.1:8765/health
 ### Concurrency
 
 The service admits exactly one inference at a time. A second request receives `503 BUSY`.
-Concurrency is governed by the SVML Runtime Scheduler's lane configuration, not the service
+Concurrency is governed by the Narratage Runtime Scheduler's lane configuration, not the service
 itself.
 
-The Node Provider (`@svml/provider-whisperx-local`) must be configured with matching model,
+The Node Provider (`@narratage/provider-whisperx-local`) must be configured with matching model,
 device, compute and batch size. A mismatch fails before results are accepted.
 
 ### Tests
@@ -69,7 +69,7 @@ pnpm test:whisperx-service
 ## OpenCV image service
 
 Provides bounded image transforms (e.g. the GPT Image YCrCb denoise preset) through
-`@svml/provider-image-opencv-local`.
+`@narratage/provider-image-opencv-local`.
 
 ### Install
 
