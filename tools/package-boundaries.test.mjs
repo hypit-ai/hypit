@@ -131,3 +131,21 @@ test("generic and video CLIs reach no Provider package and video CLI activates n
   assert.ok(!videoDependencies.has("@narratage/film"));
   assert.ok(videoDependencies.has("@narratage/cli"));
 });
+
+test("domain packages confine their Text dependency to Surface and activation entries", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const surfaceOnly = [
+    "broll", "caption", "caption-gemini", "estimate", "film", "hyperframes-render",
+    "image-transform", "media", "seedance", "seedance-speaker", "speech-program", "whisperx",
+  ];
+  const allowed = new Set(["surface.ts", "activation.ts"]);
+  for (const name of surfaceOnly) {
+    const root = new URL(`../packages/${name}/src/`, import.meta.url);
+    for (const file of await readdir(root)) {
+      if (!file.endsWith(".ts") || allowed.has(file)) continue;
+      const content = await readFile(new URL(file, root), "utf8");
+      assert.ok(!content.includes("\"@narratage/text\""),
+        `${name}/src/${file} imports @narratage/text outside its Surface boundary`);
+    }
+  }
+});
