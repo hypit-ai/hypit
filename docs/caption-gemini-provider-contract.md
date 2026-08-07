@@ -122,10 +122,10 @@ CaptionPlan + CaptionProgram + Map + Narrative ─── TimedCaptionProjection
 TimedCaptionProjection + Styles ────────────────── VisualTrack
 ```
 
-For exact left/right correspondences, display atoms inherit measured source-token time. If one
+For exact left/right correspondences, display atoms inherit their source-token time. If one
 authored display phrase maps to a different spoken phrase without word-level evidence, Caption may
-derive proportional local windows inside the measured region envelope. Those windows are marked
-`estimated`; they are downstream presentation facts and never written into `CompleteSemanticMap`.
+derive proportional local windows inside the region envelope. Those windows are downstream
+presentation facts and are never written into `CompleteSemanticMap`.
 
 ## 5. Runtime registration
 

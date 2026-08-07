@@ -128,7 +128,7 @@ test("Caption-owned validators reject semantically invalid values", () => {
   );
 });
 
-test("Caption temporalization preserves evidence envelopes and labels local estimates", () => {
+test("Caption temporalization preserves evidence envelopes and refines them per word", () => {
   const narrative = parseScript(
     "caption.svml",
     "<line><that was insane | what the fuck> <15% off | fifteen percent off></line>",
@@ -159,18 +159,11 @@ test("Caption temporalization preserves evidence envelopes and labels local esti
 
   const whole = planCaptionPresentation(timed, "whole");
   assert.deepEqual(
-    [whole.units[0]?.display, whole.units[0]?.startSec, whole.units[0]?.endSec, whole.units[0]?.basis],
-    ["that was insane", 0.1, 0.72, "region-envelope"],
+    [whole.units[0]?.display, whole.units[0]?.startSec, whole.units[0]?.endSec],
+    ["that was insane", 0.1, 0.72],
   );
 
   const words = planCaptionPresentation(timed, "proportional-word");
-  assert.deepEqual(words.units.slice(0, 3).map((unit) => unit.basis), [
-    "presentation-estimate",
-    "presentation-estimate",
-    "presentation-estimate",
-  ]);
-  assert.equal(words.units.find((unit) => unit.display === "off")?.basis, "exact-correspondence");
-  assert.equal(words.units.find((unit) => unit.display === "15")?.timingQuality, "estimated");
   assert.deepEqual(map, originalMap, "caption presentation must not modify the global speech map");
 });
 
@@ -207,8 +200,6 @@ test("multiple Cues inside one display alias receive ordered local estimates, no
   const projection = temporalizeCaptionPlan(narrative, map, program, plan);
 
   assert.deepEqual(projection.regions.map((region) => region.display), ["that", "was", "insane"]);
-  assert.equal(projection.regions.every((region) =>
-    region.startQuality === "estimated" && region.endQuality === "estimated"), true);
   assert.equal(projection.regions[0]!.endSec <= projection.regions[1]!.startSec, true);
   assert.equal(projection.regions[1]!.endSec <= projection.regions[2]!.startSec, true);
   assert.deepEqual(

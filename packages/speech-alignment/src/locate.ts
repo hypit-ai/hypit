@@ -3,7 +3,7 @@ import type { Narrative, NarrativeToken } from "@narratage/narrative";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
 import type { AlignedTranscriptEvidence, AlignedTranscriptSegment, SpeechCharacterEvidence, SpeechWordEvidence } from "@narratage/speech-evidence";
-import type { AlignmentGroup, CompleteSemanticMap, SemanticTimePoint, TimedSpeechSegment, TimedSpeechToken, TimingQuality } from "@narratage/semantic-map";
+import type { AlignmentGroup, CompleteSemanticMap, SemanticTimePoint, TimedSpeechSegment, TimedSpeechToken } from "@narratage/semantic-map";
 
 import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";
@@ -15,8 +15,6 @@ export const speechLocatorDigest = digestOf("@narratage/speech-alignment/locate@
 type MutableTiming = {
   startSec: number;
   endSec: number;
-  startQuality: TimingQuality;
-  endQuality: TimingQuality;
 };
 
 type TimedEvidenceChar = {
@@ -310,8 +308,6 @@ function locatePairedGroup(
     output[sourceIndex] = {
       startSec,
       endSec: Math.max(startSec, endSec),
-      startQuality: exactOneToOne ? "measured" : "derived",
-      endQuality: exactOneToOne ? "measured" : "derived",
     };
   }
 }
@@ -354,8 +350,6 @@ function fillEstimated(
       values[index] = {
         startSec,
         endSec,
-        startQuality: "estimated",
-        endQuality: "estimated",
       };
     }
   }
@@ -414,8 +408,6 @@ export function locateSpeechTiming(
         endSec: secondsFor(basis, endFrame),
         startFrame,
         endFrame,
-        startQuality: timing.startQuality,
-        endQuality: timing.endQuality,
       };
     });
     assertMonotonic(segmentTokens, segment.id);
@@ -428,8 +420,6 @@ export function locateSpeechTiming(
       endSec: secondsFor(basis, endFrame),
       startFrame,
       endFrame,
-      startQuality: "measured",
-      endQuality: "measured",
     });
     groups.push(...segmentGroups);
   }
@@ -440,13 +430,13 @@ export function locateSpeechTiming(
     if (anchor.kind === "segment-start" || anchor.kind === "segment-end") {
       const segment = segmentsById.get(anchor.segmentId)!;
       return anchor.kind === "segment-start"
-        ? { identity: anchor.id, timeSec: segment.startSec, frame: segment.startFrame, quality: segment.startQuality }
-        : { identity: anchor.id, timeSec: segment.endSec, frame: segment.endFrame, quality: segment.endQuality };
+        ? { identity: anchor.id, timeSec: segment.startSec, frame: segment.startFrame }
+        : { identity: anchor.id, timeSec: segment.endSec, frame: segment.endFrame };
     }
     const token = tokensById.get(anchor.tokenId!)!;
     return anchor.kind === "token-start"
-      ? { identity: anchor.id, timeSec: token.startSec, frame: token.startFrame, quality: token.startQuality }
-      : { identity: anchor.id, timeSec: token.endSec, frame: token.endFrame, quality: token.endQuality };
+      ? { identity: anchor.id, timeSec: token.startSec, frame: token.startFrame }
+      : { identity: anchor.id, timeSec: token.endSec, frame: token.endFrame };
   });
   const payload = {
     contract: "svml.complete-semantic-map@1" as const,
