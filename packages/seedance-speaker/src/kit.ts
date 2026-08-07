@@ -11,6 +11,8 @@ import {
 } from "@narratage/seedance";
 import type { SeedanceSpeechProgram } from "@narratage/seedance";
 
+import type { BlobRef } from "@narratage/protocol";
+
 import type { SpeakerTakeIntent } from "./types.js";
 
 export const speakerMethodDefaults = {
@@ -102,6 +104,18 @@ export function bindSpeakerPromptKit(intent: SpeakerTakeIntent): PromptKitInvoca
   return invocation;
 }
 
+/** The model keeps one port per reference modality; the Speaker groups its takes accordingly. */
+function referencePortsOf(
+  references: SpeakerTakeIntent["references"],
+): Record<string, readonly { readonly role: "image" | "video" | "audio"; readonly artifact: BlobRef }[]> {
+  const ports: Record<string, { readonly role: "image" | "video" | "audio"; readonly artifact: BlobRef }[]> = {};
+  const names = { image: "referenceImage", video: "referenceVideo", audio: "referenceAudio" } as const;
+  for (const item of references) {
+    (ports[names[item.kind]] ??= []).push({ role: item.kind, artifact: item.artifact });
+  }
+  return ports;
+}
+
 export function renderSpeakerSpeechProgram(
   program: PromptProgram,
   intent: SpeakerTakeIntent,
@@ -111,14 +125,13 @@ export function renderSpeakerSpeechProgram(
   return sealSeedanceSpeechProgram({
     contract: "svml.seedance-speech-spine@1",
     model: intent.model,
-    prompt: program.blocks.map((item) => item.text).join(program.separator),
-    mode: {
-      kind: "reference",
-      items: intent.references.map((item) => ({ kind: item.kind, artifact: item.artifact })),
+    ports: {
+      prompt: [program.blocks.map((item) => item.text).join(program.separator)],
+      ...referencePortsOf(intent.references),
+      resolution: [intent.resolution],
+      aspectRatio: [intent.aspectRatio],
+      generateAudio: [true],
+      webSearch: [intent.webSearch],
     },
-    resolution: intent.resolution,
-    aspectRatio: intent.aspectRatio,
-    generateAudio: true,
-    webSearch: intent.webSearch,
   });
 }

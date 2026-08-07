@@ -109,7 +109,8 @@ Implemented:
 - independently activatable exact-model packages for Seedance, MiniMax H3, Gemini Omni,
   Grok Imagine, GPT Image, Nano Banana and Seedream;
 - `@narratage/provider-kie`: upload, recoverable paid submission, checkpointed polling, bounded download
-  and immediate ArtifactStore persistence for sixteen exact model capabilities;
+  and immediate ArtifactStore persistence for eleven exact models, mapped from their declared input
+  ports without importing any model package;
 - `@narratage/provider-google-vertex`: display-only Gemini Caption planning;
 - provider-neutral all-stream media inspection, attached-picture-safe selection, synchronized A/V
   normalization, audio-program rendering and final mux contracts;

@@ -20,6 +20,8 @@ the working tree contains only documents that should inform current implementati
 
 - [`graph-first-value-boundary.md`](./graph-first-value-boundary.md) — graph edges own
   dependency truth; values contain only intrinsic meaning.
+- [`model-input-ports.md`](./model-input-ports.md) — models declare the inputs they accept;
+  Providers only map those ports onto their own wire.
 - [`node-package-activation.md`](./node-package-activation.md) — trusted installed package
   locking, contributions and Host-selected facet activation.
 - [`local-developer-runtime.md`](./local-developer-runtime.md) — local SQLite/filesystem
