@@ -123,6 +123,7 @@
     id="captions"
     narrative={story}
     map={timing.map}
+    space={speech.space}
     program={caption-program}
     plan={caption-plan.plan}
   />
@@ -133,5 +134,5 @@
     <film:Track source={captions.track}/>
   </film:Film>
 
-  <render:Video id="final" composition={main.composition}/>
+  <render:Video id="final" composition={main.composition} space={speech.space}/>
 </svml>
