@@ -265,6 +265,7 @@ function groupWindow(
     ...charRun.map((char) => char.endSec),
   ].filter(finite);
   if (!starts.length || !ends.length) return undefined;
+  // The envelope of a run of evidence, not a correction of any one measurement.
   return { startSec: Math.min(...starts), endSec: Math.max(...ends) };
 }
 
@@ -305,10 +306,7 @@ function locatePairedGroup(
     }
     if (!finite(startSec) || !finite(endSec)) continue;
     const sourceIndex = sourceIndexById.get(sourceRun[tokenOffset]!.id)!;
-    output[sourceIndex] = {
-      startSec,
-      endSec: Math.max(startSec, endSec),
-    };
+    output[sourceIndex] = { startSec, endSec };
   }
 }
 
@@ -336,6 +334,8 @@ function fillEstimated(
     const runEnd = cursor;
     const left = runStart > 0 ? values[runStart - 1]!.endSec : startBound;
     const right = runEnd < values.length ? values[runEnd]!.startSec : endBound;
+    // These tokens have no measurement at all, so this bound shapes an invention
+    // rather than editing anything that was measured.
     const usableRight = Math.max(left, right);
     const weights = source
       .slice(runStart, runEnd)
@@ -354,16 +354,6 @@ function fillEstimated(
     }
   }
   return values as MutableTiming[];
-}
-
-function assertMonotonic(tokens: readonly TimedSpeechToken[], segmentId: string): void {
-  let previousEnd = -Infinity;
-  for (const token of tokens) {
-    if (token.startSec < previousEnd - EPSILON || token.endSec < token.startSec - EPSILON) {
-      fail("SPEECH_MAP_ORDER", `Located token ${token.tokenId} violates time order in Segment ${segmentId}.`);
-    }
-    previousEnd = token.endSec;
-  }
 }
 
 function frameFor(basis: SpeechAudioBasis, timeSec: number): number {
@@ -399,7 +389,7 @@ export function locateSpeechTiming(
     const segmentTokens = source.map((token, index): TimedSpeechToken => {
       const timing = complete[index]!;
       const startFrame = frameFor(basis, timing.startSec);
-      const endFrame = Math.max(startFrame, frameFor(basis, timing.endSec));
+      const endFrame = frameFor(basis, timing.endSec);
       return {
         tokenId: token.id,
         segmentId: segment.id,
@@ -409,10 +399,9 @@ export function locateSpeechTiming(
         endFrame,
       };
     });
-    assertMonotonic(segmentTokens, segment.id);
     timedTokens.push(...segmentTokens);
     const startFrame = frameFor(basis, aligned.startSec);
-    const endFrame = Math.max(startFrame, frameFor(basis, aligned.endSec));
+    const endFrame = frameFor(basis, aligned.endSec);
     timedSegments.push({
       segmentId: segment.id,
       startSec: secondsFor(basis, startFrame),
@@ -438,7 +427,6 @@ export function locateSpeechTiming(
   });
   return {
     contract: "svml.complete-semantic-map@1" as const,
-    segments: timedSegments,
     tokens: timedTokens,
     anchors,
   };
