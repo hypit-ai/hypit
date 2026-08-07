@@ -1,6 +1,0 @@
-<kernel name="speech-locator" abi="1" implementation="./runtime/speech-locator.mjs">
-  <port name="script" direction="input" type="NarrativeIR" cardinality="one"/>
-  <port name="basis" direction="input" type="TemporalBasisProduction" cardinality="one"/>
-  <port name="evidence" direction="input" type="SpeechTimingEvidence" cardinality="one"/>
-  <port name="map" direction="output" type="CompleteSemanticMap" cardinality="one"/>
-</kernel>

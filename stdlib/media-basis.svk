@@ -1,9 +1,0 @@
-<kernel name="media-basis" abi="1" implementation="./runtime/media-basis.mjs">
-  <param name="fps" type="number" default="30"/>
-  <param name="duration" type="duration"/>
-  <param name="sourceStart" type="duration" default="0ms"/>
-  <port name="audio" direction="input" type="Audio" cardinality="one"/>
-  <port name="visual" direction="input" type="Video" cardinality="zero-or-one"/>
-  <port name="production" direction="output" type="TemporalBasisProduction" cardinality="one"/>
-  <port name="facets.visual" direction="output" type="ProgramBoundVideo" cardinality="zero-or-one"/>
-</kernel>
