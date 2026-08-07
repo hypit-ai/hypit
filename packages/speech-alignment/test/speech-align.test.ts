@@ -305,17 +305,34 @@ test("multiple Script Segments stay independent even when evidence records arriv
   ]);
 });
 
-test("invalid overlapping evidence word windows fail instead of producing a reversed map", () => {
-  const narrative = parseScript("bad.svml", "<line>one two</line>");
-  assert.throws(
-    () => locate(narrative, {
-      words: [
-        { text: "one", startSec: 0.1, endSec: 0.5 },
-        { text: "two", startSec: 0.4, endSec: 0.8 },
-      ],
-    }),
-    (error: unknown) => error instanceof SpeechAlignmentError && error.code === "SPEECH_WORD_ORDER",
-  );
+test("overlapping evidence word windows reach the map overlapping", () => {
+  // Two spoken words whose measured windows overlap. Nothing here knows whether
+  // that is a real overlap or a wobble, and no consumer of the map is bound to
+  // treat it as either, so it is reported as measured.
+  const narrative = parseScript("overlap.svml", "<line>one two</line>");
+  const map = locate(narrative, {
+    words: [
+      { text: "one", startSec: 0.1, endSec: 0.5 },
+      { text: "two", startSec: 0.4, endSec: 0.8 },
+    ],
+  });
+  assert.deepEqual(map.tokens.map((token) => [token.startSec, token.endSec]), [[0.1, 0.5], [0.4, 0.8]]);
+  assert.equal(map.tokens[1]!.startSec < map.tokens[0]!.endSec, true, "the overlap survived");
+});
+
+test("locating is total: every Script token carries a window", () => {
+  const narrative = parseScript("total.svml", "<line>alpha beta gamma delta</line>");
+  // Nothing the aligner could place: every window below is interpolated.
+  const blind = locate(narrative, {
+    words: [{ text: "alpha" }, { text: "beta" }, { text: "gamma" }, { text: "delta" }],
+  });
+  assert.equal(blind.tokens.length, narrative.tokens.length);
+  assert.equal(blind.tokens.every((token) => Number.isFinite(token.startSec) && Number.isFinite(token.endSec)), true);
+
+  // The speaker said something else entirely; the Script is still fully located.
+  const diverged = locate(narrative, { words: [{ text: "zzz", startSec: 0.2, endSec: 0.8 }] });
+  assert.equal(diverged.tokens.length, narrative.tokens.length);
+  assert.equal(diverged.tokens.every((token) => Number.isFinite(token.startSec)), true);
 });
 
 test("Evidence is interpreted only through the explicitly connected SpeechAudioBasis", () => {
