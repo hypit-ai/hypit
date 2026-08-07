@@ -35,7 +35,7 @@ const audio: MediaArtifactRef = {
 
 function fixture() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 4,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -213,7 +213,7 @@ test("the Type owner rejects an invalid VisualTrack at the shared admission gate
 test("Composition validates Track frame ranges against the explicitly connected ProgramSpace", () => {
   const { programSpace, visual } = fixture();
   const foreign = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 24, denominator: 1 },
   });

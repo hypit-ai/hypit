@@ -12,7 +12,7 @@ export const speechAlignProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const speechAlignManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: speechAlignModuleRef.name,
   version: speechAlignModuleRef.version,
   dependencies: [

@@ -15,7 +15,7 @@ export const artifactTypes = {
 export const blobArtifactValueSchema: ValueSchema = { kind: "blob" };
 
 export const artifactManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: artifactModuleRef.name,
   version: artifactModuleRef.version,
   dependencies: [],

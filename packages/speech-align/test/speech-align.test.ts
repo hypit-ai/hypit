@@ -53,7 +53,7 @@ function speechBasis(
   windows?: readonly { readonly startSec: number; readonly endSec: number }[],
 ): SpeechAudioBasis {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
@@ -318,7 +318,7 @@ test("Evidence is interpreted only through the explicitly connected SpeechAudioB
     words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
   const anotherSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -331,7 +331,7 @@ test("the final map is quantized once into the selected ProgramSpace", () => {
   const narrative = parseScript("frames.svml", "<line>Hello.</line>");
   const original = speechBasis(narrative, 1);
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });

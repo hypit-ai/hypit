@@ -71,7 +71,7 @@ const markerEdge = object({
 });
 
 export const narrativeSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.narrative@0" } },
+  contract: { schema: { kind: "literal", value: "svml.narrative@1" } },
   segments: { schema: { kind: "array", minItems: 1, items: object({
     id: { schema: string }, index: { schema: integer }, startAnchorId: { schema: string },
     endAnchorId: { schema: string }, tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
@@ -97,7 +97,7 @@ export const narrativeSchema: ValueSchema = object({
     }) } },
   }) } },
   captionProjection: { schema: object({
-    contract: { schema: { kind: "literal", value: "svml.caption-projection@0" } },
+    contract: { schema: { kind: "literal", value: "svml.caption-projection@1" } },
     text: { schema: { kind: "string" } },
     regions: { schema: { kind: "array", items: object({
       id: { schema: string }, display: { schema: { kind: "string" } }, segmentId: { schema: string },
@@ -111,7 +111,7 @@ export const narrativeSchema: ValueSchema = object({
     }) } },
   }) },
   semanticIndex: { schema: object({
-    contract: { schema: { kind: "literal", value: "svml.semantic-index@0" } },
+    contract: { schema: { kind: "literal", value: "svml.semantic-index@1" } },
     anchors: { schema: { kind: "array", minItems: 2, items: object({
       id: { schema: string },
       kind: { schema: { kind: "string", enum: ["segment-start", "token-start", "token-end", "segment-end"] } },
@@ -155,7 +155,7 @@ export const narrativeSpeechExcerptSchema: ValueSchema = object({
 });
 
 export const captionProjectionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-projection@0" } },
+  contract: { schema: { kind: "literal", value: "svml.caption-projection@1" } },
   text: { schema: { kind: "string" } },
   regions: { schema: { kind: "array", items: object({
     id: { schema: string }, display: { schema: { kind: "string" } }, segmentId: { schema: string },
@@ -352,7 +352,7 @@ export const compositableSurfaceSchema: ValueSchema = object({
   timing: { schema: surfaceTimingSchema },
 });
 export const programSpaceSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.program-space@0" } },
+  contract: { schema: { kind: "literal", value: "svml.program-space@1" } },
   durationSec: { schema: number },
   frameRate: { schema: object({ numerator: { schema: integer }, denominator: { schema: integer } }) },
 });
@@ -555,7 +555,7 @@ export const compositionSchema: ValueSchema = object({
 });
 
 export const narrativeManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: narrativeModuleRef.name,
   version: narrativeModuleRef.version,
   dependencies: [],
@@ -587,7 +587,7 @@ export const mediaSurfaceImplementationDigests = {
 } as const;
 
 export const mediaManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: mediaModuleRef.name,
   version: mediaModuleRef.version,
   dependencies: [artifactDependency],
@@ -697,7 +697,7 @@ export const mediaManifest: ModuleManifest = {
 };
 
 export const programSpaceManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: programSpaceModuleRef.name,
   version: programSpaceModuleRef.version,
   dependencies: [],
@@ -712,7 +712,7 @@ export const mediaManifestDigest = digestOf(mediaManifest);
 export const programSpaceManifestDigest = digestOf(programSpaceManifest);
 
 export const speechManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: speechModuleRef.name,
   version: speechModuleRef.version,
   dependencies: [
@@ -734,7 +734,7 @@ export const speechManifest: ModuleManifest = {
 export const speechManifestDigest = digestOf(speechManifest);
 
 export const semanticTimeManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: semanticTimeModuleRef.name,
   version: semanticTimeModuleRef.version,
   dependencies: [
@@ -758,7 +758,7 @@ export const compositionValidatorDigests = {
 } as const;
 
 export const compositionManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: compositionModuleRef.name,
   version: compositionModuleRef.version,
   dependencies: [

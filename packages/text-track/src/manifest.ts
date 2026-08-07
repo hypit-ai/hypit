@@ -121,7 +121,7 @@ const textTrackSetSchema: ValueSchema = object({
 export const textTrackSurfaceImplementationDigest = digestOf("@svml/text-track/track-surface@2");
 
 export const textTrackManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: textTrackModuleRef.name,
   version: textTrackModuleRef.version,
   dependencies: [

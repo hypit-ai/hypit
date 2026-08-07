@@ -138,7 +138,7 @@ export function planCaptionPresentation(
         ? proportionalWords(region)
         : characterFlow(region));
   return {
-    contract: "svml.caption-presentation-plan@0" as const,
+    contract: "svml.caption-presentation-plan@1" as const,
     mode,
     units,
   };

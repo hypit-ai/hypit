@@ -103,7 +103,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       style: "normal",
     };
     const space = sealProgramSpace({
-      contract: "svml.program-space@0",
+      contract: "svml.program-space@1",
       durationSec: 1 / 30,
       frameRate: { numerator: 30, denominator: 1 },
     });

@@ -79,17 +79,17 @@
     {
       "name": "@svml/artifact",
       "version": "0.0.0-dev",
-      "digest": "sha256:368270c5c19f9300599a4a1ee9f7525f39b1e3e2c036bf0b03317fa2dc32a303"
+      "digest": "sha256:7cb3fdae052dff482784bb6db5cfbad2c0df61928ec012614fb8e9d71bba4e19"
     },
     {
       "name": "@svml/caption-gemini",
       "version": "0.0.0-dev",
-      "digest": "sha256:9627669c488f9df22fef6a27f74d2bf5d499e3a0ba651eb594a9b47fe82cd21f"
+      "digest": "sha256:db7f94f706db5cffd40c2adce6d8deff105adc79acecea97fde9123fc1a37010"
     },
     {
       "name": "@svml/caption",
       "version": "0.0.0-dev",
-      "digest": "sha256:a7f225fee5e57574f3f0d874a3ebaaca896126bee9a1ba420a022b560aaffc53"
+      "digest": "sha256:0bbe90fb97d3337c558a2271356dc1575ed3fd2ca7bf205de4e53f137ed0875c"
     },
     {
       "name": "@svml/component-kit",
@@ -99,22 +99,22 @@
     {
       "name": "@svml/contracts",
       "version": "0.0.0-dev",
-      "digest": "sha256:b3a9eea0f89a6c0a5920fb055f919a123c9a45b268b31f029e466415565059d3"
+      "digest": "sha256:c2f5cbb59b0f2717bd221c74f4f4318a235e2fd96bae73b1265a3abbcafebae8"
     },
     {
       "name": "@svml/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:7b8af092e472c43f2b990d92cd7f0b0d426e19f4003582f50ca7aaefd3ec6007"
+      "digest": "sha256:add5f61a29c3fafe97bcb5f18c5e78bbeff44f30e9a79e61cfe8736d654eb570"
     },
     {
       "name": "@svml/elaborator",
       "version": "0.0.0-dev",
-      "digest": "sha256:d5987b778a5bc3c4b2f734140bb8fd520f5abcb86ce85391464643d59c45f78a"
+      "digest": "sha256:d74149453ea40638721db94afcad3855c4b0f6ba6ed6c8fa27fe54e75c341d42"
     },
     {
       "name": "@svml/endpoint-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:49ba39c758614bba5c473601cbc0d36b7d38e823031b2d3dfdd76f95c6b6702e"
+      "digest": "sha256:3f4e787a9bc08f7b8df9788a44608ea9097937f8e1d2800e99d907e672610562"
     },
     {
       "name": "@svml/gemini-omni",
@@ -124,7 +124,7 @@
     {
       "name": "@svml/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:7cbe6e3c8db1bbe3c084bbdac82fe672908f3f8ec7f1585de28349d8711e1843"
+      "digest": "sha256:df79e236551d4467197b17c46a9d9275cc865e76c0b49f63f290ac54d926b16f"
     },
     {
       "name": "@svml/gpt-image",
@@ -144,17 +144,17 @@
     {
       "name": "@svml/hyperframes-render",
       "version": "0.0.0-dev",
-      "digest": "sha256:6f0dcd08108987e1dd9a5701ee5d2f21d42c4559def713539f3103a19b4d5d3b"
+      "digest": "sha256:f51ad9eea70e7cb6f6acd63599df3093bc9213c0bd4aa72f52bf365bfaf0ea8a"
     },
     {
       "name": "@svml/hyperframes",
       "version": "0.0.0-dev",
-      "digest": "sha256:c121a31f96d6e5c3205040c58a3a5b03d52ceb31ba584975df2d9b8ceb720ebb"
+      "digest": "sha256:0442b7a5faf21cafcb590ed24d53e7f740925d234a82eb19b06c3146bae9e352"
     },
     {
       "name": "@svml/media-pipeline",
       "version": "0.0.0-dev",
-      "digest": "sha256:4bea3929ab3efabda5748ba897bd597bcfd571ce25459cb387630dfa2a23110a"
+      "digest": "sha256:8abbbd818e74af7c1a42148e618d59dcbd4048110512930841ae39e0abf5a884"
     },
     {
       "name": "@svml/minimax-h3",
@@ -164,7 +164,7 @@
     {
       "name": "@svml/model-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:51c71bac3365c6811b27d0aa345b63ff64cee26047bd33b524ad6aa969cc02de"
+      "digest": "sha256:9278b3142925b2bc86a5419cd98aa7848f300ab7db488dbad91b36ab5ae9efda"
     },
     {
       "name": "@svml/nano-banana",
@@ -174,7 +174,7 @@
     {
       "name": "@svml/protocol",
       "version": "0.0.0-dev",
-      "digest": "sha256:cdede72e3612684f37302267a757cdfde7cd7d474c671e738969b10268e2e7fe"
+      "digest": "sha256:79c678aebb04a4ffbafd124b4e8a154030b86b874ec8711c37dc0ca3c8618120"
     },
     {
       "name": "@svml/provider-google-vertex",
@@ -184,7 +184,7 @@
     {
       "name": "@svml/provider-hyperframes-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:f94e3d0e32fe4b43d4e72ddf1a1f3233fc8a470004c0589b7eb7c3b4bac3bbc5"
+      "digest": "sha256:a91ff07b06df1b54976ea8caea7e18ef4e9d2660b65b97cc824aef044c4560a0"
     },
     {
       "name": "@svml/provider-kie",
@@ -199,7 +199,7 @@
     {
       "name": "@svml/provider-whisperx-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:fc69b1beb7c726ad93a337365c7e7106c6e23752021118d05fcdf4f9b845285b"
+      "digest": "sha256:7727a0c14100c8ca1cf993b6d1bfd79bdeb5edff95ee5add63e8d8567daf1517"
     },
     {
       "name": "@svml/runtime-adapter-node",
@@ -214,7 +214,7 @@
     {
       "name": "@svml/runtime",
       "version": "0.0.0-dev",
-      "digest": "sha256:276aabd6a0f955ecfa630ea104c959f1a4fdae30d320f91cfa21cc9023f49169"
+      "digest": "sha256:8e144113fc79535b7951ba920c6c6162f7e104b3d605ea8d9b9661b02499e529"
     },
     {
       "name": "@svml/seedance",
@@ -234,17 +234,17 @@
     {
       "name": "@svml/speech-align",
       "version": "0.0.0-dev",
-      "digest": "sha256:1ae65828af4e46e1e8b4065c28451ee08109fe5e5d58e60e457ff0a610c02d90"
+      "digest": "sha256:41933e5c0275de9106a2338e54b2a7f30cf015592b0a55ca0ef3282029982a2a"
     },
     {
       "name": "@svml/svs",
       "version": "0.0.0-dev",
-      "digest": "sha256:a336db7f075cab5357a96ba0d3b079c213c93fa0a4f95c39926c2e1b784d3d24"
+      "digest": "sha256:12c9c49ef78fa1ec352e3be0693b78d66177fc203d406c44e7665f8fcba33226"
     },
     {
       "name": "@svml/text",
       "version": "0.0.0-dev",
-      "digest": "sha256:03985ce5c8bf04fc8dcfc474b4b80133a5bffbb6965604bdc0f9f8fb64ad0524"
+      "digest": "sha256:c60dc444a6ca6481f906635d699093542c4031e9e0bbe6b5312561317d694777"
     },
     {
       "name": "@svml/validation",
@@ -254,7 +254,7 @@
     {
       "name": "@svml/whisperx",
       "version": "0.0.0-dev",
-      "digest": "sha256:9047e6ed3c9d88dcce16f05d273eb2295692e274b68b6d7ea1835031ef55bebf"
+      "digest": "sha256:49083ba473a0a3546eca5d253f93b3068c70d6107e6c57ba007a472f096f3971"
     },
     {
       "name": "@swc/helpers",
@@ -855,7 +855,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:a1fe53038e8c6c126a1325f15a23061263d85ea4ff7067e36fb9855e77cf4a40",
-      "closureDigest": "sha256:599ed165d800fa2a29d36291f1861c6c4a8dd35d75a85dbec004de584cfec8ad"
+      "closureDigest": "sha256:c5bf42e84227ab789eb3335ecc7fab6553bc3fb4113a87b60641caf3551dc7cf"
     },
     {
       "specifier": "@svml/provider-hyperframes-local",
@@ -864,7 +864,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:6dbd880063eb20cfd7e1eee749184c1935c353a0cdb732b188508a2410e04eb2",
-      "closureDigest": "sha256:80315b164819acd9d88b2000c6ab7c6720521d76b673cbd7aaf0e635abdc6fec"
+      "closureDigest": "sha256:471bec9cd16cf74afa23f33ce53e611e8dbb7e97ca0a7d35594279c2939b9c21"
     },
     {
       "specifier": "@svml/provider-kie",
@@ -873,7 +873,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:bfdc56dd5b01deb5da2c8cfe20e039387b0a9ffb1ce66fceae11378f28cb1bdb",
-      "closureDigest": "sha256:995ae3e691362edd7c7678f69e0f4845c5fdaa4a4d0a44da1d0c0fbe37140c00"
+      "closureDigest": "sha256:49ec9be89ef7e2e8a7df66436630ebf4cdd116933578213755d5bc0a406c0d40"
     },
     {
       "specifier": "@svml/provider-media-local",
@@ -882,7 +882,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e232139c8339387f3404c29d9ea0829b7be78fb742ee48671727d9c7f899a30b",
-      "closureDigest": "sha256:b57bca51e0aa39f20bc2894d569f5815dcad14800e89487cef4eefaee456d92a"
+      "closureDigest": "sha256:7fb270ac4207264a863e1589bf254654fcdcf7c3411122d05a35831ae4377a3d"
     },
     {
       "specifier": "@svml/provider-whisperx-local",
@@ -891,8 +891,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:8a1b222a41c2b8a119c973c783f14efb103745f3ff960c1d8f04aaff534918c9",
-      "closureDigest": "sha256:6d4abbe0d5215a78fe108fec15c5577f73b55c8a5a1049027aaf33d54af964e5"
+      "closureDigest": "sha256:df3bdc7453c34720053a92ec9cfdecc92515ac35f5cfae02e2e5d2e6d611236d"
     }
   ],
-  "digest": "sha256:1de4569c947957d0e633edb8d6c472746ce63edc5076ce2d1ad24a86161abf38"
+  "digest": "sha256:5d2f6a665e5acca96f14e16ec91cb84e156fb13cb6facb54545abe14495f9762"
 }

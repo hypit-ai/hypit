@@ -40,7 +40,7 @@ const measureSurfaceDigest = digestOf("example.text-laboratory/measure-surface@1
 const reportSurfaceDigest = digestOf("example.text-laboratory/report-surface@1");
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],

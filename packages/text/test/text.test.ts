@@ -178,7 +178,7 @@ test("a module can use Text's generic structured parser without adding another p
   const type = { module, name: "Card" } as const;
   const implementationDigest = digestOf("example.card/surface@1");
   const manifest: ModuleManifest = {
-    format: "svml.module@0",
+    format: "svml.module@1",
     name: module.name,
     version: module.version,
     dependencies: [],

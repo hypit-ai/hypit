@@ -20,7 +20,7 @@ import {
 import type { CompleteSemanticMap, NarrativeSelectionRef } from "@svml/contracts";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@0",
+  contract: "svml.program-space@1",
   durationSec: 5,
   frameRate: { numerator: 30, denominator: 1 },
 });

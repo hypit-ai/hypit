@@ -40,8 +40,8 @@ Implemented:
 - `@svml/protocol`: immutable Manifests, Types, Graph, Build and provenance wire data;
 - `@svml/artifact`: domain-neutral nominal `BlobArtifact` contract, independent of video Media and
   Runtime ArtifactStore implementations;
-- `@svml/core`: `svml.graph@2`, independent Candidate, explicit Satisfaction, arbitrary Targets,
-  reverse reachability, finite `svml.plan@2` derivation and verified `svml.build@2` state machine;
+- `@svml/core`: `svml.graph@1`, independent Candidate, explicit Satisfaction, arbitrary Targets,
+  reverse reachability, finite `svml.plan@1` derivation and verified `svml.build@1` state machine;
 - one Operation instance fans out once; distinct instances never content-deduplicate;
 - Provided Values, multi-export Run Fragments, partial substitution and fully pruned defaults;
 - digest-bound Derivation and Receipt integrity, monotonic conformance and regenerated resume

@@ -46,7 +46,7 @@ const producers = {
 } satisfies Record<string, ProducerRef>;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
