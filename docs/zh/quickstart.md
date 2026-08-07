@@ -10,7 +10,8 @@ Glory*》的一篇影评。那位影评人造出这个词，用来描述当时�
 **Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
 
 这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
-文字与音频组装成一部完成的影片。内部的包作用域是 `@svml`（Semantic Video Markup Language）。
+文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
+扩展名为 `.svml`；工作区包则发布在 `@narratage` 作用域下。
 
 ## 安装
 
@@ -41,11 +42,11 @@ WhisperX、Gemini Caption、B-roll、Text、Film、HyperFrames —— 全程不�
 
 ```bash
 # 编译 Author Source。
-pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+pnpm narratage check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
 # 编译 Run Source 并查看冻结后的 plan。
-pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+pnpm narratage plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
@@ -65,10 +66,10 @@ pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
 
 ```bash
 # 诊断 Runtime 环境。
-pnpm svml:v2 doctor examples/echo-pro-aroll/svml.runtime.json
+pnpm narratage doctor examples/echo-pro-aroll/svml.runtime.json
 
 # 提交 Build。
-pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
+pnpm narratage build examples/echo-pro-aroll/build.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . \
@@ -76,7 +77,7 @@ pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
   --follow
 
 # 取回最终视频。
-pnpm svml:v2 get echo-pro-film-001 \
+pnpm narratage get echo-pro-film-001 \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --name final.video \
   --to examples/echo-pro-aroll/output/final.mp4
@@ -91,7 +92,7 @@ SVML 没有隐式缓存。复用结果是显式的 Run Graph 编写工作 ——
 Candidates，再用 Satisfaction edges 把它们接起来：
 
 ```xml
-<?svml using="@svml/run-text@1"?>
+<?svml using="@narratage/run-text@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
   <target-set id="delivery">
@@ -109,7 +110,7 @@ Candidates，再用 Satisfaction edges 把它们接起来：
 而不是对上一次的续跑。
 
 ```bash
-pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
+pnpm narratage build examples/echo-pro-aroll/reuse-generated.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . --build-id echo-pro-film-reuse-001 --follow
@@ -118,17 +119,17 @@ pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
 ## CLI 参考
 
 ```text
-svml-v2 lock-packages <lock> --package name [--package name ...] [--root dir]
-svml-v2 doctor <runtime.json>
-svml-v2 gc <runtime.json> [--apply]
-svml-v2 check <source> [--package-lock file] [--root dir]
-svml-v2 plan <run-source> [--package-lock file] [--root dir]
-svml-v2 build <run-source> --runtime profile [--build-id id] [--follow]
-svml-v2 status <build-id> --runtime profile
-svml-v2 builds --runtime profile
-svml-v2 inspect <build-id> --runtime profile
-svml-v2 get <build-id> --runtime profile [--name x|--record x|--output x|--artifact x] [--to path]
-svml-v2 cancel <build-id> --runtime profile
+narratage lock-packages <lock> --package name [--package name ...] [--root dir]
+narratage doctor <runtime.json>
+narratage gc <runtime.json> [--apply]
+narratage check <source> [--package-lock file] [--root dir]
+narratage plan <run-source> [--package-lock file] [--root dir]
+narratage build <run-source> --runtime profile [--build-id id] [--follow]
+narratage status <build-id> --runtime profile
+narratage builds --runtime profile
+narratage inspect <build-id> --runtime profile
+narratage get <build-id> --runtime profile [--name x|--record x|--output x|--artifact x] [--to path]
+narratage cancel <build-id> --runtime profile
 ```
 
 ## 下一步

@@ -22,39 +22,31 @@ description: 开始 Narratage 开发工作。
 
 ```bash
 pnpm install          # 拉取代码或改动依赖之后
-pnpm check            # TypeScript 类型检查：v1 + v2
-pnpm test             # 完整测试套件：v1 + v2
+pnpm check            # TypeScript 类型检查
+pnpm test             # 完整测试套件
 ```
 
 | 命令 | 实际执行什么 |
 |---|---|
-| `pnpm check:v1` | `tsc -p tsconfig.json --noEmit` —— 保留下来的 v1 research oracle |
-| `pnpm check:v2` | `tsc -p tsconfig.v2.json --noEmit` —— 全部 v2 workspace 包 |
-| `pnpm test:v1` | `node --import tsx --test 'test/**/*.test.ts'` |
-| `pnpm test:v2` | `node --import tsx --test 'packages/*/test/**/*.test.ts' 'tools/*.test.mjs'` |
+| `pnpm check` | `tsc -p tsconfig.json --noEmit` |
+| `pnpm test` | `node --import tsx --test 'packages/*/test/**/*.test.ts' 'tools/*.test.mjs'` |
 
-关于受环境开关控制的测试与测试写法，参见 [Testing](./testing.md)。
+关于受环境开关控制的测试与测试写法，参见[测试](./testing.md)。
 
 ## 仓库结构
 
 ```text
-svml/
-├── packages/              64 v2 workspace packages (the active system)
+narratage/
+├── packages/              78 workspace packages
 ├── spec/                  7 normative specification documents
 ├── docs/                  VitePress documentation site
-├── examples/              v2 examples and v1 regression fixtures
+├── examples/              runnable example sources
 ├── services/              Python sidecar services (whisperx, image-opencv)
-├── src/                   v1 legacy source (regression evidence only)
-├── stdlib/                v1 kernel definitions and runtime
-├── test/                  v1 test suite
 ├── tools/                 boundary tests and build scripts
 ├── package.json           root workspace manifest
 ├── pnpm-workspace.yaml    workspace: [packages/*]
-├── tsconfig.json          v1 TypeScript config
-└── tsconfig.v2.json       v2 TypeScript config
+└── tsconfig.json          TypeScript config
 ```
-
-`src/`、`stdlib/` 与 `test/` 是 v1 research oracle，作为回归证据保留下来。它们不是 v2 API。
 
 ## 指南目录
 

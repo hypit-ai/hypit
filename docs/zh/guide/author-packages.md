@@ -17,7 +17,7 @@ mkdir -p packages/my-component/src packages/my-component/test
 
 ```json
 {
-  "name": "@svml/my-component",
+  "name": "@narratage/my-component",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -28,9 +28,9 @@ mkdir -p packages/my-component/src packages/my-component/test
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/protocol": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }
 ```
@@ -42,10 +42,10 @@ mkdir -p packages/my-component/src packages/my-component/test
 在 `src/index.ts` 中声明你的 Module 的身份、Type 和 Producer：
 
 ```typescript
-import type { ModuleManifest, ModuleRef } from "@svml/protocol";
+import type { ModuleManifest, ModuleRef } from "@narratage/protocol";
 
 export const myComponentModuleRef: ModuleRef = {
-  name: "@svml/my-component",
+  name: "@narratage/my-component",
   version: 1,
 };
 
@@ -64,7 +64,7 @@ Surface handler 把 Text Frontend 的 XML 元素解码成带类型的作者声�
 
 ```typescript
 // src/surface.ts
-import type { TextSurfaceDecoder } from "@svml/text";
+import type { TextSurfaceDecoder } from "@narratage/text";
 
 export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) => {
   // Read attributes and children from the XML element
@@ -83,7 +83,7 @@ export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) =
 
 ```typescript
 // src/activation.ts
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 import {
   myComponentManifest,
   myComponentModuleRef,
@@ -92,10 +92,10 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/my-component",
+  name: "@narratage/my-component",
   modules: [{
     manifest: myComponentManifest,
-    specifiers: ["@svml/my-component", "@svml/my-component@1"],
+    specifiers: ["@narratage/my-component", "@narratage/my-component@1"],
   }],
   hostFacets: [
     createTextSurfaceHostFacet({
@@ -113,12 +113,12 @@ export default svmlPackage;
 
 `specifiers` 数组列出了 `<import from="..."/>` 会去匹配的字符串。`surface` 字符串决定 XML 元素前缀（以 `mine` 导入时即为 `<mine:my-widget>`）。
 
-## 6. 在 tsconfig.v2.json 中注册
+## 6. 在 tsconfig.json 中注册
 
-添加路径映射，让 TypeScript 把 `@svml/my-component` 解析到源码：
+添加路径映射，让 TypeScript 把 `@narratage/my-component` 解析到源码：
 
 ```json
-"@svml/my-component": ["packages/my-component/src/index.ts"]
+"@narratage/my-component": ["packages/my-component/src/index.ts"]
 ```
 
 ## 7. 安装并锁定
@@ -126,18 +126,18 @@ export default svmlPackage;
 ```bash
 pnpm install
 
-pnpm svml:v2 lock-packages <lock-file> \
-  --package @svml/my-component \
-  [--package @svml/other-dep ...] \
+pnpm narratage lock-packages <lock-file> \
+  --package @narratage/my-component \
+  [--package @narratage/other-dep ...] \
   --root .
 ```
 
 ## 8. 在 Author Source 中使用
 
 ```xml
-<?svml using="@svml/text@1"?>
+<?svml using="@narratage/text@1"?>
 <svml>
-  <import as="mine" from="@svml/my-component@1"/>
+  <import as="mine" from="@narratage/my-component@1"/>
 
   <mine:Widget id="demo" during={story.selection.example}/>
 </svml>

@@ -5,7 +5,7 @@ description: The four layers, dependency boundaries, package anatomy and facets.
 
 # Package Architecture
 
-The 64+ workspace packages under `packages/` are organized into four architectural layers. Each
+The 78 workspace packages under `packages/` are organized into four architectural layers. Each
 layer has strict dependency rules enforced by tests on every commit.
 
 ## The four layers
@@ -17,32 +17,32 @@ Runtime ports. They are reusable by any domain — not just video — and have n
 Script, Seedance, Film or any video concept.
 
 ```text
-@svml/protocol              immutable wire contracts
-@svml/artifact              domain-neutral content-addressed byte type
-@svml/core                  Demand compiler and Build state machine
-@svml/source                mandatory Source Header
-@svml/elaborator            author declarations and Fragment expansion
-@svml/realization           typed realization overlays
-@svml/run                   syntax-neutral Run Graph
-@svml/validation            semantic admission
-@svml/host                  Host-facing interfaces
-@svml/compiler-node         reference Node compiler Host
-@svml/workspace-fs-node     workspace filesystem abstraction
-@svml/component-kit         Producer/validator registration
-@svml/runtime               Scheduler and Store ports
-@svml/runtime-adapter       deployment-adapter ABI
-@svml/runtime-adapter-node  project-root resolution
-@svml/endpoint-kit          Endpoint registration
-@svml/driver-node           trusted Node command executor
-@svml/package-loader-node   byte-locked package loading
-@svml/store-sqlite          SQLite Build/Operation stores
-@svml/artifact-store-fs     filesystem Artifact store
-@svml/artifact-store-s3     S3 Artifact store
-@svml/credential-store-env  environment credentials
-@svml/transport             invocation seams
-@svml/transport-process     local process transport
-@svml/transport-aws-lambda  Lambda transport
-@svml/local                 SQLite/filesystem developer assembly
+@narratage/protocol              immutable wire contracts
+@narratage/artifact              domain-neutral content-addressed byte type
+@narratage/core                  Demand compiler and Build state machine
+@narratage/source                mandatory Source Header
+@narratage/elaborator            author declarations and Fragment expansion
+@narratage/realization           typed realization overlays
+@narratage/run                   syntax-neutral Run Graph
+@narratage/validation            semantic admission
+@narratage/host                  Host-facing interfaces
+@narratage/compiler-node         reference Node compiler Host
+@narratage/workspace-fs-node     workspace filesystem abstraction
+@narratage/component-kit         Producer/validator registration
+@narratage/runtime               Scheduler and Store ports
+@narratage/runtime-adapter       deployment-adapter ABI
+@narratage/runtime-adapter-node  project-root resolution
+@narratage/endpoint-kit          Endpoint registration
+@narratage/driver-node           trusted Node command executor
+@narratage/package-loader-node   byte-locked package loading
+@narratage/store-sqlite          SQLite Build/Operation stores
+@narratage/artifact-store-fs     filesystem Artifact store
+@narratage/artifact-store-s3     S3 Artifact store
+@narratage/credential-store-env  environment credentials
+@narratage/transport             invocation seams
+@narratage/transport-process     local process transport
+@narratage/transport-aws-lambda  Lambda transport
+@narratage/local                 SQLite/filesystem developer assembly
 ```
 
 ### Layer 2: Author language
@@ -51,12 +51,12 @@ Author-facing vocabulary: the text Frontend, Script Surface, SVS Recipes, Run te
 reusable compilation libraries.
 
 ```text
-@svml/text                  official .svml markup Frontend
-@svml/script                Script Surface
-@svml/svs                   SVS Recipe Frontend
-@svml/run-text              official .svrun Frontend
-@svml/prompt-kit            declarative prompt compilation
-@svml/compiler-text-node    Text Frontend + Surface Host assembly
+@narratage/text                  official .svml markup Frontend
+@narratage/script                Script Surface
+@narratage/svs                   SVS Recipe Frontend
+@narratage/run-text              official .svrun Frontend
+@narratage/prompt-kit            declarative prompt compilation
+@narratage/compiler-text-node    Text Frontend + Surface Host assembly
 ```
 
 ### Layer 3: Video domain
@@ -65,32 +65,32 @@ Video-specific types, generation model families, speech/caption/track contracts 
 Depends on Layer 1 and 2 but not on any Provider.
 
 ```text
-@svml/contracts             Narrative, Track, Composition contracts
-@svml/media                 media types
-@svml/generation            image/video product contracts
-@svml/model-kit             model family abstractions
-@svml/seedance              Seedance model family + author Surface
-@svml/seedance-speaker      Seedance Speaker binding
-@svml/minimax-h3            MiniMax H3 model family
-@svml/gemini-omni           Gemini Omni model family
-@svml/grok-imagine          Grok Imagine model family
-@svml/gpt-image             GPT Image model family
-@svml/nano-banana           Nano Banana model family
-@svml/seedream              Seedream model family
-@svml/estimate              duration estimation
-@svml/speech-program        speech program compilation
-@svml/speech-take           atomic speech take
-@svml/speech-align          speech alignment
-@svml/whisperx              WhisperX component
-@svml/caption               caption planning and Track
-@svml/caption-gemini        Gemini caption planner
-@svml/broll                 B-roll Track
-@svml/text-track            text overlay Track
-@svml/film                  Film composition
-@svml/hyperframes           HyperFrames Visual IR
-@svml/hyperframes-render    HyperFrames rendering component
-@svml/image-transform       image processing component
-@svml/media-pipeline        media inspection/normalization
+@narratage/contracts             Narrative, Track, Composition contracts
+@narratage/media                 media types
+@narratage/generation            image/video product contracts
+@narratage/model-kit             model family abstractions
+@narratage/seedance              Seedance model family + author Surface
+@narratage/seedance-speaker      Seedance Speaker binding
+@narratage/minimax-h3            MiniMax H3 model family
+@narratage/gemini-omni           Gemini Omni model family
+@narratage/grok-imagine          Grok Imagine model family
+@narratage/gpt-image             GPT Image model family
+@narratage/nano-banana           Nano Banana model family
+@narratage/seedream              Seedream model family
+@narratage/estimate              duration estimation
+@narratage/speech-program        speech program compilation
+@narratage/speech-take           atomic speech take
+@narratage/speech-align          speech alignment
+@narratage/whisperx              WhisperX component
+@narratage/caption               caption planning and Track
+@narratage/caption-gemini        Gemini caption planner
+@narratage/broll                 B-roll Track
+@narratage/text-track            text overlay Track
+@narratage/film                  Film composition
+@narratage/hyperframes           HyperFrames Visual IR
+@narratage/hyperframes-render    HyperFrames rendering component
+@narratage/image-transform       image processing component
+@narratage/media-pipeline        media inspection/normalization
 ```
 
 ### Layer 4: Provider (Endpoint) packages
@@ -99,33 +99,33 @@ Privileged external capabilities. Depend on Runtime ports and the model families
 on the CLI.
 
 ```text
-@svml/provider-kie                  KIE generation (16 model capabilities)
-@svml/provider-media-local          local ffprobe/ffmpeg
-@svml/provider-whisperx-local       local WhisperX sidecar
-@svml/provider-google-vertex        Vertex Gemini caption planning
-@svml/provider-hyperframes-local    local Chrome rendering
-@svml/provider-image-opencv-local   local OpenCV image transforms
+@narratage/provider-kie                  KIE generation (16 model capabilities)
+@narratage/provider-media-local          local ffprobe/ffmpeg
+@narratage/provider-whisperx-local       local WhisperX sidecar
+@narratage/provider-google-vertex        Vertex Gemini caption planning
+@narratage/provider-hyperframes-local    local Chrome rendering
+@narratage/provider-image-opencv-local   local OpenCV image transforms
 ```
 
 ### Application layer
 
 ```text
-@svml/cli           generic command engine (requires explicit Distribution)
-@svml/video-cli     video command application (selects Text compiler, no built-in author packages)
+@narratage/cli           generic command engine (requires explicit Distribution)
+@narratage/video-cli     video command application (selects Text compiler, no built-in author packages)
 ```
 
 ## Dependency rules
 
 `tools/package-boundaries.test.mjs` enforces three invariants on every commit:
 
-1. **Acyclic production graph.** No dependency cycle among any `@svml/*` packages.
+1. **Acyclic production graph.** No dependency cycle among any `@narratage/*` packages.
 
 2. **Domain-neutral closure.** Every Layer 1 package's transitive closure contains only Layer 1
-   packages. `@svml/core` depends only on `@svml/protocol`.
+   packages. `@narratage/core` depends only on `@narratage/protocol`.
 
-3. **CLI independence.** Neither `@svml/cli` nor `@svml/video-cli` transitively depends on any
+3. **CLI independence.** Neither `@narratage/cli` nor `@narratage/video-cli` transitively depends on any
    Provider package. The video CLI also does not depend on any author-level video package
-   (`@svml/script`, `@svml/seedance-speaker`, `@svml/broll`, `@svml/text-track`, `@svml/film`).
+   (`@narratage/script`, `@narratage/seedance-speaker`, `@narratage/broll`, `@narratage/text-track`, `@narratage/film`).
    Author packages are activated through the explicit package lock, not compile-time CLI
    dependencies.
 
@@ -147,7 +147,7 @@ packages/example/
 
 ```json
 {
-  "name": "@svml/example",
+  "name": "@narratage/example",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -158,13 +158,13 @@ packages/example/
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/protocol": "workspace:*"
+    "@narratage/protocol": "workspace:*"
   }
 }
 ```
 
-- `"exports"` points to TypeScript source directly. The workspace `tsconfig.v2.json` maps
-  `@svml/*` imports to source entry points via `paths`.
+- `"exports"` points to TypeScript source directly. The workspace `tsconfig.json` maps
+  `@narratage/*` imports to source entry points via `paths`.
 - `"svml.activation"` is the entry point that the Package Loader reads when this package is
   byte-locked. It must default-export a `NodePackageContribution`.
 
@@ -199,7 +199,7 @@ SHA-256 digest:
   "format": "svml.node-package-lock@1",
   "artifacts": [
     {
-      "name": "@svml/seedance",
+      "name": "@narratage/seedance",
       "version": "0.0.0-dev",
       "digest": "sha256:abc123..."
     }

@@ -23,7 +23,7 @@ Provider packages depend on Runtime ports and the model families they serve, nev
 
 ```json
 {
-  "name": "@svml/provider-my-service",
+  "name": "@narratage/provider-my-service",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -32,12 +32,12 @@ Provider packages depend on Runtime ports and the model families they serve, nev
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/runtime-adapter-node": "workspace:*",
-    "@svml/seedance": "workspace:*"
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*",
+    "@narratage/seedance": "workspace:*"
   }
 }
 ```
@@ -49,7 +49,7 @@ ArtifactStore persistence.
 
 ```typescript
 // src/provider.ts
-import type { EndpointManifest } from "@svml/endpoint-kit";
+import type { EndpointManifest } from "@narratage/endpoint-kit";
 
 export function createMyServiceProvider(options: {
   instance: string;
@@ -79,12 +79,12 @@ import {
   runtimeConfigObject,
   runtimeConfigString,
   runtimeConfigPositiveInteger,
-} from "@svml/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@svml/runtime-adapter-node";
+} from "@narratage/runtime-adapter";
+import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@svml/provider-my-service",
+  use: "@narratage/provider-my-service",
 
   create(context) {
     const config = runtimeConfigObject(context.config, "MyService");
@@ -108,7 +108,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/provider-my-service",
+  name: "@narratage/provider-my-service",
   hostFacets: [adapter],
 };
 
@@ -121,17 +121,17 @@ anything.
 
 ## 5. Register and lock
 
-Add the path mapping to `tsconfig.v2.json`:
+Add the path mapping to `tsconfig.json`:
 
 ```json
-"@svml/provider-my-service": ["packages/provider-my-service/src/index.ts"]
+"@narratage/provider-my-service": ["packages/provider-my-service/src/index.ts"]
 ```
 
 Lock into a Runtime package lock:
 
 ```bash
-pnpm svml:v2 lock-packages <runtime-lock> \
-  --package @svml/provider-my-service \
+pnpm narratage lock-packages <runtime-lock> \
+  --package @narratage/provider-my-service \
   --root .
 ```
 
@@ -141,7 +141,7 @@ pnpm svml:v2 lock-packages <runtime-lock> \
 {
   "endpoints": [
     {
-      "use": "@svml/provider-my-service",
+      "use": "@narratage/provider-my-service",
       "instance": "my-service.project",
       "lane": "generation",
       "config": {
@@ -159,7 +159,7 @@ pnpm svml:v2 lock-packages <runtime-lock> \
 Verify the configuration:
 
 ```bash
-pnpm svml:v2 doctor svml.runtime.json
+pnpm narratage doctor svml.runtime.json
 ```
 
 ## Existing Providers to study

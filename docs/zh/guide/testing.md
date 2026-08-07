@@ -7,12 +7,10 @@ description: 测试运行器、测试模式与环境门控的测试。
 
 ## 测试运行器
 
-SVML 使用 Node.js 内置的测试运行器（`node:test`），而不是 Jest、Vitest 或 Mocha。
+Narratage 使用 Node.js 内置的测试运行器（`node:test`），而不是 Jest、Vitest 或 Mocha。
 
 ```bash
-pnpm test          # everything: v1 + v2
-pnpm test:v1       # v1 regression tests
-pnpm test:v2       # v2 package tests + boundary tests
+pnpm test          # 包测试 + boundary 测试
 ```
 
 测试文件位于 `packages/<name>/test/`，扩展名为 `.test.ts`。它们通过 glob `packages/*/test/**/*.test.ts` 被发现。
@@ -23,7 +21,7 @@ pnpm test:v2       # v2 package tests + boundary tests
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { someFunction } from "@svml/example";
+import { someFunction } from "@narratage/example";
 
 describe("someFunction", () => {
   test("returns the expected result", () => {
@@ -70,7 +68,7 @@ test("generates a video", async (t) => {
 - 领域中立闭包中只包含领域中立的包
 - CLI 不依赖任何 Provider 或作者包
 
-它们作为 `pnpm test:v2` 的一部分，在每次提交时运行。
+它们作为 `pnpm test` 的一部分，在每次提交时运行。
 
 ## 受环境开关控制的测试
 
@@ -82,9 +80,9 @@ test("generates a video", async (t) => {
 
 ## 测试 fixtures
 
-测试夹具放在 `packages/<name>/test/fixtures/` 或 `test/fixtures/`（v1）。它们是普通的 `.svml`、`.svs` 和 `.svrun` 文件，用于覆盖特定的编译路径。
+测试夹具放在 `packages/<name>/test/fixtures/`。它们是普通的 `.svml`、`.svs` 和 `.svrun` 文件，用于覆盖特定的编译路径。
 
 `examples/` 目录同时充当集成级别的夹具：
-- `examples/v2-bootstrap/` — 最小源闭包检查
+- `examples/bootstrap/` — 最小源闭包检查
 - `examples/talking-film-graph-check/` — 不含 Provider 的完整图编译
 - `examples/echo-pro-aroll/` — 显式复用历史 Candidate 的实时验收
