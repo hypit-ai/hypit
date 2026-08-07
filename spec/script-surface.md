@@ -1,4 +1,4 @@
-# SVML Script Surface v1
+# SVML Script Surface
 
 > **Draft; not frozen.**
 >
@@ -567,7 +567,7 @@ Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
 当前 Caption Program 使用一个覆盖全部可见词的默认 Style，再按源码顺序应用 Role
 或显式 Selection 的整 Style 替换，最后命中的规则获胜。无 Role 的 Turn 自动保留默认
 Style；修改一个局部区间不要求作者书写它的补集。完整规则见
-[`caption-program-v1.md`](./caption-program-v1.md)。
+[`caption-program.md`](./caption-program.md)。
 
 ## 9. v1 明确不在 Script 中表达
 

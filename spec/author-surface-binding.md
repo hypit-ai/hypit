@@ -1,4 +1,4 @@
-# Author Surface Binding v1
+# Author Surface Binding
 
 Status: implemented compiler contract for trusted package-owned Surfaces; third-party isolation is
 not yet implemented.

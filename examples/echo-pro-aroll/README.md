@@ -27,7 +27,7 @@ take at Seedance's 15-second request limit.
 Create the explicit package lock used by this development-workspace example:
 
 ```sh
-pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.packages.lock \
+pnpm svml lock-packages examples/echo-pro-aroll/svml.packages.lock \
   --package @svml/artifact \
   --package @svml/contracts \
   --package @svml/media \
@@ -51,7 +51,7 @@ pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.packages.lock \
   --package @svml/run-text \
   --root .
 
-pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.runtime-packages.lock \
+pnpm svml lock-packages examples/echo-pro-aroll/svml.runtime-packages.lock \
   --package @svml/provider-kie \
   --package @svml/provider-media-local \
   --package @svml/provider-whisperx-local \
@@ -63,7 +63,7 @@ pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.runtime-packages.lock \
 Inspect all authored outputs—including `*.prompt` and `*.program`—without a paid call:
 
 ```sh
-pnpm svml:v2 check examples/echo-pro-aroll/main.svml \
+pnpm svml check examples/echo-pro-aroll/main.svml \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root .
 ```
@@ -71,7 +71,7 @@ pnpm svml:v2 check examples/echo-pro-aroll/main.svml \
 Inspect the exact paid plan before submitting it:
 
 ```sh
-pnpm svml:v2 plan examples/echo-pro-aroll/build.svrun \
+pnpm svml plan examples/echo-pro-aroll/build.svrun \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root .
 ```
@@ -80,14 +80,14 @@ Build the complete film after starting the local WhisperX sidecar and exposing `
 `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`:
 
 ```sh
-pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
+pnpm svml build examples/echo-pro-aroll/build.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . \
   --build-id echo-pro-film-001 \
   --follow
 
-pnpm svml:v2 get echo-pro-film-001 \
+pnpm svml get echo-pro-film-001 \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --name final.video \
   --to examples/echo-pro-aroll/output/final.mp4
@@ -97,7 +97,7 @@ Run the same downstream film from the four archived generated shots without anot
 submission:
 
 ```sh
-pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
+pnpm svml build examples/echo-pro-aroll/reuse-generated.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . \

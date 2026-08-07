@@ -1,6 +1,6 @@
 # Caption Gemini and Google Vertex contract
 
-Status: implemented v2 vertical slice. This contract contains no credential or network authority.
+Status: implemented vertical slice. This contract contains no credential or network authority.
 
 ## 1. Boundary recovered from the old engine
 

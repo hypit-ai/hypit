@@ -27,7 +27,7 @@ the official Script parser. The actual `<media:Image>` Surface implementation li
 separate physical `@svml/media` package.
 
 `VisualTrack`, `AudioTrack` and `Composition` implement the flat composition law in
-[`../../spec/track-composition-v1.md`](../../spec/track-composition-v1.md). Caption, Speech and
+[`../../spec/track-composition.md`](../../spec/track-composition.md). Caption, Speech and
 B-roll are upstream package concerns; the final Composition contract contains no family field.
 `VisualTrack` is one self-contained render contribution, while each `VisualPresent` owns its own
 frame span and absolute z so Presents from different Tracks may interleave without cross-Track
@@ -35,7 +35,7 @@ access. Upstream ownership and provenance live in the Graph and Derivation rathe
 `sources[]` field copied into every Track.
 
 Every VisualTrack explicitly binds the closed
-[`svml.hyperframes-visual-ir@1`](../../spec/hyperframes-visual-ir-v1.md) target. This is the common
+[`svml.hyperframes-visual-ir@1`](../../spec/hyperframes-visual-ir.md) target. This is the common
 video rendering protocol, not a component "dialect": packages may lower their private Programs to
 it, but may not extend it with arbitrary CSS. The physical contracts distribution owns its schema
 and identity validation; Core does not know that it exists.

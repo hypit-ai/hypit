@@ -6,11 +6,11 @@ explicit HyperFrames rendering. `check` and `plan` do not invoke Seedance, Whisp
 HyperFrames.
 
 ```bash
-pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+pnpm svml check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
-pnpm svml:v2 check examples/talking-film-graph-check/build.svrun \
+pnpm svml check examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
-pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+pnpm svml plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 

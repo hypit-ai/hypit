@@ -1,4 +1,4 @@
-# Media Execution Boundary v1
+# Media Execution Boundary
 
 Status: implemented local reference path, including evidence audio, HyperFrames visual rendering,
 program audio and final mux. AWS execution Providers remain future work. This is not yet a public
@@ -61,7 +61,7 @@ operations to Speech and put all four behind one large adapter.
 
 SVML preserves the execution insight but changes the vocabulary:
 
-| Twinit operation | SVML v2 boundary |
+| Twinit operation | SVML boundary |
 |---|---|
 | `normalize_source` | inspect/select/normalize generic media |
 | `assemble_spine` | an ordinary visual Track plus an `AudioProgramPlan` |

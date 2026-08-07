@@ -4,11 +4,9 @@ Status: **two-speaker production target, not executable end to end with the chec
 Every author Surface and the Gemini planning/Vertex execution package now exists. Real image/font
 assets, credentials and a selected local Runtime profile are not checked into this fixture.
 
-This example replaces neither the executable v1 fixtures nor their regression value. In particular,
-`examples/flat-track-launch` remains the capability oracle for selections, moments, B-roll motion,
-caption styling, sound and absolute stacking. This directory answers a different question:
+This directory answers one question:
 
-> What should a normal author write after the v2 package architecture is hidden behind good
+> What should a normal author write once the package architecture is hidden behind good
 > namespaced Surfaces?
 
 ## What the source says—and does not say
