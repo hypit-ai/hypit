@@ -10,8 +10,8 @@ A developer owns one authoritative SVML Runtime process and may independently ch
 external capability executes:
 
 ```text
-main.svml
-  -> trusted compiler
+build.svrun -> main.svml
+  -> self-described Run + Author compilation
   -> Core BuildState
   -> @svml/local Scheduler
        -> local deterministic component code

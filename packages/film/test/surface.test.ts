@@ -27,11 +27,10 @@ import {
   filmTypes,
 } from "@svml/film";
 import type { ModuleManifest } from "@svml/protocol";
-import { svsFrontend, svsFrontendId, svsManifest } from "@svml/svs";
+import { svsFrontend, svsManifest } from "@svml/svs";
 import {
   TextSurfaceRegistry,
   createTextAuthorFrontend,
-  textAuthorFrontendId,
 } from "@svml/text";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@svml/validation";
 
@@ -88,7 +87,12 @@ const closure = createResolvedClosure([
 ]);
 
 function source(id: string, text: string): AuthorSourceUnit {
-  return { id, name: id.split("/").at(-1) ?? id, text };
+  const frontend = id.endsWith(".svs") ? "@svml/svs@1" : "@svml/text@1";
+  return {
+    id,
+    name: id.split("/").at(-1) ?? id,
+    text: `<?svml using="${frontend}"?>\n${text}`,
+  };
 }
 
 function validatorRegistry(): TypeValidatorRegistry {
@@ -139,11 +143,10 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
     entry: source("/project/main.svml", `<svml>
       <import as="fixture" from="example.film-fixture@1"/>
       <import as="film" from="@svml/film@1"/>
-      <import as="studio" from="./studio.svs" using="${svsFrontendId}"/>
+      <import as="studio" source="./studio.svs"/>
       <fixture:Inputs/>
       <film:Film id="main" space={space} appearance={studio.film.vertical}>${tracks}</film:Film>
     </svml>`),
-    frontend: textAuthorFrontendId,
     closure,
     frontends,
     resolveSource() {

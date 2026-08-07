@@ -18,6 +18,11 @@ import type {
   TypedModule,
   TypedRecord,
 } from "@svml/protocol";
+import {
+  maskSourceHeader,
+  parseSourceHeader,
+} from "@svml/source";
+import type { SourceHeader } from "@svml/source";
 
 import {
   elaborateAuthorModule,
@@ -38,10 +43,15 @@ export type AuthorSourceUnit = {
   readonly text: string;
 };
 
+/** Source presented to a Frontend after the mandatory Header has been admitted and masked. */
+export type AuthorFrontendSourceUnit = AuthorSourceUnit & {
+  readonly header: SourceHeader;
+  readonly sourceDigest: Digest;
+};
+
 export type AuthorSourceImport = {
   readonly from: string;
   readonly alias: string;
-  readonly frontend: string;
   readonly range?: SourceRange;
 };
 
@@ -73,6 +83,9 @@ export type AuthorSourceExport = {
 export type ResolvedAuthorSourceImport = {
   readonly request: AuthorSourceImport;
   readonly source: Digest;
+  readonly frontendRequest: string;
+  readonly frontend: string;
+  readonly frontendDigest: Digest;
   readonly exports: readonly AuthorSourceExport[];
   /** Public record exports available to a package-owned Surface during author compilation. */
   readonly records: readonly TypedRecord[];
@@ -97,8 +110,8 @@ export type Awaitable<T> = T | Promise<T>;
 export type AuthorFrontend = {
   readonly id: string;
   readonly implementationDigest: Digest;
-  discover(source: AuthorSourceUnit): Awaitable<AuthorSourceDiscovery>;
-  decode(source: AuthorSourceUnit, context: AuthorSourceDecodeContext): Awaitable<DecodedAuthorSource>;
+  discover(source: AuthorFrontendSourceUnit): Awaitable<AuthorSourceDiscovery>;
+  decode(source: AuthorFrontendSourceUnit, context: AuthorSourceDecodeContext): Awaitable<DecodedAuthorSource>;
 };
 
 export interface AuthorFrontendRegistryLike {
@@ -146,8 +159,9 @@ export type AuthorRecordAdmitter = (
 ) => Awaitable<TypedRecord>;
 
 export type SourceClosureUnit = {
-  readonly format: "svml.source-unit@1";
+  readonly format: "svml.source-unit@2";
   readonly id: Digest;
+  readonly frontendRequest: string;
   readonly frontend: string;
   readonly frontendDigest: Digest;
   readonly sourceDigest: Digest;
@@ -158,12 +172,14 @@ export type SourceClosureUnit = {
     readonly alias: string;
     readonly from: string;
     readonly source: Digest;
+    readonly frontendRequest: string;
     readonly frontend: string;
+    readonly frontendDigest: Digest;
   }[];
 };
 
 export type SourceClosure = {
-  readonly format: "svml.source-closure@1";
+  readonly format: "svml.source-closure@2";
   readonly id: Digest;
   readonly entry: Digest;
   readonly units: readonly SourceClosureUnit[];
@@ -187,7 +203,6 @@ export type CompiledSourceClosure = {
 
 export type CompileSourceClosureRequest = {
   readonly entry: AuthorSourceUnit;
-  readonly frontend: string;
   readonly closure: ResolvedModuleClosure;
   readonly frontends: AuthorFrontendRegistryLike;
   readonly resolveSource: AuthorSourceResolver;
@@ -209,7 +224,8 @@ export class SourceClosureError extends Error {
 
 function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id"> {
   return {
-    format: "svml.source-unit@1",
+    format: "svml.source-unit@2",
+    frontendRequest: unit.frontendRequest,
     frontend: unit.frontend,
     frontendDigest: unit.frontendDigest,
     sourceDigest: unit.sourceDigest,
@@ -223,7 +239,9 @@ function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id
         alias: item.alias,
         from: item.from,
         source: item.source,
+        frontendRequest: item.frontendRequest,
         frontend: item.frontend,
+        frontendDigest: item.frontendDigest,
       }))
       .sort((left, right) => left.alias.localeCompare(right.alias)),
   };
@@ -231,7 +249,7 @@ function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id
 
 function sourceClosureContent(closure: SourceClosure): Omit<SourceClosure, "id"> {
   return {
-    format: "svml.source-closure@1",
+    format: "svml.source-closure@2",
     entry: closure.entry,
     units: [...closure.units].sort((left, right) => left.id.localeCompare(right.id)),
   };
@@ -260,6 +278,16 @@ function sourceKey(source: AuthorSourceUnit, frontend: string): string {
   return `${source.id}\u0000${frontend}`;
 }
 
+export function prepareAuthorSource(source: AuthorSourceUnit): AuthorFrontendSourceUnit {
+  const header = parseSourceHeader(source.name, source.text);
+  return {
+    ...source,
+    text: maskSourceHeader(source.text, header),
+    header,
+    sourceDigest: digestOf(source.text),
+  };
+}
+
 type HygienicSource = {
   readonly unit: SourceClosureUnit;
   readonly records: readonly TypedRecord[];
@@ -273,7 +301,7 @@ function hygienicId(kind: string, unit: Digest, local: string): string {
 }
 
 function hygienizeSource(
-  source: AuthorSourceUnit,
+  source: AuthorFrontendSourceUnit,
   frontend: AuthorFrontend,
   discovery: AuthorSourceDiscovery,
   decoded: DecodedAuthorSource,
@@ -316,8 +344,6 @@ function hygienizeSource(
   }
 
   const semanticDigest = digestOf({
-    frontend: frontend.id,
-    implementationDigest: frontend.implementationDigest,
     records: [...decoded.module.records]
       .sort((left, right) => left.id.localeCompare(right.id))
       .map((record) => ({
@@ -370,10 +396,11 @@ function hygienizeSource(
   }));
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
-    format: "svml.source-unit@1" as const,
+    format: "svml.source-unit@2" as const,
+    frontendRequest: source.header.using,
     frontend: frontend.id,
     frontendDigest: frontend.implementationDigest,
-    sourceDigest: digestOf(source.text),
+    sourceDigest: source.sourceDigest,
     semanticDigest,
     modules: [...discovery.modules].sort(),
     assets: [...assets].sort((left, right) => left.from.localeCompare(right.from)),
@@ -385,7 +412,9 @@ function hygienizeSource(
           alias: request.alias,
           from: request.from,
           source: resolved.source,
-          frontend: request.frontend,
+          frontendRequest: resolved.frontendRequest,
+          frontend: resolved.frontend,
+          frontendDigest: resolved.frontendDigest,
         };
       })
       .sort((left, right) => left.alias.localeCompare(right.alias)),
@@ -393,7 +422,8 @@ function hygienizeSource(
   return {
     unit: {
       id: digestOf(unitContent),
-      format: "svml.source-unit@1",
+      format: "svml.source-unit@2",
+      frontendRequest: unitContent.frontendRequest,
       frontend: frontend.id,
       frontendDigest: frontend.implementationDigest,
       sourceDigest: unitContent.sourceDigest,
@@ -428,9 +458,11 @@ export async function compileSourceClosure(
   const visiting: string[] = [];
   const ordered: HygienicSource[] = [];
 
-  const compile = async (source: AuthorSourceUnit, frontendId: string): Promise<HygienicSource> => {
-    assert(source.id.length > 0, "EMPTY_SOURCE_ID", "SourceUnit id is empty");
-    const key = sourceKey(source, frontendId);
+  const compile = async (rawSource: AuthorSourceUnit): Promise<HygienicSource> => {
+    assert(rawSource.id.length > 0, "EMPTY_SOURCE_ID", "SourceUnit id is empty");
+    const source = prepareAuthorSource(rawSource);
+    const frontendId = source.header.using;
+    const key = sourceKey(rawSource, frontendId);
     const cached = cache.get(key);
     if (cached !== undefined) return cached;
     const cycle = visiting.indexOf(key);
@@ -438,7 +470,7 @@ export async function compileSourceClosure(
       cycle === -1,
       "SOURCE_IMPORT_CYCLE",
       `Source imports cycle through ${[...visiting.slice(cycle), key].join(" -> ")}`,
-      source.id,
+      rawSource.id,
     );
     const frontend = request.frontends.resolve(frontendId);
     assert(frontend !== undefined, "UNKNOWN_FRONTEND", `Frontend ${frontendId} is not registered`, frontendId);
@@ -451,14 +483,17 @@ export async function compileSourceClosure(
       assert(dependency.alias.length > 0, "EMPTY_SOURCE_ALIAS", `${source.name} has an empty source alias`);
       assert(!aliases.has(dependency.alias), "DUPLICATE_SOURCE_ALIAS", `${source.name} repeats alias ${dependency.alias}`);
       aliases.add(dependency.alias);
-      const child = await request.resolveSource(source, dependency);
-      const compiled = await compile(child, dependency.frontend);
+      const child = await request.resolveSource(rawSource, dependency);
+      const compiled = await compile(child);
       const publicRecordIds = new Set(compiled.exports
         .filter((item) => item.ref.kind === "record")
         .map((item) => item.ref.kind === "record" ? item.ref.id : ""));
       imports.push({
         request: dependency,
         source: compiled.unit.id,
+        frontendRequest: compiled.unit.frontendRequest,
+        frontend: compiled.unit.frontend,
+        frontendDigest: compiled.unit.frontendDigest,
         exports: compiled.exports,
         records: compiled.records.filter((record) => publicRecordIds.has(record.id)),
       });
@@ -486,7 +521,7 @@ export async function compileSourceClosure(
           `${source.name} requires source asset ${assetRequest.from}, but the Host has no asset resolver`,
           assetRequest.from,
         );
-        const resolved = await request.resolveAsset(source, assetRequest);
+        const resolved = await request.resolveAsset(rawSource, assetRequest);
         const artifact = resolved.artifact;
         assert(artifact.kind === "blob", "INVALID_SOURCE_ASSET", `${assetRequest.from} did not resolve to a BlobRef`);
         assert(isDigest(artifact.digest), "INVALID_SOURCE_ASSET_DIGEST", `${assetRequest.from} has an invalid digest`);
@@ -551,7 +586,7 @@ export async function compileSourceClosure(
     return result;
   };
 
-  const entry = await compile(request.entry, request.frontend);
+  const entry = await compile(request.entry);
   const records = ordered.flatMap((unit) => unit.records);
   const recordIds = new Set<string>();
   for (const record of records) {
@@ -583,7 +618,7 @@ export async function compileSourceClosure(
   const elaboration = elaborateAuthorModule(program, author, (id) => fragments.get(id));
   const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
   const closureContent = {
-    format: "svml.source-closure@1" as const,
+    format: "svml.source-closure@2" as const,
     entry: entry.unit.id,
     units,
   };
@@ -608,11 +643,11 @@ export async function compileSourceClosure(
 }
 
 export function verifySourceClosure(closure: SourceClosure): void {
-  assert(closure.format === "svml.source-closure@1", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
+  assert(closure.format === "svml.source-closure@2", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
   assert(isDigest(closure.id), "INVALID_SOURCE_CLOSURE_DIGEST", "Source Closure digest is invalid");
   const units = new Map<string, SourceClosureUnit>();
   for (const unit of closure.units) {
-    assert(unit.format === "svml.source-unit@1", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
+    assert(unit.format === "svml.source-unit@2", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
     assert(isDigest(unit.id), "INVALID_SOURCE_UNIT_DIGEST", "SourceUnit digest is invalid");
     assert(unit.id === digestOf(sourceUnitContent(unit)), "SOURCE_UNIT_DIGEST_MISMATCH", `SourceUnit ${unit.id} digest differs`);
     assert(!units.has(unit.id), "DUPLICATE_SOURCE_UNIT", `Source Closure repeats ${unit.id}`, unit.id);

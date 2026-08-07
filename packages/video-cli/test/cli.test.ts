@@ -7,7 +7,23 @@ import test from "node:test";
 
 import { materializeRecord, runVideoCli as runCli } from "@svml/video-cli";
 
-test("CLI Pin is explicit substitute selection rather than an exact-history privilege", async () => {
+async function writeRun(
+  root: string,
+  name: string,
+  targets: readonly { readonly output: string; readonly accepts?: "exact" | "substitute" }[],
+): Promise<string> {
+  const path = join(root, name);
+  await writeFile(path, `<?svml using="@svml/run-text@1"?>
+<svrun version="1" targets="selected">
+  <author source="./main.svml"/>
+  <target-set id="selected">
+    ${targets.map((target) => `<target output="${target.output}" accepts="${target.accepts ?? "exact"}"/>`).join("\n    ")}
+  </target-set>
+</svrun>`, "utf8");
+  return path;
+}
+
+test("CLI refuses to synthesize hidden Run intent from Pin and Target flags", async () => {
   await assert.rejects(
     async () => await runCli([
       "build", "unused.svml",
@@ -15,7 +31,7 @@ test("CLI Pin is explicit substitute selection rather than an exact-history priv
       "--runtime", "unused-runtime.ts",
       "--pin", "shot=sha256:historical",
     ], { write() {} }),
-    /--pin attaches substitute Candidates; add --accept-substitute/u,
+    /belong in a self-described Run Source/u,
   );
 });
 
@@ -31,15 +47,17 @@ test("CLI does not confuse Build persistence with the removed --out convenience"
 test("official v2 CLI checks a real Script source through the Node compiler host", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-"));
   const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<sheet version="1">
+  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+<sheet version="1">
     caption.host {
       color: #ffffff;
       font-size: 72;
     }
   </sheet>`, "utf8");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
     <import from="@svml/script@1"/>
-    <import as="studio" from="./studio.svs" using="@svml/svs@1"/>
+    <import as="studio" source="./studio.svs"/>
     <script id="story">
       <opening>
         <ALICE>Meaning becomes the source.
@@ -89,7 +107,8 @@ test("official media and Seedance Surfaces lower author intent into exact genera
   const root = await mkdtemp(join(tmpdir(), "svml-cli-generation-"));
   const file = join(root, "main.svml");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
     <import from="@svml/script@1"/>
     <import as="media" from="@svml/media@1"/>
     <import as="seedance" from="@svml/seedance@1"/>
@@ -129,10 +148,12 @@ test("official media and Seedance Surfaces lower author intent into exact genera
   ]);
 
   let planOutput = "";
+  const run = await writeRun(root, "generation.svrun", [
+    { output: "take" },
+    { output: "motion.video" },
+  ]);
   await runCli([
-    "plan", file,
-    "--target", "take",
-    "--target", "motion.video",
+    "plan", run,
   ], { write: (text) => { planOutput += text; } });
   const plan = JSON.parse(planOutput) as {
     readonly goals: readonly unknown[];
@@ -154,12 +175,15 @@ test(".svrun is the complete human-readable Target graph used by plan", async ()
   const root = await mkdtemp(join(tmpdir(), "svml-cli-run-"));
   const source = join(root, "main.svml");
   const run = join(root, "preview.svrun");
-  await writeFile(source, `<svml>
+  await writeFile(source, `<?svml using="@svml/text@1"?>
+<svml>
     <import as="seedance" from="@svml/seedance@1"/>
     <seedance:Prompt id="direction">A quiet locked-off studio shot.</seedance:Prompt>
     <seedance:Video id="motion" model="mini" prompt={direction} duration="4"/>
   </svml>`, "utf8");
-  await writeFile(run, `<svrun version="1" source="./main.svml" targets="preview">
+  await writeFile(run, `<?svml using="@svml/run-text@1"?>
+  <svrun version="1" targets="preview">
+    <author source="./main.svml"/>
     <target-set id="preview">
       <target output="motion.video" accepts="exact"/>
     </target-set>
@@ -178,7 +202,7 @@ test(".svrun is the complete human-readable Target graph used by plan", async ()
   ]);
   await assert.rejects(
     async () => await runCli(["plan", run, "--target", "motion.video"], { write() {} }),
-    /.svrun owns Targets/u,
+    /belong in a self-described Run Source/u,
   );
 });
 
@@ -208,7 +232,8 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
 test("official prelude lowers Speech Spine and explicit WhisperX alignment without provider calls", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-speech-spine-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
     <import from="@svml/script@1"/>
     <import as="seedance" from="@svml/seedance@1"/>
     <import as="speech" from="@svml/speech@1"/>
@@ -232,16 +257,18 @@ test("official prelude lowers Speech Spine and explicit WhisperX alignment witho
 test("Caption Gemini Surface lowers immutable display-atom runs into one explicit planning Need", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-caption-gemini-"));
   const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<sheet version="1">
+  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+<sheet version="1">
     caption.base { stack-order: 70; x: 0.08; y: 0.76; width: 0.84; font: Inter;
       weight: 600; size: 58; line-height: 1; align: center; fill: #FFFFFF;
       background: #09090BCC; padding: 16 24; radius: 18; }
   </sheet>`, "utf8");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
     <import from="@svml/script@1"/>
     <import as="caption" from="@svml/caption@1"/>
     <import as="gemini" from="@svml/caption-gemini@1"/>
-    <import as="studio" from="./studio.svs" using="@svml/svs@1"/>
+    <import as="studio" source="./studio.svs"/>
     <script id="story"><dialogue><ALICE>Meaning becomes the source.<BOB>Then the graph stays explicit.</dialogue></script>
     <caption:Style id="plain" appearance={studio.caption.base}>
       <caption:Cues>Prefer short complete semantic phrases. Never cross clause punctuation.</caption:Cues>
@@ -263,7 +290,8 @@ test("Caption Gemini Surface lowers immutable display-atom runs into one explici
   assert.equal(checked.exports.some((item) => item.name === "caption-program"), true);
   assert.equal(checked.exports.some((item) => item.name === "dialogue-plan.plan"), true);
   let planOutput = "";
-  await runCli(["plan", file, "--target", "dialogue-plan.plan"], { write: (text) => { planOutput += text; } });
+  const run = await writeRun(root, "caption.svrun", [{ output: "dialogue-plan.plan" }]);
+  await runCli(["plan", run], { write: (text) => { planOutput += text; } });
   const plan = JSON.parse(planOutput) as { readonly steps: readonly { readonly producer: { readonly name: string } }[] };
   assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
     "compile-caption-gemini-request",
@@ -274,7 +302,8 @@ test("Caption Gemini Surface lowers immutable display-atom runs into one explici
 test("Track Surfaces close one complete author graph before any external execution", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-complete-author-"));
   const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<sheet version="1">
+  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+<sheet version="1">
     film.vertical { width: 1080; height: 1920; frame-rate: 30; background: #09090B; }
     broll.card { stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5; fit: cover;
       background: #111116; radius: 20; enter: slide-up 4f; exit: fade 4f; }
@@ -284,7 +313,8 @@ test("Track Surfaces close one complete author graph before any external executi
     text.title { stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1;
       font: Inter; weight: 900; size: 64; align: center; fill: #FFFFFF; tracking: -1; }
   </sheet>`, "utf8");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
     <import from="@svml/script@1"/>
     <import as="seedance" from="@svml/seedance@1"/>
     <import as="speech" from="@svml/speech@1"/>
@@ -295,7 +325,7 @@ test("Track Surfaces close one complete author graph before any external executi
     <import as="text" from="@svml/text-track@1"/>
     <import as="film" from="@svml/film@1"/>
     <import as="render" from="@svml/hyperframes-render@1"/>
-    <import as="studio" from="./studio.svs" using="@svml/svs@1"/>
+    <import as="studio" source="./studio.svs"/>
     <script id="story"><opening><HOST>Meaning @demo becomes the source @/demo.</opening></script>
     <seedance:Prompt id="direction">Locked medium close-up.</seedance:Prompt>
     <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue} prompt={direction} duration="5"/>
@@ -334,7 +364,8 @@ test("Track Surfaces close one complete author graph before any external executi
 test("official v2 CLI closes the explicit HyperFrames render package without loading a Provider", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-render-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
     <import as="render" from="@svml/hyperframes-render@1"/>
   </svml>`, "utf8");
   let output = "";
@@ -393,7 +424,8 @@ test("CLI package lock activates an installed package without changing the offic
   `, "utf8");
   const file = join(root, "main.svml");
   const lockPath = join(root, "svml.packages.lock");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+<svml>
     <import as="example" from="example.empty@1"/>
     <example:Empty/>
   </svml>`, "utf8");

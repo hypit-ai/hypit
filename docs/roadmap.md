@@ -8,9 +8,10 @@ environments replaceable. Video-style breadth is deliberately deferred.
 
 ## A. Domain-neutral system
 
-### A1. Human-readable Run Graph — first public slice implemented
+### A1. Self-described Author/Run compilation — first public slice implemented
 
-The `.svrun` Frontend now implements:
+Every Author and Run source now carries a mandatory exact Frontend Header. The official
+`@svml/run-text` `.svrun` Frontend implements:
 
 - named Targets and reusable Target sets;
 - Provided-Value and Fragment Candidates;
@@ -19,9 +20,15 @@ The `.svrun` Frontend now implements:
 - separately instantiated identical implementations;
 - imports of trusted Run packages.
 
-The Frontend compiles completely before execution. It cannot contain credentials, Endpoint bindings
-or an inline unversioned execution callback. The existing CLI `--pin` option remains temporary
-compatibility sugar and can be removed after examples and users migrate.
+The Author Graph and complete Run Graph compile and bind into one final graph before execution. The
+Frontend cannot contain credentials, Endpoint bindings or an inline unversioned execution callback.
+The CLI no longer accepts `--pin`, `--target` or `--accept-substitute`; they would be invisible Run
+Graph mutations.
+
+Run-only Fragment Modules now extend a separately identity-bound execution Program Closure without
+polluting Author imports. Trusted Fragment libraries use the generic Host Facet envelope rather than
+a Package Loader special case. Remaining A1 work is diagnostics and public packaging, not another
+graph model.
 
 ### A2. Runtime Profile usability — first public slice implemented
 

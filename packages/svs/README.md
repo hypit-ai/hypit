@@ -1,6 +1,7 @@
 # `@svml/svs`
 
-Minimal official parameter-recipe Frontend for `.svs` SourceUnits.
+Minimal official parameter-recipe Frontend normally used by `.svs` SourceUnits. The source must
+select it explicitly with `<?svml using="@svml/svs@1"?>`; the suffix is only a human convention.
 
 SVS v1 reads a `<sheet version="1">` containing named rule blocks and emits one immutable generic
 `Recipe` Record per rule. It does not know Caption, Film, Track or Provider parameters and it does

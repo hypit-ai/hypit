@@ -1,12 +1,13 @@
 # `@svml/realization`
 
-Content-addressed Run Graph assembly outside SVML Core.
+Internal content-addressed realization composition outside SVML Core.
 
-A `svml.realization-overlay@2` locks the exact Author Graph and contributes independent typed
+A `svml.realization-overlay@2` is produced from a complete public `@svml/run` Run Graph when that
+run contributes alternate implementations. It locks the exact Author Graph and contributes independent typed
 Candidates plus any already elaborated Operations. It does not attach those Candidates to, or
 rewrite, Author Logical Outputs. `resolveRealization()` merges one or more Run Graph overlays
-deterministically, retains the author source digest, records a separate Realization Closure digest,
-and produces the graph universe consumed by Build Compiler.
+deterministically, retains the Author Graph digest, records the complete Run Graph digest as the
+realization identity, and produces the graph universe consumed by Build Compiler.
 
 A Candidate is inert. It enters a finite BuildPlan only when a `BuildRequest` establishes an
 explicit Satisfaction from a demanded Logical Output to that Candidate. The Satisfaction owns fidelity;

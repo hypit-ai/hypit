@@ -12,6 +12,7 @@
     "@svml/protocol": "workspace:*"
   },
   "devDependencies": {
+    "@svml/source": "workspace:*",
     "@svml/text": "workspace:*"
   }
 }

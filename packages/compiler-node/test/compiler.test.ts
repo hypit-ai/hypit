@@ -15,6 +15,7 @@ import {
   ModulePackageRegistry,
   NodeCompiler,
   NodeCompilerError,
+  NodeRunCompiler,
 } from "@svml/compiler-node";
 import {
   computeModuleDigest,
@@ -37,12 +38,17 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@svml/protocol";
+import { SourceHeaderError } from "@svml/source";
+import {
+  RunFragmentRegistry,
+  RunFrontendRegistry,
+} from "@svml/run";
+import { runTextFrontend } from "@svml/run-text";
 import type { Workspace } from "@svml/host";
 import { WorkspaceError } from "@svml/host";
 import {
   createTextAuthorFrontend,
   TextSurfaceRegistry,
-  textAuthorFrontendId,
 } from "@svml/text";
 import { NodeFilesystemWorkspace } from "@svml/workspace-fs-node";
 
@@ -176,9 +182,10 @@ const assetManifest: ModuleManifest = {
   }],
 };
 
-function compiler(root: string): NodeCompiler {
+function compiler(root: string, additional: readonly ModuleManifest[] = []): NodeCompiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: laboratoryManifest });
+  for (const manifest of additional) modules.register({ manifest });
   const surfaces = new TextSurfaceRegistry();
   surfaces.registerStructured(laboratory, "result", surfaceDigest, ({ element }) => {
     const id = element.attributes.id;
@@ -204,8 +211,46 @@ function compiler(root: string): NodeCompiler {
       return resolved;
     },
   }));
-  return new NodeCompiler({ modules, frontends, entryFrontend: textAuthorFrontendId, root });
+  return new NodeCompiler({ modules, frontends, root });
 }
+
+const previewModule = { name: "example.compiler-preview", version: "1" } as const;
+const previewProducer = { module: previewModule, name: "preview" } satisfies ProducerRef;
+const previewManifest: ModuleManifest = {
+  ...emptyManifest(previewModule.name),
+  dependencies: [{
+    module: laboratory,
+    digest: computeModuleDigest(laboratoryManifest),
+  }],
+  producers: [{
+    name: previewProducer.name,
+    inputs: [],
+    outputs: [{ name: "result", type: resultType }],
+    needs: [],
+    implementation: {
+      kind: "registered",
+      locator: "example.compiler-preview/preview",
+      digest: digestOf("example.compiler-preview/preview@1"),
+    },
+  }],
+};
+const previewFragment = sealGraphFragment({
+  name: "example.compiler-preview/preview@1",
+  inputs: [],
+  operations: [{
+    id: "preview",
+    producer: previewProducer,
+    inputs: {},
+    result: { kind: "output", name: "result" },
+  }],
+  exports: [{
+    name: "result",
+    type: resultType,
+    root: { kind: "fragment-operation", operation: "preview" },
+    semanticInputs: [],
+    fidelity: "substitute",
+  }],
+});
 
 function assetCompiler(environment: { readonly root: string } | { readonly workspace: Workspace }): NodeCompiler {
   const modules = new ModulePackageRegistry();
@@ -231,7 +276,7 @@ function assetCompiler(environment: { readonly root: string } | { readonly works
       return resolved;
     },
   }));
-  return new NodeCompiler({ modules, frontends, entryFrontend: textAuthorFrontendId, ...environment });
+  return new NodeCompiler({ modules, frontends, ...environment });
 }
 
 function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace {
@@ -268,10 +313,11 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
   };
 }
 
-test("Node Compiler discovers real imports and plans a named public export", async () => {
+test("Node Compiler discovers real imports and emits a named public Author Graph export", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-compiler-node-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+  <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
@@ -280,17 +326,78 @@ test("Node Compiler discovers real imports and plans a named public export", asy
   assert.equal(compiled.exports[0]?.name, "hello.result");
   assert.equal(compiled.elaboration.graph.outputs.length, 1);
 
-  const planned = await compiler(root).planFile(file, { targets: ["hello.result"] });
+});
+
+test("Author Frontend identity comes only from the mandatory Source Header, never the suffix", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-self-described-source-"));
+  const text = `<?svml using="@svml/text@1"?>
+  <svml>
+    <import as="lab" from="example.compiler-lab@1"/>
+    <lab:Result id="hello"/>
+  </svml>`;
+  const svml = join(root, "main.svml");
+  const arbitrary = join(root, "main.anything");
+  await writeFile(svml, text, "utf8");
+  await writeFile(arbitrary, text, "utf8");
+  const first = await compiler(root).compileFile(svml);
+  const second = await compiler(root).compileFile(arbitrary);
+  assert.equal(first.closure.id, second.closure.id);
+  assert.equal(first.elaboration.graph.id, second.elaboration.graph.id);
+
+  const missing = join(root, "missing.svml");
+  await writeFile(missing, "<svml/>", "utf8");
+  await assert.rejects(
+    compiler(root).compileFile(missing),
+    (error: unknown) => error instanceof SourceHeaderError && error.code === "SOURCE_HEADER_MISSING",
+  );
+});
+
+test("Run-only Fragment modules extend the execution closure without polluting the Author Graph", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-dual-graph-closure-"));
+  const authorFile = join(root, "main.svml");
+  const runFile = join(root, "build.svrun");
+  await writeFile(authorFile, `<?svml using="@svml/text@1"?>
+  <svml>
+    <import as="lab" from="example.compiler-lab@1"/>
+    <lab:Result id="hello"/>
+  </svml>`, "utf8");
+  await writeFile(runFile, `<?svml using="@svml/run-text@1"?>
+  <svrun version="1" targets="preview">
+    <author source="./main.svml"/>
+    <import from="@example/preview" as="preview"/>
+    <target-set id="preview"><target output="hello.result" accepts="substitute"/></target-set>
+    <fragment id="one" using="preview:result"/>
+    <satisfy output="hello.result" candidate="one.result" fidelity="substitute"/>
+  </svrun>`, "utf8");
+
+  const authorCompiler = compiler(root, [previewManifest]);
+  const frontends = new RunFrontendRegistry();
+  frontends.register(runTextFrontend);
+  const fragments = new RunFragmentRegistry();
+  fragments.register({ name: "@example/preview", fragments: { result: previewFragment } });
+  const runCompiler = new NodeRunCompiler({ authorCompiler, frontends, fragments, root });
+  const compiled = await runCompiler.compileFile(runFile);
+  const planned = runCompiler.planCompilation(compiled);
+
+  assert.deepEqual(
+    compiled.author.program.closure.modules.map((item) => item.ref.name),
+    [laboratory.name],
+  );
+  assert.deepEqual(
+    compiled.program.closure.modules.map((item) => item.ref.name).sort(),
+    [laboratory.name, previewModule.name].sort(),
+  );
+  assert.equal(compiled.run.graph.authorGraph, compiled.author.elaboration.graph.id);
   assert.equal(planned.plan.steps.length, 1);
-  assert.equal(planned.plan.steps[0]?.producer.name, "produce");
-  assert.equal(planned.plan.goals.length, 1);
+  assert.equal(planned.plan.steps[0]?.producer.name, previewProducer.name);
 });
 
 test("source assets are content addressed, closure-bound and returned as a Host transfer bundle", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-source-assets-"));
   const file = join(root, "main.svml");
   const asset = join(root, "reference.bin");
-  await writeFile(file, `<svml>
+  await writeFile(file, `<?svml using="@svml/text@1"?>
+  <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>
   </svml>`, "utf8");
@@ -343,7 +450,7 @@ test("filesystem Workspace contains symlinks and reads each canonical source onl
   assert.equal((await new NodeFilesystemWorkspace({ root }).open(entryPath)).entry.text, "second");
   assert.equal(entry.text, "first");
   assert.equal(await readFile(entryPath, "utf8"), "second");
-  const sourceRequest = { from: "./included.svs", alias: "included", frontend: "example.frontend@1" };
+  const sourceRequest = { from: "./included.svs", alias: "included" };
   const firstIncluded = await workspace.resolveSource(entry, sourceRequest);
   await writeFile(includedPath, "included-second", "utf8");
   assert.deepEqual(await workspace.resolveSource(entry, sourceRequest), firstIncluded);
@@ -359,7 +466,6 @@ test("filesystem Workspace contains symlinks and reads each canonical source onl
     async () => await workspace.resolveSource(entry, {
       from: "./escaped.svs",
       alias: "escaped",
-      frontend: "example.frontend@1",
     }),
     (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT",
   );
@@ -375,7 +481,8 @@ test("filesystem Workspace contains symlinks and reads each canonical source onl
 test("filesystem and in-memory Workspaces compile identical source and bytes to one semantic result", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-workspace-equivalence-"));
   const file = join(root, "main.svml");
-  const source = `<svml>
+  const source = `<?svml using="@svml/text@1"?>
+  <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>
   </svml>`;

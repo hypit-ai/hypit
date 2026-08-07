@@ -5,7 +5,6 @@ export {
   RealizationError,
   resolveRealization,
   sealRealizationOverlay,
-  sealRunGraph,
   verifyRealizationOverlay,
   verifyResolvedRealization,
 } from "./overlay.js";
@@ -15,6 +14,5 @@ export type {
   ProvidedCandidateInput,
   RealizationClosure,
   RealizationOverlay,
-  RunGraph,
   ResolvedRealization,
 } from "./overlay.js";

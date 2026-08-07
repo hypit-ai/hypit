@@ -1,5 +1,4 @@
 import {
-  digestOf,
   sealRecord,
   sealTypedModule,
   verifyClosure,
@@ -25,7 +24,7 @@ export const svsFrontend: AuthorFrontend = {
   decode(source, context) {
     verifyClosure(context.closure);
     const parsed = parseSvs(source.name, source.text);
-    const sourceDigest = digestOf(source.text);
+    const sourceDigest = source.sourceDigest;
     const records = parsed.recipes.map((recipe) => sealRecord({
       id: recipe.value.path,
       type: svsRecipeType,
