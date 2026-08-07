@@ -1,5 +1,5 @@
 {
-  "name": "@svml/estimate",
+  "name": "@narratage/estimate",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,11 +10,12 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/svs": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/svs": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

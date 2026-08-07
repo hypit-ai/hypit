@@ -1,25 +1,25 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { GenerateContentResponse, GoogleGenAIOptions, Schema } from "@google/genai";
-import { captionTypes } from "@svml/caption";
+import { captionTypes } from "@narratage/caption";
 import {
   captionGeminiCapabilities,
   sealCaptionGeminiPlan,
   verifyCaptionGeminiRequest,
-} from "@svml/caption-gemini";
-import type { CaptionGeminiRequest } from "@svml/caption-gemini";
-import { defineEndpointPackage } from "@svml/endpoint-kit";
-import type { EndpointFulfillment, EndpointInvocationContext } from "@svml/endpoint-kit";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
-import type { CanonicalValue, Digest } from "@svml/protocol";
-import { credentialRef } from "@svml/runtime";
-import type { CredentialRef } from "@svml/runtime";
+} from "@narratage/caption-gemini";
+import type { CaptionGeminiRequest } from "@narratage/caption-gemini";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
+import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
+import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
+import type { CanonicalValue, Digest } from "@narratage/protocol";
+import { credentialRef } from "@narratage/runtime";
+import type { CredentialRef } from "@narratage/runtime";
 
 export const googleVertexProviderModuleRef = {
-  name: "@svml/provider-google-vertex",
+  name: "@narratage/provider-google-vertex",
   version: "0.0.0-dev",
 } as const;
 export const googleVertexProviderImplementationDigest = digestOf(
-  "@svml/provider-google-vertex/caption-gemini@2:@google/genai@1.52.0",
+  "@narratage/provider-google-vertex/caption-gemini@2:@google/genai@1.52.0",
 );
 
 type GenerateCaptionContentInput = {
@@ -201,7 +201,7 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
   }
   const generateContent = options.generateContent ?? sdkGenerateContent();
   const transportDigest = options.generateContentImplementationDigest
-    ?? digestOf("@svml/provider-google-vertex/@google-genai-1.52.0@1");
+    ?? digestOf("@narratage/provider-google-vertex/@google-genai-1.52.0@1");
 
   return defineEndpointPackage({
     module: googleVertexProviderModuleRef,
@@ -209,7 +209,7 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
     instance: options.instance ?? "google-vertex.caption",
     ...(options.lane === undefined ? {} : { lane: options.lane }),
     implementation: {
-      locator: "@svml/provider-google-vertex/caption-gemini",
+      locator: "@narratage/provider-google-vertex/caption-gemini",
       digest: googleVertexProviderImplementationDigest,
     },
     permissions: ["network:aiplatform.googleapis.com"],

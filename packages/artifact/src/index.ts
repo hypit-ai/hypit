@@ -1,11 +1,11 @@
-import { digestOf } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
 import type {
   ModuleManifest,
   TypeRef,
   ValueSchema,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
-export const artifactModuleRef = { name: "@svml/artifact", version: "0.0.0-dev" } as const;
+export const artifactModuleRef = { name: "@narratage/artifact", version: "0.0.0-dev" } as const;
 
 export const artifactTypes = {
   blob: { module: artifactModuleRef, name: "BlobArtifact" },
@@ -15,7 +15,7 @@ export const artifactTypes = {
 export const blobArtifactValueSchema: ValueSchema = { kind: "blob" };
 
 export const artifactManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: artifactModuleRef.name,
   version: artifactModuleRef.version,
   dependencies: [],

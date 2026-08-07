@@ -1,15 +1,19 @@
-import { artifactTypes } from "@svml/artifact";
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import type { FragmentOperation } from "@svml/elaborator";
+import { narrativeTypes } from "@narratage/narrative";
+import { mediaTypes } from "@narratage/media";
+import { programSpaceTypes } from "@narratage/program-space";
+import { semanticMapTypes } from "@narratage/semantic-map";
+import { compositionTypes } from "@narratage/composition";
+import { artifactTypes } from "@narratage/artifact";
+import { sealGraphFragment } from "@narratage/elaborator";
+import type { FragmentOperation } from "@narratage/elaborator";
 import {
   mediaPipelineTypes,
   sealMediaSelectionRequest,
   synchronizedMediaFragment,
-} from "@svml/media-pipeline";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@svml/text";
+} from "@narratage/media-pipeline";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
 
 import { sealBrollItemSpec, sealBrollTrackSpec } from "./author.js";
 import { brollProducers, brollTypes } from "./manifest.js";
@@ -42,19 +46,19 @@ function createBrollSurfaceFragment(items: readonly BrollSurfaceItemInput[], nam
   return sealGraphFragment({
     name,
     inputs: [
-      { name: "map", type: contractTypes.completeSemanticMap },
-      { name: "space", type: contractTypes.programSpace },
+      { name: "map", type: semanticMapTypes.complete },
+      { name: "space", type: programSpaceTypes.programSpace },
       { name: "track-spec", type: brollTypes.trackSpec },
       ...items.flatMap((item) => [
-        { name: item.mediaName, type: contractTypes.synchronizedMedia },
-        { name: item.selectionName, type: contractTypes.narrativeSelection },
+        { name: item.mediaName, type: mediaTypes.synchronized },
+        { name: item.selectionName, type: narrativeTypes.selection },
         { name: item.specName, type: brollTypes.itemSpec },
       ]),
     ],
     operations,
     exports: [
-      { name: "visual", type: contractTypes.visualTrack, root: operation("broll:visual"), semanticInputs, fidelity: "exact" },
-      { name: "audio", type: contractTypes.audioTrack, root: operation("broll:audio"), semanticInputs, fidelity: "exact" },
+      { name: "visual", type: compositionTypes.visualTrack, root: operation("broll:visual"), semanticInputs, fidelity: "exact" },
+      { name: "audio", type: compositionTypes.audioTrack, root: operation("broll:audio"), semanticInputs, fidelity: "exact" },
     ],
   });
 }
@@ -100,8 +104,8 @@ function motion(value: string): BrollMotion {
 export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   exact(element, ["id", "map", "space"]);
   const id = text(element, "id");
-  const map = ref(element, "map", contractTypes.completeSemanticMap, resolveReference);
-  const space = ref(element, "space", contractTypes.programSpace, resolveReference);
+  const map = ref(element, "map", semanticMapTypes.complete, resolveReference);
+  const space = ref(element, "space", programSpaceTypes.programSpace, resolveReference);
   const trackSpecId = `${id}.spec`;
   const requestId = `${id}.selection`;
   const records: Array<{ id: string; type: typeof brollTypes.itemSpec | typeof brollTypes.trackSpec | typeof mediaPipelineTypes.selectionRequest; value: { kind: "inline"; value: ReturnType<typeof sealBrollItemSpec> | ReturnType<typeof sealBrollTrackSpec> | ReturnType<typeof sealMediaSelectionRequest> }; range: typeof element.range }> = [
@@ -121,7 +125,7 @@ export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, res
     itemIndex += 1;
     exact(child, ["source", "during", "appearance"]);
     const source = ref(child, "source", artifactTypes.blob, resolveReference);
-    const selection = ref(child, "during", contractTypes.narrativeSelection, resolveReference);
+    const selection = ref(child, "during", narrativeTypes.selection, resolveReference);
     const appearance = recipe(ref(child, "appearance", svsRecipeType, resolveReference));
     const expected = ["background", "enter", "exit", "fit", "height", "radius", "stack-order", "width", "x", "y"];
     if (Object.keys(appearance.properties).sort().join("\0") !== expected.sort().join("\0")) throw new Error(`B-roll Recipe requires exactly ${expected.join(", ")}`);
@@ -143,7 +147,7 @@ export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, res
       input: { mediaName: `item-${suffix}-media`, selectionName: `item-${suffix}-selection`, specName: `item-${suffix}-spec` } }];
   });
   if (declared.length === 0) throw new Error(`${element.name} requires at least one Item`);
-  const fragment = createBrollSurfaceFragment(declared.map((item) => item.input), `@svml/broll/surface/${id}@1`);
+  const fragment = createBrollSurfaceFragment(declared.map((item) => item.input), `@narratage/broll/surface/${id}@1`);
   const normalization = declared.map((item) => ({
     id: `${id}.normalize.${item.suffix}`, fragment: synchronizedMediaFragment.id,
     inputs: { source: item.source.ref, request: { kind: "record" as const, id: requestId } },

@@ -1,22 +1,17 @@
-import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-
-import {
-  contractTypes,
-  sealComposition,
-  sealProgramSpace,
-  sealVisualTrack,
-  verifyRenderedVisual,
-} from "@svml/contracts";
-import type { RenderedVisual } from "@svml/contracts";
-import { MemoryArtifactStore, EndpointRegistry } from "@svml/driver-node";
-import type { EndpointRegistration } from "@svml/driver-node";
-import type { ImmediateEndpointHandler } from "@svml/endpoint-kit";
-import { compileHyperframesDocument } from "@svml/hyperframes";
-import { hyperframesRenderCapabilities, hyperframesVisualRequest } from "@svml/hyperframes-render";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { CanonicalValue, Need } from "@svml/protocol";
+import { mediaTypes, verifyRenderedVisual } from "@narratage/media";
+import type { RenderedVisual } from "@narratage/media";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import assert from "node:assert/strict";
+import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
+import type { EndpointRegistration } from "@narratage/driver-node";
+import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
+import { compileHyperframesDocument } from "@narratage/hyperframes";
+import { renderHyperframesCapabilities, hyperframesVisualRequest } from "@narratage/render-hyperframes";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { CanonicalValue, Need } from "@narratage/protocol";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
 
@@ -25,13 +20,13 @@ const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).statu
 
 function documentFixture() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 12, denominator: 1 },
   });
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "provider-proof",
     presents: [{
       id: "card",
@@ -79,16 +74,16 @@ function requestNeed(): Need {
   const constraints = hyperframesVisualRequest(documentFixture());
   return {
     id: "need:local-hyperframes-proof",
-    capability: hyperframesRenderCapabilities.renderVisual,
-    returns: contractTypes.renderedVisual,
+    capability: renderHyperframesCapabilities.renderVisual,
+    returns: mediaTypes.renderedVisual,
     constraints,
     requestedBy: "derivation:local-hyperframes-proof",
     result: "record:local-hyperframes-proof",
     accepts: "exact",
     conformanceFloor: "exact",
     requestDigest: digestOf({
-      capability: hyperframesRenderCapabilities.renderVisual,
-      returns: contractTypes.renderedVisual,
+      capability: renderHyperframesCapabilities.renderVisual,
+      returns: mediaTypes.renderedVisual,
       constraints,
     }),
   };
@@ -119,8 +114,8 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
   assert.deepEqual(facet.permissions, ["process:hyperframes"]);
   assert.equal(facet.defaultConcurrency, 2);
   assert.deepEqual(provider.bindings, [{
-    capability: hyperframesRenderCapabilities.renderVisual,
-    returns: contractTypes.renderedVisual,
+    capability: renderHyperframesCapabilities.renderVisual,
+    returns: mediaTypes.renderedVisual,
     endpoint: "hyperframes.local",
   }]);
   const resolved = await handlerFor(requestNeed());

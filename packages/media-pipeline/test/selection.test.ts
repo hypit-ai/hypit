@@ -1,12 +1,9 @@
+import { sealMediaInspection, verifyMediaStreamSelection } from "@narratage/media";
+import type { MediaInspection, MediaVideoStream } from "@narratage/media";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  sealMediaInspection,
-  verifyMediaStreamSelection,
-} from "@svml/contracts";
-import type { MediaInspection, MediaVideoStream } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
 
 import {
   sealMediaSelectionRequest,

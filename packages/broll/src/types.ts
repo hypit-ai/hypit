@@ -1,9 +1,5 @@
-import type {
-  AudioTrack,
-  FrameSpan,
-  MediaArtifactRef,
-  VisualTrack,
-} from "@svml/contracts";
+import type { MediaArtifactRef } from "@narratage/media";
+import type { AudioTrack, FrameSpan, VisualTrack } from "@narratage/composition";
 
 export type BrollBox = {
   readonly xPercent: number;

@@ -1,5 +1,5 @@
 {
-  "name": "@svml/cli",
+  "name": "@narratage/cli",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,13 +7,13 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/compiler-node": "workspace:*",
-    "@svml/local": "workspace:*",
-    "@svml/package-loader-node": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/realization": "workspace:*",
-    "@svml/run": "workspace:*",
-    "@svml/source": "workspace:*",
-    "@svml/runtime": "workspace:*"
+    "@narratage/compiler-node": "workspace:*",
+    "@narratage/host": "workspace:*",
+    "@narratage/local": "workspace:*",
+    "@narratage/package-loader-node": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/run": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/source": "workspace:*"
   }
 }

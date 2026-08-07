@@ -1,4 +1,4 @@
-# `@svml/media-pipeline`
+# `@narratage/media-pipeline`
 
 Provider-neutral media execution vocabulary. Ingestion contributes one ordinary finite Fragment:
 
@@ -21,7 +21,7 @@ Selecting embedded audio is a media fact only. This package never produces `Spee
 `SpeechAudioBasis`; a speech component must separately bind normalized audio to a Narrative and its
 Segment identities.
 
-The v1 normalization profile uses one source presentation origin, a requested rational video frame
+The current normalization profile uses one source presentation origin, a requested rational video frame
 rate, and a 48 kHz stereo PCM render stem. It preserves input level: loudness/mastering remains a
 separate author policy.
 

@@ -10,7 +10,7 @@ import type {
   RecordId,
   TypeRef,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { canonicalStringify, digestOf } from "./canonical.js";
 import { invariant } from "./error.js";
@@ -79,7 +79,7 @@ function planContent(
   selections: BuildPlan["selections"],
 ): Omit<BuildPlan, "id"> {
   return {
-    format: "svml.plan@2",
+    format: "svml.plan@1",
     graph: graph.id,
     request: request.digest,
     initialValues,
@@ -244,7 +244,7 @@ function validatePlanStructure(
   request: BuildRequest,
   plan: BuildPlan,
 ): void {
-  invariant(plan.format === "svml.plan@2", "UNSUPPORTED_PLAN", "unsupported build plan format");
+  invariant(plan.format === "svml.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
   invariant(plan.graph === graph.id, "PLAN_GRAPH_MISMATCH", "build plan belongs to another graph");
   invariant(plan.request === request.digest, "PLAN_REQUEST_MISMATCH", "build plan belongs to another request");
   const { id: _id, ...content } = plan;

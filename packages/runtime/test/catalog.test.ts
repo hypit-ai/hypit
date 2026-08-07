@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/core";
-import { MemoryBuildCatalog } from "@svml/runtime";
+import { digestOf } from "@narratage/core";
+import { MemoryBuildCatalog } from "@narratage/runtime";
 
 function descriptor(core = digestOf("core:one")) {
   return {

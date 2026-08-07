@@ -4,11 +4,11 @@ import {
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-} from "@svml/generation";
-import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/generation";
+import { defineExactModelModule } from "@narratage/model-kit";
+import type { BlobRef, ValueSchema } from "@narratage/protocol";
 
-export const grokImagineModuleRef = { name: "@svml/grok-imagine", version: "0.0.0-dev" } as const;
+export const grokImagineModuleRef = { name: "@narratage/grok-imagine", version: "0.0.0-dev" } as const;
 export type GrokImagineMode = "text" | "image" | "preview-1.5";
 
 type Common = {

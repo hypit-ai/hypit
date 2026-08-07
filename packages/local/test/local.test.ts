@@ -10,21 +10,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileArtifactStore } from "@svml/artifact-store-fs";
-import { MemoryArtifactStore } from "@svml/driver-node";
-import type { RecoverableEndpoint } from "@svml/endpoint-kit";
+import { FileArtifactStore } from "@narratage/artifact-store-fs";
+import { MemoryArtifactStore } from "@narratage/driver-node";
+import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
 import type {
   NodeComponentPackage,
   EndpointPackage,
-} from "@svml/local";
-import { createLocalRuntime, createProjectLocalRuntime } from "@svml/local";
-import { digestOf } from "@svml/core";
+} from "@narratage/local";
+import { createLocalRuntime, createProjectLocalRuntime } from "@narratage/local";
+import { digestOf } from "@narratage/core";
 import {
   createNodePackageLock,
   writeNodePackageLock,
-} from "@svml/package-loader-node";
-import { LocalBuildScheduler, MemoryBuildStore, defineRuntimeServicePackage } from "@svml/runtime";
-import type { RuntimeModuleManifest } from "@svml/runtime";
+} from "@narratage/package-loader-node";
+import { LocalBuildScheduler, MemoryBuildStore, defineRuntimeServicePackage } from "@narratage/runtime";
+import type { RuntimeModuleManifest } from "@narratage/runtime";
 
 import {
   capabilities,
@@ -39,7 +39,7 @@ const providerModule = { name: "example.local-endpoint", version: "1" } as const
 const providerFacet = { module: providerModule, name: "generation" } as const;
 const providerDigest = digestOf("example.local-endpoint/generation@1");
 const providerManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@2",
+  format: "svml.runtime-module@1",
   name: providerModule.name,
   version: providerModule.version,
   facets: [{

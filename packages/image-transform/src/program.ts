@@ -1,4 +1,4 @@
-import { canonicalize } from "@svml/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import type {
   ImageTransformOperation,

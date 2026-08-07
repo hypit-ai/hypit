@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileArtifactStore } from "@svml/artifact-store-fs";
+import { FileArtifactStore } from "@narratage/artifact-store-fs";
 
 test("filesystem artifacts are content-addressed and survive adapter restart", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-artifacts-"));

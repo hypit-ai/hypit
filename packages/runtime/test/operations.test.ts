@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/core";
+import { digestOf } from "@narratage/core";
 import {
   MemoryOperationStore,
   sealOperationIdentity,
   verifyOperationSnapshot,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 
 function identity(overrides: { readonly endpoint?: string; readonly runtimeClosure?: string } = {}) {
   return sealOperationIdentity({

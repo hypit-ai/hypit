@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
 import {
   MemoryBuildStore,
   MemoryOperationStore,
   assembleRuntimeServices,
   defineRuntimeServicePackage,
   verifyRuntimeServicePackage,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 
 const moduleRef = { name: "example.runtime-services", version: "1" } as const;
 

@@ -1,11 +1,11 @@
-# `@svml/provider-media-local`
+# `@narratage/provider-media-local`
 
-Trusted local ffprobe/ffmpeg implementation of `@svml/media-pipeline`'s four exact byte-operation
+Trusted local ffprobe/ffmpeg implementation of `@narratage/media-pipeline`'s four exact byte-operation
 capabilities. It is Runtime configuration and is never imported by author `.svml`.
 
 ```ts
-import { createProjectLocalRuntime } from "@svml/local";
-import { createLocalMediaProvider } from "@svml/provider-media-local";
+import { createProjectLocalRuntime } from "@narratage/local";
+import { createLocalMediaProvider } from "@narratage/provider-media-local";
 
 const runtime = await createProjectLocalRuntime({
   packageLock: "./svml.packages.lock",

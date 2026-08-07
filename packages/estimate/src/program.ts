@@ -1,12 +1,7 @@
-import {
-  assertSpeechDurationIdentity,
-  sealSpeechDuration,
-} from "@svml/contracts";
-import type {
-  NarrativeSpeechExcerpt,
-  SpeechDuration,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
+import { assertSpeechDurationIdentity, sealSpeechDuration } from "@narratage/speech";
+import type { SpeechDuration } from "@narratage/speech";
+import { digestOf } from "@narratage/protocol";
 
 import type {
   ResolvedSpeechEstimateLanguage,
@@ -14,7 +9,7 @@ import type {
   SpeechEstimatePolicy,
 } from "./types.js";
 
-export const estimateSpeechImplementationDigest = digestOf("@svml/estimate/estimate-speech@1");
+export const estimateSpeechImplementationDigest = digestOf("@narratage/estimate/estimate-speech@1");
 
 const BASE_RATE: Readonly<Record<ResolvedSpeechEstimateLanguage, number>> = {
   en: 4.5,

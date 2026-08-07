@@ -1,4 +1,4 @@
-# `@svml/store-sqlite`
+# `@narratage/store-sqlite`
 
 Durable local adapters for the environment-neutral `BuildStore` and `OperationStore` ports.
 

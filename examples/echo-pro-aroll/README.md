@@ -11,8 +11,8 @@ Supply these ignored local assets before checking or building:
 Every take uses the same voice-timbre reference. The visual reference sequence is clean, product,
 product, clean.
 
-`@svml/seedance-speaker` binds the reusable project SVS Recipe, Script dialogue and explicit
-references into a Prompt Kit Invocation. The generic `@svml/prompt-kit` author compiler applies the
+`@narratage/seedance-speaker` binds the reusable project SVS Recipe, Script dialogue and explicit
+references into a Prompt Kit Invocation. The generic `@narratage/prompt-kit` author compiler applies the
 separately imported `official-ugc-v1.svs` mapping. It emits an ordered Prompt Program and exact
 Seedance Speech Program while compiling `main.svml`; neither operation is a Runtime task.
 The four generated videos are normalized and concatenated into one Speech Spine. One canonical
@@ -27,43 +27,49 @@ take at Seedance's 15-second request limit.
 Create the explicit package lock used by this development-workspace example:
 
 ```sh
-pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.packages.lock \
-  --package @svml/artifact \
-  --package @svml/contracts \
-  --package @svml/media \
-  --package @svml/svs \
-  --package @svml/script \
-  --package @svml/estimate \
-  --package @svml/prompt-kit \
-  --package @svml/generation \
-  --package @svml/seedance \
-  --package @svml/seedance-speaker \
-  --package @svml/speech-align \
-  --package @svml/speech-take \
-  --package @svml/speech-program \
-  --package @svml/whisperx \
-  --package @svml/caption \
-  --package @svml/caption-gemini \
-  --package @svml/film \
-  --package @svml/hyperframes \
-  --package @svml/media-pipeline \
-  --package @svml/hyperframes-render \
-  --package @svml/run-text \
+pnpm narratage lock-packages examples/echo-pro-aroll/svml.packages.lock \
+  --package @narratage/artifact \
+  --package @narratage/narrative \
+  --package @narratage/media \
+  --package @narratage/program-space \
+  --package @narratage/speech \
+  --package @narratage/speech-evidence \
+  --package @narratage/semantic-map \
+  --package @narratage/visual-ir \
+  --package @narratage/composition \
+  --package @narratage/svs \
+  --package @narratage/script \
+  --package @narratage/estimate \
+  --package @narratage/prompt-kit \
+  --package @narratage/generation \
+  --package @narratage/seedance \
+  --package @narratage/seedance-speaker \
+  --package @narratage/speech-alignment \
+  --package @narratage/speech-basis \
+  --package @narratage/speech-spine \
+  --package @narratage/whisperx \
+  --package @narratage/caption \
+  --package @narratage/caption-gemini \
+  --package @narratage/film \
+  --package @narratage/hyperframes \
+  --package @narratage/media-pipeline \
+  --package @narratage/render-hyperframes \
+  --package @narratage/run-text \
   --root .
 
-pnpm svml:v2 lock-packages examples/echo-pro-aroll/svml.runtime-packages.lock \
-  --package @svml/provider-kie \
-  --package @svml/provider-media-local \
-  --package @svml/provider-whisperx-local \
-  --package @svml/provider-google-vertex \
-  --package @svml/provider-hyperframes-local \
+pnpm narratage lock-packages examples/echo-pro-aroll/svml.runtime-packages.lock \
+  --package @narratage/provider-kie \
+  --package @narratage/provider-media-local \
+  --package @narratage/provider-whisperx-local \
+  --package @narratage/provider-google-vertex \
+  --package @narratage/provider-hyperframes-local \
   --root .
 ```
 
 Inspect all authored outputs—including `*.prompt` and `*.program`—without a paid call:
 
 ```sh
-pnpm svml:v2 check examples/echo-pro-aroll/main.svml \
+pnpm narratage check examples/echo-pro-aroll/main.svml \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root .
 ```
@@ -71,7 +77,7 @@ pnpm svml:v2 check examples/echo-pro-aroll/main.svml \
 Inspect the exact paid plan before submitting it:
 
 ```sh
-pnpm svml:v2 plan examples/echo-pro-aroll/build.svrun \
+pnpm narratage plan examples/echo-pro-aroll/build.svrun \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root .
 ```
@@ -80,14 +86,14 @@ Build the complete film after starting the local WhisperX sidecar and exposing `
 `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`:
 
 ```sh
-pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
+pnpm narratage build examples/echo-pro-aroll/build.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . \
   --build-id echo-pro-film-001 \
   --follow
 
-pnpm svml:v2 get echo-pro-film-001 \
+pnpm narratage get echo-pro-film-001 \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --name final.video \
   --to examples/echo-pro-aroll/output/final.mp4
@@ -97,7 +103,7 @@ Run the same downstream film from the four archived generated shots without anot
 submission:
 
 ```sh
-pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
+pnpm narratage build examples/echo-pro-aroll/reuse-generated.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . \

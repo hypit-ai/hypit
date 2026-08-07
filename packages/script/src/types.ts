@@ -1,28 +1,7 @@
-import type {
-  Affinity,
-  CaptionProjection,
-  CaptionRefinement,
-  CaptionRegion,
-  MarkerBoundary,
-  Narrative,
-  NarrativeMoment,
-  NarrativeMomentOccurrence,
-  NarrativeSegment,
-  NarrativeSelection,
-  NarrativeSelectionOccurrence,
-  NarrativeToken,
-  NarrativeTurn,
-  SemanticAnchor,
-} from "@svml/contracts";
-import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@svml/protocol";
+import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@narratage/protocol";
+import type { CaptionProjection, CaptionRefinement, CaptionRegion, Narrative, NarrativeMoment, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelection, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@narratage/narrative";
 
-export type {
-  Affinity,
-  CaptionProjection,
-  MarkerBoundary,
-  Narrative,
-  SemanticAnchor,
-} from "@svml/contracts";
+export type { Affinity, CaptionProjection, MarkerBoundary, Narrative, SemanticAnchor } from "@narratage/narrative";
 
 export type ParsedTextAtom = {
   readonly kind: "text";

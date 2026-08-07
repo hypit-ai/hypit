@@ -1,18 +1,15 @@
-import {
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  programSpaceFrameCount,
-  sealVisualTrack,
-} from "@svml/contracts";
-import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
+import type { Track, VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
+import { digestOf } from "@narratage/protocol";
 
 import { planCaptionPresentation } from "./presentation.js";
 import { assertCaptionProgram } from "./style.js";
 import type { CaptionProgram, CaptionTrackProgram, TimedCaptionProjection } from "./types.js";
 
-export const renderCaptionTrackImplementationDigest = digestOf("@svml/caption/render-track@1");
-export const renderCaptionProgramImplementationDigest = digestOf("@svml/caption/render-program@1");
+export const renderCaptionTrackImplementationDigest = digestOf("@narratage/caption/render-track@1");
+export const renderCaptionProgramImplementationDigest = digestOf("@narratage/caption/render-program@1");
 
 function normalizedProgram(value: CaptionTrackProgram): CaptionTrackProgram {
   return {
@@ -122,7 +119,7 @@ export function renderCaptionTrack(
   const plan = planCaptionPresentation(projection, program.mode);
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: plan.units.flatMap((unit) => {
       const startFrame = Math.max(0, frameAt(programSpace, unit.startSec));
@@ -201,7 +198,7 @@ export function renderCaptionProgram(
   });
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: units.flatMap(({ unit, style }) => {
       const startFrame = Math.max(0, frameAt(programSpace, unit.startSec));

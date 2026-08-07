@@ -1,0 +1,25 @@
+{
+  "name": "@narratage/speech-basis",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/composition": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/program-space": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/speech": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/validation": "workspace:*"
+  }
+}

@@ -1,4 +1,4 @@
-<?svml using="@svml/prompt-kit/svs@1"?>
+<?svml using="@narratage/prompt-kit/svs@1"?>
 
 <sheet version="1" id="official-ugc-v1">
   prompt-kit.official-ugc-v1 {

@@ -1,5 +1,5 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { StoredValue } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { StoredValue } from "@narratage/protocol";
 
 import {
   promptKitImplementationDigests,
@@ -16,7 +16,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const promptKitComponent = {
-  name: "@svml/prompt-kit",
+  name: "@narratage/prompt-kit",
   validators: [
     {
       type: promptKitTypes.spec,

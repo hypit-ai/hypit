@@ -1,4 +1,4 @@
-# `@svml/caption`
+# `@narratage/caption`
 
 Provider-neutral Caption planning, timing projection and lowering to an ordinary peer
 `VisualTrack`.
@@ -54,5 +54,5 @@ one self-contained `VisualTrack`. Caption is not a privileged Composition layer:
 exactly like Speech, B-roll or Text Track output.
 
 The package owns deterministic Types, validators and Producers only. It contains no LLM, Provider,
-credential, queue or Core authority. A planning package such as `@svml/caption-gemini` may fulfill
+credential, queue or Core authority. A planning package such as `@narratage/caption-gemini` may fulfill
 the narrow `CaptionPlan` contract; presentation and timing remain here.

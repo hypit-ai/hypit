@@ -2,7 +2,7 @@ import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, isAbsolute, resolve } from "node:path";
 
-import type { RuntimeDoctorDiagnostic } from "@svml/runtime-adapter";
+import type { RuntimeDoctorDiagnostic } from "@narratage/runtime-adapter";
 
 function pathLike(value: string): boolean {
   return isAbsolute(value) || value.includes("/") || value.includes("\\");

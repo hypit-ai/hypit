@@ -1,15 +1,15 @@
-import { assertGenerationBlobRef } from "@svml/generation";
+import { assertGenerationBlobRef } from "@narratage/generation";
 import {
   sealPromptKitInvocation,
   verifyPromptKitInvocation,
   verifyPromptProgram,
-} from "@svml/prompt-kit";
-import type { PromptKitInvocation, PromptKitScalar, PromptProgram } from "@svml/prompt-kit";
+} from "@narratage/prompt-kit";
+import type { PromptKitInvocation, PromptKitScalar, PromptProgram } from "@narratage/prompt-kit";
 import {
   sealSeedanceSpeechProgram,
   seedanceModels,
-} from "@svml/seedance";
-import type { SeedanceSpeechProgram } from "@svml/seedance";
+} from "@narratage/seedance";
+import type { SeedanceSpeechProgram } from "@narratage/seedance";
 
 import type { SpeakerTakeIntent } from "./types.js";
 
@@ -109,7 +109,7 @@ export function renderSpeakerSpeechProgram(
   verifyPromptProgram(program);
   verifySpeakerTakeIntent(intent);
   return sealSeedanceSpeechProgram({
-    contract: "svml.seedance-speech-program@1",
+    contract: "svml.seedance-speech-spine@1",
     model: intent.model,
     prompt: program.blocks.map((item) => item.text).join(program.separator),
     mode: {

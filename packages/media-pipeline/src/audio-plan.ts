@@ -1,9 +1,8 @@
-import {
-  assertCompositionIdentity,
-  programSpaceFrameCount,
-} from "@svml/contracts";
-import type { Composition, ProgramSpace } from "@svml/contracts";
-import { canonicalize, isDigest } from "@svml/protocol";
+import { programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertCompositionIdentity } from "@narratage/composition";
+import type { Composition } from "@narratage/composition";
+import { canonicalize, isDigest } from "@narratage/protocol";
 
 import type { AudioProgramPlan } from "./types.js";
 

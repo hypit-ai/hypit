@@ -1,6 +1,6 @@
 # Documentation
 
-SVML documentation is intentionally split by authority. Git history preserves discarded designs;
+Narratage documentation is intentionally split by authority. Git history preserves discarded designs;
 the working tree contains only documents that should inform current implementation or public use.
 
 ## Start here
@@ -13,42 +13,42 @@ the working tree contains only documents that should inform current implementati
    work is separated explicitly.
 5. [`open-source-distribution.md`](./open-source-distribution.md) — what can ship independently,
    current packaging truth and public-release gates.
-6. [`../spec/core-kernel-v1.md`](../spec/core-kernel-v1.md) — compact normative Kernel laws for the
-   current `@2` wire data.
+6. [`../spec/core-kernel.md`](../spec/core-kernel.md) — compact normative Kernel laws for the
+   current `@1` wire data.
 
 ## Domain-neutral implementation records
 
-- [`graph-first-value-boundary-v1.md`](./graph-first-value-boundary-v1.md) — graph edges own
+- [`graph-first-value-boundary.md`](./graph-first-value-boundary.md) — graph edges own
   dependency truth; values contain only intrinsic meaning.
-- [`node-package-activation-v1.md`](./node-package-activation-v1.md) — trusted installed package
+- [`node-package-activation.md`](./node-package-activation.md) — trusted installed package
   locking, contributions and Host-selected facet activation.
-- [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — local SQLite/filesystem
+- [`local-developer-runtime.md`](./local-developer-runtime.md) — local SQLite/filesystem
   Runtime, recovery and environment replacement.
-- [`runtime-adapter-loading-v1.md`](./runtime-adapter-loading-v1.md) — separately locked Provider
+- [`runtime-adapter-loading.md`](./runtime-adapter-loading.md) — separately locked Provider
   and Store activation, physical-code identity, diagnostics and explicit Artifact maintenance.
-- [`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md) — Targets, durable Records,
+- [`build-archive-and-egress.md`](./build-archive-and-egress.md) — Targets, durable Records,
   Artifact retention and optional Host materialization as four separate concerns.
-- [`source-and-run-compilation-v1.md`](./source-and-run-compilation-v1.md) — mandatory Source Header,
+- [`source-and-run-compilation.md`](./source-and-run-compilation.md) — mandatory Source Header,
   peer Author/Run graphs, deterministic composition and compilation data gates.
 - package READMEs under [`../packages`](../packages) — executable APIs and ownership.
 
 ## Video-domain specifications
 
-- [`../spec/script-surface-v1.md`](../spec/script-surface-v1.md)
-- [`../spec/author-surface-binding-v1.md`](../spec/author-surface-binding-v1.md)
-- [`../spec/caption-program-v1.md`](../spec/caption-program-v1.md)
-- [`../spec/track-composition-v1.md`](../spec/track-composition-v1.md)
-- [`../spec/track-expressiveness-v1.md`](../spec/track-expressiveness-v1.md)
-- [`../spec/hyperframes-visual-ir-v1.md`](../spec/hyperframes-visual-ir-v1.md)
+- [`../spec/script-surface.md`](../spec/script-surface.md)
+- [`../spec/author-surface-binding.md`](../spec/author-surface-binding.md)
+- [`../spec/caption-program.md`](../spec/caption-program.md)
+- [`../spec/track-composition.md`](../spec/track-composition.md)
+- [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
+- [`../spec/visual-ir.md`](../spec/visual-ir.md)
 
 These video contracts are executable candidates, not yet an open-source compatibility freeze.
 
 ## Video execution records
 
-- [`kie-generation-modules-v1.md`](./kie-generation-modules-v1.md)
-- [`media-inspection-and-normalization-v1.md`](./media-inspection-and-normalization-v1.md)
-- [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md)
-- [`image-transform-v1.md`](./image-transform-v1.md)
+- [`kie-generation-modules.md`](./kie-generation-modules.md)
+- [`media-inspection-and-normalization.md`](./media-inspection-and-normalization.md)
+- [`media-execution-boundary.md`](./media-execution-boundary.md)
+- [`image-transform.md`](./image-transform.md)
 - [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
 - [`../services/whisperx/README.md`](../services/whisperx/README.md)
 - [`../examples/echo-pro-aroll/README.md`](../examples/echo-pro-aroll/README.md) — current four-take

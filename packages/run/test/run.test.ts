@@ -11,13 +11,13 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   sealGraphFragment,
-} from "@svml/elaborator";
-import type { CompiledSourceClosure } from "@svml/elaborator";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@svml/protocol";
-import { resolveRealization } from "@svml/realization";
+} from "@narratage/elaborator";
+import type { CompiledSourceClosure } from "@narratage/elaborator";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
+import { resolveRealization } from "@narratage/run";
 import {
   compileRunSource,
   createRunFragmentHostFacet,
@@ -27,8 +27,8 @@ import {
   RunFrontendRegistry,
   RunSourceError,
   verifyRunSourceClosure,
-} from "@svml/run";
-import { parseRunDocument, runTextFrontend } from "@svml/run-text";
+} from "@narratage/run";
+import { parseRunDocument, runTextFrontend } from "@narratage/run-text";
 
 const moduleRef = { name: "example.run", version: "1" } as const;
 const promptType = { module: moduleRef, name: "Prompt" } satisfies TypeRef;
@@ -37,7 +37,7 @@ const defaultProducer = { module: moduleRef, name: "default" } satisfies Produce
 const previewProducer = { module: moduleRef, name: "preview" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
@@ -159,7 +159,7 @@ async function compileDocument(body: string) {
   return await compileRunSource({
     id: "/project/build.svrun",
     name: "build.svrun",
-    text: `<?svml using="@svml/run-text@1"?>\n${body}`,
+    text: `<?svml using="@narratage/run-text@1"?>\n${body}`,
   }, frontends);
 }
 

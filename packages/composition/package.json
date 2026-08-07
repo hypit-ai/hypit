@@ -1,0 +1,28 @@
+{
+  "name": "@narratage/composition",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/program-space": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/visual-ir": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/semantic-map": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/speech-evidence": "workspace:*",
+    "@narratage/validation": "workspace:*"
+  }
+}

@@ -48,32 +48,31 @@ function transitive(graph, entry) {
 }
 
 const domainNeutralPackages = new Set([
-  "@svml/protocol",
-  "@svml/artifact",
-  "@svml/core",
-  "@svml/source",
-  "@svml/elaborator",
-  "@svml/realization",
-  "@svml/run",
-  "@svml/validation",
-  "@svml/host",
-  "@svml/compiler-node",
-  "@svml/workspace-fs-node",
-  "@svml/component-kit",
-  "@svml/runtime",
-  "@svml/runtime-adapter",
-  "@svml/runtime-adapter-node",
-  "@svml/endpoint-kit",
-  "@svml/driver-node",
-  "@svml/package-loader-node",
-  "@svml/store-sqlite",
-  "@svml/artifact-store-fs",
-  "@svml/artifact-store-s3",
-  "@svml/credential-store-env",
-  "@svml/transport",
-  "@svml/transport-process",
-  "@svml/transport-aws-lambda",
-  "@svml/local",
+  "@narratage/protocol",
+  "@narratage/artifact",
+  "@narratage/core",
+  "@narratage/source",
+  "@narratage/elaborator",
+  "@narratage/run",
+  "@narratage/validation",
+  "@narratage/host",
+  "@narratage/compiler-node",
+  "@narratage/workspace-fs-node",
+  "@narratage/component-kit",
+  "@narratage/runtime",
+  "@narratage/runtime-adapter",
+  "@narratage/runtime-adapter-node",
+  "@narratage/endpoint-kit",
+  "@narratage/driver-node",
+  "@narratage/package-loader-node",
+  "@narratage/store-sqlite",
+  "@narratage/artifact-store-fs",
+  "@narratage/artifact-store-s3",
+  "@narratage/credential-store-env",
+  "@narratage/transport",
+  "@narratage/transport-process",
+  "@narratage/transport-aws-lambda",
+  "@narratage/local",
 ]);
 
 test("official production packages have no dependency cycle", async () => {
@@ -97,37 +96,88 @@ test("the declared domain-neutral distribution closes without syntax, AIGC or vi
   for (const name of domainNeutralPackages) {
     assert.ok(packages.has(name), `domain-neutral package ${name} is absent`);
     const outside = [...transitive(graph, name)].filter((dependency) =>
-      dependency.startsWith("@svml/") && !domainNeutralPackages.has(dependency));
+      dependency.startsWith("@narratage/") && !domainNeutralPackages.has(dependency));
     assert.deepEqual(outside, [], `${name} reaches packages outside the domain-neutral distribution`);
   }
-  assert.deepEqual(graph.get("@svml/core"), ["@svml/protocol"]);
+  assert.deepEqual(graph.get("@narratage/core"), ["@narratage/protocol"]);
 });
 
 test("Text compilation is one explicit leaf assembly, not a Package Loader or Local Runtime dependency", async () => {
   const graph = productionGraph(await workspacePackages());
-  assert.ok(transitive(graph, "@svml/compiler-text-node").has("@svml/text"));
-  assert.ok(!transitive(graph, "@svml/package-loader-node").has("@svml/text"));
-  assert.ok(!transitive(graph, "@svml/local").has("@svml/text"));
+  assert.ok(transitive(graph, "@narratage/compiler-text-node").has("@narratage/text"));
+  assert.ok(!transitive(graph, "@narratage/package-loader-node").has("@narratage/text"));
+  assert.ok(!transitive(graph, "@narratage/local").has("@narratage/text"));
 });
 
 test("generic and video CLIs reach no Provider package and video CLI activates no author aggregate", async () => {
   const graph = productionGraph(await workspacePackages());
-  const dependencies = transitive(graph, "@svml/cli");
+  const dependencies = transitive(graph, "@narratage/cli");
   const videoAssembly = [
-    "@svml/provider-google-vertex",
-    "@svml/provider-hyperframes-local",
-    "@svml/provider-image-opencv-local",
-    "@svml/provider-kie",
-    "@svml/provider-media-local",
-    "@svml/provider-whisperx-local",
+    "@narratage/provider-google-vertex",
+    "@narratage/provider-hyperframes-local",
+    "@narratage/provider-image-opencv-local",
+    "@narratage/provider-kie",
+    "@narratage/provider-media-local",
+    "@narratage/provider-whisperx-local",
   ];
   assert.deepEqual(videoAssembly.filter((name) => dependencies.has(name)), []);
-  const videoDependencies = transitive(graph, "@svml/video-cli");
+  const videoDependencies = transitive(graph, "@narratage/video-cli");
   assert.deepEqual(videoAssembly.filter((name) => videoDependencies.has(name)), []);
-  assert.ok(!videoDependencies.has("@svml/script"));
-  assert.ok(!videoDependencies.has("@svml/seedance-speaker"));
-  assert.ok(!videoDependencies.has("@svml/broll"));
-  assert.ok(!videoDependencies.has("@svml/text-track"));
-  assert.ok(!videoDependencies.has("@svml/film"));
-  assert.ok(videoDependencies.has("@svml/cli"));
+  assert.ok(!videoDependencies.has("@narratage/script"));
+  assert.ok(!videoDependencies.has("@narratage/seedance-speaker"));
+  assert.ok(!videoDependencies.has("@narratage/broll"));
+  assert.ok(!videoDependencies.has("@narratage/text-track"));
+  assert.ok(!videoDependencies.has("@narratage/film"));
+  assert.ok(videoDependencies.has("@narratage/cli"));
+});
+
+test("domain packages confine their Text dependency to Surface and activation entries", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const surfaceOnly = [
+    "broll", "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
+    "image-transform", "media", "seedance", "seedance-speaker", "speech-spine", "whisperx",
+  ];
+  const allowed = new Set(["surface.ts", "activation.ts"]);
+  for (const name of surfaceOnly) {
+    const root = new URL(`../packages/${name}/src/`, import.meta.url);
+    for (const file of await readdir(root)) {
+      if (!file.endsWith(".ts") || allowed.has(file)) continue;
+      const content = await readFile(new URL(file, root), "utf8");
+      assert.ok(!content.includes("\"@narratage/text\""),
+        `${name}/src/${file} imports @narratage/text outside its Surface boundary`);
+    }
+  }
+});
+
+test("every workspace package is exercised by some test, directly or through a tested consumer", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const packages = await workspacePackages();
+  const graph = productionGraph(packages);
+  const directlyTested = new Set();
+  for (const name of packages.keys()) {
+    const short = name.replace("@narratage/", "");
+    let entries = [];
+    try {
+      entries = await readdir(new URL(`../packages/${short}/test/`, import.meta.url));
+    } catch {
+      continue;
+    }
+    if (entries.some((file) => file.endsWith(".test.ts"))) directlyTested.add(name);
+  }
+  const testedImports = new Set(directlyTested);
+  for (const name of directlyTested) {
+    for (const dependency of transitive(graph, name)) testedImports.add(dependency);
+    const short = name.replace("@narratage/", "");
+    const testRoot = new URL(`../packages/${short}/test/`, import.meta.url);
+    for (const file of await readdir(testRoot)) {
+      if (!file.endsWith(".ts")) continue;
+      const source = await readFile(new URL(file, testRoot), "utf8");
+      for (const match of source.matchAll(/"(@narratage\/[a-z-]+)"/gu)) {
+        testedImports.add(match[1]);
+        for (const dependency of transitive(graph, match[1])) testedImports.add(dependency);
+      }
+    }
+  }
+  const uncovered = [...packages.keys()].filter((name) => !testedImports.has(name)).sort();
+  assert.deepEqual(uncovered, [], "packages reachable from no test at all");
 });

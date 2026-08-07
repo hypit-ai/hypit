@@ -1,7 +1,7 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { NarrativeSpeechExcerpt } from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import { estimateProducers } from "./manifest.js";
 import { estimateSpeechDuration, estimateSpeechImplementationDigest } from "./program.js";
@@ -13,7 +13,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const estimateComponent = {
-  name: "@svml/estimate",
+  name: "@narratage/estimate",
   producers: [{
     producer: estimateProducers.speech,
     implementationDigest: estimateSpeechImplementationDigest,

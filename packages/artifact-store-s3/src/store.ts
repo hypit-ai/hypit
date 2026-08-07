@@ -1,20 +1,20 @@
 import { createHash } from "node:crypto";
 
-import { digestOf, isDigest } from "@svml/protocol";
-import type { BlobRef, Digest } from "@svml/protocol";
-import { defineRuntimeServicePackage } from "@svml/runtime";
-import type { ArtifactStore, RuntimeServicePackage } from "@svml/runtime";
+import { digestOf, isDigest } from "@narratage/protocol";
+import type { BlobRef, Digest } from "@narratage/protocol";
+import { defineRuntimeServicePackage } from "@narratage/runtime";
+import type { ArtifactStore, RuntimeServicePackage } from "@narratage/runtime";
 
 import { AwsS3ObjectClient } from "./client.js";
 import type { S3ObjectClient } from "./client.js";
 
 export const s3ArtifactStoreModuleRef = {
-  name: "@svml/artifact-store-s3",
+  name: "@narratage/artifact-store-s3",
   version: "1",
 } as const;
 
 export const s3ArtifactStoreImplementationDigest = digestOf(
-  "@svml/artifact-store-s3/artifact-store@1",
+  "@narratage/artifact-store-s3/artifact-store@1",
 );
 
 type S3Location = {
@@ -178,7 +178,7 @@ export function createS3ArtifactStorePackage(
       facet: "artifact-store",
       instance,
       implementation: {
-        locator: "@svml/artifact-store-s3/artifact-store",
+        locator: "@narratage/artifact-store-s3/artifact-store",
         digest: s3ArtifactStoreImplementationDigest,
       },
       permissions: ["network:aws:s3"],

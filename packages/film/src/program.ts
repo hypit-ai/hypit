@@ -1,25 +1,15 @@
-import {
-  assertAudioTrackIdentity,
-  assertCompositionIdentity,
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  sealComposition,
-} from "@svml/contracts";
-import type {
-  AudioTrack,
-  Composition,
-  ProgramSpace,
-  Track,
-  VisualTrack,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+import { assertProgramSpaceIdentity } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealComposition } from "@narratage/composition";
+import type { AudioTrack, Composition, Track, VisualTrack } from "@narratage/composition";
+import { digestOf } from "@narratage/protocol";
 
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 
-export const createFilmTrackSetImplementationDigest = digestOf("@svml/film/create-track-set@1");
-export const appendFilmVisualTrackImplementationDigest = digestOf("@svml/film/append-visual-track@1");
-export const appendFilmAudioTrackImplementationDigest = digestOf("@svml/film/append-audio-track@1");
-export const compileFilmCompositionImplementationDigest = digestOf("@svml/film/compile-composition@1");
+export const createFilmTrackSetImplementationDigest = digestOf("@narratage/film/create-track-set@1");
+export const appendFilmVisualTrackImplementationDigest = digestOf("@narratage/film/append-visual-track@1");
+export const appendFilmAudioTrackImplementationDigest = digestOf("@narratage/film/append-audio-track@1");
+export const compileFilmCompositionImplementationDigest = digestOf("@narratage/film/compile-composition@1");
 
 function assertNonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);

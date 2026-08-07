@@ -1,9 +1,9 @@
-# `@svml/provider-kie`
+# `@narratage/provider-kie`
 
 Recoverable KIE Market Provider for the first seven explicitly selected model families.
 
-This package is deployment code. Author source imports model modules such as `@svml/seedance` or
-`@svml/gpt-image`; trusted Runtime configuration installs `createKieProvider()`. The Provider binds
+This package is deployment code. Author source imports model modules such as `@narratage/seedance` or
+`@narratage/gpt-image`; trusted Runtime configuration installs `createKieProvider()`. The Provider binds
 only those exact capabilities and never interprets a generic image/video request as permission to
 choose another model.
 
@@ -11,13 +11,13 @@ choose another model.
 
 | Author module | Exact author model/mode | KIE model |
 |---|---|---|
-| `@svml/seedance` | Seedance 2.0 / Fast / Mini | `bytedance/seedance-2*` |
-| `@svml/minimax-h3` | text / frames / multimodal reference | `minimax-h3/*-to-video` |
-| `@svml/gemini-omni` | Gemini Omni Video | `gemini-omni-video` |
-| `@svml/grok-imagine` | text video / image video / 1.5 preview | Grok Imagine video endpoints |
-| `@svml/gpt-image` | GPT Image 2 text / image | GPT Image 2 endpoints |
-| `@svml/nano-banana` | Nano Banana 2 / Pro | `nano-banana-2`, `nano-banana-pro` |
-| `@svml/seedream` | Seedream 5 Lite text / image | Seedream 5 Lite endpoints |
+| `@narratage/seedance` | Seedance 2.0 / Fast / Mini | `bytedance/seedance-2*` |
+| `@narratage/minimax-h3` | text / frames / multimodal reference | `minimax-h3/*-to-video` |
+| `@narratage/gemini-omni` | Gemini Omni Video | `gemini-omni-video` |
+| `@narratage/grok-imagine` | text video / image video / 1.5 preview | Grok Imagine video endpoints |
+| `@narratage/gpt-image` | GPT Image 2 text / image | GPT Image 2 endpoints |
+| `@narratage/nano-banana` | Nano Banana 2 / Pro | `nano-banana-2`, `nano-banana-pro` |
+| `@narratage/seedream` | Seedream 5 Lite text / image | Seedream 5 Lite endpoints |
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A
@@ -27,17 +27,17 @@ requests, not in Provider routing.
 ## Local Runtime
 
 ```ts
-import { geminiOmniComponent } from "@svml/gemini-omni";
-import { generationComponent } from "@svml/generation";
-import { gptImageComponent } from "@svml/gpt-image";
-import { grokImagineComponent } from "@svml/grok-imagine";
-import { createProjectLocalRuntime } from "@svml/local";
-import { minimaxH3Component } from "@svml/minimax-h3";
-import { nanoBananaComponent } from "@svml/nano-banana";
-import { createKieProvider } from "@svml/provider-kie";
-import { credentialRef } from "@svml/runtime";
-import { seedanceComponent } from "@svml/seedance";
-import { seedreamComponent } from "@svml/seedream";
+import { geminiOmniComponent } from "@narratage/gemini-omni";
+import { generationComponent } from "@narratage/generation";
+import { gptImageComponent } from "@narratage/gpt-image";
+import { grokImagineComponent } from "@narratage/grok-imagine";
+import { createProjectLocalRuntime } from "@narratage/local";
+import { minimaxH3Component } from "@narratage/minimax-h3";
+import { nanoBananaComponent } from "@narratage/nano-banana";
+import { createKieProvider } from "@narratage/provider-kie";
+import { credentialRef } from "@narratage/runtime";
+import { seedanceComponent } from "@narratage/seedance";
+import { seedreamComponent } from "@narratage/seedream";
 
 export default await createProjectLocalRuntime({
   components: [
@@ -80,7 +80,7 @@ author document; installing Runtime code does not implicitly add author intent.
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
    immediately written to the configured content-addressed ArtifactStore, and removed from durable
    result metadata.
-5. `@svml/local` owns Build concurrency. This Provider contributes one KIE lane and a conservative
+5. `@narratage/local` owns Build concurrency. This Provider contributes one KIE lane and a conservative
    create-task interval; it does not introduce Redis or another source of Build truth.
 
 The automated suite uses an adversarial fake KIE service. The credentialed smoke command is a paid

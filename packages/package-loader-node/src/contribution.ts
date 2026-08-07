@@ -1,15 +1,15 @@
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@svml/component-kit";
+} from "@narratage/component-kit";
 import type {
   ComponentPackage,
   ProducerRegistrar,
-} from "@svml/component-kit";
-import { ModulePackageRegistry } from "@svml/compiler-node";
-import type { RegisteredModulePackage } from "@svml/compiler-node";
-import { canonicalize } from "@svml/protocol";
-import type { TypeValidatorRegistrar } from "@svml/validation";
+} from "@narratage/component-kit";
+import { ModulePackageRegistry } from "@narratage/compiler-node";
+import type { RegisteredModulePackage } from "@narratage/compiler-node";
+import { canonicalize } from "@narratage/protocol";
+import type { TypeValidatorRegistrar } from "@narratage/validation";
 
 import type { NodePackageContribution } from "./types.js";
 

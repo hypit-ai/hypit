@@ -6,17 +6,17 @@ import {
   resolveCaptionProgram,
   sealCaptionProgram,
   sealCaptionStyle,
-} from "@svml/caption";
-import type { CaptionStyleIntent } from "@svml/caption";
+} from "@narratage/caption";
+import type { CaptionStyleIntent } from "@narratage/caption";
 import {
   captionGeminiComponent,
   captionGeminiManifest,
   compileCaptionGeminiRequest,
   sealCaptionGeminiPlan,
   sealCaptionGeminiProgram,
-} from "@svml/caption-gemini";
-import type { CaptionGeminiRequest, RawCaptionGeminiResponse } from "@svml/caption-gemini";
-import { parseScript } from "@svml/script";
+} from "@narratage/caption-gemini";
+import type { CaptionGeminiRequest, RawCaptionGeminiResponse } from "@narratage/caption-gemini";
+import { parseScript } from "@narratage/script";
 
 function style(id: string, fields: CaptionStyleIntent["planning"]["fields"] = []) {
   const base = defaultCaptionTrackProgram(id);

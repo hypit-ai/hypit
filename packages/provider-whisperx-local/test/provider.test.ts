@@ -1,20 +1,17 @@
-import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-
-import {
-  contractTypes,
-  sealSpeechEvidenceAudio,
-} from "@svml/contracts";
-import { MemoryArtifactStore, EndpointRegistry } from "@svml/driver-node";
-import { digestOf } from "@svml/protocol";
-import type { Need } from "@svml/protocol";
+import { sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
+import assert from "node:assert/strict";
+import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
+import { digestOf } from "@narratage/protocol";
+import type { Need } from "@narratage/protocol";
 import {
   whisperXCapabilities,
   whisperXRequestForEvidenceAudio,
   whisperXTypes,
-} from "@svml/whisperx";
+} from "@narratage/whisperx";
 
 import {
   createLocalWhisperXProvider,
@@ -190,8 +187,8 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
     assert.equal((value as { readonly audioArtifactDigest?: unknown }).audioArtifactDigest,
       evidenceAudio.artifact.digest);
     assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
-    assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@2");
-    assert.equal(contractTypes.speechEvidenceAudio.name, "SpeechEvidenceAudio");
+    assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@1");
+    assert.equal(speechTypes.evidenceAudio.name, "SpeechEvidenceAudio");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

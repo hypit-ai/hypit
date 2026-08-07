@@ -1,4 +1,4 @@
-import type { BlobRef } from "@svml/protocol";
+import type { BlobRef } from "@narratage/protocol";
 
 export type GeneratedImageSet = {
   readonly contract: "svml.generated-image-set@1";

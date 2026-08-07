@@ -1,14 +1,17 @@
 {
-  "name": "@svml/gemini-omni",
+  "name": "@narratage/gemini-omni",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
-    "@svml/generation": "workspace:*",
-    "@svml/model-kit": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/generation": "workspace:*",
+    "@narratage/model-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   }
 }

@@ -6,11 +6,11 @@ import type {
   StoredValue,
   TypeRef,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import type {
   TypeValidatorHandler,
   TypeValidatorRegistrar,
-} from "@svml/validation";
+} from "@narratage/validation";
 
 export type Awaitable<T> = T | Promise<T>;
 

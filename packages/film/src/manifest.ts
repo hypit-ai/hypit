@@ -1,13 +1,8 @@
-import {
-  audioTrackSchema,
-  compositionSchema,
-  contractTypes,
-  videoContractDependencies,
-  visualTrackSchema,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { svsManifest, svsModuleRef } from "@svml/svs";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@narratage/composition";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { svsManifest, svsModuleRef } from "@narratage/svs";
 
 import {
   appendFilmAudioTrackImplementationDigest,
@@ -16,8 +11,8 @@ import {
   createFilmTrackSetImplementationDigest,
 } from "./program.js";
 
-export const filmModuleRef = { name: "@svml/film", version: "0.0.0-dev" } as const;
-export const filmSurfaceImplementationDigest = digestOf("@svml/film/surface@1");
+export const filmModuleRef = { name: "@narratage/film", version: "0.0.0-dev" } as const;
+export const filmSurfaceImplementationDigest = digestOf("@narratage/film/surface@1");
 export const filmTypes = {
   program: { module: filmModuleRef, name: "FilmProgram" },
   trackSet: { module: filmModuleRef, name: "FilmTrackSet" },
@@ -64,12 +59,12 @@ export const filmTrackSetSchema: ValueSchema = object({
 });
 
 export const filmManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: filmModuleRef.name,
   version: filmModuleRef.version,
   dependencies: [
-    videoContractDependencies.programSpace,
-    videoContractDependencies.composition,
+    programSpaceDependency,
+    compositionDependency,
     { module: svsModuleRef, digest: digestOf(svsManifest) },
   ],
   types: [
@@ -84,7 +79,7 @@ export const filmManifest: ModuleManifest = {
     outputs: [filmTypes.program],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/film/surface",
+      locator: "@narratage/film/surface",
       digest: filmSurfaceImplementationDigest,
     },
   }],
@@ -96,7 +91,7 @@ export const filmManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/create-track-set",
+        locator: "@narratage/film/create-track-set",
         digest: createFilmTrackSetImplementationDigest,
       },
     },
@@ -104,14 +99,14 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendVisualTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "space", type: contractTypes.programSpace },
-        { name: "track", type: contractTypes.visualTrack },
+        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "track", type: compositionTypes.visualTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/append-visual-track",
+        locator: "@narratage/film/append-visual-track",
         digest: appendFilmVisualTrackImplementationDigest,
       },
     },
@@ -119,14 +114,14 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.appendAudioTrack.name,
       inputs: [
         { name: "set", type: filmTypes.trackSet },
-        { name: "space", type: contractTypes.programSpace },
-        { name: "track", type: contractTypes.audioTrack },
+        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "track", type: compositionTypes.audioTrack },
       ],
       outputs: [{ name: "set", type: filmTypes.trackSet }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/append-audio-track",
+        locator: "@narratage/film/append-audio-track",
         digest: appendFilmAudioTrackImplementationDigest,
       },
     },
@@ -134,14 +129,14 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.compileComposition.name,
       inputs: [
         { name: "program", type: filmTypes.program },
-        { name: "space", type: contractTypes.programSpace },
+        { name: "space", type: programSpaceTypes.programSpace },
         { name: "set", type: filmTypes.trackSet },
       ],
-      outputs: [{ name: "composition", type: contractTypes.composition }],
+      outputs: [{ name: "composition", type: compositionTypes.composition }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/film/compile-composition",
+        locator: "@narratage/film/compile-composition",
         digest: compileFilmCompositionImplementationDigest,
       },
     },

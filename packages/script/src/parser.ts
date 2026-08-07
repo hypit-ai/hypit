@@ -1,4 +1,4 @@
-import { digestOf } from "@svml/core";
+import { digestOf } from "@narratage/core";
 
 import { ScriptSyntaxError } from "./error.js";
 import type {
@@ -681,19 +681,19 @@ export function parseScript(
     fail("SCRIPT_ANCHOR_CARDINALITY", "Semantic anchor cardinality is not 2M + 2N.");
   }
   return {
-    contract: "svml.narrative@0",
+    contract: "svml.narrative@1",
     segments,
     tokens,
     turns,
     selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({ id, occurrences })),
     moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({ id, occurrences })),
     captionProjection: {
-      contract: "svml.caption-projection@0",
+      contract: "svml.caption-projection@1",
       text: captionSegments.join("\n"),
       regions: captionRegions,
     },
     semanticIndex: {
-      contract: "svml.semantic-index@0",
+      contract: "svml.semantic-index@1",
       anchors,
     },
     serializations: {

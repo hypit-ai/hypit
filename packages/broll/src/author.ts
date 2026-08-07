@@ -1,16 +1,11 @@
-import {
-  assertCompleteSemanticMapIdentity,
-  assertNarrativeSelectionIdentity,
-  selectionFrameSpans,
-  verifySynchronizedMedia,
-} from "@svml/contracts";
-import type {
-  CompleteSemanticMap,
-  NarrativeSelectionRef,
-  ProgramSpace,
-  SynchronizedMedia,
-} from "@svml/contracts";
-import { canonicalize, digestOf } from "@svml/protocol";
+import type { NarrativeSelectionRef } from "@narratage/narrative";
+import { verifySynchronizedMedia } from "@narratage/media";
+import type { SynchronizedMedia } from "@narratage/media";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertCompleteSemanticMapIdentity, assertNarrativeSelectionIdentity, selectionFrameSpans } from "@narratage/semantic-map";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { Track } from "@narratage/composition";
+import { canonicalize, digestOf } from "@narratage/protocol";
 
 import { sealBrollProgram } from "./program.js";
 import type {
@@ -20,9 +15,9 @@ import type {
   BrollTrackSpec,
 } from "./types.js";
 
-export const createBrollSetImplementationDigest = digestOf("@svml/broll/create-set@1");
-export const appendBrollItemImplementationDigest = digestOf("@svml/broll/append-item@1");
-export const finalizeBrollProgramImplementationDigest = digestOf("@svml/broll/finalize-program@1");
+export const createBrollSetImplementationDigest = digestOf("@narratage/broll/create-set@1");
+export const appendBrollItemImplementationDigest = digestOf("@narratage/broll/append-item@1");
+export const finalizeBrollProgramImplementationDigest = digestOf("@narratage/broll/finalize-program@1");
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

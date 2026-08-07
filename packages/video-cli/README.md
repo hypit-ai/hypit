@@ -1,6 +1,6 @@
-# `@svml/video-cli`
+# `@narratage/video-cli`
 
-Official v2 video command application. It selects the Text compiler Host, but deliberately carries
+Official video command application. It selects the Text compiler Host, but deliberately carries
 no built-in author, Run, Provider or Store package.
 
 Every Frontend, Surface, deterministic Producer and Validator is activated from an explicit
@@ -11,22 +11,22 @@ the corresponding physical package. They never grant network, credential or proc
 From the repository:
 
 ```bash
-pnpm svml:v2 lock-packages ./svml.packages.lock \
-  --package @svml/run-text --package @svml/script --package @example/cards --root .
-pnpm svml:v2 lock-packages ./svml.runtime-packages.lock \
-  --package @svml/provider-kie --package @svml/provider-media-local --root .
-pnpm svml:v2 check path/to/main.svml --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 check path/to/build.svrun --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 plan path/to/build.svrun --package-lock ./svml.packages.lock --root .
-pnpm svml:v2 build path/to/build.svrun --package-lock ./svml.packages.lock \
+pnpm narratage lock-packages ./svml.packages.lock \
+  --package @narratage/run-text --package @narratage/script --package @example/cards --root .
+pnpm narratage lock-packages ./svml.runtime-packages.lock \
+  --package @narratage/provider-kie --package @narratage/provider-media-local --root .
+pnpm narratage check path/to/main.svml --package-lock ./svml.packages.lock --root .
+pnpm narratage check path/to/build.svrun --package-lock ./svml.packages.lock --root .
+pnpm narratage plan path/to/build.svrun --package-lock ./svml.packages.lock --root .
+pnpm narratage build path/to/build.svrun --package-lock ./svml.packages.lock \
   --runtime ./svml.runtime.json --build-id delivery-01 --follow --root .
-pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 builds --runtime ./svml.runtime.json
-pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
-pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 doctor ./svml.runtime.json
-pnpm svml:v2 gc ./svml.runtime.json
+pnpm narratage status <build-id> --runtime ./svml.runtime.json
+pnpm narratage builds --runtime ./svml.runtime.json
+pnpm narratage inspect <build-id> --runtime ./svml.runtime.json
+pnpm narratage get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
+pnpm narratage cancel <build-id> --runtime ./svml.runtime.json
+pnpm narratage doctor ./svml.runtime.json
+pnpm narratage gc ./svml.runtime.json
 ```
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run
@@ -67,7 +67,7 @@ output. Upstream work behind the selected Candidate is pruned by reverse reachab
 unbound reachable output follows the ordinary graph. This is a new Build identity and never resumes
 or copies the prior Build's outstanding Commands.
 
-`@svml/package-loader-node` supports explicitly trusted installed implementation packages. It
+`@narratage/package-loader-node` supports explicitly trusted installed implementation packages. It
 verifies the complete physical dependency closure before executing an activation entry, then checks
 exact Module, Author/Run Frontend, Host-facet, Producer and Validator identities. The Loader does not
 select a syntax; each Source Header selects among Frontends trusted by this Distribution and its
