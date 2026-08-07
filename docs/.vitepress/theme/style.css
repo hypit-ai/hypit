@@ -462,6 +462,7 @@ body {
   .hero-statement-viewport-en { height: 88.74px; }
   .hero-statement-en { font-size: 29px; }
   .hero-statement-zh { font-size: 16px; }
+  .hero-statement-break { display: none; }
   .vp-doc .demo-heading h2 { font-size: 20px; }
   .VPHome .vp-doc .demo-heading h2 { font-size: 16px; }
   .demo-shell { margin-inline: 0; border-radius: 2px; }
