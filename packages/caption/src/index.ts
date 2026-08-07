@@ -47,3 +47,4 @@ export {
   sealCaptionTrackProgram,
 } from "./track.js";
 export type * from "./types.js";
+export { captionTimingFragment, captionTrackFragment } from "./fragment.js";

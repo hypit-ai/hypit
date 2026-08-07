@@ -1,10 +1,11 @@
-import { contractTypes } from "@svml/contracts";
+import { narrativeTypes } from "@narratage/narrative";
+import { speechTypes } from "@narratage/speech";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { whisperXSpeechAlignmentFragment } from "./fragment.js";
 
@@ -44,8 +45,8 @@ export const decodeWhisperXAlignmentSurface: StructuredSurfaceHandler = ({ eleme
     throw new Error(`${element.name} does not accept children`);
   }
   const id = stringAttribute(element, "id");
-  const narrative = reference(element, "narrative", contractTypes.narrative, resolveReference);
-  const audio = reference(element, "audio", contractTypes.speechAudioBasis, resolveReference);
+  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+  const audio = reference(element, "audio", speechTypes.audioBasis, resolveReference);
   return {
     records: [],
     components: [{

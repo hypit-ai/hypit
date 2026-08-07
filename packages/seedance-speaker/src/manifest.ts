@@ -1,35 +1,35 @@
-import { artifactDependency, artifactTypes } from "@svml/artifact";
-import {
-  videoContractDependencies,
-} from "@svml/contracts";
+import { artifactDependency } from "@narratage/artifact";
+import { narrativeDependency } from "@narratage/narrative";
+import { speechDependency } from "@narratage/speech";
+import { artifactTypes } from "@narratage/artifact";
 import {
   promptKitManifestDigest,
   promptKitModuleRef,
   promptKitTypes,
-} from "@svml/prompt-kit";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest } from "@svml/protocol";
+} from "@narratage/prompt-kit";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest } from "@narratage/protocol";
 import {
   seedanceManifestDigest,
   seedanceModuleRef,
   seedanceTypes,
-} from "@svml/seedance";
-import { svsManifest, svsRecipeType } from "@svml/svs";
+} from "@narratage/seedance";
+import { svsManifest, svsRecipeType } from "@narratage/svs";
 
-export const seedanceSpeakerModuleRef = { name: "@svml/seedance-speaker", version: "0.0.0-dev" } as const;
+export const seedanceSpeakerModuleRef = { name: "@narratage/seedance-speaker", version: "0.0.0-dev" } as const;
 
 export const seedanceSpeakerImplementationDigests = {
-  takeSurface: digestOf("@svml/seedance-speaker/take-surface@3"),
+  takeSurface: digestOf("@narratage/seedance-speaker/take-surface@3"),
 } as const;
 
 export const seedanceSpeakerManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: seedanceSpeakerModuleRef.name,
   version: seedanceSpeakerModuleRef.version,
   dependencies: [
     artifactDependency,
-    videoContractDependencies.narrative,
-    videoContractDependencies.speech,
+    narrativeDependency,
+    speechDependency,
     { module: promptKitModuleRef, digest: promptKitManifestDigest },
     { module: seedanceModuleRef, digest: seedanceManifestDigest },
     { module: svsRecipeType.module, digest: digestOf(svsManifest) },
@@ -40,10 +40,10 @@ export const seedanceSpeakerManifest: ModuleManifest = {
     name: "take",
     tag: "Take",
     mode: "structured",
-    outputs: [promptKitTypes.program, seedanceTypes.speechProgram, artifactTypes.blob],
+    outputs: [promptKitTypes.program, seedanceTypes.speechSpine, artifactTypes.blob],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/seedance-speaker/take-surface",
+      locator: "@narratage/seedance-speaker/take-surface",
       digest: seedanceSpeakerImplementationDigests.takeSurface,
     },
   }],

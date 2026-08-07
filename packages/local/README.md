@@ -1,4 +1,4 @@
-# `@svml/local`
+# `@narratage/local`
 
 The trusted, zero-service developer distribution. It keeps Core and the authoritative Build
 Scheduler in the current Node process while allowing every capability Endpoint to run in a different
@@ -6,8 +6,8 @@ place.
 
 The convenience assembly uses:
 
-- `@svml/store-sqlite` for durable Build and Operation facts;
-- `@svml/artifact-store-fs` for content-addressed project bytes;
+- `@narratage/store-sqlite` for durable Build and Operation facts;
+- `@narratage/artifact-store-fs` for content-addressed project bytes;
 - optional replacement of Scheduler, BuildStore, OperationStore, ArtifactStore or CredentialStore
   by permission-checked Runtime service packages;
 - an in-process, queue-free Scheduler whose ready work always comes from Core;
@@ -15,7 +15,7 @@ The convenience assembly uses:
 - separately selected external Endpoint packages.
 
 Package loading is syntax-neutral. The local Runtime activates only locked deterministic Producer
-and Validator facets; it neither depends on `@svml/text` nor installs any package Host facet.
+and Validator facets; it neither depends on `@narratage/text` nor installs any package Host facet.
 
 Normal CLI projects may express the same assembly as closed data:
 
@@ -26,7 +26,7 @@ Normal CLI projects may express the same assembly as closed data:
   "services": [],
   "endpoints": [
     {
-      "use": "@svml/provider-kie",
+      "use": "@narratage/provider-kie",
       "instance": "kie.project",
       "lane": "generation",
       "config": { "apiKeyEnv": "KIE_API_KEY", "defaultConcurrency": 2 }
@@ -54,7 +54,7 @@ and Store implementation identities are rebound to actual physical package bytes
 transitive dependency closure, rather than trusting a package's development label or unrelated
 selected adapters.
 
-Deterministic packages implement the host-neutral `@svml/component-kit` contract. `@svml/local`
+Deterministic packages implement the host-neutral `@narratage/component-kit` contract. `@narratage/local`
 adapts them to `ProducerRegistry`; the component never imports the Node Driver or receives Runtime
 services.
 
@@ -84,7 +84,7 @@ Endpoint implementation and lane, not the `.svml` author document.
 `createProjectLocalRuntime` infers a role when exactly one configured service package supplies it.
 When several instances provide the same role, `runtimeSelection` must name the exact instance.
 The same mechanism covers Postgres, S3, keychains and replacement Schedulers; none requires a
-change to `@svml/local`. Advanced hosts may still call `createLocalRuntime` with raw ports.
+change to `@narratage/local`. Advanced hosts may still call `createLocalRuntime` with raw ports.
 
 `LocalRuntime.status(build)` exposes the verified durable Build archive, and
 `LocalRuntime.readArtifact(digest)` is the generic byte-egress seam used by CLI `get`. They expose
@@ -92,9 +92,9 @@ Record and content identities, not private filesystem layout, so filesystem and 
 interchangeable. Egress never determines whether a Build result is retained.
 
 The filesystem ArtifactStore additionally implements optional streaming transfer and explicit
-retention capabilities. `svml-v2 gc <runtime-profile.json>` is read-only by default; `--apply`
+retention capabilities. `narratage gc <runtime-profile.json>` is read-only by default; `--apply`
 deletes only objects unreachable from every retained BuildState and Operation. This is Host
-maintenance, never a Core transition or automatic cache policy. `svml-v2 doctor
+maintenance, never a Core transition or automatic cache policy. `narratage doctor
 <runtime-profile.json>` verifies package bytes, closed adapter configuration, required environment
 credentials and local executable availability without running a Build.
 

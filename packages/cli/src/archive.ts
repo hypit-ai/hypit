@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { LocalRuntime } from "@svml/local";
-import { isDigest } from "@svml/protocol";
-import type { BuildState, Digest, TypedRecord } from "@svml/protocol";
-import type { BuildCatalogEntry } from "@svml/runtime";
+import type { LocalRuntime } from "@narratage/local";
+import { isDigest } from "@narratage/protocol";
+import type { BuildState, Digest, TypedRecord } from "@narratage/protocol";
+import type { BuildCatalogEntry } from "@narratage/runtime";
 
 type ArtifactIdentity = {
   readonly digest: Digest;

@@ -4,11 +4,11 @@ import {
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-} from "@svml/generation";
-import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/generation";
+import { defineExactModelModule } from "@narratage/model-kit";
+import type { BlobRef, ValueSchema } from "@narratage/protocol";
 
-export const nanoBananaModuleRef = { name: "@svml/nano-banana", version: "0.0.0-dev" } as const;
+export const nanoBananaModuleRef = { name: "@narratage/nano-banana", version: "0.0.0-dev" } as const;
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;
 export type NanoBananaModel = typeof nanoBananaModels[number];
 export type NanoBananaRequestContent<M extends NanoBananaModel = NanoBananaModel> = {

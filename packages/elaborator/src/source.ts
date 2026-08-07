@@ -6,7 +6,7 @@ import {
   link,
   sealTypedModule,
   verifyRecord,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   BlobRef,
   Digest,
@@ -17,12 +17,12 @@ import type {
   TypeRef,
   TypedModule,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   maskSourceHeader,
   parseSourceHeader,
-} from "@svml/source";
-import type { SourceHeader } from "@svml/source";
+} from "@narratage/source";
+import type { SourceHeader } from "@narratage/source";
 
 import {
   elaborateAuthorModule,
@@ -159,7 +159,7 @@ export type AuthorRecordAdmitter = (
 ) => Awaitable<TypedRecord>;
 
 export type SourceClosureUnit = {
-  readonly format: "svml.source-unit@2";
+  readonly format: "svml.source-unit@1";
   readonly id: Digest;
   readonly frontendRequest: string;
   readonly frontend: string;
@@ -179,7 +179,7 @@ export type SourceClosureUnit = {
 };
 
 export type SourceClosure = {
-  readonly format: "svml.source-closure@2";
+  readonly format: "svml.source-closure@1";
   readonly id: Digest;
   readonly entry: Digest;
   readonly units: readonly SourceClosureUnit[];
@@ -224,7 +224,7 @@ export class SourceClosureError extends Error {
 
 function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id"> {
   return {
-    format: "svml.source-unit@2",
+    format: "svml.source-unit@1",
     frontendRequest: unit.frontendRequest,
     frontend: unit.frontend,
     frontendDigest: unit.frontendDigest,
@@ -249,7 +249,7 @@ function sourceUnitContent(unit: SourceClosureUnit): Omit<SourceClosureUnit, "id
 
 function sourceClosureContent(closure: SourceClosure): Omit<SourceClosure, "id"> {
   return {
-    format: "svml.source-closure@2",
+    format: "svml.source-closure@1",
     entry: closure.entry,
     units: [...closure.units].sort((left, right) => left.id.localeCompare(right.id)),
   };
@@ -396,7 +396,7 @@ function hygienizeSource(
   }));
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
-    format: "svml.source-unit@2" as const,
+    format: "svml.source-unit@1" as const,
     frontendRequest: source.header.using,
     frontend: frontend.id,
     frontendDigest: frontend.implementationDigest,
@@ -422,7 +422,7 @@ function hygienizeSource(
   return {
     unit: {
       id: digestOf(unitContent),
-      format: "svml.source-unit@2",
+      format: "svml.source-unit@1",
       frontendRequest: unitContent.frontendRequest,
       frontend: frontend.id,
       frontendDigest: frontend.implementationDigest,
@@ -618,7 +618,7 @@ export async function compileSourceClosure(
   const elaboration = elaborateAuthorModule(program, author, (id) => fragments.get(id));
   const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
   const closureContent = {
-    format: "svml.source-closure@2" as const,
+    format: "svml.source-closure@1" as const,
     entry: entry.unit.id,
     units,
   };
@@ -643,11 +643,11 @@ export async function compileSourceClosure(
 }
 
 export function verifySourceClosure(closure: SourceClosure): void {
-  assert(closure.format === "svml.source-closure@2", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
+  assert(closure.format === "svml.source-closure@1", "UNSUPPORTED_SOURCE_CLOSURE", "unsupported Source Closure format");
   assert(isDigest(closure.id), "INVALID_SOURCE_CLOSURE_DIGEST", "Source Closure digest is invalid");
   const units = new Map<string, SourceClosureUnit>();
   for (const unit of closure.units) {
-    assert(unit.format === "svml.source-unit@2", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
+    assert(unit.format === "svml.source-unit@1", "UNSUPPORTED_SOURCE_UNIT", "unsupported SourceUnit format");
     assert(isDigest(unit.id), "INVALID_SOURCE_UNIT_DIGEST", "SourceUnit digest is invalid");
     assert(unit.id === digestOf(sourceUnitContent(unit)), "SOURCE_UNIT_DIGEST_MISMATCH", `SourceUnit ${unit.id} digest differs`);
     assert(!units.has(unit.id), "DUPLICATE_SOURCE_UNIT", `Source Closure repeats ${unit.id}`, unit.id);

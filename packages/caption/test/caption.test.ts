@@ -1,6 +1,3 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-
 import {
   captionComponent,
   captionManifest,
@@ -14,16 +11,20 @@ import {
   sealCaptionTrackProgram,
   temporalizeCaption,
   temporalizeCaptionPlan,
-} from "@svml/caption";
-import {
-  sealAlignedTranscriptEvidence,
-  sealProgramSpace,
-  sealSpeechBasis,
-} from "@svml/contracts";
-import type { AlignedTranscriptSegment, Narrative, NarrativeSelectionRef, SpeechAudioBasis } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import { narrativeSelectionValue, parseScript } from "@svml/script";
-import { locateSpeechTiming } from "@svml/speech-align";
+} from "@narratage/caption";
+import type { Narrative, NarrativeSelectionRef } from "@narratage/narrative";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealSpeechBasis } from "@narratage/speech";
+import type { SpeechAudioBasis } from "@narratage/speech";
+import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
+import type { AlignedTranscriptSegment } from "@narratage/speech-evidence";
+import type { VisualTrack } from "@narratage/composition";
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { digestOf } from "@narratage/protocol";
+import { narrativeSelectionValue, parseScript } from "@narratage/script";
+import { locateSpeechTiming } from "@narratage/speech-alignment";
 
 test("the component enumerates every Manifest Producer and owned Type validator", () => {
   assert.deepEqual(
@@ -89,7 +90,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
 
 function captionSpace(durationSec: number) {
   return sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });

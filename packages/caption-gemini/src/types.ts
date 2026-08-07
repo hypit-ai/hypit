@@ -6,7 +6,7 @@ import type {
   CaptionPlannedCue,
   CaptionPlannedRun,
   CaptionProgram,
-} from "@svml/caption";
+} from "@narratage/caption";
 
 export type {
   CaptionFieldAssignment,

@@ -1,4 +1,4 @@
-# `@svml/transport-aws-lambda`
+# `@narratage/transport-aws-lambda`
 
 Low-level synchronous JSON invocation for Endpoint packages that execute work through AWS Lambda.
 It is deliberately not an Endpoint and declares no SVML capability.

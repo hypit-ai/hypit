@@ -1,0 +1,24 @@
+{
+  "name": "@narratage/speech-alignment",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/program-space": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/semantic-map": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/speech-evidence": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/script": "workspace:*"
+  }
+}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { digestOf } from "@svml/core";
+import { digestOf } from "@narratage/core";
 import {
   RuntimeModuleRegistry,
   localSchedulerOptionsFromClosure,
@@ -10,8 +10,8 @@ import {
   verifyRuntimeClosure,
   verifyRuntimeCoverage,
   verifyRuntimeProfile,
-} from "@svml/runtime";
-import type { RuntimeModuleManifest } from "@svml/runtime";
+} from "@narratage/runtime";
+import type { RuntimeModuleManifest } from "@narratage/runtime";
 
 import {
   capabilities,
@@ -25,7 +25,7 @@ const endpointImplementationDigest = digestOf("example.runtime-fixture/greeting-
 
 function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
   return {
-    format: "svml.runtime-module@2",
+    format: "svml.runtime-module@1",
     name: runtimeModule.name,
     version: runtimeModule.version,
     facets: [
@@ -217,20 +217,20 @@ test("Runtime Closure content cannot be changed without invalidating its digest"
 test("Runtime @1 facts are rejected instead of being reinterpreted as Endpoint bindings", () => {
   const registry = new RuntimeModuleRegistry();
   assert.throws(
-    () => registry.register({ ...manifest(), format: "svml.runtime-module@1" } as never),
+    () => registry.register({ ...manifest(), format: "svml.runtime-module@9" } as never),
     /unsupported Runtime Module Manifest format/u,
   );
 
   const configured = profile();
   assert.throws(
-    () => verifyRuntimeProfile({ ...configured, format: "svml.runtime-profile@1" } as never),
+    () => verifyRuntimeProfile({ ...configured, format: "svml.runtime-profile@9" } as never),
     /unsupported Runtime Profile format/u,
   );
 
   registry.register(manifest());
   const closure = resolveRuntimeProfile(registry, configured);
   assert.throws(
-    () => verifyRuntimeClosure({ ...closure, format: "svml.runtime-closure@1" } as never),
+    () => verifyRuntimeClosure({ ...closure, format: "svml.runtime-closure@9" } as never),
     /unsupported Runtime Closure format/u,
   );
 });

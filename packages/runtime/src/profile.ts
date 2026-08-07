@@ -1,12 +1,12 @@
-import { resolveProducer } from "@svml/core";
-import { digestOf, isDigest } from "@svml/protocol";
+import { resolveProducer } from "@narratage/core";
+import { digestOf, isDigest } from "@narratage/protocol";
 import type {
   BuildState,
   CapabilityRef,
   Digest,
   ModuleRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export type RuntimeFacetRole =
   | "scheduler"
@@ -56,7 +56,7 @@ export type RuntimeFacet = RuntimeServiceFacet | RuntimeEndpointFacet;
 
 /** Static package metadata. Reading it must never execute the implementation it describes. */
 export type RuntimeModuleManifest = {
-  readonly format: "svml.runtime-module@2";
+  readonly format: "svml.runtime-module@1";
   readonly name: string;
   readonly version: string;
   readonly facets: readonly RuntimeFacet[];
@@ -76,7 +76,7 @@ export type RuntimeEndpointBinding = RuntimeCapability & {
 };
 
 export type RuntimeProfile = {
-  readonly format: "svml.runtime-profile@2";
+  readonly format: "svml.runtime-profile@1";
   readonly digest: Digest;
   readonly name: string;
   readonly instances: readonly RuntimeProfileInstance[];
@@ -120,7 +120,7 @@ export type ResolvedRuntimeEndpoint = {
 export type ResolvedRuntimeInstance = ResolvedRuntimeService | ResolvedRuntimeEndpoint;
 
 export type RuntimeClosure = {
-  readonly format: "svml.runtime-closure@2";
+  readonly format: "svml.runtime-closure@1";
   readonly digest: Digest;
   readonly profile: Digest;
   readonly modules: readonly { readonly module: ModuleRef; readonly digest: Digest }[];
@@ -234,12 +234,12 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
 }
 
 function normalizeManifest(manifest: RuntimeModuleManifest): RuntimeModuleManifest {
-  assert(manifest.format === "svml.runtime-module@2", "unsupported Runtime Module Manifest format");
+  assert(manifest.format === "svml.runtime-module@1", "unsupported Runtime Module Manifest format");
   assert(manifest.name.trim().length > 0 && manifest.version.trim().length > 0, "runtime module identity is invalid");
   const facets = manifest.facets.map(normalizeFacet).sort((left, right) => left.name.localeCompare(right.name));
   assert(new Set(facets.map((facet) => facet.name)).size === facets.length, `${manifest.name} repeats a Runtime facet`);
   return {
-    format: "svml.runtime-module@2",
+    format: "svml.runtime-module@1",
     name: manifest.name,
     version: manifest.version,
     facets,
@@ -298,7 +298,7 @@ export class RuntimeModuleRegistry {
 
 function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest"> {
   return {
-    format: "svml.runtime-profile@2",
+    format: "svml.runtime-profile@1",
     name: profile.name,
     instances: [...profile.instances]
       .map((instance) => ({
@@ -330,7 +330,7 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
 }
 
 function verifyProfileShape(profile: RuntimeProfile): void {
-  assert(profile.format === "svml.runtime-profile@2", "unsupported Runtime Profile format");
+  assert(profile.format === "svml.runtime-profile@1", "unsupported Runtime Profile format");
   assert(profile.name.trim().length > 0, "Runtime Profile name is empty");
   assert(profile.scheduler.trim().length > 0, "Runtime Profile scheduler is empty");
   positiveInteger(profile.scheduling.maxConcurrency, "Runtime Profile maxConcurrency");
@@ -362,7 +362,7 @@ export function sealRuntimeProfile(
   value: Omit<RuntimeProfile, "format" | "digest">,
 ): RuntimeProfile {
   const draft: RuntimeProfile = {
-    format: "svml.runtime-profile@2",
+    format: "svml.runtime-profile@1",
     digest: digestOf("unsealed-runtime-profile"),
     ...value,
   };
@@ -378,7 +378,7 @@ export function verifyRuntimeProfile(profile: RuntimeProfile): void {
 
 function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest"> {
   return {
-    format: "svml.runtime-closure@2",
+    format: "svml.runtime-closure@1",
     profile: closure.profile,
     modules: [...closure.modules].map((item) => ({ module: { ...item.module }, digest: item.digest }))
       .sort((left, right) => moduleKey(left.module).localeCompare(moduleKey(right.module))),
@@ -396,7 +396,7 @@ function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest">
 }
 
 export function verifyRuntimeClosure(closure: RuntimeClosure): void {
-  assert(closure.format === "svml.runtime-closure@2", "unsupported Runtime Closure format");
+  assert(closure.format === "svml.runtime-closure@1", "unsupported Runtime Closure format");
   assert(isDigest(closure.profile), "Runtime Closure profile digest is invalid");
   assert(isDigest(closure.digest) && closure.digest === digestOf(closureContent(closure)), "Runtime Closure digest differs");
   positiveInteger(closure.scheduling.maxConcurrency, "Runtime Closure maxConcurrency");
@@ -517,7 +517,7 @@ export function resolveRuntimeProfile(
     assert(profile.stores.credentials !== undefined, "credentialed Endpoints require a CredentialStore");
   }
   const draft: RuntimeClosure = {
-    format: "svml.runtime-closure@2",
+    format: "svml.runtime-closure@1",
     digest: digestOf("unsealed-runtime-closure"),
     profile: profile.digest,
     modules: [...modules.values()],

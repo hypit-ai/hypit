@@ -1,22 +1,22 @@
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   ModulePackageRegistry,
   NodeCompiler,
-} from "@svml/compiler-node";
-import { AuthorFrontendRegistry } from "@svml/elaborator";
-import type { Workspace } from "@svml/host";
+} from "@narratage/compiler-node";
+import { AuthorFrontendRegistry } from "@narratage/elaborator";
+import type { Workspace } from "@narratage/host";
 import {
   assertNodePackageContribution,
   collectNodePackageComponents,
-} from "@svml/package-loader-node";
-import type { NodePackageContribution } from "@svml/package-loader-node";
+} from "@narratage/package-loader-node";
+import type { NodePackageContribution } from "@narratage/package-loader-node";
 import {
   createTextAuthorFrontend,
   installTextSurfaceHostFacets,
   TextSurfaceRegistry,
   textAuthorFrontendId,
-} from "@svml/text";
-import { TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/text";
+import { TypeValidatorRegistry } from "@narratage/validation";
 
 export type CreateTextNodeCompilerOptions = {
   readonly root?: string;

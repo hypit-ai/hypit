@@ -1,5 +1,5 @@
 {
-  "name": "@svml/media",
+  "name": "@narratage/media",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,8 +10,9 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

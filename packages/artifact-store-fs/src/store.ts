@@ -9,18 +9,18 @@ import {
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { digestOf, isDigest } from "@svml/protocol";
-import type { BlobRef, Digest } from "@svml/protocol";
-import { defineRuntimeServicePackage } from "@svml/runtime";
-import type { ArtifactStore, RuntimeServicePackage } from "@svml/runtime";
+import { digestOf, isDigest } from "@narratage/protocol";
+import type { BlobRef, Digest } from "@narratage/protocol";
+import { defineRuntimeServicePackage } from "@narratage/runtime";
+import type { ArtifactStore, RuntimeServicePackage } from "@narratage/runtime";
 
 export const fileArtifactStoreModuleRef = {
-  name: "@svml/artifact-store-fs",
+  name: "@narratage/artifact-store-fs",
   version: "1",
 } as const;
 
 export const fileArtifactStoreImplementationDigest = digestOf(
-  "@svml/artifact-store-fs/artifact-store@1",
+  "@narratage/artifact-store-fs/artifact-store@1",
 );
 
 export type CreateFileArtifactStorePackageOptions = {
@@ -196,7 +196,7 @@ export function createFileArtifactStorePackage(
       facet: "artifact-store",
       instance,
       implementation: {
-        locator: "@svml/artifact-store-fs/artifact-store",
+        locator: "@narratage/artifact-store-fs/artifact-store",
         digest: fileArtifactStoreImplementationDigest,
       },
       permissions: ["filesystem:artifacts"],

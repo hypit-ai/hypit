@@ -1,5 +1,5 @@
-import type { HYPERFRAMES_VISUAL_IR_V1 } from "@svml/contracts";
-import type { BlobRef, Digest } from "@svml/protocol";
+
+import type { BlobRef, Digest } from "@narratage/protocol";
 
 export type HyperframesFrameDomain = {
   readonly frameRate: {
@@ -17,8 +17,8 @@ export type HyperframesCanvas = {
 
 /** Deterministic, portable input to a local or remote HyperFrames renderer. */
 export type HyperframesDocument = HyperframesFrameDomain & {
-  readonly contract: "svml.hyperframes-document@4";
-  readonly visualIr: typeof HYPERFRAMES_VISUAL_IR_V1;
+  readonly contract: "svml.hyperframes-document@1";
+  readonly visualIr: typeof VISUAL_IR_V1;
   readonly canvas: HyperframesCanvas;
   /** Every content-addressed byte dependency referenced by the HTML template. */
   readonly artifacts: readonly BlobRef[];
@@ -33,3 +33,4 @@ export type HyperframesFrameSpan = {
 };
 
 export type ArtifactUrlResolver = (artifact: BlobRef) => string;
+import { VISUAL_IR_V1 } from "@narratage/visual-ir";

@@ -3,8 +3,8 @@ import test from "node:test";
 
 import {
   AwsLambdaJsonInvoker,
-} from "@svml/transport-aws-lambda";
-import type { LambdaInvocationClient } from "@svml/transport-aws-lambda";
+} from "@narratage/transport-aws-lambda";
+import type { LambdaInvocationClient } from "@narratage/transport-aws-lambda";
 
 test("Lambda transport uses synchronous JSON and leaves Endpoint semantics to its caller", async () => {
   let invocation: Parameters<LambdaInvocationClient["invoke"]>[0] | undefined;

@@ -1,6 +1,6 @@
-# `@svml/protocol`
+# `@narratage/protocol`
 
-Execution-free v2 bootstrap contracts shared by Core, Drivers and future modules. The package defines
+Execution-free wire contracts shared by Core, Drivers and future modules. The package defines
 canonical values, module/type references, static raw/structured Surface declarations, records and
 origins, explicit plans, Needs, Receipts, Derivations, events and commands. It also parses the static
 JSON representation of a Module Manifest without reading files or executing package code. It

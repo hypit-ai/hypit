@@ -1,7 +1,7 @@
 import type {
   CompiledSourceClosure,
   GraphFragment,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   BuildState,
   Candidate,
@@ -12,9 +12,9 @@ import type {
   Satisfaction,
   StoredValue,
   TypeRef,
-} from "@svml/protocol";
-import type { RealizationOverlay } from "@svml/realization";
-import type { SourceHeader } from "@svml/source";
+} from "@narratage/protocol";
+import type { RealizationOverlay } from "./realization.js";
+import type { SourceHeader } from "@narratage/source";
 
 export type RunSourceUnit = {
   readonly id: string;
@@ -91,7 +91,7 @@ export type RunSatisfaction = {
 };
 
 export type RunDocument = {
-  readonly format: "svml.run-document@2";
+  readonly format: "svml.run-document@1";
   readonly author: RunAuthorSourceRequest;
   readonly selectedTargets: string;
   readonly imports: readonly RunImport[];

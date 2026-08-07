@@ -1,11 +1,10 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type {
-  CompleteSemanticMap,
-  Narrative,
-  ProgramSpace,
-} from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { Narrative } from "@narratage/narrative";
+import type { ProgramSpace } from "@narratage/program-space";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { VisualTrack } from "@narratage/composition";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import {
   captionImplementationDigest,
@@ -40,7 +39,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 
 /** Deterministic timing and VisualTrack lowering only; cue generation and author styling stay outside. */
 export const captionComponent = {
-  name: "@svml/caption",
+  name: "@narratage/caption",
   producers: [
     {
       producer: captionProducers.temporalize,

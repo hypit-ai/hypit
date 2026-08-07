@@ -6,15 +6,15 @@ import {
   compilePromptKit,
   promptKitSpecFromSvsRecipes,
   verifyPromptProgram,
-} from "@svml/prompt-kit";
-import { digestOf } from "@svml/protocol";
-import { parseSvs } from "@svml/svs";
+} from "@narratage/prompt-kit";
+import { digestOf } from "@narratage/protocol";
+import { parseSvs } from "@narratage/svs";
 import {
   bindSpeakerPromptKit,
   renderSpeakerSpeechProgram,
   sealSpeakerTakeIntent,
   speakerMethodDefaults,
-} from "@svml/seedance-speaker";
+} from "@narratage/seedance-speaker";
 
 const officialUgcV1SvsSource = readFileSync(new URL("../kits/official-ugc-v1.svs", import.meta.url), "utf8");
 const officialUgcV1Parsed = parseSvs(
@@ -61,7 +61,7 @@ function intent() {
 }
 
 test("published official Kit SVS is the exact package resource compiled by the module", () => {
-  assert.match(officialUgcV1SvsSource, /^<\?svml using="@svml\/prompt-kit\/svs@1"\?>/u);
+  assert.match(officialUgcV1SvsSource, /^<\?svml using="@narratage\/prompt-kit\/svs@1"\?>/u);
   assert.equal(officialUgcV1KitSpec.id, "official-ugc-v1");
   assert.equal(officialUgcV1KitSpec.defaults.performance, "natural-explainer");
 });

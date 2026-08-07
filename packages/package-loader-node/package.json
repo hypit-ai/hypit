@@ -1,5 +1,5 @@
 {
-  "name": "@svml/package-loader-node",
+  "name": "@narratage/package-loader-node",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,15 +7,15 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/compiler-node": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/host": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/run": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/compiler-node": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/host": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/run": "workspace:*",
+    "@narratage/validation": "workspace:*"
   },
   "devDependencies": {
-    "@svml/runtime-adapter": "workspace:*"
+    "@narratage/runtime-adapter": "workspace:*"
   }
 }

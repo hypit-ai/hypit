@@ -1,12 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-
-import {
-  sealComposition,
-  sealProgramSpace,
-  sealVisualTrack,
-} from "@svml/contracts";
-import { compileHyperframesDocument } from "@svml/hyperframes";
+import { compileHyperframesDocument } from "@narratage/hyperframes";
 import {
   appendSelectedTextItem,
   createTextTrackSet,
@@ -16,11 +8,19 @@ import {
   sealTextTrackProgram,
   sealTextItemSpec,
   sealTextTrackHeader,
-} from "@svml/text-track";
-import type { CompleteSemanticMap, NarrativeSelectionRef } from "@svml/contracts";
+} from "@narratage/text-track";
+import type { NarrativeSelectionRef } from "@narratage/narrative";
+import { sealProgramSpace } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import type { VisualTrack } from "@narratage/composition";
+import assert from "node:assert/strict";
+import test from "node:test";
+
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@0",
+  contract: "svml.program-space@1",
   durationSec: 5,
   frameRate: { numerator: 30, denominator: 1 },
 });
@@ -66,7 +66,7 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
 
   const lower = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "lower",
     presents: [{
       id: "lower",

@@ -1,13 +1,14 @@
-import { contractTypes } from "@svml/contracts";
-import type { CanonicalValue } from "@svml/protocol";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
+import { narrativeTypes } from "@narratage/narrative";
+import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
+import type { CanonicalValue } from "@narratage/protocol";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { speechEstimateFragment } from "./fragment.js";
 import { estimateTypes } from "./manifest.js";
@@ -125,7 +126,7 @@ function reference(
     throw new Error(`${element.name}.source must be a whole-value reference`);
   }
   const result = resolveReference(raw.path);
-  if (result === undefined || !sameType(result.type, contractTypes.narrativeSpeechExcerpt)) {
+  if (result === undefined || !sameType(result.type, narrativeTypes.speechExcerpt)) {
     throw new Error(`${element.name}.source must reference a NarrativeSpeechExcerpt`);
   }
   return result;

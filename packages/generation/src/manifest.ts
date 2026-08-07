@@ -1,21 +1,21 @@
 import {
   artifactDependency,
   artifactTypes,
-} from "@svml/artifact";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef } from "@svml/protocol";
+} from "@narratage/artifact";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
 
 import { generatedImageSetSchema, generatedVideoSetSchema } from "./schema.js";
 
-export const generationModuleRef = { name: "@svml/generation", version: "0.0.0-dev" } as const;
+export const generationModuleRef = { name: "@narratage/generation", version: "0.0.0-dev" } as const;
 export const generationTypes = {
   imageSet: { module: generationModuleRef, name: "GeneratedImageSet" },
   videoSet: { module: generationModuleRef, name: "GeneratedVideoSet" },
 } satisfies Record<string, TypeRef>;
 
 export const generationValidatorDigests = {
-  imageSet: digestOf("@svml/generation/validate-generated-image-set@1"),
-  videoSet: digestOf("@svml/generation/validate-generated-video-set@1"),
+  imageSet: digestOf("@narratage/generation/validate-generated-image-set@1"),
+  videoSet: digestOf("@narratage/generation/validate-generated-video-set@1"),
 };
 
 export const generationProducers = {
@@ -24,12 +24,12 @@ export const generationProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const generationProducerDigests = {
-  primaryImage: digestOf("@svml/generation/select-primary-image@1"),
-  primaryVideo: digestOf("@svml/generation/select-primary-video@1"),
+  primaryImage: digestOf("@narratage/generation/select-primary-image@1"),
+  primaryVideo: digestOf("@narratage/generation/select-primary-video@1"),
 } as const;
 
 export const generationManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: generationModuleRef.name,
   version: generationModuleRef.version,
   dependencies: [artifactDependency],
@@ -41,7 +41,7 @@ export const generationManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/generation/validate-generated-image-set",
+          locator: "@narratage/generation/validate-generated-image-set",
           digest: generationValidatorDigests.imageSet,
         },
       },
@@ -53,7 +53,7 @@ export const generationManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/generation/validate-generated-video-set",
+          locator: "@narratage/generation/validate-generated-video-set",
           digest: generationValidatorDigests.videoSet,
         },
       },
@@ -72,7 +72,7 @@ export const generationManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/generation/select-primary-image",
+        locator: "@narratage/generation/select-primary-image",
         digest: generationProducerDigests.primaryImage,
       },
     },
@@ -86,7 +86,7 @@ export const generationManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/generation/select-primary-video",
+        locator: "@narratage/generation/select-primary-video",
         digest: generationProducerDigests.primaryVideo,
       },
     },

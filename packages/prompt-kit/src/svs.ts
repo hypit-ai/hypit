@@ -1,4 +1,4 @@
-import type { SvsRecipe } from "@svml/svs";
+import type { SvsRecipe } from "@narratage/svs";
 
 import { sealPromptKitSpec } from "./program.js";
 import type {

@@ -1,4 +1,4 @@
-# `@svml/workspace-fs-node`
+# `@narratage/workspace-fs-node`
 
 Default Node filesystem implementation of the host-neutral `Workspace` contract.
 

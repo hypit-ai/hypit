@@ -1,7 +1,7 @@
 import {
   digestOf,
   isDigest,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import type { RunGraph } from "./types.js";
 

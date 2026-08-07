@@ -1,11 +1,11 @@
 import { fileURLToPath } from "node:url";
 
-import { createProjectLocalRuntime } from "@svml/local";
-import { createGoogleVertexCaptionProvider } from "@svml/provider-google-vertex";
-import { createLocalHyperframesProvider } from "@svml/provider-hyperframes-local";
-import { createKieProvider } from "@svml/provider-kie";
-import { createLocalMediaProvider } from "@svml/provider-media-local";
-import { createLocalWhisperXProvider } from "@svml/provider-whisperx-local";
+import { createProjectLocalRuntime } from "@narratage/local";
+import { createGoogleVertexCaptionProvider } from "@narratage/provider-google-vertex";
+import { createLocalHyperframesProvider } from "@narratage/provider-hyperframes-local";
+import { createKieProvider } from "@narratage/provider-kie";
+import { createLocalMediaProvider } from "@narratage/provider-media-local";
+import { createLocalWhisperXProvider } from "@narratage/provider-whisperx-local";
 
 export default async function createTalkingFilmRuntime() {
   const project = process.env.GOOGLE_CLOUD_PROJECT?.trim();

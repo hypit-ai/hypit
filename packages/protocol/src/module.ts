@@ -66,7 +66,7 @@ export type ProducerDeclaration = {
 };
 
 export type ModuleManifest = {
-  readonly format: "svml.module@0";
+  readonly format: "svml.module@1";
   readonly name: string;
   readonly version: string;
   readonly dependencies: readonly ModuleDependency[];
@@ -83,7 +83,7 @@ export type ResolvedModule = {
 };
 
 export type ResolvedModuleClosure = {
-  readonly format: "svml.closure@0";
+  readonly format: "svml.closure@1";
   readonly modules: readonly ResolvedModule[];
   readonly digest: Digest;
 };

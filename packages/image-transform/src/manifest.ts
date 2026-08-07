@@ -1,14 +1,14 @@
-import { artifactDependency, artifactTypes } from "@svml/artifact";
-import { digestOf } from "@svml/protocol";
+import { artifactDependency, artifactTypes } from "@narratage/artifact";
+import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
   TypeRef,
   ValueSchema,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
-export const imageTransformModuleRef = { name: "@svml/image-transform", version: "0.0.0-dev" } as const;
+export const imageTransformModuleRef = { name: "@narratage/image-transform", version: "0.0.0-dev" } as const;
 export const imageTransformTypes = {
   program: { module: imageTransformModuleRef, name: "ImageTransformProgram" },
 } satisfies Record<string, TypeRef>;
@@ -19,10 +19,10 @@ export const imageTransformProducers = {
   request: { module: imageTransformModuleRef, name: "request-image-transform" },
 } satisfies Record<string, ProducerRef>;
 export const imageTransformImplementationDigests = {
-  request: digestOf("@svml/image-transform/request-image-transform@1"),
-  validator: digestOf("@svml/image-transform/validate-program@1"),
-  programSurface: digestOf("@svml/image-transform/program-surface@1"),
-  transformSurface: digestOf("@svml/image-transform/transform-surface@1"),
+  request: digestOf("@narratage/image-transform/request-image-transform@1"),
+  validator: digestOf("@narratage/image-transform/validate-program@1"),
+  programSurface: digestOf("@narratage/image-transform/program-surface@1"),
+  transformSurface: digestOf("@narratage/image-transform/transform-surface@1"),
 } as const;
 
 const number = (minimum?: number, maximum?: number): ValueSchema => ({
@@ -109,7 +109,7 @@ export const imageTransformProgramSchema: ValueSchema = object({
 });
 
 export const imageTransformManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: imageTransformModuleRef.name,
   version: imageTransformModuleRef.version,
   dependencies: [artifactDependency],
@@ -120,7 +120,7 @@ export const imageTransformManifest: ModuleManifest = {
       abi: "svml.type-validator@1",
       implementation: {
         kind: "registered",
-        locator: "@svml/image-transform/validate-program",
+        locator: "@narratage/image-transform/validate-program",
         digest: imageTransformImplementationDigests.validator,
       },
     },
@@ -133,7 +133,7 @@ export const imageTransformManifest: ModuleManifest = {
     outputs: [imageTransformTypes.program],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/image-transform/program-surface",
+      locator: "@narratage/image-transform/program-surface",
       digest: imageTransformImplementationDigests.programSurface,
     },
   }, {
@@ -143,7 +143,7 @@ export const imageTransformManifest: ModuleManifest = {
     outputs: [artifactTypes.blob],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/image-transform/transform-surface",
+      locator: "@narratage/image-transform/transform-surface",
       digest: imageTransformImplementationDigests.transformSurface,
     },
   }],
@@ -161,7 +161,7 @@ export const imageTransformManifest: ModuleManifest = {
     }],
     implementation: {
       kind: "registered",
-      locator: "@svml/image-transform/request-image-transform",
+      locator: "@narratage/image-transform/request-image-transform",
       digest: imageTransformImplementationDigests.request,
     },
   }],

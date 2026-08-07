@@ -9,14 +9,14 @@ import {
   validateStoredValue,
   validatePlan,
   verifyBuildState,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   BuildEvent,
   BuildState,
   FulfillNeedCommand,
   InvokeProducerCommand,
   ValueSchema,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { createGreetingBuild, producers } from "./greeting-fixture.js";
 

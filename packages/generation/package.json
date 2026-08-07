@@ -1,5 +1,5 @@
 {
-  "name": "@svml/generation",
+  "name": "@narratage/generation",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,12 +10,12 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/driver-node": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

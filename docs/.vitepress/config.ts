@@ -73,10 +73,26 @@ export default defineConfig({
   description: "Write the story. Compile the video.",
   appearance: true,
   cleanUrls: true,
-  // Contributor-facing indexes of repository files, not site pages: they link to
-  // ../spec, ../packages, ../services and ../examples, which resolve when browsing
-  // the repository but have no route on the published site.
-  srcExclude: ["README.md", "implementation-status.md"],
+  // Engineering documents live in docs/ for the repository reader; only the
+  // site pages (index, quickstart, guide, zh) are built into the public site.
+  srcExclude: [
+    "README.md",
+    "architecture.md",
+    "implementation-status.md",
+    "roadmap.md",
+    "open-source-distribution.md",
+    "build-archive-and-egress.md",
+    "caption-gemini-provider-contract.md",
+    "graph-first-value-boundary.md",
+    "image-transform.md",
+    "kie-generation-modules.md",
+    "local-developer-runtime.md",
+    "media-execution-boundary.md",
+    "media-inspection-and-normalization.md",
+    "node-package-activation.md",
+    "runtime-adapter-loading.md",
+    "source-and-run-compilation.md",
+  ],
   markdown: {
     theme: {
       light: "github-light",

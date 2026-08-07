@@ -1,7 +1,8 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { AudioTrack, ProgramSpace, VisualTrack } from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { ProgramSpace } from "@narratage/program-space";
+import type { AudioTrack, VisualTrack } from "@narratage/composition";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import { filmProducers } from "./manifest.js";
 import {
@@ -22,7 +23,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const filmComponent = {
-  name: "@svml/film",
+  name: "@narratage/film",
   producers: [
     {
       producer: filmProducers.createTrackSet,

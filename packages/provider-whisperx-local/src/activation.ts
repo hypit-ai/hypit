@@ -4,12 +4,12 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@svml/runtime-adapter";
+} from "@narratage/runtime-adapter";
 
 import { createLocalWhisperXProvider } from "./provider.js";
 
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@svml/provider-whisperx-local",
+  use: "@narratage/provider-whisperx-local",
   create(context) {
     const config = runtimeConfigObject(context.config, "local WhisperX");
     runtimeConfigExact(config, [
@@ -48,7 +48,7 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/provider-whisperx-local",
+  name: "@narratage/provider-whisperx-local",
   hostFacets: [localWhisperXRuntimeAdapter],
 };
 

@@ -3,7 +3,7 @@ import {
   digestOf,
   isDigest,
   resolveProducer,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   Candidate,
   Satisfaction,
@@ -17,7 +17,7 @@ import type {
   OperationNode,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export type FragmentInputRef = {
   readonly kind: "fragment-input";

@@ -1,8 +1,7 @@
-import {
-  assertSpeechEvidenceAudioIdentity,
-  sealAlignedTranscriptEvidence,
-} from "@svml/contracts";
-import type { AlignedTranscriptEvidence, SpeechEvidenceAudio } from "@svml/contracts";
+import { assertSpeechEvidenceAudioIdentity } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
+import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
+import type { AlignedTranscriptEvidence } from "@narratage/speech-evidence";
 
 import type {
   WhisperXAlignmentEvidence,
@@ -16,7 +15,7 @@ export function whisperXRequestForEvidenceAudio(
 ): WhisperXAlignmentRequest {
   assertSpeechEvidenceAudioIdentity(basis);
   return {
-    contract: "svml.whisperx-alignment-request@2",
+    contract: "svml.whisperx-alignment-request@1",
     audio: basis.artifact,
     sampleFrames: basis.sampleFrames,
     durationSec: basis.durationSec,

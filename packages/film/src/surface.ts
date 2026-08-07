@@ -1,13 +1,16 @@
-import { contractTypes } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
+import { programSpaceTypes } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { compositionTypes } from "@narratage/composition";
+import type { AudioTrack, Track, VisualTrack } from "@narratage/composition";
+import { digestOf } from "@narratage/protocol";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmTypes } from "./manifest.js";
@@ -100,8 +103,8 @@ function trackChildren(element: StructuredElement): StructuredElement[] {
 }
 
 function trackKind(reference: SurfaceResolvedReference): "visual" | "audio" {
-  if (sameType(reference.type, contractTypes.visualTrack)) return "visual";
-  if (sameType(reference.type, contractTypes.audioTrack)) return "audio";
+  if (sameType(reference.type, compositionTypes.visualTrack)) return "visual";
+  if (sameType(reference.type, compositionTypes.audioTrack)) return "audio";
   throw new Error(`Film Track ${reference.path} must be a VisualTrack or AudioTrack`);
 }
 
@@ -109,7 +112,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
   exactAttributes(element, ["id", "space", "appearance"]);
   const id = stringAttribute(element, "id");
   const space = requiredReference(element, "space", resolveReference);
-  if (!sameType(space.type, contractTypes.programSpace)) {
+  if (!sameType(space.type, programSpaceTypes.programSpace)) {
     throw new Error(`${element.name}.space must reference ProgramSpace`);
   }
   const appearanceReference = requiredReference(element, "appearance", resolveReference);
@@ -140,7 +143,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
   if (new Set(tracks.map((track) => track.name)).size !== tracks.length) {
     throw new Error(`${element.name} cannot include the same Track more than once`);
   }
-  const fragment = createFilmAssemblyFragment({ name: "@svml/film/surface-assembly@1", tracks });
+  const fragment = createFilmAssemblyFragment({ name: "@narratage/film/surface-assembly@1", tracks });
 
   return {
     records: [{

@@ -1,8 +1,0 @@
-<kernel name="selection-set" abi="1" implementation="./selection-set.mjs">
-  <port name="item" direction="input" type="SelectionRule" cardinality="one"/>
-  <port name="track" direction="output" type="Track" cardinality="one"/>
-  <child name="item" cardinality="one">
-    <field name="id" type="id" required="true"/>
-    <field name="during" type="SelectionSet" consume="set" required="true"/>
-  </child>
-</kernel>

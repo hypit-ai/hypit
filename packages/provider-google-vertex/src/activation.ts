@@ -1,17 +1,17 @@
-import { credentialRef } from "@svml/runtime";
+import { credentialRef } from "@narratage/runtime";
 import {
   createRuntimeEndpointAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@svml/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@svml/runtime-adapter-node";
+} from "@narratage/runtime-adapter";
+import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 
 import { createGoogleVertexCaptionProvider } from "./provider.js";
 
 const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@svml/provider-google-vertex",
+  use: "@narratage/provider-google-vertex",
   create(context) {
     const config = runtimeConfigObject(context.config, "Google Vertex");
     runtimeConfigExact(config, [
@@ -58,7 +58,7 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/provider-google-vertex",
+  name: "@narratage/provider-google-vertex",
   hostFacets: [googleVertexRuntimeAdapter],
 };
 

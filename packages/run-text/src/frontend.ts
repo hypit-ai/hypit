@@ -1,10 +1,10 @@
-import { digestOf } from "@svml/protocol";
-import type { RunFrontend } from "@svml/run";
+import { digestOf } from "@narratage/protocol";
+import type { RunFrontend } from "@narratage/run";
 
 import { parseRunDocument } from "./syntax.js";
 
-export const runTextFrontendId = "@svml/run-text@1";
-export const runTextFrontendImplementationDigest = digestOf("@svml/run-text/frontend@1");
+export const runTextFrontendId = "@narratage/run-text@1";
+export const runTextFrontendImplementationDigest = digestOf("@narratage/run-text/frontend@1");
 
 export const runTextFrontend: RunFrontend = {
   id: runTextFrontendId,
