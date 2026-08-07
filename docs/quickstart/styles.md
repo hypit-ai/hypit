@@ -261,7 +261,7 @@ Seedance Speaker generation settings — the Recipe that controls how `speaker:T
 talking-head clip.
 
 ```svs
-speaker.echo-pro {
+speaker.host {
   kind: ugc-talking-head;
   model: mini;
   resolution: 720p;
@@ -292,7 +292,7 @@ Referenced by `speaker:Take` via the `recipe` attribute:
 
 ```svml
 <speaker:Take id="hook-take" dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration} recipe={studio.speaker.echo-pro} kit={ugc.official-ugc-v1}>
+  duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
 ```
 
 ## Font declarations
@@ -346,7 +346,7 @@ A complete `studio.svs` file for a four-take talking-head project:
     rounding: ceil;
   }
 
-  speaker.echo-pro {
+  speaker.host {
     kind: ugc-talking-head;
     model: mini;
     resolution: 720p;
@@ -392,7 +392,7 @@ This file is imported once in the `.svml` source and its values are referenced t
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
   policy={studio.speech.normal}/>
 
-<speaker:Take id="hook-take" ... recipe={studio.speaker.echo-pro} .../>
+<speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
 
 <caption:Style id="primary-caption" appearance={studio.caption.primary} .../>
 

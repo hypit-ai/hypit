@@ -95,13 +95,13 @@ historical Records as zero-input Candidates and connect them through Satisfactio
   </target-set>
 
   <build-record id="hook-video"
-    build="echo-pro-film-001" output="hook-take.video"/>
+    build="my-film-001" output="hook-take.video"/>
   <build-record id="meeting-video"
-    build="echo-pro-film-001" output="meeting-take.video"/>
+    build="my-film-001" output="meeting-take.video"/>
   <build-record id="evidence-video"
-    build="echo-pro-film-001" output="evidence-take.video"/>
+    build="my-film-001" output="evidence-take.video"/>
   <build-record id="payoff-video"
-    build="echo-pro-film-001" output="payoff-take.video"/>
+    build="my-film-001" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video"
     candidate="hook-video" fidelity="substitute"/>
@@ -248,7 +248,7 @@ prevent one type of work from starving others.
 ### 1. Diagnose the environment
 
 ```bash
-pnpm narratage doctor examples/echo-pro-aroll/svml.runtime.json
+pnpm narratage doctor examples/talking-head-aroll/svml.runtime.json
 ```
 
 Doctor checks that every endpoint is reachable, credentials are valid, and required executables
@@ -257,8 +257,8 @@ Doctor checks that every endpoint is reachable, credentials are valid, and requi
 ### 2. Inspect the plan
 
 ```bash
-pnpm narratage plan examples/echo-pro-aroll/build.svrun \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock --root .
+pnpm narratage plan examples/talking-head-aroll/build.svrun \
+  --package-lock examples/talking-head-aroll/svml.packages.lock --root .
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
@@ -267,11 +267,11 @@ Scheduler would issue.
 ### 3. Submit the Build
 
 ```bash
-pnpm narratage build examples/echo-pro-aroll/build.svrun \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock \
+pnpm narratage build examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --package-lock examples/talking-head-aroll/svml.packages.lock \
   --root . \
-  --build-id echo-pro-film-001 \
+  --build-id my-film-001 \
   --follow
 ```
 
@@ -286,10 +286,10 @@ pnpm narratage build examples/echo-pro-aroll/build.svrun \
 ### 4. Retrieve results
 
 ```bash
-pnpm narratage get echo-pro-film-001 \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
+pnpm narratage get my-film-001 \
+  --runtime examples/talking-head-aroll/svml.runtime.json \
   --name final.video \
-  --to examples/echo-pro-aroll/output/final.mp4
+  --to examples/talking-head-aroll/output/final.mp4
 ```
 
 Every accepted intermediate Record and Artifact is archived before the Build completes. `get` makes
@@ -301,8 +301,8 @@ Create a new `.svrun` file that references the completed Build's Records (see [R
 above), then submit it:
 
 ```bash
-pnpm narratage build examples/echo-pro-aroll/reuse-generated.svrun \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock \
-  --root . --build-id echo-pro-film-reuse-001 --follow
+pnpm narratage build examples/talking-head-aroll/reuse-generated.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --package-lock examples/talking-head-aroll/svml.packages.lock \
+  --root . --build-id my-film-reuse-001 --follow
 ```

@@ -6,10 +6,10 @@
     <target output="final.video" accepts="substitute"/>
   </target-set>
 
-  <build-record id="hook-video" build="echo-pro-film-001" output="hook-take.video"/>
-  <build-record id="meeting-video" build="echo-pro-film-001" output="meeting-take.video"/>
-  <build-record id="evidence-video" build="echo-pro-film-001" output="evidence-take.video"/>
-  <build-record id="payoff-video" build="echo-pro-film-001" output="payoff-take.video"/>
+  <build-record id="hook-video" build="my-film-001" output="hook-take.video"/>
+  <build-record id="meeting-video" build="my-film-001" output="meeting-take.video"/>
+  <build-record id="evidence-video" build="my-film-001" output="evidence-take.video"/>
+  <build-record id="payoff-video" build="my-film-001" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video" candidate="hook-video" fidelity="substitute"/>
   <satisfy output="meeting-take.video" candidate="meeting-video" fidelity="substitute"/>

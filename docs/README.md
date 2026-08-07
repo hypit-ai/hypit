@@ -51,7 +51,7 @@ These video contracts are executable candidates, not yet an open-source compatib
 - [`image-transform.md`](./image-transform.md)
 - [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
 - [`../services/whisperx/README.md`](../services/whisperx/README.md)
-- [`../examples/echo-pro-aroll/README.md`](../examples/echo-pro-aroll/README.md) — current four-take
+- [`../examples/talking-head-aroll/README.md`](../examples/talking-head-aroll/README.md) — current four-take
   live acceptance and explicit historical-Candidate reuse witness.
 - [`../examples/talking-film-live/README.md`](../examples/talking-film-live/README.md)
 
