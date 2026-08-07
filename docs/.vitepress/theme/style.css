@@ -459,7 +459,8 @@ body {
   .VPHero .text { font-size: 29px !important; }
   .hero-statement-name { font-size: 50px; }
   .hero-statement { --hero-rhythm: 24px; --hero-zh-gap: 8px; --hero-zh-line: 25.6px; }
-  .hero-statement-viewport-en { height: 88.74px; }
+  .hero-statement-viewport-en { display: grid; height: auto; }
+  .hero-statement-viewport-en .hero-statement-en { position: relative; inset: auto; grid-area: 1 / 1; }
   .hero-statement-en { font-size: 29px; }
   .hero-statement-zh { font-size: 16px; }
   .hero-statement-break { display: none; }
