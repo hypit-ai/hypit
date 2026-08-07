@@ -48,7 +48,15 @@ function frameFor(frames: ReadonlyMap<string, number>, anchorId: string, owner: 
   return frame;
 }
 
-/** Project every occurrence of one Script Selection onto one measured SemanticMap. */
+/**
+ * Project every occurrence of one Script Selection onto one measured SemanticMap.
+ *
+ * One entry per occurrence, in Script order — the order the markers appear in the
+ * source. Segments may overlap in time, so Script order is not necessarily time
+ * order, and occurrences are located independently: they are never sorted,
+ * merged, clipped against one another or otherwise reconciled. A caller that
+ * needs time order sorts them itself.
+ */
 export function selectionFrameSpans(
   map: CompleteSemanticMap,
   selection: NarrativeSelectionRef,
@@ -66,6 +74,27 @@ export function selectionFrameSpans(
     }
     return { startFrame, endFrameExclusive };
   });
+}
+
+/**
+ * The measured window a run of Script tokens occupies: the first token's start
+ * and the last token's end, exactly as located. Undefined when any named token
+ * is absent, leaving the caller to decide what that means.
+ *
+ * This is the second way the same points are addressed. Markers address them by
+ * anchor; a component that renders the Script text itself addresses them by
+ * token, because its runs are computed rather than authored.
+ */
+export function tokenSpanSeconds(
+  map: CompleteSemanticMap,
+  tokenIds: readonly string[],
+): { readonly startSec: number; readonly endSec: number } | undefined {
+  assertCompleteSemanticMapIdentity(map);
+  if (tokenIds.length === 0) return undefined;
+  const timing = new Map(map.tokens.map((token) => [token.tokenId, token]));
+  const located = tokenIds.map((id) => timing.get(id));
+  if (located.some((token) => token === undefined)) return undefined;
+  return { startSec: located[0]!.startSec, endSec: located.at(-1)!.endSec };
 }
 
 /** Project every occurrence of one Script Moment onto one measured SemanticMap. */

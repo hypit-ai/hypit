@@ -10,7 +10,6 @@ export type SemanticTimePoint = { readonly identity: string; readonly timeSec: n
  */
 export type CompleteSemanticMap = {
   readonly contract: "svml.complete-semantic-map@1";
-  readonly segments: readonly TimedSpeechSegment[];
   readonly tokens: readonly TimedSpeechToken[];
   readonly anchors: readonly SemanticTimePoint[];
 };
