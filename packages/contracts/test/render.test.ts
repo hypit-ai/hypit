@@ -17,7 +17,7 @@ import type {
 import { digestOf } from "@svml/protocol";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@0",
+  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });

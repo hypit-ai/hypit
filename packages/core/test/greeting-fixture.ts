@@ -46,7 +46,7 @@ export const implementationDigests = {
 };
 
 export const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],

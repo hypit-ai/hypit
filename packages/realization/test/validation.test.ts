@@ -23,7 +23,7 @@ const moduleRef = { name: "example.validated-existing", version: "1" } as const;
 const mediaType = { module: moduleRef, name: "Media" } satisfies TypeRef;
 const validatorDigest = digestOf("example.validated-existing/validator@1");
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],

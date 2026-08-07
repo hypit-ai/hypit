@@ -15,7 +15,7 @@ export type SpeechDuration = {
 };
 
 export type ProgramSpace = {
-  readonly contract: "svml.program-space@0";
+  readonly contract: "svml.program-space@1";
   readonly durationSec: number;
   readonly frameRate: {
     readonly numerator: number;

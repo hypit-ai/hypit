@@ -57,7 +57,7 @@ export const speechSpineSetSchema: ValueSchema = object({
 });
 
 export const speechProgramManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: speechProgramModuleRef.name,
   version: speechProgramModuleRef.version,
   dependencies: [

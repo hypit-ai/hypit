@@ -126,7 +126,7 @@ export const audioProgramPlanSchema: ValueSchema = {
 };
 
 export const mediaPipelineManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: mediaPipelineModuleRef.name,
   version: mediaPipelineModuleRef.version,
   dependencies: [

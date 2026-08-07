@@ -22,7 +22,7 @@ const installedPackage: NodePackageContribution = {
   name: "example-card",
   modules: [{
     manifest: {
-      format: "svml.module@0",
+      format: "svml.module@1",
       name: module.name,
       version: module.version,
       dependencies: [],

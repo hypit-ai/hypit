@@ -37,7 +37,7 @@ const defaultProducer = { module: moduleRef, name: "default" } satisfies Produce
 const previewProducer = { module: moduleRef, name: "preview" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],

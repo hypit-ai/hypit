@@ -7,7 +7,7 @@ export const svsFrontendId = "@svml/svs@1";
 export const svsFrontendImplementationDigest = digestOf("@svml/svs/frontend@1");
 
 export const svsManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: svsModuleRef.name,
   version: svsModuleRef.version,
   dependencies: [],

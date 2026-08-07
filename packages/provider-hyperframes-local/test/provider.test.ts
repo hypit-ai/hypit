@@ -25,7 +25,7 @@ const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).statu
 
 function documentFixture() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 12, denominator: 1 },
   });

@@ -9,7 +9,7 @@ phases:
 
 1. lock every referenced Fragment and predeclare every component export;
 2. resolve references, reject missing values, type mismatches and cycles, hygienically instantiate
-   Fragments, then emit one ordinary `svml.graph@2` for Core.
+   Fragments, then emit one ordinary `svml.graph@1` for Core.
 
 Because all exports are collected before any input is resolved, declaration order has no meaning
 and a component may reference a later component. The linker itself does not parse `.svml`, execute

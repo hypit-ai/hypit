@@ -133,7 +133,7 @@ export const brollSetSchema: ValueSchema = object({
 export const brollSurfaceImplementationDigest = digestOf("@svml/broll/track-surface@1");
 
 export const brollManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: brollModuleRef.name,
   version: brollModuleRef.version,
   dependencies: [

@@ -515,7 +515,7 @@ test("CLI package lock activates an installed package without changing the offic
       format: "svml.node-package@1",
       name: "example-empty",
       modules: [{ manifest: {
-        format: "svml.module@0", name: module.name, version: module.version,
+        format: "svml.module@1", name: module.name, version: module.version,
         dependencies: [], types: [], capabilities: [], producers: [],
         surfaces: [{ name: "empty", tag: "Empty", mode: "structured", outputs: [],
           implementation: { kind: "trusted-frontend-surface", locator: "example/empty", digest } }],

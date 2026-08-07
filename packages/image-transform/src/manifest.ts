@@ -109,7 +109,7 @@ export const imageTransformProgramSchema: ValueSchema = object({
 });
 
 export const imageTransformManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: imageTransformModuleRef.name,
   version: imageTransformModuleRef.version,
   dependencies: [artifactDependency],

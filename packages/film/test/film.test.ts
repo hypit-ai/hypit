@@ -63,7 +63,7 @@ import {
 import { admitRecord, TypeValidatorRegistry } from "@svml/validation";
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@0",
+  contract: "svml.program-space@1",
   durationSec: 4,
   frameRate: { numerator: 30, denominator: 1 },
 });

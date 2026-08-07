@@ -30,13 +30,13 @@ const { contract: _commonContract, ...sharedEvidenceFields } =
 export const whisperXAlignmentEvidenceSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.whisperx-alignment-evidence@2" } },
+    contract: { schema: { kind: "literal", value: "svml.whisperx-alignment-evidence@1" } },
     ...sharedEvidenceFields,
   },
 };
 
 export const whisperXManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: whisperXModuleRef.name,
   version: whisperXModuleRef.version,
   dependencies: [

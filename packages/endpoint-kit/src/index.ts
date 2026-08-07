@@ -210,7 +210,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     returns: structuredClone(item.returns),
   }));
   const manifest: RuntimeModuleManifest = {
-    format: "svml.runtime-module@2",
+    format: "svml.runtime-module@1",
     name: module.name,
     version: module.version,
     facets: [{

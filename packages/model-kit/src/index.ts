@@ -97,7 +97,7 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
   const endpointData = options.endpoints.map((spec) => ({ spec, ...endpointRef(options.module, spec) }));
 
   const manifest: ModuleManifest = {
-    format: "svml.module@0",
+    format: "svml.module@1",
     name: options.module.name,
     version: options.module.version,
     dependencies: [{ module: generationModuleRef, digest: generationManifestDigest }],

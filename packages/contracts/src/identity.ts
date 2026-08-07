@@ -66,7 +66,7 @@ export function programSpaceSampleFrames(programSpace: ProgramSpace, sampleRate:
 }
 
 export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {
-  if (programSpace.contract !== "svml.program-space@0") throw new Error("Unsupported ProgramSpace contract.");
+  if (programSpace.contract !== "svml.program-space@1") throw new Error("Unsupported ProgramSpace contract.");
   const { numerator, denominator } = programSpace.frameRate;
   if (
     !Number.isSafeInteger(numerator)

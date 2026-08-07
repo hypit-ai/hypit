@@ -39,7 +39,7 @@ const providerModule = { name: "example.local-endpoint", version: "1" } as const
 const providerFacet = { module: providerModule, name: "generation" } as const;
 const providerDigest = digestOf("example.local-endpoint/generation@1");
 const providerManifest: RuntimeModuleManifest = {
-  format: "svml.runtime-module@2",
+  format: "svml.runtime-module@1",
   name: providerModule.name,
   version: providerModule.version,
   facets: [{

@@ -21,7 +21,7 @@ import type {
 } from "@svml/protocol";
 
 export type RealizationOverlay = {
-  readonly format: "svml.realization-overlay@2";
+  readonly format: "svml.realization-overlay@1";
   readonly id: Digest;
   /** Exact Author Graph whose Logical Outputs may be referenced by this Run Graph. */
   readonly sourceGraph: Digest;
@@ -30,7 +30,7 @@ export type RealizationOverlay = {
 };
 
 export type RealizationClosure = {
-  readonly format: "svml.realization-closure@2";
+  readonly format: "svml.realization-closure@1";
   readonly id: Digest;
   readonly sourceGraph: Digest;
   readonly overlays: readonly Digest[];
@@ -77,7 +77,7 @@ function assert(condition: unknown, code: string, message: string, subject?: str
 
 function overlayContent(overlay: RealizationOverlay): Omit<RealizationOverlay, "id"> {
   return {
-    format: "svml.realization-overlay@2",
+    format: "svml.realization-overlay@1",
     sourceGraph: overlay.sourceGraph,
     candidates: [...overlay.candidates].sort((left, right) => left.id.localeCompare(right.id)),
     operations: [...overlay.operations].sort((left, right) => left.id.localeCompare(right.id)),
@@ -88,7 +88,7 @@ export function sealRealizationOverlay(
   overlay: Omit<RealizationOverlay, "format" | "id">,
 ): RealizationOverlay {
   const draft = {
-    format: "svml.realization-overlay@2" as const,
+    format: "svml.realization-overlay@1" as const,
     id: digestOf("unsealed-realization-overlay"),
     ...overlay,
   };
@@ -169,7 +169,7 @@ export function verifyRealizationOverlay(
     "OVERLAY_REQUIRES_AUTHOR_GRAPH",
     "Realization Overlays attach to an author graph, not an already realized graph",
   );
-  assert(overlay.format === "svml.realization-overlay@2", "UNSUPPORTED_REALIZATION_OVERLAY", "unsupported Overlay format");
+  assert(overlay.format === "svml.realization-overlay@1", "UNSUPPORTED_REALIZATION_OVERLAY", "unsupported Overlay format");
   assert(isDigest(overlay.id), "INVALID_OVERLAY_DIGEST", "Realization Overlay id is not a digest");
   assert(overlay.id === digestOf(overlayContent(overlay)), "OVERLAY_DIGEST_MISMATCH", "Realization Overlay digest differs");
   assert(overlay.sourceGraph === source.id, "OVERLAY_SOURCE_MISMATCH", "Realization Overlay targets another author graph");
@@ -188,7 +188,7 @@ function sealRealizationClosure(
   overlays: readonly RealizationOverlay[],
 ): RealizationClosure {
   const content = {
-    format: "svml.realization-closure@2" as const,
+    format: "svml.realization-closure@1" as const,
     sourceGraph,
     overlays: overlays.map((overlay) => overlay.id).sort(),
   };

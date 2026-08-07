@@ -127,7 +127,7 @@ Build.
 The CLI selects Records by a source output alias, stable Record identity, demanded Logical Output or
 the sole target when unambiguous. `builds` lists the Host Catalog, while `inspect` reports which
 aliases currently resolve to accepted Records. An alias never bypasses Build verification and is
-never added to `svml.build@2`.
+never added to `svml.build@1`.
 
 A real external publication is different from a convenience copy. Uploading to a customer bucket,
 publishing to a CMS or sending a delivery should be an explicit side-effect Operation with its own

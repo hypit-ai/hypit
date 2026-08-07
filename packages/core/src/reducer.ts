@@ -370,7 +370,7 @@ export function start(
 ): BuildState {
   const plan: BuildPlan = compileBuild(program, graph, request);
   const state: BuildState = {
-    format: "svml.build@2",
+    format: "svml.build@1",
     id: digestOf({
       closure: program.closure.digest,
       semantic: program.semanticDigest,

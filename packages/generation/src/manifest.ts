@@ -29,7 +29,7 @@ export const generationProducerDigests = {
 } as const;
 
 export const generationManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: generationModuleRef.name,
   version: generationModuleRef.version,
   dependencies: [artifactDependency],

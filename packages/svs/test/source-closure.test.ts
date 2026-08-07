@@ -46,7 +46,7 @@ const renderProducer = { module: laboratory, name: "render-card" } satisfies Pro
 const cardSurfaceDigest = digestOf("example.recipe-card/card-surface@1");
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [{ module: { name: svsManifest.name, version: svsManifest.version }, digest: computeModuleDigest(svsManifest) }],
