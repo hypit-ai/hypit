@@ -178,14 +178,14 @@ export function interpretWhisperXResponse(
       if (text.length === 0) continue;
       const start = finite(rawWord.start) ? rawWord.start : undefined;
       const end = finite(rawWord.end) ? rawWord.end : undefined;
-      assert((start === undefined) === (end === undefined), `WhisperX Word ${text} has partial timing`);
-      if (start !== undefined && end !== undefined) {
-        assert(start >= 0 && end >= start && end <= durationSec + 1e-3,
-          `WhisperX Word ${text} lies outside the evidence audio`);
-      }
       const source = sourceSegmentFor(sourceSegments, start, end, segmentStart, segmentEnd);
       const prior = previousEnd.get(source.segmentId)!;
+      // A word whose timing cannot be proved keeps its text and loses its clock,
+      // exactly as the sidecar already does for words its aligner could not place.
       const timingIsProvable = start !== undefined && end !== undefined
+        && start >= 0
+        && end >= start
+        && end <= durationSec + 1e-3
         && start >= source.startSec - 1e-6
         && end <= source.endSec + 1e-6
         && start >= prior - 1e-6;
