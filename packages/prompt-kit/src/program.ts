@@ -1,4 +1,4 @@
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
+import { canonicalize } from "@svml/protocol";
 
 import type {
   PromptKitAxisBlock,
@@ -94,12 +94,8 @@ function block(value: unknown, subject: string): asserts value is PromptKitBlock
   throw new Error(`${subject}.kind is invalid`);
 }
 
-function specContent(value: Omit<PromptKitSpec, "specDigest">) {
-  return canonicalize(value);
-}
-
-export function sealPromptKitSpec(value: Omit<PromptKitSpec, "specDigest">): PromptKitSpec {
-  const result = { ...value, specDigest: digestOf(specContent(value)) };
+export function sealPromptKitSpec(value: PromptKitSpec): PromptKitSpec {
+  const result = canonicalize(value) as unknown as PromptKitSpec;
   verifyPromptKitSpec(result);
   return result;
 }
@@ -112,7 +108,6 @@ export function verifyPromptKitSpec(value: unknown): asserts value is PromptKitS
     || spec.separator !== "\n\n"
     || !Array.isArray(spec.blocks)
     || spec.blocks.length === 0
-    || !isDigest(spec.specDigest)
   ) {
     throw new Error("PromptKitSpec header is invalid");
   }
@@ -131,18 +126,12 @@ export function verifyPromptKitSpec(value: unknown): asserts value is PromptKitS
       throw new Error(`PromptKitSpec block ${item.id} has duplicate choices`);
     }
   }
-  const { specDigest: _digest, ...content } = spec;
-  if (spec.specDigest !== digestOf(specContent(content))) throw new Error("PromptKitSpec digest differs from its contents");
-}
-
-function invocationContent(value: Omit<PromptKitInvocation, "invocationDigest">) {
-  return canonicalize(value);
 }
 
 export function sealPromptKitInvocation(
-  value: Omit<PromptKitInvocation, "invocationDigest">,
+  value: PromptKitInvocation,
 ): PromptKitInvocation {
-  const result = { ...value, invocationDigest: digestOf(invocationContent(value)) };
+  const result = canonicalize(value) as unknown as PromptKitInvocation;
   verifyPromptKitInvocation(result);
   return result;
 }
@@ -151,49 +140,31 @@ export function verifyPromptKitInvocation(value: unknown): asserts value is Prom
   const invocation = object(value, "PromptKitInvocation") as PromptKitInvocation;
   if (
     invocation.contract !== "svml.prompt-kit-invocation@1"
-    || !ID.test(invocation.kit)
-    || !isDigest(invocation.invocationDigest)
   ) {
     throw new Error("PromptKitInvocation header is invalid");
   }
   scalarMap(invocation.parameters, "PromptKitInvocation.parameters");
   stringMap(invocation.selectors, "PromptKitInvocation.selectors");
   stringMap(invocation.slots, "PromptKitInvocation.slots");
-  const { invocationDigest: _digest, ...content } = invocation;
-  if (invocation.invocationDigest !== digestOf(invocationContent(content))) {
-    throw new Error("PromptKitInvocation digest differs from its contents");
-  }
-}
-
-function programContent(value: Omit<PromptProgram, "programDigest">) {
-  return canonicalize(value);
 }
 
 export function verifyPromptProgram(value: unknown): asserts value is PromptProgram {
   const program = object(value, "PromptProgram") as PromptProgram;
   if (
     program.contract !== "svml.prompt-program@1"
-    || !ID.test(program.kit)
-    || !isDigest(program.specDigest)
-    || !isDigest(program.invocationDigest)
     || program.separator !== "\n\n"
     || !Array.isArray(program.blocks)
     || program.blocks.length === 0
-    || !isDigest(program.programDigest)
   ) {
     throw new Error("PromptProgram header is invalid");
   }
   for (const [index, item] of program.blocks.entries()) {
-    if (!ID.test(item.id) || typeof item.origin !== "string" || item.origin.length === 0 || typeof item.text !== "string" || item.text.length === 0) {
+    if (!ID.test(item.id) || typeof item.text !== "string" || item.text.length === 0) {
       throw new Error(`PromptProgram.blocks[${index}] is invalid`);
     }
   }
   if (new Set(program.blocks.map((item) => item.id)).size !== program.blocks.length) {
     throw new Error("PromptProgram block ids must be unique");
-  }
-  const { programDigest: _digest, ...content } = program;
-  if (program.programDigest !== digestOf(programContent(content))) {
-    throw new Error("PromptProgram digest differs from its contents");
   }
 }
 
@@ -231,13 +202,12 @@ function axisBlock(
   if (value === undefined) throw new Error(`Prompt Kit parameter ${item.parameter} is required`);
   const selected = item.choices.filter((option) => option.id === String(value));
   if (selected.length !== 1) throw new Error(`Prompt Kit axis ${item.parameter} has no unique choice for ${String(value)}`);
-  return { id: item.id, origin: `parameter:${item.parameter}:${String(value)}`, text: selected[0]!.text };
+  return { id: item.id, text: selected[0]!.text };
 }
 
 export function compilePromptKit(spec: PromptKitSpec, invocation: PromptKitInvocation): PromptProgram {
   verifyPromptKitSpec(spec);
   verifyPromptKitInvocation(invocation);
-  if (invocation.kit !== spec.id) throw new Error(`Prompt Kit ${invocation.kit} does not match Spec ${spec.id}`);
   const known = knownInputs(spec);
   for (const name of Object.keys(invocation.parameters)) {
     if (!known.parameters.has(name)) throw new Error(`Prompt Kit parameter ${name} is not declared`);
@@ -252,7 +222,7 @@ export function compilePromptKit(spec: PromptKitSpec, invocation: PromptKitInvoc
   const blocks: PromptProgramBlock[] = [];
   for (const item of spec.blocks) {
     if (item.kind === "fixed") {
-      blocks.push({ id: item.id, origin: `kit:${spec.id}:fixed`, text: item.text });
+      blocks.push({ id: item.id, text: item.text });
       continue;
     }
     if (item.kind === "axis") {
@@ -262,7 +232,7 @@ export function compilePromptKit(spec: PromptKitSpec, invocation: PromptKitInvoc
     if (item.kind === "variant") {
       const selected = item.choices.filter((option) => conditionsMatch(option, parameters, invocation.selectors));
       if (selected.length !== 1) throw new Error(`Prompt Kit variant ${item.id} matched ${selected.length} choices`);
-      blocks.push({ id: item.id, origin: `variant:${item.id}:${selected[0]!.id}`, text: selected[0]!.text });
+      blocks.push({ id: item.id, text: selected[0]!.text });
       continue;
     }
     const value = invocation.slots[item.slot]?.trim();
@@ -272,19 +242,14 @@ export function compilePromptKit(spec: PromptKitSpec, invocation: PromptKitInvoc
     }
     blocks.push({
       id: item.id,
-      origin: `slot:${item.slot}`,
       text: item.label === undefined ? value : `${item.label}\n${value}`,
     });
   }
-  const content: Omit<PromptProgram, "programDigest"> = {
+  const program: PromptProgram = {
     contract: "svml.prompt-program@1",
-    kit: spec.id,
-    specDigest: spec.specDigest,
-    invocationDigest: invocation.invocationDigest,
     separator: spec.separator,
     blocks,
   };
-  const program = { ...content, programDigest: digestOf(programContent(content)) };
   verifyPromptProgram(program);
   return program;
 }

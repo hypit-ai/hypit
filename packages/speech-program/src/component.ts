@@ -31,8 +31,8 @@ export const speechProgramComponent = {
     {
       producer: speechProgramProducers.createSet,
       implementationDigest: createSpeechSpineSetImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: { set: { kind: "inline", value: canonicalize(createSpeechSpineSet(inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"))) } },
+      handler: () => ({
+        outputs: { set: { kind: "inline", value: canonicalize(createSpeechSpineSet()) } },
         needs: {},
       }),
     },
@@ -42,6 +42,7 @@ export const speechProgramComponent = {
       handler: ({ inputs }) => ({
         outputs: { set: { kind: "inline", value: canonicalize(appendSpeechSpineTake(
           inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
+          inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"),
           inline<SynchronizedMedia>(inputs.media?.value, "SynchronizedMedia"),
           inline<NarrativeExcerpt>(inputs.segment?.value, "NarrativeExcerpt"),
         )) } },
@@ -52,7 +53,10 @@ export const speechProgramComponent = {
       producer: speechProgramProducers.compileAudio,
       implementationDigest: compileSpeechSpineAudioImplementationDigest,
       handler: ({ inputs }) => ({
-        outputs: { plan: { kind: "inline", value: canonicalize(compileSpeechSpineAudio(inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"))) } },
+        outputs: { plan: { kind: "inline", value: canonicalize(compileSpeechSpineAudio(
+          inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"),
+          inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
+        )) } },
         needs: {},
       }),
     },
@@ -61,6 +65,7 @@ export const speechProgramComponent = {
       implementationDigest: assembleSpeechBasisImplementationDigest,
       handler: ({ inputs }) => ({
         outputs: { basis: { kind: "inline", value: canonicalize(assembleSpeechBasis(
+          inline<SpeechSpineProgram>(inputs.program?.value, "SpeechSpineProgram"),
           inline<SpeechSpineSet>(inputs.set?.value, "SpeechSpineSet"),
           inline<TimelineAudio>(inputs.audio?.value, "TimelineAudio"),
         )) } },

@@ -2,12 +2,10 @@ import type {
   NarrativeExcerpt,
   SynchronizedMedia,
 } from "@svml/contracts";
-import type { Digest } from "@svml/protocol";
 
 /** Author-owned policy for one ordered Speech Spine. */
 export type SpeechSpineProgram = {
   readonly contract: "svml.speech-spine-program@1";
-  readonly digest: Digest;
   readonly id: string;
   readonly frameRate: {
     readonly numerator: number;
@@ -26,14 +24,7 @@ export type SpeechSpineTake = {
  */
 export type SpeechSpineSet = {
   readonly contract: "svml.speech-spine-set@1";
-  readonly digest: Digest;
-  readonly program: SpeechSpineProgram;
   readonly takes: readonly SpeechSpineTake[];
-  readonly lastAddition?: {
-    readonly previousSetDigest: Digest;
-    readonly segmentDigest: Digest;
-    readonly mediaDigest: Digest;
-  };
 };
 
 export type SpeechSpineInput = {

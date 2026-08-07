@@ -6,11 +6,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@svml/contracts": "workspace:*",
     "@svml/endpoint-kit": "workspace:*",
     "@svml/media-pipeline": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@svml/protocol": "workspace:*",
+    "@svml/runtime-adapter": "workspace:*",
+    "@svml/runtime-adapter-node": "workspace:*"
   },
   "devDependencies": {
     "@svml/artifact-store-fs": "workspace:*",

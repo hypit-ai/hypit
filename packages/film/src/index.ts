@@ -19,8 +19,6 @@ export {
   assertFilmTrackSetIdentity,
   compileFilmComposition,
   compileFilmCompositionImplementationDigest,
-  computeFilmProgramDigest,
-  computeFilmTrackSetDigest,
   createFilmTrackSet,
   createFilmTrackSetImplementationDigest,
   sealFilmProgram,

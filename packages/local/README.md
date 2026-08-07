@@ -22,6 +22,7 @@ Normal CLI projects may express the same assembly as closed data:
 ```json
 {
   "format": "svml.runtime-config@1",
+  "runtimePackageLock": "./svml.runtime-packages.lock",
   "services": [],
   "endpoints": [
     {
@@ -39,10 +40,19 @@ Normal CLI projects may express the same assembly as closed data:
 }
 ```
 
-`RuntimeConfigRegistry` maps each exact `use` name to a trusted package factory. The data file can
-choose instances, non-secret configuration, permissions and concurrency, but it cannot embed code
-or secrets. Unknown adapters fail rather than being guessed. `createProjectLocalRuntime(...)`
-remains the advanced TypeScript embedding API.
+`runtimePackageLock` selects the physical packages allowed to contribute privileged Runtime Adapter
+facets. The generic local Host verifies their complete package closure before activation; the video
+CLI imports no Provider or Store implementation. Each exact `use` selects one adapter from that
+verified inventory. The data file can choose instances, non-secret configuration, permissions and
+concurrency, but it cannot embed code or secrets. Unknown adapters fail rather than being guessed.
+`createProjectLocalRuntime(...)` remains the advanced trusted TypeScript embedding API.
+
+`packageLock` and `runtimePackageLock` are deliberately different. The former closes deterministic
+Producer/Validator code used by the author graph. The latter closes deployment code that may read
+credentials, spawn processes or call networks. Source imports can affect neither. Loaded Endpoint
+and Store implementation identities are rebound to actual physical package bytes and that package's
+transitive dependency closure, rather than trusting a package's development label or unrelated
+selected adapters.
 
 Deterministic packages implement the host-neutral `@svml/component-kit` contract. `@svml/local`
 adapts them to `ProducerRegistry`; the component never imports the Node Driver or receives Runtime
@@ -80,6 +90,13 @@ change to `@svml/local`. Advanced hosts may still call `createLocalRuntime` with
 `LocalRuntime.readArtifact(digest)` is the generic byte-egress seam used by CLI `get`. They expose
 Record and content identities, not private filesystem layout, so filesystem and S3 stores remain
 interchangeable. Egress never determines whether a Build result is retained.
+
+The filesystem ArtifactStore additionally implements optional streaming transfer and explicit
+retention capabilities. `svml-v2 gc <runtime-profile.json>` is read-only by default; `--apply`
+deletes only objects unreachable from every retained BuildState and Operation. This is Host
+maintenance, never a Core transition or automatic cache policy. `svml-v2 doctor
+<runtime-profile.json>` verifies package bytes, closed adapter configuration, required environment
+credentials and local executable availability without running a Build.
 
 `LocalRuntime.builds()` reads a separate Host `BuildCatalog`. With the default local assembly the
 catalog shares the SQLite file physically; deployments with replacement execution Stores default

@@ -18,12 +18,12 @@ not mutate Core state or require a database.
 `createBuildRecordCandidate()` is a Host convenience for this common case. It verifies the complete
 prior `BuildState` only to extract a trusted typed Record, its type-validation receipt and optional
 provenance. It returns an independent zero-input Candidate; the caller may use a substitute
-Satisfaction to map it to any compatible Logical Output. The previous author Graph, prompt, semantic inputs and affinity are not
-compatibility evidence and are not compared. No historical Operation, Command or outstanding work
-is copied into the new Build.
+Satisfaction to map it to any compatible Logical Output. The previous Author Graph, prompt and
+semantic inputs are not compatibility evidence and are not compared. No historical Operation,
+Command or outstanding work is copied into the new Build.
 
 The same model covers an uploaded video, a fixed black clip and any other already materialized
 value. Core checks the Candidate Type/value on graph admission and checks it again against the
-selected output. A `substitute` Satisfaction need not prove the current output's author affinity;
-the BuildRequest must explicitly declare it and the
+selected output. A `substitute` Satisfaction need not prove a semantic relationship to the current
+output; the BuildRequest must explicitly declare it and the
 Target must explicitly accept substitute fidelity.

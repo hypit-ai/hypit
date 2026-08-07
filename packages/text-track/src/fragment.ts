@@ -24,9 +24,6 @@ export const textTrackFragment = sealGraphFragment({
     type: contractTypes.visualTrack,
     root: operation("render"),
     semanticInputs: ["space", "program"],
-    affinity: [
-      { resultPointer: "/programSpaceDigest", source: input("space"), sourcePointer: "/digest" },
-    ],
     fidelity: "exact",
   }],
 });

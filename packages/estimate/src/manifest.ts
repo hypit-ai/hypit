@@ -18,7 +18,6 @@ export const estimateProducers = {
 export const estimateSurfaceImplementationDigest = digestOf("@svml/estimate/speech-surface@2");
 
 const number = { kind: "number" } as const satisfies ValueSchema;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {
   kind: "object",
   fields: {
@@ -29,7 +28,6 @@ const speechEstimatePolicySchema: ValueSchema = {
     minimumSec: { schema: number },
     maximumSec: { schema: number },
     rounding: { schema: { kind: "string", enum: ["none", "round", "ceil"] } },
-    policyDigest: { schema: digest },
   },
 };
 
@@ -61,16 +59,7 @@ export const estimateManifest: ModuleManifest = {
       { name: "speech", type: contractTypes.narrativeSpeechExcerpt },
       { name: "policy", type: estimateTypes.speechPolicy },
     ],
-    outputs: [{
-      name: "duration",
-      type: contractTypes.speechDuration,
-      affinity: [
-        { resultPointer: "/sourceSpeechExcerptDigest", input: "speech", inputPointer: "/excerptDigest" },
-        { resultPointer: "/segmentId", input: "speech", inputPointer: "/id" },
-        { resultPointer: "/tokenStart", input: "speech", inputPointer: "/tokenStart" },
-        { resultPointer: "/tokenEndExclusive", input: "speech", inputPointer: "/tokenEndExclusive" },
-      ],
-    }],
+    outputs: [{ name: "duration", type: contractTypes.speechDuration }],
     needs: [],
     implementation: {
       kind: "registered",

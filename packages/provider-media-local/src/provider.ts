@@ -351,7 +351,6 @@ function normalizeNeed(value: CanonicalValue): NormalizeMediaNeed {
     "NormalizeMediaNeed is invalid");
   verifyMediaInspection(item.inspection);
   verifyMediaStreamSelection(item.selection);
-  assert(item.inspection.source.digest === item.source.digest, "NormalizeMediaNeed source is invalid");
   assert(item.audio.sampleRate === 48_000 && item.audio.channels === 2
     && item.audio.codec === "pcm_s16le" && item.audio.loudness === "preserve",
   "NormalizeMediaNeed audio profile is unsupported");
@@ -384,8 +383,6 @@ function muxMediaNeed(value: CanonicalValue): MuxMediaNeed {
   assert(item.contract === "svml.mux-media-request@1", "MuxMediaNeed is invalid");
   verifyRenderedVisual(item.visual);
   verifyTimelineAudio(item.audio);
-  assert(item.visual.programSpaceDigest === item.audio.programSpaceDigest,
-    "MuxMediaNeed inputs belong to different ProgramSpaces");
   const expectedSamples = roundPositive(
     BigInt(item.visual.frameCount) * 48_000n * BigInt(item.visual.frameRate.denominator),
     BigInt(item.visual.frameRate.numerator),
@@ -507,7 +504,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
           try {
             const input = join(work, "source.bin");
             await writeFile(input, await sourceBytes(context, need.source));
-            const ffmpegVersion = await version(ffmpegPath, processTimeoutMs);
             let visualArtifact: BlobRef | undefined;
             let visualWidth: number | undefined;
             let visualHeight: number | undefined;
@@ -617,10 +613,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
                   loudness: "preserved" as const,
                 },
               }),
-              normalization: {
-                algorithm: "shared-presentation-origin@1",
-                implementation: `${ffmpegVersion};${need.inspection.probe.implementation}`,
-              },
             });
             return result(canonicalize(media), canonicalize({ provider: "media.local", operation: "normalize",
               visual: visualArtifact !== undefined, audio: audioArtifact !== undefined }));
@@ -650,7 +642,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
             });
             assert(source.decodedSampleFrames === need.sourceSampleFrames,
               "Speech master sample count differs from its ProgramSpace");
-            const ffmpegVersion = await version(ffmpegPath, processTimeoutMs);
             const filter = [
               "asetpts=N/SR/TB",
               "aresample=16000:async=0:first_pts=0",
@@ -683,8 +674,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
             const artifact = await context.artifacts.put(await readFile(output), "audio/wav");
             const evidence: SpeechEvidenceAudio = sealSpeechEvidenceAudio({
               contract: "svml.speech-evidence-audio@1",
-              programSpaceDigest: need.programSpaceDigest,
-              sourceAudioArtifactDigest: need.source.digest,
               artifact,
               codec: "pcm_s16le",
               sampleRate: 16_000,
@@ -700,7 +689,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
                 evidenceSampleFrames: need.evidenceSampleFrames,
                 sourceOriginSample: 0,
                 evidenceOriginSample: 0,
-                resamplerImplementation: ffmpegVersion,
               },
             });
             assertSpeechEvidenceAudioIdentity(evidence);
@@ -783,8 +771,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
               "Rendered TimelineAudio sample count differs from its plan");
             const value: TimelineAudio = sealTimelineAudio({
               contract: "svml.timeline-audio@1",
-              planDigest: plan.planDigest,
-              programSpaceDigest: plan.programSpaceDigest,
               artifact,
               codec: "pcm_s16le",
               sampleRate: 48_000,
@@ -883,9 +869,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
             const artifact = await context.artifacts.put(await readFile(output), "video/mp4");
             const value: MuxedMedia = sealMuxedMedia({
               contract: "svml.muxed-media@1",
-              visualDigest: need.visual.visualDigest,
-              audioDigest: need.audio.audioDigest,
-              programSpaceDigest: need.visual.programSpaceDigest,
               frameRate: need.visual.frameRate,
               frameCount: need.visual.frameCount,
               canvas: need.visual.canvas,

@@ -25,7 +25,6 @@ const timestamp = (ticks: string) => ({ ticks, timeBase });
 function grokInspection(): MediaInspection {
   return sealMediaInspection({
     contract: "svml.media-inspection@1",
-    source,
     container: { formatNames: ["mov", "mp4"] },
     streams: [
       {
@@ -77,7 +76,6 @@ function grokInspection(): MediaInspection {
         height: 688,
       },
     ],
-    probe: { algorithm: "ffprobe-decoded-units-json@1", implementation: "ffprobe fixture" },
   });
 }
 
@@ -102,9 +100,8 @@ test("primary stream selection excludes Grok's MJPEG attached picture and observ
 test("multiple moving streams without one default fail closed instead of guessing by index or size", () => {
   const inspection = grokInspection();
   const primary = inspection.streams.find((stream): stream is MediaVideoStream => stream.kind === "video" && stream.index === 0)!;
-  const { inspectionDigest: _inspectionDigest, ...inspectionContent } = inspection;
   const ambiguous = sealMediaInspection({
-    ...inspectionContent,
+    ...inspection,
     streams: [
       { ...primary, disposition: { default: false, attachedPicture: false } },
       { ...primary, index: 3, width: 1920, height: 1080, disposition: { default: false, attachedPicture: false } },

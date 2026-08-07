@@ -23,7 +23,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
   const operations: FragmentOperation[] = [{
     id: "spine:set:empty",
     producer: speechProgramProducers.createSet,
-    inputs: { program: input("program") },
+    inputs: {},
     result: { kind: "output", name: "set" },
   }];
   let current = "spine:set:empty";
@@ -32,7 +32,12 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     operations.push({
       id,
       producer: speechProgramProducers.appendTake,
-      inputs: { set: operation(current), media: input(take.mediaName), segment: input(take.segmentName) },
+      inputs: {
+        set: operation(current),
+        program: input("program"),
+        media: input(take.mediaName),
+        segment: input(take.segmentName),
+      },
       result: { kind: "output", name: "set" },
     });
     current = id;
@@ -41,7 +46,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     {
       id: "spine:audio:plan",
       producer: speechProgramProducers.compileAudio,
-      inputs: { set: operation(current) },
+      inputs: { program: input("program"), set: operation(current) },
       result: { kind: "output", name: "plan" },
     },
     {
@@ -53,7 +58,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     {
       id: "spine:basis",
       producer: speechProgramProducers.assembleBasis,
-      inputs: { set: operation(current), audio: operation("spine:audio:render") },
+      inputs: { program: input("program"), set: operation(current), audio: operation("spine:audio:render") },
       result: { kind: "output", name: "basis" },
     },
     {
@@ -96,19 +101,19 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
       { name: "basis", type: contractTypes.speechBasis, root: operation("spine:basis"), semanticInputs, fidelity: "exact" },
       {
         name: "space", type: contractTypes.programSpace, root: operation("spine:space"), semanticInputs,
-        affinity: [{ resultPointer: "/digest", source: operation("spine:basis"), sourcePointer: "/programSpace/digest" }], fidelity: "exact",
+        fidelity: "exact",
       },
       {
         name: "audio", type: contractTypes.speechAudioBasis, root: operation("spine:audio-basis"), semanticInputs,
-        affinity: [{ resultPointer: "/programSpace/digest", source: operation("spine:basis"), sourcePointer: "/programSpace/digest" }], fidelity: "exact",
+        fidelity: "exact",
       },
       {
         name: "visual", type: contractTypes.visualTrack, root: operation("spine:visual-track"), semanticInputs,
-        affinity: [{ resultPointer: "/programSpaceDigest", source: operation("spine:basis"), sourcePointer: "/programSpace/digest" }], fidelity: "exact",
+        fidelity: "exact",
       },
       {
         name: "audioTrack", type: contractTypes.audioTrack, root: operation("spine:audio-track"), semanticInputs,
-        affinity: [{ resultPointer: "/programSpaceDigest", source: operation("spine:basis"), sourcePointer: "/programSpace/digest" }], fidelity: "exact",
+        fidelity: "exact",
       },
     ],
   });

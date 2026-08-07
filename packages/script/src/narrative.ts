@@ -1,4 +1,4 @@
-import { canonicalize, digestOf } from "@svml/core";
+import { canonicalize } from "@svml/core";
 import type { CanonicalValue } from "@svml/protocol";
 
 import type { ParsedNarrative } from "./types.js";
@@ -77,7 +77,7 @@ export function narrativeSegmentExcerptValue(
     tokenEndExclusive: segment.tokenEndExclusive,
     serializations: segmentSerializations(segment),
   } as const;
-  return canonicalize({ ...content, excerptDigest: digestOf(canonicalize(content)) });
+  return canonicalize(content);
 }
 
 export function narrativeDialogueExcerptValue(
@@ -87,7 +87,7 @@ export function narrativeDialogueExcerptValue(
     contract: "svml.narrative-dialogue-excerpt@1",
     ...excerptContent(segment, "dialogue"),
   } as const;
-  return canonicalize({ ...content, excerptDigest: digestOf(canonicalize(content)) });
+  return canonicalize(content);
 }
 
 export function narrativeSpeechExcerptValue(
@@ -97,7 +97,7 @@ export function narrativeSpeechExcerptValue(
     contract: "svml.narrative-speech-excerpt@1",
     ...excerptContent(segment, "speech"),
   } as const;
-  return canonicalize({ ...content, excerptDigest: digestOf(canonicalize(content)) });
+  return canonicalize(content);
 }
 
 export function captionProjectionValue(parsed: ParsedNarrative): CanonicalValue {
@@ -106,7 +106,7 @@ export function captionProjectionValue(parsed: ParsedNarrative): CanonicalValue 
     text: parsed.captionProjection.text,
     regions: parsed.captionProjection.regions.map(({ range: _range, ...region }) => region),
   } as const;
-  return canonicalize({ ...content, projectionDigest: digestOf(canonicalize(content)) });
+  return canonicalize(content);
 }
 
 export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
@@ -119,7 +119,7 @@ export function narrativeSelectionValue(selection: ParsedNarrative["selections"]
       close: { affinity: occurrence.close.affinity, boundary: semanticBoundary(occurrence.close.boundary) },
     })),
   } as const;
-  return canonicalize({ ...content, selectionDigest: digestOf(canonicalize(content)) });
+  return canonicalize(content);
 }
 
 function semanticBoundary(boundary: {

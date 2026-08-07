@@ -31,6 +31,8 @@ Run the complete graph through the explicit Run Graph and declarative local Runt
 The checked-in `svml.packages.lock` selects each author, Run and deterministic compute package
 independently; there is no implicit video bundle. Regenerate it after changing one of those package
 implementations with the package list documented in the lock file.
+The independent `svml.runtime-packages.lock` selects only KIE, local media, local WhisperX, Vertex
+and local HyperFrames deployment adapters; adding another Provider does not change the CLI.
 
 ```bash
 pnpm svml:v2 build examples/talking-film-live/build.svrun \

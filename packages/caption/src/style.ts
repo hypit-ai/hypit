@@ -1,5 +1,5 @@
 import type { Narrative, NarrativeSelectionRef } from "@svml/contracts";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
+import { canonicalize, digestOf } from "@svml/protocol";
 
 import { captionDisplayAtoms, displayAtomMatchesSelection } from "./display.js";
 import type {
@@ -43,7 +43,7 @@ function normalizedField(field: CaptionFieldDeclaration): CaptionFieldDeclaratio
   };
 }
 
-function styleContent(value: Omit<CaptionStyleIntent, "digest">) {
+function styleContent(value: CaptionStyleIntent) {
   return canonicalize({
     contract: "svml.caption-style@1",
     id: value.id,
@@ -52,12 +52,11 @@ function styleContent(value: Omit<CaptionStyleIntent, "digest">) {
       fields: value.planning.fields.map(normalizedField),
     },
     presentation: canonicalize(value.presentation),
-  }) as unknown as Omit<CaptionStyleIntent, "digest">;
+  }) as unknown as CaptionStyleIntent;
 }
 
-export function sealCaptionStyle(value: Omit<CaptionStyleIntent, "digest">): CaptionStyleIntent {
-  const content = styleContent(value);
-  const result = { ...content, digest: digestOf(content) };
+export function sealCaptionStyle(value: CaptionStyleIntent): CaptionStyleIntent {
+  const result = styleContent(value);
   assertCaptionStyle(result);
   return result;
 }
@@ -113,9 +112,6 @@ export function assertCaptionStyle(value: CaptionStyleIntent): void {
   for (const color of [appearance.color, appearance.backgroundColor].filter((item): item is string => item !== undefined)) {
     assert(/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(color), `Caption Style ${value.id} color ${color} is invalid`);
   }
-  assert(isDigest(value.digest), `Caption Style ${value.id} digest is invalid`);
-  const { digest: _digest, ...withoutDigest } = value;
-  assert(value.digest === digestOf(styleContent(withoutDigest)), `Caption Style ${value.id} digest differs`);
 }
 
 function matches(
@@ -127,20 +123,18 @@ function matches(
   return displayAtomMatchesSelection(atom, application.selector.selection, narrative.tokens.length);
 }
 
-function programContent(value: Omit<CaptionProgram, "digest">) {
-  return canonicalize(value) as unknown as Omit<CaptionProgram, "digest">;
+function programContent(value: CaptionProgram) {
+  return canonicalize(value) as unknown as CaptionProgram;
 }
 
-export function sealCaptionProgram(value: Omit<CaptionProgram, "digest">): CaptionProgram {
-  const content = programContent(value);
-  const result = { ...content, digest: digestOf(content) };
+export function sealCaptionProgram(value: CaptionProgram): CaptionProgram {
+  const result = programContent(value);
   assertCaptionProgram(result);
   return result;
 }
 
 export function assertCaptionProgram(value: CaptionProgram): void {
   assert(value.contract === "svml.caption-program@1" && ID.test(value.id), "Caption Program identity is invalid");
-  assert(isDigest(value.narrativeDigest) && isDigest(value.digest), "Caption Program digest is invalid");
   assert(value.atoms.length > 0 && value.runs.length > 0 && value.styles.length > 0, "Caption Program is empty");
   const styles = new Map(value.styles.map((style) => [style.id, style]));
   assert(styles.size === value.styles.length && styles.has(value.defaultStyleId), "Caption Program styles are invalid");
@@ -165,14 +159,11 @@ export function assertCaptionProgram(value: CaptionProgram): void {
   assert(planned.join("\0") === atomIds.join("\0"),
     "Caption Program runs must partition every display atom exactly once and in order");
   assert(value.runs.every((run) => styles.has(run.styleId) && run.atomIds.length > 0), "Caption Program run style is invalid");
-  const { digest: _digest, ...withoutDigest } = value;
-  assert(value.digest === digestOf(programContent(withoutDigest)), "Caption Program digest differs");
 }
 
 /** Bind a Program's immutable display universe to the exact Narrative consumed by a Producer. */
 export function assertCaptionProgramForNarrative(value: CaptionProgram, narrative: Narrative): void {
   assertCaptionProgram(value);
-  assert(value.narrativeDigest === digestOf(narrative), "Caption Program belongs to another Narrative");
   assert(digestOf(value.atoms) === digestOf(captionDisplayAtoms(narrative)),
     "Caption Program display atoms differ from its Narrative");
 }
@@ -196,7 +187,7 @@ export function resolveCaptionProgram(
   const styles = new Map<string, CaptionStyleIntent>([[defaultStyle.id, defaultStyle]]);
   applications.forEach((application) => {
     const previous = styles.get(application.style.id);
-    assert(previous === undefined || previous.digest === application.style.digest,
+    assert(previous === undefined || digestOf(previous) === digestOf(application.style),
       `Caption Style ${application.style.id} has conflicting definitions`);
     styles.set(application.style.id, application.style);
   });
@@ -230,7 +221,6 @@ export function resolveCaptionProgram(
   return sealCaptionProgram({
     contract: "svml.caption-program@1",
     id,
-    narrativeDigest: digestOf(narrative),
     defaultStyleId: defaultStyle.id,
     styles: [...styles.values()],
     atoms,

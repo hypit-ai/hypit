@@ -12,8 +12,7 @@ import type {
   Track,
   VisualTrack,
 } from "@svml/contracts";
-import { digestOf, isDigest } from "@svml/protocol";
-import type { Digest } from "@svml/protocol";
+import { digestOf } from "@svml/protocol";
 
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 
@@ -30,7 +29,7 @@ function trackKey(track: Track): string {
   return `${track.contract}\u0000${track.id}`;
 }
 
-function filmProgramContent(value: Omit<FilmProgram, "digest">): Omit<FilmProgram, "digest"> {
+function filmProgramContent(value: FilmProgram): FilmProgram {
   return {
     contract: "svml.film-program@1",
     id: value.id,
@@ -39,27 +38,17 @@ function filmProgramContent(value: Omit<FilmProgram, "digest">): Omit<FilmProgra
   };
 }
 
-function filmTrackSetContent(value: Omit<FilmTrackSet, "digest">): Omit<FilmTrackSet, "digest"> {
+function filmTrackSetContent(value: FilmTrackSet): FilmTrackSet {
   return {
     contract: "svml.film-track-set@1",
-    programSpace: {
-      ...value.programSpace,
-      frameRate: { ...value.programSpace.frameRate },
-    },
     tracks: [...value.tracks]
       .map((track) => structuredClone(track))
       .sort((left, right) => trackKey(left).localeCompare(trackKey(right))),
-    ...(value.lastAddition === undefined ? {} : { lastAddition: { ...value.lastAddition } }),
   };
 }
 
-export function computeFilmProgramDigest(value: Omit<FilmProgram, "digest">): Digest {
-  return digestOf(filmProgramContent(value));
-}
-
-export function sealFilmProgram(value: Omit<FilmProgram, "digest">): FilmProgram {
-  const content = filmProgramContent(value);
-  return { ...content, digest: digestOf(content) };
+export function sealFilmProgram(value: FilmProgram): FilmProgram {
+  return filmProgramContent(value);
 }
 
 export function assertFilmProgramIdentity(program: FilmProgram): void {
@@ -82,102 +71,68 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
   ) {
     throw new Error("FilmProgram canvas is invalid.");
   }
-  const { digest: _digest, ...content } = program;
-  if (!isDigest(program.digest) || program.digest !== computeFilmProgramDigest(content)) {
-    throw new Error("FilmProgram digest does not match its contents.");
-  }
 }
 
-export function computeFilmTrackSetDigest(value: Omit<FilmTrackSet, "digest">): Digest {
-  return digestOf(filmTrackSetContent(value));
-}
-
-function sealFilmTrackSet(value: Omit<FilmTrackSet, "digest">): FilmTrackSet {
-  const content = filmTrackSetContent(value);
-  return { ...content, digest: digestOf(content) };
+function sealFilmTrackSet(value: FilmTrackSet): FilmTrackSet {
+  return filmTrackSetContent(value);
 }
 
 export function assertFilmTrackSetIdentity(set: FilmTrackSet): void {
   if (set.contract !== "svml.film-track-set@1") throw new Error("Unsupported FilmTrackSet contract.");
-  assertProgramSpaceIdentity(set.programSpace);
-  const { digest: _digest, ...content } = set;
-  if (!isDigest(set.digest) || set.digest !== computeFilmTrackSetDigest(content)) {
-    throw new Error("FilmTrackSet digest does not match its contents.");
-  }
   const ids = new Set<string>();
   for (const track of set.tracks) {
     if (ids.has(track.id)) throw new Error(`FilmTrackSet contains duplicate Track id ${track.id}.`);
     ids.add(track.id);
-    if (track.contract === "svml.visual-track@1") assertVisualTrackIdentity(track, set.programSpace);
-    else assertAudioTrackIdentity(track, set.programSpace);
-  }
-  if (set.tracks.length === 0 && set.lastAddition !== undefined) {
-    throw new Error("An empty FilmTrackSet cannot declare a last addition.");
-  }
-  if (set.tracks.length > 0 && set.lastAddition === undefined) {
-    throw new Error("A non-empty FilmTrackSet must declare its last addition.");
-  }
-  if (set.lastAddition !== undefined) {
-    if (!isDigest(set.lastAddition.previousSetDigest) || !isDigest(set.lastAddition.trackDigest)) {
-      throw new Error("FilmTrackSet last addition contains an invalid digest.");
-    }
-    if (!set.tracks.some((track) => track.digest === set.lastAddition?.trackDigest)) {
-      throw new Error("FilmTrackSet last addition does not identify one of its Tracks.");
-    }
+    if (track.contract === "svml.visual-track@1") assertVisualTrackIdentity(track);
+    else assertAudioTrackIdentity(track);
   }
 }
 
-export function createFilmTrackSet(programSpace: ProgramSpace): FilmTrackSet {
-  assertProgramSpaceIdentity(programSpace);
+export function createFilmTrackSet(): FilmTrackSet {
   return sealFilmTrackSet({
     contract: "svml.film-track-set@1",
-    programSpace,
     tracks: [],
   });
 }
 
-function appendTrack(set: FilmTrackSet, track: Track): FilmTrackSet {
+function appendTrack(set: FilmTrackSet, programSpace: ProgramSpace, track: Track): FilmTrackSet {
   assertFilmTrackSetIdentity(set);
-  if (track.contract === "svml.visual-track@1") assertVisualTrackIdentity(track, set.programSpace);
-  else assertAudioTrackIdentity(track, set.programSpace);
+  assertProgramSpaceIdentity(programSpace);
+  if (track.contract === "svml.visual-track@1") assertVisualTrackIdentity(track, programSpace);
+  else assertAudioTrackIdentity(track, programSpace);
   if (set.tracks.some((existing) => existing.id === track.id)) {
     throw new Error(`FilmTrackSet already contains Track id ${track.id}.`);
   }
   return sealFilmTrackSet({
     contract: "svml.film-track-set@1",
-    programSpace: set.programSpace,
     tracks: [...set.tracks, track],
-    lastAddition: {
-      previousSetDigest: set.digest,
-      trackDigest: track.digest,
-    },
   });
 }
 
-export function appendFilmVisualTrack(set: FilmTrackSet, track: VisualTrack): FilmTrackSet {
-  return appendTrack(set, track);
+export function appendFilmVisualTrack(set: FilmTrackSet, programSpace: ProgramSpace, track: VisualTrack): FilmTrackSet {
+  return appendTrack(set, programSpace, track);
 }
 
-export function appendFilmAudioTrack(set: FilmTrackSet, track: AudioTrack): FilmTrackSet {
-  return appendTrack(set, track);
+export function appendFilmAudioTrack(set: FilmTrackSet, programSpace: ProgramSpace, track: AudioTrack): FilmTrackSet {
+  return appendTrack(set, programSpace, track);
 }
 
-export function compileFilmComposition(program: FilmProgram, set: FilmTrackSet): Composition {
+export function compileFilmComposition(program: FilmProgram, programSpace: ProgramSpace, set: FilmTrackSet): Composition {
   assertFilmProgramIdentity(program);
+  assertProgramSpaceIdentity(programSpace);
   assertFilmTrackSetIdentity(set);
   if (
-    program.frameRate.numerator !== set.programSpace.frameRate.numerator
-    || program.frameRate.denominator !== set.programSpace.frameRate.denominator
+    program.frameRate.numerator !== programSpace.frameRate.numerator
+    || program.frameRate.denominator !== programSpace.frameRate.denominator
   ) {
     throw new Error("FilmProgram and FilmTrackSet use different frame rates.");
   }
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: program.id,
-    programSpace: set.programSpace,
     canvas: program.canvas,
     tracks: set.tracks,
   });
-  assertCompositionIdentity(composition);
+  assertCompositionIdentity(composition, programSpace);
   return composition;
 }

@@ -140,6 +140,8 @@ These inputs are separate by design:
 | `.svs` | reusable package-defined Recipe values |
 | `.svrun` | Targets, Candidates and explicit Satisfaction edges for one reusable Run |
 | `svml.runtime.json` / `svml.runtime.ts` | Scheduler, Stores, credential references, Endpoints and concurrency |
+| `svml.packages.lock` | physical author/compute implementation closure |
+| `svml.runtime-packages.lock` | physical Provider/Store adapter closure and privileged code identity |
 
 Source imports activate author vocabulary only. They never authorize network, filesystem, process,
 credential or queue access.
@@ -207,10 +209,9 @@ rewritten under `packages/`. They are not the public v2 package taxonomy or sour
 
 ## Current priorities
 
-Work is intentionally focused on two layers:
-
-1. Run/Runtime diagnostics, package lifecycle and developer inspection;
-2. repeatable live acceptance and replaceable local/cloud Endpoint environments.
-
-Broader Text, Caption, B-roll and Ranking visual behavior is deferred until those foundations are
-clean. See the [roadmap](docs/roadmap.md).
+The domain-neutral Run/Runtime foundation, developer inspection path and the first replaceable local
+Endpoint environments are implemented. Current work is split between making that foundation ready
+for trusted-developer distribution and turning the real talking-film acceptance path into a
+repeatable harness. Text, Caption and B-roll already execute as vertical slices; their full visual
+breadth, Ranking and the final video compatibility freeze remain deferred. See the
+[implementation status](docs/implementation-status.md) and [roadmap](docs/roadmap.md).

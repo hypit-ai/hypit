@@ -1,5 +1,6 @@
 import type { NodeCompiler } from "@svml/compiler-node";
 import type { LocalRuntime } from "@svml/local";
+import type { RuntimeConfigDoctorResult } from "@svml/local";
 import type { NodePackageContribution } from "@svml/package-loader-node";
 import type { RunFrontend } from "@svml/run";
 
@@ -21,4 +22,5 @@ export type CliDistribution = {
   readonly runFrontends: readonly RunFrontend[];
   createCompiler(options: CliCompilerOptions): NodeCompiler;
   createRuntimeFromConfig(path: string): Promise<LocalRuntime>;
+  doctorRuntimeConfig(path: string): Promise<RuntimeConfigDoctorResult>;
 };

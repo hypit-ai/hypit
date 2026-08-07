@@ -40,11 +40,8 @@ export const textTrackComponent = {
   producers: [{
     producer: textTrackProducers.createSet,
     implementationDigest: createTextTrackSetImplementationDigest,
-    handler: ({ inputs }) => ({
-      outputs: { set: { kind: "inline", value: canonicalize(createTextTrackSet(
-        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
-        inline<TextTrackHeader>(inputs.header?.value, "TextTrackHeader"),
-      )) } }, needs: {},
+    handler: () => ({
+      outputs: { set: { kind: "inline", value: canonicalize(createTextTrackSet()) } }, needs: {},
     }),
   }, {
     producer: textTrackProducers.appendFull,
@@ -52,6 +49,8 @@ export const textTrackComponent = {
     handler: ({ inputs }) => ({
       outputs: { set: { kind: "inline", value: canonicalize(appendFullTextItem(
         inline<TextTrackSet>(inputs.set?.value, "TextTrackSet"),
+        inline<TextTrackHeader>(inputs.header?.value, "TextTrackHeader"),
+        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
       )) } }, needs: {},
     }),
@@ -61,8 +60,10 @@ export const textTrackComponent = {
     handler: ({ inputs }) => ({
       outputs: { set: { kind: "inline", value: canonicalize(appendSelectedTextItem(
         inline<TextTrackSet>(inputs.set?.value, "TextTrackSet"),
+        inline<TextTrackHeader>(inputs.header?.value, "TextTrackHeader"),
         inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
         inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelection"),
+        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
         inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
       )) } }, needs: {},
     }),
@@ -71,6 +72,7 @@ export const textTrackComponent = {
     implementationDigest: finalizeTextTrackImplementationDigest,
     handler: ({ inputs }) => ({
       outputs: { program: { kind: "inline", value: canonicalize(finalizeTextTrack(
+        inline<TextTrackHeader>(inputs.header?.value, "TextTrackHeader"),
         inline<TextTrackSet>(inputs.set?.value, "TextTrackSet"),
       )) } }, needs: {},
     }),

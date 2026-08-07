@@ -268,7 +268,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const source = await artifacts.put(await readFile(sourcePath), "audio/wav");
     const constraints = canonicalize({
       contract: "svml.project-speech-evidence-audio-request@1",
-      programSpaceDigest: digestOf("evidence:program-space"),
       source,
       sourceSampleRate: 48_000,
       sourceChannels: 2,
@@ -294,7 +293,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const value = await fulfillInline(artifacts, request);
     assertSpeechEvidenceAudioIdentity(value as unknown as SpeechEvidenceAudio);
     const evidence = value as unknown as SpeechEvidenceAudio;
-    assert.equal(evidence.sourceAudioArtifactDigest, source.digest);
     assert.equal(evidence.sampleMap.sourceSampleFrames, 48_001);
     assert.equal(evidence.sampleMap.evidenceSampleFrames, 16_000);
     assert.equal(evidence.sampleMap.sourceOriginSample, 0);
@@ -439,10 +437,8 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       artifacts.put(await readFile(secondPath), "audio/wav"),
       artifacts.put(await readFile(visualPath), "video/mp4"),
     ]);
-    const programSpaceDigest = digestOf("provider-media-local:one-second-program");
     const plan = sealAudioProgramPlan({
       contract: "svml.audio-program-plan@1",
-      programSpaceDigest,
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
       sampleRate: 48_000,
@@ -489,8 +485,6 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
 
     const visual = sealRenderedVisual({
       contract: "svml.rendered-visual@1",
-      renderInputDigest: digestOf("provider-media-local:visual-program"),
-      programSpaceDigest,
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
       canvas: { width: 160, height: 96 },

@@ -160,20 +160,12 @@ export type OperationResultRef = {
 
 export type GraphValueRef = RecordRef | LogicalOutputRef | OperationResultRef;
 
-/** A domain-neutral equality claim between a logical result and one source fact. */
-export type AffinityConstraint = {
-  readonly resultPointer: string;
-  readonly source: GraphValueRef;
-  readonly sourcePointer: string;
-};
-
 export type LogicalOutput = {
   readonly id: LogicalOutputId;
   readonly type: TypeRef;
   readonly primary: CandidateId;
   /** Author-visible facts that a Candidate may transitively depend upon. */
   readonly semanticInputs: readonly GraphValueRef[];
-  readonly affinity?: readonly AffinityConstraint[];
 };
 
 export type OperationResult =

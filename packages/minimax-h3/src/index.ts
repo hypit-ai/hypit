@@ -1,14 +1,12 @@
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
-  generationDigestSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-  verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, Digest, ValueSchema } from "@svml/protocol";
+import type { BlobRef, ValueSchema } from "@svml/protocol";
 
 export const minimaxH3ModuleRef = { name: "@svml/minimax-h3", version: "0.0.0-dev" } as const;
 export type MinimaxH3Mode = "text" | "frames" | "reference";
@@ -42,14 +40,13 @@ export type MinimaxH3RequestContent =
   | MinimaxH3TextRequestContent
   | MinimaxH3FramesRequestContent
   | MinimaxH3ReferenceRequestContent;
-export type MinimaxH3Request = MinimaxH3RequestContent & { readonly requestDigest: Digest };
+export type MinimaxH3Request = MinimaxH3RequestContent;
 
 const commonFields = {
   contract: { schema: { kind: "literal", value: "svml.minimax-h3-request@1" } },
   model: { schema: { kind: "literal", value: "minimax-h3" } },
   prompt: { schema: generationPromptSchema },
   durationSec: { schema: { kind: "number", integer: true, minimum: 1, maximum: 60 } },
-  requestDigest: { schema: generationDigestSchema },
 } as const;
 const aspect = { kind: "string", minLength: 3, maxLength: 16 } as const satisfies ValueSchema;
 const referenceSchema: ValueSchema = {
@@ -86,7 +83,6 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 }
 
 export function verifyMinimaxH3Request(value: unknown, expectedMode?: MinimaxH3Mode): asserts value is MinimaxH3Request {
-  verifyGenerationRequestDigest(value);
   const request = object(value, "MiniMax H3 request");
   if (request.contract !== "svml.minimax-h3-request@1" || request.model !== "minimax-h3") {
     throw new Error("MiniMax H3 request identity is invalid");
@@ -111,7 +107,7 @@ export function verifyMinimaxH3Request(value: unknown, expectedMode?: MinimaxH3M
 
 export function sealMinimaxH3Request<T extends MinimaxH3RequestContent>(
   content: T,
-): T & { readonly requestDigest: Digest } {
+): T {
   const request = sealGenerationRequest(content);
   verifyMinimaxH3Request(request, content.mode);
   return request;

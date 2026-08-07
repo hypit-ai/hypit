@@ -2,10 +2,8 @@ import type {
   AudioTrack,
   FrameSpan,
   MediaArtifactRef,
-  ProgramSpace,
   VisualTrack,
 } from "@svml/contracts";
-import type { Digest } from "@svml/protocol";
 
 export type BrollBox = {
   readonly xPercent: number;
@@ -57,9 +55,7 @@ export type BrollPairTransition = {
 /** Official B-roll authoring/lowering value. It is not a Core contract. */
 export type BrollProgram = {
   readonly contract: "svml.broll-program@1";
-  readonly digest: Digest;
   readonly id: string;
-  readonly programSpaceDigest: Digest;
   readonly items: readonly BrollItem[];
   readonly transitions: readonly BrollPairTransition[];
 };
@@ -67,15 +63,12 @@ export type BrollProgram = {
 /** One atomic compilation result followed by ordinary deterministic projections. */
 export type BrollProduct = {
   readonly contract: "svml.broll-product@1";
-  readonly productDigest: Digest;
-  readonly programSpace: ProgramSpace;
   readonly visualTrack: VisualTrack;
   readonly audioTrack: AudioTrack;
 };
 
 export type BrollItemSpec = {
   readonly contract: "svml.broll-item-spec@1";
-  readonly digest: Digest;
   readonly id: string;
   readonly z: number;
   readonly box: BrollBox;
@@ -88,22 +81,12 @@ export type BrollItemSpec = {
 
 export type BrollTrackSpec = {
   readonly contract: "svml.broll-track-spec@1";
-  readonly digest: Digest;
   readonly id: string;
 };
 
 export type BrollSet = {
   readonly contract: "svml.broll-set@1";
-  readonly digest: Digest;
-  readonly id: string;
-  readonly map: import("@svml/contracts").CompleteSemanticMap;
   readonly items: readonly BrollItem[];
-  readonly lastAddition?: {
-    readonly previousSetDigest: Digest;
-    readonly mediaDigest: Digest;
-    readonly selectionDigest: Digest;
-    readonly specDigest: Digest;
-  };
 };
 
 export type BrollSurfaceItemInput = {

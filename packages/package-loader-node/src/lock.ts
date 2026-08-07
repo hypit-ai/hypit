@@ -34,6 +34,7 @@ type PackageJson = {
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly optionalDependencies?: Readonly<Record<string, string>>;
   readonly peerDependencies?: Readonly<Record<string, string>>;
+  readonly peerDependenciesMeta?: Readonly<Record<string, { readonly optional?: boolean }>>;
   readonly svml?: {
     readonly activation?: string;
   };
@@ -61,6 +62,9 @@ function string(value: unknown, subject: string): string {
 function parsePackageJson(value: unknown, subject: string): PackageJson {
   const parsed = object(value, subject);
   const svml = parsed.svml === undefined ? undefined : object(parsed.svml, `${subject}.svml`);
+  const peerDependenciesMeta = parsed.peerDependenciesMeta === undefined
+    ? undefined
+    : object(parsed.peerDependenciesMeta, `${subject}.peerDependenciesMeta`);
   return {
     name: string(parsed.name, `${subject}.name`),
     version: string(parsed.version, `${subject}.version`),
@@ -73,6 +77,14 @@ function parsePackageJson(value: unknown, subject: string): PackageJson {
     ...(parsed.peerDependencies === undefined
       ? {}
       : { peerDependencies: object(parsed.peerDependencies, `${subject}.peerDependencies`) as Readonly<Record<string, string>> }),
+    ...(peerDependenciesMeta === undefined
+      ? {}
+      : { peerDependenciesMeta: Object.fromEntries(Object.entries(peerDependenciesMeta).map(([name, raw]) => {
+        const value = object(raw, `${subject}.peerDependenciesMeta.${name}`);
+        assert(value.optional === undefined || typeof value.optional === "boolean",
+          `${subject}.peerDependenciesMeta.${name}.optional must be a boolean`);
+        return [name, value.optional === undefined ? {} : { optional: value.optional }];
+      })) }),
     ...(svml === undefined ? {} : { svml: {
       ...(svml.activation === undefined
         ? {}
@@ -105,8 +117,13 @@ async function resolvePhysicalPackage(specifier: string, from: string): Promise<
   let entry: string;
   try {
     entry = resolver.resolve(specifier);
-  } catch (error) {
-    throw new Error(`cannot resolve installed package ${specifier} from ${from}: ${error instanceof Error ? error.message : String(error)}`);
+  } catch (entryError) {
+    try {
+      // Type-only and metadata-only packages may intentionally expose no runtime entry.
+      entry = resolver.resolve(`${specifier}/package.json`);
+    } catch {
+      throw new Error(`cannot resolve installed package ${specifier} from ${from}: ${entryError instanceof Error ? entryError.message : String(entryError)}`);
+    }
   }
   return await packageRootFromEntry(entry, specifier);
 }
@@ -117,6 +134,11 @@ function dependencyNames(json: PackageJson): readonly string[] {
     ...Object.keys(json.optionalDependencies ?? {}),
     ...Object.keys(json.peerDependencies ?? {}),
   ])].sort();
+}
+
+function optionalDependency(json: PackageJson, name: string): boolean {
+  return Object.hasOwn(json.optionalDependencies ?? {}, name)
+    || json.peerDependenciesMeta?.[name]?.optional === true;
 }
 
 async function packageClosure(entries: readonly string[], root: string): Promise<readonly ResolvedPhysicalPackage[]> {
@@ -133,7 +155,7 @@ async function packageClosure(entries: readonly string[], root: string): Promise
       try {
         await visit(await resolvePhysicalPackage(dependency, item.root));
       } catch (error) {
-        if (Object.hasOwn(item.json.optionalDependencies ?? {}, dependency)) continue;
+        if (optionalDependency(item.json, dependency)) continue;
         throw error;
       }
     }
@@ -275,6 +297,8 @@ function parseLock(value: unknown): NodePackageLock {
     const physical = object(item.package, `$lock.packages[${index}].package`);
     const facetsDigest = string(item.facetsDigest, `$lock.packages[${index}].facetsDigest`);
     assert(isDigest(facetsDigest), `$lock.packages[${index}].facetsDigest is invalid`);
+    const closureDigest = string(item.closureDigest, `$lock.packages[${index}].closureDigest`);
+    assert(isDigest(closureDigest), `$lock.packages[${index}].closureDigest is invalid`);
     return {
       specifier: string(item.specifier, `$lock.packages[${index}].specifier`),
       package: {
@@ -282,6 +306,7 @@ function parseLock(value: unknown): NodePackageLock {
         version: string(physical.version, `$lock.packages[${index}].package.version`),
       },
       facetsDigest,
+      closureDigest,
     };
   });
   const digest = string(parsed.digest, "$lock.digest");
@@ -316,10 +341,12 @@ export async function createNodePackageLock(
   for (const specifier of unique) {
     const physical = await resolvePhysicalPackage(specifier, root);
     const contribution = await importContribution(physical);
+    const ownArtifacts = await resolvedArtifacts(await packageClosure([specifier], root));
     packages.push({
       specifier,
       package: { name: physical.json.name, version: physical.json.version },
       facetsDigest: digestOf(contributionMetadata(contribution)),
+      closureDigest: digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }),
     });
   }
   return sealLock({
@@ -352,6 +379,9 @@ export async function loadNodePackageSet(
     const contribution = await importContribution(physical);
     assert(digestOf(contributionMetadata(contribution)) === expected.facetsDigest,
       `${expected.specifier} facets do not match the lock`);
+    const ownArtifacts = await resolvedArtifacts(await packageClosure([expected.specifier], root));
+    assert(digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }) === expected.closureDigest,
+      `${expected.specifier} dependency closure does not match the lock`);
     values.push(contribution);
   }
   return { lock, contributions: values };

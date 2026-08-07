@@ -23,7 +23,7 @@ function referenceAttribute(element: StructuredElement, name: string): string {
 
 export const decodeHyperframesRenderSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   const names = Object.keys(element.attributes).sort();
-  if (names.join(",") !== "composition,id") throw new Error(`${element.name} requires exactly composition and id`);
+  if (names.join(",") !== "composition,id,space") throw new Error(`${element.name} requires exactly composition, id and space`);
   if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
     throw new Error(`${element.name} does not accept children`);
   }
@@ -36,12 +36,20 @@ export const decodeHyperframesRenderSurface: StructuredSurfaceHandler = ({ eleme
     || composition.type.name !== contractTypes.composition.name) {
     throw new Error(`${element.name}.composition must reference Composition`);
   }
+  const spacePath = referenceAttribute(element, "space");
+  const space = resolveReference(spacePath);
+  if (space === undefined
+    || space.type.module.name !== contractTypes.programSpace.module.name
+    || space.type.module.version !== contractTypes.programSpace.module.version
+    || space.type.name !== contractTypes.programSpace.name) {
+    throw new Error(`${element.name}.space must reference ProgramSpace`);
+  }
   return {
     records: [],
     components: [{
       id,
       fragment: hyperframesRenderFragment.id,
-      inputs: { composition: composition.ref },
+      inputs: { composition: composition.ref, space: space.ref },
       outputs: { video: `${id}.video` },
       range: element.range,
     }],

@@ -12,12 +12,15 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 export const hyperframesRenderFragment = sealGraphFragment({
   name: "@svml/hyperframes-render/video@1",
-  inputs: [{ name: "composition", type: contractTypes.composition }],
+  inputs: [
+    { name: "composition", type: contractTypes.composition },
+    { name: "space", type: contractTypes.programSpace },
+  ],
   operations: [
     {
       id: "compile-document",
       producer: hyperframesProducers.compile,
-      inputs: { composition: input("composition") },
+      inputs: { composition: input("composition"), space: input("space") },
       result: { kind: "output", name: "document" },
     },
     {
@@ -29,7 +32,7 @@ export const hyperframesRenderFragment = sealGraphFragment({
     {
       id: "compile-audio-program",
       producer: mediaPipelineProducers.planAudio,
-      inputs: { composition: input("composition") },
+      inputs: { composition: input("composition"), space: input("space") },
       result: { kind: "output", name: "plan" },
     },
     {
@@ -58,12 +61,7 @@ export const hyperframesRenderFragment = sealGraphFragment({
     name: "video",
     type: contractTypes.mediaArtifact,
     root: operation("project-video"),
-    semanticInputs: ["composition"],
-    affinity: [{
-      resultPointer: "/digest",
-      source: operation("request-mux"),
-      sourcePointer: "/artifact/digest",
-    }],
+    semanticInputs: ["composition", "space"],
     fidelity: "exact",
   }],
 });

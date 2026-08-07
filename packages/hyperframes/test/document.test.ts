@@ -41,7 +41,6 @@ function fixture() {
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "lower",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "picture",
       span: { startFrame: 0, endFrameExclusive: 30 },
@@ -59,7 +58,6 @@ function fixture() {
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "upper",
-    programSpaceDigest: programSpace.digest,
     presents: [{
       id: "words",
       span: { startFrame: 3, endFrameExclusive: 20 },
@@ -73,24 +71,21 @@ function fixture() {
   const audio = sealAudioTrack({
     contract: "svml.audio-track@1",
     id: "sound",
-    programSpaceDigest: programSpace.digest,
     clips: [{ id: "main", span: { startFrame: 0, endFrameExclusive: 30 }, artifact: sound, bus: "speech" }],
   });
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: "main",
-    programSpace,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [upper, audio, lower],
   });
-  return { composition, picture, sound };
+  return { composition, picture, sound, programSpace };
 }
 
 test("HyperFrames flattens generic peer visual Track Presents without absorbing audio rendering", () => {
-  const { composition, picture, sound } = fixture();
-  const document = compileHyperframesDocument(composition);
+  const { composition, picture, sound, programSpace } = fixture();
+  const document = compileHyperframesDocument(composition, programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.equal(document.compositionDigest, composition.digest);
   assert.equal(document.visualIr, HYPERFRAMES_VISUAL_IR_V1);
   assert.deepEqual(document.artifacts, [{
     kind: "blob",
@@ -108,8 +103,8 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
 });
 
 test("visual Artifact placeholders are materialized only by the Runtime boundary", () => {
-  const { composition, picture, sound } = fixture();
-  const document = compileHyperframesDocument(composition);
+  const { composition, picture, sound, programSpace } = fixture();
+  const document = compileHyperframesDocument(composition, programSpace);
   assert.match(document.html, /svml-artifact:\/\/sha256\//u);
   const resolved = materializeHyperframesHtml(document,
     (artifact) => `https://assets.example/${artifact.digest}?x=1&y=2`);
@@ -119,14 +114,10 @@ test("visual Artifact placeholders are materialized only by the Runtime boundary
   assert.equal(document.html.includes("assets.example"), false, "materialization must not mutate the compiled document");
 });
 
-test("HyperframesDocument binds its HTML and exact frame-to-time projection", () => {
-  const { composition } = fixture();
-  const document = compileHyperframesDocument(composition);
-  const tampered = { ...document, html: document.html.replace("Hello", "Tampered") };
-  assert.throws(() => assertHyperframesDocument(tampered), /digest does not match/);
-  const changedDomain = { ...document, frameCount: document.frameCount - 1 };
-  assert.throws(() => assertHyperframesDocument(changedDomain), /digest does not match/);
-  assert.equal(document.programSpaceDigest, composition.programSpace.digest);
+test("HyperframesDocument carries render facts while its Record binds integrity", () => {
+  const { composition, programSpace } = fixture();
+  const document = compileHyperframesDocument(composition, programSpace);
+  assert.equal("digest" in document, false);
   assert.deepEqual(document.frameRate, { numerator: 30_000, denominator: 1_001 });
   assert.equal(document.frameCount, 30);
   assert.deepEqual(document.canvas, { width: 1080, height: 1920 });
@@ -137,7 +128,8 @@ test("HyperframesDocument binds its HTML and exact frame-to-time projection", ()
 });
 
 test("any legal frame and Provider-owned chunk can be addressed without traversing earlier frames", () => {
-  const document = compileHyperframesDocument(fixture().composition);
+  const fixtureValue = fixture();
+  const document = compileHyperframesDocument(fixtureValue.composition, fixtureValue.programSpace);
   assert.doesNotThrow(() => assertHyperframesFrameIndex(document, 0));
   assert.doesNotThrow(() => assertHyperframesFrameIndex(document, 17));
   assert.doesNotThrow(() => assertHyperframesFrameIndex(document, 29));
@@ -162,7 +154,7 @@ test("any legal frame and Provider-owned chunk can be addressed without traversi
 });
 
 test("HyperFrames emits frame-bound local animation without creating a Track stacking context", () => {
-  const { composition } = fixture();
+  const { composition, programSpace } = fixture();
   const lower = composition.tracks.find((track) => track.id === "lower");
   assert(lower?.contract === "svml.visual-track@1");
   const present = lower.presents[0]!;
@@ -186,7 +178,7 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
   const document = compileHyperframesDocument(sealComposition({
     ...composition,
     tracks: composition.tracks.map((track) => track.id === "lower" ? animated : track),
-  }));
+  }), programSpace);
   assert.match(document.html, /@keyframes svml-/u);
   assert.match(document.html, /33\.333333333%\{opacity:1;transform:translateY\(0%\)/u);
   assert.match(document.html, /animation-duration:1\.001s/u);
@@ -215,7 +207,6 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     contract: "svml.visual-track@1",
     visualIr: "svml.hyperframes-visual-ir@1",
     id: "bound-render-dependencies",
-    programSpaceDigest: space.digest,
     presents: [{
       id: "bound",
       span: { startFrame: 0, endFrameExclusive: 30 },
@@ -257,10 +248,9 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   const document = compileHyperframesDocument(sealComposition({
     contract: "svml.composition@1",
     id: "render-dependencies",
-    programSpace: space,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [track],
-  }));
+  }), space);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [font.artifact.digest, surfaceDigest].sort());
   assert.match(document.html, /@font-face\{/u);

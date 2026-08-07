@@ -11,17 +11,11 @@ export type TimingQuality = "measured" | "derived" | "estimated";
  */
 export type SpeechDuration = {
   readonly contract: "svml.speech-duration@1";
-  readonly segmentId: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly sourceSpeechExcerptDigest: Digest;
   readonly durationSec: number;
-  readonly durationDigest: Digest;
 };
 
 export type ProgramSpace = {
   readonly contract: "svml.program-space@0";
-  readonly digest: Digest;
   readonly durationSec: number;
   readonly frameRate: {
     readonly numerator: number;
@@ -44,7 +38,6 @@ export type SpeechBasisSegment = {
 
 export type SpeechBasis = {
   readonly contract: "svml.speech-basis@1";
-  readonly basisDigest: Digest;
   readonly programSpace: ProgramSpace;
   readonly audio: MediaArtifactRef;
   readonly visualTrack: {
@@ -69,9 +62,6 @@ export type SpeechAudioBasis = {
 /** Canonical 16 kHz mono PCM projection used only for acoustic alignment evidence. */
 export type SpeechEvidenceAudio = {
   readonly contract: "svml.speech-evidence-audio@1";
-  readonly programSpaceDigest: Digest;
-  /** The 48 kHz speech-master bytes from which this projection was derived. */
-  readonly sourceAudioArtifactDigest: Digest;
   readonly artifact: BlobRef;
   readonly codec: "pcm_s16le";
   readonly sampleRate: 16_000;
@@ -87,9 +77,7 @@ export type SpeechEvidenceAudio = {
     readonly evidenceSampleFrames: number;
     readonly sourceOriginSample: 0;
     readonly evidenceOriginSample: 0;
-    readonly resamplerImplementation: string;
   };
-  readonly evidenceAudioDigest: Digest;
 };
 
 export type SpeechWordEvidence = {
@@ -123,10 +111,6 @@ export type AlignedTranscriptSegment = {
 
 export type AlignedTranscriptEvidence = {
   readonly contract: "svml.aligned-transcript-evidence@1";
-  /** Exact acoustic Artifact measured by the recognizer. */
-  readonly audioArtifactDigest: Digest;
-  readonly programSpaceDigest: Digest;
-  readonly evidenceDigest: Digest;
   readonly durationSec: number;
   readonly segments: readonly AlignedTranscriptSegment[];
 };
@@ -178,12 +162,10 @@ export type SemanticTimePoint = {
 
 export type CompleteSemanticMap = {
   readonly contract: "svml.complete-semantic-map@1";
-  readonly programSpace: ProgramSpace;
   readonly quantizationPolicy: "nearest-frame";
   readonly durationSec: number;
   readonly segments: readonly TimedSpeechSegment[];
   readonly tokens: readonly TimedSpeechToken[];
   readonly anchors: readonly SemanticTimePoint[];
   readonly groups: readonly AlignmentGroup[];
-  readonly mapDigest: Digest;
 };

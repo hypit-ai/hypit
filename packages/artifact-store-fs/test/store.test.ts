@@ -27,3 +27,25 @@ test("filesystem artifacts are content-addressed and survive adapter restart", a
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("filesystem artifacts expose optional streaming and explicit retention capabilities", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-artifacts-stream-"));
+  try {
+    const store = new FileArtifactStore(directory);
+    const artifact = await store.putStream((async function* () {
+      yield new TextEncoder().encode("streamed ");
+      yield new TextEncoder().encode("artifact");
+    })(), "application/octet-stream");
+    assert.deepEqual(await store.list(), [artifact.digest]);
+    const opened = await store.open(artifact.digest);
+    assert.notEqual(opened, undefined);
+    const values: number[] = [];
+    for await (const chunk of opened!) values.push(...chunk);
+    assert.equal(new TextDecoder().decode(Uint8Array.from(values)), "streamed artifact");
+    assert.equal(await store.delete(artifact.digest), true);
+    assert.equal(await store.delete(artifact.digest), false);
+    assert.deepEqual(await store.list(), []);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

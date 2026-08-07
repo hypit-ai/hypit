@@ -25,8 +25,9 @@ handing the HTML to HyperFrames. That environment-specific materialization is no
 Record and does not change the document digest.
 
 The document exposes its render domain directly rather than asking an Endpoint to scrape HTML:
-`programSpaceDigest`, exact rational `frameRate`, integer `frameCount`, and canvas dimensions are
-all content-addressed. Legal frame addresses are exactly `[0, frameCount)`. A local worker pool or a
+exact rational `frameRate`, integer `frameCount`, and canvas dimensions are explicit document
+content. The ProgramSpace relationship is an input edge of the Producer and is not copied into the
+document as lineage metadata. Legal frame addresses are exactly `[0, frameCount)`. A local worker pool or a
 hosted renderer may independently evaluate any legal frame or half-open chunk; partition size and
 worker count are Runtime policy, not author intent and not Core graph nodes. The emitted root also
 uses the rational HyperFrames `data-fps` form, so NTSC rates do not drift through a decimal guess.

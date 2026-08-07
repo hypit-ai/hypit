@@ -39,7 +39,6 @@ const spec = sealPromptKitSpec({
 function invocation(parameters: Record<string, string> = {}) {
   return sealPromptKitInvocation({
     contract: "svml.prompt-kit-invocation@1",
-    kit: "demo-v1",
     parameters,
     selectors: { evidence: "present" },
     slots: { subject: "a toothbrush" },
@@ -51,12 +50,6 @@ test("generic Prompt Kit resolves defaults, finite variants and required slots",
   verifyPromptProgram(program);
   assert.deepEqual(program.blocks.map((block) => block.text), [
     "BASE", "CALM", "USE EVIDENCE", "SUBJECT:\na toothbrush",
-  ]);
-  assert.deepEqual(program.blocks.map((block) => block.origin), [
-    "kit:demo-v1:fixed",
-    "parameter:tone:calm",
-    "variant:evidence:present",
-    "slot:subject",
   ]);
 });
 
@@ -86,7 +79,6 @@ test("unknown inputs and non-unique finite branches fail closed", () => {
   });
   const call = sealPromptKitInvocation({
     contract: "svml.prompt-kit-invocation@1",
-    kit: "ambiguous-v1",
     parameters: {}, selectors: {}, slots: {},
   });
   assert.throws(() => compilePromptKit(ambiguous, call), /matched 2 choices/u);

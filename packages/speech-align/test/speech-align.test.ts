@@ -33,8 +33,6 @@ function evidence(args: {
 }): AlignedTranscriptEvidence {
   return sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    audioArtifactDigest: digestOf("fixture:whisperx:acoustic-input"),
-    programSpaceDigest: args.basis.programSpace.digest,
     durationSec: args.basis.programSpace.durationSec,
     segments: [
       {
@@ -59,7 +57,7 @@ function speechBasis(
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });
-  const audioDigest = digestOf(`fixture:audio:${narrative.semanticIndex.digest}:${durationSec}`);
+  const audioDigest = digestOf(`fixture:audio:${narrative.segments.map((segment) => segment.id).join("+")}:${durationSec}`);
   const segments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
     startSec: windows?.[index]?.startSec ?? durationSec * index / narrative.segments.length,
@@ -155,7 +153,7 @@ test("exact transcript words cover every Script and Segment anchor", () => {
     ],
   );
   assert.equal(new Set(map.anchors.map((anchor) => anchor.identity)).size, map.anchors.length);
-  assert.match(map.mapDigest, /^sha256:[a-f0-9]{64}$/u);
+  assert.equal(map.contract, "svml.complete-semantic-map@1");
 });
 
 test("M:1 uses evidence character times instead of dividing a merged word by length", () => {
@@ -273,8 +271,6 @@ test("multiple Script Segments stay independent even when evidence records arriv
   ]);
   const map = locateSpeechTiming(narrative, basis, sealAlignedTranscriptEvidence({
     contract: "svml.aligned-transcript-evidence@1",
-    audioArtifactDigest: digestOf("fixture:segments:acoustic-input"),
-    programSpaceDigest: basis.programSpace.digest,
     durationSec: 2,
     segments: [
       {
@@ -314,7 +310,7 @@ test("invalid overlapping evidence word windows fail instead of producing a reve
   );
 });
 
-test("Evidence is rejected for another coordinate space without replaying hidden provenance", () => {
+test("Evidence is interpreted only through the explicitly connected SpeechAudioBasis", () => {
   const narrative = parseScript("affinity.svml", "<line>Hello world.</line>");
   const basis = speechBasis(narrative, 2);
   const mismatched = evidence({
@@ -326,10 +322,9 @@ test("Evidence is rejected for another coordinate space without replaying hidden
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  assert.throws(
-    () => locateSpeechTiming(narrative, basis, { ...mismatched, programSpaceDigest: anotherSpace.digest }),
-    (error: unknown) => error instanceof SpeechAlignmentError && error.code === "SPEECH_EVIDENCE_PROGRAM",
-  );
+  const anotherBasis = { ...basis, programSpace: anotherSpace };
+  const map = locateSpeechTiming(narrative, anotherBasis, mismatched);
+  assert.equal(map.tokens[0]?.startFrame, 3);
 });
 
 test("the final map is quantized once into the selected ProgramSpace", () => {

@@ -1,10 +1,8 @@
-import type { ProgramSpace, Track } from "@svml/contracts";
-import type { Digest } from "@svml/protocol";
+import type { Track } from "@svml/contracts";
 
 /** Package-owned authoring value. A future Film Surface may produce this record. */
 export type FilmProgram = {
   readonly contract: "svml.film-program@1";
-  readonly digest: Digest;
   readonly id: string;
   readonly frameRate: {
     readonly numerator: number;
@@ -23,13 +21,7 @@ export type FilmProgram = {
  */
 export type FilmTrackSet = {
   readonly contract: "svml.film-track-set@1";
-  readonly digest: Digest;
-  readonly programSpace: ProgramSpace;
   readonly tracks: readonly Track[];
-  readonly lastAddition?: {
-    readonly previousSetDigest: Digest;
-    readonly trackDigest: Digest;
-  };
 };
 
 export type FilmTrackInput = {

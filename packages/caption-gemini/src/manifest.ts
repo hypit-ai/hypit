@@ -24,7 +24,6 @@ export const captionGeminiImplementationDigests = {
 } as const;
 
 const string = { kind: "string", minLength: 1 } as const satisfies ValueSchema;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const satisfies ValueSchema;
 const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as const satisfies ValueSchema;
 const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
@@ -56,15 +55,15 @@ const planningRun = object({
 });
 export const captionGeminiProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-gemini-program@1" } },
-  model: { schema: model }, programDigest: { schema: digest },
+  model: { schema: model },
 });
 export const captionGeminiRequestSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-gemini-request@1" } },
-  model: { schema: model }, narrativeDigest: { schema: digest }, captionProgramDigest: { schema: digest },
+  model: { schema: model },
   atoms: { schema: { kind: "array", minItems: 1, items: object({ id: { schema: string }, text: { schema: string } }) } },
   runs: { schema: { kind: "array", minItems: 1, items: planningRun } },
   systemInstruction: { schema: string }, prompt: { schema: string },
-  temperature: { schema: { kind: "literal", value: 0.2 } }, requestDigest: { schema: digest },
+  temperature: { schema: { kind: "literal", value: 0.2 } },
 });
 
 function ownedType(name: string, schema: ValueSchema, digestValue: ReturnType<typeof digestOf>) {
@@ -120,10 +119,7 @@ export const captionGeminiManifest: ModuleManifest = {
       name: captionGeminiProducers.request.name,
       inputs: [{ name: "request", type: captionGeminiTypes.request }],
       outputs: [],
-      needs: [{
-        name: "plan", capability: captionGeminiCapabilities.plan, returns: captionTypes.plan,
-        affinity: [{ resultPointer: "/planningRequestDigest", input: "request", inputPointer: "/requestDigest" }],
-      }],
+      needs: [{ name: "plan", capability: captionGeminiCapabilities.plan, returns: captionTypes.plan }],
       implementation: {
         kind: "registered", locator: "@svml/caption-gemini/request-plan", digest: captionGeminiImplementationDigests.request,
       },

@@ -2,11 +2,9 @@ import { artifactDependency } from "@svml/artifact";
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
-  generationDigestSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-  verifyGenerationRequestDigest,
 } from "@svml/generation";
 import { defineExactModelModule } from "@svml/model-kit";
 import {
@@ -44,14 +42,11 @@ export type SeedanceRequestContent<M extends SeedanceModel = SeedanceModel> = {
   readonly webSearch: boolean;
 };
 
-export type SeedanceRequest<M extends SeedanceModel = SeedanceModel> = SeedanceRequestContent<M> & {
-  readonly requestDigest: Digest;
-};
+export type SeedanceRequest<M extends SeedanceModel = SeedanceModel> = SeedanceRequestContent<M>;
 
 export type SeedancePrompt = {
   readonly contract: "svml.seedance-prompt@1";
   readonly text: string;
-  readonly promptDigest: Digest;
 };
 
 export type SeedanceSpeechProgram = {
@@ -63,13 +58,6 @@ export type SeedanceSpeechProgram = {
   readonly aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive";
   readonly generateAudio: true;
   readonly webSearch: boolean;
-  readonly segment: {
-    readonly id: string;
-    readonly tokenStart: number;
-    readonly tokenEndExclusive: number;
-    readonly dialogueExcerptDigest: Digest;
-  };
-  readonly programDigest: Digest;
 };
 
 export const seedanceTypes = {
@@ -100,7 +88,7 @@ export function sealSeedancePrompt(text: string): SeedancePrompt {
     throw new Error("Seedance Prompt must contain 1 to 20,000 characters");
   }
   const content = { contract: "svml.seedance-prompt@1" as const, text: normalized };
-  return { ...content, promptDigest: digestOf(canonicalize(content)) };
+  return content;
 }
 
 export function verifySeedancePrompt(value: unknown): asserts value is SeedancePrompt {
@@ -108,18 +96,10 @@ export function verifySeedancePrompt(value: unknown): asserts value is SeedanceP
   if (value.contract !== "svml.seedance-prompt@1" || typeof value.text !== "string" || value.text.length === 0) {
     throw new Error("Seedance Prompt is invalid");
   }
-  const content = canonicalize({ contract: value.contract, text: value.text });
-  if (value.promptDigest !== digestOf(content)) throw new Error("Seedance Prompt digest differs");
 }
 
-function speechProgramContent(value: Omit<SeedanceSpeechProgram, "programDigest">) {
-  return canonicalize(value);
-}
-
-export function sealSeedanceSpeechProgram(
-  value: Omit<SeedanceSpeechProgram, "programDigest">,
-): SeedanceSpeechProgram {
-  const result: SeedanceSpeechProgram = { ...value, programDigest: digestOf(speechProgramContent(value)) };
+export function sealSeedanceSpeechProgram(value: SeedanceSpeechProgram): SeedanceSpeechProgram {
+  const result = structuredClone(value);
   verifySeedanceSpeechProgram(result);
   return result;
 }
@@ -137,21 +117,6 @@ export function verifySeedanceSpeechProgram(value: unknown): asserts value is Se
     || !["1:1", "4:3", "3:4", "16:9", "9:16", "21:9", "adaptive"].includes(value.aspectRatio as string)
   ) {
     throw new Error("Seedance SpeechProgram is invalid");
-  }
-  assertObject(value.segment);
-  if (
-    typeof value.segment.id !== "string"
-    || value.segment.id.length === 0
-    || !Number.isSafeInteger(value.segment.tokenStart)
-    || !Number.isSafeInteger(value.segment.tokenEndExclusive)
-    || (value.segment.tokenEndExclusive as number) <= (value.segment.tokenStart as number)
-    || typeof value.segment.dialogueExcerptDigest !== "string"
-  ) {
-    throw new Error("Seedance SpeechProgram Segment identity is invalid");
-  }
-  const { programDigest: _digest, ...content } = value as unknown as SeedanceSpeechProgram;
-  if (value.programDigest !== digestOf(speechProgramContent(content))) {
-    throw new Error("Seedance SpeechProgram digest differs from its contents");
   }
   const program = value as unknown as SeedanceSpeechProgram;
   sealSeedanceRequest({
@@ -173,13 +138,6 @@ export function compileSeedanceSpeechRequest(
 ): SeedanceRequest {
   verifySeedanceSpeechProgram(program);
   assertSpeechDurationIdentity(duration);
-  if (
-    duration.segmentId !== program.segment.id
-    || duration.tokenStart !== program.segment.tokenStart
-    || duration.tokenEndExclusive !== program.segment.tokenEndExclusive
-  ) {
-    throw new Error("Seedance Speech duration belongs to another Narrative Segment");
-  }
   if (!Number.isSafeInteger(duration.durationSec) || duration.durationSec < 4 || duration.durationSec > 15) {
     throw new Error("Seedance Speech duration must be an integer between 4 and 15 seconds");
   }
@@ -234,13 +192,6 @@ const speechProgramSchema: ValueSchema = generationObjectSchema({
   aspectRatio: { schema: aspectRatioSchema },
   generateAudio: { schema: { kind: "literal", value: true } },
   webSearch: { schema: { kind: "boolean" } },
-  segment: { schema: generationObjectSchema({
-    id: { schema: generationPromptSchema },
-    tokenStart: { schema: { kind: "number", integer: true, minimum: 0 } },
-    tokenEndExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-    dialogueExcerptDigest: { schema: generationDigestSchema },
-  }) },
-  programDigest: { schema: generationDigestSchema },
 });
 
 function requestSchema(model: SeedanceModel): ValueSchema {
@@ -259,7 +210,6 @@ function requestSchema(model: SeedanceModel): ValueSchema {
     durationSec: { schema: { kind: "number", integer: true, minimum: 4, maximum: 15 } },
     generateAudio: { schema: { kind: "boolean" } },
     webSearch: { schema: { kind: "boolean" } },
-    requestDigest: { schema: generationDigestSchema },
   });
 }
 
@@ -270,7 +220,6 @@ function assertObject(value: unknown): asserts value is Record<string, unknown> 
 }
 
 export function verifySeedanceRequest(value: unknown, expectedModel?: SeedanceModel): asserts value is SeedanceRequest {
-  verifyGenerationRequestDigest(value);
   assertObject(value);
   if (value.contract !== "svml.seedance-request@1") throw new Error("Seedance request contract is invalid");
   if (!seedanceModels.includes(value.model as SeedanceModel)) throw new Error("Seedance model is invalid");
@@ -342,7 +291,6 @@ export const seedanceManifest = {
       schema: generationObjectSchema({
         contract: { schema: { kind: "literal", value: "svml.seedance-prompt@1" } },
         text: { schema: generationPromptSchema },
-        promptDigest: { schema: generationDigestSchema },
       }),
     },
   ],
@@ -389,11 +337,7 @@ export const seedanceManifest = {
         { name: "program", type: seedanceTypes.speechProgram },
         { name: "duration", type: contractTypes.speechDuration },
       ],
-      outputs: [{
-        name: "request",
-        type: seedanceEndpointsByModel[model].requestType,
-        affinity: [{ resultPointer: "/durationSec", input: "duration", inputPointer: "/durationSec" }],
-      }],
+      outputs: [{ name: "request", type: seedanceEndpointsByModel[model].requestType }],
       needs: [],
       implementation: {
         kind: "registered" as const,

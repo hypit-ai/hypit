@@ -7,8 +7,8 @@ import type { RunFrontend } from "@svml/run";
 
 /**
  * Trusted executable facets exported by one installed physical package. The Host independently
- * grants author registries or deterministic compute registries; this descriptor has no Provider,
- * credential, store, queue or Runtime facet.
+ * grants each exact Host ABI separately. Runtime Adapter Host facets remain inert unless a Runtime
+ * Profile explicitly selects the physical package through its own lock.
  */
 export type NodePackageContribution = {
   readonly format: "svml.node-package@1";
@@ -36,6 +36,8 @@ export type LockedNodePackage = {
   };
   /** Digest of declared Module, author and compute facet identities, excluding function objects. */
   readonly facetsDigest: Digest;
+  /** Digest of this package's own transitive physical Artifact closure, excluding unrelated selections. */
+  readonly closureDigest: Digest;
 };
 
 export type NodePackageLock = {

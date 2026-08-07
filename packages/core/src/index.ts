@@ -1,10 +1,4 @@
 export { canonicalStringify, canonicalize, digestOf, isDigest, recordDigest } from "./canonical.js";
-export {
-  verifyGraphRecordAffinity,
-  verifyInitialAffinities,
-  verifyProducerRecordAffinity,
-  verifyRecordAffinity,
-} from "./affinity.js";
 export { CoreError } from "./error.js";
 export {
   computeClosureDigest,

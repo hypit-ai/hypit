@@ -172,6 +172,15 @@ class SqliteBuildStore implements BuildStore {
     return row === undefined ? undefined : parseBuildSnapshot(row);
   }
 
+  async list(): Promise<readonly BuildSnapshot[]> {
+    const rows = this.#database.prepare(`
+      SELECT build_id, revision, state_json
+      FROM svml_builds
+      ORDER BY build_id ASC
+    `).all() as Row[];
+    return rows.map(parseBuildSnapshot);
+  }
+
   async compareAndSwap(
     build: string,
     expectedRevision: number,

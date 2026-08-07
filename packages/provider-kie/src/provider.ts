@@ -112,11 +112,7 @@ function object(value: unknown, subject: string): Record<string, unknown> {
 }
 
 function contentRequestDigest(value: unknown): Digest {
-  const request = object(value, "KIE request");
-  if (typeof request.requestDigest !== "string" || !isDigest(request.requestDigest)) {
-    throw new KieError("KIE_INVALID_REQUEST", "KIE request has no valid content digest");
-  }
-  return request.requestDigest;
+  return digestOf(object(value, "KIE request"));
 }
 
 function secret(context: EndpointStartContext | EndpointResumeContext): string {

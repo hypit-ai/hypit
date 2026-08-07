@@ -37,11 +37,7 @@ export const speechTakeManifest: ModuleManifest = {
     {
       name: speechTakeProducers.projectProgramSpace.name,
       inputs: [{ name: "basis", type: contractTypes.speechBasis }],
-      outputs: [{
-        name: "programSpace",
-        type: contractTypes.programSpace,
-        affinity: [{ resultPointer: "/digest", input: "basis", inputPointer: "/programSpace/digest" }],
-      }],
+      outputs: [{ name: "programSpace", type: contractTypes.programSpace }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -52,14 +48,7 @@ export const speechTakeManifest: ModuleManifest = {
     {
       name: speechTakeProducers.projectAudio.name,
       inputs: [{ name: "basis", type: contractTypes.speechBasis }],
-      outputs: [{
-        name: "audio",
-        type: contractTypes.speechAudioBasis,
-        affinity: [
-          { resultPointer: "/programSpace/digest", input: "basis", inputPointer: "/programSpace/digest" },
-          { resultPointer: "/audio/digest", input: "basis", inputPointer: "/audio/digest" },
-        ],
-      }],
+      outputs: [{ name: "audio", type: contractTypes.speechAudioBasis }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -70,13 +59,7 @@ export const speechTakeManifest: ModuleManifest = {
     {
       name: speechTakeProducers.projectVisual.name,
       inputs: [{ name: "basis", type: contractTypes.speechBasis }],
-      outputs: [{
-        name: "visual",
-        type: contractTypes.visualTrack,
-        affinity: [
-          { resultPointer: "/programSpaceDigest", input: "basis", inputPointer: "/programSpace/digest" },
-        ],
-      }],
+      outputs: [{ name: "visual", type: contractTypes.visualTrack }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -87,13 +70,7 @@ export const speechTakeManifest: ModuleManifest = {
     {
       name: speechTakeProducers.projectAudioTrack.name,
       inputs: [{ name: "basis", type: contractTypes.speechBasis }],
-      outputs: [{
-        name: "track",
-        type: contractTypes.audioTrack,
-        affinity: [
-          { resultPointer: "/programSpaceDigest", input: "basis", inputPointer: "/programSpace/digest" },
-        ],
-      }],
+      outputs: [{ name: "track", type: contractTypes.audioTrack }],
       needs: [],
       implementation: {
         kind: "registered",

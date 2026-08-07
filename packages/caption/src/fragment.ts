@@ -13,6 +13,7 @@ export const captionTrackSurfaceFragment = sealGraphFragment({
     { name: "narrative", type: contractTypes.narrative },
     { name: "map", type: contractTypes.completeSemanticMap },
     { name: "program", type: captionTypes.trackProgram },
+    { name: "space", type: contractTypes.programSpace },
   ],
   operations: [
     {
@@ -24,7 +25,7 @@ export const captionTrackSurfaceFragment = sealGraphFragment({
     {
       id: "caption:render",
       producer: captionProducers.renderTrack,
-      inputs: { caption: operation("caption:temporalize"), program: input("program") },
+      inputs: { caption: operation("caption:temporalize"), program: input("program"), space: input("space") },
       result: { kind: "output", name: "track" },
     },
   ],
@@ -32,8 +33,7 @@ export const captionTrackSurfaceFragment = sealGraphFragment({
     name: "track",
     type: contractTypes.visualTrack,
     root: operation("caption:render"),
-    semanticInputs: ["narrative", "map", "program"],
-    affinity: [{ resultPointer: "/programSpaceDigest", source: input("map"), sourcePointer: "/programSpace/digest" }],
+    semanticInputs: ["narrative", "map", "program", "space"],
     fidelity: "exact",
   }],
 });
@@ -46,6 +46,7 @@ export const plannedCaptionTrackSurfaceFragment = sealGraphFragment({
     { name: "map", type: contractTypes.completeSemanticMap },
     { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
+    { name: "space", type: contractTypes.programSpace },
   ],
   operations: [
     {
@@ -57,7 +58,7 @@ export const plannedCaptionTrackSurfaceFragment = sealGraphFragment({
     {
       id: "caption:render-plan",
       producer: captionProducers.renderProgram,
-      inputs: { caption: operation("caption:temporalize-plan"), program: input("program") },
+      inputs: { caption: operation("caption:temporalize-plan"), program: input("program"), space: input("space") },
       result: { kind: "output", name: "track" },
     },
   ],
@@ -65,8 +66,7 @@ export const plannedCaptionTrackSurfaceFragment = sealGraphFragment({
     name: "track",
     type: contractTypes.visualTrack,
     root: operation("caption:render-plan"),
-    semanticInputs: ["narrative", "map", "plan", "program"],
-    affinity: [{ resultPointer: "/programSpaceDigest", source: input("map"), sourcePointer: "/programSpace/digest" }],
+    semanticInputs: ["narrative", "map", "plan", "program", "space"],
     fidelity: "exact",
   }],
 });

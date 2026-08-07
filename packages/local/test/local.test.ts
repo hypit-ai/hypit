@@ -10,19 +10,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { FileArtifactStore } from "@svml/artifact-store-fs";
 import { MemoryArtifactStore } from "@svml/driver-node";
 import type { RecoverableEndpoint } from "@svml/endpoint-kit";
 import type {
   NodeComponentPackage,
   EndpointPackage,
 } from "@svml/local";
-import { createProjectLocalRuntime } from "@svml/local";
+import { createLocalRuntime, createProjectLocalRuntime } from "@svml/local";
 import { digestOf } from "@svml/core";
 import {
   createNodePackageLock,
   writeNodePackageLock,
 } from "@svml/package-loader-node";
-import { LocalBuildScheduler, defineRuntimeServicePackage } from "@svml/runtime";
+import { LocalBuildScheduler, MemoryBuildStore, defineRuntimeServicePackage } from "@svml/runtime";
 import type { RuntimeModuleManifest } from "@svml/runtime";
 
 import {
@@ -51,6 +52,27 @@ const providerManifest: RuntimeModuleManifest = {
     defaultConcurrency: 1,
   }],
 };
+
+test("Artifact GC is explicit, dry-run by default, and only removes unreachable managed bytes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-local-artifact-gc-"));
+  try {
+    const artifacts = new FileArtifactStore(join(directory, "artifacts"));
+    const orphan = await artifacts.put(new TextEncoder().encode("orphan"), "application/octet-stream");
+    const runtime = await createLocalRuntime({
+      buildStore: new MemoryBuildStore(),
+      artifactStore: artifacts,
+    });
+    const preview = await runtime.garbageCollectArtifacts();
+    assert.deepEqual(preview.unreachable, [orphan.digest]);
+    assert.deepEqual(preview.deleted, []);
+    assert.equal(await artifacts.has(orphan.digest), true);
+    const applied = await runtime.garbageCollectArtifacts({ apply: true });
+    assert.deepEqual(applied.deleted, [orphan.digest]);
+    assert.equal(await artifacts.has(orphan.digest), false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("project local runtime resumes durable work while component and endpoint packages stay replaceable", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-"));

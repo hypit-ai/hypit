@@ -265,7 +265,7 @@ export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element,
 
 export const decodeCaptionTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   if (element.attributes.program !== undefined) {
-    attributes(element, ["id", "narrative", "map", "program", "plan"]);
+    attributes(element, ["id", "narrative", "map", "program", "plan", "space"]);
     if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
       throw new Error(`${element.name} with a Caption Program does not accept children`);
     }
@@ -274,25 +274,27 @@ export const decodeCaptionTrackSurface: StructuredSurfaceHandler = ({ element, r
     const map = reference(element, "map", contractTypes.completeSemanticMap, resolveReference);
     const program = reference(element, "program", captionTypes.program, resolveReference);
     const plan = reference(element, "plan", captionTypes.plan, resolveReference);
+    const space = reference(element, "space", contractTypes.programSpace, resolveReference);
     return {
       records: [],
       components: [{
         id,
         fragment: plannedCaptionTrackSurfaceFragment.id,
-        inputs: { narrative: narrative.ref, map: map.ref, program: program.ref, plan: plan.ref },
+        inputs: { narrative: narrative.ref, map: map.ref, program: program.ref, plan: plan.ref, space: space.ref },
         outputs: { track: `${id}.track` },
         range: element.range,
       }],
       fragments: [plannedCaptionTrackSurfaceFragment],
     };
   }
-  attributes(element, ["id", "narrative", "map", "appearance"], ["mode"]);
+  attributes(element, ["id", "narrative", "map", "space", "appearance"], ["mode"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} provider-free base does not accept Role children`);
   }
   const id = stringAttribute(element, "id");
   const narrative = reference(element, "narrative", contractTypes.narrative, resolveReference);
   const map = reference(element, "map", contractTypes.completeSemanticMap, resolveReference);
+  const space = reference(element, "space", contractTypes.programSpace, resolveReference);
   const appearance = recipe(reference(element, "appearance", svsRecipeType, resolveReference));
   const resolvedAppearance = captionAppearance(element, appearance);
   const program = sealCaptionTrackProgram({
@@ -311,6 +313,7 @@ export const decodeCaptionTrackSurface: StructuredSurfaceHandler = ({ element, r
       inputs: {
         narrative: narrative.ref,
         map: map.ref,
+        space: space.ref,
         program: { kind: "record", id: programId },
       },
       outputs: { track: `${id}.track` },

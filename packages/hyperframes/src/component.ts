@@ -1,5 +1,5 @@
 import type { ComponentPackage } from "@svml/component-kit";
-import type { Composition } from "@svml/contracts";
+import type { Composition, ProgramSpace } from "@svml/contracts";
 import type { CanonicalValue, StoredValue } from "@svml/protocol";
 import { canonicalize } from "@svml/protocol";
 
@@ -26,6 +26,7 @@ export const hyperframesComponent = {
           kind: "inline",
           value: canonicalize(compileHyperframesDocument(
             inline(inputs.composition!.value, "Composition") as unknown as Composition,
+            inline(inputs.space!.value, "ProgramSpace") as unknown as ProgramSpace,
           )),
         },
       },

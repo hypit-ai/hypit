@@ -13,23 +13,21 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
  */
 export const hyperframesDocumentFragment = sealGraphFragment({
   name: "@svml/hyperframes/document@1",
-  inputs: [{ name: "composition", type: contractTypes.composition }],
+  inputs: [
+    { name: "composition", type: contractTypes.composition },
+    { name: "space", type: contractTypes.programSpace },
+  ],
   operations: [{
     id: "compile-document",
     producer: hyperframesProducers.compile,
-    inputs: { composition: input("composition") },
+    inputs: { composition: input("composition"), space: input("space") },
     result: { kind: "output", name: "document" },
   }],
   exports: [{
     name: "document",
     type: hyperframesTypes.document,
     root: operation("compile-document"),
-    semanticInputs: ["composition"],
-    affinity: [{
-      resultPointer: "/compositionDigest",
-      source: input("composition"),
-      sourcePointer: "/digest",
-    }],
+    semanticInputs: ["composition", "space"],
     fidelity: "exact",
   }],
 });

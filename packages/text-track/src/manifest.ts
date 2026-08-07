@@ -1,6 +1,5 @@
 import {
   contractTypes,
-  programSpaceSchema,
   videoContractDependencies,
   visualTrackSchema,
 } from "@svml/contracts";
@@ -38,7 +37,6 @@ const number = { kind: "number" } as const;
 const positiveNumber = { kind: "number", minimum: 0.000001 } as const;
 const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
 const signedInteger = { kind: "number", integer: true } as const;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({
   kind: "object",
   fields,
@@ -78,15 +76,12 @@ const textItemSchema = object({
 
 export const textTrackProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.text-track-program@1" } },
-  digest: { schema: digest },
   id: { schema: string },
-  programSpaceDigest: { schema: digest },
   items: { schema: { kind: "array", minItems: 1, items: textItemSchema } },
 });
 
 export const textTrackSpecSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.text-track-spec@1" } },
-  digest: { schema: digest },
   id: { schema: string },
   items: { schema: { kind: "array", minItems: 1, items: object({
     id: { schema: string },
@@ -104,7 +99,6 @@ export const textTrackSpecSchema: ValueSchema = object({
 const textTrackHeaderSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.text-track-header@1" } },
   id: { schema: string },
-  digest: { schema: digest },
 });
 
 const textItemSpecSchema: ValueSchema = object({
@@ -117,21 +111,11 @@ const textItemSpecSchema: ValueSchema = object({
     widthPercent: { schema: positiveNumber }, heightPercent: { schema: positiveNumber },
   }) },
   appearance: { schema: textAppearanceSchema },
-  digest: { schema: digest },
 });
 
 const textTrackSetSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.text-track-set@1" } },
-  id: { schema: string },
-  programSpace: { schema: programSpaceSchema },
   items: { schema: { kind: "array", items: textItemSchema } },
-  lastAddition: { schema: object({
-    previousSetDigest: { schema: digest },
-    itemSpecDigest: { schema: digest },
-    selectionDigest: { schema: digest, optional: true },
-    mapDigest: { schema: digest, optional: true },
-  }), optional: true },
-  digest: { schema: digest },
 });
 
 export const textTrackSurfaceImplementationDigest = digestOf("@svml/text-track/track-surface@2");
@@ -162,10 +146,7 @@ export const textTrackManifest: ModuleManifest = {
   }],
   producers: [{
     name: textTrackProducers.createSet.name,
-    inputs: [
-      { name: "space", type: contractTypes.programSpace },
-      { name: "header", type: textTrackTypes.header },
-    ],
+    inputs: [],
     outputs: [{ name: "set", type: textTrackTypes.set }],
     needs: [],
     implementation: { kind: "registered", locator: "@svml/text-track/create-set", digest: createTextTrackSetImplementationDigest },
@@ -173,6 +154,8 @@ export const textTrackManifest: ModuleManifest = {
     name: textTrackProducers.appendFull.name,
     inputs: [
       { name: "set", type: textTrackTypes.set },
+      { name: "header", type: textTrackTypes.header },
+      { name: "space", type: contractTypes.programSpace },
       { name: "spec", type: textTrackTypes.itemSpec },
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],
@@ -182,8 +165,10 @@ export const textTrackManifest: ModuleManifest = {
     name: textTrackProducers.appendSelected.name,
     inputs: [
       { name: "set", type: textTrackTypes.set },
+      { name: "header", type: textTrackTypes.header },
       { name: "map", type: contractTypes.completeSemanticMap },
       { name: "selection", type: contractTypes.narrativeSelection },
+      { name: "space", type: contractTypes.programSpace },
       { name: "spec", type: textTrackTypes.itemSpec },
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],
@@ -191,11 +176,11 @@ export const textTrackManifest: ModuleManifest = {
     implementation: { kind: "registered", locator: "@svml/text-track/append-selected", digest: appendSelectedTextItemImplementationDigest },
   }, {
     name: textTrackProducers.finalize.name,
-    inputs: [{ name: "set", type: textTrackTypes.set }],
-    outputs: [{
-      name: "program", type: textTrackTypes.program,
-      affinity: [{ resultPointer: "/programSpaceDigest", input: "set", inputPointer: "/programSpace/digest" }],
-    }],
+    inputs: [
+      { name: "header", type: textTrackTypes.header },
+      { name: "set", type: textTrackTypes.set },
+    ],
+    outputs: [{ name: "program", type: textTrackTypes.program }],
     needs: [],
     implementation: { kind: "registered", locator: "@svml/text-track/finalize", digest: finalizeTextTrackImplementationDigest },
   }, {
@@ -204,10 +189,7 @@ export const textTrackManifest: ModuleManifest = {
       { name: "space", type: contractTypes.programSpace },
       { name: "spec", type: textTrackTypes.spec },
     ],
-    outputs: [{
-      name: "program", type: textTrackTypes.program,
-      affinity: [{ resultPointer: "/programSpaceDigest", input: "space", inputPointer: "/digest" }],
-    }],
+    outputs: [{ name: "program", type: textTrackTypes.program }],
     needs: [],
     implementation: { kind: "registered", locator: "@svml/text-track/compile", digest: compileTextTrackImplementationDigest },
   }, {
@@ -216,13 +198,7 @@ export const textTrackManifest: ModuleManifest = {
       { name: "space", type: contractTypes.programSpace },
       { name: "program", type: textTrackTypes.program },
     ],
-    outputs: [{
-      name: "track",
-      type: contractTypes.visualTrack,
-      affinity: [
-        { resultPointer: "/programSpaceDigest", input: "space", inputPointer: "/digest" },
-      ],
-    }],
+    outputs: [{ name: "track", type: contractTypes.visualTrack }],
     needs: [],
     implementation: {
       kind: "registered",

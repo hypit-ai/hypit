@@ -9,8 +9,12 @@ export {
 } from "./runtime.js";
 export {
   createRuntimeFromConfig,
+  doctorRuntimeConfig,
   parseRuntimeConfig,
-  RuntimeConfigRegistry,
 } from "./config.js";
+export {
+  RuntimeAdapterRegistry,
+  RuntimeAdapterRegistry as RuntimeConfigRegistry,
+} from "@svml/runtime-adapter";
 export type * from "./types.js";
 export type * from "./config.js";

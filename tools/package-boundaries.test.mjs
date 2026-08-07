@@ -61,6 +61,8 @@ const domainNeutralPackages = new Set([
   "@svml/workspace-fs-node",
   "@svml/component-kit",
   "@svml/runtime",
+  "@svml/runtime-adapter",
+  "@svml/runtime-adapter-node",
   "@svml/endpoint-kit",
   "@svml/driver-node",
   "@svml/package-loader-node",
@@ -108,18 +110,20 @@ test("Text compilation is one explicit leaf assembly, not a Package Loader or Lo
   assert.ok(!transitive(graph, "@svml/local").has("@svml/text"));
 });
 
-test("the generic CLI reaches no Endpoint package and video CLI activates no author aggregate", async () => {
+test("generic and video CLIs reach no Provider package and video CLI activates no author aggregate", async () => {
   const graph = productionGraph(await workspacePackages());
   const dependencies = transitive(graph, "@svml/cli");
   const videoAssembly = [
     "@svml/provider-google-vertex",
     "@svml/provider-hyperframes-local",
+    "@svml/provider-image-opencv-local",
     "@svml/provider-kie",
     "@svml/provider-media-local",
     "@svml/provider-whisperx-local",
   ];
   assert.deepEqual(videoAssembly.filter((name) => dependencies.has(name)), []);
   const videoDependencies = transitive(graph, "@svml/video-cli");
+  assert.deepEqual(videoAssembly.filter((name) => videoDependencies.has(name)), []);
   assert.ok(!videoDependencies.has("@svml/script"));
   assert.ok(!videoDependencies.has("@svml/seedance-speaker"));
   assert.ok(!videoDependencies.has("@svml/broll"));

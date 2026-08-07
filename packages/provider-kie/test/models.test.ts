@@ -122,7 +122,7 @@ test("Seedream safety policy is explicit author content and contributes to reque
     nsfwCheck: true,
   });
   assert.equal(unchecked.nsfwCheck, false);
-  assert.notEqual(unchecked.requestDigest, checked.requestDigest);
+  assert.notEqual(digestOf(unchecked), digestOf(checked));
 });
 
 test("all sixteen exact capabilities translate to their documented KIE model slug", async () => {

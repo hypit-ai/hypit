@@ -48,7 +48,6 @@ export type NarrativeSelection = {
 /** One explicitly authored semantic window, independently referenceable by graph edges. */
 export type NarrativeSelectionRef = NarrativeSelection & {
   readonly contract: "svml.narrative-selection@1";
-  readonly selectionDigest: Digest;
 };
 
 export type NarrativeMomentOccurrence = {
@@ -89,9 +88,7 @@ export type CaptionProjection = {
 };
 
 /** Whole authored display projection. It contains no pronunciation replacement text. */
-export type CaptionProjectionRef = CaptionProjection & {
-  readonly projectionDigest: Digest;
-};
+export type CaptionProjectionRef = CaptionProjection;
 
 export type SemanticAnchor = {
   readonly id: string;
@@ -112,7 +109,6 @@ export type Narrative = {
   readonly semanticIndex: {
     readonly contract: "svml.semantic-index@0";
     readonly anchors: readonly SemanticAnchor[];
-    readonly digest: Digest;
   };
   readonly serializations: {
     readonly dialogue: string;
@@ -135,7 +131,6 @@ export type NarrativeExcerpt = {
     readonly dialogue: string;
     readonly speech: string;
   };
-  readonly excerptDigest: Digest;
 };
 
 /** The exact dialogue prompt for one Segment, including only explicitly authored Role prefixes. */
@@ -146,7 +141,6 @@ export type NarrativeDialogueExcerpt = {
   readonly tokenStart: number;
   readonly tokenEndExclusive: number;
   readonly dialogue: string;
-  readonly excerptDigest: Digest;
 };
 
 /** The exact spoken wording for one Segment, without Role prefixes. */
@@ -157,6 +151,4 @@ export type NarrativeSpeechExcerpt = {
   readonly tokenStart: number;
   readonly tokenEndExclusive: number;
   readonly speech: string;
-  readonly excerptDigest: Digest;
 };
-import type { Digest } from "@svml/protocol";
