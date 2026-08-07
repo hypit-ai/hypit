@@ -162,8 +162,6 @@ export function renderCaptionTrack(
             text: unit.display,
             style: textStyle(program.style),
             attributes: [
-              { name: "data-caption-basis", value: unit.basis },
-              { name: "data-caption-quality", value: unit.timingQuality },
               ...(unit.runId === undefined ? [] : [{ name: "data-caption-run", value: unit.runId }]),
               ...(unit.fields === undefined ? [] : [{ name: "data-caption-fields", value: JSON.stringify(unit.fields) }]),
             ],
@@ -242,8 +240,6 @@ export function renderCaptionProgram(
             text: unit.display,
             style: textStyle(appearance),
             attributes: [
-              { name: "data-caption-basis", value: unit.basis },
-              { name: "data-caption-quality", value: unit.timingQuality },
               { name: "data-caption-style", value: style.id },
               ...(unit.runId === undefined ? [] : [{ name: "data-caption-run", value: unit.runId }]),
               ...(unit.fields === undefined ? [] : [{ name: "data-caption-fields", value: JSON.stringify(unit.fields) }]),
