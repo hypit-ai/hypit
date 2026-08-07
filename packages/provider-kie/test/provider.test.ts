@@ -4,17 +4,17 @@ import test from "node:test";
 import {
   MemoryArtifactStore,
   EndpointRegistry,
-} from "@svml/driver-node";
-import type { EndpointRegistration } from "@svml/driver-node";
-import type { RecoverableEndpoint } from "@svml/endpoint-kit";
-import { seedanceEndpoints, sealSeedanceRequest } from "@svml/seedance";
-import { digestOf } from "@svml/protocol";
-import type { CanonicalValue, Need } from "@svml/protocol";
+} from "@narratage/driver-node";
+import type { EndpointRegistration } from "@narratage/driver-node";
+import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
+import { seedanceEndpoints, sealSeedanceRequest } from "@narratage/seedance";
+import { digestOf } from "@narratage/protocol";
+import type { CanonicalValue, Need } from "@narratage/protocol";
 import {
   createKieProvider,
   kieProviderImplementationDigest,
-} from "@svml/provider-kie";
-import { sealOperationIdentity } from "@svml/runtime";
+} from "@narratage/provider-kie";
+import { sealOperationIdentity } from "@narratage/runtime";
 
 function need(constraints: CanonicalValue): Need {
   return {

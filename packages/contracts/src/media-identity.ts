@@ -1,8 +1,8 @@
 import {
   canonicalize,
   isDigest,
-} from "@svml/protocol";
-import type { BlobRef } from "@svml/protocol";
+} from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 
 import type {
   MediaInspection,

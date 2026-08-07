@@ -2,7 +2,7 @@ import {
   assertCompositionIdentity,
   HYPERFRAMES_VISUAL_IR_V1,
   programSpaceFrameCount,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   Composition,
   FontArtifactRef,
@@ -13,9 +13,9 @@ import type {
   VisualPresent,
   VisualStyleDeclaration,
   VisualTrack,
-} from "@svml/contracts";
-import { digestOf, isDigest } from "@svml/protocol";
-import type { BlobRef, Digest } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf, isDigest } from "@narratage/protocol";
+import type { BlobRef, Digest } from "@narratage/protocol";
 
 import type {
   ArtifactUrlResolver,
@@ -23,7 +23,7 @@ import type {
   HyperframesFrameSpan,
 } from "./types.js";
 
-export const compileHyperframesImplementationDigest = digestOf("@svml/hyperframes/compile@5");
+export const compileHyperframesImplementationDigest = digestOf("@narratage/hyperframes/compile@5");
 
 const NANOSECONDS = 1_000_000_000n;
 const ARTIFACT_URI = /svml-artifact:\/\/sha256\/([0-9a-f]{64})/gu;

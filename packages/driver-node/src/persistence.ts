@@ -1,5 +1,5 @@
-import { canonicalStringify, verifyBuildState } from "@svml/core";
-import type { BuildState } from "@svml/protocol";
+import { canonicalStringify, verifyBuildState } from "@narratage/core";
+import type { BuildState } from "@narratage/protocol";
 
 export function serializeBuildState(state: BuildState): string {
   verifyBuildState(state);

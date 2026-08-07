@@ -1,5 +1,5 @@
-import type { CanonicalValue, BlobRef } from "@svml/protocol";
-import type { SeedanceModel } from "@svml/seedance";
+import type { CanonicalValue, BlobRef } from "@narratage/protocol";
+import type { SeedanceModel } from "@narratage/seedance";
 
 export type SpeakerReference = {
   readonly kind: "image" | "audio";

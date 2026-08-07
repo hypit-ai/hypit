@@ -2,11 +2,11 @@ import {
   canonicalStringify,
   digestOf,
   isDigest,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   maskSourceHeader,
   parseSourceHeader,
-} from "@svml/source";
+} from "@narratage/source";
 
 import type {
   RunDocument,

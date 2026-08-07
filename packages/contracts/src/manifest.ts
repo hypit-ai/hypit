@@ -3,9 +3,9 @@ import {
   artifactManifest,
   artifactTypes,
   blobArtifactValueSchema,
-} from "@svml/artifact";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, TypeRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/artifact";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
 
 import {
   HYPERFRAMES_VISUAL_IR_V1,
@@ -13,12 +13,12 @@ import {
   HYPERFRAMES_VISUAL_STYLE_NAMES_V1,
 } from "./hyperframes-visual-ir.js";
 
-export const narrativeModuleRef = { name: "@svml/narrative", version: "0.0.0-dev" } as const;
-export const mediaModuleRef = { name: "@svml/media", version: "0.0.0-dev" } as const;
-export const programSpaceModuleRef = { name: "@svml/program-space", version: "0.0.0-dev" } as const;
-export const speechModuleRef = { name: "@svml/speech", version: "0.0.0-dev" } as const;
-export const semanticTimeModuleRef = { name: "@svml/semantic-time", version: "0.0.0-dev" } as const;
-export const compositionModuleRef = { name: "@svml/composition", version: "0.0.0-dev" } as const;
+export const narrativeModuleRef = { name: "@narratage/narrative", version: "0.0.0-dev" } as const;
+export const mediaModuleRef = { name: "@narratage/media", version: "0.0.0-dev" } as const;
+export const programSpaceModuleRef = { name: "@narratage/program-space", version: "0.0.0-dev" } as const;
+export const speechModuleRef = { name: "@narratage/speech", version: "0.0.0-dev" } as const;
+export const semanticTimeModuleRef = { name: "@narratage/semantic-time", version: "0.0.0-dev" } as const;
+export const compositionModuleRef = { name: "@narratage/composition", version: "0.0.0-dev" } as const;
 
 export const contractTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },
@@ -573,17 +573,17 @@ export const narrativeManifest: ModuleManifest = {
 };
 
 export const mediaValidatorDigests = {
-  inspection: digestOf("@svml/media/validate-media-inspection@1"),
-  selection: digestOf("@svml/media/validate-media-stream-selection@1"),
-  synchronized: digestOf("@svml/media/validate-synchronized-media@1"),
-  renderedVisual: digestOf("@svml/media/validate-rendered-visual@1"),
-  timelineAudio: digestOf("@svml/media/validate-timeline-audio@1"),
-  muxedMedia: digestOf("@svml/media/validate-muxed-media@1"),
+  inspection: digestOf("@narratage/media/validate-media-inspection@1"),
+  selection: digestOf("@narratage/media/validate-media-stream-selection@1"),
+  synchronized: digestOf("@narratage/media/validate-synchronized-media@1"),
+  renderedVisual: digestOf("@narratage/media/validate-rendered-visual@1"),
+  timelineAudio: digestOf("@narratage/media/validate-timeline-audio@1"),
+  muxedMedia: digestOf("@narratage/media/validate-muxed-media@1"),
 } as const;
 
 export const mediaSurfaceImplementationDigests = {
-  image: digestOf("@svml/media/image-surface@1"),
-  audio: digestOf("@svml/media/audio-surface@1"),
+  image: digestOf("@narratage/media/image-surface@1"),
+  audio: digestOf("@narratage/media/audio-surface@1"),
 } as const;
 
 export const mediaManifest: ModuleManifest = {
@@ -600,7 +600,7 @@ export const mediaManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media/validate-media-inspection",
+          locator: "@narratage/media/validate-media-inspection",
           digest: mediaValidatorDigests.inspection,
         },
       },
@@ -612,7 +612,7 @@ export const mediaManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media/validate-media-stream-selection",
+          locator: "@narratage/media/validate-media-stream-selection",
           digest: mediaValidatorDigests.selection,
         },
       },
@@ -624,7 +624,7 @@ export const mediaManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media/validate-synchronized-media",
+          locator: "@narratage/media/validate-synchronized-media",
           digest: mediaValidatorDigests.synchronized,
         },
       },
@@ -636,7 +636,7 @@ export const mediaManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media/validate-rendered-visual",
+          locator: "@narratage/media/validate-rendered-visual",
           digest: mediaValidatorDigests.renderedVisual,
         },
       },
@@ -648,7 +648,7 @@ export const mediaManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media/validate-timeline-audio",
+          locator: "@narratage/media/validate-timeline-audio",
           digest: mediaValidatorDigests.timelineAudio,
         },
       },
@@ -660,7 +660,7 @@ export const mediaManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media/validate-muxed-media",
+          locator: "@narratage/media/validate-muxed-media",
           digest: mediaValidatorDigests.muxedMedia,
         },
       },
@@ -677,7 +677,7 @@ export const mediaManifest: ModuleManifest = {
       outputs: [contractTypes.blobArtifact],
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@svml/media/image-surface",
+        locator: "@narratage/media/image-surface",
         digest: mediaSurfaceImplementationDigests.image,
       },
     },
@@ -688,7 +688,7 @@ export const mediaManifest: ModuleManifest = {
       outputs: [contractTypes.blobArtifact],
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@svml/media/audio-surface",
+        locator: "@narratage/media/audio-surface",
         digest: mediaSurfaceImplementationDigests.audio,
       },
     },
@@ -752,9 +752,9 @@ export const semanticTimeManifest: ModuleManifest = {
 };
 
 export const compositionValidatorDigests = {
-  visualTrack: digestOf("@svml/composition/validate-visual-track@1"),
-  audioTrack: digestOf("@svml/composition/validate-audio-track@1"),
-  composition: digestOf("@svml/composition/validate-composition@1"),
+  visualTrack: digestOf("@narratage/composition/validate-visual-track@1"),
+  audioTrack: digestOf("@narratage/composition/validate-audio-track@1"),
+  composition: digestOf("@narratage/composition/validate-composition@1"),
 } as const;
 
 export const compositionManifest: ModuleManifest = {
@@ -773,7 +773,7 @@ export const compositionManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/composition/validate-visual-track",
+          locator: "@narratage/composition/validate-visual-track",
           digest: compositionValidatorDigests.visualTrack,
         },
       },
@@ -785,7 +785,7 @@ export const compositionManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/composition/validate-audio-track",
+          locator: "@narratage/composition/validate-audio-track",
           digest: compositionValidatorDigests.audioTrack,
         },
       },
@@ -797,7 +797,7 @@ export const compositionManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/composition/validate-composition",
+          locator: "@narratage/composition/validate-composition",
           digest: compositionValidatorDigests.composition,
         },
       },

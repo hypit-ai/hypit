@@ -2,7 +2,7 @@ import {
   canonicalize,
   digestOf,
   isDigest,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import type {
   CanonicalValue,
   CapabilityRef,
@@ -14,7 +14,7 @@ import type {
   Need,
   StoredValue,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import type {
   ArtifactStore,
   CredentialRef,
@@ -25,8 +25,8 @@ import type {
   RuntimeFacetRef,
   RuntimeModuleManifest,
   RuntimeProfileInstance,
-} from "@svml/runtime";
-import { verifyCredentialRef } from "@svml/runtime";
+} from "@narratage/runtime";
+import { verifyCredentialRef } from "@narratage/runtime";
 
 export type Awaitable<T> = T | Promise<T>;
 

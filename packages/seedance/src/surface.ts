@@ -1,12 +1,12 @@
-import { artifactTypes } from "@svml/artifact";
-import { contractTypes } from "@svml/contracts";
-import type { BlobRef, CanonicalValue } from "@svml/protocol";
+import { artifactTypes } from "@narratage/artifact";
+import { contractTypes } from "@narratage/contracts";
+import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import {
   createSeedanceGenerationFragment,

@@ -1,5 +1,5 @@
 {
-  "name": "@svml/speech-take",
+  "name": "@narratage/speech-take",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,13 +8,13 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/driver-node": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

@@ -12,7 +12,7 @@ import {
   sealTypedModule,
   start,
   verifyBuildState,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   BuildRequest,
   BuildState,
@@ -28,7 +28,7 @@ import type {
   OperationResultRef,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 const moduleRef = { name: "example.kernel-demand", version: "0.0.0" } as const;
 const types = {

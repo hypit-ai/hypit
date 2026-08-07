@@ -1,5 +1,5 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
 
 import { hyperframesProducers, hyperframesTypes } from "./manifest.js";
 
@@ -12,7 +12,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
  * can use this ordinary downstream Fragment.
  */
 export const hyperframesDocumentFragment = sealGraphFragment({
-  name: "@svml/hyperframes/document@1",
+  name: "@narratage/hyperframes/document@1",
   inputs: [
     { name: "composition", type: contractTypes.composition },
     { name: "space", type: contractTypes.programSpace },

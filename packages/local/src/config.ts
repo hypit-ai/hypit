@@ -1,15 +1,15 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import type { ComponentPackage } from "@svml/component-kit";
-import { loadNodePackageSet } from "@svml/package-loader-node";
-import { canonicalize } from "@svml/protocol";
-import type { CanonicalValue } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import { loadNodePackageSet } from "@narratage/package-loader-node";
+import { canonicalize } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 import {
   isRuntimeAdapterHostFacet,
   RuntimeAdapterRegistry,
-} from "@svml/runtime-adapter";
-import type { RuntimeDoctorDiagnostic } from "@svml/runtime-adapter";
+} from "@narratage/runtime-adapter";
+import type { RuntimeDoctorDiagnostic } from "@narratage/runtime-adapter";
 
 import { createProjectLocalRuntime } from "./runtime.js";
 import type { LocalRuntime } from "./types.js";

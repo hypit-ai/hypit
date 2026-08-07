@@ -7,27 +7,27 @@ import {
   link,
   sealBuildRequest,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   AuthorModuleError,
   elaborateAuthorModule,
   sealGraphFragment,
-} from "@svml/elaborator";
-import type { GraphFragment } from "@svml/elaborator";
+} from "@narratage/elaborator";
+import type { GraphFragment } from "@narratage/elaborator";
 import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   TextFrontendError,
   TextSurfaceRegistry,
   decodeText,
-} from "@svml/text";
+} from "@narratage/text";
 import type {
   StructuredElement,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 const laboratory = { name: "example.text-laboratory", version: "1" } as const;
 const sampleType = { module: laboratory, name: "Sample" } satisfies TypeRef;

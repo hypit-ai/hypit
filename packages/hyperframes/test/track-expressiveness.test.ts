@@ -5,19 +5,19 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   CompositableSurfaceRef,
   MediaArtifactRef,
   VisualElement,
   VisualPresent,
   VisualTrack,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   assertHyperframesDocument,
   compileHyperframesDocument,
-} from "@svml/hyperframes";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/hyperframes";
+import { digestOf } from "@narratage/protocol";
 
 const programSpace = sealProgramSpace({
   contract: "svml.program-space@1",

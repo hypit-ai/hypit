@@ -1,5 +1,5 @@
 {
-  "name": "@svml/contracts",
+  "name": "@narratage/contracts",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,12 +10,12 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }

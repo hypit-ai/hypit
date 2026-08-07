@@ -1,15 +1,15 @@
-import { assertGenerationBlobRef } from "@svml/generation";
+import { assertGenerationBlobRef } from "@narratage/generation";
 import {
   sealPromptKitInvocation,
   verifyPromptKitInvocation,
   verifyPromptProgram,
-} from "@svml/prompt-kit";
-import type { PromptKitInvocation, PromptKitScalar, PromptProgram } from "@svml/prompt-kit";
+} from "@narratage/prompt-kit";
+import type { PromptKitInvocation, PromptKitScalar, PromptProgram } from "@narratage/prompt-kit";
 import {
   sealSeedanceSpeechProgram,
   seedanceModels,
-} from "@svml/seedance";
-import type { SeedanceSpeechProgram } from "@svml/seedance";
+} from "@narratage/seedance";
+import type { SeedanceSpeechProgram } from "@narratage/seedance";
 
 import type { SpeakerTakeIntent } from "./types.js";
 

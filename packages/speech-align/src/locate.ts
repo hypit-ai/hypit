@@ -1,4 +1,4 @@
-import { digestOf, isDigest } from "@svml/protocol";
+import { digestOf, isDigest } from "@narratage/protocol";
 import type {
   AlignedTranscriptEvidence,
   AlignedTranscriptSegment,
@@ -13,14 +13,14 @@ import type {
   TimedSpeechSegment,
   TimedSpeechToken,
   TimingQuality,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 
 import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";
 import { alignCharacters, alignmentCharacters } from "./normalize.js";
 
 const EPSILON = 1e-6;
-export const speechLocatorDigest = digestOf("@svml/speech-align/locate@1");
+export const speechLocatorDigest = digestOf("@narratage/speech-align/locate@1");
 
 type MutableTiming = {
   startSec: number;

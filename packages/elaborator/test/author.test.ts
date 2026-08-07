@@ -9,20 +9,20 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   AuthorModuleError,
   elaborateAuthorModule,
   sealAuthorModule,
   sealGraphFragment,
-} from "@svml/elaborator";
-import type { GraphFragment } from "@svml/elaborator";
+} from "@narratage/elaborator";
+import type { GraphFragment } from "@narratage/elaborator";
 import type {
   LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 const laboratory = { name: "example.laboratory", version: "1" } as const;
 const sampleType = { module: laboratory, name: "Sample" } satisfies TypeRef;

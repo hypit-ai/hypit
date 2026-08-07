@@ -1,20 +1,20 @@
-# `@svml/contracts` physical video distribution
+# `@narratage/contracts` physical video distribution
 
 This transitional physical workspace package delivers six independently identified logical modules:
 
-- `@svml/narrative`;
-- `@svml/media`;
-- `@svml/program-space`;
-- `@svml/speech`;
-- `@svml/semantic-time`;
-- `@svml/composition`.
+- `@narratage/narrative`;
+- `@narratage/media`;
+- `@narratage/program-space`;
+- `@narratage/speech`;
+- `@narratage/semantic-time`;
+- `@narratage/composition`.
 
 Each has its own Manifest and digest. The physical package name is not a public nominal Type owner
-and may later become `@svml/video` without changing those logical identities. The distribution
+and may later become `@narratage/video` without changing those logical identities. The distribution
 contains Provider- and Frontend-neutral data contracts, identity validators and static schemas
 only. It does not parse SVML, execute external services, align speech or render Tracks.
 
-The domain-neutral `BlobArtifact` owner is `@svml/artifact`, not `@svml/media`. This video
+The domain-neutral `BlobArtifact` owner is `@narratage/artifact`, not `@narratage/media`. This video
 distribution depends on that module and re-exports its symbols only as a migration convenience;
 video packages that put byte Artifacts on Graph edges declare the Artifact dependency directly.
 
@@ -24,7 +24,7 @@ parser-specific object: `NarrativeExcerpt` associates a Take with a Segment,
 `NarrativeSpeechExcerpt` carries pronunciation-only estimate text, and `CaptionProjectionRef`
 identifies the whole display-side Caption truth. They keep model and Caption packages independent of
 the official Script parser. The actual `<media:Image>` Surface implementation likewise lives in the
-separate physical `@svml/media` package.
+separate physical `@narratage/media` package.
 
 `VisualTrack`, `AudioTrack` and `Composition` implement the flat composition law in
 [`../../spec/track-composition.md`](../../spec/track-composition.md). Caption, Speech and

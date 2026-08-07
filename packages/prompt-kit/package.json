@@ -1,5 +1,5 @@
 {
-  "name": "@svml/prompt-kit",
+  "name": "@narratage/prompt-kit",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,10 +10,10 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/core": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/svs": "workspace:*"
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/svs": "workspace:*"
   }
 }

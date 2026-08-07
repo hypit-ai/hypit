@@ -1,10 +1,10 @@
-# @svml/hyperframes
+# @narratage/hyperframes
 
 Deterministic reference lowering from the generic `Composition` contract to a portable
 `HyperframesDocument`.
 
 This package implements the one closed `svml.hyperframes-visual-ir@1` target declared by every
-VisualTrack. The IR is a public video protocol owned by `@svml/composition`, not an author component
+VisualTrack. The IR is a public video protocol owned by `@narratage/composition`, not an author component
 and not arbitrary CSS. Unknown properties and alternate browser semantics fail before document
 compilation; visuals outside the structural vocabulary enter as typed `CompositableSurface` values.
 
@@ -41,5 +41,5 @@ The ordinary test suite validates deterministic HTML and Artifact collection. Se
 `SVML_BROWSER_TESTS=1` to run the host integration witness that invokes the installed Hyperframes
 CLI, paints a real font and checks straight-alpha composition at the rendered pixel level. That
 test needs a local font, Chrome and FFmpeg; it is a renderer conformance witness, not Core logic.
-`@svml/provider-hyperframes-local` adds a real two-worker silent-MP4 witness and strict ffprobe
+`@narratage/provider-hyperframes-local` adds a real two-worker silent-MP4 witness and strict ffprobe
 output verification.

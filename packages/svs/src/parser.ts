@@ -1,4 +1,4 @@
-import type { CanonicalValue } from "@svml/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 
 import type { ParsedSvsRecipe, ParsedSvsSheet, SvsRecipe } from "./types.js";
 

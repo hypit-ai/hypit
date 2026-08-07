@@ -1,11 +1,11 @@
-import type { ComponentPackage } from "@svml/component-kit";
+import type { ComponentPackage } from "@narratage/component-kit";
 import type {
   NarrativeExcerpt,
   SynchronizedMedia,
   TimelineAudio,
-} from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import { speechProgramProducers } from "./manifest.js";
 import {
@@ -26,7 +26,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const speechProgramComponent = {
-  name: "@svml/speech-program",
+  name: "@narratage/speech-program",
   producers: [
     {
       producer: speechProgramProducers.createSet,

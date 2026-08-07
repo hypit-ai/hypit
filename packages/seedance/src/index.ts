@@ -1,22 +1,22 @@
-import { artifactDependency } from "@svml/artifact";
+import { artifactDependency } from "@narratage/artifact";
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-} from "@svml/generation";
-import { defineExactModelModule } from "@svml/model-kit";
+} from "@narratage/generation";
+import { defineExactModelModule } from "@narratage/model-kit";
 import {
   assertSpeechDurationIdentity,
   contractTypes,
   videoContractDependencies,
-} from "@svml/contracts";
-import type { SpeechDuration } from "@svml/contracts";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { BlobRef, Digest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/contracts";
+import type { SpeechDuration } from "@narratage/contracts";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { BlobRef, Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
-export const seedanceModuleRef = { name: "@svml/seedance", version: "0.0.0-dev" } as const;
+export const seedanceModuleRef = { name: "@narratage/seedance", version: "0.0.0-dev" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini"] as const;
 export type SeedanceModel = typeof seedanceModels[number];
 
@@ -73,13 +73,13 @@ export const seedanceSpeechCompileProducers = Object.fromEntries(
 ) as Record<SeedanceModel, ProducerRef>;
 
 export const seedanceSpeechCompileImplementationDigests = Object.fromEntries(
-  seedanceModels.map((model) => [model, digestOf(`@svml/seedance/compile-${model}-speech-request@1`)]),
+  seedanceModels.map((model) => [model, digestOf(`@narratage/seedance/compile-${model}-speech-request@1`)]),
 ) as Record<SeedanceModel, Digest>;
 
 export const seedanceSurfaceImplementationDigests = {
-  prompt: digestOf("@svml/seedance/prompt-surface@1"),
-  speech: digestOf("@svml/seedance/speech-surface@3"),
-  video: digestOf("@svml/seedance/video-surface@1"),
+  prompt: digestOf("@narratage/seedance/prompt-surface@1"),
+  speech: digestOf("@narratage/seedance/speech-surface@3"),
+  video: digestOf("@narratage/seedance/video-surface@1"),
 } as const;
 
 export function sealSeedancePrompt(text: string): SeedancePrompt {
@@ -302,7 +302,7 @@ export const seedanceManifest = {
       outputs: [seedanceTypes.prompt],
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@svml/seedance/prompt-surface",
+        locator: "@narratage/seedance/prompt-surface",
         digest: seedanceSurfaceImplementationDigests.prompt,
       },
     },
@@ -313,7 +313,7 @@ export const seedanceManifest = {
       outputs: [seedanceTypes.speechProgram, ...Object.values(seedanceEndpoints).map((endpoint) => endpoint.requestType)],
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@svml/seedance/speech-surface",
+        locator: "@narratage/seedance/speech-surface",
         digest: seedanceSurfaceImplementationDigests.speech,
       },
     },
@@ -324,7 +324,7 @@ export const seedanceManifest = {
       outputs: Object.values(seedanceEndpoints).map((endpoint) => endpoint.requestType),
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@svml/seedance/video-surface",
+        locator: "@narratage/seedance/video-surface",
         digest: seedanceSurfaceImplementationDigests.video,
       },
     },
@@ -341,7 +341,7 @@ export const seedanceManifest = {
       needs: [],
       implementation: {
         kind: "registered" as const,
-        locator: `@svml/seedance/compile-${model}-speech-request`,
+        locator: `@narratage/seedance/compile-${model}-speech-request`,
         digest: seedanceSpeechCompileImplementationDigests[model],
       },
     })),
@@ -355,7 +355,7 @@ export const seedanceComponent = {
     ...seedanceModels.map((model) => ({
       producer: seedanceSpeechCompileProducers[model],
       implementationDigest: seedanceSpeechCompileImplementationDigests[model],
-      handler: ({ inputs }: { readonly inputs: Readonly<Record<string, { readonly value: import("@svml/protocol").StoredValue }>> }) => ({
+      handler: ({ inputs }: { readonly inputs: Readonly<Record<string, { readonly value: import("@narratage/protocol").StoredValue }>> }) => ({
         outputs: {
           request: {
             kind: "inline" as const,

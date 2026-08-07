@@ -1,4 +1,4 @@
-# `@svml/protocol`
+# `@narratage/protocol`
 
 Execution-free wire contracts shared by Core, Drivers and future modules. The package defines
 canonical values, module/type references, static raw/structured Surface declarations, records and

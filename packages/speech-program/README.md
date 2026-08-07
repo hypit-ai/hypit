@@ -1,4 +1,4 @@
-# @svml/speech-program
+# @narratage/speech-program
 
 Trusted, static Graph Fragments for the first official speech-video Program.
 

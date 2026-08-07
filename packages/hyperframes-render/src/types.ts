@@ -1,1 +1,1 @@
-export type { RenderedVisual as HyperframesRenderedVisual } from "@svml/contracts";
+export type { RenderedVisual as HyperframesRenderedVisual } from "@narratage/contracts";

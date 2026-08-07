@@ -1,18 +1,18 @@
-import { artifactDependency } from "@svml/artifact";
+import { artifactDependency } from "@narratage/artifact";
 import {
   contractTypes,
   narrativeExcerptSchema,
   synchronizedMediaSchema,
   videoContractDependencies,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   mediaPipelineManifest,
   mediaPipelineModuleRef,
   mediaPipelineTypes,
-} from "@svml/media-pipeline";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { speechTakeManifest, speechTakeModuleRef } from "@svml/speech-take";
+} from "@narratage/media-pipeline";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { speechTakeManifest, speechTakeModuleRef } from "@narratage/speech-take";
 
 import {
   appendSpeechSpineTakeImplementationDigest,
@@ -21,8 +21,8 @@ import {
   createSpeechSpineSetImplementationDigest,
 } from "./program.js";
 
-export const speechProgramModuleRef = { name: "@svml/speech-program", version: "0.0.0-dev" } as const;
-export const speechSpineSurfaceImplementationDigest = digestOf("@svml/speech-program/spine-surface@1");
+export const speechProgramModuleRef = { name: "@narratage/speech-program", version: "0.0.0-dev" } as const;
+export const speechSpineSurfaceImplementationDigest = digestOf("@narratage/speech-program/spine-surface@1");
 export const speechProgramTypes = {
   spineProgram: { module: speechProgramModuleRef, name: "SpeechSpineProgram" },
   spineSet: { module: speechProgramModuleRef, name: "SpeechSpineSet" },
@@ -84,7 +84,7 @@ export const speechProgramManifest: ModuleManifest = {
       contractTypes.visualTrack, contractTypes.audioTrack],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/speech-program/spine-surface",
+      locator: "@narratage/speech-program/spine-surface",
       digest: speechSpineSurfaceImplementationDigest,
     },
   }],
@@ -94,7 +94,7 @@ export const speechProgramManifest: ModuleManifest = {
       inputs: [],
       outputs: [{ name: "set", type: speechProgramTypes.spineSet }],
       needs: [],
-      implementation: { kind: "registered", locator: "@svml/speech-program/create-spine-set", digest: createSpeechSpineSetImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/speech-program/create-spine-set", digest: createSpeechSpineSetImplementationDigest },
     },
     {
       name: speechProgramProducers.appendTake.name,
@@ -106,7 +106,7 @@ export const speechProgramManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: speechProgramTypes.spineSet }],
       needs: [],
-      implementation: { kind: "registered", locator: "@svml/speech-program/append-spine-take", digest: appendSpeechSpineTakeImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/speech-program/append-spine-take", digest: appendSpeechSpineTakeImplementationDigest },
     },
     {
       name: speechProgramProducers.compileAudio.name,
@@ -116,7 +116,7 @@ export const speechProgramManifest: ModuleManifest = {
       ],
       outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
-      implementation: { kind: "registered", locator: "@svml/speech-program/compile-spine-audio", digest: compileSpeechSpineAudioImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/speech-program/compile-spine-audio", digest: compileSpeechSpineAudioImplementationDigest },
     },
     {
       name: speechProgramProducers.assembleBasis.name,
@@ -127,7 +127,7 @@ export const speechProgramManifest: ModuleManifest = {
       ],
       outputs: [{ name: "basis", type: contractTypes.speechBasis }],
       needs: [],
-      implementation: { kind: "registered", locator: "@svml/speech-program/assemble-speech-basis", digest: assembleSpeechBasisImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/speech-program/assemble-speech-basis", digest: assembleSpeechBasisImplementationDigest },
     },
   ],
 };

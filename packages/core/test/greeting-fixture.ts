@@ -7,7 +7,7 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   BuildState,
   CapabilityRef,
@@ -16,7 +16,7 @@ import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 export const moduleRef = { name: "example.greeting", version: "0.0.0" } as const;
 
@@ -187,7 +187,7 @@ export function greetingGraph(program: LinkedProgram): CompiledGraph {
 export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
   readonly goalAccepts?: "exact" | "substitute";
-  readonly implementationClosure?: import("@svml/protocol").Digest;
+  readonly implementationClosure?: import("@narratage/protocol").Digest;
 }): BuildState {
   const closure = createResolvedClosure([manifest]);
   const authored = sealRecord({

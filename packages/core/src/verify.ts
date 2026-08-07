@@ -5,7 +5,7 @@ import type {
   Need,
   Receipt,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";

@@ -2,11 +2,11 @@ import type {
   EndpointPackage,
   EndpointRegistrar,
   EndpointRegistrationOptions,
-} from "@svml/endpoint-kit";
-import type { HostFacet } from "@svml/host";
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
-import type { CanonicalValue, Digest } from "@svml/protocol";
-import type { RuntimeServicePackage } from "@svml/runtime";
+} from "@narratage/endpoint-kit";
+import type { HostFacet } from "@narratage/host";
+import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
+import type { CanonicalValue, Digest } from "@narratage/protocol";
+import type { RuntimeServicePackage } from "@narratage/runtime";
 
 export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@1";
 

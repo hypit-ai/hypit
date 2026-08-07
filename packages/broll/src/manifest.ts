@@ -1,4 +1,4 @@
-import { artifactDependency } from "@svml/artifact";
+import { artifactDependency } from "@narratage/artifact";
 import {
   audioTrackSchema,
   contractTypes,
@@ -7,11 +7,11 @@ import {
   synchronizedMediaSchema,
   videoContractDependencies,
   visualTrackSchema,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { mediaPipelineManifest, mediaPipelineModuleRef, mediaPipelineTypes } from "@svml/media-pipeline";
-import { svsManifest, svsModuleRef } from "@svml/svs";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { mediaPipelineManifest, mediaPipelineModuleRef, mediaPipelineTypes } from "@narratage/media-pipeline";
+import { svsManifest, svsModuleRef } from "@narratage/svs";
 
 import {
   appendBrollItemImplementationDigest,
@@ -25,7 +25,7 @@ import {
   projectBrollVisualImplementationDigest,
 } from "./program.js";
 
-export const brollModuleRef = { name: "@svml/broll", version: "0.0.0-dev" } as const;
+export const brollModuleRef = { name: "@narratage/broll", version: "0.0.0-dev" } as const;
 export const brollTypes = {
   program: { module: brollModuleRef, name: "BrollProgram" },
   product: { module: brollModuleRef, name: "BrollProduct" },
@@ -130,7 +130,7 @@ export const brollSetSchema: ValueSchema = object({
   items: { schema: { kind: "array", items: item } },
 });
 
-export const brollSurfaceImplementationDigest = digestOf("@svml/broll/track-surface@1");
+export const brollSurfaceImplementationDigest = digestOf("@narratage/broll/track-surface@1");
 
 export const brollManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -158,14 +158,14 @@ export const brollManifest: ModuleManifest = {
     name: "track", tag: "Track", mode: "structured",
     outputs: [brollTypes.trackSpec, brollTypes.itemSpec, mediaPipelineTypes.selectionRequest,
       brollTypes.program, brollTypes.product, contractTypes.visualTrack, contractTypes.audioTrack],
-    implementation: { kind: "trusted-frontend-surface", locator: "@svml/broll/track-surface", digest: brollSurfaceImplementationDigest },
+    implementation: { kind: "trusted-frontend-surface", locator: "@narratage/broll/track-surface", digest: brollSurfaceImplementationDigest },
   }],
   producers: [
     {
       name: brollProducers.createSet.name,
       inputs: [],
       outputs: [{ name: "set", type: brollTypes.set }], needs: [],
-      implementation: { kind: "registered", locator: "@svml/broll/create-set", digest: createBrollSetImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/broll/create-set", digest: createBrollSetImplementationDigest },
     },
     {
       name: brollProducers.appendItem.name,
@@ -179,7 +179,7 @@ export const brollManifest: ModuleManifest = {
         { name: "spec", type: brollTypes.itemSpec },
       ],
       outputs: [{ name: "set", type: brollTypes.set }], needs: [],
-      implementation: { kind: "registered", locator: "@svml/broll/append-item", digest: appendBrollItemImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/broll/append-item", digest: appendBrollItemImplementationDigest },
     },
     {
       name: brollProducers.finalize.name,
@@ -188,7 +188,7 @@ export const brollManifest: ModuleManifest = {
         { name: "track", type: brollTypes.trackSpec },
       ],
       outputs: [{ name: "program", type: brollTypes.program }], needs: [],
-      implementation: { kind: "registered", locator: "@svml/broll/finalize-program", digest: finalizeBrollProgramImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/broll/finalize-program", digest: finalizeBrollProgramImplementationDigest },
     },
     {
       name: brollProducers.compile.name,
@@ -200,7 +200,7 @@ export const brollManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/broll/compile",
+        locator: "@narratage/broll/compile",
         digest: compileBrollImplementationDigest,
       },
     },
@@ -211,7 +211,7 @@ export const brollManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/broll/project-visual",
+        locator: "@narratage/broll/project-visual",
         digest: projectBrollVisualImplementationDigest,
       },
     },
@@ -222,7 +222,7 @@ export const brollManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/broll/project-audio",
+        locator: "@narratage/broll/project-audio",
         digest: projectBrollAudioImplementationDigest,
       },
     },

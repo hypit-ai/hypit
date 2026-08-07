@@ -1,8 +1,8 @@
-import { contractTypes } from "@svml/contracts";
-import { sealGraphFragment } from "@svml/elaborator";
-import type { FragmentOperation } from "@svml/elaborator";
-import { mediaPipelineProducers } from "@svml/media-pipeline";
-import { speechTakeProducers } from "@svml/speech-take";
+import { contractTypes } from "@narratage/contracts";
+import { sealGraphFragment } from "@narratage/elaborator";
+import type { FragmentOperation } from "@narratage/elaborator";
+import { mediaPipelineProducers } from "@narratage/media-pipeline";
+import { speechTakeProducers } from "@narratage/speech-take";
 
 import { speechProgramProducers, speechProgramTypes } from "./manifest.js";
 import type { SpeechSpineFragmentOptions } from "./types.js";
@@ -88,7 +88,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
   );
   const semanticInputs = ["program", ...options.takes.flatMap((take) => [take.mediaName, take.segmentName])];
   return sealGraphFragment({
-    name: options.name?.trim() || "@svml/speech-program/spine@1",
+    name: options.name?.trim() || "@narratage/speech-program/spine@1",
     inputs: [
       { name: "program", type: speechProgramTypes.spineProgram },
       ...options.takes.flatMap((take) => [

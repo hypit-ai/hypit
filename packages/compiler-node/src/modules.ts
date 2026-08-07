@@ -1,12 +1,12 @@
 import {
   computeModuleDigest,
   createResolvedClosure,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   ModuleManifest,
   ModuleRef,
   ResolvedModuleClosure,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { NodeCompilerError } from "./error.js";
 

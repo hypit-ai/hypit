@@ -2,8 +2,8 @@ import {
   materializeArtifact,
   materializeRecord,
   runCli,
-} from "@svml/cli";
-import type { NodePackageContribution } from "@svml/package-loader-node";
+} from "@narratage/cli";
+import type { NodePackageContribution } from "@narratage/package-loader-node";
 
 import { videoCliDistribution } from "./distribution.js";
 

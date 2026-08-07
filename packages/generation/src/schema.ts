@@ -1,4 +1,4 @@
-import type { ObjectFieldSchema, ValueSchema } from "@svml/protocol";
+import type { ObjectFieldSchema, ValueSchema } from "@narratage/protocol";
 
 export const generationDigestSchema = {
   kind: "string",

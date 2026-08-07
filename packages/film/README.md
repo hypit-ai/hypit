@@ -1,4 +1,4 @@
-# `@svml/film`
+# `@narratage/film`
 
 Official package-owned assembly layer between peer Tracks and the generic Composition waist.
 Film is an ordinary author component and an optional Target, not a Core root or a privileged video

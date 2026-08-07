@@ -1,4 +1,4 @@
-# `@svml/seedance`
+# `@narratage/seedance`
 
 Exact Seedance author model module. It owns the request schema and the namespaced `Prompt`, `Video`
 and `Speech` Surfaces; it does not contain KIE credentials, HTTP code, queues or runtime routing.

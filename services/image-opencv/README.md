@@ -1,6 +1,6 @@
 # SVML local OpenCV runtime
 
-This is the locked Python environment used by `@svml/provider-image-opencv-local`. It is deployment
+This is the locked Python environment used by `@narratage/provider-image-opencv-local`. It is deployment
 state, not an author-importable SVML package, a queue, a service daemon or part of Core.
 
 Install it once:
@@ -16,7 +16,7 @@ Then configure the Provider with the environment's interpreter:
 
 ```json
 {
-  "use": "@svml/provider-image-opencv-local",
+  "use": "@narratage/provider-image-opencv-local",
   "instance": "image.opencv.local",
   "config": {
     "pythonExecutable": "./services/image-opencv/.venv/bin/python",

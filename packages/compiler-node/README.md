@@ -1,4 +1,4 @@
-# `@svml/compiler-node`
+# `@narratage/compiler-node`
 
 Domain-neutral Node.js compiler host.
 
@@ -12,7 +12,7 @@ Source Header + registered Frontends + registered manifests
   -> Author Module + Graph
 ```
 
-Every Author Source selects its own exact Frontend through the mandatory `@svml/source` Header.
+Every Author Source selects its own exact Frontend through the mandatory `@narratage/source` Header.
 The compiler has no suffix table and no entry-Frontend default. A recursively imported source may
 select another Frontend without the importer choosing on its behalf.
 
@@ -22,7 +22,7 @@ embedding application must register the manifests and matching Frontend/Surface 
 has chosen to trust.
 
 `NodeCompiler` accepts the host-neutral `Workspace` contract. With no explicit Workspace it creates
-the convenient `@svml/workspace-fs-node` default: relative recursive Source imports are confined to
+the convenient `@narratage/workspace-fs-node` default: relative recursive Source imports are confined to
 one canonical root, symlink escapes are rejected and each edge is locked to the first bytes read for
 that compilation. A browser, Git, memory or remote Host can inject another Workspace without
 changing Frontends, Surfaces, Source Closure identity or Core.

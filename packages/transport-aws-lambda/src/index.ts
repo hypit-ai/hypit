@@ -5,9 +5,9 @@ import {
 import type {
   LambdaClientConfig,
 } from "@aws-sdk/client-lambda";
-import { canonicalize } from "@svml/protocol";
-import type { CanonicalValue } from "@svml/protocol";
-import type { JsonInvoker } from "@svml/transport";
+import { canonicalize } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
+import type { JsonInvoker } from "@narratage/transport";
 
 export type LambdaInvocationInput = {
   readonly functionName: string;

@@ -1,16 +1,16 @@
-import { digestOf } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
 import {
   LocalBuildScheduler,
   defineRuntimeServicePackage,
-} from "@svml/runtime";
-import type { RuntimeServicePackage } from "@svml/runtime";
+} from "@narratage/runtime";
+import type { RuntimeServicePackage } from "@narratage/runtime";
 
 export const localRuntimeModuleRef = {
-  name: "@svml/local",
+  name: "@narratage/local",
   version: "1",
 } as const;
 
-export const localSchedulerImplementationDigest = digestOf("@svml/local/scheduler@1");
+export const localSchedulerImplementationDigest = digestOf("@narratage/local/scheduler@1");
 
 export function createLocalSchedulerPackage(
   instance = "scheduler.local",
@@ -23,7 +23,7 @@ export function createLocalSchedulerPackage(
       facet: "scheduler",
       instance,
       implementation: {
-        locator: "@svml/local/scheduler",
+        locator: "@narratage/local/scheduler",
         digest: localSchedulerImplementationDigest,
       },
       configuration: { algorithm: "queue-free-fair-lanes", version: 1 },

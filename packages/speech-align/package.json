@@ -1,5 +1,5 @@
 {
-  "name": "@svml/speech-align",
+  "name": "@narratage/speech-align",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,11 +8,11 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/component-kit": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/protocol": "workspace:*"
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@svml/script": "workspace:*"
+    "@narratage/script": "workspace:*"
   }
 }

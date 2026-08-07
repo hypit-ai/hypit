@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
-} from "@svml/component-kit";
+} from "@narratage/component-kit";
 import {
   compositionContractsComponent,
   compositionValidatorDigests,
@@ -13,8 +13,8 @@ import {
   sealSpeechBasis,
   videoContractDependencies,
   videoContractManifests,
-} from "@svml/contracts";
-import type { SpeechBasis } from "@svml/contracts";
+} from "@narratage/contracts";
+import type { SpeechBasis } from "@narratage/contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -26,8 +26,8 @@ import {
   sealTypeValidationReceipt,
   sealTypedModule,
   start,
-} from "@svml/core";
-import { ProducerRegistry, NodeDriver } from "@svml/driver-node";
+} from "@narratage/core";
+import { ProducerRegistry, NodeDriver } from "@narratage/driver-node";
 import type {
   BuildRequest,
   CompiledGraph,
@@ -35,7 +35,7 @@ import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   projectSpeechAudio,
   projectSpeechAudioTrack,
@@ -44,8 +44,8 @@ import {
   speechTakeComponent,
   speechTakeManifest,
   speechTakeProducers,
-} from "@svml/speech-take";
-import { TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/speech-take";
+import { TypeValidatorRegistry } from "@narratage/validation";
 
 const testModule = { name: "example.speech-take-product", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "SpeechRequest" } satisfies TypeRef;

@@ -1,10 +1,10 @@
-import { contractTypes } from "@svml/contracts";
+import { contractTypes } from "@narratage/contracts";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { whisperXSpeechAlignmentFragment } from "./fragment.js";
 

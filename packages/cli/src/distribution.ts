@@ -1,8 +1,8 @@
-import type { NodeCompiler } from "@svml/compiler-node";
-import type { LocalRuntime } from "@svml/local";
-import type { RuntimeConfigDoctorResult } from "@svml/local";
-import type { NodePackageContribution } from "@svml/package-loader-node";
-import type { RunFrontend } from "@svml/run";
+import type { NodeCompiler } from "@narratage/compiler-node";
+import type { LocalRuntime } from "@narratage/local";
+import type { RuntimeConfigDoctorResult } from "@narratage/local";
+import type { NodePackageContribution } from "@narratage/package-loader-node";
+import type { RunFrontend } from "@narratage/run";
 
 export type CliCompilerOptions = {
   readonly root?: string;

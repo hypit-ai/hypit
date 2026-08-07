@@ -4,20 +4,20 @@ import {
   sealSpeechBasis,
   verifySynchronizedMedia,
   verifyTimelineAudio,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   NarrativeExcerpt,
   ProgramSpace,
   SpeechBasis,
   SynchronizedMedia,
   TimelineAudio,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import {
   sealAudioProgramPlan,
   verifyAudioProgramPlan,
-} from "@svml/media-pipeline";
-import type { AudioProgramPlan } from "@svml/media-pipeline";
-import { canonicalize, digestOf } from "@svml/protocol";
+} from "@narratage/media-pipeline";
+import type { AudioProgramPlan } from "@narratage/media-pipeline";
+import { canonicalize, digestOf } from "@narratage/protocol";
 
 import type {
   SpeechSpineProgram,
@@ -25,10 +25,10 @@ import type {
   SpeechSpineTake,
 } from "./types.js";
 
-export const createSpeechSpineSetImplementationDigest = digestOf("@svml/speech-program/create-spine-set@1");
-export const appendSpeechSpineTakeImplementationDigest = digestOf("@svml/speech-program/append-spine-take@1");
-export const compileSpeechSpineAudioImplementationDigest = digestOf("@svml/speech-program/compile-spine-audio@1");
-export const assembleSpeechBasisImplementationDigest = digestOf("@svml/speech-program/assemble-speech-basis@1");
+export const createSpeechSpineSetImplementationDigest = digestOf("@narratage/speech-program/create-spine-set@1");
+export const appendSpeechSpineTakeImplementationDigest = digestOf("@narratage/speech-program/append-spine-take@1");
+export const compileSpeechSpineAudioImplementationDigest = digestOf("@narratage/speech-program/compile-spine-audio@1");
+export const assembleSpeechBasisImplementationDigest = digestOf("@narratage/speech-program/assemble-speech-basis@1");
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

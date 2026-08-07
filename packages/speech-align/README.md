@@ -1,4 +1,4 @@
-# `@svml/speech-align`
+# `@narratage/speech-align`
 
 Provider-neutral deterministic timing locator for one aligned transcript. The package does not
 invoke Python, read audio, call a speech provider, use an LLM, infer speakers or retain multiple
@@ -23,5 +23,5 @@ lock and executes through the host-neutral compute port. The package depends onl
 contracts and protocol utilities; it has no Core, Driver, Provider, Artifact, queue or credential
 authority.
 
-Caption display is outside this package. `@svml/caption` composes the resulting complete speech
+Caption display is outside this package. `@narratage/caption` composes the resulting complete speech
 map with Script's authored Caption Projection and keeps presentation estimates local to the track.

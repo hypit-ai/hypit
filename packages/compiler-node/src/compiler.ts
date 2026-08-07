@@ -3,26 +3,26 @@ import { resolve } from "node:path";
 import {
   compileSourceClosure,
   prepareAuthorSource,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import {
   link,
   sealTypedModule,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
   AuthorSourceUnit,
   CompiledSourceClosure,
   AuthorRecordAdmitter,
-} from "@svml/elaborator";
-import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@svml/host";
-import type { LinkedProgram } from "@svml/protocol";
+} from "@narratage/elaborator";
+import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@narratage/host";
+import type { LinkedProgram } from "@narratage/protocol";
 import {
   TypeValidatorRegistry,
   createRecordAdmitter,
-} from "@svml/validation";
-import type { TypeValidatorRegistryLike } from "@svml/validation";
-import { NodeFilesystemWorkspace } from "@svml/workspace-fs-node";
+} from "@narratage/validation";
+import type { TypeValidatorRegistryLike } from "@narratage/validation";
+import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 
 import { NodeCompilerError } from "./error.js";
 import type { ModulePackageRegistryLike } from "./modules.js";

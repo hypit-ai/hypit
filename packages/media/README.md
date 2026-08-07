@@ -1,6 +1,6 @@
-# `@svml/media`
+# `@narratage/media`
 
-Author-facing media declarations for the neutral `@svml/media` contract module.
+Author-facing media declarations for the neutral `@narratage/media` contract module.
 
 `<media:Image>` and `<media:Audio>` request bytes through the Host-owned source-asset capability and
 emit one content-addressed `BlobArtifact`. They do not open files themselves, inspect media, call a

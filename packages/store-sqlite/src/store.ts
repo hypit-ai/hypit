@@ -5,12 +5,12 @@ import { DatabaseSync } from "node:sqlite";
 import {
   canonicalStringify,
   verifyBuildState,
-} from "@svml/core";
-import { digestOf } from "@svml/protocol";
+} from "@narratage/core";
+import { digestOf } from "@narratage/protocol";
 import type {
   BuildState,
   Digest,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
@@ -18,7 +18,7 @@ import {
   sealOperationCompletion,
   verifyOperationIdentity,
   verifyOperationSnapshot,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 import type {
   BuildCatalog,
   BuildCatalogDescriptor,
@@ -34,23 +34,23 @@ import type {
   OperationStoreWrite,
   OperationUpdate,
   RuntimeServicePackage,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 
 const databaseSchemaVersion = 2;
 /** Build/Operation table semantics are unchanged by the Host-only Catalog migration. */
 const executionStoreSchemaVersion = 1;
 
 export const sqliteStoreModuleRef = {
-  name: "@svml/store-sqlite",
+  name: "@narratage/store-sqlite",
   version: "1",
 } as const;
 
 export const sqliteBuildStoreImplementationDigest = digestOf(
-  "@svml/store-sqlite/build-store@1",
+  "@narratage/store-sqlite/build-store@1",
 );
 
 export const sqliteOperationStoreImplementationDigest = digestOf(
-  "@svml/store-sqlite/operation-store@1",
+  "@narratage/store-sqlite/operation-store@1",
 );
 
 export type SqliteRuntimeStateOptions = {
@@ -414,7 +414,7 @@ export class SqliteRuntimeState {
       this.#database.exec("COMMIT");
     } else {
       assert(version.schema_version === databaseSchemaVersion,
-        `unsupported @svml/store-sqlite schema ${String(version.schema_version)}`);
+        `unsupported @narratage/store-sqlite schema ${String(version.schema_version)}`);
       const catalog = this.#database.prepare(`
         SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'svml_build_catalog'
       `).get() as Row | undefined;
@@ -448,7 +448,7 @@ export function createSqliteRuntimeServicePackage(
           facet: "build-store",
           instance: buildInstance,
           implementation: {
-            locator: "@svml/store-sqlite/build-store",
+            locator: "@narratage/store-sqlite/build-store",
             digest: sqliteBuildStoreImplementationDigest,
           },
           permissions: ["filesystem:state"],
@@ -464,7 +464,7 @@ export function createSqliteRuntimeServicePackage(
           facet: "operation-store",
           instance: operationInstance,
           implementation: {
-            locator: "@svml/store-sqlite/operation-store",
+            locator: "@narratage/store-sqlite/operation-store",
             digest: sqliteOperationStoreImplementationDigest,
           },
           permissions: ["filesystem:state"],

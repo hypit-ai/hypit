@@ -1,5 +1,5 @@
 {
-  "name": "@svml/image-transform",
+  "name": "@narratage/image-transform",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,10 +8,10 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

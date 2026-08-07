@@ -1,5 +1,5 @@
 {
-  "name": "@svml/provider-hyperframes-local",
+  "name": "@narratage/provider-hyperframes-local",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -8,17 +8,17 @@
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/contracts": "workspace:*",
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/hyperframes": "workspace:*",
-    "@svml/hyperframes-render": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/runtime-adapter-node": "workspace:*",
+    "@narratage/contracts": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/hyperframes": "workspace:*",
+    "@narratage/hyperframes-render": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*",
     "hyperframes": "0.7.84"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*",
-    "@svml/driver-node": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*"
   }
 }

@@ -2,9 +2,9 @@ import {
   contractTypes,
   videoContractDependencies,
   visualTrackSchema,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 import {
   appendFullTextItemImplementationDigest,
@@ -15,7 +15,7 @@ import {
   renderTextTrackImplementationDigest,
 } from "./program.js";
 
-export const textTrackModuleRef = { name: "@svml/text-track", version: "0.0.0-dev" } as const;
+export const textTrackModuleRef = { name: "@narratage/text-track", version: "0.0.0-dev" } as const;
 export const textTrackTypes = {
   program: { module: textTrackModuleRef, name: "TextTrackProgram" },
   spec: { module: textTrackModuleRef, name: "TextTrackSpec" },
@@ -118,7 +118,7 @@ const textTrackSetSchema: ValueSchema = object({
   items: { schema: { kind: "array", items: textItemSchema } },
 });
 
-export const textTrackSurfaceImplementationDigest = digestOf("@svml/text-track/track-surface@2");
+export const textTrackSurfaceImplementationDigest = digestOf("@narratage/text-track/track-surface@2");
 
 export const textTrackManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -142,14 +142,14 @@ export const textTrackManifest: ModuleManifest = {
     name: "track", tag: "Track", mode: "structured",
     outputs: [textTrackTypes.spec, textTrackTypes.header, textTrackTypes.itemSpec,
       textTrackTypes.set, textTrackTypes.program, contractTypes.visualTrack],
-    implementation: { kind: "trusted-frontend-surface", locator: "@svml/text-track/track-surface", digest: textTrackSurfaceImplementationDigest },
+    implementation: { kind: "trusted-frontend-surface", locator: "@narratage/text-track/track-surface", digest: textTrackSurfaceImplementationDigest },
   }],
   producers: [{
     name: textTrackProducers.createSet.name,
     inputs: [],
     outputs: [{ name: "set", type: textTrackTypes.set }],
     needs: [],
-    implementation: { kind: "registered", locator: "@svml/text-track/create-set", digest: createTextTrackSetImplementationDigest },
+    implementation: { kind: "registered", locator: "@narratage/text-track/create-set", digest: createTextTrackSetImplementationDigest },
   }, {
     name: textTrackProducers.appendFull.name,
     inputs: [
@@ -160,7 +160,7 @@ export const textTrackManifest: ModuleManifest = {
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],
     needs: [],
-    implementation: { kind: "registered", locator: "@svml/text-track/append-full", digest: appendFullTextItemImplementationDigest },
+    implementation: { kind: "registered", locator: "@narratage/text-track/append-full", digest: appendFullTextItemImplementationDigest },
   }, {
     name: textTrackProducers.appendSelected.name,
     inputs: [
@@ -173,7 +173,7 @@ export const textTrackManifest: ModuleManifest = {
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],
     needs: [],
-    implementation: { kind: "registered", locator: "@svml/text-track/append-selected", digest: appendSelectedTextItemImplementationDigest },
+    implementation: { kind: "registered", locator: "@narratage/text-track/append-selected", digest: appendSelectedTextItemImplementationDigest },
   }, {
     name: textTrackProducers.finalize.name,
     inputs: [
@@ -182,7 +182,7 @@ export const textTrackManifest: ModuleManifest = {
     ],
     outputs: [{ name: "program", type: textTrackTypes.program }],
     needs: [],
-    implementation: { kind: "registered", locator: "@svml/text-track/finalize", digest: finalizeTextTrackImplementationDigest },
+    implementation: { kind: "registered", locator: "@narratage/text-track/finalize", digest: finalizeTextTrackImplementationDigest },
   }, {
     name: textTrackProducers.compile.name,
     inputs: [
@@ -191,7 +191,7 @@ export const textTrackManifest: ModuleManifest = {
     ],
     outputs: [{ name: "program", type: textTrackTypes.program }],
     needs: [],
-    implementation: { kind: "registered", locator: "@svml/text-track/compile", digest: compileTextTrackImplementationDigest },
+    implementation: { kind: "registered", locator: "@narratage/text-track/compile", digest: compileTextTrackImplementationDigest },
   }, {
     name: textTrackProducers.render.name,
     inputs: [
@@ -202,7 +202,7 @@ export const textTrackManifest: ModuleManifest = {
     needs: [],
     implementation: {
       kind: "registered",
-      locator: "@svml/text-track/render",
+      locator: "@narratage/text-track/render",
       digest: renderTextTrackImplementationDigest,
     },
   }],

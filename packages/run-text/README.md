@@ -1,11 +1,11 @@
-# `@svml/run-text`
+# `@narratage/run-text`
 
-Official human-readable Frontend for `@svml/run`.
+Official human-readable Frontend for `@narratage/run`.
 
 One Run Source is self-described and names one Author Source explicitly:
 
 ```xml
-<?svml using="@svml/run-text@1"?>
+<?svml using="@narratage/run-text@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
 

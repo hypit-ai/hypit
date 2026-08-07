@@ -1,9 +1,9 @@
 import {
   contractTypes,
   videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef } from "@svml/protocol";
+} from "@narratage/contracts";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 import {
   projectSpeechAudioImplementationDigest,
@@ -12,7 +12,7 @@ import {
   projectSpeechVisualImplementationDigest,
 } from "./projection.js";
 
-export const speechTakeModuleRef = { name: "@svml/speech-take", version: "0.0.0-dev" } as const;
+export const speechTakeModuleRef = { name: "@narratage/speech-take", version: "0.0.0-dev" } as const;
 
 export const speechTakeProducers = {
   projectAudio: { module: speechTakeModuleRef, name: "project-audio" },
@@ -41,7 +41,7 @@ export const speechTakeManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/speech-take/project-program-space",
+        locator: "@narratage/speech-take/project-program-space",
         digest: projectSpeechProgramSpaceImplementationDigest,
       },
     },
@@ -52,7 +52,7 @@ export const speechTakeManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/speech-take/project-audio",
+        locator: "@narratage/speech-take/project-audio",
         digest: projectSpeechAudioImplementationDigest,
       },
     },
@@ -63,7 +63,7 @@ export const speechTakeManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/speech-take/project-visual",
+        locator: "@narratage/speech-take/project-visual",
         digest: projectSpeechVisualImplementationDigest,
       },
     },
@@ -74,7 +74,7 @@ export const speechTakeManifest: ModuleManifest = {
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/speech-take/project-audio-track",
+        locator: "@narratage/speech-take/project-audio-track",
         digest: projectSpeechAudioTrackImplementationDigest,
       },
     },

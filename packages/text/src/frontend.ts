@@ -7,22 +7,22 @@ import {
   sealTypedModule,
   verifyClosure,
   verifyRecordStructure,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   CanonicalValue,
   ModuleRef,
   ResolvedModule,
   SurfaceDeclaration,
   TypedRecord,
-} from "@svml/protocol";
-import { sealAuthorModule } from "@svml/elaborator";
+} from "@narratage/protocol";
+import { sealAuthorModule } from "@narratage/elaborator";
 import type {
   AuthorComponent,
   AuthorSourceExport,
   AuthorValueRef,
   GraphFragment,
   ResolvedAuthorSourceImport,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 
 import { TextFrontendError } from "./error.js";
 import {
@@ -47,9 +47,9 @@ import type {
   TextImportRequest,
 } from "./types.js";
 
-export const textFrontendRef = { module: "@svml/text", version: "0.0.0-dev", name: "text" } as const;
-export const textFrontendImplementationDigest = digestOf("@svml/text/frontend@1");
-export const textAuthorFrontendId = "@svml/text@1";
+export const textFrontendRef = { module: "@narratage/text", version: "0.0.0-dev", name: "text" } as const;
+export const textFrontendImplementationDigest = digestOf("@narratage/text/frontend@1");
+export const textAuthorFrontendId = "@narratage/text@1";
 
 type BoundSurface = {
   readonly tag: string;

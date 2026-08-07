@@ -16,7 +16,7 @@ import {
   verifyRenderedVisual,
   assertSpeechEvidenceAudioIdentity,
   verifyTimelineAudio,
-} from "@svml/contracts";
+} from "@narratage/contracts";
 import type {
   MediaAudioStream,
   MediaInspection,
@@ -29,8 +29,8 @@ import type {
   SynchronizedMedia,
   SpeechEvidenceAudio,
   TimelineAudio,
-} from "@svml/contracts";
-import type { EndpointInvocationContext, EndpointFulfillment } from "@svml/endpoint-kit";
+} from "@narratage/contracts";
+import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import {
   mediaPipelineCapabilities,
   verifyAudioProgramPlan,
@@ -39,19 +39,19 @@ import {
   type NormalizeMediaNeed,
   type ProjectSpeechEvidenceAudioNeed,
   type RenderAudioNeed,
-} from "@svml/media-pipeline";
-import type { AudioProgramClip, AudioProgramPlan } from "@svml/media-pipeline";
+} from "@narratage/media-pipeline";
+import type { AudioProgramClip, AudioProgramPlan } from "@narratage/media-pipeline";
 import {
   canonicalize,
   digestOf,
-} from "@svml/protocol";
-import type { BlobRef, CanonicalValue } from "@svml/protocol";
-import { defineEndpointPackage } from "@svml/endpoint-kit";
+} from "@narratage/protocol";
+import type { BlobRef, CanonicalValue } from "@narratage/protocol";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
 
 import { parseMediaInspection } from "./probe.js";
 
-export const localMediaProviderModuleRef = { name: "@svml/provider-media-local", version: "0.0.0-dev" } as const;
-export const localMediaProviderImplementationDigest = digestOf("@svml/provider-media-local/ffmpeg@2");
+export const localMediaProviderModuleRef = { name: "@narratage/provider-media-local", version: "0.0.0-dev" } as const;
+export const localMediaProviderImplementationDigest = digestOf("@narratage/provider-media-local/ffmpeg@2");
 
 export type CreateLocalMediaProviderOptions = {
   readonly instance?: string;
@@ -461,7 +461,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     instance: config.instance ?? "media.local",
     ...(config.lane === undefined ? {} : { lane: config.lane }),
     implementation: {
-      locator: "@svml/provider-media-local/ffmpeg",
+      locator: "@narratage/provider-media-local/ffmpeg",
       digest: localMediaProviderImplementationDigest,
     },
     permissions: ["process:media"],

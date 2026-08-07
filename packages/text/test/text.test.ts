@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { narrativeManifest } from "@svml/contracts";
-import { createResolvedClosure, digestOf, isDigest, link } from "@svml/core";
-import type { ModuleManifest } from "@svml/protocol";
+import { narrativeManifest } from "@narratage/contracts";
+import { createResolvedClosure, digestOf, isDigest, link } from "@narratage/core";
+import type { ModuleManifest } from "@narratage/protocol";
 import {
   decodeScriptSurface,
   scriptManifest,
   scriptModuleRef,
   scriptSurfaceImplementationDigest,
-} from "@svml/script";
+} from "@narratage/script";
 import {
   TextFrontendError,
   TextSurfaceRegistry,
   decodeText,
   parseStructuredElement,
-} from "@svml/text";
+} from "@narratage/text";
 
 function scriptContext() {
   const closure = createResolvedClosure([narrativeManifest, scriptManifest]);
@@ -38,7 +38,7 @@ test("Text learns <script> only from an imported Script Manifest", async () => {
     {
       name: "talk.svml",
       text: `<svml>
-        <import from="@svml/script@0.0.0-dev"/>
+        <import from="@narratage/script@0.0.0-dev"/>
 
         <script id="story">
           <opening>
@@ -70,7 +70,7 @@ test("the same Script meaning has the same authored Record digest across reflow"
   const compact = await decodeText(
     {
       name: "compact.svml",
-      text: `<svml><import from="@svml/script"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
+      text: `<svml><import from="@narratage/script"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
     },
     scriptContext(),
   );
@@ -78,7 +78,7 @@ test("the same Script meaning has the same authored Record digest across reflow"
     {
       name: "multiline.svml",
       text: `<svml>
-        <import from="@svml/script"/>
+        <import from="@narratage/script"/>
         <script id="story">
           <opening>
             <ALICE>Hello.
@@ -126,7 +126,7 @@ test("a raw Surface cannot consume the Text document close", async () => {
     decodeText(
       {
         name: "swallowed.svml",
-        text: `<svml><import from="@svml/script"/><script><opening>Hello.</opening></script></svml>`,
+        text: `<svml><import from="@narratage/script"/><script><opening>Hello.</opening></script></svml>`,
       },
       { closure, registry, resolveModule: () => scriptModuleRef },
     ),
@@ -140,9 +140,9 @@ test("imports are frozen before body decoding", async () => {
       {
         name: "late.svml",
         text: `<svml>
-          <import from="@svml/script"/>
+          <import from="@narratage/script"/>
           <script><opening>Hello.</opening></script>
-          <import from="@svml/script"/>
+          <import from="@narratage/script"/>
         </svml>`,
       },
       scriptContext(),
