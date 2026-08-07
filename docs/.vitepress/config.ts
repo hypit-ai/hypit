@@ -28,46 +28,22 @@ const sharedTheme = {
   search: { provider: "local" as const },
 };
 
-const zhTheme = {
-  ...sharedTheme,
-  nav: [
-    { text: "快速开始", link: "/quickstart" },
-    { text: "开发指南", link: "/guide/components" },
-  ],
-  sidebar: {
-    "/quickstart": [
-      { text: "开始使用", items: [{ text: "Quickstart", link: "/quickstart" }] },
-    ],
-    "/guide/": [
-      {
-        text: "开发指南",
-        items: [
-          { text: "创建组件", link: "/guide/components" },
-          { text: "运行时与 Provider", link: "/guide/runtime" },
-        ],
-      },
-    ],
-  },
-  outline: { level: [2, 3] as [number, number], label: "本页目录" },
-  docFooter: { prev: "上一页", next: "下一页" },
-};
-
 const enTheme = {
   ...sharedTheme,
   nav: [
-    { text: "Quickstart", link: "/en/quickstart" },
-    { text: "Develop", link: "/en/guide/components" },
+    { text: "Quickstart", link: "/quickstart" },
+    { text: "Develop", link: "/guide/components" },
   ],
   sidebar: {
-    "/en/quickstart": [
-      { text: "Getting Started", items: [{ text: "Quickstart", link: "/en/quickstart" }] },
+    "/quickstart": [
+      { text: "Getting Started", items: [{ text: "Quickstart", link: "/quickstart" }] },
     ],
-    "/en/guide/": [
+    "/guide/": [
       {
         text: "Develop",
         items: [
-          { text: "Components", link: "/en/guide/components" },
-          { text: "Runtime & Providers", link: "/en/guide/runtime" },
+          { text: "Components", link: "/guide/components" },
+          { text: "Runtime & Providers", link: "/guide/runtime" },
         ],
       },
     ],
@@ -76,9 +52,33 @@ const enTheme = {
   docFooter: { prev: "Previous", next: "Next" },
 };
 
+const zhTheme = {
+  ...sharedTheme,
+  nav: [
+    { text: "快速开始", link: "/zh/quickstart" },
+    { text: "开发指南", link: "/zh/guide/components" },
+  ],
+  sidebar: {
+    "/zh/quickstart": [
+      { text: "开始使用", items: [{ text: "Quickstart", link: "/zh/quickstart" }] },
+    ],
+    "/zh/guide/": [
+      {
+        text: "开发指南",
+        items: [
+          { text: "创建组件", link: "/zh/guide/components" },
+          { text: "运行时与 Provider", link: "/zh/guide/runtime" },
+        ],
+      },
+    ],
+  },
+  outline: { level: [2, 3] as [number, number], label: "本页目录" },
+  docFooter: { prev: "上一页", next: "下一页" },
+};
+
 export default defineConfig({
   base: "/docs/",
-  lang: "zh-CN",
+  lang: "en-US",
   title: "Narratage",
   description: "Write the story. Compile the video.",
   appearance: false,
@@ -100,7 +100,7 @@ export default defineConfig({
     [
       "script",
       {},
-      `(function(){var p=location.pathname,b="/docs/",k="narratage-locale",l;try{l=localStorage.getItem(k)}catch(e){}if(!l)l=(navigator.language||"").toLowerCase().indexOf("zh")===0?"zh":"en";if(p===b&&l==="en")location.replace(b+"en/"+location.search+location.hash)})()`,
+      `(function(){var p=location.pathname,b="/docs/",k="narratage-locale",h="narratage-hero-intro-seen",l;try{if(sessionStorage.getItem(h)==="1")document.documentElement.classList.add("hero-intro-seen");l=localStorage.getItem(k)}catch(e){}if(!l)l=(navigator.language||"").toLowerCase().indexOf("zh")===0?"zh":"en";if(p===b&&l==="zh")location.replace(b+"zh/"+location.search+location.hash)})()`,
     ],
     ["link", { rel: "preconnect", href: "https://fonts.googleapis.com" }],
     ["link", { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" }],
@@ -120,8 +120,8 @@ export default defineConfig({
     ],
   ],
   locales: {
-    root: { label: "简体中文", lang: "zh-CN", themeConfig: zhTheme },
-    en: { label: "English", lang: "en-US", link: "/en/", themeConfig: enTheme },
+    root: { label: "English", lang: "en-US", themeConfig: enTheme },
+    zh: { label: "简体中文", lang: "zh-CN", link: "/zh/", themeConfig: zhTheme },
   },
-  themeConfig: zhTheme,
+  themeConfig: enTheme,
 });
