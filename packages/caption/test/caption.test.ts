@@ -19,8 +19,8 @@ import {
   sealAlignedTranscriptEvidence,
   sealProgramSpace,
   sealSpeechBasis,
-} from "@narratage/contracts";
-import type { AlignedTranscriptSegment, Narrative, NarrativeSelectionRef, SpeechAudioBasis } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { AlignedTranscriptSegment, Narrative, NarrativeSelectionRef, SpeechAudioBasis } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import { narrativeSelectionValue, parseScript } from "@narratage/script";
 import { locateSpeechTiming } from "@narratage/speech-align";

@@ -9,7 +9,7 @@ import {
   verifyMediaStreamSelection,
   verifyRenderedVisual,
   verifyTimelineAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   Composition,
   MuxedMedia,
@@ -17,7 +17,7 @@ import type {
   RenderedVisual,
   SpeechAudioBasis,
   TimelineAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 

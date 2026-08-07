@@ -14,7 +14,7 @@ import {
   sealTypedModule,
   start,
 } from "@narratage/core";
-import { mediaManifest, narrativeManifest } from "@narratage/contracts";
+import { mediaManifest, narrativeManifest } from "@narratage/video-contracts";
 import {
   geminiOmniComponent,
   geminiOmniEndpoints,

@@ -20,9 +20,6 @@ importers:
       '@narratage/caption-gemini':
         specifier: workspace:*
         version: link:packages/caption-gemini
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:packages/contracts
       '@narratage/estimate':
         specifier: workspace:*
         version: link:packages/estimate
@@ -104,6 +101,9 @@ importers:
       '@narratage/text-track':
         specifier: workspace:*
         version: link:packages/text-track
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:packages/video-contracts
       '@narratage/whisperx':
         specifier: workspace:*
         version: link:packages/whisperx
@@ -155,9 +155,6 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -173,6 +170,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/hyperframes':
         specifier: workspace:*
@@ -183,9 +183,6 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -198,6 +195,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/script':
         specifier: workspace:*
@@ -214,9 +214,6 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -226,6 +223,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/script':
         specifier: workspace:*
@@ -329,25 +329,6 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
-  packages/contracts:
-    dependencies:
-      '@narratage/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@narratage/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-    devDependencies:
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
-
   packages/core:
     dependencies:
       '@narratage/protocol':
@@ -387,15 +368,15 @@ importers:
       '@narratage/caption':
         specifier: workspace:*
         version: link:../caption
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/script':
         specifier: workspace:*
         version: link:../script
       '@narratage/speech-align':
         specifier: workspace:*
         version: link:../speech-align
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/elaborator:
     dependencies:
@@ -409,12 +390,12 @@ importers:
         specifier: workspace:*
         version: link:../source
     devDependencies:
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/speech-take':
         specifier: workspace:*
         version: link:../speech-take
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/endpoint-kit:
     dependencies:
@@ -430,9 +411,6 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -445,15 +423,15 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/film:
     dependencies:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -466,6 +444,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
@@ -552,24 +533,21 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/hyperframes-render:
     dependencies:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -585,6 +563,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
@@ -662,12 +643,12 @@ importers:
       '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/media-pipeline:
     dependencies:
@@ -677,15 +658,15 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
@@ -817,9 +798,6 @@ importers:
 
   packages/provider-hyperframes-local:
     dependencies:
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -838,6 +816,9 @@ importers:
       '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
       hyperframes:
         specifier: 0.7.84
         version: 0.7.84(@types/node@24.10.1)
@@ -922,9 +903,6 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
@@ -940,12 +918,12 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/provider-media-local:
     dependencies:
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -961,6 +939,9 @@ importers:
       '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
@@ -983,9 +964,6 @@ importers:
 
   packages/provider-whisperx-local:
     dependencies:
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -995,6 +973,9 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
       '@narratage/whisperx':
         specifier: workspace:*
         version: link:../whisperx
@@ -1084,9 +1065,6 @@ importers:
 
   packages/script:
     dependencies:
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
@@ -1096,15 +1074,15 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/seedance:
     dependencies:
       '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -1120,15 +1098,15 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/seedance-speaker:
     dependencies:
       '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -1153,6 +1131,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/seedream:
     dependencies:
@@ -1173,12 +1154,12 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/script':
         specifier: workspace:*
@@ -1195,9 +1176,6 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -1216,6 +1194,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
       '@narratage/whisperx':
         specifier: workspace:*
         version: link:../whisperx
@@ -1241,12 +1222,12 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
@@ -1304,21 +1285,18 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/script':
         specifier: workspace:*
         version: link:../script
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/text-track:
     dependencies:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -1331,6 +1309,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
     devDependencies:
       '@narratage/hyperframes':
         specifier: workspace:*
@@ -1388,14 +1369,30 @@ importers:
         specifier: workspace:*
         version: link:../package-loader-node
 
+  packages/video-contracts:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
+
   packages/whisperx:
     dependencies:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
@@ -1411,6 +1408,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      '@narratage/video-contracts':
+        specifier: workspace:*
+        version: link:../video-contracts
 
   packages/workspace-fs-node:
     dependencies:

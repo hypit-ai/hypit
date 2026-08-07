@@ -1,7 +1,7 @@
 import {
   contractTypes,
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { svsManifest, svsRecipeType } from "@narratage/svs";

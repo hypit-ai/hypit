@@ -2,7 +2,7 @@ import {
   assertCompositionIdentity,
   HYPERFRAMES_VISUAL_IR_V1,
   programSpaceFrameCount,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   Composition,
   FontArtifactRef,
@@ -13,7 +13,7 @@ import type {
   VisualPresent,
   VisualStyleDeclaration,
   VisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf, isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
 

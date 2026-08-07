@@ -1,6 +1,6 @@
 import type { ComponentPackage } from "@narratage/component-kit";
 import type { CaptionProgram } from "@narratage/caption";
-import type { Narrative } from "@narratage/contracts";
+import type { Narrative } from "@narratage/video-contracts";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 

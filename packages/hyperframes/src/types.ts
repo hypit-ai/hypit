@@ -1,4 +1,4 @@
-import type { HYPERFRAMES_VISUAL_IR_V1 } from "@narratage/contracts";
+import type { HYPERFRAMES_VISUAL_IR_V1 } from "@narratage/video-contracts";
 import type { BlobRef, Digest } from "@narratage/protocol";
 
 export type HyperframesFrameDomain = {

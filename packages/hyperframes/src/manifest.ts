@@ -2,7 +2,7 @@ import {
   contractTypes,
   HYPERFRAMES_VISUAL_IR_V1,
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 

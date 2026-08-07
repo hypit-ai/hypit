@@ -13,8 +13,8 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@narratage/contracts";
-import type { MediaArtifactRef } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { MediaArtifactRef } from "@narratage/video-contracts";
 import type { BrollItem, BrollPairTransition } from "@narratage/broll";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { digestOf } from "@narratage/protocol";

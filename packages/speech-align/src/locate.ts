@@ -13,7 +13,7 @@ import type {
   TimedSpeechSegment,
   TimedSpeechToken,
   TimingQuality,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 
 import { alignWordGroups } from "./align.js";
 import { SpeechAlignmentError } from "./error.js";

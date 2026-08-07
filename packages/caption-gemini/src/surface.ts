@@ -1,5 +1,5 @@
 import { captionTypes } from "@narratage/caption";
-import { contractTypes } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
 import type {
   StructuredSurfaceHandler,
   SurfaceResolvedReference,

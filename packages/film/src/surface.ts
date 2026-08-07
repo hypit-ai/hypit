@@ -1,4 +1,4 @@
-import { contractTypes } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";

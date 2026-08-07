@@ -6,8 +6,8 @@ import type {
   MediaStream,
   MediaTimestamp,
   MediaVideoStream,
-} from "@narratage/contracts";
-import { sealMediaInspection } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import { sealMediaInspection } from "@narratage/video-contracts";
 import type { BlobRef } from "@narratage/protocol";
 
 type JsonObject = Record<string, unknown>;

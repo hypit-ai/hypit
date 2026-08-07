@@ -1,4 +1,4 @@
-import type { FrameSpan } from "@narratage/contracts";
+import type { FrameSpan } from "@narratage/video-contracts";
 
 export type TextBox = {
   readonly xPercent: number;

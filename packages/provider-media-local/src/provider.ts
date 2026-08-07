@@ -16,7 +16,7 @@ import {
   verifyRenderedVisual,
   assertSpeechEvidenceAudioIdentity,
   verifyTimelineAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   MediaAudioStream,
   MediaInspection,
@@ -29,7 +29,7 @@ import type {
   SynchronizedMedia,
   SpeechEvidenceAudio,
   TimelineAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import {
   mediaPipelineCapabilities,

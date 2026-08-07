@@ -1,4 +1,4 @@
-import { mediaContractsComponent } from "@narratage/contracts";
+import { mediaContractsComponent } from "@narratage/video-contracts";
 import { createTextSurfaceHostFacet } from "@narratage/text";
 
 import {

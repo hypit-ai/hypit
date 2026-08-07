@@ -5,8 +5,8 @@ import {
   registerProducerFacets,
 } from "@narratage/component-kit";
 import type { ProducerRegistrar } from "@narratage/component-kit";
-import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/contracts";
-import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/contracts";
+import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/video-contracts";
+import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type { Digest, ProducerRef } from "@narratage/protocol";
 import {

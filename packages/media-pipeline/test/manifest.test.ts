@@ -5,7 +5,7 @@ import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   contractTypes,
   videoContractManifests,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   createResolvedClosure,
   link,

@@ -13,8 +13,8 @@ import {
   sealSpeechBasis,
   videoContractDependencies,
   videoContractManifests,
-} from "@narratage/contracts";
-import type { SpeechBasis } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { SpeechBasis } from "@narratage/video-contracts";
 import {
   createResolvedClosure,
   digestOf,

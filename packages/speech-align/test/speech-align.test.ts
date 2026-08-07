@@ -5,8 +5,8 @@ import {
   sealAlignedTranscriptEvidence,
   sealProgramSpace,
   sealSpeechBasis,
-} from "@narratage/contracts";
-import type { Narrative, SpeechAudioBasis, SpeechBasis } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { Narrative, SpeechAudioBasis, SpeechBasis } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import { parseScript } from "@narratage/script";
 import {

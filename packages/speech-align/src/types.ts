@@ -12,4 +12,4 @@ export type {
   TimedSpeechSegment,
   TimedSpeechToken,
   TimingQuality,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";

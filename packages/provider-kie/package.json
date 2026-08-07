@@ -25,7 +25,7 @@
   "devDependencies": {
     "@narratage/artifact-store-fs": "workspace:*",
     "@narratage/component-kit": "workspace:*",
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/core": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/elaborator": "workspace:*",

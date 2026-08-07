@@ -1,4 +1,4 @@
-import { contractTypes } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
 import { captionTypes } from "@narratage/caption";
 import { sealGraphFragment } from "@narratage/elaborator";
 

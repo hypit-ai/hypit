@@ -4,8 +4,8 @@ import test from "node:test";
 import {
   sealMediaInspection,
   verifyMediaStreamSelection,
-} from "@narratage/contracts";
-import type { MediaInspection, MediaVideoStream } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { MediaInspection, MediaVideoStream } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 
 import {

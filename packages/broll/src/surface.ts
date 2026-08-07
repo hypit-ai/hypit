@@ -1,5 +1,5 @@
 import { artifactTypes } from "@narratage/artifact";
-import { contractTypes } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
 import { sealGraphFragment } from "@narratage/elaborator";
 import type { FragmentOperation } from "@narratage/elaborator";
 import {

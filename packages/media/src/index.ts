@@ -7,4 +7,4 @@ export {
   mediaManifestDigest,
   mediaModuleRef,
   mediaSurfaceImplementationDigests,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";

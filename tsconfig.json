@@ -30,8 +30,8 @@
       "@narratage/endpoint-kit": [
         "packages/endpoint-kit/src/index.ts"
       ],
-      "@narratage/contracts": [
-        "packages/contracts/src/index.ts"
+      "@narratage/video-contracts": [
+        "packages/video-contracts/src/index.ts"
       ],
       "@narratage/media": [
         "packages/media/src/index.ts"
