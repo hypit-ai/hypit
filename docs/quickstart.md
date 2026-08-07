@@ -1,24 +1,24 @@
 ---
 title: Quickstart
-description: 在几分钟内检查并编译第一支 SVML 视频。
+description: Check and compile your first SVML video in minutes.
 ---
 
 # Quickstart
 
-从一份口播稿开始，编译出可交给 HyperFrames 渲染的视频页面。
+Start with a spoken script and compile it into a video page ready for HyperFrames to render.
 
-## 安装
+## Install
 
-SVML 目前需要 Node.js 22 和 pnpm。
+SVML currently requires Node.js 22 and pnpm.
 
 ```bash
 pnpm install
 pnpm build
 ```
 
-## 先看一个真实例子
+## Start with a real example
 
-仓库里的 Ranking 示例用 `@name … @/name` 在口播稿中声明语义范围，再让组件消费这个范围。下面是核心节选：
+The Ranking example in this repository uses `@name … @/name` to declare semantic ranges in the spoken script, then lets components consume those ranges. Here is the core excerpt:
 
 ```xml
 <svml version="1">
@@ -43,9 +43,9 @@ pnpm build
 </svml>
 ```
 
-这里没有手写“第 3 秒到第 7 秒”。定位器会根据口播与媒体，把 `photoshop` Selection 解析成这次构建的真实时间。
+There is no hand-written “second 3 to second 7.” The locator resolves the `photoshop` Selection against the spoken script and media into the real time range for this build.
 
-## 检查与编译
+## Check and compile
 
 ```bash
 pnpm svml check examples/regen-ranking/regen-ranking.svml
@@ -55,16 +55,16 @@ pnpm svml compile examples/regen-ranking/regen-ranking.svml \
   --out build/index.html
 ```
 
-`check` 检查声明是否完整；`lock` 固定本次构建实际使用的输入；`compile` 生成确定的 HyperFrames HTML。
+`check` verifies that the declarations are complete; `lock` freezes the inputs actually used by this build; `compile` produces deterministic HyperFrames HTML.
 
-## 渲染
+## Render
 
 ```bash
 pnpm svml render build/index.html --out build/video.mp4
 ```
 
-::: warning 当前状态
-可执行示例需要其本地媒体和对齐证据。在线 Provider 自动加载尚未实现。
+::: warning Current status
+The executable example requires its local media and alignment evidence. Automatic loading from online Providers is not implemented yet.
 :::
 
-接下来可以去[开发指南](/guide/components)，了解怎样把常用视觉封装成 SVK 组件。
+Continue to [Components](/guide/components) to learn how recurring visual treatments can be packaged as SVK components.
