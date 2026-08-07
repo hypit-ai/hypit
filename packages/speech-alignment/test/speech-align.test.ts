@@ -12,10 +12,25 @@ import { digestOf } from "@narratage/protocol";
 import { parseScript } from "@narratage/script";
 import {
   SpeechAlignmentError,
+  alignWordGroups,
   locateSpeechTiming,
   speechAlignmentComponent,
   speechAlignmentManifest,
 } from "@narratage/speech-alignment";
+
+/** The alignment classification is a property of alignWordGroups, tested at its own level. */
+function relations(
+  narrative: Narrative,
+  words: readonly SpeechWordEvidence[],
+  segmentId = "line",
+): string[] {
+  const segment = narrative.segments.find((item) => item.id === segmentId)!;
+  return alignWordGroups(
+    segmentId,
+    narrative.tokens.slice(segment.tokenStart, segment.tokenEndExclusive),
+    words,
+  ).map((group) => group.relation);
+}
 
 function evidence(args: {
   readonly basis: SpeechAudioBasis;
@@ -154,10 +169,11 @@ test("exact transcript words cover every Script and Segment anchor", () => {
 
 test("M:1 uses evidence character times instead of dividing a merged word by length", () => {
   const narrative = parseScript("merge.svml", "<line>can not</line>");
+  const merged = [{ text: "cannot", startSec: 0.1, endSec: 0.78, score: 0.93 }];
   const map = locate(narrative, {
     endSec: 1,
     durationSec: 1,
-    words: [{ text: "cannot", startSec: 0.1, endSec: 0.78, score: 0.93 }],
+    words: merged,
     chars: characters(
       "cannot",
       [0.1, 0.18, 0.27, 0.42, 0.51, 0.63],
@@ -165,7 +181,7 @@ test("M:1 uses evidence character times instead of dividing a merged word by len
     ),
   });
 
-  assert.equal(map.groups[0]?.relation, "merge");
+  assert.deepEqual(relations(narrative, merged), ["merge"]);
   assert.deepEqual(
     map.tokens.map((token) => [token.startSec, token.endSec]),
     [
@@ -177,14 +193,13 @@ test("M:1 uses evidence character times instead of dividing a merged word by len
 
 test("1:N wraps all evidence words in one Script token", () => {
   const narrative = parseScript("split.svml", "<line>website</line>");
-  const map = locate(narrative, {
-    words: [
-      { text: "web", startSec: 0.2, endSec: 0.45, score: 0.9 },
-      { text: "site", startSec: 0.5, endSec: 0.82, score: 0.91 },
-    ],
-  });
+  const split = [
+    { text: "web", startSec: 0.2, endSec: 0.45, score: 0.9 },
+    { text: "site", startSec: 0.5, endSec: 0.82, score: 0.91 },
+  ];
+  const map = locate(narrative, { words: split });
 
-  assert.equal(map.groups[0]?.relation, "split");
+  assert.deepEqual(relations(narrative, split), ["split"]);
   assert.deepEqual(
     [map.tokens[0]?.startSec, map.tokens[0]?.endSec],
     [0.2, 0.82],
@@ -193,17 +208,16 @@ test("1:N wraps all evidence words in one Script token", () => {
 
 test("a recognized filler stays an insertion and does not absorb neighboring Script words", () => {
   const narrative = parseScript("insertion.svml", "<line>I really like it.</line>");
-  const map = locate(narrative, {
-    words: [
-      { text: "I", startSec: 0.1, endSec: 0.2, score: 0.98 },
-      { text: "uh", startSec: 0.24, endSec: 0.34, score: 0.88 },
-      { text: "really", startSec: 0.4, endSec: 0.62, score: 0.95 },
-      { text: "like", startSec: 0.67, endSec: 0.82, score: 0.96 },
-      { text: "it", startSec: 0.86, endSec: 0.96, score: 0.96 },
-    ],
-  });
+  const spoken = [
+    { text: "I", startSec: 0.1, endSec: 0.2, score: 0.98 },
+    { text: "uh", startSec: 0.24, endSec: 0.34, score: 0.88 },
+    { text: "really", startSec: 0.4, endSec: 0.62, score: 0.95 },
+    { text: "like", startSec: 0.67, endSec: 0.82, score: 0.96 },
+    { text: "it", startSec: 0.86, endSec: 0.96, score: 0.96 },
+  ];
+  const map = locate(narrative, { words: spoken });
 
-  assert.deepEqual(map.groups.map((group) => group.relation), [
+  assert.deepEqual(relations(narrative, spoken), [
     "exact",
     "evidence-insertion",
     "exact",
@@ -223,15 +237,14 @@ test("a recognized filler stays an insertion and does not absorb neighboring Scr
 
 test("an omitted Script word receives the complete unmeasured interval between neighbors", () => {
   const narrative = parseScript("omission.svml", "<line>This is very good.</line>");
-  const map = locate(narrative, {
-    words: [
-      { text: "This", startSec: 0.1, endSec: 0.25, score: 0.98 },
-      { text: "is", startSec: 0.3, endSec: 0.4, score: 0.97 },
-      { text: "good", startSec: 0.6, endSec: 0.82, score: 0.98 },
-    ],
-  });
+  const spoken = [
+    { text: "This", startSec: 0.1, endSec: 0.25, score: 0.98 },
+    { text: "is", startSec: 0.3, endSec: 0.4, score: 0.97 },
+    { text: "good", startSec: 0.6, endSec: 0.82, score: 0.98 },
+  ];
+  const map = locate(narrative, { words: spoken });
 
-  assert.deepEqual(map.groups.map((group) => group.relation), [
+  assert.deepEqual(relations(narrative, spoken), [
     "exact",
     "exact",
     "source-omission",
@@ -290,7 +303,6 @@ test("multiple Script Segments stay independent even when evidence records arriv
     ["one", 0.2, 0.55],
     ["two", 1.2, 1.6],
   ]);
-  assert.deepEqual(map.groups.map((group) => group.sourceSegmentId), ["one", "two"]);
 });
 
 test("invalid overlapping evidence word windows fail instead of producing a reversed map", () => {

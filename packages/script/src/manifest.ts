@@ -8,6 +8,7 @@ export const narrativeExcerptType: TypeRef = narrativeTypes.excerpt;
 export const narrativeDialogueExcerptType: TypeRef = narrativeTypes.dialogueExcerpt;
 export const narrativeSpeechExcerptType: TypeRef = narrativeTypes.speechExcerpt;
 export const narrativeSelectionType: TypeRef = narrativeTypes.selection;
+export const narrativeMomentType: TypeRef = narrativeTypes.moment;
 export const captionProjectionType: TypeRef = narrativeTypes.captionProjection;
 export { narrativeSchema };
 
@@ -31,6 +32,7 @@ export const scriptManifest: ModuleManifest = {
         narrativeDialogueExcerptType,
         narrativeSpeechExcerptType,
         narrativeSelectionType,
+        narrativeMomentType,
         captionProjectionType,
       ],
       implementation: {

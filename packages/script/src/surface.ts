@@ -5,6 +5,7 @@ import {
   captionProjectionValue,
   narrativeDialogueExcerptValue,
   narrativeSegmentExcerptValue,
+  narrativeMomentValue,
   narrativeSelectionValue,
   narrativeSpeechExcerptValue,
   narrativeSourceMap,
@@ -14,6 +15,7 @@ import {
   captionProjectionType,
   narrativeDialogueExcerptType,
   narrativeExcerptType,
+  narrativeMomentType,
   narrativeSelectionType,
   narrativeSpeechExcerptType,
   narrativeType,
@@ -117,6 +119,15 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
         range: {
           start: selection.occurrences[0]!.open.range.start,
           end: selection.occurrences.at(-1)!.close.range.end,
+        },
+      })),
+      ...parsed.moments.map((moment) => ({
+        id: `${rawId}.moment.${moment.id}`,
+        type: narrativeMomentType,
+        value: { kind: "inline" as const, value: narrativeMomentValue(moment) },
+        range: {
+          start: moment.occurrences[0]!.range.start,
+          end: moment.occurrences.at(-1)!.range.end,
         },
       })),
     ],
