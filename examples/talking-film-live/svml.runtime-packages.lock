@@ -99,12 +99,12 @@
     {
       "name": "@svml/contracts",
       "version": "0.0.0-dev",
-      "digest": "sha256:c2f5cbb59b0f2717bd221c74f4f4318a235e2fd96bae73b1265a3abbcafebae8"
+      "digest": "sha256:e8e2f67e33c2d16f49fc4e92dc27ecfdffb51597eeac7e5c591c30259b8e01e5"
     },
     {
       "name": "@svml/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:add5f61a29c3fafe97bcb5f18c5e78bbeff44f30e9a79e61cfe8736d654eb570"
+      "digest": "sha256:92283bf2b8bd01b0c88cd250b8d86e5630f8bb175add3e7a0170a1d921307111"
     },
     {
       "name": "@svml/elaborator",
@@ -154,7 +154,7 @@
     {
       "name": "@svml/media-pipeline",
       "version": "0.0.0-dev",
-      "digest": "sha256:8abbbd818e74af7c1a42148e618d59dcbd4048110512930841ae39e0abf5a884"
+      "digest": "sha256:ee72f9caed24e356f03cfda63bde9f4eea212e62436b6c051ae9ab882ec11812"
     },
     {
       "name": "@svml/minimax-h3",
@@ -174,7 +174,7 @@
     {
       "name": "@svml/protocol",
       "version": "0.0.0-dev",
-      "digest": "sha256:79c678aebb04a4ffbafd124b4e8a154030b86b874ec8711c37dc0ca3c8618120"
+      "digest": "sha256:648a71280a37a6b61e3e2bd5ce3fe80bf256098ac907b5303b56998b3f658fe1"
     },
     {
       "name": "@svml/provider-google-vertex",
@@ -239,7 +239,7 @@
     {
       "name": "@svml/svs",
       "version": "0.0.0-dev",
-      "digest": "sha256:12c9c49ef78fa1ec352e3be0693b78d66177fc203d406c44e7665f8fcba33226"
+      "digest": "sha256:f2c65bb63aa897a43cb015b3260a6333a0e86b75219230744e39dbc3e42e541a"
     },
     {
       "name": "@svml/text",
@@ -855,7 +855,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:a1fe53038e8c6c126a1325f15a23061263d85ea4ff7067e36fb9855e77cf4a40",
-      "closureDigest": "sha256:c5bf42e84227ab789eb3335ecc7fab6553bc3fb4113a87b60641caf3551dc7cf"
+      "closureDigest": "sha256:6f79de58150cd328d3cbcd267b74626c42f8c3118e3e3c32bdf31b6cb1908d94"
     },
     {
       "specifier": "@svml/provider-hyperframes-local",
@@ -864,7 +864,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:6dbd880063eb20cfd7e1eee749184c1935c353a0cdb732b188508a2410e04eb2",
-      "closureDigest": "sha256:471bec9cd16cf74afa23f33ce53e611e8dbb7e97ca0a7d35594279c2939b9c21"
+      "closureDigest": "sha256:c1473c76b090fc5d66d6337c0dc0721f05a7b0a2759e9d8745921195857e3542"
     },
     {
       "specifier": "@svml/provider-kie",
@@ -873,7 +873,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:bfdc56dd5b01deb5da2c8cfe20e039387b0a9ffb1ce66fceae11378f28cb1bdb",
-      "closureDigest": "sha256:49ec9be89ef7e2e8a7df66436630ebf4cdd116933578213755d5bc0a406c0d40"
+      "closureDigest": "sha256:532b3e66f5cd2eab5cdaf0c70a9f4438d6d59b46945273d9c502e73e1d854afa"
     },
     {
       "specifier": "@svml/provider-media-local",
@@ -882,7 +882,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e232139c8339387f3404c29d9ea0829b7be78fb742ee48671727d9c7f899a30b",
-      "closureDigest": "sha256:7fb270ac4207264a863e1589bf254654fcdcf7c3411122d05a35831ae4377a3d"
+      "closureDigest": "sha256:a4fdc17ac0e1b261edfeccd1719044bb34cc91693958f8da55f4741e58bb91e2"
     },
     {
       "specifier": "@svml/provider-whisperx-local",
@@ -891,8 +891,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:8a1b222a41c2b8a119c973c783f14efb103745f3ff960c1d8f04aaff534918c9",
-      "closureDigest": "sha256:df3bdc7453c34720053a92ec9cfdecc92515ac35f5cfae02e2e5d2e6d611236d"
+      "closureDigest": "sha256:86e57c6250c439ade700cb9806ca370128d92934b60b016f642d933e95ca02fe"
     }
   ],
-  "digest": "sha256:5d2f6a665e5acca96f14e16ec91cb84e156fb13cb6facb54545abe14495f9762"
+  "digest": "sha256:e047c571a5cb9f8eb705d5a68444a8e7212a1f26cef442f217a510571648070c"
 }

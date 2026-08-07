@@ -17,9 +17,9 @@ deployment configuration independently chooses whether to grant author or determ
 Executable plans bind the package-lock digest as `BuildRequest.implementationClosure`.
 
 ```bash
-svml-v2 lock-packages ./svml.packages.lock --package @example/cards --root .
-svml-v2 check ./main.svml --package-lock ./svml.packages.lock --root .
+svml lock-packages ./svml.packages.lock --package @example/cards --root .
+svml check ./main.svml --package-lock ./svml.packages.lock --root .
 ```
 
-See [`../../docs/node-package-activation-v1.md`](../../docs/node-package-activation-v1.md)
+See [`../../docs/node-package-activation.md`](../../docs/node-package-activation.md)
 for the lock, trust and restart laws.

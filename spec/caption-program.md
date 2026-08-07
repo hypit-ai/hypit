@@ -1,4 +1,4 @@
-# Caption Program v1
+# Caption Program
 
 Status: implemented pre-release contract. Public names may still be polished before package
 publication; the semantic laws below are executable.

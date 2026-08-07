@@ -1,7 +1,7 @@
-# SVML Track and Composition v1
+# SVML Track and Composition
 
-Status: first executable v2 contract candidate; public freeze is gated by
-[`track-expressiveness-v1.md`](./track-expressiveness-v1.md).
+Status: first executable contract candidate; public freeze is gated by
+[`track-expressiveness.md`](./track-expressiveness.md).
 
 ## Law
 
@@ -30,7 +30,7 @@ duration or becomes a privileged Base.
 ## VisualTrack
 
 A VisualTrack is one self-contained render contribution owned by an author package. It explicitly binds the
-[`svml.hyperframes-visual-ir@1`](./hyperframes-visual-ir-v1.md) terminal language and owns zero or
+[`svml.hyperframes-visual-ir@1`](./hyperframes-visual-ir.md) terminal language and owns zero or
 more frame-exact `VisualPresent` values; every Present owns its own absolute `(order, tieBreak)`
 stacking key and one self-contained, code-free element tree made from box, text, ordinary media and
 typed compositable-Surface primitives. Parent references are Present-local. Media and exact font

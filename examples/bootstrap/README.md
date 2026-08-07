@@ -1,11 +1,11 @@
-# v2 bootstrap source example
+# Bootstrap source example
 
 This is the smallest real-file example for the official Text compiler Host. It proves that a
 self-described Text entry source can import the Script Surface and recursively compile an SVS
 source selected by another Header. There is no built-in video prelude or suffix-selected parser:
 
 ```bash
-pnpm svml:v2 check examples/v2-bootstrap/main.svml \
+pnpm svml check examples/bootstrap/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
