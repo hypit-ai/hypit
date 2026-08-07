@@ -25,8 +25,9 @@ Updating an installed package does not silently change or resume that Build unde
 New Builds can use the newly locked package without a Core release.
 
 Another domain needs only `@svml/protocol` and `@svml/core` for the irreducible state machine. It
-will usually also choose an Elaborator, compiler Host, Driver and Runtime adapters. It does not need
-the official Text Frontend, `.svrun`, video contracts or any video Endpoint.
+will usually also choose `@svml/source`, an Elaborator, `@svml/run`, a compiler Host, Driver and
+Runtime adapters. It does not need the official Text, SVS or Run Text Frontends, video contracts or
+any video Endpoint.
 
 ## 2. Installation is not authority
 
@@ -43,8 +44,10 @@ privileged implementation still requires the relevant Host to trust, lock and re
 
 ## 3. Reference Host assemblies
 
-`@svml/compiler-node` accepts an arbitrary registered entry Frontend. `@svml/package-loader-node`
-only locks and loads physical package facets; it does not select an author syntax. Host-specific
+`@svml/compiler-node` exposes separate Author and Run compiler hosts for arbitrary registered
+Frontends; each source selects its exact Frontend through a mandatory Header.
+`@svml/package-loader-node` only locks and loads physical package facets; it does not select a
+syntax. Host-specific
 executable facets carry an exact ABI and canonical identity, and stay inert until a matching Host
 selects them.
 
@@ -53,6 +56,11 @@ Host facets and combines them with the syntax-neutral compiler. `@svml/cli` is n
 command engine and has no video Prelude or video Endpoint dependency. `@svml/video-cli` is the
 explicit application Distribution that supplies the Text compiler, built-in video package
 contributions and video Runtime-config adapters.
+
+Run Fragment packages use the ordinary Host Facet envelope with ABI
+`svml.run-fragment-host@1`. The generic Loader locks that opaque identity; only the Run Host
+interprets and registers its Fragment exports. New Run capabilities therefore do not add another
+field or branch to the Loader.
 
 `@svml/artifact` owns the domain-neutral nominal `BlobArtifact` Graph type. Filesystem and S3
 packages implement the separate Runtime `ArtifactStore` port. This avoids making a non-video domain

@@ -94,7 +94,7 @@ function surfaceScope(
       if (aliases.has(request.alias)) fail(source, "TEXT_ALIAS_DUPLICATE", `Duplicate import alias "${request.alias}".`, request.range.start);
       aliases.add(request.alias);
     }
-    if (request.using !== undefined) continue;
+    if (request.kind === "source") continue;
     const module = moduleForImport(source, request, context);
     for (const declaration of module.manifest.surfaces) {
       const tag = request.alias === undefined ? declaration.tag : `${request.alias}:${declaration.tag}`;
@@ -111,11 +111,10 @@ export async function decodeText(source: SourceUnit, context: TextDecodeContext)
   const sourceImports = context.sourceImports ?? [];
   const importedBindings = new Map<string, AuthorSourceExport>();
   const importedReferences = new Map<string, SurfaceResolvedReference>();
-  for (const request of discovery.imports.filter((item) => item.using !== undefined)) {
+  for (const request of discovery.imports.filter((item) => item.kind === "source")) {
     const resolved = sourceImports.find((item) =>
       item.request.from === request.from
-      && item.request.alias === request.alias
-      && item.request.frontend === request.using);
+      && item.request.alias === request.alias);
     if (resolved === undefined) {
       fail(
         source,
@@ -143,7 +142,7 @@ export async function decodeText(source: SourceUnit, context: TextDecodeContext)
     }
   }
   const scope = surfaceScope(source, discovery.imports, context);
-  const sourceDigest = digestOf(source.text);
+  const sourceDigest = source.sourceDigest ?? digestOf(source.text);
   const frontendClosureDigest = digestOf({
     frontend: textFrontendImplementationDigest,
     surfaces: [...scope.values()]
@@ -159,7 +158,8 @@ export async function decodeText(source: SourceUnit, context: TextDecodeContext)
       .map((item) => ({
         from: item.request.from,
         alias: item.request.alias,
-        frontend: item.request.frontend,
+        frontend: item.frontend,
+        frontendDigest: item.frontendDigest,
         source: item.source,
         exports: item.exports,
       }))
@@ -435,21 +435,20 @@ export function createTextAuthorFrontend(options: TextAuthorFrontendOptions): Te
     discover(source) {
       const discovery = discoverText(source);
       return {
-        modules: discovery.imports.filter((item) => item.using === undefined).map((item) => item.from),
+        modules: discovery.imports.filter((item) => item.kind === "module").map((item) => item.from),
         sources: discovery.imports
-          .filter((item): item is TextImportRequest & { alias: string; using: string } =>
-            item.using !== undefined && item.alias !== undefined)
+          .filter((item): item is TextImportRequest & { alias: string; kind: "source" } =>
+            item.kind === "source" && item.alias !== undefined)
           .map((item) => ({
             from: item.from,
             alias: item.alias,
-            frontend: item.using,
             range: item.range,
           })),
       };
     },
     async decode(source, context) {
       const result = await decodeText(
-        { name: source.name, text: source.text },
+        { name: source.name, text: source.text, sourceDigest: source.sourceDigest },
         {
           closure: context.closure,
           registry: options.registry,

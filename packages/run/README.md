@@ -1,48 +1,23 @@
 # `@svml/run`
 
-The official human-readable frontend for one execution intention. It compiles a `.svrun` file into
-three ordinary domain-neutral facts before Core starts:
+Syntax-neutral Run Source and complete Run Graph compiler.
+
+This package is outside Core and knows no XML, filename suffix, video type, Provider or Runtime
+configuration. Given a self-described source unit, a registered `RunFrontend`, an already compiled
+Author Source and trusted Run Fragment registry, it produces:
 
 ```text
-Run Graph[] + Satisfaction[] + Target[]
+RunSourceClosure + RunDocument -> complete RunGraph
 ```
 
-It is deliberately separate from both author source and deployment configuration:
+The Run Graph always exists and binds the exact Author Graph. It contains Run Candidates,
+Operations, explicit Satisfaction edges, all named Target sets and the selected Target set. A run
+that selects only primary Candidates therefore still has identity and cannot be replaced by hidden
+CLI flags.
 
-- `.svml` says what the author means;
-- `.svrun` says what this run demands and which explicit Candidates satisfy which outputs;
-- `svml.runtime.json` says where and under which permissions the frozen plan executes.
+`RunSourceClosure` separately binds original source bytes, Frontend id/implementation and decoded
+semantic meaning. `RunFragmentRegistry` accepts trusted Fragment packages only through the
+`svml.run-fragment-host@1` Host-facet installer. Package loading does not interpret Fragment code.
 
-```xml
-<svrun version="1" source="./main.svml" targets="delivery">
-  <target-set id="delivery">
-    <target output="final.video" accepts="substitute"/>
-  </target-set>
-
-  <build-record id="opening" build="prior-build-id" output="opening-take"/>
-  <satisfy output="opening-take" candidate="opening" fidelity="substitute"/>
-</svrun>
-```
-
-`<value>` attaches a typed zero-input `StoredValue` from JSON. `<build-record>` extracts one typed
-Record from a verified prior Build by its prior Logical Output id; it is independent of the current
-output later named by `<satisfy>`. Neither is a Core Pin primitive. `<fragment>` instantiates a
-trusted package-exported Run Fragment and may expose several Candidates backed by one shared
-Operation:
-
-```xml
-<import from="@acme/preview" as="preview"/>
-<fragment id="one-black-frame" using="preview:black-video">
-  <input name="duration" from="opening.duration"/>
-</fragment>
-<satisfy output="opening.visual"
-         candidate="one-black-frame.video"
-         fidelity="substitute"/>
-```
-
-Two `<fragment>` declarations are two instances and therefore may execute twice. One declaration
-with several exports is one instance and shares its internal Operations. Imports must form the
-opening prologue and can resolve only Fragments exposed by explicitly activated trusted packages.
-
-`.svrun` cannot declare credentials, Providers, Store paths, queues, Endpoint bindings or inline
-execution callbacks.
+The optional official XML-like syntax lives in `@svml/run-text`. Another trusted Frontend can emit
+the same `RunDocument` without changing this package or Core.

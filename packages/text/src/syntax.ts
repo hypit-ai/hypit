@@ -210,18 +210,22 @@ function importRequest(source: SourceUnit, opening: OpeningTag): TextImportReque
   if (opening.name !== "import" || !opening.selfClosing) {
     fail(source, "TEXT_IMPORT", "Imports must use <import .../>.", opening.start);
   }
-  const unknown = Object.keys(opening.attributes).filter((name) => !["from", "as", "using"].includes(name));
+  const unknown = Object.keys(opening.attributes).filter((name) => !["from", "source", "as"].includes(name));
   if (unknown.length) fail(source, "TEXT_IMPORT", `Unknown import attribute "${unknown[0]}".`, opening.start);
   const alias = stringAttribute(source, opening, "as");
   if (alias !== undefined && !ALIAS.test(alias)) fail(source, "TEXT_IMPORT_ALIAS", `Invalid alias "${alias}".`, opening.start);
-  const using = stringAttribute(source, opening, "using");
-  if (using !== undefined && alias === undefined) {
-    fail(source, "TEXT_IMPORT_USING", "A source import using a codec requires an alias.", opening.start);
+  const module = stringAttribute(source, opening, "from");
+  const importedSource = stringAttribute(source, opening, "source");
+  if ((module === undefined) === (importedSource === undefined)) {
+    fail(source, "TEXT_IMPORT_KIND", "<import> requires exactly one of from or source.", opening.start);
+  }
+  if (importedSource !== undefined && alias === undefined) {
+    fail(source, "TEXT_IMPORT_SOURCE_ALIAS", "A source import requires an alias.", opening.start);
   }
   return {
-    from: stringAttribute(source, opening, "from", true)!,
+    kind: importedSource === undefined ? "module" : "source",
+    from: importedSource ?? module!,
     ...(alias === undefined ? {} : { alias }),
-    ...(using === undefined ? {} : { using }),
     range: { start: opening.start, end: opening.end },
   };
 }

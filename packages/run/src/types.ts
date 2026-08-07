@@ -4,13 +4,32 @@ import type {
 } from "@svml/elaborator";
 import type {
   BuildState,
+  Candidate,
   CanonicalValue,
+  Digest,
   NeedAcceptance,
+  OperationNode,
   Satisfaction,
   StoredValue,
   TypeRef,
 } from "@svml/protocol";
-import type { RunGraph } from "@svml/realization";
+import type { RealizationOverlay } from "@svml/realization";
+import type { SourceHeader } from "@svml/source";
+
+export type RunSourceUnit = {
+  readonly id: string;
+  readonly name: string;
+  readonly text: string;
+};
+
+export type RunFrontendSourceUnit = RunSourceUnit & {
+  readonly header: SourceHeader;
+  readonly sourceDigest: Digest;
+};
+
+export type RunAuthorSourceRequest = {
+  readonly source: string;
+};
 
 export type RunImport = {
   readonly from: string;
@@ -72,13 +91,52 @@ export type RunSatisfaction = {
 };
 
 export type RunDocument = {
-  readonly format: "svml.run-document@1";
-  readonly source: string;
+  readonly format: "svml.run-document@2";
+  readonly author: RunAuthorSourceRequest;
   readonly selectedTargets: string;
   readonly imports: readonly RunImport[];
   readonly targetSets: readonly RunTargetSet[];
   readonly candidates: readonly RunCandidateDeclaration[];
   readonly satisfactions: readonly RunSatisfaction[];
+};
+
+export type RunSourceDiscovery = {
+  readonly author: RunAuthorSourceRequest;
+  readonly imports: readonly RunImport[];
+};
+
+export type DecodedRunSource = {
+  readonly document: RunDocument;
+};
+
+export type RunFrontend = {
+  readonly id: string;
+  readonly implementationDigest: Digest;
+  discover(source: RunFrontendSourceUnit): RunSourceDiscovery | Promise<RunSourceDiscovery>;
+  decode(source: RunFrontendSourceUnit): DecodedRunSource | Promise<DecodedRunSource>;
+};
+
+export interface RunFrontendRegistryLike {
+  resolve(id: string): RunFrontend | undefined;
+}
+
+export type RunSourceUnitIdentity = {
+  readonly format: "svml.run-source-unit@1";
+  readonly id: Digest;
+  readonly frontendRequest: string;
+  readonly frontend: string;
+  readonly frontendDigest: Digest;
+  readonly sourceDigest: Digest;
+  readonly semanticDigest: Digest;
+  readonly authorSource: string;
+  readonly imports: readonly RunImport[];
+};
+
+export type RunSourceClosure = {
+  readonly format: "svml.run-source-closure@1";
+  readonly id: Digest;
+  readonly entry: Digest;
+  readonly units: readonly RunSourceUnitIdentity[];
 };
 
 export type RunFragmentPackage = {
@@ -90,17 +148,39 @@ export interface RunFragmentRegistryLike {
   resolve(packageName: string, fragmentName: string): GraphFragment | undefined;
 }
 
+export type ResolvedRunTargetSet = {
+  readonly id: string;
+  readonly targets: readonly {
+    readonly output: string;
+    readonly accepts: NeedAcceptance;
+  }[];
+};
+
+/** Complete, mandatory execution-intent graph. Empty alternate Candidate sets are still a Run Graph. */
+export type RunGraph = {
+  readonly format: "svml.run-graph@1";
+  readonly id: Digest;
+  readonly authorGraph: Digest;
+  readonly sourceClosure: Digest;
+  readonly candidates: readonly Candidate[];
+  readonly operations: readonly OperationNode[];
+  readonly satisfactions: readonly Satisfaction[];
+  readonly targetSets: readonly ResolvedRunTargetSet[];
+  readonly selectedTargets: string;
+};
+
 export type ResolveRunDocumentContext = {
   readonly compilation: CompiledSourceClosure;
+  readonly sourceClosure: RunSourceClosure;
   readonly fragments: RunFragmentRegistryLike;
   readonly readStoredValue: (from: string) => Promise<StoredValue> | StoredValue;
   readonly readBuild: (id: string) => Promise<BuildState | undefined> | BuildState | undefined;
 };
 
-export type ResolvedRunDocument = {
-  readonly source: string;
-  readonly targets: readonly { readonly name: string; readonly accepts: NeedAcceptance }[];
-  readonly graphs: readonly RunGraph[];
-  readonly satisfactions: readonly Satisfaction[];
+export type RunCompilation = {
+  readonly closure: RunSourceClosure;
+  readonly document: RunDocument;
+  readonly graph: RunGraph;
+  readonly overlay?: RealizationOverlay;
   readonly candidates: Readonly<Record<string, string>>;
 };

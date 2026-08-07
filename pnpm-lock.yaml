@@ -33,6 +33,9 @@ importers:
       '@svml/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
+      '@svml/run-text':
+        specifier: workspace:*
+        version: link:packages/run-text
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
@@ -177,6 +180,9 @@ importers:
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
 
   packages/compiler-node:
     dependencies:
@@ -195,6 +201,12 @@ importers:
       '@svml/realization':
         specifier: workspace:*
         version: link:../realization
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
@@ -319,6 +331,9 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
     devDependencies:
       '@svml/contracts':
         specifier: workspace:*
@@ -637,6 +652,9 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
       '@svml/validation':
         specifier: workspace:*
         version: link:../validation
@@ -898,22 +916,36 @@ importers:
 
   packages/run:
     dependencies:
+      '@svml/core':
+        specifier: workspace:*
+        version: link:../core
       '@svml/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@svml/host':
+        specifier: workspace:*
+        version: link:../host
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@svml/realization':
         specifier: workspace:*
         version: link:../realization
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
+
+  packages/run-text:
+    dependencies:
+      '@svml/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@svml/run':
+        specifier: workspace:*
+        version: link:../run
       '@svml/text':
         specifier: workspace:*
         version: link:../text
-    devDependencies:
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
 
   packages/runtime:
     dependencies:
@@ -971,6 +1003,8 @@ importers:
       '@svml/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/source: {}
 
   packages/speech-align:
     dependencies:
@@ -1086,6 +1120,9 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
+      '@svml/source':
+        specifier: workspace:*
+        version: link:../source
       '@svml/text':
         specifier: workspace:*
         version: link:../text
@@ -1208,6 +1245,9 @@ importers:
       '@svml/provider-whisperx-local':
         specifier: workspace:*
         version: link:../provider-whisperx-local
+      '@svml/run-text':
+        specifier: workspace:*
+        version: link:../run-text
       '@svml/runtime':
         specifier: workspace:*
         version: link:../runtime

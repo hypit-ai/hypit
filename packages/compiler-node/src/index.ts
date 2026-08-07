@@ -7,9 +7,13 @@ export type {
   RegisteredModulePackage,
 } from "./modules.js";
 export { NodeCompiler } from "./compiler.js";
+export { NodeRunCompiler } from "./run.js";
 export type {
   NodeCompilerOptions,
   NodeCompiledSourceClosure,
-  PlannedSource,
-  PlanFileOptions,
 } from "./compiler.js";
+export type {
+  NodeCompiledRun,
+  NodeRunCompilerOptions,
+  PlannedBuild,
+} from "./run.js";

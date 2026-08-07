@@ -6,12 +6,15 @@ This package is outside Core. It connects a replaceable definition-time `Workspa
 implemented compiler IR:
 
 ```text
-file + registered Frontends + registered manifests
+Source Header + registered Frontends + registered manifests
   -> discovered Source/Module closure
   -> typed Source Closure
   -> Author Module + Graph
-  -> optional BuildPlan for named exports
 ```
+
+Every Author Source selects its own exact Frontend through the mandatory `@svml/source` Header.
+The compiler has no suffix table and no entry-Frontend default. A recursively imported source may
+select another Frontend without the importer choosing on its behalf.
 
 `ModulePackageRegistry` maps author import spellings to exact, already trusted manifests and closes
 their digest-bound dependencies. It does not install npm packages or execute module code. An
@@ -35,10 +38,16 @@ SourceUnit recursion and Source Asset resolution are intentionally different cap
 asset cannot import syntax, and a source import does not silently make arbitrary neighboring bytes
 available to package code.
 
-`NodeCompiler` runs a discovery pass first because Frontends must be known before source decoding,
+`NodeCompiler` runs a discovery pass first because Headers and imports must be known before source decoding,
 while the exact Module Closure must be known before typed Records can be verified. It then invokes
-the ordinary Elaborator Source Closure implementation. `planFile()` resolves author-facing export
-names to Logical Outputs and asks Core to derive the finite reverse-demand plan.
+the ordinary Elaborator Source Closure implementation.
+
+`NodeRunCompiler` is the separate dual-graph assembly. It compiles one self-described Run Source,
+opens its explicitly named Author Source in the same Workspace session, resolves the complete Run
+Graph, extends the execution Program Closure with Modules referenced only by selected Run
+Fragments, binds Author and Run graph identities into the final immutable graph, and only then asks
+Core for a finite BuildPlan. The Author Graph remains unchanged. There is no Author-only planning
+shortcut.
 
 The package contains no Script, video, Provider, queue, credentials or rendering knowledge. A
 non-video application can use it with only its own manifests, Frontends, Surfaces and chosen

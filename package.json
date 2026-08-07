@@ -40,6 +40,7 @@
     "@svml/provider-kie": "workspace:*",
     "@svml/provider-media-local": "workspace:*",
     "@svml/provider-whisperx-local": "workspace:*",
+    "@svml/run-text": "workspace:*",
     "@types/node": "24.10.1",
     "tsx": "4.21.0",
     "typescript": "5.9.3"

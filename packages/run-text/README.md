@@ -1,0 +1,30 @@
+# `@svml/run-text`
+
+Official human-readable Frontend for `@svml/run`.
+
+One Run Source is self-described and names one Author Source explicitly:
+
+```xml
+<?svml using="@svml/run-text@1"?>
+<svrun version="1" targets="delivery">
+  <author source="./main.svml"/>
+
+  <target-set id="delivery">
+    <target output="final.video" accepts="substitute"/>
+  </target-set>
+
+  <build-record id="opening" build="prior-build-id" output="opening-take"/>
+  <satisfy output="opening-take" candidate="opening" fidelity="substitute"/>
+</svrun>
+```
+
+The Author Source's own Header—not this file and not its suffix—selects its Author Frontend.
+
+`<value>` declares a typed zero-input `StoredValue`. `<build-record>` exposes a verified prior
+Build Record as a zero-input Candidate. `<fragment>` instantiates a trusted package Fragment and may
+export several Candidates backed by shared Operations. Two declarations are two instances; one
+declaration with several exports is one instance.
+
+Imports form the opening prologue. They name Fragment libraries already admitted by the Host; they
+do not install packages. Provider credentials, queues, Stores, Endpoint bindings and inline
+callbacks are not Run language elements.

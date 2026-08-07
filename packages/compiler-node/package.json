@@ -12,6 +12,8 @@
     "@svml/host": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/realization": "workspace:*",
+    "@svml/run": "workspace:*",
+    "@svml/source": "workspace:*",
     "@svml/validation": "workspace:*",
     "@svml/workspace-fs-node": "workspace:*"
   },

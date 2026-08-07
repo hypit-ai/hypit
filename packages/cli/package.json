@@ -13,6 +13,7 @@
     "@svml/protocol": "workspace:*",
     "@svml/realization": "workspace:*",
     "@svml/run": "workspace:*",
+    "@svml/source": "workspace:*",
     "@svml/runtime": "workspace:*"
   }
 }
