@@ -1,6 +1,8 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { ProgramSpace } from "@narratage/video-contracts";
-import type { CompleteSemanticMap, NarrativeSelectionRef, SynchronizedMedia } from "@narratage/video-contracts";
+import type { NarrativeSelection, NarrativeSelectionRef } from "@narratage/narrative";
+import type { SynchronizedMedia } from "@narratage/media";
+import type { ProgramSpace } from "@narratage/program-space";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 

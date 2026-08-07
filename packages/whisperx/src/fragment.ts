@@ -1,7 +1,10 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { narrativeTypes } from "@narratage/narrative";
+import { speechTypes } from "@narratage/speech";
+import { speechEvidenceTypes } from "@narratage/speech-evidence";
+import { semanticMapTypes } from "@narratage/semantic-map";
 import { sealGraphFragment } from "@narratage/elaborator";
 import { mediaPipelineProducers } from "@narratage/media-pipeline";
-import { speechAlignProducers } from "@narratage/speech-align";
+import { speechAlignmentProducers } from "@narratage/speech-alignment";
 
 import { whisperXProducers, whisperXTypes } from "./manifest.js";
 
@@ -12,8 +15,8 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const whisperXSpeechAlignmentFragment = sealGraphFragment({
   name: "@narratage/whisperx/speech-alignment@1",
   inputs: [
-    { name: "narrative", type: contractTypes.narrative },
-    { name: "audio", type: contractTypes.speechAudioBasis },
+    { name: "narrative", type: narrativeTypes.narrative },
+    { name: "audio", type: speechTypes.audioBasis },
   ],
   operations: [
     {
@@ -36,7 +39,7 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
     },
     {
       id: "locate-speech",
-      producer: speechAlignProducers.locate,
+      producer: speechAlignmentProducers.locate,
       inputs: { narrative: input("narrative"), audio: input("audio"), evidence: operation("normalize-evidence") },
       result: { kind: "output", name: "map" },
     },
@@ -51,14 +54,14 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
     },
     {
       name: "evidence",
-      type: contractTypes.alignedTranscriptEvidence,
+      type: speechEvidenceTypes.alignedTranscript,
       root: operation("normalize-evidence"),
       semanticInputs: ["audio"],
       fidelity: "exact",
     },
     {
       name: "map",
-      type: contractTypes.completeSemanticMap,
+      type: semanticMapTypes.complete,
       root: operation("locate-speech"),
       semanticInputs: ["narrative", "audio"],
       fidelity: "exact",

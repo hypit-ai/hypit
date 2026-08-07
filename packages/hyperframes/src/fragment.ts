@@ -1,4 +1,6 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { programSpaceTypes } from "@narratage/program-space";
+import { compositionTypes } from "@narratage/composition";
+import type { Composition } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
 
 import { hyperframesProducers, hyperframesTypes } from "./manifest.js";
@@ -14,8 +16,8 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const hyperframesDocumentFragment = sealGraphFragment({
   name: "@narratage/hyperframes/document@1",
   inputs: [
-    { name: "composition", type: contractTypes.composition },
-    { name: "space", type: contractTypes.programSpace },
+    { name: "composition", type: compositionTypes.composition },
+    { name: "space", type: programSpaceTypes.programSpace },
   ],
   operations: [{
     id: "compile-document",

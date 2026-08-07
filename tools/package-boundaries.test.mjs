@@ -53,7 +53,6 @@ const domainNeutralPackages = new Set([
   "@narratage/core",
   "@narratage/source",
   "@narratage/elaborator",
-  "@narratage/realization",
   "@narratage/run",
   "@narratage/validation",
   "@narratage/host",
@@ -135,8 +134,8 @@ test("generic and video CLIs reach no Provider package and video CLI activates n
 test("domain packages confine their Text dependency to Surface and activation entries", async () => {
   const { readdir, readFile } = await import("node:fs/promises");
   const surfaceOnly = [
-    "broll", "caption", "caption-gemini", "estimate", "film", "hyperframes-render",
-    "image-transform", "media", "seedance", "seedance-speaker", "speech-program", "whisperx",
+    "broll", "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
+    "image-transform", "media", "seedance", "seedance-speaker", "speech-spine", "whisperx",
   ];
   const allowed = new Set(["surface.ts", "activation.ts"]);
   for (const name of surfaceOnly) {

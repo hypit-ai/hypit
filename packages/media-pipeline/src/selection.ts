@@ -1,13 +1,7 @@
-import {
-  sealMediaStreamSelection,
-  verifyMediaInspection,
-} from "@narratage/video-contracts";
-import type {
-  MediaAudioStream,
-  MediaInspection,
-  MediaStreamSelection,
-  MediaVideoStream,
-} from "@narratage/video-contracts";
+import type { Narrative } from "@narratage/narrative";
+import { sealMediaStreamSelection, verifyMediaInspection } from "@narratage/media";
+import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream } from "@narratage/media";
+import type { SpeechBasis } from "@narratage/speech";
 import {
   canonicalize,
 } from "@narratage/protocol";

@@ -1,7 +1,5 @@
-import {
-  contractTypes,
-  videoContractDependencies,
-} from "@narratage/video-contracts";
+import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
+import { speechDependency, speechTypes } from "@narratage/speech";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { svsManifest, svsRecipeType } from "@narratage/svs";
@@ -36,8 +34,8 @@ export const estimateManifest: ModuleManifest = {
   name: estimateModuleRef.name,
   version: estimateModuleRef.version,
   dependencies: [
-    videoContractDependencies.narrative,
-    videoContractDependencies.speech,
+    narrativeDependency,
+    speechDependency,
     { module: svsRecipeType.module, digest: digestOf(svsManifest) },
   ],
   types: [{ name: estimateTypes.speechPolicy.name, schema: speechEstimatePolicySchema }],
@@ -46,7 +44,7 @@ export const estimateManifest: ModuleManifest = {
     name: "speech",
     tag: "Speech",
     mode: "structured",
-    outputs: [estimateTypes.speechPolicy, contractTypes.speechDuration],
+    outputs: [estimateTypes.speechPolicy, speechTypes.duration],
     implementation: {
       kind: "trusted-frontend-surface",
       locator: "@narratage/estimate/speech-surface",
@@ -56,10 +54,10 @@ export const estimateManifest: ModuleManifest = {
   producers: [{
     name: estimateProducers.speech.name,
     inputs: [
-      { name: "speech", type: contractTypes.narrativeSpeechExcerpt },
+      { name: "speech", type: narrativeTypes.speechExcerpt },
       { name: "policy", type: estimateTypes.speechPolicy },
     ],
-    outputs: [{ name: "duration", type: contractTypes.speechDuration }],
+    outputs: [{ name: "duration", type: speechTypes.duration }],
     needs: [],
     implementation: {
       kind: "registered",

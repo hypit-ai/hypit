@@ -1,5 +1,5 @@
+import { speechTypes } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
-import { contractTypes } from "@narratage/video-contracts";
 import { sealGraphFragment } from "@narratage/elaborator";
 import { generationProducers } from "@narratage/generation";
 import type { ExactModelEndpoint } from "@narratage/model-kit";
@@ -16,8 +16,8 @@ export function createSeedanceSpeakerTakeFragment(
   return sealGraphFragment({
     name: `@narratage/seedance-speaker/${endpoint.key}-take@1`,
     inputs: [
-      { name: "program", type: seedanceTypes.speechProgram },
-      { name: "duration", type: contractTypes.speechDuration },
+      { name: "program", type: seedanceTypes.speechSpine },
+      { name: "duration", type: speechTypes.duration },
     ],
     operations: [
       {

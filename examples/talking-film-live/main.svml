@@ -5,13 +5,13 @@
   <import as="media" from="@narratage/media@1"/>
   <import as="estimate" from="@narratage/estimate@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
-  <import as="speech" from="@narratage/speech@1"/>
+  <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="text" from="@narratage/text-track@1"/>
   <import as="film" from="@narratage/film@1"/>
-  <import as="render" from="@narratage/hyperframes-render@1"/>
+  <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
 
   <script id="story">

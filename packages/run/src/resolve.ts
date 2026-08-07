@@ -15,7 +15,7 @@ import {
   createBuildRecordCandidate,
   createProvidedCandidate,
   sealRealizationOverlay,
-} from "@narratage/realization";
+} from "./realization.js";
 
 import { sealRunGraph } from "./graph.js";
 

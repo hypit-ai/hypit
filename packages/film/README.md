@@ -10,9 +10,10 @@ of VisualTrack and AudioTrack inputs while every Core Operation retains a fixed 
 port list and one atomic result.
 
 `FilmTrackSet` is an immutable lowering value, not an author-facing workflow collection. Each append
-result binds the previous set digest and the newly added Track digest. The final Composition remains
-order-independent because the public contract canonicalizes Tracks and visual ordering belongs to
-each Present's absolute stacking key.
+receives the previous set and newly added Track through explicit graph edges; their enclosing Core
+Records and Derivation bind integrity. The domain value copies no lineage digests. Final Composition
+remains order-independent because the public contract canonicalizes Tracks and visual ordering
+belongs to each Present's absolute stacking key.
 
 The official Structured Surface validates an imported generic SVS Recipe into a nominal
 `FilmProgram`, type-checks each `<film:Track source={...}/>` reference and generates the finite fold.

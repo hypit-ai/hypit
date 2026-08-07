@@ -1,6 +1,3 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-
 import {
   assertBrollProductIdentity,
   assertBrollProgramIdentity,
@@ -9,12 +6,14 @@ import {
   projectBrollVisual,
   sealBrollProgram,
 } from "@narratage/broll";
-import {
-  sealComposition,
-  sealProgramSpace,
-  sealVisualTrack,
-} from "@narratage/video-contracts";
-import type { MediaArtifactRef } from "@narratage/video-contracts";
+import type { MediaArtifactRef } from "@narratage/media";
+import { sealProgramSpace } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import type { AudioTrack, Track } from "@narratage/composition";
+import assert from "node:assert/strict";
+import test from "node:test";
+
 import type { BrollItem, BrollPairTransition } from "@narratage/broll";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { digestOf } from "@narratage/protocol";
@@ -83,7 +82,7 @@ test("B-roll owns local motion while every item remains an independently stacked
 
   const middle = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "middle-overlay",
     presents: [{
       id: "middle",

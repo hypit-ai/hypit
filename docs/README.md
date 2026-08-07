@@ -39,7 +39,7 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/caption-program.md`](../spec/caption-program.md)
 - [`../spec/track-composition.md`](../spec/track-composition.md)
 - [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
-- [`../spec/hyperframes-visual-ir.md`](../spec/hyperframes-visual-ir.md)
+- [`../spec/visual-ir.md`](../spec/visual-ir.md)
 
 These video contracts are executable candidates, not yet an open-source compatibility freeze.
 

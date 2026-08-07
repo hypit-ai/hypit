@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@narratage/generation": "workspace:*",
     "@narratage/model-kit": "workspace:*",

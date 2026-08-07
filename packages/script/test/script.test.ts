@@ -130,7 +130,7 @@ test("zero-width temporal markers may touch a token edge but cannot split a toke
   );
 });
 
-test("the v2 authoring golden fixture reuses the implemented Script Surface unchanged", () => {
+test("the authoring golden fixture reuses the implemented Script Surface unchanged", () => {
   const source = readFileSync("examples/talking-film-golden/main.svml", "utf8");
   const body = source.match(/<script>([\s\S]*?)<\/script>/u)?.[1];
   if (body === undefined) throw new Error("The authoring golden fixture has no Script body.");

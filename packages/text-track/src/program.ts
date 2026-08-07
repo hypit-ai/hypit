@@ -1,19 +1,10 @@
-import {
-  assertCompleteSemanticMapIdentity,
-  assertNarrativeSelectionIdentity,
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  programSpaceFrameCount,
-  selectionFrameSpans,
-  sealVisualTrack,
-} from "@narratage/video-contracts";
-import type {
-  CompleteSemanticMap,
-  NarrativeSelectionRef,
-  ProgramSpace,
-  VisualStyleDeclaration,
-  VisualTrack,
-} from "@narratage/video-contracts";
+import type { NarrativeSelectionRef } from "@narratage/narrative";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertCompleteSemanticMapIdentity, assertNarrativeSelectionIdentity, selectionFrameSpans } from "@narratage/semantic-map";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
+import type { VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
 import { canonicalize, digestOf } from "@narratage/protocol";
 
 import type {
@@ -223,7 +214,7 @@ export function renderTextTrack(programSpace: ProgramSpace, program: TextTrackPr
   assertTextTrackProgramIdentity(program, programSpace);
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
       id: item.id,

@@ -1,7 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-
 import { FileArtifactStore } from "@narratage/artifact-store-fs";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
@@ -14,7 +13,8 @@ import {
   sealTypedModule,
   start,
 } from "@narratage/core";
-import { mediaManifest, narrativeManifest } from "@narratage/video-contracts";
+import { narrativeManifest } from "@narratage/narrative";
+import { mediaManifest } from "@narratage/media";
 import {
   geminiOmniComponent,
   geminiOmniEndpoints,

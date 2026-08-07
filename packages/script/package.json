@@ -10,8 +10,8 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@narratage/video-contracts": "workspace:*",
     "@narratage/core": "workspace:*",
+    "@narratage/narrative": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/text": "workspace:*"
   }

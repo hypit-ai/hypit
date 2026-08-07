@@ -1,19 +1,8 @@
-import {
-  assertAudioTrackIdentity,
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  programSpaceFrameCount,
-  sealAudioTrack,
-  sealVisualTrack,
-} from "@narratage/video-contracts";
-import type {
-  AudioClip,
-  MediaArtifactRef,
-  ProgramSpace,
-  VisualAnimation,
-  VisualElement,
-  VisualStyleDeclaration,
-} from "@narratage/video-contracts";
+import type { MediaArtifactRef } from "@narratage/media";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertAudioTrackIdentity, assertVisualTrackIdentity, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
+import type { AudioClip, AudioTrack, VisualAnimation, VisualElement, VisualStyleDeclaration } from "@narratage/composition";
 import { digestOf, isDigest } from "@narratage/protocol";
 
 import type {
@@ -390,7 +379,7 @@ export function compileBrollProduct(programSpace: ProgramSpace, program: BrollPr
   const { incoming, outgoing } = transitionMaps(program, programSpaceFrameCount(programSpace));
   const visualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: `${program.id}:visual`,
     presents: program.items.map((item) => ({
       id: item.id,

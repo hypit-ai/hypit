@@ -1,4 +1,8 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { narrativeTypes } from "@narratage/narrative";
+import type { NarrativeSelection } from "@narratage/narrative";
+import { programSpaceTypes } from "@narratage/program-space";
+import { semanticMapTypes } from "@narratage/semantic-map";
+import { compositionTypes } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
 import type { FragmentOperation } from "@narratage/elaborator";
 import { svsRecipeType } from "@narratage/svs";
@@ -58,17 +62,17 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
   return sealGraphFragment({
     name: `@narratage/text-track/surface/${id}@2`,
     inputs: [
-      { name: "space", type: contractTypes.programSpace },
+      { name: "space", type: programSpaceTypes.programSpace },
       { name: "header", type: textTrackTypes.header },
-      ...(selected.length === 0 ? [] : [{ name: "map", type: contractTypes.completeSemanticMap }]),
+      ...(selected.length === 0 ? [] : [{ name: "map", type: semanticMapTypes.complete }]),
       ...items.flatMap((item) => [
         { name: item.specName, type: textTrackTypes.itemSpec },
-        ...(item.selectionName === undefined ? [] : [{ name: item.selectionName, type: contractTypes.narrativeSelection }]),
+        ...(item.selectionName === undefined ? [] : [{ name: item.selectionName, type: narrativeTypes.selection }]),
       ]),
     ],
     operations,
     exports: [{
-      name: "track", type: contractTypes.visualTrack, root: operation("text:render"), semanticInputs, fidelity: "exact",
+      name: "track", type: compositionTypes.visualTrack, root: operation("text:render"), semanticInputs, fidelity: "exact",
     }],
   });
 }
@@ -113,7 +117,7 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
     throw new Error(`${element.name} requires id and space; map is required when an Item uses a Selection`);
   }
   const id = text(element, "id");
-  const space = ref(element, "space", contractTypes.programSpace, resolveReference);
+  const space = ref(element, "space", programSpaceTypes.programSpace, resolveReference);
   const header = sealTextTrackHeader({ contract: "svml.text-track-header@1", id });
   const headerId = `${id}.header`;
   const records: Array<{
@@ -137,7 +141,7 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
           if (rawDuring.trim() !== "full") throw new Error(`${child.name}.during must be full or a NarrativeSelection reference`);
           return undefined;
         })()
-      : ref(child, "during", contractTypes.narrativeSelection, resolveReference);
+      : ref(child, "during", narrativeTypes.selection, resolveReference);
     const appearance = recipe(ref(child, "appearance", svsRecipeType, resolveReference));
     const expected = ["align", "fill", "font", "height", "size", "stack-order", "tracking", "weight", "width", "x", "y"];
     if (Object.keys(appearance.properties).sort().join("\0") !== expected.sort().join("\0")) throw new Error(`Text Recipe requires exactly ${expected.join(", ")}`);
@@ -173,7 +177,7 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
   const selected = items.filter((item) => item.selection !== undefined);
   const map = selected.length === 0
     ? undefined
-    : ref(element, "map", contractTypes.completeSemanticMap, resolveReference);
+    : ref(element, "map", semanticMapTypes.complete, resolveReference);
   if (selected.length === 0 && element.attributes.map !== undefined) {
     throw new Error(`${element.name}.map is unused because every Item uses during="full"`);
   }

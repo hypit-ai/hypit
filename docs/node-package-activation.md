@@ -130,8 +130,8 @@ Tests create installed packages unknown to the repository and prove all of the f
 - unrelated Host-facet ABIs remain inert;
 - its authored value passes its locked Type-owner Validator and carries a validation receipt;
 - its deterministic Producer is discovered as enumerable locked data;
-- independently activated official packages close over `@narratage/speech-take`,
-  `@narratage/speech-align` and `@narratage/caption`, exposing Product projections, the timing locator,
+- independently activated official packages close over `@narratage/speech-basis`,
+  `@narratage/speech-alignment` and `@narratage/caption`, exposing Product projections, the timing locator,
   Caption lowering and Caption-owned validators without a CLI registration list;
 - `createProjectLocalRuntime({ packageLock })` executes that Producer without a deployment-source
   component list;

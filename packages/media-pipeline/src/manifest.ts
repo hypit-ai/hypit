@@ -1,8 +1,9 @@
-import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import {
-  contractTypes,
-  videoContractDependencies,
-} from "@narratage/video-contracts";
+import { artifactDependency } from "@narratage/artifact";
+import { mediaDependency, mediaTypes } from "@narratage/media";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { speechDependency, speechTypes } from "@narratage/speech";
+import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { artifactTypes } from "@narratage/artifact";
 import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,
@@ -131,10 +132,10 @@ export const mediaPipelineManifest: ModuleManifest = {
   version: mediaPipelineModuleRef.version,
   dependencies: [
     artifactDependency,
-    videoContractDependencies.media,
-    videoContractDependencies.speech,
-    videoContractDependencies.programSpace,
-    videoContractDependencies.composition,
+    mediaDependency,
+    speechDependency,
+    programSpaceDependency,
+    compositionDependency,
   ],
   types: [
     {
@@ -163,11 +164,11 @@ export const mediaPipelineManifest: ModuleManifest = {
     },
   ],
   capabilities: [
-    { name: mediaPipelineCapabilities.inspect.name, returns: contractTypes.mediaInspection },
-    { name: mediaPipelineCapabilities.normalize.name, returns: contractTypes.synchronizedMedia },
-    { name: mediaPipelineCapabilities.projectSpeechEvidenceAudio.name, returns: contractTypes.speechEvidenceAudio },
-    { name: mediaPipelineCapabilities.renderAudio.name, returns: contractTypes.timelineAudio },
-    { name: mediaPipelineCapabilities.mux.name, returns: contractTypes.muxedMedia },
+    { name: mediaPipelineCapabilities.inspect.name, returns: mediaTypes.inspection },
+    { name: mediaPipelineCapabilities.normalize.name, returns: mediaTypes.synchronized },
+    { name: mediaPipelineCapabilities.projectSpeechEvidenceAudio.name, returns: speechTypes.evidenceAudio },
+    { name: mediaPipelineCapabilities.renderAudio.name, returns: mediaTypes.timelineAudio },
+    { name: mediaPipelineCapabilities.mux.name, returns: mediaTypes.muxed },
   ],
   surfaces: [],
   producers: [
@@ -178,7 +179,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [{
         name: "inspection",
         capability: mediaPipelineCapabilities.inspect,
-        returns: contractTypes.mediaInspection,
+        returns: mediaTypes.inspection,
       }],
       implementation: {
         kind: "registered",
@@ -189,12 +190,12 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.select.name,
       inputs: [
-        { name: "inspection", type: contractTypes.mediaInspection },
+        { name: "inspection", type: mediaTypes.inspection },
         { name: "request", type: mediaPipelineTypes.selectionRequest },
       ],
       outputs: [{
         name: "selection",
-        type: contractTypes.mediaStreamSelection,
+        type: mediaTypes.streamSelection,
       }],
       needs: [],
       implementation: {
@@ -207,15 +208,15 @@ export const mediaPipelineManifest: ModuleManifest = {
       name: mediaPipelineProducers.normalize.name,
       inputs: [
         { name: "source", type: artifactTypes.blob },
-        { name: "inspection", type: contractTypes.mediaInspection },
-        { name: "selection", type: contractTypes.mediaStreamSelection },
+        { name: "inspection", type: mediaTypes.inspection },
+        { name: "selection", type: mediaTypes.streamSelection },
         { name: "request", type: mediaPipelineTypes.selectionRequest },
       ],
       outputs: [],
       needs: [{
         name: "media",
         capability: mediaPipelineCapabilities.normalize,
-        returns: contractTypes.synchronizedMedia,
+        returns: mediaTypes.synchronized,
       }],
       implementation: {
         kind: "registered",
@@ -225,12 +226,12 @@ export const mediaPipelineManifest: ModuleManifest = {
     },
     {
       name: mediaPipelineProducers.projectSpeechEvidenceAudio.name,
-      inputs: [{ name: "audio", type: contractTypes.speechAudioBasis }],
+      inputs: [{ name: "audio", type: speechTypes.audioBasis }],
       outputs: [],
       needs: [{
         name: "evidenceAudio",
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
-        returns: contractTypes.speechEvidenceAudio,
+        returns: speechTypes.evidenceAudio,
       }],
       implementation: {
         kind: "registered",
@@ -241,8 +242,8 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.planAudio.name,
       inputs: [
-        { name: "composition", type: contractTypes.composition },
-        { name: "space", type: contractTypes.programSpace },
+        { name: "composition", type: compositionTypes.composition },
+        { name: "space", type: programSpaceTypes.programSpace },
       ],
       outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
@@ -259,7 +260,7 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [{
         name: "audio",
         capability: mediaPipelineCapabilities.renderAudio,
-        returns: contractTypes.timelineAudio,
+        returns: mediaTypes.timelineAudio,
       }],
       implementation: {
         kind: "registered",
@@ -270,14 +271,14 @@ export const mediaPipelineManifest: ModuleManifest = {
     {
       name: mediaPipelineProducers.mux.name,
       inputs: [
-        { name: "visual", type: contractTypes.renderedVisual },
-        { name: "audio", type: contractTypes.timelineAudio },
+        { name: "visual", type: mediaTypes.renderedVisual },
+        { name: "audio", type: mediaTypes.timelineAudio },
       ],
       outputs: [],
       needs: [{
         name: "media",
         capability: mediaPipelineCapabilities.mux,
-        returns: contractTypes.muxedMedia,
+        returns: mediaTypes.muxed,
       }],
       implementation: {
         kind: "registered",
@@ -287,8 +288,8 @@ export const mediaPipelineManifest: ModuleManifest = {
     },
     {
       name: mediaPipelineProducers.projectMuxed.name,
-      inputs: [{ name: "media", type: contractTypes.muxedMedia }],
-      outputs: [{ name: "video", type: contractTypes.mediaArtifact }],
+      inputs: [{ name: "media", type: mediaTypes.muxed }],
+      outputs: [{ name: "video", type: mediaTypes.artifact }],
       needs: [],
       implementation: {
         kind: "registered",

@@ -1,4 +1,6 @@
-import { contractTypes } from "@narratage/video-contracts";
+import { programSpaceTypes } from "@narratage/program-space";
+import { compositionTypes } from "@narratage/composition";
+import type { VisualTrack } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
 
 import { textTrackProducers, textTrackTypes } from "./manifest.js";
@@ -10,7 +12,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const textTrackFragment = sealGraphFragment({
   name: "@narratage/text-track/render@1",
   inputs: [
-    { name: "space", type: contractTypes.programSpace },
+    { name: "space", type: programSpaceTypes.programSpace },
     { name: "program", type: textTrackTypes.program },
   ],
   operations: [{
@@ -21,7 +23,7 @@ export const textTrackFragment = sealGraphFragment({
   }],
   exports: [{
     name: "track",
-    type: contractTypes.visualTrack,
+    type: compositionTypes.visualTrack,
     root: operation("render"),
     semanticInputs: ["space", "program"],
     fidelity: "exact",

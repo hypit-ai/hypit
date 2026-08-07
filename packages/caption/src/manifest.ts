@@ -1,4 +1,8 @@
-import { contractTypes, videoContractDependencies } from "@narratage/video-contracts";
+import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
+import { compositionDependency, compositionTypes } from "@narratage/composition";
+import type { Track } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
@@ -183,10 +187,10 @@ export const captionManifest: ModuleManifest = {
   name: captionModuleRef.name,
   version: captionModuleRef.version,
   dependencies: [
-    videoContractDependencies.narrative,
-    videoContractDependencies.programSpace,
-    videoContractDependencies.semanticTime,
-    videoContractDependencies.composition,
+    narrativeDependency,
+    programSpaceDependency,
+    semanticMapDependency,
+    compositionDependency,
   ],
   types: [
     {
@@ -252,7 +256,7 @@ export const captionManifest: ModuleManifest = {
     },
     {
       name: "track", tag: "Track", mode: "structured",
-      outputs: [captionTypes.trackProgram, contractTypes.visualTrack],
+      outputs: [captionTypes.trackProgram, compositionTypes.visualTrack],
       implementation: { kind: "trusted-frontend-surface", locator: "@narratage/caption/track-surface", digest: captionSurfaceImplementationDigest },
     },
   ],
@@ -260,8 +264,8 @@ export const captionManifest: ModuleManifest = {
     {
       name: captionProducers.temporalize.name,
       inputs: [
-        { name: "narrative", type: contractTypes.narrative },
-        { name: "map", type: contractTypes.completeSemanticMap },
+        { name: "narrative", type: narrativeTypes.narrative },
+        { name: "map", type: semanticMapTypes.complete },
       ],
       outputs: [{ name: "caption", type: captionTypes.timedProjection }],
       needs: [],
@@ -274,8 +278,8 @@ export const captionManifest: ModuleManifest = {
     {
       name: captionProducers.temporalizePlan.name,
       inputs: [
-        { name: "narrative", type: contractTypes.narrative },
-        { name: "map", type: contractTypes.completeSemanticMap },
+        { name: "narrative", type: narrativeTypes.narrative },
+        { name: "map", type: semanticMapTypes.complete },
         { name: "program", type: captionTypes.program },
         { name: "plan", type: captionTypes.plan },
       ],
@@ -292,9 +296,9 @@ export const captionManifest: ModuleManifest = {
       inputs: [
         { name: "caption", type: captionTypes.timedProjection },
         { name: "program", type: captionTypes.program },
-        { name: "space", type: contractTypes.programSpace },
+        { name: "space", type: programSpaceTypes.programSpace },
       ],
-      outputs: [{ name: "track", type: contractTypes.visualTrack }],
+      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: { kind: "registered", locator: "@narratage/caption/render-program", digest: renderCaptionProgramImplementationDigest },
     },
@@ -303,9 +307,9 @@ export const captionManifest: ModuleManifest = {
       inputs: [
         { name: "caption", type: captionTypes.timedProjection },
         { name: "program", type: captionTypes.trackProgram },
-        { name: "space", type: contractTypes.programSpace },
+        { name: "space", type: programSpaceTypes.programSpace },
       ],
-      outputs: [{ name: "track", type: contractTypes.visualTrack }],
+      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: {
         kind: "registered",

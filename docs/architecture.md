@@ -1,6 +1,6 @@
 # Narratage architecture
 
-Status: current architecture, 2026-08-07. Wire formats mentioned here are executable `@1`
+Status: current architecture, 2026-08-08. Wire formats mentioned here are executable `@1`
 contracts, not sketches.
 
 Narratage has two deliberately separate ideas:
@@ -193,7 +193,7 @@ One Operation produces one atomic Product. A Product may contain several related
 cheap deterministic Projection Operations:
 
 ```text
-GenerateSpeechTake → SpeechTake Product
+GenerateSpeechBasis → SpeechBasis Product
                          ├─ ProjectVisual → VisualTrack
                          └─ ProjectAudio  → AudioTrack
 ```
@@ -353,10 +353,56 @@ installation or execution.
 
 ## 10. Video is an ordinary distribution
 
-The official video packages contribute Narrative, ProgramSpace, Speech, SemanticMap, Track and
-Composition contracts plus author Surfaces. They use the same Graph, Candidate, Satisfaction, Need
-and Endpoint rules as any other domain. Film is an ordinary Composition target; HyperFrames is an
-ordinary downstream implementation; neither is a Core root.
+The old umbrella `@narratage/video-contracts` package no longer exists. Public video communication
+is owned by small, independently versioned modules:
+
+| Package | Owns |
+|---|---|
+| `@narratage/narrative` | authored tokens, Segments, excerpts, selections and Caption display projection |
+| `@narratage/media` | inspected/normalized media facts, renderer outputs and typed media/font/surface references |
+| `@narratage/program-space` | duration and exact rational frame domain |
+| `@narratage/speech` | speech duration, atomic SpeechBasis and alignment-audio facts |
+| `@narratage/speech-evidence` | provider-neutral transcript observations |
+| `@narratage/semantic-map` | located authored token, Segment and anchor timings |
+| `@narratage/visual-ir` | the closed, code-free terminal visual vocabulary |
+| `@narratage/composition` | peer VisualTrack/AudioTrack values and final Composition |
+
+These are domain contracts, not a second Core. Installing a ninth contract package needs no Core
+change: it publishes its own Manifest and nominal Types, and components communicate through normal
+graph edges.
+
+Speech implementation packages now describe what they actually do:
+
+| Package | Role |
+|---|---|
+| `@narratage/speech-spine` | author-facing assembly of multiple speech takes into the primary A/V spine |
+| `@narratage/speech-basis` | deterministic projections from one atomic SpeechBasis Product |
+| `@narratage/speech-alignment` | deterministic Narrative/evidence alignment into SemanticMap |
+
+Final rendering is also layered rather than privileged:
+
+```text
+Composition + ProgramSpace
+          │
+          ├─ @narratage/render-hyperframes
+          │       └─ @narratage/hyperframes (pure document compiler)
+          │              └─ local/hosted HyperFrames Endpoint
+          │
+          ├─ future @narratage/render-remotion
+          │       └─ local/hosted Remotion Endpoint
+          │
+          └─ future API-specific render package + Endpoint
+```
+
+`@narratage/render-hyperframes` is the current official reference route and the route used by the
+examples; it is not a Core default. The Author Source imports it explicitly. A future renderer may
+consume the same Composition and `svml.visual-ir@1`, compile its own immutable document and return
+the same provider-neutral media contract. It does not require changing Film, Track, Core or the
+existing HyperFrames packages.
+
+All official video packages use the same Graph, Candidate, Satisfaction, Need and Endpoint rules
+as any other domain. Film is an ordinary Composition target and each renderer is an ordinary
+downstream implementation; neither is a Core root.
 
 The current audiovisual narrow waist remains pre-freeze. Its expressiveness work is intentionally
 deferred while the domain-neutral run language and deployment paths are completed.
