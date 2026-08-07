@@ -89,13 +89,13 @@ Narratage 没有隐式缓存。复用结果是显式的运行图编写——你�
   </target-set>
 
   <build-record id="hook-video"
-    build="echo-pro-film-001" output="hook-take.video"/>
+    build="my-film-001" output="hook-take.video"/>
   <build-record id="meeting-video"
-    build="echo-pro-film-001" output="meeting-take.video"/>
+    build="my-film-001" output="meeting-take.video"/>
   <build-record id="evidence-video"
-    build="echo-pro-film-001" output="evidence-take.video"/>
+    build="my-film-001" output="evidence-take.video"/>
   <build-record id="payoff-video"
-    build="echo-pro-film-001" output="payoff-take.video"/>
+    build="my-film-001" output="payoff-take.video"/>
 
   <satisfy output="hook-take.video"
     candidate="hook-video" fidelity="substitute"/>
@@ -236,7 +236,7 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
 ### 1. 诊断环境
 
 ```bash
-pnpm narratage doctor examples/echo-pro-aroll/svml.runtime.json
+pnpm narratage doctor examples/talking-head-aroll/svml.runtime.json
 ```
 
 Doctor 检查每个 endpoint 是否可达、凭证是否有效，以及所需的可执行文件（`ffmpeg`、`ffprobe`、Chrome）是否可用。
@@ -244,8 +244,8 @@ Doctor 检查每个 endpoint 是否可达、凭证是否有效，以及所需的
 ### 2. 检查计划
 
 ```bash
-pnpm narratage plan examples/echo-pro-aroll/build.svrun \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock --root .
+pnpm narratage plan examples/talking-head-aroll/build.svrun \
+  --package-lock examples/talking-head-aroll/svml.packages.lock --root .
 ```
 
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs。
@@ -253,11 +253,11 @@ pnpm narratage plan examples/echo-pro-aroll/build.svrun \
 ### 3. 提交 Build
 
 ```bash
-pnpm narratage build examples/echo-pro-aroll/build.svrun \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock \
+pnpm narratage build examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --package-lock examples/talking-head-aroll/svml.packages.lock \
   --root . \
-  --build-id echo-pro-film-001 \
+  --build-id my-film-001 \
   --follow
 ```
 
@@ -272,10 +272,10 @@ pnpm narratage build examples/echo-pro-aroll/build.svrun \
 ### 4. 获取结果
 
 ```bash
-pnpm narratage get echo-pro-film-001 \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
+pnpm narratage get my-film-001 \
+  --runtime examples/talking-head-aroll/svml.runtime.json \
   --name final.video \
-  --to examples/echo-pro-aroll/output/final.mp4
+  --to examples/talking-head-aroll/output/final.mp4
 ```
 
 每个被接受的中间 Record 和 Artifact 在 Build 完成前都会被归档。`get` 会复制一份已持久化的 Record。
@@ -285,8 +285,8 @@ pnpm narratage get echo-pro-film-001 \
 创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文[复用结果](#复用结果)），然后提交：
 
 ```bash
-pnpm narratage build examples/echo-pro-aroll/reuse-generated.svrun \
-  --runtime examples/echo-pro-aroll/svml.runtime.json \
-  --package-lock examples/echo-pro-aroll/svml.packages.lock \
-  --root . --build-id echo-pro-film-reuse-001 --follow
+pnpm narratage build examples/talking-head-aroll/reuse-generated.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json \
+  --package-lock examples/talking-head-aroll/svml.packages.lock \
+  --root . --build-id my-film-reuse-001 --follow
 ```

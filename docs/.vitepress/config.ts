@@ -1,4 +1,122 @@
 import { defineConfig } from "vitepress";
+import type { ShikiTransformer } from "shiki";
+
+function svmlSelectionHighlighter(): ShikiTransformer {
+  return {
+    name: "svml-selection-highlighter",
+    span(node) {
+      const text = node.children?.[0];
+      if (!text || text.type !== "text") return;
+      const v = text.value;
+      const re = /(~?@\/?[A-Za-z][\w-]*[!~]?| \| )/g;
+      const parts: Array<{ value: string; highlight: boolean }> = [];
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(v)) !== null) {
+        if (m[1].startsWith("@")) {
+          const after = v[re.lastIndex];
+          if (after === "/") continue;
+        }
+        if (m.index > last) parts.push({ value: v.slice(last, m.index), highlight: false });
+        parts.push({ value: m[1], highlight: true });
+        last = re.lastIndex;
+      }
+      if (parts.length === 0) return;
+      if (last < v.length) parts.push({ value: v.slice(last), highlight: false });
+      node.children = parts.map((p) =>
+        p.highlight
+          ? { type: "element", tagName: "span", properties: { class: "svml-selection" }, children: [{ type: "text", value: p.value }] }
+          : { type: "text", value: p.value },
+      );
+    },
+  };
+}
+
+const svsLanguage: Record<string, unknown> = {
+  name: "svs",
+  scopeName: "source.svs",
+  patterns: [
+    { include: "#processing-instruction" },
+    { include: "#close-tag" },
+    { include: "#open-tag" },
+    { include: "#comment" },
+    { include: "#recipe-block" },
+  ],
+  repository: {
+    "processing-instruction": {
+      begin: "<\\?",
+      end: "\\?>",
+      beginCaptures: { "0": { name: "punctuation.definition.tag.xml" } },
+      endCaptures: { "0": { name: "punctuation.definition.tag.xml" } },
+      name: "meta.tag.preprocessor.xml",
+      patterns: [
+        { match: "\\bsvml\\b", name: "entity.name.tag.xml" },
+        { include: "#attribute" },
+      ],
+    },
+    "open-tag": {
+      begin: "(<)(sheet)\\b",
+      beginCaptures: {
+        "1": { name: "punctuation.definition.tag.xml" },
+        "2": { name: "entity.name.tag.xml" },
+      },
+      end: ">",
+      endCaptures: { "0": { name: "punctuation.definition.tag.xml" } },
+      patterns: [{ include: "#attribute" }],
+    },
+    "close-tag": {
+      match: "(</)(sheet)(>)",
+      captures: {
+        "1": { name: "punctuation.definition.tag.xml" },
+        "2": { name: "entity.name.tag.xml" },
+        "3": { name: "punctuation.definition.tag.xml" },
+      },
+    },
+    attribute: {
+      match: '([\\w-]+)(=)("[^"]*")',
+      captures: {
+        "1": { name: "entity.other.attribute-name.xml" },
+        "2": { name: "punctuation.separator.key-value.xml" },
+        "3": { name: "string.quoted.double.xml" },
+      },
+    },
+    comment: {
+      name: "comment.block.css",
+      begin: "/\\*",
+      end: "\\*/",
+    },
+    "recipe-block": {
+      begin: "([a-z][\\w-]*)(\\.)(\\S+)\\s*(\\{)",
+      beginCaptures: {
+        "1": { name: "entity.name.tag.css" },
+        "2": { name: "punctuation.accessor.css" },
+        "3": { name: "entity.other.attribute-name.class.css" },
+        "4": { name: "punctuation.section.block.begin.css" },
+      },
+      end: "\\}",
+      endCaptures: { "0": { name: "punctuation.section.block.end.css" } },
+      patterns: [{ include: "#comment" }, { include: "#property-declaration" }],
+    },
+    "property-declaration": {
+      begin: "([a-z][\\w-]*)\\s*(:)",
+      beginCaptures: {
+        "1": { name: "support.type.property-name.css" },
+        "2": { name: "punctuation.separator.key-value.css" },
+      },
+      end: ";",
+      endCaptures: { "0": { name: "punctuation.terminator.rule.css" } },
+      patterns: [{ include: "#property-value" }],
+    },
+    "property-value": {
+      patterns: [
+        { match: "#[0-9A-Fa-f]{3,8}\\b", name: "constant.other.color.css" },
+        { match: "\\b\\d+(?:\\.\\d+)?\\b", name: "constant.numeric.css" },
+        { match: "\\./[^;\\s]+", name: "string.unquoted.css" },
+        { match: "[a-zA-Z][\\w:-]+", name: "support.constant.property-value.css" },
+      ],
+    },
+  },
+};
 
 const sharedTheme = {
   siteTitle: "NARRATAGE",
@@ -122,12 +240,12 @@ export default defineConfig({
       light: "github-light",
       dark: "github-dark",
     },
+    languages: [svsLanguage as never],
     languageAlias: {
       svml: "xml",
       svk: "xml",
-      svs: "xml",
-      svc: "xml",
     },
+    codeTransformers: [svmlSelectionHighlighter()],
   },
   head: [
     ["meta", { name: "theme-color", content: "#2C2126" }],

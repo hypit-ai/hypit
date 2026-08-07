@@ -256,7 +256,7 @@ speech.normal {
 Seedance Speaker 生成设置——控制 `speaker:Take` 如何生成说话人头像片段的 Recipe。
 
 ```svs
-speaker.echo-pro {
+speaker.host {
   kind: ugc-talking-head;
   model: mini;
   resolution: 720p;
@@ -287,7 +287,7 @@ speaker.echo-pro {
 
 ```svml
 <speaker:Take id="hook-take" dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration} recipe={studio.speaker.echo-pro} kit={ugc.official-ugc-v1}>
+  duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
 ```
 
 ## 字体声明
@@ -340,7 +340,7 @@ caption.dialogue {
     rounding: ceil;
   }
 
-  speaker.echo-pro {
+  speaker.host {
     kind: ugc-talking-head;
     model: mini;
     resolution: 720p;
@@ -386,7 +386,7 @@ caption.dialogue {
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
   policy={studio.speech.normal}/>
 
-<speaker:Take id="hook-take" ... recipe={studio.speaker.echo-pro} .../>
+<speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
 
 <caption:Style id="primary-caption" appearance={studio.caption.primary} .../>
 

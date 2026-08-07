@@ -218,9 +218,9 @@ Slot id 为 1–64 个字符，以字母或下划线开头。绑定值为纯文�
   </hook>
 
   <meeting>
-    <HOST> @solution Then I found <Echo Pro | echo pro>: a card-sized recorder
-           that snaps onto the back of my phone. @ranking! I brought it to one
-           meeting. @/solution
+    <HOST> @solution I started sending <BCC | B C C> recaps after every
+           meeting: timestamps, decisions, who said what. @ranking! After
+           the first recap, everything changed. @/solution
   </meeting>
 
   <evidence>
@@ -238,8 +238,8 @@ Slot id 为 1–64 个字符，以字母或下划线开头。绑定值为纯文�
 
 - 四个 Segment：`hook`、`meeting`、`evidence`、`payoff`
 - 一个 Role Cue：`HOST`（在所有 Segment 中保持一致）
-- 一个 Dual Text：`<Echo Pro | echo pro>`（显示为 "Echo Pro"，说出为 "echo pro"）
+- 一个 Dual Text：`<BCC | B C C>`（显示为 "BCC"，说出为 "B C C"）
 - 三个 Selection：`whole`（整个 Script）、`problem`、`solution`、`emphasis`
-- 一个 Moment：`ranking`（标记 "I brought it to one meeting" 这一瞬间）
+- 一个 Moment：`ranking`（标记 "After the first recap" 这一瞬间）
 
 下游组件通过名称引用这些内容：`{story.segment.hook.dialogue}` 用于生成，`{story.selection.problem}` 用于 B-roll 时间绑定，`{story.moment.ranking}` 用于视觉卡片揭示。

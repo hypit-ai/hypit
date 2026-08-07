@@ -173,7 +173,7 @@ speech.normal {
 <speaker:Take id="hook-take"
   dialogue={story.segment.hook.dialogue}
   duration={hook-duration.duration}
-  recipe={studio.speaker.echo-pro}
+  recipe={studio.speaker.host}
   kit={ugc.official-ugc-v1}>
   <speaker:Reference image={presenter-clean} role="character-and-scene"/>
   <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
@@ -229,7 +229,7 @@ Prompt Kit 是一种特殊的 SVS 文件，定义了包含有序块、变体选�
 <import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
-<media:Image id="presenter-with-echo" src="./assets/presenter-with-echo.png"/>
+<media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
 <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
 <estimate:Speech id="hook-duration"
@@ -242,28 +242,28 @@ Prompt Kit 是一种特殊的 SVS 文件，定义了包含有序块、变体选�
   source={story.segment.payoff.speech} policy={studio.speech.normal}/>
 
 <speaker:Take id="hook-take" dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration} recipe={studio.speaker.echo-pro}
+  duration={hook-duration.duration} recipe={studio.speaker.host}
   kit={ugc.official-ugc-v1}>
   <speaker:Reference image={presenter-clean} role="character-and-scene"/>
   <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
 </speaker:Take>
 
 <speaker:Take id="meeting-take" dialogue={story.segment.meeting.dialogue}
-  duration={meeting-duration.duration} recipe={studio.speaker.echo-pro}
+  duration={meeting-duration.duration} recipe={studio.speaker.host}
   kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-with-echo} role="character-and-scene"/>
+  <speaker:Reference image={presenter-alt} role="character-and-scene"/>
   <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
 </speaker:Take>
 
 <speaker:Take id="evidence-take" dialogue={story.segment.evidence.dialogue}
-  duration={evidence-duration.duration} recipe={studio.speaker.echo-pro}
+  duration={evidence-duration.duration} recipe={studio.speaker.host}
   kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-with-echo} role="character-and-scene"/>
+  <speaker:Reference image={presenter-alt} role="character-and-scene"/>
   <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
 </speaker:Take>
 
 <speaker:Take id="payoff-take" dialogue={story.segment.payoff.dialogue}
-  duration={payoff-duration.duration} recipe={studio.speaker.echo-pro}
+  duration={payoff-duration.duration} recipe={studio.speaker.host}
   kit={ugc.official-ugc-v1}>
   <speaker:Reference image={presenter-clean} role="character-and-scene"/>
   <speaker:Reference audio={presenter-voice} role="voice-timbre"/>

@@ -234,9 +234,9 @@ A complete Script using all constructs together:
   </hook>
 
   <meeting>
-    <HOST> @solution Then I found <Echo Pro | echo pro>: a card-sized recorder
-           that snaps onto the back of my phone. @ranking! I brought it to one
-           meeting. @/solution
+    <HOST> @solution I started sending <BCC | B C C> recaps after every
+           meeting: timestamps, decisions, who said what. @ranking! After
+           the first recap, everything changed. @/solution
   </meeting>
 
   <evidence>
@@ -254,9 +254,9 @@ This Script declares:
 
 - Four Segments: `hook`, `meeting`, `evidence`, `payoff`
 - One Role Cue: `HOST` (consistent across all Segments)
-- One Dual Text: `<Echo Pro | echo pro>` (displayed as "Echo Pro", spoken as "echo pro")
+- One Dual Text: `<BCC | B C C>` (displayed as "BCC", spoken as "B C C")
 - Three Selections: `whole` (entire Script), `problem`, `solution`, `emphasis`
-- One Moment: `ranking` (marks the instant "I brought it to one meeting")
+- One Moment: `ranking` (marks the instant "After the first recap")
 
 Downstream components reference these by name: `{story.segment.hook.dialogue}` for generation,
 `{story.selection.problem}` for B-roll timing, `{story.moment.ranking}` for a visual card reveal.

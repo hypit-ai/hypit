@@ -66,7 +66,3 @@ before spending money.
 | [Film & Rendering](./quickstart/composition.md) | film:Film, render:Video, full pipeline walkthrough |
 | [Run Source & Builds](./quickstart/run.md) | .svrun syntax, targets, reuse, runtime profile, build workflow |
 
-## Next
-
-- [Development guide](./guide/develop.md) — repository layout, package architecture, extension
-  patterns.
