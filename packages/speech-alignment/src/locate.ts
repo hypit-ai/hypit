@@ -32,9 +32,14 @@ function finite(value: number | undefined): value is number {
   return value !== undefined && Number.isFinite(value);
 }
 
-function validateWindow(start: number, end: number, limit: number, label: string): void {
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || end > limit + EPSILON) {
-    fail("SPEECH_WINDOW", `${label} has invalid time window ${start}..${end}.`);
+/**
+ * A time is rejected only when no frame can be derived from it. Whether a window
+ * runs backwards, leaves its Segment or reaches past the programme is a fact
+ * about the recording, reported as measured.
+ */
+function validateWindow(start: number, end: number, _limit: number, label: string): void {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < 0) {
+    fail("SPEECH_WINDOW", `${label} has an unusable time ${start}..${end}.`);
   }
 }
 
@@ -57,17 +62,12 @@ function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
   if (basis.segments.length !== narrative.segments.length) {
     fail("SPEECH_BASIS_SEGMENTS", "SpeechAudioBasis must cover every Narrative Segment exactly once.");
   }
-  let previousEnd = 0;
   for (const [index, segment] of basis.segments.entries()) {
     const expected = narrative.segments[index]!;
     if (segment.segmentId !== expected.id) {
       fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} does not match ${expected.id}.`);
     }
     validateWindow(segment.startSec, segment.endSec, basis.programSpace.durationSec, `Basis Segment ${segment.segmentId}`);
-    if (segment.startSec < previousEnd - EPSILON) {
-      fail("SPEECH_BASIS_SEGMENTS", `SpeechAudioBasis Segment ${segment.segmentId} overlaps its predecessor.`);
-    }
-    previousEnd = segment.endSec;
   }
 }
 
@@ -96,86 +96,38 @@ function validateEvidence(
     }
     seen.add(segment.sourceSegmentId);
     validateWindow(segment.startSec, segment.endSec, evidence.durationSec, `Segment ${segment.sourceSegmentId}`);
-    let previousEnd = segment.startSec;
     for (const [index, word] of segment.words.entries()) {
       if (typeof word.text !== "string") fail("SPEECH_WORD_TEXT", `Word ${index + 1} has no text.`);
-      if (finite(word.startSec) !== finite(word.endSec)) {
-        fail("SPEECH_WORD_PARTIAL_TIME", `Word ${index + 1} must provide both start and end or neither.`);
-      }
       if (finite(word.startSec) && finite(word.endSec)) {
         validateWindow(word.startSec, word.endSec, evidence.durationSec, `Word ${index + 1}`);
-        if (
-          word.startSec < segment.startSec - EPSILON
-          || word.endSec > segment.endSec + EPSILON
-          || word.startSec < previousEnd - EPSILON
-        ) {
-          fail("SPEECH_WORD_ORDER", `Word ${index + 1} is outside or overlaps its Segment window.`);
-        }
-        previousEnd = word.endSec;
-      }
-      if (word.score !== undefined && (!Number.isFinite(word.score) || word.score < 0 || word.score > 1)) {
-        fail("SPEECH_SCORE", `Word ${index + 1} score must be between zero and one.`);
       }
     }
     for (const [index, char] of segment.chars.entries()) {
       if (!Number.isInteger(char.wordIndex) || char.wordIndex < 0 || char.wordIndex >= segment.words.length) {
         fail("SPEECH_CHAR_WORD", `Character ${index + 1} has an invalid wordIndex.`);
       }
-      if (finite(char.startSec) !== finite(char.endSec)) {
-        fail("SPEECH_CHAR_PARTIAL_TIME", `Character ${index + 1} must provide both start and end or neither.`);
-      }
       if (finite(char.startSec) && finite(char.endSec)) {
         validateWindow(char.startSec, char.endSec, evidence.durationSec, `Character ${index + 1}`);
-        const word = segment.words[char.wordIndex]!;
-        if (
-          char.startSec < segment.startSec - EPSILON
-          || char.endSec > segment.endSec + EPSILON
-          || (finite(word.startSec) && char.startSec < word.startSec - EPSILON)
-          || (finite(word.endSec) && char.endSec > word.endSec + EPSILON)
-        ) {
-          fail("SPEECH_CHAR_WINDOW", `Character ${index + 1} falls outside its Word or Segment window.`);
-        }
-      }
-      if (char.score !== undefined && (!Number.isFinite(char.score) || char.score < 0 || char.score > 1)) {
-        fail("SPEECH_SCORE", `Character ${index + 1} score must be between zero and one.`);
       }
     }
-    let previousVadEnd = segment.startSec;
     for (const [index, span] of (segment.speechActivity ?? []).entries()) {
       validateWindow(span.startSec, span.endSec, evidence.durationSec, `VAD span ${index + 1}`);
-      if (
-        span.startSec < segment.startSec - EPSILON
-        || span.endSec > segment.endSec + EPSILON
-        || span.startSec < previousVadEnd - EPSILON
-      ) {
-        fail("SPEECH_ACTIVITY_WINDOW", `Speech activity ${index + 1} falls outside Segment ${segment.sourceSegmentId}.`);
-      }
-      previousVadEnd = span.endSec;
     }
   }
   for (const id of expected) {
     if (!seen.has(id)) fail("SPEECH_SEGMENT_MISSING", `Aligned transcript is missing Segment ${id}.`);
   }
   const segmentsById = new Map(evidence.segments.map((segment) => [segment.sourceSegmentId, segment]));
-  let previousSegmentStart = -Infinity;
-  let previousSegmentEnd = -Infinity;
   for (const sourceSegment of narrative.segments) {
     const segment = segmentsById.get(sourceSegment.id)!;
     const basisSegment = basis.segments.find((item) => item.segmentId === sourceSegment.id)!;
+    // The transcript must answer the segmentation it was asked about.
     if (
       Math.abs(segment.startSec - basisSegment.startSec) > EPSILON
       || Math.abs(segment.endSec - basisSegment.endSec) > EPSILON
     ) {
       fail("SPEECH_EVIDENCE_SEGMENT_AFFINITY", `Segment ${segment.sourceSegmentId} differs from SpeechBasis.`);
     }
-    if (
-      segment.startSec < previousSegmentStart - EPSILON
-      || segment.endSec < previousSegmentEnd - EPSILON
-    ) {
-      fail("SPEECH_SEGMENT_ORDER", `Segment ${segment.sourceSegmentId} violates Script source order.`);
-    }
-    previousSegmentStart = segment.startSec;
-    previousSegmentEnd = segment.endSec;
   }
 }
 
@@ -366,6 +318,21 @@ function secondsFor(basis: SpeechAudioBasis, frame: number): number {
   return frame * denominator / numerator;
 }
 
+/**
+ * Locate every Script token against one recording.
+ *
+ * The result is total: every token of every Segment carries a window, whether it
+ * was measured, derived from a neighbouring character run, or interpolated
+ * because the transcript never reached it. Whether a window runs backwards,
+ * overlaps its neighbour or leaves its Segment is reported as measured — those
+ * are facts about the recording, and deciding what they mean belongs to whoever
+ * projects them onto a timeline.
+ *
+ * Locating fails only when the Script, the audio and the transcript are not the
+ * same three things: a missing or repeated Segment, a Segment the Script never
+ * declared, a transcript answering a different segmentation, or a duration that
+ * belongs to other audio. It never fails because of a timestamp.
+ */
 export function locateSpeechTiming(
   narrative: Narrative,
   basis: SpeechAudioBasis,
