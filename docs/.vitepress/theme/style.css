@@ -45,6 +45,7 @@
 }
 
 html { background: var(--paper); }
+.hero-statement-viewport-zh.is-locale-hidden { height: 0 !important; margin-top: 0; visibility: hidden; opacity: 0 !important; transform: none !important; pointer-events: none; }
 body {
   background: var(--paper);
   color: var(--ink);

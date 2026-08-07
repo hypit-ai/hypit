@@ -7,14 +7,18 @@ import {
   type DemoMediaManifest,
 } from "./demo-media";
 import { clearDemoPointer, updateDemoPointer } from "./demo-pointer";
+import { useData } from "vitepress";
 import SemanticVideoDemo from "./SemanticVideoDemo.vue";
 import SvmlPlayground from "./SvmlPlayground.vue";
 
 const cards = [
-  { component: SvmlPlayground, props: undefined, label: "AI 图片应用排名" },
-  { component: SemanticVideoDemo, props: { demo: "street" as const }, label: "街头采访" },
-  { component: SemanticVideoDemo, props: { demo: "good-better-best" as const }, label: "Good Better Best" },
+  { component: SvmlPlayground, props: undefined, labelZh: "AI 图片应用排名", labelEn: "AI photo app ranking" },
+  { component: SemanticVideoDemo, props: { demo: "street" as const }, labelZh: "街头采访", labelEn: "Street interview" },
+  { component: SemanticVideoDemo, props: { demo: "good-better-best" as const }, labelZh: "Good Better Best", labelEn: "Good Better Best" },
 ];
+const { lang } = useData();
+const isChinese = computed(() => lang.value.toLowerCase().startsWith("zh"));
+const cardLabel = (card: (typeof cards)[number]) => isChinese.value ? card.labelZh : card.labelEn;
 const selectedIndex = ref(0);
 const playingIndex = ref<number | null>(null);
 const loadedIndices = ref<Set<number>>(new Set());
@@ -132,13 +136,13 @@ onBeforeUnmount(() => { activationId += 1; });
     @pointerleave="clearDemoPointer"
   >
     <header class="demo-heading carousel-heading">
-      <h2><span class="hover-interaction-copy">悬停标记范围，查看对应画面</span><span class="touch-interaction-copy">点击标记范围，查看对应画面</span></h2>
+      <h2><span class="hover-interaction-copy">{{ isChinese ? "悬停标记范围，查看对应画面" : "Hover a marked range to see the corresponding frame" }}</span><span class="touch-interaction-copy">{{ isChinese ? "点击标记范围，查看对应画面" : "Tap a marked range to see the corresponding frame" }}</span></h2>
     </header>
 
     <div class="demo-carousel-stage">
       <article
         v-for="(card, index) in cards"
-        :key="card.label"
+        :key="card.labelEn"
         class="demo-card"
         :class="cardPosition(index)"
         :aria-hidden="index !== selectedIndex"
@@ -147,13 +151,13 @@ onBeforeUnmount(() => { activationId += 1; });
           v-if="index !== selectedIndex"
           class="demo-card-select"
           type="button"
-          :aria-label="`查看${card.label}演示`"
+          :aria-label="isChinese ? `查看${cardLabel(card)}演示` : `View the ${cardLabel(card)} demo`"
           @click="activateDemo(index)"
         ></button>
 
         <div v-if="!loadedIndices.has(index)" class="demo-loading" role="status" aria-live="polite">
           <span class="demo-loading-spinner" aria-hidden="true"></span>
-          <span>加载演示素材…</span>
+          <span>{{ isChinese ? "加载演示素材…" : "Loading demo media…" }}</span>
         </div>
         <div
           v-else
@@ -171,22 +175,22 @@ onBeforeUnmount(() => { activationId += 1; });
       </article>
     </div>
 
-    <nav class="demo-carousel-controls" aria-label="切换示例">
-      <button class="arrow-button" type="button" aria-label="上一个示例" @click="move(-1)">
+    <nav class="demo-carousel-controls" :aria-label="isChinese ? '切换示例' : 'Switch demos'">
+      <button class="arrow-button" type="button" :aria-label="isChinese ? '上一个示例' : 'Previous demo'" @click="move(-1)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 5.3 8 12l6.7 6.7 1.4-1.4-5.3-5.3 5.3-5.3z"/></svg>
       </button>
-      <div class="demo-carousel-dots" aria-label="选择示例">
+      <div class="demo-carousel-dots" :aria-label="isChinese ? '选择示例' : 'Choose a demo'">
         <button
           v-for="(card, index) in cards"
-          :key="card.label"
+          :key="card.labelEn"
           type="button"
           :class="{ active: index === selectedIndex }"
-          :aria-label="`查看${card.label}演示`"
+          :aria-label="isChinese ? `查看${cardLabel(card)}演示` : `View the ${cardLabel(card)} demo`"
           :aria-current="index === selectedIndex ? 'true' : undefined"
           @click="activateDemo(index)"
         ></button>
       </div>
-      <button class="arrow-button" type="button" aria-label="下一个示例" @click="move(1)">
+      <button class="arrow-button" type="button" :aria-label="isChinese ? '下一个示例' : 'Next demo'" @click="move(1)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.3 5.3-1.4 1.4 5.3 5.3-5.3 5.3 1.4 1.4L16 12z"/></svg>
       </button>
     </nav>
