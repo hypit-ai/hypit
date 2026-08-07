@@ -43,6 +43,13 @@ trusted embedding API.
 Runtime Profile is deployment configuration. It must not enter author semantic identity or
 `.svrun` creative choices.
 
+Before calling `doctor` structurally read-only for third-party adapters, split adapter configuration
+validation from `create()`. The current trusted-package implementation invokes `create()` after
+adapter diagnostics to catch invalid configuration; an adapter constructor is therefore trusted not
+to open a service, write state or issue a request during diagnosis. Diagnostics should also
+coalesce a missing prerequisite instead of reporting both the prerequisite and the resulting
+construction failure.
+
 ### A3. Public package lifecycle
 
 - generate implementation locks through supported CLI commands;
@@ -132,7 +139,7 @@ independent Endpoint packages. They do not require changes to author model packa
 Do not freeze or greatly expand the video author surface yet. The deferred backlog includes:
 
 - full Text three-box and exact-font behavior;
-- Caption browser/pixel acceptance;
+- Caption field-to-word visual mapping plus browser/pixel acceptance;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;
 - final Track and HyperFrames Visual IR compatibility freeze.
