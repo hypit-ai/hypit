@@ -6,7 +6,6 @@ import { assertGenerationPortTable, isMediaPort } from "./ports.js";
 import type {
   GenerationMediaPort,
   GenerationMediaRole,
-  GenerationMediaValue,
   GenerationPort,
   GenerationPortItemField,
   GenerationPortScalarKind,
@@ -279,12 +278,4 @@ export function sealGenerationPortRequest(
 /** Which ports this request actually populates; drives Provider routing and coverage. */
 export function presentPorts(request: GenerationRequest): ReadonlySet<string> {
   return new Set(Object.keys(request.ports));
-}
-
-export function portValues(request: GenerationRequest, name: string): readonly GenerationPortValue[] {
-  return request.ports[name] ?? [];
-}
-
-export function mediaValues(request: GenerationRequest, name: string): readonly GenerationMediaValue[] {
-  return portValues(request, name) as readonly GenerationMediaValue[];
 }
