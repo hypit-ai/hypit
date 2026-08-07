@@ -36,10 +36,10 @@
   <caption:Program id="caption-program" narrative={story} default={base-caption}/>
   <caption-ai:Planner id="cue-plan" narrative={story} program={caption-program} model="gemini-2.5-flash"/>
 
-  <broll:Track id="cards" map={timing.map}>
+  <broll:Track id="cards" map={timing.map} space={speech.space}>
     <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
   </broll:Track>
-  <caption:Track id="captions" narrative={story} map={timing.map}
+  <caption:Track id="captions" narrative={story} map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
   <text:Track id="titles" space={speech.space}>
     <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
@@ -52,5 +52,5 @@
     <film:Track source={captions.track}/>
     <film:Track source={titles.track}/>
   </film:Film>
-  <render:Video id="final" composition={main.composition}/>
+  <render:Video id="final" composition={main.composition} space={speech.space}/>
 </svml>
