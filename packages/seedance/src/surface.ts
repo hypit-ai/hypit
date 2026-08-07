@@ -15,22 +15,31 @@ import {
   createSeedanceGenerationFragment,
   createSeedanceSpeechGenerationFragment,
 } from "./fragment.js";
+import { generationPort } from "@narratage/generation";
+import type { GenerationMediaRole, GenerationPortTable } from "@narratage/generation";
+
 import {
   sealSeedancePrompt,
   sealSeedanceRequest,
   sealSeedanceSpeechProgram,
   seedanceEndpoints,
+  seedancePorts,
   seedanceSpeechCompileProducers,
   seedanceTypes,
   verifySeedancePrompt,
 } from "./index.js";
 import type {
   SeedanceModel,
+  SeedancePortMap,
   SeedancePrompt,
-  SeedanceReference,
 } from "./index.js";
 
-type ReferenceInput = SeedanceReference & { readonly role?: string };
+/** `role` is the media kind the port accepts; `label` is the author's own note about it. */
+type ReferenceInput = {
+  readonly role: GenerationMediaRole;
+  readonly artifact: BlobRef;
+  readonly label?: string;
+};
 
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
@@ -154,43 +163,57 @@ function booleanAttribute(element: StructuredElement, name: string, fallback: bo
   throw new Error(`${element.name}.${name} must be true or false`);
 }
 
+/** The model's own port table is the only source of truth for these bounds. */
+function enumeratedPort(table: GenerationPortTable, name: string): readonly (string | number)[] {
+  const port = generationPort(table, name);
+  if (port.value.kind !== "enum") throw new Error(`${table.model} port ${name} is not enumerated`);
+  return port.value.values;
+}
+
 function generationSettings(
   element: StructuredElement,
   model: SeedanceModel,
   suppliedDurationSec?: number,
-): {
-  readonly durationSec: number;
-  readonly resolution: "480p" | "720p" | "1080p";
-  readonly aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive";
-  readonly webSearch: boolean;
-} {
+): SeedancePortMap {
+  const table = seedancePorts[model];
+  const duration = generationPort(table, "duration");
+  if (duration.value.kind !== "number") throw new Error("Seedance duration port is not numeric");
   const durationSec = suppliedDurationSec ?? integerAttribute(element, "duration");
-  if (durationSec < 4 || durationSec > 15) {
-    throw new Error(`${element.name}.duration must be between 4 and 15 seconds`);
+  const { minimum = 0, maximum = Number.MAX_SAFE_INTEGER } = duration.value;
+  if (durationSec < minimum || durationSec > maximum) {
+    throw new Error(`${element.name}.duration must be between ${minimum} and ${maximum} seconds`);
   }
+  const resolutions = enumeratedPort(table, "resolution");
   const resolution = optionalStringAttribute(element, "resolution") ?? "720p";
-  if (resolution !== "480p" && resolution !== "720p" && resolution !== "1080p") {
-    throw new Error(`${element.name}.resolution must be 480p, 720p or 1080p`);
+  if (!resolutions.includes(resolution)) {
+    throw new Error(`${element.name}.resolution must be ${resolutions.join(", ")} for ${model}`);
   }
-  if (resolution === "1080p" && model !== "seedance-2") {
-    throw new Error(`${element.name}.resolution 1080p is available only for the standard model`);
-  }
+  const aspectRatios = enumeratedPort(table, "aspectRatio");
   const aspectRatio = optionalStringAttribute(element, "aspect-ratio") ?? "9:16";
-  if (!["1:1", "4:3", "3:4", "16:9", "9:16", "21:9", "adaptive"].includes(aspectRatio)) {
+  if (!aspectRatios.includes(aspectRatio)) {
     throw new Error(`${element.name}.aspect-ratio is not supported by Seedance`);
   }
   return {
-    durationSec,
-    resolution,
-    aspectRatio: aspectRatio as "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive",
-    webSearch: booleanAttribute(element, "web-search", false),
+    duration: [durationSec],
+    resolution: [resolution],
+    aspectRatio: [aspectRatio],
+    webSearch: [booleanAttribute(element, "web-search", false)],
   };
 }
 
+const REFERENCE_PORTS = {
+  image: "referenceImage",
+  video: "referenceVideo",
+  audio: "referenceAudio",
+} as const satisfies Record<GenerationMediaRole, string>;
+
 function references(
   element: StructuredElement,
+  model: SeedanceModel,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): ReferenceInput[] {
+  const table = seedancePorts[model];
+  const accepted = Object.keys(REFERENCE_PORTS) as readonly GenerationMediaRole[];
   const result: ReferenceInput[] = [];
   for (const child of element.children) {
     if (child.kind === "text") {
@@ -198,27 +221,43 @@ function references(
       continue;
     }
     if (localName(child.name) !== "Reference") throw new Error(`${element.name} accepts only Reference children`);
-    attributes(child, [], ["image", "video", "audio", "role"]);
-    const kinds = (["image", "video", "audio"] as const).filter((kind) => child.attributes[kind] !== undefined);
-    if (kinds.length !== 1) throw new Error(`${child.name} requires exactly one of image, video or audio`);
-    const kind = kinds[0]!;
-    const source = resolved(child, kind, resolveReference);
-    const artifact = blob(source, `${child.name}.${kind}`);
-    if (!artifact.mediaType.startsWith(`${kind}/`)) {
-      throw new Error(`${child.name}.${kind} must reference ${kind} media`);
+    attributes(child, [], [...accepted, "role"]);
+    const kinds = accepted.filter((kind) => child.attributes[kind] !== undefined);
+    if (kinds.length !== 1) throw new Error(`${child.name} requires exactly one of ${accepted.join(", ")}`);
+    const role = kinds[0]!;
+    const source = resolved(child, role, resolveReference);
+    const artifact = blob(source, `${child.name}.${role}`);
+    if (!artifact.mediaType.startsWith(`${role}/`)) {
+      throw new Error(`${child.name}.${role} must reference ${role} media`);
     }
-    const role = optionalStringAttribute(child, "role");
-    result.push({ kind, artifact, ...(role === undefined ? {} : { role }) });
+    const label = optionalStringAttribute(child, "role");
+    result.push({ role, artifact, ...(label === undefined ? {} : { label }) });
   }
-  if (result.length > 12) throw new Error(`${element.name} accepts at most 12 references`);
+  // Every bound below is read from the model's own port table, never repeated here.
+  for (const role of accepted) {
+    const port = generationPort(table, REFERENCE_PORTS[role]);
+    const used = result.filter((item) => item.role === role).length;
+    if (used > port.maxItems) {
+      throw new Error(`${element.name} accepts at most ${port.maxItems} ${role} references`);
+    }
+  }
   return result;
 }
 
 function referencePrompt(values: readonly ReferenceInput[]): string {
-  const roles = values.flatMap((item, index) => item.role === undefined
+  const roles = values.flatMap((item, index) => item.label === undefined
     ? []
-    : [`Reference ${item.kind} ${index + 1} is the ${item.role}.`]);
+    : [`Reference ${item.role} ${index + 1} is the ${item.label}.`]);
   return roles.length === 0 ? "" : `\n\nReference roles:\n${roles.join("\n")}`;
+}
+
+/** Authored references split into the model's per-modality ports; labels never reach the wire. */
+function referencePorts(values: readonly ReferenceInput[]): SeedancePortMap {
+  return Object.fromEntries((Object.keys(REFERENCE_PORTS) as readonly GenerationMediaRole[])
+    .map((role) => [REFERENCE_PORTS[role], values
+      .filter((item) => item.role === role)
+      .map(({ artifact }) => ({ role, artifact }))])
+    .filter(([, items]) => (items as readonly unknown[]).length > 0));
 }
 
 function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): { readonly dialogue: string } {
@@ -304,16 +343,12 @@ export const decodeSeedanceVideoSurface: StructuredSurfaceHandler = ({ element, 
   ]);
   const selected = modelSelection(element);
   const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
-  const refs = references(element, resolveReference);
-  const request = sealSeedanceRequest({
-    contract: "svml.seedance-request@1",
-    model: selected.model,
-    prompt: declaredPrompt.text + referencePrompt(refs),
-    mode: refs.length === 0
-      ? { kind: "text" }
-      : { kind: "reference", items: refs.map(({ role: _role, ...item }) => item) },
+  const refs = references(element, selected.model, resolveReference);
+  const request = sealSeedanceRequest(selected.model, {
+    prompt: [declaredPrompt.text + referencePrompt(refs)],
+    ...referencePorts(refs),
     ...generationSettings(element, selected.model),
-    generateAudio: booleanAttribute(element, "generate-audio", false),
+    generateAudio: [booleanAttribute(element, "generate-audio", false)],
   });
   return generationOutput(element, request, `${stringAttribute(element, "id")}.video`);
 };
@@ -325,23 +360,20 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
   const selected = modelSelection(element);
   const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
   const spoken = dialogueExcerpt(resolved(element, "dialogue", resolveReference), `${element.name}.dialogue`);
-  const refs = references(element, resolveReference);
+  const refs = references(element, selected.model, resolveReference);
   const duration = speechDurationReference(element, resolveReference);
   const promptText = `${declaredPrompt.text}${referencePrompt(refs)}\n\nSpoken dialogue — say exactly:\n${spoken.dialogue}`;
-  const mode = refs.length === 0
-    ? { kind: "text" as const }
-    : { kind: "reference" as const, items: refs.map(({ role: _role, ...item }) => item) };
   if (duration !== undefined) {
-    const settings = generationSettings(element, selected.model, 4);
+    const { duration: _later, ...settings } = generationSettings(element, selected.model, 4);
     const program = sealSeedanceSpeechProgram({
       contract: "svml.seedance-speech-spine@1",
       model: selected.model,
-      prompt: promptText,
-      mode,
-      resolution: settings.resolution,
-      aspectRatio: settings.aspectRatio,
-      generateAudio: true,
-      webSearch: settings.webSearch,
+      ports: {
+        prompt: [promptText],
+        ...referencePorts(refs),
+        ...settings,
+        generateAudio: [true],
+      },
     });
     const id = stringAttribute(element, "id");
     const programId = `${id}.program`;
@@ -369,13 +401,11 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
       fragments: [fragment],
     };
   }
-  const request = sealSeedanceRequest({
-    contract: "svml.seedance-request@1",
-    model: selected.model as SeedanceModel,
-    prompt: promptText,
-    mode,
+  const request = sealSeedanceRequest(selected.model, {
+    prompt: [promptText],
+    ...referencePorts(refs),
     ...generationSettings(element, selected.model),
-    generateAudio: true,
+    generateAudio: [true],
   });
   return generationOutput(element, request, stringAttribute(element, "id"));
 };

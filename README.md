@@ -69,7 +69,7 @@ The repository implements:
 - recoverable Runtime scheduling with concurrency lanes, retries and cancellation;
 - SQLite Build/Operation stores and filesystem/S3 Artifact stores;
 - exact Endpoint binding and scoped credentials;
-- seven explicit image/video model families through the KIE Provider;
+- eleven exact image/video models declaring their own input ports, reached through the KIE Provider;
 - local ffprobe/ffmpeg media processing;
 - local pinned WhisperX service;
 - Vertex Gemini display-only Caption planning;

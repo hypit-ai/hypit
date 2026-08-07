@@ -49,7 +49,7 @@
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:280b7f009d0f5c93c171cbf167d21e5ee2cf415fbb0ce885f1b9fa05b1833c29"
+      "digest": "sha256:517aa8e72c832175bd09fb711a091fcab5e8d16af3fa0e6c302dc4b73afe277f"
     },
     {
       "name": "@narratage/host",
@@ -74,7 +74,7 @@
     {
       "name": "@narratage/model-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:195208129c357c8b48dd38977557a8c9f87e3bbd3c162e2e51e17db0f56bf874"
+      "digest": "sha256:71b23848a90535e0cd74b25f4ef74a9827ce1aa0abdfe4eb34cc1dc3d907ce13"
     },
     {
       "name": "@narratage/narrative",
@@ -114,7 +114,7 @@
     {
       "name": "@narratage/seedance",
       "version": "0.0.0-dev",
-      "digest": "sha256:872fe63f9a1d36d071aec4baa4764cc14e99e807a21a446f0a19788ef37a48ec"
+      "digest": "sha256:f550f1f9278056b349c6f4f536e8d8694ff3cc1d01395c30a1384332fc034f5d"
     },
     {
       "name": "@narratage/semantic-map",
@@ -244,7 +244,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:c52730036a392448eb17cada1dd16b22be9ecb721ba47fb8d8a8633f74e4e039",
-      "closureDigest": "sha256:ab382976a8fd6caed8cc59060774edae9a4158c8a341073d80b3bcd9c50640e1"
+      "closureDigest": "sha256:74985d499a527c256c23191b188ca3d061d25f1e5fae91136460918438090b5b"
     },
     {
       "specifier": "@narratage/hyperframes",
@@ -324,8 +324,8 @@
         "name": "@narratage/seedance",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:aca85f68a54101516b734a0aafa7e819ac2ce670f595ae1084ac493b2bdafb95",
-      "closureDigest": "sha256:023e18468d9a78f1f32ea42ea087176e1c7d076a2908f2bff78397ad01ccdbd4"
+      "facetsDigest": "sha256:33c8544ab99b77c94af25a4620bf17e0b1b994cc505616933878c8ece586f666",
+      "closureDigest": "sha256:4afcf602ed33934feaaec18babbcebe016b51a310ef6c56f5a94363201cfd393"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -418,5 +418,5 @@
       "closureDigest": "sha256:777e0f036d3213461c2d441c30869e26206e1cbaea318dc213244a224444fcf3"
     }
   ],
-  "digest": "sha256:368f3a799ac566877e1625fa1c97594a9850dfb1343bb721d3e41745c4796eb9"
+  "digest": "sha256:1a445f5c6c074683776245b048ce1ad4fec53e1e0d7b178560fff431a9e3b77b"
 }
