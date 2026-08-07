@@ -1,23 +1,30 @@
 # `@narratage/provider-kie`
 
-Recoverable KIE Market Provider for the first seven explicitly selected model families.
+Recoverable KIE Market Provider for the eleven explicitly selected exact models.
 
 This package is deployment code. Author source imports model modules such as `@narratage/seedance` or
 `@narratage/gpt-image`; trusted Runtime configuration installs `createKieProvider()`. The Provider binds
 only those exact capabilities and never interprets a generic image/video request as permission to
 choose another model.
 
+It imports no model package. Each model declares the inputs it accepts, and this package contributes
+only the wire mapping over those ports — including the routes where KIE serves one model from several
+of its own endpoint slugs. See [`model-input-ports.md`](../../docs/model-input-ports.md).
+
 ## Supported catalog
 
-| Author module | Exact author model/mode | KIE model |
+One Capability per exact model; a service that splits a model across endpoints expresses that as
+routes rather than extra Capabilities.
+
+| Author module | Exact models | KIE model slugs |
 |---|---|---|
-| `@narratage/seedance` | Seedance 2.0 / Fast / Mini | `bytedance/seedance-2*` |
-| `@narratage/minimax-h3` | text / frames / multimodal reference | `minimax-h3/*-to-video` |
-| `@narratage/gemini-omni` | Gemini Omni Video | `gemini-omni-video` |
-| `@narratage/grok-imagine` | text video / image video / 1.5 preview | Grok Imagine video endpoints |
-| `@narratage/gpt-image` | GPT Image 2 text / image | GPT Image 2 endpoints |
-| `@narratage/nano-banana` | Nano Banana 2 / Pro | `nano-banana-2`, `nano-banana-pro` |
-| `@narratage/seedream` | Seedream 5 Lite text / image | Seedream 5 Lite endpoints |
+| `@narratage/seedance` | `seedance-2`, `-fast`, `-mini` | `bytedance/seedance-2*` |
+| `@narratage/minimax-h3` | `minimax-h3` | `minimax-h3/{text,image,reference}-to-video` |
+| `@narratage/gemini-omni` | `gemini-omni-video` | `gemini-omni-video` |
+| `@narratage/grok-imagine` | `grok-imagine-video`, `-1.5-preview` | Grok Imagine video endpoints |
+| `@narratage/gpt-image` | `gpt-image-2` | `gpt-image-2-{text,image}-to-image` |
+| `@narratage/nano-banana` | `nano-banana-2`, `-pro` | `nano-banana-2`, `nano-banana-pro` |
+| `@narratage/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A
