@@ -1,60 +1,102 @@
 import { artifactDependency } from "@narratage/artifact";
 import {
-  assertGenerationBlobRef,
-  generationBlobRefSchema,
   generationObjectSchema,
   generationPromptSchema,
-  sealGenerationRequest,
+  portsObjectSchema,
+  sealGenerationPortRequest,
+  sealGenerationPortTable,
+  verifyPortsAgainstTable,
+} from "@narratage/generation";
+import type {
+  GenerationPortTable,
+  GenerationPortValue,
+  GenerationRequest,
 } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
 import { narrativeDependency } from "@narratage/narrative";
 import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
 import { canonicalize, digestOf } from "@narratage/protocol";
-import type { BlobRef, Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 export const seedanceModuleRef = { name: "@narratage/seedance", version: "0.0.0-dev" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini"] as const;
 export type SeedanceModel = typeof seedanceModels[number];
 
-export type SeedanceReference =
-  | { readonly kind: "image"; readonly artifact: BlobRef }
-  | { readonly kind: "video"; readonly artifact: BlobRef }
-  | { readonly kind: "audio"; readonly artifact: BlobRef };
+const ASPECT_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9", "adaptive"] as const;
 
-export type SeedanceMode =
-  | { readonly kind: "text" }
-  | { readonly kind: "frames"; readonly firstFrame: BlobRef; readonly lastFrame?: BlobRef }
-  | { readonly kind: "reference"; readonly items: readonly SeedanceReference[] };
+/**
+ * What Seedance 2 accepts is fixed when the model is trained; no service
+ * reselling it can widen or narrow this. Every limit below is stated identically
+ * by ByteDance's own launch material, KIE and fal — only the wire field names
+ * differ between services, and those live in each Provider's wire mapping.
+ *
+ * Reference modalities are separate ports because the model gives each its own
+ * capacity: 9 images, 3 videos, 3 audio clips, and no more than 12 files in
+ * total. Only the resolution ceiling differs between the variants.
+ */
+function seedancePortTable(model: SeedanceModel): GenerationPortTable {
+  return sealGenerationPortTable({
+    contract: "svml.generation-ports@1",
+    model,
+    result: "video",
+    ports: [
+      { name: "prompt", value: { kind: "text", maxChars: 20_000 }, minItems: 1, maxItems: 1 },
+      { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 9 },
+      { name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0, maxItems: 3 },
+      { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0, maxItems: 3 },
+      { name: "firstFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
+      { name: "lastFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
+      {
+        name: "resolution",
+        value: {
+          kind: "enum",
+          values: model === "seedance-2" ? ["480p", "720p", "1080p", "4k"] : ["480p", "720p"],
+        },
+        minItems: 1,
+        maxItems: 1,
+      },
+      { name: "aspectRatio", value: { kind: "enum", values: [...ASPECT_RATIOS] }, minItems: 1, maxItems: 1 },
+      { name: "duration", value: { kind: "number", integer: true, minimum: 4, maximum: 15 }, minItems: 1, maxItems: 1 },
+      { name: "generateAudio", value: { kind: "boolean" }, minItems: 1, maxItems: 1 },
+      { name: "webSearch", value: { kind: "boolean" }, minItems: 1, maxItems: 1 },
+    ],
+    requires: [
+      // First-frame, first-and-last-frame and multimodal reference are three
+      // scenarios the model cannot combine.
+      { kind: "atMostOneOf", ports: ["referenceImage", "firstFrame"] },
+      { kind: "atMostOneOf", ports: ["referenceVideo", "firstFrame"] },
+      { kind: "atMostOneOf", ports: ["referenceAudio", "firstFrame"] },
+      { kind: "requiresPresent", port: "lastFrame", needs: ["firstFrame"] },
+      // Reference audio cannot travel alone; it needs at least one visual reference.
+      { kind: "requiresAnyOf", port: "referenceAudio", anyOf: ["referenceImage", "referenceVideo"] },
+      { kind: "weightedTotal", weights: { referenceImage: 1, referenceVideo: 1, referenceAudio: 1 }, maximum: 12 },
+    ],
+  });
+}
 
-export type SeedanceRequestContent<M extends SeedanceModel = SeedanceModel> = {
-  readonly contract: "svml.seedance-request@1";
-  readonly model: M;
-  readonly prompt: string;
-  readonly mode: SeedanceMode;
-  readonly resolution: "480p" | "720p" | "1080p";
-  readonly aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive";
-  readonly durationSec: number;
-  readonly generateAudio: boolean;
-  readonly webSearch: boolean;
+export const seedancePorts: Readonly<Record<SeedanceModel, GenerationPortTable>> = {
+  "seedance-2": seedancePortTable("seedance-2"),
+  "seedance-2-fast": seedancePortTable("seedance-2-fast"),
+  "seedance-2-mini": seedancePortTable("seedance-2-mini"),
 };
 
-export type SeedanceRequest<M extends SeedanceModel = SeedanceModel> = SeedanceRequestContent<M>;
+export type SeedancePortMap = Readonly<Record<string, readonly GenerationPortValue[]>>;
+
+export function sealSeedanceRequest(model: SeedanceModel, ports: SeedancePortMap): GenerationRequest {
+  return sealGenerationPortRequest(seedancePorts[model], ports);
+}
 
 export type SeedancePrompt = {
   readonly contract: "svml.seedance-prompt@1";
   readonly text: string;
 };
 
+/** One authored generation minus the duration only speech estimation can supply. */
 export type SeedanceSpeechProgram = {
   readonly contract: "svml.seedance-speech-spine@1";
   readonly model: SeedanceModel;
-  readonly prompt: string;
-  readonly mode: SeedanceMode;
-  readonly resolution: "480p" | "720p" | "1080p";
-  readonly aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive";
-  readonly generateAudio: true;
-  readonly webSearch: boolean;
+  readonly ports: SeedancePortMap;
 };
 
 export const seedanceTypes = {
@@ -75,17 +117,22 @@ export const seedanceSpeechCompileImplementationDigests = Object.fromEntries(
 
 export const seedanceSurfaceImplementationDigests = {
   prompt: digestOf("@narratage/seedance/prompt-surface@1"),
-  speech: digestOf("@narratage/seedance/speech-surface@3"),
-  video: digestOf("@narratage/seedance/video-surface@1"),
+  speech: digestOf("@narratage/seedance/speech-surface@4"),
+  video: digestOf("@narratage/seedance/video-surface@2"),
 } as const;
+
+function assertObject(value: unknown): asserts value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Seedance value must be an object");
+  }
+}
 
 export function sealSeedancePrompt(text: string): SeedancePrompt {
   const normalized = text.trim();
   if (normalized.length === 0 || normalized.length > 20_000) {
     throw new Error("Seedance Prompt must contain 1 to 20,000 characters");
   }
-  const content = { contract: "svml.seedance-prompt@1" as const, text: normalized };
-  return content;
+  return { contract: "svml.seedance-prompt@1" as const, text: normalized };
 }
 
 export function verifySeedancePrompt(value: unknown): asserts value is SeedancePrompt {
@@ -95,173 +142,50 @@ export function verifySeedancePrompt(value: unknown): asserts value is SeedanceP
   }
 }
 
-export function sealSeedanceSpeechProgram(value: SeedanceSpeechProgram): SeedanceSpeechProgram {
-  const result = structuredClone(value);
-  verifySeedanceSpeechProgram(result);
-  return result;
-}
-
 export function verifySeedanceSpeechProgram(value: unknown): asserts value is SeedanceSpeechProgram {
   assertObject(value);
-  if (
-    value.contract !== "svml.seedance-speech-spine@1"
-    || !seedanceModels.includes(value.model as SeedanceModel)
-    || typeof value.prompt !== "string"
-    || value.prompt.trim().length === 0
-    || value.generateAudio !== true
-    || typeof value.webSearch !== "boolean"
-    || !["480p", "720p", "1080p"].includes(value.resolution as string)
-    || !["1:1", "4:3", "3:4", "16:9", "9:16", "21:9", "adaptive"].includes(value.aspectRatio as string)
-  ) {
-    throw new Error("Seedance SpeechProgram is invalid");
+  if (value.contract !== "svml.seedance-speech-spine@1"
+    || !seedanceModels.includes(value.model as SeedanceModel)) {
+    throw new Error("Seedance SpeechProgram identity is invalid");
   }
-  const program = value as unknown as SeedanceSpeechProgram;
-  sealSeedanceRequest({
-    contract: "svml.seedance-request@1",
-    model: program.model,
-    prompt: program.prompt,
-    mode: program.mode,
-    resolution: program.resolution,
-    aspectRatio: program.aspectRatio,
-    durationSec: 4,
-    generateAudio: true,
-    webSearch: program.webSearch,
-  });
+  const table = seedancePorts[value.model as SeedanceModel];
+  verifyPortsAgainstTable(table, value.ports, { omit: ["duration"] });
+  const generateAudio = (value.ports as SeedancePortMap).generateAudio;
+  if (generateAudio?.[0] !== true) throw new Error("Seedance SpeechProgram must generate audio");
+}
+
+export function sealSeedanceSpeechProgram(value: SeedanceSpeechProgram): SeedanceSpeechProgram {
+  const result = canonicalize(value) as unknown as SeedanceSpeechProgram;
+  verifySeedanceSpeechProgram(result);
+  return result;
 }
 
 export function compileSeedanceSpeechRequest(
   program: SeedanceSpeechProgram,
   duration: SpeechDuration,
-): SeedanceRequest {
+): GenerationRequest {
   verifySeedanceSpeechProgram(program);
   assertSpeechDurationIdentity(duration);
-  if (!Number.isSafeInteger(duration.durationSec) || duration.durationSec < 4 || duration.durationSec > 15) {
-    throw new Error("Seedance Speech duration must be an integer between 4 and 15 seconds");
-  }
-  return sealSeedanceRequest({
-    contract: "svml.seedance-request@1",
-    model: program.model,
-    prompt: program.prompt,
-    mode: program.mode,
-    resolution: program.resolution,
-    aspectRatio: program.aspectRatio,
-    durationSec: duration.durationSec,
-    generateAudio: true,
-    webSearch: program.webSearch,
-  });
+  return sealSeedanceRequest(program.model, { ...program.ports, duration: [duration.durationSec] });
 }
 
-const referenceSchema: ValueSchema = {
-  kind: "oneOf",
-  variants: (["image", "video", "audio"] as const).map((kind) => generationObjectSchema({
-    kind: { schema: { kind: "literal", value: kind } },
-    artifact: { schema: generationBlobRefSchema },
-  })),
-};
-
-const modeSchema: ValueSchema = {
-  kind: "oneOf",
-  variants: [
-    generationObjectSchema({ kind: { schema: { kind: "literal", value: "text" } } }),
-    generationObjectSchema({
-      kind: { schema: { kind: "literal", value: "frames" } },
-      firstFrame: { schema: generationBlobRefSchema },
-      lastFrame: { schema: generationBlobRefSchema, optional: true },
-    }),
-    generationObjectSchema({
-      kind: { schema: { kind: "literal", value: "reference" } },
-      items: { schema: { kind: "array", minItems: 1, maxItems: 12, items: referenceSchema } },
-    }),
-  ],
-};
-
-const aspectRatioSchema = {
-  kind: "string",
-  enum: ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9", "adaptive"],
-} as const satisfies ValueSchema;
-
-const speechSpineSchema: ValueSchema = generationObjectSchema({
+const speechSpineSchema = (model: SeedanceModel): ValueSchema => generationObjectSchema({
   contract: { schema: { kind: "literal", value: "svml.seedance-speech-spine@1" } },
-  model: { schema: { kind: "string", enum: [...seedanceModels] } },
-  prompt: { schema: generationPromptSchema },
-  mode: { schema: modeSchema },
-  resolution: { schema: { kind: "string", enum: ["480p", "720p", "1080p"] } },
-  aspectRatio: { schema: aspectRatioSchema },
-  generateAudio: { schema: { kind: "literal", value: true } },
-  webSearch: { schema: { kind: "boolean" } },
+  model: { schema: { kind: "literal", value: model } },
+  ports: { schema: portsObjectSchema(seedancePorts[model], { omit: ["duration"] }) },
 });
-
-function requestSchema(model: SeedanceModel): ValueSchema {
-  return generationObjectSchema({
-    contract: { schema: { kind: "literal", value: "svml.seedance-request@1" } },
-    model: { schema: { kind: "literal", value: model } },
-    prompt: { schema: generationPromptSchema },
-    mode: { schema: modeSchema },
-    resolution: {
-      schema: {
-        kind: "string",
-        enum: model === "seedance-2" ? ["480p", "720p", "1080p"] : ["480p", "720p"],
-      },
-    },
-    aspectRatio: { schema: aspectRatioSchema },
-    durationSec: { schema: { kind: "number", integer: true, minimum: 4, maximum: 15 } },
-    generateAudio: { schema: { kind: "boolean" } },
-    webSearch: { schema: { kind: "boolean" } },
-  });
-}
-
-function assertObject(value: unknown): asserts value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Seedance request must be an object");
-  }
-}
-
-export function verifySeedanceRequest(value: unknown, expectedModel?: SeedanceModel): asserts value is SeedanceRequest {
-  assertObject(value);
-  if (value.contract !== "svml.seedance-request@1") throw new Error("Seedance request contract is invalid");
-  if (!seedanceModels.includes(value.model as SeedanceModel)) throw new Error("Seedance model is invalid");
-  if (expectedModel !== undefined && value.model !== expectedModel) throw new Error(`Expected ${expectedModel}`);
-  const mode = value.mode;
-  assertObject(mode);
-  if (mode.kind === "frames") {
-    assertGenerationBlobRef(mode.firstFrame, "image/");
-    if (mode.lastFrame !== undefined) assertGenerationBlobRef(mode.lastFrame, "image/");
-  } else if (mode.kind === "reference") {
-    if (!Array.isArray(mode.items) || mode.items.length === 0) throw new Error("Seedance references are empty");
-    for (const item of mode.items) {
-      assertObject(item);
-      if (item.kind !== "image" && item.kind !== "video" && item.kind !== "audio") {
-        throw new Error("Seedance reference kind is invalid");
-      }
-      assertGenerationBlobRef(item.artifact, `${item.kind}/` as "image/" | "video/" | "audio/");
-    }
-  } else if (mode.kind !== "text") {
-    throw new Error("Seedance mode is invalid");
-  }
-}
-
-export function sealSeedanceRequest<M extends SeedanceModel>(
-  content: SeedanceRequestContent<M>,
-): SeedanceRequest<M> {
-  const request = sealGenerationRequest(content);
-  verifySeedanceRequest(request, content.model);
-  return request;
-}
 
 const seedanceBaseDefinition = defineExactModelModule({
   module: seedanceModuleRef,
-  endpoints: [
+  endpoints: ([
     ["standard", "seedance-2"],
     ["fast", "seedance-2-fast"],
     ["mini", "seedance-2-mini"],
-  ].map(([key, model]) => ({
-    key: key!,
-    requestTypeName: `${model!.split("-").map((part) => part[0]!.toUpperCase() + part.slice(1)).join("")}Request`,
-    capabilityName: `${model}-generation`,
+  ] as const).map(([key, model]) => ({
+    key,
+    requestTypeName: `${model.split("-").map((part) => part[0]!.toUpperCase() + part.slice(1)).join("")}Request`,
     producerName: `request-${model}`,
-    result: "video" as const,
-    requestSchema: requestSchema(model as SeedanceModel),
-    verifyRequest: (value: unknown) => verifySeedanceRequest(value, model as SeedanceModel),
+    ports: seedancePorts[model],
   })),
 });
 
@@ -282,7 +206,10 @@ export const seedanceManifest = {
   ],
   types: [
     ...seedanceBaseDefinition.manifest.types,
-    { name: seedanceTypes.speechSpine.name, schema: speechSpineSchema },
+    {
+      name: seedanceTypes.speechSpine.name,
+      schema: { kind: "oneOf", variants: seedanceModels.map(speechSpineSchema) } satisfies ValueSchema,
+    },
     {
       name: seedanceTypes.prompt.name,
       schema: generationObjectSchema({
