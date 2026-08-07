@@ -9,7 +9,7 @@ hero:
       link: /quickstart
     - theme: alt
       text: Develop
-      link: /guide/components
+      link: /guide/develop
 ---
 
 <ClientOnly>
