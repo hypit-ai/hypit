@@ -15,8 +15,8 @@ import {
 import { generationComponent } from "@svml/generation";
 import {
   createNodePackageLock,
-  loadNodePackages,
-  nodePackageComponents,
+  collectNodePackageComponents,
+  loadNodePackageContributions,
   writeNodePackageLock,
 } from "@svml/package-loader-node";
 import {
@@ -32,7 +32,7 @@ import { seedanceComponent } from "@svml/seedance";
 import { svmlPackage } from "../src/index.js";
 
 test("the official prelude activates SpeechTake compute without teaching the Host its name", () => {
-  const components = nodePackageComponents([svmlPackage]);
+  const components = collectNodePackageComponents([svmlPackage]);
   assert.equal(
     svmlPackage.modules?.some((module) => module.manifest === speechTakeManifest),
     true,
@@ -45,7 +45,7 @@ test("the official prelude activates SpeechTake compute without teaching the Hos
 });
 
 test("the official prelude activates Speech Align compute without teaching the Host its name", () => {
-  const components = nodePackageComponents([svmlPackage]);
+  const components = collectNodePackageComponents([svmlPackage]);
   assert.equal(
     svmlPackage.modules?.some((module) => module.manifest === speechAlignManifest),
     true,
@@ -58,7 +58,7 @@ test("the official prelude activates Speech Align compute without teaching the H
 });
 
 test("the official prelude activates Caption compute and owner validators without Host special cases", () => {
-  const components = nodePackageComponents([svmlPackage]);
+  const components = collectNodePackageComponents([svmlPackage]);
   assert.equal(
     svmlPackage.modules?.some((module) => module.manifest === captionManifest),
     true,
@@ -87,8 +87,8 @@ test("the installed official package lock physically contains speech and Caption
     assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/generation"), true);
     assert.equal(lock.artifacts.some((artifact) => artifact.name === "@svml/seedance"), true);
     await writeNodePackageLock(lockPath, lock);
-    const packages = await loadNodePackages(lockPath, installedRoot);
-    const components = nodePackageComponents(packages);
+    const packages = await loadNodePackageContributions(lockPath, installedRoot);
+    const components = collectNodePackageComponents(packages);
     assert.equal(components.some((component) => component.name === "@svml/speech-take"), true);
     assert.equal(components.some((component) => component.name === "@svml/speech-align"), true);
     assert.equal(components.some((component) => component.name === "@svml/caption"), true);

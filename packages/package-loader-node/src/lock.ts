@@ -19,12 +19,12 @@ import { pathToFileURL } from "node:url";
 
 import { digestOf, isDigest } from "@svml/protocol";
 
-import { nodePackageComponents } from "./activation.js";
+import { collectNodePackageComponents } from "./contribution.js";
 import type {
   LockedNodePackage,
   LockedPackageArtifact,
   LoadedNodePackageSet,
-  NodePackageActivation,
+  NodePackageContribution,
   NodePackageLock,
 } from "./types.js";
 
@@ -180,9 +180,9 @@ function activationPath(item: ResolvedPhysicalPackage): string {
   return target;
 }
 
-function activationMetadata(value: NodePackageActivation): unknown {
-  assert(value.format === "svml.node-package@1", "Node package activation has an unsupported format");
-  assert(value.name.trim().length > 0, "Node package activation name is empty");
+function contributionMetadata(value: NodePackageContribution): unknown {
+  assert(value.format === "svml.node-package@1", "Node package contribution has an unsupported format");
+  assert(value.name.trim().length > 0, "Node package contribution name is empty");
   return {
     format: value.format,
     name: value.name,
@@ -194,14 +194,11 @@ function activationMetadata(value: NodePackageActivation): unknown {
       id: item.id,
       implementationDigest: item.implementationDigest,
     })).sort((left, right) => left.id.localeCompare(right.id)),
-    textSurfaces: [...(value.textSurfaces ?? [])].map((item) => ({
-      module: item.module,
-      surface: item.surface,
-      mode: item.mode,
-      implementationDigest: item.implementationDigest,
+    hostFacets: [...(value.hostFacets ?? [])].map((item) => ({
+      abi: item.abi,
+      identity: item.identity,
     })).sort((left, right) =>
-      `${left.module.name}@${left.module.version}#${left.surface}`
-        .localeCompare(`${right.module.name}@${right.module.version}#${right.surface}`),
+      `${left.abi}:${digestOf(left.identity)}`.localeCompare(`${right.abi}:${digestOf(right.identity)}`),
     ),
     components: [...(value.components ?? [])].map((component) => ({
       name: component.name,
@@ -226,7 +223,7 @@ function activationMetadata(value: NodePackageActivation): unknown {
   };
 }
 
-async function importActivation(item: ResolvedPhysicalPackage): Promise<NodePackageActivation> {
+async function importContribution(item: ResolvedPhysicalPackage): Promise<NodePackageContribution> {
   const target = activationPath(item);
   assert((await stat(target)).isFile(), `${item.json.name} activation is not a file`);
   const imported = await import(pathToFileURL(target).href) as {
@@ -235,11 +232,11 @@ async function importActivation(item: ResolvedPhysicalPackage): Promise<NodePack
   };
   const value = imported.default ?? imported.svmlPackage;
   assert(value !== null && typeof value === "object", `${item.json.name} activation exports no package`);
-  const activation = value as NodePackageActivation;
-  assert(activation.name === item.json.name,
-    `${item.json.name} activation claims physical package ${activation.name}`);
-  nodePackageComponents([activation]);
-  return activation;
+  const contribution = value as NodePackageContribution;
+  assert(contribution.name === item.json.name,
+    `${item.json.name} activation claims physical package ${contribution.name}`);
+  collectNodePackageComponents([contribution]);
+  return contribution;
 }
 
 function lockContent(lock: Omit<NodePackageLock, "digest">): Omit<NodePackageLock, "digest"> {
@@ -317,11 +314,11 @@ export async function createNodePackageLock(
   const packages: LockedNodePackage[] = [];
   for (const specifier of unique) {
     const physical = await resolvePhysicalPackage(specifier, root);
-    const activation = await importActivation(physical);
+    const contribution = await importContribution(physical);
     packages.push({
       specifier,
       package: { name: physical.json.name, version: physical.json.version },
-      facetsDigest: digestOf(activationMetadata(activation)),
+      facetsDigest: digestOf(contributionMetadata(contribution)),
     });
   }
   return sealLock({
@@ -346,22 +343,22 @@ export async function loadNodePackageSet(
   const artifacts = await resolvedArtifacts(closure);
   assert(sameArtifacts(artifacts, lock.artifacts), "installed Node package bytes do not match the lock");
   const byName = new Map(closure.map((item) => [`${item.json.name}@${item.json.version}`, item]));
-  const values: NodePackageActivation[] = [];
+  const values: NodePackageContribution[] = [];
   for (const expected of lock.packages) {
     const physical = byName.get(`${expected.package.name}@${expected.package.version}`);
     assert(physical !== undefined, `${expected.package.name}@${expected.package.version} is not installed`);
     assert(physical.json.name === expected.specifier, `${expected.specifier} resolved to another package`);
-    const activation = await importActivation(physical);
-    assert(digestOf(activationMetadata(activation)) === expected.facetsDigest,
+    const contribution = await importContribution(physical);
+    assert(digestOf(contributionMetadata(contribution)) === expected.facetsDigest,
       `${expected.specifier} facets do not match the lock`);
-    values.push(activation);
+    values.push(contribution);
   }
-  return { lock, packages: values };
+  return { lock, contributions: values };
 }
 
-export async function loadNodePackages(
+export async function loadNodePackageContributions(
   path: string,
   root = dirname(resolve(path)),
-): Promise<readonly NodePackageActivation[]> {
-  return (await loadNodePackageSet(path, root)).packages;
+): Promise<readonly NodePackageContribution[]> {
+  return (await loadNodePackageSet(path, root)).contributions;
 }

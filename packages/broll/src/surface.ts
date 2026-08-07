@@ -1,3 +1,4 @@
+import { artifactTypes } from "@svml/artifact";
 import { contractTypes } from "@svml/contracts";
 import { sealGraphFragment } from "@svml/elaborator";
 import type { FragmentOperation } from "@svml/elaborator";
@@ -120,7 +121,7 @@ export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, res
     if (!child.name.endsWith(":Item") && child.name !== "Item") throw new Error(`${element.name} accepts only Item children`);
     itemIndex += 1;
     exact(child, ["source", "during", "appearance"]);
-    const source = ref(child, "source", contractTypes.blobArtifact, resolveReference);
+    const source = ref(child, "source", artifactTypes.blob, resolveReference);
     const selection = ref(child, "during", contractTypes.narrativeSelection, resolveReference);
     const appearance = recipe(ref(child, "appearance", svsRecipeType, resolveReference));
     const expected = ["background", "enter", "exit", "fit", "height", "radius", "stack-order", "width", "x", "y"];

@@ -6,35 +6,29 @@ import type {
   ComponentPackage,
   ProducerRegistrar,
 } from "@svml/component-kit";
-import {
-  ModulePackageRegistry,
-  NodeCompiler,
-} from "@svml/compiler-node";
+import { ModulePackageRegistry } from "@svml/compiler-node";
 import type { RegisteredModulePackage } from "@svml/compiler-node";
-import { AuthorFrontendRegistry } from "@svml/elaborator";
-import type { Workspace } from "@svml/host";
-import { isDigest } from "@svml/protocol";
-import {
-  createTextAuthorFrontend,
-  TextSurfaceRegistry,
-  textAuthorFrontendId,
-} from "@svml/text";
-import { TypeValidatorRegistry } from "@svml/validation";
+import { canonicalize } from "@svml/protocol";
 import type { TypeValidatorRegistrar } from "@svml/validation";
 
-import type { NodePackageActivation } from "./types.js";
+import type { NodePackageContribution } from "./types.js";
 
-export type CreateActivatedNodeCompilerOptions = {
-  readonly root?: string;
-  readonly workspace?: Workspace;
-};
-
-function assertPackage(value: NodePackageActivation): void {
+function assertPackage(value: NodePackageContribution): void {
   if (value.format !== "svml.node-package@1") {
     throw new Error(`${value.name || "Node package"} has an unsupported format`);
   }
   if (value.name.trim().length === 0) throw new Error("Node package name must not be empty");
+  const hostFacets = new Set<string>();
+  for (const facet of value.hostFacets ?? []) {
+    if (facet.abi.trim().length === 0) throw new Error(`${value.name} has an empty Host facet ABI`);
+    const identity = canonicalize(facet.identity);
+    const key = `${facet.abi}:${JSON.stringify(identity)}`;
+    if (hostFacets.has(key)) throw new Error(`${value.name} repeats Host facet ${facet.abi}`);
+    hostFacets.add(key);
+  }
 }
+
+export { assertPackage as assertNodePackageContribution };
 
 function facetKey(
   ref: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
@@ -43,8 +37,8 @@ function facetKey(
 }
 
 /** Verify package-local facet identities before any Host registry receives executable handlers. */
-export function nodePackageComponents(
-  packages: readonly NodePackageActivation[],
+export function collectNodePackageComponents(
+  packages: readonly NodePackageContribution[],
 ): readonly ComponentPackage[] {
   const packageNames = new Set<string>();
   const moduleRegistry = new ModulePackageRegistry();
@@ -54,7 +48,7 @@ export function nodePackageComponents(
   const validators = new Set<string>();
   for (const item of packages) {
     assertPackage(item);
-    if (packageNames.has(item.name)) throw new Error(`Node package ${item.name} is activated twice`);
+    if (packageNames.has(item.name)) throw new Error(`Node package contribution ${item.name} is listed twice`);
     packageNames.add(item.name);
     for (const module of item.modules ?? []) {
       const key = `${module.manifest.name}@${module.manifest.version}`;
@@ -99,75 +93,13 @@ export function nodePackageComponents(
   return [...components.values()];
 }
 
-export function activateNodeComponents(
-  packages: readonly NodePackageActivation[],
+export function installNodePackageComponents(
+  packages: readonly NodePackageContribution[],
   producers: ProducerRegistrar,
   validators: TypeValidatorRegistrar,
 ): void {
-  for (const component of nodePackageComponents(packages)) {
+  for (const component of collectNodePackageComponents(packages)) {
     registerTypeValidatorFacets(validators, component.validators ?? []);
     registerProducerFacets(producers, component.producers ?? []);
   }
-}
-
-/** Assemble already trusted author facets without knowing any domain component by name. */
-export function createActivatedNodeCompiler(
-  packages: readonly NodePackageActivation[],
-  options: CreateActivatedNodeCompilerOptions = {},
-): NodeCompiler {
-  const names = new Set<string>();
-  const modules = new ModulePackageRegistry();
-  const surfaces = new TextSurfaceRegistry();
-  const frontends = new AuthorFrontendRegistry();
-  const validators = new TypeValidatorRegistry();
-
-  for (const item of packages) {
-    assertPackage(item);
-    if (names.has(item.name)) throw new Error(`Node package ${item.name} is activated twice`);
-    names.add(item.name);
-    for (const module of item.modules ?? []) modules.register(module);
-    for (const surface of item.textSurfaces ?? []) {
-      if (!isDigest(surface.implementationDigest)) {
-        throw new Error(`${item.name} Surface ${surface.surface} has an invalid implementation digest`);
-      }
-      if (surface.mode === "raw") {
-        surfaces.registerRaw(
-          surface.module,
-          surface.surface,
-          surface.implementationDigest,
-          surface.handler,
-        );
-      } else {
-        surfaces.registerStructured(
-          surface.module,
-          surface.surface,
-          surface.implementationDigest,
-          surface.handler,
-        );
-      }
-    }
-    for (const frontend of item.frontends ?? []) frontends.register(frontend);
-  }
-
-  for (const component of nodePackageComponents(packages)) {
-    registerTypeValidatorFacets(validators, component.validators ?? []);
-  }
-
-  frontends.register(createTextAuthorFrontend({
-    registry: surfaces,
-    resolveModule(request) {
-      const resolved = modules.resolve(request.from);
-      if (resolved === undefined) throw new Error(`No activated author package satisfies ${request.from}`);
-      return resolved;
-    },
-  }));
-
-  return new NodeCompiler({
-    modules,
-    frontends,
-    validators,
-    entryFrontend: textAuthorFrontendId,
-    ...(options.root === undefined ? {} : { root: options.root }),
-    ...(options.workspace === undefined ? {} : { workspace: options.workspace }),
-  });
 }

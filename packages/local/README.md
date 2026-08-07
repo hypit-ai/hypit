@@ -14,6 +14,9 @@ The convenience assembly uses:
 - an exact implementation package lock for deterministic component packages;
 - separately selected external Endpoint packages.
 
+Package loading is syntax-neutral. The local Runtime activates only locked deterministic Producer
+and Validator facets; it neither depends on `@svml/text` nor installs any package Host facet.
+
 Normal CLI projects may express the same assembly as closed data:
 
 ```json
