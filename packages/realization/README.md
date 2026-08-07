@@ -2,7 +2,7 @@
 
 Internal content-addressed realization composition outside SVML Core.
 
-A `svml.realization-overlay@2` is produced from a complete public `@svml/run` Run Graph when that
+A `svml.realization-overlay@1` is produced from a complete public `@svml/run` Run Graph when that
 run contributes alternate implementations. It locks the exact Author Graph and contributes independent typed
 Candidates plus any already elaborated Operations. It does not attach those Candidates to, or
 rewrite, Author Logical Outputs. `resolveRealization()` merges one or more Run Graph overlays

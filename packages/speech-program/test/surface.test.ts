@@ -44,7 +44,7 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@svml/validation";
 const fixtureModule = { name: "example.speech-media", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.speech-media/surface@1");
 const fixtureManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [artifactDependency, videoContractDependencies.media],

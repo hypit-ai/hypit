@@ -172,7 +172,7 @@ export function defineRuntimeServicePackage(
     } as RuntimeService;
   });
   const manifest: RuntimeModuleManifest = {
-    format: "svml.runtime-module@2",
+    format: "svml.runtime-module@1",
     name: options.module.name,
     version: options.module.version,
     facets: options.services.map((definition) => ({

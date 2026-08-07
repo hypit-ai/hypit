@@ -56,7 +56,7 @@ function validatedType(name: string, schema: ValueSchema, locator: string, valid
 }
 
 export const promptKitManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: promptKitModuleRef.name,
   version: promptKitModuleRef.version,
   dependencies: [],

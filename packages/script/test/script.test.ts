@@ -95,7 +95,7 @@ test("Caption Projection owns speech ranges without inventing alias word timing"
   );
   const [identity, discount, replacement, interrupted, hidden] = parsed.captionProjection.regions;
 
-  assert.equal(parsed.captionProjection.contract, "svml.caption-projection@0");
+  assert.equal(parsed.captionProjection.contract, "svml.caption-projection@1");
   assert.equal(identity?.kind, "identity");
   assert.deepEqual(identity?.refinements.map((item) => item.display), ["test", "this"]);
   assert.equal(discount?.kind, "alias");

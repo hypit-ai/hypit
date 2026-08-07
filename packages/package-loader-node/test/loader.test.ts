@@ -87,7 +87,7 @@ async function fixture(): Promise<{
       name: "example-card",
       modules: [{
         manifest: {
-          format: "svml.module@0",
+          format: "svml.module@1",
           name: module.name,
           version: module.version,
           dependencies: [],
@@ -282,7 +282,7 @@ async function runtimeAdapterFixture(marker: string): Promise<{
           return {
             name: context.instance,
             manifest: {
-              format: "svml.runtime-module@2",
+              format: "svml.runtime-module@1",
               name: module.name,
               version: module.version,
               facets: [{

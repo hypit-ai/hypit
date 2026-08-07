@@ -190,7 +190,7 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
     assert.equal((value as { readonly audioArtifactDigest?: unknown }).audioArtifactDigest,
       evidenceAudio.artifact.digest);
     assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
-    assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@2");
+    assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@1");
     assert.equal(contractTypes.speechEvidenceAudio.name, "SpeechEvidenceAudio");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));

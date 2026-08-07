@@ -23,7 +23,7 @@ export const seedanceSpeakerImplementationDigests = {
 } as const;
 
 export const seedanceSpeakerManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: seedanceSpeakerModuleRef.name,
   version: seedanceSpeakerModuleRef.version,
   dependencies: [

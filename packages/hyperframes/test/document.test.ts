@@ -21,7 +21,7 @@ import type { FontArtifactRef } from "@svml/contracts";
 
 function fixture() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1001 / 1000,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });
@@ -187,7 +187,7 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {
   const space = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });

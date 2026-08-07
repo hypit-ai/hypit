@@ -16,7 +16,7 @@ test("speech evidence uses integer rational boundary projection rather than floa
   assert.equal(speechEvidenceSampleBoundary(480_001), 160_000);
   assert.equal(speechEvidenceSampleBoundary(480_002), 160_001);
   const ntsc = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1.001,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });

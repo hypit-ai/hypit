@@ -33,7 +33,7 @@ const reportProducer = { module: laboratory, name: "write-report" } satisfies Pr
 const echoProducer = { module: laboratory, name: "echo-sample" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],

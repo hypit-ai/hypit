@@ -22,7 +22,7 @@ export const speechTakeProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const speechTakeManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: speechTakeModuleRef.name,
   version: speechTakeModuleRef.version,
   dependencies: [

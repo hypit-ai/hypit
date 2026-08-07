@@ -244,7 +244,7 @@ export function parseRunDocument(name: string, text: string): RunDocument {
     fail(root, "RUN_TARGET_SET", `Selected target set ${selectedTargets} is not declared`);
   }
   return {
-    format: "svml.run-document@2",
+    format: "svml.run-document@1",
     author,
     selectedTargets,
     imports,

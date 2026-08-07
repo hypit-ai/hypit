@@ -137,7 +137,7 @@ export type CaptionPresentationUnit = {
 };
 
 export type CaptionPresentationPlan = {
-  readonly contract: "svml.caption-presentation-plan@0";
+  readonly contract: "svml.caption-presentation-plan@1";
   readonly mode: CaptionPresentationMode;
   readonly units: readonly CaptionPresentationUnit[];
 };

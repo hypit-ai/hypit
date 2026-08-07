@@ -64,7 +64,7 @@ export const filmTrackSetSchema: ValueSchema = object({
 });
 
 export const filmManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: filmModuleRef.name,
   version: filmModuleRef.version,
   dependencies: [
