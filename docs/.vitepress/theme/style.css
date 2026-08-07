@@ -139,7 +139,7 @@ body {
 .VPHero .name,
 .VPHero .text { color: var(--ink) !important; }
 .hero-statement {
-  --hero-rhythm: 48px;
+  --hero-rhythm: 24px;
   --hero-zh-gap: 8px;
   --hero-zh-line: 30.4px;
   width: 100%;
@@ -458,7 +458,7 @@ body {
   .VPHero .name { font-size: 50px !important; }
   .VPHero .text { font-size: 29px !important; }
   .hero-statement-name { font-size: 50px; }
-  .hero-statement { --hero-rhythm: 40px; --hero-zh-gap: 8px; --hero-zh-line: 25.6px; }
+  .hero-statement { --hero-rhythm: 24px; --hero-zh-gap: 8px; --hero-zh-line: 25.6px; }
   .hero-statement-viewport-en { height: 88.74px; }
   .hero-statement-en { font-size: 29px; }
   .hero-statement-zh { font-size: 16px; }
