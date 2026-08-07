@@ -11,18 +11,11 @@
   },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/gemini-omni": "workspace:*",
     "@narratage/generation": "workspace:*",
-    "@narratage/gpt-image": "workspace:*",
-    "@narratage/grok-imagine": "workspace:*",
-    "@narratage/minimax-h3": "workspace:*",
-    "@narratage/nano-banana": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*",
-    "@narratage/seedance": "workspace:*",
-    "@narratage/seedream": "workspace:*"
+    "@narratage/runtime-adapter-node": "workspace:*"
   },
   "devDependencies": {
     "@narratage/artifact-store-fs": "workspace:*",
@@ -30,10 +23,17 @@
     "@narratage/core": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/elaborator": "workspace:*",
+    "@narratage/gemini-omni": "workspace:*",
+    "@narratage/gpt-image": "workspace:*",
+    "@narratage/grok-imagine": "workspace:*",
     "@narratage/local": "workspace:*",
     "@narratage/media": "workspace:*",
+    "@narratage/minimax-h3": "workspace:*",
     "@narratage/model-kit": "workspace:*",
+    "@narratage/nano-banana": "workspace:*",
     "@narratage/narrative": "workspace:*",
+    "@narratage/seedance": "workspace:*",
+    "@narratage/seedream": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }

@@ -102,6 +102,31 @@ test("the declared domain-neutral distribution closes without syntax, AIGC or vi
   assert.deepEqual(graph.get("@narratage/core"), ["@narratage/protocol"]);
 });
 
+test("a Provider reaches no exact-model package, so models and services stay N+M", async () => {
+  const packages = await workspacePackages();
+  const graph = productionGraph(packages);
+  const models = [
+    "@narratage/gemini-omni",
+    "@narratage/gpt-image",
+    "@narratage/grok-imagine",
+    "@narratage/minimax-h3",
+    "@narratage/nano-banana",
+    "@narratage/seedance",
+    "@narratage/seedream",
+  ];
+  for (const name of [...packages.keys()].filter((item) => item.startsWith("@narratage/provider-"))) {
+    const reached = transitive(graph, name);
+    assert.deepEqual(
+      models.filter((model) => reached.has(model)),
+      [],
+      `${name} depends on an exact-model package; a Provider must map declared ports instead`,
+    );
+  }
+  // The shared port and wire-mapping vocabulary is the only legitimate meeting point.
+  assert.ok(transitive(graph, "@narratage/provider-kie").has("@narratage/generation"));
+  assert.ok(transitive(graph, "@narratage/seedance").has("@narratage/generation"));
+});
+
 test("Text compilation is one explicit leaf assembly, not a Package Loader or Local Runtime dependency", async () => {
   const graph = productionGraph(await workspacePackages());
   assert.ok(transitive(graph, "@narratage/compiler-text-node").has("@narratage/text"));
@@ -172,7 +197,7 @@ test("every workspace package is exercised by some test, directly or through a t
     for (const file of await readdir(testRoot)) {
       if (!file.endsWith(".ts")) continue;
       const source = await readFile(new URL(file, testRoot), "utf8");
-      for (const match of source.matchAll(/"(@narratage\/[a-z-]+)"/gu)) {
+      for (const match of source.matchAll(/"(@narratage\/[a-z0-9-]+)"/gu)) {
         testedImports.add(match[1]);
         for (const dependency of transitive(graph, match[1])) testedImports.add(dependency);
       }

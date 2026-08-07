@@ -67,24 +67,9 @@
       "digest": "sha256:2f377c58c0dbec426d90adcb4794356507b3b4c55eb3d2533f54b44fcc20be03"
     },
     {
-      "name": "@narratage/gemini-omni",
-      "version": "0.0.0-dev",
-      "digest": "sha256:81a6cf3606f087085eb539a107a2d0f944a10bfd54ac6b8d0c5eae540d73b252"
-    },
-    {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:280b7f009d0f5c93c171cbf167d21e5ee2cf415fbb0ce885f1b9fa05b1833c29"
-    },
-    {
-      "name": "@narratage/gpt-image",
-      "version": "0.0.0-dev",
-      "digest": "sha256:03888009b4ecf8be1c31ce0b8e54a5e8ba72073828833ea60ba8975f89ce6809"
-    },
-    {
-      "name": "@narratage/grok-imagine",
-      "version": "0.0.0-dev",
-      "digest": "sha256:3aa49200686fb185442e52871f1e32ec58ce733e30567cc929fe39b92e91439f"
+      "digest": "sha256:517aa8e72c832175bd09fb711a091fcab5e8d16af3fa0e6c302dc4b73afe277f"
     },
     {
       "name": "@narratage/host",
@@ -105,21 +90,6 @@
       "name": "@narratage/media",
       "version": "0.0.0-dev",
       "digest": "sha256:d92f53d5060df53a7a671b58b8c0d1305be99384bd34e71bda0f7f1296550f4b"
-    },
-    {
-      "name": "@narratage/minimax-h3",
-      "version": "0.0.0-dev",
-      "digest": "sha256:2662e852ca9d8c61cefdf33895220c7adeedfede13973513e4c9ae3e5940b4de"
-    },
-    {
-      "name": "@narratage/model-kit",
-      "version": "0.0.0-dev",
-      "digest": "sha256:195208129c357c8b48dd38977557a8c9f87e3bbd3c162e2e51e17db0f56bf874"
-    },
-    {
-      "name": "@narratage/nano-banana",
-      "version": "0.0.0-dev",
-      "digest": "sha256:254cd027bfc5937a5d09865f574f7512bfcc2070056e842068061f1fc61cce6f"
     },
     {
       "name": "@narratage/narrative",
@@ -149,7 +119,7 @@
     {
       "name": "@narratage/provider-kie",
       "version": "0.0.0-dev",
-      "digest": "sha256:1333e4b33f80224db0052765ce0f3a9c3f47c9bc03eede4becaea53d5d15f24a"
+      "digest": "sha256:9dde6cc353d5d3af0a6c3b857b9a4ddb18c2b5a0c1b3642642b7772e74e1144c"
     },
     {
       "name": "@narratage/provider-media-local",
@@ -180,16 +150,6 @@
       "name": "@narratage/runtime",
       "version": "0.0.0-dev",
       "digest": "sha256:3d5bd79233f3f78633b427740e2efa4ce2720195a91cd50e0ced94f054471c2a"
-    },
-    {
-      "name": "@narratage/seedance",
-      "version": "0.0.0-dev",
-      "digest": "sha256:872fe63f9a1d36d071aec4baa4764cc14e99e807a21a446f0a19788ef37a48ec"
-    },
-    {
-      "name": "@narratage/seedream",
-      "version": "0.0.0-dev",
-      "digest": "sha256:6ca275e237cd04b0a15d10c690abfe54d08b1cbe458c45bb564a3af1a9aebc7b"
     },
     {
       "name": "@narratage/semantic-map",
@@ -908,7 +868,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e61ebb911a33d4c5d0e4e4ee4fb69cdb790f4ced050ef35f7472bfbd72013d9b",
-      "closureDigest": "sha256:af79dec340e8f700efbe31c8925af468bab09bd5153831ba89516f8b96193eed"
+      "closureDigest": "sha256:b68e74e3a4c97b465610a137d221af97a5cf2c4b0cec535657d74922242d5bbd"
     },
     {
       "specifier": "@narratage/provider-media-local",
@@ -929,5 +889,5 @@
       "closureDigest": "sha256:723c10f0112c7b9d2dff11ba214ae3d595bfcebdf09644703401972818375de0"
     }
   ],
-  "digest": "sha256:e04400ffa7fc06fee8659853b74468b9cb300c0d07758f5c4d3b5480a53e35c1"
+  "digest": "sha256:04a5e7e90430a98090200a05e5d53e3fe7c552f6a5e790c090f8ab111db4c832"
 }

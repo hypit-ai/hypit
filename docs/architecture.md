@@ -245,6 +245,15 @@ binds that already explicit capability to one exact Endpoint instance. Runtime m
 Volcengine for the same declared Seedance capability; it may not reinterpret a generic `speaker`
 request as Seedance, Kling or another creative method.
 
+For generation models the split is sharper still, because what a model accepts as input is fixed
+when it is trained and no reseller can change it. An exact-model package declares a closed
+`svml.generation-ports@1` table—the reference roles, cardinalities and combination rules it accepts—
+and every request uses one `svml.generation-request@1` envelope keyed by those port names. A Provider
+contributes only a `svml.generation-wire-mapping@1`: which of its own fields carries each port, and
+which of its own endpoints serves which port combination. Providers therefore import no model
+package, and a repository test proves each mapping covers every declared port before any paid call.
+See [`model-input-ports.md`](./model-input-ports.md).
+
 ## 7. Package and authority boundaries
 
 A physical package may expose independently activated facets:
