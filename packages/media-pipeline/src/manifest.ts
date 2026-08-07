@@ -1,18 +1,19 @@
-import { artifactDependency, artifactTypes } from "@svml/artifact";
-import {
-  contractTypes,
-  videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
+import { artifactDependency } from "@narratage/artifact";
+import { mediaDependency, mediaTypes } from "@narratage/media";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { speechDependency, speechTypes } from "@narratage/speech";
+import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { artifactTypes } from "@narratage/artifact";
+import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
   TypeRef,
   ValueSchema,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
-export const mediaPipelineModuleRef = { name: "@svml/media-pipeline", version: "0.0.0-dev" } as const;
+export const mediaPipelineModuleRef = { name: "@narratage/media-pipeline", version: "0.0.0-dev" } as const;
 export const mediaPipelineTypes = {
   selectionRequest: { module: mediaPipelineModuleRef, name: "MediaSelectionRequest" },
   audioProgramPlan: { module: mediaPipelineModuleRef, name: "AudioProgramPlan" },
@@ -35,16 +36,16 @@ export const mediaPipelineProducers = {
   projectMuxed: { module: mediaPipelineModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
 export const mediaPipelineImplementationDigests = {
-  inspect: digestOf("@svml/media-pipeline/request-media-inspection@1"),
-  select: digestOf("@svml/media-pipeline/select-media-streams@1"),
-  normalize: digestOf("@svml/media-pipeline/request-media-normalization@1"),
-  projectSpeechEvidenceAudio: digestOf("@svml/media-pipeline/request-speech-evidence-audio@1"),
-  requestValidator: digestOf("@svml/media-pipeline/validate-selection-request@1"),
-  planAudio: digestOf("@svml/media-pipeline/compile-audio-program@1"),
-  renderAudio: digestOf("@svml/media-pipeline/request-audio-render@1"),
-  mux: digestOf("@svml/media-pipeline/request-media-mux@1"),
-  projectMuxed: digestOf("@svml/media-pipeline/project-muxed-media@1"),
-  audioPlanValidator: digestOf("@svml/media-pipeline/validate-audio-program-plan@1"),
+  inspect: digestOf("@narratage/media-pipeline/request-media-inspection@1"),
+  select: digestOf("@narratage/media-pipeline/select-media-streams@1"),
+  normalize: digestOf("@narratage/media-pipeline/request-media-normalization@1"),
+  projectSpeechEvidenceAudio: digestOf("@narratage/media-pipeline/request-speech-evidence-audio@1"),
+  requestValidator: digestOf("@narratage/media-pipeline/validate-selection-request@1"),
+  planAudio: digestOf("@narratage/media-pipeline/compile-audio-program@1"),
+  renderAudio: digestOf("@narratage/media-pipeline/request-audio-render@1"),
+  mux: digestOf("@narratage/media-pipeline/request-media-mux@1"),
+  projectMuxed: digestOf("@narratage/media-pipeline/project-muxed-media@1"),
+  audioPlanValidator: digestOf("@narratage/media-pipeline/validate-audio-program-plan@1"),
 } as const;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
@@ -126,15 +127,15 @@ export const audioProgramPlanSchema: ValueSchema = {
 };
 
 export const mediaPipelineManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: mediaPipelineModuleRef.name,
   version: mediaPipelineModuleRef.version,
   dependencies: [
     artifactDependency,
-    videoContractDependencies.media,
-    videoContractDependencies.speech,
-    videoContractDependencies.programSpace,
-    videoContractDependencies.composition,
+    mediaDependency,
+    speechDependency,
+    programSpaceDependency,
+    compositionDependency,
   ],
   types: [
     {
@@ -144,7 +145,7 @@ export const mediaPipelineManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media-pipeline/validate-selection-request",
+          locator: "@narratage/media-pipeline/validate-selection-request",
           digest: mediaPipelineImplementationDigests.requestValidator,
         },
       },
@@ -156,18 +157,18 @@ export const mediaPipelineManifest: ModuleManifest = {
         abi: "svml.type-validator@1",
         implementation: {
           kind: "registered",
-          locator: "@svml/media-pipeline/validate-audio-program-plan",
+          locator: "@narratage/media-pipeline/validate-audio-program-plan",
           digest: mediaPipelineImplementationDigests.audioPlanValidator,
         },
       },
     },
   ],
   capabilities: [
-    { name: mediaPipelineCapabilities.inspect.name, returns: contractTypes.mediaInspection },
-    { name: mediaPipelineCapabilities.normalize.name, returns: contractTypes.synchronizedMedia },
-    { name: mediaPipelineCapabilities.projectSpeechEvidenceAudio.name, returns: contractTypes.speechEvidenceAudio },
-    { name: mediaPipelineCapabilities.renderAudio.name, returns: contractTypes.timelineAudio },
-    { name: mediaPipelineCapabilities.mux.name, returns: contractTypes.muxedMedia },
+    { name: mediaPipelineCapabilities.inspect.name, returns: mediaTypes.inspection },
+    { name: mediaPipelineCapabilities.normalize.name, returns: mediaTypes.synchronized },
+    { name: mediaPipelineCapabilities.projectSpeechEvidenceAudio.name, returns: speechTypes.evidenceAudio },
+    { name: mediaPipelineCapabilities.renderAudio.name, returns: mediaTypes.timelineAudio },
+    { name: mediaPipelineCapabilities.mux.name, returns: mediaTypes.muxed },
   ],
   surfaces: [],
   producers: [
@@ -178,28 +179,28 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [{
         name: "inspection",
         capability: mediaPipelineCapabilities.inspect,
-        returns: contractTypes.mediaInspection,
+        returns: mediaTypes.inspection,
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-media-inspection",
+        locator: "@narratage/media-pipeline/request-media-inspection",
         digest: mediaPipelineImplementationDigests.inspect,
       },
     },
     {
       name: mediaPipelineProducers.select.name,
       inputs: [
-        { name: "inspection", type: contractTypes.mediaInspection },
+        { name: "inspection", type: mediaTypes.inspection },
         { name: "request", type: mediaPipelineTypes.selectionRequest },
       ],
       outputs: [{
         name: "selection",
-        type: contractTypes.mediaStreamSelection,
+        type: mediaTypes.streamSelection,
       }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/select-media-streams",
+        locator: "@narratage/media-pipeline/select-media-streams",
         digest: mediaPipelineImplementationDigests.select,
       },
     },
@@ -207,48 +208,48 @@ export const mediaPipelineManifest: ModuleManifest = {
       name: mediaPipelineProducers.normalize.name,
       inputs: [
         { name: "source", type: artifactTypes.blob },
-        { name: "inspection", type: contractTypes.mediaInspection },
-        { name: "selection", type: contractTypes.mediaStreamSelection },
+        { name: "inspection", type: mediaTypes.inspection },
+        { name: "selection", type: mediaTypes.streamSelection },
         { name: "request", type: mediaPipelineTypes.selectionRequest },
       ],
       outputs: [],
       needs: [{
         name: "media",
         capability: mediaPipelineCapabilities.normalize,
-        returns: contractTypes.synchronizedMedia,
+        returns: mediaTypes.synchronized,
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-media-normalization",
+        locator: "@narratage/media-pipeline/request-media-normalization",
         digest: mediaPipelineImplementationDigests.normalize,
       },
     },
     {
       name: mediaPipelineProducers.projectSpeechEvidenceAudio.name,
-      inputs: [{ name: "audio", type: contractTypes.speechAudioBasis }],
+      inputs: [{ name: "audio", type: speechTypes.audioBasis }],
       outputs: [],
       needs: [{
         name: "evidenceAudio",
         capability: mediaPipelineCapabilities.projectSpeechEvidenceAudio,
-        returns: contractTypes.speechEvidenceAudio,
+        returns: speechTypes.evidenceAudio,
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-speech-evidence-audio",
+        locator: "@narratage/media-pipeline/request-speech-evidence-audio",
         digest: mediaPipelineImplementationDigests.projectSpeechEvidenceAudio,
       },
     },
     {
       name: mediaPipelineProducers.planAudio.name,
       inputs: [
-        { name: "composition", type: contractTypes.composition },
-        { name: "space", type: contractTypes.programSpace },
+        { name: "composition", type: compositionTypes.composition },
+        { name: "space", type: programSpaceTypes.programSpace },
       ],
       outputs: [{ name: "plan", type: mediaPipelineTypes.audioProgramPlan }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/compile-audio-program",
+        locator: "@narratage/media-pipeline/compile-audio-program",
         digest: mediaPipelineImplementationDigests.planAudio,
       },
     },
@@ -259,40 +260,40 @@ export const mediaPipelineManifest: ModuleManifest = {
       needs: [{
         name: "audio",
         capability: mediaPipelineCapabilities.renderAudio,
-        returns: contractTypes.timelineAudio,
+        returns: mediaTypes.timelineAudio,
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-audio-render",
+        locator: "@narratage/media-pipeline/request-audio-render",
         digest: mediaPipelineImplementationDigests.renderAudio,
       },
     },
     {
       name: mediaPipelineProducers.mux.name,
       inputs: [
-        { name: "visual", type: contractTypes.renderedVisual },
-        { name: "audio", type: contractTypes.timelineAudio },
+        { name: "visual", type: mediaTypes.renderedVisual },
+        { name: "audio", type: mediaTypes.timelineAudio },
       ],
       outputs: [],
       needs: [{
         name: "media",
         capability: mediaPipelineCapabilities.mux,
-        returns: contractTypes.muxedMedia,
+        returns: mediaTypes.muxed,
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/request-media-mux",
+        locator: "@narratage/media-pipeline/request-media-mux",
         digest: mediaPipelineImplementationDigests.mux,
       },
     },
     {
       name: mediaPipelineProducers.projectMuxed.name,
-      inputs: [{ name: "media", type: contractTypes.muxedMedia }],
-      outputs: [{ name: "video", type: contractTypes.mediaArtifact }],
+      inputs: [{ name: "media", type: mediaTypes.muxed }],
+      outputs: [{ name: "video", type: mediaTypes.artifact }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/media-pipeline/project-muxed-media",
+        locator: "@narratage/media-pipeline/project-muxed-media",
         digest: mediaPipelineImplementationDigests.projectMuxed,
       },
     },

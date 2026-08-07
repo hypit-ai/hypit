@@ -1,10 +1,10 @@
-import { captionTypes } from "@svml/caption";
-import { contractTypes } from "@svml/contracts";
+import { captionTypes } from "@narratage/caption";
+import { narrativeTypes } from "@narratage/narrative";
 import type {
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { captionGeminiPlanningFragment } from "./fragment.js";
 import { captionGeminiTypes } from "./manifest.js";
@@ -43,7 +43,7 @@ export const decodeCaptionGeminiPlannerSurface: StructuredSurfaceHandler = ({ el
   if (model !== "gemini-2.5-flash" && model !== "gemini-3.1-pro-preview") {
     throw new Error(`${element.name}.model is unsupported`);
   }
-  const narrative = reference(element, "narrative", contractTypes.narrative, resolveReference);
+  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
   const captionProgram = reference(element, "program", captionTypes.program, resolveReference);
   const optionsId = `${id}.gemini`;
   const options = sealCaptionGeminiProgram({

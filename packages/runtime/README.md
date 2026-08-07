@@ -1,4 +1,4 @@
-# `@svml/runtime`
+# `@narratage/runtime`
 
 Environment-neutral execution and persistence ports around the domain-free Core state machine.
 
@@ -36,7 +36,7 @@ call the Endpoint again.
 
 This package is an environment-neutral reference, not a durable queue. SQLite/filesystem adapters,
 environment credentials, the local follow loop, Endpoint implementations and
-`@svml/endpoint-kit` live in separate packages. The repository already contains KIE, Vertex and
+`@narratage/endpoint-kit` live in separate packages. The repository already contains KIE, Vertex and
 several local media/service Endpoint packages; distributed attempt leases and additional hosted
 adapters remain deployment work. An Endpoint whose upstream API cannot look up or deduplicate the
 supplied `submissionKey` cannot promise exactly-once remote work across the crash window; its

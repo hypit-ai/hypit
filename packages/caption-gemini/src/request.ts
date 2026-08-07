@@ -1,6 +1,6 @@
-import { assertCaptionProgramForNarrative } from "@svml/caption";
-import type { CaptionFieldDeclaration, CaptionProgram } from "@svml/caption";
-import type { Narrative } from "@svml/contracts";
+import { assertCaptionProgramForNarrative } from "@narratage/caption";
+import type { CaptionFieldDeclaration, CaptionProgram } from "@narratage/caption";
+import type { Narrative } from "@narratage/narrative";
 
 import { verifyCaptionGeminiProgram } from "./program.js";
 import type {

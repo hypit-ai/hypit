@@ -1,6 +1,6 @@
 # SVML WhisperX Service
 
-This is the trusted, warm Python process used by `@svml/provider-whisperx-local`. It is a Runtime
+This is the trusted, warm Python process used by `@narratage/provider-whisperx-local`. It is a Runtime
 deployment package, not an author-importable SVML module and not part of Core.
 
 The service has one narrow job:

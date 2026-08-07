@@ -1,11 +1,11 @@
-import { artifactTypes } from "@svml/artifact";
+import { artifactTypes } from "@narratage/artifact";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
-import type { CanonicalValue } from "@svml/protocol";
+} from "@narratage/text";
+import type { CanonicalValue } from "@narratage/protocol";
 
 import { imageTransformFragment } from "./fragment.js";
 import { imageTransformTypes } from "./manifest.js";

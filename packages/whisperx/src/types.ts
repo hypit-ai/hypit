@@ -1,12 +1,8 @@
-import type {
-  AlignedTranscriptEvidence,
-  AlignedTranscriptSegment,
-  SpeechEvidenceAudio,
-  SpeechBasisSegment,
-} from "@svml/contracts";
+import type { SpeechBasisSegment, SpeechEvidenceAudio } from "@narratage/speech";
+import type { AlignedTranscriptEvidence, AlignedTranscriptSegment } from "@narratage/speech-evidence";
 
 export type WhisperXAlignmentRequest = {
-  readonly contract: "svml.whisperx-alignment-request@2";
+  readonly contract: "svml.whisperx-alignment-request@1";
   readonly audio: SpeechEvidenceAudio["artifact"];
   readonly sampleFrames: number;
   readonly durationSec: number;
@@ -17,7 +13,7 @@ export type WhisperXAlignmentRequest = {
 };
 
 export type WhisperXAlignmentEvidence = {
-  readonly contract: "svml.whisperx-alignment-evidence@2";
+  readonly contract: "svml.whisperx-alignment-evidence@1";
   readonly durationSec: number;
   readonly segments: readonly AlignedTranscriptSegment[];
 };

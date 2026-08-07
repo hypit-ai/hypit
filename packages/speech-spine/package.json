@@ -1,0 +1,37 @@
+{
+  "name": "@narratage/speech-spine",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/composition": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/program-space": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/speech-basis": "workspace:*",
+    "@narratage/text": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/caption": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/run": "workspace:*",
+    "@narratage/script": "workspace:*",
+    "@narratage/speech-alignment": "workspace:*",
+    "@narratage/speech-evidence": "workspace:*",
+    "@narratage/validation": "workspace:*",
+    "@narratage/whisperx": "workspace:*"
+  }
+}

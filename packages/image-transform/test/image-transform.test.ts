@@ -9,10 +9,10 @@ import {
   imageTransformManifest,
   imageTransformTypes,
   sealImageTransformProgram,
-} from "@svml/image-transform";
-import { artifactTypes } from "@svml/artifact";
-import { digestOf } from "@svml/protocol";
-import type { CanonicalValue, TypedRecord } from "@svml/protocol";
+} from "@narratage/image-transform";
+import { artifactTypes } from "@narratage/artifact";
+import { digestOf } from "@narratage/protocol";
+import type { CanonicalValue, TypedRecord } from "@narratage/protocol";
 
 test("the Twinit GPT Image cleanup is one explicit reusable Program", () => {
   assert.deepEqual(gptImageDenoiseV1.operations, [{

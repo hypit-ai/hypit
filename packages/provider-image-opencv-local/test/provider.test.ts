@@ -2,20 +2,20 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-import { artifactTypes } from "@svml/artifact";
-import { EndpointRegistry, MemoryArtifactStore } from "@svml/driver-node";
+import { artifactTypes } from "@narratage/artifact";
+import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
 import {
   gptImageDenoiseV1,
   imageTransformCapabilities,
   sealImageTransformProgram,
-} from "@svml/image-transform";
-import type { ImageTransformProgram } from "@svml/image-transform";
+} from "@narratage/image-transform";
+import type { ImageTransformProgram } from "@narratage/image-transform";
 import {
   createLocalOpenCvImageProvider,
   localOpenCvImageProviderModuleRef,
-} from "@svml/provider-image-opencv-local";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { BlobRef, Need } from "@svml/protocol";
+} from "@narratage/provider-image-opencv-local";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { BlobRef, Need } from "@narratage/protocol";
 
 function need(source: BlobRef, program: ImageTransformProgram = gptImageDenoiseV1): Need {
   const constraints = canonicalize({

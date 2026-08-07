@@ -4,11 +4,11 @@ import {
   generationObjectSchema,
   generationPromptSchema,
   sealGenerationRequest,
-} from "@svml/generation";
-import { defineExactModelModule } from "@svml/model-kit";
-import type { BlobRef, ValueSchema } from "@svml/protocol";
+} from "@narratage/generation";
+import { defineExactModelModule } from "@narratage/model-kit";
+import type { BlobRef, ValueSchema } from "@narratage/protocol";
 
-export const gptImageModuleRef = { name: "@svml/gpt-image", version: "0.0.0-dev" } as const;
+export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "0.0.0-dev" } as const;
 export type GptImage2Mode = "text" | "image";
 type Common = {
   readonly contract: "svml.gpt-image-2-request@1";

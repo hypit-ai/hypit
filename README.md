@@ -1,15 +1,17 @@
-# SVML
+# Narratage
 
-SVML is a graph language and runtime for building expensive, recoverable creative workflows from
-human-readable intent.
+Narratage is a compiler and runtime for building expensive, recoverable creative workflows from
+human-readable intent. Its sources are written in SVML, its graph markup language.
 
-Its reference video distribution lets an author address a video with words rather than timecodes:
-Script defines the semantic truth, generated speech supplies acoustic evidence, and independent
-packages lower captions, B-roll, text and speech into peer Tracks.
+The name is a 1930s film-industry term — narration plus montage: narration-driven storytelling
+with montage in a supporting role. The reference video distribution follows that technique. An
+author addresses a video with words rather than timecodes: Script defines the semantic truth,
+generated speech supplies acoustic evidence, and independent packages lower captions, B-roll,
+text and speech into peer Tracks.
 
-SVML is currently a pre-release v2 rewrite. It has completed a real paid talking-video acceptance
-sequence, but the repository is currently a source-checkout workspace rather than a published npm
-distribution; its public package names and video authoring ABI are not frozen yet.
+Narratage is pre-release. It has completed a real paid talking-video acceptance sequence, but the
+repository is currently a source-checkout workspace rather than a published npm distribution; its
+public package names and video authoring ABI are not frozen yet.
 
 ## Why a graph language
 
@@ -23,7 +25,7 @@ inputs to later compilation. A usable system must therefore distinguish:
 - where an external capability executes;
 - which facts and code produced every accepted result.
 
-SVML compiles those decisions before execution:
+Narratage compiles those decisions before execution:
 
 ```text
 Author Graph + Run Graph + Satisfaction edges + Targets
@@ -54,7 +56,7 @@ fragment are ordinary Run Graph authoring. Core contains no Pin, preview mode, a
 Provider fallback branch.
 
 See [the architecture](docs/architecture.md) and
-[Core Kernel specification](spec/core-kernel-v1.md).
+[Core Kernel specification](spec/core-kernel.md).
 
 ## What works today
 
@@ -97,12 +99,12 @@ pnpm install
 pnpm check
 pnpm test
 
-# Compile a complete provider-free v2 author graph.
-pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+# Compile a complete provider-free author graph.
+pnpm narratage check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
 # Compile the self-described Run Graph and inspect its finite plan.
-pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+pnpm narratage plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
@@ -110,14 +112,14 @@ The live example uses an explicit Run Graph, declarative local Runtime Profile a
 credentials:
 
 ```bash
-pnpm svml:v2 build examples/talking-film-live/build.svrun \
+pnpm narratage build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
   --package-lock examples/talking-film-live/svml.packages.lock \
   --root . \
   --build-id talking-film-live \
   --follow
 
-pnpm svml:v2 get talking-film-live \
+pnpm narratage get talking-film-live \
   --name final.video \
   --runtime examples/talking-film-live/svml.runtime.json \
   --to examples/talking-film-live/output/final.mp4
@@ -186,7 +188,7 @@ packages/*               optional Frontend, domain, Endpoint and adapter package
 services/whisperx        pinned local WhisperX sidecar
 spec                     current normative contracts
 docs                     architecture, status, roadmap and focused implementation records
-examples                 v2 checks/live witness plus retained v1 regression fixtures
+examples                 source-closure checks and the live acceptance witness
 ```
 
 Start with the [documentation map](docs/README.md) and [roadmap](docs/roadmap.md).
@@ -196,16 +198,12 @@ independently and what remains before the first public package release.
 ## Development
 
 ```bash
-pnpm check       # v1 research oracle + v2 TypeScript
-pnpm test        # v1 regression tests + v2 package tests
-pnpm build       # build the retained root v1 CLI during migration
+pnpm check       # TypeScript across every workspace package
+pnpm test        # package test suites and repository boundary tests
 
 pnpm test:whisperx-service
 pnpm smoke:kie   # opt-in paid Provider smoke test; requires credentials
 ```
-
-The root `src/`, `stdlib/` and legacy examples remain executable regression evidence while v2 is
-rewritten under `packages/`. They are not the public v2 package taxonomy or source contract.
 
 ## Current priorities
 

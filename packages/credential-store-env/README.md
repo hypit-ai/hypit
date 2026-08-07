@@ -1,4 +1,4 @@
-# `@svml/credential-store-env`
+# `@narratage/credential-store-env`
 
 Minimal local `CredentialStore` backed by explicitly named environment variables.
 

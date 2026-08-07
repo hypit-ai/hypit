@@ -7,108 +7,122 @@ settings:
 importers:
 
   .:
-    dependencies:
-      hyperframes:
-        specifier: 0.7.84
-        version: 0.7.84(@types/node@24.10.1)
     devDependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:packages/artifact
-      '@svml/broll':
+      '@narratage/broll':
         specifier: workspace:*
         version: link:packages/broll
-      '@svml/caption':
+      '@narratage/caption':
         specifier: workspace:*
         version: link:packages/caption
-      '@svml/caption-gemini':
+      '@narratage/caption-gemini':
         specifier: workspace:*
         version: link:packages/caption-gemini
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:packages/contracts
-      '@svml/estimate':
+        version: link:packages/composition
+      '@narratage/estimate':
         specifier: workspace:*
         version: link:packages/estimate
-      '@svml/film':
+      '@narratage/film':
         specifier: workspace:*
         version: link:packages/film
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:packages/generation
-      '@svml/hyperframes':
+      '@narratage/hyperframes':
         specifier: workspace:*
         version: link:packages/hyperframes
-      '@svml/hyperframes-render':
-        specifier: workspace:*
-        version: link:packages/hyperframes-render
-      '@svml/image-transform':
+      '@narratage/image-transform':
         specifier: workspace:*
         version: link:packages/image-transform
-      '@svml/local':
+      '@narratage/local':
         specifier: workspace:*
         version: link:packages/local
-      '@svml/media':
+      '@narratage/media':
         specifier: workspace:*
         version: link:packages/media
-      '@svml/media-pipeline':
+      '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:packages/media-pipeline
-      '@svml/prompt-kit':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:packages/narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:packages/program-space
+      '@narratage/prompt-kit':
         specifier: workspace:*
         version: link:packages/prompt-kit
-      '@svml/provider-google-vertex':
+      '@narratage/provider-google-vertex':
         specifier: workspace:*
         version: link:packages/provider-google-vertex
-      '@svml/provider-hyperframes-local':
+      '@narratage/provider-hyperframes-local':
         specifier: workspace:*
         version: link:packages/provider-hyperframes-local
-      '@svml/provider-image-opencv-local':
+      '@narratage/provider-image-opencv-local':
         specifier: workspace:*
         version: link:packages/provider-image-opencv-local
-      '@svml/provider-kie':
+      '@narratage/provider-kie':
         specifier: workspace:*
         version: link:packages/provider-kie
-      '@svml/provider-media-local':
+      '@narratage/provider-media-local':
         specifier: workspace:*
         version: link:packages/provider-media-local
-      '@svml/provider-whisperx-local':
+      '@narratage/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
-      '@svml/run-text':
+      '@narratage/render-hyperframes':
+        specifier: workspace:*
+        version: link:packages/render-hyperframes
+      '@narratage/run-text':
         specifier: workspace:*
         version: link:packages/run-text
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:packages/runtime-adapter
-      '@svml/runtime-adapter-node':
+      '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:packages/runtime-adapter-node
-      '@svml/script':
+      '@narratage/script':
         specifier: workspace:*
         version: link:packages/script
-      '@svml/seedance':
+      '@narratage/seedance':
         specifier: workspace:*
         version: link:packages/seedance
-      '@svml/seedance-speaker':
+      '@narratage/seedance-speaker':
         specifier: workspace:*
         version: link:packages/seedance-speaker
-      '@svml/speech-align':
+      '@narratage/semantic-map':
         specifier: workspace:*
-        version: link:packages/speech-align
-      '@svml/speech-program':
+        version: link:packages/semantic-map
+      '@narratage/speech':
         specifier: workspace:*
-        version: link:packages/speech-program
-      '@svml/speech-take':
+        version: link:packages/speech
+      '@narratage/speech-alignment':
         specifier: workspace:*
-        version: link:packages/speech-take
-      '@svml/svs':
+        version: link:packages/speech-alignment
+      '@narratage/speech-basis':
+        specifier: workspace:*
+        version: link:packages/speech-basis
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:packages/speech-evidence
+      '@narratage/speech-spine':
+        specifier: workspace:*
+        version: link:packages/speech-spine
+      '@narratage/svs':
         specifier: workspace:*
         version: link:packages/svs
-      '@svml/text-track':
+      '@narratage/text-track':
         specifier: workspace:*
         version: link:packages/text-track
-      '@svml/whisperx':
+      '@narratage/visual-ir':
+        specifier: workspace:*
+        version: link:packages/visual-ir
+      '@narratage/whisperx':
         specifier: workspace:*
         version: link:packages/whisperx
       '@types/node':
@@ -126,16 +140,16 @@ importers:
 
   packages/artifact:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/artifact-store-fs:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
 
@@ -144,645 +158,723 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.1103.0
         version: 3.1103.0
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
 
   packages/broll:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/media-pipeline':
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
-      '@svml/protocol':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/svs':
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
     devDependencies:
-      '@svml/hyperframes':
+      '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
 
   packages/caption:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/svs':
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
     devDependencies:
-      '@svml/script':
+      '@narratage/script':
         specifier: workspace:*
         version: link:../script
-      '@svml/speech-align':
+      '@narratage/speech':
         specifier: workspace:*
-        version: link:../speech-align
+        version: link:../speech
+      '@narratage/speech-alignment':
+        specifier: workspace:*
+        version: link:../speech-alignment
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
 
   packages/caption-gemini:
     dependencies:
-      '@svml/caption':
+      '@narratage/caption':
         specifier: workspace:*
         version: link:../caption
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
     devDependencies:
-      '@svml/script':
+      '@narratage/script':
         specifier: workspace:*
         version: link:../script
 
   packages/cli:
     dependencies:
-      '@svml/compiler-node':
+      '@narratage/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
-      '@svml/local':
+      '@narratage/host':
+        specifier: workspace:*
+        version: link:../host
+      '@narratage/local':
         specifier: workspace:*
         version: link:../local
-      '@svml/package-loader-node':
+      '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/realization':
-        specifier: workspace:*
-        version: link:../realization
-      '@svml/run':
+      '@narratage/run':
         specifier: workspace:*
         version: link:../run
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@svml/source':
+      '@narratage/source':
         specifier: workspace:*
         version: link:../source
 
   packages/compiler-node:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/realization':
-        specifier: workspace:*
-        version: link:../realization
-      '@svml/run':
+      '@narratage/run':
         specifier: workspace:*
         version: link:../run
-      '@svml/source':
+      '@narratage/source':
         specifier: workspace:*
         version: link:../source
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
-      '@svml/workspace-fs-node':
+      '@narratage/workspace-fs-node':
         specifier: workspace:*
         version: link:../workspace-fs-node
     devDependencies:
-      '@svml/text':
+      '@narratage/run-text':
+        specifier: workspace:*
+        version: link:../run-text
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/compiler-text-node:
     dependencies:
-      '@svml/compiler-node':
+      '@narratage/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/package-loader-node':
+      '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
     devDependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/component-kit:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
-  packages/contracts:
+  packages/composition:
     dependencies:
-      '@svml/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/protocol':
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
     devDependencies:
-      '@svml/core':
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/validation':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/core:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/credential-store-env:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
 
   packages/driver-node:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
     devDependencies:
-      '@svml/caption':
+      '@narratage/caption':
         specifier: workspace:*
         version: link:../caption
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/script':
+      '@narratage/script':
         specifier: workspace:*
         version: link:../script
-      '@svml/speech-align':
+      '@narratage/speech-alignment':
         specifier: workspace:*
-        version: link:../speech-align
+        version: link:../speech-alignment
 
   packages/elaborator:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/source':
+      '@narratage/source':
         specifier: workspace:*
         version: link:../source
     devDependencies:
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/speech-take':
+        version: link:../composition
+      '@narratage/speech':
         specifier: workspace:*
-        version: link:../speech-take
+        version: link:../speech
+      '@narratage/speech-basis':
+        specifier: workspace:*
+        version: link:../speech-basis
 
   packages/endpoint-kit:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
 
   packages/estimate:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/svs':
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/film:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/svs':
+      '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
     devDependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/hyperframes':
+      '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
-      '@svml/text-track':
+      '@narratage/text-track':
         specifier: workspace:*
         version: link:../text-track
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/gemini-omni:
     dependencies:
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/generation:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/gpt-image:
     dependencies:
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/grok-imagine:
     dependencies:
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/host:
     dependencies:
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/hyperframes:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@svml/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-
-  packages/hyperframes-render:
-    dependencies:
-      '@svml/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/hyperframes':
+      '@narratage/media':
         specifier: workspace:*
-        version: link:../hyperframes
-      '@svml/media-pipeline':
+        version: link:../media
+      '@narratage/program-space':
         specifier: workspace:*
-        version: link:../media-pipeline
-      '@svml/protocol':
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/text':
+      '@narratage/visual-ir':
         specifier: workspace:*
-        version: link:../text
-    devDependencies:
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
-      '@svml/driver-node':
-        specifier: workspace:*
-        version: link:../driver-node
-      '@svml/validation':
-        specifier: workspace:*
-        version: link:../validation
+        version: link:../visual-ir
 
   packages/image-transform:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/local:
     dependencies:
-      '@svml/artifact-store-fs':
+      '@narratage/artifact-store-fs':
         specifier: workspace:*
         version: link:../artifact-store-fs
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/credential-store-env':
+      '@narratage/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/package-loader-node':
+      '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@svml/store-sqlite':
+      '@narratage/store-sqlite':
         specifier: workspace:*
         version: link:../store-sqlite
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
     devDependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
 
   packages/media:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/contracts':
+      '@narratage/component-kit':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/text':
+        version: link:../component-kit
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/media-pipeline:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
     devDependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/minimax-h3:
     dependencies:
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/model-kit:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/nano-banana:
     dependencies:
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/narrative:
+    dependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@narratage/visual-ir':
+        specifier: workspace:*
+        version: link:../visual-ir
 
   packages/package-loader-node:
     dependencies:
-      '@svml/compiler-node':
+      '@narratage/compiler-node':
         specifier: workspace:*
         version: link:../compiler-node
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/run':
+      '@narratage/run':
         specifier: workspace:*
         version: link:../run
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
     devDependencies:
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
 
-  packages/prompt-kit:
+  packages/program-space:
     dependencies:
-      '@svml/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@svml/core':
-        specifier: workspace:*
-        version: link:../core
-      '@svml/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/svs':
+
+  packages/prompt-kit:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
 
@@ -793,559 +885,698 @@ importers:
       '@google/genai':
         specifier: 1.52.0
         version: 1.52.0
-      '@svml/caption':
+      '@narratage/caption':
         specifier: workspace:*
         version: link:../caption
-      '@svml/caption-gemini':
+      '@narratage/caption-gemini':
         specifier: workspace:*
         version: link:../caption-gemini
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@svml/runtime-adapter-node':
+      '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
     devDependencies:
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/script':
+      '@narratage/script':
         specifier: workspace:*
         version: link:../script
 
   packages/provider-hyperframes-local:
     dependencies:
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/hyperframes':
+      '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
-      '@svml/hyperframes-render':
+      '@narratage/media':
         specifier: workspace:*
-        version: link:../hyperframes-render
-      '@svml/protocol':
+        version: link:../media
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime-adapter':
+      '@narratage/render-hyperframes':
+        specifier: workspace:*
+        version: link:../render-hyperframes
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@svml/runtime-adapter-node':
+      '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
       hyperframes:
         specifier: 0.7.84
         version: 0.7.84(@types/node@24.10.1)
     devDependencies:
-      '@svml/core':
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
 
   packages/provider-image-opencv-local:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/image-transform':
+      '@narratage/image-transform':
         specifier: workspace:*
         version: link:../image-transform
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@svml/runtime-adapter-node':
+      '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
     devDependencies:
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
 
   packages/provider-kie:
     dependencies:
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/gemini-omni':
+      '@narratage/gemini-omni':
         specifier: workspace:*
         version: link:../gemini-omni
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/gpt-image':
+      '@narratage/gpt-image':
         specifier: workspace:*
         version: link:../gpt-image
-      '@svml/grok-imagine':
+      '@narratage/grok-imagine':
         specifier: workspace:*
         version: link:../grok-imagine
-      '@svml/minimax-h3':
+      '@narratage/minimax-h3':
         specifier: workspace:*
         version: link:../minimax-h3
-      '@svml/nano-banana':
+      '@narratage/nano-banana':
         specifier: workspace:*
         version: link:../nano-banana
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@svml/runtime-adapter-node':
+      '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
-      '@svml/seedance':
+      '@narratage/seedance':
         specifier: workspace:*
         version: link:../seedance
-      '@svml/seedream':
+      '@narratage/seedream':
         specifier: workspace:*
         version: link:../seedream
     devDependencies:
-      '@svml/artifact-store-fs':
+      '@narratage/artifact-store-fs':
         specifier: workspace:*
         version: link:../artifact-store-fs
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/local':
+      '@narratage/local':
         specifier: workspace:*
         version: link:../local
-      '@svml/validation':
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/provider-media-local:
     dependencies:
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/media-pipeline':
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
-      '@svml/protocol':
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@svml/runtime-adapter-node':
+      '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
     devDependencies:
-      '@svml/artifact-store-fs':
+      '@narratage/artifact-store-fs':
         specifier: workspace:*
         version: link:../artifact-store-fs
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/local':
+      '@narratage/local':
         specifier: workspace:*
         version: link:../local
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/provider-whisperx-local:
     dependencies:
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@svml/whisperx':
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@narratage/whisperx':
         specifier: workspace:*
         version: link:../whisperx
     devDependencies:
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
 
-  packages/realization:
+  packages/render-hyperframes:
     dependencies:
-      '@svml/core':
+      '@narratage/component-kit':
         specifier: workspace:*
-        version: link:../core
-      '@svml/protocol':
+        version: link:../component-kit
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../protocol
-    devDependencies:
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/validation':
+      '@narratage/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
   packages/run:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/realization':
-        specifier: workspace:*
-        version: link:../realization
-      '@svml/source':
+      '@narratage/source':
         specifier: workspace:*
         version: link:../source
+    devDependencies:
+      '@narratage/run-text':
+        specifier: workspace:*
+        version: link:../run-text
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/run-text:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/run':
+      '@narratage/run':
         specifier: workspace:*
         version: link:../run
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/runtime:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/runtime-adapter:
     dependencies:
-      '@svml/endpoint-kit':
+      '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
 
   packages/runtime-adapter-node:
     dependencies:
-      '@svml/runtime-adapter':
+      '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
 
   packages/script:
     dependencies:
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/protocol':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/seedance:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/protocol':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/text':
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/seedance-speaker:
     dependencies:
-      '@svml/artifact':
+      '@narratage/artifact':
         specifier: workspace:*
         version: link:../artifact
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/prompt-kit':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/prompt-kit':
         specifier: workspace:*
         version: link:../prompt-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/seedance':
+      '@narratage/seedance':
         specifier: workspace:*
         version: link:../seedance
-      '@svml/svs':
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/seedream:
     dependencies:
-      '@svml/generation':
+      '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@svml/model-kit':
+      '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/semantic-map:
+    dependencies:
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
 
   packages/source: {}
 
-  packages/speech-align:
+  packages/speech:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/media':
         specifier: workspace:*
-        version: link:../component-kit
-      '@svml/contracts':
+        version: link:../media
+      '@narratage/narrative':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/protocol':
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/speech-alignment:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
     devDependencies:
-      '@svml/script':
+      '@narratage/script':
         specifier: workspace:*
         version: link:../script
 
-  packages/speech-program:
+  packages/speech-basis:
     dependencies:
-      '@svml/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@svml/caption':
-        specifier: workspace:*
-        version: link:../caption
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/media-pipeline':
+      '@narratage/program-space':
         specifier: workspace:*
-        version: link:../media-pipeline
-      '@svml/protocol':
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/speech-align':
+      '@narratage/speech':
         specifier: workspace:*
-        version: link:../speech-align
-      '@svml/speech-take':
-        specifier: workspace:*
-        version: link:../speech-take
-      '@svml/text':
-        specifier: workspace:*
-        version: link:../text
-      '@svml/whisperx':
-        specifier: workspace:*
-        version: link:../whisperx
+        version: link:../speech
     devDependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/realization':
-        specifier: workspace:*
-        version: link:../realization
-      '@svml/script':
-        specifier: workspace:*
-        version: link:../script
-      '@svml/validation':
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
-  packages/speech-take:
+  packages/speech-evidence:
     dependencies:
-      '@svml/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+
+  packages/speech-spine:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-basis':
+        specifier: workspace:*
+        version: link:../speech-basis
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
     devDependencies:
-      '@svml/core':
+      '@narratage/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/driver-node':
+      '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
-      '@svml/validation':
+      '@narratage/run':
+        specifier: workspace:*
+        version: link:../run
+      '@narratage/script':
+        specifier: workspace:*
+        version: link:../script
+      '@narratage/speech-alignment':
+        specifier: workspace:*
+        version: link:../speech-alignment
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+      '@narratage/whisperx':
+        specifier: workspace:*
+        version: link:../whisperx
 
   packages/store-sqlite:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/runtime':
+      '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
 
   packages/svs:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
-      '@svml/source':
+      '@narratage/source':
         specifier: workspace:*
         version: link:../source
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
 
   packages/text:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
-      '@svml/contracts':
+      '@narratage/narrative':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/script':
+        version: link:../narrative
+      '@narratage/script':
         specifier: workspace:*
         version: link:../script
 
   packages/text-track:
     dependencies:
-      '@svml/component-kit':
+      '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@svml/contracts':
+      '@narratage/composition':
         specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
+        version: link:../composition
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/protocol':
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/svs':
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@svml/text':
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
     devDependencies:
-      '@svml/hyperframes':
+      '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
 
   packages/transport:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
@@ -1354,80 +1585,98 @@ importers:
       '@aws-sdk/client-lambda':
         specifier: ^3.1103.0
         version: 3.1103.0
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/transport':
+      '@narratage/transport':
         specifier: workspace:*
         version: link:../transport
 
   packages/transport-process:
     dependencies:
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/transport':
+      '@narratage/transport':
         specifier: workspace:*
         version: link:../transport
 
   packages/validation:
     dependencies:
-      '@svml/core':
+      '@narratage/core':
         specifier: workspace:*
         version: link:../core
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/video-cli:
     dependencies:
-      '@svml/cli':
+      '@narratage/cli':
         specifier: workspace:*
         version: link:../cli
-      '@svml/compiler-text-node':
+      '@narratage/compiler-text-node':
         specifier: workspace:*
         version: link:../compiler-text-node
-      '@svml/local':
+      '@narratage/local':
         specifier: workspace:*
         version: link:../local
-    devDependencies:
-      '@svml/package-loader-node':
+      '@narratage/package-loader-node':
         specifier: workspace:*
         version: link:../package-loader-node
 
-  packages/whisperx:
+  packages/visual-ir:
     dependencies:
-      '@svml/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@svml/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@svml/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@svml/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@svml/speech-align':
+
+  packages/whisperx:
+    dependencies:
+      '@narratage/component-kit':
         specifier: workspace:*
-        version: link:../speech-align
-      '@svml/text':
+        version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-alignment':
+        specifier: workspace:*
+        version: link:../speech-alignment
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+      '@narratage/text':
         specifier: workspace:*
         version: link:../text
+    devDependencies:
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
 
   packages/workspace-fs-node:
     dependencies:
-      '@svml/elaborator':
+      '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@svml/host':
+      '@narratage/host':
         specifier: workspace:*
         version: link:../host
-      '@svml/protocol':
+      '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
 
@@ -2134,89 +2383,105 @@ packages:
     resolution: {integrity: sha512-dqVSFynCox4C/J8kT16V7SIFAns0IjgLwkvYT7p8LQVmJ5OS5b6tI9IGflxTeuBS//zXeFIUbwt5dwxyZ17cnA==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-libvips-linux-arm@1.3.2':
     resolution: {integrity: sha512-1eMLzy92I4J6rmi4mAT8yC3HxOtniyGELlzGbNMLLeqe052ahFQ0h6LFq+lh5DsDIdYViIDst08abvSbcEdLXQ==}
     cpu: [arm]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-libvips-linux-ppc64@1.3.2':
     resolution: {integrity: sha512-3z0NHDxD6n5I9gc05U1eW1AyRm+Gznzq3naMrthPNqE6oYykcogW0l/jfpJdjYnuNl8R7yI9pNbE1XiUeyq0Aw==}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-libvips-linux-riscv64@1.3.2':
     resolution: {integrity: sha512-bsb4rI+NldGOsXuej2r8OdSS8+zXDVaCWxyWrcv6kneTOlgAHtZABRzBBCwdsPiD90J4myNJuHpg6kA20ImW/w==}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-libvips-linux-s390x@1.3.2':
     resolution: {integrity: sha512-/ABshyj8gCpyIrNXnHn4LorDJ0HHm1VhXPBlxZ8zAtfVPAaSafXPGn+sUSIRiwaSBy0mmFjSjiXI5mkcwdChKQ==}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-libvips-linux-x64@1.3.2':
     resolution: {integrity: sha512-ITPEtgffGJ0S6G9dRyw/366tJQqFRcHWPHhC+Stpg3Z8AEMrDrTr2lhdz4f/Y/HMbRh//7Z5mBzEpVdi62Oc3w==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-libvips-linuxmusl-arm64@1.3.2':
     resolution: {integrity: sha512-zE9EdiUzUmg5mDT5a1rk5fYJ6GWPloTwWBYDS14naqHsL+EaMpDj1AWnpLgh3u0YCORv2Tt50wrcrpYqkP97Kw==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@img/sharp-libvips-linuxmusl-x64@1.3.2':
     resolution: {integrity: sha512-m0lrLiUt+lBYnCFr8qV/65yMR4E/c7/wf78I5eKTdkEakFAlZ9QlzEM3QIhhAwVeUhLAHLcCq7a7Vszq/oFNZQ==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@img/sharp-linux-arm64@0.35.3':
     resolution: {integrity: sha512-QgKDspHPnrU+GQ55XPhGwyhC8acLVOOSyAvo1oVfFmrIXLkDNmGWzAfDZ4xK8oSA1qBQrALcHX0G5UZni/SuFQ==}
     engines: {node: '>=20.9.0'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-linux-arm@0.35.3':
     resolution: {integrity: sha512-affVWCTLooy8TSxbDx2qkzuDeaWLNVBA+P//FNBirHsXpP2fuBhk5AuboYUnrDnzoXes8GFjpTx0SBFOCRg+FA==}
     engines: {node: '>=20.9.0'}
     cpu: [arm]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-linux-ppc64@0.35.3':
     resolution: {integrity: sha512-sMd8rDxmpLOwv/7N44klFjOD5DUO7FLdjiXDI0hoxYaf7Ar262dQIEkosE98bps+5HPLtp/EvNqeqQtOycP/IA==}
     engines: {node: '>=20.9.0'}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-linux-riscv64@0.35.3':
     resolution: {integrity: sha512-0Eob78yjlYPfL5vMNWAW55l3R9Y6BQS/gOfe0ZcP9mEz9ohhKSt4im1hayiknXgf8AWrFqMvJcKIdmLmEe7yeQ==}
     engines: {node: '>=20.9.0'}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-linux-s390x@0.35.3':
     resolution: {integrity: sha512-KgAxQ0DxpNOq1rG2t5cgTgShJFGSuU7XO45cqC+1NVOuZnP6tlgZRuSYOfNupGkHID0o3cJOsw4DVeJpMovcGw==}
     engines: {node: '>=20.9.0'}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-linux-x64@0.35.3':
     resolution: {integrity: sha512-8pqvxubL2PGdhlPy6GLqzDYMUjyRmKAwKHYKixpdJYBUK7PJ0C029XdsnpFIdgRZG68fZiGdHVWcKPvtiPB4cA==}
     engines: {node: '>=20.9.0'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@img/sharp-linuxmusl-arm64@0.35.3':
     resolution: {integrity: sha512-Vz0iQjzzcSX3HCbfwFfCSG/9SCIqyO0mH2sXyiHaAYfBk0cRsCWXRyQYX0ovCK/PAQBbTzQ0dsPQHh5MAFL59w==}
     engines: {node: '>=20.9.0'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@img/sharp-linuxmusl-x64@0.35.3':
     resolution: {integrity: sha512-6O1NPKcDVj9QEdg7Hx549EX8U0rp6yXQERqru6yRN7fGBn32UvIRJUlWnk+8xDCiG76hXVBbX82NZ/ZKr0euIg==}
     engines: {node: '>=20.9.0'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@img/sharp-wasm32@0.35.3':
     resolution: {integrity: sha512-cZ0XkcYGpHZkqW6iCkqTcmUC0CD9DhD5d/qeZlZkfRBn6GnHniZXLUo5+9xw8Iv76YE6LQFN9YNBlKREcCG76w==}
@@ -2257,6 +2522,7 @@ packages:
     engines: {node: ^22.20 || ^24.12 || >=25}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -2332,66 +2598,79 @@ packages:
     resolution: {integrity: sha512-81wiiX3v7aqy+T+bT61TJ78yJjRquqFFTTbAPt08imfQQzkPIW8t6aJbkTagtCCrXMNc9D66+geqlK7ydLPNqA==}
     cpu: [arm]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-arm-musleabihf@4.62.4':
     resolution: {integrity: sha512-9kmDIvNZqdoHOBZgNtpTBeLWYO/LVipM3H/j62P8848/l/VPEQL6N3uxU9pvP1oZAsXyC2MEnFP3ovRjo7WYNQ==}
     cpu: [arm]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-arm64-gnu@4.62.4':
     resolution: {integrity: sha512-CcnXHWnXg69g+DX5VWL3FHts3qMRN2uVEHX+BZvGLdd07/gXkn3ePjYtO1LDJvxkGKVHMclKBRa1QUTH+6toYQ==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-arm64-musl@4.62.4':
     resolution: {integrity: sha512-iFOibiHnTRuhrWLlRsOQFdZJJIa7S8OwkneJr4ocALP16u5yk6lWLINFwhHaEqBFMsKDUZofLkGos7+CPzGB3g==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-loong64-gnu@4.62.4':
     resolution: {integrity: sha512-XnWYMI7euHlb5a871xPja+Gm7DRCFU+FGRrtS2sMq9N8FvqtpagUy6gD4YOemC5MRk9xbh8+jYMEJbigFQwsgA==}
     cpu: [loong64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-loong64-musl@4.62.4':
     resolution: {integrity: sha512-qGDAlO0U8xedCcsdRm9oaoQY8DAx/QT7uIxJWhCdx0ceIWX783UC9QSYkdpzAe29wNiVfp24+bZdQmn49o45SQ==}
     cpu: [loong64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-ppc64-gnu@4.62.4':
     resolution: {integrity: sha512-ru4H6ezD7ysA5EiEK6qkkaEb4modH8CTej6kUy/gQi20u3kB3G7Zn8snXXkeJSCOFKG/rbPPtM/+9Wgas1961w==}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-ppc64-musl@4.62.4':
     resolution: {integrity: sha512-2W4MO5WQVJnbJaZdvDb9rhBDuFU1nKIepPFpJUBsTh2k1YY2g+ODViaWuyOAjQ5cOP7NvrvLzt3wvHOoiAvc7w==}
     cpu: [ppc64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-riscv64-gnu@4.62.4':
     resolution: {integrity: sha512-+fxjfuoAmVMCYV5QyjoIpu0cp5DOiOTeqYFk1AVaxGr+/ravWLX89XfQmptsoWcaVy/TGf2hexzbUOrCQIL1CQ==}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-riscv64-musl@4.62.4':
     resolution: {integrity: sha512-jTn8JfHGL4djjFxPuM06LmNUJDsst2jeVlsd9OmIH6zc5sC9K6rIuO4YajXatLUpBmBKl6b35ro1QZocLi+tcA==}
     cpu: [riscv64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-s390x-gnu@4.62.4':
     resolution: {integrity: sha512-oCJCJL4pXsoDcP2QZ+JVlPTIRc6266zsIaeJJsWImmF7HO0W8nb6HuSgZlMWxJwaPf8ehbSw8yo0EUw925hKsA==}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-x64-gnu@4.62.4':
     resolution: {integrity: sha512-W69hukhZ3KKNRCaMIEzKvcFye42hh0FE1+YoYaf5+Ikacuftoco6yO/xouz0hc5d5W/s3yBro5jRiuEE/Q5vUw==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-x64-musl@4.62.4':
     resolution: {integrity: sha512-qiXbGG2jkjXhzXpsFZSR2Xpb8DN/UaxYsbb/STbuR/6fpaDgRmmaq1B/LmtF2wQFOFOSsK2jdE0RZ3a0zHn4QA==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-openbsd-x64@4.62.4':
     resolution: {integrity: sha512-nWeM//hxv8mIo6jD7Hu4o48DVmV9pbV6gsKaWU+4NFyqHoPKwrkRiZGLKUhOBk8qNmDmpwFtPKg80Bo/Tn4xiQ==}

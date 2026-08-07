@@ -36,16 +36,16 @@ const domainValuePackages = [
   "film",
   "generation",
   "hyperframes",
-  "hyperframes-render",
+  "render-hyperframes",
   "image-transform",
   "media-pipeline",
   "prompt-kit",
   "script",
   "seedance",
   "seedance-speaker",
-  "speech-align",
-  "speech-program",
-  "speech-take",
+  "speech-alignment",
+  "speech-spine",
+  "speech-basis",
   "text-track",
   "whisperx",
 ];
@@ -102,7 +102,7 @@ test("fold values retain members, not hidden identity or policy context", async 
   const declarations = [
     ["broll", "types.ts", "BrollSet"],
     ["film", "types.ts", "FilmTrackSet"],
-    ["speech-program", "types.ts", "SpeechSpineSet"],
+    ["speech-spine", "types.ts", "SpeechSpineSet"],
     ["text-track", "types.ts", "TextTrackSet"],
   ];
   for (const [packageName, fileName, typeName] of declarations) {

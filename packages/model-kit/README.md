@@ -1,4 +1,4 @@
-# `@svml/model-kit`
+# `@narratage/model-kit`
 
 Author-model package helper for defining exact generated-media requests without repeating the
 nominal Type → Producer → Need → Graph Fragment shell.

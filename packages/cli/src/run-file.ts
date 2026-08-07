@@ -1,19 +1,19 @@
 import {
   NodeRunCompiler,
-} from "@svml/compiler-node";
+} from "@narratage/compiler-node";
 import type {
   NodeCompiledRun,
   NodeCompiler,
-} from "@svml/compiler-node";
-import type { LocalRuntime } from "@svml/local";
-import type { NodePackageContribution } from "@svml/package-loader-node";
-import type { WorkspaceSession } from "@svml/host";
+} from "@narratage/compiler-node";
+import type { LocalRuntime } from "@narratage/local";
+import type { NodePackageContribution } from "@narratage/package-loader-node";
+import type { WorkspaceSession } from "@narratage/host";
 import {
   installRunFragmentHostFacets,
   RunFragmentRegistry,
   RunFrontendRegistry,
-} from "@svml/run";
-import type { RunFrontend } from "@svml/run";
+} from "@narratage/run";
+import type { RunFrontend } from "@narratage/run";
 
 export type LoadedRunFile = NodeCompiledRun & {
   readonly path: string;

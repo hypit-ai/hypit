@@ -1,14 +1,6 @@
-import type {
-  MediaAudioStream,
-  MediaInspection,
-  MediaOtherStream,
-  MediaRational,
-  MediaStream,
-  MediaTimestamp,
-  MediaVideoStream,
-} from "@svml/contracts";
-import { sealMediaInspection } from "@svml/contracts";
-import type { BlobRef } from "@svml/protocol";
+import { sealMediaInspection } from "@narratage/media";
+import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream } from "@narratage/media";
+import type { BlobRef } from "@narratage/protocol";
 
 type JsonObject = Record<string, unknown>;
 

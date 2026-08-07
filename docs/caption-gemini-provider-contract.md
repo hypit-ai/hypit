@@ -1,6 +1,6 @@
 # Caption Gemini and Google Vertex contract
 
-Status: implemented v2 vertical slice. This contract contains no credential or network authority.
+Status: implemented vertical slice. This contract contains no credential or network authority.
 
 ## 1. Boundary recovered from the old engine
 
@@ -10,7 +10,7 @@ The production reference in the old `twinit` repository combined three concerns:
 - model execution and JSON validation in `lib/engine/nodes/locate/correct.ts`;
 - Google Vertex transport in `lib/adapters/vertex.ts`.
 
-SVML retains only the useful model judgment: Cue boundaries and declared per-word fields. Script is
+Narratage retains only the useful model judgment: Cue boundaries and declared per-word fields. Script is
 the sole wording, casing and punctuation truth. Gemini performs no correction, receives no
 WhisperX transcript and returns neither text nor time.
 
@@ -18,9 +18,9 @@ The old deployment used `@google/genai` in Vertex mode with project, location an
 The new split preserves that mechanism without leaking it into author intent:
 
 ```text
-@svml/caption                 display atoms, Style cascade, Plan validation, timing join, Track
-@svml/caption-gemini          exact Gemini request and deterministic response lowering
-@svml/provider-google-vertex credentials, generateContent transport, timeout and queue lane
+@narratage/caption                 display atoms, Style cascade, Plan validation, timing join, Track
+@narratage/caption-gemini          exact Gemini request and deterministic response lowering
+@narratage/provider-google-vertex credentials, generateContent transport, timeout and queue lane
 ```
 
 An AI Studio API-key endpoint could implement the same exact capability later, but Runtime may not

@@ -1,21 +1,19 @@
-import {
-  contractTypes,
-  videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { svsManifest, svsRecipeType } from "@svml/svs";
+import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
+import { speechDependency, speechTypes } from "@narratage/speech";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { svsManifest, svsRecipeType } from "@narratage/svs";
 
 import { estimateSpeechImplementationDigest } from "./program.js";
 
-export const estimateModuleRef = { name: "@svml/estimate", version: "0.0.0-dev" } as const;
+export const estimateModuleRef = { name: "@narratage/estimate", version: "0.0.0-dev" } as const;
 export const estimateTypes = {
   speechPolicy: { module: estimateModuleRef, name: "SpeechEstimatePolicy" },
 } satisfies Record<string, TypeRef>;
 export const estimateProducers = {
   speech: { module: estimateModuleRef, name: "estimate-speech-duration" },
 } satisfies Record<string, ProducerRef>;
-export const estimateSurfaceImplementationDigest = digestOf("@svml/estimate/speech-surface@2");
+export const estimateSurfaceImplementationDigest = digestOf("@narratage/estimate/speech-surface@2");
 
 const number = { kind: "number" } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {
@@ -32,12 +30,12 @@ const speechEstimatePolicySchema: ValueSchema = {
 };
 
 export const estimateManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: estimateModuleRef.name,
   version: estimateModuleRef.version,
   dependencies: [
-    videoContractDependencies.narrative,
-    videoContractDependencies.speech,
+    narrativeDependency,
+    speechDependency,
     { module: svsRecipeType.module, digest: digestOf(svsManifest) },
   ],
   types: [{ name: estimateTypes.speechPolicy.name, schema: speechEstimatePolicySchema }],
@@ -46,24 +44,24 @@ export const estimateManifest: ModuleManifest = {
     name: "speech",
     tag: "Speech",
     mode: "structured",
-    outputs: [estimateTypes.speechPolicy, contractTypes.speechDuration],
+    outputs: [estimateTypes.speechPolicy, speechTypes.duration],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/estimate/speech-surface",
+      locator: "@narratage/estimate/speech-surface",
       digest: estimateSurfaceImplementationDigest,
     },
   }],
   producers: [{
     name: estimateProducers.speech.name,
     inputs: [
-      { name: "speech", type: contractTypes.narrativeSpeechExcerpt },
+      { name: "speech", type: narrativeTypes.speechExcerpt },
       { name: "policy", type: estimateTypes.speechPolicy },
     ],
-    outputs: [{ name: "duration", type: contractTypes.speechDuration }],
+    outputs: [{ name: "duration", type: speechTypes.duration }],
     needs: [],
     implementation: {
       kind: "registered",
-      locator: "@svml/estimate/estimate-speech",
+      locator: "@narratage/estimate/estimate-speech",
       digest: estimateSpeechImplementationDigest,
     },
   }],

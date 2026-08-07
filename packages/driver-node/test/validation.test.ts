@@ -12,7 +12,7 @@ import {
   sealTypedModule,
   start,
   verifyRecord,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   ProducerRegistry,
   NodeDriver,
@@ -20,7 +20,7 @@ import {
   parseBuildState,
   parseModuleManifestText,
   serializeBuildState,
-} from "@svml/driver-node";
+} from "@narratage/driver-node";
 import type {
   CapabilityRef,
   CompiledGraph,
@@ -28,13 +28,13 @@ import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   TypeValidationError,
   TypeValidatorRegistry,
   admitRecord,
   validateValue,
-} from "@svml/validation";
+} from "@narratage/validation";
 
 const contractModule = { name: "example.measurement-contract", version: "1.0.0" } as const;
 const sensorModule = { name: "example.sensor", version: "1.0.0" } as const;
@@ -58,7 +58,7 @@ const producerDigests = {
 };
 
 const contractManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: contractModule.name,
   version: contractModule.version,
   dependencies: [],
@@ -91,7 +91,7 @@ const contractDependency = {
 };
 
 const sensorManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: sensorModule.name,
   version: sensorModule.version,
   dependencies: [contractDependency],
@@ -129,7 +129,7 @@ const sensorManifest: ModuleManifest = {
 };
 
 const reportManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: reportModule.name,
   version: reportModule.version,
   dependencies: [contractDependency],

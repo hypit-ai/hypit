@@ -3,7 +3,10 @@
     "target": "ES2023",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2023", "DOM"],
+    "lib": [
+      "ES2023",
+      "DOM"
+    ],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -11,9 +14,216 @@
     "declaration": true,
     "sourceMap": true,
     "rootDir": ".",
-    "outDir": "dist",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@narratage/protocol": [
+        "packages/protocol/src/index.ts"
+      ],
+      "@narratage/core": [
+        "packages/core/src/index.ts"
+      ],
+      "@narratage/component-kit": [
+        "packages/component-kit/src/index.ts"
+      ],
+      "@narratage/narrative": [
+        "packages/narrative/src/index.ts"
+      ],
+      "@narratage/program-space": [
+        "packages/program-space/src/index.ts"
+      ],
+      "@narratage/speech": [
+        "packages/speech/src/index.ts"
+      ],
+      "@narratage/speech-evidence": [
+        "packages/speech-evidence/src/index.ts"
+      ],
+      "@narratage/semantic-map": [
+        "packages/semantic-map/src/index.ts"
+      ],
+      "@narratage/composition": [
+        "packages/composition/src/index.ts"
+      ],
+      "@narratage/visual-ir": [
+        "packages/visual-ir/src/index.ts"
+      ],
+      "@narratage/endpoint-kit": [
+        "packages/endpoint-kit/src/index.ts"
+      ],
+      "@narratage/media": [
+        "packages/media/src/index.ts"
+      ],
+      "@narratage/driver-node": [
+        "packages/driver-node/src/index.ts"
+      ],
+      "@narratage/script": [
+        "packages/script/src/index.ts"
+      ],
+      "@narratage/text": [
+        "packages/text/src/index.ts"
+      ],
+      "@narratage/speech-alignment": [
+        "packages/speech-alignment/src/index.ts"
+      ],
+      "@narratage/whisperx": [
+        "packages/whisperx/src/index.ts"
+      ],
+      "@narratage/caption": [
+        "packages/caption/src/index.ts"
+      ],
+      "@narratage/speech-basis": [
+        "packages/speech-basis/src/index.ts"
+      ],
+      "@narratage/elaborator": [
+        "packages/elaborator/src/index.ts"
+      ],
+      "@narratage/run": [
+        "packages/run/src/index.ts"
+      ],
+      "@narratage/run-text": [
+        "packages/run-text/src/index.ts"
+      ],
+      "@narratage/runtime": [
+        "packages/runtime/src/index.ts"
+      ],
+      "@narratage/runtime-adapter": [
+        "packages/runtime-adapter/src/index.ts"
+      ],
+      "@narratage/runtime-adapter-node": [
+        "packages/runtime-adapter-node/src/index.ts"
+      ],
+      "@narratage/store-sqlite": [
+        "packages/store-sqlite/src/index.ts"
+      ],
+      "@narratage/artifact-store-fs": [
+        "packages/artifact-store-fs/src/index.ts"
+      ],
+      "@narratage/artifact-store-s3": [
+        "packages/artifact-store-s3/src/index.ts"
+      ],
+      "@narratage/credential-store-env": [
+        "packages/credential-store-env/src/index.ts"
+      ],
+      "@narratage/local": [
+        "packages/local/src/index.ts"
+      ],
+      "@narratage/generation": [
+        "packages/generation/src/index.ts"
+      ],
+      "@narratage/model-kit": [
+        "packages/model-kit/src/index.ts"
+      ],
+      "@narratage/prompt-kit": [
+        "packages/prompt-kit/src/index.ts"
+      ],
+      "@narratage/seedance": [
+        "packages/seedance/src/index.ts"
+      ],
+      "@narratage/minimax-h3": [
+        "packages/minimax-h3/src/index.ts"
+      ],
+      "@narratage/gemini-omni": [
+        "packages/gemini-omni/src/index.ts"
+      ],
+      "@narratage/grok-imagine": [
+        "packages/grok-imagine/src/index.ts"
+      ],
+      "@narratage/gpt-image": [
+        "packages/gpt-image/src/index.ts"
+      ],
+      "@narratage/nano-banana": [
+        "packages/nano-banana/src/index.ts"
+      ],
+      "@narratage/seedream": [
+        "packages/seedream/src/index.ts"
+      ],
+      "@narratage/provider-kie": [
+        "packages/provider-kie/src/index.ts"
+      ],
+      "@narratage/media-pipeline": [
+        "packages/media-pipeline/src/index.ts"
+      ],
+      "@narratage/provider-media-local": [
+        "packages/provider-media-local/src/index.ts"
+      ],
+      "@narratage/provider-hyperframes-local": [
+        "packages/provider-hyperframes-local/src/index.ts"
+      ],
+      "@narratage/provider-whisperx-local": [
+        "packages/provider-whisperx-local/src/index.ts"
+      ],
+      "@narratage/provider-google-vertex": [
+        "packages/provider-google-vertex/src/index.ts"
+      ],
+      "@narratage/image-transform": [
+        "packages/image-transform/src/index.ts"
+      ],
+      "@narratage/provider-image-opencv-local": [
+        "packages/provider-image-opencv-local/src/index.ts"
+      ],
+      "@narratage/transport-aws-lambda": [
+        "packages/transport-aws-lambda/src/index.ts"
+      ],
+      "@narratage/transport-process": [
+        "packages/transport-process/src/index.ts"
+      ],
+      "@narratage/transport": [
+        "packages/transport/src/index.ts"
+      ],
+      "@narratage/speech-spine": [
+        "packages/speech-spine/src/index.ts"
+      ],
+      "@narratage/estimate": [
+        "packages/estimate/src/index.ts"
+      ],
+      "@narratage/hyperframes": [
+        "packages/hyperframes/src/index.ts"
+      ],
+      "@narratage/render-hyperframes": [
+        "packages/render-hyperframes/src/index.ts"
+      ],
+      "@narratage/broll": [
+        "packages/broll/src/index.ts"
+      ],
+      "@narratage/film": [
+        "packages/film/src/index.ts"
+      ],
+      "@narratage/text-track": [
+        "packages/text-track/src/index.ts"
+      ],
+      "@narratage/svs": [
+        "packages/svs/src/index.ts"
+      ],
+      "@narratage/compiler-node": [
+        "packages/compiler-node/src/index.ts"
+      ],
+      "@narratage/package-loader-node": [
+        "packages/package-loader-node/src/index.ts"
+      ],
+      "@narratage/cli": [
+        "packages/cli/src/index.ts"
+      ],
+      "@narratage/validation": [
+        "packages/validation/src/index.ts"
+      ],
+      "@narratage/host": [
+        "packages/host/src/index.ts"
+      ],
+      "@narratage/source": [
+        "packages/source/src/index.ts"
+      ],
+      "@narratage/workspace-fs-node": [
+        "packages/workspace-fs-node/src/index.ts"
+      ]
+    }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["dist", "node_modules"]
+  "include": [
+    "packages/**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "packages/*/dist"
+  ]
 }

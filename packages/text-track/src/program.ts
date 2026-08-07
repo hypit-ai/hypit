@@ -1,20 +1,11 @@
-import {
-  assertCompleteSemanticMapIdentity,
-  assertNarrativeSelectionIdentity,
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  programSpaceFrameCount,
-  selectionFrameSpans,
-  sealVisualTrack,
-} from "@svml/contracts";
-import type {
-  CompleteSemanticMap,
-  NarrativeSelectionRef,
-  ProgramSpace,
-  VisualStyleDeclaration,
-  VisualTrack,
-} from "@svml/contracts";
-import { canonicalize, digestOf } from "@svml/protocol";
+import type { NarrativeSelectionRef } from "@narratage/narrative";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertCompleteSemanticMapIdentity, assertNarrativeSelectionIdentity, selectionFrameSpans } from "@narratage/semantic-map";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
+import type { VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
+import { canonicalize, digestOf } from "@narratage/protocol";
 
 import type {
   TextAppearance,
@@ -26,12 +17,12 @@ import type {
   TextTrackSpec,
 } from "./types.js";
 
-export const renderTextTrackImplementationDigest = digestOf("@svml/text-track/render@1");
-export const compileTextTrackImplementationDigest = digestOf("@svml/text-track/compile@1");
-export const createTextTrackSetImplementationDigest = digestOf("@svml/text-track/create-set@1");
-export const appendFullTextItemImplementationDigest = digestOf("@svml/text-track/append-full-item@1");
-export const appendSelectedTextItemImplementationDigest = digestOf("@svml/text-track/append-selected-item@1");
-export const finalizeTextTrackImplementationDigest = digestOf("@svml/text-track/finalize@1");
+export const renderTextTrackImplementationDigest = digestOf("@narratage/text-track/render@1");
+export const compileTextTrackImplementationDigest = digestOf("@narratage/text-track/compile@1");
+export const createTextTrackSetImplementationDigest = digestOf("@narratage/text-track/create-set@1");
+export const appendFullTextItemImplementationDigest = digestOf("@narratage/text-track/append-full-item@1");
+export const appendSelectedTextItemImplementationDigest = digestOf("@narratage/text-track/append-selected-item@1");
+export const finalizeTextTrackImplementationDigest = digestOf("@narratage/text-track/finalize@1");
 
 function assertNonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);
@@ -223,7 +214,7 @@ export function renderTextTrack(programSpace: ProgramSpace, program: TextTrackPr
   assertTextTrackProgramIdentity(program, programSpace);
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: program.id,
     presents: program.items.map((item) => ({
       id: item.id,

@@ -5,24 +5,24 @@ import {
   captionGeminiCapabilities,
   compileCaptionGeminiRequest,
   sealCaptionGeminiProgram,
-} from "@svml/caption-gemini";
+} from "@narratage/caption-gemini";
 import {
   captionTypes,
   defaultCaptionTrackProgram,
   resolveCaptionProgram,
   sealCaptionStyle,
-} from "@svml/caption";
-import type { CaptionGeminiRequest, RawCaptionGeminiResponse } from "@svml/caption-gemini";
-import { EndpointRegistry, MemoryArtifactStore } from "@svml/driver-node";
-import type { ImmediateEndpointHandler } from "@svml/endpoint-kit";
-import { digestOf } from "@svml/protocol";
-import type { CanonicalValue, Need } from "@svml/protocol";
+} from "@narratage/caption";
+import type { CaptionGeminiRequest, RawCaptionGeminiResponse } from "@narratage/caption-gemini";
+import { EndpointRegistry, MemoryArtifactStore } from "@narratage/driver-node";
+import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";
+import { digestOf } from "@narratage/protocol";
+import type { CanonicalValue, Need } from "@narratage/protocol";
 import {
   createGoogleVertexCaptionProvider,
   googleVertexProviderImplementationDigest,
-} from "@svml/provider-google-vertex";
-import type { GenerateCaptionContent } from "@svml/provider-google-vertex";
-import { parseScript } from "@svml/script";
+} from "@narratage/provider-google-vertex";
+import type { GenerateCaptionContent } from "@narratage/provider-google-vertex";
+import { parseScript } from "@narratage/script";
 
 function request(): CaptionGeminiRequest {
   const narrative = parseScript("provider.svml", "<line><ALICE>Meaning becomes the source.</line>");

@@ -15,6 +15,6 @@ export {
 export {
   RuntimeAdapterRegistry,
   RuntimeAdapterRegistry as RuntimeConfigRegistry,
-} from "@svml/runtime-adapter";
+} from "@narratage/runtime-adapter";
 export type * from "./types.js";
 export type * from "./config.js";

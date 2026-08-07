@@ -1,25 +1,14 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import {
-  mediaContractsComponent,
-  assertSpeechAudioBasisIdentity,
-  speechEvidenceSampleBoundary,
-  programSpaceSampleFrames,
-  verifyMuxedMedia,
-  verifyMediaInspection,
-  verifyMediaStreamSelection,
-  verifyRenderedVisual,
-  verifyTimelineAudio,
-} from "@svml/contracts";
-import type {
-  Composition,
-  MuxedMedia,
-  ProgramSpace,
-  RenderedVisual,
-  SpeechAudioBasis,
-  TimelineAudio,
-} from "@svml/contracts";
-import type { BlobRef, CanonicalValue, StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import { mediaComponent } from "@narratage/media";
+import type { ComponentPackage } from "@narratage/component-kit";
+import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifyTimelineAudio } from "@narratage/media";
+import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
+import { programSpaceSampleFrames } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertSpeechAudioBasisIdentity, speechEvidenceSampleBoundary } from "@narratage/speech";
+import type { SpeechAudioBasis } from "@narratage/speech";
+import type { Composition } from "@narratage/composition";
+import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import {
   compileAudioProgramPlan,
@@ -54,7 +43,7 @@ function blob(value: StoredValue, subject: string): BlobRef {
 }
 
 export const mediaPipelineComponent = {
-  name: "@svml/media-pipeline",
+  name: "@narratage/media-pipeline",
   validators: [
     {
       type: mediaPipelineTypes.selectionRequest,
@@ -218,4 +207,4 @@ export const mediaPipelineComponent = {
 } satisfies ComponentPackage;
 
 /** Convenience set: public media validators must accompany the pipeline Producers. */
-export const mediaPipelineComponents = [mediaContractsComponent, mediaPipelineComponent] as const;
+export const mediaPipelineComponents = [mediaComponent, mediaPipelineComponent] as const;

@@ -3,14 +3,14 @@ import {
   isDigest,
   sealCompiledGraph,
   verifyCompiledGraph,
-} from "@svml/core";
+} from "@narratage/core";
 import type {
   CompiledGraph,
   Digest,
   GraphValueRef,
   LinkedProgram,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import {
   bindAuthorFragment,

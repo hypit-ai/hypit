@@ -8,7 +8,7 @@ import {
   digestOf,
   sealBuildRequest,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   AuthorFrontendRegistry,
   SourceClosureError,
@@ -16,28 +16,28 @@ import {
   resolveCompiledSourceExport,
   sealGraphFragment,
   verifySourceClosure,
-} from "@svml/elaborator";
-import type { AuthorSourceUnit } from "@svml/elaborator";
+} from "@narratage/elaborator";
+import type { AuthorSourceUnit } from "@narratage/elaborator";
 import type {
   ModuleManifest,
   ProducerRef,
   TypeRef,
   TypedRecord,
-} from "@svml/protocol";
-import { maskSourceHeader, parseSourceHeader } from "@svml/source";
+} from "@narratage/protocol";
+import { maskSourceHeader, parseSourceHeader } from "@narratage/source";
 import {
   SvsSyntaxError,
   parseSvs,
   svsFrontend,
   svsManifest,
   svsRecipeType,
-} from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
+} from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import {
   TextSurfaceRegistry,
   createTextAuthorFrontend,
-} from "@svml/text";
-import type { StructuredElement } from "@svml/text";
+} from "@narratage/text";
+import type { StructuredElement } from "@narratage/text";
 
 const laboratory = { name: "example.recipe-card", version: "1" } as const;
 const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
@@ -46,7 +46,7 @@ const renderProducer = { module: laboratory, name: "render-card" } satisfies Pro
 const cardSurfaceDigest = digestOf("example.recipe-card/card-surface@1");
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [{ module: { name: svsManifest.name, version: svsManifest.version }, digest: computeModuleDigest(svsManifest) }],
@@ -185,7 +185,7 @@ function sourceRegistry(): TextSurfaceRegistry {
 const closure = createResolvedClosure([svsManifest, manifest]);
 
 function unit(id: string, text: string, frontend?: string): AuthorSourceUnit {
-  const selected = frontend ?? (id.endsWith(".svs") ? "@svml/svs@1" : "@svml/text@1");
+  const selected = frontend ?? (id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/text@1");
   return {
     id,
     name: id.split("/").at(-1) ?? id,

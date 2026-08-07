@@ -4,12 +4,12 @@ import {
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigString,
-} from "@svml/runtime-adapter";
+} from "@narratage/runtime-adapter";
 
 import { createS3ArtifactStorePackage } from "./store.js";
 
 const s3ArtifactStoreRuntimeAdapter = createRuntimeServiceAdapterFacet({
-  use: "@svml/artifact-store-s3",
+  use: "@narratage/artifact-store-s3",
   create(context) {
     const config = runtimeConfigObject(context.config, "S3 ArtifactStore");
     runtimeConfigExact(config, [
@@ -36,7 +36,7 @@ const s3ArtifactStoreRuntimeAdapter = createRuntimeServiceAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/artifact-store-s3",
+  name: "@narratage/artifact-store-s3",
   hostFacets: [s3ArtifactStoreRuntimeAdapter],
 };
 

@@ -1,11 +1,9 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type {
-  CompleteSemanticMap,
-  NarrativeSelectionRef,
-  ProgramSpace,
-} from "@svml/contracts";
-import type { StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { NarrativeSelection, NarrativeSelectionRef } from "@narratage/narrative";
+import type { ProgramSpace } from "@narratage/program-space";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import { textTrackProducers } from "./manifest.js";
 import {
@@ -36,7 +34,7 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
 }
 
 export const textTrackComponent = {
-  name: "@svml/text-track",
+  name: "@narratage/text-track",
   producers: [{
     producer: textTrackProducers.createSet,
     implementationDigest: createTextTrackSetImplementationDigest,

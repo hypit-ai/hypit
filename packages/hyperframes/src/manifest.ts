@@ -1,14 +1,12 @@
-import {
-  contractTypes,
-  HYPERFRAMES_VISUAL_IR_V1,
-  videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { digestOf } from "@narratage/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 
 import { compileHyperframesImplementationDigest } from "./document.js";
 
-export const hyperframesModuleRef = { name: "@svml/hyperframes", version: "0.0.0-dev" } as const;
+export const hyperframesModuleRef = { name: "@narratage/hyperframes", version: "0.0.0-dev" } as const;
 export const hyperframesTypes = {
   document: { module: hyperframesModuleRef, name: "HyperframesDocument" },
 } satisfies Record<string, TypeRef>;
@@ -22,8 +20,8 @@ const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as cons
 export const hyperframesDocumentSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.hyperframes-document@4" } },
-    visualIr: { schema: { kind: "literal", value: HYPERFRAMES_VISUAL_IR_V1 } },
+    contract: { schema: { kind: "literal", value: "svml.hyperframes-document@1" } },
+    visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } },
     frameRate: { schema: {
       kind: "object",
       fields: {
@@ -53,24 +51,24 @@ export const hyperframesDocumentSchema: ValueSchema = {
 };
 
 export const hyperframesManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: hyperframesModuleRef.name,
   version: hyperframesModuleRef.version,
-  dependencies: [videoContractDependencies.composition, videoContractDependencies.programSpace],
+  dependencies: [compositionDependency, programSpaceDependency],
   types: [{ name: hyperframesTypes.document.name, schema: hyperframesDocumentSchema }],
   capabilities: [],
   surfaces: [],
   producers: [{
     name: hyperframesProducers.compile.name,
     inputs: [
-      { name: "composition", type: contractTypes.composition },
-      { name: "space", type: contractTypes.programSpace },
+      { name: "composition", type: compositionTypes.composition },
+      { name: "space", type: programSpaceTypes.programSpace },
     ],
     outputs: [{ name: "document", type: hyperframesTypes.document }],
     needs: [],
     implementation: {
       kind: "registered",
-      locator: "@svml/hyperframes/compile",
+      locator: "@narratage/hyperframes/compile",
       digest: compileHyperframesImplementationDigest,
     },
   }],

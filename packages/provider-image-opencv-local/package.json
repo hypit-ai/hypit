@@ -1,21 +1,23 @@
 {
-  "name": "@svml/provider-image-opencv-local",
+  "name": "@narratage/provider-image-opencv-local",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/image-transform": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/runtime-adapter-node": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/image-transform": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*"
   },
   "devDependencies": {
-    "@svml/driver-node": "workspace:*"
+    "@narratage/driver-node": "workspace:*"
   }
 }

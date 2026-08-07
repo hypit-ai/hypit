@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 
 import {
   decodeSpeechEstimateSurface,
@@ -10,8 +10,8 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/estimate",
-  modules: [{ manifest: estimateManifest, specifiers: ["@svml/estimate", "@svml/estimate@1"] }],
+  name: "@narratage/estimate",
+  modules: [{ manifest: estimateManifest, specifiers: ["@narratage/estimate", "@narratage/estimate@1"] }],
   components: [estimateComponent],
   hostFacets: [createTextSurfaceHostFacet({
     module: estimateModuleRef,

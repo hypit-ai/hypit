@@ -1,14 +1,12 @@
-import {
-  alignedTranscriptEvidenceFields,
-  contractTypes,
-  videoContractDependencies,
-} from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
-import { mediaPipelineManifest, mediaPipelineModuleRef } from "@svml/media-pipeline";
-import { speechAlignManifest, speechAlignModuleRef } from "@svml/speech-align";
+import { speechDependency, speechTypes } from "@narratage/speech";
+import { alignedTranscriptEvidenceFields, speechEvidenceDependency, speechEvidenceTypes } from "@narratage/speech-evidence";
+import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
+import { digestOf } from "@narratage/protocol";
+import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
+import { speechAlignmentManifest, speechAlignmentModuleRef } from "@narratage/speech-alignment";
 
-export const whisperXModuleRef = { name: "@svml/whisperx", version: "0.0.0-dev" } as const;
+export const whisperXModuleRef = { name: "@narratage/whisperx", version: "0.0.0-dev" } as const;
 export const whisperXTypes = {
   alignmentEvidence: { module: whisperXModuleRef, name: "WhisperXAlignmentEvidence" },
 } satisfies Record<string, TypeRef>;
@@ -20,9 +18,9 @@ export const whisperXProducers = {
   normalize: { module: whisperXModuleRef, name: "normalize-whisperx-alignment" },
 } satisfies Record<string, ProducerRef>;
 export const whisperXImplementationDigests = {
-  request: digestOf("@svml/whisperx/request@2"),
-  normalize: digestOf("@svml/whisperx/normalize@2"),
-  surface: digestOf("@svml/whisperx/alignment-surface@1"),
+  request: digestOf("@narratage/whisperx/request@2"),
+  normalize: digestOf("@narratage/whisperx/normalize@2"),
+  surface: digestOf("@narratage/whisperx/alignment-surface@1"),
 };
 
 const { contract: _commonContract, ...sharedEvidenceFields } =
@@ -30,20 +28,21 @@ const { contract: _commonContract, ...sharedEvidenceFields } =
 export const whisperXAlignmentEvidenceSchema: ValueSchema = {
   kind: "object",
   fields: {
-    contract: { schema: { kind: "literal", value: "svml.whisperx-alignment-evidence@2" } },
+    contract: { schema: { kind: "literal", value: "svml.whisperx-alignment-evidence@1" } },
     ...sharedEvidenceFields,
   },
 };
 
 export const whisperXManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: whisperXModuleRef.name,
   version: whisperXModuleRef.version,
   dependencies: [
-    videoContractDependencies.speech,
-    videoContractDependencies.semanticTime,
+    speechDependency,
+    speechEvidenceDependency,
+    semanticMapDependency,
     { module: mediaPipelineModuleRef, digest: digestOf(mediaPipelineManifest) },
-    { module: speechAlignModuleRef, digest: digestOf(speechAlignManifest) },
+    { module: speechAlignmentModuleRef, digest: digestOf(speechAlignmentManifest) },
   ],
   types: [{ name: whisperXTypes.alignmentEvidence.name, schema: whisperXAlignmentEvidenceSchema }],
   capabilities: [{
@@ -54,17 +53,17 @@ export const whisperXManifest: ModuleManifest = {
     name: "alignment",
     tag: "Alignment",
     mode: "structured",
-    outputs: [whisperXTypes.alignmentEvidence, contractTypes.alignedTranscriptEvidence, contractTypes.completeSemanticMap],
+    outputs: [whisperXTypes.alignmentEvidence, speechEvidenceTypes.alignedTranscript, semanticMapTypes.complete],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/whisperx/alignment-surface",
+      locator: "@narratage/whisperx/alignment-surface",
       digest: whisperXImplementationDigests.surface,
     },
   }],
   producers: [
     {
       name: whisperXProducers.request.name,
-      inputs: [{ name: "audio", type: contractTypes.speechEvidenceAudio }],
+      inputs: [{ name: "audio", type: speechTypes.evidenceAudio }],
       outputs: [],
       needs: [{
         name: "alignment",
@@ -73,18 +72,18 @@ export const whisperXManifest: ModuleManifest = {
       }],
       implementation: {
         kind: "registered",
-        locator: "@svml/whisperx/request",
+        locator: "@narratage/whisperx/request",
         digest: whisperXImplementationDigests.request,
       },
     },
     {
       name: whisperXProducers.normalize.name,
       inputs: [{ name: "whisperx", type: whisperXTypes.alignmentEvidence }],
-      outputs: [{ name: "evidence", type: contractTypes.alignedTranscriptEvidence }],
+      outputs: [{ name: "evidence", type: speechEvidenceTypes.alignedTranscript }],
       needs: [],
       implementation: {
         kind: "registered",
-        locator: "@svml/whisperx/normalize",
+        locator: "@narratage/whisperx/normalize",
         digest: whisperXImplementationDigests.normalize,
       },
     },

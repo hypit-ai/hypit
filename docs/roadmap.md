@@ -1,8 +1,8 @@
-# SVML roadmap
+# Narratage roadmap
 
-Status: active priorities after the `svml.graph@2` / Satisfaction redesign, 2026-08-07.
+Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-07.
 
-SVML can already execute one real paid talking-video build. The active roadmap is no longer “make a
+Narratage can already execute one real paid talking-video build. The active roadmap is no longer “make a
 video possible.” It is to make the domain-neutral system pleasant to operate and to make execution
 environments replaceable. Video-style breadth is deliberately deferred.
 
@@ -11,7 +11,7 @@ environments replaceable. Video-style breadth is deliberately deferred.
 ### A1. Self-described Author/Run compilation — first public slice implemented
 
 Every Author and Run source now carries a mandatory exact Frontend Header. The official
-`@svml/run-text` `.svrun` Frontend implements:
+`@narratage/run-text` `.svrun` Frontend implements:
 
 - named Targets and reusable Target sets;
 - Provided-Value and Fragment Candidates;
@@ -142,7 +142,7 @@ Do not freeze or greatly expand the video author surface yet. The deferred backl
 - Caption field-to-word visual mapping plus browser/pixel acceptance;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;
-- final Track and HyperFrames Visual IR compatibility freeze.
+- final Track and renderer-neutral Visual IR compatibility freeze.
 
 The current implementations remain executable vertical slices and regression witnesses while A and
 B are completed.

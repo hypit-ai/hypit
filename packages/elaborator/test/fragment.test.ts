@@ -1,11 +1,9 @@
+import { videoContractManifests } from "../../test-support/video-domain.js";
+import { speechDependency, speechTypes } from "@narratage/speech";
+import { compositionTypes } from "@narratage/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  contractTypes,
-  videoContractDependencies,
-  videoContractManifests,
-} from "@svml/contracts";
 import {
   createResolvedClosure,
   digestOf,
@@ -15,7 +13,7 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
@@ -23,32 +21,32 @@ import {
   sameFragmentInstance,
   sealGraphFragment,
   verifyGraphFragment,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   FragmentContribution,
   GraphFragment,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   CompiledGraph,
   LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
-  speechTakeManifest,
-  speechTakeProducers,
-} from "@svml/speech-take";
+  speechBasisManifest,
+  speechBasisProducers,
+} from "@narratage/speech-basis";
 
 const testModule = { name: "example.fragment-speech", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "Request" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: testModule.name,
   version: testModule.version,
-  dependencies: [videoContractDependencies.speech],
+  dependencies: [speechDependency],
   types: [{ name: requestType.name, schema: { kind: "string", minLength: 1 } }],
   capabilities: [],
   surfaces: [],
@@ -58,7 +56,7 @@ const manifest: ModuleManifest = {
       { name: "request", type: requestType },
       { name: "style", type: requestType },
     ],
-    outputs: [{ name: "take", type: contractTypes.speechBasis }],
+    outputs: [{ name: "take", type: speechTypes.basis }],
     needs: [],
     implementation: {
       kind: "registered",
@@ -68,7 +66,7 @@ const manifest: ModuleManifest = {
   }],
 };
 
-const closure = createResolvedClosure([...videoContractManifests, speechTakeManifest, manifest]);
+const closure = createResolvedClosure([...videoContractManifests, speechBasisManifest, manifest]);
 
 function program(): LinkedProgram {
   const origin = {
@@ -102,7 +100,7 @@ function speechFragment(): GraphFragment {
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
   return sealGraphFragment({
-    name: "official-speech-take",
+    name: "official-speech-basis",
     inputs: [
       { name: "request", type: requestType },
       { name: "style", type: requestType },
@@ -116,13 +114,13 @@ function speechFragment(): GraphFragment {
       },
       {
         id: "audio",
-        producer: speechTakeProducers.projectAudio,
+        producer: speechBasisProducers.projectAudio,
         inputs: { basis: operation("generate") },
         result: { kind: "output", name: "audio" },
       },
       {
         id: "visual",
-        producer: speechTakeProducers.projectVisual,
+        producer: speechBasisProducers.projectVisual,
         inputs: { basis: operation("generate") },
         result: { kind: "output", name: "visual" },
       },
@@ -130,21 +128,21 @@ function speechFragment(): GraphFragment {
     exports: [
       {
         name: "take",
-        type: contractTypes.speechBasis,
+        type: speechTypes.basis,
         root: operation("generate"),
         semanticInputs: ["request", "style"],
         fidelity: "exact",
       },
       {
         name: "audio",
-        type: contractTypes.speechAudioBasis,
+        type: speechTypes.audioBasis,
         root: operation("audio"),
         semanticInputs: ["request", "style"],
         fidelity: "exact",
       },
       {
         name: "visual",
-        type: contractTypes.visualTrack,
+        type: compositionTypes.visualTrack,
         root: operation("visual"),
         semanticInputs: ["request", "style"],
         fidelity: "exact",

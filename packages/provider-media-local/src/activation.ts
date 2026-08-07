@@ -4,16 +4,16 @@ import {
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@svml/runtime-adapter";
+} from "@narratage/runtime-adapter";
 import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
-} from "@svml/runtime-adapter-node";
+} from "@narratage/runtime-adapter-node";
 
 import { createLocalMediaProvider } from "./provider.js";
 
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@svml/provider-media-local",
+  use: "@narratage/provider-media-local",
   create(context) {
     const config = runtimeConfigObject(context.config, "local media");
     runtimeConfigExact(config, [
@@ -57,7 +57,7 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/provider-media-local",
+  name: "@narratage/provider-media-local",
   hostFacets: [localMediaRuntimeAdapter],
 };
 

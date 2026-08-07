@@ -1,20 +1,9 @@
-import {
-  assertAudioTrackIdentity,
-  assertProgramSpaceIdentity,
-  assertVisualTrackIdentity,
-  programSpaceFrameCount,
-  sealAudioTrack,
-  sealVisualTrack,
-} from "@svml/contracts";
-import type {
-  AudioClip,
-  MediaArtifactRef,
-  ProgramSpace,
-  VisualAnimation,
-  VisualElement,
-  VisualStyleDeclaration,
-} from "@svml/contracts";
-import { digestOf, isDigest } from "@svml/protocol";
+import type { MediaArtifactRef } from "@narratage/media";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertAudioTrackIdentity, assertVisualTrackIdentity, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
+import type { AudioClip, AudioTrack, VisualAnimation, VisualElement, VisualStyleDeclaration } from "@narratage/composition";
+import { digestOf, isDigest } from "@narratage/protocol";
 
 import type {
   BrollItem,
@@ -24,9 +13,9 @@ import type {
   BrollProgram,
 } from "./types.js";
 
-export const compileBrollImplementationDigest = digestOf("@svml/broll/compile@1");
-export const projectBrollVisualImplementationDigest = digestOf("@svml/broll/project-visual@1");
-export const projectBrollAudioImplementationDigest = digestOf("@svml/broll/project-audio@1");
+export const compileBrollImplementationDigest = digestOf("@narratage/broll/compile@1");
+export const projectBrollVisualImplementationDigest = digestOf("@narratage/broll/project-visual@1");
+export const projectBrollAudioImplementationDigest = digestOf("@narratage/broll/project-audio@1");
 
 type MotionState = {
   readonly opacity: number;
@@ -390,7 +379,7 @@ export function compileBrollProduct(programSpace: ProgramSpace, program: BrollPr
   const { incoming, outgoing } = transitionMaps(program, programSpaceFrameCount(programSpace));
   const visualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: `${program.id}:visual`,
     presents: program.items.map((item) => ({
       id: item.id,

@@ -1,4 +1,4 @@
-# `@svml/caption-gemini`
+# `@narratage/caption-gemini`
 
 Exact Gemini Caption planning, without transcript correction, Style selection or timing authority.
 
@@ -28,5 +28,5 @@ attributes. The validator enforces ids, value types and per-Cue cardinality befo
 enters the graph.
 
 Model choice is author-visible. Network execution is separate: a Runtime explicitly binds the
-exact Gemini capability to `@svml/provider-google-vertex` or another compatible endpoint. The local
+exact Gemini capability to `@narratage/provider-google-vertex` or another compatible endpoint. The local
 Scheduler owns concurrency; credentials and transport never enter `.svml` or BuildState.

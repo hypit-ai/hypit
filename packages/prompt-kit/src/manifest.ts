@@ -1,17 +1,17 @@
-import { digestOf } from "@svml/protocol";
-import type { Digest, ModuleManifest, TypeRef, ValueSchema } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
+import type { Digest, ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
 
-export const promptKitModuleRef = { name: "@svml/prompt-kit", version: "0.0.0-dev" } as const;
+export const promptKitModuleRef = { name: "@narratage/prompt-kit", version: "0.0.0-dev" } as const;
 export const promptKitTypes = {
   spec: { module: promptKitModuleRef, name: "PromptKitSpec" },
   invocation: { module: promptKitModuleRef, name: "PromptKitInvocation" },
   program: { module: promptKitModuleRef, name: "PromptProgram" },
 } satisfies Record<string, TypeRef>;
 export const promptKitImplementationDigests = {
-  svsFrontend: digestOf("@svml/prompt-kit/svs-frontend@1"),
-  specValidator: digestOf("@svml/prompt-kit/validate-spec@1"),
-  invocationValidator: digestOf("@svml/prompt-kit/validate-invocation@1"),
-  programValidator: digestOf("@svml/prompt-kit/validate-program@1"),
+  svsFrontend: digestOf("@narratage/prompt-kit/svs-frontend@1"),
+  specValidator: digestOf("@narratage/prompt-kit/validate-spec@1"),
+  invocationValidator: digestOf("@narratage/prompt-kit/validate-invocation@1"),
+  programValidator: digestOf("@narratage/prompt-kit/validate-program@1"),
 } as const;
 
 const openObject: ValueSchema = { kind: "object", fields: {}, allowUnknown: true };
@@ -56,14 +56,14 @@ function validatedType(name: string, schema: ValueSchema, locator: string, valid
 }
 
 export const promptKitManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: promptKitModuleRef.name,
   version: promptKitModuleRef.version,
   dependencies: [],
   types: [
-    validatedType(promptKitTypes.spec.name, specSchema, "@svml/prompt-kit/validate-spec", promptKitImplementationDigests.specValidator),
-    validatedType(promptKitTypes.invocation.name, invocationSchema, "@svml/prompt-kit/validate-invocation", promptKitImplementationDigests.invocationValidator),
-    validatedType(promptKitTypes.program.name, programSchema, "@svml/prompt-kit/validate-program", promptKitImplementationDigests.programValidator),
+    validatedType(promptKitTypes.spec.name, specSchema, "@narratage/prompt-kit/validate-spec", promptKitImplementationDigests.specValidator),
+    validatedType(promptKitTypes.invocation.name, invocationSchema, "@narratage/prompt-kit/validate-invocation", promptKitImplementationDigests.invocationValidator),
+    validatedType(promptKitTypes.program.name, programSchema, "@narratage/prompt-kit/validate-program", promptKitImplementationDigests.programValidator),
   ],
   capabilities: [],
   surfaces: [],

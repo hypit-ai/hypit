@@ -1,21 +1,11 @@
-import {
-  assertCompositionIdentity,
-  HYPERFRAMES_VISUAL_IR_V1,
-  programSpaceFrameCount,
-} from "@svml/contracts";
-import type {
-  Composition,
-  FontArtifactRef,
-  ProgramSpace,
-  Track,
-  VisualAttribute,
-  VisualElement,
-  VisualPresent,
-  VisualStyleDeclaration,
-  VisualTrack,
-} from "@svml/contracts";
-import { digestOf, isDigest } from "@svml/protocol";
-import type { BlobRef, Digest } from "@svml/protocol";
+import type { FontArtifactRef } from "@narratage/media";
+import { programSpaceFrameCount } from "@narratage/program-space";
+import type { ProgramSpace } from "@narratage/program-space";
+import { assertCompositionIdentity } from "@narratage/composition";
+import type { Composition, Track, VisualAttribute, VisualElement, VisualPresent, VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
+import { digestOf, isDigest } from "@narratage/protocol";
+import type { BlobRef, Digest } from "@narratage/protocol";
+import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 
 import type {
   ArtifactUrlResolver,
@@ -23,7 +13,7 @@ import type {
   HyperframesFrameSpan,
 } from "./types.js";
 
-export const compileHyperframesImplementationDigest = digestOf("@svml/hyperframes/compile@5");
+export const compileHyperframesImplementationDigest = digestOf("@narratage/hyperframes/compile@5");
 
 const NANOSECONDS = 1_000_000_000n;
 const ARTIFACT_URI = /svml-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
@@ -308,7 +298,7 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
 
 function normalizedDocument(value: HyperframesDocument): HyperframesDocument {
   return {
-    contract: "svml.hyperframes-document@4",
+    contract: "svml.hyperframes-document@1",
     visualIr: value.visualIr,
     frameRate: { ...value.frameRate },
     frameCount: value.frameCount,
@@ -323,8 +313,8 @@ function normalizedDocument(value: HyperframesDocument): HyperframesDocument {
 export function compileHyperframesDocument(composition: Composition, programSpace: ProgramSpace): HyperframesDocument {
   assertCompositionIdentity(composition, programSpace);
   const content = normalizedDocument({
-    contract: "svml.hyperframes-document@4",
-    visualIr: HYPERFRAMES_VISUAL_IR_V1,
+    contract: "svml.hyperframes-document@1",
+    visualIr: VISUAL_IR_V1,
     frameRate: { ...programSpace.frameRate },
     frameCount: programSpaceFrameCount(programSpace),
     canvas: {
@@ -338,8 +328,8 @@ export function compileHyperframesDocument(composition: Composition, programSpac
 }
 
 export function assertHyperframesDocument(document: HyperframesDocument): void {
-  if (document.contract !== "svml.hyperframes-document@4") throw new Error("Unsupported HyperframesDocument contract.");
-  if (document.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported HyperframesDocument visual IR.");
+  if (document.contract !== "svml.hyperframes-document@1") throw new Error("Unsupported HyperframesDocument contract.");
+  if (document.visualIr !== VISUAL_IR_V1) throw new Error("Unsupported HyperframesDocument visual IR.");
   if (
     !Number.isSafeInteger(document.frameRate.numerator)
     || document.frameRate.numerator <= 0

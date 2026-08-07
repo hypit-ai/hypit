@@ -1,6 +1,6 @@
-# `@svml/script`
+# `@narratage/script`
 
-Official raw Script Surface for the v2 text Frontend. It parses prose-first named Segment blocks,
+Official raw Script Surface for the Text Frontend. It parses prose-first named Segment blocks,
 newline-independent Role Cues, Dual Text, Selection, Moment and Slot syntax, and lowers them to a
 canonical authored Narrative value with exactly `2M + 2N` semantic anchor identities.
 
@@ -32,7 +32,7 @@ when every Segment closes; a Role can never leak into the following Segment.
 The package exports its Manifest, `parseScript`, semantic/source-map projection helpers, a
 semantic-preserving formatter and the raw `decodeScriptSurface` handler. Source ranges and parser
 state remain private to Script; its authored Narrative Record uses the Frontend-neutral type from
-`@svml/contracts`, so third-party author surfaces can feed the same WhisperX, locator and caption
+`@narratage/narrative`, so third-party author surfaces can feed the same WhisperX, locator and caption
 components without importing Script internals.
 
 The Surface exports one full Narrative plus narrow, immutable views:

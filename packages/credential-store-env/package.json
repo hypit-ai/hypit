@@ -1,5 +1,5 @@
 {
-  "name": "@svml/credential-store-env",
+  "name": "@narratage/credential-store-env",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*"
   }
 }

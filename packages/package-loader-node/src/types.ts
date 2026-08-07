@@ -1,9 +1,9 @@
-import type { RegisteredModulePackage } from "@svml/compiler-node";
-import type { ComponentPackage } from "@svml/component-kit";
-import type { AuthorFrontend } from "@svml/elaborator";
-import type { HostFacet } from "@svml/host";
-import type { Digest } from "@svml/protocol";
-import type { RunFrontend } from "@svml/run";
+import type { RegisteredModulePackage } from "@narratage/compiler-node";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { AuthorFrontend } from "@narratage/elaborator";
+import type { HostFacet } from "@narratage/host";
+import type { Digest } from "@narratage/protocol";
+import type { RunFrontend } from "@narratage/run";
 
 /**
  * Trusted executable facets exported by one installed physical package. The Host independently

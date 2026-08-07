@@ -4,7 +4,7 @@ import type {
   BuildState,
   CoreCommand,
   Digest,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import type { RuntimeClosure } from "./profile.js";
 
 export type RuntimeBlockedCommand = {
