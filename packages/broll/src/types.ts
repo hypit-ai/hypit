@@ -3,7 +3,7 @@ import type {
   FrameSpan,
   MediaArtifactRef,
   VisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 
 export type BrollBox = {
   readonly xPercent: number;

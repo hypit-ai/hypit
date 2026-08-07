@@ -12,7 +12,7 @@
     "@narratage/source": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/speech-take": "workspace:*"
   }
 }

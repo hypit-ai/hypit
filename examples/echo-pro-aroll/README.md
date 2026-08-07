@@ -29,7 +29,7 @@ Create the explicit package lock used by this development-workspace example:
 ```sh
 pnpm narratage lock-packages examples/echo-pro-aroll/svml.packages.lock \
   --package @narratage/artifact \
-  --package @narratage/contracts \
+  --package @narratage/video-contracts \
   --package @narratage/media \
   --package @narratage/svs \
   --package @narratage/script \

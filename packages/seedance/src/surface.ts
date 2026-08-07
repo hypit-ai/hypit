@@ -1,5 +1,5 @@
 import { artifactTypes } from "@narratage/artifact";
-import { contractTypes } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import type {
   StructuredElement,

@@ -2,7 +2,7 @@ import {
   alignedTranscriptEvidenceFields,
   contractTypes,
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";

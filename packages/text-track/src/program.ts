@@ -6,14 +6,14 @@ import {
   programSpaceFrameCount,
   selectionFrameSpans,
   sealVisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   CompleteSemanticMap,
   NarrativeSelectionRef,
   ProgramSpace,
   VisualStyleDeclaration,
   VisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { canonicalize, digestOf } from "@narratage/protocol";
 
 import type {

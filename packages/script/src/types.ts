@@ -13,7 +13,7 @@ import type {
   NarrativeToken,
   NarrativeTurn,
   SemanticAnchor,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@narratage/protocol";
 
 export type {
@@ -22,7 +22,7 @@ export type {
   MarkerBoundary,
   Narrative,
   SemanticAnchor,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 
 export type ParsedTextAtom = {
   readonly kind: "text";

@@ -8,8 +8,8 @@ import {
   sealProgramSpace,
   sealVisualTrack,
   verifyRenderedVisual,
-} from "@narratage/contracts";
-import type { RenderedVisual } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { RenderedVisual } from "@narratage/video-contracts";
 import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
 import type { EndpointRegistration } from "@narratage/driver-node";
 import type { ImmediateEndpointHandler } from "@narratage/endpoint-kit";

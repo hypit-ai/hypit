@@ -7,7 +7,7 @@ import {
   synchronizedMediaSchema,
   videoContractDependencies,
   visualTrackSchema,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { mediaPipelineManifest, mediaPipelineModuleRef, mediaPipelineTypes } from "@narratage/media-pipeline";

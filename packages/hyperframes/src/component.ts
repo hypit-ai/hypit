@@ -1,5 +1,5 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { Composition, ProgramSpace } from "@narratage/contracts";
+import type { Composition, ProgramSpace } from "@narratage/video-contracts";
 import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 

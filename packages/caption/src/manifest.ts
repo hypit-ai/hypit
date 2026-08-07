@@ -1,4 +1,4 @@
-import { contractTypes, videoContractDependencies } from "@narratage/contracts";
+import { contractTypes, videoContractDependencies } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 

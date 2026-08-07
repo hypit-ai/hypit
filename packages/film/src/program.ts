@@ -4,14 +4,14 @@ import {
   assertProgramSpaceIdentity,
   assertVisualTrackIdentity,
   sealComposition,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   AudioTrack,
   Composition,
   ProgramSpace,
   Track,
   VisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 
 import type { FilmProgram, FilmTrackSet } from "./types.js";

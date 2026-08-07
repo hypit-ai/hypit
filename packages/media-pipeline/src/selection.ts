@@ -1,13 +1,13 @@
 import {
   sealMediaStreamSelection,
   verifyMediaInspection,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   MediaAudioStream,
   MediaInspection,
   MediaStreamSelection,
   MediaVideoStream,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   canonicalize,
 } from "@narratage/protocol";

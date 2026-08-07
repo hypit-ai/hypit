@@ -9,7 +9,7 @@ import {
   sealProgramSpace,
   sealVisualTrack,
   videoContractManifests,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   createResolvedClosure,
   digestOf,

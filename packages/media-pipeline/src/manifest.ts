@@ -2,7 +2,7 @@ import { artifactDependency, artifactTypes } from "@narratage/artifact";
 import {
   contractTypes,
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type {
   CapabilityRef,

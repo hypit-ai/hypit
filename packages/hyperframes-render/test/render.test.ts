@@ -15,7 +15,7 @@ import {
   sealTimelineAudio,
   videoContractDependencies,
   videoContractManifests,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   createResolvedClosure,
   digestOf,

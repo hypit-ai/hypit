@@ -3,7 +3,7 @@ import {
   programSpaceFrameCount,
   sealAudioTrack,
   sealVisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   AudioTrack,
   ProgramSpace,
@@ -11,7 +11,7 @@ import type {
   SpeechBasis,
   VisualElement,
   VisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 
 export const projectSpeechAudioImplementationDigest = digestOf(

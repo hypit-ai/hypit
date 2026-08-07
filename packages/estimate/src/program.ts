@@ -1,11 +1,11 @@
 import {
   assertSpeechDurationIdentity,
   sealSpeechDuration,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   NarrativeSpeechExcerpt,
   SpeechDuration,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 
 import type {

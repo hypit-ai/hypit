@@ -20,7 +20,7 @@
     "@narratage/broll": "workspace:*",
     "@narratage/caption": "workspace:*",
     "@narratage/caption-gemini": "workspace:*",
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/estimate": "workspace:*",
     "@narratage/film": "workspace:*",
     "@narratage/generation": "workspace:*",

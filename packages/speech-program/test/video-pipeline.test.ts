@@ -17,14 +17,14 @@ import {
   sealSpeechBasis,
   sealSpeechEvidenceAudio,
   sealVisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   Narrative,
   SpeechAudioBasis,
   SpeechBasis,
   SpeechEvidenceAudio,
   VisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf, sealBuildRequest, start } from "@narratage/core";
 import {
   ProducerRegistry,

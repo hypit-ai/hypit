@@ -11,8 +11,8 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@narratage/contracts";
-import type { FontArtifactRef } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { FontArtifactRef } from "@narratage/video-contracts";
 import {
   compileHyperframesDocument,
   materializeHyperframesHtml,
