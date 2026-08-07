@@ -149,3 +149,36 @@ test("domain packages confine their Text dependency to Surface and activation en
     }
   }
 });
+
+test("every workspace package is exercised by some test, directly or through a tested consumer", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const packages = await workspacePackages();
+  const graph = productionGraph(packages);
+  const directlyTested = new Set();
+  for (const name of packages.keys()) {
+    const short = name.replace("@narratage/", "");
+    let entries = [];
+    try {
+      entries = await readdir(new URL(`../packages/${short}/test/`, import.meta.url));
+    } catch {
+      continue;
+    }
+    if (entries.some((file) => file.endsWith(".test.ts"))) directlyTested.add(name);
+  }
+  const testedImports = new Set(directlyTested);
+  for (const name of directlyTested) {
+    for (const dependency of transitive(graph, name)) testedImports.add(dependency);
+    const short = name.replace("@narratage/", "");
+    const testRoot = new URL(`../packages/${short}/test/`, import.meta.url);
+    for (const file of await readdir(testRoot)) {
+      if (!file.endsWith(".ts")) continue;
+      const source = await readFile(new URL(file, testRoot), "utf8");
+      for (const match of source.matchAll(/"(@narratage\/[a-z-]+)"/gu)) {
+        testedImports.add(match[1]);
+        for (const dependency of transitive(graph, match[1])) testedImports.add(dependency);
+      }
+    }
+  }
+  const uncovered = [...packages.keys()].filter((name) => !testedImports.has(name)).sort();
+  assert.deepEqual(uncovered, [], "packages reachable from no test at all");
+});
