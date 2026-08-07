@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
     <div class="hero-statement-viewport hero-statement-viewport-en">
       <Transition name="hero-statement-swap">
         <p :key="activeIndex" class="hero-statement-en">
-          <span class="hero-statement-line">{{ statements[activeIndex].enBefore }}{{ statements[activeIndex].enConcept }}{{ statements[activeIndex].enConnector }}<br><span class="hero-statement-accent">{{ statements[activeIndex].enAudience }}</span>{{ statements[activeIndex].enAfter }}</span>
+          <span class="hero-statement-line">{{ statements[activeIndex].enBefore }}{{ statements[activeIndex].enConcept }}{{ statements[activeIndex].enConnector }}<br class="hero-statement-break"><span class="hero-statement-accent">{{ statements[activeIndex].enAudience }}</span>{{ statements[activeIndex].enAfter }}</span>
         </p>
       </Transition>
     </div>
