@@ -18,5 +18,8 @@ export {
   resolveSpeechEstimateLanguage,
   sealSpeechEstimatePolicy,
 } from "./program.js";
-export { decodeSpeechEstimateSurface } from "./surface.js";
+export {
+  decodeSpeechEstimateSurface,
+  speechEstimatePolicyFromRecipe,
+} from "./surface.js";
 export type * from "./types.js";

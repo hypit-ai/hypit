@@ -404,3 +404,11 @@ test("SVS rejects duplicate public recipes", () => {
     (error: unknown) => error instanceof SvsSyntaxError && error.code === "SVS_RULE_DUPLICATE",
   );
 });
+
+test("quoted Recipe values may contain Prompt punctuation without changing SVS structure", () => {
+  const sheet = parseSvs(
+    "prompt.svs",
+    '<sheet version="1">demo.prompt { text: "first; second } /* literal */"; }</sheet>',
+  );
+  assert.equal(sheet.recipes[0]?.value.properties.text, "first; second } /* literal */");
+});

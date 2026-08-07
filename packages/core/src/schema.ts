@@ -7,6 +7,29 @@ function fail(path: string, message: string): never {
   throw new CoreError("VALUE_SCHEMA_MISMATCH", `${path} ${message}`, path);
 }
 
+/**
+ * Prove that an object-shaped union branch cannot match by looking only at its
+ * literal fields. This is a semantic no-op: a branch skipped here would fail
+ * the normal object validation at the same field. It matters for large IRs,
+ * where validating every word/style node against every named union variant
+ * otherwise constructs thousands of exceptions just to discover that their
+ * discriminator literals differ.
+ */
+function objectLiteralMismatch(value: CanonicalValue, schema: ValueSchema): boolean {
+  if (schema.kind !== "object" || value === null || Array.isArray(value) || typeof value !== "object") {
+    return false;
+  }
+  const object = value as Readonly<Record<string, CanonicalValue>>;
+  for (const [name, field] of Object.entries(schema.fields)) {
+    if (field.schema.kind !== "literal") continue;
+    if (!Object.hasOwn(object, name)) return field.optional !== true;
+    if (canonicalStringify(object[name] as CanonicalValue) !== canonicalStringify(field.schema.value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function validateInline(value: CanonicalValue, schema: ValueSchema, path: string): void {
   switch (schema.kind) {
     case "null":
@@ -74,6 +97,7 @@ function validateInline(value: CanonicalValue, schema: ValueSchema, path: string
     case "oneOf": {
       let matches = 0;
       for (const variant of schema.variants) {
+        if (objectLiteralMismatch(value, variant)) continue;
         try {
           validateInline(value, variant, path);
           matches += 1;

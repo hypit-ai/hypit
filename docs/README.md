@@ -48,6 +48,8 @@ These video contracts are executable candidates, not yet an open-source compatib
 - [`media-execution-boundary-v1.md`](./media-execution-boundary-v1.md)
 - [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
 - [`../services/whisperx/README.md`](../services/whisperx/README.md)
+- [`../examples/echo-pro-aroll/README.md`](../examples/echo-pro-aroll/README.md) — current four-take
+  live acceptance and explicit historical-Candidate reuse witness.
 - [`../examples/talking-film-live/README.md`](../examples/talking-film-live/README.md)
 
 ## Documentation rules

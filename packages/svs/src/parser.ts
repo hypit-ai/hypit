@@ -27,7 +27,30 @@ function fail(sourceName: string, code: string, message: string, offset: number)
 function withoutComments(sourceName: string, text: string): string {
   const output = [...text];
   let cursor = 0;
+  let quote: "\"" | "'" | undefined;
+  let escaped = false;
   while (cursor < text.length) {
+    const character = text[cursor];
+    if (escaped) {
+      escaped = false;
+      cursor += 1;
+      continue;
+    }
+    if (character === "\\" && quote !== undefined) {
+      escaped = true;
+      cursor += 1;
+      continue;
+    }
+    if (quote !== undefined) {
+      if (character === quote) quote = undefined;
+      cursor += 1;
+      continue;
+    }
+    if (character === "\"" || character === "'") {
+      quote = character;
+      cursor += 1;
+      continue;
+    }
     if (!text.startsWith("/*", cursor)) {
       cursor += 1;
       continue;
@@ -40,6 +63,32 @@ function withoutComments(sourceName: string, text: string): string {
     cursor = end + 2;
   }
   return output.join("");
+}
+
+function closingBrace(text: string, start: number, limit: number): number {
+  let quote: "\"" | "'" | undefined;
+  let escaped = false;
+  for (let cursor = start; cursor < limit; cursor += 1) {
+    const character = text[cursor];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\" && quote !== undefined) {
+      escaped = true;
+      continue;
+    }
+    if (quote !== undefined) {
+      if (character === quote) quote = undefined;
+      continue;
+    }
+    if (character === "\"" || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (character === "}") return cursor;
+  }
+  return -1;
 }
 
 function skipSpace(text: string, start: number): number {
@@ -95,6 +144,32 @@ function parseValue(sourceName: string, text: string, offset: number): Canonical
   return value;
 }
 
+function valueSemicolon(text: string, start: number): number {
+  let quote: "\"" | "'" | undefined;
+  let escaped = false;
+  for (let cursor = start; cursor < text.length; cursor += 1) {
+    const character = text[cursor];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\" && quote !== undefined) {
+      escaped = true;
+      continue;
+    }
+    if (quote !== undefined) {
+      if (character === quote) quote = undefined;
+      continue;
+    }
+    if (character === "\"" || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (character === ";") return cursor;
+  }
+  return -1;
+}
+
 function parseProperties(
   sourceName: string,
   text: string,
@@ -115,7 +190,7 @@ function parseProperties(
     cursor = skipSpace(text, cursor);
     if (text[cursor] !== ":") fail(sourceName, "SVS_PROPERTY_COLON", `Property ${name} requires ':'.`, offset + cursor);
     const valueStart = cursor + 1;
-    const semicolon = text.indexOf(";", valueStart);
+    const semicolon = valueSemicolon(text, valueStart);
     if (semicolon < 0) fail(sourceName, "SVS_PROPERTY_SEMICOLON", `Property ${name} requires ';'.`, offset + valueStart);
     properties[name] = parseValue(sourceName, text.slice(valueStart, semicolon), offset + valueStart);
     cursor = semicolon + 1;
@@ -151,7 +226,7 @@ export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
     cursor = skipSpace(text, cursor);
     if (text[cursor] !== "{") fail(sourceName, "SVS_RULE_OPEN", `Recipe ${path} requires '{'.`, cursor);
     const blockStart = cursor + 1;
-    const blockEnd = text.indexOf("}", blockStart);
+    const blockEnd = closingBrace(text, blockStart, close);
     if (blockEnd < 0 || blockEnd > close) fail(sourceName, "SVS_RULE_UNCLOSED", `Recipe ${path} is not closed.`, start);
     const value: SvsRecipe = {
       contract: "svml.svs-recipe@1",

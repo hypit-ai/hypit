@@ -1,0 +1,205 @@
+<?svml using="@svml/prompt-kit/svs@1"?>
+
+<sheet version="1" id="official-ugc-v1">
+  prompt-kit.official-ugc-v1 {
+    separator: paragraph;
+    default-composition-stability: soft-locked;
+    default-camera-motion: none;
+    default-edit-rhythm: continuous-take;
+    default-performance: natural-explainer;
+    default-gesture: natural;
+    default-voice-mode: single-speaker;
+  }
+
+  prompt-kit.official-ugc-v1.block.base {
+    kind: fixed;
+    order: 10;
+    text: "Create a realistic vertical iPhone UGC talking-head video using @image1 as the character-and-scene reference.";
+  }
+
+  prompt-kit.official-ugc-v1.block.reference-contract {
+    kind: variant;
+    order: 20;
+  }
+
+  prompt-kit.official-ugc-v1.choice.reference-contract.one {
+    when-select-image-count: one;
+    text: "REFERENCE CONTRACT: preserve @image1's visible person, face identity, outfit, room, lighting, lens feel, and broad camera style.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.reference-contract.many {
+    when-select-image-count: many;
+    text: "REFERENCE CONTRACT: use @image1 as the primary character-and-scene reference. Use @image2 and later image references only as supplementary identity, wardrobe, product, or environment evidence; preserve one coherent person and scene.";
+  }
+
+  prompt-kit.official-ugc-v1.block.script-contract {
+    kind: fixed;
+    order: 30;
+    text: "SCRIPT: deliver the scripted lines exactly in order, with clear lip-sync for the visible speaker's spoken lines.";
+  }
+
+  prompt-kit.official-ugc-v1.block.voice-map {
+    kind: variant;
+    order: 40;
+  }
+
+  prompt-kit.official-ugc-v1.choice.voice-map.single-without-audio {
+    when-param-voice-mode: single-speaker;
+    when-select-audio-count: zero;
+    text: "VOICE MAP: the visible person in @image1 delivers the full script on camera with a natural voice matching the character.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.voice-map.single-with-audio {
+    when-param-voice-mode: single-speaker;
+    when-select-audio-count: one;
+    text: "VOICE MAP: the visible person in @image1 delivers the full script on camera. @audio1 is the voice-timbre reference for the visible speaker.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.voice-map.single-with-many-audios {
+    when-param-voice-mode: single-speaker;
+    when-select-audio-count: many;
+    text: "VOICE MAP: the visible person in @image1 delivers the full script on camera. @audio1 is the voice-timbre reference for the visible speaker. Additional audio references provide supplementary voice evidence only.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.voice-map.roles-without-audio {
+    when-param-voice-mode: role-tagged-lines;
+    when-select-audio-count: zero;
+    text: "VOICE MAP: the script uses role labels such as HOST: and NARRATOR:. The visible person in @image1 delivers the first speaking role on camera; lines assigned to the second role play as an off-camera narrator voice while the visible speaker stays present and reacts naturally.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.voice-map.roles-with-one-audio {
+    when-param-voice-mode: role-tagged-lines;
+    when-select-audio-count: one;
+    text: "VOICE MAP: the script uses role labels such as HOST: and NARRATOR:. The visible person in @image1 delivers the first speaking role on camera; lines assigned to the second role play as an off-camera narrator voice while the visible speaker stays present and reacts naturally. @audio1 is the visible speaker's voice-timbre reference.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.voice-map.roles-with-many-audios {
+    when-param-voice-mode: role-tagged-lines;
+    when-select-audio-count: many;
+    text: "VOICE MAP: the script uses role labels such as HOST: and NARRATOR:. The visible person in @image1 delivers the first speaking role on camera; lines assigned to the second role play as an off-camera narrator voice while the visible speaker stays present and reacts naturally. @audio1 is the visible speaker's voice-timbre reference. @audio2 is the narrator voice-timbre reference.";
+  }
+
+  prompt-kit.official-ugc-v1.block.composition-stability {
+    kind: axis;
+    order: 50;
+    parameter: composition-stability;
+  }
+
+  prompt-kit.official-ugc-v1.choice.composition-stability.flexible-ugc {
+    text: "COMPOSITION STABILITY: preserve @image1's visible person and overall reference setup while allowing normal short-form UGC framing variation for a lively creator video.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.composition-stability.soft-locked {
+    text: "COMPOSITION STABILITY: keep the speaker in the same general region and maintain the reference composition, allowing natural posture changes and only tiny crop or scale breathing.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.composition-stability.strict-locked {
+    text: "COMPOSITION STABILITY: treat @image1 as a locked spatial stage. Preserve the same subject placement, perspective, left-right orientation, background relationship, and framing envelope so persistent overlays stay spatially meaningful.";
+  }
+
+  prompt-kit.official-ugc-v1.block.camera-motion {
+    kind: axis;
+    order: 60;
+    parameter: camera-motion;
+  }
+
+  prompt-kit.official-ugc-v1.choice.camera-motion.none {
+    text: "CAMERA MOTION: hold the framing steady in a fixed shot, keeping the selected composition envelope stable from start to finish.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.camera-motion.subtle-punch-in-return {
+    text: "CAMERA MOTION: use one subtle push-in on the most important phrase along the same optical axis, then return smoothly to the original framing while preserving the same subject placement and background relationship.";
+  }
+
+  prompt-kit.official-ugc-v1.block.edit-rhythm {
+    kind: axis;
+    order: 70;
+    parameter: edit-rhythm;
+  }
+
+  prompt-kit.official-ugc-v1.choice.edit-rhythm.continuous-take {
+    text: "EDIT RHYTHM: make the clip feel like a continuous creator explanation, with natural breath timing and polished short-form pacing.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.edit-rhythm.pause-trim-jump-cuts {
+    text: "EDIT RHYTHM: use pause-trim jump cuts. The final clip feels tightly edited because silent gaps between spoken phrases have been removed; framing stays locked, with only tiny temporal jumps in expression, mouth position, gaze, hands, and posture at phrase boundaries.";
+  }
+
+  prompt-kit.official-ugc-v1.block.performance {
+    kind: axis;
+    order: 80;
+    parameter: performance;
+  }
+
+  prompt-kit.official-ugc-v1.choice.performance.natural-explainer {
+    text: "PERFORMANCE: natural explainer energy. The speaker uses clear eye focus, expressive eyebrows, small nods, and a friendly teaching rhythm that matches each idea.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.performance.high-energy-ugc {
+    text: "PERFORMANCE: high-energy short-form UGC delivery. The speaker feels magnetic, quick, vivid, and excited, with expressive face changes on key words.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.performance.calm-authority {
+    text: "PERFORMANCE: calm authority. The speaker is composed, confident, precise, and trustworthy, with deliberate emphasis.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.performance.reactive-playful {
+    text: "PERFORMANCE: reactive and playful. The speaker responds visibly to the idea with amused looks, quick smiles, skeptical eyebrows, and lively conversational timing.";
+  }
+
+  prompt-kit.official-ugc-v1.block.gesture {
+    kind: axis;
+    order: 90;
+    parameter: gesture;
+  }
+
+  prompt-kit.official-ugc-v1.choice.gesture.restrained {
+    text: "GESTURE: restrained body language. Let face, eye focus, and voice carry most of the meaning, with small posture shifts and very light hand beats.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.gesture.compact {
+    text: "GESTURE: compact explanatory gestures. Keep hand movement close to the torso and inside the frame, using small semantic beats that support the words without competing with persistent overlays.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.gesture.natural {
+    text: "GESTURE: natural creator gestures. Use open palms, small pointing beats, nods, and posture shifts where the script naturally calls for them.";
+  }
+
+  prompt-kit.official-ugc-v1.choice.gesture.expressive {
+    text: "GESTURE: expressive embodied delivery. Use richer hand, shoulder, and posture changes that clearly visualize the idea while staying coherent with the spoken line.";
+  }
+
+  prompt-kit.official-ugc-v1.block.texture {
+    kind: fixed;
+    order: 100;
+    text: "TEXTURE: crisp real-shot phone footage with stable face, hands, skin texture, lighting, and photoreal motion.";
+  }
+
+  prompt-kit.official-ugc-v1.block.visible-text {
+    kind: fixed;
+    order: 110;
+    text: "No subtitles, captions, labels, logos, UI text, floating words, or any readable on-screen text inside the generated video.";
+  }
+
+  prompt-kit.official-ugc-v1.block.dialogue {
+    kind: slot;
+    order: 120;
+    slot: dialogue;
+    optional: false;
+    label: "SCRIPT TO DELIVER:";
+  }
+
+  prompt-kit.official-ugc-v1.block.action {
+    kind: slot;
+    order: 130;
+    slot: action;
+    optional: true;
+  }
+
+  prompt-kit.official-ugc-v1.block.extra {
+    kind: slot;
+    order: 140;
+    slot: extra;
+    optional: true;
+  }
+</sheet>

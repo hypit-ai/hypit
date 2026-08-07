@@ -11,13 +11,11 @@
     "@svml/cli": "workspace:*",
     "@svml/compiler-text-node": "workspace:*",
     "@svml/local": "workspace:*",
-    "@svml/prelude-video": "workspace:*",
     "@svml/provider-google-vertex": "workspace:*",
     "@svml/provider-hyperframes-local": "workspace:*",
     "@svml/provider-kie": "workspace:*",
     "@svml/provider-media-local": "workspace:*",
     "@svml/provider-whisperx-local": "workspace:*",
-    "@svml/run-text": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/runtime": "workspace:*"
   }
