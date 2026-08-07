@@ -9,6 +9,7 @@ const markerBoundary = object({
   tokenIndex: { schema: integer },
   structuralPosition: { schema: integer },
   segmentId: { schema: string, optional: true },
+  anchorId: { schema: string },
 });
 const markerEdge = object({
   affinity: { schema: { kind: "string", enum: ["left", "right"] } },
@@ -97,6 +98,13 @@ export const captionProjectionSchema: ValueSchema = object({
       displayEnd: { schema: integer }, startToken: { schema: integer }, endTokenExclusive: { schema: integer },
       relation: { schema: { kind: "literal", value: "exact" } },
     }) } },
+  }) } },
+});
+export const narrativeMomentSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.narrative-moment@1" } }, id: { schema: string },
+  occurrences: { schema: { kind: "array", minItems: 1, items: object({
+    occurrence: { schema: integer }, affinity: { schema: { kind: "string", enum: ["left", "right"] } },
+    boundary: { schema: markerBoundary },
   }) } },
 });
 export const narrativeSelectionSchema: ValueSchema = object({
