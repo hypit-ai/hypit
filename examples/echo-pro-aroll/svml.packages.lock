@@ -14,7 +14,7 @@
     {
       "name": "@narratage/caption",
       "version": "0.0.0-dev",
-      "digest": "sha256:2cc50a1dc8aacb13caf90b5aa7c58bbda6be782765996e0e5a12d1b4c1163753"
+      "digest": "sha256:6db06978a4f877a78bcea9d44e0470b3580fff01f4be723b9e364431cef79a67"
     },
     {
       "name": "@narratage/component-kit",
@@ -79,7 +79,7 @@
     {
       "name": "@narratage/narrative",
       "version": "0.0.0-dev",
-      "digest": "sha256:866d6570d7fd659cd56540c0be3a28ad43b7de68be464a77591f6e14d8b61564"
+      "digest": "sha256:85e98e61021310c2dd6473189dcbcc9daa54039277169cbb5ed51ed70277a894"
     },
     {
       "name": "@narratage/program-space",
@@ -114,7 +114,7 @@
     {
       "name": "@narratage/script",
       "version": "0.0.0-dev",
-      "digest": "sha256:4826275f4b7f1fc9169f059eef794bff22db76b5283f48442ad60a0452bf2218"
+      "digest": "sha256:346c06c3a317d749019da7309c419771f3325a4329d6e551d5f4c5af95cb260e"
     },
     {
       "name": "@narratage/seedance-speaker",
@@ -129,7 +129,7 @@
     {
       "name": "@narratage/semantic-map",
       "version": "0.0.0-dev",
-      "digest": "sha256:387bad3d99eb4b50d9721f5b258f1ed4d2fad277a817aca98c6390eb511e40d4"
+      "digest": "sha256:51a531dfb1e7342a0b5a4e714f9f89642f295a18f19d13a6aa9c47e8cfbef1df"
     },
     {
       "name": "@narratage/source",
@@ -139,7 +139,7 @@
     {
       "name": "@narratage/speech-alignment",
       "version": "0.0.0-dev",
-      "digest": "sha256:aacaade075325a1f3a28dc4ee8d6a685046e480ff9d6e40fce1c6e5f3d7c0091"
+      "digest": "sha256:ea916939fa15e434c799cc7914eedea06a521902e6523c11809a98b69f807836"
     },
     {
       "name": "@narratage/speech-basis",
@@ -203,8 +203,8 @@
         "name": "@narratage/caption",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:2ee66831641cb2f84f681a75fa094ef2e2f59d5ef6306dbe6614aa0e5936cef8",
-      "closureDigest": "sha256:2d31507ffb92dde6cb9acc3f8705f7823fd268a5f469335ab0b103633e143550"
+      "facetsDigest": "sha256:f5745238a85fe4571792b27e15a5dc5cc958fb165d0d72951f13c4dfbe8f6c67",
+      "closureDigest": "sha256:cdab28c4b5596b48ea867bfe14ad62bf349c8740124d2da2c2c65e700b1bf168"
     },
     {
       "specifier": "@narratage/caption-gemini",
@@ -212,8 +212,8 @@
         "name": "@narratage/caption-gemini",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:187f25b50175ac03a581fccba8395296a0a2118e532225b366d397a2b0400fc4",
-      "closureDigest": "sha256:48c8f7f6b231f057672a97a8aa9c13061705f067aa8e967abf988c3404a19d87"
+      "facetsDigest": "sha256:6ae1f54415d7b6fa4ce5993dd3e1255615cd17e54e8a62cf34ebf17a534453e3",
+      "closureDigest": "sha256:8d3683a5d160118c2ccad1402fff0406051409b92518623d61c4102e14bf960f"
     },
     {
       "specifier": "@narratage/composition",
@@ -230,8 +230,8 @@
         "name": "@narratage/estimate",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:0e6e3a40ca98b42bf76f5877eaa0f5c7a420d69965a32af84ef7e61c0feb0c22",
-      "closureDigest": "sha256:696a5dff37acf90698288d3bc6628c82975239208e5b5b4977dd68b8abf8a810"
+      "facetsDigest": "sha256:b737a89381747c16afbc9cc026f268b83e8e6c02b707f85a44c28f66c8807eaa",
+      "closureDigest": "sha256:71418c16346213e42a25d62de93fe83fbfafeb181dae0a25e095a2c519d0ff8a"
     },
     {
       "specifier": "@narratage/film",
@@ -275,8 +275,8 @@
         "name": "@narratage/media-pipeline",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:6f520aa9a6d237dec9e48cfd3c3c9b47282ce6241a614cfd5ffe35a9e39d9533",
-      "closureDigest": "sha256:0d101dc7b9054d2b5f7b03a80c4f75c6d6238514c0ea8f7e2b4e0b0832a950c4"
+      "facetsDigest": "sha256:783aeed74e2586b3f4cff5350a27d06de9cb9472a237dabc0d5c68680cca3546",
+      "closureDigest": "sha256:36e72ba079f2b473f997bec1f8944a7c36ebd6946a828b84161908576b3c314a"
     },
     {
       "specifier": "@narratage/narrative",
@@ -284,8 +284,8 @@
         "name": "@narratage/narrative",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:ad432145af4671da3a98c911958f569e49df74115ac336d1e34111ee513c303f",
-      "closureDigest": "sha256:6056d2d75cb3b109d3499f94f875f33bd70b985e8cdb668e82012c918e2e9165"
+      "facetsDigest": "sha256:849b7e49ef228b44d07ae57a106b18a24c7730c88783057bcdbad1e2e61153d3",
+      "closureDigest": "sha256:40c0f9e814f4c09567f45ca2cbfabeec756aa2aa317c914c3bdd40ea2cab3473"
     },
     {
       "specifier": "@narratage/program-space",
@@ -311,8 +311,8 @@
         "name": "@narratage/render-hyperframes",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:9fe1ea0ccad65e4819fa82804a6a96003782cad1b32fc155f65a991b91f2bfdf",
-      "closureDigest": "sha256:c5796095828887f523f078fea4f24e17df38988817df2ad90f79c337e7dbb6a8"
+      "facetsDigest": "sha256:8fcb965f660a24bfbe2808f0e288d0afb316d772ec5d6f189530d3602a9f9186",
+      "closureDigest": "sha256:eace40b956a40685862e46b9cd3b8e29f32120bb74d8c41d09977ea354522af7"
     },
     {
       "specifier": "@narratage/run-text",
@@ -329,8 +329,8 @@
         "name": "@narratage/script",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:be36b7773862df5124e3c3598ac9f9c3407f081d91360623fb2f983ba7e2ecab",
-      "closureDigest": "sha256:85f18a69197b5c61a96a5188adc586dcf4ef72e961e10775d8301a3864678563"
+      "facetsDigest": "sha256:42d654cd2ce1e48b6a0edb036e4ef742ab59cd73abb2bb42f66ab522ae41e34e",
+      "closureDigest": "sha256:29f695f2d8584b0ddd80f53252df0127911b182fa59d41b430112eaa5eff01b2"
     },
     {
       "specifier": "@narratage/seedance",
@@ -338,8 +338,8 @@
         "name": "@narratage/seedance",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:33c8544ab99b77c94af25a4620bf17e0b1b994cc505616933878c8ece586f666",
-      "closureDigest": "sha256:b0a54d63ab4459257885d87cc247e86b9fed0c9d1bd704fd6fca8ce8f0a36a75"
+      "facetsDigest": "sha256:25a6e78020082829e4ad5b41609f11b82933fb99d6fdb7958d392fa646eaa94b",
+      "closureDigest": "sha256:138c8e96a9f08d92fde7a6b81d2d7c464d3263234c9930aac5a7faafa0a727b5"
     },
     {
       "specifier": "@narratage/seedance-speaker",
@@ -347,8 +347,8 @@
         "name": "@narratage/seedance-speaker",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:7e53dd24fcc24b2cf3aff7bb10671132251c37a38d20223e33c95f129a8213a9",
-      "closureDigest": "sha256:d0a812f48784ef7abc69e5b2f5dde3058dd02762050753ec1e0bf8eb1953aba2"
+      "facetsDigest": "sha256:6d913b16f5ffd7c5cc4969c6ec78d5a1b87060ec4ec4fbd59df1dff12ec52b94",
+      "closureDigest": "sha256:a6761cb197f0b9088b6cceaef4533af579a154fd2fc7482cc932895aa296dc06"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -356,8 +356,8 @@
         "name": "@narratage/semantic-map",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:0643f64108ed0effaa2d4fb6430ee784cf4097b645f6a29454a7053ebbd5c24b",
-      "closureDigest": "sha256:6d02c9e040b8c6069753f33d032cbef30a201a8a46f5c6ef6c335f21742d9d59"
+      "facetsDigest": "sha256:368118044ef91df01ac2f92a3a7acd443cd256904a99b01ee1a9451b8c822305",
+      "closureDigest": "sha256:52979d37ffef941461bcec99a5873bea634f921e1194a44a7316cd64b9483d79"
     },
     {
       "specifier": "@narratage/speech",
@@ -365,8 +365,8 @@
         "name": "@narratage/speech",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:18c88419b284266980f5016505e4fce22ba544d4eff743395bcb365c560a16b4",
-      "closureDigest": "sha256:ab1999e9af57cf1af17453ac31aba868b45b60603c729e5cdd4b6bfba850690f"
+      "facetsDigest": "sha256:fbecf0c9334b34c91f49c4edd9f2592d7b49856ec2d8a875dd272f47ade29a18",
+      "closureDigest": "sha256:919377b0b462538e1071bb1aa48bb1603a29b9b7c8b9054861343b8e62f59d23"
     },
     {
       "specifier": "@narratage/speech-alignment",
@@ -374,8 +374,8 @@
         "name": "@narratage/speech-alignment",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:c6639913da14ba2249280bbc797ee8dde7039ad99169a364a2a2df48f8485329",
-      "closureDigest": "sha256:c35b77441ee90b9e7348f4931b89c6db235adf2cf2339ce3f7206150f5031b0f"
+      "facetsDigest": "sha256:6b274580dadbfc4b79a0df00bbd87683ba91143be08bf4b1736a85c8d0b658fd",
+      "closureDigest": "sha256:86d76f2023484ace331efff9d4aa56845e5f7c600c318efae946a1ccf899a7a8"
     },
     {
       "specifier": "@narratage/speech-basis",
@@ -383,8 +383,8 @@
         "name": "@narratage/speech-basis",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:145137408570c5bd7a635fb81ce8d239c0345ae70b3b6d85cfcc460ebbf86044",
-      "closureDigest": "sha256:0c6be2eb13111369a7fee4462a48317129945d54f4079c2d4a541312331cebb6"
+      "facetsDigest": "sha256:9703845ab4a67b1a1fba98b276f5c913baec80748a08c0d63dc1b10caef8466f",
+      "closureDigest": "sha256:62f0ee7705817ba70a94c78a6d00377628f8548f22d7d6ce8daed97048112e0b"
     },
     {
       "specifier": "@narratage/speech-evidence",
@@ -392,8 +392,8 @@
         "name": "@narratage/speech-evidence",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:d9ab65b0cd727208120e24a9931c763e33c8c9981265c9e0488c0017149de811",
-      "closureDigest": "sha256:7e382d8d648709f7d6489f399ec0bdbc6d207c9ae57abbf98dc3923ea197f9f5"
+      "facetsDigest": "sha256:69110ba7b1740b0e609f6beef673fe4ef113ba5b0c803fb785ecf1dc9325f0a7",
+      "closureDigest": "sha256:ebe2ab569881b98726bbc3aafc3dc546794530cd3f656b1b4fdf2d5b30a297ae"
     },
     {
       "specifier": "@narratage/speech-spine",
@@ -401,8 +401,8 @@
         "name": "@narratage/speech-spine",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:3b85990a1db133628007169f15637c5efed029a4d184f8c908d4475624139b40",
-      "closureDigest": "sha256:c9ab638e436347e9f5352abfa7d62602978220e2bfb072af8ac8f779bafce96d"
+      "facetsDigest": "sha256:a4cdbee32b5752810b440adb83ba73a4261b4a61f5a750c6712a721f3265ad48",
+      "closureDigest": "sha256:3d7f54d31a3c38ee46e104f68349539d023d0b59b230ef07b407268452834ada"
     },
     {
       "specifier": "@narratage/svs",
@@ -428,9 +428,9 @@
         "name": "@narratage/whisperx",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:55e29a62e673186f29325660db595ddd5346f004d6bfbef15fac3c25d9f63686",
-      "closureDigest": "sha256:7fd17af066fc1758244a4773a493c3fc75125991ad0d3db321eb6a3bd7bbd33a"
+      "facetsDigest": "sha256:6ba179530bbf53e7e3cce1c1ef8b37280bb6a4ac558fe2dc8ec2fada3ba57636",
+      "closureDigest": "sha256:a183d236eba0fff7b15c2f186475041b6c5101ef5949af40e853471119be5b7d"
     }
   ],
-  "digest": "sha256:560d97c7ff69362c2bf8cd70f5730f96aef6bbb4c2ab7febe9750b7953fcbbce"
+  "digest": "sha256:6b4e80a647150ca1e00a29f6e8370041724ea456b25ef81eb20301f3b1f9ed26"
 }

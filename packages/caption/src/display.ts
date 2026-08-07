@@ -57,13 +57,13 @@ function occurrenceRange(
   occurrence: NarrativeSelectionRef["occurrences"][number],
   tokenCount: number,
 ): { readonly start: number; readonly endExclusive: number } {
-  const start = occurrence.open.affinity === "left"
-    ? Math.max(0, occurrence.open.boundary.tokenIndex - 1)
-    : occurrence.open.boundary.tokenIndex;
-  const endExclusive = occurrence.close.affinity === "right"
-    ? Math.min(tokenCount, occurrence.close.boundary.tokenIndex + 1)
-    : occurrence.close.boundary.tokenIndex;
-  return { start, endExclusive };
+  // Outward affinity moves the boundary in time, not in words: `~@x hello @/x~`
+  // and `@x hello @/x` cover the same token, differing only in the surrounding
+  // silence they absorb.
+  return {
+    start: Math.max(0, occurrence.open.boundary.tokenIndex),
+    endExclusive: Math.min(tokenCount, occurrence.close.boundary.tokenIndex),
+  };
 }
 
 export function displayAtomMatchesSelection(
