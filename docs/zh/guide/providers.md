@@ -21,7 +21,7 @@ Provider 包依赖 Runtime 端口以及它所服务的模型族，绝不依赖 C
 
 ```json
 {
-  "name": "@svml/provider-my-service",
+  "name": "@narratage/provider-my-service",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -30,12 +30,12 @@ Provider 包依赖 Runtime 端口以及它所服务的模型族，绝不依赖 C
   },
   "svml": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/runtime": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/runtime-adapter-node": "workspace:*",
-    "@svml/seedance": "workspace:*"
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/runtime-adapter-node": "workspace:*",
+    "@narratage/seedance": "workspace:*"
   }
 }
 ```
@@ -46,7 +46,7 @@ Provider 处理来自 Scheduler 的 Command：提交请求、轮询、下载以�
 
 ```typescript
 // src/provider.ts
-import type { EndpointManifest } from "@svml/endpoint-kit";
+import type { EndpointManifest } from "@narratage/endpoint-kit";
 
 export function createMyServiceProvider(options: {
   instance: string;
@@ -76,12 +76,12 @@ import {
   runtimeConfigObject,
   runtimeConfigString,
   runtimeConfigPositiveInteger,
-} from "@svml/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@svml/runtime-adapter-node";
+} from "@narratage/runtime-adapter";
+import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
-  use: "@svml/provider-my-service",
+  use: "@narratage/provider-my-service",
 
   create(context) {
     const config = runtimeConfigObject(context.config, "MyService");
@@ -105,7 +105,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/provider-my-service",
+  name: "@narratage/provider-my-service",
   hostFacets: [adapter],
 };
 
@@ -116,17 +116,17 @@ export default svmlPackage;
 
 ## 5. 注册并锁定
 
-在 `tsconfig.v2.json` 中添加路径映射：
+在 `tsconfig.json` 中添加路径映射：
 
 ```json
-"@svml/provider-my-service": ["packages/provider-my-service/src/index.ts"]
+"@narratage/provider-my-service": ["packages/provider-my-service/src/index.ts"]
 ```
 
 锁定进 Runtime 包锁文件：
 
 ```bash
-pnpm svml:v2 lock-packages <runtime-lock> \
-  --package @svml/provider-my-service \
+pnpm narratage lock-packages <runtime-lock> \
+  --package @narratage/provider-my-service \
   --root .
 ```
 
@@ -136,7 +136,7 @@ pnpm svml:v2 lock-packages <runtime-lock> \
 {
   "endpoints": [
     {
-      "use": "@svml/provider-my-service",
+      "use": "@narratage/provider-my-service",
       "instance": "my-service.project",
       "lane": "generation",
       "config": {
@@ -154,7 +154,7 @@ pnpm svml:v2 lock-packages <runtime-lock> \
 验证配置：
 
 ```bash
-pnpm svml:v2 doctor svml.runtime.json
+pnpm narratage doctor svml.runtime.json
 ```
 
 ## 可供研究的现有 Provider

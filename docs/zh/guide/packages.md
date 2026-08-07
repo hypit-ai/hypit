@@ -5,7 +5,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 
 # 包架构
 
-`packages/` 下的 64 个以上工作区包被组织成四个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
+`packages/` 下的 78 个工作区包被组织成四个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
 
 ## 四个分层
 
@@ -14,32 +14,32 @@ description: 四个分层、依赖边界、包的结构与 facet。
 这些包实现图语言、Build 状态机、编译器基础设施和 Runtime 端口。它们可以被任意领域复用 —— 不只是视频 —— 并且不依赖 Text、Script、Seedance、Film 或任何视频概念。
 
 ```text
-@svml/protocol              immutable wire contracts
-@svml/artifact              domain-neutral content-addressed byte type
-@svml/core                  Demand compiler and Build state machine
-@svml/source                mandatory Source Header
-@svml/elaborator            author declarations and Fragment expansion
-@svml/realization           typed realization overlays
-@svml/run                   syntax-neutral Run Graph
-@svml/validation            semantic admission
-@svml/host                  Host-facing interfaces
-@svml/compiler-node         reference Node compiler Host
-@svml/workspace-fs-node     workspace filesystem abstraction
-@svml/component-kit         Producer/validator registration
-@svml/runtime               Scheduler and Store ports
-@svml/runtime-adapter       deployment-adapter ABI
-@svml/runtime-adapter-node  project-root resolution
-@svml/endpoint-kit          Endpoint registration
-@svml/driver-node           trusted Node command executor
-@svml/package-loader-node   byte-locked package loading
-@svml/store-sqlite          SQLite Build/Operation stores
-@svml/artifact-store-fs     filesystem Artifact store
-@svml/artifact-store-s3     S3 Artifact store
-@svml/credential-store-env  environment credentials
-@svml/transport             invocation seams
-@svml/transport-process     local process transport
-@svml/transport-aws-lambda  Lambda transport
-@svml/local                 SQLite/filesystem developer assembly
+@narratage/protocol              immutable wire contracts
+@narratage/artifact              domain-neutral content-addressed byte type
+@narratage/core                  Demand compiler and Build state machine
+@narratage/source                mandatory Source Header
+@narratage/elaborator            author declarations and Fragment expansion
+@narratage/realization           typed realization overlays
+@narratage/run                   syntax-neutral Run Graph
+@narratage/validation            semantic admission
+@narratage/host                  Host-facing interfaces
+@narratage/compiler-node         reference Node compiler Host
+@narratage/workspace-fs-node     workspace filesystem abstraction
+@narratage/component-kit         Producer/validator registration
+@narratage/runtime               Scheduler and Store ports
+@narratage/runtime-adapter       deployment-adapter ABI
+@narratage/runtime-adapter-node  project-root resolution
+@narratage/endpoint-kit          Endpoint registration
+@narratage/driver-node           trusted Node command executor
+@narratage/package-loader-node   byte-locked package loading
+@narratage/store-sqlite          SQLite Build/Operation stores
+@narratage/artifact-store-fs     filesystem Artifact store
+@narratage/artifact-store-s3     S3 Artifact store
+@narratage/credential-store-env  environment credentials
+@narratage/transport             invocation seams
+@narratage/transport-process     local process transport
+@narratage/transport-aws-lambda  Lambda transport
+@narratage/local                 SQLite/filesystem developer assembly
 ```
 
 ### Layer 2：作者语言层
@@ -47,12 +47,12 @@ description: 四个分层、依赖边界、包的结构与 facet。
 面向作者的词汇：文本 Frontend、Script Surface、SVS Recipe、Run 文本 Frontend 以及可复用的编译库。
 
 ```text
-@svml/text                  official .svml markup Frontend
-@svml/script                Script Surface
-@svml/svs                   SVS Recipe Frontend
-@svml/run-text              official .svrun Frontend
-@svml/prompt-kit            declarative prompt compilation
-@svml/compiler-text-node    Text Frontend + Surface Host assembly
+@narratage/text                  official .svml markup Frontend
+@narratage/script                Script Surface
+@narratage/svs                   SVS Recipe Frontend
+@narratage/run-text              official .svrun Frontend
+@narratage/prompt-kit            declarative prompt compilation
+@narratage/compiler-text-node    Text Frontend + Surface Host assembly
 ```
 
 ### Layer 3：视频领域层
@@ -60,32 +60,32 @@ description: 四个分层、依赖边界、包的结构与 facet。
 视频专属类型、生成模型族、语音/字幕/轨道契约以及合成。依赖 Layer 1 和 Layer 2，但不依赖任何 Provider。
 
 ```text
-@svml/contracts             Narrative, Track, Composition contracts
-@svml/media                 media types
-@svml/generation            image/video product contracts
-@svml/model-kit             model family abstractions
-@svml/seedance              Seedance model family + author Surface
-@svml/seedance-speaker      Seedance Speaker binding
-@svml/minimax-h3            MiniMax H3 model family
-@svml/gemini-omni           Gemini Omni model family
-@svml/grok-imagine          Grok Imagine model family
-@svml/gpt-image             GPT Image model family
-@svml/nano-banana           Nano Banana model family
-@svml/seedream              Seedream model family
-@svml/estimate              duration estimation
-@svml/speech-program        speech program compilation
-@svml/speech-take           atomic speech take
-@svml/speech-align          speech alignment
-@svml/whisperx              WhisperX component
-@svml/caption               caption planning and Track
-@svml/caption-gemini        Gemini caption planner
-@svml/broll                 B-roll Track
-@svml/text-track            text overlay Track
-@svml/film                  Film composition
-@svml/hyperframes           HyperFrames Visual IR
-@svml/hyperframes-render    HyperFrames rendering component
-@svml/image-transform       image processing component
-@svml/media-pipeline        media inspection/normalization
+@narratage/contracts             Narrative, Track, Composition contracts
+@narratage/media                 media types
+@narratage/generation            image/video product contracts
+@narratage/model-kit             model family abstractions
+@narratage/seedance              Seedance model family + author Surface
+@narratage/seedance-speaker      Seedance Speaker binding
+@narratage/minimax-h3            MiniMax H3 model family
+@narratage/gemini-omni           Gemini Omni model family
+@narratage/grok-imagine          Grok Imagine model family
+@narratage/gpt-image             GPT Image model family
+@narratage/nano-banana           Nano Banana model family
+@narratage/seedream              Seedream model family
+@narratage/estimate              duration estimation
+@narratage/speech-program        speech program compilation
+@narratage/speech-take           atomic speech take
+@narratage/speech-align          speech alignment
+@narratage/whisperx              WhisperX component
+@narratage/caption               caption planning and Track
+@narratage/caption-gemini        Gemini caption planner
+@narratage/broll                 B-roll Track
+@narratage/text-track            text overlay Track
+@narratage/film                  Film composition
+@narratage/hyperframes           HyperFrames Visual IR
+@narratage/hyperframes-render    HyperFrames rendering component
+@narratage/image-transform       image processing component
+@narratage/media-pipeline        media inspection/normalization
 ```
 
 ### Layer 4：Provider（Endpoint）包
@@ -93,30 +93,30 @@ description: 四个分层、依赖边界、包的结构与 facet。
 具备特权的外部能力。依赖 Runtime 端口和它们所服务的模型族，绝不依赖 CLI。
 
 ```text
-@svml/provider-kie                  KIE generation (16 model capabilities)
-@svml/provider-media-local          local ffprobe/ffmpeg
-@svml/provider-whisperx-local       local WhisperX sidecar
-@svml/provider-google-vertex        Vertex Gemini caption planning
-@svml/provider-hyperframes-local    local Chrome rendering
-@svml/provider-image-opencv-local   local OpenCV image transforms
+@narratage/provider-kie                  KIE generation (16 model capabilities)
+@narratage/provider-media-local          local ffprobe/ffmpeg
+@narratage/provider-whisperx-local       local WhisperX sidecar
+@narratage/provider-google-vertex        Vertex Gemini caption planning
+@narratage/provider-hyperframes-local    local Chrome rendering
+@narratage/provider-image-opencv-local   local OpenCV image transforms
 ```
 
 ### 应用层
 
 ```text
-@svml/cli           generic command engine (requires explicit Distribution)
-@svml/video-cli     video command application (selects Text compiler, no built-in author packages)
+@narratage/cli           generic command engine (requires explicit Distribution)
+@narratage/video-cli     video command application (selects Text compiler, no built-in author packages)
 ```
 
 ## 依赖规则
 
 `tools/package-boundaries.test.mjs` 在每次提交时强制执行三条不变式：
 
-1. **无环的生产依赖图。** 任何 `@svml/*` 包之间都不存在依赖环。
+1. **无环的生产依赖图。** 任何 `@narratage/*` 包之间都不存在依赖环。
 
-2. **领域无关闭包。** 每个 Layer 1 包的传递闭包只包含 Layer 1 的包。`@svml/core` 只依赖 `@svml/protocol`。
+2. **领域无关闭包。** 每个 Layer 1 包的传递闭包只包含 Layer 1 的包。`@narratage/core` 只依赖 `@narratage/protocol`。
 
-3. **CLI 独立性。** `@svml/cli` 和 `@svml/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@svml/script`、`@svml/seedance-speaker`、`@svml/broll`、`@svml/text-track`、`@svml/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
+3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance-speaker`、`@narratage/broll`、`@narratage/text-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
 
 ## 包的结构
 
@@ -136,7 +136,7 @@ packages/example/
 
 ```json
 {
-  "name": "@svml/example",
+  "name": "@narratage/example",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -147,12 +147,12 @@ packages/example/
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/protocol": "workspace:*"
+    "@narratage/protocol": "workspace:*"
   }
 }
 ```
 
-- `"exports"` 直接指向 TypeScript 源码。工作区的 `tsconfig.v2.json` 通过 `paths` 把 `@svml/*` 导入映射到源码入口。
+- `"exports"` 直接指向 TypeScript 源码。工作区的 `tsconfig.json` 通过 `paths` 把 `@narratage/*` 导入映射到源码入口。
 - `"svml.activation"` 是该包被 byte-locked 时 Package Loader 会读取的入口。它必须默认导出一个 `NodePackageContribution`。
 
 ### activation.ts
@@ -182,7 +182,7 @@ SVML 使用按字节锁定的受信任代码执行。加载器会记录每个包
   "format": "svml.node-package-lock@1",
   "artifacts": [
     {
-      "name": "@svml/seedance",
+      "name": "@narratage/seedance",
       "version": "0.0.0-dev",
       "digest": "sha256:abc123..."
     }

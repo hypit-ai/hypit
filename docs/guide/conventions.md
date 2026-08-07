@@ -10,8 +10,8 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 | Thing | Convention | Example |
 |---|---|---|
 | Package directory | kebab-case | `packages/speech-align/` |
-| Package name | `@svml/` scope | `@svml/speech-align` |
-| Provider package | `provider-` prefix | `@svml/provider-kie` |
+| Package name | `@narratage/` scope | `@narratage/speech-align` |
+| Provider package | `provider-` prefix | `@narratage/provider-kie` |
 | TypeScript file | kebab-case | `speech-align.ts` |
 | Exported type | PascalCase | `SpeechAlignment` |
 | Exported function | camelCase | `createSpeechAlignment` |
@@ -20,12 +20,12 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 
 - Each package has exactly one public entry point: `src/index.ts`.
 - Internal modules use explicit `.js` extensions (NodeNext resolution).
-- Cross-package imports use `@svml/*`, never relative paths across package boundaries.
+- Cross-package imports use `@narratage/*`, never relative paths across package boundaries.
 - Circular dependencies are forbidden (enforced by `tools/package-boundaries.test.mjs`).
 
 ## TypeScript configuration
 
-`tsconfig.v2.json` extends `tsconfig.json` and adds `paths` mappings for all `@svml/*` packages.
+`tsconfig.json` extends `tsconfig.json` and adds `paths` mappings for all `@narratage/*` packages.
 
 | Setting | Value |
 |---|---|
@@ -36,16 +36,16 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 | `noUncheckedIndexedAccess` | `true` — indexed access returns `T \| undefined` |
 | `exactOptionalPropertyTypes` | `true` — `undefined` must be explicit |
 
-When adding a new package, add its path mapping to `tsconfig.v2.json`:
+When adding a new package, add its path mapping to `tsconfig.json`:
 
 ```json
-"@svml/my-package": ["packages/my-package/src/index.ts"]
+"@narratage/my-package": ["packages/my-package/src/index.ts"]
 ```
 
 ## Wire data
 
-- All persisted data uses the `@2` wire format version.
-- Wire types are defined in `@svml/protocol` and are immutable.
+- All persisted data uses the `@1` wire format version.
+- Wire types are defined in `@narratage/protocol` and are immutable.
 - Nominal Types are owned by Modules, not registered in a central union.
 - Type schemas use JSON-compatible structures, not TypeScript interfaces.
 

@@ -26,7 +26,7 @@ Two forms are supported:
   "services": [],
   "endpoints": [
     {
-      "use": "@svml/provider-kie",
+      "use": "@narratage/provider-kie",
       "instance": "kie.production",
       "lane": "generation",
       "config": {
@@ -35,19 +35,19 @@ Two forms are supported:
       }
     },
     {
-      "use": "@svml/provider-media-local",
+      "use": "@narratage/provider-media-local",
       "instance": "media.local",
       "lane": "media",
       "config": { "defaultConcurrency": 2 }
     },
     {
-      "use": "@svml/provider-whisperx-local",
+      "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.local",
       "lane": "alignment",
       "config": { "defaultConcurrency": 1 }
     },
     {
-      "use": "@svml/provider-google-vertex",
+      "use": "@narratage/provider-google-vertex",
       "instance": "vertex.local",
       "lane": "planning",
       "config": {
@@ -57,7 +57,7 @@ Two forms are supported:
       }
     },
     {
-      "use": "@svml/provider-hyperframes-local",
+      "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.local",
       "lane": "render",
       "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
@@ -113,9 +113,9 @@ Each permission string grants one specific authority to the locked Endpoints:
 For advanced embedding, construct the Runtime programmatically:
 
 ```typescript
-import { createProjectLocalRuntime } from "@svml/local";
-import { createKieProvider } from "@svml/provider-kie";
-import { createLocalMediaProvider } from "@svml/provider-media-local";
+import { createProjectLocalRuntime } from "@narratage/local";
+import { createKieProvider } from "@narratage/provider-kie";
+import { createLocalMediaProvider } from "@narratage/provider-media-local";
 
 export default async function createRuntime() {
   const endpoints = [
@@ -148,8 +148,8 @@ export default async function createRuntime() {
 Pass either form to `--runtime`:
 
 ```bash
-pnpm svml:v2 build build.svrun --runtime ./svml.runtime.json
-pnpm svml:v2 build build.svrun --runtime ./svml.runtime.ts
+pnpm narratage build build.svrun --runtime ./svml.runtime.json
+pnpm narratage build build.svrun --runtime ./svml.runtime.ts
 ```
 
 ## Diagnostics
@@ -159,7 +159,7 @@ pnpm svml:v2 build build.svrun --runtime ./svml.runtime.ts
 Checks the Runtime Profile without running a Build or making paid requests:
 
 ```bash
-pnpm svml:v2 doctor svml.runtime.json
+pnpm narratage doctor svml.runtime.json
 ```
 
 Validates:
@@ -172,8 +172,8 @@ Validates:
 ### gc (garbage collection)
 
 ```bash
-pnpm svml:v2 gc svml.runtime.json            # dry-run
-pnpm svml:v2 gc svml.runtime.json --apply     # delete unreachable Artifacts
+pnpm narratage gc svml.runtime.json            # dry-run
+pnpm narratage gc svml.runtime.json --apply     # delete unreachable Artifacts
 ```
 
 Walks every retained BuildState and Operation, computes reachable Artifact digests, and reports
@@ -187,13 +187,13 @@ Every Build archives all accepted Records and referenced Artifacts durably, inde
 ### List Builds
 
 ```bash
-pnpm svml:v2 builds --runtime svml.runtime.json
+pnpm narratage builds --runtime svml.runtime.json
 ```
 
 ### Inspect
 
 ```bash
-pnpm svml:v2 inspect <build-id> --runtime svml.runtime.json
+pnpm narratage inspect <build-id> --runtime svml.runtime.json
 ```
 
 Shows target bindings, demanded Logical Outputs, every accepted Record and Operation status.
@@ -202,19 +202,19 @@ Shows target bindings, demanded Logical Outputs, every accepted Record and Opera
 
 ```bash
 # By source output name
-pnpm svml:v2 get <build-id> --runtime svml.runtime.json \
+pnpm narratage get <build-id> --runtime svml.runtime.json \
   --name final.video --to output.mp4
 
 # By Record id
-pnpm svml:v2 get <build-id> --runtime svml.runtime.json \
+pnpm narratage get <build-id> --runtime svml.runtime.json \
   --record <record-id> --to output.json
 
 # By Logical Output id
-pnpm svml:v2 get <build-id> --runtime svml.runtime.json \
+pnpm narratage get <build-id> --runtime svml.runtime.json \
   --output <output-id>
 
 # By Artifact digest
-pnpm svml:v2 get <build-id> --runtime svml.runtime.json \
+pnpm narratage get <build-id> --runtime svml.runtime.json \
   --artifact <sha256:...> --to file.bin
 ```
 

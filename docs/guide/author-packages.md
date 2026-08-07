@@ -19,7 +19,7 @@ mkdir -p packages/my-component/src packages/my-component/test
 
 ```json
 {
-  "name": "@svml/my-component",
+  "name": "@narratage/my-component",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -30,9 +30,9 @@ mkdir -p packages/my-component/src packages/my-component/test
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/protocol": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }
 ```
@@ -45,10 +45,10 @@ Add only the dependencies your package actually imports. See
 In `src/index.ts`, declare your Module's identity, Types and Producers:
 
 ```typescript
-import type { ModuleManifest, ModuleRef } from "@svml/protocol";
+import type { ModuleManifest, ModuleRef } from "@narratage/protocol";
 
 export const myComponentModuleRef: ModuleRef = {
-  name: "@svml/my-component",
+  name: "@narratage/my-component",
   version: 1,
 };
 
@@ -68,7 +68,7 @@ The Surface handler decodes the Text Frontend's XML elements into typed author d
 
 ```typescript
 // src/surface.ts
-import type { TextSurfaceDecoder } from "@svml/text";
+import type { TextSurfaceDecoder } from "@narratage/text";
 
 export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) => {
   // Read attributes and children from the XML element
@@ -87,7 +87,7 @@ Look at existing Surface implementations for reference:
 
 ```typescript
 // src/activation.ts
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 import {
   myComponentManifest,
   myComponentModuleRef,
@@ -96,10 +96,10 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/my-component",
+  name: "@narratage/my-component",
   modules: [{
     manifest: myComponentManifest,
-    specifiers: ["@svml/my-component", "@svml/my-component@1"],
+    specifiers: ["@narratage/my-component", "@narratage/my-component@1"],
   }],
   hostFacets: [
     createTextSurfaceHostFacet({
@@ -118,12 +118,12 @@ export default svmlPackage;
 The `specifiers` array lists the strings that an `<import from="..."/>` will match against. The
 `surface` string determines the XML element prefix (`<mine:my-widget>` when imported as `mine`).
 
-## 6. Register in tsconfig.v2.json
+## 6. Register in tsconfig.json
 
-Add the path mapping so TypeScript resolves `@svml/my-component` to source:
+Add the path mapping so TypeScript resolves `@narratage/my-component` to source:
 
 ```json
-"@svml/my-component": ["packages/my-component/src/index.ts"]
+"@narratage/my-component": ["packages/my-component/src/index.ts"]
 ```
 
 ## 7. Install and lock
@@ -131,18 +131,18 @@ Add the path mapping so TypeScript resolves `@svml/my-component` to source:
 ```bash
 pnpm install
 
-pnpm svml:v2 lock-packages <lock-file> \
-  --package @svml/my-component \
-  [--package @svml/other-dep ...] \
+pnpm narratage lock-packages <lock-file> \
+  --package @narratage/my-component \
+  [--package @narratage/other-dep ...] \
   --root .
 ```
 
 ## 8. Use in Author Source
 
 ```xml
-<?svml using="@svml/text@1"?>
+<?svml using="@narratage/text@1"?>
 <svml>
-  <import as="mine" from="@svml/my-component@1"/>
+  <import as="mine" from="@narratage/my-component@1"/>
 
   <mine:Widget id="demo" during={story.selection.example}/>
 </svml>

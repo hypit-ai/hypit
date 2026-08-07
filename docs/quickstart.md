@@ -12,7 +12,8 @@ a montage of scenes to match.
 
 That is exactly what this system does. The author writes a narrated Script with semantic anchors,
 and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
-The internal package scope is `@svml` (Semantic Video Markup Language).
+Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml`
+extension; the workspace packages are published under the `@narratage` scope.
 
 ## Install
 
@@ -43,11 +44,11 @@ WhisperX, Gemini Caption, B-roll, Text, Film, HyperFrames — without calling an
 
 ```bash
 # Compile the Author Source.
-pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+pnpm narratage check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
 # Compile the Run Source and inspect the frozen plan.
-pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+pnpm narratage plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
@@ -68,10 +69,10 @@ Prerequisites:
 
 ```bash
 # Diagnose the Runtime environment.
-pnpm svml:v2 doctor examples/echo-pro-aroll/svml.runtime.json
+pnpm narratage doctor examples/echo-pro-aroll/svml.runtime.json
 
 # Submit the Build.
-pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
+pnpm narratage build examples/echo-pro-aroll/build.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . \
@@ -79,7 +80,7 @@ pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
   --follow
 
 # Retrieve the final video.
-pnpm svml:v2 get echo-pro-film-001 \
+pnpm narratage get echo-pro-film-001 \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --name final.video \
   --to examples/echo-pro-aroll/output/final.mp4
@@ -90,11 +91,11 @@ makes an optional copy of an already durable Record.
 
 ## Reuse previous results
 
-SVML has no implicit cache. Reusing a result is explicit Run Graph authoring — declare zero-input
+Narratage has no implicit cache. Reusing a result is explicit Run Graph authoring — declare zero-input
 Candidates backed by historical Records and connect them through Satisfaction edges:
 
 ```xml
-<?svml using="@svml/run-text@1"?>
+<?svml using="@narratage/run-text@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
   <target-set id="delivery">
@@ -112,7 +113,7 @@ The compiled plan prunes all upstream Operations that the substitute Candidates 
 new Build, not a continuation.
 
 ```bash
-pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
+pnpm narratage build examples/echo-pro-aroll/reuse-generated.svrun \
   --runtime examples/echo-pro-aroll/svml.runtime.json \
   --package-lock examples/echo-pro-aroll/svml.packages.lock \
   --root . --build-id echo-pro-film-reuse-001 --follow
@@ -121,17 +122,17 @@ pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
 ## CLI reference
 
 ```text
-svml-v2 lock-packages <lock> --package name [--package name ...] [--root dir]
-svml-v2 doctor <runtime.json>
-svml-v2 gc <runtime.json> [--apply]
-svml-v2 check <source> [--package-lock file] [--root dir]
-svml-v2 plan <run-source> [--package-lock file] [--root dir]
-svml-v2 build <run-source> --runtime profile [--build-id id] [--follow]
-svml-v2 status <build-id> --runtime profile
-svml-v2 builds --runtime profile
-svml-v2 inspect <build-id> --runtime profile
-svml-v2 get <build-id> --runtime profile [--name x|--record x|--output x|--artifact x] [--to path]
-svml-v2 cancel <build-id> --runtime profile
+narratage lock-packages <lock> --package name [--package name ...] [--root dir]
+narratage doctor <runtime.json>
+narratage gc <runtime.json> [--apply]
+narratage check <source> [--package-lock file] [--root dir]
+narratage plan <run-source> [--package-lock file] [--root dir]
+narratage build <run-source> --runtime profile [--build-id id] [--follow]
+narratage status <build-id> --runtime profile
+narratage builds --runtime profile
+narratage inspect <build-id> --runtime profile
+narratage get <build-id> --runtime profile [--name x|--record x|--output x|--artifact x] [--to path]
+narratage cancel <build-id> --runtime profile
 ```
 
 ## Next
