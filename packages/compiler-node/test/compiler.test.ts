@@ -54,7 +54,7 @@ import { NodeFilesystemWorkspace } from "@svml/workspace-fs-node";
 
 function emptyManifest(name: string, version = "1"): ModuleManifest {
   return {
-    format: "svml.module@0",
+    format: "svml.module@1",
     name,
     version,
     dependencies: [],
@@ -116,7 +116,7 @@ const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
 const surfaceDigest = digestOf("example.compiler-lab/surface@1");
 const laboratoryManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],

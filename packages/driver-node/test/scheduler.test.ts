@@ -194,7 +194,7 @@ const providerImplementationDigest = digestOf("example.scheduler-runtime/generat
 
 function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverable" = "immediate") {
   const manifest: RuntimeModuleManifest = {
-    format: "svml.runtime-module@2",
+    format: "svml.runtime-module@1",
     name: runtimeModule.name,
     version: runtimeModule.version,
     facets: [

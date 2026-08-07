@@ -53,7 +53,7 @@ const generateProducer = { module: testModule, name: "generate-speech-take" } sa
 const generateImplementationDigest = digestOf("example.speech-take-product/generate@1");
 
 const testManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: testModule.name,
   version: testModule.version,
   dependencies: [videoContractDependencies.speech],
@@ -84,7 +84,7 @@ function validatorRegistry(): TypeValidatorRegistry {
 function sampleTake(label = "generated"): SpeechBasis {
   const durationSec = 2;
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
   });

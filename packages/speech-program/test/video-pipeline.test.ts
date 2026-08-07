@@ -167,7 +167,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
     const media = inlineObject(inputs.media.value.value);
     const durationSec = media.durationSec as number;
     const programSpace = sealProgramSpace({
-      contract: "svml.program-space@0",
+      contract: "svml.program-space@1",
       durationSec,
       frameRate: { numerator: 1_000, denominator: 1 },
     });
@@ -406,7 +406,7 @@ test("the Speech Program pipeline resumes without repeating paid calls", async (
         value: {
           kind: "inline",
           value: sealWhisperXAlignmentEvidence({
-            contract: "svml.whisperx-alignment-evidence@2",
+            contract: "svml.whisperx-alignment-evidence@1",
             durationSec: 1,
             segments: [{
               sourceSegmentId: "line",
@@ -535,7 +535,7 @@ test("an Existing SpeechTake cuts generation while a visual substitute cuts the 
     narrativeRecord?.value.kind === "inline" ? narrativeRecord.value.value : {},
   );
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 1_000, denominator: 1 },
   });

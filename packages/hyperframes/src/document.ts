@@ -308,7 +308,7 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
 
 function normalizedDocument(value: HyperframesDocument): HyperframesDocument {
   return {
-    contract: "svml.hyperframes-document@4",
+    contract: "svml.hyperframes-document@1",
     visualIr: value.visualIr,
     frameRate: { ...value.frameRate },
     frameCount: value.frameCount,
@@ -323,7 +323,7 @@ function normalizedDocument(value: HyperframesDocument): HyperframesDocument {
 export function compileHyperframesDocument(composition: Composition, programSpace: ProgramSpace): HyperframesDocument {
   assertCompositionIdentity(composition, programSpace);
   const content = normalizedDocument({
-    contract: "svml.hyperframes-document@4",
+    contract: "svml.hyperframes-document@1",
     visualIr: HYPERFRAMES_VISUAL_IR_V1,
     frameRate: { ...programSpace.frameRate },
     frameCount: programSpaceFrameCount(programSpace),
@@ -338,7 +338,7 @@ export function compileHyperframesDocument(composition: Composition, programSpac
 }
 
 export function assertHyperframesDocument(document: HyperframesDocument): void {
-  if (document.contract !== "svml.hyperframes-document@4") throw new Error("Unsupported HyperframesDocument contract.");
+  if (document.contract !== "svml.hyperframes-document@1") throw new Error("Unsupported HyperframesDocument contract.");
   if (document.visualIr !== HYPERFRAMES_VISUAL_IR_V1) throw new Error("Unsupported HyperframesDocument visual IR.");
   if (
     !Number.isSafeInteger(document.frameRate.numerator)

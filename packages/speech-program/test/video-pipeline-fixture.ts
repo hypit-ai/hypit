@@ -75,7 +75,7 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema }
 });
 
 export const videoManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: videoModule.name,
   version: videoModule.version,
   dependencies: [

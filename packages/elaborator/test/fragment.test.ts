@@ -45,7 +45,7 @@ const requestType = { module: testModule, name: "Request" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: testModule.name,
   version: testModule.version,
   dependencies: [videoContractDependencies.speech],

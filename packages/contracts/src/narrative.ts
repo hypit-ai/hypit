@@ -82,7 +82,7 @@ export type CaptionRegion = {
 };
 
 export type CaptionProjection = {
-  readonly contract: "svml.caption-projection@0";
+  readonly contract: "svml.caption-projection@1";
   readonly text: string;
   readonly regions: readonly CaptionRegion[];
 };
@@ -99,7 +99,7 @@ export type SemanticAnchor = {
 };
 
 export type Narrative = {
-  readonly contract: "svml.narrative@0";
+  readonly contract: "svml.narrative@1";
   readonly segments: readonly NarrativeSegment[];
   readonly tokens: readonly NarrativeToken[];
   readonly turns: readonly NarrativeTurn[];
@@ -107,7 +107,7 @@ export type Narrative = {
   readonly moments: readonly NarrativeMoment[];
   readonly captionProjection: CaptionProjection;
   readonly semanticIndex: {
-    readonly contract: "svml.semantic-index@0";
+    readonly contract: "svml.semantic-index@1";
     readonly anchors: readonly SemanticAnchor[];
   };
   readonly serializations: {

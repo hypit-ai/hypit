@@ -20,7 +20,7 @@ import { compileHyperframesDocument } from "@svml/hyperframes";
 import { digestOf } from "@svml/protocol";
 
 const programSpace = sealProgramSpace({
-  contract: "svml.program-space@0",
+  contract: "svml.program-space@1",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 });

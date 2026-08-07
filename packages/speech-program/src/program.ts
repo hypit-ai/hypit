@@ -133,7 +133,7 @@ function programSpace(program: SpeechSpineProgram, set: SpeechSpineSet): Program
   for (const take of set.takes) assertTake(take, program);
   const frameCount = set.takes.reduce((sum, take) => sum + take.media.timeline.frameCount, 0);
   const space = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: frameCount * program.frameRate.denominator / program.frameRate.numerator,
     frameRate: { ...program.frameRate },
   });

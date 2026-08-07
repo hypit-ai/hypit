@@ -3,7 +3,7 @@
 Experimental v2 bootstrap microkernel.
 
 The package accepts an already resolved module closure, typed authored modules, a complete
-`svml.graph@2` and a `svml.build-request@2`. It verifies explicit Satisfaction and compiles the finite
+`svml.graph@1` and a `svml.build-request@1`. It verifies explicit Satisfaction and compiles the finite
 BuildPlan by traversing backwards from every Target, resolving Logical Outputs and memoizing shared
 atomic Operations by stable OperationId during compilation. The BuildPlan is frozen before any
 external Command; execution performs no Candidate selection, graph mutation or content-based

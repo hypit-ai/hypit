@@ -89,7 +89,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
 
 function captionSpace(durationSec: number) {
   return sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec,
     frameRate: { numerator: 1_000, denominator: 1 },
   });

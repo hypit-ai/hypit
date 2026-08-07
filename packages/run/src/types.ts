@@ -91,7 +91,7 @@ export type RunSatisfaction = {
 };
 
 export type RunDocument = {
-  readonly format: "svml.run-document@2";
+  readonly format: "svml.run-document@1";
   readonly author: RunAuthorSourceRequest;
   readonly selectedTargets: string;
   readonly imports: readonly RunImport[];

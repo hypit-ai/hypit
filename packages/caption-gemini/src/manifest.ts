@@ -78,7 +78,7 @@ function ownedType(name: string, schema: ValueSchema, digestValue: ReturnType<ty
 }
 
 export const captionGeminiManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: captionGeminiModuleRef.name,
   version: captionGeminiModuleRef.version,
   dependencies: [

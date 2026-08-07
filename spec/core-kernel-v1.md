@@ -12,9 +12,9 @@ artifacts or know video vocabulary.
 Core accepts immutable, already linked data:
 
 - a resolved module closure and typed authored Records;
-- a complete `svml.graph@2` containing Logical Outputs, independent Candidates and atomic
+- a complete `svml.graph@1` containing Logical Outputs, independent Candidates and atomic
   Operations from the Author and Run Graphs;
-- a `svml.build-request@2` containing Targets and explicit Satisfaction edges.
+- a `svml.build-request@1` containing Targets and explicit Satisfaction edges.
 
 Graph construction, source parsing, package resolution, Fragment expansion and Run Graph authoring
 happen outside Core. Core verifies the resulting data before deriving a plan.
@@ -44,7 +44,7 @@ happen outside Core. Core verifies the resulting data before deriving a plan.
 6. A Candidate's authored leaves must remain within that Logical Output's semantic input envelope.
 7. Cycles, missing references, undeclared ports, duplicate identities and incompatible Types fail
    before execution.
-8. The resulting `svml.plan@2` is finite, deterministic and content-bound to the verified Graph and
+8. The resulting `svml.plan@1` is finite, deterministic and content-bound to the verified Graph and
    BuildRequest.
 
 ## Execution laws

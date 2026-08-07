@@ -37,7 +37,7 @@ import { createRecordAdmitter, TypeValidatorRegistry } from "@svml/validation";
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = digestOf("example.film-fixture/inputs-surface@1");
 const fixtureManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
   dependencies: [
@@ -61,7 +61,7 @@ const fixtureManifest: ModuleManifest = {
 };
 
 const space = sealProgramSpace({
-  contract: "svml.program-space@0",
+  contract: "svml.program-space@1",
   durationSec: 2,
   frameRate: { numerator: 30, denominator: 1 },
 });

@@ -72,7 +72,7 @@ export type TypedRecord = {
 };
 
 export type TypedModule = {
-  readonly format: "svml.typed-module@0";
+  readonly format: "svml.typed-module@1";
   readonly id: string;
   readonly closureDigest: Digest;
   readonly records: readonly TypedRecord[];
@@ -208,7 +208,7 @@ export type Candidate = {
 };
 
 export type CompiledGraph = {
-  readonly format: "svml.graph@2";
+  readonly format: "svml.graph@1";
   readonly id: Digest;
   readonly program: Digest;
   /** Digest of the author graph before external Candidate attachment. */
@@ -236,7 +236,7 @@ export type Satisfaction = {
 export type CandidateBinding = Satisfaction;
 
 export type BuildRequest = {
-  readonly format: "svml.build-request@2";
+  readonly format: "svml.build-request@1";
   readonly graph: Digest;
   /** Exact trusted implementation-package closure selected outside author source. */
   readonly implementationClosure?: Digest;
@@ -268,7 +268,7 @@ export type BuildGoal = {
 };
 
 export type BuildPlan = {
-  readonly format: "svml.plan@2";
+  readonly format: "svml.plan@1";
   readonly id: Digest;
   readonly graph: Digest;
   readonly request: Digest;
@@ -357,7 +357,7 @@ export type BuildDiagnostic = {
 };
 
 export type BuildState = {
-  readonly format: "svml.build@2";
+  readonly format: "svml.build@1";
   readonly id: Digest;
   readonly program: LinkedProgram;
   readonly graph: CompiledGraph;

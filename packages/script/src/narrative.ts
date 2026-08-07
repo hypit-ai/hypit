@@ -132,7 +132,7 @@ function semanticBoundary(boundary: {
 
 export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
   return canonicalize({
-    contract: "svml.narrative@0",
+    contract: "svml.narrative@1",
     segments: parsed.segments.map((segment) => ({
       id: segment.id,
       index: segment.index,
@@ -220,7 +220,7 @@ export function serializeCaption(parsed: ParsedNarrative): string {
 
 export function narrativeSourceMap(recordId: string, parsed: ParsedNarrative): CanonicalValue {
   return canonicalize({
-    format: "svml.script-source-map@0",
+    format: "svml.script-source-map@1",
     record: recordId,
     segments: parsed.segments.map((segment) => ({ id: segment.id, range: segment.range })),
     tokens: parsed.tokens.map((token) => ({ id: token.id, range: token.range })),

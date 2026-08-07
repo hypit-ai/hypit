@@ -32,7 +32,7 @@ const speechEstimatePolicySchema: ValueSchema = {
 };
 
 export const estimateManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: estimateModuleRef.name,
   version: estimateModuleRef.version,
   dependencies: [

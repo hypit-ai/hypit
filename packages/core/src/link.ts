@@ -35,7 +35,7 @@ export function computeModuleDigest(manifest: ModuleManifest): Digest {
 
 export function computeClosureDigest(modules: readonly ResolvedModule[]): Digest {
   return digestOf({
-    format: "svml.closure@0",
+    format: "svml.closure@1",
     modules: [...modules]
       .sort((left, right) => moduleKey(left.ref).localeCompare(moduleKey(right.ref)))
       .map((module) => ({ ref: module.ref, digest: module.digest })),
@@ -51,7 +51,7 @@ export function createResolvedClosure(
     manifest,
   }));
   const closure: ResolvedModuleClosure = {
-    format: "svml.closure@0",
+    format: "svml.closure@1",
     modules,
     digest: computeClosureDigest(modules),
   };
@@ -69,7 +69,7 @@ function ensureUniqueNames(names: readonly string[], kind: string, owner: string
 }
 
 export function verifyClosure(closure: ResolvedModuleClosure): void {
-  invariant(closure.format === "svml.closure@0", "UNSUPPORTED_CLOSURE", "unsupported closure format");
+  invariant(closure.format === "svml.closure@1", "UNSUPPORTED_CLOSURE", "unsupported closure format");
   invariant(isDigest(closure.digest), "INVALID_DIGEST", "closure digest is invalid");
 
   const modules = new Map<string, ResolvedModule>();
@@ -77,7 +77,7 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
     const key = moduleKey(module.ref);
     invariant(module.ref.name.length > 0, "EMPTY_MODULE_NAME", "module name is empty");
     invariant(module.ref.version.length > 0, "EMPTY_MODULE_VERSION", `${module.ref.name} version is empty`);
-    invariant(module.manifest.format === "svml.module@0", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
+    invariant(module.manifest.format === "svml.module@1", "UNSUPPORTED_MODULE", `${key} format is unsupported`);
     invariant(!modules.has(key), "DUPLICATE_MODULE", `duplicate module ${key}`, key);
     invariant(
       sameModule(module.ref, manifestRef(module.manifest)),
@@ -417,7 +417,7 @@ export function sealTypedModule(input: {
   readonly records: readonly TypedRecord[];
 }): TypedModule {
   return {
-    format: "svml.typed-module@0",
+    format: "svml.typed-module@1",
     id: input.id,
     closureDigest: input.closureDigest,
     records: input.records,
@@ -436,7 +436,7 @@ export function link(
 
   for (const typedModule of typedModules) {
     invariant(
-      typedModule.format === "svml.typed-module@0",
+      typedModule.format === "svml.typed-module@1",
       "UNSUPPORTED_TYPED_MODULE",
       `${typedModule.id} has an unsupported format`,
     );

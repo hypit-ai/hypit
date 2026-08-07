@@ -58,7 +58,7 @@ const producerDigests = {
 };
 
 const contractManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: contractModule.name,
   version: contractModule.version,
   dependencies: [],
@@ -91,7 +91,7 @@ const contractDependency = {
 };
 
 const sensorManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: sensorModule.name,
   version: sensorModule.version,
   dependencies: [contractDependency],
@@ -129,7 +129,7 @@ const sensorManifest: ModuleManifest = {
 };
 
 const reportManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: reportModule.name,
   version: reportModule.version,
   dependencies: [contractDependency],

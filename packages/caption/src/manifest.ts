@@ -179,7 +179,7 @@ export const captionProgramSchema: ValueSchema = object({
 });
 
 export const captionManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: captionModuleRef.name,
   version: captionModuleRef.version,
   dependencies: [

@@ -33,7 +33,7 @@ export const hyperframesRenderProducers = {
 } satisfies Record<string, ProducerRef>;
 
 export const hyperframesRenderManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: hyperframesRenderModuleRef.name,
   version: hyperframesRenderModuleRef.version,
   dependencies: [

@@ -18,7 +18,7 @@ export { narrativeSchema };
 export const scriptSurfaceImplementationDigest = digestOf("@svml/script/surface@2");
 
 export const scriptManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: scriptModuleRef.name,
   version: scriptModuleRef.version,
   dependencies: [videoContractDependencies.narrative],

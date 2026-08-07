@@ -19,7 +19,7 @@ import {
 
 function basis() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -74,7 +74,7 @@ test("WhisperX consumes only the canonical 16 kHz evidence projection", () => {
 
 test("WhisperX normalization lowers model-specific evidence without leaking provider metadata", () => {
   const measured = sealWhisperXAlignmentEvidence({
-    contract: "svml.whisperx-alignment-evidence@2",
+    contract: "svml.whisperx-alignment-evidence@1",
     durationSec: 1,
     segments: [{
       sourceSegmentId: "line",
