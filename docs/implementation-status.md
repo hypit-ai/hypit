@@ -76,7 +76,7 @@ Implemented:
 - `@svml/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
   recoverable Endpoint lifecycle;
 - `@svml/runtime-adapter`, `@svml/runtime-adapter-node`: locked deployment-adapter ABI, physical
-  package-byte identity, project-root executable resolution and read-only diagnostics;
+  package-byte identity, project-root executable resolution and diagnostic hooks;
 - `@svml/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
 - `@svml/store-sqlite`: durable CAS BuildStore and OperationStore;
 - `@svml/artifact-store-fs`, `@svml/artifact-store-s3`: interchangeable content-addressed bytes;
@@ -88,8 +88,8 @@ Implemented:
   durable independently of optional `inspect` / `get --to` Host reads;
 - Host-only Build Catalog history and source output aliases through `builds`, `inspect` and
   `get --name`, without changing Core Build identity or Runtime Closure;
-- read-only `doctor`, filesystem streaming Artifact transfer and explicit dry-run/apply reachability
-  GC over every retained BuildState and Operation;
+- `doctor` configuration diagnostics for the current trusted adapters, filesystem streaming Artifact
+  transfer and explicit dry-run/apply reachability GC over every retained BuildState and Operation;
 - `@svml/transport`, `@svml/transport-process`, `@svml/transport-aws-lambda`: capability-neutral
   invocation seams.
 
