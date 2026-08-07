@@ -4,14 +4,14 @@ import {
   sealSpeechBasis,
   verifySynchronizedMedia,
   verifyTimelineAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   NarrativeExcerpt,
   ProgramSpace,
   SpeechBasis,
   SynchronizedMedia,
   TimelineAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   sealAudioProgramPlan,
   verifyAudioProgramPlan,

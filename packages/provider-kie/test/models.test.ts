@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createResolvedClosure, digestOf } from "@narratage/core";
-import { videoContractManifests } from "@narratage/contracts";
+import { videoContractManifests } from "@narratage/video-contracts";
 import { verifyGraphFragment } from "@narratage/elaborator";
 import {
   geminiOmniDefinition,

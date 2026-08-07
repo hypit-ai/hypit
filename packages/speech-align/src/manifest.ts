@@ -1,7 +1,7 @@
 import {
   contractTypes,
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 import { speechLocatorDigest } from "./locate.js";

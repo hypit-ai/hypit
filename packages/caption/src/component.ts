@@ -3,7 +3,7 @@ import type {
   CompleteSemanticMap,
   Narrative,
   ProgramSpace,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 

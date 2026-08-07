@@ -2,7 +2,7 @@ import artifact from "../../artifact/src/activation.js";
 import broll from "../../broll/src/activation.js";
 import captionGemini from "../../caption-gemini/src/activation.js";
 import caption from "../../caption/src/activation.js";
-import contracts from "../../contracts/src/activation.js";
+import contracts from "../../video-contracts/src/activation.js";
 import estimate from "../../estimate/src/activation.js";
 import film from "../../film/src/activation.js";
 import generation from "../../generation/src/activation.js";

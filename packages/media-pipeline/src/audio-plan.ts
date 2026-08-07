@@ -1,8 +1,8 @@
 import {
   assertCompositionIdentity,
   programSpaceFrameCount,
-} from "@narratage/contracts";
-import type { Composition, ProgramSpace } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { Composition, ProgramSpace } from "@narratage/video-contracts";
 import { canonicalize, isDigest } from "@narratage/protocol";
 
 import type { AudioProgramPlan } from "./types.js";

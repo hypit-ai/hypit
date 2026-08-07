@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@narratage/component-kit": "workspace:*",
-    "@narratage/contracts": "workspace:*",
+    "@narratage/video-contracts": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/svs": "workspace:*",

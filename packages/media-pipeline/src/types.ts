@@ -6,7 +6,7 @@ import type {
   RenderedVisual,
   TimelineAudio,
   SpeechBasisSegment,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 
 export type MediaSelectionRequest = {
   readonly contract: "svml.media-selection-request@1";

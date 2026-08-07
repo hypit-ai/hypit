@@ -5,14 +5,14 @@ import {
   sealComposition,
   sealProgramSpace,
   sealVisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   CompositableSurfaceRef,
   MediaArtifactRef,
   VisualElement,
   VisualPresent,
   VisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   assertHyperframesDocument,
   compileHyperframesDocument,

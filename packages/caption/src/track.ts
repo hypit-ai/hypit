@@ -3,8 +3,8 @@ import {
   assertVisualTrackIdentity,
   programSpaceFrameCount,
   sealVisualTrack,
-} from "@narratage/contracts";
-import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { ProgramSpace, VisualStyleDeclaration, VisualTrack } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 
 import { planCaptionPresentation } from "./presentation.js";

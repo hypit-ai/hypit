@@ -1,5 +1,5 @@
 import { captionProducers, captionTypes } from "@narratage/caption";
-import { contractTypes } from "@narratage/contracts";
+import { contractTypes } from "@narratage/video-contracts";
 import { sealGraphFragment } from "@narratage/elaborator";
 import { speechTakeProducers } from "@narratage/speech-take";
 

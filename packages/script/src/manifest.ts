@@ -2,7 +2,7 @@ import {
   contractTypes,
   narrativeSchema,
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf } from "@narratage/core";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 

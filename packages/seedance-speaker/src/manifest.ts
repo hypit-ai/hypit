@@ -1,7 +1,7 @@
 import { artifactDependency, artifactTypes } from "@narratage/artifact";
 import {
   videoContractDependencies,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   promptKitManifestDigest,
   promptKitModuleRef,

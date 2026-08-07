@@ -11,8 +11,8 @@ import {
   assertSpeechDurationIdentity,
   contractTypes,
   videoContractDependencies,
-} from "@narratage/contracts";
-import type { SpeechDuration } from "@narratage/contracts";
+} from "@narratage/video-contracts";
+import type { SpeechDuration } from "@narratage/video-contracts";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { BlobRef, Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 

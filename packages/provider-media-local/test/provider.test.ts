@@ -13,7 +13,7 @@ import {
   verifyMediaInspection,
   verifySynchronizedMedia,
   verifyTimelineAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   MediaAudioStream,
   MediaInspection,
@@ -21,7 +21,7 @@ import type {
   SynchronizedMedia,
   TimelineAudio,
   SpeechEvidenceAudio,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import {
   MemoryArtifactStore,
   EndpointRegistry,

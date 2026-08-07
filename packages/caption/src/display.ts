@@ -2,7 +2,7 @@ import type {
   CaptionRegion,
   Narrative,
   NarrativeSelectionRef,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 
 import type { CaptionDisplayAtom } from "./types.js";
 

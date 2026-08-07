@@ -5,7 +5,7 @@ import {
   programSpaceFrameCount,
   sealAudioTrack,
   sealVisualTrack,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import type {
   AudioClip,
   MediaArtifactRef,
@@ -13,7 +13,7 @@ import type {
   VisualAnimation,
   VisualElement,
   VisualStyleDeclaration,
-} from "@narratage/contracts";
+} from "@narratage/video-contracts";
 import { digestOf, isDigest } from "@narratage/protocol";
 
 import type {

@@ -1,4 +1,4 @@
-import type { Track } from "@narratage/contracts";
+import type { Track } from "@narratage/video-contracts";
 
 /** Package-owned authoring value. A future Film Surface may produce this record. */
 export type FilmProgram = {

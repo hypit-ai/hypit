@@ -4,8 +4,8 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { contractTypes, sealRenderedVisual } from "@narratage/contracts";
-import type { RenderedVisual } from "@narratage/contracts";
+import { contractTypes, sealRenderedVisual } from "@narratage/video-contracts";
+import type { RenderedVisual } from "@narratage/video-contracts";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import { assertHyperframesDocument, materializeHyperframesHtml } from "@narratage/hyperframes";
 import type { HyperframesDocument } from "@narratage/hyperframes";

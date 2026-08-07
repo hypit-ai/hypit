@@ -1,5 +1,5 @@
 import { captionManifest, captionModuleRef, captionTypes } from "@narratage/caption";
-import { contractTypes, videoContractDependencies } from "@narratage/contracts";
+import { contractTypes, videoContractDependencies } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
