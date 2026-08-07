@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { artifactDependency, artifactTypes } from "@svml/artifact";
 import { registerTypeValidatorFacets } from "@svml/component-kit";
 import {
   contractTypes,
@@ -47,10 +48,10 @@ const fixtureManifest: ModuleManifest = {
   format: "svml.module@0",
   name: fixtureModule.name,
   version: fixtureModule.version,
-  dependencies: [videoContractDependencies.media],
+  dependencies: [artifactDependency, videoContractDependencies.media],
   types: [], capabilities: [], producers: [],
   surfaces: [{
-    name: "media", tag: "Media", mode: "structured", outputs: [contractTypes.blobArtifact],
+    name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob],
     implementation: { kind: "trusted-frontend-surface", locator: "example.speech-media/surface", digest: fixtureSurfaceDigest },
   }],
 };
@@ -73,7 +74,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   surfaces.registerStructured(speechProgramModuleRef, "spine", speechSpineSurfaceImplementationDigest, decodeSpeechSpineSurface);
   surfaces.registerStructured(fixtureModule, "media", fixtureSurfaceDigest, ({ element }) => ({
     records: ["take-one", "take-two"].map((id) => ({
-      id, type: contractTypes.blobArtifact,
+      id, type: artifactTypes.blob,
       value: { kind: "blob" as const, digest: digestOf(id), size: 128, mediaType: "video/mp4" },
       range: element.range,
     })),

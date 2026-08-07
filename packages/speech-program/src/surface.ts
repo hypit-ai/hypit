@@ -1,3 +1,4 @@
+import { artifactTypes } from "@svml/artifact";
 import { contractTypes } from "@svml/contracts";
 import {
   sealMediaSelectionRequest,
@@ -76,7 +77,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
   const declaredTakes = takes(element).map((take, index) => ({
     mediaName: `take-${String(index + 1).padStart(4, "0")}-media`,
     segmentName: `take-${String(index + 1).padStart(4, "0")}-segment`,
-    source: resolve(take, "source", contractTypes.blobArtifact, resolveReference),
+    source: resolve(take, "source", artifactTypes.blob, resolveReference),
     segment: resolve(take, "segment", contractTypes.narrativeExcerpt, resolveReference),
     range: take.range,
   }));

@@ -1,3 +1,4 @@
+import { artifactDependency } from "@svml/artifact";
 import {
   assertGenerationBlobRef,
   generationBlobRefSchema,
@@ -329,6 +330,7 @@ export const seedanceManifest = {
   ...seedanceBaseDefinition.manifest,
   dependencies: [
     ...seedanceBaseDefinition.manifest.dependencies,
+    artifactDependency,
     videoContractDependencies.narrative,
     videoContractDependencies.speech,
   ],

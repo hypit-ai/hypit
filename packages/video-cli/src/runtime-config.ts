@@ -45,7 +45,7 @@ function common(context: RuntimeConfigFactoryContext): { readonly instance: stri
   return { instance: context.instance, ...(context.lane === undefined ? {} : { lane: context.lane }) };
 }
 
-export function createOfficialRuntimeConfigRegistry(): RuntimeConfigRegistry {
+export function createVideoRuntimeConfigRegistry(): RuntimeConfigRegistry {
   const registry = new RuntimeConfigRegistry();
   registry.registerEndpoint("@svml/provider-kie", (context) => {
     const config = object(context.config, "KIE");
@@ -164,9 +164,9 @@ export function createOfficialRuntimeConfigRegistry(): RuntimeConfigRegistry {
   return registry;
 }
 
-export async function createOfficialRuntimeFromConfig(path: string) {
+export async function createVideoRuntimeFromConfig(path: string) {
   return await createRuntimeFromConfig(path, {
-    registry: createOfficialRuntimeConfigRegistry(),
+    registry: createVideoRuntimeConfigRegistry(),
     components: videoPrelude.components ?? [],
   });
 }

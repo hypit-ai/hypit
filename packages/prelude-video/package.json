@@ -27,6 +27,7 @@
     "@svml/speech-program": "workspace:*",
     "@svml/speech-take": "workspace:*",
     "@svml/svs": "workspace:*",
+    "@svml/text": "workspace:*",
     "@svml/text-track": "workspace:*",
     "@svml/whisperx": "workspace:*"
   },

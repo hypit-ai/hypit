@@ -37,6 +37,8 @@ the completed Candidate Build.
 Implemented:
 
 - `@svml/protocol`: immutable Manifests, Types, Graph, Build and provenance wire data;
+- `@svml/artifact`: domain-neutral nominal `BlobArtifact` contract, independent of video Media and
+  Runtime ArtifactStore implementations;
 - `@svml/core`: `svml.graph@2`, independent Candidate, explicit Satisfaction, arbitrary Targets,
   reverse reachability, finite `svml.plan@2` derivation and verified `svml.build@2` state machine;
 - one Operation instance fans out once; distinct instances never content-deduplicate;
@@ -51,7 +53,12 @@ Implemented:
 - `@svml/component-kit`: host-neutral deterministic Producer/validator registration;
 - `@svml/host`, `@svml/workspace-fs-node`, `@svml/compiler-node`: replaceable Workspace and the
   reference Node compiler Host;
-- `@svml/package-loader-node`: explicitly installed, byte-locked trusted author and compute facets;
+- `@svml/package-loader-node`: syntax-neutral installed-package byte locking and trusted facet
+  loading;
+- `@svml/compiler-text-node`: the explicit official Text Frontend and Text Surface Host assembly;
+- `@svml/cli`: a generic command engine requiring one explicit `CliDistribution`;
+- `@svml/video-cli`: the current video Distribution selecting the Text compiler, video Prelude and
+  video Runtime-config adapter registry;
 - `@svml/text`, `@svml/script`, `@svml/svs`: official markup, Script and Recipe Frontends without
   Core parser branches;
 - `@svml/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
@@ -73,10 +80,10 @@ Implemented:
 The current CLI `--pin` flag remains temporary compatibility sugar for legacy commands. New reusable
 runs should use `.svrun`; the Core still has no Pin primitive.
 
-One Host-periphery caveat remains: `@svml/package-loader-node` currently assembles the official Text
-entry Frontend as well as generic locked facets. Core and `@svml/compiler-node` do not require Text,
-but this convenience loader must be split or named more narrowly before being described as a fully
-frontend-neutral public loader.
+Repository-level dependency tests now enforce an acyclic production graph and prove that the
+declared domain-neutral distribution—including `@svml/local` and `@svml/package-loader-node`—closes
+without Text, AIGC or video packages. A non-video Greeting Build exercises persistent scheduling,
+an external Need, recovery and final Record assembly through that distribution.
 
 ## Environment and Provider packages
 
@@ -153,7 +160,7 @@ permission enforcement and loaded-code attestation remain release work.
 
 - TypeScript v1 and v2 checks pass;
 - v1 research oracle: 35/35 tests;
-- v2: 303 passing, 3 environment-gated skips, 0 failures;
+- v2: 308 passing, 3 environment-gated skips, 0 failures;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
 - generated credentials, media outputs and local databases are ignored by Git.
 

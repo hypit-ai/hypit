@@ -1,4 +1,4 @@
-# Node package activation v1
+# Node package loading and facet activation v1
 
 Status: implemented for trusted installed author and deterministic compute facets. Provider and
 Runtime-service activation remain governed by Runtime Profile/Closure.
@@ -13,8 +13,8 @@ implementation closure:
 installed package bytes
   -> explicit lock-packages command
   -> physical declared-dependency-closure digests
-  -> Module / Frontend / Text Surface / Producer / Type Validator identities
-  -> verified NodePackageActivation
+  -> Module / Frontend / Host Facet / Producer / Type Validator identities
+  -> verified NodePackageContribution
   -> Host grants only the selected author or compute registries
 ```
 
@@ -35,14 +35,16 @@ An installed physical package declares one package-relative activation entry:
 }
 ```
 
-The entry exports one `svml.node-package@1` object containing any number of:
+The entry exports one `svml.node-package@1` `NodePackageContribution` containing any number of:
 
 - immutable Module Manifests and author import specifiers;
 - Author Frontends;
-- Text Surface handlers;
+- ABI-identified Host facets, such as official Text Surface handlers;
 - host-neutral `ComponentPackage` values with enumerable Producer and Type Validator facets.
 
-Every executable facet carries its exact nominal identity and declared implementation digest.
+Every executable facet carries its exact nominal identity and declared implementation digest. The
+word *Contribution* is deliberate: the returned object says what the package offers; it does not
+grant authority. A specific compiler or Runtime Host later installs only the facet ABIs it trusts.
 Producer and validator facets are checked against the corresponding static Manifest declaration
 before a Host registry receives their handlers. One physical package may aggregate multiple
 logical modules; physical package identity and logical Module identity remain different facts.
@@ -108,10 +110,11 @@ The package lock is an implementation lock, not a Runtime Profile. It contains n
 - Candidate selection or Build Target;
 - network, process or filesystem-write grant.
 
-The Compiler receives only Module, Frontend, Surface and Validator registries. The local compute
-Host receives only Producer and Validator registries. Source `<import>` merely selects an already
-activated logical author module for a Source Closure; it cannot cause Producer execution and cannot
-activate Provider or Runtime-service facets.
+The syntax-neutral Loader does not install any Host facet. `@svml/compiler-text-node` explicitly
+selects the official Text Surface ABI; another compiler may select another ABI. The local compute
+Host receives only Producer and Validator registries and does not depend on Text. Source `<import>`
+merely selects an already activated logical author module for a Source Closure; it cannot cause
+Producer execution and cannot activate Provider or Runtime-service facets.
 
 The v1 loader still executes reviewed JavaScript in process after integrity verification. Integrity
 is not confinement: community code requires an isolated Worker, resource limits and a real
@@ -121,7 +124,9 @@ permission boundary before it can be treated as untrusted.
 
 Tests create installed packages unknown to the repository and prove all of the following:
 
-- a namespaced Surface compiles without a Core or CLI registration change;
+- a namespaced Text Surface compiles through the explicit Text compiler without a Core or CLI
+  registration change;
+- unrelated Host-facet ABIs remain inert;
 - its authored value passes its locked Type-owner Validator and carries a validation receipt;
 - its deterministic Producer is discovered as enumerable locked data;
 - the installed official video prelude physically closes over `@svml/speech-take` and

@@ -12,7 +12,6 @@
     "@svml/elaborator": "workspace:*",
     "@svml/host": "workspace:*",
     "@svml/protocol": "workspace:*",
-    "@svml/text": "workspace:*",
     "@svml/validation": "workspace:*"
   }
 }

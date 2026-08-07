@@ -1,3 +1,9 @@
+import {
+  artifactDependency,
+  artifactManifest,
+  artifactTypes,
+  blobArtifactValueSchema,
+} from "@svml/artifact";
 import { digestOf } from "@svml/protocol";
 import type { ModuleManifest, TypeRef, ValueSchema } from "@svml/protocol";
 
@@ -21,7 +27,7 @@ export const contractTypes = {
   narrativeSpeechExcerpt: { module: narrativeModuleRef, name: "NarrativeSpeechExcerpt" },
   narrativeSelection: { module: narrativeModuleRef, name: "NarrativeSelection" },
   captionProjection: { module: narrativeModuleRef, name: "CaptionProjection" },
-  blobArtifact: { module: mediaModuleRef, name: "BlobArtifact" },
+  blobArtifact: artifactTypes.blob,
   mediaArtifact: { module: mediaModuleRef, name: "MediaArtifactRef" },
   mediaInspection: { module: mediaModuleRef, name: "MediaInspection" },
   mediaStreamSelection: { module: mediaModuleRef, name: "MediaStreamSelection" },
@@ -186,8 +192,6 @@ const blobArtifactSchema = (mediaTypes?: readonly string[]): ValueSchema => obje
   size: { schema: integer },
   mediaType: { schema: mediaTypes === undefined ? string : { kind: "string", enum: mediaTypes } },
 });
-export const blobArtifactValueSchema: ValueSchema = { kind: "blob" };
-
 const mediaRationalSchema = object({
   numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
   denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
@@ -630,9 +634,8 @@ export const mediaManifest: ModuleManifest = {
   format: "svml.module@0",
   name: mediaModuleRef.name,
   version: mediaModuleRef.version,
-  dependencies: [],
+  dependencies: [artifactDependency],
   types: [
-    { name: contractTypes.blobArtifact.name, schema: blobArtifactValueSchema },
     { name: contractTypes.mediaArtifact.name, schema: mediaArtifactSchema },
     {
       name: contractTypes.mediaInspection.name,
@@ -839,13 +842,19 @@ export const compositionManifest: ModuleManifest = {
 export const semanticTimeManifestDigest = digestOf(semanticTimeManifest);
 export const compositionManifestDigest = digestOf(compositionManifest);
 
-export const videoContractManifests = [
+export const videoDomainManifests = [
   narrativeManifest,
   mediaManifest,
   programSpaceManifest,
   speechManifest,
   semanticTimeManifest,
   compositionManifest,
+] as const;
+
+/** Complete Manifest set required to instantiate the video-domain contracts. */
+export const videoContractManifests = [
+  artifactManifest,
+  ...videoDomainManifests,
 ] as const;
 
 export const videoContractDependencies = {

@@ -11,7 +11,7 @@ import {
 } from "@svml/driver-node";
 import {
   loadNodePackageSet,
-  nodePackageComponents,
+  collectNodePackageComponents,
 } from "@svml/package-loader-node";
 import {
   LocalBuildScheduler,
@@ -264,7 +264,7 @@ export async function createProjectLocalRuntime(
     : await loadNodePackageSet(resolve(root, options.packageLock), root);
   const lockedComponents = lockedPackageSet === undefined
     ? []
-    : nodePackageComponents(lockedPackageSet.packages);
+    : collectNodePackageComponents(lockedPackageSet.contributions);
   const configuredComponents = [...lockedComponents, ...(options.components ?? [])];
   const projectServices = await createProjectRuntimeServices(root, options);
   const services = projectServices.assembly;

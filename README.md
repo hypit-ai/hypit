@@ -162,9 +162,14 @@ community Parser/Producer/Validator execution still needs a real isolation and p
 
 ```text
 packages/protocol        immutable wire contracts
+packages/artifact        domain-neutral content-addressed byte Type
 packages/core            domain-neutral Demand compiler and Build state machine
 packages/elaborator      author declarations and hygienic Fragment expansion
 packages/compiler-node   reference Node compiler Host
+packages/compiler-text-node  optional official Text compiler assembly
+packages/package-loader-node syntax-neutral trusted physical-package loading
+packages/cli             generic commands requiring an explicit Distribution
+packages/video-cli       official Text/video command Distribution
 packages/run             official human-readable Run Graph frontend
 packages/runtime         environment-neutral scheduling and Store ports
 packages/driver-node     trusted Node command execution

@@ -21,7 +21,7 @@ the working tree contains only documents that should inform current implementati
 - [`graph-first-value-boundary-v1.md`](./graph-first-value-boundary-v1.md) — graph edges own
   dependency truth; values contain only intrinsic meaning.
 - [`node-package-activation-v1.md`](./node-package-activation-v1.md) — trusted installed package
-  locking and facet activation.
+  locking, contributions and Host-selected facet activation.
 - [`local-developer-runtime-v1.md`](./local-developer-runtime-v1.md) — local SQLite/filesystem
   Runtime, recovery and environment replacement.
 - [`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md) — Targets, durable Records,
