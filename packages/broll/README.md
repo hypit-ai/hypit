@@ -11,7 +11,7 @@ Fragment; semantic-window placement and local motion are deterministic package O
 
 `BrollProgram@1` remains an executable vertical-slice fixture. The author-facing package is not
 frozen until the old content-frame plus independent foreground/backdrop sampling witnesses lower
-through the closed HyperFrames Visual IR.
+through the closed SVML Visual IR.
 
 It does not generate media, select a Provider, read another Track, sample the
 accumulated lower composite or implement Base/Screen FX.

@@ -1,7 +1,7 @@
+import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { NarrativeSpeechExcerpt } from "@narratage/video-contracts";
 import {
   countSpeechEstimateUnits,
   estimateSpeechDuration,

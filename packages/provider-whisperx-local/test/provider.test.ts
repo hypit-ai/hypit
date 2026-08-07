@@ -1,12 +1,9 @@
-import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-
-import {
-  contractTypes,
-  sealSpeechEvidenceAudio,
-} from "@narratage/video-contracts";
+import { sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
+import assert from "node:assert/strict";
 import { MemoryArtifactStore, EndpointRegistry } from "@narratage/driver-node";
 import { digestOf } from "@narratage/protocol";
 import type { Need } from "@narratage/protocol";
@@ -191,7 +188,7 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
       evidenceAudio.artifact.digest);
     assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
     assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@1");
-    assert.equal(contractTypes.speechEvidenceAudio.name, "SpeechEvidenceAudio");
+    assert.equal(speechTypes.evidenceAudio.name, "SpeechEvidenceAudio");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

@@ -111,7 +111,7 @@ package tests separately prove ordinary Text, Caption and B-roll Programs lower 
 Track and Composition path.
 
 The current `VisualTrack / VisualPresent / VisualElement` candidate explicitly binds
-`svml.hyperframes-visual-ir@1` and can encode the structural three-box, two-box, word-local and
+`svml.visual-ir@1` and can encode the structural three-box, two-box, word-local and
 absolute-stack cases. Two generic terminal facts are now
 executable rather than package-family patches:
 

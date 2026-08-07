@@ -1,11 +1,8 @@
+import { sealMediaInspection, verifyMediaStreamSelection } from "@narratage/media";
+import type { MediaInspection, MediaVideoStream } from "@narratage/media";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  sealMediaInspection,
-  verifyMediaStreamSelection,
-} from "@narratage/video-contracts";
-import type { MediaInspection, MediaVideoStream } from "@narratage/video-contracts";
 import { digestOf } from "@narratage/protocol";
 
 import {

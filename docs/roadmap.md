@@ -142,7 +142,7 @@ Do not freeze or greatly expand the video author surface yet. The deferred backl
 - Caption field-to-word visual mapping plus browser/pixel acceptance;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;
-- final Track and HyperFrames Visual IR compatibility freeze.
+- final Track and renderer-neutral Visual IR compatibility freeze.
 
 The current implementations remain executable vertical slices and regression witnesses while A and
 B are completed.

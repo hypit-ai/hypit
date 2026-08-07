@@ -232,9 +232,6 @@ export type Satisfaction = {
   readonly fidelity: Conformance;
 };
 
-/** @deprecated Use Satisfaction. */
-export type CandidateBinding = Satisfaction;
-
 export type BuildRequest = {
   readonly format: "svml.build-request@1";
   readonly graph: Digest;

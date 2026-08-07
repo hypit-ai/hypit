@@ -1,10 +1,8 @@
-import {
-  contractTypes,
-  HYPERFRAMES_VISUAL_IR_V1,
-  videoContractDependencies,
-} from "@narratage/video-contracts";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { compositionDependency, compositionTypes } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 
 import { compileHyperframesImplementationDigest } from "./document.js";
 
@@ -23,7 +21,7 @@ export const hyperframesDocumentSchema: ValueSchema = {
   kind: "object",
   fields: {
     contract: { schema: { kind: "literal", value: "svml.hyperframes-document@1" } },
-    visualIr: { schema: { kind: "literal", value: HYPERFRAMES_VISUAL_IR_V1 } },
+    visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } },
     frameRate: { schema: {
       kind: "object",
       fields: {
@@ -56,15 +54,15 @@ export const hyperframesManifest: ModuleManifest = {
   format: "svml.module@1",
   name: hyperframesModuleRef.name,
   version: hyperframesModuleRef.version,
-  dependencies: [videoContractDependencies.composition, videoContractDependencies.programSpace],
+  dependencies: [compositionDependency, programSpaceDependency],
   types: [{ name: hyperframesTypes.document.name, schema: hyperframesDocumentSchema }],
   capabilities: [],
   surfaces: [],
   producers: [{
     name: hyperframesProducers.compile.name,
     inputs: [
-      { name: "composition", type: contractTypes.composition },
-      { name: "space", type: contractTypes.programSpace },
+      { name: "composition", type: compositionTypes.composition },
+      { name: "space", type: programSpaceTypes.programSpace },
     ],
     outputs: [{ name: "document", type: hyperframesTypes.document }],
     needs: [],

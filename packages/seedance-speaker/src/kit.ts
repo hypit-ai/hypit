@@ -109,7 +109,7 @@ export function renderSpeakerSpeechProgram(
   verifyPromptProgram(program);
   verifySpeakerTakeIntent(intent);
   return sealSeedanceSpeechProgram({
-    contract: "svml.seedance-speech-program@1",
+    contract: "svml.seedance-speech-spine@1",
     model: intent.model,
     prompt: program.blocks.map((item) => item.text).join(program.separator),
     mode: {

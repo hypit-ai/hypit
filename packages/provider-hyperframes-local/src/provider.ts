@@ -3,13 +3,12 @@ import { createRequire } from "node:module";
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-
-import { contractTypes, sealRenderedVisual } from "@narratage/video-contracts";
-import type { RenderedVisual } from "@narratage/video-contracts";
+import { mediaTypes, sealRenderedVisual } from "@narratage/media";
+import type { RenderedVisual } from "@narratage/media";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
 import { assertHyperframesDocument, materializeHyperframesHtml } from "@narratage/hyperframes";
 import type { HyperframesDocument } from "@narratage/hyperframes";
-import { hyperframesRenderCapabilities } from "@narratage/hyperframes-render";
+import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
@@ -281,8 +280,8 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
-      capability: hyperframesRenderCapabilities.renderVisual,
-      returns: contractTypes.renderedVisual,
+      capability: renderHyperframesCapabilities.renderVisual,
+      returns: mediaTypes.renderedVisual,
       supports: (need) => need.constraints !== null && typeof need.constraints === "object"
         && !Array.isArray(need.constraints)
         && (need.constraints as { readonly contract?: unknown }).contract

@@ -1,13 +1,10 @@
 import { artifactDependency } from "@narratage/artifact";
-import {
-  audioTrackSchema,
-  contractTypes,
-  mediaArtifactSchema,
-  narrativeSelectionSchema,
-  synchronizedMediaSchema,
-  videoContractDependencies,
-  visualTrackSchema,
-} from "@narratage/video-contracts";
+import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
+import { mediaArtifactSchema, mediaDependency, mediaTypes } from "@narratage/media";
+import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
+import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@narratage/composition";
+import type { Track } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { mediaPipelineManifest, mediaPipelineModuleRef, mediaPipelineTypes } from "@narratage/media-pipeline";
@@ -138,11 +135,11 @@ export const brollManifest: ModuleManifest = {
   version: brollModuleRef.version,
   dependencies: [
     artifactDependency,
-    videoContractDependencies.narrative,
-    videoContractDependencies.media,
-    videoContractDependencies.semanticTime,
-    videoContractDependencies.programSpace,
-    videoContractDependencies.composition,
+    narrativeDependency,
+    mediaDependency,
+    semanticMapDependency,
+    programSpaceDependency,
+    compositionDependency,
     { module: mediaPipelineModuleRef, digest: digestOf(mediaPipelineManifest) },
     { module: svsModuleRef, digest: digestOf(svsManifest) },
   ],
@@ -157,7 +154,7 @@ export const brollManifest: ModuleManifest = {
   surfaces: [{
     name: "track", tag: "Track", mode: "structured",
     outputs: [brollTypes.trackSpec, brollTypes.itemSpec, mediaPipelineTypes.selectionRequest,
-      brollTypes.program, brollTypes.product, contractTypes.visualTrack, contractTypes.audioTrack],
+      brollTypes.program, brollTypes.product, compositionTypes.visualTrack, compositionTypes.audioTrack],
     implementation: { kind: "trusted-frontend-surface", locator: "@narratage/broll/track-surface", digest: brollSurfaceImplementationDigest },
   }],
   producers: [
@@ -172,10 +169,10 @@ export const brollManifest: ModuleManifest = {
       inputs: [
         { name: "set", type: brollTypes.set },
         { name: "track", type: brollTypes.trackSpec },
-        { name: "map", type: contractTypes.completeSemanticMap },
-        { name: "space", type: contractTypes.programSpace },
-        { name: "media", type: contractTypes.synchronizedMedia },
-        { name: "selection", type: contractTypes.narrativeSelection },
+        { name: "map", type: semanticMapTypes.complete },
+        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "media", type: mediaTypes.synchronized },
+        { name: "selection", type: narrativeTypes.selection },
         { name: "spec", type: brollTypes.itemSpec },
       ],
       outputs: [{ name: "set", type: brollTypes.set }], needs: [],
@@ -193,7 +190,7 @@ export const brollManifest: ModuleManifest = {
     {
       name: brollProducers.compile.name,
       inputs: [
-        { name: "space", type: contractTypes.programSpace },
+        { name: "space", type: programSpaceTypes.programSpace },
         { name: "program", type: brollTypes.program },
       ],
       outputs: [{ name: "product", type: brollTypes.product }],
@@ -207,7 +204,7 @@ export const brollManifest: ModuleManifest = {
     {
       name: brollProducers.projectVisual.name,
       inputs: [{ name: "product", type: brollTypes.product }],
-      outputs: [{ name: "visual", type: contractTypes.visualTrack }],
+      outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: {
         kind: "registered",
@@ -218,7 +215,7 @@ export const brollManifest: ModuleManifest = {
     {
       name: brollProducers.projectAudio.name,
       inputs: [{ name: "product", type: brollTypes.product }],
-      outputs: [{ name: "audio", type: contractTypes.audioTrack }],
+      outputs: [{ name: "audio", type: compositionTypes.audioTrack }],
       needs: [],
       implementation: {
         kind: "registered",

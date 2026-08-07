@@ -1,8 +1,7 @@
-import {
-  assertSpeechEvidenceAudioIdentity,
-  sealAlignedTranscriptEvidence,
-} from "@narratage/video-contracts";
-import type { AlignedTranscriptEvidence, SpeechEvidenceAudio } from "@narratage/video-contracts";
+import { assertSpeechEvidenceAudioIdentity } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
+import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
+import type { AlignedTranscriptEvidence } from "@narratage/speech-evidence";
 
 import type {
   WhisperXAlignmentEvidence,

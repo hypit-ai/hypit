@@ -1,5 +1,5 @@
 import { captionManifest, captionModuleRef, captionTypes } from "@narratage/caption";
-import { contractTypes, videoContractDependencies } from "@narratage/video-contracts";
+import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
@@ -82,7 +82,7 @@ export const captionGeminiManifest: ModuleManifest = {
   name: captionGeminiModuleRef.name,
   version: captionGeminiModuleRef.version,
   dependencies: [
-    videoContractDependencies.narrative,
+    narrativeDependency,
     { module: captionModuleRef, digest: digestOf(captionManifest) },
   ],
   types: [
@@ -105,7 +105,7 @@ export const captionGeminiManifest: ModuleManifest = {
     {
       name: captionGeminiProducers.compile.name,
       inputs: [
-        { name: "narrative", type: contractTypes.narrative },
+        { name: "narrative", type: narrativeTypes.narrative },
         { name: "captionProgram", type: captionTypes.program },
         { name: "program", type: captionGeminiTypes.program },
       ],

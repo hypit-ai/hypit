@@ -1,6 +1,3 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-
 import {
   captionComponent,
   captionManifest,
@@ -15,15 +12,19 @@ import {
   temporalizeCaption,
   temporalizeCaptionPlan,
 } from "@narratage/caption";
-import {
-  sealAlignedTranscriptEvidence,
-  sealProgramSpace,
-  sealSpeechBasis,
-} from "@narratage/video-contracts";
-import type { AlignedTranscriptSegment, Narrative, NarrativeSelectionRef, SpeechAudioBasis } from "@narratage/video-contracts";
+import type { Narrative, NarrativeSelectionRef } from "@narratage/narrative";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealSpeechBasis } from "@narratage/speech";
+import type { SpeechAudioBasis } from "@narratage/speech";
+import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
+import type { AlignedTranscriptSegment } from "@narratage/speech-evidence";
+import type { VisualTrack } from "@narratage/composition";
+import assert from "node:assert/strict";
+import test from "node:test";
+
 import { digestOf } from "@narratage/protocol";
 import { narrativeSelectionValue, parseScript } from "@narratage/script";
-import { locateSpeechTiming } from "@narratage/speech-align";
+import { locateSpeechTiming } from "@narratage/speech-alignment";
 
 test("the component enumerates every Manifest Producer and owned Type validator", () => {
   assert.deepEqual(

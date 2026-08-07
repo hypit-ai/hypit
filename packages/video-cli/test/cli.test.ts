@@ -67,7 +67,7 @@ test("CLI does not confuse Build persistence with the removed --out convenience"
   );
 });
 
-test("official v2 CLI checks a real Script source through the Node compiler host", async () => {
+test("official video CLI checks a real Script source through the Node compiler host", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-"));
   const file = join(root, "main.svml");
   await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
@@ -342,7 +342,7 @@ test("independent packages lower Speech Spine and explicit WhisperX alignment wi
 <svml>
     <import from="@narratage/script@1"/>
     <import as="seedance" from="@narratage/seedance@1"/>
-    <import as="speech" from="@narratage/speech@1"/>
+    <import as="speech" from="@narratage/speech-spine@1"/>
     <import as="whisperx" from="@narratage/whisperx@1"/>
     <script id="story"><opening><HOST>Meaning becomes the source.</opening></script>
     <seedance:Prompt id="direction">Locked medium close-up.</seedance:Prompt>
@@ -423,14 +423,14 @@ test("Track Surfaces close one complete author graph before any external executi
 <svml>
     <import from="@narratage/script@1"/>
     <import as="seedance" from="@narratage/seedance@1"/>
-    <import as="speech" from="@narratage/speech@1"/>
+    <import as="speech" from="@narratage/speech-spine@1"/>
     <import as="whisperx" from="@narratage/whisperx@1"/>
     <import as="broll" from="@narratage/broll@1"/>
     <import as="caption" from="@narratage/caption@1"/>
     <import as="caption-ai" from="@narratage/caption-gemini@1"/>
     <import as="text" from="@narratage/text-track@1"/>
     <import as="film" from="@narratage/film@1"/>
-    <import as="render" from="@narratage/hyperframes-render@1"/>
+    <import as="render" from="@narratage/render-hyperframes@1"/>
     <import as="studio" source="./studio.svs"/>
     <script id="story"><opening><HOST>Meaning @demo becomes the source @/demo.</opening></script>
     <seedance:Prompt id="direction">Locked medium close-up.</seedance:Prompt>
@@ -467,12 +467,12 @@ test("Track Surfaces close one complete author graph before any external executi
   }
 });
 
-test("official v2 CLI closes the explicit HyperFrames render package without loading a Provider", async () => {
+test("official video CLI closes the explicit HyperFrames render package without loading a Provider", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-render-"));
   const file = join(root, "main.svml");
   await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import as="render" from="@narratage/hyperframes-render@1"/>
+    <import as="render" from="@narratage/render-hyperframes@1"/>
   </svml>`, "utf8");
   let output = "";
   await runCli(["check", file], { write: (text) => { output += text; } });
@@ -485,13 +485,14 @@ test("official v2 CLI closes the explicit HyperFrames render package without loa
   assert.deepEqual([...result.modules].sort(), [
     "@narratage/artifact@0.0.0-dev",
     "@narratage/composition@0.0.0-dev",
-    "@narratage/hyperframes-render@0.0.0-dev",
     "@narratage/hyperframes@0.0.0-dev",
     "@narratage/media-pipeline@0.0.0-dev",
     "@narratage/media@0.0.0-dev",
     "@narratage/narrative@0.0.0-dev",
     "@narratage/program-space@0.0.0-dev",
+    "@narratage/render-hyperframes@0.0.0-dev",
     "@narratage/speech@0.0.0-dev",
+    "@narratage/visual-ir@0.0.0-dev",
   ]);
   assert.deepEqual(result.exports, []);
 });

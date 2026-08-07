@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@narratage/artifact": "workspace:*",
     "@narratage/component-kit": "workspace:*",

@@ -1,28 +1,7 @@
-import type {
-  Affinity,
-  CaptionProjection,
-  CaptionRefinement,
-  CaptionRegion,
-  MarkerBoundary,
-  Narrative,
-  NarrativeMoment,
-  NarrativeMomentOccurrence,
-  NarrativeSegment,
-  NarrativeSelection,
-  NarrativeSelectionOccurrence,
-  NarrativeToken,
-  NarrativeTurn,
-  SemanticAnchor,
-} from "@narratage/video-contracts";
 import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@narratage/protocol";
+import type { CaptionProjection, CaptionRefinement, CaptionRegion, Narrative, NarrativeMoment, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelection, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@narratage/narrative";
 
-export type {
-  Affinity,
-  CaptionProjection,
-  MarkerBoundary,
-  Narrative,
-  SemanticAnchor,
-} from "@narratage/video-contracts";
+export type { Affinity, CaptionProjection, MarkerBoundary, Narrative, SemanticAnchor } from "@narratage/narrative";
 
 export type ParsedTextAtom = {
   readonly kind: "text";

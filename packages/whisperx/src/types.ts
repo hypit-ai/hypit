@@ -1,9 +1,5 @@
-import type {
-  AlignedTranscriptEvidence,
-  AlignedTranscriptSegment,
-  SpeechEvidenceAudio,
-  SpeechBasisSegment,
-} from "@narratage/video-contracts";
+import type { SpeechBasisSegment, SpeechEvidenceAudio } from "@narratage/speech";
+import type { AlignedTranscriptEvidence, AlignedTranscriptSegment } from "@narratage/speech-evidence";
 
 export type WhisperXAlignmentRequest = {
   readonly contract: "svml.whisperx-alignment-request@1";

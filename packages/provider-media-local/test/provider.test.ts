@@ -1,27 +1,13 @@
-import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-
-import {
-  contractTypes,
-  assertSpeechEvidenceAudioIdentity,
-  sealRenderedVisual,
-  verifyMuxedMedia,
-  verifyMediaInspection,
-  verifySynchronizedMedia,
-  verifyTimelineAudio,
-} from "@narratage/video-contracts";
-import type {
-  MediaAudioStream,
-  MediaInspection,
-  MuxedMedia,
-  SynchronizedMedia,
-  TimelineAudio,
-  SpeechEvidenceAudio,
-} from "@narratage/video-contracts";
+import { mediaTypes, sealRenderedVisual, verifyMediaInspection, verifyMuxedMedia, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
+import type { MediaAudioStream, MediaInspection, MuxedMedia, SynchronizedMedia, TimelineAudio } from "@narratage/media";
+import { assertSpeechEvidenceAudioIdentity, speechTypes } from "@narratage/speech";
+import type { SpeechEvidenceAudio } from "@narratage/speech";
+import assert from "node:assert/strict";
 import {
   MemoryArtifactStore,
   EndpointRegistry,
@@ -130,7 +116,7 @@ async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHa
 async function inspectArtifact(artifacts: MemoryArtifactStore, source: Awaited<ReturnType<MemoryArtifactStore["put"]>>) {
   const constraints = canonicalize({ contract: "svml.inspect-media-request@1", source });
   const request = need("need:media-inspect", mediaPipelineCapabilities.inspect,
-    contractTypes.mediaInspection, constraints);
+    mediaTypes.inspection, constraints);
   const provider = await handlerFor(request);
   const result = await provider.handler({
     command: { kind: "fulfill-need", id: "command:media-inspect", need: request },
@@ -160,7 +146,7 @@ async function normalizeArtifact(args: {
     audio: { sampleRate: 48_000, channels: 2, codec: "pcm_s16le", loudness: "preserve" },
   });
   const request = need("need:media-normalize", mediaPipelineCapabilities.normalize,
-    contractTypes.synchronizedMedia, constraints);
+    mediaTypes.synchronized, constraints);
   const provider = await handlerFor(request);
   const result = await provider.handler({
     command: { kind: "fulfill-need", id: "command:media-normalize", need: request },
@@ -287,7 +273,7 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const request = need(
       "need:speech-evidence-audio",
       mediaPipelineCapabilities.projectSpeechEvidenceAudio,
-      contractTypes.speechEvidenceAudio,
+      speechTypes.evidenceAudio,
       constraints,
     );
     const value = await fulfillInline(artifacts, request);
@@ -474,7 +460,7 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
     const audioRequest = need(
       "need:render-program-audio",
       mediaPipelineCapabilities.renderAudio,
-      contractTypes.timelineAudio,
+      mediaTypes.timelineAudio,
       canonicalize({ contract: "svml.render-audio-request@1", plan }),
     );
     const audioValue = await fulfillInline(artifacts, audioRequest);
@@ -494,7 +480,7 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
     const muxRequest = need(
       "need:mux-program-media",
       mediaPipelineCapabilities.mux,
-      contractTypes.muxedMedia,
+      mediaTypes.muxed,
       canonicalize({ contract: "svml.mux-media-request@1", visual, audio }),
     );
     const muxValue = await fulfillInline(artifacts, muxRequest);

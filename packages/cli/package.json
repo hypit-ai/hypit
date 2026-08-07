@@ -8,12 +8,12 @@
   },
   "dependencies": {
     "@narratage/compiler-node": "workspace:*",
+    "@narratage/host": "workspace:*",
     "@narratage/local": "workspace:*",
     "@narratage/package-loader-node": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/realization": "workspace:*",
     "@narratage/run": "workspace:*",
-    "@narratage/source": "workspace:*",
-    "@narratage/runtime": "workspace:*"
+    "@narratage/runtime": "workspace:*",
+    "@narratage/source": "workspace:*"
   }
 }

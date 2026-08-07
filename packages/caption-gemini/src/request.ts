@@ -1,6 +1,6 @@
 import { assertCaptionProgramForNarrative } from "@narratage/caption";
 import type { CaptionFieldDeclaration, CaptionProgram } from "@narratage/caption";
-import type { Narrative } from "@narratage/video-contracts";
+import type { Narrative } from "@narratage/narrative";
 
 import { verifyCaptionGeminiProgram } from "./program.js";
 import type {

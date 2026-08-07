@@ -1,7 +1,8 @@
+import { narrativeManifest } from "@narratage/narrative";
+import type { CaptionProjection, Narrative, NarrativeDialogueExcerpt, NarrativeExcerpt, NarrativeSpeechExcerpt } from "@narratage/narrative";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { narrativeManifest } from "@narratage/video-contracts";
 import { createResolvedClosure, digestOf, isDigest, link } from "@narratage/core";
 import type { ModuleManifest } from "@narratage/protocol";
 import {

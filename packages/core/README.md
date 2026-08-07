@@ -30,7 +30,7 @@ structure. Those responsibilities remain outside Core. The normative laws are in
 
 For a non-video domain, the irreducible reusable base is only `@narratage/protocol` plus `@narratage/core`.
 Most source languages will also use `@narratage/elaborator` to turn modular component declarations into a
-Graph, and a Driver/Runtime package to execute Commands. `@narratage/text`, `@narratage/realization` and every
+Graph, and a Driver/Runtime package to execute Commands. `@narratage/text`, `@narratage/run` and every
 domain contract package are optional layers; none receives Kernel privilege by being official.
 Domains that declare semantic Type validators additionally need a Host admission implementation;
 the reference one is `@narratage/validation`.

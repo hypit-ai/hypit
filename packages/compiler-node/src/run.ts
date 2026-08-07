@@ -15,7 +15,7 @@ import type {
   Digest,
   StoredValue,
 } from "@narratage/protocol";
-import { resolveRealization } from "@narratage/realization";
+import { resolveRealization } from "@narratage/run";
 import {
   collectRunModuleRequests,
   compileRunSource,

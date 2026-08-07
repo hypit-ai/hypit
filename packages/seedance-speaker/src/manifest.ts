@@ -1,7 +1,7 @@
-import { artifactDependency, artifactTypes } from "@narratage/artifact";
-import {
-  videoContractDependencies,
-} from "@narratage/video-contracts";
+import { artifactDependency } from "@narratage/artifact";
+import { narrativeDependency } from "@narratage/narrative";
+import { speechDependency } from "@narratage/speech";
+import { artifactTypes } from "@narratage/artifact";
 import {
   promptKitManifestDigest,
   promptKitModuleRef,
@@ -28,8 +28,8 @@ export const seedanceSpeakerManifest: ModuleManifest = {
   version: seedanceSpeakerModuleRef.version,
   dependencies: [
     artifactDependency,
-    videoContractDependencies.narrative,
-    videoContractDependencies.speech,
+    narrativeDependency,
+    speechDependency,
     { module: promptKitModuleRef, digest: promptKitManifestDigest },
     { module: seedanceModuleRef, digest: seedanceManifestDigest },
     { module: svsRecipeType.module, digest: digestOf(svsManifest) },
@@ -40,7 +40,7 @@ export const seedanceSpeakerManifest: ModuleManifest = {
     name: "take",
     tag: "Take",
     mode: "structured",
-    outputs: [promptKitTypes.program, seedanceTypes.speechProgram, artifactTypes.blob],
+    outputs: [promptKitTypes.program, seedanceTypes.speechSpine, artifactTypes.blob],
     implementation: {
       kind: "trusted-frontend-surface",
       locator: "@narratage/seedance-speaker/take-surface",
