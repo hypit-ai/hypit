@@ -5,7 +5,7 @@ executes. SVML is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
 
-On 2026-08-07 the v2 branch completed a real paid four-take vertical-video acceptance sequence
+On 2026-08-07 the repository completed a real paid four-take vertical-video acceptance sequence
 covering the combined path:
 
 ```text
@@ -186,21 +186,17 @@ permission enforcement and loaded-code attestation remain release work.
 
 ## Current verification
 
-- TypeScript v1 and v2 checks pass;
-- v1 research oracle: 35/35 tests;
-- the v2 suite passes; browser, paid-Provider and heavyweight local-service acceptance tests remain
-  environment-gated and are skipped when their prerequisites are absent;
+- the TypeScript check and the package test suites pass; browser, paid-Provider and heavyweight
+  local-service acceptance tests remain environment-gated and are skipped when their prerequisites
+  are absent;
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
 - generated credentials, media outputs and local databases are ignored by Git.
 
-All v2 workspace packages are currently private development packages that export TypeScript source.
+All workspace packages are currently private development packages that export TypeScript source.
 The repository is usable from a checkout, but no npm-ready package distribution exists yet. See
 [`open-source-distribution.md`](./open-source-distribution.md).
-
-The v1 root compiler and fixtures remain only as executable regression evidence during the rewrite.
-They are not the public v2 syntax, package taxonomy or compilation path.
 
 See [`architecture.md`](./architecture.md) for boundaries and [`roadmap.md`](./roadmap.md) for the
 two active workstreams.

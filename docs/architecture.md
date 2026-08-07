@@ -1,6 +1,6 @@
 # SVML architecture
 
-Status: current v2 architecture, 2026-08-07. Wire formats mentioned here are executable `@2`
+Status: current architecture, 2026-08-07. Wire formats mentioned here are executable `@1`
 contracts, not sketches.
 
 SVML has two deliberately separate ideas:
@@ -36,7 +36,7 @@ Author Source + author packages
               Event → verified BuildState transition
 ```
 
-Every v2 source starts with a mandatory self-description such as
+Every source starts with a mandatory self-description such as
 `<?svml using="@svml/text@1"?>`. The suffix is only an editor and human convention; the Header
 selects the exact trusted Frontend. There is no implicit Text, SVS or Run parser.
 
@@ -231,7 +231,7 @@ output. This structural boundary avoids a Core list of "important intermediates.
 A destination path is optional Host egress after archival. Omitting it never discards a Render,
 WhisperX result or another accepted Record. Convenience copying, retention and garbage collection
 are Runtime/Host policy and do not enter author or Run graph identity. See
-[`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md).
+[`build-archive-and-egress.md`](./build-archive-and-egress.md).
 
 An author package selects an exact capability such as Seedance Mini or WhisperX. A Runtime Profile
 binds that already explicit capability to one exact Endpoint instance. Runtime may select KIE versus
@@ -333,7 +333,7 @@ activates only deployment adapters. Thus adding an author package or Provider re
 CLI or aggregate-package release.
 
 The exact bootstrap and data gates are specified in
-[`source-and-run-compilation-v1.md`](./source-and-run-compilation-v1.md).
+[`source-and-run-compilation.md`](./source-and-run-compilation.md).
 
 ## 9. Trust boundary
 

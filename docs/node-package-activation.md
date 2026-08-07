@@ -1,4 +1,4 @@
-# Node package loading and facet activation v1
+# Node package loading and facet activation
 
 Status: implemented for trusted installed author and deterministic compute facets. Provider and
 Runtime-service activation remain governed by Runtime Profile/Closure.
@@ -55,7 +55,7 @@ logical modules; physical package identity and logical Module identity remain di
 Create the lock only after installing and reviewing the selected packages:
 
 ```bash
-svml-v2 lock-packages ./svml.packages.lock \
+svml lock-packages ./svml.packages.lock \
   --package @example/cards \
   --root .
 ```
@@ -63,7 +63,7 @@ svml-v2 lock-packages ./svml.packages.lock \
 Use it for compilation:
 
 ```bash
-svml-v2 check ./main.svml --package-lock ./svml.packages.lock --root .
+svml check ./main.svml --package-lock ./svml.packages.lock --root .
 ```
 
 Use the same lock in a local Runtime configuration:
@@ -117,7 +117,7 @@ Host receives only Producer and Validator registries and does not depend on Text
 merely selects an already activated logical author module for a Source Closure; it cannot cause
 Producer execution and cannot activate Provider or Runtime-service facets.
 
-The v1 loader still executes reviewed JavaScript in process after integrity verification. Integrity
+The current loader still executes reviewed JavaScript in process after integrity verification. Integrity
 is not confinement: community code requires an isolated Worker, resource limits and a real
 permission boundary before it can be treated as untrusted.
 

@@ -1,6 +1,6 @@
 # `@svml/compiler-node`
 
-Domain-neutral Node.js compiler host for v2.
+Domain-neutral Node.js compiler host.
 
 This package is outside Core. It connects a replaceable definition-time `Workspace` to the already
 implemented compiler IR:

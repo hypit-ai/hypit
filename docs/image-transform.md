@@ -1,4 +1,4 @@
-# Image Transform v1
+# Image Transform
 
 Status: implemented author module and local OpenCV Endpoint; public compatibility is not frozen.
 
@@ -52,7 +52,7 @@ GPT Image post-step. It is no longer mandatory behavior of GPT Image generation.
 
 ## Operations
 
-Operation order is author meaning. v1 supports:
+Operation order is author meaning. The current program grammar supports:
 
 - crop, resize, rotate and flip;
 - YCrCb non-local-means denoise with separate luma/chroma strength and window sizes;

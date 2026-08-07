@@ -1,4 +1,4 @@
-# HyperFrames Visual IR v1
+# HyperFrames Visual IR
 
 Status: executable candidate; closed vocabulary, not yet a frozen open-source ABI.
 

@@ -1,7 +1,7 @@
-# SVML Core Kernel v1
+# SVML Core Kernel
 
-Status: current executable contract. The specification version is v1; current persisted Graph,
-BuildRequest, Plan and BuildState wire formats are `@2`.
+Status: current executable contract. Persisted Graph, BuildRequest, Plan and BuildState wire
+formats are `@1`.
 
 Core is a domain-free graph-demand compiler and verified Build state machine. It does not parse
 source, load packages, execute implementations, choose an Endpoint, access credentials, persist

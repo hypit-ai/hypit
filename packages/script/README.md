@@ -1,6 +1,6 @@
 # `@svml/script`
 
-Official raw Script Surface for the v2 text Frontend. It parses prose-first named Segment blocks,
+Official raw Script Surface for the Text Frontend. It parses prose-first named Segment blocks,
 newline-independent Role Cues, Dual Text, Selection, Moment and Slot syntax, and lowers them to a
 canonical authored Narrative value with exactly `2M + 2N` semantic anchor identities.
 

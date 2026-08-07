@@ -208,17 +208,17 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
 function usage(): string {
   return [
     "usage:",
-    "  svml-v2 lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
-    "  svml-v2 doctor <runtime-profile.json>",
-    "  svml-v2 gc <runtime-profile.json> [--apply]",
-    "  svml-v2 check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
-    "  svml-v2 plan <run-source> [--runtime profile.json] [--package-lock file]",
-    "  svml-v2 build <run-source> --runtime profile.json|./svml.runtime.ts [--follow]",
-    "  svml-v2 status <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  svml-v2 builds --runtime profile.json|./svml.runtime.ts",
-    "  svml-v2 inspect <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  svml-v2 get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
-    "  svml-v2 cancel <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  svml lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
+    "  svml doctor <runtime-profile.json>",
+    "  svml gc <runtime-profile.json> [--apply]",
+    "  svml check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
+    "  svml plan <run-source> [--runtime profile.json] [--package-lock file]",
+    "  svml build <run-source> --runtime profile.json|./svml.runtime.ts [--follow]",
+    "  svml status <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  svml builds --runtime profile.json|./svml.runtime.ts",
+    "  svml inspect <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  svml get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
+    "  svml cancel <build-id> --runtime profile.json|./svml.runtime.ts",
   ].join("\n");
 }
 

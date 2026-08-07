@@ -1,4 +1,4 @@
-# SVML Track Expressiveness Gate v1
+# SVML Track Expressiveness Gate
 
 Status: executable validation gate; not yet a frozen public Track ABI.
 

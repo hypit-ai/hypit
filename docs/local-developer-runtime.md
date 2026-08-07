@@ -1,4 +1,4 @@
-# Local developer Runtime v1
+# Local developer Runtime
 
 Status: implemented reference assembly, KIE generation Provider, local media Provider, local image
 transform Provider, local HyperFrames Provider, local WhisperX Provider and its locked Python
@@ -110,17 +110,17 @@ callbacks or secret values:
 Create the two closures explicitly:
 
 ```bash
-svml-v2 lock-packages ./svml.packages.lock \
+svml lock-packages ./svml.packages.lock \
   --package @svml/script --package @svml/seedance --root .
 
-svml-v2 lock-packages ./svml.runtime-packages.lock \
+svml lock-packages ./svml.runtime-packages.lock \
   --package @svml/provider-kie \
   --package @svml/provider-media-local \
   --package @svml/provider-whisperx-local \
   --package @svml/provider-hyperframes-local \
   --root .
 
-svml-v2 doctor ./svml.runtime.json
+svml doctor ./svml.runtime.json
 ```
 
 The same generic lock format is reused, but the two references grant different Host ABIs.
@@ -207,7 +207,7 @@ cannot leak resources. Package code is still trusted deployment code and is neve
 author imports.
 
 `svml.packages.lock` is created from explicitly selected physical packages with
-`svml-v2 lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
+`svml lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
 Runtime config no longer imports each component by name. Its digest must equal the
 `BuildRequest.implementationClosure` produced by `plan`/`build` with the same lock, so durable work
 cannot resume after an unnoticed component-closure swap. The low-level `components` option remains
@@ -262,22 +262,22 @@ capabilities by themselves.
 
 ## 5. Build command and recovery
 
-The v2 CLI now accepts:
+The CLI accepts:
 
 ```bash
-pnpm svml:v2 build build.svrun \
+pnpm svml build build.svrun \
   --runtime ./svml.runtime.json \
   --package-lock ./svml.packages.lock \
   --root . \
   --follow
 
-pnpm svml:v2 status <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 inspect <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 get <build-id> --runtime ./svml.runtime.json --to ./result.bin
-pnpm svml:v2 cancel <build-id> --runtime ./svml.runtime.json
-pnpm svml:v2 doctor ./svml.runtime.json
-pnpm svml:v2 gc ./svml.runtime.json
-pnpm svml:v2 gc ./svml.runtime.json --apply
+pnpm svml status <build-id> --runtime ./svml.runtime.json
+pnpm svml inspect <build-id> --runtime ./svml.runtime.json
+pnpm svml get <build-id> --runtime ./svml.runtime.json --to ./result.bin
+pnpm svml cancel <build-id> --runtime ./svml.runtime.json
+pnpm svml doctor ./svml.runtime.json
+pnpm svml gc ./svml.runtime.json
+pnpm svml gc ./svml.runtime.json --apply
 ```
 
 The default local Build id is the content-derived Core Build id. Repeating the same command resumes
@@ -299,7 +299,7 @@ Every accepted output in the demanded closure remains in BuildState, not only th
 Referenced bytes remain in ArtifactStore. `inspect` exposes that archive without reading private
 Store paths; `get` optionally copies one direct Artifact or writes one structured Record as JSON.
 Neither command resumes execution, and omitting `get` never discards a result. See
-[`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md).
+[`build-archive-and-egress.md`](./build-archive-and-egress.md).
 
 `gc` is explicit deployment maintenance. Its default is a dry-run report. The local implementation
 enumerates every retained BuildState and Operation, recursively finds their BlobRefs and only then

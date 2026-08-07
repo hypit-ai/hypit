@@ -22,7 +22,7 @@ Prerequisites for the exact checked-in Runtime Profile:
 - `ffmpeg`, `ffprobe`, Chrome/HyperFrames and the prepared local WhisperX sidecar.
 
 Prepare and health-check WhisperX as described in
-[`../../services/whisperx/README.md`](../../services/whisperx/README.md). `svml-v2 check` validates
+[`../../services/whisperx/README.md`](../../services/whisperx/README.md). `svml check` validates
 source, Run Graph and exact Runtime capability coverage before scheduling, but it does not make a
 paid Provider request or promise that remote credentials and service health are valid.
 
@@ -35,17 +35,17 @@ The independent `svml.runtime-packages.lock` selects only KIE, local media, loca
 and local HyperFrames deployment adapters; adding another Provider does not change the CLI.
 
 ```bash
-pnpm svml:v2 build examples/talking-film-live/build.svrun \
+pnpm svml build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
   --package-lock examples/talking-film-live/svml.packages.lock \
   --root . \
   --build-id talking-film-live \
   --follow
 
-pnpm svml:v2 inspect talking-film-live \
+pnpm svml inspect talking-film-live \
   --runtime examples/talking-film-live/svml.runtime.json
 
-pnpm svml:v2 get talking-film-live \
+pnpm svml get talking-film-live \
   --runtime examples/talking-film-live/svml.runtime.json \
   --name final.video \
   --to examples/talking-film-live/output/final.mp4
