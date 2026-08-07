@@ -1,0 +1,163 @@
+---
+title: Adding an Author Package
+description: Step-by-step guide for adding a new author-level component.
+---
+
+# Adding an Author Package
+
+An author package extends the video vocabulary with a new component. Authors use it through
+`<import>` and XML elements in their `.svml` source. No change to Core, the CLI or any aggregate
+package is needed.
+
+## 1. Create the package
+
+```bash
+mkdir -p packages/my-component/src packages/my-component/test
+```
+
+## 2. Write package.json
+
+```json
+{
+  "name": "@svml/my-component",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@svml/protocol": "workspace:*",
+    "@svml/elaborator": "workspace:*",
+    "@svml/text": "workspace:*"
+  }
+}
+```
+
+Add only the dependencies your package actually imports. See
+[Package architecture](./packages.md) for layer rules.
+
+## 3. Define the Module Manifest
+
+In `src/index.ts`, declare your Module's identity, Types and Producers:
+
+```typescript
+import type { ModuleManifest, ModuleRef } from "@svml/protocol";
+
+export const myComponentModuleRef: ModuleRef = {
+  name: "@svml/my-component",
+  version: 1,
+};
+
+export const myComponentManifest: ModuleManifest = {
+  module: myComponentModuleRef,
+  types: [ /* your nominal Types */ ],
+  producers: [ /* your deterministic Producers */ ],
+};
+```
+
+Types are nominally owned by Modules. Core does not maintain a central union of every domain
+type — installing a new package can add a new Type without a Core release.
+
+## 4. Implement the Surface handler
+
+The Surface handler decodes the Text Frontend's XML elements into typed author declarations.
+
+```typescript
+// src/surface.ts
+import type { TextSurfaceDecoder } from "@svml/text";
+
+export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) => {
+  // Read attributes and children from the XML element
+  // Validate inputs
+  // Emit typed Records and Operations into context
+  // Return authored graph declarations
+};
+```
+
+Look at existing Surface implementations for reference:
+- `packages/seedance/src/surface.ts` — Prompt, Speech and Video Surfaces
+- `packages/caption/src/surface.ts` — Style, Program and Track Surfaces
+- `packages/broll/src/surface.ts` — Track and Item Surfaces
+
+## 5. Write the activation descriptor
+
+```typescript
+// src/activation.ts
+import { createTextSurfaceHostFacet } from "@svml/text";
+import {
+  myComponentManifest,
+  myComponentModuleRef,
+  decodeMyComponentSurface,
+} from "./index.js";
+
+export const svmlPackage = {
+  format: "svml.node-package@1" as const,
+  name: "@svml/my-component",
+  modules: [{
+    manifest: myComponentManifest,
+    specifiers: ["@svml/my-component", "@svml/my-component@1"],
+  }],
+  hostFacets: [
+    createTextSurfaceHostFacet({
+      module: myComponentModuleRef,
+      surface: "my-widget",
+      mode: "structured",
+      implementationDigest: "sha256:...",
+      handler: decodeMyComponentSurface,
+    }),
+  ],
+};
+
+export default svmlPackage;
+```
+
+The `specifiers` array lists the strings that an `<import from="..."/>` will match against. The
+`surface` string determines the XML element prefix (`<mine:my-widget>` when imported as `mine`).
+
+## 6. Register in tsconfig.v2.json
+
+Add the path mapping so TypeScript resolves `@svml/my-component` to source:
+
+```json
+"@svml/my-component": ["packages/my-component/src/index.ts"]
+```
+
+## 7. Install and lock
+
+```bash
+pnpm install
+
+pnpm svml:v2 lock-packages <lock-file> \
+  --package @svml/my-component \
+  [--package @svml/other-dep ...] \
+  --root .
+```
+
+## 8. Use in Author Source
+
+```xml
+<?svml using="@svml/text@1"?>
+<svml>
+  <import as="mine" from="@svml/my-component@1"/>
+
+  <mine:Widget id="demo" during={story.selection.example}/>
+</svml>
+```
+
+The `<import>` activates only author vocabulary. It never grants network, filesystem or credential
+authority.
+
+## Existing examples to study
+
+| Package | What it demonstrates |
+|---|---|
+| `packages/seedance/` | Model family with multiple Surfaces (Prompt, Speech, Video) |
+| `packages/seedance-speaker/` | Higher-level binding that composes Script, Prompt Kit and Seedance |
+| `packages/caption/` | Style, Program and Track Surfaces with typed field declarations |
+| `packages/broll/` | Track with Item/transition behavior |
+| `packages/text-track/` | Simple text overlay Track |
+| `packages/film/` | Composition target that consumes peer Tracks |
