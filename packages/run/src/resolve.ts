@@ -3,18 +3,55 @@ import {
   exportRunFragment,
   resolveCompiledSourceExport,
 } from "@svml/elaborator";
-import type { GraphValueRef, StoredValue } from "@svml/protocol";
+import { canonicalStringify } from "@svml/protocol";
+import type {
+  Candidate,
+  GraphValueRef,
+  ModuleRef,
+  OperationNode,
+  StoredValue,
+} from "@svml/protocol";
 import {
   createBuildRecordCandidate,
   createProvidedCandidate,
-  sealRunGraph,
+  sealRealizationOverlay,
 } from "@svml/realization";
+
+import { sealRunGraph } from "./graph.js";
 
 import type {
   ResolveRunDocumentContext,
-  ResolvedRunDocument,
+  RunCompilation,
   RunDocument,
 } from "./types.js";
+
+function moduleRequest(ref: ModuleRef): string {
+  return `${ref.name}@${ref.version}`;
+}
+
+/** Module closure additions required only by the selected Run implementations. */
+export function collectRunModuleRequests(
+  document: RunDocument,
+  fragments: ResolveRunDocumentContext["fragments"],
+): readonly string[] {
+  const imports = new Map(document.imports.map((item) => [item.as, item.from]));
+  const requests = new Set<string>();
+  for (const declaration of document.candidates) {
+    if (declaration.kind === "provided") {
+      requests.add(moduleRequest(declaration.type.module));
+      continue;
+    }
+    if (declaration.kind !== "fragment") continue;
+    const packageName = imports.get(declaration.using.alias);
+    if (packageName === undefined) throw new Error(`Run Fragment alias ${declaration.using.alias} is not imported`);
+    const fragment = fragments.resolve(packageName, declaration.using.name);
+    if (fragment === undefined) throw new Error(`${packageName} exports no Run Fragment ${declaration.using.name}`);
+    for (const input of fragment.inputs) requests.add(moduleRequest(input.type.module));
+    for (const operation of fragment.operations) requests.add(moduleRequest(operation.producer.module));
+    for (const item of fragment.exports) requests.add(moduleRequest(item.type.module));
+  }
+  return [...requests].sort();
+}
 
 function authorRef(context: ResolveRunDocumentContext, name: string): GraphValueRef {
   const exported = resolveCompiledSourceExport(context.compilation, name);
@@ -46,10 +83,24 @@ function assertStoredValue(value: unknown, subject: string): asserts value is St
 export async function resolveRunDocument(
   document: RunDocument,
   context: ResolveRunDocumentContext,
-): Promise<ResolvedRunDocument> {
+): Promise<RunCompilation> {
   const imports = new Map(document.imports.map((item) => [item.as, item.from]));
-  const candidates = [];
-  const operations = [];
+  const candidates = new Map<string, Candidate>();
+  const operations = new Map<string, OperationNode>();
+  const addCandidate = (candidate: Candidate): void => {
+    const existing = candidates.get(candidate.id);
+    if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(candidate)) {
+      throw new Error(`Run Candidate identity ${candidate.id} has conflicting definitions`);
+    }
+    candidates.set(candidate.id, candidate);
+  };
+  const addOperation = (operation: OperationNode): void => {
+    const existing = operations.get(operation.id);
+    if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(operation)) {
+      throw new Error(`Run Operation identity ${operation.id} has conflicting definitions`);
+    }
+    operations.set(operation.id, operation);
+  };
   const candidateNames = new Map<string, string>();
   const bindCandidateName = (name: string, candidate: string): void => {
     if (candidateNames.has(name)) throw new Error(`Run Candidate reference ${name} is declared twice`);
@@ -61,7 +112,7 @@ export async function resolveRunDocument(
       const value = await context.readStoredValue(declaration.from);
       assertStoredValue(value, declaration.from);
       const candidate = createProvidedCandidate({ type: declaration.type, value });
-      candidates.push(candidate);
+      addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
       continue;
     }
@@ -72,7 +123,7 @@ export async function resolveRunDocument(
         build,
         sourceOutput: declaration.output,
       });
-      candidates.push(candidate);
+      addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
       continue;
     }
@@ -88,8 +139,8 @@ export async function resolveRunDocument(
       inputs: Object.fromEntries(declaration.inputs.map((item) => [item.name, authorRef(context, item.from)])),
     });
     const contribution = exportRunFragment(instance, declaration.exports);
-    candidates.push(...contribution.candidates);
-    operations.push(...contribution.operations);
+    for (const candidate of contribution.candidates) addCandidate(candidate);
+    for (const operation of contribution.operations) addOperation(operation);
     for (const item of contribution.exports) bindCandidateName(`${declaration.id}.${item.name}`, item.candidate);
   }
 
@@ -102,19 +153,36 @@ export async function resolveRunDocument(
       fidelity: item.fidelity,
     } as const;
   });
-  const selected = document.targetSets.find((item) => item.id === document.selectedTargets)!;
-  const graphs = candidates.length === 0
-    ? []
-    : [sealRunGraph({
-        sourceGraph: context.compilation.elaboration.graph.id,
-        candidates,
-        operations,
-      })];
-  return {
-    source: document.source,
-    targets: selected.targets.map((item) => ({ name: item.output, accepts: item.accepts })),
-    graphs,
+  const targetSets = document.targetSets.map((set) => ({
+    id: set.id,
+    targets: set.targets.map((item) => ({
+      output: logicalOutput(context, item.output),
+      accepts: item.accepts,
+    })),
+  }));
+  const resolvedCandidates = [...candidates.values()];
+  const resolvedOperations = [...operations.values()];
+  const overlay = resolvedCandidates.length === 0
+    ? undefined
+    : sealRealizationOverlay({
+      sourceGraph: context.compilation.elaboration.graph.id,
+      candidates: resolvedCandidates,
+      operations: resolvedOperations,
+    });
+  const graph = sealRunGraph({
+    authorGraph: context.compilation.elaboration.graph.id,
+    sourceClosure: context.sourceClosure.id,
+    candidates: resolvedCandidates,
+    operations: resolvedOperations,
     satisfactions,
+    targetSets,
+    selectedTargets: document.selectedTargets,
+  });
+  return {
+    closure: context.sourceClosure,
+    document,
+    graph,
+    ...(overlay === undefined ? {} : { overlay }),
     candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
   };
 }

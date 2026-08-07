@@ -190,7 +190,11 @@ function contributionMetadata(value: NodePackageContribution): unknown {
       manifestDigest: digestOf(item.manifest),
       specifiers: [...(item.specifiers ?? [])].sort(),
     })).sort((left, right) => left.manifestDigest.localeCompare(right.manifestDigest)),
-    frontends: [...(value.frontends ?? [])].map((item) => ({
+    authorFrontends: [...(value.authorFrontends ?? [])].map((item) => ({
+      id: item.id,
+      implementationDigest: item.implementationDigest,
+    })).sort((left, right) => left.id.localeCompare(right.id)),
+    runFrontends: [...(value.runFrontends ?? [])].map((item) => ({
       id: item.id,
       implementationDigest: item.implementationDigest,
     })).sort((left, right) => left.id.localeCompare(right.id)),
@@ -217,9 +221,6 @@ function contributionMetadata(value: NodePackageContribution): unknown {
           .localeCompare(`${right.type.module.name}@${right.type.module.version}#${right.type.name}`),
       ),
     })).sort((left, right) => left.name.localeCompare(right.name)),
-    runFragments: Object.entries(value.runFragments ?? {})
-      .map(([name, fragment]) => ({ name, digest: fragment.id }))
-      .sort((left, right) => left.name.localeCompare(right.name)),
   };
 }
 

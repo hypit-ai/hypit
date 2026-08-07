@@ -1,15 +1,4 @@
-import type { CanonicalValue, TypeRef } from "@svml/protocol";
-import {
-  parseStructuredElement,
-  skipTextTrivia,
-} from "@svml/text";
-import type {
-  SourceUnit,
-  StructuredElement,
-  StructuredNode,
-  TextAttributeValue,
-} from "@svml/text";
-
+import type { TypeRef } from "@svml/protocol";
 import type {
   RunBuildRecord,
   RunCandidateDeclaration,
@@ -19,7 +8,15 @@ import type {
   RunProvidedValue,
   RunSatisfaction,
   RunTargetSet,
-} from "./types.js";
+} from "@svml/run";
+import {
+  parseStructuredElement,
+  skipTextTrivia,
+} from "@svml/text";
+import type {
+  SourceUnit,
+  StructuredElement,
+} from "@svml/text";
 
 export class RunSyntaxError extends Error {
   readonly code: string;
@@ -88,6 +85,12 @@ export function parseTypeRef(value: string): TypeRef {
     module: { name: value.slice(0, version), version: value.slice(version + 1, hash) },
     name: value.slice(hash + 1),
   };
+}
+
+function authorDeclaration(element: StructuredElement): { readonly source: string } {
+  exactAttributes(element, ["source"]);
+  empty(element);
+  return { source: stringAttribute(element, "source")! };
 }
 
 function importDeclaration(element: StructuredElement): RunImport {
@@ -198,21 +201,31 @@ export function parseRunDocument(name: string, text: string): RunDocument {
   if (end !== text.length) throw new RunSyntaxError("RUN_TRAILING", "Only trivia may follow </svrun>", end);
   const root = parsed.element;
   if (root.name !== "svrun") fail(root, "RUN_ROOT", "Run document root must be <svrun>");
-  exactAttributes(root, ["version", "source", "targets"]);
+  exactAttributes(root, ["version", "targets"]);
   if (stringAttribute(root, "version") !== "1") fail(root, "RUN_VERSION", "Only .svrun version 1 is supported");
 
+  let author: { readonly source: string } | undefined;
   const imports: RunImport[] = [];
   const targetSets: RunTargetSet[] = [];
   const candidates: RunCandidateDeclaration[] = [];
   const satisfactions: RunSatisfaction[] = [];
   let bodyStarted = false;
   for (const child of elements(root)) {
+    if (child.name === "author") {
+      if (bodyStarted || author !== undefined || imports.length > 0) {
+        fail(child, "RUN_AUTHOR_ORDER", "<author> must be the first and only Author declaration");
+      }
+      author = authorDeclaration(child);
+      continue;
+    }
     if (child.name === "import") {
       if (bodyStarted) fail(child, "RUN_IMPORT_ORDER", "Run imports must form the opening prologue");
+      if (author === undefined) fail(child, "RUN_AUTHOR_ORDER", "<author> must precede Run imports");
       imports.push(importDeclaration(child));
       continue;
     }
     bodyStarted = true;
+    if (author === undefined) fail(child, "RUN_AUTHOR_MISSING", "<svrun> requires an opening <author> declaration");
     if (child.name === "target-set") targetSets.push(targetSet(child));
     else if (child.name === "value") candidates.push(provided(child));
     else if (child.name === "build-record") candidates.push(buildRecord(child));
@@ -220,6 +233,7 @@ export function parseRunDocument(name: string, text: string): RunDocument {
     else if (child.name === "satisfy") satisfactions.push(satisfaction(child));
     else fail(child, "RUN_CHILD", `<svrun> does not accept <${child.name}>`);
   }
+  if (author === undefined) fail(root, "RUN_AUTHOR_MISSING", "<svrun> requires exactly one <author> declaration");
 
   unique(imports.map((item) => item.as), "Run import alias", root);
   unique(targetSets.map((item) => item.id), "Target set", root);
@@ -230,8 +244,8 @@ export function parseRunDocument(name: string, text: string): RunDocument {
     fail(root, "RUN_TARGET_SET", `Selected target set ${selectedTargets} is not declared`);
   }
   return {
-    format: "svml.run-document@1",
-    source: stringAttribute(root, "source")!,
+    format: "svml.run-document@2",
+    author,
     selectedTargets,
     imports,
     targetSets,

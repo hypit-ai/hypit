@@ -40,7 +40,7 @@ export function createTextNodeCompiler(
     names.add(item.name);
     for (const module of item.modules ?? []) modules.register(module);
     installTextSurfaceHostFacets(item.hostFacets ?? [], surfaces);
-    for (const frontend of item.frontends ?? []) frontends.register(frontend);
+    for (const frontend of item.authorFrontends ?? []) frontends.register(frontend);
   }
 
   for (const component of collectNodePackageComponents(packages)) {
@@ -60,7 +60,6 @@ export function createTextNodeCompiler(
     modules,
     frontends,
     validators,
-    entryFrontend: textAuthorFrontendId,
     ...(options.root === undefined ? {} : { root: options.root }),
     ...(options.workspace === undefined ? {} : { workspace: options.workspace }),
   });

@@ -7,7 +7,8 @@ HyperFrames.
 
 ```bash
 pnpm svml:v2 check examples/talking-film-graph-check/main.svml
-pnpm svml:v2 plan examples/talking-film-graph-check/main.svml --target final.video
+pnpm svml:v2 check examples/talking-film-graph-check/build.svrun
+pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun
 ```
 
 The Gemini planner receives immutable left-side display atoms and resolved style runs only. Its generic

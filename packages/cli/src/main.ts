@@ -4,10 +4,7 @@ import { pathToFileURL } from "node:url";
 import type { LocalRuntime } from "@svml/local";
 import type { NodeCompiledSourceClosure } from "@svml/compiler-node";
 import type { BuildCatalogDescriptor } from "@svml/runtime";
-import {
-  createBuildRecordCandidate,
-  sealRealizationOverlay,
-} from "@svml/realization";
+import { parseSourceHeader } from "@svml/source";
 import {
   createNodePackageLock,
   loadNodePackageSet,
@@ -23,7 +20,7 @@ import {
   selectArchivedRecord,
   summarizeBuildCatalog,
 } from "./archive.js";
-import { loadRunFile } from "./run-file.js";
+import { collectRunFrontends, loadRunFile } from "./run-file.js";
 import type { CliDistribution } from "./distribution.js";
 
 type CliIo = {
@@ -205,11 +202,9 @@ function usage(): string {
   return [
     "usage:",
     "  svml-v2 lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
-    "  svml-v2 check <file.svml|file.svrun> [--runtime profile.json] [--package-lock file] [--root directory]",
-    "  svml-v2 plan <file.svml> --target export [--target export] [--accept-substitute] [--package-lock file]",
-    "  svml-v2 plan <file.svrun> [--runtime profile.json] [--package-lock file]",
-    "  svml-v2 build <file.svml> --target export --runtime ./svml.runtime.ts [--pin output=prior-build --accept-substitute] [--follow]",
-    "  svml-v2 build <file.svrun> --runtime profile.json [--follow]",
+    "  svml-v2 check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
+    "  svml-v2 plan <run-source> [--runtime profile.json] [--package-lock file]",
+    "  svml-v2 build <run-source> --runtime profile.json|./svml.runtime.ts [--follow]",
     "  svml-v2 status <build-id> --runtime profile.json|./svml.runtime.ts",
     "  svml-v2 builds --runtime profile.json|./svml.runtime.ts",
     "  svml-v2 inspect <build-id> --runtime profile.json|./svml.runtime.ts",
@@ -301,9 +296,8 @@ export async function runCli(
     && args.command !== "get") {
     throw new Error("--name, --record, --output, --artifact and --to are only valid for get");
   }
-  if (args.pins.length > 0 && args.command !== "build") throw new Error("--pin is only valid for build");
-  if (args.pins.length > 0 && !args.substitute) {
-    throw new Error("--pin attaches substitute Candidates; add --accept-substitute");
+  if (args.targets.length > 0 || args.substitute || args.pins.length > 0) {
+    throw new Error("Targets, Candidate selections and fidelity belong in a self-described Run Source; CLI --target, --pin and --accept-substitute are not supported");
   }
   if (args.command === "status" || args.command === "builds" || args.command === "inspect"
     || args.command === "get" || args.command === "cancel") {
@@ -424,50 +418,64 @@ export async function runCli(
     return;
   }
   if (args.packages.length > 0) throw new Error("--package is only valid for lock-packages");
-  const runMode = extname(args.file!) === ".svrun";
-  if (runMode && (args.targets.length > 0 || args.substitute || args.pins.length > 0)) {
-    throw new Error(".svrun owns Targets, Candidate selections and fidelity; do not combine it with --target, --pin or --accept-substitute");
-  }
   const loadedPackageSet = args.packageLock === undefined
     ? undefined
     : await loadNodePackageSet(args.packageLock, args.root ?? dirname(args.packageLock));
   const packageContributions = loadedPackageSet?.contributions ?? distribution.builtInPackageContributions;
+  const runFrontends = collectRunFrontends(distribution.runFrontends, packageContributions);
   const compiler = distribution.createCompiler({
     ...(args.root === undefined ? {} : { root: args.root }),
     packageContributions,
   });
+  const workspace = await compiler.openFile(args.file!);
+  const sourceHeader = parseSourceHeader(workspace.entry.name, workspace.entry.text);
+  const runMode = runFrontends.some((frontend) => frontend.id === sourceHeader.using);
+  const authorMode = compiler.supportsFrontend(sourceHeader.using);
+  if (runMode === authorMode) {
+    throw new Error(runMode
+      ? `Frontend ${sourceHeader.using} is ambiguously registered as Author and Run`
+      : `No trusted Author or Run compiler accepts Frontend ${sourceHeader.using}`);
+  }
+  if ((args.command === "plan" || args.command === "build") && !runMode) {
+    throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
+  }
   if (args.command === "check") {
     let runtime: LocalRuntime | undefined;
     try {
       runtime = args.runtime === undefined ? undefined : await loadLocalRuntime(args.runtime, distribution);
       if (runMode) {
         const loaded = await loadRunFile({
-          path: args.file!,
-          compiler,
+          workspace,
+          authorCompiler: compiler,
+          frontends: runFrontends,
           packageContributions,
           ...(runtime === undefined ? {} : { runtime }),
         });
-        const planned = compiler.planCompilation(loaded.compilation, {
-          targets: loaded.run.targets,
-          satisfactions: loaded.run.satisfactions,
-          realizations: loaded.run.graphs,
-          ...(loadedPackageSet === undefined ? {} : { implementationClosure: loadedPackageSet.lock.digest }),
-        });
+        const planned = loaded.compiler.planCompilation(
+          loaded,
+          loadedPackageSet?.lock.digest,
+        );
+        const selected = loaded.run.graph.targetSets.find((item) => item.id === loaded.run.graph.selectedTargets)!;
         io.write(`${JSON.stringify({
           ok: true,
           run: loaded.path,
-          source: loaded.source,
-          sourceClosure: loaded.compilation.closure.id,
+          source: loaded.authorSource,
+          authorSourceClosure: loaded.author.closure.id,
+          runSourceClosure: loaded.run.closure.id,
+          authorModuleClosure: loaded.author.program.closure.digest,
+          executionModuleClosure: loaded.program.closure.digest,
+          authorGraph: loaded.author.elaboration.graph.id,
+          runGraph: loaded.run.graph.id,
           graph: planned.request.graph,
-          targetSet: loaded.document.selectedTargets,
-          targets: loaded.run.targets,
+          targetSet: loaded.run.graph.selectedTargets,
+          targets: selected.targets,
           candidates: loaded.run.candidates,
-          satisfactions: loaded.run.satisfactions,
+          satisfactions: loaded.run.graph.satisfactions,
           steps: planned.plan.steps.length,
         }, null, 2)}\n`);
         return;
       }
-      const result = await compiler.compileFile(args.file!);
+      const result = await compiler.compileSource(workspace.entry, workspace);
       io.write(`${JSON.stringify({
         ok: true,
         sourceClosure: result.closure.id,
@@ -487,71 +495,25 @@ export async function runCli(
     if (args.runtime === undefined) throw new Error("build requires --runtime with a Runtime Profile or trusted local config module");
     const runtime = await loadLocalRuntime(args.runtime, distribution);
     try {
-      const planOptions = {
-        targets: args.targets,
-        accepts: args.substitute ? "substitute" as const : "exact" as const,
-        ...(loadedPackageSet === undefined ? {} : { implementationClosure: loadedPackageSet.lock.digest }),
-      };
-      let pinSummary: readonly { readonly output: string; readonly build: string; readonly candidate: string }[] = [];
-      const loadedRun = runMode
-        ? await loadRunFile({ path: args.file!, compiler, packageContributions, runtime })
-        : undefined;
-      const result = loadedRun !== undefined
-        ? compiler.planCompilation(loadedRun.compilation, {
-            targets: loadedRun.run.targets,
-            satisfactions: loadedRun.run.satisfactions,
-            realizations: loadedRun.run.graphs,
-            ...(loadedPackageSet === undefined ? {} : { implementationClosure: loadedPackageSet.lock.digest }),
-          })
-        : args.pins.length === 0
-          ? await compiler.planFile(args.file!, planOptions)
-          : await (async () => {
-            const compilation = await compiler.compileFile(args.file!);
-            const seen = new Set<string>();
-            const candidates = [];
-            const satisfactions = [];
-            const summary = [];
-            for (const pin of args.pins) {
-              if (seen.has(pin.output)) throw new Error(`--pin repeats output ${pin.output}`);
-              seen.add(pin.output);
-              const exported = compilation.exports.find((item) => item.name === pin.output);
-              if (exported === undefined) throw new Error(`--pin refers to unknown public output ${pin.output}`);
-              if (exported.ref.kind !== "logical-output") {
-                throw new Error(`--pin ${pin.output} is an authored Record, not a realizable output`);
-              }
-              const historical = await runtime.status(pin.build);
-              if (historical.build === undefined) throw new Error(`--pin source Build ${pin.build} does not exist`);
-              const candidate = createBuildRecordCandidate({
-                build: historical.build.state,
-                sourceOutput: exported.ref.id,
-              });
-              candidates.push(candidate);
-              satisfactions.push({ output: exported.ref.id, candidate: candidate.id, fidelity: "substitute" as const });
-              summary.push({ output: pin.output, build: pin.build, candidate: candidate.id });
-            }
-            const overlay = sealRealizationOverlay({
-              sourceGraph: compilation.elaboration.graph.id,
-              candidates,
-              operations: [],
-            });
-            pinSummary = summary;
-            return compiler.planCompilation(compilation, {
-              ...planOptions,
-              satisfactions,
-              realizations: [overlay],
-            });
-          })();
+      const loadedRun = await loadRunFile({
+        workspace,
+        authorCompiler: compiler,
+        frontends: runFrontends,
+        packageContributions,
+        runtime,
+      });
+      const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
       const built = await runtime.build({
         id: args.buildId ?? result.state.id,
         state: result.state,
         catalog: createCatalogDescriptor({
           core: result.state.id,
-          source: loadedRun?.source ?? args.file!,
-          compilation: result.compilation,
-          ...(loadedRun === undefined ? {} : { run: {
+          source: loadedRun.authorSource,
+          compilation: result.compilation.author,
+          run: {
             path: loadedRun.path,
-            targetSet: loadedRun.document.selectedTargets,
-          } }),
+            targetSet: loadedRun.run.graph.selectedTargets,
+          },
         }),
         attachments: result.compilation.attachments,
       }, {
@@ -573,7 +535,6 @@ export async function runCli(
         }),
         blocked: built.blocked,
         journal: built.journal,
-        ...(pinSummary.length === 0 ? {} : { pins: pinSummary }),
       }, null, 2)}\n`);
     } finally {
       await runtime.close();
@@ -583,26 +544,14 @@ export async function runCli(
   let runtime: LocalRuntime | undefined;
   try {
     runtime = args.runtime === undefined ? undefined : await loadLocalRuntime(args.runtime, distribution);
-    const result = runMode
-      ? await (async () => {
-          const loaded = await loadRunFile({
-            path: args.file!,
-            compiler,
-            packageContributions,
-            ...(runtime === undefined ? {} : { runtime }),
-          });
-          return compiler.planCompilation(loaded.compilation, {
-            targets: loaded.run.targets,
-            satisfactions: loaded.run.satisfactions,
-            realizations: loaded.run.graphs,
-            ...(loadedPackageSet === undefined ? {} : { implementationClosure: loadedPackageSet.lock.digest }),
-          });
-        })()
-      : await compiler.planFile(args.file!, {
-          targets: args.targets,
-          accepts: args.substitute ? "substitute" : "exact",
-          ...(loadedPackageSet === undefined ? {} : { implementationClosure: loadedPackageSet.lock.digest }),
-        });
+    const loaded = await loadRunFile({
+      workspace,
+      authorCompiler: compiler,
+      frontends: runFrontends,
+      packageContributions,
+      ...(runtime === undefined ? {} : { runtime }),
+    });
+    const result = loaded.compiler.planCompilation(loaded, loadedPackageSet?.lock.digest);
     io.write(`${JSON.stringify(result.plan, null, 2)}\n`);
   } finally {
     await runtime?.close();

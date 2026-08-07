@@ -1,6 +1,7 @@
 # `@svml/text`
 
-Official XML-like Author Frontend for `.svml` source units. It owns only the `<svml>` envelope,
+Official XML-like Author Frontend normally used by `.svml` source units. The suffix has no parser
+authority; a mandatory `<?svml using="@svml/text@1"?>` Header selects this Frontend. It owns only the `<svml>` envelope,
 the leading Import Prologue, namespace binding, generic structured elements and dispatch to
 statically declared module Surfaces.
 
@@ -10,8 +11,10 @@ implementation. The current registry is for trusted official/in-process use; it 
 sandbox for third-party parser code.
 
 ```svml
+<?svml using="@svml/text@1"?>
 <svml>
-  <import from="@svml/script@0.0.0-dev"/>
+  <import from="@svml/script@1"/>
+  <import as="studio" source="./studio.svs"/>
 
   <script id="story">
     <opening><ALICE>Hello.</opening>
@@ -45,5 +48,6 @@ resolves forward references and emits the Core Graph.
 
 Direct `decodeText()` calls require every source import to be supplied as an already resolved
 namespace. The reference `compileSourceClosure()` orchestration in `@svml/elaborator` recursively
-discovers those SourceUnits, selects the exact `using` Frontend, decodes dependencies first and then
-calls Text with their locked public exports. Text itself never reads a file or guesses a Frontend.
+discovers those SourceUnits. Each dependency's own Source Header selects its exact Frontend; Text
+never chooses a dependency parser. The compiler decodes dependencies first and then calls Text with
+their locked public exports. Text itself never reads a file or guesses a Frontend.

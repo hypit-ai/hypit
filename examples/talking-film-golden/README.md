@@ -104,10 +104,10 @@ A Hypit profile changes endpoint bindings, not `main.svml`. Existing Values, bla
 preview realizations remain explicitly selected Candidates in a BuildRequest; they do not alter
 the author source or teach Runtime to guess a creative method.
 
-The intended final command is:
+The intended final command uses the checked-in self-described Run Source:
 
 ```bash
-svml build main.svml --target final.video
+svml build build.svrun --runtime ./svml.runtime.json
 ```
 
 Until real assets, credentials and a Runtime profile are supplied, tools must report this file as a

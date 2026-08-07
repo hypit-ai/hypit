@@ -1,0 +1,19 @@
+import { digestOf } from "@svml/protocol";
+import type { RunFrontend } from "@svml/run";
+
+import { parseRunDocument } from "./syntax.js";
+
+export const runTextFrontendId = "@svml/run-text@1";
+export const runTextFrontendImplementationDigest = digestOf("@svml/run-text/frontend@1");
+
+export const runTextFrontend: RunFrontend = {
+  id: runTextFrontendId,
+  implementationDigest: runTextFrontendImplementationDigest,
+  discover(source) {
+    const document = parseRunDocument(source.name, source.text);
+    return { author: document.author, imports: document.imports };
+  },
+  decode(source) {
+    return { document: parseRunDocument(source.name, source.text) };
+  },
+};

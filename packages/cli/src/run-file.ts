@@ -1,52 +1,58 @@
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-
-import type { NodeCompiler, NodeCompiledSourceClosure } from "@svml/compiler-node";
+import {
+  NodeRunCompiler,
+} from "@svml/compiler-node";
+import type {
+  NodeCompiledRun,
+  NodeCompiler,
+} from "@svml/compiler-node";
 import type { LocalRuntime } from "@svml/local";
 import type { NodePackageContribution } from "@svml/package-loader-node";
+import type { WorkspaceSession } from "@svml/host";
 import {
-  parseRunDocument,
-  resolveRunDocument,
+  installRunFragmentHostFacets,
   RunFragmentRegistry,
+  RunFrontendRegistry,
 } from "@svml/run";
-import type { ResolvedRunDocument, RunDocument } from "@svml/run";
+import type { RunFrontend } from "@svml/run";
 
-export type LoadedRunFile = {
+export type LoadedRunFile = NodeCompiledRun & {
   readonly path: string;
-  readonly source: string;
-  readonly document: RunDocument;
-  readonly compilation: NodeCompiledSourceClosure;
-  readonly run: ResolvedRunDocument;
+  readonly compiler: NodeRunCompiler;
 };
 
+export function collectRunFrontends(
+  builtIns: readonly RunFrontend[],
+  packages: readonly NodePackageContribution[],
+): readonly RunFrontend[] {
+  return [
+    ...builtIns,
+    ...packages.flatMap((item) => item.runFrontends ?? []),
+  ];
+}
+
 export async function loadRunFile(options: {
-  readonly path: string;
-  readonly compiler: NodeCompiler;
+  readonly workspace: WorkspaceSession;
+  readonly authorCompiler: NodeCompiler;
+  readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly NodePackageContribution[];
   readonly runtime?: Pick<LocalRuntime, "status">;
 }): Promise<LoadedRunFile> {
-  const path = resolve(options.path);
-  const directory = dirname(path);
-  const document = parseRunDocument(path, await readFile(path, "utf8"));
-  const source = resolve(directory, document.source);
-  const compilation = await options.compiler.compileFile(source);
   const fragments = new RunFragmentRegistry();
   for (const item of options.packageContributions) {
-    if (item.runFragments === undefined || Object.keys(item.runFragments).length === 0) continue;
-    fragments.register({ name: item.name, fragments: item.runFragments });
+    installRunFragmentHostFacets(item.hostFacets ?? [], fragments);
   }
-  const run = await resolveRunDocument(document, {
-    compilation,
+  const frontends = new RunFrontendRegistry();
+  for (const frontend of options.frontends) frontends.register(frontend);
+  const compiler = new NodeRunCompiler({
+    authorCompiler: options.authorCompiler,
+    frontends,
     fragments,
-    async readStoredValue(from) {
-      return JSON.parse(await readFile(resolve(directory, from), "utf8"));
-    },
-    async readBuild(id) {
-      if (options.runtime === undefined) {
-        throw new Error(`Run Candidate uses Build ${id}; select a Runtime Profile so it can be resolved`);
-      }
-      return (await options.runtime.status(id)).build?.state;
-    },
+    ...(options.runtime === undefined ? {} : {
+      async readBuild(id: string) {
+        return (await options.runtime!.status(id)).build?.state;
+      },
+    }),
   });
-  return { path, source, document, compilation, run };
+  const compiled = await compiler.compileSource(options.workspace.entry, options.workspace);
+  return { path: options.workspace.entry.id, compiler, ...compiled };
 }

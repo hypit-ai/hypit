@@ -17,6 +17,7 @@
     "@svml/provider-kie": "workspace:*",
     "@svml/provider-media-local": "workspace:*",
     "@svml/provider-whisperx-local": "workspace:*",
+    "@svml/run-text": "workspace:*",
     "@svml/protocol": "workspace:*",
     "@svml/runtime": "workspace:*"
   }

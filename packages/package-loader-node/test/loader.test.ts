@@ -152,7 +152,8 @@ async function fixture(): Promise<{
     };
   `, "utf8");
   const source = join(root, "main.svml");
-  await writeFile(source, `<svml>
+  await writeFile(source, `<?svml using="@svml/text@1"?>
+<svml>
     <import as="example" from="example.card@1"/>
     <example:Card/>
   </svml>`, "utf8");

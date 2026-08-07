@@ -25,12 +25,14 @@ import type {
 export type SourceUnit = {
   readonly name: string;
   readonly text: string;
+  /** Whole unmasked source digest supplied by Source Closure compilation. */
+  readonly sourceDigest?: Digest;
 };
 
 export type TextImportRequest = {
+  readonly kind: "module" | "source";
   readonly from: string;
   readonly alias?: string;
-  readonly using?: string;
   readonly range: SourceRange;
 };
 

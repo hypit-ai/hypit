@@ -26,6 +26,8 @@ the working tree contains only documents that should inform current implementati
   Runtime, recovery and environment replacement.
 - [`build-archive-and-egress-v1.md`](./build-archive-and-egress-v1.md) — Targets, durable Records,
   Artifact retention and optional Host materialization as four separate concerns.
+- [`source-and-run-compilation-v1.md`](./source-and-run-compilation-v1.md) — mandatory Source Header,
+  peer Author/Run graphs, deterministic composition and compilation data gates.
 - package READMEs under [`../packages`](../packages) — executable APIs and ownership.
 
 ## Video-domain specifications
