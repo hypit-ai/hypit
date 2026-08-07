@@ -1,70 +1,72 @@
 ---
 title: Quickstart
-description: Check and compile your first SVML video in minutes.
+description: Set up Narratage and compile your first video graph.
 ---
 
 # Quickstart
 
-Start with a spoken script and compile it into a video page ready for HyperFrames to render.
+The name **Narratage** comes from a 1933 *New York Times* review of the film *The Power and the
+Glory*. The critic coined the word to describe a then-new cinematic technique:
+**Narration + Montage** — a narrator's voice carries the story forward while the screen assembles
+a montage of scenes to match.
+
+That is exactly what this system does. The author writes a narrated Script with semantic anchors,
+and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
+Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml`
+extension; the workspace packages are published under the `@narratage` scope.
 
 ## Install
 
-SVML currently requires Node.js 22 and pnpm.
+Requires Node.js 22+ and pnpm.
 
 ```bash
 pnpm install
-pnpm build
+pnpm check
+pnpm test
 ```
 
-## Start with a real example
+## Three inputs
 
-The Ranking example in this repository uses `@name … @/name` to declare semantic ranges in the spoken script, then lets components consume those ranges. Here is the core excerpt:
+Every Build takes three separate inputs:
 
-```xml
-<svml version="1">
-  <import from="../../stdlib/ranking-column.svk"/>
+| Input | What it owns | Typical file |
+|---|---|---|
+| **Author Source** | script, model choices, track composition, output graph | `.svml` |
+| **Run Source** | which outputs to target, alternate candidates, satisfaction edges | `.svrun` |
+| **Runtime Profile** | endpoints, credentials, concurrency, permissions | `svml.runtime.json` |
 
-  <script>
-    <segment id="ranking">
-      <NARRATOR> @photoshop Photoshop.
-      <SPEAKER> Powerful, but only if you know how to use it.
-                Otherwise it becomes a three-hour project @/photoshop.
-    </segment>
-  </script>
+Author Source says *what*. Run Source says *which*. Runtime Profile says *where*.
 
-  <ranking-column id="ranking" z="42">
-    <item
-      id="photoshop"
-      rank="5"
-      image={ranking-icon-5}
-      during={script.selection.photoshop}
-    />
-  </ranking-column>
-</svml>
-```
+## Your first graph check
 
-There is no hand-written “second 3 to second 7.” The locator resolves the `photoshop` Selection against the spoken script and media into the real time range for this build.
-
-## Check and compile
+The `talking-film-graph-check` example compiles a complete video graph — Script, Seedance, Speech,
+WhisperX, Gemini Caption, B-roll, Text, Film, HyperFrames — without calling any external service.
 
 ```bash
-pnpm svml check examples/regen-ranking/regen-ranking.svml
-pnpm svml lock examples/regen-ranking/regen-ranking.svml --out svml.lock
-pnpm svml compile examples/regen-ranking/regen-ranking.svml \
-  --lock svml.lock \
-  --out build/index.html
+pnpm narratage check examples/talking-film-graph-check/main.svml \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+
+pnpm narratage plan examples/talking-film-graph-check/build.svrun \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
-`check` verifies that the declarations are complete; `lock` freezes the inputs actually used by this build; `compile` produces deterministic HyperFrames HTML.
+`check` produces the typed Author Graph. `plan` binds the Author and Run graphs, resolves Targets
+and outputs the frozen BuildPlan — every Operation and Needs the Scheduler would issue. Inspect it
+before spending money.
 
-## Render
+## Guide contents
 
-```bash
-pnpm svml render build/index.html --out build/video.mp4
-```
+| Guide | Topic |
+|---|---|
+| [Script](./quickstart/script.md) | Segments, Role Cues, Dual Text, Selections, Moments, text projections |
+| [SVS Stylesheets](./quickstart/styles.md) | CSS-like Recipes for film, caption, B-roll, text, speech and fonts |
+| [Media & Generation](./quickstart/generation.md) | media:Image, media:Audio, estimate:Speech, Seedance, speaker:Take |
+| [Timing & Assembly](./quickstart/timing.md) | speech:Spine, whisperx:Alignment, ProgramSpace, SemanticMap |
+| [Caption, B-roll & Text](./quickstart/tracks.md) | caption:Style/Program/Planner/Track, broll:Track, text:Track |
+| [Film & Rendering](./quickstart/composition.md) | film:Film, render:Video, full pipeline walkthrough |
+| [Run Source & Builds](./quickstart/run.md) | .svrun syntax, targets, reuse, runtime profile, build workflow |
 
-::: warning Current status
-The executable example requires its local media and alignment evidence. Automatic loading from online Providers is not implemented yet.
-:::
+## Next
 
-Continue to [Components](/guide/components) to learn how recurring visual treatments can be packaged as SVK components.
+- [Development guide](./guide/develop.md) — repository layout, package architecture, extension
+  patterns.

@@ -1,0 +1,235 @@
+---
+title: Film 与渲染
+description: 将 Track 组合为 Film 并渲染为视频。
+---
+
+# Film 与渲染
+
+Film 是最终的组装阶段。它接收所有对等的 Track，对其进行验证，并生成一个
+Composition。然后渲染器将该 Composition 编译为 MP4 视频。
+
+```svml
+<import as="film" from="@narratage/film@1"/>
+<import as="render" from="@narratage/render-hyperframes@1"/>
+```
+
+## film:Film
+
+将所有 Track 组装为单一的 Composition。Film 本身没有领域知识——它不知道什么是字幕、
+什么是 B-roll、什么是语音。它接收任何 VisualTrack 或 AudioTrack，并按堆叠顺序将它们分层。
+
+```svml
+<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+  <film:Track source={speech.visual}/>
+  <film:Track source={speech.audioTrack}/>
+  <film:Track source={captions.track}/>
+  <film:Track source={product-broll.visual}/>
+  <film:Track source={titles.track}/>
+</film:Film>
+```
+
+| 属性 | 必填 | 说明 |
+|---|---|---|
+| `id` | 是 | 唯一标识符 |
+| `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace——定义时长和帧率 |
+| `appearance` | 是 | SVS Film Recipe——画布宽度、高度、帧率、背景 |
+
+### film:Track
+
+每个 `<film:Track>` 子元素向 Composition 添加一个 Track 来源：
+
+| 属性 | 必填 | 说明 |
+|---|---|---|
+| `source` | 是 | 来自任何上游组件的 VisualTrack 或 AudioTrack |
+
+常见的 Track 来源：
+
+| 来源 | 类型 | 来自 |
+|---|---|---|
+| `{speech.visual}` | VisualTrack | `speech:Spine`——全屏说话人画面 |
+| `{speech.audioTrack}` | AudioTrack | `speech:Spine`——同步音频 |
+| `{captions.track}` | VisualTrack | `caption:Track`——定时字幕 |
+| `{cards.visual}` | VisualTrack | `broll:Track`——B-roll 叠加层 |
+| `{titles.track}` | VisualTrack | `text:Track`——文字叠加层 |
+
+### Track 堆叠
+
+Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 Track 的 SVS Recipe 中的
+`stack-order` 属性决定。较低的值在后面；较高的值渲染在上面。
+
+典型的堆叠顺序：
+
+| stack-order | 内容 |
+|---|---|
+| 10 | 语音画面（全屏说话人画面） |
+| 40 | B-roll 叠加层 |
+| 70 | 字幕 |
+| 90 | 文字叠加层 |
+
+一个组件可以在不同的 z 位置发出多个视觉元素（Presents），这些元素会与其他组件的 Presents
+交错排列。最终渲染会将所有 Presents 展平，按绝对堆叠键排序，然后绘制到一个画布上。
+
+**输出：** `{main.composition}`——完整的 Composition，传递给渲染器。
+
+## render:Video
+
+通过 HyperFrames 渲染器将 Composition 编译为最终视频。
+
+```svml
+<render:Video id="final" composition={main.composition} space={speech.space}/>
+```
+
+| 属性 | 必填 | 说明 |
+|---|---|---|
+| `id` | 是 | 唯一标识符 |
+| `composition` | 是 | 来自 `film:Film` 的 Composition |
+| `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace |
+
+渲染器：
+
+1. 将 Composition 编译为 `HyperframesDocument`——每一帧的 HTML 表示
+2. 通过 Chrome/Chromium 渲染每一帧
+3. 将帧序列编码为视频
+4. 混合音频 Track
+5. 将视频和音频混合封装为最终的 MP4
+
+**输出：** `{final.video}`——最终的视频文件。这是最常见的 Build Target。
+
+## 完整的管线流程
+
+从 Script 到渲染视频的完整数据流。本示例基于
+`examples/talking-film-graph-check/`——最小的完整图。
+
+### Author Source (`main.svml`)
+
+```svml
+<?svml using="@narratage/text@1"?>
+
+<svml>
+  <import from="@narratage/script@1"/>
+  <import as="seedance" from="@narratage/seedance@1"/>
+  <import as="speech" from="@narratage/speech-spine@1"/>
+  <import as="whisperx" from="@narratage/whisperx@1"/>
+  <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="broll" from="@narratage/broll@1"/>
+  <import as="text" from="@narratage/text-track@1"/>
+  <import as="film" from="@narratage/film@1"/>
+  <import as="render" from="@narratage/render-hyperframes@1"/>
+  <import as="studio" source="./studio.svs"/>
+
+  <!-- 1. Script: the semantic truth -->
+  <script id="story">
+    <opening><HOST>Meaning @demo becomes the source @/demo.</opening>
+  </script>
+
+  <!-- 2. Generation: Seedance talking head + standalone video -->
+  <seedance:Prompt id="direction">
+    Locked medium close-up in a quiet daylight studio.
+  </seedance:Prompt>
+  <seedance:Speech id="take" model="mini"
+    dialogue={story.segment.opening.dialogue}
+    prompt={direction} duration="5"/>
+  <seedance:Video id="motion" model="mini"
+    prompt={direction} duration="5"/>
+
+  <!-- 3. Timing: assemble spine and align words -->
+  <speech:Spine id="speech">
+    <speech:Take source={take} segment={story.segment.opening}/>
+  </speech:Spine>
+  <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
+
+  <!-- 4. Tracks: captions, B-roll, text -->
+  <caption:Style id="base-caption" appearance={studio.caption.base}>
+    <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
+    <caption:Field id="important" type="boolean"
+      min-per-cue="0" max-per-cue="2">
+      Select zero, one, or two words whose emphasis best communicates
+      this Cue.
+    </caption:Field>
+  </caption:Style>
+  <caption:Program id="caption-program" narrative={story}
+    default={base-caption}/>
+  <caption-ai:Planner id="cue-plan" narrative={story}
+    program={caption-program} model="gemini-2.5-flash"/>
+  <caption:Track id="captions" narrative={story} map={timing.map}
+    space={speech.space} plan={cue-plan.plan} program={caption-program}/>
+
+  <broll:Track id="cards" map={timing.map} space={speech.space}>
+    <broll:Item source={motion.video} during={story.selection.demo}
+      appearance={studio.broll.card}/>
+  </broll:Track>
+
+  <text:Track id="titles" space={speech.space}>
+    <text:Item text="MEANING" during="full"
+      appearance={studio.text.title}/>
+  </text:Track>
+
+  <!-- 5. Film: compose all tracks -->
+  <film:Film id="main" space={speech.space}
+    appearance={studio.film.vertical}>
+    <film:Track source={speech.visual}/>
+    <film:Track source={speech.audioTrack}/>
+    <film:Track source={cards.visual}/>
+    <film:Track source={captions.track}/>
+    <film:Track source={titles.track}/>
+  </film:Film>
+
+  <!-- 6. Render: compile to MP4 -->
+  <render:Video id="final" composition={main.composition}
+    space={speech.space}/>
+</svml>
+```
+
+### 样式表 (`studio.svs`)
+
+```svs
+<?svml using="@narratage/svs@1"?>
+
+<sheet version="1">
+  film.vertical {
+    width: 1080; height: 1920; frame-rate: 30; background: #09090B;
+  }
+  broll.card {
+    stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5;
+    fit: cover; background: #111116; radius: 20;
+    enter: slide-up 4f; exit: fade 4f;
+  }
+  caption.base {
+    stack-order: 70; x: 0.08; y: 0.76; width: 0.84;
+    font: Inter; weight: 600; size: 58; line-height: 1; align: center;
+    fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;
+  }
+  text.title {
+    stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1;
+    font: Inter; weight: 900; size: 64; align: center;
+    fill: #FFFFFF; tracking: -1;
+  }
+</sheet>
+```
+
+### Run Source (`build.svrun`)
+
+```svml
+<?svml using="@narratage/run-text@1"?>
+
+<svrun version="1" targets="delivery">
+  <author source="./main.svml"/>
+  <target-set id="delivery">
+    <target output="final.video" accepts="exact"/>
+  </target-set>
+</svrun>
+```
+
+### 编译与验证
+
+```bash
+pnpm narratage check examples/talking-film-graph-check/main.svml \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+
+pnpm narratage plan examples/talking-film-graph-check/build.svrun \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+```
+
+`check` 编译 Author Graph——验证所有导入、类型和图的边，而不调用任何外部服务。`plan`
+还会额外编译 Run Source 并输出冻结的 BuildPlan，展示调度器将发出的每个 Operation。在花费资金之前请先检查计划。
