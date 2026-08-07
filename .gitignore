@@ -1,5 +1,7 @@
 node_modules/
 dist/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 .svml-cache/
 examples/**/assets/
 examples/**/build/
