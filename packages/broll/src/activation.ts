@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 import {
   brollComponent, brollManifest, brollModuleRef, brollSurfaceImplementationDigest,
   decodeBrollTrackSurface,
@@ -6,8 +6,8 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/broll",
-  modules: [{ manifest: brollManifest, specifiers: ["@svml/broll", "@svml/broll@1"] }],
+  name: "@narratage/broll",
+  modules: [{ manifest: brollManifest, specifiers: ["@narratage/broll", "@narratage/broll@1"] }],
   components: [brollComponent],
   hostFacets: [createTextSurfaceHostFacet({
     module: brollModuleRef, surface: "track", mode: "structured",

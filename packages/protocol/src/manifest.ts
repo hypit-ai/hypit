@@ -270,9 +270,9 @@ function surface(value: unknown, path: string): SurfaceDeclaration {
 
 export function parseModuleManifest(value: unknown): ModuleManifest {
   const parsed = object(canonicalize(value), "$manifest");
-  if (parsed.format !== "svml.module@0") throw new Error("$manifest.format must be svml.module@0");
+  if (parsed.format !== "svml.module@1") throw new Error("$manifest.format must be svml.module@1");
   return {
-    format: "svml.module@0",
+    format: "svml.module@1",
     name: string(parsed.name, "$manifest.name"),
     version: string(parsed.version, "$manifest.version"),
     dependencies: array(parsed.dependencies, "$manifest.dependencies").map((item, index) =>

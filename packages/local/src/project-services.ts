@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 
-import { createFileArtifactStorePackage } from "@svml/artifact-store-fs";
-import { createEnvironmentCredentialStorePackage } from "@svml/credential-store-env";
+import { createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
+import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
 import {
   assembleRuntimeServices,
   verifyRuntimeServicePackage,
-} from "@svml/runtime";
+} from "@narratage/runtime";
 import type {
   ArtifactStore,
   BuildCatalog,
@@ -15,8 +15,8 @@ import type {
   RuntimeServiceAssembly,
   RuntimeServiceFacetRole,
   RuntimeServicePackage,
-} from "@svml/runtime";
-import { createSqliteRuntimeServicePackage, SqliteRuntimeState } from "@svml/store-sqlite";
+} from "@narratage/runtime";
+import { createSqliteRuntimeServicePackage, SqliteRuntimeState } from "@narratage/store-sqlite";
 
 import { createLocalSchedulerPackage } from "./scheduler-package.js";
 import type { ProjectLocalRuntimeOptions } from "./types.js";

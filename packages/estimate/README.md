@@ -1,4 +1,4 @@
-# `@svml/estimate`
+# `@narratage/estimate`
 
 Provider-free deterministic speech-duration planning.
 

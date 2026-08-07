@@ -1,5 +1,5 @@
-import { reduce } from "@svml/core";
-import type { BuildState } from "@svml/protocol";
+import { reduce } from "@narratage/core";
+import type { BuildState } from "@narratage/protocol";
 import { verifyRuntimeClosure, verifyRuntimeCoverage } from "./profile.js";
 import type { RuntimeClosure } from "./profile.js";
 

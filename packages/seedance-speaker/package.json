@@ -1,5 +1,5 @@
 {
-  "name": "@svml/seedance-speaker",
+  "name": "@narratage/seedance-speaker",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -10,15 +10,16 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@svml/artifact": "workspace:*",
-    "@svml/contracts": "workspace:*",
-    "@svml/elaborator": "workspace:*",
-    "@svml/generation": "workspace:*",
-    "@svml/model-kit": "workspace:*",
-    "@svml/prompt-kit": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/seedance": "workspace:*",
-    "@svml/svs": "workspace:*",
-    "@svml/text": "workspace:*"
+    "@narratage/artifact": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/generation": "workspace:*",
+    "@narratage/model-kit": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/prompt-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/seedance": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/svs": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

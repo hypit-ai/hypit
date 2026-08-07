@@ -1,9 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-
-import { FileArtifactStore } from "@svml/artifact-store-fs";
-import { registerTypeValidatorFacets } from "@svml/component-kit";
+import { FileArtifactStore } from "@narratage/artifact-store-fs";
+import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   createResolvedClosure,
   digestOf,
@@ -13,68 +12,69 @@ import {
   sealRecord,
   sealTypedModule,
   start,
-} from "@svml/core";
-import { mediaManifest, narrativeManifest } from "@svml/contracts";
+} from "@narratage/core";
+import { narrativeManifest } from "@narratage/narrative";
+import { mediaManifest } from "@narratage/media";
 import {
   geminiOmniComponent,
   geminiOmniEndpoints,
   geminiOmniManifest,
   sealGeminiOmniRequest,
-} from "@svml/gemini-omni";
+} from "@narratage/gemini-omni";
 import {
   generationComponent,
   generationManifest,
   verifyGeneratedImageSet,
   verifyGeneratedVideoSet,
-} from "@svml/generation";
+} from "@narratage/generation";
 import {
   gptImageComponent,
   gptImageEndpoints,
   gptImageManifest,
   sealGptImage2Request,
-} from "@svml/gpt-image";
+} from "@narratage/gpt-image";
 import {
   grokImagineComponent,
   grokImagineEndpoints,
   grokImagineManifest,
   sealGrokImagineRequest,
-} from "@svml/grok-imagine";
-import { createProjectLocalRuntime } from "@svml/local";
+} from "@narratage/grok-imagine";
+import { createProjectLocalRuntime } from "@narratage/local";
 import {
   minimaxH3Component,
   minimaxH3Endpoints,
   minimaxH3Manifest,
   sealMinimaxH3Request,
-} from "@svml/minimax-h3";
-import type { ExactModelEndpoint, ExactModelModule } from "@svml/model-kit";
+} from "@narratage/minimax-h3";
+import type { ExactModelEndpoint, ExactModelModule } from "@narratage/model-kit";
 import {
   nanoBananaComponent,
   nanoBananaEndpoints,
   nanoBananaManifest,
   sealNanoBananaRequest,
-} from "@svml/nano-banana";
-import { createKieProvider } from "@svml/provider-kie";
+} from "@narratage/nano-banana";
+import { createKieProvider } from "@narratage/provider-kie";
 import type {
   BlobRef,
   CanonicalValue,
   ModuleManifest,
   TypedRecord,
-} from "@svml/protocol";
-import { credentialRef } from "@svml/runtime";
-import type { ScheduledBuildResult } from "@svml/runtime";
+} from "@narratage/protocol";
+import { credentialRef } from "@narratage/runtime";
+import type { ScheduledBuildResult } from "@narratage/runtime";
 import {
   sealSeedanceRequest,
   seedanceComponent,
   seedanceEndpoints,
   seedanceManifest,
-} from "@svml/seedance";
+} from "@narratage/seedance";
 import {
   sealSeedreamRequest,
   seedreamComponent,
   seedreamEndpoints,
   seedreamManifest,
-} from "@svml/seedream";
-import { admitRecord, TypeValidatorRegistry } from "@svml/validation";
+} from "@narratage/seedream";
+import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
 
 type SmokeCase = {
   readonly key: string;
@@ -160,7 +160,7 @@ function caseIds(key: string, media: "image" | "video"): SmokeCase["ids"] {
     // Preserve the identity of the first live Build so rerunning the suite resumes/reuses it.
     return {
       request: "request:gpt-image-2-live",
-      source: "@svml/provider-kie/live-smoke/gpt-image-2@1",
+      source: "@narratage/provider-kie/live-smoke/gpt-image-2@1",
       output: "result:image",
       candidate: "candidate:gpt-image-2",
       operation: "operation:gpt-image-2",
@@ -170,7 +170,7 @@ function caseIds(key: string, media: "image" | "video"): SmokeCase["ids"] {
   }
   return {
     request: `request:${key}-live`,
-    source: `@svml/provider-kie/live-smoke/${key}@1`,
+    source: `@narratage/provider-kie/live-smoke/${key}@1`,
     output: `result:${key}`,
     candidate: `candidate:${key}`,
     operation: `operation:${key}`,
@@ -352,7 +352,7 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
     origin: {
       kind: "authored",
       sourceDigest: digestOf(item.ids.source),
-      frontendClosureDigest: digestOf("@svml/provider-kie/live-smoke/frontend@1"),
+      frontendClosureDigest: digestOf("@narratage/provider-kie/live-smoke/frontend@1"),
       sourceName: "provider-kie/live-smoke",
     },
   });

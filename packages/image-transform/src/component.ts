@@ -1,6 +1,6 @@
-import type { ComponentPackage } from "@svml/component-kit";
-import type { BlobRef, StoredValue } from "@svml/protocol";
-import { canonicalize } from "@svml/protocol";
+import type { ComponentPackage } from "@narratage/component-kit";
+import type { BlobRef, StoredValue } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
 
 import {
   imageTransformImplementationDigests,
@@ -22,7 +22,7 @@ function blob(value: StoredValue | undefined, subject: string): BlobRef {
 }
 
 export const imageTransformComponent = {
-  name: "@svml/image-transform",
+  name: "@narratage/image-transform",
   validators: [{
     type: imageTransformTypes.program,
     implementationDigest: imageTransformImplementationDigests.validator,

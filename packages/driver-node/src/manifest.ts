@@ -1,13 +1,13 @@
 import { readFile } from "node:fs/promises";
 
-import { createResolvedClosure } from "@svml/core";
+import { createResolvedClosure } from "@narratage/core";
 import {
   parseModuleManifest,
   parseModuleManifestText,
-} from "@svml/protocol";
-import type { ModuleManifest, ResolvedModuleClosure } from "@svml/protocol";
+} from "@narratage/protocol";
+import type { ModuleManifest, ResolvedModuleClosure } from "@narratage/protocol";
 
-export { parseModuleManifest, parseModuleManifestText } from "@svml/protocol";
+export { parseModuleManifest, parseModuleManifestText } from "@narratage/protocol";
 
 export async function loadModuleManifest(path: string): Promise<ModuleManifest> {
   return parseModuleManifestText(await readFile(path, "utf8"));

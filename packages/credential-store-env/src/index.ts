@@ -1,20 +1,20 @@
-import { digestOf } from "@svml/protocol";
-import { defineRuntimeServicePackage } from "@svml/runtime";
+import { digestOf } from "@narratage/protocol";
+import { defineRuntimeServicePackage } from "@narratage/runtime";
 import type {
   CredentialRef,
   CredentialStore,
   CredentialValue,
   RuntimeServicePackage,
-} from "@svml/runtime";
-import { verifyCredentialRef } from "@svml/runtime";
+} from "@narratage/runtime";
+import { verifyCredentialRef } from "@narratage/runtime";
 
 export const environmentCredentialStoreModuleRef = {
-  name: "@svml/credential-store-env",
+  name: "@narratage/credential-store-env",
   version: "1",
 } as const;
 
 export const environmentCredentialStoreImplementationDigest = digestOf(
-  "@svml/credential-store-env/credential-store@1",
+  "@narratage/credential-store-env/credential-store@1",
 );
 
 export type CreateEnvironmentCredentialStorePackageOptions = {
@@ -51,7 +51,7 @@ export function createEnvironmentCredentialStorePackage(
       facet: "credential-store",
       instance,
       implementation: {
-        locator: "@svml/credential-store-env",
+        locator: "@narratage/credential-store-env",
         digest: environmentCredentialStoreImplementationDigest,
       },
       permissions: ["environment:credentials"],

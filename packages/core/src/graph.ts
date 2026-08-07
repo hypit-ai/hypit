@@ -13,7 +13,7 @@ import type {
   Satisfaction,
   StoredValue,
   TypeRef,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { canonicalize, digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";
@@ -21,7 +21,7 @@ import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
 import { producerKey, sameType, typeKey } from "./reference.js";
 
 export const EMPTY_REALIZATION_DIGEST = digestOf({
-  format: "svml.realization-closure@2",
+  format: "svml.realization-closure@1",
   overlays: [],
 });
 
@@ -109,10 +109,10 @@ export function sealCompiledGraph(
     candidates: [...graph.candidates].map(normalizeCandidate).sort((a, b) => a.id.localeCompare(b.id)),
     operations: [...graph.operations].map(normalizeOperation).sort((a, b) => a.id.localeCompare(b.id)),
   };
-  const source = graph.source ?? digestOf({ format: "svml.graph-source@2", ...normalized });
+  const source = graph.source ?? digestOf({ format: "svml.graph-source@1", ...normalized });
   const realization = graph.realization ?? EMPTY_REALIZATION_DIGEST;
   const content = {
-    format: "svml.graph@2" as const,
+    format: "svml.graph@1" as const,
     ...normalized,
     source,
     realization,
@@ -134,7 +134,7 @@ export function sealBuildRequest(
     }))
     .sort((a, b) => a.output.localeCompare(b.output));
   const content = {
-    format: "svml.build-request@2" as const,
+    format: "svml.build-request@1" as const,
     graph: request.graph,
     ...(request.implementationClosure === undefined
       ? {}
@@ -358,7 +358,7 @@ function verifySatisfaction(
 }
 
 export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph): void {
-  invariant(graph.format === "svml.graph@2", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
+  invariant(graph.format === "svml.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
   invariant(isDigest(graph.id), "INVALID_DIGEST", "compiled graph id is invalid");
   invariant(isDigest(graph.source), "INVALID_DIGEST", "compiled graph source digest is invalid");
   invariant(isDigest(graph.realization), "INVALID_DIGEST", "compiled graph realization digest is invalid");
@@ -372,7 +372,7 @@ export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph
   if (graph.realization === EMPTY_REALIZATION_DIGEST) {
     invariant(
       graph.source === digestOf({
-        format: "svml.graph-source@2",
+        format: "svml.graph-source@1",
         program: graph.program,
         outputs: graph.outputs,
         candidates: graph.candidates,
@@ -439,7 +439,7 @@ export function verifyBuildRequest(
 ): void {
   verifyCompiledGraph(program, graph);
   invariant(
-    request.format === "svml.build-request@2",
+    request.format === "svml.build-request@1",
     "UNSUPPORTED_BUILD_REQUEST",
     "unsupported BuildRequest format",
   );

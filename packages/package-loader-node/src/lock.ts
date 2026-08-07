@@ -17,7 +17,7 @@ import {
 } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { digestOf, isDigest } from "@svml/protocol";
+import { digestOf, isDigest } from "@narratage/protocol";
 
 import { collectNodePackageComponents } from "./contribution.js";
 import type {

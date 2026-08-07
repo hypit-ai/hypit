@@ -1,8 +1,4 @@
-import type {
-  CaptionRegion,
-  Narrative,
-  NarrativeSelectionRef,
-} from "@svml/contracts";
+import type { CaptionRegion, Narrative, NarrativeSelectionRef } from "@narratage/narrative";
 
 import type { CaptionDisplayAtom } from "./types.js";
 

@@ -16,45 +16,45 @@ import {
   NodeCompiler,
   NodeCompilerError,
   NodeRunCompiler,
-} from "@svml/compiler-node";
+} from "@narratage/compiler-node";
 import {
   computeModuleDigest,
   digestOf,
-} from "@svml/core";
+} from "@narratage/core";
 import {
   AuthorFrontendRegistry,
   sealGraphFragment,
   verifySourceClosure,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   AuthorSourceAssetRequest,
   AuthorSourceImport,
   AuthorSourceUnit,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   BlobRef,
   ModuleManifest,
   ModuleRef,
   ProducerRef,
   TypeRef,
-} from "@svml/protocol";
-import { SourceHeaderError } from "@svml/source";
+} from "@narratage/protocol";
+import { SourceHeaderError } from "@narratage/source";
 import {
   RunFragmentRegistry,
   RunFrontendRegistry,
-} from "@svml/run";
-import { runTextFrontend } from "@svml/run-text";
-import type { Workspace } from "@svml/host";
-import { WorkspaceError } from "@svml/host";
+} from "@narratage/run";
+import { runTextFrontend } from "@narratage/run-text";
+import type { Workspace } from "@narratage/host";
+import { WorkspaceError } from "@narratage/host";
 import {
   createTextAuthorFrontend,
   TextSurfaceRegistry,
-} from "@svml/text";
-import { NodeFilesystemWorkspace } from "@svml/workspace-fs-node";
+} from "@narratage/text";
+import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 
 function emptyManifest(name: string, version = "1"): ModuleManifest {
   return {
-    format: "svml.module@0",
+    format: "svml.module@1",
     name,
     version,
     dependencies: [],
@@ -116,7 +116,7 @@ const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
 const surfaceDigest = digestOf("example.compiler-lab/surface@1");
 const laboratoryManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],
@@ -316,7 +316,7 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
 test("Node Compiler discovers real imports and emits a named public Author Graph export", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-compiler-node-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
@@ -330,7 +330,7 @@ test("Node Compiler discovers real imports and emits a named public Author Graph
 
 test("Author Frontend identity comes only from the mandatory Source Header, never the suffix", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-self-described-source-"));
-  const text = `<?svml using="@svml/text@1"?>
+  const text = `<?svml using="@narratage/text@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
@@ -356,12 +356,12 @@ test("Run-only Fragment modules extend the execution closure without polluting t
   const root = await mkdtemp(join(tmpdir(), "svml-dual-graph-closure-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
-  await writeFile(authorFile, `<?svml using="@svml/text@1"?>
+  await writeFile(authorFile, `<?svml using="@narratage/text@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
-  await writeFile(runFile, `<?svml using="@svml/run-text@1"?>
+  await writeFile(runFile, `<?svml using="@narratage/run-text@1"?>
   <svrun version="1" targets="preview">
     <author source="./main.svml"/>
     <import from="@example/preview" as="preview"/>
@@ -396,7 +396,7 @@ test("source assets are content addressed, closure-bound and returned as a Host 
   const root = await mkdtemp(join(tmpdir(), "svml-source-assets-"));
   const file = join(root, "main.svml");
   const asset = join(root, "reference.bin");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>
@@ -481,7 +481,7 @@ test("filesystem Workspace contains symlinks and reads each canonical source onl
 test("filesystem and in-memory Workspaces compile identical source and bytes to one semantic result", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-workspace-equivalence-"));
   const file = join(root, "main.svml");
-  const source = `<?svml using="@svml/text@1"?>
+  const source = `<?svml using="@narratage/text@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>

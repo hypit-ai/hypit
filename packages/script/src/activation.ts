@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 
 import {
   decodeScriptSurface,
@@ -9,8 +9,8 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/script",
-  modules: [{ manifest: scriptManifest, specifiers: ["@svml/script", "@svml/script@1"] }],
+  name: "@narratage/script",
+  modules: [{ manifest: scriptManifest, specifiers: ["@narratage/script", "@narratage/script@1"] }],
   hostFacets: [createTextSurfaceHostFacet({
     module: scriptModuleRef,
     surface: "script",

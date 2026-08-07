@@ -1,26 +1,29 @@
-import { artifactTypes } from "@svml/artifact";
-import { contractTypes } from "@svml/contracts";
-import type { CanonicalValue, StoredValue } from "@svml/protocol";
+import { narrativeTypes } from "@narratage/narrative";
+import type { NarrativeDialogueExcerpt } from "@narratage/narrative";
+import { speechTypes } from "@narratage/speech";
+import type { SpeechDuration } from "@narratage/speech";
+import { artifactTypes } from "@narratage/artifact";
+import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import {
   compilePromptKit,
   promptKitTypes,
   verifyPromptKitSpec,
-} from "@svml/prompt-kit";
-import type { PromptKitSpec } from "@svml/prompt-kit";
+} from "@narratage/prompt-kit";
+import type { PromptKitSpec } from "@narratage/prompt-kit";
 import {
   seedanceEndpointsByModel,
   seedanceSpeechCompileProducers,
   seedanceTypes,
-} from "@svml/seedance";
-import type { SeedanceModel } from "@svml/seedance";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
+} from "@narratage/seedance";
+import type { SeedanceModel } from "@narratage/seedance";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { createSeedanceSpeakerTakeFragment } from "./fragment.js";
 import {
@@ -123,7 +126,7 @@ function dialogueValue(
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ) {
   const reference = resolved(element, "dialogue", resolveReference);
-  if (!sameType(reference.type, contractTypes.narrativeDialogueExcerpt)) {
+  if (!sameType(reference.type, narrativeTypes.dialogueExcerpt)) {
     throw new Error(`${element.name}.dialogue must reference a NarrativeDialogueExcerpt`);
   }
   const value = inline<{
@@ -252,7 +255,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   const prompt = compilePromptKit(kit, bindSpeakerPromptKit(intent));
   const program = renderSpeakerSpeechProgram(prompt, intent);
   const duration = resolved(element, "duration", resolveReference);
-  if (!sameType(duration.type, contractTypes.speechDuration)) {
+  if (!sameType(duration.type, speechTypes.duration)) {
     throw new Error(`${element.name}.duration must reference a SpeechDuration`);
   }
   const promptId = `${id}.prompt`;
@@ -269,7 +272,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
       range: element.range,
     }, {
       id: programId,
-      type: seedanceTypes.speechProgram,
+      type: seedanceTypes.speechSpine,
       value: { kind: "inline", value: program as unknown as CanonicalValue },
       range: element.range,
     }],

@@ -2,20 +2,20 @@ import {
   elaborateGraphFragment,
   exportRunFragment,
   resolveCompiledSourceExport,
-} from "@svml/elaborator";
-import { canonicalStringify } from "@svml/protocol";
+} from "@narratage/elaborator";
+import { canonicalStringify } from "@narratage/protocol";
 import type {
   Candidate,
   GraphValueRef,
   ModuleRef,
   OperationNode,
   StoredValue,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   createBuildRecordCandidate,
   createProvidedCandidate,
   sealRealizationOverlay,
-} from "@svml/realization";
+} from "./realization.js";
 
 import { sealRunGraph } from "./graph.js";
 

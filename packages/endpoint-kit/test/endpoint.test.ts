@@ -4,16 +4,16 @@ import test from "node:test";
 import {
   defineEndpointPackage,
   wakeAfter,
-} from "@svml/endpoint-kit";
+} from "@narratage/endpoint-kit";
 import type {
   EndpointRegistrar,
   EndpointRegistrationOptions,
   ImmediateEndpointHandler,
   RecoverableEndpoint,
-} from "@svml/endpoint-kit";
-import type { CapabilityRef, TypeRef } from "@svml/protocol";
-import { digestOf } from "@svml/protocol";
-import { credentialRef } from "@svml/runtime";
+} from "@narratage/endpoint-kit";
+import type { CapabilityRef, TypeRef } from "@narratage/protocol";
+import { digestOf } from "@narratage/protocol";
+import { credentialRef } from "@narratage/runtime";
 
 import { capabilities, types } from "../../core/test/greeting-fixture.js";
 

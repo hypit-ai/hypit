@@ -4,24 +4,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { artifactTypes } from "@svml/artifact";
-import { defineEndpointPackage } from "@svml/endpoint-kit";
-import type { EndpointFulfillment } from "@svml/endpoint-kit";
+import { artifactTypes } from "@narratage/artifact";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
+import type { EndpointFulfillment } from "@narratage/endpoint-kit";
 import {
   imageTransformCapabilities,
   verifyImageTransformProgram,
-} from "@svml/image-transform";
-import type { ImageTransformRequest } from "@svml/image-transform";
-import type { ImageEncodeOperation } from "@svml/image-transform";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { CanonicalValue } from "@svml/protocol";
+} from "@narratage/image-transform";
+import type { ImageTransformRequest } from "@narratage/image-transform";
+import type { ImageEncodeOperation } from "@narratage/image-transform";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 
 export const localOpenCvImageProviderModuleRef = {
-  name: "@svml/provider-image-opencv-local",
+  name: "@narratage/provider-image-opencv-local",
   version: "0.0.0-dev",
 } as const;
 export const localOpenCvImageProviderImplementationDigest = digestOf(
-  "@svml/provider-image-opencv-local/opencv@1",
+  "@narratage/provider-image-opencv-local/opencv@1",
 );
 
 export type CreateLocalOpenCvImageProviderOptions = {
@@ -112,7 +112,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     instance: config.instance ?? "image.opencv.local",
     ...(config.lane === undefined ? {} : { lane: config.lane }),
     implementation: {
-      locator: "@svml/provider-image-opencv-local/opencv",
+      locator: "@narratage/provider-image-opencv-local/opencv",
       digest: localOpenCvImageProviderImplementationDigest,
     },
     permissions: ["process:image"],

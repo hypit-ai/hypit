@@ -1,8 +1,8 @@
-import { artifactTypes } from "@svml/artifact";
+import { artifactTypes } from "@narratage/artifact";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
-} from "@svml/text";
+} from "@narratage/text";
 
 const IMAGE_MEDIA_TYPES = new Map([
   [".avif", "image/avif"],

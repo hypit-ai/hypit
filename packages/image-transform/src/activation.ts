@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@svml/text";
+import { createTextSurfaceHostFacet } from "@narratage/text";
 
 import {
   decodeImageTransformProgramSurface,
@@ -11,10 +11,10 @@ import {
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/image-transform",
+  name: "@narratage/image-transform",
   modules: [{
     manifest: imageTransformManifest,
-    specifiers: ["@svml/image-transform", "@svml/image-transform@1"],
+    specifiers: ["@narratage/image-transform", "@narratage/image-transform@1"],
   }],
   components: [imageTransformComponent],
   hostFacets: [{

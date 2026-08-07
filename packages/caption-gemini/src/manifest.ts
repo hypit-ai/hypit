@@ -1,9 +1,9 @@
-import { captionManifest, captionModuleRef, captionTypes } from "@svml/caption";
-import { contractTypes, videoContractDependencies } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@svml/protocol";
+import { captionManifest, captionModuleRef, captionTypes } from "@narratage/caption";
+import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
+import { digestOf } from "@narratage/protocol";
+import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
-export const captionGeminiModuleRef = { name: "@svml/caption-gemini", version: "0.0.0-dev" } as const;
+export const captionGeminiModuleRef = { name: "@narratage/caption-gemini", version: "0.0.0-dev" } as const;
 export const captionGeminiTypes = {
   program: { module: captionGeminiModuleRef, name: "CaptionGeminiProgram" },
   request: { module: captionGeminiModuleRef, name: "CaptionGeminiRequest" },
@@ -16,11 +16,11 @@ export const captionGeminiProducers = {
   request: { module: captionGeminiModuleRef, name: "request-caption-gemini-plan" },
 } satisfies Record<string, ProducerRef>;
 export const captionGeminiImplementationDigests = {
-  compile: digestOf("@svml/caption-gemini/compile-request@2"),
-  request: digestOf("@svml/caption-gemini/request-plan@2"),
-  programValidator: digestOf("@svml/caption-gemini/validate-program@2"),
-  requestValidator: digestOf("@svml/caption-gemini/validate-request@2"),
-  plannerSurface: digestOf("@svml/caption-gemini/planner-surface@2"),
+  compile: digestOf("@narratage/caption-gemini/compile-request@2"),
+  request: digestOf("@narratage/caption-gemini/request-plan@2"),
+  programValidator: digestOf("@narratage/caption-gemini/validate-program@2"),
+  requestValidator: digestOf("@narratage/caption-gemini/validate-request@2"),
+  plannerSurface: digestOf("@narratage/caption-gemini/planner-surface@2"),
 } as const;
 
 const string = { kind: "string", minLength: 1 } as const satisfies ValueSchema;
@@ -72,17 +72,17 @@ function ownedType(name: string, schema: ValueSchema, digestValue: ReturnType<ty
     schema,
     validator: {
       abi: "svml.type-validator@1" as const,
-      implementation: { kind: "registered" as const, locator: `@svml/caption-gemini/validate-${name}`, digest: digestValue },
+      implementation: { kind: "registered" as const, locator: `@narratage/caption-gemini/validate-${name}`, digest: digestValue },
     },
   };
 }
 
 export const captionGeminiManifest: ModuleManifest = {
-  format: "svml.module@0",
+  format: "svml.module@1",
   name: captionGeminiModuleRef.name,
   version: captionGeminiModuleRef.version,
   dependencies: [
-    videoContractDependencies.narrative,
+    narrativeDependency,
     { module: captionModuleRef, digest: digestOf(captionManifest) },
   ],
   types: [
@@ -97,7 +97,7 @@ export const captionGeminiManifest: ModuleManifest = {
     outputs: [captionGeminiTypes.program, captionTypes.plan],
     implementation: {
       kind: "trusted-frontend-surface",
-      locator: "@svml/caption-gemini/planner-surface",
+      locator: "@narratage/caption-gemini/planner-surface",
       digest: captionGeminiImplementationDigests.plannerSurface,
     },
   }],
@@ -105,14 +105,14 @@ export const captionGeminiManifest: ModuleManifest = {
     {
       name: captionGeminiProducers.compile.name,
       inputs: [
-        { name: "narrative", type: contractTypes.narrative },
+        { name: "narrative", type: narrativeTypes.narrative },
         { name: "captionProgram", type: captionTypes.program },
         { name: "program", type: captionGeminiTypes.program },
       ],
       outputs: [{ name: "request", type: captionGeminiTypes.request }],
       needs: [],
       implementation: {
-        kind: "registered", locator: "@svml/caption-gemini/compile-request", digest: captionGeminiImplementationDigests.compile,
+        kind: "registered", locator: "@narratage/caption-gemini/compile-request", digest: captionGeminiImplementationDigests.compile,
       },
     },
     {
@@ -121,7 +121,7 @@ export const captionGeminiManifest: ModuleManifest = {
       outputs: [],
       needs: [{ name: "plan", capability: captionGeminiCapabilities.plan, returns: captionTypes.plan }],
       implementation: {
-        kind: "registered", locator: "@svml/caption-gemini/request-plan", digest: captionGeminiImplementationDigests.request,
+        kind: "registered", locator: "@narratage/caption-gemini/request-plan", digest: captionGeminiImplementationDigests.request,
       },
     },
   ],

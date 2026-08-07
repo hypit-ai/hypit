@@ -1,13 +1,3 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-
-import {
-  HYPERFRAMES_VISUAL_IR_V1,
-  sealAudioTrack,
-  sealComposition,
-  sealProgramSpace,
-  sealVisualTrack,
-} from "@svml/contracts";
 import {
   assertHyperframesDocument,
   assertHyperframesFrameIndex,
@@ -15,13 +5,20 @@ import {
   compileHyperframesDocument,
   hyperframesTime,
   materializeHyperframesHtml,
-} from "@svml/hyperframes";
-import { digestOf } from "@svml/protocol";
-import type { FontArtifactRef } from "@svml/contracts";
+} from "@narratage/hyperframes";
+import { digestOf } from "@narratage/protocol";
+import type { FontArtifactRef } from "@narratage/media";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealAudioTrack, sealComposition, sealVisualTrack } from "@narratage/composition";
+import type { Track } from "@narratage/composition";
+import { VISUAL_IR_V1 } from "@narratage/visual-ir";
+import assert from "node:assert/strict";
+import test from "node:test";
+
 
 function fixture() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1001 / 1000,
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });
@@ -39,7 +36,7 @@ function fixture() {
   };
   const lower = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "lower",
     presents: [{
       id: "picture",
@@ -56,7 +53,7 @@ function fixture() {
   });
   const upper = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "upper",
     presents: [{
       id: "words",
@@ -86,7 +83,7 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   const { composition, picture, sound, programSpace } = fixture();
   const document = compileHyperframesDocument(composition, programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.equal(document.visualIr, HYPERFRAMES_VISUAL_IR_V1);
+  assert.equal(document.visualIr, VISUAL_IR_V1);
   assert.deepEqual(document.artifacts, [{
     kind: "blob",
     digest: picture.digest,
@@ -187,7 +184,7 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {
   const space = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -205,7 +202,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   const surfaceDigest = digestOf("hyperframes:alpha-surface");
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
-    visualIr: "svml.hyperframes-visual-ir@1",
+    visualIr: "svml.visual-ir@1",
     id: "bound-render-dependencies",
     presents: [{
       id: "bound",

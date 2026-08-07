@@ -6,14 +6,14 @@ import type {
   AuthorSourceAssetRequest,
   AuthorSourceImport,
   AuthorSourceUnit,
-} from "@svml/elaborator";
+} from "@narratage/elaborator";
 import type {
   ArtifactAttachment,
   Workspace,
   WorkspaceSession,
-} from "@svml/host";
-import { WorkspaceError } from "@svml/host";
-import type { BlobRef } from "@svml/protocol";
+} from "@narratage/host";
+import { WorkspaceError } from "@narratage/host";
+import type { BlobRef } from "@narratage/protocol";
 
 function isWithin(root: string, path: string): boolean {
   const relation = relative(root, path);

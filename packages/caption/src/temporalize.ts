@@ -1,4 +1,5 @@
-import type { CompleteSemanticMap, Narrative, TimingQuality } from "@svml/contracts";
+import type { Narrative } from "@narratage/narrative";
+import type { CompleteSemanticMap, TimingQuality } from "@narratage/semantic-map";
 
 import { CaptionProjectionError } from "./error.js";
 import type {

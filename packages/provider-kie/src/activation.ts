@@ -1,17 +1,17 @@
-import { credentialRef } from "@svml/runtime";
+import { credentialRef } from "@narratage/runtime";
 import {
   createRuntimeEndpointAdapterFacet,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
-} from "@svml/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@svml/runtime-adapter-node";
+} from "@narratage/runtime-adapter";
+import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 
 import { createKieProvider } from "./provider.js";
 
 const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
-  use: "@svml/provider-kie",
+  use: "@narratage/provider-kie",
   create(context) {
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
@@ -50,7 +50,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
 
 export const svmlPackage = {
   format: "svml.node-package@1" as const,
-  name: "@svml/provider-kie",
+  name: "@narratage/provider-kie",
   hostFacets: [kieRuntimeAdapter],
 };
 

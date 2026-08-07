@@ -3,27 +3,27 @@ import type {
   EndpointResumeContext,
   EndpointStartContext,
   EndpointOutcome,
-} from "@svml/endpoint-kit";
+} from "@narratage/endpoint-kit";
 import {
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
-} from "@svml/generation";
+} from "@narratage/generation";
 import {
   canonicalize,
   digestOf,
   isDigest,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import type {
   BlobRef,
   CanonicalValue,
   Digest,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 import {
   defineEndpointPackage,
   wakeAfter,
-} from "@svml/endpoint-kit";
-import { credentialRef } from "@svml/runtime";
-import type { ArtifactStore, CredentialRef } from "@svml/runtime";
+} from "@narratage/endpoint-kit";
+import { credentialRef } from "@narratage/runtime";
+import type { ArtifactStore, CredentialRef } from "@narratage/runtime";
 
 import {
   kieAdapterForCapability,
@@ -36,8 +36,8 @@ import type {
   KieTask,
 } from "./catalog.js";
 
-export const kieProviderModuleRef = { name: "@svml/provider-kie", version: "0.0.0-dev" } as const;
-export const kieProviderImplementationDigest = digestOf("@svml/provider-kie/market-endpoint@1");
+export const kieProviderModuleRef = { name: "@narratage/provider-kie", version: "0.0.0-dev" } as const;
+export const kieProviderImplementationDigest = digestOf("@narratage/provider-kie/market-endpoint@1");
 
 type Fetch = typeof globalThis.fetch;
 
@@ -561,7 +561,7 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
     throw new Error("fetchImplementationDigest is invalid");
   }
   const fetchImplementationDigest = config.fetchImplementationDigest
-    ?? digestOf("@svml/provider-kie/node-global-fetch@1");
+    ?? digestOf("@narratage/provider-kie/node-global-fetch@1");
   const now = config.now ?? Date.now;
   const client = new KieClient({
     apiBaseUrl,
@@ -583,7 +583,7 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
     instance: config.instance ?? "kie.default",
     ...(config.lane === undefined ? {} : { lane: config.lane }),
     implementation: {
-      locator: "@svml/provider-kie/market",
+      locator: "@narratage/provider-kie/market",
       digest: kieProviderImplementationDigest,
     },
     permissions: [...new Set([

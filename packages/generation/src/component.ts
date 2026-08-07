@@ -1,4 +1,4 @@
-import type { ComponentPackage } from "@svml/component-kit";
+import type { ComponentPackage } from "@narratage/component-kit";
 
 import {
   verifyGeneratedImageSet,
@@ -19,10 +19,10 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
 function primary(
   value: { readonly kind: string; readonly value?: unknown },
   kind: "image" | "video",
-): import("@svml/protocol").BlobRef {
+): import("@narratage/protocol").BlobRef {
   const content = inline(value, `Generated${kind === "image" ? "Image" : "Video"}Set`) as {
-    readonly images?: readonly import("@svml/protocol").BlobRef[];
-    readonly videos?: readonly import("@svml/protocol").BlobRef[];
+    readonly images?: readonly import("@narratage/protocol").BlobRef[];
+    readonly videos?: readonly import("@narratage/protocol").BlobRef[];
   };
   const selected = kind === "image" ? content.images?.[0] : content.videos?.[0];
   if (selected === undefined) throw new Error(`Generated ${kind} set has no primary artifact`);
@@ -31,7 +31,7 @@ function primary(
 
 /** Host-side semantic refinements for the shared generated-media contracts. */
 export const generationComponent = {
-  name: "@svml/generation",
+  name: "@narratage/generation",
   producers: [
     {
       producer: generationProducers.primaryImage,

@@ -3,9 +3,9 @@ import {
   sealTypedModule,
   verifyClosure,
   verifyRecordStructure,
-} from "@svml/core";
-import { sealAuthorModule } from "@svml/elaborator";
-import type { AuthorFrontend, AuthorSourceExport } from "@svml/elaborator";
+} from "@narratage/core";
+import { sealAuthorModule } from "@narratage/elaborator";
+import type { AuthorFrontend, AuthorSourceExport } from "@narratage/elaborator";
 
 import {
   svsFrontendId,

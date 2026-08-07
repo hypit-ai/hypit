@@ -1,13 +1,15 @@
-import { contractTypes } from "@svml/contracts";
-import type { Narrative, NarrativeSelectionRef } from "@svml/contracts";
-import { svsRecipeType } from "@svml/svs";
-import type { SvsRecipe } from "@svml/svs";
+import { narrativeTypes } from "@narratage/narrative";
+import type { Narrative, NarrativeSelectionRef } from "@narratage/narrative";
+import { programSpaceTypes } from "@narratage/program-space";
+import { semanticMapTypes } from "@narratage/semantic-map";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
   TextAttributeValue,
-} from "@svml/text";
+} from "@narratage/text";
 
 import { captionTrackSurfaceFragment, plannedCaptionTrackSurfaceFragment } from "./fragment.js";
 import { captionTypes } from "./manifest.js";
@@ -221,7 +223,7 @@ export const decodeCaptionStyleSurface: StructuredSurfaceHandler = ({ element, r
 export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "narrative", "default"]);
   const id = stringAttribute(element, "id");
-  const narrativeRef = reference(element, "narrative", contractTypes.narrative, resolveReference);
+  const narrativeRef = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
   const defaultRef = reference(element, "default", captionTypes.style, resolveReference);
   const applications: CaptionStyleApplication[] = [];
   for (const child of element.children) {
@@ -240,7 +242,7 @@ export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element,
       : {
           kind: "selection" as const,
           selection: inline<NarrativeSelectionRef>(
-            reference(child, "on", contractTypes.narrativeSelection, resolveReference),
+            reference(child, "on", narrativeTypes.selection, resolveReference),
             `${child.name}.on`,
           ),
         };
@@ -270,11 +272,11 @@ export const decodeCaptionTrackSurface: StructuredSurfaceHandler = ({ element, r
       throw new Error(`${element.name} with a Caption Program does not accept children`);
     }
     const id = stringAttribute(element, "id");
-    const narrative = reference(element, "narrative", contractTypes.narrative, resolveReference);
-    const map = reference(element, "map", contractTypes.completeSemanticMap, resolveReference);
+    const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+    const map = reference(element, "map", semanticMapTypes.complete, resolveReference);
     const program = reference(element, "program", captionTypes.program, resolveReference);
     const plan = reference(element, "plan", captionTypes.plan, resolveReference);
-    const space = reference(element, "space", contractTypes.programSpace, resolveReference);
+    const space = reference(element, "space", programSpaceTypes.programSpace, resolveReference);
     return {
       records: [],
       components: [{
@@ -292,9 +294,9 @@ export const decodeCaptionTrackSurface: StructuredSurfaceHandler = ({ element, r
     throw new Error(`${element.name} provider-free base does not accept Role children`);
   }
   const id = stringAttribute(element, "id");
-  const narrative = reference(element, "narrative", contractTypes.narrative, resolveReference);
-  const map = reference(element, "map", contractTypes.completeSemanticMap, resolveReference);
-  const space = reference(element, "space", contractTypes.programSpace, resolveReference);
+  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+  const map = reference(element, "map", semanticMapTypes.complete, resolveReference);
+  const space = reference(element, "space", programSpaceTypes.programSpace, resolveReference);
   const appearance = recipe(reference(element, "appearance", svsRecipeType, resolveReference));
   const resolvedAppearance = captionAppearance(element, appearance);
   const program = sealCaptionTrackProgram({

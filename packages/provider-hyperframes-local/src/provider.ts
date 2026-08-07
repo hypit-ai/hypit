@@ -3,25 +3,24 @@ import { createRequire } from "node:module";
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-
-import { contractTypes, sealRenderedVisual } from "@svml/contracts";
-import type { RenderedVisual } from "@svml/contracts";
-import type { EndpointInvocationContext, EndpointFulfillment } from "@svml/endpoint-kit";
-import { assertHyperframesDocument, materializeHyperframesHtml } from "@svml/hyperframes";
-import type { HyperframesDocument } from "@svml/hyperframes";
-import { hyperframesRenderCapabilities } from "@svml/hyperframes-render";
-import { canonicalize, digestOf } from "@svml/protocol";
-import type { BlobRef, CanonicalValue } from "@svml/protocol";
-import { defineEndpointPackage } from "@svml/endpoint-kit";
+import { mediaTypes, sealRenderedVisual } from "@narratage/media";
+import type { RenderedVisual } from "@narratage/media";
+import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
+import { assertHyperframesDocument, materializeHyperframesHtml } from "@narratage/hyperframes";
+import type { HyperframesDocument } from "@narratage/hyperframes";
+import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
+import { canonicalize, digestOf } from "@narratage/protocol";
+import type { BlobRef, CanonicalValue } from "@narratage/protocol";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
 
 const HYPERFRAMES_VERSION = "0.7.84";
 
 export const localHyperframesProviderModuleRef = {
-  name: "@svml/provider-hyperframes-local",
+  name: "@narratage/provider-hyperframes-local",
   version: "0.0.0-dev",
 } as const;
 export const localHyperframesProviderImplementationDigest = digestOf(
-  `@svml/provider-hyperframes-local/render@1+hyperframes@${HYPERFRAMES_VERSION}`,
+  `@narratage/provider-hyperframes-local/render@1+hyperframes@${HYPERFRAMES_VERSION}`,
 );
 
 export type HyperframesWorkers = number | "auto";
@@ -273,7 +272,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     instance: config.instance ?? "hyperframes.local",
     ...(config.lane === undefined ? {} : { lane: config.lane }),
     implementation: {
-      locator: "@svml/provider-hyperframes-local/render",
+      locator: "@narratage/provider-hyperframes-local/render",
       digest: localHyperframesProviderImplementationDigest,
     },
     permissions: ["process:hyperframes"],
@@ -281,8 +280,8 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
-      capability: hyperframesRenderCapabilities.renderVisual,
-      returns: contractTypes.renderedVisual,
+      capability: renderHyperframesCapabilities.renderVisual,
+      returns: mediaTypes.renderedVisual,
       supports: (need) => need.constraints !== null && typeof need.constraints === "object"
         && !Array.isArray(need.constraints)
         && (need.constraints as { readonly contract?: unknown }).contract

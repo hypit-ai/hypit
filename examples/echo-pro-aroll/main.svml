@@ -1,16 +1,16 @@
-<?svml using="@svml/text@1"?>
+<?svml using="@narratage/text@1"?>
 
 <svml>
-  <import from="@svml/script@1"/>
-  <import as="media" from="@svml/media@1"/>
-  <import as="estimate" from="@svml/estimate@1"/>
-  <import as="speaker" from="@svml/seedance-speaker@1"/>
-  <import as="speech" from="@svml/speech@1"/>
-  <import as="whisperx" from="@svml/whisperx@1"/>
-  <import as="caption" from="@svml/caption@1"/>
-  <import as="caption-ai" from="@svml/caption-gemini@1"/>
-  <import as="film" from="@svml/film@1"/>
-  <import as="render" from="@svml/hyperframes-render@1"/>
+  <import from="@narratage/script@1"/>
+  <import as="media" from="@narratage/media@1"/>
+  <import as="estimate" from="@narratage/estimate@1"/>
+  <import as="speaker" from="@narratage/seedance-speaker@1"/>
+  <import as="speech" from="@narratage/speech-spine@1"/>
+  <import as="whisperx" from="@narratage/whisperx@1"/>
+  <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="film" from="@narratage/film@1"/>
+  <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
   <import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
 

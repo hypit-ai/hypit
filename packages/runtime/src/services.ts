@@ -1,5 +1,5 @@
-import { canonicalize, digestOf, isDigest } from "@svml/protocol";
-import type { CanonicalValue, Digest, ModuleRef } from "@svml/protocol";
+import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
+import type { CanonicalValue, Digest, ModuleRef } from "@narratage/protocol";
 
 import type { CredentialStore } from "./credentials.js";
 import type { OperationStore } from "./operations.js";
@@ -172,7 +172,7 @@ export function defineRuntimeServicePackage(
     } as RuntimeService;
   });
   const manifest: RuntimeModuleManifest = {
-    format: "svml.runtime-module@2",
+    format: "svml.runtime-module@1",
     name: options.module.name,
     version: options.module.version,
     facets: options.services.map((definition) => ({

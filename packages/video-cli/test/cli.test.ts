@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createNodePackageLock, writeNodePackageLock } from "@svml/package-loader-node";
-import { materializeRecord, runVideoCli } from "@svml/video-cli";
+import { createNodePackageLock, writeNodePackageLock } from "@narratage/package-loader-node";
+import { materializeRecord, runVideoCli } from "@narratage/video-cli";
 
 import { videoTestPackages } from "./packages.js";
 
@@ -18,15 +18,15 @@ const runCli = (
 test("production video CLI has no implicit author or Run packages", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-empty-distribution-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-  <import from="@svml/script@1"/>
+  <import from="@narratage/script@1"/>
   <script id="story"><opening><HOST>No hidden package.</opening></script>
 </svml>`, "utf8");
 
   await assert.rejects(
     async () => await runVideoCli(["check", file], { write() {} }),
-    /No registered module satisfies @svml\/script@1/u,
+    /No registered module satisfies @narratage\/script@1/u,
   );
 });
 
@@ -36,7 +36,7 @@ async function writeRun(
   targets: readonly { readonly output: string; readonly accepts?: "exact" | "substitute" }[],
 ): Promise<string> {
   const path = join(root, name);
-  await writeFile(path, `<?svml using="@svml/run-text@1"?>
+  await writeFile(path, `<?svml using="@narratage/run-text@1"?>
 <svrun version="1" targets="selected">
   <author source="./main.svml"/>
   <target-set id="selected">
@@ -67,19 +67,19 @@ test("CLI does not confuse Build persistence with the removed --out convenience"
   );
 });
 
-test("official v2 CLI checks a real Script source through the Node compiler host", async () => {
+test("official video CLI checks a real Script source through the Node compiler host", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-"));
   const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
     caption.host {
       color: #ffffff;
       font-size: 72;
     }
   </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import from="@svml/script@1"/>
+    <import from="@narratage/script@1"/>
     <import as="studio" source="./studio.svs"/>
     <script id="story">
       <opening>
@@ -98,29 +98,29 @@ test("official v2 CLI checks a real Script source through the Node compiler host
   assert.equal(result.ok, true);
   assert.equal(result.units, 2);
   assert.deepEqual([...result.modules].sort(), [
-    "@svml/narrative@0.0.0-dev",
-    "@svml/script@0.0.0-dev",
-    "@svml/svs@1",
+    "@narratage/narrative@0.0.0-dev",
+    "@narratage/script@0.0.0-dev",
+    "@narratage/svs@1",
   ]);
   assert.deepEqual(result.exports, [
     { name: "story", type: {
-      module: { name: "@svml/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
       name: "Narrative",
     }, kind: "record" },
     { name: "story.caption", type: {
-      module: { name: "@svml/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
       name: "CaptionProjection",
     }, kind: "record" },
     { name: "story.segment.opening", type: {
-      module: { name: "@svml/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
       name: "NarrativeExcerpt",
     }, kind: "record" },
     { name: "story.segment.opening.dialogue", type: {
-      module: { name: "@svml/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
       name: "NarrativeDialogueExcerpt",
     }, kind: "record" },
     { name: "story.segment.opening.speech", type: {
-      module: { name: "@svml/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
       name: "NarrativeSpeechExcerpt",
     }, kind: "record" },
   ]);
@@ -131,11 +131,11 @@ test("official media and Seedance Surfaces lower author intent into exact genera
   const file = join(root, "main.svml");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
   await writeFile(join(root, "voice.mp3"), new Uint8Array([73, 68, 51]));
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import from="@svml/script@1"/>
-    <import as="media" from="@svml/media@1"/>
-    <import as="seedance" from="@svml/seedance@1"/>
+    <import from="@narratage/script@1"/>
+    <import as="media" from="@narratage/media@1"/>
+    <import as="seedance" from="@narratage/seedance@1"/>
     <script id="story"><opening><HOST>Say exactly these words.</opening></script>
     <media:Image id="host" src="./host.png"/>
     <media:Audio id="voice" src="./voice.mp3"/>
@@ -206,18 +206,18 @@ test("Prompt Kit source and Speaker Surface finish prompt assembly before the Ru
     "utf8",
   );
   await writeFile(join(root, "official-ugc-v1.svs"), kitSource, "utf8");
-  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
   speech.normal { language: en; pace: normal; padding: 0.3; min: 4; max: 15; rounding: ceil; }
   speaker.default { kind: ugc-talking-head; model: mini; resolution: 720p; aspect-ratio: 9:16; }
 </sheet>`, "utf8");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-  <import from="@svml/script@1"/>
-  <import as="media" from="@svml/media@1"/>
-  <import as="estimate" from="@svml/estimate@1"/>
-  <import as="speaker" from="@svml/seedance-speaker@1"/>
+  <import from="@narratage/script@1"/>
+  <import as="media" from="@narratage/media@1"/>
+  <import as="estimate" from="@narratage/estimate@1"/>
+  <import as="speaker" from="@narratage/seedance-speaker@1"/>
   <import as="studio" source="./studio.svs"/>
   <import as="ugc" source="./official-ugc-v1.svs"/>
 
@@ -262,13 +262,13 @@ test(".svrun is the complete human-readable Target graph used by plan", async ()
   const root = await mkdtemp(join(tmpdir(), "svml-cli-run-"));
   const source = join(root, "main.svml");
   const run = join(root, "preview.svrun");
-  await writeFile(source, `<?svml using="@svml/text@1"?>
+  await writeFile(source, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import as="seedance" from="@svml/seedance@1"/>
+    <import as="seedance" from="@narratage/seedance@1"/>
     <seedance:Prompt id="direction">A quiet locked-off studio shot.</seedance:Prompt>
     <seedance:Video id="motion" model="mini" prompt={direction} duration="4"/>
   </svml>`, "utf8");
-  await writeFile(run, `<?svml using="@svml/run-text@1"?>
+  await writeFile(run, `<?svml using="@narratage/run-text@1"?>
   <svrun version="1" targets="preview">
     <author source="./main.svml"/>
     <target-set id="preview">
@@ -299,7 +299,7 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
   const runtimePackageLock = join(root, "runtime.packages.lock.json");
   await writeNodePackageLock(
     runtimePackageLock,
-    await createNodePackageLock(["@svml/provider-kie"], process.cwd()),
+    await createNodePackageLock(["@narratage/provider-kie"], process.cwd()),
   );
   await writeFile(profile, JSON.stringify({
     format: "svml.runtime-config@1",
@@ -310,7 +310,7 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
     runtimePackageLock,
     services: [],
     endpoints: [{
-      use: "@svml/provider-kie",
+      use: "@narratage/provider-kie",
       instance: "kie.cli-test",
       lane: "generation",
       config: { apiKeyEnv: "SVML_TEST_MISSING_KIE_KEY", defaultConcurrency: 2 },
@@ -338,12 +338,12 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
 test("independent packages lower Speech Spine and explicit WhisperX alignment without provider calls", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-speech-spine-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import from="@svml/script@1"/>
-    <import as="seedance" from="@svml/seedance@1"/>
-    <import as="speech" from="@svml/speech@1"/>
-    <import as="whisperx" from="@svml/whisperx@1"/>
+    <import from="@narratage/script@1"/>
+    <import as="seedance" from="@narratage/seedance@1"/>
+    <import as="speech" from="@narratage/speech-spine@1"/>
+    <import as="whisperx" from="@narratage/whisperx@1"/>
     <script id="story"><opening><HOST>Meaning becomes the source.</opening></script>
     <seedance:Prompt id="direction">Locked medium close-up.</seedance:Prompt>
     <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue}
@@ -363,17 +363,17 @@ test("independent packages lower Speech Spine and explicit WhisperX alignment wi
 test("Caption Gemini Surface lowers immutable display-atom runs into one explicit planning Need", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-caption-gemini-"));
   const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
     caption.base { stack-order: 70; x: 0.08; y: 0.76; width: 0.84; font: Inter;
       weight: 600; size: 58; line-height: 1; align: center; fill: #FFFFFF;
       background: #09090BCC; padding: 16 24; radius: 18; }
   </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import from="@svml/script@1"/>
-    <import as="caption" from="@svml/caption@1"/>
-    <import as="gemini" from="@svml/caption-gemini@1"/>
+    <import from="@narratage/script@1"/>
+    <import as="caption" from="@narratage/caption@1"/>
+    <import as="gemini" from="@narratage/caption-gemini@1"/>
     <import as="studio" source="./studio.svs"/>
     <script id="story"><dialogue><ALICE>Meaning becomes the source.<BOB>Then the graph stays explicit.</dialogue></script>
     <caption:Style id="plain" appearance={studio.caption.base}>
@@ -408,7 +408,7 @@ test("Caption Gemini Surface lowers immutable display-atom runs into one explici
 test("Track Surfaces close one complete author graph before any external execution", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-complete-author-"));
   const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<?svml using="@svml/svs@1"?>
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
     film.vertical { width: 1080; height: 1920; frame-rate: 30; background: #09090B; }
     broll.card { stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5; fit: cover;
@@ -419,18 +419,18 @@ test("Track Surfaces close one complete author graph before any external executi
     text.title { stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1;
       font: Inter; weight: 900; size: 64; align: center; fill: #FFFFFF; tracking: -1; }
   </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import from="@svml/script@1"/>
-    <import as="seedance" from="@svml/seedance@1"/>
-    <import as="speech" from="@svml/speech@1"/>
-    <import as="whisperx" from="@svml/whisperx@1"/>
-    <import as="broll" from="@svml/broll@1"/>
-    <import as="caption" from="@svml/caption@1"/>
-    <import as="caption-ai" from="@svml/caption-gemini@1"/>
-    <import as="text" from="@svml/text-track@1"/>
-    <import as="film" from="@svml/film@1"/>
-    <import as="render" from="@svml/hyperframes-render@1"/>
+    <import from="@narratage/script@1"/>
+    <import as="seedance" from="@narratage/seedance@1"/>
+    <import as="speech" from="@narratage/speech-spine@1"/>
+    <import as="whisperx" from="@narratage/whisperx@1"/>
+    <import as="broll" from="@narratage/broll@1"/>
+    <import as="caption" from="@narratage/caption@1"/>
+    <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+    <import as="text" from="@narratage/text-track@1"/>
+    <import as="film" from="@narratage/film@1"/>
+    <import as="render" from="@narratage/render-hyperframes@1"/>
     <import as="studio" source="./studio.svs"/>
     <script id="story"><opening><HOST>Meaning @demo becomes the source @/demo.</opening></script>
     <seedance:Prompt id="direction">Locked medium close-up.</seedance:Prompt>
@@ -467,12 +467,12 @@ test("Track Surfaces close one complete author graph before any external executi
   }
 });
 
-test("official v2 CLI closes the explicit HyperFrames render package without loading a Provider", async () => {
+test("official video CLI closes the explicit HyperFrames render package without loading a Provider", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-render-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
-    <import as="render" from="@svml/hyperframes-render@1"/>
+    <import as="render" from="@narratage/render-hyperframes@1"/>
   </svml>`, "utf8");
   let output = "";
   await runCli(["check", file], { write: (text) => { output += text; } });
@@ -483,15 +483,16 @@ test("official v2 CLI closes the explicit HyperFrames render package without loa
   };
   assert.equal(result.ok, true);
   assert.deepEqual([...result.modules].sort(), [
-    "@svml/artifact@0.0.0-dev",
-    "@svml/composition@0.0.0-dev",
-    "@svml/hyperframes-render@0.0.0-dev",
-    "@svml/hyperframes@0.0.0-dev",
-    "@svml/media-pipeline@0.0.0-dev",
-    "@svml/media@0.0.0-dev",
-    "@svml/narrative@0.0.0-dev",
-    "@svml/program-space@0.0.0-dev",
-    "@svml/speech@0.0.0-dev",
+    "@narratage/artifact@0.0.0-dev",
+    "@narratage/composition@0.0.0-dev",
+    "@narratage/hyperframes@0.0.0-dev",
+    "@narratage/media-pipeline@0.0.0-dev",
+    "@narratage/media@0.0.0-dev",
+    "@narratage/narrative@0.0.0-dev",
+    "@narratage/program-space@0.0.0-dev",
+    "@narratage/render-hyperframes@0.0.0-dev",
+    "@narratage/speech@0.0.0-dev",
+    "@narratage/visual-ir@0.0.0-dev",
   ]);
   assert.deepEqual(result.exports, []);
 });
@@ -515,7 +516,7 @@ test("CLI package lock activates an installed package without changing the offic
       format: "svml.node-package@1",
       name: "example-empty",
       modules: [{ manifest: {
-        format: "svml.module@0", name: module.name, version: module.version,
+        format: "svml.module@1", name: module.name, version: module.version,
         dependencies: [], types: [], capabilities: [], producers: [],
         surfaces: [{ name: "empty", tag: "Empty", mode: "structured", outputs: [],
           implementation: { kind: "trusted-frontend-surface", locator: "example/empty", digest } }],
@@ -530,7 +531,7 @@ test("CLI package lock activates an installed package without changing the offic
   `, "utf8");
   const file = join(root, "main.svml");
   const lockPath = join(root, "svml.packages.lock");
-  await writeFile(file, `<?svml using="@svml/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
 <svml>
     <import as="example" from="example.empty@1"/>
     <example:Empty/>

@@ -1,5 +1,5 @@
 {
-  "name": "@svml/local",
+  "name": "@narratage/local",
   "version": "0.0.0-dev",
   "private": true,
   "type": "module",
@@ -7,20 +7,20 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@svml/artifact-store-fs": "workspace:*",
-    "@svml/component-kit": "workspace:*",
-    "@svml/credential-store-env": "workspace:*",
-    "@svml/host": "workspace:*",
-    "@svml/driver-node": "workspace:*",
-    "@svml/package-loader-node": "workspace:*",
-    "@svml/protocol": "workspace:*",
-    "@svml/endpoint-kit": "workspace:*",
-    "@svml/runtime": "workspace:*",
-    "@svml/runtime-adapter": "workspace:*",
-    "@svml/store-sqlite": "workspace:*",
-    "@svml/validation": "workspace:*"
+    "@narratage/artifact-store-fs": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/credential-store-env": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/host": "workspace:*",
+    "@narratage/package-loader-node": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/store-sqlite": "workspace:*",
+    "@narratage/validation": "workspace:*"
   },
   "devDependencies": {
-    "@svml/core": "workspace:*"
+    "@narratage/core": "workspace:*"
   }
 }

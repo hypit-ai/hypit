@@ -5,7 +5,7 @@ import type {
   Need,
   Receipt,
   ReceiptId,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { digestOf } from "./canonical.js";
 

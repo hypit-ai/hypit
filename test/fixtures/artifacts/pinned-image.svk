@@ -1,9 +1,0 @@
-<kernel
-  name="pinned-image"
-  abi="1"
-  profile="capability-v1"
-  capability="image.generate"
->
-  <param name="prompt" type="string"/>
-  <port name="image" direction="output" type="Image" cardinality="one"/>
-</kernel>

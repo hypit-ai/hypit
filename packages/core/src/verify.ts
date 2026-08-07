@@ -5,7 +5,7 @@ import type {
   Need,
   Receipt,
   TypedRecord,
-} from "@svml/protocol";
+} from "@narratage/protocol";
 
 import { digestOf, isDigest } from "./canonical.js";
 import { invariant } from "./error.js";
@@ -184,7 +184,7 @@ function verifyOutstanding(state: BuildState, command: CoreCommand): void {
 }
 
 export function verifyBuildState(state: BuildState): void {
-  invariant(state.format === "svml.build@2", "UNSUPPORTED_BUILD", "unsupported build state format");
+  invariant(state.format === "svml.build@1", "UNSUPPORTED_BUILD", "unsupported build state format");
   invariant(
     state.status === "active" || state.status === "complete" || state.status === "failed",
     "INVALID_BUILD_STATUS",

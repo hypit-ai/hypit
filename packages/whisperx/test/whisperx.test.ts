@@ -1,25 +1,26 @@
+import {
+  registerProducerFacets,
+} from "@narratage/component-kit";
+import type { ProducerRegistrar } from "@narratage/component-kit";
+import { sealProgramSpace } from "@narratage/program-space";
+import { sealSpeechBasis, sealSpeechEvidenceAudio } from "@narratage/speech";
+import type { SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  registerProducerFacets,
-} from "@svml/component-kit";
-import type { ProducerRegistrar } from "@svml/component-kit";
-import { sealProgramSpace, sealSpeechBasis, sealSpeechEvidenceAudio } from "@svml/contracts";
-import type { SpeechBasis, SpeechEvidenceAudio } from "@svml/contracts";
-import { digestOf } from "@svml/protocol";
-import type { Digest, ProducerRef } from "@svml/protocol";
+import { digestOf } from "@narratage/protocol";
+import type { Digest, ProducerRef } from "@narratage/protocol";
 import {
   normalizeWhisperXAlignment,
   sealWhisperXAlignmentEvidence,
   whisperXComponent,
   whisperXProducers,
   whisperXRequestForEvidenceAudio,
-} from "@svml/whisperx";
+} from "@narratage/whisperx";
 
 function basis() {
   const programSpace = sealProgramSpace({
-    contract: "svml.program-space@0",
+    contract: "svml.program-space@1",
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
@@ -74,7 +75,7 @@ test("WhisperX consumes only the canonical 16 kHz evidence projection", () => {
 
 test("WhisperX normalization lowers model-specific evidence without leaking provider metadata", () => {
   const measured = sealWhisperXAlignmentEvidence({
-    contract: "svml.whisperx-alignment-evidence@2",
+    contract: "svml.whisperx-alignment-evidence@1",
     durationSec: 1,
     segments: [{
       sourceSegmentId: "line",
