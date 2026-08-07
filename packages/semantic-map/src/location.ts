@@ -56,6 +56,10 @@ function frameFor(frames: ReadonlyMap<string, number>, anchorId: string, owner: 
  * order, and occurrences are located independently: they are never sorted,
  * merged, clipped against one another or otherwise reconciled. A caller that
  * needs time order sorts them itself.
+ *
+ * An occurrence whose two anchors meet or cross yields an empty or backwards
+ * span, returned as located. What a Selection covering no frames should show is
+ * a question about material, answered where that material is projected.
  */
 export function selectionFrameSpans(
   map: CompleteSemanticMap,
@@ -69,9 +73,6 @@ export function selectionFrameSpans(
   return selection.occurrences.map((occurrence) => {
     const startFrame = frameFor(frames, occurrence.open.boundary.anchorId, `NarrativeSelection ${selection.id}`);
     const endFrameExclusive = frameFor(frames, occurrence.close.boundary.anchorId, `NarrativeSelection ${selection.id}`);
-    if (endFrameExclusive <= startFrame) {
-      throw new Error(`NarrativeSelection ${selection.id} contains an empty located occurrence`);
-    }
     return { startFrame, endFrameExclusive };
   });
 }
