@@ -142,10 +142,10 @@ test("exact transcript words cover every Script and Segment anchor", () => {
   assert.equal(map.tokens.length, 2);
   assert.equal(map.anchors.length, 2 * narrative.tokens.length + 2 * narrative.segments.length);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec, token.startQuality, token.endQuality]),
+    map.tokens.map((token) => [token.startSec, token.endSec]),
     [
-      [0.1, 0.4, "measured", "measured"],
-      [0.5, 0.9, "measured", "measured"],
+      [0.1, 0.4],
+      [0.5, 0.9],
     ],
   );
   assert.equal(new Set(map.anchors.map((anchor) => anchor.identity)).size, map.anchors.length);
@@ -167,10 +167,10 @@ test("M:1 uses evidence character times instead of dividing a merged word by len
 
   assert.equal(map.groups[0]?.relation, "merge");
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec, token.startQuality]),
+    map.tokens.map((token) => [token.startSec, token.endSec]),
     [
-      [0.1, 0.36, "derived"],
-      [0.42, 0.78, "derived"],
+      [0.1, 0.36],
+      [0.42, 0.78],
     ],
   );
 });
@@ -186,8 +186,8 @@ test("1:N wraps all evidence words in one Script token", () => {
 
   assert.equal(map.groups[0]?.relation, "split");
   assert.deepEqual(
-    [map.tokens[0]?.startSec, map.tokens[0]?.endSec, map.tokens[0]?.startQuality],
-    [0.2, 0.82, "derived"],
+    [map.tokens[0]?.startSec, map.tokens[0]?.endSec],
+    [0.2, 0.82],
   );
 });
 
@@ -211,12 +211,12 @@ test("a recognized filler stays an insertion and does not absorb neighboring Scr
     "exact",
   ]);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec, token.startQuality]),
+    map.tokens.map((token) => [token.startSec, token.endSec]),
     [
-      [0.1, 0.2, "measured"],
-      [0.4, 0.62, "measured"],
-      [0.67, 0.82, "measured"],
-      [0.86, 0.96, "measured"],
+      [0.1, 0.2],
+      [0.4, 0.62],
+      [0.67, 0.82],
+      [0.86, 0.96],
     ],
   );
 });
@@ -238,8 +238,8 @@ test("an omitted Script word receives the complete unmeasured interval between n
     "exact",
   ]);
   assert.deepEqual(
-    [map.tokens[2]?.startSec, map.tokens[2]?.endSec, map.tokens[2]?.startQuality],
-    [0.4, 0.6, "estimated"],
+    [map.tokens[2]?.startSec, map.tokens[2]?.endSec],
+    [0.4, 0.6],
   );
 });
 
@@ -251,10 +251,10 @@ test("VAD bounds contain estimates when an entire Script Segment has no recogniz
   });
 
   assert.deepEqual(
-    map.tokens.map((token) => [token.startSec, token.endSec, token.startQuality]),
+    map.tokens.map((token) => [token.startSec, token.endSec]),
     [
-      [0.4, 0.8, "estimated"],
-      [0.8, 1.2, "estimated"],
+      [0.4, 0.8],
+      [0.8, 1.2],
     ],
   );
 });

@@ -35,8 +35,6 @@ function wholeRegion(region: TimedCaptionRegion): CaptionPresentationUnit[] {
     displayEnd: region.display.length,
     startSec: region.startSec,
     endSec: region.endSec,
-    basis: "region-envelope",
-    timingQuality: region.startQuality === "estimated" || region.endQuality === "estimated" ? "estimated" : "derived",
     ...(region.fields === undefined ? {} : { fields: region.fields.map((field) => ({ ...field })) }),
   }];
 }
@@ -57,8 +55,6 @@ function proportionalWords(region: TimedCaptionRegion): CaptionPresentationUnit[
       displayEnd: word.end,
       startSec: refinement.startSec,
       endSec: refinement.endSec,
-      basis: "exact-correspondence",
-      timingQuality: refinement.startQuality === "estimated" || refinement.endQuality === "estimated" ? "estimated" : "derived",
     } : undefined;
   });
 
@@ -92,8 +88,6 @@ function proportionalWords(region: TimedCaptionRegion): CaptionPresentationUnit[
         displayEnd: word.end,
         startSec,
         endSec,
-        basis: "presentation-estimate",
-        timingQuality: "estimated",
       };
     }
   }
@@ -120,8 +114,6 @@ function characterFlow(region: TimedCaptionRegion): CaptionPresentationUnit[] {
       displayEnd: sourceOffset,
       startSec: region.startSec + duration * index / characters.length,
       endSec: region.startSec + duration * (index + 1) / characters.length,
-      basis: "presentation-estimate",
-      timingQuality: "estimated",
     });
   }
   return units;

@@ -5,10 +5,9 @@ import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
 const string = { kind: "string", minLength: 1 } as const; const number = { kind: "number", minimum: 0 } as const; const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
-const quality = { kind: "string", enum: ["measured", "derived", "estimated"] } as const;
-const timedSegment = object({ segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number }, startFrame: { schema: integer }, endFrame: { schema: integer }, startQuality: { schema: quality }, endQuality: { schema: quality } });
-const timedToken = object({ tokenId: { schema: string }, segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number }, startFrame: { schema: integer }, endFrame: { schema: integer }, startQuality: { schema: quality }, endQuality: { schema: quality } });
-const point = object({ identity: { schema: string }, timeSec: { schema: number }, frame: { schema: integer }, quality: { schema: quality } });
+const timedSegment = object({ segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number }, startFrame: { schema: integer }, endFrame: { schema: integer } });
+const timedToken = object({ tokenId: { schema: string }, segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number }, startFrame: { schema: integer }, endFrame: { schema: integer } });
+const point = object({ identity: { schema: string }, timeSec: { schema: number }, frame: { schema: integer } });
 const group = object({ sourceSegmentId: { schema: string }, sourceTokenIds: { schema: { kind: "array", items: string } }, evidenceWordStart: { schema: integer }, evidenceWordEndExclusive: { schema: integer },
   relation: { schema: { kind: "string", enum: ["exact", "split", "merge", "replacement", "source-omission", "evidence-insertion"] } }, cost: { schema: number } });
 export const completeSemanticMapSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.complete-semantic-map@1" } },

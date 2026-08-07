@@ -1,5 +1,5 @@
 import type { Narrative } from "@narratage/narrative";
-import type { CompleteSemanticMap, TimingQuality } from "@narratage/semantic-map";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
 
 import { CaptionProjectionError } from "./error.js";
 import type {
@@ -13,16 +13,6 @@ import type {
 import { assertCaptionPlanForProgram } from "./plan.js";
 import { displayTextForAtoms } from "./display.js";
 import { assertCaptionProgramForNarrative } from "./style.js";
-
-const QUALITY_RANK: Readonly<Record<TimingQuality, number>> = {
-  measured: 0,
-  derived: 1,
-  estimated: 2,
-};
-
-function composedQuality(value: TimingQuality): TimingQuality {
-  return QUALITY_RANK[value] >= QUALITY_RANK.derived ? value : "derived";
-}
 
 export function temporalizeCaption(
   narrative: Narrative,
@@ -44,8 +34,6 @@ export function temporalizeCaption(
       sourceTokenIds: source.map((token) => token.id),
       startSec: first.startSec,
       endSec: last.endSec,
-      startQuality: composedQuality(first.startQuality),
-      endQuality: composedQuality(last.endQuality),
     };
   };
 
@@ -109,8 +97,6 @@ export function temporalizeCaptionPlan(
       return {
         startSec: first.startSec,
         endSec: last.endSec,
-        startQuality: composedQuality(first.startQuality),
-        endQuality: composedQuality(last.endQuality),
       };
     }
     const region = regionById.get(atom.regionId);
@@ -123,8 +109,6 @@ export function temporalizeCaptionPlan(
     return {
       startSec: first.startSec + duration * atom.displayStart / region.display.length,
       endSec: first.startSec + duration * (next?.displayStart ?? region.display.length) / region.display.length,
-      startQuality: "estimated" as const,
-      endQuality: "estimated" as const,
     };
   };
   const visible = new Set(program.atoms.map((atom) => atom.id));
@@ -184,8 +168,6 @@ export function temporalizeCaptionPlan(
         sourceTokenIds: sourceTokens.map((token) => token!.id),
         startSec: firstWindow.startSec,
         endSec: lastWindow.endSec,
-        startQuality: firstWindow.startQuality,
-        endQuality: lastWindow.endQuality,
         refinements: [],
         fields: cue.fields.map((field) => ({ ...field })),
       });

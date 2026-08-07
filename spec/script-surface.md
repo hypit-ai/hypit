@@ -340,8 +340,7 @@ Locator 必须提交覆盖全部 `2M + 2N` identity 的总映射：
 SemanticAnchorIdentity → ProgramPoint(ProgramSpace)
 ```
 
-完整性与精度正交：每个点都必须存在，同时可以标记为 `estimated`、`derived`
-或 `measured`。消费者不得补点、移动点或从相邻 occurrence 借点。每个 Segment
+每个点都必须存在。消费者不得补点、移动点或从相邻 occurrence 借点。每个 Segment
 内部必须非降序：
 
 ```text
@@ -368,8 +367,7 @@ gap        B.start >  A.end
 Range 在不同 Locator 下反向或消失。
 
 同一份 SelectionSet 在不同 fulfillment 产生的 `CompleteSemanticMap` 上可得到
-预览或成片区间。Map 使用相同 identity；每个 anchor 以 `measured`、`derived` 或
-`estimated` 记录证据质量。Script 本身不含秒数、帧号或采样点。
+预览或成片区间。Map 使用相同 identity。Script 本身不含秒数、帧号或采样点。
 Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只
 量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
 
