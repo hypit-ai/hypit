@@ -1,13 +1,12 @@
 export {
-  activateNodeComponents,
-  createActivatedNodeCompiler,
-  nodePackageComponents,
-} from "./activation.js";
-export type { CreateActivatedNodeCompilerOptions } from "./activation.js";
+  assertNodePackageContribution,
+  collectNodePackageComponents,
+  installNodePackageComponents,
+} from "./contribution.js";
 export {
   createNodePackageLock,
   loadNodePackageSet,
-  loadNodePackages,
+  loadNodePackageContributions,
   writeNodePackageLock,
 } from "./lock.js";
 export type * from "./types.js";

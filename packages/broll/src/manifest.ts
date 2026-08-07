@@ -1,3 +1,4 @@
+import { artifactDependency } from "@svml/artifact";
 import {
   audioTrackSchema,
   completeSemanticMapSchema,
@@ -154,6 +155,7 @@ export const brollManifest: ModuleManifest = {
   name: brollModuleRef.name,
   version: brollModuleRef.version,
   dependencies: [
+    artifactDependency,
     videoContractDependencies.narrative,
     videoContractDependencies.media,
     videoContractDependencies.semanticTime,

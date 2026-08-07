@@ -1,4 +1,11 @@
 export {
+  artifactManifest,
+  artifactManifestDigest,
+  artifactModuleRef,
+  artifactTypes,
+  blobArtifactValueSchema,
+} from "@svml/artifact";
+export {
   assertProgramSpaceIdentity,
   assertSpeechDurationIdentity,
   assertSpeechAudioBasisIdentity,
@@ -73,8 +80,8 @@ export {
   speechModuleRef,
   videoContractDependencies,
   videoContractManifests,
+  videoDomainManifests,
   mediaArtifactSchema,
-  blobArtifactValueSchema,
   mediaInspectionSchema,
   mediaStreamSelectionSchema,
   muxedMediaSchema,

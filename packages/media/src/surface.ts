@@ -1,6 +1,4 @@
-import {
-  contractTypes,
-} from "@svml/contracts";
+import { artifactTypes } from "@svml/artifact";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
@@ -63,7 +61,7 @@ export const decodeMediaImageSurface: StructuredSurfaceHandler = async ({ elemen
   return {
     records: [{
       id,
-      type: contractTypes.blobArtifact,
+      type: artifactTypes.blob,
       value: resolved.artifact,
       range: element.range,
     }],

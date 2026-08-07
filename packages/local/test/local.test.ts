@@ -162,7 +162,7 @@ test("project local runtime resumes durable work while component and endpoint pa
       components: [components],
       endpoints: [endpointPackage],
     });
-    const first = await firstRuntime.build({ id: "client-video", state: initial, catalog });
+    const first = await firstRuntime.build({ id: "greeting-build", state: initial, catalog });
     assert.equal(first.status, "paused");
     assert.equal(starts, 1);
     assert.equal(resumes, 0);
@@ -173,32 +173,32 @@ test("project local runtime resumes durable work while component and endpoint pa
       components: [components],
       endpoints: [endpointPackage],
     });
-    const second = await secondRuntime.build({ id: "client-video", state: createGreetingBuild(), catalog });
+    const second = await secondRuntime.build({ id: "greeting-build", state: createGreetingBuild(), catalog });
     assert.equal(second.status, "complete");
     assert.equal(starts, 1);
     assert.equal(resumes, 1);
     assert.equal(promptCalls, 1, "persisted Core facts stop deterministic upstream replay");
     assert.equal(requestCalls, 1, "the Need request Producer is also persisted");
     assert.equal(assembleCalls, 1);
-    const clientStatus = await secondRuntime.status("client-video");
+    const clientStatus = await secondRuntime.status("greeting-build");
     assert.equal(clientStatus.catalog?.core, initial.id);
     assert.equal(clientStatus.catalog?.aliases[0]?.name, "final.document");
-    assert.deepEqual((await secondRuntime.builds()).map((item) => item.build), ["client-video"]);
+    assert.deepEqual((await secondRuntime.builds()).map((item) => item.build), ["greeting-build"]);
 
     const followed = await secondRuntime.build(
-      { id: "follow-video", state: createGreetingBuild() },
+      { id: "greeting-follow", state: createGreetingBuild() },
       { follow: true, pollIntervalMs: 1, maxWaitMs: 1_000 },
     );
     assert.equal(followed.status, "complete");
     assert.equal(starts, 2);
     assert.equal(resumes, 2);
-    const followedStatus = await secondRuntime.status("follow-video");
+    const followedStatus = await secondRuntime.status("greeting-follow");
     assert.equal(followedStatus.build?.state.status, "complete");
     assert.equal(followedStatus.operations.length, 1);
 
-    const waiting = await secondRuntime.build({ id: "cancel-video", state: createGreetingBuild() });
+    const waiting = await secondRuntime.build({ id: "greeting-cancel", state: createGreetingBuild() });
     assert.equal(waiting.status, "paused");
-    const cancelled = await secondRuntime.cancel("cancel-video");
+    const cancelled = await secondRuntime.cancel("greeting-cancel");
     assert.equal(cancelled?.status, "failed");
     assert.equal(cancels, 1);
     await secondRuntime.close();

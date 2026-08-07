@@ -1,7 +1,7 @@
 import {
-  contractTypes,
-  videoContractDependencies,
-} from "@svml/contracts";
+  artifactDependency,
+  artifactTypes,
+} from "@svml/artifact";
 import { digestOf } from "@svml/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@svml/protocol";
 
@@ -32,7 +32,7 @@ export const generationManifest: ModuleManifest = {
   format: "svml.module@0",
   name: generationModuleRef.name,
   version: generationModuleRef.version,
-  dependencies: [videoContractDependencies.media],
+  dependencies: [artifactDependency],
   types: [
     {
       name: generationTypes.imageSet.name,
@@ -67,7 +67,7 @@ export const generationManifest: ModuleManifest = {
       inputs: [{ name: "set", type: generationTypes.imageSet }],
       outputs: [{
         name: "image",
-        type: contractTypes.blobArtifact,
+        type: artifactTypes.blob,
         affinity: [{ resultPointer: "/digest", input: "set", inputPointer: "/images/0/digest" }],
       }],
       needs: [],
@@ -82,7 +82,7 @@ export const generationManifest: ModuleManifest = {
       inputs: [{ name: "set", type: generationTypes.videoSet }],
       outputs: [{
         name: "video",
-        type: contractTypes.blobArtifact,
+        type: artifactTypes.blob,
         affinity: [{ resultPointer: "/digest", input: "set", inputPointer: "/videos/0/digest" }],
       }],
       needs: [],

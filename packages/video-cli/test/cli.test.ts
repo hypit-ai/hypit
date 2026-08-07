@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { materializeRecord, runCli } from "@svml/cli";
+import { materializeRecord, runVideoCli as runCli } from "@svml/video-cli";
 
 test("CLI Pin is explicit substitute selection rather than an exact-history privilege", async () => {
   await assert.rejects(
@@ -346,6 +346,7 @@ test("official v2 CLI closes the explicit HyperFrames render package without loa
   };
   assert.equal(result.ok, true);
   assert.deepEqual([...result.modules].sort(), [
+    "@svml/artifact@0.0.0-dev",
     "@svml/composition@0.0.0-dev",
     "@svml/hyperframes-render@0.0.0-dev",
     "@svml/hyperframes@0.0.0-dev",
@@ -382,8 +383,12 @@ test("CLI package lock activates an installed package without changing the offic
         surfaces: [{ name: "empty", tag: "Empty", mode: "structured", outputs: [],
           implementation: { kind: "trusted-frontend-surface", locator: "example/empty", digest } }],
       }, specifiers: ["example.empty@1"] }],
-      textSurfaces: [{ module, surface: "empty", mode: "structured", implementationDigest: digest,
-        handler() { return { records: [], components: [], fragments: [] }; } }],
+      hostFacets: [{
+        abi: "svml.text-surface-host@1",
+        identity: { contract: "svml.text-surface-host-facet@1", module, surface: "empty",
+          mode: "structured", implementationDigest: digest },
+        implementation() { return { records: [], components: [], fragments: [] }; },
+      }],
     };
   `, "utf8");
   const file = join(root, "main.svml");

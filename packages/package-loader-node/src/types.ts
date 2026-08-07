@@ -2,39 +2,21 @@ import type { RegisteredModulePackage } from "@svml/compiler-node";
 import type { ComponentPackage } from "@svml/component-kit";
 import type { AuthorFrontend } from "@svml/elaborator";
 import type { GraphFragment } from "@svml/elaborator";
-import type { Digest, ModuleRef } from "@svml/protocol";
-import type {
-  RawSurfaceHandler,
-  StructuredSurfaceHandler,
-} from "@svml/text";
-
-export type NodeTextSurfaceFacet =
-  | {
-      readonly module: ModuleRef;
-      readonly surface: string;
-      readonly mode: "raw";
-      readonly implementationDigest: Digest;
-      readonly handler: RawSurfaceHandler;
-    }
-  | {
-      readonly module: ModuleRef;
-      readonly surface: string;
-      readonly mode: "structured";
-      readonly implementationDigest: Digest;
-      readonly handler: StructuredSurfaceHandler;
-    };
+import type { HostFacet } from "@svml/host";
+import type { Digest } from "@svml/protocol";
 
 /**
  * Trusted executable facets exported by one installed physical package. The Host independently
  * grants author registries or deterministic compute registries; this descriptor has no Provider,
  * credential, store, queue or Runtime facet.
  */
-export type NodePackageActivation = {
+export type NodePackageContribution = {
   readonly format: "svml.node-package@1";
   readonly name: string;
   readonly modules?: readonly RegisteredModulePackage[];
   readonly frontends?: readonly AuthorFrontend[];
-  readonly textSurfaces?: readonly NodeTextSurfaceFacet[];
+  /** Syntax- or Host-specific executable facets, inert until their exact Host ABI selects them. */
+  readonly hostFacets?: readonly HostFacet[];
   readonly components?: readonly ComponentPackage[];
   /** Trusted Run-Graph Fragments, addressable from `.svrun` imports by package and export name. */
   readonly runFragments?: Readonly<Record<string, GraphFragment>>;
@@ -66,5 +48,5 @@ export type NodePackageLock = {
 
 export type LoadedNodePackageSet = {
   readonly lock: NodePackageLock;
-  readonly packages: readonly NodePackageActivation[];
+  readonly contributions: readonly NodePackageContribution[];
 };

@@ -8,11 +8,11 @@ import {
   contractTypes,
   narrativeManifest,
   narrativeManifestDigest,
-  videoContractManifests,
+  videoDomainManifests,
 } from "../src/index.js";
 
 test("the physical video distribution carries six independently identified logical modules", () => {
-  assert.deepEqual(videoContractManifests.map((manifest) => manifest.name), [
+  assert.deepEqual(videoDomainManifests.map((manifest) => manifest.name), [
     "@svml/narrative",
     "@svml/media",
     "@svml/program-space",
@@ -20,7 +20,7 @@ test("the physical video distribution carries six independently identified logic
     "@svml/semantic-time",
     "@svml/composition",
   ]);
-  assert.equal(new Set(videoContractManifests.map((manifest) => digestOf(manifest))).size, 6);
+  assert.equal(new Set(videoDomainManifests.map((manifest) => digestOf(manifest))).size, 6);
   assert.equal(narrativeManifestDigest, digestOf(narrativeManifest));
 });
 

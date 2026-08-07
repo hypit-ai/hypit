@@ -9,6 +9,12 @@ export {
 } from "./frontend.js";
 export { TextSurfaceRegistry } from "./registry.js";
 export {
+  createTextSurfaceHostFacet,
+  installTextSurfaceHostFacets,
+  textSurfaceHostFacetAbi,
+} from "./host-facet.js";
+export type { TextSurfaceHostFacetOptions } from "./host-facet.js";
+export {
   closeDocument,
   discoverText,
   parseOpeningTag,

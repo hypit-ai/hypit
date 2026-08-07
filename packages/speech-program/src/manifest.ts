@@ -1,3 +1,4 @@
+import { artifactDependency } from "@svml/artifact";
 import {
   contractTypes,
   narrativeExcerptSchema,
@@ -69,6 +70,7 @@ export const speechProgramManifest: ModuleManifest = {
   name: speechProgramModuleRef.name,
   version: speechProgramModuleRef.version,
   dependencies: [
+    artifactDependency,
     videoContractDependencies.narrative,
     videoContractDependencies.media,
     videoContractDependencies.programSpace,
