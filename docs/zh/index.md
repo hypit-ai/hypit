@@ -9,7 +9,7 @@ hero:
       link: /zh/quickstart
     - theme: alt
       text: 开发指南
-      link: /zh/guide/components
+      link: /zh/guide/develop
 ---
 
 <ClientOnly>

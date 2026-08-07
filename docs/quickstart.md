@@ -1,70 +1,140 @@
 ---
 title: Quickstart
-description: Check and compile your first SVML video in minutes.
+description: Set up Narratage and compile your first video graph.
 ---
 
 # Quickstart
 
-Start with a spoken script and compile it into a video page ready for HyperFrames to render.
+The name **Narratage** comes from a 1933 *New York Times* review of the film *The Power and the
+Glory*. The critic coined the word to describe a then-new cinematic technique:
+**Narration + Montage** — a narrator's voice carries the story forward while the screen assembles
+a montage of scenes to match.
+
+That is exactly what this system does. The author writes a narrated Script with semantic anchors,
+and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
+The internal package scope is `@svml` (Semantic Video Markup Language).
 
 ## Install
 
-SVML currently requires Node.js 22 and pnpm.
+Requires Node.js 22+ and pnpm.
 
 ```bash
 pnpm install
-pnpm build
+pnpm check
+pnpm test
 ```
 
-## Start with a real example
+## Three inputs
 
-The Ranking example in this repository uses `@name … @/name` to declare semantic ranges in the spoken script, then lets components consume those ranges. Here is the core excerpt:
+Every Build takes three separate inputs:
+
+| Input | What it owns | Typical file |
+|---|---|---|
+| **Author Source** | script, model choices, track composition, output graph | `.svml` |
+| **Run Source** | which outputs to target, alternate candidates, satisfaction edges | `.svrun` |
+| **Runtime Profile** | endpoints, credentials, concurrency, permissions | `svml.runtime.json` |
+
+Author Source says *what*. Run Source says *which*. Runtime Profile says *where*.
+
+## Check a video graph (free)
+
+The `talking-film-graph-check` example compiles a complete video graph — Script, Seedance, Speech,
+WhisperX, Gemini Caption, B-roll, Text, Film, HyperFrames — without calling any external service.
+
+```bash
+# Compile the Author Source.
+pnpm svml:v2 check examples/talking-film-graph-check/main.svml \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+
+# Compile the Run Source and inspect the frozen plan.
+pnpm svml:v2 plan examples/talking-film-graph-check/build.svrun \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+```
+
+`check` produces the typed Author Graph. `plan` binds the Author and Run graphs, resolves Targets
+and outputs the frozen BuildPlan — every Operation and Needs the Scheduler would issue. Inspect it
+before spending money.
+
+## Run a real Build (paid)
+
+The `echo-pro-aroll` example is a four-take Seedance Mini talking-head film.
+
+Prerequisites:
+
+- `KIE_API_KEY`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS_JSON` in env
+- `ffmpeg`, `ffprobe`, Chrome
+- Local WhisperX service running (see `services/whisperx/README.md`)
+- Local assets in `examples/echo-pro-aroll/assets/` (not committed)
+
+```bash
+# Diagnose the Runtime environment.
+pnpm svml:v2 doctor examples/echo-pro-aroll/svml.runtime.json
+
+# Submit the Build.
+pnpm svml:v2 build examples/echo-pro-aroll/build.svrun \
+  --runtime examples/echo-pro-aroll/svml.runtime.json \
+  --package-lock examples/echo-pro-aroll/svml.packages.lock \
+  --root . \
+  --build-id echo-pro-film-001 \
+  --follow
+
+# Retrieve the final video.
+pnpm svml:v2 get echo-pro-film-001 \
+  --runtime examples/echo-pro-aroll/svml.runtime.json \
+  --name final.video \
+  --to examples/echo-pro-aroll/output/final.mp4
+```
+
+Every accepted intermediate Record and Artifact is archived before the Build completes. `get`
+makes an optional copy of an already durable Record.
+
+## Reuse previous results
+
+SVML has no implicit cache. Reusing a result is explicit Run Graph authoring — declare zero-input
+Candidates backed by historical Records and connect them through Satisfaction edges:
 
 ```xml
-<svml version="1">
-  <import from="../../stdlib/ranking-column.svk"/>
+<?svml using="@svml/run-text@1"?>
+<svrun version="1" targets="delivery">
+  <author source="./main.svml"/>
+  <target-set id="delivery">
+    <target output="final.video" accepts="substitute"/>
+  </target-set>
 
-  <script>
-    <segment id="ranking">
-      <NARRATOR> @photoshop Photoshop.
-      <SPEAKER> Powerful, but only if you know how to use it.
-                Otherwise it becomes a three-hour project @/photoshop.
-    </segment>
-  </script>
-
-  <ranking-column id="ranking" z="42">
-    <item
-      id="photoshop"
-      rank="5"
-      image={ranking-icon-5}
-      during={script.selection.photoshop}
-    />
-  </ranking-column>
-</svml>
+  <build-record id="hook-video"
+    build="echo-pro-film-001" output="hook-take.video"/>
+  <satisfy output="hook-take.video"
+    candidate="hook-video" fidelity="substitute"/>
+</svrun>
 ```
 
-There is no hand-written “second 3 to second 7.” The locator resolves the `photoshop` Selection against the spoken script and media into the real time range for this build.
-
-## Check and compile
+The compiled plan prunes all upstream Operations that the substitute Candidates replace. This is a
+new Build, not a continuation.
 
 ```bash
-pnpm svml check examples/regen-ranking/regen-ranking.svml
-pnpm svml lock examples/regen-ranking/regen-ranking.svml --out svml.lock
-pnpm svml compile examples/regen-ranking/regen-ranking.svml \
-  --lock svml.lock \
-  --out build/index.html
+pnpm svml:v2 build examples/echo-pro-aroll/reuse-generated.svrun \
+  --runtime examples/echo-pro-aroll/svml.runtime.json \
+  --package-lock examples/echo-pro-aroll/svml.packages.lock \
+  --root . --build-id echo-pro-film-reuse-001 --follow
 ```
 
-`check` verifies that the declarations are complete; `lock` freezes the inputs actually used by this build; `compile` produces deterministic HyperFrames HTML.
+## CLI reference
 
-## Render
-
-```bash
-pnpm svml render build/index.html --out build/video.mp4
+```text
+svml-v2 lock-packages <lock> --package name [--package name ...] [--root dir]
+svml-v2 doctor <runtime.json>
+svml-v2 gc <runtime.json> [--apply]
+svml-v2 check <source> [--package-lock file] [--root dir]
+svml-v2 plan <run-source> [--package-lock file] [--root dir]
+svml-v2 build <run-source> --runtime profile [--build-id id] [--follow]
+svml-v2 status <build-id> --runtime profile
+svml-v2 builds --runtime profile
+svml-v2 inspect <build-id> --runtime profile
+svml-v2 get <build-id> --runtime profile [--name x|--record x|--output x|--artifact x] [--to path]
+svml-v2 cancel <build-id> --runtime profile
 ```
 
-::: warning Current status
-The executable example requires its local media and alignment evidence. Automatic loading from online Providers is not implemented yet.
-:::
+## Next
 
-Continue to [Components](/guide/components) to learn how recurring visual treatments can be packaged as SVK components.
+- [Development guide](./guide/develop.md) — repository layout, package architecture, extension
+  patterns.
