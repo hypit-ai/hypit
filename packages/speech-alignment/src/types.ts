@@ -12,6 +12,5 @@ export type {
   SemanticTimePoint,
   TimedSpeechSegment,
   TimedSpeechToken,
-  TimingQuality,
 } from "@narratage/semantic-map";
 export type { SpeechAudioBasis } from "@narratage/speech";

@@ -110,7 +110,6 @@ test("a selected Text Item is located only through explicit Selection and Semant
     durationSec: 5,
     segments: [{
       segmentId: "opening", startSec: 0, endSec: 3, startFrame: 0, endFrame: 90,
-      startQuality: "measured" as const, endQuality: "measured" as const,
     }],
     tokens: [0, 1, 2].map((index) => ({
       tokenId: `token-${index}`,
@@ -119,8 +118,6 @@ test("a selected Text Item is located only through explicit Selection and Semant
       endSec: index + 1,
       startFrame: index * 30,
       endFrame: (index + 1) * 30,
-      startQuality: "measured" as const,
-      endQuality: "measured" as const,
     })),
     anchors: [],
     groups: [],
