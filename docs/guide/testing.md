@@ -90,4 +90,4 @@ ordinary `.svml`, `.svs` and `.svrun` files that exercise specific compilation p
 The `examples/` directory also serves as integration-level fixtures:
 - `examples/bootstrap/` — smallest source closure check
 - `examples/talking-film-graph-check/` — complete graph compilation without Providers
-- `examples/echo-pro-aroll/` — live acceptance with explicit historical-Candidate reuse
+- `examples/talking-head-aroll/` — live acceptance with explicit historical-Candidate reuse

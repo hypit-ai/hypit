@@ -63,6 +63,3 @@ pnpm narratage plan examples/talking-film-graph-check/build.svrun \
 | [Film 与渲染](./quickstart/composition.md) | film:Film、render:Video、完整流水线演练 |
 | [Run Source 与 Build](./quickstart/run.md) | .svrun 语法、targets、复用、runtime profile、build 工作流 |
 
-## 下一步
-
-- [开发指南](./guide/develop.md) —— 仓库结构、包架构、扩展模式。

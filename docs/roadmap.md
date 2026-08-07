@@ -98,7 +98,7 @@ There is no automatic result reuse or hidden Candidate selection.
 ### B1. Repeatable live acceptance — manual path passed
 
 One paid four-take generation Build plus one explicit Candidate-reuse Build covered the complete
-combined path manually on 2026-08-07. Turn `examples/echo-pro-aroll` into a credential-safe opt-in
+combined path manually on 2026-08-07. Turn `examples/talking-head-aroll` into a credential-safe opt-in
 acceptance command that can also run a fresh uninterrupted all-`exact` Build:
 
 - never commits credentials or paid output;
