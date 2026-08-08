@@ -28,6 +28,6 @@ The Endpoint:
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.
 
 Video-backed normalization is video-authoritative so an AAC packet tail cannot extend the program
-past its final picture. Audio-only normalization is audio-authoritative. A future AWS media Provider
+past its final picture. Audio-only normalization is audio-authoritative. The AWS Lambda media Provider
 must return the same public contracts and timing laws; Lambda is an execution topology, not another
 author meaning.

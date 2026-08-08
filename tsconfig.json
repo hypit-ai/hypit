@@ -149,6 +149,9 @@
       "@narratage/provider-media-local": [
         "packages/provider-media-local/src/index.ts"
       ],
+      "@narratage/provider-hyperframes-aws-lambda": [
+        "packages/provider-hyperframes-aws-lambda/src/index.ts"
+      ],
       "@narratage/provider-hyperframes-local": [
         "packages/provider-hyperframes-local/src/index.ts"
       ],

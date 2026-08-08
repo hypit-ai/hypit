@@ -71,9 +71,11 @@ The repository implements:
 - exact Endpoint binding and scoped credentials;
 - eleven exact image/video models declaring their own input ports, reached through the KIE Provider;
 - local ffprobe/ffmpeg media processing;
+- S3 multipart Artifact streaming and AWS Lambda media processing;
 - local pinned WhisperX service;
 - Vertex Gemini display-only Caption planning;
 - local frame-parallel HyperFrames rendering;
+- recoverable Step Functions/Lambda HyperFrames rendering;
 - Speech, Caption, Text, B-roll, Film, audio and final mux vertical slices.
 
 The complete live path is:
