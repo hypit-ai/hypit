@@ -187,6 +187,43 @@ async function installLockedRuntimeAdapters(
   }
 }
 
+/** One Endpoint's declaration of an external program its Provider drives. */
+export type DeclaredExternalService = {
+  readonly instance: string;
+  readonly service: RuntimeExternalService;
+};
+
+/**
+ * The external programs a Runtime Profile implies, in the order it declares
+ * them. Two Endpoints may name the same program — one WhisperX serves every
+ * Provider instance pointed at it — so callers that act on these deduplicate
+ * by `service.id` and act once.
+ */
+export async function declaredExternalServices(
+  path: string,
+  options: LoadRuntimeConfigOptions = {},
+): Promise<{ readonly root: string; readonly services: readonly DeclaredExternalService[] }> {
+  const absolute = resolve(path);
+  const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
+  const root = resolve(dirname(absolute), document.root ?? ".");
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root);
+  const services: DeclaredExternalService[] = [];
+  for (const item of document.endpoints) {
+    if (!registry.has(item.use, "endpoint")) {
+      throw new Error(`Runtime Adapter ${item.use} is not registered`);
+    }
+    const service = registry.service(item.use, {
+      root,
+      instance: item.instance,
+      ...(item.lane === undefined ? {} : { lane: item.lane }),
+      config: item.config ?? {},
+    });
+    if (service !== undefined) services.push({ instance: item.instance, service });
+  }
+  return { root, services };
+}
+
 function diagnostic(error: unknown, code: string, subject?: string): RuntimeDoctorDiagnostic {
   return {
     severity: "error",

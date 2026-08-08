@@ -129,7 +129,7 @@
     {
       "name": "@narratage/provider-whisperx-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:f1abef0bb16d172d2d013b1e44cedcd77bc1beeaa46590b90774892fd948514f"
+      "digest": "sha256:35b536fe2e6752d4cc92ca368a318214e8e56e0d8356eba56a049d3a626543c5"
     },
     {
       "name": "@narratage/render-hyperframes",
@@ -886,8 +886,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:3686b84c42cc2b1bcaccf57cbdcda25a15c7d9d3778fb92d25437f9880ed8f5d",
-      "closureDigest": "sha256:a9a75710e062f02bb8ba55cd5eac6ef2c8622fcddd8908547f336503b1f188ca"
+      "closureDigest": "sha256:d82fe2de72e4ce6fee4f660552b12485617b4254289a0ee4fd50e72a492f44e8"
     }
   ],
-  "digest": "sha256:f0cf55a93a5bbc7e9500b20a3c09d49624b5b3fdc49cb5c9d8e4d0fe0e436e83"
+  "digest": "sha256:680b29750d6c64627622b37eb9975077d09ba616093170bb08b65b43bbe2947e"
 }
