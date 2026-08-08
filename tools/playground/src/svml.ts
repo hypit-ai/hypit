@@ -37,3 +37,19 @@ export { programSpaceFrameCount, sealProgramSpace } from "@narratage/program-spa
 export type { ProgramSpace } from "@narratage/program-space";
 
 export type { CanonicalValue, ValueSchema } from "@narratage/protocol";
+
+// Component lowering. These are the real renderers the compiler runs, so what
+// the playground shows is the production visual result and not a lookalike.
+export {
+  renderCaptionTrack,
+  sealCaptionTrackProgram,
+} from "@narratage/caption";
+export type {
+  CaptionPresentationMode,
+  CaptionTrackProgram,
+  TimedCaptionProjection,
+  TimedCaptionRegion,
+} from "@narratage/caption";
+
+export { renderTextTrack, sealTextTrackProgram } from "@narratage/text-track";
+export type { TextItem, TextTrackProgram } from "@narratage/text-track";
