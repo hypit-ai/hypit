@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { digestOf } from "@narratage/core";
+import type { Narrative } from "@narratage/narrative";
 import {
   ScriptSyntaxError,
   formatScript,
@@ -80,6 +81,11 @@ test("selections, moments and Dual Text preserve separate semantic projections",
   assert.deepEqual(parsed.selections.map((selection) => selection.id), ["whole"]);
   assert.deepEqual(parsed.moments.map((moment) => moment.id), ["beat"]);
   assert.equal(parsed.captionProjection.regions.find((region) => region.kind === "alias")?.display, "laughed");
+  const publicNarrative = narrativeValue(parsed) as unknown as Narrative;
+  assert.deepEqual(Object.keys(publicNarrative.selections[0]!.occurrences[0]!).sort(),
+    ["endAnchorId", "occurrence", "startAnchorId"]);
+  assert.deepEqual(Object.keys(publicNarrative.moments[0]!.occurrences[0]!).sort(),
+    ["anchorId", "occurrence"]);
 });
 
 test("Caption Projection owns speech ranges without inventing alias word timing", () => {

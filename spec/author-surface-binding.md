@@ -57,7 +57,7 @@ rewrite an already compiled child SourceUnit or a previous declaration.
 For this source:
 
 ```svml
-<caption:Track appearance={studio.caption.dialogue}/>
+<caption-fine:Style recipe={studio.caption.dialogue}/>
 ```
 
 the responsibilities are:

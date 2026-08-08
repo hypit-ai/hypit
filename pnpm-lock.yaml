@@ -17,6 +17,9 @@ importers:
       '@narratage/caption':
         specifier: workspace:*
         version: link:packages/caption
+      '@narratage/caption-fine':
+        specifier: workspace:*
+        version: link:packages/caption-fine
       '@narratage/caption-gemini':
         specifier: workspace:*
         version: link:packages/caption-gemini
@@ -216,6 +219,43 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@narratage/script':
+        specifier: workspace:*
+        version: link:../script
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/speech-alignment':
+        specifier: workspace:*
+        version: link:../speech-alignment
+      '@narratage/speech-evidence':
+        specifier: workspace:*
+        version: link:../speech-evidence
+
+  packages/caption-fine:
+    dependencies:
+      '@narratage/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
       '@narratage/composition':
         specifier: workspace:*
         version: link:../composition
@@ -244,15 +284,6 @@ importers:
       '@narratage/script':
         specifier: workspace:*
         version: link:../script
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@narratage/speech-alignment':
-        specifier: workspace:*
-        version: link:../speech-alignment
-      '@narratage/speech-evidence':
-        specifier: workspace:*
-        version: link:../speech-evidence
 
   packages/caption-gemini:
     dependencies:

@@ -11,167 +11,90 @@ covers the three main visual Track types: captions, B-roll, and text overlays.
 
 ## Caption system
 
-Captions are built from four components that form a pipeline:
+Caption uses a small common language and a replaceable Style family:
 
 ```text
-caption:Style → caption:Program → caption-ai:Planner → caption:Track
+Script words → Style family → Caption Program → Planner → Style-family Track
 ```
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 ```
 
-### caption:Style
+`@narratage/caption` owns only common Cue bounds, generic per-word fields, total Style assignment,
+Plan validation and the timing join. `@narratage/caption-fine` is one concrete Style family: it owns
+the `important` field, font/box parameters and visual rendering.
 
-Declares a complete visual appearance plus planning instructions for one style of caption.
+### caption-fine:Style
 
-```svml
-<caption:Style id="primary-caption" appearance={studio.caption.primary}
-  mode="proportional-word">
-  <caption:Cues>
-    Split each Script Segment into short complete semantic phrases of two to
-    seven words. Never cross a sentence or Segment boundary.
-  </caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="1" max-per-cue="2">
-    Select one or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
+A Style is one indivisible pair of planning requirements and rendering parameters. Fine resolves
+both from one package-owned SVS Recipe:
+
+```svs
+caption.primary {
+  cue-min-words: 2;
+  cue-max-words: 7;
+  important-min-per-cue: 1;
+  important-max-per-cue: 2;
+  important-fill: #FFD166;
+  important-scale: 1.08;
+  stack-order: 70;
+  x: 0.08; y: 0.76; width: 0.84;
+  font: Inter; weight: 600; size: 58; line-height: 0.96;
+  align: center; fill: #FFFFFF; background: #09090BCC;
+  padding: 16 24; radius: 18;
+}
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `appearance` | yes | SVS caption Recipe — position, font, colors, container |
-| `mode` | no | Caption timing mode, e.g. `proportional-word` |
+```svml
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
+```
 
-**Children:**
-
-- `<caption:Cues>` — natural-language instructions for the AI planner telling it how to split text
-  into cues. The planner receives display text (left side of Dual Text) and these instructions, but
-  never audio or timing data.
-- `<caption:Field>` — declares a typed per-atom annotation. The planner assigns these fields to
-  individual words within each cue.
-
-| `<caption:Field>` attribute | Description |
-|---|---|
-| `id` | Field name (e.g. `important`) |
-| `type` | Field type: `boolean` |
-| `min-per-cue` | Minimum annotations per cue |
-| `max-per-cue` | Maximum annotations per cue |
-
-The element body of `<caption:Field>` is a natural-language instruction for the planner.
+Another Caption package may define completely different planning fields and visual parameters
+without changing the common package.
 
 ### caption:Program
 
-Assigns caption styles to the narrative. Declares a default style and optional per-role or
-per-Selection overrides.
+The Program starts from the complete ordered display-word universe emitted by Script. One explicit
+default Style covers every word; no `@whole` Selection or complement is required. Ordered `Use`
+rules replace the whole Style on a Role or explicit Caption word subset, with the last match winning.
 
 ```svml
-<caption:Program id="caption-program" narrative={story} default={primary-caption}>
+<caption:Program id="caption-program" words={story.caption.words}
+  default={primary-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
+  <caption:Use words={story.caption.selection.product-demo}
+    style={dialogue-caption}/>
 </caption:Program>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `narrative` | yes | The Script component |
-| `default` | yes | Default `caption:Style` for all text |
-
-**Children:**
-
-`<caption:Use>` applies style overrides. Rules are applied in source order — last match wins.
-
-| `<caption:Use>` attribute | Description |
-|---|---|
-| `role` | Match by Role Cue label (e.g. `"ALICE"`) |
-| `on` | Match by Selection reference (e.g. `{story.selection.product-demo}`) |
-| `style` | The `caption:Style` to apply |
-
-Use `role=` to give different speakers different caption colors. Use `on=` to override style during
-specific Selections (e.g. a product demo section uses a different caption style).
+`role=` is convenient author syntax for a word subset, not a temporal condition. `words=` consumes
+the Caption-specific projection of a Script Selection; the public time Selection remains only a
+pair of semantic anchors. Partial ownership of an indivisible Dual Text display word is rejected.
 
 ### caption-ai:Planner
 
-AI-driven cue planning via Gemini. The planner receives the display text atoms, the Style
-instructions, and the Program assignments. It splits text into cues and assigns Field values.
-
 ```svml
-<caption-ai:Planner id="caption-plan" narrative={story}
+<caption-ai:Planner id="caption-plan" words={story.caption.words}
   program={caption-program} model="gemini-2.5-flash"/>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `narrative` | yes | The Script component |
-| `program` | yes | The `caption:Program` |
-| `model` | yes | Gemini model: `gemini-2.5-flash` |
+The planner receives immutable display words and already-resolved Style runs. It may only cut each
+run into ordered Cues and attach declared fields to word ids. It cannot rewrite text, select Styles,
+see audio, or invent time. Its output is `{caption-plan.plan}`.
 
-The planner never receives audio, timing data, or the speech side of Dual Text. It works entirely
-from the caption (display) projection.
-
-**Output:** `{caption-plan.plan}` — the cue plan, passed to `caption:Track`.
-
-### caption:Track
-
-Joins the cue plan, SemanticMap, ProgramSpace, and Program to produce a timed VisualTrack.
+### caption-fine:Track
 
 ```svml
-<caption:Track id="captions" narrative={story} map={timing.map}
+<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
   space={speech.space} program={caption-program} plan={caption-plan.plan}/>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `narrative` | yes | The Script component |
-| `map` | yes | SemanticMap from `whisperx:Alignment` |
-| `space` | yes | ProgramSpace from `speech:Spine` |
-| `program` | yes | The `caption:Program` |
-| `plan` | yes | Cue plan from `caption-ai:Planner` |
-
-**Output:** `{captions.track}` — a VisualTrack added to `film:Film`.
-
-### Caption combination example
-
-The full caption pipeline with per-role styles:
-
-```svml
-<caption:Style id="dialogue-caption" appearance={studio.caption.dialogue}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Style id="alice-caption" appearance={studio.caption.alice}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select at most two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-
-<caption:Style id="bob-caption" appearance={studio.caption.bob}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Program id="caption-program" narrative={story} default={dialogue-caption}>
-  <caption:Use role="ALICE" style={alice-caption}/>
-  <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
-</caption:Program>
-
-<caption-ai:Planner id="caption-plan" narrative={story}
-  program={caption-program} model="gemini-2.5-flash"/>
-
-<caption:Track id="captions" narrative={story} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
-```
-
-ALICE gets green captions (`#73FBD3`), BOB gets gold (`#FFD166`), and during the product-demo
-Selection both switch to the neutral dialogue style. The `important` Field only applies to ALICE's
-style — her emphasized words get special treatment.
+The common Caption timing step joins the Plan to the independent SemanticMap. Fine then renders all
+default and override Styles into one ordinary peer `VisualTrack`: `{captions.track}`.
 
 ## B-roll
 
@@ -315,21 +238,17 @@ All three track types together in one source file:
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="broll" from="@narratage/broll@1"/>
 <import as="text" from="@narratage/text-track@1"/>
 
 <!-- Captions: primary style for all text -->
-<caption:Style id="base-caption" appearance={studio.caption.base}>
-  <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select zero, one, or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-<caption:Program id="caption-program" narrative={story} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" narrative={story}
+<caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+<caption:Program id="caption-program" words={story.caption.words} default={base-caption}/>
+<caption-ai:Planner id="cue-plan" words={story.caption.words}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption:Track id="captions" narrative={story} map={timing.map}
+<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
 <!-- B-roll: generated video during a Selection -->

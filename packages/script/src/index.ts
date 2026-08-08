@@ -2,6 +2,8 @@ export { ScriptSyntaxError } from "./error.js";
 export { formatScript } from "./format.js";
 export {
   captionProjectionType,
+  captionWordSequenceType,
+  captionWordSubsetType,
   narrativeDialogueExcerptType,
   narrativeExcerptType,
   narrativeMomentType,
@@ -15,6 +17,10 @@ export {
 } from "./manifest.js";
 export {
   captionProjectionValue,
+  captionSelectionWordSubset,
+  captionSelectionWordSubsetValue,
+  captionWordSequence,
+  captionWordSequenceValue,
   narrativeDialogueExcerptValue,
   narrativeSegmentExcerptValue,
   narrativeMomentValue,

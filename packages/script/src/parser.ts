@@ -45,11 +45,11 @@ const RESERVED_SEGMENT_IDS = new Set(["script"]);
 /** A marker's structural position before its affinity picks one anchor. */
 type RawMarkerBoundary = Omit<MarkerBoundary, "anchorId">;
 type RawEdge<T> = Omit<T, "boundary"> & { readonly boundary: RawMarkerBoundary };
-type RawSelectionOccurrence = Omit<ParsedSelectionOccurrence, "open" | "close"> & {
+type RawSelectionOccurrence = Omit<ParsedSelectionOccurrence, "startAnchorId" | "endAnchorId" | "open" | "close"> & {
   readonly open: RawEdge<ParsedSelectionOccurrence["open"]>;
   readonly close: RawEdge<ParsedSelectionOccurrence["close"]>;
 };
-type RawMomentOccurrence = Omit<ParsedMomentOccurrence, "boundary"> & { readonly boundary: RawMarkerBoundary };
+type RawMomentOccurrence = Omit<ParsedMomentOccurrence, "anchorId" | "boundary"> & { readonly boundary: RawMarkerBoundary };
 
 function normalizeWord(value: string): string {
   return value
@@ -733,15 +733,24 @@ export function parseScript(
     turns,
     selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
       id,
-      occurrences: occurrences.map((occurrence) => ({
-        ...occurrence,
-        open: anchored(occurrence.open),
-        close: anchored(occurrence.close),
-      })),
+      occurrences: occurrences.map((occurrence) => {
+        const open = anchored(occurrence.open);
+        const close = anchored(occurrence.close);
+        return {
+          ...occurrence,
+          startAnchorId: open.boundary.anchorId,
+          endAnchorId: close.boundary.anchorId,
+          open,
+          close,
+        };
+      }),
     })),
     moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
       id,
-      occurrences: occurrences.map(anchored),
+      occurrences: occurrences.map((occurrence) => {
+        const value = anchored(occurrence);
+        return { ...value, anchorId: value.boundary.anchorId };
+      }),
     })),
     captionProjection: {
       contract: "svml.caption-projection@1",

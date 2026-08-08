@@ -1,0 +1,96 @@
+import { captionTypes } from "@narratage/caption";
+import { narrativeTypes } from "@narratage/narrative";
+import { programSpaceTypes } from "@narratage/program-space";
+import { semanticMapTypes } from "@narratage/semantic-map";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
+import type {
+  StructuredElement,
+  StructuredSurfaceHandler,
+  SurfaceResolvedReference,
+  TextAttributeValue,
+} from "@narratage/text";
+
+import { fineCaptionTrackFragment } from "./fragment.js";
+import { fineCaptionStyle } from "./style.js";
+
+function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
+  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
+}
+
+function attributes(element: StructuredElement, required: readonly string[]): void {
+  const actual = Object.keys(element.attributes);
+  if (required.some((name) => element.attributes[name] === undefined) || actual.some((name) => !required.includes(name))) {
+    throw new Error(`${element.name} requires exactly ${required.join(", ")}`);
+  }
+}
+
+function stringAttribute(element: StructuredElement, name: string): string {
+  const value = element.attributes[name];
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be a non-empty string`);
+  return value.trim();
+}
+
+function reference(
+  element: StructuredElement,
+  name: string,
+  expected: SurfaceResolvedReference["type"],
+  resolveReference: (path: string) => SurfaceResolvedReference | undefined,
+): SurfaceResolvedReference {
+  const raw: TextAttributeValue | undefined = element.attributes[name];
+  if (typeof raw !== "object" || raw.kind !== "reference") {
+    throw new Error(`${element.name}.${name} must be a whole-value reference`);
+  }
+  const value = resolveReference(raw.path);
+  if (value === undefined) throw new Error(`${element.name}.${name} cannot resolve ${raw.path}`);
+  if (!sameType(value.type, expected)) throw new Error(`${element.name}.${name} has the wrong type`);
+  return value;
+}
+
+function inline<T>(referenceValue: SurfaceResolvedReference, subject: string): T {
+  if (referenceValue.record?.value.kind !== "inline") throw new Error(`${subject} must reference an authored inline Record`);
+  return referenceValue.record.value.value as unknown as T;
+}
+
+export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  attributes(element, ["id", "recipe"]);
+  if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
+    throw new Error(`${element.name} does not accept children`);
+  }
+  const id = stringAttribute(element, "id");
+  const recipe = inline<SvsRecipe>(reference(element, "recipe", svsRecipeType, resolveReference), `${element.name}.recipe`);
+  const style = fineCaptionStyle(id, recipe);
+  return {
+    records: [{ id, type: captionTypes.style, value: { kind: "inline", value: style }, range: element.range }],
+    components: [],
+    fragments: [],
+  };
+};
+
+export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  attributes(element, ["id", "narrative", "map", "words", "program", "plan", "space"]);
+  if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
+    throw new Error(`${element.name} does not accept children`);
+  }
+  const id = stringAttribute(element, "id");
+  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+  const map = reference(element, "map", semanticMapTypes.complete, resolveReference);
+  const words = reference(element, "words", narrativeTypes.captionWordSequence, resolveReference);
+  const program = reference(element, "program", captionTypes.program, resolveReference);
+  const plan = reference(element, "plan", captionTypes.plan, resolveReference);
+  const space = reference(element, "space", programSpaceTypes.programSpace, resolveReference);
+  return {
+    records: [],
+    components: [{
+      id,
+      fragment: fineCaptionTrackFragment.id,
+      inputs: {
+        narrative: narrative.ref, map: map.ref, words: words.ref,
+        program: program.ref, plan: plan.ref, space: space.ref,
+      },
+      outputs: { track: `${id}.track` },
+      range: element.range,
+    }],
+    fragments: [fineCaptionTrackFragment],
+  };
+};

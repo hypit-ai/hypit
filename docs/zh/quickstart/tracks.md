@@ -9,158 +9,72 @@ description: 视觉 Track 组件——字幕、B-roll 叠加层和文字叠加�
 
 ## 字幕系统
 
-字幕由四个组件构成一条流水线：
+字幕由一套很小的公共语言与可替换的样式族组成：
 
 ```text
-caption:Style → caption:Program → caption-ai:Planner → caption:Track
+Script 词全集 → 样式族 → Caption Program → Planner → 样式族 Track
 ```
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 ```
 
-### caption:Style
+公共 Caption 只负责 Cue 字数边界、通用逐词字段、完整样式分配、Plan 校验与时间
+拼接。Fine 是第一种具体样式族，负责 `important` 字段、字体/框参数和视觉渲染。
 
-声明一种字幕样式的完整视觉外观及规划指令。
+### caption-fine:Style
+
+一个 Style 是不可拆分的“规划要求 + 渲染参数”。Fine 从一个包自有的 SVS Recipe
+同时解析两者：
 
 ```svml
-<caption:Style id="primary-caption" appearance={studio.caption.primary}
-  mode="proportional-word">
-  <caption:Cues>
-    Split each Script Segment into short complete semantic phrases of two to
-    seven words. Never cross a sentence or Segment boundary.
-  </caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="1" max-per-cue="2">
-    Select one or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 ```
 
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `appearance` | 是 | SVS 字幕 Recipe——位置、字体、颜色、容器 |
-| `mode` | 否 | 字幕计时模式，例如 `proportional-word` |
-
-**子元素：**
-
-- `<caption:Cues>` —— 给 AI 规划器的自然语言指令，告诉它如何将文本拆分为提示单元。规划器接收显示文本（Dual Text 的左侧）和这些指令，但不会接收音频或时间数据。
-- `<caption:Field>` —— 声明一个有类型的逐词注解。规划器将这些字段分配给每个提示单元中的各个词。
-
-| `<caption:Field>` 属性 | 描述 |
-|---|---|
-| `id` | 字段名称（例如 `important`） |
-| `type` | 字段类型：`boolean` |
-| `min-per-cue` | 每个提示单元的最少注解数 |
-| `max-per-cue` | 每个提示单元的最多注解数 |
-
-`<caption:Field>` 的元素主体是给规划器的自然语言指令。
+Recipe 同时包含 `cue-min-words`、`cue-max-words`、Fine 自有的
+`important-*-per-cue`、强调外观和完整字体/框参数。其他字幕包可以定义完全不同
+的字段和渲染方式，无需修改公共 Caption。
 
 ### caption:Program
 
-将字幕样式分配给叙事。声明一个默认样式，并可选择按角色或按 Selection 覆盖。
+Program 消费 Script 显式输出的完整有序显示词全集。一个必填的默认 Style 自动覆盖
+所有词，不需要作者制造 `@whole` 或补集。`Use` 按源码顺序替换整个 Style，后命中
+者获胜。
 
 ```svml
-<caption:Program id="caption-program" narrative={story} default={primary-caption}>
+<caption:Program id="caption-program" words={story.caption.words}
+  default={primary-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
+  <caption:Use words={story.caption.selection.product-demo}
+    style={dialogue-caption}/>
 </caption:Program>
 ```
 
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `narrative` | 是 | Script 组件 |
-| `default` | 是 | 所有文本的默认 `caption:Style` |
-
-**子元素：**
-
-`<caption:Use>` 用于应用样式覆盖。规则按源代码顺序应用——后匹配优先。
-
-| `<caption:Use>` 属性 | 描述 |
-|---|---|
-| `role` | 按 Role Cue 标签匹配（例如 `"ALICE"`） |
-| `on` | 按 Selection 引用匹配（例如 `{story.selection.product-demo}`） |
-| `style` | 要应用的 `caption:Style` |
-
-使用 `role=` 为不同说话者设置不同的字幕颜色。使用 `on=` 在特定 Selection 期间覆盖样式（例如产品演示部分使用不同的字幕样式）。
+`role=` 是词子集查询的作者语法，不是时间条件。`words=` 接收 Selection 的字幕专用
+词投影；通用 Selection 的公开值仍只有语义首尾锚点。
 
 ### caption-ai:Planner
 
-通过 Gemini 驱动的 AI 提示单元规划。规划器接收显示文本原子、Style 指令和 Program 分配，将文本拆分为提示单元并分配 Field 值。
-
 ```svml
-<caption-ai:Planner id="caption-plan" narrative={story}
+<caption-ai:Planner id="caption-plan" words={story.caption.words}
   program={caption-program} model="gemini-2.5-flash"/>
 ```
 
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `narrative` | 是 | Script 组件 |
-| `program` | 是 | `caption:Program` |
-| `model` | 是 | Gemini 模型：`gemini-2.5-flash` |
+Planner 只接收不可改写的显示词与已解析好的 Style runs。它只能分 Cue，并给词 id
+附上样式声明的字段；看不到音频、时间或 Dual Text 右侧。
 
-规划器不会接收音频、时间数据或 Dual Text 的语音侧。它完全基于字幕（显示）投影进行工作。
-
-**输出：**`{caption-plan.plan}` —— 提示单元计划，传递给 `caption:Track`。
-
-### caption:Track
-
-将提示单元计划、SemanticMap、ProgramSpace 和 Program 组合在一起，生成一个带时间信息的 VisualTrack。
+### caption-fine:Track
 
 ```svml
-<caption:Track id="captions" narrative={story} map={timing.map}
+<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
   space={speech.space} program={caption-program} plan={caption-plan.plan}/>
 ```
 
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `narrative` | 是 | Script 组件 |
-| `map` | 是 | 来自 `whisperx:Alignment` 的 SemanticMap |
-| `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace |
-| `program` | 是 | `caption:Program` |
-| `plan` | 是 | 来自 `caption-ai:Planner` 的提示单元计划 |
-
-**输出：**`{captions.track}` —— 添加到 `film:Film` 的 VisualTrack。
-
-### 字幕组合示例
-
-包含按角色样式的完整字幕流水线：
-
-```svml
-<caption:Style id="dialogue-caption" appearance={studio.caption.dialogue}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Style id="alice-caption" appearance={studio.caption.alice}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select at most two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-
-<caption:Style id="bob-caption" appearance={studio.caption.bob}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Program id="caption-program" narrative={story} default={dialogue-caption}>
-  <caption:Use role="ALICE" style={alice-caption}/>
-  <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
-</caption:Program>
-
-<caption-ai:Planner id="caption-plan" narrative={story}
-  program={caption-program} model="gemini-2.5-flash"/>
-
-<caption:Track id="captions" narrative={story} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
-```
-
-ALICE 使用绿色字幕（`#73FBD3`），BOB 使用金色字幕（`#FFD166`），在 product-demo Selection 期间两者都切换为中性对话样式。`important` Field 仅应用于 ALICE 的样式——她的强调词会获得特殊处理。
+公共 Caption 先把 Plan 与独立 SemanticMap 拼接，Fine 再把所有默认/覆盖样式渲染成
+一个普通的对等 `VisualTrack`：`{captions.track}`。
 
 ## B-roll
 
@@ -301,21 +215,17 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="broll" from="@narratage/broll@1"/>
 <import as="text" from="@narratage/text-track@1"/>
 
 <!-- Captions: primary style for all text -->
-<caption:Style id="base-caption" appearance={studio.caption.base}>
-  <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select zero, one, or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-<caption:Program id="caption-program" narrative={story} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" narrative={story}
+<caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+<caption:Program id="caption-program" words={story.caption.words} default={base-caption}/>
+<caption-ai:Planner id="cue-plan" words={story.caption.words}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption:Track id="captions" narrative={story} map={timing.map}
+<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
 <!-- B-roll: generated video during a Selection -->

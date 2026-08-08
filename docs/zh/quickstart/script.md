@@ -70,7 +70,7 @@ Role Cue 会产生不同的文本投影：
 | **speech** | `What time is it?`<br>`It's 8:30.` |
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
-dialogue 投影包含 Role Cue 前缀。speech 和 caption 投影会去除前缀。像 `seedance:Speech` 这样的组件使用 `{story.segment.dialogue.dialogue}`（带标签），而 `caption:Track` 使用 caption 投影（不带标签）。
+dialogue 投影包含 Role Cue 前缀，speech 和 caption 投影会去除前缀。像 `seedance:Speech` 这样的组件使用 `{story.segment.dialogue.dialogue}`（带标签）。Script 还会显式输出完整有序的 `{story.caption.words}` 词全集，供 Caption Program 和 Planner 使用。
 
 ## Dual Text
 
@@ -148,7 +148,9 @@ Selection 不要求像 XML 标签那样嵌套，它们可以互相交叉：
 </demo>
 ```
 
-Selection 标记是零宽度的，不会出现在任何文本投影中。它们编译为包含 `Range[]` 的 `SelectionSet` 值。Script 本身不包含秒数或帧号——时间信息来自 WhisperX 对齐。
+Selection 标记是零宽度的，不会出现在任何文本投影中。每个公开 occurrence 只包含已经解析好的首尾语义锚点身份。Script 本身不包含秒数或帧号；消费者必须通过显式连接的 SemanticMap 投影这些锚点。
+
+Caption 还会得到 `{story.caption.selection.<id>}` 这一有序词子集，因此不会从通用时间 Selection 中读取 Parser token 下标。
 
 其他组件通过 `{story.selection.problem}` 引用 Selection，将视觉内容绑定到叙事中的语义时刻。
 
@@ -168,7 +170,7 @@ Moment 是具名的时间**点**（不是范围）：
 | `@id!` | 右吸附（时间点位于下一个单词的起始处） |
 | `~@id!` | 左吸附（时间点位于前一个单词的末尾） |
 
-Moment 编译为包含 `Point[]` 的 `MomentSet` 值。Selection 和 Moment 共享同一命名空间——同一个 id 不能同时用于两者。
+每个 Moment occurrence 只包含一个已经解析好的语义锚点身份；时间消费者通过同一份显式 SemanticMap 投影它。Selection 和 Moment 共享同一命名空间——同一个 id 不能同时用于两者。
 
 其他组件通过 `{story.moment.ranking}` 引用 Moment。
 

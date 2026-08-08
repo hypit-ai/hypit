@@ -67,23 +67,23 @@ const captionResponseSchema: Schema = {
             items: {
               type: Type.OBJECT,
               properties: {
-                after_atom_id: { type: Type.STRING },
+                after_word_id: { type: Type.STRING },
                 fields: {
                   type: Type.ARRAY,
                   items: {
                     type: Type.OBJECT,
                     properties: {
                       declaration_id: { type: Type.STRING },
-                      atom_id: { type: Type.STRING },
+                      word_id: { type: Type.STRING },
                       value: { type: Type.STRING },
                     },
-                    required: ["declaration_id", "atom_id", "value"],
-                    propertyOrdering: ["declaration_id", "atom_id", "value"],
+                    required: ["declaration_id", "word_id", "value"],
+                    propertyOrdering: ["declaration_id", "word_id", "value"],
                   },
                 },
               },
-              required: ["after_atom_id", "fields"],
-              propertyOrdering: ["after_atom_id", "fields"],
+              required: ["after_word_id", "fields"],
+              propertyOrdering: ["after_word_id", "fields"],
             },
           },
         },

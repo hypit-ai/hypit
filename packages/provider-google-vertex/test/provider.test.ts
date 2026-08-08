@@ -8,7 +8,6 @@ import {
 } from "@narratage/caption-gemini";
 import {
   captionTypes,
-  defaultCaptionTrackProgram,
   resolveCaptionProgram,
   sealCaptionStyle,
 } from "@narratage/caption";
@@ -22,16 +21,16 @@ import {
   googleVertexProviderImplementationDigest,
 } from "@narratage/provider-google-vertex";
 import type { GenerateCaptionContent } from "@narratage/provider-google-vertex";
-import { parseScript } from "@narratage/script";
+import { captionWordSequence, parseScript } from "@narratage/script";
 
 function request(): CaptionGeminiRequest {
   const narrative = parseScript("provider.svml", "<line><ALICE>Meaning becomes the source.</line>");
-  const base = defaultCaptionTrackProgram("important");
+  const words = captionWordSequence(narrative, "story.caption.words");
   const style = sealCaptionStyle({
     contract: "svml.caption-style@1",
     id: "important",
     planning: {
-      cueInstruction: "Prefer one short complete semantic phrase.",
+      cue: { minimumWords: 1, maximumWords: 7, instruction: "Prefer one short complete semantic phrase." },
       fields: [{
         id: "important",
         value: { kind: "enum", values: ["important"] },
@@ -40,10 +39,10 @@ function request(): CaptionGeminiRequest {
         maximumPerCue: 2,
       }],
     },
-    presentation: { mode: "whole", stackingOrder: 100, style: base.style },
+    rendering: { family: "test-caption@1", parameters: {} },
   });
-  const captionProgram = resolveCaptionProgram(narrative, "captions", style, []);
-  return compileCaptionGeminiRequest(narrative, captionProgram, sealCaptionGeminiProgram({
+  const captionProgram = resolveCaptionProgram(words, "captions", style, []);
+  return compileCaptionGeminiRequest(words, captionProgram, sealCaptionGeminiProgram({
     contract: "svml.caption-gemini-program@1",
     model: "gemini-2.5-flash",
   }));
@@ -53,8 +52,8 @@ function response(requestValue: CaptionGeminiRequest): RawCaptionGeminiResponse 
   return { runs: requestValue.runs.map((run) => ({
     run_id: run.id,
     cues: [{
-      after_atom_id: run.atomIds.at(-1)!,
-      fields: [{ declaration_id: "important", atom_id: run.atomIds[0]!, value: "important" }],
+      after_word_id: run.wordIds.at(-1)!,
+      fields: [{ declaration_id: "important", word_id: run.wordIds[0]!, value: "important" }],
     }],
   })) };
 }

@@ -1,13 +1,3 @@
-export type Affinity = "left" | "right";
-
-export type MarkerBoundary = {
-  readonly tokenIndex: number;
-  readonly structuralPosition: number;
-  readonly segmentId?: string;
-  /** The exact 2M+2N anchor this marker's affinity resolves to, fixed at parse time. */
-  readonly anchorId: string;
-};
-
 export type NarrativeSegment = {
   readonly id: string;
   readonly index: number;
@@ -38,8 +28,9 @@ export type NarrativeTurn = {
 
 export type NarrativeSelectionOccurrence = {
   readonly occurrence: number;
-  readonly open: { readonly affinity: Affinity; readonly boundary: MarkerBoundary };
-  readonly close: { readonly affinity: Affinity; readonly boundary: MarkerBoundary };
+  /** The exact semantic anchors chosen by the author Surface's affinity syntax. */
+  readonly startAnchorId: string;
+  readonly endAnchorId: string;
 };
 
 export type NarrativeSelection = {
@@ -54,8 +45,8 @@ export type NarrativeSelectionRef = NarrativeSelection & {
 
 export type NarrativeMomentOccurrence = {
   readonly occurrence: number;
-  readonly affinity: Affinity;
-  readonly boundary: MarkerBoundary;
+  /** The exact semantic anchor chosen by the author Surface's affinity syntax. */
+  readonly anchorId: string;
 };
 
 export type NarrativeMoment = {
@@ -96,6 +87,37 @@ export type CaptionProjection = {
 
 /** Whole authored display projection. It contains no pronunciation replacement text. */
 export type CaptionProjectionRef = CaptionProjection;
+
+/** One visible display word. Pronunciation-only text never enters this value. */
+export type CaptionWord = {
+  readonly id: string;
+  readonly index: number;
+  readonly regionId: string;
+  readonly segmentId: string;
+  readonly turnId: string;
+  readonly role?: string;
+  readonly text: string;
+  readonly displayStart: number;
+  readonly displayEnd: number;
+  readonly sourceTokenStart: number;
+  readonly sourceTokenEndExclusive: number;
+  readonly correspondence: "exact" | "region-envelope";
+};
+
+/** The complete ordered visible-word universe for one Script Caption projection. */
+export type CaptionWordSequence = {
+  readonly contract: "svml.caption-word-sequence@1";
+  readonly id: string;
+  readonly words: readonly CaptionWord[];
+};
+
+/** One ordered subset of an exact CaptionWordSequence, projected by Script structure. */
+export type CaptionWordSubset = {
+  readonly contract: "svml.caption-word-subset@1";
+  readonly id: string;
+  readonly sequenceId: string;
+  readonly wordIds: readonly string[];
+};
 
 export type SemanticAnchor = {
   readonly id: string;

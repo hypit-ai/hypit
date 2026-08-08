@@ -1,58 +1,44 @@
 # `@narratage/caption`
 
-Provider-neutral Caption planning, timing projection and lowering to an ordinary peer
-`VisualTrack`.
+Style-family-neutral Caption contracts and timing.
 
-Caption has two independent inputs:
+The package owns four pieces of common language:
 
-- `Narrative.captionProjection` is the immutable display truth. Only the left side of Dual Text is
-  visible here; `<SVML | semantic video markup language>` contributes the display atom `SVML`, not
-  its pronunciation words.
-- `CaptionProgram` is the complete author intent for planning and presentation. It assigns exactly
-  one full `CaptionStyle` to every visible display atom.
+- a complete ordered `CaptionWordSequence` supplied explicitly by the Script package;
+- one total `CaptionProgram`, with an explicit default Style and ordered whole-Style overrides;
+- a generic `CaptionPlan`, which partitions words into Cues and assigns declared fields;
+- the deterministic join from planned display words to an independent `CompleteSemanticMap`.
 
-A Style contains both its planning requirements and its complete visual appearance. The Program
-names one default Style and then applies ordered whole-Style replacements by Role or explicit
-Script Selection. Later matching applications win. Consequently roleless prose and every
-unmentioned word receive the default automatically, while changing one sentence needs only one
-Selection and one `Use`; the author never writes the complement.
+It does **not** own a concrete font, box model, field meaning, renderer, LLM or Provider. A Style
+family such as `@narratage/caption-fine` creates complete Styles and renders the resulting Program.
 
 ```xml
-<caption:Style id="plain" appearance={studio.caption.plain}>
-  <caption:Cues>Use complete phrases of two to five words.</caption:Cues>
-</caption:Style>
+<caption-fine:Style id="plain" recipe={studio.caption.plain}/>
+<caption-fine:Style id="impact" recipe={studio.caption.impact}/>
 
-<caption:Style id="impact" appearance={studio.caption.impact}>
-  <caption:Cues>Use complete phrases of two to seven words.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select at most two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-
-<caption:Program id="captions" narrative={story} default={plain}>
+<caption:Program id="captions" words={story.caption.words} default={plain}>
   <caption:Use role="ALICE" style={impact}/>
-  <caption:Use on={story.selection.special} style={plain}/>
+  <caption:Use words={story.caption.selection.special} style={plain}/>
 </caption:Program>
 ```
 
-`Use` order is semantic. The second rule above replaces the entire Style for `special`; it does not
-merge arbitrary fields from two styles. A Role Cue is optional in Script, and Role state never
-crosses a Segment boundary.
+The default covers the whole word universe. Authors do not create a fake `@whole` Selection or its
+complement. Each `Use` replaces one complete Style on an explicit word subset; later matching rules
+win. `role=` is author-surface sugar for a subset of the same ordered word universe. It is not a
+second time-range language.
 
-The planner-neutral `CaptionPlan` has only two freedoms:
+The Program stores only sequence identity and word-id-to-Style runs. It does not copy the upstream
+word payload. Planner, timing and rendering packages receive `story.caption.words` through their own
+explicit graph inputs.
 
-1. partition each already-resolved Program run into ordered Cues;
-2. assign zero, one or more declared attributes to each display atom.
+One Style is an indivisible pair:
 
-It cannot rewrite text, change Style assignment or invent time. `temporalize-caption-plan` later
-joins those atom identities with the independent `CompleteSemanticMap`. Exact display/speech
-correspondence reuses measured timing. A display alias without word-level audio evidence receives
-an explicitly estimated local projection and never contaminates the global speech map.
+- common planning requirements: Cue word bounds and generic per-word field declarations;
+- package-owned rendering family and opaque resolved parameters.
 
-The final `render-caption-program` Producer lowers the timed result and each selected full Style to
-one self-contained `VisualTrack`. Caption is not a privileged Composition layer: Film consumes it
-exactly like Speech, B-roll or Text Track output.
+The planner has only two freedoms: partition each resolved run without reordering or rewriting its
+words, and assign zero or more declared fields to each word. It never sees audio or time. The common
+timing Producer later joins the validated Plan to Script's Caption projection and the measured
+semantic map.
 
-The package owns deterministic Types, validators and Producers only. It contains no LLM, Provider,
-credential, queue or Core authority. A planning package such as `@narratage/caption-gemini` may fulfill
-the narrow `CaptionPlan` contract; presentation and timing remain here.
+The package contains no LLM, Provider, credential, queue, visual renderer or Core authority.

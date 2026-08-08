@@ -5,17 +5,6 @@ const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
 ): ValueSchema => ({ kind: "object", fields });
-const markerBoundary = object({
-  tokenIndex: { schema: integer },
-  structuralPosition: { schema: integer },
-  segmentId: { schema: string, optional: true },
-  anchorId: { schema: string },
-});
-const markerEdge = object({
-  affinity: { schema: { kind: "string", enum: ["left", "right"] } },
-  boundary: { schema: markerBoundary },
-});
-
 export const narrativeSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.narrative@1" } },
   segments: { schema: { kind: "array", minItems: 1, items: object({
@@ -33,13 +22,12 @@ export const narrativeSchema: ValueSchema = object({
   }) } },
   selections: { schema: { kind: "array", items: object({
     id: { schema: string }, occurrences: { schema: { kind: "array", minItems: 1, items: object({
-      occurrence: { schema: integer }, open: { schema: markerEdge }, close: { schema: markerEdge },
+      occurrence: { schema: integer }, startAnchorId: { schema: string }, endAnchorId: { schema: string },
     }) } },
   }) } },
   moments: { schema: { kind: "array", items: object({
     id: { schema: string }, occurrences: { schema: { kind: "array", minItems: 1, items: object({
-      occurrence: { schema: integer }, affinity: { schema: { kind: "string", enum: ["left", "right"] } },
-      boundary: { schema: markerBoundary },
+      occurrence: { schema: integer }, anchorId: { schema: string },
     }) } },
   }) } },
   captionProjection: { schema: object({
@@ -100,16 +88,31 @@ export const captionProjectionSchema: ValueSchema = object({
     }) } },
   }) } },
 });
+const captionWord = object({
+  id: { schema: string }, index: { schema: integer }, regionId: { schema: string }, segmentId: { schema: string },
+  turnId: { schema: string }, role: { schema: string, optional: true }, text: { schema: string },
+  displayStart: { schema: integer }, displayEnd: { schema: integer }, sourceTokenStart: { schema: integer },
+  sourceTokenEndExclusive: { schema: integer },
+  correspondence: { schema: { kind: "string", enum: ["exact", "region-envelope"] } },
+});
+export const captionWordSequenceSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.caption-word-sequence@1" } },
+  id: { schema: string }, words: { schema: { kind: "array", minItems: 1, items: captionWord } },
+});
+export const captionWordSubsetSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.caption-word-subset@1" } },
+  id: { schema: string }, sequenceId: { schema: string },
+  wordIds: { schema: { kind: "array", items: string } },
+});
 export const narrativeMomentSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.narrative-moment@1" } }, id: { schema: string },
   occurrences: { schema: { kind: "array", minItems: 1, items: object({
-    occurrence: { schema: integer }, affinity: { schema: { kind: "string", enum: ["left", "right"] } },
-    boundary: { schema: markerBoundary },
+    occurrence: { schema: integer }, anchorId: { schema: string },
   }) } },
 });
 export const narrativeSelectionSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.narrative-selection@1" } }, id: { schema: string },
   occurrences: { schema: { kind: "array", minItems: 1, items: object({
-    occurrence: { schema: integer }, open: { schema: markerEdge }, close: { schema: markerEdge },
+    occurrence: { schema: integer }, startAnchorId: { schema: string }, endAnchorId: { schema: string },
   }) } },
 });

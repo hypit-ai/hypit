@@ -128,14 +128,8 @@ test("a selected Text Item is located only through explicit Selection and Semant
     id: "callout",
     occurrences: [{
       occurrence: 1,
-      open: {
-        affinity: "right" as const,
-        boundary: { tokenIndex: 1, structuralPosition: 1, segmentId: "opening", anchorId: "segment:opening:token:2:start" },
-      },
-      close: {
-        affinity: "left" as const,
-        boundary: { tokenIndex: 2, structuralPosition: 2, segmentId: "opening", anchorId: "segment:opening:token:2:end" },
-      },
+      startAnchorId: "segment:opening:token:2:start",
+      endAnchorId: "segment:opening:token:2:end",
     }],
   };
   const selection: NarrativeSelectionRef = selectionContent;
