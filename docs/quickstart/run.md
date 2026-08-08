@@ -245,6 +245,19 @@ prevent one type of work from starving others.
 
 ## Build workflow
 
+### 0. Install
+
+```bash
+pnpm install
+```
+
+This installs Node dependencies **and** prepares the Python services (WhisperX, OpenCV) that local
+Builds need. When `uv` is not on your PATH the Python step is skipped with a warning — install
+[uv](https://docs.astral.sh/uv/) first if you need local alignment or image processing.
+
+`narratage build` will start the required services automatically; you do not need to launch them
+yourself.
+
 ### 1. Diagnose the environment
 
 ```bash

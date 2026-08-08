@@ -233,6 +233,18 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
 
 ## Build 工作流
 
+### 0. 安装
+
+```bash
+pnpm install
+```
+
+这条命令在安装 Node 依赖的同时，也会准备好本地 Build 所需的 Python 服务（WhisperX、OpenCV）。
+如果 `uv` 不在 PATH 中，Python 步骤会跳过并给出提示——需要本地对齐或图像处理时请先安装
+[uv](https://docs.astral.sh/uv/)。
+
+`narratage build` 会自动启动所需的服务，无需手动启动。
+
 ### 1. 诊断环境
 
 ```bash

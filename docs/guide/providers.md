@@ -30,7 +30,7 @@ Provider packages depend on Runtime ports and the model families they serve, nev
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": { "activation": "./src/activation.ts", "service": true },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
@@ -119,7 +119,43 @@ The `create` function constructs the Endpoint from Runtime config. The `doctor` 
 diagnostics (credential presence, executable availability) without constructing or calling
 anything.
 
-## 5. Register and lock
+## 5. Declare an external service (if needed)
+
+If the Provider depends on an external program (a Python service, a local server), add
+`"service": true` to the `svml` block in `package.json` (shown in step 2) and export a factory
+from `src/service.ts`:
+
+```typescript
+// src/service.ts
+import type { RuntimeExternalService } from "@narratage/local";
+
+export function createMyExternalService(): RuntimeExternalService {
+  return {
+    id: "my-service",
+    prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
+    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "svml-my-service"] },
+    probe: async () => {
+      // Return { state: "ready" } or { state: "down", detail: "..." }
+    },
+  };
+}
+```
+
+Wire it into the activation descriptor by passing `service` to `createRuntimeEndpointAdapterFacet`:
+
+```typescript
+const adapter = createRuntimeEndpointAdapterFacet({
+  use: "@narratage/provider-my-service",
+  service: createMyExternalService,
+  // create, doctor …
+});
+```
+
+`pnpm install` will run `prepare` automatically, and `narratage build` will call `start` and
+`probe` before the first Operation. Providers that call only remote APIs (no local program) omit
+this step entirely — leave `"service"` out of `package.json`.
+
+## 6. Register and lock
 
 Add the path mapping to `tsconfig.json`:
 
@@ -135,7 +171,7 @@ pnpm narratage lock-packages <runtime-lock> \
   --root .
 ```
 
-## 6. Reference from svml.runtime.json
+## 7. Reference from svml.runtime.json
 
 ```json
 {
