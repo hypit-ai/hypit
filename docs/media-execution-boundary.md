@@ -1,8 +1,7 @@
 # Media Execution Boundary
 
-Status: local reference path and AWS media/HyperFrames Endpoint variants are implemented. The AWS
-deployments have not yet passed a live acceptance run. This is not yet a public compatibility
-freeze.
+Status: local reference path and AWS media/HyperFrames Endpoint variants are implemented. Both AWS
+variants have passed complete live acceptance runs. This is not yet a public compatibility freeze.
 
 ## The rule
 
@@ -128,8 +127,6 @@ mistake codec padding for extra authored time.
 
 ## Remaining work
 
-- deploy and live-test the implemented AWS HyperFrames variant after explicit resource review; the
-  exact FFmpeg Layer and ZIP-packaged media service already pass their complete live canary;
 - deploy the implemented `services/whisperx` distribution wherever a local warm model process is
   required, and add a remote-service Provider only for a genuinely persistent warm deployment;
   WhisperX is deliberately not an AWS Lambda target because repeated model cold starts defeat this

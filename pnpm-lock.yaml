@@ -962,9 +962,15 @@ importers:
         specifier: workspace:*
         version: link:../runtime-adapter
     devDependencies:
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
 
   packages/provider-hyperframes-local:
     dependencies:
