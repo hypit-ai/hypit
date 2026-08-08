@@ -9,7 +9,11 @@ import {
   isRuntimeAdapterHostFacet,
   RuntimeAdapterRegistry,
 } from "@narratage/runtime-adapter";
-import type { RuntimeDoctorDiagnostic } from "@narratage/runtime-adapter";
+import type {
+  RuntimeDoctorDiagnostic,
+  RuntimeExternalService,
+  RuntimeServiceState,
+} from "@narratage/runtime-adapter";
 
 import { createProjectLocalRuntime } from "./runtime.js";
 import type { LocalRuntime } from "./types.js";
@@ -224,11 +228,11 @@ export async function doctorRuntimeConfig(
   for (const item of document.runtimeServices) {
     const context = { root, instance: item.instance, config: item.config ?? {} };
     try {
-      diagnostics.push(...await registry.doctor(item.use, "service", context));
+      diagnostics.push(...await registry.doctor(item.use, "runtime-service", context));
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
     }
-    if (!registry.has(item.use, "service")) continue;
+    if (!registry.has(item.use, "runtime-service")) continue;
     try {
       await registry.createService(item.use, context);
     } catch (error) {
@@ -252,6 +256,42 @@ export async function doctorRuntimeConfig(
       await registry.createEndpoint(item.use, context);
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
+    }
+    // An external program is a prerequisite a Build cannot supply for itself, so
+    // name the command that supplies it here rather than failing mid-Build on a
+    // socket. `RUNTIME_SERVICE_` above is the Runtime's own part; this is the
+    // separate program a deployment must have installed or running.
+    let service: RuntimeExternalService | undefined;
+    try {
+      service = registry.service(item.use, context);
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "EXTERNAL_SERVICE_INVALID", item.instance));
+    }
+    if (service === undefined) continue;
+    let state: RuntimeServiceState;
+    try {
+      state = await service.probe();
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "EXTERNAL_SERVICE_PROBE_FAILED", service.id));
+      continue;
+    }
+    if (state.state === "down") {
+      diagnostics.push({
+        severity: "error",
+        code: "EXTERNAL_SERVICE_DOWN",
+        message: `${service.id} is not usable: ${state.detail}.${
+          service.start === undefined && service.prepare === undefined
+            ? ""
+            : " Bring it up with: narratage services up"}`,
+        subject: service.id,
+      });
+    } else if (state.state === "mismatch") {
+      diagnostics.push({
+        severity: "error",
+        code: "EXTERNAL_SERVICE_MISMATCH",
+        message: `${service.id} is running but differs from this Runtime Profile: ${state.detail}`,
+        subject: service.id,
+      });
     }
   }
   return { root, diagnostics };

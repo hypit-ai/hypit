@@ -4,8 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { createRuntimeEndpointAdapterFacet } from "@narratage/runtime-adapter";
+
 import {
   createRuntimeFromConfig,
+  doctorRuntimeConfig,
   parseRuntimeConfig,
   RuntimeConfigRegistry,
 } from "@narratage/local";
@@ -79,5 +82,54 @@ test("runtimeServices names the Runtime's own replaceable parts, apart from exte
     /does not accept services/u,
     "the word services now belongs to the external processes a deployment must have running",
   );
+  await rm(root, { recursive: true, force: true });
+});
+
+test("doctor names the external program a Provider needs, and the command that supplies it", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-external-service-"));
+  const path = join(root, "svml.runtime.json");
+  await writeFile(path, JSON.stringify({
+    format: "svml.runtime-config@1",
+    endpoints: [
+      { use: "example.absent", instance: "absent", config: {} },
+      { use: "example.wrong", instance: "wrong", config: {} },
+      { use: "example.exploding", instance: "exploding", config: {} },
+    ],
+    permissions: [],
+  }));
+
+  const registry = new RuntimeConfigRegistry();
+  const declare = (use: string, service: unknown) =>
+    registry.registerFacet(createRuntimeEndpointAdapterFacet({
+      use,
+      create: () => ({}) as never,
+      service: () => service as never,
+    }));
+  declare("example.absent", {
+    id: "absent-one",
+    start: { command: "uv", args: ["run", "serve"] },
+    probe: async () => ({ state: "down", detail: "nothing is answering at http://127.0.0.1:1" }),
+  });
+  declare("example.wrong", {
+    id: "wrong-one",
+    probe: async () => ({ state: "mismatch", detail: "model is large-v3, expected small" }),
+  });
+  declare("example.exploding", {
+    id: "exploding-one",
+    probe: async () => { throw new Error("the probe itself is broken"); },
+  });
+
+  const { diagnostics } = await doctorRuntimeConfig(path, { registry });
+  const seen = diagnostics.map((item) => `${item.code}: ${item.message}`);
+
+  assert.deepEqual(seen, [
+    "EXTERNAL_SERVICE_DOWN: absent-one is not usable: nothing is answering at http://127.0.0.1:1."
+      + " Bring it up with: narratage services up",
+    // Nothing to prepare and nothing to start: report the difference, name no command.
+    "EXTERNAL_SERVICE_MISMATCH: wrong-one is running but differs from this Runtime Profile:"
+      + " model is large-v3, expected small",
+    // A broken probe is a broken Provider, never a silently healthy service.
+    "EXTERNAL_SERVICE_PROBE_FAILED: the probe itself is broken",
+  ]);
   await rm(root, { recursive: true, force: true });
 });
