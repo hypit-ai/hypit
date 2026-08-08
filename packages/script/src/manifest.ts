@@ -12,7 +12,7 @@ export const narrativeMomentType: TypeRef = narrativeTypes.moment;
 export const captionProjectionType: TypeRef = narrativeTypes.captionProjection;
 export { narrativeSchema };
 
-export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/surface@2");
+export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/surface@1");
 
 export const scriptManifest: ModuleManifest = {
   format: "svml.module@1",

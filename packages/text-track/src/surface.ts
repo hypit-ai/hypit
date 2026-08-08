@@ -60,7 +60,7 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
   const semanticInputs = ["space", "header", ...(selected.length === 0 ? [] : ["map"]),
     ...items.flatMap((item) => [item.specName, ...(item.selectionName === undefined ? [] : [item.selectionName])])];
   return sealGraphFragment({
-    name: `@narratage/text-track/surface/${id}@2`,
+    name: `@narratage/text-track/surface/${id}@1`,
     inputs: [
       { name: "space", type: programSpaceTypes.programSpace },
       { name: "header", type: textTrackTypes.header },

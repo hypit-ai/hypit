@@ -26,13 +26,14 @@ final Record. This is the intended realization model—not an implicit cache, mu
 Runtime-selected fallback.
 
 The resulting artifact is a 57.13-second 720×1280, 30 fps H.264/AAC MP4. Frame inspection confirmed
-the four ordered speech visuals and measured Caption Track in the final Composition. The checked-in
-source, exact Run, reuse Run and Runtime assembly are in
-[`examples/echo-pro-aroll`](../examples/echo-pro-aroll/README.md). Credentials, presenter assets,
-Build databases and generated outputs are intentionally ignored. Its `build.svrun` is the complete
-fresh `exact` execution choice, while `reuse-generated.svrun` is the separate explicit reuse choice.
-Running either is an ordinary CLI Build; no Echo Pro-specific harness or hidden third workflow graph
-is required.
+the four ordered speech visuals and measured Caption Track in the final Composition. That paid run
+used a private delivery source. The checked-in brand-neutral
+[`examples/talking-head-aroll`](../examples/talking-head-aroll/README.md) fixture preserves its graph
+topology and explicit fresh/reuse Run shapes; it is not represented as the byte-identical historical
+input. Credentials, presenter assets, Build databases and generated outputs are intentionally
+ignored. Its `build.svrun` is the complete fresh `exact` execution choice, while
+`reuse-generated.svrun` is the separate explicit reuse choice. Running either is an ordinary CLI
+Build; no example-specific harness or hidden third workflow graph is required.
 
 ## Domain-neutral system
 
@@ -90,7 +91,7 @@ Implemented:
   durable independently of optional `inspect` / `get --to` Host reads;
 - Host-only Build Catalog history and source output aliases through `builds`, `inspect` and
   `get --name`, without changing Core Build identity or Runtime Closure;
-- Runtime Adapter Host ABI `@2`: a required pure configuration validator is separate from
+- Runtime Adapter Host ABI `@1`: a required pure configuration validator is separate from
   construction; `doctor` never calls adapter factories and suppresses dependent diagnostics after
   one invalid configuration or failed prerequisite;
 - `doctor` read-only environment diagnostics for the current trusted adapters, filesystem streaming

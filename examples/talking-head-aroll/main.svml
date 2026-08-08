@@ -20,21 +20,21 @@
     </hook>
 
     <meeting>
-      <HOST>Then I found Echo Pro: a card-sized recorder that snaps onto the back of my phone, paired with an AI agent. I brought it to one meeting. It captured every word, organized the minutes, and showed exactly where my work had been overlooked. For once, I felt seen.
+      <HOST>Then I found a voice memo app that auto-transcribes: just tap record and it captures every word. I brought it to one meeting. It organized the minutes and showed exactly where my work had been overlooked. For once, I felt seen.
     </meeting>
 
     <evidence>
-      <HOST>That gave me the courage I was missing. Before our month-end review, I gave Echo Pro the meeting notes and my actual work files. It connected the dots and turned everything into one clear, evidence-backed report of what I had really delivered.
+      <HOST>That gave me the courage I was missing. Before our month-end review, I fed the app my meeting notes and my actual work files. It connected the dots and turned everything into one clear, evidence-backed report of what I had really delivered.
     </evidence>
 
     <payoff>
-      <HOST>And guess what? I’m sitting in my old boss’s chair now. The first thing I did was give every person on my team an Echo Pro—so work gets easier, achievements stay visible, and no one has to fight alone just to get the credit they’ve earned.
+      <HOST>And guess what? I’m sitting in my old boss’s chair now. The first thing I did was set up the same tool for every person on my team—so work gets easier, achievements stay visible, and no one has to fight alone just to get the credit they’ve earned.
     </payoff>
   </script>
 
   <!-- Author-owned reference material. -->
   <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
-  <media:Image id="presenter-with-echo" src="./assets/presenter-with-echo.png"/>
+  <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
   <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
   <!-- Duration remains an explicit graph fact derived from the pronunciation projection. -->
@@ -43,12 +43,12 @@
   <estimate:Speech id="evidence-duration" source={story.segment.evidence.speech} policy={studio.speech.normal}/>
   <estimate:Speech id="payoff-duration" source={story.segment.payoff.speech} policy={studio.speech.normal}/>
 
-  <!-- Clean → product → product → clean; all four share the same voice reference. -->
+  <!-- Base → alternate → alternate → base; all four share the same voice reference. -->
   <speaker:Take
     id="hook-take"
     dialogue={story.segment.hook.dialogue}
     duration={hook-duration.duration}
-    recipe={studio.speaker.echo-pro}
+    recipe={studio.speaker.host}
     kit={ugc.official-ugc-v1}
   >
     <speaker:Reference image={presenter-clean} role="character-and-scene"/>
@@ -59,10 +59,10 @@
     id="meeting-take"
     dialogue={story.segment.meeting.dialogue}
     duration={meeting-duration.duration}
-    recipe={studio.speaker.echo-pro}
+    recipe={studio.speaker.host}
     kit={ugc.official-ugc-v1}
   >
-    <speaker:Reference image={presenter-with-echo} role="character-and-scene"/>
+    <speaker:Reference image={presenter-alt} role="character-and-scene"/>
     <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
   </speaker:Take>
 
@@ -70,10 +70,10 @@
     id="evidence-take"
     dialogue={story.segment.evidence.dialogue}
     duration={evidence-duration.duration}
-    recipe={studio.speaker.echo-pro}
+    recipe={studio.speaker.host}
     kit={ugc.official-ugc-v1}
   >
-    <speaker:Reference image={presenter-with-echo} role="character-and-scene"/>
+    <speaker:Reference image={presenter-alt} role="character-and-scene"/>
     <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
   </speaker:Take>
 
@@ -81,7 +81,7 @@
     id="payoff-take"
     dialogue={story.segment.payoff.dialogue}
     duration={payoff-duration.duration}
-    recipe={studio.speaker.echo-pro}
+    recipe={studio.speaker.host}
     kit={ugc.official-ugc-v1}
   >
     <speaker:Reference image={presenter-clean} role="character-and-scene"/>

@@ -16,11 +16,11 @@ export const captionGeminiProducers = {
   request: { module: captionGeminiModuleRef, name: "request-caption-gemini-plan" },
 } satisfies Record<string, ProducerRef>;
 export const captionGeminiImplementationDigests = {
-  compile: digestOf("@narratage/caption-gemini/compile-request@2"),
-  request: digestOf("@narratage/caption-gemini/request-plan@2"),
-  programValidator: digestOf("@narratage/caption-gemini/validate-program@2"),
-  requestValidator: digestOf("@narratage/caption-gemini/validate-request@2"),
-  plannerSurface: digestOf("@narratage/caption-gemini/planner-surface@2"),
+  compile: digestOf("@narratage/caption-gemini/compile-request@1"),
+  request: digestOf("@narratage/caption-gemini/request-plan@1"),
+  programValidator: digestOf("@narratage/caption-gemini/validate-program@1"),
+  requestValidator: digestOf("@narratage/caption-gemini/validate-request@1"),
+  plannerSurface: digestOf("@narratage/caption-gemini/planner-surface@1"),
 } as const;
 
 const string = { kind: "string", minLength: 1 } as const satisfies ValueSchema;

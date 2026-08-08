@@ -98,8 +98,9 @@ Installing a new visual component must not modify this protocol. The component e
 2. materializes the visual it owns as a typed `CompositableSurface` and contributes that Surface.
 
 Only a capability that is both broadly reusable and impossible to represent through those two
-paths may justify a future `svml.visual-ir@2`. Adding a Text style, Caption mode, B-roll
-recipe, transition or Provider never qualifies by itself.
+paths may justify changing the `svml.visual-ir@1` contract. While Narratage is pre-release the
+identifier remains `@1`, with exact implementation identity carried by digests and package locks.
+Adding a Text style, Caption mode, B-roll recipe, transition or Provider never qualifies by itself.
 
 Old-system Text three-box, Caption range/cue/content and media content-frame sampling models are
 therefore package-owned Programs and lowering evidence. They are expressiveness witnesses for this

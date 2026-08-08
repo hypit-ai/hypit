@@ -13,7 +13,7 @@ import type {
   HyperframesFrameSpan,
 } from "./types.js";
 
-export const compileHyperframesImplementationDigest = digestOf("@narratage/hyperframes/compile@5");
+export const compileHyperframesImplementationDigest = digestOf("@narratage/hyperframes/compile@1");
 
 const NANOSECONDS = 1_000_000_000n;
 const ARTIFACT_URI = /svml-artifact:\/\/sha256\/([0-9a-f]{64})/gu;

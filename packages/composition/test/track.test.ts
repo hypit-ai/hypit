@@ -187,7 +187,7 @@ test("VisualTrack explicitly binds the visual IR instead of trusting the Runtime
   assert.throws(
     () => assertVisualTrackIdentity({
       ...visual,
-      visualIr: "third-party.browser-css@9",
+      visualIr: "third-party.browser-css@1",
     } as unknown as VisualTrack, programSpace),
     /Unsupported VisualTrack visual IR/u,
   );

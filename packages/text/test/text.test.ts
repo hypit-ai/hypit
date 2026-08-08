@@ -39,7 +39,7 @@ test("Text learns <script> only from an imported Script Manifest", async () => {
     {
       name: "talk.svml",
       text: `<svml>
-        <import from="@narratage/script@0.0.0-dev"/>
+        <import from="@narratage/script@1"/>
 
         <script id="story">
           <opening>

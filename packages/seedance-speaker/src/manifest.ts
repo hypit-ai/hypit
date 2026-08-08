@@ -19,7 +19,7 @@ import { svsManifest, svsRecipeType } from "@narratage/svs";
 export const seedanceSpeakerModuleRef = { name: "@narratage/seedance-speaker", version: "0.0.0-dev" } as const;
 
 export const seedanceSpeakerImplementationDigests = {
-  takeSurface: digestOf("@narratage/seedance-speaker/take-surface@3"),
+  takeSurface: digestOf("@narratage/seedance-speaker/take-surface@1"),
 } as const;
 
 export const seedanceSpeakerManifest: ModuleManifest = {

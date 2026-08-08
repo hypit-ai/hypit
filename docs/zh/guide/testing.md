@@ -85,4 +85,4 @@ test("generates a video", async (t) => {
 `examples/` 目录同时充当集成级别的夹具：
 - `examples/bootstrap/` — 最小源闭包检查
 - `examples/talking-film-graph-check/` — 不含 Provider 的完整图编译
-- `examples/echo-pro-aroll/` — 显式复用历史 Candidate 的实时验收
+- `examples/talking-head-aroll/` — 显式复用历史 Candidate 的实时验收

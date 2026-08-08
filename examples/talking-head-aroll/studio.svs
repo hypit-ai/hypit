@@ -10,7 +10,7 @@
     rounding: ceil;
   }
 
-  speaker.echo-pro {
+  speaker.host {
     kind: ugc-talking-head;
     model: mini;
     resolution: 720p;
