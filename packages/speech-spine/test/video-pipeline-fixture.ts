@@ -1,14 +1,24 @@
 import { videoContractManifests } from "../../test-support/video-domain.js";
-import { captionManifest, captionTimingFragment } from "@narratage/caption";
+import {
+  captionManifest,
+  captionTypes,
+  captionValidatorDigests,
+  plannedCaptionTimingFragment,
+  resolveCaptionProgram,
+  sealCaptionPlan,
+  sealCaptionStyle,
+} from "@narratage/caption";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import {
   createResolvedClosure,
+  canonicalize,
   digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
+  sealTypeValidationReceipt,
   sealTypedModule,
   start,
 } from "@narratage/core";
@@ -31,7 +41,12 @@ import type {
   ValueSchema,
 } from "@narratage/protocol";
 import { resolveRealization, sealRealizationOverlay } from "@narratage/run";
-import { narrativeValue, parseScript } from "@narratage/script";
+import {
+  captionCorrespondence,
+  captionDisplaySequence,
+  narrativeValue,
+  parseScript,
+} from "@narratage/script";
 import { speechAlignmentManifest } from "@narratage/speech-alignment";
 import { speechBasisManifest, speechBasisProjectionFragment } from "@narratage/speech-basis";
 import { mediaPipelineManifest } from "@narratage/media-pipeline";
@@ -256,22 +271,63 @@ export const videoClosure = createResolvedClosure([
 
 function authorProgram(): LinkedProgram {
   const parsed = parseScript("pipeline.svml", "<line><that was insane | what the fuck></line>");
+  const display = captionDisplaySequence(parsed, "caption:display");
+  const correspondence = captionCorrespondence(parsed, display.id);
+  const style = sealCaptionStyle({
+    contract: "svml.caption-style@1",
+    id: "fixture",
+    planning: {
+      cue: { minimumWords: 1, maximumWords: 7, instruction: "Use one authored Atom." },
+      fields: [],
+    },
+    rendering: { family: "fixture-caption@1", parameters: {} },
+  });
+  const captionProgram = resolveCaptionProgram(display, "caption-program", style, []);
+  const captionPlan = sealCaptionPlan({
+    contract: "svml.caption-plan@1",
+    runs: [{
+      id: captionProgram.runs[0]!.id,
+      styleId: style.id,
+      cues: [{ id: "caption:cue:1", atomIds: display.atoms.map((atom) => atom.id), fields: [] }],
+    }],
+  });
+  const origin = {
+    kind: "authored" as const,
+    sourceDigest: digestOf("source:video-pipeline"),
+    frontendClosureDigest: digestOf("frontend:script"),
+    sourceName: "pipeline.svml",
+  };
   const narrative = sealRecord({
     id: "narrative:root",
     type: narrativeTypes.narrative,
     value: { kind: "inline", value: narrativeValue(parsed) },
     conformance: "exact",
-    origin: {
-      kind: "authored",
-      sourceDigest: digestOf("source:video-pipeline"),
-      frontendClosureDigest: digestOf("frontend:script"),
-      sourceName: "pipeline.svml",
-    },
+    origin,
   });
+  const programRecord = sealRecord({ id: "caption:program", type: captionTypes.program,
+    value: { kind: "inline", value: canonicalize(captionProgram) }, conformance: "exact", origin });
+  const planRecord = sealRecord({ id: "caption:plan", type: captionTypes.plan,
+    value: { kind: "inline", value: canonicalize(captionPlan) }, conformance: "exact", origin });
+  const captionRecords = [
+    sealRecord({ id: "caption:display", type: narrativeTypes.captionDisplay,
+      value: { kind: "inline", value: canonicalize(display) }, conformance: "exact", origin }),
+    sealRecord({ id: "caption:correspondence", type: narrativeTypes.captionCorrespondence,
+      value: { kind: "inline", value: canonicalize(correspondence) }, conformance: "exact", origin }),
+    { ...programRecord, validation: sealTypeValidationReceipt({
+      type: programRecord.type,
+      recordDigest: programRecord.digest,
+      validatorDigest: captionValidatorDigests.program,
+    }) },
+    { ...planRecord, validation: sealTypeValidationReceipt({
+      type: planRecord.type,
+      recordDigest: planRecord.digest,
+      validatorDigest: captionValidatorDigests.plan,
+    }) },
+  ];
   return link(videoClosure, [sealTypedModule({
     id: "author:video-pipeline",
     closureDigest: videoClosure.digest,
-    records: [narrative],
+    records: [narrative, ...captionRecords],
   })]);
 }
 
@@ -303,12 +359,15 @@ export function createVideoGraph(program: LinkedProgram): CompiledGraph {
       audio: { kind: "logical-output", id: videoOutputs.audio },
     },
   });
-  const caption = elaborateGraphFragment(program, captionTimingFragment, {
+  const caption = elaborateGraphFragment(program, plannedCaptionTimingFragment, {
     id: "opening.caption",
-    fragment: captionTimingFragment.id,
+    fragment: plannedCaptionTimingFragment.id,
     inputs: {
-      narrative,
+      display: { kind: "record", id: "caption:display" },
+      correspondence: { kind: "record", id: "caption:correspondence" },
       map: { kind: "logical-output", id: videoOutputs.map },
+      program: { kind: "record", id: "caption:program" },
+      plan: { kind: "record", id: "caption:plan" },
     },
   });
   const contribution = mergeFragmentContributions(

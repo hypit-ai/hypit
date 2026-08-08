@@ -1,30 +1,25 @@
 # `@narratage/caption-gemini`
 
-Exact Gemini Caption planning, without transcript correction, Style selection or timing authority.
+Exact Gemini Caption planning, without wording, Style-selection or timing authority.
 
 ```xml
 <caption-ai:Planner
   id="caption-plan"
-  words={story.caption.words}
+  display={story.caption}
   program={caption-program}
   model="gemini-2.5-flash"
 />
 ```
 
-Gemini receives the immutable ordered display words and the planning requirements of each resolved
-Program run. It never receives WhisperX text, timestamps or the pronunciation side of Dual Text,
-and it cannot return replacement wording.
+Gemini receives one `atoms: string[][]` value per resolved Style run. The outer array is the
+ordered Cue-cut universe; each inner array is one indivisible display Atom; its strings are
+immutable display Words with authored punctuation. The pronunciation side of Dual Text, WhisperX,
+timestamps and internal ids never enter the prompt.
 
-Within each run the response may only:
+A response may consume consecutive Atoms with `atom_count` and assign declared fields using
+one-based `atom_number` plus `word_number` inside the Cue. The package restores stable ids and
+rejects rewrites, incomplete coverage, invalid coordinates, fields or values before producing a
+`CaptionPlan`.
 
-- choose `after_word_id` boundaries that partition the run exactly once and in order;
-- attach declared field values to `word_id` values inside that Cue.
-
-Fields are generic per-word attributes. A Style family may declare no fields, one `important`
-boolean, several independent booleans, enums or bounded numbers. A word may receive zero, one or
-multiple fields. The model package validates word identities, Cue coverage, Cue word bounds, field
-types and per-Cue cardinality before a `CaptionPlan` enters the graph.
-
-Model choice remains author-visible. Network execution is separate: a Runtime explicitly binds the
-exact Gemini capability to `@narratage/provider-google-vertex` or another compatible Endpoint.
-Credentials, queues and transport never enter `.svml` or BuildState.
+Model choice is author-visible. A Runtime separately binds the exact capability to Google Vertex
+or another explicitly configured Endpoint; credentials, queue and transport remain outside SVML.

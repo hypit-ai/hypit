@@ -5,7 +5,6 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narrata
 
 export const captionModuleRef = { name: "@narratage/caption", version: "0.0.0-dev" } as const;
 export const captionProducers = {
-  temporalize: { module: captionModuleRef, name: "temporalize-caption" },
   temporalizePlan: { module: captionModuleRef, name: "temporalize-caption-plan" },
 } satisfies Record<string, ProducerRef>;
 export const captionTypes = {
@@ -14,15 +13,14 @@ export const captionTypes = {
   plan: { module: captionModuleRef, name: "CaptionPlan" },
   timedProjection: { module: captionModuleRef, name: "TimedCaptionProjection" },
 } satisfies Record<string, TypeRef>;
-export const captionImplementationDigest = digestOf("@narratage/caption/temporalize@1");
-export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-plan@1");
+export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-whole-atoms-plan@1");
 export const captionValidatorDigests = {
   style: digestOf("@narratage/caption/validate-style@1"),
-  program: digestOf("@narratage/caption/validate-program@1"),
-  plan: digestOf("@narratage/caption/validate-plan@1"),
-  timedProjection: digestOf("@narratage/caption/validate-timed-projection@1"),
+  program: digestOf("@narratage/caption/validate-display-program@1"),
+  plan: digestOf("@narratage/caption/validate-atom-plan@1"),
+  timedProjection: digestOf("@narratage/caption/validate-timed-atoms@1"),
 } as const;
-export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/caption/program-surface@1");
+export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/caption/display-program-surface@1");
 
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
@@ -36,7 +34,7 @@ const captionFieldAssignment = object({
 });
 const captionPlannedCue = object({
   id: { schema: string },
-  wordIds: { schema: { kind: "array", minItems: 1, items: string } },
+  atomIds: { schema: { kind: "array", minItems: 1, items: string } },
   fields: { schema: { kind: "array", items: captionFieldAssignment } },
 });
 const captionPlannedRun = object({
@@ -48,24 +46,19 @@ export const captionPlanSchema: ValueSchema = object({
   runs: { schema: { kind: "array", minItems: 1, items: captionPlannedRun } },
 });
 
-const timedCaptionRefinement = object({
-  id: { schema: string }, display: { schema: string }, displayStart: { schema: integer },
-  displayEnd: { schema: integer }, sourceTokenIds: { schema: { kind: "array", items: string } },
-  startSec: { schema: number }, endSec: { schema: number },
-  relation: { schema: { kind: "literal", value: "exact" } },
+const timedCaptionAtom = object({
+  atomId: { schema: string }, startSec: { schema: number }, endSec: { schema: number },
 });
-const timedCaptionRegion = object({
-  id: { schema: string }, runId: { schema: string, optional: true }, styleId: { schema: string, optional: true },
-  display: { schema: { kind: "string" } }, segmentId: { schema: string },
-  kind: { schema: { kind: "string", enum: ["identity", "alias", "hidden"] } },
-  sourceTokenIds: { schema: { kind: "array", items: string } }, startSec: { schema: number },
-  endSec: { schema: number }, refinements: { schema: { kind: "array", items: timedCaptionRefinement } },
-  wordIds: { schema: { kind: "array", items: string }, optional: true },
-  fields: { schema: { kind: "array", items: captionFieldAssignment }, optional: true },
+const timedCaptionCue = object({
+  id: { schema: string }, runId: { schema: string }, styleId: { schema: string }, segmentId: { schema: string },
+  startSec: { schema: number }, endSec: { schema: number },
+  atoms: { schema: { kind: "array", minItems: 1, items: timedCaptionAtom } },
+  fields: { schema: { kind: "array", items: captionFieldAssignment } },
 });
 export const timedCaptionProjectionSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.timed-caption-projection@1" } },
-  text: { schema: { kind: "string" } }, regions: { schema: { kind: "array", items: timedCaptionRegion } },
+  displaySequenceId: { schema: string },
+  cues: { schema: { kind: "array", minItems: 1, items: timedCaptionCue } },
 });
 
 const captionFieldValueSchema: ValueSchema = {
@@ -103,7 +96,7 @@ const captionProgramRun = object({
 });
 export const captionProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-program@1" } },
-  id: { schema: string }, wordSequenceId: { schema: string }, defaultStyleId: { schema: string },
+  id: { schema: string }, displaySequenceId: { schema: string }, defaultStyleId: { schema: string },
   styles: { schema: { kind: "array", minItems: 1, items: captionStyleSchema } },
   runs: { schema: { kind: "array", minItems: 1, items: captionProgramRun } },
 });
@@ -137,18 +130,11 @@ export const captionManifest: ModuleManifest = {
   }],
   producers: [
     {
-      name: captionProducers.temporalize.name,
-      inputs: [{ name: "narrative", type: narrativeTypes.narrative }, { name: "map", type: semanticMapTypes.complete }],
-      outputs: [{ name: "caption", type: captionTypes.timedProjection }], needs: [],
-      implementation: { kind: "registered", locator: "@narratage/caption/temporalize",
-        digest: captionImplementationDigest },
-    },
-    {
       name: captionProducers.temporalizePlan.name,
       inputs: [
-        { name: "narrative", type: narrativeTypes.narrative },
+        { name: "display", type: narrativeTypes.captionDisplay },
+        { name: "correspondence", type: narrativeTypes.captionCorrespondence },
         { name: "map", type: semanticMapTypes.complete },
-        { name: "words", type: narrativeTypes.captionWordSequence },
         { name: "program", type: captionTypes.program },
         { name: "plan", type: captionTypes.plan },
       ],

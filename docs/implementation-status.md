@@ -185,8 +185,8 @@ Implemented and executable:
 
 Still pre-freeze and deliberately deferred:
 
-- removal of the temporary Fine-only `important` field and convergence on uniform static words per
-  Cue; random word sizing is explicitly outside the accepted Fine direction;
+- browser/pixel evidence for Fine Caption placement, wrapping and basic paint; its executable
+  baseline is already field-free with uniform static Words per Cue;
 - complete Text three-box, exact-font and layered-decoration behavior;
 - Caption CJK/emoji/multiline/pixel acceptance;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;

@@ -6,7 +6,6 @@ import {
   resolveCaptionProgram,
   sealCaptionPlan,
   sealCaptionStyle,
-  temporalizeCaption,
   temporalizeCaptionPlan,
 } from "@narratage/caption";
 import type { CaptionFieldDeclaration, CaptionStyleIntent } from "@narratage/caption";
@@ -19,8 +18,9 @@ import { locateSpeechTiming } from "@narratage/speech-alignment";
 import { sealAlignedTranscriptEvidence } from "@narratage/speech-evidence";
 import type { AlignedTranscriptSegment } from "@narratage/speech-evidence";
 import {
+  captionCorrespondence,
+  captionDisplaySequence,
   captionSelectionWordSubset,
-  captionWordSequence,
   parseScript,
 } from "@narratage/script";
 
@@ -70,46 +70,49 @@ function style(id: string, fields: readonly CaptionFieldDeclaration[] = []): Cap
   });
 }
 
-test("Script projects an ordered word universe and explicit Selection word subset", () => {
-  const narrative = parseScript(
-    "selection.svml",
-    "<line>Keep this @special one sentence different @/special and return.</line>",
+test("Script emits punctuation-preserving display Words grouped into whole Atoms", () => {
+  const parsed = parseScript(
+    "punctuation.svml",
+    "<line>45% back-and-forth damn! 300,000 don't U.S.A.</line>",
   );
-  const words = captionWordSequence(narrative, "story.caption.words");
-  const special = captionSelectionWordSubset(words, narrative.selections[0]!);
-  assert.deepEqual(words.words.map((word) => word.text), ["Keep", "this", "one", "sentence", "different", "and", "return"]);
-  assert.deepEqual(special.wordIds.map((id) => words.words.find((word) => word.id === id)!.text),
-    ["one", "sentence", "different"]);
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const correspondence = captionCorrespondence(parsed, display.id);
 
-  const program = resolveCaptionProgram(words, "captions", style("normal"), [{
-    id: "special-use",
-    words: special,
-    style: style("special"),
-  }]);
-  assert.deepEqual(program.runs.map((run) => [run.styleId, run.wordIds.length]), [
-    ["normal", 2], ["special", 3], ["normal", 2],
+  assert.deepEqual(display.words.map((word) => word.text), [
+    "45%", "back-and-forth", "damn!", "300,000", "don't", "U.S.A.",
   ]);
-  assert.equal("words" in program, false, "Program must reference the word edge rather than copy its payload");
+  assert.deepEqual(display.atoms.map((atom) => atom.wordIds.length), [1, 1, 1, 1, 1, 1]);
+  assert.deepEqual(correspondence.atoms.map((item) => item.atomId), display.atoms.map((atom) => atom.id));
 });
 
-test("Role replacement is a word subset and the explicit default covers roleless prose", () => {
-  const narrative = parseScript("roles.svml", `
-    <intro>Roleless words stay readable.</intro>
-    <answer><ALICE>Only this sentence changes.</answer>
-  `);
-  const words = captionWordSequence(narrative, "story.caption.words");
-  const aliceIds = words.words.filter((word) => word.role === "ALICE").map((word) => word.id);
-  const program = resolveCaptionProgram(words, "captions", style("normal"), [{
+test("Selection and Role project to ordered whole-Atom display-word subsets", () => {
+  const parsed = parseScript(
+    "selection.svml",
+    "<intro>Roleless words stay readable.</intro><answer><ALICE>Keep @special this sentence @/special different.</answer>",
+  );
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const correspondence = captionCorrespondence(parsed, display.id);
+  const special = captionSelectionWordSubset(parsed, display, correspondence, parsed.selections[0]!);
+  assert.deepEqual(special.wordIds.map((id) => display.words.find((word) => word.id === id)!.text),
+    ["this", "sentence"]);
+
+  const aliceIds = display.words.filter((word) => word.role === "ALICE").map((word) => word.id);
+  const program = resolveCaptionProgram(display, "captions", style("normal"), [{
     id: "alice-use",
-    words: { contract: "svml.caption-word-subset@1", id: "role:ALICE", sequenceId: words.id, wordIds: aliceIds },
+    words: {
+      contract: "svml.caption-display-word-subset@1",
+      id: "role:ALICE",
+      sequenceId: display.id,
+      wordIds: aliceIds,
+    },
     style: style("alice"),
   }]);
   assert.deepEqual(program.runs.map((run) => run.styleId), ["normal", "alice"]);
 });
 
-test("Caption Plan validates Cue word bounds and independent per-word fields", () => {
-  const narrative = parseScript("plan.svml", "<line>one two three four.</line>");
-  const words = captionWordSequence(narrative, "story.caption.words");
+test("Caption Plan partitions Atoms and assigns independent fields to display Words", () => {
+  const parsed = parseScript("plan.svml", "<line>one two three four.</line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
   const important: CaptionFieldDeclaration = {
     id: "important",
     value: { kind: "boolean" },
@@ -117,46 +120,59 @@ test("Caption Plan validates Cue word bounds and independent per-word fields", (
     minimumPerCue: 0,
     maximumPerCue: 2,
   };
-  const program = resolveCaptionProgram(words, "captions", style("fine", [important]), []);
+  const program = resolveCaptionProgram(display, "captions", style("fine", [important]), []);
   const run = program.runs[0]!;
   const plan = sealCaptionPlan({
     contract: "svml.caption-plan@1",
     runs: [{ id: run.id, styleId: run.styleId, cues: [{
       id: "cue:1",
-      wordIds: run.wordIds,
+      atomIds: display.atoms.map((atom) => atom.id),
       fields: [
-        { declarationId: "important", wordId: run.wordIds[0]!, value: "true" },
-        { declarationId: "important", wordId: run.wordIds[2]!, value: "true" },
+        { declarationId: "important", wordId: display.words[0]!.id, value: "true" },
+        { declarationId: "important", wordId: display.words[2]!.id, value: "true" },
       ],
     }] }],
   });
-  assert.doesNotThrow(() => assertCaptionPlanForProgram(plan, program));
+  assert.doesNotThrow(() => assertCaptionPlanForProgram(plan, program, display));
 });
 
-test("Program rejects a Style run that no legal Cue partition can satisfy", () => {
-  const narrative = parseScript("impossible.svml", "<line>one two three four five six.</line>");
-  const words = captionWordSequence(narrative, "story.caption.words");
-  const impossible = sealCaptionStyle({
+test("Cue word bounds are planner preferences and cannot split an oversized authored Atom", () => {
+  const parsed = parseScript("impossible.svml", "<line><one two three four | something></line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const compact = sealCaptionStyle({
     contract: "svml.caption-style@1",
-    id: "impossible",
-    planning: { cue: { minimumWords: 4, maximumWords: 5, instruction: "Use four or five words." }, fields: [] },
+    id: "compact",
+    planning: { cue: { minimumWords: 1, maximumWords: 3, instruction: "Prefer at most three words." }, fields: [] },
     rendering: { family: "test-caption@1", parameters: {} },
   });
-  assert.throws(() => resolveCaptionProgram(words, "captions", impossible, []), /cannot satisfy/u);
+  const program = resolveCaptionProgram(display, "captions", compact, []);
+  assert.equal(display.atoms.length, 1);
+  assert.equal(display.atoms[0]!.wordIds.length, 4);
+  assert.doesNotThrow(() => assertCaptionPlanForProgram(sealCaptionPlan({
+    contract: "svml.caption-plan@1",
+    runs: [{ id: program.runs[0]!.id, styleId: compact.id, cues: [{
+      id: "cue:1", atomIds: [display.atoms[0]!.id], fields: [],
+    }] }],
+  }), program, display));
 });
 
-test("planned display words join measured speech timing only after planning", () => {
-  const narrative = parseScript("timed.svml", "<line><that was insane | what the fuck></line>");
-  const words = captionWordSequence(narrative, "story.caption.words");
-  const program = resolveCaptionProgram(words, "captions", style("fine"), []);
+test("Dual Text exposes one whole timed display Atom and never invents internal word timing", () => {
+  const parsed = parseScript("timed.svml", "<line><that was insane | what the fuck></line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const correspondence = captionCorrespondence(parsed, display.id);
+  assert.deepEqual(display.atoms.map((atom) => atom.wordIds.length), [3]);
+  assert.deepEqual(display.words.map((word) => word.text), ["that", "was", "insane"]);
+  assert.equal(correspondence.atoms[0]!.sourceTokenIds.length, 3);
+
+  const program = resolveCaptionProgram(display, "captions", style("fine"), []);
   const run = program.runs[0]!;
   const plan = sealCaptionPlan({
     contract: "svml.caption-plan@1",
-    runs: [{ id: run.id, styleId: run.styleId, cues: run.wordIds.map((wordId, index) => ({
-      id: `cue:${index + 1}`, wordIds: [wordId], fields: [],
-    })) }],
+    runs: [{ id: run.id, styleId: run.styleId, cues: [{
+      id: "cue:1", atomIds: [display.atoms[0]!.id], fields: [],
+    }] }],
   });
-  const map = locate(narrative, 1, [{
+  const map = locate(parsed, 1, [{
     sourceSegmentId: "line", startSec: 0, endSec: 1,
     words: [
       { text: "what", startSec: 0.1, endSec: 0.25 },
@@ -165,15 +181,26 @@ test("planned display words join measured speech timing only after planning", ()
     ],
     chars: [],
   }]);
-  const projection = temporalizeCaptionPlan(narrative, map, words, program, plan);
-  assert.deepEqual(projection.regions.map((region) => region.display), ["that", "was", "insane"]);
-  assert.equal(projection.regions[0]!.endSec <= projection.regions[1]!.startSec, true);
-  assert.deepEqual(projection.regions.map((region) => region.wordIds?.length), [1, 1, 1]);
-  assert.equal(temporalizeCaption(narrative, map).text, "that was insane");
+  const projection = temporalizeCaptionPlan(display, correspondence, map, program, plan);
+  assert.deepEqual(projection.cues, [{
+    id: "cue:1",
+    runId: run.id,
+    styleId: run.styleId,
+    segmentId: "line",
+    startSec: 0.1,
+    endSec: 22 / 30,
+    atoms: [{ atomId: display.atoms[0]!.id, startSec: 0.1, endSec: 22 / 30 }],
+    fields: [],
+  }]);
+  assert.equal("words" in projection.cues[0]!, false);
 });
 
-test("a Selection cutting an indivisible Dual Text word fails before Caption planning", () => {
-  const narrative = parseScript("partial.svml", "<line><lmao | laughed my @part ass out @/part></line>");
-  const words = captionWordSequence(narrative, "story.caption.words");
-  assert.throws(() => captionSelectionWordSubset(words, narrative.selections[0]!), /owns only part/u);
+test("a Selection cutting an indivisible Dual Text Atom fails before Caption planning", () => {
+  const parsed = parseScript("partial.svml", "<line><lmao | laughed my @part ass out @/part></line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const correspondence = captionCorrespondence(parsed, display.id);
+  assert.throws(
+    () => captionSelectionWordSubset(parsed, display, correspondence, parsed.selections[0]!),
+    /owns only part/u,
+  );
 });

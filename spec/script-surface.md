@@ -158,7 +158,7 @@ B: It’s 8:30.
 在 `speech` 和 `caption` 投影中，`<A>`、`<B>` 都被移除。Role Cue 不是
 speaker 数据模型，不建立人物实体，不选择音色，也不对字幕隐式分组。外部
 Program 可以显式写 `role="A"` 查询这些 spoken turn。Caption Program 将这类
-查询直接降低为 `CaptionWordSubset`；它不是时间 Selection，也不伪造 Selection
+查询直接降低为 `CaptionDisplayWordSubset`；它不是时间 Selection，也不伪造 Selection
 Record。仅有 `<A>` 本身不触发任何样式、人物、音色或素材行为。
 
 为消除歧义：
@@ -541,14 +541,15 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 - 每个 Segment 的有序 spoken turn，以及各 turn 的稳定 identity、可选 Role Cue、
   token range 和 source range；
 - plain / Dual Text / Slot atom 及其源码范围；
-- caption atom 到一个或多个 speech token 的显式映射；
+- Caption display Atom、其内部有序 display Word，以及 Atom 到一个或多个 speech token
+  的独立显式映射；
 - 每个 Selection 的一个或多个有序 occurrence，以及各 occurrence 已解析的
   `startAnchorId` / `endAnchorId`；
 - 每个 Moment 的一个或多个有序 occurrence，以及各 occurrence 已解析的
   `anchorId`；
 - Parser/Source Map 内部另行保留 affinity、token/source range，公开值不携带它们；
-- 完整有序的 `CaptionWordSequence`，以及每个显式 Selection 对应的
-  `CaptionWordSubset`。字幕无需也不得从公开 Selection 反推词下标。
+- 完整有序的 `CaptionDisplaySequence`、独立的 `CaptionCorrespondence`，以及每个显式
+  Selection 对应的 `CaptionDisplayWordSubset`。字幕无需也不得从公开 Selection 反推词下标。
 
 外部 Program 的 `role="label"` selector 可以从上述词全集投影自己的词子集；
 同一 label 的多次 Turn 是多个有序、互不相邻的命中。它是 Caption author surface
@@ -558,13 +559,15 @@ SelectionSet/MomentSet 是消费者边界，不是 Segment 的子对象。典型
 关系是：
 
 ```text
-Script ──compile──> Narrative IR ──project──> dialogue / speech / caption
+Script ──compile──> Narrative IR ──project──> dialogue / speech
                            ├──resolve──> NarrativeSelection[] / NarrativeMoment[]
-                           └──project──> CaptionWordSequence / CaptionWordSubset[]
+                           └──project──> CaptionDisplaySequence
+                                         + CaptionCorrespondence
+                                         + CaptionDisplayWordSubset[]
 
 NarrativeSelection A ──during──> consumer.port_1
 NarrativeMoment P    ──at──────> consumer.port_2
-CaptionWordSubset C  ──words───> caption.Program
+CaptionDisplayWordSubset C ──words──> caption.Program
 ```
 
 一个 Ranking、B-roll 或其他节点可以有多个动态端口，各端口接受不同

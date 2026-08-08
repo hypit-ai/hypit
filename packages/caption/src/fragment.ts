@@ -7,34 +7,13 @@ import { captionProducers, captionTypes } from "./manifest.js";
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
-export const captionTimingFragment = sealGraphFragment({
-  name: "@narratage/caption/timing@1",
-  inputs: [
-    { name: "narrative", type: narrativeTypes.narrative },
-    { name: "map", type: semanticMapTypes.complete },
-  ],
-  operations: [{
-    id: "temporalize-caption",
-    producer: captionProducers.temporalize,
-    inputs: { narrative: input("narrative"), map: input("map") },
-    result: { kind: "output", name: "caption" },
-  }],
-  exports: [{
-    name: "caption",
-    type: captionTypes.timedProjection,
-    root: operation("temporalize-caption"),
-    semanticInputs: ["narrative", "map"],
-    fidelity: "exact",
-  }],
-});
-
-/** Cue and field facts meet measured speech time here, before any Style renderer. */
+/** Cue and field facts meet only proven whole-Atom speech time here. */
 export const plannedCaptionTimingFragment = sealGraphFragment({
   name: "@narratage/caption/planned-timing@1",
   inputs: [
-    { name: "narrative", type: narrativeTypes.narrative },
+    { name: "display", type: narrativeTypes.captionDisplay },
+    { name: "correspondence", type: narrativeTypes.captionCorrespondence },
     { name: "map", type: semanticMapTypes.complete },
-    { name: "words", type: narrativeTypes.captionWordSequence },
     { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
   ],
@@ -42,7 +21,7 @@ export const plannedCaptionTimingFragment = sealGraphFragment({
     id: "temporalize-caption-plan",
     producer: captionProducers.temporalizePlan,
     inputs: {
-      narrative: input("narrative"), map: input("map"), words: input("words"),
+      display: input("display"), correspondence: input("correspondence"), map: input("map"),
       plan: input("plan"), program: input("program"),
     },
     result: { kind: "output", name: "caption" },
@@ -51,7 +30,7 @@ export const plannedCaptionTimingFragment = sealGraphFragment({
     name: "caption",
     type: captionTypes.timedProjection,
     root: operation("temporalize-caption-plan"),
-    semanticInputs: ["narrative", "map", "words", "plan", "program"],
+    semanticInputs: ["display", "correspondence", "map", "plan", "program"],
     fidelity: "exact",
   }],
 });

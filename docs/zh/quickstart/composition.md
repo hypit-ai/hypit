@@ -142,11 +142,11 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 
   <!-- 4. Tracks: captions, B-roll, text -->
   <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
-  <caption:Program id="caption-program" words={story.caption.words}
+  <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" words={story.caption.words}
+  <caption-ai:Planner id="cue-plan" display={story.caption}
     program={caption-program} model="gemini-2.5-flash"/>
-  <caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
+  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
     space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
   <broll:Track id="cards" map={timing.map} space={speech.space}>
@@ -191,8 +191,6 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   }
   caption.base {
     cue-min-words: 1; cue-max-words: 5;
-    important-min-per-cue: 0; important-max-per-cue: 2;
-    important-fill: #FFF16A; important-scale: 1.12;
     stack-order: 70; x: 0.08; y: 0.76; width: 0.84;
     font: Inter; weight: 600; size: 58; line-height: 1; align: center;
     fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;

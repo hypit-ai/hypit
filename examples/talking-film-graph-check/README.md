@@ -14,7 +14,7 @@ pnpm narratage plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 
-The Gemini planner receives immutable ordered display words and resolved Style runs only. Its generic
-`CaptionPlan` joins the independent `CompleteSemanticMap` in `@narratage/caption`; neither the planner
-nor the Vertex Provider has text-rewriting or timing authority. `@narratage/caption-fine` alone owns
-the concrete `important` field, Recipe interpretation and visual renderer.
+The Gemini planner receives readable indivisible display atoms and resolved Style runs only. Its
+generic `CaptionPlan` joins the independent `CompleteSemanticMap` in `@narratage/caption`; neither
+the planner nor the Vertex Provider has text-rewriting or timing authority.
+`@narratage/caption-fine` alone owns Recipe interpretation and the concrete visual renderer.

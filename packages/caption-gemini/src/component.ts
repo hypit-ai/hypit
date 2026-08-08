@@ -1,6 +1,6 @@
 import type { ComponentPackage } from "@narratage/component-kit";
 import type { CaptionProgram } from "@narratage/caption";
-import type { CaptionWordSequence } from "@narratage/narrative";
+import type { CaptionDisplaySequence } from "@narratage/narrative";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
@@ -25,7 +25,7 @@ export const captionGeminiComponent = {
           request: {
             kind: "inline",
             value: canonicalize(compileCaptionGeminiRequest(
-              inline<CaptionWordSequence>(inputs.words?.value, "CaptionWordSequence"),
+              inline<CaptionDisplaySequence>(inputs.display?.value, "CaptionDisplaySequence"),
               inline<CaptionProgram>(inputs.captionProgram?.value, "CaptionProgram"),
               inline<CaptionGeminiProgram>(inputs.program?.value, "CaptionGeminiProgram"),
             )),

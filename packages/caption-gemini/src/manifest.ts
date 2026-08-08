@@ -16,11 +16,11 @@ export const captionGeminiProducers = {
   request: { module: captionGeminiModuleRef, name: "request-caption-gemini-plan" },
 } satisfies Record<string, ProducerRef>;
 export const captionGeminiImplementationDigests = {
-  compile: digestOf("@narratage/caption-gemini/compile-request@1"),
-  request: digestOf("@narratage/caption-gemini/request-plan@1"),
+  compile: digestOf("@narratage/caption-gemini/compile-readable-atoms-structured-fields@1"),
+  request: digestOf("@narratage/caption-gemini/request-readable-atoms-plan@1"),
   programValidator: digestOf("@narratage/caption-gemini/validate-program@1"),
-  requestValidator: digestOf("@narratage/caption-gemini/validate-request@1"),
-  plannerSurface: digestOf("@narratage/caption-gemini/planner-surface@1"),
+  requestValidator: digestOf("@narratage/caption-gemini/validate-readable-atoms-request@1"),
+  plannerSurface: digestOf("@narratage/caption-gemini/display-planner-surface@1"),
 } as const;
 
 const string = { kind: "string", minLength: 1 } as const satisfies ValueSchema;
@@ -50,7 +50,11 @@ const fieldDeclaration = object({
 });
 const planningRun = object({
   id: { schema: string }, styleId: { schema: string },
-  wordIds: { schema: { kind: "array", minItems: 1, items: string } },
+  atoms: { schema: { kind: "array", minItems: 1, items: object({
+    id: { schema: string }, words: { schema: { kind: "array", minItems: 1, items: object({
+      id: { schema: string }, text: { schema: string },
+    }) } },
+  }) } },
   cueMinimumWords: { schema: nonNegativeInteger }, cueMaximumWords: { schema: nonNegativeInteger },
   cueInstruction: { schema: string }, fields: { schema: { kind: "array", items: fieldDeclaration } },
 });
@@ -61,7 +65,6 @@ export const captionGeminiProgramSchema: ValueSchema = object({
 export const captionGeminiRequestSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-gemini-request@1" } },
   model: { schema: model },
-  words: { schema: { kind: "array", minItems: 1, items: object({ id: { schema: string }, text: { schema: string } }) } },
   runs: { schema: { kind: "array", minItems: 1, items: planningRun } },
   systemInstruction: { schema: string }, prompt: { schema: string },
   temperature: { schema: { kind: "literal", value: 0.2 } },
@@ -106,7 +109,7 @@ export const captionGeminiManifest: ModuleManifest = {
     {
       name: captionGeminiProducers.compile.name,
       inputs: [
-        { name: "words", type: narrativeTypes.captionWordSequence },
+        { name: "display", type: narrativeTypes.captionDisplay },
         { name: "captionProgram", type: captionTypes.program },
         { name: "program", type: captionGeminiTypes.program },
       ],

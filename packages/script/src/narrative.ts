@@ -1,23 +1,54 @@
 import { canonicalize } from "@narratage/core";
 import type { CanonicalValue } from "@narratage/protocol";
-import type { CaptionRegion, CaptionWord, CaptionWordSequence, CaptionWordSubset } from "@narratage/narrative";
+import type {
+  CaptionCorrespondence,
+  CaptionDisplayAtom,
+  CaptionDisplaySequence,
+  CaptionDisplayWord,
+  CaptionDisplayWordSubset,
+} from "@narratage/narrative";
 
-import type { ParsedNarrative } from "./types.js";
+import type { ParsedCaptionRegion, ParsedNarrative } from "./types.js";
 
-const DISPLAY_WORD =
+const LEXICAL_WORD =
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]\p{M}*|[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
+const DISPLAY_SURFACE = /\S+/gu;
 
-function displayWords(value: string): Array<{ readonly text: string; readonly start: number; readonly end: number }> {
-  const result: Array<{ text: string; start: number; end: number }> = [];
-  DISPLAY_WORD.lastIndex = 0;
+function lexicalCount(value: string): number {
+  LEXICAL_WORD.lastIndex = 0;
+  let count = 0;
+  while (LEXICAL_WORD.exec(value)) count += 1;
+  return count;
+}
+
+/**
+ * The official Script reader is English-first: authored whitespace is the primary display-word
+ * boundary and punctuation inside a surface is preserved. A punctuation-only surface is attached
+ * to its left neighbour; a leading one is attached to the first following word. This is lexical
+ * ownership, not semantic interpretation.
+ */
+function displayWords(value: string): string[] {
+  const chunks: string[] = [];
+  DISPLAY_SURFACE.lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = DISPLAY_WORD.exec(value))) {
-    result.push({ text: match[0], start: match.index, end: match.index + match[0].length });
+  while ((match = DISPLAY_SURFACE.exec(value))) chunks.push(match[0]);
+  const result: string[] = [];
+  let leading = "";
+  for (const chunk of chunks) {
+    if (lexicalCount(chunk) > 0) {
+      result.push(leading ? `${leading} ${chunk}` : chunk);
+      leading = "";
+    } else if (result.length > 0) {
+      result[result.length - 1] = `${result.at(-1)!} ${chunk}`;
+    } else {
+      leading = leading ? `${leading} ${chunk}` : chunk;
+    }
   }
+  if (leading) result.push(leading);
   return result;
 }
 
-function turnForRegion(parsed: ParsedNarrative, region: CaptionRegion): ParsedNarrative["turns"][number] {
+function turnForRegion(parsed: ParsedNarrative, region: ParsedCaptionRegion): ParsedNarrative["turns"][number] {
   const turn = parsed.turns.find((candidate) =>
     candidate.segmentId === region.segmentId
     && candidate.tokenStart < region.endTokenExclusive
@@ -26,74 +57,134 @@ function turnForRegion(parsed: ParsedNarrative, region: CaptionRegion): ParsedNa
   return turn;
 }
 
-/** Script owns display-word projection because only it still knows authored source structure. */
-export function captionWordSequence(parsed: ParsedNarrative, id: string): CaptionWordSequence {
-  const words: CaptionWord[] = [];
+function projectCaption(
+  parsed: ParsedNarrative,
+  id: string,
+): { readonly display: CaptionDisplaySequence; readonly correspondence: CaptionCorrespondence } {
+  const atoms: CaptionDisplayAtom[] = [];
+  const words: CaptionDisplayWord[] = [];
+  const correspondence: Array<{ atomId: string; sourceTokenIds: string[] }> = [];
   for (const region of parsed.captionProjection.regions) {
     if (region.kind === "hidden") continue;
     const turn = turnForRegion(parsed, region);
-    for (const word of displayWords(region.display)) {
-      const exact = region.refinements.find((refinement) =>
-        refinement.displayStart === word.start && refinement.displayEnd === word.end);
-      words.push({
-        id: `${region.id}:word:${words.length + 1}`,
-        index: words.length,
-        regionId: region.id,
+    const surfaces = displayWords(region.display);
+    if (surfaces.length === 0) throw new Error(`Caption region ${region.id} contains no visible display surface`);
+    const groups = region.kind === "alias" ? [surfaces] : surfaces.map((surface) => [surface]);
+    let sourceCursor = region.startToken;
+    for (const group of groups) {
+      const atomId = `${id}:atom:${atoms.length + 1}`;
+      const atomWordIds = group.map((surface, groupIndex) => {
+        const wordId = `${atomId}:word:${groupIndex + 1}`;
+        words.push({
+          id: wordId,
+          index: words.length,
+          atomId,
+          segmentId: region.segmentId,
+          turnId: turn.id,
+          ...(turn.role === undefined ? {} : { role: turn.role }),
+          text: surface,
+        });
+        return wordId;
+      });
+      atoms.push({
+        id: atomId,
+        index: atoms.length,
         segmentId: region.segmentId,
         turnId: turn.id,
         ...(turn.role === undefined ? {} : { role: turn.role }),
-        text: word.text,
-        displayStart: word.start,
-        displayEnd: word.end,
-        sourceTokenStart: exact?.startToken ?? region.startToken,
-        sourceTokenEndExclusive: exact?.endTokenExclusive ?? region.endTokenExclusive,
-        correspondence: exact === undefined ? "region-envelope" : "exact",
+        wordIds: atomWordIds,
       });
+      const sourceEnd = region.kind === "alias"
+        ? region.endTokenExclusive
+        : sourceCursor + group.reduce((count, surface) => count + lexicalCount(surface), 0);
+      const sourceTokenIds = parsed.tokens.slice(sourceCursor, sourceEnd).map((token) => token.id);
+      if (sourceTokenIds.length === 0) throw new Error(`Caption Atom ${atomId} has no authored speech correspondence`);
+      correspondence.push({ atomId, sourceTokenIds });
+      sourceCursor = sourceEnd;
+    }
+    if (sourceCursor !== region.endTokenExclusive) {
+      throw new Error(`Caption identity region ${region.id} does not structurally partition its authored speech`);
     }
   }
-  if (words.length === 0) throw new Error("Caption display projection contains no visible words");
-  return { contract: "svml.caption-word-sequence@1", id, words };
+  if (atoms.length === 0 || words.length === 0) throw new Error("Caption display contains no visible words");
+  return {
+    display: {
+      contract: "svml.caption-display-sequence@1",
+      id,
+      atoms,
+      words,
+    },
+    correspondence: {
+      contract: "svml.caption-correspondence@1",
+      displaySequenceId: id,
+      atoms: correspondence,
+    },
+  };
 }
 
-/** Project one authored Selection into visible words before public values lose source positions. */
+export function captionDisplaySequence(parsed: ParsedNarrative, id: string): CaptionDisplaySequence {
+  return projectCaption(parsed, id).display;
+}
+
+export function captionCorrespondence(parsed: ParsedNarrative, id: string): CaptionCorrespondence {
+  return projectCaption(parsed, id).correspondence;
+}
+
+/** Project one authored Selection into whole visible Atoms before public values lose source positions. */
 export function captionSelectionWordSubset(
-  sequence: CaptionWordSequence,
+  parsed: ParsedNarrative,
+  sequence: CaptionDisplaySequence,
+  correspondence: CaptionCorrespondence,
   selection: ParsedNarrative["selections"][number],
-): CaptionWordSubset {
+): CaptionDisplayWordSubset {
   const ranges = selection.occurrences.map((occurrence) => ({
     start: occurrence.open.boundary.tokenIndex,
     endExclusive: occurrence.close.boundary.tokenIndex,
   }));
+  const tokenIndex = new Map(parsed.tokens.map((token) => [token.id, token.index]));
+  const atomById = new Map(sequence.atoms.map((atom) => [atom.id, atom]));
   const wordIds: string[] = [];
-  for (const word of sequence.words) {
+  for (const mapping of correspondence.atoms) {
+    const indexes = mapping.sourceTokenIds.map((id) => tokenIndex.get(id));
+    if (indexes.some((index) => index === undefined)) throw new Error(`Caption Atom ${mapping.atomId} references an unknown speech token`);
+    const start = Math.min(...indexes as number[]);
+    const endExclusive = Math.max(...indexes as number[]) + 1;
     const intersects = ranges.some((range) =>
-      word.sourceTokenStart < range.endExclusive && word.sourceTokenEndExclusive > range.start);
+      start < range.endExclusive && endExclusive > range.start);
     const contained = ranges.some((range) =>
-      word.sourceTokenStart >= range.start && word.sourceTokenEndExclusive <= range.endExclusive);
+      start >= range.start && endExclusive <= range.endExclusive);
     if (intersects && !contained) {
-      throw new Error(
-        `Selection ${selection.id} owns only part of Caption word ${word.id}; split the Dual Text atom`,
-      );
+      throw new Error(`Selection ${selection.id} owns only part of Caption Atom ${mapping.atomId}`);
     }
-    if (contained) wordIds.push(word.id);
+    if (contained) {
+      const atom = atomById.get(mapping.atomId);
+      if (atom === undefined) throw new Error(`Caption correspondence references unknown Atom ${mapping.atomId}`);
+      wordIds.push(...atom.wordIds);
+    }
   }
   return {
-    contract: "svml.caption-word-subset@1",
+    contract: "svml.caption-display-word-subset@1",
     id: selection.id,
     sequenceId: sequence.id,
     wordIds,
   };
 }
 
-export function captionWordSequenceValue(parsed: ParsedNarrative, id: string): CanonicalValue {
-  return canonicalize(captionWordSequence(parsed, id));
+export function captionDisplaySequenceValue(parsed: ParsedNarrative, id: string): CanonicalValue {
+  return canonicalize(captionDisplaySequence(parsed, id));
+}
+
+export function captionCorrespondenceValue(parsed: ParsedNarrative, id: string): CanonicalValue {
+  return canonicalize(captionCorrespondence(parsed, id));
 }
 
 export function captionSelectionWordSubsetValue(
-  sequence: CaptionWordSequence,
+  parsed: ParsedNarrative,
+  sequence: CaptionDisplaySequence,
+  correspondence: CaptionCorrespondence,
   selection: ParsedNarrative["selections"][number],
 ): CanonicalValue {
-  return canonicalize(captionSelectionWordSubset(sequence, selection));
+  return canonicalize(captionSelectionWordSubset(parsed, sequence, correspondence, selection));
 }
 
 function cleanProjection(value: string): string {
@@ -193,15 +284,6 @@ export function narrativeSpeechExcerptValue(
   return canonicalize(content);
 }
 
-export function captionProjectionValue(parsed: ParsedNarrative): CanonicalValue {
-  const content = {
-    contract: parsed.captionProjection.contract,
-    text: parsed.captionProjection.text,
-    regions: parsed.captionProjection.regions.map(({ range: _range, ...region }) => region),
-  } as const;
-  return canonicalize(content);
-}
-
 export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
   const content = {
     contract: "svml.narrative-selection@1",
@@ -270,27 +352,6 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
         anchorId: occurrence.boundary.anchorId,
       })),
     })),
-    captionProjection: {
-      contract: parsed.captionProjection.contract,
-      text: parsed.captionProjection.text,
-      regions: parsed.captionProjection.regions.map((region) => ({
-        id: region.id,
-        display: region.display,
-        segmentId: region.segmentId,
-        startToken: region.startToken,
-        endTokenExclusive: region.endTokenExclusive,
-        kind: region.kind,
-        refinements: region.refinements.map((refinement) => ({
-          id: refinement.id,
-          display: refinement.display,
-          displayStart: refinement.displayStart,
-          displayEnd: refinement.displayEnd,
-          startToken: refinement.startToken,
-          endTokenExclusive: refinement.endTokenExclusive,
-          relation: refinement.relation,
-        })),
-      })),
-    },
     semanticIndex: parsed.semanticIndex,
     serializations: parsed.serializations,
   });

@@ -12,7 +12,7 @@ description: 视觉 Track 组件——字幕、B-roll 叠加层和文字叠加�
 字幕由一套很小的公共语言与可替换的样式族组成：
 
 ```text
-Script 词全集 → 样式族 → Caption Program → Planner → 样式族 Track
+Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样式族 Track
 ```
 
 ```svml
@@ -21,8 +21,8 @@ Script 词全集 → 样式族 → Caption Program → Planner → 样式族 Tra
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 ```
 
-公共 Caption 只负责 Cue 字数边界、通用逐词字段、完整样式分配、Plan 校验与时间
-拼接。Fine 是第一种具体样式族，负责 `important` 字段、字体/框参数和视觉渲染。
+公共 Caption 只负责 Cue 字数边界、可选的通用逐词字段、完整样式分配、Plan 校验与时间
+拼接。Fine 是第一种无字段样式族，负责自己的字体/框参数和统一 Cue 视觉渲染。
 
 ### caption-fine:Style
 
@@ -33,9 +33,8 @@ Script 词全集 → 样式族 → Caption Program → Planner → 样式族 Tra
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 ```
 
-Recipe 同时包含 `cue-min-words`、`cue-max-words`、Fine 自有的
-`important-*-per-cue`、强调外观和完整字体/框参数。其他字幕包可以定义完全不同
-的字段和渲染方式，无需修改公共 Caption。
+Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
+逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。
 
 ### caption:Program
 
@@ -44,7 +43,7 @@ Program 消费 Script 显式输出的完整有序显示词全集。一个必填�
 者获胜。
 
 ```svml
-<caption:Program id="caption-program" words={story.caption.words}
+<caption:Program id="caption-program" display={story.caption}
   default={primary-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
@@ -59,17 +58,18 @@ Program 消费 Script 显式输出的完整有序显示词全集。一个必填�
 ### caption-ai:Planner
 
 ```svml
-<caption-ai:Planner id="caption-plan" words={story.caption.words}
+<caption-ai:Planner id="caption-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
 ```
 
-Planner 只接收不可改写的显示词与已解析好的 Style runs。它只能分 Cue，并给词 id
-附上样式声明的字段；看不到音频、时间或 Dual Text 右侧。
+Planner 只接收不可改写的显示 Atom/Word 与已解析好的 Style runs。它只能在完整 Atom
+之间分 Cue，并给 Word id 附上样式声明的字段；Fine 没有字段。它看不到音频、时间或
+Dual Text 右侧。
 
 ### caption-fine:Track
 
 ```svml
-<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} program={caption-program} plan={caption-plan.plan}/>
 ```
 
@@ -222,10 +222,10 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 
 <!-- Captions: primary style for all text -->
 <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
-<caption:Program id="caption-program" words={story.caption.words} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" words={story.caption.words}
+<caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+<caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
 <!-- B-roll: generated video during a Selection -->
