@@ -129,7 +129,7 @@
     {
       "name": "@narratage/provider-whisperx-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:ec4f25269c4aed169781ec0364e9fbcaa932eb816402856f06c54b746bf277ec"
+      "digest": "sha256:fcea064388755c71c7d178900bf77488cf9dbe57c2746b2969dca751f73940de"
     },
     {
       "name": "@narratage/render-hyperframes",
@@ -199,7 +199,7 @@
     {
       "name": "@narratage/whisperx",
       "version": "0.0.0-dev",
-      "digest": "sha256:72fd08de6dca9bbec329d4f880e176832fba7ce1b89e0992be9bf4bcd87f2b49"
+      "digest": "sha256:92683f7866c852eda0a71c8935a522bbc2579219ebde680b289eabb39f51f77a"
     },
     {
       "name": "@protobufjs/aspromise",
@@ -886,8 +886,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:3686b84c42cc2b1bcaccf57cbdcda25a15c7d9d3778fb92d25437f9880ed8f5d",
-      "closureDigest": "sha256:45db58b6f207565bde42852a4f14e31f84d40b74d99158c8f03e18e6163ec2b7"
+      "closureDigest": "sha256:621f941c2c8c4d65de7ebaaacf9a589de8b85154e04667f04c6e82049e37cfd5"
     }
   ],
-  "digest": "sha256:e2ac372472113278dc44b30afed0033b3d6bb9c30e26f718748cb4b935156b56"
+  "digest": "sha256:ec400ea8518f373094428bf4c4181ba539b5ae726626a3418d8d68e9e4955466"
 }
