@@ -102,6 +102,7 @@
       "@narratage/artifact-store-s3": [
         "packages/artifact-store-s3/src/index.ts"
       ],
+      "@narratage/credential-store-keychain": ["packages/credential-store-keychain/src/index.ts"],
       "@narratage/credential-store-env": [
         "packages/credential-store-env/src/index.ts"
       ],

@@ -432,6 +432,22 @@ importers:
         specifier: workspace:*
         version: link:../runtime
 
+  packages/credential-store-keychain:
+    dependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+    devDependencies:
+      '@narratage/credential-store-env':
+        specifier: workspace:*
+        version: link:../credential-store-env
+
   packages/driver-node:
     dependencies:
       '@narratage/component-kit':

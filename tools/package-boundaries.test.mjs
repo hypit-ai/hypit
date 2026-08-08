@@ -69,6 +69,7 @@ const domainNeutralPackages = new Set([
   "@narratage/artifact-store-fs",
   "@narratage/artifact-store-s3",
   "@narratage/credential-store-env",
+  "@narratage/credential-store-keychain",
   "@narratage/transport",
   "@narratage/transport-aws-lambda",
   "@narratage/local",
