@@ -24,7 +24,7 @@ export {
   resolveOperation,
   sealBuildRequest,
   sealCompiledGraph,
-  selectedSatisfaction,
+  satisfiedCandidate,
   satisfactionForOutput,
   valueRefKey,
   verifyBuildRequest,
