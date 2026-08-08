@@ -1,5 +1,5 @@
 import { narrativeManifest } from "@narratage/narrative";
-import type { CaptionProjection, Narrative, NarrativeDialogueExcerpt, NarrativeExcerpt, NarrativeSpeechExcerpt } from "@narratage/narrative";
+import type { Narrative, NarrativeDialogueExcerpt, NarrativeExcerpt, NarrativeSpeechExcerpt } from "@narratage/narrative";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -62,9 +62,9 @@ test("Text learns <script> only from an imported Script Manifest", async () => {
   assert.equal(result.module.records.some((record) =>
     record.id === "story.segment.opening.speech" && record.type.name === "NarrativeSpeechExcerpt"), true);
   assert.equal(result.module.records.some((record) =>
-    record.id === "story.caption" && record.type.name === "CaptionProjection"), true);
+    record.id === "story.caption" && record.type.name === "CaptionDisplaySequence"), true);
   assert.equal(result.module.records.some((record) =>
-    record.id === "story.caption.words" && record.type.name === "CaptionWordSequence"), true);
+    record.id === "story.caption.correspondence" && record.type.name === "CaptionCorrespondence"), true);
   assert.equal(result.sourceMaps.length, 1);
   assert.doesNotThrow(() => link(scriptContext().closure, [result.module]));
 });

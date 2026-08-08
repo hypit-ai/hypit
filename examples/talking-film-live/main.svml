@@ -91,18 +91,18 @@
 
   <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 
-  <caption:Program id="caption-program" words={story.caption.words} default={primary-caption}/>
+  <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
   <caption-ai:Planner
     id="caption-plan"
-    words={story.caption.words}
+    display={story.caption}
     program={caption-program}
     model="gemini-2.5-flash"
   />
 
   <caption-fine:Track
     id="captions"
-    narrative={story}
-    words={story.caption.words}
+    display={story.caption}
+    correspondence={story.caption.correspondence}
     map={timing.map}
     space={speech.space}
     program={caption-program}

@@ -20,8 +20,4 @@ export type FineCaptionParameters = {
     readonly paddingYPx: number;
     readonly radiusPx: number;
   };
-  readonly important: {
-    readonly fill: string;
-    readonly scale: number;
-  };
 };

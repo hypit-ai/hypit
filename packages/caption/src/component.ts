@@ -1,11 +1,10 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { CaptionWordSequence, Narrative } from "@narratage/narrative";
+import type { CaptionCorrespondence, CaptionDisplaySequence } from "@narratage/narrative";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
 import {
-  captionImplementationDigest,
   captionPlanImplementationDigest,
   captionProducers,
   captionTypes,
@@ -13,7 +12,7 @@ import {
 } from "./manifest.js";
 import { assertCaptionPlan } from "./plan.js";
 import { assertCaptionProgram, assertCaptionStyle } from "./style.js";
-import { temporalizeCaption, temporalizeCaptionPlan } from "./temporalize.js";
+import { temporalizeCaptionPlan } from "./temporalize.js";
 import { assertTimedCaptionProjection } from "./temporalize.js";
 import type {
   CaptionPlan,
@@ -32,22 +31,6 @@ export const captionComponent = {
   name: "@narratage/caption",
   producers: [
     {
-      producer: captionProducers.temporalize,
-      implementationDigest: captionImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: {
-          caption: {
-            kind: "inline",
-            value: canonicalize(temporalizeCaption(
-              inline<Narrative>(inputs.narrative?.value, "Narrative"),
-              inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
-            )),
-          },
-        },
-        needs: {},
-      }),
-    },
-    {
       producer: captionProducers.temporalizePlan,
       implementationDigest: captionPlanImplementationDigest,
       handler: ({ inputs }) => ({
@@ -55,9 +38,9 @@ export const captionComponent = {
           caption: {
             kind: "inline",
             value: canonicalize(temporalizeCaptionPlan(
-              inline<Narrative>(inputs.narrative?.value, "Narrative"),
+              inline<CaptionDisplaySequence>(inputs.display?.value, "CaptionDisplaySequence"),
+              inline<CaptionCorrespondence>(inputs.correspondence?.value, "CaptionCorrespondence"),
               inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
-              inline<CaptionWordSequence>(inputs.words?.value, "CaptionWordSequence"),
               inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
               inline<CaptionPlan>(inputs.plan?.value, "CaptionPlan"),
             )),

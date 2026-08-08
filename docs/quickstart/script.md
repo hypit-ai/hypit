@@ -79,7 +79,8 @@ Role Cues produce different text projections:
 
 The dialogue projection includes Role Cue prefixes. Speech and caption projections strip them.
 Components like `seedance:Speech` use `{story.segment.dialogue.dialogue}` (with labels). Script also
-emits the complete ordered `{story.caption.words}` universe used by Caption Programs and Planners.
+emits `{story.caption}` as the ordered display Atom/Word universe and
+`{story.caption.correspondence}` as the separate Atom-to-speech edge used only when timing joins.
 
 ## Dual Text
 

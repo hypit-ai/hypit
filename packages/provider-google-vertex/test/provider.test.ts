@@ -21,11 +21,11 @@ import {
   googleVertexProviderImplementationDigest,
 } from "@narratage/provider-google-vertex";
 import type { GenerateCaptionContent } from "@narratage/provider-google-vertex";
-import { captionWordSequence, parseScript } from "@narratage/script";
+import { captionDisplaySequence, parseScript } from "@narratage/script";
 
 function request(): CaptionGeminiRequest {
   const narrative = parseScript("provider.svml", "<line><ALICE>Meaning becomes the source.</line>");
-  const words = captionWordSequence(narrative, "story.caption.words");
+  const display = captionDisplaySequence(narrative, "story.caption");
   const style = sealCaptionStyle({
     contract: "svml.caption-style@1",
     id: "important",
@@ -41,8 +41,8 @@ function request(): CaptionGeminiRequest {
     },
     rendering: { family: "test-caption@1", parameters: {} },
   });
-  const captionProgram = resolveCaptionProgram(words, "captions", style, []);
-  return compileCaptionGeminiRequest(words, captionProgram, sealCaptionGeminiProgram({
+  const captionProgram = resolveCaptionProgram(display, "captions", style, []);
+  return compileCaptionGeminiRequest(display, captionProgram, sealCaptionGeminiProgram({
     contract: "svml.caption-gemini-program@1",
     model: "gemini-2.5-flash",
   }));
@@ -50,10 +50,9 @@ function request(): CaptionGeminiRequest {
 
 function response(requestValue: CaptionGeminiRequest): RawCaptionGeminiResponse {
   return { runs: requestValue.runs.map((run) => ({
-    run_id: run.id,
     cues: [{
-      after_word_id: run.wordIds.at(-1)!,
-      fields: [{ declaration_id: "important", word_id: run.wordIds[0]!, value: "important" }],
+      atom_count: run.atoms.length,
+      fields: [{ declaration_id: "important", atom_number: 1, word_number: 1, value: "important" }],
     }],
   })) };
 }

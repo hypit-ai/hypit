@@ -1,7 +1,7 @@
 import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@narratage/protocol";
-import type { CaptionProjection, CaptionRefinement, CaptionRegion, Narrative, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@narratage/narrative";
+import type { Narrative, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@narratage/narrative";
 
-export type { CaptionProjection, Narrative, SemanticAnchor } from "@narratage/narrative";
+export type { Narrative, SemanticAnchor } from "@narratage/narrative";
 
 export type Affinity = "left" | "right";
 
@@ -59,19 +59,27 @@ export type ParsedMoment = {
   readonly occurrences: readonly ParsedMomentOccurrence[];
 };
 
-export type ParsedCaptionRefinement = CaptionRefinement;
-export type ParsedCaptionRegion = CaptionRegion & { readonly range: SourceRange };
+export type ParsedCaptionRegion = {
+  readonly id: string;
+  readonly display: string;
+  readonly segmentId: string;
+  readonly startToken: number;
+  readonly endTokenExclusive: number;
+  readonly kind: "identity" | "alias" | "hidden";
+  readonly range: SourceRange;
+};
 
 export type ParsedNarrative = Omit<
   Narrative,
-  "segments" | "tokens" | "turns" | "selections" | "moments" | "captionProjection"
+  "segments" | "tokens" | "turns" | "selections" | "moments"
 > & {
   readonly segments: readonly ParsedSegment[];
   readonly tokens: readonly ParsedToken[];
   readonly turns: readonly ParsedTurn[];
   readonly selections: readonly ParsedSelection[];
   readonly moments: readonly ParsedMoment[];
-  readonly captionProjection: Omit<CaptionProjection, "regions"> & {
+  readonly captionProjection: {
+    readonly text: string;
     readonly regions: readonly ParsedCaptionRegion[];
   };
 };

@@ -12,8 +12,8 @@ export const captionFineModuleRef = { name: "@narratage/caption-fine", version: 
 export const captionFineProducers = {
   render: { module: captionFineModuleRef, name: "render-fine-caption" },
 } satisfies Record<string, ProducerRef>;
-export const captionFineStyleSurfaceImplementationDigest = digestOf("@narratage/caption-fine/style-surface@1");
-export const captionFineTrackSurfaceImplementationDigest = digestOf("@narratage/caption-fine/track-surface@1");
+export const captionFineStyleSurfaceImplementationDigest = digestOf("@narratage/caption-fine/field-free-style-surface@1");
+export const captionFineTrackSurfaceImplementationDigest = digestOf("@narratage/caption-fine/whole-atom-track-surface@1");
 
 export const captionFineManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -45,7 +45,7 @@ export const captionFineManifest: ModuleManifest = {
     inputs: [
       { name: "caption", type: captionTypes.timedProjection },
       { name: "program", type: captionTypes.program },
-      { name: "words", type: narrativeTypes.captionWordSequence },
+      { name: "display", type: narrativeTypes.captionDisplay },
       { name: "space", type: programSpaceTypes.programSpace },
     ],
     outputs: [{ name: "track", type: compositionTypes.visualTrack }],

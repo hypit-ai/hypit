@@ -59,61 +59,48 @@ export type NarrativeMomentRef = NarrativeMoment & {
   readonly contract: "svml.narrative-moment@1";
 };
 
-export type CaptionRefinement = {
-  readonly id: string;
-  readonly display: string;
-  readonly displayStart: number;
-  readonly displayEnd: number;
-  readonly startToken: number;
-  readonly endTokenExclusive: number;
-  readonly relation: "exact";
-};
-
-export type CaptionRegion = {
-  readonly id: string;
-  readonly display: string;
-  readonly segmentId: string;
-  readonly startToken: number;
-  readonly endTokenExclusive: number;
-  readonly kind: "identity" | "alias" | "hidden";
-  readonly refinements: readonly CaptionRefinement[];
-};
-
-export type CaptionProjection = {
-  readonly contract: "svml.caption-projection@1";
-  readonly text: string;
-  readonly regions: readonly CaptionRegion[];
-};
-
-/** Whole authored display projection. It contains no pronunciation replacement text. */
-export type CaptionProjectionRef = CaptionProjection;
-
-/** One visible display word. Pronunciation-only text never enters this value. */
-export type CaptionWord = {
+/** One author-visible word surface. Punctuation owned by the surface is preserved. */
+export type CaptionDisplayWord = {
   readonly id: string;
   readonly index: number;
-  readonly regionId: string;
+  readonly atomId: string;
   readonly segmentId: string;
   readonly turnId: string;
   readonly role?: string;
   readonly text: string;
-  readonly displayStart: number;
-  readonly displayEnd: number;
-  readonly sourceTokenStart: number;
-  readonly sourceTokenEndExclusive: number;
-  readonly correspondence: "exact" | "region-envelope";
 };
 
-/** The complete ordered visible-word universe for one Script Caption projection. */
-export type CaptionWordSequence = {
-  readonly contract: "svml.caption-word-sequence@1";
+/** One indivisible Cue-planning unit. Fields may still address its ordered words. */
+export type CaptionDisplayAtom = {
   readonly id: string;
-  readonly words: readonly CaptionWord[];
+  readonly index: number;
+  readonly segmentId: string;
+  readonly turnId: string;
+  readonly role?: string;
+  readonly wordIds: readonly string[];
 };
 
-/** One ordered subset of an exact CaptionWordSequence, projected by Script structure. */
-export type CaptionWordSubset = {
-  readonly contract: "svml.caption-word-subset@1";
+/** Complete visible Caption truth. It contains no pronunciation or timing facts. */
+export type CaptionDisplaySequence = {
+  readonly contract: "svml.caption-display-sequence@1";
+  readonly id: string;
+  readonly atoms: readonly CaptionDisplayAtom[];
+  readonly words: readonly CaptionDisplayWord[];
+};
+
+/** Author-declared whole-Atom correspondence to spoken Script tokens; never an inferred refinement. */
+export type CaptionCorrespondence = {
+  readonly contract: "svml.caption-correspondence@1";
+  readonly displaySequenceId: string;
+  readonly atoms: readonly {
+    readonly atomId: string;
+    readonly sourceTokenIds: readonly string[];
+  }[];
+};
+
+/** One ordered subset of an exact CaptionDisplaySequence, projected by Script structure. */
+export type CaptionDisplayWordSubset = {
+  readonly contract: "svml.caption-display-word-subset@1";
   readonly id: string;
   readonly sequenceId: string;
   readonly wordIds: readonly string[];
@@ -134,7 +121,6 @@ export type Narrative = {
   readonly turns: readonly NarrativeTurn[];
   readonly selections: readonly NarrativeSelection[];
   readonly moments: readonly NarrativeMoment[];
-  readonly captionProjection: CaptionProjection;
   readonly semanticIndex: {
     readonly contract: "svml.semantic-index@1";
     readonly anchors: readonly SemanticAnchor[];

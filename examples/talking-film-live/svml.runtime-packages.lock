@@ -34,12 +34,12 @@
     {
       "name": "@narratage/caption-gemini",
       "version": "0.0.0-dev",
-      "digest": "sha256:8a631e9345ea2c5901f3785058fde176a8280b9f20dd77e3333d651d56991797"
+      "digest": "sha256:418af81230bf3ac8a7e307484b6098f283575bbae0b18a94cb525c3b52ce26e8"
     },
     {
       "name": "@narratage/caption",
       "version": "0.0.0-dev",
-      "digest": "sha256:dc090e7d96c7a6c3a53c4aabd0874f1b743f02ecd7e05c81f50fef8cfa88ae6a"
+      "digest": "sha256:3a569665a5bc60fde2f049786f76928e0729b4fd723c91a38d568014f53cdbb1"
     },
     {
       "name": "@narratage/component-kit",
@@ -99,7 +99,7 @@
     {
       "name": "@narratage/narrative",
       "version": "0.0.0-dev",
-      "digest": "sha256:85e98e61021310c2dd6473189dcbcc9daa54039277169cbb5ed51ed70277a894"
+      "digest": "sha256:d68aca30ab820e2ef794fc81d80aadb1c150937311048a6646df8b2dab3b99b0"
     },
     {
       "name": "@narratage/program-space",
@@ -114,7 +114,7 @@
     {
       "name": "@narratage/provider-google-vertex",
       "version": "0.0.0-dev",
-      "digest": "sha256:13e1058f0d4058cb6790a969a3ed54b778d8e818305eac1625bd939c4eb81c09"
+      "digest": "sha256:4ff2b97f210866712da258f09fc315ee296096c5fd29b23f471eb0e1becea733"
     },
     {
       "name": "@narratage/provider-hyperframes-local",
@@ -159,7 +159,7 @@
     {
       "name": "@narratage/semantic-map",
       "version": "0.0.0-dev",
-      "digest": "sha256:4293518a23ead1320f81d5d38e60bef96ea7f27149495bc890b9e4c275572864"
+      "digest": "sha256:425c1ea0d89039fc070de2a5de13b7d414d7a3a7d4c2e155445603fad3d60572"
     },
     {
       "name": "@narratage/source",
@@ -169,7 +169,7 @@
     {
       "name": "@narratage/speech-alignment",
       "version": "0.0.0-dev",
-      "digest": "sha256:277ffa2f5453636c61f6eef5713ad9fc4d3f71c2529456232f37df4ad6686b20"
+      "digest": "sha256:9f54aefc38b06344902d0a9f1bb0e76f03cd9e9e29d1bd8d79263979c73da6d2"
     },
     {
       "name": "@narratage/speech-evidence",
@@ -182,14 +182,9 @@
       "digest": "sha256:1296f5241ab87621cbed2019ffd09e51a2ecd79a49848715ade628a9d722d8c1"
     },
     {
-      "name": "@narratage/svs",
-      "version": "0.0.0-dev",
-      "digest": "sha256:8973ec01d5c9390da4e5a3f74c7e5af0a4bb49e15796e98e748b75ce62363d9d"
-    },
-    {
       "name": "@narratage/text",
       "version": "0.0.0-dev",
-      "digest": "sha256:99605f90eeca6d07428bd3e90741c3ddb36c75f8cd6a0e0958112d0994d13fd9"
+      "digest": "sha256:5dbe71a52a2b77f29a77ee7cff790081044cbecbbc410ca085769dd27be2566c"
     },
     {
       "name": "@narratage/validation",
@@ -855,7 +850,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b2636492ab0b0b500d674899ab2ff14fc61c7f2b22ef44eb8f816f141b21ec4d",
-      "closureDigest": "sha256:308ab3eba0e8ab28b601890f48b342645e16f2b6809efc8ddd27ef4a9568ee31"
+      "closureDigest": "sha256:a9da145f8ca7d78926bb835ac5e641d177632164cd5466050bab83fc18ba4603"
     },
     {
       "specifier": "@narratage/provider-hyperframes-local",
@@ -864,7 +859,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b14b721bdc0c9d5d9ced1c345107c92a3a5878f3383dea2ecd3e310442c2a40c",
-      "closureDigest": "sha256:cd38be1844a865ae960decea036fb307d90e23a26f6b2b3654dd9add0d8a81f9"
+      "closureDigest": "sha256:2ee2076c51c8e5e3570287da0b6abbf055d664c099a05b7993130d12c2ccf667"
     },
     {
       "specifier": "@narratage/provider-kie",
@@ -882,7 +877,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:701abcc923bf8a711c20b6e308d8cc8be27bf560f249b8c5a801e1dbd9cb3979",
-      "closureDigest": "sha256:14ffbed83708b1a4dbf62c2087f42813c728d483f71969a0959b1587c3793051"
+      "closureDigest": "sha256:9c5ef78ea75970ea2d295a7dd9fcc60c890f190e46f2d3ca918a8a61077d0fef"
     },
     {
       "specifier": "@narratage/provider-whisperx-local",
@@ -891,8 +886,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:3686b84c42cc2b1bcaccf57cbdcda25a15c7d9d3778fb92d25437f9880ed8f5d",
-      "closureDigest": "sha256:df22e2ec9d843674c4fdbcb6d6d243f63cf426033e4586106917508a7023a508"
+      "closureDigest": "sha256:76b93481c5df50da73ebead3050abd139b350d0bedf8b802a08dc540f61ccc88"
     }
   ],
-  "digest": "sha256:c1a51e98d44a45fdb13e73fff46ebbeaed9367dab13e0acf0f35a3ee11c617c4"
+  "digest": "sha256:6cc6ad9fdbd1cdda1a80b7961ec0d805ce3a91591b60c1e5db8a8a5d8e5e9940"
 }

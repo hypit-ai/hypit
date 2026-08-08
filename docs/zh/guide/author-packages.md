@@ -76,7 +76,7 @@ export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) =
 
 可以参考已有的 Surface 实现：
 - `packages/seedance/src/surface.ts` —— Prompt、Speech 和 Video Surface
-- `packages/caption/src/surface.ts` —— Style、Program 和 Track Surface
+- `packages/caption/src/surface.ts` —— 公共 Program Surface；具体 Style/Track Surface 属于各样式族包
 - `packages/broll/src/surface.ts` —— Track 和 Item Surface
 
 ## 5. 编写 activation 描述符
@@ -151,7 +151,8 @@ pnpm narratage lock-packages <lock-file> \
 |---|---|
 | `packages/seedance/` | 带多个 Surface（Prompt、Speech、Video）的模型族 |
 | `packages/seedance-speaker/` | 组合 Script、Prompt Kit 和 Seedance 的更高层绑定 |
-| `packages/caption/` | 带类型化字段声明的 Style、Program 和 Track Surface |
+| `packages/caption/` | 公共 Program、Cue/字段合同和整 Atom 定时 |
+| `packages/caption-fine/` | 一种无字段的 Style 与 Track Surface 样式族 |
 | `packages/broll/` | 带 Item/转场行为的 Track |
 | `packages/text-track/` | 简单的文字叠加 Track |
 | `packages/film/` | 消费同级 Track 的合成 target |
