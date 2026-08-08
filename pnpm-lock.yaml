@@ -1067,6 +1067,40 @@ importers:
         specifier: workspace:*
         version: link:../validation
 
+  packages/provider-media-aws-lambda:
+    dependencies:
+      '@narratage/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../media-execution
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/transport':
+        specifier: workspace:*
+        version: link:../transport
+      '@narratage/transport-aws-lambda':
+        specifier: workspace:*
+        version: link:../transport-aws-lambda
+    devDependencies:
+      '@narratage/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
+
   packages/provider-media-local:
     dependencies:
       '@narratage/endpoint-kit':

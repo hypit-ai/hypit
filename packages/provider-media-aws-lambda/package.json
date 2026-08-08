@@ -1,0 +1,26 @@
+{
+  "name": "@narratage/provider-media-aws-lambda",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/endpoint-kit": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/media-execution": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/transport": "workspace:*",
+    "@narratage/transport-aws-lambda": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/driver-node": "workspace:*"
+  }
+}
