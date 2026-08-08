@@ -11,6 +11,7 @@ import {
 } from "@narratage/runtime-adapter-node";
 
 import { createLocalOpenCvImageProvider } from "./provider.js";
+import { localOpenCvService } from "./service.js";
 
 const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-image-opencv-local",
@@ -46,6 +47,7 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       subject: "OpenCV Python",
     });
   },
+  service: localOpenCvService,
 });
 
 export const svmlPackage = {
