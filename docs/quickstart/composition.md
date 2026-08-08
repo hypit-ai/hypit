@@ -49,7 +49,7 @@ Common Track sources:
 |---|---|---|
 | `{speech.visual}` | VisualTrack | `speech:Spine` — full-screen talking head |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine` — synchronized audio |
-| `{captions.track}` | VisualTrack | `caption:Track` — timed captions |
+| `{captions.track}` | VisualTrack | a Caption Style-family Track — timed captions |
 | `{cards.visual}` | VisualTrack | `broll:Track` — B-roll overlays |
 | `{titles.track}` | VisualTrack | `text:Track` — text overlays |
 
@@ -114,6 +114,7 @@ The complete data flow from Script to rendered video. This example is based on
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="broll" from="@narratage/broll@1"/>
   <import as="text" from="@narratage/text-track@1"/>
@@ -143,19 +144,12 @@ The complete data flow from Script to rendered video. This example is based on
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <!-- 4. Tracks: captions, B-roll, text -->
-  <caption:Style id="base-caption" appearance={studio.caption.base}>
-    <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-    <caption:Field id="important" type="boolean"
-      min-per-cue="0" max-per-cue="2">
-      Select zero, one, or two words whose emphasis best communicates
-      this Cue.
-    </caption:Field>
-  </caption:Style>
-  <caption:Program id="caption-program" narrative={story}
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+  <caption:Program id="caption-program" words={story.caption.words}
     default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" narrative={story}
+  <caption-ai:Planner id="cue-plan" words={story.caption.words}
     program={caption-program} model="gemini-2.5-flash"/>
-  <caption:Track id="captions" narrative={story} map={timing.map}
+  <caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
     space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
   <broll:Track id="cards" map={timing.map} space={speech.space}>
@@ -199,6 +193,9 @@ The complete data flow from Script to rendered video. This example is based on
     enter: slide-up 4f; exit: fade 4f;
   }
   caption.base {
+    cue-min-words: 1; cue-max-words: 5;
+    important-min-per-cue: 0; important-max-per-cue: 2;
+    important-fill: #FFF16A; important-scale: 1.12;
     stack-order: 70; x: 0.08; y: 0.76; width: 0.84;
     font: Inter; weight: 600; size: 58; line-height: 1; align: center;
     fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;

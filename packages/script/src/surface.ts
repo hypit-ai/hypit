@@ -3,6 +3,8 @@ import { canonicalize } from "@narratage/core";
 import { ScriptSyntaxError } from "./error.js";
 import {
   captionProjectionValue,
+  captionSelectionWordSubsetValue,
+  captionWordSequence,
   narrativeDialogueExcerptValue,
   narrativeSegmentExcerptValue,
   narrativeMomentValue,
@@ -13,6 +15,8 @@ import {
 } from "./narrative.js";
 import {
   captionProjectionType,
+  captionWordSequenceType,
+  captionWordSubsetType,
   narrativeDialogueExcerptType,
   narrativeExcerptType,
   narrativeMomentType,
@@ -77,6 +81,8 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
     input.source.slice(input.contentStart, close.start),
     input.contentStart,
   );
+  const wordsId = `${rawId}.caption.words`;
+  const words = captionWordSequence(parsed, wordsId);
   return {
     nextOffset: close.end,
     records: [
@@ -112,6 +118,21 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
         value: { kind: "inline" as const, value: captionProjectionValue(parsed) },
         range: { start: input.openingStart, end: close.end },
       },
+      {
+        id: wordsId,
+        type: captionWordSequenceType,
+        value: { kind: "inline" as const, value: canonicalize(words) },
+        range: { start: input.openingStart, end: close.end },
+      },
+      ...parsed.selections.map((selection) => ({
+        id: `${rawId}.caption.selection.${selection.id}`,
+        type: captionWordSubsetType,
+        value: { kind: "inline" as const, value: captionSelectionWordSubsetValue(words, selection) },
+        range: {
+          start: selection.occurrences[0]!.open.range.start,
+          end: selection.occurrences.at(-1)!.close.range.end,
+        },
+      })),
       ...parsed.selections.map((selection) => ({
         id: `${rawId}.selection.${selection.id}`,
         type: narrativeSelectionType,

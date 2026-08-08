@@ -373,7 +373,7 @@ is owned by small, independently versioned modules:
 
 | Package | Owns |
 |---|---|
-| `@narratage/narrative` | authored tokens, Segments, excerpts, selections and Caption display projection |
+| `@narratage/narrative` | authored tokens, Segments, excerpts, anchor-only selections/moments, Caption display projection and ordered Caption words/subsets |
 | `@narratage/media` | inspected/normalized media facts, renderer outputs and typed media/font/surface references |
 | `@narratage/program-space` | duration and exact rational frame domain |
 | `@narratage/speech` | speech duration, atomic SpeechBasis and alignment-audio facts |

@@ -74,7 +74,7 @@ This produces the **SemanticMap** — the bridge between Script text and physica
 
 | Output | Type | Used by |
 |---|---|---|
-| `{timing.map}` | CompleteSemanticMap | `caption:Track`, `broll:Track`, `text:Track` — timed placement |
+| `{timing.map}` | CompleteSemanticMap | Caption Style-family Tracks, `broll:Track`, `text:Track` — timed placement |
 
 The SemanticMap maps every authored Script anchor to a time point. It covers all `2M + 2N` identities
 (where M = total speech tokens, N = number of Segments). This is how Selections and Moments declared
@@ -87,7 +87,7 @@ component that needs to know the total program duration and frame domain.
 
 ```svml
 <film:Film id="main" space={speech.space} ...>
-<caption:Track id="captions" ... space={speech.space} .../>
+<caption-fine:Track id="captions" ... space={speech.space} .../>
 <text:Track id="titles" space={speech.space}>
 <render:Video id="final" composition={main.composition} space={speech.space}/>
 ```
@@ -112,7 +112,7 @@ Components that use the map take it via the `map` attribute:
 
 ```svml
 <broll:Track id="cards" map={timing.map} ...>
-<caption:Track id="captions" ... map={timing.map} .../>
+<caption-fine:Track id="captions" ... map={timing.map} .../>
 ```
 
 Each point in the map can be:
@@ -153,7 +153,7 @@ speaker:Take outputs ──► speech:Spine ──► whisperx:Alignment
                          .visual              .map (SemanticMap)
                          .audio                    │
                          .audioTrack               ▼
-                         .space ──────────► caption:Track
+                         .space ──────────► caption-fine:Track
                               │            broll:Track
                               │            text:Track
                               ▼            film:Film

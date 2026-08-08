@@ -72,6 +72,9 @@
       "@narratage/caption": [
         "packages/caption/src/index.ts"
       ],
+      "@narratage/caption-fine": [
+        "packages/caption-fine/src/index.ts"
+      ],
       "@narratage/speech-basis": [
         "packages/speech-basis/src/index.ts"
       ],

@@ -52,7 +52,7 @@ test("Text learns <script> only from an imported Script Manifest", async () => {
     scriptContext(),
   );
 
-  assert.equal(result.module.records.length, 5);
+  assert.equal(result.module.records.length, 6);
   assert.equal(result.module.records[0]?.id, "story");
   assert.equal(result.module.records[0]?.type.name, "Narrative");
   assert.equal(result.module.records.some((record) =>
@@ -63,6 +63,8 @@ test("Text learns <script> only from an imported Script Manifest", async () => {
     record.id === "story.segment.opening.speech" && record.type.name === "NarrativeSpeechExcerpt"), true);
   assert.equal(result.module.records.some((record) =>
     record.id === "story.caption" && record.type.name === "CaptionProjection"), true);
+  assert.equal(result.module.records.some((record) =>
+    record.id === "story.caption.words" && record.type.name === "CaptionWordSequence"), true);
   assert.equal(result.sourceMaps.length, 1);
   assert.doesNotThrow(() => link(scriptContext().closure, [result.module]));
 });

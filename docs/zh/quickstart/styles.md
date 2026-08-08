@@ -69,12 +69,18 @@ film.vertical {
 <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
 ```
 
-## 字幕
+## Caption Fine
 
-字幕视觉外观——位置、排版和容器样式。
+第一种官方 Caption 样式族把规划要求和渲染参数放在同一个 Recipe 中。
 
 ```svs
 caption.dialogue {
+  cue-min-words: 2;
+  cue-max-words: 7;
+  important-min-per-cue: 0;
+  important-max-per-cue: 2;
+  important-fill: #FFD166;
+  important-scale: 1.08;
   stack-order: 70;
   x: 0.08;
   y: 0.76;
@@ -93,6 +99,9 @@ caption.dialogue {
 
 | 属性 | 描述 |
 |---|---|
+| `cue-min-words`、`cue-max-words` | 通用 Cue 字数边界 |
+| `important-min-per-cue`、`important-max-per-cue` | Fine 每个 Cue 的强调数量；最大值为 `0` 时禁用该字段 |
+| `important-fill`、`important-scale` | Fine 对 `important` 词的渲染方式 |
 | `stack-order` | 所有 Track 之间的 Z 轴层叠顺序（值越大越靠前） |
 | `x`、`y` | 位置，以画布比例表示（0–1） |
 | `width` | 宽度，以画布比例表示 |
@@ -106,10 +115,10 @@ caption.dialogue {
 | `padding` | 容器内边距（像素）（单个值或 `垂直 水平`） |
 | `radius` | 容器圆角半径（像素） |
 
-通过 `caption:Style` 的 `appearance` 属性引用：
+由 Fine 样式族解析：
 
 ```svml
-<caption:Style id="primary-caption" appearance={studio.caption.dialogue}>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}/>
 ```
 
 ### 按角色设置字幕样式
@@ -118,6 +127,9 @@ caption.dialogue {
 
 ```svs
 caption.alice {
+  cue-min-words: 2; cue-max-words: 5;
+  important-min-per-cue: 0; important-max-per-cue: 2;
+  important-fill: #FFFFFF; important-scale: 1.08;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -127,6 +139,9 @@ caption.alice {
 }
 
 caption.bob {
+  cue-min-words: 2; cue-max-words: 5;
+  important-min-per-cue: 0; important-max-per-cue: 0;
+  important-fill: #FFFFFF; important-scale: 1;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -139,7 +154,10 @@ caption.bob {
 然后通过 `caption:Program` 进行分配：
 
 ```svml
-<caption:Program id="caption-program" narrative={story} default={studio.caption.dialogue}>
+<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue}/>
+<caption-fine:Style id="alice-caption" recipe={studio.caption.alice}/>
+<caption-fine:Style id="bob-caption" recipe={studio.caption.bob}/>
+<caption:Program id="caption-program" words={story.caption.words} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
 </caption:Program>
@@ -361,6 +379,12 @@ caption.dialogue {
   }
 
   caption.primary {
+    cue-min-words: 2;
+    cue-max-words: 5;
+    important-min-per-cue: 0;
+    important-max-per-cue: 2;
+    important-fill: #FFF16A;
+    important-scale: 1.08;
     stack-order: 70;
     x: 0.08;
     y: 0.74;
@@ -388,7 +412,7 @@ caption.dialogue {
 
 <speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
 
-<caption:Style id="primary-caption" appearance={studio.caption.primary} .../>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 
 <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
 ```
