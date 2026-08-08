@@ -270,7 +270,7 @@ async function runtimeAdapterFixture(marker: string): Promise<{
     const capability = { module, name: "Generate" };
     const returns = { module, name: "Result" };
     const runtimeFacet = {
-      abi: "svml.runtime-adapter-host@2",
+      abi: "svml.runtime-adapter-host@1",
       identity: {
         contract: "svml.runtime-adapter-facet@1",
         use: "example-runtime-adapter",

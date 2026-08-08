@@ -26,15 +26,15 @@ export const captionTypes = {
   trackProgram: { module: captionModuleRef, name: "CaptionTrackProgram" },
 } satisfies Record<string, TypeRef>;
 export const captionImplementationDigest = digestOf("@narratage/caption/temporalize@1");
-export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-plan@2");
+export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-plan@1");
 export const captionValidatorDigests = {
-  style: digestOf("@narratage/caption/validate-style@2"),
-  program: digestOf("@narratage/caption/validate-program@2"),
-  plan: digestOf("@narratage/caption/validate-plan@2"),
-  timedProjection: digestOf("@narratage/caption/validate-timed-projection@2"),
+  style: digestOf("@narratage/caption/validate-style@1"),
+  program: digestOf("@narratage/caption/validate-program@1"),
+  plan: digestOf("@narratage/caption/validate-plan@1"),
+  timedProjection: digestOf("@narratage/caption/validate-timed-projection@1"),
   trackProgram: digestOf("@narratage/caption/validate-track-program@1"),
 } as const;
-export const captionSurfaceImplementationDigest = digestOf("@narratage/caption/track-surface@2");
+export const captionSurfaceImplementationDigest = digestOf("@narratage/caption/track-surface@1");
 export const captionStyleSurfaceImplementationDigest = digestOf("@narratage/caption/style-surface@1");
 export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/caption/program-surface@1");
 
