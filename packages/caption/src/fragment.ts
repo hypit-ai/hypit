@@ -44,7 +44,7 @@ export const captionTrackSurfaceFragment = sealGraphFragment({
 
 /** Planner-neutral Cue/field facts join the independent measured map only at Caption lowering. */
 export const plannedCaptionTrackSurfaceFragment = sealGraphFragment({
-  name: "@narratage/caption/planned-track-surface@2",
+  name: "@narratage/caption/planned-track-surface@1",
   inputs: [
     { name: "narrative", type: narrativeTypes.narrative },
     { name: "map", type: semanticMapTypes.complete },

@@ -39,7 +39,7 @@ Adapter names resolve from a separately verified physical package closure; the g
 CLIs import no Provider implementation. Effective Runtime implementation identity binds actual
 package bytes, not a self-asserted development label. `doctor` checks locks, configuration,
 credentials, executables and declared service health without running a Build or constructing an
-Endpoint/Store. Runtime Adapter Host ABI `@2` gives every adapter a required pure configuration
+Endpoint/Store. Runtime Adapter Host ABI `@1` gives every adapter a required pure configuration
 gate, followed only for valid instances by optional read-only environment probes. A failed gate
 suppresses dependent diagnostics for that instance. Executable TypeScript remains the advanced
 trusted embedding API.
@@ -104,7 +104,7 @@ path on 2026-08-07. The two reusable execution choices are already the checked-i
 - credentials, local source assets, Build databases and paid outputs remain outside Git.
 
 A future uninterrupted paid rerun is operational evidence obtained by executing `build.svrun`, not
-a missing compiler feature and not a reason to add an Echo Pro-specific TypeScript orchestrator.
+a missing compiler feature and not a reason to add an example-specific TypeScript orchestrator.
 
 ### B2. Remote execution only where demanded
 

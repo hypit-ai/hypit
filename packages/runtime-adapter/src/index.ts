@@ -8,7 +8,7 @@ import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
 import type { CanonicalValue, Digest } from "@narratage/protocol";
 import type { RuntimeServicePackage } from "@narratage/runtime";
 
-export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@2";
+export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@1";
 
 export type RuntimeAdapterKind = "endpoint" | "runtime-service";
 

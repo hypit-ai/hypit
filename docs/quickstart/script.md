@@ -234,8 +234,8 @@ A complete Script using all constructs together:
   </hook>
 
   <meeting>
-    <HOST> @solution Then I found <Echo Pro | echo pro>: a card-sized recorder
-           that snaps onto the back of my phone. @ranking! I brought it to one
+    <HOST> @solution Then I opened <AI notes | artificial intelligence notes>,
+           which organized the meeting for me. @ranking! I brought it to one
            meeting. @/solution
   </meeting>
 
@@ -254,7 +254,7 @@ This Script declares:
 
 - Four Segments: `hook`, `meeting`, `evidence`, `payoff`
 - One Role Cue: `HOST` (consistent across all Segments)
-- One Dual Text: `<Echo Pro | echo pro>` (displayed as "Echo Pro", spoken as "echo pro")
+- One Dual Text: `<AI notes | artificial intelligence notes>` (displayed as "AI notes", spoken in full)
 - Three Selections: `whole` (entire Script), `problem`, `solution`, `emphasis`
 - One Moment: `ranking` (marks the instant "I brought it to one meeting")
 

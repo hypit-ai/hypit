@@ -19,7 +19,7 @@ export const googleVertexProviderModuleRef = {
   version: "0.0.0-dev",
 } as const;
 export const googleVertexProviderImplementationDigest = digestOf(
-  "@narratage/provider-google-vertex/caption-gemini@2:@google/genai@1.52.0",
+  "@narratage/provider-google-vertex/caption-gemini@1:@google/genai@1.52.0",
 );
 
 type GenerateCaptionContentInput = {

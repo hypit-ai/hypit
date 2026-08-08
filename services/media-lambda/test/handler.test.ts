@@ -98,7 +98,7 @@ test("a source the bucket does not hold is a typed failure, never a throw", asyn
 
 test("an envelope from another contract is refused before any media is touched", async () => {
   const handle = createMediaLambdaHandler({ client: new Bucket() });
-  const reply = await handle({ contract: "svml.media-lambda-request@0" }) as Record<string, unknown>;
+  const reply = await handle({ contract: "svml.media-lambda-request@invalid" }) as Record<string, unknown>;
   assert.equal(reply.ok, false);
   assert.match(String(reply.message), /contract must be svml\.media-lambda-request@1/u);
 });

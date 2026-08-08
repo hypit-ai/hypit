@@ -11,7 +11,7 @@ export const projectSpeechAudioImplementationDigest = digestOf(
 );
 
 export const projectSpeechVisualImplementationDigest = digestOf(
-  "@narratage/speech-basis/project-visual@2",
+  "@narratage/speech-basis/project-visual@1",
 );
 
 export const projectSpeechAudioTrackImplementationDigest = digestOf(

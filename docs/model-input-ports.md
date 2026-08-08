@@ -56,8 +56,9 @@ requirement forms: `atMostOneOf`, `requiresPresent`, `requiresAnyOf` (reference 
 one visual companion) and `weightedTotal` (a shared budget, such as Gemini Omni's documented
 `images + videos×2 + characterIds ≤ 7`). A media port may carry `itemFields` plus a
 `strictlyIncreasing` item rule, which is how a trimmed excerpt states `endSec > startSec`. Adding a
-kind or a requirement form is a `svml.generation-ports@2` decision, in the same way
-`VISUAL_STYLE_NAMES_V1` closes the Visual IR vocabulary.
+kind or a requirement form changes the `svml.generation-ports@1` contract while the project remains
+pre-release, in the same way `VISUAL_STYLE_NAMES_V1` closes the Visual IR vocabulary. Package locks
+and implementation digests record the exact implementation; speculative major numbers do not.
 
 ### What a port table deliberately does not encode
 

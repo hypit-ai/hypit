@@ -97,7 +97,7 @@ deletes only objects unreachable from every retained BuildState and Operation. T
 maintenance, never a Core transition or automatic cache policy. `narratage doctor
 <runtime-profile.json>` verifies package bytes, closed adapter configuration, required environment
 credentials, executables and declared service health without running a Build. Runtime Adapter Host
-ABI `@2` requires a pure configuration gate separate from construction: `doctor` never invokes an
+ABI `@1` requires a pure configuration gate separate from construction: `doctor` never invokes an
 adapter factory, starts a service, writes Runtime state or submits work. Valid instances may perform
 bounded read-only environment probes.
 
