@@ -135,11 +135,11 @@ Implemented:
 Not implemented:
 
 - the opt-in, credential-free-by-default live acceptance harness around the real talking-film Build;
-- AWS WhisperX Endpoint package;
+- a persistent remote WhisperX service Provider; AWS Lambda is explicitly not its target;
 - deployment and a first live render of the HyperFrames AWS stack—the Provider exists, but this
   repository intentionally creates no paid resource before an explicit resource review;
-- conversion of the implemented media Lambda distribution from its current container image to a
-  ZIP plus an exact FFmpeg Layer;
+- publication of a reviewed, redistributable FFmpeg 8.0.1 Layer and a first live run of the
+  implemented managed-runtime media function ZIP;
 - Keychain, Secrets Manager or Vault credential adapters;
 - deployment-specific Build release policy;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
@@ -207,8 +207,9 @@ permission enforcement and loaded-code attestation remain release work.
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
-- the AWS media function handler has passed against real ffmpeg and an in-memory bucket; the AWS
-  HyperFrames Provider passes injected-SDK recovery tests but has not yet deployed cloud resources;
+- the AWS media function handler and ZIP build have passed against real ffmpeg and an in-memory
+  bucket; the AWS HyperFrames Provider passes injected-SDK recovery tests but has not yet deployed
+  cloud resources;
 - generated credentials, media outputs and local databases are ignored by Git.
 
 All workspace packages are currently private development packages that export TypeScript source.

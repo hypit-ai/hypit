@@ -128,9 +128,11 @@ mistake codec padding for extra authored time.
 
 ## Remaining work
 
-- deploy and live-test the implemented AWS HyperFrames and media variants after explicit resource
-  review, and implement the AWS WhisperX variant against the same public contracts;
+- publish a reviewed, redistributable exact FFmpeg Layer, then deploy and live-test the implemented
+  AWS HyperFrames and ZIP-packaged media variants after explicit resource review;
 - deploy the implemented `services/whisperx` distribution wherever a local warm model process is
-  required; its lock, HTTP protocol and systemd example are independent of the Node Provider;
+  required, and add a remote-service Provider only for a genuinely persistent warm deployment;
+  WhisperX is deliberately not an AWS Lambda target because repeated model cold starts defeat this
+  execution shape;
 - decide whether visual-only identity should be projected earlier so an audio-only edit can reuse a
   paid visual render without even recompiling its cheap visual document.

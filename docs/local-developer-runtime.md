@@ -2,7 +2,7 @@
 
 Status: implemented reference assembly, KIE generation Provider, local media/image/HyperFrames/
 WhisperX Providers, S3 ArtifactStore, AWS media Provider and recoverable AWS HyperFrames Provider.
-Hosted orchestration and AWS WhisperX remain optional.
+Hosted orchestration and a persistent remote WhisperX service remain optional.
 
 ## 1. Outcome
 
@@ -17,7 +17,7 @@ build.svrun -> main.svml
        -> local deterministic component code
        -> KIE / Volcengine / Hypit Seedance Endpoint
        -> local OpenCV image-transform Endpoint
-       -> local / Lambda / Hypit WhisperX Endpoint
+       -> local / team-hosted / Hypit warm WhisperX service Endpoint
        -> local workers / Lambda / Hypit HyperFrames Endpoint
 
 durable facts       .svml/runtime.sqlite
@@ -330,7 +330,7 @@ the SQLite file on S3 or a network filesystem.
 | laptop to internal server | Runtime config paths and deployment | `.svml`, Core, components |
 | files to S3 | ArtifactStore service package | BuildStore, Endpoint packages |
 | SQLite to Postgres | Build/Operation Store adapters | Scheduler law, Core |
-| WhisperX local to Lambda | exact WhisperX Provider package | author-declared WhisperX method |
+| WhisperX local to a persistent remote service | exact WhisperX Provider package | author-declared WhisperX method |
 | KIE to Volcengine for an explicitly supported method | Provider package and locked binding | source unless author parameters differ |
 | local HyperFrames to Lambda | HyperFrames Provider package | HyperframesDocument and frame domain |
 | local Build to Hypit hosted Build | whole Runtime distribution | author/module closure and Core protocol |
