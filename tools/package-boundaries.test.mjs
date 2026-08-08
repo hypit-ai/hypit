@@ -69,8 +69,8 @@ const domainNeutralPackages = new Set([
   "@narratage/artifact-store-fs",
   "@narratage/artifact-store-s3",
   "@narratage/credential-store-env",
+  "@narratage/credential-store-keychain",
   "@narratage/transport",
-  "@narratage/transport-process",
   "@narratage/transport-aws-lambda",
   "@narratage/local",
 ]);
@@ -224,4 +224,48 @@ test("every workspace package is exercised by some test, directly or through a t
   }
   const uncovered = [...packages.keys()].filter((name) => !testedImports.has(name)).sort();
   assert.deepEqual(uncovered, [], "packages reachable from no test at all");
+});
+
+test("every package is reachable: imported, activatable, or a declared entry point", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const packages = await workspacePackages();
+  // A CLI is nobody's dependency by construction; it is what a person runs.
+  const entryPoints = new Set(["@narratage/video-cli", "@narratage/test-support"]);
+
+  // Anything imported by non-test source anywhere in the workspace, including
+  // the deployment services, which are real consumers even though they are not
+  // workspace packages.
+  const imported = new Set();
+  const scan = async (directory, owner) => {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const path = `${directory}/${entry.name}`;
+      if (entry.isDirectory() && entry.name !== "node_modules") await scan(path, owner);
+      else if (entry.name.endsWith(".ts")) {
+        for (const match of (await readFile(path, "utf8")).matchAll(/"(@narratage\/[a-z0-9-]+)"/gu)) {
+          if (match[1] !== owner) imported.add(match[1]);
+        }
+      }
+    }
+  };
+  for (const name of packages.keys()) await scan(`packages/${name.replace("@narratage/", "")}/src`, name);
+  await scan("services", undefined);
+
+  // A package with an activation entry is loaded by the Package Loader from a
+  // lock, never by an import, so having no importer is what it is supposed to
+  // look like.
+  const activatable = new Set([...packages]
+    .filter(([, manifest]) => manifest.svml?.activation !== undefined)
+    .map(([name]) => name));
+
+  const unreachable = [...packages.keys()]
+    .filter((name) => !imported.has(name) && !activatable.has(name) && !entryPoints.has(name))
+    .sort();
+  assert.deepEqual(unreachable, [],
+    "packages nothing imports, nothing can activate, and no one runs — delete them or give them a consumer");
 });

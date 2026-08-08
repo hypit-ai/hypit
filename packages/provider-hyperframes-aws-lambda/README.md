@@ -25,4 +25,5 @@ The production client uses the AWS SDK default credential chain. No access key i
 package configuration or written into Runtime identity.
 
 See [`docs/hyperframes-aws-runtime.md`](../../docs/hyperframes-aws-runtime.md) for Runtime Profile
-configuration, recovery semantics and the resource review required before the first real deploy.
+configuration, recovery semantics, deployment review and the opt-in live canary. The canary uses a
+fresh operation identity on every run and cleans its exact render/site prefixes by default.

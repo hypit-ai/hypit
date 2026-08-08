@@ -1,6 +1,6 @@
 # Implementation status
 
-Repository reality as of 2026-08-08. Specifications define laws; this page says what currently
+Repository reality as of 2026-08-09. Specifications define laws; this page says what currently
 executes. Narratage is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
@@ -28,10 +28,11 @@ Runtime-selected fallback.
 The resulting artifact is a 57.13-second 720×1280, 30 fps H.264/AAC MP4. Frame inspection confirmed
 the four ordered speech visuals and measured Caption Track in the final Composition. The checked-in
 source, exact Run, reuse Run and Runtime assembly are in
-[`examples/talking-head-aroll`](../examples/talking-head-aroll/README.md). Credentials, presenter assets,
-Build databases and generated outputs are intentionally ignored. A fresh uninterrupted all-`exact`
-acceptance remains part of automating the opt-in live harness; the explicit Candidate Build did not
-bypass any downstream implementation gap.
+[`examples/echo-pro-aroll`](../examples/echo-pro-aroll/README.md). Credentials, presenter assets,
+Build databases and generated outputs are intentionally ignored. Its `build.svrun` is the complete
+fresh `exact` execution choice, while `reuse-generated.svrun` is the separate explicit reuse choice.
+Running either is an ordinary CLI Build; no Echo Pro-specific harness or hidden third workflow graph
+is required.
 
 ## Domain-neutral system
 
@@ -80,7 +81,8 @@ Implemented:
 - `@narratage/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
 - `@narratage/store-sqlite`: durable CAS BuildStore and OperationStore;
 - `@narratage/artifact-store-fs`, `@narratage/artifact-store-s3`: interchangeable content-addressed bytes;
-- `@narratage/credential-store-env`: explicit credential slots without secrets in BuildState;
+- `@narratage/credential-store-env`, `@narratage/credential-store-keychain`: explicit credential
+  slots without secrets in BuildState, each answering only for its own `CredentialRef.store` name;
 - `@narratage/local`: zero-service developer assembly over SQLite and filesystem defaults;
 - declarative `svml.runtime.json` loading through a separate locked Runtime Adapter package closure,
   with TypeScript Runtime assembly retained as the advanced embedding API;
@@ -88,9 +90,13 @@ Implemented:
   durable independently of optional `inspect` / `get --to` Host reads;
 - Host-only Build Catalog history and source output aliases through `builds`, `inspect` and
   `get --name`, without changing Core Build identity or Runtime Closure;
-- `doctor` configuration diagnostics for the current trusted adapters, filesystem streaming Artifact
-  transfer and explicit dry-run/apply reachability GC over every retained BuildState and Operation;
-- `@narratage/transport`, `@narratage/transport-process`, `@narratage/transport-aws-lambda`: capability-neutral
+- Runtime Adapter Host ABI `@2`: a required pure configuration validator is separate from
+  construction; `doctor` never calls adapter factories and suppresses dependent diagnostics after
+  one invalid configuration or failed prerequisite;
+- `doctor` read-only environment diagnostics for the current trusted adapters, filesystem streaming
+  Artifact transfer and explicit dry-run/apply reachability GC over every retained BuildState and
+  Operation;
+- `@narratage/transport`, `@narratage/transport-aws-lambda`: capability-neutral
   invocation seams.
 
 The removed CLI `--pin`, `--target` and `--accept-substitute` path cannot synthesize hidden execution
@@ -122,10 +128,12 @@ Implemented:
 - `@narratage/artifact-store-s3`: conditional content-addressed writes, multipart streaming,
   streamed digest verification and explicit retention facets;
 - `@narratage/provider-media-aws-lambda`: the same five media operations as the local Provider,
-  executed through one Lambda function and the shared `@narratage/media-execution` body;
+  executed through one Lambda function and the shared `@narratage/media-execution` body; the exact
+  FFmpeg Layer and ZIP service passed their complete live AWS canary;
 - `@narratage/provider-hyperframes-aws-lambda`: recoverable plan-v2 rendering through the locked
   HyperFrames 0.7.84 SDK, deterministic Step Functions execution identity, checkpointed polling and
-  streamed S3 output persistence;
+  streamed S3 output persistence; the deployed stack passed a complete distributed render,
+  ArtifactStore ingestion, ffprobe verification and remote cleanup canary;
 - `@narratage/image-transform`: explicit image-plus-Program to image graph component, including the
   extracted Twinit GPT Image YCrCb denoise preset;
 - `@narratage/provider-image-opencv-local` and `services/image-opencv`: bounded OpenCV/NumPy execution
@@ -134,13 +142,11 @@ Implemented:
 
 Not implemented:
 
-- the opt-in, credential-free-by-default live acceptance harness around the real talking-film Build;
 - a persistent remote WhisperX service Provider; AWS Lambda is explicitly not its target;
-- deployment and a first live render of the HyperFrames AWS stack—the Provider exists, but this
-  repository intentionally creates no paid resource before an explicit resource review;
-- publication of a reviewed, redistributable FFmpeg 8.0.1 Layer and a first live run of the
-  implemented managed-runtime media function ZIP;
-- Keychain, Secrets Manager or Vault credential adapters;
+- publication-ready redistributable Media/HyperFrames AWS deployment bundles; the current team
+  resources are live deployments, not public release artifacts;
+- Secrets Manager, Vault or multi-store credential adapters; environment and Keychain stores exist,
+  and a current Runtime selects one store;
 - deployment-specific Build release policy;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
 - arbitrary Volcengine, Fal, API-key Gemini or Hypit Endpoint packages.
@@ -207,9 +213,9 @@ permission enforcement and loaded-code attestation remain release work.
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
-- the AWS media function handler and ZIP build have passed against real ffmpeg and an in-memory
-  bucket; the AWS HyperFrames Provider passes injected-SDK recovery tests but has not yet deployed
-  cloud resources;
+- the deployed AWS media function has passed all five real operations through its exact FFmpeg
+  Layer, and the deployed HyperFrames stack has passed the Narratage Provider's real distributed
+  rendering, ingestion, frame verification and cleanup canary;
 - generated credentials, media outputs and local databases are ignored by Git.
 
 All workspace packages are currently private development packages that export TypeScript source.

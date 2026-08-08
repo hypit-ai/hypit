@@ -43,7 +43,6 @@ authority that asks Core what is ready and accepts returned Events.
 | `@narratage/transport` | canonical request/response transport seam | capability identity, recovery or scheduling |
 | `@narratage/credential-store-env` | explicitly requested local environment secrets | enumeration, persistence or author imports |
 | `@narratage/transport-aws-lambda` | synchronous bounded JSON invocation | capability identity or remote job semantics |
-| `@narratage/transport-process` | shell-free, bounded, no-ambient-env local JSON process | capability identity or executable choice from source |
 | `@narratage/provider-*` | one exact external implementation and its polling/recovery | Core graph traversal, author parsing |
 
 The implemented remote video Endpoints are `@narratage/provider-media-aws-lambda` and
@@ -341,16 +340,16 @@ exact implementation endpoint or an explicit Candidate chosen outside the source
 
 ## 8. Remaining vertical work
 
-The durable local chassis and one real talking-video path are implemented. Remaining work is to:
+The durable local chassis and one real talking-video path are implemented. Different fresh, reuse
+and preview executions belong in explicit Run sources; the local Runtime needs no example-specific
+acceptance orchestrator. Remaining work is to:
 
-1. turn the credentialed path into a repeatable opt-in acceptance command while keeping paid output
-   and credentials outside Git (the representative KIE family run and synthetic-reference upload
-   passed on 2026-08-06; the four-take combined film passed on 2026-08-07);
-2. finish package-owned Caption field-to-word painting, Text three-box/exact-font authoring and
+1. finish package-owned Caption field-to-word painting, Text three-box/exact-font authoring and
    B-roll content-frame behavior before freezing those author Surfaces;
-3. migrate Ranking and other production components only after their meanings fit the peer-Track
+2. migrate Ranking and other production components only after their meanings fit the peer-Track
    contract;
-4. add Lambda-backed variants only when deployment pressure justifies them.
+3. add a persistent remote WhisperX Provider or further environment variants only when a concrete
+   deployment requires them.
 
 Hosted tenant auth, credits, Redis, a distributed queue and Hypit-wide Build hosting remain outside
 this phase.

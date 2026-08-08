@@ -432,6 +432,22 @@ importers:
         specifier: workspace:*
         version: link:../runtime
 
+  packages/credential-store-keychain:
+    dependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+    devDependencies:
+      '@narratage/credential-store-env':
+        specifier: workspace:*
+        version: link:../credential-store-env
+
   packages/driver-node:
     dependencies:
       '@narratage/component-kit':
@@ -962,9 +978,15 @@ importers:
         specifier: workspace:*
         version: link:../runtime-adapter
     devDependencies:
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
 
   packages/provider-hyperframes-local:
     dependencies:
@@ -1674,15 +1696,6 @@ importers:
       '@aws-sdk/client-lambda':
         specifier: ^3.1103.0
         version: 3.1103.0
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/transport':
-        specifier: workspace:*
-        version: link:../transport
-
-  packages/transport-process:
-    dependencies:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol

@@ -214,12 +214,12 @@ The Runtime executes an already frozen plan. Its environment-neutral ports are:
 
 | Port | Responsibility |
 |---|---|
-| `BuildScheduler` | readiness, concurrency lanes, fairness, retry and cancellation policy |
+| `BuildScheduler` | readiness, concurrency lanes, fairness |
+| execution driver | attempt, retry and cancellation of one admitted Operation |
 | `BuildStore` | verified BuildState snapshots and compare-and-swap revisions |
 | `OperationStore` | external submission identity, checkpoint, reconciliation and completion |
 | `ArtifactStore` | content-addressed bytes |
 | `CredentialStore` | scoped secret lookup for an exact Endpoint instance |
-| `CommandDispatcher` | optional distributed delivery after scheduling authority has decided |
 
 There is no universal Queue package. One Build has one authoritative Scheduler. KIE, Lambda and
 other remote services may have private job queues, but those queues cannot advance the Narratage graph.
@@ -280,7 +280,7 @@ identity, and only the Run Host validates and installs its Fragment exports. The
 special `runFragments` branch and does not interpret Run syntax.
 
 The reference local Host accepts `svml.runtime.json`. A separate `runtimePackageLock` selects
-physical packages whose verified `svml.runtime-adapter-host@1` facets may construct Endpoints and
+physical packages whose verified `svml.runtime-adapter-host@2` facets may validate configuration and construct Endpoints and
 services. Exact `use` names resolve only inside that locked inventory. The Host rebinds each Runtime
 implementation identity to the package Artifact digest and that package's transitive dependency closure before
 resolving the Runtime Profile/Closure. The JSON contains non-secret configuration and credential

@@ -295,27 +295,6 @@ export function resolveProducer(
   return { ...declaration, ref };
 }
 
-export function resolveCapability(
-  closure: ResolvedModuleClosure,
-  ref: CapabilityRef,
-): ResolvedCapabilityDeclaration {
-  const module = closure.modules.find((item) => sameModule(item.ref, ref.module));
-  invariant(
-    module !== undefined,
-    "UNKNOWN_MODULE",
-    `unknown module ${moduleKey(ref.module)}`,
-    capabilityKey(ref),
-  );
-  const declaration = module.manifest.capabilities.find((item) => item.name === ref.name);
-  invariant(
-    declaration !== undefined,
-    "UNKNOWN_CAPABILITY",
-    `unknown capability ${capabilityKey(ref)}`,
-    capabilityKey(ref),
-  );
-  return { ...declaration, ref };
-}
-
 export function sealRecord(record: TypedRecordDraft): TypedRecord {
   return { ...record, digest: recordDigest(record.type, record.value) };
 }
