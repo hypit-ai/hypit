@@ -1,0 +1,160 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { momentFrames, selectionFrameSpans } from "@narratage/semantic-map";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import type { ProgramSpace } from "@narratage/program-space";
+
+/**
+ * Two Segments at 10 fps. Words are one frame wide with a one-frame gap, so a
+ * boundary that snaps to the wrong side of a gap is visible as a whole frame,
+ * and the two Segments are separated by a further frame of silence.
+ *
+ *   opening: hello[0..1)  end[2..3)      segment 0..4
+ *   second:  start[5..6)  here[7..8)     segment 5..9
+ */
+const space: ProgramSpace = {
+  contract: "svml.program-space@1",
+  frameRate: { numerator: 10, denominator: 1 },
+  durationSec: 1,
+};
+
+const anchor = (identity: string, frame: number) => ({ identity, timeSec: frame / 10, frame });
+
+const map = {
+  contract: "svml.complete-semantic-map@1",
+  segments: [
+    { segmentId: "opening", startSec: 0, endSec: 0.4, startFrame: 0, endFrame: 4 },
+    { segmentId: "second", startSec: 0.5, endSec: 0.9, startFrame: 5, endFrame: 9 },
+  ],
+  tokens: [],
+  anchors: [
+    anchor("segment:opening:start", 0),
+    anchor("segment:opening:token:1:start", 0),
+    anchor("segment:opening:token:1:end", 1),
+    anchor("segment:opening:token:2:start", 2),
+    anchor("segment:opening:token:2:end", 3),
+    anchor("segment:opening:end", 4),
+    anchor("segment:second:start", 5),
+    anchor("segment:second:token:1:start", 5),
+    anchor("segment:second:token:1:end", 6),
+    anchor("segment:second:token:2:start", 7),
+    anchor("segment:second:token:2:end", 8),
+    anchor("segment:second:end", 9),
+  ],
+} as unknown as CompleteSemanticMap;
+
+const boundary = (anchorId: string) => ({ tokenIndex: 0, structuralPosition: 0, anchorId });
+
+function selection(openAnchor: string, closeAnchor: string): NarrativeSelectionRef {
+  return {
+    contract: "svml.narrative-selection@1",
+    id: "x",
+    occurrences: [{
+      occurrence: 0,
+      open: { affinity: "right", boundary: boundary(openAnchor) },
+      close: { affinity: "left", boundary: boundary(closeAnchor) },
+    }],
+  } as NarrativeSelectionRef;
+}
+
+test("the default inward markers select exactly the marked word", () => {
+  // `@x end @/x` resolved at parse time to token 2's own cuts.
+  assert.deepEqual(
+    selectionFrameSpans(map, selection("segment:opening:token:2:start", "segment:opening:token:2:end"), space),
+    [{ startFrame: 2, endFrameExclusive: 3 }],
+  );
+});
+
+test("outward markers absorb the surrounding silence, not the neighbouring word", () => {
+  // `hello ~@x end @/x~ …` resolves to hello's END and the next word's START.
+  assert.deepEqual(
+    selectionFrameSpans(map, selection("segment:opening:token:1:end", "segment:opening:token:2:start"), space),
+    [{ startFrame: 1, endFrameExclusive: 2 }],
+  );
+});
+
+test("a Segment cut is an ordinary anchor, so a Selection may start at one", () => {
+  // `</opening><second> ~@x start …` — the left boundary is `second`'s own start
+  // cut, five frames after `opening` ended, never `opening`'s last word.
+  assert.deepEqual(
+    selectionFrameSpans(map, selection("segment:second:start", "segment:second:token:1:end"), space),
+    [{ startFrame: 5, endFrameExclusive: 6 }],
+  );
+  assert.deepEqual(
+    selectionFrameSpans(map, selection("segment:second:token:2:start", "segment:second:end"), space),
+    [{ startFrame: 7, endFrameExclusive: 9 }],
+  );
+});
+
+test("a Moment locates one instant per occurrence", () => {
+  const moment = {
+    contract: "svml.narrative-moment@1",
+    id: "reveal",
+    occurrences: [
+      { occurrence: 0, affinity: "left", boundary: boundary("segment:second:start") },
+      { occurrence: 1, affinity: "right", boundary: boundary("segment:second:token:2:start") },
+    ],
+  } as NarrativeMomentRef;
+  assert.deepEqual(momentFrames(map, moment, space), [5, 7]);
+});
+
+test("an anchor the map does not contain names the Selection that asked for it", () => {
+  assert.throws(
+    () => selectionFrameSpans(map, selection("segment:missing:start", "segment:second:end"), space),
+    /NarrativeSelection x names anchor segment:missing:start/u,
+  );
+});
+
+test("overlapping occurrences pass through untouched, in Script order", () => {
+  // `@beat one @/beat … @beat three @/beat` where the two Segments overlap in
+  // time. Locating never sorts, merges or clips occurrences against each other:
+  // reconciling them is the caller's decision about its own material.
+  const overlapping = {
+    contract: "svml.narrative-selection@1",
+    id: "beat",
+    occurrences: [
+      {
+        occurrence: 0,
+        open: { affinity: "right", boundary: boundary("segment:opening:token:1:start") },
+        close: { affinity: "left", boundary: boundary("segment:opening:end") },
+      },
+      {
+        occurrence: 1,
+        open: { affinity: "right", boundary: boundary("segment:second:token:1:end") },
+        close: { affinity: "left", boundary: boundary("segment:second:end") },
+      },
+    ],
+  } as NarrativeSelectionRef;
+  // opening:token1:start = 0, opening:end = 4, second:token1:end = 6, second:end = 9
+  assert.deepEqual(selectionFrameSpans(map, overlapping, space), [
+    { startFrame: 0, endFrameExclusive: 4 },
+    { startFrame: 6, endFrameExclusive: 9 },
+  ]);
+});
+
+test("Script order is preserved even when it runs backwards in time", () => {
+  // Overlapping Segments make the second occurrence start before the first ends.
+  // The array still follows the Script; a caller that needs time order sorts.
+  const crossing = {
+    contract: "svml.narrative-selection@1",
+    id: "beat",
+    occurrences: [
+      {
+        occurrence: 0,
+        open: { affinity: "right", boundary: boundary("segment:second:token:1:start") },
+        close: { affinity: "left", boundary: boundary("segment:second:end") },
+      },
+      {
+        occurrence: 1,
+        open: { affinity: "right", boundary: boundary("segment:opening:token:1:start") },
+        close: { affinity: "left", boundary: boundary("segment:opening:end") },
+      },
+    ],
+  } as NarrativeSelectionRef;
+  assert.deepEqual(selectionFrameSpans(map, crossing, space), [
+    { startFrame: 5, endFrameExclusive: 9 },
+    { startFrame: 0, endFrameExclusive: 4 },
+  ]);
+});

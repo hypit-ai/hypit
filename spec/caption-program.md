@@ -101,8 +101,8 @@ Gemini, but the author graph must explicitly choose them.
 
 `CompleteSemanticMap` remains the only global speech timing truth. Exact display atoms reuse their
 source token windows. For a `region-envelope` alias, a Caption renderer may allocate local windows
-inside that region's measured envelope. Such boundaries are labelled `estimated`, remain downstream
-Caption facts and are never written back into the global map.
+inside that region's envelope. Those local boundaries remain downstream Caption facts and are never
+written back into the global map.
 
 Multiple Cues inside one alias must receive ordered, non-overlapping local windows. They must not
 each copy the same whole region envelope.

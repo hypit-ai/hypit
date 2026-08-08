@@ -134,6 +134,26 @@ KIE generation, Vertex Caption planning, local media, local OpenCV image transfo
 and local HyperFrames are implemented. Volcengine, Fal, API-key Gemini or Hypit can be added as
 independent Endpoint packages. They do not require changes to author model packages or Core.
 
+Since a Provider now contributes only a wire mapping over the input ports a model already declares
+(see [`model-input-ports.md`](./model-input-ports.md)), onboarding the common aggregator services is
+mostly data entry rather than code. The planned next phase is to bring the widely used relay
+services into the repository in a batch, one package each, so that whichever service a user already
+has an account with is simply available.
+
+Ease of adoption comes first in that phase; a second optimisation pass follows once several
+mappings exist side by side. Only then will it be clear which of these are real and worth building:
+
+- shared enum and field-name vocabulary that repeats across relay services;
+- generating a mapping skeleton from a service's published schema instead of hand-authoring it;
+- one model reached through several services in one deployment, and how a Runtime Profile chooses;
+- per-service pricing, rate limit and availability facts, which are deployment data and must not
+  enter the port table.
+
+Two rules hold through that phase. A relay service never edits a model package: if its documented
+limits disagree with a port table, the disagreement is investigated against the model vendor rather
+than absorbed into the mapping. And the port table keeps stating ports, cardinalities and
+combination rules only — value-level compatibility matrices stay with the service to reject.
+
 ## C. Deferred video-domain work
 
 Do not freeze or greatly expand the video author surface yet. The deferred backlog includes:

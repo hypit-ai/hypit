@@ -10,7 +10,7 @@ import type { RuntimeServicePackage } from "@narratage/runtime";
 
 export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@1";
 
-export type RuntimeAdapterKind = "endpoint" | "service";
+export type RuntimeAdapterKind = "endpoint" | "runtime-service";
 
 export type RuntimeAdapterIdentity = {
   readonly contract: "svml.runtime-adapter-facet@1";
@@ -33,9 +33,37 @@ export type RuntimeDoctorDiagnostic = {
   readonly subject?: string;
 };
 
+/** One command this deployment may run on the developer's machine. */
+export type RuntimeServiceCommand = {
+  readonly command: string;
+  readonly args: readonly string[];
+};
+
+export type RuntimeServiceState =
+  | { readonly state: "ready" }
+  | { readonly state: "down"; readonly detail: string }
+  /** Something answers, but not as the configured deployment expects. */
+  | { readonly state: "mismatch"; readonly detail: string };
+
+/**
+ * A separate program that must already be running for this Endpoint to work.
+ *
+ * An Endpoint that spawns a bounded process per Need declares nothing here; this
+ * is for a program whose cost is its warm state, which therefore outlives one
+ * Need and one Build. `start` is absent when the deployment does not own the
+ * program's lifetime, as with a remote host, leaving `probe` to report on it.
+ */
+export type RuntimeExternalService = {
+  readonly id: string;
+  probe(): Promise<RuntimeServiceState>;
+  readonly prepare?: RuntimeServiceCommand;
+  readonly start?: RuntimeServiceCommand;
+};
+
 export type RuntimeEndpointAdapterImplementation = {
   create(context: RuntimeAdapterFactoryContext): EndpointPackage | Promise<EndpointPackage>;
   doctor?(context: RuntimeAdapterFactoryContext): readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
+  service?(context: RuntimeAdapterFactoryContext): RuntimeExternalService | undefined;
 };
 
 export type RuntimeServiceAdapterImplementation = {
@@ -72,7 +100,7 @@ function identity(value: CanonicalValue): RuntimeAdapterIdentity {
   const item = value as unknown as RuntimeAdapterIdentity;
   assert(item.contract === "svml.runtime-adapter-facet@1", "Runtime Adapter identity contract is unsupported");
   assert(item.use.trim().length > 0, "Runtime Adapter use name is empty");
-  assert(item.kind === "endpoint" || item.kind === "service", "Runtime Adapter kind is invalid");
+  assert(item.kind === "endpoint" || item.kind === "runtime-service", "Runtime Adapter kind is invalid");
   return canonicalize(item) as unknown as RuntimeAdapterIdentity;
 }
 
@@ -88,6 +116,7 @@ export function createRuntimeEndpointAdapterFacet(options: {
   readonly use: string;
   readonly create: RuntimeEndpointAdapterImplementation["create"];
   readonly doctor?: RuntimeEndpointAdapterImplementation["doctor"];
+  readonly service?: RuntimeEndpointAdapterImplementation["service"];
 }): RuntimeAdapterHostFacet {
   const facet: RuntimeAdapterHostFacet = {
     abi: runtimeAdapterHostAbi,
@@ -99,6 +128,7 @@ export function createRuntimeEndpointAdapterFacet(options: {
     implementation: {
       create: options.create,
       ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
+      ...(options.service === undefined ? {} : { service: options.service }),
     },
   };
   return facet;
@@ -114,7 +144,7 @@ export function createRuntimeServiceAdapterFacet(options: {
     identity: identity(canonicalize({
       contract: "svml.runtime-adapter-facet@1",
       use: options.use,
-      kind: "service",
+      kind: "runtime-service",
     })),
     implementation: {
       create: options.create,
@@ -270,9 +300,17 @@ export class RuntimeAdapterRegistry {
   async createService(use: string, context: RuntimeAdapterFactoryContext): Promise<RuntimeServicePackage> {
     const value = this.#registrations.get(use);
     assert(value !== undefined, `Runtime service adapter ${use} is not registered`);
-    assert(value.facet.identity.kind === "service", `Runtime Adapter ${use} is not a service adapter`);
+    assert(value.facet.identity.kind === "runtime-service", `Runtime Adapter ${use} is not a Runtime service adapter`);
     const created = await (value.facet.implementation as RuntimeServiceAdapterImplementation).create(context);
     return bindServicePackage(created, value.facet.identity, value.binding);
+  }
+
+  /** The external program this Endpoint adapter needs running, when it declares one. */
+  service(use: string, context: RuntimeAdapterFactoryContext): RuntimeExternalService | undefined {
+    const value = this.#registrations.get(use);
+    if (value === undefined || value.facet.identity.kind !== "endpoint") return undefined;
+    const declare = (value.facet.implementation as RuntimeEndpointAdapterImplementation).service;
+    return declare === undefined ? undefined : declare(context);
   }
 
   async doctor(use: string, kind: RuntimeAdapterKind, context: RuntimeAdapterFactoryContext): Promise<readonly RuntimeDoctorDiagnostic[]> {

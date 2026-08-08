@@ -174,7 +174,7 @@ class ApplicationTests(unittest.TestCase):
                 )
         self.assertEqual(raised.exception.code, "UNKNOWN_FIELD")
 
-    def test_a_second_inference_is_not_hidden_in_a_sidecar_queue(self) -> None:
+    def test_a_second_inference_is_not_hidden_in_a_service_queue(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / "evidence.wav"

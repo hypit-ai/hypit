@@ -92,12 +92,18 @@ test("rendering the generic Prompt Program preserves exact Seedance method and r
   const prompt = compilePromptKit(officialUgcV1KitSpec, bindSpeakerPromptKit(take));
   const program = renderSpeakerSpeechProgram(prompt, take);
   assert.equal(program.model, "seedance-2-mini");
-  assert.equal(program.resolution, "720p");
-  assert.equal(program.aspectRatio, "9:16");
-  assert.equal(program.mode.kind, "reference");
-  if (program.mode.kind !== "reference") assert.fail("expected reference mode");
-  assert.deepEqual(program.mode.items.map((item) => item.kind), ["image", "audio"]);
-  assert.equal(program.prompt, prompt.blocks.map((item) => item.text).join("\n\n"));
+  assert.deepEqual(program.ports.resolution, ["720p"]);
+  assert.deepEqual(program.ports.aspectRatio, ["9:16"]);
+  assert.deepEqual(
+    (program.ports.referenceImage ?? []).map((item) => (item as { readonly role: string }).role),
+    ["image"],
+  );
+  assert.deepEqual(
+    (program.ports.referenceAudio ?? []).map((item) => (item as { readonly role: string }).role),
+    ["audio"],
+  );
+  assert.deepEqual(program.ports.prompt, [prompt.blocks.map((item) => item.text).join("\n\n")]);
+  assert.equal(program.ports.duration, undefined, "duration arrives from speech estimation");
 });
 
 test("Speaker rejects invalid media while Prompt Kit rejects unknown parameters", () => {

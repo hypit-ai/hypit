@@ -22,7 +22,7 @@ export const localWhisperXProviderModuleRef = {
   version: "0.0.0-dev",
 } as const;
 export const localWhisperXProviderImplementationDigest = digestOf(
-  "@narratage/provider-whisperx-local/svml-sidecar@4",
+  "@narratage/provider-whisperx-local/svml-service@1",
 );
 export const localWhisperXPunktTabDigest =
   "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106";
@@ -30,7 +30,7 @@ export const localWhisperXPunktTabDigest =
 export type CreateLocalWhisperXProviderOptions = {
   readonly instance?: string;
   readonly lane?: string;
-  /** Must resolve to the same machine because the sidecar protocol passes a staged local path. */
+  /** Must resolve to the same machine because the protocol passes a staged local path. */
   readonly baseUrl?: string;
   readonly expectedModel?: string;
   readonly expectedDevice?: string;
@@ -58,7 +58,7 @@ type RawSegment = {
   readonly words?: unknown;
 };
 
-export type WhisperXSidecarResponse = {
+export type WhisperXServiceResponse = {
   readonly language?: unknown;
   readonly segments?: unknown;
 };
@@ -95,7 +95,7 @@ function fourCc(bytes: Uint8Array, offset: number): string {
   return String.fromCharCode(...bytes.subarray(offset, offset + 4));
 }
 
-/** Fail closed if the Provider would cause the sidecar to normalize audio a second time. */
+/** Fail closed if the Provider would cause the service to normalize audio a second time. */
 function assertCanonicalEvidenceWav(bytes: Uint8Array, sampleFrames: number): void {
   assert(bytes.byteLength >= 44 && fourCc(bytes, 0) === "RIFF" && fourCc(bytes, 8) === "WAVE",
     "WhisperX evidence Artifact is not a WAV file");
@@ -142,12 +142,12 @@ function sourceSegmentFor(
 }
 
 /**
- * Lower sidecar-specific pauses/segments onto authored structural Segments without inventing time.
+ * Lower service-specific pauses/segments onto authored structural Segments without inventing time.
  * A word crossing a structural cut keeps its lexical evidence but loses its per-word time; the
  * downstream locator may derive that uncertainty explicitly instead of receiving a clipped lie.
  */
 export function interpretWhisperXResponse(
-  response: WhisperXSidecarResponse,
+  response: WhisperXServiceResponse,
   sourceSegments: readonly SpeechBasisSegment[],
   durationSec: number,
 ): readonly AlignedTranscriptSegment[] {
@@ -178,14 +178,14 @@ export function interpretWhisperXResponse(
       if (text.length === 0) continue;
       const start = finite(rawWord.start) ? rawWord.start : undefined;
       const end = finite(rawWord.end) ? rawWord.end : undefined;
-      assert((start === undefined) === (end === undefined), `WhisperX Word ${text} has partial timing`);
-      if (start !== undefined && end !== undefined) {
-        assert(start >= 0 && end >= start && end <= durationSec + 1e-3,
-          `WhisperX Word ${text} lies outside the evidence audio`);
-      }
       const source = sourceSegmentFor(sourceSegments, start, end, segmentStart, segmentEnd);
       const prior = previousEnd.get(source.segmentId)!;
+      // A word whose timing cannot be proved keeps its text and loses its clock,
+      // exactly as the service already does for words its aligner could not place.
       const timingIsProvable = start !== undefined && end !== undefined
+        && start >= 0
+        && end >= start
+        && end <= durationSec + 1e-3
         && start >= source.startSec - 1e-6
         && end <= source.endSec + 1e-6
         && start >= prior - 1e-6;
@@ -236,7 +236,7 @@ function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfil
 export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions = {}) {
   const baseUrl = new URL(config.baseUrl ?? "http://127.0.0.1:8765");
   assert(baseUrl.protocol === "http:" && ["127.0.0.1", "localhost", "::1", "[::1]"].includes(baseUrl.hostname),
-    "local WhisperX Provider requires a loopback HTTP sidecar");
+    "local WhisperX Provider requires a loopback HTTP service");
   const normalizedBaseUrl = baseUrl.href.replace(/\/+$/u, "");
   const expectedModel = config.expectedModel ?? "small";
   const expectedDevice = config.expectedDevice ?? "cpu";
@@ -260,7 +260,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     instance: config.instance ?? "whisperx.local",
     ...(config.lane === undefined ? {} : { lane: config.lane }),
     implementation: {
-      locator: "@narratage/provider-whisperx-local/svml-sidecar",
+      locator: "@narratage/provider-whisperx-local/svml-service",
       digest: localWhisperXProviderImplementationDigest,
     },
     permissions: ["filesystem:whisperx-staging", "network:whisperx-loopback"],
@@ -311,7 +311,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             readonly punktTabDigest?: unknown;
           };
           assert(healthValue.ok === true
-            && healthValue.protocol === "svml.whisperx-sidecar@1"
+            && healthValue.protocol === "svml.whisperx-service@1"
             && healthValue.serviceVersion === expectedServiceVersion
             && healthValue.whisperxVersion === expectedWhisperXVersion
             && healthValue.model === expectedModel
@@ -319,7 +319,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             && healthValue.compute === expectedCompute
             && healthValue.batchSize === expectedBatchSize
             && healthValue.punktTabDigest === expectedPunktTabDigest,
-          "WhisperX sidecar runtime identity differs from the configured Provider");
+          "WhisperX service runtime identity differs from the configured Provider");
           const transcriptionResponse = await fetch(`${normalizedBaseUrl}/transcribe`, {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -332,7 +332,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
           const raw = await limitedJson(transcriptionResponse, maxResponseBytes, "WhisperX transcription");
           assert(raw.value !== null && typeof raw.value === "object" && !Array.isArray(raw.value),
             "WhisperX transcription response is invalid");
-          const response = raw.value as WhisperXSidecarResponse;
+          const response = raw.value as WhisperXServiceResponse;
           const segments = interpretWhisperXResponse(response, request.segments, request.durationSec);
           const rawArtifact = await context.artifacts.put(raw.bytes, "application/json");
           const evidence: WhisperXAlignmentEvidence = sealWhisperXAlignmentEvidence({

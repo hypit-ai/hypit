@@ -1,13 +1,8 @@
 export {
-  kieAdapterForCapability,
+  kieMappingForCapability,
   kieModelCatalog,
   verifyKieModelCatalog,
-} from "./catalog.js";
-export type {
-  KieArtifactUrlResolver,
-  KieModelAdapter,
-  KieTask,
-} from "./catalog.js";
+} from "./mapping.js";
 export {
   createKieProvider,
   kieProviderImplementationDigest,

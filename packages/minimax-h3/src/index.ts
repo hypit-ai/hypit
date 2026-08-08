@@ -1,129 +1,69 @@
-import {
-  assertGenerationBlobRef,
-  generationBlobRefSchema,
-  generationObjectSchema,
-  generationPromptSchema,
-  sealGenerationRequest,
-} from "@narratage/generation";
+import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
+import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import type { BlobRef, ValueSchema } from "@narratage/protocol";
 
 export const minimaxH3ModuleRef = { name: "@narratage/minimax-h3", version: "0.0.0-dev" } as const;
-export type MinimaxH3Mode = "text" | "frames" | "reference";
-export type MinimaxH3Reference =
-  | { readonly kind: "image"; readonly artifact: BlobRef }
-  | { readonly kind: "video"; readonly artifact: BlobRef }
-  | { readonly kind: "audio"; readonly artifact: BlobRef };
 
-type Common = {
-  readonly contract: "svml.minimax-h3-request@1";
-  readonly model: "minimax-h3";
-  readonly prompt: string;
-  readonly durationSec: number;
-};
+/**
+ * What MiniMax H3 accepts is a property of the trained model, not of whichever
+ * service resells it. A service that splits these ports across several of its
+ * own endpoints expresses that in its wire mapping.
+ *
+ * `768P` and `2K` are the model's own two output tiers — H3-Base renders at
+ * 768p and H3-Regenerate-2K re-renders from the original context — so the
+ * spelling is MiniMax's, not any gateway's.
+ */
+export const minimaxH3Ports: GenerationPortTable = sealGenerationPortTable({
+  contract: "svml.generation-ports@1",
+  model: "minimax-h3",
+  result: "video",
+  ports: [
+    { name: "prompt", value: { kind: "text", maxChars: 7_000 }, minItems: 1, maxItems: 1 },
+    {
+      name: "duration",
+      value: { kind: "number", integer: true, minimum: 4, maximum: 15 },
+      minItems: 1,
+      maxItems: 1,
+    },
+    { name: "resolution", value: { kind: "enum", values: ["768P", "2K"] }, minItems: 0, maxItems: 1 },
+    {
+      name: "aspectRatio",
+      value: { kind: "enum", values: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"] },
+      minItems: 0,
+      maxItems: 1,
+    },
+    { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 9 },
+    { name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0, maxItems: 3 },
+    { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0, maxItems: 3 },
+    { name: "firstFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
+    { name: "lastFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
+  ],
+  requires: [
+    { kind: "atMostOneOf", ports: ["referenceImage", "firstFrame"] },
+    { kind: "atMostOneOf", ports: ["referenceVideo", "firstFrame"] },
+    { kind: "atMostOneOf", ports: ["referenceAudio", "firstFrame"] },
+    { kind: "requiresAnyOf", port: "referenceAudio", anyOf: ["referenceImage", "referenceVideo"] },
+    // A first/last frame run inherits its framing from the uploaded image, so the
+    // model takes no aspect ratio in that mode.
+    { kind: "atMostOneOf", ports: ["aspectRatio", "firstFrame"] },
+    { kind: "weightedTotal", weights: { referenceImage: 1, referenceVideo: 1, referenceAudio: 1 }, maximum: 12 },
+  ],
+});
 
-export type MinimaxH3TextRequestContent = Common & {
-  readonly mode: "text";
-  readonly aspectRatio: string;
-};
-export type MinimaxH3FramesRequestContent = Common & {
-  readonly mode: "frames";
-  readonly firstFrame: BlobRef;
-  readonly lastFrame?: BlobRef;
-};
-export type MinimaxH3ReferenceRequestContent = Common & {
-  readonly mode: "reference";
-  readonly references: readonly MinimaxH3Reference[];
-  readonly aspectRatio: string;
-};
-export type MinimaxH3RequestContent =
-  | MinimaxH3TextRequestContent
-  | MinimaxH3FramesRequestContent
-  | MinimaxH3ReferenceRequestContent;
-export type MinimaxH3Request = MinimaxH3RequestContent;
-
-const commonFields = {
-  contract: { schema: { kind: "literal", value: "svml.minimax-h3-request@1" } },
-  model: { schema: { kind: "literal", value: "minimax-h3" } },
-  prompt: { schema: generationPromptSchema },
-  durationSec: { schema: { kind: "number", integer: true, minimum: 1, maximum: 60 } },
-} as const;
-const aspect = { kind: "string", minLength: 3, maxLength: 16 } as const satisfies ValueSchema;
-const referenceSchema: ValueSchema = {
-  kind: "oneOf",
-  variants: (["image", "video", "audio"] as const).map((kind) => generationObjectSchema({
-    kind: { schema: { kind: "literal", value: kind } },
-    artifact: { schema: generationBlobRefSchema },
-  })),
-};
-
-const schemas: Record<MinimaxH3Mode, ValueSchema> = {
-  text: generationObjectSchema({
-    ...commonFields,
-    mode: { schema: { kind: "literal", value: "text" } },
-    aspectRatio: { schema: aspect },
-  }),
-  frames: generationObjectSchema({
-    ...commonFields,
-    mode: { schema: { kind: "literal", value: "frames" } },
-    firstFrame: { schema: generationBlobRefSchema },
-    lastFrame: { schema: generationBlobRefSchema, optional: true },
-  }),
-  reference: generationObjectSchema({
-    ...commonFields,
-    mode: { schema: { kind: "literal", value: "reference" } },
-    references: { schema: { kind: "array", minItems: 1, maxItems: 12, items: referenceSchema } },
-    aspectRatio: { schema: aspect },
-  }),
-};
-
-function object(value: unknown, subject: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`${subject} must be an object`);
-  return value as Record<string, unknown>;
-}
-
-export function verifyMinimaxH3Request(value: unknown, expectedMode?: MinimaxH3Mode): asserts value is MinimaxH3Request {
-  const request = object(value, "MiniMax H3 request");
-  if (request.contract !== "svml.minimax-h3-request@1" || request.model !== "minimax-h3") {
-    throw new Error("MiniMax H3 request identity is invalid");
-  }
-  if (expectedMode !== undefined && request.mode !== expectedMode) throw new Error(`Expected MiniMax H3 ${expectedMode}`);
-  if (request.mode === "frames") {
-    assertGenerationBlobRef(request.firstFrame, "image/");
-    if (request.lastFrame !== undefined) assertGenerationBlobRef(request.lastFrame, "image/");
-  } else if (request.mode === "reference") {
-    if (!Array.isArray(request.references) || request.references.length === 0) throw new Error("MiniMax H3 references are empty");
-    request.references.forEach((candidate) => {
-      const item = object(candidate, "MiniMax H3 reference");
-      if (item.kind !== "image" && item.kind !== "video" && item.kind !== "audio") {
-        throw new Error("MiniMax H3 reference kind is invalid");
-      }
-      assertGenerationBlobRef(item.artifact, `${item.kind}/` as "image/" | "video/" | "audio/");
-    });
-  } else if (request.mode !== "text") {
-    throw new Error("MiniMax H3 mode is invalid");
-  }
-}
-
-export function sealMinimaxH3Request<T extends MinimaxH3RequestContent>(
-  content: T,
-): T {
-  const request = sealGenerationRequest(content);
-  verifyMinimaxH3Request(request, content.mode);
-  return request;
+export function sealMinimaxH3Request(
+  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+): GenerationRequest {
+  return sealGenerationPortRequest(minimaxH3Ports, ports);
 }
 
 export const minimaxH3Definition = defineExactModelModule({
   module: minimaxH3ModuleRef,
-  endpoints: (["text", "frames", "reference"] as const).map((mode) => ({
-    key: mode,
-    requestTypeName: `MinimaxH3${mode[0]!.toUpperCase()}${mode.slice(1)}Request`,
-    capabilityName: `minimax-h3-${mode}-generation`,
-    producerName: `request-minimax-h3-${mode}`,
-    result: "video" as const,
-    requestSchema: schemas[mode],
-    verifyRequest: (value: unknown) => verifyMinimaxH3Request(value, mode),
-  })),
+  endpoints: [{
+    key: "video",
+    requestTypeName: "MinimaxH3Request",
+    producerName: "request-minimax-h3",
+    ports: minimaxH3Ports,
+  }],
 });
 
 export const minimaxH3Manifest = minimaxH3Definition.manifest;
