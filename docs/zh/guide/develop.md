@@ -56,6 +56,7 @@ narratage/
 | [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、activation |
 | [添加 Provider](./providers.md) | 分步说明：新增 Endpoint 适配器 |
 | [Runtime Profile](./runtime-profile.md) | JSON 与 TypeScript 配置、诊断、Build 归档 |
+| [组件 Playground](./playground.md) | 不跑 Build 预览单个视觉组件 |
 | [本地服务](./services.md) | WhisperX 与 OpenCV 的搭建 |
 | [测试](./testing.md) | 测试运行器、写法、示例、boundary tests |
 | [代码规范](./conventions.md) | 命名、模块边界、wire 数据、TypeScript 配置 |
