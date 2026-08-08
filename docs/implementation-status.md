@@ -90,8 +90,12 @@ Implemented:
   durable independently of optional `inspect` / `get --to` Host reads;
 - Host-only Build Catalog history and source output aliases through `builds`, `inspect` and
   `get --name`, without changing Core Build identity or Runtime Closure;
-- `doctor` configuration diagnostics for the current trusted adapters, filesystem streaming Artifact
-  transfer and explicit dry-run/apply reachability GC over every retained BuildState and Operation;
+- Runtime Adapter Host ABI `@2`: a required pure configuration validator is separate from
+  construction; `doctor` never calls adapter factories and suppresses dependent diagnostics after
+  one invalid configuration or failed prerequisite;
+- `doctor` read-only environment diagnostics for the current trusted adapters, filesystem streaming
+  Artifact transfer and explicit dry-run/apply reachability GC over every retained BuildState and
+  Operation;
 - `@narratage/transport`, `@narratage/transport-aws-lambda`: capability-neutral
   invocation seams.
 

@@ -280,7 +280,7 @@ identity, and only the Run Host validates and installs its Fragment exports. The
 special `runFragments` branch and does not interpret Run syntax.
 
 The reference local Host accepts `svml.runtime.json`. A separate `runtimePackageLock` selects
-physical packages whose verified `svml.runtime-adapter-host@1` facets may construct Endpoints and
+physical packages whose verified `svml.runtime-adapter-host@2` facets may validate configuration and construct Endpoints and
 services. Exact `use` names resolve only inside that locked inventory. The Host rebinds each Runtime
 implementation identity to the package Artifact digest and that package's transitive dependency closure before
 resolving the Runtime Profile/Closure. The JSON contains non-secret configuration and credential

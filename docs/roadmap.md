@@ -38,18 +38,14 @@ Scheduler defaults, replacement services, credential references, Endpoints, lane
 Adapter names resolve from a separately verified physical package closure; the generic and video
 CLIs import no Provider implementation. Effective Runtime implementation identity binds actual
 package bytes, not a self-asserted development label. `doctor` checks locks, configuration,
-credentials and executables without running a Build. Executable TypeScript remains the advanced
+credentials, executables and declared service health without running a Build or constructing an
+Endpoint/Store. Runtime Adapter Host ABI `@2` gives every adapter a required pure configuration
+gate, followed only for valid instances by optional read-only environment probes. A failed gate
+suppresses dependent diagnostics for that instance. Executable TypeScript remains the advanced
 trusted embedding API.
 
 Runtime Profile is deployment configuration. It must not enter author semantic identity or
 `.svrun` creative choices.
-
-Before calling `doctor` structurally read-only for third-party adapters, split adapter configuration
-validation from `create()`. The current trusted-package implementation invokes `create()` after
-adapter diagnostics to catch invalid configuration; an adapter constructor is therefore trusted not
-to open a service, write state or issue a request during diagnosis. Diagnostics should also
-coalesce a missing prerequisite instead of reporting both the prerequisite and the resulting
-construction failure.
 
 ### A3. Public package lifecycle — release phase, not current execution work
 
