@@ -386,6 +386,17 @@ These are domain contracts, not a second Core. Installing a ninth contract packa
 change: it publishes its own Manifest and nominal Types, and components communicate through normal
 graph edges.
 
+Caption follows the same separation. `@narratage/caption` owns the family-neutral word-to-Cue Plan,
+total Style assignment and SemanticMap timing join. A concrete family such as
+`@narratage/caption-fine` owns its Recipe schema, layout and visual lowering. Using Caption Types is
+not authority to add a concrete Style parameter to the common package: changing a Fine position,
+font, box or paint rule must not change Caption, Composition or Core.
+
+`@narratage/media` owns the identity of renderable bytes, including the already-defined
+`FontArtifactRef`; it does not own typography choices. A future author Surface that turns a local
+font file into that existing value is one shared Text/Caption/Ranking capability and must be
+delivered independently from any Fine Style redesign.
+
 Speech implementation packages now describe what they actually do:
 
 | Package | Role |

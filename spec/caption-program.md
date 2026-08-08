@@ -73,9 +73,10 @@ A `CaptionStyle` is a complete author declaration with two inseparable payloads:
   parameters.
 
 Styles are declared separately from where they apply. The common Caption contract owns Cue
-partitioning and field assignment shapes, but it does not own fonts, colors, three-box layout,
-animation modes or the meaning of `important`. Those belong to a concrete Style family such as
-`@narratage/caption-fine`.
+partitioning and field assignment shapes, but it does not own fonts, colors, box layout, animation
+modes or the meaning of any field id. Those belong to concrete Style families. A Style family may
+declare no fields at all: the accepted `@narratage/caption-fine` direction uses only Cue partitioning
+and one uniform static appearance for every word in a Cue.
 
 A field declaration has a stable id, value schema, natural-language instruction and
 minimum/maximum assignment count per Cue. Boolean, enum and bounded numeric values are supported.
