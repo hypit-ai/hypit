@@ -7,7 +7,10 @@ pnpm playground
 ```
 
 Pick a producer, fill in its inputs, and it renders on a canvas of the size you
-choose. Browse to a `.svs` stylesheet and its Film Recipe fills in the frame.
+choose. Choose a `.svs` stylesheet and its Film Recipe fills in the frame.
+
+[The guide page](../../docs/guide/playground.md) covers using it. This file
+covers how it works.
 
 ## It lists nothing
 

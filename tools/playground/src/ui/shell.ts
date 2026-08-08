@@ -12,7 +12,6 @@ import {
   sealProgramSpace,
 } from "../svml.js";
 import type { CanonicalValue, ProgramSpace, Track } from "../svml.js";
-import { BROWSE_CSS, createBrowser, readSheet } from "./browse.js";
 import { FORM_CSS, blankValue, buildForm } from "./form.js";
 import { createStage } from "./stage.js";
 
@@ -35,7 +34,12 @@ const CSS = `
 .module { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 4px; }
 .sheet-note { color: var(--muted); font-size: 12px; margin-top: 7px; }
 .sheet-note b { color: var(--accent); font-weight: 500; }
-${BROWSE_CSS}
+.sheet-file { font-size: 11px; color: var(--muted); max-width: 100%; }
+.sheet-file::file-selector-button {
+  border: 1px solid var(--line); border-radius: 5px; background: #1c1c21;
+  color: var(--text); font: inherit; font-size: 11px; padding: 3px 9px; margin-right: 7px; cursor: pointer;
+}
+.sheet-file::file-selector-button:hover { border-color: #3a3a42; }
 ${FORM_CSS}
 `;
 
@@ -163,18 +167,28 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     }
   }
 
-  function loadSheet(path: string): void {
-    void readSheet(path).then((source) => {
-      const header = parseSourceHeader(path, source);
+  const note = document.createElement("div");
+  note.className = "sheet-note";
+
+  /**
+   * Reads a chosen stylesheet for its canvas.
+   *
+   * A Film Recipe is where a frame size comes from, so a sheet is offered as
+   * a way to adopt one. Nothing else in it is read: what a component looks
+   * like comes from the module that owns it.
+   */
+  function loadSheet(file: File): void {
+    void file.text().then((source) => {
+      const header = parseSourceHeader(file.name, source);
       if (!header.using.startsWith("@narratage/svs@")) {
-        throw new Error(`${path} is a ${header.using} source, not a stylesheet.`);
+        throw new Error(`${file.name} is a ${header.using} source, not a stylesheet.`);
       }
-      const sheet = parseSvs(path, maskSourceHeader(source, header));
+      const sheet = parseSvs(file.name, maskSourceHeader(source, header));
       const filmShape = [...filmRecipeKeys].sort().join(" ");
       const found = sheet.recipes.find((recipe) =>
         Object.keys(recipe.value.properties).sort().join(" ") === filmShape);
       if (found === undefined) {
-        note.textContent = "This stylesheet declares no Film Recipe, so the canvas is unchanged.";
+        note.textContent = `${file.name} declares no Film Recipe, so the canvas is unchanged.`;
         return;
       }
       const read = filmCanvasFromRecipe(found.value.properties);
@@ -195,9 +209,14 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     });
   }
 
-  const browser = createBrowser(loadSheet);
-  const note = document.createElement("div");
-  note.className = "sheet-note";
+  const sheetPicker = document.createElement("input");
+  sheetPicker.type = "file";
+  sheetPicker.accept = ".svs";
+  sheetPicker.className = "sheet-file";
+  sheetPicker.addEventListener("change", () => {
+    const file = sheetPicker.files?.[0];
+    if (file !== undefined) loadSheet(file);
+  });
 
   function section(title: string): HTMLElement {
     const element = document.createElement("div");
@@ -209,7 +228,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   function renderRail(): void {
     const values = draft(active);
     moduleLine.textContent = active.moduleName;
-    body.replaceChildren(section("Canvas from a stylesheet"), browser.element, note);
+    body.replaceChildren(section("Canvas from a stylesheet"), sheetPicker, note);
 
     for (const input of active.inputs) {
       // The shell owns the frame domain; offering it again would be a second
