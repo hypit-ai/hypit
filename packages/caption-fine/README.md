@@ -1,8 +1,13 @@
 # `@narratage/caption-fine`
 
 The first official fine-grained Caption Style family. It turns an SVS Recipe into one complete
-`CaptionStyle`: common Cue bounds, this family's `important` planning field, and the exact rendering
-parameters that understand that field.
+`CaptionStyle` and lowers timed Cues into one ordinary `VisualTrack`.
+
+The accepted target is deliberately plain: semantic Cue bounds plus one deterministic static
+appearance shared by every word in the Cue. Fine will declare no planning fields. `important`,
+random word sizing, karaoke state and per-word motion are not part of this family. The current
+executable baseline still contains the temporary optional `important` experiment; that is a known
+implementation delta, not a compatibility promise.
 
 ```xml
 <fine:Style id="primary" recipe={studio.caption.primary}/>
@@ -17,4 +22,4 @@ parameters that understand that field.
 
 One `fine:Track` handles the default and all ordered overrides and emits one ordinary
 `VisualTrack`. The common `@narratage/caption` package does not know this package's fonts, boxes,
-colors or the meaning of `important`.
+colors or placement rules.

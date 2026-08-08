@@ -144,6 +144,8 @@ Implement these against real delivery examples, but do not freeze or indiscrimin
 video author surface yet:
 
 - Caption Fine browser/pixel acceptance, especially CJK, emoji and multiline layout;
+- simplify Caption Fine to field-free, deterministic static Cue rendering before expanding its
+  layout and paint surface; do not migrate legacy `important` or random-size behavior;
 - full Text three-box and exact-font behavior;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;
