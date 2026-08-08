@@ -2,25 +2,10 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "PushTheImage",
+      "Sid": "ReadThePinnedFfmpegLayer",
       "Effect": "Allow",
-      "Action": [
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:CompleteLayerUpload",
-        "ecr:CreateRepository",
-        "ecr:DescribeImages",
-        "ecr:DescribeRepositories",
-        "ecr:InitiateLayerUpload",
-        "ecr:PutImage",
-        "ecr:UploadLayerPart"
-      ],
-      "Resource": "arn:aws:ecr:REGION:ACCOUNT_ID:repository/narratage-media"
-    },
-    {
-      "Sid": "EcrLoginIsAccountWide",
-      "Effect": "Allow",
-      "Action": ["ecr:GetAuthorizationToken"],
-      "Resource": "*"
+      "Action": ["lambda:GetLayerVersion"],
+      "Resource": "arn:aws:lambda:REGION:*:layer:*:*"
     },
     {
       "Sid": "PublishTheFunction",
