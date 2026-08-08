@@ -1,6 +1,6 @@
 import type { CaptionProgram, TimedCaptionProjection } from "@narratage/caption";
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { CaptionWordSequence } from "@narratage/narrative";
+import type { CaptionDisplaySequence } from "@narratage/narrative";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
@@ -22,7 +22,7 @@ export const captionFineComponent = {
       outputs: { track: { kind: "inline", value: canonicalize(renderFineCaption(
         inline<TimedCaptionProjection>(inputs.caption?.value, "TimedCaptionProjection"),
         inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
-        inline<CaptionWordSequence>(inputs.words?.value, "CaptionWordSequence"),
+        inline<CaptionDisplaySequence>(inputs.display?.value, "CaptionDisplaySequence"),
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
       )) } },
       needs: {},

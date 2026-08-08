@@ -9,12 +9,12 @@ export const narrativeDialogueExcerptType: TypeRef = narrativeTypes.dialogueExce
 export const narrativeSpeechExcerptType: TypeRef = narrativeTypes.speechExcerpt;
 export const narrativeSelectionType: TypeRef = narrativeTypes.selection;
 export const narrativeMomentType: TypeRef = narrativeTypes.moment;
-export const captionProjectionType: TypeRef = narrativeTypes.captionProjection;
-export const captionWordSequenceType: TypeRef = narrativeTypes.captionWordSequence;
-export const captionWordSubsetType: TypeRef = narrativeTypes.captionWordSubset;
+export const captionDisplayType: TypeRef = narrativeTypes.captionDisplay;
+export const captionCorrespondenceType: TypeRef = narrativeTypes.captionCorrespondence;
+export const captionDisplayWordSubsetType: TypeRef = narrativeTypes.captionDisplayWordSubset;
 export { narrativeSchema };
 
-export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/surface@1");
+export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/display-atoms-surface@1");
 
 export const scriptManifest: ModuleManifest = {
   format: "svml.module@1",
@@ -35,9 +35,9 @@ export const scriptManifest: ModuleManifest = {
         narrativeSpeechExcerptType,
         narrativeSelectionType,
         narrativeMomentType,
-        captionProjectionType,
-        captionWordSequenceType,
-        captionWordSubsetType,
+        captionDisplayType,
+        captionCorrespondenceType,
+        captionDisplayWordSubsetType,
       ],
       implementation: {
         kind: "trusted-frontend-surface",

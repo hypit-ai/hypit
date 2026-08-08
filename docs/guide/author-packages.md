@@ -80,7 +80,7 @@ export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) =
 
 Look at existing Surface implementations for reference:
 - `packages/seedance/src/surface.ts` — Prompt, Speech and Video Surfaces
-- `packages/caption/src/surface.ts` — Style, Program and Track Surfaces
+- `packages/caption/src/surface.ts` — the common Program Surface; concrete Style/Track Surfaces live in Style-family packages
 - `packages/broll/src/surface.ts` — Track and Item Surfaces
 
 ## 5. Write the activation descriptor
@@ -157,7 +157,8 @@ authority.
 |---|---|
 | `packages/seedance/` | Model family with multiple Surfaces (Prompt, Speech, Video) |
 | `packages/seedance-speaker/` | Higher-level binding that composes Script, Prompt Kit and Seedance |
-| `packages/caption/` | Style, Program and Track Surfaces with typed field declarations |
+| `packages/caption/` | common Program, Cue/field contracts and whole-Atom timing |
+| `packages/caption-fine/` | one field-free Style and Track Surface family |
 | `packages/broll/` | Track with Item/transition behavior |
 | `packages/text-track/` | Simple text overlay Track |
 | `packages/film/` | Composition target that consumes peer Tracks |

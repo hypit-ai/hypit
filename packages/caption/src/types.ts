@@ -31,7 +31,7 @@ export type CaptionFieldAssignment = {
 
 export type CaptionPlannedCue = {
   readonly id: string;
-  readonly wordIds: readonly string[];
+  readonly atomIds: readonly string[];
   readonly fields: readonly CaptionFieldAssignment[];
 };
 
@@ -69,40 +69,30 @@ export type CaptionProgramRun = {
 export type CaptionProgram = {
   readonly contract: "svml.caption-program@1";
   readonly id: string;
-  readonly wordSequenceId: string;
+  readonly displaySequenceId: string;
   readonly defaultStyleId: string;
   readonly styles: readonly CaptionStyleIntent[];
   readonly runs: readonly CaptionProgramRun[];
 };
 
-export type TimedCaptionRefinement = {
+export type TimedCaptionCue = {
   readonly id: string;
-  readonly display: string;
-  readonly displayStart: number;
-  readonly displayEnd: number;
-  readonly sourceTokenIds: readonly string[];
-  readonly startSec: number;
-  readonly endSec: number;
-  readonly relation: "exact";
-};
-
-export type TimedCaptionRegion = {
-  readonly id: string;
-  readonly runId?: string;
-  readonly styleId?: string;
-  readonly display: string;
+  readonly runId: string;
+  readonly styleId: string;
   readonly segmentId: string;
-  readonly kind: "identity" | "alias" | "hidden";
-  readonly sourceTokenIds: readonly string[];
   readonly startSec: number;
   readonly endSec: number;
-  readonly refinements: readonly TimedCaptionRefinement[];
-  readonly wordIds?: readonly string[];
-  readonly fields?: readonly CaptionFieldAssignment[];
+  /** Only whole-Atom timing is proven. No display-word timing exists here. */
+  readonly atoms: readonly {
+    readonly atomId: string;
+    readonly startSec: number;
+    readonly endSec: number;
+  }[];
+  readonly fields: readonly CaptionFieldAssignment[];
 };
 
 export type TimedCaptionProjection = {
   readonly contract: "svml.timed-caption-projection@1";
-  readonly text: string;
-  readonly regions: readonly TimedCaptionRegion[];
+  readonly displaySequenceId: string;
+  readonly cues: readonly TimedCaptionCue[];
 };

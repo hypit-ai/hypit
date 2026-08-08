@@ -5,7 +5,7 @@ import { resolveCaptionProgram } from "@narratage/caption";
 import type { TimedCaptionProjection } from "@narratage/caption";
 import { fineCaptionStyle, renderFineCaption } from "@narratage/caption-fine";
 import { sealProgramSpace } from "@narratage/program-space";
-import { captionWordSequence, parseScript } from "@narratage/script";
+import { captionDisplaySequence, parseScript } from "@narratage/script";
 import type { SvsRecipe } from "@narratage/svs";
 
 const recipe: SvsRecipe = {
@@ -14,10 +14,6 @@ const recipe: SvsRecipe = {
   properties: {
     "cue-min-words": 1,
     "cue-max-words": 5,
-    "important-min-per-cue": 0,
-    "important-max-per-cue": 2,
-    "important-fill": "#FFE044",
-    "important-scale": 1.15,
     "stack-order": 70,
     x: 0.08,
     y: 0.76,
@@ -34,28 +30,23 @@ const recipe: SvsRecipe = {
   },
 };
 
-test("one Fine renderer handles the default Style, per-word fields and one peer VisualTrack", () => {
+test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack", () => {
   const narrative = parseScript("fine.svml", "<line>Meaning becomes visible.</line>");
-  const words = captionWordSequence(narrative, "story.caption.words");
+  const display = captionDisplaySequence(narrative, "story.caption");
   const style = fineCaptionStyle("primary", recipe);
-  const program = resolveCaptionProgram(words, "captions", style, []);
-  const wordIds = words.words.map((word) => word.id);
+  const program = resolveCaptionProgram(display, "captions", style, []);
   const projection: TimedCaptionProjection = {
     contract: "svml.timed-caption-projection@1",
-    text: "Meaning becomes visible.",
-    regions: [{
+    displaySequenceId: display.id,
+    cues: [{
       id: "cue:1",
       runId: program.runs[0]!.id,
       styleId: style.id,
-      display: "Meaning becomes visible.",
       segmentId: "line",
-      kind: "identity",
-      sourceTokenIds: narrative.tokens.map((token) => token.id),
       startSec: 0,
       endSec: 2,
-      refinements: [],
-      wordIds,
-      fields: [{ declarationId: "important", wordId: wordIds[1]!, value: "true" }],
+      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: 2 })),
+      fields: [],
     }],
   };
   const space = sealProgramSpace({
@@ -63,14 +54,15 @@ test("one Fine renderer handles the default Style, per-word fields and one peer 
     durationSec: 2,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const track = renderFineCaption(projection, program, words, space);
+  const track = renderFineCaption(projection, program, display, space);
   assert.equal(track.contract, "svml.visual-track@1");
   assert.equal(track.presents.length, 1);
   const wordElements = track.presents[0]!.elements.filter((element) => element.kind === "text");
   assert.equal(wordElements.length, 3);
   assert.deepEqual(wordElements.map((element) => element.kind === "text" ? element.text : undefined),
     ["Meaning ", "becomes ", "visible."]);
-  assert.equal(wordElements[1]!.style.some((declaration) =>
-    declaration.name === "color" && declaration.value === "#FFE044"), true);
-  assert.equal(wordElements[0]!.style.some((declaration) => declaration.name === "transform"), false);
+  assert.equal(wordElements.every((element) => element.style.some((declaration) =>
+    declaration.name === "color" && declaration.value === "#FFFFFF")), true);
+  assert.equal(wordElements.every((element) =>
+    element.style.every((declaration) => declaration.name !== "transform")), true);
 });

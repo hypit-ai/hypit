@@ -1,7 +1,11 @@
-import type { CaptionWord, CaptionWordSequence, CaptionWordSubset } from "@narratage/narrative";
+import type {
+  CaptionDisplaySequence,
+  CaptionDisplayWord,
+  CaptionDisplayWordSubset,
+} from "@narratage/narrative";
 import { canonicalize, digestOf } from "@narratage/protocol";
 
-import { assertCaptionWordSequence, assertCaptionWordSubset } from "./display.js";
+import { assertCaptionDisplaySequence, assertCaptionDisplayWordSubset } from "./display.js";
 import type {
   CaptionFieldDeclaration,
   CaptionProgram,
@@ -10,7 +14,7 @@ import type {
 
 export type CaptionStyleApplication = {
   readonly id: string;
-  readonly words: CaptionWordSubset;
+  readonly words: CaptionDisplayWordSubset;
   readonly style: CaptionStyleIntent;
 };
 
@@ -80,8 +84,6 @@ export function assertCaptionStyle(value: CaptionStyleIntent): void {
       `Caption Style ${value.id} field minimum is invalid`);
     assert(Number.isSafeInteger(field.maximumPerCue) && field.maximumPerCue >= field.minimumPerCue,
       `Caption Style ${value.id} field maximum is invalid`);
-    assert(field.maximumPerCue <= cue.maximumWords,
-      `Caption Style ${value.id} field maximum exceeds its Cue word maximum`);
     if (field.value.kind === "enum") {
       assert(field.value.values.length > 0 && new Set(field.value.values).size === field.value.values.length,
         `Caption Style ${value.id} field enum is invalid`);
@@ -108,7 +110,7 @@ export function sealCaptionProgram(value: CaptionProgram): CaptionProgram {
 
 export function assertCaptionProgram(value: CaptionProgram): void {
   assert(value.contract === "svml.caption-program@1" && ID.test(value.id), "Caption Program identity is invalid");
-  assert(value.wordSequenceId.length > 0 && value.runs.length > 0 && value.styles.length > 0,
+  assert(value.displaySequenceId.length > 0 && value.runs.length > 0 && value.styles.length > 0,
     "Caption Program is empty");
   const styles = new Map(value.styles.map((style) => [style.id, style]));
   assert(styles.size === value.styles.length && styles.has(value.defaultStyleId), "Caption Program styles are invalid");
@@ -121,37 +123,35 @@ export function assertCaptionProgram(value: CaptionProgram): void {
   assert(new Set(planned).size === planned.length, "Caption Program runs repeat a display word");
   assert(value.runs.every((run) => styles.has(run.styleId) && run.wordIds.length > 0),
     "Caption Program run style is invalid");
-  for (const run of value.runs) {
-    const style = styles.get(run.styleId)!;
-    const fewestCues = Math.ceil(run.wordIds.length / style.planning.cue.maximumWords);
-    const mostCues = Math.floor(run.wordIds.length / style.planning.cue.minimumWords);
-    assert(fewestCues <= mostCues,
-      `Caption Program run ${run.id} cannot satisfy Style ${style.id} Cue word bounds`);
-  }
 }
 
 /** Bind a Program's immutable display universe to the exact Script-produced sequence. */
-export function assertCaptionProgramForWords(value: CaptionProgram, sequence: CaptionWordSequence): void {
+export function assertCaptionProgramForDisplay(value: CaptionProgram, sequence: CaptionDisplaySequence): void {
   assertCaptionProgram(value);
-  assertCaptionWordSequence(sequence);
-  assert(value.wordSequenceId === sequence.id
+  assertCaptionDisplaySequence(sequence);
+  assert(value.displaySequenceId === sequence.id
     && value.runs.flatMap((run) => run.wordIds).join("\0") === sequence.words.map((word) => word.id).join("\0"),
-  "Caption Program does not partition its CaptionWordSequence exactly once and in order");
+  "Caption Program does not partition its CaptionDisplaySequence exactly once and in order");
+  const runByWord = new Map(value.runs.flatMap((run) => run.wordIds.map((id) => [id, run.id] as const)));
+  for (const atom of sequence.atoms) {
+    assert(new Set(atom.wordIds.map((id) => runByWord.get(id))).size === 1,
+      `Caption Program splits indivisible Atom ${atom.id}`);
+  }
 }
 
 /** Resolve an explicit default Style plus ordered whole-Style replacements. Later applications win. */
 export function resolveCaptionProgram(
-  sequence: CaptionWordSequence,
+  sequence: CaptionDisplaySequence,
   id: string,
   defaultStyle: CaptionStyleIntent,
   applications: readonly CaptionStyleApplication[],
 ): CaptionProgram {
-  assertCaptionWordSequence(sequence);
+  assertCaptionDisplaySequence(sequence);
   assertCaptionStyle(defaultStyle);
   applications.forEach((application) => {
     assert(ID.test(application.id), "Caption Style Application identity is invalid");
     assertCaptionStyle(application.style);
-    assertCaptionWordSubset(application.words, sequence);
+    assertCaptionDisplayWordSubset(application.words, sequence);
     assert(application.words.wordIds.length > 0, `Caption application ${application.id} selects no visible display word`);
   });
   const styles = new Map<string, CaptionStyleIntent>([[defaultStyle.id, defaultStyle]]);
@@ -169,6 +169,11 @@ export function resolveCaptionProgram(
     });
     return { word, styleId };
   });
+  const assignmentByWord = new Map(assignments.map((assignment) => [assignment.word.id, assignment.styleId]));
+  for (const atom of sequence.atoms) {
+    assert(new Set(atom.wordIds.map((wordId) => assignmentByWord.get(wordId))).size === 1,
+      `Caption Style applications split indivisible Atom ${atom.id}`);
+  }
   const runs: Array<{ id: string; styleId: string; wordIds: string[]; turnId: string; segmentId: string }> = [];
   for (const assignment of assignments) {
     const current = runs.at(-1);
@@ -188,13 +193,13 @@ export function resolveCaptionProgram(
   const program = sealCaptionProgram({
     contract: "svml.caption-program@1",
     id,
-    wordSequenceId: sequence.id,
+    displaySequenceId: sequence.id,
     defaultStyleId: defaultStyle.id,
     styles: [...styles.values()],
     runs: runs.map(({ turnId: _turn, segmentId: _segment, ...run }) => run),
   });
-  assertCaptionProgramForWords(program, sequence);
+  assertCaptionProgramForDisplay(program, sequence);
   return program;
 }
 
-export type { CaptionWord };
+export type { CaptionDisplayWord };

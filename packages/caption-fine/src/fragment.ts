@@ -14,9 +14,9 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const fineCaptionTrackFragment = sealGraphFragment({
   name: "@narratage/caption-fine/track@1",
   inputs: [
-    { name: "narrative", type: narrativeTypes.narrative },
+    { name: "display", type: narrativeTypes.captionDisplay },
+    { name: "correspondence", type: narrativeTypes.captionCorrespondence },
     { name: "map", type: semanticMapTypes.complete },
-    { name: "words", type: narrativeTypes.captionWordSequence },
     { name: "plan", type: captionTypes.plan },
     { name: "program", type: captionTypes.program },
     { name: "space", type: programSpaceTypes.programSpace },
@@ -26,7 +26,7 @@ export const fineCaptionTrackFragment = sealGraphFragment({
       id: "caption:temporalize-plan",
       producer: captionProducers.temporalizePlan,
       inputs: {
-        narrative: input("narrative"), map: input("map"), words: input("words"),
+        display: input("display"), correspondence: input("correspondence"), map: input("map"),
         plan: input("plan"), program: input("program"),
       },
       result: { kind: "output", name: "caption" },
@@ -36,7 +36,7 @@ export const fineCaptionTrackFragment = sealGraphFragment({
       producer: captionFineProducers.render,
       inputs: {
         caption: operation("caption:temporalize-plan"), program: input("program"),
-        words: input("words"), space: input("space"),
+        display: input("display"), space: input("space"),
       },
       result: { kind: "output", name: "track" },
     },
@@ -45,7 +45,7 @@ export const fineCaptionTrackFragment = sealGraphFragment({
     name: "track",
     type: compositionTypes.visualTrack,
     root: operation("caption-fine:render"),
-    semanticInputs: ["narrative", "map", "words", "plan", "program", "space"],
+    semanticInputs: ["display", "correspondence", "map", "plan", "program", "space"],
     fidelity: "exact",
   }],
 });

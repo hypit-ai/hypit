@@ -1,5 +1,5 @@
 import { narrativeTypes } from "@narratage/narrative";
-import type { CaptionWordSequence, CaptionWordSubset } from "@narratage/narrative";
+import type { CaptionDisplaySequence, CaptionDisplayWordSubset } from "@narratage/narrative";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
@@ -67,14 +67,14 @@ function localName(name: string): string {
 
 /**
  * Resolve one complete word assignment at author-compilation time. Script has already projected
- * Selection syntax to CaptionWordSubset data; this Surface lowers Role sugar from the same sequence.
+ * Selection syntax to CaptionDisplayWordSubset data; this Surface lowers Role sugar from the same sequence.
  */
 export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "words", "default"]);
+  attributes(element, ["id", "display", "default"]);
   const id = stringAttribute(element, "id");
-  const sequence = inline<CaptionWordSequence>(
-    reference(element, "words", narrativeTypes.captionWordSequence, resolveReference),
-    `${element.name}.words`,
+  const sequence = inline<CaptionDisplaySequence>(
+    reference(element, "display", narrativeTypes.captionDisplay, resolveReference),
+    `${element.name}.display`,
   );
   const defaultStyle = inline<CaptionStyleIntent>(
     reference(element, "default", captionTypes.style, resolveReference),
@@ -94,8 +94,8 @@ export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element,
       throw new Error(`${child.name} requires exactly one of role or words`);
     }
     const words = role === undefined
-      ? inline<CaptionWordSubset>(
-          reference(child, "words", narrativeTypes.captionWordSubset, resolveReference),
+      ? inline<CaptionDisplayWordSubset>(
+          reference(child, "words", narrativeTypes.captionDisplayWordSubset, resolveReference),
           `${child.name}.words`,
         )
       : captionWordsForRole(sequence, role);

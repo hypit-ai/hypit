@@ -28,13 +28,13 @@
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
-  <caption:Program id="caption-program" words={story.caption.words} default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" words={story.caption.words} program={caption-program} model="gemini-2.5-flash"/>
+  <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+  <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program} model="gemini-2.5-flash"/>
 
   <broll:Track id="cards" map={timing.map} space={speech.space}>
     <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
   </broll:Track>
-  <caption-fine:Track id="captions" narrative={story} words={story.caption.words}
+  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
     map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
   <text:Track id="titles" space={speech.space}>

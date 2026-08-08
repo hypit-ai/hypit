@@ -1,9 +1,9 @@
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 import {
-  captionProjectionSchema,
-  captionWordSequenceSchema,
-  captionWordSubsetSchema,
+  captionCorrespondenceSchema,
+  captionDisplaySequenceSchema,
+  captionDisplayWordSubsetSchema,
   narrativeDialogueExcerptSchema,
   narrativeExcerptSchema,
   narrativeSchema,
@@ -20,9 +20,9 @@ export const narrativeTypes = {
   speechExcerpt: { module: narrativeModuleRef, name: "NarrativeSpeechExcerpt" },
   selection: { module: narrativeModuleRef, name: "NarrativeSelection" },
   moment: { module: narrativeModuleRef, name: "NarrativeMoment" },
-  captionProjection: { module: narrativeModuleRef, name: "CaptionProjection" },
-  captionWordSequence: { module: narrativeModuleRef, name: "CaptionWordSequence" },
-  captionWordSubset: { module: narrativeModuleRef, name: "CaptionWordSubset" },
+  captionDisplay: { module: narrativeModuleRef, name: "CaptionDisplaySequence" },
+  captionCorrespondence: { module: narrativeModuleRef, name: "CaptionCorrespondence" },
+  captionDisplayWordSubset: { module: narrativeModuleRef, name: "CaptionDisplayWordSubset" },
 } satisfies Record<string, TypeRef>;
 export const narrativeManifest: ModuleManifest = {
   format: "svml.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
@@ -34,9 +34,9 @@ export const narrativeManifest: ModuleManifest = {
     { name: narrativeTypes.speechExcerpt.name, schema: narrativeSpeechExcerptSchema },
     { name: narrativeTypes.selection.name, schema: narrativeSelectionSchema },
     { name: narrativeTypes.moment.name, schema: narrativeMomentSchema },
-    { name: narrativeTypes.captionProjection.name, schema: captionProjectionSchema },
-    { name: narrativeTypes.captionWordSequence.name, schema: captionWordSequenceSchema },
-    { name: narrativeTypes.captionWordSubset.name, schema: captionWordSubsetSchema },
+    { name: narrativeTypes.captionDisplay.name, schema: captionDisplaySequenceSchema },
+    { name: narrativeTypes.captionCorrespondence.name, schema: captionCorrespondenceSchema },
+    { name: narrativeTypes.captionDisplayWordSubset.name, schema: captionDisplayWordSubsetSchema },
   ],
   capabilities: [], surfaces: [], producers: [],
 };
