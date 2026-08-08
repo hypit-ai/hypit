@@ -126,7 +126,7 @@ test("a media port enforces the media type its role demands", async () => {
   assert.equal(ok.model, "demo-video");
 });
 
-test("port combination rules replace the old mode union", async () => {
+test("port combination rules enforce mutually exclusive input modes", async () => {
   const { image } = await artifacts();
   const base = { prompt: ["hi"], duration: [8], resolution: ["720p"] } as const;
   assert.throws(

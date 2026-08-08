@@ -268,18 +268,6 @@ test("SpeechBasis is one Product and audio/visual are ordinary shared projection
   );
 });
 
-test("the component enumerates every Manifest-declared SpeechBasis projection", () => {
-  const declared = speechBasisManifest.producers.map((producer) => ({
-    name: producer.name,
-    digest: producer.implementation.digest,
-  })).sort((left, right) => left.name.localeCompare(right.name));
-  const implemented = speechBasisComponent.producers.map((facet) => ({
-    name: facet.producer.name,
-    digest: facet.implementationDigest,
-  })).sort((left, right) => left.name.localeCompare(right.name));
-  assert.deepEqual(implemented, declared);
-});
-
 test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   const take = sampleTake();
   const visual = projectSpeechVisual(take);

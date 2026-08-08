@@ -32,6 +32,18 @@ describe("someFunction", () => {
 });
 ```
 
+## Admission rule
+
+A test belongs in the default suite only when it protects an observable contract, an architectural
+boundary, or a failure mode that could corrupt work, repeat paid execution, or make an environment
+unsafe. Test that fact once at its owning layer; use one checked-in graph fixture for cross-package
+assembly instead of rebuilding the same partial video in every higher layer.
+
+Do not add tests merely to make every package appear covered, mirror a Manifest array, preserve a
+removed pre-release flag or database shape, or exercise documentation-only UI helpers. Package
+locks and component registration already reject Manifest/implementation drift. Obsolete tests are
+deleted with obsolete behavior rather than retained as project history.
+
 ## Test patterns
 
 ### Pure compilation tests
