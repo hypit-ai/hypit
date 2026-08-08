@@ -1,12 +1,12 @@
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { mediaTypes, sealRenderedVisual } from "@narratage/media";
 import type { RenderedVisual } from "@narratage/media";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@narratage/endpoint-kit";
-import { assertHyperframesDocument, materializeHyperframesHtml } from "@narratage/hyperframes";
+import { assertHyperframesDocument, stageHyperframesProject } from "@narratage/hyperframes";
 import type { HyperframesDocument } from "@narratage/hyperframes";
 import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
 import { canonicalize, digestOf } from "@narratage/protocol";
@@ -131,26 +131,6 @@ async function runProcess(args: {
       else finish(new Error(`${args.executable} exited ${String(code)}: ${stderr}`));
     });
   });
-}
-
-function extension(mediaType: string): string {
-  const known: Readonly<Record<string, string>> = {
-    "image/png": ".png",
-    "image/jpeg": ".jpg",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
-    "image/svg+xml": ".svg",
-    "video/mp4": ".mp4",
-    "video/webm": ".webm",
-    "video/quicktime": ".mov",
-    "font/woff2": ".woff2",
-    "font/woff": ".woff",
-    "font/otf": ".otf",
-    "font/ttf": ".ttf",
-  };
-  const result = known[mediaType];
-  assert(result !== undefined, `HyperFrames does not support Artifact media type ${mediaType}`);
-  return result;
 }
 
 async function artifactBytes(context: EndpointInvocationContext, artifact: BlobRef): Promise<Uint8Array> {
@@ -290,21 +270,11 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
         const document = visualRequest(context.need.constraints);
         const work = await mkdtemp(join(tmpdir(), "svml-hyperframes-local-"));
         try {
-          const artifactDir = join(work, "artifacts");
-          await mkdir(artifactDir);
-          const paths = new Map<string, string>();
-          await Promise.all(document.artifacts.map(async (artifact) => {
-            const name = `${artifact.digest.slice("sha256:".length)}${extension(artifact.mediaType)}`;
-            const path = join(artifactDir, name);
-            await writeFile(path, await artifactBytes(context, artifact));
-            paths.set(artifact.digest, `./artifacts/${name}`);
-          }));
-          const html = materializeHyperframesHtml(document, (artifact) => {
-            const path = paths.get(artifact.digest);
-            assert(path !== undefined, `HyperFrames Artifact ${artifact.digest} was not staged`);
-            return path;
+          await stageHyperframesProject({
+            document,
+            directory: work,
+            read: (artifact) => artifactBytes(context, artifact),
           });
-          await writeFile(join(work, "index.html"), html, "utf8");
           const output = join(work, "visual.mp4");
           const fps = document.frameRate.denominator === 1
             ? String(document.frameRate.numerator)
