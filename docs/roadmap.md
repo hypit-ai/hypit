@@ -108,12 +108,14 @@ acceptance command that can also run a fresh uninterrupted all-`exact` Build:
 
 ### B2. Remote execution only where demanded
 
-Local media, WhisperX and parallel HyperFrames execution are implemented. Add AWS Endpoint packages
-only when a deployment needs them:
+Local media, WhisperX and parallel HyperFrames execution are implemented. S3 Artifact streaming,
+AWS media execution and the recoverable AWS HyperFrames Endpoint are also implemented. The exact
+FFmpeg Layer plus ZIP-packaged media service have passed their complete five-operation live canary.
+Complete the remaining deployment work only when a deployment needs it:
 
-- media inspection/normalization/audio/mux;
-- WhisperX;
-- HyperFrames rendering.
+- deploy WhisperX only as a persistent warm service and add the corresponding remote-service
+  Provider when a team environment needs it; do not put the model behind Lambda;
+- deploy and live-test the HyperFrames stack after reviewing its CloudFormation resources.
 
 The generic Lambda transport already exists. Each Endpoint must return the existing capability and
 contract; Lambda placement cannot define another media meaning.
@@ -121,7 +123,6 @@ contract; Lambda placement cannot define another media meaning.
 ### B3. Production environment adapters
 
 - Keychain, Secrets Manager or Vault CredentialStore;
-- production S3 streaming/multipart behavior when object size requires it;
 - hosted Build/Operation stores and distributed leases only for a real multi-process deployment;
 - Build release/retention windows and S3 lifecycle policy.
 

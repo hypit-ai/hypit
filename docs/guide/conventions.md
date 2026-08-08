@@ -9,10 +9,10 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 
 | Thing | Convention | Example |
 |---|---|---|
-| Package directory | kebab-case | `packages/speech-align/` |
-| Package name | `@narratage/` scope | `@narratage/speech-align` |
+| Package directory | kebab-case | `packages/speech-alignment/` |
+| Package name | `@narratage/` scope | `@narratage/speech-alignment` |
 | Provider package | `provider-` prefix | `@narratage/provider-kie` |
-| TypeScript file | kebab-case | `speech-align.ts` |
+| TypeScript file | kebab-case | `align.ts` |
 | Exported type | PascalCase | `SpeechAlignment` |
 | Exported function | camelCase | `createSpeechAlignment` |
 
