@@ -30,20 +30,6 @@ export const narrativeSchema: ValueSchema = object({
       occurrence: { schema: integer }, anchorId: { schema: string },
     }) } },
   }) } },
-  captionProjection: { schema: object({
-    contract: { schema: { kind: "literal", value: "svml.caption-projection@1" } },
-    text: { schema: { kind: "string" } },
-    regions: { schema: { kind: "array", items: object({
-      id: { schema: string }, display: { schema: { kind: "string" } }, segmentId: { schema: string },
-      startToken: { schema: integer }, endTokenExclusive: { schema: integer },
-      kind: { schema: { kind: "string", enum: ["identity", "alias", "hidden"] } },
-      refinements: { schema: { kind: "array", items: object({
-        id: { schema: string }, display: { schema: string }, displayStart: { schema: integer },
-        displayEnd: { schema: integer }, startToken: { schema: integer }, endTokenExclusive: { schema: integer },
-        relation: { schema: { kind: "literal", value: "exact" } },
-      }) } },
-    }) } },
-  }) },
   semanticIndex: { schema: object({
     contract: { schema: { kind: "literal", value: "svml.semantic-index@1" } },
     anchors: { schema: { kind: "array", minItems: 2, items: object({
@@ -74,33 +60,30 @@ export const narrativeSpeechExcerptSchema: ValueSchema = object({
   kind: { schema: { kind: "literal", value: "segment" } }, id: { schema: string },
   tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer }, speech: { schema: string },
 });
-export const captionProjectionSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-projection@1" } },
-  text: { schema: { kind: "string" } },
-  regions: { schema: { kind: "array", items: object({
-    id: { schema: string }, display: { schema: { kind: "string" } }, segmentId: { schema: string },
-    startToken: { schema: integer }, endTokenExclusive: { schema: integer },
-    kind: { schema: { kind: "string", enum: ["identity", "alias", "hidden"] } },
-    refinements: { schema: { kind: "array", items: object({
-      id: { schema: string }, display: { schema: string }, displayStart: { schema: integer },
-      displayEnd: { schema: integer }, startToken: { schema: integer }, endTokenExclusive: { schema: integer },
-      relation: { schema: { kind: "literal", value: "exact" } },
-    }) } },
+const captionDisplayWord = object({
+  id: { schema: string }, index: { schema: integer }, atomId: { schema: string }, segmentId: { schema: string },
+  turnId: { schema: string }, role: { schema: string, optional: true }, text: { schema: string },
+});
+const captionDisplayAtom = object({
+  id: { schema: string }, index: { schema: integer }, segmentId: { schema: string },
+  turnId: { schema: string }, role: { schema: string, optional: true },
+  wordIds: { schema: { kind: "array", minItems: 1, items: string } },
+});
+export const captionDisplaySequenceSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.caption-display-sequence@1" } },
+  id: { schema: string },
+  atoms: { schema: { kind: "array", minItems: 1, items: captionDisplayAtom } },
+  words: { schema: { kind: "array", minItems: 1, items: captionDisplayWord } },
+});
+export const captionCorrespondenceSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.caption-correspondence@1" } },
+  displaySequenceId: { schema: string },
+  atoms: { schema: { kind: "array", minItems: 1, items: object({
+    atomId: { schema: string }, sourceTokenIds: { schema: { kind: "array", minItems: 1, items: string } },
   }) } },
 });
-const captionWord = object({
-  id: { schema: string }, index: { schema: integer }, regionId: { schema: string }, segmentId: { schema: string },
-  turnId: { schema: string }, role: { schema: string, optional: true }, text: { schema: string },
-  displayStart: { schema: integer }, displayEnd: { schema: integer }, sourceTokenStart: { schema: integer },
-  sourceTokenEndExclusive: { schema: integer },
-  correspondence: { schema: { kind: "string", enum: ["exact", "region-envelope"] } },
-});
-export const captionWordSequenceSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-word-sequence@1" } },
-  id: { schema: string }, words: { schema: { kind: "array", minItems: 1, items: captionWord } },
-});
-export const captionWordSubsetSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.caption-word-subset@1" } },
+export const captionDisplayWordSubsetSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.caption-display-word-subset@1" } },
   id: { schema: string }, sequenceId: { schema: string },
   wordIds: { schema: { kind: "array", items: string } },
 });

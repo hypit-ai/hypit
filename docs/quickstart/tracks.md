@@ -14,7 +14,7 @@ covers the three main visual Track types: captions, B-roll, and text overlays.
 Caption uses a small common language and a replaceable Style family:
 
 ```text
-Script words → Style family → Caption Program → Planner → Style-family Track
+Script Display → Caption Program → Planner + measured Atom timing → Style-family Track
 ```
 
 ```svml
@@ -23,9 +23,9 @@ Script words → Style family → Caption Program → Planner → Style-family T
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 ```
 
-`@narratage/caption` owns only common Cue bounds, generic per-word fields, total Style assignment,
-Plan validation and the timing join. `@narratage/caption-fine` is one concrete Style family: it owns
-the `important` field, font/box parameters and visual rendering.
+`@narratage/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
+assignment, Plan validation and the timing join. `@narratage/caption-fine` is one field-free Style
+family: it owns its font/box parameters and uniform Cue rendering.
 
 ### caption-fine:Style
 
@@ -36,10 +36,6 @@ both from one package-owned SVS Recipe:
 caption.primary {
   cue-min-words: 2;
   cue-max-words: 7;
-  important-min-per-cue: 1;
-  important-max-per-cue: 2;
-  important-fill: #FFD166;
-  important-scale: 1.08;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58; line-height: 0.96;
@@ -62,7 +58,7 @@ default Style covers every word; no `@whole` Selection or complement is required
 rules replace the whole Style on a Role or explicit Caption word subset, with the last match winning.
 
 ```svml
-<caption:Program id="caption-program" words={story.caption.words}
+<caption:Program id="caption-program" display={story.caption}
   default={primary-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
@@ -78,18 +74,19 @@ pair of semantic anchors. Partial ownership of an indivisible Dual Text display 
 ### caption-ai:Planner
 
 ```svml
-<caption-ai:Planner id="caption-plan" words={story.caption.words}
+<caption-ai:Planner id="caption-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
 ```
 
-The planner receives immutable display words and already-resolved Style runs. It may only cut each
-run into ordered Cues and attach declared fields to word ids. It cannot rewrite text, select Styles,
-see audio, or invent time. Its output is `{caption-plan.plan}`.
+The planner receives immutable display Atoms/Words and already-resolved Style runs. It may only cut
+each run between whole Atoms and attach declared fields to Word ids. Fine declares no fields. The
+planner cannot rewrite text, select Styles, see audio or invent time. Its output is
+`{caption-plan.plan}`.
 
 ### caption-fine:Track
 
 ```svml
-<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} program={caption-program} plan={caption-plan.plan}/>
 ```
 
@@ -245,10 +242,10 @@ All three track types together in one source file:
 
 <!-- Captions: primary style for all text -->
 <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
-<caption:Program id="caption-program" words={story.caption.words} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" words={story.caption.words}
+<caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+<caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
 <!-- B-roll: generated video during a Selection -->

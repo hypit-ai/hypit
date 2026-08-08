@@ -88,11 +88,11 @@ test("official video CLI checks a real Script source through the Node compiler h
     }, kind: "record" },
     { name: "story.caption", type: {
       module: { name: "@narratage/narrative", version: "0.0.0-dev" },
-      name: "CaptionProjection",
+      name: "CaptionDisplaySequence",
     }, kind: "record" },
-    { name: "story.caption.words", type: {
+    { name: "story.caption.correspondence", type: {
       module: { name: "@narratage/narrative", version: "0.0.0-dev" },
-      name: "CaptionWordSequence",
+      name: "CaptionCorrespondence",
     }, kind: "record" },
     { name: "story.segment.opening", type: {
       module: { name: "@narratage/narrative", version: "0.0.0-dev" },

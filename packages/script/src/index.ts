@@ -1,9 +1,9 @@
 export { ScriptSyntaxError } from "./error.js";
 export { formatScript } from "./format.js";
 export {
-  captionProjectionType,
-  captionWordSequenceType,
-  captionWordSubsetType,
+  captionCorrespondenceType,
+  captionDisplayType,
+  captionDisplayWordSubsetType,
   narrativeDialogueExcerptType,
   narrativeExcerptType,
   narrativeMomentType,
@@ -16,11 +16,12 @@ export {
   scriptSurfaceImplementationDigest,
 } from "./manifest.js";
 export {
-  captionProjectionValue,
+  captionCorrespondence,
+  captionCorrespondenceValue,
+  captionDisplaySequence,
+  captionDisplaySequenceValue,
   captionSelectionWordSubset,
   captionSelectionWordSubsetValue,
-  captionWordSequence,
-  captionWordSequenceValue,
   narrativeDialogueExcerptValue,
   narrativeSegmentExcerptValue,
   narrativeMomentValue,

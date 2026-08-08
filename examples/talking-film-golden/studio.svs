@@ -53,10 +53,6 @@
   caption.dialogue {
     cue-min-words: 2;
     cue-max-words: 5;
-    important-min-per-cue: 0;
-    important-max-per-cue: 0;
-    important-fill: #FFFFFF;
-    important-scale: 1;
     stack-order: 70;
     x: 0.08;
     y: 0.76;
@@ -75,10 +71,6 @@
   caption.alice {
     cue-min-words: 2;
     cue-max-words: 5;
-    important-min-per-cue: 0;
-    important-max-per-cue: 2;
-    important-fill: #FFF16A;
-    important-scale: 1.12;
     stack-order: 70;
     x: 0.08;
     y: 0.76;
@@ -97,10 +89,6 @@
   caption.bob {
     cue-min-words: 2;
     cue-max-words: 5;
-    important-min-per-cue: 0;
-    important-max-per-cue: 0;
-    important-fill: #FFD166;
-    important-scale: 1;
     stack-order: 70;
     x: 0.08;
     y: 0.76;

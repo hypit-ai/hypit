@@ -2,9 +2,11 @@ import { canonicalize } from "@narratage/core";
 
 import { ScriptSyntaxError } from "./error.js";
 import {
-  captionProjectionValue,
+  captionCorrespondence,
+  captionCorrespondenceValue,
+  captionDisplaySequence,
+  captionDisplaySequenceValue,
   captionSelectionWordSubsetValue,
-  captionWordSequence,
   narrativeDialogueExcerptValue,
   narrativeSegmentExcerptValue,
   narrativeMomentValue,
@@ -14,9 +16,9 @@ import {
   narrativeValue,
 } from "./narrative.js";
 import {
-  captionProjectionType,
-  captionWordSequenceType,
-  captionWordSubsetType,
+  captionCorrespondenceType,
+  captionDisplayType,
+  captionDisplayWordSubsetType,
   narrativeDialogueExcerptType,
   narrativeExcerptType,
   narrativeMomentType,
@@ -81,8 +83,9 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
     input.source.slice(input.contentStart, close.start),
     input.contentStart,
   );
-  const wordsId = `${rawId}.caption.words`;
-  const words = captionWordSequence(parsed, wordsId);
+  const displayId = `${rawId}.caption`;
+  const display = captionDisplaySequence(parsed, displayId);
+  const correspondence = captionCorrespondence(parsed, displayId);
   return {
     nextOffset: close.end,
     records: [
@@ -113,21 +116,26 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
         },
       ]),
       {
-        id: `${rawId}.caption`,
-        type: captionProjectionType,
-        value: { kind: "inline" as const, value: captionProjectionValue(parsed) },
+        id: displayId,
+        type: captionDisplayType,
+        value: { kind: "inline" as const, value: captionDisplaySequenceValue(parsed, displayId) },
         range: { start: input.openingStart, end: close.end },
       },
       {
-        id: wordsId,
-        type: captionWordSequenceType,
-        value: { kind: "inline" as const, value: canonicalize(words) },
+        id: `${displayId}.correspondence`,
+        type: captionCorrespondenceType,
+        value: { kind: "inline" as const, value: captionCorrespondenceValue(parsed, displayId) },
         range: { start: input.openingStart, end: close.end },
       },
       ...parsed.selections.map((selection) => ({
         id: `${rawId}.caption.selection.${selection.id}`,
-        type: captionWordSubsetType,
-        value: { kind: "inline" as const, value: captionSelectionWordSubsetValue(words, selection) },
+        type: captionDisplayWordSubsetType,
+        value: { kind: "inline" as const, value: captionSelectionWordSubsetValue(
+          parsed,
+          display,
+          correspondence,
+          selection,
+        ) },
         range: {
           start: selection.occurrences[0]!.open.range.start,
           end: selection.occurrences.at(-1)!.close.range.end,

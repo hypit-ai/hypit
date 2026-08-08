@@ -68,14 +68,19 @@ export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ elemen
 };
 
 export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "narrative", "map", "words", "program", "plan", "space"]);
+  attributes(element, ["id", "display", "correspondence", "map", "program", "plan", "space"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} does not accept children`);
   }
   const id = stringAttribute(element, "id");
-  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+  const display = reference(element, "display", narrativeTypes.captionDisplay, resolveReference);
+  const correspondence = reference(
+    element,
+    "correspondence",
+    narrativeTypes.captionCorrespondence,
+    resolveReference,
+  );
   const map = reference(element, "map", semanticMapTypes.complete, resolveReference);
-  const words = reference(element, "words", narrativeTypes.captionWordSequence, resolveReference);
   const program = reference(element, "program", captionTypes.program, resolveReference);
   const plan = reference(element, "plan", captionTypes.plan, resolveReference);
   const space = reference(element, "space", programSpaceTypes.programSpace, resolveReference);
@@ -85,7 +90,7 @@ export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ elemen
       id,
       fragment: fineCaptionTrackFragment.id,
       inputs: {
-        narrative: narrative.ref, map: map.ref, words: words.ref,
+        display: display.ref, correspondence: correspondence.ref, map: map.ref,
         program: program.ref, plan: plan.ref, space: space.ref,
       },
       outputs: { track: `${id}.track` },

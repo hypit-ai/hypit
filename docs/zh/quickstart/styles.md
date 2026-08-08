@@ -77,10 +77,6 @@ film.vertical {
 caption.dialogue {
   cue-min-words: 2;
   cue-max-words: 7;
-  important-min-per-cue: 0;
-  important-max-per-cue: 2;
-  important-fill: #FFD166;
-  important-scale: 1.08;
   stack-order: 70;
   x: 0.08;
   y: 0.76;
@@ -100,8 +96,6 @@ caption.dialogue {
 | 属性 | 描述 |
 |---|---|
 | `cue-min-words`、`cue-max-words` | 通用 Cue 字数边界 |
-| `important-min-per-cue`、`important-max-per-cue` | Fine 每个 Cue 的强调数量；最大值为 `0` 时禁用该字段 |
-| `important-fill`、`important-scale` | Fine 对 `important` 词的渲染方式 |
 | `stack-order` | 所有 Track 之间的 Z 轴层叠顺序（值越大越靠前） |
 | `x`、`y` | 位置，以画布比例表示（0–1） |
 | `width` | 宽度，以画布比例表示 |
@@ -128,8 +122,6 @@ caption.dialogue {
 ```svs
 caption.alice {
   cue-min-words: 2; cue-max-words: 5;
-  important-min-per-cue: 0; important-max-per-cue: 2;
-  important-fill: #FFFFFF; important-scale: 1.08;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -140,8 +132,6 @@ caption.alice {
 
 caption.bob {
   cue-min-words: 2; cue-max-words: 5;
-  important-min-per-cue: 0; important-max-per-cue: 0;
-  important-fill: #FFFFFF; important-scale: 1;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -157,7 +147,7 @@ caption.bob {
 <caption-fine:Style id="default-caption" recipe={studio.caption.dialogue}/>
 <caption-fine:Style id="alice-caption" recipe={studio.caption.alice}/>
 <caption-fine:Style id="bob-caption" recipe={studio.caption.bob}/>
-<caption:Program id="caption-program" words={story.caption.words} default={default-caption}>
+<caption:Program id="caption-program" display={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
 </caption:Program>
@@ -381,10 +371,6 @@ caption.dialogue {
   caption.primary {
     cue-min-words: 2;
     cue-max-words: 5;
-    important-min-per-cue: 0;
-    important-max-per-cue: 2;
-    important-fill: #FFF16A;
-    important-scale: 1.08;
     stack-order: 70;
     x: 0.08;
     y: 0.74;

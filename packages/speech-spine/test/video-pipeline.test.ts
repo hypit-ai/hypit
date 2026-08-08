@@ -446,8 +446,8 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
     captionRecord?.value.kind === "inline" ? captionRecord.value.value : {},
   );
   assert.deepEqual(
-    [value.text, value.regions[0]?.display, value.regions[0]?.startSec, value.regions[0]?.endSec],
-    ["that was insane", "that was insane", 0.1, 0.72],
+    [value.cues[0]?.startSec, value.cues[0]?.endSec, value.cues[0]?.atoms.length],
+    [0.1, 0.72, 1],
   );
 
   const mapRecordId = selectedRecord(completed.state, videoOutputs.map);
@@ -498,7 +498,7 @@ test("Targets prune official Fragments while shared SpeechBasis generation stays
   assert.equal(producerCount(visual, speechBasisProducers.projectVisual), 1);
   assert.equal(producerCount(visual, speechBasisProducers.projectAudio), 0);
   assert.equal(producerCount(visual, whisperXProducers.request), 0);
-  assert.equal(producerCount(visual, captionProducers.temporalize), 0);
+  assert.equal(producerCount(visual, captionProducers.temporalizePlan), 0);
 
   const map = createVideoBuild({ targets: ["map"] });
   assert.equal(producerCount(map, speechBasisProducers.projectAudio), 1);
@@ -506,7 +506,7 @@ test("Targets prune official Fragments while shared SpeechBasis generation stays
   assert.equal(producerCount(map, whisperXProducers.request), 1);
   assert.equal(producerCount(map, whisperXProducers.normalize), 1);
   assert.equal(producerCount(map, speechAlignmentProducers.locate), 1);
-  assert.equal(producerCount(map, captionProducers.temporalize), 0);
+  assert.equal(producerCount(map, captionProducers.temporalizePlan), 0);
 
   const bothTakeProjections = createVideoBuild({ targets: ["audio", "visual"] });
   assert.equal(producerCount(bothTakeProjections, videoProducers.requestSeedanceMini), 1);
@@ -571,7 +571,7 @@ test("an Existing SpeechBasis cuts generation while a visual substitute cuts the
   assert.equal(producerCount(captionFromExisting, videoProducers.assembleBasis), 0);
   assert.equal(producerCount(captionFromExisting, speechBasisProducers.projectAudio), 1);
   assert.equal(producerCount(captionFromExisting, whisperXProducers.request), 1);
-  assert.equal(producerCount(captionFromExisting, captionProducers.temporalize), 1);
+  assert.equal(producerCount(captionFromExisting, captionProducers.temporalizePlan), 1);
 
   const black: VisualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",

@@ -17,7 +17,7 @@ separately imported `official-ugc-v1.svs` mapping. It emits an ordered Prompt Pr
 Seedance Speech Program while compiling `main.svml`; neither operation is a Runtime task.
 The four generated videos are normalized and concatenated into one Speech Spine. One canonical
 audio projection goes through WhisperX, direct Script alignment produces the complete SemanticMap,
-Gemini plans Cue cuts and the `important` field without seeing timing, and the resulting Caption
+Gemini plans Cue cuts without seeing timing, and the resulting Caption
 VisualTrack joins the peer speech visual/audio Tracks in Film. HyperFrames renders and muxes the
 single `final.video` target.
 

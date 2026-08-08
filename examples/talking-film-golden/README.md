@@ -75,7 +75,7 @@ Candidates and Operations.
 | `seedance:Video model="mini"` | `@narratage/seedance` | explicit Seedance Mini video Need plus primary-video projection | implemented |
 | `broll:Track` | `@narratage/broll` | semantic windows + normalized media + recipe -> peer Visual/Audio Tracks | Surface and deterministic lowering implemented |
 | `caption-fine:Style` / `caption:Program` | Fine + common Caption | explicit default over all words + ordered whole-Style replacement by Role or word subset | implemented |
-| `caption-ai:Planner` | `@narratage/caption-gemini` | immutable display words + per-run requirements -> Cue cuts and per-word fields | implemented; Google Vertex Endpoint implemented separately |
+| `caption-ai:Planner` | `@narratage/caption-gemini` | immutable display Atoms/Words + per-run requirements -> whole-Atom Cue cuts and optional per-Word fields | implemented; Google Vertex Endpoint implemented separately |
 | `caption-fine:Track` | `@narratage/caption-fine` | CaptionPlan + independent SemanticMap + complete Fine Styles -> VisualTrack | implemented |
 | `text:Track` | `@narratage/text-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
 | `film:Film` | `@narratage/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |

@@ -1,7 +1,6 @@
 # Fine Caption Style Family
 
-Status: accepted direction; parameter surface deliberately not frozen; current implementation has
-the deltas listed below.
+Status: implemented baseline; parameter surface remains deliberately small and pre-release.
 
 ## Purpose
 
@@ -47,8 +46,8 @@ glow, long shadow, backdrop sampling, case rewriting, random variation and field
 must not enter merely to reproduce the old engine's option count.
 
 Cue timing is not a fifth Style dimension. It comes from the independent `TimedCaptionProjection`:
-the first and last included display-word windows determine the Cue window. Fine adds no hidden hold,
-lead, fade or provider-dependent timing.
+the first and last included whole-Atom windows determine the Cue window. Fine adds no hidden hold,
+lead, fade or provider-dependent timing, and it receives no display-Word timestamps.
 
 ## Font boundary
 
@@ -58,16 +57,8 @@ components. `@narratage/media` already defines `FontArtifactRef`; adding an auth
 font files and connecting that value explicitly is separate work. It must not be smuggled into the
 Fine redesign as a Caption-specific Media contract.
 
-## Current implementation delta
+## Remaining visual evidence
 
-Before this Style family can be treated as its accepted design, its package alone must:
-
-- remove `important-min-per-cue`, `important-max-per-cue`, `important-fill` and `important-scale`;
-- emit an empty field declaration list;
-- remove field-dependent word color/scale and related attributes;
-- replace the current left/top box with a deterministic bounded layout after its small parameter
-  set is reviewed;
-- add real browser/pixel evidence for placement, wrapping and basic paint.
-
-Quickstarts continue to describe the executable baseline until this delta is implemented. They are
-not a reason to preserve the temporary field.
+The field-free contract is executable. Before freezing the family's visual surface, add real
+browser/pixel evidence for placement, wrapping and basic paint and review whether the current
+bounded left/top geometry is the smallest useful public parameter set.

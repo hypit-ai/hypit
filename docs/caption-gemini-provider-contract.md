@@ -2,85 +2,63 @@
 
 Status: implemented vertical slice. This contract contains no credential or network authority.
 
-## 1. Responsibility split
-
-The old engine mixed prompt construction, model judgment, response parsing and Vertex transport.
-Narratage keeps only the useful model judgment: Cue boundaries and declared per-word fields. Script
-is the sole wording, casing and punctuation truth. Gemini performs no correction, receives no
-WhisperX transcript and returns neither text nor time.
+## Responsibility split
 
 ```text
-@narratage/script                 ordered display words and Selection word subsets
-@narratage/caption                total Style assignment, Plan validation and timing join
-@narratage/caption-fine           one concrete Style family and visual renderer
-@narratage/caption-gemini         exact Gemini request and deterministic response lowering
-@narratage/provider-google-vertex credentials, generateContent transport, timeout and queue lane
+@narratage/script                 display Atoms/Words and Atom-to-speech correspondence
+@narratage/caption                total Style assignment, Plan validation and whole-Atom timing
+@narratage/caption-fine           one field-free Style family and VisualTrack renderer
+@narratage/caption-gemini         Gemini request construction and response lowering
+@narratage/provider-google-vertex credentials, generateContent transport and queue lane
 ```
 
-An AI Studio endpoint could implement the same exact capability later, but Runtime may not silently
-change model family or planning method.
+Script remains the only wording, casing and punctuation truth. Gemini performs no correction,
+receives no WhisperX transcript and returns neither text nor time.
 
-## 2. Immutable inputs
+## Immutable input
 
-Caption planning consumes:
+The planner consumes one `CaptionDisplaySequence` and one resolved `CaptionProgram`. For Dual Text
+such as `<SVML | semantic video markup language>`, it sees only `SVML`. For
+`<New York City | something>`, it sees one indivisible Atom containing three field-addressable
+Words. It cannot cut between them.
 
-1. Script's complete ordered `CaptionWordSequence`;
-2. a resolved `CaptionProgram`, containing total Style assignment and planning requirements.
-
-For `<SVML | semantic video markup language>`, Seedance and alignment use the right side. Caption
-planning sees one display word, `SVML`, from the left side. The Program's explicit default covers
-the complete word universe. Ordered Role or `CaptionWordSubset` applications replace one whole
-Style, with the last match winning. Gemini never selects Styles or moves words between resolved
-runs.
-
-## 3. Model freedom
-
-For each resolved run Gemini may do exactly two things:
-
-1. return ordered Cue endpoints that partition every word exactly once;
-2. attach zero, one or more values from declared fields to individual words.
-
-A field declaration contains an id, value schema, instruction and per-Cue cardinality. Values
-support boolean, enum and bounded-number schemas. Fields are independent and need not be contiguous.
-
-Conceptual request data:
+The request deliberately sends readable text once:
 
 ```json
 {
-  "words": [
-    { "id": "caption-word:1", "text": "SVML" },
-    { "id": "caption-word:2", "text": "changes" }
-  ],
   "runs": [{
-    "id": "caption-program:run:1",
-    "word_ids": ["caption-word:1", "caption-word:2"],
-    "cue": {
-      "minimum_words": 1,
-      "maximum_words": 5,
-      "instruction": "Use complete semantic phrases."
-    },
-    "fields": [{
-      "id": "important",
-      "type": "boolean",
-      "minimum_per_cue": 0,
-      "maximum_per_cue": 2,
-      "instruction": "Select words whose emphasis best communicates this Cue."
-    }]
+    "atoms": [
+      ["new"],
+      ["york"],
+      ["city", "is", "beautiful"]
+    ],
+    "cue_words": { "minimum": 1, "maximum": 5 },
+    "cue_instruction": "Use complete semantic phrases."
   }]
 }
 ```
 
-Conceptual response:
+There is no redundant `text` or `words` payload. Punctuation is part of each immutable string, so
+`45%`, `back-and-forth`, `damn!` and `300,000` survive unchanged.
+
+## Model freedom
+
+For each already-resolved Style run, Gemini may only:
+
+1. consume consecutive whole Atoms into Cues with `atom_count`;
+2. assign declared fields to a Word with one-based `atom_number` and `word_number` inside the Cue.
+
+Conceptual field-bearing response:
 
 ```json
 {
   "runs": [{
-    "run_id": "caption-program:run:1",
     "cues": [{
-      "after_word_id": "caption-word:2",
+      "atom_count": 3,
       "fields": [{
-        "declaration_id": "important",
-        "word_id": "caption-word:1",
+        "declaration_id": "emphasis",
+        "atom_number": 3,
+        "word_number": 2,
         "value": "true"
       }]
     }]
@@ -88,29 +66,28 @@ Conceptual response:
 }
 ```
 
-The response schema has no text field. Missing or foreign runs, reordered or duplicated words,
-incomplete coverage, Cue word-count violations, undeclared fields, foreign word ids, invalid values
-and cardinality violations all fail before `CaptionPlan` enters the graph.
+A field-free Style returns `fields: []`. Cue bounds are preferences: one authored Atom may exceed
+the preferred maximum, but Gemini still cannot split it. The response schema contains no text,
+pronunciation, timestamp, Style or Provider choice. The package restores stable Atom/Word ids and
+rejects incomplete coverage, invalid coordinates, undeclared fields, invalid values and cardinality
+violations.
 
-## 4. Timing is another graph branch
-
-Gemini planning does not wait for generation, media normalization or WhisperX:
+## Independent timing branch
 
 ```text
-CaptionWordSequence + CaptionProgram ── Gemini ───────── CaptionPlan
-generated audio ─────────────────────── WhisperX ─────── CompleteSemanticMap
-Plan + Program + Words + Map + Narrative ───────────── TimedCaptionProjection
-TimedCaptionProjection + Words + Program ─ Style renderer ─ VisualTrack
+Display + Program ───────────────────────── Gemini ─── CaptionPlan
+generated audio ───────── WhisperX + locator ───────── CompleteSemanticMap
+Display + Correspondence + Program + Plan + Map ───── TimedCaptionProjection
+TimedCaptionProjection + Display + Program ────────── VisualTrack
 ```
 
-Display words inherit time only through Script's explicit display/speech correspondence. If one
-display word aliases several spoken words, Caption may derive a presentation window inside the
-measured region envelope. It never writes that estimate into the global semantic map.
+`CaptionCorrespondence` binds each whole display Atom to explicit authored speech tokens. Timing
+resolves that range through the measured map. Multiword Dual Text therefore receives one exact
+Atom envelope and no invented internal Word timestamps.
 
-## 5. Runtime registration
+## Runtime registration
 
-The author chooses Gemini and its model in `.svml`. Trusted Runtime configuration selects one exact
-Vertex Endpoint. The selected `CredentialStore` supplies credentials without granting arbitrary
-filesystem access. Endpoint identity covers implementation, model support and non-secret config.
-The Scheduler owns concurrency; the Provider owns transport. Secrets, queue state and network
-metadata do not enter `.svml`, `.svs`, Core `BuildState` or Caption values.
+The author chooses Gemini and its model in SVML. Trusted Runtime configuration binds that exact
+capability to a Vertex Endpoint. The Scheduler owns concurrency; the Provider owns transport and
+credential slots. Secrets, network metadata and queue state never enter SVML, SVS, Caption values
+or Core BuildState.
