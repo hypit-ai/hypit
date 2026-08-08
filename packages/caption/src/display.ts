@@ -1,102 +1,89 @@
-import type { CaptionRegion, Narrative, NarrativeSelectionRef } from "@narratage/narrative";
+import type {
+  CaptionWord,
+  CaptionWordSequence,
+  CaptionWordSubset,
+  Narrative,
+} from "@narratage/narrative";
 
-import type { CaptionDisplayAtom } from "./types.js";
-
-const WORD =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]\p{M}*|[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
-
-function displayWords(value: string): Array<{ readonly text: string; readonly start: number; readonly end: number }> {
-  const result: Array<{ text: string; start: number; end: number }> = [];
-  WORD.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = WORD.exec(value))) {
-    result.push({ text: match[0], start: match.index, end: match.index + match[0].length });
-  }
-  return result;
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
 }
 
-function turnForRegion(narrative: Narrative, region: CaptionRegion): Narrative["turns"][number] {
-  const turn = narrative.turns.find((candidate) =>
-    candidate.segmentId === region.segmentId
-    && candidate.tokenStart < region.endTokenExclusive
-    && candidate.tokenEndExclusive > region.startToken);
-  if (turn === undefined) throw new Error(`Caption region ${region.id} is not owned by a Narrative Turn`);
-  return turn;
-}
-
-/** The only word universe visible to Caption planning. Speech-side alias text never enters it. */
-export function captionDisplayAtoms(narrative: Narrative): CaptionDisplayAtom[] {
-  const atoms: CaptionDisplayAtom[] = [];
-  for (const region of narrative.captionProjection.regions) {
-    if (region.kind === "hidden") continue;
-    const turn = turnForRegion(narrative, region);
-    for (const word of displayWords(region.display)) {
-      const exact = region.refinements.find((refinement) =>
-        refinement.displayStart === word.start && refinement.displayEnd === word.end);
-      atoms.push({
-        id: `${region.id}:display:${atoms.length + 1}`,
-        index: atoms.length,
-        regionId: region.id,
-        segmentId: region.segmentId,
-        turnId: turn.id,
-        ...(turn.role === undefined ? {} : { role: turn.role }),
-        text: word.text,
-        displayStart: word.start,
-        displayEnd: word.end,
-        sourceTokenStart: exact?.startToken ?? region.startToken,
-        sourceTokenEndExclusive: exact?.endTokenExclusive ?? region.endTokenExclusive,
-        correspondence: exact === undefined ? "region-envelope" : "exact",
-      });
-    }
-  }
-  if (atoms.length === 0) throw new Error("Caption display projection contains no visible words");
-  return atoms;
-}
-
-function occurrenceRange(
-  occurrence: NarrativeSelectionRef["occurrences"][number],
-  tokenCount: number,
-): { readonly start: number; readonly endExclusive: number } {
-  // Outward affinity moves the boundary in time, not in words: `~@x hello @/x~`
-  // and `@x hello @/x` cover the same token, differing only in the surrounding
-  // silence they absorb.
-  return {
-    start: Math.max(0, occurrence.open.boundary.tokenIndex),
-    endExclusive: Math.min(tokenCount, occurrence.close.boundary.tokenIndex),
-  };
-}
-
-export function displayAtomMatchesSelection(
-  atom: CaptionDisplayAtom,
-  selection: NarrativeSelectionRef,
-  tokenCount: number,
-): boolean {
-  return selection.occurrences.some((occurrence) => {
-    const range = occurrenceRange(occurrence, tokenCount);
-    return atom.sourceTokenStart < range.endExclusive && atom.sourceTokenEndExclusive > range.start;
+export function assertCaptionWordSequence(value: CaptionWordSequence): void {
+  assert(value.contract === "svml.caption-word-sequence@1" && value.id.length > 0,
+    "CaptionWordSequence identity is invalid");
+  assert(value.words.length > 0, "CaptionWordSequence is empty");
+  const ids = new Set<string>();
+  value.words.forEach((word, index) => {
+    assert(word.id.length > 0 && !ids.has(word.id) && word.index === index,
+      "CaptionWord identity is invalid or repeated");
+    ids.add(word.id);
+    assert(word.regionId.length > 0 && word.segmentId.length > 0 && word.turnId.length > 0 && word.text.length > 0,
+      `CaptionWord ${word.id} context is invalid`);
+    assert(Number.isSafeInteger(word.displayStart) && Number.isSafeInteger(word.displayEnd)
+      && word.displayStart >= 0 && word.displayEnd > word.displayStart,
+    `CaptionWord ${word.id} display range is invalid`);
+    assert(Number.isSafeInteger(word.sourceTokenStart) && Number.isSafeInteger(word.sourceTokenEndExclusive)
+      && word.sourceTokenStart >= 0 && word.sourceTokenEndExclusive > word.sourceTokenStart,
+    `CaptionWord ${word.id} source range is invalid`);
+    assert(word.correspondence === "exact" || word.correspondence === "region-envelope",
+      `CaptionWord ${word.id} correspondence is invalid`);
   });
 }
 
-export function displayTextForAtoms(
+export function assertCaptionWordSubset(value: CaptionWordSubset, sequence: CaptionWordSequence): void {
+  assertCaptionWordSequence(sequence);
+  assert(value.contract === "svml.caption-word-subset@1" && value.id.length > 0,
+    "CaptionWordSubset identity is invalid");
+  assert(value.sequenceId === sequence.id, `CaptionWordSubset ${value.id} belongs to another word sequence`);
+  const positions = new Map(sequence.words.map((word) => [word.id, word.index]));
+  let previous = -1;
+  const seen = new Set<string>();
+  for (const id of value.wordIds) {
+    const position = positions.get(id);
+    assert(position !== undefined && position > previous && !seen.has(id),
+      `CaptionWordSubset ${value.id} is not an ordered subset of ${sequence.id}`);
+    previous = position;
+    seen.add(id);
+  }
+}
+
+/** Author-surface sugar for Role selection. The Program itself receives only the resolved subset. */
+export function captionWordsForRole(sequence: CaptionWordSequence, role: string): CaptionWordSubset {
+  assertCaptionWordSequence(sequence);
+  const normalized = role.trim();
+  assert(normalized.length > 0, "Caption Role is empty");
+  return {
+    contract: "svml.caption-word-subset@1",
+    id: `role:${normalized}`,
+    sequenceId: sequence.id,
+    wordIds: sequence.words.filter((word) => word.role === normalized).map((word) => word.id),
+  };
+}
+
+export function displayTextForWords(
   narrative: Narrative,
-  selected: readonly CaptionDisplayAtom[],
+  universe: readonly CaptionWord[],
+  selected: readonly CaptionWord[],
 ): string {
-  const byRegion = new Map<string, CaptionDisplayAtom[]>();
-  for (const atom of selected) {
-    const values = byRegion.get(atom.regionId) ?? [];
-    values.push(atom);
-    byRegion.set(atom.regionId, values);
+  const byRegion = new Map<string, CaptionWord[]>();
+  for (const word of selected) {
+    const values = byRegion.get(word.regionId) ?? [];
+    values.push(word);
+    byRegion.set(word.regionId, values);
   }
   const parts: string[] = [];
   for (const region of narrative.captionProjection.regions) {
-    const atoms = byRegion.get(region.id);
-    if (atoms === undefined || atoms.length === 0) continue;
-    const ordered = [...atoms].sort((left, right) => left.displayStart - right.displayStart);
-    const all = displayWords(region.display);
+    const words = byRegion.get(region.id);
+    if (words === undefined || words.length === 0) continue;
+    const ordered = [...words].sort((left, right) => left.displayStart - right.displayStart);
+    const all = universe
+      .filter((word) => word.regionId === region.id)
+      .sort((left, right) => left.displayStart - right.displayStart);
     const first = ordered[0]!;
     const last = ordered.at(-1)!;
-    const after = all.find((word) => word.start > last.displayStart);
-    parts.push(region.display.slice(first.displayStart, after?.start ?? region.display.length).trim());
+    const after = all.find((word) => word.displayStart > last.displayStart);
+    parts.push(region.display.slice(first.displayStart, after?.displayStart ?? region.display.length).trim());
   }
   return parts.join(" ").replace(/\s+/gu, " ").replace(/\s+([,.;:!?])/gu, "$1").trim();
 }

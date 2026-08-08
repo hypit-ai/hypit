@@ -7,6 +7,7 @@
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="broll" from="@narratage/broll@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="text" from="@narratage/text-track@1"/>
   <import as="film" from="@narratage/film@1"/>
@@ -26,20 +27,15 @@
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <caption:Style id="base-caption" appearance={studio.caption.base}>
-    <caption:Cues>Prefer short complete semantic phrases. Never cross clause punctuation.</caption:Cues>
-    <caption:Field id="important" type="boolean"
-      min-per-cue="0" max-per-cue="2">
-      Select zero, one, or two words whose emphasis best communicates this Cue.
-    </caption:Field>
-  </caption:Style>
-  <caption:Program id="caption-program" narrative={story} default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" narrative={story} program={caption-program} model="gemini-2.5-flash"/>
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+  <caption:Program id="caption-program" words={story.caption.words} default={base-caption}/>
+  <caption-ai:Planner id="cue-plan" words={story.caption.words} program={caption-program} model="gemini-2.5-flash"/>
 
   <broll:Track id="cards" map={timing.map} space={speech.space}>
     <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
   </broll:Track>
-  <caption:Track id="captions" narrative={story} map={timing.map} space={speech.space}
+  <caption-fine:Track id="captions" narrative={story} words={story.caption.words}
+    map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
   <text:Track id="titles" space={speech.space}>
     <text:Item text="MEANING" during="full" appearance={studio.text.title}/>

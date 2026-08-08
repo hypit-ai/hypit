@@ -73,12 +73,18 @@ Referenced by `film:Film` via the `appearance` attribute:
 <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
 ```
 
-## Caption
+## Caption Fine
 
-Caption visual appearance — position, typography, and container styling.
+The first official Caption Style family keeps planning and rendering parameters in one Recipe.
 
 ```svs
 caption.dialogue {
+  cue-min-words: 2;
+  cue-max-words: 7;
+  important-min-per-cue: 0;
+  important-max-per-cue: 2;
+  important-fill: #FFD166;
+  important-scale: 1.08;
   stack-order: 70;
   x: 0.08;
   y: 0.76;
@@ -97,6 +103,9 @@ caption.dialogue {
 
 | Property | Description |
 |---|---|
+| `cue-min-words`, `cue-max-words` | Common Cue word-count bounds |
+| `important-min-per-cue`, `important-max-per-cue` | Fine's per-Cue emphasis cardinality; max `0` disables the field |
+| `important-fill`, `important-scale` | Fine's rendering of words assigned the `important` field |
 | `stack-order` | Z-stacking order among all Tracks (higher = on top) |
 | `x`, `y` | Position as fraction of canvas (0–1) |
 | `width` | Width as fraction of canvas |
@@ -110,10 +119,10 @@ caption.dialogue {
 | `padding` | Container padding in pixels (single value or `vertical horizontal`) |
 | `radius` | Container border radius in pixels |
 
-Referenced by `caption:Style` via the `appearance` attribute:
+Resolved by the Fine Style family:
 
 ```svml
-<caption:Style id="primary-caption" appearance={studio.caption.dialogue}>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}/>
 ```
 
 ### Per-role caption styles
@@ -122,6 +131,9 @@ Define multiple caption Recipes for different speakers:
 
 ```svs
 caption.alice {
+  cue-min-words: 2; cue-max-words: 5;
+  important-min-per-cue: 0; important-max-per-cue: 2;
+  important-fill: #FFFFFF; important-scale: 1.08;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -131,6 +143,9 @@ caption.alice {
 }
 
 caption.bob {
+  cue-min-words: 2; cue-max-words: 5;
+  important-min-per-cue: 0; important-max-per-cue: 0;
+  important-fill: #FFFFFF; important-scale: 1;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -143,7 +158,10 @@ caption.bob {
 Then assign them via `caption:Program`:
 
 ```svml
-<caption:Program id="caption-program" narrative={story} default={studio.caption.dialogue}>
+<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue}/>
+<caption-fine:Style id="alice-caption" recipe={studio.caption.alice}/>
+<caption-fine:Style id="bob-caption" recipe={studio.caption.bob}/>
+<caption:Program id="caption-program" words={story.caption.words} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
 </caption:Program>
@@ -367,6 +385,12 @@ A complete `studio.svs` file for a four-take talking-head project:
   }
 
   caption.primary {
+    cue-min-words: 2;
+    cue-max-words: 5;
+    important-min-per-cue: 0;
+    important-max-per-cue: 2;
+    important-fill: #FFF16A;
+    important-scale: 1.08;
     stack-order: 70;
     x: 0.08;
     y: 0.74;
@@ -394,7 +418,7 @@ This file is imported once in the `.svml` source and its values are referenced t
 
 <speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
 
-<caption:Style id="primary-caption" appearance={studio.caption.primary} .../>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 
 <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
 ```

@@ -2,6 +2,8 @@ import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 import {
   captionProjectionSchema,
+  captionWordSequenceSchema,
+  captionWordSubsetSchema,
   narrativeDialogueExcerptSchema,
   narrativeExcerptSchema,
   narrativeSchema,
@@ -19,6 +21,8 @@ export const narrativeTypes = {
   selection: { module: narrativeModuleRef, name: "NarrativeSelection" },
   moment: { module: narrativeModuleRef, name: "NarrativeMoment" },
   captionProjection: { module: narrativeModuleRef, name: "CaptionProjection" },
+  captionWordSequence: { module: narrativeModuleRef, name: "CaptionWordSequence" },
+  captionWordSubset: { module: narrativeModuleRef, name: "CaptionWordSubset" },
 } satisfies Record<string, TypeRef>;
 export const narrativeManifest: ModuleManifest = {
   format: "svml.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
@@ -31,6 +35,8 @@ export const narrativeManifest: ModuleManifest = {
     { name: narrativeTypes.selection.name, schema: narrativeSelectionSchema },
     { name: narrativeTypes.moment.name, schema: narrativeMomentSchema },
     { name: narrativeTypes.captionProjection.name, schema: captionProjectionSchema },
+    { name: narrativeTypes.captionWordSequence.name, schema: captionWordSequenceSchema },
+    { name: narrativeTypes.captionWordSubset.name, schema: captionWordSubsetSchema },
   ],
   capabilities: [], surfaces: [], producers: [],
 };

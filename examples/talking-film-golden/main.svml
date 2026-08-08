@@ -13,6 +13,7 @@
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="broll" from="@narratage/broll@1"/>
   <import as="text" from="@narratage/text-track@1"/>
@@ -57,31 +58,22 @@
   </seedance:Prompt>
 
   <!-- Complete styles are declared once. Selection and use remain separate. -->
-  <caption:Style id="dialogue-caption" appearance={studio.caption.dialogue}>
-    <caption:Cues>Use short complete semantic phrases, usually between two and five words.</caption:Cues>
-  </caption:Style>
+  <caption-fine:Style id="dialogue-caption" recipe={studio.caption.dialogue}/>
 
-  <caption:Style id="alice-caption" appearance={studio.caption.alice}>
-    <caption:Cues>Use short complete semantic phrases, usually between two and five words.</caption:Cues>
-    <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-      Select at most two words whose emphasis best communicates this Cue.
-    </caption:Field>
-  </caption:Style>
+  <caption-fine:Style id="alice-caption" recipe={studio.caption.alice}/>
 
-  <caption:Style id="bob-caption" appearance={studio.caption.bob}>
-    <caption:Cues>Use short complete semantic phrases, usually between two and five words.</caption:Cues>
-  </caption:Style>
+  <caption-fine:Style id="bob-caption" recipe={studio.caption.bob}/>
 
-  <caption:Program id="caption-program" narrative={script} default={dialogue-caption}>
+  <caption:Program id="caption-program" words={script.caption.words} default={dialogue-caption}>
     <caption:Use role="ALICE" style={alice-caption}/>
     <caption:Use role="BOB" style={bob-caption}/>
     <!-- Ordered whole-style replacement: no complement Selection is required. -->
-    <caption:Use on={script.selection.product-demo} style={dialogue-caption}/>
+    <caption:Use words={script.caption.selection.product-demo} style={dialogue-caption}/>
   </caption:Program>
 
   <caption-ai:Planner
     id="caption-plan"
-    narrative={script}
+    words={script.caption.words}
     program={caption-program}
     model="gemini-2.5-flash"
   />
@@ -134,10 +126,12 @@
   </broll:Track>
 
   <!-- This imported package explicitly chooses Gemini cue planning; it cannot rewrite Script. -->
-  <caption:Track
+  <caption-fine:Track
     id="captions"
     narrative={script}
+    words={script.caption.words}
     map={timing.map}
+    space={speech.space}
     program={caption-program}
     plan={caption-plan.plan}
   />

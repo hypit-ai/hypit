@@ -24,6 +24,7 @@
     "@narratage/artifact": "workspace:*",
     "@narratage/broll": "workspace:*",
     "@narratage/caption": "workspace:*",
+    "@narratage/caption-fine": "workspace:*",
     "@narratage/caption-gemini": "workspace:*",
     "@narratage/composition": "workspace:*",
     "@narratage/estimate": "workspace:*",

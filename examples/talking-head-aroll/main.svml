@@ -8,6 +8,7 @@
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
@@ -99,29 +100,22 @@
   <!-- One measured evidence pass locates the complete authored Script. -->
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <!-- Gemini sees display atoms and these requirements, never audio or timing. -->
-  <caption:Style id="primary-caption" appearance={studio.caption.primary} mode="proportional-word">
-    <caption:Cues>
-      Split each Script Segment into short complete semantic phrases of two to seven words.
-      Never cross a sentence or Segment boundary.
-    </caption:Cues>
-    <caption:Field id="important" type="boolean" min-per-cue="1" max-per-cue="2">
-      Select one or two words whose emphasis best communicates this Cue.
-    </caption:Field>
-  </caption:Style>
+  <!-- Gemini sees display words and these requirements, never audio or timing. -->
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 
-  <caption:Program id="caption-program" narrative={story} default={primary-caption}/>
+  <caption:Program id="caption-program" words={story.caption.words} default={primary-caption}/>
   <caption-ai:Planner
     id="caption-plan"
-    narrative={story}
+    words={story.caption.words}
     program={caption-program}
     model="gemini-2.5-flash"
   />
 
   <!-- Caption becomes an ordinary self-contained VisualTrack after joining the measured map. -->
-  <caption:Track
+  <caption-fine:Track
     id="captions"
     narrative={story}
+    words={story.caption.words}
     map={timing.map}
     space={speech.space}
     program={caption-program}

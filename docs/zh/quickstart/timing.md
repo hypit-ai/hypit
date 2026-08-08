@@ -69,7 +69,7 @@ Spine 产生四个输出，供下游组件使用：
 
 | 输出 | 类型 | 使用方 |
 |---|---|---|
-| `{timing.map}` | CompleteSemanticMap | `caption:Track`、`broll:Track`、`text:Track`——定时放置 |
+| `{timing.map}` | CompleteSemanticMap | Caption 样式族 Track、`broll:Track`、`text:Track`——定时放置 |
 
 SemanticMap 将每个 Script 中标注的锚点映射到一个时间点。它覆盖所有 `2M + 2N` 个标识（其中 M = 语音词元总数，N = Segment 数量）。这就是 Script 中声明的 Selection 和 Moment 如何转化为下游视觉组件所需的实际时间范围和时间点。
 
@@ -79,7 +79,7 @@ ProgramSpace 不是一个需要声明的组件——它由 `speech:Spine` 产生
 
 ```svml
 <film:Film id="main" space={speech.space} ...>
-<caption:Track id="captions" ... space={speech.space} .../>
+<caption-fine:Track id="captions" ... space={speech.space} .../>
 <text:Track id="titles" space={speech.space}>
 <render:Video id="final" composition={main.composition} space={speech.space}/>
 ```
@@ -100,7 +100,7 @@ SemanticMap 是连接 Script 文本与物理时间的类型化桥梁。当你在
 
 ```svml
 <broll:Track id="cards" map={timing.map} ...>
-<caption:Track id="captions" ... map={timing.map} .../>
+<caption-fine:Track id="captions" ... map={timing.map} .../>
 ```
 
 映射中的每个点可以是：
@@ -141,7 +141,7 @@ speaker:Take outputs ──► speech:Spine ──► whisperx:Alignment
                          .visual              .map (SemanticMap)
                          .audio                    │
                          .audioTrack               ▼
-                         .space ──────────► caption:Track
+                         .space ──────────► caption-fine:Track
                               │            broll:Track
                               │            text:Track
                               ▼            film:Film

@@ -26,7 +26,7 @@ export type CaptionGeminiProgram = {
   readonly model: CaptionGeminiModel;
 };
 
-export type CaptionPlanningAtom = {
+export type CaptionPlanningWord = {
   readonly id: string;
   readonly text: string;
 };
@@ -34,7 +34,9 @@ export type CaptionPlanningAtom = {
 export type CaptionPlanningRun = {
   readonly id: string;
   readonly styleId: string;
-  readonly atomIds: readonly string[];
+  readonly wordIds: readonly string[];
+  readonly cueMinimumWords: number;
+  readonly cueMaximumWords: number;
   readonly cueInstruction: string;
   readonly fields: readonly CaptionFieldDeclaration[];
 };
@@ -42,7 +44,7 @@ export type CaptionPlanningRun = {
 export type CaptionGeminiRequest = {
   readonly contract: "svml.caption-gemini-request@1";
   readonly model: CaptionGeminiModel;
-  readonly atoms: readonly CaptionPlanningAtom[];
+  readonly words: readonly CaptionPlanningWord[];
   readonly runs: readonly CaptionPlanningRun[];
   readonly systemInstruction: string;
   readonly prompt: string;
@@ -53,10 +55,10 @@ export type RawCaptionGeminiResponse = {
   readonly runs: readonly {
     readonly run_id: string;
     readonly cues: readonly {
-      readonly after_atom_id: string;
+      readonly after_word_id: string;
       readonly fields: readonly {
         readonly declaration_id: string;
-        readonly atom_id: string;
+        readonly word_id: string;
         readonly value: string;
       }[];
     }[];

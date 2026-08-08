@@ -1,7 +1,100 @@
 import { canonicalize } from "@narratage/core";
 import type { CanonicalValue } from "@narratage/protocol";
+import type { CaptionRegion, CaptionWord, CaptionWordSequence, CaptionWordSubset } from "@narratage/narrative";
 
 import type { ParsedNarrative } from "./types.js";
+
+const DISPLAY_WORD =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]\p{M}*|[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu;
+
+function displayWords(value: string): Array<{ readonly text: string; readonly start: number; readonly end: number }> {
+  const result: Array<{ text: string; start: number; end: number }> = [];
+  DISPLAY_WORD.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = DISPLAY_WORD.exec(value))) {
+    result.push({ text: match[0], start: match.index, end: match.index + match[0].length });
+  }
+  return result;
+}
+
+function turnForRegion(parsed: ParsedNarrative, region: CaptionRegion): ParsedNarrative["turns"][number] {
+  const turn = parsed.turns.find((candidate) =>
+    candidate.segmentId === region.segmentId
+    && candidate.tokenStart < region.endTokenExclusive
+    && candidate.tokenEndExclusive > region.startToken);
+  if (turn === undefined) throw new Error(`Caption region ${region.id} is not owned by a Narrative Turn`);
+  return turn;
+}
+
+/** Script owns display-word projection because only it still knows authored source structure. */
+export function captionWordSequence(parsed: ParsedNarrative, id: string): CaptionWordSequence {
+  const words: CaptionWord[] = [];
+  for (const region of parsed.captionProjection.regions) {
+    if (region.kind === "hidden") continue;
+    const turn = turnForRegion(parsed, region);
+    for (const word of displayWords(region.display)) {
+      const exact = region.refinements.find((refinement) =>
+        refinement.displayStart === word.start && refinement.displayEnd === word.end);
+      words.push({
+        id: `${region.id}:word:${words.length + 1}`,
+        index: words.length,
+        regionId: region.id,
+        segmentId: region.segmentId,
+        turnId: turn.id,
+        ...(turn.role === undefined ? {} : { role: turn.role }),
+        text: word.text,
+        displayStart: word.start,
+        displayEnd: word.end,
+        sourceTokenStart: exact?.startToken ?? region.startToken,
+        sourceTokenEndExclusive: exact?.endTokenExclusive ?? region.endTokenExclusive,
+        correspondence: exact === undefined ? "region-envelope" : "exact",
+      });
+    }
+  }
+  if (words.length === 0) throw new Error("Caption display projection contains no visible words");
+  return { contract: "svml.caption-word-sequence@1", id, words };
+}
+
+/** Project one authored Selection into visible words before public values lose source positions. */
+export function captionSelectionWordSubset(
+  sequence: CaptionWordSequence,
+  selection: ParsedNarrative["selections"][number],
+): CaptionWordSubset {
+  const ranges = selection.occurrences.map((occurrence) => ({
+    start: occurrence.open.boundary.tokenIndex,
+    endExclusive: occurrence.close.boundary.tokenIndex,
+  }));
+  const wordIds: string[] = [];
+  for (const word of sequence.words) {
+    const intersects = ranges.some((range) =>
+      word.sourceTokenStart < range.endExclusive && word.sourceTokenEndExclusive > range.start);
+    const contained = ranges.some((range) =>
+      word.sourceTokenStart >= range.start && word.sourceTokenEndExclusive <= range.endExclusive);
+    if (intersects && !contained) {
+      throw new Error(
+        `Selection ${selection.id} owns only part of Caption word ${word.id}; split the Dual Text atom`,
+      );
+    }
+    if (contained) wordIds.push(word.id);
+  }
+  return {
+    contract: "svml.caption-word-subset@1",
+    id: selection.id,
+    sequenceId: sequence.id,
+    wordIds,
+  };
+}
+
+export function captionWordSequenceValue(parsed: ParsedNarrative, id: string): CanonicalValue {
+  return canonicalize(captionWordSequence(parsed, id));
+}
+
+export function captionSelectionWordSubsetValue(
+  sequence: CaptionWordSequence,
+  selection: ParsedNarrative["selections"][number],
+): CanonicalValue {
+  return canonicalize(captionSelectionWordSubset(sequence, selection));
+}
 
 function cleanProjection(value: string): string {
   return value
@@ -115,8 +208,8 @@ export function narrativeSelectionValue(selection: ParsedNarrative["selections"]
     id: selection.id,
     occurrences: selection.occurrences.map((occurrence) => ({
       occurrence: occurrence.occurrence,
-      open: { affinity: occurrence.open.affinity, boundary: semanticBoundary(occurrence.open.boundary) },
-      close: { affinity: occurrence.close.affinity, boundary: semanticBoundary(occurrence.close.boundary) },
+      startAnchorId: occurrence.open.boundary.anchorId,
+      endAnchorId: occurrence.close.boundary.anchorId,
     })),
   } as const;
   return canonicalize(content);
@@ -128,20 +221,10 @@ export function narrativeMomentValue(moment: ParsedNarrative["moments"][number])
     id: moment.id,
     occurrences: moment.occurrences.map((occurrence) => ({
       occurrence: occurrence.occurrence,
-      affinity: occurrence.affinity,
-      boundary: semanticBoundary(occurrence.boundary),
+      anchorId: occurrence.boundary.anchorId,
     })),
   } as const;
   return canonicalize(content);
-}
-
-function semanticBoundary(boundary: {
-  readonly tokenIndex: number;
-  readonly structuralPosition: number;
-  readonly segmentId?: string;
-  readonly anchorId: string;
-}): CanonicalValue {
-  return canonicalize(boundary);
 }
 
 export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
@@ -176,22 +259,15 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
       id: selection.id,
       occurrences: selection.occurrences.map((occurrence) => ({
         occurrence: occurrence.occurrence,
-        open: {
-          affinity: occurrence.open.affinity,
-          boundary: semanticBoundary(occurrence.open.boundary),
-        },
-        close: {
-          affinity: occurrence.close.affinity,
-          boundary: semanticBoundary(occurrence.close.boundary),
-        },
+        startAnchorId: occurrence.open.boundary.anchorId,
+        endAnchorId: occurrence.close.boundary.anchorId,
       })),
     })),
     moments: parsed.moments.map((moment) => ({
       id: moment.id,
       occurrences: moment.occurrences.map((occurrence) => ({
         occurrence: occurrence.occurrence,
-        affinity: occurrence.affinity,
-        boundary: semanticBoundary(occurrence.boundary),
+        anchorId: occurrence.boundary.anchorId,
       })),
     })),
     captionProjection: {

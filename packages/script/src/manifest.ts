@@ -10,6 +10,8 @@ export const narrativeSpeechExcerptType: TypeRef = narrativeTypes.speechExcerpt;
 export const narrativeSelectionType: TypeRef = narrativeTypes.selection;
 export const narrativeMomentType: TypeRef = narrativeTypes.moment;
 export const captionProjectionType: TypeRef = narrativeTypes.captionProjection;
+export const captionWordSequenceType: TypeRef = narrativeTypes.captionWordSequence;
+export const captionWordSubsetType: TypeRef = narrativeTypes.captionWordSubset;
 export { narrativeSchema };
 
 export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/surface@1");
@@ -34,6 +36,8 @@ export const scriptManifest: ModuleManifest = {
         narrativeSelectionType,
         narrativeMomentType,
         captionProjectionType,
+        captionWordSequenceType,
+        captionWordSubsetType,
       ],
       implementation: {
         kind: "trusted-frontend-surface",
