@@ -179,7 +179,7 @@
     {
       "name": "@narratage/whisperx",
       "version": "0.0.0-dev",
-      "digest": "sha256:72fd08de6dca9bbec329d4f880e176832fba7ce1b89e0992be9bf4bcd87f2b49"
+      "digest": "sha256:92683f7866c852eda0a71c8935a522bbc2579219ebde680b289eabb39f51f77a"
     }
   ],
   "packages": [
@@ -415,8 +415,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:0eb8b7e5605851c873e0d37385577242a761e23d6eae9b0a495a2667ba71a082",
-      "closureDigest": "sha256:d342b6dd4602b1cea54a1e8bdb221d80f6c9d32c3a7b74d4a522415dbfba5d0f"
+      "closureDigest": "sha256:e596704f26f2aafcacc647dc02c54dc3ede198de4a06e7b5bc097758e2249682"
     }
   ],
-  "digest": "sha256:b0a665c5a0367630faf1283727be48682e016d30517878da3d18ae6314c4252d"
+  "digest": "sha256:fd90a74f3de7f6af3952538a47d1f565607265a15f9bcfa25d892bc38668ee6f"
 }
