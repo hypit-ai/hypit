@@ -308,7 +308,6 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
     catalogPath: join(root, "catalog.sqlite"),
     artifactPath: join(root, "artifacts"),
     runtimePackageLock,
-    services: [],
     endpoints: [{
       use: "@narratage/provider-kie",
       instance: "kie.cli-test",

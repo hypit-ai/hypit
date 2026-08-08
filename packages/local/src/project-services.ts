@@ -59,17 +59,23 @@ function configuredServiceIds(
     .map((service) => service.instance.id));
 }
 
+/**
+ * A Runtime fills each role exactly once. One package may fill several roles —
+ * the SQLite package supplies both stores from one file — but two packages
+ * filling the same role is a configuration to correct, not an ambiguity to
+ * resolve after the fact.
+ */
 function chooseService(
   packages: readonly RuntimeServicePackage[],
   role: RuntimeServiceFacetRole,
-  explicit: string | undefined,
   fallback: string,
 ): string {
   const configured = configuredServiceIds(packages, role);
-  if (explicit !== undefined) return explicit;
   if (configured.length === 0) return fallback;
   if (configured.length === 1) return configured[0]!;
-  throw new Error(`multiple ${role} services are configured; runtimeSelection must choose one`);
+  throw new Error(
+    `runtimeServices configures ${configured.length} ${role} implementations (${configured.join(", ")}); a Runtime uses one`,
+  );
 }
 
 function hasConfiguredService(
@@ -109,37 +115,12 @@ function projectSelection(
   options: ProjectLocalRuntimeOptions,
 ): ProjectRuntimeServiceSelection {
   return {
-    scheduler: chooseService(
-      packages,
-      "scheduler",
-      options.runtimeSelection?.scheduler,
-      "scheduler.local",
-    ),
+    scheduler: chooseService(packages, "scheduler", "scheduler.local"),
     stores: {
-      build: chooseService(
-        packages,
-        "build-store",
-        options.runtimeSelection?.stores?.build,
-        "builds.sqlite",
-      ),
-      operations: chooseService(
-        packages,
-        "operation-store",
-        options.runtimeSelection?.stores?.operations,
-        "operations.sqlite",
-      ),
-      artifacts: chooseService(
-        packages,
-        "artifact-store",
-        options.runtimeSelection?.stores?.artifacts,
-        "artifacts.fs",
-      ),
-      credentials: chooseService(
-        packages,
-        "credential-store",
-        options.runtimeSelection?.stores?.credentials,
-        "credentials.env",
-      ),
+      build: chooseService(packages, "build-store", "builds.sqlite"),
+      operations: chooseService(packages, "operation-store", "operations.sqlite"),
+      artifacts: chooseService(packages, "artifact-store", "artifacts.fs"),
+      credentials: chooseService(packages, "credential-store", "credentials.env"),
     },
   };
 }
