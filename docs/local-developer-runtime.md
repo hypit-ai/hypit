@@ -43,7 +43,6 @@ authority that asks Core what is ready and accepts returned Events.
 | `@narratage/transport` | canonical request/response transport seam | capability identity, recovery or scheduling |
 | `@narratage/credential-store-env` | explicitly requested local environment secrets | enumeration, persistence or author imports |
 | `@narratage/transport-aws-lambda` | synchronous bounded JSON invocation | capability identity or remote job semantics |
-| `@narratage/transport-process` | shell-free, bounded, no-ambient-env local JSON process | capability identity or executable choice from source |
 | `@narratage/provider-*` | one exact external implementation and its polling/recovery | Core graph traversal, author parsing |
 
 The implemented remote video Endpoints are `@narratage/provider-media-aws-lambda` and

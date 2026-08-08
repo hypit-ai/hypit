@@ -214,12 +214,12 @@ The Runtime executes an already frozen plan. Its environment-neutral ports are:
 
 | Port | Responsibility |
 |---|---|
-| `BuildScheduler` | readiness, concurrency lanes, fairness, retry and cancellation policy |
+| `BuildScheduler` | readiness, concurrency lanes, fairness |
+| execution driver | attempt, retry and cancellation of one admitted Operation |
 | `BuildStore` | verified BuildState snapshots and compare-and-swap revisions |
 | `OperationStore` | external submission identity, checkpoint, reconciliation and completion |
 | `ArtifactStore` | content-addressed bytes |
 | `CredentialStore` | scoped secret lookup for an exact Endpoint instance |
-| `CommandDispatcher` | optional distributed delivery after scheduling authority has decided |
 
 There is no universal Queue package. One Build has one authoritative Scheduler. KIE, Lambda and
 other remote services may have private job queues, but those queues cannot advance the Narratage graph.
