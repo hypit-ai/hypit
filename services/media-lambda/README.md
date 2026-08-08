@@ -22,6 +22,46 @@ Artifact it cannot read.
 **An execution role** that can read and write the Artifact prefix in that
 bucket, and write CloudWatch Logs. Nothing else.
 
+## First-time AWS setup
+
+One IAM user and one bucket. Everything else — the ECR repository, the function,
+and (for the renderer) its whole stack — is created by the scripts that need it.
+
+The policies under `iam/` are templates: replace `ACCOUNT_ID`, `REGION` and
+`BUCKET`. They are scoped to named resources rather than `*`, so a mistake
+cannot reach the rest of the account.
+
+```bash
+export AWS_REGION=us-east-1
+export AWS_ACCOUNT_ID=123456789012
+export NARRATAGE_MEDIA_BUCKET=your-artifact-bucket
+
+# 1. The bucket the Build and the function share.
+aws s3api create-bucket --bucket "$NARRATAGE_MEDIA_BUCKET" --region "$AWS_REGION"
+aws s3api put-public-access-block --bucket "$NARRATAGE_MEDIA_BUCKET" \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+# 2. The role the function runs as. It can read and write Artifacts, and say
+#    what happened. Nothing else.
+sed -e "s/ACCOUNT_ID/$AWS_ACCOUNT_ID/g" -e "s/REGION/$AWS_REGION/g" \
+    -e "s/BUCKET/$NARRATAGE_MEDIA_BUCKET/g" iam/execution.json > /tmp/execution.json
+aws iam create-role --role-name NarratageMediaExecution \
+  --assume-role-policy-document file://iam/execution-trust.json
+aws iam put-role-policy --role-name NarratageMediaExecution \
+  --policy-name NarratageMediaExecution --policy-document file:///tmp/execution.json
+
+# 3. The user that publishes. Attach iam/publisher.json with the same
+#    substitutions, then configure its keys as a named profile — never in this
+#    repository, and never assembled by hand in code.
+aws configure --profile narratage
+```
+
+Credentials reach the SDK through its default chain. That is deliberate: a
+managed runtime injects `AWS_SESSION_TOKEN`, and code that rebuilds a
+credential object from an id and a secret drops it, so every request fails
+`InvalidAccessKeyId`.
+
 ## Deploying it
 
 ```bash
