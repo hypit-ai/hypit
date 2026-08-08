@@ -342,7 +342,7 @@ test("project local runtime infers one supplied Scheduler service without knowin
   }
 });
 
-test("multiple Scheduler services require exact selection and unselected code never gains authority", async () => {
+test("two Scheduler services are refused and neither gains authority", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-scheduler-selection-"));
   const creates = { one: 0, two: 0 };
   const closes = { one: 0, two: 0 };
@@ -367,23 +367,23 @@ test("multiple Scheduler services require exact selection and unselected code ne
     close() { closes[name] += 1; },
   });
   try {
+    // Two schedulers is a configuration to correct, not a choice to make later.
     await assert.rejects(
       createProjectLocalRuntime({
         root: directory,
         runtimeServices: [scheduler("one"), scheduler("two")],
       }),
-      /runtimeSelection must choose one/u,
+      /configures 2 scheduler implementations/u,
     );
     assert.deepEqual(closes, { one: 1, two: 1 });
 
     const runtime = await createProjectLocalRuntime({
       root: directory,
-      runtimeServices: [scheduler("one"), scheduler("two")],
-      runtimeSelection: { scheduler: "scheduler.two" },
+      runtimeServices: [scheduler("two")],
     });
     assert.deepEqual(creates, { one: 0, two: 1 });
     await runtime.close();
-    assert.deepEqual(closes, { one: 2, two: 2 });
+    assert.deepEqual(closes, { one: 1, two: 2 });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
