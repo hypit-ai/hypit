@@ -1,0 +1,15 @@
+{
+  "name": "@narratage/media-execution",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@narratage/media": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/speech": "workspace:*"
+  }
+}
