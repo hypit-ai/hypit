@@ -17,9 +17,10 @@ An author module says which model and mode is intended. The KIE package says how
 exact request. Runtime configuration selects the KIE implementation but cannot turn Seedance into
 Grok, choose a model from a generic `speaker` declaration, or mutate a safety field.
 
-The current seven families expose sixteen exact capabilities because several models have distinct
-text/image/reference endpoints. This is not “sixteen Provider packages”: there is one KIE Provider
-package and seven independently importable author model modules.
+The current seven families expose eleven exact capabilities—one per exact model. Where KIE splits a
+model across several of its own endpoint slugs, that split is a route in this package's wire mapping
+rather than an extra Capability. This package imports no model package; it maps the input ports each
+model declares. See [`model-input-ports.md`](./model-input-ports.md).
 
 ## Content-addressed references
 
@@ -58,7 +59,9 @@ route arbitrary requests.
 ## Current verification
 
 The model slugs and request fields were checked against KIE's current Market and File Upload API
-documentation on 2026-08-06. Tests cover all seven family identities, Gemini's weighted reference
+documentation on 2026-08-06 and rechecked on 2026-08-08, when several limits recorded in the port
+tables were corrected; Seedance and MiniMax were additionally cross-checked against ByteDance, fal
+and MiniMax's own published specifications. Tests cover all seven family identities, Gemini's weighted reference
 quota, explicit Seedream safety identity, Blob upload, recoverable polling, immediate artifact
 persistence, missing-checkpoint recovery, HTTP-200 business rejection and ambiguous-submission
 no-retry behavior.
@@ -69,8 +72,10 @@ additional credits. The repeatable command and supported case names live in the 
 README rather than a dated result transcript.
 
 The repository contains no credential. One live run cannot guarantee future availability, prices,
-moderation behavior or undocumented enum changes, and eight of the sixteen exact endpoint variants
-have not received a paid live call.
+moderation behavior or undocumented enum changes, and most exact endpoint variants have not received
+a paid live call. The image-variant array caps for Seedream, Grok Imagine and Nano Banana Pro remain
+single-source and unverified; their per-model provenance is recorded in
+[`model-input-ports.md`](./model-input-ports.md).
 
 Generated video bytes remain raw Provider Products. Their all-stream inspection, attached-picture
 selection and shared-origin A/V normalization are owned by the separate

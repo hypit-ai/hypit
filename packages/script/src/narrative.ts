@@ -122,10 +122,24 @@ export function narrativeSelectionValue(selection: ParsedNarrative["selections"]
   return canonicalize(content);
 }
 
+export function narrativeMomentValue(moment: ParsedNarrative["moments"][number]): CanonicalValue {
+  const content = {
+    contract: "svml.narrative-moment@1",
+    id: moment.id,
+    occurrences: moment.occurrences.map((occurrence) => ({
+      occurrence: occurrence.occurrence,
+      affinity: occurrence.affinity,
+      boundary: semanticBoundary(occurrence.boundary),
+    })),
+  } as const;
+  return canonicalize(content);
+}
+
 function semanticBoundary(boundary: {
   readonly tokenIndex: number;
   readonly structuralPosition: number;
   readonly segmentId?: string;
+  readonly anchorId: string;
 }): CanonicalValue {
   return canonicalize(boundary);
 }

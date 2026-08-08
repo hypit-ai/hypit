@@ -1,5 +1,5 @@
-import type { NarrativeSelectionRef } from "@narratage/narrative";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import { assertProgramSpaceIdentity } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { CompleteSemanticMap } from "./types.js";
 
@@ -21,24 +21,46 @@ export function assertNarrativeSelectionIdentity(selection: NarrativeSelectionRe
   }
 }
 
-function boundaryFrame(
-  map: CompleteSemanticMap,
-  programSpace: ProgramSpace,
-  edge: NarrativeSelectionRef["occurrences"][number]["open"],
-  side: "open" | "close",
-): number {
-  const index = edge.boundary.tokenIndex;
-  if (side === "open") {
-    if (edge.affinity === "left" && index > 0) return map.tokens[index - 1]?.startFrame ?? 0;
-    return map.tokens[index]?.startFrame ?? programSpaceFrameCount(programSpace);
+export function assertNarrativeMomentIdentity(moment: NarrativeMomentRef): void {
+  if (
+    moment.contract !== "svml.narrative-moment@1"
+    || moment.id.length === 0
+    || moment.occurrences.length === 0
+  ) {
+    throw new Error("NarrativeMoment is invalid");
   }
-  if (edge.affinity === "right" && index < map.tokens.length) {
-    return map.tokens[index]?.endFrame ?? programSpaceFrameCount(programSpace);
-  }
-  return index > 0 ? map.tokens[index - 1]?.endFrame ?? 0 : 0;
 }
 
-/** Project every occurrence of one Script Selection onto one measured SemanticMap. */
+/**
+ * Every marker resolved its affinity to one of the map's 2M+2N anchors while the
+ * Script was parsed, where the surrounding structure was known. Locating is a
+ * lookup: Token cuts and Segment cuts are equal citizens here.
+ */
+function anchorFrames(map: CompleteSemanticMap): ReadonlyMap<string, number> {
+  return new Map(map.anchors.map((anchor) => [anchor.identity, anchor.frame]));
+}
+
+function frameFor(frames: ReadonlyMap<string, number>, anchorId: string, owner: string): number {
+  const frame = frames.get(anchorId);
+  if (frame === undefined) {
+    throw new Error(`${owner} names anchor ${anchorId}, which this SemanticMap does not contain`);
+  }
+  return frame;
+}
+
+/**
+ * Project every occurrence of one Script Selection onto one measured SemanticMap.
+ *
+ * One entry per occurrence, in Script order — the order the markers appear in the
+ * source. Segments may overlap in time, so Script order is not necessarily time
+ * order, and occurrences are located independently: they are never sorted,
+ * merged, clipped against one another or otherwise reconciled. A caller that
+ * needs time order sorts them itself.
+ *
+ * An occurrence whose two anchors meet or cross yields an empty or backwards
+ * span, returned as located. What a Selection covering no frames should show is
+ * a question about material, answered where that material is projected.
+ */
 export function selectionFrameSpans(
   map: CompleteSemanticMap,
   selection: NarrativeSelectionRef,
@@ -47,12 +69,45 @@ export function selectionFrameSpans(
   assertCompleteSemanticMapIdentity(map);
   assertNarrativeSelectionIdentity(selection);
   assertProgramSpaceIdentity(programSpace);
+  const frames = anchorFrames(map);
   return selection.occurrences.map((occurrence) => {
-    const startFrame = boundaryFrame(map, programSpace, occurrence.open, "open");
-    const endFrameExclusive = boundaryFrame(map, programSpace, occurrence.close, "close");
-    if (endFrameExclusive <= startFrame) {
-      throw new Error(`NarrativeSelection ${selection.id} contains an empty located occurrence`);
-    }
+    const startFrame = frameFor(frames, occurrence.open.boundary.anchorId, `NarrativeSelection ${selection.id}`);
+    const endFrameExclusive = frameFor(frames, occurrence.close.boundary.anchorId, `NarrativeSelection ${selection.id}`);
     return { startFrame, endFrameExclusive };
   });
+}
+
+/**
+ * The measured window a run of Script tokens occupies: the first token's start
+ * and the last token's end, exactly as located. Undefined when any named token
+ * is absent, leaving the caller to decide what that means.
+ *
+ * This is the second way the same points are addressed. Markers address them by
+ * anchor; a component that renders the Script text itself addresses them by
+ * token, because its runs are computed rather than authored.
+ */
+export function tokenSpanSeconds(
+  map: CompleteSemanticMap,
+  tokenIds: readonly string[],
+): { readonly startSec: number; readonly endSec: number } | undefined {
+  assertCompleteSemanticMapIdentity(map);
+  if (tokenIds.length === 0) return undefined;
+  const timing = new Map(map.tokens.map((token) => [token.tokenId, token]));
+  const located = tokenIds.map((id) => timing.get(id));
+  if (located.some((token) => token === undefined)) return undefined;
+  return { startSec: located[0]!.startSec, endSec: located.at(-1)!.endSec };
+}
+
+/** Project every occurrence of one Script Moment onto one measured SemanticMap. */
+export function momentFrames(
+  map: CompleteSemanticMap,
+  moment: NarrativeMomentRef,
+  programSpace: ProgramSpace,
+): readonly number[] {
+  assertCompleteSemanticMapIdentity(map);
+  assertNarrativeMomentIdentity(moment);
+  assertProgramSpaceIdentity(programSpace);
+  const frames = anchorFrames(map);
+  return moment.occurrences.map((occurrence) =>
+    frameFor(frames, occurrence.boundary.anchorId, `NarrativeMoment ${moment.id}`));
 }

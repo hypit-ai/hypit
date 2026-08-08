@@ -11,22 +11,101 @@ import {
   sealGeminiOmniRequest,
 } from "@narratage/gemini-omni";
 import { MemoryArtifactStore } from "@narratage/driver-node";
-import { generationManifest } from "@narratage/generation";
-import { gptImageDefinition, gptImageManifest, sealGptImage2Request } from "@narratage/gpt-image";
-import { grokImagineDefinition, grokImagineManifest, sealGrokImagineRequest } from "@narratage/grok-imagine";
-import { minimaxH3Definition, minimaxH3Manifest, sealMinimaxH3Request } from "@narratage/minimax-h3";
-import { nanoBananaDefinition, nanoBananaManifest, sealNanoBananaRequest } from "@narratage/nano-banana";
+import {
+  assertMappingCoversPorts,
+  compileWireRequest,
+  generationManifest,
+} from "@narratage/generation";
+import type { GenerationPortTable } from "@narratage/generation";
+import {
+  gptImageDefinition,
+  gptImageManifest,
+  sealGptImage2Request,
+} from "@narratage/gpt-image";
+import {
+  grokImagineDefinition,
+  grokImagineManifest,
+  sealGrokImagineRequest,
+} from "@narratage/grok-imagine";
+import {
+  minimaxH3Definition,
+  minimaxH3Manifest,
+  sealMinimaxH3Request,
+} from "@narratage/minimax-h3";
+import {
+  nanoBananaDefinition,
+  nanoBananaManifest,
+  sealNanoBananaRequest,
+} from "@narratage/nano-banana";
 import { kieModelCatalog } from "@narratage/provider-kie";
-import { seedanceDefinition, seedanceManifest, sealSeedanceRequest } from "@narratage/seedance";
-import { seedreamDefinition, seedreamManifest, sealSeedreamRequest } from "@narratage/seedream";
-import type { LinkedProgram } from "@narratage/protocol";
+import { seedanceDefinition, seedanceManifest, seedancePorts, sealSeedanceRequest } from "@narratage/seedance";
+import {
+  seedreamDefinition,
+  seedreamManifest,
+  sealSeedreamRequest,
+} from "@narratage/seedream";
+import type { CapabilityRef, LinkedProgram } from "@narratage/protocol";
+
+/**
+ * Every exact model this repository ships, paired with the Capability it publishes.
+ * The Capability carries the module version, so a mapping written for an older model
+ * version fails here rather than at submission time.
+ */
+const modelCapabilities: readonly { readonly ports: GenerationPortTable; readonly capability: CapabilityRef }[] = [
+  seedanceDefinition, minimaxH3Definition, geminiOmniDefinition, grokImagineDefinition,
+  gptImageDefinition, nanoBananaDefinition, seedreamDefinition,
+].flatMap((definition) => Object.values(definition.endpoints)
+  .map((endpoint) => ({ ports: endpoint.ports, capability: endpoint.capability })));
+
+function capabilityKey(ref: CapabilityRef): string {
+  return `${ref.module.name}@${ref.module.version}#${ref.name}`;
+}
+
+const upload = async (artifact: { readonly digest: string }) => `https://upload.test/${artifact.digest}`;
 
 test("the selected KIE release is seven exact model families and no Grok image capability", () => {
-  assert.equal(kieModelCatalog.length, 16);
-  assert.equal(kieModelCatalog.some((item) => item.key.startsWith("grok-imagine.") && item.result === "image"), false);
+  assert.equal(kieModelCatalog.length, 11);
+  assert.equal(
+    kieModelCatalog.some((item) => item.capability.name.startsWith("grok-") && item.result === "image"),
+    false,
+  );
   assert.deepEqual(
-    [...new Set(kieModelCatalog.map((item) => item.key.split(".", 1)[0]))].sort(),
-    ["gemini-omni", "gpt-image-2", "grok-imagine", "minimax-h3", "nano-banana", "seedance", "seedream"],
+    [...new Set(kieModelCatalog.map((item) => item.capability.module.name))].sort(),
+    [
+      "@narratage/gemini-omni",
+      "@narratage/gpt-image",
+      "@narratage/grok-imagine",
+      "@narratage/minimax-h3",
+      "@narratage/nano-banana",
+      "@narratage/seedance",
+      "@narratage/seedream",
+    ],
+  );
+});
+
+/**
+ * The check the old hand-written translators could not perform. Forgetting a
+ * reference role or an item field used to surface only after paid generation
+ * returned the wrong result; it now fails here.
+ */
+test("the KIE mapping covers every port every exact model declares", () => {
+  assert.equal(modelCapabilities.length, kieModelCatalog.length);
+  const mappings = new Map(kieModelCatalog.map((item) => [capabilityKey(item.capability), item]));
+  for (const { ports, capability } of modelCapabilities) {
+    // Matched on the full Capability, version included: a stale mapping cannot pass by name alone.
+    const mapping = mappings.get(capabilityKey(capability));
+    assert.ok(mapping, `KIE declares no mapping for ${capabilityKey(capability)}`);
+    assertMappingCoversPorts(ports, mapping);
+  }
+});
+
+test("dropping one reference modality from a mapping fails coverage before any spend", () => {
+  const seedance = kieModelCatalog.find((item) => item.capability.name === "seedance-2-mini");
+  assert.ok(seedance);
+  const { referenceAudio: _dropped, ...withoutAudio } = seedance.fields;
+  assert.throws(
+    () => assertMappingCoversPorts(seedancePorts["seedance-2-mini"], { ...seedance, fields: withoutAudio }),
+    /does not cover port referenceAudio/u,
   );
 });
 
@@ -67,33 +146,33 @@ test("Gemini Omni enforces the weighted seven-unit reference quota", async () =>
   const image = await artifacts.put(new Uint8Array([1]), "image/png");
   const video = await artifacts.put(new Uint8Array([2]), "video/mp4");
   assert.throws(() => sealGeminiOmniRequest({
-    contract: "svml.gemini-omni-request@1",
-    model: "gemini-omni-video",
-    prompt: "Use every reference.",
-    durationSec: 4,
-    aspectRatio: "16:9",
-    resolution: "720p",
-    images: [image, image, image],
-    videos: [{ artifact: video, startSec: 0, endSec: 1 }],
+    prompt: ["Use every reference."],
+    duration: [4],
+    aspectRatio: ["16:9"],
+    resolution: ["720p"],
+    images: [
+      { role: "image", artifact: image },
+      { role: "image", artifact: image },
+      { role: "image", artifact: image },
+    ],
+    excerpts: [{ role: "video", artifact: video, fields: { startSec: 0, endSec: 1 } }],
     characterIds: ["a", "b", "c"],
-  }), /quota is 8/u);
+  }), /uses 8 of its 7 shared/u);
 });
 
 test("Gemini Omni binds its documented output controls into the KIE request", async () => {
   const request = sealGeminiOmniRequest({
-    contract: "svml.gemini-omni-request@1",
-    model: "gemini-omni-video",
-    prompt: "A glass sphere rolls across a blue floor.",
-    durationSec: 4,
-    aspectRatio: "16:9",
-    resolution: "720p",
-    seed: 42,
+    prompt: ["A glass sphere rolls across a blue floor."],
+    duration: [4],
+    aspectRatio: ["16:9"],
+    resolution: ["720p"],
+    seed: [42],
   });
-  const adapter = kieModelCatalog.find((item) => item.key === "gemini-omni.video");
-  assert.ok(adapter);
-  const task = await adapter.task(request, async () => "https://upload.test/reference");
+  const mapping = kieModelCatalog.find((item) => item.capability.name === "gemini-omni-video");
+  assert.ok(mapping);
+  const task = await compileWireRequest(mapping, request, upload);
   assert.deepEqual(task.input, {
-    prompt: request.prompt,
+    prompt: "A glass sphere rolls across a blue floor.",
     duration: "4",
     aspect_ratio: "16:9",
     resolution: "720p",
@@ -102,137 +181,143 @@ test("Gemini Omni binds its documented output controls into the KIE request", as
 });
 
 test("Seedream safety policy is explicit author content and contributes to request identity", () => {
-  const unchecked = sealSeedreamRequest({
-    contract: "svml.seedream-5-lite-request@1",
-    model: "seedream-5-lite",
-    mode: "text",
-    prompt: "A fashion editorial.",
-    aspectRatio: "3:4",
-    quality: "basic",
-    outputFormat: "png",
-    nsfwCheck: false,
-  });
-  const checked = sealSeedreamRequest({
-    contract: "svml.seedream-5-lite-request@1",
-    model: "seedream-5-lite",
-    mode: "text",
-    prompt: "A fashion editorial.",
-    aspectRatio: "3:4",
-    quality: "basic",
-    outputFormat: "png",
-    nsfwCheck: true,
-  });
-  assert.equal(unchecked.nsfwCheck, false);
+  const base = {
+    prompt: ["A fashion editorial."],
+    aspectRatio: ["3:4"],
+    quality: ["basic"],
+    outputFormat: ["png"],
+  };
+  const unchecked = sealSeedreamRequest({ ...base, nsfwCheck: [false] });
+  const checked = sealSeedreamRequest({ ...base, nsfwCheck: [true] });
+  assert.deepEqual(unchecked.ports.nsfwCheck, [false]);
   assert.notEqual(digestOf(unchecked), digestOf(checked));
 });
 
-test("all sixteen exact capabilities translate to their documented KIE model slug", async () => {
+test("all eleven exact capabilities route to their documented KIE model slug", async () => {
   const store = new MemoryArtifactStore();
   const image = await store.put(new Uint8Array([1]), "image/png");
   const video = await store.put(new Uint8Array([2]), "video/mp4");
   const audio = await store.put(new Uint8Array([3]), "audio/wav");
-  const seedance = (model: "seedance-2" | "seedance-2-fast" | "seedance-2-mini") => sealSeedanceRequest({
-    contract: "svml.seedance-request@1",
-    model,
-    prompt: "A studio shot.",
-    mode: { kind: "text" },
-    resolution: model === "seedance-2" ? "1080p" : "720p",
-    aspectRatio: "16:9",
-    durationSec: 5,
-    generateAudio: false,
-    webSearch: false,
+  const seedance = (model: "seedance-2" | "seedance-2-fast" | "seedance-2-mini") => sealSeedanceRequest(model, {
+    prompt: ["A studio shot."],
+    resolution: [model === "seedance-2" ? "1080p" : "720p"],
+    aspectRatio: ["16:9"],
+    duration: [5],
+    generateAudio: [false],
+    webSearch: [false],
   });
-  const commonH3 = {
-    contract: "svml.minimax-h3-request@1" as const,
-    model: "minimax-h3" as const,
-    prompt: "A studio shot.",
-    durationSec: 6,
-  };
   const commonGrok = {
-    contract: "svml.grok-imagine-video-request@1" as const,
-    prompt: "A studio shot.",
-    aspectRatio: "16:9",
-    resolution: "480p" as const,
-    durationSec: 6,
-  };
-  const commonGpt = {
-    contract: "svml.gpt-image-2-request@1" as const,
-    model: "gpt-image-2" as const,
-    prompt: "A studio portrait.",
-    aspectRatio: "auto",
-  };
+    prompt: ["A studio shot."],
+    aspectRatio: ["16:9"],
+    resolution: ["480p"],
+    duration: [6],
+  } as const;
   const commonSeedream = {
-    contract: "svml.seedream-5-lite-request@1" as const,
-    model: "seedream-5-lite" as const,
-    prompt: "A studio portrait.",
-    aspectRatio: "1:1",
-    quality: "basic" as const,
-    outputFormat: "png" as const,
-    nsfwCheck: true,
+    prompt: ["A studio portrait."],
+    aspectRatio: ["1:1"],
+    quality: ["basic"],
+    outputFormat: ["png"],
+    nsfwCheck: [true],
   };
   const cases = [
-    ["seedance.standard", seedance("seedance-2"), "bytedance/seedance-2"],
-    ["seedance.fast", seedance("seedance-2-fast"), "bytedance/seedance-2-fast"],
-    ["seedance.mini", seedance("seedance-2-mini"), "bytedance/seedance-2-mini"],
-    ["minimax-h3.text", sealMinimaxH3Request({ ...commonH3, mode: "text", aspectRatio: "16:9" }), "minimax-h3/text-to-video"],
-    ["minimax-h3.frames", sealMinimaxH3Request({ ...commonH3, mode: "frames", firstFrame: image }), "minimax-h3/image-to-video"],
-    ["minimax-h3.reference", sealMinimaxH3Request({
-      ...commonH3,
-      mode: "reference",
-      aspectRatio: "adaptive",
-      references: [
-        { kind: "image", artifact: image },
-        { kind: "video", artifact: video },
-        { kind: "audio", artifact: audio },
-      ],
+    ["seedance-2", seedance("seedance-2"), "bytedance/seedance-2"],
+    ["seedance-2-fast", seedance("seedance-2-fast"), "bytedance/seedance-2-fast"],
+    ["seedance-2-mini", seedance("seedance-2-mini"), "bytedance/seedance-2-mini"],
+    ["minimax-h3", sealMinimaxH3Request({
+      prompt: ["A studio shot."],
+      duration: [6],
+      aspectRatio: ["16:9"],
+    }), "minimax-h3/text-to-video"],
+    ["minimax-h3", sealMinimaxH3Request({
+      prompt: ["A studio shot."],
+      duration: [6],
+      firstFrame: [{ role: "image", artifact: image }],
+    }), "minimax-h3/image-to-video"],
+    ["minimax-h3", sealMinimaxH3Request({
+      prompt: ["A studio shot."],
+      duration: [6],
+      referenceImage: [{ role: "image", artifact: image }],
+      referenceVideo: [{ role: "video", artifact: video }],
+      referenceAudio: [{ role: "audio", artifact: audio }],
     }), "minimax-h3/reference-to-video"],
-    ["gemini-omni.video", sealGeminiOmniRequest({
-      contract: "svml.gemini-omni-request@1",
-      model: "gemini-omni-video",
-      prompt: "A studio shot.",
-      durationSec: 4,
-      aspectRatio: "16:9",
-      resolution: "720p",
-      images: [image],
+    ["gemini-omni-video", sealGeminiOmniRequest({
+      prompt: ["A studio shot."],
+      duration: [4],
+      aspectRatio: ["16:9"],
+      resolution: ["720p"],
+      images: [{ role: "image", artifact: image }],
     }), "gemini-omni-video"],
-    ["grok-imagine.text", sealGrokImagineRequest({ ...commonGrok, model: "grok-imagine-video", mode: "text" }), "grok-imagine/text-to-video"],
-    ["grok-imagine.image", sealGrokImagineRequest({
+    ["grok-imagine-video", sealGrokImagineRequest("grok-imagine-video", commonGrok), "grok-imagine/text-to-video"],
+    ["grok-imagine-video", sealGrokImagineRequest("grok-imagine-video", {
       ...commonGrok,
-      model: "grok-imagine-video",
-      mode: "image",
-      images: [image],
+      images: [{ role: "image", artifact: image }],
     }), "grok-imagine/image-to-video"],
-    ["grok-imagine.preview-1.5", sealGrokImagineRequest({
-      ...commonGrok,
-      model: "grok-imagine-video-1.5-preview",
-      mode: "preview-1.5",
-    }), "grok-imagine-video-1-5-preview"],
-    ["gpt-image-2.text", sealGptImage2Request({ ...commonGpt, mode: "text" }), "gpt-image-2-text-to-image"],
-    ["gpt-image-2.image", sealGptImage2Request({ ...commonGpt, mode: "image", images: [image] }), "gpt-image-2-image-to-image"],
-    ["nano-banana.v2", sealNanoBananaRequest({
-      contract: "svml.nano-banana-request@1",
-      model: "nano-banana-2",
-      prompt: "A studio portrait.",
-      aspectRatio: "auto",
-      resolution: "2K",
-      outputFormat: "jpg",
+    ["grok-imagine-video-1.5-preview",
+      sealGrokImagineRequest("grok-imagine-video-1.5-preview", commonGrok),
+      "grok-imagine-video-1-5-preview"],
+    ["gpt-image-2", sealGptImage2Request({
+      prompt: ["A studio portrait."],
+      aspectRatio: ["auto"],
+      resolution: ["1K"],
+    }), "gpt-image-2-text-to-image"],
+    ["gpt-image-2", sealGptImage2Request({
+      prompt: ["A studio portrait."],
+      aspectRatio: ["auto"],
+      resolution: ["1K"],
+      images: [{ role: "image", artifact: image }],
+    }), "gpt-image-2-image-to-image"],
+    ["nano-banana-2", sealNanoBananaRequest("nano-banana-2", {
+      prompt: ["A studio portrait."],
+      aspectRatio: ["auto"],
+      resolution: ["2K"],
+      outputFormat: ["jpg"],
     }), "nano-banana-2"],
-    ["nano-banana.pro", sealNanoBananaRequest({
-      contract: "svml.nano-banana-request@1",
-      model: "nano-banana-pro",
-      prompt: "A studio portrait.",
-      images: [image],
-      aspectRatio: "1:1",
-      resolution: "1K",
-      outputFormat: "png",
+    ["nano-banana-pro", sealNanoBananaRequest("nano-banana-pro", {
+      prompt: ["A studio portrait."],
+      images: [{ role: "image", artifact: image }],
+      aspectRatio: ["1:1"],
+      resolution: ["1K"],
+      outputFormat: ["png"],
     }), "nano-banana-pro"],
-    ["seedream.text", sealSeedreamRequest({ ...commonSeedream, mode: "text" }), "seedream/5-lite-text-to-image"],
-    ["seedream.image", sealSeedreamRequest({ ...commonSeedream, mode: "image", images: [image] }), "seedream/5-lite-image-to-image"],
+    ["seedream-5-lite", sealSeedreamRequest(commonSeedream), "seedream/5-lite-text-to-image"],
+    ["seedream-5-lite", sealSeedreamRequest({
+      ...commonSeedream,
+      images: [{ role: "image", artifact: image }],
+    }), "seedream/5-lite-image-to-image"],
   ] as const;
-  for (const [key, request, expectedModel] of cases) {
-    const item = kieModelCatalog.find((candidate) => candidate.key === key);
-    assert.ok(item, key);
-    const task = await item.task(request, async (artifact) => `https://upload.test/${artifact.digest}`);
-    assert.equal(task.model, expectedModel, key);
+  for (const [model, request, expectedModel] of cases) {
+    const mapping = kieModelCatalog.find((candidate) => candidate.capability.name === model);
+    assert.ok(mapping, model);
+    const task = await compileWireRequest(mapping, request, upload);
+    assert.equal(task.model, expectedModel, `${model} -> ${expectedModel}`);
   }
+});
+
+test("one model reaching a service that splits it keeps the reference roles intact", async () => {
+  const store = new MemoryArtifactStore();
+  const image = await store.put(new Uint8Array([1]), "image/png");
+  const audio = await store.put(new Uint8Array([3]), "audio/wav");
+  const request = sealSeedanceRequest("seedance-2-mini", {
+    prompt: ["A presenter speaks."],
+    referenceImage: [{ role: "image", artifact: image }],
+    referenceAudio: [{ role: "audio", artifact: audio }],
+    resolution: ["720p"],
+    aspectRatio: ["9:16"],
+    duration: [5],
+    generateAudio: [true],
+    webSearch: [false],
+  });
+  const mapping = kieModelCatalog.find((item) => item.capability.name === "seedance-2-mini");
+  assert.ok(mapping);
+  const task = await compileWireRequest(mapping, request, upload);
+  assert.deepEqual(task.input, {
+    prompt: "A presenter speaks.",
+    reference_image_urls: [`https://upload.test/${image.digest}`],
+    reference_audio_urls: [`https://upload.test/${audio.digest}`],
+    resolution: "720p",
+    aspect_ratio: "9:16",
+    duration: 5,
+    generate_audio: true,
+    web_search: false,
+  });
 });

@@ -231,9 +231,11 @@ export default defineConfig({
     "local-developer-runtime.md",
     "media-execution-boundary.md",
     "media-inspection-and-normalization.md",
+    "model-input-ports.md",
     "node-package-activation.md",
     "runtime-adapter-loading.md",
     "source-and-run-compilation.md",
+    "speech-alignment.md",
   ],
   markdown: {
     theme: {

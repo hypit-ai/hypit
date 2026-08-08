@@ -340,8 +340,17 @@ Locator 必须提交覆盖全部 `2M + 2N` identity 的总映射：
 SemanticAnchorIdentity → ProgramPoint(ProgramSpace)
 ```
 
-完整性与精度正交：每个点都必须存在，同时可以标记为 `estimated`、`derived`
-或 `measured`。消费者不得补点、移动点或从相邻 occurrence 借点。每个 Segment
+标记的左右吸附在 Script 解析时就确定到唯一一个 anchor。Token 切点与 Segment
+切点在此完全平等：段首标记左吸附取该 Segment 自己的起始切点，绝不越到前一个
+Segment 的词尾。下游拿到的是 anchor 身份，不再自行做下标推算。
+
+定位是全覆盖的：每个 Segment 的每个 token 都带有窗口，无论它被测得、由相邻
+字符推得，还是因为转写从未触及而由插值补出。窗口倒序、越出所属 Segment 或
+与邻居重叠，都按测得原样报出；那是关于录音的事实，如何解释属于把它投影到
+时间轴的那一方。定位只在 Script、音频与转写不是同一组三件事时失败，绝不因为
+一个时间戳而失败。
+
+每个点都必须存在。消费者不得补点、移动点或从相邻 occurrence 借点。每个 Segment
 内部必须非降序：
 
 ```text
@@ -368,8 +377,7 @@ gap        B.start >  A.end
 Range 在不同 Locator 下反向或消失。
 
 同一份 SelectionSet 在不同 fulfillment 产生的 `CompleteSemanticMap` 上可得到
-预览或成片区间。Map 使用相同 identity；每个 anchor 以 `measured`、`derived` 或
-`estimated` 记录证据质量。Script 本身不含秒数、帧号或采样点。
+预览或成片区间。Map 使用相同 identity。Script 本身不含秒数、帧号或采样点。
 Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只
 量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
 

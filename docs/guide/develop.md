@@ -11,7 +11,7 @@ description: Getting started with Narratage development.
 |---|---|---|
 | Node.js | 22+ | everything |
 | pnpm | 9+ | workspace management |
-| Python | 3.10–3.13 | WhisperX and OpenCV [sidecar services](./services.md) |
+| Python | 3.10–3.13 | WhisperX and OpenCV [local services](./services.md) |
 | uv | latest | Python environment management |
 | ffmpeg / ffprobe | recent stable | media processing |
 | Chrome / Chromium | recent stable | HyperFrames rendering |
@@ -41,7 +41,7 @@ narratage/
 ├── spec/                  7 normative specification documents
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
-├── services/              Python sidecar services (whisperx, image-opencv)
+├── services/              Python services (whisperx, image-opencv)
 ├── tools/                 boundary tests and build scripts
 ├── package.json           root workspace manifest
 ├── pnpm-workspace.yaml    workspace: [packages/*]
@@ -56,6 +56,6 @@ narratage/
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime Profile](./runtime-profile.md) | JSON and TypeScript configuration, diagnostics, Build archive |
-| [Local services](./services.md) | WhisperX and OpenCV sidecar setup |
+| [Local services](./services.md) | WhisperX and OpenCV setup |
 | [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
 | [Conventions](./conventions.md) | Naming, module boundaries, wire data, TypeScript config |
