@@ -10,7 +10,7 @@ import {
   createRuntimeFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
-  RuntimeConfigRegistry,
+  RuntimeAdapterRegistry,
 } from "@narratage/local";
 
 test("declarative Runtime config starts the domain-neutral local defaults", async () => {
@@ -22,7 +22,7 @@ test("declarative Runtime config starts the domain-neutral local defaults", asyn
     permissions: [],
     scheduling: { maxConcurrency: 3, lanes: { generation: 2 } },
   }));
-  const runtime = await createRuntimeFromConfig(path, { registry: new RuntimeConfigRegistry() });
+  const runtime = await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() });
   try {
     assert.equal((await runtime.status("absent")).build, undefined);
   } finally {
@@ -54,7 +54,7 @@ test("declarative adapters are explicit and never guessed", async () => {
     permissions: [],
   }));
   await assert.rejects(
-    async () => await createRuntimeFromConfig(path, { registry: new RuntimeConfigRegistry() }),
+    async () => await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() }),
     /adapter example\.missing is not registered/u,
   );
 });
@@ -98,7 +98,7 @@ test("doctor names the external program a Provider needs, and the command that s
     permissions: [],
   }));
 
-  const registry = new RuntimeConfigRegistry();
+  const registry = new RuntimeAdapterRegistry();
   const declare = (use: string, service: unknown) =>
     registry.registerFacet(createRuntimeEndpointAdapterFacet({
       use,

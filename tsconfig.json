@@ -170,9 +170,6 @@
       "@narratage/transport-aws-lambda": [
         "packages/transport-aws-lambda/src/index.ts"
       ],
-      "@narratage/transport-process": [
-        "packages/transport-process/src/index.ts"
-      ],
       "@narratage/transport": [
         "packages/transport/src/index.ts"
       ],

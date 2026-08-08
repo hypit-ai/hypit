@@ -5,7 +5,6 @@ export {
   computeModuleDigest,
   createResolvedClosure,
   link,
-  resolveCapability,
   resolveProducer,
   resolveType,
   sealRecord,
@@ -18,7 +17,6 @@ export {
 } from "./link.js";
 export {
   EMPTY_REALIZATION_DIGEST,
-  bindingForOutput,
   operationResultRecord,
   operationResultType,
   resolveCandidate,
@@ -26,14 +24,13 @@ export {
   resolveOperation,
   sealBuildRequest,
   sealCompiledGraph,
-  selectedCandidate,
   selectedSatisfaction,
   satisfactionForOutput,
   valueRefKey,
   verifyBuildRequest,
   verifyCompiledGraph,
 } from "./graph.js";
-export { compileBuild, deriveBuildPlan, validatePlan } from "./plan.js";
+export { compileBuild, validatePlan } from "./plan.js";
 export { reduce, start } from "./reducer.js";
 export { verifyBuildState } from "./verify.js";
 export { validateStoredValue } from "./schema.js";

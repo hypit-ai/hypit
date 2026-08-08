@@ -171,8 +171,6 @@ export function satisfactionForOutput(
 }
 
 /** @deprecated Use satisfactionForOutput. */
-export const bindingForOutput = satisfactionForOutput;
-
 export function selectedSatisfaction(
   graph: CompiledGraph,
   request: BuildRequest,
@@ -185,8 +183,6 @@ export function selectedSatisfaction(
 }
 
 /** @deprecated Use selectedSatisfaction. */
-export const selectedCandidate = selectedSatisfaction;
-
 export function operationResultRecord(operation: OperationNode): string {
   return operation.result.record;
 }
@@ -476,6 +472,3 @@ export function verifyBuildRequest(
   }
 }
 
-export function sameProducerRef(left: ProducerRef, right: ProducerRef): boolean {
-  return producerKey(left) === producerKey(right);
-}

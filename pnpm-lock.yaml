@@ -1687,15 +1687,6 @@ importers:
         specifier: workspace:*
         version: link:../transport
 
-  packages/transport-process:
-    dependencies:
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/transport':
-        specifier: workspace:*
-        version: link:../transport
-
   packages/validation:
     dependencies:
       '@narratage/core':
