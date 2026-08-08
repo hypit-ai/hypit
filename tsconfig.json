@@ -141,6 +141,7 @@
       "@narratage/provider-kie": [
         "packages/provider-kie/src/index.ts"
       ],
+      "@narratage/media-execution": ["packages/media-execution/src/index.ts"],
       "@narratage/media-pipeline": [
         "packages/media-pipeline/src/index.ts"
       ],
