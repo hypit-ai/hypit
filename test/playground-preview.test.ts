@@ -6,6 +6,7 @@ import { sealComposition } from "@narratage/composition";
 import { sealProgramSpace } from "@narratage/program-space";
 
 import { REGISTRY, matchRecipe } from "../tools/playground/src/registry/index.js";
+import { registerArtifact } from "../tools/playground/src/preview/artifacts.js";
 
 /**
  * Every adapter, through the whole compiler path it will run in the browser.
@@ -23,10 +24,41 @@ const programSpace = sealProgramSpace({
 });
 const canvas = { width: 1080, height: 1920, clearColor: "#09090b" };
 
+/** A named Artifact with no bytes — enough to build with, not to draw. */
+const VIDEO = registerArtifact({
+  digest: `sha256:${"a1".repeat(32)}`,
+  size: 1024,
+  mediaType: "video/mp4",
+  durationSec: 4,
+} as Parameters<typeof registerArtifact>[0]);
+
+/**
+ * Fills in whatever media a component needs.
+ *
+ * Components that draw supplied footage contribute nothing until they have
+ * some — an empty picker is not an error — so their defaults have to be
+ * completed before there is a document to judge.
+ */
+function withMedia(content: unknown): unknown {
+  const bag = structuredClone(content) as Record<string, unknown>;
+  for (const value of Object.values(bag)) {
+    if (!Array.isArray(value)) continue;
+    for (const entry of value as Record<string, unknown>[]) {
+      if ("media" in entry) entry["media"] = VIDEO.digest;
+    }
+  }
+  return bag;
+}
+
 for (const component of REGISTRY) {
   test(`${component.id} compiles its defaults into a legal document`, () => {
     const { parameters, content } = component.defaults();
-    const tracks = component.build({ parameters, content, programSpace, canvas });
+    const tracks = component.build({
+      parameters,
+      content: withMedia(content) as typeof content,
+      programSpace,
+      canvas,
+    });
     assert.ok(tracks.length > 0, "an adapter must contribute at least one Track");
     const document = compileHyperframesDocument(sealComposition({
       contract: "svml.composition@1",
@@ -52,9 +84,20 @@ for (const component of REGISTRY) {
         contract: "svml.composition@1",
         id: component.id,
         canvas,
-        tracks: component.build({ parameters, content, programSpace: short, canvas }),
+        tracks: component.build({
+          parameters,
+          content: withMedia(content) as typeof content,
+          programSpace: short,
+          canvas,
+        }),
       }), short);
     });
+  });
+
+  test(`${component.id} draws nothing rather than failing before its media arrives`, () => {
+    // An empty picker is a state to pass through, not an error to report.
+    const { parameters, content } = component.defaults();
+    assert.doesNotThrow(() => component.build({ parameters, content, programSpace, canvas }));
   });
 }
 

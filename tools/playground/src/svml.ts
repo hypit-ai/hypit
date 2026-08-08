@@ -59,3 +59,11 @@ export type { ParsedSvsSheet, SvsRecipe } from "@narratage/svs";
 
 export { maskSourceHeader, parseSourceHeader } from "@narratage/source";
 export type { SourceHeader } from "@narratage/source";
+
+export type { MediaArtifactRef } from "@narratage/media";
+
+export { compileBrollProduct, sealBrollProgram } from "@narratage/broll";
+export type { BrollItem, BrollMotion, BrollProgram } from "@narratage/broll";
+
+export { projectSpeechVisual } from "@narratage/speech-basis";
+export type { SpeechBasis } from "@narratage/speech";
