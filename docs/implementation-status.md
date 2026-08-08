@@ -175,8 +175,8 @@ Implemented and executable:
 - planner-neutral CaptionPlan: ordered Cue cuts plus zero or more declared attributes per display
   word, with no text rewrite or timing authority;
 - total explicit default Caption Style plus ordered Role/word-subset whole-style overrides;
-- `@narratage/caption-fine`: the first concrete Style family, owning its SVS schema, optional
-  `important` field, box/font parameters and field-dependent per-word painting;
+- `@narratage/caption-fine`: the first executable concrete Style-family baseline, owning its SVS
+  schema, box/font parameters and VisualTrack lowering;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
@@ -185,6 +185,8 @@ Implemented and executable:
 
 Still pre-freeze and deliberately deferred:
 
+- removal of the temporary Fine-only `important` field and convergence on uniform static words per
+  Cue; random word sizing is explicitly outside the accepted Fine direction;
 - complete Text three-box, exact-font and layered-decoration behavior;
 - Caption CJK/emoji/multiline/pixel acceptance;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
