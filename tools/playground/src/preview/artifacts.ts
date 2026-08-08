@@ -81,5 +81,5 @@ export function artifactLabel(digest: string | undefined): string {
   const size = ref.size < 1024 * 1024
     ? `${Math.round(ref.size / 1024)} KB`
     : `${(ref.size / 1024 / 1024).toFixed(1)} MB`;
-  return `${ref.mediaType} · ${size}`;
+  return `${ref.mediaType}, ${size}`;
 }

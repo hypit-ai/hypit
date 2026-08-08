@@ -70,7 +70,7 @@ function label(moduleName: string, producer: ProducerDeclaration, siblings: numb
   const rest = producer.name
     .replace(/^(?:render|project|compile)-/u, "")
     .replace(new RegExp(`^${short}-`, "u"), "");
-  return `${short} · ${rest}`;
+  return `${short} ${rest}`;
 }
 
 /**

@@ -30,8 +30,7 @@ const CSS = `
 }
 .rail-canvas { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 6px; align-items: center; margin-top: 9px; }
 .rail-canvas span { color: var(--muted); font-size: 11px; }
-.section { color: var(--accent); font-size: 11px; letter-spacing: .05em;
-  text-transform: uppercase; margin: 15px 0 4px; }
+.section { color: var(--accent); font-size: 11px; margin: 15px 0 4px; }
 .section:first-child { margin-top: 0; }
 .module { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 4px; }
 .sheet-note { color: var(--muted); font-size: 12px; margin-top: 7px; }

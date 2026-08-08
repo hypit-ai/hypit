@@ -21,7 +21,7 @@ export const FORM_CSS = `
 }
 .form-control .form-file-label { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .form-group { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 5px 0; }
-.form-group > legend { color: var(--accent); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; padding: 0 5px; }
+.form-group > legend { color: var(--accent); font-size: 11px; padding: 0 5px; }
 .form-item { border-top: 1px dashed var(--line); padding-top: 7px; margin-top: 7px; }
 .form-item:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
 .form-actions { display: flex; gap: 6px; margin-top: 7px; }
