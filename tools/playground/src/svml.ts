@@ -53,3 +53,9 @@ export type {
 
 export { renderTextTrack, sealTextTrackProgram } from "@narratage/text-track";
 export type { TextItem, TextTrackProgram } from "@narratage/text-track";
+
+export { parseSvs } from "@narratage/svs";
+export type { ParsedSvsSheet, SvsRecipe } from "@narratage/svs";
+
+export { maskSourceHeader, parseSourceHeader } from "@narratage/source";
+export type { SourceHeader } from "@narratage/source";
