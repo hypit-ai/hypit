@@ -108,6 +108,7 @@ export default defineConfig({
     "build-archive-and-egress.md",
     "caption-gemini-provider-contract.md",
     "graph-first-value-boundary.md",
+    "hyperframes-aws-runtime.md",
     "image-transform.md",
     "kie-generation-modules.md",
     "local-developer-runtime.md",

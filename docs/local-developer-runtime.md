@@ -1,8 +1,8 @@
 # Local developer Runtime
 
-Status: implemented reference assembly, KIE generation Provider, local media Provider, local image
-transform Provider, local HyperFrames Provider, local WhisperX Provider and its locked Python
-service. Hosted/AWS variants remain optional.
+Status: implemented reference assembly, KIE generation Provider, local media/image/HyperFrames/
+WhisperX Providers, S3 ArtifactStore, AWS media Provider and recoverable AWS HyperFrames Provider.
+Hosted orchestration and AWS WhisperX remain optional.
 
 ## 1. Outcome
 
@@ -45,6 +45,11 @@ authority that asks Core what is ready and accepts returned Events.
 | `@narratage/transport-aws-lambda` | synchronous bounded JSON invocation | capability identity or remote job semantics |
 | `@narratage/transport-process` | shell-free, bounded, no-ambient-env local JSON process | capability identity or executable choice from source |
 | `@narratage/provider-*` | one exact external implementation and its polling/recovery | Core graph traversal, author parsing |
+
+The implemented remote video Endpoints are `@narratage/provider-media-aws-lambda` and
+`@narratage/provider-hyperframes-aws-lambda`. The former is synchronous Lambda transport around
+the shared media execution body; the latter owns one recoverable Step Functions job. See
+[`hyperframes-aws-runtime.md`](./hyperframes-aws-runtime.md) before provisioning its stack.
 
 SQLite is deliberately optional. `createLocalRuntime()` accepts any implementation of the same
 ports, so an internal server can use Postgres and S3 without changing Core or Endpoint packages.
@@ -255,9 +260,9 @@ Provider naming follows execution reality. Seedance is an author-selected method
 Volcengine are Provider packages that may each fulfill explicit Seedance capabilities. OpenCV,
 WhisperX and HyperFrames are concrete implementations we may run locally or replace at deployment.
 The local packages exist as `provider-image-opencv-local`, `provider-whisperx-local` and
-`provider-hyperframes-local`; matching remote packages may be added without changing author syntax
-or Core. Lambda and process transports remain lower-level helpers and cannot register any of those
-capabilities by themselves.
+`provider-hyperframes-local`; AWS media and HyperFrames packages already satisfy the same public
+Needs without changing author syntax or Core. Lambda and process transports remain lower-level
+helpers and cannot register any capability by themselves.
 
 ## 5. Build command and recovery
 
