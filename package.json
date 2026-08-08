@@ -15,7 +15,8 @@
     "smoke:kie": "node --import tsx packages/provider-kie/test/live-smoke.ts",
     "narratage": "node --import tsx packages/video-cli/src/cli.ts",
     "svml": "node --import tsx packages/video-cli/src/cli.ts",
-    "build:media-lambda": "pnpm --filter @narratage/media-lambda build"
+    "build:media-lambda": "pnpm --filter @narratage/media-lambda build",
+    "build:media-lambda-layer": "pnpm --filter @narratage/media-lambda build:layer"
   },
   "engines": {
     "node": ">=22"

@@ -1,0 +1,28 @@
+# `@narratage/provider-hyperframes-aws-lambda`
+
+Recoverable AWS Step Functions/Lambda implementation of the exact
+`@narratage/render-hyperframes#render-visual` capability.
+
+The Endpoint stages the immutable `HyperframesDocument` with the shared
+`stageHyperframesProject()` layout, uploads that content-addressed site, starts one distributed
+render and journals its execution ARN. Its Step Functions execution name is derived from the
+Runtime submission key, so recovery cannot accidentally submit the same attempt twice.
+Cancellation uses that same identity to stop the remote Step Functions execution, including the
+crash window before the first checkpoint was saved.
+
+The distributed HyperFrames contract supports only integer 24, 30 and 60 fps. Unsupported Needs
+are declined by `supports()` so another Endpoint may satisfy them; no frame rate or GPU intent is
+silently changed. The Provider always requests strict SDR H.264, exact CFR assembly, software
+browser rendering and plan protocol v2. Chunking remains deployment configuration.
+
+On success the Endpoint requires HyperFrames' plan and completed-frame counts to equal the source
+document, then streams the returned S3 object into the selected content-addressed ArtifactStore.
+This is a renderer execution receipt, not an ffprobe claim about the MP4 byte stream. Container and
+stream conformance stays in the explicit media inspection/mux capabilities, so the orchestrating
+machine does not acquire a hidden FFmpeg dependency.
+
+The production client uses the AWS SDK default credential chain. No access key is accepted by the
+package configuration or written into Runtime identity.
+
+See [`docs/hyperframes-aws-runtime.md`](../../docs/hyperframes-aws-runtime.md) for Runtime Profile
+configuration, recovery semantics and the resource review required before the first real deploy.
