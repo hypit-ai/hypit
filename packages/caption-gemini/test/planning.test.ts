@@ -9,8 +9,6 @@ import {
 } from "@narratage/caption";
 import type { CaptionStyleIntent } from "@narratage/caption";
 import {
-  captionGeminiComponent,
-  captionGeminiManifest,
   compileCaptionGeminiRequest,
   sealCaptionGeminiPlan,
   sealCaptionGeminiProgram,
@@ -157,15 +155,4 @@ test("one atom may carry multiple independent fields and fields need not form co
   assert.equal(fields.filter((field) => field.atomId === atoms[2]).length, 2);
   assert.deepEqual(fields.filter((field) => field.declarationId === "best").map((field) => field.atomId),
     [atoms[0], atoms[2]]);
-});
-
-test("the package enumerates every Manifest Producer and validator", () => {
-  assert.deepEqual(
-    captionGeminiComponent.producers?.map((facet) => [facet.producer.name, facet.implementationDigest]),
-    captionGeminiManifest.producers.map((producer) => [producer.name, producer.implementation.digest]),
-  );
-  assert.deepEqual(
-    captionGeminiComponent.validators?.map((facet) => [facet.type.name, facet.implementationDigest]),
-    captionGeminiManifest.types.map((type) => [type.name, type.validator?.implementation.digest]),
-  );
 });

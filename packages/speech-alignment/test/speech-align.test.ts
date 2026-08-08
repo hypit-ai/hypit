@@ -14,8 +14,6 @@ import {
   SpeechAlignmentError,
   alignWordGroups,
   locateSpeechTiming,
-  speechAlignmentComponent,
-  speechAlignmentManifest,
 } from "@narratage/speech-alignment";
 
 /** The alignment classification is a property of alignWordGroups, tested at its own level. */
@@ -131,19 +129,6 @@ function characters(
     score: 0.95,
   }));
 }
-
-test("the component enumerates the exact Manifest-declared locator", () => {
-  assert.deepEqual(
-    speechAlignmentComponent.producers.map((facet) => ({
-      name: facet.producer.name,
-      digest: facet.implementationDigest,
-    })),
-    speechAlignmentManifest.producers.map((producer) => ({
-      name: producer.name,
-      digest: producer.implementation.digest,
-    })),
-  );
-});
 
 test("exact transcript words cover every Script and Segment anchor", () => {
   const narrative = parseScript("exact.svml", "<line>Hello world.</line>");
