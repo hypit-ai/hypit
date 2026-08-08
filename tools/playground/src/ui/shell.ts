@@ -1,9 +1,13 @@
 import { REGISTRY, componentById } from "../registry/index.js";
 import type { PreviewComponent } from "../registry/index.js";
 import { renderPreview } from "../preview/render.js";
+import { discover } from "../svs/discover.js";
+import type { Discovery, PreviewSubject } from "../svs/discover.js";
 import { sealProgramSpace } from "../svml.js";
 import type { CanonicalValue } from "../svml.js";
+import { BROWSE_CSS, createBrowser, readSheet } from "./browse.js";
 import { FORM_CSS, buildForm } from "./form.js";
+import { GALLERY_CSS, renderGallery } from "./gallery.js";
 import { createStage } from "./stage.js";
 
 const CSS = `
@@ -21,9 +25,18 @@ const CSS = `
 .rail-canvas { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 6px; align-items: center; margin-top: 9px; }
 .rail-canvas span { color: var(--muted); font-size: 11px; }
 .section { color: var(--accent); font-size: 11px; letter-spacing: .05em;
-  text-transform: uppercase; margin: 14px 0 4px; }
+  text-transform: uppercase; margin: 14px 0 4px; display: flex; justify-content: space-between; align-items: baseline; }
 .section:first-child { margin-top: 0; }
+.section button {
+  border: 0; background: none; color: var(--muted); cursor: pointer;
+  font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; padding: 0;
+}
+.section button:hover { color: var(--text); }
+.sheet-note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.sheet-note b { color: var(--accent); font-weight: 500; }
+${BROWSE_CSS}
 ${FORM_CSS}
+${GALLERY_CSS}
 `;
 
 type Draft = { parameters: CanonicalValue; content: CanonicalValue };
@@ -64,7 +77,8 @@ export function mountShell(root: HTMLElement): void {
   }
 
   const stage = createStage();
-  root.append(rail, stage.element);
+  let main: HTMLElement = stage.element;
+  root.append(rail, main);
 
   const canvas = { width: 1080, height: 1920, clearColor: "#09090b" };
   const space = { fps: 30, durationSec: 4 };
@@ -73,16 +87,28 @@ export function mountShell(root: HTMLElement): void {
   fpsInput.value = String(space.fps);
   durationInput.value = String(space.durationSec);
 
-  // One draft per component, so switching away and back keeps your edits.
+  // Mode B keeps one draft per component; mode A keeps one per Recipe, so
+  // switching between two captions from a sheet does not merge their edits.
   const drafts = new Map<string, Draft>();
   let active: PreviewComponent = REGISTRY[0]!;
+  let activeKey = active.id;
+  let sheet: { name: string; discovery: Discovery } | undefined;
 
-  function draft(component: PreviewComponent): Draft {
-    const existing = drafts.get(component.id);
+  function draft(key: string, make: () => Draft): Draft {
+    const existing = drafts.get(key);
     if (existing !== undefined) return existing;
-    const created = component.defaults();
-    drafts.set(component.id, created);
+    const created = make();
+    drafts.set(key, created);
     return created;
+  }
+
+  function currentDraft(): Draft {
+    return draft(activeKey, () => active.defaults());
+  }
+
+  function swapMain(next: HTMLElement): void {
+    main.replaceWith(next);
+    main = next;
   }
 
   let queued = 0;
@@ -91,47 +117,126 @@ export function mountShell(root: HTMLElement): void {
     queued = window.setTimeout(render, 120);
   }
 
+  function programSpace() {
+    return sealProgramSpace({
+      contract: "svml.program-space@1",
+      durationSec: space.durationSec,
+      frameRate: { numerator: space.fps, denominator: 1 },
+    });
+  }
+
   function render(): void {
-    const current = draft(active);
+    if (main !== stage.element) swapMain(stage.element);
+    const current = currentDraft();
     try {
-      const programSpace = sealProgramSpace({
-        contract: "svml.program-space@1",
-        durationSec: space.durationSec,
-        frameRate: { numerator: space.fps, denominator: 1 },
-      });
-      const tracks = active.build({
-        parameters: current.parameters,
-        content: current.content,
-        programSpace,
+      const resolved = programSpace();
+      stage.show(renderPreview({
+        id: active.id,
         canvas,
-      });
-      stage.show(renderPreview({ id: active.id, canvas, programSpace, tracks }));
+        programSpace: resolved,
+        tracks: active.build({
+          parameters: current.parameters,
+          content: current.content,
+          programSpace: resolved,
+          canvas,
+        }),
+      }));
     } catch (error) {
       // The compiler's own message, verbatim. The last good frame stays up.
       stage.showError(error instanceof Error ? error.message : String(error));
     }
   }
 
-  function renderForm(): void {
-    const current = draft(active);
+  function showGallery(): void {
+    if (sheet === undefined) return;
+    swapMain(renderGallery({
+      subjects: sheet.discovery.subjects,
+      unmatched: sheet.discovery.unmatched,
+      canvas,
+      fps: space.fps,
+      durationSec: space.durationSec,
+      onFocus: focusSubject,
+    }));
+  }
+
+  function focusSubject(subject: PreviewSubject): void {
+    active = subject.component;
+    activeKey = subject.key;
+    picker.value = subject.component.id;
+    draft(subject.key, () => ({ parameters: subject.parameters, content: subject.content }));
+    renderRail();
+    render();
+  }
+
+  function loadSheet(path: string): void {
+    void readSheet(path).then((source) => {
+      const discovery = discover(path, source);
+      sheet = { name: path, discovery };
+      // A Film Recipe is not a preview subject; it says how big the frame is.
+      const offer = discovery.canvases[0];
+      if (offer !== undefined) {
+        canvas.width = offer.width;
+        canvas.height = offer.height;
+        canvas.clearColor = offer.clearColor;
+        space.fps = offer.fps;
+        widthInput.value = String(offer.width);
+        heightInput.value = String(offer.height);
+        fpsInput.value = String(offer.fps);
+      }
+      renderRail();
+      showGallery();
+    }).catch((error: unknown) => {
+      sheet = undefined;
+      renderRail();
+      stage.showError(error instanceof Error ? error.message : String(error));
+    });
+  }
+
+  const browser = createBrowser(loadSheet);
+
+  function section(title: string, action?: { label: string; run: () => void }): HTMLElement {
+    const element = document.createElement("div");
+    element.className = "section";
+    const caption = document.createElement("span");
+    caption.textContent = title;
+    element.append(caption);
+    if (action !== undefined) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = action.label;
+      button.addEventListener("click", action.run);
+      element.append(button);
+    }
+    return element;
+  }
+
+  function renderRail(): void {
+    const current = currentDraft();
     body.replaceChildren();
-    const parameters = document.createElement("div");
-    parameters.className = "section";
-    parameters.textContent = "Parameters";
-    const content = document.createElement("div");
-    content.className = "section";
-    content.textContent = "Content";
-    body.append(
-      parameters,
-      buildForm(active.parameters, current.parameters, active.hints ?? {}, schedule),
-      content,
-      buildForm(active.content, current.content, active.hints ?? {}, schedule),
-    );
+
+    body.append(section("Stylesheet"), browser.element);
+    if (sheet !== undefined) {
+      const note = document.createElement("div");
+      note.className = "sheet-note";
+      const count = sheet.discovery.subjects.length;
+      note.append(document.createTextNode(`${count} previewable Recipe(s) in `));
+      const id = document.createElement("b");
+      id.textContent = sheet.discovery.sheetId ?? sheet.name;
+      note.append(id);
+      body.append(note, section("", { label: "Show all", run: showGallery }));
+    }
+
+    body.append(section("Parameters"));
+    body.append(buildForm(active.parameters, current.parameters, active.hints ?? {}, schedule));
+    body.append(section("Content"));
+    body.append(buildForm(active.content, current.content, active.hints ?? {}, schedule));
   }
 
   picker.addEventListener("input", () => {
     active = componentById(picker.value) ?? active;
-    renderForm();
+    // Choosing from the list leaves any focused Recipe behind.
+    activeKey = active.id;
+    renderRail();
     render();
   });
 
@@ -147,6 +252,6 @@ export function mountShell(root: HTMLElement): void {
     });
   }
 
-  renderForm();
+  renderRail();
   render();
 }
