@@ -1,0 +1,21 @@
+{
+  "name": "@narratage/media-lambda",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/handler.ts"
+  },
+  "dependencies": {
+    "@narratage/artifact-store-s3": "workspace:*",
+    "@narratage/media-execution": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/provider-media-aws-lambda": "workspace:*"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
