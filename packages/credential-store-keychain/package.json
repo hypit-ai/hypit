@@ -1,0 +1,20 @@
+{
+  "name": "@narratage/credential-store-keychain",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/credential-store-env": "workspace:*"
+  }
+}
