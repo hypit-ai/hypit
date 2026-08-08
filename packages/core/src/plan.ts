@@ -418,4 +418,3 @@ export function producerStep(plan: BuildPlan, id: string): ProducerStep {
 }
 
 /** @deprecated Use compileBuild. */
-export const deriveBuildPlan = compileBuild;

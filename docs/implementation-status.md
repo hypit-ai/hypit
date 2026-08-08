@@ -90,7 +90,7 @@ Implemented:
   `get --name`, without changing Core Build identity or Runtime Closure;
 - `doctor` configuration diagnostics for the current trusted adapters, filesystem streaming Artifact
   transfer and explicit dry-run/apply reachability GC over every retained BuildState and Operation;
-- `@narratage/transport`, `@narratage/transport-process`, `@narratage/transport-aws-lambda`: capability-neutral
+- `@narratage/transport`, `@narratage/transport-aws-lambda`: capability-neutral
   invocation seams.
 
 The removed CLI `--pin`, `--target` and `--accept-substitute` path cannot synthesize hidden execution
