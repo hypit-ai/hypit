@@ -26,9 +26,6 @@ the working tree contains only documents that should inform current implementati
   locking, contributions and Host-selected facet activation.
 - [`local-developer-runtime.md`](./local-developer-runtime.md) — local SQLite/filesystem
   Runtime, recovery and environment replacement.
-- [`credential-store-composition.md`](./credential-store-composition.md) — why the
-  credential-store role could hold several implementations, what widening it would break,
-  and why it waits for a deployment that needs it.
 - [`runtime-adapter-loading.md`](./runtime-adapter-loading.md) — separately locked Provider
   and Store activation, physical-code identity, diagnostics and explicit Artifact maintenance.
 - [`build-archive-and-egress.md`](./build-archive-and-egress.md) — Targets, durable Records,
@@ -55,8 +52,8 @@ These video contracts are executable candidates, not yet an open-source compatib
 - [`kie-generation-modules.md`](./kie-generation-modules.md)
 - [`media-inspection-and-normalization.md`](./media-inspection-and-normalization.md)
 - [`media-execution-boundary.md`](./media-execution-boundary.md)
-- [`hyperframes-aws-runtime.md`](./hyperframes-aws-runtime.md) — recoverable Endpoint semantics and
-  the resource review required before the first stack deployment.
+- [`hyperframes-aws-runtime.md`](./hyperframes-aws-runtime.md) — recoverable Endpoint semantics,
+  deployment resource review and the live AWS canary.
 - [`image-transform.md`](./image-transform.md)
 - [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
 - [`../services/whisperx/README.md`](../services/whisperx/README.md)

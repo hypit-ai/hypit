@@ -1,10 +1,11 @@
 # Narratage roadmap
 
-Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-07.
+Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-09.
 
-Narratage can already execute one real paid talking-video build. The active roadmap is no longer “make a
-video possible.” It is to make the domain-neutral system pleasant to operate and to make execution
-environments replaceable. Video-style breadth is deliberately deferred.
+Narratage can already execute one real paid talking-video build. The active roadmap is no longer
+“make a video possible.” It is to finish the few remaining domain-neutral operational gaps, keep
+execution environments replaceable, and make the first real video packages delivery-grade without
+prematurely freezing their public ABI.
 
 ## A. Domain-neutral system
 
@@ -50,7 +51,7 @@ to open a service, write state or issue a request during diagnosis. Diagnostics 
 coalesce a missing prerequisite instead of reporting both the prerequisite and the resulting
 construction failure.
 
-### A3. Public package lifecycle
+### A3. Public package lifecycle — release phase, not current execution work
 
 - generate implementation locks through supported CLI commands;
 - replace development implementation labels with release-built code identities;
@@ -64,7 +65,7 @@ marketplace are not prerequisites for the first developer release.
 The current release and restart boundary is documented in
 [`open-source-distribution.md`](./open-source-distribution.md).
 
-### A4. Trusted and untrusted extension levels
+### A4. Trusted and untrusted extension levels — trusted works, arbitrary code is later
 
 First make trusted local packages straightforward and diagnosable. Later add isolation for arbitrary
 community Frontends, Producers and Validators:
@@ -95,16 +96,19 @@ There is no automatic result reuse or hidden Candidate selection.
 
 ## B. Environment and Provider work
 
-### B1. Repeatable live acceptance — manual path passed
+### B1. Explicit live Run sources — implemented
 
-One paid four-take generation Build plus one explicit Candidate-reuse Build covered the complete
-combined path manually on 2026-08-07. Turn `examples/echo-pro-aroll` into a credential-safe opt-in
-acceptance command that can also run a fresh uninterrupted all-`exact` Build:
+One paid four-take generation Build plus one explicit Candidate-reuse Build covered the combined
+path on 2026-08-07. The two reusable execution choices are already the checked-in Run sources:
 
-- never commits credentials or paid output;
-- verifies exact Endpoint coverage before spending money;
-- runs the complete generation, media, alignment, planning and render path;
-- proves a second Build can use explicit Existing-Value Candidates without another generation call.
+- `build.svrun` targets the final video with `exact` fidelity and therefore demands fresh generation;
+- `reuse-generated.svrun` explicitly selects four historical Build-Record Candidates and prunes
+  their generation branches;
+- `doctor`, `plan`, `build --follow` and `get` are the ordinary user path around either Run;
+- credentials, local source assets, Build databases and paid outputs remain outside Git.
+
+A future uninterrupted paid rerun is operational evidence obtained by executing `build.svrun`, not
+a missing compiler feature and not a reason to add an Echo Pro-specific TypeScript orchestrator.
 
 ### B2. Remote execution only where demanded
 
@@ -122,7 +126,8 @@ contract; Lambda placement cannot define another media meaning.
 
 ### B3. Production environment adapters
 
-- Keychain, Secrets Manager or Vault CredentialStore;
+- Secrets Manager, Vault or multi-store credential composition only when a concrete deployment
+  requires one; environment and Keychain stores already exist, and current profiles select one;
 - hosted Build/Operation stores and distributed leases only for a real multi-process deployment;
 - Build release/retention windows and S3 lifecycle policy.
 
@@ -133,40 +138,24 @@ Hypit, not to open-source Core.
 
 KIE generation, Vertex Caption planning, local media, local OpenCV image transforms, local WhisperX
 and local HyperFrames are implemented. Volcengine, Fal, API-key Gemini or Hypit can be added as
-independent Endpoint packages. They do not require changes to author model packages or Core.
+independent Endpoint packages without changing author model packages or Core. None is a current
+batch-migration target: add one only when a concrete deployment selects that service, following the
+port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 
-Since a Provider now contributes only a wire mapping over the input ports a model already declares
-(see [`model-input-ports.md`](./model-input-ports.md)), onboarding the common aggregator services is
-mostly data entry rather than code. The planned next phase is to bring the widely used relay
-services into the repository in a batch, one package each, so that whichever service a user already
-has an account with is simply available.
+## C. Current video-domain work, still pre-freeze
 
-Ease of adoption comes first in that phase; a second optimisation pass follows once several
-mappings exist side by side. Only then will it be clear which of these are real and worth building:
+Implement these against real delivery examples, but do not freeze or indiscriminately expand the
+video author surface yet:
 
-- shared enum and field-name vocabulary that repeats across relay services;
-- generating a mapping skeleton from a service's published schema instead of hand-authoring it;
-- one model reached through several services in one deployment, and how a Runtime Profile chooses;
-- per-service pricing, rate limit and availability facts, which are deployment data and must not
-  enter the port table.
-
-Two rules hold through that phase. A relay service never edits a model package: if its documented
-limits disagree with a port table, the disagreement is investigated against the model vendor rather
-than absorbed into the mapping. And the port table keeps stating ports, cardinalities and
-combination rules only — value-level compatibility matrices stay with the service to reject.
-
-## C. Deferred video-domain work
-
-Do not freeze or greatly expand the video author surface yet. The deferred backlog includes:
-
-- full Text three-box and exact-font behavior;
 - Caption field-to-word visual mapping plus browser/pixel acceptance;
+- full Text three-box and exact-font behavior;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;
 - final Track and renderer-neutral Visual IR compatibility freeze.
 
-The current implementations remain executable vertical slices and regression witnesses while A and
-B are completed.
+The current implementations remain executable vertical slices and regression witnesses. This work
+does not wait for release packaging, optional Providers or arbitrary-code isolation, and it must not
+reopen Core to add video-specific meaning.
 
 ## Explicit non-goals for the current phase
 

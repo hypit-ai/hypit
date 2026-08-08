@@ -209,9 +209,10 @@ pnpm smoke:kie   # opt-in paid Provider smoke test; requires credentials
 
 ## Current priorities
 
-The domain-neutral Run/Runtime foundation, developer inspection path and the first replaceable local
-Endpoint environments are implemented. Current work is split between making that foundation ready
-for trusted-developer distribution and turning the real talking-film acceptance path into a
-repeatable harness. Text, Caption and B-roll already execute as vertical slices; their full visual
+The domain-neutral Run/Runtime foundation, developer inspection path and replaceable local/AWS
+Endpoint environments are implemented. Current work is split between preparing trusted-developer
+distribution and completing the video-domain packages needed by real deliveries. Fresh generation,
+historical reuse and previews remain ordinary explicit `.svrun` choices rather than a second
+workflow layer. Text, Caption and B-roll already execute as vertical slices; their full visual
 breadth, Ranking and the final video compatibility freeze remain deferred. See the
 [implementation status](docs/implementation-status.md) and [roadmap](docs/roadmap.md).
