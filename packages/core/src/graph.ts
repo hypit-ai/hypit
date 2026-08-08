@@ -170,8 +170,16 @@ export function satisfactionForOutput(
   return request.satisfactions.find((satisfaction) => satisfaction.output === output);
 }
 
-/** @deprecated Use satisfactionForOutput. */
-export function selectedSatisfaction(
+/**
+ * The Candidate that satisfies one Logical Output, and how faithfully.
+ *
+ * A Satisfaction is the request's choice — an edge from an output to one of its
+ * Candidates. This resolves that edge: it returns the Candidate the edge names,
+ * falling back to the output's primary when the request made no choice. The
+ * distinction is worth keeping in the names, because a Satisfaction is what a
+ * BuildRequest records and a Candidate is what the graph supplies.
+ */
+export function satisfiedCandidate(
   graph: CompiledGraph,
   request: BuildRequest,
   outputId: string,
@@ -182,7 +190,6 @@ export function selectedSatisfaction(
   return { candidate, fidelity: satisfaction?.fidelity ?? "exact" };
 }
 
-/** @deprecated Use selectedSatisfaction. */
 export function operationResultRecord(operation: OperationNode): string {
   return operation.result.record;
 }
