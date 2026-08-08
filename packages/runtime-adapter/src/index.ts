@@ -8,7 +8,7 @@ import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
 import type { CanonicalValue, Digest } from "@narratage/protocol";
 import type { RuntimeServicePackage } from "@narratage/runtime";
 
-export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@1";
+export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@2";
 
 export type RuntimeAdapterKind = "endpoint" | "runtime-service";
 
@@ -61,12 +61,16 @@ export type RuntimeExternalService = {
 };
 
 export type RuntimeEndpointAdapterImplementation = {
+  /** Pure, closed-data validation. Must not construct an Endpoint or touch the environment. */
+  validate(context: RuntimeAdapterFactoryContext): void;
   create(context: RuntimeAdapterFactoryContext): EndpointPackage | Promise<EndpointPackage>;
   doctor?(context: RuntimeAdapterFactoryContext): readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
   service?(context: RuntimeAdapterFactoryContext): RuntimeExternalService | undefined;
 };
 
 export type RuntimeServiceAdapterImplementation = {
+  /** Pure, closed-data validation. Must not construct a service or touch the environment. */
+  validate(context: RuntimeAdapterFactoryContext): void;
   create(context: RuntimeAdapterFactoryContext): RuntimeServicePackage | Promise<RuntimeServicePackage>;
   doctor?(context: RuntimeAdapterFactoryContext): readonly RuntimeDoctorDiagnostic[] | Promise<readonly RuntimeDoctorDiagnostic[]>;
 };
@@ -107,6 +111,8 @@ function identity(value: CanonicalValue): RuntimeAdapterIdentity {
 function implementation(value: unknown, subject: string): RuntimeAdapterHostFacet["implementation"] {
   assert(value !== null && typeof value === "object" && typeof (value as { create?: unknown }).create === "function",
     `${subject} does not implement create()`);
+  assert(typeof (value as { validate?: unknown }).validate === "function",
+    `${subject} does not implement validate()`);
   const doctor = (value as { doctor?: unknown }).doctor;
   assert(doctor === undefined || typeof doctor === "function", `${subject}.doctor must be a function`);
   return value as RuntimeAdapterHostFacet["implementation"];
@@ -114,6 +120,7 @@ function implementation(value: unknown, subject: string): RuntimeAdapterHostFace
 
 export function createRuntimeEndpointAdapterFacet(options: {
   readonly use: string;
+  readonly validate: RuntimeEndpointAdapterImplementation["validate"];
   readonly create: RuntimeEndpointAdapterImplementation["create"];
   readonly doctor?: RuntimeEndpointAdapterImplementation["doctor"];
   readonly service?: RuntimeEndpointAdapterImplementation["service"];
@@ -130,6 +137,7 @@ export function createRuntimeEndpointAdapterFacet(options: {
     // broken adapter would otherwise learn about it as "adapter X is not
     // registered", three layers from the mistake.
     implementation: implementation({
+      validate: options.validate,
       create: options.create,
       ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
       ...(options.service === undefined ? {} : { service: options.service }),
@@ -140,6 +148,7 @@ export function createRuntimeEndpointAdapterFacet(options: {
 
 export function createRuntimeServiceAdapterFacet(options: {
   readonly use: string;
+  readonly validate: RuntimeServiceAdapterImplementation["validate"];
   readonly create: RuntimeServiceAdapterImplementation["create"];
   readonly doctor?: RuntimeServiceAdapterImplementation["doctor"];
 }): RuntimeAdapterHostFacet {
@@ -151,6 +160,7 @@ export function createRuntimeServiceAdapterFacet(options: {
       kind: "runtime-service",
     })),
     implementation: implementation({
+      validate: options.validate,
       create: options.create,
       ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
     }, `Runtime Adapter ${options.use}`),
@@ -280,12 +290,12 @@ export class RuntimeAdapterRegistry {
 
   /** Trusted embedding compatibility. Locked installed packages should use registerFacet(). */
   registerEndpoint(use: string, create: RuntimeEndpointAdapterImplementation["create"]): void {
-    this.#register(createRuntimeEndpointAdapterFacet({ use, create }));
+    this.#register(createRuntimeEndpointAdapterFacet({ use, validate() {}, create }));
   }
 
   /** Trusted embedding compatibility. Locked installed packages should use registerFacet(). */
   registerService(use: string, create: RuntimeServiceAdapterImplementation["create"]): void {
-    this.#register(createRuntimeServiceAdapterFacet({ use, create }));
+    this.#register(createRuntimeServiceAdapterFacet({ use, validate() {}, create }));
   }
 
   has(use: string, kind?: RuntimeAdapterKind): boolean {
@@ -293,11 +303,40 @@ export class RuntimeAdapterRegistry {
     return value !== undefined && (kind === undefined || value.facet.identity.kind === kind);
   }
 
+  /**
+   * Validate one selected adapter without constructing it. Missing/kind errors
+   * are diagnostics; adapter-owned configuration errors remain throws so the
+   * Host can attach the selected instance and service/Endpoint-specific code.
+   */
+  validate(
+    use: string,
+    kind: RuntimeAdapterKind,
+    context: RuntimeAdapterFactoryContext,
+  ): readonly RuntimeDoctorDiagnostic[] {
+    const value = this.#registrations.get(use);
+    if (value === undefined) return [{
+      severity: "error",
+      code: "RUNTIME_ADAPTER_MISSING",
+      message: `Runtime Adapter ${use} is not registered`,
+      subject: use,
+    }];
+    if (value.facet.identity.kind !== kind) return [{
+      severity: "error",
+      code: "RUNTIME_ADAPTER_KIND",
+      message: `Runtime Adapter ${use} is ${value.facet.identity.kind}, not ${kind}`,
+      subject: use,
+    }];
+    value.facet.implementation.validate(context);
+    return [];
+  }
+
   async createEndpoint(use: string, context: RuntimeAdapterFactoryContext): Promise<EndpointPackage> {
     const value = this.#registrations.get(use);
     assert(value !== undefined, `Runtime Endpoint adapter ${use} is not registered`);
     assert(value.facet.identity.kind === "endpoint", `Runtime Adapter ${use} is not an Endpoint adapter`);
-    const created = await (value.facet.implementation as RuntimeEndpointAdapterImplementation).create(context);
+    const implementation = value.facet.implementation as RuntimeEndpointAdapterImplementation;
+    implementation.validate(context);
+    const created = await implementation.create(context);
     return bindEndpointPackage(created, value.facet.identity, value.binding);
   }
 
@@ -305,7 +344,9 @@ export class RuntimeAdapterRegistry {
     const value = this.#registrations.get(use);
     assert(value !== undefined, `Runtime service adapter ${use} is not registered`);
     assert(value.facet.identity.kind === "runtime-service", `Runtime Adapter ${use} is not a Runtime service adapter`);
-    const created = await (value.facet.implementation as RuntimeServiceAdapterImplementation).create(context);
+    const implementation = value.facet.implementation as RuntimeServiceAdapterImplementation;
+    implementation.validate(context);
+    const created = await implementation.create(context);
     return bindServicePackage(created, value.facet.identity, value.binding);
   }
 
@@ -313,7 +354,9 @@ export class RuntimeAdapterRegistry {
   service(use: string, context: RuntimeAdapterFactoryContext): RuntimeExternalService | undefined {
     const value = this.#registrations.get(use);
     if (value === undefined || value.facet.identity.kind !== "endpoint") return undefined;
-    const declare = (value.facet.implementation as RuntimeEndpointAdapterImplementation).service;
+    const implementation = value.facet.implementation as RuntimeEndpointAdapterImplementation;
+    implementation.validate(context);
+    const declare = implementation.service;
     return declare === undefined ? undefined : declare(context);
   }
 
