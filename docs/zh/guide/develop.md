@@ -11,7 +11,7 @@ description: 开始 Narratage 开发工作。
 |---|---|---|
 | Node.js | 22+ | 所有工作 |
 | pnpm | 9+ | workspace 管理 |
-| Python | 3.10–3.13 | WhisperX 与 OpenCV [sidecar 服务](./services.md) |
+| Python | 3.10–3.13 | WhisperX 与 OpenCV [本地服务](./services.md) |
 | uv | latest | Python 环境管理 |
 | ffmpeg / ffprobe | 较新的稳定版 | 媒体处理 |
 | Chrome / Chromium | 较新的稳定版 | HyperFrames 渲染 |
@@ -41,7 +41,7 @@ narratage/
 ├── spec/                  7 normative specification documents
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
-├── services/              Python sidecar services (whisperx, image-opencv)
+├── services/              Python 服务 (whisperx, image-opencv)
 ├── tools/                 boundary tests and build scripts
 ├── package.json           root workspace manifest
 ├── pnpm-workspace.yaml    workspace: [packages/*]
@@ -56,6 +56,6 @@ narratage/
 | [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、activation |
 | [添加 Provider](./providers.md) | 分步说明：新增 Endpoint 适配器 |
 | [Runtime Profile](./runtime-profile.md) | JSON 与 TypeScript 配置、诊断、Build 归档 |
-| [本地服务](./services.md) | WhisperX 与 OpenCV sidecar 的搭建 |
+| [本地服务](./services.md) | WhisperX 与 OpenCV 的搭建 |
 | [测试](./testing.md) | 测试运行器、写法、示例、boundary tests |
 | [代码规范](./conventions.md) | 命名、模块边界、wire 数据、TypeScript 配置 |

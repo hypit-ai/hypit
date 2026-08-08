@@ -45,7 +45,7 @@ model       small
 device      cpu
 compute     int8
 batch size  8
-protocol    svml.whisperx-sidecar@1
+protocol    svml.whisperx-service@1
 ```
 
 Configuration is deployment state:
@@ -69,7 +69,7 @@ WhisperX version. A mismatch fails before transcription results are accepted.
 
 The SVML Runtime Scheduler decides how many WhisperX Needs may enter this Provider lane. One service
 process admits exactly one inference because its ASR/alignment models are shared process state. A
-second direct request receives `503 BUSY` instead of entering a hidden sidecar queue.
+second direct request receives `503 BUSY` instead of entering a hidden service queue.
 `ThreadingHTTPServer` keeps `/health` responsive while the admitted inference runs.
 
 Run multiple service processes on different devices/ports only when the Runtime registers and

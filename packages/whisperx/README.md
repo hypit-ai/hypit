@@ -15,4 +15,4 @@ zero-origin rational sample map and exact evidence bytes. The Producer Derivatio
 SpeechAudioBasis; the Need and Receipt bind the exact evidence-audio request to the accepted result.
 
 `@narratage/provider-whisperx-local` is the first concrete adapter; it validates and stages those bytes
-unchanged for a warm loopback sidecar.
+unchanged for a warm loopback service.
