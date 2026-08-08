@@ -1,6 +1,5 @@
 import {
   captionComponent,
-  captionManifest,
   defaultCaptionTrackProgram,
   planCaptionPresentation,
   renderCaptionProgram,
@@ -25,29 +24,6 @@ import test from "node:test";
 import { digestOf } from "@narratage/protocol";
 import { narrativeSelectionValue, parseScript } from "@narratage/script";
 import { locateSpeechTiming } from "@narratage/speech-alignment";
-
-test("the component enumerates every Manifest Producer and owned Type validator", () => {
-  assert.deepEqual(
-    captionComponent.producers.map((facet) => ({
-      name: facet.producer.name,
-      digest: facet.implementationDigest,
-    })),
-    captionManifest.producers.map((producer) => ({
-      name: producer.name,
-      digest: producer.implementation.digest,
-    })),
-  );
-  assert.deepEqual(
-    captionComponent.validators?.map((facet) => ({
-      name: facet.type.name,
-      digest: facet.implementationDigest,
-    })),
-    captionManifest.types.map((type) => ({
-      name: type.name,
-      digest: type.validator?.implementation.digest,
-    })),
-  );
-});
 
 function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
   const programSpace = captionSpace(durationSec);

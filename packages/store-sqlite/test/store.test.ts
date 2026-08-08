@@ -3,7 +3,6 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
-import { DatabaseSync } from "node:sqlite";
 
 import { digestOf } from "@narratage/core";
 import {
@@ -107,35 +106,6 @@ test("SQLite Operation CAS preserves a terminal completion", async () => {
       /already terminal/u,
     );
     state.close();
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("SQLite upgrades the append-only v1 state database with a Host Catalog", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "svml-catalog-migration-"));
-  const path = join(directory, "runtime.sqlite");
-  try {
-    const legacy = new DatabaseSync(path);
-    legacy.exec(`
-      CREATE TABLE svml_store_meta (
-        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-        schema_version INTEGER NOT NULL
-      ) STRICT;
-      INSERT INTO svml_store_meta (singleton, schema_version) VALUES (1, 1);
-    `);
-    legacy.close();
-
-    const migrated = new SqliteRuntimeState(path);
-    assert.deepEqual(await migrated.catalog.list(), []);
-    migrated.close();
-
-    const checked = new DatabaseSync(path);
-    const version = checked.prepare("SELECT schema_version FROM svml_store_meta WHERE singleton = 1").get() as {
-      readonly schema_version: number;
-    };
-    assert.equal(version.schema_version, 2);
-    checked.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

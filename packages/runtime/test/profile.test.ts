@@ -214,7 +214,7 @@ test("Runtime Closure content cannot be changed without invalidating its digest"
   assert.throws(() => verifyRuntimeClosure(tampered), /digest differs/u);
 });
 
-test("Runtime @1 facts are rejected instead of being reinterpreted as Endpoint bindings", () => {
+test("unsupported Runtime formats are rejected instead of being reinterpreted", () => {
   const registry = new RuntimeModuleRegistry();
   assert.throws(
     () => registry.register({ ...manifest(), format: "svml.runtime-module@invalid" } as never),
