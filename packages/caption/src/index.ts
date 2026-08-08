@@ -1,4 +1,12 @@
 export { CaptionProjectionError } from "./error.js";
+export {
+  assertCaptionAppearanceRecipe,
+  captionAppearanceFromRecipe,
+  captionAppearanceRecipeKeys,
+  captionRecipePadding,
+  defaultCaptionAppearanceRecipe,
+} from "./recipe.js";
+export type { CaptionAppearance } from "./recipe.js";
 export { captionDisplayAtoms, displayAtomMatchesSelection, displayTextForAtoms } from "./display.js";
 export { captionComponent } from "./component.js";
 export { captionTrackSurfaceFragment, plannedCaptionTrackSurfaceFragment } from "./fragment.js";
@@ -40,6 +48,7 @@ export {
   assertCaptionTrackProgram,
   assertTimedCaptionProjection,
   defaultCaptionTrackProgram,
+  defaultTimedCaptionProjection,
   renderCaptionTrack,
   renderCaptionProgram,
   renderCaptionTrackImplementationDigest,

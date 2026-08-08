@@ -1,10 +1,13 @@
 import type { ValueSchema } from "@narratage/protocol";
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
+const seconds = { kind: "number", minimum: 0, format: "duration" } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
-const digest = { kind: "string", minLength: 71, maxLength: 71 } as const;
+// 71 is `sha256:` plus 64 hex characters. The format states the shape the
+// length was only ever approximating.
+const digest = { kind: "string", minLength: 71, maxLength: 71, format: "digest" } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
-export const mediaArtifactSchema = object({ digest: { schema: digest }, size: { schema: integer }, mediaType: { schema: string }, durationSec: { schema: number } });
+export const mediaArtifactSchema = object({ digest: { schema: digest }, size: { schema: integer }, mediaType: { schema: string }, durationSec: { schema: seconds } });
 const blobArtifactSchema = (mediaTypes?: readonly string[]): ValueSchema => object({
   kind: { schema: { kind: "literal", value: "blob" } }, digest: { schema: digest }, size: { schema: integer },
   mediaType: { schema: mediaTypes === undefined ? string : { kind: "string", enum: mediaTypes } },

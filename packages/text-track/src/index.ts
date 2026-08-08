@@ -21,6 +21,7 @@ export {
   assertTextTrackSet,
   createTextTrackSet,
   createTextTrackSetImplementationDigest,
+  defaultTextTrackProgram,
   finalizeTextTrack,
   finalizeTextTrackImplementationDigest,
   assertTextTrackSpec,
@@ -34,4 +35,11 @@ export {
   sealTextTrackSpec,
 } from "./program.js";
 export { decodeTextTrackSurface } from "./surface.js";
+export {
+  assertTextAppearanceRecipe,
+  defaultTextAppearanceRecipe,
+  textAppearanceFromRecipe,
+  textAppearanceRecipeKeys,
+} from "./recipe.js";
+export type { TextItemAppearance } from "./recipe.js";
 export type * from "./types.js";
