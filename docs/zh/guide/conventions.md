@@ -9,10 +9,10 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 
 | 项目 | 约定 | 示例 |
 |---|---|---|
-| 包目录 | kebab-case | `packages/speech-align/` |
-| 包名 | `@narratage/` scope | `@narratage/speech-align` |
+| 包目录 | kebab-case | `packages/speech-alignment/` |
+| 包名 | `@narratage/` scope | `@narratage/speech-alignment` |
 | Provider 包 | `provider-` 前缀 | `@narratage/provider-kie` |
-| TypeScript 文件 | kebab-case | `speech-align.ts` |
+| TypeScript 文件 | kebab-case | `align.ts` |
 | 导出类型 | PascalCase | `SpeechAlignment` |
 | 导出函数 | camelCase | `createSpeechAlignment` |
 

@@ -1,61 +1,113 @@
-# Narratage media function
+# Narratage media execution service
 
-The five media Needs — inspect, normalize, speech-evidence projection, timeline
-audio and mux — executed in AWS Lambda instead of on the machine running the
-Build. This is deployment state, not an author-importable SVML package.
+This service answers the five media Needs — inspect, normalize, speech-evidence projection,
+timeline audio and mux — in AWS Lambda. It is deployment state, not an author-importable SVML
+package.
 
-It owns no media logic. `@narratage/media-execution` holds the ffmpeg argv and
-the frame arithmetic, and the same code answers a local Build through
-`@narratage/provider-media-local`. Only two things are particular to this
-deployment: where the bytes live, and which ffmpeg binary the image carries.
+It owns no media semantics. `@narratage/media-execution` contains the FFmpeg commands and
+frame/sample arithmetic shared with `@narratage/provider-media-local`. This directory contributes
+an S3 byte gateway, a managed-runtime handler and one declarative AWS deployment.
 
-## What it requires, and why
+## One stack, two immutable code objects
 
-**An S3 ArtifactStore, shared with the function.** A synchronous Lambda
-invocation carries a few megabytes; a programme does not fit. So media never
-travels in the payload — the request names the bucket the Artifacts already
-occupy, and the function reads and writes there using the same
-content-addressed key rule as `@narratage/artifact-store-s3`. A Provider
-configured against a different bucket fails on the first result, naming the
-Artifact it cannot read.
+`template.yaml` makes one CloudFormation stack own:
 
-**An execution role** that can read and write the Artifact prefix in that
-bucket, and write CloudWatch Logs. Nothing else.
+- the narrowly scoped Lambda execution role;
+- its retained CloudWatch log group;
+- an immutable FFmpeg 8.0.1 Layer version;
+- the Node.js 22 media function;
+- a retained, immutable function version;
+- an explicit reserved-concurrency ceiling.
 
-## Deploying it
+The ArtifactStore bucket and deployment-artifact bucket remain external resources. The same
+ArtifactStore can serve local and Lambda Endpoints; the deployment bucket contains code, not Build
+Artifacts.
+
+`build.mjs` produces the small function ZIP. `build-layer.mjs` downloads one exact BtbN archive,
+checks its SHA-256, retains only `ffmpeg`, `ffprobe`, their shared libraries and the upstream
+license, and creates a deterministic Layer ZIP. The Layer provenance is embedded as
+`/opt/narratage-layer.json`. Set `NARRATAGE_FFMPEG_SOURCE` to an already downloaded archive for an
+offline build; it is accepted only when its digest matches the pin.
+
+Shared-library links are copied verbatim from the upstream archive. The builder rejects absolute,
+escaping or dangling links before producing the ZIP, so a build-machine path cannot become a
+silent `/opt/lib` runtime failure.
+
+The selected build is:
+
+```text
+FFmpeg n8.0.1-66-g27b8d1a017
+linux64 GPL shared, x86-64
+source sha256 38f5363bef58d74547e5055846d76d8b20bb2872a87b0aab71611b010b437a6f
+```
+
+AWS mounts Layer `bin/` and `lib/` as `/opt/bin` and `/opt/lib`. The handler additionally executes
+both binaries with `-version` once per warm environment and refuses work unless both report 8.0.1.
+
+## Authority and bytes
+
+The function role can only read and write objects in the selected ArtifactStore bucket and append
+to its own log group. It cannot deploy code, publish Layers, inspect IAM or access the deployment
+bucket.
+
+The deployer needs the reviewed actions in `iam/publisher.json`. CloudFormation uses the deployer's
+AWS credential chain; access keys never enter source, a Runtime Profile or BuildState.
+
+Media bytes never enter the synchronous Lambda request. Requests identify content-addressed S3
+objects and results are written back through the same `@narratage/artifact-store-s3` key rule.
+
+## Build without AWS
 
 ```bash
+pnpm build:media-lambda
+pnpm build:media-lambda-layer
+```
+
+Ignored output is written under `services/media-lambda/build/`. The two artifact manifests record
+the function bundle hash, ZIP hashes, exact upstream source and package sizes.
+
+## Plan, inspect, apply
+
+Deployment deliberately has two commands. `plan` may build and upload content-addressed packages,
+but it only creates a CloudFormation Change Set. `apply` accepts that exact Change Set ARN; it does
+not rebuild or silently reinterpret the plan.
+
+```bash
+export AWS_PROFILE=narratage
 export AWS_REGION=us-east-1
 export AWS_ACCOUNT_ID=123456789012
-export NARRATAGE_MEDIA_BUCKET=your-artifact-bucket
-./publish.sh
+export NARRATAGE_MEDIA_ENVIRONMENT=dev
+export NARRATAGE_MEDIA_STACK=narratage-media-dev
+export NARRATAGE_MEDIA_FUNCTION=narratage-media-dev
+export NARRATAGE_MEDIA_ROLE=NarratageMediaExecution-dev
+export NARRATAGE_MEDIA_LAYER=narratage-ffmpeg-8-0-1
+export NARRATAGE_MEDIA_ARTIFACT_BUCKET=narratage-artifacts-123456789012
+export NARRATAGE_MEDIA_DEPLOYMENT_BUCKET=your-regional-deployment-bucket
+
+services/media-lambda/deploy.sh plan
+services/media-lambda/deploy.sh apply <exact-change-set-arn>
 ```
 
-`publish.sh` bundles the handler, asserts the FFmpeg version inside the image,
-pushes to ECR under an immutable `bundle-<sha256>` tag, creates or updates the
-function, publishes a **version**, and prints the Runtime Profile entry to
-paste. Overridable: `NARRATAGE_MEDIA_REPOSITORY`, `_FUNCTION`, `_ROLE`,
-`_MEMORY` (3008), `_TIMEOUT` (900), `_EPHEMERAL` (8192).
+Optional infrastructure parameters are `NARRATAGE_MEDIA_MEMORY` (3008),
+`NARRATAGE_MEDIA_EPHEMERAL` (8192), `NARRATAGE_MEDIA_CONCURRENCY` (8) and
+`NARRATAGE_MEDIA_LOG_RETENTION_DAYS` (14). They are CloudFormation parameters and therefore visible
+in the Change Set.
 
-The printed ARN ends in `:<version>`. The Provider refuses an unqualified ARN:
-a bare function name is whatever was deployed last, and two Builds of one Run
-Source could then execute different code while recording the same Endpoint
-identity.
+The stack outputs an immutable function-version ARN and a complete JSON Endpoint entry for
+`@narratage/provider-media-aws-lambda`. The Provider rejects an unqualified function name. Old
+function and Layer versions are retained across updates so a recorded Runtime Profile never changes
+meaning because a newer deployment happened.
 
-## Checking it before you depend on it
+## Live canary
+
+The canary generates a one-second local fixture and runs all five remote media operations. Its S3
+prefix is isolated and removed after success or failure unless `NARRATAGE_MEDIA_CANARY_KEEP=1`.
 
 ```bash
-pnpm narratage doctor svml.runtime.json
+export NARRATAGE_MEDIA_FUNCTION_ARN=arn:aws:lambda:us-east-1:123456789012:function:narratage-media-dev:1
+export NARRATAGE_MEDIA_ARTIFACT_BUCKET=narratage-artifacts-123456789012
+pnpm --filter @narratage/media-lambda canary
 ```
 
-## Tests
-
-The handler is tested against real ffmpeg over an in-memory bucket, so the
-whole chain except AWS itself runs in `pnpm test`. What that does **not** cover
-is the deployed image, the role's permissions and the account's limits; those
-are only proven by publishing once and running a Build.
-
-```bash
-pnpm test                 # includes services/media-lambda/test
-pnpm build:media-lambda   # bundle only, no AWS
-```
+No paid AWS deployment runs in the normal test suite. The handler tests execute the real shared
+media implementation with local FFmpeg and an in-memory object store.

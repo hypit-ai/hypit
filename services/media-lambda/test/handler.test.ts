@@ -102,3 +102,30 @@ test("an envelope from another contract is refused before any media is touched",
   assert.equal(reply.ok, false);
   assert.match(String(reply.message), /contract must be svml\.media-lambda-request@1/u);
 });
+
+test("a Layer that lies about its FFmpeg version fails before reading an Artifact",
+  { skip: (await ffmpegAvailable()) ? false : "ffmpeg and ffprobe are not on PATH" },
+  async () => {
+    const handle = createMediaLambdaHandler({
+      client: new Bucket(),
+      ffmpegPath: "ffmpeg",
+      ffprobePath: "ffprobe",
+      expectedFfmpegVersion: "0.0.0-impossible",
+    });
+    const reply = await handle({
+      contract: "svml.media-lambda-request@1",
+      operation: "inspect",
+      artifacts: { bucket: "fixture" },
+      constraints: {
+        contract: "svml.inspect-media-request@1",
+        source: {
+          kind: "blob",
+          digest: `sha256:${"0".repeat(64)}`,
+          size: 1,
+          mediaType: "audio/wav",
+        },
+      },
+    }) as Record<string, unknown>;
+    assert.equal(reply.ok, false);
+    assert.match(String(reply.message), /Layer mismatch: expected 0\.0\.0-impossible/u);
+  });

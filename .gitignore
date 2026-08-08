@@ -13,3 +13,4 @@ services/whisperx/**/__pycache__/
 services/whisperx/src/*.egg-info/
 services/image-opencv/.venv/
 services/image-opencv/**/__pycache__/
+services/media-lambda/build/

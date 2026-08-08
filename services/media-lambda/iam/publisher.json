@@ -1,0 +1,88 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageThePinnedFfmpegLayer",
+      "Effect": "Allow",
+      "Action": ["lambda:PublishLayerVersion", "lambda:GetLayerVersion"],
+      "Resource": [
+        "arn:aws:lambda:REGION:ACCOUNT_ID:layer:narratage-ffmpeg-8-0-1",
+        "arn:aws:lambda:REGION:ACCOUNT_ID:layer:narratage-ffmpeg-8-0-1:*"
+      ]
+    },
+    {
+      "Sid": "PublishTheFunction",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:GetFunctionConcurrency",
+        "lambda:GetRuntimeManagementConfig",
+        "lambda:InvokeFunction",
+        "lambda:ListTags",
+        "lambda:ListVersionsByFunction",
+        "lambda:PublishVersion",
+        "lambda:PutRuntimeManagementConfig",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:DeleteFunction",
+        "lambda:PutFunctionConcurrency",
+        "lambda:TagResource",
+        "lambda:UntagResource"
+      ],
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:narratage-media*"
+    },
+    {
+      "Sid": "HandTheExecutionRoleToTheFunction",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:DeleteRole",
+        "iam:PassRole",
+        "iam:TagRole",
+        "iam:UntagRole"
+      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/NarratageMediaExecution-*"
+    },
+    {
+      "Sid": "ManageTheMediaStack",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:CreateStack",
+        "cloudformation:UpdateStack",
+        "cloudformation:CreateChangeSet",
+        "cloudformation:DescribeStacks",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:DeleteChangeSet"
+      ],
+      "Resource": "arn:aws:cloudformation:REGION:ACCOUNT_ID:stack/narratage-media-*/*"
+    },
+    {
+      "Sid": "ManageTheMediaLogGroup",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:PutRetentionPolicy"
+      ],
+      "Resource": "arn:aws:logs:REGION:ACCOUNT_ID:log-group:/aws/lambda/narratage-media-*"
+    },
+    {
+      "Sid": "TheArtifactStore",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::BUCKET",
+        "arn:aws:s3:::BUCKET/*",
+        "arn:aws:s3:::DEPLOYMENT_BUCKET",
+        "arn:aws:s3:::DEPLOYMENT_BUCKET/narratage/media-lambda/*"
+      ]
+    }
+  ]
+}
