@@ -14,6 +14,17 @@ import { createLocalMediaProvider } from "./provider.js";
 
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-media-local",
+  validate(context) {
+    const config = runtimeConfigObject(context.config, "local media");
+    runtimeConfigExact(config, [
+      "ffmpegPath", "ffprobePath", "defaultConcurrency", "processTimeoutMs", "maxProbeOutputBytes",
+    ], "local media");
+    runtimeConfigString(config.ffmpegPath, "media ffmpegPath");
+    runtimeConfigString(config.ffprobePath, "media ffprobePath");
+    runtimeConfigPositiveInteger(config.defaultConcurrency, "media defaultConcurrency");
+    runtimeConfigPositiveInteger(config.processTimeoutMs, "media processTimeoutMs");
+    runtimeConfigPositiveInteger(config.maxProbeOutputBytes, "media maxProbeOutputBytes");
+  },
   create(context) {
     const config = runtimeConfigObject(context.config, "local media");
     runtimeConfigExact(config, [
