@@ -15,6 +15,17 @@ import { localOpenCvService } from "./service.js";
 
 const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-image-opencv-local",
+  validate(context) {
+    const config = runtimeConfigObject(context.config, "local OpenCV image");
+    runtimeConfigExact(config, [
+      "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
+    ], "local OpenCV image");
+    runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
+    runtimeConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency");
+    runtimeConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs");
+    runtimeConfigPositiveInteger(config.maxInputBytes, "OpenCV maxInputBytes");
+    runtimeConfigPositiveInteger(config.maxOutputBytes, "OpenCV maxOutputBytes");
+  },
   create(context) {
     const config = runtimeConfigObject(context.config, "local OpenCV image");
     runtimeConfigExact(config, [

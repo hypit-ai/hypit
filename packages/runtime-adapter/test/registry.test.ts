@@ -17,13 +17,14 @@ import {
 
 const context = { root: "/tmp", instance: "one", config: {} };
 const endpoint = (use: string, extra: Record<string, unknown> = {}) =>
-  createRuntimeEndpointAdapterFacet({ use, create: () => ({ use }) as never, ...extra } as never);
+  createRuntimeEndpointAdapterFacet({ use, validate() {}, create: () => ({ use }) as never, ...extra } as never);
 
 test("a facet declares which kind it is, and the registry keeps the two apart", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
   registry.registerFacet(createRuntimeServiceAdapterFacet({
     use: "example.service",
+    validate() {},
     create: () => ({}) as never,
   }));
 
@@ -53,10 +54,44 @@ test("a facet without create() is not a facet", () => {
     /does not implement create\(\)/u,
   );
   assert.throws(
-    () => createRuntimeEndpointAdapterFacet({ use: "x", create: () => ({}), doctor: 1 } as never),
+    () => createRuntimeEndpointAdapterFacet({ use: "x", validate() {}, create: () => ({}), doctor: 1 } as never),
     /doctor must be a function/u,
   );
-  assert.throws(() => createRuntimeEndpointAdapterFacet({ use: "  ", create: () => ({}) } as never), /use name is empty/u);
+  assert.throws(
+    () => createRuntimeEndpointAdapterFacet({ use: "x", create: () => ({}) } as never),
+    /does not implement validate\(\)/u,
+  );
+  assert.throws(
+    () => createRuntimeEndpointAdapterFacet({ use: "  ", validate() {}, create: () => ({}) } as never),
+    /use name is empty/u,
+  );
+});
+
+test("validation is a separate gate and never constructs the selected adapter", async () => {
+  let created = 0;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.validated",
+    validate(value) {
+      if (value.config !== null && typeof value.config === "object" && "bad" in value.config) {
+        throw new Error("bad config");
+      }
+    },
+    create: () => {
+      created += 1;
+      return {} as never;
+    },
+  }));
+
+  assert.deepEqual(registry.validate("example.validated", "endpoint", context), []);
+  assert.equal(created, 0);
+  assert.throws(
+    () => registry.validate("example.validated", "endpoint", { ...context, config: { bad: true } }),
+    /bad config/u,
+  );
+  assert.equal(created, 0);
+  await registry.createEndpoint("example.validated", context);
+  assert.equal(created, 1);
 });
 
 test("an external service is present only when the adapter declares one", () => {

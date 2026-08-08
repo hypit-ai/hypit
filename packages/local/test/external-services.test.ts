@@ -35,6 +35,7 @@ async function project(service: (root: string) => RuntimeExternalService) {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.program",
+    validate() {},
     create: () => ({}) as never,
     service: () => service(root),
   }));

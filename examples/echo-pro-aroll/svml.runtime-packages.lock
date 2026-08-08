@@ -54,7 +54,7 @@
     {
       "name": "@narratage/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:50e6dbf1298fccd3f1fe5cfbcd9968d10ecfdc055adb5a8f79db7db441d37db7"
+      "digest": "sha256:b1fafa8715899f565a03794849045846b5cc08fd3f51a12d5f7374a9c66d8534"
     },
     {
       "name": "@narratage/elaborator",
@@ -79,7 +79,12 @@
     {
       "name": "@narratage/hyperframes",
       "version": "0.0.0-dev",
-      "digest": "sha256:ce3902f4d69c5057a1795fd2d201c189716436c8501f8790d6b1df4ebd2fd691"
+      "digest": "sha256:fa8536f53f6f9d84dbe587eba814d97299767a359a95fe76a437b257659c27f6"
+    },
+    {
+      "name": "@narratage/media-execution",
+      "version": "0.0.0-dev",
+      "digest": "sha256:f1998bb2b93e848c4adebf797bb645d10361aa7ba68e449c09f03709ceeb9ad1"
     },
     {
       "name": "@narratage/media-pipeline",
@@ -104,32 +109,32 @@
     {
       "name": "@narratage/protocol",
       "version": "0.0.0-dev",
-      "digest": "sha256:ba71856c619670704e209ea38efdd21fa2af097e4b746206422c9d75334d1939"
+      "digest": "sha256:aba55408fd1ffec38c1ce2e81706aaadad48277a2fe4b9adc6323674e1b23ce6"
     },
     {
       "name": "@narratage/provider-google-vertex",
       "version": "0.0.0-dev",
-      "digest": "sha256:ba4bdc26e4f74103d776f1166d7dc315bc0ae5520186a5757966cf05bbc0a018"
+      "digest": "sha256:04bf0234e5f3e2a28fb08c112b987e812568b8bbfd26748fbbc1ea082f1aeb65"
     },
     {
       "name": "@narratage/provider-hyperframes-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:5e1884b45679d28fb644e067a9014b8a1b448b9b05030c53ac76a6d0946b0d61"
+      "digest": "sha256:0281e943dbf30074f75ba4551c462ea634f8d14d7490a75bf60cc672aaceee91"
     },
     {
       "name": "@narratage/provider-kie",
       "version": "0.0.0-dev",
-      "digest": "sha256:b202786d05553c232855c9273433fb924a15f501941a2d338b0757b24eea3a60"
+      "digest": "sha256:afd2e0000d43a8706d4e6040d96960acc72b6163b29b24802448238a9f3a742c"
     },
     {
       "name": "@narratage/provider-media-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:66ad1aa489a466112f9177ad285de9baf9ce4e8155dba26a8bfdfbbc2aa35be4"
+      "digest": "sha256:f8aa0b6376cad033b60f9ec430598d92d099c237a5acb3a0aa014d3fc17661af"
     },
     {
       "name": "@narratage/provider-whisperx-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:35b536fe2e6752d4cc92ca368a318214e8e56e0d8356eba56a049d3a626543c5"
+      "digest": "sha256:a8584814ca24118f844b8eec6a795ac861d1d44da166e5feeb90c7e84feda5ac"
     },
     {
       "name": "@narratage/render-hyperframes",
@@ -144,12 +149,12 @@
     {
       "name": "@narratage/runtime-adapter",
       "version": "0.0.0-dev",
-      "digest": "sha256:532f529daa0334c393c94faa99268e9f216b1e3fb760440e8d4f9b9b1e3ce324"
+      "digest": "sha256:d3ab8004cc48baad726baea9fdfc7366705ce0ee7152a8b677bd9a8996144f85"
     },
     {
       "name": "@narratage/runtime",
       "version": "0.0.0-dev",
-      "digest": "sha256:3d5bd79233f3f78633b427740e2efa4ce2720195a91cd50e0ced94f054471c2a"
+      "digest": "sha256:234bc81f6651e2a291110e74d9ed68c866c35f2591f1f571c581ea7133ddcd0d"
     },
     {
       "name": "@narratage/semantic-map",
@@ -849,8 +854,8 @@
         "name": "@narratage/provider-google-vertex",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:b2636492ab0b0b500d674899ab2ff14fc61c7f2b22ef44eb8f816f141b21ec4d",
-      "closureDigest": "sha256:e56b87f20fc177aebaf4f99c374f7c97363384c2ad9c98f6548342fa5b465c45"
+      "facetsDigest": "sha256:58eb269b382f90295525fbc3802ffe5792d730812e1d06fbd57f03cf907077bc",
+      "closureDigest": "sha256:6b87c3f1f221f0f63ea59cd731a91498921e120f56f2b71fb281f359a9961e74"
     },
     {
       "specifier": "@narratage/provider-hyperframes-local",
@@ -858,8 +863,8 @@
         "name": "@narratage/provider-hyperframes-local",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:b14b721bdc0c9d5d9ced1c345107c92a3a5878f3383dea2ecd3e310442c2a40c",
-      "closureDigest": "sha256:b86d3e37edbdbc3d64cb494897b02697a35e5098e80ce99cf19a87b1f22a6f4b"
+      "facetsDigest": "sha256:d91d461c882da5517de5aaf6be0939755f38fc0341fe429c76a19aa2b0d547ad",
+      "closureDigest": "sha256:b657df01d25b7a891ed0871f82f00bd4356dfceb911a7ad631cbb2b1cf872157"
     },
     {
       "specifier": "@narratage/provider-kie",
@@ -867,8 +872,8 @@
         "name": "@narratage/provider-kie",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:e61ebb911a33d4c5d0e4e4ee4fb69cdb790f4ced050ef35f7472bfbd72013d9b",
-      "closureDigest": "sha256:fca0be1ad55d4f5cd6c871d7004865bb6339213d7678ac3b6e795adf0a77c978"
+      "facetsDigest": "sha256:283e9fe0d14d4e9095760ca71cafff272278905a689ca27fd1dd8ceb0f5f70f2",
+      "closureDigest": "sha256:45b2b4dd8b204e87bf204b908cf9ebd993f5ec60f644d38d81d5915b3ad3a73f"
     },
     {
       "specifier": "@narratage/provider-media-local",
@@ -876,8 +881,8 @@
         "name": "@narratage/provider-media-local",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:701abcc923bf8a711c20b6e308d8cc8be27bf560f249b8c5a801e1dbd9cb3979",
-      "closureDigest": "sha256:2b8ffcc53158623170425aa94442671e58c167e210e7413e158fce2cdac87db5"
+      "facetsDigest": "sha256:bc6bf655a84f19a7ad4e033b9b851a1efaa3651ee4d2deeb52455225d7fc86df",
+      "closureDigest": "sha256:2e184bf93046b7147879d634e67278f70132f2bc2e8f57c05542d1b2f2dca680"
     },
     {
       "specifier": "@narratage/provider-whisperx-local",
@@ -885,9 +890,9 @@
         "name": "@narratage/provider-whisperx-local",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:3686b84c42cc2b1bcaccf57cbdcda25a15c7d9d3778fb92d25437f9880ed8f5d",
-      "closureDigest": "sha256:d82fe2de72e4ce6fee4f660552b12485617b4254289a0ee4fd50e72a492f44e8"
+      "facetsDigest": "sha256:731c3192863b5bfd661a5bec776f85965d3952f377daa9bc0c2cfe04018fd2ae",
+      "closureDigest": "sha256:efb2e9a403ab27c42f0dc6aee4077dbd46ca43eb4ebde23992cec5c8c8e92dcc"
     }
   ],
-  "digest": "sha256:680b29750d6c64627622b37eb9975077d09ba616093170bb08b65b43bbe2947e"
+  "digest": "sha256:a4cb331a78428459f735ea85c04d54b304f08a70debafdd771486d33b2fc052a"
 }
