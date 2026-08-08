@@ -1,6 +1,6 @@
 import type { NodeCompiler } from "@narratage/compiler-node";
 import type { LocalRuntime } from "@narratage/local";
-import type { RuntimeConfigDoctorResult } from "@narratage/local";
+import type { ExternalServiceReport, RuntimeConfigDoctorResult } from "@narratage/local";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
 import type { RunFrontend } from "@narratage/run";
 
@@ -23,4 +23,15 @@ export type CliDistribution = {
   createCompiler(options: CliCompilerOptions): NodeCompiler;
   createRuntimeFromConfig(path: string): Promise<LocalRuntime>;
   doctorRuntimeConfig(path: string): Promise<RuntimeConfigDoctorResult>;
+  /** The external programs a Runtime Profile implies: probe, prepare and start them. */
+  readonly externalServices: {
+    up(path: string, options: { maxWaitMs?: number }): Promise<ExternalServiceResult>;
+    down(path: string): Promise<ExternalServiceResult>;
+    report(path: string): Promise<ExternalServiceResult>;
+  };
+};
+
+export type ExternalServiceResult = {
+  readonly root: string;
+  readonly services: readonly ExternalServiceReport[];
 };

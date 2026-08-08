@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-adapter";
 import type { RuntimeAdapterFactoryContext, RuntimeExternalService, RuntimeServiceState } from "@narratage/runtime-adapter";
 
@@ -8,21 +11,34 @@ import { localWhisperXPunktTabDigest } from "./provider.js";
  * program a developer keeps running, not a process spawned for each Need. The
  * Provider declares how to bring it up; the Runtime Profile may override the
  * command for an environment that installs WhisperX differently.
+ *
+ * The default names the pinned uv project shipped beside this package in the
+ * Narratage repository, by absolute path — a Runtime root is wherever the
+ * operator keeps their Profile, and it is not where that project lives. An
+ * installation that obtained this package on its own has no such directory and
+ * must say what to run instead; `serviceCommand` is that.
  */
-const DEFAULT_START = {
-  command: "uv",
-  args: ["run", "--project", "services/whisperx", "--frozen", "svml-whisperx-service"],
-} as const;
+const WORKSPACE_PROJECT = fileURLToPath(new URL("../../../services/whisperx", import.meta.url));
 
-const DEFAULT_PREPARE = {
-  command: "uv",
-  args: ["run", "--project", "services/whisperx", "--frozen", "svml-whisperx-prepare"],
-} as const;
+function workspaceCommand(entry: string): { command: string; args: readonly string[] } | undefined {
+  if (!existsSync(WORKSPACE_PROJECT)) return undefined;
+  return { command: "uv", args: ["run", "--project", WORKSPACE_PROJECT, "--frozen", entry] };
+}
 
-function command(value: unknown, fallback: { readonly command: string; readonly args: readonly string[] }) {
-  if (value === undefined) return fallback;
+function command(
+  value: unknown,
+  fallback: { readonly command: string; readonly args: readonly string[] } | undefined,
+  key: string,
+) {
+  if (value === undefined) {
+    if (fallback !== undefined) return fallback;
+    throw new Error(
+      `WhisperX ${key} is required: the pinned uv project is not at ${WORKSPACE_PROJECT},`
+      + " so this deployment must say what command runs WhisperX",
+    );
+  }
   if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string")) {
-    throw new Error("WhisperX serviceCommand must be a non-empty array of strings");
+    throw new Error(`WhisperX ${key} must be a non-empty array of strings`);
   }
   return { command: value[0] as string, args: (value as string[]).slice(1) };
 }
@@ -37,12 +53,13 @@ export function localWhisperXService(context: RuntimeAdapterFactoryContext): Run
     whisperxVersion: runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion") ?? "3.8.6",
     model: runtimeConfigString(config.expectedModel, "WhisperX expectedModel") ?? "small",
     device: runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice") ?? "cpu",
-    punktTabDigest: runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest") ?? localWhisperXPunktTabDigest,
+    punktTabDigest: runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest")
+      ?? localWhisperXPunktTabDigest,
   };
   return {
     id: "whisperx",
-    prepare: command(config.servicePrepareCommand, DEFAULT_PREPARE),
-    start: command(config.serviceCommand, DEFAULT_START),
+    prepare: command(config.servicePrepareCommand, workspaceCommand("svml-whisperx-prepare"), "servicePrepareCommand"),
+    start: command(config.serviceCommand, workspaceCommand("svml-whisperx-service"), "serviceCommand"),
     async probe(): Promise<RuntimeServiceState> {
       let health: Record<string, unknown>;
       try {

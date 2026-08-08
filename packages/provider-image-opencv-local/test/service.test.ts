@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import test from "node:test";
 
 import { localOpenCvService } from "../src/service.js";
@@ -14,10 +15,13 @@ test("OpenCV declares how to install its interpreter and nothing to keep running
   const service = localOpenCvService(context());
   assert.equal(service.id, "image-opencv");
   assert.equal(service.start, undefined, "OpenCV runs per Need; there is no daemon to start");
-  assert.deepEqual(service.prepare, {
-    command: "uv",
-    args: ["sync", "--project", "services/image-opencv", "--frozen"],
-  });
+  // Absolute: a Runtime root is wherever the Profile lives, not where the
+  // pinned uv project lives.
+  assert.equal(service.prepare?.command, "uv");
+  assert.equal(service.prepare?.args.at(-1), "--frozen");
+  const project = service.prepare?.args.at(-2) ?? "";
+  assert.ok(isAbsolute(project), `${project} must be absolute`);
+  assert.ok(existsSync(join(project, "pyproject.toml")), `${project} must be the pinned uv project`);
 });
 
 test("an interpreter without cv2 is reported here, not mid-Build", async () => {
