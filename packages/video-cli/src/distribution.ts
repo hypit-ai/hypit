@@ -3,7 +3,12 @@ import {
   createVideoCompiler,
   videoBuiltInPackageContributions,
 } from "./compiler.js";
-import { doctorRuntimeConfig } from "@narratage/local";
+import {
+  bringExternalServicesUp,
+  doctorRuntimeConfig,
+  reportExternalServices,
+  takeExternalServicesDown,
+} from "@narratage/local";
 import { createVideoRuntimeFromConfig } from "./runtime-config.js";
 
 /** Official video authoring and local Runtime-adapter assembly for the generic CLI engine. */
@@ -14,4 +19,9 @@ export const videoCliDistribution: CliDistribution = {
   createCompiler: createVideoCompiler,
   createRuntimeFromConfig: createVideoRuntimeFromConfig,
   doctorRuntimeConfig,
+  externalServices: {
+    up: bringExternalServicesUp,
+    down: takeExternalServicesDown,
+    report: reportExternalServices,
+  },
 };
