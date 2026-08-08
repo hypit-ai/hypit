@@ -26,6 +26,9 @@ the working tree contains only documents that should inform current implementati
   locking, contributions and Host-selected facet activation.
 - [`local-developer-runtime.md`](./local-developer-runtime.md) — local SQLite/filesystem
   Runtime, recovery and environment replacement.
+- [`credential-store-composition.md`](./credential-store-composition.md) — why the
+  credential-store role could hold several implementations, what widening it would break,
+  and why it waits for a deployment that needs it.
 - [`runtime-adapter-loading.md`](./runtime-adapter-loading.md) — separately locked Provider
   and Store activation, physical-code identity, diagnostics and explicit Artifact maintenance.
 - [`build-archive-and-egress.md`](./build-archive-and-egress.md) — Targets, durable Records,
