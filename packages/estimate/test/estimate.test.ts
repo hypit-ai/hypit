@@ -30,7 +30,7 @@ const normal = sealSpeechEstimatePolicy({
   rounding: "ceil",
 });
 
-test("normal English speech estimate preserves the old syllable-rate policy", () => {
+test("normal English speech estimate follows the syllable-rate policy", () => {
   const source = excerpt(
     "opening",
     "Video editing begins with meaning, not a pile of clips on a timeline.",
