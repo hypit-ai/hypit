@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import test from "node:test";
 
 import { localWhisperXService } from "../src/service.js";
@@ -10,11 +12,14 @@ const context = (config: Record<string, unknown> = {}) => ({
 test("the Provider declares how to bring WhisperX up and how to recognise it", () => {
   const service = localWhisperXService(context());
   assert.equal(service.id, "whisperx");
-  assert.deepEqual(service.start, {
-    command: "uv",
-    args: ["run", "--project", "services/whisperx", "--frozen", "svml-whisperx-service"],
-  });
+  assert.equal(service.start?.command, "uv");
+  assert.equal(service.start?.args.at(-1), "svml-whisperx-service");
   assert.equal(service.prepare?.args.at(-1), "svml-whisperx-prepare");
+  // Absolute: a Runtime root is wherever the Profile lives, not where the
+  // pinned uv project lives.
+  const project = service.start?.args.at(-3) ?? "";
+  assert.ok(isAbsolute(project), `${project} must be absolute`);
+  assert.ok(existsSync(join(project, "pyproject.toml")), `${project} must be the pinned uv project`);
 });
 
 test("a deployment that installs WhisperX elsewhere overrides the command", () => {
