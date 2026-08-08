@@ -1,13 +1,18 @@
 import type { CanonicalValue } from "../svml.js";
+import { brollComponent } from "./broll.js";
 import { captionComponent } from "./caption.js";
+import { speechComponent } from "./speech.js";
 import { textTrackComponent } from "./text-track.js";
 import type { PreviewComponent } from "./types.js";
 
 export type { BuildInput, FieldHint, PreviewComponent } from "./types.js";
 
+/** Every component that puts pixels on the frame. */
 export const REGISTRY: readonly PreviewComponent[] = [
   captionComponent,
   textTrackComponent,
+  brollComponent,
+  speechComponent,
 ];
 
 export function componentById(id: string): PreviewComponent | undefined {

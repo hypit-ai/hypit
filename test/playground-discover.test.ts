@@ -24,6 +24,7 @@ test("a stylesheet is read as a list of things to preview", () => {
   assert.deepEqual(
     found.subjects.map((subject) => [subject.path, subject.component.id]),
     [
+      ["broll.product", "broll"],
       ["caption.dialogue", "caption"],
       ["caption.alice", "caption"],
       ["caption.bob", "caption"],
@@ -31,11 +32,15 @@ test("a stylesheet is read as a list of things to preview", () => {
     ],
   );
 
-  // Reported rather than dropped. These are real Recipes with no preview yet,
-  // and naming them is the difference between a gap and a silent omission.
+  // Reported rather than dropped. These are real Recipes with no preview, and
+  // naming them is the difference between a gap and a silent omission.
+  //
+  // speech.full is here for a reason worth knowing: no Surface in the compiler
+  // reads it. projectSpeechVisual takes no appearance at all, so the Recipe is
+  // declared and unused, and the playground cannot honour what nothing honours.
   assert.deepEqual(
     found.unmatched.map((entry) => entry.path),
-    ["font.inter-semibold", "font.inter-black", "speech.full", "broll.product", "caption.short-cues"],
+    ["font.inter-semibold", "font.inter-black", "speech.full", "caption.short-cues"],
   );
 });
 
