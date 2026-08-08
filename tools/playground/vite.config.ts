@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vite";
 
+import { playgroundBrowsePlugin } from "./src/server/browse.js";
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../..");
 
@@ -49,4 +51,5 @@ export default defineConfig({
     // The playground reads sources and media from anywhere in the repository.
     fs: { allow: [repoRoot] },
   },
+  plugins: [playgroundBrowsePlugin(repoRoot)],
 });
