@@ -21,8 +21,6 @@ import type {
 } from "@narratage/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
 
-/** @deprecated Use the host-neutral ComponentPackage name. */
-export type NodeComponentPackage = ComponentPackage;
 export type { ComponentPackage } from "@narratage/component-kit";
 
 export type LocalTypeValidatorRegistry = TypeValidatorRegistryLike & TypeValidatorRegistrar;

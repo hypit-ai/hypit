@@ -14,7 +14,7 @@ import { FileArtifactStore } from "@narratage/artifact-store-fs";
 import { MemoryArtifactStore } from "@narratage/driver-node";
 import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
 import type {
-  NodeComponentPackage,
+  ComponentPackage,
   EndpointPackage,
 } from "@narratage/local";
 import { createLocalRuntime, createProjectLocalRuntime } from "@narratage/local";
@@ -93,7 +93,7 @@ test("project local runtime resumes durable work while component and endpoint pa
   let starts = 0;
   let resumes = 0;
   let cancels = 0;
-  const components: NodeComponentPackage = {
+  const components: ComponentPackage = {
     name: "example.components",
     producers: [
       {
