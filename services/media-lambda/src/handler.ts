@@ -9,7 +9,9 @@ import {
   executeRenderTimelineAudio,
 } from "@narratage/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@narratage/media-execution";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { promisify } from "node:util";
 import type { BlobRef, CanonicalValue, Digest } from "@narratage/protocol";
 import {
   MEDIA_LAMBDA_RESPONSE,
@@ -23,7 +25,7 @@ import type { MediaLambdaArtifactLocation, MediaLambdaOperation } from "@narrata
  * It owns no media logic: `@narratage/media-execution` holds the ffmpeg argv
  * and the frame arithmetic, and the same code answers a local Build. What is
  * particular to this deployment is only where the bytes live and which ffmpeg
- * binary the image carries.
+ * binary its immutable Layer carries.
  */
 const OPERATIONS: Record<
   MediaLambdaOperation,
@@ -38,6 +40,8 @@ const OPERATIONS: Record<
 
 const FFMPEG_PATH = process.env.FFMPEG_PATH ?? "/opt/bin/ffmpeg";
 const FFPROBE_PATH = process.env.FFPROBE_PATH ?? "/opt/bin/ffprobe";
+const FFMPEG_LIBRARY_PATH = process.env.NARRATAGE_FFMPEG_LIBRARY_PATH;
+const run = promisify(execFile);
 
 function positiveInteger(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
@@ -96,42 +100,103 @@ export type MediaLambdaHandlerOptions = {
   readonly client?: S3ObjectClient;
   readonly ffmpegPath?: string;
   readonly ffprobePath?: string;
+  readonly sharedLibraryPath?: string;
+  /**
+   * The deployed ZIP sets this to the version promised by its immutable Layer.
+   * Tests and embedded handlers may omit it when their binary identity is
+   * already controlled by the caller.
+   */
+  readonly expectedFfmpegVersion?: string;
 };
+
+function versionMatches(line: string, tool: "ffmpeg" | "ffprobe", expected: string): boolean {
+  const escaped = expected.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return new RegExp(`^${tool} version (?:n)?${escaped}(?:[-\\s]|$)`, "u").test(line);
+}
+
+async function assertBinaryVersion(
+  path: string,
+  tool: "ffmpeg" | "ffprobe",
+  expected: string,
+  sharedLibraryPath?: string,
+): Promise<void> {
+  const { stdout } = await run(path, ["-version"], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024,
+    timeout: 10_000,
+    env: {
+      ...process.env,
+      ...(sharedLibraryPath === undefined ? {} : { LD_LIBRARY_PATH: sharedLibraryPath }),
+    },
+  });
+  const firstLine = stdout.split(/\r?\n/u, 1)[0] ?? "";
+  if (!versionMatches(firstLine, tool, expected)) {
+    throw new Error(`${tool} Layer mismatch: expected ${expected}, got ${firstLine || "no version"}`);
+  }
+}
+
+async function assertBinaryPair(
+  ffmpegPath: string,
+  ffprobePath: string,
+  expected: string | undefined,
+  sharedLibraryPath?: string,
+): Promise<void> {
+  if (expected === undefined) return;
+  await Promise.all([
+    assertBinaryVersion(ffmpegPath, "ffmpeg", expected, sharedLibraryPath),
+    assertBinaryVersion(ffprobePath, "ffprobe", expected, sharedLibraryPath),
+  ]);
+}
 
 /**
  * The handler, with its S3 client and binaries open to substitution. The
- * deployed entry point below closes them over the image's own defaults; a test
+ * deployed entry point below closes them over the Layer's fixed paths; a test
  * can supply an in-memory bucket and run the real ffmpeg.
  */
 export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}) {
+  const ffmpegPath = options.ffmpegPath ?? FFMPEG_PATH;
+  const ffprobePath = options.ffprobePath ?? FFPROBE_PATH;
+  const sharedLibraryPath = options.sharedLibraryPath ?? FFMPEG_LIBRARY_PATH;
+  // One promise per warm execution environment. A missing or wrong Layer is a
+  // typed fulfillment failure, not a deployment fact silently discovered after
+  // several expensive transformations have already run.
+  let binariesReady: Promise<void> | undefined;
   return async function handle(event: unknown): Promise<unknown> {
-  let operation: MediaLambdaOperation = "inspect";
-  try {
-    const request = parseMediaLambdaRequest(event);
-    operation = request.operation;
-    const env: MediaExecutionEnvironment = {
-      artifacts: gateway(request.artifacts, options.client ?? new AwsS3ObjectClient({})),
-      ffmpegPath: options.ffmpegPath ?? FFMPEG_PATH,
-      ffprobePath: options.ffprobePath ?? FFPROBE_PATH,
-      processTimeoutMs: positiveInteger(process.env.SVML_MEDIA_TIMEOUT_MS, 14 * 60_000),
-      maxProbeOutputBytes: positiveInteger(process.env.SVML_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
-      label: "media.aws-lambda",
-    };
-    const result = await OPERATIONS[operation](env, request.constraints);
-    return {
-      contract: MEDIA_LAMBDA_RESPONSE,
-      operation,
-      ok: true as const,
-      value: result.value,
-      metadata: result.metadata,
-    };
-  } catch (error) {
-    // Never thrown: the transport will not copy a failed function's payload
-    // into its error, so a throw would reach the Build as "Unhandled".
-    return failure(operation, error);
-  }
+    let operation: MediaLambdaOperation = "inspect";
+    try {
+      const request = parseMediaLambdaRequest(event);
+      operation = request.operation;
+      binariesReady ??= assertBinaryPair(
+        ffmpegPath,
+        ffprobePath,
+        options.expectedFfmpegVersion ?? process.env.NARRATAGE_FFMPEG_VERSION,
+        sharedLibraryPath,
+      );
+      await binariesReady;
+      const env: MediaExecutionEnvironment = {
+        artifacts: gateway(request.artifacts, options.client ?? new AwsS3ObjectClient({})),
+        ffmpegPath,
+        ffprobePath,
+        ...(sharedLibraryPath === undefined ? {} : { sharedLibraryPath }),
+        processTimeoutMs: positiveInteger(process.env.SVML_MEDIA_TIMEOUT_MS, 14 * 60_000),
+        maxProbeOutputBytes: positiveInteger(process.env.SVML_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
+        label: "media.aws-lambda",
+      };
+      const result = await OPERATIONS[operation](env, request.constraints);
+      return {
+        contract: MEDIA_LAMBDA_RESPONSE,
+        operation,
+        ok: true as const,
+        value: result.value,
+        metadata: result.metadata,
+      };
+    } catch (error) {
+      // Never thrown: the transport will not copy a failed function's payload
+      // into its error, so a throw would reach the Build as "Unhandled".
+      return failure(operation, error);
+    }
   };
 }
 
-/** The image's entry point. */
+/** The managed-runtime ZIP's entry point. */
 export const handler = createMediaLambdaHandler();

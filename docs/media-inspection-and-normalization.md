@@ -134,16 +134,17 @@ hidden transcode.
 ## Provider boundary
 
 `@narratage/media-pipeline` owns the provider-neutral Fragment and exact capabilities.
-`@narratage/provider-media-local` realizes them with bounded local ffprobe/ffmpeg processes.
+`@narratage/provider-media-local` realizes them with bounded local ffprobe/ffmpeg processes;
+`@narratage/provider-media-aws-lambda` runs the same execution body in Lambda.
 
 ```text
 .svml/imported author package  chooses that a generated result is used as visual or speech media
 Media Pipeline                fixes inspection, selection and clock laws
-Runtime Profile               binds local media Provider or future AWS media Provider
+Runtime Profile               binds local or AWS Lambda media Provider
 Provider                      executes bytes; it cannot promote audio to speech
 ```
 
-A future Lambda package returns the same `MediaInspection` and `SynchronizedMedia` contracts. It may
+The Lambda package returns the same `MediaInspection` and `SynchronizedMedia` contracts. It may
 queue or parallelize internally, but it cannot change primary-stream selection or A/V timing laws.
 
 ## Executable evidence

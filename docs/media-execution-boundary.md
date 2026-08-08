@@ -1,8 +1,8 @@
 # Media Execution Boundary
 
-Status: implemented local reference path, including evidence audio, HyperFrames visual rendering,
-program audio and final mux. AWS execution Providers remain future work. This is not yet a public
-compatibility freeze.
+Status: local reference path and AWS media/HyperFrames Endpoint variants are implemented. The AWS
+deployments have not yet passed a live acceptance run. This is not yet a public compatibility
+freeze.
 
 ## The rule
 
@@ -73,17 +73,17 @@ with separate inputs, results, digests, retry histories and scheduling identitie
 
 ## Local, Lambda and queues
 
-`@narratage/provider-media-local` currently fulfills inspection, normalization, canonical speech-
+`@narratage/provider-media-local` fulfills inspection, normalization, canonical speech-
 evidence projection, timeline-audio rendering and mux with bounded shell-free ffprobe/ffmpeg
 subprocesses. `@narratage/provider-hyperframes-local` fulfills the independent silent visual Need. One
 Runtime Scheduler applies configured Endpoint lane concurrency across Builds, while HyperFrames'
 own `workers` option partitions frames inside one admitted render.
 
-A future AWS package may fulfill the same Needs through Lambda. Lambda invocation, internal worker
-fan-out, polling and remote queues belong to that Endpoint and its execution topology. They do not
-change the Need or require another author component. HyperFrames visual rendering follows the same
-rule: local workers and Lambda workers are alternate Provider implementations of the exact visual
-Need.
+`@narratage/provider-media-aws-lambda` fulfills the same five media Needs through one Lambda and the
+same `@narratage/media-execution` implementation. `@narratage/provider-hyperframes-aws-lambda`
+fulfills the same silent visual Need through one recoverable Step Functions execution. Lambda
+invocation, internal frame fan-out, polling and remote queues belong to those Endpoints and their
+execution topology. They do not change a Need or require another author component.
 
 ## Speech evidence path
 
@@ -128,9 +128,11 @@ mistake codec padding for extra authored time.
 
 ## Remaining work
 
-- implement AWS HyperFrames, media and WhisperX Provider variants only when a deployment needs
-  them, while preserving the same public contracts;
+- deploy and live-test the implemented AWS HyperFrames variant after explicit resource review; the
+  exact FFmpeg Layer and ZIP-packaged media service already pass their complete live canary;
 - deploy the implemented `services/whisperx` distribution wherever a local warm model process is
-  required; its lock, HTTP protocol and systemd example are independent of the Node Provider;
+  required, and add a remote-service Provider only for a genuinely persistent warm deployment;
+  WhisperX is deliberately not an AWS Lambda target because repeated model cold starts defeat this
+  execution shape;
 - decide whether visual-only identity should be projected earlier so an audio-only edit can reuse a
   paid visual render without even recompiling its cheap visual document.
