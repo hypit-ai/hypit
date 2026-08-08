@@ -11,7 +11,7 @@ export const programSpaceModuleRef = { name: "@narratage/program-space", version
 export const programSpaceTypes = {
   programSpace: { module: programSpaceModuleRef, name: "ProgramSpace" },
 } satisfies Record<string, TypeRef>;
-const number = { kind: "number", minimum: 0 } as const;
+const number = { kind: "number", minimum: 0, format: "duration" } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 export const programSpaceSchema: ValueSchema = {
   kind: "object",
@@ -25,13 +25,29 @@ export const programSpaceSchema: ValueSchema = {
 };
 export const programSpaceManifest: ModuleManifest = {
   format: "svml.module@1", name: programSpaceModuleRef.name, version: programSpaceModuleRef.version,
-  dependencies: [], types: [{ name: programSpaceTypes.programSpace.name, schema: programSpaceSchema }],
+  dependencies: [], types: [{
+    name: programSpaceTypes.programSpace.name,
+    schema: programSpaceSchema,
+    default: { contract: "svml.program-space@1", durationSec: 4, frameRate: { numerator: 30, denominator: 1 } },
+  }],
   capabilities: [], surfaces: [], producers: [],
 };
 export const programSpaceManifestDigest = digestOf(programSpaceManifest);
 export const programSpaceDependency = { module: programSpaceModuleRef, digest: programSpaceManifestDigest } as const;
 
 export function sealProgramSpace(value: ProgramSpace): ProgramSpace { return structuredClone(value); }
+
+/**
+ * Four seconds at 30, for anything that must have a frame domain before a
+ * Build has measured one.
+ */
+export function defaultProgramSpace(): ProgramSpace {
+  return sealProgramSpace({
+    contract: "svml.program-space@1",
+    durationSec: 4,
+    frameRate: { numerator: 30, denominator: 1 },
+  });
+}
 export function programSpaceFrameCount(programSpace: ProgramSpace): number {
   const frames = programSpace.durationSec * programSpace.frameRate.numerator / programSpace.frameRate.denominator;
   const rounded = Math.round(frames);

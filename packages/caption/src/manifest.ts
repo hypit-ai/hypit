@@ -7,6 +7,8 @@ import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 import {
+  defaultCaptionTrackProgram,
+  defaultTimedCaptionProjection,
   renderCaptionProgramImplementationDigest,
   renderCaptionTrackImplementationDigest,
 } from "./track.js";
@@ -41,6 +43,7 @@ export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/ca
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
+const seconds = { kind: "number", minimum: 0, format: "duration" } as const;
 const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
 ): ValueSchema => ({ kind: "object", fields });
@@ -59,12 +62,12 @@ const timedCaptionRegion = object({
   id: { schema: string },
   runId: { schema: string, optional: true },
   styleId: { schema: string, optional: true },
-  display: { schema: { kind: "string" } },
+  display: { schema: { kind: "string", format: "multiline" } },
   segmentId: { schema: string },
   kind: { schema: { kind: "string", enum: ["identity", "alias", "hidden"] } },
   sourceTokenIds: { schema: { kind: "array", items: string } },
-  startSec: { schema: number },
-  endSec: { schema: number },
+  startSec: { schema: seconds },
+  endSec: { schema: seconds },
   refinements: { schema: { kind: "array", items: timedCaptionRefinement } },
   fields: { schema: { kind: "array", items: object({
     declarationId: { schema: string },
@@ -93,24 +96,28 @@ export const captionPlanSchema: ValueSchema = object({
 });
 export const timedCaptionProjectionSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.timed-caption-projection@1" } },
-  text: { schema: { kind: "string" } },
+  text: { schema: { kind: "string", format: "multiline" } },
   regions: { schema: { kind: "array", items: timedCaptionRegion } },
 });
+
+const color = { kind: "string", minLength: 1, format: "color" } as const;
+/** Percent of a canvas dimension. Not a unit fraction: these run 0 to 100. */
+const percent = { kind: "number", minimum: 0, maximum: 100 } as const;
 
 const captionTrackStyleSchema = object({
     fontFamily: { schema: string },
     fontSizePx: { schema: number },
     fontWeight: { schema: number },
-    color: { schema: string },
-    backgroundColor: { schema: string, optional: true },
+    color: { schema: color },
+    backgroundColor: { schema: color, optional: true },
     paddingXPx: { schema: number },
     paddingYPx: { schema: number },
     borderRadiusPx: { schema: number },
-    bottomPercent: { schema: number },
-    maxWidthPercent: { schema: number },
-    leftPercent: { schema: number, optional: true },
-    topPercent: { schema: number, optional: true },
-    widthPercent: { schema: number, optional: true },
+    bottomPercent: { schema: percent },
+    maxWidthPercent: { schema: percent },
+    leftPercent: { schema: percent, optional: true },
+    topPercent: { schema: percent, optional: true },
+    widthPercent: { schema: percent, optional: true },
     lineHeight: { schema: number, optional: true },
     textAlign: { schema: { kind: "string", enum: ["left", "center", "right"] } },
   });
@@ -217,6 +224,7 @@ export const captionManifest: ModuleManifest = {
     {
       name: captionTypes.timedProjection.name,
       schema: timedCaptionProjectionSchema,
+      default: defaultTimedCaptionProjection(),
       validator: {
         abi: "svml.type-validator@1",
         implementation: {
@@ -229,6 +237,7 @@ export const captionManifest: ModuleManifest = {
     {
       name: captionTypes.trackProgram.name,
       schema: captionTrackProgramSchema,
+      default: defaultCaptionTrackProgram(),
       validator: {
         abi: "svml.type-validator@1",
         implementation: {
