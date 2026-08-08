@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "canary": "node --import tsx test/live-canary.ts"
+  },
   "svml": {
     "activation": "./src/activation.ts"
   },
@@ -22,6 +25,8 @@
     "@narratage/runtime-adapter": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/driver-node": "workspace:*"
+    "@narratage/composition": "workspace:*",
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/program-space": "workspace:*"
   }
 }
