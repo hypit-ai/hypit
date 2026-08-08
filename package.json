@@ -15,6 +15,7 @@
     "smoke:kie": "node --import tsx packages/provider-kie/test/live-smoke.ts",
     "narratage": "node --import tsx packages/video-cli/src/cli.ts",
     "svml": "node --import tsx packages/video-cli/src/cli.ts",
+    "playground": "vite --config tools/playground/vite.config.ts",
     "build:media-lambda": "pnpm --filter @narratage/media-lambda build",
     "build:media-lambda-layer": "pnpm --filter @narratage/media-lambda build:layer"
   },
@@ -38,6 +39,7 @@
     "@narratage/narrative": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/prompt-kit": "workspace:*",
+    "@narratage/protocol": "workspace:*",
     "@narratage/provider-google-vertex": "workspace:*",
     "@narratage/provider-hyperframes-local": "workspace:*",
     "@narratage/provider-image-opencv-local": "workspace:*",
@@ -64,6 +66,7 @@
     "@types/node": "24.10.1",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
+    "vite": "5.4.21",
     "vitepress": "^1.6.4"
   }
 }
