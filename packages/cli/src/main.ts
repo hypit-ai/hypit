@@ -1,7 +1,7 @@
 import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { LocalRuntime } from "@narratage/local";
+import type { ExternalServiceReport, LocalRuntime } from "@narratage/local";
 import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
 import type { BuildCatalogDescriptor } from "@narratage/runtime";
 import { parseSourceHeader } from "@narratage/source";
@@ -48,6 +48,8 @@ type ParsedArgs = {
   readonly to: string | undefined;
   readonly pins: readonly { readonly output: string; readonly build: string }[];
   readonly apply: boolean;
+  /** Leave the declared external programs alone; build against what is running. */
+  readonly noServices: boolean;
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -72,6 +74,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let to: string | undefined;
   const pins: { output: string; build: string }[] = [];
   let apply = false;
+  let noServices = false;
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
     if (item === "--target") {
@@ -175,6 +178,10 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       apply = true;
       continue;
     }
+    if (item === "--no-services") {
+      noServices = true;
+      continue;
+    }
     if (item === "--max-wait-ms") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--max-wait-ms requires milliseconds");
@@ -207,6 +214,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     to,
     pins,
     apply,
+    noServices,
   };
 }
 
@@ -219,7 +227,7 @@ function usage(): string {
     "  narratage gc <runtime-profile.json> [--apply]",
     "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
     "  narratage plan <run-source> [--runtime profile.json] [--package-lock file]",
-    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--follow]",
+    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--follow] [--no-services]",
     "  narratage status <build-id> --runtime profile.json|./svml.runtime.ts",
     "  narratage builds --runtime profile.json|./svml.runtime.ts",
     "  narratage inspect <build-id> --runtime profile.json|./svml.runtime.ts",
@@ -266,6 +274,42 @@ function createCatalogDescriptor(options: {
     } }),
     aliases,
   };
+}
+
+/**
+ * Starts the external programs the Runtime Profile's Endpoints declare, before
+ * the Build reaches an Operation that would need one. A WhisperX that is not
+ * running otherwise surfaces as a refused connection partway through, after the
+ * paid generation ahead of it has already been spent.
+ *
+ * Only a JSON Profile declares Endpoints this can read. A trusted `.ts` module
+ * builds its Runtime itself and owns whatever its Endpoints talk to, so there is
+ * nothing here to start on its behalf.
+ *
+ * Services are started and left running: a developer submits several Builds
+ * against one warm program, and stopping it between them would pay the model
+ * load every time. `narratage services down` ends them.
+ */
+async function startDeclaredServices(
+  path: string,
+  distribution: CliDistribution,
+): Promise<readonly ExternalServiceReport[] | undefined> {
+  if (extname(path) !== ".json") return undefined;
+  const result = await distribution.externalServices.up(resolve(path), {});
+  const unavailable = result.services.filter((item) => item.state.state !== "ready");
+  if (unavailable.length > 0) {
+    throw new Error([
+      `${unavailable.length} external service${unavailable.length === 1 ? " is" : "s are"} not ready:`,
+      // The report carries two reasons that do not overlap: what the probe saw,
+      // and why the attempt to fix it fell short. Both name a different repair.
+      ...unavailable.map((item) => `  ${item.id}: ${item.state.state}`
+        + `${"detail" in item.state ? ` — ${item.state.detail}` : ""}`
+        + `${item.detail === undefined ? "" : `; ${item.detail}`}`
+        + `${item.logPath === undefined ? "" : ` (log: ${item.logPath})`}`),
+      "Fix the service, or pass --no-services to build against what is already running.",
+    ].join("\n"));
+  }
+  return result.services;
 }
 
 async function loadLocalRuntime(path: string, distribution: CliDistribution): Promise<LocalRuntime> {
@@ -366,6 +410,9 @@ export async function runCli(
     return;
   }
   if (args.apply) throw new Error("--apply is only valid for gc");
+  if (args.noServices && args.command !== "build") {
+    throw new Error("--no-services is only valid for build; no other command starts an external program");
+  }
   if ((args.record !== undefined || args.output !== undefined || args.name !== undefined
     || args.artifact !== undefined || args.to !== undefined)
     && args.command !== "get") {
@@ -568,6 +615,7 @@ export async function runCli(
   }
   if (args.command === "build") {
     if (args.runtime === undefined) throw new Error("build requires --runtime with a Runtime Profile or trusted local config module");
+    const services = args.noServices ? undefined : await startDeclaredServices(args.runtime, distribution);
     const runtime = await loadLocalRuntime(args.runtime, distribution);
     try {
       const loadedRun = await loadRunFile({
@@ -599,6 +647,9 @@ export async function runCli(
         build: built.id,
         core: built.state.id,
         status: built.status,
+        ...(services === undefined ? {} : {
+          services: services.map((item) => ({ id: item.id, action: item.action })),
+        }),
         goals: built.state.plan.goals.map((goal) => {
           const record = built.state.records.find((item) => item.id === goal.record);
           return {

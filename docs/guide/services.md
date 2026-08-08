@@ -8,13 +8,41 @@ description: Setting up the WhisperX and OpenCV services.
 Two Python services support local Builds. They are Runtime deployment packages, not part
 of Core or the author language.
 
+## Automatic setup
+
+You normally do not run any of the commands on this page. `pnpm install` prepares every service
+that an installed Provider declares, and `narratage build` starts them:
+
+```bash
+pnpm install     # prepares the Python environments
+pnpm narratage build build.svrun --runtime svml.runtime.json --follow
+```
+
+A Build starts only the services its Runtime Profile declares, leaves them running between Builds
+so a warm model is not reloaded, and stops before its first Operation if one cannot be reached —
+so an unavailable service never costs a paid generation.
+
+Manage them directly when you need to:
+
+```bash
+pnpm narratage services status svml.runtime.json   # what is running
+pnpm narratage services up svml.runtime.json       # start without building
+pnpm narratage services down svml.runtime.json     # stop what this project started
+pnpm narratage build … --no-services               # build against what is already running
+```
+
+`pnpm install` skips preparation when `uv` is absent and says so; it never fails the install. The
+rest of this page is what those commands run, for when one of them fails or you are deploying
+outside this repository.
+
 ## WhisperX
 
 Provides ASR and language-specific alignment for speech timing measurement.
 
-### Install
+### Install by hand
 
-WhisperX 3.8.6 supports Python 3.10–3.13. The checked-in lock selects 3.13:
+`pnpm install` runs the first three of these. WhisperX 3.8.6 supports Python 3.10–3.13, and the
+checked-in lock selects 3.13:
 
 ```bash
 uv python install 3.13
@@ -30,7 +58,10 @@ inference.
 The first model start may download ASR and alignment weights. Production should put the Hugging
 Face cache on persistent storage.
 
-### Run
+### Run by hand
+
+`narratage build` and `narratage services up` run this for you, logging to
+`.svml/services/whisperx.log`. To run it in the foreground instead:
 
 ```bash
 uv run --project services/whisperx --frozen svml-whisperx-service
@@ -71,7 +102,13 @@ pnpm test:whisperx-service
 Provides bounded image transforms (e.g. the GPT Image YCrCb denoise preset) through
 `@narratage/provider-image-opencv-local`.
 
-### Install
+OpenCV runs as one bounded process per Need, so there is no program to keep warm — preparing the
+environment is the whole job, and `narratage services status` reports whether the interpreter
+carries a usable `cv2` and `numpy`.
+
+### Install by hand
+
+`pnpm install` runs this:
 
 ```bash
 uv python install 3.13

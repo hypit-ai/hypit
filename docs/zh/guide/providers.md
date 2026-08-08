@@ -28,7 +28,7 @@ Provider 包依赖 Runtime 端口以及它所服务的模型族，绝不依赖 C
   "exports": {
     ".": "./src/index.ts"
   },
-  "svml": { "activation": "./src/activation.ts" },
+  "svml": { "activation": "./src/activation.ts", "service": true },
   "dependencies": {
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
@@ -114,7 +114,42 @@ export default svmlPackage;
 
 `create` 函数根据 Runtime 配置构造 Endpoint。`doctor` 函数返回诊断信息（凭据是否存在、可执行文件是否可用），不构造也不调用任何东西。
 
-## 5. 注册并锁定
+## 5. 声明外部服务（如需要）
+
+如果 Provider 依赖外部程序（Python 服务、本地服务器），在 `package.json` 的 `svml` 块中添加
+`"service": true`（见第 2 步），并在 `src/service.ts` 中导出工厂函数：
+
+```typescript
+// src/service.ts
+import type { RuntimeExternalService } from "@narratage/local";
+
+export function createMyExternalService(): RuntimeExternalService {
+  return {
+    id: "my-service",
+    prepare: { command: "uv", args: ["sync", "--project", "services/my-service", "--frozen"] },
+    start: { command: "uv", args: ["run", "--project", "services/my-service", "--frozen", "svml-my-service"] },
+    probe: async () => {
+      // 返回 { state: "ready" } 或 { state: "down", detail: "..." }
+    },
+  };
+}
+```
+
+在 activation 描述符中通过 `service` 参数接入：
+
+```typescript
+const adapter = createRuntimeEndpointAdapterFacet({
+  use: "@narratage/provider-my-service",
+  service: createMyExternalService,
+  // create, doctor …
+});
+```
+
+`pnpm install` 会自动执行 `prepare`，`narratage build` 会在第一个 Operation 之前调用 `start`
+和 `probe`。只调用远程 API 的 Provider（没有本地程序）跳过这一步——`package.json` 中不写
+`"service"`。
+
+## 6. 注册并锁定
 
 在 `tsconfig.json` 中添加路径映射：
 
@@ -130,7 +165,7 @@ pnpm narratage lock-packages <runtime-lock> \
   --root .
 ```
 
-## 6. 在 svml.runtime.json 中引用
+## 7. 在 svml.runtime.json 中引用
 
 ```json
 {
