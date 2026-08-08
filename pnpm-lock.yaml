@@ -722,6 +722,21 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/media-execution:
+    dependencies:
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+
   packages/media-pipeline:
     dependencies:
       '@narratage/artifact':
@@ -1060,6 +1075,9 @@ importers:
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../media-execution
       '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
