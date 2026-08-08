@@ -218,8 +218,8 @@ Slot id 为 1–64 个字符，以字母或下划线开头。绑定值为纯文�
   </hook>
 
   <meeting>
-    <HOST> @solution Then I found <Echo Pro | echo pro>: a card-sized recorder
-           that snaps onto the back of my phone. @ranking! I brought it to one
+    <HOST> @solution Then I opened <AI notes | artificial intelligence notes>,
+           which organized the meeting for me. @ranking! I brought it to one
            meeting. @/solution
   </meeting>
 
@@ -238,7 +238,7 @@ Slot id 为 1–64 个字符，以字母或下划线开头。绑定值为纯文�
 
 - 四个 Segment：`hook`、`meeting`、`evidence`、`payoff`
 - 一个 Role Cue：`HOST`（在所有 Segment 中保持一致）
-- 一个 Dual Text：`<Echo Pro | echo pro>`（显示为 "Echo Pro"，说出为 "echo pro"）
+- 一个 Dual Text：`<AI notes | artificial intelligence notes>`（显示为 "AI notes"，完整读出右侧文本）
 - 三个 Selection：`whole`（整个 Script）、`problem`、`solution`、`emphasis`
 - 一个 Moment：`ranking`（标记 "I brought it to one meeting" 这一瞬间）
 

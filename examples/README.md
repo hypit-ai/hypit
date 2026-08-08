@@ -5,7 +5,7 @@
   requirements.
 - [`talking-film-live`](./talking-film-live/README.md) executes the real paid two-take path with KIE,
   local media processing, local WhisperX, Vertex Caption planning and local HyperFrames rendering.
-- [`echo-pro-aroll`](./echo-pro-aroll/README.md) is the current four-take acceptance witness and
+- [`talking-head-aroll`](./talking-head-aroll/README.md) is the current four-take acceptance witness and
   demonstrates a second Run that explicitly reuses historical shot Records as zero-input
   Candidates without another KIE submission.
 - [`talking-film-golden`](./talking-film-golden/README.md) is the larger authoring and visual design

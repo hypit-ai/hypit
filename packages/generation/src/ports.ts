@@ -8,7 +8,7 @@ import type { BlobRef } from "@narratage/protocol";
  * of the service reselling it. A Provider therefore never redeclares this
  * shape; it only maps each declared port onto its own wire fields.
  *
- * Adding a port kind is a `svml.generation-ports@2` decision, not a field patch.
+ * Adding a port kind is a `svml.generation-ports@1` decision, not a field patch.
  */
 export const GENERATION_PORTS_V1 = "svml.generation-ports@1" as const;
 

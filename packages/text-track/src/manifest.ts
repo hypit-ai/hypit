@@ -118,7 +118,7 @@ const textTrackSetSchema: ValueSchema = object({
   items: { schema: { kind: "array", items: textItemSchema } },
 });
 
-export const textTrackSurfaceImplementationDigest = digestOf("@narratage/text-track/track-surface@2");
+export const textTrackSurfaceImplementationDigest = digestOf("@narratage/text-track/track-surface@1");
 
 export const textTrackManifest: ModuleManifest = {
   format: "svml.module@1",

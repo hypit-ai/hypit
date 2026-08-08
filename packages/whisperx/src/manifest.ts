@@ -18,8 +18,8 @@ export const whisperXProducers = {
   normalize: { module: whisperXModuleRef, name: "normalize-whisperx-alignment" },
 } satisfies Record<string, ProducerRef>;
 export const whisperXImplementationDigests = {
-  request: digestOf("@narratage/whisperx/request@2"),
-  normalize: digestOf("@narratage/whisperx/normalize@2"),
+  request: digestOf("@narratage/whisperx/request@1"),
+  normalize: digestOf("@narratage/whisperx/normalize@1"),
   surface: digestOf("@narratage/whisperx/alignment-surface@1"),
 };
 

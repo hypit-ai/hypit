@@ -13,7 +13,7 @@ export const estimateTypes = {
 export const estimateProducers = {
   speech: { module: estimateModuleRef, name: "estimate-speech-duration" },
 } satisfies Record<string, ProducerRef>;
-export const estimateSurfaceImplementationDigest = digestOf("@narratage/estimate/speech-surface@2");
+export const estimateSurfaceImplementationDigest = digestOf("@narratage/estimate/speech-surface@1");
 
 const number = { kind: "number" } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {

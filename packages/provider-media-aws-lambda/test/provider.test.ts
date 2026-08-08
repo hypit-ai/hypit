@@ -141,7 +141,7 @@ test("a typed failure reaches the Build with its code, since the transport withh
 });
 
 test("a reply that is not this contract is refused rather than half-read", () => {
-  assert.throws(() => parseMediaLambdaResponse({ contract: "svml.media-lambda-response@0", operation: "inspect" }),
+  assert.throws(() => parseMediaLambdaResponse({ contract: "svml.media-lambda-response@invalid", operation: "inspect" }),
     /contract must be svml\.media-lambda-response@1/u);
   assert.throws(() => parseMediaLambdaResponse({ contract: "svml.media-lambda-response@1", operation: "transcode" }),
     /operation must be one of/u);

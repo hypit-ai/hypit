@@ -117,8 +117,8 @@ export const seedanceSpeechCompileImplementationDigests = Object.fromEntries(
 
 export const seedanceSurfaceImplementationDigests = {
   prompt: digestOf("@narratage/seedance/prompt-surface@1"),
-  speech: digestOf("@narratage/seedance/speech-surface@4"),
-  video: digestOf("@narratage/seedance/video-surface@2"),
+  speech: digestOf("@narratage/seedance/speech-surface@1"),
+  video: digestOf("@narratage/seedance/video-surface@1"),
 } as const;
 
 function assertObject(value: unknown): asserts value is Record<string, unknown> {
