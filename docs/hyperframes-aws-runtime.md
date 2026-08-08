@@ -1,7 +1,10 @@
 # HyperFrames AWS Runtime
 
-Status: the recoverable Endpoint package is implemented and tested with an injected SDK client. No
-HyperFrames AWS stack or paid render has been created from this repository yet.
+Status: the recoverable Endpoint package has passed both injected-client tests and a complete live
+AWS acceptance run: site staging, checkpointed Step Functions polling, distributed frame
+rendering, assembly, ArtifactStore ingestion, local ffprobe verification and remote
+temporary-object cleanup. Stack
+provisioning remains an adopter-owned deployment operation rather than package-import side effect.
 
 ## Boundary
 
@@ -68,6 +71,26 @@ The progress receipt is not an ffprobe inspection. Deep codec/container validati
 explicit media Need. This lets a fully remote Runtime operate without acquiring a hidden local
 FFmpeg dependency.
 
+## Live canary
+
+The canary is opt-in because it uses real AWS resources. It constructs a one-second, 24-frame
+document, renders it through the Narratage recoverable Endpoint, verifies the downloaded H.264
+stream has exactly 24 frames, and deletes that run's render/site prefixes unless
+`NARRATAGE_HYPERFRAMES_CANARY_KEEP=1` is set:
+
+```bash
+AWS_PROFILE=my-profile \
+AWS_REGION=us-east-1 \
+NARRATAGE_HYPERFRAMES_STATE_MACHINE_ARN=arn:aws:states:us-east-1:123456789012:stateMachine:hyperframes-team \
+NARRATAGE_HYPERFRAMES_BUCKET=hyperframes-team-render-bucket \
+NARRATAGE_HYPERFRAMES_MEMORY_MB=2048 \
+pnpm --filter @narratage/provider-hyperframes-aws-lambda canary
+```
+
+Every invocation gets a fresh Runtime operation identity, so repeated canaries never reuse an old
+Step Functions execution whose output has already been cleaned. The canary needs local `ffprobe`
+only for acceptance inspection; normal remote orchestration does not.
+
 ## Resource review before the first deploy
 
 The upstream 0.7.84 SAM topology is expected to create or use:
@@ -97,6 +120,11 @@ stack, but its `lambda deploy` command searches a HyperFrames source checkout fo
 not contain that template or a ready handler ZIP. The first deployment must therefore use an exact
 0.7.84 HyperFrames source checkout (or a reviewed Narratage-owned CDK/SAM distribution), not assume
 that installing the SDK alone is a deployable stack.
+
+When that source checkout is built on macOS, `ffmpeg-static` follows the host platform by default.
+Before packaging Lambda, reinstall its binary for `npm_config_platform=linux` and
+`npm_config_arch=x64` and verify that both `ffmpeg` and `ffprobe` are Linux ELF files. The upstream
+ZIP verifier rejects a host Mach-O binary, as it should.
 
 Before any real deploy, inspect the CloudFormation change set and confirm stack name, region,
 reserved concurrency, memory, retained bucket and IAM resources. Only then place its output bucket

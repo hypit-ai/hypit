@@ -96,7 +96,10 @@ retention capabilities. `narratage gc <runtime-profile.json>` is read-only by de
 deletes only objects unreachable from every retained BuildState and Operation. This is Host
 maintenance, never a Core transition or automatic cache policy. `narratage doctor
 <runtime-profile.json>` verifies package bytes, closed adapter configuration, required environment
-credentials and local executable availability without running a Build.
+credentials, executables and declared service health without running a Build. Runtime Adapter Host
+ABI `@2` requires a pure configuration gate separate from construction: `doctor` never invokes an
+adapter factory, starts a service, writes Runtime state or submits work. Valid instances may perform
+bounded read-only environment probes.
 
 `LocalRuntime.builds()` reads a separate Host `BuildCatalog`. With the default local assembly the
 catalog shares the SQLite file physically; deployments with replacement execution Stores default

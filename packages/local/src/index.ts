@@ -20,7 +20,6 @@ export {
 } from "./external-services.js";
 export {
   RuntimeAdapterRegistry,
-  RuntimeAdapterRegistry as RuntimeConfigRegistry,
 } from "@narratage/runtime-adapter";
 export type * from "./types.js";
 export type * from "./config.js";

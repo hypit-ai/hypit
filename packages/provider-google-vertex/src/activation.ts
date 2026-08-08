@@ -12,6 +12,23 @@ import { createGoogleVertexCaptionProvider } from "./provider.js";
 
 const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-google-vertex",
+  validate(context) {
+    const config = runtimeConfigObject(context.config, "Google Vertex");
+    runtimeConfigExact(config, [
+      "project", "projectEnv", "location", "credentialsEnv", "defaultConcurrency",
+      "requestTimeoutMs", "maxResponseBytes",
+    ], "Google Vertex");
+    const project = runtimeConfigString(config.project, "Google Vertex project");
+    const projectEnv = runtimeConfigString(config.projectEnv, "Google Vertex projectEnv");
+    if (project !== undefined && projectEnv !== undefined) {
+      throw new Error("Google Vertex accepts project or projectEnv, not both");
+    }
+    runtimeConfigString(config.location, "Google Vertex location");
+    runtimeConfigString(config.credentialsEnv, "Google Vertex credentialsEnv");
+    runtimeConfigPositiveInteger(config.defaultConcurrency, "Google Vertex defaultConcurrency");
+    runtimeConfigPositiveInteger(config.requestTimeoutMs, "Google Vertex requestTimeoutMs");
+    runtimeConfigPositiveInteger(config.maxResponseBytes, "Google Vertex maxResponseBytes");
+  },
   create(context) {
     const config = runtimeConfigObject(context.config, "Google Vertex");
     runtimeConfigExact(config, [

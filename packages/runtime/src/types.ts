@@ -147,5 +147,3 @@ export type BuildSchedulerFactory = {
   create(executor: RuntimeCommandExecutor, options?: BuildSchedulerOptions): BuildScheduler;
 };
 
-/** @deprecated The options are not specific to the reference local implementation. */
-export type LocalBuildSchedulerOptions = BuildSchedulerOptions;

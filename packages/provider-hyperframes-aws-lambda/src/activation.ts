@@ -37,9 +37,22 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
   runtimeConfigExact(config, CONFIG_KEYS, "AWS Lambda HyperFrames");
   const stateMachineArn = runtimeConfigString(config.stateMachineArn, "HyperFrames stateMachineArn");
   if (stateMachineArn === undefined) throw new Error("AWS Lambda HyperFrames stateMachineArn is required");
+  const machine = /^(arn:aws(?:-[a-z]+)*:states):([a-z0-9-]+):(\d{12}):stateMachine:([A-Za-z0-9_-]+)$/u
+    .exec(stateMachineArn);
+  if (machine === null) {
+    throw new Error(`HyperFrames stateMachineArn must be an unqualified AWS Step Functions state-machine ARN; got ${stateMachineArn}`);
+  }
   const bucketName = runtimeConfigString(config.bucketName, "HyperFrames bucketName");
   if (bucketName === undefined) throw new Error("AWS Lambda HyperFrames bucketName is required");
+  if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/u.test(bucketName)
+    || bucketName.includes("..") || bucketName.includes(".-") || bucketName.includes("-.")
+    || /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(bucketName)) {
+    throw new Error("HyperFrames bucketName is invalid");
+  }
   const region = runtimeConfigString(config.region, "HyperFrames region");
+  if (region !== undefined && region !== machine[2]) {
+    throw new Error(`HyperFrames region ${region} differs from state machine region ${machine[2]}`);
+  }
   const quality = runtimeConfigString(config.quality, "HyperFrames quality");
   if (quality !== undefined && quality !== "draft" && quality !== "standard" && quality !== "high") {
     throw new Error("HyperFrames quality is invalid");
@@ -47,6 +60,9 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
   const chunkSize = optionalInteger(config, "chunkSize");
   const maxParallelChunks = optionalInteger(config, "maxParallelChunks");
   const targetChunkFrames = optionalInteger(config, "targetChunkFrames");
+  if (chunkSize !== undefined && targetChunkFrames !== undefined) {
+    throw new Error("HyperFrames chunkSize and targetChunkFrames are mutually exclusive");
+  }
   const defaultMemorySizeMb = optionalInteger(config, "defaultMemorySizeMb");
   const defaultConcurrency = optionalInteger(config, "defaultConcurrency");
   const pollIntervalMs = optionalInteger(config, "pollIntervalMs");
@@ -76,32 +92,11 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
 
 const awsLambdaHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-hyperframes-aws-lambda",
+  validate(context) {
+    providerOptions(context);
+  },
   create(context) {
     return createAwsLambdaHyperframesProvider(providerOptions(context));
-  },
-  doctor(context) {
-    try {
-      const options = providerOptions(context);
-      createAwsLambdaHyperframesProvider({
-        ...options,
-        client: {
-          deploySite: async () => { throw new Error("doctor does not deploy"); },
-          render: async () => { throw new Error("doctor does not render"); },
-          progress: async () => { throw new Error("doctor does not poll"); },
-          stop: async () => { throw new Error("doctor does not cancel"); },
-          openOutput: async () => { throw new Error("doctor does not download"); },
-        },
-        clientImplementationDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      });
-      return [];
-    } catch (error) {
-      return [{
-        severity: "error" as const,
-        code: "ENDPOINT_TARGET_INVALID",
-        message: error instanceof Error ? error.message : String(error),
-        subject: context.instance,
-      }];
-    }
   },
 });
 

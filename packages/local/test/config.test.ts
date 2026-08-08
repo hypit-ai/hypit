@@ -4,13 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createRuntimeEndpointAdapterFacet } from "@narratage/runtime-adapter";
+import {
+  createRuntimeEndpointAdapterFacet,
+  createRuntimeServiceAdapterFacet,
+} from "@narratage/runtime-adapter";
 
 import {
   createRuntimeFromConfig,
   doctorRuntimeConfig,
   parseRuntimeConfig,
-  RuntimeConfigRegistry,
+  RuntimeAdapterRegistry,
 } from "@narratage/local";
 
 test("declarative Runtime config starts the domain-neutral local defaults", async () => {
@@ -22,7 +25,7 @@ test("declarative Runtime config starts the domain-neutral local defaults", asyn
     permissions: [],
     scheduling: { maxConcurrency: 3, lanes: { generation: 2 } },
   }));
-  const runtime = await createRuntimeFromConfig(path, { registry: new RuntimeConfigRegistry() });
+  const runtime = await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() });
   try {
     assert.equal((await runtime.status("absent")).build, undefined);
   } finally {
@@ -54,7 +57,7 @@ test("declarative adapters are explicit and never guessed", async () => {
     permissions: [],
   }));
   await assert.rejects(
-    async () => await createRuntimeFromConfig(path, { registry: new RuntimeConfigRegistry() }),
+    async () => await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() }),
     /adapter example\.missing is not registered/u,
   );
 });
@@ -98,10 +101,11 @@ test("doctor names the external program a Provider needs, and the command that s
     permissions: [],
   }));
 
-  const registry = new RuntimeConfigRegistry();
+  const registry = new RuntimeAdapterRegistry();
   const declare = (use: string, service: unknown) =>
     registry.registerFacet(createRuntimeEndpointAdapterFacet({
       use,
+      validate() {},
       create: () => ({}) as never,
       service: () => service as never,
     }));
@@ -131,5 +135,79 @@ test("doctor names the external program a Provider needs, and the command that s
     // A broken probe is a broken Provider, never a silently healthy service.
     "EXTERNAL_SERVICE_PROBE_FAILED: the probe itself is broken",
   ]);
+  await rm(root, { recursive: true, force: true });
+});
+
+test("doctor validates closed config without constructing adapters or cascading one root failure", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-read-only-doctor-"));
+  const path = join(root, "svml.runtime.json");
+  await writeFile(path, JSON.stringify({
+    format: "svml.runtime-config@1",
+    runtimeServices: [{ use: "example.store", instance: "store", config: { mode: "valid" } }],
+    endpoints: [
+      { use: "example.invalid", instance: "invalid", config: { mode: "bad" } },
+      { use: "example.missing-credential", instance: "missing-credential", config: {} },
+    ],
+    permissions: [],
+  }));
+
+  let constructed = 0;
+  let invalidDoctorCalls = 0;
+  let serviceDeclarations = 0;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.store",
+    validate(context) {
+      assert.deepEqual(context.config, { mode: "valid" });
+    },
+    create() {
+      constructed += 1;
+      throw new Error("doctor constructed the Runtime service");
+    },
+    doctor: () => [{ severity: "info", code: "STORE_OK", message: "store config is valid" }],
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.invalid",
+    validate() {
+      throw new Error("mode is invalid");
+    },
+    create() {
+      constructed += 1;
+      throw new Error("doctor constructed the invalid Endpoint");
+    },
+    doctor() {
+      invalidDoctorCalls += 1;
+      return [{ severity: "error", code: "SECOND_ERROR", message: "must never be reported" }];
+    },
+  }));
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.missing-credential",
+    validate() {},
+    create() {
+      constructed += 1;
+      throw new Error("missing credential also prevents construction");
+    },
+    doctor: () => [{
+      severity: "error",
+      code: "RUNTIME_CREDENTIAL_MISSING",
+      message: "one declared credential is absent",
+    }],
+    service() {
+      serviceDeclarations += 1;
+      return { id: "should-not-be-probed", probe: async () => ({ state: "ready" }) };
+    },
+  }));
+
+  const { diagnostics } = await doctorRuntimeConfig(path, { registry });
+  assert.deepEqual(diagnostics.map(({ severity, code, message, subject }) => ({
+    severity, code, message, ...(subject === undefined ? {} : { subject }),
+  })), [
+    { severity: "info", code: "STORE_OK", message: "store config is valid" },
+    { severity: "error", code: "RUNTIME_ENDPOINT_CONFIG_INVALID", message: "mode is invalid", subject: "invalid" },
+    { severity: "error", code: "RUNTIME_CREDENTIAL_MISSING", message: "one declared credential is absent" },
+  ]);
+  assert.equal(constructed, 0);
+  assert.equal(invalidDoctorCalls, 0);
+  assert.equal(serviceDeclarations, 0);
   await rm(root, { recursive: true, force: true });
 });
