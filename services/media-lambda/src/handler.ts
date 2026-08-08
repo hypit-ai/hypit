@@ -40,6 +40,7 @@ const OPERATIONS: Record<
 
 const FFMPEG_PATH = process.env.FFMPEG_PATH ?? "/opt/bin/ffmpeg";
 const FFPROBE_PATH = process.env.FFPROBE_PATH ?? "/opt/bin/ffprobe";
+const FFMPEG_LIBRARY_PATH = process.env.NARRATAGE_FFMPEG_LIBRARY_PATH;
 const run = promisify(execFile);
 
 function positiveInteger(value: string | undefined, fallback: number): number {
@@ -99,6 +100,7 @@ export type MediaLambdaHandlerOptions = {
   readonly client?: S3ObjectClient;
   readonly ffmpegPath?: string;
   readonly ffprobePath?: string;
+  readonly sharedLibraryPath?: string;
   /**
    * The deployed ZIP sets this to the version promised by its immutable Layer.
    * Tests and embedded handlers may omit it when their binary identity is
@@ -112,11 +114,20 @@ function versionMatches(line: string, tool: "ffmpeg" | "ffprobe", expected: stri
   return new RegExp(`^${tool} version (?:n)?${escaped}(?:[-\\s]|$)`, "u").test(line);
 }
 
-async function assertBinaryVersion(path: string, tool: "ffmpeg" | "ffprobe", expected: string): Promise<void> {
+async function assertBinaryVersion(
+  path: string,
+  tool: "ffmpeg" | "ffprobe",
+  expected: string,
+  sharedLibraryPath?: string,
+): Promise<void> {
   const { stdout } = await run(path, ["-version"], {
     encoding: "utf8",
     maxBuffer: 64 * 1024,
     timeout: 10_000,
+    env: {
+      ...process.env,
+      ...(sharedLibraryPath === undefined ? {} : { LD_LIBRARY_PATH: sharedLibraryPath }),
+    },
   });
   const firstLine = stdout.split(/\r?\n/u, 1)[0] ?? "";
   if (!versionMatches(firstLine, tool, expected)) {
@@ -128,11 +139,12 @@ async function assertBinaryPair(
   ffmpegPath: string,
   ffprobePath: string,
   expected: string | undefined,
+  sharedLibraryPath?: string,
 ): Promise<void> {
   if (expected === undefined) return;
   await Promise.all([
-    assertBinaryVersion(ffmpegPath, "ffmpeg", expected),
-    assertBinaryVersion(ffprobePath, "ffprobe", expected),
+    assertBinaryVersion(ffmpegPath, "ffmpeg", expected, sharedLibraryPath),
+    assertBinaryVersion(ffprobePath, "ffprobe", expected, sharedLibraryPath),
   ]);
 }
 
@@ -144,6 +156,7 @@ async function assertBinaryPair(
 export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}) {
   const ffmpegPath = options.ffmpegPath ?? FFMPEG_PATH;
   const ffprobePath = options.ffprobePath ?? FFPROBE_PATH;
+  const sharedLibraryPath = options.sharedLibraryPath ?? FFMPEG_LIBRARY_PATH;
   // One promise per warm execution environment. A missing or wrong Layer is a
   // typed fulfillment failure, not a deployment fact silently discovered after
   // several expensive transformations have already run.
@@ -157,12 +170,14 @@ export function createMediaLambdaHandler(options: MediaLambdaHandlerOptions = {}
         ffmpegPath,
         ffprobePath,
         options.expectedFfmpegVersion ?? process.env.NARRATAGE_FFMPEG_VERSION,
+        sharedLibraryPath,
       );
       await binariesReady;
       const env: MediaExecutionEnvironment = {
         artifacts: gateway(request.artifacts, options.client ?? new AwsS3ObjectClient({})),
         ffmpegPath,
         ffprobePath,
+        ...(sharedLibraryPath === undefined ? {} : { sharedLibraryPath }),
         processTimeoutMs: positiveInteger(process.env.SVML_MEDIA_TIMEOUT_MS, 14 * 60_000),
         maxProbeOutputBytes: positiveInteger(process.env.SVML_MEDIA_MAX_PROBE_BYTES, 256 * 1024 * 1024),
         label: "media.aws-lambda",
