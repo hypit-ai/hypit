@@ -82,6 +82,11 @@
       "digest": "sha256:ce3902f4d69c5057a1795fd2d201c189716436c8501f8790d6b1df4ebd2fd691"
     },
     {
+      "name": "@narratage/media-execution",
+      "version": "0.0.0-dev",
+      "digest": "sha256:5caac585710623bfa7435b5f26b9973c70a8dbadb960cc1f83c6003129a349fa"
+    },
+    {
       "name": "@narratage/media-pipeline",
       "version": "0.0.0-dev",
       "digest": "sha256:4ceb5c9ef785e456f3807809b0384cbd40d463c4e5f1878375dcc8b017799922"
@@ -124,12 +129,12 @@
     {
       "name": "@narratage/provider-media-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:66ad1aa489a466112f9177ad285de9baf9ce4e8155dba26a8bfdfbbc2aa35be4"
+      "digest": "sha256:e66c1f86f72eb7c5ff7be73e54ac744e1d63c1a8a186b2374dd225e8f98192b9"
     },
     {
       "name": "@narratage/provider-whisperx-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:35b536fe2e6752d4cc92ca368a318214e8e56e0d8356eba56a049d3a626543c5"
+      "digest": "sha256:86c0b55abfbcf896330d020693d03e85fb5b8d31123b6383fb5b9505a1abf4ef"
     },
     {
       "name": "@narratage/render-hyperframes",
@@ -429,7 +434,7 @@
     {
       "name": "esbuild",
       "version": "0.25.12",
-      "digest": "sha256:d45f05635279ab74b586ef526256666bf06353c35733ba7265669098f7b0f221"
+      "digest": "sha256:d428001f327707b220f882523c466e93d30edd744a796697f5c80141d418e520"
     },
     {
       "name": "escalade",
@@ -859,7 +864,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b14b721bdc0c9d5d9ced1c345107c92a3a5878f3383dea2ecd3e310442c2a40c",
-      "closureDigest": "sha256:b86d3e37edbdbc3d64cb494897b02697a35e5098e80ce99cf19a87b1f22a6f4b"
+      "closureDigest": "sha256:38470648eb8b9d5c44db4ec0676d90fe9e493737e94f61cbe26f00445dd8f799"
     },
     {
       "specifier": "@narratage/provider-kie",
@@ -877,7 +882,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:701abcc923bf8a711c20b6e308d8cc8be27bf560f249b8c5a801e1dbd9cb3979",
-      "closureDigest": "sha256:2b8ffcc53158623170425aa94442671e58c167e210e7413e158fce2cdac87db5"
+      "closureDigest": "sha256:b66f4699551aa39acb16a6586dd5921431d2bfa25f6921ac3320b46453fd52ba"
     },
     {
       "specifier": "@narratage/provider-whisperx-local",
@@ -886,8 +891,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:3686b84c42cc2b1bcaccf57cbdcda25a15c7d9d3778fb92d25437f9880ed8f5d",
-      "closureDigest": "sha256:d82fe2de72e4ce6fee4f660552b12485617b4254289a0ee4fd50e72a492f44e8"
+      "closureDigest": "sha256:113812e1354a85f210277b1324d653e8d10984dd9c0d9621f5325d856e317fd2"
     }
   ],
-  "digest": "sha256:680b29750d6c64627622b37eb9975077d09ba616093170bb08b65b43bbe2947e"
+  "digest": "sha256:b18d6f2423e1336b5701b775c5e2c523466d051bb7283912459a6a6993630228"
 }
