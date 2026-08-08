@@ -119,6 +119,13 @@ Implemented:
 - `@narratage/provider-whisperx-local` and `services/whisperx`: pinned warm local WhisperX execution;
 - `@narratage/provider-hyperframes-local`: finite-frame parallel Chrome rendering with output probe
   validation;
+- `@narratage/artifact-store-s3`: conditional content-addressed writes, multipart streaming,
+  streamed digest verification and explicit retention facets;
+- `@narratage/provider-media-aws-lambda`: the same five media operations as the local Provider,
+  executed through one Lambda function and the shared `@narratage/media-execution` body;
+- `@narratage/provider-hyperframes-aws-lambda`: recoverable plan-v2 rendering through the locked
+  HyperFrames 0.7.84 SDK, deterministic Step Functions execution identity, checkpointed polling and
+  streamed S3 output persistence;
 - `@narratage/image-transform`: explicit image-plus-Program to image graph component, including the
   extracted Twinit GPT Image YCrCb denoise preset;
 - `@narratage/provider-image-opencv-local` and `services/image-opencv`: bounded OpenCV/NumPy execution
@@ -128,9 +135,13 @@ Implemented:
 Not implemented:
 
 - the opt-in, credential-free-by-default live acceptance harness around the real talking-film Build;
-- AWS media, WhisperX and HyperFrames Endpoint packages—the generic Lambda transport exists;
+- AWS WhisperX Endpoint package;
+- deployment and a first live render of the HyperFrames AWS stack—the Provider exists, but this
+  repository intentionally creates no paid resource before an explicit resource review;
+- conversion of the implemented media Lambda distribution from its current container image to a
+  ZIP plus an exact FFmpeg Layer;
 - Keychain, Secrets Manager or Vault credential adapters;
-- production S3 multipart/ranged Artifact transfer and deployment-specific Build release policy;
+- deployment-specific Build release policy;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
 - arbitrary Volcengine, Fal, API-key Gemini or Hypit Endpoint packages.
 
@@ -196,6 +207,8 @@ permission enforcement and loaded-code attestation remain release work.
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
+- the AWS media function handler has passed against real ffmpeg and an in-memory bucket; the AWS
+  HyperFrames Provider passes injected-SDK recovery tests but has not yet deployed cloud resources;
 - generated credentials, media outputs and local databases are ignored by Git.
 
 All workspace packages are currently private development packages that export TypeScript source.
