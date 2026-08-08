@@ -1,92 +1,45 @@
-import {
-  assertGenerationBlobRef,
-  generationBlobRefSchema,
-  generationObjectSchema,
-  generationPromptSchema,
-  sealGenerationRequest,
-} from "@narratage/generation";
+import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
+import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import type { BlobRef, ValueSchema } from "@narratage/protocol";
 
 export const seedreamModuleRef = { name: "@narratage/seedream", version: "0.0.0-dev" } as const;
-export type SeedreamMode = "text" | "image";
-type Common = {
-  readonly contract: "svml.seedream-5-lite-request@1";
-  readonly model: "seedream-5-lite";
-  readonly prompt: string;
-  readonly aspectRatio: string;
-  readonly quality: "basic";
-  readonly outputFormat: "png" | "jpg";
-  /** Explicit author choice; the Provider never silently changes this policy. */
-  readonly nsfwCheck: boolean;
-};
-export type SeedreamTextRequestContent = Common & { readonly mode: "text" };
-export type SeedreamImageRequestContent = Common & {
-  readonly mode: "image";
-  readonly images: readonly BlobRef[];
-};
-export type SeedreamRequestContent = SeedreamTextRequestContent | SeedreamImageRequestContent;
-export type SeedreamRequest = SeedreamRequestContent;
 
-const commonFields = {
-  contract: { schema: { kind: "literal", value: "svml.seedream-5-lite-request@1" } },
-  model: { schema: { kind: "literal", value: "seedream-5-lite" } },
-  prompt: { schema: generationPromptSchema },
-  aspectRatio: { schema: { kind: "string", minLength: 3, maxLength: 16 } },
-  quality: { schema: { kind: "literal", value: "basic" } },
-  outputFormat: { schema: { kind: "string", enum: ["png", "jpg"] } },
-  nsfwCheck: { schema: { kind: "boolean" } },
-} as const;
-const schemas: Record<SeedreamMode, ValueSchema> = {
-  text: generationObjectSchema({
-    ...commonFields,
-    mode: { schema: { kind: "literal", value: "text" } },
-  }),
-  image: generationObjectSchema({
-    ...commonFields,
-    mode: { schema: { kind: "literal", value: "image" } },
-    images: { schema: { kind: "array", minItems: 1, maxItems: 16, items: generationBlobRefSchema } },
-  }),
-};
+export const seedream5LitePorts: GenerationPortTable = sealGenerationPortTable({
+  contract: "svml.generation-ports@1",
+  model: "seedream-5-lite",
+  result: "image",
+  ports: [
+    { name: "prompt", value: { kind: "text", maxChars: 3_000 }, minItems: 1, maxItems: 1 },
+    {
+      name: "aspectRatio",
+      value: { kind: "enum", values: ["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"] },
+      minItems: 1,
+      maxItems: 1,
+    },
+    /** Basic renders 2K, high 3K and ultra 4K. */
+    { name: "quality", value: { kind: "enum", values: ["basic", "high", "ultra"] }, minItems: 1, maxItems: 1 },
+    { name: "outputFormat", value: { kind: "enum", values: ["png", "jpeg"] }, minItems: 1, maxItems: 1 },
+    /** Explicit author choice; the Provider never silently changes this policy. */
+    { name: "nsfwCheck", value: { kind: "boolean" }, minItems: 1, maxItems: 1 },
+    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 16 },
+  ],
+  requires: [],
+});
 
-function object(value: unknown): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("Seedream request must be an object");
-  return value as Record<string, unknown>;
-}
-
-export function verifySeedreamRequest(value: unknown, expectedMode?: SeedreamMode): asserts value is SeedreamRequest {
-  const request = object(value);
-  if (request.contract !== "svml.seedream-5-lite-request@1" || request.model !== "seedream-5-lite") {
-    throw new Error("Seedream request identity is invalid");
-  }
-  if (expectedMode !== undefined && request.mode !== expectedMode) throw new Error(`Expected Seedream ${expectedMode}`);
-  if (request.mode === "image") {
-    if (!Array.isArray(request.images) || request.images.length === 0) throw new Error("Seedream input images are empty");
-    request.images.forEach((image) => assertGenerationBlobRef(image, "image/"));
-  } else if (request.mode !== "text") {
-    throw new Error("Seedream mode is invalid");
-  }
-}
-
-export function sealSeedreamRequest<T extends SeedreamRequestContent>(
-  content: T,
-): T {
-  const request = sealGenerationRequest(content);
-  verifySeedreamRequest(request, content.mode);
-  return request;
+export function sealSeedreamRequest(
+  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+): GenerationRequest {
+  return sealGenerationPortRequest(seedream5LitePorts, ports);
 }
 
 export const seedreamDefinition = defineExactModelModule({
   module: seedreamModuleRef,
-  endpoints: (["text", "image"] as const).map((mode) => ({
-    key: mode,
-    requestTypeName: mode === "text" ? "Seedream5LiteTextRequest" : "Seedream5LiteImageRequest",
-    capabilityName: `seedream-5-lite-${mode}-generation`,
-    producerName: `request-seedream-5-lite-${mode}`,
-    result: "image" as const,
-    requestSchema: schemas[mode],
-    verifyRequest: (value: unknown) => verifySeedreamRequest(value, mode),
-  })),
+  endpoints: [{
+    key: "image",
+    requestTypeName: "Seedream5LiteRequest",
+    producerName: "request-seedream-5-lite",
+    ports: seedream5LitePorts,
+  }],
 });
 
 export const seedreamManifest = seedreamDefinition.manifest;

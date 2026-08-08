@@ -8,9 +8,11 @@ import type {
   ParsedCaptionRefinement,
   ParsedCaptionRegion,
   ParsedMoment,
+  ParsedMomentOccurrence,
   ParsedNarrative,
   ParsedSegment,
   ParsedSelection,
+  ParsedSelectionOccurrence,
   ParsedToken,
   ParsedTurn,
   SemanticAnchor,
@@ -39,6 +41,15 @@ const SEGMENT_ID = /^[a-z][a-z0-9_-]{0,63}$/u;
 const TEMPORAL_ID = /^[a-z][a-z0-9_-]{0,63}$/u;
 const ROLE_LABEL = /^[\p{L}\p{M}\p{N}_](?:[\p{L}\p{M}\p{N}_. -]{0,30}[\p{L}\p{M}\p{N}_.-])?$/u;
 const RESERVED_SEGMENT_IDS = new Set(["script"]);
+
+/** A marker's structural position before its affinity picks one anchor. */
+type RawMarkerBoundary = Omit<MarkerBoundary, "anchorId">;
+type RawEdge<T> = Omit<T, "boundary"> & { readonly boundary: RawMarkerBoundary };
+type RawSelectionOccurrence = Omit<ParsedSelectionOccurrence, "open" | "close"> & {
+  readonly open: RawEdge<ParsedSelectionOccurrence["open"]>;
+  readonly close: RawEdge<ParsedSelectionOccurrence["close"]>;
+};
+type RawMomentOccurrence = Omit<ParsedMomentOccurrence, "boundary"> & { readonly boundary: RawMarkerBoundary };
 
 function normalizeWord(value: string): string {
   return value
@@ -209,11 +220,11 @@ export function parseScript(
   const segments: ParsedSegment[] = [];
   const tokens: ParsedToken[] = [];
   const captionRegions: ParsedCaptionRegion[] = [];
-  const selections = new Map<string, ParsedSelection["occurrences"] extends readonly (infer T)[] ? T[] : never>();
-  const moments = new Map<string, ParsedMoment["occurrences"] extends readonly (infer T)[] ? T[] : never>();
+  const selections = new Map<string, RawSelectionOccurrence[]>();
+  const moments = new Map<string, RawMomentOccurrence[]>();
   const openSelections = new Map<string, {
     readonly affinity: Affinity;
-    readonly boundary: MarkerBoundary;
+    readonly boundary: RawMarkerBoundary;
     readonly start: number;
     readonly end: number;
   }>();
@@ -221,7 +232,7 @@ export function parseScript(
   let offset = 0;
   let structuralPosition = 0;
 
-  const boundary = (): MarkerBoundary => ({
+  const boundary = (): RawMarkerBoundary => ({
     tokenIndex: tokens.length,
     structuralPosition,
     ...(current ? { segmentId: current.id } : {}),
@@ -657,6 +668,41 @@ export function parseScript(
     if (caption) captionSegments.push(caption);
   }
 
+  const segmentById = new Map(segments.map((segment) => [segment.id, segment]));
+  /**
+   * Resolve one marker to the exact 2M+2N anchor its affinity names. Token and
+   * Segment cuts are equal citizens: a marker with nothing to its left inside a
+   * Segment snaps to that Segment's own start, never across into the previous
+   * Segment, whose end may sit at a different time.
+   */
+  const anchorForBoundary = (boundary: RawMarkerBoundary, affinity: Affinity): string => {
+    if (segments.length === 0) fail("SCRIPT_ANCHOR_UNRESOLVED", "Script declares no Segment to anchor markers to.");
+    const inside = boundary.segmentId === undefined ? undefined : segmentById.get(boundary.segmentId);
+    if (inside) {
+      if (affinity === "left") {
+        return boundary.tokenIndex > inside.tokenStart
+          ? tokens[boundary.tokenIndex - 1]!.endAnchorId
+          : inside.startAnchorId;
+      }
+      return boundary.tokenIndex < inside.tokenEndExclusive
+        ? tokens[boundary.tokenIndex]!.startAnchorId
+        : inside.endAnchorId;
+    }
+    // Between Segments: structuralPosition counts the Segments already closed.
+    if (affinity === "left") {
+      const previous = segments[boundary.structuralPosition - 1];
+      return previous ? previous.endAnchorId : segments[0]!.startAnchorId;
+    }
+    const next = segments[boundary.structuralPosition];
+    return next ? next.startAnchorId : segments.at(-1)!.endAnchorId;
+  };
+  const anchored = <T extends { readonly affinity: Affinity; readonly boundary: RawMarkerBoundary }>(
+    edge: T,
+  ): Omit<T, "boundary"> & { readonly boundary: MarkerBoundary } => ({
+    ...edge,
+    boundary: { ...edge.boundary, anchorId: anchorForBoundary(edge.boundary, edge.affinity) },
+  });
+
   const anchors: SemanticAnchor[] = segments.flatMap((segment) => [
     { id: segment.startAnchorId, kind: "segment-start" as const, segmentId: segment.id },
     ...tokens.slice(segment.tokenStart, segment.tokenEndExclusive).flatMap((token) => [
@@ -685,8 +731,18 @@ export function parseScript(
     segments,
     tokens,
     turns,
-    selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({ id, occurrences })),
-    moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({ id, occurrences })),
+    selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
+      id,
+      occurrences: occurrences.map((occurrence) => ({
+        ...occurrence,
+        open: anchored(occurrence.open),
+        close: anchored(occurrence.close),
+      })),
+    })),
+    moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
+      id,
+      occurrences: occurrences.map(anchored),
+    })),
     captionProjection: {
       contract: "svml.caption-projection@1",
       text: captionSegments.join("\n"),

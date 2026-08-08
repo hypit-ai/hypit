@@ -1,85 +1,45 @@
-import {
-  assertGenerationBlobRef,
-  generationBlobRefSchema,
-  generationObjectSchema,
-  generationPromptSchema,
-  sealGenerationRequest,
-} from "@narratage/generation";
+import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
+import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import type { BlobRef, ValueSchema } from "@narratage/protocol";
 
 export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "0.0.0-dev" } as const;
-export type GptImage2Mode = "text" | "image";
-type Common = {
-  readonly contract: "svml.gpt-image-2-request@1";
-  readonly model: "gpt-image-2";
-  readonly prompt: string;
-  readonly aspectRatio: string;
-};
-export type GptImage2TextRequestContent = Common & { readonly mode: "text" };
-export type GptImage2ImageRequestContent = Common & {
-  readonly mode: "image";
-  readonly images: readonly BlobRef[];
-};
-export type GptImage2RequestContent = GptImage2TextRequestContent | GptImage2ImageRequestContent;
-export type GptImage2Request = GptImage2RequestContent;
 
-const commonFields = {
-  contract: { schema: { kind: "literal", value: "svml.gpt-image-2-request@1" } },
-  model: { schema: { kind: "literal", value: "gpt-image-2" } },
-  prompt: { schema: generationPromptSchema },
-  aspectRatio: { schema: { kind: "string", minLength: 3, maxLength: 16 } },
-} as const;
-const schemas: Record<GptImage2Mode, ValueSchema> = {
-  text: generationObjectSchema({
-    ...commonFields,
-    mode: { schema: { kind: "literal", value: "text" } },
-  }),
-  image: generationObjectSchema({
-    ...commonFields,
-    mode: { schema: { kind: "literal", value: "image" } },
-    images: { schema: { kind: "array", minItems: 1, maxItems: 16, items: generationBlobRefSchema } },
-  }),
-};
+export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
+  contract: "svml.generation-ports@1",
+  model: "gpt-image-2",
+  result: "image",
+  ports: [
+    { name: "prompt", value: { kind: "text", maxChars: 20_000 }, minItems: 1, maxItems: 1 },
+    {
+      name: "aspectRatio",
+      value: {
+        kind: "enum",
+        values: ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5",
+          "16:9", "9:16", "2:1", "1:2", "3:1", "1:3", "21:9", "9:21"],
+      },
+      minItems: 1,
+      maxItems: 1,
+    },
+    { name: "resolution", value: { kind: "enum", values: ["1K", "2K", "4K"] }, minItems: 1, maxItems: 1 },
+    { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 16 },
+  ],
+  requires: [],
+});
 
-function object(value: unknown): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("GPT Image 2 request must be an object");
-  return value as Record<string, unknown>;
-}
-
-export function verifyGptImage2Request(value: unknown, expectedMode?: GptImage2Mode): asserts value is GptImage2Request {
-  const request = object(value);
-  if (request.contract !== "svml.gpt-image-2-request@1" || request.model !== "gpt-image-2") {
-    throw new Error("GPT Image 2 request identity is invalid");
-  }
-  if (expectedMode !== undefined && request.mode !== expectedMode) throw new Error(`Expected GPT Image 2 ${expectedMode}`);
-  if (request.mode === "image") {
-    if (!Array.isArray(request.images) || request.images.length === 0) throw new Error("GPT Image 2 input images are empty");
-    request.images.forEach((image) => assertGenerationBlobRef(image, "image/"));
-  } else if (request.mode !== "text") {
-    throw new Error("GPT Image 2 mode is invalid");
-  }
-}
-
-export function sealGptImage2Request<T extends GptImage2RequestContent>(
-  content: T,
-): T {
-  const request = sealGenerationRequest(content);
-  verifyGptImage2Request(request, content.mode);
-  return request;
+export function sealGptImage2Request(
+  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+): GenerationRequest {
+  return sealGenerationPortRequest(gptImage2Ports, ports);
 }
 
 export const gptImageDefinition = defineExactModelModule({
   module: gptImageModuleRef,
-  endpoints: (["text", "image"] as const).map((mode) => ({
-    key: mode,
-    requestTypeName: mode === "text" ? "GptImage2TextRequest" : "GptImage2ImageRequest",
-    capabilityName: `gpt-image-2-${mode}-generation`,
-    producerName: `request-gpt-image-2-${mode}`,
-    result: "image" as const,
-    requestSchema: schemas[mode],
-    verifyRequest: (value: unknown) => verifyGptImage2Request(value, mode),
-  })),
+  endpoints: [{
+    key: "image",
+    requestTypeName: "GptImage2Request",
+    producerName: "request-gpt-image-2",
+    ports: gptImage2Ports,
+  }],
 });
 
 export const gptImageManifest = gptImageDefinition.manifest;

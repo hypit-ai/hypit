@@ -7,6 +7,7 @@ import {
 } from "@narratage/runtime-adapter";
 
 import { createLocalWhisperXProvider } from "./provider.js";
+import { localWhisperXService } from "./service.js";
 
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-whisperx-local",
@@ -16,6 +17,7 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       "baseUrl", "expectedModel", "expectedDevice", "expectedCompute", "expectedBatchSize",
       "expectedServiceVersion", "expectedWhisperXVersion", "expectedPunktTabDigest",
       "defaultConcurrency", "requestTimeoutMs", "maxResponseBytes",
+      "serviceCommand", "servicePrepareCommand",
     ], "local WhisperX");
     return createLocalWhisperXProvider({
       instance: context.instance,
@@ -44,6 +46,7 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ? {} : { maxResponseBytes: config.maxResponseBytes as number }),
     });
   },
+  service: localWhisperXService,
 });
 
 export const svmlPackage = {

@@ -6,5 +6,5 @@ export {
 } from "./provider.js";
 export type {
   CreateLocalWhisperXProviderOptions,
-  WhisperXSidecarResponse,
+  WhisperXServiceResponse,
 } from "./provider.js";

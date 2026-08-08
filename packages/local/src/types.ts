@@ -63,18 +63,12 @@ export type ProjectLocalRuntimeOptions = {
   readonly buildCatalog?: BuildCatalog;
   /** Exact installed implementation package lock. Source imports cannot change this selection. */
   readonly packageLock?: string;
-  /** Additional configured Runtime services. A unique supplied role replaces that role's local default. */
+  /**
+   * Replaceable parts of the Runtime itself. One package may fill several roles;
+   * a supplied role replaces that role's local default, and two packages filling
+   * one role is a configuration error rather than a choice made here.
+   */
   readonly runtimeServices?: readonly RuntimeServicePackage[];
-  /** Required only when more than one supplied instance can fulfill the same Runtime service role. */
-  readonly runtimeSelection?: {
-    readonly scheduler?: string;
-    readonly stores?: {
-      readonly build?: string;
-      readonly operations?: string;
-      readonly artifacts?: string;
-      readonly credentials?: string;
-    };
-  };
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
   readonly allowedPermissions?: readonly string[];

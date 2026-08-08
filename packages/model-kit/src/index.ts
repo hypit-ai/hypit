@@ -8,7 +8,10 @@ import {
   generationManifestDigest,
   generationModuleRef,
   generationTypes,
+  requestSchemaFromPorts,
+  verifyRequestAgainstPorts,
 } from "@narratage/generation";
+import type { GenerationPortTable } from "@narratage/generation";
 import {
   canonicalize,
   digestOf,
@@ -21,18 +24,19 @@ import type {
   ModuleRef,
   ProducerRef,
   TypeRef,
-  ValueSchema,
 } from "@narratage/protocol";
 
+/**
+ * One exact model endpoint. The model declares which input ports it accepts;
+ * its request Schema and semantic validator are derived from that declaration,
+ * so the Capability name, the accepted media roles and the port cardinalities
+ * have exactly one source of truth.
+ */
 export type ExactModelEndpointSpec = {
   readonly key: string;
   readonly requestTypeName: string;
-  readonly capabilityName: string;
   readonly producerName: string;
-  readonly result: "image" | "video";
-  readonly requestSchema: ValueSchema;
-  /** Checks digest identity and model-specific constraints after structural validation. */
-  readonly verifyRequest: (value: unknown) => void;
+  readonly ports: GenerationPortTable;
 };
 
 export type ExactModelEndpoint = {
@@ -43,23 +47,25 @@ export type ExactModelEndpoint = {
   readonly returns: TypeRef;
   readonly implementationDigest: Digest;
   readonly validatorDigest: Digest;
+  readonly ports: GenerationPortTable;
   readonly fragment: ReturnType<typeof sealGraphFragment>;
 };
 
-export type ExactModelModule = {
+export type ExactModelModule<Key extends string = string> = {
   readonly module: ModuleRef;
   readonly manifest: ModuleManifest;
   readonly manifestDigest: Digest;
-  readonly endpoints: Readonly<Record<string, ExactModelEndpoint>>;
+  /** Keyed by the exact endpoint keys the module declared, so a stale key fails to compile. */
+  readonly endpoints: Readonly<Record<Key, ExactModelEndpoint>>;
   readonly component: ComponentPackage & {
     readonly validators: readonly TypeValidatorFacet[];
     readonly producers: readonly ProducerFacet[];
   };
 };
 
-export type DefineExactModelModuleOptions = {
+export type DefineExactModelModuleOptions<Key extends string = string> = {
   readonly module: ModuleRef;
-  readonly endpoints: readonly ExactModelEndpointSpec[];
+  readonly endpoints: readonly (Omit<ExactModelEndpointSpec, "key"> & { readonly key: Key })[];
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -68,9 +74,9 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function endpointRef(module: ModuleRef, spec: ExactModelEndpointSpec) {
   const requestType = { module, name: spec.requestTypeName };
-  const capability = { module, name: spec.capabilityName };
+  const capability = { module, name: spec.ports.model };
   const producer = { module, name: spec.producerName };
-  const returns = spec.result === "image" ? generationTypes.imageSet : generationTypes.videoSet;
+  const returns = spec.ports.result === "image" ? generationTypes.imageSet : generationTypes.videoSet;
   const implementationDigest = digestOf(`${module.name}/${spec.producerName}@1`);
   const validatorDigest = digestOf(`${module.name}/validate-${spec.requestTypeName}@1`);
   return { requestType, capability, producer, returns, implementationDigest, validatorDigest };
@@ -88,12 +94,16 @@ function inlineRequest(
  * Builds the repetitive nominal shell around an exact model request. The model package still owns
  * every field, constraint and model name; this helper only wires Type -> Producer -> Need -> Fragment.
  */
-export function defineExactModelModule(options: DefineExactModelModuleOptions): ExactModelModule {
+export function defineExactModelModule<const Key extends string>(
+  options: DefineExactModelModuleOptions<Key>,
+): ExactModelModule<Key> {
   assert(options.module.name.trim().length > 0 && options.module.version.trim().length > 0,
     "Exact model module identity is invalid");
   assert(options.endpoints.length > 0, `${options.module.name} declares no exact model endpoint`);
   const keys = options.endpoints.map((item) => item.key);
   assert(new Set(keys).size === keys.length, `${options.module.name} repeats an endpoint key`);
+  const models = options.endpoints.map((item) => item.ports.model);
+  assert(new Set(models).size === models.length, `${options.module.name} repeats an exact model`);
   const endpointData = options.endpoints.map((spec) => ({ spec, ...endpointRef(options.module, spec) }));
 
   const manifest: ModuleManifest = {
@@ -103,7 +113,7 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
     dependencies: [{ module: generationModuleRef, digest: generationManifestDigest }],
     types: endpointData.map((item) => ({
       name: item.requestType.name,
-      schema: item.spec.requestSchema,
+      schema: requestSchemaFromPorts(item.spec.ports),
       validator: {
         abi: "svml.type-validator@1",
         implementation: {
@@ -135,7 +145,7 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
     })),
   };
 
-  const endpoints = Object.fromEntries(endpointData.map((item) => {
+  const endpoints = Object.fromEntries(endpointData.map((item): [Key, ExactModelEndpoint] => {
     const fragment = sealGraphFragment({
       name: `${options.module.name}/${item.spec.key}@1`,
       inputs: [{ name: "request", type: item.requestType }],
@@ -161,6 +171,7 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
       returns: item.returns,
       implementationDigest: item.implementationDigest,
       validatorDigest: item.validatorDigest,
+      ports: item.spec.ports,
       fragment,
     } satisfies ExactModelEndpoint];
   }));
@@ -169,14 +180,14 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
     module: { ...options.module },
     manifest,
     manifestDigest: digestOf(manifest),
-    endpoints,
+    endpoints: endpoints as Readonly<Record<Key, ExactModelEndpoint>>,
     component: {
       name: options.module.name,
       validators: endpointData.map((item) => ({
         type: item.requestType,
         implementationDigest: item.validatorDigest,
         handler({ value }) {
-          item.spec.verifyRequest(inlineRequest(value, item.spec.key));
+          verifyRequestAgainstPorts(item.spec.ports, inlineRequest(value, item.spec.key));
         },
       })),
       producers: endpointData.map((item) => ({
@@ -186,7 +197,7 @@ export function defineExactModelModule(options: DefineExactModelModuleOptions): 
           const requestRecord = inputs.request;
           assert(requestRecord !== undefined, `${item.spec.key} request input is missing`);
           const request = inlineRequest(requestRecord.value, item.spec.key);
-          item.spec.verifyRequest(request);
+          verifyRequestAgainstPorts(item.spec.ports, request);
           return { outputs: {}, needs: { generation: request } };
         },
       })),

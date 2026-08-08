@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { digestOf } from "@narratage/protocol";
 
-import { parseMediaInspection } from "../src/index.js";
+import { parseMediaInspection } from "@narratage/media-execution";
 
 test("probe derives the last decoded-unit duration instead of adding whole-stream duration_ts", () => {
   const inspection = parseMediaInspection({
