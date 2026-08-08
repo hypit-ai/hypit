@@ -11,7 +11,6 @@ import { build } from "esbuild";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const out = join(root, "build");
-await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 
 const deployment = {
@@ -22,9 +21,17 @@ const deployment = {
   ffmpegVersion: "8.0.1",
   ffmpegPath: "/opt/bin/ffmpeg",
   ffprobePath: "/opt/bin/ffprobe",
+  ffmpegLibraryPath: "/opt/lib",
 };
 const entry = join(out, "index.mjs");
 const archive = join(out, "function.zip");
+for (const path of [
+  entry,
+  archive,
+  join(out, "deployment.json"),
+  join(out, "bundle-hash.txt"),
+  join(out, "function-artifact.json"),
+]) await rm(path, { force: true });
 
 const result = await build({
   entryPoints: [join(root, "src/handler.ts")],
@@ -57,10 +64,20 @@ await promisify(execFile)("zip", ["-X", "-q", "-j", archive, entry], {
   env: { ...process.env, TZ: "UTC" },
 });
 const archiveStat = await stat(archive);
+const archiveBytes = await readFile(archive);
+const archiveSha256 = createHash("sha256").update(archiveBytes).digest();
+const functionArtifact = {
+  contract: "narratage.media-lambda-function-artifact@1",
+  bundleHash: hash,
+  archiveSha256: archiveSha256.toString("hex"),
+  codeSha256: archiveSha256.toString("base64"),
+  archiveBytes: archiveStat.size,
+};
+await writeFile(join(out, "function-artifact.json"),
+  `${JSON.stringify(functionArtifact, null, 2)}\n`);
 
 process.stdout.write(`${JSON.stringify({
-  bundleHash: hash,
+  ...functionArtifact,
   bundleBytes: bundle.byteLength,
-  archiveBytes: archiveStat.size,
   deployment,
 }, null, 2)}\n`);

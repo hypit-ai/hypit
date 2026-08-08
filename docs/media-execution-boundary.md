@@ -128,8 +128,8 @@ mistake codec padding for extra authored time.
 
 ## Remaining work
 
-- publish a reviewed, redistributable exact FFmpeg Layer, then deploy and live-test the implemented
-  AWS HyperFrames and ZIP-packaged media variants after explicit resource review;
+- deploy and live-test the implemented AWS HyperFrames variant after explicit resource review; the
+  exact FFmpeg Layer and ZIP-packaged media service already pass their complete live canary;
 - deploy the implemented `services/whisperx` distribution wherever a local warm model process is
   required, and add a remote-service Provider only for a genuinely persistent warm deployment;
   WhisperX is deliberately not an AWS Lambda target because repeated model cold starts defeat this

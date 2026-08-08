@@ -8,12 +8,18 @@
   },
   "dependencies": {
     "@narratage/artifact-store-s3": "workspace:*",
+    "@narratage/media": "workspace:*",
     "@narratage/media-execution": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/provider-media-aws-lambda": "workspace:*"
+    "@narratage/provider-media-aws-lambda": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/transport-aws-lambda": "workspace:*"
   },
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "build:layer": "node build-layer.mjs",
+    "canary": "node --import tsx canary.ts"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

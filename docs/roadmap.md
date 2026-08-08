@@ -109,11 +109,10 @@ acceptance command that can also run a fresh uninterrupted all-`exact` Build:
 ### B2. Remote execution only where demanded
 
 Local media, WhisperX and parallel HyperFrames execution are implemented. S3 Artifact streaming,
-AWS media execution and the recoverable AWS HyperFrames Endpoint are also implemented. Complete the
-remaining deployment work only when a deployment needs it:
+AWS media execution and the recoverable AWS HyperFrames Endpoint are also implemented. The exact
+FFmpeg Layer plus ZIP-packaged media service have passed their complete five-operation live canary.
+Complete the remaining deployment work only when a deployment needs it:
 
-- publish a reviewed redistributable FFmpeg Layer, then deploy and live-test the implemented media
-  function ZIP;
 - deploy WhisperX only as a persistent warm service and add the corresponding remote-service
   Provider when a team environment needs it; do not put the model behind Lambda;
 - deploy and live-test the HyperFrames stack after reviewing its CloudFormation resources.
