@@ -1,11 +1,11 @@
 ---
 title: Local Services
-description: Setting up the WhisperX and OpenCV sidecar services.
+description: Setting up the WhisperX and OpenCV services.
 ---
 
 # Local Services
 
-Two Python sidecar services support local Builds. They are Runtime deployment packages, not part
+Two Python services support local Builds. They are Runtime deployment packages, not part
 of Core or the author language.
 
 ## WhisperX

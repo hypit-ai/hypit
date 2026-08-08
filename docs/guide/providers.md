@@ -67,7 +67,7 @@ export function createMyServiceProvider(options: {
 Look at existing Providers for reference:
 - `packages/provider-kie/src/provider.ts` — remote generation with upload, polling and download
 - `packages/provider-media-local/` — local process execution (ffprobe/ffmpeg)
-- `packages/provider-whisperx-local/` — local sidecar HTTP service
+- `packages/provider-whisperx-local/` — local HTTP service
 - `packages/provider-hyperframes-local/` — local Chrome rendering
 
 ## 4. Write the activation descriptor
@@ -168,7 +168,7 @@ pnpm narratage doctor svml.runtime.json
 |---|---|
 | `provider-kie` | Remote API: upload, paid submission, checkpointed polling, bounded download, immediate ArtifactStore persistence |
 | `provider-media-local` | Local process: shell-free ffprobe/ffmpeg with bounded execution |
-| `provider-whisperx-local` | Local sidecar: HTTP service with warm model, single-admit concurrency |
+| `provider-whisperx-local` | Local HTTP service with a warm model, single-admit concurrency |
 | `provider-google-vertex` | Cloud API: Vertex AI with project/credentials configuration |
 | `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |
 | `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |

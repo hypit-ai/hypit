@@ -23,7 +23,6 @@ Two forms are supported:
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
-  "services": [],
   "endpoints": [
     {
       "use": "@narratage/provider-kie",

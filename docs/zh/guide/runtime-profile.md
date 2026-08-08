@@ -21,7 +21,6 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Endpoint、凭据�
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
-  "services": [],
   "endpoints": [
     {
       "use": "@narratage/provider-kie",

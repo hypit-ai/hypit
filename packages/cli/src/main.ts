@@ -29,6 +29,8 @@ type CliIo = {
 
 type ParsedArgs = {
   readonly command: string | undefined;
+  /** Second command word. Only `services` takes one. */
+  readonly action: string | undefined;
   readonly file: string | undefined;
   readonly root: string | undefined;
   readonly targets: readonly string[];
@@ -50,8 +52,10 @@ type ParsedArgs = {
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, ...tail] = argv;
-  const file = command === "builds" ? undefined : tail[0];
-  const rest = command === "builds" ? tail : tail.slice(1);
+  const action = command === "services" ? tail[0] : undefined;
+  const positional = command === "services" ? tail.slice(1) : tail;
+  const file = command === "builds" ? undefined : positional[0];
+  const rest = command === "builds" ? positional : positional.slice(1);
   const targets: string[] = [];
   let root: string | undefined;
   let runtime: string | undefined;
@@ -185,6 +189,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   }
   return {
     command,
+    action,
     file,
     root,
     targets,
@@ -210,6 +215,7 @@ function usage(): string {
     "usage:",
     "  narratage lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
     "  narratage doctor <runtime-profile.json>",
+    "  narratage services up|down|status <runtime-profile.json> [--max-wait-ms milliseconds]",
     "  narratage gc <runtime-profile.json> [--apply]",
     "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
     "  narratage plan <run-source> [--runtime profile.json] [--package-lock file]",
@@ -287,7 +293,7 @@ export async function runCli(
   const known = args.command === "lock-packages" || args.command === "check" || args.command === "plan"
     || args.command === "build" || args.command === "status" || args.command === "builds"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
-    || args.command === "doctor" || args.command === "gc";
+    || args.command === "doctor" || args.command === "gc" || args.command === "services";
   if (!known || (args.command !== "builds" && args.file === undefined)) {
     throw new Error(usage());
   }
@@ -310,6 +316,31 @@ export async function runCli(
       ok: !result.diagnostics.some((item) => item.severity === "error"),
       root: result.root,
       diagnostics: result.diagnostics,
+    }, null, 2)}\n`);
+    return;
+  }
+  if (args.command === "services") {
+    if (args.runtime !== undefined || args.packageLock !== undefined || args.packages.length > 0 || args.apply) {
+      throw new Error("services reads all deployment selection from the Runtime Profile itself");
+    }
+    if (args.action !== "up" && args.action !== "down" && args.action !== "status") {
+      throw new Error("services takes up, down or status");
+    }
+    if (args.action !== "up" && args.maxWaitMs !== undefined) {
+      throw new Error("--max-wait-ms applies to services up");
+    }
+    const profile = resolve(args.file!);
+    const result = args.action === "up"
+      ? await distribution.externalServices.up(profile, {
+        ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+      })
+      : args.action === "down"
+        ? await distribution.externalServices.down(profile)
+        : await distribution.externalServices.report(profile);
+    io.write(`${JSON.stringify({
+      ok: result.services.every((item) => (args.action === "down" ? item.state.state !== "ready" : item.state.state === "ready")),
+      root: result.root,
+      services: result.services,
     }, null, 2)}\n`);
     return;
   }

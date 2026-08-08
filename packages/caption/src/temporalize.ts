@@ -1,5 +1,6 @@
 import type { Narrative } from "@narratage/narrative";
-import type { CompleteSemanticMap, TimingQuality } from "@narratage/semantic-map";
+import { tokenSpanSeconds } from "@narratage/semantic-map";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
 
 import { CaptionProjectionError } from "./error.js";
 import type {
@@ -14,38 +15,23 @@ import { assertCaptionPlanForProgram } from "./plan.js";
 import { displayTextForAtoms } from "./display.js";
 import { assertCaptionProgramForNarrative } from "./style.js";
 
-const QUALITY_RANK: Readonly<Record<TimingQuality, number>> = {
-  measured: 0,
-  derived: 1,
-  estimated: 2,
-};
-
-function composedQuality(value: TimingQuality): TimingQuality {
-  return QUALITY_RANK[value] >= QUALITY_RANK.derived ? value : "derived";
-}
-
 export function temporalizeCaption(
   narrative: Narrative,
   map: CompleteSemanticMap,
 ): TimedCaptionProjection {
-  const timingByToken = new Map(map.tokens.map((token) => [token.tokenId, token]));
   const sourceTiming = (startToken: number, endTokenExclusive: number, owner: string) => {
     const source = narrative.tokens.slice(startToken, endTokenExclusive);
-    const timed = source.map((token) => timingByToken.get(token.id));
-    if (!timed.length || timed.some((token) => token === undefined)) {
+    const window = tokenSpanSeconds(map, source.map((token) => token.id));
+    if (window === undefined) {
       throw new CaptionProjectionError(
         "CAPTION_SPEECH_COVERAGE",
         `${owner} is not covered by the complete speech time map.`,
       );
     }
-    const first = timed[0]!;
-    const last = timed.at(-1)!;
     return {
       sourceTokenIds: source.map((token) => token.id),
-      startSec: first.startSec,
-      endSec: last.endSec,
-      startQuality: composedQuality(first.startQuality),
-      endQuality: composedQuality(last.endQuality),
+      startSec: window.startSec,
+      endSec: window.endSec,
     };
   };
 
@@ -89,7 +75,6 @@ export function temporalizeCaptionPlan(
   assertCaptionProgramForNarrative(program, narrative);
   assertCaptionPlanForProgram(plan, program);
   const atomById = new Map(program.atoms.map((atom) => [atom.id, atom]));
-  const timingById = new Map(map.tokens.map((token) => [token.tokenId, token]));
   const regionById = new Map(narrative.captionProjection.regions.map((region) => [region.id, region]));
   const atomsByRegion = new Map<string, CaptionDisplayAtom[]>();
   for (const atom of program.atoms) {
@@ -98,33 +83,24 @@ export function temporalizeCaptionPlan(
     atomsByRegion.set(atom.regionId, values);
   }
   const atomWindow = (atom: CaptionDisplayAtom) => {
-    const firstSource = narrative.tokens[atom.sourceTokenStart];
-    const lastSource = narrative.tokens[atom.sourceTokenEndExclusive - 1];
-    const first = firstSource === undefined ? undefined : timingById.get(firstSource.id);
-    const last = lastSource === undefined ? undefined : timingById.get(lastSource.id);
-    if (first === undefined || last === undefined) {
+    const sourceIds = narrative.tokens
+      .slice(atom.sourceTokenStart, atom.sourceTokenEndExclusive)
+      .map((token) => token.id);
+    const window = tokenSpanSeconds(map, sourceIds);
+    if (window === undefined) {
       throw new CaptionProjectionError("CAPTION_SPEECH_COVERAGE", `Caption display atom ${atom.id} is absent from the complete speech map.`);
     }
-    if (atom.correspondence === "exact") {
-      return {
-        startSec: first.startSec,
-        endSec: last.endSec,
-        startQuality: composedQuality(first.startQuality),
-        endQuality: composedQuality(last.endQuality),
-      };
-    }
+    if (atom.correspondence === "exact") return window;
     const region = regionById.get(atom.regionId);
     if (region === undefined || region.display.length === 0) {
       throw new CaptionProjectionError("CAPTION_DISPLAY_REGION", `Caption display atom ${atom.id} has no owning display region.`);
     }
     const siblings = atomsByRegion.get(atom.regionId) ?? [];
     const next = siblings.find((candidate) => candidate.displayStart > atom.displayStart);
-    const duration = last.endSec - first.startSec;
+    const duration = window.endSec - window.startSec;
     return {
-      startSec: first.startSec + duration * atom.displayStart / region.display.length,
-      endSec: first.startSec + duration * (next?.displayStart ?? region.display.length) / region.display.length,
-      startQuality: "estimated" as const,
-      endQuality: "estimated" as const,
+      startSec: window.startSec + duration * atom.displayStart / region.display.length,
+      endSec: window.startSec + duration * (next?.displayStart ?? region.display.length) / region.display.length,
     };
   };
   const visible = new Set(program.atoms.map((atom) => atom.id));
@@ -163,8 +139,8 @@ export function temporalizeCaptionPlan(
         (_, offset) => atom.sourceTokenStart + offset,
       )))].sort((left, right) => left - right);
       const sourceTokens = sourceIndexes.map((index) => narrative.tokens[index]);
-      const timed = sourceTokens.map((token) => token === undefined ? undefined : timingById.get(token.id));
-      if (timed.length === 0 || timed.some((token) => token === undefined)) {
+      if (sourceTokens.some((token) => token === undefined)
+        || tokenSpanSeconds(map, sourceTokens.map((token) => token!.id)) === undefined) {
         throw new CaptionProjectionError("CAPTION_SPEECH_COVERAGE", `Caption Cue ${cue.id} is absent from the complete speech map.`);
       }
       const firstWindow = atomWindow(atoms[0]!);
@@ -184,8 +160,6 @@ export function temporalizeCaptionPlan(
         sourceTokenIds: sourceTokens.map((token) => token!.id),
         startSec: firstWindow.startSec,
         endSec: lastWindow.endSec,
-        startQuality: firstWindow.startQuality,
-        endQuality: lastWindow.endQuality,
         refinements: [],
         fields: cue.fields.map((field) => ({ ...field })),
       });

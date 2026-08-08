@@ -64,7 +64,7 @@ export function createMyServiceProvider(options: {
 可以参考现有的 Provider：
 - `packages/provider-kie/src/provider.ts` — 带上传、轮询和下载的远程生成
 - `packages/provider-media-local/` — 本地进程执行（ffprobe/ffmpeg）
-- `packages/provider-whisperx-local/` — 本地 sidecar HTTP 服务
+- `packages/provider-whisperx-local/` — 本地 HTTP 服务
 - `packages/provider-hyperframes-local/` — 本地 Chrome 渲染
 
 ## 4. 编写 activation 描述符
@@ -163,7 +163,7 @@ pnpm narratage doctor svml.runtime.json
 |---|---|
 | `provider-kie` | 远程 API：上传、付费提交、带检查点的轮询、有界下载、即时 ArtifactStore 持久化 |
 | `provider-media-local` | 本地进程：不经 shell 的 ffprobe/ffmpeg，执行有界 |
-| `provider-whisperx-local` | 本地 sidecar：带热模型的 HTTP 服务，单次准入并发 |
+| `provider-whisperx-local` | 本地 HTTP 服务：带热模型，单次准入并发 |
 | `provider-google-vertex` | 云 API：带 project/credentials 配置的 Vertex AI |
 | `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |
 | `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |

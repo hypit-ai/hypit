@@ -45,7 +45,6 @@ const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
 ): ValueSchema => ({ kind: "object", fields });
 
-const quality = { kind: "string", enum: ["measured", "derived", "estimated"] } as const;
 const timedCaptionRefinement = object({
   id: { schema: string },
   display: { schema: string },
@@ -54,8 +53,6 @@ const timedCaptionRefinement = object({
   sourceTokenIds: { schema: { kind: "array", items: string } },
   startSec: { schema: number },
   endSec: { schema: number },
-  startQuality: { schema: quality },
-  endQuality: { schema: quality },
   relation: { schema: { kind: "literal", value: "exact" } },
 });
 const timedCaptionRegion = object({
@@ -68,8 +65,6 @@ const timedCaptionRegion = object({
   sourceTokenIds: { schema: { kind: "array", items: string } },
   startSec: { schema: number },
   endSec: { schema: number },
-  startQuality: { schema: quality },
-  endQuality: { schema: quality },
   refinements: { schema: { kind: "array", items: timedCaptionRefinement } },
   fields: { schema: { kind: "array", items: object({
     declarationId: { schema: string },

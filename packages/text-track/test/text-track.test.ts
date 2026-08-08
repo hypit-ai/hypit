@@ -106,11 +106,8 @@ test("TextTrackProgram rejects a frame span outside its ProgramSpace", () => {
 test("a selected Text Item is located only through explicit Selection and SemanticMap edges", () => {
   const mapContent = {
     contract: "svml.complete-semantic-map@1" as const,
-    quantizationPolicy: "nearest-frame" as const,
-    durationSec: 5,
     segments: [{
       segmentId: "opening", startSec: 0, endSec: 3, startFrame: 0, endFrame: 90,
-      startQuality: "measured" as const, endQuality: "measured" as const,
     }],
     tokens: [0, 1, 2].map((index) => ({
       tokenId: `token-${index}`,
@@ -119,11 +116,11 @@ test("a selected Text Item is located only through explicit Selection and Semant
       endSec: index + 1,
       startFrame: index * 30,
       endFrame: (index + 1) * 30,
-      startQuality: "measured" as const,
-      endQuality: "measured" as const,
     })),
-    anchors: [],
-    groups: [],
+    anchors: [0, 1, 2].flatMap((index) => [
+      { identity: `segment:opening:token:${index + 1}:start`, timeSec: index, frame: index * 30 },
+      { identity: `segment:opening:token:${index + 1}:end`, timeSec: index + 1, frame: (index + 1) * 30 },
+    ]),
   };
   const map: CompleteSemanticMap = mapContent;
   const selectionContent = {
@@ -131,8 +128,14 @@ test("a selected Text Item is located only through explicit Selection and Semant
     id: "callout",
     occurrences: [{
       occurrence: 1,
-      open: { affinity: "right" as const, boundary: { tokenIndex: 1, structuralPosition: 1, segmentId: "opening" } },
-      close: { affinity: "left" as const, boundary: { tokenIndex: 2, structuralPosition: 2, segmentId: "opening" } },
+      open: {
+        affinity: "right" as const,
+        boundary: { tokenIndex: 1, structuralPosition: 1, segmentId: "opening", anchorId: "segment:opening:token:2:start" },
+      },
+      close: {
+        affinity: "left" as const,
+        boundary: { tokenIndex: 2, structuralPosition: 2, segmentId: "opening", anchorId: "segment:opening:token:2:end" },
+      },
     }],
   };
   const selection: NarrativeSelectionRef = selectionContent;

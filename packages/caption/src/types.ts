@@ -1,4 +1,3 @@
-import type { TimingQuality } from "@narratage/semantic-map";
 
 export type CaptionFieldValueSchema =
   | { readonly kind: "boolean" }
@@ -92,8 +91,6 @@ export type TimedCaptionRefinement = {
   readonly sourceTokenIds: readonly string[];
   readonly startSec: number;
   readonly endSec: number;
-  readonly startQuality: TimingQuality;
-  readonly endQuality: TimingQuality;
   readonly relation: "exact";
 };
 
@@ -107,8 +104,6 @@ export type TimedCaptionRegion = {
   readonly sourceTokenIds: readonly string[];
   readonly startSec: number;
   readonly endSec: number;
-  readonly startQuality: TimingQuality;
-  readonly endQuality: TimingQuality;
   readonly refinements: readonly TimedCaptionRefinement[];
   readonly fields?: readonly CaptionFieldAssignment[];
 };
@@ -131,8 +126,6 @@ export type CaptionPresentationUnit = {
   readonly displayEnd: number;
   readonly startSec: number;
   readonly endSec: number;
-  readonly basis: "region-envelope" | "exact-correspondence" | "presentation-estimate";
-  readonly timingQuality: TimingQuality;
   readonly fields?: readonly CaptionFieldAssignment[];
 };
 

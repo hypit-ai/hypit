@@ -5,8 +5,16 @@ import type {
   EndpointOutcome,
 } from "@narratage/endpoint-kit";
 import {
+  compileWireRequest,
+  generationTypes,
+  mappingSupportsRequest,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
+} from "@narratage/generation";
+import type {
+  GenerationArtifactUrlResolver,
+  GenerationRequest,
+  GenerationWireRequest,
 } from "@narratage/generation";
 import {
   canonicalize,
@@ -26,15 +34,10 @@ import { credentialRef } from "@narratage/runtime";
 import type { ArtifactStore, CredentialRef } from "@narratage/runtime";
 
 import {
-  kieAdapterForCapability,
+  kieMappingForCapability,
   kieModelCatalog,
   verifyKieModelCatalog,
-} from "./catalog.js";
-import type {
-  KieArtifactUrlResolver,
-  KieModelAdapter,
-  KieTask,
-} from "./catalog.js";
+} from "./mapping.js";
 
 export const kieProviderModuleRef = { name: "@narratage/provider-kie", version: "0.0.0-dev" } as const;
 export const kieProviderImplementationDigest = digestOf("@narratage/provider-kie/market-endpoint@1");
@@ -245,7 +248,7 @@ class KieClient {
     return url;
   }
 
-  async createTask(task: KieTask, apiKey: string): Promise<string> {
+  async createTask(task: GenerationWireRequest, apiKey: string): Promise<string> {
     let response: Record<string, unknown>;
     try {
       response = await this.#json(`${this.#options.apiBaseUrl}/api/v1/jobs/createTask`, {
@@ -374,11 +377,11 @@ function verifyCheckpoint(value: CanonicalValue | undefined, context: EndpointRe
     );
   }
   const checkpoint = object(value, "KIE checkpoint") as unknown as KieCheckpoint;
-  const adapter = kieAdapterForCapability(context.need.capability);
+  const mapping = kieMappingForCapability(context.need.capability);
   if (checkpoint.contract !== "svml.kie-operation@1"
     || typeof checkpoint.taskId !== "string"
-    || adapter === undefined
-    || checkpoint.catalogKey !== adapter.key
+    || mapping === undefined
+    || checkpoint.catalogKey !== mapping.capability.name
     || checkpoint.requestDigest !== context.need.requestDigest
     || !isDigest(checkpoint.contentRequestDigest)
     || !Number.isSafeInteger(checkpoint.startedAt)
@@ -419,27 +422,30 @@ function endpoint(options: {
   return {
     async start(context) {
       try {
-        const adapter = kieAdapterForCapability(context.need.capability);
-        if (adapter === undefined) throw new KieError("KIE_UNSUPPORTED_CAPABILITY", "KIE does not implement this exact capability");
-        adapter.verify(context.need.constraints);
+        const mapping = kieMappingForCapability(context.need.capability);
+        if (mapping === undefined) throw new KieError("KIE_UNSUPPORTED_CAPABILITY", "KIE does not implement this exact capability");
         const key = secret(context);
         const uploaded = new Map<Digest, Promise<string>>();
-        const resolve: KieArtifactUrlResolver = (artifact) => {
+        const resolve: GenerationArtifactUrlResolver = (artifact) => {
           const existing = uploaded.get(artifact.digest);
           if (existing !== undefined) return existing;
           const promise = options.client.upload(artifact, context.artifacts, key);
           uploaded.set(artifact.digest, promise);
           return promise;
         };
-        const task = await adapter.task(context.need.constraints, resolve);
+        const task = await compileWireRequest(
+          mapping,
+          context.need.constraints as unknown as GenerationRequest,
+          resolve,
+        );
         await options.gate.enter();
         const taskId = await options.client.createTask(task, key);
         const checkpoint: KieCheckpoint = {
           contract: "svml.kie-operation@1",
           taskId,
-          catalogKey: adapter.key,
+          catalogKey: mapping.capability.name,
           model: task.model,
-          result: task.result,
+          result: mapping.result,
           requestDigest: context.need.requestDigest,
           contentRequestDigest: contentRequestDigest(context.need.constraints),
           startedAt: options.now(),
@@ -459,11 +465,10 @@ function endpoint(options: {
         return failure(error);
       }
       try {
-        const adapter = kieAdapterForCapability(context.need.capability);
-        if (adapter === undefined || adapter.key !== checkpoint.catalogKey) {
+        const mapping = kieMappingForCapability(context.need.capability);
+        if (mapping === undefined || mapping.capability.name !== checkpoint.catalogKey) {
           throw new KieError("KIE_CHECKPOINT_INVALID", "KIE checkpoint capability differs");
         }
-        adapter.verify(context.need.constraints);
         if (contentRequestDigest(context.need.constraints) !== checkpoint.contentRequestDigest) {
           throw new KieError("KIE_CHECKPOINT_INVALID", "KIE checkpoint request content differs");
         }
@@ -604,18 +609,12 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
     defaultConcurrency: config.defaultConcurrency ?? 2,
     capabilities: kieModelCatalog.map((item) => ({
       capability: item.capability,
-      returns: item.returns,
+      returns: item.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
       lifecycle: "recoverable" as const,
       endpoint: providerEndpoint,
       retry: { maxAttempts: 3 },
-      supports: (need) => {
-        try {
-          item.verify(need.constraints);
-          return true;
-        } catch {
-          return false;
-        }
-      },
+      /** Model semantics were already admitted by Core; KIE only checks it can write every port. */
+      supports: (need) => mappingSupportsRequest(item, need.constraints),
     })),
   });
 }

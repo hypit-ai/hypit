@@ -95,7 +95,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 ```text
 @narratage/provider-kie                  KIE generation (16 model capabilities)
 @narratage/provider-media-local          local ffprobe/ffmpeg
-@narratage/provider-whisperx-local       local WhisperX sidecar
+@narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
 @narratage/provider-hyperframes-local    local Chrome rendering
 @narratage/provider-image-opencv-local   local OpenCV image transforms

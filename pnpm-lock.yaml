@@ -722,6 +722,21 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/media-execution:
+    dependencies:
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+
   packages/media-pipeline:
     dependencies:
       '@narratage/artifact':
@@ -984,24 +999,9 @@ importers:
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@narratage/gemini-omni':
-        specifier: workspace:*
-        version: link:../gemini-omni
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
-      '@narratage/gpt-image':
-        specifier: workspace:*
-        version: link:../gpt-image
-      '@narratage/grok-imagine':
-        specifier: workspace:*
-        version: link:../grok-imagine
-      '@narratage/minimax-h3':
-        specifier: workspace:*
-        version: link:../minimax-h3
-      '@narratage/nano-banana':
-        specifier: workspace:*
-        version: link:../nano-banana
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1014,12 +1014,6 @@ importers:
       '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:../runtime-adapter-node
-      '@narratage/seedance':
-        specifier: workspace:*
-        version: link:../seedance
-      '@narratage/seedream':
-        specifier: workspace:*
-        version: link:../seedream
     devDependencies:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
@@ -1036,21 +1030,76 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/gemini-omni':
+        specifier: workspace:*
+        version: link:../gemini-omni
+      '@narratage/gpt-image':
+        specifier: workspace:*
+        version: link:../gpt-image
+      '@narratage/grok-imagine':
+        specifier: workspace:*
+        version: link:../grok-imagine
       '@narratage/local':
         specifier: workspace:*
         version: link:../local
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
+      '@narratage/minimax-h3':
+        specifier: workspace:*
+        version: link:../minimax-h3
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
+      '@narratage/nano-banana':
+        specifier: workspace:*
+        version: link:../nano-banana
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
+      '@narratage/seedance':
+        specifier: workspace:*
+        version: link:../seedance
+      '@narratage/seedream':
+        specifier: workspace:*
+        version: link:../seedream
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+
+  packages/provider-media-aws-lambda:
+    dependencies:
+      '@narratage/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../media-execution
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@narratage/speech':
+        specifier: workspace:*
+        version: link:../speech
+      '@narratage/transport':
+        specifier: workspace:*
+        version: link:../transport
+      '@narratage/transport-aws-lambda':
+        specifier: workspace:*
+        version: link:../transport-aws-lambda
+    devDependencies:
+      '@narratage/driver-node':
+        specifier: workspace:*
+        version: link:../driver-node
 
   packages/provider-media-local:
     dependencies:
@@ -1060,6 +1109,9 @@ importers:
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../media-execution
       '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
@@ -1679,6 +1731,25 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  services/media-lambda:
+    dependencies:
+      '@narratage/artifact-store-s3':
+        specifier: workspace:*
+        version: link:../../packages/artifact-store-s3
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../../packages/media-execution
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@narratage/provider-media-aws-lambda':
+        specifier: workspace:*
+        version: link:../../packages/provider-media-aws-lambda
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
 
 packages:
 
