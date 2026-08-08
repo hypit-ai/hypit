@@ -13,6 +13,7 @@ import type {
 
 import { captionTrackSurfaceFragment, plannedCaptionTrackSurfaceFragment } from "./fragment.js";
 import { captionTypes } from "./manifest.js";
+import { captionAppearanceFromRecipe } from "./recipe.js";
 import { sealCaptionTrackProgram } from "./track.js";
 import { resolveCaptionProgram, sealCaptionStyle } from "./style.js";
 import type { CaptionStyleApplication } from "./style.js";
@@ -147,35 +148,9 @@ function fieldValue(element: StructuredElement): CaptionFieldValueSchema {
   throw new Error(`${element.name}.type must be boolean, enum or number`);
 }
 
+/** Element attributes are this handler's; the Recipe belongs to ./recipe.ts. */
 function captionAppearance(element: StructuredElement, value: SvsRecipe) {
-  const expected = ["align", "background", "fill", "font", "line-height", "padding", "radius", "size", "stack-order", "weight", "width", "x", "y"];
-  if (Object.keys(value.properties).sort().join("\u0000") !== expected.sort().join("\u0000")) {
-    throw new Error(`Caption Recipe requires exactly ${expected.join(", ")}`);
-  }
-  const align = string(value, "align");
-  if (align !== "left" && align !== "center" && align !== "right") throw new Error("Caption Recipe align is invalid");
-  const pad = padding(string(value, "padding"));
-  return {
-    mode: mode(element),
-    stackingOrder: integer(value, "stack-order"),
-    style: {
-      fontFamily: string(value, "font"),
-      fontSizePx: number(value, "size"),
-      fontWeight: integer(value, "weight"),
-      color: string(value, "fill"),
-      backgroundColor: string(value, "background"),
-      paddingXPx: pad.x,
-      paddingYPx: pad.y,
-      borderRadiusPx: number(value, "radius"),
-      bottomPercent: 0,
-      maxWidthPercent: number(value, "width") * 100,
-      leftPercent: number(value, "x") * 100,
-      topPercent: number(value, "y") * 100,
-      widthPercent: number(value, "width") * 100,
-      lineHeight: number(value, "line-height"),
-      textAlign: align,
-    },
-  } as const;
+  return { mode: mode(element), ...captionAppearanceFromRecipe(value.properties) } as const;
 }
 
 export const decodeCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {

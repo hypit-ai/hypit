@@ -13,6 +13,7 @@ import { svsManifest, svsModuleRef } from "@narratage/svs";
 import {
   appendBrollItemImplementationDigest,
   createBrollSetImplementationDigest,
+  defaultBrollItemSpec,
   finalizeBrollProgramImplementationDigest,
 } from "./author.js";
 
@@ -40,6 +41,7 @@ export const brollProducers = {
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
+const color = { kind: "string", minLength: 1, format: "color" } as const;
 const number = { kind: "number" } as const;
 const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
 const signedInteger = { kind: "number", integer: true } as const;
@@ -77,7 +79,7 @@ const item = object({
   audioGain: { schema: number, optional: true },
   enter: { schema: motion, optional: true },
   exit: { schema: motion, optional: true },
-  backgroundColor: { schema: string, optional: true },
+  backgroundColor: { schema: color, optional: true },
   borderRadiusPx: { schema: number, optional: true },
 });
 const itemSpec = object({
@@ -86,7 +88,7 @@ const itemSpec = object({
   z: { schema: signedInteger },
   box: { schema: box },
   fit: { schema: { kind: "string", enum: ["contain", "cover"] } },
-  backgroundColor: { schema: string, optional: true },
+  backgroundColor: { schema: color, optional: true },
   borderRadiusPx: { schema: number, optional: true },
   enter: { schema: motion, optional: true },
   exit: { schema: motion, optional: true },
@@ -147,7 +149,10 @@ export const brollManifest: ModuleManifest = {
     { name: brollTypes.program.name, schema: brollProgramSchema },
     { name: brollTypes.product.name, schema: brollProductSchema },
     { name: brollTypes.trackSpec.name, schema: brollTrackSpecSchema },
-    { name: brollTypes.itemSpec.name, schema: brollItemSpecSchema },
+    // BrollProgram has no default: an Item carries a content-addressed
+    // Artifact, and this module has no bytes to point at. The appearance it can
+    // honestly decide is declared on the item spec instead.
+    { name: brollTypes.itemSpec.name, schema: brollItemSpecSchema, default: defaultBrollItemSpec() },
     { name: brollTypes.set.name, schema: brollSetSchema },
   ],
   capabilities: [],

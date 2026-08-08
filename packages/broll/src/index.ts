@@ -19,9 +19,19 @@ export {
   createBrollSetImplementationDigest,
   finalizeBrollProgram,
   finalizeBrollProgramImplementationDigest,
+  defaultBrollItemSpec,
   sealBrollItemSpec,
   sealBrollTrackSpec,
 } from "./author.js";
+export {
+  assertBrollAppearanceRecipe,
+  brollAppearanceFromRecipe,
+  brollAppearanceRecipeKeys,
+  brollItemSpecFromRecipe,
+  brollRecipeMotion,
+  defaultBrollAppearanceRecipe,
+} from "./recipe.js";
+export type { BrollAppearance } from "./recipe.js";
 export {
   brollManifest,
   brollManifestDigest,

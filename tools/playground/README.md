@@ -6,22 +6,30 @@ Look at a visual component without running a Build.
 pnpm playground
 ```
 
-Pick a component, fill in its parameters, and it renders on a canvas of the size
-you choose. Or browse to a `.svs` stylesheet: every Recipe in it becomes its own
-preview, and the `film` Recipe fills in the frame size.
+Pick a producer, fill in its inputs, and it renders on a canvas of the size you
+choose. Browse to a `.svs` stylesheet and its Film Recipe fills in the frame.
 
-## What it actually renders
+## It lists nothing
 
-The real thing. Each adapter converts form values into its package's own Program
-type and calls that package's renderer — `renderCaptionTrack`,
-`renderTextTrack`, `compileBrollProduct`, `projectSpeechVisual` — then
-`compileHyperframesDocument` produces the same document a Build would render.
-Those functions are pure and import nothing from `node:`, which is what lets
-them run in a browser at all.
+There is no registry here, and no per-component code. Everything comes from
+what the compiler already declares about itself:
 
-Nothing here validates. The packages' own `seal*` and `assert*` functions are
-the judge, because they are what a real Build runs. A rejected value shows the
-compiler's own message beside the form and leaves the last good frame up.
+| Question | Answered by |
+|---|---|
+| Which modules can be previewed | manifests declaring a Producer whose output type is `@narratage/composition.VisualTrack` |
+| What each needs | that Producer's `inputs`, each a `TypeRef` |
+| What shape each input has | the declaring module's `TypeDeclaration.schema` |
+| What a control should look like | `ValueSchema.format` — `color`, `unit-fraction`, `multiline`, `digest`, `duration` |
+| What to start from | `TypeDeclaration.default`, given by the module that owns the type |
+| How to run it | the module's `component.producers[].handler` |
+
+A module that gains a visual Producer appears here on its own. One that loses
+it disappears. Neither requires editing anything in this directory.
+
+Nothing here validates, either: `validateStoredValue` and the modules' own
+`seal*` and `assert*` functions are the judge, because they are what a real
+Build runs. A rejected value shows the compiler's own message beside the form
+and leaves the last good frame up.
 
 ## Two things a Build supplies that the document does not
 
@@ -37,17 +45,16 @@ self-sufficient — a real render supplies a producer for the rest. The shim in
   `getAnimations()` plus an explicit `currentTime` — the same technique the
   production renderer uses.
 
-## Adding a component
+## Making a module previewable
 
-One file in `src/registry/`, one entry in `src/registry/index.ts`. Declare the
-parameters as a `ValueSchema` and the form is generated; return `Track[]` from
-`build` and the shell owns the canvas, the ProgramSpace and the seal.
+Nothing to add here. In the module: declare a Producer that outputs a
+`VisualTrack`, give each input type a `schema`, and give it a `default` where
+you honestly can. A type carrying content-addressed media has no default — say
+nothing rather than inventing a digest, and the playground will ask the operator
+for a file instead.
 
-If the component reads an SVS Recipe, copy its key set from the Surface handler
-and add the pair to `tools/playground-registry.test.mjs`, which reads the
-literal back out of the source and fails if the two drift. Recipes are matched
-by exact property key set, never by path prefix — `caption.dialogue` and
-`caption.short-cues` share a prefix and describe unrelated things.
+Annotate a field with `format` where its type alone is ambiguous: a colour and
+a font family are both strings, and only the module knows which is which.
 
 ## Known divergences from a real render
 
@@ -55,5 +62,5 @@ by exact property key set, never by path prefix — `caption.dialogue` and
   `FontArtifactRef` path with hashed `@font-face` families is not exercised,
   because `renderCaptionTrack` and `renderTextTrack` do not attach one.
 - Audio tracks are not played.
-- `speech.full` in the golden stylesheet has no preview because no Surface in
-  the compiler reads it; `projectSpeechVisual` takes no appearance at all.
+- The frame domain is the shell's, not the form's: a `ProgramSpace` input is
+  filled from the canvas controls, so there is only one place to change it.

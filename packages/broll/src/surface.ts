@@ -17,6 +17,7 @@ import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedRefere
 
 import { sealBrollItemSpec, sealBrollTrackSpec } from "./author.js";
 import { brollProducers, brollTypes } from "./manifest.js";
+import { brollItemSpecFromRecipe } from "./recipe.js";
 import type { BrollMotion, BrollSurfaceItemInput } from "./types.js";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
@@ -127,21 +128,13 @@ export const decodeBrollTrackSurface: StructuredSurfaceHandler = ({ element, res
     const source = ref(child, "source", artifactTypes.blob, resolveReference);
     const selection = ref(child, "during", narrativeTypes.selection, resolveReference);
     const appearance = recipe(ref(child, "appearance", svsRecipeType, resolveReference));
-    const expected = ["background", "enter", "exit", "fit", "height", "radius", "stack-order", "width", "x", "y"];
-    if (Object.keys(appearance.properties).sort().join("\0") !== expected.sort().join("\0")) throw new Error(`B-roll Recipe requires exactly ${expected.join(", ")}`);
-    const fit = str(appearance, "fit");
-    if (fit !== "contain" && fit !== "cover") throw new Error("B-roll Recipe fit is invalid");
     const suffix = String(itemIndex).padStart(4, "0");
     const specId = `${id}.item.${suffix}.spec`;
     records.push({
       id: specId, type: brollTypes.itemSpec,
-      value: { kind: "inline", value: sealBrollItemSpec({
-        contract: "svml.broll-item-spec@1", id: `${id}.item.${suffix}`, z: num(appearance, "stack-order"),
-        box: { xPercent: num(appearance, "x") * 100, yPercent: num(appearance, "y") * 100,
-          widthPercent: num(appearance, "width") * 100, heightPercent: num(appearance, "height") * 100 },
-        fit, backgroundColor: str(appearance, "background"), borderRadiusPx: num(appearance, "radius"),
-        enter: motion(str(appearance, "enter")), exit: motion(str(appearance, "exit")),
-      }) }, range: child.range,
+      value: { kind: "inline", value: sealBrollItemSpec(
+        brollItemSpecFromRecipe(`${id}.item.${suffix}`, appearance.properties),
+      ) }, range: child.range,
     });
     return [{ suffix, source, selection, specId, range: child.range,
       input: { mediaName: `item-${suffix}-media`, selectionName: `item-${suffix}-selection`, specName: `item-${suffix}-spec` } }];

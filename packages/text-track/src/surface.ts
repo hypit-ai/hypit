@@ -11,6 +11,7 @@ import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedRefere
 
 import { textTrackProducers, textTrackTypes } from "./manifest.js";
 import { sealTextItemSpec, sealTextTrackHeader } from "./program.js";
+import { textAppearanceFromRecipe } from "./recipe.js";
 import type { TextItemSpec } from "./types.js";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
@@ -143,27 +144,13 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
         })()
       : ref(child, "during", narrativeTypes.selection, resolveReference);
     const appearance = recipe(ref(child, "appearance", svsRecipeType, resolveReference));
-    const expected = ["align", "fill", "font", "height", "size", "stack-order", "tracking", "weight", "width", "x", "y"];
-    if (Object.keys(appearance.properties).sort().join("\0") !== expected.sort().join("\0")) throw new Error(`Text Recipe requires exactly ${expected.join(", ")}`);
-    const align = propString(appearance, "align");
-    if (align !== "left" && align !== "center" && align !== "right") throw new Error("Text Recipe align is invalid");
-    const textAlign = align as "left" | "center" | "right";
     const suffix = String(itemIndex).padStart(4, "0");
     const specId = `${id}.item.${suffix}.spec`;
     const spec = sealTextItemSpec({
       contract: "svml.text-item-spec@1",
       id: `item-${suffix}`,
       text: text(child, "text"),
-      z: propNumber(appearance, "stack-order"),
-      box: {
-        xPercent: propNumber(appearance, "x") * 100, yPercent: propNumber(appearance, "y") * 100,
-        widthPercent: propNumber(appearance, "width") * 100, heightPercent: propNumber(appearance, "height") * 100,
-      },
-      appearance: {
-        color: propString(appearance, "fill"), fontSizePx: propNumber(appearance, "size"),
-        fontFamily: propString(appearance, "font"), fontWeight: propNumber(appearance, "weight"),
-        letterSpacingPx: propNumber(appearance, "tracking"), align: textAlign,
-      },
+      ...textAppearanceFromRecipe(appearance.properties),
     });
     records.push({ id: specId, type: textTrackTypes.itemSpec, value: { kind: "inline", value: spec }, range: child.range });
     return [{

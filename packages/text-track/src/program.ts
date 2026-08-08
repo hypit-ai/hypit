@@ -4,7 +4,7 @@ import type { ProgramSpace } from "@narratage/program-space";
 import { assertCompleteSemanticMapIdentity, assertNarrativeSelectionIdentity, selectionFrameSpans } from "@narratage/semantic-map";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
-import type { VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
+import type { FrameSpan, VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
 import { canonicalize, digestOf } from "@narratage/protocol";
 
 import type {
@@ -59,6 +59,40 @@ function textTrackProgramContent(value: TextTrackProgram): TextTrackProgram {
 
 export function sealTextTrackProgram(value: TextTrackProgram): TextTrackProgram {
   return textTrackProgramContent(value);
+}
+
+/**
+ * One legible overlay, for anything that must show a Text Track before an
+ * author has written one — a preview, a diagnostic, a document.
+ *
+ * The package owning the type owns what it looks like by default. A consumer
+ * that invented its own would be a second answer to the same question, free to
+ * drift from this one without anything noticing.
+ */
+export function defaultTextTrackProgram(
+  id = "text",
+  span: FrameSpan = { startFrame: 0, endFrameExclusive: 30 },
+): TextTrackProgram {
+  return sealTextTrackProgram({
+    contract: "svml.text-track-program@1",
+    id,
+    items: [{
+      id: "item-0001",
+      text: "A title card",
+      span,
+      z: 90,
+      tieBreak: `${id}:item-0001`,
+      box: { xPercent: 8, yPercent: 12, widthPercent: 84, heightPercent: 20 },
+      appearance: {
+        color: "#ffffff",
+        fontSizePx: 96,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontWeight: 800,
+        letterSpacingPx: -2,
+        align: "left",
+      },
+    }],
+  });
 }
 
 function assertAppearance(appearance: TextAppearance, label: string): void {

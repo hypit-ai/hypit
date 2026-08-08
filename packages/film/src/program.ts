@@ -37,6 +37,23 @@ function filmTrackSetContent(value: FilmTrackSet): FilmTrackSet {
   };
 }
 
+/**
+ * One vertical frame at 30, for anything that must choose a canvas before an
+ * author has declared a Film.
+ *
+ * The package that defines what a frame is decides what an undeclared one
+ * looks like. Anything else picking its own numbers would be a second, silent
+ * answer.
+ */
+export function defaultFilmProgram(id = "film"): FilmProgram {
+  return sealFilmProgram({
+    contract: "svml.film-program@1",
+    id,
+    frameRate: { numerator: 30, denominator: 1 },
+    canvas: { width: 1080, height: 1920, clearColor: "#09090b" },
+  });
+}
+
 export function sealFilmProgram(value: FilmProgram): FilmProgram {
   return filmProgramContent(value);
 }

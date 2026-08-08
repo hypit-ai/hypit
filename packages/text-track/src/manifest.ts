@@ -11,6 +11,7 @@ import {
   appendSelectedTextItemImplementationDigest,
   compileTextTrackImplementationDigest,
   createTextTrackSetImplementationDigest,
+  defaultTextTrackProgram,
   finalizeTextTrackImplementationDigest,
   renderTextTrackImplementationDigest,
 } from "./program.js";
@@ -42,15 +43,17 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
   fields,
 });
 
+const color = { kind: "string", minLength: 1, format: "color" } as const;
+
 const textAppearanceSchema = object({
-  color: { schema: string },
+  color: { schema: color },
   fontSizePx: { schema: positiveNumber },
   fontFamily: { schema: string, optional: true },
   fontWeight: { schema: { kind: "number", integer: true, minimum: 1, maximum: 1000 }, optional: true },
   lineHeight: { schema: positiveNumber, optional: true },
   align: { schema: { kind: "string", enum: ["left", "center", "right"] }, optional: true },
   verticalAlign: { schema: { kind: "string", enum: ["top", "center", "bottom"] }, optional: true },
-  backgroundColor: { schema: string, optional: true },
+  backgroundColor: { schema: color, optional: true },
   borderRadiusPx: { schema: { kind: "number", minimum: 0 }, optional: true },
   paddingPx: { schema: { kind: "number", minimum: 0 }, optional: true },
   letterSpacingPx: { schema: number, optional: true },
@@ -58,7 +61,7 @@ const textAppearanceSchema = object({
 
 const textItemSchema = object({
   id: { schema: string },
-  text: { schema: string },
+  text: { schema: { kind: "string", format: "multiline" } },
   span: { schema: object({
     startFrame: { schema: unsignedInteger },
     endFrameExclusive: { schema: unsignedInteger },
@@ -131,7 +134,7 @@ export const textTrackManifest: ModuleManifest = {
     compositionDependency,
   ],
   types: [
-    { name: textTrackTypes.program.name, schema: textTrackProgramSchema },
+    { name: textTrackTypes.program.name, schema: textTrackProgramSchema, default: defaultTextTrackProgram() },
     { name: textTrackTypes.spec.name, schema: textTrackSpecSchema },
     { name: textTrackTypes.header.name, schema: textTrackHeaderSchema },
     { name: textTrackTypes.itemSpec.name, schema: textItemSpecSchema },
