@@ -30,6 +30,8 @@ the working tree contains only documents that should inform current implementati
   and Store activation, physical-code identity, diagnostics and explicit Artifact maintenance.
 - [`build-archive-and-egress.md`](./build-archive-and-egress.md) — Targets, durable Records,
   Artifact retention and optional Host materialization as four separate concerns.
+- [`speech-alignment.md`](./speech-alignment.md) — the Script and the recording as two
+  independent observations, and what locating guarantees.
 - [`source-and-run-compilation.md`](./source-and-run-compilation.md) — mandatory Source Header,
   peer Author/Run graphs, deterministic composition and compilation data gates.
 - package READMEs under [`../packages`](../packages) — executable APIs and ownership.

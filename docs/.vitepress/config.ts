@@ -117,6 +117,7 @@ export default defineConfig({
     "node-package-activation.md",
     "runtime-adapter-loading.md",
     "source-and-run-compilation.md",
+    "speech-alignment.md",
   ],
   markdown: {
     theme: {
