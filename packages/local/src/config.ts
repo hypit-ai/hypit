@@ -31,17 +31,9 @@ export type RuntimeConfigDocument = {
   readonly packageLock?: string;
   /** Locked physical packages allowed to configure privileged Runtime adapters. */
   readonly runtimePackageLock?: string;
-  readonly services: readonly RuntimeConfigEntry[];
+  /** Replaceable parts of the Runtime itself. One package may fill several roles. */
+  readonly runtimeServices: readonly RuntimeConfigEntry[];
   readonly endpoints: readonly RuntimeConfigEntry[];
-  readonly selection?: {
-    readonly scheduler?: string;
-    readonly stores?: {
-      readonly build?: string;
-      readonly operations?: string;
-      readonly artifacts?: string;
-      readonly credentials?: string;
-    };
-  };
   readonly permissions: readonly string[];
   readonly scheduling?: {
     readonly maxConcurrency?: number;
@@ -98,23 +90,6 @@ function entry(value: unknown, subject: string, laneAllowed: boolean): RuntimeCo
   };
 }
 
-function selection(value: unknown): RuntimeConfigDocument["selection"] {
-  if (value === undefined) return undefined;
-  const item = object(value, "$runtime.selection");
-  exactKeys(item, ["scheduler", "stores"], "$runtime.selection");
-  const stores = item.stores === undefined ? undefined : object(item.stores, "$runtime.selection.stores");
-  if (stores !== undefined) exactKeys(stores, ["build", "operations", "artifacts", "credentials"], "$runtime.selection.stores");
-  const scheduler = optionalString(item.scheduler, "$runtime.selection.scheduler");
-  return {
-    ...(scheduler === undefined ? {} : { scheduler }),
-    ...(stores === undefined ? {} : { stores: {
-      ...(optionalString(stores.build, "$runtime.selection.stores.build") === undefined ? {} : { build: stores.build as string }),
-      ...(optionalString(stores.operations, "$runtime.selection.stores.operations") === undefined ? {} : { operations: stores.operations as string }),
-      ...(optionalString(stores.artifacts, "$runtime.selection.stores.artifacts") === undefined ? {} : { artifacts: stores.artifacts as string }),
-      ...(optionalString(stores.credentials, "$runtime.selection.stores.credentials") === undefined ? {} : { credentials: stores.credentials as string }),
-    } }),
-  };
-}
 
 function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
   if (value === undefined) return undefined;
@@ -140,21 +115,20 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
   exactKeys(item, [
     "format", "root", "statePath", "catalogPath", "artifactPath", "packageLock", "runtimePackageLock",
-    "services", "endpoints",
-    "selection", "permissions", "scheduling",
+    "runtimeServices", "endpoints",
+    "permissions", "scheduling",
   ], "$runtime");
   if (item.format !== "svml.runtime-config@1") throw new Error("$runtime.format must be svml.runtime-config@1");
-  const services = item.services === undefined ? [] : (() => {
-    if (!Array.isArray(item.services)) throw new Error("$runtime.services must be an array");
-    return item.services.map((value, index) => entry(value, `$runtime.services[${index}]`, false));
+  const runtimeServices = item.runtimeServices === undefined ? [] : (() => {
+    if (!Array.isArray(item.runtimeServices)) throw new Error("$runtime.runtimeServices must be an array");
+    return item.runtimeServices.map((value, index) => entry(value, `$runtime.runtimeServices[${index}]`, false));
   })();
   const endpoints = item.endpoints === undefined ? [] : (() => {
     if (!Array.isArray(item.endpoints)) throw new Error("$runtime.endpoints must be an array");
     return item.endpoints.map((value, index) => entry(value, `$runtime.endpoints[${index}]`, true));
   })();
-  const instances = [...services, ...endpoints].map((value) => value.instance);
+  const instances = [...runtimeServices, ...endpoints].map((value) => value.instance);
   if (new Set(instances).size !== instances.length) throw new Error("$runtime repeats a Runtime instance id");
-  const selected = selection(item.selection);
   const scheduled = scheduling(item.scheduling);
   return {
     format: "svml.runtime-config@1",
@@ -166,9 +140,8 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     ...(optionalString(item.runtimePackageLock, "$runtime.runtimePackageLock") === undefined
       ? {}
       : { runtimePackageLock: item.runtimePackageLock as string }),
-    services,
+    runtimeServices,
     endpoints,
-    ...(selected === undefined ? {} : { selection: selected }),
     permissions: stringList(item.permissions, "$runtime.permissions"),
     ...(scheduled === undefined ? {} : { scheduling: scheduled }),
   };
@@ -248,7 +221,7 @@ export async function doctorRuntimeConfig(
       diagnostics.push(diagnostic(error, "IMPLEMENTATION_PACKAGE_LOCK_INVALID", document.packageLock));
     }
   }
-  for (const item of document.services) {
+  for (const item of document.runtimeServices) {
     const context = { root, instance: item.instance, config: item.config ?? {} };
     try {
       diagnostics.push(...await registry.doctor(item.use, "service", context));
@@ -293,7 +266,7 @@ export async function createRuntimeFromConfig(
   const root = resolve(dirname(absolute), document.root ?? ".");
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root);
-  const services = await Promise.all(document.services.map(async (item) => {
+  const runtimeServices = await Promise.all(document.runtimeServices.map(async (item) => {
     return await registry.createService(item.use, {
       root,
       instance: item.instance,
@@ -314,8 +287,7 @@ export async function createRuntimeFromConfig(
     ...(document.catalogPath === undefined ? {} : { catalogPath: document.catalogPath }),
     ...(document.artifactPath === undefined ? {} : { artifactPath: document.artifactPath }),
     ...(document.packageLock === undefined ? {} : { packageLock: document.packageLock }),
-    runtimeServices: services,
-    ...(document.selection === undefined ? {} : { runtimeSelection: document.selection }),
+    runtimeServices,
     components: options.components ?? [],
     endpoints,
     allowedPermissions: document.permissions,
