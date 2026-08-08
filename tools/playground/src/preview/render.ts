@@ -5,6 +5,7 @@ import {
   sealComposition,
 } from "../svml.js";
 import type { Composition, ProgramSpace, Track } from "../svml.js";
+import { artifactUrl } from "./artifacts.js";
 import { injectRuntimeShim } from "./runtime-shim.js";
 
 /** A grey card standing in for an Artifact the playground has not been given. */
@@ -20,8 +21,6 @@ export type PreviewInput = {
   readonly canvas: Composition["canvas"];
   readonly programSpace: ProgramSpace;
   readonly tracks: readonly Track[];
-  /** Digest to object URL. A miss is a warning, never a failed preview. */
-  readonly resolveArtifact?: (digest: string) => string | undefined;
 };
 
 export type PreviewOutput = {
@@ -51,9 +50,11 @@ export function renderPreview(input: PreviewInput): PreviewOutput {
 
   const warnings: string[] = [];
   const html = materializeHyperframesHtml(document, (artifact) => {
-    const resolved = input.resolveArtifact?.(artifact.digest);
+    const resolved = artifactUrl(artifact.digest);
     if (resolved !== undefined) return resolved;
-    warnings.push(`No media set for ${artifact.digest.slice(0, 19)}…`);
+    // A missing Artifact must not blank the frame: a playground where one
+    // unset image hides everything else teaches nothing.
+    warnings.push(`No media registered for ${artifact.digest.slice(0, 19)}…`);
     return MISSING_MEDIA;
   });
 

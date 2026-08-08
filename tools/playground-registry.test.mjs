@@ -22,6 +22,7 @@ import { REGISTRY } from "./playground/src/registry/index.ts";
 const SURFACES = {
   caption: "../packages/caption/src/surface.ts",
   "text-track": "../packages/text-track/src/surface.ts",
+  broll: "../packages/broll/src/surface.ts",
 };
 
 /** Pulls the `expected` array literal a Surface compares Recipe keys against. */

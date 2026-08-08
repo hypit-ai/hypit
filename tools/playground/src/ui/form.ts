@@ -1,3 +1,4 @@
+import { artifactLabel, registerFile } from "../preview/artifacts.js";
 import type { CanonicalValue, ValueSchema } from "../svml.js";
 import type { FieldHint } from "../registry/index.js";
 
@@ -14,6 +15,12 @@ export const FORM_CSS = `
 .form-control input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
 .form-control input[type=color] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--line); background: none; border-radius: 4px; }
 .form-control .narrow { flex: 0 0 68px; }
+.form-control .form-file { flex: 0 0 auto; font-size: 11px; color: var(--muted); max-width: 130px; }
+.form-control .form-file::file-selector-button {
+  border: 1px solid var(--line); border-radius: 5px; background: #1c1c21;
+  color: var(--text); font: inherit; font-size: 11px; padding: 2px 7px; margin-right: 6px; cursor: pointer;
+}
+.form-control .form-file-label { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .form-group { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 5px 0; }
 .form-group > legend { color: var(--accent); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; padding: 0 5px; }
 .form-item { border-top: 1px dashed var(--line); padding-top: 7px; margin-top: 7px; }
@@ -200,9 +207,47 @@ function scalarControl(
     return input;
   }
 
+  if (schema.kind === "blob") return blobControl(current, schema.mediaTypes, onChange);
+
   const unsupported = document.createElement("span");
   unsupported.textContent = `(${schema.kind})`;
   return unsupported;
+}
+
+/**
+ * Media picker.
+ *
+ * The form value is the digest, and the bytes stay in the Artifact registry, so
+ * a component's parameters remain a plain canonical value that a test can build
+ * without a browser.
+ */
+function blobControl(
+  current: CanonicalValue | undefined,
+  mediaTypes: readonly string[] | undefined,
+  onChange: (next: CanonicalValue) => void,
+): HTMLElement {
+  const holder = document.createElement("div");
+  holder.className = "form-control";
+  const picker = document.createElement("input");
+  picker.type = "file";
+  picker.className = "form-file";
+  if (mediaTypes !== undefined) picker.accept = mediaTypes.join(",");
+  const label = document.createElement("span");
+  label.className = "form-file-label";
+  label.textContent = artifactLabel(typeof current === "string" && current !== "" ? current : undefined);
+  picker.addEventListener("change", () => {
+    const file = picker.files?.[0];
+    if (file === undefined) return;
+    label.textContent = "hashing…";
+    void registerFile(file).then((ref) => {
+      label.textContent = artifactLabel(ref.digest);
+      onChange(ref.digest);
+    }).catch((error: unknown) => {
+      label.textContent = error instanceof Error ? error.message : String(error);
+    });
+  });
+  holder.append(picker, label);
+  return holder;
 }
 
 function blank(schema: ValueSchema): CanonicalValue {
