@@ -107,7 +107,6 @@ export default defineConfig({
     "open-source-distribution.md",
     "build-archive-and-egress.md",
     "caption-gemini-provider-contract.md",
-    "credential-store-composition.md",
     "graph-first-value-boundary.md",
     "hyperframes-aws-runtime.md",
     "image-transform.md",
