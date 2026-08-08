@@ -1,3 +1,3 @@
 import { mountShell } from "./ui/shell.js";
 
-mountShell(document.querySelector<HTMLElement>("#app")!);
+void mountShell(document.querySelector<HTMLElement>("#app")!);

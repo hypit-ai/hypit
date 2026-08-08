@@ -7,8 +7,9 @@
  * entry would therefore drag a filesystem into the browser for a function the
  * playground never calls, so the document module is imported by path instead.
  *
- * Everything else the playground uses goes through this module too, so the
- * boundary is one file to audit rather than an import convention to remember.
+ * Only the render path is named here. Components are not: they are discovered
+ * from the manifests at run time, and a list of them in this file would be the
+ * very coupling the discovery exists to avoid.
  */
 
 export {
@@ -18,52 +19,32 @@ export {
 } from "../../../packages/hyperframes/src/document.js";
 export type { HyperframesDocument } from "../../../packages/hyperframes/src/types.js";
 
-export {
-  sealComposition,
-  sealVisualTrack,
-  assertCompositionIdentity,
-} from "@narratage/composition";
-export type {
-  Composition,
-  FrameSpan,
-  Track,
-  VisualElement,
-  VisualPresent,
-  VisualStyleDeclaration,
-  VisualTrack,
-} from "@narratage/composition";
+export { sealComposition } from "@narratage/composition";
+export type { Composition, Track, VisualTrack } from "@narratage/composition";
 
-export { programSpaceFrameCount, sealProgramSpace } from "@narratage/program-space";
+export {
+  defaultProgramSpace,
+  programSpaceFrameCount,
+  sealProgramSpace,
+} from "@narratage/program-space";
 export type { ProgramSpace } from "@narratage/program-space";
 
-export type { CanonicalValue, ValueSchema } from "@narratage/protocol";
+export { validateStoredValue } from "@narratage/core";
 
-// Component lowering. These are the real renderers the compiler runs, so what
-// the playground shows is the production visual result and not a lookalike.
-export {
-  renderCaptionTrack,
-  sealCaptionTrackProgram,
-} from "@narratage/caption";
 export type {
-  CaptionPresentationMode,
-  CaptionTrackProgram,
-  TimedCaptionProjection,
-  TimedCaptionRegion,
-} from "@narratage/caption";
-
-export { renderTextTrack, sealTextTrackProgram } from "@narratage/text-track";
-export type { TextItem, TextTrackProgram } from "@narratage/text-track";
-
-export { parseSvs } from "@narratage/svs";
-export type { ParsedSvsSheet, SvsRecipe } from "@narratage/svs";
-
-export { maskSourceHeader, parseSourceHeader } from "@narratage/source";
-export type { SourceHeader } from "@narratage/source";
+  CanonicalValue,
+  ModuleManifest,
+  ProducerDeclaration,
+  TypeRef,
+  ValueFormat,
+  ValueSchema,
+} from "@narratage/protocol";
 
 export type { MediaArtifactRef } from "@narratage/media";
 
-export { compileBrollProduct, sealBrollProgram } from "@narratage/broll";
-export type { BrollItem, BrollMotion, BrollProgram } from "@narratage/broll";
+// Stylesheets are read to fill a form, never to decide what a component is.
+export { parseSvs } from "@narratage/svs";
+export type { SvsRecipe } from "@narratage/svs";
+export { maskSourceHeader, parseSourceHeader } from "@narratage/source";
 
-export { projectSpeechVisual } from "@narratage/speech-basis";
-export type { SpeechBasis } from "@narratage/speech";
+export { defaultFilmProgram, filmCanvasFromRecipe, filmRecipeKeys } from "@narratage/film";

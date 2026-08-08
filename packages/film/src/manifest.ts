@@ -9,6 +9,7 @@ import {
   appendFilmVisualTrackImplementationDigest,
   compileFilmCompositionImplementationDigest,
   createFilmTrackSetImplementationDigest,
+  defaultFilmProgram,
 } from "./program.js";
 
 export const filmModuleRef = { name: "@narratage/film", version: "0.0.0-dev" } as const;
@@ -34,7 +35,7 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
 const canvasSchema = object({
   width: { schema: integer },
   height: { schema: integer },
-  clearColor: { schema: string },
+  clearColor: { schema: { kind: "string", minLength: 1, format: "color" } },
 });
 const frameRateSchema = object({
   numerator: { schema: integer },
@@ -68,7 +69,7 @@ export const filmManifest: ModuleManifest = {
     { module: svsModuleRef, digest: digestOf(svsManifest) },
   ],
   types: [
-    { name: filmTypes.program.name, schema: filmProgramSchema },
+    { name: filmTypes.program.name, schema: filmProgramSchema, default: defaultFilmProgram() },
     { name: filmTypes.trackSet.name, schema: filmTrackSetSchema },
   ],
   capabilities: [],

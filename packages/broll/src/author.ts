@@ -27,6 +27,29 @@ export function sealBrollItemSpec(value: BrollItemSpec): BrollItemSpec {
   return canonicalize(value) as unknown as BrollItemSpec;
 }
 
+/**
+ * One inset card, for anything that must place B-roll before an author has
+ * styled it.
+ *
+ * A spec and not an Item: media is the caller's, and a package that shipped a
+ * default clip would be answering a question nobody asked it. Everything a
+ * package can honestly decide — where the card sits, how it is cropped, how it
+ * arrives and leaves — is decided here, once.
+ */
+export function defaultBrollItemSpec(id = "broll-item"): BrollItemSpec {
+  return sealBrollItemSpec({
+    contract: "svml.broll-item-spec@1",
+    id,
+    z: 40,
+    box: { xPercent: 8, yPercent: 20, widthPercent: 84, heightPercent: 48 },
+    fit: "contain",
+    backgroundColor: "#111116",
+    borderRadiusPx: 28,
+    enter: { operator: "slide-up", durationFrames: 8 },
+    exit: { operator: "fade", durationFrames: 6 },
+  });
+}
+
 export function assertBrollItemSpec(value: BrollItemSpec): void {
   assert(value.contract === "svml.broll-item-spec@1" && value.id.length > 0, "BrollItemSpec identity is invalid");
   assert(Number.isSafeInteger(value.z), "BrollItemSpec z must be an integer");

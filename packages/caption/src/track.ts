@@ -80,6 +80,33 @@ export function assertCaptionTrackProgram(program: CaptionTrackProgram): void {
   }
 }
 
+/**
+ * Two cues, for anything that must show captions before speech has been
+ * aligned. The regions carry no source tokens and no refinements because there
+ * is no alignment behind them — which is exactly what every presentation mode
+ * falls back to when a real Build has none either.
+ */
+export function defaultTimedCaptionProjection(): TimedCaptionProjection {
+  const cues: readonly (readonly [string, number, number])[] = [
+    ["This is the first caption cue.", 0, 1.8],
+    ["And this one follows it.", 1.8, 4],
+  ];
+  return {
+    contract: "svml.timed-caption-projection@1",
+    text: cues.map(([display]) => display).join(" "),
+    regions: cues.map(([display, startSec, endSec], index) => ({
+      id: `cue-${index + 1}`,
+      display,
+      segmentId: "default",
+      kind: "identity",
+      sourceTokenIds: [],
+      startSec,
+      endSec,
+      refinements: [],
+    })),
+  };
+}
+
 export function assertTimedCaptionProjection(projection: TimedCaptionProjection): void {
   if (projection.contract !== "svml.timed-caption-projection@1") {
     throw new Error("Unsupported TimedCaptionProjection contract.");

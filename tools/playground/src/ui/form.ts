@@ -1,10 +1,9 @@
 import { artifactLabel, registerFile } from "../preview/artifacts.js";
 import type { CanonicalValue, ValueSchema } from "../svml.js";
-import type { FieldHint } from "../registry/index.js";
 
 export const FORM_CSS = `
 .form { display: flex; flex-direction: column; gap: 2px; }
-.form-row { display: grid; grid-template-columns: 96px 1fr; gap: 8px; align-items: center; padding: 3px 0; }
+.form-row { display: grid; grid-template-columns: 108px 1fr; gap: 8px; align-items: center; padding: 3px 0; }
 .form-row > label { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
 .form-control { display: flex; gap: 6px; align-items: center; min-width: 0; }
 .form-control input[type=text], .form-control input[type=number], .form-control select, .form-control textarea {
@@ -15,7 +14,7 @@ export const FORM_CSS = `
 .form-control input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
 .form-control input[type=color] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--line); background: none; border-radius: 4px; }
 .form-control .narrow { flex: 0 0 68px; }
-.form-control .form-file { flex: 0 0 auto; font-size: 11px; color: var(--muted); max-width: 130px; }
+.form-control .form-file { flex: 0 0 auto; font-size: 11px; color: var(--muted); max-width: 118px; }
 .form-control .form-file::file-selector-button {
   border: 1px solid var(--line); border-radius: 5px; background: #1c1c21;
   color: var(--text); font: inherit; font-size: 11px; padding: 2px 7px; margin-right: 6px; cursor: pointer;
@@ -32,16 +31,17 @@ export const FORM_CSS = `
 }
 .form-actions button:hover:not(:disabled) { border-color: #3a3a42; }
 .form-actions button:disabled { opacity: .4; cursor: default; }
+.form-fixed { color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
 `;
 
 type Emit = () => void;
 
-function row(label: string, control: HTMLElement): HTMLElement {
+function row(name: string, control: HTMLElement): HTMLElement {
   const element = document.createElement("div");
   element.className = "form-row";
   const caption = document.createElement("label");
-  caption.textContent = label;
-  caption.title = label;
+  caption.textContent = name;
+  caption.title = name;
   const holder = document.createElement("div");
   holder.className = "form-control";
   holder.append(control);
@@ -49,7 +49,12 @@ function row(label: string, control: HTMLElement): HTMLElement {
   return element;
 }
 
-/** `#RRGGBB` or `#RRGGBBAA`; `<input type=color>` can only carry the first six. */
+/**
+ * A colour, edited as text with a swatch beside it.
+ *
+ * The text is authoritative: `format: "color"` admits `#RRGGBBAA` and
+ * `<input type=color>` cannot carry the alpha byte.
+ */
 function colorControl(value: string, onChange: (next: string) => void): HTMLElement {
   const holder = document.createElement("div");
   holder.className = "form-control";
@@ -59,7 +64,6 @@ function colorControl(value: string, onChange: (next: string) => void): HTMLElem
   const exact = document.createElement("input");
   exact.type = "text";
   exact.value = value;
-  // The text box is the source of truth: alpha survives only there.
   swatch.addEventListener("input", () => {
     const alpha = exact.value.length === 9 ? exact.value.slice(7) : "";
     exact.value = swatch.value + alpha;
@@ -98,37 +102,81 @@ function fractionControl(
 }
 
 /**
+ * Media, addressed by digest.
+ *
+ * A `format: "digest"` field is content-addressed, so the control produces one
+ * by hashing the chosen file. The form value stays the digest; the bytes live
+ * in the Artifact registry.
+ */
+function digestControl(
+  current: CanonicalValue | undefined,
+  onChange: (next: CanonicalValue) => void,
+): HTMLElement {
+  const holder = document.createElement("div");
+  holder.className = "form-control";
+  const picker = document.createElement("input");
+  picker.type = "file";
+  picker.className = "form-file";
+  const label = document.createElement("span");
+  label.className = "form-file-label";
+  label.textContent = artifactLabel(typeof current === "string" && current !== "" ? current : undefined);
+  picker.addEventListener("change", () => {
+    const file = picker.files?.[0];
+    if (file === undefined) return;
+    label.textContent = "hashing…";
+    void registerFile(file).then((ref) => {
+      label.textContent = artifactLabel(ref.digest);
+      onChange(ref.digest);
+    }).catch((error: unknown) => {
+      label.textContent = error instanceof Error ? error.message : String(error);
+    });
+  });
+  holder.append(picker, label);
+  return holder;
+}
+
+/**
  * Builds controls from a ValueSchema.
  *
- * Nothing here validates. The schema shapes and coerces the input; the packages'
- * own seal and assert functions decide whether a value is legal, because they
- * are what a real Build would run and their messages are already good. A form
- * that pre-judged would only disagree with them.
+ * Every choice here comes from the schema: `enum` becomes a list, `format`
+ * decides between a colour, a slider, a prose box and a file, bounds become
+ * limits. Nothing is keyed on a field's name, so a module that declares a new
+ * field gets a usable control without this file knowing it exists.
+ *
+ * Nothing here validates. `validateStoredValue` and the packages' own assert
+ * functions are the judge — they are what a real Build runs.
  */
 export function buildForm(
   schema: ValueSchema,
   value: CanonicalValue,
-  hints: Readonly<Record<string, FieldHint>>,
   emit: Emit,
-  path = "",
 ): HTMLElement {
   const container = document.createElement("div");
   container.className = "form";
-
   if (schema.kind !== "object") {
-    container.textContent = "Unsupported top-level schema.";
+    container.append(row("value", scalarControl(schema, value, (next) => {
+      // A non-object input is replaced wholesale by its caller.
+      (emit as Emit & { replace?: (v: CanonicalValue) => void }).replace?.(next);
+      emit();
+    })));
     return container;
   }
 
   const bag = value as Record<string, CanonicalValue>;
-
   for (const [name, field] of Object.entries(schema.fields)) {
-    const here = path ? `${path}.${name}` : name;
-    const hint = hints[here] ?? hints[name];
     const current = bag[name];
 
+    if (field.schema.kind === "literal") {
+      // A literal is the contract tag: shown so the shape is legible, never
+      // offered, because changing it would only ever be wrong.
+      const fixed = document.createElement("span");
+      fixed.className = "form-fixed";
+      fixed.textContent = String(field.schema.value);
+      container.append(row(name, fixed));
+      continue;
+    }
     if (field.schema.kind === "array") {
-      container.append(arrayGroup(name, here, field.schema, bag, hints, emit));
+      container.append(arrayGroup(name, field.schema, bag, emit));
       continue;
     }
     if (field.schema.kind === "object") {
@@ -136,11 +184,12 @@ export function buildForm(
       group.className = "form-group";
       const legend = document.createElement("legend");
       legend.textContent = name;
-      group.append(legend, buildForm(field.schema, current ?? {}, hints, emit, here));
+      if (bag[name] === undefined) bag[name] = {};
+      group.append(legend, buildForm(field.schema, bag[name], emit));
       container.append(group);
       continue;
     }
-    container.append(row(name, scalarControl(field.schema, current, hint, (next) => {
+    container.append(row(name, scalarControl(field.schema, current, (next) => {
       bag[name] = next;
       emit();
     })));
@@ -151,7 +200,6 @@ export function buildForm(
 function scalarControl(
   schema: ValueSchema,
   current: CanonicalValue | undefined,
-  hint: FieldHint | undefined,
   onChange: (next: CanonicalValue) => void,
 ): HTMLElement {
   if (schema.kind === "boolean") {
@@ -163,7 +211,7 @@ function scalarControl(
   }
 
   if (schema.kind === "number") {
-    if (hint === "unit-fraction") {
+    if (schema.format === "unit-fraction") {
       return fractionControl(typeof current === "number" ? current : 0, schema, onChange);
     }
     const input = document.createElement("input");
@@ -171,7 +219,7 @@ function scalarControl(
     if (schema.minimum !== undefined) input.min = String(schema.minimum);
     if (schema.maximum !== undefined) input.max = String(schema.maximum);
     input.step = schema.integer === true ? "1" : "any";
-    input.value = String(typeof current === "number" ? current : 0);
+    input.value = String(typeof current === "number" ? current : schema.minimum ?? 0);
     input.addEventListener("input", () => {
       if (input.value !== "") onChange(Number(input.value));
     });
@@ -191,10 +239,11 @@ function scalarControl(
       select.addEventListener("input", () => onChange(select.value));
       return select;
     }
-    if (hint === "color") {
+    if (schema.format === "color") {
       return colorControl(typeof current === "string" ? current : "#ffffff", onChange);
     }
-    if (hint === "multiline") {
+    if (schema.format === "digest") return digestControl(current, onChange);
+    if (schema.format === "multiline") {
       const area = document.createElement("textarea");
       area.value = typeof current === "string" ? current : "";
       area.addEventListener("input", () => onChange(area.value));
@@ -207,68 +256,31 @@ function scalarControl(
     return input;
   }
 
-  if (schema.kind === "blob") return blobControl(current, schema.mediaTypes, onChange);
-
   const unsupported = document.createElement("span");
+  unsupported.className = "form-fixed";
   unsupported.textContent = `(${schema.kind})`;
   return unsupported;
 }
 
-/**
- * Media picker.
- *
- * The form value is the digest, and the bytes stay in the Artifact registry, so
- * a component's parameters remain a plain canonical value that a test can build
- * without a browser.
- */
-function blobControl(
-  current: CanonicalValue | undefined,
-  mediaTypes: readonly string[] | undefined,
-  onChange: (next: CanonicalValue) => void,
-): HTMLElement {
-  const holder = document.createElement("div");
-  holder.className = "form-control";
-  const picker = document.createElement("input");
-  picker.type = "file";
-  picker.className = "form-file";
-  if (mediaTypes !== undefined) picker.accept = mediaTypes.join(",");
-  const label = document.createElement("span");
-  label.className = "form-file-label";
-  label.textContent = artifactLabel(typeof current === "string" && current !== "" ? current : undefined);
-  picker.addEventListener("change", () => {
-    const file = picker.files?.[0];
-    if (file === undefined) return;
-    label.textContent = "hashing…";
-    void registerFile(file).then((ref) => {
-      label.textContent = artifactLabel(ref.digest);
-      onChange(ref.digest);
-    }).catch((error: unknown) => {
-      label.textContent = error instanceof Error ? error.message : String(error);
-    });
-  });
-  holder.append(picker, label);
-  return holder;
-}
-
-function blank(schema: ValueSchema): CanonicalValue {
+export function blankValue(schema: ValueSchema): CanonicalValue {
   if (schema.kind === "object") {
     return Object.fromEntries(Object.entries(schema.fields)
       .filter(([, field]) => field.optional !== true)
-      .map(([name, field]) => [name, blank(field.schema)]));
+      .map(([name, field]) => [name, blankValue(field.schema)]));
   }
+  if (schema.kind === "literal") return schema.value;
   if (schema.kind === "array") return [];
   if (schema.kind === "number") return schema.minimum ?? 0;
   if (schema.kind === "string") return schema.enum?.[0] ?? "";
   if (schema.kind === "boolean") return false;
+  if (schema.kind === "oneOf") return blankValue(schema.variants[0] ?? { kind: "null" });
   return null;
 }
 
 function arrayGroup(
   name: string,
-  path: string,
   schema: ValueSchema & { kind: "array" },
   bag: Record<string, CanonicalValue>,
-  hints: Readonly<Record<string, FieldHint>>,
   emit: Emit,
 ): HTMLElement {
   const group = document.createElement("fieldset");
@@ -282,23 +294,16 @@ function arrayGroup(
   const minItems = schema.minItems ?? 0;
 
   const rebuild = (): void => {
-    // Adding or removing an entry changes the control tree, so this subtree is
-    // rebuilt rather than patched. Scalar edits never come through here.
-    const replacement = arrayGroup(name, path, schema, bag, hints, emit);
-    group.replaceWith(replacement);
+    // Adding or removing changes the control tree, so this subtree is rebuilt.
+    // Scalar edits never come through here.
+    group.replaceWith(arrayGroup(name, schema, bag, emit));
     emit();
   };
 
   entries.forEach((entry, index) => {
     const item = document.createElement("div");
     item.className = "form-item";
-    item.append(buildForm(
-      schema.items,
-      entry,
-      hints,
-      emit,
-      `${path}[]`,
-    ));
+    item.append(buildForm(schema.items, entry, emit));
     const actions = document.createElement("div");
     actions.className = "form-actions";
     const remove = document.createElement("button");
@@ -316,7 +321,7 @@ function arrayGroup(
   const add = document.createElement("button");
   add.type = "button";
   add.textContent = "Add";
-  add.addEventListener("click", () => { entries.push(blank(schema.items)); rebuild(); });
+  add.addEventListener("click", () => { entries.push(blankValue(schema.items)); rebuild(); });
   actions.append(add);
   group.append(actions);
   return group;

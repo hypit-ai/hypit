@@ -15,6 +15,7 @@ import type {
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmTypes } from "./manifest.js";
 import { sealFilmProgram } from "./program.js";
+import { filmCanvasFromRecipe } from "./recipe.js";
 
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
@@ -117,22 +118,12 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
   }
   const appearanceReference = requiredReference(element, "appearance", resolveReference);
   const appearance = recipe(appearanceReference, `${element.name}.appearance`);
-  const expectedProperties = ["background", "frame-rate", "height", "width"];
-  const actualProperties = Object.keys(appearance.properties).sort();
-  if (actualProperties.join("\u0000") !== expectedProperties.join("\u0000")) {
-    throw new Error(`Film Recipe requires exactly ${expectedProperties.join(", ")}`);
-  }
 
   const programId = `${id}.program`;
   const program = sealFilmProgram({
     contract: "svml.film-program@1",
     id,
-    frameRate: { numerator: numberProperty(appearance, "frame-rate"), denominator: 1 },
-    canvas: {
-      width: numberProperty(appearance, "width"),
-      height: numberProperty(appearance, "height"),
-      clearColor: colorProperty(appearance, "background"),
-    },
+    ...filmCanvasFromRecipe(appearance.properties),
   });
 
   const tracks = trackChildren(element).map((child) => {
