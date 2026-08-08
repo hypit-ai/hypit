@@ -125,11 +125,15 @@ export function createRuntimeEndpointAdapterFacet(options: {
       use: options.use,
       kind: "endpoint",
     })),
-    implementation: {
+    // Validated here, not only at the loading boundary. A facet that fails
+    // isRuntimeAdapterHostFacet is skipped by the loader, so the author of a
+    // broken adapter would otherwise learn about it as "adapter X is not
+    // registered", three layers from the mistake.
+    implementation: implementation({
       create: options.create,
       ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
       ...(options.service === undefined ? {} : { service: options.service }),
-    },
+    }, `Runtime Adapter ${options.use}`),
   };
   return facet;
 }
@@ -146,10 +150,10 @@ export function createRuntimeServiceAdapterFacet(options: {
       use: options.use,
       kind: "runtime-service",
     })),
-    implementation: {
+    implementation: implementation({
       create: options.create,
       ...(options.doctor === undefined ? {} : { doctor: options.doctor }),
-    },
+    }, `Runtime Adapter ${options.use}`),
   };
 }
 
