@@ -17,6 +17,22 @@ export const s3ArtifactStoreImplementationDigest = digestOf(
   "@narratage/artifact-store-s3/artifact-store@1",
 );
 
+/**
+ * Where an Artifact lives in a bucket, given its digest.
+ *
+ * Exported because a remote worker that reads and writes the same bucket must
+ * address objects identically. Two statements of this rule would be two
+ * different stores wearing one bucket name.
+ */
+export function s3ArtifactKey(prefix: string | undefined, digest: Digest): string {
+  if (!isDigest(digest)) throw new Error("Artifact digest is invalid");
+  const [algorithm, hex] = digest.split(":");
+  if (algorithm !== "sha256" || hex === undefined) throw new Error(`unsupported Artifact digest ${digest}`);
+  const normalized = normalizePrefix(prefix);
+  const relative = `${algorithm}/${hex.slice(0, 2)}/${hex}`;
+  return normalized.length === 0 ? relative : `${normalized}/${relative}`;
+}
+
 type S3Location = {
   readonly bucket: string;
   readonly prefix?: string;
@@ -114,11 +130,7 @@ export class S3ArtifactStore implements ArtifactStore {
   }
 
   key(digest: Digest): string {
-    if (!isDigest(digest)) throw new Error("Artifact digest is invalid");
-    const [algorithm, hex] = digest.split(":");
-    if (algorithm !== "sha256" || hex === undefined) throw new Error(`unsupported Artifact digest ${digest}`);
-    const relative = `${algorithm}/${hex.slice(0, 2)}/${hex}`;
-    return this.#prefix.length === 0 ? relative : `${this.#prefix}/${relative}`;
+    return s3ArtifactKey(this.#prefix, digest);
   }
 
   async put(bytes: Uint8Array, mediaType: string): Promise<BlobRef> {
