@@ -4,8 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vite";
 
-import { playgroundBrowsePlugin } from "./src/server/browse.js";
-
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../..");
 
@@ -48,8 +46,9 @@ export default defineConfig({
   },
   server: {
     port: 5178,
-    // The playground reads sources and media from anywhere in the repository.
+    // Workspace sources resolve through the aliases above, which point outside
+    // this root. Stylesheets and media are chosen by the operator and read in
+    // the browser, so the server serves no repository content of its own.
     fs: { allow: [repoRoot] },
   },
-  plugins: [playgroundBrowsePlugin(repoRoot)],
 });
