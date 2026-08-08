@@ -112,8 +112,10 @@ Local media, WhisperX and parallel HyperFrames execution are implemented. S3 Art
 AWS media execution and the recoverable AWS HyperFrames Endpoint are also implemented. Complete the
 remaining deployment work only when a deployment needs it:
 
-- publish the media function as ZIP plus a pinned FFmpeg Layer and live-test it;
-- implement and deploy WhisperX;
+- publish a reviewed redistributable FFmpeg Layer, then deploy and live-test the implemented media
+  function ZIP;
+- deploy WhisperX only as a persistent warm service and add the corresponding remote-service
+  Provider when a team environment needs it; do not put the model behind Lambda;
 - deploy and live-test the HyperFrames stack after reviewing its CloudFormation resources.
 
 The generic Lambda transport already exists. Each Endpoint must return the existing capability and
