@@ -12,6 +12,28 @@ import { createKieProvider } from "./provider.js";
 
 const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-kie",
+  validate(context) {
+    const config = runtimeConfigObject(context.config, "KIE");
+    runtimeConfigExact(config, [
+      "apiBaseUrl", "uploadBaseUrl", "apiKeyEnv", "defaultConcurrency", "pollIntervalMs",
+      "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
+    ], "KIE");
+    for (const [key, subject] of [["apiBaseUrl", "KIE apiBaseUrl"], ["uploadBaseUrl", "KIE uploadBaseUrl"]] as const) {
+      const value = runtimeConfigString(config[key], subject);
+      if (value === undefined) continue;
+      const url = new URL(value);
+      if (url.protocol !== "https:" && url.hostname !== "localhost") {
+        throw new Error(`${subject} must use HTTPS or localhost`);
+      }
+    }
+    runtimeConfigString(config.apiKeyEnv, "KIE apiKeyEnv");
+    runtimeConfigPositiveInteger(config.defaultConcurrency, "KIE defaultConcurrency");
+    runtimeConfigPositiveInteger(config.pollIntervalMs, "KIE pollIntervalMs");
+    runtimeConfigPositiveInteger(config.submissionIntervalMs, "KIE submissionIntervalMs");
+    runtimeConfigPositiveInteger(config.requestTimeoutMs, "KIE requestTimeoutMs");
+    runtimeConfigPositiveInteger(config.maxOperationMs, "KIE maxOperationMs");
+    runtimeConfigPositiveInteger(config.maxArtifactBytes, "KIE maxArtifactBytes");
+  },
   create(context) {
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [

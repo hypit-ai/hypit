@@ -39,7 +39,6 @@ Script, Seedance, Film or any video concept.
 @narratage/artifact-store-s3     S3 Artifact store
 @narratage/credential-store-env  environment credentials
 @narratage/transport             invocation seams
-@narratage/transport-process     local process transport
 @narratage/transport-aws-lambda  Lambda transport
 @narratage/local                 SQLite/filesystem developer assembly
 ```

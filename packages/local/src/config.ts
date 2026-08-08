@@ -265,15 +265,17 @@ export async function doctorRuntimeConfig(
   for (const item of document.runtimeServices) {
     const context = { root, instance: item.instance, config: item.config ?? {} };
     try {
+      const selection = registry.validate(item.use, "runtime-service", context);
+      diagnostics.push(...selection);
+      if (selection.some((entry) => entry.severity === "error")) continue;
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "RUNTIME_SERVICE_CONFIG_INVALID", item.instance));
+      continue;
+    }
+    try {
       diagnostics.push(...await registry.doctor(item.use, "runtime-service", context));
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
-    }
-    if (!registry.has(item.use, "runtime-service")) continue;
-    try {
-      await registry.createService(item.use, context);
-    } catch (error) {
-      diagnostics.push(diagnostic(error, "RUNTIME_SERVICE_CONFIG_INVALID", item.instance));
     }
   }
   for (const item of document.endpoints) {
@@ -284,16 +286,23 @@ export async function doctorRuntimeConfig(
       config: item.config ?? {},
     };
     try {
-      diagnostics.push(...await registry.doctor(item.use, "endpoint", context));
-    } catch (error) {
-      diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
-    }
-    if (!registry.has(item.use, "endpoint")) continue;
-    try {
-      await registry.createEndpoint(item.use, context);
+      const selection = registry.validate(item.use, "endpoint", context);
+      diagnostics.push(...selection);
+      if (selection.some((entry) => entry.severity === "error")) continue;
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
+      continue;
     }
+    let adapterHasError = false;
+    try {
+      const adapterDiagnostics = await registry.doctor(item.use, "endpoint", context);
+      diagnostics.push(...adapterDiagnostics);
+      adapterHasError = adapterDiagnostics.some((entry) => entry.severity === "error");
+    } catch (error) {
+      diagnostics.push(diagnostic(error, "RUNTIME_ADAPTER_DOCTOR_FAILED", item.instance));
+      continue;
+    }
+    if (adapterHasError) continue;
     // An external program is a prerequisite a Build cannot supply for itself, so
     // name the command that supplies it here rather than failing mid-Build on a
     // socket. `RUNTIME_SERVICE_` above is the Runtime's own part; this is the

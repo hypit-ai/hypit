@@ -27,11 +27,12 @@ package never activates all of its facets.
 ## 2. Package contract
 
 A runtime-capable physical package declares `svml.activation` and contributes one or more generic
-Host facets with ABI `svml.runtime-adapter-host@1`. Each facet has only:
+Host facets with ABI `svml.runtime-adapter-host@2`. Each facet has only:
 
 - an exact `use` name;
-- kind `endpoint` or `service`;
-- a factory from project root, instance, lane and closed canonical configuration;
+- kind `endpoint` or `runtime-service`;
+- a required pure validator over project root, instance, lane and closed canonical configuration;
+- a separately called factory over that same input;
 - an optional read-only doctor function.
 
 The Provider package owns translation from its configuration into an `EndpointPackage`. A Store
@@ -70,9 +71,13 @@ absolute paths from checked-in configuration.
 narratage doctor ./svml.runtime.json
 ```
 
-Doctor is read-only. It verifies package bytes and adapter configuration, then asks each selected
-adapter to report missing credentials or executables. It does not submit Provider jobs or execute a
-Build.
+Doctor is read-only. It verifies package bytes, calls the adapter's pure configuration validator,
+then asks a valid selected adapter to report missing credentials, executables or external-service
+health. A doctor hook may read environment variables, inspect executables, run a bounded local
+health check or issue a read-only remote probe such as S3 `HeadObject`; it may not write state,
+start a service or submit work. Doctor never calls the adapter factory, constructs an
+Endpoint/Store, submits a Provider job or executes a Build. One failed configuration gate or
+prerequisite suppresses dependent diagnostics for that instance.
 
 ## 5. Artifact lifecycle
 

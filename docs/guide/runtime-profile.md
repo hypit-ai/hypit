@@ -167,6 +167,13 @@ Validates:
 - Configuration keys are valid for each adapter
 - Referenced credentials exist in the environment
 - Required executables (ffmpeg, ffprobe, chrome) are found
+- Declared external services are reachable and match the selected profile
+
+Runtime Adapter Host ABI `@2` separates a required pure configuration validator from the adapter
+factory. `doctor` never constructs an Endpoint or Store, starts a service, writes Runtime state or
+submits work. After configuration passes it may make bounded read-only environment probes. The first
+configuration or prerequisite failure for one instance suppresses diagnostics that merely result
+from that same failure.
 
 ### gc (garbage collection)
 

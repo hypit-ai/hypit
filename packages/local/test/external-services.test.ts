@@ -11,7 +11,7 @@ import type { RuntimeExternalService } from "@narratage/runtime-adapter";
 import {
   bringExternalServicesUp,
   reportExternalServices,
-  RuntimeConfigRegistry,
+  RuntimeAdapterRegistry,
   takeExternalServicesDown,
 } from "@narratage/local";
 
@@ -32,9 +32,10 @@ async function project(service: (root: string) => RuntimeExternalService) {
     ],
     permissions: [],
   }));
-  const registry = new RuntimeConfigRegistry();
+  const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.program",
+    validate() {},
     create: () => ({}) as never,
     service: () => service(root),
   }));

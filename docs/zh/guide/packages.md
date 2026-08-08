@@ -36,7 +36,6 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/artifact-store-s3     S3 Artifact store
 @narratage/credential-store-env  environment credentials
 @narratage/transport             invocation seams
-@narratage/transport-process     local process transport
 @narratage/transport-aws-lambda  Lambda transport
 @narratage/local                 SQLite/filesystem developer assembly
 ```

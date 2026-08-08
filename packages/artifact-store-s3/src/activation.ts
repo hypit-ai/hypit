@@ -6,12 +6,34 @@ import {
   runtimeConfigPositiveInteger,
   runtimeConfigString,
 } from "@narratage/runtime-adapter";
+import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-adapter";
 
 import { AwsS3ObjectClient } from "./client.js";
-import { createS3ArtifactStorePackage } from "./store.js";
+import { createS3ArtifactStorePackage, s3ArtifactKey } from "./store.js";
+
+const VALIDATION_DIGEST = "sha256:0000000000000000000000000000000000000000000000000000000000000000" as const;
+
+function validateConfig(context: RuntimeAdapterFactoryContext): void {
+  const config = runtimeConfigObject(context.config, "S3 ArtifactStore");
+  runtimeConfigExact(config, [
+    "bucket", "prefix", "expectedBucketOwner", "region", "endpoint", "forcePathStyle", "partSizeBytes",
+  ], "S3 ArtifactStore");
+  if (runtimeConfigString(config.bucket, "S3 bucket") === undefined) throw new Error("S3 bucket is required");
+  const prefix = runtimeConfigString(config.prefix, "S3 prefix");
+  s3ArtifactKey(prefix, VALIDATION_DIGEST);
+  runtimeConfigString(config.expectedBucketOwner, "S3 expectedBucketOwner");
+  runtimeConfigString(config.region, "S3 region");
+  runtimeConfigString(config.endpoint, "S3 endpoint");
+  runtimeConfigBoolean(config.forcePathStyle, "S3 forcePathStyle");
+  const partSizeBytes = runtimeConfigPositiveInteger(config.partSizeBytes, "S3 partSizeBytes");
+  if (partSizeBytes !== undefined && partSizeBytes < 5 * 1024 * 1024) {
+    throw new Error("S3 requires multipart parts of at least 5 MiB");
+  }
+}
 
 const s3ArtifactStoreRuntimeAdapter = createRuntimeServiceAdapterFacet({
   use: "@narratage/artifact-store-s3",
+  validate: validateConfig,
   create(context) {
     const config = runtimeConfigObject(context.config, "S3 ArtifactStore");
     runtimeConfigExact(config, [
