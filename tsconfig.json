@@ -221,7 +221,8 @@
     }
   },
   "include": [
-    "packages/**/*.ts"
+    "packages/**/*.ts",
+    "services/media-lambda/src/**/*.ts"
   ],
   "exclude": [
     "dist",
