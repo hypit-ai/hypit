@@ -223,7 +223,9 @@
   },
   "include": [
     "packages/**/*.ts",
-    "services/media-lambda/src/**/*.ts"
+    "services/media-lambda/src/**/*.ts",
+    "tools/playground/**/*.ts",
+    "test/playground-*.test.ts"
   ],
   "exclude": [
     "dist",
