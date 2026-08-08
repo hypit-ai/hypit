@@ -18,7 +18,7 @@ import {
   operationResultRecord,
   resolveLogicalOutput,
   resolveOperation,
-  selectedSatisfaction,
+  satisfiedCandidate,
   verifyBuildRequest,
 } from "./graph.js";
 import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
@@ -148,7 +148,7 @@ export function compileBuild(
     invariant(!resolvingOutputs.has(id), "SELECTED_GRAPH_CYCLE", `selected graph cycles through ${id}`, id);
     resolvingOutputs.add(id);
     const output = resolveLogicalOutput(graph, id);
-    const selected = selectedSatisfaction(graph, request, id);
+    const selected = satisfiedCandidate(graph, request, id);
     const { candidate, fidelity } = selected;
     let resolved: ResolvedSource;
     if (candidate.root.kind === "value") {
@@ -417,5 +417,3 @@ export function producerStep(plan: BuildPlan, id: string): ProducerStep {
   return step;
 }
 
-/** @deprecated Use compileBuild. */
-export const deriveBuildPlan = compileBuild;

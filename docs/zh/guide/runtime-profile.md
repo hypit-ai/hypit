@@ -164,6 +164,11 @@ pnpm narratage doctor svml.runtime.json
 - 配置键对各适配器有效
 - 引用的凭据在环境中存在
 - 找得到所需的可执行文件（ffmpeg、ffprobe、chrome）
+- 声明的外部服务可达且与当前 Profile 匹配
+
+Runtime Adapter Host ABI `@2` 把必需的纯配置校验与 Adapter 工厂彻底分开。`doctor`
+不会构造 Endpoint 或 Store、启动服务、写入 Runtime 状态或提交任务。配置通过后，它可以执行
+有边界的只读环境探测；同一实例的首个配置或前置条件错误会截断由它连带产生的重复诊断。
 
 ### gc（垃圾回收）
 
