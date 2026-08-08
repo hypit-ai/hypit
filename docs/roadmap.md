@@ -143,7 +143,7 @@ port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 Implement these against real delivery examples, but do not freeze or indiscriminately expand the
 video author surface yet:
 
-- Caption field-to-word visual mapping plus browser/pixel acceptance;
+- Caption Fine browser/pixel acceptance, especially CJK, emoji and multiline layout;
 - full Text three-box and exact-font behavior;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;

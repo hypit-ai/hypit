@@ -9,6 +9,12 @@
   }
 
   caption.primary {
+    cue-min-words: 2;
+    cue-max-words: 5;
+    important-min-per-cue: 0;
+    important-max-per-cue: 2;
+    important-fill: #FFF16A;
+    important-scale: 1.12;
     stack-order: 70;
     x: 0.08;
     y: 0.74;

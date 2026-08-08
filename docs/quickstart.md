@@ -62,7 +62,7 @@ before spending money.
 | [SVS Stylesheets](./quickstart/styles.md) | CSS-like Recipes for film, caption, B-roll, text, speech and fonts |
 | [Media & Generation](./quickstart/generation.md) | media:Image, media:Audio, estimate:Speech, Seedance, speaker:Take |
 | [Timing & Assembly](./quickstart/timing.md) | speech:Spine, whisperx:Alignment, ProgramSpace, SemanticMap |
-| [Caption, B-roll & Text](./quickstart/tracks.md) | caption:Style/Program/Planner/Track, broll:Track, text:Track |
+| [Caption, B-roll & Text](./quickstart/tracks.md) | caption-fine:Style/Track, caption:Program, Planner, B-roll and Text |
 | [Film & Rendering](./quickstart/composition.md) | film:Film, render:Video, full pipeline walkthrough |
 | [Run Source & Builds](./quickstart/run.md) | .svrun syntax, targets, reuse, runtime profile, build workflow |
 

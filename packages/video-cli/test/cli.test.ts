@@ -90,6 +90,10 @@ test("official video CLI checks a real Script source through the Node compiler h
       module: { name: "@narratage/narrative", version: "0.0.0-dev" },
       name: "CaptionProjection",
     }, kind: "record" },
+    { name: "story.caption.words", type: {
+      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      name: "CaptionWordSequence",
+    }, kind: "record" },
     { name: "story.segment.opening", type: {
       module: { name: "@narratage/narrative", version: "0.0.0-dev" },
       name: "NarrativeExcerpt",
@@ -231,7 +235,7 @@ test("one checked-in fixture closes the complete provider-free video plan", asyn
     "request-whisperx-alignment",
     "request-caption-gemini-plan",
     "compile-broll",
-    "render-caption-program",
+    "render-fine-caption",
     "render-text-track",
     "compile-composition",
     "request-visual-render",

@@ -78,8 +78,8 @@ Role Cues produce different text projections:
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
 The dialogue projection includes Role Cue prefixes. Speech and caption projections strip them.
-Components like `seedance:Speech` use `{story.segment.dialogue.dialogue}` (with labels) while
-`caption:Track` uses the caption projection (without labels).
+Components like `seedance:Speech` use `{story.segment.dialogue.dialogue}` (with labels). Script also
+emits the complete ordered `{story.caption.words}` universe used by Caption Programs and Planners.
 
 ## Dual Text
 
@@ -159,9 +159,12 @@ Selections are not required to nest like XML tags. They can cross each other:
 </demo>
 ```
 
-Selection markers are zero-width and never appear in any text projection. They compile into
-`SelectionSet` values containing `Range[]`. Script itself contains no seconds or frame numbers —
-timing comes from WhisperX alignment.
+Selection markers are zero-width and never appear in any text projection. Each public occurrence
+contains only its resolved start/end semantic anchor identities. Script itself contains no seconds
+or frame numbers — consumers project those anchors through an explicitly connected SemanticMap.
+
+For Caption only, Script additionally emits `{story.caption.selection.<id>}` as an ordered word
+subset. Caption therefore never reads parser token indexes from the general time Selection.
 
 Other components reference Selections via `{story.selection.problem}` to bind visual content to
 semantic moments in the narrative.
@@ -182,8 +185,9 @@ Moments are named time **points** (not ranges):
 | `@id!` | Right-absorbing (point at the next word's start) |
 | `~@id!` | Left-absorbing (point at the previous word's end) |
 
-Moments compile into `MomentSet` values containing `Point[]`. Selection and Moment share the same
-name namespace — the same id cannot be used for both.
+Each Moment occurrence contains only one resolved semantic anchor identity. A temporal consumer
+projects it through the same explicit SemanticMap. Selection and Moment share the same name
+namespace — the same id cannot be used for both.
 
 Other components reference Moments via `{story.moment.ranking}`.
 

@@ -12,7 +12,7 @@ covering the combined path:
 Script → Estimate → four KIE Seedance Mini generations
        → media inspection and normalization → Speech Spine
        → local WhisperX → SemanticMap
-       → Vertex Gemini CaptionPlan → Caption Track
+       → Vertex Gemini CaptionPlan → Fine Caption Track
        → Film → local parallel HyperFrames render
        → audio program → mux → H.264/AAC MP4
 ```
@@ -161,8 +161,8 @@ Implemented and executable:
 
 - independently digested Narrative, Media, ProgramSpace, Speech, SpeechEvidence, SemanticMap,
   VisualIR and Composition logical modules; the former `video-contracts` umbrella is gone;
-- Script Segments, optional Role Cues, Dual Text, Selection/Moment anchors and display/speech
-  projections;
+- Script Segments, optional Role Cues, Dual Text, anchor-only public Selection/Moment values,
+  display/speech projections, an ordered Caption word universe and explicit Selection word subsets;
 - deterministic speech estimate, atomic SpeechBasis and peer VisualTrack/AudioTrack
   projections;
 - authored image/audio Blob references and reusable SVS-backed speech-estimate policies;
@@ -173,8 +173,10 @@ Implemented and executable:
   compilation before the existing exact Seedance request path;
 - one-pass WhisperX evidence and direct Script-to-evidence many-to-many alignment;
 - planner-neutral CaptionPlan: ordered Cue cuts plus zero or more declared attributes per display
-  atom, with no text rewrite or timing authority;
-- total default Caption Style plus ordered Role/Selection whole-style overrides;
+  word, with no text rewrite or timing authority;
+- total explicit default Caption Style plus ordered Role/word-subset whole-style overrides;
+- `@narratage/caption-fine`: the first concrete Style family, owning its SVS schema, optional
+  `important` field, box/font parameters and field-dependent per-word painting;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
@@ -184,8 +186,6 @@ Implemented and executable:
 Still pre-freeze and deliberately deferred:
 
 - complete Text three-box, exact-font and layered-decoration behavior;
-- field-dependent Caption word painting—the current renderer preserves planned fields as typed
-  Track data attributes but does not yet map them to distinct word visuals;
 - Caption CJK/emoji/multiline/pixel acceptance;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
 - Ranking and other old production author packages;

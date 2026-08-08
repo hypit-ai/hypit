@@ -50,7 +50,8 @@ const fieldDeclaration = object({
 });
 const planningRun = object({
   id: { schema: string }, styleId: { schema: string },
-  atomIds: { schema: { kind: "array", minItems: 1, items: string } },
+  wordIds: { schema: { kind: "array", minItems: 1, items: string } },
+  cueMinimumWords: { schema: nonNegativeInteger }, cueMaximumWords: { schema: nonNegativeInteger },
   cueInstruction: { schema: string }, fields: { schema: { kind: "array", items: fieldDeclaration } },
 });
 export const captionGeminiProgramSchema: ValueSchema = object({
@@ -60,7 +61,7 @@ export const captionGeminiProgramSchema: ValueSchema = object({
 export const captionGeminiRequestSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.caption-gemini-request@1" } },
   model: { schema: model },
-  atoms: { schema: { kind: "array", minItems: 1, items: object({ id: { schema: string }, text: { schema: string } }) } },
+  words: { schema: { kind: "array", minItems: 1, items: object({ id: { schema: string }, text: { schema: string } }) } },
   runs: { schema: { kind: "array", minItems: 1, items: planningRun } },
   systemInstruction: { schema: string }, prompt: { schema: string },
   temperature: { schema: { kind: "literal", value: 0.2 } },
@@ -105,7 +106,7 @@ export const captionGeminiManifest: ModuleManifest = {
     {
       name: captionGeminiProducers.compile.name,
       inputs: [
-        { name: "narrative", type: narrativeTypes.narrative },
+        { name: "words", type: narrativeTypes.captionWordSequence },
         { name: "captionProgram", type: captionTypes.program },
         { name: "program", type: captionGeminiTypes.program },
       ],

@@ -71,8 +71,8 @@ export function selectionFrameSpans(
   assertProgramSpaceIdentity(programSpace);
   const frames = anchorFrames(map);
   return selection.occurrences.map((occurrence) => {
-    const startFrame = frameFor(frames, occurrence.open.boundary.anchorId, `NarrativeSelection ${selection.id}`);
-    const endFrameExclusive = frameFor(frames, occurrence.close.boundary.anchorId, `NarrativeSelection ${selection.id}`);
+    const startFrame = frameFor(frames, occurrence.startAnchorId, `NarrativeSelection ${selection.id}`);
+    const endFrameExclusive = frameFor(frames, occurrence.endAnchorId, `NarrativeSelection ${selection.id}`);
     return { startFrame, endFrameExclusive };
   });
 }
@@ -109,5 +109,5 @@ export function momentFrames(
   assertProgramSpaceIdentity(programSpace);
   const frames = anchorFrames(map);
   return moment.occurrences.map((occurrence) =>
-    frameFor(frames, occurrence.boundary.anchorId, `NarrativeMoment ${moment.id}`));
+    frameFor(frames, occurrence.anchorId, `NarrativeMoment ${moment.id}`));
 }

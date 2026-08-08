@@ -48,7 +48,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 |---|---|---|
 | `{speech.visual}` | VisualTrack | `speech:Spine`——全屏说话人画面 |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine`——同步音频 |
-| `{captions.track}` | VisualTrack | `caption:Track`——定时字幕 |
+| `{captions.track}` | VisualTrack | Caption 样式族 Track——定时字幕 |
 | `{cards.visual}` | VisualTrack | `broll:Track`——B-roll 叠加层 |
 | `{titles.track}` | VisualTrack | `text:Track`——文字叠加层 |
 
@@ -111,6 +111,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="broll" from="@narratage/broll@1"/>
   <import as="text" from="@narratage/text-track@1"/>
@@ -140,19 +141,12 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <!-- 4. Tracks: captions, B-roll, text -->
-  <caption:Style id="base-caption" appearance={studio.caption.base}>
-    <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-    <caption:Field id="important" type="boolean"
-      min-per-cue="0" max-per-cue="2">
-      Select zero, one, or two words whose emphasis best communicates
-      this Cue.
-    </caption:Field>
-  </caption:Style>
-  <caption:Program id="caption-program" narrative={story}
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+  <caption:Program id="caption-program" words={story.caption.words}
     default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" narrative={story}
+  <caption-ai:Planner id="cue-plan" words={story.caption.words}
     program={caption-program} model="gemini-2.5-flash"/>
-  <caption:Track id="captions" narrative={story} map={timing.map}
+  <caption-fine:Track id="captions" narrative={story} words={story.caption.words} map={timing.map}
     space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
   <broll:Track id="cards" map={timing.map} space={speech.space}>
@@ -196,6 +190,9 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
     enter: slide-up 4f; exit: fade 4f;
   }
   caption.base {
+    cue-min-words: 1; cue-max-words: 5;
+    important-min-per-cue: 0; important-max-per-cue: 2;
+    important-fill: #FFF16A; important-scale: 1.12;
     stack-order: 70; x: 0.08; y: 0.76; width: 0.84;
     font: Inter; weight: 600; size: 58; line-height: 1; align: center;
     fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;

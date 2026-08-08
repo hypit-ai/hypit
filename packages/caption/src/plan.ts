@@ -12,7 +12,7 @@ function content(value: CaptionPlan) {
       styleId: run.styleId,
       cues: run.cues.map((cue) => ({
         id: cue.id,
-        atomIds: [...cue.atomIds],
+        wordIds: [...cue.wordIds],
         fields: cue.fields.map((field) => ({ ...field })),
       })),
     })),
@@ -32,7 +32,7 @@ export function assertCaptionPlan(value: unknown): asserts value is CaptionPlan 
   assert(plan.contract === "svml.caption-plan@1", "Unsupported CaptionPlan contract");
   assert(Array.isArray(plan.runs) && plan.runs.length > 0, "CaptionPlan runs are empty");
   const runIds = new Set<string>();
-  const atomIds = new Set<string>();
+  const wordIds = new Set<string>();
   const cueIds = new Set<string>();
   for (const run of plan.runs) {
     assert(run.id.length > 0 && !runIds.has(run.id) && run.styleId.length > 0,
@@ -40,18 +40,18 @@ export function assertCaptionPlan(value: unknown): asserts value is CaptionPlan 
     runIds.add(run.id);
     assert(run.cues.length > 0, `CaptionPlan run ${run.id} has no Cues`);
     for (const cue of run.cues) {
-      assert(cue.id.length > 0 && !cueIds.has(cue.id) && cue.atomIds.length > 0,
+      assert(cue.id.length > 0 && !cueIds.has(cue.id) && cue.wordIds.length > 0,
         `CaptionPlan run ${run.id} contains an empty or repeated Cue`);
       cueIds.add(cue.id);
-      assert(new Set(cue.atomIds).size === cue.atomIds.length, `CaptionPlan Cue ${cue.id} repeats a display atom`);
-      for (const atomId of cue.atomIds) {
-        assert(!atomIds.has(atomId), `CaptionPlan repeats display atom ${atomId}`);
-        atomIds.add(atomId);
+      assert(new Set(cue.wordIds).size === cue.wordIds.length, `CaptionPlan Cue ${cue.id} repeats a display word`);
+      for (const wordId of cue.wordIds) {
+        assert(!wordIds.has(wordId), `CaptionPlan repeats display word ${wordId}`);
+        wordIds.add(wordId);
       }
       for (const field of cue.fields) {
-        assert(field.declarationId.length > 0 && field.atomId.length > 0 && field.value.length > 0,
+        assert(field.declarationId.length > 0 && field.wordId.length > 0 && field.value.length > 0,
           `CaptionPlan Cue ${cue.id} field is invalid`);
-        assert(cue.atomIds.includes(field.atomId), `CaptionPlan Cue ${cue.id} field lies outside its Cue`);
+        assert(cue.wordIds.includes(field.wordId), `CaptionPlan Cue ${cue.id} field lies outside its Cue`);
       }
     }
   }
@@ -82,18 +82,21 @@ export function assertCaptionPlanForProgram(plan: CaptionPlan, program: CaptionP
     const actual = plan.runs[index]!;
     assert(actual.id === expected.id && actual.styleId === expected.styleId,
       `CaptionPlan run ${actual.id} differs from Program order or Style`);
-    assert(actual.cues.flatMap((cue) => cue.atomIds).join("\0") === expected.atomIds.join("\0"),
-      `CaptionPlan run ${actual.id} does not partition its Program atoms exactly in order`);
+    assert(actual.cues.flatMap((cue) => cue.wordIds).join("\0") === expected.wordIds.join("\0"),
+      `CaptionPlan run ${actual.id} does not partition its Program words exactly in order`);
     const style = styles.get(expected.styleId);
     assert(style !== undefined, `Caption Program Style ${expected.styleId} is absent`);
     const declarations = new Map(style.planning.fields.map((field) => [field.id, field]));
     for (const cue of actual.cues) {
+      assert(cue.wordIds.length >= style.planning.cue.minimumWords
+        && cue.wordIds.length <= style.planning.cue.maximumWords,
+      `Caption Cue ${cue.id} violates Style ${style.id} word-count bounds`);
       const unique = new Set<string>();
       for (const field of cue.fields) {
         const declaration = declarations.get(field.declarationId);
         assert(declaration !== undefined, `Caption field ${field.declarationId} is not declared by Style ${style.id}`);
-        const key = `${field.declarationId}\0${field.atomId}`;
-        assert(!unique.has(key), `Caption Cue ${cue.id} repeats field ${field.declarationId} on ${field.atomId}`);
+        const key = `${field.declarationId}\0${field.wordId}`;
+        assert(!unique.has(key), `Caption Cue ${cue.id} repeats field ${field.declarationId} on ${field.wordId}`);
         unique.add(key);
         assertFieldValue(declaration, field.value);
       }

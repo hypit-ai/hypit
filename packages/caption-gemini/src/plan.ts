@@ -42,32 +42,32 @@ function cueFromRaw(
   raw: unknown,
   runId: string,
   cueIndex: number,
-  runAtomIds: readonly string[],
+  runWordIds: readonly string[],
   cursor: number,
   declarations: ReadonlyMap<string, CaptionFieldDeclaration>,
 ): { readonly cue: CaptionPlannedCue; readonly nextCursor: number } {
   const value = object(raw, `Caption cue ${runId}/${cueIndex + 1}`);
-  exactKeys(value, ["after_atom_id", "fields"], `Caption cue ${runId}/${cueIndex + 1}`);
-  assert(typeof value.after_atom_id === "string", `Caption cue ${runId}/${cueIndex + 1} endpoint is invalid`);
-  const endpoint = runAtomIds.indexOf(value.after_atom_id, cursor);
+  exactKeys(value, ["after_word_id", "fields"], `Caption cue ${runId}/${cueIndex + 1}`);
+  assert(typeof value.after_word_id === "string", `Caption cue ${runId}/${cueIndex + 1} endpoint is invalid`);
+  const endpoint = runWordIds.indexOf(value.after_word_id, cursor);
   assert(endpoint >= cursor, `Caption cue ${runId}/${cueIndex + 1} endpoint is outside its remaining run`);
-  const atomIds = runAtomIds.slice(cursor, endpoint + 1);
+  const wordIds = runWordIds.slice(cursor, endpoint + 1);
   assert(Array.isArray(value.fields), `Caption cue ${runId}/${cueIndex + 1} fields are invalid`);
   const assignments = value.fields.map((rawField, fieldIndex) => {
     const field = object(rawField, `Caption field ${runId}/${cueIndex + 1}/${fieldIndex + 1}`);
-    exactKeys(field, ["declaration_id", "atom_id", "value"], "Caption field assignment");
+    exactKeys(field, ["declaration_id", "word_id", "value"], "Caption field assignment");
     assert(typeof field.declaration_id === "string", "Caption field declaration id is invalid");
     const declaration = declarations.get(field.declaration_id);
     assert(declaration !== undefined, `Caption field ${field.declaration_id} was not declared for run ${runId}`);
-    assert(typeof field.atom_id === "string" && atomIds.includes(field.atom_id),
-      `Caption field ${declaration.id} atom lies outside its cue`);
+    assert(typeof field.word_id === "string" && wordIds.includes(field.word_id),
+      `Caption field ${declaration.id} word lies outside its cue`);
     return {
       declarationId: declaration.id,
-      atomId: field.atom_id,
+      wordId: field.word_id,
       value: fieldValue(declaration, field.value),
     };
   });
-  const unique = new Set(assignments.map((field) => `${field.declarationId}\0${field.atomId}`));
+  const unique = new Set(assignments.map((field) => `${field.declarationId}\0${field.wordId}`));
   assert(unique.size === assignments.length, `Caption cue ${runId}/${cueIndex + 1} repeats a field assignment`);
   for (const declaration of declarations.values()) {
     const count = assignments.filter((field) => field.declarationId === declaration.id).length;
@@ -75,7 +75,7 @@ function cueFromRaw(
       `Caption field ${declaration.id} count ${count} violates ${declaration.minimumPerCue}..${declaration.maximumPerCue} per cue`);
   }
   return {
-    cue: { id: `${runId}:cue:${cueIndex + 1}`, atomIds, fields: assignments },
+    cue: { id: `${runId}:cue:${cueIndex + 1}`, wordIds, fields: assignments },
     nextCursor: endpoint + 1,
   };
 }
@@ -103,11 +103,14 @@ export function sealCaptionGeminiPlan(
     const declarations = new Map(expectedRun.fields.map((field) => [field.id, field]));
     let cursor = 0;
     const cues = rawRun.cues.map((rawCue, cueIndex) => {
-      const planned = cueFromRaw(rawCue, expectedRun.id, cueIndex, expectedRun.atomIds, cursor, declarations);
+      const planned = cueFromRaw(rawCue, expectedRun.id, cueIndex, expectedRun.wordIds, cursor, declarations);
       cursor = planned.nextCursor;
+      assert(planned.cue.wordIds.length >= expectedRun.cueMinimumWords
+        && planned.cue.wordIds.length <= expectedRun.cueMaximumWords,
+      `Caption Cue ${planned.cue.id} violates ${expectedRun.cueMinimumWords}..${expectedRun.cueMaximumWords} words`);
       return planned.cue;
     });
-    assert(cursor === expectedRun.atomIds.length, `Caption run ${expectedRun.id} Cues do not cover its final atom`);
+    assert(cursor === expectedRun.wordIds.length, `Caption run ${expectedRun.id} Cues do not cover its final word`);
     return { id: expectedRun.id, styleId: expectedRun.styleId, cues };
   });
   return sealCaptionPlan({
