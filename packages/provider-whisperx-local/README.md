@@ -18,7 +18,7 @@ createLocalWhisperXProvider({
 });
 ```
 
-The sidecar must be on loopback because this protocol deliberately passes a local staged path. A
+The service must be on loopback because this protocol deliberately passes a local staged path. A
 future Lambda/hosted Provider should use an Artifact URL or request payload owned by that Provider;
 it is a different deployment package but must return the same `WhisperXAlignmentEvidence` type.
 

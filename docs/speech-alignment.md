@@ -8,8 +8,8 @@ Narratage treats the Script as the semantic truth and the generated speech as ac
 evidence. Those are two separate observations of the same intended sentence, and the gap
 between them is information worth keeping.
 
-The WhisperX Provider therefore sends the sidecar **audio only** — the request body accepts
-`audio_path` and an optional `language`, and the sidecar rejects any other field. The Script
+The WhisperX Provider therefore sends the service **audio only** — the request body accepts
+`audio_path` and an optional `language`, and the service rejects any other field. The Script
 is never transmitted. What comes back is an independent transcript: what the model actually
 said, not what it was asked to say.
 
@@ -22,7 +22,7 @@ audio ──Whisper transcription──> the transcript's own words
 Script ──many-to-many alignment──> the transcript's words
 ```
 
-The first alignment happens inside the sidecar and concerns words Narratage never authored.
+The first alignment happens inside the service and concerns words Narratage never authored.
 The second happens in `@narratage/speech-alignment` and is what produces the SemanticMap.
 
 Both can come up short, in different ways:
@@ -33,7 +33,7 @@ Both can come up short, in different ways:
 | Script alignment | The transcript diverges from the Script — a swallowed word, a synonym, an added filler | The pair is classified `merge`, `split`, `replacement`, `source-omission` or `evidence-insertion` and timed from the group envelope |
 
 Words without timestamps are ordinary, not exceptional: one numeral in a sentence is enough.
-The sidecar states the rule it follows — *missing or partial acoustic evidence stays missing,
+The service states the rule it follows — *missing or partial acoustic evidence stays missing,
 never manufacture a tick* — and the Provider follows it too, keeping a word whose timing it
 cannot prove and dropping only the clock.
 

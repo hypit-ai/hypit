@@ -46,7 +46,7 @@ function wav(sampleFrames: number): Uint8Array {
   return bytes;
 }
 
-test("local WhisperX Provider pins the complete sidecar runtime and is independently queued", () => {
+test("local WhisperX Provider pins the complete service runtime and is independently queued", () => {
   const provider = createLocalWhisperXProvider({ expectedModel: "small", defaultConcurrency: 2 });
   assert.equal(provider.name, "whisperx.local");
   const facet = provider.manifest.facets[0];
@@ -60,7 +60,7 @@ test("local WhisperX Provider pins the complete sidecar runtime and is independe
   );
 });
 
-test("sidecar pauses are projected onto authored Segments without clipping a crossing word into fake evidence", () => {
+test("service pauses are projected onto authored Segments without clipping a crossing word into fake evidence", () => {
   const evidence = interpretWhisperXResponse({
     language: "en",
     segments: [{
@@ -82,7 +82,7 @@ test("sidecar pauses are projected onto authored Segments without clipping a cro
   assert.deepEqual(evidence[1]!.words[1], { text: "world", startSec: 1.2, endSec: 1.6 });
 });
 
-test("local Provider stages canonical evidence bytes unchanged and binds sidecar output to both audio identities", {
+test("local Provider stages canonical evidence bytes unchanged and binds service output to both audio identities", {
   skip: !loopbackEnabled,
 }, async () => {
   const expected = wav(32_000);
@@ -93,7 +93,7 @@ test("local Provider stages canonical evidence bytes unchanged and binds sidecar
         response.setHeader("content-type", "application/json");
         response.end(JSON.stringify({
           ok: true,
-          protocol: "svml.whisperx-sidecar@1",
+          protocol: "svml.whisperx-service@1",
           serviceVersion: "0.1.0",
           whisperxVersion: "3.8.6",
           model: "small",
