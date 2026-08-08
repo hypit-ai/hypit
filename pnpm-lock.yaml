@@ -1732,6 +1732,25 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  services/media-lambda:
+    dependencies:
+      '@narratage/artifact-store-s3':
+        specifier: workspace:*
+        version: link:../../packages/artifact-store-s3
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../../packages/media-execution
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@narratage/provider-media-aws-lambda':
+        specifier: workspace:*
+        version: link:../../packages/provider-media-aws-lambda
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+
 packages:
 
   '@algolia/abtesting@1.22.0':
