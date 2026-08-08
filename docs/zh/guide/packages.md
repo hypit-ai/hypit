@@ -5,7 +5,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 
 # 包架构
 
-`packages/` 下的 78 个工作区包被组织成四个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
+`packages/` 下的工作区包被组织成四个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
 
 ## 四个分层
 
@@ -19,7 +19,6 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/core                  Demand compiler and Build state machine
 @narratage/source                mandatory Source Header
 @narratage/elaborator            author declarations and Fragment expansion
-@narratage/realization           typed realization overlays
 @narratage/run                   syntax-neutral Run Graph
 @narratage/validation            semantic admission
 @narratage/host                  Host-facing interfaces
@@ -60,8 +59,9 @@ description: 四个分层、依赖边界、包的结构与 facet。
 视频专属类型、生成模型族、语音/字幕/轨道契约以及合成。依赖 Layer 1 和 Layer 2，但不依赖任何 Provider。
 
 ```text
-@narratage/contracts             Narrative, Track, Composition contracts
 @narratage/media                 media types
+@narratage/narrative             authored narrative products
+@narratage/program-space         exact frame/sample domain
 @narratage/generation            image/video product contracts
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
@@ -73,19 +73,25 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/nano-banana           Nano Banana model family
 @narratage/seedream              Seedream model family
 @narratage/estimate              duration estimation
-@narratage/speech-program        speech program compilation
-@narratage/speech-take           atomic speech take
-@narratage/speech-align          speech alignment
+@narratage/speech                shared speech products
+@narratage/speech-basis          generated speech A/V product
+@narratage/speech-evidence       acoustic evidence products
+@narratage/semantic-map          authored-token timing map
+@narratage/speech-alignment      speech alignment
+@narratage/speech-spine          ordered speech-take compilation
 @narratage/whisperx              WhisperX component
 @narratage/caption               caption planning and Track
 @narratage/caption-gemini        Gemini caption planner
 @narratage/broll                 B-roll Track
 @narratage/text-track            text overlay Track
 @narratage/film                  Film composition
-@narratage/hyperframes           HyperFrames Visual IR
-@narratage/hyperframes-render    HyperFrames rendering component
+@narratage/composition           peer Track composition
+@narratage/visual-ir             renderer-neutral visual vocabulary
+@narratage/hyperframes           HyperFrames document compiler
+@narratage/render-hyperframes    explicit HyperFrames rendering component
 @narratage/image-transform       image processing component
 @narratage/media-pipeline        media inspection/normalization
+@narratage/media-execution       shared ffmpeg execution body for Providers
 ```
 
 ### Layer 4：Provider（Endpoint）包
@@ -98,7 +104,9 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
 @narratage/provider-hyperframes-local    local Chrome rendering
+@narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
 @narratage/provider-image-opencv-local   local OpenCV image transforms
+@narratage/provider-media-aws-lambda     synchronous AWS media execution
 ```
 
 ### 应用层

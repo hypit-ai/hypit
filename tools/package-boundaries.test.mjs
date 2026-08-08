@@ -160,19 +160,13 @@ test("Text compilation is one explicit leaf assembly, not a Package Loader or Lo
 });
 
 test("generic and video CLIs reach no Provider package and video CLI activates no author aggregate", async () => {
-  const graph = productionGraph(await workspacePackages());
+  const packages = await workspacePackages();
+  const graph = productionGraph(packages);
   const dependencies = transitive(graph, "@narratage/cli");
-  const videoAssembly = [
-    "@narratage/provider-google-vertex",
-    "@narratage/provider-hyperframes-local",
-    "@narratage/provider-image-opencv-local",
-    "@narratage/provider-kie",
-    "@narratage/provider-media-local",
-    "@narratage/provider-whisperx-local",
-  ];
-  assert.deepEqual(videoAssembly.filter((name) => dependencies.has(name)), []);
+  const providers = [...packages.keys()].filter((name) => name.startsWith("@narratage/provider-"));
+  assert.deepEqual(providers.filter((name) => dependencies.has(name)), []);
   const videoDependencies = transitive(graph, "@narratage/video-cli");
-  assert.deepEqual(videoAssembly.filter((name) => videoDependencies.has(name)), []);
+  assert.deepEqual(providers.filter((name) => videoDependencies.has(name)), []);
   assert.ok(!videoDependencies.has("@narratage/script"));
   assert.ok(!videoDependencies.has("@narratage/seedance-speaker"));
   assert.ok(!videoDependencies.has("@narratage/broll"));
