@@ -4,6 +4,10 @@ import { speechTypes } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
 import type { CanonicalValue, StoredValue } from "@narratage/protocol";
+import { generationPort, sealGenerationMediaBinding } from "@narratage/generation";
+import type { GenerationMediaPort } from "@narratage/generation";
+import { exactModelMediaInputNames } from "@narratage/model-kit";
+import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
 import {
   compilePromptKit,
   promptKitTypes,
@@ -88,11 +92,15 @@ function inline<T>(reference: SurfaceResolvedReference, subject: string): T {
   return value.value as unknown as T;
 }
 
-function blob(reference: SurfaceResolvedReference, subject: string) {
-  if (!sameType(reference.type, artifactTypes.blob) || reference.record?.value.kind !== "blob") {
-    throw new Error(`${subject} must reference an authored BlobArtifact`);
+function mediaReference(reference: SurfaceResolvedReference, kind: "image" | "audio", subject: string) {
+  if (!sameType(reference.type, artifactTypes.blob)) {
+    throw new Error(`${subject} must reference a BlobArtifact`);
   }
-  return reference.record.value;
+  const value = reference.record?.value;
+  if (value !== undefined && (value.kind !== "blob" || !value.mediaType.startsWith(`${kind}/`))) {
+    throw new Error(`${subject} is not ${kind} media`);
+  }
+  return reference;
 }
 
 function recipeValue(
@@ -149,11 +157,13 @@ function dialogueValue(
   return value;
 }
 
+type ResolvedSpeakerReference = SpeakerReference & { readonly source: SurfaceResolvedReference };
+
 function references(
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
-): SpeakerReference[] {
-  const result: SpeakerReference[] = [];
+): ResolvedSpeakerReference[] {
+  const result: ResolvedSpeakerReference[] = [];
   for (const child of element.children) {
     if (child.kind === "text") {
       if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Reference children`);
@@ -164,17 +174,55 @@ function references(
     const kinds = (["image", "audio"] as const).filter((kind) => child.attributes[kind] !== undefined);
     if (kinds.length !== 1) throw new Error(`${child.name} requires exactly one of image or audio`);
     const kind = kinds[0]!;
-    const artifact = blob(resolved(child, kind, resolveReference), `${child.name}.${kind}`);
-    if (!artifact.mediaType.startsWith(`${kind}/`)) throw new Error(`${child.name}.${kind} is not ${kind} media`);
+    const source = mediaReference(resolved(child, kind, resolveReference), kind, `${child.name}.${kind}`);
     const rawRole = child.attributes.role;
     const role = rawRole === undefined
       ? kind === "image" ? "character-and-scene" : "voice-timbre"
       : typeof rawRole === "string" && rawRole.trim().length > 0
         ? rawRole.trim()
         : (() => { throw new Error(`${child.name}.role must be a non-empty string`); })();
-    result.push({ kind, artifact, role });
+    result.push({ kind, source, role });
   }
   return result;
+}
+
+function assembledReferences(
+  id: string,
+  endpoint: ExactModelEndpoint,
+  values: readonly ResolvedSpeakerReference[],
+  range: StructuredElement["range"],
+) {
+  const mediaInputs: ExactModelMediaInput[] = [];
+  const records: Array<{
+    readonly id: string;
+    readonly type: SurfaceResolvedReference["type"];
+    readonly value: { readonly kind: "inline"; readonly value: CanonicalValue };
+    readonly range: StructuredElement["range"];
+  }> = [];
+  const inputs: Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {};
+  values.forEach((value, index) => {
+    const name = `media-${String(index + 1).padStart(4, "0")}`;
+    const portName = value.kind === "image" ? "referenceImage" : "referenceAudio";
+    const endpointBinding = endpoint.mediaBindings[portName];
+    if (endpointBinding === undefined) throw new Error(`${endpoint.ports.model} has no media port ${portName}`);
+    const port = generationPort(endpoint.ports, portName);
+    if (port.value.kind !== "media") throw new Error(`${endpoint.ports.model} port ${portName} is not media`);
+    const bindingId = `${id}.${name}.binding`;
+    records.push({
+      id: bindingId,
+      type: endpointBinding.type,
+      value: {
+        kind: "inline",
+        value: sealGenerationMediaBinding(port as GenerationMediaPort, { role: value.kind }) as unknown as CanonicalValue,
+      },
+      range,
+    });
+    const names = exactModelMediaInputNames(name);
+    inputs[names.binding] = { kind: "record", id: bindingId };
+    inputs[names.artifact] = value.source.ref;
+    mediaInputs.push({ name, port: portName });
+  });
+  return { mediaInputs, records, inputs };
 }
 
 function recipeString(
@@ -247,7 +295,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
     segment: {
       dialogue: dialogue.dialogue,
     },
-    references: refs,
+    references: refs.map(({ source: _source, ...reference }) => reference),
     ...(actionPrompt === undefined ? {} : { actionPrompt }),
     ...(extraPrompt === undefined ? {} : { extraPrompt }),
   });
@@ -260,9 +308,12 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   }
   const promptId = `${id}.prompt`;
   const programId = `${id}.program`;
+  const endpoint = seedanceEndpointsByModel[selectedModel];
+  const assembled = assembledReferences(id, endpoint, refs, element.range);
   const fragment = createSeedanceSpeakerTakeFragment(
-    seedanceEndpointsByModel[selectedModel],
+    endpoint,
     seedanceSpeechCompileProducers[selectedModel],
+    assembled.mediaInputs,
   );
   return {
     records: [{
@@ -275,13 +326,14 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
       type: seedanceTypes.speechSpine,
       value: { kind: "inline", value: program as unknown as CanonicalValue },
       range: element.range,
-    }],
+    }, ...assembled.records],
     components: [{
       id,
       fragment: fragment.id,
       inputs: {
         program: { kind: "record", id: programId },
         duration: duration.ref,
+        ...assembled.inputs,
       },
       outputs: {
         video: `${id}.video`,

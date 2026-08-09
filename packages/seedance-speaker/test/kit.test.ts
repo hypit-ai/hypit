@@ -7,7 +7,6 @@ import {
   promptKitSpecFromSvsRecipes,
   verifyPromptProgram,
 } from "@narratage/prompt-kit";
-import { digestOf } from "@narratage/protocol";
 import { parseSvs } from "@narratage/svs";
 import {
   bindSpeakerPromptKit,
@@ -26,20 +25,6 @@ const officialUgcV1KitSpec = promptKitSpecFromSvsRecipes(
   "official-ugc-v1",
 );
 
-const image = {
-  kind: "blob" as const,
-  digest: digestOf("speaker-image"),
-  size: 100,
-  mediaType: "image/png",
-};
-
-const audio = {
-  kind: "blob" as const,
-  digest: digestOf("speaker-audio"),
-  size: 200,
-  mediaType: "audio/mpeg",
-};
-
 function intent() {
   return sealSpeakerTakeIntent({
     contract: "svml.seedance-speaker-take-intent@1",
@@ -54,8 +39,8 @@ function intent() {
       dialogue: "HOST: Say exactly these words.",
     },
     references: [
-      { kind: "image", artifact: image, role: "character-and-scene" },
-      { kind: "audio", artifact: audio, role: "voice-timbre" },
+      { kind: "image", role: "character-and-scene" },
+      { kind: "audio", role: "voice-timbre" },
     ],
   });
 }
@@ -87,21 +72,15 @@ test("official UGC Kit emits an ordered generic Prompt Program", () => {
   assert.match(prompt.blocks[3]?.text ?? "", /@audio1/u);
 });
 
-test("rendering the generic Prompt Program preserves exact Seedance method and references", () => {
+test("rendering the generic Prompt Program preserves exact Seedance method while media stays on graph edges", () => {
   const take = intent();
   const prompt = compilePromptKit(officialUgcV1KitSpec, bindSpeakerPromptKit(take));
   const program = renderSpeakerSpeechProgram(prompt, take);
   assert.equal(program.model, "seedance-2-mini");
   assert.deepEqual(program.ports.resolution, ["720p"]);
   assert.deepEqual(program.ports.aspectRatio, ["9:16"]);
-  assert.deepEqual(
-    (program.ports.referenceImage ?? []).map((item) => (item as { readonly role: string }).role),
-    ["image"],
-  );
-  assert.deepEqual(
-    (program.ports.referenceAudio ?? []).map((item) => (item as { readonly role: string }).role),
-    ["audio"],
-  );
+  assert.equal(program.ports.referenceImage, undefined);
+  assert.equal(program.ports.referenceAudio, undefined);
   assert.deepEqual(program.ports.prompt, [prompt.blocks.map((item) => item.text).join("\n\n")]);
   assert.equal(program.ports.duration, undefined, "duration arrives from speech estimation");
 });
@@ -110,7 +89,7 @@ test("Speaker rejects invalid media while Prompt Kit rejects unknown parameters"
   const base = intent();
   assert.throws(() => sealSpeakerTakeIntent({
     ...base,
-    references: [{ kind: "audio", artifact: audio, role: "voice-timbre" }],
+    references: [{ kind: "audio", role: "voice-timbre" }],
   }), /requires 1-9 image references/u);
   assert.throws(() => sealSpeakerTakeIntent({ ...base, resolution: "1080p" }), /at most 720p/u);
   const unknown = sealSpeakerTakeIntent({ ...base, promptParameters: { "imaginary-axis": "value" } });

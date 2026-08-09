@@ -95,13 +95,21 @@ test("the three author Surfaces are separate components with one ordinary audio 
       Calm and direct.
     </mimo:VoiceClone>`)),
   ]);
-  for (const result of results) {
+  for (const [index, result] of results.entries()) {
     assert.equal(result.components.length, 1);
     assert.deepEqual(Object.keys(result.components[0]!.outputs), ["audio"]);
-    assert.deepEqual(result.fragments[0]!.operations.map((operation) => operation.producer.name), [
-      result.fragments[0]!.operations[0]!.producer.name,
-      generationProducers.primaryAudio.name,
-    ]);
+    assert.deepEqual(result.fragments[0]!.operations.map((operation) => operation.producer.name), index === 2
+      ? [
+          "bind-request-mimo-v2.5-tts-voiceclone-sample",
+          "finalize-request-mimo-v2.5-tts-voiceclone",
+          "request-mimo-v2.5-tts-voiceclone",
+          generationProducers.primaryAudio.name,
+        ]
+      : [
+          index === 0 ? "finalize-request-mimo-v2.5-tts" : "finalize-request-mimo-v2.5-tts-voicedesign",
+          index === 0 ? "request-mimo-v2.5-tts" : "request-mimo-v2.5-tts-voicedesign",
+          generationProducers.primaryAudio.name,
+        ]);
     assert.equal(result.records[0]!.value.kind, "inline");
     const request = result.records[0]!.value.kind === "inline"
       ? result.records[0]!.value.value as Record<string, unknown> : {};

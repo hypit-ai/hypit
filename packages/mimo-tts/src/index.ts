@@ -1,5 +1,4 @@
-import { artifactDependency } from "@narratage/artifact";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
+import { sealGenerationPortRequest, sealGenerationRequestDraft, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
 import { narrativeDependency } from "@narratage/narrative";
@@ -70,6 +69,13 @@ export function sealMimoTtsRequest(
   return sealGenerationPortRequest(mimoTtsPorts[model], ports);
 }
 
+export function sealMimoTtsRequestDraft(
+  model: MimoTtsModel,
+  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+) {
+  return sealGenerationRequestDraft(mimoTtsPorts[model], ports);
+}
+
 const base = defineExactModelModule({
   module: mimoTtsModuleRef,
   endpoints: ([
@@ -93,11 +99,11 @@ export const mimoTtsSurfaceDigests = {
 
 export const mimoTtsManifest = {
   ...base.manifest,
-  dependencies: [...base.manifest.dependencies, artifactDependency, narrativeDependency],
+  dependencies: [...base.manifest.dependencies, narrativeDependency],
   surfaces: [
     {
       name: "preset", tag: "Preset", mode: "structured",
-      outputs: [mimoTtsEndpoints.preset.requestType],
+      outputs: [mimoTtsEndpoints.preset.draftType],
       implementation: {
         kind: "trusted-frontend-surface" as const,
         locator: "@narratage/mimo-tts/preset-surface",
@@ -106,7 +112,7 @@ export const mimoTtsManifest = {
     },
     {
       name: "voiceDesign", tag: "VoiceDesign", mode: "structured",
-      outputs: [mimoTtsEndpoints.voiceDesign.requestType],
+      outputs: [mimoTtsEndpoints.voiceDesign.draftType],
       implementation: {
         kind: "trusted-frontend-surface" as const,
         locator: "@narratage/mimo-tts/voice-design-surface",
@@ -115,7 +121,10 @@ export const mimoTtsManifest = {
     },
     {
       name: "voiceClone", tag: "VoiceClone", mode: "structured",
-      outputs: [mimoTtsEndpoints.voiceClone.requestType],
+      outputs: [
+        mimoTtsEndpoints.voiceClone.draftType,
+        ...Object.values(mimoTtsEndpoints.voiceClone.mediaBindings).map((binding) => binding.type),
+      ],
       implementation: {
         kind: "trusted-frontend-surface" as const,
         locator: "@narratage/mimo-tts/voice-clone-surface",

@@ -52,6 +52,22 @@ Declaration and use are separate:
 The shipped `gptImageDenoiseV1` program is the exact useful behavior extracted from Twinit's hidden
 GPT Image post-step. It is no longer mandatory behavior of GPT Image generation.
 
+The same physical GPT Image package also exposes the optional logical module
+`@narratage/gpt-image/clean@1`. Its component Fragment is deliberately expanded as two visible graph
+operations:
+
+```text
+GPT Image RequestDraft + reference Blob edges
+  ─> bind/finalize ─> generate ─> primary raw image
+  ─> ImageTransformProgram ─> execute-raster ─> clean image
+```
+
+The component exports one clean image while preserving both Needs and every input edge in the graph.
+The raw exact-model module remains usable on its own, and the cleanup Program remains replaceable.
+This avoids repeating the denoise step in every author file without turning it into hidden Provider
+behavior. A higher-level Prompt author Surface is intentionally deferred to the separate Prompt
+redesign.
+
 ## Operations
 
 Operation order is author meaning. The current program grammar supports:

@@ -604,7 +604,7 @@
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:4ceaf545fa645de80873c5cc3b9df7655474a262057f805e85eca2679025536e"
+      "digest": "sha256:aa8125353ac0e60222bd038503fd3787bd7c942bccd794c013bf5220eb454bc9"
     },
     {
       "name": "@narratage/host",
@@ -634,7 +634,7 @@
     {
       "name": "@narratage/model-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:debadc91af0b1c706f6d44214be281fbf05a53b0d53d027066d06a1a8752e477"
+      "digest": "sha256:b5ce0f8b10756e801827f119b3335b22b8aab1ed1765f6a6261457355506bcab"
     },
     {
       "name": "@narratage/narrative",
@@ -674,7 +674,7 @@
     {
       "name": "@narratage/seedance",
       "version": "0.0.0-dev",
-      "digest": "sha256:26c103a2093171da0f30e1676b76f3667518114df57110fe0885e16241c05952"
+      "digest": "sha256:e218a3c54118c75a21c080cc20a4dd410c78223000100a009dfe270c1429b03d"
     },
     {
       "name": "@narratage/semantic-map",
@@ -832,7 +832,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:d74a57a3210267e665366513324db5c313b3ca0f770da66e74cc38aee5048efb",
-      "closureDigest": "sha256:67fa8f4123972a33bd2d0e1cc6126a9ed8d3d09cc2745aa058888b735fc85570"
+      "closureDigest": "sha256:ae96c20681e676094f7a411ce82a4b2d9f835a4fffa189dd7b6550c321166d94"
     },
     {
       "specifier": "@narratage/hyperframes",
@@ -912,8 +912,8 @@
         "name": "@narratage/seedance",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:3b9cebaa0503cb716c3d8314a6cf837b13dd5d88c2b09fd9604ab38e67d7af5e",
-      "closureDigest": "sha256:d8f3669cc7a75d22e30a4e3b304f6a87ff9d33920199e50c043d6ed0e6d4e2be"
+      "facetsDigest": "sha256:c1f9cb32b1343f2a5b095e43c5a9501b6d015fe064b47af480fa6d3d10e1782e",
+      "closureDigest": "sha256:3d75f4413dd8b4435ce8e3e96d1a6881ff11872aa0b2b7dd3e7b4b8e6469903a"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -1015,5 +1015,5 @@
       "closureDigest": "sha256:1dd3e16f58411fd77f2daf4a945781a784618cffe7512d83d6181f701c39cadb"
     }
   ],
-  "digest": "sha256:6c2f003b40c9824af27dfbbf08015ee9a10f1d79231167faeb07d0c7c4389c8f"
+  "digest": "sha256:b6cc9ac228600f6e32a7487547765f67083213971fabdc3f2290263581995702"
 }
