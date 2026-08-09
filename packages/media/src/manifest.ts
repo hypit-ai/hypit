@@ -15,7 +15,11 @@ export const mediaValidatorDigests = {
   synchronized: digestOf("@narratage/media/validate-synchronized-media@1"), renderedVisual: digestOf("@narratage/media/validate-rendered-visual@1"),
   timelineAudio: digestOf("@narratage/media/validate-timeline-audio@1"), muxed: digestOf("@narratage/media/validate-muxed-media@1"),
 } as const;
-export const mediaSurfaceImplementationDigests = { image: digestOf("@narratage/media/image-surface@1"), audio: digestOf("@narratage/media/audio-surface@1") } as const;
+export const mediaSurfaceImplementationDigests = {
+  image: digestOf("@narratage/media/image-surface@1"),
+  audio: digestOf("@narratage/media/audio-surface@1"),
+  font: digestOf("@narratage/media/font-surface@1"),
+} as const;
 const validator = (locator: string, digest: ReturnType<typeof digestOf>) => ({ abi: "svml.type-validator@1" as const, implementation: { kind: "registered" as const, locator, digest } });
 export const mediaManifest: ModuleManifest = {
   format: "svml.module@1", name: mediaModuleRef.name, version: mediaModuleRef.version, dependencies: [artifactDependency],
@@ -32,6 +36,7 @@ export const mediaManifest: ModuleManifest = {
   surfaces: [
     { name: "image", tag: "Image", mode: "structured", outputs: [artifactTypes.blob], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media/image-surface", digest: mediaSurfaceImplementationDigests.image } },
     { name: "audio", tag: "Audio", mode: "structured", outputs: [artifactTypes.blob], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media/audio-surface", digest: mediaSurfaceImplementationDigests.audio } },
+    { name: "font", tag: "Font", mode: "structured", outputs: [mediaTypes.fontArtifact], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media/font-surface", digest: mediaSurfaceImplementationDigests.font } },
   ], producers: [],
 };
 export const mediaManifestDigest = digestOf(mediaManifest);

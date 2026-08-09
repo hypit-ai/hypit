@@ -109,6 +109,41 @@ test("official video CLI checks a real Script source through the Node compiler h
   ]);
 });
 
+test("author source binds exact Font bytes to a Fine Caption Style", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-caption-font-"));
+  const file = join(root, "main.svml");
+  const fontBytes = new Uint8Array([119, 79, 70, 50, 0, 1, 0, 0]);
+  await writeFile(join(root, "caption.woff2"), fontBytes);
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
+<sheet version="1">
+  caption.primary {
+    cue-min-words: 1; cue-max-words: 4;
+    stack-order: 20; x: 0.5; y: 0.9; width: 0.8;
+    align: center; font: Studio Sans; weight: 600; size: 48; line-height: 1.1;
+    fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
+  }
+</sheet>`, "utf8");
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
+<svml>
+  <import as="media" from="@narratage/media@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
+  <import as="studio" source="./studio.svs"/>
+
+  <media:Font id="caption-font" src="./caption.woff2" weight="600" style="normal"/>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
+</svml>`, "utf8");
+
+  let output = "";
+  await runCli(["check", file], { write: (text) => { output += text; } });
+  const result = JSON.parse(output) as {
+    readonly ok: boolean;
+    readonly exports: readonly { readonly name: string; readonly kind: string }[];
+  };
+  assert.equal(result.ok, true);
+  assert.equal(result.exports.some((item) => item.name === "caption-font" && item.kind === "record"), true);
+  assert.equal(result.exports.some((item) => item.name === "primary-caption" && item.kind === "record"), true);
+});
+
 test("Prompt Kit source and Speaker Surface finish prompt assembly before the Run Graph", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-prompt-kit-"));
   const file = join(root, "main.svml");

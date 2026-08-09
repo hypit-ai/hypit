@@ -392,10 +392,11 @@ total Style assignment and SemanticMap timing join. A concrete family such as
 not authority to add a concrete Style parameter to the common package: changing a Fine position,
 font, box or paint rule must not change Caption, Composition or Core.
 
-`@narratage/media` owns the identity of renderable bytes, including the already-defined
-`FontArtifactRef`; it does not own typography choices. A future author Surface that turns a local
-font file into that existing value is one shared Text/Caption/Ranking capability and must be
-delivered independently from any Fine Style redesign.
+`@narratage/media` owns the identity of renderable bytes, including `FontArtifactRef`; it does not
+own typography choices. Its `<media:Font>` author Surface turns an explicitly referenced font file
+into that existing value. A consuming Text/Caption/Ranking package chooses the face through a
+normal graph reference. Fine Caption already accepts it through `Style.font`; no font fact is added
+to Core or propagated through unrelated intermediate values.
 
 Speech implementation packages now describe what they actually do:
 

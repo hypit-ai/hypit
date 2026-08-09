@@ -19,6 +19,7 @@ Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样�
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+<import as="media" from="@narratage/media@1"/>
 ```
 
 公共 Caption 只负责 Cue 字数边界、可选的通用逐词字段、完整样式分配、Plan 校验与时间
@@ -30,8 +31,14 @@ Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样�
 同时解析两者：
 
 ```svml
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
+<media:Font id="caption-font" src="./assets/Inter-Bold.woff2"
+  weight="700" style="normal"/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+  font={caption-font}/>
 ```
+
+显式的 `font=` 边让最终字体按字节复现。省略它则明确使用 Recipe 的环境字体兜底名；
+Caption 和 Runtime 都不会替作者猜字体。
 
 Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
 逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。

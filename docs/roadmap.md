@@ -143,11 +143,12 @@ port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 Implement these against real delivery examples, but do not freeze or indiscriminately expand the
 video author surface yet:
 
-- Caption Fine browser/pixel acceptance, especially CJK, emoji, multiline layout and all four
-  current/trail by step/wipe karaoke combinations; its full restrained parameter surface and
-  frame-addressed lowering are implemented;
-- exact Font Artifact wiring, followed by a decision on fail-closed measured line limits; never
-  silently clip authored Caption text;
+- Caption Fine browser/pixel acceptance for CJK, emoji and a wider outline/glow matrix; exact-font
+  multiline layout and all four current/trail by step/wipe karaoke combinations already have real
+  browser witnesses, and the full restrained parameter surface is implemented;
+- wider adoption of the implemented exact `<media:Font>` → Fine Style → HyperFrames byte path,
+  followed by a decision on fail-closed measured line limits; never silently clip authored Caption
+  text;
 - full Text three-box and exact-font behavior;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;

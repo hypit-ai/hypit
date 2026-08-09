@@ -1,3 +1,5 @@
+import type { FontArtifactRef } from "@narratage/media";
+
 export type FineCaptionGlyphPaint = {
   readonly fill: string;
   readonly opacity: number;
@@ -40,7 +42,8 @@ export type FineCaptionParameters = {
     readonly fontFamily: string;
     readonly fontSizePx: number;
     readonly fontWeight: number;
-    readonly fontStyle: "normal" | "italic";
+    readonly fontStyle: "normal" | "italic" | "oblique";
+    readonly exactFont?: FontArtifactRef;
   };
   readonly basePaint: FineCaptionGlyphPaint;
   readonly activePaint: FineCaptionGlyphPaint;

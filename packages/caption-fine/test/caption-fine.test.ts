@@ -4,7 +4,9 @@ import test from "node:test";
 import { resolveCaptionProgram } from "@narratage/caption";
 import type { TimedCaptionProjection } from "@narratage/caption";
 import { fineCaptionParameters, fineCaptionStyle, renderFineCaption } from "@narratage/caption-fine";
+import type { FontArtifactRef } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
+import { digestOf } from "@narratage/protocol";
 import { captionDisplaySequence, parseScript } from "@narratage/script";
 import type { SvsRecipe } from "@narratage/svs";
 
@@ -28,6 +30,13 @@ const recipe: SvsRecipe = {
     padding: "16 24",
     radius: 18,
   },
+};
+
+const exactFont: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  artifact: { kind: "blob", digest: digestOf("caption-fine:test-font"), size: 1_024, mediaType: "font/woff2" },
+  weight: 800,
+  style: "normal",
 };
 
 test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack", () => {
@@ -188,6 +197,37 @@ test("Fine rejects unknown or obsolete Recipe dimensions instead of silently acc
     ...recipe,
     properties: { ...recipe.properties, important: true },
   }), /unknown property important/u);
+});
+
+test("an exact Font is explicit Style input and reaches every base and active glyph", () => {
+  const narrative = parseScript("font.svml", "<line>Exact words.</line>");
+  const display = captionDisplaySequence(narrative, "font.caption");
+  const style = fineCaptionStyle("font", {
+    ...recipe,
+    properties: { ...recipe.properties, karaoke: "current", "active-fill": "#FFD54A" },
+  }, exactFont);
+  const program = resolveCaptionProgram(display, "font-program", style, []);
+  const projection: TimedCaptionProjection = {
+    contract: "svml.timed-caption-projection@1",
+    displaySequenceId: display.id,
+    cues: [{
+      id: "cue:font", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+      startSec: 0, endSec: 1,
+      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: 1 })),
+      fields: [],
+    }],
+  };
+  const space = sealProgramSpace({
+    contract: "svml.program-space@1", durationSec: 1, frameRate: { numerator: 30, denominator: 1 },
+  });
+  const track = renderFineCaption(projection, program, display, space);
+  const glyphs = track.presents[0]!.elements.filter((element) => element.kind === "text");
+  assert.ok(glyphs.length > display.words.length);
+  assert.equal(glyphs.every((element) => element.kind === "text" && element.fonts?.length === 1), true);
+  for (const glyph of glyphs) {
+    if (glyph.kind === "text") assert.deepEqual(glyph.fonts, [exactFont]);
+  }
+  assert.throws(() => fineCaptionStyle("mismatch", recipe, { ...exactFont, weight: 700 }), /must match/u);
 });
 
 test("current/trail by step/wipe have four distinct frame-exact Atom histories", () => {
