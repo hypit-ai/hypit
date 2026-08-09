@@ -140,15 +140,13 @@ port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 
 ## C. Current video-domain work, still pre-freeze
 
+Caption Fine's restrained surface is complete: exact primary/fallback fonts, CJK, emoji/symbols,
+multiline layout, outline/shadow/glow and all current/trail by step/wipe combinations have real
+browser evidence. It deliberately has no line-clipping or `max-lines` behavior.
+
 Implement these against real delivery examples, but do not freeze or indiscriminately expand the
 video author surface yet:
 
-- Caption Fine browser/pixel acceptance for CJK, emoji and a wider outline/glow matrix; exact-font
-  multiline layout and all four current/trail by step/wipe karaoke combinations already have real
-  browser witnesses, and the full restrained parameter surface is implemented;
-- wider adoption of the implemented exact `<media:Font>` → Fine Style → HyperFrames byte path,
-  followed by a decision on fail-closed measured line limits; never silently clip authored Caption
-  text;
 - full Text three-box and exact-font behavior;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;

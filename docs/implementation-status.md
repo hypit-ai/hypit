@@ -178,9 +178,11 @@ Implemented and executable:
 - `@narratage/caption-fine`: the first executable field-free Style family, owning its complete SVS
   schema, anchors/layout, base and active glyph Paint, Cue box, whole-Atom karaoke, restrained local
   motion and one shared VisualTrack lowering; all four karaoke timing combinations have unit and
-  real HyperFrames/browser pixel evidence, including exact-font multiline wrapping;
+  real HyperFrames/browser pixel evidence, including multiline wrapping, CJK, emoji/symbols,
+  outline, shadow and glow;
 - explicit `<media:Font>` source declarations produce exact `FontArtifactRef` values; Fine Style
-  accepts one as an ordinary author reference and HyperFrames materializes those exact bytes;
+  accepts an ordered primary/fallback stack as ordinary author references and HyperFrames
+  materializes those exact bytes;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
@@ -189,10 +191,7 @@ Implemented and executable:
 
 Still pre-freeze and deliberately deferred:
 
-- browser/pixel evidence for Fine Caption CJK, emoji and a wider outline/glow matrix;
-- any browser-measured line-limit assertion for Fine Caption;
 - complete Text three-box, exact-font and layered-decoration behavior;
-- Caption CJK/emoji/multiline/pixel acceptance;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
 - Ranking and other old production author packages;
 - renderer receipts and complete Surface-byte validation;

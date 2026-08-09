@@ -121,10 +121,12 @@ executable rather than package-family patches:
    still/frame timing to Blob bytes. Animated Surfaces must exactly share the containing Present's
    frame count and ProgramSpace rate.
 
-`packages/hyperframes/test/browser-visual.test.ts` additionally drives one real Hyperframes browser
-frame: a real content-addressed font paints glyphs and a 50% straight-alpha PNG composites over a
-blue Track at the expected pixel values. This opt-in host test is run with
-`SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future hosted Runtime.
+`packages/hyperframes/test/browser-visual.test.ts` additionally drives real Hyperframes browser
+frames: content-addressed fonts paint Latin, CJK and emoji/symbol glyphs through an ordered fallback
+stack; Fine Caption proves multiline wrapping, outline/shadow/glow and every karaoke mode; and a
+50% straight-alpha PNG composites over a blue Track at the expected pixel values. This opt-in host
+test is run with `SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future
+hosted Runtime.
 
 The IR style vocabulary is now closed rather than arbitrary CSS: components cannot add an unknown
 property, environment-dependent value or alternate browser language without changing the protocol

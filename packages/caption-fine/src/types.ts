@@ -43,7 +43,7 @@ export type FineCaptionParameters = {
     readonly fontSizePx: number;
     readonly fontWeight: number;
     readonly fontStyle: "normal" | "italic" | "oblique";
-    readonly exactFont?: FontArtifactRef;
+    readonly exactFonts?: readonly FontArtifactRef[];
   };
   readonly basePaint: FineCaptionGlyphPaint;
   readonly activePaint: FineCaptionGlyphPaint;
