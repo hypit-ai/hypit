@@ -12,6 +12,23 @@ const audioBlobRef = object({
   size: { schema: integer },
   mediaType: { schema: { kind: "literal", value: "audio/wav" } },
 });
+const mediaBlobRef = object({
+  kind: { schema: { kind: "literal", value: "blob" } },
+  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+  size: { schema: integer },
+  mediaType: { schema: string },
+});
+const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
+const rational = object({ numerator: { schema: integer }, denominator: { schema: positiveInteger } });
+const samplingSegment = object({
+  target: { schema: object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } }) },
+  sourceFrame: { schema: rational }, rate: { schema: rational },
+  loop: { schema: object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } }), optional: true },
+});
+const sampling = object({
+  sourceFrameRate: { schema: rational }, sourceFrameCount: { schema: positiveInteger },
+  segments: { schema: { kind: "array", minItems: 1, items: samplingSegment } },
+});
 const styleDeclaration: ValueSchema = { kind: "oneOf", variants: VISUAL_STYLE_NAMES_V1.map((name) => object({
   name: { schema: { kind: "literal", value: name } }, value: { schema: Object.hasOwn(VISUAL_STYLE_ENUM_VALUES_V1, name)
     ? { kind: "string", enum: VISUAL_STYLE_ENUM_VALUES_V1[name as keyof typeof VISUAL_STYLE_ENUM_VALUES_V1] }
@@ -23,8 +40,8 @@ const animation = object({ keyframes: { schema: { kind: "array", minItems: 2, it
 const base = { id: { schema: string }, parent: { schema: string, optional: true }, order: { schema: integer }, style: { schema: { kind: "array", items: styleDeclaration } }, attributes: { schema: { kind: "array", items: attribute }, optional: true }, animation: { schema: animation, optional: true } } as const;
 const box = object({ ...base, kind: { schema: { kind: "literal", value: "box" } } });
 const text = object({ ...base, kind: { schema: { kind: "literal", value: "text" } }, text: { schema: { kind: "string" } }, fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema }, optional: true } });
-const media = (kind: "image" | "video") => object({ ...base, kind: { schema: { kind: "literal", value: kind } }, artifact: { schema: mediaArtifactSchema }, mediaStartSec: { schema: number, optional: true }, playbackRate: { schema: number, optional: true }, loop: { schema: { kind: "boolean" }, optional: true }, muted: { schema: { kind: "boolean" }, optional: true } });
-const surface = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema } });
+const media = (kind: "image" | "video") => object({ ...base, kind: { schema: { kind: "literal", value: kind } }, artifact: { schema: mediaBlobRef }, sampling: { schema: sampling, optional: true }, mediaStartSec: { schema: number, optional: true }, playbackRate: { schema: number, optional: true }, loop: { schema: { kind: "boolean" }, optional: true }, muted: { schema: { kind: "boolean" }, optional: true } });
+const surface = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sampling: { schema: sampling, optional: true } });
 const element: ValueSchema = { kind: "oneOf", variants: [box, text, media("image"), media("video"), surface] };
 const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
 const present = object({ id: { schema: string }, span: { schema: span }, stacking: { schema: object({ order: { schema: signedInteger }, tieBreak: { schema: string } }) }, elements: { schema: { kind: "array", minItems: 1, items: element } } });

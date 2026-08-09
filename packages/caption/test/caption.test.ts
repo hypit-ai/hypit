@@ -47,9 +47,10 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     audio,
     visualTrack: { clips: basisSegments.map((segment) => ({
       segmentId: segment.segmentId,
-      artifact: { digest: digestOf(segment.segmentId), size: 1, mediaType: "video/mp4", durationSec: segment.endSec - segment.startSec },
-      startSec: segment.startSec,
-      endSec: segment.endSec,
+      artifact: { kind: "blob", digest: digestOf(segment.segmentId), size: 1, mediaType: "video/mp4" },
+      extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+      frameRate: { ...space.frameRate },
+      frameCount: Math.round((segment.endSec - segment.startSec) * 30),
     })) },
     segments: basisSegments,
   });

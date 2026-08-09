@@ -12,7 +12,7 @@ SVML video stack. It is:
 - not a Provider API;
 - not part of the domain-neutral Core.
 
-Text, Caption, B-roll, Ranking and third-party visual packages may own unrelated author Programs.
+Text, Caption, Media, Ranking and third-party visual packages may own unrelated author Programs.
 Before entering a `Composition`, each package must lower its resolved result into a `VisualTrack`
 that explicitly names this IR. A renderer adapter validates and compiles that common language; it
 never learns the originating component family. `@narratage/hyperframes` is the first reference
@@ -21,7 +21,7 @@ adapter, not the owner of the protocol.
 ```text
 author Program                 shared terminal protocol             final-render route
 ─────────────────────         ─────────────────────────            ─────────────────────
-Text / Caption / B-roll  ───>  SVML Visual IR in Track      ───┬─> HyperFrames
+Text / Caption / Media   ───>  SVML Visual IR in Track      ───┬─> HyperFrames
 custom visual producer   ───>  typed CompositableSurface    ───┤
                                                               ├─> future Remotion
                                                               └─> future render API
@@ -100,9 +100,9 @@ Installing a new visual component must not modify this protocol. The component e
 Only a capability that is both broadly reusable and impossible to represent through those two
 paths may justify changing the `svml.visual-ir@1` contract. While Narratage is pre-release the
 identifier remains `@1`, with exact implementation identity carried by digests and package locks.
-Adding a Text style, Caption mode, B-roll recipe, transition or Provider never qualifies by itself.
+Adding a Text style, Caption mode, Media recipe, transition or Provider never qualifies by itself.
 
-Old-system Text three-box, Caption range/cue/content and media content-frame sampling models are
+Old-system Text three-box, Caption range/cue/content and Media content-frame sampling models are
 therefore package-owned Programs and lowering evidence. They are expressiveness witnesses for this
 IR, not fields added to the IR.
 

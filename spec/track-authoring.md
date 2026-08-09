@@ -416,9 +416,9 @@ structural cuts are Narrative Selection consumption.
 
 ## 8. Migration consequences
 
-The current `text-track` and `broll` author Surfaces support only `during="full"` or an identity
-Selection mapping. They must not independently grow another timing enum. Their rewrites should
-consume the shared temporal package.
+The current simple `text-track` Surface still supports only `during="full"` or an identity
+Selection mapping. It must not independently grow another timing enum. Its rewrite must consume the
+shared temporal package. Media Track already consumes that package for Item and Sequence timing.
 
 The first implementation batch must include tests for:
 

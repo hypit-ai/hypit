@@ -17,7 +17,7 @@
     "@narratage/render-hyperframes": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
     "@narratage/runtime-adapter-node": "workspace:*",
-    "hyperframes": "0.7.84"
+    "hyperframes": "0.7.101"
   },
   "devDependencies": {
     "@narratage/composition": "workspace:*",

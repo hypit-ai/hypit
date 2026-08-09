@@ -14,6 +14,7 @@ import type {
 import { createSpeechSpineFragment } from "./fragment.js";
 import { speechSpineTypes } from "./manifest.js";
 import { sealSpeechSpineProgram } from "./program.js";
+import { spatialTypes } from "@narratage/spatial";
 
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
@@ -72,8 +73,9 @@ function takes(element: StructuredElement): StructuredElement[] {
 }
 
 export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id"]);
+  exactAttributes(element, ["id", "canvas"]);
   const id = stringAttribute(element, "id");
+  const canvas = resolve(element, "canvas", spatialTypes.canvas, resolveReference);
   const declaredTakes = takes(element).map((take, index) => ({
     mediaName: `take-${String(index + 1).padStart(4, "0")}-media`,
     segmentName: `take-${String(index + 1).padStart(4, "0")}-segment`,
@@ -118,6 +120,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
         fragment: assembly.id,
         inputs: {
           program: { kind: "record", id: programId },
+          canvas: canvas.ref,
           ...Object.fromEntries(declaredTakes.flatMap((take, index) => [
             [take.mediaName, { kind: "component-output" as const, component: normalizationComponents[index]!.id, output: "media" }],
             [take.segmentName, take.segment.ref],

@@ -14,9 +14,6 @@ importers:
       '@narratage/audio-track':
         specifier: workspace:*
         version: link:packages/audio-track
-      '@narratage/broll':
-        specifier: workspace:*
-        version: link:packages/broll
       '@narratage/caption':
         specifier: workspace:*
         version: link:packages/caption
@@ -221,49 +218,6 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
-
-  packages/broll:
-    dependencies:
-      '@narratage/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@narratage/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/media':
-        specifier: workspace:*
-        version: link:../media
-      '@narratage/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@narratage/program-space':
-        specifier: workspace:*
-        version: link:../program-space
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/semantic-map':
-        specifier: workspace:*
-        version: link:../semantic-map
-      '@narratage/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
-    devDependencies:
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
 
   packages/caption:
     dependencies:
@@ -1209,6 +1163,9 @@ importers:
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
@@ -1234,18 +1191,30 @@ importers:
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
       '@narratage/program-space':
         specifier: workspace:*
         version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
       '@narratage/spatial':
         specifier: workspace:*
         version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
       '@narratage/temporal':
         specifier: workspace:*
         version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/minimax-h3:
     dependencies:
@@ -1411,8 +1380,8 @@ importers:
         specifier: ^3.700.0
         version: 3.1106.0
       '@hyperframes/aws-lambda':
-        specifier: 0.7.84
-        version: 0.7.84
+        specifier: 0.7.101
+        version: 0.7.101
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1469,8 +1438,8 @@ importers:
         specifier: workspace:*
         version: link:../runtime-adapter-node
       hyperframes:
-        specifier: 0.7.84
-        version: 0.7.84(@types/node@24.10.1)
+        specifier: 0.7.101
+        version: 0.7.101(@types/node@24.10.1)
     devDependencies:
       '@narratage/composition':
         specifier: workspace:*
@@ -1970,6 +1939,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
 
   packages/speech-alignment:
     dependencies:
@@ -2010,12 +1982,18 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:../media-track
       '@narratage/program-space':
         specifier: workspace:*
         version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -2068,6 +2046,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -3363,8 +3344,8 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@hyperframes/aws-lambda@0.7.84':
-    resolution: {integrity: sha512-ampI/JKXixe/ilmbLgo9Mg5BaWvrBSEWC2Ovc9rzIFkJ3V+6z736tOWhK5hQ70r6xmSfw2a+As/+trhGsujl7Q==}
+  '@hyperframes/aws-lambda@0.7.101':
+    resolution: {integrity: sha512-SNv2b2cn/TKEuSWDeJ6POz29DYqFEnbhDkQ+57+6dv3Ztu4344ChGKlofzK8LxyVXGqLimOnxI8RG0cRxXBxFg==}
     engines: {node: '>=22'}
     peerDependencies:
       aws-cdk-lib: ^2.130.0
@@ -3606,19 +3587,6 @@ packages:
 
   '@protobufjs/utf8@1.1.2':
     resolution: {integrity: sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==}
-
-  '@puppeteer/browsers@3.0.6':
-    resolution: {integrity: sha512-B/gKoqlFkzhvzsI6jo9K1cZz9o5ypviVv/xu8CwA4grZzyVwN+XfkT+tu8T1zrauuEXv6VhS2oGX+6NL95WcKA==}
-    engines: {node: '>=22.12.0'}
-    hasBin: true
-    peerDependencies:
-      proxy-agent: '>=8.0.1'
-      yauzl: ^2.10.0 || ^3.4.0
-    peerDependenciesMeta:
-      proxy-agent:
-        optional: true
-      yauzl:
-        optional: true
 
   '@puppeteer/browsers@3.1.0':
     resolution: {integrity: sha512-RDLpio3fH/qrj5k4DVY6eyiN8tCS0Zovd/6jW//n605oeqkWcUjn+3k+9ZtZBnbwMpsu0F7xDIiKXvVmG5c5Bw==}
@@ -4411,8 +4379,8 @@ packages:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
 
-  hyperframes@0.7.84:
-    resolution: {integrity: sha512-JkfJtHRjPezHPdXoyoHjgnBEGQOffzjvAe4+bsHgbo1VBp3vYQI47GdL2bn3EydPa7p8c/shs7Ffs503ZrO4xA==}
+  hyperframes@0.7.101:
+    resolution: {integrity: sha512-Y6+qLyEo5rwHfMJzPXLACDvV5QlGo0qs2BgVmq/Jn2pgWg+N9VXsF9drBXnIG7v5DpDvqGumCttfsv/tmq3ixQ==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -4607,10 +4575,6 @@ packages:
 
   pump@3.0.4:
     resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
-
-  puppeteer-core@25.4.0:
-    resolution: {integrity: sha512-K1plkLOdeoUnGeT1OvdqF3qxl33v+Ra/uH5VyPEhXdMcpvGiEskHzxxEU3fgpccJpJLIipB/rPUsvkZRWeKqOA==}
-    engines: {node: '>=22.12.0'}
 
   puppeteer-core@25.5.0:
     resolution: {integrity: sha512-XPNT0dQJtphqQ4I29zxlG4IIPbg1iEHAQKWuQgtMJGXjACV77pZSmJvDi51IIIfd+DTKICcopJwUx4upVQ4XbA==}
@@ -5756,7 +5720,7 @@ snapshots:
     dependencies:
       hono: 4.12.32
 
-  '@hyperframes/aws-lambda@0.7.84':
+  '@hyperframes/aws-lambda@0.7.101':
     dependencies:
       '@aws-sdk/client-s3': 3.1103.0
       '@aws-sdk/client-sfn': 3.1106.0
@@ -5764,7 +5728,7 @@ snapshots:
       '@sparticuz/chromium': 148.0.0
       ffmpeg-static: 5.3.0
       ffprobe-static: 3.1.0
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
       tar: 7.5.22
     transitivePeerDependencies:
       - bare-abort-controller
@@ -5799,7 +5763,7 @@ snapshots:
       hono: 4.12.32
       linkedom: 0.18.13
       puppeteer: 25.5.0
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
     transitivePeerDependencies:
       - bufferutil
       - canvas
@@ -5851,7 +5815,7 @@ snapshots:
       linkedom: 0.18.13
       postcss: 8.5.25
       puppeteer: 25.5.0
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
       wawoff2: 2.0.1
     transitivePeerDependencies:
       - bufferutil
@@ -6013,11 +5977,6 @@ snapshots:
   '@protobufjs/pool@1.1.0': {}
 
   '@protobufjs/utf8@1.1.2': {}
-
-  '@puppeteer/browsers@3.0.6':
-    dependencies:
-      modern-tar: 0.7.7
-      yargs: 18.1.0
 
   '@puppeteer/browsers@3.1.0':
     dependencies:
@@ -6834,10 +6793,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  hyperframes@0.7.84(@types/node@24.10.1):
+  hyperframes@0.7.101(@types/node@24.10.1):
     dependencies:
       '@hono/node-server': 2.0.12(hono@4.12.32)
-      '@puppeteer/browsers': 3.0.6
+      '@puppeteer/browsers': 3.1.0
       adm-zip: 0.6.0
       citty: 0.2.2
       compare-versions: 6.1.1
@@ -6851,7 +6810,7 @@ snapshots:
       open: 10.2.0
       postcss: 8.5.25
       prettier: 3.9.6
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
       sharp: 0.35.3(@types/node@24.10.1)
     optionalDependencies:
       '@google/genai': 1.52.0
@@ -7053,20 +7012,6 @@ snapshots:
     dependencies:
       end-of-stream: 1.4.5
       once: 1.4.0
-
-  puppeteer-core@25.4.0:
-    dependencies:
-      '@puppeteer/browsers': 3.0.6
-      chromium-bidi: 17.0.2(devtools-protocol@0.0.1653615)
-      devtools-protocol: 0.0.1653615
-      typed-query-selector: 2.12.2
-      webdriver-bidi-protocol: 0.4.2
-      ws: 8.21.1
-    transitivePeerDependencies:
-      - bufferutil
-      - proxy-agent
-      - utf-8-validate
-      - yauzl
 
   puppeteer-core@25.5.0:
     dependencies:

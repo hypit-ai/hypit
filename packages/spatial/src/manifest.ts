@@ -18,6 +18,7 @@ import {
 export const spatialModuleRef = { name: "@narratage/spatial", version: "0.0.0-dev" } as const;
 export const spatialSurfaceDigests = {
   canvas: digestOf("@narratage/spatial/canvas-surface@1"),
+  extent: digestOf("@narratage/spatial/extent-surface@1"),
   frame: digestOf("@narratage/spatial/frame-surface@1"),
   anchoredFrame: digestOf("@narratage/spatial/anchored-frame-surface@1"),
   aspectFrame: digestOf("@narratage/spatial/aspect-frame-surface@1"),
@@ -67,6 +68,7 @@ export const spatialManifest: ModuleManifest = {
   capabilities: [],
   surfaces: [
     { name: "canvas", tag: "Canvas", mode: "structured", outputs: [spatialTypes.canvas], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/canvas-surface", digest: spatialSurfaceDigests.canvas } },
+    { name: "extent", tag: "Extent", mode: "structured", outputs: [spatialTypes.extent], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/extent-surface", digest: spatialSurfaceDigests.extent } },
     { name: "frame", tag: "Frame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.frameEdgesProgram], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/frame-surface", digest: spatialSurfaceDigests.frame } },
     { name: "anchored-frame", tag: "AnchoredFrame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.anchoredFrameProgram], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/anchored-frame-surface", digest: spatialSurfaceDigests.anchoredFrame } },
     { name: "aspect-frame", tag: "AspectFrame", mode: "structured", outputs: [spatialTypes.frame, spatialTypes.extent, spatialTypes.aspectFrameProgram], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/spatial/aspect-frame-surface", digest: spatialSurfaceDigests.aspectFrame } },

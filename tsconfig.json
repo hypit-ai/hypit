@@ -204,9 +204,6 @@
       "@narratage/render-hyperframes": [
         "packages/render-hyperframes/src/index.ts"
       ],
-      "@narratage/broll": [
-        "packages/broll/src/index.ts"
-      ],
       "@narratage/film": [
         "packages/film/src/index.ts"
       ],

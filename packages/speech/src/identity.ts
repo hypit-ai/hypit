@@ -1,5 +1,6 @@
 import { isDigest } from "@narratage/protocol";
-import { assertProgramSpaceIdentity } from "@narratage/program-space";
+import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import { assertIntrinsicExtent } from "@narratage/spatial";
 import type { SpeechAudioBasis, SpeechBasis, SpeechDuration, SpeechEvidenceAudio } from "./types.js";
 function assertAudioBlob(value: SpeechBasis["audio"], label: string): void {
   if (value.kind !== "blob" || !isDigest(value.digest) || !Number.isSafeInteger(value.size)
@@ -33,6 +34,40 @@ export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
   if (basis.contract !== "svml.speech-basis@1") throw new Error("Unsupported SpeechBasis contract.");
   assertProgramSpaceIdentity(basis.programSpace);
   assertAudioBlob(basis.audio, "SpeechBasis audio");
+  if (basis.segments.length === 0 || basis.visualTrack.clips.length !== basis.segments.length) {
+    throw new Error("SpeechBasis must pair every Segment with one visual clip.");
+  }
+  let previousEnd = 0;
+  let accumulatedFrames = 0;
+  const frameAt = (seconds: number): number => Math.round(
+    seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator,
+  );
+  for (const [index, segment] of basis.segments.entries()) {
+    const clip = basis.visualTrack.clips[index]!;
+    if (!segment.segmentId || segment.startSec !== previousEnd || !Number.isFinite(segment.endSec)
+      || segment.endSec <= segment.startSec || segment.endSec > basis.programSpace.durationSec) {
+      throw new Error("SpeechBasis Segment is invalid or non-contiguous.");
+    }
+    if (clip.segmentId !== segment.segmentId || clip.artifact.kind !== "blob" || !isDigest(clip.artifact.digest)
+      || !Number.isSafeInteger(clip.artifact.size) || clip.artifact.size < 0
+      || !clip.artifact.mediaType.startsWith("video/")
+      || clip.frameRate.numerator !== basis.programSpace.frameRate.numerator
+      || clip.frameRate.denominator !== basis.programSpace.frameRate.denominator
+      || !Number.isSafeInteger(clip.frameCount) || clip.frameCount <= 0) {
+      throw new Error(`SpeechBasis visual clip ${clip.segmentId} is invalid.`);
+    }
+    assertIntrinsicExtent(clip.extent);
+    const startFrame = frameAt(segment.startSec);
+    const endFrame = frameAt(segment.endSec);
+    if (startFrame !== accumulatedFrames || endFrame - startFrame !== clip.frameCount) {
+      throw new Error(`SpeechBasis visual clip ${clip.segmentId} does not cover its Segment.`);
+    }
+    accumulatedFrames = endFrame;
+    previousEnd = segment.endSec;
+  }
+  if (accumulatedFrames !== programSpaceFrameCount(basis.programSpace)) {
+    throw new Error("SpeechBasis visuals do not cover ProgramSpace.");
+  }
 }
 export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {
   if (basis.contract !== "svml.speech-audio-basis@1") throw new Error("Unsupported SpeechAudioBasis contract.");

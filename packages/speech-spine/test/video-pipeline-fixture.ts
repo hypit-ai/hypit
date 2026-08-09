@@ -41,6 +41,7 @@ import type {
   ValueSchema,
 } from "@narratage/protocol";
 import { resolveRealization, sealRealizationOverlay } from "@narratage/run";
+import { spatialTypes, spatialValidatorDigests } from "@narratage/spatial";
 import {
   captionCorrespondence,
   captionDisplaySequence,
@@ -50,6 +51,7 @@ import {
 import { speechAlignmentManifest } from "@narratage/speech-alignment";
 import { speechBasisManifest, speechBasisProjectionFragment } from "@narratage/speech-basis";
 import { mediaPipelineManifest } from "@narratage/media-pipeline";
+import { mediaTrackManifest } from "@narratage/media-track";
 import {
   whisperXManifest,
   whisperXSpeechAlignmentFragment,
@@ -262,6 +264,7 @@ export type VideoOutputName = keyof typeof videoOutputs;
 export const videoClosure = createResolvedClosure([
   ...videoContractManifests,
   videoManifest,
+  mediaTrackManifest,
   speechBasisManifest,
   mediaPipelineManifest,
   whisperXManifest,
@@ -324,10 +327,33 @@ function authorProgram(): LinkedProgram {
       validatorDigest: captionValidatorDigests.plan,
     }) },
   ];
+  const rawCanvas = sealRecord({
+    id: "canvas:vertical",
+    type: spatialTypes.canvas,
+    value: { kind: "inline", value: {
+      contract: "svml.canvas-space@1",
+      widthPx: 720,
+      heightPx: 1280,
+      origin: "top-left",
+      xDirection: "right",
+      yDirection: "down",
+      pixelAspect: "square",
+    } },
+    conformance: "exact",
+    origin,
+  });
+  const canvas = {
+    ...rawCanvas,
+    validation: sealTypeValidationReceipt({
+      type: rawCanvas.type,
+      recordDigest: rawCanvas.digest,
+      validatorDigest: spatialValidatorDigests.canvas,
+    }),
+  };
   return link(videoClosure, [sealTypedModule({
     id: "author:video-pipeline",
     closureDigest: videoClosure.digest,
-    records: [narrative, ...captionRecords],
+    records: [narrative, canvas, ...captionRecords],
   })]);
 }
 
@@ -349,7 +375,10 @@ export function createVideoGraph(program: LinkedProgram): CompiledGraph {
   const projections = elaborateGraphFragment(program, speechBasisProjectionFragment, {
     id: "opening.take-projections",
     fragment: speechBasisProjectionFragment.id,
-    inputs: { basis: { kind: "logical-output", id: videoOutputs.take } },
+    inputs: {
+      basis: { kind: "logical-output", id: videoOutputs.take },
+      canvas: { kind: "record", id: "canvas:vertical" },
+    },
   });
   const alignment = elaborateGraphFragment(program, whisperXSpeechAlignmentFragment, {
     id: "opening.whisperx-alignment",

@@ -18,10 +18,12 @@ export {
   mediaPipelineTypes,
   audioProgramPlanSchema,
   mediaSelectionRequestSchema,
+  synchronizedMediaSurfaceImplementationDigest,
 } from "./manifest.js";
 export {
   sealMediaSelectionRequest,
   selectMediaStreams,
   verifyMediaSelectionRequest,
 } from "./selection.js";
+export { decodeSynchronizedMediaSurface } from "./surface.js";
 export type * from "./types.js";

@@ -1,11 +1,11 @@
 ---
 title: SVS 样式表
-description: SVS Recipe 语言——用于影片、字幕、B-roll、文本及生成设置的类 CSS 样式表。
+description: SVS Recipe 语言——用于影片、字幕、媒体、文本及生成设置的类 CSS 样式表。
 ---
 
 # SVS 样式表
 
-SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片尺寸、字幕外观、B-roll 布局、文本样式、语音估算参数、生成设置和字体选择。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
+SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片外观、字幕外观、Media 呈现与运动、文本样式、语音估算参数、生成设置和字体选择。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
 
 ## 基本语法
 
@@ -149,41 +149,58 @@ caption.bob {
 </caption:Program>
 ```
 
-## B-roll
+## Media Track
 
-B-roll 项目外观——位置、适配方式、容器以及进入/退出动画。
+Media 将空间位置、框呈现与生命周期运动分开。`SpatialFrame` 负责位置和尺寸；外观 Recipe
+负责素材适配与框材质；可选的 motion Recipe 负责入场、持续和退场。
 
 ```svs
-broll.product {
+media.product {
   stack-order: 40;
-  x: 0.08;
-  y: 0.20;
-  width: 0.84;
-  height: 0.48;
   fit: contain;
-  background: #111116;
+  playback: hold-start;
+  frame-paint: #111116;
+  clip: rounded;
   radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
+  padding: 0;
+  border-width: 1;
+  border-style: solid;
+  border-color: #FFFFFF20;
+  shadows: 0 10 24 0 #00000066;
+}
+
+motion.product {
+  enter: slide;
+  enter-frames: 8;
+  enter-direction: up;
+  enter-easing: ease-out;
+  exit: fade;
+  exit-frames: 6;
+  exit-easing: ease-in;
 }
 ```
 
 | 属性 | 描述 |
 |---|---|
 | `stack-order` | Z 轴层叠顺序 |
-| `x`、`y` | 位置，以画布比例表示 |
-| `width`、`height` | 尺寸，以画布比例表示 |
-| `fit` | 源内容适配容器的方式：`cover`、`contain` |
-| `background` | 容器背景颜色 |
-| `radius` | 容器圆角半径 |
-| `enter` | 进入动画：`slide-up Nf`、`fade Nf`（N = 帧数） |
-| `exit` | 退出动画：`fade Nf`、`slide-down Nf` |
+| `fit` | `contain`、`cover`、`fit-width`、`fit-height`、`native`、`scale-down` 或 `stretch` |
+| `frame-x`、`frame-y` | 放置 Frame 内的对齐点 |
+| `content-x`、`content-y` | 素材内部独立选择的焦点 |
+| `playback` | `once-start`、`hold-start`、`loop-end`、`stretch` 等有时长素材占用方式 |
+| `frame-paint` | 采样素材背后的纯色或渐变 Paint |
+| `clip`、`radius`、`padding` | 框裁切与内缩 |
+| `border-*`、`shadows` | 框自有的边框与有序阴影 |
+| `enter`、`exit` | 生命周期算子；帧数、缓动和方向使用独立属性 |
+| `sustain` | 零个或多个确定性局部运动，例如 `float 12 2 up` |
 
-通过 `broll:Item` 的 `appearance` 属性引用：
+位置始终是一条显式图边：
 
 ```svml
-<broll:Item source={motion.video} during={story.selection.demo}
-  appearance={studio.broll.product}/>
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+<media-track:Item source={product-media.media}
+  during={story.selection.demo} frame={product-frame}
+  appearance={studio.media.product} motion={studio.motion.product}/>
 ```
 
 ## 文本

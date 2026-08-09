@@ -2,7 +2,17 @@ import type { FontArtifactRef } from "@narratage/media";
 import { programSpaceFrameCount } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertCompositionIdentity } from "@narratage/composition";
-import type { Composition, Track, VisualAttribute, VisualElement, VisualPresent, VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
+import type {
+  Composition,
+  Track,
+  VisualAttribute,
+  VisualElement,
+  VisualPresent,
+  VisualSamplingRational,
+  VisualSamplingSegment,
+  VisualStyleDeclaration,
+  VisualTrack,
+} from "@narratage/composition";
 import { digestOf, isDigest } from "@narratage/protocol";
 import type { BlobRef, Digest } from "@narratage/protocol";
 import { VISUAL_IR_V1 } from "@narratage/visual-ir";
@@ -46,6 +56,108 @@ function fpsDecimal(numerator: number, denominator: number): string {
 
 function fpsRational(numerator: number, denominator: number): string {
   return denominator === 1 ? String(numerator) : `${numerator}/${denominator}`;
+}
+
+function rationalDecimal(numerator: bigint, denominator: bigint): string {
+  if (denominator <= 0n) throw new Error("HyperFrames rational denominator must be positive.");
+  const scale = 1_000_000_000_000n;
+  const scaled = numerator * scale / denominator;
+  const whole = scaled / scale;
+  const remainder = scaled % scale;
+  if (remainder === 0n) return String(whole);
+  return `${whole}.${String(remainder).padStart(12, "0").replace(/0+$/u, "")}`;
+}
+
+function sourceSeconds(frame: VisualSamplingRational, frameRate: VisualSamplingRational): string {
+  return rationalDecimal(
+    BigInt(frame.numerator) * BigInt(frameRate.denominator),
+    BigInt(frame.denominator) * BigInt(frameRate.numerator),
+  );
+}
+
+function sourcePosition(segment: VisualSamplingSegment, offset: number): {
+  readonly position: VisualSamplingRational;
+  readonly cycle: bigint;
+} {
+  const denominator = BigInt(segment.sourceFrame.denominator) * BigInt(segment.rate.denominator);
+  const raw = BigInt(segment.sourceFrame.numerator) * BigInt(segment.rate.denominator)
+    + BigInt(offset) * BigInt(segment.rate.numerator) * BigInt(segment.sourceFrame.denominator);
+  if (segment.loop === undefined) {
+    if (raw < 0n || raw > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error("HyperFrames visual sampling exceeds safe arithmetic.");
+    }
+    return { position: { numerator: Number(raw), denominator: Number(denominator) }, cycle: 0n };
+  }
+  const start = BigInt(segment.loop.startFrame) * denominator;
+  const length = BigInt(segment.loop.endFrameExclusive - segment.loop.startFrame) * denominator;
+  const delta = raw - start;
+  const cycle = delta / length;
+  const wrapped = ((delta % length) + length) % length;
+  const numerator = start + wrapped;
+  if (numerator > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error("HyperFrames visual sampling exceeds safe arithmetic.");
+  }
+  return { position: { numerator: Number(numerator), denominator: Number(denominator) }, cycle };
+}
+
+function samplingRuns(segment: VisualSamplingSegment): Array<{
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
+  readonly sourceFrame: VisualSamplingRational;
+}> {
+  const length = segment.target.endFrameExclusive - segment.target.startFrame;
+  const runs: Array<{ startFrame: number; endFrameExclusive: number; sourceFrame: VisualSamplingRational }> = [];
+  // HyperFrames and HTMLMediaElement require a positive playback rate. A held
+  // visual frame is therefore represented as one independently addressed
+  // target-frame clip per Program frame. Every clip starts at the same exact
+  // source position; no browser-specific zero-rate behavior is assumed.
+  if (segment.rate.numerator === 0) {
+    const source = sourcePosition(segment, 0).position;
+    for (let offset = 0; offset < length; offset += 1) {
+      runs.push({
+        startFrame: segment.target.startFrame + offset,
+        endFrameExclusive: segment.target.startFrame + offset + 1,
+        sourceFrame: source,
+      });
+    }
+    return runs;
+  }
+  let runStart = 0;
+  let runSource = sourcePosition(segment, 0);
+  for (let offset = 1; offset < length; offset += 1) {
+    const next = sourcePosition(segment, offset);
+    if (next.cycle !== runSource.cycle) {
+      runs.push({
+        startFrame: segment.target.startFrame + runStart,
+        endFrameExclusive: segment.target.startFrame + offset,
+        sourceFrame: runSource.position,
+      });
+      runStart = offset;
+      runSource = next;
+    }
+  }
+  runs.push({
+    startFrame: segment.target.startFrame + runStart,
+    endFrameExclusive: segment.target.endFrameExclusive,
+    sourceFrame: runSource.position,
+  });
+  return runs;
+}
+
+function sampledPlaybackRate(
+  rate: VisualSamplingRational,
+  sourceFrameRate: VisualSamplingRational,
+  programNumerator: number,
+  programDenominator: number,
+): string {
+  // Zero-rate segments have already been split into one-frame clips above.
+  // Their media clock may advance inside that single frame, while every
+  // independently rendered target frame still starts at the exact held source.
+  if (rate.numerator === 0) return "1";
+  return rationalDecimal(
+    BigInt(rate.numerator) * BigInt(programNumerator) * BigInt(sourceFrameRate.denominator),
+    BigInt(rate.denominator) * BigInt(programDenominator) * BigInt(sourceFrameRate.numerator),
+  );
 }
 
 function percentage(frame: number, totalFrames: number): string {
@@ -97,6 +209,9 @@ function renderElement(
     readonly presentId: string;
     readonly presentStart: string;
     readonly presentDuration: string;
+    readonly presentStartFrame: number;
+    readonly programNumerator: number;
+    readonly programDenominator: number;
     readonly stackIndex: number;
   },
 ): string {
@@ -111,6 +226,11 @@ function renderElement(
       `animation-name:${animationName}`,
       `animation-duration:${context.presentDuration}s`,
       "animation-fill-mode:both",
+      // An independently launched render worker may begin at any frame. Keep
+      // CSS animations inert from first paint so HyperFrames' exact seek is
+      // the only clock; otherwise page-load time leaks into the first frame of
+      // each partition before the runtime pauses the animation.
+      "animation-play-state:paused",
       "animation-timing-function:linear",
     ]),
   ].filter(Boolean).join(";");
@@ -120,6 +240,40 @@ function renderElement(
     .join("");
   if (element.kind === "box") return `<div ${common}>${descendants}</div>`;
   if (element.kind === "text") return `<div ${common}>${escapeHtml(element.text)}${descendants}</div>`;
+  if ((element.kind === "video" || element.kind === "surface") && element.sampling !== undefined) {
+    const artifact = element.kind === "surface" ? element.surface.artifact : element.artifact;
+    const source = escapeHtml(hyperframesArtifactUri(artifact.digest));
+    let part = 0;
+    return element.sampling.segments.flatMap((segment) => samplingRuns(segment).map((run) => {
+      part += 1;
+      const startFrame = context.presentStartFrame + run.startFrame;
+      const durationFrames = run.endFrameExclusive - run.startFrame;
+      const partId = `${id}-sample-${String(part).padStart(4, "0")}`;
+      const media = [
+        `id="${partId}"`,
+        `data-svml-element-id="${escapeHtml(element.id)}"`,
+        `data-svml-sampling-part="${part}"`,
+        `data-start="${frameSeconds(startFrame, context.programNumerator, context.programDenominator)}"`,
+        `data-duration="${frameSeconds(durationFrames, context.programNumerator, context.programDenominator)}"`,
+        `data-track-index="${context.stackIndex}"`,
+        `data-media-start="${sourceSeconds(run.sourceFrame, element.sampling!.sourceFrameRate)}"`,
+        `data-playback-rate="${sampledPlaybackRate(segment.rate, element.sampling!.sourceFrameRate, context.programNumerator, context.programDenominator)}"`,
+        `data-svml-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
+        `data-svml-source-rate="${segment.rate.numerator}/${segment.rate.denominator}"`,
+        `style="${escapeHtml(inlineStyle)}"`,
+        attributes(element.attributes).trim(),
+        "muted",
+        "playsinline",
+        ...(element.kind === "surface" ? [
+          `data-svml-alpha-mode="${element.surface.alphaMode}"`,
+          `data-svml-color-space="${element.surface.colorSpace}"`,
+          `width="${element.surface.width}"`,
+          `height="${element.surface.height}"`,
+        ] : []),
+      ].filter(Boolean).join(" ");
+      return `<video ${media} src="${source}"></video>`;
+    })).join("");
+  }
   if (element.kind === "surface") {
     const source = escapeHtml(hyperframesArtifactUri(element.surface.artifact.digest));
     const surface = [
@@ -173,6 +327,9 @@ function renderVisualPresent(
     presentId: present.id,
     presentStart: start,
     presentDuration: duration,
+    presentStartFrame: present.span.startFrame,
+    programNumerator: numerator,
+    programDenominator: denominator,
     stackIndex,
   });
   return `<div class="clip svml-visual-present" data-svml-track-id="${escapeHtml(track.id)}" data-svml-present-id="${escapeHtml(present.id)}" data-svml-stack-order="${present.stacking.order}" data-svml-stack-tie="${escapeHtml(present.stacking.tieBreak)}" data-track-index="${stackIndex}" data-start="${start}" data-duration="${duration}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${contents}</div>`;
@@ -294,6 +451,17 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
   <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-svml-frame-count="${frameCount}">
     ${visualHtml}
   </div>
+  <script>
+    window.addEventListener("hf-seek", (event) => {
+      // HyperFrames 0.7.101 exposes a per-seek readiness barrier. One browser
+      // task gives Chromium's compositor the same commit opportunity even
+      // when this worker begins at a non-zero frame, so partition boundaries
+      // cannot leak first-paint state into captured pixels.
+      if (event && event.detail && typeof event.detail.waitUntil === "function") {
+        event.detail.waitUntil(new Promise((resolve) => setTimeout(resolve, 16)));
+      }
+    });
+  </script>
 </body>
 </html>
 `;

@@ -5,7 +5,7 @@ Status: executable validation gate; not yet a frozen public Track ABI.
 ## Purpose
 
 One public Track contract must solve final audiovisual composition without pretending that every
-author package shares one authoring model. Text, Caption, B-roll, Ranking and future packages own
+author package shares one authoring model. Text, Caption, Media, Ranking and future packages own
 their Programs and may revise those Programs independently. They may enter Composition only after
 lowering their package-specific meanings into self-contained, frame-exact contributions.
 
@@ -128,7 +128,7 @@ the Screen Overlay package. See [`screen-overlay.md`](./screen-overlay.md).
 | explicit media replacement group | Media Sequence | coordinated owned outgoing/incoming Presents |
 | visible card history and depth reflow | Depth-Stack Deck Track | package-owned collection state over ordinary Presents |
 | Ranking board and icons at unrelated z | Ranking Program | several absolute-stack Presents |
-| B-roll enter/exit and pair transition | B-roll Program | local frame-exact keyframes over owned Presents |
+| Media enter/exit and pair transition | Media Program | local frame-exact keyframes over owned Presents |
 | arbitrary self-contained visual | component/provider | materialized compositable Surface Artifact |
 | music/SFX/additional voice placement | Audio Program | ordinary frame-exact AudioTrack clips |
 | flash/vignette/grain/veil | Screen Overlay Program | owned full-canvas Presents or alpha Surface |
@@ -137,8 +137,8 @@ the Screen Overlay package. See [`screen-overlay.md`](./screen-overlay.md).
 ## Current executable evidence
 
 `packages/hyperframes/test/track-expressiveness.test.ts` constructs package-private lowering
-witnesses rather than adding Text, Caption, B-roll or Ranking fields to public contracts. Existing
-package tests separately prove ordinary Text, Caption and B-roll Programs lower through the same
+witnesses rather than adding Text, Caption, Media or Ranking fields to public contracts. Existing
+package tests separately prove ordinary Text, Caption and Media Programs lower through the same
 Track and Composition path.
 
 The current `VisualTrack / VisualPresent / VisualElement` candidate explicitly binds
@@ -167,7 +167,7 @@ property, environment-dependent value or alternate browser language without chan
 version. The candidate is intentionally still not frozen. Unbound text remains temporarily legal for
 candidate-era package migration, and a production Runtime still needs to bind its exact renderer
 implementation and validate that Surface bytes satisfy the declared metadata. Those remaining
-facts must stay generic; they must not be patched with Caption-, Text- or B-roll-specific fields.
+facts must stay generic; they must not be patched with Caption-, Text- or Media-specific fields.
 
 E7 and E8 now have their official package witnesses. `@narratage/audio-track` proves the exact
 48 kHz source/target mapping, overlap law, bounded stretch and one shared local/remote
@@ -185,7 +185,7 @@ Track v1 may be called a stable public waist only when all of the following hold
 3. E6 has a typed compositable-Surface path whose Runtime validates the declared media facts and
    records the renderer implementation;
 4. installing a new Track package requires no Core, Film, Composition or family registry change;
-5. public Track data contains no Caption, Text, B-roll, Ranking or provider discriminator;
+5. public Track data contains no Caption, Text, Media, Ranking or provider discriminator;
 6. a package can revise its Program schema while preserving or versioning only its own lowerer;
 7. unsupported cross-Track sampling fails closed.
 

@@ -59,7 +59,7 @@ pnpm narratage plan examples/talking-film-graph-check/build.svrun \
 | [SVS 样式表](./quickstart/styles.md) | CSS 风格的 Recipe：film、caption、B-roll、text、speech、字体 |
 | [媒体与生成](./quickstart/generation.md) | media:Image、media:Audio、estimate:Speech、Seedance、speaker:Take |
 | [时序与装配](./quickstart/timing.md) | speech:Spine、whisperx:Alignment、ProgramSpace、SemanticMap |
-| [字幕、B-roll 与文字](./quickstart/tracks.md) | caption-fine:Style/Track、caption:Program、Planner、B-roll 与 Text |
+| [字幕、Media 与文字](./quickstart/tracks.md) | caption-fine:Style/Track、caption:Program、Planner、Media Track 与 Text |
 | [Film 与渲染](./quickstart/composition.md) | film:Film、render:Video、完整流水线演练 |
 | [Run Source 与 Build](./quickstart/run.md) | .svrun 语法、targets、复用、runtime profile、build 工作流 |
 
