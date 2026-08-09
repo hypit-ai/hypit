@@ -9,6 +9,7 @@ import { deflateSync } from "node:zlib";
 import { resolveCaptionProgram } from "@narratage/caption";
 import type { TimedCaptionProjection } from "@narratage/caption";
 import { fineCaptionStyle, renderFineCaption } from "@narratage/caption-fine";
+import { decodeOpenFontFaceSurface } from "@narratage/fonts-open";
 import type { FontArtifactRef } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealComposition, sealVisualTrack } from "@narratage/composition";
@@ -24,15 +25,47 @@ import type { SvsRecipe } from "@narratage/svs";
 const enabled = process.env.SVML_BROWSER_TESTS === "1";
 const localFont = process.env.SVML_TEST_FONT_PATH
   ?? (process.platform === "darwin" ? "/System/Library/Fonts/SFNSMono.ttf" : undefined);
-const cjkFont = process.env.SVML_TEST_CJK_FONT_PATH
-  ?? (process.platform === "darwin" ? "/System/Library/Fonts/Supplemental/Arial Unicode.ttf" : undefined);
-const emojiFont = process.env.SVML_TEST_EMOJI_FONT_PATH
-  ?? (process.platform === "darwin" ? "/System/Library/Fonts/Apple Symbols.ttf" : undefined);
 const hyperframesCli = createRequire(path.join(process.cwd(), "packages/provider-hyperframes-local/package.json"))
   .resolve("hyperframes/bin/hyperframes.mjs");
 
 function digest(bytes: Uint8Array): Digest {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}` as Digest;
+}
+
+async function installedOpenFont(
+  family: string,
+  weight: number,
+  style: "normal" | "italic",
+): Promise<{ readonly font: FontArtifactRef; readonly bytes: ReadonlyMap<Digest, Uint8Array> }> {
+  const bytes = new Map<Digest, Uint8Array>();
+  const output = await decodeOpenFontFaceSurface({
+    sourceName: "browser-visual.svml",
+    element: {
+      kind: "element",
+      name: "fonts:Face",
+      attributes: { id: `${family}-${weight}-${style}`, family, weight: String(weight), style },
+      children: [],
+      range: { start: 0, end: 1 },
+    },
+    resolveReference: () => undefined,
+    resolveAsset(request) {
+      assert(request.bytes !== undefined);
+      const copy = Uint8Array.from(request.bytes);
+      const artifactDigest = digest(copy);
+      bytes.set(artifactDigest, copy);
+      return {
+        artifact: {
+          kind: "blob",
+          digest: artifactDigest,
+          size: copy.byteLength,
+          mediaType: request.mediaType,
+        },
+      };
+    },
+  });
+  const stored = output.records[0]?.value;
+  assert(stored?.kind === "inline");
+  return { font: stored.value as FontArtifactRef, bytes };
 }
 
 function crc32(bytes: Uint8Array): number {
@@ -159,7 +192,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     const surfaceDigest = digest(surfaceBytes);
     const font: FontArtifactRef = {
       contract: "svml.font-artifact@1",
-      artifact: { kind: "blob", digest: fontDigest, size: fontBytes.byteLength, mediaType: "font/ttf" },
+      sources: [{ artifact: { kind: "blob", digest: fontDigest, size: fontBytes.byteLength, mediaType: "font/ttf" } }],
       weight: 400,
       style: "normal",
     };
@@ -317,7 +350,7 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
     const fontBytes = await import("node:fs/promises").then(({ readFile }) => readFile(localFont));
     const font: FontArtifactRef = {
       contract: "svml.font-artifact@1",
-      artifact: { kind: "blob", digest: digest(fontBytes), size: fontBytes.byteLength, mediaType: "font/ttf" },
+      sources: [{ artifact: { kind: "blob", digest: digest(fontBytes), size: fontBytes.byteLength, mediaType: "font/ttf" } }],
       weight: 400,
       style: "normal",
     };
@@ -366,10 +399,10 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
       canvas: { width, height, clearColor: "#000000" },
       tracks,
     }), space);
-    assert.deepEqual(document.artifacts, [font.artifact]);
+    assert.deepEqual(document.artifacts, [font.sources[0]!.artifact]);
     await copyFile(localFont, path.join(temp, "caption.ttf"));
     await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
-      if (artifact.digest === font.artifact.digest) return "./caption.ttf";
+      if (artifact.digest === font.sources[0]!.artifact.digest) return "./caption.ttf";
       throw new Error(`Unexpected Fine Caption visual-test Artifact ${artifact.digest}`);
     }));
     const output = path.join(temp, "frames");
@@ -396,11 +429,10 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
   }
 });
 
-test("Fine Caption exact fallbacks render CJK, emoji and independent stroke, shadow and glow Paint", {
-  skip: !enabled || localFont === undefined || cjkFont === undefined || emojiFont === undefined,
+test("installed open fonts render CJK, emoji and independent stroke, shadow and glow Paint", {
+  skip: !enabled,
   timeout: 120_000,
 }, async () => {
-  assert(localFont !== undefined && cjkFont !== undefined && emojiFont !== undefined);
   const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-multilingual-"));
   try {
     const width = 720;
@@ -411,20 +443,19 @@ test("Fine Caption exact fallbacks render CJK, emoji and independent stroke, sha
       durationSec,
       frameRate: { numerator: 30, denominator: 1 },
     });
-    const fontPaths = [localFont, cjkFont, emojiFont] as const;
-    const fontBytes = await Promise.all(fontPaths.map(async (file) =>
-      await import("node:fs/promises").then(({ readFile }) => readFile(file))));
-    const fonts: FontArtifactRef[] = fontBytes.map((bytes) => ({
-      contract: "svml.font-artifact@1",
-      artifact: { kind: "blob", digest: digest(bytes), size: bytes.byteLength, mediaType: "font/ttf" },
-      weight: 400,
-      style: "normal",
-    }));
+    const installed = await Promise.all([
+      installedOpenFont("inter", 700, "normal"),
+      installedOpenFont("noto-sans-sc", 700, "normal"),
+      installedOpenFont("noto-emoji", 400, "normal"),
+    ]);
+    const fonts = installed.map(({ font }) => font);
+    const fontBytes = new Map<Digest, Uint8Array>();
+    for (const face of installed) for (const [artifactDigest, bytes] of face.bytes) fontBytes.set(artifactDigest, bytes);
     const base = {
       "cue-min-words": 1, "cue-max-words": 8,
       "stack-order": 20, width: 0.4,
       "anchor-x": "center", "anchor-y": "center",
-      font: "Exact Multilingual Stack", weight: 400, size: 72, "line-height": 1,
+      font: "Exact Multilingual Stack", weight: 700, size: 72, "line-height": 1,
       align: "center", fill: "#FFFFFF",
       background: "#00000000", padding: "0 0", radius: 0,
     } as const;
@@ -473,11 +504,14 @@ test("Fine Caption exact fallbacks render CJK, emoji and independent stroke, sha
     }), space);
     assert.deepEqual(
       new Set(document.artifacts.map((artifact) => artifact.digest)),
-      new Set(fonts.map((font) => font.artifact.digest)),
+      new Set(fonts.flatMap((font) => font.sources.map((source) => source.artifact.digest))),
     );
-    const names = ["latin.ttf", "cjk.ttf", "emoji.ttf"] as const;
-    await Promise.all(fontPaths.map(async (file, index) => await copyFile(file, path.join(temp, names[index]!))));
-    const paths = new Map(fonts.map((font, index) => [font.artifact.digest, `./${names[index]!}`]));
+    const paths = new Map<Digest, string>();
+    await Promise.all([...fontBytes].map(async ([artifactDigest, bytes], index) => {
+      const name = `font-${index}.woff2`;
+      await writeFile(path.join(temp, name), bytes);
+      paths.set(artifactDigest, `./${name}`);
+    }));
     await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
       const materialized = paths.get(artifact.digest);
       if (materialized === undefined) throw new Error(`Unexpected multilingual Artifact ${artifact.digest}`);

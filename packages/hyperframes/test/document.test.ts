@@ -190,12 +190,12 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   });
   const font: FontArtifactRef = {
     contract: "svml.font-artifact@1",
-    artifact: {
+    sources: [{ artifact: {
       kind: "blob",
       digest: digestOf("hyperframes:font"),
       size: 1_024,
       mediaType: "font/woff2",
-    },
+    } }],
     weight: 700,
     style: "normal",
   };
@@ -249,7 +249,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     tracks: [track],
   }), space);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [font.artifact.digest, surfaceDigest].sort());
+  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [font.sources[0]!.artifact.digest, surfaceDigest].sort());
   assert.match(document.html, /@font-face\{/u);
   assert.match(document.html, /format\("woff2"\)/u);
   assert.match(document.html, /font-synthesis:none/u);
@@ -258,6 +258,6 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   const materialized = materializeHyperframesHtml(document,
     (artifact) => `https://assets.example/${artifact.digest}?token=1&part=2`);
   assert.doesNotMatch(materialized, /svml-artifact:\/\//u);
-  assert.match(materialized, new RegExp(font.artifact.digest, "u"));
+  assert.match(materialized, new RegExp(font.sources[0]!.artifact.digest, "u"));
   assert.match(materialized, new RegExp(surfaceDigest, "u"));
 });

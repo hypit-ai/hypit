@@ -6,6 +6,7 @@ import caption from "../../caption/src/activation.js";
 import composition from "../../composition/src/activation.js";
 import estimate from "../../estimate/src/activation.js";
 import film from "../../film/src/activation.js";
+import fontsOpen from "../../fonts-open/src/activation.js";
 import generation from "../../generation/src/activation.js";
 import renderHyperframes from "../../render-hyperframes/src/activation.js";
 import hyperframes from "../../hyperframes/src/activation.js";
@@ -43,6 +44,7 @@ export const videoTestPackages = [
   svs,
   script,
   estimate,
+  fontsOpen,
   promptKit,
   generation,
   seedance,

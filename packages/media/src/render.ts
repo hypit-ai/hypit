@@ -16,7 +16,11 @@ const ALPHA_SURFACE_MEDIA_TYPES = new Set([
 
 export type FontArtifactRef = {
   readonly contract: "svml.font-artifact@1";
-  readonly artifact: BlobRef;
+  /** One logical face may be split into independently addressed Unicode-range sources. */
+  readonly sources: readonly {
+    readonly artifact: BlobRef;
+    readonly unicodeRange?: string;
+  }[];
   readonly weight: number;
   readonly style: "normal" | "italic" | "oblique";
 };
@@ -54,9 +58,19 @@ function assertBlobRef(value: BlobRef, label: string): void {
 
 export function assertFontArtifactRef(value: FontArtifactRef, label = "FontArtifactRef"): void {
   if (value.contract !== "svml.font-artifact@1") throw new Error(`${label} contract is unsupported.`);
-  assertBlobRef(value.artifact, label);
-  if (!FONT_MEDIA_TYPES.has(value.artifact.mediaType)) {
-    throw new Error(`${label} Artifact must use a supported font media type.`);
+  if (!Array.isArray(value.sources) || value.sources.length === 0) throw new Error(`${label} sources are empty.`);
+  const artifacts = new Set<string>();
+  for (const [index, source] of value.sources.entries()) {
+    assertBlobRef(source.artifact, `${label}.sources.${index}`);
+    if (!FONT_MEDIA_TYPES.has(source.artifact.mediaType)) {
+      throw new Error(`${label}.sources.${index} Artifact must use a supported font media type.`);
+    }
+    if (artifacts.has(source.artifact.digest)) throw new Error(`${label} repeats a source Artifact.`);
+    artifacts.add(source.artifact.digest);
+    if (source.unicodeRange !== undefined
+      && !/^U\+[0-9a-f?]{1,6}(?:-[0-9a-f]{1,6})?(?:,U\+[0-9a-f?]{1,6}(?:-[0-9a-f]{1,6})?)*$/iu.test(source.unicodeRange)) {
+      throw new Error(`${label}.sources.${index} Unicode range is invalid.`);
+    }
   }
   if (!Number.isSafeInteger(value.weight) || value.weight < 1 || value.weight > 1_000) {
     throw new Error(`${label} weight is invalid.`);

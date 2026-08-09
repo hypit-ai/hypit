@@ -34,7 +34,7 @@ const recipe: SvsRecipe = {
 
 const exactFont: FontArtifactRef = {
   contract: "svml.font-artifact@1",
-  artifact: { kind: "blob", digest: digestOf("caption-fine:test-font"), size: 1_024, mediaType: "font/woff2" },
+  sources: [{ artifact: { kind: "blob", digest: digestOf("caption-fine:test-font"), size: 1_024, mediaType: "font/woff2" } }],
   weight: 800,
   style: "normal",
 };
@@ -230,15 +230,16 @@ test("an exact Font is explicit Style input and reaches every base and active gl
   assert.throws(() => fineCaptionStyle("mismatch", recipe, [{ ...exactFont, weight: 700 }]), /must match/u);
 });
 
-test("an ordered exact Font stack is preserved and rejects incompatible or duplicate fallbacks", () => {
+test("an ordered exact Font stack preserves honest fallback faces and rejects duplicates", () => {
   const fallback: FontArtifactRef = {
     ...exactFont,
-    artifact: { ...exactFont.artifact, digest: digestOf("caption-fine:test-fallback") },
+    sources: [{ artifact: { ...exactFont.sources[0]!.artifact, digest: digestOf("caption-fine:test-fallback") } }],
+    weight: 400,
   };
   const parameters = fineCaptionParameters(recipe, [exactFont, fallback]);
   assert.deepEqual(parameters.typography.exactFonts, [exactFont, fallback]);
   assert.throws(() => fineCaptionParameters(recipe, [exactFont, exactFont]), /duplicate face/u);
-  assert.throws(() => fineCaptionParameters(recipe, [exactFont, { ...fallback, style: "italic" }]), /must match/u);
+  assert.doesNotThrow(() => fineCaptionParameters(recipe, [exactFont, { ...fallback, style: "italic" }]));
 });
 
 test("current/trail by step/wipe have four distinct frame-exact Atom histories", () => {
