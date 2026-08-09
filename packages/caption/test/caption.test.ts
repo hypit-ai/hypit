@@ -3,14 +3,18 @@ import test from "node:test";
 
 import {
   assertCaptionPlanForProgram,
+  captionTypes,
+  decodeCaptionProgramSurface,
   resolveCaptionProgram,
   sealCaptionPlan,
   sealCaptionStyle,
   temporalizeCaptionPlan,
 } from "@narratage/caption";
 import type { CaptionFieldDeclaration, CaptionStyleIntent } from "@narratage/caption";
-import type { Narrative } from "@narratage/narrative";
-import { digestOf } from "@narratage/protocol";
+import { narrativeTypes } from "@narratage/narrative";
+import type { CaptionDisplayWordSubset, Narrative } from "@narratage/narrative";
+import { canonicalize, digestOf, recordDigest } from "@narratage/protocol";
+import type { StoredValue, TypeRef } from "@narratage/protocol";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealSpeechBasis } from "@narratage/speech";
 import type { SpeechAudioBasis } from "@narratage/speech";
@@ -23,6 +27,7 @@ import {
   captionSelectionWordSubset,
   parseScript,
 } from "@narratage/script";
+import type { StructuredElement, SurfaceResolvedReference } from "@narratage/text";
 
 function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
   const space = sealProgramSpace({
@@ -108,6 +113,137 @@ test("Selection and Role project to ordered whole-Atom display-word subsets", ()
     style: style("alice"),
   }]);
   assert.deepEqual(program.runs.map((run) => run.styleId), ["normal", "alice"]);
+});
+
+test("Caption Mute is an ordered whole-Atom visibility mask and does not change planning runs", () => {
+  const parsed = parseScript("mute.svml", "<line>Keep this hidden phrase visible ending.</line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const mutedWords = [display.words[2]!, display.words[3]!];
+  const program = resolveCaptionProgram(display, "captions", style("normal"), [], [{
+    id: "hide-middle",
+    words: {
+      contract: "svml.caption-display-word-subset@1",
+      id: "selection:hide-middle",
+      sequenceId: display.id,
+      wordIds: mutedWords.map((word) => word.id),
+    },
+  }]);
+
+  assert.deepEqual(program.mutedWordIds, mutedWords.map((word) => word.id));
+  assert.deepEqual(program.runs.flatMap((run) => run.wordIds), display.words.map((word) => word.id));
+});
+
+test("Caption timing applies Mute after planning and preserves the original Cue window", () => {
+  const parsed = parseScript("mute-timing.svml", "<line>Keep this hidden phrase visible.</line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const correspondence = captionCorrespondence(parsed, display.id);
+  const mutedWordIds = [display.words[0]!.id, display.words[2]!.id];
+  const program = resolveCaptionProgram(display, "captions", style("normal"), [], [{
+    id: "hide-disconnected",
+    words: {
+      contract: "svml.caption-display-word-subset@1",
+      id: "selection:hide-disconnected",
+      sequenceId: display.id,
+      wordIds: mutedWordIds,
+    },
+  }]);
+  const plan = sealCaptionPlan({
+    contract: "svml.caption-plan@1",
+    runs: [{
+      id: program.runs[0]!.id,
+      styleId: program.runs[0]!.styleId,
+      cues: [{ id: "cue:1", atomIds: display.atoms.map((atom) => atom.id), fields: [] }],
+    }],
+  });
+  const map = locate(parsed, 2, [{
+    sourceSegmentId: "line",
+    startSec: 0,
+    endSec: 2,
+    words: ["Keep", "this", "hidden", "phrase", "visible"].map((text, index) => ({
+      text,
+      startSec: index * 0.3,
+      endSec: index * 0.3 + 0.2,
+    })),
+    chars: [],
+  }]);
+
+  const projection = temporalizeCaptionPlan(display, correspondence, map, program, plan);
+  assert.equal(plan.runs[0]!.cues[0]!.atomIds.length, display.atoms.length);
+  assert.deepEqual(projection.cues[0]!.atoms.map((atom) => atom.atomId),
+    display.atoms.filter((atom) => !atom.wordIds.some((wordId) => mutedWordIds.includes(wordId)))
+      .map((atom) => atom.id));
+  assert.equal(projection.cues[0]!.startSec, 0);
+  assert.equal(projection.cues[0]!.endSec, 1.4);
+});
+
+test("caption:Program lowers explicit Mute word subsets without a temporal mask", async () => {
+  const parsed = parseScript("mute-surface.svml", "<line>Keep this private phrase hidden.</line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const hidden: CaptionDisplayWordSubset = {
+    contract: "svml.caption-display-word-subset@1",
+    id: "private",
+    sequenceId: display.id,
+    wordIds: display.words.slice(2, 4).map((word) => word.id),
+  };
+  const defaultStyle = style("normal");
+  const resolved = <T,>(path: string, type: TypeRef, value: T): SurfaceResolvedReference => {
+    const stored = { kind: "inline", value: canonicalize(value) } satisfies StoredValue;
+    return {
+      path,
+      ref: { kind: "record", id: path },
+      type,
+      record: {
+        id: path,
+        type,
+        value: stored,
+        digest: recordDigest(type, stored),
+        conformance: "exact",
+        origin: {
+          kind: "authored",
+          sourceDigest: digestOf("caption:mute-surface-source"),
+          frontendClosureDigest: digestOf("caption:mute-surface-frontend"),
+          sourceName: "main.svml",
+        },
+      },
+    };
+  };
+  const references = new Map<string, SurfaceResolvedReference>([
+    ["story.caption", resolved("story.caption", narrativeTypes.captionDisplay, display)],
+    ["story.caption.selection.private", resolved(
+      "story.caption.selection.private",
+      narrativeTypes.captionDisplayWordSubset,
+      hidden,
+    )],
+    ["normal", resolved("normal", captionTypes.style, defaultStyle)],
+  ]);
+  const element: StructuredElement = {
+    kind: "element",
+    name: "caption:Program",
+    attributes: {
+      id: "captions",
+      display: { kind: "reference", path: "story.caption" },
+      default: { kind: "reference", path: "normal" },
+    },
+    children: [{
+      kind: "element",
+      name: "caption:Mute",
+      attributes: { words: { kind: "reference", path: "story.caption.selection.private" } },
+      children: [],
+      range: { start: 10, end: 40 },
+    }],
+    range: { start: 0, end: 50 },
+  };
+  const output = await decodeCaptionProgramSurface({
+    sourceName: "main.svml",
+    element,
+    resolveReference: (path) => references.get(path),
+    resolveAsset: () => { throw new Error("Caption Program does not resolve assets"); },
+  });
+  const value = output.records[0]!.value;
+  assert.equal(value.kind, "inline");
+  assert.deepEqual(value.kind === "inline"
+    ? (value.value as unknown as { mutedWordIds: readonly string[] }).mutedWordIds
+    : [], hidden.wordIds);
 });
 
 test("Caption Plan partitions Atoms and assigns independent fields to display Words", () => {

@@ -1,8 +1,15 @@
 import type { NarrativeSelectionRef } from "@narratage/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
-import { assertCompleteSemanticMapIdentity, assertNarrativeSelectionIdentity, selectionFrameSpans } from "@narratage/semantic-map";
+import { assertCompleteSemanticMapIdentity, assertNarrativeSelectionIdentity } from "@narratage/semantic-map";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import { assertSpatialFrame } from "@narratage/spatial";
+import type { SpatialFrame } from "@narratage/spatial";
+import {
+  assertWindowRelation,
+  projectProgramWindow,
+  projectSelectionWindows,
+} from "@narratage/temporal";
 import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
 import type { VisualStyleDeclaration, VisualTrack } from "@narratage/composition";
 import { canonicalize, digestOf } from "@narratage/protocol";
@@ -39,7 +46,7 @@ function normalizeItem(item: TextItem): TextItem {
     span: { ...item.span },
     z: item.z,
     tieBreak: item.tieBreak,
-    box: { ...item.box },
+    frame: { ...item.frame },
     appearance: { ...item.appearance },
   };
 }
@@ -112,10 +119,7 @@ export function assertTextTrackProgramIdentity(program: TextTrackProgram, progra
     }
     if (!Number.isSafeInteger(item.z)) throw new Error(`${item.id} z must be a safe integer.`);
     assertNonEmpty(item.tieBreak, `${item.id} tieBreak`);
-    for (const [name, value] of Object.entries(item.box)) assertFinite(value, `${item.id} box.${name}`);
-    if (item.box.widthPercent <= 0 || item.box.heightPercent <= 0) {
-      throw new Error(`${item.id} box width and height must be positive.`);
-    }
+    assertSpatialFrame(item.frame);
     assertAppearance(item.appearance, `${item.id} appearance`);
   }
 }
@@ -124,10 +128,10 @@ function rootStyle(item: TextItem): VisualStyleDeclaration[] {
   const vertical = item.appearance.verticalAlign ?? "center";
   return [
     { name: "position", value: "absolute" },
-    { name: "left", value: `${item.box.xPercent}%` },
-    { name: "top", value: `${item.box.yPercent}%` },
-    { name: "width", value: `${item.box.widthPercent}%` },
-    { name: "height", value: `${item.box.heightPercent}%` },
+    { name: "left", value: `${item.frame.xPx}px` },
+    { name: "top", value: `${item.frame.yPx}px` },
+    { name: "width", value: `${item.frame.widthPx}px` },
+    { name: "height", value: `${item.frame.heightPx}px` },
     { name: "box-sizing", value: "border-box" },
     { name: "display", value: "flex" },
     { name: "align-items", value: vertical === "top" ? "flex-start" : vertical === "bottom" ? "flex-end" : "center" },
@@ -171,7 +175,7 @@ function canonicalSpec(value: TextTrackSpec): TextTrackSpec {
       text: item.text,
       during: "full",
       z: item.z,
-      box: { ...item.box },
+      frame: { ...item.frame },
       appearance: { ...item.appearance },
     })),
   };
@@ -187,7 +191,7 @@ export function assertTextTrackSpec(spec: TextTrackSpec): void {
       throw new Error("TextTrackSpec contains an invalid item.");
     }
     ids.add(item.id);
-    for (const value of Object.values(item.box)) assertFinite(value, `${item.id} box`);
+    assertSpatialFrame(item.frame);
     assertAppearance(item.appearance, `${item.id} appearance`);
   }
 }
@@ -204,7 +208,7 @@ export function compileTextTrackProgram(programSpace: ProgramSpace, spec: TextTr
       span: { startFrame: 0, endFrameExclusive: programSpaceFrameCount(programSpace) },
       z: item.z,
       tieBreak: `${spec.id}:${item.id}`,
-      box: item.box,
+      frame: item.frame,
       appearance: item.appearance,
     })),
   });
@@ -256,8 +260,6 @@ export function assertTextItemSpec(value: TextItemSpec): void {
     || value.text.length === 0
     || !Number.isSafeInteger(value.z)
   ) throw new Error("TextItemSpec is invalid");
-  for (const [name, number] of Object.entries(value.box)) assertFinite(number, `${value.id} box.${name}`);
-  if (value.box.widthPercent <= 0 || value.box.heightPercent <= 0) throw new Error("TextItemSpec box is invalid");
   assertAppearance(value.appearance, `${value.id} appearance`);
 }
 
@@ -292,14 +294,21 @@ function appendItems(
   };
 }
 
-function itemFromSpec(spec: TextItemSpec, id: string, span: TextItem["span"], tieBreak: string): TextItem {
+function itemFromSpec(
+  spec: TextItemSpec,
+  frame: SpatialFrame,
+  id: string,
+  span: TextItem["span"],
+  tieBreak: string,
+): TextItem {
+  assertSpatialFrame(frame);
   return {
     id,
     text: spec.text,
     span,
     z: spec.z,
     tieBreak,
-    box: spec.box,
+    frame,
     appearance: spec.appearance,
   };
 }
@@ -308,15 +317,22 @@ export function appendFullTextItem(
   set: TextTrackSet,
   header: TextTrackHeader,
   space: ProgramSpace,
+  frame: SpatialFrame,
   spec: TextItemSpec,
 ): TextTrackSet {
   assertTextTrackSet(set);
   assertTextTrackHeader(header);
   assertProgramSpaceIdentity(space);
+  const projected = projectProgramWindow({
+    itemId: spec.id,
+    space,
+    projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+  });
   return appendItems(set, spec, [itemFromSpec(
     spec,
+    frame,
     spec.id,
-    { startFrame: 0, endFrameExclusive: programSpaceFrameCount(space) },
+    projected.span,
     `${header.id}:${spec.id}:1`,
   )]);
 }
@@ -327,6 +343,7 @@ export function appendSelectedTextItem(
   map: CompleteSemanticMap,
   selection: NarrativeSelectionRef,
   space: ProgramSpace,
+  frame: SpatialFrame,
   spec: TextItemSpec,
 ): TextTrackSet {
   assertTextTrackSet(set);
@@ -334,11 +351,19 @@ export function appendSelectedTextItem(
   assertCompleteSemanticMapIdentity(map);
   assertNarrativeSelectionIdentity(selection);
   assertProgramSpaceIdentity(space);
-  const spans = selectionFrameSpans(map, selection, space);
-  return appendItems(set, spec, spans.map((span, index) => itemFromSpec(
+  const occurrences = assertWindowRelation(projectSelectionWindows({
+    itemId: spec.id,
+    map,
+    selection,
+    space,
+    expansion: { kind: "each" },
+    projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
+  }), "disjoint");
+  return appendItems(set, spec, occurrences.map((occurrence, index) => itemFromSpec(
     spec,
-    spans.length === 1 ? spec.id : `${spec.id}:${index + 1}`,
-    span,
+    frame,
+    occurrences.length === 1 ? spec.id : occurrence.id,
+    occurrence.span,
     `${header.id}:${spec.id}:${index + 1}`,
   )));
 }

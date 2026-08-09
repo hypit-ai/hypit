@@ -8,10 +8,12 @@ Text authoring protocol. It proves package-to-IR lowering but does not yet repro
 three-box layout, exact-font and layered-decoration capability gate.
 
 An item spanning the complete ProgramSpace is a persistent overlay; a shorter item is timed. They
-are not different Track kinds. The package exposes semantic typography and box parameters rather
-than a rendering callback, arbitrary CSS or cross-Track access.
+are not different Track kinds. Timing is projected through `@narratage/temporal`, and placement is
+an explicit `SpatialFrame` input from `@narratage/spatial`; neither is hidden in the appearance
+Recipe. The package exposes semantic typography rather than a rendering callback, arbitrary CSS or
+cross-Track access.
 
-The provider-free `<text:Track>` Surface now validates `.svs` Recipes, compiles `during="full"`
-against an explicitly connected ProgramSpace and produces the same TextTrackProgram without
-changing Core, Film, Composition or HyperFrames. Timed semantic windows and exact FontArtifact
-lowering remain pre-freeze work.
+The provider-free `<text:Track>` Surface validates `.svs` Recipes, accepts explicit full or
+Selection timing plus a `SpatialFrame` edge for every Item, and produces the same TextTrackProgram
+without changing Core, Film, Composition or HyperFrames. Exact FontArtifact lowering and the full
+Point/Area/Path Text model remain pre-freeze work.

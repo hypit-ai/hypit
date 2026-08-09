@@ -78,7 +78,7 @@ SemanticMap 将每个 Script 中标注的锚点映射到一个时间点。它覆
 ProgramSpace 不是一个需要声明的组件——它由 `speech:Spine` 产生，并传递给每个需要知道总节目时长和帧域的组件。
 
 ```svml
-<film:Film id="main" space={speech.space} ...>
+<film:Film id="main" canvas={vertical} space={speech.space} ...>
 <caption-fine:Track id="captions" ... space={speech.space} .../>
 <text:Track id="titles" space={speech.space}>
 <render:Video id="final" composition={main.composition} space={speech.space}/>

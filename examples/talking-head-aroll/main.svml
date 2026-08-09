@@ -10,6 +10,7 @@
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -122,7 +123,8 @@
     plan={caption-plan.plan}
   />
 
-  <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+  <space:Canvas id="vertical" width="720" height="1280"/>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={captions.track}/>

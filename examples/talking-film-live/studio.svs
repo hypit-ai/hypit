@@ -2,9 +2,6 @@
 
 <sheet version="1">
   film.vertical {
-    width: 480;
-    height: 854;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -28,10 +25,6 @@
 
   text.callout {
     stack-order: 85;
-    x: 0.08;
-    y: 0.10;
-    width: 0.84;
-    height: 0.10;
     font: Inter;
     weight: 900;
     size: 27;

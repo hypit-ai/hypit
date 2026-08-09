@@ -5,6 +5,10 @@ description: 视觉 Track 组件——字幕、B-roll 叠加层和文字叠加�
 
 # 字幕、B-roll 与文字
 
+> **当前可执行切片：** Caption Fine 已完整实现。B-roll 与文字章节描述的是今天仍可运行的
+> 纵向切片；它们的目标模型分别记录在 `spec/media-track.md`、`spec/spatial-layout.md` 与
+> `spec/text-track.md`。只有对应新包真正可运行后，教程才会改用新语法。
+
 每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三种主要的视觉 Track 类型：字幕、B-roll 和文字叠加层。
 
 ## 字幕系统
@@ -87,11 +91,14 @@ Program 消费 Script 显式输出的完整有序显示词全集。一个必填�
   <caption:Use role="BOB" style={bob-caption}/>
   <caption:Use words={story.caption.selection.product-demo}
     style={dialogue-caption}/>
+  <caption:Mute words={story.caption.selection.private}/>
 </caption:Program>
 ```
 
 `role=` 是词子集查询的作者语法，不是时间条件。`words=` 接收 Selection 的字幕专用
 词投影；通用 Selection 的公开值仍只有语义首尾锚点。
+`Mute` 消费同一份精确词投影，不进入 Gemini；它在 Cue 规划完成后隐藏这些完整 Atom，
+既不重新分 Cue，也不把字幕可见性变成 Core 的通用时间遮罩。
 
 ### caption-ai:Planner
 
@@ -209,8 +216,12 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 文字项目的容器。
 
 ```svml
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
 <text:Track id="titles" space={speech.space}>
   <text:Item text="EDIT MEANING, NOT TIMELINES" during="full"
+    frame={title-frame}
     appearance={studio.text.title}/>
 </text:Track>
 ```
@@ -226,14 +237,16 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 每个项目是放置在某个时间位置的一段文本字符串：
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<text:Item text="MEANING" during="full" frame={title-frame}
+  appearance={studio.text.title}/>
 ```
 
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `text` | 是 | 要显示的文本字符串 |
 | `during` | 是 | 何时显示：`"full"`（整个节目时长）或 Selection 引用 |
-| `appearance` | 是 | SVS 文字 Recipe——位置、字体、大小、颜色 |
+| `frame` | 是 | 显式 `SpatialFrame`，定义位置和可用排版区域 |
+| `appearance` | 是 | SVS 文字 Recipe——层级、字体、大小与 Paint |
 
 `during` 属性接受字面字符串 `"full"`（表示整个节目时长），或 Selection 引用（用于语义计时）：
 
@@ -241,6 +254,7 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 <text:Track id="callout" space={speech.space} map={timing.map}>
   <text:Item text="EXACTLY THE RIGHT MOMENT"
     during={story.selection.callout}
+    frame={callout-frame}
     appearance={studio.text.callout}/>
 </text:Track>
 ```
@@ -257,6 +271,7 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="broll" from="@narratage/broll@1"/>
 <import as="text" from="@narratage/text-track@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
 <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
@@ -272,13 +287,19 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
     appearance={studio.broll.card}/>
 </broll:Track>
 
+<!-- 共享位置是显式边，与 Text 外观分开。 -->
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
+
 <!-- Text: persistent title overlay -->
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+  <text:Item text="MEANING" during="full" frame={title-frame}
+    appearance={studio.text.title}/>
 </text:Track>
 
 <!-- All three tracks feed into Film -->
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={cards.visual}/>

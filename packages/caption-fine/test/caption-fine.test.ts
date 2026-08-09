@@ -77,6 +77,88 @@ test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack",
   assert.equal(fineCaptionParameters(recipe).activePaint.fill, "#FFD54A");
 });
 
+test("Fine applies Caption Mute after planning without regrouping Cues", () => {
+  const narrative = parseScript("mute.svml", "<line>Keep hidden words visible.</line>");
+  const display = captionDisplaySequence(narrative, "story.caption");
+  const style = fineCaptionStyle("primary", recipe);
+  const muted = display.words.slice(1, 3);
+  const program = resolveCaptionProgram(display, "captions", style, [], [{
+    id: "hide-middle",
+    words: {
+      contract: "svml.caption-display-word-subset@1",
+      id: "selection:hide-middle",
+      sequenceId: display.id,
+      wordIds: muted.map((word) => word.id),
+    },
+  }]);
+  const projection: TimedCaptionProjection = {
+    contract: "svml.timed-caption-projection@1",
+    displaySequenceId: display.id,
+    cues: [{
+      id: "cue:1",
+      runId: program.runs[0]!.id,
+      styleId: style.id,
+      segmentId: "line",
+      startSec: 0,
+      endSec: 2,
+      atoms: display.atoms.map((atom, index) => ({
+        atomId: atom.id,
+        startSec: index * 0.4,
+        endSec: index * 0.4 + 0.3,
+      })),
+      fields: [],
+    }],
+  };
+  const space = sealProgramSpace({
+    contract: "svml.program-space@1",
+    durationSec: 2,
+    frameRate: { numerator: 30, denominator: 1 },
+  });
+
+  const track = renderFineCaption(projection, program, display, space);
+  assert.equal(track.presents.length, 1);
+  assert.deepEqual(track.presents[0]!.span, { startFrame: 0, endFrameExclusive: 60 });
+  const renderedWords = track.presents[0]!.elements
+    .filter((element) => element.kind === "text")
+    .map((element) => element.kind === "text" ? element.text : undefined);
+  assert.deepEqual(renderedWords, ["Keep", "visible."]);
+});
+
+test("Fine emits no Present for a fully muted Cue", () => {
+  const narrative = parseScript("mute-all.svml", "<line>Hide everything.</line>");
+  const display = captionDisplaySequence(narrative, "story.caption");
+  const style = fineCaptionStyle("primary", recipe);
+  const program = resolveCaptionProgram(display, "captions", style, [], [{
+    id: "hide-all",
+    words: {
+      contract: "svml.caption-display-word-subset@1",
+      id: "all",
+      sequenceId: display.id,
+      wordIds: display.words.map((word) => word.id),
+    },
+  }]);
+  const projection: TimedCaptionProjection = {
+    contract: "svml.timed-caption-projection@1",
+    displaySequenceId: display.id,
+    cues: [{
+      id: "cue:1",
+      runId: program.runs[0]!.id,
+      styleId: style.id,
+      segmentId: "line",
+      startSec: 0,
+      endSec: 1,
+      atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: 1 })),
+      fields: [],
+    }],
+  };
+  const track = renderFineCaption(projection, program, display, sealProgramSpace({
+    contract: "svml.program-space@1",
+    durationSec: 1,
+    frameRate: { numerator: 30, denominator: 1 },
+  }));
+  assert.deepEqual(track.presents, []);
+});
+
 test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion surface", () => {
   const parameters = fineCaptionParameters({
     ...recipe,

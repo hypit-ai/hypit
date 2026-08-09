@@ -5,6 +5,11 @@ description: Visual track components — captions, B-roll overlays and text over
 
 # Caption, B-roll & Text
 
+> **Executable-slice note:** Caption Fine is the current complete package. The B-roll and Text
+> sections document today's executable vertical slices. Their intended replacement author models
+> are specified in `spec/media-track.md`, `spec/spatial-layout.md` and `spec/text-track.md`; examples
+> using those future Surfaces will replace these sections only after the packages execute.
+
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and their z-order is determined by the `stack-order` property in SVS. This page
 covers the three main visual Track types: captions, B-roll, and text overlays.
@@ -116,12 +121,15 @@ rules replace the whole Style on a Role or explicit Caption word subset, with th
   <caption:Use role="BOB" style={bob-caption}/>
   <caption:Use words={story.caption.selection.product-demo}
     style={dialogue-caption}/>
+  <caption:Mute words={story.caption.selection.private}/>
 </caption:Program>
 ```
 
 `role=` is convenient author syntax for a word subset, not a temporal condition. `words=` consumes
 the Caption-specific projection of a Script Selection; the public time Selection remains only a
 pair of semantic anchors. Partial ownership of an indivisible Dual Text display word is rejected.
+`Mute` uses that same exact word projection, stays out of Gemini, and hides those complete Atoms
+after Cue planning without regrouping the Cue.
 
 ### caption-ai:Planner
 
@@ -242,8 +250,12 @@ Static or timed text displayed on screen — titles, callouts, lower thirds.
 Container for text items.
 
 ```svml
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
 <text:Track id="titles" space={speech.space}>
   <text:Item text="EDIT MEANING, NOT TIMELINES" during="full"
+    frame={title-frame}
     appearance={studio.text.title}/>
 </text:Track>
 ```
@@ -259,14 +271,16 @@ Container for text items.
 Each item is a text string placed at a time position:
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<text:Item text="MEANING" during="full" frame={title-frame}
+  appearance={studio.text.title}/>
 ```
 
 | Attribute | Required | Description |
 |---|---|---|
 | `text` | yes | The text string to display |
 | `during` | yes | When to show: `"full"` (entire program) or a Selection reference |
-| `appearance` | yes | SVS text Recipe — position, font, size, color |
+| `frame` | yes | Explicit `SpatialFrame` defining placement and available layout area |
+| `appearance` | yes | SVS text Recipe — stacking, font, size and Paint |
 
 The `during` attribute accepts either the literal string `"full"` for the entire program duration, or
 a Selection reference for semantic timing:
@@ -275,6 +289,7 @@ a Selection reference for semantic timing:
 <text:Track id="callout" space={speech.space} map={timing.map}>
   <text:Item text="EXACTLY THE RIGHT MOMENT"
     during={story.selection.callout}
+    frame={callout-frame}
     appearance={studio.text.callout}/>
 </text:Track>
 ```
@@ -291,6 +306,7 @@ All three track types together in one source file:
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="broll" from="@narratage/broll@1"/>
 <import as="text" from="@narratage/text-track@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
 <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
@@ -306,13 +322,19 @@ All three track types together in one source file:
     appearance={studio.broll.card}/>
 </broll:Track>
 
+<!-- Shared placement is an explicit edge, separate from Text appearance. -->
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
+
 <!-- Text: persistent title overlay -->
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+  <text:Item text="MEANING" during="full" frame={title-frame}
+    appearance={studio.text.title}/>
 </text:Track>
 
 <!-- All three tracks feed into Film -->
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={cards.visual}/>

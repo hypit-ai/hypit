@@ -8,6 +8,41 @@ import { assertCaptionPlanForProgram } from "./plan.js";
 import { assertCaptionProgramForDisplay } from "./style.js";
 import type { CaptionPlan, CaptionProgram, TimedCaptionProjection } from "./types.js";
 
+/**
+ * Apply Caption-owned post-planning visibility without changing Cue identity, timing or grouping.
+ * The operation is idempotent so Style-family renderers may enforce the contract defensively.
+ */
+export function applyCaptionMute(
+  projection: TimedCaptionProjection,
+  program: CaptionProgram,
+  display: CaptionDisplaySequence,
+): TimedCaptionProjection {
+  assertTimedCaptionProjection(projection);
+  assertCaptionProgramForDisplay(program, display);
+  if (projection.displaySequenceId !== display.id) {
+    throw new Error("Caption Mute received another display sequence");
+  }
+  const mutedWords = new Set(program.mutedWordIds);
+  const mutedAtoms = new Set(display.atoms
+    .filter((atom) => atom.wordIds.every((wordId) => mutedWords.has(wordId)))
+    .map((atom) => atom.id));
+  const result: TimedCaptionProjection = {
+    contract: "svml.timed-caption-projection@1",
+    displaySequenceId: projection.displaySequenceId,
+    cues: projection.cues.flatMap((cue) => {
+      const atoms = cue.atoms.filter((atom) => !mutedAtoms.has(atom.atomId));
+      if (atoms.length === 0) return [];
+      return [{
+        ...cue,
+        atoms,
+        fields: cue.fields.filter((field) => !mutedWords.has(field.wordId)),
+      }];
+    }),
+  };
+  assertTimedCaptionProjection(result);
+  return result;
+}
+
 /** Join whole authored Caption Atoms to measured speech time. No display-word time is invented. */
 export function temporalizeCaptionPlan(
   display: CaptionDisplaySequence,
@@ -52,12 +87,11 @@ export function temporalizeCaptionPlan(
       fields: cue.fields.map((field) => ({ ...field })),
     };
   }));
-  const result: TimedCaptionProjection = {
+  const result = applyCaptionMute({
     contract: "svml.timed-caption-projection@1",
     displaySequenceId: display.id,
     cues,
-  };
-  assertTimedCaptionProjection(result);
+  }, program, display);
   return result;
 }
 

@@ -3,6 +3,7 @@ import type { NarrativeSelection } from "@narratage/narrative";
 import { programSpaceTypes } from "@narratage/program-space";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import { compositionTypes } from "@narratage/composition";
+import { spatialTypes } from "@narratage/spatial";
 import { sealGraphFragment } from "@narratage/elaborator";
 import type { FragmentOperation } from "@narratage/elaborator";
 import { svsRecipeType } from "@narratage/svs";
@@ -19,6 +20,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 type SurfaceItem = {
   readonly suffix: string;
   readonly specName: string;
+  readonly frameName: string;
   readonly selectionName?: string;
 };
 
@@ -36,7 +38,10 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
     operations.push(item.selectionName === undefined ? {
       id: operationId,
       producer: textTrackProducers.appendFull,
-      inputs: { set: operation(current), header: input("header"), space: input("space"), spec: input(item.specName) },
+      inputs: {
+        set: operation(current), header: input("header"), space: input("space"),
+        frame: input(item.frameName), spec: input(item.specName),
+      },
       result: { kind: "output", name: "set" },
     } : {
       id: operationId,
@@ -47,6 +52,7 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
         map: input("map"),
         selection: input(item.selectionName),
         space: input("space"),
+        frame: input(item.frameName),
         spec: input(item.specName),
       },
       result: { kind: "output", name: "set" },
@@ -58,7 +64,8 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
     { id: "text:render", producer: textTrackProducers.render, inputs: { space: input("space"), program: operation("text:finalize") }, result: { kind: "output", name: "track" } },
   );
   const semanticInputs = ["space", "header", ...(selected.length === 0 ? [] : ["map"]),
-    ...items.flatMap((item) => [item.specName, ...(item.selectionName === undefined ? [] : [item.selectionName])])];
+    ...items.flatMap((item) => [item.frameName, item.specName,
+      ...(item.selectionName === undefined ? [] : [item.selectionName])])];
   return sealGraphFragment({
     name: `@narratage/text-track/surface/${id}@1`,
     inputs: [
@@ -66,6 +73,7 @@ function createTextTrackSurfaceFragment(id: string, items: readonly SurfaceItem[
       { name: "header", type: textTrackTypes.header },
       ...(selected.length === 0 ? [] : [{ name: "map", type: semanticMapTypes.complete }]),
       ...items.flatMap((item) => [
+        { name: item.frameName, type: spatialTypes.frame },
         { name: item.specName, type: textTrackTypes.itemSpec },
         ...(item.selectionName === undefined ? [] : [{ name: item.selectionName, type: narrativeTypes.selection }]),
       ]),
@@ -134,7 +142,7 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
     }
     if (!child.name.endsWith(":Item") && child.name !== "Item") throw new Error(`${element.name} accepts only Item children`);
     itemIndex += 1;
-    exact(child, ["text", "during", "appearance"]);
+    exact(child, ["text", "during", "frame", "appearance"]);
     const rawDuring = child.attributes.during;
     const selection = typeof rawDuring === "string"
       ? (() => {
@@ -143,7 +151,8 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
         })()
       : ref(child, "during", narrativeTypes.selection, resolveReference);
     const appearance = recipe(ref(child, "appearance", svsRecipeType, resolveReference));
-    const expected = ["align", "fill", "font", "height", "size", "stack-order", "tracking", "weight", "width", "x", "y"];
+    const frame = ref(child, "frame", spatialTypes.frame, resolveReference);
+    const expected = ["align", "fill", "font", "size", "stack-order", "tracking", "weight"];
     if (Object.keys(appearance.properties).sort().join("\0") !== expected.sort().join("\0")) throw new Error(`Text Recipe requires exactly ${expected.join(", ")}`);
     const align = propString(appearance, "align");
     if (align !== "left" && align !== "center" && align !== "right") throw new Error("Text Recipe align is invalid");
@@ -155,10 +164,6 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
       id: `item-${suffix}`,
       text: text(child, "text"),
       z: propNumber(appearance, "stack-order"),
-      box: {
-        xPercent: propNumber(appearance, "x") * 100, yPercent: propNumber(appearance, "y") * 100,
-        widthPercent: propNumber(appearance, "width") * 100, heightPercent: propNumber(appearance, "height") * 100,
-      },
       appearance: {
         color: propString(appearance, "fill"), fontSizePx: propNumber(appearance, "size"),
         fontFamily: propString(appearance, "font"), fontWeight: propNumber(appearance, "weight"),
@@ -170,6 +175,8 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
       suffix,
       specId,
       specName: `item-${suffix}-spec`,
+      frame,
+      frameName: `item-${suffix}-frame`,
       ...(selection === undefined ? {} : { selection, selectionName: `item-${suffix}-selection` }),
     }];
   });
@@ -184,6 +191,7 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
   const fragmentItems: SurfaceItem[] = items.map((item) => ({
     suffix: item.suffix,
     specName: item.specName,
+    frameName: item.frameName,
     ...(item.selectionName === undefined ? {} : { selectionName: item.selectionName }),
   }));
   const fragment = createTextTrackSurfaceFragment(id, fragmentItems);
@@ -197,6 +205,7 @@ export const decodeTextTrackSurface: StructuredSurfaceHandler = ({ element, reso
         header: { kind: "record", id: headerId },
         ...(map === undefined ? {} : { map: map.ref }),
         ...Object.fromEntries(items.flatMap((item) => [
+          [item.frameName, item.frame.ref],
           [item.specName, { kind: "record" as const, id: item.specId }],
           ...(item.selection === undefined ? [] : [[item.selectionName!, item.selection.ref] as const]),
         ])),

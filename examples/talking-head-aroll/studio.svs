@@ -25,9 +25,6 @@
   }
 
   film.vertical {
-    width: 720;
-    height: 1280;
-    frame-rate: 30;
     background: #09090B;
   }
 
