@@ -7,7 +7,7 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { BlobRef } from "@narratage/protocol";
 import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
 import { artifactManifest } from "@narratage/artifact";
-import type { MediaArtifactRef } from "@narratage/media";
+import type { FontArtifactRef, MediaArtifactRef } from "@narratage/media";
 import { mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceManifest, sealProgramSpace } from "@narratage/program-space";
@@ -38,6 +38,12 @@ const image: MediaArtifactRef = {
   mediaType: "image/png",
   durationSec: 0,
 };
+const font: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  sources: [{ artifact: { kind: "blob", digest: digestOf("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],
+  weight: 700,
+  style: "normal",
+};
 const audio: BlobRef = {
   kind: "blob",
   digest: digestOf("audio"),
@@ -61,7 +67,7 @@ function fixture() {
       stacking: { order: 100, tieBreak: "caption" },
       elements: [
         { id: "root", order: 0, kind: "box", style: [{ name: "position", value: "absolute" }] },
-        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello", style: [] },
+        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello", fonts: [font], style: [] },
       ],
     }],
   });

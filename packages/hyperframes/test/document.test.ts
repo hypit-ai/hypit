@@ -15,6 +15,12 @@ import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 import assert from "node:assert/strict";
 import test from "node:test";
 
+const fixtureFont: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  sources: [{ artifact: { kind: "blob", digest: digestOf("hyperframes:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
+  weight: 700,
+  style: "normal",
+};
 
 function fixture() {
   const programSpace = sealProgramSpace({
@@ -61,7 +67,7 @@ function fixture() {
       stacking: { order: 20, tieBreak: "upper" },
       elements: [
         { id: "root", order: 0, kind: "box", style: [{ name: "position", value: "absolute" }] },
-        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello <world>", style: [] },
+        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello <world>", fonts: [fixtureFont], style: [] },
       ],
     }],
   });
@@ -94,12 +100,15 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   const document = compileHyperframesDocument(composition, programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.equal(document.visualIr, VISUAL_IR_V1);
-  assert.deepEqual(document.artifacts, [{
-    kind: "blob",
-    digest: picture.digest,
-    size: picture.size,
-    mediaType: picture.mediaType,
-  }]);
+  assert.deepEqual(document.artifacts, [
+    {
+      kind: "blob",
+      digest: picture.digest,
+      size: picture.size,
+      mediaType: picture.mediaType,
+    },
+    fixtureFont.sources[0]!.artifact,
+  ]);
   assert.ok(document.html.indexOf('data-svml-track-id="lower"') < document.html.indexOf('data-svml-track-id="upper"'));
   assert.equal((document.html.match(/class="clip svml-visual-present"/gu) ?? []).length, 2);
   assert.doesNotMatch(document.html, /<audio/u);

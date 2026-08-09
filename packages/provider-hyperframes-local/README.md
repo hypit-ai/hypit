@@ -2,7 +2,14 @@
 
 Trusted local Provider for the `@narratage/render-hyperframes#render-visual` capability. It stages the
 content-addressed dependencies declared by a `HyperframesDocument`, renders a silent MP4 with the
-HyperFrames CLI, probes the bytes, and returns a verified `RenderedVisual`.
+HyperFrames CLI, probes the bytes, and returns a verified `RenderedVisual`. Before staging a typed
+Surface it decodes the exact bytes and checks declared dimensions, still/frame timing, SDR/sRGB and
+opaque/straight-alpha facts. Artifact size and SHA-256 are checked for every dependency.
+
+The receipt-covered renderer attestation includes the HyperFrames version, exact browser executable
+digest/version, document digest and all Surface verification evidence. The Driver separately binds
+the locked Endpoint implementation and configuration; neither identity is self-asserted by the
+handler.
 
 There are deliberately two concurrency controls:
 

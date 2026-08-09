@@ -36,6 +36,7 @@ const REGION = "us-east-1";
 const BUCKET = "narratage-render-test";
 const STATE_MACHINE = `arn:aws:states:${REGION}:${ACCOUNT}:stateMachine:narratage-hyperframes`;
 const EXECUTION_PREFIX = `arn:aws:states:${REGION}:${ACCOUNT}:execution:narratage-hyperframes:`;
+const RENDERER_IMPLEMENTATION = digestOf("hyperframes-lambda:test-renderer-deployment");
 
 function documentFixture(fps = 30, denominator = 1): HyperframesDocument {
   return {
@@ -45,6 +46,7 @@ function documentFixture(fps = 30, denominator = 1): HyperframesDocument {
     frameCount: 60,
     canvas: { width: 720, height: 1280 },
     artifacts: [],
+    surfaces: [],
     html: "<!doctype html><html><body><div>SVML</div></body></html>",
   };
 }
@@ -208,6 +210,7 @@ async function endpointFor(
     instance: "hyperframes.aws-lambda.test",
     stateMachineArn: STATE_MACHINE,
     bucketName: BUCKET,
+    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
     client,
     clientImplementationDigest: digestOf("hyperframes-lambda:test-client"),
     pollIntervalMs: 1,
@@ -243,6 +246,28 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
     document: documentFixture(),
     browserGpu: "hardware",
   })), false, "an unsupported hardware requirement must fall through to another Endpoint");
+  const artifact = {
+    kind: "blob" as const,
+    digest: digestOf("lambda-surface-without-verifier"),
+    size: 100,
+    mediaType: "image/png",
+  };
+  const withSurface: HyperframesDocument = {
+    ...documentFixture(30),
+    artifacts: [artifact],
+    surfaces: [{
+      contract: "svml.compositable-surface@1",
+      artifact,
+      width: 1,
+      height: 1,
+      colorSpace: "srgb",
+      alphaMode: "straight",
+      timing: { kind: "still" },
+    }],
+    html: `<!doctype html><img data-svml-surface-artifact="${artifact.digest}" src="svml-artifact://sha256/${artifact.digest.slice("sha256:".length)}"/>`,
+  };
+  assert.equal(supportsAwsLambdaHyperframes(hyperframesVisualRequest(withSurface)), false,
+    "a deployment without a Surface verifier must fail closed");
 });
 
 test("the Runtime adapter refuses a hardware-GPU deployment wish instead of ignoring it", () => {
@@ -312,6 +337,10 @@ test("one deterministic submission resumes and streams the exact output into the
   assert.equal(visual.muted, true);
   assert.equal(await artifacts.has(visual.artifact.digest), true);
   assert.deepEqual(await artifacts.get(visual.artifact.digest), new Uint8Array([1, 2, 3, 4, 5]));
+  const metadata = completed.result.metadata as Record<string, CanonicalValue>;
+  assert.equal(metadata.contract, "svml.hyperframes-renderer-attestation@1");
+  assert.equal(metadata.rendererImplementationDigest, RENDERER_IMPLEMENTATION);
+  assert.equal(metadata.documentDigest, digestOf(documentFixture()));
 });
 
 test("an ambiguous StartExecution is recovered by the same name without redeploying the site", async () => {
@@ -456,24 +485,29 @@ test("the deployment identity is validated before any AWS client is constructed"
   assert.throws(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: `${STATE_MACHINE}:mutable-alias`,
     bucketName: BUCKET,
+    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
   }), /unqualified AWS Step Functions state-machine ARN/u);
   assert.throws(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: STATE_MACHINE,
     bucketName: BUCKET,
+    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
     region: "eu-west-1",
   }), /differs from state machine region/u);
   assert.throws(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: STATE_MACHINE,
     bucketName: BUCKET,
+    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
     client: fakeClient().client,
   }), /requires clientImplementationDigest/u);
   assert.throws(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: STATE_MACHINE,
     bucketName: "192.168.0.1",
+    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
   }), /bucketName is invalid/u);
   assert.doesNotThrow(() => createAwsLambdaHyperframesProvider({
     stateMachineArn: "arn:aws-us-gov:states:us-gov-west-1:123456789012:stateMachine:narratage-hyperframes",
     bucketName: BUCKET,
+    rendererImplementationDigest: RENDERER_IMPLEMENTATION,
     client: fakeClient().client,
     clientImplementationDigest: digestOf("hyperframes-lambda:test-gov-client"),
   }));

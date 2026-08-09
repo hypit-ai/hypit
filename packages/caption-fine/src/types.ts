@@ -91,7 +91,7 @@ export type FineCaptionParameters = {
     readonly fontWeight: number;
     readonly fontStyle: "normal" | "italic" | "oblique";
     readonly textTransform: "none" | "uppercase" | "lowercase";
-    readonly exactFonts?: readonly FontArtifactRef[];
+    readonly exactFonts: readonly FontArtifactRef[];
   };
   readonly basePaint: FineCaptionGlyphPaint;
   readonly activePaint: FineCaptionGlyphPaint;

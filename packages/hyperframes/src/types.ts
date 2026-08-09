@@ -1,5 +1,6 @@
 
 import type { BlobRef, Digest } from "@narratage/protocol";
+import type { CompositableSurfaceRef } from "@narratage/media";
 
 export type HyperframesFrameDomain = {
   readonly frameRate: {
@@ -22,6 +23,8 @@ export type HyperframesDocument = HyperframesFrameDomain & {
   readonly canvas: HyperframesCanvas;
   /** Every content-addressed byte dependency referenced by the HTML template. */
   readonly artifacts: readonly BlobRef[];
+  /** Typed Surface dependencies that a Runtime must verify before rendering. */
+  readonly surfaces: readonly CompositableSurfaceRef[];
   /** Media URLs remain svml-artifact:// placeholders until a Runtime materializes them. */
   readonly html: string;
 };

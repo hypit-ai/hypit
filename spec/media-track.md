@@ -608,8 +608,8 @@ Implement only after the shared Temporal and Spatial slices exist:
 7. **Implemented:** route Speech Spine visual projection through the restricted lowerer;
 8. **Implemented:** migrate the checked-in B-roll examples and retire the old package;
 9. **Implemented:** close the package-local acceptance matrix with structural, real-media and
-   partitioned-browser evidence. The shared Track/Visual IR remains pre-freeze for the independent
-   gates in [`track-expressiveness.md`](./track-expressiveness.md).
+   partitioned-browser evidence. The independent shared Track/Visual IR gates in
+   [`track-expressiveness.md`](./track-expressiveness.md) also pass.
 
 No step requires a Core, Runtime, queue or Provider change. Surface materialization may use an
 existing explicitly registered Provider capability, but ordinary Item/Sequence lowering is
@@ -695,7 +695,6 @@ The matrix above is closed by executable evidence rather than by package status 
 - `tools/package-boundaries.test.mjs` and `tools/graph-first-value-boundary.test.mjs` enforce the
   absence of a Media family registry and of hidden lineage/provider metadata in values.
 
-The local package is therefore complete as a pre-freeze Media implementation. This does not claim
-that the shared `svml.visual-track@1` or `svml.visual-ir@1` waist is frozen; renderer receipts,
-Surface-byte validation and the remaining independent Text/Deck/Ranking witnesses still govern
-that later decision.
+The local package is therefore complete as a pre-release Media implementation over the frozen
+repository-internal `svml.visual-track@1` / `svml.visual-ir@1` waist. This does not publish or
+separately freeze the Media author Surface.

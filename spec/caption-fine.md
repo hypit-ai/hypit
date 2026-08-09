@@ -68,9 +68,9 @@ must be a separately connected component whose failure is explicit in the graph.
 Text transform is terminal presentation only. It never changes `CaptionDisplaySequence`, planner
 input, Word/Atom identity, speech correspondence or timing.
 
-The Recipe's `font` property is a readable family label and an environment fallback. For a
-reproducible build the author imports exact installed faces from `@narratage/fonts-open`, or declares
-custom/brand bytes with `<media:Font>`. `font=` accepts one exact face with ordered Style-owned
+The Recipe's `font` property is a readable family label, not a source of bytes. Every Style must
+import exact installed faces from `@narratage/fonts-open`, or declare custom/brand bytes with
+`<media:Font>`. `font=` accepts one exact face with ordered Style-owned
 Fallback children, or one reusable generic `FontStackRef`. The compact open-font path is:
 
 ```svml
@@ -86,7 +86,7 @@ duplicate faces are rejected. One logical face may contain several content-addre
 sources, as the installed CJK and Emoji fonts do. Fine expands `FontStackRef` into the same ordered
 exact faces and puts them only
 on its terminal text elements; Caption, Core and unrelated graph values remain unchanged. Omitting
-`font=` is an explicit environment-bound prototype path, not a Runtime font-selection policy.
+`font=` is invalid, so no Runtime or machine-font selection policy enters the result.
 
 CJK speech may be authored directly. A display-only emoji still needs explicit speech
 correspondence, for example `<🌐 | globe>`; Script correctly refuses to invent a spoken token for a

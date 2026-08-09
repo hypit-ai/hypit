@@ -182,7 +182,7 @@ function assertPaint(value: FineCaptionGlyphPaint, label: string): void {
 
 export function fineCaptionParameters(
   recipe: SvsRecipe,
-  exactFonts: readonly FontArtifactRef[] = [],
+  exactFonts: readonly FontArtifactRef[],
 ): FineCaptionParameters {
   for (const name of REQUIRED_PROPERTIES) required(recipe, name);
   const unknown = Object.keys(recipe.properties).filter((name) => !ALLOWED_PROPERTIES.has(name));
@@ -218,7 +218,7 @@ export function fineCaptionParameters(
       fontWeight: integer(recipe, "weight"),
       fontStyle: choice(recipe, "font-style", ["normal", "italic", "oblique"] as const, "normal"),
       textTransform: choice(recipe, "text-transform", ["none", "uppercase", "lowercase"] as const, "none"),
-      ...(exactFonts.length === 0 ? {} : { exactFonts: [...exactFonts] }),
+      exactFonts: [...exactFonts],
     },
     basePaint,
     activePaint: glyphPaint(recipe, "active-", basePaint),
@@ -310,18 +310,16 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
   if (!value.typography.fontFamily.trim() || value.typography.fontWeight < 1 || value.typography.fontWeight > 1000) {
     throw new Error("Fine Caption typography is invalid");
   }
-  if (value.typography.exactFonts !== undefined) {
-    if (value.typography.exactFonts.length === 0) throw new Error("Fine Caption exact Font stack is empty");
-    const faces = new Set<string>();
-    for (const [index, font] of value.typography.exactFonts.entries()) {
-      assertFontArtifactRef(font, `Fine Caption exact Font ${index + 1}`);
-      if (index === 0 && (font.weight !== value.typography.fontWeight || font.style !== value.typography.fontStyle)) {
-        throw new Error("Fine Caption primary exact Font face must match Recipe weight and font-style");
-      }
-      const identity = digestOf(font);
-      if (faces.has(identity)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
-      faces.add(identity);
+  if (value.typography.exactFonts.length === 0) throw new Error("Fine Caption exact Font stack is empty");
+  const faces = new Set<string>();
+  for (const [index, font] of value.typography.exactFonts.entries()) {
+    assertFontArtifactRef(font, `Fine Caption exact Font ${index + 1}`);
+    if (index === 0 && (font.weight !== value.typography.fontWeight || font.style !== value.typography.fontStyle)) {
+      throw new Error("Fine Caption primary exact Font face must match Recipe weight and font-style");
     }
+    const identity = digestOf(font);
+    if (faces.has(identity)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
+    faces.add(identity);
   }
   assertColor(value.cueBox.background, "Fine Caption background");
   assertColor(value.cueBox.borderColor, "Fine Caption border color");
@@ -336,7 +334,7 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
 export function fineCaptionStyle(
   id: string,
   recipe: SvsRecipe,
-  exactFonts: readonly FontArtifactRef[] = [],
+  exactFonts: readonly FontArtifactRef[],
 ): CaptionStyleIntent {
   const minimumWords = integer(recipe, "cue-min-words");
   const maximumWords = integer(recipe, "cue-max-words");

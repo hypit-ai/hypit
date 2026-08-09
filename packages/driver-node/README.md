@@ -33,7 +33,9 @@ the prototype API.
 - Preview, fallback and reuse are graph-level Candidates selected by BuildRequest, not Endpoint
   modes. A reused value is an Existing-Value Candidate; “Pin” is only the host UI action that selects
   it. Satisfaction fidelity is sealed into the Core-derived plan before execution.
-- Endpoint identity becomes the Receipt fulfiller; handlers return only value, conformance, delivery and metadata.
+- Endpoint identity becomes the Receipt fulfiller. The Driver also copies the locked Endpoint
+  implementation/configuration and applied Runtime closure digests into the Receipt; handlers return
+  only value, conformance, delivery and metadata and cannot self-assert implementation identity.
 - `TypeValidatorRegistry` is a separate exact-Type registry. Before an Event exists, the Driver
   structurally checks every result, executes the Type owner's digest-locked validator when declared,
   and attaches the resulting receipt. Producer and Endpoint handlers cannot self-assert validation.

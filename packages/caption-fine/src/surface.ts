@@ -67,21 +67,20 @@ function exactFonts(
 ): FontArtifactRef[] {
   const result: FontArtifactRef[] = [];
   const primary = element.attributes.font;
-  if (primary !== undefined) {
-    if (typeof primary !== "object" || primary.kind !== "reference") {
-      throw new Error(`${element.name}.font must be a whole-value reference`);
-    }
-    const resolved = resolveReference(primary.path);
-    if (resolved === undefined) throw new Error(`${element.name}.font cannot resolve ${primary.path}`);
-    if (sameType(resolved.type, mediaTypes.fontArtifact)) {
-      result.push(inline<FontArtifactRef>(resolved, `${element.name}.font`));
-    } else if (sameType(resolved.type, mediaTypes.fontStack)) {
-      const stack = inline<FontStackRef>(resolved, `${element.name}.font`);
-      assertFontStackRef(stack, `${element.name}.font`);
-      result.push(...stack.faces);
-    } else {
-      throw new Error(`${element.name}.font has the wrong type`);
-    }
+  if (primary === undefined) throw new Error(`${element.name} requires font`);
+  if (typeof primary !== "object" || primary.kind !== "reference") {
+    throw new Error(`${element.name}.font must be a whole-value reference`);
+  }
+  const resolved = resolveReference(primary.path);
+  if (resolved === undefined) throw new Error(`${element.name}.font cannot resolve ${primary.path}`);
+  if (sameType(resolved.type, mediaTypes.fontArtifact)) {
+    result.push(inline<FontArtifactRef>(resolved, `${element.name}.font`));
+  } else if (sameType(resolved.type, mediaTypes.fontStack)) {
+    const stack = inline<FontStackRef>(resolved, `${element.name}.font`);
+    assertFontStackRef(stack, `${element.name}.font`);
+    result.push(...stack.faces);
+  } else {
+    throw new Error(`${element.name}.font has the wrong type`);
   }
   for (const child of element.children) {
     if (child.kind === "text") {
@@ -97,9 +96,6 @@ function exactFonts(
       reference(child, "font", mediaTypes.fontArtifact, resolveReference),
       `${child.name}.font`,
     ));
-  }
-  if (primary === undefined && result.length > 0) {
-    throw new Error(`${element.name} requires font before Fallback children`);
   }
   for (const [index, font] of result.entries()) assertFontArtifactRef(font, `${element.name}.font.${index + 1}`);
   return result;

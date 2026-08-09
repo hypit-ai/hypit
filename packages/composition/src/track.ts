@@ -71,17 +71,16 @@ export type VisualMaskElement = VisualElementBase & {
 export type VisualTextElement = VisualElementBase & {
   readonly kind: "text";
   readonly text: string;
-  /** Exact ordered fallback faces. Omission remains a candidate-era, environment-bound path. */
-  readonly fonts?: readonly FontArtifactRef[];
+  /** Exact ordered fallback faces. Terminal Visual IR never depends on environment fonts. */
+  readonly fonts: readonly FontArtifactRef[];
 };
 
 export type VisualTextDirection = "auto" | "ltr" | "rtl";
 export type VisualTextWritingMode = "horizontal-tb" | "vertical-rl" | "vertical-lr";
 
 export type VisualTextTypography = {
-  /** Exact ordered faces. A renderer-family name is allowed only on the explicit prototype path. */
-  readonly fonts?: readonly FontArtifactRef[];
-  readonly prototypeFamily?: string;
+  /** Exact ordered faces. Author-package prototype families must resolve before this boundary. */
+  readonly fonts: readonly FontArtifactRef[];
   readonly sizePx: number;
   readonly weight: number;
   readonly style: "normal" | "italic" | "oblique";
@@ -547,8 +546,7 @@ function assertAttributes(attributes: readonly VisualAttribute[] | undefined, la
   }
 }
 
-function assertExactFonts(fonts: readonly FontArtifactRef[] | undefined, label: string): void {
-  if (fonts === undefined) return;
+function assertExactFonts(fonts: readonly FontArtifactRef[], label: string): void {
   if (fonts.length === 0) throw new Error(`${label} has an empty font stack.`);
   const faces = new Set<string>();
   for (const [index, font] of fonts.entries()) {
@@ -608,12 +606,6 @@ function assertColorPaint(paint: VisualColorPaint, label: string): void {
 
 function assertTypography(typography: VisualTextTypography, label: string): void {
   assertExactFonts(typography.fonts, `${label}.fonts`);
-  if (typography.fonts === undefined && !typography.prototypeFamily?.trim()) {
-    throw new Error(`${label} requires exact fonts or an explicit prototypeFamily.`);
-  }
-  if (typography.fonts !== undefined && typography.prototypeFamily !== undefined) {
-    throw new Error(`${label} cannot mix exact fonts with prototypeFamily.`);
-  }
   finite(typography.sizePx, `${label}.sizePx`);
   if (typography.sizePx <= 0 || !Number.isSafeInteger(typography.weight) || typography.weight < 1 || typography.weight > 1_000) {
     throw new Error(`${label} size or weight is invalid.`);
@@ -684,16 +676,8 @@ function inheritedTypography(
 ): VisualTextTypography {
   const override = style?.typography;
   if (override === undefined) return base;
-  const fontSelection = override.fonts !== undefined
-    ? { fonts: override.fonts }
-    : override.prototypeFamily !== undefined
-      ? { prototypeFamily: override.prototypeFamily }
-      : base.fonts === undefined
-        ? { prototypeFamily: base.prototypeFamily! }
-        : { fonts: base.fonts };
   const {
     fonts: _fonts,
-    prototypeFamily: _prototypeFamily,
     axes: _axes,
     features: _features,
     decorations: _decorations,
@@ -703,7 +687,7 @@ function inheritedTypography(
   return {
     ...base,
     ...scalarOverrides,
-    ...fontSelection,
+    fonts: override.fonts ?? base.fonts,
     axes: override.axes ?? base.axes,
     features: override.features ?? base.features,
     decorations: override.decorations ?? base.decorations,
@@ -979,7 +963,7 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
           `${trackId}.${present.id}.${element.id}.sampling`);
       }
     }
-    if (element.kind === "text" && element.fonts !== undefined) {
+    if (element.kind === "text") {
       assertExactFonts(element.fonts, `${trackId}.${present.id}.${element.id}.fonts`);
       const ownedFontStyles = new Set(["font", "font-family", "font-style", "font-synthesis", "font-weight"]);
       if (element.style.some((declaration) => ownedFontStyles.has(declaration.name))) {
@@ -1143,8 +1127,7 @@ function normalizeElement(element: VisualElement): VisualElement {
       ...common,
       kind: "text",
       text: element.text,
-      ...(element.fonts === undefined ? {} : {
-        fonts: element.fonts.map((font) => ({
+      fonts: element.fonts.map((font) => ({
           contract: font.contract,
           sources: font.sources.map((source) => ({
             artifact: { ...source.artifact },
@@ -1153,7 +1136,6 @@ function normalizeElement(element: VisualElement): VisualElement {
           weight: font.weight,
           style: font.style,
         })),
-      }),
     };
   }
   if (element.kind === "text-flow" || element.kind === "path-text") {

@@ -5,8 +5,8 @@ item into an independently timed and stacked Present in the public VisualTrack c
 
 The current `TextTrackProgram@1` implements the complete pre-release Point/Area/Path author model:
 bounded rich documents, exact font stacks, ordered Paint, frame/content/paragraph/line/run/word/
-grapheme boxes, deterministic overflow and Unicode-aware local motion. It is not yet a frozen
-public ABI because the shared Track and Visual IR freeze gates remain open.
+grapheme boxes, deterministic overflow and Unicode-aware local motion. Its author Surface remains
+pre-release even though the repository-internal Track and Visual IR waist is now frozen.
 
 An item spanning the complete ProgramSpace is a persistent overlay; a shorter item is timed. They
 are not different Track kinds. Timing is projected through `@narratage/temporal`, and placement is

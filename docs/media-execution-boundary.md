@@ -78,11 +78,18 @@ subprocesses. `@narratage/provider-hyperframes-local` fulfills the independent s
 Runtime Scheduler applies configured Endpoint lane concurrency across Builds, while HyperFrames'
 own `workers` option partitions frames inside one admitted render.
 
+The same domain library also owns generic `CompositableSurface` byte verification. Before local
+HyperFrames staging it checks Artifact size/digest, exact dimensions, decoded still/frame timing,
+SDR/sRGB-compatible metadata and opaque/straight alpha. The result is receipt evidence, not another
+graph Product and not lineage copied through unrelated values.
+
 `@narratage/provider-media-aws-lambda` fulfills the same five media Needs through one Lambda and the
 same `@narratage/media-execution` implementation. `@narratage/provider-hyperframes-aws-lambda`
 fulfills the same silent visual Need through one recoverable Step Functions execution. Lambda
 invocation, internal frame fan-out, polling and remote queues belong to those Endpoints and their
 execution topology. They do not change a Need or require another author component.
+The AWS HyperFrames Endpoint currently declines documents containing typed Surfaces until that
+remote route owns equivalent byte verification; it cannot silently provide weaker conformance.
 
 ## Speech evidence path
 
