@@ -109,11 +109,12 @@ test("official video CLI checks a real Script source through the Node compiler h
   ]);
 });
 
-test("author source binds exact Font bytes to a Fine Caption Style", async () => {
+test("author source binds an ordered exact Font stack to a Fine Caption Style", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-caption-font-"));
   const file = join(root, "main.svml");
   const fontBytes = new Uint8Array([119, 79, 70, 50, 0, 1, 0, 0]);
   await writeFile(join(root, "caption.woff2"), fontBytes);
+  await writeFile(join(root, "caption-fallback.woff2"), new Uint8Array([...fontBytes, 1]));
   await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
   caption.primary {
@@ -130,7 +131,10 @@ test("author source binds exact Font bytes to a Fine Caption Style", async () =>
   <import as="studio" source="./studio.svs"/>
 
   <media:Font id="caption-font" src="./caption.woff2" weight="600" style="normal"/>
-  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
+  <media:Font id="caption-fallback" src="./caption-fallback.woff2" weight="600" style="normal"/>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}>
+    <caption-fine:Fallback font={caption-fallback}/>
+  </caption-fine:Style>
 </svml>`, "utf8");
 
   let output = "";
@@ -141,6 +145,7 @@ test("author source binds exact Font bytes to a Fine Caption Style", async () =>
   };
   assert.equal(result.ok, true);
   assert.equal(result.exports.some((item) => item.name === "caption-font" && item.kind === "record"), true);
+  assert.equal(result.exports.some((item) => item.name === "caption-fallback" && item.kind === "record"), true);
   assert.equal(result.exports.some((item) => item.name === "primary-caption" && item.kind === "record"), true);
 });
 

@@ -24,6 +24,10 @@ import type { SvsRecipe } from "@narratage/svs";
 const enabled = process.env.SVML_BROWSER_TESTS === "1";
 const localFont = process.env.SVML_TEST_FONT_PATH
   ?? (process.platform === "darwin" ? "/System/Library/Fonts/SFNSMono.ttf" : undefined);
+const cjkFont = process.env.SVML_TEST_CJK_FONT_PATH
+  ?? (process.platform === "darwin" ? "/System/Library/Fonts/Supplemental/Arial Unicode.ttf" : undefined);
+const emojiFont = process.env.SVML_TEST_EMOJI_FONT_PATH
+  ?? (process.platform === "darwin" ? "/System/Library/Fonts/Apple Symbols.ttf" : undefined);
 const hyperframesCli = createRequire(path.join(process.cwd(), "packages/provider-hyperframes-local/package.json"))
   .resolve("hyperframes/bin/hyperframes.mjs");
 
@@ -115,6 +119,31 @@ function yellowPixelsByColumns(file: string, width: number, height: number, colu
     }
   }
   return counts;
+}
+
+function decodedRgba(file: string, width: number, height: number): Buffer {
+  const decoded = spawnSync("ffmpeg", [
+    "-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1",
+  ], { encoding: "buffer", timeout: 30_000 });
+  assert.equal(decoded.status, 0, decoded.stderr.toString());
+  assert.equal(decoded.stdout.byteLength, width * height * 4);
+  return decoded.stdout;
+}
+
+function matchingPixels(
+  rgba: Buffer,
+  width: number,
+  region: { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number },
+  predicate: (red: number, green: number, blue: number, alpha: number) => boolean,
+): number {
+  let count = 0;
+  for (let y = region.top; y < region.bottom; y += 1) {
+    for (let x = region.left; x < region.right; x += 1) {
+      const index = (y * width + x) * 4;
+      if (predicate(rgba[index]!, rgba[index + 1]!, rgba[index + 2]!, rgba[index + 3]!)) count += 1;
+    }
+  }
+  return count;
 }
 
 test("locked font and straight-alpha Surface survive one real Hyperframes browser frame", {
@@ -315,7 +344,7 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
           karaoke: mode, "karaoke-transition": transition, "active-fill": "#FFD54A",
         },
       };
-      const style = fineCaptionStyle(`${mode}-${transition}`, recipe, font);
+      const style = fineCaptionStyle(`${mode}-${transition}`, recipe, [font]);
       const program = resolveCaptionProgram(display, `${mode}-${transition}-program`, style, []);
       const projection: TimedCaptionProjection = {
         contract: "svml.timed-caption-projection@1",
@@ -362,6 +391,121 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
     assert.ok(final[0]! > 20 && final[1]! > 20, `current modes lost the final active Atom: ${final}`);
     assert.ok(final[2]! > final[0]! * 2, `trail step did not retain prior Atoms: ${final}`);
     assert.ok(final[3]! > final[1]! * 2, `trail wipe did not retain prior Atoms: ${final}`);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("Fine Caption exact fallbacks render CJK, emoji and independent stroke, shadow and glow Paint", {
+  skip: !enabled || localFont === undefined || cjkFont === undefined || emojiFont === undefined,
+  timeout: 120_000,
+}, async () => {
+  assert(localFont !== undefined && cjkFont !== undefined && emojiFont !== undefined);
+  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-multilingual-"));
+  try {
+    const width = 720;
+    const height = 320;
+    const durationSec = 1 / 30;
+    const space = sealProgramSpace({
+      contract: "svml.program-space@1",
+      durationSec,
+      frameRate: { numerator: 30, denominator: 1 },
+    });
+    const fontPaths = [localFont, cjkFont, emojiFont] as const;
+    const fontBytes = await Promise.all(fontPaths.map(async (file) =>
+      await import("node:fs/promises").then(({ readFile }) => readFile(file))));
+    const fonts: FontArtifactRef[] = fontBytes.map((bytes) => ({
+      contract: "svml.font-artifact@1",
+      artifact: { kind: "blob", digest: digest(bytes), size: bytes.byteLength, mediaType: "font/ttf" },
+      weight: 400,
+      style: "normal",
+    }));
+    const base = {
+      "cue-min-words": 1, "cue-max-words": 8,
+      "stack-order": 20, width: 0.4,
+      "anchor-x": "center", "anchor-y": "center",
+      font: "Exact Multilingual Stack", weight: 400, size: 72, "line-height": 1,
+      align: "center", fill: "#FFFFFF",
+      background: "#00000000", padding: "0 0", radius: 0,
+    } as const;
+    const makeTrack = (
+      id: string,
+      text: string,
+      properties: Readonly<Record<string, string | number>>,
+    ) => {
+      const narrative = parseScript(`${id}.svml`, `<line>${text}</line>`);
+      const display = captionDisplaySequence(narrative, `${id}.caption`);
+      const recipe: SvsRecipe = {
+        contract: "svml.svs-recipe@1",
+        path: `caption.${id}`,
+        properties: { ...base, ...properties },
+      };
+      const style = fineCaptionStyle(id, recipe, fonts);
+      const program = resolveCaptionProgram(display, `${id}-program`, style, []);
+      const projection: TimedCaptionProjection = {
+        contract: "svml.timed-caption-projection@1",
+        displaySequenceId: display.id,
+        cues: [{
+          id: `${id}-cue`, runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+          startSec: 0, endSec: durationSec,
+          atoms: display.atoms.map((atom) => ({ atomId: atom.id, startSec: 0, endSec: durationSec })),
+          fields: [],
+        }],
+      };
+      return renderFineCaption(projection, program, display, space);
+    };
+    const tracks = [
+      makeTrack("cjk", "世界", { x: 0.25, y: 0.28 }),
+      makeTrack("emoji", "<🌐 🎤 | globe microphone>", { x: 0.75, y: 0.28 }),
+      makeTrack("paint", "SVML", {
+        x: 0.5, y: 0.75, width: 0.7, size: 76,
+        "stroke-color": "#FF0000", "stroke-width": 3,
+        "shadow-color": "#0000FF", "shadow-opacity": 1,
+        "shadow-x": 14, "shadow-y": 10, "shadow-blur": 0,
+        "glow-color": "#00FF00", "glow-opacity": 1, "glow-blur": 10,
+      }),
+    ];
+    const document = compileHyperframesDocument(sealComposition({
+      contract: "svml.composition@1",
+      id: "caption-fine-multilingual",
+      canvas: { width, height, clearColor: "#000000" },
+      tracks,
+    }), space);
+    assert.deepEqual(
+      new Set(document.artifacts.map((artifact) => artifact.digest)),
+      new Set(fonts.map((font) => font.artifact.digest)),
+    );
+    const names = ["latin.ttf", "cjk.ttf", "emoji.ttf"] as const;
+    await Promise.all(fontPaths.map(async (file, index) => await copyFile(file, path.join(temp, names[index]!))));
+    const paths = new Map(fonts.map((font, index) => [font.artifact.digest, `./${names[index]!}`]));
+    await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
+      const materialized = paths.get(artifact.digest);
+      if (materialized === undefined) throw new Error(`Unexpected multilingual Artifact ${artifact.digest}`);
+      return materialized;
+    }));
+    const output = path.join(temp, "frames");
+    await mkdir(output);
+    const render = spawnSync(process.execPath, [
+      hyperframesCli, "render", temp,
+      "--format", "png-sequence", "--output", output, "--fps", "30", "--workers", "1",
+      "--no-browser-gpu", "--no-best-effort", "--quiet",
+    ], { encoding: "utf8", timeout: 110_000 });
+    assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
+    const frames = await collectPngs(output);
+    assert.equal(frames.length, 1);
+    const rgba = decodedRgba(frames[0]!, width, height);
+    const visible = (red: number, green: number, blue: number) => red + green + blue > 180;
+    assert.ok(matchingPixels(rgba, width, { left: 0, top: 0, right: width / 2, bottom: height / 2 }, visible) > 100,
+      "the exact CJK fallback did not paint its glyphs");
+    assert.ok(matchingPixels(rgba, width, { left: width / 2, top: 0, right: width, bottom: height / 2 }, visible) > 100,
+      "the exact emoji fallback did not paint its glyphs");
+    const paintRegion = { left: 0, top: height / 2, right: width, bottom: height };
+    assert.ok(matchingPixels(rgba, width, paintRegion, (red, green, blue) => red > 150 && green < 120 && blue < 120) > 100,
+      "stroke Paint did not produce red pixels");
+    assert.ok(matchingPixels(rgba, width, paintRegion, (red, green, blue) => blue > 150 && red < 120 && green < 120) > 100,
+      "shadow Paint did not produce blue pixels");
+    assert.ok(matchingPixels(rgba, width, paintRegion, (red, green, blue) => green > 50 && red < 120 && blue < 120) > 100,
+      "glow Paint did not produce green pixels");
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

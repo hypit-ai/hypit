@@ -33,15 +33,26 @@ Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样�
 ```svml
 <media:Font id="caption-font" src="./assets/Inter-Bold.woff2"
   weight="700" style="normal"/>
+<media:Font id="caption-cjk" src="./assets/NotoSansCJK-Bold.otf"
+  weight="700" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
-  font={caption-font}/>
+  font={caption-font}>
+  <caption-fine:Fallback font={caption-cjk}/>
+</caption-fine:Style>
 ```
 
-显式的 `font=` 边让最终字体按字节复现。省略它则明确使用 Recipe 的环境字体兜底名；
-Caption 和 Runtime 都不会替作者猜字体。
+显式的 `font=` 边与有序 `Fallback` 子元素让最终字体栈按字节复现。每个字体都必须与
+Recipe 的 weight/style 一致。省略字体栈则明确使用 Recipe 的环境字体兜底名；Caption
+和 Runtime 都不会替作者猜字体。
 
 Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
 逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。
+
+Fine 只在完整 Atom 之间自然换行，永不裁掉作者文字，因此有意不提供 `max-lines`。
+需要控制行数时，应调整 Cue 字数边界、Track 宽度与字号。
+
+CJK 口播可以直接书写。若一个只负责显示的 emoji 仍需跟随语音计时，应显式写出对应，
+例如 `<🌐 | globe>`；系统不会替裸符号虚构一个口播词。
 
 ### caption:Program
 

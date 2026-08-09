@@ -314,6 +314,8 @@ SVS 描述字体策略，但不负责打开文件。具体字体文件由独立�
   weight="600" style="normal"/>
 <media:Font id="inter-black" src="./assets/Inter-Black.woff2"
   weight="900" style="normal"/>
+<media:Font id="noto-cjk-semibold" src="./assets/NotoSansCJK-SemiBold.otf"
+  weight="600" style="normal"/>
 ```
 
 | 属性 | 描述 |
@@ -327,10 +329,14 @@ Runtime 不猜字体：
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
-  font={inter-semibold}/>
+  font={inter-semibold}>
+  <caption-fine:Fallback font={noto-cjk-semibold}/>
+</caption-fine:Style>
 ```
 
-省略 `font=` 时会使用 Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现。
+`font=` 是主字体，有序 `Fallback` 子元素用于覆盖 CJK、emoji 等额外字形集合。所有字体
+都必须和 Recipe 的 weight/style 一致。省略字体栈时会使用 Recipe 的环境字体兜底名，
+适合原型，但不能保证字节级复现。
 
 ## 综合示例
 

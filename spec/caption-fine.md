@@ -1,6 +1,6 @@
 # Fine Caption Style Family
 
-Status: complete public design recorded; implementation proceeds by the evidence gates below.
+Status: implemented pre-release Style family with complete browser evidence for the declared surface.
 
 ## Purpose and boundary
 
@@ -52,20 +52,36 @@ maximum; it is never split to satisfy a number.
 - `line-height`, `letter-spacing`, `word-gap`
 - absolute `stack-order`
 
-The Cue naturally wraps only between Atoms. Words inside one Atom never wrap apart. A hard
-`max-lines` control is intentionally unavailable until browser-measured layout can fail the build
-rather than silently clip or truncate authored text. Exact font bytes are now available; clipping
-is still forbidden.
+The Cue naturally wraps only between Atoms. Words inside one Atom never wrap apart. Fine has no
+`max-lines` property: a hard line limit would either discard author text or smuggle browser
+measurement into deterministic lowering. Fine never clips or truncates. Authors control density
+with Cue bounds, width and font size. A future hard layout assertion, if one is genuinely needed,
+must be a separately connected component whose failure is explicit in the graph.
 
 ### 3. Typography
 
 - `font`, `weight`, `size`, `font-style: normal | italic | oblique`
 
 The Recipe's `font` property is a readable family label and an environment fallback. For a
-reproducible build the author declares exact bytes with `<media:Font>` and passes that value through
-the Style's optional `font=` input. The declared face weight/style must equal the Recipe. Fine puts
-that `FontArtifactRef` only on its terminal text elements; Caption, Core and unrelated graph values
-remain unchanged.
+reproducible build the author declares exact bytes with `<media:Font>`, passes the primary face
+through `font=`, and may add ordered `<caption-fine:Fallback>` children for CJK, emoji or other
+glyph coverage:
+
+```svml
+<caption-fine:Style id="primary" recipe={studio.caption.primary} font={latin}>
+  <caption-fine:Fallback font={cjk}/>
+  <caption-fine:Fallback font={symbols}/>
+</caption-fine:Style>
+```
+
+Every face must declare the Recipe's exact weight/style and duplicate bytes are rejected. Fine puts
+this ordered `FontArtifactRef` stack only on its terminal text elements; Caption, Core and unrelated
+graph values remain unchanged. Omitting `font=` is an explicit environment-bound prototype path,
+not a Runtime font-selection policy.
+
+CJK speech may be authored directly. A display-only emoji still needs explicit speech
+correspondence, for example `<🌐 | globe>`; Script correctly refuses to invent a spoken token for a
+bare symbol. This is timing truth, not a font limitation.
 
 ### 4. Base glyph Paint
 
@@ -143,17 +159,17 @@ complete immutable parameter object:
 Unknown properties are rejected. Defaults are package implementation policy and therefore covered
 by its implementation digest; they are not hidden Runtime behavior.
 
-## Evidence gates and implementation order
+## Completed evidence gates
 
-This is one complete design, delivered progressively rather than three incompatible versions:
+The complete design was delivered progressively rather than as incompatible versions:
 
 1. **Resolved model and static lowering** — complete parameters, anchors, layout, base/active Paint,
    Cue box and strict validation.
 2. **Timed lowering** — current/trail, step/wipe, Cue fades, Atom reveal and active scale using only
    proven whole-Atom time.
-3. **Reproducibility freeze** — exact Font Artifact input, multiline wrapping and all four karaoke
-   modes have a real browser witness. Remaining work is broader CJK/emoji and outline/glow pixel
-   evidence, then deciding whether measured `max-lines` can be exposed without clipping.
+3. **Reproducibility evidence** — an ordered exact Font Artifact stack, CJK, emoji/symbol fallback,
+   multiline wrapping, outline, shadow, glow and all four karaoke modes have real browser/pixel
+   witnesses. `max-lines` was deliberately rejected rather than deferred.
 
 No gate changes Core or common Caption. Exact font selection is an explicit author-graph reference
 between the Media Font Surface and the Fine Style Surface, not metadata propagated through the
