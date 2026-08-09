@@ -14,6 +14,7 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
+import { localHyperframesBrowserService } from "../src/service.js";
 
 const liveEnabled = process.env.SVML_BROWSER_TESTS === "1";
 const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
@@ -119,6 +120,13 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
   const resolved = await handlerFor(requestNeed());
   assert.equal(resolved.registration.scheduling?.maxConcurrency, 1,
     "Runtime request admission must remain separate from HyperFrames frame workers");
+});
+
+test("the selected HyperFrames Provider owns one idempotent browser preparation", () => {
+  const service = localHyperframesBrowserService({ root: "/project", instance: "hyperframes", config: {} });
+  assert.equal(service.id, "hyperframes-browser");
+  assert.equal(service.start, undefined);
+  assert.deepEqual(service.prepare?.args.slice(-2), ["browser", "ensure"]);
 });
 
 test("local HyperFrames Provider really renders a silent frame-exact MP4 with parallel workers", {

@@ -66,6 +66,18 @@
       "@narratage/screen-overlay": [
         "packages/screen-overlay/src/index.ts"
       ],
+      "@narratage/comment-sticker": [
+        "packages/comment-sticker/src/index.ts"
+      ],
+      "@narratage/background-removal": [
+        "packages/background-removal/src/index.ts"
+      ],
+      "@narratage/image-compose": [
+        "packages/image-compose/src/index.ts"
+      ],
+      "@narratage/raster": [
+        "packages/raster/src/index.ts"
+      ],
       "@narratage/visual-ir": [
         "packages/visual-ir/src/index.ts"
       ],

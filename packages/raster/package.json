@@ -1,0 +1,13 @@
+{
+  "name": "@narratage/raster",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "svml": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/spatial": "workspace:*"
+  }
+}

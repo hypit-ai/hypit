@@ -23,8 +23,8 @@ a finished author package, and a deferred package is not an impossible feature.
 | `gpt_image_2` | Complete | `@narratage/gpt-image`, KIE and explicit `image-transform` post-processing. |
 | `grok_image` | Deliberately omitted | The current exact-model catalog intentionally exposes Grok only for video. A future image model package remains possible. |
 | `mimo_tts` | Backlog | Add an exact MiMo model package, author Surface and official Provider when selected. |
-| `image_chroma_key` | Backlog | The old node was KIE Recraft background removal, not local chroma key. It needs an explicit remove-background capability and Provider. |
-| `image_overlay` | Backlog | Add a deterministic two-image-to-one-image component; Media Track overlap does not produce the same reusable still Artifact. |
+| `image_chroma_key` | Complete | The misleading old name is retired. `@narratage/background-removal` declares image-in/image-out intent and KIE fulfills it through Recraft `remove-background`; another Endpoint may implement the same exact capability. |
+| `image_overlay` | Complete | `@narratage/image-compose` replaces the fixed base/sticker special case with an explicit Canvas and ordered image Layers; the local OpenCV Endpoint produces one reusable PNG Artifact. |
 | `estimate_duration` | Complete | `@narratage/estimate` plus an explicit SVS policy. |
 | `speech_script` | Complete | Script/Narrative, Segment and Role projections, Selection/Moment anchors and Caption atoms. |
 | `text_concat` | Backlog | A generic deterministic string-assembly component is not currently published. Prompt Kit does not replace every graph-level use. |
@@ -45,7 +45,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `broll_track` | Complete | Unified `@narratage/media-track` Item/Sequence authoring; the old B-roll package is retired. |
 | `deck_track` | Complete | `@narratage/deck-track` implements the independent DepthStack collection model. |
 | `cluely_ui_track` | Deliberately omitted | Product-specific UI recreation was explicitly removed from the migration scope. |
-| `comment_sticker_track` | Backlog | A separate Comment Sticker author package remains planned; shared Temporal/Spatial/Visual IR already suffice. |
+| `comment_sticker_track` | Complete | Independent `@narratage/comment-sticker` Style/Track Surfaces lower explicit content, Spatial Frames and shared Temporal projections to a self-contained peer Visual Track. |
 | `text_track` | Complete | `@narratage/text-track` implements Point/Area/Path text, rich paint, boxes, layout, masks and motion. |
 | `subtitle_track` | Complete | Caption Plan, Gemini planner and `@narratage/caption-fine` replace the monolithic subtitle node. |
 | `fx_track` | Deliberately omitted | Base/lower-composite sampling violates peer self-contained Track laws; no placeholder is reserved. |
@@ -55,7 +55,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `locate` | Complete | WhisperX evidence, Speech Alignment, SemanticMap, Temporal, Spatial and Film replace one privileged locate phase. |
 | `export` | Complete | Composition, HyperFrames document compilation, visual rendering, audio rendering and mux are explicit graph operations. |
 
-Totals: **17 Complete**, **8 Expressible; Kit missing**, **7 Backlog**, **3 Deliberately omitted**.
+Totals: **20 Complete**, **8 Expressible; Kit missing**, **4 Backlog**, **3 Deliberately omitted**.
 
 ## Retired behavior inside migrated families
 

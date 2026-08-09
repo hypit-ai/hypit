@@ -24,9 +24,19 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@narratage/protocol";
 
 import { createLocalMediaProvider } from "../src/index.js";
+import { localMediaToolchainService } from "../src/service.js";
 
 const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0
   && spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
+
+test("the local media Provider declares its external toolchain without owning a second daemon", async () => {
+  const service = localMediaToolchainService({ root: "/project", instance: "media", config: {} });
+  assert.equal(service.id, "media-ffmpeg-toolchain");
+  assert.equal(service.prepare, undefined);
+  assert.equal(service.start, undefined);
+  const state = await service.probe();
+  assert.equal(state.state, hasMediaBinaries ? "ready" : "down");
+});
 
 // Five 64x48 lossless frames at 100 ms each. Later frames are partial alpha
 // rectangles, so this fixture exercises WebP blend and canvas persistence.

@@ -11,6 +11,7 @@ import {
   sealImageTransformProgram,
 } from "@narratage/image-transform";
 import { artifactTypes } from "@narratage/artifact";
+import { rasterCapabilities } from "@narratage/raster";
 import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, TypedRecord } from "@narratage/protocol";
 
@@ -27,7 +28,7 @@ test("the Twinit GPT Image cleanup is one explicit reusable Program", () => {
   assert.throws(() => sealImageTransformProgram({
     contract: "svml.image-transform-program@1",
     operations: [{ kind: "encode", format: "png" }, { kind: "blur", sigma: 1 }],
-  }), /encode must be the final/u);
+  }), /encode must be final/u);
 });
 
 test("the official Surface separates Program declaration from Transform use", async () => {
@@ -66,7 +67,8 @@ test("the official Surface separates Program declaration from Transform use", as
 test("the graph contract is exactly source plus Program to one image Need", async () => {
   assert.deepEqual(imageTransformFragment.inputs.map((input) => input.name).sort(), ["program", "source"]);
   assert.deepEqual(imageTransformFragment.exports.map((output) => output.name), ["image"]);
-  assert.equal(imageTransformManifest.capabilities.length, 1);
+  assert.equal(imageTransformManifest.capabilities.length, 0);
+  assert.deepEqual(imageTransformManifest.producers[0]?.needs[0]?.capability, rasterCapabilities.execute);
   const producer = imageTransformComponent.producers[0]!;
   const source = {
     kind: "blob" as const,
@@ -95,8 +97,9 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
   } as never);
   assert.deepEqual(result.outputs, {});
   assert.deepEqual(result.needs.image, {
-    contract: "svml.image-transform-request@1",
+    contract: "svml.raster-request@1",
+    kind: "transform",
     source,
-    program: gptImageDenoiseV1,
+    operations: gptImageDenoiseV1.operations,
   });
 });

@@ -1,13 +1,15 @@
 # `@narratage/provider-image-opencv-local`
 
-Local OpenCV/NumPy realization of `@narratage/image-transform`.
+Local OpenCV/NumPy realization of the single `@narratage/raster` capability.
 
-It reads one content-addressed image Artifact, runs the closed-data operation list in a bounded
-child process and stores one new image Artifact. Temporary paths, OpenCV details and diagnostics
+Image Transform and Image Compose lower their different author meanings to one closed RasterRequest.
+One Handler stages its content-addressed inputs, and one Python interpreter shares decoding, fit,
+interpolation, alpha and encoding primitives across both variants. It runs in a bounded child process
+and stores one new image Artifact. Temporary paths, OpenCV details and diagnostics
 stay inside the Endpoint/Receipt and never enter the image Product.
 
-The configured Python executable must provide `cv2` and `numpy`. The repository ships the locked
-deployment environment in `services/image-opencv`; run
-`uv sync --project services/image-opencv --frozen` once, then configure `pythonExecutable` as
-`./services/image-opencv/.venv/bin/python`. Runtime admission and inner image work share the
-configured Endpoint lane; no separate queue is hidden in this package.
+The repository ships the frozen deployment environment in `services/image-opencv`. With the Runtime
+Adapter's default configuration, `services up` runs `uv sync --frozen` and the Endpoint, service probe
+and doctor all resolve the resulting `.venv` interpreter. An explicit `pythonExecutable` selects an
+operator-managed compatible environment and suppresses that managed prepare. Runtime admission and
+inner image work share the configured Endpoint lane; no separate queue is hidden in this package.

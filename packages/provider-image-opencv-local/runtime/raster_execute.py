@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Bounded closed-data image transforms for @narratage/provider-image-opencv-local."""
+"""One bounded raster interpreter for @narratage/provider-image-opencv-local."""
 
 import json
+import math
 import sys
 
 import cv2
@@ -63,29 +64,40 @@ def interpolation(name):
     }[name]
 
 
+def decode(source):
+    image = cv2.imdecode(np.frombuffer(source, np.uint8), cv2.IMREAD_UNCHANGED)
+    if image is None:
+        raise ValueError("image decode failed")
+    return image
+
+
+def fit_geometry(width, height, target_width, target_height, mode):
+    if mode == "stretch":
+        return target_width, target_height, 0, 0
+    scale = min(target_width / width, target_height / height) if mode == "contain" else max(
+        target_width / width, target_height / height
+    )
+    scaled_width = max(1, round_half_up(width * scale))
+    scaled_height = max(1, round_half_up(height * scale))
+    return scaled_width, scaled_height, (target_width - scaled_width) // 2, (target_height - scaled_height) // 2
+
+
 def resize(image, operation):
     target_width, target_height = int(operation["width"]), int(operation["height"])
     mode = operation["fit"]
     method = interpolation(operation["interpolation"])
-    if mode == "stretch":
-        return cv2.resize(image, (target_width, target_height), interpolation=method)
     height, width = image.shape[:2]
-    scale = min(target_width / width, target_height / height) if mode == "contain" else max(
-        target_width / width, target_height / height
-    )
-    scaled_width, scaled_height = max(1, int(round(width * scale))), max(1, int(round(height * scale)))
+    scaled_width, scaled_height, x, y = fit_geometry(width, height, target_width, target_height, mode)
     scaled = cv2.resize(image, (scaled_width, scaled_height), interpolation=method)
     if mode == "cover":
-        x = (scaled_width - target_width) // 2
-        y = (scaled_height - target_height) // 2
-        return scaled[y:y + target_height, x:x + target_width].copy()
+        return scaled[-y:-y + target_height, -x:-x + target_width].copy()
+    if mode == "stretch":
+        return scaled
     channels = 4 if scaled.ndim == 3 and scaled.shape[2] == 4 else 3
     default = "#00000000" if channels == 4 else "#000000"
     fill = color(operation.get("background", default))
     canvas = np.empty((target_height, target_width, channels), dtype=np.uint8)
     canvas[:] = fill[:channels]
-    x = (target_width - scaled_width) // 2
-    y = (target_height - scaled_height) // 2
     canvas[y:y + scaled_height, x:x + scaled_width] = scaled
     return canvas
 
@@ -169,26 +181,18 @@ def apply(image, operation):
     raise ValueError(f"unknown image operation {kind}")
 
 
-def transform(source, program):
-    image = cv2.imdecode(np.frombuffer(source, np.uint8), cv2.IMREAD_UNCHANGED)
-    if image is None:
-        raise ValueError("image decode failed")
-    for operation in program["operations"]:
-        if operation["kind"] != "encode":
-            image = apply(image, operation)
-    encode = next((item for item in program["operations"] if item["kind"] == "encode"), {"format": "png"})
-    output_format = encode["format"]
+def encode_image(image, output_format="png", quality=None, background=None):
     parameters = []
     if output_format == "jpeg":
         if image.ndim == 3 and image.shape[2] == 4:
-            if "background" not in encode:
+            if background is None:
                 raise ValueError("JPEG encoding of alpha requires an explicit background")
-            image = flatten(image, encode["background"])
+            image = flatten(image, background)
         extension = ".jpg"
-        parameters = [cv2.IMWRITE_JPEG_QUALITY, int(encode.get("quality", 95))]
+        parameters = [cv2.IMWRITE_JPEG_QUALITY, int(quality or 95)]
     elif output_format == "webp":
         extension = ".webp"
-        parameters = [cv2.IMWRITE_WEBP_QUALITY, int(encode.get("quality", 95))]
+        parameters = [cv2.IMWRITE_WEBP_QUALITY, int(quality or 95)]
     else:
         extension = ".png"
     ok, encoded = cv2.imencode(extension, image, parameters)
@@ -197,18 +201,96 @@ def transform(source, program):
     return encoded.tobytes()
 
 
+def transform(source, operations):
+    image = decode(source)
+    for operation in operations:
+        if operation["kind"] != "encode":
+            image = apply(image, operation)
+    encode = next((item for item in operations if item["kind"] == "encode"), {"format": "png"})
+    output_format = encode["format"]
+    return encode_image(image, output_format, encode.get("quality"), encode.get("background"))
+
+
+def bgra(image):
+    if image is None:
+        raise ValueError("image decode failed")
+    if image.ndim == 2:
+        return cv2.cvtColor(image, cv2.COLOR_GRAY2BGRA)
+    if image.shape[2] == 3:
+        return cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+    if image.shape[2] == 4:
+        return image
+    raise ValueError("unsupported image channel count")
+
+
+def round_half_up(value):
+    return math.floor(float(value) + 0.5)
+
+
+def fit_layer(image, frame, mode, method):
+    frame_width = max(1, round_half_up(frame["widthPx"]))
+    frame_height = max(1, round_half_up(frame["heightPx"]))
+    height, width = image.shape[:2]
+    scaled_width, scaled_height, x, y = fit_geometry(width, height, frame_width, frame_height, mode)
+    scaled = cv2.resize(image, (scaled_width, scaled_height), interpolation=method)
+    return scaled, x, y
+
+
+def alpha_over(canvas, image, x, y, opacity):
+    canvas_height, canvas_width = canvas.shape[:2]
+    image_height, image_width = image.shape[:2]
+    left, top = max(0, x), max(0, y)
+    right, bottom = min(canvas_width, x + image_width), min(canvas_height, y + image_height)
+    if left >= right or top >= bottom:
+        return
+    source = image[top - y:bottom - y, left - x:right - x].astype(np.float32) / 255.0
+    target = canvas[top:bottom, left:right].astype(np.float32) / 255.0
+    source_alpha = source[:, :, 3:4] * float(opacity)
+    target_alpha = target[:, :, 3:4]
+    output_alpha = source_alpha + target_alpha * (1.0 - source_alpha)
+    premultiplied = source[:, :, :3] * source_alpha + target[:, :, :3] * target_alpha * (1.0 - source_alpha)
+    rgb = np.divide(premultiplied, output_alpha, out=np.zeros_like(premultiplied), where=output_alpha > 0)
+    canvas[top:bottom, left:right] = np.rint(
+        np.concatenate([rgb, output_alpha], axis=2) * 255.0
+    ).clip(0, 255).astype(np.uint8)
+
+
+def compose(request):
+    width, height = int(request["canvas"]["widthPx"]), int(request["canvas"]["heightPx"])
+    fill = color(request["background"])
+    canvas = np.empty((height, width, 4), dtype=np.uint8)
+    canvas[:] = fill
+    for layer in request["layers"]:
+        with open(layer["source"], "rb") as source_file:
+            image = bgra(decode(source_file.read()))
+        fitted, offset_x, offset_y = fit_layer(
+            image, layer["frame"], layer["fit"], interpolation(layer["interpolation"])
+        )
+        alpha_over(
+            canvas, fitted,
+            round_half_up(layer["frame"]["xPx"]) + offset_x,
+            round_half_up(layer["frame"]["yPx"]) + offset_y,
+            layer["opacity"],
+        )
+    return encode_image(canvas)
+
+
 def main():
     if sys.argv[1:] == ["--self-test"]:
         print(json.dumps({"opencv": cv2.__version__, "numpy": np.__version__}))
         return
-    if len(sys.argv) != 4:
-        raise SystemExit("usage: image_transform.py <input> <program.json> <output>")
-    input_path, program_path, output_path = sys.argv[1:]
-    with open(input_path, "rb") as source_file:
-        source = source_file.read()
-    with open(program_path, "r", encoding="utf-8") as program_file:
-        program = json.load(program_file)
-    result = transform(source, program)
+    if len(sys.argv) != 3:
+        raise SystemExit("usage: raster_execute.py <request.json> <output>")
+    request_path, output_path = sys.argv[1:]
+    with open(request_path, "r", encoding="utf-8") as request_file:
+        request = json.load(request_file)
+    if request["kind"] == "transform":
+        with open(request["source"], "rb") as source_file:
+            result = transform(source_file.read(), request["operations"])
+    elif request["kind"] == "compose":
+        result = compose(request)
+    else:
+        raise ValueError("unknown raster request kind")
     with open(output_path, "wb") as output_file:
         output_file.write(result)
 

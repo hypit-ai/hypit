@@ -27,6 +27,11 @@ The Endpoint:
 - muxes exactly one verified silent visual stream and one verified program-audio stream into MP4;
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.
 
+The Runtime Adapter declares the selected `ffmpeg`/`ffprobe` pair as an external, non-daemon service.
+Its shared probe checks the encoders and filters used by the execution body. Compatible custom paths
+remain valid; the package neither pins a semantic Capability to one FFmpeg version nor mutates a
+system package manager.
+
 Video-backed normalization is video-authoritative so an AAC packet tail cannot extend the program
 past its final picture. Audio-only normalization is audio-authoritative. The AWS Lambda media Provider
 must return the same public contracts and timing laws; Lambda is an execution topology, not another

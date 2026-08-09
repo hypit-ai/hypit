@@ -7,9 +7,9 @@ import {
 } from "@narratage/runtime-adapter";
 import {
   diagnoseRuntimeExecutable,
-  resolveRuntimeExecutable,
 } from "@narratage/runtime-adapter-node";
 
+import { resolveLocalOpenCvDeployment } from "./deployment.js";
 import { createLocalOpenCvImageProvider } from "./provider.js";
 import { localOpenCvService } from "./service.js";
 
@@ -31,14 +31,11 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     runtimeConfigExact(config, [
       "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
     ], "local OpenCV image");
-    const configuredPython = runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
-    const pythonExecutable = configuredPython === undefined
-      ? undefined
-      : resolveRuntimeExecutable(context.root, configuredPython);
+    const pythonExecutable = resolveLocalOpenCvDeployment(context).pythonExecutable;
     return createLocalOpenCvImageProvider({
       instance: context.instance,
       ...(context.lane === undefined ? {} : { lane: context.lane }),
-      ...(pythonExecutable === undefined ? {} : { pythonExecutable }),
+      pythonExecutable,
       ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency") === undefined
         ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
       ...(runtimeConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs") === undefined
@@ -50,11 +47,11 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     });
   },
   async doctor(context) {
-    const config = runtimeConfigObject(context.config, "local OpenCV image");
+    const deployment = resolveLocalOpenCvDeployment(context);
     return await diagnoseRuntimeExecutable({
       root: context.root,
-      configured: runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable"),
-      fallback: "python3",
+      configured: deployment.pythonExecutable,
+      fallback: deployment.pythonExecutable,
       subject: "OpenCV Python",
     });
   },
