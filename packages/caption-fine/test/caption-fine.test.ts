@@ -205,7 +205,7 @@ test("an exact Font is explicit Style input and reaches every base and active gl
   const style = fineCaptionStyle("font", {
     ...recipe,
     properties: { ...recipe.properties, karaoke: "current", "active-fill": "#FFD54A" },
-  }, exactFont);
+  }, [exactFont]);
   const program = resolveCaptionProgram(display, "font-program", style, []);
   const projection: TimedCaptionProjection = {
     contract: "svml.timed-caption-projection@1",
@@ -227,7 +227,18 @@ test("an exact Font is explicit Style input and reaches every base and active gl
   for (const glyph of glyphs) {
     if (glyph.kind === "text") assert.deepEqual(glyph.fonts, [exactFont]);
   }
-  assert.throws(() => fineCaptionStyle("mismatch", recipe, { ...exactFont, weight: 700 }), /must match/u);
+  assert.throws(() => fineCaptionStyle("mismatch", recipe, [{ ...exactFont, weight: 700 }]), /must match/u);
+});
+
+test("an ordered exact Font stack is preserved and rejects incompatible or duplicate fallbacks", () => {
+  const fallback: FontArtifactRef = {
+    ...exactFont,
+    artifact: { ...exactFont.artifact, digest: digestOf("caption-fine:test-fallback") },
+  };
+  const parameters = fineCaptionParameters(recipe, [exactFont, fallback]);
+  assert.deepEqual(parameters.typography.exactFonts, [exactFont, fallback]);
+  assert.throws(() => fineCaptionParameters(recipe, [exactFont, exactFont]), /duplicate face/u);
+  assert.throws(() => fineCaptionParameters(recipe, [exactFont, { ...fallback, style: "italic" }]), /must match/u);
 });
 
 test("current/trail by step/wipe have four distinct frame-exact Atom histories", () => {

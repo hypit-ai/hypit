@@ -394,9 +394,10 @@ font, box or paint rule must not change Caption, Composition or Core.
 
 `@narratage/media` owns the identity of renderable bytes, including `FontArtifactRef`; it does not
 own typography choices. Its `<media:Font>` author Surface turns an explicitly referenced font file
-into that existing value. A consuming Text/Caption/Ranking package chooses the face through a
-normal graph reference. Fine Caption already accepts it through `Style.font`; no font fact is added
-to Core or propagated through unrelated intermediate values.
+into that existing value. A consuming Text/Caption/Ranking package chooses faces through normal
+graph references. Fine Caption accepts a primary `Style.font` plus ordered package-owned
+`Fallback` children; no font fact is added to Core or propagated through unrelated intermediate
+values.
 
 Speech implementation packages now describe what they actually do:
 
