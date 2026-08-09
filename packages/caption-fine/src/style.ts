@@ -2,6 +2,7 @@ import type { CaptionStyleIntent } from "@narratage/caption";
 import { sealCaptionStyle } from "@narratage/caption";
 import { assertFontArtifactRef } from "@narratage/media";
 import type { FontArtifactRef } from "@narratage/media";
+import { digestOf } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
 import type { FineCaptionGlyphPaint, FineCaptionParameters } from "./types.js";
@@ -215,14 +216,15 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
   }
   if (value.typography.exactFonts !== undefined) {
     if (value.typography.exactFonts.length === 0) throw new Error("Fine Caption exact Font stack is empty");
-    const artifacts = new Set<string>();
+    const faces = new Set<string>();
     for (const [index, font] of value.typography.exactFonts.entries()) {
       assertFontArtifactRef(font, `Fine Caption exact Font ${index + 1}`);
-      if (font.weight !== value.typography.fontWeight || font.style !== value.typography.fontStyle) {
-        throw new Error("Fine Caption exact Font faces must match Recipe weight and font-style");
+      if (index === 0 && (font.weight !== value.typography.fontWeight || font.style !== value.typography.fontStyle)) {
+        throw new Error("Fine Caption primary exact Font face must match Recipe weight and font-style");
       }
-      if (artifacts.has(font.artifact.digest)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
-      artifacts.add(font.artifact.digest);
+      const identity = digestOf(font);
+      if (faces.has(identity)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
+      faces.add(identity);
     }
   }
   assertColor(value.cueBox.background, "Fine Caption background");

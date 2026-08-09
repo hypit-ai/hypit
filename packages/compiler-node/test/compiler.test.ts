@@ -260,7 +260,14 @@ function assetCompiler(environment: { readonly root: string } | { readonly works
     const id = element.attributes.id;
     const src = element.attributes.src;
     if (typeof id !== "string" || typeof src !== "string") throw new Error("Asset id and src are required");
-    const resolved = await resolveAsset({ from: src, mediaType: "application/octet-stream", range: element.range });
+    const resolved = await resolveAsset({
+      from: src,
+      mediaType: "application/octet-stream",
+      ...(src === "package:example.asset-lab/embedded.bin"
+        ? { bytes: new Uint8Array([8, 6, 7, 5, 3, 0, 9]) }
+        : {}),
+      range: element.range,
+    });
     return {
       records: [{ id, type: assetType, value: resolved.artifact, range: element.range }],
       components: [],
@@ -429,6 +436,26 @@ test("source assets are content addressed, closure-bound and returned as a Host 
   const second = await assetCompiler({ root }).compileFile(file);
   assert.notEqual(second.closure.id, first.closure.id);
   assert.notEqual(second.attachments[0]?.artifact.digest, attachment?.artifact.digest);
+});
+
+test("an installed package Surface can contribute locked bytes without an author file or network", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-embedded-assets-"));
+  const file = join(root, "main.svml");
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  <svml>
+    <import as="asset" from="example.asset-lab@1"/>
+    <asset:Asset id="embedded" src="package:example.asset-lab/embedded.bin"/>
+  </svml>`, "utf8");
+
+  const compiled = await assetCompiler({ root }).compileFile(file);
+  const attachment = compiled.attachments[0];
+  assert.deepEqual(attachment?.bytes, new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
+  assert.equal(compiled.closure.units[0]?.assets[0]?.from, "package:example.asset-lab/embedded.bin");
+  assert.equal(compiled.closure.units[0]?.assets[0]?.artifact.digest, attachment?.artifact.digest);
+  assert.equal(compiled.module.records[0]?.value.kind, "blob");
+  assert.equal(compiled.module.records[0]?.value.kind === "blob"
+    ? compiled.module.records[0].value.digest
+    : undefined, attachment?.artifact.digest);
 });
 
 test("filesystem Workspace contains symlinks and reads each canonical source only once", async () => {

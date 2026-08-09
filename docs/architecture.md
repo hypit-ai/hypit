@@ -366,6 +366,13 @@ real process/Wasm isolation boundary, permission grants, resource limits and cod
 Package installation is also outside source semantics: importing a module never authorizes npm
 installation or execution.
 
+A trusted installed Surface may contribute package-owned static bytes—fonts today, and potentially
+LUTs or templates later—through the same Host asset gate as an author file. The Node Compiler hashes
+the bytes, records their `BlobRef` in the Source Closure and returns them in its Host transfer bundle;
+the bytes never enter Core state. This is not a hidden network fetch: installation has already
+resolved the locked physical package, and compilation only reads that installed closure. A Surface
+cannot turn an SVML import into package installation.
+
 ## 10. Video is an ordinary distribution
 
 The old umbrella `@narratage/video-contracts` package no longer exists. Public video communication
@@ -393,11 +400,12 @@ not authority to add a concrete Style parameter to the common package: changing 
 font, box or paint rule must not change Caption, Composition or Core.
 
 `@narratage/media` owns the identity of renderable bytes, including `FontArtifactRef`; it does not
-own typography choices. Its `<media:Font>` author Surface turns an explicitly referenced font file
-into that existing value. A consuming Text/Caption/Ranking package chooses faces through normal
-graph references. Fine Caption accepts a primary `Style.font` plus ordered package-owned
-`Fallback` children; no font fact is added to Core or propagated through unrelated intermediate
-values.
+own typography choices. Its `<media:Font>` author Surface turns an explicitly referenced custom font
+file into that existing value. The optional `@narratage/fonts-open` package exposes a curated,
+version-pinned catalog of installed OFL faces through the same value contract. A consuming
+Text/Caption/Ranking package chooses faces through normal graph references. Fine Caption accepts a
+primary `Style.font` plus ordered package-owned `Fallback` children; no font fact is added to Core or
+propagated through unrelated intermediate values.
 
 Speech implementation packages now describe what they actually do:
 

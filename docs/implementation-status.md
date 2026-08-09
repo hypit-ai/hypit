@@ -180,9 +180,10 @@ Implemented and executable:
   motion and one shared VisualTrack lowering; all four karaoke timing combinations have unit and
   real HyperFrames/browser pixel evidence, including multiline wrapping, CJK, emoji/symbols,
   outline, shadow and glow;
-- explicit `<media:Font>` source declarations produce exact `FontArtifactRef` values; Fine Style
-  accepts an ordered primary/fallback stack as ordinary author references and HyperFrames
-  materializes those exact bytes;
+- explicit `<media:Font>` custom source declarations and the private, version-pinned
+  `@narratage/fonts-open` installed catalog produce exact `FontArtifactRef` values; one logical face
+  may carry several Unicode-range sources, Fine Style accepts an ordered primary/fallback stack as
+  ordinary author references, and HyperFrames materializes those exact bytes;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;

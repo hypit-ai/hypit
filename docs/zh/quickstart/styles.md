@@ -109,12 +109,11 @@ caption.dialogue {
 | `padding` | 容器内边距（像素）（单个值或 `垂直 水平`） |
 | `radius` | 容器圆角半径（像素） |
 
-若要可复现渲染，应在 `.svml` 源码中显式声明字体字节，并把该 Record 传给 Fine Style。
-它的 `weight` 与 `style` 必须和 Recipe 一致：
+若要可复现渲染，应在 `.svml` 源码中显式选择已安装的精确字体，并把该 Record 传给 Fine
+Style。主字体的 `weight` 与 `style` 必须和 Recipe 一致：
 
 ```svml
-<media:Font id="caption-font" src="./assets/Inter-SemiBold.woff2"
-  weight="600" style="normal"/>
+<fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
   font={caption-font}/>
 ```
@@ -304,39 +303,48 @@ speaker.host {
 
 ## 精确字体声明
 
-SVS 描述字体策略，但不负责打开文件。具体字体文件由独立导入的 Media 包在作者源码中
-声明：
+SVS 描述字体策略，但不选择或打开字体字节。常用开源字体由私有的预发布字体目录显式
+导入；只有作者图真正引用的字体会进入本次 Build：
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 
-<media:Font id="inter-semibold" src="./assets/Inter-SemiBold.woff2"
-  weight="600" style="normal"/>
-<media:Font id="inter-black" src="./assets/Inter-Black.woff2"
-  weight="900" style="normal"/>
-<media:Font id="noto-cjk-semibold" src="./assets/NotoSansCJK-SemiBold.otf"
-  weight="600" style="normal"/>
+<fonts:Face id="inter-semibold" family="inter" weight="600" style="normal"/>
+<fonts:Face id="noto-cjk-semibold" family="noto-sans-sc" weight="600" style="normal"/>
+<fonts:Face id="symbols" family="noto-emoji" weight="400" style="normal"/>
 ```
 
 | 属性 | 描述 |
 |---|---|
-| `src` | 字体文件路径（相对于作者源码） |
-| `weight` | 该文件提供的字体粗细 |
-| `style` | 字体样式：`normal`、`italic`、`oblique` |
+| `family` | 字体包有限目录中的字体族 |
+| `weight` | 精确选择的字体粗细 |
+| `style` | `normal` 或该字体族支持的 `italic` |
 
-编译器把字体字节解析为内容寻址的 `FontArtifactRef`。消费组件通过普通源码引用选择它，
-Runtime 不猜字体：
+当前目录包含 Inter、Montserrat、DM Sans、Manrope、Poppins、Bebas Neue、Playfair Display、
+Source Serif 4、Noto Sans SC、Noto Serif SC 与 Noto Emoji。Fontsource 依赖固定为 `5.3.0`；
+编译器把已安装字节哈希成内容寻址的 `FontArtifactRef`，Build 过程不会下载字体，Runtime
+也不猜字体：
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
   font={inter-semibold}>
   <caption-fine:Fallback font={noto-cjk-semibold}/>
+  <caption-fine:Fallback font={symbols}/>
 </caption-fine:Style>
 ```
 
-`font=` 是主字体，有序 `Fallback` 子元素用于覆盖 CJK、emoji 等额外字形集合。所有字体
-都必须和 Recipe 的 weight/style 一致。省略字体栈时会使用 Recipe 的环境字体兜底名，
-适合原型，但不能保证字节级复现。
+`font=` 是主字体，有序 `Fallback` 子元素用于覆盖 CJK、emoji 等额外字形集合。主字体
+必须和 Recipe 的 weight/style 一致；Fallback 保留自己的真实 weight/style。CJK 与 emoji
+即使由多个 Unicode-range 文件组成，在作者图中仍是一条逻辑字体边。省略字体栈时会使用
+Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现。
+
+品牌字体与自定义字体仍是显式作者资产，不会被塞进共享目录：
+
+```svml
+<import as="media" from="@narratage/media@1"/>
+<media:Font id="brand" src="./assets/Brand-Semibold.woff2"
+  weight="600" style="normal"/>
+```
 
 ## 综合示例
 

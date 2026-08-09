@@ -62,8 +62,12 @@ export const muxedMediaSchema: ValueSchema = object({ contract: { schema: { kind
   frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, artifact: { schema: blobArtifactSchema(["video/mp4"]) } });
-export const fontArtifactSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-artifact@1" } },
+const fontSourceSchema: ValueSchema = object({
   artifact: { schema: blobArtifactSchema(["font/otf", "font/ttf", "font/woff", "font/woff2"]) },
+  unicodeRange: { schema: { kind: "string", minLength: 3 }, optional: true },
+});
+export const fontArtifactSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-artifact@1" } },
+  sources: { schema: { kind: "array", minItems: 1, items: fontSourceSchema } },
   weight: { schema: { kind: "number", integer: true, minimum: 1, maximum: 1_000 } }, style: { schema: { kind: "string", enum: ["normal", "italic", "oblique"] } } });
 const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "still" } } }),

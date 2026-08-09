@@ -63,9 +63,9 @@ must be a separately connected component whose failure is explicit in the graph.
 - `font`, `weight`, `size`, `font-style: normal | italic | oblique`
 
 The Recipe's `font` property is a readable family label and an environment fallback. For a
-reproducible build the author declares exact bytes with `<media:Font>`, passes the primary face
-through `font=`, and may add ordered `<caption-fine:Fallback>` children for CJK, emoji or other
-glyph coverage:
+reproducible build the author imports exact installed faces from `@narratage/fonts-open`, or declares
+custom/brand bytes with `<media:Font>`. The primary face passes through `font=`; ordered
+`<caption-fine:Fallback>` children add CJK, emoji or other glyph coverage:
 
 ```svml
 <caption-fine:Style id="primary" recipe={studio.caption.primary} font={latin}>
@@ -74,10 +74,12 @@ glyph coverage:
 </caption-fine:Style>
 ```
 
-Every face must declare the Recipe's exact weight/style and duplicate bytes are rejected. Fine puts
-this ordered `FontArtifactRef` stack only on its terminal text elements; Caption, Core and unrelated
-graph values remain unchanged. Omitting `font=` is an explicit environment-bound prototype path,
-not a Runtime font-selection policy.
+The primary face must declare the Recipe's exact weight/style. A fallback preserves its own honest
+face metadata—for example a 700-weight Latin primary may use a 400-weight symbol fallback. Exact
+duplicate faces are rejected. One logical face may contain several content-addressed Unicode-range
+sources, as the installed CJK and emoji fonts do. Fine puts this ordered `FontArtifactRef` stack only
+on its terminal text elements; Caption, Core and unrelated graph values remain unchanged. Omitting
+`font=` is an explicit environment-bound prototype path, not a Runtime font-selection policy.
 
 CJK speech may be authored directly. A display-only emoji still needs explicit speech
 correspondence, for example `<🌐 | globe>`; Script correctly refuses to invent a spoken token for a

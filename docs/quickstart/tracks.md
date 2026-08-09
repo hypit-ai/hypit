@@ -22,6 +22,7 @@ Script Display → Caption Program → Planner + measured Atom timing → Style-
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="media" from="@narratage/media@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 ```
 
 `@narratage/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
@@ -57,20 +58,20 @@ caption.primary {
 ```
 
 ```svml
-<media:Font id="caption-font" src="./assets/Inter-Bold.woff2"
-  weight="700" style="normal"/>
-<media:Font id="caption-cjk" src="./assets/NotoSansCJK-Bold.otf"
-  weight="700" style="normal"/>
+<fonts:Face id="caption-font" family="inter" weight="700" style="normal"/>
+<fonts:Face id="caption-cjk" family="noto-sans-sc" weight="700" style="normal"/>
+<fonts:Face id="caption-symbols" family="noto-emoji" weight="400" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
   font={caption-font}>
   <caption-fine:Fallback font={caption-cjk}/>
+  <caption-fine:Fallback font={caption-symbols}/>
 </caption-fine:Style>
 ```
 
 The explicit `font=` edge and ordered `Fallback` children make the rendered stack
-byte-reproducible. Every face must match the Recipe's weight/style. Omitting the stack deliberately
-uses the Recipe's `font` family as an environment fallback; neither Caption nor the Runtime chooses
-a font on the author's behalf.
+byte-reproducible. The primary face must match the Recipe's weight/style; each fallback retains its
+own exact face metadata. Omitting the stack deliberately uses the Recipe's `font` family as an
+environment fallback; neither Caption nor the Runtime chooses a font on the author's behalf.
 
 Another Caption package may define completely different planning fields and visual parameters
 without changing the common package.
