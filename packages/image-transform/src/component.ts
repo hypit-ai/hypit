@@ -1,6 +1,7 @@
 import type { ComponentPackage } from "@narratage/component-kit";
 import type { BlobRef, StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
+import { rasterTransformRequest } from "@narratage/raster";
 
 import {
   imageTransformImplementationDigests,
@@ -8,7 +9,7 @@ import {
   imageTransformTypes,
 } from "./manifest.js";
 import { verifyImageTransformProgram } from "./program.js";
-import type { ImageTransformProgram, ImageTransformRequest } from "./types.js";
+import type { ImageTransformProgram } from "./types.js";
 
 function inline(value: StoredValue | undefined, subject: string): ImageTransformProgram {
   if (value?.kind !== "inline") throw new Error(`${subject} must be inline`);
@@ -37,12 +38,7 @@ export const imageTransformComponent = {
       const source = blob(inputs.source?.value, "ImageTransform source");
       const program = inline(inputs.program?.value, "ImageTransformProgram");
       verifyImageTransformProgram(program);
-      const request: ImageTransformRequest = {
-        contract: "svml.image-transform-request@1",
-        source,
-        program,
-      };
-      return { outputs: {}, needs: { image: canonicalize(request) } };
+      return { outputs: {}, needs: { image: canonicalize(rasterTransformRequest(source, program.operations)) } };
     },
   }],
 } satisfies ComponentPackage;

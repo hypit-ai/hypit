@@ -5,18 +5,6 @@ import type {
   EndpointOutcome,
 } from "@narratage/endpoint-kit";
 import {
-  compileWireRequest,
-  generationTypes,
-  mappingSupportsRequest,
-  sealGeneratedImageSet,
-  sealGeneratedVideoSet,
-} from "@narratage/generation";
-import type {
-  GenerationArtifactUrlResolver,
-  GenerationRequest,
-  GenerationWireRequest,
-} from "@narratage/generation";
-import {
   canonicalize,
   digestOf,
   isDigest,
@@ -25,6 +13,7 @@ import type {
   BlobRef,
   CanonicalValue,
   Digest,
+  Need,
 } from "@narratage/protocol";
 import {
   defineEndpointPackage,
@@ -34,10 +23,11 @@ import { credentialRef } from "@narratage/runtime";
 import type { ArtifactStore, CredentialRef } from "@narratage/runtime";
 
 import {
-  kieMappingForCapability,
-  kieModelCatalog,
-  verifyKieModelCatalog,
-} from "./mapping.js";
+  kieRouteForCapability,
+  kieRoutes,
+  verifyKieRoutes,
+} from "./routes.js";
+import type { KieTaskRequest } from "./routes.js";
 
 export const kieProviderModuleRef = { name: "@narratage/provider-kie", version: "1" } as const;
 export const kieProviderImplementationDigest = digestOf("@narratage/provider-kie/market-endpoint@1");
@@ -65,9 +55,8 @@ export type CreateKieProviderOptions = {
 type KieCheckpoint = {
   readonly contract: "svml.kie-operation@1";
   readonly taskId: string;
-  readonly catalogKey: string;
+  readonly routeKey: string;
   readonly model: string;
-  readonly result: "image" | "video";
   readonly requestDigest: Digest;
   readonly contentRequestDigest: Digest;
   readonly startedAt: number;
@@ -248,7 +237,7 @@ class KieClient {
     return url;
   }
 
-  async createTask(task: GenerationWireRequest, apiKey: string): Promise<string> {
+  async createTask(task: KieTaskRequest, apiKey: string): Promise<string> {
     let response: Record<string, unknown>;
     try {
       response = await this.#json(`${this.#options.apiBaseUrl}/api/v1/jobs/createTask`, {
@@ -377,11 +366,11 @@ function verifyCheckpoint(value: CanonicalValue | undefined, context: EndpointRe
     );
   }
   const checkpoint = object(value, "KIE checkpoint") as unknown as KieCheckpoint;
-  const mapping = kieMappingForCapability(context.need.capability);
+  const route = kieRouteForCapability(context.need.capability);
   if (checkpoint.contract !== "svml.kie-operation@1"
     || typeof checkpoint.taskId !== "string"
-    || mapping === undefined
-    || checkpoint.catalogKey !== mapping.capability.name
+    || route === undefined
+    || checkpoint.routeKey !== route.key
     || checkpoint.requestDigest !== context.need.requestDigest
     || !isDigest(checkpoint.contentRequestDigest)
     || !Number.isSafeInteger(checkpoint.startedAt)
@@ -422,30 +411,25 @@ function endpoint(options: {
   return {
     async start(context) {
       try {
-        const mapping = kieMappingForCapability(context.need.capability);
-        if (mapping === undefined) throw new KieError("KIE_UNSUPPORTED_CAPABILITY", "KIE does not implement this exact capability");
+        const route = kieRouteForCapability(context.need.capability);
+        if (route === undefined) throw new KieError("KIE_UNSUPPORTED_CAPABILITY", "KIE does not implement this exact capability");
         const key = secret(context);
         const uploaded = new Map<Digest, Promise<string>>();
-        const resolve: GenerationArtifactUrlResolver = (artifact) => {
+        const resolve = (artifact: BlobRef): Promise<string> => {
           const existing = uploaded.get(artifact.digest);
           if (existing !== undefined) return existing;
           const promise = options.client.upload(artifact, context.artifacts, key);
           uploaded.set(artifact.digest, promise);
           return promise;
         };
-        const task = await compileWireRequest(
-          mapping,
-          context.need.constraints as unknown as GenerationRequest,
-          resolve,
-        );
+        const task = await route.compile(context.need.constraints, resolve);
         await options.gate.enter();
         const taskId = await options.client.createTask(task, key);
         const checkpoint: KieCheckpoint = {
           contract: "svml.kie-operation@1",
           taskId,
-          catalogKey: mapping.capability.name,
+          routeKey: route.key,
           model: task.model,
-          result: mapping.result,
           requestDigest: context.need.requestDigest,
           contentRequestDigest: contentRequestDigest(context.need.constraints),
           startedAt: options.now(),
@@ -465,8 +449,8 @@ function endpoint(options: {
         return failure(error);
       }
       try {
-        const mapping = kieMappingForCapability(context.need.capability);
-        if (mapping === undefined || mapping.capability.name !== checkpoint.catalogKey) {
+        const route = kieRouteForCapability(context.need.capability);
+        if (route === undefined || route.key !== checkpoint.routeKey) {
           throw new KieError("KIE_CHECKPOINT_INVALID", "KIE checkpoint capability differs");
         }
         if (contentRequestDigest(context.need.constraints) !== checkpoint.contentRequestDigest) {
@@ -491,27 +475,18 @@ function endpoint(options: {
         if (state === "fail") {
           const vendorCode = typeof data.failCode === "string" && data.failCode.length > 0 ? data.failCode : "unknown";
           const vendorMessage = typeof data.failMsg === "string" && data.failMsg.length > 0
-            ? data.failMsg.slice(0, 500) : "KIE generation failed";
+            ? data.failMsg.slice(0, 500) : "KIE task failed";
           throw new KieError("KIE_TASK_FAILED", `${vendorMessage} (${vendorCode})`);
         }
         if (state !== "success") throw new KieError("KIE_TASK_STATE_INVALID", "KIE returned an unknown task state");
         const urls = resultUrls(data);
-        const limit = checkpoint.result === "image" ? 16 : 8;
-        if (urls.length > limit) throw new KieError("KIE_RESULT_COUNT_EXCEEDED", "KIE returned too many result artifacts");
+        if (urls.length > route.maxResults) throw new KieError("KIE_RESULT_COUNT_EXCEEDED", "KIE returned too many result artifacts");
         const artifacts: BlobRef[] = [];
         for (const url of urls) {
-          const downloaded = await options.client.download(url, checkpoint.result, key);
+          const downloaded = await options.client.download(url, route.media, key);
           artifacts.push(await context.artifacts.put(downloaded.bytes, downloaded.mediaType));
         }
-        const result = checkpoint.result === "image"
-          ? sealGeneratedImageSet({
-              contract: "svml.generated-image-set@1",
-              images: artifacts,
-            })
-          : sealGeneratedVideoSet({
-              contract: "svml.generated-video-set@1",
-              videos: artifacts,
-            });
+        const result = route.packageResult(artifacts);
         const vendorMetrics: Record<string, CanonicalValue> = {};
         for (const name of ["creditsConsumed", "costTime", "completeTime"] as const) {
           const metric = data[name];
@@ -520,7 +495,7 @@ function endpoint(options: {
         return {
           status: "completed",
           result: {
-            value: { kind: "inline", value: canonicalize(result) },
+            value: result,
             conformance: "exact",
             delivery: "executed",
             metadata: canonicalize({
@@ -551,7 +526,7 @@ function endpoint(options: {
 }
 
 export function createKieProvider(config: CreateKieProviderOptions = {}) {
-  verifyKieModelCatalog();
+  verifyKieRoutes();
   const apiBaseUrl = baseUrl(config.apiBaseUrl ?? "https://api.kie.ai", "apiBaseUrl");
   const uploadBaseUrl = baseUrl(config.uploadBaseUrl ?? "https://kieai.redpandaai.co", "uploadBaseUrl");
   const pollIntervalMs = nonNegativeInteger(config.pollIntervalMs ?? 3_000, "pollIntervalMs");
@@ -607,14 +582,13 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
     }),
     credentials: { apiKey: config.apiKey ?? credentialRef("env", "KIE_API_KEY") },
     defaultConcurrency: config.defaultConcurrency ?? 2,
-    capabilities: kieModelCatalog.map((item) => ({
-      capability: item.capability,
-      returns: item.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
+    capabilities: kieRoutes.map((route) => ({
+      capability: route.capability,
+      returns: route.returns,
       lifecycle: "recoverable" as const,
       endpoint: providerEndpoint,
       retry: { maxAttempts: 3 },
-      /** Model semantics were already admitted by Core; KIE only checks it can write every port. */
-      supports: (need) => mappingSupportsRequest(item, need.constraints),
+      supports: (need: Need) => route.supports(need.constraints),
     })),
   });
 }

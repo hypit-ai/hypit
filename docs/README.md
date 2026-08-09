@@ -76,7 +76,7 @@ says otherwise.
 - [`media-execution-boundary.md`](./media-execution-boundary.md)
 - [`hyperframes-aws-runtime.md`](./hyperframes-aws-runtime.md) — recoverable Endpoint semantics,
   deployment resource review and the live AWS canary.
-- [`image-transform.md`](./image-transform.md)
+- [`image-transform.md`](./image-transform.md) — transforms, ordered composition and external cutout boundaries
 - [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
 - [`../services/whisperx/README.md`](../services/whisperx/README.md)
 - [`../examples/talking-head-aroll/README.md`](../examples/talking-head-aroll/README.md) — current four-take

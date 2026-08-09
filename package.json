@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "check": "tsc -p tsconfig.json --noEmit",
     "docs:dev": "vitepress dev docs",
@@ -18,14 +19,17 @@
     "build:media-lambda-layer": "pnpm --filter @narratage/media-lambda build:layer"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "pnpm": ">=10.33.0 <11"
   },
   "devDependencies": {
     "@narratage/artifact": "workspace:*",
     "@narratage/audio-track": "workspace:*",
+    "@narratage/background-removal": "workspace:*",
     "@narratage/caption": "workspace:*",
     "@narratage/caption-fine": "workspace:*",
     "@narratage/caption-gemini": "workspace:*",
+    "@narratage/comment-sticker": "workspace:*",
     "@narratage/composition": "workspace:*",
     "@narratage/deck-track": "workspace:*",
     "@narratage/estimate": "workspace:*",
@@ -33,6 +37,7 @@
     "@narratage/fonts-open": "workspace:*",
     "@narratage/generation": "workspace:*",
     "@narratage/hyperframes": "workspace:*",
+    "@narratage/image-compose": "workspace:*",
     "@narratage/image-transform": "workspace:*",
     "@narratage/local": "workspace:*",
     "@narratage/media": "workspace:*",
@@ -48,6 +53,7 @@
     "@narratage/provider-kie": "workspace:*",
     "@narratage/provider-media-local": "workspace:*",
     "@narratage/provider-whisperx-local": "workspace:*",
+    "@narratage/raster": "workspace:*",
     "@narratage/render-hyperframes": "workspace:*",
     "@narratage/run-text": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
