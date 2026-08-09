@@ -15,7 +15,7 @@ import { speechTypes } from "@narratage/speech";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
 
-export const localMediaProviderModuleRef = { name: "@narratage/provider-media-local", version: "0.0.0-dev" } as const;
+export const localMediaProviderModuleRef = { name: "@narratage/provider-media-local", version: "1" } as const;
 export const localMediaProviderImplementationDigest = digestOf("@narratage/provider-media-local/ffmpeg@1");
 
 export type CreateLocalMediaProviderOptions = {

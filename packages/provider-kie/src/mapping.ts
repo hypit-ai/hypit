@@ -11,15 +11,13 @@ import type { GenerationWireMapping } from "@narratage/generation";
  */
 
 /** Model packages this KIE release is written against. A version bump is a mapping review. */
-const MODEL_VERSION = "0.0.0-dev";
-
-const SEEDANCE: ModuleRef = { name: "@narratage/seedance", version: MODEL_VERSION };
-const MINIMAX: ModuleRef = { name: "@narratage/minimax-h3", version: MODEL_VERSION };
-const GEMINI: ModuleRef = { name: "@narratage/gemini-omni", version: MODEL_VERSION };
-const GROK: ModuleRef = { name: "@narratage/grok-imagine", version: MODEL_VERSION };
-const GPT_IMAGE: ModuleRef = { name: "@narratage/gpt-image", version: MODEL_VERSION };
-const NANO_BANANA: ModuleRef = { name: "@narratage/nano-banana", version: MODEL_VERSION };
-const SEEDREAM: ModuleRef = { name: "@narratage/seedream", version: MODEL_VERSION };
+const SEEDANCE: ModuleRef = { name: "@narratage/seedance", version: "1" };
+const MINIMAX: ModuleRef = { name: "@narratage/minimax-h3", version: "1" };
+const GEMINI: ModuleRef = { name: "@narratage/gemini-omni", version: "1" };
+const GROK: ModuleRef = { name: "@narratage/grok-imagine", version: "1" };
+const GPT_IMAGE: ModuleRef = { name: "@narratage/gpt-image", version: "1" };
+const NANO_BANANA: ModuleRef = { name: "@narratage/nano-banana", version: "1" };
+const SEEDREAM: ModuleRef = { name: "@narratage/seedream", version: "1" };
 
 /** KIE keeps each reference modality in its own array, as its schema documents. */
 const referenceFields = {

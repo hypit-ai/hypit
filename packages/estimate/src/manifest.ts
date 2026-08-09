@@ -6,7 +6,7 @@ import { svsManifest, svsRecipeType } from "@narratage/svs";
 
 import { estimateSpeechImplementationDigest } from "./program.js";
 
-export const estimateModuleRef = { name: "@narratage/estimate", version: "0.0.0-dev" } as const;
+export const estimateModuleRef = { name: "@narratage/estimate", version: "1" } as const;
 export const estimateTypes = {
   speechPolicy: { module: estimateModuleRef, name: "SpeechEstimatePolicy" },
 } satisfies Record<string, TypeRef>;

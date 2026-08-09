@@ -111,7 +111,7 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
   return {
     records: [
       { id: programId, type: speechSpineTypes.spineProgram, value: { kind: "inline", value: program }, range: element.range },
-      { id: requestId, type: { module: { name: "@narratage/media-pipeline", version: "0.0.0-dev" }, name: "MediaSelectionRequest" }, value: { kind: "inline", value: request }, range: element.range },
+      { id: requestId, type: { module: { name: "@narratage/media-pipeline", version: "1" }, name: "MediaSelectionRequest" }, value: { kind: "inline", value: request }, range: element.range },
     ],
     components: [
       ...normalizationComponents,

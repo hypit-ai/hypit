@@ -35,7 +35,7 @@ import {
   renderTextMaskTrackImplementationDigest,
 } from "./program.js";
 
-export const textTrackModuleRef = { name: "@narratage/text-track", version: "0.0.0-dev" } as const;
+export const textTrackModuleRef = { name: "@narratage/text-track", version: "1" } as const;
 export const textTrackTypes = {
   style: { module: textTrackModuleRef, name: "TextStyle" },
   motion: { module: textTrackModuleRef, name: "TextMotion" },

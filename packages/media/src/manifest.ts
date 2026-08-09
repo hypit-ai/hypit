@@ -2,7 +2,7 @@ import { artifactDependency, artifactTypes } from "@narratage/artifact";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 import { compositableSurfaceSchema, fontArtifactSchema, fontStackSchema, mediaArtifactSchema, mediaInspectionSchema, mediaStreamSelectionSchema, muxedMediaSchema, renderedVisualSchema, synchronizedMediaSchema, timelineAudioSchema } from "./schema.js";
-export const mediaModuleRef = { name: "@narratage/media", version: "0.0.0-dev" } as const;
+export const mediaModuleRef = { name: "@narratage/media", version: "1" } as const;
 export const mediaTypes = {
   artifact: { module: mediaModuleRef, name: "MediaArtifactRef" }, inspection: { module: mediaModuleRef, name: "MediaInspection" },
   streamSelection: { module: mediaModuleRef, name: "MediaStreamSelection" }, synchronized: { module: mediaModuleRef, name: "SynchronizedMedia" },

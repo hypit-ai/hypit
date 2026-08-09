@@ -13,7 +13,8 @@ a montage of scenes to match.
 That is exactly what this system does. The author writes a narrated Script with semantic anchors,
 and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
 Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml`
-extension; the workspace packages are published under the `@narratage` scope.
+extension; development packages in this workspace reserve the `@narratage` scope. They have not
+been published to npm yet.
 
 ## Install
 

@@ -109,7 +109,6 @@
 
   text.title {
     stack-order: 90;
-    font: inter-black;
     weight: 900;
     size: 64;
     align: center;

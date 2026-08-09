@@ -21,7 +21,7 @@ import {
   requestHyperframesVisualImplementationDigest,
 } from "./product.js";
 
-export const renderHyperframesModuleRef = { name: "@narratage/render-hyperframes", version: "0.0.0-dev" } as const;
+export const renderHyperframesModuleRef = { name: "@narratage/render-hyperframes", version: "1" } as const;
 export const renderHyperframesSurfaceImplementationDigest = digestOf("@narratage/render-hyperframes/surface@1");
 export const renderHyperframesCapabilities = {
   renderVisual: { module: renderHyperframesModuleRef, name: "render-visual" },

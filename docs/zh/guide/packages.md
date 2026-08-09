@@ -1,13 +1,13 @@
 ---
 title: 包架构
-description: 四个分层、依赖边界、包的结构与 facet。
+description: 五个分层、依赖边界、包的结构与 facet。
 ---
 
 # 包架构
 
-`packages/` 下的工作区包被组织成四个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
+`packages/` 下的工作区包被组织成五个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
 
-## 四个分层
+## 五个分层
 
 ### Layer 1：领域无关的基础层
 
@@ -35,6 +35,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/artifact-store-fs     filesystem Artifact store
 @narratage/artifact-store-s3     S3 Artifact store
 @narratage/credential-store-env  environment credentials
+@narratage/credential-store-keychain macOS Keychain credentials
 @narratage/transport             invocation seams
 @narratage/transport-aws-lambda  Lambda transport
 @narratage/local                 SQLite/filesystem developer assembly
@@ -79,10 +80,18 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/speech-alignment      speech alignment
 @narratage/speech-spine          ordered speech-take compilation
 @narratage/whisperx              WhisperX component
-@narratage/caption               caption planning and Track
+@narratage/temporal              Selection/Moment 投影与调度
+@narratage/spatial               Canvas/Frame/Point/Path 几何
+@narratage/caption               caption planning and timing
 @narratage/caption-gemini        Gemini caption planner
+@narratage/caption-fine          无字段细粒度字幕 Track family
+@narratage/fonts-open            exact redistributable font catalog
 @narratage/media-track           统一的 Media Item/Sequence Track
 @narratage/text-track            text overlay Track
+@narratage/audio-track           arbitrary sample-domain Audio Track
+@narratage/deck-track            depth-stack collection Track
+@narratage/ranking               four ranking component families
+@narratage/screen-overlay        self-contained full-canvas overlays
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
 @narratage/visual-ir             renderer-neutral visual vocabulary
@@ -98,7 +107,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 具备特权的外部能力。依赖 Runtime 端口和它们所服务的模型族，绝不依赖 CLI。
 
 ```text
-@narratage/provider-kie                  KIE generation (16 model capabilities)
+@narratage/provider-kie                  KIE generation (11 exact model capabilities)
 @narratage/provider-media-local          local ffprobe/ffmpeg
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
@@ -108,7 +117,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
 ```
 
-### 应用层
+### Layer 5：应用层
 
 ```text
 @narratage/cli           generic command engine (requires explicit Distribution)
@@ -161,6 +170,7 @@ packages/example/
 
 - `"exports"` 直接指向 TypeScript 源码。工作区的 `tsconfig.json` 通过 `paths` 把 `@narratage/*` 导入映射到源码入口。
 - `"svml.activation"` 是该包被 byte-locked 时 Package Loader 会读取的入口。它必须默认导出一个 `NodePackageContribution`。
+- 物理包版本在真正发布前保持 `0.0.0-dev`。Module 与 Frontend manifest 使用相互独立的逻辑协议版本 `1`；精确的实现身份由 lock 摘要确定。
 
 ### activation.ts
 

@@ -12,7 +12,7 @@ import {
   narrativeSpeechExcerptSchema,
 } from "./schema.js";
 
-export const narrativeModuleRef = { name: "@narratage/narrative", version: "0.0.0-dev" } as const;
+export const narrativeModuleRef = { name: "@narratage/narrative", version: "1" } as const;
 export const narrativeTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },
   excerpt: { module: narrativeModuleRef, name: "NarrativeExcerpt" },

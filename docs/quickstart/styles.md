@@ -216,7 +216,6 @@ Text overlay appearance — typography and Paint. Placement is a separate `Spati
 ```svs
 text.title {
   stack-order: 90;
-  font: Inter;
   weight: 900;
   size: 64;
   align: center;
@@ -228,18 +227,20 @@ text.title {
 | Property | Description |
 |---|---|
 | `stack-order` | Z-stacking order |
-| `font` | Font family name |
 | `weight` | Font weight |
 | `size` | Font size in pixels |
 | `align` | Text alignment |
 | `fill` | Text color |
 | `tracking` | Letter spacing adjustment |
 
-Referenced by `text:Item` via the `appearance` attribute:
+Compiled with exact font bytes into a `text:Style`, then referenced by a concrete placement form:
 
 ```svml
-<text:Item text="MEANING" during="full" frame={title-frame}
-  appearance={studio.text.title}/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 ## Speech estimation

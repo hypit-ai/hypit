@@ -13,7 +13,7 @@ import type {
   ValueSchema,
 } from "@narratage/protocol";
 
-export const mediaPipelineModuleRef = { name: "@narratage/media-pipeline", version: "0.0.0-dev" } as const;
+export const mediaPipelineModuleRef = { name: "@narratage/media-pipeline", version: "1" } as const;
 export const mediaPipelineTypes = {
   selectionRequest: { module: mediaPipelineModuleRef, name: "MediaSelectionRequest" },
   audioProgramPlan: { module: mediaPipelineModuleRef, name: "AudioProgramPlan" },

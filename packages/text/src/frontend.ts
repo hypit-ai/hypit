@@ -47,7 +47,7 @@ import type {
   TextImportRequest,
 } from "./types.js";
 
-export const textFrontendRef = { module: "@narratage/text", version: "0.0.0-dev", name: "text" } as const;
+export const textFrontendRef = { module: "@narratage/text", version: "1", name: "text" } as const;
 export const textFrontendImplementationDigest = digestOf("@narratage/text/frontend@1");
 export const textAuthorFrontendId = "@narratage/text@1";
 

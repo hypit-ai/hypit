@@ -7,7 +7,7 @@ export type ProgramSpace = {
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
 };
 
-export const programSpaceModuleRef = { name: "@narratage/program-space", version: "0.0.0-dev" } as const;
+export const programSpaceModuleRef = { name: "@narratage/program-space", version: "1" } as const;
 export const programSpaceTypes = {
   programSpace: { module: programSpaceModuleRef, name: "ProgramSpace" },
 } satisfies Record<string, TypeRef>;

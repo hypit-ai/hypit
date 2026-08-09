@@ -45,6 +45,9 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 ## wire 数据
 
 - 所有持久化数据使用 `@1` wire 格式版本。
+- 项目自有的 Module 与 Frontend 身份统一使用逻辑版本字面量 `1`。
+- 工作区 `package.json` 在真正发布前保持 `0.0.0-dev`；它是物理包元数据，不是逻辑协议身份。
+- 真正的可执行实现身份来自锁定后的包字节与闭包摘要，而不是以上任意一个版本字符串。
 - wire 类型定义在 `@narratage/protocol` 中，且不可变。
 - Nominal Type 由 Module 拥有，不在中心化的联合类型中注册。
 - 类型 schema 使用与 JSON 兼容的结构，而不是 TypeScript 接口。

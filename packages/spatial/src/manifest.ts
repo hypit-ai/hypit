@@ -15,7 +15,7 @@ import {
   spatialPointSchema,
 } from "./schema.js";
 
-export const spatialModuleRef = { name: "@narratage/spatial", version: "0.0.0-dev" } as const;
+export const spatialModuleRef = { name: "@narratage/spatial", version: "1" } as const;
 export const spatialSurfaceDigests = {
   canvas: digestOf("@narratage/spatial/canvas-surface@1"),
   point: digestOf("@narratage/spatial/point-surface@1"),

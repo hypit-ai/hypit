@@ -12,7 +12,7 @@ import {
   createFilmTrackSetImplementationDigest,
 } from "./program.js";
 
-export const filmModuleRef = { name: "@narratage/film", version: "0.0.0-dev" } as const;
+export const filmModuleRef = { name: "@narratage/film", version: "1" } as const;
 export const filmSurfaceImplementationDigest = digestOf("@narratage/film/surface@1");
 export const filmTypes = {
   program: { module: filmModuleRef, name: "FilmProgram" },

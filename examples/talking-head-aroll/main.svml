@@ -91,6 +91,8 @@
     <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
   </speaker:Take>
 
+  <space:Canvas id="vertical" width="720" height="1280"/>
+
   <!-- Four equal Takes become one ordered speech coordinate space and two peer Tracks. -->
   <speech:Spine id="speech" canvas={vertical}>
     <speech:Take source={hook-take.video} segment={story.segment.hook}/>
@@ -125,7 +127,6 @@
     plan={caption-plan.plan}
   />
 
-  <space:Canvas id="vertical" width="720" height="1280"/>
   <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
