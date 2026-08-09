@@ -18,7 +18,7 @@ import { digestOf } from "@narratage/protocol";
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import type { FineCaptionGlyphPaint, FineCaptionParameters } from "./types.js";
 
-export const renderFineCaptionImplementationDigest = digestOf("@narratage/caption-fine/render-atom-paint-karaoke@1");
+export const renderFineCaptionImplementationDigest = digestOf("@narratage/caption-fine/render-exact-font-stack@1");
 
 function frameAt(space: ProgramSpace, seconds: number): number {
   return Math.round(seconds * space.frameRate.numerator / space.frameRate.denominator);
@@ -56,7 +56,7 @@ function glyphStyle(parameters: FineCaptionParameters, paint: FineCaptionGlyphPa
   return [
     { name: "color", value: paint.fill },
     { name: "font-size", value: `${compactNumber(parameters.typography.fontSizePx)}px` },
-    ...(parameters.typography.exactFont === undefined ? [
+    ...(parameters.typography.exactFonts === undefined ? [
       { name: "font-family", value: parameters.typography.fontFamily },
       { name: "font-style", value: parameters.typography.fontStyle },
       { name: "font-weight", value: parameters.typography.fontWeight },
@@ -255,7 +255,7 @@ function cueElements(
         kind: "text",
         text,
         style: glyphStyle(parameters, parameters.basePaint),
-        ...(parameters.typography.exactFont === undefined ? {} : { fonts: [parameters.typography.exactFont] }),
+        ...(parameters.typography.exactFonts === undefined ? {} : { fonts: parameters.typography.exactFonts }),
         attributes: [{ name: "data-caption-word", value: wordId }],
       });
     }
@@ -285,7 +285,7 @@ function cueElements(
         kind: "text",
         text,
         style: glyphStyle(parameters, parameters.activePaint),
-        ...(parameters.typography.exactFont === undefined ? {} : { fonts: [parameters.typography.exactFont] }),
+        ...(parameters.typography.exactFonts === undefined ? {} : { fonts: parameters.typography.exactFonts }),
         attributes: [{ name: "data-caption-active-word", value: wordId }],
       });
     }

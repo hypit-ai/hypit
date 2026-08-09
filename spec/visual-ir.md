@@ -110,9 +110,10 @@ IR, not fields added to the IR.
 
 The identifier and closed vocabulary are executable, but v1 remains a candidate until:
 
-1. official Text and Caption lowerers require exact font Artifacts or materialized glyph Surfaces;
-2. old production text/media witnesses have real browser pixel tests, including CJK, emoji,
-   multiline decoration, focal sampling, alpha and overflow;
+1. the official Text lowerer requires exact font Artifacts or materialized glyph Surfaces; Fine
+   Caption already exposes an exact ordered font stack while retaining an explicit prototype path;
+2. remaining old production Text/media witnesses have real browser pixel tests for their own
+   multiline decoration, focal sampling, alpha and overflow; Fine Caption's CJK/emoji matrix is complete;
 3. the Runtime receipt binds the exact renderer implementation used for layout;
 4. Surface bytes are checked against their declared dimensions, timing, color and alpha facts;
 5. a separately installed Track package passes without changing Core, Film or HyperFrames code.

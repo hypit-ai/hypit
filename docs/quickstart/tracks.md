@@ -59,13 +59,18 @@ caption.primary {
 ```svml
 <media:Font id="caption-font" src="./assets/Inter-Bold.woff2"
   weight="700" style="normal"/>
+<media:Font id="caption-cjk" src="./assets/NotoSansCJK-Bold.otf"
+  weight="700" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
-  font={caption-font}/>
+  font={caption-font}>
+  <caption-fine:Fallback font={caption-cjk}/>
+</caption-fine:Style>
 ```
 
-The explicit `font=` edge makes the rendered face byte-reproducible. Omitting it deliberately uses
-the Recipe's `font` family as an environment fallback; neither Caption nor the Runtime chooses a
-font on the author's behalf.
+The explicit `font=` edge and ordered `Fallback` children make the rendered stack
+byte-reproducible. Every face must match the Recipe's weight/style. Omitting the stack deliberately
+uses the Recipe's `font` family as an environment fallback; neither Caption nor the Runtime chooses
+a font on the author's behalf.
 
 Another Caption package may define completely different planning fields and visual parameters
 without changing the common package.
@@ -79,6 +84,13 @@ decoration or motion. Unknown properties are rejected.
 `karaoke` is `off`, `current` or `trail`; `karaoke-transition` is `step` or `wipe`. Timing is always
 whole-Atom timing already proven by Caption. A normal one-word Atom therefore highlights per word,
 while a Dual Text Atom remains one indivisible visible unit. Fine never guesses internal time.
+
+Fine wraps only between complete Atoms and never clips author text. It intentionally has no
+`max-lines`; use Cue bounds, Track width and font size to control density.
+
+CJK dialogue can be written directly. For a display-only emoji that still follows speech timing,
+author the correspondence explicitly, such as `<🌐 | globe>`; the system will not invent a spoken
+word for a bare symbol.
 
 ### caption:Program
 

@@ -56,22 +56,50 @@ function inline<T>(referenceValue: SurfaceResolvedReference, subject: string): T
   return referenceValue.record.value.value as unknown as T;
 }
 
-export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "recipe"], ["font"]);
-  if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
-    throw new Error(`${element.name} does not accept children`);
-  }
-  const id = stringAttribute(element, "id");
-  const recipe = inline<SvsRecipe>(reference(element, "recipe", svsRecipeType, resolveReference), `${element.name}.recipe`);
-  const fontAttribute = element.attributes.font;
-  const exactFont = fontAttribute === undefined
-    ? undefined
-    : inline<FontArtifactRef>(
+function localName(name: string): string {
+  const colon = name.lastIndexOf(":");
+  return colon < 0 ? name : name.slice(colon + 1);
+}
+
+function exactFonts(
+  element: StructuredElement,
+  resolveReference: (path: string) => SurfaceResolvedReference | undefined,
+): FontArtifactRef[] {
+  const result: FontArtifactRef[] = [];
+  const primary = element.attributes.font;
+  if (primary !== undefined) {
+    result.push(inline<FontArtifactRef>(
       reference(element, "font", mediaTypes.fontArtifact, resolveReference),
       `${element.name}.font`,
-    );
-  if (exactFont !== undefined) assertFontArtifactRef(exactFont, `${element.name}.font`);
-  const style = fineCaptionStyle(id, recipe, exactFont);
+    ));
+  }
+  for (const child of element.children) {
+    if (child.kind === "text") {
+      if (child.value.trim()) throw new Error(`${element.name} accepts only Fallback children`);
+      continue;
+    }
+    if (localName(child.name) !== "Fallback") throw new Error(`${element.name} accepts only Fallback children`);
+    attributes(child, ["font"]);
+    if (child.children.some((nested) => nested.kind === "element" || nested.value.trim())) {
+      throw new Error(`${child.name} does not accept children`);
+    }
+    result.push(inline<FontArtifactRef>(
+      reference(child, "font", mediaTypes.fontArtifact, resolveReference),
+      `${child.name}.font`,
+    ));
+  }
+  if (primary === undefined && result.length > 0) {
+    throw new Error(`${element.name} requires font before Fallback children`);
+  }
+  for (const [index, font] of result.entries()) assertFontArtifactRef(font, `${element.name}.font.${index + 1}`);
+  return result;
+}
+
+export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  attributes(element, ["id", "recipe"], ["font"]);
+  const id = stringAttribute(element, "id");
+  const recipe = inline<SvsRecipe>(reference(element, "recipe", svsRecipeType, resolveReference), `${element.name}.recipe`);
+  const style = fineCaptionStyle(id, recipe, exactFonts(element, resolveReference));
   return {
     records: [{ id, type: captionTypes.style, value: { kind: "inline", value: style }, range: element.range }],
     components: [],

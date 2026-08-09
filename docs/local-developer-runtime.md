@@ -344,9 +344,8 @@ The durable local chassis and one real talking-video path are implemented. Diffe
 and preview executions belong in explicit Run sources; the local Runtime needs no example-specific
 acceptance orchestrator. Remaining work is to:
 
-1. add browser evidence for field-free Caption Fine placement/wrapping, finish Text
-   three-box/exact-font authoring and B-roll content-frame behavior before freezing those author
-   Surfaces;
+1. finish Text three-box/exact-font authoring and B-roll content-frame behavior before freezing
+   those author Surfaces; the field-free Caption Fine surface already has complete browser evidence;
 2. migrate Ranking and other production components only after their meanings fit the peer-Track
    contract;
 3. add a persistent remote WhisperX Provider or further environment variants only when a concrete

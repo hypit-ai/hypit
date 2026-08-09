@@ -319,6 +319,8 @@ the author source with the independently imported Media package:
   weight="600" style="normal"/>
 <media:Font id="inter-black" src="./assets/Inter-Black.woff2"
   weight="900" style="normal"/>
+<media:Font id="noto-cjk-semibold" src="./assets/NotoSansCJK-SemiBold.otf"
+  weight="600" style="normal"/>
 ```
 
 | Property | Description |
@@ -332,11 +334,15 @@ component chooses it with a normal source reference; the Runtime never guesses a
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
-  font={inter-semibold}/>
+  font={inter-semibold}>
+  <caption-fine:Fallback font={noto-cjk-semibold}/>
+</caption-fine:Style>
 ```
 
-Omitting `font=` keeps the Recipe's `font` family as an environment fallback, which is convenient
-for prototypes but is not byte-reproducible.
+`font=` is the primary face; ordered `Fallback` children cover additional glyph sets such as CJK or
+emoji. Every face must match the Recipe's weight/style. Omitting the stack keeps the Recipe's
+`font` family as an environment fallback, which is convenient for prototypes but is not
+byte-reproducible.
 
 ## Combination example
 
