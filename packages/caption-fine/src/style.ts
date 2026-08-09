@@ -15,13 +15,21 @@ const REQUIRED_PROPERTIES = [
 ] as const;
 
 const OPTIONAL_PROPERTIES = [
-  "active-fill", "active-glow-blur", "active-glow-color", "active-glow-opacity", "active-opacity",
-  "active-scale", "active-shadow-blur", "active-shadow-color", "active-shadow-opacity", "active-shadow-x",
-  "active-shadow-y", "active-stroke-color", "active-stroke-width", "anchor-x", "anchor-y", "atom-reveal",
-  "border-color", "border-width", "cue-enter", "cue-exit", "cue-transition-frames", "direction", "font-style",
-  "glow-blur", "glow-color", "glow-opacity", "karaoke", "karaoke-transition", "letter-spacing", "opacity",
-  "shadow-blur", "shadow-color", "shadow-opacity", "shadow-x", "shadow-y", "stroke-color", "stroke-width",
-  "word-gap",
+  "active-box", "active-box-background", "active-box-border-color", "active-box-border-width",
+  "active-box-continuity", "active-box-enter", "active-box-exit", "active-box-padding", "active-box-radius",
+  "active-box-transition-frames", "active-fill", "active-glow-blur", "active-glow-color", "active-glow-opacity",
+  "active-gradient-angle", "active-gradient-from", "active-gradient-to", "active-long-shadow-angle",
+  "active-long-shadow-color", "active-long-shadow-distance", "active-long-shadow-opacity", "active-opacity",
+  "active-response", "active-response-frames", "active-scale", "active-shadow-blur", "active-shadow-color", "active-shadow-opacity",
+  "active-shadow-x", "active-shadow-y", "active-stroke-color", "active-stroke-width", "active-underline",
+  "active-underline-color", "active-underline-offset", "active-underline-thickness", "anchor-x", "anchor-y",
+  "atom-enter", "atom-enter-frames", "atom-reveal", "border-color", "border-width", "cue-enter",
+  "cue-enter-frames", "cue-exit", "cue-exit-frames", "direction", "font-style", "glow-blur", "glow-color",
+  "glow-opacity", "gradient-angle", "gradient-from", "gradient-to", "karaoke", "karaoke-transition",
+  "letter-spacing", "long-shadow-angle", "long-shadow-color", "long-shadow-distance", "long-shadow-opacity",
+  "loop", "loop-intensity", "loop-period-frames", "loop-target", "opacity", "shadow-blur", "shadow-color",
+  "shadow-opacity", "shadow-x", "shadow-y", "slide-distance", "stroke-color", "stroke-width", "text-transform",
+  "underline", "underline-color", "underline-offset", "underline-thickness", "word-gap",
 ] as const;
 
 const ALLOWED_PROPERTIES = new Set<string>([...REQUIRED_PROPERTIES, ...OPTIONAL_PROPERTIES]);
@@ -80,13 +88,37 @@ function padding(value: string): { readonly x: number; readonly y: number } {
   return { y: parts[0]!, x: parts[1] ?? parts[0]! };
 }
 
+function optionalGradient(
+  recipe: SvsRecipe,
+  prefix: "" | "active-",
+  base?: FineCaptionGlyphPaint["gradient"],
+): FineCaptionGlyphPaint["gradient"] | undefined {
+  const fromName = `${prefix}gradient-from`;
+  const toName = `${prefix}gradient-to`;
+  const hasFrom = Object.hasOwn(recipe.properties, fromName);
+  const hasTo = Object.hasOwn(recipe.properties, toName);
+  const hasAngle = Object.hasOwn(recipe.properties, `${prefix}gradient-angle`);
+  if (!hasFrom && !hasTo && !hasAngle) return prefix === "active-" ? undefined : base;
+  if (!hasFrom || !hasTo) {
+    throw new Error(`Fine Caption Recipe ${prefix}gradient requires both from and to colors`);
+  }
+  return {
+    from: color(recipe, fromName),
+    to: color(recipe, toName),
+    angleDeg: number(recipe, `${prefix}gradient-angle`, base?.angleDeg ?? 90),
+  };
+}
+
 function glyphPaint(recipe: SvsRecipe, prefix: "" | "active-", base?: FineCaptionGlyphPaint): FineCaptionGlyphPaint {
   const fallback = <K extends keyof FineCaptionGlyphPaint>(key: K): FineCaptionGlyphPaint[K] | undefined => base?.[key];
   const baseShadow = fallback("shadow") as FineCaptionGlyphPaint["shadow"] | undefined;
   const baseGlow = fallback("glow") as FineCaptionGlyphPaint["glow"] | undefined;
   const baseStroke = fallback("stroke") as FineCaptionGlyphPaint["stroke"] | undefined;
+  const baseLongShadow = fallback("longShadow") as FineCaptionGlyphPaint["longShadow"] | undefined;
+  const gradient = optionalGradient(recipe, prefix, base?.gradient);
   return {
     fill: color(recipe, `${prefix}fill`, prefix === "active-" ? "#FFD54A" : base?.fill),
+    ...(gradient === undefined ? {} : { gradient }),
     opacity: number(recipe, `${prefix}opacity`, base?.opacity ?? 1),
     stroke: {
       color: color(recipe, `${prefix}stroke-color`, baseStroke?.color ?? "#000000"),
@@ -98,6 +130,12 @@ function glyphPaint(recipe: SvsRecipe, prefix: "" | "active-", base?: FineCaptio
       offsetXPx: number(recipe, `${prefix}shadow-x`, baseShadow?.offsetXPx ?? 0),
       offsetYPx: number(recipe, `${prefix}shadow-y`, baseShadow?.offsetYPx ?? 0),
       blurPx: number(recipe, `${prefix}shadow-blur`, baseShadow?.blurPx ?? 0),
+    },
+    longShadow: {
+      color: color(recipe, `${prefix}long-shadow-color`, baseLongShadow?.color ?? "#000000"),
+      opacity: number(recipe, `${prefix}long-shadow-opacity`, baseLongShadow?.opacity ?? 0),
+      distancePx: number(recipe, `${prefix}long-shadow-distance`, baseLongShadow?.distancePx ?? 0),
+      angleDeg: number(recipe, `${prefix}long-shadow-angle`, baseLongShadow?.angleDeg ?? 45),
     },
     glow: {
       color: color(recipe, `${prefix}glow-color`, baseGlow?.color ?? "#FFFFFF"),
@@ -120,16 +158,25 @@ function assertPaint(value: FineCaptionGlyphPaint, label: string): void {
   assertOpacity(value.opacity, `${label} opacity`);
   assertColor(value.stroke.color, `${label} stroke color`);
   assertColor(value.shadow.color, `${label} shadow color`);
+  assertColor(value.longShadow.color, `${label} long shadow color`);
   assertColor(value.glow.color, `${label} glow color`);
   assertOpacity(value.shadow.opacity, `${label} shadow opacity`);
+  assertOpacity(value.longShadow.opacity, `${label} long shadow opacity`);
   assertOpacity(value.glow.opacity, `${label} glow opacity`);
   for (const [name, metric] of [
-    ["stroke width", value.stroke.widthPx], ["shadow blur", value.shadow.blurPx], ["glow blur", value.glow.blurPx],
+    ["stroke width", value.stroke.widthPx], ["shadow blur", value.shadow.blurPx],
+    ["long shadow distance", value.longShadow.distancePx], ["glow blur", value.glow.blurPx],
   ] as const) {
     if (!Number.isFinite(metric) || metric < 0) throw new Error(`${label} ${name} is invalid`);
   }
   if (!Number.isFinite(value.shadow.offsetXPx) || !Number.isFinite(value.shadow.offsetYPx)) {
     throw new Error(`${label} shadow offset is invalid`);
+  }
+  if (!Number.isFinite(value.longShadow.angleDeg)) throw new Error(`${label} long shadow angle is invalid`);
+  if (value.gradient !== undefined) {
+    assertColor(value.gradient.from, `${label} gradient from`);
+    assertColor(value.gradient.to, `${label} gradient to`);
+    if (!Number.isFinite(value.gradient.angleDeg)) throw new Error(`${label} gradient angle is invalid`);
   }
 }
 
@@ -142,8 +189,12 @@ export function fineCaptionParameters(
   if (unknown.length > 0) throw new Error(`Fine Caption Recipe contains unknown property ${unknown[0]}`);
 
   const pad = padding(string(recipe, "padding"));
+  const activeBoxPadding = padding(string(recipe, "active-box-padding", "0"));
   const fontSizePx = number(recipe, "size");
   const basePaint = glyphPaint(recipe, "");
+  const oneShotMotions = [
+    "none", "fade", "pop", "spring", "slide-left", "slide-right", "slide-up", "slide-down", "blur-in",
+  ] as const;
   const parameters: FineCaptionParameters = {
     contract: "svml.caption-fine-parameters@1",
     stackingOrder: integer(recipe, "stack-order"),
@@ -166,10 +217,23 @@ export function fineCaptionParameters(
       fontSizePx,
       fontWeight: integer(recipe, "weight"),
       fontStyle: choice(recipe, "font-style", ["normal", "italic", "oblique"] as const, "normal"),
+      textTransform: choice(recipe, "text-transform", ["none", "uppercase", "lowercase"] as const, "none"),
       ...(exactFonts.length === 0 ? {} : { exactFonts: [...exactFonts] }),
     },
     basePaint,
     activePaint: glyphPaint(recipe, "active-", basePaint),
+    underline: {
+      mode: choice(recipe, "underline", ["off", "always"] as const, "off"),
+      color: color(recipe, "underline-color", basePaint.fill),
+      thicknessPx: number(recipe, "underline-thickness", 2),
+      offsetPx: number(recipe, "underline-offset", 4),
+    },
+    activeUnderline: {
+      mode: choice(recipe, "active-underline", ["off", "current", "trail"] as const, "off"),
+      color: color(recipe, "active-underline-color", "#FFD54A"),
+      thicknessPx: number(recipe, "active-underline-thickness", 3),
+      offsetPx: number(recipe, "active-underline-offset", 4),
+    },
     cueBox: {
       background: color(recipe, "background"),
       borderColor: color(recipe, "border-color", "#00000000"),
@@ -182,12 +246,35 @@ export function fineCaptionParameters(
       mode: choice(recipe, "karaoke", ["off", "current", "trail"] as const, "off"),
       transition: choice(recipe, "karaoke-transition", ["step", "wipe"] as const, "step"),
     },
+    activeBox: {
+      mode: choice(recipe, "active-box", ["off", "current", "trail"] as const, "off"),
+      continuity: choice(recipe, "active-box-continuity", ["isolated", "joined"] as const, "isolated"),
+      background: color(recipe, "active-box-background", "#FFD54A"),
+      borderColor: color(recipe, "active-box-border-color", "#00000000"),
+      borderWidthPx: number(recipe, "active-box-border-width", 0),
+      paddingXPx: activeBoxPadding.x,
+      paddingYPx: activeBoxPadding.y,
+      radiusPx: number(recipe, "active-box-radius", 8),
+      enter: choice(recipe, "active-box-enter", ["none", "fade", "pop"] as const, "none"),
+      exit: choice(recipe, "active-box-exit", ["none", "fade", "pop"] as const, "none"),
+      transitionFrames: integer(recipe, "active-box-transition-frames", 0),
+    },
     motion: {
-      cueEnter: choice(recipe, "cue-enter", ["none", "fade"] as const, "none"),
-      cueExit: choice(recipe, "cue-exit", ["none", "fade"] as const, "none"),
-      cueTransitionFrames: integer(recipe, "cue-transition-frames", 0),
-      atomReveal: choice(recipe, "atom-reveal", ["all", "on-start"] as const, "all"),
-      activeScale: number(recipe, "active-scale", 1),
+      cueEnter: choice(recipe, "cue-enter", oneShotMotions, "none"),
+      cueExit: choice(recipe, "cue-exit", oneShotMotions, "none"),
+      cueEnterFrames: integer(recipe, "cue-enter-frames", 0),
+      cueExitFrames: integer(recipe, "cue-exit-frames", 0),
+      atomEnter: choice(recipe, "atom-enter", oneShotMotions, "none"),
+      atomEnterFrames: integer(recipe, "atom-enter-frames", 0),
+      atomReveal: choice(recipe, "atom-reveal", ["all", "on-start", "typewriter"] as const, "all"),
+      activeResponse: choice(recipe, "active-response", ["none", "scale", "pop", "spring"] as const, "none"),
+      activeResponseFrames: integer(recipe, "active-response-frames", 6),
+      activeScale: number(recipe, "active-scale", 1.08),
+      slideDistancePx: number(recipe, "slide-distance", 24),
+      loop: choice(recipe, "loop", ["none", "shake", "wobble", "glow-pulse"] as const, "none"),
+      loopTarget: choice(recipe, "loop-target", ["cue", "active-atom"] as const, "cue"),
+      loopPeriodFrames: integer(recipe, "loop-period-frames", 12),
+      loopIntensity: number(recipe, "loop-intensity", 1),
     },
   };
   assertFineCaptionParameters(parameters);
@@ -202,12 +289,21 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
   const nonNegative = [
     value.placement.x, value.placement.y, value.placement.width, value.typography.fontSizePx,
     value.typography.fontWeight, value.layout.lineHeight, value.layout.wordGapPx, value.cueBox.paddingXPx,
-    value.cueBox.paddingYPx, value.cueBox.radiusPx, value.cueBox.borderWidthPx, value.motion.cueTransitionFrames,
+    value.cueBox.paddingYPx, value.cueBox.radiusPx, value.cueBox.borderWidthPx,
+    value.underline.thicknessPx, value.underline.offsetPx, value.activeUnderline.thicknessPx,
+    value.activeUnderline.offsetPx, value.activeBox.borderWidthPx, value.activeBox.paddingXPx,
+    value.activeBox.paddingYPx, value.activeBox.radiusPx, value.activeBox.transitionFrames,
+    value.motion.cueEnterFrames, value.motion.cueExitFrames, value.motion.atomEnterFrames, value.motion.activeResponseFrames,
+    value.motion.slideDistancePx, value.motion.loopPeriodFrames, value.motion.loopIntensity,
   ];
   if (nonNegative.some((item) => !Number.isFinite(item) || item < 0)
     || value.placement.x > 1 || value.placement.y > 1 || value.placement.width <= 0 || value.placement.width > 1
     || value.typography.fontSizePx <= 0 || value.layout.lineHeight <= 0
-    || !Number.isSafeInteger(value.motion.cueTransitionFrames) || value.motion.activeScale <= 0
+    || !Number.isSafeInteger(value.motion.cueEnterFrames) || !Number.isSafeInteger(value.motion.cueExitFrames)
+    || !Number.isSafeInteger(value.motion.atomEnterFrames) || !Number.isSafeInteger(value.motion.loopPeriodFrames)
+    || !Number.isSafeInteger(value.motion.activeResponseFrames)
+    || !Number.isSafeInteger(value.activeBox.transitionFrames) || value.motion.loopPeriodFrames <= 0
+    || value.motion.activeScale <= 0
     || !Number.isFinite(value.motion.activeScale) || !Number.isFinite(value.layout.letterSpacingPx)) {
     throw new Error("Fine Caption parameters contain invalid numeric bounds");
   }
@@ -229,6 +325,10 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
   }
   assertColor(value.cueBox.background, "Fine Caption background");
   assertColor(value.cueBox.borderColor, "Fine Caption border color");
+  assertColor(value.underline.color, "Fine Caption underline color");
+  assertColor(value.activeUnderline.color, "Fine Caption active underline color");
+  assertColor(value.activeBox.background, "Fine Caption active box background");
+  assertColor(value.activeBox.borderColor, "Fine Caption active box border color");
   assertPaint(value.basePaint, "Fine Caption base Paint");
   assertPaint(value.activePaint, "Fine Caption active Paint");
 }

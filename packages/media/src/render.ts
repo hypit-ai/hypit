@@ -25,6 +25,12 @@ export type FontArtifactRef = {
   readonly style: "normal" | "italic" | "oblique";
 };
 
+/** Ordered exact font faces. The first face is primary; the remainder are glyph fallbacks. */
+export type FontStackRef = {
+  readonly contract: "svml.font-stack@1";
+  readonly faces: readonly FontArtifactRef[];
+};
+
 export type CompositableSurfaceRef = {
   readonly contract: "svml.compositable-surface@1";
   readonly artifact: BlobRef;
@@ -77,6 +83,22 @@ export function assertFontArtifactRef(value: FontArtifactRef, label = "FontArtif
   }
   if (!["normal", "italic", "oblique"].includes(value.style)) {
     throw new Error(`${label} style is invalid.`);
+  }
+}
+
+export function assertFontStackRef(value: FontStackRef, label = "FontStackRef"): void {
+  if (value.contract !== "svml.font-stack@1") throw new Error(`${label} contract is unsupported.`);
+  if (value.faces.length === 0) throw new Error(`${label} faces are empty.`);
+  const identities = new Set<string>();
+  for (const [index, face] of value.faces.entries()) {
+    assertFontArtifactRef(face, `${label}.faces.${index}`);
+    const identity = JSON.stringify({
+      sources: face.sources.map((source) => [source.artifact.digest, source.unicodeRange ?? null]),
+      weight: face.weight,
+      style: face.style,
+    });
+    if (identities.has(identity)) throw new Error(`${label} repeats an exact face.`);
+    identities.add(identity);
   }
 }
 

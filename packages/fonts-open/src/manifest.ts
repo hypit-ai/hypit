@@ -5,7 +5,10 @@ import type { ModuleManifest } from "@narratage/protocol";
 export const fontsOpenModuleRef = { name: "@narratage/fonts-open", version: "0.0.0-dev" } as const;
 
 export const fontsOpenFaceSurfaceImplementationDigest = digestOf(
-  "@narratage/fonts-open/fontsource-5.3.0-face-surface@1",
+  "@narratage/fonts-open/pinned-open-face-surface@1",
+);
+export const fontsOpenStackSurfaceImplementationDigest = digestOf(
+  "@narratage/fonts-open/pinned-open-exact-stack-surface@1",
 );
 
 export const fontsOpenManifest: ModuleManifest = {
@@ -24,6 +27,16 @@ export const fontsOpenManifest: ModuleManifest = {
       kind: "trusted-frontend-surface",
       locator: "@narratage/fonts-open/face-surface",
       digest: fontsOpenFaceSurfaceImplementationDigest,
+    },
+  }, {
+    name: "stack",
+    tag: "Stack",
+    mode: "structured",
+    outputs: [mediaTypes.fontStack],
+    implementation: {
+      kind: "trusted-frontend-surface",
+      locator: "@narratage/fonts-open/stack-surface",
+      digest: fontsOpenStackSurfaceImplementationDigest,
     },
   }],
   producers: [],
