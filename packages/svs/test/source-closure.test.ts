@@ -391,7 +391,7 @@ test("the golden studio.svs parses as generic Recipes without video knowledge", 
   const parsed = parseSvs("studio.svs", maskSourceHeader(source, parseSourceHeader("studio.svs", source)));
   assert.equal(parsed.recipes.length, 10);
   assert.equal(parsed.recipes.find((recipe) => recipe.value.path === "caption.short-cues")?.value.properties.model, "gemini-2.5-flash");
-  assert.equal(parsed.recipes.find((recipe) => recipe.value.path === "film.vertical")?.value.properties.width, 1080);
+  assert.equal(parsed.recipes.find((recipe) => recipe.value.path === "film.vertical")?.value.properties.background, "#09090B");
 });
 
 test("SVS rejects duplicate public recipes", () => {

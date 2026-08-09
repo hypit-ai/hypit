@@ -10,7 +10,7 @@ import type {
 import { captionTypes } from "./manifest.js";
 import { captionWordsForRole } from "./display.js";
 import { resolveCaptionProgram } from "./style.js";
-import type { CaptionStyleApplication } from "./style.js";
+import type { CaptionMuteApplication, CaptionStyleApplication } from "./style.js";
 import type { CaptionStyleIntent } from "./types.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
@@ -81,13 +81,17 @@ export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element,
     `${element.name}.default`,
   );
   const applications: CaptionStyleApplication[] = [];
+  const mutes: CaptionMuteApplication[] = [];
   for (const child of element.children) {
     if (child.kind === "text") {
-      if (child.value.trim()) throw new Error(`${element.name} accepts only Use children`);
+      if (child.value.trim()) throw new Error(`${element.name} accepts only Use or Mute children`);
       continue;
     }
-    if (localName(child.name) !== "Use") throw new Error(`${element.name} accepts only Use children`);
-    attributes(child, ["style"], ["role", "words"]);
+    const childName = localName(child.name);
+    if (childName !== "Use" && childName !== "Mute") {
+      throw new Error(`${element.name} accepts only Use or Mute children`);
+    }
+    attributes(child, childName === "Use" ? ["style"] : [], ["role", "words"]);
     const role = optionalString(child, "role");
     const wordsAttribute = child.attributes.words;
     if ((role === undefined) === (wordsAttribute === undefined)) {
@@ -99,16 +103,20 @@ export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element,
           `${child.name}.words`,
         )
       : captionWordsForRole(sequence, role);
-    applications.push({
-      id: `${id}.use.${applications.length + 1}`,
-      words,
-      style: inline<CaptionStyleIntent>(
-        reference(child, "style", captionTypes.style, resolveReference),
-        `${child.name}.style`,
-      ),
-    });
+    if (childName === "Mute") {
+      mutes.push({ id: `${id}.mute.${mutes.length + 1}`, words });
+    } else {
+      applications.push({
+        id: `${id}.use.${applications.length + 1}`,
+        words,
+        style: inline<CaptionStyleIntent>(
+          reference(child, "style", captionTypes.style, resolveReference),
+          `${child.name}.style`,
+        ),
+      });
+    }
   }
-  const program = resolveCaptionProgram(sequence, id, defaultStyle, applications);
+  const program = resolveCaptionProgram(sequence, id, defaultStyle, applications, mutes);
   return {
     records: [{ id, type: captionTypes.program, value: { kind: "inline", value: program }, range: element.range }],
     components: [],

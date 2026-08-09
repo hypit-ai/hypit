@@ -89,6 +89,7 @@ Authors do not need a fake `@whole` Selection or a complement.
 <caption:Program id="captions" display={story.caption} default={plain}>
   <caption:Use role="ALICE" style={alice}/>
   <caption:Use words={story.caption.selection.special} style={impact}/>
+  <caption:Mute words={story.caption.selection.private}/>
 </caption:Program>
 ```
 
@@ -96,6 +97,21 @@ Uses apply in source order and the last matching whole-Style replacement wins. T
 the display-sequence identity and ordered Word-id runs, not copied text. A run never crosses a
 Segment or Turn boundary. All runs are disjoint and partition the display Words exactly once, and
 no run may split an Atom.
+
+`Mute` consumes the same Caption-specific whole-Atom word subset as `Use`. Multiple `Mute`
+children form one ordered union, so one Program can hide any number of disconnected authored
+ranges. `Mute` is post-planning visibility intent: muted Atoms remain in the immutable display
+universe and `CaptionPlan`, never enter the planner prompt as an instruction, and never cause Cue
+replanning. The common timing join removes muted Atoms from the already-planned timed Cue while
+preserving that Cue's identity and original time span; a Cue with no visible Atom is absent from the
+timed visual projection. Style-family renderers therefore share this behavior without each
+inventing their own mask semantics. The common package also exports the same idempotent operation
+for defensive direct renderer calls.
+
+This is deliberately not a generic temporal mask. Script has already projected the author's
+Selection into the exact display-word subset, so Caption need not convert words to time and then
+guess them back from overlapping windows. A `Mute` selecting only part of a multiword Dual Text
+Atom is rejected by the same indivisibility rule as a Style application.
 
 `display={story.caption}` is a real graph edge. Planner, timing and rendering declare their own
 edges to the same value only when they need it.
@@ -162,6 +178,7 @@ Caption v1 does not define:
 - implicit model or Provider routing;
 - automatic cache reuse;
 - estimated display-word timing;
+- planner-visible or Core-owned Caption mute semantics;
 - a global Caption layer in Composition;
 - field-specific semantics in Core.
 

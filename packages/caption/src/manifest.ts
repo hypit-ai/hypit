@@ -13,14 +13,14 @@ export const captionTypes = {
   plan: { module: captionModuleRef, name: "CaptionPlan" },
   timedProjection: { module: captionModuleRef, name: "TimedCaptionProjection" },
 } satisfies Record<string, TypeRef>;
-export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-whole-atoms-plan@1");
+export const captionPlanImplementationDigest = digestOf("@narratage/caption/temporalize-whole-atoms-with-mute@1");
 export const captionValidatorDigests = {
   style: digestOf("@narratage/caption/validate-style@1"),
-  program: digestOf("@narratage/caption/validate-display-program@1"),
+  program: digestOf("@narratage/caption/validate-display-program-with-mute@1"),
   plan: digestOf("@narratage/caption/validate-atom-plan@1"),
   timedProjection: digestOf("@narratage/caption/validate-timed-atoms@1"),
 } as const;
-export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/caption/display-program-surface@1");
+export const captionProgramSurfaceImplementationDigest = digestOf("@narratage/caption/display-program-surface-with-mute@1");
 
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
@@ -58,7 +58,7 @@ const timedCaptionCue = object({
 export const timedCaptionProjectionSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.timed-caption-projection@1" } },
   displaySequenceId: { schema: string },
-  cues: { schema: { kind: "array", minItems: 1, items: timedCaptionCue } },
+  cues: { schema: { kind: "array", items: timedCaptionCue } },
 });
 
 const captionFieldValueSchema: ValueSchema = {
@@ -99,6 +99,7 @@ export const captionProgramSchema: ValueSchema = object({
   id: { schema: string }, displaySequenceId: { schema: string }, defaultStyleId: { schema: string },
   styles: { schema: { kind: "array", minItems: 1, items: captionStyleSchema } },
   runs: { schema: { kind: "array", minItems: 1, items: captionProgramRun } },
+  mutedWordIds: { schema: { kind: "array", items: string } },
 });
 
 export const captionManifest: ModuleManifest = {

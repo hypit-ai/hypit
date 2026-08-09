@@ -65,7 +65,7 @@ export type CaptionProgramRun = {
   readonly wordIds: readonly string[];
 };
 
-/** Total, ordered style assignment over one Caption display universe. */
+/** Total, ordered style assignment plus an explicit post-planning visibility mask. */
 export type CaptionProgram = {
   readonly contract: "svml.caption-program@1";
   readonly id: string;
@@ -73,6 +73,8 @@ export type CaptionProgram = {
   readonly defaultStyleId: string;
   readonly styles: readonly CaptionStyleIntent[];
   readonly runs: readonly CaptionProgramRun[];
+  /** Ordered display-word ids hidden by the renderer. They remain present in CaptionPlan. */
+  readonly mutedWordIds: readonly string[];
 };
 
 export type TimedCaptionCue = {

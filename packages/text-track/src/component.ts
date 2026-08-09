@@ -2,6 +2,7 @@ import type { ComponentPackage } from "@narratage/component-kit";
 import type { NarrativeSelection, NarrativeSelectionRef } from "@narratage/narrative";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { SpatialFrame } from "@narratage/spatial";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
@@ -49,6 +50,7 @@ export const textTrackComponent = {
         inline<TextTrackSet>(inputs.set?.value, "TextTrackSet"),
         inline<TextTrackHeader>(inputs.header?.value, "TextTrackHeader"),
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
         inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
       )) } }, needs: {},
     }),
@@ -62,6 +64,7 @@ export const textTrackComponent = {
         inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
         inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelection"),
         inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
         inline<TextItemSpec>(inputs.spec?.value, "TextItemSpec"),
       )) } }, needs: {},
     }),

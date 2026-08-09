@@ -30,6 +30,6 @@ export {
   sealCaptionProgram,
   sealCaptionStyle,
 } from "./style.js";
-export type { CaptionStyleApplication } from "./style.js";
-export { assertTimedCaptionProjection, temporalizeCaptionPlan } from "./temporalize.js";
+export type { CaptionMuteApplication, CaptionStyleApplication } from "./style.js";
+export { applyCaptionMute, assertTimedCaptionProjection, temporalizeCaptionPlan } from "./temporalize.js";
 export type * from "./types.js";

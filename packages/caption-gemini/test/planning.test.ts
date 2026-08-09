@@ -122,6 +122,27 @@ test("a field-free Style requires only Cue boundaries", () => {
     request.runs[0]!.atoms.map((atom) => atom.id));
 });
 
+test("Caption Mute stays out of Gemini while muted Atoms remain in the immutable plan", () => {
+  const parsed = parseScript("mute.svml", "<line>Keep this private phrase in the authored plan.</line>");
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const muted = display.words.slice(2, 4);
+  const program = resolveCaptionProgram(display, "captions", style("fine"), [], [{
+    id: "private",
+    words: {
+      contract: "svml.caption-display-word-subset@1",
+      id: "selection:private",
+      sequenceId: display.id,
+      wordIds: muted.map((word) => word.id),
+    },
+  }]);
+  const request = compileCaptionGeminiRequest(display, program, options());
+
+  assert.deepEqual(request.runs.flatMap((run) => run.atoms.flatMap((atom) => atom.words.map((word) => word.id))),
+    display.words.map((word) => word.id));
+  assert.equal(request.prompt.includes("mutedWordIds"), false);
+  assert.equal(request.prompt.includes("visibility"), false);
+});
+
 test("one Word may carry multiple independent field assignments", () => {
   const parsed = parseScript("multi.svml", "<line>one two three four five.</line>");
   const display = captionDisplaySequence(parsed, "story.caption");

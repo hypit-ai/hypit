@@ -16,7 +16,8 @@ This gate answers one question:
 
 Passing this gate does not make one universal `TrackProgram`. The six Track Program axes—content,
 temporal source, window projection, spatial source, occupancy and presentation—remain a separation
-discipline for package authors, not six mandatory public fields.
+discipline for package authors, not six mandatory public fields. The shared authoring laws and the
+current temporal design are specified in [`track-authoring.md`](./track-authoring.md).
 
 ## Three levels that must not collapse
 
@@ -57,10 +58,11 @@ A Caption package must be able to lower a hard range boundary, a cue-level align
 container, shrink-wrapped rows and independently styled or animated words. Dual-font and per-word
 paint are package facts. Composition sees only ordinary elements and Presents.
 
-### E3 — Media two-box lowering
+### E3 — Media two-frame lowering
 
-A media package must be able to lower one resolved content box containing two independent samples
-of the same Artifact:
+A media package must be able to lower one resolved Placement Frame containing two independent
+samples of the same Artifact. Each sample derives its own Content Frame according to
+[`spatial-layout.md`](./spatial-layout.md):
 
 - a backdrop sample with its own cover/zoom/blur/tone treatment;
 - a foreground sample with its own contain/cover/fit-height and focal alignment.
@@ -81,6 +83,12 @@ Frame-exact opacity, transform, filter and clip animation may operate on element
 Present. A package that owns both materials in a handoff may lower complementary Presents. No
 ordinary Track may sample the accumulated pixels below it or mutate a sibling Track.
 
+The Media package must additionally prove that entry, sustain, exit, per-layer sampling motion and
+Sequence pair handoffs remain separate channels with a fixed composition order. The independent
+Depth-Stack Deck package must prove that its collection-state reflow composes with Card-local motion
+without adding Deck meaning to the terminal Track. The complete models are specified in
+[`media-track.md`](./media-track.md) and [`deck-track.md`](./deck-track.md).
+
 ### E6 — Materialized visual fallback
 
 A component whose deterministic visual result cannot be represented by the reference element tree
@@ -88,6 +96,23 @@ must be able to materialize its owned result and contribute it as a typed Surfac
 interleaving, the final public contract must bind enough surface information to distinguish a
 compositable alpha-bearing visual from an opaque video. Merely naming a `.webm` Artifact does not
 prove this property.
+
+### E7 — Generic audio lowering
+
+The official Audio package must lower arbitrary explicit normalized sources, source trim, one-shot,
+loop, bounded pitch-preserving stretch, start/end alignment, gain and fades into the same peer
+`AudioTrack` waist. Overlapping clips mix without priority clipping or a privileged Base lane.
+Container stream selection, loudness processing and Provider placement remain explicit upstream or
+downstream graph work. The complete boundary is specified in
+[`audio-track.md`](./audio-track.md).
+
+### E8 — Self-contained screen overlay
+
+A full-canvas effect must lower to ordinary absolute-stack Presents made from owned Visual IR
+elements or an owned alpha-bearing Surface. It cannot read the accumulated lower composite, reserve
+the highest z-index or introduce a post-composition phase. Source-free blur, color-adjust and real
+zoom-blur therefore fail closed; their honest form consumes explicit media or Surface input outside
+the Screen Overlay package. See [`screen-overlay.md`](./screen-overlay.md).
 
 ## Old-system attack matrix
 
@@ -99,9 +124,15 @@ prove this property.
 | dual fonts, CJK, emoji and writing direction | Text/Caption Program | text elements plus locked font/layout dependencies |
 | media content box plus foreground/backdrop sampling | media package | sibling media elements referencing one Artifact |
 | focal crop and fit-height | media package | deterministic sampling/placement result |
+| full-frame B-roll, corner GIF and lower media card | Media Item + Recipes | the same Item lowering against different Frames |
+| explicit media replacement group | Media Sequence | coordinated owned outgoing/incoming Presents |
+| visible card history and depth reflow | Depth-Stack Deck Track | package-owned collection state over ordinary Presents |
 | Ranking board and icons at unrelated z | Ranking Program | several absolute-stack Presents |
 | B-roll enter/exit and pair transition | B-roll Program | local frame-exact keyframes over owned Presents |
 | arbitrary self-contained visual | component/provider | materialized compositable Surface Artifact |
+| music/SFX/additional voice placement | Audio Program | ordinary frame-exact AudioTrack clips |
+| flash/vignette/grain/veil | Screen Overlay Program | owned full-canvas Presents or alpha Surface |
+| blur/color transform of a picture | explicit-input media effect | transformed owned material, never backdrop sampling |
 
 ## Current executable evidence
 
@@ -141,7 +172,7 @@ facts must stay generic; they must not be patched with Caption-, Text- or B-roll
 
 Track v1 may be called a stable public waist only when all of the following hold:
 
-1. E1–E5 have executable structural and HTML-lowering witnesses;
+1. E1–E8 have executable structural, HTML-lowering and audio-plan witnesses;
 2. official Text/Caption lowerers either bind exact font Artifacts or explicitly materialize their
    glyph result, and the renderer implementation used for layout is receipt-bound;
 3. E6 has a typed compositable-Surface path whose Runtime validates the declared media facts and

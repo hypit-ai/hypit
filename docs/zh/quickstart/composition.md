@@ -9,6 +9,7 @@ Film 是最终的组装阶段。它接收所有对等的 Track，对其进行验
 Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 ```svml
+<import as="space" from="@narratage/spatial@1"/>
 <import as="film" from="@narratage/film@1"/>
 <import as="render" from="@narratage/render-hyperframes@1"/>
 ```
@@ -19,7 +20,8 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 什么是 B-roll、什么是语音。它接收任何 VisualTrack 或 AudioTrack，并按堆叠顺序将它们分层。
 
 ```svml
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={captions.track}/>
@@ -31,8 +33,9 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 | 属性 | 必填 | 说明 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
+| `canvas` | 是 | 与 Track 布局共享的显式 CanvasSpace |
 | `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace——定义时长和帧率 |
-| `appearance` | 是 | SVS Film Recipe——画布宽度、高度、帧率、背景 |
+| `appearance` | 是 | SVS Film Recipe——画布清除颜色 |
 
 ### film:Track
 
@@ -115,6 +118,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="broll" from="@narratage/broll@1"/>
   <import as="text" from="@narratage/text-track@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -154,13 +158,17 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
       appearance={studio.broll.card}/>
   </broll:Track>
 
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
   <text:Track id="titles" space={speech.space}>
     <text:Item text="MEANING" during="full"
+      frame={title-frame}
       appearance={studio.text.title}/>
   </text:Track>
 
   <!-- 5. Film: compose all tracks -->
-  <film:Film id="main" space={speech.space}
+  <film:Film id="main" canvas={vertical} space={speech.space}
     appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
@@ -182,7 +190,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 
 <sheet version="1">
   film.vertical {
-    width: 1080; height: 1920; frame-rate: 30; background: #09090B;
+    background: #09090B;
   }
   broll.card {
     stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5;
@@ -196,7 +204,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
     fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;
   }
   text.title {
-    stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1;
+    stack-order: 90;
     font: Inter; weight: 900; size: 64; align: center;
     fill: #FFFFFF; tracking: -1;
   }

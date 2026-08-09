@@ -60,6 +60,8 @@
     "@narratage/speech-spine": "workspace:*",
     "@narratage/svs": "workspace:*",
     "@narratage/text-track": "workspace:*",
+    "@narratage/temporal": "workspace:*",
+    "@narratage/spatial": "workspace:*",
     "@narratage/visual-ir": "workspace:*",
     "@narratage/whisperx": "workspace:*",
     "@types/node": "24.10.1",

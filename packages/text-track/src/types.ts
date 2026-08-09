@@ -1,11 +1,5 @@
 import type { FrameSpan, Track } from "@narratage/composition";
-
-export type TextBox = {
-  readonly xPercent: number;
-  readonly yPercent: number;
-  readonly widthPercent: number;
-  readonly heightPercent: number;
-};
+import type { SpatialFrame } from "@narratage/spatial";
 
 export type TextAppearance = {
   readonly color: string;
@@ -27,7 +21,7 @@ export type TextItem = {
   readonly span: FrameSpan;
   readonly z: number;
   readonly tieBreak: string;
-  readonly box: TextBox;
+  readonly frame: SpatialFrame;
   readonly appearance: TextAppearance;
 };
 
@@ -46,7 +40,7 @@ export type TextTrackSpec = {
     readonly text: string;
     readonly during: "full";
     readonly z: number;
-    readonly box: TextBox;
+    readonly frame: SpatialFrame;
     readonly appearance: TextAppearance;
   }[];
 };
@@ -57,13 +51,12 @@ export type TextTrackHeader = {
   readonly id: string;
 };
 
-/** Appearance and content are authored here; timing remains an explicit graph input. */
+/** Appearance and content are authored here; timing and placement remain explicit graph inputs. */
 export type TextItemSpec = {
   readonly contract: "svml.text-item-spec@1";
   readonly id: string;
   readonly text: string;
   readonly z: number;
-  readonly box: TextBox;
   readonly appearance: TextAppearance;
 };
 

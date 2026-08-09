@@ -1,5 +1,6 @@
 import type { ComponentPackage } from "@narratage/component-kit";
 import type { ProgramSpace } from "@narratage/program-space";
+import type { CanvasSpace } from "@narratage/spatial";
 import type { AudioTrack, VisualTrack } from "@narratage/composition";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
@@ -63,6 +64,7 @@ export const filmComponent = {
       handler: ({ inputs }) => ({
         outputs: { composition: { kind: "inline", value: canonicalize(compileFilmComposition(
           inline<FilmProgram>(inputs.program?.value, "FilmProgram"),
+          inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"),
           inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
           inline<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
         )) } },

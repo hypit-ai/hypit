@@ -18,6 +18,11 @@ export type CaptionStyleApplication = {
   readonly style: CaptionStyleIntent;
 };
 
+export type CaptionMuteApplication = {
+  readonly id: string;
+  readonly words: CaptionDisplayWordSubset;
+};
+
 const ID = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/u;
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -123,6 +128,10 @@ export function assertCaptionProgram(value: CaptionProgram): void {
   assert(new Set(planned).size === planned.length, "Caption Program runs repeat a display word");
   assert(value.runs.every((run) => styles.has(run.styleId) && run.wordIds.length > 0),
     "Caption Program run style is invalid");
+  assert(Array.isArray(value.mutedWordIds)
+    && value.mutedWordIds.every((wordId) => typeof wordId === "string" && wordId.length > 0)
+    && new Set(value.mutedWordIds).size === value.mutedWordIds.length,
+  "Caption Program muted display words are invalid or repeated");
 }
 
 /** Bind a Program's immutable display universe to the exact Script-produced sequence. */
@@ -132,6 +141,12 @@ export function assertCaptionProgramForDisplay(value: CaptionProgram, sequence: 
   assert(value.displaySequenceId === sequence.id
     && value.runs.flatMap((run) => run.wordIds).join("\0") === sequence.words.map((word) => word.id).join("\0"),
   "Caption Program does not partition its CaptionDisplaySequence exactly once and in order");
+  assertCaptionDisplayWordSubset({
+    contract: "svml.caption-display-word-subset@1",
+    id: `${value.id}:mute`,
+    sequenceId: sequence.id,
+    wordIds: value.mutedWordIds,
+  }, sequence);
   const runByWord = new Map(value.runs.flatMap((run) => run.wordIds.map((id) => [id, run.id] as const)));
   for (const atom of sequence.atoms) {
     assert(new Set(atom.wordIds.map((id) => runByWord.get(id))).size === 1,
@@ -145,6 +160,7 @@ export function resolveCaptionProgram(
   id: string,
   defaultStyle: CaptionStyleIntent,
   applications: readonly CaptionStyleApplication[],
+  mutes: readonly CaptionMuteApplication[] = [],
 ): CaptionProgram {
   assertCaptionDisplaySequence(sequence);
   assertCaptionStyle(defaultStyle);
@@ -153,6 +169,11 @@ export function resolveCaptionProgram(
     assertCaptionStyle(application.style);
     assertCaptionDisplayWordSubset(application.words, sequence);
     assert(application.words.wordIds.length > 0, `Caption application ${application.id} selects no visible display word`);
+  });
+  mutes.forEach((mute) => {
+    assert(ID.test(mute.id), "Caption Mute identity is invalid");
+    assertCaptionDisplayWordSubset(mute.words, sequence);
+    assert(mute.words.wordIds.length > 0, `Caption Mute ${mute.id} selects no display word`);
   });
   const styles = new Map<string, CaptionStyleIntent>([[defaultStyle.id, defaultStyle]]);
   applications.forEach((application) => {
@@ -197,6 +218,9 @@ export function resolveCaptionProgram(
     defaultStyleId: defaultStyle.id,
     styles: [...styles.values()],
     runs: runs.map(({ turnId: _turn, segmentId: _segment, ...run }) => run),
+    mutedWordIds: sequence.words
+      .filter((word) => mutes.some((mute) => mute.words.wordIds.includes(word.id)))
+      .map((word) => word.id),
   });
   assertCaptionProgramForDisplay(program, sequence);
   return program;

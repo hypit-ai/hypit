@@ -1,4 +1,4 @@
-import { compositionComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { compositionComponent, spatialComponent, videoContractManifests } from "../../test-support/video-domain.js";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
 import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
@@ -23,6 +23,12 @@ import {
 } from "@narratage/film";
 import type { ModuleManifest } from "@narratage/protocol";
 import { svsFrontend, svsManifest } from "@narratage/svs";
+import {
+  decodeCanvasSurface,
+  spatialManifest,
+  spatialModuleRef,
+  spatialSurfaceDigests,
+} from "@narratage/spatial";
 import {
   TextSurfaceRegistry,
   createTextAuthorFrontend,
@@ -91,14 +97,12 @@ function source(id: string, text: string): AuthorSourceUnit {
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
   registerTypeValidatorFacets(registry, compositionComponent.validators);
+  registerTypeValidatorFacets(registry, spatialComponent.validators);
   return registry;
 }
 
 const validStyles = `<sheet version="1">
   film.vertical {
-    width: 1080;
-    height: 1920;
-    frame-rate: 30;
     background: #09090B;
   }
 </sheet>`;
@@ -120,11 +124,19 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
     filmSurfaceImplementationDigest,
     decodeFilmSurface,
   );
+  surfaces.registerStructured(
+    spatialModuleRef,
+    "canvas",
+    spatialSurfaceDigests.canvas,
+    decodeCanvasSurface,
+  );
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createTextAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      return request.from.startsWith("@narratage/film") ? filmModuleRef : fixtureModule;
+      if (request.from.startsWith("@narratage/film")) return filmModuleRef;
+      if (request.from.startsWith("@narratage/spatial")) return spatialModuleRef;
+      return fixtureModule;
     },
   }));
   frontends.register(svsFrontend);
@@ -136,9 +148,11 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
     entry: source("/project/main.svml", `<svml>
       <import as="fixture" from="example.film-fixture@1"/>
       <import as="film" from="@narratage/film@1"/>
+      <import as="space" from="@narratage/spatial@1"/>
       <import as="studio" source="./studio.svs"/>
       <fixture:Inputs/>
-      <film:Film id="main" space={space} appearance={studio.film.vertical}>${tracks}</film:Film>
+      <space:Canvas id="vertical" width="1080" height="1920"/>
+      <film:Film id="main" canvas={vertical} space={space} appearance={studio.film.vertical}>${tracks}</film:Film>
     </svml>`),
     closure,
     frontends,
@@ -155,8 +169,7 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
   assert.deepEqual(program?.value.kind === "inline" ? program.value.value : undefined, {
     contract: "svml.film-program@1",
     id: "main",
-    frameRate: { numerator: 30, denominator: 1 },
-    canvas: { width: 1080, height: 1920, clearColor: "#09090B" },
+    clearColor: "#09090B",
   });
   const target = resolveCompiledSourceExport(compiled, "main.composition", compositionTypes.composition);
   assert.equal(target.ref.kind, "logical-output");

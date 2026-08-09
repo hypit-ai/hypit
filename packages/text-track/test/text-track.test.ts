@@ -36,7 +36,7 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
         span: { startFrame: 0, endFrameExclusive: 150 },
         z: 90,
         tieBreak: "watermark",
-        box: { xPercent: 70, yPercent: 4, widthPercent: 25, heightPercent: 8 },
+        frame: { contract: "svml.spatial-frame@1", xPx: 756, yPx: 76.8, widthPx: 270, heightPx: 153.6 },
         appearance: { color: "#ffffff", fontSizePx: 32, fontWeight: 700, align: "right" },
       },
       {
@@ -45,7 +45,7 @@ test("persistent and timed text are ordinary Presents in one VisualTrack", () =>
         span: { startFrame: 30, endFrameExclusive: 90 },
         z: 55,
         tieBreak: "callout",
-        box: { xPercent: 10, yPercent: 65, widthPercent: 80, heightPercent: 12 },
+        frame: { contract: "svml.spatial-frame@1", xPx: 108, yPx: 1248, widthPx: 864, heightPx: 230.4 },
         appearance: {
           color: "#111111",
           fontSizePx: 48,
@@ -96,7 +96,7 @@ test("TextTrackProgram rejects a frame span outside its ProgramSpace", () => {
       span: { startFrame: 149, endFrameExclusive: 151 },
       z: 1,
       tieBreak: "late",
-      box: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 10 },
+      frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 },
       appearance: { color: "#ffffff", fontSizePx: 24 },
     }],
   });
@@ -139,7 +139,6 @@ test("a selected Text Item is located only through explicit Selection and Semant
     id: "meaning",
     text: "MEANING",
     z: 80,
-    box: { xPercent: 10, yPercent: 10, widthPercent: 80, heightPercent: 10 },
     appearance: { color: "#ffffff", fontSizePx: 48 },
   });
   const program = finalizeTextTrack(header, appendSelectedTextItem(
@@ -148,6 +147,7 @@ test("a selected Text Item is located only through explicit Selection and Semant
     map,
     selection,
     space,
+    { contract: "svml.spatial-frame@1", xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 },
     spec,
   ));
   assert.deepEqual(program.items.map((item) => item.span), [{ startFrame: 30, endFrameExclusive: 60 }]);

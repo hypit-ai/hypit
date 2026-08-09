@@ -104,6 +104,9 @@ importers:
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:packages/semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:packages/spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:packages/speech
@@ -122,6 +125,9 @@ importers:
       '@narratage/svs':
         specifier: workspace:*
         version: link:packages/svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:packages/temporal
       '@narratage/text-track':
         specifier: workspace:*
         version: link:packages/text-track
@@ -588,6 +594,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
@@ -1824,6 +1833,24 @@ importers:
 
   packages/source: {}
 
+  packages/spatial:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
+
   packages/speech:
     dependencies:
       '@narratage/media':
@@ -2004,6 +2031,21 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+
+  packages/temporal:
+    dependencies:
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
 
   packages/text:
     dependencies:
