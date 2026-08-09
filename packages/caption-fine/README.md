@@ -1,11 +1,12 @@
 # `@narratage/caption-fine`
 
-The first official fine-grained Caption Style family. It turns an SVS Recipe into one complete
-`CaptionStyle` and lowers timed Cues into one ordinary `VisualTrack`.
+The official field-free fine-grained Caption Style family. It turns one SVS Recipe into a complete
+`CaptionStyle` and lowers timed whole Atoms into one ordinary peer `VisualTrack`.
 
-Fine means short semantic Cues with deterministic geometry, typography and paint. Every Word in a
-Cue has one uniform static appearance. This family declares no planning fields and has no
-`important`, karaoke, random sizing or per-Word motion semantics.
+Fine owns Cue geometry, typography, base/active glyph Paint, Cue box Paint and restrained local
+motion. Its optional karaoke is `current | trail` by `step | wipe`; ordinary single-Word Atoms get
+per-word timing while a Dual Text Atom remains one honest indivisible activation unit. It declares
+no planning fields and has no `important`, random sizing or inferred Word timestamps.
 
 ```xml
 <fine:Style id="primary" recipe={studio.caption.primary}/>
@@ -23,5 +24,6 @@ Cue has one uniform static appearance. This family declares no planning fields a
 />
 ```
 
-One Track handles the default and ordered Style replacements and emits one peer `VisualTrack`.
-Common Caption, Media, Composition and Core know none of Fine's Recipe fields or layout policy.
+One Track handles the default and ordered Style replacements. Common Caption, Media, Composition
+and Core know none of Fine's Recipe fields or layout policy. See `spec/caption-fine.md` for the full
+parameter surface, defaults, non-goals and remaining visual evidence gates.
