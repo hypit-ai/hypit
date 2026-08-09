@@ -1,0 +1,21 @@
+{
+  "name": "@narratage/mimo-tts",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/generation": "workspace:*",
+    "@narratage/model-kit": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
+  }
+}

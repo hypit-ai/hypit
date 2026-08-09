@@ -42,6 +42,9 @@
       "@narratage/media-track": [
         "packages/media-track/src/index.ts"
       ],
+      "@narratage/mimo-tts": [
+        "packages/mimo-tts/src/index.ts"
+      ],
       "@narratage/deck-track": [
         "packages/deck-track/src/index.ts"
       ],
@@ -185,6 +188,9 @@
       "@narratage/provider-media-aws-lambda": ["packages/provider-media-aws-lambda/src/index.ts"],
       "@narratage/provider-media-local": [
         "packages/provider-media-local/src/index.ts"
+      ],
+      "@narratage/provider-xiaomi-mimo": [
+        "packages/provider-xiaomi-mimo/src/index.ts"
       ],
       "@narratage/provider-hyperframes-aws-lambda": [
         "packages/provider-hyperframes-aws-lambda/src/index.ts"

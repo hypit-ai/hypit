@@ -604,7 +604,7 @@
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:af3cee164fcae00d407a657cd8a2491c727b4f82f5465af71ecf7d3101aeee38"
+      "digest": "sha256:4ceaf545fa645de80873c5cc3b9df7655474a262057f805e85eca2679025536e"
     },
     {
       "name": "@narratage/host",
@@ -634,7 +634,7 @@
     {
       "name": "@narratage/model-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:71b23848a90535e0cd74b25f4ef74a9827ce1aa0abdfe4eb34cc1dc3d907ce13"
+      "digest": "sha256:debadc91af0b1c706f6d44214be281fbf05a53b0d53d027066d06a1a8752e477"
     },
     {
       "name": "@narratage/narrative",
@@ -836,8 +836,8 @@
         "name": "@narratage/generation",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:e66e286a114071febbf5152de90fad064b7abae825b0f4e20becacb397049171",
-      "closureDigest": "sha256:ce410e04dad47fd5ae4b2b1316a642c7b2f6b44ba5c1d1107b6d7666257ef097"
+      "facetsDigest": "sha256:d74a57a3210267e665366513324db5c313b3ca0f770da66e74cc38aee5048efb",
+      "closureDigest": "sha256:67fa8f4123972a33bd2d0e1cc6126a9ed8d3d09cc2745aa058888b735fc85570"
     },
     {
       "specifier": "@narratage/hyperframes",
@@ -926,8 +926,8 @@
         "name": "@narratage/seedance",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:fb36bc91792ad09598e09d77fe1a577c357c4e4beede079b7f6ccc0f3478534e",
-      "closureDigest": "sha256:c90e652bcf2aa55b525ac778cd8eb9814c592b895a6d2ddb8c957626807a6609"
+      "facetsDigest": "sha256:3b9cebaa0503cb716c3d8314a6cf837b13dd5d88c2b09fd9604ab38e67d7af5e",
+      "closureDigest": "sha256:d8f3669cc7a75d22e30a4e3b304f6a87ff9d33920199e50c043d6ed0e6d4e2be"
     },
     {
       "specifier": "@narratage/seedance-speaker",
@@ -935,8 +935,8 @@
         "name": "@narratage/seedance-speaker",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:f2f99e778220f5dc90d178a1ac2bc8843395bb14f3cdc63220a5ff87c6fa250b",
-      "closureDigest": "sha256:c98428165704676ad121c7c57e00e7370687b9bb8839a5755b90825c2bdf648c"
+      "facetsDigest": "sha256:82648b54b0e363bae552ad852bc4fb261088e20b90e7cf2ab94471f0be68ba35",
+      "closureDigest": "sha256:f09074e9d2145c724f174958dc86e0398a600e2109750da1306339a048df6899"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -1029,5 +1029,5 @@
       "closureDigest": "sha256:1dd3e16f58411fd77f2daf4a945781a784618cffe7512d83d6181f701c39cadb"
     }
   ],
-  "digest": "sha256:101eebd953e8e78527a18bc36fa70c989be0ad1865e879c81befe1b41d906191"
+  "digest": "sha256:ec4435e504b092818c851290ff4e4c1528f54e98ed88e9315b180844f4a488dd"
 }

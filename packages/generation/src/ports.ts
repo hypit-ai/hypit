@@ -17,7 +17,7 @@ export type GenerationMediaRole = "image" | "video" | "audio";
 export const GENERATION_MEDIA_ROLES: readonly GenerationMediaRole[] = ["image", "video", "audio"];
 
 export type GenerationPortScalarKind =
-  | { readonly kind: "text"; readonly maxChars: number }
+  | { readonly kind: "text"; readonly maxChars?: number }
   | { readonly kind: "token"; readonly minLength: number; readonly maxLength: number }
   | { readonly kind: "enum"; readonly values: readonly (string | number)[] }
   | {
@@ -81,7 +81,7 @@ export type GenerationPortTable = {
   readonly contract: "svml.generation-ports@1";
   /** Exact model identity; this is also the Capability name. */
   readonly model: string;
-  readonly result: "image" | "video";
+  readonly result: "audio" | "image" | "video";
   readonly ports: readonly GenerationPort[];
   readonly requires: readonly GenerationPortRequirement[];
 };
@@ -106,7 +106,9 @@ export function isMediaPort(port: GenerationPort): port is GenerationMediaPort {
 
 function assertScalarKind(value: GenerationPortScalarKind, subject: string): void {
   if (value.kind === "text") {
-    assert(Number.isSafeInteger(value.maxChars) && value.maxChars > 0, `${subject} maxChars is invalid`);
+    if (value.maxChars !== undefined) {
+      assert(Number.isSafeInteger(value.maxChars) && value.maxChars > 0, `${subject} maxChars is invalid`);
+    }
     return;
   }
   if (value.kind === "token") {
@@ -137,7 +139,8 @@ function assertScalarKind(value: GenerationPortScalarKind, subject: string): voi
 export function assertGenerationPortTable(value: GenerationPortTable): void {
   assert(value.contract === GENERATION_PORTS_V1, "Generation port table contract is invalid");
   assert(typeof value.model === "string" && value.model.trim().length > 0, "Generation port table model is empty");
-  assert(value.result === "image" || value.result === "video", `${value.model} port table result is invalid`);
+  assert(value.result === "audio" || value.result === "image" || value.result === "video",
+    `${value.model} port table result is invalid`);
   assert(value.ports.length > 0, `${value.model} declares no input port`);
 
   const names = new Set<string>();
