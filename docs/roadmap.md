@@ -145,8 +145,9 @@ The next official Track-package migration is governed by
 occurrence expansion, rational frame quantization and triggered scheduling now execute in the
 focused `@narratage/temporal` package. Shared Canvas/Frame/Point/Path geometry and two-frame fitting
 now execute in `@narratage/spatial`; Film consumes CanvasSpace explicitly rather than hiding
-dimensions or frame rate in its Recipe. Ranking's old-system audit and complete migration design are recorded
-in [`../spec/ranking-track.md`](../spec/ranking-track.md). Text's old-system/editor attack audit,
+dimensions or frame rate in its Recipe. All four independent Ranking components now execute through
+the shared Temporal/Spatial and peer Track contracts specified in
+[`../spec/ranking-track.md`](../spec/ranking-track.md). Text's old-system/editor attack audit,
 complete two-dimensional author model, terminal-IR gaps and Caption feedback are recorded in
 [`../spec/text-track.md`](../spec/text-track.md). The shared Canvas/Frame geometry, two-frame fitting,
 focal alignment and backing ownership boundary are recorded in
@@ -156,8 +157,9 @@ Self-contained full-canvas effects and the prohibition on hidden lower-composite
 execute in `@narratage/screen-overlay`, including real sequential/parallel pixel evidence. Unified Media Item/Sequence authoring,
 ordered local layers, lifecycle/sampling motion, internal handoffs, explicit audio projection and
 Speech Spine reuse are recorded in [`../spec/media-track.md`](../spec/media-track.md). The old
-depth-stack Deck is separately specified as a higher-order Track in
-[`../spec/deck-track.md`](../spec/deck-track.md). Comment Sticker remains an independent future
+depth-stack Deck now executes as the independent higher-order `@narratage/deck-track` package
+specified in [`../spec/deck-track.md`](../spec/deck-track.md), including real partitioned browser
+evidence. Comment Sticker remains an independent future
 design task; it does not block implementation of the already specified packages.
 
 Caption Fine's complete field-free surface is implemented: exact primary/fallback fonts, CJK,
@@ -166,14 +168,15 @@ independent glyph/Pill/underline activation, joined wrapped trail geometry and l
 local motion. Glyph karaoke modes and joined Pill geometry have real browser evidence. It
 deliberately has no line-clipping or `max-lines` behavior.
 
-The simple Text witness and complete pre-freeze Media Item/Sequence package execute through the
-shared Temporal/Spatial foundation. Continue against real delivery examples, but do not freeze or indiscriminately expand
+The complete pre-release Text and Media Item/Sequence packages execute through the shared
+Temporal/Spatial foundation. Continue against real delivery examples, but do not freeze or indiscriminately expand
 the video author surface yet:
 
-- the specified Text Document, Point/Area/Path forms, ordered Paint and selector-motion model;
+- the implemented Text Document, Point/Area/Path forms, ordered Paint, selector-motion, local Mask
+  and materialized advanced fallback;
 - the implemented Media Item/Sequence model, with the retired B-roll package kept out of the graph;
-- the independent Depth-Stack Deck Track in place of the old Deck implementation;
-- the designed Ranking components after the shared temporal package;
+- the implemented independent Depth-Stack Deck Track in place of the old Deck implementation;
+- the implemented TierBoard, Column, TopThree and TypewriterList Ranking components;
 - final Track and renderer-neutral Visual IR compatibility freeze.
 
 The current implementations remain executable vertical slices and regression witnesses. This work

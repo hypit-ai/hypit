@@ -2,6 +2,7 @@ import type {
   VisualAnimation,
   VisualElement,
   VisualStyleDeclaration,
+  VisualTimedSampling,
 } from "@narratage/composition";
 import type { ProgramSpace } from "@narratage/program-space";
 import { fitContent } from "@narratage/spatial";
@@ -117,6 +118,8 @@ function sampleElements(
   parent: string,
   order: { value: number },
   space: ProgramSpace,
+  samplingOverrides: Readonly<Record<string, VisualTimedSampling>>,
+  samplingAnimationOverrides: Readonly<Record<string, VisualAnimation | null>>,
 ): VisualElement[] {
   const content = fitContent(innerFrame(item), layer.source.extent, layer.fit).contentFrame;
   const wrapper = `${layer.id}:sampling`;
@@ -135,9 +138,14 @@ function sampleElements(
     order: order.value++,
     kind: "box",
     style: wrapperStyle,
-    ...(layer.samplingMotion === undefined ? {} : {
-      animation: samplingAnimation(layer.samplingMotion, durationFrames),
-    }),
+    ...(() => {
+      const override = samplingAnimationOverrides[layer.id];
+      if (override === null) return {};
+      if (override !== undefined) return { animation: override };
+      return layer.samplingMotion === undefined ? {} : {
+        animation: samplingAnimation(layer.samplingMotion, durationFrames),
+      };
+    })(),
   };
   // Blur samples are overscanned inside the owned frame before clipping. The
   // Gaussian kernel therefore never invents a transparent/dark border and still
@@ -179,14 +187,14 @@ function sampleElements(
       style: mediaStyle,
     }];
   }
-  const sampling = resolveVisualSampling({
-    space,
-    sourceFrameRate: sourceTiming.frameRate,
-    sourceFrameCount: sourceTiming.frameCount,
-    targetFrameCount: durationFrames,
-    ...(layer.trim === undefined ? {} : { trim: layer.trim }),
-    occupancy: layer.occupancy!,
-  });
+  const sampling = samplingOverrides[layer.id] ?? resolveVisualSampling({
+      space,
+      sourceFrameRate: sourceTiming.frameRate,
+      sourceFrameCount: sourceTiming.frameCount,
+      targetFrameCount: durationFrames,
+      ...(layer.trim === undefined ? {} : { trim: layer.trim }),
+      occupancy: layer.occupancy!,
+    });
   if (layer.source.kind === "timed") {
     return [wrapperElement, {
       id: layer.id,
@@ -216,8 +224,12 @@ function layerElements(
   parent: string,
   order: { value: number },
   space: ProgramSpace,
+  samplingOverrides: Readonly<Record<string, VisualTimedSampling>>,
+  samplingAnimationOverrides: Readonly<Record<string, VisualAnimation | null>>,
 ): VisualElement[] {
-  if (layer.kind === "sample") return sampleElements(layer, item, parent, order, space);
+  if (layer.kind === "sample") {
+    return sampleElements(layer, item, parent, order, space, samplingOverrides, samplingAnimationOverrides);
+  }
   return [{
     id: layer.id,
     parent,
@@ -244,6 +256,11 @@ export function lowerMediaItemElements(
     readonly handoffAnimation?: VisualAnimation;
     readonly lifecycleAnimationOverride?: VisualAnimation | null;
     readonly sustainAnimationsOverride?: readonly (VisualAnimation | null)[];
+    /** Implementation-level reuse hook for collection components with their own explicit clock. */
+    readonly samplingOverrides?: Readonly<Record<string, VisualTimedSampling>>;
+    readonly samplingAnimationOverrides?: Readonly<Record<string, VisualAnimation | null>>;
+    /** Attach the Media placement subtree below another component-owned wrapper. */
+    readonly placementParent?: string;
   } = {},
 ): readonly VisualElement[] {
   const durationFrames = item.span.endFrameExclusive - item.span.startFrame;
@@ -251,6 +268,7 @@ export function lowerMediaItemElements(
   const root = `${item.id}:placement`;
   const elements: VisualElement[] = [{
     id: root,
+    ...(options.placementParent === undefined ? {} : { parent: options.placementParent }),
     order: order.value++,
     kind: "box",
     style: [
@@ -281,6 +299,16 @@ export function lowerMediaItemElements(
   }
   const frame = `${item.id}:frame`;
   elements.push({ id: frame, parent, order: order.value++, kind: "box", style: frameStyles(item.presentation) });
-  for (const layer of item.layers) elements.push(...layerElements(layer, item, frame, order, space));
+  for (const layer of item.layers) {
+    elements.push(...layerElements(
+      layer,
+      item,
+      frame,
+      order,
+      space,
+      options.samplingOverrides ?? {},
+      options.samplingAnimationOverrides ?? {},
+    ));
+  }
   return elements;
 }

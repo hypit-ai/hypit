@@ -155,3 +155,67 @@ test("animated materialized Surfaces must exactly share the Present frame domain
     tracks: [invalid],
   }), space), /must exactly match its Present frame domain/u);
 });
+
+test("a local mask owns exactly one mask root and one content root inside its Present", () => {
+  const track = sealVisualTrack({
+    contract: "svml.visual-track@1",
+    visualIr: "svml.visual-ir@1",
+    id: "masked-text",
+    presents: [{
+      id: "mask",
+      span: { startFrame: 0, endFrameExclusive: 60 },
+      stacking: { order: 4, tieBreak: "mask" },
+      elements: [
+        {
+          id: "local-mask", kind: "mask", order: 0, mode: "alpha",
+          maskElement: "letters", contentElement: "material",
+          style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
+        },
+        {
+          id: "letters", parent: "local-mask", kind: "text", order: 1, text: "MASK", fonts: [font],
+          style: [{ name: "font-size", value: "180px" }, { name: "color", value: "#ffffff" }],
+        },
+        {
+          id: "material", parent: "local-mask", kind: "box", order: 2,
+          style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "linear-gradient(90deg,#ff0000,#0000ff)" }],
+        },
+      ],
+    }],
+  });
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
+    contract: "svml.composition@1",
+    id: "mask-composition",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    tracks: [track],
+  }), space));
+
+  const invalid = structuredClone(track) as VisualTrack;
+  const root = invalid.presents[0]!.elements[0]!;
+  assert(root.kind === "mask");
+  const broken = sealVisualTrack({
+    ...invalid,
+    presents: [{
+      ...invalid.presents[0]!,
+      elements: [{ ...root, contentElement: "foreign" }, ...invalid.presents[0]!.elements.slice(1)],
+    }],
+  });
+  assert.throws(() => assertCompositionIdentity(sealComposition({
+    contract: "svml.composition@1", id: "broken-mask",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [broken],
+  }), space), /declared mask and content roots/u);
+
+  const nested = sealVisualTrack({
+    ...track,
+    presents: [{
+      ...track.presents[0]!,
+      elements: [
+        ...track.presents[0]!.elements,
+        { id: "hidden-child", parent: "letters", kind: "box", order: 3, style: [] },
+      ],
+    }],
+  });
+  assert.throws(() => assertCompositionIdentity(sealComposition({
+    contract: "svml.composition@1", id: "nested-mask-source",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [nested],
+  }), space), /must have a box or mask parent/u);
+});

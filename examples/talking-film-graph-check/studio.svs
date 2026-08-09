@@ -22,7 +22,7 @@
     cue-enter: fade; cue-enter-frames: 4; cue-exit: fade; cue-exit-frames: 4;
   }
   text.title {
-    stack-order: 90; font: Inter;
+    stack-order: 90;
     weight: 900; size: 64; align: center; fill: #FFFFFF; tracking: -1;
   }
 </sheet>

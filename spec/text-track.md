@@ -1,8 +1,8 @@
 # Text Track Authoring and Expressiveness
 
-Status: design authority for the official two-dimensional Text migration. The current
-`@narratage/text-track` package is an executable vertical slice, not an implementation of this
-complete model. The terminal Visual IR changes identified here remain pre-freeze work.
+Status: implemented pre-release authority for the official two-dimensional Text package. The
+complete declared model and browser evidence execute through the candidate Visual IR; the shared
+Track/renderer ABI remains pre-freeze work.
 
 ## 1. Conclusion
 
@@ -148,6 +148,11 @@ Two capabilities have materially different inputs and stay out of ordinary Text:
 Those may be separate packages or separately imported components in a later official distribution.
 Package count is a distribution decision; their graph contracts must remain separate. Neither case
 adds a branch to Core.
+
+The official local Text Mask witness deliberately accepts only one exact single-line Area Text
+shape and one explicit still `CompositableSurface`. Rich runs, multiline/Path flow, sequence
+animation and timed materials fail closed and use the same materialized-Surface escape route as 3D
+Text. This boundary avoids pretending that browser `foreignObject` masking is portable or exact.
 
 ## 4. Authored Text Document
 
@@ -414,25 +419,21 @@ or package-owned resolved geometry used to materialize a Surface.
 
 ## 11. Terminal Visual IR findings
 
-The current `svml.visual-ir@1` candidate can already carry simple nested boxes, exact fonts, local
-style keyframes and duplicated glyph layers. It is not yet sufficient to honestly freeze the Text
-model:
+The candidate `svml.visual-ir@1` now carries the smallest additions proven by this migration:
 
-- one `text` element is one escaped leaf string, so interleaved rich runs and paragraph structure
-  have no first-class terminal representation;
-- there is no vector path/text-path primitive;
-- local masks are not represented;
-- keyframes can animate only opacity, transform, filter and clip-path, not sequenced glyph Paint;
-- the closed style vocabulary lacks several typography controls;
-- repeated Paint layers and their ordering are only implicit renderer tricks.
+- `text-flow` owns the bounded rich document, exact typography, ordered Paint and sequence values;
+- `path-text` owns typed vector commands and exact path-flow facts;
+- the local `mask` primitive owns exactly one terminal mask source and one content root;
+- ordered repeated Paint and Unicode unit animation remain serialized data, never callbacks;
+- exact font Artifacts and typed `CompositableSurface` values cross the ordinary Artifact boundary.
 
-These are video-terminal issues, never Core issues. Before Visual IR freezes, implementation must
-choose and prove the smallest renderer-neutral additions for rich text flow, typed local masking,
-path geometry and unit-local animation. A capability that still cannot be expressed uses the
-existing typed `CompositableSurface` path.
+The HyperFrames reference compiler implements those primitives without exposing HTML, CSS, SVG or
+renderer scripts to author packages. A separately installed non-native Text fixture proves that
+extrusion/material/light/camera semantics can remain outside the waist and contribute only a typed
+alpha Surface. Unsupported rich masks use the same path.
 
-The requirement is not to expose HTML, CSS, SVG or renderer scripts. It is to add only generic
-code-free visual primitives with at least Text and one independent witness where practical.
+These remain video-terminal facts, never Core facts. Visual IR is still a candidate until renderer
+receipts, Surface-byte validation, Deck/Ranking witnesses and the final compatibility audit pass.
 
 ## 12. Feedback into Fine Caption
 
@@ -468,17 +469,16 @@ Atoms and activates only from proven Atom windows.
 
 ## 13. Migration order and acceptance gates
 
-Implementation should replace the current slice rather than accrete compatibility fields:
+Implementation replaced the earlier slice rather than accreting compatibility fields:
 
-1. define Text Document, Point/Area tagged geometry, Text Style and ordered Paint values;
-2. implement exact fonts, plain/phrase/line/word/grapheme Box Paint and rich-run static lowering;
-3. route every item through shared Temporal Window Projection and the specified shared Spatial
-   source;
-4. add deterministic overflow, direction/writing mode and browser pixel evidence;
-5. add item motion and Unicode-aware sequence selectors;
-6. add Path Text and typed local mask support or materialized witnesses;
-7. prove the `CompositableSurface` escape route with one 3D or otherwise non-native Text package;
-8. only then decide the smallest Visual IR revision and freeze it.
+1. **Implemented:** Text Document, Point/Area tagged geometry, Text Style and ordered Paint values;
+2. **Implemented:** exact fonts, frame/content/paragraph/line/run/word/grapheme Box Paint and rich-run static lowering;
+3. **Implemented:** shared Temporal Window Projection and explicit Point/Frame/Path Spatial inputs;
+4. **Implemented:** deterministic overflow, direction/writing mode and browser pixel evidence;
+5. **Implemented:** item motion and Unicode-aware sequence selectors;
+6. **Implemented:** Path Text plus an exact bounded local Text Mask and fail-closed materialization boundary;
+7. **Implemented:** the `CompositableSurface` escape route with a separately installed non-native Text package witness;
+8. **Pending shared freeze:** settle the final Visual IR only after the repository-wide gates pass.
 
 Acceptance requires browser/render evidence for at least:
 
@@ -493,5 +493,5 @@ Acceptance requires browser/render evidence for at least:
 - explicit Text Mask ownership and one materialized advanced fallback;
 - no modification to Core, Runtime, Film or an unrelated Track package.
 
-Until those gates pass, the current Text package proves the graph path only and must not be
-described as a complete or frozen Text system.
+The declared Text package gates now pass. This establishes a complete pre-release Text package, not
+a frozen public Track or Visual IR compatibility promise.

@@ -192,12 +192,31 @@ Implemented and executable:
   relation validation and cumulative/exclusive/settled trigger schedules;
 - `@narratage/spatial`: explicit CanvasSpace, Frame/Point/Path geometry, parent-relative and anchored
   Frames, intrinsic extents and deterministic two-frame ContentFit with independent focal points;
-- the current Text vertical slice consumes an explicit SpatialFrame edge;
+  its complete aspect/sizing/alignment matrix and final Chromium pixels are covered, including
+  bounded/free focal displacement and off-Canvas Frames;
+- `@narratage/text-track`: complete pre-release Point/Area/Path Text authoring over explicit
+  Temporal and Spatial edges, bounded rich documents, exact font stacks, ordered repeated Paint,
+  all seven Box targets, deterministic clip/ellipsis/shrink, horizontal/vertical/bidi layout,
+  item/path motion and forward/reverse/seeded Unicode unit sequences; real Chromium witnesses cover
+  the declared layout, Paint, mask and partition laws, including fail-closed minimum shrink;
+- separately imported `<text:Mask>` consumes an authored Text Program plus one owned still Surface;
+  unsupported rich/path/timed cases explicitly materialize rather than sampling another Track;
 - `@narratage/media-track` implements independently timed Item and ordered Sequence Surfaces over
   explicit ProgramSpace, CanvasSpace, SpatialFrame and optional SemanticMap edges: durationless
   images, normalized video, compositable Surfaces, ordered Paint/sample layers, every ContentFit,
   trim/occupancy, frame presentation, lifecycle/sampling motion, pairwise handoffs and separate
   source-audio/SFX projection all lower to ordinary peer Tracks;
+- `@narratage/deck-track` implements the independent `DepthStack` collection model: explicit ordered
+  Cards and semantic triggers, finite/wrapped neighborhoods, relative-depth pose and tone,
+  frame-local whole-collection reflow, still/timed inactive playback, exact-font labels and
+  whole-group lifecycle motion lower to ordinary VisualTrack Presents; real HyperFrames frames are
+  byte-identical under one-worker and partitioned/out-of-order evaluation, and another Deck family
+  can install through the existing VisualTrack waist without changing Core or renderer packages;
+- `@narratage/ranking` implements four independent author components over one private triggered
+  schedule: TierBoard, Column, TopThree and TypewriterList lower exact-font/content-addressed media
+  into ordinary independently stacked VisualTrack Presents; optional appear/move sounds lower from
+  the same event frames into a peer AudioTrack, and all four author Surfaces plus real partitioned
+  browser progression are executable without a Core, Composition or HyperFrames family registry;
 - animated GIF and WebP sources retain their authored frame timing before fixed-rate media
   normalization; animated WebP blend/dispose composition is performed by the shared media-execution
   implementation rather than delegated to environment-dependent browser playback;
@@ -218,9 +237,6 @@ Implemented and executable:
 
 Still pre-freeze and deliberately deferred:
 
-- complete Text migration beyond the executable simple shared-Spatial witness;
-- complete Text three-box, exact-font and layered-decoration behavior;
-- full Text, Deck and Ranking production author packages;
 - renderer receipts and complete Surface-byte validation;
 - final Track and Visual IR compatibility promise;
 - Remotion or API-backed final render packages; these can be added beside `render-hyperframes`
