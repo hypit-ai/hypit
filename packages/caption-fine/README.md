@@ -9,7 +9,8 @@ per-word timing while a Dual Text Atom remains one honest indivisible activation
 no planning fields and has no `important`, random sizing or inferred Word timestamps.
 
 ```xml
-<fine:Style id="primary" recipe={studio.caption.primary}/>
+<media:Font id="caption-font" src="./Inter-SemiBold.woff2" weight="600" style="normal"/>
+<fine:Style id="primary" recipe={studio.caption.primary} font={caption-font}/>
 
 <caption:Program id="captions" display={story.caption} default={primary}/>
 
@@ -24,6 +25,8 @@ no planning fields and has no `important`, random sizing or inferred Word timest
 />
 ```
 
-One Track handles the default and ordered Style replacements. Common Caption, Media, Composition
-and Core know none of Fine's Recipe fields or layout policy. See `spec/caption-fine.md` for the full
-parameter surface, defaults, non-goals and remaining visual evidence gates.
+One Track handles the default and ordered Style replacements. `font=` is optional for environment
+font prototyping and explicit for reproducible builds; it references the existing Media
+`FontArtifactRef` and must match the Recipe's weight/style. Common Caption, Composition and Core
+know none of Fine's Recipe fields or layout policy. See `spec/caption-fine.md` for the full parameter
+surface, defaults, non-goals and remaining visual evidence gates.

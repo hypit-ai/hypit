@@ -7,7 +7,7 @@ description: The SVS Recipe language — CSS-like stylesheets for film, caption,
 
 SVS (`.svs`) files define reusable, typed configuration values using a CSS-like syntax. They
 configure film dimensions, caption appearance, B-roll layout, text styling, speech estimation
-parameters, generation settings, and custom fonts. SVS values are called **Recipes** — they are
+parameters, generation settings, and typography choices. SVS values are called **Recipes** — they are
 immutable typed Records that consuming components validate and interpret.
 
 ## Basic syntax
@@ -103,8 +103,8 @@ caption.dialogue {
 | `stack-order` | Z-stacking order among all Tracks (higher = on top) |
 | `x`, `y` | Position as fraction of canvas (0–1) |
 | `width` | Width as fraction of canvas |
-| `font` | Font family name or SVS font reference |
-| `weight` | Font weight (400–900) |
+| `font` | Readable font-family label and environment fallback |
+| `weight` | Requested font weight (1–1000) |
 | `size` | Font size in pixels |
 | `line-height` | Line height multiplier |
 | `align` | Text alignment: `left`, `center`, `right` |
@@ -113,10 +113,14 @@ caption.dialogue {
 | `padding` | Container padding in pixels (single value or `vertical horizontal`) |
 | `radius` | Container border radius in pixels |
 
-Resolved by the Fine Style family:
+For reproducible rendering, declare exact font bytes in the `.svml` source and pass that Record to
+the Fine Style. Its `weight` and `style` must match the Recipe:
 
 ```svml
-<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}/>
+<media:Font id="caption-font" src="./assets/Inter-SemiBold.woff2"
+  weight="600" style="normal"/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
+  font={caption-font}/>
 ```
 
 ### Per-role caption styles
@@ -303,39 +307,36 @@ Referenced by `speaker:Take` via the `recipe` attribute:
   duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
 ```
 
-## Font declarations
+## Exact font declarations
 
-Declare local font files for use in captions and text overlays.
+SVS describes typography policy, but it does not open files. Declare each concrete font face in
+the author source with the independently imported Media package:
 
-```svs
-font.inter-semibold {
-  src: ./assets/Inter-SemiBold.woff2;
-  weight: 600;
-  style: normal;
-}
+```svml
+<import as="media" from="@narratage/media@1"/>
 
-font.inter-black {
-  src: ./assets/Inter-Black.woff2;
-  weight: 900;
-  style: normal;
-}
+<media:Font id="inter-semibold" src="./assets/Inter-SemiBold.woff2"
+  weight="600" style="normal"/>
+<media:Font id="inter-black" src="./assets/Inter-Black.woff2"
+  weight="900" style="normal"/>
 ```
 
 | Property | Description |
 |---|---|
-| `src` | Path to the font file (relative to the SVS file) |
+| `src` | Path to the font file, relative to the author source |
 | `weight` | Font weight this file provides |
-| `style` | Font style: `normal`, `italic` |
+| `style` | Font style: `normal`, `italic`, `oblique` |
 
-Font paths are resolved at compile time and become `FontArtifactRef` values. Reference them by name
-in other SVS blocks:
+The compiler resolves the source bytes into a content-addressed `FontArtifactRef`. A consuming
+component chooses it with a normal source reference; the Runtime never guesses a font:
 
-```svs
-caption.dialogue {
-  font: inter-semibold;
-  /* ... */
-}
+```svml
+<caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
+  font={inter-semibold}/>
 ```
+
+Omitting `font=` keeps the Recipe's `font` family as an environment fallback, which is convenient
+for prototypes but is not byte-reproducible.
 
 ## Combination example
 

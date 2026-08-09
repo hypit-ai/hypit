@@ -1,7 +1,7 @@
 import { createTextSurfaceHostFacet } from "@narratage/text";
 
 import {
-  decodeMediaAudioSurface, decodeMediaImageSurface, mediaComponent,
+  decodeMediaAudioSurface, decodeMediaFontSurface, decodeMediaImageSurface, mediaComponent,
   mediaManifest,
   mediaModuleRef,
   mediaSurfaceImplementationDigests,
@@ -26,6 +26,13 @@ export const svmlPackage = {
       mode: "structured",
       implementationDigest: mediaSurfaceImplementationDigests.audio,
       handler: decodeMediaAudioSurface,
+    }),
+    createTextSurfaceHostFacet({
+      module: mediaModuleRef,
+      surface: "font",
+      mode: "structured",
+      implementationDigest: mediaSurfaceImplementationDigests.font,
+      handler: decodeMediaFontSurface,
     }),
   ],
 };

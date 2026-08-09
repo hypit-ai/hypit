@@ -55,10 +55,12 @@ function glyphStyle(parameters: FineCaptionParameters, paint: FineCaptionGlyphPa
   }
   return [
     { name: "color", value: paint.fill },
-    { name: "font-family", value: parameters.typography.fontFamily },
     { name: "font-size", value: `${compactNumber(parameters.typography.fontSizePx)}px` },
-    { name: "font-style", value: parameters.typography.fontStyle },
-    { name: "font-weight", value: parameters.typography.fontWeight },
+    ...(parameters.typography.exactFont === undefined ? [
+      { name: "font-family", value: parameters.typography.fontFamily },
+      { name: "font-style", value: parameters.typography.fontStyle },
+      { name: "font-weight", value: parameters.typography.fontWeight },
+    ] as const : []),
     { name: "letter-spacing", value: `${compactNumber(parameters.layout.letterSpacingPx)}px` },
     { name: "line-height", value: parameters.layout.lineHeight },
     { name: "opacity", value: paint.opacity },
@@ -253,6 +255,7 @@ function cueElements(
         kind: "text",
         text,
         style: glyphStyle(parameters, parameters.basePaint),
+        ...(parameters.typography.exactFont === undefined ? {} : { fonts: [parameters.typography.exactFont] }),
         attributes: [{ name: "data-caption-word", value: wordId }],
       });
     }
@@ -282,6 +285,7 @@ function cueElements(
         kind: "text",
         text,
         style: glyphStyle(parameters, parameters.activePaint),
+        ...(parameters.typography.exactFont === undefined ? {} : { fonts: [parameters.typography.exactFont] }),
         attributes: [{ name: "data-caption-active-word", value: wordId }],
       });
     }

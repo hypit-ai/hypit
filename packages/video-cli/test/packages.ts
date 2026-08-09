@@ -1,6 +1,7 @@
 import artifact from "../../artifact/src/activation.js";
 import broll from "../../broll/src/activation.js";
 import captionGemini from "../../caption-gemini/src/activation.js";
+import captionFine from "../../caption-fine/src/activation.js";
 import caption from "../../caption/src/activation.js";
 import composition from "../../composition/src/activation.js";
 import estimate from "../../estimate/src/activation.js";
@@ -47,6 +48,7 @@ export const videoTestPackages = [
   seedance,
   seedanceSpeaker,
   caption,
+  captionFine,
   captionGemini,
   speechAlignment,
   speechBasis,
