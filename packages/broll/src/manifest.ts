@@ -47,6 +47,12 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
   kind: "object",
   fields,
 });
+const audioBlobRef = object({
+  kind: { schema: { kind: "literal", value: "blob" } },
+  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
+  size: { schema: unsignedInteger },
+  mediaType: { schema: { kind: "literal", value: "audio/wav" } },
+});
 
 const frameSpan = object({
   startFrame: { schema: unsignedInteger },
@@ -73,8 +79,11 @@ const item = object({
   fit: { schema: { kind: "string", enum: ["contain", "cover"] } },
   playback: { schema: { kind: "string", enum: ["freeze", "native", "loop", "stretch"] } },
   mediaStartSec: { schema: number, optional: true },
-  includeAudio: { schema: { kind: "boolean" }, optional: true },
-  audioGain: { schema: number, optional: true },
+  audio: { schema: object({
+    artifact: { schema: audioBlobRef },
+    sampleFrames: { schema: unsignedInteger },
+    gain: { schema: number },
+  }), optional: true },
   enter: { schema: motion, optional: true },
   exit: { schema: motion, optional: true },
   backgroundColor: { schema: string, optional: true },
@@ -99,8 +108,9 @@ const transition = object({
   operator: { schema: { kind: "string", enum: ["push", "page-turn"] } },
   direction: { schema: { kind: "string", enum: ["left", "right", "up", "down"] } },
   sfx: { schema: object({
-    artifact: { schema: mediaArtifactSchema },
-    gain: { schema: number, optional: true },
+    artifact: { schema: audioBlobRef },
+    sampleFrames: { schema: unsignedInteger },
+    gain: { schema: number },
   }), optional: true },
 });
 

@@ -39,6 +39,9 @@
       "@narratage/spatial": [
         "packages/spatial/src/index.ts"
       ],
+      "@narratage/media-track": [
+        "packages/media-track/src/index.ts"
+      ],
       "@narratage/speech": [
         "packages/speech/src/index.ts"
       ],
@@ -50,6 +53,12 @@
       ],
       "@narratage/composition": [
         "packages/composition/src/index.ts"
+      ],
+      "@narratage/audio-track": [
+        "packages/audio-track/src/index.ts"
+      ],
+      "@narratage/screen-overlay": [
+        "packages/screen-overlay/src/index.ts"
       ],
       "@narratage/visual-ir": [
         "packages/visual-ir/src/index.ts"

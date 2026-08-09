@@ -169,7 +169,7 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
     const basis = sealSpeechBasis({
       contract: "svml.speech-basis@1",
       programSpace,
-      audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
+      audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
       visualTrack: { clips: [{
         segmentId: "line",
         artifact: { digest: visualDigest, size: 1, mediaType: "video/mp4", durationSec },
@@ -537,10 +537,10 @@ test("an Existing SpeechBasis cuts generation while a visual substitute cuts the
     contract: "svml.speech-basis@1",
     programSpace,
     audio: {
+      kind: "blob",
       digest: digestOf("existing-take:audio"),
       size: 1,
       mediaType: "audio/wav",
-      durationSec: 1,
     },
     visualTrack: { clips: [{
       segmentId: "line",

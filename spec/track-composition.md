@@ -65,9 +65,10 @@ the accumulated lower composite.
 
 ## AudioTrack
 
-An AudioTrack owns frame-exact clips, typed Artifacts, playback mapping, gain, fades and an optional
-mix bus. It has no visual stacking key and no special relationship to a Speech Track. Speech audio,
-music, source audio and sound effects use the same contract.
+An AudioTrack owns exact 48 kHz sample-domain clips, typed canonical-WAV Artifacts, source interval,
+loop phase, pitch-preserving playback rate, target interval, gain and sample-exact fades. It has no
+visual stacking key, inert bus label or special relationship to a Speech Track. Speech audio, music,
+source audio and sound effects use the same contract.
 
 ## Composition
 

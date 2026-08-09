@@ -213,6 +213,7 @@ The domain-neutral Run/Runtime foundation, developer inspection path and replace
 Endpoint environments are implemented. Current work is split between preparing trusted-developer
 distribution and completing the video-domain packages needed by real deliveries. Fresh generation,
 historical reuse and previews remain ordinary explicit `.svrun` choices rather than a second
-workflow layer. Text, Caption and B-roll already execute as vertical slices; their full visual
-breadth, Ranking and the final video compatibility freeze remain deferred. See the
+workflow layer. Caption, exact Audio and self-contained Screen Overlay execute; Text and Media
+remain vertical slices, while their full visual breadth, Deck, Ranking and the final video
+compatibility freeze remain active work. See the
 [implementation status](docs/implementation-status.md) and [roadmap](docs/roadmap.md).

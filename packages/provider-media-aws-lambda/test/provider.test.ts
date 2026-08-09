@@ -32,7 +32,7 @@ const inspectNeed = {
 } as unknown as CanonicalValue;
 
 /** Installs the Provider into a registrar that keeps the handlers, as the Runtime does. */
-async function endpointFor(invoker: JsonInvoker, options: { bucket?: string } = {}) {
+async function endpointFor(invoker: JsonInvoker, options: { bucket?: string; capability?: string } = {}) {
   const provider = createAwsLambdaMediaProvider({
     functionArn: ARN,
     bucket: options.bucket ?? "team-artifacts",
@@ -53,8 +53,9 @@ async function endpointFor(invoker: JsonInvoker, options: { bucket?: string } = 
       throw new Error("the AWS media Provider registers no recoverable endpoint");
     },
   } as never);
-  const handler = handlers.get("inspect-media");
-  assert.ok(handler, "the Provider offers media inspection");
+  const capability = options.capability ?? "inspect-media";
+  const handler = handlers.get(capability);
+  assert.ok(handler, `the Provider offers ${capability}`);
   return { handler };
 }
 
@@ -95,6 +96,59 @@ test("the Provider sends the Need verbatim with the bucket the function should u
   assert.deepEqual(request.artifacts, { bucket: "team-artifacts", prefix: "svml" });
   assert.deepEqual(request.constraints, canonicalize(inspectNeed));
   assert.equal((outcome as { conformance: string }).conformance, "exact");
+});
+
+test("the remote Provider receives the exact AudioProgramPlan compiled for local execution", async () => {
+  const store = new MemoryArtifactStore();
+  const output = await store.put(new TextEncoder().encode("timeline-audio"), "audio/wav");
+  const plan = canonicalize({
+    contract: "svml.audio-program-plan@1",
+    frameRate: { numerator: 30_000, denominator: 1_001 },
+    frameCount: 30,
+    sampleRate: 48_000,
+    sampleFrames: 48_048,
+    clips: [{
+      id: "end-loop",
+      artifact: { kind: "blob", digest: digestOf("audio-source"), size: 400, mediaType: "audio/wav" },
+      targetStartSample: 0,
+      targetEndSampleExclusive: 48_048,
+      sourceSampleFrames: 20_000,
+      sourceStartSample: 1_000,
+      sourceEndSampleExclusive: 19_000,
+      sourceLoop: true,
+      sourcePhaseSample: 12_048,
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: 0.5,
+      fadeInSamples: 480,
+      fadeOutSamples: 960,
+    }],
+    mix: { normalize: false, limiter: "none" },
+  } as unknown as CanonicalValue);
+  const constraints = canonicalize({
+    contract: "svml.render-audio-request@1",
+    plan,
+  } as unknown as CanonicalValue);
+  const { invoker, seen } = recordingInvoker(() => canonicalize({
+    contract: "svml.media-lambda-response@1",
+    operation: "render-audio",
+    ok: true,
+    value: {
+      contract: "svml.timeline-audio@1",
+      artifact: output,
+      codec: "pcm_s16le",
+      sampleRate: 48_000,
+      channels: 2,
+      sampleFrames: 48_048,
+      loudness: "planned",
+    },
+    metadata: { provider: "media.aws-lambda" },
+  } as unknown as CanonicalValue));
+  const capability = await endpointFor(invoker, { capability: "render-timeline-audio" });
+  await capability.handler({ need: { constraints }, artifacts: store, credentials: {} } as never);
+  const request = parseMediaLambdaRequest(seen[0]);
+  assert.equal(request.operation, "render-audio");
+  assert.deepEqual(request.constraints, constraints);
 });
 
 test("a Provider aimed at another bucket fails naming the Artifact, not later with an unreadable Record", async () => {

@@ -192,6 +192,16 @@ Implemented and executable:
   relation validation and cumulative/exclusive/settled trigger schedules;
 - `@narratage/spatial`: explicit CanvasSpace, Frame/Point/Path geometry, parent-relative and anchored
   Frames, intrinsic extents and deterministic two-frame ContentFit with independent focal points;
+- the current Text vertical slice consumes an explicit SpatialFrame edge, and
+  `@narratage/media-track` proves one still-image Item with separate BlobArtifact,
+  IntrinsicExtent, SpatialFrame, ContentFit and ProgramSpace inputs;
+- `@narratage/audio-track`: a self-described arbitrary-item author package over explicit normalized
+  audio; Program/Selection/Moment `one`/`each`, exact trim, once/loop/start/end, bounded
+  pitch-preserving stretch, gain and fades lower to one peer sample-domain AudioTrack and the same
+  AudioProgramPlan under local or Lambda execution;
+- `@narratage/screen-overlay`: eleven self-described, seeded where stochastic, full-canvas components
+  lower only their owned pixels to ordinary Visual IR Presents; one-worker and parallel real
+  HyperFrames renders are pixel-identical and lower-composite effects fail closed;
 - Film receives CanvasSpace, ProgramSpace and peer Tracks through separate graph edges: dimensions,
   frame rate and Film appearance no longer compete as duplicate truths;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
@@ -201,10 +211,10 @@ Implemented and executable:
 
 Still pre-freeze and deliberately deferred:
 
-- simple and complete Text/Media migrations through the shared Spatial package;
+- complete Text/Media migrations beyond the executable simple shared-Spatial witnesses;
 - complete Text three-box, exact-font and layered-decoration behavior;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
-- Ranking and other old production author packages;
+- full Media, Text, Deck and Ranking production author packages;
 - renderer receipts and complete Surface-byte validation;
 - final Track and Visual IR compatibility promise;
 - Remotion or API-backed final render packages; these can be added beside `render-hyperframes`

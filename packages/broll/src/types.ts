@@ -1,4 +1,5 @@
 import type { MediaArtifactRef } from "@narratage/media";
+import type { BlobRef } from "@narratage/protocol";
 import type { AudioTrack, FrameSpan, VisualTrack } from "@narratage/composition";
 
 export type BrollBox = {
@@ -27,8 +28,11 @@ export type BrollItem = {
   readonly fit: "contain" | "cover";
   readonly playback: "freeze" | "native" | "loop" | "stretch";
   readonly mediaStartSec?: number;
-  readonly includeAudio?: boolean;
-  readonly audioGain?: number;
+  readonly audio?: {
+    readonly artifact: BlobRef;
+    readonly sampleFrames: number;
+    readonly gain: number;
+  };
   readonly enter?: BrollMotion;
   readonly exit?: BrollMotion;
   readonly backgroundColor?: string;
@@ -43,8 +47,9 @@ export type BrollPairTransition = {
   readonly operator: "push" | "page-turn";
   readonly direction: "left" | "right" | "up" | "down";
   readonly sfx?: {
-    readonly artifact: MediaArtifactRef;
-    readonly gain?: number;
+    readonly artifact: BlobRef;
+    readonly sampleFrames: number;
+    readonly gain: number;
   };
 };
 
