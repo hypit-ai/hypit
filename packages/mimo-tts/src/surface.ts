@@ -1,7 +1,13 @@
 import { artifactTypes } from "@narratage/artifact";
-import type { GenerationPortValue } from "@narratage/generation";
+import {
+  generationPort,
+  sealGenerationMediaBinding,
+} from "@narratage/generation";
+import type { GenerationMediaPort, GenerationPortValue } from "@narratage/generation";
+import { exactModelMediaInputNames } from "@narratage/model-kit";
+import type { ExactModelMediaInput } from "@narratage/model-kit";
 import { narrativeTypes } from "@narratage/narrative";
-import type { BlobRef, CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
@@ -13,7 +19,7 @@ import { createMimoTtsAudioFragment } from "./fragment.js";
 import {
   mimoPresetVoices,
   mimoTtsEndpoints,
-  sealMimoTtsRequest,
+  sealMimoTtsRequestDraft,
 } from "./index.js";
 import type { MimoPresetVoice, MimoTtsModel } from "./index.js";
 
@@ -74,12 +80,15 @@ function speechText(reference: SurfaceResolvedReference, subject: string): strin
   return value.speech;
 }
 
-function sample(reference: SurfaceResolvedReference, subject: string): BlobRef {
-  if (!sameType(reference.type, artifactTypes.blob) || reference.record?.value.kind !== "blob") {
-    throw new Error(`${subject} must reference an authored audio BlobArtifact`);
+function sample(reference: SurfaceResolvedReference, subject: string): SurfaceResolvedReference {
+  if (!sameType(reference.type, artifactTypes.blob)) {
+    throw new Error(`${subject} must reference an audio BlobArtifact`);
   }
-  if (!reference.record.value.mediaType.startsWith("audio/")) throw new Error(`${subject} must be audio media`);
-  return reference.record.value;
+  const value = reference.record?.value;
+  if (value !== undefined && (value.kind !== "blob" || !value.mediaType.startsWith("audio/"))) {
+    throw new Error(`${subject} must be audio media`);
+  }
+  return reference;
 }
 
 function body(element: StructuredElement, required: boolean): string | undefined {
@@ -103,22 +112,51 @@ function body(element: StructuredElement, required: boolean): string | undefined
 function output(
   element: StructuredElement,
   endpoint: (typeof mimoTtsEndpoints)[keyof typeof mimoTtsEndpoints],
-  request: ReturnType<typeof sealMimoTtsRequest>,
+  draft: ReturnType<typeof sealMimoTtsRequestDraft>,
+  media: readonly { readonly input: ExactModelMediaInput; readonly source: SurfaceResolvedReference }[] = [],
 ) {
   const id = stringAttribute(element, "id");
-  const requestId = `${id}.request`;
-  const fragment = createMimoTtsAudioFragment(endpoint);
-  return {
-    records: [{
-      id: requestId,
-      type: endpoint.requestType,
-      value: { kind: "inline" as const, value: request as unknown as CanonicalValue },
+  const draftId = `${id}.draft`;
+  const records: Array<{
+    readonly id: string;
+    readonly type: SurfaceResolvedReference["type"];
+    readonly value: { readonly kind: "inline"; readonly value: CanonicalValue };
+    readonly range: StructuredElement["range"];
+  }> = [{
+    id: draftId,
+    type: endpoint.draftType,
+    value: { kind: "inline", value: draft as unknown as CanonicalValue },
+    range: element.range,
+  }];
+  const inputs: Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {
+    draft: { kind: "record", id: draftId },
+  };
+  for (const item of media) {
+    const binding = endpoint.mediaBindings[item.input.port];
+    if (binding === undefined) throw new Error(`${endpoint.ports.model} has no media port ${item.input.port}`);
+    const port = generationPort(endpoint.ports, item.input.port);
+    if (port.value.kind !== "media") throw new Error(`${endpoint.ports.model} port ${item.input.port} is not media`);
+    const names = exactModelMediaInputNames(item.input.name);
+    const bindingId = `${id}.${item.input.name}.binding`;
+    records.push({
+      id: bindingId,
+      type: binding.type,
+      value: {
+        kind: "inline",
+        value: sealGenerationMediaBinding(port as GenerationMediaPort, { role: "audio" }) as unknown as CanonicalValue,
+      },
       range: element.range,
-    }],
+    });
+    inputs[names.binding] = { kind: "record", id: bindingId };
+    inputs[names.artifact] = item.source.ref;
+  }
+  const fragment = createMimoTtsAudioFragment(endpoint, media.map((item) => item.input));
+  return {
+    records,
     components: [{
       id,
       fragment: fragment.id,
-      inputs: { request: { kind: "record" as const, id: requestId } },
+      inputs,
       outputs: { audio: `${id}.audio` },
       range: element.range,
     }],
@@ -140,12 +178,12 @@ export const decodeMimoPresetSurface: StructuredSurfaceHandler = ({ element, res
   const instruction = body(element, false);
   const ports: Record<string, readonly GenerationPortValue[]> = { text: common(element, resolveReference), voice: [voice] };
   if (instruction !== undefined) ports.instruction = [instruction];
-  return output(element, mimoTtsEndpoints.preset, sealMimoTtsRequest("mimo-v2.5-tts", ports));
+  return output(element, mimoTtsEndpoints.preset, sealMimoTtsRequestDraft("mimo-v2.5-tts", ports));
 };
 
 export const decodeMimoVoiceDesignSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "speech"]);
-  return output(element, mimoTtsEndpoints.voiceDesign, sealMimoTtsRequest("mimo-v2.5-tts-voicedesign", {
+  return output(element, mimoTtsEndpoints.voiceDesign, sealMimoTtsRequestDraft("mimo-v2.5-tts-voicedesign", {
     text: common(element, resolveReference),
     voiceDescription: [body(element, true)!],
   }));
@@ -154,10 +192,15 @@ export const decodeMimoVoiceDesignSurface: StructuredSurfaceHandler = ({ element
 export const decodeMimoVoiceCloneSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "speech", "sample"]);
   const instruction = body(element, false);
+  const source = sample(resolved(element, "sample", resolveReference), `${element.name}.sample`);
   const ports: Record<string, readonly GenerationPortValue[]> = {
     text: common(element, resolveReference),
-    sample: [{ role: "audio", artifact: sample(resolved(element, "sample", resolveReference), `${element.name}.sample`) }],
   };
   if (instruction !== undefined) ports.instruction = [instruction];
-  return output(element, mimoTtsEndpoints.voiceClone, sealMimoTtsRequest("mimo-v2.5-tts-voiceclone", ports));
+  return output(
+    element,
+    mimoTtsEndpoints.voiceClone,
+    sealMimoTtsRequestDraft("mimo-v2.5-tts-voiceclone", ports),
+    [{ input: { name: "sample", port: "sample" }, source }],
+  );
 };

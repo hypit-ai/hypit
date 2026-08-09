@@ -12,6 +12,7 @@ import type { ModuleManifest } from "@narratage/protocol";
 import {
   seedanceManifestDigest,
   seedanceModuleRef,
+  seedanceEndpointsByModel,
   seedanceTypes,
 } from "@narratage/seedance";
 import { svsManifest, svsRecipeType } from "@narratage/svs";
@@ -40,7 +41,13 @@ export const seedanceSpeakerManifest: ModuleManifest = {
     name: "take",
     tag: "Take",
     mode: "structured",
-    outputs: [promptKitTypes.program, seedanceTypes.speechSpine, artifactTypes.blob],
+    outputs: [
+      promptKitTypes.program,
+      seedanceTypes.speechSpine,
+      artifactTypes.blob,
+      ...Object.values(seedanceEndpointsByModel).flatMap((endpoint) =>
+        Object.values(endpoint.mediaBindings).map((binding) => binding.type)),
+    ],
     implementation: {
       kind: "trusted-frontend-surface",
       locator: "@narratage/seedance-speaker/take-surface",

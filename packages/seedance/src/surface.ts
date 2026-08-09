@@ -3,7 +3,7 @@ import type { NarrativeDialogueExcerpt } from "@narratage/narrative";
 import { speechTypes } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
-import type { BlobRef, CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
@@ -12,15 +12,20 @@ import type {
 } from "@narratage/text";
 
 import {
-  createSeedanceGenerationFragment,
+  createSeedanceAssembledGenerationFragment,
   createSeedanceSpeechGenerationFragment,
 } from "./fragment.js";
-import { generationPort } from "@narratage/generation";
-import type { GenerationMediaRole, GenerationPortTable } from "@narratage/generation";
+import {
+  generationPort,
+  sealGenerationMediaBinding,
+  sealGenerationRequestDraft,
+} from "@narratage/generation";
+import type { GenerationMediaPort, GenerationMediaRole, GenerationPortTable } from "@narratage/generation";
+import { exactModelMediaInputNames } from "@narratage/model-kit";
+import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
 
 import {
   sealSeedancePrompt,
-  sealSeedanceRequest,
   sealSeedanceSpeechProgram,
   seedanceEndpoints,
   seedancePorts,
@@ -37,7 +42,7 @@ import type {
 /** `role` is the media kind the port accepts; `label` is the author's own note about it. */
 type ReferenceInput = {
   readonly role: GenerationMediaRole;
-  readonly artifact: BlobRef;
+  readonly source: SurfaceResolvedReference;
   readonly label?: string;
 };
 
@@ -115,11 +120,13 @@ function prompt(reference: SurfaceResolvedReference, subject: string): SeedanceP
   return value;
 }
 
-function blob(reference: SurfaceResolvedReference, subject: string): BlobRef {
+function mediaReference(reference: SurfaceResolvedReference, role: GenerationMediaRole, subject: string): SurfaceResolvedReference {
   if (!sameType(reference.type, artifactTypes.blob)) throw new Error(`${subject} must reference a BlobArtifact`);
   const value = reference.record?.value;
-  if (value?.kind !== "blob") throw new Error(`${subject} must reference an authored artifact declared before use`);
-  return value;
+  if (value !== undefined && (value.kind !== "blob" || !value.mediaType.startsWith(`${role}/`))) {
+    throw new Error(`${subject} must reference ${role} media`);
+  }
+  return reference;
 }
 
 function normalizedText(element: StructuredElement): string {
@@ -225,13 +232,9 @@ function references(
     const kinds = accepted.filter((kind) => child.attributes[kind] !== undefined);
     if (kinds.length !== 1) throw new Error(`${child.name} requires exactly one of ${accepted.join(", ")}`);
     const role = kinds[0]!;
-    const source = resolved(child, role, resolveReference);
-    const artifact = blob(source, `${child.name}.${role}`);
-    if (!artifact.mediaType.startsWith(`${role}/`)) {
-      throw new Error(`${child.name}.${role} must reference ${role} media`);
-    }
+    const source = mediaReference(resolved(child, role, resolveReference), role, `${child.name}.${role}`);
     const label = optionalStringAttribute(child, "role");
-    result.push({ role, artifact, ...(label === undefined ? {} : { label }) });
+    result.push({ role, source, ...(label === undefined ? {} : { label }) });
   }
   // Every bound below is read from the model's own port table, never repeated here.
   for (const role of accepted) {
@@ -251,13 +254,49 @@ function referencePrompt(values: readonly ReferenceInput[]): string {
   return roles.length === 0 ? "" : `\n\nReference roles:\n${roles.join("\n")}`;
 }
 
-/** Authored references split into the model's per-modality ports; labels never reach the wire. */
-function referencePorts(values: readonly ReferenceInput[]): SeedancePortMap {
-  return Object.fromEntries((Object.keys(REFERENCE_PORTS) as readonly GenerationMediaRole[])
-    .map((role) => [REFERENCE_PORTS[role], values
-      .filter((item) => item.role === role)
-      .map(({ artifact }) => ({ role, artifact }))])
-    .filter(([, items]) => (items as readonly unknown[]).length > 0));
+type AssembledReferences = {
+  readonly mediaInputs: readonly ExactModelMediaInput[];
+  readonly records: readonly {
+    readonly id: string;
+    readonly type: SurfaceResolvedReference["type"];
+    readonly value: { readonly kind: "inline"; readonly value: CanonicalValue };
+    readonly range: StructuredElement["range"];
+  }[];
+  readonly inputs: Readonly<Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }>>;
+};
+
+function assembleReferences(
+  id: string,
+  endpoint: ExactModelEndpoint,
+  values: readonly ReferenceInput[],
+  range: StructuredElement["range"],
+): AssembledReferences {
+  const records: AssembledReferences["records"][number][] = [];
+  const inputs: Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {};
+  const mediaInputs = values.map((value, index): ExactModelMediaInput => {
+    const name = `media-${String(index + 1).padStart(4, "0")}`;
+    const portName = REFERENCE_PORTS[value.role];
+    const binding = endpoint.mediaBindings[portName];
+    if (binding === undefined) throw new Error(`${endpoint.ports.model} has no media port ${portName}`);
+    const port = generationPort(endpoint.ports, portName);
+    if (port.value.kind !== "media") throw new Error(`${endpoint.ports.model} port ${portName} is not media`);
+    const mediaPort = port as GenerationMediaPort;
+    const bindingId = `${id}.${name}.binding`;
+    records.push({
+      id: bindingId,
+      type: binding.type,
+      value: {
+        kind: "inline",
+        value: sealGenerationMediaBinding(mediaPort, { role: value.role }) as unknown as CanonicalValue,
+      },
+      range,
+    });
+    const names = exactModelMediaInputNames(name);
+    inputs[names.binding] = { kind: "record", id: bindingId };
+    inputs[names.artifact] = value.source.ref;
+    return { name, port: portName };
+  });
+  return { mediaInputs, records, inputs };
 }
 
 function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): { readonly dialogue: string } {
@@ -296,24 +335,26 @@ function speechDurationReference(
 
 function generationOutput(
   element: StructuredElement,
-  request: ReturnType<typeof sealSeedanceRequest>,
+  endpoint: ExactModelEndpoint,
+  draft: ReturnType<typeof sealGenerationRequestDraft>,
+  references: readonly ReferenceInput[],
   output: string,
 ) {
-  const { endpoint } = modelSelection(element);
-  const fragment = createSeedanceGenerationFragment(endpoint);
-  const requestId = `${stringAttribute(element, "id")}.request`;
   const id = stringAttribute(element, "id");
+  const assembled = assembleReferences(id, endpoint, references, element.range);
+  const fragment = createSeedanceAssembledGenerationFragment(endpoint, assembled.mediaInputs);
+  const draftId = `${id}.draft`;
   return {
     records: [{
-      id: requestId,
-      type: endpoint.requestType,
-      value: { kind: "inline" as const, value: request as unknown as CanonicalValue },
+      id: draftId,
+      type: endpoint.draftType,
+      value: { kind: "inline" as const, value: draft as unknown as CanonicalValue },
       range: element.range,
-    }],
+    }, ...assembled.records],
     components: [{
       id,
       fragment: fragment.id,
-      inputs: { request: { kind: "record" as const, id: requestId } },
+      inputs: { draft: { kind: "record" as const, id: draftId }, ...assembled.inputs },
       outputs: { video: output },
       range: element.range,
     }],
@@ -344,13 +385,12 @@ export const decodeSeedanceVideoSurface: StructuredSurfaceHandler = ({ element, 
   const selected = modelSelection(element);
   const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
   const refs = references(element, selected.model, resolveReference);
-  const request = sealSeedanceRequest(selected.model, {
+  const draft = sealGenerationRequestDraft(seedancePorts[selected.model], {
     prompt: [declaredPrompt.text + referencePrompt(refs)],
-    ...referencePorts(refs),
     ...generationSettings(element, selected.model),
     generateAudio: [booleanAttribute(element, "generate-audio", false)],
   });
-  return generationOutput(element, request, `${stringAttribute(element, "id")}.video`);
+  return generationOutput(element, selected.endpoint, draft, refs, `${stringAttribute(element, "id")}.video`);
 };
 
 export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
@@ -370,16 +410,17 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
       model: selected.model,
       ports: {
         prompt: [promptText],
-        ...referencePorts(refs),
         ...settings,
         generateAudio: [true],
       },
     });
     const id = stringAttribute(element, "id");
     const programId = `${id}.program`;
+    const assembled = assembleReferences(id, selected.endpoint, refs, element.range);
     const fragment = createSeedanceSpeechGenerationFragment(
       selected.endpoint,
       seedanceSpeechCompileProducers[selected.model],
+      assembled.mediaInputs,
     );
     return {
       records: [{
@@ -387,13 +428,14 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
         type: seedanceTypes.speechSpine,
         value: { kind: "inline", value: program as unknown as CanonicalValue },
         range: element.range,
-      }],
+      }, ...assembled.records],
       components: [{
         id,
         fragment: fragment.id,
         inputs: {
           program: { kind: "record", id: programId },
           duration: duration.ref,
+          ...assembled.inputs,
         },
         outputs: { video: id },
         range: element.range,
@@ -401,11 +443,10 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
       fragments: [fragment],
     };
   }
-  const request = sealSeedanceRequest(selected.model, {
+  const draft = sealGenerationRequestDraft(seedancePorts[selected.model], {
     prompt: [promptText],
-    ...referencePorts(refs),
     ...generationSettings(element, selected.model),
     generateAudio: [true],
   });
-  return generationOutput(element, request, stringAttribute(element, "id"));
+  return generationOutput(element, selected.endpoint, draft, refs, stringAttribute(element, "id"));
 };

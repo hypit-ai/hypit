@@ -20,7 +20,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | Twinit node | Status | Current replacement or remaining work |
 |---|---|---|
 | `input` | Complete | Author Source values and explicit graph edges replace a special canvas input node. |
-| `gpt_image_2` | Complete | `@narratage/gpt-image`, KIE and explicit `image-transform` post-processing. |
+| `gpt_image_2` | Complete | `@narratage/gpt-image`, KIE and the optional `@narratage/gpt-image/clean` graph composite; runtime-produced references are explicit Blob edges and cleanup still uses the shared `image-transform` operation. |
 | `grok_image` | Deliberately omitted | The current exact-model catalog intentionally exposes Grok only for video. A future image model package remains possible. |
 | `mimo_tts` | Complete | `@narratage/mimo-tts` declares three exact author-selected models; `@narratage/provider-xiaomi-mimo` independently realizes them through Xiaomi's official API and returns a generic audio Artifact. |
 | `image_chroma_key` | Complete | The misleading old name is retired. `@narratage/background-removal` declares image-in/image-out intent and KIE fulfills it through Recraft `remove-background`; another Endpoint may implement the same exact capability. |
@@ -31,7 +31,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `text_replace` | Backlog | A generic deterministic replacement component is not currently published. |
 | `seedance_avatar` | Complete | The official Seedance Speaker path covers the single-speaker reference-image/audio case. |
 | `seedance_speaker` | Complete | `@narratage/seedance-speaker` with one explicit six-axis Prompt Kit and SVS invocation. |
-| `seedance_broll` | Expressible; Kit missing | Generic Seedance video plus Media Track exists; migrate the old silent B-roll author Kit only when a real project needs it. |
+| `seedance_broll` | Expressible; Kit missing | Generic Seedance now accepts runtime-produced image/audio/video edges; a tested three-image montage topology exists. Only the named Prompt author Kit is intentionally deferred. |
 | `seedance_podcast` | Expressible; Kit missing | Seedance accepts the required multimodal references; the two-speaker podcast Prompt Kit and author Surface are absent. |
 | `seedance_call` | Expressible; Kit missing | Model ports exist; the call-layout Prompt Kit and author Surface are absent. |
 | `seedance_street_interview` | Expressible; Kit missing | Model ports exist; the street-interview Script/Prompt Kit is absent. |

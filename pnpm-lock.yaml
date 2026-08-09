@@ -1114,9 +1114,18 @@ importers:
 
   packages/gpt-image:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/image-transform':
+        specifier: workspace:*
+        version: link:../image-transform
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit

@@ -92,7 +92,8 @@ domain inputs into one `PromptKitInvocation` and lowers it during author compila
 `@narratage/seedance-speaker` binds Script dialogue, explicit media references, one project Recipe and
 the explicitly referenced `official-ugc-v1.svs` Source Module, then emits authored PromptProgram
 and Seedance SpeechProgram Records. The Run Graph begins at duration-dependent Seedance request
-compilation. SVS never executes conditions, Prompt Kit has no Speaker or Seedance knowledge, and
+Draft compilation, then attaches every media reference through an explicit Blob edge before exact
+request finalization. SVS never executes conditions, Prompt Kit has no Speaker or Seedance knowledge, and
 Provider code never sees the higher-level mapping.
 
 This extension boundary is deliberately smaller than a general compiler-plugin API:
@@ -258,6 +259,9 @@ and every request uses one `svml.generation-request@1` envelope keyed by those p
 contributes only a `svml.generation-wire-mapping@1`: which of its own fields carries each port, and
 which of its own endpoints serves which port combination. Providers therefore import no model
 package, and a repository test proves each mapping covers every declared port before any paid call.
+The exact model additionally owns a Request Draft plus media Binding and finalize Producers. They
+keep runtime-produced references as graph edges while ensuring the Provider receives only the fully
+validated request; Core does not learn image, video, audio or model semantics.
 See [`model-input-ports.md`](./model-input-ports.md).
 
 ## 7. Package and authority boundaries

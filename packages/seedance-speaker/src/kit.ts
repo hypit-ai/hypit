@@ -1,4 +1,3 @@
-import { assertGenerationBlobRef } from "@narratage/generation";
 import {
   sealPromptKitInvocation,
   verifyPromptKitInvocation,
@@ -10,8 +9,6 @@ import {
   seedanceModels,
 } from "@narratage/seedance";
 import type { SeedanceSpeechProgram } from "@narratage/seedance";
-
-import type { BlobRef } from "@narratage/protocol";
 
 import type { SpeakerTakeIntent } from "./types.js";
 
@@ -72,7 +69,6 @@ export function verifySpeakerTakeIntent(value: unknown): asserts value is Speake
     if ((item.kind !== "image" && item.kind !== "audio") || typeof item.role !== "string" || item.role.length === 0) {
       throw new Error("Speaker reference is invalid");
     }
-    assertGenerationBlobRef(item.artifact, `${item.kind}/` as "image/" | "audio/");
   }
 }
 
@@ -104,18 +100,6 @@ export function bindSpeakerPromptKit(intent: SpeakerTakeIntent): PromptKitInvoca
   return invocation;
 }
 
-/** The model keeps one port per reference modality; the Speaker groups its takes accordingly. */
-function referencePortsOf(
-  references: SpeakerTakeIntent["references"],
-): Record<string, readonly { readonly role: "image" | "video" | "audio"; readonly artifact: BlobRef }[]> {
-  const ports: Record<string, { readonly role: "image" | "video" | "audio"; readonly artifact: BlobRef }[]> = {};
-  const names = { image: "referenceImage", video: "referenceVideo", audio: "referenceAudio" } as const;
-  for (const item of references) {
-    (ports[names[item.kind]] ??= []).push({ role: item.kind, artifact: item.artifact });
-  }
-  return ports;
-}
-
 export function renderSpeakerSpeechProgram(
   program: PromptProgram,
   intent: SpeakerTakeIntent,
@@ -127,7 +111,6 @@ export function renderSpeakerSpeechProgram(
     model: intent.model,
     ports: {
       prompt: [program.blocks.map((item) => item.text).join(program.separator)],
-      ...referencePortsOf(intent.references),
       resolution: [intent.resolution],
       aspectRatio: [intent.aspectRatio],
       generateAudio: [true],
