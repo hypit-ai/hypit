@@ -5,7 +5,18 @@ description: 配置 WhisperX 与 OpenCV 边车服务。
 
 # 本地服务
 
-两个 Python 边车服务为本地 Build 提供支持。它们属于 Runtime 部署包，不属于 Core，也不属于作者语言。
+本地 Build 可能依赖托管边车、托管工具资产或由部署者维护的可执行文件。它们属于 Runtime
+部署问题，不属于 Core，也不属于作者语言。
+
+对于已经选定的 Runtime Profile，优先使用按 Profile 限定的生命周期：
+
+```bash
+pnpm narratage services up svml.runtime.json
+pnpm narratage doctor svml.runtime.json
+```
+
+只有该 Profile 选择的 Provider 会被准备。`services up` 可以准备或启动部署状态；`doctor`
+始终只读。下列命令是对应的手工操作。
 
 ## WhisperX
 
@@ -69,6 +80,23 @@ pnpm test:whisperx-service
 uv python install 3.13
 uv sync --project services/image-opencv --frozen
 ```
+
+使用官方 Runtime Adapter 时无需填写 `pythonExecutable`：`services up` 会准备这份冻结工程，
+Endpoint、probe 与 doctor 都使用它的 `.venv`。显式填写 `pythonExecutable` 会把环境所有权交给
+操作者，同时禁止无关的默认 prepare。
+
+## HyperFrames 浏览器
+
+`@narratage/provider-hyperframes-local` 声明按 Profile 管理的浏览器服务。`services up` 执行
+`hyperframes browser ensure`；probe 会定位浏览器、运行 `--version`，并检查配置的 ffprobe。
+无需预先全局安装 Chrome。
+
+## FFmpeg 工具链
+
+本地媒体 Provider 接受系统或显式配置的 `ffmpeg` 与 `ffprobe`。共享兼容性探针检查
+`@narratage/media-execution` 真正使用的编码器和滤镜，而非强制某个版本号。`services up`
+不会修改 Homebrew、apt 或其他系统包管理器。跨平台受管理二进制要等来源、校验和、平台矩阵
+及再分发许可证冻结后再加入。
 
 ### 测试
 

@@ -1,6 +1,7 @@
-# Image Transform
+# Image Operations
 
-Status: implemented author module and local OpenCV Endpoint; public compatibility is not frozen.
+Status: transform, ordered composition, background-removal intent, local OpenCV execution and KIE
+cutout execution are implemented; public compatibility is not frozen.
 
 ## Boundary
 
@@ -8,7 +9,7 @@ Image post-processing is an ordinary graph step:
 
 ```text
 BlobArtifact(image) ──────┐
-                          ├─ request-image-transform ─ Need ─> BlobArtifact(image)
+                          ├─ RasterRequest(transform) ─ execute-raster ─> BlobArtifact(image)
 ImageTransformProgram ────┘
 ```
 
@@ -17,8 +18,9 @@ provider field, diagnostic field or inspection envelope. The source relationship
 Producer input edge; Core's Derivation binds that input Record to the result Record; Need and
 Receipt bind the external execution.
 
-OpenCV is not part of the authored meaning. `@narratage/image-transform` owns the closed transformation
-vocabulary and `@narratage/provider-image-opencv-local` is one replaceable execution Endpoint. A future
+OpenCV is not part of the authored meaning. `@narratage/image-transform` owns the author-facing Program
+Surface while `@narratage/raster` owns the closed execution vocabulary shared with Compose.
+`@narratage/provider-image-opencv-local` is one replaceable execution Endpoint. A future
 Wasm, Sharp, libvips or Lambda Endpoint can fulfill the same exact capability.
 
 ## Author form
@@ -77,7 +79,6 @@ The developer opts into the local Endpoint in `svml.runtime.json`:
       "use": "@narratage/provider-image-opencv-local",
       "instance": "image.opencv.local",
       "config": {
-        "pythonExecutable": "./services/image-opencv/.venv/bin/python",
         "defaultConcurrency": 2
       }
     }
@@ -93,7 +94,56 @@ uv sync --project services/image-opencv --frozen
 pnpm test:image-opencv
 ```
 
-Set `pythonExecutable` to `./services/image-opencv/.venv/bin/python`. The ordinary Runtime Scheduler
+With no `pythonExecutable`, `services up` prepares the frozen project and the Adapter resolves its
+`.venv` for the Endpoint, probe and doctor. Set `pythonExecutable` only to opt into an externally
+managed compatible environment; that disables the managed prepare. The ordinary Runtime Scheduler
 owns admission and lane concurrency; the Provider does not create another queue. Temporary files
 and OpenCV errors are Endpoint-local, while compact execution diagnostics live only in Receipt
 metadata.
+
+## Ordered composition
+
+Reusable still composition is a different author operation from transforming one image:
+
+```text
+CanvasSpace ───────────────┐
+Blob + SpatialFrame + Spec├─ ImageComposeLayerSet ─ RasterRequest(compose) ─ execute-raster ─> BlobArtifact(PNG)
+Blob + SpatialFrame + Spec┘
+```
+
+`@narratage/image-compose` deliberately has no fixed “base” and “sticker” ports. Child order is
+paint order. Every Layer carries an explicit source edge, Spatial Frame, `contain|cover|stretch`,
+interpolation and opacity. Frames may extend outside the Canvas and the Endpoint clips them. The
+version-1 result is always PNG using normal alpha-over; blend modes can be added only as explicit
+contract vocabulary.
+
+```xml
+<import as="compose" from="@narratage/image-compose@1"/>
+
+<compose:Image id="poster" canvas={portrait} background="#00000000">
+  <compose:Layer source={background.image} frame={full} fit="cover"/>
+  <compose:Layer source={product.image} frame={productFrame} fit="contain" opacity="0.95"/>
+</compose:Image>
+```
+
+Both author packages lower to the same `execute-raster` capability. The local OpenCV Endpoint has one
+Handler and one shared interpreter on its configured Scheduler lane; neither author form owns a queue.
+
+## Background removal
+
+Background removal is external image understanding, not an OpenCV transform and not a misleading
+“chroma key” operation:
+
+```text
+BlobArtifact(image) ─ request-background-removal ─ Need ─> BlobArtifact(image)
+```
+
+```xml
+<import as="remove" from="@narratage/background-removal@1"/>
+<remove:Background id="cutout" source={portrait.image}/>
+```
+
+`@narratage/background-removal` defines only that exact input/output meaning. The current KIE
+Endpoint maps it to Recraft `remove-background`; a local segmentation Endpoint can fulfill the same
+Need later. Model/API identity, polling and temporary URLs remain execution facts and never enter
+the returned Blob or Core.

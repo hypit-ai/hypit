@@ -98,6 +98,9 @@ description: 五个分层、依赖边界、包的结构与 facet。
 @narratage/hyperframes           HyperFrames document compiler
 @narratage/render-hyperframes    explicit HyperFrames rendering component
 @narratage/image-transform       image processing component
+@narratage/image-compose         有序静态图像合成
+@narratage/raster                共享确定性光栅执行合同
+@narratage/background-removal    外部图像去背景能力
 @narratage/media-pipeline        media inspection/normalization
 @narratage/media-execution       shared ffmpeg execution body for Providers
 ```
@@ -107,13 +110,13 @@ description: 五个分层、依赖边界、包的结构与 facet。
 具备特权的外部能力。依赖 Runtime 端口和它们所服务的模型族，绝不依赖 CLI。
 
 ```text
-@narratage/provider-kie                  KIE generation (11 exact model capabilities)
+@narratage/provider-kie                  KIE 生成与去背景
 @narratage/provider-media-local          local ffprobe/ffmpeg
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
 @narratage/provider-hyperframes-local    local Chrome rendering
 @narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
-@narratage/provider-image-opencv-local   local OpenCV image transforms
+@narratage/provider-image-opencv-local   本地 OpenCV 光栅执行
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
 ```
 

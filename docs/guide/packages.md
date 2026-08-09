@@ -103,6 +103,9 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/hyperframes           HyperFrames document compiler
 @narratage/render-hyperframes    explicit HyperFrames rendering component
 @narratage/image-transform       image processing component
+@narratage/image-compose         ordered still-image composition
+@narratage/raster                shared deterministic raster execution contract
+@narratage/background-removal    external image cutout capability
 @narratage/media-pipeline        media inspection/normalization
 @narratage/media-execution       shared ffmpeg execution body for Providers
 ```
@@ -113,13 +116,13 @@ Privileged external capabilities. Depend on Runtime ports and the model families
 on the CLI.
 
 ```text
-@narratage/provider-kie                  KIE generation (11 exact model capabilities)
+@narratage/provider-kie                  KIE generation plus background removal
 @narratage/provider-media-local          local ffprobe/ffmpeg
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
 @narratage/provider-hyperframes-local    local Chrome rendering
 @narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
-@narratage/provider-image-opencv-local   local OpenCV image transforms
+@narratage/provider-image-opencv-local   local OpenCV Raster execution
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
 ```
 

@@ -138,6 +138,13 @@ independent Endpoint packages without changing author model packages or Core. No
 batch-migration target: add one only when a concrete deployment selects that service, following the
 port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 
+Deterministic still-image work is also explicit rather than hidden in Track code:
+`@narratage/image-compose` and `@narratage/image-transform` lower their different author forms to the
+single `@narratage/raster` execution contract, and the local OpenCV Endpoint implements that one
+capability on its one configured lane.
+External cutout work is a separate `@narratage/background-removal` Need; KIE currently realizes it
+with Recraft without leaking that vendor choice into Core.
+
 ## C. Current video-domain work after the terminal waist freeze
 
 The next official Track-package migration is governed by
@@ -159,8 +166,9 @@ ordered local layers, lifecycle/sampling motion, internal handoffs, explicit aud
 Speech Spine reuse are recorded in [`../spec/media-track.md`](../spec/media-track.md). The old
 depth-stack Deck now executes as the independent higher-order `@narratage/deck-track` package
 specified in [`../spec/deck-track.md`](../spec/deck-track.md), including real partitioned browser
-evidence. Comment Sticker remains an independent future
-design task; it does not block implementation of the already specified packages.
+evidence. Comment cards now execute through the independent `@narratage/comment-sticker` package:
+content, Spatial Frame, SVS appearance and Temporal projection remain explicit, while its output is
+an ordinary self-contained peer Visual Track.
 
 Caption Fine's complete field-free surface is implemented: exact primary/fallback fonts, CJK,
 emoji/symbols, multiline layout, solid/gradient Paint, outline/shadow/long-shadow/glow/underline,
@@ -177,7 +185,7 @@ author Surfaces may continue against real delivery examples without reopening it
 - the implemented Media Item/Sequence model, with the retired B-roll package kept out of the graph;
 - the implemented independent Depth-Stack Deck Track in place of the old Deck implementation;
 - the implemented TierBoard, Column, TopThree and TypewriterList Ranking components;
-- independent future author packages such as Comment Sticker, only when a real design is ready.
+- independent future author packages only when a real design is ready.
 
 The current implementations remain executable vertical slices and regression witnesses. This work
 does not wait for release packaging, optional Providers or arbitrary-code isolation, and it must not

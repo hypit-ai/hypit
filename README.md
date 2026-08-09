@@ -97,7 +97,8 @@ Requirements:
 - Python 3.10–3.13 only when running the local WhisperX service
 
 ```bash
-pnpm install
+corepack enable
+pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 

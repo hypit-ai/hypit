@@ -86,12 +86,18 @@ structural invariants across the entire workspace:
 
 These run as part of `pnpm test` on every commit.
 
+These tests remain when the repository is opened: protocol, graph, package-boundary and deterministic
+unit tests are the executable definition of the decoupling rules. Before publication, remove customer
+or brand fixtures, credential traces, paid output artifacts, absolute workstation paths and one-off
+acceptance harnesses. Generic live tests may remain only when they are explicitly opt-in, use no
+committed secret and fail before spending money unless their gate is set.
+
 ## Environment-gated tests
 
 | Command | What it tests | Prerequisites |
 |---|---|---|
 | `pnpm test:whisperx-service` | Python WhisperX service | Python 3.13, uv, frozen sync |
-| `pnpm test:image-opencv` | OpenCV image transforms | `SVML_OPENCV_TESTS=1`, `SVML_OPENCV_PYTHON` |
+| `pnpm test:image-opencv` | the shared OpenCV Raster interpreter across both request variants | `SVML_OPENCV_TESTS=1`, `SVML_OPENCV_PYTHON` |
 | `pnpm smoke:kie` | Live paid KIE generation | `KIE_API_KEY` |
 
 ## Test fixtures

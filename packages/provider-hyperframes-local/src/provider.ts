@@ -78,7 +78,7 @@ function positiveInteger(value: number, subject: string): number {
   return value;
 }
 
-function defaultHyperframesCliPath(): string {
+export function defaultHyperframesCliPath(): string {
   const require = createRequire(import.meta.url);
   return join(dirname(require.resolve("hyperframes/package.json")), "bin", "hyperframes.mjs");
 }

@@ -21,7 +21,8 @@ been published to npm yet.
 Requires Node.js 22+ and pnpm.
 
 ```bash
-pnpm install
+corepack enable
+pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 ```

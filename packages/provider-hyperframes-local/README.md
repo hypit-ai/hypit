@@ -20,6 +20,10 @@ The Provider owns both controls because they are deployment policy, not author i
 renders program audio; `@narratage/provider-media-local` separately prepares `TimelineAudio` and muxes
 the final media.
 
+The Runtime Adapter also owns one non-daemon browser service. `services up` invokes the pinned
+HyperFrames CLI's `browser ensure`; the service probe resolves and starts that browser and checks
+ffprobe before a Build. The Endpoint still records the actual browser digest/version in its Receipt.
+
 ```ts
 const provider = createLocalHyperframesProvider({
   workers: 4,
