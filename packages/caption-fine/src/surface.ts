@@ -1,4 +1,6 @@
 import { captionTypes } from "@narratage/caption";
+import { assertFontArtifactRef, mediaTypes } from "@narratage/media";
+import type { FontArtifactRef } from "@narratage/media";
 import { narrativeTypes } from "@narratage/narrative";
 import { programSpaceTypes } from "@narratage/program-space";
 import { semanticMapTypes } from "@narratage/semantic-map";
@@ -18,10 +20,12 @@ function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolved
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
 }
 
-function attributes(element: StructuredElement, required: readonly string[]): void {
+function attributes(element: StructuredElement, required: readonly string[], optional: readonly string[] = []): void {
   const actual = Object.keys(element.attributes);
-  if (required.some((name) => element.attributes[name] === undefined) || actual.some((name) => !required.includes(name))) {
-    throw new Error(`${element.name} requires exactly ${required.join(", ")}`);
+  const allowed = new Set([...required, ...optional]);
+  if (required.some((name) => element.attributes[name] === undefined) || actual.some((name) => !allowed.has(name))) {
+    const suffix = optional.length === 0 ? "" : `, with optional ${optional.join(", ")}`;
+    throw new Error(`${element.name} requires ${required.join(", ")}${suffix}`);
   }
 }
 
@@ -53,13 +57,21 @@ function inline<T>(referenceValue: SurfaceResolvedReference, subject: string): T
 }
 
 export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "recipe"]);
+  attributes(element, ["id", "recipe"], ["font"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
     throw new Error(`${element.name} does not accept children`);
   }
   const id = stringAttribute(element, "id");
   const recipe = inline<SvsRecipe>(reference(element, "recipe", svsRecipeType, resolveReference), `${element.name}.recipe`);
-  const style = fineCaptionStyle(id, recipe);
+  const fontAttribute = element.attributes.font;
+  const exactFont = fontAttribute === undefined
+    ? undefined
+    : inline<FontArtifactRef>(
+      reference(element, "font", mediaTypes.fontArtifact, resolveReference),
+      `${element.name}.font`,
+    );
+  if (exactFont !== undefined) assertFontArtifactRef(exactFont, `${element.name}.font`);
+  const style = fineCaptionStyle(id, recipe, exactFont);
   return {
     records: [{ id, type: captionTypes.style, value: { kind: "inline", value: style }, range: element.range }],
     components: [],

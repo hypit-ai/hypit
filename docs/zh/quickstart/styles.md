@@ -5,7 +5,7 @@ description: SVS Recipe 语言——用于影片、字幕、B-roll、文本及�
 
 # SVS 样式表
 
-SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片尺寸、字幕外观、B-roll 布局、文本样式、语音估算参数、生成设置和自定义字体。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
+SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片尺寸、字幕外观、B-roll 布局、文本样式、语音估算参数、生成设置和字体选择。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
 
 ## 基本语法
 
@@ -99,8 +99,8 @@ caption.dialogue {
 | `stack-order` | 所有 Track 之间的 Z 轴层叠顺序（值越大越靠前） |
 | `x`、`y` | 位置，以画布比例表示（0–1） |
 | `width` | 宽度，以画布比例表示 |
-| `font` | 字体族名称或 SVS 字体引用 |
-| `weight` | 字体粗细（400–900） |
+| `font` | 便于阅读的字体族标签，也是环境字体兜底名 |
+| `weight` | 请求的字体粗细（1–1000） |
 | `size` | 字体大小（像素） |
 | `line-height` | 行高倍数 |
 | `align` | 文本对齐方式：`left`、`center`、`right` |
@@ -109,10 +109,14 @@ caption.dialogue {
 | `padding` | 容器内边距（像素）（单个值或 `垂直 水平`） |
 | `radius` | 容器圆角半径（像素） |
 
-由 Fine 样式族解析：
+若要可复现渲染，应在 `.svml` 源码中显式声明字体字节，并把该 Record 传给 Fine Style。
+它的 `weight` 与 `style` 必须和 Recipe 一致：
 
 ```svml
-<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}/>
+<media:Font id="caption-font" src="./assets/Inter-SemiBold.woff2"
+  weight="600" style="normal"/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
+  font={caption-font}/>
 ```
 
 ### 按角色设置字幕样式
@@ -298,38 +302,35 @@ speaker.host {
   duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
 ```
 
-## 字体声明
+## 精确字体声明
 
-声明本地字体文件，以便在字幕和文本叠加层中使用。
+SVS 描述字体策略，但不负责打开文件。具体字体文件由独立导入的 Media 包在作者源码中
+声明：
 
-```svs
-font.inter-semibold {
-  src: ./assets/Inter-SemiBold.woff2;
-  weight: 600;
-  style: normal;
-}
+```svml
+<import as="media" from="@narratage/media@1"/>
 
-font.inter-black {
-  src: ./assets/Inter-Black.woff2;
-  weight: 900;
-  style: normal;
-}
+<media:Font id="inter-semibold" src="./assets/Inter-SemiBold.woff2"
+  weight="600" style="normal"/>
+<media:Font id="inter-black" src="./assets/Inter-Black.woff2"
+  weight="900" style="normal"/>
 ```
 
 | 属性 | 描述 |
 |---|---|
-| `src` | 字体文件路径（相对于 SVS 文件） |
+| `src` | 字体文件路径（相对于作者源码） |
 | `weight` | 该文件提供的字体粗细 |
-| `style` | 字体样式：`normal`、`italic` |
+| `style` | 字体样式：`normal`、`italic`、`oblique` |
 
-字体路径在编译时解析，并成为 `FontArtifactRef` 值。在其他 SVS 块中通过名称引用：
+编译器把字体字节解析为内容寻址的 `FontArtifactRef`。消费组件通过普通源码引用选择它，
+Runtime 不猜字体：
 
-```svs
-caption.dialogue {
-  font: inter-semibold;
-  /* ... */
-}
+```svml
+<caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
+  font={inter-semibold}/>
 ```
+
+省略 `font=` 时会使用 Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现。
 
 ## 综合示例
 

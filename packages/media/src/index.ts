@@ -1,5 +1,6 @@
 export {
   decodeMediaAudioSurface,
+  decodeMediaFontSurface,
   decodeMediaImageSurface,
 } from "./surface.js";
 export { mediaComponent } from "./component.js";

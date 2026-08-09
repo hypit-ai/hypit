@@ -1,5 +1,6 @@
 import { captionManifest, captionModuleRef, captionTypes } from "@narratage/caption";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { mediaDependency } from "@narratage/media";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { semanticMapDependency } from "@narratage/semantic-map";
@@ -12,7 +13,7 @@ export const captionFineModuleRef = { name: "@narratage/caption-fine", version: 
 export const captionFineProducers = {
   render: { module: captionFineModuleRef, name: "render-fine-caption" },
 } satisfies Record<string, ProducerRef>;
-export const captionFineStyleSurfaceImplementationDigest = digestOf("@narratage/caption-fine/complete-style-surface@1");
+export const captionFineStyleSurfaceImplementationDigest = digestOf("@narratage/caption-fine/exact-font-style-surface@1");
 export const captionFineTrackSurfaceImplementationDigest = digestOf("@narratage/caption-fine/whole-atom-track-surface@1");
 
 export const captionFineManifest: ModuleManifest = {
@@ -22,6 +23,7 @@ export const captionFineManifest: ModuleManifest = {
   dependencies: [
     { module: captionModuleRef, digest: digestOf(captionManifest) },
     compositionDependency,
+    mediaDependency,
     narrativeDependency,
     programSpaceDependency,
     semanticMapDependency,

@@ -21,6 +21,7 @@ Script Display → Caption Program → Planner + measured Atom timing → Style-
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+<import as="media" from="@narratage/media@1"/>
 ```
 
 `@narratage/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
@@ -56,8 +57,15 @@ caption.primary {
 ```
 
 ```svml
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
+<media:Font id="caption-font" src="./assets/Inter-Bold.woff2"
+  weight="700" style="normal"/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+  font={caption-font}/>
 ```
+
+The explicit `font=` edge makes the rendered face byte-reproducible. Omitting it deliberately uses
+the Recipe's `font` family as an environment fallback; neither Caption nor the Runtime chooses a
+font on the author's behalf.
 
 Another Caption package may define completely different planning fields and visual parameters
 without changing the common package.
