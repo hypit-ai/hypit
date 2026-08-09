@@ -151,9 +151,9 @@ complete two-dimensional author model, terminal-IR gaps and Caption feedback are
 [`../spec/text-track.md`](../spec/text-track.md). The shared Canvas/Frame geometry, two-frame fitting,
 focal alignment and backing ownership boundary are recorded in
 [`../spec/spatial-layout.md`](../spec/spatial-layout.md). Generic Audio placement, sample occupancy
-and mix boundaries are recorded in [`../spec/audio-track.md`](../spec/audio-track.md). Self-contained
-full-canvas effects and the prohibition on hidden lower-composite sampling are recorded in
-[`../spec/screen-overlay.md`](../spec/screen-overlay.md). Unified Media Item/Sequence authoring,
+and mix boundaries now execute in `@narratage/audio-track` as exact sample-domain plans.
+Self-contained full-canvas effects and the prohibition on hidden lower-composite sampling now
+execute in `@narratage/screen-overlay`, including real sequential/parallel pixel evidence. Unified Media Item/Sequence authoring,
 ordered local layers, lifecycle/sampling motion, internal handoffs, explicit audio projection and
 Speech Spine reuse are recorded in [`../spec/media-track.md`](../spec/media-track.md). The old
 depth-stack Deck is separately specified as a higher-order Track in
@@ -166,15 +166,14 @@ independent glyph/Pill/underline activation, joined wrapped trail geometry and l
 local motion. Glyph karaoke modes and joined Pill geometry have real browser evidence. It
 deliberately has no line-clipping or `max-lines` behavior.
 
-Implement these against real delivery examples, but do not freeze or indiscriminately expand the
-video author surface yet:
+The simple Text and still-image Media witnesses now execute through the shared Temporal/Spatial
+foundation. Continue against real delivery examples, but do not freeze or indiscriminately expand
+the video author surface yet:
 
-- one simple Text and one simple Media witness through the executable Temporal/Spatial foundation;
 - the specified Text Document, Point/Area/Path forms, ordered Paint and selector-motion model;
 - the specified Media Item/Sequence model in place of the current B-roll vertical slice;
 - the independent Depth-Stack Deck Track in place of the old Deck implementation;
 - the designed Ranking components after the shared temporal package;
-- the designed Audio and Screen Overlay packages after the shared temporal package;
 - final Track and renderer-neutral Visual IR compatibility freeze.
 
 The current implementations remain executable vertical slices and regression witnesses. This work

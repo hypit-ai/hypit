@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import { programFrameSampleBoundary, programSpaceSampleFrames } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 
@@ -12,6 +13,7 @@ import {
   projectProgramWindow,
   projectSelectionWindows,
   resolveTriggeredSchedule,
+  temporalDurationInSamples,
 } from "../src/index.js";
 
 const space: ProgramSpace = {
@@ -118,6 +120,26 @@ test("program and absolute projections use exact rational frame-rate arithmetic"
     },
   });
   assert.deepEqual(result.span, { startFrame: 15, endFrameExclusive: 30 });
+});
+
+test("frame and authored durations enter one exact sample-boundary rule", () => {
+  const ntsc: ProgramSpace = {
+    contract: "svml.program-space@1",
+    durationSec: 1.001,
+    frameRate: { numerator: 30_000, denominator: 1_001 },
+  };
+  assert.equal(programFrameSampleBoundary(ntsc, 15, 48_000), 24_024);
+  assert.equal(programSpaceSampleFrames(ntsc, 48_000), 48_048);
+  assert.equal(temporalDurationInSamples(frames(15), ntsc), 24_024);
+  assert.equal(temporalDurationInSamples({ unit: "milliseconds", value: 125 }, ntsc), 6_000);
+  assert.equal(temporalDurationInSamples(seconds(1, 3), ntsc), 16_000);
+  const twentyFour: ProgramSpace = {
+    contract: "svml.program-space@1",
+    durationSec: 1,
+    frameRate: { numerator: 24, denominator: 1 },
+  };
+  assert.equal(programFrameSampleBoundary(twentyFour, 1, 44_100), 1_838,
+    "half-sample boundaries round to the later sample deterministically");
 });
 
 test("crossed source anchors are allowed until a projection actually consumes the reversal", () => {

@@ -436,7 +436,7 @@ Retired:
    `IntrinsicExtent`, `ContentFit` and pure fit validation;
 2. **Implemented:** split Canvas declaration from Film assembly and connect the same Canvas value to Track layout and
    Composition;
-3. migrate one simple Text Point/Area and one simple Media image through shared geometry;
+3. **Implemented:** migrate one simple Text Area and one simple Media still image through shared geometry;
 4. add exact browser tests for every fit and alignment law;
 5. prove ordered transparent/color/self-blur/alternate-source Media layers;
 6. migrate Ranking and Comment Sticker geometry;

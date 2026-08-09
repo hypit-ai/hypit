@@ -35,7 +35,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     durationSec,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const audio = { digest: digestOf("caption:test-audio"), size: 1, mediaType: "audio/wav", durationSec };
+  const audio = { kind: "blob" as const, digest: digestOf("caption:test-audio"), size: 1, mediaType: "audio/wav" };
   const basisSegments = narrative.segments.map((segment, index) => ({
     segmentId: segment.id,
     startSec: segments[index]!.startSec,

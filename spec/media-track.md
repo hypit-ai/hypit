@@ -1,8 +1,9 @@
 # SVML Media Track Authoring
 
-Status: design authority for the unified official Media Track migration. It supersedes the intended
-author model of the current executable `@narratage/broll` vertical slice, but is not implemented or
-a frozen public ABI.
+Status: design authority for the unified official Media Track migration. Its first explicit
+still-image Item witness is executable; timed material, layers, motion, Sequence, audio projection
+and the author Surface remain unimplemented. It supersedes the intended author model of the current
+`@narratage/broll` vertical slice and is not a frozen public ABI.
 
 ## 1. Conclusion
 
@@ -596,7 +597,8 @@ public compatibility layer. Source assets and generated files remain untouched.
 
 Implement only after the shared Temporal and Spatial slices exist:
 
-1. introduce `@narratage/media-track` with one still-image Item;
+1. **Implemented:** introduce `@narratage/media-track` with one still-image Item whose BlobArtifact,
+   IntrinsicExtent, SpatialFrame, ContentFit and ProgramSpace are separate semantic inputs;
 2. add timed source trim and every occupancy/alignment policy;
 3. add ordered Paint/media layers, clipping and the two-frame fit model;
 4. add lifecycle and sampling motion with the fixed transform stack;

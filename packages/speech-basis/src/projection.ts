@@ -1,4 +1,4 @@
-import { programSpaceFrameCount } from "@narratage/program-space";
+import { programSpaceFrameCount, programSpaceSampleFrames } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertSpeechBasisIdentity } from "@narratage/speech";
 import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
@@ -81,14 +81,26 @@ export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
 
 export function projectSpeechAudioTrack(basis: SpeechBasis): AudioTrack {
   assertSpeechBasisIdentity(basis);
+  const sampleFrames = programSpaceSampleFrames(basis.programSpace, 48_000);
   return sealAudioTrack({
     contract: "svml.audio-track@1",
     id: `speech-audio:${basis.segments.map((segment) => segment.segmentId).join("+")}`,
     clips: [{
       id: "speech",
-      span: { startFrame: 0, endFrameExclusive: programSpaceFrameCount(basis.programSpace) },
       artifact: basis.audio,
-      bus: "speech",
+      target: { startSample: 0, endSampleExclusive: sampleFrames },
+      source: {
+        sampleFrames,
+        startSample: 0,
+        endSampleExclusive: sampleFrames,
+        loop: false,
+        phaseSample: 0,
+      },
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: 1,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
     }],
   });
 }

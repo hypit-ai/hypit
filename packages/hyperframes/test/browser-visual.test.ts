@@ -20,6 +20,16 @@ import {
 } from "@narratage/hyperframes";
 import type { Digest } from "@narratage/protocol";
 import { captionDisplaySequence, parseScript } from "@narratage/script";
+import {
+  appendProgramScreenOverlay,
+  createScreenOverlaySet,
+  finalizeScreenOverlay,
+  renderScreenOverlay,
+  sealScreenOverlayHeader,
+  sealScreenOverlayItemSpec,
+} from "@narratage/screen-overlay";
+import type { ScreenOverlayComponent, ScreenOverlaySet } from "@narratage/screen-overlay";
+import { sealCanvasSpace } from "@narratage/spatial";
 import type { SvsRecipe } from "@narratage/svs";
 
 const enabled = process.env.SVML_BROWSER_TESTS === "1";
@@ -644,6 +654,91 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
       "shadow Paint did not produce blue pixels");
     assert.ok(matchingPixels(rgba, width, paintRegion, (red, green, blue) => green > 50 && red < 120 && blue < 120) > 100,
       "glow Paint did not produce green pixels");
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("every official Screen Overlay survives real sequential and parallel browser frames identically", {
+  skip: !enabled,
+  timeout: 120_000,
+}, async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-screen-overlay-visual-"));
+  try {
+    const width = 128;
+    const height = 96;
+    const canvas = sealCanvasSpace({
+      contract: "svml.canvas-space@1",
+      widthPx: width,
+      heightPx: height,
+      origin: "top-left",
+      xDirection: "right",
+      yDirection: "down",
+      pixelAspect: "square",
+    });
+    const space = sealProgramSpace({
+      contract: "svml.program-space@1",
+      durationSec: 1,
+      frameRate: { numerator: 12, denominator: 1 },
+    });
+    const header = sealScreenOverlayHeader({ contract: "svml.screen-overlay-header@1", id: "browser-overlays" });
+    const components: readonly ScreenOverlayComponent[] = [
+      { kind: "flash", color: "#ffffff", intensity: 0.2, attackFrames: 2, holdFrames: 2, decayFrames: 4 },
+      { kind: "color-wash", color: "#2030ff", opacity: 0.08 },
+      { kind: "vignette", center: { x: 0.5, y: 0.5 }, radius: { x: 0.8, y: 0.7 }, softness: 0.4, color: "#000000", opacity: 0.25 },
+      { kind: "scan-lines", spacingPx: 7, thicknessPx: 1, angleDeg: 3, opacity: 0.1, travelPx: 8 },
+      { kind: "directional-matte", angleDeg: 12, coverage: 0.4, feather: 0.3, color: "#ffcc88", opacity: 0.08, progress: { from: -0.5, to: 1.5 } },
+      { kind: "whip-veil", direction: "right", widthPx: 36, softnessPx: 8, travelPx: 180, opacity: 0.12 },
+      { kind: "glitch-veil", bars: 5, colors: ["#ff0055", "#00ddff"], opacity: 0.12, travelPx: 16, seed: 7 },
+      { kind: "grain", amount: 0.12, grainSizePx: 2, chroma: "monochrome", motionRatePxPerFrame: 0.25, seed: 11 },
+      { kind: "light-leak", colors: ["#ff3300", "#ffd000"], angleDeg: 25, softness: 0.25, travelPx: 24, intensity: 0.1, seed: 13 },
+      { kind: "bokeh", amount: 0.12, sizeMinPx: 4, sizeMaxPx: 12, color: "#ffe2aa", warmth: 0.3, driftPx: 12, seed: 17 },
+      { kind: "tv-static", amount: 0.05, noiseSizePx: 4, scanLineOpacity: 0.08, motionRatePxPerFrame: 0.2, seed: 19 },
+    ];
+    let set: ScreenOverlaySet = createScreenOverlaySet();
+    components.forEach((content, index) => {
+      set = appendProgramScreenOverlay(set, header, space, sealScreenOverlayItemSpec({
+        contract: "svml.screen-overlay-item-spec@1",
+        id: `${content.kind}-${index + 1}`,
+        content,
+        projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
+        expansion: { kind: "one" },
+        stackingOrder: index + 1,
+      }));
+    });
+    const track = renderScreenOverlay(canvas, space, finalizeScreenOverlay(set, header));
+    const document = compileHyperframesDocument(sealComposition({
+      contract: "svml.composition@1",
+      id: "screen-overlay-browser-proof",
+      canvas: { width, height, clearColor: "#000000" },
+      tracks: [track],
+    }), space);
+    await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
+      throw new Error(`Screen Overlay unexpectedly requested Artifact ${artifact.digest}`);
+    }));
+    const render = async (workers: number, name: string): Promise<string[]> => {
+      const output = path.join(temp, name);
+      await mkdir(output);
+      const result = spawnSync(process.execPath, [
+        hyperframesCli, "render", temp,
+        "--format", "png-sequence", "--output", output, "--fps", "12", "--workers", String(workers),
+        "--no-browser-gpu", "--no-best-effort", "--quiet",
+      ], { encoding: "utf8", timeout: 110_000 });
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      return collectPngs(output);
+    };
+    const sequential = await render(1, "sequential");
+    const parallel = await render(3, "parallel");
+    assert.equal(sequential.length, 12);
+    assert.equal(parallel.length, 12);
+    const sequentialPixels = sequential.map((frame) => decodedRgba(frame, width, height));
+    const parallelPixels = parallel.map((frame) => decodedRgba(frame, width, height));
+    for (let frame = 0; frame < 12; frame += 1) {
+      assert.deepEqual(parallelPixels[frame], sequentialPixels[frame], `frame ${frame} changed under partitioning`);
+    }
+    assert.notDeepEqual(sequentialPixels[0], sequentialPixels[6], "authored Overlay envelopes painted no temporal change");
+    assert.ok(sequentialPixels.some((pixels) => pixels.some((channel, index) => index % 4 !== 3 && channel > 0)),
+      "the combined official Overlay set painted no visible pixels");
   } finally {
     await rm(temp, { recursive: true, force: true });
   }
