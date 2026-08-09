@@ -113,6 +113,9 @@ an external Need, recovery and final Record assembly through that distribution.
 Implemented:
 
 - provider-neutral generated image/video/audio Product contracts and exact-model shell;
+- model-owned Request Draft, media Binding and finalize Producers generated from every exact Port
+  Table, so runtime-produced image/video/audio references remain explicit graph edges and only a
+  complete request can reach a Provider;
 - independently activatable exact-model packages for Seedance, MiniMax H3, Gemini Omni,
   Grok Imagine, GPT Image, Nano Banana and Seedream;
 - `@narratage/mimo-tts`: three separate exact MiMo V2.5 TTS contracts and author Surfaces for
@@ -144,6 +147,9 @@ Implemented:
   ArtifactStore ingestion, ffprobe verification and remote cleanup canary;
 - `@narratage/image-transform`: explicit image-plus-Program to image graph component, including the
   extracted Twinit GPT Image YCrCb denoise preset;
+- `@narratage/gpt-image/clean`: an optional logical module from the GPT Image physical package that
+  expands generation plus the shared denoise transform as two visible graph operations and exports
+  one clean image; a high-level Prompt Surface remains intentionally deferred;
 - `@narratage/image-compose`: explicit Canvas plus ordered image Layers to one reusable PNG Artifact,
   with no privileged base/sticker roles or hidden layout metadata;
 - `@narratage/raster`: one closed deterministic execution waist shared by Transform and Compose;
@@ -187,6 +193,9 @@ Implemented and executable:
   self-described `official-ugc-v1.svs` Source Module contains defaults, ordering,
   parameter-to-Prompt mappings and finite reference-count branches, all lowered during author
   compilation before the existing exact Seedance request path;
+- graph-native Seedance reference assembly for both generic video and speech paths, including a
+  tested person/product → holding → walking/interview → three-image montage topology and selective
+  zero-input Candidate pruning;
 - one-pass WhisperX evidence and direct Script-to-evidence many-to-many alignment;
 - planner-neutral CaptionPlan: ordered Cue cuts plus zero or more declared attributes per display
   word, with no text rewrite or timing authority;

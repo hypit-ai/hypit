@@ -54,14 +54,29 @@ export type {
   GenerationScalarPort,
 } from "./ports.js";
 export {
+  bindGenerationMedia,
+  finalizeGenerationRequestDraft,
+  GENERATION_MEDIA_BINDING_V1,
+  GENERATION_REQUEST_DRAFT_V1,
   GENERATION_REQUEST_V1,
+  mediaBindingSchemaFromPort,
   portsObjectSchema,
+  requestDraftSchemaFromPorts,
   requestSchemaFromPorts,
+  sealGenerationMediaBinding,
   sealGenerationPortRequest,
+  sealGenerationRequestDraft,
+  verifyGenerationMediaBinding,
   verifyPortsAgainstTable,
+  verifyRequestDraftAgainstPorts,
   verifyRequestAgainstPorts,
 } from "./request.js";
-export type { GenerationPortSubset, GenerationRequest } from "./request.js";
+export type {
+  GenerationMediaBinding,
+  GenerationPortSubset,
+  GenerationRequest,
+  GenerationRequestDraft,
+} from "./request.js";
 export {
   generatedImageSetSchema,
   generatedAudioSetSchema,

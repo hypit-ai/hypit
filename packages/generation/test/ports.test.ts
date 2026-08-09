@@ -4,9 +4,13 @@ import test from "node:test";
 import { MemoryArtifactStore } from "@narratage/driver-node";
 import {
   assertMappingCoversPorts,
+  bindGenerationMedia,
   compileWireRequest,
+  finalizeGenerationRequestDraft,
   requestSchemaFromPorts,
+  sealGenerationMediaBinding,
   sealGenerationPortRequest,
+  sealGenerationRequestDraft,
   sealGenerationPortTable,
   selectWireModel,
   verifyRequestAgainstPorts,
@@ -201,4 +205,37 @@ test("coverage rejects a mapping that forgets a port the model declares", () => 
     fields: { ...mapping.fields, voiceId: { as: "value", field: "voice_ids" } },
   };
   assert.throws(() => assertMappingCoversPorts(table, wrongShape), /must use valueArray/u);
+});
+
+test("runtime media stays on graph edges until a model-owned draft is finalized", async () => {
+  const { image, video, audio } = await artifacts();
+  const base = sealGenerationRequestDraft(table, {
+    prompt: ["hello"], duration: [8], resolution: ["720p"],
+  });
+  const audioPort = table.ports.find((port) => port.name === "referenceAudio");
+  const imagePort = table.ports.find((port) => port.name === "referenceImage");
+  const excerptPort = table.ports.find((port) => port.name === "excerpt");
+  assert.ok(audioPort?.value.kind === "media");
+  assert.ok(imagePort?.value.kind === "media");
+  assert.ok(excerptPort?.value.kind === "media");
+
+  // An intermediate draft may receive audio first; the exact cross-port rule
+  // is enforced only once all explicitly connected edges have been attached.
+  const withAudio = bindGenerationMedia(table, base, "referenceAudio",
+    sealGenerationMediaBinding(audioPort as never, { role: "audio" }), audio);
+  assert.throws(() => finalizeGenerationRequestDraft(table, withAudio), /needs at least one of referenceImage/u);
+  const withImage = bindGenerationMedia(table, withAudio, "referenceImage",
+    sealGenerationMediaBinding(imagePort as never, { role: "image" }), image);
+  const withExcerpt = bindGenerationMedia(table, withImage, "excerpt",
+    sealGenerationMediaBinding(excerptPort as never, {
+      role: "video", fields: { startSec: 1, endSec: 3 },
+    }), video);
+  const exact = finalizeGenerationRequestDraft(table, withExcerpt);
+  assert.equal(exact.contract, "svml.generation-request@1");
+  assert.deepEqual(exact.ports.referenceAudio?.[0], { role: "audio", artifact: audio });
+  assert.deepEqual(exact.ports.excerpt?.[0], {
+    role: "video", artifact: video, fields: { startSec: 1, endSec: 3 },
+  });
+  assert.throws(() => bindGenerationMedia(table, base, "referenceImage",
+    sealGenerationMediaBinding(imagePort as never, { role: "image" }), audio), /image\//u);
 });

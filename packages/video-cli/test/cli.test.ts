@@ -235,8 +235,10 @@ test("Prompt Kit source and Speaker Surface finish prompt assembly before the Ru
     readonly steps: readonly { readonly producer: { readonly name: string } }[];
   };
   assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
+    "bind-request-seedance-2-mini-referenceImage",
     "compile-seedance-2-mini-speech-request",
     "estimate-speech-duration",
+    "finalize-request-seedance-2-mini",
     "request-seedance-2-mini",
     "select-primary-video",
   ].sort());
