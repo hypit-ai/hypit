@@ -1,7 +1,8 @@
 # Model input ports
 
-Status: implemented domain-adjacent contract, 2026-08-08. `svml.generation-ports@1`,
+Status: implemented domain-adjacent contract, 2026-08-10. `svml.generation-ports@1`,
 `svml.generation-request@1` and `svml.generation-wire-mapping@1` are executable `@1` contracts.
+The common result waist covers generated image, video and audio sets.
 
 ## The fact this encodes
 
@@ -60,6 +61,9 @@ kind or a requirement form changes the `svml.generation-ports@1` contract while 
 pre-release, in the same way `VISUAL_STYLE_NAMES_V1` closes the Visual IR vocabulary. Package locks
 and implementation digests record the exact implementation; speculative major numbers do not.
 
+`text.maxChars` is optional. A model package states a ceiling only when a published model fact
+supports it; it must not invent a convenient local limit for an API whose documentation states none.
+
 ### What a port table deliberately does not encode
 
 The vocabulary states **which ports exist, what each accepts, how many it takes, and which
@@ -108,9 +112,9 @@ discriminated unions are gone: which mode a request is in *is* which ports it po
 `SpeechProgram`, the authored generation that is complete except for the duration only speech
 estimation can supply.
 
-## Wire mapping
+## Provider translation
 
-A Provider ships data, not a translation function:
+For flat form/JSON APIs, a Provider should ship the reusable declarative wire mapping:
 
 ```ts
 {
@@ -139,6 +143,15 @@ mapping written for one model version cannot silently serve another.
 the mapping and the request only—never the port table—so it runs inside a Provider that imports no
 model package. `resolve` is supplied by the Provider, which is what keeps artifact upload out of the
 shared vocabulary.
+
+The flat mapping is a convenience contract, not a claim that every external protocol is flat.
+Xiaomi MiMo's official TTS API, for example, places spoken text in an assistant message, optional
+delivery direction in a user message, and a preset name or Base64 audio sample under a nested
+`audio` object. Its Provider owns that tested translation. It still consumes the same sealed
+`GenerationRequest`, advertises the same full exact-model Capability refs as versioned data, returns
+the shared `GeneratedAudioSet`, and has no dependency on `@narratage/mimo-tts`. A new reusable wire
+shape belongs here only after a second Provider proves it common; one unusual API does not widen the
+shared contract.
 
 ## Where the numbers come from
 
@@ -173,6 +186,7 @@ Provenance of the current tables, so a later reader knows what was actually chec
 | `nano-banana-2` | — | text schema; `-pro` assumed identical |
 | `seedream-5-lite` | — | text schema; image-variant array cap unverified |
 | `grok-imagine-video`, `-1.5-preview` | — | text schema; image-variant fields unverified |
+| `mimo-v2.5-tts`, `-voicedesign`, `-voiceclone` | Xiaomi official model/API documentation | — |
 
 ## Coverage
 
@@ -202,7 +216,7 @@ Capability and Endpoint rules are in [`architecture.md`](./architecture.md) §6.
 
 ## What this makes cheap next
 
-Adding a service is now a mapping file plus its transport, with no model package touched and no Core
-release. The planned next phase brings the common aggregator services in as a batch on that basis;
-its scope, the optimisations deliberately deferred until several mappings exist, and the two rules
-that hold throughout are recorded in [`roadmap.md`](./roadmap.md) B4.
+Adding a service is now a mapping or bounded Provider translator plus its transport, with no model
+package or Core touched. The planned next phase brings the common aggregator services in as a batch
+on that basis; its scope, the optimisations deliberately deferred until several mappings exist, and
+the two rules that hold throughout are recorded in [`roadmap.md`](./roadmap.md) B4.

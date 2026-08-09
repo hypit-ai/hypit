@@ -132,11 +132,11 @@ Hypit, not to open-source Core.
 
 ### B4. Additional Providers
 
-KIE generation, Vertex Caption planning, local media, local OpenCV image transforms, local WhisperX
-and local HyperFrames are implemented. Volcengine, Fal, API-key Gemini or Hypit can be added as
-independent Endpoint packages without changing author model packages or Core. None is a current
-batch-migration target: add one only when a concrete deployment selects that service, following the
-port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
+KIE generation, Xiaomi MiMo TTS, Vertex Caption planning, local media, local OpenCV image transforms,
+local WhisperX and local HyperFrames are implemented. Volcengine, Fal, API-key Gemini or Hypit can
+be added as independent Endpoint packages without changing author model packages or Core. None is a
+current batch-migration target: add one only when a concrete deployment selects that service,
+following the port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 
 Deterministic still-image work is also explicit rather than hidden in Track code:
 `@narratage/image-compose` and `@narratage/image-transform` lower their different author forms to the

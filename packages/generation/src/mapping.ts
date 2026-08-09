@@ -51,7 +51,7 @@ export type GenerationWireMapping = {
    * cannot silently serve another.
    */
   readonly capability: CapabilityRef;
-  readonly result: "image" | "video";
+  readonly result: "audio" | "image" | "video";
   readonly routes: readonly GenerationWireRoute[];
   readonly fields: Readonly<Record<string, GenerationFieldMapping>>;
   readonly constants?: Readonly<Record<string, CanonicalValue>>;

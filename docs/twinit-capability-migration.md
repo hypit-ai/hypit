@@ -22,7 +22,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `input` | Complete | Author Source values and explicit graph edges replace a special canvas input node. |
 | `gpt_image_2` | Complete | `@narratage/gpt-image`, KIE and explicit `image-transform` post-processing. |
 | `grok_image` | Deliberately omitted | The current exact-model catalog intentionally exposes Grok only for video. A future image model package remains possible. |
-| `mimo_tts` | Backlog | Add an exact MiMo model package, author Surface and official Provider when selected. |
+| `mimo_tts` | Complete | `@narratage/mimo-tts` declares three exact author-selected models; `@narratage/provider-xiaomi-mimo` independently realizes them through Xiaomi's official API and returns a generic audio Artifact. |
 | `image_chroma_key` | Complete | The misleading old name is retired. `@narratage/background-removal` declares image-in/image-out intent and KIE fulfills it through Recraft `remove-background`; another Endpoint may implement the same exact capability. |
 | `image_overlay` | Complete | `@narratage/image-compose` replaces the fixed base/sticker special case with an explicit Canvas and ordered image Layers; the local OpenCV Endpoint produces one reusable PNG Artifact. |
 | `estimate_duration` | Complete | `@narratage/estimate` plus an explicit SVS policy. |
@@ -55,7 +55,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `locate` | Complete | WhisperX evidence, Speech Alignment, SemanticMap, Temporal, Spatial and Film replace one privileged locate phase. |
 | `export` | Complete | Composition, HyperFrames document compilation, visual rendering, audio rendering and mux are explicit graph operations. |
 
-Totals: **20 Complete**, **8 Expressible; Kit missing**, **4 Backlog**, **3 Deliberately omitted**.
+Totals: **21 Complete**, **8 Expressible; Kit missing**, **3 Backlog**, **3 Deliberately omitted**.
 
 ## Retired behavior inside migrated families
 

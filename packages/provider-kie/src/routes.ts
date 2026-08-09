@@ -11,7 +11,7 @@ import {
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@narratage/generation";
-import type { GenerationArtifactUrlResolver, GenerationRequest } from "@narratage/generation";
+import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@narratage/generation";
 import { canonicalize } from "@narratage/protocol";
 import type { BlobRef, CanonicalValue, CapabilityRef, StoredValue, TypeRef } from "@narratage/protocol";
 
@@ -40,7 +40,14 @@ function capabilityKey(ref: CapabilityRef): string {
   return `${ref.module.name}@${ref.module.version}#${ref.name}`;
 }
 
-const generationRoutes: readonly KieRoute[] = kieModelCatalog.map((mapping) => ({
+const kieGenerationMappings = kieModelCatalog.map((mapping) => {
+  if (mapping.result === "audio") {
+    throw new Error(`KIE route ${mapping.capability.name} declares unsupported audio output`);
+  }
+  return mapping as GenerationWireMapping & { readonly result: "image" | "video" };
+});
+
+const generationRoutes: readonly KieRoute[] = kieGenerationMappings.map((mapping) => ({
   key: capabilityKey(mapping.capability),
   capability: mapping.capability,
   returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,

@@ -74,7 +74,7 @@
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:af3cee164fcae00d407a657cd8a2491c727b4f82f5465af71ecf7d3101aeee38"
+      "digest": "sha256:4ceaf545fa645de80873c5cc3b9df7655474a262057f805e85eca2679025536e"
     },
     {
       "name": "@narratage/host",
@@ -129,7 +129,7 @@
     {
       "name": "@narratage/provider-kie",
       "version": "0.0.0-dev",
-      "digest": "sha256:eb6f6128e9df4d7ec1b70bdcbded81e627dd336958b9aabb7212559b93baa7ff"
+      "digest": "sha256:e9047810ec2972880c798ac717c720b33e84dcc8edb7b4421dc8c3dbf55d731e"
     },
     {
       "name": "@narratage/provider-media-local",
@@ -878,7 +878,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e61ebb911a33d4c5d0e4e4ee4fb69cdb790f4ced050ef35f7472bfbd72013d9b",
-      "closureDigest": "sha256:0bd2705a051de96c59b3e9c26f632a6887cb161ffcb84b3786790e59f79cdd93"
+      "closureDigest": "sha256:35e95885907dbc295141ad63c0d2801be742295f4536e574c213a22a99e49530"
     },
     {
       "specifier": "@narratage/provider-media-local",
@@ -899,5 +899,5 @@
       "closureDigest": "sha256:90bd3d82d9006322e174a24e616981d6dd942cb9844f676878ab91de38c07e87"
     }
   ],
-  "digest": "sha256:cd4864f8925cad18619c3786c266bb70024bd75e6d0aa6cb39b807bced9ebc4c"
+  "digest": "sha256:76ed6d4b9b4ec2dcd8aec5b30a6a3043dd0c637fcf9314cf6abc234393673ec7"
 }
