@@ -119,6 +119,7 @@ export default defineConfig({
     "runtime-adapter-loading.md",
     "source-and-run-compilation.md",
     "speech-alignment.md",
+    "twinit-capability-migration.md",
   ],
   markdown: {
     theme: {

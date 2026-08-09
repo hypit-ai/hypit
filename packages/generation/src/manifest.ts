@@ -7,7 +7,7 @@ import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
 
 import { generatedImageSetSchema, generatedVideoSetSchema } from "./schema.js";
 
-export const generationModuleRef = { name: "@narratage/generation", version: "0.0.0-dev" } as const;
+export const generationModuleRef = { name: "@narratage/generation", version: "1" } as const;
 export const generationTypes = {
   imageSet: { module: generationModuleRef, name: "GeneratedImageSet" },
   videoSet: { module: generationModuleRef, name: "GeneratedVideoSet" },

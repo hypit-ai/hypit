@@ -29,7 +29,7 @@ pnpm test             # full test suite
 | Command | What it runs |
 |---|---|
 | `pnpm check` | `tsc -p tsconfig.json --noEmit` |
-| `pnpm test` | `node --import tsx --test 'packages/*/test/**/*.test.ts' 'tools/*.test.mjs'` |
+| `pnpm test` | package, service-adapter and repository-boundary tests through Node's test runner |
 
 See [Testing](./testing.md) for environment-gated tests and test patterns.
 
@@ -37,8 +37,8 @@ See [Testing](./testing.md) for environment-gated tests and test patterns.
 
 ```text
 narratage/
-├── packages/              78 workspace packages
-├── spec/                  7 normative specification documents
+├── packages/              82 workspace packages
+├── spec/                  16 normative specification documents
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
 ├── services/              Python services (whisperx, image-opencv)
@@ -52,7 +52,7 @@ narratage/
 
 | Guide | Topic |
 |---|---|
-| [Package architecture](./packages.md) | The four layers, dependency rules, package anatomy, facets |
+| [Package architecture](./packages.md) | The five layers, dependency rules, package anatomy, facets |
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime Profile](./runtime-profile.md) | JSON and TypeScript configuration, diagnostics, Build archive |

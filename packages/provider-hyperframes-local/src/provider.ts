@@ -20,7 +20,7 @@ const HYPERFRAMES_VERSION = "0.7.101";
 
 export const localHyperframesProviderModuleRef = {
   name: "@narratage/provider-hyperframes-local",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const localHyperframesProviderImplementationDigest = digestOf(
   `@narratage/provider-hyperframes-local/render@1+hyperframes@${HYPERFRAMES_VERSION}`,

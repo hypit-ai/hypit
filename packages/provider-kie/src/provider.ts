@@ -39,7 +39,7 @@ import {
   verifyKieModelCatalog,
 } from "./mapping.js";
 
-export const kieProviderModuleRef = { name: "@narratage/provider-kie", version: "0.0.0-dev" } as const;
+export const kieProviderModuleRef = { name: "@narratage/provider-kie", version: "1" } as const;
 export const kieProviderImplementationDigest = digestOf("@narratage/provider-kie/market-endpoint@1");
 
 type Fetch = typeof globalThis.fetch;

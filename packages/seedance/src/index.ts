@@ -19,7 +19,7 @@ import type { SpeechDuration } from "@narratage/speech";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
-export const seedanceModuleRef = { name: "@narratage/seedance", version: "0.0.0-dev" } as const;
+export const seedanceModuleRef = { name: "@narratage/seedance", version: "1" } as const;
 export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini"] as const;
 export type SeedanceModel = typeof seedanceModels[number];
 

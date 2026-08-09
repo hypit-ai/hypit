@@ -18,7 +18,7 @@ export const alignedTranscriptEvidenceFields = {
     speechActivity: { schema: { kind: "array", items: object({ startSec: { schema: number }, endSec: { schema: number } }) }, optional: true } }) } },
 } as const satisfies Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>;
 export const alignedTranscriptEvidenceSchema: ValueSchema = object(alignedTranscriptEvidenceFields);
-export const speechEvidenceModuleRef = { name: "@narratage/speech-evidence", version: "0.0.0-dev" } as const;
+export const speechEvidenceModuleRef = { name: "@narratage/speech-evidence", version: "1" } as const;
 export const speechEvidenceTypes = { alignedTranscript: { module: speechEvidenceModuleRef, name: "AlignedTranscriptEvidence" } } satisfies Record<string, TypeRef>;
 export const speechEvidenceManifest: ModuleManifest = { format: "svml.module@1", name: speechEvidenceModuleRef.name, version: speechEvidenceModuleRef.version,
   dependencies: [speechDependency], types: [{ name: speechEvidenceTypes.alignedTranscript.name, schema: alignedTranscriptEvidenceSchema }], capabilities: [], surfaces: [], producers: [] };

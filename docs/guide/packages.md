@@ -1,14 +1,14 @@
 ---
 title: Package Architecture
-description: The four layers, dependency boundaries, package anatomy and facets.
+description: The five layers, dependency boundaries, package anatomy and facets.
 ---
 
 # Package Architecture
 
-Workspace packages under `packages/` are organized into four architectural layers. Each layer has
+Workspace packages under `packages/` are organized into five architectural layers. Each layer has
 strict dependency rules enforced by tests on every commit.
 
-## The four layers
+## The five layers
 
 ### Layer 1: Domain-neutral foundation
 
@@ -38,6 +38,7 @@ Script, Seedance, Film or any video concept.
 @narratage/artifact-store-fs     filesystem Artifact store
 @narratage/artifact-store-s3     S3 Artifact store
 @narratage/credential-store-env  environment credentials
+@narratage/credential-store-keychain macOS Keychain credentials
 @narratage/transport             invocation seams
 @narratage/transport-aws-lambda  Lambda transport
 @narratage/local                 SQLite/filesystem developer assembly
@@ -84,10 +85,18 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/speech-alignment      speech alignment
 @narratage/speech-spine          ordered speech-take compilation
 @narratage/whisperx              WhisperX component
-@narratage/caption               caption planning and Track
+@narratage/temporal              Selection/Moment projection and schedules
+@narratage/spatial               Canvas/Frame/Point/Path geometry
+@narratage/caption               caption planning and timing
 @narratage/caption-gemini        Gemini caption planner
+@narratage/caption-fine          field-free fine caption Track family
+@narratage/fonts-open            exact redistributable font catalog
 @narratage/media-track           unified Media Item/Sequence Track
 @narratage/text-track            text overlay Track
+@narratage/audio-track           arbitrary sample-domain Audio Track
+@narratage/deck-track            depth-stack collection Track
+@narratage/ranking               four ranking component families
+@narratage/screen-overlay        self-contained full-canvas overlays
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
 @narratage/visual-ir             renderer-neutral visual vocabulary
@@ -104,7 +113,7 @@ Privileged external capabilities. Depend on Runtime ports and the model families
 on the CLI.
 
 ```text
-@narratage/provider-kie                  KIE generation (16 model capabilities)
+@narratage/provider-kie                  KIE generation (11 exact model capabilities)
 @narratage/provider-media-local          local ffprobe/ffmpeg
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
@@ -114,7 +123,7 @@ on the CLI.
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
 ```
 
-### Application layer
+### Layer 5: Application
 
 ```text
 @narratage/cli           generic command engine (requires explicit Distribution)
@@ -174,6 +183,9 @@ packages/example/
   `@narratage/*` imports to source entry points via `paths`.
 - `"svml.activation"` is the entry point that the Package Loader reads when this package is
   byte-locked. It must default-export a `NodePackageContribution`.
+- The physical package version remains `0.0.0-dev` until publication. Module and Frontend manifests
+  use the independent logical protocol version `1`; exact implementation identity is the lock
+  digest.
 
 ### activation.ts
 
