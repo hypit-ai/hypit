@@ -314,9 +314,9 @@ import the private pre-release catalog and select only the faces the Author Grap
 ```svml
 <import as="fonts" from="@narratage/fonts-open@1"/>
 
-<fonts:Face id="inter-semibold" family="inter" weight="600" style="normal"/>
-<fonts:Face id="noto-cjk-semibold" family="noto-sans-sc" weight="600" style="normal"/>
-<fonts:Face id="symbols" family="noto-emoji" weight="400" style="normal"/>
+<fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
+</fonts:Stack>
 ```
 
 | Property | Description |
@@ -324,26 +324,25 @@ import the private pre-release catalog and select only the faces the Author Grap
 | `family` | A family from the package's finite catalog |
 | `weight` | Exact selected face weight |
 | `style` | Selected style: `normal` or a family-supported `italic` |
+| `emoji` | Optional `color` (COLRv1) or `mono` fallback on `Stack` |
 
-The catalog currently includes Inter, Montserrat, DM Sans, Manrope, Poppins, Bebas Neue, Playfair
-Display, Source Serif 4, Noto Sans SC, Noto Serif SC and Noto Emoji. Its Fontsource dependencies are
-pinned to `5.3.0`; the compiler hashes the installed bytes into a content-addressed
-`FontArtifactRef`. It performs no font download during a build, and the Runtime never guesses a
-font:
+The catalog contains 109 open families across handwriting, script, display, sans, serif,
+monospace, CJK, world-script and Emoji categories. Fontsource dependencies are pinned to `5.3.0`;
+the Chromium-compatible COLRv1 Emoji package is pinned separately. The compiler hashes installed
+bytes into content-addressed font values. It performs no download during a build, and the Runtime
+never guesses a font:
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
-  font={inter-semibold}>
-  <caption-fine:Fallback font={noto-cjk-semibold}/>
-  <caption-fine:Fallback font={symbols}/>
-</caption-fine:Style>
+  font={caption-fonts}/>
 ```
 
-`font=` is the primary face; ordered `Fallback` children cover additional glyph sets such as CJK or
-emoji. The primary must match the Recipe's weight/style; fallback faces preserve their own honest
-weight/style. CJK and emoji can be split into several Unicode-range files while remaining one
-logical font edge. Omitting the stack keeps the Recipe's `font` family as an environment fallback,
+`fonts:Stack` emits one generic `FontStackRef`: its primary must match the Recipe's weight/style and
+its fallbacks preserve their own honest metadata. CJK and Emoji can be split into several
+Unicode-range files while remaining one logical graph edge. Omitting the stack keeps the Recipe's `font` family as an environment fallback,
 which is convenient for prototypes but is not byte-reproducible.
+For a symbol with both text and Emoji presentation, write the authored Unicode Emoji sequence
+(for example `☎️`, including VS16); no package rewrites display text to force color.
 
 Brand and custom fonts remain explicit author assets rather than additions to the shared catalog:
 

@@ -140,9 +140,11 @@ port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 
 ## C. Current video-domain work, still pre-freeze
 
-Caption Fine's restrained surface is complete: exact primary/fallback fonts, CJK, emoji/symbols,
-multiline layout, outline/shadow/glow and all current/trail by step/wipe combinations have real
-browser evidence. It deliberately has no line-clipping or `max-lines` behavior.
+Caption Fine's complete field-free surface is implemented: exact primary/fallback fonts, CJK,
+emoji/symbols, multiline layout, solid/gradient Paint, outline/shadow/long-shadow/glow/underline,
+independent glyph/Pill/underline activation, joined wrapped trail geometry and layered deterministic
+local motion. Glyph karaoke modes and joined Pill geometry have real browser evidence. It
+deliberately has no line-clipping or `max-lines` behavior.
 
 Implement these against real delivery examples, but do not freeze or indiscriminately expand the
 video author surface yet:

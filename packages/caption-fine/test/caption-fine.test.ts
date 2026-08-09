@@ -88,7 +88,11 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
       "letter-spacing": -1.5,
       "word-gap": 11,
       "font-style": "italic",
+      "text-transform": "uppercase",
       opacity: 0.9,
+      "gradient-from": "#FFFFFF",
+      "gradient-to": "#55CCFF",
+      "gradient-angle": 120,
       "stroke-color": "#101010",
       "stroke-width": 3,
       "shadow-color": "#000000",
@@ -99,11 +103,22 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
       "glow-color": "#5CE1E6",
       "glow-opacity": 0.6,
       "glow-blur": 12,
+      "long-shadow-color": "#111827",
+      "long-shadow-opacity": 0.45,
+      "long-shadow-distance": 14,
+      "long-shadow-angle": 35,
+      underline: "always",
+      "underline-color": "#A7F3D0",
+      "underline-thickness": 3,
+      "underline-offset": 6,
       "border-color": "#FFFFFF80",
       "border-width": 2,
       karaoke: "trail",
       "karaoke-transition": "wipe",
       "active-fill": "#FFDD00",
+      "active-gradient-from": "#FFF176",
+      "active-gradient-to": "#FF6F00",
+      "active-gradient-angle": 90,
       "active-opacity": 0.95,
       "active-stroke-color": "#401000",
       "active-stroke-width": 1,
@@ -115,11 +130,39 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
       "active-glow-color": "#FFFFFF",
       "active-glow-opacity": 0.7,
       "active-glow-blur": 10,
-      "cue-enter": "fade",
-      "cue-exit": "fade",
-      "cue-transition-frames": 6,
-      "atom-reveal": "on-start",
-      "active-scale": 1.08,
+      "active-long-shadow-color": "#7C2D12",
+      "active-long-shadow-opacity": 0.5,
+      "active-long-shadow-distance": 8,
+      "active-long-shadow-angle": 45,
+      "active-underline": "current",
+      "active-underline-color": "#FFFFFF",
+      "active-underline-thickness": 4,
+      "active-underline-offset": 7,
+      "active-box": "trail",
+      "active-box-continuity": "joined",
+      "active-box-background": "#FACC15CC",
+      "active-box-border-color": "#FFFFFF80",
+      "active-box-border-width": 2,
+      "active-box-padding": "5 9",
+      "active-box-radius": 10,
+      "active-box-enter": "pop",
+      "active-box-exit": "fade",
+      "active-box-transition-frames": 4,
+      "cue-enter": "spring",
+      "cue-exit": "blur-in",
+      "cue-enter-frames": 6,
+      "cue-exit-frames": 6,
+      "atom-enter": "slide-up",
+      "atom-enter-frames": 5,
+      "atom-reveal": "typewriter",
+      "active-response": "spring",
+      "active-response-frames": 7,
+      "active-scale": 1.12,
+      "slide-distance": 20,
+      loop: "wobble",
+      "loop-target": "active-atom",
+      "loop-period-frames": 14,
+      "loop-intensity": 0.8,
     },
   });
 
@@ -128,13 +171,27 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
   });
   assert.equal(parameters.layout.direction, "rtl");
   assert.equal(parameters.typography.fontStyle, "italic");
+  assert.equal(parameters.typography.textTransform, "uppercase");
+  assert.deepEqual(parameters.basePaint.gradient, { from: "#FFFFFF", to: "#55CCFF", angleDeg: 120 });
   assert.equal(parameters.basePaint.stroke.widthPx, 3);
   assert.equal(parameters.basePaint.glow.blurPx, 12);
+  assert.equal(parameters.basePaint.longShadow.distancePx, 14);
   assert.equal(parameters.activePaint.fill, "#FFDD00");
   assert.equal(parameters.activePaint.shadow.offsetYPx, 2);
+  assert.equal(parameters.underline.mode, "always");
+  assert.equal(parameters.activeUnderline.mode, "current");
+  assert.equal(parameters.activeBox.continuity, "joined");
+  assert.deepEqual(parameters.activeBox, {
+    mode: "trail", continuity: "joined", background: "#FACC15CC", borderColor: "#FFFFFF80",
+    borderWidthPx: 2, paddingXPx: 9, paddingYPx: 5, radiusPx: 10,
+    enter: "pop", exit: "fade", transitionFrames: 4,
+  });
   assert.deepEqual(parameters.karaoke, { mode: "trail", transition: "wipe" });
   assert.deepEqual(parameters.motion, {
-    cueEnter: "fade", cueExit: "fade", cueTransitionFrames: 6, atomReveal: "on-start", activeScale: 1.08,
+    cueEnter: "spring", cueExit: "blur-in", cueEnterFrames: 6, cueExitFrames: 6,
+    atomEnter: "slide-up", atomEnterFrames: 5, atomReveal: "typewriter",
+    activeResponse: "spring", activeResponseFrames: 7, activeScale: 1.12, slideDistancePx: 20,
+    loop: "wobble", loopTarget: "active-atom", loopPeriodFrames: 14, loopIntensity: 0.8,
   });
 });
 
@@ -152,7 +209,8 @@ test("karaoke uses one active overlay per whole Atom and never invents Dual Text
       "active-scale": 1.04,
       "cue-enter": "fade",
       "cue-exit": "fade",
-      "cue-transition-frames": 4,
+      "cue-enter-frames": 4,
+      "cue-exit-frames": 4,
     },
   });
   const program = resolveCaptionProgram(display, "karaoke-captions", style, []);
@@ -197,6 +255,10 @@ test("Fine rejects unknown or obsolete Recipe dimensions instead of silently acc
     ...recipe,
     properties: { ...recipe.properties, important: true },
   }), /unknown property important/u);
+  assert.throws(() => fineCaptionStyle("half-gradient", {
+    ...recipe,
+    properties: { ...recipe.properties, "gradient-from": "#FFFFFF" },
+  }), /requires both from and to/u);
 });
 
 test("an exact Font is explicit Style input and reaches every base and active glyph", () => {
@@ -291,4 +353,144 @@ test("current/trail by step/wipe have four distinct frame-exact Atom histories",
   assert.equal(at(trailWipe, 0, "clip-path"), "inset(0 100% 0 0)");
   assert.equal(at(trailWipe, 10, "clip-path"), "inset(0 0% 0 0)");
   assert.equal(at(trailWipe, 20, "clip-path"), "inset(0 0% 0 0)");
+});
+
+test("full Fine Paint and layered motion lower to terminal Visual IR without changing Caption truth", () => {
+  const narrative = parseScript("full.svml", "<line>Every authored atom stays intact.</line>");
+  const display = captionDisplaySequence(narrative, "full.caption");
+  const style = fineCaptionStyle("full", {
+    ...recipe,
+    properties: {
+      ...recipe.properties,
+      "text-transform": "uppercase",
+      "gradient-from": "#FFFFFF", "gradient-to": "#60A5FA", "gradient-angle": 120,
+      "long-shadow-color": "#172554", "long-shadow-opacity": 0.55,
+      "long-shadow-distance": 8, "long-shadow-angle": 45,
+      underline: "always", "underline-color": "#A7F3D0", "underline-thickness": 2, "underline-offset": 5,
+      karaoke: "trail", "karaoke-transition": "wipe",
+      "active-gradient-from": "#FDE047", "active-gradient-to": "#F97316", "active-gradient-angle": 90,
+      "active-underline": "current", "active-underline-color": "#FFFFFF",
+      "active-box": "trail", "active-box-continuity": "joined", "active-box-background": "#F59E0BCC",
+      "active-box-padding": "4 7", "active-box-radius": 8,
+      "cue-enter": "spring", "cue-enter-frames": 5, "cue-exit": "blur-in", "cue-exit-frames": 5,
+      "atom-enter": "slide-up", "atom-enter-frames": 4, "atom-reveal": "typewriter",
+      "active-response": "pop", "active-response-frames": 4, "active-scale": 1.12,
+      loop: "wobble", "loop-target": "active-atom", "loop-period-frames": 8, "loop-intensity": 1,
+    },
+  });
+  const program = resolveCaptionProgram(display, "full-program", style, []);
+  const projection: TimedCaptionProjection = {
+    contract: "svml.timed-caption-projection@1",
+    displaySequenceId: display.id,
+    cues: [{
+      id: "cue:full", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+      startSec: 0, endSec: 4,
+      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+      fields: [],
+    }],
+  };
+  const space = sealProgramSpace({
+    contract: "svml.program-space@1", durationSec: 4, frameRate: { numerator: 10, denominator: 1 },
+  });
+  const elements = renderFineCaption(projection, program, display, space).presents[0]!.elements;
+  const base = elements.find((element) => element.id === "atom-1-base-1");
+  assert.equal(base?.kind, "text");
+  assert.ok(base?.style.some(({ name }) => name === "background-image"));
+  assert.ok(base?.style.some(({ name, value }) => name === "text-transform" && value === "uppercase"));
+  assert.ok(base?.style.some(({ name }) => name === "text-decoration-thickness"));
+  assert.ok(base?.style.some(({ name, value }) => name === "text-shadow" && String(value).split(",").length >= 8));
+  const activeGlyph = elements.find((element) => element.id === "atom-1-active-1");
+  assert.equal(activeGlyph?.kind, "text");
+  assert.ok(activeGlyph?.style.some(({ name }) => name === "background-image"));
+  const joined = elements.filter((element) => element.attributes?.some((attribute) =>
+    attribute.name === "data-caption-active-box" && attribute.value === "joined"));
+  assert.equal(joined.length, display.atoms.length);
+  const joinedText = elements.find((element) => element.id === `joined-box-${display.atoms.length}-text`);
+  assert.equal(joinedText?.kind, "text");
+  assert.ok(joinedText?.style.some(({ name, value }) => name === "box-decoration-break" && value === "clone"));
+  assert.ok(elements.find((element) => element.id === "cue-motion")?.animation);
+  assert.ok(elements.find((element) => element.id === "atom-1-typewriter")?.animation?.keyframes.some((keyframe) =>
+    keyframe.style.some(({ name }) => name === "clip-path")));
+  assert.ok(elements.find((element) => element.id === "atom-1-loop")?.animation);
+  assert.ok(elements.find((element) => element.id === "atom-1-response")?.animation);
+  assert.equal(elements.filter((element) => element.attributes?.some((attribute) =>
+    attribute.name === "data-caption-active-underline")).length, display.atoms.length);
+});
+
+test("glyph, underline and Pill activation are independent channels", () => {
+  const narrative = parseScript("channels.svml", "<line>Read this now.</line>");
+  const display = captionDisplaySequence(narrative, "channels.caption");
+  const style = fineCaptionStyle("channels", {
+    ...recipe,
+    properties: {
+      ...recipe.properties,
+      karaoke: "trail",
+      "active-underline": "trail",
+      "active-box": "current",
+      "active-box-continuity": "joined",
+      "active-box-background": "#FFD54ACC",
+      "active-box-padding": "3 6",
+    },
+  });
+  const program = resolveCaptionProgram(display, "channels-program", style, []);
+  const projection: TimedCaptionProjection = {
+    contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
+    cues: [{
+      id: "cue:channels", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+      startSec: 0, endSec: 3,
+      atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+      fields: [],
+    }],
+  };
+  const space = sealProgramSpace({
+    contract: "svml.program-space@1", durationSec: 3, frameRate: { numerator: 10, denominator: 1 },
+  });
+  const elements = renderFineCaption(projection, program, display, space).presents[0]!.elements;
+  assert.equal(elements.filter((element) => element.attributes?.some((attribute) =>
+    attribute.name === "data-caption-karaoke" && attribute.value === "trail")).length, display.atoms.length);
+  assert.equal(elements.filter((element) => element.attributes?.some((attribute) =>
+    attribute.name === "data-caption-active-underline" && attribute.value === "trail")).length, display.atoms.length);
+  const boxes = elements.filter((element) => element.attributes?.some((attribute) =>
+    attribute.name === "data-caption-active-box"));
+  assert.equal(boxes.length, display.atoms.length);
+  assert.equal(boxes.every((element) => element.attributes?.some((attribute) => attribute.value === "isolated")), true);
+});
+
+test("every declared one-shot and loop motion lowers through the same wrapper vocabulary", () => {
+  const narrative = parseScript("motions.svml", "<line>Motion stays local.</line>");
+  const display = captionDisplaySequence(narrative, "motions.caption");
+  const space = sealProgramSpace({
+    contract: "svml.program-space@1", durationSec: 3, frameRate: { numerator: 10, denominator: 1 },
+  });
+  const render = (id: string, properties: Readonly<Record<string, string | number>>) => {
+    const style = fineCaptionStyle(id, { ...recipe, properties: { ...recipe.properties, ...properties } });
+    const program = resolveCaptionProgram(display, `${id}-program`, style, []);
+    const projection: TimedCaptionProjection = {
+      contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
+      cues: [{
+        id: `cue:${id}`, runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+        startSec: 0, endSec: 3,
+        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+        fields: [],
+      }],
+    };
+    return renderFineCaption(projection, program, display, space).presents[0]!.elements;
+  };
+  for (const kind of [
+    "fade", "pop", "spring", "slide-left", "slide-right", "slide-up", "slide-down", "blur-in",
+  ] as const) {
+    const elements = render(`enter-${kind}`, { "cue-enter": kind, "cue-enter-frames": 6 });
+    assert.ok(elements.find((element) => element.id === "cue-motion")?.animation, `${kind} emitted no Cue animation`);
+  }
+  for (const kind of ["shake", "wobble", "glow-pulse"] as const) {
+    const elements = render(`loop-${kind}`, { loop: kind, "loop-target": "cue", "loop-period-frames": 8 });
+    assert.ok(elements.find((element) => element.id === "cue-loop")?.animation, `${kind} emitted no loop animation`);
+  }
+  for (const kind of ["scale", "pop", "spring"] as const) {
+    const elements = render(`response-${kind}`, {
+      "active-response": kind, "active-response-frames": 5, "active-scale": 1.12,
+    });
+    assert.ok(elements.find((element) => element.id === "atom-1-response")?.animation,
+      `${kind} emitted no active response`);
+  }
 });

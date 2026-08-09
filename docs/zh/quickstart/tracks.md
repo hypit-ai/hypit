@@ -24,30 +24,49 @@ Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样�
 ```
 
 公共 Caption 只负责 Cue 字数边界、可选的通用逐词字段、完整样式分配、Plan 校验与时间
-拼接。Fine 是第一种无字段样式族，负责自己的字体/框参数和统一 Cue 视觉渲染。
+拼接。Fine 是第一种无字段样式族，负责自己的几何、字形/Cue/Pill Paint 与局部动画。
 
 ### caption-fine:Style
 
 一个 Style 是不可拆分的“规划要求 + 渲染参数”。Fine 从一个包自有的 SVS Recipe
 同时解析两者：
 
-```svml
-<fonts:Face id="caption-font" family="inter" weight="700" style="normal"/>
-<fonts:Face id="caption-cjk" family="noto-sans-sc" weight="700" style="normal"/>
-<fonts:Face id="caption-symbols" family="noto-emoji" weight="400" style="normal"/>
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
-  font={caption-font}>
-  <caption-fine:Fallback font={caption-cjk}/>
-  <caption-fine:Fallback font={caption-symbols}/>
-</caption-fine:Style>
+```svs
+caption.primary {
+  cue-min-words: 2; cue-max-words: 7;
+  stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+  anchor-x: center; anchor-y: bottom;
+  font: Inter; weight: 700; size: 58; line-height: 1; align: center;
+  fill: #FFFFFF; stroke-color: #09090B; stroke-width: 2;
+  background: #00000000; padding: 0; radius: 0;
+  karaoke: trail; karaoke-transition: wipe; active-fill: #FFD54A;
+  active-box: current; active-box-continuity: isolated;
+  active-box-background: #FFD54ACC; active-box-padding: 4 8; active-box-radius: 8;
+  active-underline: current; active-underline-color: #FFFFFF;
+  cue-enter: spring; cue-enter-frames: 6;
+  active-response: pop; active-response-frames: 5; active-scale: 1.08;
+}
 ```
 
-显式的 `font=` 边与有序 `Fallback` 子元素让最终字体栈按字节复现。主字体必须与 Recipe
+```svml
+<fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
+</fonts:Stack>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+  font={caption-fonts}/>
+```
+
+显式的 `font=` 边携带一个按字节复现的 `FontStackRef`。主字体必须与 Recipe
 的 weight/style 一致；每个 Fallback 保留自己的真实字体信息。省略字体栈则明确使用
 Recipe 的环境字体兜底名；Caption 和 Runtime 都不会替作者猜字体。
 
 Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
 逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。
+
+Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill
+和动画均为正交维度。文字、下划线和 Pill 各自选择 `off | current | trail`；因此可以
+直接表达“文字保留已读色，但 Pill 只跟随当前词”。`active-box-continuity: joined` 会把
+已读前缀在每个真实换行片段内连成一个背景，而不是给每个词分别套胶囊。
 
 Fine 只在完整 Atom 之间自然换行，永不裁掉作者文字，因此有意不提供 `max-lines`。
 需要控制行数时，应调整 Cue 字数边界、Track 宽度与字号。

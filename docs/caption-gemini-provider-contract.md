@@ -7,7 +7,7 @@ Status: implemented vertical slice. This contract contains no credential or netw
 ```text
 @narratage/script                 display Atoms/Words and Atom-to-speech correspondence
 @narratage/caption                total Style assignment, Plan validation and whole-Atom timing
-@narratage/caption-fine           one field-free Style family, whole-Atom karaoke and VisualTrack renderer
+@narratage/caption-fine           one field-free Style family and whole-Atom visual renderer
 @narratage/caption-gemini         Gemini request construction and response lowering
 @narratage/provider-google-vertex credentials, generateContent transport and queue lane
 ```
