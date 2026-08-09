@@ -15,6 +15,7 @@
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="pipeline" from="@narratage/media-pipeline@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/text-track@1"/>
@@ -66,11 +67,12 @@
   </seedance:Prompt>
 
   <!-- Complete styles are declared once. Selection and use remain separate. -->
-  <caption-fine:Style id="dialogue-caption" recipe={studio.caption.dialogue}/>
+  <fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
+  <caption-fine:Style id="dialogue-caption" recipe={studio.caption.dialogue} font={caption-font}/>
 
-  <caption-fine:Style id="alice-caption" recipe={studio.caption.alice}/>
+  <caption-fine:Style id="alice-caption" recipe={studio.caption.alice} font={caption-font}/>
 
-  <caption-fine:Style id="bob-caption" recipe={studio.caption.bob}/>
+  <caption-fine:Style id="bob-caption" recipe={studio.caption.bob} font={caption-font}/>
 
   <caption:Program id="caption-program" display={script.caption} default={dialogue-caption}>
     <caption:Use role="ALICE" style={alice-caption}/>

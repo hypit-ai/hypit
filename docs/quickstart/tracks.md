@@ -5,9 +5,9 @@ description: Visual track components — captions, media overlays and text overl
 
 # Caption, Media & Text
 
-> **Pre-freeze note:** Caption Fine and Media Track execute their declared author Surfaces. Text is
-> still the small graph witness described here; its complete author model remains governed by
-> `spec/text-track.md`. None of these package contracts is a frozen public ABI yet.
+> **Pre-release note:** Caption Fine, Media Track and Text execute their declared author Surfaces.
+> Their author APIs may still evolve; the shared terminal Track/Visual IR waist is frozen inside the
+> repository but has not been published as an npm ABI.
 
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and their z-order is determined by the `stack-order` property in SVS. This page
@@ -77,10 +77,9 @@ caption.primary {
   font={caption-fonts}/>
 ```
 
-The explicit `font=` edge carries one byte-reproducible `FontStackRef`. The primary face must match
-the Recipe's weight/style; each fallback retains its
-own exact face metadata. Omitting the stack deliberately uses the Recipe's `font` family as an
-environment fallback; neither Caption nor the Runtime chooses a font on the author's behalf.
+The required `font=` edge carries one byte-reproducible `FontStackRef`. The primary face must match
+the Recipe's weight/style; each fallback retains its own exact face metadata. Fine rejects a Style
+without that stack instead of falling back to machine fonts.
 
 Another Caption package may define completely different planning fields and visual parameters
 without changing the common package.
@@ -265,13 +264,15 @@ All three track types together in one source file:
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 <import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/text-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
-<caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+<fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+<caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>

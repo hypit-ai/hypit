@@ -3,7 +3,7 @@
 The official field-free fine-grained Caption Style family. It turns one SVS Recipe into a complete
 `CaptionStyle` and lowers timed whole Atoms into one ordinary peer `VisualTrack`.
 
-Fine owns Cue geometry, single-font typography, base/active glyph Paint, Cue/Pill Paint and layered
+Fine owns Cue geometry, exact-stack typography, base/active glyph Paint, Cue/Pill Paint and layered
 local motion. Glyph, underline and Pill activation are independent `off | current | trail` channels;
 Pills may be isolated or one joined prefix across real browser line fragments. Ordinary single-Word
 Atoms get per-word timing while a Dual Text Atom remains one honest indivisible activation unit. It
@@ -59,8 +59,8 @@ already-read Pill rather than one capsule per Atom. Text may remain `trail` whil
 
 One Track handles the default and ordered Style replacements. `font=` accepts either one exact
 `FontArtifactRef` plus ordered Style `Fallback` children, or a reusable Media `FontStackRef` such as
-the compact `fonts:Stack` above. The primary must match the Recipe's weight/style; fallbacks keep their own
-honest face metadata. Omitting the stack is the explicit environment-font prototype path. Fine never
-clips author text and intentionally has no `max-lines`.
+the compact `fonts:Stack` above. The primary must match the Recipe's weight/style; fallbacks keep
+their own honest face metadata. Omitting the stack is invalid rather than an environment-font
+prototype path. Fine never clips author text and intentionally has no `max-lines`.
 Common Caption, Composition and Core know none of Fine's Recipe fields or layout policy. See
 `spec/caption-fine.md` for the full parameter surface, defaults and non-goals.

@@ -36,7 +36,9 @@
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+  <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program} model="gemini-2.5-flash"/>
 
@@ -49,7 +51,6 @@
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
     map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
-  <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
   <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
   <text:Track id="titles" space={speech.space}>
     <text:Area id="meaning" placement={title-frame} style={title-style} during="program">

@@ -461,6 +461,6 @@ The pure geometry matrix and real Chromium witness now cover every sizing mode, 
 alignments, unequal bounded/free focal points and partially/fully off-Canvas Frames. Media
 normalization additionally materializes container rotation and non-square sample aspect into a
 square-pixel visual before deriving `IntrinsicExtent`. Ranking now consumes the same explicit Frame
-geometry without adding a family discriminator. Spatial remains pre-freeze until the final Visual IR
-compatibility audit passes; no package-local percentage vocabulary should grow in
-the meantime.
+geometry without adding a family discriminator. The final Visual IR compatibility audit now passes;
+Spatial's own author Surface remains pre-release, and no package-local percentage vocabulary should
+grow in the meantime.

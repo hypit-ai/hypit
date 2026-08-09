@@ -119,6 +119,7 @@ The complete data flow from Script to rendered video. This example is based on
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="pipeline" from="@narratage/media-pipeline@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/text-track@1"/>
@@ -155,7 +156,8 @@ The complete data flow from Script to rendered video. This example is based on
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <!-- 4. Tracks: captions, Media, text -->
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+  <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption}

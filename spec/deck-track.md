@@ -268,8 +268,8 @@ Steps 1–8 execute in `@narratage/deck-track`. Package tests cover every state,
 playback, label and extension case below. The real HyperFrames witness renders a Twinit-style
 three-Card depth stack twice—one worker and three partitioned workers—and compares every decoded
 frame byte-for-byte while also proving each authored current state paints. This completes the Deck
-package acceptance matrix; the terminal VisualTrack/Visual IR waist remains pre-freeze until the
-generic E1–E8 freeze criteria are all complete.
+package acceptance matrix, and the independent generic E1–E8 terminal VisualTrack/Visual IR gates
+now pass as well.
 
 Required evidence includes:
 

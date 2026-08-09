@@ -504,7 +504,7 @@ function cueElements(
           { name: "padding", value: `${compactNumber(parameters.activeBox.paddingYPx)}px ${compactNumber(parameters.activeBox.paddingXPx)}px` },
           { name: "white-space", value: "normal" },
         ],
-        ...(fonts === undefined ? {} : { fonts }),
+        fonts,
       });
     }
   }
@@ -602,7 +602,7 @@ function cueElements(
         kind: "text",
         text,
         style: glyphStyle(parameters, parameters.basePaint, parameters.underline),
-        ...(fonts === undefined ? {} : { fonts }),
+        fonts,
         attributes: [{ name: "data-caption-word", value: wordId }],
       });
     }
@@ -639,7 +639,7 @@ function cueElements(
           style: kind === "glyph"
             ? glyphStyle(parameters, parameters.activePaint)
             : transparentGlyphStyle(parameters, parameters.activeUnderline),
-          ...(fonts === undefined ? {} : { fonts }),
+          fonts,
           attributes: [{ name: kind === "glyph" ? "data-caption-active-word" : "data-caption-underlined-word", value: wordId }],
         });
       }

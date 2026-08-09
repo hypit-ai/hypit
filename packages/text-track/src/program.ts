@@ -100,9 +100,6 @@ export function assertTextStyle(style: TextStyle): void {
   if (style.typography.fonts === undefined) {
     throw new Error("Official TextStyle requires an exact content-addressed font stack.");
   }
-  if (style.typography.prototypeFamily !== undefined) {
-    throw new Error("Official TextStyle does not accept an environment font family.");
-  }
   if (!["start", "center", "end"].includes(style.point.anchorInline)
     || !["start", "center", "end"].includes(style.point.anchorBlock)
     || !["left", "right"].includes(style.path.side)
@@ -529,6 +526,7 @@ function maskTextElement(item: TextItem): VisualTextElement {
     throw new Error(`${item.id} advanced Text Mask flow must be materialized by an independent package.`);
   }
   const fonts = typography.fonts;
+  if (fonts.length === 0) throw new Error("Text Mask requires an exact content-addressed font stack.");
   if (fonts !== undefined) {
     const primary = fonts[0];
     if (primary === undefined || primary.weight !== typography.weight || primary.style !== typography.style || typography.synthesis !== "none") {
@@ -547,11 +545,6 @@ function maskTextElement(item: TextItem): VisualTextElement {
     { name: "overflow", value: area.overflow === "clip" || area.clipToFrame ? "hidden" : "visible" },
     { name: "text-align", value: area.inlineAlign },
     { name: "font-size", value: `${typography.sizePx}px` },
-    ...(fonts === undefined ? [
-      { name: "font-weight", value: typography.weight } as const,
-      { name: "font-style", value: typography.style } as const,
-      { name: "font-synthesis", value: typography.synthesis } as const,
-    ] : []),
     { name: "font-kerning", value: typography.kerning },
     { name: "letter-spacing", value: `${typography.trackingPx}px` },
     { name: "word-spacing", value: `${typography.wordSpacingPx}px` },
@@ -573,7 +566,7 @@ function maskTextElement(item: TextItem): VisualTextElement {
   }
   return {
     id: "text", parent: "mask", kind: "text", order: 1,
-    text: maskText(item), ...(fonts === undefined ? {} : { fonts }), style,
+    text: maskText(item), fonts, style,
     attributes: [
       ...(typography.language === undefined ? [] : [{ name: "lang", value: typography.language }]),
       ...(typography.direction === "auto" ? [] : [{ name: "dir", value: typography.direction }]),

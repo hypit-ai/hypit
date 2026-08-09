@@ -12,3 +12,8 @@ A Type declaration may lock an optional `svml.type-validator@1` implementation. 
 data-only: Protocol describes the validator and its content-bound receipt but never loads or runs
 code. Structural Schema, semantic refinement execution and receipt verification remain separate
 responsibilities.
+
+A Need fulfillment may carry a Host-attested implementation binding: locked Endpoint implementation
+digest, non-secret configuration digest and applied Runtime closure digest. The Endpoint does not
+supply this value. Receipt content addressing covers the binding and any renderer-specific evidence
+stored in fulfillment metadata without teaching Protocol what a renderer is.

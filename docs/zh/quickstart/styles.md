@@ -92,7 +92,7 @@ caption.dialogue {
 | `stack-order` | 所有 Track 之间的 Z 轴层叠顺序（值越大越靠前） |
 | `x`、`y` | 位置，以画布比例表示（0–1） |
 | `width` | 宽度，以画布比例表示 |
-| `font` | 便于阅读的字体族标签，也是环境字体兜底名 |
+| `font` | Recipe 中便于阅读的字体标签；精确字节来自必填的 `font=` 图边 |
 | `weight` | 请求的字体粗细（1–1000） |
 | `size` | 字体大小（像素） |
 | `line-height` | 行高倍数 |
@@ -140,9 +140,10 @@ caption.bob {
 然后通过 `caption:Program` 进行分配：
 
 ```svml
-<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue}/>
-<caption-fine:Style id="alice-caption" recipe={studio.caption.alice}/>
-<caption-fine:Style id="bob-caption" recipe={studio.caption.bob}/>
+<fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
+<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue} font={caption-font}/>
+<caption-fine:Style id="alice-caption" recipe={studio.caption.alice} font={caption-font}/>
+<caption-fine:Style id="bob-caption" recipe={studio.caption.bob} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
@@ -338,8 +339,7 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
 
 `fonts:Stack` 产出通用 `FontStackRef`：主字体必须和 Recipe 的 weight/style 一致，Fallback
 保留自己的真实元数据。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是
-一条逻辑边。省略字体栈时会使用
-Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现。
+一条逻辑边。终端 Text 与 Fine Caption 都拒绝省略字体栈；Visual IR 不接受机器字体兜底。
 对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如
 包含 VS16 的 `☎️`）；任何包都不会为了强制彩色而改写显示稿。
 
@@ -415,7 +415,7 @@ Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现�
 
 <speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
 
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
 <space:Canvas id="vertical" width="720" height="1280"/>
 <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>

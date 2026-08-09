@@ -1,4 +1,4 @@
-import type { CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue, Digest } from "@narratage/protocol";
 import {
   createRuntimeEndpointAdapterFacet,
   runtimeConfigExact,
@@ -15,7 +15,7 @@ import type {
 } from "./provider.js";
 
 const CONFIG_KEYS = [
-  "stateMachineArn", "bucketName", "region", "quality", "chunkSize", "maxParallelChunks",
+  "stateMachineArn", "bucketName", "rendererImplementationDigest", "region", "quality", "chunkSize", "maxParallelChunks",
   "targetChunkFrames", "defaultMemorySizeMb", "defaultConcurrency", "pollIntervalMs",
   "maxOperationMs", "maxRenderedBytes", "maxPollFailures", "maxAttempts",
 ] as const;
@@ -49,6 +49,13 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
     || /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(bucketName)) {
     throw new Error("HyperFrames bucketName is invalid");
   }
+  const rendererImplementationDigest = runtimeConfigString(
+    config.rendererImplementationDigest,
+    "HyperFrames rendererImplementationDigest",
+  );
+  if (rendererImplementationDigest === undefined || !/^sha256:[0-9a-f]{64}$/u.test(rendererImplementationDigest)) {
+    throw new Error("AWS Lambda HyperFrames rendererImplementationDigest is required and must be a digest");
+  }
   const region = runtimeConfigString(config.region, "HyperFrames region");
   if (region !== undefined && region !== machine[2]) {
     throw new Error(`HyperFrames region ${region} differs from state machine region ${machine[2]}`);
@@ -75,6 +82,7 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
     ...(context.lane === undefined ? {} : { lane: context.lane }),
     stateMachineArn,
     bucketName,
+    rendererImplementationDigest: rendererImplementationDigest as Digest,
     ...(region === undefined ? {} : { region }),
     ...(quality === undefined ? {} : { quality: quality as HyperframesLambdaQuality }),
     ...(chunkSize === undefined ? {} : { chunkSize }),

@@ -34,10 +34,12 @@ worker count are Runtime policy, not author intent and not Core graph nodes. The
 uses the rational HyperFrames `data-fps` form, so NTSC rates do not drift through a decimal guess.
 
 Exact `FontArtifactRef` dependencies lower to generated `@font-face` declarations with font
-synthesis disabled; a Unicode-range-sharded logical face emits one rule per exact source.
+synthesis disabled; a Unicode-range-sharded logical face emits one rule per exact source. Terminal
+text without a non-empty exact Font stack is invalid rather than falling back to machine fonts.
 `CompositableSurfaceRef` values lower as typed image/video surfaces carrying
 their declared alpha, color-space and frame-domain metadata. The package never guesses either fact
-from a user font name or filename extension.
+from a user font name or filename extension. The document carries a deduplicated typed Surface set
+beside its Artifact set so a staging Runtime can verify the exact bytes before rendering.
 
 The ordinary test suite validates deterministic HTML and Artifact collection. Set
 `SVML_BROWSER_TESTS=1` to run the host integration witness that invokes the installed Hyperframes

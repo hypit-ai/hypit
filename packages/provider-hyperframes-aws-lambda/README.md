@@ -13,10 +13,16 @@ crash window before the first checkpoint was saved.
 The distributed HyperFrames contract supports only integer 24, 30 and 60 fps. Unsupported Needs
 are declined by `supports()` so another Endpoint may satisfy them; no frame rate or GPU intent is
 silently changed. The Provider always requests strict SDR H.264, exact CFR assembly, software
-browser rendering and plan protocol v2. Chunking remains deployment configuration.
+browser rendering and plan protocol v2. It also declines Surface-bearing documents until the
+remote route owns the same byte verifier as the local Endpoint. Chunking remains deployment
+configuration.
 
 On success the Endpoint requires HyperFrames' plan and completed-frame counts to equal the source
 document, then streams the returned S3 object into the selected content-addressed ArtifactStore.
+Configuration must include the reviewed deployed renderer's content digest; a mutable state-machine
+ARN is not implementation identity. That digest and the document digest are repeated in
+receipt-covered renderer-attestation metadata, while the Driver independently binds the locked
+Endpoint/configuration/Runtime closure in the generic Need Receipt.
 This is a renderer execution receipt, not an ffprobe claim about the MP4 byte stream. Container and
 stream conformance stays in the explicit media inspection/mux capabilities, so the orchestrating
 machine does not acquire a hidden FFmpeg dependency.
