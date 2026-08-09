@@ -2,7 +2,7 @@ import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/g
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
 
-export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "0.0.0-dev" } as const;
+export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "1" } as const;
 
 export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
   contract: "svml.generation-ports@1",

@@ -12,7 +12,7 @@ import {
   projectSpeechVisualImplementationDigest,
 } from "./projection.js";
 
-export const speechBasisModuleRef = { name: "@narratage/speech-basis", version: "0.0.0-dev" } as const;
+export const speechBasisModuleRef = { name: "@narratage/speech-basis", version: "1" } as const;
 
 export const speechBasisProducers = {
   projectAudio: { module: speechBasisModuleRef, name: "project-audio" },

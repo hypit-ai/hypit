@@ -55,7 +55,7 @@ const SUPPORTED_FPS = new Set([24, 30, 60]);
 
 export const awsLambdaHyperframesProviderModuleRef = {
   name: "@narratage/provider-hyperframes-aws-lambda",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const awsLambdaHyperframesProviderImplementationDigest = digestOf(
   `@narratage/provider-hyperframes-aws-lambda/render@1+hyperframes@${HYPERFRAMES_VERSION}`,

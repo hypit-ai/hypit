@@ -7,7 +7,7 @@ export * from "./schedule.js";
 export * from "./sample.js";
 export type * from "./types.js";
 
-export const temporalModuleRef = { name: "@narratage/temporal", version: "0.0.0-dev" } as const;
+export const temporalModuleRef = { name: "@narratage/temporal", version: "1" } as const;
 export const temporalManifest: ModuleManifest = {
   format: "svml.module@1",
   name: temporalModuleRef.name,

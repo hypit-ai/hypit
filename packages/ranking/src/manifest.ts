@@ -11,7 +11,7 @@ import { temporalDependency } from "@narratage/temporal";
 
 import { rankingImplementationDigests, rankingValidatorDigests } from "./schedule.js";
 
-export const rankingModuleRef = { name: "@narratage/ranking", version: "0.0.0-dev" } as const;
+export const rankingModuleRef = { name: "@narratage/ranking", version: "1" } as const;
 export const rankingTypes = {
   header: { module: rankingModuleRef, name: "RankingHeader" },
   itemSpec: { module: rankingModuleRef, name: "RankingItemSpec" },

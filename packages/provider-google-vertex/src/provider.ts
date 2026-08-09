@@ -16,7 +16,7 @@ import type { CredentialRef } from "@narratage/runtime";
 
 export const googleVertexProviderModuleRef = {
   name: "@narratage/provider-google-vertex",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const googleVertexProviderImplementationDigest = digestOf(
   "@narratage/provider-google-vertex/caption-atom-word-coordinates@1:@google/genai@1.52.0",

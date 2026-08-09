@@ -8,7 +8,7 @@ import type {
   ValueSchema,
 } from "@narratage/protocol";
 
-export const imageTransformModuleRef = { name: "@narratage/image-transform", version: "0.0.0-dev" } as const;
+export const imageTransformModuleRef = { name: "@narratage/image-transform", version: "1" } as const;
 export const imageTransformTypes = {
   program: { module: imageTransformModuleRef, name: "ImageTransformProgram" },
 } satisfies Record<string, TypeRef>;

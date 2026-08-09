@@ -1,7 +1,7 @@
 import { digestOf } from "@narratage/protocol";
 import type { Digest, ModuleManifest, TypeRef, ValueSchema } from "@narratage/protocol";
 
-export const promptKitModuleRef = { name: "@narratage/prompt-kit", version: "0.0.0-dev" } as const;
+export const promptKitModuleRef = { name: "@narratage/prompt-kit", version: "1" } as const;
 export const promptKitTypes = {
   spec: { module: promptKitModuleRef, name: "PromptKitSpec" },
   invocation: { module: promptKitModuleRef, name: "PromptKitInvocation" },

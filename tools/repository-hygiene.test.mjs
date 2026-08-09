@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { extname, relative } from "node:path";
 import test from "node:test";
+import ts from "typescript";
 
 const repositoryRoot = new URL("../", import.meta.url);
 const scanRoots = ["docs", "examples", "packages", "services", "spec", "test", "tools"];
@@ -57,4 +58,48 @@ test("pre-release project-owned major identities remain at one", async () => {
     }
   }
   assert.deepEqual(failures, [], `non-@1 project identity found:\n${failures.join("\n")}`);
+});
+
+function propertyName(node) {
+  if (ts.isIdentifier(node) || ts.isStringLiteralLike(node)) return node.text;
+  return undefined;
+}
+
+function projectIdentityObject(node) {
+  const properties = new Map();
+  for (const property of node.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const name = propertyName(property.name);
+    if (name !== undefined) properties.set(name, property.initializer);
+  }
+  const owner = properties.get("name") ?? properties.get("module");
+  return owner !== undefined
+    && ts.isStringLiteralLike(owner)
+    && owner.text.startsWith("@narratage/")
+    && properties.has("version")
+    ? properties.get("version")
+    : undefined;
+}
+
+test("project-owned production Module and Frontend identities use literal version one", async () => {
+  const failures = [];
+  for (const entry of await repositoryEntries()) {
+    if (!entry.isFile || !/^packages\/[^/]+\/src\/.*\.(?:ts|tsx)$/u.test(entry.path)) continue;
+    const source = await readFile(entry.child, "utf8");
+    const file = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true,
+      entry.path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    const visit = (node) => {
+      if (ts.isObjectLiteralExpression(node)) {
+        const version = projectIdentityObject(node);
+        if (version !== undefined && (!ts.isStringLiteralLike(version) || version.text !== "1")) {
+          const { line } = file.getLineAndCharacterOfPosition(version.getStart(file));
+          failures.push(`${entry.path}:${line + 1} (${version.getText(file)})`);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+  }
+  assert.deepEqual(failures, [],
+    `project-owned logical identities must use literal version \"1\":\n${failures.join("\n")}`);
 });

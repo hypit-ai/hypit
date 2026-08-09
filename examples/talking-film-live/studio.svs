@@ -25,7 +25,6 @@
 
   text.callout {
     stack-order: 85;
-    font: Inter;
     weight: 900;
     size: 27;
     align: center;

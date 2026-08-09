@@ -211,7 +211,6 @@ motion.product {
 ```svs
 text.title {
   stack-order: 90;
-  font: Inter;
   weight: 900;
   size: 64;
   align: center;
@@ -223,18 +222,20 @@ text.title {
 | 属性 | 描述 |
 |---|---|
 | `stack-order` | Z 轴层叠顺序 |
-| `font` | 字体族名称 |
 | `weight` | 字体粗细 |
 | `size` | 字体大小（像素） |
 | `align` | 文本对齐方式 |
 | `fill` | 文本颜色 |
 | `tracking` | 字间距调整 |
 
-通过 `text:Item` 的 `appearance` 属性引用：
+先与精确字体字节一起编译为 `text:Style`，再由具体放置形式引用：
 
 ```svml
-<text:Item text="MEANING" during="full" frame={title-frame}
-  appearance={studio.text.title}/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 ## 语音估算

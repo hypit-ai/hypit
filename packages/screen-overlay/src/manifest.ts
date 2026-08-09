@@ -9,7 +9,7 @@ import { temporalDependency } from "@narratage/temporal";
 
 import { screenOverlayImplementationDigests, screenOverlayValidatorDigests } from "./program.js";
 
-export const screenOverlayModuleRef = { name: "@narratage/screen-overlay", version: "0.0.0-dev" } as const;
+export const screenOverlayModuleRef = { name: "@narratage/screen-overlay", version: "1" } as const;
 export const screenOverlayTypes = {
   header: { module: screenOverlayModuleRef, name: "ScreenOverlayHeader" },
   itemSpec: { module: screenOverlayModuleRef, name: "ScreenOverlayItemSpec" },

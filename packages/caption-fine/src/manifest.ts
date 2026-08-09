@@ -9,7 +9,7 @@ import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 import { renderFineCaptionImplementationDigest } from "./render.js";
 
-export const captionFineModuleRef = { name: "@narratage/caption-fine", version: "0.0.0-dev" } as const;
+export const captionFineModuleRef = { name: "@narratage/caption-fine", version: "1" } as const;
 export const captionFineProducers = {
   render: { module: captionFineModuleRef, name: "render-fine-caption" },
 } satisfies Record<string, ProducerRef>;

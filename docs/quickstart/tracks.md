@@ -213,10 +213,12 @@ Container for text items.
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
   left="6%" top="6%" right="6%" bottom="84%"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="EDIT MEANING, NOT TIMELINES" during="full"
-    frame={title-frame}
-    appearance={studio.text.title}/>
+  <text:Area id="title" placement={title-frame} style={title-style} during="program">
+    EDIT MEANING, NOT TIMELINES
+  </text:Area>
 </text:Track>
 ```
 
@@ -226,31 +228,35 @@ Container for text items.
 | `space` | yes | ProgramSpace from `speech:Spine` |
 | `map` | no | SemanticMap — needed when items use Selection-based timing |
 
-### text:Item
+### text:Point, text:Area and text:Path
 
-Each item is a text string placed at a time position:
+Each item has one explicit placement form, one exact Style and one temporal projection. `Area`
+places flowing text inside a `SpatialFrame`:
 
 ```svml
-<text:Item text="MEANING" during="full" frame={title-frame}
-  appearance={studio.text.title}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 | Attribute | Required | Description |
 |---|---|---|
-| `text` | yes | The text string to display |
-| `during` | yes | When to show: `"full"` (entire program) or a Selection reference |
-| `frame` | yes | Explicit `SpatialFrame` defining placement and available layout area |
-| `appearance` | yes | SVS text Recipe — stacking, font, size and Paint |
+| `id` | yes | Stable item identity |
+| child content | yes | Plain text, or `P`, `Span` and `Break` for rich text |
+| `during` | yes | `"program"` or a Selection reference; `at` and explicit `start`/`end` are also available |
+| `placement` | yes | `SpatialPoint`, `SpatialFrame` or `SpatialPath`, matching the item form |
+| `style` | yes | A `text:Style` compiled from an SVS Recipe plus exact font bytes |
 
-The `during` attribute accepts either the literal string `"full"` for the entire program duration, or
-a Selection reference for semantic timing:
+The `during` attribute accepts either the literal string `"program"` for the complete ProgramSpace,
+or a Selection reference for semantic timing:
 
 ```svml
+<text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
 <text:Track id="callout" space={speech.space} map={timing.map}>
-  <text:Item text="EXACTLY THE RIGHT MOMENT"
-    during={story.selection.callout}
-    frame={callout-frame}
-    appearance={studio.text.callout}/>
+  <text:Area id="callout-copy" placement={callout-frame}
+    style={callout-style} during={story.selection.callout}>
+    EXACTLY THE RIGHT MOMENT
+  </text:Area>
 </text:Track>
 ```
 
@@ -272,6 +278,7 @@ All three track types together in one source file:
 
 <!-- Captions: primary style for all text -->
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
@@ -295,9 +302,11 @@ All three track types together in one source file:
 </media-track:Track>
 
 <!-- Text: persistent title overlay -->
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="MEANING" during="full" frame={title-frame}
-    appearance={studio.text.title}/>
+  <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+    MEANING
+  </text:Area>
 </text:Track>
 
 <!-- All three tracks feed into Film -->

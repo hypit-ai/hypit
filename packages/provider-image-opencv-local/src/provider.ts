@@ -18,7 +18,7 @@ import type { CanonicalValue } from "@narratage/protocol";
 
 export const localOpenCvImageProviderModuleRef = {
   name: "@narratage/provider-image-opencv-local",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const localOpenCvImageProviderImplementationDigest = digestOf(
   "@narratage/provider-image-opencv-local/opencv@1",

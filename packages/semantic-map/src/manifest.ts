@@ -10,7 +10,7 @@ const timedToken = object({ tokenId: { schema: string }, segmentId: { schema: st
 const point = object({ identity: { schema: string }, timeSec: { schema: number }, frame: { schema: integer } });
 export const completeSemanticMapSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.complete-semantic-map@1" } },
   tokens: { schema: { kind: "array", items: timedToken } }, anchors: { schema: { kind: "array", items: point } } });
-export const semanticMapModuleRef = { name: "@narratage/semantic-map", version: "0.0.0-dev" } as const;
+export const semanticMapModuleRef = { name: "@narratage/semantic-map", version: "1" } as const;
 export const semanticMapTypes = { complete: { module: semanticMapModuleRef, name: "CompleteSemanticMap" } } satisfies Record<string, TypeRef>;
 export const semanticMapManifest: ModuleManifest = { format: "svml.module@1", name: semanticMapModuleRef.name, version: semanticMapModuleRef.version,
   dependencies: [narrativeDependency, speechEvidenceDependency, programSpaceDependency], types: [{ name: semanticMapTypes.complete.name, schema: completeSemanticMapSchema }], capabilities: [], surfaces: [], producers: [] };

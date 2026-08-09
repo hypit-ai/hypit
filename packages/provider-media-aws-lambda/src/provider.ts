@@ -18,7 +18,7 @@ import type { MediaLambdaOperation } from "./contract.js";
 
 export const awsLambdaMediaProviderModuleRef = {
   name: "@narratage/provider-media-aws-lambda",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const awsLambdaMediaProviderImplementationDigest =
   digestOf("@narratage/provider-media-aws-lambda/media@1");

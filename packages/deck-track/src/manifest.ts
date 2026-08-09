@@ -24,7 +24,7 @@ import { temporalDependency } from "@narratage/temporal";
 
 import { depthStackImplementationDigests, depthStackValidatorDigests } from "./program.js";
 
-export const depthStackModuleRef = { name: "@narratage/deck-track", version: "0.0.0-dev" } as const;
+export const depthStackModuleRef = { name: "@narratage/deck-track", version: "1" } as const;
 export const depthStackTypes = {
   header: { module: depthStackModuleRef, name: "DepthStackHeader" },
   spec: { module: depthStackModuleRef, name: "DepthStackSpec" },

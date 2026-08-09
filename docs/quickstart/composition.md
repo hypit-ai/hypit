@@ -157,6 +157,7 @@ The complete data flow from Script to rendered video. This example is based on
 
   <!-- 4. Tracks: captions, Media, text -->
   <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
   <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
@@ -172,10 +173,11 @@ The complete data flow from Script to rendered video. This example is based on
     <media-track:Item source={motion-media.media} during={story.selection.demo}
       frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
   </media-track:Track>
+  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
   <text:Track id="titles" space={speech.space}>
-    <text:Item text="MEANING" during="full"
-      frame={title-frame}
-      appearance={studio.text.title}/>
+    <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+      MEANING
+    </text:Area>
   </text:Track>
 
   <!-- 5. Film: compose all tracks -->
