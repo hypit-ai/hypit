@@ -3,7 +3,7 @@ import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
-export const captionModuleRef = { name: "@narratage/caption", version: "0.0.0-dev" } as const;
+export const captionModuleRef = { name: "@narratage/caption", version: "1" } as const;
 export const captionProducers = {
   temporalizePlan: { module: captionModuleRef, name: "temporalize-caption-plan" },
 } satisfies Record<string, ProducerRef>;

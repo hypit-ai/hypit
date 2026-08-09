@@ -45,6 +45,11 @@ When adding a new package, add its path mapping to `tsconfig.json`:
 ## Wire data
 
 - All persisted data uses the `@1` wire format version.
+- Project-owned Module and Frontend identities use the literal logical version `1`.
+- Workspace `package.json` versions remain `0.0.0-dev` until publication. They are physical package
+  metadata, not logical protocol identities.
+- Exact executable identity comes from locked package bytes and closure digests, not either version
+  string.
 - Wire types are defined in `@narratage/protocol` and are immutable.
 - Nominal Types are owned by Modules, not registered in a central union.
 - Type schemas use JSON-compatible structures, not TypeScript interfaces.

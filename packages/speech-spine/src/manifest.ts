@@ -20,7 +20,7 @@ import {
   createSpeechSpineSetImplementationDigest,
 } from "./program.js";
 
-export const speechSpineModuleRef = { name: "@narratage/speech-spine", version: "0.0.0-dev" } as const;
+export const speechSpineModuleRef = { name: "@narratage/speech-spine", version: "1" } as const;
 export const speechSpineSurfaceImplementationDigest = digestOf("@narratage/speech-spine/spine-surface@1");
 export const speechSpineTypes = {
   spineProgram: { module: speechSpineModuleRef, name: "SpeechSpineProgram" },

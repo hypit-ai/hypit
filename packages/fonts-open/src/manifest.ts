@@ -2,7 +2,7 @@ import { mediaDependency, mediaTypes } from "@narratage/media";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 
-export const fontsOpenModuleRef = { name: "@narratage/fonts-open", version: "0.0.0-dev" } as const;
+export const fontsOpenModuleRef = { name: "@narratage/fonts-open", version: "1" } as const;
 
 export const fontsOpenFaceSurfaceImplementationDigest = digestOf(
   "@narratage/fonts-open/pinned-open-face-surface@1",

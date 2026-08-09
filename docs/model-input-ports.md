@@ -115,7 +115,7 @@ A Provider ships data, not a translation function:
 ```ts
 {
   contract: "svml.generation-wire-mapping@1",
-  capability: { module: { name: "@narratage/minimax-h3", version: "0.0.0-dev" }, name: "minimax-h3" },
+  capability: { module: { name: "@narratage/minimax-h3", version: "1" }, name: "minimax-h3" },
   result: "video",
   routes: [
     { model: "minimax-h3/image-to-video", whenPresent: ["firstFrame"] },

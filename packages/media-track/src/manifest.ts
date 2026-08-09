@@ -21,7 +21,7 @@ import { temporalDependency } from "@narratage/temporal";
 
 import { mediaTrackImplementationDigests, mediaTrackValidatorDigests } from "./program.js";
 
-export const mediaTrackModuleRef = { name: "@narratage/media-track", version: "0.0.0-dev" } as const;
+export const mediaTrackModuleRef = { name: "@narratage/media-track", version: "1" } as const;
 export const mediaTrackTypes = {
   header: { module: mediaTrackModuleRef, name: "MediaTrackHeader" },
   paintLayerSpec: { module: mediaTrackModuleRef, name: "MediaPaintLayerSpec" },

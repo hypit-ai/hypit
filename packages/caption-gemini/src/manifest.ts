@@ -3,7 +3,7 @@ import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { digestOf } from "@narratage/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
-export const captionGeminiModuleRef = { name: "@narratage/caption-gemini", version: "0.0.0-dev" } as const;
+export const captionGeminiModuleRef = { name: "@narratage/caption-gemini", version: "1" } as const;
 export const captionGeminiTypes = {
   program: { module: captionGeminiModuleRef, name: "CaptionGeminiProgram" },
   request: { module: captionGeminiModuleRef, name: "CaptionGeminiRequest" },

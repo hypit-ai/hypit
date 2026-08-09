@@ -44,7 +44,7 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/caption-fine.md`](../spec/caption-fine.md) — implemented first field-free Caption Style
   family and its completed browser evidence.
 - [`../spec/track-authoring.md`](../spec/track-authoring.md) — shared package-authoring discipline;
-  the temporal projection and occurrence-expansion design governs the next Track migration.
+  its temporal projection and occurrence-expansion laws are implemented across the current Track packages.
 - [`../spec/spatial-layout.md`](../spec/spatial-layout.md) — shared Canvas/Frame/Point/Path geometry,
   two-frame fitting, alignment and explicit backing-layer boundary.
 - [`../spec/text-track.md`](../spec/text-track.md) — complete two-dimensional Text model, old-system
@@ -62,6 +62,8 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/track-composition.md`](../spec/track-composition.md)
 - [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
 - [`../spec/visual-ir.md`](../spec/visual-ir.md)
+- [`twinit-capability-migration.md`](./twinit-capability-migration.md) — one explicit ledger for every
+  active Twinit node: complete replacement, expressible-but-missing Kit, backlog or deliberate omission.
 
 The shared `svml.visual-track@1` / `svml.visual-ir@1` terminal waist is frozen inside the repository
 before publication. Individual author Surfaces remain pre-release unless their own specification

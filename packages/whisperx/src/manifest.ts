@@ -6,7 +6,7 @@ import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema }
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
 import { speechAlignmentManifest, speechAlignmentModuleRef } from "@narratage/speech-alignment";
 
-export const whisperXModuleRef = { name: "@narratage/whisperx", version: "0.0.0-dev" } as const;
+export const whisperXModuleRef = { name: "@narratage/whisperx", version: "1" } as const;
 export const whisperXTypes = {
   alignmentEvidence: { module: whisperXModuleRef, name: "WhisperXAlignmentEvidence" },
 } satisfies Record<string, TypeRef>;

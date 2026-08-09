@@ -11,7 +11,7 @@ Glory*》的一篇影评。那位影评人造出这个词，用来描述当时�
 
 这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
 文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
-扩展名为 `.svml`；工作区包则发布在 `@narratage` 作用域下。
+扩展名为 `.svml`；当前工作区的开发包预留 `@narratage` 作用域，但尚未发布到 npm。
 
 ## 安装
 

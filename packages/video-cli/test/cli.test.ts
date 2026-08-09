@@ -77,33 +77,33 @@ test("official video CLI checks a real Script source through the Node compiler h
   assert.equal(result.ok, true);
   assert.equal(result.units, 2);
   assert.deepEqual([...result.modules].sort(), [
-    "@narratage/narrative@0.0.0-dev",
-    "@narratage/script@0.0.0-dev",
+    "@narratage/narrative@1",
+    "@narratage/script@1",
     "@narratage/svs@1",
   ]);
   assert.deepEqual(result.exports, [
     { name: "story", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "Narrative",
     }, kind: "record" },
     { name: "story.caption", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "CaptionDisplaySequence",
     }, kind: "record" },
     { name: "story.caption.correspondence", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "CaptionCorrespondence",
     }, kind: "record" },
     { name: "story.segment.opening", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "NarrativeExcerpt",
     }, kind: "record" },
     { name: "story.segment.opening.dialogue", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "NarrativeDialogueExcerpt",
     }, kind: "record" },
     { name: "story.segment.opening.speech", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "NarrativeSpeechExcerpt",
     }, kind: "record" },
   ]);

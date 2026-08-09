@@ -2,7 +2,7 @@ import { narrativeDependency, narrativeSchema, narrativeTypes } from "@narratage
 import { digestOf } from "@narratage/core";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 
-export const scriptModuleRef = { name: "@narratage/script", version: "0.0.0-dev" } as const;
+export const scriptModuleRef = { name: "@narratage/script", version: "1" } as const;
 export const narrativeType: TypeRef = narrativeTypes.narrative;
 export const narrativeExcerptType: TypeRef = narrativeTypes.excerpt;
 export const narrativeDialogueExcerptType: TypeRef = narrativeTypes.dialogueExcerpt;

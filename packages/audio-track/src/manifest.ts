@@ -9,7 +9,7 @@ import { temporalDependency } from "@narratage/temporal";
 
 import { audioTrackImplementationDigests, audioTrackValidatorDigests } from "./program.js";
 
-export const audioTrackModuleRef = { name: "@narratage/audio-track", version: "0.0.0-dev" } as const;
+export const audioTrackModuleRef = { name: "@narratage/audio-track", version: "1" } as const;
 export const audioTrackTypes = {
   header: { module: audioTrackModuleRef, name: "AudioTrackHeader" },
   clipSpec: { module: audioTrackModuleRef, name: "AudioClipSpec" },

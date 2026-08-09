@@ -183,10 +183,12 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
   left="6%" top="6%" right="6%" bottom="84%"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="EDIT MEANING, NOT TIMELINES" during="full"
-    frame={title-frame}
-    appearance={studio.text.title}/>
+  <text:Area id="title" placement={title-frame} style={title-style} during="program">
+    EDIT MEANING, NOT TIMELINES
+  </text:Area>
 </text:Track>
 ```
 
@@ -196,30 +198,34 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 | `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace |
 | `map` | 否 | SemanticMap——当项目使用基于 Selection 的计时时需要 |
 
-### text:Item
+### text:Point、text:Area 与 text:Path
 
-每个项目是放置在某个时间位置的一段文本字符串：
+每个 Item 都明确选择一种放置形式、一份精确 Style 和一种时间投影。`Area` 把流式文字放入
+`SpatialFrame`：
 
 ```svml
-<text:Item text="MEANING" during="full" frame={title-frame}
-  appearance={studio.text.title}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 | 属性 | 必填 | 描述 |
 |---|---|---|
-| `text` | 是 | 要显示的文本字符串 |
-| `during` | 是 | 何时显示：`"full"`（整个节目时长）或 Selection 引用 |
-| `frame` | 是 | 显式 `SpatialFrame`，定义位置和可用排版区域 |
-| `appearance` | 是 | SVS 文字 Recipe——层级、字体、大小与 Paint |
+| `id` | 是 | 稳定的 Item 身份 |
+| 子内容 | 是 | 纯文本，或用于富文本的 `P`、`Span` 与 `Break` |
+| `during` | 是 | `"program"` 或 Selection 引用；也可使用 `at` 与显式 `start`/`end` |
+| `placement` | 是 | 与 Item 形式匹配的 `SpatialPoint`、`SpatialFrame` 或 `SpatialPath` |
+| `style` | 是 | 由 SVS Recipe 与精确字体字节共同编译出的 `text:Style` |
 
-`during` 属性接受字面字符串 `"full"`（表示整个节目时长），或 Selection 引用（用于语义计时）：
+`during` 属性接受字面字符串 `"program"`（表示完整 ProgramSpace），或用于语义计时的 Selection 引用：
 
 ```svml
+<text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
 <text:Track id="callout" space={speech.space} map={timing.map}>
-  <text:Item text="EXACTLY THE RIGHT MOMENT"
-    during={story.selection.callout}
-    frame={callout-frame}
-    appearance={studio.text.callout}/>
+  <text:Area id="callout-copy" placement={callout-frame}
+    style={callout-style} during={story.selection.callout}>
+    EXACTLY THE RIGHT MOMENT
+  </text:Area>
 </text:Track>
 ```
 
@@ -241,6 +247,7 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 
 <!-- Captions: primary style for all text -->
 <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
 <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
@@ -264,9 +271,11 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 </media-track:Track>
 
 <!-- Text: persistent title overlay -->
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="MEANING" during="full" frame={title-frame}
-    appearance={studio.text.title}/>
+  <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+    MEANING
+  </text:Area>
 </text:Track>
 
 <!-- All three tracks feed into Film -->
