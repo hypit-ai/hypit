@@ -76,7 +76,9 @@ function endpointRef(module: ModuleRef, spec: ExactModelEndpointSpec) {
   const requestType = { module, name: spec.requestTypeName };
   const capability = { module, name: spec.ports.model };
   const producer = { module, name: spec.producerName };
-  const returns = spec.ports.result === "image" ? generationTypes.imageSet : generationTypes.videoSet;
+  const returns = spec.ports.result === "audio"
+    ? generationTypes.audioSet
+    : spec.ports.result === "image" ? generationTypes.imageSet : generationTypes.videoSet;
   const implementationDigest = digestOf(`${module.name}/${spec.producerName}@1`);
   const validatorDigest = digestOf(`${module.name}/validate-${spec.requestTypeName}@1`);
   return { requestType, capability, producer, returns, implementationDigest, validatorDigest };

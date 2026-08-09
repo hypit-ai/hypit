@@ -67,7 +67,7 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/media                 media types
 @narratage/narrative             authored narrative products
 @narratage/program-space         exact frame/sample domain
-@narratage/generation            image/video product contracts
+@narratage/generation            image/video/audio generation contracts
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
 @narratage/seedance-speaker      Seedance Speaker binding
@@ -77,6 +77,7 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/gpt-image             GPT Image model family
 @narratage/nano-banana           Nano Banana model family
 @narratage/seedream              Seedream model family
+@narratage/mimo-tts              three exact Xiaomi MiMo TTS models + author Surfaces
 @narratage/estimate              duration estimation
 @narratage/speech                shared speech products
 @narratage/speech-basis          generated speech A/V product
@@ -112,8 +113,8 @@ Depends on Layer 1 and 2 but not on any Provider.
 
 ### Layer 4: Provider (Endpoint) packages
 
-Privileged external capabilities. Depend on Runtime ports and the model families they serve, never
-on the CLI.
+Privileged external capabilities. Depend on Runtime ports and shared capability vocabularies,
+never on exact-model packages or the CLI.
 
 ```text
 @narratage/provider-kie                  KIE generation plus background removal
@@ -124,6 +125,7 @@ on the CLI.
 @narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
 @narratage/provider-image-opencv-local   local OpenCV Raster execution
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
+@narratage/provider-xiaomi-mimo           official Xiaomi MiMo TTS API
 ```
 
 ### Layer 5: Application

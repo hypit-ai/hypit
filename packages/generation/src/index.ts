@@ -1,10 +1,12 @@
 export { generationComponent } from "./component.js";
 export {
   assertGenerationBlobRef,
+  sealGeneratedAudioSet,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
   sealGenerationRequest,
   verifyGeneratedImageSet,
+  verifyGeneratedAudioSet,
   verifyGeneratedVideoSet,
 } from "./identity.js";
 export {
@@ -62,6 +64,7 @@ export {
 export type { GenerationPortSubset, GenerationRequest } from "./request.js";
 export {
   generatedImageSetSchema,
+  generatedAudioSetSchema,
   generatedVideoSetSchema,
   generationBlobRefSchema,
   generationDigestSchema,
