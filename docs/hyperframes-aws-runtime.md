@@ -22,7 +22,7 @@ HyperframesDocument
   -> RenderedVisual Artifact
 ```
 
-The package imports only `@hyperframes/aws-lambda/sdk` at runtime, locked to version `0.7.84`.
+The package imports only `@hyperframes/aws-lambda/sdk` at runtime, locked to version `0.7.101`.
 It uses the AWS SDK default credential chain. AWS profile, SSO, environment credentials and instance
 roles therefore remain deployment choices; access-key bytes are not Runtime configuration.
 
@@ -93,7 +93,7 @@ only for acceptance inspection; normal remote orchestration does not.
 
 ## Resource review before the first deploy
 
-The upstream 0.7.84 SAM topology is expected to create or use:
+The upstream 0.7.101 SAM/CDK topology is expected to create or use:
 
 - a CloudFormation/SAM render stack;
 - SAM's managed deployment-artifact stack and bucket when `--resolve-s3` is used;
@@ -110,21 +110,17 @@ is no longer wanted. The Narratage ArtifactStore bucket may be different: the En
 finished render out of the HyperFrames bucket and immediately persists it under the selected
 content-addressed ArtifactStore.
 
-Do not run the upstream generated deploy policy unchanged. HyperFrames 0.7.84 emits the nonexistent
-IAM action `s3:PutPublicAccessBlock`; AWS requires `s3:PutBucketPublicAccessBlock`. Its own policy
-validator repeats the typo and therefore cannot detect it.
-
-There is also a packaging constraint: the published HyperFrames 0.7.84 CLI can drive an existing
-stack, but its `lambda deploy` command searches a HyperFrames source checkout for
-`examples/aws-lambda/template.yaml` and the handler build workspace. The published SDK package does
-not contain that template or a ready handler ZIP. The first deployment must therefore use an exact
-0.7.84 HyperFrames source checkout (or a reviewed Narratage-owned CDK/SAM distribution), not assume
-that installing the SDK alone is a deployable stack.
+The 0.7.101 package adds a supported `HyperframesRenderStack` CDK construct beside the SDK, but the
+published tarball still contains no ready handler ZIP. Its packaged build script points at the
+source-only `src/handler.ts`, so installing the package alone does not produce deployable bytes.
+The first deployment therefore needs either an exact 0.7.101 source checkout to build and verify
+the ZIP, or an independently reviewed immutable handler ZIP passed to the CDK construct. Importing
+the Narratage Provider never provisions either path.
 
 When that source checkout is built on macOS, `ffmpeg-static` follows the host platform by default.
-Before packaging Lambda, reinstall its binary for `npm_config_platform=linux` and
-`npm_config_arch=x64` and verify that both `ffmpeg` and `ffprobe` are Linux ELF files. The upstream
-ZIP verifier rejects a host Mach-O binary, as it should.
+Before packaging Lambda, select Linux x64 binary dependencies and verify that the bundled binaries
+are Linux ELF files. Never treat a ZIP produced with host Mach-O binaries as deployable merely
+because archive construction succeeded.
 
 Before any real deploy, inspect the CloudFormation change set and confirm stack name, region,
 reserved concurrency, memory, retained bucket and IAM resources. Only then place its output bucket

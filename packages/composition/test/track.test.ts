@@ -14,6 +14,7 @@ import { programSpaceManifest, sealProgramSpace } from "@narratage/program-space
 import { speechManifest } from "@narratage/speech";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { semanticMapManifest } from "@narratage/semantic-map";
+import { spatialManifest } from "@narratage/spatial";
 import { VISUAL_IR_V1, visualIrManifest } from "@narratage/visual-ir";
 
 import {
@@ -29,7 +30,7 @@ import {
 import type { VisualTrack } from "../src/index.js";
 
 const videoContractManifests = [artifactManifest, narrativeManifest, mediaManifest, programSpaceManifest,
-  speechManifest, speechEvidenceManifest, semanticMapManifest, visualIrManifest, compositionManifest] as const;
+  speechManifest, speechEvidenceManifest, semanticMapManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
 
 const image: MediaArtifactRef = {
   digest: digestOf("image"),

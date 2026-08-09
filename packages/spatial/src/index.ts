@@ -21,6 +21,7 @@ export {
   decodeAnchoredFrameSurface,
   decodeAspectFrameSurface,
   decodeCanvasSurface,
+  decodeExtentSurface,
   decodeFrameSurface,
 } from "./surface.js";
 export type * from "./types.js";

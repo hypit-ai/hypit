@@ -2,11 +2,17 @@
 
 Official provider-free Media Item and Sequence authoring package.
 
-The current executable slice implements one independently timed still-image Item. Its Artifact,
-intrinsic extent, Placement Frame, Content Fit and ProgramSpace are separate graph inputs. The
-resolved package-owned Program lowers to an ordinary peer `VisualTrack`; it does not add Media,
-B-roll or Provider meaning to Core, Film, Composition or HyperFrames.
+`Track` accepts explicit ProgramSpace, CanvasSpace and, when semantic points are used, a
+CompleteSemanticMap. Each independently timed `Item` receives an explicit SpatialFrame and either
+one direct normalized source or ordered Paint/sample layers. `Sequence` owns an ordered replacement
+surface with explicit activation points and pairwise Handoffs. Package-owned Recipes cover fitting,
+source occupancy, frame Paint, clipping, borders, shadows, lifecycle motion and sampling motion.
 
-Timed visual sources, frame Paint, motion, Sequence handoffs, explicit audio projection and the
-author Surface remain governed by `spec/media-track.md` and are intentionally not claimed by this
-first witness.
+Visual and audio are separate deterministic projections. A visual-only Track exports only
+`VisualTrack`; selecting one source layer's audio or adding explicit enter/exit/handoff sounds also
+exports a peer `AudioTrack`. Speech Spine reuses the same lowering laws through a deliberately
+restricted internal projection.
+
+The package does not add Media, B-roll or Provider meaning to Core, Film, Composition or
+HyperFrames. “B-roll” is an editorial use of an ordinary Item or Sequence. The complete pre-release
+contract and acceptance matrix live in `spec/media-track.md`.

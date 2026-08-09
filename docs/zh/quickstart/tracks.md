@@ -1,15 +1,15 @@
 ---
-title: 字幕、B-roll 与文字
-description: 视觉 Track 组件——字幕、B-roll 叠加层和文字叠加层。
+title: 字幕、Media 与文字
+description: 视觉 Track 组件——字幕、媒体叠加层和文字叠加层。
 ---
 
-# 字幕、B-roll 与文字
+# 字幕、Media 与文字
 
-> **当前可执行切片：** Caption Fine 已完整实现。B-roll 与文字章节描述的是今天仍可运行的
-> 纵向切片；它们的目标模型分别记录在 `spec/media-track.md`、`spec/spatial-layout.md` 与
-> `spec/text-track.md`。只有对应新包真正可运行后，教程才会改用新语法。
+> **冻结前说明：** Caption Fine 与 Media Track 已执行各自声明的作者 Surface。Text
+> 仍是本页展示的小型图链路证明；完整作者模型由 `spec/text-track.md` 约束。当前没有任何
+> 一个包被宣布为冻结的公开 ABI。
 
-每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三种主要的视觉 Track 类型：字幕、B-roll 和文字叠加层。
+每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三个官方视觉 Track 包：字幕、Media 和文字叠加层。
 
 ## 字幕系统
 
@@ -121,69 +121,19 @@ Dual Text 右侧。
 公共 Caption 先把 Plan 与独立 SemanticMap 拼接，Fine 再把所有默认/覆盖样式渲染成
 一个普通的对等 `VisualTrack`：`{captions.track}`。
 
-## B-roll
+## Media 叠加层与 B-roll
 
-B-roll 在语义时间位置叠加生成的或预先提供的视频/图像。
-
-```svml
-<import as="broll" from="@narratage/broll@1"/>
-```
-
-### broll:Track
-
-B-roll 项目的容器。接收 SemanticMap 用于时间解析。
+B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族。一个 Item 可以在语义
+或绝对窗口内放置规范化图片、视频、动画或 Compositable Surface。
 
 ```svml
-<broll:Track id="product-broll" map={timing.map} space={speech.space}>
-  <broll:Item source={product-motion.video}
-    during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
 ```
 
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `map` | 是 | 来自 `whisperx:Alignment` 的 SemanticMap |
-| `space` | 否 | ProgramSpace（某些配置需要） |
+### media-track:Track 与 media-track:Item
 
-### broll:Item
-
-每个项目将一个来源放置在语义时间位置上，并附带样式外观：
-
-```svml
-<broll:Item source={product-motion.video}
-  during={story.selection.product-demo}
-  appearance={studio.broll.product}/>
-```
-
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `source` | 是 | 视频或图像——来自 `seedance:Video`、`media:Image` 等 |
-| `during` | 是 | Selection 引用——该项目何时出现 |
-| `appearance` | 是 | SVS B-roll Recipe——位置、大小、适配方式、动画 |
-
-`during` 属性接收一个 Selection 引用，如 `{story.selection.product-demo}`。B-roll 项目在屏幕上显示的时长恰好等于该 Selection 的持续时间，通过 SemanticMap 解析确定。
-
-外观 Recipe 控制进场/退场动画：
-
-```svs
-broll.product {
-  stack-order: 40;
-  x: 0.08; y: 0.20; width: 0.84; height: 0.48;
-  fit: contain;
-  background: #111116;
-  radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
-}
-```
-
-**输出：**`{product-broll.visual}` —— 添加到 `film:Film` 的 VisualTrack。
-
-### B-roll 示例
-
-B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
+位置是一条显式 Spatial Frame 边，外观和运动则是可复用的 SVS 值：
 
 ```svml
 <seedance:Prompt id="product-direction">
@@ -196,12 +146,26 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
   <seedance:Reference image={product-reference} role="subject"/>
 </seedance:Video>
 
-<broll:Track id="product-broll" map={timing.map}>
-  <broll:Item source={product-motion.video}
+<pipeline:Normalize id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+
+<media-track:Track id="product-broll" map={timing.map}
+  space={speech.space} canvas={vertical}>
+  <media-track:Item source={product-media.media} frame={product-frame}
     during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
+    appearance={studio.media.product}
+    motion={studio.motion.product}/>
+</media-track:Track>
 ```
+
+Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同一个 Item 模型也能表达全屏
+切换、分屏和角落小窗。需要多个素材时，可以使用有序局部 Layer 或显式 Sequence。
+
+**输出：**`{product-broll.visual}`；只有作者显式选择了源音频或 SFX 时才会出现
+`{product-broll.audio}`。
 
 ## 文字叠加层
 
@@ -269,7 +233,8 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="broll" from="@narratage/broll@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/text-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
@@ -281,16 +246,20 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-<!-- B-roll: generated video during a Selection -->
-<broll:Track id="cards" map={timing.map} space={speech.space}>
-  <broll:Item source={motion.video} during={story.selection.demo}
-    appearance={studio.broll.card}/>
-</broll:Track>
-
-<!-- 共享位置是显式边，与 Text 外观分开。 -->
+<!-- 共享位置是显式边，与 Media/Text 外观分开。 -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
   left="6%" top="6%" right="6%" bottom="84%"/>
+<space:Frame id="card-frame" within={vertical}
+  left="10%" top="20%" right="10%" bottom="30%"/>
+
+<!-- Media：Selection 期间显示一个普通 Item -->
+<pipeline:Normalize id="motion-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+<media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+  <media-track:Item source={motion-media.media} frame={card-frame}
+    during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
+</media-track:Track>
 
 <!-- Text: persistent title overlay -->
 <text:Track id="titles" space={speech.space}>
@@ -308,4 +277,4 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 </film:Film>
 ```
 
-每个 SVS Recipe 中的 `stack-order` 决定 z 轴排序：语音视觉层为 10，B-roll 为 40，字幕为 70，文字为 90。数值越高，渲染层越靠上。
+每个 SVS Recipe 中的 `stack-order` 决定 z 轴排序：语音视觉层为 10，Media 为 40，字幕为 70，文字为 90。数值越高，渲染层越靠上。

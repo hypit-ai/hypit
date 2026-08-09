@@ -86,7 +86,7 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/whisperx              WhisperX component
 @narratage/caption               caption planning and Track
 @narratage/caption-gemini        Gemini caption planner
-@narratage/broll                 B-roll Track
+@narratage/media-track           unified Media Item/Sequence Track
 @narratage/text-track            text overlay Track
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
@@ -132,7 +132,7 @@ on the CLI.
 
 3. **CLI independence.** Neither `@narratage/cli` nor `@narratage/video-cli` transitively depends on any
    Provider package. The video CLI also does not depend on any author-level video package
-   (`@narratage/script`, `@narratage/seedance-speaker`, `@narratage/broll`, `@narratage/text-track`, `@narratage/film`).
+   (`@narratage/script`, `@narratage/seedance-speaker`, `@narratage/media-track`, `@narratage/text-track`, `@narratage/film`).
    Author packages are activated through the explicit package lock, not compile-time CLI
    dependencies.
 

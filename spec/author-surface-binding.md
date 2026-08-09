@@ -7,7 +7,7 @@ not yet implemented.
 
 The generic Markup Frontend owns element syntax. A package-owned Surface owns what one imported tag
 means. SVS owns only its stylesheet syntax and produces generic immutable Recipe records. Neither
-Markup, SVS nor Core owns Caption, B-roll, Film or another package's property vocabulary.
+Markup, SVS nor Core owns Caption, Media, Film or another package's property vocabulary.
 
 The missing bridge is compile-time reference inspection: a Surface such as Caption must be able to
 read an explicitly referenced public Recipe and lower it into a nominal `CaptionProgram` before the

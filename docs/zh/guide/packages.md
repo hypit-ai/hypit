@@ -81,7 +81,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/whisperx              WhisperX component
 @narratage/caption               caption planning and Track
 @narratage/caption-gemini        Gemini caption planner
-@narratage/broll                 B-roll Track
+@narratage/media-track           统一的 Media Item/Sequence Track
 @narratage/text-track            text overlay Track
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
@@ -123,7 +123,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 
 2. **领域无关闭包。** 每个 Layer 1 包的传递闭包只包含 Layer 1 的包。`@narratage/core` 只依赖 `@narratage/protocol`。
 
-3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance-speaker`、`@narratage/broll`、`@narratage/text-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
+3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance-speaker`、`@narratage/media-track`、`@narratage/text-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
 
 ## 包的结构
 

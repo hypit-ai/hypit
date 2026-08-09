@@ -31,9 +31,10 @@ function basis() {
     audio: { kind: "blob", digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [{
       segmentId: "line",
-      artifact: { digest: visual, size: 1, mediaType: "video/mp4", durationSec: 1 },
-      startSec: 0,
-      endSec: 1,
+      artifact: { kind: "blob", digest: visual, size: 1, mediaType: "video/mp4" },
+      extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+      frameRate: { ...programSpace.frameRate },
+      frameCount: 30,
     }] },
     segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
   });

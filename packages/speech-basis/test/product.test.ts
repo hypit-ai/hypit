@@ -1,4 +1,4 @@
-import { compositionComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { compositionComponent, spatialComponent, videoContractManifests } from "../../test-support/video-domain.js";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
@@ -41,6 +41,19 @@ import {
   speechBasisProducers,
 } from "@narratage/speech-basis";
 import { TypeValidatorRegistry } from "@narratage/validation";
+import { spatialTypes } from "@narratage/spatial";
+import { spatialValidatorDigests } from "@narratage/spatial";
+import { mediaTrackManifest } from "@narratage/media-track";
+
+const canvas = {
+  contract: "svml.canvas-space@1" as const,
+  widthPx: 720,
+  heightPx: 1280,
+  origin: "top-left" as const,
+  xDirection: "right" as const,
+  yDirection: "down" as const,
+  pixelAspect: "square" as const,
+};
 
 const testModule = { name: "example.speech-basis-product", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "SpeechRequest" } satisfies TypeRef;
@@ -68,11 +81,12 @@ const testManifest: ModuleManifest = {
   }],
 };
 
-const closure = createResolvedClosure([...videoContractManifests, speechBasisManifest, testManifest]);
+const closure = createResolvedClosure([...videoContractManifests, mediaTrackManifest, speechBasisManifest, testManifest]);
 
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
   registerTypeValidatorFacets(registry, compositionComponent.validators);
+  registerTypeValidatorFacets(registry, spatialComponent.validators);
   return registry;
 }
 
@@ -90,17 +104,23 @@ function sampleTake(label = "generated"): SpeechBasis {
     mediaType: "audio/wav",
   };
   const visual = {
+    kind: "blob" as const,
     digest: digestOf(`${label}:visual`),
     size: 24,
     mediaType: "video/mp4",
-    durationSec,
   };
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
     programSpace,
     audio,
     visualTrack: {
-      clips: [{ segmentId: "opening", artifact: visual, startSec: 0, endSec: durationSec }],
+      clips: [{
+        segmentId: "opening",
+        artifact: visual,
+        extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+        frameRate: { ...programSpace.frameRate },
+        frameCount: 60,
+      }],
     },
     segments: [{
       segmentId: "opening",
@@ -122,10 +142,29 @@ function createProgram(): LinkedProgram {
       frontendClosureDigest: digestOf("frontend:speech-basis-product"),
     },
   });
+  const rawCanvasRecord = sealRecord({
+    id: "canvas:vertical",
+    type: spatialTypes.canvas,
+    value: { kind: "inline", value: canvas },
+    conformance: "exact",
+    origin: {
+      kind: "authored",
+      sourceDigest: digestOf("source:speech-basis-product"),
+      frontendClosureDigest: digestOf("frontend:speech-basis-product"),
+    },
+  });
+  const canvasRecord = {
+    ...rawCanvasRecord,
+    validation: sealTypeValidationReceipt({
+      type: rawCanvasRecord.type,
+      recordDigest: rawCanvasRecord.digest,
+      validatorDigest: spatialValidatorDigests.canvas,
+    }),
+  };
   return link(closure, [sealTypedModule({
     id: "author:speech-basis-product",
     closureDigest: closure.digest,
-    records: [request],
+    records: [request, canvasRecord],
   })]);
 }
 
@@ -134,7 +173,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
   const output = (id: string) => ({ kind: "logical-output" as const, id });
   const operation = (id: string) => ({ kind: "operation-result" as const, operation: id });
   const existingTake = sampleTake("approved");
-  const existingVisual = projectSpeechVisual(existingTake);
+  const existingVisual = projectSpeechVisual(existingTake, canvas);
   const existingVisualValue = { kind: "inline" as const, value: existingVisual };
   const existingVisualValidation = sealTypeValidationReceipt({
     type: compositionTypes.visualTrack,
@@ -160,7 +199,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         id: "opening.visual",
         type: compositionTypes.visualTrack,
         primary: "opening.visual.project",
-        semanticInputs: [output("opening.take")],
+        semanticInputs: [output("opening.take"), record("canvas:vertical")],
       },
     ],
     candidates: [
@@ -221,7 +260,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
       {
         id: "project-opening-visual",
         producer: speechBasisProducers.projectVisual,
-        inputs: { basis: output("opening.take") },
+        inputs: { basis: output("opening.take"), canvas: record("canvas:vertical") },
         result: { kind: "output", name: "visual", record: "visual:opening" },
       },
     ],
@@ -270,7 +309,7 @@ test("SpeechBasis is one Product and audio/visual are ordinary shared projection
 
 test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   const take = sampleTake();
-  const visual = projectSpeechVisual(take);
+  const visual = projectSpeechVisual(take, canvas);
   const audio = projectSpeechAudioTrack(take);
   const programSpace = projectSpeechProgramSpace(take);
   assert.equal(visual.contract, "svml.visual-track@1");

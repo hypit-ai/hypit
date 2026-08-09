@@ -1,18 +1,17 @@
 ---
-title: Caption, B-roll & Text
-description: Visual track components — captions, B-roll overlays and text overlays.
+title: Caption, Media & Text
+description: Visual track components — captions, media overlays and text overlays.
 ---
 
-# Caption, B-roll & Text
+# Caption, Media & Text
 
-> **Executable-slice note:** Caption Fine is the current complete package. The B-roll and Text
-> sections document today's executable vertical slices. Their intended replacement author models
-> are specified in `spec/media-track.md`, `spec/spatial-layout.md` and `spec/text-track.md`; examples
-> using those future Surfaces will replace these sections only after the packages execute.
+> **Pre-freeze note:** Caption Fine and Media Track execute their declared author Surfaces. Text is
+> still the small graph witness described here; its complete author model remains governed by
+> `spec/text-track.md`. None of these package contracts is a frozen public ABI yet.
 
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and their z-order is determined by the `stack-order` property in SVS. This page
-covers the three main visual Track types: captions, B-roll, and text overlays.
+covers three official visual Track packages: captions, media, and text overlays.
 
 ## Caption system
 
@@ -153,71 +152,19 @@ planner cannot rewrite text, select Styles, see audio or invent time. Its output
 The common Caption timing step joins the Plan to the independent SemanticMap. Fine then renders all
 default and override Styles into one ordinary peer `VisualTrack`: `{captions.track}`.
 
-## B-roll
+## Media overlays and B-roll
 
-B-roll overlays generated or provided video/images at semantic time positions.
-
-```svml
-<import as="broll" from="@narratage/broll@1"/>
-```
-
-### broll:Track
-
-Container for B-roll items. Takes the SemanticMap for timing resolution.
+B-roll is an editorial use of the generic Media Track, not a separate Track family. One Item can
+place a normalized image, video, animation or compositable Surface at a semantic or absolute window.
 
 ```svml
-<broll:Track id="product-broll" map={timing.map} space={speech.space}>
-  <broll:Item source={product-motion.video}
-    during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `map` | yes | SemanticMap from `whisperx:Alignment` |
-| `space` | no | ProgramSpace (required by some configurations) |
+### media-track:Track and media-track:Item
 
-### broll:Item
-
-Each item places a source at a semantic time position with styled appearance:
-
-```svml
-<broll:Item source={product-motion.video}
-  during={story.selection.product-demo}
-  appearance={studio.broll.product}/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `source` | yes | Video or image — from `seedance:Video`, `media:Image`, etc. |
-| `during` | yes | Selection reference — when this item appears |
-| `appearance` | yes | SVS broll Recipe — position, size, fit, animations |
-
-The `during` attribute takes a Selection reference like `{story.selection.product-demo}`. The B-roll
-item appears on screen for exactly the duration of that Selection, as resolved through the
-SemanticMap.
-
-The appearance Recipe controls enter/exit animations:
-
-```svs
-broll.product {
-  stack-order: 40;
-  x: 0.08; y: 0.20; width: 0.84; height: 0.48;
-  fit: contain;
-  background: #111116;
-  radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
-}
-```
-
-**Output:** `{product-broll.visual}` — a VisualTrack added to `film:Film`.
-
-### B-roll example
-
-B-roll with a generated Seedance video appearing during a Script Selection:
+Placement is an explicit Spatial Frame edge; appearance and motion remain reusable SVS values.
 
 ```svml
 <seedance:Prompt id="product-direction">
@@ -230,12 +177,26 @@ B-roll with a generated Seedance video appearing during a Script Selection:
   <seedance:Reference image={product-reference} role="subject"/>
 </seedance:Video>
 
-<broll:Track id="product-broll" map={timing.map}>
-  <broll:Item source={product-motion.video}
+<pipeline:Normalize id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+
+<media-track:Track id="product-broll" map={timing.map}
+  space={speech.space} canvas={vertical}>
+  <media-track:Item source={product-media.media} frame={product-frame}
     during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
+    appearance={studio.media.product}
+    motion={studio.motion.product}/>
+</media-track:Track>
 ```
+
+The Selection contributes semantic points; Media performs the package-owned window projection.
+The same Item model also covers full-canvas cutaways, split screens and corner overlays. Ordered
+child layers, source occupancy and explicit Sequences are available when one source is not enough.
+
+**Outputs:** `{product-broll.visual}` and, only when explicitly authored, `{product-broll.audio}`.
 
 ## Text overlays
 
@@ -304,7 +265,8 @@ All three track types together in one source file:
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="broll" from="@narratage/broll@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/text-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
@@ -316,16 +278,20 @@ All three track types together in one source file:
 <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-<!-- B-roll: generated video during a Selection -->
-<broll:Track id="cards" map={timing.map} space={speech.space}>
-  <broll:Item source={motion.video} during={story.selection.demo}
-    appearance={studio.broll.card}/>
-</broll:Track>
-
 <!-- Shared placement is an explicit edge, separate from Text appearance. -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="title-frame" within={vertical}
   left="6%" top="6%" right="6%" bottom="84%"/>
+<space:Frame id="card-frame" within={vertical}
+  left="10%" top="20%" right="10%" bottom="30%"/>
+
+<!-- Media: one ordinary Item used editorially as B-roll -->
+<pipeline:Normalize id="motion-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+<media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+  <media-track:Item source={motion-media.media} frame={card-frame}
+    during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
+</media-track:Track>
 
 <!-- Text: persistent title overlay -->
 <text:Track id="titles" space={speech.space}>
@@ -343,5 +309,5 @@ All three track types together in one source file:
 </film:Film>
 ```
 
-The `stack-order` in each SVS Recipe determines z-ordering: speech visual at 10, B-roll at 40,
+The `stack-order` in each SVS Recipe determines z-ordering: speech visual at 10, media at 40,
 captions at 70, text at 90. Higher values render on top.

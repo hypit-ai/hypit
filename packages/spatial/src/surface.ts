@@ -122,6 +122,17 @@ export const decodeCanvasSurface: StructuredSurfaceHandler = ({ element }) => {
   return { records: [{ id, type: spatialTypes.canvas, value: { kind: "inline", value: canvas as unknown as CanonicalValue }, range: element.range }], components: [], fragments: [] };
 };
 
+export const decodeExtentSurface: StructuredSurfaceHandler = ({ element }) => {
+  exact(element, ["id", "width", "height"], ["id", "width", "height"]);
+  const id = text(element, "id");
+  const extent = sealIntrinsicExtent({
+    contract: "svml.intrinsic-extent@1",
+    widthPx: positiveInteger(element, "width"),
+    heightPx: positiveInteger(element, "height"),
+  });
+  return { records: [{ id, type: spatialTypes.extent, value: { kind: "inline", value: extent as unknown as CanonicalValue }, range: element.range }], components: [], fragments: [] };
+};
+
 function frameSurface(
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,

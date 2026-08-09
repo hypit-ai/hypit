@@ -1,9 +1,9 @@
 # SVML Media Track Authoring
 
-Status: design authority for the unified official Media Track migration. Its first explicit
-still-image Item witness is executable; timed material, layers, motion, Sequence, audio projection
-and the author Surface remain unimplemented. It supersedes the intended author model of the current
-`@narratage/broll` vertical slice and is not a frozen public ABI.
+Status: executable pre-release authority for the unified official Media Track. Item/Sequence
+Surfaces, timed material, ordered layers, motion, handoffs, separate audio projection and the
+restricted Speech projection are implemented. The former `@narratage/broll` vertical slice has
+been retired rather than preserved as compatibility. The contract is not a frozen public ABI.
 
 ## 1. Conclusion
 
@@ -589,9 +589,10 @@ The package may use internal focused files or future implementation-only librari
 create one umbrella authoring library shared by Text, Caption, Ranking and Media, and it must not
 require a release of Core when a new media Recipe, motion operator or component package is added.
 
-The existing `@narratage/broll` package remains an executable regression witness until the new path
-passes. Because the project is pre-release, the migration may replace it rather than preserving a
-public compatibility layer. Source assets and generated files remain untouched.
+The former `@narratage/broll` package was used as a regression witness during migration and is now
+retired. Because the project is pre-release, no compatibility package remains. “B-roll” is still a
+useful editorial description for an Item or Sequence, not a terminal Type or author package.
+Source assets and generated files remain untouched.
 
 ## 16. Implementation order
 
@@ -599,14 +600,16 @@ Implement only after the shared Temporal and Spatial slices exist:
 
 1. **Implemented:** introduce `@narratage/media-track` with one still-image Item whose BlobArtifact,
    IntrinsicExtent, SpatialFrame, ContentFit and ProgramSpace are separate semantic inputs;
-2. add timed source trim and every occupancy/alignment policy;
-3. add ordered Paint/media layers, clipping and the two-frame fit model;
-4. add lifecycle and sampling motion with the fixed transform stack;
-5. add explicit Sequence scheduling and pair transitions;
-6. add separate source-audio and SFX projection;
-7. route Speech Spine visual projection through the restricted lowerer;
-8. migrate real B-roll examples and then retire the old package;
-9. freeze only after the complete acceptance matrix passes.
+2. **Implemented:** add timed source trim and every occupancy/alignment policy;
+3. **Implemented:** add ordered Paint/media layers, clipping and the two-frame fit model;
+4. **Implemented:** add lifecycle and sampling motion with the fixed transform stack;
+5. **Implemented:** add explicit Sequence scheduling and pair transitions;
+6. **Implemented:** add separate source-audio and SFX projection;
+7. **Implemented:** route Speech Spine visual projection through the restricted lowerer;
+8. **Implemented:** migrate the checked-in B-roll examples and retire the old package;
+9. **Implemented:** close the package-local acceptance matrix with structural, real-media and
+   partitioned-browser evidence. The shared Track/Visual IR remains pre-freeze for the independent
+   gates in [`track-expressiveness.md`](./track-expressiveness.md).
 
 No step requires a Core, Runtime, queue or Provider change. Surface materialization may use an
 existing explicitly registered Provider capability, but ordinary Item/Sequence lowering is
@@ -625,7 +628,7 @@ deterministic local compilation.
 
 ### Item
 
-- Selection, Moment, Program and absolute windows under `one` and `each`;
+- Program/absolute windows under `one`, and Selection/Moment windows under `one` and `each`;
 - independent overlapping Items at unrelated absolute stacking keys;
 - every source trim and shorter/equal/longer occupancy case;
 - full Canvas, split, lower card, corner and off-canvas Frames;
@@ -641,7 +644,8 @@ deterministic local compilation.
 - cut, crossfade, push, wipe, cover and page turn;
 - start/center/end boundary-position ratios;
 - continuous source sampling across handoff overlap;
-- transition duration at, below and above available separation;
+- transition duration below, equal to and above the adjacent logical-phase separation when the
+  explicit Sequence envelope and no-three-source laws still hold; invalid envelope/overlap fails;
 - missing, repeated, reversed and same-frame activation failure;
 - no implicit three-member overlap and no lower-composite input;
 - group entry/exit operating only on owned pixels.
@@ -665,3 +669,33 @@ deterministic local compilation.
 - no Track contains provider, path, Narrative digest or source-family metadata;
 - no operation samples the accumulated lower composite;
 - the Speech Spine restricted projection and ordinary Item use the same lowering laws.
+
+### Executable evidence
+
+The matrix above is closed by executable evidence rather than by package status prose:
+
+- `packages/media-track/test/media-track.test.ts` covers every Item binding, strict occurrence
+  expansion, all documented Frames and Content Fits, ordered Paint/sample/backing layers, trim and
+  occupancy, lifecycle/sustain/sampling motion, every Handoff operator and ratio, exact source
+  audio/SFX projection, malformed Sequence rejection and explicit author-graph edges;
+- `packages/provider-media-local/test/provider.test.ts` runs real FFmpeg inspection and
+  normalization for moving video with and without audio, attached pictures, source A/V offsets,
+  animated GIF, animated WebP, exact audio rendering and final muxing;
+- `packages/media-execution/test/webp.test.ts` separately proves animated WebP straight-alpha
+  blend and dispose behavior used by both local and Lambda execution;
+- `packages/provider-media-aws-lambda/test/provider.test.ts` proves that remote execution receives
+  the same exact `AudioProgramPlan`; both local and Lambda media environments execute
+  `@narratage/media-execution` rather than owning alternate media semantics;
+- `packages/speech-spine/test/surface.test.ts` and `packages/speech-basis/test/product.test.ts`
+  prove the restricted Speech projection, one shared generated Product and independent visual/audio
+  Candidate satisfaction;
+- `packages/hyperframes/test/browser-visual.test.ts` renders opaque images, a straight-alpha
+  Surface, two-frame fitting, local motion and a Sequence handoff through real Chromium, then
+  compares every decoded RGBA frame across different worker partitions;
+- `tools/package-boundaries.test.mjs` and `tools/graph-first-value-boundary.test.mjs` enforce the
+  absence of a Media family registry and of hidden lineage/provider metadata in values.
+
+The local package is therefore complete as a pre-freeze Media implementation. This does not claim
+that the shared `svml.visual-track@1` or `svml.visual-ir@1` waist is frozen; renderer receipts,
+Surface-byte validation and the remaining independent Text/Deck/Ranking witnesses still govern
+that later decision.

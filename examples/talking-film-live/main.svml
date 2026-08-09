@@ -83,7 +83,7 @@
     <seedance:Reference image={presenter} role="character"/>
   </seedance:Speech>
 
-  <speech:Spine id="speech">
+  <speech:Spine id="speech" canvas={vertical}>
     <speech:Take source={opening-take} segment={story.segment.opening}/>
     <speech:Take source={answer-take} segment={story.segment.answer}/>
   </speech:Spine>
