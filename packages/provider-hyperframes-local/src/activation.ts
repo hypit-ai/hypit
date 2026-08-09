@@ -12,6 +12,7 @@ import {
 
 import { createLocalHyperframesProvider } from "./provider.js";
 import type { HyperframesBrowserGpu, HyperframesQuality, HyperframesWorkers } from "./provider.js";
+import { localHyperframesBrowserService } from "./service.js";
 
 const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-hyperframes-local",
@@ -100,6 +101,7 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       }),
     ];
   },
+  service: localHyperframesBrowserService,
 });
 
 export const svmlPackage = {

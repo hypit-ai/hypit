@@ -1,22 +1,8 @@
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
-import { runtimeConfigObject, runtimeConfigString } from "@narratage/runtime-adapter";
 import type { RuntimeAdapterFactoryContext, RuntimeExternalService, RuntimeServiceState } from "@narratage/runtime-adapter";
-import { resolveRuntimeExecutable } from "@narratage/runtime-adapter-node";
 
-const WORKSPACE_PROJECT = fileURLToPath(new URL("../../../services/image-opencv", import.meta.url));
-
-/**
- * Absolute, because a Runtime root is wherever the operator keeps their Profile
- * and not where the pinned uv project lives. An installation without that
- * project has nothing to prepare and says so through the probe instead.
- */
-function workspacePrepare() {
-  if (!existsSync(WORKSPACE_PROJECT)) return undefined;
-  return { command: "uv", args: ["sync", "--project", WORKSPACE_PROJECT, "--frozen"] };
-}
+import { resolveLocalOpenCvDeployment } from "./deployment.js";
 
 /** Kept equal to `services/image-opencv/pyproject.toml` by a test in this package. */
 const REQUIRED_MAJOR = { cv2: 4, numpy: 2 } as const;
@@ -42,13 +28,11 @@ function run(executable: string, args: readonly string[]): Promise<{ ok: boolean
  * subprocess error. Probing says so at `doctor` time instead.
  */
 export function localOpenCvService(context: RuntimeAdapterFactoryContext): RuntimeExternalService {
-  const config = runtimeConfigObject(context.config, "local OpenCV image");
-  const configured = runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
-  const python = configured === undefined ? "python3" : resolveRuntimeExecutable(context.root, configured);
-  const prepare = workspacePrepare();
+  const deployment = resolveLocalOpenCvDeployment(context);
+  const python = deployment.pythonExecutable;
   return {
     id: "image-opencv",
-    ...(prepare === undefined ? {} : { prepare }),
+    ...(deployment.prepare === undefined ? {} : { prepare: deployment.prepare }),
     async probe(): Promise<RuntimeServiceState> {
       const result = await run(python, ["-c", PROBE_PROGRAM]);
       if (!result.ok) return { state: "down", detail: `${python} cannot import cv2 and numpy: ${result.output}` };

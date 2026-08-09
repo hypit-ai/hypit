@@ -121,11 +121,13 @@ Implemented:
 - `@narratage/provider-google-vertex`: display-only Gemini Caption planning;
 - provider-neutral all-stream media inspection, attached-picture-safe selection, synchronized A/V
   normalization, audio-program rendering and final mux contracts;
-- `@narratage/provider-media-local`: bounded shell-free ffprobe/ffmpeg realization;
+- `@narratage/provider-media-local`: bounded shell-free ffprobe/ffmpeg realization, with a shared
+  compatibility probe for the encoders and filters actually consumed by media execution;
 - canonical 48 kHz speech master to content-addressed 16 kHz mono evidence-audio projection;
-- `@narratage/provider-whisperx-local` and `services/whisperx`: pinned warm local WhisperX execution;
+- `@narratage/provider-whisperx-local` and `services/whisperx`: pinned warm local WhisperX execution,
+  while an explicit lifecycle override or an already-running service remains deployment-owned;
 - `@narratage/provider-hyperframes-local`: finite-frame parallel Chrome rendering with output probe
-  validation;
+  validation and profile-scoped HyperFrames browser preparation;
 - `@narratage/artifact-store-s3`: conditional content-addressed writes, multipart streaming,
   streamed digest verification and explicit retention facets;
 - `@narratage/provider-media-aws-lambda`: the same five media operations as the local Provider,
@@ -137,12 +139,21 @@ Implemented:
   ArtifactStore ingestion, ffprobe verification and remote cleanup canary;
 - `@narratage/image-transform`: explicit image-plus-Program to image graph component, including the
   extracted Twinit GPT Image YCrCb denoise preset;
+- `@narratage/image-compose`: explicit Canvas plus ordered image Layers to one reusable PNG Artifact,
+  with no privileged base/sticker roles or hidden layout metadata;
+- `@narratage/raster`: one closed deterministic execution waist shared by Transform and Compose;
+- `@narratage/background-removal`: provider-neutral image-in/image-out Need; KIE realizes it through
+  Recraft without changing the author graph;
 - `@narratage/provider-image-opencv-local` and `services/image-opencv`: bounded OpenCV/NumPy execution
-  with a locked Python 3.13 environment that returns only a new content-addressed image Blob;
+  with a locked Python 3.13 environment, one Raster capability, one Handler and one shared pixel
+  interpreter, returning only a new content-addressed image Blob; an explicitly configured Python
+  transfers lifecycle ownership to the deployment instead of preparing the managed uv project;
 - one Scheduler with global and named lane concurrency shared across Builds.
 
 Not implemented:
 
+- a redistribution-ready managed FFmpeg bundle; local execution currently accepts any explicitly
+  configured or system toolchain that passes the required capability probe;
 - a persistent remote WhisperX service Provider; AWS Lambda is explicitly not its target;
 - publication-ready redistributable Media/HyperFrames AWS deployment bundles; the current team
   resources are live deployments, not public release artifacts;

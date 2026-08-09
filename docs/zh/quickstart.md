@@ -18,7 +18,8 @@ Glory*》的一篇影评。那位影评人造出这个词，用来描述当时�
 需要 Node.js 22+ 与 pnpm。
 
 ```bash
-pnpm install
+corepack enable
+pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 ```

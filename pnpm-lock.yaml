@@ -14,6 +14,9 @@ importers:
       '@narratage/audio-track':
         specifier: workspace:*
         version: link:packages/audio-track
+      '@narratage/background-removal':
+        specifier: workspace:*
+        version: link:packages/background-removal
       '@narratage/caption':
         specifier: workspace:*
         version: link:packages/caption
@@ -23,6 +26,9 @@ importers:
       '@narratage/caption-gemini':
         specifier: workspace:*
         version: link:packages/caption-gemini
+      '@narratage/comment-sticker':
+        specifier: workspace:*
+        version: link:packages/comment-sticker
       '@narratage/composition':
         specifier: workspace:*
         version: link:packages/composition
@@ -44,6 +50,9 @@ importers:
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:packages/hyperframes
+      '@narratage/image-compose':
+        specifier: workspace:*
+        version: link:packages/image-compose
       '@narratage/image-transform':
         specifier: workspace:*
         version: link:packages/image-transform
@@ -89,6 +98,9 @@ importers:
       '@narratage/ranking':
         specifier: workspace:*
         version: link:packages/ranking
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:packages/raster
       '@narratage/render-hyperframes':
         specifier: workspace:*
         version: link:packages/render-hyperframes
@@ -225,6 +237,24 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/background-removal:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/caption:
     dependencies:
       '@narratage/component-kit':
@@ -350,6 +380,48 @@ importers:
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
+
+  packages/comment-sticker:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/compiler-node:
     dependencies:
@@ -1091,6 +1163,30 @@ importers:
         specifier: workspace:*
         version: link:../visual-ir
 
+  packages/image-compose:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:../raster
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/image-transform:
     dependencies:
       '@narratage/artifact':
@@ -1105,6 +1201,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:../raster
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
@@ -1513,12 +1612,12 @@ importers:
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@narratage/image-transform':
-        specifier: workspace:*
-        version: link:../image-transform
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:../raster
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
@@ -1532,6 +1631,12 @@ importers:
 
   packages/provider-kie:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/background-removal':
+        specifier: workspace:*
+        version: link:../background-removal
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1752,6 +1857,18 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+
+  packages/raster:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
 
   packages/render-hyperframes:
     dependencies:

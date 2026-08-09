@@ -129,7 +129,7 @@ Add the path mapping so TypeScript resolves `@narratage/my-component` to source:
 ## 7. Install and lock
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 
 pnpm narratage lock-packages <lock-file> \
   --package @narratage/my-component \

@@ -124,7 +124,7 @@ export default svmlPackage;
 ## 7. 安装并锁定
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 
 pnpm narratage lock-packages <lock-file> \
   --package @narratage/my-component \

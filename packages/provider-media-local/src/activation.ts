@@ -11,6 +11,7 @@ import {
 } from "@narratage/runtime-adapter-node";
 
 import { createLocalMediaProvider } from "./provider.js";
+import { localMediaToolchainService } from "./service.js";
 
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-media-local",
@@ -64,6 +65,7 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       }),
     ];
   },
+  service: localMediaToolchainService,
 });
 
 export const svmlPackage = {

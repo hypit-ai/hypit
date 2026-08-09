@@ -16,7 +16,7 @@ build.svrun -> main.svml
   -> @narratage/local Scheduler
        -> local deterministic component code
        -> KIE / Volcengine / Hypit Seedance Endpoint
-       -> local OpenCV image-transform Endpoint
+       -> one local OpenCV Raster Endpoint
        -> local / team-hosted / Hypit warm WhisperX service Endpoint
        -> local workers / Lambda / Hypit HyperFrames Endpoint
 
@@ -222,7 +222,7 @@ Endpoint/Store implementation digest from the physical package Artifact, that pa
 dependency closure, adapter identity and declared facet. Editing implementation bytes without regenerating the lock fails
 before any Provider call. Source `<import>` cannot add an adapter to this closure.
 
-The KIE, local media, local OpenCV image-transform, local WhisperX and local HyperFrames package
+The KIE, local media, local OpenCV Raster, local WhisperX and local HyperFrames package
 functions in this example are implemented. `@narratage/endpoint-kit` implements the host-neutral
 `EndpointPackage` definition path and lets those packages contribute:
 
