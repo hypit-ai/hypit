@@ -360,6 +360,8 @@ function animatedWebpInspection(source: BlobRef, animation: AnimatedWebp): Media
       role: "moving",
       width: animation.width,
       height: animation.height,
+      sampleAspectRatio: { numerator: 1, denominator: 1 },
+      rotationDegrees: 0,
       averageFrameRate: { numerator: numerator / factor, denominator: durationMs / factor },
     }],
   });
@@ -593,10 +595,14 @@ export async function executeNormalizeMedia(
         `fps=fps=${fps}:round=near:start_time=0:eof_action=round`,
         `trim=start_frame=0:end_frame=${plan.frameCount}`,
         `setpts=N*${need.frameRate.denominator}/(${need.frameRate.numerator}*TB)`,
-        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        // Autorotation runs before this filter. Expand, never shrink, the axis
+        // carrying non-square samples, then erase SAR so downstream Spatial
+        // receives only truthful square-pixel display dimensions.
+        "scale=trunc(iw*max(sar\\,1)/2)*2:trunc(ih*max(1/sar\\,1)/2)*2",
+        "setsar=1",
       ].join(",");
       const visualInput = animation === undefined
-        ? ["-i", input, "-map", `0:${plan.video.index}`]
+        ? ["-autorotate", "-i", input, "-map", `0:${plan.video.index}`]
         : ["-f", "concat", "-safe", "0", "-i", await animatedWebpConcat(env, animation, work), "-map", "0:v:0"];
       await runProcess({
         executable: env.ffmpegPath,
@@ -618,6 +624,9 @@ export async function executeNormalizeMedia(
       const visual = inspected.streams.find((item): item is MediaVideoStream => item.kind === "video");
       assert(visual?.decodedUnitCount === plan.frameCount && visual.role === "moving",
         "Normalized visual frame shape differs from its plan");
+      assert(visual.sampleAspectRatio.numerator === 1 && visual.sampleAspectRatio.denominator === 1
+        && visual.rotationDegrees === 0,
+      "Normalized visual retains non-square samples or display rotation");
       const bytes = await readFile(output);
       visualArtifact = await env.artifacts.put(bytes, "video/mp4");
       visualWidth = visual.width;

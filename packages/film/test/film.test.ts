@@ -3,6 +3,7 @@ import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
 import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
 import type { Composition, Track } from "@narratage/composition";
+import type { FontArtifactRef } from "@narratage/media";
 import { sealCanvasSpace, spatialTypes } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -52,11 +53,13 @@ import {
   renderTextTrack,
   renderTextTrackImplementationDigest,
   sealTextTrackProgram,
+  stillTextMotion,
   textTrackFragment,
   textTrackManifest,
   textTrackProducers,
   textTrackTypes,
 } from "@narratage/text-track";
+import type { TextStyle } from "@narratage/text-track";
 import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
 
 const space = sealProgramSpace({
@@ -85,17 +88,48 @@ const filmProgram = sealFilmProgram({
   id: "main-film",
   clearColor: "#000000",
 });
+const titleFont: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  sources: [{ artifact: {
+    kind: "blob", digest: digestOf("film-test-title-font"), size: 1, mediaType: "font/woff2",
+  } }],
+  weight: 800,
+  style: "normal",
+};
+const titleStyle: TextStyle = {
+  contract: "svml.text-style@1",
+  id: "title-style",
+  stackingOrder: 60,
+  typography: {
+    fonts: [titleFont], sizePx: 56, weight: 800, style: "normal",
+    axes: [], features: [], synthesis: "none", kerning: "auto", trackingPx: 0,
+    wordSpacingPx: 0, lineHeight: 1.2, direction: "auto", writingMode: "horizontal-tb",
+    baselineShiftPx: 0, tabSize: 4, indentationPx: 0, paragraphBeforePx: 0,
+    paragraphAfterPx: 0, transform: "none", variantCaps: "normal", verticalAlign: "baseline", decorations: [],
+    cjk: { textSpacing: "normal", punctuationTrim: "none" },
+  },
+  paints: [{ kind: "fill", paint: { kind: "solid", color: "#ffffff" } }],
+  area: {
+    inlineSize: "fixed", blockSize: "fixed",
+    paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
+    inlineAlign: "center", blockAlign: "center", wrap: "word", overflow: "visible",
+    clipToFrame: false, columns: 1, columnGapPx: 0, metricEdge: "line-box",
+  },
+  point: { anchorInline: "center", anchorBlock: "center" },
+  path: { side: "left", orientation: "follow", startMarginPx: 0, endMarginPx: 0, align: "start", reverse: false, overflow: "visible" },
+};
 const textProgram = sealTextTrackProgram({
   contract: "svml.text-track-program@1",
   id: "title-track",
   items: [{
     id: "title",
-    text: "Semantic Video Markup Language",
+    sourceOccurrenceId: "program",
     span: { startFrame: 10, endFrameExclusive: 100 },
-    z: 60,
     tieBreak: "title",
-    frame: { contract: "svml.spatial-frame@1", xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 },
-    appearance: { color: "#ffffff", fontSizePx: 56, fontWeight: 800 },
+    geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 } },
+    document: { paragraphs: [{ id: "title", inlines: [{ kind: "text", id: "title-text", text: "Semantic Video Markup Language" }] }] },
+    style: titleStyle,
+    motion: stillTextMotion(),
   }],
 });
 const background = sealVisualTrack({
@@ -277,7 +311,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   const documentRecord = result.state.records.find((record) => record.type.module.name === hyperframesTypes.document.module.name);
   assert(documentRecord);
   const document = inline(documentRecord) as { readonly html: string };
-  assert.match(document.html, /Semantic Video Markup Language/u);
+  assert.match(document.html, /data-svml-text-run="title-text"/u);
   assert.match(document.html, /background-track/u);
   assert.equal(result.state.records.filter((record) => record.type.name === filmTypes.trackSet.name).length, 4);
 });

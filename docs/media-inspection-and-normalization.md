@@ -45,6 +45,7 @@ with digest validators registered by the media component.
 - default and attached-picture dispositions;
 - video role: moving, still or attached picture;
 - width, height and rational frame-rate metadata;
+- sample-aspect ratio and quarter-turn display rotation metadata;
 - audio sample rate, channels, layout and decoded sample count;
 - rational presentation start/end derived from decoded units;
 - timing admission: admissible, missing, non-monotonic or discontinuous;
@@ -103,6 +104,13 @@ Video sources are video-authoritative because AAC packetization may legally exte
 picture. The tail is trimmed instead of lengthening the program and exposing black frames. A short
 audio stream is padded to the exact program sample count.
 
+Before a normalized visual may enter Spatial layout, media execution explicitly applies the
+selected stream's display rotation, expands the non-square sample axis without discarding source
+resolution, writes square samples and removes the display matrix. The output is probed again and is
+rejected unless its sample aspect is `1:1` and rotation is zero. Consequently a downstream
+`IntrinsicExtent` needs only the normalized pixel width and height; rotation and SAR are never
+smuggled through Track values.
+
 For target rate `fps.num / fps.den` and frame boundary `F`, the 48 kHz sample boundary is computed
 with integer/rational arithmetic:
 
@@ -156,6 +164,7 @@ The tests cover:
 - ambiguous multiple moving streams failing closed and explicit-index resolution;
 - attached-picture explicit-index rejection;
 - real local 24fps H.264 + 32 kHz AAC + MJPEG normalization;
+- real local quarter-turn plus non-square-SAR normalization into square-pixel display dimensions;
 - AAC presentation tail trimmed to the last picture;
 - later-starting audio preserved as head silence from measured PTS;
 - silent generated video remaining visual-only;

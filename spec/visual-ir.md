@@ -108,12 +108,13 @@ IR, not fields added to the IR.
 
 ## Remaining freeze gates
 
-The identifier and closed vocabulary are executable, but v1 remains a candidate until:
+The identifier and closed vocabulary are executable. Exact Text fonts, multiline decoration,
+Path/Mask/overflow, Media focal sampling and alpha now have real browser evidence; a separately
+installed non-native Text package crosses the typed Surface waist without changing Core, Film or
+HyperFrames. The candidate remains open until:
 
-1. the official Text lowerer requires exact font Artifacts or materialized glyph Surfaces; Fine
-   Caption already exposes an exact ordered font stack while retaining an explicit prototype path;
-2. remaining old production Text/media witnesses have real browser pixel tests for their own
-   multiline decoration, focal sampling, alpha and overflow; Fine Caption's CJK/emoji matrix is complete;
-3. the Runtime receipt binds the exact renderer implementation used for layout;
-4. Surface bytes are checked against their declared dimensions, timing, color and alpha facts;
-5. a separately installed Track package passes without changing Core, Film or HyperFrames code.
+1. the Runtime receipt binds the exact renderer implementation used for layout;
+2. Surface bytes are checked against their declared dimensions, timing, color and alpha facts;
+3. **Completed:** Deck and Ranking provide the remaining package-owned Track expressiveness witnesses;
+4. the final repository-wide compatibility audit proves that no package-family discriminator or
+   hidden cross-Track sampling path entered the waist.

@@ -42,6 +42,12 @@
       "@narratage/media-track": [
         "packages/media-track/src/index.ts"
       ],
+      "@narratage/deck-track": [
+        "packages/deck-track/src/index.ts"
+      ],
+      "@narratage/ranking": [
+        "packages/ranking/src/index.ts"
+      ],
       "@narratage/speech": [
         "packages/speech/src/index.ts"
       ],

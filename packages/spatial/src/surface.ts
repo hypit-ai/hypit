@@ -15,13 +15,15 @@ import {
   frameEdgesFragment,
 } from "./fragment.js";
 import { spatialTypes } from "./manifest.js";
-import { sealCanvasSpace, sealIntrinsicExtent } from "./geometry.js";
+import { assertSpatialPath, sealCanvasSpace, sealIntrinsicExtent, sealSpatialPoint } from "./geometry.js";
 import type {
   AnchoredFrameProgram,
   AspectFrameProgram,
   FrameEdgesProgram,
   SpatialAnchor,
   SpatialLength,
+  SpatialPath,
+  SpatialPathCommand,
 } from "./types.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
@@ -120,6 +122,81 @@ export const decodeCanvasSurface: StructuredSurfaceHandler = ({ element }) => {
     origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
   });
   return { records: [{ id, type: spatialTypes.canvas, value: { kind: "inline", value: canvas as unknown as CanonicalValue }, range: element.range }], components: [], fragments: [] };
+};
+
+export const decodePointSurface: StructuredSurfaceHandler = ({ element }) => {
+  exact(element, ["id", "x", "y"], ["id", "x", "y"]);
+  const id = text(element, "id");
+  const point = sealSpatialPoint({
+    contract: "svml.spatial-point@1",
+    xPx: number(element, "x"),
+    yPx: number(element, "y"),
+  });
+  return {
+    records: [{ id, type: spatialTypes.point, value: { kind: "inline", value: point as unknown as CanonicalValue }, range: element.range }],
+    components: [], fragments: [],
+  };
+};
+
+function commandNumber(element: StructuredElement, name: string): number {
+  const value = element.attributes[name];
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be finite.`);
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) throw new Error(`${element.name}.${name} must be finite.`);
+  return parsed;
+}
+
+function pathCommand(element: StructuredElement): SpatialPathCommand {
+  const name = element.name.slice(element.name.lastIndexOf(":") + 1);
+  if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
+    throw new Error(`${element.name} must be empty.`);
+  }
+  if (name === "Move" || name === "Line") {
+    exact(element, ["x", "y"], ["x", "y"]);
+    return { kind: name === "Move" ? "move" : "line", xPx: commandNumber(element, "x"), yPx: commandNumber(element, "y") };
+  }
+  if (name === "Quadratic") {
+    exact(element, ["control-x", "control-y", "x", "y"], ["control-x", "control-y", "x", "y"]);
+    return {
+      kind: "quadratic",
+      controlX: commandNumber(element, "control-x"), controlY: commandNumber(element, "control-y"),
+      xPx: commandNumber(element, "x"), yPx: commandNumber(element, "y"),
+    };
+  }
+  if (name === "Cubic") {
+    exact(element, ["control1-x", "control1-y", "control2-x", "control2-y", "x", "y"], ["control1-x", "control1-y", "control2-x", "control2-y", "x", "y"]);
+    return {
+      kind: "cubic",
+      control1X: commandNumber(element, "control1-x"), control1Y: commandNumber(element, "control1-y"),
+      control2X: commandNumber(element, "control2-x"), control2Y: commandNumber(element, "control2-y"),
+      xPx: commandNumber(element, "x"), yPx: commandNumber(element, "y"),
+    };
+  }
+  if (name === "Close") {
+    exact(element, [], []);
+    return { kind: "close" };
+  }
+  throw new Error(`${element.name} is not a Spatial Path command.`);
+}
+
+export const decodePathSurface: StructuredSurfaceHandler = ({ element }) => {
+  const unknown = Object.keys(element.attributes).filter((name) => name !== "id");
+  if (unknown.length > 0) throw new Error(`${element.name} does not accept ${unknown[0]}.`);
+  const id = text(element, "id");
+  const commands: SpatialPathCommand[] = [];
+  for (const child of element.children) {
+    if (child.kind === "text") {
+      if (child.value.trim()) throw new Error(`${element.name} accepts only Path commands.`);
+      continue;
+    }
+    commands.push(pathCommand(child));
+  }
+  const path: SpatialPath = { contract: "svml.spatial-path@1", commands };
+  assertSpatialPath(path);
+  return {
+    records: [{ id, type: spatialTypes.path, value: { kind: "inline", value: path as unknown as CanonicalValue }, range: element.range }],
+    components: [], fragments: [],
+  };
 };
 
 export const decodeExtentSurface: StructuredSurfaceHandler = ({ element }) => {
