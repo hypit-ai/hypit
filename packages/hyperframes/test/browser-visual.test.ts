@@ -99,19 +99,22 @@ async function collectPngs(directory: string): Promise<string[]> {
   return result.sort();
 }
 
-function yellowPixels(file: string, width: number, height: number): number {
+function yellowPixelsByColumns(file: string, width: number, height: number, columns: number): number[] {
   const decoded = spawnSync("ffmpeg", [
     "-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1",
   ], { encoding: "buffer", timeout: 30_000 });
   assert.equal(decoded.status, 0, decoded.stderr.toString());
   assert.equal(decoded.stdout.byteLength, width * height * 4);
-  let count = 0;
+  const counts = Array.from({ length: columns }, () => 0);
   for (let index = 0; index < decoded.stdout.byteLength; index += 4) {
     if (decoded.stdout[index]! > 180 && decoded.stdout[index + 1]! > 130 && decoded.stdout[index + 2]! < 140) {
-      count += 1;
+      const pixel = index / 4;
+      const x = pixel % width;
+      const column = Math.min(columns - 1, Math.floor(x * columns / width));
+      counts[column]! += 1;
     }
   }
-  return count;
+  return counts;
 }
 
 test("locked font and straight-alpha Surface survive one real Hyperframes browser frame", {
@@ -266,57 +269,80 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
   }
 });
 
-test("Fine Caption Paint and trail wipe survive real frame rendering", {
-  skip: !enabled,
+test("Fine Caption exact font, wrapping and all karaoke modes survive real browser frames", {
+  skip: !enabled || localFont === undefined,
   timeout: 120_000,
 }, async () => {
+  assert(localFont !== undefined);
   const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-visual-"));
   try {
-    const width = 360;
-    const height = 180;
+    const width = 720;
+    const height = 240;
     const space = sealProgramSpace({
       contract: "svml.program-space@1",
-      durationSec: 2,
+      durationSec: 4,
       frameRate: { numerator: 10, denominator: 1 },
     });
-    const narrative = parseScript("visual.svml", "<line>First second.</line>");
+    const narrative = parseScript("visual.svml", "<line>One two three four.</line>");
     const display = captionDisplaySequence(narrative, "visual.caption");
-    const recipe: SvsRecipe = {
-      contract: "svml.svs-recipe@1",
-      path: "caption.visual",
-      properties: {
-        "cue-min-words": 1, "cue-max-words": 4,
-        "stack-order": 10, x: 0.5, y: 0.82, width: 0.92,
-        "anchor-x": "center", "anchor-y": "bottom",
-        font: "Arial", weight: 800, size: 44, "line-height": 1,
-        align: "center", fill: "#FFFFFF",
-        "stroke-color": "#000000", "stroke-width": 2,
-        "shadow-color": "#000000", "shadow-opacity": 0.8,
-        "shadow-x": 0, "shadow-y": 2, "shadow-blur": 4,
-        background: "#111111CC", padding: "10 14", radius: 10,
-        karaoke: "trail", "karaoke-transition": "wipe", "active-fill": "#FFD54A",
-      },
+    const fontBytes = await import("node:fs/promises").then(({ readFile }) => readFile(localFont));
+    const font: FontArtifactRef = {
+      contract: "svml.font-artifact@1",
+      artifact: { kind: "blob", digest: digest(fontBytes), size: fontBytes.byteLength, mediaType: "font/ttf" },
+      weight: 400,
+      style: "normal",
     };
-    const style = fineCaptionStyle("visual", recipe);
-    const program = resolveCaptionProgram(display, "visual-program", style, []);
-    const projection: TimedCaptionProjection = {
-      contract: "svml.timed-caption-projection@1",
-      displaySequenceId: display.id,
-      cues: [{
-        id: "visual-cue", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
-        startSec: 0, endSec: 2,
-        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
-        fields: [],
-      }],
-    };
-    const track = renderFineCaption(projection, program, display, space);
+    const modes = [
+      { mode: "current", transition: "step" },
+      { mode: "current", transition: "wipe" },
+      { mode: "trail", transition: "step" },
+      { mode: "trail", transition: "wipe" },
+    ] as const;
+    const tracks = modes.map(({ mode, transition }, index) => {
+      const recipe: SvsRecipe = {
+        contract: "svml.svs-recipe@1",
+        path: `caption.${mode}-${transition}`,
+        properties: {
+          "cue-min-words": 1, "cue-max-words": 4,
+          "stack-order": 10 + index, x: 0.125 + index * 0.25, y: 0.82, width: 0.22,
+          "anchor-x": "center", "anchor-y": "bottom",
+          font: "Exact Test Font", weight: 400, size: 32, "line-height": 1,
+          align: "center", fill: "#FFFFFF",
+          "stroke-color": "#000000", "stroke-width": 1,
+          "shadow-color": "#000000", "shadow-opacity": 0.8,
+          "shadow-x": 0, "shadow-y": 2, "shadow-blur": 3,
+          background: "#111111CC", padding: "8 10", radius: 8,
+          karaoke: mode, "karaoke-transition": transition, "active-fill": "#FFD54A",
+        },
+      };
+      const style = fineCaptionStyle(`${mode}-${transition}`, recipe, font);
+      const program = resolveCaptionProgram(display, `${mode}-${transition}-program`, style, []);
+      const projection: TimedCaptionProjection = {
+        contract: "svml.timed-caption-projection@1",
+        displaySequenceId: display.id,
+        cues: [{
+          id: `${mode}-${transition}-cue`, runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+          startSec: 0, endSec: 4,
+          atoms: display.atoms.map((atom, atomIndex) => ({
+            atomId: atom.id, startSec: atomIndex, endSec: atomIndex + 1,
+          })),
+          fields: [],
+        }],
+      };
+      return renderFineCaption(projection, program, display, space);
+    });
     const document = compileHyperframesDocument(sealComposition({
       contract: "svml.composition@1",
       id: "caption-fine-visual",
       canvas: { width, height, clearColor: "#000000" },
-      tracks: [track],
+      tracks,
     }), space);
-    await writeFile(path.join(temp, "index.html"), document.html);
+    assert.deepEqual(document.artifacts, [font.artifact]);
+    await copyFile(localFont, path.join(temp, "caption.ttf"));
+    await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
+      if (artifact.digest === font.artifact.digest) return "./caption.ttf";
+      throw new Error(`Unexpected Fine Caption visual-test Artifact ${artifact.digest}`);
+    }));
     const output = path.join(temp, "frames");
     await mkdir(output);
     const render = spawnSync(process.execPath, [
@@ -326,11 +352,16 @@ test("Fine Caption Paint and trail wipe survive real frame rendering", {
     ], { encoding: "utf8", timeout: 110_000 });
     assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
     const frames = await collectPngs(output);
-    assert.equal(frames.length, 20);
-    const initialYellow = yellowPixels(frames[0]!, width, height);
-    const finalYellow = yellowPixels(frames.at(-1)!, width, height);
-    assert.ok(initialYellow < 10, `first wipe frame unexpectedly painted ${initialYellow} active pixels`);
-    assert.ok(finalYellow > 100, `trail wipe painted only ${finalYellow} active pixels at the end`);
+    assert.equal(frames.length, 40);
+    const initial = yellowPixelsByColumns(frames[0]!, width, height, modes.length);
+    const final = yellowPixelsByColumns(frames.at(-1)!, width, height, modes.length);
+    assert.ok(initial[0]! > 20, `current step painted only ${initial[0]} active pixels at Cue start`);
+    assert.ok(initial[1]! < 10, `current wipe unexpectedly painted ${initial[1]} active pixels at Cue start`);
+    assert.ok(initial[2]! > 20, `trail step painted only ${initial[2]} active pixels at Cue start`);
+    assert.ok(initial[3]! < 10, `trail wipe unexpectedly painted ${initial[3]} active pixels at Cue start`);
+    assert.ok(final[0]! > 20 && final[1]! > 20, `current modes lost the final active Atom: ${final}`);
+    assert.ok(final[2]! > final[0]! * 2, `trail step did not retain prior Atoms: ${final}`);
+    assert.ok(final[3]! > final[1]! * 2, `trail wipe did not retain prior Atoms: ${final}`);
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

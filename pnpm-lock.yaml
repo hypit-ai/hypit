@@ -262,6 +262,9 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative

@@ -53,15 +53,19 @@ maximum; it is never split to satisfy a number.
 - absolute `stack-order`
 
 The Cue naturally wraps only between Atoms. Words inside one Atom never wrap apart. A hard
-`max-lines` control is intentionally unavailable until exact font bytes and browser-measured layout
-can fail the build rather than silently clip or truncate authored text.
+`max-lines` control is intentionally unavailable until browser-measured layout can fail the build
+rather than silently clip or truncate authored text. Exact font bytes are now available; clipping
+is still forbidden.
 
 ### 3. Typography
 
-- `font`, `weight`, `size`, `font-style: normal | italic`
+- `font`, `weight`, `size`, `font-style: normal | italic | oblique`
 
-The current Recipe names an environment font. Exact `FontArtifactRef` input is a shared typography
-reproducibility gate and remains visible in the implementation table below.
+The Recipe's `font` property is a readable family label and an environment fallback. For a
+reproducible build the author declares exact bytes with `<media:Font>` and passes that value through
+the Style's optional `font=` input. The declared face weight/style must equal the Recipe. Fine puts
+that `FontArtifactRef` only on its terminal text elements; Caption, Core and unrelated graph values
+remain unchanged.
 
 ### 4. Base glyph Paint
 
@@ -147,9 +151,10 @@ This is one complete design, delivered progressively rather than three incompati
    Cue box and strict validation.
 2. **Timed lowering** — current/trail, step/wipe, Cue fades, Atom reveal and active scale using only
    proven whole-Atom time.
-3. **Reproducibility freeze** — exact Font Artifact input, real browser/pixel fixtures for wrapping,
-   outline/glow and all karaoke modes, then decide whether measured `max-lines` can be exposed
-   without clipping.
+3. **Reproducibility freeze** — exact Font Artifact input, multiline wrapping and all four karaoke
+   modes have a real browser witness. Remaining work is broader CJK/emoji and outline/glow pixel
+   evidence, then deciding whether measured `max-lines` can be exposed without clipping.
 
-The first two gates require no common-contract change. The third may add an explicit Font input to
-the Fine Surface/fragment, but still does not belong in Core or common Caption.
+No gate changes Core or common Caption. Exact font selection is an explicit author-graph reference
+between the Media Font Surface and the Fine Style Surface, not metadata propagated through the
+Caption pipeline.
