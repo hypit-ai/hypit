@@ -15,7 +15,7 @@
     glow-color: #FFFFFF; glow-opacity: 0.12; glow-blur: 8;
     background: #09090BCC; border-color: #FFFFFF20; border-width: 1; padding: 16 24; radius: 18;
     karaoke: trail; karaoke-transition: wipe; active-fill: #FFD54A;
-    cue-enter: fade; cue-exit: fade; cue-transition-frames: 4;
+    cue-enter: fade; cue-enter-frames: 4; cue-exit: fade; cue-exit-frames: 4;
   }
   text.title {
     stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1; font: Inter;

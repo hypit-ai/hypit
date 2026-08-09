@@ -124,7 +124,8 @@ executable rather than package-family patches:
 
 `packages/hyperframes/test/browser-visual.test.ts` additionally drives real Hyperframes browser
 frames: installed content-addressed open fonts paint Latin, CJK and emoji/symbol glyphs through an ordered fallback
-stack; Fine Caption proves multiline wrapping, outline/shadow/glow and every karaoke mode; and a
+stack; Fine Caption proves multiline wrapping, full glyph Paint, every glyph karaoke mode and joined
+trail Pill line geometry; and a
 50% straight-alpha PNG composites over a blue Track at the expected pixel values. This opt-in host
 test is run with `SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future
 hosted Runtime.

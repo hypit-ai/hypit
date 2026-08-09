@@ -179,6 +179,28 @@ function matchingPixels(
   return count;
 }
 
+function longestHorizontalRun(
+  rgba: Buffer,
+  width: number,
+  height: number,
+  predicate: (red: number, green: number, blue: number, alpha: number) => boolean,
+): number {
+  let longest = 0;
+  for (let y = 0; y < height; y += 1) {
+    let run = 0;
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      if (predicate(rgba[index]!, rgba[index + 1]!, rgba[index + 2]!, rgba[index + 3]!)) {
+        run += 1;
+        longest = Math.max(longest, run);
+      } else {
+        run = 0;
+      }
+    }
+  }
+  return longest;
+}
+
 test("locked font and straight-alpha Surface survive one real Hyperframes browser frame", {
   skip: !enabled || localFont === undefined,
   timeout: 120_000,
@@ -429,6 +451,85 @@ test("Fine Caption exact font, wrapping and all karaoke modes survive real brows
   }
 });
 
+test("Fine Caption joined trail Pill follows real wrapped browser line fragments", {
+  skip: !enabled || localFont === undefined,
+  timeout: 120_000,
+}, async () => {
+  assert(localFont !== undefined);
+  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-pill-"));
+  try {
+    const width = 480;
+    const height = 280;
+    const space = sealProgramSpace({
+      contract: "svml.program-space@1", durationSec: 6, frameRate: { numerator: 10, denominator: 1 },
+    });
+    const narrative = parseScript("pill.svml", "<line>Every caption word joins across lines.</line>");
+    const display = captionDisplaySequence(narrative, "pill.caption");
+    const fontBytes = await import("node:fs/promises").then(({ readFile }) => readFile(localFont));
+    const font: FontArtifactRef = {
+      contract: "svml.font-artifact@1",
+      sources: [{ artifact: { kind: "blob", digest: digest(fontBytes), size: fontBytes.byteLength, mediaType: "font/ttf" } }],
+      weight: 400,
+      style: "normal",
+    };
+    const recipe: SvsRecipe = {
+      contract: "svml.svs-recipe@1",
+      path: "caption.joined-pill",
+      properties: {
+        "cue-min-words": 1, "cue-max-words": 8,
+        "stack-order": 20, x: 0.5, y: 0.5, width: 0.5,
+        "anchor-x": "center", "anchor-y": "center",
+        font: "Exact Test Font", weight: 400, size: 36, "line-height": 1.5,
+        align: "left", fill: "#FFFFFF", background: "#00000000", padding: "0 0", radius: 0,
+        "word-gap": 8,
+        "active-box": "trail", "active-box-continuity": "joined",
+        "active-box-background": "#00FF00", "active-box-padding": "3 7", "active-box-radius": 7,
+      },
+    };
+    const style = fineCaptionStyle("joined-pill", recipe, [font]);
+    const program = resolveCaptionProgram(display, "joined-pill-program", style, []);
+    const projection: TimedCaptionProjection = {
+      contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
+      cues: [{
+        id: "joined-pill-cue", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+        startSec: 0, endSec: 6,
+        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+        fields: [],
+      }],
+    };
+    const track = renderFineCaption(projection, program, display, space);
+    const document = compileHyperframesDocument(sealComposition({
+      contract: "svml.composition@1",
+      id: "caption-fine-joined-pill",
+      canvas: { width, height, clearColor: "#000000" },
+      tracks: [track],
+    }), space);
+    await copyFile(localFont, path.join(temp, "caption.ttf"));
+    await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
+      if (artifact.digest === font.sources[0]!.artifact.digest) return "./caption.ttf";
+      throw new Error(`Unexpected joined-Pill Artifact ${artifact.digest}`);
+    }));
+    const output = path.join(temp, "frames");
+    await mkdir(output);
+    const render = spawnSync(process.execPath, [
+      hyperframesCli, "render", temp,
+      "--format", "png-sequence", "--output", output, "--fps", "10", "--workers", "1",
+      "--no-browser-gpu", "--no-best-effort", "--quiet",
+    ], { encoding: "utf8", timeout: 110_000 });
+    assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
+    const frames = await collectPngs(output);
+    assert.equal(frames.length, 60);
+    const rgba = decodedRgba(frames.at(-1)!, width, height);
+    const isGreen = (red: number, green: number, blue: number) => green > 170 && red < 100 && blue < 100;
+    assert.ok(matchingPixels(rgba, width, { left: 0, top: 0, right: width, bottom: height }, isGreen) > 1_000,
+      "joined trail Pill painted too few background pixels");
+    assert.ok(longestHorizontalRun(rgba, width, height, isGreen) > 100,
+      "joined trail Pill remained separate per-Atom capsules instead of one line fragment");
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
 test("installed open fonts render CJK, emoji and independent stroke, shadow and glow Paint", {
   skip: !enabled,
   timeout: 120_000,
@@ -446,7 +547,7 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
     const installed = await Promise.all([
       installedOpenFont("inter", 700, "normal"),
       installedOpenFont("noto-sans-sc", 700, "normal"),
-      installedOpenFont("noto-emoji", 400, "normal"),
+      installedOpenFont("noto-color-emoji", 400, "normal"),
     ]);
     const fonts = installed.map(({ font }) => font);
     const fontBytes = new Map<Digest, Uint8Array>();
@@ -533,6 +634,9 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
       "the exact CJK fallback did not paint its glyphs");
     assert.ok(matchingPixels(rgba, width, { left: width / 2, top: 0, right: width, bottom: height / 2 }, visible) > 100,
       "the exact emoji fallback did not paint its glyphs");
+    assert.ok(matchingPixels(rgba, width, { left: width / 2, top: 0, right: width, bottom: height / 2 },
+      (red, green, blue) => Math.max(red, green, blue) - Math.min(red, green, blue) > 35) > 50,
+    "the exact color emoji fallback painted no chromatic pixels");
     const paintRegion = { left: 0, top: height / 2, right: width, bottom: height };
     assert.ok(matchingPixels(rgba, width, paintRegion, (red, green, blue) => red > 150 && green < 120 && blue < 120) > 100,
       "stroke Paint did not produce red pixels");

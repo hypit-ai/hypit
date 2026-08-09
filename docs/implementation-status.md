@@ -176,14 +176,16 @@ Implemented and executable:
   word, with no text rewrite or timing authority;
 - total explicit default Caption Style plus ordered Role/word-subset whole-style overrides;
 - `@narratage/caption-fine`: the first executable field-free Style family, owning its complete SVS
-  schema, anchors/layout, base and active glyph Paint, Cue box, whole-Atom karaoke, restrained local
-  motion and one shared VisualTrack lowering; all four karaoke timing combinations have unit and
-  real HyperFrames/browser pixel evidence, including multiline wrapping, CJK, emoji/symbols,
-  outline, shadow and glow;
+  schema, anchors/layout, solid/gradient base and active glyph Paint, outline, shadow, bounded long
+  shadow, glow, underline, Cue/Pill Paint and layered local motion in one shared VisualTrack
+  lowering; glyph, underline and Pill activation are independent, including isolated/current and
+  real joined-trail line geometry; all four glyph karaoke combinations and joined wrapped Pill have
+  unit plus real HyperFrames/browser pixel evidence, alongside CJK and emoji/symbols;
 - explicit `<media:Font>` custom source declarations and the private, version-pinned
-  `@narratage/fonts-open` installed catalog produce exact `FontArtifactRef` values; one logical face
-  may carry several Unicode-range sources, Fine Style accepts an ordered primary/fallback stack as
-  ordinary author references, and HyperFrames materializes those exact bytes;
+  `@narratage/fonts-open` 109-family installed catalog produces exact `FontArtifactRef` and reusable
+  `FontStackRef` values; one logical face may carry several Unicode-range sources, the pinned
+  COLRv1 Emoji path has real Chromium pixel evidence, Fine accepts the generic ordered stack as an
+  ordinary author reference, and HyperFrames materializes those exact bytes;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;

@@ -27,7 +27,7 @@ Script Display → Caption Program → Planner + measured Atom timing → Style-
 
 `@narratage/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
 assignment, Plan validation and the timing join. `@narratage/caption-fine` is one field-free Style
-family: it owns geometry, glyph/Cue-box Paint, restrained motion and optional whole-Atom karaoke.
+family: it owns geometry, glyph/Cue/Pill Paint and layered local motion.
 
 ### caption-fine:Style
 
@@ -48,28 +48,33 @@ caption.primary {
   shadow-color: #000000; shadow-opacity: 0.72;
   shadow-x: 0; shadow-y: 3; shadow-blur: 8;
   glow-color: #FFFFFF; glow-opacity: 0.12; glow-blur: 8;
+  gradient-from: #FFFFFF; gradient-to: #93C5FD; gradient-angle: 120;
+  long-shadow-color: #111827; long-shadow-opacity: 0.35;
+  long-shadow-distance: 8; long-shadow-angle: 45;
   background: #09090BCC; border-color: #FFFFFF20; border-width: 1;
   padding: 16 24; radius: 18;
   karaoke: trail; karaoke-transition: wipe;
-  active-fill: #FFD54A; active-scale: 1.04;
-  cue-enter: fade; cue-exit: fade; cue-transition-frames: 4;
+  active-fill: #FFD54A;
+  active-box: current; active-box-continuity: isolated;
+  active-box-background: #FFD54ACC; active-box-padding: 4 8; active-box-radius: 8;
+  active-underline: current; active-underline-color: #FFFFFF;
+  active-underline-thickness: 3; active-underline-offset: 5;
+  cue-enter: fade; cue-enter-frames: 4; cue-exit: fade; cue-exit-frames: 4;
   atom-reveal: all;
+  active-response: pop; active-response-frames: 5; active-scale: 1.08;
 }
 ```
 
 ```svml
-<fonts:Face id="caption-font" family="inter" weight="700" style="normal"/>
-<fonts:Face id="caption-cjk" family="noto-sans-sc" weight="700" style="normal"/>
-<fonts:Face id="caption-symbols" family="noto-emoji" weight="400" style="normal"/>
+<fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
+</fonts:Stack>
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
-  font={caption-font}>
-  <caption-fine:Fallback font={caption-cjk}/>
-  <caption-fine:Fallback font={caption-symbols}/>
-</caption-fine:Style>
+  font={caption-fonts}/>
 ```
 
-The explicit `font=` edge and ordered `Fallback` children make the rendered stack
-byte-reproducible. The primary face must match the Recipe's weight/style; each fallback retains its
+The explicit `font=` edge carries one byte-reproducible `FontStackRef`. The primary face must match
+the Recipe's weight/style; each fallback retains its
 own exact face metadata. Omitting the stack deliberately uses the Recipe's `font` family as an
 environment fallback; neither Caption nor the Runtime chooses a font on the author's behalf.
 
@@ -77,14 +82,19 @@ Another Caption package may define completely different planning fields and visu
 without changing the common package.
 
 Fine's properties are orthogonal: Cue planning; normalized placement and anchor; layout and
-typography; base glyph Paint; Cue-box Paint; active glyph Paint; karaoke timing; and restrained
-local motion. Active Paint supports the same `fill`/`opacity`/`stroke-*`/`shadow-*`/`glow-*`
-dimensions using the `active-` prefix. Missing optional dimensions resolve deterministically to no
-decoration or motion. Unknown properties are rejected.
+typography; base/active solid or gradient glyph Paint; stroke, shadow, directional long shadow,
+glow and underline; Cue/Pill Paint; three independent glyph/Pill/underline activation channels;
+and layered Cue, Atom, active-response and loop motion. Missing optional dimensions resolve
+deterministically to no decoration or motion. Unknown properties are rejected.
 
 `karaoke` is `off`, `current` or `trail`; `karaoke-transition` is `step` or `wipe`. Timing is always
 whole-Atom timing already proven by Caption. A normal one-word Atom therefore highlights per word,
 while a Dual Text Atom remains one indivisible visible unit. Fine never guesses internal time.
+
+`active-box` is independently `off`, `current` or `trail`. `active-box-continuity: isolated` paints
+one capsule per activated Atom; `joined` turns a trail into one ordered prefix whose background is
+continuous on each real browser line. Thus trail-colored text with a current-only Pill, the original
+Twinit behavior, is one Recipe—not a second renderer.
 
 Fine wraps only between complete Atoms and never clips author text. It intentionally has no
 `max-lines`; use Cue bounds, Track width and font size to control density.

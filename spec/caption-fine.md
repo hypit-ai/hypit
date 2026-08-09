@@ -31,8 +31,10 @@ Composition, Visual IR or Core while their existing public contracts can express
 
 ## Complete orthogonal surface
 
-The complete restrained family has these independent dimensions. Properties not listed here are
-not deferred accidents: they are deliberate non-goals for this family.
+Fine owns one single-font Cue/Atom layout tree. Its dimensions are independent: a Recipe may combine
+gradient glyphs, a current-word box, trail text, an underline and local motion without selecting a
+different renderer. A new package is warranted only when a look changes the layout tree or requires
+planner fields—for example dual-font editorial layout—not when it merely adds Paint or local motion.
 
 ### 1. Cue planning
 
@@ -61,40 +63,58 @@ must be a separately connected component whose failure is explicit in the graph.
 ### 3. Typography
 
 - `font`, `weight`, `size`, `font-style: normal | italic | oblique`
+- `text-transform: none | uppercase | lowercase`
+
+Text transform is terminal presentation only. It never changes `CaptionDisplaySequence`, planner
+input, Word/Atom identity, speech correspondence or timing.
 
 The Recipe's `font` property is a readable family label and an environment fallback. For a
 reproducible build the author imports exact installed faces from `@narratage/fonts-open`, or declares
-custom/brand bytes with `<media:Font>`. The primary face passes through `font=`; ordered
-`<caption-fine:Fallback>` children add CJK, emoji or other glyph coverage:
+custom/brand bytes with `<media:Font>`. `font=` accepts one exact face with ordered Style-owned
+Fallback children, or one reusable generic `FontStackRef`. The compact open-font path is:
 
 ```svml
-<caption-fine:Style id="primary" recipe={studio.caption.primary} font={latin}>
-  <caption-fine:Fallback font={cjk}/>
-  <caption-fine:Fallback font={symbols}/>
-</caption-fine:Style>
+<fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
+</fonts:Stack>
+<caption-fine:Style id="primary" recipe={studio.caption.primary} font={caption-fonts}/>
 ```
 
 The primary face must declare the Recipe's exact weight/style. A fallback preserves its own honest
 face metadata—for example a 700-weight Latin primary may use a 400-weight symbol fallback. Exact
 duplicate faces are rejected. One logical face may contain several content-addressed Unicode-range
-sources, as the installed CJK and emoji fonts do. Fine puts this ordered `FontArtifactRef` stack only
+sources, as the installed CJK and Emoji fonts do. Fine expands `FontStackRef` into the same ordered
+exact faces and puts them only
 on its terminal text elements; Caption, Core and unrelated graph values remain unchanged. Omitting
 `font=` is an explicit environment-bound prototype path, not a Runtime font-selection policy.
 
 CJK speech may be authored directly. A display-only emoji still needs explicit speech
 correspondence, for example `<🌐 | globe>`; Script correctly refuses to invent a spoken token for a
-bare symbol. This is timing truth, not a font limitation.
+bare symbol. A character with both text and Emoji presentation uses the exact authored Unicode
+sequence (for example `☎️` with VS16); no lowerer rewrites display text to force color. This is
+timing and text truth, not a font limitation.
 
-### 4. Base glyph Paint
+### 4. Base and active glyph Paint
 
-- solid `fill` and `opacity`
+- solid `fill`, or `gradient-from`, `gradient-to`, `gradient-angle`
+- `opacity`
 - one outline: `stroke-color`, `stroke-width`
-- one shadow: color, opacity, x/y offset and blur
-- one glow: color, opacity and blur
+- one shadow: `shadow-color`, `shadow-opacity`, `shadow-x`, `shadow-y`, `shadow-blur`
+- one bounded directional long shadow: `long-shadow-color`, `long-shadow-opacity`,
+  `long-shadow-distance`, `long-shadow-angle`
+- one glow: `glow-color`, `glow-opacity`, `glow-blur`
+- one base underline: `underline: off | always`, `underline-color`, `underline-thickness`,
+  `underline-offset`
 
-Shadow and glow are two independently authored contributions lowered into one deterministic
-`text-shadow` declaration. Multiple arbitrary layers, textures, gradients, bevel, extrusion and
-long-shadow generators are outside this restrained family.
+Every active Paint name uses the `active-` prefix. For example `active-gradient-from`,
+`active-long-shadow-distance` and `active-glow-blur` describe the active glyph without changing
+the base glyph.
+
+Base and active Paint have the same shape. A gradient replaces the solid fill for that layer; it
+does not replace the active overlay or the karaoke transition. Drop shadow, long shadow and glow are
+independent authored contributions lowered into one deterministic `text-shadow` declaration. Long
+shadow expansion is implementation-bounded, so one Recipe cannot create an unbounded CSS payload.
+Multiple arbitrary shadow layers, textures, bevel and free-form extrusion remain outside Fine.
 
 ### 5. Cue box Paint
 
@@ -105,29 +125,50 @@ long-shadow generators are outside this restrained family.
 
 Backdrop sampling is forbidden because it would make this Track inspect another Track's pixels.
 
-### 6. Karaoke Paint and timing
+### 6. Activation channels, karaoke Paint and timing
 
-- `karaoke: off | current | trail`
-- `karaoke-transition: step | wipe`
-- a complete active glyph Paint with the same fill/opacity/stroke/shadow/glow shape as base Paint
+- active glyph state: `karaoke: off | current | trail`
+- active glyph transition: `karaoke-transition: step | wipe`
+- active box state: `active-box: off | current | trail`
+- active box continuity: `active-box-continuity: isolated | joined`
+- active box Paint: `active-box-background`, border, padding and radius
+- active box motion: `active-box-enter`, `active-box-exit`, `active-box-transition-frames`
+- active underline state: `active-underline: off | current | trail`, plus color, thickness and offset
 
-`current` activates only the Atom whose measured window contains the frame. `trail` retains every
-activated Atom through the end of the Cue. `step` swaps the whole Atom; `wipe` reveals its active
-layer across that Atom's measured window. RTL reverses the wipe direction.
+Activation state and decoration geometry are deliberately separate. `current` activates only the
+Atom whose measured window contains the frame. `trail` retains every activated Atom through the end
+of the Cue. `step` swaps the whole active glyph layer; `wipe` reveals it across the Atom's measured
+window. RTL reverses the wipe direction. Glyphs, boxes and underlines may choose different state
+policies, so the old Twinit behavior—trail text with a current-only pill—is directly expressible.
+
+An isolated box paints one box per activated Atom. A joined trail paints the one ordered activated
+prefix as continuous inline fragments: atoms on the same rendered line share one background, while
+each wrapped line receives its own end caps. Browser line layout, not upstream metadata, determines
+the fragments. Fine never propagates measured line boxes through the graph.
 
 Karaoke is deliberately Atom-grained. In ordinary text an Atom is normally one visible Word. In
 `<45% | forty five percent>` the authored visible `45%` is one Atom and activates as one unit. In a
 multi-word display Atom, the whole authored Atom activates together. No downstream package invents
 internal Word timestamps that the author and audio evidence never supplied.
 
-### 7. Restrained local motion
+### 7. Layered local motion
 
-- Cue enter/exit: `none | fade`, with one frame duration
-- Atom reveal: `all | on-start`
-- active Atom scale
+- Cue enter/exit: `none | fade | pop | spring | slide-left | slide-right | slide-up | slide-down | blur-in`
+- Atom entry: the same one-shot vocabulary
+- Atom reveal: `all | on-start | typewriter`
+- active response: `none | scale | pop | spring`
+- active-box enter/exit: `none | fade | pop`
+- continuous local loop: `none | shake | wobble | glow-pulse`, targeted at the Cue or active Atom
 
-These motions affect only Fine's own elements. Typewriter, bounce, rotation, path motion and random
-variation are intentionally excluded until a concrete reusable style needs them.
+The flat Recipe names are `cue-enter`, `cue-exit`, their independent `*-frames`; `atom-enter`,
+`atom-enter-frames`, `atom-reveal`; `active-response`, `active-response-frames`, `active-scale`;
+`slide-distance`; and `loop`, `loop-target`, `loop-period-frames`, `loop-intensity`.
+
+Cue, Atom entry, active response and loop own separate wrappers, so their transforms compose instead
+of overwriting one another. Typewriter reveals authored display graphemes inside a whole Atom; it is
+visual interpolation, not a claim of character timestamps and never changes Atom boundaries.
+Continuous motion is a bounded deterministic frame function with no random input. Bounce, arbitrary
+rotation, path motion and random variation remain outside Fine.
 
 ## One renderer, one layout tree
 
@@ -135,16 +176,20 @@ Static and karaoke output share this structure:
 
 ```text
 placement
-└── cue box
-    ├── atom
-    │   ├── base words
-    │   └── active overlay (only when karaoke is enabled)
-    │       └── active words
-    └── atom ...
+└── cue motion
+    └── cue box
+        ├── joined/isolated decoration underlay
+        └── cue loop
+            └── atom entry
+                └── active response
+                    ├── base words
+                    └── active glyph/underline overlay
 ```
 
-The active overlay reuses the same Atom geometry; karaoke does not fork a second DOM renderer.
-Every animation lowers to frame-addressed `VisualTrack` keyframes before HyperFrames sees it.
+The decoration underlay repeats only the same transparent glyph geometry required to obtain honest
+browser line fragments. It does not create another text truth. Active overlays reuse the same Atom
+geometry. Every animation lowers to finite frame-addressed `VisualTrack` keyframes before
+HyperFrames sees it.
 
 ## Defaults and compatibility
 
@@ -153,8 +198,11 @@ planning, geometry, typography and its visible box. New dimensions are optional 
 complete immutable parameter object:
 
 - top-left anchor, LTR, normal font, zero letter spacing and a one-quarter-em word gap;
-- no stroke, shadow, glow or border;
-- karaoke off, Cue motion off, all Atoms visible, scale 1;
+- no stroke, shadow, long shadow, glow, underline or border;
+- solid fill, text transform none;
+- active glyph, active box and active underline off;
+- Cue/Atom/box motion and loops off, all Atoms visible; active response scale defaults to 1.08 when
+  that response channel is enabled;
 - when karaoke is enabled without another active Paint, active fill defaults to `#FFD54A` and the
   other active Paint dimensions inherit base Paint.
 
@@ -170,8 +218,12 @@ The complete design was delivered progressively rather than as incompatible vers
 2. **Timed lowering** — current/trail, step/wipe, Cue fades, Atom reveal and active scale using only
    proven whole-Atom time.
 3. **Reproducibility evidence** — an ordered exact Font Artifact stack, CJK, emoji/symbol fallback,
-   multiline wrapping, outline, shadow, glow and all four karaoke modes have real browser/pixel
+   multiline wrapping, outline, shadow, glow and all four glyph karaoke modes have real browser/pixel
    witnesses. `max-lines` was deliberately rejected rather than deferred.
+4. **Expressive Paint and motion evidence** — current-only and trail boxes, isolated and joined
+   geometry, gradient, underline, long shadow, text transform, layered one-shot motion, typewriter
+   reveal and deterministic loops each have a terminal-IR witness; joined geometry additionally has
+   a real wrapped browser/pixel witness.
 
 No gate changes Core or common Caption. Exact font selection is an explicit author-graph reference
 between the Media Font Surface and the Fine Style Surface, not metadata propagated through the

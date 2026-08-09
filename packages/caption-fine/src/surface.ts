@@ -1,6 +1,6 @@
 import { captionTypes } from "@narratage/caption";
-import { assertFontArtifactRef, mediaTypes } from "@narratage/media";
-import type { FontArtifactRef } from "@narratage/media";
+import { assertFontArtifactRef, assertFontStackRef, mediaTypes } from "@narratage/media";
+import type { FontArtifactRef, FontStackRef } from "@narratage/media";
 import { narrativeTypes } from "@narratage/narrative";
 import { programSpaceTypes } from "@narratage/program-space";
 import { semanticMapTypes } from "@narratage/semantic-map";
@@ -68,10 +68,20 @@ function exactFonts(
   const result: FontArtifactRef[] = [];
   const primary = element.attributes.font;
   if (primary !== undefined) {
-    result.push(inline<FontArtifactRef>(
-      reference(element, "font", mediaTypes.fontArtifact, resolveReference),
-      `${element.name}.font`,
-    ));
+    if (typeof primary !== "object" || primary.kind !== "reference") {
+      throw new Error(`${element.name}.font must be a whole-value reference`);
+    }
+    const resolved = resolveReference(primary.path);
+    if (resolved === undefined) throw new Error(`${element.name}.font cannot resolve ${primary.path}`);
+    if (sameType(resolved.type, mediaTypes.fontArtifact)) {
+      result.push(inline<FontArtifactRef>(resolved, `${element.name}.font`));
+    } else if (sameType(resolved.type, mediaTypes.fontStack)) {
+      const stack = inline<FontStackRef>(resolved, `${element.name}.font`);
+      assertFontStackRef(stack, `${element.name}.font`);
+      result.push(...stack.faces);
+    } else {
+      throw new Error(`${element.name}.font has the wrong type`);
+    }
   }
   for (const child of element.children) {
     if (child.kind === "text") {
