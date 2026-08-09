@@ -10,6 +10,7 @@
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="text" from="@narratage/text-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
@@ -48,9 +49,12 @@
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
     map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
+  <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
   <text:Track id="titles" space={speech.space}>
-    <text:Item text="MEANING" during="full" frame={title-frame}
-      appearance={studio.text.title}/>
+    <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+      MEANING
+    </text:Area>
   </text:Track>
 
   <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>

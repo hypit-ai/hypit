@@ -41,6 +41,9 @@ export type MediaVideoStream = MediaStreamBase & {
   readonly role: "moving" | "attached-picture" | "still";
   readonly width: number;
   readonly height: number;
+  /** Coded-pixel width/height become display geometry only after this ratio and rotation are normalized. */
+  readonly sampleAspectRatio: MediaRational;
+  readonly rotationDegrees: 0 | 90 | 180 | 270;
   readonly averageFrameRate?: MediaRational;
   readonly nominalFrameRate?: MediaRational;
 };

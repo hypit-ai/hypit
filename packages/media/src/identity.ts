@@ -90,6 +90,10 @@ function verifyStream(value: unknown, subject: string): asserts value is MediaSt
     assert(item.role === "moving" || item.role === "attached-picture" || item.role === "still", `${subject}.role is invalid`);
     positiveInteger(item.width, `${subject}.width`);
     positiveInteger(item.height, `${subject}.height`);
+    verifyRational(item.sampleAspectRatio, `${subject}.sampleAspectRatio`);
+    assert(item.rotationDegrees === 0 || item.rotationDegrees === 90
+      || item.rotationDegrees === 180 || item.rotationDegrees === 270,
+    `${subject}.rotationDegrees is invalid`);
     if (item.averageFrameRate !== undefined) verifyRational(item.averageFrameRate, `${subject}.averageFrameRate`);
     if (item.nominalFrameRate !== undefined) verifyRational(item.nominalFrameRate, `${subject}.nominalFrameRate`);
     if (item.role === "attached-picture") {

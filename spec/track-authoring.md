@@ -441,19 +441,21 @@ The first implementation batch must include tests for:
 
 ## 9. Ranking specialization
 
-The complete Ranking audit, component split, group schedule and migration plan are specified in
-[`ranking-track.md`](./ranking-track.md). Ranking validates that the common temporal algebra can
+The complete Ranking audit, component split, group schedule and executable migration are specified in
+[`ranking-track.md`](./ranking-track.md). Ranking now validates that the common temporal algebra can
 support cumulative state, exclusive current stages and a final settled suffix without adding
 Ranking or `Stage` meaning to Core or the public Track contract.
 
 ## 10. Remaining design and implementation work
 
-The following work remains, but it does not block rewriting packages whose own specifications and
-shared dependencies are complete:
+One independently designed author package remains outside the current migration:
 
 1. design Comment Sticker content/layout/presentation independently when a real migration starts;
-2. implement the existing acceptance matrix proving all packages lower to peer
-   VisualTrack/AudioTrack values without changing Core or Composition.
+
+For every currently specified official Track package, the implemented acceptance matrix proves
+Text, Caption, Media, Deck, Ranking and Screen Overlay lower to peer VisualTrack values, while
+generic Audio and optional Media/Ranking sound lower to peer AudioTrack values without changing
+Core or Composition.
 
 Generic Audio Track and self-contained Screen Overlay are now specified separately in
 [`audio-track.md`](./audio-track.md) and [`screen-overlay.md`](./screen-overlay.md). Audio reuses the

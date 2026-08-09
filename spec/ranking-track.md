@@ -1,8 +1,9 @@
 # SVML Ranking Track Migration
 
-Status: normative design for the official Ranking migration. It records the author model and
-lowering laws to implement after the shared temporal projection package. It is not a compatibility
-promise for the historical Twinit node format or a frozen public ABI.
+Status: implemented executable authority for the official Ranking migration. All four author
+components, their shared triggered schedule, optional peer AudioTrack lowering, author Surfaces and
+real-browser evidence execute in `@narratage/ranking`. It is not a compatibility promise for the
+historical Twinit node format or a frozen public ABI.
 
 ## 1. What Ranking means
 
@@ -268,16 +269,16 @@ Ranking branch and its temporal/media ancestors. No special Ranking execution ru
 
 ## 9. Migration order and acceptance
 
-Implementation order:
+Implemented in this order:
 
-1. implement the shared temporal projection and triggered-schedule laws;
-2. create `@narratage/ranking@1` with four separate Programs/Styles and one private schedule utility;
-3. lower TierBoard and Column first, because together they prove cumulative and exclusive stage
+1. **Implemented:** the shared temporal projection and triggered-schedule laws;
+2. **Implemented:** `@narratage/ranking@1` with four separate Programs/Styles and one private schedule utility;
+3. **Implemented:** TierBoard and Column, which together prove cumulative and exclusive stage
    semantics plus independent stacking;
-4. lower TopThree;
-5. lower TypewriterList using exact font/layout primitives;
-6. add optional AudioTrack lowering from the same schedule;
-7. add real-browser visual witnesses and one author-Surface graph check per component.
+4. **Implemented:** TopThree;
+5. **Implemented:** TypewriterList using exact font/layout primitives;
+6. **Implemented:** optional AudioTrack lowering from the same schedule;
+7. **Implemented:** a real-browser progressive-state witness and one author-Surface graph check per component.
 
 Acceptance requires:
 
@@ -295,3 +296,8 @@ Acceptance requires:
 The migration intentionally does not preserve historical node JSON, mode switching, old dynamic
 ports, renderer ids or Remotion components. Historical projects are evidence and visual references,
 not a compatibility obligation for an unreleased language.
+
+The package test matrix covers every acceptance item above. The opt-in Chromium witness evaluates
+all four components with one worker and partitioned workers, proves visible trigger progression and
+the final settled suffix, and bounds only microscopic cross-process edge-antialiasing noise. Logical
+frame state, geometry, stacking, event frames and authored graph edges remain exact.

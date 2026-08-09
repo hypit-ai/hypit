@@ -13,6 +13,7 @@
     "@narratage/component-kit": "workspace:*",
     "@narratage/composition": "workspace:*",
     "@narratage/elaborator": "workspace:*",
+    "@narratage/media": "workspace:*",
     "@narratage/narrative": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",

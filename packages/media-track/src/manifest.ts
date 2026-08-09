@@ -163,7 +163,7 @@ const clip: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "path" } }, path: { schema: path } }),
 ] };
 const padding = object({ topPx: { schema: unsigned }, rightPx: { schema: unsigned }, bottomPx: { schema: unsigned }, leftPx: { schema: unsigned } });
-const presentation = object({
+export const mediaFramePresentationSchema: ValueSchema = object({
   clip: { schema: clip }, padding: { schema: padding },
   border: { schema: object({ widthPx: { schema: unsigned }, style: { schema: { kind: "string", enum: ["solid", "dashed", "dotted"] } }, color: { schema: string } }), optional: true },
   shadows: { schema: { kind: "array", items: object({ offsetX: { schema: number }, offsetY: { schema: number }, blurPx: { schema: unsigned }, spreadPx: { schema: number }, color: { schema: string } }) } },
@@ -179,7 +179,7 @@ const sustainMotion = object({
   amount: { schema: unsigned }, cycles: { schema: positiveInteger },
   direction: { schema: { kind: "string", enum: ["left", "right", "up", "down"] }, optional: true },
 });
-const lifecycle = object({
+export const mediaLifecycleMotionSchema: ValueSchema = object({
   enter: { schema: edgeMotion, optional: true }, sustain: { schema: { kind: "array", items: sustainMotion } },
   exit: { schema: edgeMotion, optional: true },
 });
@@ -200,7 +200,7 @@ export const mediaSoundSetSchema: ValueSchema = object({
 export const mediaItemSpecSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.media-item-spec@1" } }, id: { schema: string },
   projection: { schema: projection }, expansion: { schema: object({ kind: { schema: { kind: "string", enum: ["one", "each"] } } }) },
-  presentation: { schema: presentation }, motion: { schema: lifecycle }, stackingOrder: { schema: integer },
+  presentation: { schema: mediaFramePresentationSchema }, motion: { schema: mediaLifecycleMotionSchema }, stackingOrder: { schema: integer },
   sourceAudio: { schema: object({ fromLayer: { schema: string }, gain: { schema: unsigned } }), optional: true },
 });
 const sourceAudio = object({ fromLayer: { schema: string }, gain: { schema: unsigned } });
@@ -230,14 +230,14 @@ export const mediaHandoffSpecSchema: ValueSchema = object({
 });
 export const mediaSequenceSpecSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.media-sequence-spec@1" } },
-  id: { schema: string }, presentation: { schema: presentation },
-  motion: { schema: lifecycle }, stackingOrder: { schema: integer },
+  id: { schema: string }, presentation: { schema: mediaFramePresentationSchema },
+  motion: { schema: mediaLifecycleMotionSchema }, stackingOrder: { schema: integer },
   handoffs: { schema: { kind: "array", minItems: 1, items: mediaHandoffSpecSchema } },
 });
 const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const resolvedItem = object({
   id: { schema: string }, sourceOccurrenceId: { schema: string }, span: { schema: frameSpan }, frame: { schema: spatialFrameSchema },
-  presentation: { schema: presentation }, layers: { schema: { kind: "array", minItems: 1, items: layer } }, motion: { schema: lifecycle },
+  presentation: { schema: mediaFramePresentationSchema }, layers: { schema: { kind: "array", minItems: 1, items: layer } }, motion: { schema: mediaLifecycleMotionSchema },
   stacking: { schema: object({ order: { schema: integer }, tieBreak: { schema: string } }) },
   sourceAudio: { schema: object({ fromLayer: { schema: string }, gain: { schema: unsigned } }), optional: true },
   sounds: { schema: { kind: "array", items: soundEvent } },
@@ -250,10 +250,10 @@ const resolvedMember = object({
 const resolvedHandoff = object({ ...handoffFields, span: { schema: frameSpan } });
 const resolvedSequence = object({
   id: { schema: string }, span: { schema: frameSpan }, terminalFrame: { schema: positiveInteger },
-  frame: { schema: spatialFrameSchema }, presentation: { schema: presentation },
+  frame: { schema: spatialFrameSchema }, presentation: { schema: mediaFramePresentationSchema },
   members: { schema: { kind: "array", minItems: 2, items: resolvedMember } },
   handoffs: { schema: { kind: "array", minItems: 1, items: resolvedHandoff } },
-  motion: { schema: lifecycle }, stacking: { schema: object({ order: { schema: integer }, tieBreak: { schema: string } }) },
+  motion: { schema: mediaLifecycleMotionSchema }, stacking: { schema: object({ order: { schema: integer }, tieBreak: { schema: string } }) },
   sounds: { schema: { kind: "array", items: soundEvent } },
 });
 export const mediaTrackSetSchema: ValueSchema = object({

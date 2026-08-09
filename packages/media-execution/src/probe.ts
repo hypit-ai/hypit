@@ -10,6 +10,7 @@ type FfprobeStream = {
   readonly codec_name?: unknown;
   readonly width?: unknown;
   readonly height?: unknown;
+  readonly sample_aspect_ratio?: unknown;
   readonly time_base?: unknown;
   readonly avg_frame_rate?: unknown;
   readonly r_frame_rate?: unknown;
@@ -17,6 +18,8 @@ type FfprobeStream = {
   readonly channels?: unknown;
   readonly channel_layout?: unknown;
   readonly disposition?: { readonly default?: unknown; readonly attached_pic?: unknown };
+  readonly tags?: { readonly rotate?: unknown };
+  readonly side_data_list?: readonly unknown[];
 };
 
 type FfprobeFrame = {
@@ -66,6 +69,41 @@ function rational(value: unknown, allowZero = false): MediaRational | undefined 
   if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator < 1) return undefined;
   if (allowZero ? numerator < 0 : numerator < 1) return undefined;
   return { numerator, denominator };
+}
+
+function divisor(left: number, right: number): number {
+  let a = Math.abs(left);
+  let b = Math.abs(right);
+  while (b !== 0) [a, b] = [b, a % b];
+  return a;
+}
+
+function sampleAspectRatio(value: unknown): MediaRational {
+  if (typeof value !== "string") return { numerator: 1, denominator: 1 };
+  const match = value.match(/^(\d+):(\d+)$/u);
+  if (match === null) return { numerator: 1, denominator: 1 };
+  const numerator = Number(match[1]);
+  const denominator = Number(match[2]);
+  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator)
+    || numerator <= 0 || denominator <= 0) return { numerator: 1, denominator: 1 };
+  const factor = divisor(numerator, denominator);
+  return { numerator: numerator / factor, denominator: denominator / factor };
+}
+
+function numeric(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return undefined;
+}
+
+function displayRotation(stream: FfprobeStream, index: number): 0 | 90 | 180 | 270 {
+  const sideData = stream.side_data_list?.map(object).find((item) => item?.side_data_type === "Display Matrix");
+  const raw = numeric(sideData?.rotation) ?? numeric(stream.tags?.rotate) ?? 0;
+  const normalized = ((raw % 360) + 360) % 360;
+  for (const quarter of [0, 90, 180, 270] as const) {
+    if (Math.abs(normalized - quarter) < 1e-6) return quarter;
+  }
+  throw new Error(`video stream ${index} uses unsupported non-quarter display rotation ${raw}`);
 }
 
 function timestamp(ticks: bigint, timeBase: MediaRational): MediaTimestamp {
@@ -222,6 +260,8 @@ export function parseMediaInspection(args: {
         role,
         width,
         height,
+        sampleAspectRatio: sampleAspectRatio(stream.sample_aspect_ratio),
+        rotationDegrees: displayRotation(stream, index),
         ...(rational(stream.avg_frame_rate, true) === undefined ? {} : { averageFrameRate: rational(stream.avg_frame_rate, true)! }),
         ...(rational(stream.r_frame_rate, true) === undefined ? {} : { nominalFrameRate: rational(stream.r_frame_rate, true)! }),
       };

@@ -16,12 +16,20 @@ export {
   spatialSurfaceDigests,
   spatialTypes,
 } from "./manifest.js";
-export { contentFitSchema, intrinsicExtentSchema, spatialFrameSchema } from "./schema.js";
+export {
+  contentFitSchema,
+  intrinsicExtentSchema,
+  spatialFrameSchema,
+  spatialPathSchema,
+  spatialPointSchema,
+} from "./schema.js";
 export {
   decodeAnchoredFrameSurface,
   decodeAspectFrameSurface,
   decodeCanvasSurface,
   decodeExtentSurface,
   decodeFrameSurface,
+  decodePathSurface,
+  decodePointSurface,
 } from "./surface.js";
 export type * from "./types.js";

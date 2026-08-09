@@ -26,6 +26,9 @@ importers:
       '@narratage/composition':
         specifier: workspace:*
         version: link:packages/composition
+      '@narratage/deck-track':
+        specifier: workspace:*
+        version: link:packages/deck-track
       '@narratage/estimate':
         specifier: workspace:*
         version: link:packages/estimate
@@ -83,6 +86,9 @@ importers:
       '@narratage/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
+      '@narratage/ranking':
+        specifier: workspace:*
+        version: link:packages/ranking
       '@narratage/render-hyperframes':
         specifier: workspace:*
         version: link:packages/render-hyperframes
@@ -486,6 +492,48 @@ importers:
       '@narratage/credential-store-env':
         specifier: workspace:*
         version: link:../credential-store-env
+
+  packages/deck-track:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:../media-track
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/driver-node:
     dependencies:
@@ -1660,6 +1708,48 @@ importers:
         specifier: workspace:*
         version: link:../driver-node
 
+  packages/ranking:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/render-hyperframes:
     dependencies:
       '@narratage/component-kit':
@@ -2166,6 +2256,9 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative

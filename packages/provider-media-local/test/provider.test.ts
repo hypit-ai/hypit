@@ -259,6 +259,48 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
   }
 });
 
+test("local media normalization materializes rotation and sample aspect before Spatial", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-display-geometry-"));
+  try {
+    const base = join(root, "base.mp4");
+    const sourcePath = join(root, "rotated.mp4");
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=160x96:r=4:d=0.5",
+      "-vf", "setsar=2/1", "-c:v", "libx264", "-pix_fmt", "yuv420p", base,
+    ]);
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-display_rotation", "90", "-i", base, "-c", "copy", sourcePath,
+    ]);
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
+    const inspection = await inspectArtifact(artifacts, source);
+    const inputVideo = inspection.streams.find((stream) => stream.kind === "video");
+    assert.equal(inputVideo?.kind, "video");
+    if (inputVideo?.kind !== "video") return;
+    assert.deepEqual(inputVideo.sampleAspectRatio, { numerator: 2, denominator: 1 });
+    assert.equal(inputVideo.rotationDegrees, 90);
+    const request = sealMediaSelectionRequest({
+      contract: "svml.media-selection-request@1",
+      video: { mode: "primary-moving" }, audio: { mode: "none" },
+      spanAuthority: "video", frameRate: { numerator: 4, denominator: 1 },
+    });
+    const selection = selectMediaStreams(inspection, request);
+    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    assert.equal(normalized.visual?.width, 96);
+    assert.equal(normalized.visual?.height, 320);
+    const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+    const outputVideo = output.streams.find((stream) => stream.kind === "video");
+    assert.equal(outputVideo?.kind, "video");
+    if (outputVideo?.kind !== "video") return;
+    assert.deepEqual(outputVideo.sampleAspectRatio, { numerator: 1, denominator: 1 });
+    assert.equal(outputVideo.rotationDegrees, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("animated WebP keeps its authored frame timing before fixed-rate normalization", {
   skip: !hasMediaBinaries,
 }, async () => {
