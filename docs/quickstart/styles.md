@@ -113,12 +113,11 @@ caption.dialogue {
 | `padding` | Container padding in pixels (single value or `vertical horizontal`) |
 | `radius` | Container border radius in pixels |
 
-For reproducible rendering, declare exact font bytes in the `.svml` source and pass that Record to
-the Fine Style. Its `weight` and `style` must match the Recipe:
+For reproducible rendering, select an exact installed face in the `.svml` source and pass that
+Record to the Fine Style. The primary face's `weight` and `style` must match the Recipe:
 
 ```svml
-<media:Font id="caption-font" src="./assets/Inter-SemiBold.woff2"
-  weight="600" style="normal"/>
+<fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
   font={caption-font}/>
 ```
@@ -309,40 +308,50 @@ Referenced by `speaker:Take` via the `recipe` attribute:
 
 ## Exact font declarations
 
-SVS describes typography policy, but it does not open files. Declare each concrete font face in
-the author source with the independently imported Media package:
+SVS describes typography policy, but it does not choose or open font bytes. For common open fonts,
+import the private pre-release catalog and select only the faces the Author Graph uses:
 
 ```svml
-<import as="media" from="@narratage/media@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 
-<media:Font id="inter-semibold" src="./assets/Inter-SemiBold.woff2"
-  weight="600" style="normal"/>
-<media:Font id="inter-black" src="./assets/Inter-Black.woff2"
-  weight="900" style="normal"/>
-<media:Font id="noto-cjk-semibold" src="./assets/NotoSansCJK-SemiBold.otf"
-  weight="600" style="normal"/>
+<fonts:Face id="inter-semibold" family="inter" weight="600" style="normal"/>
+<fonts:Face id="noto-cjk-semibold" family="noto-sans-sc" weight="600" style="normal"/>
+<fonts:Face id="symbols" family="noto-emoji" weight="400" style="normal"/>
 ```
 
 | Property | Description |
 |---|---|
-| `src` | Path to the font file, relative to the author source |
-| `weight` | Font weight this file provides |
-| `style` | Font style: `normal`, `italic`, `oblique` |
+| `family` | A family from the package's finite catalog |
+| `weight` | Exact selected face weight |
+| `style` | Selected style: `normal` or a family-supported `italic` |
 
-The compiler resolves the source bytes into a content-addressed `FontArtifactRef`. A consuming
-component chooses it with a normal source reference; the Runtime never guesses a font:
+The catalog currently includes Inter, Montserrat, DM Sans, Manrope, Poppins, Bebas Neue, Playfair
+Display, Source Serif 4, Noto Sans SC, Noto Serif SC and Noto Emoji. Its Fontsource dependencies are
+pinned to `5.3.0`; the compiler hashes the installed bytes into a content-addressed
+`FontArtifactRef`. It performs no font download during a build, and the Runtime never guesses a
+font:
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
   font={inter-semibold}>
   <caption-fine:Fallback font={noto-cjk-semibold}/>
+  <caption-fine:Fallback font={symbols}/>
 </caption-fine:Style>
 ```
 
 `font=` is the primary face; ordered `Fallback` children cover additional glyph sets such as CJK or
-emoji. Every face must match the Recipe's weight/style. Omitting the stack keeps the Recipe's
-`font` family as an environment fallback, which is convenient for prototypes but is not
-byte-reproducible.
+emoji. The primary must match the Recipe's weight/style; fallback faces preserve their own honest
+weight/style. CJK and emoji can be split into several Unicode-range files while remaining one
+logical font edge. Omitting the stack keeps the Recipe's `font` family as an environment fallback,
+which is convenient for prototypes but is not byte-reproducible.
+
+Brand and custom fonts remain explicit author assets rather than additions to the shared catalog:
+
+```svml
+<import as="media" from="@narratage/media@1"/>
+<media:Font id="brand" src="./assets/Brand-Semibold.woff2"
+  weight="600" style="normal"/>
+```
 
 ## Combination example
 

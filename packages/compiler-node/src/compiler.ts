@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 import {
@@ -16,7 +17,7 @@ import type {
   AuthorRecordAdmitter,
 } from "@narratage/elaborator";
 import type { ArtifactAttachment, Workspace, WorkspaceSession } from "@narratage/host";
-import type { LinkedProgram } from "@narratage/protocol";
+import type { BlobRef, LinkedProgram } from "@narratage/protocol";
 import {
   TypeValidatorRegistry,
   createRecordAdmitter,
@@ -32,6 +33,38 @@ type DiscoveredUnit = {
   readonly frontend: string;
   readonly discovery: AuthorSourceDiscovery;
 };
+
+function attachmentKey(artifact: BlobRef): string {
+  return `${artifact.digest}\u0000${artifact.mediaType}`;
+}
+
+function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
+  return left.byteLength === right.byteLength && left.every((value, index) => value === right[index]);
+}
+
+function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): readonly ArtifactAttachment[] {
+  const merged = new Map<string, ArtifactAttachment>();
+  for (const item of groups.flat()) {
+    const key = attachmentKey(item.artifact);
+    const existing = merged.get(key);
+    if (existing !== undefined) {
+      if (existing.artifact.size !== item.artifact.size || !sameBytes(existing.bytes, item.bytes)) {
+        throw new NodeCompilerError(
+          "SOURCE_ATTACHMENT_CONFLICT",
+          `Artifact attachment ${item.artifact.digest} carries conflicting bytes`,
+          item.artifact.digest,
+        );
+      }
+      continue;
+    }
+    merged.set(key, {
+      artifact: { ...item.artifact },
+      bytes: Uint8Array.from(item.bytes),
+    });
+  }
+  return [...merged.values()]
+    .sort((left, right) => attachmentKey(left.artifact).localeCompare(attachmentKey(right.artifact)));
+}
 
 async function discoverClosure(
   entry: AuthorSourceUnit,
@@ -125,6 +158,7 @@ export class NodeCompiler {
 
   /** Compile an explicitly resolved self-describing SourceUnit inside one already isolated Workspace. */
   async compileSource(entry: AuthorSourceUnit, workspace: WorkspaceSession): Promise<NodeCompiledSourceClosure> {
+    const embeddedAttachments = new Map<string, ArtifactAttachment>();
     const discovered = await discoverClosure(
       entry,
       this.#options.frontends,
@@ -138,10 +172,33 @@ export class NodeCompiler {
       closure,
       frontends: this.#options.frontends,
       resolveSource: workspace.resolveSource,
-      resolveAsset: workspace.resolveAsset,
+      async resolveAsset(importer, request) {
+        if (request.bytes === undefined) return await workspace.resolveAsset(importer, request);
+        const bytes = Uint8Array.from(request.bytes);
+        const artifact: BlobRef = {
+          kind: "blob",
+          digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+          size: bytes.byteLength,
+          mediaType: request.mediaType,
+        };
+        const key = attachmentKey(artifact);
+        const existing = embeddedAttachments.get(key);
+        if (existing !== undefined && !sameBytes(existing.bytes, bytes)) {
+          throw new NodeCompilerError(
+            "SOURCE_ATTACHMENT_CONFLICT",
+            `Embedded asset ${request.from} conflicts with ${artifact.digest}`,
+            request.from,
+          );
+        }
+        embeddedAttachments.set(key, { artifact, bytes });
+        return { artifact: { ...artifact } };
+      },
       admitRecord: this.#admitRecord,
     });
-    return { ...compilation, attachments: await workspace.attachments() };
+    return {
+      ...compilation,
+      attachments: mergeAttachments([await workspace.attachments(), [...embeddedAttachments.values()]]),
+    };
   }
 
   /**

@@ -149,6 +149,46 @@ test("author source binds an ordered exact Font stack to a Fine Caption Style", 
   assert.equal(result.exports.some((item) => item.name === "primary-caption" && item.kind === "record"), true);
 });
 
+test("an installed open-font package supplies a multilingual exact stack without system fonts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-installed-fonts-"));
+  const file = join(root, "main.svml");
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
+<sheet version="1">
+  caption.primary {
+    cue-min-words: 1; cue-max-words: 4;
+    stack-order: 20; x: 0.5; y: 0.9; width: 0.8;
+    align: center; font: Installed Open Stack; weight: 700; size: 48; line-height: 1.1;
+    fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
+  }
+</sheet>`, "utf8");
+  await writeFile(file, `<?svml using="@narratage/text@1"?>
+<svml>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
+  <import as="studio" source="./studio.svs"/>
+
+  <fonts:Face id="caption-font" family="inter" weight="700" style="normal"/>
+  <fonts:Face id="caption-cjk" family="noto-sans-sc" weight="700" style="normal"/>
+  <fonts:Face id="caption-symbols" family="noto-emoji" weight="400" style="normal"/>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}>
+    <caption-fine:Fallback font={caption-cjk}/>
+    <caption-fine:Fallback font={caption-symbols}/>
+  </caption-fine:Style>
+</svml>`, "utf8");
+
+  let output = "";
+  await runCli(["check", file], { write: (text) => { output += text; } });
+  const result = JSON.parse(output) as {
+    readonly ok: boolean;
+    readonly exports: readonly { readonly name: string; readonly kind: string }[];
+  };
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    result.exports.map((item) => item.name).sort(),
+    ["caption-cjk", "caption-font", "caption-symbols", "primary-caption"],
+  );
+});
+
 test("Prompt Kit source and Speaker Surface finish prompt assembly before the Run Graph", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-prompt-kit-"));
   const file = join(root, "main.svml");

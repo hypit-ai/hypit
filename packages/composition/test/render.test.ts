@@ -23,12 +23,12 @@ const space = sealProgramSpace({
 
 const font: FontArtifactRef = {
   contract: "svml.font-artifact@1",
-  artifact: {
+  sources: [{ artifact: {
     kind: "blob",
     digest: digestOf("font:inter-bold"),
     size: 1_024,
     mediaType: "font/woff2",
-  },
+  } }],
   weight: 700,
   style: "normal",
 };
@@ -55,7 +55,10 @@ const animatedSurface: CompositableSurfaceRef = {
 test("FontArtifactRef binds one exact font face to a content-addressed Blob", () => {
   assert.doesNotThrow(() => assertFontArtifactRef(font));
   assert.throws(
-    () => assertFontArtifactRef({ ...font, artifact: { ...font.artifact, mediaType: "application/octet-stream" } }),
+    () => assertFontArtifactRef({
+      ...font,
+      sources: [{ artifact: { ...font.sources[0]!.artifact, mediaType: "application/octet-stream" } }],
+    }),
     /supported font media type/u,
   );
   assert.throws(() => assertFontArtifactRef({ ...font, weight: 0 }), /weight/u);

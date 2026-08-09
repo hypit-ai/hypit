@@ -115,14 +115,15 @@ The current `VisualTrack / VisualPresent / VisualElement` candidate explicitly b
 absolute-stack cases. Two generic terminal facts are now
 executable rather than package-family patches:
 
-1. `FontArtifactRef` binds each exact fallback face, weight and style to Blob bytes. Exact text
-   lowering emits content-addressed `@font-face` rules and disables font synthesis;
+1. `FontArtifactRef` binds each exact fallback face, weight and style to one or more Blob sources.
+   Unicode-range shards remain one logical face; exact text lowering emits content-addressed
+   `@font-face` rules for every source and disables font synthesis;
 2. `CompositableSurfaceRef` binds dimensions, sRGB color space, opaque/straight alpha semantics and
    still/frame timing to Blob bytes. Animated Surfaces must exactly share the containing Present's
    frame count and ProgramSpace rate.
 
 `packages/hyperframes/test/browser-visual.test.ts` additionally drives real Hyperframes browser
-frames: content-addressed fonts paint Latin, CJK and emoji/symbol glyphs through an ordered fallback
+frames: installed content-addressed open fonts paint Latin, CJK and emoji/symbol glyphs through an ordered fallback
 stack; Fine Caption proves multiline wrapping, outline/shadow/glow and every karaoke mode; and a
 50% straight-alpha PNG composites over a blue Track at the expected pixel values. This opt-in host
 test is run with `SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future

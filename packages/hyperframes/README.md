@@ -34,13 +34,15 @@ worker count are Runtime policy, not author intent and not Core graph nodes. The
 uses the rational HyperFrames `data-fps` form, so NTSC rates do not drift through a decimal guess.
 
 Exact `FontArtifactRef` dependencies lower to generated `@font-face` declarations with font
-synthesis disabled. `CompositableSurfaceRef` values lower as typed image/video surfaces carrying
+synthesis disabled; a Unicode-range-sharded logical face emits one rule per exact source.
+`CompositableSurfaceRef` values lower as typed image/video surfaces carrying
 their declared alpha, color-space and frame-domain metadata. The package never guesses either fact
 from a user font name or filename extension.
 
 The ordinary test suite validates deterministic HTML and Artifact collection. Set
 `SVML_BROWSER_TESTS=1` to run the host integration witness that invokes the installed Hyperframes
 CLI, paints a real font and checks straight-alpha composition at the rendered pixel level. That
-test needs a local font, Chrome and FFmpeg; it is a renderer conformance witness, not Core logic.
+test needs Chrome and FFmpeg; its multilingual case uses only the locked open-font package, not a
+system font. It is a renderer conformance witness, not Core logic.
 `@narratage/provider-hyperframes-local` adds a real two-worker silent-MP4 witness and strict ffprobe
 output verification.

@@ -42,12 +42,12 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
     kind: "inline",
     value: {
       contract: "svml.font-artifact@1",
-      artifact: {
+      sources: [{ artifact: {
         kind: "blob",
         digest: digestOf("font:inter-bold"),
         size: 2_048,
         mediaType: "font/woff2",
-      },
+      } }],
       weight: 700,
       style: "normal",
     },

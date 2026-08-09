@@ -224,7 +224,9 @@ function collectArtifacts(composition: Composition): BlobRef[] {
         if (element.kind === "image" || element.kind === "video") add(element.artifact);
         if (element.kind === "surface") add(element.surface.artifact);
         if (element.kind === "text") {
-          for (const font of element.fonts ?? []) add(font.artifact);
+          for (const font of element.fonts ?? []) {
+            for (const source of font.sources) add(source.artifact);
+          }
         }
       }
     }
@@ -254,15 +256,16 @@ function fontFormat(mediaType: string): string {
 }
 
 function renderFontFaces(composition: Composition): string {
-  return collectFonts(composition).map((font) => [
-    "@font-face{",
-    `font-family:${exactFontFamily(font)};`,
-    `src:url(\"${hyperframesArtifactUri(font.artifact.digest)}\") format(\"${fontFormat(font.artifact.mediaType)}\");`,
-    `font-weight:${font.weight};`,
-    `font-style:${font.style};`,
-    "font-display:block;",
-    "}",
-  ].join("")).join("\n    ");
+  return collectFonts(composition).flatMap((font) => font.sources.map((source) => [
+      "@font-face{",
+      `font-family:${exactFontFamily(font)};`,
+      `src:url(\"${hyperframesArtifactUri(source.artifact.digest)}\") format(\"${fontFormat(source.artifact.mediaType)}\");`,
+      `font-weight:${font.weight};`,
+      `font-style:${font.style};`,
+      "font-display:block;",
+      ...(source.unicodeRange === undefined ? [] : [`unicode-range:${source.unicodeRange};`]),
+      "}",
+    ].join(""))).join("\n    ");
 }
 
 function emitHtml(composition: Composition, programSpace: ProgramSpace): string {

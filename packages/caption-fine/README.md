@@ -9,8 +9,8 @@ per-word timing while a Dual Text Atom remains one honest indivisible activation
 no planning fields and has no `important`, random sizing or inferred Word timestamps.
 
 ```xml
-<media:Font id="caption-font" src="./Inter-SemiBold.woff2" weight="600" style="normal"/>
-<media:Font id="caption-cjk" src="./NotoSansCJK-SemiBold.otf" weight="600" style="normal"/>
+<fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
+<fonts:Face id="caption-cjk" family="noto-sans-sc" weight="600" style="normal"/>
 <fine:Style id="primary" recipe={studio.caption.primary} font={caption-font}>
   <fine:Fallback font={caption-cjk}/>
 </fine:Style>
@@ -30,7 +30,8 @@ no planning fields and has no `important`, random sizing or inferred Word timest
 
 One Track handles the default and ordered Style replacements. `font=` plus ordered `Fallback`
 children form an exact font stack for reproducible builds; all faces reference existing Media
-`FontArtifactRef` values and must match the Recipe's weight/style. Omitting the stack is the explicit
-environment-font prototype path. Fine never clips author text and intentionally has no `max-lines`.
+`FontArtifactRef` values. The primary must match the Recipe's weight/style; fallbacks keep their own
+honest face metadata. Omitting the stack is the explicit environment-font prototype path. Fine never
+clips author text and intentionally has no `max-lines`.
 Common Caption, Composition and Core know none of Fine's Recipe fields or layout policy. See
 `spec/caption-fine.md` for the full parameter surface, defaults and non-goals.
