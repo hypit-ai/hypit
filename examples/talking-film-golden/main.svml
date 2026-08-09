@@ -17,6 +17,7 @@
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="broll" from="@narratage/broll@1"/>
   <import as="text" from="@narratage/text-track@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -136,16 +137,21 @@
     plan={caption-plan.plan}
   />
 
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
+
   <text:Track id="titles" space={speech.space}>
     <text:Item
       text="EDIT MEANING, NOT TIMELINES"
       during="full"
+      frame={title-frame}
       appearance={studio.text.title}
     />
   </text:Track>
 
   <!-- Child order is organizational. Every Present carries its own absolute stack position. -->
-  <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={product-broll.visual}/>

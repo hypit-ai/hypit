@@ -1,5 +1,6 @@
 import { programSpaceTypes } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
+import { spatialTypes } from "@narratage/spatial";
 import { compositionTypes } from "@narratage/composition";
 import type { AudioTrack, Track, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
@@ -71,14 +72,6 @@ function recipe(reference: SurfaceResolvedReference, label: string): SvsRecipe {
   return value.value as SvsRecipe;
 }
 
-function numberProperty(value: SvsRecipe, name: string): number {
-  const property = value.properties[name];
-  if (typeof property !== "number" || !Number.isSafeInteger(property) || property <= 0) {
-    throw new Error(`Film Recipe ${name} must be a positive integer`);
-  }
-  return property;
-}
-
 function colorProperty(value: SvsRecipe, name: string): string {
   const property = value.properties[name];
   if (typeof property !== "string" || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(property)) {
@@ -109,15 +102,19 @@ function trackKind(reference: SurfaceResolvedReference): "visual" | "audio" {
 }
 
 export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "space", "appearance"]);
+  exactAttributes(element, ["id", "canvas", "space", "appearance"]);
   const id = stringAttribute(element, "id");
+  const canvas = requiredReference(element, "canvas", resolveReference);
+  if (!sameType(canvas.type, spatialTypes.canvas)) {
+    throw new Error(`${element.name}.canvas must reference CanvasSpace`);
+  }
   const space = requiredReference(element, "space", resolveReference);
   if (!sameType(space.type, programSpaceTypes.programSpace)) {
     throw new Error(`${element.name}.space must reference ProgramSpace`);
   }
   const appearanceReference = requiredReference(element, "appearance", resolveReference);
   const appearance = recipe(appearanceReference, `${element.name}.appearance`);
-  const expectedProperties = ["background", "frame-rate", "height", "width"];
+  const expectedProperties = ["background"];
   const actualProperties = Object.keys(appearance.properties).sort();
   if (actualProperties.join("\u0000") !== expectedProperties.join("\u0000")) {
     throw new Error(`Film Recipe requires exactly ${expectedProperties.join(", ")}`);
@@ -127,12 +124,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
   const program = sealFilmProgram({
     contract: "svml.film-program@1",
     id,
-    frameRate: { numerator: numberProperty(appearance, "frame-rate"), denominator: 1 },
-    canvas: {
-      width: numberProperty(appearance, "width"),
-      height: numberProperty(appearance, "height"),
-      clearColor: colorProperty(appearance, "background"),
-    },
+    clearColor: colorProperty(appearance, "background"),
   });
 
   const tracks = trackChildren(element).map((child) => {
@@ -157,6 +149,7 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
       fragment: fragment.id,
       inputs: {
         program: { kind: "record", id: programId },
+        canvas: canvas.ref,
         space: space.ref,
         ...Object.fromEntries(tracks.map((track) => [track.name, track.source.ref])),
       },

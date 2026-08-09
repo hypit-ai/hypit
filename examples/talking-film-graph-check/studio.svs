@@ -1,7 +1,7 @@
 <?svml using="@narratage/svs@1"?>
 
 <sheet version="1">
-  film.vertical { width: 1080; height: 1920; frame-rate: 30; background: #09090B; }
+  film.vertical { background: #09090B; }
   broll.card {
     stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5; fit: cover;
     background: #111116; radius: 20; enter: slide-up 4f; exit: fade 4f;
@@ -18,7 +18,7 @@
     cue-enter: fade; cue-enter-frames: 4; cue-exit: fade; cue-exit-frames: 4;
   }
   text.title {
-    stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1; font: Inter;
+    stack-order: 90; font: Inter;
     weight: 900; size: 64; align: center; fill: #FFFFFF; tracking: -1;
   }
 </sheet>

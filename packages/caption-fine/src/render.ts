@@ -1,4 +1,4 @@
-import { assertCaptionProgramForDisplay, assertTimedCaptionProjection } from "@narratage/caption";
+import { applyCaptionMute, assertCaptionProgramForDisplay, assertTimedCaptionProjection } from "@narratage/caption";
 import type { CaptionProgram, TimedCaptionProjection } from "@narratage/caption";
 import { assertVisualTrackIdentity, sealVisualTrack } from "@narratage/composition";
 import type {
@@ -24,7 +24,7 @@ import type {
   FineCaptionUnderline,
 } from "./types.js";
 
-export const renderFineCaptionImplementationDigest = digestOf("@narratage/caption-fine/full-orthogonal-renderer@1");
+export const renderFineCaptionImplementationDigest = digestOf("@narratage/caption-fine/full-orthogonal-renderer-with-mute@1");
 
 function frameAt(space: ProgramSpace, seconds: number): number {
   return Math.round(seconds * space.frameRate.numerator / space.frameRate.denominator);
@@ -661,6 +661,7 @@ export function renderFineCaption(
   assertTimedCaptionProjection(projection);
   assertCaptionProgramForDisplay(program, display);
   if (projection.displaySequenceId !== display.id) throw new Error("Fine Caption received another display sequence");
+  const visibleProjection = applyCaptionMute(projection, program, display);
   assertProgramSpaceIdentity(space);
   const styles = new Map(program.styles.map((style) => [style.id, style]));
   const wordText = new Map(display.words.map((word) => [word.id, word.text]));
@@ -672,7 +673,7 @@ export function renderFineCaption(
     assertFineCaptionParameters(style.rendering.parameters as unknown as FineCaptionParameters);
   }
   const totalFrames = programSpaceFrameCount(space);
-  const presents = projection.cues.flatMap((cue) => {
+  const presents = visibleProjection.cues.flatMap((cue) => {
     const atoms = cue.atoms.map((timing) => atomById.get(timing.atomId));
     if (atoms.some((atom) => atom === undefined)) throw new Error(`Fine Caption Cue ${cue.id} references unknown Atom`);
     const resolvedAtoms = atoms.map((atom) => atom!);

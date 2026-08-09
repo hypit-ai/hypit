@@ -140,6 +140,26 @@ port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 
 ## C. Current video-domain work, still pre-freeze
 
+The next official Track-package migration is governed by
+[`../spec/track-authoring.md`](../spec/track-authoring.md). Its temporal projection, strict
+occurrence expansion, rational frame quantization and triggered scheduling now execute in the
+focused `@narratage/temporal` package. Shared Canvas/Frame/Point/Path geometry and two-frame fitting
+now execute in `@narratage/spatial`; Film consumes CanvasSpace explicitly rather than hiding
+dimensions or frame rate in its Recipe. Ranking's old-system audit and complete migration design are recorded
+in [`../spec/ranking-track.md`](../spec/ranking-track.md). Text's old-system/editor attack audit,
+complete two-dimensional author model, terminal-IR gaps and Caption feedback are recorded in
+[`../spec/text-track.md`](../spec/text-track.md). The shared Canvas/Frame geometry, two-frame fitting,
+focal alignment and backing ownership boundary are recorded in
+[`../spec/spatial-layout.md`](../spec/spatial-layout.md). Generic Audio placement, sample occupancy
+and mix boundaries are recorded in [`../spec/audio-track.md`](../spec/audio-track.md). Self-contained
+full-canvas effects and the prohibition on hidden lower-composite sampling are recorded in
+[`../spec/screen-overlay.md`](../spec/screen-overlay.md). Unified Media Item/Sequence authoring,
+ordered local layers, lifecycle/sampling motion, internal handoffs, explicit audio projection and
+Speech Spine reuse are recorded in [`../spec/media-track.md`](../spec/media-track.md). The old
+depth-stack Deck is separately specified as a higher-order Track in
+[`../spec/deck-track.md`](../spec/deck-track.md). Comment Sticker remains an independent future
+design task; it does not block implementation of the already specified packages.
+
 Caption Fine's complete field-free surface is implemented: exact primary/fallback fonts, CJK,
 emoji/symbols, multiline layout, solid/gradient Paint, outline/shadow/long-shadow/glow/underline,
 independent glyph/Pill/underline activation, joined wrapped trail geometry and layered deterministic
@@ -149,9 +169,12 @@ deliberately has no line-clipping or `max-lines` behavior.
 Implement these against real delivery examples, but do not freeze or indiscriminately expand the
 video author surface yet:
 
-- full Text three-box and exact-font behavior;
-- B-roll foreground/backdrop media-box behavior;
-- Ranking and other old production components;
+- one simple Text and one simple Media witness through the executable Temporal/Spatial foundation;
+- the specified Text Document, Point/Area/Path forms, ordered Paint and selector-motion model;
+- the specified Media Item/Sequence model in place of the current B-roll vertical slice;
+- the independent Depth-Stack Deck Track in place of the old Deck implementation;
+- the designed Ranking components after the shared temporal package;
+- the designed Audio and Screen Overlay packages after the shared temporal package;
 - final Track and renderer-neutral Visual IR compatibility freeze.
 
 The current implementations remain executable vertical slices and regression witnesses. This work

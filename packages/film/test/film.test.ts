@@ -1,8 +1,9 @@
-import { compositionComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { compositionComponent, spatialComponent, videoContractManifests } from "../../test-support/video-domain.js";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
 import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
 import type { Composition, Track } from "@narratage/composition";
+import { sealCanvasSpace, spatialTypes } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -67,13 +68,22 @@ const space = sealProgramSpace({
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
   registerTypeValidatorFacets(registry, compositionComponent.validators);
+  registerTypeValidatorFacets(registry, spatialComponent.validators);
   return registry;
 }
+const canvas = sealCanvasSpace({
+  contract: "svml.canvas-space@1",
+  widthPx: 1080,
+  heightPx: 1920,
+  origin: "top-left",
+  xDirection: "right",
+  yDirection: "down",
+  pixelAspect: "square",
+});
 const filmProgram = sealFilmProgram({
   contract: "svml.film-program@1",
   id: "main-film",
-  frameRate: space.frameRate,
-  canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+  clearColor: "#000000",
 });
 const textProgram = sealTextTrackProgram({
   contract: "svml.text-track-program@1",
@@ -84,7 +94,7 @@ const textProgram = sealTextTrackProgram({
     span: { startFrame: 10, endFrameExclusive: 100 },
     z: 60,
     tieBreak: "title",
-    box: { xPercent: 8, yPercent: 10, widthPercent: 84, heightPercent: 20 },
+    frame: { contract: "svml.spatial-frame@1", xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 },
     appearance: { color: "#ffffff", fontSizePx: 56, fontWeight: 800 },
   }],
 });
@@ -129,6 +139,7 @@ const origin = {
 };
 const records = await Promise.all([
   sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space), conformance: "exact", origin }),
+  sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas), conformance: "exact", origin }),
   sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram), conformance: "exact", origin }),
   sealRecord({ id: "text-program", type: textTrackTypes.program, value: stored(textProgram), conformance: "exact", origin }),
   sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), conformance: "exact", origin }),
@@ -159,6 +170,7 @@ const filmInstance = elaborateGraphFragment(linked, filmFragment, {
   fragment: filmFragment.id,
   inputs: {
     program: { kind: "record", id: "film-program" },
+    canvas: { kind: "record", id: "canvas" },
     space: { kind: "record", id: "space" },
     title: { kind: "logical-output", id: "title.track" },
     background: { kind: "record", id: "background" },
@@ -246,6 +258,7 @@ test("the Driver folds peer Tracks, then independently compiles the Composition"
   registry.registerProducer(filmProducers.compileComposition, compileFilmCompositionImplementationDigest, ({ inputs }) => ({
     outputs: { composition: stored(compileFilmComposition(
       inline(inputs.program) as never,
+      inline(inputs.canvas) as typeof canvas,
       inline(inputs.space) as typeof space,
       inline(inputs.set) as never,
     )) },
