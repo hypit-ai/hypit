@@ -1,10 +1,15 @@
 import { digestOf, isDigest } from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 
 import {
   assertVisualStyleV1,
   VISUAL_IR_V1,
 } from "@narratage/visual-ir";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import {
+  assertProgramSpaceIdentity,
+  programSpaceFrameCount,
+  programSpaceSampleFrames,
+} from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertCompositableSurfaceRef, assertFontArtifactRef } from "@narratage/media";
 import type { CompositableSurfaceRef, FontArtifactRef, MediaArtifactRef } from "@narratage/media";
@@ -107,14 +112,27 @@ export type VisualTrack = {
 
 export type AudioClip = {
   readonly id: string;
-  readonly span: FrameSpan;
-  readonly artifact: MediaArtifactRef;
-  readonly mediaStartSec?: number;
-  readonly playbackRate?: number;
-  readonly gain?: number;
-  readonly fadeInSec?: number;
-  readonly fadeOutSec?: number;
-  readonly bus?: "speech" | "music" | "sfx" | "source";
+  /** Bytes only. Exact duration belongs to source.sampleFrames, not duplicated floating metadata. */
+  readonly artifact: BlobRef;
+  /** Exact audible placement in the canonical 48 kHz ProgramSpace sample domain. */
+  readonly target: {
+    readonly startSample: number;
+    readonly endSampleExclusive: number;
+  };
+  /** Exact sampling interval in one canonical 48 kHz stereo WAV Artifact. */
+  readonly source: {
+    readonly sampleFrames: number;
+    readonly startSample: number;
+    readonly endSampleExclusive: number;
+    readonly loop: boolean;
+    /** Offset inside the effective source interval used only when looping. */
+    readonly phaseSample: number;
+  };
+  readonly playbackRate: number;
+  readonly pitch: "preserve";
+  readonly gain: number;
+  readonly fadeInSamples: number;
+  readonly fadeOutSamples: number;
 };
 
 export type AudioTrack = {
@@ -160,7 +178,7 @@ function assertFrameSpan(span: FrameSpan, totalFrames: number, label: string): v
   }
 }
 
-function assertArtifact(artifact: MediaArtifactRef, label: string): void {
+function assertMediaArtifact(artifact: MediaArtifactRef, label: string): void {
   if (
     !isDigest(artifact.digest)
     || !Number.isSafeInteger(artifact.size)
@@ -170,6 +188,18 @@ function assertArtifact(artifact: MediaArtifactRef, label: string): void {
     || artifact.durationSec < 0
   ) {
     throw new Error(`${label} is invalid.`);
+  }
+}
+
+function assertAudioArtifact(artifact: BlobRef, label: string): void {
+  if (
+    artifact.kind !== "blob"
+    || !isDigest(artifact.digest)
+    || !Number.isSafeInteger(artifact.size)
+    || artifact.size < 0
+    || artifact.mediaType !== "audio/wav"
+  ) {
+    throw new Error(`${label} must be a canonical WAV BlobRef.`);
   }
 }
 
@@ -259,7 +289,7 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
       `${trackId}.${present.id}.${element.id}`,
     );
     if (element.kind === "image" || element.kind === "video") {
-      assertArtifact(element.artifact, `${trackId}.${present.id}.${element.id}.artifact`);
+      assertMediaArtifact(element.artifact, `${trackId}.${present.id}.${element.id}.artifact`);
       if (!element.artifact.mediaType.startsWith(`${element.kind}/`)) {
         throw new Error(`${trackId}.${present.id}.${element.id} media kind does not match its Artifact.`);
       }
@@ -418,16 +448,16 @@ function audioTrackContent(value: AudioTrack): AudioTrack {
     clips: [...value.clips]
       .map((clip) => ({
         id: clip.id,
-        span: { ...clip.span },
         artifact: { ...clip.artifact },
-        ...(clip.mediaStartSec === undefined ? {} : { mediaStartSec: clip.mediaStartSec }),
-        ...(clip.playbackRate === undefined ? {} : { playbackRate: clip.playbackRate }),
-        ...(clip.gain === undefined ? {} : { gain: clip.gain }),
-        ...(clip.fadeInSec === undefined ? {} : { fadeInSec: clip.fadeInSec }),
-        ...(clip.fadeOutSec === undefined ? {} : { fadeOutSec: clip.fadeOutSec }),
-        ...(clip.bus === undefined ? {} : { bus: clip.bus }),
+        target: { ...clip.target },
+        source: { ...clip.source },
+        playbackRate: clip.playbackRate,
+        pitch: clip.pitch,
+        gain: clip.gain,
+        fadeInSamples: clip.fadeInSamples,
+        fadeOutSamples: clip.fadeOutSamples,
       }))
-      .sort((a, b) => a.span.startFrame - b.span.startFrame || a.id.localeCompare(b.id)),
+      .sort((a, b) => a.target.startSample - b.target.startSample || a.id.localeCompare(b.id)),
   };
 }
 
@@ -456,29 +486,46 @@ export function assertAudioTrackIdentity(track: AudioTrack, programSpace?: Progr
   if (programSpace !== undefined) assertProgramSpaceIdentity(programSpace);
   if (track.contract !== "svml.audio-track@1") throw new Error("Unsupported AudioTrack contract.");
   assertNonEmpty(track.id, "AudioTrack id");
-  const totalFrames = programSpace === undefined ? Number.MAX_SAFE_INTEGER : programSpaceFrameCount(programSpace);
+  const totalSamples = programSpace === undefined
+    ? Number.MAX_SAFE_INTEGER
+    : programSpaceSampleFrames(programSpace, 48_000);
   const clipIds = new Set<string>();
   for (const clip of track.clips) {
     if (clipIds.has(clip.id)) throw new Error(`${track.id} has duplicate clip ${clip.id}.`);
     clipIds.add(clip.id);
     assertNonEmpty(clip.id, `${track.id} clip id`);
-    assertFrameSpan(clip.span, totalFrames, `${track.id}.${clip.id}.span`);
-    assertArtifact(clip.artifact, `${track.id}.${clip.id}.artifact`);
-    if (!clip.artifact.mediaType.startsWith("audio/") && !clip.artifact.mediaType.startsWith("video/")) {
-      throw new Error(`${track.id}.${clip.id} is not an audio-capable Artifact.`);
+    assertAudioArtifact(clip.artifact, `${track.id}.${clip.id}.artifact`);
+    if (!Number.isSafeInteger(clip.target.startSample) || clip.target.startSample < 0
+      || !Number.isSafeInteger(clip.target.endSampleExclusive)
+      || clip.target.endSampleExclusive <= clip.target.startSample
+      || clip.target.endSampleExclusive > totalSamples) {
+      throw new Error(`${track.id}.${clip.id} target sample interval is outside ProgramSpace.`);
     }
-    for (const [name, value] of Object.entries({
-      mediaStartSec: clip.mediaStartSec,
-      gain: clip.gain,
-      fadeInSec: clip.fadeInSec,
-      fadeOutSec: clip.fadeOutSec,
-    })) {
-      if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
-        throw new Error(`${track.id}.${clip.id} has invalid ${name}.`);
-      }
+    if (!Number.isSafeInteger(clip.source.sampleFrames) || clip.source.sampleFrames <= 0
+      || !Number.isSafeInteger(clip.source.startSample) || clip.source.startSample < 0
+      || !Number.isSafeInteger(clip.source.endSampleExclusive)
+      || clip.source.endSampleExclusive <= clip.source.startSample
+      || clip.source.endSampleExclusive > clip.source.sampleFrames) {
+      throw new Error(`${track.id}.${clip.id} source sample interval is invalid.`);
     }
-    if (clip.playbackRate !== undefined && (!Number.isFinite(clip.playbackRate) || clip.playbackRate <= 0)) {
+    const sourceLength = clip.source.endSampleExclusive - clip.source.startSample;
+    if (!Number.isSafeInteger(clip.source.phaseSample) || clip.source.phaseSample < 0
+      || clip.source.phaseSample >= sourceLength
+      || (!clip.source.loop && clip.source.phaseSample !== 0)) {
+      throw new Error(`${track.id}.${clip.id} source loop phase is invalid.`);
+    }
+    if (!Number.isFinite(clip.playbackRate) || clip.playbackRate <= 0 || clip.playbackRate > 100) {
       throw new Error(`${track.id}.${clip.id} has invalid playbackRate.`);
+    }
+    if (clip.pitch !== "preserve") throw new Error(`${track.id}.${clip.id} pitch policy is invalid.`);
+    if (!Number.isFinite(clip.gain) || clip.gain < 0 || clip.gain > 64) {
+      throw new Error(`${track.id}.${clip.id} gain is invalid.`);
+    }
+    const targetLength = clip.target.endSampleExclusive - clip.target.startSample;
+    if (!Number.isSafeInteger(clip.fadeInSamples) || clip.fadeInSamples < 0 || clip.fadeInSamples > targetLength
+      || !Number.isSafeInteger(clip.fadeOutSamples) || clip.fadeOutSamples < 0
+      || clip.fadeOutSamples > targetLength) {
+      throw new Error(`${track.id}.${clip.id} fades are invalid.`);
     }
   }
 }

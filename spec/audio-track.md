@@ -1,7 +1,8 @@
 # SVML Audio Track Authoring
 
-Status: design authority for the generic official Audio Track package. It is not implemented by an
-author Surface yet and is not a frozen public ABI.
+Status: implemented pre-release contract for the generic official Audio Track package, including
+its self-described author Surface, exact sample-domain lowering and local/remote execution witness.
+It is not yet a frozen public ABI.
 
 ## Purpose
 
@@ -72,7 +73,7 @@ These are package-level concerns. They are not new fields on Core Operations or 
 An illustrative author Surface may remain compact:
 
 ```xml
-<audio:Track id="mix">
+<audio:Track id="mix" space={speech.space}>
   <audio:Clip
     source={music.media}
     during={program}
@@ -104,7 +105,7 @@ Audio uses the same rules as [`track-authoring.md`](./track-authoring.md):
 3. project a directed candidate window;
 4. intersect and validate it against ProgramSpace;
 5. apply audio source trim and occupancy;
-6. lower the result to frame-exact target spans and exact source samples.
+6. lower both target placement and source sampling into the exact 48 kHz sample domain.
 
 Audio items are independent. Overlapping projected windows mix; they are never clipped according
 to authoring order, auto-stitched, deduplicated or treated as competing alternatives. Several Audio
@@ -184,20 +185,18 @@ automatic music-bed behavior. Those are legitimate future audio-processing or mi
 they must consume explicit inputs and make their behavior author-visible. A runtime or Provider may
 not add them as an environment preference.
 
-The current terminal `bus: speech | music | sfx | source` field is copied into the audio plan but
-does not affect rendering. The official author package must not attach hidden behavior to this dead
-label. Before the public Track freeze it should either be removed, or be replaced by an explicit
-mix-routing contract that has a real downstream consumer. Merely naming a clip `music` cannot cause
-ducking.
+The former terminal `bus: speech | music | sfx | source` label has been removed. It had no rendering
+effect and therefore carried no honest meaning. A future mix-routing contract must have an explicit
+consumer and graph behavior; merely naming a clip `music` cannot cause ducking.
 
 ## 7. Lowering and execution
 
 The deterministic author package lowers every realized item to an ordinary terminal `AudioClip`:
 
-- target `span` from temporal projection;
+- exact target `{ startSample, endSampleExclusive }` from temporal projection;
 - canonical WAV Artifact from the normalized input;
-- exact source offset and playback rate from trim/occupancy;
-- linear gain and fades from presentation.
+- exact source sample interval, loop phase and playback rate from trim/occupancy;
+- pitch-preservation intent, linear gain and exact sample fades from presentation.
 
 Composition validates the Audio Track against an explicitly connected ProgramSpace. The media
 pipeline then compiles all peer Audio Tracks into one content-addressed `AudioProgramPlan`. Local
@@ -233,19 +232,20 @@ Retire:
 
 ## 9. Implementation and acceptance
 
-Implementation should wait for the shared `@narratage/temporal` package, then proceed without a
-Core, Composition or Provider change:
+The shared Temporal package and the pre-freeze terminal Audio candidate have now been completed
+without a Core branch, Provider-family branch or privileged Film lane:
 
-1. add the `@narratage/audio-track` author package and self-described Surface;
-2. consume explicit normalized `SynchronizedMedia` inputs;
-3. implement sample-exact trim and every occupancy law;
-4. lower to the existing terminal `AudioTrack`;
-5. add graph tests for arbitrary item counts and Selection/Moment `one` / `each`;
-6. add sample-level tests for shorter/equal/longer sources, both alignments, loops, stretch bounds
+1. **Implemented:** add the `@narratage/audio-track` author package and self-described Surface;
+2. **Implemented:** consume explicit normalized `SynchronizedMedia` inputs;
+3. **Implemented:** sample-exact trim and every occupancy law;
+4. **Implemented:** lower to the peer terminal `AudioTrack`;
+5. **Implemented:** graph tests for arbitrary item counts and Selection/Moment `one` / `each`;
+6. **Implemented:** sample-level tests for shorter/equal/longer sources, both alignments, loops, stretch bounds
    and fades;
-7. prove two overlapping items and two peer Audio Tracks produce the same planned mix facts;
-8. prove a different local/remote media Provider receives the identical `AudioProgramPlan`.
+7. **Implemented:** two overlapping items and two peer Audio Tracks produce the same planned mix facts;
+8. **Implemented:** local FFmpeg and remote Lambda Providers receive the identical
+   content-addressed `AudioProgramPlan`; the real FFmpeg witness additionally checks exact loop
+   phase sample by sample.
 
 The migration is incomplete if adding this package requires a Core branch, a Film audio family, a
 new queue, a Provider name in SVML or a hidden Base-audio rule.
-

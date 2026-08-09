@@ -28,7 +28,7 @@ function basis() {
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
     programSpace,
-    audio: { digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav", durationSec: 1 },
+    audio: { kind: "blob", digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
     visualTrack: { clips: [{
       segmentId: "line",
       artifact: { digest: visual, size: 1, mediaType: "video/mp4", durationSec: 1 },

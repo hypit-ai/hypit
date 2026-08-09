@@ -1,0 +1,23 @@
+{
+  "name": "@narratage/media-track",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/component-kit": "workspace:*",
+    "@narratage/composition": "workspace:*",
+    "@narratage/elaborator": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/program-space": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/spatial": "workspace:*",
+    "@narratage/temporal": "workspace:*"
+  }
+}

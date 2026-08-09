@@ -55,12 +55,16 @@ export type AudioProgramClip = {
   readonly artifact: BlobRef;
   readonly targetStartSample: number;
   readonly targetEndSampleExclusive: number;
+  readonly sourceSampleFrames: number;
   readonly sourceStartSample: number;
+  readonly sourceEndSampleExclusive: number;
+  readonly sourceLoop: boolean;
+  readonly sourcePhaseSample: number;
   readonly playbackRate: number;
+  readonly pitch: "preserve";
   readonly gain: number;
   readonly fadeInSamples: number;
   readonly fadeOutSamples: number;
-  readonly bus: "speech" | "music" | "sfx" | "source";
 };
 
 /** Pure, content-addressed plan. Executing it is always a Provider Need. */

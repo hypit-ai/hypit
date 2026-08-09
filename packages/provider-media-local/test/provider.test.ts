@@ -38,6 +38,21 @@ async function run(executable: string, args: readonly string[]): Promise<void> {
   });
 }
 
+function rampWav(sampleFrames: number): Buffer {
+  const dataBytes = sampleFrames * 2 * 2;
+  const bytes = Buffer.alloc(44 + dataBytes);
+  bytes.write("RIFF", 0); bytes.writeUInt32LE(36 + dataBytes, 4); bytes.write("WAVE", 8);
+  bytes.write("fmt ", 12); bytes.writeUInt32LE(16, 16); bytes.writeUInt16LE(1, 20);
+  bytes.writeUInt16LE(2, 22); bytes.writeUInt32LE(48_000, 24); bytes.writeUInt32LE(48_000 * 4, 28);
+  bytes.writeUInt16LE(4, 32); bytes.writeUInt16LE(16, 34); bytes.write("data", 36); bytes.writeUInt32LE(dataBytes, 40);
+  for (let frame = 0; frame < sampleFrames; frame += 1) {
+    const value = frame + 1;
+    bytes.writeInt16LE(value, 44 + frame * 4);
+    bytes.writeInt16LE(value, 46 + frame * 4);
+  }
+  return bytes;
+}
+
 function presentationSampleFrames(stream: MediaAudioStream): number {
   assert(stream.startPts !== undefined && stream.endPts !== undefined);
   const startNumerator = BigInt(stream.startPts.ticks) * BigInt(stream.startPts.timeBase.numerator);
@@ -435,24 +450,32 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
           artifact: first,
           targetStartSample: 0,
           targetEndSampleExclusive: 24_000,
+          sourceSampleFrames: 24_000,
           sourceStartSample: 0,
+          sourceEndSampleExclusive: 24_000,
+          sourceLoop: false,
+          sourcePhaseSample: 0,
           playbackRate: 1,
+          pitch: "preserve",
           gain: 1,
           fadeInSamples: 0,
           fadeOutSamples: 0,
-          bus: "speech",
         },
         {
           id: "speech:second",
           artifact: second,
           targetStartSample: 24_000,
           targetEndSampleExclusive: 48_000,
+          sourceSampleFrames: 24_000,
           sourceStartSample: 0,
+          sourceEndSampleExclusive: 24_000,
+          sourceLoop: false,
+          sourcePhaseSample: 0,
           playbackRate: 1,
+          pitch: "preserve",
           gain: 1,
           fadeInSamples: 0,
           fadeOutSamples: 0,
-          bus: "speech",
         },
       ],
       mix: { normalize: false, limiter: "none" },
@@ -502,6 +525,63 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       "AAC packet duration/padding metadata must preserve the authoritative presentation span");
     assert.ok(audios[0]?.kind === "audio" && audios[0].decodedSampleFrames >= 48_000,
       "AAC coding frames may include padding, but must cover the complete presentation span");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("local media Provider executes an end-aligned loop from the exact authored sample phase", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-loop-"));
+  try {
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(rampWav(100), "audio/wav");
+    const plan = sealAudioProgramPlan({
+      contract: "svml.audio-program-plan@1",
+      frameRate: { numerator: 30, denominator: 1 },
+      frameCount: 30,
+      sampleRate: 48_000,
+      sampleFrames: 48_000,
+      clips: [{
+        id: "loop:end",
+        artifact: source,
+        targetStartSample: 0,
+        targetEndSampleExclusive: 250,
+        sourceSampleFrames: 100,
+        sourceStartSample: 0,
+        sourceEndSampleExclusive: 100,
+        sourceLoop: true,
+        sourcePhaseSample: 50,
+        playbackRate: 1,
+        pitch: "preserve",
+        gain: 1,
+        fadeInSamples: 0,
+        fadeOutSamples: 0,
+      }],
+      mix: { normalize: false, limiter: "none" },
+    });
+    const value = await fulfillInline(artifacts, need(
+      "need:render-loop-audio",
+      mediaPipelineCapabilities.renderAudio,
+      mediaTypes.timelineAudio,
+      canonicalize({ contract: "svml.render-audio-request@1", plan }),
+    ));
+    verifyTimelineAudio(value);
+    const audio = value as unknown as TimelineAudio;
+    assert.equal(audio.sampleFrames, 48_000);
+    const wav = await artifacts.get(audio.artifact.digest);
+    assert(wav);
+    const wavPath = join(root, "loop.wav");
+    const rawPath = join(root, "loop.raw");
+    await writeFile(wavPath, wav);
+    await run("ffmpeg", ["-v", "error", "-y", "-i", wavPath, "-f", "s16le", "-acodec", "pcm_s16le", rawPath]);
+    const raw = await readFile(rawPath);
+    assert.equal(raw.readInt16LE(0), 51, "end alignment must begin at source phase 50");
+    assert.equal(raw.readInt16LE(49 * 4), 100);
+    assert.equal(raw.readInt16LE(50 * 4), 1, "the complete authored source interval must loop");
+    assert.equal(raw.readInt16LE(249 * 4), 100);
+    assert.equal(raw.readInt16LE(250 * 4), 0, "silence is absence after the audible target interval");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

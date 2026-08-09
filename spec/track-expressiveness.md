@@ -156,7 +156,8 @@ executable rather than package-family patches:
 `packages/hyperframes/test/browser-visual.test.ts` additionally drives real Hyperframes browser
 frames: installed content-addressed open fonts paint Latin, CJK and emoji/symbol glyphs through an ordered fallback
 stack; Fine Caption proves multiline wrapping, full glyph Paint, every glyph karaoke mode and joined
-trail Pill line geometry; and a
+trail Pill line geometry; all eleven official Screen Overlay components preserve identical pixels
+under sequential and parallel frame rendering; and a
 50% straight-alpha PNG composites over a blue Track at the expected pixel values. This opt-in host
 test is run with `SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future
 hosted Runtime.
@@ -167,6 +168,12 @@ version. The candidate is intentionally still not frozen. Unbound text remains t
 candidate-era package migration, and a production Runtime still needs to bind its exact renderer
 implementation and validate that Surface bytes satisfy the declared metadata. Those remaining
 facts must stay generic; they must not be patched with Caption-, Text- or B-roll-specific fields.
+
+E7 and E8 now have their official package witnesses. `@narratage/audio-track` proves the exact
+48 kHz source/target mapping, overlap law, bounded stretch and one shared local/remote
+`AudioProgramPlan`; `@narratage/screen-overlay` proves only self-contained owned pixels, explicit
+seeds, flat stacking and fail-closed rejection of lower-composite effects. E1–E6 remain governed by
+the complete Text/Media/Deck work and final Surface validation below.
 
 ## Freeze criteria
 
