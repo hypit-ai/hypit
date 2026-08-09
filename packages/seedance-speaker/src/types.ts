@@ -1,9 +1,8 @@
-import type { CanonicalValue, BlobRef } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 import type { SeedanceModel } from "@narratage/seedance";
 
 export type SpeakerReference = {
   readonly kind: "image" | "audio";
-  readonly artifact: BlobRef;
   readonly role: string;
 };
 
