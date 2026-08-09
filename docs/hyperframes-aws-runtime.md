@@ -42,6 +42,7 @@ After installing the package into `svml.runtime-packages.lock`, configure one En
   "config": {
     "stateMachineArn": "arn:aws:states:us-east-1:123456789012:stateMachine:hyperframes-team",
     "bucketName": "hyperframes-team-render-bucket",
+    "rendererImplementationDigest": "sha256:REVIEWED_DEPLOYMENT_CONTENT_DIGEST",
     "region": "us-east-1",
     "quality": "standard",
     "maxParallelChunks": 16,
@@ -50,6 +51,12 @@ After installing the package into `svml.runtime-packages.lock`, configure one En
   }
 }
 ```
+
+`rendererImplementationDigest` is the content identity of the reviewed deployed renderer bundle or
+deployment closure. The state-machine ARN is mutable location and is not sufficient identity. The
+generic Need Receipt binds this configured Endpoint digest/configuration/Runtime closure, while the
+HyperFrames attestation inside receipt-covered metadata repeats this renderer deployment digest and
+the exact document digest.
 
 Allow only the permissions declared by the Endpoint:
 
@@ -61,6 +68,11 @@ The distributed renderer accepts only integer 24, 30 and 60 fps. The request con
 an added hardware-GPU or unknown render requirement is declined so another Endpoint can satisfy the
 Need. Nothing is silently converted. HyperFrames always receives strict SDR H.264/CFR software
 render configuration and plan protocol v2.
+
+This Endpoint currently declines every document containing a `CompositableSurface`. The local
+Endpoint verifies Surface bytes against dimensions, timing, SDR/sRGB and alpha declarations before
+rendering; the deployed Lambda route has no equivalent verifier yet, so accepting those documents
+would make the same protocol weaker merely because execution moved remotely.
 
 The Step Functions execution name and output key derive from the Runtime Operation's submission
 key. A process crash before the first checkpoint therefore polls or resubmits the same AWS identity;
@@ -83,6 +95,7 @@ AWS_PROFILE=my-profile \
 AWS_REGION=us-east-1 \
 NARRATAGE_HYPERFRAMES_STATE_MACHINE_ARN=arn:aws:states:us-east-1:123456789012:stateMachine:hyperframes-team \
 NARRATAGE_HYPERFRAMES_BUCKET=hyperframes-team-render-bucket \
+NARRATAGE_HYPERFRAMES_RENDERER_DIGEST=sha256:REVIEWED_DEPLOYMENT_CONTENT_DIGEST \
 NARRATAGE_HYPERFRAMES_MEMORY_MB=2048 \
 pnpm --filter @narratage/provider-hyperframes-aws-lambda canary
 ```

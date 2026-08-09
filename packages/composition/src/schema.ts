@@ -49,7 +49,7 @@ const mask = object({
   maskElement: { schema: string },
   contentElement: { schema: string },
 });
-const text = object({ ...base, kind: { schema: { kind: "literal", value: "text" } }, text: { schema: { kind: "string" } }, fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema }, optional: true } });
+const text = object({ ...base, kind: { schema: { kind: "literal", value: "text" } }, text: { schema: { kind: "string" } }, fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
 const finiteNumber = { kind: "number" } as const;
 const boolean = { kind: "boolean" } as const;
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
@@ -94,8 +94,8 @@ export const visualTextPaintSchema: ValueSchema = { kind: "oneOf", variants: [
 const axis = object({ tag: { schema: { kind: "string", minLength: 4, maxLength: 4 } }, value: { schema: finiteNumber } });
 const feature = object({ tag: { schema: { kind: "string", minLength: 4, maxLength: 4 } }, enabled: { schema: boolean } });
 const textTypographyFields = {
-  fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } as ValueSchema, optional: true },
-  prototypeFamily: { schema: string, optional: true }, sizePx: { schema: { kind: "number", minimum: 0.000001 }, optional: false },
+  fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } as ValueSchema, optional: false },
+  sizePx: { schema: { kind: "number", minimum: 0.000001 }, optional: false },
   weight: { schema: { kind: "number", integer: true, minimum: 1, maximum: 1000 }, optional: false },
   style: { schema: enumString(["normal", "italic", "oblique"]), optional: false },
   axes: { schema: { kind: "array", items: axis } as ValueSchema, optional: false },

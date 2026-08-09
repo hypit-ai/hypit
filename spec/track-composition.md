@@ -1,7 +1,7 @@
 # SVML Track and Composition
 
-Status: first executable contract candidate; public freeze is gated by
-[`track-expressiveness.md`](./track-expressiveness.md).
+Status: executable repository-internal `@1` compatibility waist; all gates in
+[`track-expressiveness.md`](./track-expressiveness.md) pass, publication remains separate.
 
 ## Law
 
@@ -36,7 +36,7 @@ more frame-exact `VisualPresent` values; every Present owns its own absolute `(o
 stacking key and one self-contained, code-free element tree made from box, text, ordinary media and
 typed compositable-Surface primitives. Parent references are Present-local. Media and exact font
 faces enter through content-addressed Artifact references rather than CSS URLs or environment font
-names.
+names. Every terminal text element carries a non-empty exact Font stack.
 Its ProgramSpace identity is intrinsic because the Track cannot be interpreted without a clock.
 Which Records produced it is Graph/Derivation truth and is deliberately absent from the Track.
 
@@ -123,7 +123,10 @@ URLs. Resolving those placeholders is a Runtime/Provider action immediately befo
 one compiled document can be rendered locally or remotely without changing author intent or its
 compiled identity. Exact text becomes generated `@font-face` rules with font synthesis disabled.
 Typed Surfaces preserve declared dimensions, color space, alpha mode and still/frame timing across
-the same Artifact boundary; they are not inferred from filename extensions.
+the same Artifact boundary; they are not inferred from filename extensions. A renderer validates
+those byte facts before staging or declines the document. Its generic Need Receipt binds the locked
+Endpoint implementation, and renderer-specific evidence in receipt-covered metadata binds the exact
+browser or immutable remote deployment used for layout.
 
 `@narratage/film` implements package-level arbitrary-arity assembly as a finite immutable TrackSet
 fold followed by ordinary Composition. Rendering is a separate explicitly imported downstream

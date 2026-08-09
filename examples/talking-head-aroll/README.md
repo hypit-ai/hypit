@@ -49,7 +49,9 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/speech-spine \
   --package @narratage/whisperx \
   --package @narratage/caption \
+  --package @narratage/caption-fine \
   --package @narratage/caption-gemini \
+  --package @narratage/fonts-open \
   --package @narratage/film \
   --package @narratage/hyperframes \
   --package @narratage/media-pipeline \

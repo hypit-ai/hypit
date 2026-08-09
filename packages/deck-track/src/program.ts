@@ -128,7 +128,7 @@ export function assertDepthStackCardLabel(value: DepthStackCardLabel): void {
   assert(value.kind === "text", "DepthStackCardLabel kind is invalid.");
   assert(value.document.paragraphs.length > 0, "DepthStackCardLabel document is empty.");
   const fonts = value.typography.fonts;
-  assert(fonts !== undefined && fonts.length > 0 && value.typography.prototypeFamily === undefined,
+  assert(fonts !== undefined && fonts.length > 0,
     "DepthStackCardLabel requires exact font Artifacts.");
   for (const [index, font] of fonts.entries()) assertFontArtifactRef(font, `DepthStackCardLabel.fonts.${index}`);
   assert(value.typography.synthesis === "none", "DepthStackCardLabel cannot synthesize an exact font.");

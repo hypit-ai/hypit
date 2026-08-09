@@ -41,6 +41,7 @@ import {
 } from "@narratage/protocol";
 import type {
   CanonicalValue,
+  Digest,
   Need,
 } from "@narratage/protocol";
 import {
@@ -57,6 +58,9 @@ function requiredEnvironment(name: string): string {
 
 const stateMachineArn = requiredEnvironment("NARRATAGE_HYPERFRAMES_STATE_MACHINE_ARN");
 const bucketName = requiredEnvironment("NARRATAGE_HYPERFRAMES_BUCKET");
+const rendererImplementationDigest = requiredEnvironment("NARRATAGE_HYPERFRAMES_RENDERER_DIGEST") as Digest;
+assert(/^sha256:[0-9a-f]{64}$/u.test(rendererImplementationDigest),
+  "invalid NARRATAGE_HYPERFRAMES_RENDERER_DIGEST");
 const region = requiredEnvironment("AWS_REGION");
 
 const run = promisify(execFile);
@@ -131,6 +135,7 @@ async function endpointFor(request: Need): Promise<RecoverableEndpoint> {
     instance: "hyperframes.aws-lambda.canary",
     stateMachineArn,
     bucketName,
+    rendererImplementationDigest,
     region,
     quality: "draft",
     targetChunkFrames: 12,

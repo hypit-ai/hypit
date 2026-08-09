@@ -235,12 +235,16 @@ Implemented and executable:
 - renderer-neutral, frame-addressable Visual IR, exact Artifact references and compositable Surface
   path; HyperFrames is its current reference compiler/renderer route rather than the IR owner.
 
-Still pre-freeze and deliberately deferred:
+The repository-internal `svml.visual-track@1` and `svml.visual-ir@1` compatibility waist is now
+frozen for subsequent package work. Exact text fonts, locked renderer identity, generic
+Surface-byte verification and the no-family/no-cross-Track boundary audit all execute. This is not
+npm publication and does not freeze each package-owned author Surface.
 
-- renderer receipts and complete Surface-byte validation;
-- final Track and Visual IR compatibility promise;
+Deliberately deferred:
+
 - Remotion or API-backed final render packages; these can be added beside `render-hyperframes`
-  without changing Composition or Core.
+  without changing Composition or Core;
+- public distribution hardening and untrusted community-code isolation.
 
 There is intentionally no cross-Track sampling/effect model and no Base FX placeholder.
 

@@ -85,9 +85,7 @@ function typographyCss(
     throw new Error("HyperFrames Text decorations on one run must share Paint and metric settings.");
   }
   return [
-    ...(typography.fonts === undefined
-      ? [`font-family:${typography.prototypeFamily}`]
-      : exactFontCss(typography.fonts, exactFontFamily)),
+    ...exactFontCss(typography.fonts, exactFontFamily),
     `font-size:${number(typography.sizePx)}px`,
     `font-weight:${typography.weight}`,
     `font-style:${typography.style}`,
@@ -139,16 +137,8 @@ function mergedTypography(
 ): VisualTextTypography {
   const override = style?.typography;
   if (override === undefined) return base;
-  const fontSelection = override.fonts !== undefined
-    ? { fonts: override.fonts }
-    : override.prototypeFamily !== undefined
-      ? { prototypeFamily: override.prototypeFamily }
-      : base.fonts === undefined
-        ? { prototypeFamily: base.prototypeFamily! }
-        : { fonts: base.fonts };
   const {
     fonts: _fonts,
-    prototypeFamily: _prototypeFamily,
     axes: _axes,
     features: _features,
     decorations: _decorations,
@@ -158,7 +148,7 @@ function mergedTypography(
   return {
     ...base,
     ...scalarOverrides,
-    ...fontSelection,
+    fonts: override.fonts ?? base.fonts,
     axes: override.axes ?? base.axes,
     features: override.features ?? base.features,
     decorations: override.decorations ?? base.decorations,
@@ -716,7 +706,7 @@ export function renderTerminalTextElement(element: TerminalTextElement, context:
 }
 
 export function collectTerminalTextFonts(element: TerminalTextElement): FontArtifactRef[] {
-  const result: FontArtifactRef[] = [...(element.typography.fonts ?? [])];
+  const result: FontArtifactRef[] = [...element.typography.fonts];
   for (const paragraph of element.document.paragraphs) {
     result.push(...(paragraph.style?.typography?.fonts ?? []));
     for (const inline of paragraph.inlines) {

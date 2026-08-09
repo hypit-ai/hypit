@@ -104,6 +104,20 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
   const need = state.needs.find((item) => item.id === receipt.need);
   invariant(need !== undefined, "RECEIPT_UNKNOWN_NEED", `${receipt.id} references an unknown need`);
   invariant(receipt.fulfiller.length > 0, "EMPTY_FULFILLER", `${receipt.id} fulfiller is empty`);
+  if (receipt.implementation !== undefined) {
+    invariant(isDigest(receipt.implementation.digest), "INVALID_IMPLEMENTATION_DIGEST", receipt.id);
+    invariant(
+      isDigest(receipt.implementation.configurationDigest),
+      "INVALID_CONFIGURATION_DIGEST",
+      receipt.id,
+    );
+    invariant(
+      receipt.implementation.runtimeClosure === undefined
+        || isDigest(receipt.implementation.runtimeClosure),
+      "INVALID_RUNTIME_CLOSURE_DIGEST",
+      receipt.id,
+    );
+  }
   invariant(validConformance(receipt.fulfillmentConformance), "INVALID_CONFORMANCE", receipt.id);
   invariant(validConformance(receipt.conformance), "INVALID_CONFORMANCE", receipt.id);
   invariant(

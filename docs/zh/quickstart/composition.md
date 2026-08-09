@@ -116,6 +116,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="pipeline" from="@narratage/media-pipeline@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/text-track@1"/>
@@ -152,7 +153,8 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
   <!-- 4. Tracks: captions, Media, text -->
-  <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+  <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption}

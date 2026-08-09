@@ -96,7 +96,7 @@ caption.dialogue {
 | `stack-order` | Z-stacking order among all Tracks (higher = on top) |
 | `x`, `y` | Position as fraction of canvas (0–1) |
 | `width` | Width as fraction of canvas |
-| `font` | Readable font-family label and environment fallback |
+| `font` | Readable Recipe label; exact bytes come from the required `font=` graph edge |
 | `weight` | Requested font weight (1–1000) |
 | `size` | Font size in pixels |
 | `line-height` | Line height multiplier |
@@ -144,9 +144,10 @@ caption.bob {
 Then assign them via `caption:Program`:
 
 ```svml
-<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue}/>
-<caption-fine:Style id="alice-caption" recipe={studio.caption.alice}/>
-<caption-fine:Style id="bob-caption" recipe={studio.caption.bob}/>
+<fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
+<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue} font={caption-font}/>
+<caption-fine:Style id="alice-caption" recipe={studio.caption.alice} font={caption-font}/>
+<caption-fine:Style id="bob-caption" recipe={studio.caption.bob} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
@@ -345,8 +346,8 @@ never guesses a font:
 
 `fonts:Stack` emits one generic `FontStackRef`: its primary must match the Recipe's weight/style and
 its fallbacks preserve their own honest metadata. CJK and Emoji can be split into several
-Unicode-range files while remaining one logical graph edge. Omitting the stack keeps the Recipe's `font` family as an environment fallback,
-which is convenient for prototypes but is not byte-reproducible.
+Unicode-range files while remaining one logical graph edge. Terminal Text and Fine Caption reject
+an omitted stack; machine-font fallback is not part of Visual IR.
 For a symbol with both text and Emoji presentation, write the authored Unicode Emoji sequence
 (for example `☎️`, including VS16); no package rewrites display text to force color.
 
@@ -422,7 +423,7 @@ This file is imported once in the `.svml` source and its values are referenced t
 
 <speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
 
-<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
 <space:Canvas id="vertical" width="720" height="1280"/>
 <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>

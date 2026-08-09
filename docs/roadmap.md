@@ -138,7 +138,7 @@ independent Endpoint packages without changing author model packages or Core. No
 batch-migration target: add one only when a concrete deployment selects that service, following the
 port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 
-## C. Current video-domain work, still pre-freeze
+## C. Current video-domain work after the terminal waist freeze
 
 The next official Track-package migration is governed by
 [`../spec/track-authoring.md`](../spec/track-authoring.md). Its temporal projection, strict
@@ -169,15 +169,15 @@ local motion. Glyph karaoke modes and joined Pill geometry have real browser evi
 deliberately has no line-clipping or `max-lines` behavior.
 
 The complete pre-release Text and Media Item/Sequence packages execute through the shared
-Temporal/Spatial foundation. Continue against real delivery examples, but do not freeze or indiscriminately expand
-the video author surface yet:
+Temporal/Spatial foundation. The repository-internal Track/Visual IR waist is frozen; individual
+author Surfaces may continue against real delivery examples without reopening it:
 
 - the implemented Text Document, Point/Area/Path forms, ordered Paint, selector-motion, local Mask
   and materialized advanced fallback;
 - the implemented Media Item/Sequence model, with the retired B-roll package kept out of the graph;
 - the implemented independent Depth-Stack Deck Track in place of the old Deck implementation;
 - the implemented TierBoard, Column, TopThree and TypewriterList Ranking components;
-- final Track and renderer-neutral Visual IR compatibility freeze.
+- independent future author packages such as Comment Sticker, only when a real design is ready.
 
 The current implementations remain executable vertical slices and regression witnesses. This work
 does not wait for release packaging, optional Providers or arbitrary-code isolation, and it must not

@@ -99,6 +99,14 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 0 });
 
   const restored = parseBuildState(serializeBuildState(paused.state));
+  const endpointImplementation = {
+    facet: {
+      module: { name: "example/runtime", version: "1" },
+      name: "generation",
+    },
+    digest: digestOf("example:generation-implementation"),
+    configurationDigest: digestOf({ model: "fixture" }),
+  } as const;
   endpoints.registerImmediateEndpoint("example:generation", capabilities.generation, types.generated, ({ need }) => {
     calls.fulfill += 1;
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
@@ -108,13 +116,17 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
       delivery: "executed",
       metadata: { endpoint: "fixture" },
     };
-  });
+  }, { runtimeImplementation: endpointImplementation });
 
   const completed = await driver.run(restored);
   assert.equal(completed.status, "complete");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 1, fulfill: 1 });
   assert.equal(completed.state.receipts[0]?.delivery, "executed");
   assert.equal(completed.state.receipts[0]?.fulfiller, "example:generation");
+  assert.deepEqual(completed.state.receipts[0]?.implementation, {
+    digest: endpointImplementation.digest,
+    configurationDigest: endpointImplementation.configurationDigest,
+  });
   assert.equal(completed.state.records.find((record) => record.id === "document:root")?.conformance, "exact");
 });
 
