@@ -309,9 +309,9 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
 ```svml
 <import as="fonts" from="@narratage/fonts-open@1"/>
 
-<fonts:Face id="inter-semibold" family="inter" weight="600" style="normal"/>
-<fonts:Face id="noto-cjk-semibold" family="noto-sans-sc" weight="600" style="normal"/>
-<fonts:Face id="symbols" family="noto-emoji" weight="400" style="normal"/>
+<fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
+</fonts:Stack>
 ```
 
 | 属性 | 描述 |
@@ -319,24 +319,24 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
 | `family` | 字体包有限目录中的字体族 |
 | `weight` | 精确选择的字体粗细 |
 | `style` | `normal` 或该字体族支持的 `italic` |
+| `emoji` | `Stack` 可选的 `color`（COLRv1）或 `mono` 兜底 |
 
-当前目录包含 Inter、Montserrat、DM Sans、Manrope、Poppins、Bebas Neue、Playfair Display、
-Source Serif 4、Noto Sans SC、Noto Serif SC 与 Noto Emoji。Fontsource 依赖固定为 `5.3.0`；
-编译器把已安装字节哈希成内容寻址的 `FontArtifactRef`，Build 过程不会下载字体，Runtime
+目录现有 109 个开源字体族，覆盖手写、书法、展示、无衬线、衬线、等宽、CJK、其他
+文字系统与 Emoji。Fontsource 依赖固定为 `5.3.0`，Chromium 兼容的 COLRv1 Emoji 包另行
+锁定版本；编译器把已安装字节哈希成内容寻址的字体值，Build 过程不会下载字体，Runtime
 也不猜字体：
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
-  font={inter-semibold}>
-  <caption-fine:Fallback font={noto-cjk-semibold}/>
-  <caption-fine:Fallback font={symbols}/>
-</caption-fine:Style>
+  font={caption-fonts}/>
 ```
 
-`font=` 是主字体，有序 `Fallback` 子元素用于覆盖 CJK、emoji 等额外字形集合。主字体
-必须和 Recipe 的 weight/style 一致；Fallback 保留自己的真实 weight/style。CJK 与 emoji
-即使由多个 Unicode-range 文件组成，在作者图中仍是一条逻辑字体边。省略字体栈时会使用
+`fonts:Stack` 产出通用 `FontStackRef`：主字体必须和 Recipe 的 weight/style 一致，Fallback
+保留自己的真实元数据。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是
+一条逻辑边。省略字体栈时会使用
 Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现。
+对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如
+包含 VS16 的 `☎️`）；任何包都不会为了强制彩色而改写显示稿。
 
 品牌字体与自定义字体仍是显式作者资产，不会被塞进共享目录：
 

@@ -1,13 +1,14 @@
 import { artifactDependency, artifactTypes } from "@narratage/artifact";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
-import { compositableSurfaceSchema, fontArtifactSchema, mediaArtifactSchema, mediaInspectionSchema, mediaStreamSelectionSchema, muxedMediaSchema, renderedVisualSchema, synchronizedMediaSchema, timelineAudioSchema } from "./schema.js";
+import { compositableSurfaceSchema, fontArtifactSchema, fontStackSchema, mediaArtifactSchema, mediaInspectionSchema, mediaStreamSelectionSchema, muxedMediaSchema, renderedVisualSchema, synchronizedMediaSchema, timelineAudioSchema } from "./schema.js";
 export const mediaModuleRef = { name: "@narratage/media", version: "0.0.0-dev" } as const;
 export const mediaTypes = {
   artifact: { module: mediaModuleRef, name: "MediaArtifactRef" }, inspection: { module: mediaModuleRef, name: "MediaInspection" },
   streamSelection: { module: mediaModuleRef, name: "MediaStreamSelection" }, synchronized: { module: mediaModuleRef, name: "SynchronizedMedia" },
   renderedVisual: { module: mediaModuleRef, name: "RenderedVisual" }, timelineAudio: { module: mediaModuleRef, name: "TimelineAudio" },
   muxed: { module: mediaModuleRef, name: "MuxedMedia" }, fontArtifact: { module: mediaModuleRef, name: "FontArtifactRef" },
+  fontStack: { module: mediaModuleRef, name: "FontStackRef" },
   compositableSurface: { module: mediaModuleRef, name: "CompositableSurfaceRef" }, blobArtifact: artifactTypes.blob,
 } satisfies Record<string, TypeRef>;
 export const mediaValidatorDigests = {
@@ -31,7 +32,8 @@ export const mediaManifest: ModuleManifest = {
     { name: mediaTypes.renderedVisual.name, schema: renderedVisualSchema, validator: validator("@narratage/media/validate-rendered-visual", mediaValidatorDigests.renderedVisual) },
     { name: mediaTypes.timelineAudio.name, schema: timelineAudioSchema, validator: validator("@narratage/media/validate-timeline-audio", mediaValidatorDigests.timelineAudio) },
     { name: mediaTypes.muxed.name, schema: muxedMediaSchema, validator: validator("@narratage/media/validate-muxed-media", mediaValidatorDigests.muxed) },
-    { name: mediaTypes.fontArtifact.name, schema: fontArtifactSchema }, { name: mediaTypes.compositableSurface.name, schema: compositableSurfaceSchema },
+    { name: mediaTypes.fontArtifact.name, schema: fontArtifactSchema }, { name: mediaTypes.fontStack.name, schema: fontStackSchema },
+    { name: mediaTypes.compositableSurface.name, schema: compositableSurfaceSchema },
   ], capabilities: [],
   surfaces: [
     { name: "image", tag: "Image", mode: "structured", outputs: [artifactTypes.blob], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media/image-surface", digest: mediaSurfaceImplementationDigests.image } },

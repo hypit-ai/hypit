@@ -167,13 +167,10 @@ test("an installed open-font package supplies a multilingual exact stack without
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="studio" source="./studio.svs"/>
 
-  <fonts:Face id="caption-font" family="inter" weight="700" style="normal"/>
-  <fonts:Face id="caption-cjk" family="noto-sans-sc" weight="700" style="normal"/>
-  <fonts:Face id="caption-symbols" family="noto-emoji" weight="400" style="normal"/>
-  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}>
-    <caption-fine:Fallback font={caption-cjk}/>
-    <caption-fine:Fallback font={caption-symbols}/>
-  </caption-fine:Style>
+  <fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
+    <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
+  </fonts:Stack>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-fonts}/>
 </svml>`, "utf8");
 
   let output = "";
@@ -185,7 +182,7 @@ test("an installed open-font package supplies a multilingual exact stack without
   assert.equal(result.ok, true);
   assert.deepEqual(
     result.exports.map((item) => item.name).sort(),
-    ["caption-cjk", "caption-font", "caption-symbols", "primary-caption"],
+    ["caption-fonts", "primary-caption"],
   );
 });
 

@@ -69,6 +69,8 @@ const fontSourceSchema: ValueSchema = object({
 export const fontArtifactSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-artifact@1" } },
   sources: { schema: { kind: "array", minItems: 1, items: fontSourceSchema } },
   weight: { schema: { kind: "number", integer: true, minimum: 1, maximum: 1_000 } }, style: { schema: { kind: "string", enum: ["normal", "italic", "oblique"] } } });
+export const fontStackSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-stack@1" } },
+  faces: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
 const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "still" } } }),
   object({ kind: { schema: { kind: "literal", value: "frames" } }, frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }),
