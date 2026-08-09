@@ -10,6 +10,7 @@
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="text" from="@narratage/text-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
@@ -90,7 +91,8 @@
 
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
+  <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
   <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
   <caption-ai:Planner

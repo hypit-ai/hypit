@@ -63,7 +63,9 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
 - [`../spec/visual-ir.md`](../spec/visual-ir.md)
 
-These video contracts are executable candidates, not yet an open-source compatibility freeze.
+The shared `svml.visual-track@1` / `svml.visual-ir@1` terminal waist is frozen inside the repository
+before publication. Individual author Surfaces remain pre-release unless their own specification
+says otherwise.
 
 ## Video execution records
 

@@ -20,4 +20,4 @@ export {
 } from "./manifest.js";
 export type * from "./types.js";
 export { stageHyperframesProject } from "./project.js";
-export type { HyperframesArtifactReader } from "./project.js";
+export type { HyperframesArtifactReader, HyperframesSurfaceValidator } from "./project.js";

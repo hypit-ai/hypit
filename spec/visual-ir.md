@@ -1,6 +1,6 @@
 # SVML Visual IR
 
-Status: executable candidate; closed vocabulary, not yet a frozen open-source ABI.
+Status: implemented repository-internal `@1` compatibility waist; not yet published as an npm ABI.
 
 ## Position
 
@@ -106,15 +106,24 @@ Old-system Text three-box, Caption range/cue/content and Media content-frame sam
 therefore package-owned Programs and lowering evidence. They are expressiveness witnesses for this
 IR, not fields added to the IR.
 
-## Remaining freeze gates
+## Freeze evidence
 
 The identifier and closed vocabulary are executable. Exact Text fonts, multiline decoration,
 Path/Mask/overflow, Media focal sampling and alpha now have real browser evidence; a separately
 installed non-native Text package crosses the typed Surface waist without changing Core, Film or
-HyperFrames. The candidate remains open until:
+HyperFrames. The repository-internal `@1` waist is frozen because all four independent gates now
+execute:
 
-1. the Runtime receipt binds the exact renderer implementation used for layout;
-2. Surface bytes are checked against their declared dimensions, timing, color and alpha facts;
-3. **Completed:** Deck and Ranking provide the remaining package-owned Track expressiveness witnesses;
-4. the final repository-wide compatibility audit proves that no package-family discriminator or
-   hidden cross-Track sampling path entered the waist.
+1. the generic Need Receipt binds the locked Endpoint implementation/configuration/Runtime closure,
+   while HyperFrames' receipt-covered attestation binds the exact browser bytes locally or the
+   explicitly configured immutable renderer deployment digest remotely;
+2. the shared media executor decodes Surface bytes and proves dimensions, frame timing, SDR/sRGB
+   compatibility and opaque/straight-alpha facts before local rendering; a renderer Endpoint without
+   that verifier must decline a Surface-bearing document;
+3. Deck and Ranking provide the remaining package-owned Track expressiveness witnesses;
+4. the repository-wide boundary audit proves that Composition contains no package-family/provider
+   discriminator and the terminal compiler contains no hidden cross-Track sampling path.
+
+This freezes the protocol for subsequent package work in this repository. It is not a statement
+that npm packages have been published, that every author Surface is frozen, or that a future public
+release may skip its distribution and security review.

@@ -12,8 +12,8 @@ It owns no Script parser, concrete font, box model, field meaning, renderer, LLM
 Runtime policy.
 
 ```xml
-<caption-fine:Style id="plain" recipe={studio.caption.plain}/>
-<caption-fine:Style id="impact" recipe={studio.caption.impact}/>
+<caption-fine:Style id="plain" recipe={studio.caption.plain} font={caption-font}/>
+<caption-fine:Style id="impact" recipe={studio.caption.impact} font={caption-font}/>
 
 <caption:Program id="captions" display={story.caption} default={plain}>
   <caption:Use role="ALICE" style={impact}/>

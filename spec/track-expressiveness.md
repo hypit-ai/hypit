@@ -1,6 +1,6 @@
 # SVML Track Expressiveness Gate
 
-Status: executable validation gate; not yet a frozen public Track ABI.
+Status: all E1–E8 gates execute; repository-internal `svml.visual-track@1` waist frozen pre-publication.
 
 ## Purpose
 
@@ -164,12 +164,14 @@ byte-identical one-worker/partitioned frames; all eleven official Screen Overlay
 test is run with `SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future
 hosted Runtime.
 
-The IR style vocabulary is now closed rather than arbitrary CSS: components cannot add an unknown
+The IR style vocabulary is closed rather than arbitrary CSS: components cannot add an unknown
 property, environment-dependent value or alternate browser language without changing the protocol
-version. The candidate is intentionally still not frozen. Unbound text remains temporarily legal for
-candidate-era package migration, and a production Runtime still needs to bind its exact renderer
-implementation and validate that Surface bytes satisfy the declared metadata. Those remaining
-facts must stay generic; they must not be patched with Caption-, Text- or Media-specific fields.
+version. Every terminal text element now carries a non-empty exact Font Artifact stack; system-font
+fallback and a prototype family are invalid. The Runtime binds its locked implementation in the
+generic Receipt. HyperFrames additionally records the exact local browser digest or configured
+remote renderer-deployment digest in receipt-covered metadata. Shared ffprobe-based Surface-byte
+verification proves declared dimensions, timing, SDR/sRGB and alpha facts before local staging;
+Endpoints without this ability decline Surface-bearing documents.
 
 E1–E5, E7 and E8 now have their official package witnesses. `@narratage/text-track` proves the
 complete three-box/Text terminal model without public Text fields; Caption and Media prove their
@@ -181,12 +183,12 @@ seeds, flat stacking and fail-closed rejection of lower-composite effects;
 visible Cards while reusing Card-local Media lowering. `@narratage/ranking` supplies the real E4
 witness: board, stage and independently stacked Items interleave with an unrelated peer Track,
 while all four Ranking components retain frame-pure progressive state under partitioned browser
-rendering. E6 alone awaits Runtime Surface-byte validation despite its typed path and independently
-installed non-native Text witness already executing.
+rendering. E6 is complete through the typed path, independently installed non-native Text witness,
+byte verifier and fail-closed Endpoint support check.
 
 ## Freeze criteria
 
-Track v1 may be called a stable public waist only when all of the following hold:
+The repository-internal Track v1 waist satisfies all of the following:
 
 1. E1–E8 have executable structural, HTML-lowering and audio-plan witnesses;
 2. official Text/Caption lowerers either bind exact font Artifacts or explicitly materialize their
@@ -198,5 +200,6 @@ Track v1 may be called a stable public waist only when all of the following hold
 6. a package can revise its Program schema while preserving or versioning only its own lowerer;
 7. unsupported cross-Track sampling fails closed.
 
-Until then, `svml.visual-track@1` is an executable candidate used to discover the correct waist,
-not an open-source compatibility promise.
+The implementation is therefore frozen for subsequent repository package work. Public npm
+publication, untrusted-code isolation and final release versioning remain separate release gates;
+they do not reopen the video meaning of this waist.

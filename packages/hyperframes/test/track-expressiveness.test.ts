@@ -22,6 +22,13 @@ const programSpace = sealProgramSpace({
   frameRate: { numerator: 30, denominator: 1 },
 });
 
+const witnessFont: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  sources: [{ artifact: { kind: "blob", digest: digestOf("visual-ir:witness-font"), size: 32, mediaType: "font/woff2" } }],
+  weight: 700,
+  style: "normal",
+};
+
 function composition(id: string, tracks: readonly VisualTrack[]) {
   return sealComposition({
     contract: "svml.composition@1",
@@ -95,8 +102,8 @@ function textPresent(
       order: 4,
       kind: "text",
       text: "Intent",
+      fonts: [witnessFont],
       style: [
-        { name: "font-family", value: "Inter, sans-serif" },
         { name: "font-size", value: "64px" },
         { name: "box-shadow", value: "0 12px 32px rgba(0,0,0,0.4)" },
         ...(paintTarget === "word" ? painted : []),
@@ -108,8 +115,8 @@ function textPresent(
       order: 5,
       kind: "text",
       text: " first",
+      fonts: [witnessFont],
       style: [
-        { name: "font-family", value: "Noto Sans SC, sans-serif" },
         { name: "font-size", value: "64px" },
       ],
     },
@@ -222,7 +229,8 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
           order: 3,
           kind: "text",
           text: "semantic ",
-          style: [{ name: "font-family", value: "Playfair Display, serif" }],
+          fonts: [witnessFont],
+          style: [],
           animation: wordAnimation(1, 20),
         },
         {
@@ -231,7 +239,8 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
           order: 4,
           kind: "text",
           text: "video",
-          style: [{ name: "font-family", value: "Inter, sans-serif" }, { name: "background-color", value: "#00ff66" }],
+          fonts: [witnessFont],
+          style: [{ name: "background-color", value: "#00ff66" }],
           animation: wordAnimation(21, 50),
         },
       ],
@@ -243,8 +252,8 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
   assert.match(document.html, /data-svml-element-id="range"/u);
   assert.match(document.html, /data-svml-element-id="cue"/u);
   assert.match(document.html, /data-svml-element-id="content"/u);
-  assert.match(document.html, /Playfair Display, serif/u);
-  assert.match(document.html, /Inter, sans-serif/u);
+  assert.match(document.html, /@font-face\{font-family:svml-/u);
+  assert.match(document.html, new RegExp(witnessFont.sources[0]!.artifact.digest.slice("sha256:".length), "u"));
   assert.match(document.html, /drop-shadow\(0 0 18px #00ffff\)/u);
 });
 
@@ -367,7 +376,7 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
       id: "peer",
       span: { startFrame: 0, endFrameExclusive: 300 },
       stacking: { order: 50, tieBreak: "peer" },
-      elements: [{ id: "peer", order: 0, kind: "text", text: "between", style: [] }],
+      elements: [{ id: "peer", order: 0, kind: "text", text: "between", fonts: [font], style: [] }],
     }],
   });
   const document = compileHyperframesDocument(composition("interleaved-ranking", [ranking, peer]), programSpace);

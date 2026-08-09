@@ -42,7 +42,7 @@ const exactFont: FontArtifactRef = {
 test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack", () => {
   const narrative = parseScript("fine.svml", "<line>Meaning becomes visible.</line>");
   const display = captionDisplaySequence(narrative, "story.caption");
-  const style = fineCaptionStyle("primary", recipe);
+  const style = fineCaptionStyle("primary", recipe, [exactFont]);
   const program = resolveCaptionProgram(display, "captions", style, []);
   const projection: TimedCaptionProjection = {
     contract: "svml.timed-caption-projection@1",
@@ -74,13 +74,13 @@ test("one Fine renderer handles uniform Cue appearance as one peer VisualTrack",
     declaration.name === "color" && declaration.value === "#FFFFFF")), true);
   assert.equal(wordElements.every((element) =>
     element.style.every((declaration) => declaration.name !== "transform")), true);
-  assert.equal(fineCaptionParameters(recipe).activePaint.fill, "#FFD54A");
+  assert.equal(fineCaptionParameters(recipe, [exactFont]).activePaint.fill, "#FFD54A");
 });
 
 test("Fine applies Caption Mute after planning without regrouping Cues", () => {
   const narrative = parseScript("mute.svml", "<line>Keep hidden words visible.</line>");
   const display = captionDisplaySequence(narrative, "story.caption");
-  const style = fineCaptionStyle("primary", recipe);
+  const style = fineCaptionStyle("primary", recipe, [exactFont]);
   const muted = display.words.slice(1, 3);
   const program = resolveCaptionProgram(display, "captions", style, [], [{
     id: "hide-middle",
@@ -127,7 +127,7 @@ test("Fine applies Caption Mute after planning without regrouping Cues", () => {
 test("Fine emits no Present for a fully muted Cue", () => {
   const narrative = parseScript("mute-all.svml", "<line>Hide everything.</line>");
   const display = captionDisplaySequence(narrative, "story.caption");
-  const style = fineCaptionStyle("primary", recipe);
+  const style = fineCaptionStyle("primary", recipe, [exactFont]);
   const program = resolveCaptionProgram(display, "captions", style, [], [{
     id: "hide-all",
     words: {
@@ -246,7 +246,7 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
       "loop-period-frames": 14,
       "loop-intensity": 0.8,
     },
-  });
+  }, [{ ...exactFont, style: "italic" }]);
 
   assert.deepEqual(parameters.placement, {
     x: 0.08, y: 0.76, width: 0.84, anchorX: "center", anchorY: "bottom",
@@ -294,7 +294,7 @@ test("karaoke uses one active overlay per whole Atom and never invents Dual Text
       "cue-enter-frames": 4,
       "cue-exit-frames": 4,
     },
-  });
+  }, [exactFont]);
   const program = resolveCaptionProgram(display, "karaoke-captions", style, []);
   const projection: TimedCaptionProjection = {
     contract: "svml.timed-caption-projection@1",
@@ -336,11 +336,11 @@ test("Fine rejects unknown or obsolete Recipe dimensions instead of silently acc
   assert.throws(() => fineCaptionStyle("bad", {
     ...recipe,
     properties: { ...recipe.properties, important: true },
-  }), /unknown property important/u);
+  }, [exactFont]), /unknown property important/u);
   assert.throws(() => fineCaptionStyle("half-gradient", {
     ...recipe,
     properties: { ...recipe.properties, "gradient-from": "#FFFFFF" },
-  }), /requires both from and to/u);
+  }, [exactFont]), /requires both from and to/u);
 });
 
 test("an exact Font is explicit Style input and reaches every base and active glyph", () => {
@@ -398,7 +398,7 @@ test("current/trail by step/wipe have four distinct frame-exact Atom histories",
     const style = fineCaptionStyle(`${mode}-${transition}`, {
       ...recipe,
       properties: { ...recipe.properties, karaoke: mode, "karaoke-transition": transition },
-    });
+    }, [exactFont]);
     const program = resolveCaptionProgram(display, `program-${mode}-${transition}`, style, []);
     const projection: TimedCaptionProjection = {
       contract: "svml.timed-caption-projection@1",
@@ -459,7 +459,7 @@ test("full Fine Paint and layered motion lower to terminal Visual IR without cha
       "active-response": "pop", "active-response-frames": 4, "active-scale": 1.12,
       loop: "wobble", "loop-target": "active-atom", "loop-period-frames": 8, "loop-intensity": 1,
     },
-  });
+  }, [exactFont]);
   const program = resolveCaptionProgram(display, "full-program", style, []);
   const projection: TimedCaptionProjection = {
     contract: "svml.timed-caption-projection@1",
@@ -513,7 +513,7 @@ test("glyph, underline and Pill activation are independent channels", () => {
       "active-box-background": "#FFD54ACC",
       "active-box-padding": "3 6",
     },
-  });
+  }, [exactFont]);
   const program = resolveCaptionProgram(display, "channels-program", style, []);
   const projection: TimedCaptionProjection = {
     contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,
@@ -545,7 +545,7 @@ test("every declared one-shot and loop motion lowers through the same wrapper vo
     contract: "svml.program-space@1", durationSec: 3, frameRate: { numerator: 10, denominator: 1 },
   });
   const render = (id: string, properties: Readonly<Record<string, string | number>>) => {
-    const style = fineCaptionStyle(id, { ...recipe, properties: { ...recipe.properties, ...properties } });
+    const style = fineCaptionStyle(id, { ...recipe, properties: { ...recipe.properties, ...properties } }, [exactFont]);
     const program = resolveCaptionProgram(display, `${id}-program`, style, []);
     const projection: TimedCaptionProjection = {
       contract: "svml.timed-caption-projection@1", displaySequenceId: display.id,

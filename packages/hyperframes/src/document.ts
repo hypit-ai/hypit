@@ -1,4 +1,5 @@
-import type { FontArtifactRef } from "@narratage/media";
+import { assertCompositableSurfaceRef } from "@narratage/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
 import { programSpaceFrameCount } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertCompositionIdentity } from "@narratage/composition";
@@ -32,6 +33,7 @@ export const compileHyperframesImplementationDigest = digestOf("@narratage/hyper
 
 const NANOSECONDS = 1_000_000_000n;
 const ARTIFACT_URI = /svml-artifact:\/\/sha256\/([0-9a-f]{64})/gu;
+const SURFACE_ARTIFACT = /data-svml-surface-artifact="(sha256:[0-9a-f]{64})"/gu;
 
 function escapeHtml(value: string): string {
   return value
@@ -205,7 +207,7 @@ function exactFontFamily(font: FontArtifactRef): string {
 }
 
 function exactFontStyle(element: VisualElement): string[] {
-  if (element.kind !== "text" || element.fonts === undefined) return [];
+  if (element.kind !== "text") return [];
   const first = element.fonts[0]!;
   return [
     `font-family:${element.fonts.map(exactFontFamily).join(",")}`,
@@ -300,7 +302,7 @@ function renderElement(
         return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       if (maskRoot.kind === "surface" && maskRoot.surface.timing.kind === "still") {
-        return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
+        return `<image data-svml-surface-artifact="${maskRoot.surface.artifact.digest}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
       }
       throw new Error(`Local mask ${element.id} requires a terminal owned text, image or still Surface mask source.`);
     })();
@@ -352,6 +354,7 @@ function renderElement(
         "muted",
         "playsinline",
         ...(element.kind === "surface" ? [
+          `data-svml-surface-artifact="${element.surface.artifact.digest}"`,
           `data-svml-alpha-mode="${element.surface.alphaMode}"`,
           `data-svml-color-space="${element.surface.colorSpace}"`,
           `width="${element.surface.width}"`,
@@ -364,6 +367,7 @@ function renderElement(
   if (element.kind === "surface") {
     const source = escapeHtml(hyperframesArtifactUri(element.surface.artifact.digest));
     const surface = [
+      `data-svml-surface-artifact="${element.surface.artifact.digest}"`,
       `data-start="${context.presentStart}"`,
       `data-duration="${context.presentDuration}"`,
       `data-track-index="${context.stackIndex}"`,
@@ -491,6 +495,26 @@ function collectArtifacts(composition: Composition): BlobRef[] {
     }
   }
   return [...artifacts.values()].sort((left, right) => left.digest.localeCompare(right.digest));
+}
+
+function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
+  const surfaces = new Map<Digest, CompositableSurfaceRef>();
+  for (const track of composition.tracks) {
+    if (track.contract !== "svml.visual-track@1") continue;
+    for (const present of track.presents) {
+      for (const element of present.elements) {
+        if (element.kind !== "surface") continue;
+        const surface = structuredClone(element.surface);
+        const existing = surfaces.get(surface.artifact.digest);
+        if (existing !== undefined && digestOf(existing) !== digestOf(surface)) {
+          throw new Error(`HyperFrames Surface ${surface.artifact.digest} has conflicting declarations.`);
+        }
+        surfaces.set(surface.artifact.digest, surface);
+      }
+    }
+  }
+  return [...surfaces.values()].sort((left, right) =>
+    left.artifact.digest.localeCompare(right.artifact.digest));
 }
 
 function collectFonts(composition: Composition): FontArtifactRef[] {
@@ -635,6 +659,9 @@ function normalizedDocument(value: HyperframesDocument): HyperframesDocument {
     artifacts: [...value.artifacts]
       .map((artifact) => ({ ...artifact }))
       .sort((left, right) => left.digest.localeCompare(right.digest)),
+    surfaces: [...value.surfaces]
+      .map((surface) => structuredClone(surface))
+      .sort((left, right) => left.artifact.digest.localeCompare(right.artifact.digest)),
     html: value.html,
   };
 }
@@ -651,6 +678,7 @@ export function compileHyperframesDocument(composition: Composition, programSpac
       height: composition.canvas.height,
     },
     artifacts: collectArtifacts(composition),
+    surfaces: collectSurfaces(composition),
     html: emitHtml(composition, programSpace),
   });
   return content;
@@ -684,6 +712,27 @@ export function assertHyperframesDocument(document: HyperframesDocument): void {
   const actual = [...new Set(referenced)].sort();
   if (JSON.stringify(actual) !== JSON.stringify(declared.map((item) => item.digest).sort())) {
     throw new Error("HyperframesDocument Artifact placeholders do not match its declared dependencies.");
+  }
+  if (!Array.isArray(document.surfaces)) throw new Error("HyperframesDocument Surface set is invalid.");
+  const surfaceArtifacts = new Set<string>();
+  for (const [index, surface] of document.surfaces.entries()) {
+    assertCompositableSurfaceRef(surface, `HyperframesDocument.surfaces.${index}`);
+    if (surfaceArtifacts.has(surface.artifact.digest)) {
+      throw new Error("HyperframesDocument Surface set repeats an Artifact.");
+    }
+    surfaceArtifacts.add(surface.artifact.digest);
+    const artifact = declared.find((item) => item.digest === surface.artifact.digest);
+    if (artifact === undefined
+      || artifact.size !== surface.artifact.size
+      || artifact.mediaType !== surface.artifact.mediaType) {
+      throw new Error("HyperframesDocument Surface is not bound to its declared Artifact.");
+    }
+  }
+  const referencedSurfaces = [...new Set(
+    [...document.html.matchAll(SURFACE_ARTIFACT)].map((match) => match[1]!),
+  )].sort();
+  if (JSON.stringify(referencedSurfaces) !== JSON.stringify([...surfaceArtifacts].sort())) {
+    throw new Error("HyperframesDocument Surface markers do not match its typed dependencies.");
   }
 }
 

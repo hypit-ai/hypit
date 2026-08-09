@@ -1,8 +1,8 @@
 # Text Track Authoring and Expressiveness
 
 Status: implemented pre-release authority for the official two-dimensional Text package. The
-complete declared model and browser evidence execute through the candidate Visual IR; the shared
-Track/renderer ABI remains pre-freeze work.
+complete declared model and browser evidence execute through the frozen repository-internal
+Track/Visual IR waist; the author Surface itself is not yet a published ABI.
 
 ## 1. Conclusion
 
@@ -432,8 +432,9 @@ renderer scripts to author packages. A separately installed non-native Text fixt
 extrusion/material/light/camera semantics can remain outside the waist and contribute only a typed
 alpha Surface. Unsupported rich masks use the same path.
 
-These remain video-terminal facts, never Core facts. Visual IR is still a candidate until renderer
-receipts, Surface-byte validation, Deck/Ranking witnesses and the final compatibility audit pass.
+These remain video-terminal facts, never Core facts. Renderer receipts, Surface-byte validation,
+Deck/Ranking witnesses and the final compatibility audit now pass without adding Text meaning to
+the shared waist.
 
 ## 12. Feedback into Fine Caption
 
@@ -478,7 +479,7 @@ Implementation replaced the earlier slice rather than accreting compatibility fi
 5. **Implemented:** item motion and Unicode-aware sequence selectors;
 6. **Implemented:** Path Text plus an exact bounded local Text Mask and fail-closed materialization boundary;
 7. **Implemented:** the `CompositableSurface` escape route with a separately installed non-native Text package witness;
-8. **Pending shared freeze:** settle the final Visual IR only after the repository-wide gates pass.
+8. **Implemented:** freeze the repository-internal Visual IR after every repository-wide gate passes.
 
 Acceptance requires browser/render evidence for at least:
 
@@ -493,5 +494,6 @@ Acceptance requires browser/render evidence for at least:
 - explicit Text Mask ownership and one materialized advanced fallback;
 - no modification to Core, Runtime, Film or an unrelated Track package.
 
-The declared Text package gates now pass. This establishes a complete pre-release Text package, not
-a frozen public Track or Visual IR compatibility promise.
+The declared Text package gates now pass. This establishes a complete pre-release Text package on
+the frozen repository-internal Track/Visual IR waist; npm publication and the Text author Surface's
+own public-version promise remain separate.

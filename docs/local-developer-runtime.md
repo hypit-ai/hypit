@@ -345,11 +345,9 @@ and preview executions belong in explicit Run sources; the local Runtime needs n
 acceptance orchestrator. Remaining work is to:
 
 1. keep the implemented Text, Media, Deck and Ranking package acceptance matrices green while their
-   author Surfaces remain pre-freeze; the field-free Caption Fine surface already has complete
-   browser evidence;
-2. complete generic Surface-byte validation and renderer receipts before freezing the shared
-   Track/Visual IR waist;
-3. add a persistent remote WhisperX Provider or further environment variants only when a concrete
+   author Surfaces remain pre-release; the shared terminal Track/Visual IR waist and field-free
+   Caption Fine browser evidence are already complete;
+2. add a persistent remote WhisperX Provider or further environment variants only when a concrete
    deployment requires them.
 
 Hosted tenant auth, credits, Redis, a distributed queue and Hypit-wide Build hosting remain outside

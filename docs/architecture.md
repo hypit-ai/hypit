@@ -442,8 +442,10 @@ All official video packages use the same Graph, Candidate, Satisfaction, Need an
 as any other domain. Film is an ordinary Composition target and each renderer is an ordinary
 downstream implementation; neither is a Core root.
 
-The current audiovisual narrow waist remains pre-freeze. Its expressiveness work is intentionally
-deferred while the domain-neutral run language and deployment paths are completed.
+The repository-internal audiovisual narrow waist is frozen at `svml.visual-track@1` and
+`svml.visual-ir@1`: exact fonts, typed and byte-verified Surfaces, renderer implementation receipts
+and the no-family/no-cross-Track audit all execute. Individual author Surfaces and public package
+distribution remain pre-release work and can evolve without reopening that terminal contract.
 
 See [`open-source-distribution.md`](./open-source-distribution.md) for independent publication,
 restart and current release-readiness boundaries.

@@ -5,9 +5,9 @@ description: 视觉 Track 组件——字幕、媒体叠加层和文字叠加层
 
 # 字幕、Media 与文字
 
-> **冻结前说明：** Caption Fine 与 Media Track 已执行各自声明的作者 Surface。Text
-> 仍是本页展示的小型图链路证明；完整作者模型由 `spec/text-track.md` 约束。当前没有任何
-> 一个包被宣布为冻结的公开 ABI。
+> **发布前说明：** Caption Fine、Media Track 与 Text 都执行各自声明的作者 Surface。
+> 它们的作者 API 仍可演进；共享终端 Track/Visual IR 窄腰已在仓库内冻结，但尚未作为
+> npm ABI 发布。
 
 每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三个官方视觉 Track 包：字幕、Media 和文字叠加层。
 
@@ -60,9 +60,9 @@ caption.primary {
   font={caption-fonts}/>
 ```
 
-显式的 `font=` 边携带一个按字节复现的 `FontStackRef`。主字体必须与 Recipe
-的 weight/style 一致；每个 Fallback 保留自己的真实字体信息。省略字体栈则明确使用
-Recipe 的环境字体兜底名；Caption 和 Runtime 都不会替作者猜字体。
+必填的 `font=` 边携带一个按字节复现的 `FontStackRef`。主字体必须与 Recipe
+的 weight/style 一致；每个 Fallback 保留自己的真实字体信息。省略字体栈会在编译时
+失败，不会退回当前机器上的同名字体。
 
 Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
 逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。
@@ -233,13 +233,15 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 <import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/text-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
-<caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
+<fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+<caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
 <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
 <caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>

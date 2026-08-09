@@ -1473,6 +1473,9 @@ importers:
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../media-execution
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
