@@ -2,9 +2,13 @@
 
 <sheet version="1">
   film.vertical { background: #09090B; }
-  broll.card {
-    stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5; fit: cover;
-    background: #111116; radius: 20; enter: slide-up 4f; exit: fade 4f;
+  media.card {
+    stack-order: 40; fit: cover; playback: hold-start;
+    frame-paint: #111116; clip: rounded; radius: 20;
+  }
+  motion.card {
+    enter: slide; enter-frames: 4; enter-direction: up; enter-easing: ease-out;
+    exit: fade; exit-frames: 4; exit-easing: ease-in;
   }
   caption.base {
     cue-min-words: 1; cue-max-words: 5;

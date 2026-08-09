@@ -166,12 +166,12 @@ independent glyph/Pill/underline activation, joined wrapped trail geometry and l
 local motion. Glyph karaoke modes and joined Pill geometry have real browser evidence. It
 deliberately has no line-clipping or `max-lines` behavior.
 
-The simple Text and still-image Media witnesses now execute through the shared Temporal/Spatial
-foundation. Continue against real delivery examples, but do not freeze or indiscriminately expand
+The simple Text witness and complete pre-freeze Media Item/Sequence package execute through the
+shared Temporal/Spatial foundation. Continue against real delivery examples, but do not freeze or indiscriminately expand
 the video author surface yet:
 
 - the specified Text Document, Point/Area/Path forms, ordered Paint and selector-motion model;
-- the specified Media Item/Sequence model in place of the current B-roll vertical slice;
+- the implemented Media Item/Sequence model, with the retired B-roll package kept out of the graph;
 - the independent Depth-Stack Deck Track in place of the old Deck implementation;
 - the designed Ranking components after the shared temporal package;
 - final Track and renderer-neutral Visual IR compatibility freeze.

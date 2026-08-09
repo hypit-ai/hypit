@@ -1,12 +1,12 @@
 ---
 title: SVS Stylesheets
-description: The SVS Recipe language — CSS-like stylesheets for film, caption, B-roll, text and generation settings.
+description: The SVS Recipe language — CSS-like stylesheets for film, caption, media, text and generation settings.
 ---
 
 # SVS Stylesheets
 
 SVS (`.svs`) files define reusable, typed configuration values using a CSS-like syntax. They
-configure Film appearance, caption appearance, B-roll layout, text styling, speech estimation
+configure Film appearance, caption appearance, Media presentation and motion, text styling, speech estimation
 parameters, generation settings, and typography choices. SVS values are called **Recipes** — they are
 immutable typed Records that consuming components validate and interpret.
 
@@ -153,41 +153,59 @@ Then assign them via `caption:Program`:
 </caption:Program>
 ```
 
-## B-roll
+## Media Track
 
-B-roll item appearance — position, fit, container, and enter/exit animations.
+Media keeps spatial placement, frame presentation and lifecycle motion separate. A `SpatialFrame`
+owns position and size; the appearance Recipe owns fitting and the frame material; an optional
+motion Recipe owns enter, sustain and exit behavior.
 
 ```svs
-broll.product {
+media.product {
   stack-order: 40;
-  x: 0.08;
-  y: 0.20;
-  width: 0.84;
-  height: 0.48;
   fit: contain;
-  background: #111116;
+  playback: hold-start;
+  frame-paint: #111116;
+  clip: rounded;
   radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
+  padding: 0;
+  border-width: 1;
+  border-style: solid;
+  border-color: #FFFFFF20;
+  shadows: 0 10 24 0 #00000066;
+}
+
+motion.product {
+  enter: slide;
+  enter-frames: 8;
+  enter-direction: up;
+  enter-easing: ease-out;
+  exit: fade;
+  exit-frames: 6;
+  exit-easing: ease-in;
 }
 ```
 
 | Property | Description |
 |---|---|
 | `stack-order` | Z-stacking order |
-| `x`, `y` | Position as fraction of canvas |
-| `width`, `height` | Size as fraction of canvas |
-| `fit` | How the source fits the container: `cover`, `contain` |
-| `background` | Container background color |
-| `radius` | Container border radius |
-| `enter` | Enter animation: `slide-up Nf`, `fade Nf` (N = frames) |
-| `exit` | Exit animation: `fade Nf`, `slide-down Nf` |
+| `fit` | `contain`, `cover`, `fit-width`, `fit-height`, `native`, `scale-down`, or `stretch` |
+| `frame-x`, `frame-y` | Alignment point inside the placement Frame |
+| `content-x`, `content-y` | Independently selected focal point inside the source |
+| `playback` | Timed-source occupancy such as `once-start`, `hold-start`, `loop-end`, or `stretch` |
+| `frame-paint` | Solid or gradient Paint behind the sampled source |
+| `clip`, `radius`, `padding` | Frame clipping and inset |
+| `border-*`, `shadows` | Frame-owned border and ordered shadows |
+| `enter`, `exit` | Lifecycle operator; its frame count, easing and direction use separate properties |
+| `sustain` | Zero or more deterministic local motions such as `float 12 2 up` |
 
-Referenced by `broll:Item` via the `appearance` attribute:
+Position remains an explicit graph edge:
 
 ```svml
-<broll:Item source={motion.video} during={story.selection.demo}
-  appearance={studio.broll.product}/>
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+<media-track:Item source={product-media.media}
+  during={story.selection.demo} frame={product-frame}
+  appearance={studio.media.product} motion={studio.motion.product}/>
 ```
 
 ## Text

@@ -24,7 +24,7 @@ Updating an installed package does not silently change or resume that Build unde
 New Builds can use the newly locked package without a Core release.
 
 A logical Module is not required to become one physical npm package. Author meanings such as
-Seedance Speaker, B-roll and Podcast should retain separate Manifests and import identities, while a
+Seedance Speaker, Media Track and Podcast should retain separate Manifests and import identities, while a
 public Seedance distribution may ship all of those facets and their static Kit data from one
 physical package. Internal private workspace packages remain convenient development boundaries and
 do not settle the public package topology. Shared mechanics such as `@narratage/prompt-kit` prevent those

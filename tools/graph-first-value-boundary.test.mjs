@@ -29,7 +29,7 @@ async function contents(packageNames) {
 }
 
 const domainValuePackages = [
-  "broll",
+  "media-track",
   "caption",
   "caption-gemini",
   "estimate",
@@ -100,7 +100,7 @@ test("the generic graph stack has no payload-affinity side channel", async () =>
 
 test("fold values retain members, not hidden identity or policy context", async () => {
   const declarations = [
-    ["broll", "types.ts", "BrollSet"],
+    ["media-track", "types.ts", "MediaTrackSet"],
     ["film", "types.ts", "FilmTrackSet"],
     ["speech-spine", "types.ts", "SpeechSpineSet"],
     ["text-track", "types.ts", "TextTrackSet"],

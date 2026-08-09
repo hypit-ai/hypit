@@ -10,7 +10,8 @@ import { resolveCaptionProgram } from "@narratage/caption";
 import type { TimedCaptionProjection } from "@narratage/caption";
 import { fineCaptionStyle, renderFineCaption } from "@narratage/caption-fine";
 import { decodeOpenFontFaceSurface } from "@narratage/fonts-open";
-import type { FontArtifactRef } from "@narratage/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
+import * as mediaTrack from "@narratage/media-track";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealComposition, sealVisualTrack } from "@narratage/composition";
 import assert from "node:assert/strict";
@@ -18,7 +19,7 @@ import {
   compileHyperframesDocument,
   materializeHyperframesHtml,
 } from "@narratage/hyperframes";
-import type { Digest } from "@narratage/protocol";
+import type { BlobRef, Digest } from "@narratage/protocol";
 import { captionDisplaySequence, parseScript } from "@narratage/script";
 import {
   appendProgramScreenOverlay,
@@ -654,6 +655,144 @@ test("installed open fonts render CJK, emoji and independent stroke, shadow and 
       "shadow Paint did not produce blue pixels");
     assert.ok(matchingPixels(rgba, width, paintRegion, (red, green, blue) => green > 50 && red < 120 && blue < 120) > 100,
       "glow Paint did not produce green pixels");
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("Media two-frame sampling, alpha, local motion and handoff survive partitioned browser rendering", {
+  skip: !enabled,
+  timeout: 120_000,
+}, async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-media-track-visual-"));
+  try {
+    const width = 160;
+    const height = 120;
+    const redBytes = rgbaPng(80, 120, [245, 35, 35, 255]);
+    const greenBytes = rgbaPng(80, 120, [20, 235, 80, 255]);
+    const alphaBytes = rgbaPng(64, 64, [35, 70, 255, 176]);
+    const red: BlobRef = { kind: "blob", digest: digest(redBytes), size: redBytes.byteLength, mediaType: "image/png" };
+    const green: BlobRef = { kind: "blob", digest: digest(greenBytes), size: greenBytes.byteLength, mediaType: "image/png" };
+    const alpha: CompositableSurfaceRef = {
+      contract: "svml.compositable-surface@1",
+      artifact: { kind: "blob", digest: digest(alphaBytes), size: alphaBytes.byteLength, mediaType: "image/png" },
+      width: 64,
+      height: 64,
+      colorSpace: "srgb",
+      alphaMode: "straight",
+      timing: { kind: "still" },
+    };
+    const paths = new Map<Digest, string>();
+    for (const [name, bytes, artifactDigest] of [
+      ["red.png", redBytes, red.digest],
+      ["green.png", greenBytes, green.digest],
+      ["alpha.png", alphaBytes, alpha.artifact.digest],
+    ] as const) {
+      await writeFile(path.join(temp, name), bytes);
+      paths.set(artifactDigest, `./${name}`);
+    }
+    const canvas = sealCanvasSpace({
+      contract: "svml.canvas-space@1", widthPx: width, heightPx: height,
+      origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
+    });
+    const space = sealProgramSpace({
+      contract: "svml.program-space@1", durationSec: 1, frameRate: { numerator: 12, denominator: 1 },
+    });
+    const header = mediaTrack.sealMediaTrackHeader({ contract: "svml.media-track-header@1", id: "browser-media" });
+    const sampleAppearance = { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } };
+    const contentFit = (sizing: "contain" | "cover") => ({
+      contract: "svml.content-fit@1" as const, sizing,
+      framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
+      offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const,
+    });
+    const extent = { contract: "svml.intrinsic-extent@1" as const, widthPx: 80, heightPx: 120 };
+    let itemLayers = mediaTrack.createMediaLayerSet();
+    itemLayers = mediaTrack.appendStillMediaLayer(itemLayers, red, extent, contentFit("cover"), mediaTrack.sealMediaSampleLayerSpec({
+      contract: "svml.media-sample-layer-spec@1", id: "blurred-backdrop",
+      appearance: { opacity: 1, filter: { blurPx: 6, brightness: 0.8, contrast: 1, saturation: 1 } },
+    }));
+    itemLayers = mediaTrack.appendSurfaceMediaLayer(itemLayers, alpha, contentFit("contain"), mediaTrack.sealMediaSampleLayerSpec({
+      contract: "svml.media-sample-layer-spec@1", id: "alpha-foreground", appearance: sampleAppearance,
+      samplingMotion: { keyframes: [
+        { atProgress: 0, zoom: 0.9, offsetX: 0, offsetY: 5, rotationDeg: -2 },
+        { atProgress: 1, zoom: 1.05, offsetX: 0, offsetY: -3, rotationDeg: 2, easing: "ease-in-out" },
+      ] },
+    }));
+    let set = mediaTrack.appendProgramMediaItem(
+      mediaTrack.createMediaTrackSet(), header, space, canvas, itemLayers,
+      { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 80, heightPx: 120 },
+      mediaTrack.sealMediaItemSpec({
+        contract: "svml.media-item-spec@1", id: "two-frame",
+        projection: { start: { ref: "program.start" }, end: { ref: "program.end" } }, expansion: { kind: "one" },
+        presentation: { clip: { kind: "frame" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
+        motion: {
+          enter: { operator: "fade", durationFrames: 2, easing: "ease-out" },
+          sustain: [{ operator: "breathe", amount: 0.04, cycles: 1 }],
+          exit: { operator: "fade", durationFrames: 2, easing: "ease-in" },
+        },
+        stackingOrder: 10,
+      }),
+      mediaTrack.createMediaSoundSet(),
+    );
+    const stillLayers = (id: string, artifact: BlobRef) => mediaTrack.appendStillMediaLayer(
+      mediaTrack.createMediaLayerSet(), artifact, extent, contentFit("cover"), mediaTrack.sealMediaSampleLayerSpec({
+        contract: "svml.media-sample-layer-spec@1", id, appearance: sampleAppearance,
+      }),
+    );
+    let members = mediaTrack.createMediaSequenceMemberSet();
+    members = mediaTrack.appendMediaSequenceMember(members, stillLayers("red-member", red),
+      mediaTrack.sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: "red" }), 0);
+    members = mediaTrack.appendMediaSequenceMember(members, stillLayers("green-member", green),
+      mediaTrack.sealMediaSequenceMemberSpec({ contract: "svml.media-sequence-member-spec@1", id: "green" }), 6);
+    set = mediaTrack.appendMediaSequence(
+      set, header, space, canvas, members,
+      { contract: "svml.spatial-frame@1", xPx: 80, yPx: 0, widthPx: 80, heightPx: 120 },
+      mediaTrack.sealMediaSequenceSpec({
+        contract: "svml.media-sequence-spec@1", id: "handoff",
+        presentation: { clip: { kind: "frame" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
+        motion: { sustain: [] }, stackingOrder: 20,
+        handoffs: [mediaTrack.sealMediaHandoffSpec({
+          contract: "svml.media-handoff-spec@1", id: "red-green", fromMemberId: "red", toMemberId: "green",
+          operator: "crossfade", durationFrames: 4, boundaryRatio: 0.5, audio: "cut",
+        })],
+      }),
+      mediaTrack.createMediaSoundSet(), 12,
+    );
+    const track = mediaTrack.projectMediaVisualTrack(space, mediaTrack.finalizeMediaTrack(set, header, space));
+    const document = compileHyperframesDocument(sealComposition({
+      contract: "svml.composition@1", id: "media-browser-proof",
+      canvas: { width, height, clearColor: "#000000" }, tracks: [track],
+    }), space);
+    await writeFile(path.join(temp, "index.html"), materializeHyperframesHtml(document, (artifact) => {
+      const materialized = paths.get(artifact.digest);
+      if (materialized === undefined) throw new Error(`Unexpected Media Artifact ${artifact.digest}`);
+      return materialized;
+    }));
+    const render = async (workers: number, name: string): Promise<Buffer[]> => {
+      const output = path.join(temp, name);
+      await mkdir(output);
+      const result = spawnSync(process.execPath, [
+        hyperframesCli, "render", temp,
+        "--format", "png-sequence", "--output", output, "--fps", "12", "--workers", String(workers),
+        "--no-browser-gpu", "--no-best-effort", "--quiet",
+      ], { encoding: "utf8", timeout: 110_000 });
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      return Promise.all((await collectPngs(output)).map(async (file) => decodedRgba(file, width, height)));
+    };
+    const sequential = await render(2, "sequential");
+    const partitioned = await render(3, "partitioned");
+    assert.equal(sequential.length, 12);
+    assert.equal(partitioned.length, 12);
+    for (let frameIndex = 0; frameIndex < sequential.length; frameIndex += 1) {
+      assert.deepEqual(partitioned[frameIndex], sequential[frameIndex], `Media frame ${frameIndex} changed under partitioning`);
+    }
+    assert.notDeepEqual(sequential[1], sequential[10], "Media lifecycle and handoff painted no temporal change");
+    assert.ok(matchingPixels(sequential[6]!, width, { left: 0, top: 0, right: 80, bottom: 120 },
+      (redValue, _greenValue, blueValue) => redValue > 50 && blueValue > 80) > 400,
+    "the straight-alpha foreground did not composite over its explicit backdrop");
+    assert.ok(matchingPixels(sequential[10]!, width, { left: 80, top: 0, right: 160, bottom: 120 },
+      (_redValue, greenValue) => greenValue > 150) > 4_000,
+    "the Sequence handoff never reached the incoming material");
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

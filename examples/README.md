@@ -1,7 +1,7 @@
 # Examples
 
 - [`talking-film-graph-check`](./talking-film-graph-check/README.md) compiles the complete
-  provider-free author graph through Speech, WhisperX, Caption, B-roll, Text, Film and final render
+  provider-free author graph through Speech, WhisperX, Caption, Media Track, Text, Film and final render
   requirements.
 - [`talking-film-live`](./talking-film-live/README.md) executes the real paid two-take path with KIE,
   local media processing, local WhisperX, Vertex Caption planning and local HyperFrames rendering.

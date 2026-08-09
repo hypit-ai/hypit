@@ -195,14 +195,14 @@ export function assembleSpeechBasis(
   });
   const visualClips = set.takes.map((take, index) => ({
     segmentId: take.segment.id,
-    artifact: {
-      digest: take.media.visual!.artifact.digest,
-      size: take.media.visual!.artifact.size,
-      mediaType: take.media.visual!.artifact.mediaType,
-      durationSec: seconds(take.media.timeline.frameCount),
+    artifact: structuredClone(take.media.visual!.artifact),
+    extent: {
+      contract: "svml.intrinsic-extent@1" as const,
+      widthPx: take.media.visual!.width,
+      heightPx: take.media.visual!.height,
     },
-    startSec: segments[index]!.startSec,
-    endSec: segments[index]!.endSec,
+    frameRate: { ...take.media.visual!.frameRate },
+    frameCount: take.media.visual!.frameCount,
   }));
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",

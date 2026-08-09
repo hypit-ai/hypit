@@ -5,7 +5,8 @@
   <import as="seedance" from="@narratage/seedance@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
-  <import as="broll" from="@narratage/broll@1"/>
+  <import as="pipeline" from="@narratage/media-pipeline@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
@@ -19,11 +20,17 @@
     <opening><HOST>Meaning @demo becomes the source @/demo.</opening>
   </script>
 
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
+  <space:Frame id="card-frame" within={vertical}
+    left="10%" top="20%" right="10%" bottom="30%"/>
+
   <seedance:Prompt id="direction">Locked medium close-up in a quiet daylight studio.</seedance:Prompt>
   <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue} prompt={direction} duration="5"/>
   <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
 
-  <speech:Spine id="speech">
+  <speech:Spine id="speech" canvas={vertical}>
     <speech:Take source={take} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
@@ -32,15 +39,15 @@
   <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
   <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program} model="gemini-2.5-flash"/>
 
-  <broll:Track id="cards" map={timing.map} space={speech.space}>
-    <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
-  </broll:Track>
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+  <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+    <media-track:Item source={motion-media.media} during={story.selection.demo}
+      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+  </media-track:Track>
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
     map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
-  <space:Canvas id="vertical" width="1080" height="1920"/>
-  <space:Frame id="title-frame" within={vertical}
-    left="6%" top="6%" right="6%" bottom="84%"/>
   <text:Track id="titles" space={speech.space}>
     <text:Item text="MEANING" during="full" frame={title-frame}
       appearance={studio.text.title}/>

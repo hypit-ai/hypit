@@ -7,6 +7,7 @@ import { sealGraphFragment } from "@narratage/elaborator";
 import type { FragmentOperation } from "@narratage/elaborator";
 import { mediaPipelineProducers } from "@narratage/media-pipeline";
 import { speechBasisProducers } from "@narratage/speech-basis";
+import { spatialTypes } from "@narratage/spatial";
 
 import { speechSpineProducers, speechSpineTypes } from "./manifest.js";
 import type { SpeechSpineFragmentOptions } from "./types.js";
@@ -16,7 +17,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
   if (options.takes.length === 0) throw new Error("Speech Spine requires at least one Take");
-  const names = new Set(["program"]);
+  const names = new Set(["program", "canvas"]);
   for (const take of options.takes) {
     if (!take.mediaName || !take.segmentName || names.has(take.mediaName) || names.has(take.segmentName)) {
       throw new Error("Speech Spine Fragment input names are empty or duplicated");
@@ -80,7 +81,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     {
       id: "spine:visual-track",
       producer: speechBasisProducers.projectVisual,
-      inputs: { basis: operation("spine:basis") },
+      inputs: { basis: operation("spine:basis"), canvas: input("canvas") },
       result: { kind: "output", name: "visual" },
     },
     {
@@ -95,6 +96,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     name: options.name?.trim() || "@narratage/speech-spine/spine@1",
     inputs: [
       { name: "program", type: speechSpineTypes.spineProgram },
+      { name: "canvas", type: spatialTypes.canvas },
       ...options.takes.flatMap((take) => [
         { name: take.mediaName, type: mediaTypes.synchronized },
         { name: take.segmentName, type: narrativeTypes.excerpt },
@@ -112,7 +114,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
         fidelity: "exact",
       },
       {
-        name: "visual", type: compositionTypes.visualTrack, root: operation("spine:visual-track"), semanticInputs,
+        name: "visual", type: compositionTypes.visualTrack, root: operation("spine:visual-track"), semanticInputs: [...semanticInputs, "canvas"],
         fidelity: "exact",
       },
       {

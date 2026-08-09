@@ -132,7 +132,7 @@ Implemented:
   executed through one Lambda function and the shared `@narratage/media-execution` body; the exact
   FFmpeg Layer and ZIP service passed their complete live AWS canary;
 - `@narratage/provider-hyperframes-aws-lambda`: recoverable plan-v2 rendering through the locked
-  HyperFrames 0.7.84 SDK, deterministic Step Functions execution identity, checkpointed polling and
+  HyperFrames 0.7.101 SDK, deterministic Step Functions execution identity, checkpointed polling and
   streamed S3 output persistence; the deployed stack passed a complete distributed render,
   ArtifactStore ingestion, ffprobe verification and remote cleanup canary;
 - `@narratage/image-transform`: explicit image-plus-Program to image graph component, including the
@@ -186,15 +186,21 @@ Implemented and executable:
   `FontStackRef` values; one logical face may carry several Unicode-range sources, the pinned
   COLRv1 Emoji path has real Chromium pixel evidence, Fine accepts the generic ordered stack as an
   ordinary author reference, and HyperFrames materializes those exact bytes;
-- Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
+- Caption, Media, Text and Speech lowering to self-contained peer Tracks;
 - `@narratage/temporal`: strict Selection/Moment `one` and `each`, stable occurrence identity,
   exact rational point expressions, ProgramSpace clipping, deterministic frame quantization,
   relation validation and cumulative/exclusive/settled trigger schedules;
 - `@narratage/spatial`: explicit CanvasSpace, Frame/Point/Path geometry, parent-relative and anchored
   Frames, intrinsic extents and deterministic two-frame ContentFit with independent focal points;
-- the current Text vertical slice consumes an explicit SpatialFrame edge, and
-  `@narratage/media-track` proves one still-image Item with separate BlobArtifact,
-  IntrinsicExtent, SpatialFrame, ContentFit and ProgramSpace inputs;
+- the current Text vertical slice consumes an explicit SpatialFrame edge;
+- `@narratage/media-track` implements independently timed Item and ordered Sequence Surfaces over
+  explicit ProgramSpace, CanvasSpace, SpatialFrame and optional SemanticMap edges: durationless
+  images, normalized video, compositable Surfaces, ordered Paint/sample layers, every ContentFit,
+  trim/occupancy, frame presentation, lifecycle/sampling motion, pairwise handoffs and separate
+  source-audio/SFX projection all lower to ordinary peer Tracks;
+- animated GIF and WebP sources retain their authored frame timing before fixed-rate media
+  normalization; animated WebP blend/dispose composition is performed by the shared media-execution
+  implementation rather than delegated to environment-dependent browser playback;
 - `@narratage/audio-track`: a self-described arbitrary-item author package over explicit normalized
   audio; Program/Selection/Moment `one`/`each`, exact trim, once/loop/start/end, bounded
   pitch-preserving stretch, gain and fades lower to one peer sample-domain AudioTrack and the same
@@ -205,16 +211,16 @@ Implemented and executable:
 - Film receives CanvasSpace, ProgramSpace and peer Tracks through separate graph edges: dimensions,
   frame rate and Film appearance no longer compete as duplicate truths;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
-- B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
+- Media-owned entry/sustain/exit motion, source sampling, cut/crossfade/push/wipe/cover/page-turn
+  handoffs and local SFX behavior; the old `@narratage/broll` package is retired;
 - renderer-neutral, frame-addressable Visual IR, exact Artifact references and compositable Surface
   path; HyperFrames is its current reference compiler/renderer route rather than the IR owner.
 
 Still pre-freeze and deliberately deferred:
 
-- complete Text/Media migrations beyond the executable simple shared-Spatial witnesses;
+- complete Text migration beyond the executable simple shared-Spatial witness;
 - complete Text three-box, exact-font and layered-decoration behavior;
-- B-roll foreground/backdrop sampling and focal media-box acceptance;
-- full Media, Text, Deck and Ranking production author packages;
+- full Text, Deck and Ranking production author packages;
 - renderer receipts and complete Surface-byte validation;
 - final Track and Visual IR compatibility promise;
 - Remotion or API-backed final render packages; these can be added beside `render-hyperframes`

@@ -13,7 +13,7 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 
-const HYPERFRAMES_VERSION = "0.7.84";
+const HYPERFRAMES_VERSION = "0.7.101";
 
 export const localHyperframesProviderModuleRef = {
   name: "@narratage/provider-hyperframes-local",

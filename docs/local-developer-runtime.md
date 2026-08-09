@@ -77,7 +77,7 @@ The SQLite schema contains opaque, versioned framework facts:
 - Operation identities, stable submission keys, checkpoints and completions.
 
 It contains no component-specific business tables and no ready-command queue. Installing a new
-Caption, Seedance or B-roll package does not add a table. Core regenerates ready Commands from the
+Caption, Seedance or Media Track package does not add a table. Core regenerates ready Commands from the
 last verified BuildState after every restart.
 
 Artifacts are not SQLite blobs. Credentials are not stored in BuildState, Operation metadata,
@@ -344,8 +344,9 @@ The durable local chassis and one real talking-video path are implemented. Diffe
 and preview executions belong in explicit Run sources; the local Runtime needs no example-specific
 acceptance orchestrator. Remaining work is to:
 
-1. finish Text three-box/exact-font authoring and B-roll content-frame behavior before freezing
-   those author Surfaces; the field-free Caption Fine surface already has complete browser evidence;
+1. finish Text three-box/exact-font authoring and close the implemented Media Item/Sequence
+   acceptance matrix before freezing those author Surfaces; the field-free Caption Fine surface
+   already has complete browser evidence;
 2. migrate Ranking and other production components only after their meanings fit the peer-Track
    contract;
 3. add a persistent remote WhisperX Provider or further environment variants only when a concrete

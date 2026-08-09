@@ -35,6 +35,7 @@ import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { semanticMapManifest } from "@narratage/semantic-map";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { speechManifest } from "@narratage/speech";
+import { spatialManifest } from "@narratage/spatial";
 import { temporalManifest } from "@narratage/temporal";
 import { TextSurfaceRegistry, createTextAuthorFrontend } from "@narratage/text";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
@@ -278,6 +279,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     narrativeManifest,
     programSpaceManifest,
     speechManifest,
+    spatialManifest,
     speechEvidenceManifest,
     semanticMapManifest,
     temporalManifest,

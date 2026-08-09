@@ -1,4 +1,4 @@
-import type { CompositableSurfaceRef, MediaArtifactRef } from "@narratage/media";
+import type { CompositableSurfaceRef } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealComposition, sealVisualTrack } from "@narratage/composition";
 import type { Track, VisualElement, VisualPresent, VisualTrack } from "@narratage/composition";
@@ -10,6 +10,7 @@ import {
   compileHyperframesDocument,
 } from "@narratage/hyperframes";
 import { digestOf } from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 
 const programSpace = sealProgramSpace({
   contract: "svml.program-space@1",
@@ -244,11 +245,11 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
 });
 
 test("one content box lowers independent backdrop and foreground samples of one media Artifact", () => {
-  const media: MediaArtifactRef = {
+  const media: BlobRef = {
+    kind: "blob",
     digest: digestOf("two-box-source"),
     size: 1_024,
     mediaType: "video/mp4",
-    durationSec: 4,
   };
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",

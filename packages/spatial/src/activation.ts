@@ -4,6 +4,7 @@ import {
   decodeAnchoredFrameSurface,
   decodeAspectFrameSurface,
   decodeCanvasSurface,
+  decodeExtentSurface,
   decodeFrameSurface,
 } from "./surface.js";
 import {
@@ -20,6 +21,7 @@ export const svmlPackage = {
   components: [spatialComponent],
   hostFacets: [
     createTextSurfaceHostFacet({ module: spatialModuleRef, surface: "canvas", mode: "structured", implementationDigest: spatialSurfaceDigests.canvas, handler: decodeCanvasSurface }),
+    createTextSurfaceHostFacet({ module: spatialModuleRef, surface: "extent", mode: "structured", implementationDigest: spatialSurfaceDigests.extent, handler: decodeExtentSurface }),
     createTextSurfaceHostFacet({ module: spatialModuleRef, surface: "frame", mode: "structured", implementationDigest: spatialSurfaceDigests.frame, handler: decodeFrameSurface }),
     createTextSurfaceHostFacet({ module: spatialModuleRef, surface: "anchored-frame", mode: "structured", implementationDigest: spatialSurfaceDigests.anchoredFrame, handler: decodeAnchoredFrameSurface }),
     createTextSurfaceHostFacet({ module: spatialModuleRef, surface: "aspect-frame", mode: "structured", implementationDigest: spatialSurfaceDigests.aspectFrame, handler: decodeAspectFrameSurface }),
