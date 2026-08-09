@@ -144,8 +144,8 @@ Each timed Cue selects the complete rendering payload of its resolved Style. One
 renderer returns one ordinary `VisualTrack`. In the first contract, all Styles in one Program use
 the same rendering family.
 
-`@narratage/caption-fine` is the first official family. It declares no fields and uses one uniform
-static appearance for all Words in a Cue. Another package may define karaoke or field-dependent
+`@narratage/caption-fine` is the first official family. It declares no fields and owns restrained
+uniform Cue appearance plus optional whole-Atom karaoke. Another package may define field-dependent
 paint without modifying Script, Caption, Composition or Core.
 
 Film does not recognize Caption specially. It folds the resulting peer Track beside Speech,
