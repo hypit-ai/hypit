@@ -62,7 +62,7 @@ description: 五个分层、依赖边界、包的结构与 facet。
 @narratage/media                 media types
 @narratage/narrative             authored narrative products
 @narratage/program-space         exact frame/sample domain
-@narratage/generation            image/video product contracts
+@narratage/generation            图像/视频/音频生成合同
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
 @narratage/seedance-speaker      Seedance Speaker binding
@@ -72,6 +72,7 @@ description: 五个分层、依赖边界、包的结构与 facet。
 @narratage/gpt-image             GPT Image model family
 @narratage/nano-banana           Nano Banana model family
 @narratage/seedream              Seedream model family
+@narratage/mimo-tts              三个精确 Xiaomi MiMo TTS 模型及作者 Surface
 @narratage/estimate              duration estimation
 @narratage/speech                shared speech products
 @narratage/speech-basis          generated speech A/V product
@@ -107,7 +108,7 @@ description: 五个分层、依赖边界、包的结构与 facet。
 
 ### Layer 4：Provider（Endpoint）包
 
-具备特权的外部能力。依赖 Runtime 端口和它们所服务的模型族，绝不依赖 CLI。
+具备特权的外部能力。依赖 Runtime 端口与共享能力词汇，不依赖精确模型包，也绝不依赖 CLI。
 
 ```text
 @narratage/provider-kie                  KIE 生成与去背景
@@ -118,6 +119,7 @@ description: 五个分层、依赖边界、包的结构与 facet。
 @narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
 @narratage/provider-image-opencv-local   本地 OpenCV 光栅执行
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
+@narratage/provider-xiaomi-mimo           Xiaomi 官方 MiMo TTS API
 ```
 
 ### Layer 5：应用层

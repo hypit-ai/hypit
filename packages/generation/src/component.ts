@@ -1,6 +1,7 @@
 import type { ComponentPackage } from "@narratage/component-kit";
 
 import {
+  verifyGeneratedAudioSet,
   verifyGeneratedImageSet,
   verifyGeneratedVideoSet,
 } from "./identity.js";
@@ -18,13 +19,17 @@ function inline(value: { readonly kind: string; readonly value?: unknown }, subj
 
 function primary(
   value: { readonly kind: string; readonly value?: unknown },
-  kind: "image" | "video",
+  kind: "audio" | "image" | "video",
 ): import("@narratage/protocol").BlobRef {
-  const content = inline(value, `Generated${kind === "image" ? "Image" : "Video"}Set`) as {
+  const label = kind === "audio" ? "Audio" : kind === "image" ? "Image" : "Video";
+  const content = inline(value, `Generated${label}Set`) as {
     readonly images?: readonly import("@narratage/protocol").BlobRef[];
     readonly videos?: readonly import("@narratage/protocol").BlobRef[];
+    readonly audios?: readonly import("@narratage/protocol").BlobRef[];
   };
-  const selected = kind === "image" ? content.images?.[0] : content.videos?.[0];
+  const selected = kind === "audio"
+    ? content.audios?.[0]
+    : kind === "image" ? content.images?.[0] : content.videos?.[0];
   if (selected === undefined) throw new Error(`Generated ${kind} set has no primary artifact`);
   return selected;
 }
@@ -33,6 +38,14 @@ function primary(
 export const generationComponent = {
   name: "@narratage/generation",
   producers: [
+    {
+      producer: generationProducers.primaryAudio,
+      implementationDigest: generationProducerDigests.primaryAudio,
+      handler: ({ inputs }) => ({
+        outputs: { audio: primary(inputs.set!.value, "audio") },
+        needs: {},
+      }),
+    },
     {
       producer: generationProducers.primaryImage,
       implementationDigest: generationProducerDigests.primaryImage,
@@ -51,6 +64,13 @@ export const generationComponent = {
     },
   ],
   validators: [
+    {
+      type: generationTypes.audioSet,
+      implementationDigest: generationValidatorDigests.audioSet,
+      handler: ({ value }) => {
+        verifyGeneratedAudioSet(inline(value, "GeneratedAudioSet"));
+      },
+    },
     {
       type: generationTypes.imageSet,
       implementationDigest: generationValidatorDigests.imageSet,

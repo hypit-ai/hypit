@@ -70,6 +70,7 @@ The repository implements:
 - SQLite Build/Operation stores and filesystem/S3 Artifact stores;
 - exact Endpoint binding and scoped credentials;
 - eleven exact image/video models declaring their own input ports, reached through the KIE Provider;
+- three exact MiMo TTS models, independently reached through Xiaomi's official Provider;
 - local ffprobe/ffmpeg media processing;
 - S3 multipart Artifact streaming and AWS Lambda media processing;
 - local pinned WhisperX service;

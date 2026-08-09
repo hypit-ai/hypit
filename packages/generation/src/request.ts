@@ -41,7 +41,11 @@ function mediaPrefix(role: GenerationMediaRole): "image/" | "video/" | "audio/" 
 }
 
 function scalarSchema(value: GenerationPortScalarKind): ValueSchema {
-  if (value.kind === "text") return { kind: "string", minLength: 1, maxLength: value.maxChars };
+  if (value.kind === "text") return {
+    kind: "string",
+    minLength: 1,
+    ...(value.maxChars === undefined ? {} : { maxLength: value.maxChars }),
+  };
   if (value.kind === "token") return { kind: "string", minLength: value.minLength, maxLength: value.maxLength };
   if (value.kind === "boolean") return { kind: "boolean" };
   if (value.kind === "number") {
@@ -118,8 +122,10 @@ export function requestSchemaFromPorts(table: GenerationPortTable): ValueSchema 
 
 function verifyScalar(value: unknown, kind: GenerationPortScalarKind, subject: string): void {
   if (kind.kind === "text") {
-    assert(typeof value === "string" && value.length > 0 && value.length <= kind.maxChars,
-      `${subject} must be text of 1 to ${kind.maxChars} characters`);
+    assert(typeof value === "string" && value.length > 0, `${subject} must be non-empty text`);
+    if (kind.maxChars !== undefined) {
+      assert(value.length <= kind.maxChars, `${subject} must contain at most ${kind.maxChars} characters`);
+    }
     return;
   }
   if (kind.kind === "token") {

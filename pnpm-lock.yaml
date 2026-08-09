@@ -68,6 +68,9 @@ importers:
       '@narratage/media-track':
         specifier: workspace:*
         version: link:packages/media-track
+      '@narratage/mimo-tts':
+        specifier: workspace:*
+        version: link:packages/mimo-tts
       '@narratage/narrative':
         specifier: workspace:*
         version: link:packages/narrative
@@ -95,6 +98,9 @@ importers:
       '@narratage/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
+      '@narratage/provider-xiaomi-mimo':
+        specifier: workspace:*
+        version: link:packages/provider-xiaomi-mimo
       '@narratage/ranking':
         specifier: workspace:*
         version: link:packages/ranking
@@ -1363,6 +1369,30 @@ importers:
         specifier: workspace:*
         version: link:../text
 
+  packages/mimo-tts:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@narratage/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/minimax-h3:
     dependencies:
       '@narratage/generation':
@@ -1815,6 +1845,27 @@ importers:
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
+
+  packages/provider-xiaomi-mimo:
+    dependencies:
+      '@narratage/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@narratage/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@narratage/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
 
   packages/ranking:
     dependencies:

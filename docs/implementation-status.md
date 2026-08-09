@@ -112,9 +112,14 @@ an external Need, recovery and final Record assembly through that distribution.
 
 Implemented:
 
-- provider-neutral generated image/video Product contracts and exact-model shell;
+- provider-neutral generated image/video/audio Product contracts and exact-model shell;
 - independently activatable exact-model packages for Seedance, MiniMax H3, Gemini Omni,
   Grok Imagine, GPT Image, Nano Banana and Seedream;
+- `@narratage/mimo-tts`: three separate exact MiMo V2.5 TTS contracts and author Surfaces for
+  preset voice, voice design and voice clone, all consuming Script speech truth without text rewrite;
+- `@narratage/provider-xiaomi-mimo`: official immediate API translation, environment credential,
+  bounded request/response handling, voice-sample Artifact ingestion and persisted WAV output,
+  without a production dependency on the MiMo model package;
 - `@narratage/provider-kie`: upload, recoverable paid submission, checkpointed polling, bounded download
   and immediate ArtifactStore persistence for eleven exact models, mapped from their declared input
   ports without importing any model package;
