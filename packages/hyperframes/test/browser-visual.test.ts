@@ -1,10 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
 import { copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { deflateSync } from "node:zlib";
+import { resolveCaptionProgram } from "@narratage/caption";
+import type { TimedCaptionProjection } from "@narratage/caption";
+import { fineCaptionStyle, renderFineCaption } from "@narratage/caption-fine";
 import type { FontArtifactRef } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealComposition, sealVisualTrack } from "@narratage/composition";
@@ -14,10 +18,14 @@ import {
   materializeHyperframesHtml,
 } from "@narratage/hyperframes";
 import type { Digest } from "@narratage/protocol";
+import { captionDisplaySequence, parseScript } from "@narratage/script";
+import type { SvsRecipe } from "@narratage/svs";
 
 const enabled = process.env.SVML_BROWSER_TESTS === "1";
 const localFont = process.env.SVML_TEST_FONT_PATH
   ?? (process.platform === "darwin" ? "/System/Library/Fonts/SFNSMono.ttf" : undefined);
+const hyperframesCli = createRequire(path.join(process.cwd(), "packages/provider-hyperframes-local/package.json"))
+  .resolve("hyperframes/bin/hyperframes.mjs");
 
 function digest(bytes: Uint8Array): Digest {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}` as Digest;
@@ -79,6 +87,31 @@ async function findPng(directory: string): Promise<string | undefined> {
     }
   }
   return undefined;
+}
+
+async function collectPngs(directory: string): Promise<string[]> {
+  const result: string[] = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) result.push(...await collectPngs(absolute));
+    else if (entry.name.endsWith(".png")) result.push(absolute);
+  }
+  return result.sort();
+}
+
+function yellowPixels(file: string, width: number, height: number): number {
+  const decoded = spawnSync("ffmpeg", [
+    "-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1",
+  ], { encoding: "buffer", timeout: 30_000 });
+  assert.equal(decoded.status, 0, decoded.stderr.toString());
+  assert.equal(decoded.stdout.byteLength, width * height * 4);
+  let count = 0;
+  for (let index = 0; index < decoded.stdout.byteLength; index += 4) {
+    if (decoded.stdout[index]! > 180 && decoded.stdout[index + 1]! > 130 && decoded.stdout[index + 2]! < 140) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 test("locked font and straight-alpha Surface survive one real Hyperframes browser frame", {
@@ -191,7 +224,7 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
     const output = path.join(temp, "frames");
     await mkdir(output);
     const render = spawnSync(process.execPath, [
-      path.join(process.cwd(), "node_modules/hyperframes/bin/hyperframes.mjs"),
+      hyperframesCli,
       "render",
       temp,
       "--format", "png-sequence",
@@ -228,6 +261,76 @@ test("locked font and straight-alpha Surface survive one real Hyperframes browse
       if (decoded.stdout[index]! > 235 && decoded.stdout[index + 1]! > 235 && decoded.stdout[index + 2]! > 235) whitePixels += 1;
     }
     assert.ok(whitePixels > 0, "the exact-font text did not paint any white pixels");
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("Fine Caption Paint and trail wipe survive real frame rendering", {
+  skip: !enabled,
+  timeout: 120_000,
+}, async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), "svml-caption-fine-visual-"));
+  try {
+    const width = 360;
+    const height = 180;
+    const space = sealProgramSpace({
+      contract: "svml.program-space@1",
+      durationSec: 2,
+      frameRate: { numerator: 10, denominator: 1 },
+    });
+    const narrative = parseScript("visual.svml", "<line>First second.</line>");
+    const display = captionDisplaySequence(narrative, "visual.caption");
+    const recipe: SvsRecipe = {
+      contract: "svml.svs-recipe@1",
+      path: "caption.visual",
+      properties: {
+        "cue-min-words": 1, "cue-max-words": 4,
+        "stack-order": 10, x: 0.5, y: 0.82, width: 0.92,
+        "anchor-x": "center", "anchor-y": "bottom",
+        font: "Arial", weight: 800, size: 44, "line-height": 1,
+        align: "center", fill: "#FFFFFF",
+        "stroke-color": "#000000", "stroke-width": 2,
+        "shadow-color": "#000000", "shadow-opacity": 0.8,
+        "shadow-x": 0, "shadow-y": 2, "shadow-blur": 4,
+        background: "#111111CC", padding: "10 14", radius: 10,
+        karaoke: "trail", "karaoke-transition": "wipe", "active-fill": "#FFD54A",
+      },
+    };
+    const style = fineCaptionStyle("visual", recipe);
+    const program = resolveCaptionProgram(display, "visual-program", style, []);
+    const projection: TimedCaptionProjection = {
+      contract: "svml.timed-caption-projection@1",
+      displaySequenceId: display.id,
+      cues: [{
+        id: "visual-cue", runId: program.runs[0]!.id, styleId: style.id, segmentId: "line",
+        startSec: 0, endSec: 2,
+        atoms: display.atoms.map((atom, index) => ({ atomId: atom.id, startSec: index, endSec: index + 1 })),
+        fields: [],
+      }],
+    };
+    const track = renderFineCaption(projection, program, display, space);
+    const document = compileHyperframesDocument(sealComposition({
+      contract: "svml.composition@1",
+      id: "caption-fine-visual",
+      canvas: { width, height, clearColor: "#000000" },
+      tracks: [track],
+    }), space);
+    await writeFile(path.join(temp, "index.html"), document.html);
+    const output = path.join(temp, "frames");
+    await mkdir(output);
+    const render = spawnSync(process.execPath, [
+      hyperframesCli, "render", temp,
+      "--format", "png-sequence", "--output", output, "--fps", "10", "--workers", "1",
+      "--no-browser-gpu", "--no-best-effort", "--quiet",
+    ], { encoding: "utf8", timeout: 110_000 });
+    assert.equal(render.status, 0, `${render.stdout}\n${render.stderr}`);
+    const frames = await collectPngs(output);
+    assert.equal(frames.length, 20);
+    const initialYellow = yellowPixels(frames[0]!, width, height);
+    const finalYellow = yellowPixels(frames.at(-1)!, width, height);
+    assert.ok(initialYellow < 10, `first wipe frame unexpectedly painted ${initialYellow} active pixels`);
+    assert.ok(finalYellow > 100, `trail wipe painted only ${finalYellow} active pixels at the end`);
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

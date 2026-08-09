@@ -12,7 +12,7 @@ export const captionFineModuleRef = { name: "@narratage/caption-fine", version: 
 export const captionFineProducers = {
   render: { module: captionFineModuleRef, name: "render-fine-caption" },
 } satisfies Record<string, ProducerRef>;
-export const captionFineStyleSurfaceImplementationDigest = digestOf("@narratage/caption-fine/field-free-style-surface@1");
+export const captionFineStyleSurfaceImplementationDigest = digestOf("@narratage/caption-fine/complete-style-surface@1");
 export const captionFineTrackSurfaceImplementationDigest = digestOf("@narratage/caption-fine/whole-atom-track-surface@1");
 
 export const captionFineManifest: ModuleManifest = {

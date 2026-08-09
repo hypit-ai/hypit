@@ -143,9 +143,11 @@ port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
 Implement these against real delivery examples, but do not freeze or indiscriminately expand the
 video author surface yet:
 
-- Caption Fine browser/pixel acceptance, especially CJK, emoji and multiline layout;
-- add browser/pixel evidence for Caption Fine's field-free, deterministic static Cue rendering
-  before expanding its layout and paint surface;
+- Caption Fine browser/pixel acceptance, especially CJK, emoji, multiline layout and all four
+  current/trail by step/wipe karaoke combinations; its full restrained parameter surface and
+  frame-addressed lowering are implemented;
+- exact Font Artifact wiring, followed by a decision on fail-closed measured line limits; never
+  silently clip authored Caption text;
 - full Text three-box and exact-font behavior;
 - B-roll foreground/backdrop media-box behavior;
 - Ranking and other old production components;
