@@ -20,6 +20,7 @@ Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样�
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="media" from="@narratage/media@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 ```
 
 公共 Caption 只负责 Cue 字数边界、可选的通用逐词字段、完整样式分配、Plan 校验与时间
@@ -31,19 +32,19 @@ Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样�
 同时解析两者：
 
 ```svml
-<media:Font id="caption-font" src="./assets/Inter-Bold.woff2"
-  weight="700" style="normal"/>
-<media:Font id="caption-cjk" src="./assets/NotoSansCJK-Bold.otf"
-  weight="700" style="normal"/>
+<fonts:Face id="caption-font" family="inter" weight="700" style="normal"/>
+<fonts:Face id="caption-cjk" family="noto-sans-sc" weight="700" style="normal"/>
+<fonts:Face id="caption-symbols" family="noto-emoji" weight="400" style="normal"/>
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
   font={caption-font}>
   <caption-fine:Fallback font={caption-cjk}/>
+  <caption-fine:Fallback font={caption-symbols}/>
 </caption-fine:Style>
 ```
 
-显式的 `font=` 边与有序 `Fallback` 子元素让最终字体栈按字节复现。每个字体都必须与
-Recipe 的 weight/style 一致。省略字体栈则明确使用 Recipe 的环境字体兜底名；Caption
-和 Runtime 都不会替作者猜字体。
+显式的 `font=` 边与有序 `Fallback` 子元素让最终字体栈按字节复现。主字体必须与 Recipe
+的 weight/style 一致；每个 Fallback 保留自己的真实字体信息。省略字体栈则明确使用
+Recipe 的环境字体兜底名；Caption 和 Runtime 都不会替作者猜字体。
 
 Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
 逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。

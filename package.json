@@ -29,6 +29,7 @@
     "@narratage/composition": "workspace:*",
     "@narratage/estimate": "workspace:*",
     "@narratage/film": "workspace:*",
+    "@narratage/fonts-open": "workspace:*",
     "@narratage/generation": "workspace:*",
     "@narratage/hyperframes": "workspace:*",
     "@narratage/image-transform": "workspace:*",

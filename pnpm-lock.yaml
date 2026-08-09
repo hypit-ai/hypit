@@ -32,6 +32,9 @@ importers:
       '@narratage/film':
         specifier: workspace:*
         version: link:packages/film
+      '@narratage/fonts-open':
+        specifier: workspace:*
+        version: link:packages/fonts-open
       '@narratage/generation':
         specifier: workspace:*
         version: link:packages/generation
@@ -607,6 +610,54 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+
+  packages/fonts-open:
+    dependencies:
+      '@fontsource-variable/dm-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/inter':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/manrope':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/montserrat':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-emoji':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-sc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-serif-sc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/playfair-display':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/source-serif-4':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/bebas-neue':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/poppins':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/gemini-omni:
     dependencies:
@@ -2505,8 +2556,38 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@fontsource-variable/dm-sans@5.3.0':
+    resolution: {integrity: sha512-BpUG5bqePiDFMBM4ZtLSlPdAIOM990uB1dlXzIf4aw21yQR7BmykedLXXXMqGWsR18aMLOsbWccwJNh3ztTQaA==}
+
+  '@fontsource-variable/inter@5.3.0':
+    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
+
+  '@fontsource-variable/manrope@5.3.0':
+    resolution: {integrity: sha512-6D5dgokHsWDDMtmXHznKa0hK229NN+1a4BLPmUCLqcO1Pw5EEhWY5RFt0AcXnVRAljFFPfRtLkJePQj6LSsV6g==}
+
+  '@fontsource-variable/montserrat@5.3.0':
+    resolution: {integrity: sha512-7PaZoxaxrWLAyrhO46v65An9LhUhfkTExWLhfbywYZCnZEgg/W1rEHnlNmZKjNZ3nJTVYyicqxlJt10z/26yTA==}
+
+  '@fontsource-variable/noto-emoji@5.3.0':
+    resolution: {integrity: sha512-omw94ZtSEOTYPyNFIgMeFMTLhry0GA6VgOWATfcuvKgUvV4TxPwoKnaWFMDbZtp41HTXPntoMYpbxZQhv0TPCw==}
+
+  '@fontsource-variable/noto-sans-sc@5.3.0':
+    resolution: {integrity: sha512-lNar1dF7Ik/lHNPo/7JWG0TolXY29LtsqYgMvEysooZ5bsO9uH4shJmRrwyJ3PjyTPljhpMJEK0jDuLSU4vJ1w==}
+
+  '@fontsource-variable/noto-serif-sc@5.3.0':
+    resolution: {integrity: sha512-7LcN2NEf4HDjoSkGWc79WqDDyMK8JvSPdA/gsHjJpZ8l9A9mcK/GQTazp3klmkBwJooy0eqeNvlmaZFXPupHrA==}
+
+  '@fontsource-variable/playfair-display@5.3.0':
+    resolution: {integrity: sha512-IHdzTvE8eGIXHteZql7KXoqdc3Gfm+Zs1u4XlSC3MeplkwviT3sx/P6gI0tLwg/xIYLF4ZJYveZ5V+bl9cnDwA==}
+
+  '@fontsource-variable/source-serif-4@5.3.0':
+    resolution: {integrity: sha512-9vch9WqxjaaA+1o9Ur8pOgIGbCYLjRReOUel23A6lOpD1syptgjtkORevvNmldJ5kGXQL29onQUqI5Ltz0s3bQ==}
+
   '@fontsource/archivo-black@5.3.0':
     resolution: {integrity: sha512-7EsTIQ+Blf96ktpzTUpI7msi+u9/AJxM/GZxOSkEubVd1jSTrFSTNxMgfpX/8rQsjZ+19a+qvRbtcTEp5J/72g==}
+
+  '@fontsource/bebas-neue@5.3.0':
+    resolution: {integrity: sha512-nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==}
 
   '@fontsource/eb-garamond@5.3.0':
     resolution: {integrity: sha512-VplwHpB8FLuzl+4G5LDci1b3Z4SghiuXH8XEgaxjnOb5aue5mEt1njmDKeO6iyLeGa73LffU7PC7hzncLRx0ZA==}
@@ -2534,6 +2615,9 @@ packages:
 
   '@fontsource/outfit@5.3.0':
     resolution: {integrity: sha512-0AVHzTTVJSxWDOxPKSfMeHhZeBFDU3cmgrcOb76ZEyhGo0+xgyG3GsLF3h9+X8w0IX7G4jzjJgFQEBiWdX6VgA==}
+
+  '@fontsource/poppins@5.3.0':
+    resolution: {integrity: sha512-cms1nM7U6SN8epIV1WMVOV8VsA645aSm3wHfzIQnkk188U341ThbJGSl2Sv54V29gnDbT2arMPfLzvVIIVCceQ==}
 
   '@fontsource/space-mono@5.3.0':
     resolution: {integrity: sha512-FrpBMOVWn3PRdRHlrZWC55X3kZG/2BTH7SM5ZyS/bky3iKya2BturI5lk+t0RoDQL2JyHzURsVq/EisCsxpI5A==}
@@ -4696,7 +4780,27 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
+  '@fontsource-variable/dm-sans@5.3.0': {}
+
+  '@fontsource-variable/inter@5.3.0': {}
+
+  '@fontsource-variable/manrope@5.3.0': {}
+
+  '@fontsource-variable/montserrat@5.3.0': {}
+
+  '@fontsource-variable/noto-emoji@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-sc@5.3.0': {}
+
+  '@fontsource-variable/noto-serif-sc@5.3.0': {}
+
+  '@fontsource-variable/playfair-display@5.3.0': {}
+
+  '@fontsource-variable/source-serif-4@5.3.0': {}
+
   '@fontsource/archivo-black@5.3.0': {}
+
+  '@fontsource/bebas-neue@5.3.0': {}
 
   '@fontsource/eb-garamond@5.3.0': {}
 
@@ -4715,6 +4819,8 @@ snapshots:
   '@fontsource/oswald@5.3.0': {}
 
   '@fontsource/outfit@5.3.0': {}
+
+  '@fontsource/poppins@5.3.0': {}
 
   '@fontsource/space-mono@5.3.0': {}
 

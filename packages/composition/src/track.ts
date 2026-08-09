@@ -1,4 +1,4 @@
-import { isDigest } from "@narratage/protocol";
+import { digestOf, isDigest } from "@narratage/protocol";
 
 import {
   assertVisualStyleV1,
@@ -273,14 +273,9 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
     if (element.kind === "text" && element.fonts !== undefined) {
       if (element.fonts.length === 0) throw new Error(`${trackId}.${present.id}.${element.id} has an empty font stack.`);
       const faces = new Set<string>();
-      const requestedWeight = element.fonts[0]!.weight;
-      const requestedStyle = element.fonts[0]!.style;
       for (const [index, font] of element.fonts.entries()) {
         assertFontArtifactRef(font, `${trackId}.${present.id}.${element.id}.fonts.${index}`);
-        if (font.weight !== requestedWeight || font.style !== requestedStyle) {
-          throw new Error(`${trackId}.${present.id}.${element.id} fallback fonts must describe one requested face.`);
-        }
-        const face = `${font.artifact.digest}:${font.weight}:${font.style}`;
+        const face = digestOf(font);
         if (faces.has(face)) throw new Error(`${trackId}.${present.id}.${element.id} has a duplicate font face.`);
         faces.add(face);
       }
@@ -363,7 +358,10 @@ function normalizeElement(element: VisualElement): VisualElement {
       ...(element.fonts === undefined ? {} : {
         fonts: element.fonts.map((font) => ({
           contract: font.contract,
-          artifact: { ...font.artifact },
+          sources: font.sources.map((source) => ({
+            artifact: { ...source.artifact },
+            ...(source.unicodeRange === undefined ? {} : { unicodeRange: source.unicodeRange }),
+          })),
           weight: font.weight,
           style: font.style,
         })),
