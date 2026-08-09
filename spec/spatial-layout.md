@@ -2,8 +2,8 @@
 
 Status: executable foundational authority for shared Spatial geometry. `@narratage/spatial`
 implements CanvasSpace, Frame/Point/Path, IntrinsicExtent, ContentFit and pure fitting; Film now
-consumes the same explicit CanvasSpace as Track layout. Text, Media and Ranking migration witnesses
-and the public ABI freeze remain incomplete.
+consumes the same explicit CanvasSpace as Track layout. Text, Media and all four Ranking migration
+witnesses execute; only the final shared Visual IR compatibility audit and public ABI freeze remain.
 
 ## 1. Conclusion
 
@@ -437,9 +437,10 @@ Retired:
 2. **Implemented:** split Canvas declaration from Film assembly and connect the same Canvas value to Track layout and
    Composition;
 3. **Implemented:** migrate one simple Text Area and one simple Media still image through shared geometry;
-4. add exact browser tests for every fit and alignment law;
-5. prove ordered transparent/color/self-blur/alternate-source Media layers;
-6. migrate Ranking and Comment Sticker geometry;
+4. **Implemented:** add exact browser tests for every fit and alignment law;
+5. **Implemented:** prove ordered transparent/color/self-blur/alternate-source Media layers;
+6. **Implemented:** migrate all four Ranking components through explicit shared Frames; Comment
+   Sticker remains deferred until it has its own design;
 7. only then freeze the Spatial Types and related Visual IR behavior.
 
 The test matrix must include:
@@ -456,5 +457,10 @@ The test matrix must include:
 - rounding/raster behavior locked by the selected renderer implementation;
 - no Core, Runtime, Film-family, Text-family or Media-family discriminator in the shared Types.
 
-Until those witnesses pass, percentages embedded independently in Text, B-roll and Caption remain
-migration scaffolding rather than the shared spatial system.
+The pure geometry matrix and real Chromium witness now cover every sizing mode, all nine equal-point
+alignments, unequal bounded/free focal points and partially/fully off-Canvas Frames. Media
+normalization additionally materializes container rotation and non-square sample aspect into a
+square-pixel visual before deriving `IntrinsicExtent`. Ranking now consumes the same explicit Frame
+geometry without adding a family discriminator. Spatial remains pre-freeze until the final Visual IR
+compatibility audit passes; no package-local percentage vocabulary should grow in
+the meantime.

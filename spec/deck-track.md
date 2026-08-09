@@ -1,8 +1,8 @@
 # SVML Depth-Stack Deck Track
 
-Status: design authority for the official depth-stack Deck migration. It records the behavior used
-by the old Deck implementation, but it is not a frozen public ABI and does not define a universal
-Deck protocol.
+Status: implemented executable authority for the official depth-stack Deck migration. It records
+the behavior used by the old Deck implementation, but it is not a frozen public ABI and does not
+define a universal Deck protocol.
 
 ## 1. Conclusion
 
@@ -263,6 +263,13 @@ Retire:
 6. add collection reflow and whole-group lifecycle motion;
 7. prove still and timed inactive-playback behavior;
 8. migrate one real old-system Deck and freeze only after the acceptance matrix passes.
+
+Steps 1–8 execute in `@narratage/deck-track`. Package tests cover every state, validation,
+playback, label and extension case below. The real HyperFrames witness renders a Twinit-style
+three-Card depth stack twice—one worker and three partitioned workers—and compares every decoded
+frame byte-for-byte while also proving each authored current state paints. This completes the Deck
+package acceptance matrix; the terminal VisualTrack/Visual IR waist remains pre-freeze until the
+generic E1–E8 freeze criteria are all complete.
 
 Required evidence includes:
 

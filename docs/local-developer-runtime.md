@@ -344,11 +344,11 @@ The durable local chassis and one real talking-video path are implemented. Diffe
 and preview executions belong in explicit Run sources; the local Runtime needs no example-specific
 acceptance orchestrator. Remaining work is to:
 
-1. finish Text three-box/exact-font authoring and close the implemented Media Item/Sequence
-   acceptance matrix before freezing those author Surfaces; the field-free Caption Fine surface
-   already has complete browser evidence;
-2. migrate Ranking and other production components only after their meanings fit the peer-Track
-   contract;
+1. keep the implemented Text, Media, Deck and Ranking package acceptance matrices green while their
+   author Surfaces remain pre-freeze; the field-free Caption Fine surface already has complete
+   browser evidence;
+2. complete generic Surface-byte validation and renderer receipts before freezing the shared
+   Track/Visual IR waist;
 3. add a persistent remote WhisperX Provider or further environment variants only when a concrete
    deployment requires them.
 

@@ -22,6 +22,11 @@ import type {
   HyperframesDocument,
   HyperframesFrameSpan,
 } from "./types.js";
+import {
+  collectTerminalTextFonts,
+  renderTerminalTextElement,
+  terminalTextLayoutScript,
+} from "./text.js";
 
 export const compileHyperframesImplementationDigest = digestOf("@narratage/hyperframes/compile@1");
 
@@ -178,6 +183,15 @@ function css(style: readonly VisualStyleDeclaration[]): string {
   return style.map(({ name, value }) => `${name}:${String(value)}`).join(";");
 }
 
+function pixelDimension(style: readonly VisualStyleDeclaration[], name: string): number | undefined {
+  const value = style.find((declaration) => declaration.name === name)?.value;
+  if (typeof value !== "string") return undefined;
+  const match = /^(?:0|[1-9][0-9]*(?:\.[0-9]+)?)px$/u.exec(value);
+  if (match === null) return undefined;
+  const parsed = Number.parseFloat(value.slice(0, -2));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function attributes(values: readonly VisualAttribute[] | undefined): string {
   return (values ?? []).map(({ name, value }) => ` ${name}="${escapeHtml(value)}"`).join("");
 }
@@ -209,6 +223,7 @@ function renderElement(
     readonly presentId: string;
     readonly presentStart: string;
     readonly presentDuration: string;
+    readonly presentDurationFrames: number;
     readonly presentStartFrame: number;
     readonly programNumerator: number;
     readonly programDenominator: number;
@@ -219,6 +234,9 @@ function renderElement(
   const animationName = element.animation === undefined
     ? undefined
     : stableDomId(["animation", context.trackId, context.presentId, element.id]);
+  const animationProperties = element.animation === undefined
+    ? []
+    : [...new Set(element.animation.keyframes.flatMap((keyframe) => keyframe.style.map((declaration) => declaration.name)))].sort();
   const inlineStyle = [
     css(element.style),
     ...exactFontStyle(element),
@@ -234,12 +252,81 @@ function renderElement(
       "animation-timing-function:linear",
     ]),
   ].filter(Boolean).join(";");
-  const common = `id="${id}" data-svml-element-id="${escapeHtml(element.id)}" style="${escapeHtml(inlineStyle)}"${attributes(element.attributes)}`;
+  const commonAttributes = `id="${id}" data-svml-element-id="${escapeHtml(element.id)}"${attributes(element.attributes)}`;
+  const animationAttributes = animationName === undefined
+    ? ""
+    : ` data-svml-frame-animation data-svml-animation-start-frame="${context.presentStartFrame}" data-svml-animation-duration-frames="${context.presentDurationFrames}" data-svml-animation-properties="${animationProperties.join(",")}"`;
+  const common = `${commonAttributes}${animationAttributes} style="${escapeHtml(inlineStyle)}"`;
+  if (element.kind === "mask") {
+    const direct = children.get(element.id) ?? [];
+    const maskRoot = direct.find((child) => child.id === element.maskElement);
+    const contentRoot = direct.find((child) => child.id === element.contentElement);
+    if (maskRoot === undefined || contentRoot === undefined || direct.length !== 2) {
+      throw new Error(`Local mask ${element.id} is missing its declared owned roots.`);
+    }
+    const maskId = stableDomId([context.trackId, context.presentId, element.id, "mask"]);
+    const maskWidth = pixelDimension(element.style, "width");
+    const maskHeight = pixelDimension(element.style, "height");
+    const viewport = maskWidth === undefined || maskHeight === undefined
+      ? ""
+      : ` viewBox="0 0 ${maskWidth} ${maskHeight}" preserveAspectRatio="none"`;
+    const renderOwned = (child: VisualElement) => renderElement(child, children, context);
+    if ((children.get(maskRoot.id) ?? []).length !== 0) {
+      throw new Error(`Local mask ${element.id} mask source must be one terminal owned element.`);
+    }
+    const maskSource = (() => {
+      if (maskRoot.kind === "text") {
+        const alignment = maskRoot.style.find((declaration) => declaration.name === "text-align")?.value;
+        const anchor = alignment === "right" || alignment === "end" ? "end" : alignment === "left" || alignment === "start" ? "start" : "middle";
+        const blockAlignment = maskRoot.style.find((declaration) => declaration.name === "align-items")?.value;
+        const paddingLeft = pixelDimension(maskRoot.style, "padding-left") ?? 0;
+        const paddingRight = pixelDimension(maskRoot.style, "padding-right") ?? 0;
+        const paddingTop = pixelDimension(maskRoot.style, "padding-top") ?? 0;
+        const paddingBottom = pixelDimension(maskRoot.style, "padding-bottom") ?? 0;
+        const x = maskWidth === undefined
+          ? anchor === "start" ? "0" : anchor === "end" ? "100%" : "50%"
+          : String(anchor === "start" ? paddingLeft : anchor === "end" ? maskWidth - paddingRight : (paddingLeft + maskWidth - paddingRight) / 2);
+        const y = maskHeight === undefined
+          ? blockAlignment === "flex-start" ? "0" : blockAlignment === "flex-end" ? "100%" : "50%"
+          : String(blockAlignment === "flex-start" ? paddingTop : blockAlignment === "flex-end" ? maskHeight - paddingBottom : (paddingTop + maskHeight - paddingBottom) / 2);
+        const baseline = blockAlignment === "flex-start" ? "text-before-edge" : blockAlignment === "flex-end" ? "text-after-edge" : "central";
+        const textStyle = [css(maskRoot.style), ...exactFontStyle(maskRoot), "fill:currentColor"].filter(Boolean).join(";");
+        return `<text${attributes(maskRoot.attributes)} x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="${baseline}" style="${escapeHtml(textStyle)}">${escapeHtml(maskRoot.text)}</text>`;
+      }
+      if (maskRoot.kind === "text-flow" || maskRoot.kind === "path-text") {
+        return `<foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:100%;height:100%">${renderOwned(maskRoot)}</div></foreignObject>`;
+      }
+      if (maskRoot.kind === "image") {
+        return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
+      }
+      if (maskRoot.kind === "surface" && maskRoot.surface.timing.kind === "still") {
+        return `<image x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" href="${escapeHtml(hyperframesArtifactUri(maskRoot.surface.artifact.digest))}" style="${escapeHtml(css(maskRoot.style))}"/>`;
+      }
+      throw new Error(`Local mask ${element.id} requires a terminal owned text, image or still Surface mask source.`);
+    })();
+    return `<svg ${common}${viewport} width="100%" height="100%" overflow="visible"><defs><mask id="${maskId}" x="0" y="0" width="100%" height="100%" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" style="mask-type:${element.mode}">${maskSource}</mask></defs><foreignObject x="0" y="0" width="100%" height="100%" mask="url(#${maskId})"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:100%;height:100%">${renderOwned(contentRoot)}</div></foreignObject></svg>`;
+  }
   const descendants = (children.get(element.id) ?? [])
     .map((child) => renderElement(child, children, context))
     .join("");
   if (element.kind === "box") return `<div ${common}>${descendants}</div>`;
   if (element.kind === "text") return `<div ${common}>${escapeHtml(element.text)}${descendants}</div>`;
+  if (element.kind === "text-flow" || element.kind === "path-text") {
+    return renderTerminalTextElement(element, {
+      trackId: context.trackId,
+      presentId: context.presentId,
+      durationFrames: context.presentDurationFrames,
+      durationSeconds: context.presentDuration,
+      presentStartFrame: context.presentStartFrame,
+      programNumerator: context.programNumerator,
+      programDenominator: context.programDenominator,
+      escape: escapeHtml,
+      stableId: stableDomId,
+      exactFontFamily,
+      baseStyle: inlineStyle,
+      commonAttributes,
+    });
+  }
   if ((element.kind === "video" || element.kind === "surface") && element.sampling !== undefined) {
     const artifact = element.kind === "surface" ? element.surface.artifact : element.artifact;
     const source = escapeHtml(hyperframesArtifactUri(artifact.digest));
@@ -327,6 +414,7 @@ function renderVisualPresent(
     presentId: present.id,
     presentStart: start,
     presentDuration: duration,
+    presentDurationFrames: present.span.endFrameExclusive - present.span.startFrame,
     presentStartFrame: present.span.startFrame,
     programNumerator: numerator,
     programDenominator: denominator,
@@ -338,6 +426,15 @@ function renderVisualPresent(
 function renderAnimationRules(track: VisualTrack, present: VisualPresent): string[] {
   const durationFrames = present.span.endFrameExclusive - present.span.startFrame;
   return present.elements.flatMap((element) => {
+    if (element.kind === "text-flow" || element.kind === "path-text") {
+      if (element.animation === undefined) return [];
+      const name = stableDomId(["animation", track.id, present.id, element.id]);
+      const frames = element.animation.keyframes.map((keyframe) => {
+        const easing = keyframe.easing === undefined ? "" : `;animation-timing-function:${keyframe.easing}`;
+        return `${percentage(keyframe.atFrame, durationFrames)}{${css(keyframe.style)}${easing}}`;
+      }).join("");
+      return [`@keyframes ${name}{${frames}}`];
+    }
     if (element.animation === undefined) return [];
     const name = stableDomId(["animation", track.id, present.id, element.id]);
     const frames = element.animation.keyframes.map((keyframe) => {
@@ -385,6 +482,11 @@ function collectArtifacts(composition: Composition): BlobRef[] {
             for (const source of font.sources) add(source.artifact);
           }
         }
+        if (element.kind === "text-flow" || element.kind === "path-text") {
+          for (const font of collectTerminalTextFonts(element)) {
+            for (const source of font.sources) add(source.artifact);
+          }
+        }
       }
     }
   }
@@ -399,6 +501,15 @@ function collectFonts(composition: Composition): FontArtifactRef[] {
       for (const element of present.elements) {
         if (element.kind !== "text") continue;
         for (const font of element.fonts ?? []) fonts.set(digestOf(font), font);
+      }
+    }
+  }
+  for (const track of composition.tracks) {
+    if (track.contract !== "svml.visual-track@1") continue;
+    for (const present of track.presents) {
+      for (const element of present.elements) {
+        if (element.kind !== "text-flow" && element.kind !== "path-text") continue;
+        for (const font of collectTerminalTextFonts(element)) fonts.set(digestOf(font), font);
       }
     }
   }
@@ -425,6 +536,58 @@ function renderFontFaces(composition: Composition): string {
     ].join(""))).join("\n    ");
 }
 
+function hasTerminalText(composition: Composition): boolean {
+  return composition.tracks.some((track) => track.contract === "svml.visual-track@1"
+    && track.presents.some((present) => present.elements.some((element) =>
+      element.kind === "text-flow" || element.kind === "path-text")));
+}
+
+function hasFrameAnimations(composition: Composition): boolean {
+  return composition.tracks.some((track) => track.contract === "svml.visual-track@1"
+    && track.presents.some((present) => present.elements.some((element) => element.animation !== undefined)));
+}
+
+function frameAnimationRuntime(numerator: number, denominator: number): string {
+  return String.raw`
+(() => {
+  const numerator = ${numerator};
+  const denominator = ${denominator};
+  const millisecondsPerFrame = denominator * 1000 / numerator;
+  const timelines = [];
+  for (const element of document.querySelectorAll("[data-svml-frame-animation]")) {
+    void element.getBoundingClientRect();
+    const animation = element.getAnimations()[0];
+    if (animation === undefined) throw new Error("Visual IR frame animation did not materialize.");
+    const start = Number(element.getAttribute("data-svml-animation-start-frame"));
+    const duration = Number(element.getAttribute("data-svml-animation-duration-frames"));
+    const properties = String(element.getAttribute("data-svml-animation-properties") || "")
+      .split(",").filter(Boolean);
+    const frames = [];
+    for (let frame = 0; frame <= duration; frame += 1) {
+      animation.currentTime = frame * millisecondsPerFrame;
+      animation.pause();
+      const style = getComputedStyle(element);
+      frames.push(properties.map((property) => [property, style.getPropertyValue(property)]));
+    }
+    animation.cancel();
+    element.style.animationName = "none";
+    timelines.push({ element, start, duration, frames });
+  }
+  const applyFrame = (time) => {
+    const programFrame = Math.max(0, Math.round(Number(time || 0) * numerator / denominator));
+    for (const timeline of timelines) {
+      const localFrame = Math.max(0, Math.min(timeline.duration, programFrame - timeline.start));
+      for (const [property, value] of timeline.frames[localFrame]) {
+        timeline.element.style.setProperty(property, value);
+      }
+    }
+    void document.documentElement.getBoundingClientRect();
+  };
+  applyFrame(0);
+  window.addEventListener("hf-seek", (event) => applyFrame(event.detail?.time));
+})();`;
+}
+
 function emitHtml(composition: Composition, programSpace: ProgramSpace): string {
   const { numerator, denominator } = programSpace.frameRate;
   const visuals = orderedVisualPresents(composition.tracks);
@@ -434,6 +597,12 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
   const duration = frameSeconds(programSpaceFrameCount(programSpace), numerator, denominator);
   const fps = fpsRational(numerator, denominator);
   const frameCount = programSpaceFrameCount(programSpace);
+  const textRuntime = hasTerminalText(composition)
+    ? `\n  <script>\n    ${terminalTextLayoutScript}\n  </script>`
+    : "";
+  const animationRuntime = hasFrameAnimations(composition)
+    ? `\n  <script>\n    ${frameAnimationRuntime(numerator, denominator)}\n  </script>`
+    : "";
   return `<!doctype html>
 <html>
 <head>
@@ -450,18 +619,7 @@ function emitHtml(composition: Composition, programSpace: ProgramSpace): string 
 <body>
   <div data-composition-id="${escapeHtml(composition.id)}" data-start="0" data-no-timeline data-width="${composition.canvas.width}" data-height="${composition.canvas.height}" data-duration="${duration}" data-fps="${fps}" data-svml-frame-count="${frameCount}">
     ${visualHtml}
-  </div>
-  <script>
-    window.addEventListener("hf-seek", (event) => {
-      // HyperFrames 0.7.101 exposes a per-seek readiness barrier. One browser
-      // task gives Chromium's compositor the same commit opportunity even
-      // when this worker begins at a non-zero frame, so partition boundaries
-      // cannot leak first-paint state into captured pixels.
-      if (event && event.detail && typeof event.detail.waitUntil === "function") {
-        event.detail.waitUntil(new Promise((resolve) => setTimeout(resolve, 16)));
-      }
-    });
-  </script>
+  </div>${animationRuntime}${textRuntime}
 </body>
 </html>
 `;

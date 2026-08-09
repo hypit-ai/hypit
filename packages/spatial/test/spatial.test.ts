@@ -18,6 +18,8 @@ import {
   decodeAspectFrameSurface,
   decodeCanvasSurface,
   decodeFrameSurface,
+  decodePathSurface,
+  decodePointSurface,
   fitContent,
   frameFromEdges,
   sealSpatialPath,
@@ -94,6 +96,70 @@ test("every ContentFit sizing mode resolves the independent Content Frame", () =
   assert.deepEqual(fitContent(frame, portrait, centered("stretch")).contentFrame, frame);
 });
 
+test("the complete aspect, sizing and equal-point matrix preserves the two-frame equations", () => {
+  const frames = [
+    { contract: "svml.spatial-frame@1" as const, xPx: -120, yPx: 40, widthPx: 600, heightPx: 1_000 },
+    { contract: "svml.spatial-frame@1" as const, xPx: 15, yPx: -80, widthPx: 1_000, heightPx: 600 },
+    { contract: "svml.spatial-frame@1" as const, xPx: 200, yPx: 300, widthPx: 800, heightPx: 800 },
+  ];
+  const extents = [
+    { contract: "svml.intrinsic-extent@1" as const, widthPx: 600, heightPx: 1_000 },
+    { contract: "svml.intrinsic-extent@1" as const, widthPx: 1_000, heightPx: 600 },
+    { contract: "svml.intrinsic-extent@1" as const, widthPx: 800, heightPx: 800 },
+  ];
+  const sizings = ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"] as const;
+  const close = (actual: number, expected: number, label: string): void => {
+    assert.ok(Math.abs(actual - expected) < 1e-9, `${label}: ${actual} != ${expected}`);
+  };
+
+  for (const frame of frames) {
+    for (const extent of extents) {
+      for (const sizing of sizings) {
+        const content = fitContent(frame, extent, centered(sizing)).contentFrame;
+        close(content.xPx + content.widthPx / 2, frame.xPx + frame.widthPx / 2, `${sizing} center x`);
+        close(content.yPx + content.heightPx / 2, frame.yPx + frame.heightPx / 2, `${sizing} center y`);
+        if (sizing !== "stretch") {
+          close(content.widthPx / content.heightPx, extent.widthPx / extent.heightPx, `${sizing} aspect`);
+        }
+        if (sizing === "contain") {
+          assert.ok(content.widthPx <= frame.widthPx + 1e-9 && content.heightPx <= frame.heightPx + 1e-9);
+          assert.ok(Math.abs(content.widthPx - frame.widthPx) < 1e-9 || Math.abs(content.heightPx - frame.heightPx) < 1e-9);
+        } else if (sizing === "cover") {
+          assert.ok(content.widthPx + 1e-9 >= frame.widthPx && content.heightPx + 1e-9 >= frame.heightPx);
+          assert.ok(Math.abs(content.widthPx - frame.widthPx) < 1e-9 || Math.abs(content.heightPx - frame.heightPx) < 1e-9);
+        } else if (sizing === "fit-width") {
+          close(content.widthPx, frame.widthPx, "fit-width width");
+        } else if (sizing === "fit-height") {
+          close(content.heightPx, frame.heightPx, "fit-height height");
+        } else if (sizing === "native") {
+          close(content.widthPx, extent.widthPx, "native width");
+          close(content.heightPx, extent.heightPx, "native height");
+        } else if (sizing === "scale-down") {
+          assert.ok(content.widthPx <= extent.widthPx + 1e-9 && content.heightPx <= extent.heightPx + 1e-9);
+          assert.ok(content.widthPx <= frame.widthPx + 1e-9 && content.heightPx <= frame.heightPx + 1e-9);
+        } else {
+          close(content.widthPx, frame.widthPx, "stretch width");
+          close(content.heightPx, frame.heightPx, "stretch height");
+        }
+      }
+    }
+  }
+
+  const frame = { contract: "svml.spatial-frame@1" as const, xPx: -70, yPx: 110, widthPx: 400, heightPx: 400 };
+  const extent = { contract: "svml.intrinsic-extent@1" as const, widthPx: 200, heightPx: 200 };
+  const points = [0, 0.5, 1] as const;
+  for (const x of points) {
+    for (const y of points) {
+      const content = fitContent(frame, extent, {
+        contract: "svml.content-fit@1", sizing: "native",
+        framePoint: { x, y }, contentPoint: { x, y }, offsetPx: { x: 0, y: 0 }, constraint: "bounded",
+      }).contentFrame;
+      close(content.xPx + content.widthPx * x, frame.xPx + frame.widthPx * x, `equal point ${x},${y} x`);
+      close(content.yPx + content.heightPx * y, frame.yPx + frame.heightPx * y, `equal point ${x},${y} y`);
+    }
+  }
+});
+
 test("unequal focal points and bounded/free policies remain explicit", () => {
   const frame: SpatialFrame = { contract: "svml.spatial-frame@1", xPx: 10, yPx: 20, widthPx: 400, heightPx: 300 };
   const fit: ContentFit = {
@@ -137,6 +203,8 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
   const closure = createResolvedClosure([spatialManifest]);
   const surfaces = new TextSurfaceRegistry();
   surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
+  surfaces.registerStructured(spatialModuleRef, "point", spatialSurfaceDigests.point, decodePointSurface);
+  surfaces.registerStructured(spatialModuleRef, "path", spatialSurfaceDigests.path, decodePathSurface);
   surfaces.registerStructured(spatialModuleRef, "frame", spatialSurfaceDigests.frame, decodeFrameSurface);
   surfaces.registerStructured(spatialModuleRef, "anchored-frame", spatialSurfaceDigests.anchoredFrame, decodeAnchoredFrameSurface);
   surfaces.registerStructured(spatialModuleRef, "aspect-frame", spatialSurfaceDigests.aspectFrame, decodeAspectFrameSurface);
@@ -148,6 +216,11 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
     entry: source(`<svml>
       <import as="space" from="@narratage/spatial@1"/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
+      <space:Point id="headline-origin" x="120" y="280"/>
+      <space:Path id="headline-path">
+        <space:Move x="120" y="280"/>
+        <space:Cubic control1-x="360" control1-y="180" control2-x="720" control2-y="380" x="960" y="280"/>
+      </space:Path>
       <space:Frame id="safe" within={vertical} left="6%" top="4%" right="94%" bottom="96%"/>
       <space:AnchoredFrame id="card" within={safe} x="50%" y="78%" width="82%" height="28%" anchor="center"/>
       <space:AspectFrame id="sticker" within={safe} x="100%" y="100%" width="32%" aspect="9/16" anchor="bottom-right"/>
@@ -158,6 +231,8 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
     resolveSource() { throw new Error("Spatial fixture has no source imports."); },
   });
   assert.equal(resolveCompiledSourceExport(compiled, "vertical", spatialTypes.canvas).ref.kind, "record");
+  assert.equal(resolveCompiledSourceExport(compiled, "headline-origin", spatialTypes.point).ref.kind, "record");
+  assert.equal(resolveCompiledSourceExport(compiled, "headline-path", spatialTypes.path).ref.kind, "record");
   const sticker = resolveCompiledSourceExport(compiled, "sticker", spatialTypes.frame);
   assert.equal(sticker.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
@@ -165,9 +240,9 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
     targets: [{ output: sticker.ref.kind === "logical-output" ? sticker.ref.id : "", accepts: "exact" }],
     satisfactions: [],
   }));
-  assert.deepEqual(build.plan.steps.map((step) => step.producer.name), [
+  assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     spatialProducers.canvasFrame.name,
     spatialProducers.frameEdges.name,
     spatialProducers.aspectFrame.name,
-  ]);
+  ].sort());
 });

@@ -1,4 +1,12 @@
 export { mediaTrackComponent } from "./component.js";
+export {
+  decodeMediaFit,
+  decodeMediaFramePaint,
+  decodeMediaMotion,
+  decodeMediaPresentation,
+  decodeMediaSampleSpec,
+  mediaAppearanceKeys,
+} from "./author.js";
 export { renderMediaTrackFragment, stillMediaTrackFragment } from "./fragment.js";
 export {
   appendMediaPaintLayer,
@@ -17,6 +25,8 @@ export {
 export { lowerMediaItemElements } from "./lower.js";
 export {
   mediaItemSpecSchema,
+  mediaFramePresentationSchema,
+  mediaLifecycleMotionSchema,
   mediaLayerSetSchema,
   mediaHandoffSpecSchema,
   mediaPaintLayerSpecSchema,

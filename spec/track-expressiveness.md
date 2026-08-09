@@ -155,9 +155,11 @@ executable rather than package-family patches:
 
 `packages/hyperframes/test/browser-visual.test.ts` additionally drives real Hyperframes browser
 frames: installed content-addressed open fonts paint Latin, CJK and emoji/symbol glyphs through an ordered fallback
-stack; Fine Caption proves multiline wrapping, full glyph Paint, every glyph karaoke mode and joined
-trail Pill line geometry; all eleven official Screen Overlay components preserve identical pixels
-under sequential and parallel frame rendering; and a
+stack; Text proves Point/Area/Path layout, all Box targets, rich runs, horizontal/vertical flow,
+clip/ellipsis/bounded shrink, ordered Paint, local Mask and forward/reverse selector clocks; Fine
+Caption proves multiline wrapping, full glyph Paint, every glyph karaoke mode and joined trail Pill
+line geometry; DepthStack Deck proves explicit old/new collection-state reflow, exact labels and
+byte-identical one-worker/partitioned frames; all eleven official Screen Overlay components preserve identical pixels under sequential and parallel frame rendering; and a
 50% straight-alpha PNG composites over a blue Track at the expected pixel values. This opt-in host
 test is run with `SVML_BROWSER_TESTS=1`; it proves the current local renderer path, not every future
 hosted Runtime.
@@ -169,11 +171,18 @@ candidate-era package migration, and a production Runtime still needs to bind it
 implementation and validate that Surface bytes satisfy the declared metadata. Those remaining
 facts must stay generic; they must not be patched with Caption-, Text- or Media-specific fields.
 
-E7 and E8 now have their official package witnesses. `@narratage/audio-track` proves the exact
+E1–E5, E7 and E8 now have their official package witnesses. `@narratage/text-track` proves the
+complete three-box/Text terminal model without public Text fields; Caption and Media prove their
+independent package models. `@narratage/audio-track` proves the exact
 48 kHz source/target mapping, overlap law, bounded stretch and one shared local/remote
 `AudioProgramPlan`; `@narratage/screen-overlay` proves only self-contained owned pixels, explicit
-seeds, flat stacking and fail-closed rejection of lower-composite effects. E1–E6 remain governed by
-the complete Text/Media/Deck work and final Surface validation below.
+seeds, flat stacking and fail-closed rejection of lower-composite effects;
+`@narratage/deck-track` proves pure absolute-frame collection reflow over the union of old/new
+visible Cards while reusing Card-local Media lowering. `@narratage/ranking` supplies the real E4
+witness: board, stage and independently stacked Items interleave with an unrelated peer Track,
+while all four Ranking components retain frame-pure progressive state under partitioned browser
+rendering. E6 alone awaits Runtime Surface-byte validation despite its typed path and independently
+installed non-native Text witness already executing.
 
 ## Freeze criteria
 
