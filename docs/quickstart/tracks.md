@@ -25,7 +25,7 @@ Script Display → Caption Program → Planner + measured Atom timing → Style-
 
 `@narratage/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
 assignment, Plan validation and the timing join. `@narratage/caption-fine` is one field-free Style
-family: it owns its font/box parameters and uniform Cue rendering.
+family: it owns geometry, glyph/Cue-box Paint, restrained motion and optional whole-Atom karaoke.
 
 ### caption-fine:Style
 
@@ -36,11 +36,22 @@ both from one package-owned SVS Recipe:
 caption.primary {
   cue-min-words: 2;
   cue-max-words: 7;
-  stack-order: 70;
-  x: 0.08; y: 0.76; width: 0.84;
-  font: Inter; weight: 600; size: 58; line-height: 0.96;
-  align: center; fill: #FFFFFF; background: #09090BCC;
+  stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+  anchor-x: center; anchor-y: bottom;
+  font: Inter; weight: 700; size: 58; font-style: normal;
+  line-height: 0.96; letter-spacing: -0.5; word-gap: 14;
+  align: center; direction: ltr;
+  fill: #FFFFFF; opacity: 1;
+  stroke-color: #09090B; stroke-width: 2;
+  shadow-color: #000000; shadow-opacity: 0.72;
+  shadow-x: 0; shadow-y: 3; shadow-blur: 8;
+  glow-color: #FFFFFF; glow-opacity: 0.12; glow-blur: 8;
+  background: #09090BCC; border-color: #FFFFFF20; border-width: 1;
   padding: 16 24; radius: 18;
+  karaoke: trail; karaoke-transition: wipe;
+  active-fill: #FFD54A; active-scale: 1.04;
+  cue-enter: fade; cue-exit: fade; cue-transition-frames: 4;
+  atom-reveal: all;
 }
 ```
 
@@ -50,6 +61,16 @@ caption.primary {
 
 Another Caption package may define completely different planning fields and visual parameters
 without changing the common package.
+
+Fine's properties are orthogonal: Cue planning; normalized placement and anchor; layout and
+typography; base glyph Paint; Cue-box Paint; active glyph Paint; karaoke timing; and restrained
+local motion. Active Paint supports the same `fill`/`opacity`/`stroke-*`/`shadow-*`/`glow-*`
+dimensions using the `active-` prefix. Missing optional dimensions resolve deterministically to no
+decoration or motion. Unknown properties are rejected.
+
+`karaoke` is `off`, `current` or `trail`; `karaoke-transition` is `step` or `wipe`. Timing is always
+whole-Atom timing already proven by Caption. A normal one-word Atom therefore highlights per word,
+while a Dual Text Atom remains one indivisible visible unit. Fine never guesses internal time.
 
 ### caption:Program
 

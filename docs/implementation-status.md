@@ -175,8 +175,10 @@ Implemented and executable:
 - planner-neutral CaptionPlan: ordered Cue cuts plus zero or more declared attributes per display
   word, with no text rewrite or timing authority;
 - total explicit default Caption Style plus ordered Role/word-subset whole-style overrides;
-- `@narratage/caption-fine`: the first executable concrete Style-family baseline, owning its SVS
-  schema, box/font parameters and VisualTrack lowering;
+- `@narratage/caption-fine`: the first executable field-free Style family, owning its complete SVS
+  schema, anchors/layout, base and active glyph Paint, Cue box, whole-Atom karaoke, restrained local
+  motion and one shared VisualTrack lowering; all four karaoke timing combinations have unit
+  evidence and `trail + wipe` has a real HyperFrames/browser pixel witness;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
@@ -185,8 +187,8 @@ Implemented and executable:
 
 Still pre-freeze and deliberately deferred:
 
-- browser/pixel evidence for Fine Caption placement, wrapping and basic paint; its executable
-  baseline is already field-free with uniform static Words per Cue;
+- browser/pixel evidence for Fine Caption CJK, emoji, multiline wrapping and every karaoke mode;
+- exact Font Artifact wiring and any browser-measured line-limit assertion for Fine Caption;
 - complete Text three-box, exact-font and layered-decoration behavior;
 - Caption CJK/emoji/multiline/pixel acceptance;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
