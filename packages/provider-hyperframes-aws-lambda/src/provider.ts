@@ -48,7 +48,7 @@ import type {
   HyperframesLambdaSite,
 } from "./client.js";
 
-const HYPERFRAMES_VERSION = "0.7.84";
+const HYPERFRAMES_VERSION = "0.7.101";
 const REQUEST_CONTRACT = "svml.hyperframes-visual-render-request@1";
 const CHECKPOINT_CONTRACT = "svml.hyperframes-aws-lambda-operation@1";
 const SUPPORTED_FPS = new Set([24, 30, 60]);

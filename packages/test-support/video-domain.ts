@@ -8,6 +8,7 @@ import { spatialComponent, spatialManifest } from "@narratage/spatial";
 import { speechManifest } from "@narratage/speech";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { visualIrManifest } from "@narratage/visual-ir";
+import { temporalManifest } from "@narratage/temporal";
 
 /** Test-only explicit video contract closure. Production packages import only the contracts they use. */
 export const videoContractManifests = [
@@ -19,6 +20,7 @@ export const videoContractManifests = [
   speechEvidenceManifest,
   semanticMapManifest,
   spatialManifest,
+  temporalManifest,
   visualIrManifest,
   compositionManifest,
 ] as const;

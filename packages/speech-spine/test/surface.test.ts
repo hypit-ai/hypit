@@ -27,6 +27,7 @@ import {
   scriptSurfaceImplementationDigest,
 } from "@narratage/script";
 import { speechBasisManifest, speechBasisProducers } from "@narratage/speech-basis";
+import { mediaTrackManifest } from "@narratage/media-track";
 import {
   decodeSpeechSpineSurface,
   speechSpineManifest,
@@ -34,6 +35,12 @@ import {
   speechSpineProducers,
   speechSpineSurfaceImplementationDigest,
 } from "@narratage/speech-spine";
+import {
+  decodeCanvasSurface,
+  spatialComponent,
+  spatialModuleRef,
+  spatialSurfaceDigests,
+} from "@narratage/spatial";
 import {
   TextSurfaceRegistry,
   createTextAuthorFrontend,
@@ -66,6 +73,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   const closure = createResolvedClosure([
     ...videoContractManifests,
     mediaPipelineManifest,
+    mediaTrackManifest,
     speechBasisManifest,
     speechSpineManifest,
     scriptManifest,
@@ -74,6 +82,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   const surfaces = new TextSurfaceRegistry();
   surfaces.registerRaw(scriptModuleRef, "script", scriptSurfaceImplementationDigest, decodeScriptSurface);
   surfaces.registerStructured(speechSpineModuleRef, "spine", speechSpineSurfaceImplementationDigest, decodeSpeechSpineSurface);
+  surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
   surfaces.registerStructured(fixtureModule, "media", fixtureSurfaceDigest, ({ element }) => ({
     records: ["take-one", "take-two"].map((id) => ({
       id, type: artifactTypes.blob,
@@ -88,22 +97,26 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     resolveModule(request) {
       if (request.from.startsWith("@narratage/script")) return scriptModuleRef;
       if (request.from.startsWith("@narratage/speech")) return speechSpineModuleRef;
+      if (request.from.startsWith("@narratage/spatial")) return spatialModuleRef;
       return fixtureModule;
     },
   }));
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, mediaPipelineComponent.validators ?? []);
+  registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import from="@narratage/script@1"/>
       <import as="fixture" from="example.speech-media@1"/>
       <import as="speech" from="@narratage/speech-spine@1"/>
+      <import as="space" from="@narratage/spatial@1"/>
       <script id="story">
         <opening><ALICE> Hello from Alice.</opening>
         <answer><BOB> Hello from Bob.</answer>
       </script>
       <fixture:Media/>
-      <speech:Spine id="speech">
+      <space:Canvas id="vertical" width="720" height="1280"/>
+      <speech:Spine id="speech" canvas={vertical}>
         <speech:Take source={take-one} segment={story.segment.opening}/>
         <speech:Take source={take-two} segment={story.segment.answer}/>
       </speech:Spine>

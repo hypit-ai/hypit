@@ -47,6 +47,7 @@ export const mediaPipelineImplementationDigests = {
   projectMuxed: digestOf("@narratage/media-pipeline/project-muxed-media@1"),
   audioPlanValidator: digestOf("@narratage/media-pipeline/validate-audio-program-plan@1"),
 } as const;
+export const synchronizedMediaSurfaceImplementationDigest = digestOf("@narratage/media-pipeline/synchronized-media-surface@1");
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const mode = (name: string): ValueSchema => ({
@@ -174,7 +175,11 @@ export const mediaPipelineManifest: ModuleManifest = {
     { name: mediaPipelineCapabilities.renderAudio.name, returns: mediaTypes.timelineAudio },
     { name: mediaPipelineCapabilities.mux.name, returns: mediaTypes.muxed },
   ],
-  surfaces: [],
+  surfaces: [{
+    name: "synchronized-media", tag: "Normalize", mode: "structured",
+    outputs: [mediaPipelineTypes.selectionRequest, mediaTypes.synchronized],
+    implementation: { kind: "trusted-frontend-surface", locator: "@narratage/media-pipeline/synchronized-media-surface", digest: synchronizedMediaSurfaceImplementationDigest },
+  }],
   producers: [
     {
       name: mediaPipelineProducers.inspect.name,

@@ -23,10 +23,10 @@ function fixture() {
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });
   const picture = {
+    kind: "blob" as const,
     digest: digestOf("hyperframes:picture"),
     size: 10,
     mediaType: "image/png",
-    durationSec: 0,
   };
   const sound = {
     kind: "blob" as const,
@@ -270,4 +270,64 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   assert.doesNotMatch(materialized, /svml-artifact:\/\//u);
   assert.match(materialized, new RegExp(font.sources[0]!.artifact.digest, "u"));
   assert.match(materialized, new RegExp(surfaceDigest, "u"));
+});
+
+test("exact timed sampling lowers loop boundaries and held frames without zero-rate browser media", () => {
+  const programSpace = sealProgramSpace({
+    contract: "svml.program-space@1",
+    durationSec: 8 / 30,
+    frameRate: { numerator: 30, denominator: 1 },
+  });
+  const artifact = {
+    kind: "blob" as const,
+    digest: digestOf("hyperframes:sampled-video"),
+    size: 1_000,
+    mediaType: "video/mp4",
+  };
+  const track = sealVisualTrack({
+    contract: "svml.visual-track@1",
+    visualIr: "svml.visual-ir@1",
+    id: "sampled",
+    presents: [{
+      id: "sampled",
+      span: { startFrame: 0, endFrameExclusive: 8 },
+      stacking: { order: 1, tieBreak: "sampled" },
+      elements: [{
+        id: "video",
+        order: 0,
+        kind: "video",
+        artifact,
+        muted: true,
+        sampling: {
+          sourceFrameRate: { numerator: 30, denominator: 1 },
+          sourceFrameCount: 4,
+          segments: [
+            {
+              target: { startFrame: 0, endFrameExclusive: 6 },
+              sourceFrame: { numerator: 2, denominator: 1 },
+              rate: { numerator: 1, denominator: 1 },
+              loop: { startFrame: 0, endFrameExclusive: 4 },
+            },
+            {
+              target: { startFrame: 6, endFrameExclusive: 8 },
+              sourceFrame: { numerator: 3, denominator: 1 },
+              rate: { numerator: 0, denominator: 1 },
+            },
+          ],
+        },
+        style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
+      }],
+    }],
+  });
+  const document = compileHyperframesDocument(sealComposition({
+    contract: "svml.composition@1",
+    id: "sampled",
+    canvas: { width: 100, height: 100, clearColor: "#000000" },
+    tracks: [track],
+  }), programSpace);
+  assert.equal((document.html.match(/data-svml-sampling-part=/gu) ?? []).length, 4);
+  assert.match(document.html, /data-media-start="0\.066666666666"/u);
+  assert.match(document.html, /data-media-start="0"/u);
+  assert.equal((document.html.match(/data-playback-rate="1"/gu) ?? []).length, 4);
+  assert.doesNotMatch(document.html, /data-playback-rate="0"/u);
 });

@@ -1,7 +1,7 @@
 # Talking-film graph check
 
 This fixture compiles the complete author graph: Script, generated-media requests, Speech Spine,
-WhisperX alignment, display-only Gemini Caption planning, B-roll, Caption, Text, Film and
+WhisperX alignment, display-only Gemini Caption planning, Media Track, Caption, Text, Film and
 explicit HyperFrames rendering. `check` and `plan` do not invoke Seedance, WhisperX, Gemini or
 HyperFrames.
 

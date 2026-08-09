@@ -15,7 +15,8 @@
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-  <import as="broll" from="@narratage/broll@1"/>
+  <import as="pipeline" from="@narratage/media-pipeline@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/text-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
@@ -42,6 +43,12 @@
   <media:Image id="alice-reference" src="./assets/alice.png"/>
   <media:Image id="bob-reference" src="./assets/bob.png"/>
   <media:Image id="product-reference" src="./assets/product.png"/>
+
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
+  <space:Frame id="product-frame" within={vertical}
+    left="8%" top="20%" right="8%" bottom="32%"/>
 
   <seedance:Prompt id="alice-direction">
     Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
@@ -101,7 +108,7 @@
   </seedance:Speech>
 
   <!-- Ordered generated Takes become one audio basis plus its peer visual/audio Tracks. -->
-  <speech:Spine id="speech">
+  <speech:Spine id="speech" canvas={vertical}>
     <speech:Take source={alice-take} segment={script.segment.opening}/>
     <speech:Take source={bob-take} segment={script.segment.answer}/>
   </speech:Spine>
@@ -118,13 +125,19 @@
     <seedance:Reference image={product-reference} role="subject"/>
   </seedance:Video>
 
-  <broll:Track id="product-broll" map={timing.map}>
-    <broll:Item
-      source={product-motion.video}
+  <pipeline:Normalize id="product-media" source={product-motion.video}
+    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+
+  <media-track:Track id="product-broll" map={timing.map}
+    space={speech.space} canvas={vertical}>
+    <media-track:Item
+      source={product-media.media}
       during={script.selection.product-demo}
-      appearance={studio.broll.product}
+      frame={product-frame}
+      appearance={studio.media.product}
+      motion={studio.motion.product}
     />
-  </broll:Track>
+  </media-track:Track>
 
   <!-- This imported package explicitly chooses Gemini cue planning; it cannot rewrite Script. -->
   <caption-fine:Track
@@ -136,10 +149,6 @@
     program={caption-program}
     plan={caption-plan.plan}
   />
-
-  <space:Canvas id="vertical" width="1080" height="1920"/>
-  <space:Frame id="title-frame" within={vertical}
-    left="6%" top="6%" right="6%" bottom="84%"/>
 
   <text:Track id="titles" space={speech.space}>
     <text:Item

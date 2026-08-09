@@ -17,7 +17,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 ## film:Film
 
 将所有 Track 组装为单一的 Composition。Film 本身没有领域知识——它不知道什么是字幕、
-什么是 B-roll、什么是语音。它接收任何 VisualTrack 或 AudioTrack，并按堆叠顺序将它们分层。
+什么是 Media、什么是语音。它接收任何 VisualTrack 或 AudioTrack，并按堆叠顺序将它们分层。
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
@@ -52,7 +52,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 | `{speech.visual}` | VisualTrack | `speech:Spine`——全屏说话人画面 |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine`——同步音频 |
 | `{captions.track}` | VisualTrack | Caption 样式族 Track——定时字幕 |
-| `{cards.visual}` | VisualTrack | `broll:Track`——B-roll 叠加层 |
+| `{cards.visual}` | VisualTrack | `media-track:Track`——Media 叠加层或 B-roll |
 | `{titles.track}` | VisualTrack | `text:Track`——文字叠加层 |
 
 ### Track 堆叠
@@ -65,7 +65,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 | stack-order | 内容 |
 |---|---|
 | 10 | 语音画面（全屏说话人画面） |
-| 40 | B-roll 叠加层 |
+| 40 | Media 叠加层 |
 | 70 | 字幕 |
 | 90 | 文字叠加层 |
 
@@ -116,7 +116,8 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-  <import as="broll" from="@narratage/broll@1"/>
+  <import as="pipeline" from="@narratage/media-pipeline@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/text-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
@@ -138,13 +139,19 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <seedance:Video id="motion" model="mini"
     prompt={direction} duration="5"/>
 
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
+  <space:Frame id="card-frame" within={vertical}
+    left="10%" top="20%" right="10%" bottom="30%"/>
+
   <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech">
+  <speech:Spine id="speech" canvas={vertical}>
     <speech:Take source={take} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <!-- 4. Tracks: captions, B-roll, text -->
+  <!-- 4. Tracks: captions, Media, text -->
   <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
@@ -153,14 +160,13 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
     space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-  <broll:Track id="cards" map={timing.map} space={speech.space}>
-    <broll:Item source={motion.video} during={story.selection.demo}
-      appearance={studio.broll.card}/>
-  </broll:Track>
-
-  <space:Canvas id="vertical" width="1080" height="1920"/>
-  <space:Frame id="title-frame" within={vertical}
-    left="6%" top="6%" right="6%" bottom="84%"/>
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+  <media-track:Track id="cards" map={timing.map}
+    space={speech.space} canvas={vertical}>
+    <media-track:Item source={motion-media.media} during={story.selection.demo}
+      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+  </media-track:Track>
   <text:Track id="titles" space={speech.space}>
     <text:Item text="MEANING" during="full"
       frame={title-frame}
@@ -192,10 +198,13 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   film.vertical {
     background: #09090B;
   }
-  broll.card {
-    stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5;
-    fit: cover; background: #111116; radius: 20;
-    enter: slide-up 4f; exit: fade 4f;
+  media.card {
+    stack-order: 40; fit: cover; playback: hold-start;
+    frame-paint: #111116; clip: rounded; radius: 20;
+  }
+  motion.card {
+    enter: slide; enter-frames: 4; enter-direction: up; enter-easing: ease-out;
+    exit: fade; exit-frames: 4; exit-easing: ease-in;
   }
   caption.base {
     cue-min-words: 1; cue-max-words: 5;

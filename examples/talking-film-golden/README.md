@@ -14,7 +14,7 @@ This directory answers one question:
 The source explicitly chooses:
 
 - two Seedance **Mini** speech generations, each with its own Script Segment, Prompt and reference;
-- one Seedance Mini B-roll generation;
+- one Seedance Mini media generation used editorially as B-roll;
 - one WhisperX measurement path;
 - the Gemini-backed official Caption package;
 - Hyperframes as the final rendering method.
@@ -50,9 +50,9 @@ Script dialogue + Prompt + reference ──> two Seedance Speech Needs
                                                               ▼
 Script left display + Caption Program ──> Gemini Plan ──> Caption Track
 
-Script selections + generated B-roll ───────────────────> B-roll Track
+Script selections + normalized generated media ─────────> Media Track
 
-Seedance B-roll + Text Track + every Track above
+Media Track + Text Track + every Track above
                          -> Film Composition
                          -> explicit Hyperframes compile + render component
                          -> final video Need
@@ -73,7 +73,7 @@ Candidates and Operations.
 | `speech:Spine` | `@narratage/speech` | ordered clips -> normalized Takes, one `SpeechBasis`, then ordinary projections | Surface, fold, media normalization and projection components implemented |
 | `whisperx:Alignment` | `@narratage/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@narratage/speech-alignment` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
 | `seedance:Video model="mini"` | `@narratage/seedance` | explicit Seedance Mini video Need plus primary-video projection | implemented |
-| `broll:Track` | `@narratage/broll` | semantic windows + normalized media + recipe -> peer Visual/Audio Tracks | Surface and deterministic lowering implemented |
+| `media-track:Track` | `@narratage/media-track` | semantic windows + normalized media + explicit Frame/Recipe -> peer Visual/optional Audio Tracks | Item/Sequence Surface and deterministic lowering implemented |
 | `caption-fine:Style` / `caption:Program` | Fine + common Caption | explicit default over all words + ordered whole-Style replacement by Role or word subset | implemented |
 | `caption-ai:Planner` | `@narratage/caption-gemini` | immutable display Atoms/Words + per-run requirements -> whole-Atom Cue cuts and optional per-Word fields | implemented; Google Vertex Endpoint implemented separately |
 | `caption-fine:Track` | `@narratage/caption-fine` | CaptionPlan + independent SemanticMap + complete Fine Styles -> VisualTrack | implemented |

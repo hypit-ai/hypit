@@ -17,7 +17,7 @@ Composition. The renderer then compiles that Composition into an MP4 video.
 ## film:Film
 
 Assembles all Tracks into a single Composition. Film itself has no domain knowledge — it does not
-know what a caption is, what B-roll is, or what speech is. It takes any VisualTrack or AudioTrack
+know what a caption is, what Media is, or what speech is. It takes any VisualTrack or AudioTrack
 and layers them by stacking order.
 
 ```svml
@@ -53,7 +53,7 @@ Common Track sources:
 | `{speech.visual}` | VisualTrack | `speech:Spine` — full-screen talking head |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine` — synchronized audio |
 | `{captions.track}` | VisualTrack | a Caption Style-family Track — timed captions |
-| `{cards.visual}` | VisualTrack | `broll:Track` — B-roll overlays |
+| `{cards.visual}` | VisualTrack | `media-track:Track` — media overlays or B-roll |
 | `{titles.track}` | VisualTrack | `text:Track` — text overlays |
 
 ### Track stacking
@@ -67,7 +67,7 @@ Typical stacking order:
 | stack-order | Content |
 |---|---|
 | 10 | Speech visual (full-screen talking head) |
-| 40 | B-roll overlays |
+| 40 | Media overlays |
 | 70 | Captions |
 | 90 | Text overlays |
 
@@ -119,7 +119,8 @@ The complete data flow from Script to rendered video. This example is based on
   <import as="caption" from="@narratage/caption@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-  <import as="broll" from="@narratage/broll@1"/>
+  <import as="pipeline" from="@narratage/media-pipeline@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/text-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
@@ -141,13 +142,19 @@ The complete data flow from Script to rendered video. This example is based on
   <seedance:Video id="motion" model="mini"
     prompt={direction} duration="5"/>
 
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
+  <space:Frame id="card-frame" within={vertical}
+    left="10%" top="20%" right="10%" bottom="30%"/>
+
   <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech">
+  <speech:Spine id="speech" canvas={vertical}>
     <speech:Take source={take} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <!-- 4. Tracks: captions, B-roll, text -->
+  <!-- 4. Tracks: captions, Media, text -->
   <caption-fine:Style id="base-caption" recipe={studio.caption.base}/>
   <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
@@ -156,14 +163,13 @@ The complete data flow from Script to rendered video. This example is based on
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
     space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-  <broll:Track id="cards" map={timing.map} space={speech.space}>
-    <broll:Item source={motion.video} during={story.selection.demo}
-      appearance={studio.broll.card}/>
-  </broll:Track>
-
-  <space:Canvas id="vertical" width="1080" height="1920"/>
-  <space:Frame id="title-frame" within={vertical}
-    left="6%" top="6%" right="6%" bottom="84%"/>
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+  <media-track:Track id="cards" map={timing.map}
+    space={speech.space} canvas={vertical}>
+    <media-track:Item source={motion-media.media} during={story.selection.demo}
+      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+  </media-track:Track>
   <text:Track id="titles" space={speech.space}>
     <text:Item text="MEANING" during="full"
       frame={title-frame}
@@ -195,10 +201,13 @@ The complete data flow from Script to rendered video. This example is based on
   film.vertical {
     background: #09090B;
   }
-  broll.card {
-    stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5;
-    fit: cover; background: #111116; radius: 20;
-    enter: slide-up 4f; exit: fade 4f;
+  media.card {
+    stack-order: 40; fit: cover; playback: hold-start;
+    frame-paint: #111116; clip: rounded; radius: 20;
+  }
+  motion.card {
+    enter: slide; enter-frames: 4; enter-direction: up; enter-easing: ease-out;
+    exit: fade; exit-frames: 4; exit-easing: ease-in;
   }
   caption.base {
     cue-min-words: 1; cue-max-words: 5;

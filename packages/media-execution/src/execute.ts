@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mediaTypes, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifyTimelineAudio } from "@narratage/media";
+import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifyTimelineAudio } from "@narratage/media";
 import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary, speechTypes } from "@narratage/speech";
@@ -25,6 +25,13 @@ import {
 import type { BlobRef, CanonicalValue } from "@narratage/protocol";
 
 import { parseMediaInspection } from "./probe.js";
+import {
+  compositeAnimatedWebpFrame,
+  createAnimatedWebpCanvas,
+  pamRgba,
+  parseAnimatedWebp,
+} from "./webp.js";
+import type { AnimatedWebp } from "./webp.js";
 
 /**
  * Where the bytes live and which binaries transform them.
@@ -325,6 +332,75 @@ async function inspectFile(args: {
   return parseMediaInspection({ source: args.source, ffprobeVersion, value });
 }
 
+function divisor(left: number, right: number): number {
+  let a = Math.abs(left);
+  let b = Math.abs(right);
+  while (b !== 0) [a, b] = [b, a % b];
+  return a;
+}
+
+function animatedWebpInspection(source: BlobRef, animation: AnimatedWebp): MediaInspection {
+  const durationMs = animation.frames.reduce((sum, frame) => sum + frame.durationMs, 0);
+  const numerator = animation.frames.length * 1_000;
+  const factor = divisor(numerator, durationMs);
+  return sealMediaInspection({
+    contract: "svml.media-inspection@1",
+    container: { formatNames: ["webp", "webp-animation"] },
+    streams: [{
+      kind: "video",
+      index: 0,
+      codecType: "video",
+      codecName: "webp",
+      disposition: { default: true, attachedPicture: false },
+      timingStatus: "admissible",
+      timeBase: { numerator: 1, denominator: 1_000 },
+      startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 1_000 } },
+      endPts: { ticks: String(durationMs), timeBase: { numerator: 1, denominator: 1_000 } },
+      decodedUnitCount: animation.frames.length,
+      role: "moving",
+      width: animation.width,
+      height: animation.height,
+      averageFrameRate: { numerator: numerator / factor, denominator: durationMs / factor },
+    }],
+  });
+}
+
+async function animatedWebpConcat(
+  env: MediaExecutionEnvironment,
+  animation: AnimatedWebp,
+  work: string,
+): Promise<string> {
+  assert(animation.frames.length <= 10_000, "Animated WebP has too many frames");
+  const canvasBytes = animation.width * animation.height * 4;
+  assert(Number.isSafeInteger(canvasBytes) && canvasBytes > 0 && canvasBytes <= 512 * 1024 * 1024,
+    "Animated WebP canvas is outside the supported memory bound");
+  const canvas = createAnimatedWebpCanvas(animation);
+  const paths: string[] = [];
+  for (const [index, frame] of animation.frames.entries()) {
+    const imagePath = join(work, `webp-source-${String(index).padStart(6, "0")}.webp`);
+    await writeFile(imagePath, frame.image);
+    const decoded = await runProcess({
+      executable: env.ffmpegPath,
+      argv: ["-v", "error", "-i", imagePath, "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgba", "-"],
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: frame.width * frame.height * 4,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const snapshot = compositeAnimatedWebpFrame(canvas, animation, frame, decoded);
+    const path = join(work, `webp-frame-${String(index).padStart(6, "0")}.pam`);
+    await writeFile(path, pamRgba(animation.width, animation.height, snapshot));
+    paths.push(path);
+  }
+  const lines = ["ffconcat version 1.0"];
+  for (const [index, path] of paths.entries()) {
+    lines.push(`file '${path}'`, `duration ${(animation.frames[index]!.durationMs / 1_000).toFixed(6)}`);
+  }
+  lines.push(`file '${paths.at(-1)!}'`);
+  const manifest = join(work, "animated-webp.ffconcat");
+  await writeFile(manifest, `${lines.join("\n")}\n`, "utf8");
+  return manifest;
+}
+
 async function outputInspection(args: {
   readonly path: string;
   readonly mediaType: string;
@@ -475,15 +551,19 @@ export async function executeInspectMedia(
   const work = await mkdtemp(join(tmpdir(), "svml-media-inspect-"));
   try {
     const input = join(work, "source.bin");
-    await writeFile(input, await sourceBytes(env, need.source));
-    const inspection = await inspectFile({
-      source: need.source,
-      input,
-      ffprobePath: env.ffprobePath,
-      timeoutMs: env.processTimeoutMs,
-      maxProbeOutputBytes: env.maxProbeOutputBytes,
-      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-    });
+    const bytes = await sourceBytes(env, need.source);
+    await writeFile(input, bytes);
+    const animation = parseAnimatedWebp(bytes);
+    const inspection = animation === undefined
+      ? await inspectFile({
+        source: need.source,
+        input,
+        ffprobePath: env.ffprobePath,
+        timeoutMs: env.processTimeoutMs,
+        maxProbeOutputBytes: env.maxProbeOutputBytes,
+        ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+      })
+      : animatedWebpInspection(need.source, animation);
     return result(canonicalize(inspection), canonicalize({ provider: env.label, operation: "inspect" }));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
@@ -499,7 +579,9 @@ export async function executeNormalizeMedia(
   const work = await mkdtemp(join(tmpdir(), "svml-media-normalize-"));
   try {
     const input = join(work, "source.bin");
-    await writeFile(input, await sourceBytes(env, need.source));
+    const bytes = await sourceBytes(env, need.source);
+    await writeFile(input, bytes);
+    const animation = parseAnimatedWebp(bytes);
     let visualArtifact: BlobRef | undefined;
     let visualWidth: number | undefined;
     let visualHeight: number | undefined;
@@ -513,9 +595,12 @@ export async function executeNormalizeMedia(
         `setpts=N*${need.frameRate.denominator}/(${need.frameRate.numerator}*TB)`,
         "scale=trunc(iw/2)*2:trunc(ih/2)*2",
       ].join(",");
+      const visualInput = animation === undefined
+        ? ["-i", input, "-map", `0:${plan.video.index}`]
+        : ["-f", "concat", "-safe", "0", "-i", await animatedWebpConcat(env, animation, work), "-map", "0:v:0"];
       await runProcess({
         executable: env.ffmpegPath,
-        argv: ["-y", "-i", input, "-map", `0:${plan.video.index}`, "-an", "-vf", filter,
+        argv: ["-y", ...visualInput, "-an", "-vf", filter,
           "-frames:v", String(plan.frameCount), "-fps_mode", "cfr", "-c:v", "libx264",
           "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart", output],
         timeoutMs: env.processTimeoutMs,

@@ -2,6 +2,7 @@ import type { ComponentPackage } from "@narratage/component-kit";
 import type { SpeechBasis } from "@narratage/speech";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
+import type { CanvasSpace } from "@narratage/spatial";
 
 import {
   speechBasisProducers,
@@ -20,6 +21,11 @@ import {
 function speechBasis(value: StoredValue | undefined): SpeechBasis {
   if (value?.kind !== "inline") throw new Error("SpeechBasis must be inline");
   return value.value as unknown as SpeechBasis;
+}
+
+function canvas(value: StoredValue | undefined): CanvasSpace {
+  if (value?.kind !== "inline") throw new Error("CanvasSpace must be inline");
+  return value.value as unknown as CanvasSpace;
 }
 
 /** Pure projections of one atomic SpeechBasis; no Artifact read or external capability is hidden here. */
@@ -59,7 +65,7 @@ export const speechBasisComponent = {
         outputs: {
           visual: {
             kind: "inline",
-            value: canonicalize(projectSpeechVisual(speechBasis(inputs.basis?.value))),
+            value: canonicalize(projectSpeechVisual(speechBasis(inputs.basis?.value), canvas(inputs.canvas?.value))),
           },
         },
         needs: {},

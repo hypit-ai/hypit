@@ -28,6 +28,12 @@ import { createLocalMediaProvider } from "../src/index.js";
 const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0
   && spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
 
+// Five 64x48 lossless frames at 100 ms each. Later frames are partial alpha
+// rectangles, so this fixture exercises WebP blend and canvas persistence.
+const animatedWebp = Buffer.from([
+  "UklGRjQEAABXRUJQVlA4WAoAAAASAAAAPwAALwAAQU5JTQYAAAAAbPz/AABBTk1GpgIAAAAAAAAAAD8AAC8AAGQAAAJWUDhMjQIAAC8/wAsAp8EQkiRJeQ9KwxzeARbKgjBq20iQd/egFMzCOSgH58AUyjwIBCEy0kojzX8gd0AYXnAa/lMIRRkGIQiDELwMG5RBcaEUJQhCDyEIwkotw3l4P34IQlA+o4RdINm27bZt6KLGC9aIhJAnMGqge/f/fxzee1C06Iwyiei/A7dtI6nGCh0PvOk1g3nD02opOIu6Seg2ofsrKS4wj3qYs66vH6+l1G/59+0qqXlC1wktVyYwAaBPqCorqTI7pYgRASOzP2iulqdwCiEYGHS9ZlFpnpIKo+bxoJmAiej6XvoxX3C/qs4gqG6I+WMS5nQpMgWEUfqq30sg0I72QFk473xR9L1MtLXzzhtjgttxAYyCAaPzzpd35Z3zq2UI5mWXg3Z59+kauK9Sox42v7B9NlkcFxfQ9/Hq17l7LrtPv57NALIADBFZThD1XetdU1Vk2SYiy/eJEPI3D4xk+T/FOA+zmYElA85Z4gTnGj+0RWUp2hmPhwOWwgi/y8NoiROWuIBEvnMgS7Yeftdk9bkj23hveDx44QL63PH4hlqOcyGA7S63ZKn+HmpL2rbUuD9iPYznAtq2VH981WKcH0nbKttGu6rqhG2VbUVf20eyl9j1R8I+KfsUAby+a/uQsvFKeb73KL9c0/jPItqxXFW2g1vDD8a8OHABjHjzHHjj8X3dlc+uYQAb2hHyrnS0cUUZ0dYRdbuh3TYzmdmJAmFEDoQR8G7H4yu9EzDA+edOhItLnjvBo7SZFzx32UkqU8891HPfy2dPAMB0752FwnTvHW1P9d5J2VO9dy6wKxk+B/3eSduzye3/gOdOabrvNm6LSZvGdN+dE178mKYTix8NHeCE8H/UxT9/7q4BAEFOTUZSAAAAAAAAAAAABwAACQAAZAAAAFZQOEw6AAAALwdAAhA/EIraSIFWzCkFgchDCg+BQJK/ypDPf4C3zAiyOaCQkSTmFA7mCd6k+0M0hIj+JwfeYjBtNEFOTUZOAAAAAAAAAQAACQAABwAAZAAAAFZQOEw2AAAALwnAARA3MGxq2jZgCrD8NaH0mKr5D8A1EMgogKBt25jCxuUIqvE4fxolEdH/GGRxg/T6q+kDQU5NRl4AAAABAAABAAAJAAAJAABkAAAAVlA4TEYAAAAvCUACEEcgFkzmfwUYmEK2EaCDmT/PfTBTNf9BQOA5mQ8F4KiRJEeKdUCq1r0dkMV01I9ERP+jbSWJ4gre4grOQv78FnwHQU5NRkQAAAACAAACAAAHAAAJAABkAAAAVlA4TCwAAAAvB0ACECcQAoFkmPyJhpmq+Y8gbqCQjSRoGNZgzuDz5zuEiP5nKqXKvxvuAA==",
+].join(""), "base64");
+
 async function run(executable: string, args: readonly string[]): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(executable, [...args], { stdio: ["ignore", "ignore", "pipe"] });
@@ -248,6 +254,68 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
     };
     assert.deepEqual(outputProbe.streams.map((stream) => stream.codec_type), ["video"]);
     assert.equal(outputProbe.streams[0]?.nb_frames, "30");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("animated WebP keeps its authored frame timing before fixed-rate normalization", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const artifacts = new MemoryArtifactStore();
+  const source = await artifacts.put(animatedWebp, "image/webp");
+  const inspection = await inspectArtifact(artifacts, source);
+  assert.deepEqual(inspection.container.formatNames, ["webp", "webp-animation"]);
+  assert.deepEqual(inspection.streams.map((stream) => [stream.kind, stream.kind === "video" ? stream.role : undefined,
+    stream.decodedUnitCount]), [["video", "moving", 5]]);
+  const video = inspection.streams[0];
+  assert.equal(video?.kind, "video");
+  assert.equal(video?.startPts?.ticks, "0");
+  assert.equal(video?.endPts?.ticks, "500");
+  const request = sealMediaSelectionRequest({
+    contract: "svml.media-selection-request@1",
+    video: { mode: "primary-moving" },
+    audio: { mode: "none" },
+    spanAuthority: "video",
+    frameRate: { numerator: 20, denominator: 1 },
+  });
+  const selection = selectMediaStreams(inspection, request);
+  const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+  assert.equal(normalized.timeline.frameCount, 10);
+  assert.equal(normalized.visual?.frameCount, 10);
+  assert.equal(normalized.visual?.width, 64);
+  assert.equal(normalized.visual?.height, 48);
+  const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+  assert.equal(output.streams[0]?.decodedUnitCount, 10);
+});
+
+test("animated GIF keeps its authored frame timing before fixed-rate normalization", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-gif-"));
+  try {
+    const path = join(root, "animated.gif");
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=64x48:r=10:d=0.5",
+      "-frames:v", "5", path,
+    ]);
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(await readFile(path), "image/gif");
+    const inspection = await inspectArtifact(artifacts, source);
+    assert.deepEqual(inspection.streams.map((stream) => [stream.kind, stream.kind === "video" ? stream.role : undefined,
+      stream.decodedUnitCount]), [["video", "moving", 5]]);
+    const request = sealMediaSelectionRequest({
+      contract: "svml.media-selection-request@1",
+      video: { mode: "primary-moving" },
+      audio: { mode: "none" },
+      spanAuthority: "video",
+      frameRate: { numerator: 20, denominator: 1 },
+    });
+    const selection = selectMediaStreams(inspection, request);
+    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    assert.equal(normalized.timeline.frameCount, 10);
+    const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+    assert.equal(output.streams[0]?.decodedUnitCount, 10);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

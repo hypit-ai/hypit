@@ -10,6 +10,7 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 ```svml
 <import as="speech" from="@narratage/speech-spine@1"/>
 <import as="whisperx" from="@narratage/whisperx@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 ```
 
 ## speech:Spine
@@ -17,7 +18,8 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 将多个片段拼接成一个有序的音视频坐标空间。Spine 定义了节目顺序——即最终视频中 Segment 的排列序列。
 
 ```svml
-<speech:Spine id="speech">
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<speech:Spine id="speech" canvas={vertical}>
   <speech:Take source={hook-take.video} segment={story.segment.hook}/>
   <speech:Take source={meeting-take.video} segment={story.segment.meeting}/>
   <speech:Take source={evidence-take.video} segment={story.segment.evidence}/>
@@ -28,6 +30,7 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
+| `canvas` | 是 | 受限 Media 视觉投影显式使用的 CanvasSpace |
 
 ### speech:Take
 
@@ -69,7 +72,7 @@ Spine 产生四个输出，供下游组件使用：
 
 | 输出 | 类型 | 使用方 |
 |---|---|---|
-| `{timing.map}` | CompleteSemanticMap | Caption 样式族 Track、`broll:Track`、`text:Track`——定时放置 |
+| `{timing.map}` | CompleteSemanticMap | Caption 样式族 Track、`media-track:Track`、`text:Track`——定时放置 |
 
 SemanticMap 将每个 Script 中标注的锚点映射到一个时间点。它覆盖所有 `2M + 2N` 个标识（其中 M = 语音词元总数，N = Segment 数量）。这就是 Script 中声明的 Selection 和 Moment 如何转化为下游视觉组件所需的实际时间范围和时间点。
 
@@ -94,20 +97,18 @@ ProgramSpace 包含：
 
 ## SemanticMap
 
-SemanticMap 是连接 Script 文本与物理时间的类型化桥梁。当你在 B-roll 项上写 `during={story.selection.demo}` 时，组件会使用 SemanticMap 查找该 Selection 覆盖的精确帧范围。没有 SemanticMap，Selection 和 Moment 就没有物理意义。
+SemanticMap 是连接 Script 文本与物理时间的类型化桥梁。当你在 Media Item 上写 `during={story.selection.demo}` 时，组件会使用 SemanticMap 查找该 Selection 覆盖的精确帧范围。没有 SemanticMap，Selection 和 Moment 就没有物理意义。
 
 使用该映射的组件通过 `map` 属性接收它：
 
 ```svml
-<broll:Track id="cards" map={timing.map} ...>
+<media-track:Track id="cards" map={timing.map} ...>
 <caption-fine:Track id="captions" ... map={timing.map} .../>
 ```
 
-映射中的每个点可以是：
-
-- **测量值**——由 WhisperX 对齐直接观测得到
-- **推导值**——通过插值从测量值计算得出
-- **估算值**——来自初始时长估计（在对齐运行之前使用）
+Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估算”标签。WhisperX Evidence
+与确定性的 M:N 对齐器负责充分使用录音证据；下游 Track 只接收一份完整 Map，不再解释
+每个点是如何获得的。
 
 ## 组合示例
 
@@ -116,9 +117,11 @@ SemanticMap 是连接 Script 文本与物理时间的类型化桥梁。当你在
 ```svml
 <import as="speech" from="@narratage/speech-spine@1"/>
 <import as="whisperx" from="@narratage/whisperx@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 
 <!-- Assemble takes in program order -->
-<speech:Spine id="speech">
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<speech:Spine id="speech" canvas={vertical}>
   <speech:Take source={opening-take} segment={story.segment.opening}/>
   <speech:Take source={answer-take} segment={story.segment.answer}/>
 </speech:Spine>
@@ -142,7 +145,7 @@ speaker:Take outputs ──► speech:Spine ──► whisperx:Alignment
                          .audio                    │
                          .audioTrack               ▼
                          .space ──────────► caption-fine:Track
-                              │            broll:Track
+                              │            media-track:Track
                               │            text:Track
                               ▼            film:Film
                          film:Film         render:Video

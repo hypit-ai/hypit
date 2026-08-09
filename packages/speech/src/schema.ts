@@ -1,6 +1,6 @@
-import { mediaArtifactSchema } from "@narratage/media";
 import { programSpaceSchema } from "@narratage/program-space";
 import type { ValueSchema } from "@narratage/protocol";
+import { intrinsicExtentSchema } from "@narratage/spatial";
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
@@ -16,7 +16,12 @@ const segment = object({ segmentId: { schema: string }, startSec: { schema: numb
 export const speechDurationSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.speech-duration@1" } }, durationSec: { schema: number } });
 export const speechBasisSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.speech-basis@1" } }, programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef },
-  visualTrack: { schema: object({ clips: { schema: { kind: "array", items: object({ segmentId: { schema: string }, artifact: { schema: mediaArtifactSchema }, startSec: { schema: number }, endSec: { schema: number } }) } } }) },
+  visualTrack: { schema: object({ clips: { schema: { kind: "array", items: object({ segmentId: { schema: string }, artifact: { schema: object({
+    kind: { schema: { kind: "literal", value: "blob" } }, digest: { schema: digest }, size: { schema: integer }, mediaType: { schema: string },
+  }) }, extent: { schema: intrinsicExtentSchema }, frameRate: { schema: object({
+    numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
+    denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+  }) }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }) } } }) },
   segments: { schema: { kind: "array", minItems: 1, items: segment } },
 });
 export const speechAudioBasisSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.speech-audio-basis@1" } },

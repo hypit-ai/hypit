@@ -1,4 +1,4 @@
-import { compositionComponent } from "../../test-support/video-domain.js";
+import { compositionComponent, spatialComponent } from "../../test-support/video-domain.js";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
@@ -80,6 +80,7 @@ function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
   registerTypeValidatorFacets(registry, captionComponent.validators ?? []);
   registerTypeValidatorFacets(registry, compositionComponent.validators);
+  registerTypeValidatorFacets(registry, spatialComponent.validators);
   return registry;
 }
 
@@ -172,9 +173,10 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
       audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
       visualTrack: { clips: [{
         segmentId: "line",
-        artifact: { digest: visualDigest, size: 1, mediaType: "video/mp4", durationSec },
-        startSec: 0,
-        endSec: durationSec,
+        artifact: { kind: "blob", digest: visualDigest, size: 1, mediaType: "video/mp4" },
+        extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+        frameRate: { ...programSpace.frameRate },
+        frameCount: Math.round(durationSec * 1_000),
       }] },
       segments: [{ segmentId: "line", startSec: 0, endSec: durationSec }],
     });
@@ -233,11 +235,15 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
     ({ inputs }) => {
       calls.projectVisual += 1;
       assert.equal(inputs.basis?.value.kind, "inline");
+      assert(inputs.canvas?.value.kind === "inline");
       return {
         outputs: {
           visual: {
             kind: "inline",
-            value: projectSpeechVisual(inlineValue<SpeechBasis>(inputs.basis.value.value)),
+            value: projectSpeechVisual(
+              inlineValue<SpeechBasis>(inputs.basis.value.value),
+              inlineValue(inputs.canvas.value.value),
+            ),
           },
         },
         needs: {},
@@ -544,9 +550,10 @@ test("an Existing SpeechBasis cuts generation while a visual substitute cuts the
     },
     visualTrack: { clips: [{
       segmentId: "line",
-      artifact: { digest: visualDigest, size: 1, mediaType: "video/mp4", durationSec: 1 },
-      startSec: 0,
-      endSec: 1,
+      artifact: { kind: "blob", digest: visualDigest, size: 1, mediaType: "video/mp4" },
+      extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+      frameRate: { ...programSpace.frameRate },
+      frameCount: 1_000,
     }] },
     segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
   });

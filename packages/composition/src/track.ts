@@ -12,7 +12,7 @@ import {
 } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertCompositableSurfaceRef, assertFontArtifactRef } from "@narratage/media";
-import type { CompositableSurfaceRef, FontArtifactRef, MediaArtifactRef } from "@narratage/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
 
 export type FrameSpan = {
   readonly startFrame: number;
@@ -67,9 +67,36 @@ export type VisualTextElement = VisualElementBase & {
   readonly fonts?: readonly FontArtifactRef[];
 };
 
+export type VisualSamplingRational = {
+  readonly numerator: number;
+  readonly denominator: number;
+};
+
+/**
+ * One exact piece of a timed visual's source-time function. Target frames are
+ * relative to the containing Present. A gap means the material is invisible.
+ */
+export type VisualSamplingSegment = {
+  readonly target: FrameSpan;
+  /** Absolute source-frame position at target.startFrame. */
+  readonly sourceFrame: VisualSamplingRational;
+  /** Source frames advanced per Program frame; zero is an exact held frame. */
+  readonly rate: VisualSamplingRational;
+  readonly loop?: FrameSpan;
+};
+
+export type VisualTimedSampling = {
+  readonly sourceFrameRate: VisualSamplingRational;
+  readonly sourceFrameCount: number;
+  readonly segments: readonly VisualSamplingSegment[];
+};
+
 export type VisualMediaElement = VisualElementBase & {
   readonly kind: "image" | "video";
-  readonly artifact: MediaArtifactRef;
+  readonly artifact: BlobRef;
+  /** Exact frame-domain mapping superseding the candidate-era scalar playback fields. */
+  readonly sampling?: VisualTimedSampling;
+  /** Candidate-era compatibility path; new timed lowerers use sampling. */
   readonly mediaStartSec?: number;
   readonly playbackRate?: number;
   readonly loop?: boolean;
@@ -80,6 +107,7 @@ export type VisualMediaElement = VisualElementBase & {
 export type VisualSurfaceElement = VisualElementBase & {
   readonly kind: "surface";
   readonly surface: CompositableSurfaceRef;
+  readonly sampling?: VisualTimedSampling;
 };
 
 /**
@@ -178,16 +206,71 @@ function assertFrameSpan(span: FrameSpan, totalFrames: number, label: string): v
   }
 }
 
-function assertMediaArtifact(artifact: MediaArtifactRef, label: string): void {
+function assertMediaArtifact(artifact: BlobRef, label: string): void {
   if (
-    !isDigest(artifact.digest)
+    artifact.kind !== "blob"
+    || !isDigest(artifact.digest)
     || !Number.isSafeInteger(artifact.size)
     || artifact.size < 0
     || !artifact.mediaType
-    || !Number.isFinite(artifact.durationSec)
-    || artifact.durationSec < 0
   ) {
     throw new Error(`${label} is invalid.`);
+  }
+}
+
+function assertRational(value: VisualSamplingRational, label: string, allowZero: boolean): void {
+  if (!Number.isSafeInteger(value.numerator) || (!allowZero && value.numerator <= 0) || (allowZero && value.numerator < 0)
+    || !Number.isSafeInteger(value.denominator) || value.denominator <= 0) {
+    throw new Error(`${label} must be a non-negative safe rational.`);
+  }
+}
+
+function compareRationalToInteger(value: VisualSamplingRational, integer: number): number {
+  const difference = BigInt(value.numerator) - BigInt(integer) * BigInt(value.denominator);
+  return difference < 0n ? -1 : difference > 0n ? 1 : 0;
+}
+
+function sourceAt(segment: VisualSamplingSegment, targetOffset: number): VisualSamplingRational {
+  const denominator = BigInt(segment.sourceFrame.denominator) * BigInt(segment.rate.denominator);
+  const numerator = BigInt(segment.sourceFrame.numerator) * BigInt(segment.rate.denominator)
+    + BigInt(targetOffset) * BigInt(segment.rate.numerator) * BigInt(segment.sourceFrame.denominator);
+  if (numerator > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error("Visual sampling arithmetic exceeds the safe wire domain.");
+  }
+  return { numerator: Number(numerator), denominator: Number(denominator) };
+}
+
+function assertSampling(value: VisualTimedSampling, durationFrames: number, label: string): void {
+  assertRational(value.sourceFrameRate, `${label}.sourceFrameRate`, false);
+  if (!Number.isSafeInteger(value.sourceFrameCount) || value.sourceFrameCount <= 0 || value.segments.length === 0) {
+    throw new Error(`${label} source frame domain is invalid.`);
+  }
+  let previousEnd = 0;
+  for (const [index, segment] of value.segments.entries()) {
+    const item = `${label}.segments.${index}`;
+    if (!Number.isSafeInteger(segment.target.startFrame) || !Number.isSafeInteger(segment.target.endFrameExclusive)
+      || segment.target.startFrame < previousEnd || segment.target.endFrameExclusive <= segment.target.startFrame
+      || segment.target.endFrameExclusive > durationFrames) throw new Error(`${item} target interval is invalid.`);
+    assertRational(segment.sourceFrame, `${item}.sourceFrame`, true);
+    assertRational(segment.rate, `${item}.rate`, true);
+    if (segment.loop !== undefined) {
+      if (!Number.isSafeInteger(segment.loop.startFrame) || !Number.isSafeInteger(segment.loop.endFrameExclusive)
+        || segment.loop.startFrame < 0 || segment.loop.endFrameExclusive <= segment.loop.startFrame
+        || segment.loop.endFrameExclusive > value.sourceFrameCount
+        || compareRationalToInteger(segment.sourceFrame, segment.loop.startFrame) < 0
+        || compareRationalToInteger(segment.sourceFrame, segment.loop.endFrameExclusive) >= 0) {
+        throw new Error(`${item} loop interval or phase is invalid.`);
+      }
+    } else {
+      const last = sourceAt(segment, segment.target.endFrameExclusive - segment.target.startFrame - 1);
+      if (compareRationalToInteger(segment.sourceFrame, 0) < 0
+        || compareRationalToInteger(segment.sourceFrame, value.sourceFrameCount) >= 0
+        || compareRationalToInteger(last, 0) < 0
+        || compareRationalToInteger(last, value.sourceFrameCount) >= 0) {
+        throw new Error(`${item} samples outside its source frame domain.`);
+      }
+    }
+    previousEnd = segment.target.endFrameExclusive;
   }
 }
 
@@ -299,6 +382,19 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
       if (element.playbackRate !== undefined && (!Number.isFinite(element.playbackRate) || element.playbackRate <= 0)) {
         throw new Error(`${trackId}.${present.id}.${element.id} has invalid playbackRate.`);
       }
+      if (element.kind === "image" && element.sampling !== undefined) {
+        throw new Error(`${trackId}.${present.id}.${element.id} cannot sample a durationless image.`);
+      }
+      if (element.sampling !== undefined) {
+        if (element.mediaStartSec !== undefined || element.playbackRate !== undefined || element.loop !== undefined) {
+          throw new Error(`${trackId}.${present.id}.${element.id} mixes exact sampling with scalar playback fields.`);
+        }
+        if (element.animation !== undefined) {
+          throw new Error(`${trackId}.${present.id}.${element.id} sampling motion must live on an owned wrapper.`);
+        }
+        assertSampling(element.sampling, present.span.endFrameExclusive - present.span.startFrame,
+          `${trackId}.${present.id}.${element.id}.sampling`);
+      }
     }
     if (element.kind === "text" && element.fonts !== undefined) {
       if (element.fonts.length === 0) throw new Error(`${trackId}.${present.id}.${element.id} has an empty font stack.`);
@@ -316,12 +412,28 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
     }
     if (element.kind === "surface") {
       assertCompositableSurfaceRef(element.surface, `${trackId}.${present.id}.${element.id}.surface`);
+      if (element.surface.timing.kind === "still" && element.sampling !== undefined) {
+        throw new Error(`${trackId}.${present.id}.${element.id} cannot sample a still Surface.`);
+      }
+      if (element.sampling !== undefined) {
+        if (element.animation !== undefined) {
+          throw new Error(`${trackId}.${present.id}.${element.id} sampling motion must live on an owned wrapper.`);
+        }
+        if (element.surface.timing.kind !== "frames"
+          || element.sampling.sourceFrameCount !== element.surface.timing.frameCount
+          || element.sampling.sourceFrameRate.numerator !== element.surface.timing.frameRate.numerator
+          || element.sampling.sourceFrameRate.denominator !== element.surface.timing.frameRate.denominator) {
+          throw new Error(`${trackId}.${present.id}.${element.id} Surface sampling differs from its typed timing.`);
+        }
+        assertSampling(element.sampling, present.span.endFrameExclusive - present.span.startFrame,
+          `${trackId}.${present.id}.${element.id}.sampling`);
+      }
       if (element.surface.timing.kind === "frames") {
         const durationFrames = present.span.endFrameExclusive - present.span.startFrame;
-        if (element.surface.timing.frameCount !== durationFrames) {
+        if (element.sampling === undefined && element.surface.timing.frameCount !== durationFrames) {
           throw new Error(`${trackId}.${present.id}.${element.id} Surface must exactly match its Present frame domain.`);
         }
-        if (programSpace !== undefined && (
+        if (element.sampling === undefined && programSpace !== undefined && (
           element.surface.timing.frameRate.numerator !== programSpace.frameRate.numerator
           || element.surface.timing.frameRate.denominator !== programSpace.frameRate.denominator
         )) throw new Error(`${trackId}.${present.id}.${element.id} Surface must exactly match its Present frame domain.`);
@@ -409,12 +521,28 @@ function normalizeElement(element: VisualElement): VisualElement {
           ? { kind: "still" }
           : { ...element.surface.timing, frameRate: { ...element.surface.timing.frameRate } },
       },
+      ...(element.sampling === undefined ? {} : { sampling: {
+        sourceFrameRate: { ...element.sampling.sourceFrameRate },
+        sourceFrameCount: element.sampling.sourceFrameCount,
+        segments: element.sampling.segments.map((segment) => ({
+          target: { ...segment.target }, sourceFrame: { ...segment.sourceFrame }, rate: { ...segment.rate },
+          ...(segment.loop === undefined ? {} : { loop: { ...segment.loop } }),
+        })),
+      } }),
     };
   }
   return {
     ...common,
     kind: element.kind,
     artifact: { ...element.artifact },
+    ...(element.sampling === undefined ? {} : { sampling: {
+      sourceFrameRate: { ...element.sampling.sourceFrameRate },
+      sourceFrameCount: element.sampling.sourceFrameCount,
+      segments: element.sampling.segments.map((segment) => ({
+        target: { ...segment.target }, sourceFrame: { ...segment.sourceFrame }, rate: { ...segment.rate },
+        ...(segment.loop === undefined ? {} : { loop: { ...segment.loop } }),
+      })),
+    } }),
     ...(element.mediaStartSec === undefined ? {} : { mediaStartSec: element.mediaStartSec }),
     ...(element.playbackRate === undefined ? {} : { playbackRate: element.playbackRate }),
     ...(element.loop === undefined ? {} : { loop: element.loop }),

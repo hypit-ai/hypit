@@ -169,7 +169,7 @@ test("generic and video CLIs reach no Provider package and video CLI activates n
   assert.deepEqual(providers.filter((name) => videoDependencies.has(name)), []);
   assert.ok(!videoDependencies.has("@narratage/script"));
   assert.ok(!videoDependencies.has("@narratage/seedance-speaker"));
-  assert.ok(!videoDependencies.has("@narratage/broll"));
+  assert.ok(!videoDependencies.has("@narratage/media-track"));
   assert.ok(!videoDependencies.has("@narratage/text-track"));
   assert.ok(!videoDependencies.has("@narratage/film"));
   assert.ok(videoDependencies.has("@narratage/cli"));
@@ -178,8 +178,8 @@ test("generic and video CLIs reach no Provider package and video CLI activates n
 test("domain packages confine their Text dependency to Surface and activation entries", async () => {
   const { readdir, readFile } = await import("node:fs/promises");
   const surfaceOnly = [
-    "broll", "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
-    "image-transform", "media", "seedance", "seedance-speaker", "speech-spine", "whisperx",
+    "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
+    "image-transform", "media", "media-pipeline", "media-track", "seedance", "seedance-speaker", "speech-spine", "whisperx",
   ];
   const allowed = new Set(["surface.ts", "activation.ts"]);
   for (const name of surfaceOnly) {
