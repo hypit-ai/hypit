@@ -2,6 +2,7 @@ import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { spatialDependency, spatialTypes, spatialFrameSchema } from "@narratage/spatial";
 import type { Track } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
@@ -65,12 +66,7 @@ const textItemSchema = object({
   }) },
   z: { schema: signedInteger },
   tieBreak: { schema: string },
-  box: { schema: object({
-    xPercent: { schema: number },
-    yPercent: { schema: number },
-    widthPercent: { schema: positiveNumber },
-    heightPercent: { schema: positiveNumber },
-  }) },
+  frame: { schema: spatialFrameSchema },
   appearance: { schema: textAppearanceSchema },
 });
 
@@ -88,10 +84,7 @@ export const textTrackSpecSchema: ValueSchema = object({
     text: { schema: string },
     during: { schema: { kind: "literal", value: "full" } },
     z: { schema: signedInteger },
-    box: { schema: object({
-      xPercent: { schema: number }, yPercent: { schema: number },
-      widthPercent: { schema: positiveNumber }, heightPercent: { schema: positiveNumber },
-    }) },
+    frame: { schema: spatialFrameSchema },
     appearance: { schema: textAppearanceSchema },
   }) } },
 });
@@ -106,10 +99,6 @@ const textItemSpecSchema: ValueSchema = object({
   id: { schema: string },
   text: { schema: string },
   z: { schema: signedInteger },
-  box: { schema: object({
-    xPercent: { schema: number }, yPercent: { schema: number },
-    widthPercent: { schema: positiveNumber }, heightPercent: { schema: positiveNumber },
-  }) },
   appearance: { schema: textAppearanceSchema },
 });
 
@@ -128,6 +117,7 @@ export const textTrackManifest: ModuleManifest = {
     programSpaceDependency,
     narrativeDependency,
     semanticMapDependency,
+    spatialDependency,
     compositionDependency,
   ],
   types: [
@@ -156,6 +146,7 @@ export const textTrackManifest: ModuleManifest = {
       { name: "set", type: textTrackTypes.set },
       { name: "header", type: textTrackTypes.header },
       { name: "space", type: programSpaceTypes.programSpace },
+      { name: "frame", type: spatialTypes.frame },
       { name: "spec", type: textTrackTypes.itemSpec },
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],
@@ -169,6 +160,7 @@ export const textTrackManifest: ModuleManifest = {
       { name: "map", type: semanticMapTypes.complete },
       { name: "selection", type: narrativeTypes.selection },
       { name: "space", type: programSpaceTypes.programSpace },
+      { name: "frame", type: spatialTypes.frame },
       { name: "spec", type: textTrackTypes.itemSpec },
     ],
     outputs: [{ name: "set", type: textTrackTypes.set }],

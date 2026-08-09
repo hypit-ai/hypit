@@ -6,7 +6,7 @@ description: The SVS Recipe language — CSS-like stylesheets for film, caption,
 # SVS Stylesheets
 
 SVS (`.svs`) files define reusable, typed configuration values using a CSS-like syntax. They
-configure film dimensions, caption appearance, B-roll layout, text styling, speech estimation
+configure Film appearance, caption appearance, B-roll layout, text styling, speech estimation
 parameters, generation settings, and typography choices. SVS values are called **Recipes** — they are
 immutable typed Records that consuming components validate and interpret.
 
@@ -17,9 +17,6 @@ immutable typed Records that consuming components validate and interpret.
 
 <sheet version="1" id="studio">
   film.vertical {
-    width: 1080;
-    height: 1920;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -49,28 +46,24 @@ The prefix comes from the `as=` attribute; the path comes from `namespace.name` 
 
 ## Film
 
-Film appearance — canvas dimensions and background color.
+Film appearance owns only the canvas clear color. Canvas dimensions are an explicit
+`space:Canvas` graph value, while frame rate comes from ProgramSpace.
 
 ```svs
 film.vertical {
-  width: 1080;
-  height: 1920;
-  frame-rate: 30;
   background: #09090B;
 }
 ```
 
 | Property | Description |
 |---|---|
-| `width` | Canvas width in pixels |
-| `height` | Canvas height in pixels |
-| `frame-rate` | Frames per second (typically 30) |
 | `background` | Canvas clear color (hex) |
 
 Referenced by `film:Film` via the `appearance` attribute:
 
 ```svml
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```
 
 ## Caption Fine
@@ -199,15 +192,11 @@ Referenced by `broll:Item` via the `appearance` attribute:
 
 ## Text
 
-Text overlay appearance — position, typography.
+Text overlay appearance — typography and Paint. Placement is a separate `SpatialFrame` graph edge.
 
 ```svs
 text.title {
   stack-order: 90;
-  x: 0.06;
-  y: 0.06;
-  width: 0.88;
-  height: 0.10;
   font: Inter;
   weight: 900;
   size: 64;
@@ -220,8 +209,6 @@ text.title {
 | Property | Description |
 |---|---|
 | `stack-order` | Z-stacking order |
-| `x`, `y` | Position as fraction of canvas |
-| `width`, `height` | Size as fraction of canvas |
 | `font` | Font family name |
 | `weight` | Font weight |
 | `size` | Font size in pixels |
@@ -232,7 +219,8 @@ text.title {
 Referenced by `text:Item` via the `appearance` attribute:
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<text:Item text="MEANING" during="full" frame={title-frame}
+  appearance={studio.text.title}/>
 ```
 
 ## Speech estimation
@@ -383,9 +371,6 @@ A complete `studio.svs` file for a four-take talking-head project:
   }
 
   film.vertical {
-    width: 720;
-    height: 1280;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -421,5 +406,6 @@ This file is imported once in the `.svml` source and its values are referenced t
 
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="720" height="1280"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```

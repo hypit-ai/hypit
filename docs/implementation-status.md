@@ -187,6 +187,13 @@ Implemented and executable:
   COLRv1 Emoji path has real Chromium pixel evidence, Fine accepts the generic ordered stack as an
   ordinary author reference, and HyperFrames materializes those exact bytes;
 - Caption, B-roll, Text and Speech lowering to self-contained peer Tracks;
+- `@narratage/temporal`: strict Selection/Moment `one` and `each`, stable occurrence identity,
+  exact rational point expressions, ProgramSpace clipping, deterministic frame quantization,
+  relation validation and cumulative/exclusive/settled trigger schedules;
+- `@narratage/spatial`: explicit CanvasSpace, Frame/Point/Path geometry, parent-relative and anchored
+  Frames, intrinsic extents and deterministic two-frame ContentFit with independent focal points;
+- Film receives CanvasSpace, ProgramSpace and peer Tracks through separate graph edges: dimensions,
+  frame rate and Film appearance no longer compete as duplicate truths;
 - arbitrary Track folding into Composition and an explicitly imported HyperFrames render route;
 - B-roll-owned pop/fade/slide, push/page-turn and local SFX behavior;
 - renderer-neutral, frame-addressable Visual IR, exact Artifact references and compositable Surface
@@ -194,6 +201,7 @@ Implemented and executable:
 
 Still pre-freeze and deliberately deferred:
 
+- simple and complete Text/Media migrations through the shared Spatial package;
 - complete Text three-box, exact-font and layered-decoration behavior;
 - B-roll foreground/backdrop sampling and focal media-box acceptance;
 - Ranking and other old production author packages;

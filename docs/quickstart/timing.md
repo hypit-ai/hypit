@@ -86,7 +86,7 @@ ProgramSpace is not a component you declare — it is produced by `speech:Spine`
 component that needs to know the total program duration and frame domain.
 
 ```svml
-<film:Film id="main" space={speech.space} ...>
+<film:Film id="main" canvas={vertical} space={speech.space} ...>
 <caption-fine:Track id="captions" ... space={speech.space} .../>
 <text:Track id="titles" space={speech.space}>
 <render:Video id="final" composition={main.composition} space={speech.space}/>

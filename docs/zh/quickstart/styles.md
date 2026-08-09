@@ -14,9 +14,6 @@ SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。
 
 <sheet version="1" id="studio">
   film.vertical {
-    width: 1080;
-    height: 1920;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -45,28 +42,24 @@ SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。
 
 ## Film
 
-Film 外观——画布尺寸和背景颜色。
+Film 外观只拥有画布清除颜色。画布尺寸是显式的 `space:Canvas` 图值，帧率来自
+ProgramSpace。
 
 ```svs
 film.vertical {
-  width: 1080;
-  height: 1920;
-  frame-rate: 30;
   background: #09090B;
 }
 ```
 
 | 属性 | 描述 |
 |---|---|
-| `width` | 画布宽度（像素） |
-| `height` | 画布高度（像素） |
-| `frame-rate` | 每秒帧数（通常为 30） |
 | `background` | 画布清除颜色（十六进制） |
 
 通过 `film:Film` 的 `appearance` 属性引用：
 
 ```svml
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```
 
 ## Caption Fine
@@ -195,15 +188,11 @@ broll.product {
 
 ## 文本
 
-文本叠加层外观——位置、排版。
+文本叠加层外观——排版与 Paint。位置由另一条 `SpatialFrame` 图边提供。
 
 ```svs
 text.title {
   stack-order: 90;
-  x: 0.06;
-  y: 0.06;
-  width: 0.88;
-  height: 0.10;
   font: Inter;
   weight: 900;
   size: 64;
@@ -216,8 +205,6 @@ text.title {
 | 属性 | 描述 |
 |---|---|
 | `stack-order` | Z 轴层叠顺序 |
-| `x`、`y` | 位置，以画布比例表示 |
-| `width`、`height` | 尺寸，以画布比例表示 |
 | `font` | 字体族名称 |
 | `weight` | 字体粗细 |
 | `size` | 字体大小（像素） |
@@ -228,7 +215,8 @@ text.title {
 通过 `text:Item` 的 `appearance` 属性引用：
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<text:Item text="MEANING" during="full" frame={title-frame}
+  appearance={studio.text.title}/>
 ```
 
 ## 语音估算
@@ -377,9 +365,6 @@ Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现�
   }
 
   film.vertical {
-    width: 720;
-    height: 1280;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -415,5 +400,6 @@ Recipe 的环境字体兜底名，适合原型，但不能保证字节级复现�
 
 <caption-fine:Style id="primary-caption" recipe={studio.caption.primary}/>
 
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="720" height="1280"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```

@@ -41,6 +41,24 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/script-surface.md`](../spec/script-surface.md)
 - [`../spec/author-surface-binding.md`](../spec/author-surface-binding.md)
 - [`../spec/caption-program.md`](../spec/caption-program.md)
+- [`../spec/caption-fine.md`](../spec/caption-fine.md) — implemented first field-free Caption Style
+  family and its completed browser evidence.
+- [`../spec/track-authoring.md`](../spec/track-authoring.md) — shared package-authoring discipline;
+  the temporal projection and occurrence-expansion design governs the next Track migration.
+- [`../spec/spatial-layout.md`](../spec/spatial-layout.md) — shared Canvas/Frame/Point/Path geometry,
+  two-frame fitting, alignment and explicit backing-layer boundary.
+- [`../spec/text-track.md`](../spec/text-track.md) — complete two-dimensional Text model, old-system
+  and editor attack audit, terminal-IR gaps and Caption feedback.
+- [`../spec/ranking-track.md`](../spec/ranking-track.md) — old Ranking audit, separate official
+  components, triggered group schedule and renderer-neutral migration plan.
+- [`../spec/media-track.md`](../spec/media-track.md) — unified Item/Sequence media model, ordered
+  layers, playback, motion, internal handoffs, audio projection and Speech reuse.
+- [`../spec/deck-track.md`](../spec/deck-track.md) — independent depth-stack Deck Track, collection
+  state, visible neighborhood and deterministic whole-group reflow.
+- [`../spec/audio-track.md`](../spec/audio-track.md) — explicit normalized audio inputs, temporal
+  placement, sample occupancy, mixing boundary and old-system migration.
+- [`../spec/screen-overlay.md`](../spec/screen-overlay.md) — self-contained full-canvas visual
+  contributions and the hard boundary against cross-Track adjustment effects.
 - [`../spec/track-composition.md`](../spec/track-composition.md)
 - [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
 - [`../spec/visual-ir.md`](../spec/visual-ir.md)

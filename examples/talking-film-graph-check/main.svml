@@ -10,6 +10,7 @@
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="text" from="@narratage/text-track@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -37,11 +38,15 @@
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
     map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
   <text:Track id="titles" space={speech.space}>
-    <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+    <text:Item text="MEANING" during="full" frame={title-frame}
+      appearance={studio.text.title}/>
   </text:Track>
 
-  <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={cards.visual}/>

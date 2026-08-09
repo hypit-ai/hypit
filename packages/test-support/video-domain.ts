@@ -4,6 +4,7 @@ import { mediaComponent, mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceManifest } from "@narratage/program-space";
 import { semanticMapManifest } from "@narratage/semantic-map";
+import { spatialComponent, spatialManifest } from "@narratage/spatial";
 import { speechManifest } from "@narratage/speech";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { visualIrManifest } from "@narratage/visual-ir";
@@ -17,8 +18,9 @@ export const videoContractManifests = [
   speechManifest,
   speechEvidenceManifest,
   semanticMapManifest,
+  spatialManifest,
   visualIrManifest,
   compositionManifest,
 ] as const;
 
-export { compositionComponent, mediaComponent };
+export { compositionComponent, mediaComponent, spatialComponent };

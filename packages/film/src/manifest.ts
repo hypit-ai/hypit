@@ -2,6 +2,7 @@ import { programSpaceDependency, programSpaceTypes } from "@narratage/program-sp
 import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
+import { spatialDependency, spatialTypes } from "@narratage/spatial";
 import { svsManifest, svsModuleRef } from "@narratage/svs";
 
 import {
@@ -25,27 +26,15 @@ export const filmProducers = {
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
-const integer = { kind: "number", integer: true, minimum: 1 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({
   kind: "object",
   fields,
 });
 
-const canvasSchema = object({
-  width: { schema: integer },
-  height: { schema: integer },
-  clearColor: { schema: string },
-});
-const frameRateSchema = object({
-  numerator: { schema: integer },
-  denominator: { schema: integer },
-});
-
 export const filmProgramSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.film-program@1" } },
   id: { schema: string },
-  frameRate: { schema: frameRateSchema },
-  canvas: { schema: canvasSchema },
+  clearColor: { schema: string },
 });
 
 export const filmTrackSetSchema: ValueSchema = object({
@@ -64,6 +53,7 @@ export const filmManifest: ModuleManifest = {
   version: filmModuleRef.version,
   dependencies: [
     programSpaceDependency,
+    spatialDependency,
     compositionDependency,
     { module: svsModuleRef, digest: digestOf(svsManifest) },
   ],
@@ -129,6 +119,7 @@ export const filmManifest: ModuleManifest = {
       name: filmProducers.compileComposition.name,
       inputs: [
         { name: "program", type: filmTypes.program },
+        { name: "canvas", type: spatialTypes.canvas },
         { name: "space", type: programSpaceTypes.programSpace },
         { name: "set", type: filmTypes.trackSet },
       ],

@@ -16,9 +16,6 @@
   }
 
   film.vertical {
-    width: 1080;
-    height: 1920;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -106,10 +103,6 @@
 
   text.title {
     stack-order: 90;
-    x: 0.06;
-    y: 0.06;
-    width: 0.88;
-    height: 0.10;
     font: inter-black;
     weight: 900;
     size: 64;

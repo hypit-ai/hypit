@@ -33,6 +33,12 @@
       "@narratage/program-space": [
         "packages/program-space/src/index.ts"
       ],
+      "@narratage/temporal": [
+        "packages/temporal/src/index.ts"
+      ],
+      "@narratage/spatial": [
+        "packages/spatial/src/index.ts"
+      ],
       "@narratage/speech": [
         "packages/speech/src/index.ts"
       ],
