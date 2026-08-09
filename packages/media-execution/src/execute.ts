@@ -420,9 +420,15 @@ function atempo(rate: number): string[] {
 
 function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex: number): string {
   const length = clip.targetEndSampleExclusive - clip.targetStartSample;
+  const sourceLength = clip.sourceEndSampleExclusive - clip.sourceStartSample;
   const filters = [
-    `atrim=start_sample=${clip.sourceStartSample}`,
+    `atrim=start_sample=${clip.sourceStartSample}:end_sample=${clip.sourceEndSampleExclusive}`,
     "asetpts=PTS-STARTPTS",
+    ...(clip.sourceLoop ? [`aloop=loop=-1:size=${sourceLength}:start=0`] : []),
+    ...(clip.sourcePhaseSample === 0 ? [] : [
+      `atrim=start_sample=${clip.sourcePhaseSample}`,
+      "asetpts=PTS-STARTPTS",
+    ]),
     ...atempo(clip.playbackRate),
     `atrim=start_sample=0:end_sample=${length}`,
     `apad=whole_len=${length}`,
@@ -706,9 +712,14 @@ export async function executeRenderTimelineAudio(
   const plan: AudioProgramPlan = need.plan;
   const work = await mkdtemp(join(tmpdir(), "svml-media-audio-"));
   try {
-    const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number }>();
+    const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number; sampleFrames: number }>();
     for (const clip of plan.clips) {
-      if (artifacts.has(clip.artifact.digest)) continue;
+      const existing = artifacts.get(clip.artifact.digest);
+      if (existing !== undefined) {
+        assert(existing.sampleFrames === clip.sourceSampleFrames,
+          `Audio input ${clip.artifact.digest} has conflicting sample counts in one plan`);
+        continue;
+      }
       const inputIndex = artifacts.size;
       const path = join(work, `input-${inputIndex}.wav`);
       await stageArtifact(env, clip.artifact, path);
@@ -720,8 +731,14 @@ export async function executeRenderTimelineAudio(
         maxProbeOutputBytes: env.maxProbeOutputBytes,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
-      assert(audio.decodedSampleFrames > 0, `Audio input ${clip.artifact.digest} is empty`);
-      artifacts.set(clip.artifact.digest, { source: clip.artifact, path, inputIndex });
+      assert(audio.decodedSampleFrames === clip.sourceSampleFrames,
+        `Audio input ${clip.artifact.digest} sample count differs from its plan`);
+      artifacts.set(clip.artifact.digest, {
+        source: clip.artifact,
+        path,
+        inputIndex,
+        sampleFrames: audio.decodedSampleFrames,
+      });
     }
 
     const output = join(work, "program.wav");

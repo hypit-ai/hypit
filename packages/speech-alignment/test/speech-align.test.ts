@@ -75,7 +75,7 @@ function speechBasis(
   const take = sealSpeechBasis({
     contract: "svml.speech-basis@1",
     programSpace,
-    audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
+    audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
     visualTrack: {
       clips: segments.map((segment) => ({
         segmentId: segment.segmentId,

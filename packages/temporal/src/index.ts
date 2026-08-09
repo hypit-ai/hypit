@@ -4,6 +4,7 @@ import type { ModuleManifest } from "@narratage/protocol";
 export * from "./location.js";
 export * from "./projection.js";
 export * from "./schedule.js";
+export * from "./sample.js";
 export type * from "./types.js";
 
 export const temporalModuleRef = { name: "@narratage/temporal", version: "0.0.0-dev" } as const;

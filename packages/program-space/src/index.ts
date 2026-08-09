@@ -42,11 +42,22 @@ export function programSpaceFrameCount(programSpace: ProgramSpace): number {
 }
 export function programSpaceSampleFrames(programSpace: ProgramSpace, sampleRate: number): number {
   const frames = programSpaceFrameCount(programSpace);
+  return programFrameSampleBoundary(programSpace, frames, sampleRate);
+}
+export function programFrameSampleBoundary(
+  programSpace: ProgramSpace,
+  frame: number,
+  sampleRate: number,
+): number {
+  const frames = programSpaceFrameCount(programSpace);
+  if (!Number.isSafeInteger(frame) || frame < 0 || frame > frames) {
+    throw new Error("ProgramSpace frame boundary is invalid.");
+  }
   if (!Number.isSafeInteger(sampleRate) || sampleRate <= 0) throw new Error("ProgramSpace sample rate is invalid.");
-  const numerator = BigInt(frames) * BigInt(sampleRate) * BigInt(programSpace.frameRate.denominator);
+  const numerator = BigInt(frame) * BigInt(sampleRate) * BigInt(programSpace.frameRate.denominator);
   const denominator = BigInt(programSpace.frameRate.numerator);
   const value = (numerator * 2n + denominator) / (denominator * 2n);
-  if (value < 1n || value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("ProgramSpace sample domain exceeds safe arithmetic.");
+  if (value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("ProgramSpace sample domain exceeds safe arithmetic.");
   return Number(value);
 }
 export function assertProgramSpaceIdentity(programSpace: ProgramSpace): void {

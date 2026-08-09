@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@narratage/artifact": "workspace:*",
+    "@narratage/audio-track": "workspace:*",
     "@narratage/broll": "workspace:*",
     "@narratage/caption": "workspace:*",
     "@narratage/caption-fine": "workspace:*",
@@ -35,6 +36,7 @@
     "@narratage/image-transform": "workspace:*",
     "@narratage/local": "workspace:*",
     "@narratage/media": "workspace:*",
+    "@narratage/media-track": "workspace:*",
     "@narratage/media-pipeline": "workspace:*",
     "@narratage/narrative": "workspace:*",
     "@narratage/program-space": "workspace:*",
@@ -50,6 +52,7 @@
     "@narratage/runtime-adapter": "workspace:*",
     "@narratage/runtime-adapter-node": "workspace:*",
     "@narratage/script": "workspace:*",
+    "@narratage/screen-overlay": "workspace:*",
     "@narratage/seedance": "workspace:*",
     "@narratage/seedance-speaker": "workspace:*",
     "@narratage/semantic-map": "workspace:*",

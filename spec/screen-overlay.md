@@ -1,7 +1,8 @@
 # SVML Screen Overlay Authoring
 
-Status: design authority for the optional official Screen Overlay package. It is not implemented by
-an author Surface yet and is not a frozen public ABI.
+Status: implemented pre-release contract for the optional official Screen Overlay package. Its
+self-described Surface, eleven typed components and sequential/parallel browser evidence execute;
+it is not yet a frozen public ABI.
 
 ## Purpose
 
@@ -58,10 +59,14 @@ never gains a secret “current frame” input.
 The official package may expose several readable author components under one namespace:
 
 ```xml
-<screen:Track id="screen-paint">
-  <screen:Flash at={story.moment.hit} for="240ms" color="#ffffff" intensity={0.9}/>
-  <screen:Vignette during={program} opacity={0.28}/>
-  <screen:Grain during={program} amount={0.12} seed={23}/>
+<screen:Track id="screen-paint" canvas={vertical} space={speech.space}>
+  <screen:Flash at={story.moment.hit} map={timing.map} for="240ms" z="90"
+    color="#ffffff" intensity="0.9" attack="2" hold="3" decay="5"/>
+  <screen:Vignette during="program" z="20"
+    center-x="0.5" center-y="0.5" radius-x="0.82" radius-y="0.68"
+    softness="0.3" color="#000000" opacity="0.28"/>
+  <screen:Grain during="program" z="70"
+    amount="0.12" size="3" chroma="monochrome" motion-rate="0.5" seed="23"/>
 </screen:Track>
 ```
 
@@ -82,19 +87,20 @@ effect.
 Every overlay item has four independent author concerns:
 
 ```ts
-type ScreenOverlayItemProgram = {
+type ScreenOverlayItemSpec = {
   readonly id: string;
   readonly content: ScreenOverlayComponent;
-  readonly temporal: TemporalBinding;
-  readonly presentation: ScreenOverlayPresentation;
-  readonly stacking: AbsoluteStackingIntent;
+  readonly projection: TemporalWindowProjection;
+  readonly expansion: OccurrenceExpansion;
+  readonly stackingOrder: number;
 };
 ```
 
 - `content` identifies the actual visual component and its typed parameters;
-- `temporal` uses the shared Selection/Moment/Program projection algebra;
-- `presentation` describes the item's within-window envelope or local motion;
-- `stacking` resolves to an ordinary absolute Present stacking key.
+- component-owned envelope and local-motion parameters remain inside that typed component rather
+  than a universal presentation bag;
+- `projection` and `expansion` use the shared Selection/Moment/Program algebra;
+- `stackingOrder` resolves with stable authored identity to an ordinary absolute Present key.
 
 Canvas geometry is not an author-selected Spatial Frame here. A Screen Overlay intentionally owns
 the complete connected CanvasSpace. A partial-frame light, image, card or blur is a normal Media,
@@ -136,7 +142,8 @@ These can normally lower to full-canvas boxes, gradients and local keyframes:
 
 ### Owned Surface candidates
 
-These may be easier or more exact as deterministic alpha-bearing `CompositableSurface` values:
+These may be easier or more exact as deterministic alpha-bearing `CompositableSurface` values, but
+the current official implementations fit exactly in the closed code-free Visual IR:
 
 - `Grain` — amount, grain size, monochrome/color, motion rate and required seed;
 - `LightLeak` — colors, angle, softness, travel, intensity and seed when stochastic;
@@ -216,19 +223,19 @@ Retire:
 
 ## 9. Lowering and acceptance
 
-Implementation should follow the shared Temporal and existing Visual Track contracts:
+Implementation follows the shared Temporal and existing Visual Track contracts:
 
-1. add the self-described `@narratage/screen-overlay` author package;
-2. implement separate typed author components rather than one unvalidated parameter bag;
-3. lower simple components to `svml.visual-ir@1` and complex ones to typed owned Surfaces;
-4. use the connected CanvasSpace and ProgramSpace, never Film globals;
-5. emit ordinary absolute-stack Presents;
-6. add deterministic frame tests for every component and envelope;
-7. prove identical pixels across local and parallel frame rendering;
-8. prove multiple overlay Tracks interleave with Text/Caption/Media by stacking key;
-9. add negative tests rejecting any lower-composite, sibling-Track, backdrop-filter or hidden audio
+1. **Implemented:** the self-described `@narratage/screen-overlay` author package;
+2. **Implemented:** eleven separate typed author components rather than one unvalidated bag;
+3. **Implemented:** exact code-free `svml.visual-ir@1` lowering; the generic typed owned-Surface
+   escape remains available when a future component cannot be represented exactly;
+4. **Implemented:** connected CanvasSpace and ProgramSpace, never Film globals;
+5. **Implemented:** ordinary absolute-stack Presents;
+6. **Implemented:** deterministic structural/frame tests for every component and envelope;
+7. **Implemented:** identical pixels across one-worker and three-worker real Chromium rendering;
+8. **Implemented:** multiple Overlay Tracks interleave with peer Tracks by stacking key;
+9. **Implemented:** negative tests rejecting any lower-composite, sibling-Track, backdrop-filter or hidden audio
    dependency.
 
 The design fails if installing a new overlay requires a Core branch, a Composition family, a
 HyperFrames component switch or an implicit snapshot of already composed pixels.
-

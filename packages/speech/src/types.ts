@@ -4,12 +4,12 @@ import type { BlobRef } from "@narratage/protocol";
 export type SpeechDuration = { readonly contract: "svml.speech-duration@1"; readonly durationSec: number };
 export type SpeechBasisSegment = { readonly segmentId: string; readonly startSec: number; readonly endSec: number };
 export type SpeechBasis = {
-  readonly contract: "svml.speech-basis@1"; readonly programSpace: ProgramSpace; readonly audio: MediaArtifactRef;
+  readonly contract: "svml.speech-basis@1"; readonly programSpace: ProgramSpace; readonly audio: BlobRef;
   readonly visualTrack: { readonly clips: readonly { readonly segmentId: string; readonly artifact: MediaArtifactRef; readonly startSec: number; readonly endSec: number }[] };
   readonly segments: readonly SpeechBasisSegment[];
 };
 export type SpeechAudioBasis = {
-  readonly contract: "svml.speech-audio-basis@1"; readonly programSpace: ProgramSpace; readonly audio: MediaArtifactRef;
+  readonly contract: "svml.speech-audio-basis@1"; readonly programSpace: ProgramSpace; readonly audio: BlobRef;
   readonly segments: readonly SpeechBasisSegment[];
 };
 export type SpeechEvidenceAudio = {

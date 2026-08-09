@@ -29,10 +29,10 @@ function fixture() {
     durationSec: 0,
   };
   const sound = {
+    kind: "blob" as const,
     digest: digestOf("hyperframes:sound"),
     size: 20,
     mediaType: "audio/wav",
-    durationSec: programSpace.durationSec,
   };
   const lower = sealVisualTrack({
     contract: "svml.visual-track@1",
@@ -68,7 +68,17 @@ function fixture() {
   const audio = sealAudioTrack({
     contract: "svml.audio-track@1",
     id: "sound",
-    clips: [{ id: "main", span: { startFrame: 0, endFrameExclusive: 30 }, artifact: sound, bus: "speech" }],
+    clips: [{
+      id: "main",
+      artifact: sound,
+      target: { startSample: 0, endSampleExclusive: 48_000 },
+      source: { sampleFrames: 48_000, startSample: 0, endSampleExclusive: 48_000, loop: false, phaseSample: 0 },
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: 1,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
+    }],
   });
   const composition = sealComposition({
     contract: "svml.composition@1",

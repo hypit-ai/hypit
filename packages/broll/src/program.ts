@@ -1,5 +1,10 @@
 import type { MediaArtifactRef } from "@narratage/media";
-import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
+import type { BlobRef } from "@narratage/protocol";
+import {
+  assertProgramSpaceIdentity,
+  programFrameSampleBoundary,
+  programSpaceFrameCount,
+} from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertAudioTrackIdentity, assertVisualTrackIdentity, sealAudioTrack, sealVisualTrack } from "@narratage/composition";
 import type { AudioClip, AudioTrack, VisualAnimation, VisualElement, VisualStyleDeclaration } from "@narratage/composition";
@@ -55,6 +60,18 @@ function assertArtifact(artifact: MediaArtifactRef, label: string, kinds: readon
   }
 }
 
+function assertAudioArtifact(artifact: BlobRef, label: string): void {
+  if (
+    artifact.kind !== "blob"
+    || !isDigest(artifact.digest)
+    || !Number.isSafeInteger(artifact.size)
+    || artifact.size < 0
+    || artifact.mediaType !== "audio/wav"
+  ) {
+    throw new Error(`${label} must be a canonical WAV BlobRef.`);
+  }
+}
+
 function assertSpan(item: { readonly startFrame: number; readonly endFrameExclusive: number }, totalFrames: number, label: string): void {
   if (
     !Number.isSafeInteger(item.startFrame)
@@ -95,18 +112,19 @@ function assertItem(item: BrollItem, totalFrames: number): void {
   if (item.mediaStartSec !== undefined && (!Number.isFinite(item.mediaStartSec) || item.mediaStartSec < 0)) {
     throw new Error(`B-roll item ${item.id} mediaStartSec is invalid.`);
   }
-  if (item.audioGain !== undefined && (!Number.isFinite(item.audioGain) || item.audioGain < 0)) {
-    throw new Error(`B-roll item ${item.id} audioGain is invalid.`);
-  }
   if (item.backgroundColor !== undefined && !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(item.backgroundColor)) {
     throw new Error(`B-roll item ${item.id} background color is invalid.`);
   }
   if (item.borderRadiusPx !== undefined && (!Number.isFinite(item.borderRadiusPx) || item.borderRadiusPx < 0)) {
     throw new Error(`B-roll item ${item.id} border radius is invalid.`);
   }
-  if (item.includeAudio && isImage) throw new Error(`B-roll image ${item.id} cannot contribute source audio.`);
-  if (item.includeAudio && item.playback === "loop") {
-    throw new Error(`B-roll item ${item.id} cannot loop source audio in the v1 AudioTrack contract.`);
+  if (item.audio !== undefined) {
+    assertAudioArtifact(item.audio.artifact, `B-roll item ${item.id} source audio`);
+    if (isImage
+      || !Number.isSafeInteger(item.audio.sampleFrames) || item.audio.sampleFrames <= 0
+      || !Number.isFinite(item.audio.gain) || item.audio.gain < 0) {
+      throw new Error(`B-roll item ${item.id} source audio is invalid.`);
+    }
   }
   const duration = item.span.endFrameExclusive - item.span.startFrame;
   assertMotion(item.enter, duration, `B-roll item ${item.id} enter motion`);
@@ -151,8 +169,9 @@ function transitionMaps(program: BrollProgram, totalFrames: number) {
     if (!["push", "page-turn"].includes(transition.operator)) throw new Error(`B-roll transition ${transition.id} operator is unsupported.`);
     if (!["left", "right", "up", "down"].includes(transition.direction)) throw new Error(`B-roll transition ${transition.id} direction is unsupported.`);
     if (transition.sfx) {
-      assertArtifact(transition.sfx.artifact, `B-roll transition ${transition.id} SFX`, ["audio"]);
-      if (transition.sfx.gain !== undefined && (!Number.isFinite(transition.sfx.gain) || transition.sfx.gain < 0)) {
+      assertAudioArtifact(transition.sfx.artifact, `B-roll transition ${transition.id} SFX`);
+      if (!Number.isSafeInteger(transition.sfx.sampleFrames) || transition.sfx.sampleFrames <= 0
+        || !Number.isFinite(transition.sfx.gain) || transition.sfx.gain < 0) {
         throw new Error(`B-roll transition ${transition.id} SFX gain is invalid.`);
       }
     }
@@ -321,46 +340,60 @@ function itemElements(
       ...(item.mediaStartSec === undefined ? {} : { mediaStartSec: item.mediaStartSec }),
       ...(playbackRate === undefined ? {} : { playbackRate }),
       ...(!isImage && item.playback === "loop" ? { loop: true } : {}),
-      ...(!isImage ? { muted: item.includeAudio !== true } : {}),
+      ...(!isImage ? { muted: true } : {}),
     },
   ];
 }
 
 function audioClips(program: BrollProgram, programSpace: ProgramSpace): AudioClip[] {
   const clips: AudioClip[] = program.items.flatMap((item) => {
-    if (!item.includeAudio) return [];
-    const presentSeconds = (item.span.endFrameExclusive - item.span.startFrame)
-      * programSpace.frameRate.denominator / programSpace.frameRate.numerator;
-    const playbackRate = item.playback === "stretch" && item.artifact.durationSec > 0
-      ? item.artifact.durationSec / presentSeconds
-      : undefined;
+    if (item.audio === undefined) return [];
+    const targetStart = programFrameSampleBoundary(programSpace, item.span.startFrame, 48_000);
+    const targetEnd = programFrameSampleBoundary(programSpace, item.span.endFrameExclusive, 48_000);
+    const targetLength = targetEnd - targetStart;
+    const playbackRate = item.playback === "stretch"
+      ? item.audio.sampleFrames / targetLength
+      : 1;
     return [{
       id: `source:${item.id}`,
-      span: { ...item.span },
-      artifact: item.artifact,
-      ...(item.mediaStartSec === undefined ? {} : { mediaStartSec: item.mediaStartSec }),
-      ...(playbackRate === undefined ? {} : { playbackRate }),
-      ...(item.audioGain === undefined ? {} : { gain: item.audioGain }),
-      bus: "source" as const,
+      artifact: item.audio.artifact,
+      target: { startSample: targetStart, endSampleExclusive: targetEnd },
+      source: {
+        sampleFrames: item.audio.sampleFrames,
+        startSample: 0,
+        endSampleExclusive: item.audio.sampleFrames,
+        loop: item.playback === "loop",
+        phaseSample: 0,
+      },
+      playbackRate,
+      pitch: "preserve" as const,
+      gain: item.audio.gain,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
     }];
   });
   const totalFrames = programSpaceFrameCount(programSpace);
   for (const transition of program.transitions) {
     if (!transition.sfx) continue;
-    const durationFrames = Math.max(1, Math.round(
-      transition.sfx.artifact.durationSec
-        * programSpace.frameRate.numerator
-        / programSpace.frameRate.denominator,
-    ));
+    const startSample = programFrameSampleBoundary(programSpace, transition.span.startFrame, 48_000);
+    const programSamples = programFrameSampleBoundary(programSpace, totalFrames, 48_000);
+    const endSample = Math.min(programSamples, startSample + transition.sfx.sampleFrames);
     clips.push({
       id: `transition:${transition.id}`,
-      span: {
-        startFrame: transition.span.startFrame,
-        endFrameExclusive: Math.min(totalFrames, transition.span.startFrame + durationFrames),
-      },
       artifact: transition.sfx.artifact,
-      ...(transition.sfx.gain === undefined ? {} : { gain: transition.sfx.gain }),
-      bus: "sfx",
+      target: { startSample, endSampleExclusive: endSample },
+      source: {
+        sampleFrames: transition.sfx.sampleFrames,
+        startSample: 0,
+        endSampleExclusive: endSample - startSample,
+        loop: false,
+        phaseSample: 0,
+      },
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: transition.sfx.gain,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
     });
   }
   return clips;

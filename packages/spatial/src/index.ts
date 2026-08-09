@@ -16,7 +16,7 @@ export {
   spatialSurfaceDigests,
   spatialTypes,
 } from "./manifest.js";
-export { spatialFrameSchema } from "./schema.js";
+export { contentFitSchema, intrinsicExtentSchema, spatialFrameSchema } from "./schema.js";
 export {
   decodeAnchoredFrameSurface,
   decodeAspectFrameSurface,

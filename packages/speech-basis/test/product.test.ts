@@ -84,10 +84,10 @@ function sampleTake(label = "generated"): SpeechBasis {
     frameRate: { numerator: 30, denominator: 1 },
   });
   const audio = {
+    kind: "blob" as const,
     digest: digestOf(`${label}:audio`),
     size: 12,
     mediaType: "audio/wav",
-    durationSec,
   };
   const visual = {
     digest: digestOf(`${label}:visual`),
@@ -276,7 +276,11 @@ test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   assert.equal(visual.contract, "svml.visual-track@1");
   assert.equal(audio.contract, "svml.audio-track@1");
   assert.deepEqual(programSpace, take.programSpace);
-  assert.equal(visual.presents[0]?.span.endFrameExclusive, audio.clips[0]?.span.endFrameExclusive);
+  assert.equal(
+    audio.clips[0]?.target.endSampleExclusive,
+    Math.round(visual.presents[0]!.span.endFrameExclusive * 48_000
+      * take.programSpace.frameRate.denominator / take.programSpace.frameRate.numerator),
+  );
 });
 
 test("a substitute visual Candidate does not contaminate an independent exact audio path", () => {

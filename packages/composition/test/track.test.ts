@@ -4,6 +4,7 @@ import test from "node:test";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { createResolvedClosure } from "@narratage/core";
 import { canonicalize, digestOf } from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
 import { artifactManifest } from "@narratage/artifact";
 import type { MediaArtifactRef } from "@narratage/media";
@@ -36,11 +37,11 @@ const image: MediaArtifactRef = {
   mediaType: "image/png",
   durationSec: 0,
 };
-const audio: MediaArtifactRef = {
+const audio: BlobRef = {
+  kind: "blob",
   digest: digestOf("audio"),
   size: 24,
   mediaType: "audio/wav",
-  durationSec: 4,
 };
 
 function fixture() {
@@ -66,7 +67,17 @@ function fixture() {
   const sound = sealAudioTrack({
     contract: "svml.audio-track@1",
     id: "speech",
-    clips: [{ id: "speech", span: { startFrame: 0, endFrameExclusive: 120 }, artifact: audio, bus: "speech" }],
+    clips: [{
+      id: "speech",
+      artifact: audio,
+      target: { startSample: 0, endSampleExclusive: 192_000 },
+      source: { sampleFrames: 192_000, startSample: 0, endSampleExclusive: 192_000, loop: false, phaseSample: 0 },
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: 1,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
+    }],
   });
   return { programSpace, visual, sound };
 }

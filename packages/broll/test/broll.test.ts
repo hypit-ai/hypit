@@ -17,6 +17,7 @@ import test from "node:test";
 import type { BrollItem, BrollPairTransition } from "@narratage/broll";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { digestOf } from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 
 const programSpace = sealProgramSpace({
   contract: "svml.program-space@1",
@@ -26,6 +27,10 @@ const programSpace = sealProgramSpace({
 
 function artifact(id: string, mediaType = "video/mp4", durationSec = 4): MediaArtifactRef {
   return { digest: digestOf(`broll:${id}`), size: 100, mediaType, durationSec };
+}
+
+function audioArtifact(id: string): BlobRef {
+  return { kind: "blob", digest: digestOf(`broll:${id}`), size: 100, mediaType: "audio/wav" };
 }
 
 function item(overrides: Partial<BrollItem> & Pick<BrollItem, "id" | "span" | "z">): BrollItem {
@@ -65,8 +70,7 @@ test("B-roll owns local motion while every item remains an independently stacked
       z: 80,
       enter: { operator: "slide-down", durationFrames: 12 },
       exit: { operator: "slide-up", durationFrames: 12 },
-      includeAudio: true,
-      audioGain: 0.7,
+      audio: { artifact: audioArtifact("cutaway-audio"), sampleFrames: 192_000, gain: 0.7 },
     }),
   ]);
   assert.doesNotThrow(() => assertBrollProgramIdentity(authored, programSpace));
@@ -125,7 +129,7 @@ test("push is lowered into complementary animations inside one B-roll-owned hand
 });
 
 test("page-turn and transition SFX remain B-roll-owned and lower to generic visual/audio facts", () => {
-  const sfx = artifact("page-sfx", "audio/wav", 0.2);
+  const sfx = audioArtifact("page-sfx");
   const authored = program([
     item({ id: "page-a", span: { startFrame: 0, endFrameExclusive: 90 }, z: 40 }),
     item({ id: "page-b", span: { startFrame: 75, endFrameExclusive: 180 }, z: 41 }),
@@ -136,11 +140,14 @@ test("page-turn and transition SFX remain B-roll-owned and lower to generic visu
     span: { startFrame: 75, endFrameExclusive: 90 },
     operator: "page-turn",
     direction: "left",
-    sfx: { artifact: sfx, gain: 0.8 },
+    sfx: { artifact: sfx, sampleFrames: 9_600, gain: 0.8 },
   }]);
   const product = compileBrollProduct(programSpace, authored);
   assert.equal(product.audioTrack.clips[0]?.id, "transition:turn");
-  assert.deepEqual(product.audioTrack.clips[0]?.span, { startFrame: 75, endFrameExclusive: 81 });
+  assert.deepEqual(product.audioTrack.clips[0]?.target, {
+    startSample: 120_000,
+    endSampleExclusive: 129_600,
+  });
   assert.equal(product.audioTrack.clips[0]?.artifact.digest, sfx.digest);
   const document = compileHyperframesDocument(sealComposition({
     contract: "svml.composition@1",
