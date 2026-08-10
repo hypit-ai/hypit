@@ -6,17 +6,16 @@ Look at a visual component without running a Build.
 pnpm playground
 ```
 
-Pick a producer, fill in its inputs, and it renders on a canvas of the size you
-choose. Choose a `.svs` stylesheet and its Film Recipe fills in Film appearance;
-canvas size and time stay explicit preview-environment controls.
+Pick a producer, fill in its inputs, and it renders on a canvas whose size,
+frame rate, duration and background you choose.
 
 [The guide page](../../docs/guide/playground.md) covers using it. This file
 covers how it works.
 
-## It lists nothing
+## Where everything comes from
 
-There is no registry here, and no per-component code. Everything comes from
-what the compiler already declares about itself:
+There is no registry here and no per-component code. Each answer is read at run
+time:
 
 | Question | Answered by |
 |---|---|
@@ -27,13 +26,13 @@ what the compiler already declares about itself:
 | What to start from | `TypeDeclaration.default`, given by the module that owns the type |
 | How to run it | the module's `component.producers[].handler` |
 
-A module that gains a visual Producer appears here on its own. One that loses
-it disappears. Neither requires editing anything in this directory.
+A module that gains a visual Producer appears here on its own; one that loses it
+disappears. Neither requires editing anything in this directory.
 
-Nothing here validates, either: `validateStoredValue` and the modules' own
-`seal*` and `assert*` functions are the judge, because they are what a real
-Build runs. A rejected value shows the compiler's own message beside the form
-and leaves the last good frame up.
+Nothing here validates. `validateStoredValue` and the modules' own `seal*` and
+`assert*` functions are the judge, since they are what a real Build runs. A
+rejected value shows the compiler's own message beside the form and leaves the
+last good frame up.
 
 ## Two things a Build supplies that the document does not
 
@@ -53,17 +52,16 @@ self-sufficient — a real render supplies a producer for the rest. The shim in
 
 Nothing to add here. In the module: declare a Producer that outputs a
 `VisualTrack`, give each input type a `schema`, and give it a `default` where
-you honestly can. A type carrying content-addressed media has no default — say
-nothing rather than inventing a digest, and the playground will ask the operator
-for a file instead.
+one exists. A type carrying content-addressed media has none, and the playground
+asks the operator for a file instead.
 
-Annotate a field with `format` where its type alone is ambiguous: a colour and
-a font family are both strings, and only the module knows which is which.
+Annotate a field with `format` where its type alone is ambiguous — a colour and
+a font family are both strings.
 
 ## Known divergences from a real render
 
 - Fonts lower to a plain CSS `font-family` string. The production
   `FontArtifactRef` path with hashed `@font-face` families is not exercised.
 - Audio tracks are not played.
-- The frame domain is the shell's, not the form's: a `ProgramSpace` input is
-  filled from the canvas controls, so there is only one place to change it.
+- A `ProgramSpace` input is filled from the canvas controls rather than offered
+  in a form.
