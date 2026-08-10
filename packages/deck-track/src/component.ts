@@ -1,0 +1,132 @@
+import type { ComponentPackage, ProducerHandlerContext } from "@narratage/component-kit";
+import type { ProgramSpace } from "@narratage/program-space";
+import { canonicalize } from "@narratage/protocol";
+import type { StoredValue } from "@narratage/protocol";
+import type { CompleteSemanticMap } from "@narratage/semantic-map";
+import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
+import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import type { MediaLayerSet } from "@narratage/media-track";
+import type { Text } from "@narratage/text";
+
+import { renderDepthStack } from "./lower.js";
+import { depthStackProducers, depthStackTypes } from "./manifest.js";
+import {
+  appendDepthStackMomentCard,
+  assertDepthStackProgram,
+  createDepthStackCardSet,
+  depthStackImplementationDigests,
+  depthStackValidatorDigests,
+  finalizeDepthStackAtProgramEnd,
+  finalizeDepthStackUntilMoment,
+  finalizeDepthStackUntilSelection,
+  bindDepthStackCardLabelText,
+} from "./program.js";
+import type {
+  DepthStackCardLabel,
+  DepthStackCardLabelStyle,
+  DepthStackCardSet,
+  DepthStackCardSpec,
+  DepthStackHeader,
+  DepthStackProgram,
+  DepthStackSpec,
+} from "./types.js";
+
+function inline<T>(value: StoredValue | undefined, label: string): T {
+  if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
+  return value.value as unknown as T;
+}
+const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+
+function finalizeInputs(inputs: ProducerHandlerContext["inputs"]) {
+  return {
+    set: inline<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
+    header: inline<DepthStackHeader>(inputs.header?.value, "DepthStackHeader"),
+    frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
+    spec: inline<DepthStackSpec>(inputs.spec?.value, "DepthStackSpec"),
+    space: inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+  };
+}
+
+export const depthStackComponent = {
+  name: "@narratage/deck-track",
+  producers: [
+    {
+      producer: depthStackProducers.bindLabelText,
+      implementationDigest: depthStackImplementationDigests.bindLabelText,
+      handler: ({ inputs }) => ({ outputs: { label: output(bindDepthStackCardLabelText(
+        inline<DepthStackCardLabelStyle>(inputs.style?.value, "DepthStackCardLabelStyle"),
+        inline<Text>(inputs.content?.value, "Text"),
+      )) }, needs: {} }),
+    },
+    {
+      producer: depthStackProducers.createCards,
+      implementationDigest: depthStackImplementationDigests.createCards,
+      handler: () => ({ outputs: { set: output(createDepthStackCardSet()) }, needs: {} }),
+    },
+    {
+      producer: depthStackProducers.appendMomentCard,
+      implementationDigest: depthStackImplementationDigests.appendMomentCard,
+      handler: ({ inputs }) => ({ outputs: { set: output(appendDepthStackMomentCard(
+        inline<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
+        inline<MediaLayerSet>(inputs.material?.value, "MediaLayerSet"),
+        inline<DepthStackCardLabel>(inputs.label?.value, "DepthStackCardLabel"),
+        inline<DepthStackCardSpec>(inputs.spec?.value, "DepthStackCardSpec"),
+        inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+        inline<NarrativeMomentRef>(inputs.moment?.value, "NarrativeMomentRef"),
+        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+      )) }, needs: {} }),
+    },
+    {
+      producer: depthStackProducers.finalizeProgramEnd,
+      implementationDigest: depthStackImplementationDigests.finalizeProgramEnd,
+      handler: ({ inputs }) => {
+        const value = finalizeInputs(inputs);
+        return { outputs: { program: output(finalizeDepthStackAtProgramEnd(
+          value.set, value.header, value.frame, value.spec, value.space,
+        )) }, needs: {} };
+      },
+    },
+    {
+      producer: depthStackProducers.finalizeUntilMoment,
+      implementationDigest: depthStackImplementationDigests.finalizeUntilMoment,
+      handler: ({ inputs }) => {
+        const value = finalizeInputs(inputs);
+        return { outputs: { program: output(finalizeDepthStackUntilMoment(
+          value.set, value.header, value.frame, value.spec,
+          inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+          inline<NarrativeMomentRef>(inputs.terminal?.value, "NarrativeMomentRef"), value.space,
+        )) }, needs: {} };
+      },
+    },
+    ...([depthStackProducers.finalizeUntilSelectionStart, depthStackProducers.finalizeUntilSelectionEnd] as const)
+      .map((producer, index) => ({
+        producer,
+        implementationDigest: index === 0
+          ? depthStackImplementationDigests.finalizeUntilSelectionStart
+          : depthStackImplementationDigests.finalizeUntilSelectionEnd,
+        handler: ({ inputs }: ProducerHandlerContext) => {
+          const value = finalizeInputs(inputs);
+          return { outputs: { program: output(finalizeDepthStackUntilSelection(
+            value.set, value.header, value.frame, value.spec,
+            inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+            inline<NarrativeSelectionRef>(inputs.terminal?.value, "NarrativeSelectionRef"),
+            index === 0 ? "start" : "end", value.space,
+          )) }, needs: {} };
+        },
+      })),
+    {
+      producer: depthStackProducers.render,
+      implementationDigest: depthStackImplementationDigests.render,
+      handler: ({ inputs }) => ({ outputs: { track: output(renderDepthStack(
+        inline<CanvasSpace>(inputs.canvas?.value, "CanvasSpace"),
+        inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
+        inline<DepthStackProgram>(inputs.program?.value, "DepthStackProgram"),
+      )) }, needs: {} }),
+    },
+  ],
+  validators: [{
+    type: depthStackTypes.program,
+    implementationDigest: depthStackValidatorDigests.program,
+    handler: ({ value }) => assertDepthStackProgram(inline<DepthStackProgram>(value, "DepthStackProgram")),
+  }],
+} satisfies ComponentPackage;

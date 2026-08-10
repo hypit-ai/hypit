@@ -1,4 +1,5 @@
 import { programSpaceTypes } from "@narratage/program-space";
+import { spatialTypes } from "@narratage/spatial";
 import { compositionTypes } from "@narratage/composition";
 import type { Track } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
@@ -11,7 +12,7 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] {
-  const names = new Set(["program", "space"]);
+  const names = new Set(["program", "canvas", "space"]);
   return [...tracks]
     .map((track) => ({ name: track.name.trim(), kind: track.kind }))
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -50,14 +51,20 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
   operations.push({
     id: "film:composition",
     producer: filmProducers.compileComposition,
-    inputs: { program: input("program"), space: input("space"), set: operation(current) },
+    inputs: {
+      program: input("program"),
+      canvas: input("canvas"),
+      space: input("space"),
+      set: operation(current),
+    },
     result: { kind: "output" as const, name: "composition" },
   });
-  const semanticInputs = ["program", "space", ...tracks.map((track) => track.name)];
+  const semanticInputs = ["program", "canvas", "space", ...tracks.map((track) => track.name)];
   return sealGraphFragment({
     name: options.name?.trim() || "@narratage/film/assembly@1",
     inputs: [
       { name: "program", type: filmTypes.program },
+      { name: "canvas", type: spatialTypes.canvas },
       { name: "space", type: programSpaceTypes.programSpace },
       ...tracks.map((track) => ({
         name: track.name,

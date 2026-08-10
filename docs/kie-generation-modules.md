@@ -49,12 +49,12 @@ The set is one Product, not a Producer with independently replaceable fields. A 
 Projection may expose one variant as its own Candidate. Satisfaction operates on Logical Outputs;
 it never mutates part of an atomic remote Product.
 
-## Safety and customer Recipes
+## Safety and project Recipes
 
 Grok is exposed only for video. Seedream is exposed for image generation and requires explicit
-`nsfwCheck`. A Recipe for a customer such as Megneta may choose Grok video or Seedream image and set
-their exact parameters. “Spicy” is not a Provider capability and does not authorize Runtime to
-route arbitrary requests.
+`nsfwCheck`. A project Recipe may choose Grok video or Seedream image and set their exact parameters.
+Content treatment is not a Provider capability and does not authorize Runtime to route arbitrary
+requests.
 
 ## Current verification
 

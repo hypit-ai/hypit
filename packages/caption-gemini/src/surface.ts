@@ -3,8 +3,8 @@ import { narrativeTypes } from "@narratage/narrative";
 import type {
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { captionGeminiPlanningFragment } from "./fragment.js";
 import { captionGeminiTypes } from "./manifest.js";
@@ -21,7 +21,7 @@ function reference(
   expected: SurfaceResolvedReference["type"],
   resolve: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {
-  const raw: TextAttributeValue | undefined = element.attributes[name];
+  const raw: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${element.name}.${name} must be a whole-value reference`);
   const value = resolve(raw.path);
   if (value === undefined || !sameType(value.type, expected)) throw new Error(`${element.name}.${name} cannot resolve the required type`);
@@ -29,7 +29,7 @@ function reference(
 }
 
 export const decodeCaptionGeminiPlannerSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  const required = ["id", "narrative", "program", "model"];
+  const required = ["id", "display", "program", "model"];
   if (required.some((name) => element.attributes[name] === undefined)
     || Object.keys(element.attributes).some((name) => !required.includes(name))) {
     throw new Error(`${element.name} requires ${required.join(", ")}`);
@@ -43,7 +43,7 @@ export const decodeCaptionGeminiPlannerSurface: StructuredSurfaceHandler = ({ el
   if (model !== "gemini-2.5-flash" && model !== "gemini-3.1-pro-preview") {
     throw new Error(`${element.name}.model is unsupported`);
   }
-  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
+  const display = reference(element, "display", narrativeTypes.captionDisplay, resolveReference);
   const captionProgram = reference(element, "program", captionTypes.program, resolveReference);
   const optionsId = `${id}.gemini`;
   const options = sealCaptionGeminiProgram({
@@ -56,7 +56,7 @@ export const decodeCaptionGeminiPlannerSurface: StructuredSurfaceHandler = ({ el
       id,
       fragment: captionGeminiPlanningFragment.id,
       inputs: {
-        narrative: narrative.ref,
+        display: display.ref,
         captionProgram: captionProgram.ref,
         program: { kind: "record", id: optionsId },
       },

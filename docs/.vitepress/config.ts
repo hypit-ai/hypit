@@ -227,6 +227,7 @@ export default defineConfig({
     "open-source-distribution.md",
     "build-archive-and-egress.md",
     "caption-gemini-provider-contract.md",
+    "demo-assets.md",
     "graph-first-value-boundary.md",
     "hyperframes-aws-runtime.md",
     "image-transform.md",

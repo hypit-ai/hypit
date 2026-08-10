@@ -5,6 +5,8 @@ import {
 import type { BlobRef } from "@narratage/protocol";
 
 import type {
+  GeneratedAudioSet,
+  GeneratedAudioSetContent,
   GeneratedImageSet,
   GeneratedImageSetContent,
   GeneratedVideoSet,
@@ -67,4 +69,18 @@ export function verifyGeneratedVideoSet(value: unknown): asserts value is Genera
   assert(object.contract === "svml.generated-video-set@1", "Generated video contract is invalid");
   assert(Array.isArray(object.videos) && object.videos.length > 0, "Generated video set is empty");
   object.videos.forEach((artifact) => assertGenerationBlobRef(artifact, "video/"));
+}
+
+export function sealGeneratedAudioSet(content: GeneratedAudioSetContent): GeneratedAudioSet {
+  assert(content.contract === "svml.generated-audio-set@1", "Generated audio contract is invalid");
+  assert(content.audios.length > 0, "Generated audio set is empty");
+  content.audios.forEach((artifact) => assertGenerationBlobRef(artifact, "audio/"));
+  return canonicalize(content) as unknown as GeneratedAudioSet;
+}
+
+export function verifyGeneratedAudioSet(value: unknown): asserts value is GeneratedAudioSet {
+  const object = plainObject(value, "Generated audio set") as unknown as GeneratedAudioSet;
+  assert(object.contract === "svml.generated-audio-set@1", "Generated audio contract is invalid");
+  assert(Array.isArray(object.audios) && object.audios.length > 0, "Generated audio set is empty");
+  object.audios.forEach((artifact) => assertGenerationBlobRef(artifact, "audio/"));
 }

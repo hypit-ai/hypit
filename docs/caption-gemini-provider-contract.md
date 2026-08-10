@@ -2,104 +2,63 @@
 
 Status: implemented vertical slice. This contract contains no credential or network authority.
 
-## 1. Boundary recovered from the old engine
-
-The production reference in the old `twinit` repository combined three concerns:
-
-- request construction in `lib/engine/nodes/locate/caption-region-v2.ts`;
-- model execution and JSON validation in `lib/engine/nodes/locate/correct.ts`;
-- Google Vertex transport in `lib/adapters/vertex.ts`.
-
-Narratage retains only the useful model judgment: Cue boundaries and declared per-word fields. Script is
-the sole wording, casing and punctuation truth. Gemini performs no correction, receives no
-WhisperX transcript and returns neither text nor time.
-
-The old deployment used `@google/genai` in Vertex mode with project, location and ADC credentials.
-The new split preserves that mechanism without leaking it into author intent:
+## Responsibility split
 
 ```text
-@narratage/caption                 display atoms, Style cascade, Plan validation, timing join, Track
-@narratage/caption-gemini          exact Gemini request and deterministic response lowering
-@narratage/provider-google-vertex credentials, generateContent transport, timeout and queue lane
+@narratage/script                 display Atoms/Words and Atom-to-speech correspondence
+@narratage/caption                total Style assignment, Plan validation and whole-Atom timing
+@narratage/caption-fine           one field-free Style family and whole-Atom visual renderer
+@narratage/caption-gemini         Gemini request construction and response lowering
+@narratage/provider-google-vertex credentials, generateContent transport and queue lane
 ```
 
-An AI Studio API-key endpoint could implement the same exact capability later, but Runtime may not
-silently change model family or planning method.
+Script remains the only wording, casing and punctuation truth. Gemini performs no correction,
+receives no WhisperX transcript and returns neither text nor time.
 
-## 2. The two immutable inputs
+## Immutable input
 
-Caption planning consumes:
+The planner consumes one `CaptionDisplaySequence` and one resolved `CaptionProgram`. For Dual Text
+such as `<SVML | semantic video markup language>`, it sees only `SVML`. For
+`<New York City | something>`, it sees one indivisible Atom containing three field-addressable
+Words. It cannot cut between them.
 
-1. `Narrative.captionProjection`, the whole visible left-side text;
-2. a resolved `CaptionProgram`, the author's complete Style assignment and planning requirements.
-
-Dual Text does not cross this boundary. For:
-
-```svml
-<SVML | semantic video markup language>
-```
-
-Seedance dialogue receives the right side and speech alignment measures the right side, while
-Caption planning receives only the display atom `SVML`. This rule is covered by an executable test.
-
-`CaptionProgram` first creates the visible atom universe, then assigns exactly one full Style to
-every atom:
-
-- `default` covers the entire universe, including roleless Turns;
-- ordered `Use role="…"` and `Use on={selection}` applications replace the whole Style;
-- later matching applications win;
-- a `Use` selecting no visible atom is rejected as an author error.
-
-Program runs are maximal contiguous atom sequences with the same Style inside one Turn and Segment.
-The model never invents these runs and cannot move atoms between them. Different runs may have
-different Cue and field requirements.
-
-## 3. Model freedom is deliberately small
-
-For each resolved run Gemini may do exactly two things:
-
-1. return ordered Cue endpoints that partition every atom exactly once;
-2. attach zero, one or more values from declared fields to individual atoms.
-
-A field declaration contains an id, value schema, natural-language instruction and minimum/maximum
-occurrences per Cue. Values currently support boolean, enum and bounded number schemas. This is more
-general than a hard-coded contiguous emphasis span: `best` and `medium` may be independent,
-non-contiguous, or coexist on one atom.
-
-Conceptual request data:
+The request deliberately sends readable text once:
 
 ```json
 {
-  "atoms": [
-    { "id": "region:1:display:1", "text": "SVML" },
-    { "id": "region:2:display:2", "text": "changes" }
-  ],
   "runs": [{
-    "id": "caption-program:run:1",
-    "atom_ids": ["region:1:display:1", "region:2:display:2"],
-    "cue_instruction": "Use complete phrases of two to five words.",
-    "fields": [{
-      "id": "important",
-      "type": "boolean",
-      "minimum_per_cue": 0,
-      "maximum_per_cue": 2,
-      "instruction": "Select words whose emphasis best communicates this Cue."
-    }]
+    "atoms": [
+      ["new"],
+      ["york"],
+      ["city", "is", "beautiful"]
+    ],
+    "cue_words": { "minimum": 1, "maximum": 5 },
+    "cue_instruction": "Use complete semantic phrases."
   }]
 }
 ```
 
-Conceptual model response:
+There is no redundant `text` or `words` payload. Punctuation is part of each immutable string, so
+`45%`, `back-and-forth`, `damn!` and `300,000` survive unchanged.
+
+## Model freedom
+
+For each already-resolved Style run, Gemini may only:
+
+1. consume consecutive whole Atoms into Cues with `atom_count`;
+2. assign declared fields to a Word with one-based `atom_number` and `word_number` inside the Cue.
+
+Conceptual field-bearing response:
 
 ```json
 {
   "runs": [{
-    "run_id": "caption-program:run:1",
     "cues": [{
-      "after_atom_id": "region:2:display:2",
+      "atom_count": 3,
       "fields": [{
-        "declaration_id": "important",
-        "atom_id": "region:1:display:1",
+        "declaration_id": "emphasis",
+        "atom_number": 3,
+        "word_number": 2,
         "value": "true"
       }]
     }]
@@ -107,41 +66,28 @@ Conceptual model response:
 }
 ```
 
-The response schema has no text field. Missing or foreign runs, reordered or duplicated atoms,
-non-final coverage, undeclared fields, foreign atom ids, invalid values and cardinality violations
-all fail before the generic `CaptionPlan` becomes a Record.
+A field-free Style returns `fields: []`. Cue bounds are preferences: one authored Atom may exceed
+the preferred maximum, but Gemini still cannot split it. The response schema contains no text,
+pronunciation, timestamp, Style or Provider choice. The package restores stable Atom/Word ids and
+rejects incomplete coverage, invalid coordinates, undeclared fields, invalid values and cardinality
+violations.
 
-## 4. Timing is an independent graph branch
-
-Gemini planning does not wait for Seedance, media normalization or WhisperX. In parallel:
+## Independent timing branch
 
 ```text
-Narrative + CaptionProgram ── Gemini ─────────────── CaptionPlan
-generated audio ──────────── WhisperX + alignment ─ CompleteSemanticMap
-CaptionPlan + CaptionProgram + Map + Narrative ─── TimedCaptionProjection
-TimedCaptionProjection + Styles ────────────────── VisualTrack
+Display + Program ───────────────────────── Gemini ─── CaptionPlan
+generated audio ───────── WhisperX + locator ───────── CompleteSemanticMap
+Display + Correspondence + Program + Plan + Map ───── TimedCaptionProjection
+TimedCaptionProjection + Display + Program ────────── VisualTrack
 ```
 
-For exact left/right correspondences, display atoms inherit their source-token time. If one
-authored display phrase maps to a different spoken phrase without word-level evidence, Caption may
-derive proportional local windows inside the region envelope. Those windows are downstream
-presentation facts and are never written into `CompleteSemanticMap`.
+`CaptionCorrespondence` binds each whole display Atom to explicit authored speech tokens. Timing
+resolves that range through the measured map. Multiword Dual Text therefore receives one exact
+Atom envelope and no invented internal Word timestamps.
 
-## 5. Runtime registration
+## Runtime registration
 
-The author chooses Gemini and the model in `.svml`. A developer selects one concrete Vertex endpoint
-in trusted Runtime configuration. Conceptually:
-
-```ts
-createGoogleVertexCaptionProvider({
-  project: process.env.GOOGLE_CLOUD_PROJECT,
-  location: process.env.GOOGLE_CLOUD_LOCATION ?? "global",
-  credentialsJson: credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),
-});
-```
-
-The selected `CredentialStore` provides JSON credentials without granting arbitrary filesystem
-access. Endpoint identity covers its implementation, model support and non-secret configuration.
-The Runtime Scheduler owns concurrency and retry timing; the Provider owns only one exact
-submit/result transport. Secrets, queue state and network metadata do not enter `.svml`, `.svs`,
-Core `BuildState` or Caption Types.
+The author chooses Gemini and its model in SVML. Trusted Runtime configuration binds that exact
+capability to a Vertex Endpoint. The Scheduler owns concurrency; the Provider owns transport and
+credential slots. Secrets, network metadata and queue state never enter SVML, SVS, Caption values
+or Core BuildState.

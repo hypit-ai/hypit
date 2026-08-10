@@ -1,13 +1,13 @@
 ---
 title: SVS Stylesheets
-description: The SVS Recipe language — CSS-like stylesheets for film, caption, B-roll, text and generation settings.
+description: The SVS Recipe language — CSS-like stylesheets for film, caption, media, text and generation settings.
 ---
 
 # SVS Stylesheets
 
 SVS (`.svs`) files define reusable, typed configuration values using a CSS-like syntax. They
-configure film dimensions, caption appearance, B-roll layout, text styling, speech estimation
-parameters, generation settings, and custom fonts. SVS values are called **Recipes** — they are
+configure Film appearance, caption appearance, Media presentation and motion, text styling, speech estimation
+parameters, generation settings, and typography choices. SVS values are called **Recipes** — they are
 immutable typed Records that consuming components validate and interpret.
 
 ## Basic syntax
@@ -17,9 +17,6 @@ immutable typed Records that consuming components validate and interpret.
 
 <sheet version="1" id="studio">
   film.vertical {
-    width: 1080;
-    height: 1920;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -49,36 +46,34 @@ The prefix comes from the `as=` attribute; the path comes from `namespace.name` 
 
 ## Film
 
-Film appearance — canvas dimensions and background color.
+Film appearance owns only the canvas clear color. Canvas dimensions are an explicit
+`space:Canvas` graph value, while frame rate comes from ProgramSpace.
 
 ```svs
 film.vertical {
-  width: 1080;
-  height: 1920;
-  frame-rate: 30;
   background: #09090B;
 }
 ```
 
 | Property | Description |
 |---|---|
-| `width` | Canvas width in pixels |
-| `height` | Canvas height in pixels |
-| `frame-rate` | Frames per second (typically 30) |
 | `background` | Canvas clear color (hex) |
 
 Referenced by `film:Film` via the `appearance` attribute:
 
 ```svml
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```
 
-## Caption
+## Caption Fine
 
-Caption visual appearance — position, typography, and container styling.
+The first official Caption Style family keeps planning and rendering parameters in one Recipe.
 
 ```svs
 caption.dialogue {
+  cue-min-words: 2;
+  cue-max-words: 7;
   stack-order: 70;
   x: 0.08;
   y: 0.76;
@@ -97,11 +92,12 @@ caption.dialogue {
 
 | Property | Description |
 |---|---|
+| `cue-min-words`, `cue-max-words` | Common Cue word-count bounds |
 | `stack-order` | Z-stacking order among all Tracks (higher = on top) |
 | `x`, `y` | Position as fraction of canvas (0–1) |
 | `width` | Width as fraction of canvas |
-| `font` | Font family name or SVS font reference |
-| `weight` | Font weight (400–900) |
+| `font` | Readable Recipe label; exact bytes come from the required `font=` graph edge |
+| `weight` | Requested font weight (1–1000) |
 | `size` | Font size in pixels |
 | `line-height` | Line height multiplier |
 | `align` | Text alignment: `left`, `center`, `right` |
@@ -110,10 +106,13 @@ caption.dialogue {
 | `padding` | Container padding in pixels (single value or `vertical horizontal`) |
 | `radius` | Container border radius in pixels |
 
-Referenced by `caption:Style` via the `appearance` attribute:
+For reproducible rendering, select an exact installed face in the `.svml` source and pass that
+Record to the Fine Style. The primary face's `weight` and `style` must match the Recipe:
 
 ```svml
-<caption:Style id="primary-caption" appearance={studio.caption.dialogue}>
+<fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
+  font={caption-font}/>
 ```
 
 ### Per-role caption styles
@@ -122,6 +121,7 @@ Define multiple caption Recipes for different speakers:
 
 ```svs
 caption.alice {
+  cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -131,6 +131,7 @@ caption.alice {
 }
 
 caption.bob {
+  cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -143,61 +144,78 @@ caption.bob {
 Then assign them via `caption:Program`:
 
 ```svml
-<caption:Program id="caption-program" narrative={story} default={studio.caption.dialogue}>
+<fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
+<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue} font={caption-font}/>
+<caption-fine:Style id="alice-caption" recipe={studio.caption.alice} font={caption-font}/>
+<caption-fine:Style id="bob-caption" recipe={studio.caption.bob} font={caption-font}/>
+<caption:Program id="caption-program" display={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
 </caption:Program>
 ```
 
-## B-roll
+## Media Track
 
-B-roll item appearance — position, fit, container, and enter/exit animations.
+Media keeps spatial placement, frame presentation and lifecycle motion separate. A `SpatialFrame`
+owns position and size; the appearance Recipe owns fitting and the frame material; an optional
+motion Recipe owns enter, sustain and exit behavior.
 
 ```svs
-broll.product {
+media.product {
   stack-order: 40;
-  x: 0.08;
-  y: 0.20;
-  width: 0.84;
-  height: 0.48;
   fit: contain;
-  background: #111116;
+  playback: hold-start;
+  frame-paint: #111116;
+  clip: rounded;
   radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
+  padding: 0;
+  border-width: 1;
+  border-style: solid;
+  border-color: #FFFFFF20;
+  shadows: 0 10 24 0 #00000066;
+}
+
+motion.product {
+  enter: slide;
+  enter-frames: 8;
+  enter-direction: up;
+  enter-easing: ease-out;
+  exit: fade;
+  exit-frames: 6;
+  exit-easing: ease-in;
 }
 ```
 
 | Property | Description |
 |---|---|
 | `stack-order` | Z-stacking order |
-| `x`, `y` | Position as fraction of canvas |
-| `width`, `height` | Size as fraction of canvas |
-| `fit` | How the source fits the container: `cover`, `contain` |
-| `background` | Container background color |
-| `radius` | Container border radius |
-| `enter` | Enter animation: `slide-up Nf`, `fade Nf` (N = frames) |
-| `exit` | Exit animation: `fade Nf`, `slide-down Nf` |
+| `fit` | `contain`, `cover`, `fit-width`, `fit-height`, `native`, `scale-down`, or `stretch` |
+| `frame-x`, `frame-y` | Alignment point inside the placement Frame |
+| `content-x`, `content-y` | Independently selected focal point inside the source |
+| `playback` | Timed-source occupancy such as `once-start`, `hold-start`, `loop-end`, or `stretch` |
+| `frame-paint` | Solid or gradient Paint behind the sampled source |
+| `clip`, `radius`, `padding` | Frame clipping and inset |
+| `border-*`, `shadows` | Frame-owned border and ordered shadows |
+| `enter`, `exit` | Lifecycle operator; its frame count, easing and direction use separate properties |
+| `sustain` | Zero or more deterministic local motions such as `float 12 2 up` |
 
-Referenced by `broll:Item` via the `appearance` attribute:
+Position remains an explicit graph edge:
 
 ```svml
-<broll:Item source={motion.video} during={story.selection.demo}
-  appearance={studio.broll.product}/>
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+<media-track:Item source={product-media.media}
+  during={story.selection.demo} frame={product-frame}
+  appearance={studio.media.product} motion={studio.motion.product}/>
 ```
 
 ## Text
 
-Text overlay appearance — position, typography.
+Text overlay appearance — typography and Paint. Placement is a separate `SpatialFrame` graph edge.
 
 ```svs
 text.title {
   stack-order: 90;
-  x: 0.06;
-  y: 0.06;
-  width: 0.88;
-  height: 0.10;
-  font: Inter;
   weight: 900;
   size: 64;
   align: center;
@@ -209,19 +227,20 @@ text.title {
 | Property | Description |
 |---|---|
 | `stack-order` | Z-stacking order |
-| `x`, `y` | Position as fraction of canvas |
-| `width`, `height` | Size as fraction of canvas |
-| `font` | Font family name |
 | `weight` | Font weight |
 | `size` | Font size in pixels |
 | `align` | Text alignment |
 | `fill` | Text color |
 | `tracking` | Letter spacing adjustment |
 
-Referenced by `text:Item` via the `appearance` attribute:
+Compiled with exact font bytes into a `text:Style`, then referenced by a concrete placement form:
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 ## Speech estimation
@@ -232,10 +251,9 @@ Parameters for deterministic speech duration estimation.
 speech.normal {
   language: en;
   pace: normal;
-  padding: 0.3;
   min: 4;
   max: 15;
-  rounding: ceil;
+  rounding: round;
 }
 ```
 
@@ -243,10 +261,16 @@ speech.normal {
 |---|---|
 | `language` | Language code (e.g. `en`) |
 | `pace` | Speaking pace: `slow`, `normal`, `fast` |
-| `padding` | Extra padding in seconds added to the estimate |
+| `rate` | Positive pronunciation units per second; mutually exclusive with `pace` |
 | `min` | Minimum duration in seconds |
 | `max` | Maximum duration in seconds |
-| `rounding` | Rounding mode: `ceil`, `floor`, `round` |
+| `rounding` | Rounding mode: `none`, `round`, `ceil` |
+
+The English named presets resolve to `4.2`, `4.6`, and `5.0` syllables per
+second. Use a numeric `rate` in place of `pace` when the project needs a
+continuous author-controlled value.
+Every property is explicit: `language`, `min`, `max`, `rounding`, and exactly
+one of `pace` or `rate` are required. The Estimate package supplies no hidden policy defaults.
 
 Referenced by `estimate:Speech` via the `policy` attribute:
 
@@ -255,78 +279,104 @@ Referenced by `estimate:Speech` via the `policy` attribute:
   policy={studio.speech.normal}/>
 ```
 
-## Speaker
+## Speaker Text Template
 
-Seedance Speaker generation settings — the Recipe that controls how `speaker:Take` generates a
-talking-head clip.
+The Recipe selects the prompt axes declared by the data-only `speaker-v1` Text Template. Model,
+resolution, references and duration remain explicit inputs to `seedance:ReferenceVideo`; they are
+not hidden in this Recipe.
 
 ```svs
 speaker.host {
-  kind: ugc-talking-head;
-  model: mini;
-  resolution: 720p;
-  aspect-ratio: 9:16;
   composition-stability: soft-locked;
   camera-motion: none;
   edit-rhythm: continuous-take;
   performance: natural-explainer;
   gesture: natural;
-  voice-mode: single-speaker;
 }
 ```
 
 | Property | Description |
 |---|---|
-| `kind` | Generation kind (e.g. `ugc-talking-head`) |
-| `model` | Model name: `mini` |
-| `resolution` | Output resolution: `480p`, `720p`, `1080p` |
-| `aspect-ratio` | Output aspect ratio: `9:16`, `16:9`, `1:1` |
 | `composition-stability` | Camera/composition consistency: `flexible-ugc`, `soft-locked`, `strict-locked` |
 | `camera-motion` | Camera movement: `none`, `subtle-punch-in-return` |
 | `edit-rhythm` | Editing style: `continuous-take`, `pause-trim-jump-cuts` |
 | `performance` | Acting style: `natural-explainer`, `high-energy-ugc`, `calm-authority`, `reactive-playful` |
 | `gesture` | Gesture intensity: `restrained`, `compact`, `natural`, `expressive` |
-| `voice-mode` | Voice configuration: `single-speaker` |
-
-Referenced by `speaker:Take` via the `recipe` attribute:
+Referenced by `text:Render` together with the Kit's Template:
 
 ```svml
-<speaker:Take id="hook-take" dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
+<text:Render id="hook-prompt"
+  template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
 ```
 
-## Font declarations
+## Generic Text Template Recipes
 
-Declare local font files for use in captions and text overlays.
+The same precedence is available without a domain wrapper. `text:Render` can read any SVS Recipe,
+project only properties declared by its template, and let explicit `text:Param` children override
+them. This is how the data-only Seedance B-roll, Podcast, Call, Street Interview and reference
+transfer Kits remain separate from Seedance execution.
 
 ```svs
-font.inter-semibold {
-  src: ./assets/Inter-SemiBold.woff2;
-  weight: 600;
-  style: normal;
+broll.product-demo {
+  material-mode: product-beauty;
+  reference-plan: scene-plus-refs;
+  story-shape: process-demo;
+  edit-language: insert-cutaway;
+  camera-language: product-macro;
+  motion-intensity: readable;
 }
+```
 
-font.inter-black {
-  src: ./assets/Inter-Black.woff2;
-  weight: 900;
-  style: normal;
-}
+Model, resolution, duration and reference media are not template policy. They stay on the exact
+model Surface and graph edges.
+
+## Exact font declarations
+
+SVS describes typography policy, but it does not choose or open font bytes. For common open fonts,
+import the private pre-release catalog and select only the faces the Author Graph uses:
+
+```svml
+<import as="fonts" from="@narratage/fonts-open@1"/>
+
+<fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
+</fonts:Stack>
 ```
 
 | Property | Description |
 |---|---|
-| `src` | Path to the font file (relative to the SVS file) |
-| `weight` | Font weight this file provides |
-| `style` | Font style: `normal`, `italic` |
+| `family` | A family from the package's finite catalog |
+| `weight` | Exact selected face weight |
+| `style` | Selected style: `normal` or a family-supported `italic` |
+| `emoji` | Optional `color` (COLRv1) or `mono` fallback on `Stack` |
 
-Font paths are resolved at compile time and become `FontArtifactRef` values. Reference them by name
-in other SVS blocks:
+The catalog contains 109 open families across handwriting, script, display, sans, serif,
+monospace, CJK, world-script and Emoji categories. Fontsource dependencies are pinned to `5.3.0`;
+the Chromium-compatible COLRv1 Emoji package is pinned separately. The compiler hashes installed
+bytes into content-addressed font values. It performs no download during a build, and the Runtime
+never guesses a font:
 
-```svs
-caption.dialogue {
-  font: inter-semibold;
-  /* ... */
-}
+```svml
+<caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
+  font={caption-fonts}/>
+```
+
+`fonts:Stack` emits one generic `FontStackRef`: its primary must match the Recipe's weight/style and
+its fallbacks preserve their own honest metadata. CJK and Emoji can be split into several
+Unicode-range files while remaining one logical graph edge. Terminal Text and Fine Caption reject
+an omitted stack; machine-font fallback is not part of Visual IR.
+For a symbol with both text and Emoji presentation, write the authored Unicode Emoji sequence
+(for example `☎️`, including VS16); no package rewrites display text to force color.
+
+Brand and custom fonts remain explicit author assets rather than additions to the shared catalog:
+
+```svml
+<import as="media" from="@narratage/media@1"/>
+<media:Font id="brand" src="./assets/Brand-Semibold.woff2"
+  weight="600" style="normal"/>
 ```
 
 ## Combination example
@@ -340,33 +390,26 @@ A complete `studio.svs` file for a four-take talking-head project:
   speech.normal {
     language: en;
     pace: normal;
-    padding: 0.3;
     min: 4;
     max: 15;
-    rounding: ceil;
+    rounding: round;
   }
 
   speaker.host {
-    kind: ugc-talking-head;
-    model: mini;
-    resolution: 720p;
-    aspect-ratio: 9:16;
     composition-stability: soft-locked;
     camera-motion: none;
     edit-rhythm: continuous-take;
     performance: natural-explainer;
     gesture: natural;
-    voice-mode: single-speaker;
   }
 
   film.vertical {
-    width: 720;
-    height: 1280;
-    frame-rate: 30;
     background: #09090B;
   }
 
   caption.primary {
+    cue-min-words: 2;
+    cue-max-words: 5;
     stack-order: 70;
     x: 0.08;
     y: 0.74;
@@ -392,9 +435,11 @@ This file is imported once in the `.svml` source and its values are referenced t
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
   policy={studio.speech.normal}/>
 
-<speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
+<text:Render id="hook-prompt" template={speaker-kit.speaker-v1}
+  recipe={studio.speaker.host}>...</text:Render>
 
-<caption:Style id="primary-caption" appearance={studio.caption.primary} .../>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="720" height="1280"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```

@@ -1,268 +1,210 @@
 ---
-title: Caption, B-roll & Text
-description: Visual track components — captions, B-roll overlays and text overlays.
+title: Caption, Media & Typography
+description: Visual track components — captions, media overlays and typography overlays.
 ---
 
-# Caption, B-roll & Text
+# Caption, Media & Typography
+
+> **Pre-release note:** Caption Fine, Media Track and Typography Track execute their declared author Surfaces.
+> Their author APIs may still evolve; the shared terminal Track/Visual IR waist is frozen inside the
+> repository but has not been published as an npm ABI.
 
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and their z-order is determined by the `stack-order` property in SVS. This page
-covers the three main visual Track types: captions, B-roll, and text overlays.
+covers three official visual Track packages: captions, media, and typography overlays.
 
 ## Caption system
 
-Captions are built from four components that form a pipeline:
+Caption uses a small common language and a replaceable Style family:
 
 ```text
-caption:Style → caption:Program → caption-ai:Planner → caption:Track
+Script Display → Caption Program → Planner + measured Atom timing → Style-family Track
 ```
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+<import as="media" from="@narratage/media@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 ```
 
-### caption:Style
+`@narratage/caption` owns only common Cue bounds, generic optional per-Word fields, total Style
+assignment, Plan validation and the timing join. `@narratage/caption-fine` is one field-free Style
+family: it owns geometry, glyph/Cue/Pill Paint and layered local motion.
 
-Declares a complete visual appearance plus planning instructions for one style of caption.
+### caption-fine:Style
 
-```svml
-<caption:Style id="primary-caption" appearance={studio.caption.primary}
-  mode="proportional-word">
-  <caption:Cues>
-    Split each Script Segment into short complete semantic phrases of two to
-    seven words. Never cross a sentence or Segment boundary.
-  </caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="1" max-per-cue="2">
-    Select one or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `appearance` | yes | SVS caption Recipe — position, font, colors, container |
-| `mode` | no | Caption timing mode, e.g. `proportional-word` |
-
-**Children:**
-
-- `<caption:Cues>` — natural-language instructions for the AI planner telling it how to split text
-  into cues. The planner receives display text (left side of Dual Text) and these instructions, but
-  never audio or timing data.
-- `<caption:Field>` — declares a typed per-atom annotation. The planner assigns these fields to
-  individual words within each cue.
-
-| `<caption:Field>` attribute | Description |
-|---|---|
-| `id` | Field name (e.g. `important`) |
-| `type` | Field type: `boolean` |
-| `min-per-cue` | Minimum annotations per cue |
-| `max-per-cue` | Maximum annotations per cue |
-
-The element body of `<caption:Field>` is a natural-language instruction for the planner.
-
-### caption:Program
-
-Assigns caption styles to the narrative. Declares a default style and optional per-role or
-per-Selection overrides.
-
-```svml
-<caption:Program id="caption-program" narrative={story} default={primary-caption}>
-  <caption:Use role="ALICE" style={alice-caption}/>
-  <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
-</caption:Program>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `narrative` | yes | The Script component |
-| `default` | yes | Default `caption:Style` for all text |
-
-**Children:**
-
-`<caption:Use>` applies style overrides. Rules are applied in source order — last match wins.
-
-| `<caption:Use>` attribute | Description |
-|---|---|
-| `role` | Match by Role Cue label (e.g. `"ALICE"`) |
-| `on` | Match by Selection reference (e.g. `{story.selection.product-demo}`) |
-| `style` | The `caption:Style` to apply |
-
-Use `role=` to give different speakers different caption colors. Use `on=` to override style during
-specific Selections (e.g. a product demo section uses a different caption style).
-
-### caption-ai:Planner
-
-AI-driven cue planning via Gemini. The planner receives the display text atoms, the Style
-instructions, and the Program assignments. It splits text into cues and assigns Field values.
-
-```svml
-<caption-ai:Planner id="caption-plan" narrative={story}
-  program={caption-program} model="gemini-2.5-flash"/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `narrative` | yes | The Script component |
-| `program` | yes | The `caption:Program` |
-| `model` | yes | Gemini model: `gemini-2.5-flash` |
-
-The planner never receives audio, timing data, or the speech side of Dual Text. It works entirely
-from the caption (display) projection.
-
-**Output:** `{caption-plan.plan}` — the cue plan, passed to `caption:Track`.
-
-### caption:Track
-
-Joins the cue plan, SemanticMap, ProgramSpace, and Program to produce a timed VisualTrack.
-
-```svml
-<caption:Track id="captions" narrative={story} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `narrative` | yes | The Script component |
-| `map` | yes | SemanticMap from `whisperx:Alignment` |
-| `space` | yes | ProgramSpace from `speech:Spine` |
-| `program` | yes | The `caption:Program` |
-| `plan` | yes | Cue plan from `caption-ai:Planner` |
-
-**Output:** `{captions.track}` — a VisualTrack added to `film:Film`.
-
-### Caption combination example
-
-The full caption pipeline with per-role styles:
-
-```svml
-<caption:Style id="dialogue-caption" appearance={studio.caption.dialogue}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Style id="alice-caption" appearance={studio.caption.alice}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select at most two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-
-<caption:Style id="bob-caption" appearance={studio.caption.bob}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Program id="caption-program" narrative={story} default={dialogue-caption}>
-  <caption:Use role="ALICE" style={alice-caption}/>
-  <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
-</caption:Program>
-
-<caption-ai:Planner id="caption-plan" narrative={story}
-  program={caption-program} model="gemini-2.5-flash"/>
-
-<caption:Track id="captions" narrative={story} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
-```
-
-ALICE gets green captions (`#73FBD3`), BOB gets gold (`#FFD166`), and during the product-demo
-Selection both switch to the neutral dialogue style. The `important` Field only applies to ALICE's
-style — her emphasized words get special treatment.
-
-## B-roll
-
-B-roll overlays generated or provided video/images at semantic time positions.
-
-```svml
-<import as="broll" from="@narratage/broll@1"/>
-```
-
-### broll:Track
-
-Container for B-roll items. Takes the SemanticMap for timing resolution.
-
-```svml
-<broll:Track id="product-broll" map={timing.map} space={speech.space}>
-  <broll:Item source={product-motion.video}
-    during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `map` | yes | SemanticMap from `whisperx:Alignment` |
-| `space` | no | ProgramSpace (required by some configurations) |
-
-### broll:Item
-
-Each item places a source at a semantic time position with styled appearance:
-
-```svml
-<broll:Item source={product-motion.video}
-  during={story.selection.product-demo}
-  appearance={studio.broll.product}/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `source` | yes | Video or image — from `seedance:Video`, `media:Image`, etc. |
-| `during` | yes | Selection reference — when this item appears |
-| `appearance` | yes | SVS broll Recipe — position, size, fit, animations |
-
-The `during` attribute takes a Selection reference like `{story.selection.product-demo}`. The B-roll
-item appears on screen for exactly the duration of that Selection, as resolved through the
-SemanticMap.
-
-The appearance Recipe controls enter/exit animations:
+A Style is one indivisible pair of planning requirements and rendering parameters. Fine resolves
+both from one package-owned SVS Recipe:
 
 ```svs
-broll.product {
-  stack-order: 40;
-  x: 0.08; y: 0.20; width: 0.84; height: 0.48;
-  fit: contain;
-  background: #111116;
-  radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
+caption.primary {
+  cue-min-words: 2;
+  cue-max-words: 7;
+  stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+  anchor-x: center; anchor-y: bottom;
+  font: Inter; weight: 700; size: 58; font-style: normal;
+  line-height: 0.96; letter-spacing: -0.5; word-gap: 14;
+  align: center; direction: ltr;
+  fill: #FFFFFF; opacity: 1;
+  stroke-color: #09090B; stroke-width: 2;
+  shadow-color: #000000; shadow-opacity: 0.72;
+  shadow-x: 0; shadow-y: 3; shadow-blur: 8;
+  glow-color: #FFFFFF; glow-opacity: 0.12; glow-blur: 8;
+  gradient-from: #FFFFFF; gradient-to: #93C5FD; gradient-angle: 120;
+  long-shadow-color: #111827; long-shadow-opacity: 0.35;
+  long-shadow-distance: 8; long-shadow-angle: 45;
+  background: #09090BCC; border-color: #FFFFFF20; border-width: 1;
+  padding: 16 24; radius: 18;
+  karaoke: trail; karaoke-transition: wipe;
+  active-fill: #FFD54A;
+  active-box: current; active-box-continuity: isolated;
+  active-box-background: #FFD54ACC; active-box-padding: 4 8; active-box-radius: 8;
+  active-underline: current; active-underline-color: #FFFFFF;
+  active-underline-thickness: 3; active-underline-offset: 5;
+  cue-enter: fade; cue-enter-frames: 4; cue-exit: fade; cue-exit-frames: 4;
+  atom-reveal: all;
+  active-response: pop; active-response-frames: 5; active-scale: 1.08;
 }
 ```
 
-**Output:** `{product-broll.visual}` — a VisualTrack added to `film:Film`.
+```svml
+<fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
+</fonts:Stack>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+  font={caption-fonts}/>
+```
 
-### B-roll example
+The required `font=` edge carries one byte-reproducible `FontStackRef`. The primary face must match
+the Recipe's weight/style; each fallback retains its own exact face metadata. Fine rejects a Style
+without that stack instead of falling back to machine fonts.
 
-B-roll with a generated Seedance video appearing during a Script Selection:
+Another Caption package may define completely different planning fields and visual parameters
+without changing the common package.
+
+Fine's properties are orthogonal: Cue planning; normalized placement and anchor; layout and
+typography; base/active solid or gradient glyph Paint; stroke, shadow, directional long shadow,
+glow and underline; Cue/Pill Paint; three independent glyph/Pill/underline activation channels;
+and layered Cue, Atom, active-response and loop motion. Missing optional dimensions resolve
+deterministically to no decoration or motion. Unknown properties are rejected.
+
+`karaoke` is `off`, `current` or `trail`; `karaoke-transition` is `step` or `wipe`. Timing is always
+whole-Atom timing already proven by Caption. A normal one-word Atom therefore highlights per word,
+while a Dual Text Atom remains one indivisible visible unit. Fine never guesses internal time.
+
+`active-box` is independently `off`, `current` or `trail`. `active-box-continuity: isolated` paints
+one capsule per activated Atom; `joined` turns a trail into one ordered prefix whose background is
+continuous on each real browser line. Thus trail-colored text with a current-only Pill, the original
+Twinit behavior, is one Recipe—not a second renderer.
+
+Fine wraps only between complete Atoms and never clips author text. It intentionally has no
+`max-lines`; use Cue bounds, Track width and font size to control density.
+
+CJK dialogue can be written directly. For a display-only emoji that still follows speech timing,
+author the correspondence explicitly, such as `<🌐 | globe>`; the system will not invent a spoken
+word for a bare symbol.
+
+### caption:Program
+
+The Program starts from the complete ordered display-word universe emitted by Script. One explicit
+default Style covers every word; no `@whole` Selection or complement is required. Ordered `Use`
+rules replace the whole Style on a Role or explicit Caption word subset, with the last match winning.
 
 ```svml
-<seedance:Prompt id="product-direction">
+<caption:Program id="caption-program" display={story.caption}
+  default={primary-caption}>
+  <caption:Use role="ALICE" style={alice-caption}/>
+  <caption:Use role="BOB" style={bob-caption}/>
+  <caption:Use words={story.caption.selection.product-demo}
+    style={dialogue-caption}/>
+  <caption:Mute words={story.caption.selection.private}/>
+</caption:Program>
+```
+
+`role=` is convenient author syntax for a word subset, not a temporal condition. `words=` consumes
+the Caption-specific projection of a Script Selection; the public time Selection remains only a
+pair of semantic anchors. Partial ownership of an indivisible Dual Text display word is rejected.
+`Mute` uses that same exact word projection, stays out of Gemini, and hides those complete Atoms
+after Cue planning without regrouping the Cue.
+
+### caption-ai:Planner
+
+```svml
+<caption-ai:Planner id="caption-plan" display={story.caption}
+  program={caption-program} model="gemini-2.5-flash"/>
+```
+
+The planner receives immutable display Atoms/Words and already-resolved Style runs. It may only cut
+each run between whole Atoms and attach declared fields to Word ids. Fine declares no fields. The
+planner cannot rewrite text, select Styles, see audio or invent time. Its output is
+`{caption-plan.plan}`.
+
+### caption-fine:Track
+
+```svml
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
+  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
+```
+
+The common Caption timing step joins the Plan to the independent SemanticMap. Fine then renders all
+default and override Styles into one ordinary peer `VisualTrack`: `{captions.track}`.
+
+## Media overlays and B-roll
+
+B-roll is an editorial use of the generic Media Track, not a separate Track family. One Item can
+place a normalized image, video, animation or compositable Surface at a semantic or absolute window.
+
+```svml
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
+```
+
+### media-track:Track and media-track:Item
+
+Placement is an explicit Spatial Frame edge; appearance and motion remain reusable SVS values.
+
+```svml
+<wording:Value id="product-direction">
   A clean vertical product film: the written script becomes semantic regions,
   then those regions assemble into a finished video.
-</seedance:Prompt>
+</wording:Value>
 
-<seedance:Video id="product-motion" model="mini"
+<seedance:ReferenceVideo id="product-motion" model="mini"
   prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
-</seedance:Video>
+  <seedance:Reference image={product-reference}/>
+</seedance:ReferenceVideo>
 
-<broll:Track id="product-broll" map={timing.map}>
-  <broll:Item source={product-motion.video}
+<pipeline:Normalize id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+
+<media-track:Track id="product-broll" map={timing.map}
+  space={speech.space} canvas={vertical}>
+  <media-track:Item source={product-media.media} frame={product-frame}
     during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
+    appearance={studio.media.product}
+    motion={studio.motion.product}/>
+</media-track:Track>
 ```
+
+The Selection contributes semantic points; Media performs the package-owned window projection.
+The same Item model also covers full-canvas cutaways, split screens and corner overlays. Ordered
+child layers, source occupancy and explicit Sequences are available when one source is not enough.
+
+**Outputs:** `{product-broll.visual}` and, only when explicitly authored, `{product-broll.audio}`.
 
 ## Text overlays
 
 Static or timed text displayed on screen — titles, callouts, lower thirds.
 
 ```svml
-<import as="text" from="@narratage/text-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
 ```
 
 ### text:Track
@@ -270,9 +212,15 @@ Static or timed text displayed on screen — titles, callouts, lower thirds.
 Container for text items.
 
 ```svml
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="EDIT MEANING, NOT TIMELINES" during="full"
-    appearance={studio.text.title}/>
+  <text:Area id="title" placement={title-frame} style={title-style} during="program">
+    EDIT MEANING, NOT TIMELINES
+  </text:Area>
 </text:Track>
 ```
 
@@ -282,30 +230,50 @@ Container for text items.
 | `space` | yes | ProgramSpace from `speech:Spine` |
 | `map` | no | SemanticMap — needed when items use Selection-based timing |
 
-### text:Item
+### text:Point, text:Area and text:Path
 
-Each item is a text string placed at a time position:
+Each item has one explicit placement form, one exact Style and one temporal projection. `Area`
+places flowing text inside a `SpatialFrame`:
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 | Attribute | Required | Description |
 |---|---|---|
-| `text` | yes | The text string to display |
-| `during` | yes | When to show: `"full"` (entire program) or a Selection reference |
-| `appearance` | yes | SVS text Recipe — position, font, size, color |
+| `id` | yes | Stable item identity |
+| child content or `content` | yes | Inline plain/rich content, or an ordinary graph `Text` reference; the two forms are exclusive |
+| `during` | yes | `"program"` or a Selection reference; `at` and explicit `start`/`end` are also available |
+| `placement` | yes | `SpatialPoint`, `SpatialFrame` or `SpatialPath`, matching the item form |
+| `style` | yes | A `text:Style` compiled from an SVS Recipe plus exact font bytes |
 
-The `during` attribute accepts either the literal string `"full"` for the entire program duration, or
-a Selection reference for semantic timing:
+The `during` attribute accepts either the literal string `"program"` for the complete ProgramSpace,
+or a Selection reference for semantic timing:
 
 ```svml
+<text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
 <text:Track id="callout" space={speech.space} map={timing.map}>
-  <text:Item text="EXACTLY THE RIGHT MOMENT"
-    during={story.selection.callout}
-    appearance={studio.text.callout}/>
+  <text:Area id="callout-copy" placement={callout-frame}
+    style={callout-style} during={story.selection.callout}>
+    EXACTLY THE RIGHT MOMENT
+  </text:Area>
 </text:Track>
 ```
+
+Graph-produced copy remains visible as an edge:
+
+```svml
+<wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
+<text:Track id="callout" space={speech.space}>
+  <text:Area id="callout-copy" content={headline}
+    placement={callout-frame} style={callout-style} during="program"/>
+</text:Track>
+```
+
+The generic Text value supplies only characters. Typography still owns the item document wrapper,
+placement, timing, style and motion. Use inline `P`/`Span`/`Break` when the author needs rich runs.
 
 **Output:** `{titles.track}` — a VisualTrack added to `film:Film`.
 
@@ -315,36 +283,49 @@ All three track types together in one source file:
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="broll" from="@narratage/broll@1"/>
-<import as="text" from="@narratage/text-track@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
-<caption:Style id="base-caption" appearance={studio.caption.base}>
-  <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select zero, one, or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-<caption:Program id="caption-program" narrative={story} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" narrative={story}
+<fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+<caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+<caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption:Track id="captions" narrative={story} map={timing.map}
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-<!-- B-roll: generated video during a Selection -->
-<broll:Track id="cards" map={timing.map} space={speech.space}>
-  <broll:Item source={motion.video} during={story.selection.demo}
-    appearance={studio.broll.card}/>
-</broll:Track>
+<!-- Shared placement is an explicit edge, separate from Text appearance. -->
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
+<space:Frame id="card-frame" within={vertical}
+  left="10%" top="20%" right="10%" bottom="30%"/>
+
+<!-- Media: one ordinary Item used editorially as B-roll -->
+<pipeline:Normalize id="motion-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+<media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+  <media-track:Item source={motion-media.media} frame={card-frame}
+    during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
+</media-track:Track>
 
 <!-- Text: persistent title overlay -->
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+  <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+    MEANING
+  </text:Area>
 </text:Track>
 
 <!-- All three tracks feed into Film -->
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={cards.visual}/>
@@ -353,5 +334,5 @@ All three track types together in one source file:
 </film:Film>
 ```
 
-The `stack-order` in each SVS Recipe determines z-ordering: speech visual at 10, B-roll at 40,
+The `stack-order` in each SVS Recipe determines z-ordering: speech visual at 10, media at 40,
 captions at 70, text at 90. Higher values render on top.

@@ -305,7 +305,7 @@ export async function createLocalRuntime(
 
 /**
  * Zero-service local distribution. The Runtime authority stays in this process while configured
- * Capability Endpoints may execute locally, in a vendor API, in Lambda, or on Hypit.
+ * Capability Endpoints may execute locally, in a vendor API, in Lambda, or on a hosted service.
  */
 export async function createProjectLocalRuntime(
   options: ProjectLocalRuntimeOptions = {},

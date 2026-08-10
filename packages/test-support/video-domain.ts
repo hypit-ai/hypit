@@ -4,9 +4,11 @@ import { mediaComponent, mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceManifest } from "@narratage/program-space";
 import { semanticMapManifest } from "@narratage/semantic-map";
+import { spatialComponent, spatialManifest } from "@narratage/spatial";
 import { speechManifest } from "@narratage/speech";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { visualIrManifest } from "@narratage/visual-ir";
+import { temporalManifest } from "@narratage/temporal";
 
 /** Test-only explicit video contract closure. Production packages import only the contracts they use. */
 export const videoContractManifests = [
@@ -17,8 +19,10 @@ export const videoContractManifests = [
   speechManifest,
   speechEvidenceManifest,
   semanticMapManifest,
+  spatialManifest,
+  temporalManifest,
   visualIrManifest,
   compositionManifest,
 ] as const;
 
-export { compositionComponent, mediaComponent };
+export { compositionComponent, mediaComponent, spatialComponent };

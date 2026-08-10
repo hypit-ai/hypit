@@ -1,7 +1,17 @@
 import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@narratage/protocol";
-import type { CaptionProjection, CaptionRefinement, CaptionRegion, Narrative, NarrativeMoment, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelection, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@narratage/narrative";
+import type { Narrative, NarrativeMomentOccurrence, NarrativeSegment, NarrativeSelectionOccurrence, NarrativeToken, NarrativeTurn } from "@narratage/narrative";
 
-export type { Affinity, CaptionProjection, MarkerBoundary, Narrative, SemanticAnchor } from "@narratage/narrative";
+export type { Narrative, SemanticAnchor } from "@narratage/narrative";
+
+export type Affinity = "left" | "right";
+
+/** Script-only source structure. Public Selection/Moment values expose only resolved anchors. */
+export type MarkerBoundary = {
+  readonly tokenIndex: number;
+  readonly structuralPosition: number;
+  readonly segmentId?: string;
+  readonly anchorId: string;
+};
 
 export type ParsedTextAtom = {
   readonly kind: "text";
@@ -30,32 +40,51 @@ export type ParsedToken = NarrativeToken & { readonly range: SourceRange };
 export type ParsedTurn = NarrativeTurn & { readonly range: SourceRange };
 
 export type ParsedSelectionOccurrence = NarrativeSelectionOccurrence & {
-  readonly open: NarrativeSelectionOccurrence["open"] & { readonly range: SourceRange };
-  readonly close: NarrativeSelectionOccurrence["close"] & { readonly range: SourceRange };
+  readonly open: { readonly affinity: Affinity; readonly boundary: MarkerBoundary; readonly range: SourceRange };
+  readonly close: { readonly affinity: Affinity; readonly boundary: MarkerBoundary; readonly range: SourceRange };
 };
 
-export type ParsedSelection = Omit<NarrativeSelection, "occurrences"> & {
+export type ParsedSelection = {
+  readonly id: string;
   readonly occurrences: readonly ParsedSelectionOccurrence[];
 };
 
-export type ParsedMomentOccurrence = NarrativeMomentOccurrence & { readonly range: SourceRange };
-export type ParsedMoment = Omit<NarrativeMoment, "occurrences"> & {
+export type ParsedMomentOccurrence = NarrativeMomentOccurrence & {
+  readonly affinity: Affinity;
+  readonly boundary: MarkerBoundary;
+  readonly range: SourceRange;
+};
+export type ParsedMoment = {
+  readonly id: string;
   readonly occurrences: readonly ParsedMomentOccurrence[];
 };
 
-export type ParsedCaptionRefinement = CaptionRefinement;
-export type ParsedCaptionRegion = CaptionRegion & { readonly range: SourceRange };
+export type ParsedCaptionRegion = {
+  readonly id: string;
+  readonly display: string;
+  readonly segmentId: string;
+  readonly startToken: number;
+  readonly endTokenExclusive: number;
+  readonly kind: "identity" | "alias" | "hidden";
+  readonly range: SourceRange;
+};
 
 export type ParsedNarrative = Omit<
   Narrative,
-  "segments" | "tokens" | "turns" | "selections" | "moments" | "captionProjection"
+  "segments" | "tokens" | "turns" | "selections" | "moments"
 > & {
   readonly segments: readonly ParsedSegment[];
   readonly tokens: readonly ParsedToken[];
   readonly turns: readonly ParsedTurn[];
   readonly selections: readonly ParsedSelection[];
   readonly moments: readonly ParsedMoment[];
-  readonly captionProjection: Omit<CaptionProjection, "regions"> & {
+  /** Script-private renderings used to emit independent public Text values. */
+  readonly serializations: {
+    readonly dialogue: string;
+    readonly speech: string;
+  };
+  readonly captionProjection: {
+    readonly text: string;
     readonly regions: readonly ParsedCaptionRegion[];
   };
 };

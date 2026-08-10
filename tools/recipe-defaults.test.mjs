@@ -2,25 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  captionAppearanceFromRecipe,
-  captionAppearanceRecipeKeys,
-  defaultCaptionAppearanceRecipe,
-} from "../packages/caption/src/index.ts";
-import {
-  brollAppearanceFromRecipe,
-  brollAppearanceRecipeKeys,
-  defaultBrollAppearanceRecipe,
-} from "../packages/broll/src/index.ts";
-import {
   defaultFilmRecipe,
-  filmCanvasFromRecipe,
+  filmAppearanceFromRecipe,
   filmRecipeKeys,
 } from "../packages/film/src/index.ts";
-import {
-  defaultTextAppearanceRecipe,
-  textAppearanceFromRecipe,
-  textAppearanceRecipeKeys,
-} from "../packages/text-track/src/index.ts";
 
 /**
  * A module's default Recipe has to be a Recipe its own Surface would admit.
@@ -32,25 +17,7 @@ import {
  * is that the default actually survives the mapping it describes.
  */
 const MODULES = [
-  {
-    name: "caption",
-    keys: captionAppearanceRecipeKeys,
-    recipe: defaultCaptionAppearanceRecipe,
-    read: captionAppearanceFromRecipe,
-  },
-  {
-    name: "text-track",
-    keys: textAppearanceRecipeKeys,
-    recipe: defaultTextAppearanceRecipe,
-    read: textAppearanceFromRecipe,
-  },
-  {
-    name: "broll",
-    keys: brollAppearanceRecipeKeys,
-    recipe: defaultBrollAppearanceRecipe,
-    read: brollAppearanceFromRecipe,
-  },
-  { name: "film", keys: filmRecipeKeys, recipe: defaultFilmRecipe, read: filmCanvasFromRecipe },
+  { name: "film", keys: filmRecipeKeys, recipe: defaultFilmRecipe, read: filmAppearanceFromRecipe },
 ];
 
 for (const module of MODULES) {
@@ -66,13 +33,3 @@ for (const module of MODULES) {
     assert.throws(() => module.read({ ...module.recipe, unexpected: 1 }), /requires exactly/u);
   });
 }
-
-test("no two modules claim the same Recipe shape", () => {
-  const seen = new Map();
-  for (const module of MODULES) {
-    const shape = [...module.keys].sort().join(" ");
-    assert.equal(seen.get(shape), undefined,
-      `${module.name} and ${seen.get(shape)} are indistinguishable to a reader matching on shape`);
-    seen.set(shape, module.name);
-  }
-});

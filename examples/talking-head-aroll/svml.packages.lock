@@ -2,19 +2,569 @@
   "format": "svml.node-package-lock@1",
   "artifacts": [
     {
+      "name": "@fontsource-variable/archivo",
+      "version": "5.3.0",
+      "digest": "sha256:0796c28568653dd1e715f8ab13f92c68c1974e87ab53f3ab251b0d4d8b494ce3"
+    },
+    {
+      "name": "@fontsource-variable/bodoni-moda",
+      "version": "5.3.0",
+      "digest": "sha256:af217a0c9edc9f8c41e1a4dc8a2041809ef40e5f7ed7abac5214812db846fad4"
+    },
+    {
+      "name": "@fontsource-variable/cabin",
+      "version": "5.3.0",
+      "digest": "sha256:225e3db5a6244485fd06ae097d2ca20ed1d4ca9eb395391bac50d47d25be642a"
+    },
+    {
+      "name": "@fontsource-variable/caveat",
+      "version": "5.3.0",
+      "digest": "sha256:cdf6e2824a455218cce75422a7707e59f5b6e1ad35876428ee2dc4d068f29493"
+    },
+    {
+      "name": "@fontsource-variable/cinzel",
+      "version": "5.3.0",
+      "digest": "sha256:1b7f026c3ec4ec319c1c7a4cca7125b38520cdc414689e0daf897f5ab085f242"
+    },
+    {
+      "name": "@fontsource-variable/cormorant-garamond",
+      "version": "5.3.0",
+      "digest": "sha256:31ec552ad9d8f91491ec077118ae96cd01e23a42a649782da0218a402b78d043"
+    },
+    {
+      "name": "@fontsource-variable/crimson-pro",
+      "version": "5.3.0",
+      "digest": "sha256:4ae40c19011a2a13dd861a0fde72a0828eebe031e7703a185ea177d72421f7fe"
+    },
+    {
+      "name": "@fontsource-variable/dm-sans",
+      "version": "5.3.0",
+      "digest": "sha256:03f466f40ee90dde39f101ca11553af719ef8883c4b124c0ea85634e77487ac8"
+    },
+    {
+      "name": "@fontsource-variable/eb-garamond",
+      "version": "5.3.0",
+      "digest": "sha256:03aa1388dd460c886b1342e8cbf9eb9313c90e97459969d39f1dbe1ee5729428"
+    },
+    {
+      "name": "@fontsource-variable/figtree",
+      "version": "5.3.0",
+      "digest": "sha256:694a87df28b2ad7e9fdbab1ffa5198bad595740e3026159905af5cc1af327613"
+    },
+    {
+      "name": "@fontsource-variable/fira-code",
+      "version": "5.3.0",
+      "digest": "sha256:d8bfe176b9932bad28ad1b8198b50694edd17f8b787630d4f448ec0d9ace4149"
+    },
+    {
+      "name": "@fontsource-variable/fraunces",
+      "version": "5.3.0",
+      "digest": "sha256:dac41ebceb99adf018de9167ef6b03b8222b7bc3bd526f6d533df6083b502f09"
+    },
+    {
+      "name": "@fontsource-variable/fredoka",
+      "version": "5.3.0",
+      "digest": "sha256:fea0c282954326529986f54a740e7d31e1beffd04be215d51029852a0725ff7a"
+    },
+    {
+      "name": "@fontsource-variable/geist-mono",
+      "version": "5.3.0",
+      "digest": "sha256:882f6807dedf3cca496bba28b944f86bf7cc66c2aa5a87e07d408bf34a0c201b"
+    },
+    {
+      "name": "@fontsource-variable/geist",
+      "version": "5.3.0",
+      "digest": "sha256:c33524602e5843f539843469fd5a7dae8bb6fc03ba8bfdbd82261fe1143169ec"
+    },
+    {
+      "name": "@fontsource-variable/instrument-sans",
+      "version": "5.3.0",
+      "digest": "sha256:7ec5129927e99cb03fdc37b11b8b467bc5896ff31bc645fd3c90819dbe4f2045"
+    },
+    {
+      "name": "@fontsource-variable/inter",
+      "version": "5.3.0",
+      "digest": "sha256:89a89893c7e4325e230fc57cafe6f07b40c33ea020ba9402e63770a17232b7be"
+    },
+    {
+      "name": "@fontsource-variable/jetbrains-mono",
+      "version": "5.3.0",
+      "digest": "sha256:49d39073ea71f2ca0e323fd2ba3ca9073e3da36fd0dea11b88495333eaeea43a"
+    },
+    {
+      "name": "@fontsource-variable/josefin-sans",
+      "version": "5.3.0",
+      "digest": "sha256:00df24506a7366a7a1fcf82b10c0bbfd5b5337e02c232841e98d282131684bc9"
+    },
+    {
+      "name": "@fontsource-variable/jost",
+      "version": "5.3.0",
+      "digest": "sha256:70f89fec25ff8763d9e040783960202834899b1c6761bdcc83cdfc775a34de1d"
+    },
+    {
+      "name": "@fontsource-variable/league-spartan",
+      "version": "5.3.0",
+      "digest": "sha256:7576bd2cb324f16de10b35fa6167de160c6e56c9a60df095887173ae802611d4"
+    },
+    {
+      "name": "@fontsource-variable/lexend",
+      "version": "5.3.0",
+      "digest": "sha256:5f6d9a64fe7f927259654ae981056ed19a963583c130a78c5518dd367fcf04e3"
+    },
+    {
+      "name": "@fontsource-variable/libre-baskerville",
+      "version": "5.3.0",
+      "digest": "sha256:bd89f402ea6b85f64d4c1427e56abf2057bdc1abd2a43f3d7e32693e80b447ac"
+    },
+    {
+      "name": "@fontsource-variable/lora",
+      "version": "5.3.0",
+      "digest": "sha256:f3be92343cd925c324687d25752f083f049c65e65230b890843703059ffa5f58"
+    },
+    {
+      "name": "@fontsource-variable/manrope",
+      "version": "5.3.0",
+      "digest": "sha256:3a7500a3fc15c16fd47d4efffecc84c95a3abf69daf541d8b11daf17357d7a65"
+    },
+    {
+      "name": "@fontsource-variable/merriweather",
+      "version": "5.3.0",
+      "digest": "sha256:7835083efd9b17a4117f81a0f2f3bab6102266926a05474d30e4fd647a7b81ad"
+    },
+    {
+      "name": "@fontsource-variable/montserrat",
+      "version": "5.3.0",
+      "digest": "sha256:9094e73ab6d0f4f567f5a0535146b7170eaafe05b7032697552ed56d7d54e173"
+    },
+    {
+      "name": "@fontsource-variable/mulish",
+      "version": "5.3.0",
+      "digest": "sha256:d58a1ad68f7c45487423356a7ef36c0ec4e2d6e427f7b1dcb8a5c0037acb0cb7"
+    },
+    {
+      "name": "@fontsource-variable/newsreader",
+      "version": "5.3.0",
+      "digest": "sha256:8b553bc6d2104d60981fc3eee5061efe41969a2e4fe5e435321bac8f5002ce59"
+    },
+    {
+      "name": "@fontsource-variable/noto-emoji",
+      "version": "5.3.0",
+      "digest": "sha256:a932b9a3d655a731923afd4cc75170cd3e9b3674b502235ba44be17a701ca203"
+    },
+    {
+      "name": "@fontsource-variable/noto-naskh-arabic",
+      "version": "5.3.0",
+      "digest": "sha256:067035df054003765dfcd4a2e5129178f469502a7c90c3f5d49051f7afd665fb"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-arabic",
+      "version": "5.3.0",
+      "digest": "sha256:1f2ce625b338e10f09ba02b45aefd384e0d4a26be865b61ee69694f80b97b2f7"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-devanagari",
+      "version": "5.3.0",
+      "digest": "sha256:9f99f8c442c6c1d4e2414ffe8bd1919a055d5f4a90220554392eef0f382b60d2"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-hebrew",
+      "version": "5.3.0",
+      "digest": "sha256:531120f91c80f1bebd2ec1ecb6e3af3af7115471995b7adb18906870c8cfd188"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-hk",
+      "version": "5.3.0",
+      "digest": "sha256:9a429e3f7834c5d8a20ee9fab235fbf15694b3f5a8fb1cbb52946178446b9ffa"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-jp",
+      "version": "5.3.0",
+      "digest": "sha256:bccf038ebd11916f00e8de0b5b800f003c0c3e98399dc32f4016971e2fac7da0"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-kr",
+      "version": "5.3.0",
+      "digest": "sha256:ef4ac56c9a687b7f959e44933a04b2f3a20463edc76b8ea31a7563324204721f"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-sc",
+      "version": "5.3.0",
+      "digest": "sha256:a90728ab595c8d90a10a82d6abee007b4974ced6e0f7e5d464fa67442f73dbbd"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-tc",
+      "version": "5.3.0",
+      "digest": "sha256:37e63a813e70c346e6b6c89aa610752dc16b0833586dbf83e96de61ca677babe"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-thai",
+      "version": "5.3.0",
+      "digest": "sha256:86e8f04cfa4c22a3b19f99ebee20c101b0f131e7bfcaeb58f0b3e644366b169a"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans",
+      "version": "5.3.0",
+      "digest": "sha256:0d19f8c6fa129ad33447401dcbd64ef7e6c49982e6df65b49b720a9e4f50069d"
+    },
+    {
+      "name": "@fontsource-variable/noto-serif-jp",
+      "version": "5.3.0",
+      "digest": "sha256:37f80759079143c614ffb81c6c885430c66409f10ef419270a635323fa3f81a7"
+    },
+    {
+      "name": "@fontsource-variable/noto-serif-kr",
+      "version": "5.3.0",
+      "digest": "sha256:855a1346244f5313f37e6315720165fa6d92d1ee5aa50cbd51978fe3c782b92c"
+    },
+    {
+      "name": "@fontsource-variable/noto-serif-sc",
+      "version": "5.3.0",
+      "digest": "sha256:cb6c63ebbfe6e9dcc942f3b130f01c0cedb576516eee48cf3332f81748769f0f"
+    },
+    {
+      "name": "@fontsource-variable/noto-serif-tc",
+      "version": "5.3.0",
+      "digest": "sha256:beae4cd943093ef82e5209e28fb8c5f376965583c0fa230d346fd2436bdc80cc"
+    },
+    {
+      "name": "@fontsource-variable/nunito-sans",
+      "version": "5.3.0",
+      "digest": "sha256:840eba2c3ac43ff53f43b0da202d959005ad40a4bbffe592fe64198a085da57a"
+    },
+    {
+      "name": "@fontsource-variable/onest",
+      "version": "5.3.0",
+      "digest": "sha256:31835b47c0976813973d62426a8e4c17af47873df95782ee37fa7d3b9e403bb5"
+    },
+    {
+      "name": "@fontsource-variable/open-sans",
+      "version": "5.3.0",
+      "digest": "sha256:49dd61b03fcdb1c84448819974edf4738c1446461c69eefafb5caca486f35494"
+    },
+    {
+      "name": "@fontsource-variable/oswald",
+      "version": "5.3.0",
+      "digest": "sha256:5cd84a85ad052ffb721f3b6ee92ed29cb5526de7e299e6b954844f5190e8faf2"
+    },
+    {
+      "name": "@fontsource-variable/outfit",
+      "version": "5.3.0",
+      "digest": "sha256:3df511d4bd0d3ca88695d4259c00b9a01417360025bd0a3e8dacfbff50f3e5a3"
+    },
+    {
+      "name": "@fontsource-variable/playfair-display",
+      "version": "5.3.0",
+      "digest": "sha256:e46bee836bbfe084fa42571a6dced3ade14bfd8142ce201340fecfc7fd99d269"
+    },
+    {
+      "name": "@fontsource-variable/playpen-sans",
+      "version": "5.3.0",
+      "digest": "sha256:38c6f03495c79bc5632273a0d7fe73a2efe45b1c494e5dae6a546216ccbf50bc"
+    },
+    {
+      "name": "@fontsource-variable/plus-jakarta-sans",
+      "version": "5.3.0",
+      "digest": "sha256:dee784042480c00a42780ca6006aa58b3d6c749639c21cf742a034c05e9bfa67"
+    },
+    {
+      "name": "@fontsource-variable/quicksand",
+      "version": "5.3.0",
+      "digest": "sha256:18f8cf372bba1f04630a43c9d2688809fc58f500f3b0f1d813c7a5bf4f020a91"
+    },
+    {
+      "name": "@fontsource-variable/raleway",
+      "version": "5.3.0",
+      "digest": "sha256:75303c03592356b54b0749b6fcbcbb0bce63eac8c690fd97584c3316f40fac43"
+    },
+    {
+      "name": "@fontsource-variable/rethink-sans",
+      "version": "5.3.0",
+      "digest": "sha256:d96a3068fe14018b1ea398f2ffbcc617445e9e7ed3d87231a0c9fea4278a3b0d"
+    },
+    {
+      "name": "@fontsource-variable/roboto-condensed",
+      "version": "5.3.0",
+      "digest": "sha256:627e267312d43979096fc8413b6fb081625d166025cd088be1c2ee0b61fcab5c"
+    },
+    {
+      "name": "@fontsource-variable/roboto-mono",
+      "version": "5.3.0",
+      "digest": "sha256:6514cfdfe5c709b2b460c2230f71018ab3ca9029905d4ae492ddfed7bb9ba51e"
+    },
+    {
+      "name": "@fontsource-variable/roboto-slab",
+      "version": "5.3.0",
+      "digest": "sha256:0ecefb8756e7b92c02c66b9554dc5cfcd6bb43c64990adf1a8554c640375e16a"
+    },
+    {
+      "name": "@fontsource-variable/roboto",
+      "version": "5.3.0",
+      "digest": "sha256:d1983bcad42e0ab6602e8206642c5d3784ee608e25b89160a9a223d7c5a6624c"
+    },
+    {
+      "name": "@fontsource-variable/rubik",
+      "version": "5.3.0",
+      "digest": "sha256:b12fd0da57db2c5dc17aceb57a31342c686513f3b73a20623b4a42e2ced86e58"
+    },
+    {
+      "name": "@fontsource-variable/shantell-sans",
+      "version": "5.3.0",
+      "digest": "sha256:e080dcf441282e93136aff939954303270a44a409b7d63b9a3085eb5125b2650"
+    },
+    {
+      "name": "@fontsource-variable/sora",
+      "version": "5.3.0",
+      "digest": "sha256:d31911726e28a40b3ed66fac06e2766f278ce80d9bc71954cb4d72a16b3f3a89"
+    },
+    {
+      "name": "@fontsource-variable/source-serif-4",
+      "version": "5.3.0",
+      "digest": "sha256:cf02c81bdbaef8b806e33b7ae34ba8b23fefa780d91e8c2441d80e3a0fa3030a"
+    },
+    {
+      "name": "@fontsource-variable/space-grotesk",
+      "version": "5.3.0",
+      "digest": "sha256:0b220a333c3b7dab5e5df39db35d1324897a725d0729ca00d42bc971bf5d7497"
+    },
+    {
+      "name": "@fontsource-variable/unbounded",
+      "version": "5.3.0",
+      "digest": "sha256:3cf459fe9626cd028467ee2aeac662c8b1f2c38ad357cbb91e08a8f4c97c9ec1"
+    },
+    {
+      "name": "@fontsource-variable/urbanist",
+      "version": "5.3.0",
+      "digest": "sha256:4bb5962df1a45c63dd5f9e22baa971ec5049e5cd0945e8248258efc9472c08dd"
+    },
+    {
+      "name": "@fontsource-variable/vollkorn",
+      "version": "5.3.0",
+      "digest": "sha256:9316350eae8018d816e185bfeee83f02005f7cb3896295a8f601d1421c22ea34"
+    },
+    {
+      "name": "@fontsource-variable/work-sans",
+      "version": "5.3.0",
+      "digest": "sha256:0edd30280383b66ad85d502b04830739b1dee53cea9ea7eb506ddf7907daa252"
+    },
+    {
+      "name": "@fontsource/abril-fatface",
+      "version": "5.3.0",
+      "digest": "sha256:ec157bfc3af761804abaaa172e16aa6727cf0bf6ca2cbf87d41fc6df6cdcdfc0"
+    },
+    {
+      "name": "@fontsource/alfa-slab-one",
+      "version": "5.3.0",
+      "digest": "sha256:bed06b886680db4650faffe748c7af255a1eae699ed0630031fd22dc800c9d46"
+    },
+    {
+      "name": "@fontsource/anton",
+      "version": "5.3.0",
+      "digest": "sha256:96e4e1dc687995d1fdc8530d40fc22b5e3986ffcbae28e9732a697894aa69240"
+    },
+    {
+      "name": "@fontsource/architects-daughter",
+      "version": "5.3.0",
+      "digest": "sha256:358aaa18557081b1d586cab3a0a95fc33244b078e5f74cc6850a9b6165b2e292"
+    },
+    {
+      "name": "@fontsource/archivo-black",
+      "version": "5.3.0",
+      "digest": "sha256:dc508efa883840ef153e07323940462a492bec060cc350ae53e663ac8da4d73d"
+    },
+    {
+      "name": "@fontsource/bangers",
+      "version": "5.3.0",
+      "digest": "sha256:e73b813f63ba063bafe98198de235af8f92ffd022d59b8ebec618a7f1ca03674"
+    },
+    {
+      "name": "@fontsource/barlow-condensed",
+      "version": "5.3.0",
+      "digest": "sha256:7f3ddd038aadd7382e650904b3da589af30735ef0dc01607469328943a935b70"
+    },
+    {
+      "name": "@fontsource/barlow",
+      "version": "5.3.0",
+      "digest": "sha256:d70f1cbbb1d650147ea21bfbaa9cc49cf2e2090f9b2d3803a77d921b86fe57b4"
+    },
+    {
+      "name": "@fontsource/bebas-neue",
+      "version": "5.3.0",
+      "digest": "sha256:ec23dbda86e9c44278e7f032d800fa6c94b985c47c621b41fd0ff3c3bbe1844a"
+    },
+    {
+      "name": "@fontsource/black-ops-one",
+      "version": "5.3.0",
+      "digest": "sha256:d7fb77fe59dbf7fef687d99a112dbd3ccf28ef2f87a8c6d98f35288555c31929"
+    },
+    {
+      "name": "@fontsource/bungee",
+      "version": "5.3.0",
+      "digest": "sha256:dd8285d74c7e7bec6763147c7ef4aa608c6e124ba0cb6d91759111ff523a828d"
+    },
+    {
+      "name": "@fontsource/coming-soon",
+      "version": "5.3.0",
+      "digest": "sha256:cd9ec9fa4740c39c3d4572c554e1440c585b2b31186ddd0773c5bf039c71f6fc"
+    },
+    {
+      "name": "@fontsource/dm-serif-display",
+      "version": "5.3.0",
+      "digest": "sha256:f040b50cd2ae51ece04df6ce1aa1541a7996b367afeba0e8bfab53b2b4a56199"
+    },
+    {
+      "name": "@fontsource/fira-sans-condensed",
+      "version": "5.3.0",
+      "digest": "sha256:6f5e1ddd0aa79c032433cfb3323f371ea5d190a12841d7aa6f843ef4f838fb18"
+    },
+    {
+      "name": "@fontsource/gloock",
+      "version": "5.3.0",
+      "digest": "sha256:12744ba4f717ab70a8543ce5783b0990789a16065309cb771943aeb607c6220b"
+    },
+    {
+      "name": "@fontsource/handlee",
+      "version": "5.3.0",
+      "digest": "sha256:7fe2354cb89c412cf401c308826b16614924745b8bf630beb97d4515802038dc"
+    },
+    {
+      "name": "@fontsource/ibm-plex-mono",
+      "version": "5.3.0",
+      "digest": "sha256:e6f7e22e58f688a0d1513b9f9c547df5e62dffec04d23fcf1901fc6e034417f8"
+    },
+    {
+      "name": "@fontsource/instrument-serif",
+      "version": "5.3.0",
+      "digest": "sha256:daeaae3c808e28d72ee4b906dbd455cba59ca3a9bb6dddac5742e3edf2bad5f4"
+    },
+    {
+      "name": "@fontsource/kalam",
+      "version": "5.3.0",
+      "digest": "sha256:c6f32f2fef20ab0cd9459bc4b511c8b7d888f854b61cfb7103fb4f6e56cc6014"
+    },
+    {
+      "name": "@fontsource/kanit",
+      "version": "5.3.0",
+      "digest": "sha256:4f8f7013eebd54e818becb147de69fe3f28c0ecfaa1abf734fd9d0b1bd124a85"
+    },
+    {
+      "name": "@fontsource/lato",
+      "version": "5.3.0",
+      "digest": "sha256:047ac68fa9d983c65b79191f71ce8f07d9fd34884d0ed743eb5c3cc2a13a7c60"
+    },
+    {
+      "name": "@fontsource/lilita-one",
+      "version": "5.3.0",
+      "digest": "sha256:47e218fee8999d9e320eb9ac4568f3670c8a877d044f22c6f48de6bd3b1e9636"
+    },
+    {
+      "name": "@fontsource/liu-jian-mao-cao",
+      "version": "5.3.0",
+      "digest": "sha256:411179910e33e03d2fb60b621dea6fe930c30531388e4b7d66569ed7078b793a"
+    },
+    {
+      "name": "@fontsource/long-cang",
+      "version": "5.3.0",
+      "digest": "sha256:afc5cbd69c9cf8365b62538cb6596d74afcec91adf375019c3430f048118b4e8"
+    },
+    {
+      "name": "@fontsource/luckiest-guy",
+      "version": "5.3.0",
+      "digest": "sha256:fc4f77c4e7401747bae26a3f5c53a8b6661245078ae5d0f4393637edb06f93ea"
+    },
+    {
+      "name": "@fontsource/ma-shan-zheng",
+      "version": "5.3.0",
+      "digest": "sha256:c720e4fb1f60e22d1d1fd6a595df9299ed74ee5207151895f87f740bbec152d8"
+    },
+    {
+      "name": "@fontsource/pacifico",
+      "version": "5.3.0",
+      "digest": "sha256:fa4b3a17b0ab42aa24e85dcae63ce9b97651bd1d7a1b92a0481dec16935776fd"
+    },
+    {
+      "name": "@fontsource/patrick-hand",
+      "version": "5.3.0",
+      "digest": "sha256:48e67c2d58c2a60cf0ce3ee92040f1d4bf607339f1ede99d8f5e214dde725950"
+    },
+    {
+      "name": "@fontsource/permanent-marker",
+      "version": "5.3.0",
+      "digest": "sha256:5ee1261d1bacd1c7e2e7ad00b3be625c97f72069589015177f535cb1280695c1"
+    },
+    {
+      "name": "@fontsource/pinyon-script",
+      "version": "5.3.0",
+      "digest": "sha256:4969aa2f2cbfad263c46b13ae862e7b0baed08fbeb536d8b863a47d0d9408907"
+    },
+    {
+      "name": "@fontsource/poppins",
+      "version": "5.3.0",
+      "digest": "sha256:3f6cfcca8abee2eb9cdf774a5af4dc5776f56b6ecabcd88afc8124a87ce08b39"
+    },
+    {
+      "name": "@fontsource/righteous",
+      "version": "5.3.0",
+      "digest": "sha256:60b43879f5b9295e2e02773720779fda978565848e66e5337c2558b189a38370"
+    },
+    {
+      "name": "@fontsource/satisfy",
+      "version": "5.3.0",
+      "digest": "sha256:c7432078d788f7d4b6713e1581eb04efbd07c879b7f38d0d757210b0a956a52c"
+    },
+    {
+      "name": "@fontsource/shadows-into-light",
+      "version": "5.3.0",
+      "digest": "sha256:72224d6afc4c504a7f5e7534664da9be076b4c53a4b21d7b2b564088c409200d"
+    },
+    {
+      "name": "@fontsource/short-stack",
+      "version": "5.3.0",
+      "digest": "sha256:1075b3d7603869c9aa7ec77591eab9c0d3e57a780d3f5eddba824da44b8f224d"
+    },
+    {
+      "name": "@fontsource/space-mono",
+      "version": "5.3.0",
+      "digest": "sha256:f06bb46ce8780fdfac003e8939e621ae4ed5e4c76cce5825baa15e2170016071"
+    },
+    {
+      "name": "@fontsource/zcool-kuaile",
+      "version": "5.3.0",
+      "digest": "sha256:e3111dfac9b1d8d7ee35868b5dec116f198b3fa103be304a993ee9009335c7ec"
+    },
+    {
+      "name": "@fontsource/zcool-qingke-huangyou",
+      "version": "5.3.0",
+      "digest": "sha256:3cc512e44ada84dba0c380cb73964c639b3e82a61bf2c85c9faa9f29012596f1"
+    },
+    {
+      "name": "@fontsource/zcool-xiaowei",
+      "version": "5.3.0",
+      "digest": "sha256:91eb6287d3e1d92731e0487b8f73ed9779711c7099bd8e3da723edb6b6a55186"
+    },
+    {
+      "name": "@infolektuell/noto-color-emoji",
+      "version": "0.2.0",
+      "digest": "sha256:a39972f9d0c5f4281f1c8f3560065d12676238e9ba494a03d23c26e49b233ac8"
+    },
+    {
       "name": "@narratage/artifact",
       "version": "0.0.0-dev",
-      "digest": "sha256:b16107fdad5256905782fe28142cd19e77673f190691e839fd12d4f1f536ea0f"
+      "digest": "sha256:0821530c8f8bdede8095bbb2bdcc27c11c3e92a1cdfd126758d1d441999a9bad"
+    },
+    {
+      "name": "@narratage/caption-fine",
+      "version": "0.0.0-dev",
+      "digest": "sha256:8094384ca1980ee72e0a5621a7ee9d62aec167521fdb536eb068eeeecee2ec9c"
     },
     {
       "name": "@narratage/caption-gemini",
       "version": "0.0.0-dev",
-      "digest": "sha256:fee78f329fcaa348522cf5cabc0c9965169f0caa0fad34d0811adb78e4383477"
+      "digest": "sha256:f52a343838062199d0b77634f27099db4876d0b494e90616017dc743d1abab8c"
     },
     {
       "name": "@narratage/caption",
       "version": "0.0.0-dev",
-      "digest": "sha256:81e7e401a34856a5c0bdaeb0b14a587dccd90b89d06cf2c01c4234c8addfad6c"
+      "digest": "sha256:d365d74d385b56d25bbe9fa08e0d70a58dafaef3cc51683a43821d9cf8da08de"
     },
     {
       "name": "@narratage/component-kit",
@@ -24,32 +574,37 @@
     {
       "name": "@narratage/composition",
       "version": "0.0.0-dev",
-      "digest": "sha256:e21fdbfb9a9d0f98ca90c2c4a6962457ef3cff031a153c58e708de4c150b9093"
+      "digest": "sha256:c9bfd8e6d07dc38a14f622b4ce545752dee7df09c2458d4e4798dc87eb9ce997"
     },
     {
       "name": "@narratage/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:b1fafa8715899f565a03794849045846b5cc08fd3f51a12d5f7374a9c66d8534"
+      "digest": "sha256:44e4bf3a81a43ef3104caca89648963e4d8f7c84dbc0bb75432b1787c4ee8f27"
     },
     {
       "name": "@narratage/elaborator",
       "version": "0.0.0-dev",
-      "digest": "sha256:9ae85decc3e3678dbe05a1322c5f595277afcd649242ad5c36b3782252e89037"
+      "digest": "sha256:d433a2298b3afcf12d41575a9f0d3e7fd6a3feec297ba66466cc9d98b5aa8f1f"
     },
     {
       "name": "@narratage/estimate",
       "version": "0.0.0-dev",
-      "digest": "sha256:189b3e62b206587c1550e197a0551413f726999a11d143ec2da2e29012db78fe"
+      "digest": "sha256:f6f41462aee1e8972b44989de8c669ace6b4caf1b2f8fd2867edc8fcd3d77508"
     },
     {
       "name": "@narratage/film",
       "version": "0.0.0-dev",
-      "digest": "sha256:c847365263d42a5136daeac728188dfabb00b9ad4dac669682022d33e7d8f997"
+      "digest": "sha256:95f89761b3bcadd3c4111244787e8ab4e8695d0980e6da69ea1a77ed9fee6ebe"
+    },
+    {
+      "name": "@narratage/fonts-open",
+      "version": "0.0.0-dev",
+      "digest": "sha256:14f53b6b08cfa1a24d0e62c80755e9e24891de9fec7285bfca449019fd0cf965"
     },
     {
       "name": "@narratage/generation",
       "version": "0.0.0-dev",
-      "digest": "sha256:a9d0db9e25f2667602a3cc8735d6317b5ea821a187739d75c4f2c24d06a91381"
+      "digest": "sha256:0bc59f02ac62828923e280b61e88d66198471a78cc829970b7b3ca5e219530c9"
     },
     {
       "name": "@narratage/host",
@@ -59,117 +614,127 @@
     {
       "name": "@narratage/hyperframes",
       "version": "0.0.0-dev",
-      "digest": "sha256:fa8536f53f6f9d84dbe587eba814d97299767a359a95fe76a437b257659c27f6"
+      "digest": "sha256:dde9143aed4fa8731a1a91f860bb2a8a9f426c7515b5c12bed8b2fac24c0a416"
+    },
+    {
+      "name": "@narratage/markup",
+      "version": "0.0.0-dev",
+      "digest": "sha256:d038863cedf4d22162dc0b390485131caf0977be11032861415a766d068e3745"
     },
     {
       "name": "@narratage/media-pipeline",
       "version": "0.0.0-dev",
-      "digest": "sha256:4ceb5c9ef785e456f3807809b0384cbd40d463c4e5f1878375dcc8b017799922"
+      "digest": "sha256:8394a4c3b09699048bf23f40e348858a5e52ebaa2c7c1bbe16eb3df946a8139c"
+    },
+    {
+      "name": "@narratage/media-track",
+      "version": "0.0.0-dev",
+      "digest": "sha256:073650e06f85a84f9757ab2fd1da414a51687a135257c91c7f8919d9096274d0"
     },
     {
       "name": "@narratage/media",
       "version": "0.0.0-dev",
-      "digest": "sha256:d92f53d5060df53a7a671b58b8c0d1305be99384bd34e71bda0f7f1296550f4b"
+      "digest": "sha256:b1d896926ad91ce34ccbd743a6b6785e0c21c90b1072b337421225e5f876a209"
     },
     {
       "name": "@narratage/model-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:71b23848a90535e0cd74b25f4ef74a9827ce1aa0abdfe4eb34cc1dc3d907ce13"
+      "digest": "sha256:00d8ca97f522f9692748d2ef83336df759626317d9e2baf6b8a42dc1473e9746"
     },
     {
       "name": "@narratage/narrative",
       "version": "0.0.0-dev",
-      "digest": "sha256:85e98e61021310c2dd6473189dcbcc9daa54039277169cbb5ed51ed70277a894"
+      "digest": "sha256:04a9e9aaf2005e9a12befea7a29d24ab0aa74fda87e4ff39eb149342c6f8a256"
     },
     {
       "name": "@narratage/program-space",
       "version": "0.0.0-dev",
-      "digest": "sha256:3a321f064e7f763ae056662ed07bbe4b0fdf1b1628502891c4c73beb5a20edd6"
-    },
-    {
-      "name": "@narratage/prompt-kit",
-      "version": "0.0.0-dev",
-      "digest": "sha256:2a8ef5fa05cfbde5feb4b1b525e74666874632fc4fd6531a7a54b0f5d2797342"
+      "digest": "sha256:e7bbc857d07483aecce6d35fff1e91a51a6c785d13f3223607a91c3fe6e93b5f"
     },
     {
       "name": "@narratage/protocol",
       "version": "0.0.0-dev",
-      "digest": "sha256:aba55408fd1ffec38c1ce2e81706aaadad48277a2fe4b9adc6323674e1b23ce6"
+      "digest": "sha256:6774f0461a8a248b6f24aa9014738bca328e8aff9704175656ee04f255d8b083"
     },
     {
       "name": "@narratage/render-hyperframes",
       "version": "0.0.0-dev",
-      "digest": "sha256:74ff1e25ed72fb22ab17068959373162c58dd9f0cc8a5c2a811615c02666cf23"
+      "digest": "sha256:5f30fd4c9ce4de8984408d125498f58b06899011d6e07b43bea6ff3498490fe1"
     },
     {
-      "name": "@narratage/run-text",
+      "name": "@narratage/run-markup",
       "version": "0.0.0-dev",
-      "digest": "sha256:3d7c8549650244571fe6fab24a2518edac8b17368934a141594d093f846455d6"
+      "digest": "sha256:325fcbfc221a0de4a0fa94563d2c4960b6826723a7c523cdef301ee8d1a4102e"
     },
     {
       "name": "@narratage/run",
       "version": "0.0.0-dev",
-      "digest": "sha256:a828b37f801d3ebfcc4cae84e4fd0a1baf9342f00a85d1d9440c92d570acb8c9"
+      "digest": "sha256:d734eb7ef18623d279d7176ce3fb1ed8b9c3a457aec7fcec2d439129815efaff"
     },
     {
       "name": "@narratage/script",
       "version": "0.0.0-dev",
-      "digest": "sha256:346c06c3a317d749019da7309c419771f3325a4329d6e551d5f4c5af95cb260e"
-    },
-    {
-      "name": "@narratage/seedance-speaker",
-      "version": "0.0.0-dev",
-      "digest": "sha256:3f17790a7be2768aeed20d53a9db9bec47088425d0c2303ec80f0ceeb787bc14"
+      "digest": "sha256:425cb50348d40a7d14e4bac5d28f32be2f50c9a0504341ad8d72112f6e776d16"
     },
     {
       "name": "@narratage/seedance",
       "version": "0.0.0-dev",
-      "digest": "sha256:f550f1f9278056b349c6f4f536e8d8694ff3cc1d01395c30a1384332fc034f5d"
+      "digest": "sha256:72e172d81787cb632a903ab5f3f56ff7bb12daf57f3e2f927c70045db8140b88"
     },
     {
       "name": "@narratage/semantic-map",
       "version": "0.0.0-dev",
-      "digest": "sha256:4293518a23ead1320f81d5d38e60bef96ea7f27149495bc890b9e4c275572864"
+      "digest": "sha256:2edb5924fb765570a4404654844646b308d819bb8c4580689513130d78c36b78"
     },
     {
       "name": "@narratage/source",
       "version": "0.0.0-dev",
-      "digest": "sha256:8bbfa48c0fde45639578902c907d9190bd5bbb8a03bd59fca8fd364b820a3184"
+      "digest": "sha256:cdf2bca700af10b30f2c29117ed7492fae82a434f4fd3e48747e8c51a7aab4c7"
+    },
+    {
+      "name": "@narratage/spatial",
+      "version": "0.0.0-dev",
+      "digest": "sha256:651ab54204dba22f2815536bf0c03656b17dac8e01032c589f6be132d3921ed3"
     },
     {
       "name": "@narratage/speech-alignment",
       "version": "0.0.0-dev",
-      "digest": "sha256:98c3158c130b90b443283f19c770f358ed81caa915a8e741a699f8ffe3ea9f6d"
+      "digest": "sha256:e62baaf3a77d41cdd4f245169f48b4311f6a02d232625cdbc44523455d7d7c17"
     },
     {
       "name": "@narratage/speech-basis",
       "version": "0.0.0-dev",
-      "digest": "sha256:f47d8b1c0eff718380b72c241b566f766a37f65d895e2e89867ec5d177f4168d"
+      "digest": "sha256:a5aa20e9b44523fa3e05566d4745207d193e8d62cb0890f83ad2742afdb70bed"
     },
     {
       "name": "@narratage/speech-evidence",
       "version": "0.0.0-dev",
-      "digest": "sha256:a70759a336549bb4f622ff59b0259384d726211afa0cab5d0fcde89eef78fab1"
+      "digest": "sha256:c3b19b7647f203d6dc506b94d2a45203acbb29a66660da6f1771fd0af4910808"
     },
     {
       "name": "@narratage/speech-spine",
       "version": "0.0.0-dev",
-      "digest": "sha256:99ba2c670a48d35eb25e538c6099c2b31f3a20801771d81642c8e78efe13c8b4"
+      "digest": "sha256:982b442194d970a75e183cc32669b7d213a03c91e933cf1472cb6dae5f22fe73"
     },
     {
       "name": "@narratage/speech",
       "version": "0.0.0-dev",
-      "digest": "sha256:1296f5241ab87621cbed2019ffd09e51a2ecd79a49848715ade628a9d722d8c1"
+      "digest": "sha256:ad66df5763802600b43d5df3538e5dc43bfe52cb7f1dabe63497e79834cfbe09"
     },
     {
       "name": "@narratage/svs",
       "version": "0.0.0-dev",
-      "digest": "sha256:8973ec01d5c9390da4e5a3f74c7e5af0a4bb49e15796e98e748b75ce62363d9d"
+      "digest": "sha256:e44ae945c23e041602eb2f029a4c72b96fc2525e6c767e117e2bf0f11a830e0e"
+    },
+    {
+      "name": "@narratage/temporal",
+      "version": "0.0.0-dev",
+      "digest": "sha256:b20cb315f5fc365a2e9994c63989a0cc1edc46b5843e06a337827d21d74068a1"
     },
     {
       "name": "@narratage/text",
       "version": "0.0.0-dev",
-      "digest": "sha256:95d4d335bf4b4bad846a1dc2945bff0832083f7930726a8144159aa1c78a87d7"
+      "digest": "sha256:7062a1e07d011fcedd49655a7ddfcb9c8272bea1904b444146dc1da8fa939cd1"
     },
     {
       "name": "@narratage/validation",
@@ -179,12 +744,17 @@
     {
       "name": "@narratage/visual-ir",
       "version": "0.0.0-dev",
-      "digest": "sha256:7a112d37e211797b680b2aa37382be47a65a6182e91fdcc93da50e684e50373c"
+      "digest": "sha256:a42b9bcc204bf96f9416d786a06dd80c4a08d9a2c8b8d75f1956f8c03134e724"
     },
     {
       "name": "@narratage/whisperx",
       "version": "0.0.0-dev",
-      "digest": "sha256:92683f7866c852eda0a71c8935a522bbc2579219ebde680b289eabb39f51f77a"
+      "digest": "sha256:7ee7f559fdc0508b6a7447838eb0a121cbe60c03522c6969638e0e8d3c04068f"
+    },
+    {
+      "name": "cmu-pronouncing-dictionary",
+      "version": "3.0.0",
+      "digest": "sha256:11f46faa5a54006cd9ffd84ceaa6177765922a7646640c5f84ee1a16d04815d8"
     }
   ],
   "packages": [
@@ -194,8 +764,8 @@
         "name": "@narratage/artifact",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:cf6435732ab7b25c8d0c225042482d940344d5541fe37a4d9cbf905a0d0dad7a",
-      "closureDigest": "sha256:d4386b53042e584f162c2882bdc3b515c19f10a87b23c3e9634852fdad75c1ae"
+      "facetsDigest": "sha256:72524ad8d5599450b4ab199680a6382c72c40cbf760f9c0265687f340aa60650",
+      "closureDigest": "sha256:d946eba0e895f2db33d4418ad9ba96bbf73eb21a66d870d1974b6c73494a886f"
     },
     {
       "specifier": "@narratage/caption",
@@ -203,8 +773,17 @@
         "name": "@narratage/caption",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:86b692dc498c7d51fb87aab99ceb88464f2e3a86ac48a8abf64349dcc38fb7d0",
-      "closureDigest": "sha256:04e096f78374a1ac9dd53988a5356c06d4b59f1989fedb495c459cfc12df275b"
+      "facetsDigest": "sha256:6506137d8b76a283947b2ed6566cfd58562ef2a691cc05b665dd70484f6c2e2a",
+      "closureDigest": "sha256:f03d80ca88bcc9eb68f72f4382451b7a889b1e2be086a93b3ce285e313bf1f8e"
+    },
+    {
+      "specifier": "@narratage/caption-fine",
+      "package": {
+        "name": "@narratage/caption-fine",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:b196d99feded56f1ca6ae43414205ab6aa54ade2b22cb24e6d6feb166598a6f4",
+      "closureDigest": "sha256:92bfc425dbdec98728a62278b0a2e460eaafecf1a1ebbf62619f002d9fc749d6"
     },
     {
       "specifier": "@narratage/caption-gemini",
@@ -212,8 +791,8 @@
         "name": "@narratage/caption-gemini",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:bee8a4fce6b8213bd1ca1a94811cdcf261b71ecc39ecbf1593afa67f203b7cd5",
-      "closureDigest": "sha256:3764226d419778d413d503110fef77ee05f506c7c3ac61f18d341b8c038ad8bc"
+      "facetsDigest": "sha256:a1c673e347cee4543ab8949b8fae2e61248979db7851556114ec968756c72e60",
+      "closureDigest": "sha256:1277a330bb685cca60066c794d9e86d7860c3ba2cf0a5c889b61c04b6946ea84"
     },
     {
       "specifier": "@narratage/composition",
@@ -221,8 +800,8 @@
         "name": "@narratage/composition",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:ec680d429d88ec1c55531125a18c1620fea0c81600de55ba6d43c4fbf873e480",
-      "closureDigest": "sha256:ce5d73afa84939ee528d9095b711df49191e4695797e25ede03ccf2ae3ccf0b0"
+      "facetsDigest": "sha256:855f4123e5ac2b40c32e621c0167e515588c33a9a2f9bbf327a1a57676327223",
+      "closureDigest": "sha256:a968d73e961354a8c98fd72954540e47de4c1a55dcc0b1cd6d922f921f949ada"
     },
     {
       "specifier": "@narratage/estimate",
@@ -230,8 +809,8 @@
         "name": "@narratage/estimate",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:b737a89381747c16afbc9cc026f268b83e8e6c02b707f85a44c28f66c8807eaa",
-      "closureDigest": "sha256:2159640d3162218483d6c5fddf5503fba86dd862570c8b11c6890ba799a775c3"
+      "facetsDigest": "sha256:430724962414edc2ce462168db5e55190da4845f2cfaddfaa9a1891b77dfa14a",
+      "closureDigest": "sha256:366cba8d88f097f916531187d0e267c4340959eea7b916a86fd43d340187af38"
     },
     {
       "specifier": "@narratage/film",
@@ -239,8 +818,17 @@
         "name": "@narratage/film",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:61839fefb8cf723e9b55f4ac0932928b2dba5de4935ca03c0c4335246c6ab5d8",
-      "closureDigest": "sha256:ff9630a80e02f73efdfc06b6eec8f76cd5d8feeaf0f4332d25512a4d637b3a35"
+      "facetsDigest": "sha256:6fd852de1476acf47779dd072d13a02a0e7e01469dee85d366a0152d7fb3c9a8",
+      "closureDigest": "sha256:bd74ec8c440e8c450935884f672b5441c54732075c38cea750775a92314300e1"
+    },
+    {
+      "specifier": "@narratage/fonts-open",
+      "package": {
+        "name": "@narratage/fonts-open",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:c81fd5ff3f42020cf6800e77cbbeb6b3f187af135fc4af11c30a3573dd92306f",
+      "closureDigest": "sha256:8e9bdf2a8b9d9abc6d66e7a4016ed8987432c0878bf1ff255abcfe6e1f036603"
     },
     {
       "specifier": "@narratage/generation",
@@ -248,8 +836,8 @@
         "name": "@narratage/generation",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:c52730036a392448eb17cada1dd16b22be9ecb721ba47fb8d8a8633f74e4e039",
-      "closureDigest": "sha256:b3e11e3be1161e7ce0cf7bac7a2dbfc61fea637ee4fbbc6dcb7144ff060d9112"
+      "facetsDigest": "sha256:d74a57a3210267e665366513324db5c313b3ca0f770da66e74cc38aee5048efb",
+      "closureDigest": "sha256:a2adfd7204c85a3b62711f1ca9693466392390eb6ab78d8bf2732905f834ba91"
     },
     {
       "specifier": "@narratage/hyperframes",
@@ -257,8 +845,8 @@
         "name": "@narratage/hyperframes",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:a85021fad5a6ad3ab248ddd51ce8473f7e90cee6f9da50c8ec124558e67d5971",
-      "closureDigest": "sha256:1f91f9acc75cf392150311c6952078c400b8c23f6425514412b4328d0ee60b09"
+      "facetsDigest": "sha256:23f1883197740f2896dfa29a4ead467bfc1564b41634e0c14dd55a1d9c77bc17",
+      "closureDigest": "sha256:d5bc78df0e42b3a7c2d63caf8cd80d50b375a973a41837a3510f555f6cd68913"
     },
     {
       "specifier": "@narratage/media",
@@ -266,8 +854,8 @@
         "name": "@narratage/media",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:c883f03447734dc30a6c239c828083e6e9708258e457f845c2cfa5a2f95c0387",
-      "closureDigest": "sha256:5fc9bfafba5249455364fc8b4ce60dd21fc861a0888ca21c7c8de33996481bf3"
+      "facetsDigest": "sha256:a072c27c26f19f0fcaf7f423ee027c639571d369bca9bef48400a4a035616310",
+      "closureDigest": "sha256:28a7c1fbb74bb456e2cad33ba62063762b5b6fc97cb54930e1568a473362ec2b"
     },
     {
       "specifier": "@narratage/media-pipeline",
@@ -275,8 +863,8 @@
         "name": "@narratage/media-pipeline",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:783aeed74e2586b3f4cff5350a27d06de9cb9472a237dabc0d5c68680cca3546",
-      "closureDigest": "sha256:cc85343af360eca7440e3c700b86650eb080882be737df0aeb0ca9a4f7ab8106"
+      "facetsDigest": "sha256:d42e3034775755a1da5c41d7fee274c6d04f7519f5e0fb52a4d62e2b189f5274",
+      "closureDigest": "sha256:451be772203278d064ec63b3efd3f82cfacb45917cf67a52e08417c057932629"
     },
     {
       "specifier": "@narratage/narrative",
@@ -284,8 +872,8 @@
         "name": "@narratage/narrative",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:849b7e49ef228b44d07ae57a106b18a24c7730c88783057bcdbad1e2e61153d3",
-      "closureDigest": "sha256:e8030a009c4904f38373be51c372d5fcf0947aff81ed07317fce62b1930904cb"
+      "facetsDigest": "sha256:703db7ad343b00701dc39e3b316992dc371307f0c6c2ad15d1e0269257ffb326",
+      "closureDigest": "sha256:112da177d39db502da452b13d7bf17d42c39bc9db4a20102e0078adf8f0ca277"
     },
     {
       "specifier": "@narratage/program-space",
@@ -293,17 +881,8 @@
         "name": "@narratage/program-space",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:5fa9b120e8d37ca2edd478e3388c3dc4e398113e74c6589c6d25ef604a1d348a",
-      "closureDigest": "sha256:802f9ab8cf9bd284b8df0ef8ab78fc780339b175996d3626e5ba30f18f5349f1"
-    },
-    {
-      "specifier": "@narratage/prompt-kit",
-      "package": {
-        "name": "@narratage/prompt-kit",
-        "version": "0.0.0-dev"
-      },
-      "facetsDigest": "sha256:f04988c69c3b953fd02c4c791bf542bff61464c6aa593f49c71347cc03a422f9",
-      "closureDigest": "sha256:2e116ad7ccbc1cd52780fab61efa1de0c2d7d744a9c11f1379e418b6d328ca8b"
+      "facetsDigest": "sha256:45ebd22857f2d6817cb8e464ceeb37bea742e01e95edaaa3f3e6867621d2a3cb",
+      "closureDigest": "sha256:b849886764e88c35396a5295ce20c265bb7ecfac979fd5b9b4a4d177145e2e49"
     },
     {
       "specifier": "@narratage/render-hyperframes",
@@ -311,17 +890,17 @@
         "name": "@narratage/render-hyperframes",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:8fcb965f660a24bfbe2808f0e288d0afb316d772ec5d6f189530d3602a9f9186",
-      "closureDigest": "sha256:4c49f355407f2bd9824cb1d28ccda1628dc98b498e869bafe5c4d2ef5490385e"
+      "facetsDigest": "sha256:6e91e842a7306e4840bfc5b98a1bb328d78b7c0a04b8734dc8d3a0bd3b481a30",
+      "closureDigest": "sha256:a631ae0d85a64e11a5613ae6262ceb8c027e480b90389b5d1e717792f537687e"
     },
     {
-      "specifier": "@narratage/run-text",
+      "specifier": "@narratage/run-markup",
       "package": {
-        "name": "@narratage/run-text",
+        "name": "@narratage/run-markup",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:fbcab7cea86223fe00ea04b51c2160bb534aafbb99067f5877e6825b0ce4eefc",
-      "closureDigest": "sha256:de91d32eab3d3cfb7068f729dad5c41e1b6134f1360b799f3d8982d46ee34aa1"
+      "facetsDigest": "sha256:fb3a8a5be9a0ef0aa914026a199be641f4e20df27f9b284be196f52fd260be55",
+      "closureDigest": "sha256:0f3f2c4da7f40e8ae0a6c82ae76df71e82524258ddeff474a141790beb779425"
     },
     {
       "specifier": "@narratage/script",
@@ -329,8 +908,8 @@
         "name": "@narratage/script",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:42d654cd2ce1e48b6a0edb036e4ef742ab59cd73abb2bb42f66ab522ae41e34e",
-      "closureDigest": "sha256:c29b5586b3a6a1d88a7805f828cd96548f6a1e787b2163dcbf46ee235646d4e4"
+      "facetsDigest": "sha256:69e1c08a5f07c73a506ca8286426a0386485738649e86463cca0b291f319ee4e",
+      "closureDigest": "sha256:715402ed32dc6ee82909ba4e3e331df2200360003d85855af608228dc6d7723d"
     },
     {
       "specifier": "@narratage/seedance",
@@ -338,17 +917,8 @@
         "name": "@narratage/seedance",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:25a6e78020082829e4ad5b41609f11b82933fb99d6fdb7958d392fa646eaa94b",
-      "closureDigest": "sha256:6887a5187321112b887630c45cc4ee1aca638de2fe0c5e9bba9f8b0dbb317f2d"
-    },
-    {
-      "specifier": "@narratage/seedance-speaker",
-      "package": {
-        "name": "@narratage/seedance-speaker",
-        "version": "0.0.0-dev"
-      },
-      "facetsDigest": "sha256:6d913b16f5ffd7c5cc4969c6ec78d5a1b87060ec4ec4fbd59df1dff12ec52b94",
-      "closureDigest": "sha256:52ee32e40b14180bc6ea1ae6a2186bdee2a782eb8816447b5a527eb1f56e75b6"
+      "facetsDigest": "sha256:e9e09bc47e47706f9d5a6a69ba27df6f60aad62f27b131e0a98899ecdb1cad11",
+      "closureDigest": "sha256:88e2b038cd1513a4cf3667c296621c4215efe2b9d5e754a22edf47e7b70eeab5"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -356,8 +926,17 @@
         "name": "@narratage/semantic-map",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:4f041c5844a3eb9a70e8472d4cf4f534de960a77745819366dac0061ec600e76",
-      "closureDigest": "sha256:5cb3e8f8cf64ab9bb3359541d0c8252fbf032daaf82602873680e576de7e7aa7"
+      "facetsDigest": "sha256:6c4a27fc5cd63a59002f3cd433ae432b7129acb3a501a117fee1db19fb1900aa",
+      "closureDigest": "sha256:b032e7e27224d005a1d1eb147b0bb0b73ce17a712919b6182d88f2ba715c4203"
+    },
+    {
+      "specifier": "@narratage/spatial",
+      "package": {
+        "name": "@narratage/spatial",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:6cc59a18d8dda2312f3a315eb4d60a57163df1334e2ccd62641118c2304c06dc",
+      "closureDigest": "sha256:28ab5737ee6d4af10593dd7d443ca56c68102b7482aecdf8fe915eeb2611e457"
     },
     {
       "specifier": "@narratage/speech",
@@ -365,8 +944,8 @@
         "name": "@narratage/speech",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:fbecf0c9334b34c91f49c4edd9f2592d7b49856ec2d8a875dd272f47ade29a18",
-      "closureDigest": "sha256:dd94752413a319c64150b3a996e184adc1e4c16b02947e69cf1c63285b7a2fb4"
+      "facetsDigest": "sha256:212c25bf0eb71a0f4bbb29da485370b4011fd37e27187746f6f0e83799e4fd68",
+      "closureDigest": "sha256:9904ffdd31df20cae6a638f7d2797c8f0af7f86194f928077158931bffbf1012"
     },
     {
       "specifier": "@narratage/speech-alignment",
@@ -374,8 +953,8 @@
         "name": "@narratage/speech-alignment",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:b3f48d736480bd0e1911a9195d9143ffb5c38a91bdcc55584845d6488cccc14f",
-      "closureDigest": "sha256:b1a33d3356007e8176506a74d13f71792e2aa30737510057870a25fce91120b7"
+      "facetsDigest": "sha256:e921cb1351e86fe1bf072a0e9166cf5f5ee14c0ec5d59dacca08bfc5eb4ada65",
+      "closureDigest": "sha256:36f92d5d9ff633c143206d5b09e2bee00e1d05eb5e0c652791d6d56eeabe2855"
     },
     {
       "specifier": "@narratage/speech-basis",
@@ -383,8 +962,8 @@
         "name": "@narratage/speech-basis",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:9703845ab4a67b1a1fba98b276f5c913baec80748a08c0d63dc1b10caef8466f",
-      "closureDigest": "sha256:98ed38a0984bc88908a3c6c93fdb3fa0c157aa1c8bb1cfbb92ec2c935cf1d407"
+      "facetsDigest": "sha256:3f0fb57eddecbede68f9f56f96e47db0412f26ac444261ca90748550b483b79f",
+      "closureDigest": "sha256:047fd7922dc29b5dba22c3aaa4e72d979f1c528be7ab9a9bf777787a5cb9c57d"
     },
     {
       "specifier": "@narratage/speech-evidence",
@@ -392,8 +971,8 @@
         "name": "@narratage/speech-evidence",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:69110ba7b1740b0e609f6beef673fe4ef113ba5b0c803fb785ecf1dc9325f0a7",
-      "closureDigest": "sha256:aecda63214714d98f86022490f25eb3124851dcb4f2b86fdfe3f8f648511305d"
+      "facetsDigest": "sha256:9980230b5a602f483267f5ab5fd0edafc54d67bdd6d8d2691eb489075505a72e",
+      "closureDigest": "sha256:2e6610858ff681da612b5922c04cc7f4b489996e841177cbb8d1124cf9e0a409"
     },
     {
       "specifier": "@narratage/speech-spine",
@@ -401,8 +980,8 @@
         "name": "@narratage/speech-spine",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:a4cdbee32b5752810b440adb83ba73a4261b4a61f5a750c6712a721f3265ad48",
-      "closureDigest": "sha256:ebe5a7e7e9738f05ff64bc11d3cee37eecbc6ab57895786e8fb3991bff5d72b6"
+      "facetsDigest": "sha256:f497578707222b4a310b4561ee60cc6f76967c2a8b296df295d85fd5f09a057a",
+      "closureDigest": "sha256:e8b39ab5d64e8d81bf4e03a50024f8ec82389e8aa9a7d056e9587a6fa5f92f2a"
     },
     {
       "specifier": "@narratage/svs",
@@ -411,7 +990,16 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:9cc7c397d2cd97b5a3e814886b6553b6d236fd8825df0d056e328b7f0cf20163",
-      "closureDigest": "sha256:19a883fb2968a038f29f4fb496922f25c3e0fcc48783cc886f6ee472a32b1d21"
+      "closureDigest": "sha256:68904cf8f1024e6d0d034592b7246a47346cde3aa5b1e5cc1009b3601e9d5465"
+    },
+    {
+      "specifier": "@narratage/text",
+      "package": {
+        "name": "@narratage/text",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:4435dd4bd38e5e017013f775e28e379e3e235211649ee8f3913378f7f9e60b58",
+      "closureDigest": "sha256:3b287bedddfcb409e2809cc8383d881da4220a201d80cd287aacfc85b01cf9a4"
     },
     {
       "specifier": "@narratage/visual-ir",
@@ -419,8 +1007,8 @@
         "name": "@narratage/visual-ir",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:a8d72579639a41123f5ac017e98781819012adc52d94a8116c5a072dc9e6fc05",
-      "closureDigest": "sha256:026709127336795d41295ad4d67d3fb13e7765e4ae4fc3689661d5b7991282c6"
+      "facetsDigest": "sha256:8c577a635a48ee04441068df1f3dc2c18a602bff091fddca8883a3843ce4ce37",
+      "closureDigest": "sha256:6d001437aa17e2f5c6aab656cdb2b02830fea5db834c1397ae321cddf6da35da"
     },
     {
       "specifier": "@narratage/whisperx",
@@ -428,9 +1016,9 @@
         "name": "@narratage/whisperx",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:0eb8b7e5605851c873e0d37385577242a761e23d6eae9b0a495a2667ba71a082",
-      "closureDigest": "sha256:21bc9028708ff5e1f98d6bfcdc33c69238b4985baee9dcef24868c7759f6be45"
+      "facetsDigest": "sha256:5d82bc1ffa3841d795792edfdfc3ad45d26162edc65bd8bed2edaf6cd240ed76",
+      "closureDigest": "sha256:d5c2b093afe55bd0441a7ea1a614629fce15bbae796497794a4dee2b4c979e54"
     }
   ],
-  "digest": "sha256:07b9ff0a0ca973a52733fa3fdda48144b2867cff5ed7a736adcc30c3a377a88a"
+  "digest": "sha256:fcba312519c09e7239cb25a1dc65627bb2cb7c83dca13640de79dfbd30b1eb71"
 }

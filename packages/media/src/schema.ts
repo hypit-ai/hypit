@@ -23,7 +23,9 @@ const streamBase = {
 } as const;
 const videoStream = object({ ...streamBase, kind: { schema: { kind: "literal", value: "video" } }, codecType: { schema: { kind: "literal", value: "video" } },
   role: { schema: { kind: "string", enum: ["moving", "attached-picture", "still"] } }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
-  height: { schema: { kind: "number", integer: true, minimum: 1 } }, averageFrameRate: { schema: rational, optional: true }, nominalFrameRate: { schema: rational, optional: true } });
+  height: { schema: { kind: "number", integer: true, minimum: 1 } }, sampleAspectRatio: { schema: rational },
+  rotationDegrees: { schema: { kind: "oneOf", variants: [0, 90, 180, 270].map((value) => ({ kind: "literal", value })) } },
+  averageFrameRate: { schema: rational, optional: true }, nominalFrameRate: { schema: rational, optional: true } });
 const audioStream = object({ ...streamBase, kind: { schema: { kind: "literal", value: "audio" } }, codecType: { schema: { kind: "literal", value: "audio" } },
   sampleRate: { schema: { kind: "number", integer: true, minimum: 1 } }, channels: { schema: { kind: "number", integer: true, minimum: 1 } },
   channelLayout: { schema: string, optional: true }, decodedSampleFrames: { schema: integer } });
@@ -65,9 +67,15 @@ export const muxedMediaSchema: ValueSchema = object({ contract: { schema: { kind
   frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, artifact: { schema: blobArtifactSchema(["video/mp4"]) } });
-export const fontArtifactSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-artifact@1" } },
+const fontSourceSchema: ValueSchema = object({
   artifact: { schema: blobArtifactSchema(["font/otf", "font/ttf", "font/woff", "font/woff2"]) },
+  unicodeRange: { schema: { kind: "string", minLength: 3 }, optional: true },
+});
+export const fontArtifactSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-artifact@1" } },
+  sources: { schema: { kind: "array", minItems: 1, items: fontSourceSchema } },
   weight: { schema: { kind: "number", integer: true, minimum: 1, maximum: 1_000 } }, style: { schema: { kind: "string", enum: ["normal", "italic", "oblique"] } } });
+export const fontStackSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.font-stack@1" } },
+  faces: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
 const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "still" } } }),
   object({ kind: { schema: { kind: "literal", value: "frames" } }, frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }),

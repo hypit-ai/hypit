@@ -1,11 +1,11 @@
 ---
 title: SVS 样式表
-description: SVS Recipe 语言——用于影片、字幕、B-roll、文本及生成设置的类 CSS 样式表。
+description: SVS Recipe 语言——用于影片、字幕、媒体、文本及生成设置的类 CSS 样式表。
 ---
 
 # SVS 样式表
 
-SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片尺寸、字幕外观、B-roll 布局、文本样式、语音估算参数、生成设置和自定义字体。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
+SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。它们用于配置影片外观、字幕外观、Media 呈现与运动、文本样式、语音估算参数、生成设置和字体选择。SVS 中的值称为 **Recipe**——它们是不可变的类型化记录，由消费组件进行验证和解释。
 
 ## 基本语法
 
@@ -14,9 +14,6 @@ SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。
 
 <sheet version="1" id="studio">
   film.vertical {
-    width: 1080;
-    height: 1920;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -45,36 +42,34 @@ SVS（`.svs`）文件使用类 CSS 语法定义可复用的类型化配置值。
 
 ## Film
 
-Film 外观——画布尺寸和背景颜色。
+Film 外观只拥有画布清除颜色。画布尺寸是显式的 `space:Canvas` 图值，帧率来自
+ProgramSpace。
 
 ```svs
 film.vertical {
-  width: 1080;
-  height: 1920;
-  frame-rate: 30;
   background: #09090B;
 }
 ```
 
 | 属性 | 描述 |
 |---|---|
-| `width` | 画布宽度（像素） |
-| `height` | 画布高度（像素） |
-| `frame-rate` | 每秒帧数（通常为 30） |
 | `background` | 画布清除颜色（十六进制） |
 
 通过 `film:Film` 的 `appearance` 属性引用：
 
 ```svml
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```
 
-## 字幕
+## Caption Fine
 
-字幕视觉外观——位置、排版和容器样式。
+第一种官方 Caption 样式族把规划要求和渲染参数放在同一个 Recipe 中。
 
 ```svs
 caption.dialogue {
+  cue-min-words: 2;
+  cue-max-words: 7;
   stack-order: 70;
   x: 0.08;
   y: 0.76;
@@ -93,11 +88,12 @@ caption.dialogue {
 
 | 属性 | 描述 |
 |---|---|
+| `cue-min-words`、`cue-max-words` | 通用 Cue 字数边界 |
 | `stack-order` | 所有 Track 之间的 Z 轴层叠顺序（值越大越靠前） |
 | `x`、`y` | 位置，以画布比例表示（0–1） |
 | `width` | 宽度，以画布比例表示 |
-| `font` | 字体族名称或 SVS 字体引用 |
-| `weight` | 字体粗细（400–900） |
+| `font` | Recipe 中便于阅读的字体标签；精确字节来自必填的 `font=` 图边 |
+| `weight` | 请求的字体粗细（1–1000） |
 | `size` | 字体大小（像素） |
 | `line-height` | 行高倍数 |
 | `align` | 文本对齐方式：`left`、`center`、`right` |
@@ -106,10 +102,13 @@ caption.dialogue {
 | `padding` | 容器内边距（像素）（单个值或 `垂直 水平`） |
 | `radius` | 容器圆角半径（像素） |
 
-通过 `caption:Style` 的 `appearance` 属性引用：
+若要可复现渲染，应在 `.svml` 源码中显式选择已安装的精确字体，并把该 Record 传给 Fine
+Style。主字体的 `weight` 与 `style` 必须和 Recipe 一致：
 
 ```svml
-<caption:Style id="primary-caption" appearance={studio.caption.dialogue}>
+<fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.dialogue}
+  font={caption-font}/>
 ```
 
 ### 按角色设置字幕样式
@@ -118,6 +117,7 @@ caption.dialogue {
 
 ```svs
 caption.alice {
+  cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -127,6 +127,7 @@ caption.alice {
 }
 
 caption.bob {
+  cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
   font: Inter; weight: 600; size: 58;
@@ -139,61 +140,77 @@ caption.bob {
 然后通过 `caption:Program` 进行分配：
 
 ```svml
-<caption:Program id="caption-program" narrative={story} default={studio.caption.dialogue}>
+<fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
+<caption-fine:Style id="default-caption" recipe={studio.caption.dialogue} font={caption-font}/>
+<caption-fine:Style id="alice-caption" recipe={studio.caption.alice} font={caption-font}/>
+<caption-fine:Style id="bob-caption" recipe={studio.caption.bob} font={caption-font}/>
+<caption:Program id="caption-program" display={story.caption} default={default-caption}>
   <caption:Use role="ALICE" style={alice-caption}/>
   <caption:Use role="BOB" style={bob-caption}/>
 </caption:Program>
 ```
 
-## B-roll
+## Media Track
 
-B-roll 项目外观——位置、适配方式、容器以及进入/退出动画。
+Media 将空间位置、框呈现与生命周期运动分开。`SpatialFrame` 负责位置和尺寸；外观 Recipe
+负责素材适配与框材质；可选的 motion Recipe 负责入场、持续和退场。
 
 ```svs
-broll.product {
+media.product {
   stack-order: 40;
-  x: 0.08;
-  y: 0.20;
-  width: 0.84;
-  height: 0.48;
   fit: contain;
-  background: #111116;
+  playback: hold-start;
+  frame-paint: #111116;
+  clip: rounded;
   radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
+  padding: 0;
+  border-width: 1;
+  border-style: solid;
+  border-color: #FFFFFF20;
+  shadows: 0 10 24 0 #00000066;
+}
+
+motion.product {
+  enter: slide;
+  enter-frames: 8;
+  enter-direction: up;
+  enter-easing: ease-out;
+  exit: fade;
+  exit-frames: 6;
+  exit-easing: ease-in;
 }
 ```
 
 | 属性 | 描述 |
 |---|---|
 | `stack-order` | Z 轴层叠顺序 |
-| `x`、`y` | 位置，以画布比例表示 |
-| `width`、`height` | 尺寸，以画布比例表示 |
-| `fit` | 源内容适配容器的方式：`cover`、`contain` |
-| `background` | 容器背景颜色 |
-| `radius` | 容器圆角半径 |
-| `enter` | 进入动画：`slide-up Nf`、`fade Nf`（N = 帧数） |
-| `exit` | 退出动画：`fade Nf`、`slide-down Nf` |
+| `fit` | `contain`、`cover`、`fit-width`、`fit-height`、`native`、`scale-down` 或 `stretch` |
+| `frame-x`、`frame-y` | 放置 Frame 内的对齐点 |
+| `content-x`、`content-y` | 素材内部独立选择的焦点 |
+| `playback` | `once-start`、`hold-start`、`loop-end`、`stretch` 等有时长素材占用方式 |
+| `frame-paint` | 采样素材背后的纯色或渐变 Paint |
+| `clip`、`radius`、`padding` | 框裁切与内缩 |
+| `border-*`、`shadows` | 框自有的边框与有序阴影 |
+| `enter`、`exit` | 生命周期算子；帧数、缓动和方向使用独立属性 |
+| `sustain` | 零个或多个确定性局部运动，例如 `float 12 2 up` |
 
-通过 `broll:Item` 的 `appearance` 属性引用：
+位置始终是一条显式图边：
 
 ```svml
-<broll:Item source={motion.video} during={story.selection.demo}
-  appearance={studio.broll.product}/>
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+<media-track:Item source={product-media.media}
+  during={story.selection.demo} frame={product-frame}
+  appearance={studio.media.product} motion={studio.motion.product}/>
 ```
 
 ## 文本
 
-文本叠加层外观——位置、排版。
+文本叠加层外观——排版与 Paint。位置由另一条 `SpatialFrame` 图边提供。
 
 ```svs
 text.title {
   stack-order: 90;
-  x: 0.06;
-  y: 0.06;
-  width: 0.88;
-  height: 0.10;
-  font: Inter;
   weight: 900;
   size: 64;
   align: center;
@@ -205,19 +222,20 @@ text.title {
 | 属性 | 描述 |
 |---|---|
 | `stack-order` | Z 轴层叠顺序 |
-| `x`、`y` | 位置，以画布比例表示 |
-| `width`、`height` | 尺寸，以画布比例表示 |
-| `font` | 字体族名称 |
 | `weight` | 字体粗细 |
 | `size` | 字体大小（像素） |
 | `align` | 文本对齐方式 |
 | `fill` | 文本颜色 |
 | `tracking` | 字间距调整 |
 
-通过 `text:Item` 的 `appearance` 属性引用：
+先与精确字体字节一起编译为 `text:Style`，再由具体放置形式引用：
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 ## 语音估算
@@ -228,10 +246,9 @@ text.title {
 speech.normal {
   language: en;
   pace: normal;
-  padding: 0.3;
   min: 4;
   max: 15;
-  rounding: ceil;
+  rounding: round;
 }
 ```
 
@@ -239,10 +256,15 @@ speech.normal {
 |---|---|
 | `language` | 语言代码（如 `en`） |
 | `pace` | 语速：`slow`、`normal`、`fast` |
-| `padding` | 添加到估算值的额外填充时间（秒） |
+| `rate` | 正数的每秒读音单位数；不能和 `pace` 同时使用 |
 | `min` | 最小时长（秒） |
 | `max` | 最大时长（秒） |
-| `rounding` | 取整模式：`ceil`、`floor`、`round` |
+| `rounding` | 取整模式：`none`、`round`、`ceil` |
+
+英语三个具名档位分别解析为每秒 `4.2`、`4.6`、`5.0` 个音节。项目需要连续可调值时，
+用数值 `rate` 代替 `pace`。
+所有属性都必须显式提供：`language`、`min`、`max`、`rounding`，并且在 `pace` 与
+`rate` 中恰好选择一个。Estimate 包不会补充隐藏策略默认值。
 
 通过 `estimate:Speech` 的 `policy` 属性引用：
 
@@ -251,76 +273,99 @@ speech.normal {
   policy={studio.speech.normal}/>
 ```
 
-## Speaker
+## Speaker Text Template
 
-Seedance Speaker 生成设置——控制 `speaker:Take` 如何生成说话人头像片段的 Recipe。
+这个 Recipe 选择纯数据 `speaker-v1` Text Template 声明的 Prompt 轴。模型、分辨率、参考素材
+与时长仍是 `seedance:ReferenceVideo` 的显式输入，不藏在 Recipe 里。
 
 ```svs
 speaker.host {
-  kind: ugc-talking-head;
-  model: mini;
-  resolution: 720p;
-  aspect-ratio: 9:16;
   composition-stability: soft-locked;
   camera-motion: none;
   edit-rhythm: continuous-take;
   performance: natural-explainer;
   gesture: natural;
-  voice-mode: single-speaker;
 }
 ```
 
 | 属性 | 描述 |
 |---|---|
-| `kind` | 生成类型（如 `ugc-talking-head`） |
-| `model` | 模型名称：`mini` |
-| `resolution` | 输出分辨率：`480p`、`720p`、`1080p` |
-| `aspect-ratio` | 输出宽高比：`9:16`、`16:9`、`1:1` |
 | `composition-stability` | 镜头/构图一致性：`flexible-ugc`、`soft-locked`、`strict-locked` |
 | `camera-motion` | 镜头运动：`none`、`subtle-punch-in-return` |
 | `edit-rhythm` | 剪辑风格：`continuous-take`、`pause-trim-jump-cuts` |
 | `performance` | 表演风格：`natural-explainer`、`high-energy-ugc`、`calm-authority`、`reactive-playful` |
 | `gesture` | 手势强度：`restrained`、`compact`、`natural`、`expressive` |
-| `voice-mode` | 语音配置：`single-speaker` |
-
-通过 `speaker:Take` 的 `recipe` 属性引用：
+与 Kit 的 Template 一起由 `text:Render` 引用：
 
 ```svml
-<speaker:Take id="hook-take" dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
+<text:Render id="hook-prompt"
+  template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
 ```
 
-## 字体声明
+## 通用 Text Template Recipe
 
-声明本地字体文件，以便在字幕和文本叠加层中使用。
+无需领域包装器也能使用同一优先级。`text:Render` 可以读取任意 SVS Recipe，只投影模板
+明确声明的属性，并允许显式 `text:Param` 覆盖。这使 Seedance 的 B-roll、Podcast、Call、
+Street Interview 与参考迁移 Kit 可以保持为纯数据，而不进入 Seedance 执行代码。
 
 ```svs
-font.inter-semibold {
-  src: ./assets/Inter-SemiBold.woff2;
-  weight: 600;
-  style: normal;
+broll.product-demo {
+  material-mode: product-beauty;
+  reference-plan: scene-plus-refs;
+  story-shape: process-demo;
+  edit-language: insert-cutaway;
+  camera-language: product-macro;
+  motion-intensity: readable;
 }
+```
 
-font.inter-black {
-  src: ./assets/Inter-Black.woff2;
-  weight: 900;
-  style: normal;
-}
+模型、分辨率、时长和参考媒体不是模板策略；它们继续存在于精确模型 Surface 与显式图边中。
+
+## 精确字体声明
+
+SVS 描述字体策略，但不选择或打开字体字节。常用开源字体由私有的预发布字体目录显式
+导入；只有作者图真正引用的字体会进入本次 Build：
+
+```svml
+<import as="fonts" from="@narratage/fonts-open@1"/>
+
+<fonts:Stack id="caption-fonts" family="inter" weight="600" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="600" style="normal"/>
+</fonts:Stack>
 ```
 
 | 属性 | 描述 |
 |---|---|
-| `src` | 字体文件路径（相对于 SVS 文件） |
-| `weight` | 该文件提供的字体粗细 |
-| `style` | 字体样式：`normal`、`italic` |
+| `family` | 字体包有限目录中的字体族 |
+| `weight` | 精确选择的字体粗细 |
+| `style` | `normal` 或该字体族支持的 `italic` |
+| `emoji` | `Stack` 可选的 `color`（COLRv1）或 `mono` 兜底 |
 
-字体路径在编译时解析，并成为 `FontArtifactRef` 值。在其他 SVS 块中通过名称引用：
+目录现有 109 个开源字体族，覆盖手写、书法、展示、无衬线、衬线、等宽、CJK、其他
+文字系统与 Emoji。Fontsource 依赖固定为 `5.3.0`，Chromium 兼容的 COLRv1 Emoji 包另行
+锁定版本；编译器把已安装字节哈希成内容寻址的字体值，Build 过程不会下载字体，Runtime
+也不猜字体：
 
-```svs
-caption.dialogue {
-  font: inter-semibold;
-  /* ... */
-}
+```svml
+<caption-fine:Style id="dialogue" recipe={studio.caption.dialogue}
+  font={caption-fonts}/>
+```
+
+`fonts:Stack` 产出通用 `FontStackRef`：主字体必须和 Recipe 的 weight/style 一致，Fallback
+保留自己的真实元数据。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是
+一条逻辑边。终端 Text 与 Fine Caption 都拒绝省略字体栈；Visual IR 不接受机器字体兜底。
+对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如
+包含 VS16 的 `☎️`）；任何包都不会为了强制彩色而改写显示稿。
+
+品牌字体与自定义字体仍是显式作者资产，不会被塞进共享目录：
+
+```svml
+<import as="media" from="@narratage/media@1"/>
+<media:Font id="brand" src="./assets/Brand-Semibold.woff2"
+  weight="600" style="normal"/>
 ```
 
 ## 综合示例
@@ -334,33 +379,26 @@ caption.dialogue {
   speech.normal {
     language: en;
     pace: normal;
-    padding: 0.3;
     min: 4;
     max: 15;
-    rounding: ceil;
+    rounding: round;
   }
 
   speaker.host {
-    kind: ugc-talking-head;
-    model: mini;
-    resolution: 720p;
-    aspect-ratio: 9:16;
     composition-stability: soft-locked;
     camera-motion: none;
     edit-rhythm: continuous-take;
     performance: natural-explainer;
     gesture: natural;
-    voice-mode: single-speaker;
   }
 
   film.vertical {
-    width: 720;
-    height: 1280;
-    frame-rate: 30;
     background: #09090B;
   }
 
   caption.primary {
+    cue-min-words: 2;
+    cue-max-words: 5;
     stack-order: 70;
     x: 0.08;
     y: 0.74;
@@ -386,9 +424,11 @@ caption.dialogue {
 <estimate:Speech id="hook-duration" source={story.segment.hook.speech}
   policy={studio.speech.normal}/>
 
-<speaker:Take id="hook-take" ... recipe={studio.speaker.host} .../>
+<text:Render id="hook-prompt" template={speaker-kit.speaker-v1}
+  recipe={studio.speaker.host}>...</text:Render>
 
-<caption:Style id="primary-caption" appearance={studio.caption.primary} .../>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="720" height="1280"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
 ```

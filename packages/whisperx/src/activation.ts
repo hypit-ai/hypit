@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeWhisperXAlignmentSurface, whisperXComponent, whisperXImplementationDigests,
   whisperXManifest, whisperXModuleRef,
@@ -9,7 +9,7 @@ export const svmlPackage = {
   name: "@narratage/whisperx",
   modules: [{ manifest: whisperXManifest, specifiers: ["@narratage/whisperx", "@narratage/whisperx@1"] }],
   components: [whisperXComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: whisperXModuleRef, surface: "alignment", mode: "structured",
     implementationDigest: whisperXImplementationDigests.surface,
     handler: decodeWhisperXAlignmentSurface,

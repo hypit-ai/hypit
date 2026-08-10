@@ -70,6 +70,7 @@ The repository implements:
 - SQLite Build/Operation stores and filesystem/S3 Artifact stores;
 - exact Endpoint binding and scoped credentials;
 - eleven exact image/video models declaring their own input ports, reached through the KIE Provider;
+- three exact MiMo TTS models, independently reached through Xiaomi's official Provider;
 - local ffprobe/ffmpeg media processing;
 - S3 multipart Artifact streaming and AWS Lambda media processing;
 - local pinned WhisperX service;
@@ -97,7 +98,8 @@ Requirements:
 - Python 3.10–3.13 only when running the local WhisperX service
 
 ```bash
-pnpm install
+corepack enable
+pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 
@@ -177,12 +179,12 @@ packages/core            domain-neutral Demand compiler and Build state machine
 packages/source          mandatory Source Header; no syntax default
 packages/elaborator      author declarations and hygienic Fragment expansion
 packages/compiler-node   reference Node compiler Host
-packages/compiler-text-node  optional official Text compiler assembly
+packages/compiler-markup-node  optional official Markup compiler assembly
 packages/package-loader-node syntax-neutral trusted physical-package loading
 packages/cli             generic commands requiring an explicit Distribution
 packages/video-cli       official video command application; no author-package aggregate
 packages/run             syntax-neutral Run Source closure and complete Run Graph compiler
-packages/run-text        optional official human-readable Run Frontend
+packages/run-markup        optional official human-readable Run Frontend
 packages/runtime         environment-neutral scheduling and Store ports
 packages/driver-node     trusted Node command execution
 packages/local           zero-service SQLite/filesystem developer assembly
@@ -213,6 +215,7 @@ The domain-neutral Run/Runtime foundation, developer inspection path and replace
 Endpoint environments are implemented. Current work is split between preparing trusted-developer
 distribution and completing the video-domain packages needed by real deliveries. Fresh generation,
 historical reuse and previews remain ordinary explicit `.svrun` choices rather than a second
-workflow layer. Text, Caption and B-roll already execute as vertical slices; their full visual
-breadth, Ranking and the final video compatibility freeze remain deferred. See the
+workflow layer. Caption, exact Audio and self-contained Screen Overlay execute; Text and Media
+remain vertical slices, while their full visual breadth, Deck, Ranking and the final video
+compatibility freeze remain active work. See the
 [implementation status](docs/implementation-status.md) and [roadmap](docs/roadmap.md).

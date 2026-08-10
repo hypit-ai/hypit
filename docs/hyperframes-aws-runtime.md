@@ -22,7 +22,7 @@ HyperframesDocument
   -> RenderedVisual Artifact
 ```
 
-The package imports only `@hyperframes/aws-lambda/sdk` at runtime, locked to version `0.7.84`.
+The package imports only `@hyperframes/aws-lambda/sdk` at runtime, locked to version `0.7.101`.
 It uses the AWS SDK default credential chain. AWS profile, SSO, environment credentials and instance
 roles therefore remain deployment choices; access-key bytes are not Runtime configuration.
 
@@ -42,6 +42,7 @@ After installing the package into `svml.runtime-packages.lock`, configure one En
   "config": {
     "stateMachineArn": "arn:aws:states:us-east-1:123456789012:stateMachine:hyperframes-team",
     "bucketName": "hyperframes-team-render-bucket",
+    "rendererImplementationDigest": "sha256:REVIEWED_DEPLOYMENT_CONTENT_DIGEST",
     "region": "us-east-1",
     "quality": "standard",
     "maxParallelChunks": 16,
@@ -50,6 +51,12 @@ After installing the package into `svml.runtime-packages.lock`, configure one En
   }
 }
 ```
+
+`rendererImplementationDigest` is the content identity of the reviewed deployed renderer bundle or
+deployment closure. The state-machine ARN is mutable location and is not sufficient identity. The
+generic Need Receipt binds this configured Endpoint digest/configuration/Runtime closure, while the
+HyperFrames attestation inside receipt-covered metadata repeats this renderer deployment digest and
+the exact document digest.
 
 Allow only the permissions declared by the Endpoint:
 
@@ -61,6 +68,11 @@ The distributed renderer accepts only integer 24, 30 and 60 fps. The request con
 an added hardware-GPU or unknown render requirement is declined so another Endpoint can satisfy the
 Need. Nothing is silently converted. HyperFrames always receives strict SDR H.264/CFR software
 render configuration and plan protocol v2.
+
+This Endpoint currently declines every document containing a `CompositableSurface`. The local
+Endpoint verifies Surface bytes against dimensions, timing, SDR/sRGB and alpha declarations before
+rendering; the deployed Lambda route has no equivalent verifier yet, so accepting those documents
+would make the same protocol weaker merely because execution moved remotely.
 
 The Step Functions execution name and output key derive from the Runtime Operation's submission
 key. A process crash before the first checkpoint therefore polls or resubmits the same AWS identity;
@@ -83,6 +95,7 @@ AWS_PROFILE=my-profile \
 AWS_REGION=us-east-1 \
 NARRATAGE_HYPERFRAMES_STATE_MACHINE_ARN=arn:aws:states:us-east-1:123456789012:stateMachine:hyperframes-team \
 NARRATAGE_HYPERFRAMES_BUCKET=hyperframes-team-render-bucket \
+NARRATAGE_HYPERFRAMES_RENDERER_DIGEST=sha256:REVIEWED_DEPLOYMENT_CONTENT_DIGEST \
 NARRATAGE_HYPERFRAMES_MEMORY_MB=2048 \
 pnpm --filter @narratage/provider-hyperframes-aws-lambda canary
 ```
@@ -93,7 +106,7 @@ only for acceptance inspection; normal remote orchestration does not.
 
 ## Resource review before the first deploy
 
-The upstream 0.7.84 SAM topology is expected to create or use:
+The upstream 0.7.101 SAM/CDK topology is expected to create or use:
 
 - a CloudFormation/SAM render stack;
 - SAM's managed deployment-artifact stack and bucket when `--resolve-s3` is used;
@@ -110,21 +123,17 @@ is no longer wanted. The Narratage ArtifactStore bucket may be different: the En
 finished render out of the HyperFrames bucket and immediately persists it under the selected
 content-addressed ArtifactStore.
 
-Do not run the upstream generated deploy policy unchanged. HyperFrames 0.7.84 emits the nonexistent
-IAM action `s3:PutPublicAccessBlock`; AWS requires `s3:PutBucketPublicAccessBlock`. Its own policy
-validator repeats the typo and therefore cannot detect it.
-
-There is also a packaging constraint: the published HyperFrames 0.7.84 CLI can drive an existing
-stack, but its `lambda deploy` command searches a HyperFrames source checkout for
-`examples/aws-lambda/template.yaml` and the handler build workspace. The published SDK package does
-not contain that template or a ready handler ZIP. The first deployment must therefore use an exact
-0.7.84 HyperFrames source checkout (or a reviewed Narratage-owned CDK/SAM distribution), not assume
-that installing the SDK alone is a deployable stack.
+The 0.7.101 package adds a supported `HyperframesRenderStack` CDK construct beside the SDK, but the
+published tarball still contains no ready handler ZIP. Its packaged build script points at the
+source-only `src/handler.ts`, so installing the package alone does not produce deployable bytes.
+The first deployment therefore needs either an exact 0.7.101 source checkout to build and verify
+the ZIP, or an independently reviewed immutable handler ZIP passed to the CDK construct. Importing
+the Narratage Provider never provisions either path.
 
 When that source checkout is built on macOS, `ffmpeg-static` follows the host platform by default.
-Before packaging Lambda, reinstall its binary for `npm_config_platform=linux` and
-`npm_config_arch=x64` and verify that both `ffmpeg` and `ffprobe` are Linux ELF files. The upstream
-ZIP verifier rejects a host Mach-O binary, as it should.
+Before packaging Lambda, select Linux x64 binary dependencies and verify that the bundled binaries
+are Linux ELF files. Never treat a ZIP produced with host Mach-O binaries as deployable merely
+because archive construction succeeded.
 
 Before any real deploy, inspect the CloudFormation change set and confirm stack name, region,
 reserved concurrency, memory, retained bucket and IAM resources. Only then place its output bucket

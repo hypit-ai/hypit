@@ -14,11 +14,11 @@ phases:
 Because all exports are collected before any input is resolved, declaration order has no meaning
 and a component may reference a later component. The linker itself does not parse `.svml`, execute
 package code or know any domain vocabulary. The non-video laboratory test demonstrates that the
-same layer works without `@narratage/text` or audiovisual contracts.
+same layer works without `@narratage/markup` or audiovisual contracts.
 
-The official Text adapter now emits this exact Author Module format. Its separate non-video
+The official Markup adapter emits this exact Author Module format. Its separate non-video
 integration fixture proves the complete `source → Surface → AuthorModule → Graph → BuildPlan` path;
-Text still does not become a prerequisite for direct API or visual-editor callers.
+Markup still does not become a prerequisite for direct API or visual-editor callers.
 
 The package also provides the domain-neutral recursive Source Closure reference implementation.
 The Host supplies an entry SourceUnit, exact Frontend registry, immutable module closure and a

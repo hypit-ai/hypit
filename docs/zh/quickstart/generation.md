@@ -11,9 +11,11 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 
 ```svml
 <import as="media" from="@narratage/media@1"/>
+<import as="mediaop" from="@narratage/media-pipeline@1"/>
 <import as="estimate" from="@narratage/estimate@1"/>
+<import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="speaker" from="@narratage/seedance-speaker@1"/>
+<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
 ```
 
 ## media:Image
@@ -29,7 +31,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 | `id` | 是 | 组件的唯一标识符 |
 | `src` | 是 | 图片文件路径，相对于 `.svml` 源文件 |
 
-该图片在下游通过 `{presenter}` 引用——例如，作为 `seedance:Speech` 中的角色参考或作为 B-roll 来源。
+该图片在下游通过 `{presenter}` 引用——例如，作为 `seedance:ReferenceVideo` 中的角色参考或作为 B-roll 来源。
 
 ## media:Audio
 
@@ -44,11 +46,11 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 | `id` | 是 | 唯一标识符 |
 | `src` | 是 | 音频文件路径，相对于 `.svml` 源文件 |
 
-通常用作 `speaker:Take` 的语音音色参考。
+通常用作 `seedance:ReferenceVideo` 的语音音色参考。
 
 ## estimate:Speech
 
-基于 Script 文本的确定性语音时长估算。无需外部服务调用——估算根据字数和语速参数在本地计算。
+基于 Script 实际读音文本的确定性语音时长规划。无需外部服务调用——时长根据读音单位和口播密度策略在本地计算。
 
 ```svml
 <estimate:Speech id="hook-duration"
@@ -60,7 +62,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `source` | 是 | 要估算的 Script 文本——通常为 `{script.segment.NAME.speech}` |
-| `policy` | 是 | 控制语速和边界的 SVS 语音 Recipe |
+| `policy` | 否 | 控制语速和边界的 SVS 语音 Recipe；省略时使用内联参数 |
 
 `policy` 引用一个 SVS Recipe（参见 [SVS 样式表](./styles.md#speech-estimation)）：
 
@@ -68,10 +70,9 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 speech.normal {
   language: en;
   pace: normal;
-  padding: 0.3;
   min: 4;
   max: 15;
-  rounding: ceil;
+  rounding: round;
 }
 ```
 
@@ -80,153 +81,169 @@ speech.normal {
 ```svml
 <estimate:Speech id="opening-duration"
   source={story.segment.opening.speech}
-  language="en" pace="normal" padding="0.3" min="4" max="15" rounding="ceil"/>
+  language="en" pace="normal" min="4" max="15" rounding="round"/>
 ```
+
+英语官方档位为 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒。
+项目需要档位之间的连续值时，可以用 `rate="4.75"` 代替 `pace`；二者不能同时出现。
+策略没有隐式值：无论内联还是引用 Recipe，都必须写明 `language`、`min`、`max`、
+`rounding`，并且在 `pace` 和 `rate` 中恰好选择一个。
 
 **输出：** `{hook-duration.duration}`——估算的时长（秒），传递给生成组件。
 
-## seedance:Prompt
+## text:Value
 
-一个可复用的文本块，为 Seedance 生成提供视觉指导。
+一个可复用的字面 `Text` 值。它与模型无关，可以进入 Seedance、GPT Image 或任何声明的文字端口。
 
 ```svml
-<seedance:Prompt id="alice-direction">
+<import as="text" from="@narratage/text@1"/>
+
+<text:Value id="alice-direction">
   Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
   Calm, curious delivery; natural breathing and restrained hand movement.
-</seedance:Prompt>
+  Spoken dialogue — say exactly: What if editing began with meaning?
+</text:Value>
 ```
 
 | 属性 | 必填 | 说明 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 
-元素主体即为提示文本。通过 `seedance:Speech` 和 `seedance:Video` 的 `prompt` 属性引用。
+元素主体就是精确的 Text 值。`text:Render` 也能用模板和显式图输入产出同一类型。
 
-## seedance:Speech
+## Seedance 三种调用形状
 
-通过 Seedance 模型生成说话人头部视频片段。这是低层级的生成组件——直接指定对话、提示和时长。
+Seedance 只暴露模型能力，不暴露“口播”“B-roll”等创作用途。`standard`、`fast`、`mini`
+选择模型版本；调用形状则独立分为三种。三者都消费完整的普通 `Text` Prompt，并输出
+`{id.video}`。
+
+### seedance:TextVideo
+
+纯 Prompt 生成。只有这种形状允许 `web-search`：
 
 ```svml
-<seedance:Speech id="alice-take" model="mini"
-  dialogue={story.segment.opening.dialogue}
+<seedance:TextVideo id="ambient" model="mini"
+  prompt={ambient-direction} duration="5" web-search="false"/>
+```
+
+### seedance:FrameVideo
+
+必须给首帧，可以额外给尾帧：
+
+```svml
+<seedance:FrameVideo id="transition" model="fast"
+  prompt={transition-direction} duration="5"
+  first-frame={opening-image} last-frame={closing-image}/>
+```
+
+### seedance:ReferenceVideo
+
+多模态参考生成。至少需要一个 `Reference` 子元素，可以显式接入图片、视频和音频：
+
+```svml
+<seedance:ReferenceVideo id="alice-take" model="mini"
   prompt={alice-direction}
-  duration="8">
-  <seedance:Reference image={alice-reference} role="character"/>
-</seedance:Speech>
+  duration={alice-duration.duration}
+  generate-audio="true">
+  <seedance:Reference image={alice-reference}/>
+  <seedance:Reference audio={alice-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `model` | 是 | Seedance 模型名称：`mini` |
-| `dialogue` | 是 | 要进行口型同步的 Script 文本——通常为 `{script.segment.NAME.dialogue}` |
-| `prompt` | 是 | 视觉指导——引用 `seedance:Prompt` |
-| `duration` | 是 | 片段时长（秒）（数字或 `{estimate.duration}` 引用） |
-| `resolution` | 否 | 输出分辨率：`480p`、`720p`（默认值因模型而异） |
-| `aspect-ratio` | 否 | 输出宽高比：`9:16`、`16:9`、`1:1` |
+这个低层组件并不知道它被用来做口播；用途只存在于传入的 Text 中。公共属性包括
+`id`、`model`、`prompt`、`duration`、`resolution`、
+`aspect-ratio`、`generate-audio`；`duration` 可以是字面量或显式 `{estimate.duration}` 边。
 
-### seedance:Reference
-
-提供参考图片以保持角色一致性的子元素：
+可以直接抽取前一段生成视频里的音频，并通过普通图边给后续片段当作参考。这个操作不会
+把音频提升成语音证据，也不会凭空附加说话人语义：
 
 ```svml
-<seedance:Reference image={alice-reference} role="character"/>
+<mediaop:ExtractAudio id="voice-from-opening"
+  source={opening.video} audio="default"/>
+
+<seedance:ReferenceVideo id="follow-up" model="mini"
+  prompt={follow-up-direction} duration="5" generate-audio="true">
+  <seedance:Reference image={presenter-reference}/>
+  <seedance:Reference audio={voice-from-opening.audio}/>
+</seedance:ReferenceVideo>
 ```
 
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `image` | 是 | 引用 `media:Image` 组件 |
-| `role` | 是 | 该参考的用途：`character`、`subject` |
+同一个媒体操作包还提供 `Transform`（按顺序截取、变速）和 `ExtractFrame`（首帧、尾帧、
+指定帧或指定时间取图）。本地 FFmpeg 与 AWS Lambda 只是这些精确 Need 的可互换 Runtime
+Endpoint，不会改变作者图。
 
-**输出：** `{alice-take}` 或 `{alice-take.video}`——生成的视频，传递给 `speech:Spine`。
+## Seedance 语义 Kit
 
-## seedance:Video
-
-生成独立的视频片段（非说话人头部——无对话口型同步）。
+`@narratage/seedance-kits` 包含七个纯数据 Text Template。Kit 不是模型包装器：先用通用
+`text:Render` 生成 prompt，再把该 Text 与真实媒体引用显式接入低层 Seedance Surface。
 
 ```svml
-<seedance:Video id="product-motion" model="mini"
-  prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
-</seedance:Video>
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="broll-kit" source="../../packages/seedance-kits/kits/broll-v1.svs"/>
+
+<text:Render id="demo-prompt"
+  template={broll-kit.broll-v1}
+  recipe={studio.broll.product-demo}>
+  <text:Set name="story" text={copy.product-demo}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="demo" model="mini"
+  prompt={demo-prompt} duration={demo-duration.duration}
+  resolution="720p" aspect-ratio="9:16" generate-audio="false">
+  <seedance:Reference image={scene}/>
+  <seedance:Reference image={product}/>
+</seedance:ReferenceVideo>
 ```
 
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `model` | 是 | Seedance 模型名称：`mini` |
-| `prompt` | 是 | 视觉指导——引用 `seedance:Prompt` |
-| `duration` | 是 | 片段时长（秒） |
+项目 Recipe 选择模板声明的轴；显式 `text:Param` 可以覆盖 Recipe。动态 story、dialogue、
+action 和 extra 仍经由 `text:Set` 作为图边进入。现有模板包括 `speaker-v1`、`broll-v1`、`podcast-v1`、
+`call-v1`、`street-interview-v1`、`motion-reference-v1`、`camera-reference-v1`。
+媒体数量与顺序仍清楚地写在 `seedance:ReferenceVideo` 里，不藏进 Kit 代码。
 
-同样接受 `<seedance:Reference>` 子元素作为参考图片。
+## 口播 Prompt 组装
 
-**输出：** `{product-motion.video}`——用作 B-roll 来源。
-
-## speaker:Take
-
-基于 Prompt Kit 构建的更高层级说话人头部组件。无需编写原始提示，你只需提供一个包含生成设置的 Recipe 和一个自动组装提示的 Kit。
+口播创作不需要一个特殊的可执行组件。数据化的 `speaker-v1` Template、项目 Recipe 与每段的
+dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一样通过显式 `prompt` 边进入 Seedance。
 
 ```svml
-<import as="speaker" from="@narratage/seedance-speaker@1"/>
-<import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
 
-<speaker:Take id="hook-take"
-  dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration}
-  recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
+<text:Value id="hook-action">
+  先紧迫地直视镜头，最后一句收住声音。
+</text:Value>
+
+<text:Render id="hook-prompt"
+  template={speaker-kit.speaker-v1}
+  recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="hook-take" model="mini"
+  prompt={hook-prompt} duration={hook-duration.duration}
+  resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter-clean}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `dialogue` | 是 | Script 文本——通常为 `{script.segment.NAME.dialogue}` |
-| `duration` | 是 | 来自 `estimate:Speech` 的估算时长 |
-| `recipe` | 是 | SVS speaker Recipe（参见 [SVS 样式表](./styles.md#speaker)） |
-| `kit` | 是 | Prompt Kit SVS——用于组装提示的模板 |
-
-### speaker:Reference
-
-提供参考媒体的子元素。同时接受图片和音频：
-
-```svml
-<speaker:Reference image={presenter-clean} role="character-and-scene"/>
-<speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-```
-
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `image` | image/audio 二选一 | 引用 `media:Image` |
-| `audio` | image/audio 二选一 | 引用 `media:Audio` |
-| `role` | 是 | 参考用途：`character-and-scene`、`voice-timbre` |
-
-**输出：** `{hook-take.video}`——生成的视频，传递给 `speech:Spine`。
-
-### Prompt Kits
-
-Prompt Kit 是一种特殊的 SVS 文件，定义了包含有序块、变体选择、轴参数和 Slot 的结构化提示模板。官方 Kit 位于 `packages/seedance-speaker/kits/official-ugc-v1.svs`。
-
-该 Kit 使用 Prompt Kit SVS 解析器导入：
-
-```svs
-<?svml using="@narratage/prompt-kit/svs@1"?>
-```
-
-`studio.svs` 中的 Recipe 设置轴参数值（composition-stability、camera-motion、edit-rhythm、performance、gesture、voice-mode），Kit 会自动将它们组装成完整的提示。
+`speaker-v1.svs` 自己选择 Text Template Frontend。`studio.svs` 提供具名轴值，`dialogue` 与
+`action` 保持为普通图输入。Kit 和 Text 都不选择模型、参考素材或 Provider。
 
 ## 组合示例
 
-一个四段拍摄的设置，估算时长作为输入传递给 `speaker:Take` 生成：
+一个两段拍摄的设置，估算时长进入显式 Text 组装与 Seedance 生成：
 
 ```svml
 <import as="media" from="@narratage/media@1"/>
 <import as="estimate" from="@narratage/estimate@1"/>
-<import as="speaker" from="@narratage/seedance-speaker@1"/>
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
 <import as="studio" source="./studio.svs"/>
-<import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
+<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
@@ -236,38 +253,29 @@ Prompt Kit 是一种特殊的 SVS 文件，定义了包含有序块、变体选�
   source={story.segment.hook.speech} policy={studio.speech.normal}/>
 <estimate:Speech id="meeting-duration"
   source={story.segment.meeting.speech} policy={studio.speech.normal}/>
-<estimate:Speech id="evidence-duration"
-  source={story.segment.evidence.speech} policy={studio.speech.normal}/>
-<estimate:Speech id="payoff-duration"
-  source={story.segment.payoff.speech} policy={studio.speech.normal}/>
+<text:Value id="hook-action">紧迫开场，最后一句放轻。</text:Value>
+<text:Value id="meeting-action">示意产品，然后回到镜头。</text:Value>
 
-<speaker:Take id="hook-take" dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
+<text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
+<text:Render id="meeting-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.meeting.dialogue}/>
+  <text:Set name="action" text={meeting-action}/>
+</text:Render>
 
-<speaker:Take id="meeting-take" dialogue={story.segment.meeting.dialogue}
-  duration={meeting-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-alt} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
-
-<speaker:Take id="evidence-take" dialogue={story.segment.evidence.dialogue}
-  duration={evidence-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-alt} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
-
-<speaker:Take id="payoff-take" dialogue={story.segment.payoff.dialogue}
-  duration={payoff-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
+<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
+  duration={hook-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter-clean}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
+<seedance:ReferenceVideo id="meeting-take" model="mini" prompt={meeting-prompt}
+  duration={meeting-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter-alt}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-每个 `speaker:Take` 生成一个 `{*.video}` 输出，传递给下一阶段的 `speech:Spine`。不同的拍摄段可以使用不同的参考图片（例如，演示者在某些 Segment 中持有产品而在其他段中没有），同时共享相同的语音音色和生成 Recipe。
+每个 `seedance:ReferenceVideo` 产出 `{*.video}`，进入下一阶段的 `speech:Spine`。不同 Take
+可以使用不同参考图，同时共享相同的音色与 Prompt Recipe。

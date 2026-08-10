@@ -9,6 +9,7 @@ Film 是最终的组装阶段。它接收所有对等的 Track，对其进行验
 Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 ```svml
+<import as="space" from="@narratage/spatial@1"/>
 <import as="film" from="@narratage/film@1"/>
 <import as="render" from="@narratage/render-hyperframes@1"/>
 ```
@@ -16,10 +17,11 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 ## film:Film
 
 将所有 Track 组装为单一的 Composition。Film 本身没有领域知识——它不知道什么是字幕、
-什么是 B-roll、什么是语音。它接收任何 VisualTrack 或 AudioTrack，并按堆叠顺序将它们分层。
+什么是 Media、什么是语音。它接收任何 VisualTrack 或 AudioTrack，并按堆叠顺序将它们分层。
 
 ```svml
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={captions.track}/>
@@ -31,8 +33,9 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 | 属性 | 必填 | 说明 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
+| `canvas` | 是 | 与 Track 布局共享的显式 CanvasSpace |
 | `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace——定义时长和帧率 |
-| `appearance` | 是 | SVS Film Recipe——画布宽度、高度、帧率、背景 |
+| `appearance` | 是 | SVS Film Recipe——画布清除颜色 |
 
 ### film:Track
 
@@ -48,8 +51,8 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 |---|---|---|
 | `{speech.visual}` | VisualTrack | `speech:Spine`——全屏说话人画面 |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine`——同步音频 |
-| `{captions.track}` | VisualTrack | `caption:Track`——定时字幕 |
-| `{cards.visual}` | VisualTrack | `broll:Track`——B-roll 叠加层 |
+| `{captions.track}` | VisualTrack | Caption 样式族 Track——定时字幕 |
+| `{cards.visual}` | VisualTrack | `media-track:Track`——Media 叠加层或 B-roll |
 | `{titles.track}` | VisualTrack | `text:Track`——文字叠加层 |
 
 ### Track 堆叠
@@ -62,7 +65,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 | stack-order | 内容 |
 |---|---|
 | 10 | 语音画面（全屏说话人画面） |
-| 40 | B-roll 叠加层 |
+| 40 | Media 叠加层 |
 | 70 | 字幕 |
 | 90 | 文字叠加层 |
 
@@ -93,7 +96,8 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 4. 混合音频 Track
 5. 将视频和音频混合封装为最终的 MP4
 
-**输出：** `{final.video}`——最终的视频文件。这是最常见的 Build Target。
+**输出：** `{final.video}`——以普通内容寻址 `BlobArtifact` 表示的最终视频。这是最常见的
+Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参考输入等后续 Blob 消费者。
 
 ## 完整的管线流程
 
@@ -103,17 +107,22 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 ### Author Source (`main.svml`)
 
 ```svml
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-  <import as="broll" from="@narratage/broll@1"/>
-  <import as="text" from="@narratage/text-track@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
+  <import as="pipeline" from="@narratage/media-pipeline@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
+  <import as="text" from="@narratage/typography-track@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -124,49 +133,53 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   </script>
 
   <!-- 2. Generation: Seedance talking head + standalone video -->
-  <seedance:Prompt id="direction">
-    Locked medium close-up in a quiet daylight studio.
-  </seedance:Prompt>
-  <seedance:Speech id="take" model="mini"
-    dialogue={story.segment.opening.dialogue}
-    prompt={direction} duration="5"/>
-  <seedance:Video id="motion" model="mini"
+  <wording:Value id="direction">
+    Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.
+  </wording:Value>
+  <seedance:TextVideo id="take" model="mini"
+    prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="motion" model="mini"
     prompt={direction} duration="5"/>
 
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
+  <space:Frame id="card-frame" within={vertical}
+    left="10%" top="20%" right="10%" bottom="30%"/>
+
   <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech">
-    <speech:Take source={take} segment={story.segment.opening}/>
+  <speech:Spine id="speech" canvas={vertical}>
+    <speech:Take source={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <!-- 4. Tracks: captions, B-roll, text -->
-  <caption:Style id="base-caption" appearance={studio.caption.base}>
-    <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-    <caption:Field id="important" type="boolean"
-      min-per-cue="0" max-per-cue="2">
-      Select zero, one, or two words whose emphasis best communicates
-      this Cue.
-    </caption:Field>
-  </caption:Style>
-  <caption:Program id="caption-program" narrative={story}
+  <!-- 4. Tracks: captions, Media, text -->
+  <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption:Program id="caption-program" display={story.caption}
     default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" narrative={story}
+  <caption-ai:Planner id="cue-plan" display={story.caption}
     program={caption-program} model="gemini-2.5-flash"/>
-  <caption:Track id="captions" narrative={story} map={timing.map}
+  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
     space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-  <broll:Track id="cards" map={timing.map} space={speech.space}>
-    <broll:Item source={motion.video} during={story.selection.demo}
-      appearance={studio.broll.card}/>
-  </broll:Track>
-
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+  <media-track:Track id="cards" map={timing.map}
+    space={speech.space} canvas={vertical}>
+    <media-track:Item source={motion-media.media} during={story.selection.demo}
+      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+  </media-track:Track>
+  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
   <text:Track id="titles" space={speech.space}>
-    <text:Item text="MEANING" during="full"
-      appearance={studio.text.title}/>
+    <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+      MEANING
+    </text:Area>
   </text:Track>
 
   <!-- 5. Film: compose all tracks -->
-  <film:Film id="main" space={speech.space}
+  <film:Film id="main" canvas={vertical} space={speech.space}
     appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
@@ -188,20 +201,24 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 
 <sheet version="1">
   film.vertical {
-    width: 1080; height: 1920; frame-rate: 30; background: #09090B;
+    background: #09090B;
   }
-  broll.card {
-    stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5;
-    fit: cover; background: #111116; radius: 20;
-    enter: slide-up 4f; exit: fade 4f;
+  media.card {
+    stack-order: 40; fit: cover; playback: hold-start;
+    frame-paint: #111116; clip: rounded; radius: 20;
+  }
+  motion.card {
+    enter: slide; enter-frames: 4; enter-direction: up; enter-easing: ease-out;
+    exit: fade; exit-frames: 4; exit-easing: ease-in;
   }
   caption.base {
+    cue-min-words: 1; cue-max-words: 5;
     stack-order: 70; x: 0.08; y: 0.76; width: 0.84;
     font: Inter; weight: 600; size: 58; line-height: 1; align: center;
     fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;
   }
   text.title {
-    stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1;
+    stack-order: 90;
     font: Inter; weight: 900; size: 64; align: center;
     fill: #FFFFFF; tracking: -1;
   }
@@ -211,7 +228,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 ### Run Source (`build.svrun`)
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>

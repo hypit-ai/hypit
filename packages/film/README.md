@@ -16,6 +16,9 @@ remains order-independent because the public contract canonicalizes Tracks and v
 belongs to each Present's absolute stacking key.
 
 The official Structured Surface validates an imported generic SVS Recipe into a nominal
-`FilmProgram`, type-checks each `<film:Track source={...}/>` reference and generates the finite fold.
+`FilmProgram`, receives CanvasSpace and ProgramSpace through separate explicit edges, type-checks
+each `<film:Track source={...}/>` reference and generates the finite fold. CanvasSpace is the only
+dimension truth, ProgramSpace is the only frame-rate truth, and FilmProgram owns only assembly
+identity and clear color.
 Child order is organizational: Track and Present identity, timing and absolute stacking remain in
 their own typed values. Final rendering is a separate author package and capability.

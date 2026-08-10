@@ -14,8 +14,6 @@ import {
   SpeechAlignmentError,
   alignWordGroups,
   locateSpeechTiming,
-  speechAlignmentComponent,
-  speechAlignmentManifest,
 } from "@narratage/speech-alignment";
 
 /** The alignment classification is a property of alignWordGroups, tested at its own level. */
@@ -77,18 +75,19 @@ function speechBasis(
   const take = sealSpeechBasis({
     contract: "svml.speech-basis@1",
     programSpace,
-    audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
+    audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
     visualTrack: {
       clips: segments.map((segment) => ({
         segmentId: segment.segmentId,
         artifact: {
+          kind: "blob",
           digest: digestOf(`fixture:clip:${segment.segmentId}`),
           size: 1,
           mediaType: "video/mp4",
-          durationSec: segment.endSec - segment.startSec,
         },
-        startSec: segment.startSec,
-        endSec: segment.endSec,
+        extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+        frameRate: { ...programSpace.frameRate },
+        frameCount: Math.round((segment.endSec - segment.startSec) * 1_000),
       })),
     },
     segments,
@@ -131,19 +130,6 @@ function characters(
     score: 0.95,
   }));
 }
-
-test("the component enumerates the exact Manifest-declared locator", () => {
-  assert.deepEqual(
-    speechAlignmentComponent.producers.map((facet) => ({
-      name: facet.producer.name,
-      digest: facet.implementationDigest,
-    })),
-    speechAlignmentManifest.producers.map((producer) => ({
-      name: producer.name,
-      digest: producer.implementation.digest,
-    })),
-  );
-});
 
 test("exact transcript words cover every Script and Segment anchor", () => {
   const narrative = parseScript("exact.svml", "<line>Hello world.</line>");

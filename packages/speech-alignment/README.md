@@ -25,4 +25,5 @@ contracts and protocol utilities; it has no Core, Driver, Provider, Artifact, qu
 authority.
 
 Caption display is outside this package. `@narratage/caption` composes the resulting complete speech
-map with Script's authored Caption Projection and keeps presentation estimates local to the track.
+map with Script's explicit whole-Atom `CaptionCorrespondence`; it never asks this locator to infer
+display text or display-Word timing.

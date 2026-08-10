@@ -1,53 +1,56 @@
 # `@narratage/text`
 
-Official XML-like Author Frontend normally used by `.svml` source units. The suffix has no parser
-authority; a mandatory `<?svml using="@narratage/text@1"?>` Header selects this Frontend. It owns only the `<svml>` envelope,
-the leading Import Prologue, namespace binding, generic structured elements and dispatch to
-statically declared module Surfaces.
+Domain-neutral text values and deterministic text programs.
 
-The package has no built-in Script, media or video vocabulary. `<script>` is accepted only when an
-imported module declares that tag and the Host explicitly registers the locked Surface
-implementation. The current registry is for trusted official/in-process use; it is not a security
-sandbox for third-party parser code.
+This package does not own the `.svml` grammar, call models, or know what a prompt
+is. A `TextTemplate` plus explicit `TextBindings` renders one ordinary `Text`
+graph output. Dynamic text enters through normal graph edges, so the output can
+be a Target or be satisfied by any compatible Candidate like every other value.
+
+Its optional Markup vocabulary exposes literal and assembled values without
+hiding the graph:
 
 ```svml
-<?svml using="@narratage/text@1"?>
-<svml>
-  <import from="@narratage/script@1"/>
-  <import as="studio" source="./studio.svs"/>
+<import as="text" from="@narratage/text@1"/>
+<import as="ugc" source="./ugc-template.svs"/>
 
-  <script id="story">
-    <opening><ALICE>Hello.</opening>
-  </script>
-</svml>
+<text:Value id="extra">Keep the product readable.</text:Value>
+<text:Render id="prompt" template={ugc.product-shot} recipe={studio.product-shot}>
+  <text:Param name="camera" value="handheld"/>
+  <text:Param name="strict" value="true" type="boolean"/>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Append name="constraints" text={extra}/>
+</text:Render>
 ```
 
-Decoding has two passes. `discoverText` reads only the root and complete leading Import Prologue.
-After Driver supplies one immutable resolved closure, `decodeText` freezes the visible Surface
-scope and parses the body. A raw Surface receives the source cursor immediately after its opening
-tag and must return the cursor after its own close; a structured Surface receives Text's generic
-element tree.
+`Value` authors `Text`; `Render` authors text, number or boolean Params and connects each
+`Set`/`Append` Text reference as an explicit graph edge. The output `{prompt}`
+can feed any model's declared text port.
 
-A Surface may contribute three kinds of inert data:
+`recipe` is optional. When present, `Render` projects the Recipe's scalar properties that the
+template actually declares into its bindings. Template defaults, Recipe values and explicit
+`Param` children form the generic style → recipe → parameter precedence; unrelated Recipe fields
+such as model or resolution are ignored by the text program. No prompt-specific package code is
+needed.
 
-- authored typed Record drafts;
-- parser-independent Author Component drafts;
-- content-addressed Graph Fragments used by those components.
+`@narratage/markup` is the XML-like authoring Frontend and
+`@narratage/typography-track` renders text into video. They are deliberately
+separate packages.
 
-Raw and Structured Surface handlers are asynchronous and receive one narrow `resolveAsset()`
-capability. This is the only way a Surface can turn an author-written asset locator into a
-content-addressed `BlobRef`; Text never exposes filesystem APIs or a resolved local path. The
-Compiler Host, not the Surface, owns containment, read-once behavior and byte transfer. A handler
-that does not request assets remains unchanged apart from being awaitable.
+## Graph consumers
 
-Text validates source ranges, duplicate identities, Manifest-declared Record types and complete
-Fragment references. It strips diagnostic ranges before sealing one `svml.author-module@1`, so
-source reflow does not change author semantics. It never expands a Fragment or resolves a component
-input while reading the body. After every declaration has been collected, `@narratage/elaborator`
-resolves forward references and emits the Core Graph.
+`Text` is a small domain-neutral graph value, not a prompt-only type. Current consumers include:
 
-Direct `decodeText()` calls require every source import to be supplied as an already resolved
-namespace. The reference `compileSourceClosure()` orchestration in `@narratage/elaborator` recursively
-discovers those SourceUnits. Each dependency's own Source Header selects its exact Frontend; Text
-never chooses a dependency parser. The compiler decodes dependencies first and then calls Text with
-their locked public exports. Text itself never reads a file or guesses a Frontend.
+- exact model prompt ports;
+- `@narratage/typography-track` Point, Area and Path content;
+- Ranking Column/TopThree labels and Typewriter title/rows;
+- Comment Sticker comment, author, header and metadata copy;
+- Deck Card labels.
+
+Each consumer declares an ordinary `Text` input in its own Fragment. No consumer registry, prompt
+registry or video-specific branch exists in Core. A static literal may still be written inline for
+convenience; a value produced elsewhere stays an explicit graph edge all the way to the consumer.
+
+Consumer-owned structure does not move into this package. Rich typography, Ranking layout, Sticker
+fields and Deck label appearance remain in their respective packages. Caption's ordered display
+Atoms/Words also remain Caption author truth rather than being flattened into generic `Text`.

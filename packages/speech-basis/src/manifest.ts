@@ -1,6 +1,7 @@
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { spatialDependency, spatialTypes } from "@narratage/spatial";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
@@ -11,7 +12,7 @@ import {
   projectSpeechVisualImplementationDigest,
 } from "./projection.js";
 
-export const speechBasisModuleRef = { name: "@narratage/speech-basis", version: "0.0.0-dev" } as const;
+export const speechBasisModuleRef = { name: "@narratage/speech-basis", version: "1" } as const;
 
 export const speechBasisProducers = {
   projectAudio: { module: speechBasisModuleRef, name: "project-audio" },
@@ -28,6 +29,7 @@ export const speechBasisManifest: ModuleManifest = {
     speechDependency,
     programSpaceDependency,
     compositionDependency,
+    spatialDependency,
   ],
   types: [],
   capabilities: [],
@@ -57,7 +59,7 @@ export const speechBasisManifest: ModuleManifest = {
     },
     {
       name: speechBasisProducers.projectVisual.name,
-      inputs: [{ name: "basis", type: speechTypes.basis }],
+      inputs: [{ name: "basis", type: speechTypes.basis }, { name: "canvas", type: spatialTypes.canvas }],
       outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: {

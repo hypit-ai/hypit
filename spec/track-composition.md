@@ -1,17 +1,17 @@
 # SVML Track and Composition
 
-Status: first executable contract candidate; public freeze is gated by
-[`track-expressiveness.md`](./track-expressiveness.md).
+Status: executable repository-internal `@1` compatibility waist; all gates in
+[`track-expressiveness.md`](./track-expressiveness.md) pass, publication remains separate.
 
 ## Law
 
 Except for the shared ProgramSpace and canvas geometry, every audiovisual contribution entering a
 Composition is a peer Track. Composition validates, orders and combines Tracks. It does not know
-Caption, Speech, B-roll, Text, Seedance or any author-package family.
+Caption, Speech, Media, Text, Seedance or any author-package family.
 
 ```text
 Speech visual ───────────────> VisualTrack ─┐
-B-roll ──────────────────────> VisualTrack ─┤
+Media ───────────────────────> VisualTrack ─┤
 TimedCaption + style/cues ───> VisualTrack ─┤
 Text + style ────────────────> VisualTrack ─┼─> Composition
 Vignette / overlay ──────────> VisualTrack ─┤
@@ -36,17 +36,17 @@ more frame-exact `VisualPresent` values; every Present owns its own absolute `(o
 stacking key and one self-contained, code-free element tree made from box, text, ordinary media and
 typed compositable-Surface primitives. Parent references are Present-local. Media and exact font
 faces enter through content-addressed Artifact references rather than CSS URLs or environment font
-names.
+names. Every terminal text element carries a non-empty exact Font stack.
 Its ProgramSpace identity is intrinsic because the Track cannot be interpreted without a clock.
 Which Records produced it is Graph/Derivation truth and is deliberately absent from the Track.
 
-Composition flattens Presents across every Track before ordering them. One B-roll package may
+Composition flattens Presents across every Track before ordering them. One Media package may
 therefore own a board at z=30 and an icon at z=80 while a Text Present from another Track sits at
 z=50. A z change over time is represented by two non-overlapping Presents with different stacking
 keys. Track ownership never creates a render stacking context or a provenance chain.
 
 Every element may optionally carry frame-exact local keyframes over opacity, transform, filter or
-clip-path. Those keyframes operate only on that Present's element tree. A B-roll package may lower a
+clip-path. Those keyframes operate only on that Present's element tree. A Media package may lower a
 pair transition into complementary animations on two of its own Presents without teaching
 Composition the name or semantics of that transition.
 
@@ -65,9 +65,10 @@ the accumulated lower composite.
 
 ## AudioTrack
 
-An AudioTrack owns frame-exact clips, typed Artifacts, playback mapping, gain, fades and an optional
-mix bus. It has no visual stacking key and no special relationship to a Speech Track. Speech audio,
-music, source audio and sound effects use the same contract.
+An AudioTrack owns exact 48 kHz sample-domain clips, typed canonical-WAV Artifacts, source interval,
+loop phase, pitch-preserving playback rate, target interval, gain and sample-exact fades. It has no
+visual stacking key, inert bus label or special relationship to a Speech Track. Speech audio, music,
+source audio and sound effects use the same contract.
 
 ## Composition
 
@@ -91,7 +92,7 @@ lowering must finish before the caption enters Composition as an ordinary Visual
 
 `@narratage/hyperframes` is the current reference compiler for Composition and its one versioned
 SVML Visual IR. It never
-switches on Speech, Caption, B-roll or author-package identity. It deterministically emits a
+switches on Speech, Caption, Media or author-package identity. It deterministically emits a
 content-addressed `HyperframesDocument` whose HTML interleaves VisualPresents by absolute stacking
 key. It must not mount an authoring Track as one isolated visual wrapper. AudioTrack compilation
 and final mux are separate media operations over the same ProgramSpace; HyperFrames is a silent
@@ -122,7 +123,10 @@ URLs. Resolving those placeholders is a Runtime/Provider action immediately befo
 one compiled document can be rendered locally or remotely without changing author intent or its
 compiled identity. Exact text becomes generated `@font-face` rules with font synthesis disabled.
 Typed Surfaces preserve declared dimensions, color space, alpha mode and still/frame timing across
-the same Artifact boundary; they are not inferred from filename extensions.
+the same Artifact boundary; they are not inferred from filename extensions. A renderer validates
+those byte facts before staging or declines the document. Its generic Need Receipt binds the locked
+Endpoint implementation, and renderer-specific evidence in receipt-covered metadata binds the exact
+browser or immutable remote deployment used for layout.
 
 `@narratage/film` implements package-level arbitrary-arity assembly as a finite immutable TrackSet
 fold followed by ordinary Composition. Rendering is a separate explicitly imported downstream

@@ -45,16 +45,14 @@ const map = {
   ],
 } as unknown as CompleteSemanticMap;
 
-const boundary = (anchorId: string) => ({ tokenIndex: 0, structuralPosition: 0, anchorId });
-
 function selection(openAnchor: string, closeAnchor: string): NarrativeSelectionRef {
   return {
     contract: "svml.narrative-selection@1",
     id: "x",
     occurrences: [{
       occurrence: 0,
-      open: { affinity: "right", boundary: boundary(openAnchor) },
-      close: { affinity: "left", boundary: boundary(closeAnchor) },
+      startAnchorId: openAnchor,
+      endAnchorId: closeAnchor,
     }],
   } as NarrativeSelectionRef;
 }
@@ -93,8 +91,8 @@ test("a Moment locates one instant per occurrence", () => {
     contract: "svml.narrative-moment@1",
     id: "reveal",
     occurrences: [
-      { occurrence: 0, affinity: "left", boundary: boundary("segment:second:start") },
-      { occurrence: 1, affinity: "right", boundary: boundary("segment:second:token:2:start") },
+      { occurrence: 0, anchorId: "segment:second:start" },
+      { occurrence: 1, anchorId: "segment:second:token:2:start" },
     ],
   } as NarrativeMomentRef;
   assert.deepEqual(momentFrames(map, moment, space), [5, 7]);
@@ -117,13 +115,13 @@ test("overlapping occurrences pass through untouched, in Script order", () => {
     occurrences: [
       {
         occurrence: 0,
-        open: { affinity: "right", boundary: boundary("segment:opening:token:1:start") },
-        close: { affinity: "left", boundary: boundary("segment:opening:end") },
+        startAnchorId: "segment:opening:token:1:start",
+        endAnchorId: "segment:opening:end",
       },
       {
         occurrence: 1,
-        open: { affinity: "right", boundary: boundary("segment:second:token:1:end") },
-        close: { affinity: "left", boundary: boundary("segment:second:end") },
+        startAnchorId: "segment:second:token:1:end",
+        endAnchorId: "segment:second:end",
       },
     ],
   } as NarrativeSelectionRef;
@@ -143,13 +141,13 @@ test("Script order is preserved even when it runs backwards in time", () => {
     occurrences: [
       {
         occurrence: 0,
-        open: { affinity: "right", boundary: boundary("segment:second:token:1:start") },
-        close: { affinity: "left", boundary: boundary("segment:second:end") },
+        startAnchorId: "segment:second:token:1:start",
+        endAnchorId: "segment:second:end",
       },
       {
         occurrence: 1,
-        open: { affinity: "right", boundary: boundary("segment:opening:token:1:start") },
-        close: { affinity: "left", boundary: boundary("segment:opening:end") },
+        startAnchorId: "segment:opening:token:1:start",
+        endAnchorId: "segment:opening:end",
       },
     ],
   } as NarrativeSelectionRef;

@@ -12,13 +12,9 @@ import type { PreviewProducer } from "./producers.js";
  */
 export async function workspacePreviewProducers(): Promise<readonly PreviewProducer[]> {
   return await discoverPreviewProducers({
-    // Both, because a small module states its manifest in its entry rather than
-    // in a file of its own — ProgramSpace is one, and a Producer that takes one
-    // needs its schema to build a form.
-    manifests: {
-      ...import.meta.glob("../../../../packages/*/src/manifest.ts"),
-      ...import.meta.glob("../../../../packages/*/src/index.ts"),
-    },
+    // Manifests have a dedicated, browser-safe entry. Globbing package indexes
+    // would also bundle Node Drivers and Providers merely to discover metadata.
+    manifests: import.meta.glob("../../../../packages/*/src/manifest.ts"),
     components: import.meta.glob("../../../../packages/*/src/component.ts"),
   });
 }

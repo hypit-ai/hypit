@@ -1,133 +1,186 @@
 # Caption Program
 
-Status: implemented pre-release contract. Public names may still be polished before package
-publication; the semantic laws below are executable.
+Status: pre-release executable contract.
 
 ## 1. Scope
 
-Caption is an ordinary video component family. It owns the transformation from immutable authored
-display text to one self-contained `VisualTrack`. It has no authority over Script wording,
-pronunciation, speech alignment, global time, Composition order, Provider selection or Runtime
-reuse policy.
+Caption is an ordinary video component family. It turns immutable authored display text into one
+self-contained `VisualTrack`. It has no authority over Script wording, pronunciation, speech
+alignment, Provider selection, Runtime realization or Composition order.
 
-The graph has two independent branches:
+Its two independent graph branches are:
 
 ```text
-Narrative.captionProjection + CaptionProgram ── planner ─────── CaptionPlan
-speech audio ─────────────────────────────────── evidence/map ─ CompleteSemanticMap
+CaptionDisplaySequence + CaptionProgram ── planner ─────────── CaptionPlan
+speech audio ────────────────────────────── evidence/locator ── CompleteSemanticMap
 
-Narrative + Program + Plan + Map ── temporalize ── TimedCaptionProjection
-TimedCaptionProjection + Program ── render ─────── VisualTrack
+Display + Correspondence + Plan + Program + Map ── timing ─── TimedCaptionProjection
+TimedCaptionProjection + Display + Program ─────── renderer ── VisualTrack
 ```
 
-The branches meet only at temporalization. Planning contains no timestamps, and alignment contains
-no Caption Style or Cue judgment.
+Planning never receives timestamps. Alignment never receives Cue or Style judgment. The branches
+meet only at the explicit timing component.
 
-## 2. Display truth
+## 2. Display truth: Atom and Word
 
-Caption planning sees only the visible left side of Script. For Dual Text:
+Script emits one `CaptionDisplaySequence` with two ordered views:
+
+- `Atom` is the smallest unit a planner may place wholly into one Cue and the smallest display unit
+  that can receive proven speech timing;
+- `Word` is the smallest target for optional Style-owned fields.
+
+Every Word belongs to exactly one Atom. Atoms partition Words exactly once and in order. Text and
+punctuation remain author truth: `45%`, `back-and-forth`, `damn!`, `300,000`, `don't` and `U.S.A.`
+cross this edge unchanged. The official Script reader is English-first and uses authored whitespace
+as its normal display-word boundary; another author package may publish another policy while
+producing the same public contracts.
+
+For ordinary text, one display Word is normally one Atom. Explicit Dual Text is always one whole
+Atom, even when both sides happen to contain matching words:
 
 ```svml
-<SVML | semantic video markup language>
+<New York City | new york city>
 ```
 
-Caption sees `SVML`; speech generation and alignment see `semantic video markup language`. The
-right side must never enter a Caption planning request.
+The display sequence contains one Atom with three Words: `New`, `York`, `City`. It does not claim
+that any one display Word corresponds to any one spoken token. Hidden Dual Text (`< | um>`) produces
+no display Atom.
 
-The Caption package deterministically tokenizes every visible `CaptionProjection` region into an
-ordered `CaptionDisplayAtom` universe. Each atom has a stable id, display text, Segment/Turn
-ownership, optional Role and a source speech-token range. An atom's correspondence is either:
+This is intentional information discipline: Script uses all correspondence the author explicitly
+provided and invents none that the author did not provide.
 
-- `exact`: its own source speech-token range is proven;
-- `region-envelope`: only the enclosing display region's speech range is proven.
+## 3. Speech correspondence is a separate edge
 
-The package does not invent word timing for the second case at this stage.
+`CaptionCorrespondence` maps every display Atom to one or more authored speech-token identities.
+It is separate from `CaptionDisplaySequence`; display consumers do not carry speech lineage they do
+not need.
 
-## 3. Complete Style intent
+For ordinary text, each Atom maps to the speech tokens structurally owned by that display surface.
+For Dual Text, the whole display Atom maps to the whole right-side speech range. There is no public
+display-Word-to-speech-Word mapping and no guessed internal timing.
 
-A `CaptionStyle` is a complete author declaration with two independent payloads:
+Script also emits `CaptionDisplayWordSubset` values for explicit Selections. Role selectors are
+author-surface sugar over the same display sequence. A subset is ordered and may select zero or
+more whole Atoms; selecting only part of a multiword Atom is an authoring error. These values are
+not temporal `NarrativeSelection` values and do not add another `when` language.
 
-- `planning`: one Cue instruction and zero or more typed per-atom field declarations;
-- `presentation`: one complete visual appearance, presentation mode and absolute stacking order.
+## 4. Complete Style intent
 
-Styles are declared separately from where they apply. A field declaration has a stable id, value
-schema, natural-language instruction and minimum/maximum assignment count per Cue. Boolean, enum
-and bounded numeric values are supported. One atom may receive zero, one or multiple independent
-fields; fields need not be contiguous.
+A `CaptionStyle` is a complete author declaration with:
 
-A Style is a whole value. Applying another Style replaces it completely. The language does not
-implicitly merge arbitrary visual properties, Cue rules or fields from two Styles.
+- universal planning requirements: preferred Cue word bounds and zero or more typed per-Word field
+  declarations;
+- one rendering-family identity and that family's complete Recipe-resolved parameters.
 
-## 4. Total assignment and ordered replacement
+The common Caption package owns the Cue and field data shapes, not fonts, boxes, colors, animation
+or the meaning of a field id. A Style family may declare no fields. Boolean, enum and bounded-number
+fields are available to other families; a Word may carry zero, one or several independent fields.
 
-Every `CaptionProgram` must name one `default` Style. That Style initially owns every visible atom,
-including roleless Turns. The Program then applies zero or more ordered `Use` rules:
+SVS stores named Recipe data. A Style package interprets that Recipe and emits a complete Style.
+Applying another Style replaces the whole Style; arbitrary planning and rendering pieces are never
+implicitly merged.
+
+## 5. Total assignment and ordered replacement
+
+Every `CaptionProgram` has one explicit default Style covering the complete display universe.
+Authors do not need a fake `@whole` Selection or a complement.
 
 ```xml
-<caption:Program id="captions" narrative={story} default={plain}>
+<caption:Program id="captions" display={story.caption} default={plain}>
   <caption:Use role="ALICE" style={alice}/>
-  <caption:Use on={story.selection.special} style={impact}/>
+  <caption:Use words={story.caption.selection.special} style={impact}/>
+  <caption:Mute words={story.caption.selection.private}/>
 </caption:Program>
 ```
 
-A `Use` selector is either one exact Role label or one explicit Script Selection. It cannot contain
-both. Rules run in source order; for every atom, the last matching rule wins. A rule that selects no
-visible atom is an error. Authors never spell a complement merely to preserve the default.
+Uses apply in source order and the last matching whole-Style replacement wins. The Program stores
+the display-sequence identity and ordered Word-id runs, not copied text. A run never crosses a
+Segment or Turn boundary. All runs are disjoint and partition the display Words exactly once, and
+no run may split an Atom.
 
-Role is optional per Script Turn and resets at every Segment boundary. A roleless Turn therefore
-receives the default unless an explicit Selection replaces it.
+`Mute` consumes the same Caption-specific whole-Atom word subset as `Use`. Multiple `Mute`
+children form one ordered union, so one Program can hide any number of disconnected authored
+ranges. `Mute` is post-planning visibility intent: muted Atoms remain in the immutable display
+universe and `CaptionPlan`, never enter the planner prompt as an instruction, and never cause Cue
+replanning. The common timing join removes muted Atoms from the already-planned timed Cue while
+preserving that Cue's identity and original time span; a Cue with no visible Atom is absent from the
+timed visual projection. Style-family renderers therefore share this behavior without each
+inventing their own mask semantics. The common package also exports the same idempotent operation
+for defensive direct renderer calls.
 
-After assignment, the Program deterministically creates maximal contiguous runs. A run never
-crosses a Segment or Turn boundary and every atom in it has one Style. Runs are disjoint, ordered and
-partition the complete display universe exactly once.
+This is deliberately not a generic temporal mask. Script has already projected the author's
+Selection into the exact display-word subset, so Caption need not convert words to time and then
+guess them back from overlapping windows. A `Mute` selecting only part of a multiword Dual Text
+Atom is rejected by the same indivisibility rule as a Style application.
 
-## 5. Planner contract
+`display={story.caption}` is a real graph edge. Planner, timing and rendering declare their own
+edges to the same value only when they need it.
 
-A planner consumes resolved runs rather than interpreting Role, Selection or Style precedence. For
-each run it may only:
+## 6. Planner contract
 
-1. split the atom sequence into one or more ordered Cues;
-2. assign declared fields to atoms inside each Cue.
+A planner receives resolved runs. For each run it may only:
 
-The result must contain every Program run exactly once. Cues must preserve order and partition the
-run's atoms exactly once. Field ids, atom ids, value schemas and per-Cue cardinalities fail closed.
-There is no response field for text, pronunciation, time or Style.
+1. group consecutive whole Atoms into ordered Cues;
+2. assign declared fields to Words inside each Cue.
 
-`@narratage/caption-gemini` is one explicit implementation of this contract. It is not part of the
-Caption package or Core. Other packages may implement the same output law without being called
-Gemini, but the author graph must explicitly choose them.
+Cues must partition every run exactly once. Preferred minimum/maximum Cue word counts guide the
+planner but cannot invalidate author text; a single multiword Atom may exceed the maximum and must
+remain whole. The response contains no replacement text, pronunciation, timestamp or Style.
 
-## 6. Timing projection
+The Gemini planner sends the readable form only once:
 
-`CompleteSemanticMap` remains the only global speech timing truth. Exact display atoms reuse their
-source token windows. For a `region-envelope` alias, a Caption renderer may allocate local windows
-inside that region's envelope. Those local boundaries remain downstream Caption facts and are never
-written back into the global map.
+```json
+{
+  "atoms": [
+    ["new"],
+    ["york"],
+    ["city", "is", "beautiful"]
+  ]
+}
+```
 
-Multiple Cues inside one alias must receive ordered, non-overlapping local windows. They must not
-each copy the same whole region envelope.
+The outer array is the Cue-cut universe. Each inner array is one indivisible Atom. Strings inside
+it are immutable field targets. Stable ids remain inside the package. A response consumes Atoms by
+`atom_count`; a field uses one-based `atom_number` and `word_number` within its Cue.
 
-## 7. Rendering and composition
+## 7. Timing projection
 
-Each timed Cue selects the full presentation payload of its resolved Style. The renderer may expose
-declared field values to its own visual lowering, but cannot sample or mutate another Track. The
-result is exactly one ordinary `VisualTrack` whose Presents carry their own frame spans and absolute
-stacking facts.
+`CompleteSemanticMap` remains the only global speech timing truth. The timing component resolves
+each Atom's explicit speech-token range through `CaptionCorrespondence` and gives that whole Atom
+one measured window. A Cue begins at its first Atom and ends at its last Atom.
 
-Film does not recognize Caption specially. It folds the returned Track alongside Speech, B-roll,
-Text or any third-party Track satisfying the same public contract.
+`TimedCaptionProjection` therefore contains timed Cues and timed Atoms only. It contains no
+per-display-Word timestamps, no `estimated` quality label and no proportional character split. For
+a multiword Dual Text Atom, downstream renderers may choose how to lay out or animate its internal
+Words, but they cannot claim invented word timing. Nothing is written back into SemanticMap.
 
-## 8. Explicit non-goals
+## 8. Rendering and composition
 
-Caption Program v1 does not define:
+Each timed Cue selects the complete rendering payload of its resolved Style. One Style-family
+renderer returns one ordinary `VisualTrack`. In the first contract, all Styles in one Program use
+the same rendering family.
+
+`@narratage/caption-fine` is the first official family. It declares no fields and owns one
+orthogonal single-font layout/Paint/motion system, including independent whole-Atom glyph,
+underline and Pill activation. Another package may define a different layout tree or field-dependent
+Paint without modifying Script, Caption, Composition or Core.
+
+Film does not recognize Caption specially. It folds the resulting peer Track beside Speech,
+B-roll, Text and third-party Tracks.
+
+## 9. Explicit non-goals
+
+Caption v1 does not define:
 
 - Script correction or alternative wording;
+- inferred Dual Text word correspondence;
 - speaker diarization or speaker identity;
-- implicit model routing;
-- automatic cache reuse or prompt-based memoization;
-- hidden Runtime fallback;
+- implicit model or Provider routing;
+- automatic cache reuse;
+- estimated display-word timing;
+- planner-visible or Core-owned Caption mute semantics;
 - a global Caption layer in Composition;
-- field-specific visual semantics in Core.
+- field-specific semantics in Core.
 
-Reuse, Existing Values and substitutes are selected by the external BuildRequest/realization
-closure. They do not change Caption data or planner semantics.
+Targets, Candidates and realizations remain external run intent. They do not change Caption data or
+planner semantics.

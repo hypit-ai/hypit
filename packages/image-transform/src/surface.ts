@@ -3,8 +3,8 @@ import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 import type { CanonicalValue } from "@narratage/protocol";
 
 import { imageTransformFragment } from "./fragment.js";
@@ -24,7 +24,7 @@ function exact(element: StructuredElement, allowed: readonly string[], required:
 }
 
 function text(element: StructuredElement, name: string, fallback?: string): string {
-  const value: TextAttributeValue | undefined = element.attributes[name];
+  const value: MarkupAttributeValue | undefined = element.attributes[name];
   if (value === undefined && fallback !== undefined) return fallback;
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${element.name}.${name} must be a non-empty string`);

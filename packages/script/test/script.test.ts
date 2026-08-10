@@ -3,8 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { digestOf } from "@narratage/core";
+import type { Narrative } from "@narratage/narrative";
 import {
   ScriptSyntaxError,
+  captionCorrespondence,
+  captionDisplaySequence,
   formatScript,
   narrativeValue,
   parseScript,
@@ -80,9 +83,14 @@ test("selections, moments and Dual Text preserve separate semantic projections",
   assert.deepEqual(parsed.selections.map((selection) => selection.id), ["whole"]);
   assert.deepEqual(parsed.moments.map((moment) => moment.id), ["beat"]);
   assert.equal(parsed.captionProjection.regions.find((region) => region.kind === "alias")?.display, "laughed");
+  const publicNarrative = narrativeValue(parsed) as unknown as Narrative;
+  assert.deepEqual(Object.keys(publicNarrative.selections[0]!.occurrences[0]!).sort(),
+    ["endAnchorId", "occurrence", "startAnchorId"]);
+  assert.deepEqual(Object.keys(publicNarrative.moments[0]!.occurrences[0]!).sort(),
+    ["anchorId", "occurrence"]);
 });
 
-test("Caption Projection owns speech ranges without inventing alias word timing", () => {
+test("every explicit Dual Text is one whole display Atom without inferred internal correspondence", () => {
   const parsed = parseScript(
     "caption.svml",
     `<line>
@@ -93,18 +101,12 @@ test("Caption Projection owns speech ranges without inventing alias word timing"
       < | um>
     </line>`,
   );
-  const [identity, discount, replacement, interrupted, hidden] = parsed.captionProjection.regions;
+  const display = captionDisplaySequence(parsed, "story.caption");
+  const correspondence = captionCorrespondence(parsed, display.id);
 
-  assert.equal(parsed.captionProjection.contract, "svml.caption-projection@1");
-  assert.equal(identity?.kind, "identity");
-  assert.deepEqual(identity?.refinements.map((item) => item.display), ["test", "this"]);
-  assert.equal(discount?.kind, "alias");
-  assert.deepEqual(discount?.refinements.map((item) => item.display), ["off"]);
-  assert.deepEqual(replacement?.refinements, []);
-  assert.deepEqual(interrupted?.refinements.map((item) => item.display), ["what", "the"]);
-  assert.equal(hidden?.kind, "hidden");
-  assert.equal(hidden?.display, "");
-  assert.equal(hidden?.endTokenExclusive! - hidden?.startToken!, 1);
+  assert.deepEqual(display.atoms.map((atom) => atom.wordIds.length), [2, 2, 3, 2]);
+  assert.deepEqual(correspondence.atoms.map((mapping) => mapping.sourceTokenIds.length), [2, 3, 3, 3]);
+  assert.equal(display.words.some((word) => word.text === "um"), false);
 });
 
 test("mismatched named Segment closes are rejected", () => {

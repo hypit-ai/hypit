@@ -17,13 +17,13 @@ Neither of these changes what the video **is**. That is the Author Source's job.
 Every `.svrun` file begins with its processing instruction:
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 ```
 
 ### Minimal Run Source
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
@@ -86,7 +86,7 @@ Narratage has no implicit cache. Reusing a result is explicit Run Graph authorin
 historical Records as zero-input Candidates and connect them through Satisfaction edges.
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>

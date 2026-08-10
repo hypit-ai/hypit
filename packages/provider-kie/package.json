@@ -10,6 +10,8 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/background-removal": "workspace:*",
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/generation": "workspace:*",
     "@narratage/protocol": "workspace:*",

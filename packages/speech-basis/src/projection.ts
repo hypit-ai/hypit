@@ -1,17 +1,19 @@
-import { programSpaceFrameCount } from "@narratage/program-space";
+import { programSpaceFrameCount, programSpaceSampleFrames } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertSpeechBasisIdentity } from "@narratage/speech";
 import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
+import { lowerRestrictedSpeechVisualPresents } from "@narratage/media-track";
 import { sealAudioTrack, sealVisualTrack } from "@narratage/composition";
-import type { AudioTrack, VisualElement, VisualTrack } from "@narratage/composition";
+import type { AudioTrack, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
+import type { CanvasSpace } from "@narratage/spatial";
 
 export const projectSpeechAudioImplementationDigest = digestOf(
   "@narratage/speech-basis/project-audio@1",
 );
 
 export const projectSpeechVisualImplementationDigest = digestOf(
-  "@narratage/speech-basis/project-visual@2",
+  "@narratage/speech-basis/project-visual@1",
 );
 
 export const projectSpeechAudioTrackImplementationDigest = digestOf(
@@ -41,54 +43,63 @@ function frameAt(basis: SpeechBasis, seconds: number): number {
   return Math.round(seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator);
 }
 
-export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
+export function projectSpeechVisual(basis: SpeechBasis, canvas: CanvasSpace): VisualTrack {
   assertSpeechBasisIdentity(basis);
-  const totalFrames = programSpaceFrameCount(basis.programSpace);
   const trackId = `speech-visual:${basis.segments.map((segment) => segment.segmentId).join("+")}`;
+  const segments = new Map(basis.segments.map((segment) => [segment.segmentId, segment]));
   return sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
     id: trackId,
-    presents: basis.visualTrack.clips.map((clip, index) => {
-      const startFrame = frameAt(basis, clip.startSec);
-      const endFrameExclusive = Math.min(totalFrames, frameAt(basis, clip.endSec));
-      const kind: VisualElement["kind"] = clip.artifact.mediaType.startsWith("image/") ? "image" : "video";
-      if (kind !== "image" && !clip.artifact.mediaType.startsWith("video/")) {
-        throw new Error(`Speech visual ${clip.segmentId} is not an image or video Artifact.`);
-      }
-      if (endFrameExclusive <= startFrame) throw new Error(`Speech visual ${clip.segmentId} has an empty frame span.`);
-      return {
-        id: `${clip.segmentId}:${index + 1}`,
-        span: { startFrame, endFrameExclusive },
-        stacking: { order: 0, tieBreak: `${trackId}:${clip.segmentId}:${index + 1}` },
-        elements: [{
-          id: "media",
-          order: 0,
-          kind,
+    presents: lowerRestrictedSpeechVisualPresents(
+      trackId,
+      basis.programSpace,
+      canvas,
+      basis.visualTrack.clips.map((clip) => {
+        const segment = segments.get(clip.segmentId)!;
+        return {
+          id: clip.segmentId,
+          span: { startFrame: frameAt(basis, segment.startSec), endFrameExclusive: frameAt(basis, segment.endSec) },
           artifact: clip.artifact,
-          style: [
-            { name: "height", value: "100%" },
-            { name: "object-fit", value: "cover" },
-            { name: "position", value: "absolute" },
-            { name: "width", value: "100%" },
-          ],
-          ...(kind === "video" ? { muted: true } : {}),
-        }],
-      };
-    }),
+          extent: clip.extent,
+          frameRate: clip.frameRate,
+          frameCount: clip.frameCount,
+        };
+      }),
+      {
+        contract: "svml.content-fit@1",
+        sizing: "cover",
+        framePoint: { x: 0.5, y: 0.5 },
+        contentPoint: { x: 0.5, y: 0.5 },
+        offsetPx: { x: 0, y: 0 },
+        constraint: "bounded",
+      },
+    ),
   });
 }
 
 export function projectSpeechAudioTrack(basis: SpeechBasis): AudioTrack {
   assertSpeechBasisIdentity(basis);
+  const sampleFrames = programSpaceSampleFrames(basis.programSpace, 48_000);
   return sealAudioTrack({
     contract: "svml.audio-track@1",
     id: `speech-audio:${basis.segments.map((segment) => segment.segmentId).join("+")}`,
     clips: [{
       id: "speech",
-      span: { startFrame: 0, endFrameExclusive: programSpaceFrameCount(basis.programSpace) },
       artifact: basis.audio,
-      bus: "speech",
+      target: { startSample: 0, endSampleExclusive: sampleFrames },
+      source: {
+        sampleFrames,
+        startSample: 0,
+        endSampleExclusive: sampleFrames,
+        loop: false,
+        phaseSample: 0,
+      },
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: 1,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
     }],
   });
 }

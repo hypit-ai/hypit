@@ -8,9 +8,9 @@ import {
 } from "@narratage/source";
 
 test("Source Header explicitly selects one Frontend and masking preserves offsets", () => {
-  const text = '<?svml using="@narratage/text@1"?>\n\n<svml/>\n';
+  const text = '<?svml using="@narratage/markup@1"?>\n\n<svml/>\n';
   const header = parseSourceHeader("main.svml", text);
-  assert.equal(header.using, "@narratage/text@1");
+  assert.equal(header.using, "@narratage/markup@1");
   const masked = maskSourceHeader(text, header);
   assert.equal(masked.length, text.length);
   assert.equal(masked.indexOf("<svml/>"), text.indexOf("<svml/>"));

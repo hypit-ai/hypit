@@ -5,8 +5,18 @@ description: Setting up the WhisperX and OpenCV services.
 
 # Local Services
 
-Two Python services support local Builds. They are Runtime deployment packages, not part
-of Core or the author language.
+Local Builds may depend on managed sidecars, managed tool assets or operator-owned executables.
+They are Runtime deployment concerns, not part of Core or the author language.
+
+For an installed Runtime Profile, prefer the profile-scoped lifecycle:
+
+```bash
+pnpm narratage services up svml.runtime.json
+pnpm narratage doctor svml.runtime.json
+```
+
+Only Providers selected by that Profile are prepared. `services up` may prepare or start deployment
+state; `doctor` is read-only. The commands below are the equivalent manual operations.
 
 ## Automatic setup
 
@@ -99,8 +109,8 @@ pnpm test:whisperx-service
 
 ## OpenCV image service
 
-Provides bounded image transforms (e.g. the GPT Image YCrCb denoise preset) through
-`@narratage/provider-image-opencv-local`.
+Provides one bounded Raster interpreter for both image transforms (e.g. the GPT Image YCrCb denoise
+preset) and explicit ordered Canvas/Layer composition through `@narratage/provider-image-opencv-local`.
 
 OpenCV runs as one bounded process per Need, so there is no program to keep warm — preparing the
 environment is the whole job, and `narratage services status` reports whether the interpreter
@@ -114,6 +124,24 @@ carries a usable `cv2` and `numpy`.
 uv python install 3.13
 uv sync --project services/image-opencv --frozen
 ```
+
+With the official Runtime Adapter no `pythonExecutable` is required: `services up` prepares this
+frozen project and the Endpoint, probe and doctor all use its `.venv`. Supplying
+`pythonExecutable` transfers ownership to the operator and disables the unrelated managed prepare.
+
+## HyperFrames browser
+
+`@narratage/provider-hyperframes-local` declares a profile-scoped browser service. `services up`
+runs `hyperframes browser ensure`; its probe resolves the browser, starts `--version`, and verifies
+the configured ffprobe. No globally installed Chrome is required.
+
+## FFmpeg toolchain
+
+The local media Provider accepts system or explicitly configured `ffmpeg` and `ffprobe`. Its shared
+compatibility probe checks the encoders and filters actually used by `@narratage/media-execution`,
+not one blessed version string. `services up` never mutates Homebrew, apt or another system package
+manager. A managed cross-platform binary remains deferred until its source, checksums, platform
+matrix and redistribution license are frozen.
 
 ### Tests
 

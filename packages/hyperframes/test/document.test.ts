@@ -15,6 +15,12 @@ import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 import assert from "node:assert/strict";
 import test from "node:test";
 
+const fixtureFont: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  sources: [{ artifact: { kind: "blob", digest: digestOf("hyperframes:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
+  weight: 700,
+  style: "normal",
+};
 
 function fixture() {
   const programSpace = sealProgramSpace({
@@ -23,16 +29,16 @@ function fixture() {
     frameRate: { numerator: 30_000, denominator: 1_001 },
   });
   const picture = {
+    kind: "blob" as const,
     digest: digestOf("hyperframes:picture"),
     size: 10,
     mediaType: "image/png",
-    durationSec: 0,
   };
   const sound = {
+    kind: "blob" as const,
     digest: digestOf("hyperframes:sound"),
     size: 20,
     mediaType: "audio/wav",
-    durationSec: programSpace.durationSec,
   };
   const lower = sealVisualTrack({
     contract: "svml.visual-track@1",
@@ -61,14 +67,24 @@ function fixture() {
       stacking: { order: 20, tieBreak: "upper" },
       elements: [
         { id: "root", order: 0, kind: "box", style: [{ name: "position", value: "absolute" }] },
-        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello <world>", style: [] },
+        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello <world>", fonts: [fixtureFont], style: [] },
       ],
     }],
   });
   const audio = sealAudioTrack({
     contract: "svml.audio-track@1",
     id: "sound",
-    clips: [{ id: "main", span: { startFrame: 0, endFrameExclusive: 30 }, artifact: sound, bus: "speech" }],
+    clips: [{
+      id: "main",
+      artifact: sound,
+      target: { startSample: 0, endSampleExclusive: 48_000 },
+      source: { sampleFrames: 48_000, startSample: 0, endSampleExclusive: 48_000, loop: false, phaseSample: 0 },
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: 1,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
+    }],
   });
   const composition = sealComposition({
     contract: "svml.composition@1",
@@ -84,12 +100,15 @@ test("HyperFrames flattens generic peer visual Track Presents without absorbing 
   const document = compileHyperframesDocument(composition, programSpace);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
   assert.equal(document.visualIr, VISUAL_IR_V1);
-  assert.deepEqual(document.artifacts, [{
-    kind: "blob",
-    digest: picture.digest,
-    size: picture.size,
-    mediaType: picture.mediaType,
-  }]);
+  assert.deepEqual(document.artifacts, [
+    {
+      kind: "blob",
+      digest: picture.digest,
+      size: picture.size,
+      mediaType: picture.mediaType,
+    },
+    fixtureFont.sources[0]!.artifact,
+  ]);
   assert.ok(document.html.indexOf('data-svml-track-id="lower"') < document.html.indexOf('data-svml-track-id="upper"'));
   assert.equal((document.html.match(/class="clip svml-visual-present"/gu) ?? []).length, 2);
   assert.doesNotMatch(document.html, /<audio/u);
@@ -179,7 +198,30 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
   assert.match(document.html, /@keyframes svml-/u);
   assert.match(document.html, /33\.333333333%\{opacity:1;transform:translateY\(0%\)/u);
   assert.match(document.html, /animation-duration:1\.001s/u);
+  assert.match(document.html, /100%\{opacity:1;transform:translateY\(0%\)\}/u);
   assert.doesNotMatch(document.html, /isolation:isolate/u);
+});
+
+test("HyperFrames clips a long animation by Present visibility instead of rejecting it", () => {
+  const { composition, programSpace } = fixture();
+  const lower = composition.tracks.find((track) => track.id === "lower");
+  assert(lower?.contract === "svml.visual-track@1");
+  const present = lower.presents[0]!;
+  const media = present.elements[0]!;
+  const animated = sealVisualTrack({
+    ...lower,
+    presents: [{ ...present, elements: [{ ...media, animation: { keyframes: [
+      { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
+      { atFrame: 45, style: [{ name: "opacity", value: 1 }] },
+    ] } }] }],
+  });
+  const document = compileHyperframesDocument(sealComposition({
+    ...composition,
+    tracks: composition.tracks.map((track) => track.id === "lower" ? animated : track),
+  }), programSpace);
+  assert.match(document.html, /animation-duration:1\.5015s/u);
+  assert.match(document.html, /data-svml-animation-duration-frames="45" data-svml-animation-sample-frames="30"/u);
+  assert.match(document.html, /100%\{opacity:1\}/u);
 });
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {
@@ -190,12 +232,12 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   });
   const font: FontArtifactRef = {
     contract: "svml.font-artifact@1",
-    artifact: {
+    sources: [{ artifact: {
       kind: "blob",
       digest: digestOf("hyperframes:font"),
       size: 1_024,
       mediaType: "font/woff2",
-    },
+    } }],
     weight: 700,
     style: "normal",
   };
@@ -249,7 +291,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     tracks: [track],
   }), space);
   assert.doesNotThrow(() => assertHyperframesDocument(document));
-  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [font.artifact.digest, surfaceDigest].sort());
+  assert.deepEqual(document.artifacts.map((artifact) => artifact.digest), [font.sources[0]!.artifact.digest, surfaceDigest].sort());
   assert.match(document.html, /@font-face\{/u);
   assert.match(document.html, /format\("woff2"\)/u);
   assert.match(document.html, /font-synthesis:none/u);
@@ -258,6 +300,66 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   const materialized = materializeHyperframesHtml(document,
     (artifact) => `https://assets.example/${artifact.digest}?token=1&part=2`);
   assert.doesNotMatch(materialized, /svml-artifact:\/\//u);
-  assert.match(materialized, new RegExp(font.artifact.digest, "u"));
+  assert.match(materialized, new RegExp(font.sources[0]!.artifact.digest, "u"));
   assert.match(materialized, new RegExp(surfaceDigest, "u"));
+});
+
+test("exact timed sampling lowers loop boundaries and held frames without zero-rate browser media", () => {
+  const programSpace = sealProgramSpace({
+    contract: "svml.program-space@1",
+    durationSec: 8 / 30,
+    frameRate: { numerator: 30, denominator: 1 },
+  });
+  const artifact = {
+    kind: "blob" as const,
+    digest: digestOf("hyperframes:sampled-video"),
+    size: 1_000,
+    mediaType: "video/mp4",
+  };
+  const track = sealVisualTrack({
+    contract: "svml.visual-track@1",
+    visualIr: "svml.visual-ir@1",
+    id: "sampled",
+    presents: [{
+      id: "sampled",
+      span: { startFrame: 0, endFrameExclusive: 8 },
+      stacking: { order: 1, tieBreak: "sampled" },
+      elements: [{
+        id: "video",
+        order: 0,
+        kind: "video",
+        artifact,
+        muted: true,
+        sampling: {
+          sourceFrameRate: { numerator: 30, denominator: 1 },
+          sourceFrameCount: 4,
+          segments: [
+            {
+              target: { startFrame: 0, endFrameExclusive: 6 },
+              sourceFrame: { numerator: 2, denominator: 1 },
+              rate: { numerator: 1, denominator: 1 },
+              loop: { startFrame: 0, endFrameExclusive: 4 },
+            },
+            {
+              target: { startFrame: 6, endFrameExclusive: 8 },
+              sourceFrame: { numerator: 3, denominator: 1 },
+              rate: { numerator: 0, denominator: 1 },
+            },
+          ],
+        },
+        style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
+      }],
+    }],
+  });
+  const document = compileHyperframesDocument(sealComposition({
+    contract: "svml.composition@1",
+    id: "sampled",
+    canvas: { width: 100, height: 100, clearColor: "#000000" },
+    tracks: [track],
+  }), programSpace);
+  assert.equal((document.html.match(/data-svml-sampling-part=/gu) ?? []).length, 4);
+  assert.match(document.html, /data-media-start="0\.066666666666"/u);
+  assert.match(document.html, /data-media-start="0"/u);
+  assert.equal((document.html.match(/data-playback-rate="1"/gu) ?? []).length, 4);
+  assert.doesNotMatch(document.html, /data-playback-rate="0"/u);
 });

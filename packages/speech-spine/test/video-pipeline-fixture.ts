@@ -1,14 +1,25 @@
 import { videoContractManifests } from "../../test-support/video-domain.js";
-import { captionManifest, captionTimingFragment } from "@narratage/caption";
+import {
+  captionManifest,
+  captionTypes,
+  captionValidatorDigests,
+  plannedCaptionTimingFragment,
+  resolveCaptionProgram,
+  sealCaptionPlan,
+  sealCaptionStyle,
+} from "@narratage/caption";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { speechDependency, speechTypes } from "@narratage/speech";
+import { sealText, textDependency, textImplementationDigests, textManifest, textTypes } from "@narratage/text";
 import {
   createResolvedClosure,
+  canonicalize,
   digestOf,
   link,
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
+  sealTypeValidationReceipt,
   sealTypedModule,
   start,
 } from "@narratage/core";
@@ -31,10 +42,17 @@ import type {
   ValueSchema,
 } from "@narratage/protocol";
 import { resolveRealization, sealRealizationOverlay } from "@narratage/run";
-import { narrativeValue, parseScript } from "@narratage/script";
+import { spatialTypes, spatialValidatorDigests } from "@narratage/spatial";
+import {
+  captionCorrespondence,
+  captionDisplaySequence,
+  narrativeValue,
+  parseScript,
+} from "@narratage/script";
 import { speechAlignmentManifest } from "@narratage/speech-alignment";
 import { speechBasisManifest, speechBasisProjectionFragment } from "@narratage/speech-basis";
 import { mediaPipelineManifest } from "@narratage/media-pipeline";
+import { mediaTrackManifest } from "@narratage/media-track";
 import {
   whisperXManifest,
   whisperXSpeechAlignmentFragment,
@@ -78,6 +96,7 @@ export const videoManifest: ModuleManifest = {
   dependencies: [
     narrativeDependency,
     speechDependency,
+    textDependency,
   ],
   types: [
     { name: videoTypes.estimate.name, schema: object({ durationSec: { schema: number } }) },
@@ -99,7 +118,7 @@ export const videoManifest: ModuleManifest = {
   producers: [
     {
       name: videoProducers.requestEstimate.name,
-      inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+      inputs: [{ name: "speech", type: textTypes.text }],
       outputs: [],
       needs: [{
         name: "estimate",
@@ -115,7 +134,7 @@ export const videoManifest: ModuleManifest = {
     {
       name: videoProducers.requestSeedanceMini.name,
       inputs: [
-        { name: "narrative", type: narrativeTypes.narrative },
+        { name: "dialogue", type: textTypes.text },
         { name: "estimate", type: videoTypes.estimate },
       ],
       outputs: [],
@@ -132,7 +151,7 @@ export const videoManifest: ModuleManifest = {
     },
     {
       name: videoProducers.placeholderEstimate.name,
-      inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+      inputs: [{ name: "speech", type: textTypes.text }],
       outputs: [{ name: "estimate", type: videoTypes.estimate }],
       needs: [],
       implementation: {
@@ -166,18 +185,18 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 const durationEstimateFragment = sealGraphFragment({
   name: "example.video-pipeline/duration-estimate@1",
-  inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+  inputs: [{ name: "speech", type: textTypes.text }],
   operations: [{
     id: "estimate",
     producer: videoProducers.requestEstimate,
-    inputs: { narrative: input("narrative") },
+    inputs: { speech: input("speech") },
     result: { kind: "need", name: "estimate", accepts: "exact" },
   }],
   exports: [{
     name: "estimate",
     type: videoTypes.estimate,
     root: operation("estimate"),
-    semanticInputs: ["narrative"],
+    semanticInputs: ["speech"],
     fidelity: "exact",
   }],
 });
@@ -186,13 +205,14 @@ const speechBasisGenerationFragment = sealGraphFragment({
   name: "example.video-pipeline/seedance-mini-speech-basis@1",
   inputs: [
     { name: "narrative", type: narrativeTypes.narrative },
+    { name: "dialogue", type: textTypes.text },
     { name: "estimate", type: videoTypes.estimate },
   ],
   operations: [
     {
       id: "request-seedance-mini",
       producer: videoProducers.requestSeedanceMini,
-      inputs: { narrative: input("narrative"), estimate: input("estimate") },
+      inputs: { dialogue: input("dialogue"), estimate: input("estimate") },
       result: { kind: "need", name: "media", accepts: "exact" },
     },
     {
@@ -206,25 +226,25 @@ const speechBasisGenerationFragment = sealGraphFragment({
     name: "take",
     type: speechTypes.basis,
     root: operation("assemble-take"),
-    semanticInputs: ["narrative", "estimate"],
+    semanticInputs: ["narrative", "dialogue", "estimate"],
     fidelity: "exact",
   }],
 });
 
 const placeholderEstimateFragment = sealGraphFragment({
   name: "example.video-pipeline/placeholder-estimate@1",
-  inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+  inputs: [{ name: "speech", type: textTypes.text }],
   operations: [{
     id: "placeholder",
     producer: videoProducers.placeholderEstimate,
-    inputs: { narrative: input("narrative") },
+    inputs: { speech: input("speech") },
     result: { kind: "output", name: "estimate" },
   }],
   exports: [{
     name: "estimate",
     type: videoTypes.estimate,
     root: operation("placeholder"),
-    semanticInputs: ["narrative"],
+    semanticInputs: ["speech"],
     fidelity: "substitute",
   }],
 });
@@ -246,7 +266,9 @@ export type VideoOutputName = keyof typeof videoOutputs;
 
 export const videoClosure = createResolvedClosure([
   ...videoContractManifests,
+  textManifest,
   videoManifest,
+  mediaTrackManifest,
   speechBasisManifest,
   mediaPipelineManifest,
   whisperXManifest,
@@ -256,44 +278,138 @@ export const videoClosure = createResolvedClosure([
 
 function authorProgram(): LinkedProgram {
   const parsed = parseScript("pipeline.svml", "<line><that was insane | what the fuck></line>");
+  const display = captionDisplaySequence(parsed, "caption:display");
+  const correspondence = captionCorrespondence(parsed, display.id);
+  const style = sealCaptionStyle({
+    contract: "svml.caption-style@1",
+    id: "fixture",
+    planning: {
+      cue: { minimumWords: 1, maximumWords: 7, instruction: "Use one authored Atom." },
+      fields: [],
+    },
+    rendering: { family: "fixture-caption@1", parameters: {} },
+  });
+  const captionProgram = resolveCaptionProgram(display, "caption-program", style, []);
+  const captionPlan = sealCaptionPlan({
+    contract: "svml.caption-plan@1",
+    runs: [{
+      id: captionProgram.runs[0]!.id,
+      styleId: style.id,
+      cues: [{ id: "caption:cue:1", atomIds: display.atoms.map((atom) => atom.id), fields: [] }],
+    }],
+  });
+  const origin = {
+    kind: "authored" as const,
+    sourceDigest: digestOf("source:video-pipeline"),
+    frontendClosureDigest: digestOf("frontend:script"),
+    sourceName: "pipeline.svml",
+  };
   const narrative = sealRecord({
     id: "narrative:root",
     type: narrativeTypes.narrative,
     value: { kind: "inline", value: narrativeValue(parsed) },
     conformance: "exact",
-    origin: {
-      kind: "authored",
-      sourceDigest: digestOf("source:video-pipeline"),
-      frontendClosureDigest: digestOf("frontend:script"),
-      sourceName: "pipeline.svml",
-    },
+    origin,
   });
+  const rawSpeech = sealRecord({
+    id: "narrative:speech",
+    type: textTypes.text,
+    value: { kind: "inline", value: sealText(parsed.serializations.speech) as never },
+    conformance: "exact",
+    origin,
+  });
+  const speech = { ...rawSpeech, validation: sealTypeValidationReceipt({
+    type: rawSpeech.type,
+    recordDigest: rawSpeech.digest,
+    validatorDigest: textImplementationDigests.validateText,
+  }) };
+  const rawDialogue = sealRecord({
+    id: "narrative:dialogue",
+    type: textTypes.text,
+    value: { kind: "inline", value: sealText(parsed.serializations.dialogue) as never },
+    conformance: "exact",
+    origin,
+  });
+  const dialogue = { ...rawDialogue, validation: sealTypeValidationReceipt({
+    type: rawDialogue.type,
+    recordDigest: rawDialogue.digest,
+    validatorDigest: textImplementationDigests.validateText,
+  }) };
+  const programRecord = sealRecord({ id: "caption:program", type: captionTypes.program,
+    value: { kind: "inline", value: canonicalize(captionProgram) }, conformance: "exact", origin });
+  const planRecord = sealRecord({ id: "caption:plan", type: captionTypes.plan,
+    value: { kind: "inline", value: canonicalize(captionPlan) }, conformance: "exact", origin });
+  const captionRecords = [
+    sealRecord({ id: "caption:display", type: narrativeTypes.captionDisplay,
+      value: { kind: "inline", value: canonicalize(display) }, conformance: "exact", origin }),
+    sealRecord({ id: "caption:correspondence", type: narrativeTypes.captionCorrespondence,
+      value: { kind: "inline", value: canonicalize(correspondence) }, conformance: "exact", origin }),
+    { ...programRecord, validation: sealTypeValidationReceipt({
+      type: programRecord.type,
+      recordDigest: programRecord.digest,
+      validatorDigest: captionValidatorDigests.program,
+    }) },
+    { ...planRecord, validation: sealTypeValidationReceipt({
+      type: planRecord.type,
+      recordDigest: planRecord.digest,
+      validatorDigest: captionValidatorDigests.plan,
+    }) },
+  ];
+  const rawCanvas = sealRecord({
+    id: "canvas:vertical",
+    type: spatialTypes.canvas,
+    value: { kind: "inline", value: {
+      contract: "svml.canvas-space@1",
+      widthPx: 720,
+      heightPx: 1280,
+      origin: "top-left",
+      xDirection: "right",
+      yDirection: "down",
+      pixelAspect: "square",
+    } },
+    conformance: "exact",
+    origin,
+  });
+  const canvas = {
+    ...rawCanvas,
+    validation: sealTypeValidationReceipt({
+      type: rawCanvas.type,
+      recordDigest: rawCanvas.digest,
+      validatorDigest: spatialValidatorDigests.canvas,
+    }),
+  };
   return link(videoClosure, [sealTypedModule({
     id: "author:video-pipeline",
     closureDigest: videoClosure.digest,
-    records: [narrative],
+    records: [narrative, speech, dialogue, canvas, ...captionRecords],
   })]);
 }
 
 export function createVideoGraph(program: LinkedProgram): CompiledGraph {
   const narrative = { kind: "record" as const, id: "narrative:root" };
+  const speech = { kind: "record" as const, id: "narrative:speech" };
+  const dialogue = { kind: "record" as const, id: "narrative:dialogue" };
   const estimate = elaborateGraphFragment(program, durationEstimateFragment, {
     id: "opening.estimate",
     fragment: durationEstimateFragment.id,
-    inputs: { narrative },
+    inputs: { speech },
   });
   const take = elaborateGraphFragment(program, speechBasisGenerationFragment, {
     id: "opening.seedance-mini",
     fragment: speechBasisGenerationFragment.id,
     inputs: {
       narrative,
+      dialogue,
       estimate: { kind: "logical-output", id: videoOutputs.estimate },
     },
   });
   const projections = elaborateGraphFragment(program, speechBasisProjectionFragment, {
     id: "opening.take-projections",
     fragment: speechBasisProjectionFragment.id,
-    inputs: { basis: { kind: "logical-output", id: videoOutputs.take } },
+    inputs: {
+      basis: { kind: "logical-output", id: videoOutputs.take },
+      canvas: { kind: "record", id: "canvas:vertical" },
+    },
   });
   const alignment = elaborateGraphFragment(program, whisperXSpeechAlignmentFragment, {
     id: "opening.whisperx-alignment",
@@ -303,12 +419,15 @@ export function createVideoGraph(program: LinkedProgram): CompiledGraph {
       audio: { kind: "logical-output", id: videoOutputs.audio },
     },
   });
-  const caption = elaborateGraphFragment(program, captionTimingFragment, {
+  const caption = elaborateGraphFragment(program, plannedCaptionTimingFragment, {
     id: "opening.caption",
-    fragment: captionTimingFragment.id,
+    fragment: plannedCaptionTimingFragment.id,
     inputs: {
-      narrative,
+      display: { kind: "record", id: "caption:display" },
+      correspondence: { kind: "record", id: "caption:correspondence" },
       map: { kind: "logical-output", id: videoOutputs.map },
+      program: { kind: "record", id: "caption:program" },
+      plan: { kind: "record", id: "caption:plan" },
     },
   });
   const contribution = mergeFragmentContributions(
@@ -353,7 +472,7 @@ export function createVideoFixture(options: VideoBuildOptions = {}): VideoFixtur
   const placeholder = elaborateGraphFragment(program, placeholderEstimateFragment, {
     id: "opening.placeholder-estimate",
     fragment: placeholderEstimateFragment.id,
-    inputs: { narrative: { kind: "record", id: "narrative:root" } },
+    inputs: { speech: { kind: "record", id: "narrative:speech" } },
   });
   const contribution = bindCandidateFragment(placeholder, { estimate: videoOutputs.estimate });
   const overlay = sealRealizationOverlay({

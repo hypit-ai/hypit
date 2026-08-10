@@ -28,13 +28,16 @@ export type CaptionGeminiProgram = {
 
 export type CaptionPlanningAtom = {
   readonly id: string;
-  readonly text: string;
+  /** Stable identities stay inside the compiled request; the model sees only the word surfaces. */
+  readonly words: readonly { readonly id: string; readonly text: string }[];
 };
 
 export type CaptionPlanningRun = {
   readonly id: string;
   readonly styleId: string;
-  readonly atomIds: readonly string[];
+  readonly atoms: readonly CaptionPlanningAtom[];
+  readonly cueMinimumWords: number;
+  readonly cueMaximumWords: number;
   readonly cueInstruction: string;
   readonly fields: readonly CaptionFieldDeclaration[];
 };
@@ -42,7 +45,6 @@ export type CaptionPlanningRun = {
 export type CaptionGeminiRequest = {
   readonly contract: "svml.caption-gemini-request@1";
   readonly model: CaptionGeminiModel;
-  readonly atoms: readonly CaptionPlanningAtom[];
   readonly runs: readonly CaptionPlanningRun[];
   readonly systemInstruction: string;
   readonly prompt: string;
@@ -51,12 +53,15 @@ export type CaptionGeminiRequest = {
 
 export type RawCaptionGeminiResponse = {
   readonly runs: readonly {
-    readonly run_id: string;
     readonly cues: readonly {
-      readonly after_atom_id: string;
+      /** Number of consecutive unread atoms consumed by this Cue. */
+      readonly atom_count: number;
       readonly fields: readonly {
         readonly declaration_id: string;
-        readonly atom_id: string;
+        /** One-based Atom position inside this Cue. */
+        readonly atom_number: number;
+        /** One-based display-word position inside that Atom. */
+        readonly word_number: number;
         readonly value: string;
       }[];
     }[];

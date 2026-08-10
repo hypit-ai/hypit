@@ -214,23 +214,23 @@ test("Runtime Closure content cannot be changed without invalidating its digest"
   assert.throws(() => verifyRuntimeClosure(tampered), /digest differs/u);
 });
 
-test("Runtime @1 facts are rejected instead of being reinterpreted as Endpoint bindings", () => {
+test("unsupported Runtime formats are rejected instead of being reinterpreted", () => {
   const registry = new RuntimeModuleRegistry();
   assert.throws(
-    () => registry.register({ ...manifest(), format: "svml.runtime-module@9" } as never),
+    () => registry.register({ ...manifest(), format: "svml.runtime-module@invalid" } as never),
     /unsupported Runtime Module Manifest format/u,
   );
 
   const configured = profile();
   assert.throws(
-    () => verifyRuntimeProfile({ ...configured, format: "svml.runtime-profile@9" } as never),
+    () => verifyRuntimeProfile({ ...configured, format: "svml.runtime-profile@invalid" } as never),
     /unsupported Runtime Profile format/u,
   );
 
   registry.register(manifest());
   const closure = resolveRuntimeProfile(registry, configured);
   assert.throws(
-    () => verifyRuntimeClosure({ ...closure, format: "svml.runtime-closure@9" } as never),
+    () => verifyRuntimeClosure({ ...closure, format: "svml.runtime-closure@invalid" } as never),
     /unsupported Runtime Closure format/u,
   );
 });
