@@ -1,158 +1,112 @@
 ---
-title: Local Services
-description: Setting up the WhisperX and OpenCV services.
+title: Runtime & External Services
+description: Managing the durable Worker and local programs selected by a Runtime Profile.
 ---
 
-# Local Services
+# Runtime & External Services
 
-Local Builds may depend on managed daemons, prepared tool assets or operator-owned executables.
-They are Runtime deployment concerns, not part of Core or the author language.
+Two lifecycle scopes are deliberately separate.
 
-This page describes the current pre-Worker command surface. The domain-neutral target separates
-prepared tools, managed daemons, remote dependency probes and the Build Worker beneath one
-`runtime` lifecycle; see [`../runtime-execution-control.md`](../runtime-execution-control.md).
+## Runtime execution domain
 
-For an installed Runtime Profile, prefer the profile-scoped lifecycle:
+```bash
+pnpm narratage runtime up svml.runtime.json
+pnpm narratage runtime status svml.runtime.json
+pnpm narratage runtime logs svml.runtime.json
+pnpm narratage runtime down svml.runtime.json
+```
+
+`runtime up` starts or reuses the detached fenced Worker and also prepares/starts the external
+programs declared by selected adapters. The process identity, profile digest and log path are
+project-scoped. Repeating `runtime up` does not create a second Worker for the same domain.
+
+`runtime status` combines:
+
+- Worker process and profile identity;
+- durable queue phase counts and shared capacity reservations;
+- declared external-program health.
+
+The Worker record binds an effective Profile revision covering the Profile bytes plus both package
+locks it names. Editing the same Profile path or regenerating either lock makes the old process
+`stale`; the next `runtime up` or `build` replaces it before admitting work under the new
+configuration.
+
+`runtime down` asks the Worker to stop and then stops programs that the Profile owns. It does not
+cancel Builds or remote Provider jobs. Queued Builds remain durable and continue after the Runtime
+is brought up again.
+
+## External programs only
 
 ```bash
 pnpm narratage services up svml.runtime.json
-pnpm narratage doctor svml.runtime.json
+pnpm narratage services status svml.runtime.json
+pnpm narratage services down svml.runtime.json
 ```
 
-Only Providers selected by that Profile are prepared. `services up` may prepare or start deployment
-state; `doctor` is read-only. The commands below are the equivalent manual operations.
+`services` is an expert/debugging command. It never starts the Worker and never reads or mutates a
+Build queue. It operates only on adapter-declared programs such as:
 
-## Automatic setup
+- the warm local WhisperX HTTP service;
+- the managed OpenCV Python environment probe;
+- HyperFrames browser preparation;
+- local media executable compatibility probes.
 
-You normally do not run any of the commands on this page. `pnpm install` prepares every service
-that an installed Provider declares, and `narratage build` starts them:
+Remote-only Endpoints such as KIE have no local service.
+
+## Build relationship
 
 ```bash
-pnpm install     # prepares the Python environments
+pnpm narratage build build.svrun --runtime svml.runtime.json
 pnpm narratage build build.svrun --runtime svml.runtime.json --follow
 ```
 
-A Build starts only the services its Runtime Profile declares, leaves them running between Builds
-so a warm model is not reloaded, and stops before its first Operation if one cannot be reached —
-so an unavailable service never costs a paid generation.
+Before submission, `build` validates the profile and ensures its Runtime is up. The Build command
+then stores one verified Build plus dispatch ticket. Without `--follow` it exits immediately after
+submission. `--follow` observes durable state only; Ctrl-C detaches the observer and leaves the
+Worker running.
 
-Manage them directly when you need to:
+`--no-services` skips automatic external-program startup for an operator who already owns those
+programs, but it does not create implicit Runtime services or move execution back into the CLI.
+
+## Visibility
 
 ```bash
-pnpm narratage services status svml.runtime.json   # what is running
-pnpm narratage services up svml.runtime.json       # start without building
-pnpm narratage services down svml.runtime.json     # stop what this project started
-pnpm narratage build … --no-services               # build against what is already running
+pnpm narratage queue --runtime svml.runtime.json
+pnpm narratage queue --runtime svml.runtime.json --watch
+pnpm narratage status <build-id> --runtime svml.runtime.json
+pnpm narratage operations <build-id> --runtime svml.runtime.json
+pnpm narratage operation <operation-id> --runtime svml.runtime.json
 ```
 
-`pnpm install` skips preparation when `uv` is absent and says so; it never fails the install. The
-rest of this page is what those commands run, for when one of them fails or you are deploying
-outside this repository.
+These views expose durable dispatch phase, lease/capacity facts, Operation attempts, checkpoints and
+cancellation state. They do not reconstruct a secret second graph or ask a Provider for creative
+routing.
+
+Use `--json` for one versioned result and `--jsonl` for a watch stream.
 
 ## WhisperX
 
-Provides ASR and language-specific alignment for speech timing measurement.
+`@narratage/provider-whisperx-local` declares the warm service. Its health probe locks protocol,
+package, model, device, compute type and batch size. It accepts only canonical evidence WAVs beneath
+the configured input roots. WhisperX remains one-at-a-time internally; the Runtime lane prevents
+avoidable `BUSY` responses.
 
-### Install by hand
-
-`pnpm install` runs the first three of these. WhisperX 3.8.6 supports Python 3.10–3.13, and the
-checked-in lock selects 3.13:
+For service development it may be run directly:
 
 ```bash
-uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv run --project services/whisperx --frozen svml-whisperx-prepare
 uv run --project services/whisperx --frozen svml-whisperx-check
-```
-
-`svml-whisperx-prepare` installs NLTK's `punkt_tab` sentence data from a pinned archive after
-SHA-256 verification. This is required by WhisperX alignment and is never downloaded during
-inference.
-
-The first model start may download ASR and alignment weights. Production should put the Hugging
-Face cache on persistent storage.
-
-### Run by hand
-
-`narratage build` and `narratage services up` run this for you, logging to
-`.svml/services/whisperx.log`. To run it in the foreground instead:
-
-```bash
 uv run --project services/whisperx --frozen svml-whisperx-service
-curl http://127.0.0.1:8765/health
 ```
 
-### Configuration
+## OpenCV and HyperFrames
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `SVML_WHISPERX_PORT` | `8765` | loopback port |
-| `SVML_WHISPERX_MODEL` | `small` | faster-whisper model |
-| `SVML_WHISPERX_DEVICE` | `cpu` | `cpu` or deployed accelerator |
-| `SVML_WHISPERX_COMPUTE` | `int8` on CPU | CTranslate2 compute type |
-| `SVML_WHISPERX_BATCH_SIZE` | `8` | bounded ASR batch size |
-| `SVML_WHISPERX_INPUT_ROOTS` | OS temp dir | path-separated roots the service may read |
-| `SVML_WHISPERX_NLTK_DATA` | user SVML cache | prepared NLTK data root |
-| `SVML_WHISPERX_MAX_REQUEST_BYTES` | `65536` | HTTP JSON bound |
-| `SVML_WHISPERX_MAX_AUDIO_BYTES` | `536870912` | staged canonical WAV bound |
+The OpenCV adapter owns preparation of its frozen Python environment unless an explicit executable
+transfers lifecycle ownership to the deployment. HyperFrames owns its profile-scoped browser
+preparation. Neither is a central Runtime default; only a selected locked adapter contributes the
+corresponding program.
 
-### Concurrency
-
-The service admits exactly one inference at a time. A second request receives `503 BUSY`.
-Concurrency is governed by the Narratage Runtime Scheduler's lane configuration, not the service
-itself.
-
-The Node Provider (`@narratage/provider-whisperx-local`) must be configured with matching model,
-device, compute and batch size. A mismatch fails before results are accepted.
-
-### Tests
-
-```bash
-pnpm test:whisperx-service
-```
-
-## OpenCV image service
-
-Provides one bounded Raster interpreter for both image transforms (e.g. the GPT Image YCrCb denoise
-preset) and explicit ordered Canvas/Layer composition through `@narratage/provider-image-opencv-local`.
-
-OpenCV runs as one bounded process per Need, so there is no program to keep warm — preparing the
-environment is the whole job, and `narratage services status` reports whether the interpreter
-carries a usable `cv2` and `numpy`.
-
-### Install by hand
-
-`pnpm install` runs this:
-
-```bash
-uv python install 3.13
-uv sync --project services/image-opencv --frozen
-```
-
-With the official Runtime Adapter no `pythonExecutable` is required: `services up` prepares this
-frozen project and the Endpoint, probe and doctor all use its `.venv`. Supplying
-`pythonExecutable` transfers ownership to the operator and disables the unrelated managed prepare.
-
-## HyperFrames browser
-
-`@narratage/provider-hyperframes-local` declares a profile-scoped browser service. `services up`
-runs `hyperframes browser ensure`; its probe resolves the browser, starts `--version`, and verifies
-the configured ffprobe. No globally installed Chrome is required.
-
-## FFmpeg toolchain
-
-The local media Provider accepts system or explicitly configured `ffmpeg` and `ffprobe`. Its shared
-compatibility probe checks the encoders and filters actually used by `@narratage/media-execution`,
-not one blessed version string. `services up` never mutates Homebrew, apt or another system package
-manager. A managed cross-platform binary remains deferred until its source, checksums, platform
-matrix and redistribution license are frozen.
-
-### Tests
-
-Tests are gated behind environment variables:
-
-```bash
-SVML_OPENCV_TESTS=1 \
-SVML_OPENCV_PYTHON=services/image-opencv/.venv/bin/python \
-pnpm test:image-opencv
-```
+The local media Endpoint accepts an explicitly configured or system `ffmpeg`/`ffprobe` only after
+its capability probe succeeds. Runtime lifecycle does not mutate Homebrew, apt or another system
+package manager.

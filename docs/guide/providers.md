@@ -55,7 +55,7 @@ import type { EndpointManifest } from "@narratage/endpoint-kit";
 export function createMyServiceProvider(options: {
   instance: string;
   lane?: string;
-  apiKey?: { env: string };
+  apiKey: CredentialRef;
   defaultConcurrency?: number;
 }) {
   // Return an object with:
@@ -80,33 +80,36 @@ Look at existing Providers for reference:
 // src/activation.ts
 import {
   createRuntimeEndpointAdapterFacet,
+  runtimeConfigCredentialRef,
+  runtimeConfigExact,
   runtimeConfigObject,
-  runtimeConfigString,
   runtimeConfigPositiveInteger,
 } from "@narratage/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
 
+  validate(context) {
+    const config = runtimeConfigObject(context.config, "MyService");
+    runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
+    if (runtimeConfigCredentialRef(config.apiKey, "MyService apiKey") === undefined) {
+      throw new Error("MyService apiKey CredentialRef is required");
+    }
+    runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
+  },
+
   create(context) {
     const config = runtimeConfigObject(context.config, "MyService");
-    const apiKeyEnv = runtimeConfigString(config.apiKeyEnv, "MyService apiKeyEnv");
+    const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
+    if (apiKey === undefined) throw new Error("MyService apiKey CredentialRef is required");
     return createMyServiceProvider({
       instance: context.instance,
       lane: context.lane,
-      ...(apiKeyEnv === undefined ? {} : { apiKey: { env: apiKeyEnv } }),
+      apiKey,
       ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency") === undefined
         ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
     });
-  },
-
-  doctor(context) {
-    const config = runtimeConfigObject(context.config, "MyService");
-    const apiKeyEnv = runtimeConfigString(config.apiKeyEnv, "MyService apiKeyEnv")
-      ?? "MY_SERVICE_API_KEY";
-    return diagnoseRuntimeEnvironmentCredential(apiKeyEnv, "MyService");
   },
 });
 
@@ -119,9 +122,9 @@ export const svmlPackage = {
 export default svmlPackage;
 ```
 
-The `create` function constructs the Endpoint from Runtime config. The `doctor` function returns
-diagnostics (credential presence, executable availability) without constructing or calling
-anything.
+`validate` is pure and runs before authority is granted. `create` constructs the Endpoint only
+after the profile, lock and permissions pass. Credential presence is diagnosed through the generic
+CredentialStore/Endpoint description path; a Provider must not special-case environment variables.
 
 ## 5. Declare an external service (if needed)
 
@@ -155,9 +158,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`pnpm install` will run `prepare` automatically, and `narratage build` will call `start` and
-`probe` before the first Operation. Providers that call only remote APIs (no local program) omit
-this step entirely — leave `"service"` out of `package.json`.
+`narratage runtime up` prepares, starts and probes declared external programs before starting the
+durable Worker. `build` ensures that Runtime is running before submission. Providers that call only
+remote APIs omit this step entirely—leave `"service"` out of `package.json`.
 
 ## 6. Register and lock
 
@@ -185,7 +188,7 @@ pnpm narratage lock-packages <runtime-lock> \
       "instance": "my-service.project",
       "lane": "generation",
       "config": {
-        "apiKeyEnv": "MY_SERVICE_API_KEY",
+        "apiKey": { "store": "keychain", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }
