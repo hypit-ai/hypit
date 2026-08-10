@@ -211,7 +211,9 @@ const zhTheme = {
 };
 
 export default defineConfig({
-  base: "/docs/",
+  // Keep the server deployment at /docs/ while allowing the custom-domain
+  // GitHub Pages workflow to publish the same site at the domain root.
+  base: process.env.VITEPRESS_BASE || "/docs/",
   lang: "en-US",
   title: "Narratage",
   description: "Write the story. Compile the video.",
