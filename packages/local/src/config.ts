@@ -15,7 +15,6 @@ import type {
   RuntimeServiceState,
 } from "@narratage/runtime-adapter";
 
-import { createProjectLocalRuntime } from "./runtime.js";
 import type { LocalRuntime } from "./types.js";
 
 export type RuntimeConfigEntry = {
@@ -357,6 +356,9 @@ export async function createRuntimeFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalRuntime> {
+  // Diagnostics and lifecycle discovery must not initialize SQLite, Drivers or Endpoints.
+  // Load the executable Runtime assembly only on the command that actually constructs it.
+  const { createProjectLocalRuntime } = await import("./runtime.js");
   const absolute = resolve(path);
   const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
   const root = resolve(dirname(absolute), document.root ?? ".");

@@ -296,10 +296,14 @@ Operation and submission key. With `--follow`, the same process waits until the 
 hint (or a local fallback interval) and repeats the authoritative scheduling step. A completion
 already saved before a crash is replayed into Core without calling the Endpoint again.
 
-`status` reads the verified Build snapshot plus its Operation attempts. `cancel` invokes each active
-Endpoint's optional cancellation hook, journals a non-retryable `CANCELLED` failure and lets Core
-accept that terminal fact. Retryable failures create a new attempt and submission key only when the
-package's finite retry policy allows it; recovering one existing attempt never changes its key.
+`status` reads the verified Build snapshot plus its Operation attempts. The current pre-Worker
+`cancel` implementation invokes each active recoverable Endpoint's optional cancellation hook and
+then journals a non-retryable `CANCELLED` failure. This is transitional behavior, not the final
+cancellation law: it cannot distinguish a requested stop, an accepted asynchronous stop, an
+unsupported stop or a completion race. The replacement protocol is specified in
+[`runtime-execution-control.md`](./runtime-execution-control.md). Retryable execution failures create
+a new attempt and submission key only when the package's finite retry policy allows it; recovering
+one existing attempt never changes its key.
 
 Every accepted output in the demanded closure remains in BuildState, not only the Targets.
 Referenced bytes remain in ArtifactStore. `inspect` exposes that archive without reading private
