@@ -172,10 +172,10 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
   then those regions assemble into a finished video.
 </wording:Value>
 
-<seedance:Video id="product-motion" model="mini"
+<seedance:ReferenceVideo id="product-motion" model="mini"
   prompt={product-direction} duration="5">
   <seedance:Reference image={product-reference}/>
-</seedance:Video>
+</seedance:ReferenceVideo>
 
 <pipeline:Normalize id="product-media" source={product-motion.video}
   video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>

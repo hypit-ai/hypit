@@ -9,7 +9,7 @@ directly to a visible `@narratage/text` render component in the graph. Optional 
 and `extra` values are also ordinary Text edges; they are not
 hidden Recipe strings. The rendered `Text` output is wired to Seedance's exact `prompt` port. The
 same Surface authors the low-level
-`@narratage/seedance` `SpeechProgram`; generation reuses the exact Seedance request contracts. The
+`@narratage/seedance` `DurationProgram`; generation reuses the exact Seedance ReferenceVideo request shape. The
 official Text Template source is
 [`official-ugc-v1.svs`](./kits/official-ugc-v1.svs).
 
@@ -29,7 +29,7 @@ Script dialogue Text ───────────────────�
 optional action/extra Text ────────────────────┼──► render Text
 SVS-selected TextBindings + TextTemplate ──────┘         │
                                                         │ exact prompt edge
-authored Blob references + Seedance SpeechProgram ──────┼──► generation Need
+authored Blob references + Seedance DurationProgram ────┼──► generation Need
 ```
 
 `take.prompt` and `take.video` are ordinary Logical Outputs; `take.program` is authored configuration.

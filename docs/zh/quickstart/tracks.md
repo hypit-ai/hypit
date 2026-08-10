@@ -142,10 +142,10 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
   then those regions assemble into a finished video.
 </wording:Value>
 
-<seedance:Video id="product-motion" model="mini"
+<seedance:ReferenceVideo id="product-motion" model="mini"
   prompt={product-direction} duration="5">
   <seedance:Reference image={product-reference}/>
-</seedance:Video>
+</seedance:ReferenceVideo>
 
 <pipeline:Normalize id="product-media" source={product-motion.video}
   video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>

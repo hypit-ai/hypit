@@ -32,10 +32,9 @@
     source={story.segment.opening.speech}
     language="en"
     pace="normal"
-    padding="0.3"
     min="4"
     max="15"
-    rounding="ceil"
+    rounding="round"
   />
 
   <estimate:Speech
@@ -43,10 +42,9 @@
     source={story.segment.answer.speech}
     language="en"
     pace="normal"
-    padding="0.3"
     min="4"
     max="15"
-    rounding="ceil"
+    rounding="round"
   />
 
   <wording:Value id="opening-direction">
@@ -63,33 +61,35 @@
     Spoken dialogue — say exactly: Then every caption and visual can arrive at exactly the right moment.
   </wording:Value>
 
-  <seedance:Speech
+  <seedance:ReferenceVideo
     id="opening-take"
     model="mini"
     prompt={opening-direction}
     duration={opening-duration.duration}
     resolution="480p"
     aspect-ratio="9:16"
+    generate-audio="true"
   >
     <seedance:Reference image={presenter}/>
-  </seedance:Speech>
+  </seedance:ReferenceVideo>
 
-  <seedance:Speech
+  <seedance:ReferenceVideo
     id="answer-take"
     model="mini"
     prompt={answer-direction}
     duration={answer-duration.duration}
     resolution="480p"
     aspect-ratio="9:16"
+    generate-audio="true"
   >
     <seedance:Reference image={presenter}/>
-  </seedance:Speech>
+  </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="480" height="854"/>
 
   <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={opening-take} segment={story.segment.opening}/>
-    <speech:Take source={answer-take} segment={story.segment.answer}/>
+    <speech:Take source={opening-take.video} segment={story.segment.opening}/>
+    <speech:Take source={answer-take.video} segment={story.segment.answer}/>
   </speech:Spine>
 
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>

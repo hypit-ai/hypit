@@ -9,13 +9,17 @@ The package owns `<render:Video composition={...}/>` and lowers it to six ordina
 3. compile every peer `AudioTrack` into one content-addressed `AudioProgramPlan`;
 4. request an exact 48 kHz `TimelineAudio`;
 5. request one `MuxedMedia` from those two independently verified Products;
-6. project that Product into the shared `MediaArtifactRef` contract.
+6. expose the verified mux Artifact unchanged as a domain-neutral `BlobArtifact`.
 
 The package is not a renderer and contains no queue, credentials or deployment choice. A local
 HyperFrames process, a hosted Hypit endpoint or another conforming execution package may register a
 Provider for the exact visual capability. Media Providers independently realize audio rendering and
 mux. None parses SVML or decides which Composition to render. Every result is bound to the same
 ProgramSpace and exact frame/sample domain before it can become a final video Record.
+
+The output does not carry copied duration or lineage metadata. It is an ordinary content-addressed
+Blob and can therefore be connected directly to any later component that accepts Blob bytes. A
+consumer that needs stream or duration facts must request explicit media inspection.
 
 Core therefore sees three real byte-operation Needs, not one opaque mega-render. Frame workers,
 contiguous or interleaved chunks, retries and image-sequence assembly remain inside the selected

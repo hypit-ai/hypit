@@ -704,6 +704,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      cmu-pronouncing-dictionary:
+        specifier: 3.0.0
+        version: 3.0.0
 
   packages/film:
     dependencies:
@@ -1768,6 +1771,9 @@ importers:
 
   packages/provider-media-aws-lambda:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1802,6 +1808,9 @@ importers:
 
   packages/provider-media-local:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1954,6 +1963,9 @@ importers:
 
   packages/render-hyperframes:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -4377,6 +4389,9 @@ packages:
     resolution: {integrity: sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w==}
     engines: {node: '>=0.8'}
 
+  cmu-pronouncing-dictionary@3.0.0:
+    resolution: {integrity: sha512-6y5X4OxsYFnHERo6WSVPnLrk53G07MOQ8aUb2z555JgwynpbZsHR0a//WdN6DUcmE1j2auTF2TtL4PpoKze8QQ==}
+
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
@@ -6705,6 +6720,8 @@ snapshots:
       wrap-ansi: 9.0.2
 
   clone@2.1.2: {}
+
+  cmu-pronouncing-dictionary@3.0.0: {}
 
   comma-separated-tokens@2.0.3: {}
 

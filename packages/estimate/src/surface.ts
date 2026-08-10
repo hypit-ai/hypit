@@ -24,7 +24,7 @@ function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolved
 
 function attributes(element: StructuredElement): void {
   const required = ["id", "source"];
-  const direct = ["language", "pace", "padding", "min", "max", "rounding"];
+  const direct = ["language", "pace", "rate", "min", "max", "rounding"];
   const optional = ["policy", ...direct];
   const allowed = new Set([...required, ...optional]);
   if (
@@ -35,6 +35,18 @@ function attributes(element: StructuredElement): void {
   }
   if (element.attributes.policy !== undefined && direct.some((name) => element.attributes[name] !== undefined)) {
     throw new Error(`${element.name}.policy cannot be combined with inline estimate parameters`);
+  }
+  if (element.attributes.policy === undefined) {
+    const missing = ["language", "min", "max", "rounding"]
+      .filter((name) => element.attributes[name] === undefined);
+    if (missing.length > 0) {
+      throw new Error(`${element.name} inline policy requires ${missing.join(", ")}`);
+    }
+    const hasPace = element.attributes.pace !== undefined;
+    const hasRate = element.attributes.rate !== undefined;
+    if (hasPace === hasRate) {
+      throw new Error(`${element.name} inline policy requires exactly one of pace or rate`);
+    }
   }
   if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
     throw new Error(`${element.name} must be empty`);
@@ -74,32 +86,41 @@ export function speechEstimatePolicyFromRecipe(
   subject = `SVS Recipe ${recipe.path}`,
 ) {
   if (recipe.contract !== "svml.svs-recipe@1") throw new Error(`${subject} is invalid`);
-  const allowed = new Set(["language", "pace", "padding", "min", "max", "rounding"]);
+  const allowed = new Set(["language", "pace", "rate", "min", "max", "rounding"]);
   const unknown = Object.keys(recipe.properties).filter((name) => !allowed.has(name));
   if (unknown.length > 0) throw new Error(`${subject} contains unknown property ${unknown[0]}`);
-  const string = (name: string, fallback: string): string => {
-    const value = recipe.properties[name] ?? fallback;
+  const string = (name: string): string => {
+    const value = recipe.properties[name];
     if (typeof value !== "string" || value.trim().length === 0) {
       throw new Error(`${subject}.${name} must be a non-empty string`);
     }
     return value.trim();
   };
-  const finite = (name: string, fallback: number): number => {
-    const value = recipe.properties[name] ?? fallback;
+  const finite = (name: string): number => {
+    const value = recipe.properties[name];
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new Error(`${subject}.${name} must be a finite number`);
     }
     return value;
   };
-  return sealSpeechEstimatePolicy({
+  const pace = recipe.properties.pace;
+  const rate = recipe.properties.rate;
+  if ((pace !== undefined) === (rate !== undefined)) {
+    throw new Error(`${subject} requires exactly one of pace or rate`);
+  }
+  if (rate !== undefined && (typeof rate !== "number" || !Number.isFinite(rate))) {
+    throw new Error(`${subject}.rate must be a finite number`);
+  }
+  const common = {
     contract: "svml.speech-estimate-policy@1",
-    language: string("language", "auto") as SpeechEstimateLanguage,
-    pace: string("pace", "normal") as SpeechEstimatePace,
-    paddingSec: finite("padding", 0.3),
-    minimumSec: finite("min", 4),
-    maximumSec: finite("max", 15),
-    rounding: string("rounding", "ceil") as SpeechEstimateRounding,
-  });
+    language: string("language") as SpeechEstimateLanguage,
+    minimumSec: finite("min"),
+    maximumSec: finite("max"),
+    rounding: string("rounding") as SpeechEstimateRounding,
+  } as const;
+  return rate === undefined
+    ? sealSpeechEstimatePolicy({ ...common, pace: string("pace") as SpeechEstimatePace })
+    : sealSpeechEstimatePolicy({ ...common, rate });
 }
 
 function text(element: StructuredElement, name: string, fallback?: string): string {
@@ -110,8 +131,8 @@ function text(element: StructuredElement, name: string, fallback?: string): stri
   return value.trim();
 }
 
-function number(element: StructuredElement, name: string, fallback: number): number {
-  const value = Number(text(element, name, String(fallback)));
+function number(element: StructuredElement, name: string): number {
+  const value = Number(text(element, name));
   if (!Number.isFinite(value)) throw new Error(`${element.name}.${name} must be a finite number`);
   return value;
 }
@@ -138,12 +159,13 @@ export const decodeSpeechEstimateSurface: StructuredSurfaceHandler = ({ element,
   const policy = element.attributes.policy === undefined
     ? sealSpeechEstimatePolicy({
         contract: "svml.speech-estimate-policy@1",
-        language: text(element, "language", "auto") as SpeechEstimateLanguage,
-        pace: text(element, "pace", "normal") as SpeechEstimatePace,
-        paddingSec: number(element, "padding", 0.3),
-        minimumSec: number(element, "min", 4),
-        maximumSec: number(element, "max", 15),
-        rounding: text(element, "rounding", "ceil") as SpeechEstimateRounding,
+        language: text(element, "language") as SpeechEstimateLanguage,
+        ...(element.attributes.rate === undefined
+          ? { pace: text(element, "pace") as SpeechEstimatePace }
+          : { rate: number(element, "rate") }),
+        minimumSec: number(element, "min"),
+        maximumSec: number(element, "max"),
+        rounding: text(element, "rounding") as SpeechEstimateRounding,
       })
     : recipePolicy(element, resolveReference);
   const policyId = `${id}.policy`;

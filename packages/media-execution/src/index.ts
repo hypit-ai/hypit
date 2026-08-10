@@ -1,9 +1,12 @@
 export {
   executeInspectMedia,
+  executeExtractAudio,
+  executeExtractFrame,
   executeMuxProgramMedia,
   executeNormalizeMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
+  executeTransformMedia,
   mediaNeedHasContract,
   mediaOperationContracts,
 } from "./execute.js";

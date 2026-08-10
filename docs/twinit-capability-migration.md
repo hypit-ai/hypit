@@ -35,13 +35,13 @@ a finished author package, and a deferred package is not an impossible feature.
 | `seedance_podcast` | Expressible; Template missing | Seedance accepts the required multimodal references; the two-speaker Text Template and author Surface are absent. |
 | `seedance_call` | Expressible; Template missing | Model ports exist; the call-layout Text Template and author Surface are absent. |
 | `seedance_street_interview` | Expressible; Template missing | Model ports exist; the street-interview Script/Text Template is absent. |
-| `seedance_keyframe` | Expressible; Template missing | Seedance exposes explicit first/last-frame ports; no dedicated convenience Surface is shipped. |
-| `seedance_reference` | Expressible; Template missing | Seedance exposes image/video/audio reference ports; no old-style named template is shipped. |
+| `seedance_keyframe` | Complete | Generic `seedance:FrameVideo` exposes explicit first-frame and optional last-frame ports; author Text remains a separate graph input. |
+| `seedance_reference` | Complete | `seedance:TextVideo`, `seedance:FrameVideo` and `seedance:ReferenceVideo` expose the three exact model request shapes without prompt assembly in the model package. |
 | `seedance_motion_ref` | Expressible; Template missing | Reference-video input exists; the motion-only semantic Text Template is absent. |
 | `seedance_camera_ref` | Expressible; Template missing | Reference-video input exists; the camera-only semantic Text Template is absent. |
 | `concat` | Complete | Ordered Media/Speech graph composition replaces clip concatenation as a special node. |
 | `base_track` | Complete | Speech Spine, Media Track and Film replace the privileged base lane. |
-| `video_enhance` | Backlog | Add an explicit video-in/video-out enhancement component and Provider profile if delivery needs it. |
+| `video_enhance` | Deliberately omitted | Explicitly outside this migration. A future video-in/video-out package can be added without reserving a Core or media-pipeline mode. |
 | `broll_track` | Complete | Unified `@narratage/media-track` Item/Sequence authoring; the old B-roll package is retired. |
 | `deck_track` | Complete | `@narratage/deck-track` implements the independent DepthStack collection model. |
 | `cluely_ui_track` | Deliberately omitted | Product-specific UI recreation was explicitly removed from the migration scope. |
@@ -55,7 +55,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `locate` | Complete | WhisperX evidence, Speech Alignment, SemanticMap, Temporal, Spatial and Film replace one privileged locate phase. |
 | `export` | Complete | Composition, HyperFrames document compilation, visual rendering, audio rendering and mux are explicit graph operations. |
 
-Totals: **22 Complete**, **8 Expressible; Template missing**, **1 Backlog**, **4 Deliberately omitted**.
+Totals: **24 Complete**, **6 Expressible; Template missing**, **0 Backlog**, **5 Deliberately omitted**.
 
 ## Prompt and Text audit
 
@@ -169,10 +169,8 @@ comes from the locked package bytes and closure digests.
 1. keep public and engineering documentation factual and brand-neutral;
 2. preserve the enforced logical `@1` identity invariant while packages remain unpublished;
 3. settle the package rename map before npm publication work;
-4. choose concrete Backlog packages from real delivery demand;
-5. finish Fine Caption style migration, audit distinct Seedance author templates and improve
-   deterministic Estimate;
-6. keep VLM temporal/spatial interpretation outside the current version.
+4. migrate the six remaining distinct Seedance author templates from real delivery demand;
+5. keep VLM temporal/spatial interpretation outside the current version.
 
 This ledger changes when implementation evidence changes. A package moves to **Complete** only after
 its author Surface, graph lowering and relevant execution/render evidence exist.

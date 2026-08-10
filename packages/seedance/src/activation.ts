@@ -1,8 +1,9 @@
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
-  decodeSeedanceSpeechSurface,
-  decodeSeedanceVideoSurface,
+  decodeSeedanceFrameVideoSurface,
+  decodeSeedanceReferenceVideoSurface,
+  decodeSeedanceTextVideoSurface,
   seedanceComponent,
   seedanceManifest,
   seedanceModuleRef,
@@ -17,17 +18,24 @@ export const svmlPackage = {
   hostFacets: [
     createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "speech",
+      surface: "text-video",
       mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.speech,
-      handler: decodeSeedanceSpeechSurface,
+      implementationDigest: seedanceSurfaceImplementationDigests.textVideo,
+      handler: decodeSeedanceTextVideoSurface,
     }),
     createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "video",
+      surface: "frame-video",
       mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.video,
-      handler: decodeSeedanceVideoSurface,
+      implementationDigest: seedanceSurfaceImplementationDigests.frameVideo,
+      handler: decodeSeedanceFrameVideoSurface,
+    }),
+    createMarkupSurfaceHostFacet({
+      module: seedanceModuleRef,
+      surface: "reference-video",
+      mode: "structured",
+      implementationDigest: seedanceSurfaceImplementationDigests.referenceVideo,
+      handler: decodeSeedanceReferenceVideoSurface,
     }),
   ],
 };

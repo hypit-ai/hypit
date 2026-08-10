@@ -55,14 +55,14 @@ export function createSeedanceAssembledGenerationFragment(
   return createExactModelPrimaryGenerationFragment(endpoint, mediaInputs, textInputs);
 }
 
-export function createSeedanceSpeechGenerationFragment(
+export function createSeedanceDurationGenerationFragment(
   endpoint: ExactModelEndpoint,
   compileProducer: ProducerRef,
   mediaInputs: readonly ExactModelMediaInput[] = [],
   textInputs: readonly ExactModelTextInput[] = [],
 ) {
   const inputs = [
-    { name: "program", type: { module: endpoint.producer.module, name: "SpeechProgram" } },
+    { name: "program", type: { module: endpoint.producer.module, name: "DurationProgram" } },
     { name: "duration", type: speechTypes.duration },
   ];
   const operations: Array<import("@narratage/elaborator").FragmentOperation> = [{
@@ -125,7 +125,7 @@ export function createSeedanceSpeechGenerationFragment(
     ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
   ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
-    name: `@narratage/seedance/${endpoint.key}-speech-assembled-primary-video[${shape}]@1`,
+    name: `@narratage/seedance/${endpoint.key}-duration-assembled-primary-video[${shape}]@1`,
     inputs,
     operations,
     exports: [{

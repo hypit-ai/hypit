@@ -3,10 +3,13 @@
 Shared FFmpeg execution body for Narratage media Providers.
 
 `@narratage/media-pipeline` owns provider-neutral Needs, plans and result contracts. This package
-owns the byte-level implementations of the five current operations:
+owns the byte-level implementations of the eight current operations:
 
 - inspect every media stream;
 - normalize selected audio/video streams;
+- transform synchronized media with ordered trim and pitch-preserving retime operations;
+- extract one selected audio stream as an ordinary 48 kHz stereo WAV Artifact;
+- extract a first, last, indexed or time-selected frame as PNG;
 - project canonical 16 kHz mono speech-evidence audio;
 - render an exact sample-domain audio program;
 - mux rendered visual and audio products.

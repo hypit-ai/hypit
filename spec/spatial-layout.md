@@ -403,7 +403,7 @@ authored ContentFit ────────────────────
                                package Paint/motion/clip -> VisualTrack
 ```
 
-Every dependency is a graph edge. `MediaArtifactRef` does not gain placement fields. `SpatialFrame`
+Every dependency is a graph edge. `BlobArtifact` does not gain placement fields. `SpatialFrame`
 does not gain source, role, timing or Artifact digests. `VisualTrack` does not gain `focal`, B-roll
 or Text fields. Affinity is validated by the multi-input fitting/lowering Operation rather than by
 copying lineage metadata through every value.

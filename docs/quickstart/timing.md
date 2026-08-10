@@ -41,7 +41,7 @@ Each `<speech:Take>` child binds a generated video to a Script Segment:
 
 | Attribute | Required | Description |
 |---|---|---|
-| `source` | yes | Generated video — from `seedance:Speech`, `speaker:Take`, etc. |
+| `source` | yes | Generated video — from `seedance:ReferenceVideo`, `speaker:Take`, etc. |
 | `segment` | yes | Script Segment this take corresponds to — e.g. `{story.segment.hook}` |
 
 The order of `<speech:Take>` children **determines the program order**. The first take starts at
@@ -135,8 +135,8 @@ The complete timing stage, from generated takes to map and space:
 <!-- Assemble takes in program order -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <speech:Spine id="speech" canvas={vertical}>
-  <speech:Take source={opening-take} segment={story.segment.opening}/>
-  <speech:Take source={answer-take} segment={story.segment.answer}/>
+  <speech:Take source={opening-take.video} segment={story.segment.opening}/>
+  <speech:Take source={answer-take.video} segment={story.segment.answer}/>
 </speech:Spine>
 
 <!-- Measure word timing -->

@@ -39,7 +39,7 @@ export const seedanceSpeakerManifest: ModuleManifest = {
       textTypes.bindings,
       textTypes.binding,
       textTypes.text,
-      seedanceTypes.speechSpine,
+      seedanceTypes.durationProgram,
       artifactTypes.blob,
       ...Object.values(seedanceEndpointsByModel).flatMap((endpoint) =>
         Object.values(endpoint.mediaBindings).map((binding) => binding.type)),

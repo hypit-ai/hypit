@@ -12,10 +12,11 @@
   "dependencies": {
     "@narratage/component-kit": "workspace:*",
     "@narratage/elaborator": "workspace:*",
+    "@narratage/markup": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/svs": "workspace:*",
     "@narratage/text": "workspace:*",
-    "@narratage/markup": "workspace:*"
+    "cmu-pronouncing-dictionary": "3.0.0"
   }
 }

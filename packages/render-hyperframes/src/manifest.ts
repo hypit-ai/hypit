@@ -1,3 +1,4 @@
+import { artifactDependency } from "@narratage/artifact";
 import { mediaDependency, mediaTypes } from "@narratage/media";
 import { compositionDependency } from "@narratage/composition";
 import {
@@ -35,6 +36,7 @@ export const renderHyperframesManifest: ModuleManifest = {
   name: renderHyperframesModuleRef.name,
   version: renderHyperframesModuleRef.version,
   dependencies: [
+    artifactDependency,
     mediaDependency,
     compositionDependency,
     { module: hyperframesModuleRef, digest: hyperframesManifestDigest },
