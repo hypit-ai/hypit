@@ -16,7 +16,7 @@ import {
 import type { TextTemplate } from "@narratage/text";
 import {
   seedanceEndpointsByModel,
-  seedanceSpeechCompileProducers,
+  seedanceDurationCompileProducers,
   seedanceTypes,
 } from "@narratage/seedance";
 import type { SeedanceModel } from "@narratage/seedance";
@@ -31,7 +31,7 @@ import type {
 
 import { createSeedanceSpeakerTakeFragment } from "./fragment.js";
 import {
-  createSpeakerSpeechProgram,
+  createSpeakerDurationProgram,
   createSpeakerTextBindings,
   sealSpeakerTakeIntent,
   speakerMethodDefaults,
@@ -300,7 +300,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   });
   const bindings = createSpeakerTextBindings(intent);
   // Static template semantics remain an ordinary deterministic graph step.
-  const program = createSpeakerSpeechProgram(intent);
+  const program = createSpeakerDurationProgram(intent);
   const duration = resolved(element, "duration", resolveReference);
   if (!sameType(duration.type, speechTypes.duration)) {
     throw new Error(`${element.name}.duration must reference a SpeechDuration`);
@@ -317,7 +317,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   const promptFragment = createTextRenderFragment(dynamicText.map(({ name }) => ({ name })));
   const generationFragment = createSeedanceSpeakerTakeFragment(
     endpoint,
-    seedanceSpeechCompileProducers[selectedModel],
+    seedanceDurationCompileProducers[selectedModel],
     assembled.mediaInputs,
   );
   return {
@@ -328,7 +328,7 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
       range: element.range,
     }, {
       id: programId,
-      type: seedanceTypes.speechSpine,
+      type: seedanceTypes.durationProgram,
       value: { kind: "inline", value: program as unknown as CanonicalValue },
       range: element.range,
     }, ...dynamicText.map(({ name }) => ({

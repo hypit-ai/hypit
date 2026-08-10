@@ -86,31 +86,32 @@ export function sealSeedanceRequest(model: SeedanceModel, ports: SeedancePortMap
   return sealGenerationPortRequest(seedancePorts[model], ports);
 }
 
-/** One authored generation minus the duration only speech estimation can supply. */
-export type SeedanceSpeechProgram = {
-  readonly contract: "svml.seedance-speech-spine@1";
+/** One authored generation minus a duration supplied by an explicit graph edge. */
+export type SeedanceDurationProgram = {
+  readonly contract: "svml.seedance-duration-program@1";
   readonly model: SeedanceModel;
   readonly ports: SeedancePortMap;
 };
 
 export const seedanceTypes = {
-  speechSpine: { module: seedanceModuleRef, name: "SpeechProgram" },
+  durationProgram: { module: seedanceModuleRef, name: "DurationProgram" },
 } satisfies Record<string, TypeRef>;
 
-export const seedanceSpeechCompileProducers = Object.fromEntries(
+export const seedanceDurationCompileProducers = Object.fromEntries(
   seedanceModels.map((model) => [model, {
     module: seedanceModuleRef,
-    name: `compile-${model}-speech-request`,
+    name: `compile-${model}-duration-request`,
   }]),
 ) as Record<SeedanceModel, ProducerRef>;
 
-export const seedanceSpeechCompileImplementationDigests = Object.fromEntries(
-  seedanceModels.map((model) => [model, digestOf(`@narratage/seedance/compile-${model}-speech-request@1`)]),
+export const seedanceDurationCompileImplementationDigests = Object.fromEntries(
+  seedanceModels.map((model) => [model, digestOf(`@narratage/seedance/compile-${model}-duration-request@1`)]),
 ) as Record<SeedanceModel, Digest>;
 
 export const seedanceSurfaceImplementationDigests = {
-  speech: digestOf("@narratage/seedance/speech-surface@1"),
-  video: digestOf("@narratage/seedance/video-surface@1"),
+  textVideo: digestOf("@narratage/seedance/text-video-surface@1"),
+  frameVideo: digestOf("@narratage/seedance/frame-video-surface@1"),
+  referenceVideo: digestOf("@narratage/seedance/reference-video-surface@1"),
 } as const;
 
 function assertObject(value: unknown): asserts value is Record<string, unknown> {
@@ -119,11 +120,11 @@ function assertObject(value: unknown): asserts value is Record<string, unknown> 
   }
 }
 
-export function verifySeedanceSpeechProgram(value: unknown): asserts value is SeedanceSpeechProgram {
+export function verifySeedanceDurationProgram(value: unknown): asserts value is SeedanceDurationProgram {
   assertObject(value);
-  if (value.contract !== "svml.seedance-speech-spine@1"
+  if (value.contract !== "svml.seedance-duration-program@1"
     || !seedanceModels.includes(value.model as SeedanceModel)) {
-    throw new Error("Seedance SpeechProgram identity is invalid");
+    throw new Error("Seedance DurationProgram identity is invalid");
   }
   const table = seedancePorts[value.model as SeedanceModel];
   const later = table.ports
@@ -131,20 +132,19 @@ export function verifySeedanceSpeechProgram(value: unknown): asserts value is Se
     .map((port) => port.name);
   verifyPortsAgainstTable(table, value.ports, { omit: ["duration", ...later] });
   const generateAudio = (value.ports as SeedancePortMap).generateAudio;
-  if (generateAudio?.[0] !== true) throw new Error("Seedance SpeechProgram must generate audio");
 }
 
-export function sealSeedanceSpeechProgram(value: SeedanceSpeechProgram): SeedanceSpeechProgram {
-  const result = canonicalize(value) as unknown as SeedanceSpeechProgram;
-  verifySeedanceSpeechProgram(result);
+export function sealSeedanceDurationProgram(value: SeedanceDurationProgram): SeedanceDurationProgram {
+  const result = canonicalize(value) as unknown as SeedanceDurationProgram;
+  verifySeedanceDurationProgram(result);
   return result;
 }
 
-export function compileSeedanceSpeechRequestDraft(
-  program: SeedanceSpeechProgram,
+export function compileSeedanceDurationRequestDraft(
+  program: SeedanceDurationProgram,
   duration: SpeechDuration,
 ): GenerationRequestDraft {
-  verifySeedanceSpeechProgram(program);
+  verifySeedanceDurationProgram(program);
   assertSpeechDurationIdentity(duration);
   return sealGenerationRequestDraft(seedancePorts[program.model], {
     ...program.ports,
@@ -152,8 +152,8 @@ export function compileSeedanceSpeechRequestDraft(
   });
 }
 
-const speechSpineSchema = (model: SeedanceModel): ValueSchema => generationObjectSchema({
-  contract: { schema: { kind: "literal", value: "svml.seedance-speech-spine@1" } },
+const durationProgramSchema = (model: SeedanceModel): ValueSchema => generationObjectSchema({
+  contract: { schema: { kind: "literal", value: "svml.seedance-duration-program@1" } },
   model: { schema: { kind: "literal", value: model } },
   ports: {
     schema: portsObjectSchema(seedancePorts[model], {
@@ -197,17 +197,17 @@ export const seedanceManifest = {
   types: [
     ...seedanceBaseDefinition.manifest.types,
     {
-      name: seedanceTypes.speechSpine.name,
-      schema: { kind: "oneOf", variants: seedanceModels.map(speechSpineSchema) } satisfies ValueSchema,
+      name: seedanceTypes.durationProgram.name,
+      schema: { kind: "oneOf", variants: seedanceModels.map(durationProgramSchema) } satisfies ValueSchema,
     },
   ],
   surfaces: [
     {
-      name: "speech",
-      tag: "Speech",
+      name: "text-video",
+      tag: "TextVideo",
       mode: "structured",
       outputs: [
-        seedanceTypes.speechSpine,
+        seedanceTypes.durationProgram,
         ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
           endpoint.draftType,
           ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
@@ -215,39 +215,51 @@ export const seedanceManifest = {
       ],
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@narratage/seedance/speech-surface",
-        digest: seedanceSurfaceImplementationDigests.speech,
+        locator: "@narratage/seedance/text-video-surface",
+        digest: seedanceSurfaceImplementationDigests.textVideo,
       },
     },
     {
-      name: "video",
-      tag: "Video",
+      name: "frame-video",
+      tag: "FrameVideo",
       mode: "structured",
-      outputs: Object.values(seedanceEndpoints).flatMap((endpoint) => [
-        endpoint.draftType,
-        ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
-      ]),
+      outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
+        endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
+      ])],
       implementation: {
         kind: "trusted-frontend-surface",
-        locator: "@narratage/seedance/video-surface",
-        digest: seedanceSurfaceImplementationDigests.video,
+        locator: "@narratage/seedance/frame-video-surface",
+        digest: seedanceSurfaceImplementationDigests.frameVideo,
+      },
+    },
+    {
+      name: "reference-video",
+      tag: "ReferenceVideo",
+      mode: "structured",
+      outputs: [seedanceTypes.durationProgram, ...Object.values(seedanceEndpoints).flatMap((endpoint) => [
+        endpoint.draftType, ...Object.values(endpoint.mediaBindings).map((binding) => binding.type),
+      ])],
+      implementation: {
+        kind: "trusted-frontend-surface",
+        locator: "@narratage/seedance/reference-video-surface",
+        digest: seedanceSurfaceImplementationDigests.referenceVideo,
       },
     },
   ],
   producers: [
     ...seedanceBaseDefinition.manifest.producers,
     ...seedanceModels.map((model) => ({
-      name: seedanceSpeechCompileProducers[model].name,
+      name: seedanceDurationCompileProducers[model].name,
       inputs: [
-        { name: "program", type: seedanceTypes.speechSpine },
+        { name: "program", type: seedanceTypes.durationProgram },
         { name: "duration", type: speechTypes.duration },
       ],
       outputs: [{ name: "draft", type: seedanceEndpointsByModel[model].draftType }],
       needs: [],
       implementation: {
         kind: "registered" as const,
-        locator: `@narratage/seedance/compile-${model}-speech-request`,
-        digest: seedanceSpeechCompileImplementationDigests[model],
+        locator: `@narratage/seedance/compile-${model}-duration-request`,
+        digest: seedanceDurationCompileImplementationDigests[model],
       },
     })),
   ],
@@ -258,16 +270,16 @@ export const seedanceComponent = {
   producers: [
     ...seedanceBaseDefinition.component.producers,
     ...seedanceModels.map((model) => ({
-      producer: seedanceSpeechCompileProducers[model],
-      implementationDigest: seedanceSpeechCompileImplementationDigests[model],
+      producer: seedanceDurationCompileProducers[model],
+      implementationDigest: seedanceDurationCompileImplementationDigests[model],
       handler: ({ inputs }: { readonly inputs: Readonly<Record<string, { readonly value: import("@narratage/protocol").StoredValue }>> }) => ({
         outputs: {
           draft: {
             kind: "inline" as const,
-            value: canonicalize(compileSeedanceSpeechRequestDraft(
+            value: canonicalize(compileSeedanceDurationRequestDraft(
               inputs.program?.value.kind === "inline"
-                ? inputs.program.value.value as unknown as SeedanceSpeechProgram
-                : (() => { throw new Error("Seedance SpeechProgram must be inline"); })(),
+                ? inputs.program.value.value as unknown as SeedanceDurationProgram
+                : (() => { throw new Error("Seedance DurationProgram must be inline"); })(),
               inputs.duration?.value.kind === "inline"
                 ? inputs.duration.value.value as unknown as SpeechDuration
                 : (() => { throw new Error("SpeechDuration must be inline"); })(),
@@ -288,9 +300,10 @@ export const seedanceDefinition = {
 export {
   createSeedanceAssembledGenerationFragment,
   createSeedanceGenerationFragment,
-  createSeedanceSpeechGenerationFragment,
+  createSeedanceDurationGenerationFragment,
 } from "./fragment.js";
 export {
-  decodeSeedanceSpeechSurface,
-  decodeSeedanceVideoSurface,
+  decodeSeedanceFrameVideoSurface,
+  decodeSeedanceReferenceVideoSurface,
+  decodeSeedanceTextVideoSurface,
 } from "./surface.js";

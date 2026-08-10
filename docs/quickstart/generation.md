@@ -12,6 +12,7 @@ Every component shown here must be imported by its package specifier before use:
 
 ```svml
 <import as="media" from="@narratage/media@1"/>
+<import as="mediaop" from="@narratage/media-pipeline@1"/>
 <import as="estimate" from="@narratage/estimate@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
 <import as="speaker" from="@narratage/seedance-speaker@1"/>
@@ -31,7 +32,7 @@ Declares a content-addressed image asset from a local file.
 | `src` | yes | Path to the image file, relative to the `.svml` source |
 
 The image is referenced downstream via `{presenter}` — for example, as a character reference in
-`seedance:Speech` or as a B-roll source.
+`seedance:ReferenceVideo` or as a B-roll source.
 
 ## media:Audio
 
@@ -50,8 +51,8 @@ Typically used as a voice-timbre reference for `speaker:Take`.
 
 ## estimate:Speech
 
-Deterministic speech duration estimation from Script text. No external service call — the estimate is
-computed locally from word count and pace parameters.
+Deterministic speech duration planning from Script pronunciation text. No external service call — the
+duration is computed locally from pronunciation units and a delivery-density policy.
 
 ```svml
 <estimate:Speech id="hook-duration"
@@ -63,7 +64,7 @@ computed locally from word count and pace parameters.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `source` | yes | Script text to estimate — typically `{script.segment.NAME.speech}` |
-| `policy` | yes | SVS speech Recipe controlling pace and bounds |
+| `policy` | no | SVS speech Recipe controlling pace and bounds; omit it to use inline parameters |
 
 The `policy` references an SVS Recipe (see [SVS Stylesheets](./styles.md#speech-estimation)):
 
@@ -71,10 +72,9 @@ The `policy` references an SVS Recipe (see [SVS Stylesheets](./styles.md#speech-
 speech.normal {
   language: en;
   pace: normal;
-  padding: 0.3;
   min: 4;
   max: 15;
-  rounding: ceil;
+  rounding: round;
 }
 ```
 
@@ -83,8 +83,16 @@ You can also specify estimation parameters inline instead of using an SVS policy
 ```svml
 <estimate:Speech id="opening-duration"
   source={story.segment.opening.speech}
-  language="en" pace="normal" padding="0.3" min="4" max="15" rounding="ceil"/>
+  language="en" pace="normal" min="4" max="15" rounding="round"/>
 ```
+
+For English, the official pace presets are `slow = 4.2`, `normal = 4.6`, and
+`fast = 5.0` syllables per second. `rate="4.75"` may be used instead of `pace`
+when a project needs a value between the named presets. `pace` and `rate` are
+mutually exclusive.
+
+There are no implicit policy values: `language`, `min`, `max`, `rounding`, and
+exactly one of `pace` or `rate` must be present either inline or in the referenced Recipe.
 
 **Output:** `{hook-duration.duration}` — the estimated duration in seconds, passed to generation
 components.
@@ -111,63 +119,69 @@ declared text port.
 The element body is the exact Text value. `text:Render` can produce the same type from a template
 and explicit graph inputs.
 
-## seedance:Speech
+## Seedance invocation shapes
 
-Generates a talking-head video clip via the Seedance model. This is the low-level generation
-component — its complete model input Text already includes any spoken dialogue.
+Seedance exposes model capabilities, not creative usages. `standard`, `fast` and `mini` choose the
+model variant independently of three invocation shapes. All shapes consume a complete ordinary
+`Text` prompt and output `{id.video}`.
+
+### seedance:TextVideo
+
+Prompt-only generation. This is the only shape that accepts `web-search`.
 
 ```svml
-<seedance:Speech id="alice-take" model="mini"
+<seedance:TextVideo id="ambient" model="mini"
+  prompt={ambient-direction} duration="5" web-search="false"/>
+```
+
+### seedance:FrameVideo
+
+First-frame generation with an optional last frame:
+
+```svml
+<seedance:FrameVideo id="transition" model="fast"
+  prompt={transition-direction} duration="5"
+  first-frame={opening-image} last-frame={closing-image}/>
+```
+
+### seedance:ReferenceVideo
+
+Multimodal reference generation. It requires at least one `Reference` child and accepts image,
+video and audio references within the model's declared limits.
+
+```svml
+<seedance:ReferenceVideo id="alice-take" model="mini"
   prompt={alice-direction}
-  duration="8">
+  duration={alice-duration.duration}
+  generate-audio="true">
   <seedance:Reference image={alice-reference}/>
-</seedance:Speech>
+  <seedance:Reference audio={alice-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `model` | yes | Seedance model name: `mini` |
-| `prompt` | yes | Complete model input — reference to ordinary `Text` |
-| `duration` | yes | Clip duration in seconds (number or `{estimate.duration}` reference) |
-| `resolution` | no | Output resolution: `480p`, `720p` (default varies by model) |
-| `aspect-ratio` | no | Output aspect ratio: `9:16`, `16:9`, `1:1` |
+The component does not know that this is a talking head. That meaning lives in the supplied Text or
+a higher-level package such as `speaker:Take`.
 
-### seedance:Reference
+Common attributes are `id`, `model`, `prompt`, `duration`, `resolution`, `aspect-ratio` and
+`generate-audio`. `duration` may be literal or an explicit `{estimate.duration}` edge.
 
-Child element that provides a reference image for character consistency:
+The audio generated in an earlier take can be reused as a later reference through an ordinary graph
+edge. Extraction does not turn it into speech evidence or attach speaker meaning:
 
 ```svml
-<seedance:Reference image={alice-reference}/>
+<mediaop:ExtractAudio id="voice-from-opening"
+  source={opening.video} audio="default"/>
+
+<seedance:ReferenceVideo id="follow-up" model="mini"
+  prompt={follow-up-direction} duration="5" generate-audio="true">
+  <seedance:Reference image={presenter-reference}/>
+  <seedance:Reference audio={voice-from-opening.audio}/>
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `image` | yes | Reference to a `media:Image` component |
-
-**Output:** `{alice-take}` or `{alice-take.video}` — the generated video, passed to `speech:Spine`.
-
-## seedance:Video
-
-Generates a standalone video clip (not a talking-head — no dialogue lip-sync).
-
-```svml
-<seedance:Video id="product-motion" model="mini"
-  prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference}/>
-</seedance:Video>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `model` | yes | Seedance model name: `mini` |
-| `prompt` | yes | Complete model input — reference to ordinary `Text` |
-| `duration` | yes | Clip duration in seconds |
-
-Also accepts `<seedance:Reference>` children for reference images.
-
-**Output:** `{product-motion.video}` — used as a B-roll source.
+The same media-operation package exposes `Transform` for ordered trim/retime and `ExtractFrame` for
+first, last, indexed or timestamped still extraction. Local FFmpeg and AWS Lambda are interchangeable
+Runtime Endpoints for these exact Needs; neither changes the author graph.
 
 ## speaker:Take
 

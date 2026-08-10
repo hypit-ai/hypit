@@ -1,10 +1,10 @@
 import { sealTextBindings } from "@narratage/text";
 import type { TextBindings, TextScalar } from "@narratage/text";
 import {
-  sealSeedanceSpeechProgram,
+  sealSeedanceDurationProgram,
   seedanceModels,
 } from "@narratage/seedance";
-import type { SeedanceSpeechProgram } from "@narratage/seedance";
+import type { SeedanceDurationProgram } from "@narratage/seedance";
 
 import type { SpeakerTakeIntent } from "./types.js";
 
@@ -84,10 +84,10 @@ export function createSpeakerTextBindings(intent: SpeakerTakeIntent): TextBindin
   });
 }
 
-export function createSpeakerSpeechProgram(intent: SpeakerTakeIntent): SeedanceSpeechProgram {
+export function createSpeakerDurationProgram(intent: SpeakerTakeIntent): SeedanceDurationProgram {
   verifySpeakerTakeIntent(intent);
-  return sealSeedanceSpeechProgram({
-    contract: "svml.seedance-speech-spine@1",
+  return sealSeedanceDurationProgram({
+    contract: "svml.seedance-duration-program@1",
     model: intent.model,
     ports: {
       resolution: [intent.resolution],

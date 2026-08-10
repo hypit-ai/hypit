@@ -96,7 +96,8 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 4. 混合音频 Track
 5. 将视频和音频混合封装为最终的 MP4
 
-**输出：** `{final.video}`——最终的视频文件。这是最常见的 Build Target。
+**输出：** `{final.video}`——以普通内容寻址 `BlobArtifact` 表示的最终视频。这是最常见的
+Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参考输入等后续 Blob 消费者。
 
 ## 完整的管线流程
 
@@ -135,9 +136,9 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <wording:Value id="direction">
     Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.
   </wording:Value>
-  <seedance:Speech id="take" model="mini"
-    prompt={direction} duration="5"/>
-  <seedance:Video id="motion" model="mini"
+  <seedance:TextVideo id="take" model="mini"
+    prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="motion" model="mini"
     prompt={direction} duration="5"/>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
@@ -148,7 +149,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 
   <!-- 3. Timing: assemble spine and align words -->
   <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={take} segment={story.segment.opening}/>
+    <speech:Take source={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 

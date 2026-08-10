@@ -246,10 +246,9 @@ text.title {
 speech.normal {
   language: en;
   pace: normal;
-  padding: 0.3;
   min: 4;
   max: 15;
-  rounding: ceil;
+  rounding: round;
 }
 ```
 
@@ -257,10 +256,15 @@ speech.normal {
 |---|---|
 | `language` | 语言代码（如 `en`） |
 | `pace` | 语速：`slow`、`normal`、`fast` |
-| `padding` | 添加到估算值的额外填充时间（秒） |
+| `rate` | 正数的每秒读音单位数；不能和 `pace` 同时使用 |
 | `min` | 最小时长（秒） |
 | `max` | 最大时长（秒） |
-| `rounding` | 取整模式：`ceil`、`floor`、`round` |
+| `rounding` | 取整模式：`none`、`round`、`ceil` |
+
+英语三个具名档位分别解析为每秒 `4.2`、`4.6`、`5.0` 个音节。项目需要连续可调值时，
+用数值 `rate` 代替 `pace`。
+所有属性都必须显式提供：`language`、`min`、`max`、`rounding`，并且在 `pace` 与
+`rate` 中恰好选择一个。Estimate 包不会补充隐藏策略默认值。
 
 通过 `estimate:Speech` 的 `policy` 属性引用：
 
@@ -363,10 +367,9 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
   speech.normal {
     language: en;
     pace: normal;
-    padding: 0.3;
     min: 4;
     max: 15;
-    rounding: ceil;
+    rounding: round;
   }
 
   speaker.host {

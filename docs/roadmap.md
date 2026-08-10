@@ -193,14 +193,12 @@ reopen Core to add video-specific meaning.
 
 ### C1. Next video package batch
 
-The next batch is deliberately limited to three author/domain tasks:
-
-1. finish the remaining Fine Caption style migration against the existing Caption Program and
-   measured display-Atom timing, without adding fields or timing guesses to common Caption;
-2. audit Twinit's named Seedance components, migrate only the distinct author semantics as Text
-   Templates/thin Surfaces, and delete aliases that merely duplicate prompt assembly;
-3. improve the deterministic speech Estimate policy and tests while keeping it a Text-to-duration
-   graph component, never a substitute for measured speech timing.
+Fine Caption's field-free Style surface, measured display-Atom timing and documented motion
+vocabulary are implemented. Deterministic speech Estimate is now a Text-to-duration graph component
+with an explicit authored policy and model-admissible duration output; it remains separate from
+measured speech timing. The next author/domain task is deliberately narrow: migrate only the
+distinct author semantics from Twinit's named Seedance components as Text Templates/thin Surfaces,
+and delete aliases that merely duplicate prompt assembly.
 
 VLM-assisted temporal or spatial interpretation is not part of this version. If later demanded,
 it must arrive as separately imported packages with explicit Video + Text inputs and explicit

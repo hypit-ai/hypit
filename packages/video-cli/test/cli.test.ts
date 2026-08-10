@@ -197,7 +197,7 @@ test("Text Template and Speaker keep prompt assembly visible in the Run Graph", 
   await writeFile(join(root, "official-ugc-v1.svs"), kitSource, "utf8");
   await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
-  speech.normal { language: en; pace: normal; padding: 0.3; min: 4; max: 15; rounding: ceil; }
+  speech.normal { language: en; pace: normal; min: 4; max: 15; rounding: round; }
   speaker.default { kind: ugc-talking-head; model: mini; resolution: 720p; aspect-ratio: 9:16; }
 </sheet>`, "utf8");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
@@ -239,7 +239,7 @@ test("Text Template and Speaker keep prompt assembly visible in the Run Graph", 
     "bind-request-seedance-2-mini-referenceImage",
     "bind-request-seedance-2-mini-prompt-text",
     "bind-text",
-    "compile-seedance-2-mini-speech-request",
+    "compile-seedance-2-mini-duration-request",
     "estimate-speech-duration",
     "finalize-request-seedance-2-mini",
     "request-seedance-2-mini",

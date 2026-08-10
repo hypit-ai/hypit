@@ -1,6 +1,6 @@
 # `@narratage/provider-media-aws-lambda`
 
-AWS Lambda Endpoint package for the five exact capabilities declared by
+AWS Lambda Endpoint package for the eight exact capabilities declared by
 `@narratage/media-pipeline` and implemented by `@narratage/media-execution`.
 
 The Provider invokes one versioned or aliased Lambda ARN synchronously. Source and result bytes stay

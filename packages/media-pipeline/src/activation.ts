@@ -1,6 +1,10 @@
 import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeSynchronizedMediaSurface,
+  decodeExtractAudioSurface,
+  decodeExtractFrameSurface,
+  decodeTransformMediaSurface,
+  mediaOperationSurfaceImplementationDigests,
   mediaPipelineComponent,
   mediaPipelineManifest,
   mediaPipelineModuleRef,
@@ -18,6 +22,24 @@ export const svmlPackage = {
     mode: "structured",
     implementationDigest: synchronizedMediaSurfaceImplementationDigest,
     handler: decodeSynchronizedMediaSurface,
+  }), createMarkupSurfaceHostFacet({
+    module: mediaPipelineModuleRef,
+    surface: "transform-media",
+    mode: "structured",
+    implementationDigest: mediaOperationSurfaceImplementationDigests.transform,
+    handler: decodeTransformMediaSurface,
+  }), createMarkupSurfaceHostFacet({
+    module: mediaPipelineModuleRef,
+    surface: "extract-audio",
+    mode: "structured",
+    implementationDigest: mediaOperationSurfaceImplementationDigests.extractAudio,
+    handler: decodeExtractAudioSurface,
+  }), createMarkupSurfaceHostFacet({
+    module: mediaPipelineModuleRef,
+    surface: "extract-frame",
+    mode: "structured",
+    implementationDigest: mediaOperationSurfaceImplementationDigests.extractFrame,
+    handler: decodeExtractFrameSurface,
   })],
 };
 export default svmlPackage;

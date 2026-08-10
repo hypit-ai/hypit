@@ -1,4 +1,4 @@
-import { mediaTypes } from "@narratage/media";
+import { artifactTypes } from "@narratage/artifact";
 import { programSpaceTypes } from "@narratage/program-space";
 import { compositionTypes } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
@@ -61,7 +61,7 @@ export const renderHyperframesFragment = sealGraphFragment({
   ],
   exports: [{
     name: "video",
-    type: mediaTypes.artifact,
+    type: artifactTypes.blob,
     root: operation("project-video"),
     semanticInputs: ["composition", "space"],
     fidelity: "exact",
