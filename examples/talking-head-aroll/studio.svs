@@ -4,10 +4,9 @@
   speech.normal {
     language: en;
     pace: normal;
-    padding: 0.3;
     min: 4;
     max: 15;
-    rounding: ceil;
+    rounding: round;
   }
 
   speaker.host {

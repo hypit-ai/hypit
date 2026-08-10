@@ -1,10 +1,14 @@
 import { mediaTypes } from "@narratage/media";
+import { artifactTypes } from "@narratage/artifact";
 import {
+  executeExtractAudio,
+  executeExtractFrame,
   executeInspectMedia,
   executeMuxProgramMedia,
   executeNormalizeMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
+  executeTransformMedia,
   mediaNeedHasContract,
   mediaOperationContracts,
 } from "@narratage/media-execution";
@@ -39,7 +43,7 @@ function positiveInteger(value: number, subject: string): number {
 
 function fulfillment(result: MediaOperationResult): EndpointFulfillment {
   return {
-    value: { kind: "inline", value: result.value },
+    value: result.value,
     conformance: "exact",
     delivery: "executed",
     metadata: result.metadata,
@@ -97,6 +101,27 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         returns: mediaTypes.synchronized,
         supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.normalize),
         handler: operation(executeNormalizeMedia),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mediaPipelineCapabilities.transform,
+        returns: artifactTypes.blob,
+        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.transform),
+        handler: operation(executeTransformMedia),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mediaPipelineCapabilities.extractAudio,
+        returns: artifactTypes.blob,
+        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.extractAudio),
+        handler: operation(executeExtractAudio),
+      },
+      {
+        lifecycle: "immediate" as const,
+        capability: mediaPipelineCapabilities.extractFrame,
+        returns: artifactTypes.blob,
+        supports: (need) => mediaNeedHasContract(need.constraints, mediaOperationContracts.extractFrame),
+        handler: operation(executeExtractFrame),
       },
       {
         lifecycle: "immediate" as const,

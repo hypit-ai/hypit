@@ -99,7 +99,9 @@ The renderer:
 4. Mixes the audio Tracks
 5. Muxes video + audio into the final MP4
 
-**Output:** `{final.video}` — the finished video file. This is the most common Build Target.
+**Output:** `{final.video}` — the finished video as an ordinary content-addressed `BlobArtifact`.
+This is the most common Build Target, and it can also be connected directly to later Blob consumers
+such as media trimming, audio/frame extraction or a model reference input.
 
 ## Full pipeline walkthrough
 
@@ -138,9 +140,9 @@ The complete data flow from Script to rendered video. This example is based on
   <wording:Value id="direction">
     Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.
   </wording:Value>
-  <seedance:Speech id="take" model="mini"
-    prompt={direction} duration="5"/>
-  <seedance:Video id="motion" model="mini"
+  <seedance:TextVideo id="take" model="mini"
+    prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="motion" model="mini"
     prompt={direction} duration="5"/>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
@@ -151,7 +153,7 @@ The complete data flow from Script to rendered video. This example is based on
 
   <!-- 3. Timing: assemble spine and align words -->
   <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={take} segment={story.segment.opening}/>
+    <speech:Take source={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 

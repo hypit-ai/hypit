@@ -1,6 +1,6 @@
 import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
 import type { ProducerRef } from "@narratage/protocol";
-import { createSeedanceSpeechGenerationFragment } from "@narratage/seedance";
+import { createSeedanceDurationGenerationFragment } from "@narratage/seedance";
 
 /**
  * Speaker is an authoring Kit, not another execution protocol. Once its prompt
@@ -12,7 +12,7 @@ export function createSeedanceSpeakerTakeFragment(
   compileRequestProducer: ProducerRef,
   mediaInputs: readonly ExactModelMediaInput[] = [],
 ) {
-  return createSeedanceSpeechGenerationFragment(
+  return createSeedanceDurationGenerationFragment(
     endpoint,
     compileRequestProducer,
     mediaInputs,

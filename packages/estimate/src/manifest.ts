@@ -13,7 +13,9 @@ export const estimateTypes = {
 export const estimateProducers = {
   speech: { module: estimateModuleRef, name: "estimate-speech-duration" },
 } satisfies Record<string, ProducerRef>;
-export const estimateSurfaceImplementationDigest = digestOf("@narratage/estimate/speech-surface@1");
+export const estimateSurfaceImplementationDigest = digestOf(
+  "@narratage/estimate/speech-surface@1:explicit-policy-without-padding",
+);
 
 const number = { kind: "number" } as const satisfies ValueSchema;
 const speechEstimatePolicySchema: ValueSchema = {
@@ -21,8 +23,8 @@ const speechEstimatePolicySchema: ValueSchema = {
   fields: {
     contract: { schema: { kind: "literal", value: "svml.speech-estimate-policy@1" } },
     language: { schema: { kind: "string", enum: ["auto", "en", "zh", "ja", "es"] } },
-    pace: { schema: { kind: "string", enum: ["slow", "normal", "fast"] } },
-    paddingSec: { schema: number },
+    pace: { schema: { kind: "string", enum: ["slow", "normal", "fast"] }, optional: true },
+    rate: { schema: { kind: "number", minimum: 0.000001 }, optional: true },
     minimumSec: { schema: number },
     maximumSec: { schema: number },
     rounding: { schema: { kind: "string", enum: ["none", "round", "ceil"] } },

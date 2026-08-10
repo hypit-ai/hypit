@@ -15,6 +15,7 @@ export {
   detectSpeechEstimateLanguage,
   estimateSpeechDuration,
   estimateSpeechImplementationDigest,
+  resolveSpeechEstimateRate,
   resolveSpeechEstimateLanguage,
   sealSpeechEstimatePolicy,
 } from "./program.js";

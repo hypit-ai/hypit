@@ -29,11 +29,11 @@
     left="10%" top="20%" right="10%" bottom="30%"/>
 
   <wording:Value id="direction">Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.</wording:Value>
-  <seedance:Speech id="take" model="mini" prompt={direction} duration="5"/>
-  <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
+  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="motion" model="mini" prompt={direction} duration="5"/>
 
   <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={take} segment={story.segment.opening}/>
+    <speech:Take source={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 

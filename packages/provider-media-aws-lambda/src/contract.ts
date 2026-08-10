@@ -1,5 +1,5 @@
 import { canonicalize } from "@narratage/protocol";
-import type { CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 
 /**
  * The envelope between the Endpoint and the function it invokes.
@@ -15,6 +15,9 @@ export const MEDIA_LAMBDA_RESPONSE = "svml.media-lambda-response@1";
 export const mediaLambdaOperations = [
   "inspect",
   "normalize",
+  "transform",
+  "extract-audio",
+  "extract-frame",
   "project-speech-evidence-audio",
   "render-audio",
   "mux",
@@ -48,7 +51,7 @@ export type MediaLambdaResponse =
     readonly contract: typeof MEDIA_LAMBDA_RESPONSE;
     readonly operation: MediaLambdaOperation;
     readonly ok: true;
-    readonly value: CanonicalValue;
+    readonly value: StoredValue;
     readonly metadata: CanonicalValue;
   }
   | {
@@ -77,6 +80,19 @@ function operation(value: unknown, subject: string): MediaLambdaOperation {
   assert(typeof value === "string" && (mediaLambdaOperations as readonly string[]).includes(value),
     `${subject} must be one of ${mediaLambdaOperations.join(", ")}`);
   return value as MediaLambdaOperation;
+}
+
+function storedValue(value: unknown, subject: string): StoredValue {
+  const item = object(value, subject);
+  if (item.kind === "inline") {
+    assert(item.value !== null && typeof item.value === "object", `${subject}.value must be canonical data`);
+    return item as unknown as StoredValue;
+  }
+  assert(item.kind === "blob" && typeof item.digest === "string"
+    && Number.isSafeInteger(item.size) && (item.size as number) >= 0
+    && typeof item.mediaType === "string" && item.mediaType.length > 0,
+  `${subject} must be an inline or blob StoredValue`);
+  return item as unknown as StoredValue;
 }
 
 export function sealMediaLambdaRequest(request: MediaLambdaRequest): CanonicalValue {
@@ -129,14 +145,13 @@ export function parseMediaLambdaResponse(value: unknown): MediaLambdaResponse {
     };
   }
   assert(item.ok === true, "MediaLambdaResponse.ok must be a boolean");
-  assert(item.value !== null && typeof item.value === "object", "MediaLambdaResponse.value must be an object");
   assert(item.metadata !== null && typeof item.metadata === "object",
     "MediaLambdaResponse.metadata must be an object");
   return {
     contract: MEDIA_LAMBDA_RESPONSE,
     operation: named,
     ok: true,
-    value: item.value as CanonicalValue,
+    value: storedValue(item.value, "MediaLambdaResponse.value"),
     metadata: item.metadata as CanonicalValue,
   };
 }

@@ -7,9 +7,10 @@ Audio and Screen Overlay are now specified in [`spatial-layout.md`](./spatial-la
 [`typography-track.md`](./typography-track.md), [`ranking-track.md`](./ranking-track.md),
 [`media-track.md`](./media-track.md), [`deck-track.md`](./deck-track.md),
 [`audio-track.md`](./audio-track.md) and
-[`screen-overlay.md`](./screen-overlay.md). Comment Sticker remains independent future work and
-does not block the packages already specified here. This is deliberately not a compatibility
-promise for a released public ABI.
+[`screen-overlay.md`](./screen-overlay.md). The independently designed
+`@narratage/comment-sticker` package now uses the same Temporal and Spatial foundations and lowers
+to one peer VisualTrack. This is deliberately not a compatibility promise for a released public
+ABI.
 
 ## Purpose
 
@@ -446,11 +447,11 @@ The complete Ranking audit, component split, group schedule and executable migra
 support cumulative state, exclusive current stages and a final settled suffix without adding
 Ranking or `Stage` meaning to Core or the public Track contract.
 
-## 10. Remaining design and implementation work
+## 10. Migration state
 
-One independently designed author package remains outside the current migration:
-
-1. design Comment Sticker content/layout/presentation independently when a real migration starts;
+Comment Sticker content, layout and presentation are implemented as an independent author package;
+it shares only the common Temporal, Spatial and terminal VisualTrack vocabulary. No currently
+specified Track family remains blocked on this common authoring model.
 
 For every currently specified official Track package, the implemented acceptance matrix proves
 Text, Caption, Media, Deck, Ranking and Screen Overlay lower to peer VisualTrack values, while

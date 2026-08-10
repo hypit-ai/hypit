@@ -21,6 +21,80 @@ export type InspectMediaNeed = {
   readonly source: BlobRef;
 };
 
+export type MediaVideoSelector =
+  | { readonly mode: "primary-moving" }
+  | { readonly mode: "stream-index"; readonly streamIndex: number };
+
+export type MediaAudioSelector =
+  | { readonly mode: "default" }
+  | { readonly mode: "stream-index"; readonly streamIndex: number }
+  | { readonly mode: "none" };
+
+export type MediaTransformOperation =
+  | {
+      readonly kind: "trim";
+      /** Seconds in the operation's current timeline, not necessarily the source timeline. */
+      readonly startSec?: number;
+      readonly endSec?: number;
+      readonly tailSec?: number;
+    }
+  | {
+      readonly kind: "retime";
+      /** 2 means twice as fast and therefore half as long. */
+      readonly rate: number;
+      readonly pitch: "preserve";
+    };
+
+/** Ordered, deterministic A/V operations over already synchronized media. */
+export type MediaTransformProgram = {
+  readonly contract: "svml.media-transform-program@1";
+  readonly operations: readonly MediaTransformOperation[];
+};
+
+export type AudioExtractionRequest = {
+  readonly contract: "svml.audio-extraction-request@1";
+  readonly audio: Exclude<MediaAudioSelector, { readonly mode: "none" }>;
+  readonly output: {
+    readonly container: "wav";
+    readonly codec: "pcm_s16le";
+    readonly sampleRate: 48_000;
+    readonly channels: 2;
+  };
+};
+
+export type FrameExtractionRequest = {
+  readonly contract: "svml.frame-extraction-request@1";
+  readonly video: MediaVideoSelector;
+  readonly at:
+    | { readonly kind: "first" }
+    | { readonly kind: "last" }
+    | { readonly kind: "frame"; readonly index: number }
+    | { readonly kind: "time"; readonly seconds: number };
+  readonly output: { readonly format: "png" };
+};
+
+export type TransformMediaNeed = {
+  readonly contract: "svml.transform-media-request@1";
+  readonly media: import("@narratage/media").SynchronizedMedia;
+  readonly program: MediaTransformProgram;
+};
+
+export type ExtractAudioNeed = {
+  readonly contract: "svml.extract-audio-request@1";
+  readonly source: BlobRef;
+  readonly streamIndex: number;
+  readonly output: AudioExtractionRequest["output"];
+};
+
+export type ExtractFrameNeed = {
+  readonly contract: "svml.extract-frame-request@1";
+  readonly source: BlobRef;
+  readonly streamIndex: number;
+  readonly sourceFrameCount: number;
+  readonly at: FrameExtractionRequest["at"];
+  readonly output: FrameExtractionRequest["output"];
+};
+
 export type NormalizeMediaNeed = {
   readonly contract: "svml.normalize-media-request@1";
   readonly source: BlobRef;

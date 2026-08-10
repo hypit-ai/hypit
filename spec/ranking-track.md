@@ -242,7 +242,7 @@ Recipe properties fail. There is no arbitrary CSS escape hatch.
 
 ## 7. Media, fonts and sound
 
-Images and sounds enter through explicit `MediaArtifactRef` edges. Fonts enter through explicit,
+Images and sounds enter through explicit `BlobArtifact` edges. Fonts enter through explicit,
 content-addressed font stack edges. Ranking never stores a URL, asks the Runtime to choose a font,
 or names a renderer component.
 

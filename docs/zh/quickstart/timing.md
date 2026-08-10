@@ -38,7 +38,7 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 
 | 属性 | 必填 | 描述 |
 |---|---|---|
-| `source` | 是 | 生成的视频——来自 `seedance:Speech`、`speaker:Take` 等 |
+| `source` | 是 | 生成的视频——来自 `seedance:ReferenceVideo`、`speaker:Take` 等 |
 | `segment` | 是 | 此片段对应的 Script Segment——例如 `{story.segment.hook}` |
 
 `<speech:Take>` 子元素的排列顺序**决定了节目顺序**。第一个片段从时间零点开始；后续片段依次紧接。
@@ -122,8 +122,8 @@ Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估�
 <!-- Assemble takes in program order -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <speech:Spine id="speech" canvas={vertical}>
-  <speech:Take source={opening-take} segment={story.segment.opening}/>
-  <speech:Take source={answer-take} segment={story.segment.answer}/>
+  <speech:Take source={opening-take.video} segment={story.segment.opening}/>
+  <speech:Take source={answer-take.video} segment={story.segment.answer}/>
 </speech:Spine>
 
 <!-- Measure word timing -->
