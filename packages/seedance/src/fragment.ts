@@ -5,8 +5,10 @@ import { generationProducers } from "@narratage/generation";
 import {
   createExactModelPrimaryGenerationFragment,
   exactModelMediaInputNames,
+  exactModelTextInputName,
 } from "@narratage/model-kit";
-import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
+import type { ExactModelEndpoint, ExactModelMediaInput, ExactModelTextInput } from "@narratage/model-kit";
+import { textTypes } from "@narratage/text";
 import type { ProducerRef } from "@narratage/protocol";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
@@ -48,14 +50,16 @@ export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
 export function createSeedanceAssembledGenerationFragment(
   endpoint: ExactModelEndpoint,
   mediaInputs: readonly ExactModelMediaInput[] = [],
+  textInputs: readonly ExactModelTextInput[] = [],
 ) {
-  return createExactModelPrimaryGenerationFragment(endpoint, mediaInputs);
+  return createExactModelPrimaryGenerationFragment(endpoint, mediaInputs, textInputs);
 }
 
 export function createSeedanceSpeechGenerationFragment(
   endpoint: ExactModelEndpoint,
   compileProducer: ProducerRef,
   mediaInputs: readonly ExactModelMediaInput[] = [],
+  textInputs: readonly ExactModelTextInput[] = [],
 ) {
   const inputs = [
     { name: "program", type: { module: endpoint.producer.module, name: "SpeechProgram" } },
@@ -68,6 +72,20 @@ export function createSeedanceSpeechGenerationFragment(
     result: { kind: "output", name: "draft" },
   }];
   let draft = operation("compile-draft") as ReturnType<typeof input> | ReturnType<typeof operation>;
+  for (const [index, item] of textInputs.entries()) {
+    const binding = endpoint.textBindings[item.port];
+    if (binding === undefined) throw new Error(`${endpoint.ports.model} has no text port ${item.port}`);
+    const name = exactModelTextInputName(item.name);
+    inputs.push({ name, type: textTypes.text });
+    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.port}`;
+    operations.push({
+      id,
+      producer: binding.producer,
+      inputs: { draft, text: input(name) },
+      result: { kind: "output", name: "draft" },
+    });
+    draft = operation(id);
+  }
   for (const [index, item] of mediaInputs.entries()) {
     const binding = endpoint.mediaBindings[item.port];
     if (binding === undefined) throw new Error(`${endpoint.ports.model} has no media port ${item.port}`);
@@ -102,7 +120,10 @@ export function createSeedanceSpeechGenerationFragment(
       result: { kind: "output", name: "video" },
     },
   );
-  const shape = mediaInputs.map((item) => `${item.name}=${item.port}`).join(",") || "no-media";
+  const shape = [
+    ...textInputs.map((item) => `${item.name}=${item.port}:text`),
+    ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
+  ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
     name: `@narratage/seedance/${endpoint.key}-speech-assembled-primary-video[${shape}]@1`,
     inputs,

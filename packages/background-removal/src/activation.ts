@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   backgroundRemovalComponent, backgroundRemovalImplementationDigests, backgroundRemovalManifest,
@@ -10,7 +10,7 @@ export const svmlPackage = {
   name: "@narratage/background-removal",
   modules: [{ manifest: backgroundRemovalManifest, specifiers: ["@narratage/background-removal", "@narratage/background-removal@1"] }],
   components: [backgroundRemovalComponent],
-  hostFacets: [{ ...createTextSurfaceHostFacet({
+  hostFacets: [{ ...createMarkupSurfaceHostFacet({
     module: backgroundRemovalModuleRef, surface: "background", mode: "structured",
     implementationDigest: backgroundRemovalImplementationDigests.surface, handler: decodeBackgroundRemovalSurface,
   }) }],

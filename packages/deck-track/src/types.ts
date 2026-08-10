@@ -82,6 +82,13 @@ export type DepthStackCardLabel =
       readonly flow: VisualTextFlow;
     };
 
+export type DepthStackCardLabelStyle = {
+  readonly contract: "svml.depth-stack-card-label-style@1";
+  readonly typography: VisualTextTypography;
+  readonly paints: readonly VisualTextPaintLayer[];
+  readonly flow: VisualTextFlow;
+};
+
 export type DepthStackCardSpec = {
   readonly contract: "svml.depth-stack-card-spec@1";
   readonly id: string;

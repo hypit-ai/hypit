@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeHyperframesRenderSurface, renderHyperframesComponent, renderHyperframesManifest,
   renderHyperframesModuleRef, renderHyperframesSurfaceImplementationDigest,
@@ -9,7 +9,7 @@ export const svmlPackage = {
   name: "@narratage/render-hyperframes",
   modules: [{ manifest: renderHyperframesManifest, specifiers: ["@narratage/render-hyperframes", "@narratage/render-hyperframes@1"] }],
   components: [renderHyperframesComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: renderHyperframesModuleRef, surface: "video", mode: "structured",
     implementationDigest: renderHyperframesSurfaceImplementationDigest,
     handler: decodeHyperframesRenderSurface,

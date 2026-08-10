@@ -19,5 +19,5 @@ CLI flags.
 semantic meaning. `RunFragmentRegistry` accepts trusted Fragment packages only through the
 `svml.run-fragment-host@1` Host-facet installer. Package loading does not interpret Fragment code.
 
-The optional official XML-like syntax lives in `@narratage/run-text`. Another trusted Frontend can emit
+The optional official XML-like syntax lives in `@narratage/run-markup`. Another trusted Frontend can emit
 the same `RunDocument` without changing this package or Core.

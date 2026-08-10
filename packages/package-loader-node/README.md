@@ -6,8 +6,8 @@ Validator identities. Loading verifies all artifacts and checks deterministic co
 against their static Manifests before returning verified `NodePackageContribution` values.
 
 This package does not select an author syntax. Syntax-specific executable facets remain inert until
-an exact Host ABI installs them. `@narratage/compiler-text-node` selects the official Text Surface ABI;
-`@narratage/local` can load the same package's deterministic compute facets without depending on Text.
+an exact Host ABI installs them. `@narratage/compiler-markup-node` selects the official Markup Surface ABI;
+`@narratage/local` can load the same package's deterministic compute facets without depending on Markup.
 Run Fragment libraries use the ordinary `svml.run-fragment-host@1` Host facet; the Loader has no
 Run-specific fragment field or interpretation branch.
 

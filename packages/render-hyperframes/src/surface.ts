@@ -5,8 +5,8 @@ import type { Composition } from "@narratage/composition";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { renderHyperframesFragment } from "./fragment.js";
 
@@ -17,7 +17,7 @@ function stringAttribute(element: StructuredElement, name: string): string {
 }
 
 function referenceAttribute(element: StructuredElement, name: string): string {
-  const value: TextAttributeValue | undefined = element.attributes[name];
+  const value: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof value !== "object" || value.kind !== "reference") {
     throw new Error(`${element.name}.${name} must be a reference`);
   }

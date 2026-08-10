@@ -34,10 +34,10 @@ import {
 } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
 import {
-  TextSurfaceRegistry,
-  createTextAuthorFrontend,
-} from "@narratage/text";
-import type { StructuredElement } from "@narratage/text";
+  MarkupSurfaceRegistry,
+  createMarkupAuthorFrontend,
+} from "@narratage/markup";
+import type { StructuredElement } from "@narratage/markup";
 
 const laboratory = { name: "example.recipe-card", version: "1" } as const;
 const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
@@ -133,8 +133,8 @@ function recipeValue(record: TypedRecord | undefined): SvsRecipe {
   return record.value.value as SvsRecipe;
 }
 
-function sourceRegistry(): TextSurfaceRegistry {
-  const registry = new TextSurfaceRegistry();
+function sourceRegistry(): MarkupSurfaceRegistry {
+  const registry = new MarkupSurfaceRegistry();
   registry.registerStructured(laboratory, "card", cardSurfaceDigest, ({ element, resolveReference }) => {
     const id = stringAttribute(element, "id");
     const appearancePath = referenceAttribute(element, "appearance");
@@ -185,7 +185,7 @@ function sourceRegistry(): TextSurfaceRegistry {
 const closure = createResolvedClosure([svsManifest, manifest]);
 
 function unit(id: string, text: string, frontend?: string): AuthorSourceUnit {
-  const selected = frontend ?? (id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/text@1");
+  const selected = frontend ?? (id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/markup@1");
   return {
     id,
     name: id.split("/").at(-1) ?? id,
@@ -202,7 +202,7 @@ const styleText = `<sheet version="1" id="studio">
 
 async function compileMain(alias: string, root = "/project", styles = styleText) {
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: sourceRegistry(),
     resolveModule: () => laboratory,
   }));
@@ -330,8 +330,8 @@ test("Source Closure binds every recursive SourceUnit digest", async () => {
 
 test("Source Closure rejects recursive source import cycles", async () => {
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
-    registry: new TextSurfaceRegistry(),
+  frontends.register(createMarkupAuthorFrontend({
+    registry: new MarkupSurfaceRegistry(),
     resolveModule: () => laboratory,
   }));
   const a = unit("/project/a.svml", `<svml><import as="b" source="./b.svml"/></svml>`);
@@ -351,8 +351,8 @@ test("Source Closure rejects recursive source import cycles", async () => {
 
 test("Source Closure rejects duplicate aliases and unknown Frontends before decode", async () => {
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
-    registry: new TextSurfaceRegistry(),
+  frontends.register(createMarkupAuthorFrontend({
+    registry: new MarkupSurfaceRegistry(),
     resolveModule: () => laboratory,
   }));
   const duplicate = unit("/project/duplicate.svml", `<svml>

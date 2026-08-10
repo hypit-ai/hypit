@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   captionComponent, captionManifest, captionModuleRef,
   captionProgramSurfaceImplementationDigest, decodeCaptionProgramSurface,
@@ -10,7 +10,7 @@ export const svmlPackage = {
   modules: [{ manifest: captionManifest, specifiers: ["@narratage/caption", "@narratage/caption@1"] }],
   components: [captionComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({ module: captionModuleRef, surface: "program", mode: "structured", implementationDigest: captionProgramSurfaceImplementationDigest, handler: decodeCaptionProgramSurface }),
+    createMarkupSurfaceHostFacet({ module: captionModuleRef, surface: "program", mode: "structured", implementationDigest: captionProgramSurfaceImplementationDigest, handler: decodeCaptionProgramSurface }),
   ],
 };
 export default svmlPackage;

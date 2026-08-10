@@ -13,6 +13,8 @@ import {
 } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
+import { verifyText } from "@narratage/text";
+import type { Text } from "@narratage/text";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { assertSpatialFrame } from "@narratage/spatial";
 import {
@@ -31,6 +33,7 @@ import type {
   RankingHeader,
   RankingItemSpec,
   RankingItemSpecSet,
+  RankingTextItemShell,
   RankingMotionStyle,
   RankingSchedule,
   RankingSoundEvent,
@@ -86,6 +89,7 @@ export const rankingImplementationDigests = {
   renderColumn: digestOf("@narratage/ranking/render-column@1"),
   renderTopThree: digestOf("@narratage/ranking/render-top-three@1"),
   renderTypewriter: digestOf("@narratage/ranking/render-typewriter-list@1"),
+  materializeTextItem: digestOf("@narratage/ranking/materialize-text-item@1"),
 } as const;
 
 export const rankingValidatorDigests = {
@@ -303,6 +307,51 @@ export function assertRankingItemSpec(value: RankingItemSpec): void {
     }
   }
   if (value.stackingOrder !== undefined) stacking(value.stackingOrder, `RankingItemSpec.${value.id}.stackingOrder`);
+}
+
+export function assertRankingTextItemShell(value: RankingTextItemShell): void {
+  identity(value.id, "RankingTextItemShell.id");
+  if (value.variant === "column") {
+    assert(value.contract === "svml.column-text-item-shell@1", "Column Text Item Shell contract is invalid.");
+  } else if (value.variant === "top-three") {
+    assert(value.contract === "svml.top-three-text-item-shell@1", "TopThree Text Item Shell contract is invalid.");
+  } else {
+    assert(value.variant === "typewriter-list" && value.contract === "svml.typewriter-text-item-shell@1",
+      "Typewriter Text Item Shell contract is invalid.");
+    assert(typeof value.winner === "boolean", `RankingTextItemShell.${value.id}.winner is invalid.`);
+    if (value.emphasis !== undefined) {
+      integer(value.emphasis.start, `RankingTextItemShell.${value.id}.emphasis.start`);
+      integer(value.emphasis.endExclusive, `RankingTextItemShell.${value.id}.emphasis.endExclusive`, 1);
+      assert(value.emphasis.endExclusive > value.emphasis.start,
+        `RankingTextItemShell.${value.id}.emphasis is empty.`);
+    }
+  }
+  if (value.stackingOrder !== undefined) stacking(value.stackingOrder, `RankingTextItemShell.${value.id}.stackingOrder`);
+}
+
+export function sealRankingTextItemShell(value: RankingTextItemShell): RankingTextItemShell {
+  const result = canonicalize(value) as unknown as RankingTextItemShell;
+  assertRankingTextItemShell(result);
+  return result;
+}
+
+export function materializeRankingTextItem(shell: RankingTextItemShell, content: Text): RankingItemSpec {
+  assertRankingTextItemShell(shell);
+  verifyText(content);
+  assert(content.value.trim().length > 0, `Ranking Text Item ${shell.id} content is empty.`);
+  let result: RankingItemSpec;
+  if (shell.variant === "column") {
+    const { contract: _contract, ...common } = shell;
+    result = { ...common, contract: "svml.column-item-spec@1", label: content.value };
+  } else if (shell.variant === "top-three") {
+    const { contract: _contract, ...common } = shell;
+    result = { ...common, contract: "svml.top-three-item-spec@1", label: content.value };
+  } else {
+    const { contract: _contract, ...common } = shell;
+    result = { ...common, contract: "svml.typewriter-item-spec@1", text: content.value };
+  }
+  assertRankingItemSpec(result);
+  return canonicalize(result) as unknown as RankingItemSpec;
 }
 
 export function createRankingItemSpecSet(header: RankingHeader): RankingItemSpecSet {

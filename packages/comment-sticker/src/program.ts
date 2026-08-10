@@ -25,6 +25,8 @@ import {
   projectSelectionWindows,
 } from "@narratage/temporal";
 import type { ProjectedOccurrence } from "@narratage/temporal";
+import { verifyText } from "@narratage/text";
+import type { Text } from "@narratage/text";
 
 import type {
   CommentStickerContent,
@@ -45,6 +47,10 @@ export const commentStickerImplementationDigests = {
   appendSelectionAvatar: digestOf("@narratage/comment-sticker/append-selection-avatar@1"),
   appendMoment: digestOf("@narratage/comment-sticker/append-moment@1"),
   appendMomentAvatar: digestOf("@narratage/comment-sticker/append-moment-avatar@1"),
+  createContent: digestOf("@narratage/comment-sticker/create-content@1"),
+  setContentAuthor: digestOf("@narratage/comment-sticker/set-content-author@1"),
+  setContentHeader: digestOf("@narratage/comment-sticker/set-content-header@1"),
+  setContentMeta: digestOf("@narratage/comment-sticker/set-content-meta@1"),
   finalize: digestOf("@narratage/comment-sticker/finalize@1"),
   render: digestOf("@narratage/comment-sticker/render@1"),
 } as const;
@@ -148,11 +154,31 @@ export function sealCommentStickerStyle(value: CommentStickerStyle): CommentStic
   return canonicalize(value) as unknown as CommentStickerStyle;
 }
 
-function assertContent(value: CommentStickerContent): void {
+export function assertCommentStickerContent(value: CommentStickerContent): void {
+  assert(value.contract === "svml.comment-sticker-content@1", "Unsupported CommentStickerContent contract.");
   assert(value.comment.trim().length > 0, "Comment Sticker comment cannot be blank.");
   optionalText(value.author, "Comment Sticker author");
   optionalText(value.header, "Comment Sticker header");
   optionalText(value.meta, "Comment Sticker meta");
+}
+
+export function createCommentStickerContent(comment: Text): CommentStickerContent {
+  verifyText(comment);
+  const value: CommentStickerContent = { contract: "svml.comment-sticker-content@1", comment: comment.value };
+  assertCommentStickerContent(value);
+  return canonicalize(value) as unknown as CommentStickerContent;
+}
+
+export function setCommentStickerContentText(
+  content: CommentStickerContent,
+  field: "author" | "header" | "meta",
+  value: Text,
+): CommentStickerContent {
+  assertCommentStickerContent(content);
+  verifyText(value);
+  const result = { ...structuredClone(content), [field]: value.value };
+  assertCommentStickerContent(result);
+  return canonicalize(result) as unknown as CommentStickerContent;
 }
 
 function assertAvatar(value: BlobRef): void {
@@ -174,7 +200,6 @@ export function sealCommentStickerHeader(value: CommentStickerHeader): CommentSt
 export function assertCommentStickerItemSpec(value: CommentStickerItemSpec): void {
   assert(value.contract === "svml.comment-sticker-item-spec@1", "Unsupported CommentStickerItemSpec contract.");
   identity(value.id, "CommentStickerItemSpec.id");
-  assertContent(value.content);
   assert(value.expansion.kind === "one" || value.expansion.kind === "each", "CommentStickerItemSpec expansion is invalid.");
 }
 
@@ -197,6 +222,7 @@ function realized(
   frame: SpatialFrame,
   style: CommentStickerStyle,
   spec: CommentStickerItemSpec,
+  content: CommentStickerContent,
   occurrences: readonly ProjectedOccurrence[],
   avatar?: BlobRef,
 ): CommentStickerSet {
@@ -205,6 +231,7 @@ function realized(
   assertSpatialFrame(frame);
   assertCommentStickerStyle(style);
   assertCommentStickerItemSpec(spec);
+  assertCommentStickerContent(content);
   if (avatar !== undefined) assertAvatar(avatar);
   const additions = occurrences.map((occurrence, index): CommentStickerItemProgram => ({
     id: occurrence.id,
@@ -212,7 +239,7 @@ function realized(
     span: { ...occurrence.span },
     frame: structuredClone(frame),
     style: structuredClone(style),
-    content: structuredClone(spec.content),
+    content: structuredClone(content),
     ...(avatar === undefined ? {} : { avatar: structuredClone(avatar) }),
     tieBreak: `${header.id}:${spec.id}:${index + 1}`,
   }));
@@ -231,10 +258,11 @@ export function appendProgramCommentSticker(
   style: CommentStickerStyle,
   space: ProgramSpace,
   spec: CommentStickerItemSpec,
+  content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
   assert(spec.expansion.kind === "one", `Program Comment Sticker ${spec.id} must use one occurrence.`);
-  return realized(set, header, frame, style, spec, [projectProgramWindow({ itemId: spec.id, space, projection: spec.projection })], avatar);
+  return realized(set, header, frame, style, spec, content, [projectProgramWindow({ itemId: spec.id, space, projection: spec.projection })], avatar);
 }
 
 export function appendSelectionCommentSticker(
@@ -246,9 +274,10 @@ export function appendSelectionCommentSticker(
   map: CompleteSemanticMap,
   selection: NarrativeSelectionRef,
   spec: CommentStickerItemSpec,
+  content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
-  return realized(set, header, frame, style, spec,
+  return realized(set, header, frame, style, spec, content,
     projectSelectionWindows({ itemId: spec.id, map, selection, space, expansion: spec.expansion, projection: spec.projection }), avatar);
 }
 
@@ -261,9 +290,10 @@ export function appendMomentCommentSticker(
   map: CompleteSemanticMap,
   moment: NarrativeMomentRef,
   spec: CommentStickerItemSpec,
+  content: CommentStickerContent,
   avatar?: BlobRef,
 ): CommentStickerSet {
-  return realized(set, header, frame, style, spec,
+  return realized(set, header, frame, style, spec, content,
     projectMomentWindows({ itemId: spec.id, map, moment, space, expansion: spec.expansion, projection: spec.projection }), avatar);
 }
 
@@ -281,7 +311,7 @@ export function assertCommentStickerProgram(value: CommentStickerProgram): void 
       `Comment Sticker Item ${item.id} timing is invalid.`);
     assertSpatialFrame(item.frame);
     assertCommentStickerStyle(item.style);
-    assertContent(item.content);
+    assertCommentStickerContent(item.content);
     if (item.avatar !== undefined) assertAvatar(item.avatar);
     assert(item.tieBreak.length > 0, `Comment Sticker Item ${item.id} tie break is empty.`);
   }

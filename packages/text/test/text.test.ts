@@ -1,258 +1,169 @@
-import { narrativeManifest } from "@narratage/narrative";
-import type { Narrative, NarrativeDialogueExcerpt, NarrativeExcerpt, NarrativeSpeechExcerpt } from "@narratage/narrative";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { parseStructuredElement } from "@narratage/markup";
+import type { SurfaceResolvedReference } from "@narratage/markup";
 
-import { createResolvedClosure, digestOf, isDigest, link } from "@narratage/core";
-import type { ModuleManifest } from "@narratage/protocol";
 import {
-  decodeScriptSurface,
-  scriptManifest,
-  scriptModuleRef,
-  scriptSurfaceImplementationDigest,
-} from "@narratage/script";
-import {
-  TextFrontendError,
-  TextSurfaceRegistry,
-  decodeText,
-  parseStructuredElement,
+  bindText,
+  createTextRenderFragment,
+  decodeTextRenderSurface,
+  decodeTextValueSurface,
+  renderText,
+  sealText,
+  sealTextBinding,
+  sealTextBindings,
+  sealTextTemplate,
+  textTypes,
+  verifyTextTemplate,
 } from "@narratage/text";
 
-function scriptContext() {
-  const closure = createResolvedClosure([narrativeManifest, scriptManifest]);
-  const registry = new TextSurfaceRegistry();
-  registry.registerRaw(
-    scriptModuleRef,
-    "script",
-    scriptSurfaceImplementationDigest,
-    decodeScriptSurface,
-  );
-  return {
-    closure,
-    registry,
-    resolveModule: () => scriptModuleRef,
-  } as const;
-}
-
-test("Text learns <script> only from an imported Script Manifest", async () => {
-  const result = await decodeText(
-    {
-      name: "talk.svml",
-      text: `<svml>
-        <import from="@narratage/script@1"/>
-
-        <script id="story">
-          <opening>
-            <ALICE>Hello.
-            <BOB>Hi.
-          </opening>
-        </script>
-      </svml>`,
-    },
-    scriptContext(),
-  );
-
-  assert.equal(result.module.records.length, 6);
-  assert.equal(result.module.records[0]?.id, "story");
-  assert.equal(result.module.records[0]?.type.name, "Narrative");
-  assert.equal(result.module.records.some((record) =>
-    record.id === "story.segment.opening" && record.type.name === "NarrativeExcerpt"), true);
-  assert.equal(result.module.records.some((record) =>
-    record.id === "story.segment.opening.dialogue" && record.type.name === "NarrativeDialogueExcerpt"), true);
-  assert.equal(result.module.records.some((record) =>
-    record.id === "story.segment.opening.speech" && record.type.name === "NarrativeSpeechExcerpt"), true);
-  assert.equal(result.module.records.some((record) =>
-    record.id === "story.caption" && record.type.name === "CaptionDisplaySequence"), true);
-  assert.equal(result.module.records.some((record) =>
-    record.id === "story.caption.correspondence" && record.type.name === "CaptionCorrespondence"), true);
-  assert.equal(result.sourceMaps.length, 1);
-  assert.doesNotThrow(() => link(scriptContext().closure, [result.module]));
-});
-
-test("the same Script meaning has the same authored Record digest across reflow", async () => {
-  const compact = await decodeText(
-    {
-      name: "compact.svml",
-      text: `<svml><import from="@narratage/script"/><script id="story"><opening><ALICE>Hello.<BOB>Hi.</opening></script></svml>`,
-    },
-    scriptContext(),
-  );
-  const multiline = await decodeText(
-    {
-      name: "multiline.svml",
-      text: `<svml>
-        <import from="@narratage/script"/>
-        <script id="story">
-          <opening>
-            <ALICE>Hello.
-            <BOB>Hi.
-          </opening>
-        </script>
-      </svml>`,
-    },
-    scriptContext(),
-  );
-
-  assert.equal(compact.module.records[0]?.digest, multiline.module.records[0]?.digest);
-  assert.equal(compact.module.records[1]?.digest, multiline.module.records[1]?.digest);
-  assert.notEqual(
-    compact.module.records[0]?.origin.kind === "authored" ? compact.module.records[0].origin.sourceDigest : undefined,
-    multiline.module.records[0]?.origin.kind === "authored" ? multiline.module.records[0].origin.sourceDigest : undefined,
-  );
-});
-
-test("without the import, Text has no hard-coded knowledge of Script", async () => {
-  await assert.rejects(
-    decodeText(
-      { name: "unknown.svml", text: "<svml><script><opening>Hello.</opening></script></svml>" },
-      scriptContext(),
-    ),
-    (error: unknown) => error instanceof TextFrontendError && error.code === "TEXT_UNKNOWN_SURFACE",
-  );
-});
-
-test("a raw Surface cannot consume the Text document close", async () => {
-  const closure = createResolvedClosure([narrativeManifest, scriptManifest]);
-  const registry = new TextSurfaceRegistry();
-  registry.registerRaw(
-    scriptModuleRef,
-    "script",
-    scriptSurfaceImplementationDigest,
-    (input) => ({
-      nextOffset: input.source.length,
-      records: [],
-      components: [],
-      fragments: [],
-    }),
-  );
-  await assert.rejects(
-    decodeText(
-      {
-        name: "swallowed.svml",
-        text: `<svml><import from="@narratage/script"/><script><opening>Hello.</opening></script></svml>`,
+test("text programs compose nested templates, choices, lists and transforms", () => {
+  const template = sealTextTemplate({
+    contract: "svml.text-template@1",
+    definitions: {
+      dialogue: {
+        kind: "sequence",
+        items: [
+          { kind: "literal", value: "Spoken dialogue — say exactly:\n" },
+          { kind: "transform", input: { kind: "slot", binding: "dialogue" }, transforms: [{ kind: "trim" }] },
+        ],
       },
-      { closure, registry, resolveModule: () => scriptModuleRef },
-    ),
-    (error: unknown) => error instanceof TextFrontendError && error.code === "TEXT_ROOT_UNCLOSED",
-  );
-});
-
-test("imports are frozen before body decoding", async () => {
-  await assert.rejects(
-    decodeText(
-      {
-        name: "late.svml",
-        text: `<svml>
-          <import from="@narratage/script"/>
-          <script><opening>Hello.</opening></script>
-          <import from="@narratage/script"/>
-        </svml>`,
-      },
-      scriptContext(),
-    ),
-    (error: unknown) => error instanceof TextFrontendError && error.code === "TEXT_IMPORT_AFTER_BODY",
-  );
-});
-
-test("a body tag whose name merely starts with import is not treated as an import", async () => {
-  await assert.rejects(
-    decodeText(
-      { name: "important.svml", text: "<svml><important/></svml>" },
-      scriptContext(),
-    ),
-    (error: unknown) => error instanceof TextFrontendError && error.code === "TEXT_UNKNOWN_SURFACE",
-  );
-});
-
-test("Text also exposes a generic structured Surface tree", () => {
-  const source = {
-    name: "structured.svml",
-    text: `<card title="Hello" target={story}><line>World</line></card>`,
-  };
-  const parsed = parseStructuredElement(source, 0);
-  assert.equal(parsed.nextOffset, source.text.length);
-  assert.equal(parsed.element.name, "card");
-  assert.deepEqual(parsed.element.attributes.target, { kind: "reference", path: "story" });
-  assert.equal(parsed.element.children[0]?.kind, "element");
-});
-
-test("a module can use Text's generic structured parser without adding another parser", async () => {
-  const module = { name: "example.card", version: "1" } as const;
-  const type = { module, name: "Card" } as const;
-  const implementationDigest = digestOf("example.card/surface@1");
-  const manifest: ModuleManifest = {
-    format: "svml.module@1",
-    name: module.name,
-    version: module.version,
-    dependencies: [],
-    types: [
-      {
-        name: type.name,
-        schema: {
-          kind: "object",
-          fields: { tag: { schema: { kind: "literal", value: "card" } } },
+    },
+    root: {
+      kind: "join",
+      separator: "\n\n",
+      items: [
+        { kind: "slot", binding: "base" },
+        {
+          kind: "choice",
+          cases: [{
+            when: { kind: "equals", binding: "camera", value: "handheld" },
+            value: { kind: "literal", value: "Natural handheld camera movement." },
+          }],
+          otherwise: { kind: "literal", value: "Locked camera." },
         },
-      },
-    ],
-    capabilities: [],
-    surfaces: [
-      {
-        name: "card",
-        tag: "card",
-        mode: "structured",
-        outputs: [type],
-        implementation: {
-          kind: "trusted-frontend-surface",
-          locator: "example.card/surface",
-          digest: implementationDigest,
+        {
+          kind: "optional",
+          when: { kind: "present", binding: "references" },
+          value: {
+            kind: "each",
+            binding: "references",
+            as: "reference",
+            separator: "\n",
+            value: { kind: "slot", binding: "reference" },
+          },
         },
-      },
-    ],
-    producers: [],
-  };
-  const closure = createResolvedClosure([manifest]);
-  const registry = new TextSurfaceRegistry();
-  registry.registerStructured(module, "card", implementationDigest, ({ element }) => ({
-    records: [
-      {
-        id: "card",
-        type,
-        value: { kind: "inline", value: { tag: element.name } },
-        range: element.range,
-      },
-    ],
-    components: [],
-    fragments: [],
-  }));
-  const result = await decodeText(
-    {
-      name: "card.svml",
-      text: `<svml><import from="example.card@1"/><card title="Hello"><line>World</line></card></svml>`,
+        { kind: "call", template: "dialogue" },
+      ],
     },
-    { closure, registry, resolveModule: () => module },
-  );
-
-  assert.equal(result.module.records[0]?.id, "card");
-  assert.equal(isDigest(result.module.records[0]?.digest ?? ""), true);
-
-  const overreachingRegistry = new TextSurfaceRegistry();
-  overreachingRegistry.registerStructured(module, "card", implementationDigest, ({ element }) => ({
-    records: [
-      {
-        id: "other",
-        type: { module, name: "Other" },
-        value: { kind: "inline", value: { tag: element.name } },
-        range: element.range,
-      },
-    ],
-    components: [],
-    fragments: [],
+  });
+  const result = renderText(template, sealTextBindings({
+    base: "A concise UGC video.",
+    camera: "handheld",
+    references: ["Image 1 is the person.", "Image 2 is the product."],
+    dialogue: "  Hello world.  ",
   }));
-  await assert.rejects(
-    decodeText(
-      { name: "overreach.svml", text: `<svml><import from="example.card@1"/><card/></svml>` },
-      { closure, registry: overreachingRegistry, resolveModule: () => module },
-    ),
-    (error: unknown) => error instanceof TextFrontendError && error.code === "TEXT_SURFACE_OUTPUT",
-  );
+  assert.equal(result.value, [
+    "A concise UGC video.",
+    "Natural handheld camera movement.",
+    "Image 1 is the person.\nImage 2 is the product.",
+    "Spoken dialogue — say exactly:\nHello world.",
+  ].join("\n\n"));
+});
+
+test("graph Text bindings are explicit and cannot overwrite by accident", () => {
+  const initial = sealTextBindings({ base: "first" });
+  assert.throws(() => bindText(initial, sealTextBinding({ name: "base", mode: "set" }), sealText("second")), /already set/u);
+  const appended = bindText(initial, sealTextBinding({ name: "references", mode: "append" }), sealText("one"));
+  const twice = bindText(appended, sealTextBinding({ name: "references", mode: "append" }), sealText("two"));
+  assert.deepEqual(twice.values.references, ["one", "two"]);
+  const fragment = createTextRenderFragment([{ name: "dialogue" }]);
+  assert.equal(fragment.inputs.length, 4);
+  assert.equal(fragment.exports[0]?.type.name, "Text");
+});
+
+test("text templates reject recursion and ambiguous choices", () => {
+  assert.throws(() => verifyTextTemplate({
+    contract: "svml.text-template@1",
+    root: { kind: "call", template: "loop" },
+    definitions: { loop: { kind: "call", template: "loop" } },
+  }), /cycle/u);
+  assert.throws(() => renderText(sealTextTemplate({
+    contract: "svml.text-template@1",
+    root: {
+      kind: "choice",
+      cases: [
+        { when: { kind: "present", binding: "x" }, value: { kind: "literal", value: "a" } },
+        { when: { kind: "equals", binding: "x", value: true }, value: { kind: "literal", value: "b" } },
+      ],
+    },
+  }), sealTextBindings({ x: true })), /matched 2/u);
+});
+
+test("one definition keeps lexical each bindings without hiding its global uses", () => {
+  const template = sealTextTemplate({
+    contract: "svml.text-template@1",
+    definitions: { item: { kind: "slot", binding: "item" } },
+    root: {
+      kind: "join",
+      separator: " / ",
+      items: [{
+        kind: "each",
+        binding: "items",
+        as: "item",
+        separator: ", ",
+        value: { kind: "call", template: "item" },
+      }, { kind: "call", template: "item" }],
+    },
+  });
+  assert.equal(renderText(template, sealTextBindings({ items: ["one", "two"], item: "global" })).value,
+    "one, two / global");
+});
+
+test("Markup Text Surfaces expose literal and assembled Text as ordinary graph values", async () => {
+  const literal = parseStructuredElement({
+    name: "text.svml",
+    text: `<text:Value id="base">
+      Make a vertical product video.
+    </text:Value>`,
+  }, 0).element;
+  const authored = await decodeTextValueSurface({
+    sourceName: "text.svml",
+    element: literal,
+    resolveReference: () => undefined,
+    resolveAsset: () => { throw new Error("no asset"); },
+  });
+  assert.equal((authored.records[0]?.value as { value?: { value?: string } }).value?.value, "Make a vertical product video.");
+
+  const assembled = parseStructuredElement({
+    name: "text.svml",
+    text: `<text:Render id="prompt" template={kit}>
+      <text:Param name="camera" value="handheld"/>
+      <text:Param name="strict" value="true" type="boolean"/>
+      <text:Set name="dialogue" text={dialogue}/>
+      <text:Append name="references" text={first}/>
+      <text:Append name="references" text={second}/>
+    </text:Render>`,
+  }, 0).element;
+  const refs = new Map<string, SurfaceResolvedReference>([
+    ["kit", { path: "kit", ref: { kind: "record", id: "kit" }, type: textTypes.template }],
+    ["dialogue", { path: "dialogue", ref: { kind: "component-output", component: "script", output: "text" }, type: textTypes.text }],
+    ["first", { path: "first", ref: { kind: "record", id: "first" }, type: textTypes.text }],
+    ["second", { path: "second", ref: { kind: "record", id: "second" }, type: textTypes.text }],
+  ]);
+  const result = await decodeTextRenderSurface({
+    sourceName: "text.svml",
+    element: assembled,
+    resolveReference: (path) => refs.get(path),
+    resolveAsset: () => { throw new Error("no asset"); },
+  });
+  assert.equal(result.components.length, 1);
+  assert.deepEqual(result.components[0]?.outputs, { text: "prompt" });
+  assert.deepEqual(result.components[0]?.inputs["binding:binding-0001:text"], {
+    kind: "component-output", component: "script", output: "text",
+  });
+  const initial = result.records.find((record) => record.id === "prompt.bindings");
+  assert.deepEqual((initial?.value as { value?: { values?: unknown } }).value?.values,
+    { camera: "handheld", strict: true });
+  assert.equal(result.records.filter((record) => record.type.name === "TextBinding").length, 3);
 });

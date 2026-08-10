@@ -75,6 +75,7 @@ export type CommentStickerStyle = {
 };
 
 export type CommentStickerContent = {
+  readonly contract: "svml.comment-sticker-content@1";
   readonly comment: string;
   readonly author?: string;
   readonly header?: string;
@@ -84,7 +85,6 @@ export type CommentStickerContent = {
 export type CommentStickerItemSpec = {
   readonly contract: "svml.comment-sticker-item-spec@1";
   readonly id: string;
-  readonly content: CommentStickerContent;
   readonly projection: TemporalWindowProjection;
   readonly expansion: OccurrenceExpansion;
 };

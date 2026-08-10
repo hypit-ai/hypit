@@ -2,9 +2,10 @@ import { artifactTypes } from "@narratage/artifact";
 import { sealGraphFragment } from "@narratage/elaborator";
 import { generationProducers } from "@narratage/generation";
 import { imageTransformProducers, imageTransformTypes } from "@narratage/image-transform";
-import { exactModelMediaInputNames } from "@narratage/model-kit";
-import type { ExactModelMediaInput } from "@narratage/model-kit";
+import { exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
+import type { ExactModelMediaInput, ExactModelTextInput } from "@narratage/model-kit";
 import type { FragmentOperation } from "@narratage/elaborator";
+import { textTypes } from "@narratage/text";
 
 import { gptImageEndpoints } from "./index.js";
 
@@ -18,16 +19,31 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
  */
 export function createGptImageCleanFragment(
   mediaInputs: readonly ExactModelMediaInput[] = [],
+  textInputs: readonly ExactModelTextInput[] = [],
 ) {
   const endpoint = gptImageEndpoints.image!;
-  const names = mediaInputs.map((item) => item.name);
-  if (new Set(names).size !== names.length) throw new Error("GPT Image media input names must be unique");
+  const names = [...mediaInputs, ...textInputs].map((item) => item.name);
+  if (new Set(names).size !== names.length) throw new Error("GPT Image input names must be unique");
   const inputs = [
     { name: "draft", type: endpoint.draftType },
     { name: "cleanup", type: imageTransformTypes.program },
   ];
   const operations: FragmentOperation[] = [];
   let draft = input("draft") as ReturnType<typeof input> | ReturnType<typeof operation>;
+  for (const [index, item] of textInputs.entries()) {
+    const binding = endpoint.textBindings[item.port];
+    if (binding === undefined) throw new Error(`gpt-image-2 has no text port ${item.port}`);
+    const name = exactModelTextInputName(item.name);
+    inputs.push({ name, type: textTypes.text });
+    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.port}`;
+    operations.push({
+      id,
+      producer: binding.producer,
+      inputs: { draft, text: input(name) },
+      result: { kind: "output", name: "draft" },
+    });
+    draft = operation(id);
+  }
   for (const [index, item] of mediaInputs.entries()) {
     const binding = endpoint.mediaBindings[item.port];
     if (binding === undefined) throw new Error(`gpt-image-2 has no media port ${item.port}`);
@@ -69,7 +85,10 @@ export function createGptImageCleanFragment(
       result: { kind: "need", name: "image", accepts: "exact" },
     },
   );
-  const shape = mediaInputs.map((item) => `${item.name}=${item.port}`).join(",") || "no-media";
+  const shape = [
+    ...textInputs.map((item) => `${item.name}=${item.port}:text`),
+    ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
+  ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
     name: `@narratage/gpt-image/clean[${shape}]@1`,
     inputs,

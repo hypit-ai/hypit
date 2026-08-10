@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeSeedanceSpeakerTakeSurface,
@@ -14,7 +14,7 @@ export const svmlPackage = {
     manifest: seedanceSpeakerManifest,
     specifiers: ["@narratage/seedance-speaker", "@narratage/seedance-speaker@1"],
   }],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: seedanceSpeakerModuleRef,
     surface: "take",
     mode: "structured",

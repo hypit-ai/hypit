@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeMediaTrackSurface,
   mediaTrackComponent,
@@ -12,7 +12,7 @@ export const svmlPackage = {
   name: "@narratage/media-track",
   modules: [{ manifest: mediaTrackManifest, specifiers: [mediaTrackModuleRef.name, `${mediaTrackModuleRef.name}@1`] }],
   components: [mediaTrackComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: mediaTrackModuleRef,
     surface: "track",
     mode: "structured",

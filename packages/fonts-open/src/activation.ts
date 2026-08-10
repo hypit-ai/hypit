@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeOpenFontFaceSurface,
@@ -17,14 +17,14 @@ export const svmlPackage = {
     specifiers: ["@narratage/fonts-open", "@narratage/fonts-open@1"],
   }],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: fontsOpenModuleRef,
       surface: "face",
       mode: "structured",
       implementationDigest: fontsOpenFaceSurfaceImplementationDigest,
       handler: decodeOpenFontFaceSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: fontsOpenModuleRef,
       surface: "stack",
       mode: "structured",

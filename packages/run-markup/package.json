@@ -1,0 +1,17 @@
+{
+  "name": "@narratage/run-markup",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@narratage/protocol": "workspace:*",
+    "@narratage/run": "workspace:*",
+    "@narratage/markup": "workspace:*"
+  }
+}

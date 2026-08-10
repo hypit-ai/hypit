@@ -15,6 +15,7 @@
     "@narratage/generation": "workspace:*",
     "@narratage/image-transform": "workspace:*",
     "@narratage/model-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

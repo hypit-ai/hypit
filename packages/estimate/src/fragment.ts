@@ -1,6 +1,6 @@
-import { narrativeTypes } from "@narratage/narrative";
 import { speechTypes } from "@narratage/speech";
 import { sealGraphFragment } from "@narratage/elaborator";
+import { textTypes } from "@narratage/text";
 
 import { estimateProducers, estimateTypes } from "./manifest.js";
 
@@ -10,7 +10,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const speechEstimateFragment = sealGraphFragment({
   name: "@narratage/estimate/speech@1",
   inputs: [
-    { name: "speech", type: narrativeTypes.speechExcerpt },
+    { name: "speech", type: textTypes.text },
     { name: "policy", type: estimateTypes.speechPolicy },
   ],
   operations: [{

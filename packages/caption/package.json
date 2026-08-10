@@ -15,7 +15,7 @@
     "@narratage/narrative": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/semantic-map": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
     "@narratage/script": "workspace:*",

@@ -15,10 +15,5 @@ export type SpeakerTakeIntent = {
   readonly aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive";
   readonly webSearch: boolean;
   readonly promptParameters: Readonly<Record<string, CanonicalValue>>;
-  readonly segment: {
-    readonly dialogue: string;
-  };
   readonly references: readonly SpeakerReference[];
-  readonly actionPrompt?: string;
-  readonly extraPrompt?: string;
 };

@@ -3,10 +3,10 @@ import test from "node:test";
 
 import { artifactTypes } from "@narratage/artifact";
 import { generationProducers, generationTypes } from "@narratage/generation";
-import { narrativeTypes } from "@narratage/narrative";
 import { digestOf } from "@narratage/protocol";
-import { parseStructuredElement } from "@narratage/text";
-import type { SurfaceResolvedReference } from "@narratage/text";
+import { sealText, textTypes } from "@narratage/text";
+import { parseStructuredElement } from "@narratage/markup";
+import type { SurfaceResolvedReference } from "@narratage/markup";
 
 import mimoNodePackage from "../src/activation.js";
 import {
@@ -40,17 +40,10 @@ function authored(path: string, type: SurfaceResolvedReference["type"], value: u
   };
 }
 
-const speech = {
-  contract: "svml.narrative-speech-excerpt@1",
-  kind: "segment",
-  id: "opening",
-  tokenStart: 0,
-  tokenEndExclusive: 4,
-  speech: "Exact authored words stay exact.",
-};
+const speech = sealText("Exact authored words stay exact.");
 const sample = { kind: "blob" as const, digest: digestOf("voice-sample"), size: 4, mediaType: "audio/wav" };
 const refs = new Map<string, SurfaceResolvedReference>([
-  ["story.segment.opening.speech", authored("story.segment.opening.speech", narrativeTypes.speechExcerpt, speech)],
+  ["story.segment.opening.speech", authored("story.segment.opening.speech", textTypes.text, speech)],
   ["voice", authored("voice", artifactTypes.blob, sample)],
 ]);
 const context = (source: string) => ({
@@ -100,12 +93,16 @@ test("the three author Surfaces are separate components with one ordinary audio 
     assert.deepEqual(Object.keys(result.components[0]!.outputs), ["audio"]);
     assert.deepEqual(result.fragments[0]!.operations.map((operation) => operation.producer.name), index === 2
       ? [
+          "bind-request-mimo-v2.5-tts-voiceclone-text-text",
           "bind-request-mimo-v2.5-tts-voiceclone-sample",
           "finalize-request-mimo-v2.5-tts-voiceclone",
           "request-mimo-v2.5-tts-voiceclone",
           generationProducers.primaryAudio.name,
         ]
       : [
+          index === 0
+            ? "bind-request-mimo-v2.5-tts-text-text"
+            : "bind-request-mimo-v2.5-tts-voicedesign-text-text",
           index === 0 ? "finalize-request-mimo-v2.5-tts" : "finalize-request-mimo-v2.5-tts-voicedesign",
           index === 0 ? "request-mimo-v2.5-tts" : "request-mimo-v2.5-tts-voicedesign",
           generationProducers.primaryAudio.name,
@@ -113,7 +110,11 @@ test("the three author Surfaces are separate components with one ordinary audio 
     assert.equal(result.records[0]!.value.kind, "inline");
     const request = result.records[0]!.value.kind === "inline"
       ? result.records[0]!.value.value as Record<string, unknown> : {};
-    assert.equal((request.ports as Record<string, unknown[]>).text?.[0], speech.speech);
+    assert.equal((request.ports as Record<string, unknown[]>).text, undefined);
+    assert.deepEqual(result.components[0]!.inputs["speech:text"], {
+      kind: "record",
+      id: "story.segment.opening.speech",
+    });
     assert.equal(JSON.stringify(request).includes("optimize_text_preview"), false);
   }
 });

@@ -85,33 +85,35 @@ speech.normal {
 
 **输出：** `{hook-duration.duration}`——估算的时长（秒），传递给生成组件。
 
-## seedance:Prompt
+## text:Value
 
-一个可复用的文本块，为 Seedance 生成提供视觉指导。
+一个可复用的字面 `Text` 值。它与模型无关，可以进入 Seedance、GPT Image 或任何声明的文字端口。
 
 ```svml
-<seedance:Prompt id="alice-direction">
+<import as="text" from="@narratage/text@1"/>
+
+<text:Value id="alice-direction">
   Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
   Calm, curious delivery; natural breathing and restrained hand movement.
-</seedance:Prompt>
+  Spoken dialogue — say exactly: What if editing began with meaning?
+</text:Value>
 ```
 
 | 属性 | 必填 | 说明 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 
-元素主体即为提示文本。通过 `seedance:Speech` 和 `seedance:Video` 的 `prompt` 属性引用。
+元素主体就是精确的 Text 值。`text:Render` 也能用模板和显式图输入产出同一类型。
 
 ## seedance:Speech
 
-通过 Seedance 模型生成说话人头部视频片段。这是低层级的生成组件——直接指定对话、提示和时长。
+通过 Seedance 模型生成口播视频片段。这是低层生成组件——完整的模型输入 Text 已包含需要朗读的台词。
 
 ```svml
 <seedance:Speech id="alice-take" model="mini"
-  dialogue={story.segment.opening.dialogue}
   prompt={alice-direction}
   duration="8">
-  <seedance:Reference image={alice-reference} role="character"/>
+  <seedance:Reference image={alice-reference}/>
 </seedance:Speech>
 ```
 
@@ -119,8 +121,7 @@ speech.normal {
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `model` | 是 | Seedance 模型名称：`mini` |
-| `dialogue` | 是 | 要进行口型同步的 Script 文本——通常为 `{script.segment.NAME.dialogue}` |
-| `prompt` | 是 | 视觉指导——引用 `seedance:Prompt` |
+| `prompt` | 是 | 完整模型输入——引用普通 `Text` |
 | `duration` | 是 | 片段时长（秒）（数字或 `{estimate.duration}` 引用） |
 | `resolution` | 否 | 输出分辨率：`480p`、`720p`（默认值因模型而异） |
 | `aspect-ratio` | 否 | 输出宽高比：`9:16`、`16:9`、`1:1` |
@@ -130,13 +131,12 @@ speech.normal {
 提供参考图片以保持角色一致性的子元素：
 
 ```svml
-<seedance:Reference image={alice-reference} role="character"/>
+<seedance:Reference image={alice-reference}/>
 ```
 
 | 属性 | 必填 | 说明 |
 |---|---|---|
 | `image` | 是 | 引用 `media:Image` 组件 |
-| `role` | 是 | 该参考的用途：`character`、`subject` |
 
 **输出：** `{alice-take}` 或 `{alice-take.video}`——生成的视频，传递给 `speech:Spine`。
 
@@ -147,7 +147,7 @@ speech.normal {
 ```svml
 <seedance:Video id="product-motion" model="mini"
   prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
+  <seedance:Reference image={product-reference}/>
 </seedance:Video>
 ```
 
@@ -155,7 +155,7 @@ speech.normal {
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `model` | 是 | Seedance 模型名称：`mini` |
-| `prompt` | 是 | 视觉指导——引用 `seedance:Prompt` |
+| `prompt` | 是 | 完整模型输入——引用普通 `Text` |
 | `duration` | 是 | 片段时长（秒） |
 
 同样接受 `<seedance:Reference>` 子元素作为参考图片。
@@ -164,7 +164,7 @@ speech.normal {
 
 ## speaker:Take
 
-基于 Prompt Kit 构建的更高层级说话人头部组件。无需编写原始提示，你只需提供一个包含生成设置的 Recipe 和一个自动组装提示的 Kit。
+基于领域无关 Text Program 构建的更高层口播组件。无需内联原始提示，只需提供生成 Recipe 和显式组装模型输入文字的 Text Template。
 
 ```svml
 <import as="speaker" from="@narratage/seedance-speaker@1"/>
@@ -186,7 +186,7 @@ speech.normal {
 | `dialogue` | 是 | Script 文本——通常为 `{script.segment.NAME.dialogue}` |
 | `duration` | 是 | 来自 `estimate:Speech` 的估算时长 |
 | `recipe` | 是 | SVS speaker Recipe（参见 [SVS 样式表](./styles.md#speaker)） |
-| `kit` | 是 | Prompt Kit SVS——用于组装提示的模板 |
+| `kit` | 是 | Text Template SVS——用于组装模型输入文字的模板 |
 
 ### speaker:Reference
 
@@ -205,17 +205,17 @@ speech.normal {
 
 **输出：** `{hook-take.video}`——生成的视频，传递给 `speech:Spine`。
 
-### Prompt Kits
+### Text Template
 
-Prompt Kit 是一种特殊的 SVS 文件，定义了包含有序块、变体选择、轴参数和 Slot 的结构化提示模板。官方 Kit 位于 `packages/seedance-speaker/kits/official-ugc-v1.svs`。
+Text Template 可以用 SVS 表达有序块、有限分支、轴参数和 Slot。官方模板位于 `packages/seedance-speaker/kits/official-ugc-v1.svs`。
 
-该 Kit 使用 Prompt Kit SVS 解析器导入：
+该源码自己选择可选的 Text Template SVS Frontend：
 
 ```svs
-<?svml using="@narratage/prompt-kit/svs@1"?>
+<?svml using="@narratage/text/svs@1"?>
 ```
 
-`studio.svs` 中的 Recipe 设置轴参数值（composition-stability、camera-motion、edit-rhythm、performance、gesture、voice-mode），Kit 会自动将它们组装成完整的提示。
+`studio.svs` 中的 Recipe 设置轴参数值。`speaker:Take` 把这些值和 Script 台词变成显式 Text Bindings；Text 渲染结果再通过普通图边进入 Seedance 的精确 `prompt` 端口。
 
 ## 组合示例
 

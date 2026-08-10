@@ -30,9 +30,9 @@ import {
   spatialSurfaceDigests,
 } from "@narratage/spatial";
 import {
-  TextSurfaceRegistry,
-  createTextAuthorFrontend,
-} from "@narratage/text";
+  MarkupSurfaceRegistry,
+  createMarkupAuthorFrontend,
+} from "@narratage/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
@@ -86,7 +86,7 @@ const closure = createResolvedClosure([
 ]);
 
 function source(id: string, text: string): AuthorSourceUnit {
-  const frontend = id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/text@1";
+  const frontend = id.endsWith(".svs") ? "@narratage/svs@1" : "@narratage/markup@1";
   return {
     id,
     name: id.split("/").at(-1) ?? id,
@@ -108,7 +108,7 @@ const validStyles = `<sheet version="1">
 </sheet>`;
 
 async function compileFilm(options: { readonly reverse?: boolean; readonly styles?: string } = {}) {
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
     records: [
       { id: "space", type: programSpaceTypes.programSpace, value: { kind: "inline", value: space }, range: element.range },
@@ -131,7 +131,7 @@ async function compileFilm(options: { readonly reverse?: boolean; readonly style
     decodeCanvasSurface,
   );
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
       if (request.from.startsWith("@narratage/film")) return filmModuleRef;

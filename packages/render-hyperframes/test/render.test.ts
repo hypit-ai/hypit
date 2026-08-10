@@ -70,9 +70,9 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 import {
-  createTextAuthorFrontend,
-  TextSurfaceRegistry,
-} from "@narratage/text";
+  createMarkupAuthorFrontend,
+  MarkupSurfaceRegistry,
+} from "@narratage/markup";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",
@@ -383,7 +383,7 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@narratage/text@1"?>\n${text}`,
+    text: `<?svml using="@narratage/markup@1"?>\n${text}`,
   };
 }
 
@@ -395,7 +395,7 @@ test("the official render Surface lowers real author source to the same BuildPla
     renderHyperframesManifest,
     fixtureManifest,
   ]);
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured(fixtureModule, "composition", fixtureSurfaceDigest, ({ element }) => ({
     records: [
       { id: "composition", type: compositionTypes.composition, value: stored(composition), range: element.range },
@@ -411,7 +411,7 @@ test("the official render Surface lowers real author source to the same BuildPla
     decodeHyperframesRenderSurface,
   );
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
       return request.from.startsWith("@narratage/render-hyperframes")

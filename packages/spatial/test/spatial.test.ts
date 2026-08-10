@@ -6,9 +6,9 @@ import { createResolvedClosure, sealBuildRequest, start } from "@narratage/core"
 import { AuthorFrontendRegistry, compileSourceClosure, resolveCompiledSourceExport } from "@narratage/elaborator";
 import type { AuthorSourceUnit } from "@narratage/elaborator";
 import {
-  TextSurfaceRegistry,
-  createTextAuthorFrontend,
-} from "@narratage/text";
+  MarkupSurfaceRegistry,
+  createMarkupAuthorFrontend,
+} from "@narratage/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 import {
@@ -196,12 +196,12 @@ test("SpatialPath is typed geometry and rejects an empty or stateful command str
 });
 
 function source(text: string): AuthorSourceUnit {
-  return { id: "/project/main.svml", name: "main.svml", text: `<?svml using="@narratage/text@1"?>\n${text}` };
+  return { id: "/project/main.svml", name: "main.svml", text: `<?svml using="@narratage/markup@1"?>\n${text}` };
 }
 
 test("self-described Spatial Surfaces produce an explicit Canvas edge and finite Frame graph", async () => {
   const closure = createResolvedClosure([spatialManifest]);
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
   surfaces.registerStructured(spatialModuleRef, "point", spatialSurfaceDigests.point, decodePointSurface);
   surfaces.registerStructured(spatialModuleRef, "path", spatialSurfaceDigests.path, decodePathSurface);
@@ -209,7 +209,7 @@ test("self-described Spatial Surfaces produce an explicit Canvas edge and finite
   surfaces.registerStructured(spatialModuleRef, "anchored-frame", spatialSurfaceDigests.anchoredFrame, decodeAnchoredFrameSurface);
   surfaces.registerStructured(spatialModuleRef, "aspect-frame", spatialSurfaceDigests.aspectFrame, decodeAspectFrameSurface);
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({ registry: surfaces, resolveModule: () => spatialModuleRef }));
+  frontends.register(createMarkupAuthorFrontend({ registry: surfaces, resolveModule: () => spatialModuleRef }));
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
   const compiled = await compileSourceClosure({

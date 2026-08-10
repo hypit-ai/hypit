@@ -7,11 +7,11 @@ import {
   captionDisplaySequence,
   captionDisplaySequenceValue,
   captionSelectionWordSubsetValue,
-  narrativeDialogueExcerptValue,
+  narrativeDialogueTextValue,
   narrativeSegmentExcerptValue,
   narrativeMomentValue,
   narrativeSelectionValue,
-  narrativeSpeechExcerptValue,
+  narrativeSpeechTextValue,
   narrativeSourceMap,
   narrativeValue,
 } from "./narrative.js";
@@ -19,13 +19,12 @@ import {
   captionCorrespondenceType,
   captionDisplayType,
   captionDisplayWordSubsetType,
-  narrativeDialogueExcerptType,
   narrativeExcerptType,
   narrativeMomentType,
   narrativeSelectionType,
-  narrativeSpeechExcerptType,
   narrativeType,
 } from "./manifest.js";
+import { textTypes } from "@narratage/text";
 import { parseScript } from "./parser.js";
 import type { ScriptSurfaceInput, ScriptSurfaceOutput } from "./types.js";
 
@@ -104,14 +103,14 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       ...parsed.segments.flatMap((segment) => [
         {
           id: `${rawId}.segment.${segment.id}.dialogue`,
-          type: narrativeDialogueExcerptType,
-          value: { kind: "inline" as const, value: narrativeDialogueExcerptValue(segment) },
+          type: textTypes.text,
+          value: { kind: "inline" as const, value: narrativeDialogueTextValue(segment) },
           range: segment.range,
         },
         {
           id: `${rawId}.segment.${segment.id}.speech`,
-          type: narrativeSpeechExcerptType,
-          value: { kind: "inline" as const, value: narrativeSpeechExcerptValue(segment) },
+          type: textTypes.text,
+          value: { kind: "inline" as const, value: narrativeSpeechTextValue(segment) },
           range: segment.range,
         },
       ]),

@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   audioTrackComponent,
   audioTrackManifest,
@@ -12,7 +12,7 @@ export const svmlPackage = {
   name: "@narratage/audio-track",
   modules: [{ manifest: audioTrackManifest, specifiers: [audioTrackModuleRef.name, `${audioTrackModuleRef.name}@1`] }],
   components: [audioTrackComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: audioTrackModuleRef,
     surface: "track",
     mode: "structured",

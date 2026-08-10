@@ -1,5 +1,5 @@
 import { artifactTypes } from "@narratage/artifact";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
 
 import { synchronizedMediaFragment } from "./fragment.js";
 import { mediaPipelineTypes } from "./manifest.js";
@@ -17,7 +17,7 @@ function text(element: StructuredElement, name: string): string {
 }
 
 function ref(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {

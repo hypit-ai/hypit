@@ -30,7 +30,7 @@ mkdir -p packages/my-component/src packages/my-component/test
   "dependencies": {
     "@narratage/protocol": "workspace:*",
     "@narratage/elaborator": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   }
 }
 ```
@@ -60,13 +60,13 @@ Type 在名义上归属于 Module。Core 并不维护一个包含所有领域类
 
 ## 4. 实现 Surface handler
 
-Surface handler 把 Text Frontend 的 XML 元素解码成带类型的作者声明。
+Surface handler 把 Markup Frontend 的 XML 元素解码成带类型的作者声明。
 
 ```typescript
 // src/surface.ts
-import type { TextSurfaceDecoder } from "@narratage/text";
+import type { MarkupSurfaceDecoder } from "@narratage/markup";
 
-export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) => {
+export const decodeMyComponentSurface: MarkupSurfaceDecoder = (element, context) => {
   // Read attributes and children from the XML element
   // Validate inputs
   // Emit typed Records and Operations into context
@@ -83,7 +83,7 @@ export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) =
 
 ```typescript
 // src/activation.ts
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   myComponentManifest,
   myComponentModuleRef,
@@ -98,7 +98,7 @@ export const svmlPackage = {
     specifiers: ["@narratage/my-component", "@narratage/my-component@1"],
   }],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: myComponentModuleRef,
       surface: "my-widget",
       mode: "structured",
@@ -135,7 +135,7 @@ pnpm narratage lock-packages <lock-file> \
 ## 8. 在 Author Source 中使用
 
 ```xml
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 <svml>
   <import as="mine" from="@narratage/my-component@1"/>
 
@@ -150,9 +150,9 @@ pnpm narratage lock-packages <lock-file> \
 | 包 | 它展示了什么 |
 |---|---|
 | `packages/seedance/` | 带多个 Surface（Prompt、Speech、Video）的模型族 |
-| `packages/seedance-speaker/` | 组合 Script、Prompt Kit 和 Seedance 的更高层绑定 |
+| `packages/seedance-speaker/` | 组合 Script、Text Template 和 Seedance 的更高层绑定 |
 | `packages/caption/` | 公共 Program、Cue/字段合同和整 Atom 定时 |
 | `packages/caption-fine/` | 一种无字段的 Style 与 Track Surface 样式族 |
 | `packages/media-track/` | 带 Item/Sequence、图层、动效和交接行为的 Track |
-| `packages/text-track/` | 简单的文字叠加 Track |
+| `packages/typography-track/` | Typography 叠加 Track |
 | `packages/film/` | 消费同级 Track 的合成 target |

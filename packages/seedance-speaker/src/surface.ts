@@ -1,19 +1,19 @@
-import { narrativeTypes } from "@narratage/narrative";
-import type { NarrativeDialogueExcerpt } from "@narratage/narrative";
 import { speechTypes } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
 import type { CanonicalValue, StoredValue } from "@narratage/protocol";
 import { generationPort, sealGenerationMediaBinding } from "@narratage/generation";
 import type { GenerationMediaPort } from "@narratage/generation";
-import { exactModelMediaInputNames } from "@narratage/model-kit";
+import { exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
 import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
 import {
-  compilePromptKit,
-  promptKitTypes,
-  verifyPromptKitSpec,
-} from "@narratage/prompt-kit";
-import type { PromptKitSpec } from "@narratage/prompt-kit";
+  createTextRenderFragment,
+  sealTextBinding,
+  textTypes,
+  verifyText,
+  verifyTextTemplate,
+} from "@narratage/text";
+import type { TextTemplate } from "@narratage/text";
 import {
   seedanceEndpointsByModel,
   seedanceSpeechCompileProducers,
@@ -26,13 +26,13 @@ import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { createSeedanceSpeakerTakeFragment } from "./fragment.js";
 import {
-  bindSpeakerPromptKit,
-  renderSpeakerSpeechProgram,
+  createSpeakerSpeechProgram,
+  createSpeakerTextBindings,
   sealSpeakerTakeIntent,
   speakerMethodDefaults,
 } from "./kit.js";
@@ -68,7 +68,7 @@ function stringAttribute(element: StructuredElement, name: string): string {
 }
 
 function referencePath(element: StructuredElement, name: string): string {
-  const value: TextAttributeValue | undefined = element.attributes[name];
+  const value: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof value !== "object" || value.kind !== "reference" || value.path.length === 0) {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }
@@ -119,42 +119,49 @@ function recipeValue(
 function kitValue(
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
-): PromptKitSpec {
+): { readonly reference: SurfaceResolvedReference; readonly template: TextTemplate } {
   const reference = resolved(element, "kit", resolveReference);
-  if (!sameType(reference.type, promptKitTypes.spec)) {
-    throw new Error(`${element.name}.kit must reference a PromptKitSpec`);
+  if (!sameType(reference.type, textTypes.template)) {
+    throw new Error(`${element.name}.kit must reference a TextTemplate`);
   }
-  const spec = inline<PromptKitSpec>(reference, `${element.name}.kit`);
-  verifyPromptKitSpec(spec);
-  return spec;
+  const template = inline<TextTemplate>(reference, `${element.name}.kit`);
+  verifyTextTemplate(template);
+  return { reference, template };
 }
 
-function dialogueValue(
+function optionalTextValue(
   element: StructuredElement,
+  name: string,
+  resolveReference: (path: string) => SurfaceResolvedReference | undefined,
+): SurfaceResolvedReference | undefined {
+  if (element.attributes[name] === undefined) return undefined;
+  const reference = resolved(element, name, resolveReference);
+  if (!sameType(reference.type, textTypes.text)) {
+    throw new Error(`${element.name}.${name} must reference Text`);
+  }
+  const value = reference.record?.value;
+  if (value !== undefined) {
+    if (value.kind !== "inline") throw new Error(`${element.name}.${name} has an invalid authored Text value`);
+    verifyText(value.value);
+  }
+  return reference;
+}
+
+function requiredTextValue(
+  element: StructuredElement,
+  name: string,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ) {
-  const reference = resolved(element, "dialogue", resolveReference);
-  if (!sameType(reference.type, narrativeTypes.dialogueExcerpt)) {
-    throw new Error(`${element.name}.dialogue must reference a NarrativeDialogueExcerpt`);
+  const reference = resolved(element, name, resolveReference);
+  if (!sameType(reference.type, textTypes.text)) {
+    throw new Error(`${element.name}.${name} must reference Text`);
   }
-  const value = inline<{
-    readonly contract: string;
-    readonly id: string;
-    readonly tokenStart: number;
-    readonly tokenEndExclusive: number;
-    readonly dialogue: string;
-  }>(reference, `${element.name}.dialogue`);
-  if (
-    value.contract !== "svml.narrative-dialogue-excerpt@1"
-    || typeof value.id !== "string"
-    || !Number.isSafeInteger(value.tokenStart)
-    || !Number.isSafeInteger(value.tokenEndExclusive)
-    || typeof value.dialogue !== "string"
-    || value.dialogue.trim().length === 0
-  ) {
-    throw new Error(`${element.name}.dialogue is invalid`);
+  const value = reference.record?.value;
+  if (value !== undefined) {
+    if (value.kind !== "inline") throw new Error(`${element.name}.${name} has an invalid authored Text value`);
+    verifyText(value.value);
   }
-  return value;
+  return reference;
 }
 
 type ResolvedSpeakerReference = SpeakerReference & { readonly source: SurfaceResolvedReference };
@@ -252,7 +259,7 @@ function model(recipe: SvsRecipe): SeedanceModel {
 }
 
 export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "dialogue", "duration", "recipe", "kit"]);
+  attributes(element, ["id", "dialogue", "duration", "recipe", "kit"], ["action", "extra"]);
   const id = stringAttribute(element, "id");
   const kit = kitValue(element, resolveReference);
   const recipe = recipeValue(element, resolveReference);
@@ -263,18 +270,15 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
     throw new Error(`Speaker Recipe ${recipe.path}.kind must be ugc-talking-head`);
   }
   const selectedModel = model(recipe);
-  const dialogue = dialogueValue(element, resolveReference);
+  const dialogue = requiredTextValue(element, "dialogue", resolveReference);
+  const action = optionalTextValue(element, "action", resolveReference);
+  const extra = optionalTextValue(element, "extra", resolveReference);
   const refs = references(element, resolveReference);
-  const optionalPrompt = (name: "action" | "extra") => {
-    const value = recipe.properties[name];
-    if (value === undefined) return undefined;
-    if (typeof value !== "string" || value.trim().length === 0) {
-      throw new Error(`Speaker Recipe ${recipe.path}.${name} must be a non-empty string`);
+  for (const name of ["action", "extra"] as const) {
+    if (recipe.properties[name] !== undefined) {
+      throw new Error(`Speaker Recipe ${recipe.path}.${name} is content; pass it through ${element.name}.${name} as Text`);
     }
-    return value.trim();
-  };
-  const actionPrompt = optionalPrompt("action");
-  const extraPrompt = optionalPrompt("extra");
+  }
   const promptParameters: Record<string, CanonicalValue> = {};
   for (const [name, value] of Object.entries(recipe.properties)) {
     if (reserved.has(name)) continue;
@@ -285,54 +289,82 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
   }
   const intent = sealSpeakerTakeIntent({
     contract: "svml.seedance-speaker-take-intent@1",
-    kit: kit.id,
+    kit: kit.reference.path.split(".").at(-1) ?? "speaker-kit",
     recipe: { path: recipe.path },
     model: selectedModel,
     resolution: recipeString(recipe, "resolution", speakerMethodDefaults.resolution) as "480p" | "720p" | "1080p",
     aspectRatio: recipeString(recipe, "aspect-ratio", speakerMethodDefaults.aspectRatio) as "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9" | "adaptive",
     webSearch: recipeBoolean(recipe, "web-search", speakerMethodDefaults.webSearch),
     promptParameters,
-    segment: {
-      dialogue: dialogue.dialogue,
-    },
     references: refs.map(({ source: _source, ...reference }) => reference),
-    ...(actionPrompt === undefined ? {} : { actionPrompt }),
-    ...(extraPrompt === undefined ? {} : { extraPrompt }),
   });
-  // All static Kit semantics are lowered here; Runtime never sees axes, defaults or branches.
-  const prompt = compilePromptKit(kit, bindSpeakerPromptKit(intent));
-  const program = renderSpeakerSpeechProgram(prompt, intent);
+  const bindings = createSpeakerTextBindings(intent);
+  // Static template semantics remain an ordinary deterministic graph step.
+  const program = createSpeakerSpeechProgram(intent);
   const duration = resolved(element, "duration", resolveReference);
   if (!sameType(duration.type, speechTypes.duration)) {
     throw new Error(`${element.name}.duration must reference a SpeechDuration`);
   }
-  const promptId = `${id}.prompt`;
+  const bindingsId = `${id}.bindings`;
   const programId = `${id}.program`;
   const endpoint = seedanceEndpointsByModel[selectedModel];
   const assembled = assembledReferences(id, endpoint, refs, element.range);
-  const fragment = createSeedanceSpeakerTakeFragment(
+  const dynamicText = [
+    { name: "dialogue", source: dialogue.ref },
+    ...(action === undefined ? [] : [{ name: "action", source: action.ref }]),
+    ...(extra === undefined ? [] : [{ name: "extra", source: extra.ref }]),
+  ];
+  const promptFragment = createTextRenderFragment(dynamicText.map(({ name }) => ({ name })));
+  const generationFragment = createSeedanceSpeakerTakeFragment(
     endpoint,
     seedanceSpeechCompileProducers[selectedModel],
     assembled.mediaInputs,
   );
   return {
     records: [{
-      id: promptId,
-      type: promptKitTypes.program,
-      value: { kind: "inline", value: prompt as unknown as CanonicalValue },
+      id: bindingsId,
+      type: textTypes.bindings,
+      value: { kind: "inline", value: bindings as unknown as CanonicalValue },
       range: element.range,
     }, {
       id: programId,
       type: seedanceTypes.speechSpine,
       value: { kind: "inline", value: program as unknown as CanonicalValue },
       range: element.range,
-    }, ...assembled.records],
+    }, ...dynamicText.map(({ name }) => ({
+      id: `${id}.${name}-binding`,
+      type: textTypes.binding,
+      value: {
+        kind: "inline" as const,
+        value: sealTextBinding({ name, mode: "set" }) as unknown as CanonicalValue,
+      },
+      range: element.range,
+    })), ...assembled.records],
     components: [{
+      id: `${id}.render-prompt`,
+      fragment: promptFragment.id,
+      inputs: {
+        template: kit.reference.ref,
+        bindings: { kind: "record", id: bindingsId },
+        ...Object.fromEntries(dynamicText.flatMap(({ name, source }) => [[
+          `binding:${name}:spec`, { kind: "record" as const, id: `${id}.${name}-binding` },
+        ], [
+          `binding:${name}:text`, source,
+        ]])),
+      },
+      outputs: { text: `${id}.prompt` },
+      range: element.range,
+    }, {
       id,
-      fragment: fragment.id,
+      fragment: generationFragment.id,
       inputs: {
         program: { kind: "record", id: programId },
         duration: duration.ref,
+        [exactModelTextInputName("prompt")]: {
+          kind: "component-output",
+          component: `${id}.render-prompt`,
+          output: "text",
+        },
         ...assembled.inputs,
       },
       outputs: {
@@ -340,6 +372,6 @@ export const decodeSeedanceSpeakerTakeSurface: StructuredSurfaceHandler = ({ ele
       },
       range: element.range,
     }],
-    fragments: [fragment],
+    fragments: [promptFragment, generationFragment],
   };
 };

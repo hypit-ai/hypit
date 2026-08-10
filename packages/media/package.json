@@ -13,6 +13,6 @@
     "@narratage/artifact": "workspace:*",
     "@narratage/component-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   }
 }

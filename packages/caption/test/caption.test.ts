@@ -27,7 +27,7 @@ import {
   captionSelectionWordSubset,
   parseScript,
 } from "@narratage/script";
-import type { StructuredElement, SurfaceResolvedReference } from "@narratage/text";
+import type { StructuredElement, SurfaceResolvedReference } from "@narratage/markup";
 
 function locate(narrative: Narrative, durationSec: number, segments: readonly AlignedTranscriptSegment[]) {
   const space = sealProgramSpace({

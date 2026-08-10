@@ -7,13 +7,14 @@ import { semanticMapTypes } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
+import { sealText, textTypes } from "@narratage/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { createRankingFragment } from "./fragment.js";
 import type { RankingFragmentItem, RankingFragmentSound } from "./fragment.js";
@@ -21,6 +22,7 @@ import { rankingTypes } from "./manifest.js";
 import {
   assertRankingItemSpec,
   sealRankingHeader,
+  sealRankingTextItemShell,
 } from "./schedule.js";
 import {
   decodeColumnStyle,
@@ -32,6 +34,7 @@ import type {
   ColumnItemSpec,
   RankingItemSpec,
   RankingSoundStyle,
+  RankingTextItemShell,
   RankingVariant,
   TierBoardItemSpec,
   TopThreeItemSpec,
@@ -87,7 +90,7 @@ function boolean(element: StructuredElement, name: string, fallback: boolean): b
 }
 
 function reference(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: TypeRef,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
@@ -99,7 +102,7 @@ function reference(
 }
 
 function oneOfReference(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: readonly TypeRef[],
   resolve: (path: string) => SurfaceResolvedReference | undefined,
@@ -160,11 +163,25 @@ function plainChildText(element: StructuredElement): string {
   return value;
 }
 
+function textValue(
+  raw: MarkupAttributeValue | undefined,
+  label: string,
+  resolve: (path: string) => SurfaceResolvedReference | undefined,
+): string | SurfaceResolvedReference {
+  if (typeof raw === "string" && raw.trim().length > 0) return raw.trim();
+  return reference(raw, label, textTypes.text, resolve);
+}
+
 function itemIdentity(element: StructuredElement, suffix: string): string {
   return optionalText(element, "id") ?? `${localName(element).replace(/Item$/u, "").toLowerCase()}-${suffix}`;
 }
 
-function itemSpec(element: StructuredElement, variant: RankingVariant, suffix: string): RankingItemSpec {
+function itemSpec(
+  element: StructuredElement,
+  variant: RankingVariant,
+  suffix: string,
+  resolve: (path: string) => SurfaceResolvedReference | undefined,
+): { readonly spec: RankingItemSpec | RankingTextItemShell; readonly content?: SurfaceResolvedReference } {
   const id = itemIdentity(element, suffix);
   const stackingOrder = integer(element, "stack");
   let value: RankingItemSpec;
@@ -177,37 +194,54 @@ function itemSpec(element: StructuredElement, variant: RankingVariant, suffix: s
       contract: "svml.tier-board-item-spec@1", variant, id, tier: text(element, "tier"), entry,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies TierBoardItemSpec;
+    assertRankingItemSpec(value);
+    return { spec: value };
   } else if (variant === "column") {
     allowed(element, ["id", "label", "icon", "stack"]);
     empty(element);
-    value = {
-      contract: "svml.column-item-spec@1", variant, id, label: text(element, "label"),
+    const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
+    if (typeof label === "string") value = {
+      contract: "svml.column-item-spec@1", variant, id, label,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies ColumnItemSpec;
+    else return { spec: sealRankingTextItemShell({
+      contract: "svml.column-text-item-shell@1", variant, id,
+      ...(stackingOrder === undefined ? {} : { stackingOrder }),
+    }), content: label };
   } else if (variant === "top-three") {
     allowed(element, ["id", "label", "icon", "stack"]);
     empty(element);
-    value = {
-      contract: "svml.top-three-item-spec@1", variant, id, label: text(element, "label"),
+    const label = textValue(element.attributes.label, `${element.name}.label`, resolve);
+    if (typeof label === "string") value = {
+      contract: "svml.top-three-item-spec@1", variant, id, label,
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
     } satisfies TopThreeItemSpec;
+    else return { spec: sealRankingTextItemShell({
+      contract: "svml.top-three-text-item-shell@1", variant, id,
+      ...(stackingOrder === undefined ? {} : { stackingOrder }),
+    }), content: label };
   } else {
     allowed(element, ["id", "text", "winner", "emphasis-start", "emphasis-end", "stack"]);
-    const authoredText = optionalText(element, "text");
-    const content = authoredText ?? plainChildText(element);
-    if (authoredText !== undefined) empty(element);
+    const raw = element.attributes.text;
+    const content = raw === undefined ? plainChildText(element) : textValue(raw, `${element.name}.text`, resolve);
+    if (raw !== undefined) empty(element);
     const start = integer(element, "emphasis-start");
     const endExclusive = integer(element, "emphasis-end");
     if ((start === undefined) !== (endExclusive === undefined)) throw new Error(`${element.name} emphasis requires both emphasis-start and emphasis-end.`);
-    value = {
-      contract: "svml.typewriter-item-spec@1", variant, id, text: content,
-      winner: boolean(element, "winner", false),
+    const rest = {
+      variant, id, winner: boolean(element, "winner", false),
       ...(start === undefined || endExclusive === undefined ? {} : { emphasis: { start, endExclusive } }),
       ...(stackingOrder === undefined ? {} : { stackingOrder }),
+    } as const;
+    if (typeof content === "string") value = {
+      contract: "svml.typewriter-item-spec@1", ...rest, text: content,
     } satisfies TypewriterItemSpec;
+    else return { spec: sealRankingTextItemShell({
+      contract: "svml.typewriter-text-item-shell@1", ...rest,
+    }), content };
   }
   assertRankingItemSpec(value);
-  return value;
+  return { spec: value };
 }
 
 const variantDefinition = {
@@ -243,9 +277,12 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       outer: outer.ref, triggers: triggers.ref, terminal: terminal.ref, style: style.ref,
     };
     if (variant === "typewriter-list") {
-      const titleId = `${id}.title`;
-      records.push({ id: titleId, type: rankingTypes.title, value: { kind: "inline", value: { contract: "svml.ranking-title@1", value: text(element, "title") } }, range: element.range });
-      inputs.title = { kind: "record", id: titleId };
+      const title = textValue(element.attributes.title, `${element.name}.title`, resolveReference);
+      if (typeof title === "string") {
+        const titleId = `${id}.title`;
+        records.push({ id: titleId, type: textTypes.text, value: { kind: "inline", value: sealText(title) }, range: element.range });
+        inputs.title = { kind: "record", id: titleId };
+      } else inputs.title = title.ref;
     }
     const items: RankingFragmentItem[] = [];
     const itemIds = new Set<string>();
@@ -260,22 +297,25 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       if (localName(child) !== selected.tag) throw new Error(`${element.name} accepts ${selected.tag} children only.`);
       index += 1;
       const suffix = String(index).padStart(4, "0");
-      const spec = itemSpec(child, variant, suffix);
+      const authored = itemSpec(child, variant, suffix, resolveReference);
+      const spec = authored.spec;
       if (itemIds.has(spec.id)) throw new Error(`${element.name} has duplicate Item id ${spec.id}.`);
       itemIds.add(spec.id);
       hasStage ||= spec.variant === "tier-board" && spec.entry === "stage";
       hasWinner ||= spec.variant === "typewriter-list" && spec.winner;
       const specId = `${id}.item.${suffix}.spec`;
       const specName = `item-${suffix}-spec`;
-      records.push({ id: specId, type: rankingTypes.itemSpec, value: { kind: "inline", value: spec as unknown as CanonicalValue }, range: child.range });
+      records.push({ id: specId, type: authored.content === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell, value: { kind: "inline", value: spec as unknown as CanonicalValue }, range: child.range });
       inputs[specName] = { kind: "record", id: specId };
+      const contentName = authored.content === undefined ? undefined : `item-${suffix}-content`;
+      if (authored.content !== undefined) inputs[contentName!] = authored.content.ref;
       let iconName: string | undefined;
       if (variant === "tier-board" || child.attributes.icon !== undefined) {
         const icon = reference(child.attributes.icon, `${child.name}.icon`, mediaTypes.blobArtifact, resolveReference);
         iconName = `item-${suffix}-icon`;
         inputs[iconName] = icon.ref;
       }
-      items.push({ suffix, specName, ...(iconName === undefined ? {} : { iconName }) });
+      items.push({ suffix, specName, ...(contentName === undefined ? {} : { contentName }), ...(iconName === undefined ? {} : { iconName }) });
     }
     if (items.length === 0) throw new Error(`${element.name} requires at least one ${selected.tag}.`);
     const sound: RankingFragmentSound = {
