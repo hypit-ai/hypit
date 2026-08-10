@@ -9,6 +9,7 @@ import { digestOf } from "@narratage/protocol";
 import {
   imageTransformManifestDigest,
   imageTransformModuleRef,
+  imageTransformTypes,
 } from "@narratage/image-transform";
 
 export const gptImageModuleRef = { name: "@narratage/gpt-image", version: "1" } as const;
@@ -48,7 +49,7 @@ export function sealGptImage2Draft(
   return sealGenerationRequestDraft(gptImage2Ports, ports);
 }
 
-export const gptImageDefinition = defineExactModelModule({
+const gptImageBaseDefinition = defineExactModelModule({
   module: gptImageModuleRef,
   endpoints: [{
     key: "image",
@@ -58,10 +59,33 @@ export const gptImageDefinition = defineExactModelModule({
   }],
 });
 
-export const gptImageManifest = gptImageDefinition.manifest;
-export const gptImageManifestDigest = gptImageDefinition.manifestDigest;
-export const gptImageEndpoints = gptImageDefinition.endpoints;
-export const gptImageComponent = gptImageDefinition.component;
+export const gptImageEndpoints = gptImageBaseDefinition.endpoints;
+export const gptImageComponent = gptImageBaseDefinition.component;
+export const gptImageSurfaceImplementationDigests = {
+  image: digestOf("@narratage/gpt-image/image-surface@1"),
+  cleanImage: digestOf("@narratage/gpt-image/clean/image-surface@1"),
+} as const;
+const gptImageSurfaceDeclaration = {
+  name: "image",
+  tag: "Image",
+  mode: "structured" as const,
+  outputs: [gptImageEndpoints.image!.draftType, gptImageEndpoints.image!.mediaBindings.images!.type],
+  implementation: {
+    kind: "trusted-frontend-surface" as const,
+    locator: "@narratage/gpt-image/image-surface",
+    digest: gptImageSurfaceImplementationDigests.image,
+  },
+};
+export const gptImageManifest = {
+  ...gptImageBaseDefinition.manifest,
+  surfaces: [gptImageSurfaceDeclaration],
+};
+export const gptImageManifestDigest = digestOf(gptImageManifest);
+export const gptImageDefinition = {
+  ...gptImageBaseDefinition,
+  manifest: gptImageManifest,
+  manifestDigest: gptImageManifestDigest,
+};
 
 /** Optional authoring submodule; the exact GPT model remains independent of post-processing. */
 export const gptImageCleanModuleRef = { name: "@narratage/gpt-image/clean", version: "1" } as const;
@@ -75,7 +99,21 @@ export const gptImageCleanManifest = {
   ],
   types: [],
   capabilities: [],
-  surfaces: [],
+  surfaces: [{
+    name: "image",
+    tag: "Image",
+    mode: "structured" as const,
+    outputs: [
+      gptImageEndpoints.image!.draftType,
+      gptImageEndpoints.image!.mediaBindings.images!.type,
+      imageTransformTypes.program,
+    ],
+    implementation: {
+      kind: "trusted-frontend-surface" as const,
+      locator: "@narratage/gpt-image/clean/image-surface",
+      digest: gptImageSurfaceImplementationDigests.cleanImage,
+    },
+  }],
   producers: [],
 };
 export const gptImageCleanManifestDigest = digestOf(gptImageCleanManifest);

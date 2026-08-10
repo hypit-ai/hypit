@@ -1,6 +1,7 @@
 import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
+import { digestOf } from "@narratage/protocol";
 
 export const grokImagineModuleRef = { name: "@narratage/grok-imagine", version: "1" } as const;
 export const grokImagineModels = ["grok-imagine-video", "grok-imagine-video-1.5-preview"] as const;
@@ -58,7 +59,7 @@ export function sealGrokImagineRequest(
   return sealGenerationPortRequest(grokImaginePorts[model], ports);
 }
 
-export const grokImagineDefinition = defineExactModelModule({
+const grokImagineBaseDefinition = defineExactModelModule({
   module: grokImagineModuleRef,
   endpoints: [
     {
@@ -76,7 +77,38 @@ export const grokImagineDefinition = defineExactModelModule({
   ],
 });
 
-export const grokImagineManifest = grokImagineDefinition.manifest;
-export const grokImagineManifestDigest = grokImagineDefinition.manifestDigest;
-export const grokImagineEndpoints = grokImagineDefinition.endpoints;
-export const grokImagineComponent = grokImagineDefinition.component;
+export const grokImagineEndpoints = grokImagineBaseDefinition.endpoints;
+export const grokImagineComponent = grokImagineBaseDefinition.component;
+export const grokImagineSurfaceImplementationDigests = {
+  video: digestOf("@narratage/grok-imagine/video-surface@1"),
+  previewVideo: digestOf("@narratage/grok-imagine/preview-video-surface@1"),
+} as const;
+const surface = (
+  name: "video" | "preview-video",
+  tag: "Video" | "PreviewVideo",
+  endpoint: NonNullable<(typeof grokImagineEndpoints)["video" | "preview-1.5"]>,
+  digest: (typeof grokImagineSurfaceImplementationDigests)["video" | "previewVideo"],
+) => ({
+  name,
+  tag,
+  mode: "structured" as const,
+  outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type],
+  implementation: {
+    kind: "trusted-frontend-surface" as const,
+    locator: `@narratage/grok-imagine/${name}-surface`,
+    digest,
+  },
+});
+export const grokImagineManifest = {
+  ...grokImagineBaseDefinition.manifest,
+  surfaces: [
+    surface("video", "Video", grokImagineEndpoints.video!, grokImagineSurfaceImplementationDigests.video),
+    surface("preview-video", "PreviewVideo", grokImagineEndpoints["preview-1.5"]!, grokImagineSurfaceImplementationDigests.previewVideo),
+  ],
+};
+export const grokImagineManifestDigest = digestOf(grokImagineManifest);
+export const grokImagineDefinition = {
+  ...grokImagineBaseDefinition,
+  manifest: grokImagineManifest,
+  manifestDigest: grokImagineManifestDigest,
+};

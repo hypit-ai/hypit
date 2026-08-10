@@ -1,6 +1,7 @@
 import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
+import { digestOf } from "@narratage/protocol";
 
 export const geminiOmniModuleRef = { name: "@narratage/gemini-omni", version: "1" } as const;
 
@@ -51,7 +52,7 @@ export function sealGeminiOmniRequest(
   return sealGenerationPortRequest(geminiOmniVideoPorts, ports);
 }
 
-export const geminiOmniDefinition = defineExactModelModule({
+const geminiOmniBaseDefinition = defineExactModelModule({
   module: geminiOmniModuleRef,
   endpoints: [{
     key: "video",
@@ -61,7 +62,31 @@ export const geminiOmniDefinition = defineExactModelModule({
   }],
 });
 
-export const geminiOmniManifest = geminiOmniDefinition.manifest;
-export const geminiOmniManifestDigest = geminiOmniDefinition.manifestDigest;
-export const geminiOmniEndpoints = geminiOmniDefinition.endpoints;
-export const geminiOmniComponent = geminiOmniDefinition.component;
+export const geminiOmniEndpoints = geminiOmniBaseDefinition.endpoints;
+export const geminiOmniComponent = geminiOmniBaseDefinition.component;
+export const geminiOmniSurfaceImplementationDigest = digestOf("@narratage/gemini-omni/video-surface@1");
+const geminiOmniEndpoint = geminiOmniEndpoints.video!;
+export const geminiOmniManifest = {
+  ...geminiOmniBaseDefinition.manifest,
+  surfaces: [{
+    name: "video",
+    tag: "Video",
+    mode: "structured" as const,
+    outputs: [
+      geminiOmniEndpoint.draftType,
+      geminiOmniEndpoint.mediaBindings.images!.type,
+      geminiOmniEndpoint.mediaBindings.excerpts!.type,
+    ],
+    implementation: {
+      kind: "trusted-frontend-surface" as const,
+      locator: "@narratage/gemini-omni/video-surface",
+      digest: geminiOmniSurfaceImplementationDigest,
+    },
+  }],
+};
+export const geminiOmniManifestDigest = digestOf(geminiOmniManifest);
+export const geminiOmniDefinition = {
+  ...geminiOmniBaseDefinition,
+  manifest: geminiOmniManifest,
+  manifestDigest: geminiOmniManifestDigest,
+};

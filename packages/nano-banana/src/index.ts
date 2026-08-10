@@ -1,6 +1,7 @@
 import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
+import { digestOf } from "@narratage/protocol";
 
 export const nanoBananaModuleRef = { name: "@narratage/nano-banana", version: "1" } as const;
 export const nanoBananaModels = ["nano-banana-2", "nano-banana-pro"] as const;
@@ -43,7 +44,7 @@ export function sealNanoBananaRequest(
   return sealGenerationPortRequest(nanoBananaPorts[model], ports);
 }
 
-export const nanoBananaDefinition = defineExactModelModule({
+const nanoBananaBaseDefinition = defineExactModelModule({
   module: nanoBananaModuleRef,
   endpoints: nanoBananaModels.map((model) => ({
     key: model === "nano-banana-2" ? "v2" : "pro",
@@ -53,7 +54,38 @@ export const nanoBananaDefinition = defineExactModelModule({
   })),
 });
 
-export const nanoBananaManifest = nanoBananaDefinition.manifest;
-export const nanoBananaManifestDigest = nanoBananaDefinition.manifestDigest;
-export const nanoBananaEndpoints = nanoBananaDefinition.endpoints;
-export const nanoBananaComponent = nanoBananaDefinition.component;
+export const nanoBananaEndpoints = nanoBananaBaseDefinition.endpoints;
+export const nanoBananaComponent = nanoBananaBaseDefinition.component;
+export const nanoBananaSurfaceImplementationDigests = {
+  image: digestOf("@narratage/nano-banana/image-surface@1"),
+  proImage: digestOf("@narratage/nano-banana/pro-image-surface@1"),
+} as const;
+const surface = (
+  name: "image" | "pro-image",
+  tag: "Image" | "ProImage",
+  endpoint: (typeof nanoBananaEndpoints)["v2" | "pro"],
+  digest: (typeof nanoBananaSurfaceImplementationDigests)["image" | "proImage"],
+) => ({
+  name,
+  tag,
+  mode: "structured" as const,
+  outputs: [endpoint!.draftType, endpoint!.mediaBindings.images!.type],
+  implementation: {
+    kind: "trusted-frontend-surface" as const,
+    locator: `@narratage/nano-banana/${name}-surface`,
+    digest,
+  },
+});
+export const nanoBananaManifest = {
+  ...nanoBananaBaseDefinition.manifest,
+  surfaces: [
+    surface("image", "Image", nanoBananaEndpoints.v2!, nanoBananaSurfaceImplementationDigests.image),
+    surface("pro-image", "ProImage", nanoBananaEndpoints.pro!, nanoBananaSurfaceImplementationDigests.proImage),
+  ],
+};
+export const nanoBananaManifestDigest = digestOf(nanoBananaManifest);
+export const nanoBananaDefinition = {
+  ...nanoBananaBaseDefinition,
+  manifest: nanoBananaManifest,
+  manifestDigest: nanoBananaManifestDigest,
+};

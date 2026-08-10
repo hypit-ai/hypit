@@ -10,8 +10,11 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@narratage/artifact": "workspace:*",
     "@narratage/generation": "workspace:*",
+    "@narratage/markup": "workspace:*",
     "@narratage/model-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }
