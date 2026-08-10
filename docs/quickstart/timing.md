@@ -22,11 +22,11 @@ program order — the final sequence of Segments in the finished video.
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<speech:Spine id="speech" canvas={vertical}>
-  <speech:Take source={hook-take.video} segment={story.segment.hook}/>
-  <speech:Take source={meeting-take.video} segment={story.segment.meeting}/>
-  <speech:Take source={evidence-take.video} segment={story.segment.evidence}/>
-  <speech:Take source={payoff-take.video} segment={story.segment.payoff}/>
+<speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Take video={hook-take.video} segment={story.segment.hook}/>
+  <speech:Take video={meeting-take.video} segment={story.segment.meeting}/>
+  <speech:Take video={evidence-take.video} segment={story.segment.evidence}/>
+  <speech:Take video={payoff-take.video} segment={story.segment.payoff}/>
 </speech:Spine>
 ```
 
@@ -34,6 +34,7 @@ program order — the final sequence of Segments in the finished video.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `canvas` | yes | Explicit CanvasSpace used by the restricted Media visual projection |
+| `frame-rate` | yes | Program rate as an integer or rational, such as `30` or `30000/1001` |
 
 ### speech:Take
 
@@ -41,8 +42,17 @@ Each `<speech:Take>` child binds a generated video to a Script Segment:
 
 | Attribute | Required | Description |
 |---|---|---|
-| `source` | yes | Generated video — for example, from `seedance:ReferenceVideo` |
+| `video` | exactly one | Generated/raw video Blob — for example `{take.video}` from Seedance |
+| `media` | exactly one | Already prepared `SynchronizedMedia`; bypasses automatic normalization |
 | `segment` | yes | Script Segment this take corresponds to — e.g. `{story.segment.hook}` |
+
+`video` and `media` are mutually exclusive. The normal AIGC path is `video={take.video}`. The
+Speech Surface expands that readable declaration into ordinary Media Pipeline Operations:
+inspect the container, select its primary moving video and default audio stream, then normalize
+both to the Spine's declared frame rate. A 30 fps source connected to a 60 fps Spine keeps its
+duration and is deterministically resampled to a 60 fps frame sequence; it is not played twice as
+fast. Use `media=` only when another graph branch has already produced the exact synchronized value
+you intend to assemble.
 
 The order of `<speech:Take>` children **determines the program order**. The first take starts at
 time zero; each subsequent take follows immediately.
@@ -85,8 +95,9 @@ in the Script become real time ranges and points for downstream visual component
 
 ## ProgramSpace
 
-ProgramSpace is not a component you declare — it is produced by `speech:Spine` and flows to every
-component that needs to know the total program duration and frame domain.
+ProgramSpace is not guessed from a global default. It is produced by `speech:Spine` from the
+explicit `frame-rate` and the exact normalized Take durations, then flows to every component that
+needs the total program duration and frame domain.
 
 ```svml
 <film:Film id="main" canvas={vertical} space={speech.space} ...>
@@ -134,9 +145,9 @@ The complete timing stage, from generated takes to map and space:
 
 <!-- Assemble takes in program order -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<speech:Spine id="speech" canvas={vertical}>
-  <speech:Take source={opening-take.video} segment={story.segment.opening}/>
-  <speech:Take source={answer-take.video} segment={story.segment.answer}/>
+<speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Take video={opening-take.video} segment={story.segment.opening}/>
+  <speech:Take video={answer-take.video} segment={story.segment.answer}/>
 </speech:Spine>
 
 <!-- Measure word timing -->

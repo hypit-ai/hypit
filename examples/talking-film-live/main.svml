@@ -87,9 +87,9 @@
 
   <space:Canvas id="vertical" width="480" height="854"/>
 
-  <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={opening-take.video} segment={story.segment.opening}/>
-    <speech:Take source={answer-take.video} segment={story.segment.answer}/>
+  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+    <speech:Take video={opening-take.video} segment={story.segment.opening}/>
+    <speech:Take video={answer-take.video} segment={story.segment.answer}/>
   </speech:Spine>
 
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>

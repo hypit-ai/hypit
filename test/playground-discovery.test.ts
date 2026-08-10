@@ -3,10 +3,6 @@ import { readdirSync } from "node:fs";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { assertHyperframesDocument, compileHyperframesDocument } from "@narratage/hyperframes";
-import { sealComposition } from "@narratage/composition";
-import { sealProgramSpace } from "@narratage/program-space";
-
 import { discoverPreviewProducers } from "../tools/playground/src/discovery/producers.js";
 import type { PreviewSources } from "../tools/playground/src/discovery/producers.js";
 
@@ -33,13 +29,6 @@ function workspace(): PreviewSources {
   }
   return { manifests: entries, components };
 }
-
-const programSpace = sealProgramSpace({
-  contract: "svml.program-space@1",
-  durationSec: 4,
-  frameRate: { numerator: 30, denominator: 1 },
-});
-const canvas = { width: 1080, height: 1920, clearColor: "#09090b" };
 
 test("previewable modules are the ones declaring a VisualTrack Producer", async () => {
   const found = await discoverPreviewProducers(workspace());
@@ -68,29 +57,12 @@ test("each producer carries its inputs' declared schemas", async () => {
   }
 });
 
-test("a producer whose inputs all carry defaults renders without anything being typed", async () => {
+test("no preview producer invents a ProgramSpace or media input", async () => {
   const found = await discoverPreviewProducers(workspace());
   const ready = found.filter((producer) =>
     producer.inputs.every((input) => input.initial !== undefined));
 
-  assert.deepEqual(ready.map((producer) => producer.id), [
-    "@narratage/screen-overlay#render-screen-overlay",
-  ]);
-
-  for (const producer of ready) {
-    const values = Object.fromEntries(producer.inputs.map((input) =>
-      [input.name, input.type.name === "ProgramSpace" ? programSpace : input.initial]));
-    const track = producer.invoke(values as never);
-    const document = compileHyperframesDocument(sealComposition({
-      contract: "svml.composition@1",
-      id: producer.moduleName,
-      canvas,
-      tracks: [track as never],
-    }), programSpace);
-    assert.doesNotThrow(() => assertHyperframesDocument(document),
-      `${producer.id} produced an illegal document from its own declared defaults`);
-    assert.match(document.html, /class="clip svml-visual-present"/u);
-  }
+  assert.deepEqual(ready, []);
 });
 
 test("a module offering no default for a media input says so rather than inventing one", async () => {

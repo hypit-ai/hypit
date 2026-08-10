@@ -70,9 +70,9 @@ Candidates and Operations.
 | `media:Image` | `@narratage/media` | content-addressed authored Artifact | implemented |
 | `wording:Value` | `@narratage/text` | model-neutral immutable Text value | implemented |
 | `seedance:ReferenceVideo model="mini"` | `@narratage/seedance` | exact multimodal Seedance Mini Need plus primary-video projection | implemented |
-| `speech:Spine` | `@narratage/speech` | ordered clips -> normalized Takes, one `SpeechBasis`, then ordinary projections | Surface, fold, media normalization and projection components implemented |
+| `speech:Spine` | `@narratage/speech-spine` | ordered generated-video or prepared-media Takes -> one `SpeechBasis`, then ordinary projections | Surface, fold, automatic media normalization and projection components implemented |
 | `whisperx:Alignment` | `@narratage/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@narratage/speech-alignment` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
-| `media-track:Track` | `@narratage/media-track` | semantic windows + normalized media + explicit Frame/Recipe -> peer Visual/optional Audio Tracks | Item/Sequence Surface and deterministic lowering implemented |
+| `media-track:Track` | `@narratage/media-track` | semantic windows + image/raw-video/prepared-media/surface inputs + explicit Frame/Recipe -> peer Visual/optional Audio Tracks | Item/Sequence Surface, automatic raw-video normalization and deterministic lowering implemented |
 | `caption-fine:Style` / `caption:Program` | Fine + common Caption | explicit default over all words + ordered whole-Style replacement by Role or word subset | implemented |
 | `caption-ai:Planner` | `@narratage/caption-gemini` | immutable display Atoms/Words + per-run requirements -> whole-Atom Cue cuts and optional per-Word fields | implemented; Google Vertex Endpoint implemented separately |
 | `caption-fine:Track` | `@narratage/caption-fine` | CaptionPlan + independent SemanticMap + complete Fine Styles -> VisualTrack | implemented |
