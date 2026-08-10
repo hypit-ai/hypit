@@ -22,10 +22,8 @@ import {
 } from "./archive.js";
 import { collectRunFrontends, loadRunFile } from "./run-file.js";
 import type { CliDistribution } from "./distribution.js";
-
-type CliIo = {
-  readonly write: (text: string) => void;
-};
+import { writeCliHelp, writeCliOutput } from "./output.js";
+import type { CliColorMode, CliIo } from "./output.js";
 
 type ParsedArgs = {
   readonly command: string | undefined;
@@ -53,6 +51,9 @@ type ParsedArgs = {
   readonly apply: boolean;
   /** Leave the declared external programs alone; build against what is running. */
   readonly noServices: boolean;
+  readonly json: boolean;
+  readonly color: CliColorMode;
+  readonly verbose: boolean;
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -79,8 +80,35 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   const pins: { output: string; build: string }[] = [];
   let apply = false;
   let noServices = false;
+  let json = false;
+  let color: CliColorMode = "auto";
+  let verbose = false;
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
+    if (item === "--json") {
+      json = true;
+      continue;
+    }
+    if (item === "--verbose") {
+      verbose = true;
+      continue;
+    }
+    if (item === "--debug") {
+      continue;
+    }
+    if (item === "--no-color") {
+      color = "never";
+      continue;
+    }
+    if (item === "--color") {
+      const value = rest[index + 1];
+      if (value !== "auto" && value !== "always" && value !== "never") {
+        throw new Error("--color requires auto, always or never");
+      }
+      color = value;
+      index += 1;
+      continue;
+    }
     if (item === "--target") {
       const target = rest[index + 1];
       if (target === undefined || target.startsWith("--")) throw new Error("--target requires an export name");
@@ -227,6 +255,9 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     pins,
     apply,
     noServices,
+    json,
+    color,
+    verbose,
   };
 }
 
@@ -245,6 +276,9 @@ function usage(): string {
     "  narratage inspect <build-id> --runtime profile.json|./svml.runtime.ts",
     "  narratage get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
     "  narratage cancel <build-id> --runtime profile.json|./svml.runtime.ts",
+    "",
+    "output:",
+    "  --json  --verbose  --color auto|always|never  --no-color  --debug",
   ].join("\n");
 }
 
@@ -345,6 +379,10 @@ export async function runCli(
   io: CliIo,
   distribution: CliDistribution,
 ): Promise<void> {
+  if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
+    writeCliHelp(io);
+    return;
+  }
   const args = parseArgs(argv);
   const known = args.command === "lock-packages" || args.command === "check" || args.command === "plan"
     || args.command === "build" || args.command === "status" || args.command === "builds"
@@ -371,12 +409,15 @@ export async function runCli(
       || args.packages.length > 0 || args.apply) {
       throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
     }
-    const result = await distribution.doctorRuntimeConfig(resolve(args.file!));
-    io.write(`${JSON.stringify({
+    const profile = resolve(args.file!);
+    const result = await distribution.doctorRuntimeConfig(profile);
+    const machine = {
+      format: "narratage.cli-doctor@1" as const,
       ok: !result.diagnostics.some((item) => item.severity === "error"),
       root: result.root,
       diagnostics: result.diagnostics,
-    }, null, 2)}\n`);
+    };
+    writeCliOutput(io, args, { kind: "doctor", machine, profile });
     return;
   }
   if (args.command === "services") {
@@ -602,7 +643,9 @@ export async function runCli(
           loadedPackageSet?.lock.digest,
         );
         const selected = loaded.run.graph.targetSets.find((item) => item.id === loaded.run.graph.selectedTargets)!;
-        io.write(`${JSON.stringify({
+        const machine = {
+          format: "narratage.cli-check@1" as const,
+          sourceKind: "run" as const,
           ok: true,
           run: loaded.path,
           source: loaded.authorSource,
@@ -618,11 +661,18 @@ export async function runCli(
           candidates: loaded.run.candidates,
           satisfactions: loaded.run.graph.satisfactions,
           steps: planned.plan.steps.length,
-        }, null, 2)}\n`);
+        } as const;
+        writeCliOutput(io, args, {
+          kind: "check-run",
+          machine,
+          frontend: sourceHeader.using,
+        });
         return;
       }
       const result = await compiler.compileSource(workspace.entry, workspace);
-      io.write(`${JSON.stringify({
+      const machine = {
+        format: "narratage.cli-check@1" as const,
+        sourceKind: "author" as const,
         ok: true,
         sourceClosure: result.closure.id,
         moduleClosure: result.program.closure.digest,
@@ -631,7 +681,13 @@ export async function runCli(
         sourceAssets: result.attachments.map((item) => item.artifact),
         modules: result.program.closure.modules.map((item) => `${item.ref.name}@${item.ref.version}`),
         exports: result.exports.map((item) => ({ name: item.name, type: item.type, kind: item.ref.kind })),
-      }, null, 2)}\n`);
+      } as const;
+      writeCliOutput(io, args, {
+        kind: "check-author",
+        machine,
+        source: workspace.entry.name,
+        frontend: sourceHeader.using,
+      });
       return;
     } finally {
       await runtime?.close();
@@ -702,7 +758,12 @@ export async function runCli(
       ...(runtime === undefined ? {} : { runtime }),
     });
     const result = loaded.compiler.planCompilation(loaded, loadedPackageSet?.lock.digest);
-    io.write(`${JSON.stringify(result.plan, null, 2)}\n`);
+    writeCliOutput(io, args, {
+      kind: "plan",
+      machine: result.plan,
+      run: loaded.path,
+      targetSet: loaded.run.graph.selectedTargets,
+    });
   } finally {
     await runtime?.close();
   }

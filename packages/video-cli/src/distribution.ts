@@ -3,13 +3,6 @@ import {
   createVideoCompiler,
   videoBuiltInPackageContributions,
 } from "./compiler.js";
-import {
-  bringExternalServicesUp,
-  doctorRuntimeConfig,
-  reportExternalServices,
-  takeExternalServicesDown,
-} from "@narratage/local";
-import { createVideoRuntimeFromConfig } from "./runtime-config.js";
 
 const packageRoot = import.meta.dirname;
 
@@ -20,11 +13,26 @@ export const videoCliDistribution: CliDistribution = {
   builtInPackageContributions: videoBuiltInPackageContributions,
   runFrontends: [],
   createCompiler: createVideoCompiler,
-  createRuntimeFromConfig: createVideoRuntimeFromConfig,
-  doctorRuntimeConfig: async (path) => await doctorRuntimeConfig(path, { packageRoot }),
+  createRuntimeFromConfig: async (path) => {
+    const { createVideoRuntimeFromConfig } = await import("./runtime-config.js");
+    return await createVideoRuntimeFromConfig(path);
+  },
+  doctorRuntimeConfig: async (path) => {
+    const { doctorRuntimeConfig } = await import("@narratage/local/config");
+    return await doctorRuntimeConfig(path, { packageRoot });
+  },
   externalServices: {
-    up: async (path, options) => await bringExternalServicesUp(path, { ...options, packageRoot }),
-    down: async (path) => await takeExternalServicesDown(path, { packageRoot }),
-    report: async (path) => await reportExternalServices(path, { packageRoot }),
+    up: async (path, options) => {
+      const { bringExternalServicesUp } = await import("@narratage/local/external-services");
+      return await bringExternalServicesUp(path, { ...options, packageRoot });
+    },
+    down: async (path) => {
+      const { takeExternalServicesDown } = await import("@narratage/local/external-services");
+      return await takeExternalServicesDown(path, { packageRoot });
+    },
+    report: async (path) => {
+      const { reportExternalServices } = await import("@narratage/local/external-services");
+      return await reportExternalServices(path, { packageRoot });
+    },
   },
 };

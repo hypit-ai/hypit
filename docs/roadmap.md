@@ -90,6 +90,46 @@ Add richer graph/plan views and structured diagnostics after this slice. The Cat
 later support richer history search, but it must only help the user author explicit Candidates.
 There is no automatic result reuse or hidden Candidate selection.
 
+### A6. Durable local dispatch and execution control — designed, not implemented
+
+The current CLI owns one queue-free in-process Scheduler. Without `--follow` it returns when a
+recoverable Endpoint becomes pending; with `--follow` that same terminal process waits and resumes.
+This does not yet provide a durable background Worker, authority-wide capacity across CLI processes
+or honest cancellation for Endpoints whose remote stop is asynchronous or unsupported.
+
+The target design is recorded in
+[`runtime-execution-control.md`](./runtime-execution-control.md):
+
+- dispatch durable Build identities, never serialized Core Commands;
+- run one or more fenced Workers against the same execution domain;
+- keep active and remote in-flight capacity visible and shared;
+- make `build` a cheap submit operation and `--follow` an observer only;
+- place tools, managed daemons, Workers and dependency probes beneath `runtime` lifecycle commands;
+- separate cancellation request, admission closure, Endpoint acknowledgment and factual terminal
+  outcome;
+- retain late paid Artifacts without reducing them into a suppressed Build branch.
+
+The first implementation remains local SQLite/filesystem. Hosted auth, billing, multi-tenancy and
+distributed deployment are not prerequisites.
+
+### A7. Command-line product surface — first renderer slice implemented
+
+The command engine is domain-neutral and functional. `check`, `plan` and `doctor` now pass structured
+results through compact TTY/plain and explicit JSON renderers; the executable entrypoint also emits
+structured JSON errors under `--json` and human error panels otherwise. The complete terminal
+product remains specified in
+[`cli-experience.md`](./cli-experience.md):
+
+- separate TTY, plain/CI and explicit JSON/JSONL renderers over one structured command result;
+- restrained tables, trees, watch views, diagnostics and cancellation confirmation;
+- no direct terminal output from component or Provider packages;
+- optional writable Credential Store facets plus structured Endpoint authentication descriptions;
+- `auth login/status/logout` without a central Provider switch or secret leakage;
+- public `init` only after explicit template and package-distribution work exists.
+
+Next extend the same renderer to archive and current service commands. Queue/Operation watch screens
+and honest cancellation depend on A6.
+
 ## B. Environment and Provider work
 
 ### B1. Explicit live Run sources — implemented
@@ -217,7 +257,8 @@ channel.
 - no automatic cache or prompt-based semantic reuse;
 - no Core `Pin` primitive;
 - no Runtime guessing of creative method or model family;
-- no universal queue package;
+- no queue or serialized ready-Command authority in Core; one explicitly selected Runtime dispatch
+  adapter may persist Build tickets and leases;
 - no hosted multi-tenant platform required for local developer use;
 - no cross-Track effect system or Base FX placeholder.
 - no VLM temporal locator or spatial query package in this version.
