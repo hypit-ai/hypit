@@ -15,7 +15,7 @@ hiding the graph:
 <import as="ugc" source="./ugc-template.svs"/>
 
 <text:Value id="extra">Keep the product readable.</text:Value>
-<text:Render id="prompt" template={ugc.product-shot}>
+<text:Render id="prompt" template={ugc.product-shot} recipe={studio.product-shot}>
   <text:Param name="camera" value="handheld"/>
   <text:Param name="strict" value="true" type="boolean"/>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
@@ -26,6 +26,12 @@ hiding the graph:
 `Value` authors `Text`; `Render` authors text, number or boolean Params and connects each
 `Set`/`Append` Text reference as an explicit graph edge. The output `{prompt}`
 can feed any model's declared text port.
+
+`recipe` is optional. When present, `Render` projects the Recipe's scalar properties that the
+template actually declares into its bindings. Template defaults, Recipe values and explicit
+`Param` children form the generic style → recipe → parameter precedence; unrelated Recipe fields
+such as model or resolution are ignored by the text program. No prompt-specific package code is
+needed.
 
 `@narratage/markup` is the XML-like authoring Frontend and
 `@narratage/typography-track` renders text into video. They are deliberately

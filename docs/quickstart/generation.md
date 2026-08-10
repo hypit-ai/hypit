@@ -183,6 +183,44 @@ The same media-operation package exposes `Transform` for ordered trim/retime and
 first, last, indexed or timestamped still extraction. Local FFmpeg and AWS Lambda are interchangeable
 Runtime Endpoints for these exact Needs; neither changes the author graph.
 
+## Seedance semantic Kits
+
+`@narratage/seedance-kits` contains six data-only Text Templates. A Kit is not a model wrapper: use
+generic `text:Render` to produce the prompt, then connect that Text and the real media references to
+the low-level Seedance Surface.
+
+```svml
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="broll-kit" source="../../packages/seedance-kits/kits/broll-v1.svs"/>
+
+<text:Render id="demo-prompt"
+  template={broll-kit.broll-v1}
+  recipe={studio.broll.product-demo}>
+  <text:Set name="story" text={copy.product-demo}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="demo" model="mini"
+  prompt={demo-prompt}
+  duration={demo-duration.duration}
+  resolution="720p"
+  aspect-ratio="9:16"
+  generate-audio="false">
+  <seedance:Reference image={scene}/>
+  <seedance:Reference image={product}/>
+</seedance:ReferenceVideo>
+```
+
+The project Recipe selects axes such as `material-mode`, `story-shape` and `camera-language`.
+`text:Render` reads only properties declared by the template; an explicit `text:Param` overrides a
+Recipe value. Dynamic story/dialogue/action/extra content remains a `Text` edge through `Set`.
+
+Available templates are `broll-v1`, `podcast-v1`, `call-v1`, `street-interview-v1`,
+`motion-reference-v1` and `camera-reference-v1`. Podcast and Call expect two ordered image
+references plus two ordered audio references; Street Interview expects one scene image plus two
+ordered voices; the two reference-transfer templates expect one subject image and one reference
+video. Those shapes are visible in `seedance:ReferenceVideo`, not hidden in Kit execution code.
+
 ## speaker:Take
 
 A higher-level talking-head component built on the domain-neutral Text Program. Instead of writing
