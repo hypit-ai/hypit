@@ -1,6 +1,7 @@
 import { videoContractManifests } from "../../test-support/video-domain.js";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionTypes } from "@narratage/composition";
+import { spatialTypes, spatialValidatorDigests } from "@narratage/spatial";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -11,6 +12,7 @@ import {
   sealBuildRequest,
   sealCompiledGraph,
   sealRecord,
+  sealTypeValidationReceipt,
   sealTypedModule,
   start,
 } from "@narratage/core";
@@ -74,6 +76,21 @@ function program(): LinkedProgram {
     sourceDigest: digestOf("source:fragment"),
     frontendClosureDigest: digestOf("frontend:fragment"),
   };
+  const rawCanvas = sealRecord({
+    id: "canvas:root",
+    type: spatialTypes.canvas,
+    value: { kind: "inline", value: {
+      contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
+      origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
+    } },
+    conformance: "exact",
+    origin,
+  });
+  const canvas = { ...rawCanvas, validation: sealTypeValidationReceipt({
+    type: rawCanvas.type,
+    recordDigest: rawCanvas.digest,
+    validatorDigest: spatialValidatorDigests.canvas,
+  }) };
   return link(closure, [sealTypedModule({
     id: "author:fragment",
     closureDigest: closure.digest,
@@ -92,6 +109,7 @@ function program(): LinkedProgram {
         conformance: "exact",
         origin,
       }),
+      canvas,
     ],
   })]);
 }
@@ -104,6 +122,7 @@ function speechFragment(): GraphFragment {
     inputs: [
       { name: "request", type: requestType },
       { name: "style", type: requestType },
+      { name: "canvas", type: spatialTypes.canvas },
     ],
     operations: [
       {
@@ -121,7 +140,7 @@ function speechFragment(): GraphFragment {
       {
         id: "visual",
         producer: speechBasisProducers.projectVisual,
-        inputs: { basis: operation("generate") },
+        inputs: { basis: operation("generate"), canvas: input("canvas") },
         result: { kind: "output", name: "visual" },
       },
     ],
@@ -144,7 +163,7 @@ function speechFragment(): GraphFragment {
         name: "visual",
         type: compositionTypes.visualTrack,
         root: operation("visual"),
-        semanticInputs: ["request", "style"],
+        semanticInputs: ["request", "style", "canvas"],
         fidelity: "exact",
       },
     ],
@@ -159,6 +178,7 @@ function instance(programValue: LinkedProgram, id: string) {
     inputs: {
       request: { kind: "record", id: "request:root" },
       style: { kind: "record", id: "style:root" },
+      canvas: { kind: "record", id: "canvas:root" },
     },
   });
 }

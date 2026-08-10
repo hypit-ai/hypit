@@ -1,6 +1,6 @@
 # `@narratage/generation`
 
-Provider-neutral generated-media contracts shared by exact image and video model packages.
+Provider-neutral generated-media contracts shared by exact image, video and audio model packages.
 
 The package owns `GenerationRequest`, `GeneratedImageSet` and `GeneratedVideoSet` identities,
 schemas, validators and graph facets. Generated sets are atomic Products: a Provider persists the

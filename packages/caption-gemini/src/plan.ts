@@ -42,32 +42,38 @@ function cueFromRaw(
   raw: unknown,
   runId: string,
   cueIndex: number,
-  runAtomIds: readonly string[],
+  runAtoms: CaptionGeminiRequest["runs"][number]["atoms"],
   cursor: number,
   declarations: ReadonlyMap<string, CaptionFieldDeclaration>,
 ): { readonly cue: CaptionPlannedCue; readonly nextCursor: number } {
   const value = object(raw, `Caption cue ${runId}/${cueIndex + 1}`);
-  exactKeys(value, ["after_atom_id", "fields"], `Caption cue ${runId}/${cueIndex + 1}`);
-  assert(typeof value.after_atom_id === "string", `Caption cue ${runId}/${cueIndex + 1} endpoint is invalid`);
-  const endpoint = runAtomIds.indexOf(value.after_atom_id, cursor);
-  assert(endpoint >= cursor, `Caption cue ${runId}/${cueIndex + 1} endpoint is outside its remaining run`);
-  const atomIds = runAtomIds.slice(cursor, endpoint + 1);
+  exactKeys(value, ["atom_count", "fields"], `Caption cue ${runId}/${cueIndex + 1}`);
+  assert(Number.isSafeInteger(value.atom_count) && (value.atom_count as number) > 0,
+    `Caption cue ${runId}/${cueIndex + 1} atom count is invalid`);
+  const nextCursor = cursor + (value.atom_count as number);
+  assert(nextCursor <= runAtoms.length, `Caption cue ${runId}/${cueIndex + 1} exceeds its remaining atoms`);
+  const cueAtoms = runAtoms.slice(cursor, nextCursor);
   assert(Array.isArray(value.fields), `Caption cue ${runId}/${cueIndex + 1} fields are invalid`);
   const assignments = value.fields.map((rawField, fieldIndex) => {
     const field = object(rawField, `Caption field ${runId}/${cueIndex + 1}/${fieldIndex + 1}`);
-    exactKeys(field, ["declaration_id", "atom_id", "value"], "Caption field assignment");
+    exactKeys(field, ["declaration_id", "atom_number", "word_number", "value"], "Caption field assignment");
     assert(typeof field.declaration_id === "string", "Caption field declaration id is invalid");
     const declaration = declarations.get(field.declaration_id);
     assert(declaration !== undefined, `Caption field ${field.declaration_id} was not declared for run ${runId}`);
-    assert(typeof field.atom_id === "string" && atomIds.includes(field.atom_id),
-      `Caption field ${declaration.id} atom lies outside its cue`);
+    assert(Number.isSafeInteger(field.atom_number)
+      && (field.atom_number as number) >= 1 && (field.atom_number as number) <= cueAtoms.length,
+    `Caption field ${declaration.id} Atom number lies outside its cue`);
+    const atom = cueAtoms[(field.atom_number as number) - 1]!;
+    assert(Number.isSafeInteger(field.word_number)
+      && (field.word_number as number) >= 1 && (field.word_number as number) <= atom.words.length,
+    `Caption field ${declaration.id} word number lies outside its Atom`);
     return {
       declarationId: declaration.id,
-      atomId: field.atom_id,
+      wordId: atom.words[(field.word_number as number) - 1]!.id,
       value: fieldValue(declaration, field.value),
     };
   });
-  const unique = new Set(assignments.map((field) => `${field.declarationId}\0${field.atomId}`));
+  const unique = new Set(assignments.map((field) => `${field.declarationId}\0${field.wordId}`));
   assert(unique.size === assignments.length, `Caption cue ${runId}/${cueIndex + 1} repeats a field assignment`);
   for (const declaration of declarations.values()) {
     const count = assignments.filter((field) => field.declarationId === declaration.id).length;
@@ -75,8 +81,8 @@ function cueFromRaw(
       `Caption field ${declaration.id} count ${count} violates ${declaration.minimumPerCue}..${declaration.maximumPerCue} per cue`);
   }
   return {
-    cue: { id: `${runId}:cue:${cueIndex + 1}`, atomIds, fields: assignments },
-    nextCursor: endpoint + 1,
+    cue: { id: `${runId}:cue:${cueIndex + 1}`, atomIds: cueAtoms.map((atom) => atom.id), fields: assignments },
+    nextCursor,
   };
 }
 
@@ -88,26 +94,25 @@ export function sealCaptionGeminiPlan(
   const root = object(response, "Caption Gemini response");
   exactKeys(root, ["runs"], "Caption Gemini response");
   assert(Array.isArray(root.runs), "Caption Gemini response runs are invalid");
-  const rawRuns = new Map<string, Record<string, unknown>>();
+  assert(root.runs.length === request.runs.length, "Caption Gemini response does not contain the exact run set");
+  const rawRuns: Record<string, unknown>[] = [];
   for (const rawRun of root.runs) {
     const run = object(rawRun, "Caption Gemini response run");
-    exactKeys(run, ["run_id", "cues"], "Caption Gemini response run");
-    assert(typeof run.run_id === "string" && !rawRuns.has(run.run_id), "Caption Gemini response run id is invalid or repeated");
-    rawRuns.set(run.run_id, run);
+    exactKeys(run, ["cues"], "Caption Gemini response run");
+    rawRuns.push(run);
   }
-  assert(rawRuns.size === request.runs.length, "Caption Gemini response does not contain the exact run set");
-  const runs = request.runs.map((expectedRun) => {
-    const rawRun = rawRuns.get(expectedRun.id);
+  const runs = request.runs.map((expectedRun, runIndex) => {
+    const rawRun = rawRuns[runIndex];
     assert(rawRun !== undefined && Array.isArray(rawRun.cues) && rawRun.cues.length > 0,
       `Caption run ${expectedRun.id} has no Cues`);
     const declarations = new Map(expectedRun.fields.map((field) => [field.id, field]));
     let cursor = 0;
     const cues = rawRun.cues.map((rawCue, cueIndex) => {
-      const planned = cueFromRaw(rawCue, expectedRun.id, cueIndex, expectedRun.atomIds, cursor, declarations);
+      const planned = cueFromRaw(rawCue, expectedRun.id, cueIndex, expectedRun.atoms, cursor, declarations);
       cursor = planned.nextCursor;
       return planned.cue;
     });
-    assert(cursor === expectedRun.atomIds.length, `Caption run ${expectedRun.id} Cues do not cover its final atom`);
+    assert(cursor === expectedRun.atoms.length, `Caption run ${expectedRun.id} Cues do not cover its final atom`);
     return { id: expectedRun.id, styleId: expectedRun.styleId, cues };
   });
   return sealCaptionPlan({

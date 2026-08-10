@@ -2,7 +2,7 @@ import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/g
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
 
-export const geminiOmniModuleRef = { name: "@narratage/gemini-omni", version: "0.0.0-dev" } as const;
+export const geminiOmniModuleRef = { name: "@narratage/gemini-omni", version: "1" } as const;
 
 export const geminiOmniVideoPorts: GenerationPortTable = sealGenerationPortTable({
   contract: "svml.generation-ports@1",

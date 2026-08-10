@@ -1,28 +1,17 @@
 import { narrativeTypes } from "@narratage/narrative";
-import type { Narrative, NarrativeSelectionRef } from "@narratage/narrative";
-import { programSpaceTypes } from "@narratage/program-space";
-import { semanticMapTypes } from "@narratage/semantic-map";
-import { svsRecipeType } from "@narratage/svs";
-import type { SvsRecipe } from "@narratage/svs";
+import type { CaptionDisplaySequence, CaptionDisplayWordSubset } from "@narratage/narrative";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
-import { captionTrackSurfaceFragment, plannedCaptionTrackSurfaceFragment } from "./fragment.js";
 import { captionTypes } from "./manifest.js";
-import { captionAppearanceFromRecipe } from "./recipe.js";
-import { sealCaptionTrackProgram } from "./track.js";
-import { resolveCaptionProgram, sealCaptionStyle } from "./style.js";
-import type { CaptionStyleApplication } from "./style.js";
-import type {
-  CaptionFieldDeclaration,
-  CaptionFieldValueSchema,
-  CaptionPresentationMode,
-  CaptionStyleIntent,
-} from "./types.js";
+import { captionWordsForRole } from "./display.js";
+import { resolveCaptionProgram } from "./style.js";
+import type { CaptionMuteApplication, CaptionStyleApplication } from "./style.js";
+import type { CaptionStyleIntent } from "./types.js";
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
@@ -32,12 +21,21 @@ function attributes(element: StructuredElement, required: readonly string[], opt
   const allowed = new Set([...required, ...optional]);
   const actual = Object.keys(element.attributes);
   if (required.some((name) => element.attributes[name] === undefined) || actual.some((name) => !allowed.has(name))) {
-    throw new Error(`${element.name} requires ${required.join(", ")}${optional.length ? `; optional: ${optional.join(", ")}` : ""}`);
+    throw new Error(
+      `${element.name} requires ${required.join(", ")}${optional.length ? `; optional: ${optional.join(", ")}` : ""}`,
+    );
   }
 }
 
 function stringAttribute(element: StructuredElement, name: string): string {
   const value = element.attributes[name];
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be a non-empty string`);
+  return value.trim();
+}
+
+function optionalString(element: StructuredElement, name: string): string | undefined {
+  const value = element.attributes[name];
+  if (value === undefined) return undefined;
   if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be a non-empty string`);
   return value.trim();
 }
@@ -48,54 +46,14 @@ function reference(
   expected: SurfaceResolvedReference["type"],
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {
-  const raw: TextAttributeValue | undefined = element.attributes[name];
-  if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${element.name}.${name} must be a whole-value reference`);
+  const raw: MarkupAttributeValue | undefined = element.attributes[name];
+  if (typeof raw !== "object" || raw.kind !== "reference") {
+    throw new Error(`${element.name}.${name} must be a whole-value reference`);
+  }
   const value = resolveReference(raw.path);
   if (value === undefined) throw new Error(`${element.name}.${name} cannot resolve ${raw.path}`);
   if (!sameType(value.type, expected)) throw new Error(`${element.name}.${name} has the wrong type`);
   return value;
-}
-
-function recipe(reference: SurfaceResolvedReference): SvsRecipe {
-  if (!sameType(reference.type, svsRecipeType) || reference.record?.value.kind !== "inline") {
-    throw new Error("Caption appearance must reference an authored SVS Recipe");
-  }
-  return reference.record.value.value as unknown as SvsRecipe;
-}
-
-function number(value: SvsRecipe, name: string): number {
-  const property = value.properties[name];
-  if (typeof property !== "number" || !Number.isFinite(property)) throw new Error(`Caption Recipe ${name} must be a number`);
-  return property;
-}
-
-function integer(value: SvsRecipe, name: string): number {
-  const property = number(value, name);
-  if (!Number.isSafeInteger(property)) throw new Error(`Caption Recipe ${name} must be an integer`);
-  return property;
-}
-
-function string(value: SvsRecipe, name: string): string {
-  const property = value.properties[name];
-  if (typeof property !== "string" || !property.trim()) throw new Error(`Caption Recipe ${name} must be a string`);
-  return property.trim();
-}
-
-function padding(value: string): { readonly x: number; readonly y: number } {
-  const parts = value.trim().split(/\s+/u).map(Number);
-  if ((parts.length !== 1 && parts.length !== 2) || parts.some((item) => !Number.isFinite(item) || item < 0)) {
-    throw new Error("Caption Recipe padding must contain one or two non-negative pixel numbers");
-  }
-  return { y: parts[0]!, x: parts[1] ?? parts[0]! };
-}
-
-function mode(element: StructuredElement): CaptionPresentationMode {
-  const value = element.attributes.mode;
-  if (value === undefined) return "whole";
-  if (typeof value === "string" && ["whole", "proportional-word", "character-flow"].includes(value)) {
-    return value as CaptionPresentationMode;
-  }
-  throw new Error(`${element.name}.mode is invalid`);
 }
 
 function inline<T>(reference: SurfaceResolvedReference, subject: string): T {
@@ -107,195 +65,61 @@ function localName(name: string): string {
   return name.includes(":") ? name.slice(name.lastIndexOf(":") + 1) : name;
 }
 
-function body(element: StructuredElement): string {
-  if (element.children.some((child) => child.kind === "element")) throw new Error(`${element.name} accepts only natural-language text`);
-  const value = element.children.map((child) => child.kind === "text" ? child.value : "").join("").trim();
-  if (!value) throw new Error(`${element.name} instruction is empty`);
-  return value.replace(/\s+/gu, " ");
-}
-
-function optionalString(element: StructuredElement, name: string): string | undefined {
-  const value = element.attributes[name];
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be a non-empty string`);
-  return value.trim();
-}
-
-function nonNegativeInteger(element: StructuredElement, name: string): number {
-  const value = Number(stringAttribute(element, name));
-  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${element.name}.${name} must be a non-negative integer`);
-  return value;
-}
-
-function fieldValue(element: StructuredElement): CaptionFieldValueSchema {
-  const type = stringAttribute(element, "type");
-  if (type === "boolean") return { kind: "boolean" };
-  if (type === "enum") {
-    const values = stringAttribute(element, "values").split(",").map((item) => item.trim()).filter(Boolean);
-    if (!values.length) throw new Error(`${element.name}.values is empty`);
-    return { kind: "enum", values };
-  }
-  if (type === "number") {
-    const minimum = optionalString(element, "minimum");
-    const maximum = optionalString(element, "maximum");
-    const min = minimum === undefined ? undefined : Number(minimum);
-    const max = maximum === undefined ? undefined : Number(maximum);
-    if ((min !== undefined && !Number.isFinite(min)) || (max !== undefined && !Number.isFinite(max))) {
-      throw new Error(`${element.name} number bounds must be finite`);
-    }
-    return { kind: "number", ...(min === undefined ? {} : { minimum: min }), ...(max === undefined ? {} : { maximum: max }) };
-  }
-  throw new Error(`${element.name}.type must be boolean, enum or number`);
-}
-
-/** Element attributes are this handler's; the Recipe belongs to ./recipe.ts. */
-function captionAppearance(element: StructuredElement, value: SvsRecipe) {
-  return { mode: mode(element), ...captionAppearanceFromRecipe(value.properties) } as const;
-}
-
-export const decodeCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "appearance"], ["mode"]);
-  const id = stringAttribute(element, "id");
-  const appearance = recipe(reference(element, "appearance", svsRecipeType, resolveReference));
-  let cueInstruction: string | undefined;
-  const fields: CaptionFieldDeclaration[] = [];
-  for (const child of element.children) {
-    if (child.kind === "text") {
-      if (child.value.trim()) throw new Error(`${element.name} accepts only Cues and Field children`);
-      continue;
-    }
-    if (localName(child.name) === "Cues") {
-      attributes(child, []);
-      if (cueInstruction !== undefined) throw new Error(`${element.name} repeats Cues`);
-      cueInstruction = body(child);
-    } else if (localName(child.name) === "Field") {
-      attributes(child, ["id", "type", "min-per-cue", "max-per-cue"], ["values", "minimum", "maximum"]);
-      fields.push({
-        id: stringAttribute(child, "id"),
-        value: fieldValue(child),
-        instruction: body(child),
-        minimumPerCue: nonNegativeInteger(child, "min-per-cue"),
-        maximumPerCue: nonNegativeInteger(child, "max-per-cue"),
-      });
-    } else {
-      throw new Error(`${element.name} accepts only Cues and Field children`);
-    }
-  }
-  if (cueInstruction === undefined) throw new Error(`${element.name} requires one Cues instruction`);
-  const style = sealCaptionStyle({
-    contract: "svml.caption-style@1",
-    id,
-    planning: { cueInstruction, fields },
-    presentation: captionAppearance(element, appearance),
-  });
-  return {
-    records: [{ id, type: captionTypes.style, value: { kind: "inline", value: style }, range: element.range }],
-    components: [],
-    fragments: [],
-  };
-};
-
+/**
+ * Resolve one complete word assignment at author-compilation time. Script has already projected
+ * Selection syntax to CaptionDisplayWordSubset data; this Surface lowers Role sugar from the same sequence.
+ */
 export const decodeCaptionProgramSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "narrative", "default"]);
+  attributes(element, ["id", "display", "default"]);
   const id = stringAttribute(element, "id");
-  const narrativeRef = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
-  const defaultRef = reference(element, "default", captionTypes.style, resolveReference);
+  const sequence = inline<CaptionDisplaySequence>(
+    reference(element, "display", narrativeTypes.captionDisplay, resolveReference),
+    `${element.name}.display`,
+  );
+  const defaultStyle = inline<CaptionStyleIntent>(
+    reference(element, "default", captionTypes.style, resolveReference),
+    `${element.name}.default`,
+  );
   const applications: CaptionStyleApplication[] = [];
+  const mutes: CaptionMuteApplication[] = [];
   for (const child of element.children) {
     if (child.kind === "text") {
-      if (child.value.trim()) throw new Error(`${element.name} accepts only Use children`);
+      if (child.value.trim()) throw new Error(`${element.name} accepts only Use or Mute children`);
       continue;
     }
-    if (localName(child.name) !== "Use") throw new Error(`${element.name} accepts only Use children`);
-    attributes(child, ["style"], ["role", "on"]);
+    const childName = localName(child.name);
+    if (childName !== "Use" && childName !== "Mute") {
+      throw new Error(`${element.name} accepts only Use or Mute children`);
+    }
+    attributes(child, childName === "Use" ? ["style"] : [], ["role", "words"]);
     const role = optionalString(child, "role");
-    const on = child.attributes.on;
-    if ((role === undefined) === (on === undefined)) throw new Error(`${child.name} requires exactly one of role or on`);
-    const styleRef = reference(child, "style", captionTypes.style, resolveReference);
-    const selector = role !== undefined
-      ? { kind: "role" as const, role }
-      : {
-          kind: "selection" as const,
-          selection: inline<NarrativeSelectionRef>(
-            reference(child, "on", narrativeTypes.selection, resolveReference),
-            `${child.name}.on`,
-          ),
-        };
-    applications.push({
-      id: `${id}.use.${applications.length + 1}`,
-      selector,
-      style: inline<CaptionStyleIntent>(styleRef, `${child.name}.style`),
-    });
+    const wordsAttribute = child.attributes.words;
+    if ((role === undefined) === (wordsAttribute === undefined)) {
+      throw new Error(`${child.name} requires exactly one of role or words`);
+    }
+    const words = role === undefined
+      ? inline<CaptionDisplayWordSubset>(
+          reference(child, "words", narrativeTypes.captionDisplayWordSubset, resolveReference),
+          `${child.name}.words`,
+        )
+      : captionWordsForRole(sequence, role);
+    if (childName === "Mute") {
+      mutes.push({ id: `${id}.mute.${mutes.length + 1}`, words });
+    } else {
+      applications.push({
+        id: `${id}.use.${applications.length + 1}`,
+        words,
+        style: inline<CaptionStyleIntent>(
+          reference(child, "style", captionTypes.style, resolveReference),
+          `${child.name}.style`,
+        ),
+      });
+    }
   }
-  const program = resolveCaptionProgram(
-    inline<Narrative>(narrativeRef, `${element.name}.narrative`),
-    id,
-    inline<CaptionStyleIntent>(defaultRef, `${element.name}.default`),
-    applications,
-  );
+  const program = resolveCaptionProgram(sequence, id, defaultStyle, applications, mutes);
   return {
     records: [{ id, type: captionTypes.program, value: { kind: "inline", value: program }, range: element.range }],
     components: [],
     fragments: [],
-  };
-};
-
-export const decodeCaptionTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  if (element.attributes.program !== undefined) {
-    attributes(element, ["id", "narrative", "map", "program", "plan", "space"]);
-    if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
-      throw new Error(`${element.name} with a Caption Program does not accept children`);
-    }
-    const id = stringAttribute(element, "id");
-    const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
-    const map = reference(element, "map", semanticMapTypes.complete, resolveReference);
-    const program = reference(element, "program", captionTypes.program, resolveReference);
-    const plan = reference(element, "plan", captionTypes.plan, resolveReference);
-    const space = reference(element, "space", programSpaceTypes.programSpace, resolveReference);
-    return {
-      records: [],
-      components: [{
-        id,
-        fragment: plannedCaptionTrackSurfaceFragment.id,
-        inputs: { narrative: narrative.ref, map: map.ref, program: program.ref, plan: plan.ref, space: space.ref },
-        outputs: { track: `${id}.track` },
-        range: element.range,
-      }],
-      fragments: [plannedCaptionTrackSurfaceFragment],
-    };
-  }
-  attributes(element, ["id", "narrative", "map", "space", "appearance"], ["mode"]);
-  if (element.children.some((child) => child.kind === "element" || child.value.trim())) {
-    throw new Error(`${element.name} provider-free base does not accept Role children`);
-  }
-  const id = stringAttribute(element, "id");
-  const narrative = reference(element, "narrative", narrativeTypes.narrative, resolveReference);
-  const map = reference(element, "map", semanticMapTypes.complete, resolveReference);
-  const space = reference(element, "space", programSpaceTypes.programSpace, resolveReference);
-  const appearance = recipe(reference(element, "appearance", svsRecipeType, resolveReference));
-  const resolvedAppearance = captionAppearance(element, appearance);
-  const program = sealCaptionTrackProgram({
-    contract: "svml.caption-track-program@1",
-    id,
-    mode: resolvedAppearance.mode,
-    stacking: { order: resolvedAppearance.stackingOrder, tieBreak: id },
-    style: resolvedAppearance.style,
-  });
-  const programId = `${id}.program`;
-  return {
-    records: [{ id: programId, type: captionTypes.trackProgram, value: { kind: "inline", value: program }, range: element.range }],
-    components: [{
-      id,
-      fragment: captionTrackSurfaceFragment.id,
-      inputs: {
-        narrative: narrative.ref,
-        map: map.ref,
-        space: space.ref,
-        program: { kind: "record", id: programId },
-      },
-      outputs: { track: `${id}.track` },
-      range: element.range,
-    }],
-    fragments: [captionTrackSurfaceFragment],
   };
 };

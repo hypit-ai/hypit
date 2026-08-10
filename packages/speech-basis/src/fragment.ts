@@ -3,6 +3,7 @@ import { speechTypes } from "@narratage/speech";
 import type { SpeechBasis } from "@narratage/speech";
 import { compositionTypes } from "@narratage/composition";
 import { sealGraphFragment } from "@narratage/elaborator";
+import { spatialTypes } from "@narratage/spatial";
 
 import { speechBasisProducers } from "./manifest.js";
 
@@ -12,7 +13,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 /** Project the independently demandable facts carried by one SpeechBasis. */
 export const speechBasisProjectionFragment = sealGraphFragment({
   name: "@narratage/speech-basis/projections@1",
-  inputs: [{ name: "basis", type: speechTypes.basis }],
+  inputs: [{ name: "basis", type: speechTypes.basis }, { name: "canvas", type: spatialTypes.canvas }],
   operations: [
     {
       id: "project-program-space",
@@ -29,7 +30,7 @@ export const speechBasisProjectionFragment = sealGraphFragment({
     {
       id: "project-visual",
       producer: speechBasisProducers.projectVisual,
-      inputs: { basis: input("basis") },
+      inputs: { basis: input("basis"), canvas: input("canvas") },
       result: { kind: "output", name: "visual" },
     },
     {
@@ -58,7 +59,7 @@ export const speechBasisProjectionFragment = sealGraphFragment({
       name: "visual",
       type: compositionTypes.visualTrack,
       root: operation("project-visual"),
-      semanticInputs: ["basis"],
+      semanticInputs: ["basis", "canvas"],
       fidelity: "exact",
     },
     {

@@ -22,13 +22,13 @@ no credentials, no local services.
 |---|---|
 | Component list | Every module that can put pixels on a frame |
 | W / H / fps / sec | The canvas and the frame domain |
-| Canvas from a stylesheet | Adopt a `.svs` file's frame size |
+| Appearance from a stylesheet | Adopt a `.svs` Film Recipe's background |
 | Input forms | One per input the component takes |
 | Scrubber | Frame-exact; the counter shows `frame / last` |
 
-The preview is the real thing. Each component's own renderer runs —
-`renderCaptionTrack`, `renderTextTrack`, `compileBrollProduct`,
-`projectSpeechVisual` — and `compileHyperframesDocument` produces the same
+The preview uses the installed modules' real Producer handlers. For example,
+Fine Caption, Media Track, Screen Overlay, Speech Basis and Typography Track
+all lower to `VisualTrack`, then `compileHyperframesDocument` produces the same
 document a Build would render.
 
 ## It lists nothing
@@ -79,9 +79,10 @@ is a state to pass through and not an error.
 
 ## Stylesheets
 
-Choosing a `.svs` file reads **only its Film Recipe**, and only for the frame
-size. Point it at `examples/talking-film-golden/studio.svs` and the canvas
-becomes 1080×1920 at 30 with that sheet's background.
+Choosing a `.svs` file reads **only its Film Recipe**, and only for Film
+appearance. Point it at `examples/talking-film-golden/studio.svs` and the
+preview adopts that Recipe's background. Canvas dimensions and time remain
+explicit preview-environment controls.
 
 Nothing else in the sheet is read. What a component looks like comes from the
 module that owns it, not from a stylesheet the playground happened to open.

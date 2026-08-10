@@ -2,24 +2,29 @@ import { canonicalize } from "@narratage/core";
 
 import { ScriptSyntaxError } from "./error.js";
 import {
-  captionProjectionValue,
-  narrativeDialogueExcerptValue,
+  captionCorrespondence,
+  captionCorrespondenceValue,
+  captionDisplaySequence,
+  captionDisplaySequenceValue,
+  captionSelectionWordSubsetValue,
+  narrativeDialogueTextValue,
   narrativeSegmentExcerptValue,
   narrativeMomentValue,
   narrativeSelectionValue,
-  narrativeSpeechExcerptValue,
+  narrativeSpeechTextValue,
   narrativeSourceMap,
   narrativeValue,
 } from "./narrative.js";
 import {
-  captionProjectionType,
-  narrativeDialogueExcerptType,
+  captionCorrespondenceType,
+  captionDisplayType,
+  captionDisplayWordSubsetType,
   narrativeExcerptType,
   narrativeMomentType,
   narrativeSelectionType,
-  narrativeSpeechExcerptType,
   narrativeType,
 } from "./manifest.js";
+import { textTypes } from "@narratage/text";
 import { parseScript } from "./parser.js";
 import type { ScriptSurfaceInput, ScriptSurfaceOutput } from "./types.js";
 
@@ -77,6 +82,9 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
     input.source.slice(input.contentStart, close.start),
     input.contentStart,
   );
+  const displayId = `${rawId}.caption`;
+  const display = captionDisplaySequence(parsed, displayId);
+  const correspondence = captionCorrespondence(parsed, displayId);
   return {
     nextOffset: close.end,
     records: [
@@ -95,23 +103,43 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       ...parsed.segments.flatMap((segment) => [
         {
           id: `${rawId}.segment.${segment.id}.dialogue`,
-          type: narrativeDialogueExcerptType,
-          value: { kind: "inline" as const, value: narrativeDialogueExcerptValue(segment) },
+          type: textTypes.text,
+          value: { kind: "inline" as const, value: narrativeDialogueTextValue(segment) },
           range: segment.range,
         },
         {
           id: `${rawId}.segment.${segment.id}.speech`,
-          type: narrativeSpeechExcerptType,
-          value: { kind: "inline" as const, value: narrativeSpeechExcerptValue(segment) },
+          type: textTypes.text,
+          value: { kind: "inline" as const, value: narrativeSpeechTextValue(segment) },
           range: segment.range,
         },
       ]),
       {
-        id: `${rawId}.caption`,
-        type: captionProjectionType,
-        value: { kind: "inline" as const, value: captionProjectionValue(parsed) },
+        id: displayId,
+        type: captionDisplayType,
+        value: { kind: "inline" as const, value: captionDisplaySequenceValue(parsed, displayId) },
         range: { start: input.openingStart, end: close.end },
       },
+      {
+        id: `${displayId}.correspondence`,
+        type: captionCorrespondenceType,
+        value: { kind: "inline" as const, value: captionCorrespondenceValue(parsed, displayId) },
+        range: { start: input.openingStart, end: close.end },
+      },
+      ...parsed.selections.map((selection) => ({
+        id: `${rawId}.caption.selection.${selection.id}`,
+        type: captionDisplayWordSubsetType,
+        value: { kind: "inline" as const, value: captionSelectionWordSubsetValue(
+          parsed,
+          display,
+          correspondence,
+          selection,
+        ) },
+        range: {
+          start: selection.occurrences[0]!.open.range.start,
+          end: selection.occurrences.at(-1)!.close.range.end,
+        },
+      })),
       ...parsed.selections.map((selection) => ({
         id: `${rawId}.selection.${selection.id}`,
         type: narrativeSelectionType,

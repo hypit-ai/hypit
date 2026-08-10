@@ -243,12 +243,22 @@ export class NodeDriver {
       result.value,
       this.validators,
     );
+    const runtimeImplementation = executable.registration.runtimeImplementation;
+    const runtimeClosure = this.endpoints.runtimeClosureDigest();
+    const implementation = runtimeImplementation === undefined
+      ? undefined
+      : {
+          digest: runtimeImplementation.digest,
+          configurationDigest: runtimeImplementation.configurationDigest,
+          ...(runtimeClosure === undefined ? {} : { runtimeClosure }),
+        };
     const content = {
       kind: "need-fulfilled",
       command: executable.command.id,
       value: result.value,
       requestDigest: executable.command.need.requestDigest,
       fulfiller: executable.endpointId,
+      ...(implementation === undefined ? {} : { implementation }),
       conformance: result.conformance,
       delivery: result.delivery,
       metadata: result.metadata,

@@ -13,14 +13,16 @@ a montage of scenes to match.
 That is exactly what this system does. The author writes a narrated Script with semantic anchors,
 and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
 Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml`
-extension; the workspace packages are published under the `@narratage` scope.
+extension; development packages in this workspace reserve the `@narratage` scope. They have not
+been published to npm yet.
 
 ## Install
 
 Requires Node.js 22+ and pnpm.
 
 ```bash
-pnpm install
+corepack enable
+pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 ```
@@ -40,7 +42,7 @@ Author Source says *what*. Run Source says *which*. Runtime Profile says *where*
 ## Your first graph check
 
 The `talking-film-graph-check` example compiles a complete video graph — Script, Seedance, Speech,
-WhisperX, Gemini Caption, B-roll, Text, Film, HyperFrames — without calling any external service.
+WhisperX, Gemini Caption, Media Track, Text, Film, HyperFrames — without calling any external service.
 
 ```bash
 pnpm narratage check examples/talking-film-graph-check/main.svml \
@@ -60,9 +62,8 @@ before spending money.
 |---|---|
 | [Script](./quickstart/script.md) | Segments, Role Cues, Dual Text, Selections, Moments, text projections |
 | [SVS Stylesheets](./quickstart/styles.md) | CSS-like Recipes for film, caption, B-roll, text, speech and fonts |
-| [Media & Generation](./quickstart/generation.md) | media:Image, media:Audio, estimate:Speech, Seedance, speaker:Take |
+| [Media & Generation](./quickstart/generation.md) | media:Image, media:Audio, estimate:Speech, Text Templates, Seedance |
 | [Timing & Assembly](./quickstart/timing.md) | speech:Spine, whisperx:Alignment, ProgramSpace, SemanticMap |
-| [Caption, B-roll & Text](./quickstart/tracks.md) | caption:Style/Program/Planner/Track, broll:Track, text:Track |
+| [Caption, Media & Text](./quickstart/tracks.md) | caption-fine:Style/Track, caption:Program, Planner, Media Track and Text |
 | [Film & Rendering](./quickstart/composition.md) | film:Film, render:Video, full pipeline walkthrough |
 | [Run Source & Builds](./quickstart/run.md) | .svrun syntax, targets, reuse, runtime profile, build workflow |
-

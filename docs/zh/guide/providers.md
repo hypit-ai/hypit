@@ -17,7 +17,7 @@ mkdir -p packages/provider-my-service/src packages/provider-my-service/test
 
 ## 2. 编写 package.json
 
-Provider 包依赖 Runtime 端口以及它所服务的模型族，绝不依赖 CLI：
+Provider 包依赖 Runtime 端口与共享能力词汇，不依赖精确模型包，也绝不依赖 CLI：
 
 ```json
 {
@@ -35,7 +35,7 @@ Provider 包依赖 Runtime 端口以及它所服务的模型族，绝不依赖 C
     "@narratage/runtime": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
     "@narratage/runtime-adapter-node": "workspace:*",
-    "@narratage/seedance": "workspace:*"
+    "@narratage/generation": "workspace:*"
   }
 }
 ```
@@ -68,6 +68,7 @@ export function createMyServiceProvider(options: {
 - `packages/provider-hyperframes-local/` — 本地 Chrome 渲染
 - `packages/provider-hyperframes-aws-lambda/` — 可恢复的 Step Functions/Lambda 渲染
 - `packages/provider-media-aws-lambda/` — 通过共享 ffmpeg 执行体完成同步 Lambda 媒体操作
+- `packages/provider-xiaomi-mimo/` — 不依赖 MiMo 模型包的官方即时 TTS API
 
 ## 4. 编写 activation 描述符
 
@@ -205,4 +206,5 @@ pnpm narratage doctor svml.runtime.json
 | `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |
 | `provider-hyperframes-aws-lambda` | 远程可恢复任务：确定性 Step Functions 提交、轮询与 S3 流式落库 |
 | `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |
-| `provider-media-aws-lambda` | 远程同步 Lambda：与本地 Provider 相同的五项媒体操作 |
+| `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的八项能力；当前已部署 canary 覆盖原来的五项 |
+| `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo TTS 请求落成持久化音频 Artifact |

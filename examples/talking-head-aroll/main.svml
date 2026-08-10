@@ -1,18 +1,22 @@
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
   <import as="media" from="@narratage/media@1"/>
   <import as="estimate" from="@narratage/estimate@1"/>
-  <import as="speaker" from="@narratage/seedance-speaker@1"/>
+  <import as="seedance" from="@narratage/seedance@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
-  <import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
+  <import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
 
   <script id="story">
     <hook>
@@ -37,59 +41,120 @@
   <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
   <media:Audio id="presenter-voice" src="./assets/presenter-voice.mp3"/>
 
+  <!-- Per-take performance remains ordinary authored Text, separate from spoken words. -->
+  <wording:Value id="hook-action">
+    Begin with urgent direct eye contact, then let the final admission land more quietly.
+  </wording:Value>
+  <wording:Value id="meeting-action">
+    Briefly indicate the recording tool, then return to the lens with visible relief.
+  </wording:Value>
+  <wording:Value id="evidence-action">
+    Build confidence across the explanation and use one compact connecting gesture.
+  </wording:Value>
+  <wording:Value id="payoff-action">
+    Deliver the reveal with a contained smile, then finish warmly and inclusively.
+  </wording:Value>
+
   <!-- Duration remains an explicit graph fact derived from the pronunciation projection. -->
   <estimate:Speech id="hook-duration" source={story.segment.hook.speech} policy={studio.speech.normal}/>
   <estimate:Speech id="meeting-duration" source={story.segment.meeting.speech} policy={studio.speech.normal}/>
   <estimate:Speech id="evidence-duration" source={story.segment.evidence.speech} policy={studio.speech.normal}/>
   <estimate:Speech id="payoff-duration" source={story.segment.payoff.speech} policy={studio.speech.normal}/>
 
-  <!-- Clean → product → product → clean; all four share the same voice reference. -->
-  <speaker:Take
+  <!-- Prompt assembly is an ordinary Text subgraph. -->
+  <wording:Render
+    id="hook-prompt"
+    template={speaker-kit.speaker-v1}
+    recipe={studio.speaker.host}
+  >
+    <wording:Set name="dialogue" text={story.segment.hook.dialogue}/>
+    <wording:Set name="action" text={hook-action}/>
+  </wording:Render>
+
+  <wording:Render
+    id="meeting-prompt"
+    template={speaker-kit.speaker-v1}
+    recipe={studio.speaker.host}
+  >
+    <wording:Set name="dialogue" text={story.segment.meeting.dialogue}/>
+    <wording:Set name="action" text={meeting-action}/>
+  </wording:Render>
+
+  <wording:Render
+    id="evidence-prompt"
+    template={speaker-kit.speaker-v1}
+    recipe={studio.speaker.host}
+  >
+    <wording:Set name="dialogue" text={story.segment.evidence.dialogue}/>
+    <wording:Set name="action" text={evidence-action}/>
+  </wording:Render>
+
+  <wording:Render
+    id="payoff-prompt"
+    template={speaker-kit.speaker-v1}
+    recipe={studio.speaker.host}
+  >
+    <wording:Set name="dialogue" text={story.segment.payoff.dialogue}/>
+    <wording:Set name="action" text={payoff-action}/>
+  </wording:Render>
+
+  <!-- Base → alternate → alternate → base; all four share the same voice reference. -->
+  <seedance:ReferenceVideo
     id="hook-take"
-    dialogue={story.segment.hook.dialogue}
+    model="mini"
+    prompt={hook-prompt}
     duration={hook-duration.duration}
-    recipe={studio.speaker.host}
-    kit={ugc.official-ugc-v1}
+    resolution="720p"
+    aspect-ratio="9:16"
+    generate-audio="true"
   >
-    <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-  </speaker:Take>
+    <seedance:Reference image={presenter-clean}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
 
-  <speaker:Take
+  <seedance:ReferenceVideo
     id="meeting-take"
-    dialogue={story.segment.meeting.dialogue}
+    model="mini"
+    prompt={meeting-prompt}
     duration={meeting-duration.duration}
-    recipe={studio.speaker.host}
-    kit={ugc.official-ugc-v1}
+    resolution="720p"
+    aspect-ratio="9:16"
+    generate-audio="true"
   >
-    <speaker:Reference image={presenter-alt} role="character-and-scene"/>
-    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-  </speaker:Take>
+    <seedance:Reference image={presenter-alt}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
 
-  <speaker:Take
+  <seedance:ReferenceVideo
     id="evidence-take"
-    dialogue={story.segment.evidence.dialogue}
+    model="mini"
+    prompt={evidence-prompt}
     duration={evidence-duration.duration}
-    recipe={studio.speaker.host}
-    kit={ugc.official-ugc-v1}
+    resolution="720p"
+    aspect-ratio="9:16"
+    generate-audio="true"
   >
-    <speaker:Reference image={presenter-alt} role="character-and-scene"/>
-    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-  </speaker:Take>
+    <seedance:Reference image={presenter-alt}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
 
-  <speaker:Take
+  <seedance:ReferenceVideo
     id="payoff-take"
-    dialogue={story.segment.payoff.dialogue}
+    model="mini"
+    prompt={payoff-prompt}
     duration={payoff-duration.duration}
-    recipe={studio.speaker.host}
-    kit={ugc.official-ugc-v1}
+    resolution="720p"
+    aspect-ratio="9:16"
+    generate-audio="true"
   >
-    <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-    <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-  </speaker:Take>
+    <seedance:Reference image={presenter-clean}/>
+    <seedance:Reference audio={presenter-voice}/>
+  </seedance:ReferenceVideo>
+
+  <space:Canvas id="vertical" width="720" height="1280"/>
 
   <!-- Four equal Takes become one ordered speech coordinate space and two peer Tracks. -->
-  <speech:Spine id="speech">
+  <speech:Spine id="speech" canvas={vertical}>
     <speech:Take source={hook-take.video} segment={story.segment.hook}/>
     <speech:Take source={meeting-take.video} segment={story.segment.meeting}/>
     <speech:Take source={evidence-take.video} segment={story.segment.evidence}/>
@@ -99,36 +164,30 @@
   <!-- One measured evidence pass locates the complete authored Script. -->
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <!-- Gemini sees display atoms and these requirements, never audio or timing. -->
-  <caption:Style id="primary-caption" appearance={studio.caption.primary} mode="proportional-word">
-    <caption:Cues>
-      Split each Script Segment into short complete semantic phrases of two to seven words.
-      Never cross a sentence or Segment boundary.
-    </caption:Cues>
-    <caption:Field id="important" type="boolean" min-per-cue="1" max-per-cue="2">
-      Select one or two words whose emphasis best communicates this Cue.
-    </caption:Field>
-  </caption:Style>
+  <!-- Gemini sees display words and these requirements, never audio or timing. -->
+  <fonts:Stack id="caption-font" family="inter" weight="800" style="normal"/>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}/>
 
-  <caption:Program id="caption-program" narrative={story} default={primary-caption}/>
+  <caption:Program id="caption-program" display={story.caption} default={primary-caption}/>
   <caption-ai:Planner
     id="caption-plan"
-    narrative={story}
+    display={story.caption}
     program={caption-program}
     model="gemini-2.5-flash"
   />
 
   <!-- Caption becomes an ordinary self-contained VisualTrack after joining the measured map. -->
-  <caption:Track
+  <caption-fine:Track
     id="captions"
-    narrative={story}
+    display={story.caption}
+    correspondence={story.caption.correspondence}
     map={timing.map}
     space={speech.space}
     program={caption-program}
     plan={caption-plan.plan}
   />
 
-  <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={captions.track}/>

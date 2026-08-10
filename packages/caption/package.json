@@ -11,14 +11,11 @@
   },
   "dependencies": {
     "@narratage/component-kit": "workspace:*",
-    "@narratage/composition": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/narrative": "workspace:*",
-    "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/semantic-map": "workspace:*",
-    "@narratage/svs": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
     "@narratage/script": "workspace:*",

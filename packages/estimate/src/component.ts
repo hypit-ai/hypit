@@ -1,7 +1,7 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
+import type { Text } from "@narratage/text";
 
 import { estimateProducers } from "./manifest.js";
 import { estimateSpeechDuration, estimateSpeechImplementationDigest } from "./program.js";
@@ -22,7 +22,7 @@ export const estimateComponent = {
         duration: {
           kind: "inline",
           value: canonicalize(estimateSpeechDuration(
-            inline<NarrativeSpeechExcerpt>(inputs.speech?.value, "NarrativeSpeechExcerpt"),
+            inline<Text>(inputs.speech?.value, "Speech Text"),
             inline<SpeechEstimatePolicy>(inputs.policy?.value, "SpeechEstimatePolicy"),
           )),
         },

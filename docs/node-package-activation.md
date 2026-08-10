@@ -40,7 +40,7 @@ The entry exports one `svml.node-package@1` `NodePackageContribution` containing
 
 - immutable Module Manifests and author import specifiers;
 - Author Frontends;
-- ABI-identified Host facets, such as official Text Surface handlers;
+- ABI-identified Host facets, such as official Markup Surface handlers;
 - host-neutral `ComponentPackage` values with enumerable Producer and Type Validator facets.
 
 Every executable facet carries its exact nominal identity and declared implementation digest. The
@@ -111,8 +111,8 @@ The package lock is an implementation lock, not a Runtime Profile. It contains n
 - Candidate selection or Build Target;
 - network, process or filesystem-write grant.
 
-The syntax-neutral Loader does not install any Host facet. `@narratage/compiler-text-node` explicitly
-selects the official Text Surface ABI; another compiler may select another ABI. The local compute
+The syntax-neutral Loader does not install any Host facet. `@narratage/compiler-markup-node` explicitly
+selects the official Markup Surface ABI; another compiler may select another ABI. The local compute
 Host receives only Producer and Validator registries and does not depend on Text. Source `<import>`
 merely selects an already activated logical author module for a Source Closure; it cannot cause
 Producer execution and cannot activate Provider or Runtime-service facets.
@@ -125,7 +125,7 @@ permission boundary before it can be treated as untrusted.
 
 Tests create installed packages unknown to the repository and prove all of the following:
 
-- a namespaced Text Surface compiles through the explicit Text compiler without a Core or CLI
+- a namespaced Markup Surface compiles through the explicit Markup compiler without a Core or CLI
   registration change;
 - unrelated Host-facet ABIs remain inert;
 - its authored value passes its locked Type-owner Validator and carries a validation receipt;

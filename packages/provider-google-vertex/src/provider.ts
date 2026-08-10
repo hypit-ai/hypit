@@ -16,10 +16,10 @@ import type { CredentialRef } from "@narratage/runtime";
 
 export const googleVertexProviderModuleRef = {
   name: "@narratage/provider-google-vertex",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const googleVertexProviderImplementationDigest = digestOf(
-  "@narratage/provider-google-vertex/caption-gemini@2:@google/genai@1.52.0",
+  "@narratage/provider-google-vertex/caption-atom-word-coordinates@1:@google/genai@1.52.0",
 );
 
 type GenerateCaptionContentInput = {
@@ -61,34 +61,34 @@ const captionResponseSchema: Schema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          run_id: { type: Type.STRING },
           cues: {
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
               properties: {
-                after_atom_id: { type: Type.STRING },
+                atom_count: { type: Type.INTEGER, minimum: 1 },
                 fields: {
                   type: Type.ARRAY,
                   items: {
                     type: Type.OBJECT,
                     properties: {
                       declaration_id: { type: Type.STRING },
-                      atom_id: { type: Type.STRING },
+                      atom_number: { type: Type.INTEGER, minimum: 1 },
+                      word_number: { type: Type.INTEGER, minimum: 1 },
                       value: { type: Type.STRING },
                     },
-                    required: ["declaration_id", "atom_id", "value"],
-                    propertyOrdering: ["declaration_id", "atom_id", "value"],
+                    required: ["declaration_id", "atom_number", "word_number", "value"],
+                    propertyOrdering: ["declaration_id", "atom_number", "word_number", "value"],
                   },
                 },
               },
-              required: ["after_atom_id", "fields"],
-              propertyOrdering: ["after_atom_id", "fields"],
+              required: ["atom_count", "fields"],
+              propertyOrdering: ["atom_count", "fields"],
             },
           },
         },
-        required: ["run_id", "cues"],
-        propertyOrdering: ["run_id", "cues"],
+        required: ["cues"],
+        propertyOrdering: ["cues"],
       },
     },
   },

@@ -16,9 +16,6 @@
   }
 
   film.vertical {
-    width: 1080;
-    height: 1920;
-    frame-rate: 30;
     background: #09090B;
   }
 
@@ -31,17 +28,23 @@
     fit: cover;
   }
 
-  broll.product {
+  media.product {
     stack-order: 40;
-    x: 0.08;
-    y: 0.20;
-    width: 0.84;
-    height: 0.48;
     fit: contain;
-    background: #111116;
+    playback: hold-start;
+    frame-paint: #111116;
+    clip: rounded;
     radius: 28;
-    enter: slide-up 8f;
-    exit: fade 6f;
+  }
+
+  motion.product {
+    enter: slide;
+    enter-frames: 8;
+    enter-direction: up;
+    enter-easing: ease-out;
+    exit: fade;
+    exit-frames: 6;
+    exit-easing: ease-in;
   }
 
   caption.short-cues {
@@ -51,6 +54,8 @@
   }
 
   caption.dialogue {
+    cue-min-words: 2;
+    cue-max-words: 5;
     stack-order: 70;
     x: 0.08;
     y: 0.76;
@@ -67,6 +72,8 @@
   }
 
   caption.alice {
+    cue-min-words: 2;
+    cue-max-words: 5;
     stack-order: 70;
     x: 0.08;
     y: 0.76;
@@ -83,6 +90,8 @@
   }
 
   caption.bob {
+    cue-min-words: 2;
+    cue-max-words: 5;
     stack-order: 70;
     x: 0.08;
     y: 0.76;
@@ -100,11 +109,6 @@
 
   text.title {
     stack-order: 90;
-    x: 0.06;
-    y: 0.06;
-    width: 0.88;
-    height: 0.10;
-    font: inter-black;
     weight: 900;
     size: 64;
     align: center;

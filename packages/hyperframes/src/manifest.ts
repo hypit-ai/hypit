@@ -1,12 +1,13 @@
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
+import { compositableSurfaceSchema, mediaDependency } from "@narratage/media";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { VISUAL_IR_V1 } from "@narratage/visual-ir";
 
 import { compileHyperframesImplementationDigest } from "./document.js";
 
-export const hyperframesModuleRef = { name: "@narratage/hyperframes", version: "0.0.0-dev" } as const;
+export const hyperframesModuleRef = { name: "@narratage/hyperframes", version: "1" } as const;
 export const hyperframesTypes = {
   document: { module: hyperframesModuleRef, name: "HyperframesDocument" },
 } satisfies Record<string, TypeRef>;
@@ -46,6 +47,7 @@ export const hyperframesDocumentSchema: ValueSchema = {
         mediaType: { schema: { kind: "string", minLength: 1 } },
       },
     } } },
+    surfaces: { schema: { kind: "array", items: compositableSurfaceSchema } },
     html: { schema: { kind: "string", minLength: 1 } },
   },
 };
@@ -54,7 +56,7 @@ export const hyperframesManifest: ModuleManifest = {
   format: "svml.module@1",
   name: hyperframesModuleRef.name,
   version: hyperframesModuleRef.version,
-  dependencies: [compositionDependency, programSpaceDependency],
+  dependencies: [compositionDependency, mediaDependency, programSpaceDependency],
   types: [{ name: hyperframesTypes.document.name, schema: hyperframesDocumentSchema }],
   capabilities: [],
   surfaces: [],

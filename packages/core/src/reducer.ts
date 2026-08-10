@@ -217,6 +217,7 @@ function acceptNeedEvent(
     need: need.id,
     requestDigest: event.requestDigest,
     fulfiller: event.fulfiller,
+    ...(event.implementation === undefined ? {} : { implementation: event.implementation }),
     fulfillmentConformance: event.conformance,
     conformance,
     delivery: event.delivery,

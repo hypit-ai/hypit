@@ -8,16 +8,15 @@ Supply these ignored local assets before checking or building:
 - `presenter-alt.png`
 - `presenter-voice.mp3`
 
-Every take uses the same voice-timbre reference. The visual reference sequence is clean, product,
-product, clean.
+Every take uses the same voice-timbre reference. The visual reference sequence is base, alternate,
+alternate, base.
 
-`@narratage/seedance-speaker` binds the reusable project SVS Recipe, Script dialogue and explicit
-references into a Prompt Kit Invocation. The generic `@narratage/prompt-kit` author compiler applies the
-separately imported `official-ugc-v1.svs` mapping. It emits an ordered Prompt Program and exact
-Seedance Speech Program while compiling `main.svml`; neither operation is a Runtime task.
+The data-only `seedance-kits/speaker` template and project SVS Recipe feed generic Text rendering.
+Each resulting Text output connects to an exact `seedance:ReferenceVideo` beside explicit image,
+audio and duration edges; prompt assembly is therefore part of the graph, not hidden Speaker logic.
 The four generated videos are normalized and concatenated into one Speech Spine. One canonical
 audio projection goes through WhisperX, direct Script alignment produces the complete SemanticMap,
-Gemini plans Cue cuts and the `important` field without seeing timing, and the resulting Caption
+Gemini plans Cue cuts without seeing timing, and the resulting Caption
 VisualTrack joins the peer speech visual/audio Tracks in Film. HyperFrames renders and muxes the
 single `final.video` target.
 
@@ -35,26 +34,28 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/speech \
   --package @narratage/speech-evidence \
   --package @narratage/semantic-map \
+  --package @narratage/spatial \
   --package @narratage/visual-ir \
   --package @narratage/composition \
   --package @narratage/svs \
   --package @narratage/script \
   --package @narratage/estimate \
-  --package @narratage/prompt-kit \
+  --package @narratage/text \
   --package @narratage/generation \
   --package @narratage/seedance \
-  --package @narratage/seedance-speaker \
   --package @narratage/speech-alignment \
   --package @narratage/speech-basis \
   --package @narratage/speech-spine \
   --package @narratage/whisperx \
   --package @narratage/caption \
+  --package @narratage/caption-fine \
   --package @narratage/caption-gemini \
+  --package @narratage/fonts-open \
   --package @narratage/film \
   --package @narratage/hyperframes \
   --package @narratage/media-pipeline \
   --package @narratage/render-hyperframes \
-  --package @narratage/run-text \
+  --package @narratage/run-markup \
   --root .
 
 pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.lock \
@@ -66,7 +67,7 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.l
   --root .
 ```
 
-Inspect all authored outputs—including `*.prompt` and `*.program`—without a paid call:
+Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:
 
 ```sh
 pnpm narratage check examples/talking-head-aroll/main.svml \
@@ -90,10 +91,10 @@ pnpm narratage build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --package-lock examples/talking-head-aroll/svml.packages.lock \
   --root . \
-  --build-id my-film-001 \
+  --build-id talking-head-film-001 \
   --follow
 
-pnpm narratage get my-film-001 \
+pnpm narratage get talking-head-film-001 \
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
@@ -107,15 +108,19 @@ pnpm narratage build examples/talking-head-aroll/reuse-generated.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --package-lock examples/talking-head-aroll/svml.packages.lock \
   --root . \
-  --build-id my-film-reuse-001 \
+  --build-id talking-head-film-reuse-001 \
   --follow
 ```
 
-`reuse-generated.svrun` names the four public shot aliases from `my-film-001`, exposes each
-verified historical Record as a zero-input Candidate and explicitly satisfies the corresponding
+`reuse-generated.svrun` names four shot aliases from `talking-head-film-001`, exposes each
+verified Record as a zero-input Candidate and explicitly satisfies the corresponding
 logical output as `substitute`. Reverse demand therefore removes all four Seedance branches while
 keeping media normalization, WhisperX, Gemini planning, Film and rendering reachable. This is a new
 Build, not a continuation or automatic cache hit.
+
+This brand-neutral fixture demonstrates the same topology with two explicit Run shapes: fresh
+generation and reuse through zero-input Build-Record Candidates. Local source assets and generated
+Records are intentionally not committed.
 
 The package lock lists independent packages. It is not a hidden video bundle, and the video CLI
 contains no authoring or Run-language package by default.

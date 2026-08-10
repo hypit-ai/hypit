@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { mediaTypes, verifyRenderedVisual } from "@narratage/media";
-import type { RenderedVisual } from "@narratage/media";
+import type { CompositableSurfaceRef, RenderedVisual } from "@narratage/media";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealComposition, sealVisualTrack } from "@narratage/composition";
 import assert from "node:assert/strict";
@@ -14,11 +14,12 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
 
 import { createLocalHyperframesProvider } from "../src/index.js";
+import { localHyperframesBrowserService } from "../src/service.js";
 
 const liveEnabled = process.env.SVML_BROWSER_TESTS === "1";
 const hasFfprobe = spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
 
-function documentFixture() {
+function documentFixture(surface?: CompositableSurfaceRef) {
   const programSpace = sealProgramSpace({
     contract: "svml.program-space@1",
     durationSec: 1,
@@ -43,22 +44,20 @@ function documentFixture() {
             { name: "background", value: "#261447" },
           ],
         },
-        {
-          id: "title",
+        ...(surface === undefined ? [] : [{
+          id: "surface",
           parent: "background",
           order: 1,
-          kind: "text",
-          text: "SVML",
+          kind: "surface" as const,
+          surface,
           style: [
-            { name: "position", value: "absolute" },
-            { name: "left", value: "28px" },
-            { name: "top", value: "28px" },
-            { name: "font-family", value: "sans-serif" },
-            { name: "font-size", value: "24px" },
-            { name: "font-weight", value: 700 },
-            { name: "color", value: "#ffffff" },
+            { name: "position" as const, value: "absolute" },
+            { name: "left" as const, value: "0px" },
+            { name: "top" as const, value: "0px" },
+            { name: "width" as const, value: "1px" },
+            { name: "height" as const, value: "1px" },
           ],
-        },
+        }]),
       ],
     }],
   });
@@ -70,8 +69,8 @@ function documentFixture() {
   }), programSpace);
 }
 
-function requestNeed(): Need {
-  const constraints = hyperframesVisualRequest(documentFixture());
+function requestNeed(document = documentFixture()): Need {
+  const constraints = hyperframesVisualRequest(document);
   return {
     id: "need:local-hyperframes-proof",
     capability: renderHyperframesCapabilities.renderVisual,
@@ -123,12 +122,33 @@ test("local HyperFrames Provider exposes one exact visual capability and two sep
     "Runtime request admission must remain separate from HyperFrames frame workers");
 });
 
+test("the selected HyperFrames Provider owns one idempotent browser preparation", () => {
+  const service = localHyperframesBrowserService({ root: "/project", instance: "hyperframes", config: {} });
+  assert.equal(service.id, "hyperframes-browser");
+  assert.equal(service.start, undefined);
+  assert.deepEqual(service.prepare?.args.slice(-2), ["browser", "ensure"]);
+});
+
 test("local HyperFrames Provider really renders a silent frame-exact MP4 with parallel workers", {
   skip: !liveEnabled || !hasFfprobe,
 }, async () => {
-  const request = requestNeed();
-  const { handler } = await handlerFor(request);
   const artifacts = new MemoryArtifactStore();
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  );
+  const surfaceArtifact = await artifacts.put(png, "image/png");
+  const surface: CompositableSurfaceRef = {
+    contract: "svml.compositable-surface@1",
+    artifact: surfaceArtifact,
+    width: 1,
+    height: 1,
+    colorSpace: "srgb",
+    alphaMode: "straight",
+    timing: { kind: "still" },
+  };
+  const request = requestNeed(documentFixture(surface));
+  const { handler } = await handlerFor(request);
   const output = await handler({
     command: { kind: "fulfill-need", id: "command:local-hyperframes-proof", need: request },
     need: request,
@@ -145,4 +165,13 @@ test("local HyperFrames Provider really renders a silent frame-exact MP4 with pa
   assert.deepEqual(visual.canvas, { width: 160, height: 96 });
   assert.equal(visual.muted, true);
   assert.equal(await artifacts.has(visual.artifact.digest), true);
+  assert.equal((output.metadata as Record<string, CanonicalValue>).contract,
+    "svml.hyperframes-renderer-attestation@1");
+  const metadata = output.metadata as {
+    readonly browser: { readonly digest: string; readonly version: string };
+    readonly surfaceValidations: readonly { readonly artifactDigest: string }[];
+  };
+  assert.match(metadata.browser.digest, /^sha256:[0-9a-f]{64}$/u);
+  assert.match(metadata.browser.version, /(?:Chrome|Chromium)/u);
+  assert.deepEqual(metadata.surfaceValidations.map((item) => item.artifactDigest), [surfaceArtifact.digest]);
 });

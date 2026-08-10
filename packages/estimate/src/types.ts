@@ -3,12 +3,15 @@ export type ResolvedSpeechEstimateLanguage = Exclude<SpeechEstimateLanguage, "au
 export type SpeechEstimatePace = "slow" | "normal" | "fast";
 export type SpeechEstimateRounding = "none" | "round" | "ceil";
 
-export type SpeechEstimatePolicy = {
+type SpeechEstimatePolicyBase = {
   readonly contract: "svml.speech-estimate-policy@1";
   readonly language: SpeechEstimateLanguage;
-  readonly pace: SpeechEstimatePace;
-  readonly paddingSec: number;
   readonly minimumSec: number;
   readonly maximumSec: number;
   readonly rounding: SpeechEstimateRounding;
 };
+
+export type SpeechEstimatePolicy = SpeechEstimatePolicyBase & (
+  | { readonly pace: SpeechEstimatePace; readonly rate?: never }
+  | { readonly pace?: never; readonly rate: number }
+);

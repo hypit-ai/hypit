@@ -27,9 +27,9 @@ export {
 export {
   assertFilmRecipe,
   defaultFilmRecipe,
-  filmCanvasFromRecipe,
+  filmAppearanceFromRecipe,
   filmRecipeKeys,
 } from "./recipe.js";
-export type { FilmCanvas } from "./recipe.js";
+export type { FilmAppearance } from "./recipe.js";
 export { decodeFilmSurface } from "./surface.js";
 export type * from "./types.js";

@@ -27,6 +27,8 @@ import {
   scriptSurfaceImplementationDigest,
 } from "@narratage/script";
 import { speechBasisManifest, speechBasisProducers } from "@narratage/speech-basis";
+import { textComponent, textManifest } from "@narratage/text";
+import { mediaTrackManifest } from "@narratage/media-track";
 import {
   decodeSpeechSpineSurface,
   speechSpineManifest,
@@ -35,9 +37,15 @@ import {
   speechSpineSurfaceImplementationDigest,
 } from "@narratage/speech-spine";
 import {
-  TextSurfaceRegistry,
-  createTextAuthorFrontend,
-} from "@narratage/text";
+  decodeCanvasSurface,
+  spatialComponent,
+  spatialModuleRef,
+  spatialSurfaceDigests,
+} from "@narratage/spatial";
+import {
+  MarkupSurfaceRegistry,
+  createMarkupAuthorFrontend,
+} from "@narratage/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const fixtureModule = { name: "example.speech-media", version: "1" } as const;
@@ -58,7 +66,7 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@narratage/text@1"?>\n${text}`,
+    text: `<?svml using="@narratage/markup@1"?>\n${text}`,
   };
 }
 
@@ -66,14 +74,17 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   const closure = createResolvedClosure([
     ...videoContractManifests,
     mediaPipelineManifest,
+    mediaTrackManifest,
     speechBasisManifest,
     speechSpineManifest,
+    textManifest,
     scriptManifest,
     fixtureManifest,
   ]);
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerRaw(scriptModuleRef, "script", scriptSurfaceImplementationDigest, decodeScriptSurface);
   surfaces.registerStructured(speechSpineModuleRef, "spine", speechSpineSurfaceImplementationDigest, decodeSpeechSpineSurface);
+  surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
   surfaces.registerStructured(fixtureModule, "media", fixtureSurfaceDigest, ({ element }) => ({
     records: ["take-one", "take-two"].map((id) => ({
       id, type: artifactTypes.blob,
@@ -83,27 +94,32 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     components: [], fragments: [],
   }));
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
       if (request.from.startsWith("@narratage/script")) return scriptModuleRef;
       if (request.from.startsWith("@narratage/speech")) return speechSpineModuleRef;
+      if (request.from.startsWith("@narratage/spatial")) return spatialModuleRef;
       return fixtureModule;
     },
   }));
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, mediaPipelineComponent.validators ?? []);
+  registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
+  registerTypeValidatorFacets(validators, textComponent.validators ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import from="@narratage/script@1"/>
       <import as="fixture" from="example.speech-media@1"/>
       <import as="speech" from="@narratage/speech-spine@1"/>
+      <import as="space" from="@narratage/spatial@1"/>
       <script id="story">
         <opening><ALICE> Hello from Alice.</opening>
         <answer><BOB> Hello from Bob.</answer>
       </script>
       <fixture:Media/>
-      <speech:Spine id="speech">
+      <space:Canvas id="vertical" width="720" height="1280"/>
+      <speech:Spine id="speech" canvas={vertical}>
         <speech:Take source={take-one} segment={story.segment.opening}/>
         <speech:Take source={take-two} segment={story.segment.answer}/>
       </speech:Spine>

@@ -1,4 +1,7 @@
-import type { ObjectFieldSchema, ValueSchema } from "@narratage/protocol";
+import { canonicalize } from "@narratage/protocol";
+import type { BlobRef, ObjectFieldSchema, ValueSchema } from "@narratage/protocol";
+import { verifyText } from "@narratage/text";
+import type { Text } from "@narratage/text";
 
 import { assertGenerationBlobRef, sealGenerationRequest } from "./identity.js";
 import { generationBlobRefSchema, generationObjectSchema } from "./schema.js";
@@ -19,12 +22,32 @@ import type {
  * mechanism serves every model and every service reselling it.
  */
 export const GENERATION_REQUEST_V1 = "svml.generation-request@1" as const;
+export const GENERATION_REQUEST_DRAFT_V1 = "svml.generation-request-draft@1" as const;
+export const GENERATION_MEDIA_BINDING_V1 = "svml.generation-media-binding@1" as const;
 
 export type GenerationRequest = {
   readonly contract: "svml.generation-request@1";
   readonly model: string;
   /** An absent port is an omitted key. A present port always carries at least one value. */
   readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
+};
+
+/**
+ * A request while graph inputs are still being attached. It is deliberately a
+ * different contract from GenerationRequest: Providers can only receive the
+ * finalized request after the exact model package has checked every port rule.
+ */
+export type GenerationRequestDraft = {
+  readonly contract: "svml.generation-request-draft@1";
+  readonly model: string;
+  readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
+};
+
+/** Authored instructions for attaching one graph Blob edge to one media port. */
+export type GenerationMediaBinding = {
+  readonly contract: "svml.generation-media-binding@1";
+  readonly role: GenerationMediaRole;
+  readonly fields?: Readonly<Record<string, string | number | boolean>>;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -41,7 +64,11 @@ function mediaPrefix(role: GenerationMediaRole): "image/" | "video/" | "audio/" 
 }
 
 function scalarSchema(value: GenerationPortScalarKind): ValueSchema {
-  if (value.kind === "text") return { kind: "string", minLength: 1, maxLength: value.maxChars };
+  if (value.kind === "text") return {
+    kind: "string",
+    minLength: 1,
+    ...(value.maxChars === undefined ? {} : { maxLength: value.maxChars }),
+  };
   if (value.kind === "token") return { kind: "string", minLength: value.minLength, maxLength: value.maxLength };
   if (value.kind === "boolean") return { kind: "boolean" };
   if (value.kind === "number") {
@@ -64,6 +91,16 @@ function itemFieldsSchema(fields: readonly GenerationPortItemField[]): ValueSche
   } satisfies ObjectFieldSchema])));
 }
 
+/** Schema for the non-artifact half of one media-port attachment. */
+export function mediaBindingSchemaFromPort(port: GenerationMediaPort): ValueSchema {
+  const fields = port.value.itemFields ?? [];
+  return generationObjectSchema({
+    contract: { schema: { kind: "literal", value: GENERATION_MEDIA_BINDING_V1 } },
+    role: { schema: { kind: "string", enum: [...port.value.accepts] } },
+    ...(fields.length === 0 ? {} : { fields: { schema: itemFieldsSchema(fields) } }),
+  });
+}
+
 function portItemSchema(port: GenerationPort): ValueSchema {
   if (!isMediaPort(port)) return scalarSchema(port.value);
   const media = port.value;
@@ -83,6 +120,12 @@ export type GenerationPortSubset = {
    * the missing fact exists.
    */
   readonly omit?: readonly string[];
+  /**
+   * Ports that may be absent while a graph is still attaching values. If they
+   * are present, their item and cardinality rules are still checked. Exact
+   * finalization never uses this escape hatch.
+   */
+  readonly defer?: readonly string[];
 };
 
 /** Derive the Schema of the port map alone, optionally leaving some ports for later. */
@@ -92,8 +135,13 @@ export function portsObjectSchema(
 ): ValueSchema {
   assertGenerationPortTable(table);
   const omit = new Set(options.omit ?? []);
+  const defer = new Set(options.defer ?? []);
   omit.forEach((name) => assert(table.ports.some((port) => port.name === name),
     `${table.model} cannot omit undeclared port ${name}`));
+  defer.forEach((name) => {
+    assert(table.ports.some((port) => port.name === name), `${table.model} cannot defer undeclared port ${name}`);
+    assert(!omit.has(name), `${table.model} cannot both omit and defer port ${name}`);
+  });
   return generationObjectSchema(Object.fromEntries(table.ports
     .filter((port) => !omit.has(port.name))
     .map((port) => [port.name, {
@@ -103,7 +151,7 @@ export function portsObjectSchema(
         minItems: Math.max(1, port.minItems),
         maxItems: port.maxItems,
       },
-      ...(port.minItems === 0 ? { optional: true } : {}),
+      ...(port.minItems === 0 || defer.has(port.name) ? { optional: true } : {}),
     } satisfies ObjectFieldSchema])));
 }
 
@@ -116,10 +164,24 @@ export function requestSchemaFromPorts(table: GenerationPortTable): ValueSchema 
   });
 }
 
+/** Structural schema for the model-owned request draft used by graph assembly. */
+export function requestDraftSchemaFromPorts(table: GenerationPortTable): ValueSchema {
+  const deferred = table.ports
+    .filter((port) => isMediaPort(port) || port.value.kind === "text")
+    .map((port) => port.name);
+  return generationObjectSchema({
+    contract: { schema: { kind: "literal", value: GENERATION_REQUEST_DRAFT_V1 } },
+    model: { schema: { kind: "literal", value: table.model } },
+    ports: { schema: portsObjectSchema(table, { defer: deferred }) },
+  });
+}
+
 function verifyScalar(value: unknown, kind: GenerationPortScalarKind, subject: string): void {
   if (kind.kind === "text") {
-    assert(typeof value === "string" && value.length > 0 && value.length <= kind.maxChars,
-      `${subject} must be text of 1 to ${kind.maxChars} characters`);
+    assert(typeof value === "string" && value.length > 0, `${subject} must be non-empty text`);
+    if (kind.maxChars !== undefined) {
+      assert(value.length <= kind.maxChars, `${subject} must contain at most ${kind.maxChars} characters`);
+    }
     return;
   }
   if (kind.kind === "token") {
@@ -144,19 +206,17 @@ function verifyScalar(value: unknown, kind: GenerationPortScalarKind, subject: s
   );
 }
 
-function verifyMediaValue(value: unknown, port: GenerationMediaPort, subject: string): void {
+function verifyMediaItemFields(value: Record<string, unknown>, port: GenerationMediaPort, subject: string): void {
   const media = port.value;
-  const item = plainObject(value, subject);
-  const role = item.role;
+  const role = value.role;
   assert(typeof role === "string" && media.accepts.includes(role as GenerationMediaRole),
     `${subject} role must be one of ${media.accepts.join(", ")}`);
-  assertGenerationBlobRef(item.artifact, mediaPrefix(role as GenerationMediaRole));
   const declared = media.itemFields ?? [];
   if (declared.length === 0) {
-    assert(item.fields === undefined, `${subject} declares no item fields`);
+    assert(value.fields === undefined, `${subject} declares no item fields`);
     return;
   }
-  const fields = plainObject(item.fields ?? {}, `${subject} fields`);
+  const fields = plainObject(value.fields ?? {}, `${subject} fields`);
   const known = new Set(declared.map((field) => field.name));
   Object.keys(fields).forEach((name) => assert(known.has(name), `${subject} has unknown item field ${name}`));
   for (const field of declared) {
@@ -177,6 +237,12 @@ function verifyMediaValue(value: unknown, port: GenerationMediaPort, subject: st
   }
 }
 
+function verifyMediaValue(value: unknown, port: GenerationMediaPort, subject: string): void {
+  const item = plainObject(value, subject);
+  verifyMediaItemFields(item, port, subject);
+  assertGenerationBlobRef(item.artifact, mediaPrefix(item.role as GenerationMediaRole));
+}
+
 /**
  * Full standalone verification against the port table. Core's generic schema
  * admission runs first; this adds the facts a Schema cannot state, such as the
@@ -189,6 +255,7 @@ export function verifyPortsAgainstTable(
 ): void {
   assertGenerationPortTable(table);
   const omit = new Set(options.omit ?? []);
+  const defer = new Set(options.defer ?? []);
   const ports = plainObject(value, `${table.model} ports`);
   const declared = new Map(table.ports.map((port) => [port.name, port]));
   Object.keys(ports).forEach((name) => {
@@ -202,7 +269,7 @@ export function verifyPortsAgainstTable(
     const subject = `${table.model} port ${port.name}`;
     const supplied = ports[port.name];
     if (supplied === undefined) {
-      assert(port.minItems === 0, `${subject} is required`);
+      assert(port.minItems === 0 || defer.has(port.name), `${subject} is required`);
       continue;
     }
     assert(Array.isArray(supplied), `${subject} must be an array`);
@@ -226,7 +293,7 @@ export function verifyPortsAgainstTable(
     }
     if (requirement.kind === "requiresAnyOf") {
       if (!present.has(requirement.port)) continue;
-      const satisfied = requirement.anyOf.some((name) => present.has(name) || omit.has(name));
+      const satisfied = requirement.anyOf.some((name) => present.has(name) || omit.has(name) || defer.has(name));
       assert(satisfied,
         `${table.model} port ${requirement.port} needs at least one of ${requirement.anyOf.join(", ")}`);
       continue;
@@ -241,10 +308,112 @@ export function verifyPortsAgainstTable(
       continue;
     }
     if (!present.has(requirement.port)) continue;
-    const missing = requirement.needs.filter((name) => !present.has(name) && !omit.has(name));
+    const missing = requirement.needs.filter((name) => !present.has(name) && !omit.has(name) && !defer.has(name));
     assert(missing.length === 0,
       `${table.model} port ${requirement.port} also requires ${missing.join(", ")}`);
   }
+}
+
+function deferredPorts(table: GenerationPortTable): readonly string[] {
+  return table.ports
+    .filter((port) => isMediaPort(port) || port.value.kind === "text")
+    .map((port) => port.name);
+}
+
+export function verifyRequestDraftAgainstPorts(
+  table: GenerationPortTable,
+  value: unknown,
+): asserts value is GenerationRequestDraft {
+  const draft = plainObject(value, `${table.model} request draft`);
+  assert(draft.contract === GENERATION_REQUEST_DRAFT_V1, `${table.model} request draft contract is invalid`);
+  assert(draft.model === table.model, `${table.model} request draft model is invalid`);
+  verifyPortsAgainstTable(table, draft.ports, { defer: deferredPorts(table) });
+}
+
+export function sealGenerationRequestDraft(
+  table: GenerationPortTable,
+  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+): GenerationRequestDraft {
+  const draft = canonicalize({
+    contract: GENERATION_REQUEST_DRAFT_V1,
+    model: table.model,
+    ports: Object.fromEntries(Object.entries(ports).filter(([, values]) => values.length > 0)),
+  }) as unknown as GenerationRequestDraft;
+  verifyRequestDraftAgainstPorts(table, draft);
+  return draft;
+}
+
+export function verifyGenerationMediaBinding(
+  port: GenerationMediaPort,
+  value: unknown,
+): asserts value is GenerationMediaBinding {
+  const binding = plainObject(value, `${port.name} media binding`);
+  assert(binding.contract === GENERATION_MEDIA_BINDING_V1, `${port.name} media binding contract is invalid`);
+  verifyMediaItemFields(binding, port, `${port.name} media binding`);
+}
+
+export function sealGenerationMediaBinding(
+  port: GenerationMediaPort,
+  value: Omit<GenerationMediaBinding, "contract">,
+): GenerationMediaBinding {
+  const binding = canonicalize({ contract: GENERATION_MEDIA_BINDING_V1, ...value }) as unknown as GenerationMediaBinding;
+  verifyGenerationMediaBinding(port, binding);
+  return binding;
+}
+
+/**
+ * Attach one Blob supplied by a real graph edge. The returned draft contains
+ * the Provider-facing value, while Derivation preserves where that Blob came
+ * from; no lineage or project metadata is copied through the payload.
+ */
+export function bindGenerationMedia(
+  table: GenerationPortTable,
+  draft: GenerationRequestDraft,
+  portName: string,
+  binding: GenerationMediaBinding,
+  artifact: BlobRef,
+): GenerationRequestDraft {
+  verifyRequestDraftAgainstPorts(table, draft);
+  const port = table.ports.find((candidate): candidate is GenerationMediaPort =>
+    candidate.name === portName && isMediaPort(candidate));
+  assert(port !== undefined, `${table.model} has no media port ${portName}`);
+  verifyGenerationMediaBinding(port, binding);
+  const value = {
+    role: binding.role,
+    artifact,
+    ...(binding.fields === undefined ? {} : { fields: binding.fields }),
+  };
+  verifyMediaValue(value, port, `${table.model} port ${portName}`);
+  return sealGenerationRequestDraft(table, {
+    ...draft.ports,
+    [portName]: [...(draft.ports[portName] ?? []), value],
+  });
+}
+
+/** Attach one graph Text edge to an exact text port without hiding it in metadata. */
+export function bindGenerationText(
+  table: GenerationPortTable,
+  draft: GenerationRequestDraft,
+  portName: string,
+  text: Text,
+): GenerationRequestDraft {
+  verifyRequestDraftAgainstPorts(table, draft);
+  verifyText(text);
+  const port = table.ports.find((candidate) =>
+    candidate.name === portName && candidate.value.kind === "text");
+  assert(port !== undefined, `${table.model} has no text port ${portName}`);
+  return sealGenerationRequestDraft(table, {
+    ...draft.ports,
+    [portName]: [...(draft.ports[portName] ?? []), text.value],
+  });
+}
+
+export function finalizeGenerationRequestDraft(
+  table: GenerationPortTable,
+  draft: GenerationRequestDraft,
+): GenerationRequest {
+  verifyRequestDraftAgainstPorts(table, draft);
+  return sealGenerationPortRequest(table, draft.ports);
 }
 
 export function verifyRequestAgainstPorts(

@@ -1,13 +1,10 @@
 import type { ComponentPackage } from "@narratage/component-kit";
-import type { Narrative } from "@narratage/narrative";
-import type { ProgramSpace } from "@narratage/program-space";
+import type { CaptionCorrespondence, CaptionDisplaySequence } from "@narratage/narrative";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
-import type { VisualTrack } from "@narratage/composition";
 import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
 import {
-  captionImplementationDigest,
   captionPlanImplementationDigest,
   captionProducers,
   captionTypes,
@@ -15,20 +12,12 @@ import {
 } from "./manifest.js";
 import { assertCaptionPlan } from "./plan.js";
 import { assertCaptionProgram, assertCaptionStyle } from "./style.js";
-import { temporalizeCaption, temporalizeCaptionPlan } from "./temporalize.js";
-import {
-  assertCaptionTrackProgram,
-  assertTimedCaptionProjection,
-  renderCaptionProgram,
-  renderCaptionTrack,
-  renderCaptionProgramImplementationDigest,
-  renderCaptionTrackImplementationDigest,
-} from "./track.js";
+import { temporalizeCaptionPlan } from "./temporalize.js";
+import { assertTimedCaptionProjection } from "./temporalize.js";
 import type {
   CaptionPlan,
   CaptionProgram,
   CaptionStyleIntent,
-  CaptionTrackProgram,
   TimedCaptionProjection,
 } from "./types.js";
 
@@ -37,26 +26,10 @@ function inline<T>(value: StoredValue | undefined, subject: string): T {
   return value.value as T;
 }
 
-/** Deterministic timing and VisualTrack lowering only; cue generation and author styling stay outside. */
+/** Deterministic timing joins only; cue generation, Style meaning and visual lowering stay outside. */
 export const captionComponent = {
   name: "@narratage/caption",
   producers: [
-    {
-      producer: captionProducers.temporalize,
-      implementationDigest: captionImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: {
-          caption: {
-            kind: "inline",
-            value: canonicalize(temporalizeCaption(
-              inline<Narrative>(inputs.narrative?.value, "Narrative"),
-              inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
-            )),
-          },
-        },
-        needs: {},
-      }),
-    },
     {
       producer: captionProducers.temporalizePlan,
       implementationDigest: captionPlanImplementationDigest,
@@ -65,44 +38,11 @@ export const captionComponent = {
           caption: {
             kind: "inline",
             value: canonicalize(temporalizeCaptionPlan(
-              inline<Narrative>(inputs.narrative?.value, "Narrative"),
+              inline<CaptionDisplaySequence>(inputs.display?.value, "CaptionDisplaySequence"),
+              inline<CaptionCorrespondence>(inputs.correspondence?.value, "CaptionCorrespondence"),
               inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
               inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
               inline<CaptionPlan>(inputs.plan?.value, "CaptionPlan"),
-            )),
-          },
-        },
-        needs: {},
-      }),
-    },
-    {
-      producer: captionProducers.renderProgram,
-      implementationDigest: renderCaptionProgramImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: {
-          track: {
-            kind: "inline",
-            value: canonicalize(renderCaptionProgram(
-              inline<TimedCaptionProjection>(inputs.caption?.value, "TimedCaptionProjection"),
-              inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
-              inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
-            )),
-          },
-        },
-        needs: {},
-      }),
-    },
-    {
-      producer: captionProducers.renderTrack,
-      implementationDigest: renderCaptionTrackImplementationDigest,
-      handler: ({ inputs }) => ({
-        outputs: {
-          track: {
-            kind: "inline",
-            value: canonicalize(renderCaptionTrack(
-              inline<TimedCaptionProjection>(inputs.caption?.value, "TimedCaptionProjection"),
-              inline<CaptionTrackProgram>(inputs.program?.value, "CaptionTrackProgram"),
-              inline<ProgramSpace>(inputs.space?.value, "ProgramSpace"),
             )),
           },
         },
@@ -131,13 +71,6 @@ export const captionComponent = {
       implementationDigest: captionValidatorDigests.timedProjection,
       handler: ({ value }) => assertTimedCaptionProjection(
         inline<TimedCaptionProjection>(value, "TimedCaptionProjection"),
-      ),
-    },
-    {
-      type: captionTypes.trackProgram,
-      implementationDigest: captionValidatorDigests.trackProgram,
-      handler: ({ value }) => assertCaptionTrackProgram(
-        inline<CaptionTrackProgram>(value, "CaptionTrackProgram"),
       ),
     },
   ],

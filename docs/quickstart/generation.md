@@ -12,9 +12,11 @@ Every component shown here must be imported by its package specifier before use:
 
 ```svml
 <import as="media" from="@narratage/media@1"/>
+<import as="mediaop" from="@narratage/media-pipeline@1"/>
 <import as="estimate" from="@narratage/estimate@1"/>
+<import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="speaker" from="@narratage/seedance-speaker@1"/>
+<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
 ```
 
 ## media:Image
@@ -31,7 +33,7 @@ Declares a content-addressed image asset from a local file.
 | `src` | yes | Path to the image file, relative to the `.svml` source |
 
 The image is referenced downstream via `{presenter}` — for example, as a character reference in
-`seedance:Speech` or as a B-roll source.
+`seedance:ReferenceVideo` or as a B-roll source.
 
 ## media:Audio
 
@@ -46,12 +48,12 @@ Declares a content-addressed audio asset from a local file.
 | `id` | yes | Unique identifier |
 | `src` | yes | Path to the audio file, relative to the `.svml` source |
 
-Typically used as a voice-timbre reference for `speaker:Take`.
+Typically used as a voice-timbre reference for `seedance:ReferenceVideo`.
 
 ## estimate:Speech
 
-Deterministic speech duration estimation from Script text. No external service call — the estimate is
-computed locally from word count and pace parameters.
+Deterministic speech duration planning from Script pronunciation text. No external service call — the
+duration is computed locally from pronunciation units and a delivery-density policy.
 
 ```svml
 <estimate:Speech id="hook-duration"
@@ -63,7 +65,7 @@ computed locally from word count and pace parameters.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `source` | yes | Script text to estimate — typically `{script.segment.NAME.speech}` |
-| `policy` | yes | SVS speech Recipe controlling pace and bounds |
+| `policy` | no | SVS speech Recipe controlling pace and bounds; omit it to use inline parameters |
 
 The `policy` references an SVS Recipe (see [SVS Stylesheets](./styles.md#speech-estimation)):
 
@@ -71,10 +73,9 @@ The `policy` references an SVS Recipe (see [SVS Stylesheets](./styles.md#speech-
 speech.normal {
   language: en;
   pace: normal;
-  padding: 0.3;
   min: 4;
   max: 15;
-  rounding: ceil;
+  rounding: round;
 }
 ```
 
@@ -83,161 +84,189 @@ You can also specify estimation parameters inline instead of using an SVS policy
 ```svml
 <estimate:Speech id="opening-duration"
   source={story.segment.opening.speech}
-  language="en" pace="normal" padding="0.3" min="4" max="15" rounding="ceil"/>
+  language="en" pace="normal" min="4" max="15" rounding="round"/>
 ```
+
+For English, the official pace presets are `slow = 4.2`, `normal = 4.6`, and
+`fast = 5.0` syllables per second. `rate="4.75"` may be used instead of `pace`
+when a project needs a value between the named presets. `pace` and `rate` are
+mutually exclusive.
+
+There are no implicit policy values: `language`, `min`, `max`, `rounding`, and
+exactly one of `pace` or `rate` must be present either inline or in the referenced Recipe.
 
 **Output:** `{hook-duration.duration}` — the estimated duration in seconds, passed to generation
 components.
 
-## seedance:Prompt
+## text:Value
 
-A reusable text block that provides visual direction for Seedance generation.
+A reusable literal `Text` value. It is model-neutral and can feed Seedance, GPT Image or any other
+declared text port.
 
 ```svml
-<seedance:Prompt id="alice-direction">
+<import as="text" from="@narratage/text@1"/>
+
+<text:Value id="alice-direction">
   Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
   Calm, curious delivery; natural breathing and restrained hand movement.
-</seedance:Prompt>
+  Spoken dialogue — say exactly: What if editing began with meaning?
+</text:Value>
 ```
 
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Unique identifier |
 
-The element body is the prompt text. Referenced by `seedance:Speech` and `seedance:Video` via their
-`prompt` attribute.
+The element body is the exact Text value. `text:Render` can produce the same type from a template
+and explicit graph inputs.
 
-## seedance:Speech
+## Seedance invocation shapes
 
-Generates a talking-head video clip via the Seedance model. This is the low-level generation
-component — it directly specifies the dialogue, prompt, and duration.
+Seedance exposes model capabilities, not creative usages. `standard`, `fast` and `mini` choose the
+model variant independently of three invocation shapes. All shapes consume a complete ordinary
+`Text` prompt and output `{id.video}`.
+
+### seedance:TextVideo
+
+Prompt-only generation. This is the only shape that accepts `web-search`.
 
 ```svml
-<seedance:Speech id="alice-take" model="mini"
-  dialogue={story.segment.opening.dialogue}
+<seedance:TextVideo id="ambient" model="mini"
+  prompt={ambient-direction} duration="5" web-search="false"/>
+```
+
+### seedance:FrameVideo
+
+First-frame generation with an optional last frame:
+
+```svml
+<seedance:FrameVideo id="transition" model="fast"
+  prompt={transition-direction} duration="5"
+  first-frame={opening-image} last-frame={closing-image}/>
+```
+
+### seedance:ReferenceVideo
+
+Multimodal reference generation. It requires at least one `Reference` child and accepts image,
+video and audio references within the model's declared limits.
+
+```svml
+<seedance:ReferenceVideo id="alice-take" model="mini"
   prompt={alice-direction}
-  duration="8">
-  <seedance:Reference image={alice-reference} role="character"/>
-</seedance:Speech>
+  duration={alice-duration.duration}
+  generate-audio="true">
+  <seedance:Reference image={alice-reference}/>
+  <seedance:Reference audio={alice-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `model` | yes | Seedance model name: `mini` |
-| `dialogue` | yes | Script text to lip-sync — typically `{script.segment.NAME.dialogue}` |
-| `prompt` | yes | Visual direction — reference to a `seedance:Prompt` |
-| `duration` | yes | Clip duration in seconds (number or `{estimate.duration}` reference) |
-| `resolution` | no | Output resolution: `480p`, `720p` (default varies by model) |
-| `aspect-ratio` | no | Output aspect ratio: `9:16`, `16:9`, `1:1` |
+The component does not know that this is a talking head. That meaning lives in the supplied Text.
 
-### seedance:Reference
+Common attributes are `id`, `model`, `prompt`, `duration`, `resolution`, `aspect-ratio` and
+`generate-audio`. `duration` may be literal or an explicit `{estimate.duration}` edge.
 
-Child element that provides a reference image for character consistency:
+The audio generated in an earlier take can be reused as a later reference through an ordinary graph
+edge. Extraction does not turn it into speech evidence or attach speaker meaning:
 
 ```svml
-<seedance:Reference image={alice-reference} role="character"/>
+<mediaop:ExtractAudio id="voice-from-opening"
+  source={opening.video} audio="default"/>
+
+<seedance:ReferenceVideo id="follow-up" model="mini"
+  prompt={follow-up-direction} duration="5" generate-audio="true">
+  <seedance:Reference image={presenter-reference}/>
+  <seedance:Reference audio={voice-from-opening.audio}/>
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `image` | yes | Reference to a `media:Image` component |
-| `role` | yes | How this reference is used: `character`, `subject` |
+The same media-operation package exposes `Transform` for ordered trim/retime and `ExtractFrame` for
+first, last, indexed or timestamped still extraction. Local FFmpeg and AWS Lambda are interchangeable
+Runtime Endpoints for these exact Needs; neither changes the author graph.
 
-**Output:** `{alice-take}` or `{alice-take.video}` — the generated video, passed to `speech:Spine`.
+## Seedance semantic Kits
 
-## seedance:Video
-
-Generates a standalone video clip (not a talking-head — no dialogue lip-sync).
+`@narratage/seedance-kits` contains seven data-only Text Templates. A Kit is not a model wrapper: use
+generic `text:Render` to produce the prompt, then connect that Text and the real media references to
+the low-level Seedance Surface.
 
 ```svml
-<seedance:Video id="product-motion" model="mini"
-  prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
-</seedance:Video>
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="broll-kit" source="../../packages/seedance-kits/kits/broll-v1.svs"/>
+
+<text:Render id="demo-prompt"
+  template={broll-kit.broll-v1}
+  recipe={studio.broll.product-demo}>
+  <text:Set name="story" text={copy.product-demo}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="demo" model="mini"
+  prompt={demo-prompt}
+  duration={demo-duration.duration}
+  resolution="720p"
+  aspect-ratio="9:16"
+  generate-audio="false">
+  <seedance:Reference image={scene}/>
+  <seedance:Reference image={product}/>
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `model` | yes | Seedance model name: `mini` |
-| `prompt` | yes | Visual direction — reference to a `seedance:Prompt` |
-| `duration` | yes | Clip duration in seconds |
+The project Recipe selects axes such as `material-mode`, `story-shape` and `camera-language`.
+`text:Render` reads only properties declared by the template; an explicit `text:Param` overrides a
+Recipe value. Dynamic story/dialogue/action/extra content remains a `Text` edge through `Set`.
 
-Also accepts `<seedance:Reference>` children for reference images.
+Available templates are `speaker-v1`, `broll-v1`, `podcast-v1`, `call-v1`, `street-interview-v1`,
+`motion-reference-v1` and `camera-reference-v1`. Podcast and Call expect two ordered image
+references plus two ordered audio references; Street Interview expects one scene image plus two
+ordered voices; the two reference-transfer templates expect one subject image and one reference
+video. Those shapes are visible in `seedance:ReferenceVideo`, not hidden in Kit execution code.
 
-**Output:** `{product-motion.video}` — used as a B-roll source.
+## Talking-head prompt assembly
 
-## speaker:Take
-
-A higher-level talking-head component built on top of Prompt Kit. Instead of writing a raw prompt,
-you provide a Recipe with generation settings and a Kit that assembles the prompt automatically.
+Talking-head authoring does not need a special executable component. The data-only `speaker-v1`
+Template, the project's Recipe and the per-take dialogue/action are assembled by the ordinary Text
+module. The result enters Seedance through the same explicit `prompt` edge as any other generation.
 
 ```svml
-<import as="speaker" from="@narratage/seedance-speaker@1"/>
-<import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
 
-<speaker:Take id="hook-take"
-  dialogue={story.segment.hook.dialogue}
+<text:Value id="hook-action">
+  Begin with urgent direct eye contact, then let the final admission land more quietly.
+</text:Value>
+
+<text:Render id="hook-prompt"
+  template={speaker-kit.speaker-v1}
+  recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="hook-take" model="mini"
+  prompt={hook-prompt}
   duration={hook-duration.duration}
-  recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
+  resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter-clean}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-| Attribute | Required | Description |
-|---|---|---|
-| `id` | yes | Unique identifier |
-| `dialogue` | yes | Script text — typically `{script.segment.NAME.dialogue}` |
-| `duration` | yes | Estimated duration from `estimate:Speech` |
-| `recipe` | yes | SVS speaker Recipe (see [SVS Stylesheets](./styles.md#speaker)) |
-| `kit` | yes | Prompt Kit SVS — the template that assembles the prompt |
-
-### speaker:Reference
-
-Child element providing reference media. Accepts both images and audio:
-
-```svml
-<speaker:Reference image={presenter-clean} role="character-and-scene"/>
-<speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-```
-
-| Attribute | Required | Description |
-|---|---|---|
-| `image` | one of image/audio | Reference to a `media:Image` |
-| `audio` | one of image/audio | Reference to a `media:Audio` |
-| `role` | yes | Reference purpose: `character-and-scene`, `voice-timbre` |
-
-**Output:** `{hook-take.video}` — the generated video, passed to `speech:Spine`.
-
-### Prompt Kits
-
-A Prompt Kit is a special SVS file that defines a structured prompt template with ordered blocks,
-variant choices, axis parameters, and slots. The official kit is at
-`packages/seedance-speaker/kits/official-ugc-v1.svs`.
-
-The kit is imported using the Prompt Kit SVS parser:
-
-```svs
-<?svml using="@narratage/prompt-kit/svs@1"?>
-```
-
-The Recipe in `studio.svs` sets the axis parameter values (composition-stability, camera-motion,
-edit-rhythm, performance, gesture, voice-mode), and the kit assembles them into a complete prompt
-automatically.
+`speaker-v1.svs` selects its own Text Template Frontend. `studio.svs` supplies the named axis values;
+`dialogue` and `action` remain ordinary graph inputs. Neither the Kit nor Text chooses a model,
+reference media or generation endpoint.
 
 ## Combination example
 
-A four-take setup with estimated durations feeding into `speaker:Take` generation:
+A two-take setup with estimated durations feeding explicit Text assembly and Seedance generation:
 
 ```svml
 <import as="media" from="@narratage/media@1"/>
 <import as="estimate" from="@narratage/estimate@1"/>
-<import as="speaker" from="@narratage/seedance-speaker@1"/>
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
 <import as="studio" source="./studio.svs"/>
-<import as="ugc" source="../../packages/seedance-speaker/kits/official-ugc-v1.svs"/>
+<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>
@@ -247,40 +276,30 @@ A four-take setup with estimated durations feeding into `speaker:Take` generatio
   source={story.segment.hook.speech} policy={studio.speech.normal}/>
 <estimate:Speech id="meeting-duration"
   source={story.segment.meeting.speech} policy={studio.speech.normal}/>
-<estimate:Speech id="evidence-duration"
-  source={story.segment.evidence.speech} policy={studio.speech.normal}/>
-<estimate:Speech id="payoff-duration"
-  source={story.segment.payoff.speech} policy={studio.speech.normal}/>
+<text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
+<text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
 
-<speaker:Take id="hook-take" dialogue={story.segment.hook.dialogue}
-  duration={hook-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
+<text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
+<text:Render id="meeting-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.meeting.dialogue}/>
+  <text:Set name="action" text={meeting-action}/>
+</text:Render>
 
-<speaker:Take id="meeting-take" dialogue={story.segment.meeting.dialogue}
-  duration={meeting-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-alt} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
-
-<speaker:Take id="evidence-take" dialogue={story.segment.evidence.dialogue}
-  duration={evidence-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-alt} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
-
-<speaker:Take id="payoff-take" dialogue={story.segment.payoff.dialogue}
-  duration={payoff-duration.duration} recipe={studio.speaker.host}
-  kit={ugc.official-ugc-v1}>
-  <speaker:Reference image={presenter-clean} role="character-and-scene"/>
-  <speaker:Reference audio={presenter-voice} role="voice-timbre"/>
-</speaker:Take>
+<seedance:ReferenceVideo id="hook-take" model="mini" prompt={hook-prompt}
+  duration={hook-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter-clean}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
+<seedance:ReferenceVideo id="meeting-take" model="mini" prompt={meeting-prompt}
+  duration={meeting-duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter-alt}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-Each `speaker:Take` produces a `{*.video}` output that feeds into `speech:Spine` in the next stage.
-Different takes can use different reference images (e.g. the presenter holding a product in some
-Segments but not others) while sharing the same voice timbre and generation recipe.
+Each `seedance:ReferenceVideo` produces a `{*.video}` output that feeds into `speech:Spine` in the
+next stage. Different takes can use different reference images while sharing the same voice timbre
+and prompt Recipe.

@@ -1,13 +1,13 @@
 ---
 title: 包架构
-description: 四个分层、依赖边界、包的结构与 facet。
+description: 五个分层、依赖边界、包的结构与 facet。
 ---
 
 # 包架构
 
-`packages/` 下的工作区包被组织成四个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
+`packages/` 下的工作区包被组织成五个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
 
-## 四个分层
+## 五个分层
 
 ### Layer 1：领域无关的基础层
 
@@ -35,6 +35,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/artifact-store-fs     filesystem Artifact store
 @narratage/artifact-store-s3     S3 Artifact store
 @narratage/credential-store-env  environment credentials
+@narratage/credential-store-keychain macOS Keychain credentials
 @narratage/transport             invocation seams
 @narratage/transport-aws-lambda  Lambda transport
 @narratage/local                 SQLite/filesystem developer assembly
@@ -42,16 +43,20 @@ description: 四个分层、依赖边界、包的结构与 facet。
 
 ### Layer 2：作者语言层
 
-面向作者的词汇：文本 Frontend、Script Surface、SVS Recipe、Run 文本 Frontend 以及可复用的编译库。
+面向作者的词汇：Markup Frontend、Script Surface、SVS Recipe、Run Markup Frontend，以及可复用的确定性文字编译。
 
 ```text
-@narratage/text                  official .svml markup Frontend
+@narratage/markup                official .svml Markup Frontend
 @narratage/script                Script Surface
 @narratage/svs                   SVS Recipe Frontend
-@narratage/run-text              official .svrun Frontend
-@narratage/prompt-kit            declarative prompt compilation
-@narratage/compiler-text-node    Text Frontend + Surface Host assembly
+@narratage/run-markup            official .svrun Markup Frontend
+@narratage/text                  图原生文字值、模板和确定性渲染
+@narratage/compiler-markup-node  Markup Frontend + Surface Host assembly
 ```
+
+`@narratage/text` 的语义与领域无关，只是位于作者语言层。它输出的普通 `Text` 可以进入模型端口，
+也可以进入可见的视频组件。消费者依赖 Text 窄腰；Text 绝不会反向依赖 Typography、Ranking、
+Sticker、Deck 或任何模型家族。
 
 ### Layer 3：视频领域层
 
@@ -61,16 +66,17 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/media                 media types
 @narratage/narrative             authored narrative products
 @narratage/program-space         exact frame/sample domain
-@narratage/generation            image/video product contracts
+@narratage/generation            图像/视频/音频生成合同
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
-@narratage/seedance-speaker      Seedance Speaker binding
+@narratage/seedance-kits         数据化的 Seedance 语义 Text Template
 @narratage/minimax-h3            MiniMax H3 model family
 @narratage/gemini-omni           Gemini Omni model family
 @narratage/grok-imagine          Grok Imagine model family
 @narratage/gpt-image             GPT Image model family
 @narratage/nano-banana           Nano Banana model family
 @narratage/seedream              Seedream model family
+@narratage/mimo-tts              三个精确 Xiaomi MiMo TTS 模型及作者 Surface
 @narratage/estimate              duration estimation
 @narratage/speech                shared speech products
 @narratage/speech-basis          generated speech A/V product
@@ -79,40 +85,52 @@ description: 四个分层、依赖边界、包的结构与 facet。
 @narratage/speech-alignment      speech alignment
 @narratage/speech-spine          ordered speech-take compilation
 @narratage/whisperx              WhisperX component
-@narratage/caption               caption planning and Track
+@narratage/temporal              Selection/Moment 投影与调度
+@narratage/spatial               Canvas/Frame/Point/Path 几何
+@narratage/caption               caption planning and timing
 @narratage/caption-gemini        Gemini caption planner
-@narratage/broll                 B-roll Track
-@narratage/text-track            text overlay Track
+@narratage/caption-fine          无字段细粒度字幕 Track family
+@narratage/fonts-open            exact redistributable font catalog
+@narratage/media-track           统一的 Media Item/Sequence Track
+@narratage/typography-track      typography overlay Track
+@narratage/audio-track           arbitrary sample-domain Audio Track
+@narratage/deck-track            depth-stack collection Track
+@narratage/ranking               four ranking component families
+@narratage/screen-overlay        self-contained full-canvas overlays
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
 @narratage/visual-ir             renderer-neutral visual vocabulary
 @narratage/hyperframes           HyperFrames document compiler
 @narratage/render-hyperframes    explicit HyperFrames rendering component
 @narratage/image-transform       image processing component
+@narratage/image-compose         有序静态图像合成
+@narratage/raster                共享确定性光栅执行合同
+@narratage/background-removal    外部图像去背景能力
 @narratage/media-pipeline        media inspection/normalization
 @narratage/media-execution       shared ffmpeg execution body for Providers
 ```
 
 ### Layer 4：Provider（Endpoint）包
 
-具备特权的外部能力。依赖 Runtime 端口和它们所服务的模型族，绝不依赖 CLI。
+具备特权的外部能力。依赖 Runtime 端口与共享能力词汇，不依赖精确模型包，也绝不依赖 CLI。
 
 ```text
-@narratage/provider-kie                  KIE generation (16 model capabilities)
+@narratage/provider-kie                  KIE 生成与去背景
 @narratage/provider-media-local          local ffprobe/ffmpeg
 @narratage/provider-whisperx-local       local WhisperX service
 @narratage/provider-google-vertex        Vertex Gemini caption planning
 @narratage/provider-hyperframes-local    local Chrome rendering
 @narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
-@narratage/provider-image-opencv-local   local OpenCV image transforms
+@narratage/provider-image-opencv-local   本地 OpenCV 光栅执行
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
+@narratage/provider-xiaomi-mimo           Xiaomi 官方 MiMo TTS API
 ```
 
-### 应用层
+### Layer 5：应用层
 
 ```text
 @narratage/cli           generic command engine (requires explicit Distribution)
-@narratage/video-cli     video command application (selects Text compiler, no built-in author packages)
+@narratage/video-cli     video command application (selects Markup compiler, no built-in author packages)
 ```
 
 ## 依赖规则
@@ -123,7 +141,7 @@ description: 四个分层、依赖边界、包的结构与 facet。
 
 2. **领域无关闭包。** 每个 Layer 1 包的传递闭包只包含 Layer 1 的包。`@narratage/core` 只依赖 `@narratage/protocol`。
 
-3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance-speaker`、`@narratage/broll`、`@narratage/text-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
+3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance`、`@narratage/media-track`、`@narratage/typography-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
 
 ## 包的结构
 
@@ -161,6 +179,7 @@ packages/example/
 
 - `"exports"` 直接指向 TypeScript 源码。工作区的 `tsconfig.json` 通过 `paths` 把 `@narratage/*` 导入映射到源码入口。
 - `"svml.activation"` 是该包被 byte-locked 时 Package Loader 会读取的入口。它必须默认导出一个 `NodePackageContribution`。
+- 物理包版本在真正发布前保持 `0.0.0-dev`。Module 与 Frontend manifest 使用相互独立的逻辑协议版本 `1`；精确的实现身份由 lock 摘要确定。
 
 ### activation.ts
 

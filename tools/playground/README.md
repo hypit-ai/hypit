@@ -7,7 +7,8 @@ pnpm playground
 ```
 
 Pick a producer, fill in its inputs, and it renders on a canvas of the size you
-choose. Choose a `.svs` stylesheet and its Film Recipe fills in the frame.
+choose. Choose a `.svs` stylesheet and its Film Recipe fills in Film appearance;
+canvas size and time stay explicit preview-environment controls.
 
 [The guide page](../../docs/guide/playground.md) covers using it. This file
 covers how it works.
@@ -62,8 +63,7 @@ a font family are both strings, and only the module knows which is which.
 ## Known divergences from a real render
 
 - Fonts lower to a plain CSS `font-family` string. The production
-  `FontArtifactRef` path with hashed `@font-face` families is not exercised,
-  because `renderCaptionTrack` and `renderTextTrack` do not attach one.
+  `FontArtifactRef` path with hashed `@font-face` families is not exercised.
 - Audio tracks are not played.
 - The frame domain is the shell's, not the form's: a `ProgramSpace` input is
   filled from the canvas controls, so there is only one place to change it.

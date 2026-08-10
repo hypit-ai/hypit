@@ -1,11 +1,9 @@
 /**
  * The browser-safe surface of the compiler, in one place.
  *
- * Almost every package the playground needs is pure, but
- * `@narratage/hyperframes`'s entry re-exports `stageHyperframesProject`, which
- * writes a project to disk through `node:fs/promises`. Importing the package
- * entry would therefore drag a filesystem into the browser for a function the
- * playground never calls, so the document module is imported by path instead.
+ * HyperFrames keeps its browser-safe compiler at the package root and its
+ * Node-only project staging behind `@narratage/hyperframes/project`. The
+ * document module is imported directly here so that boundary stays visible.
  *
  * Only the render path is named here. Components are not: they are discovered
  * from the manifests at run time, and a list of them in this file would be the
@@ -29,6 +27,8 @@ export {
 } from "@narratage/program-space";
 export type { ProgramSpace } from "@narratage/program-space";
 
+export { defaultCanvasSpace } from "@narratage/spatial";
+
 export { validateStoredValue } from "@narratage/core";
 
 export type {
@@ -47,4 +47,4 @@ export { parseSvs } from "@narratage/svs";
 export type { SvsRecipe } from "@narratage/svs";
 export { maskSourceHeader, parseSourceHeader } from "@narratage/source";
 
-export { defaultFilmProgram, filmCanvasFromRecipe, filmRecipeKeys } from "@narratage/film";
+export { defaultFilmProgram, filmAppearanceFromRecipe, filmRecipeKeys } from "@narratage/film";

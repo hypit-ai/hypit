@@ -1,255 +1,180 @@
 ---
-title: 字幕、B-roll 与文字
-description: 视觉 Track 组件——字幕、B-roll 叠加层和文字叠加层。
+title: 字幕、Media 与 Typography
+description: 视觉 Track 组件——字幕、媒体叠加层和排版叠加层。
 ---
 
-# 字幕、B-roll 与文字
+# 字幕、Media 与 Typography
 
-每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三种主要的视觉 Track 类型：字幕、B-roll 和文字叠加层。
+> **发布前说明：** Caption Fine、Media Track 与 Typography Track 都执行各自声明的作者 Surface。
+> 它们的作者 API 仍可演进；共享终端 Track/Visual IR 窄腰已在仓库内冻结，但尚未作为
+> npm ABI 发布。
+
+每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三个官方视觉 Track 包：字幕、Media 和 Typography 叠加层。
 
 ## 字幕系统
 
-字幕由四个组件构成一条流水线：
+字幕由一套很小的公共语言与可替换的样式族组成：
 
 ```text
-caption:Style → caption:Program → caption-ai:Planner → caption:Track
+Script 显示全集 → Caption Program → Planner + Atom 实测时间 → 样式族 Track
 ```
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
+<import as="media" from="@narratage/media@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
 ```
 
-### caption:Style
+公共 Caption 只负责 Cue 字数边界、可选的通用逐词字段、完整样式分配、Plan 校验与时间
+拼接。Fine 是第一种无字段样式族，负责自己的几何、字形/Cue/Pill Paint 与局部动画。
 
-声明一种字幕样式的完整视觉外观及规划指令。
+### caption-fine:Style
 
-```svml
-<caption:Style id="primary-caption" appearance={studio.caption.primary}
-  mode="proportional-word">
-  <caption:Cues>
-    Split each Script Segment into short complete semantic phrases of two to
-    seven words. Never cross a sentence or Segment boundary.
-  </caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="1" max-per-cue="2">
-    Select one or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-```
-
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `appearance` | 是 | SVS 字幕 Recipe——位置、字体、颜色、容器 |
-| `mode` | 否 | 字幕计时模式，例如 `proportional-word` |
-
-**子元素：**
-
-- `<caption:Cues>` —— 给 AI 规划器的自然语言指令，告诉它如何将文本拆分为提示单元。规划器接收显示文本（Dual Text 的左侧）和这些指令，但不会接收音频或时间数据。
-- `<caption:Field>` —— 声明一个有类型的逐词注解。规划器将这些字段分配给每个提示单元中的各个词。
-
-| `<caption:Field>` 属性 | 描述 |
-|---|---|
-| `id` | 字段名称（例如 `important`） |
-| `type` | 字段类型：`boolean` |
-| `min-per-cue` | 每个提示单元的最少注解数 |
-| `max-per-cue` | 每个提示单元的最多注解数 |
-
-`<caption:Field>` 的元素主体是给规划器的自然语言指令。
-
-### caption:Program
-
-将字幕样式分配给叙事。声明一个默认样式，并可选择按角色或按 Selection 覆盖。
-
-```svml
-<caption:Program id="caption-program" narrative={story} default={primary-caption}>
-  <caption:Use role="ALICE" style={alice-caption}/>
-  <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
-</caption:Program>
-```
-
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `narrative` | 是 | Script 组件 |
-| `default` | 是 | 所有文本的默认 `caption:Style` |
-
-**子元素：**
-
-`<caption:Use>` 用于应用样式覆盖。规则按源代码顺序应用——后匹配优先。
-
-| `<caption:Use>` 属性 | 描述 |
-|---|---|
-| `role` | 按 Role Cue 标签匹配（例如 `"ALICE"`） |
-| `on` | 按 Selection 引用匹配（例如 `{story.selection.product-demo}`） |
-| `style` | 要应用的 `caption:Style` |
-
-使用 `role=` 为不同说话者设置不同的字幕颜色。使用 `on=` 在特定 Selection 期间覆盖样式（例如产品演示部分使用不同的字幕样式）。
-
-### caption-ai:Planner
-
-通过 Gemini 驱动的 AI 提示单元规划。规划器接收显示文本原子、Style 指令和 Program 分配，将文本拆分为提示单元并分配 Field 值。
-
-```svml
-<caption-ai:Planner id="caption-plan" narrative={story}
-  program={caption-program} model="gemini-2.5-flash"/>
-```
-
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `narrative` | 是 | Script 组件 |
-| `program` | 是 | `caption:Program` |
-| `model` | 是 | Gemini 模型：`gemini-2.5-flash` |
-
-规划器不会接收音频、时间数据或 Dual Text 的语音侧。它完全基于字幕（显示）投影进行工作。
-
-**输出：**`{caption-plan.plan}` —— 提示单元计划，传递给 `caption:Track`。
-
-### caption:Track
-
-将提示单元计划、SemanticMap、ProgramSpace 和 Program 组合在一起，生成一个带时间信息的 VisualTrack。
-
-```svml
-<caption:Track id="captions" narrative={story} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
-```
-
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `narrative` | 是 | Script 组件 |
-| `map` | 是 | 来自 `whisperx:Alignment` 的 SemanticMap |
-| `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace |
-| `program` | 是 | `caption:Program` |
-| `plan` | 是 | 来自 `caption-ai:Planner` 的提示单元计划 |
-
-**输出：**`{captions.track}` —— 添加到 `film:Film` 的 VisualTrack。
-
-### 字幕组合示例
-
-包含按角色样式的完整字幕流水线：
-
-```svml
-<caption:Style id="dialogue-caption" appearance={studio.caption.dialogue}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Style id="alice-caption" appearance={studio.caption.alice}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select at most two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-
-<caption:Style id="bob-caption" appearance={studio.caption.bob}>
-  <caption:Cues>Use short complete semantic phrases, two to five words.</caption:Cues>
-</caption:Style>
-
-<caption:Program id="caption-program" narrative={story} default={dialogue-caption}>
-  <caption:Use role="ALICE" style={alice-caption}/>
-  <caption:Use role="BOB" style={bob-caption}/>
-  <caption:Use on={story.selection.product-demo} style={dialogue-caption}/>
-</caption:Program>
-
-<caption-ai:Planner id="caption-plan" narrative={story}
-  program={caption-program} model="gemini-2.5-flash"/>
-
-<caption:Track id="captions" narrative={story} map={timing.map}
-  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
-```
-
-ALICE 使用绿色字幕（`#73FBD3`），BOB 使用金色字幕（`#FFD166`），在 product-demo Selection 期间两者都切换为中性对话样式。`important` Field 仅应用于 ALICE 的样式——她的强调词会获得特殊处理。
-
-## B-roll
-
-B-roll 在语义时间位置叠加生成的或预先提供的视频/图像。
-
-```svml
-<import as="broll" from="@narratage/broll@1"/>
-```
-
-### broll:Track
-
-B-roll 项目的容器。接收 SemanticMap 用于时间解析。
-
-```svml
-<broll:Track id="product-broll" map={timing.map} space={speech.space}>
-  <broll:Item source={product-motion.video}
-    during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
-```
-
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `map` | 是 | 来自 `whisperx:Alignment` 的 SemanticMap |
-| `space` | 否 | ProgramSpace（某些配置需要） |
-
-### broll:Item
-
-每个项目将一个来源放置在语义时间位置上，并附带样式外观：
-
-```svml
-<broll:Item source={product-motion.video}
-  during={story.selection.product-demo}
-  appearance={studio.broll.product}/>
-```
-
-| 属性 | 必填 | 描述 |
-|---|---|---|
-| `source` | 是 | 视频或图像——来自 `seedance:Video`、`media:Image` 等 |
-| `during` | 是 | Selection 引用——该项目何时出现 |
-| `appearance` | 是 | SVS B-roll Recipe——位置、大小、适配方式、动画 |
-
-`during` 属性接收一个 Selection 引用，如 `{story.selection.product-demo}`。B-roll 项目在屏幕上显示的时长恰好等于该 Selection 的持续时间，通过 SemanticMap 解析确定。
-
-外观 Recipe 控制进场/退场动画：
+一个 Style 是不可拆分的“规划要求 + 渲染参数”。Fine 从一个包自有的 SVS Recipe
+同时解析两者：
 
 ```svs
-broll.product {
-  stack-order: 40;
-  x: 0.08; y: 0.20; width: 0.84; height: 0.48;
-  fit: contain;
-  background: #111116;
-  radius: 28;
-  enter: slide-up 8f;
-  exit: fade 6f;
+caption.primary {
+  cue-min-words: 2; cue-max-words: 7;
+  stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+  anchor-x: center; anchor-y: bottom;
+  font: Inter; weight: 700; size: 58; line-height: 1; align: center;
+  fill: #FFFFFF; stroke-color: #09090B; stroke-width: 2;
+  background: #00000000; padding: 0; radius: 0;
+  karaoke: trail; karaoke-transition: wipe; active-fill: #FFD54A;
+  active-box: current; active-box-continuity: isolated;
+  active-box-background: #FFD54ACC; active-box-padding: 4 8; active-box-radius: 8;
+  active-underline: current; active-underline-color: #FFFFFF;
+  cue-enter: spring; cue-enter-frames: 6;
+  active-response: pop; active-response-frames: 5; active-scale: 1.08;
 }
 ```
 
-**输出：**`{product-broll.visual}` —— 添加到 `film:Film` 的 VisualTrack。
+```svml
+<fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
+  <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
+</fonts:Stack>
+<caption-fine:Style id="primary-caption" recipe={studio.caption.primary}
+  font={caption-fonts}/>
+```
 
-### B-roll 示例
+必填的 `font=` 边携带一个按字节复现的 `FontStackRef`。主字体必须与 Recipe
+的 weight/style 一致；每个 Fallback 保留自己的真实字体信息。省略字体栈会在编译时
+失败，不会退回当前机器上的同名字体。
 
-B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
+Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
+逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。
+
+Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill
+和动画均为正交维度。文字、下划线和 Pill 各自选择 `off | current | trail`；因此可以
+直接表达“文字保留已读色，但 Pill 只跟随当前词”。`active-box-continuity: joined` 会把
+已读前缀在每个真实换行片段内连成一个背景，而不是给每个词分别套胶囊。
+
+Fine 只在完整 Atom 之间自然换行，永不裁掉作者文字，因此有意不提供 `max-lines`。
+需要控制行数时，应调整 Cue 字数边界、Track 宽度与字号。
+
+CJK 口播可以直接书写。若一个只负责显示的 emoji 仍需跟随语音计时，应显式写出对应，
+例如 `<🌐 | globe>`；系统不会替裸符号虚构一个口播词。
+
+### caption:Program
+
+Program 消费 Script 显式输出的完整有序显示词全集。一个必填的默认 Style 自动覆盖
+所有词，不需要作者制造 `@whole` 或补集。`Use` 按源码顺序替换整个 Style，后命中
+者获胜。
 
 ```svml
-<seedance:Prompt id="product-direction">
+<caption:Program id="caption-program" display={story.caption}
+  default={primary-caption}>
+  <caption:Use role="ALICE" style={alice-caption}/>
+  <caption:Use role="BOB" style={bob-caption}/>
+  <caption:Use words={story.caption.selection.product-demo}
+    style={dialogue-caption}/>
+  <caption:Mute words={story.caption.selection.private}/>
+</caption:Program>
+```
+
+`role=` 是词子集查询的作者语法，不是时间条件。`words=` 接收 Selection 的字幕专用
+词投影；通用 Selection 的公开值仍只有语义首尾锚点。
+`Mute` 消费同一份精确词投影，不进入 Gemini；它在 Cue 规划完成后隐藏这些完整 Atom，
+既不重新分 Cue，也不把字幕可见性变成 Core 的通用时间遮罩。
+
+### caption-ai:Planner
+
+```svml
+<caption-ai:Planner id="caption-plan" display={story.caption}
+  program={caption-program} model="gemini-2.5-flash"/>
+```
+
+Planner 只接收不可改写的显示 Atom/Word 与已解析好的 Style runs。它只能在完整 Atom
+之间分 Cue，并给 Word id 附上样式声明的字段；Fine 没有字段。它看不到音频、时间或
+Dual Text 右侧。
+
+### caption-fine:Track
+
+```svml
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
+  space={speech.space} program={caption-program} plan={caption-plan.plan}/>
+```
+
+公共 Caption 先把 Plan 与独立 SemanticMap 拼接，Fine 再把所有默认/覆盖样式渲染成
+一个普通的对等 `VisualTrack`：`{captions.track}`。
+
+## Media 叠加层与 B-roll
+
+B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族。一个 Item 可以在语义
+或绝对窗口内放置规范化图片、视频、动画或 Compositable Surface。
+
+```svml
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
+```
+
+### media-track:Track 与 media-track:Item
+
+位置是一条显式 Spatial Frame 边，外观和运动则是可复用的 SVS 值：
+
+```svml
+<wording:Value id="product-direction">
   A clean vertical product film: the written script becomes semantic regions,
   then those regions assemble into a finished video.
-</seedance:Prompt>
+</wording:Value>
 
-<seedance:Video id="product-motion" model="mini"
+<seedance:ReferenceVideo id="product-motion" model="mini"
   prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
-</seedance:Video>
+  <seedance:Reference image={product-reference}/>
+</seedance:ReferenceVideo>
 
-<broll:Track id="product-broll" map={timing.map}>
-  <broll:Item source={product-motion.video}
+<pipeline:Normalize id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+
+<space:Frame id="product-frame" within={vertical}
+  left="8%" top="20%" right="8%" bottom="32%"/>
+
+<media-track:Track id="product-broll" map={timing.map}
+  space={speech.space} canvas={vertical}>
+  <media-track:Item source={product-media.media} frame={product-frame}
     during={story.selection.product-demo}
-    appearance={studio.broll.product}/>
-</broll:Track>
+    appearance={studio.media.product}
+    motion={studio.motion.product}/>
+</media-track:Track>
 ```
+
+Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同一个 Item 模型也能表达全屏
+切换、分屏和角落小窗。需要多个素材时，可以使用有序局部 Layer 或显式 Sequence。
+
+**输出：**`{product-broll.visual}`；只有作者显式选择了源音频或 SFX 时才会出现
+`{product-broll.audio}`。
 
 ## 文字叠加层
 
 在屏幕上显示的静态或定时文字——标题、标注、下方三分之一字幕条。
 
 ```svml
-<import as="text" from="@narratage/text-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
 ```
 
 ### text:Track
@@ -257,9 +182,15 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 文字项目的容器。
 
 ```svml
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="EDIT MEANING, NOT TIMELINES" during="full"
-    appearance={studio.text.title}/>
+  <text:Area id="title" placement={title-frame} style={title-style} during="program">
+    EDIT MEANING, NOT TIMELINES
+  </text:Area>
 </text:Track>
 ```
 
@@ -269,29 +200,49 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 | `space` | 是 | 来自 `speech:Spine` 的 ProgramSpace |
 | `map` | 否 | SemanticMap——当项目使用基于 Selection 的计时时需要 |
 
-### text:Item
+### text:Point、text:Area 与 text:Path
 
-每个项目是放置在某个时间位置的一段文本字符串：
+每个 Item 都明确选择一种放置形式、一份精确 Style 和一种时间投影。`Area` 把流式文字放入
+`SpatialFrame`：
 
 ```svml
-<text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+<text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+  MEANING
+</text:Area>
 ```
 
 | 属性 | 必填 | 描述 |
 |---|---|---|
-| `text` | 是 | 要显示的文本字符串 |
-| `during` | 是 | 何时显示：`"full"`（整个节目时长）或 Selection 引用 |
-| `appearance` | 是 | SVS 文字 Recipe——位置、字体、大小、颜色 |
+| `id` | 是 | 稳定的 Item 身份 |
+| 子内容或 `content` | 是 | 内联纯文本/富文本，或普通图 `Text` 引用；两种形式互斥 |
+| `during` | 是 | `"program"` 或 Selection 引用；也可使用 `at` 与显式 `start`/`end` |
+| `placement` | 是 | 与 Item 形式匹配的 `SpatialPoint`、`SpatialFrame` 或 `SpatialPath` |
+| `style` | 是 | 由 SVS Recipe 与精确字体字节共同编译出的 `text:Style` |
 
-`during` 属性接受字面字符串 `"full"`（表示整个节目时长），或 Selection 引用（用于语义计时）：
+`during` 属性接受字面字符串 `"program"`（表示完整 ProgramSpace），或用于语义计时的 Selection 引用：
 
 ```svml
+<text:Style id="callout-style" recipe={studio.text.callout} font={title-font}/>
 <text:Track id="callout" space={speech.space} map={timing.map}>
-  <text:Item text="EXACTLY THE RIGHT MOMENT"
-    during={story.selection.callout}
-    appearance={studio.text.callout}/>
+  <text:Area id="callout-copy" placement={callout-frame}
+    style={callout-style} during={story.selection.callout}>
+    EXACTLY THE RIGHT MOMENT
+  </text:Area>
 </text:Track>
 ```
+
+图中产生的文字会保留为显式边：
+
+```svml
+<wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
+<text:Track id="callout" space={speech.space}>
+  <text:Area id="callout-copy" content={headline}
+    placement={callout-frame} style={callout-style} during="program"/>
+</text:Track>
+```
+
+通用 `Text` 只提供字符；Typography 仍然拥有文档包装、位置、时间、样式与动画。作者需要富文本
+Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 **输出：**`{titles.track}` —— 添加到 `film:Film` 的 VisualTrack。
 
@@ -301,36 +252,49 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
+<import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-<import as="broll" from="@narratage/broll@1"/>
-<import as="text" from="@narratage/text-track@1"/>
+<import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="media-track" from="@narratage/media-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
-<caption:Style id="base-caption" appearance={studio.caption.base}>
-  <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-  <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-    Select zero, one, or two words whose emphasis best communicates this Cue.
-  </caption:Field>
-</caption:Style>
-<caption:Program id="caption-program" narrative={story} default={base-caption}/>
-<caption-ai:Planner id="cue-plan" narrative={story}
+<fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+<fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+<caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+<caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+<caption-ai:Planner id="cue-plan" display={story.caption}
   program={caption-program} model="gemini-2.5-flash"/>
-<caption:Track id="captions" narrative={story} map={timing.map}
+<caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
   space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-<!-- B-roll: generated video during a Selection -->
-<broll:Track id="cards" map={timing.map} space={speech.space}>
-  <broll:Item source={motion.video} during={story.selection.demo}
-    appearance={studio.broll.card}/>
-</broll:Track>
+<!-- 共享位置是显式边，与 Media/Text 外观分开。 -->
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<space:Frame id="title-frame" within={vertical}
+  left="6%" top="6%" right="6%" bottom="84%"/>
+<space:Frame id="card-frame" within={vertical}
+  left="10%" top="20%" right="10%" bottom="30%"/>
+
+<!-- Media：Selection 期间显示一个普通 Item -->
+<pipeline:Normalize id="motion-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+<media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+  <media-track:Item source={motion-media.media} frame={card-frame}
+    during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
+</media-track:Track>
 
 <!-- Text: persistent title overlay -->
+<text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
 <text:Track id="titles" space={speech.space}>
-  <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+  <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+    MEANING
+  </text:Area>
 </text:Track>
 
 <!-- All three tracks feed into Film -->
-<film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+<film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={cards.visual}/>
@@ -339,4 +303,4 @@ B-roll 搭配生成的 Seedance 视频，在 Script Selection 期间出现：
 </film:Film>
 ```
 
-每个 SVS Recipe 中的 `stack-order` 决定 z 轴排序：语音视觉层为 10，B-roll 为 40，字幕为 70，文字为 90。数值越高，渲染层越靠上。
+每个 SVS Recipe 中的 `stack-order` 决定 z 轴排序：语音视觉层为 10，Media 为 40，字幕为 70，文字为 90。数值越高，渲染层越靠上。
