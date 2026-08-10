@@ -1,7 +1,8 @@
 # Picture-in-picture overlay craft
 
 - Decide whether PIP is real photographed video, supplied recording, or a composited subject with
-  transparency. Use the matching explicit Media Track input; do not call every non-text layer a sticker.
+  transparency. Use `media-track:Item` with `video`, `media`, or `surface`; do not call every non-text
+  layer a sticker.
 - Establish a stable placement Frame, crop, border/paint, and stack order. Keep the PIP clear of
   captions, faces, product labels, and the base shot's main evidence.
 - A talking reaction PIP must remain visually alive but silent unless its audio is explicitly included.

@@ -2,7 +2,8 @@
 
 Evidence level: partial.
 
-- Use one ranking/deck presentation system for all items; change layout/style through its Recipe or
+- Use one official `ranking` variant (`TierBoard`, `Column`, `TopThree`, or `TypewriterList`) or one
+  `deck:DepthStack` for all items; change layout/style through its Recipe or
   component configuration rather than duplicating competing tracks.
 - Every item has a stable identity, label/icon, rank/tier, and narrow semantic evidence window. A
   non-contiguous Selection does not implicitly clone an item; author repeated appearances explicitly.

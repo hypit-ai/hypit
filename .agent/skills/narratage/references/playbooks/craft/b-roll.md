@@ -12,5 +12,5 @@
 - For software demos, use complementary context and proof images: person/device relationship first,
   then a device-screen shot from a physically possible reverse viewpoint. Use real supplied UI when
   exact fidelity matters.
-- Put changing text, labels, arrows, and cards in Typography/Media Tracks. Keep product labels and
+- Put changing text, labels, arrows, and cards in `text:Track`/`media-track:Track`. Keep product labels and
   UI text physically attached to the product or screen.

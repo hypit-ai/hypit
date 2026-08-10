@@ -7,9 +7,10 @@ Evidence level: thin.
 - Frame interpretation as reflection, not guaranteed fortune-telling. Offer themes/directions, not
   exact dates, flat verdicts, or promised outcomes. Personality questions describe traits, not a
   predicted person's physical appearance.
-- Generate silent card/table motion; author narration and all editorial text separately. Numbers,
-  questions, and interpretation lines belong in Typography/Caption Tracks unless physically printed
+- Generate silent card/table motion with `seedance:ReferenceVideo`; author narration and all editorial
+  text separately. Numbers, questions, and interpretation lines belong in `text:Track` or the
+  `caption:Program` + `caption-fine:Track` pair unless physically printed
   on supplied card art.
 - Use real supplied card faces when exact symbolism matters. Keep card order and identity stable from
   selection through reveal.
-- Validate every claim and visual cue with the operator before production; do not fabricate certainty.
+- Validate every claim and visual cue with the project reviewer before production; do not fabricate certainty.
