@@ -77,10 +77,9 @@ Role Cues produce different text projections:
 | **speech** | `What time is it?`<br>`It's 8:30.` |
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
-The dialogue `Text` includes Role Cue prefixes. Speech `Text` and caption projection strip them.
-Prompt programs feeding `seedance:ReferenceVideo` may use `{story.segment.dialogue.dialogue}` (with labels). Script also
-emits `{story.caption}` as the ordered display Atom/Word universe and
-`{story.caption.correspondence}` as the separate Atom-to-speech edge used only when timing joins.
+The dialogue projection includes Role Cue prefixes. Speech and caption projections strip them.
+Components like `seedance:Speech` use `{story.segment.dialogue.dialogue}` (with labels) while
+`caption:Track` uses the caption projection (without labels).
 
 ## Dual Text
 

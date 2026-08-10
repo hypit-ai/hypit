@@ -38,7 +38,7 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 
 | 属性 | 必填 | 描述 |
 |---|---|---|
-| `source` | 是 | 生成的视频——来自 `seedance:Speech`、`speaker:Take` 等 |
+| `source` | 是 | 生成的视频——例如来自 `seedance:ReferenceVideo` |
 | `segment` | 是 | 此片段对应的 Script Segment——例如 `{story.segment.hook}` |
 
 `<speech:Take>` 子元素的排列顺序**决定了节目顺序**。第一个片段从时间零点开始；后续片段依次紧接。
@@ -81,7 +81,7 @@ SemanticMap 将每个 Script 中标注的锚点映射到一个时间点。它覆
 ProgramSpace 不是一个需要声明的组件——它由 `speech:Spine` 产生，并传递给每个需要知道总节目时长和帧域的组件。
 
 ```svml
-<film:Film id="main" space={speech.space} ...>
+<film:Film id="main" canvas={vertical} space={speech.space} ...>
 <caption-fine:Track id="captions" ... space={speech.space} .../>
 <text:Track id="titles" space={speech.space}>
 <render:Video id="final" composition={main.composition} space={speech.space}/>
@@ -106,7 +106,7 @@ SemanticMap 是连接 Script 文本与物理时间的类型化桥梁。当你在
 <caption-fine:Track id="captions" ... map={timing.map} .../>
 ```
 
-Map 只包含最终词窗口和语义锚点，不传播"测量、推导、估算"标签。WhisperX Evidence
+Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估算”标签。WhisperX Evidence
 与确定性的 M:N 对齐器负责充分使用录音证据；下游 Track 只接收一份完整 Map，不再解释
 每个点是如何获得的。
 
@@ -139,7 +139,7 @@ Map 只包含最终词窗口和语义锚点，不传播"测量、推导、估算
 数据流向：
 
 ```text
-speaker:Take outputs ──► speech:Spine ──► whisperx:Alignment
+生成的视频 ─────────────► speech:Spine ──► whisperx:Alignment
                               │                    │
                          .visual              .map (SemanticMap)
                          .audio                    │

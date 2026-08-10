@@ -20,12 +20,13 @@ pnpm playground
 |---|---|
 | 组件下拉 | 所有能在画面上产生像素的模块 |
 | W / H / fps / sec | 画布与帧域 |
-| Canvas from a stylesheet | 采用某个 `.svs` 的画幅 |
+| Appearance from a stylesheet | 采用某个 `.svs` Film Recipe 的背景 |
 | 输入表单 | 组件每个输入各一份 |
 | 刻度条 | 帧精确，计数显示为 `当前帧 / 末帧` |
 
-预览的是真实结果。跑的是各组件自己的渲染器，再由 `compileHyperframesDocument` 产出与
-Build 相同的文档。
+预览运行的是已安装模块真正的 Producer handler。例如 Fine Caption、Media Track、
+Screen Overlay、Speech Basis 和 Typography Track 都会降低为 `VisualTrack`，再由
+`compileHyperframesDocument` 产出与 Build 相同的文档。
 
 ## 它不维护任何清单
 
@@ -63,13 +64,14 @@ Playground 里没有组件列表。它读取各 manifest，把所有声明了「
 `format: "digest"` 的字段接受一个文件。Playground 用 SHA-256 计算并注册真实的内容寻址标识——
 编译产出的文档会交叉校验每一个 Artifact 引用，占位值会被拒绝。
 
-因此绘制外部素材的模块（媒体轨道项、说话人画面）**没有默认值**：模块手里没有那些字节，与其编造一个
+因此绘制外部素材的模块（B-roll、说话人画面）**没有默认值**：模块手里没有那些字节，与其编造一个
 digest，不如什么都不说。在你选择文件之前这些组件不画任何东西，这是一个可以经过的状态，不是错误。
 
 ## 样式表
 
-选择 `.svs` 文件**只读其中的 Film Recipe**，且只用于画幅。指向某个 studio 样式表，画布就会
-变成其配置的尺寸和背景色。
+选择 `.svs` 文件**只读其中的 Film Recipe**，且只用于 Film 外观。指向
+`examples/talking-film-golden/studio.svs`，预览会采用该 Recipe 的背景色；画布尺寸与时间仍由
+预览环境的显式控件决定。
 
 表里其余内容一概不读。组件长什么样由拥有它的模块决定，而不是由 Playground 恰好打开的某张样式表决定。
 

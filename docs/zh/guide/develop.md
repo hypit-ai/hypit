@@ -10,18 +10,19 @@ description: 开始 Narratage 开发工作。
 | 工具 | 版本 | 用于 |
 |---|---|---|
 | Node.js | 22+ | 所有工作 |
-| pnpm | 9+ | workspace 管理 |
+| pnpm | 10.33.x | workspace 管理；由根目录 `packageManager` 字段选择 |
 | Python | 3.10–3.13 | WhisperX 与 OpenCV [本地服务](./services.md) |
 | uv | latest | Python 环境管理 |
 | ffmpeg / ffprobe | 较新的稳定版 | 媒体处理 |
-| Chrome / Chromium | 较新的稳定版 | HyperFrames 渲染 |
+| Chrome / Chromium | 由 HyperFrames 管理 | 本地 HyperFrames 渲染 |
 
 只有 Node.js 与 pnpm 是硬性要求。其余都只在跑真实 Builds 时才需要。
 
 ## 日常工作流
 
 ```bash
-pnpm install          # 拉取代码或改动依赖之后
+corepack enable
+pnpm install --frozen-lockfile # 拉取代码或改动依赖之后
 pnpm check            # TypeScript 类型检查
 pnpm test             # 完整测试套件
 ```
@@ -29,7 +30,7 @@ pnpm test             # 完整测试套件
 | 命令 | 实际执行什么 |
 |---|---|
 | `pnpm check` | `tsc -p tsconfig.json --noEmit` |
-| `pnpm test` | `node --import tsx --test 'packages/*/test/**/*.test.ts' 'tools/*.test.mjs'` |
+| `pnpm test` | 通过 Node test runner 运行 package、service-adapter 与仓库边界测试 |
 
 关于受环境开关控制的测试与测试写法，参见[测试](./testing.md)。
 
@@ -37,7 +38,7 @@ pnpm test             # 完整测试套件
 
 ```text
 narratage/
-├── packages/              86 workspace packages
+├── packages/              82 workspace packages
 ├── spec/                  16 normative specification documents
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
