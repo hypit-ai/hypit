@@ -7,6 +7,8 @@ import type { HostFacet } from "@narratage/host";
 import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
 import type { CanonicalValue, Digest } from "@narratage/protocol";
 import type { RuntimeServicePackage } from "@narratage/runtime";
+import { credentialRef } from "@narratage/runtime";
+import type { CredentialRef } from "@narratage/runtime";
 
 export const runtimeAdapterHostAbi = "svml.runtime-adapter-host@1";
 
@@ -395,4 +397,18 @@ export function runtimeConfigBoolean(value: CanonicalValue | undefined, subject:
   if (value === undefined) return undefined;
   assert(typeof value === "boolean", `${subject} must be a boolean`);
   return value;
+}
+
+/** Closed deployment syntax for a CredentialRef; secret bytes never enter the Profile. */
+export function runtimeConfigCredentialRef(
+  value: CanonicalValue | undefined,
+  subject: string,
+): CredentialRef | undefined {
+  if (value === undefined) return undefined;
+  const object = runtimeConfigObject(value, subject);
+  runtimeConfigExact(object, ["store", "key"], subject);
+  const store = runtimeConfigString(object.store, `${subject}.store`);
+  const key = runtimeConfigString(object.key, `${subject}.key`);
+  assert(store !== undefined && key !== undefined, `${subject} requires store and key`);
+  return credentialRef(store, key);
 }

@@ -25,12 +25,26 @@ async function project(service: (root: string) => RuntimeExternalService) {
   const path = join(root, "svml.runtime.json");
   await writeFile(path, JSON.stringify({
     format: "svml.runtime-config@1",
+    runtimeServices: [],
+    services: {
+      scheduler: "execution.scheduler",
+      worker: "execution.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        journal: "state.journal",
+        artifacts: "artifacts",
+        credentials: ["credentials"],
+      },
+    },
     endpoints: [
       { use: "example.program", instance: "one", config: {} },
       // A second Endpoint driving the same program: it is brought up once.
       { use: "example.program", instance: "two", config: {} },
     ],
     permissions: [],
+    scheduling: { maxConcurrency: 1 },
   }));
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(createRuntimeEndpointAdapterFacet({

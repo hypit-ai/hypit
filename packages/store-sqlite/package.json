@@ -9,9 +9,13 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
     "@narratage/core": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/runtime": "workspace:*"
+    "@narratage/runtime": "workspace:*",
+    "@narratage/runtime-adapter": "workspace:*"
   }
 }

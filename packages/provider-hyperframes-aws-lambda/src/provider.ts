@@ -654,6 +654,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       } catch (error) {
         if (!alreadyStopped(error)) throw error;
       }
+      return { status: "accepted" };
     },
   };
 

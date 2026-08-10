@@ -36,13 +36,23 @@ export type OperationFailure = {
   readonly retryAt?: number;
 };
 
+export type OperationCancellationControl = {
+  readonly requestedAt: number;
+  readonly requestId: Digest;
+  readonly status: "requested" | "accepted" | "confirmed" | "unsupported" | "too-late";
+  readonly attempts: number;
+  readonly retryAt?: number;
+  readonly lastError?: { readonly code: string; readonly message: string };
+};
+
 export type OperationSnapshot = OperationIdentity & {
   readonly revision: number;
-  readonly status: "created" | "pending" | "completed" | "failed";
+  readonly status: "created" | "pending" | "completed" | "failed" | "cancelled";
   readonly checkpoint?: CanonicalValue;
   readonly wakeAt?: number;
   readonly completion?: OperationCompletion;
   readonly failure?: OperationFailure;
+  readonly cancellation?: OperationCancellationControl;
 };
 
 export type OperationUpdate =
@@ -51,7 +61,9 @@ export type OperationUpdate =
       readonly status: "completed";
       readonly completion: Omit<OperationCompletion, "digest">;
     }
-  | { readonly status: "failed"; readonly failure: OperationFailure };
+  | { readonly status: "failed"; readonly failure: OperationFailure }
+  | { readonly status: "cancelled"; readonly cancellation: OperationCancellationControl }
+  | { readonly status: "control"; readonly cancellation: OperationCancellationControl };
 
 export type OperationCreate =
   | { readonly status: "created"; readonly snapshot: OperationSnapshot }
@@ -192,6 +204,34 @@ export function verifyOperationSnapshot(snapshot: OperationSnapshot): void {
       epochMillisecond(snapshot.failure.retryAt, "Operation failure retryAt");
     }
   }
+  if (snapshot.status === "cancelled") {
+    assert(presence === 0, "cancelled Operation cannot carry execution result state");
+    assert(snapshot.cancellation?.status === "confirmed", "cancelled Operation requires confirmed cancellation");
+  }
+  if (snapshot.cancellation !== undefined) verifyOperationCancellationControl(snapshot.id, snapshot.cancellation);
+}
+
+export function operationCancellationRequestId(operation: Digest, requestedAt: number): Digest {
+  epochMillisecond(requestedAt, "Operation cancellation requestedAt");
+  return digestOf({ format: "svml.operation-cancellation-request@1", operation, requestedAt });
+}
+
+export function verifyOperationCancellationControl(
+  operation: Digest,
+  control: OperationCancellationControl,
+): void {
+  epochMillisecond(control.requestedAt, "Operation cancellation requestedAt");
+  assert(control.requestId === operationCancellationRequestId(operation, control.requestedAt),
+    "Operation cancellation request identity differs");
+  assert(["requested", "accepted", "confirmed", "unsupported", "too-late"].includes(control.status),
+    "Operation cancellation status is invalid");
+  assert(Number.isSafeInteger(control.attempts) && control.attempts >= 0,
+    "Operation cancellation attempts is invalid");
+  if (control.retryAt !== undefined) epochMillisecond(control.retryAt, "Operation cancellation retryAt");
+  if (control.lastError !== undefined) {
+    assert(control.lastError.code.trim().length > 0 && control.lastError.message.trim().length > 0,
+      "Operation cancellation error is invalid");
+  }
 }
 
 function copy(snapshot: OperationSnapshot): OperationSnapshot {
@@ -241,16 +281,30 @@ export class MemoryOperationStore implements OperationStore {
     const current = this.#operations.get(id);
     assert(current !== undefined, `Operation ${id} does not exist`);
     if (current.revision !== expectedRevision) return { status: "conflict", current: copy(current) };
-    assert(current.status !== "completed" && current.status !== "failed", `Operation ${id} is already terminal`);
-    const mutable = update.status === "pending"
+    if (update.status !== "control") {
+      assert(current.status !== "completed" && current.status !== "failed" && current.status !== "cancelled",
+        `Operation ${id} is already terminal`);
+    }
+    const mutable = update.status === "control"
+      ? {
+          status: current.status,
+          ...(current.checkpoint === undefined ? {} : { checkpoint: structuredClone(current.checkpoint) }),
+          ...(current.wakeAt === undefined ? {} : { wakeAt: current.wakeAt }),
+          ...(current.completion === undefined ? {} : { completion: structuredClone(current.completion) }),
+          ...(current.failure === undefined ? {} : { failure: structuredClone(current.failure) }),
+          cancellation: structuredClone(update.cancellation),
+        }
+      : update.status === "pending"
       ? {
           status: "pending" as const,
           checkpoint: structuredClone(update.checkpoint),
           ...(update.wakeAt === undefined ? {} : { wakeAt: epochMillisecond(update.wakeAt, "Operation wakeAt") }),
         }
-      : update.status === "completed"
+        : update.status === "completed"
         ? { status: "completed" as const, completion: sealOperationCompletion(update.completion) }
-        : { status: "failed" as const, failure: structuredClone(update.failure) };
+        : update.status === "failed"
+          ? { status: "failed" as const, failure: structuredClone(update.failure) }
+          : { status: "cancelled" as const, cancellation: structuredClone(update.cancellation) };
     const snapshot: OperationSnapshot = {
       format: current.format,
       id: current.id,
@@ -264,6 +318,8 @@ export class MemoryOperationStore implements OperationStore {
       submissionKey: current.submissionKey,
       revision: current.revision + 1,
       ...mutable,
+      ...(update.status === "control" || update.status === "cancelled" || current.cancellation === undefined
+        ? {} : { cancellation: structuredClone(current.cancellation) }),
     };
     verifyOperationSnapshot(snapshot);
     this.#operations.set(id, snapshot);

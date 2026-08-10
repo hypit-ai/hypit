@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { FileArtifactStore } from "@narratage/artifact-store-fs";
+import { FileArtifactStore, createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
+import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import {
   createResolvedClosure,
@@ -39,7 +40,8 @@ import {
   grokImagineManifest,
   sealGrokImagineRequest,
 } from "@narratage/grok-imagine";
-import { createProjectLocalRuntime } from "@narratage/local";
+import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/local";
+import type { LocalBuildSubmission } from "@narratage/local";
 import {
   minimaxH3Component,
   minimaxH3Endpoints,
@@ -61,7 +63,7 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 import { credentialRef } from "@narratage/runtime";
-import type { ScheduledBuildResult } from "@narratage/runtime";
+import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
 import {
   sealSeedanceRequest,
   seedanceComponent,
@@ -396,10 +398,9 @@ async function inspectArtifact(root: string, item: SmokeCase, artifact: BlobRef)
   return inspectPath;
 }
 
-function failureMessage(item: SmokeCase, build: ScheduledBuildResult): string {
+function failureMessage(item: SmokeCase, build: LocalBuildSubmission): string {
   const diagnostic = build.state.diagnostics.map((entry) => `${entry.code}: ${entry.message}`).join("; ");
-  const journal = build.journal.map((entry) => `${entry.status}:${entry.message ?? entry.command}`).join("; ");
-  return `${item.key} KIE smoke Build ${build.status}: ${diagnostic || journal || "no diagnostic"}`;
+  return `${item.key} KIE smoke Build ${build.status}: ${diagnostic || build.dispatch.reason || "no diagnostic"}`;
 }
 
 async function main(): Promise<void> {
@@ -421,16 +422,51 @@ async function main(): Promise<void> {
     defaultConcurrency: 1,
     pollIntervalMs: 3_000,
   });
+  const execution = createLocalExecutionPackage("execution.local");
+  const state = createSqliteRuntimeServicePackage({
+    path: join(root, ".svml", "runtime.sqlite"),
+    name: "state.sqlite",
+    buildInstance: "state.builds",
+    operationInstance: "state.operations",
+    dispatchInstance: "state.dispatch",
+    journalInstance: "state.journal",
+  });
+  const artifacts = createFileArtifactStorePackage({ root: join(root, ".svml", "artifacts"), instance: "artifacts.fs" });
+  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
   const runtime = await createProjectLocalRuntime({
     root,
+    runtimeServices: [execution, state, artifacts, credentials],
+    runtimeSelection: {
+      scheduler: "execution.local.scheduler",
+      worker: "execution.local.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        journal: "state.journal",
+        artifacts: "artifacts.fs",
+        credentials: ["credentials.env"],
+      },
+    },
     components: [
       generationComponent,
       ...[...new Map(selected.map((item) => [item.component.name, item.component])).values()],
     ],
     endpoints: [provider],
-    allowedPermissions: provider.manifest.facets.flatMap((facet) => facet.permissions),
+    allowedPermissions: [
+      "filesystem:state", "filesystem:artifacts", "environment:credentials",
+      ...provider.manifest.facets.flatMap((facet) => facet.permissions),
+    ],
+    scheduling: { maxConcurrency: 1 },
   });
   const failures: string[] = [];
+  const workerAbort = new AbortController();
+  const workerRun = runtime.work({
+    owner: `kie-smoke-${process.pid}`,
+    leaseMs: 30_000,
+    idlePollMs: 100,
+    signal: workerAbort.signal,
+  });
   try {
     for (const item of selected) {
       const before = await accountCredits(baseUrl, key);
@@ -455,6 +491,8 @@ async function main(): Promise<void> {
       console.log(`[${item.key}] credits after: ${after}; consumed: ${before - after}`);
     }
   } finally {
+    workerAbort.abort();
+    await workerRun;
     await runtime.close();
   }
   if (failures.length > 0) throw new Error(`KIE live smoke failures:\n${failures.join("\n")}`);

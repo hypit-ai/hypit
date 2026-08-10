@@ -10,21 +10,25 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { FileArtifactStore } from "@narratage/artifact-store-fs";
+import { FileArtifactStore, createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
+import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
 import { MemoryArtifactStore } from "@narratage/driver-node";
+import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { RecoverableEndpoint } from "@narratage/endpoint-kit";
 import type {
   ComponentPackage,
   EndpointPackage,
 } from "@narratage/local";
-import { createLocalRuntime, createProjectLocalRuntime } from "@narratage/local";
+import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/local";
 import { digestOf } from "@narratage/core";
 import {
   createNodePackageLock,
   writeNodePackageLock,
 } from "@narratage/package-loader-node";
-import { LocalBuildScheduler, MemoryBuildStore, defineRuntimeServicePackage } from "@narratage/runtime";
+import { LocalBuildScheduler, credentialRef, defineRuntimeServicePackage } from "@narratage/runtime";
+import type { CredentialValue, WritableCredentialStore } from "@narratage/runtime";
 import type { RuntimeModuleManifest } from "@narratage/runtime";
+import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
 
 import {
   capabilities,
@@ -53,15 +57,46 @@ const providerManifest: RuntimeModuleManifest = {
   }],
 };
 
+function projectRuntimeFixture(directory: string) {
+  const execution = createLocalExecutionPackage("execution.local");
+  const state = createSqliteRuntimeServicePackage({
+    path: join(directory, ".svml", "runtime.sqlite"),
+    name: "state.sqlite",
+    buildInstance: "state.builds",
+    operationInstance: "state.operations",
+    dispatchInstance: "state.dispatch",
+    journalInstance: "state.journal",
+  });
+  const artifacts = createFileArtifactStorePackage({
+    root: join(directory, ".svml", "artifacts"),
+    instance: "artifacts.fs",
+  });
+  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
+  return {
+    runtimeServices: [execution, state, artifacts, credentials],
+    runtimeSelection: {
+      scheduler: "execution.local.scheduler",
+      worker: "execution.local.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        journal: "state.journal",
+        artifacts: "artifacts.fs",
+        credentials: ["credentials.env"],
+      },
+    },
+    allowedPermissions: ["filesystem:state", "filesystem:artifacts", "environment:credentials"],
+    scheduling: { maxConcurrency: 4 },
+  } as const;
+}
+
 test("Artifact GC is explicit, dry-run by default, and only removes unreachable managed bytes", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-artifact-gc-"));
   try {
-    const artifacts = new FileArtifactStore(join(directory, "artifacts"));
+    const artifacts = new FileArtifactStore(join(directory, ".svml", "artifacts"));
     const orphan = await artifacts.put(new TextEncoder().encode("orphan"), "application/octet-stream");
-    const runtime = await createLocalRuntime({
-      buildStore: new MemoryBuildStore(),
-      artifactStore: artifacts,
-    });
+    const runtime = await createProjectLocalRuntime({ root: directory, ...projectRuntimeFixture(directory) });
     const preview = await runtime.garbageCollectArtifacts();
     assert.deepEqual(preview.unreachable, [orphan.digest]);
     assert.deepEqual(preview.deleted, []);
@@ -69,6 +104,70 @@ test("Artifact GC is explicit, dry-run by default, and only removes unreachable 
     const applied = await runtime.garbageCollectArtifacts({ apply: true });
     assert.deepEqual(applied.deleted, [orphan.digest]);
     assert.equal(await artifacts.has(orphan.digest), false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("Endpoint-declared credentials use the selected writable Store without a Provider switch", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-local-auth-"));
+  const values = new Map<string, CredentialValue>();
+  const credentialStore: WritableCredentialStore = {
+    owns(ref) { return ref.store === "memory"; },
+    async resolve(ref) { return ref.store === "memory" ? values.get(ref.key) : undefined; },
+    async put(ref, value) { values.set(ref.key, value); },
+    async delete(ref) { return values.delete(ref.key); },
+  };
+  const memoryCredentials = defineRuntimeServicePackage({
+    name: "credentials.memory",
+    module: { name: "example.credentials-memory", version: "1" },
+    services: [{
+      role: "credential-store",
+      facet: "credential-store",
+      instance: "credentials.memory",
+      implementation: { locator: "example.credentials-memory", digest: digestOf("credentials-memory@1") },
+      service: credentialStore,
+    }],
+  });
+  const endpoint = defineEndpointPackage({
+    module: providerModule,
+    facet: "generation",
+    instance: "generation.auth-test",
+    implementation: { locator: "example.local-endpoint/generation", digest: providerDigest },
+    credentials: { apiKey: credentialRef("memory", "generation.api-key") },
+    credentialInputs: { apiKey: { label: "Generation API key" } },
+    capabilities: [{
+      capability: capabilities.generation,
+      returns: types.generated,
+      lifecycle: "recoverable",
+      endpoint: {
+        start() { throw new Error("unused"); },
+        resume() { throw new Error("unused"); },
+      },
+    }],
+  });
+  try {
+    const base = projectRuntimeFixture(directory);
+    const runtime = await createProjectLocalRuntime({
+      root: directory,
+      ...base,
+      runtimeServices: [...base.runtimeServices.slice(0, -1), memoryCredentials],
+      runtimeSelection: {
+        ...base.runtimeSelection,
+        stores: { ...base.runtimeSelection.stores, credentials: ["credentials.memory"] },
+      },
+      allowedPermissions: ["filesystem:state", "filesystem:artifacts"],
+      endpoints: [endpoint],
+    });
+    assert.deepEqual((await runtime.credentials("generation.auth-test")).map((item) => ({
+      slot: item.slot, configured: item.configured, writable: item.writable,
+    })), [{ slot: "apiKey", configured: false, writable: true }]);
+    const stored = await runtime.putCredential("generation.auth-test", "apiKey", "secret");
+    assert.equal(stored.configured, true);
+    const removed = await runtime.deleteCredential("generation.auth-test", "apiKey");
+    assert.equal(removed.deleted, true);
+    assert.equal(removed.credential.configured, false);
+    await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -133,7 +232,7 @@ test("project local runtime resumes durable work while component and endpoint pa
   const recoverableEndpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
-      return { status: "pending", checkpoint: { remoteJob: operation.submissionKey } };
+      return { status: "pending", checkpoint: { remoteJob: operation.submissionKey }, wakeAt: Date.now() };
     },
     resume({ checkpoint }) {
       resumes += 1;
@@ -150,6 +249,7 @@ test("project local runtime resumes durable work while component and endpoint pa
     },
     cancel() {
       cancels += 1;
+      return { status: "confirmed" };
     },
   };
   const endpointPackage: EndpointPackage = {
@@ -161,6 +261,7 @@ test("project local runtime resumes durable work while component and endpoint pa
       returns: types.generated,
       endpoint: "generation.personal",
     }],
+    credentials: [],
     install(registry) {
       registry.registerRecoverableEndpoint(
         "generation.personal",
@@ -181,22 +282,26 @@ test("project local runtime resumes durable work while component and endpoint pa
   try {
     const firstRuntime = await createProjectLocalRuntime({
       root: directory,
+      ...projectRuntimeFixture(directory),
       components: [components],
       endpoints: [endpointPackage],
     });
     const first = await firstRuntime.build({ id: "greeting-build", state: initial, catalog });
-    assert.equal(first.status, "paused");
+    assert.equal(first.status, "queued");
+    assert.equal((await firstRuntime.workOnce({ owner: "worker-one", leaseMs: 5_000 }))?.phase, "waiting");
     assert.equal(starts, 1);
     assert.equal(resumes, 0);
     await firstRuntime.close();
 
     const secondRuntime = await createProjectLocalRuntime({
       root: directory,
+      ...projectRuntimeFixture(directory),
       components: [components],
       endpoints: [endpointPackage],
     });
     const second = await secondRuntime.build({ id: "greeting-build", state: createGreetingBuild(), catalog });
-    assert.equal(second.status, "complete");
+    assert.equal(second.status, "waiting");
+    assert.equal((await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 }))?.terminal, "complete");
     assert.equal(starts, 1);
     assert.equal(resumes, 1);
     assert.equal(promptCalls, 1, "persisted Core facts stop deterministic upstream replay");
@@ -207,6 +312,9 @@ test("project local runtime resumes durable work while component and endpoint pa
     assert.equal(clientStatus.catalog?.aliases[0]?.name, "final.document");
     assert.deepEqual((await secondRuntime.builds()).map((item) => item.build), ["greeting-build"]);
 
+    await secondRuntime.build({ id: "greeting-follow", state: createGreetingBuild() });
+    await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
     const followed = await secondRuntime.build(
       { id: "greeting-follow", state: createGreetingBuild() },
       { follow: true, pollIntervalMs: 1, maxWaitMs: 1_000 },
@@ -219,9 +327,12 @@ test("project local runtime resumes durable work while component and endpoint pa
     assert.equal(followedStatus.operations.length, 1);
 
     const waiting = await secondRuntime.build({ id: "greeting-cancel", state: createGreetingBuild() });
-    assert.equal(waiting.status, "paused");
-    const cancelled = await secondRuntime.cancel("greeting-cancel");
-    assert.equal(cancelled?.status, "failed");
+    assert.equal(waiting.status, "queued");
+    await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    const requested = await secondRuntime.cancel("greeting-cancel");
+    assert.equal(requested?.admission, "closing");
+    const cancelled = await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    assert.equal(cancelled?.terminal, "cancelled");
     assert.equal(cancels, 1);
     await secondRuntime.close();
   } finally {
@@ -287,16 +398,17 @@ test("project local runtime activates locked compute facets without deployment s
     await writeNodePackageLock(lockPath, lock);
     const runtime = await createProjectLocalRuntime({
       root: runtimeRoot,
+      ...projectRuntimeFixture(runtimeRoot),
       packageRoot: installedRoot,
       packageLock: "../svml.packages.lock",
     });
-    await assert.rejects(
-      async () => await runtime.build({
-        id: "unlocked-preview",
-        state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
-      }),
-      /does not bind this Host's implementation package closure/u,
-    );
+    await runtime.build({
+      id: "unlocked-preview",
+      state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+    });
+    const refused = await runtime.workOnce({ owner: "locked-test", leaseMs: 5_000 });
+    assert.equal(refused?.terminal, "failed");
+    assert.match(refused?.reason ?? "", /does not bind this Host's implementation package closure/u);
     const result = await runtime.build({
       id: "locked-preview",
       state: createGreetingBuild({
@@ -305,15 +417,18 @@ test("project local runtime activates locked compute facets without deployment s
         implementationClosure: lock.digest,
       }),
     });
-    assert.equal(result.status, "complete");
-    assert.equal(result.state.records.some((record) => record.id === "document:root"), true);
+    assert.equal(result.status, "queued");
+    const completed = await runtime.workOnce({ owner: "locked-test", leaseMs: 5_000 });
+    assert.equal(completed?.terminal, "complete");
+    assert.equal((await runtime.status("locked-preview")).build?.state.records
+      .some((record) => record.id === "document:root"), true);
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
 });
 
-test("project local runtime infers one supplied Scheduler service without knowing its package", async () => {
+test("project local runtime uses only the explicitly selected Scheduler", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-scheduler-service-"));
   let creates = 0;
   const scheduler = defineRuntimeServicePackage({
@@ -335,10 +450,15 @@ test("project local runtime infers one supplied Scheduler service without knowin
     }],
   });
   try {
+    const base = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
       root: directory,
-      runtimeServices: [scheduler],
+      ...base,
+      runtimeServices: [...base.runtimeServices, scheduler],
+      runtimeSelection: { ...base.runtimeSelection, scheduler: "scheduler.example" },
     });
+    await runtime.build({ id: "scheduler-selection", state: createGreetingBuild() });
+    await runtime.workOnce({ owner: "scheduler-test", leaseMs: 5_000 });
     assert.equal(creates, 1);
     await runtime.close();
   } finally {
@@ -346,7 +466,7 @@ test("project local runtime infers one supplied Scheduler service without knowin
   }
 });
 
-test("two Scheduler services are refused and neither gains authority", async () => {
+test("two installed Schedulers are unambiguous because the Profile selects one", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-scheduler-selection-"));
   const creates = { one: 0, two: 0 };
   const closes = { one: 0, two: 0 };
@@ -371,23 +491,18 @@ test("two Scheduler services are refused and neither gains authority", async () 
     close() { closes[name] += 1; },
   });
   try {
-    // Two schedulers is a configuration to correct, not a choice to make later.
-    await assert.rejects(
-      createProjectLocalRuntime({
-        root: directory,
-        runtimeServices: [scheduler("one"), scheduler("two")],
-      }),
-      /configures 2 scheduler implementations/u,
-    );
-    assert.deepEqual(closes, { one: 1, two: 1 });
-
+    const base = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
       root: directory,
-      runtimeServices: [scheduler("two")],
+      ...base,
+      runtimeServices: [...base.runtimeServices, scheduler("one"), scheduler("two")],
+      runtimeSelection: { ...base.runtimeSelection, scheduler: "scheduler.two" },
     });
+    await runtime.build({ id: "scheduler-two", state: createGreetingBuild() });
+    await runtime.workOnce({ owner: "scheduler-test", leaseMs: 5_000 });
     assert.deepEqual(creates, { one: 0, two: 1 });
     await runtime.close();
-    assert.deepEqual(closes, { one: 1, two: 2 });
+    assert.deepEqual(closes, { one: 1, two: 1 });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -414,14 +529,29 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
     }],
   });
   try {
+    const denied = projectRuntimeFixture(directory);
     await assert.rejects(
-      createProjectLocalRuntime({ root: directory, runtimeServices: [artifacts] }),
+      createProjectLocalRuntime({
+        root: directory,
+        ...denied,
+        runtimeServices: [...denied.runtimeServices, artifacts],
+        runtimeSelection: {
+          ...denied.runtimeSelection,
+          stores: { ...denied.runtimeSelection.stores, artifacts: "artifacts.remote" },
+        },
+      }),
       /disallowed Runtime permission network:remote-artifacts/u,
     );
+    const allowed = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
       root: directory,
-      runtimeServices: [artifacts],
-      allowedPermissions: ["network:remote-artifacts"],
+      ...allowed,
+      runtimeServices: [...allowed.runtimeServices, artifacts],
+      runtimeSelection: {
+        ...allowed.runtimeSelection,
+        stores: { ...allowed.runtimeSelection.stores, artifacts: "artifacts.remote" },
+      },
+      allowedPermissions: [...allowed.allowedPermissions, "network:remote-artifacts"],
     });
     const bytes = new Uint8Array([7, 8, 9]);
     const sourceArtifact = {
@@ -431,14 +561,14 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
       mediaType: "application/octet-stream",
     };
     assert.equal(await artifactStore.has(sourceArtifact.digest), false);
-    await assert.rejects(
-      runtime.build({
-        id: "source-artifact-staging",
-        state: createGreetingBuild(),
-        attachments: [{ artifact: sourceArtifact, bytes }],
-      }),
-      /does not bind demanded capability/u,
-    );
+    await runtime.build({
+      id: "source-artifact-staging",
+      state: createGreetingBuild(),
+      attachments: [{ artifact: sourceArtifact, bytes }],
+    });
+    const blocked = await runtime.workOnce({ owner: "artifact-test", leaseMs: 5_000 });
+    assert.equal(blocked?.terminal, "failed");
+    assert.match(blocked?.reason ?? "", /does not bind demanded capability/u);
     assert.deepEqual(await artifactStore.get(sourceArtifact.digest), bytes);
     await assert.rejects(
       runtime.build({

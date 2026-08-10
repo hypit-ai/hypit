@@ -63,10 +63,21 @@ export type EndpointResumeContext = EndpointStartContext & {
   readonly checkpoint: CanonicalValue | undefined;
 };
 
+/**
+ * Provider-side acknowledgement is deliberately separate from the Operation's final state.
+ * `accepted` means the remote system accepted a request but may still finish normally; only
+ * `confirmed` proves that the work itself is cancelled.
+ */
+export type EndpointCancelOutcome =
+  | { readonly status: "confirmed" }
+  | { readonly status: "accepted"; readonly wakeAt?: number }
+  | { readonly status: "unsupported" }
+  | { readonly status: "too-late" };
+
 export type RecoverableEndpoint = {
   start(context: EndpointStartContext): Awaitable<EndpointOutcome>;
   resume(context: EndpointResumeContext): Awaitable<EndpointOutcome>;
-  cancel?(context: EndpointResumeContext): Awaitable<void>;
+  cancel?(context: EndpointResumeContext): Awaitable<EndpointCancelOutcome>;
 };
 
 /** Endpoint/implementation scheduling metadata; it never changes Core demand or command identity. */
@@ -118,7 +129,17 @@ export type EndpointPackage = {
   readonly manifest: RuntimeModuleManifest;
   readonly instance: RuntimeProfileInstance;
   readonly bindings: readonly RuntimeEndpointBinding[];
+  /** Host-facing login material declared by this exact configured Endpoint instance. */
+  readonly credentials: readonly EndpointCredentialDescription[];
   install(registry: EndpointRegistrar): Awaitable<void>;
+};
+
+export type EndpointCredentialDescription = {
+  readonly endpoint: string;
+  readonly slot: string;
+  readonly label: string;
+  readonly kind: "secret" | "json";
+  readonly ref: CredentialRef;
 };
 
 type EndpointCapabilityBase = {
@@ -153,6 +174,10 @@ export type DefineEndpointPackageOptions = {
   /** Non-secret deployment facts such as base URL, region and credential references. */
   readonly configuration?: CanonicalValue;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
+  readonly credentialInputs?: Readonly<Record<string, {
+    readonly label: string;
+    readonly kind?: "secret" | "json";
+  }>>;
   readonly defaultConcurrency?: number;
   readonly capabilities: readonly EndpointCapability[];
 };
@@ -194,6 +219,24 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
       verifyCredentialRef(ref);
       return [slot, structuredClone(ref)];
     }));
+  const credentialInputs = options.credentialInputs ?? {};
+  for (const slot of Object.keys(credentialInputs)) {
+    assert(slot in credentials, `Endpoint credential input ${slot} has no configured CredentialRef`);
+  }
+  const credentialDescriptions = Object.entries(credentials).map(([slot, ref]) => {
+    const input = credentialInputs[slot];
+    const label = input?.label ?? slot;
+    assert(label.trim().length > 0, `Endpoint credential ${slot} label is empty`);
+    const kind = input?.kind ?? "secret";
+    assert(kind === "secret" || kind === "json", `Endpoint credential ${slot} kind is invalid`);
+    return {
+      endpoint: options.instance,
+      slot,
+      label,
+      kind,
+      ref: structuredClone(ref),
+    } satisfies EndpointCredentialDescription;
+  });
   const configuration = canonicalize(options.configuration ?? null);
   const executionPolicy = options.capabilities.map((capability) => ({
     capability: refKey(capability.capability),
@@ -239,6 +282,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     manifest,
     instance,
     bindings,
+    credentials: credentialDescriptions,
     install(registry) {
       for (const capability of options.capabilities) {
         const common: EndpointRegistrationOptions = {

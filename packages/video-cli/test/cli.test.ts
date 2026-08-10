@@ -267,23 +267,47 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
   const runtimePackageLock = join(root, "runtime.packages.lock.json");
   await writeNodePackageLock(
     runtimePackageLock,
-    await createNodePackageLock(["@narratage/provider-kie"], process.cwd()),
+    await createNodePackageLock([
+      "@narratage/local",
+      "@narratage/store-sqlite",
+      "@narratage/artifact-store-fs",
+      "@narratage/credential-store-env",
+      "@narratage/provider-kie",
+    ], process.cwd()),
   );
   await writeFile(profile, JSON.stringify({
     format: "svml.runtime-config@1",
     root,
-    statePath: join(root, "state.sqlite"),
-    catalogPath: join(root, "catalog.sqlite"),
-    artifactPath: join(root, "artifacts"),
     runtimePackageLock,
+    runtimeServices: [
+      { use: "@narratage/local", instance: "execution" },
+      { use: "@narratage/store-sqlite", instance: "state", config: { path: "state.sqlite" } },
+      { use: "@narratage/artifact-store-fs", instance: "artifacts", config: { path: "artifacts" } },
+      { use: "@narratage/credential-store-env", instance: "credentials", config: {} },
+    ],
+    services: {
+      scheduler: "execution.scheduler",
+      worker: "execution.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        journal: "state.journal",
+        artifacts: "artifacts",
+        credentials: ["credentials"],
+      },
+    },
     endpoints: [{
       use: "@narratage/provider-kie",
       instance: "kie.cli-test",
       lane: "generation",
-      config: { apiKeyEnv: "SVML_TEST_MISSING_KIE_KEY", defaultConcurrency: 2 },
+      config: { apiKey: { store: "env", key: "SVML_TEST_MISSING_KIE_KEY" }, defaultConcurrency: 2 },
     }],
-    permissions: ["network:api.kie.ai", "network:kieai.redpandaai.co"],
-    scheduling: { lanes: { generation: 2 } },
+    permissions: [
+      "filesystem:state", "filesystem:artifacts", "environment:credentials",
+      "network:api.kie.ai", "network:kieai.redpandaai.co",
+    ],
+    scheduling: { maxConcurrency: 4, lanes: { generation: 2 } },
   }), "utf8");
   let output = "";
   await runCli(["status", "missing-build", "--runtime", profile], {
@@ -297,9 +321,18 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
     readonly ok: boolean;
     readonly diagnostics: readonly { readonly code: string; readonly subject?: string }[];
   };
-  assert.equal(diagnosis.ok, false);
-  assert.equal(diagnosis.diagnostics.some((item) =>
-    item.code === "RUNTIME_CREDENTIAL_MISSING" && item.subject === "SVML_TEST_MISSING_KIE_KEY"), true);
+  assert.equal(diagnosis.ok, true);
+  assert.equal(diagnosis.diagnostics.length, 0);
+  output = "";
+  await runCli(["auth", "status", "kie.cli-test", "--runtime", profile], {
+    write: (text) => { output += text; },
+  });
+  const auth = JSON.parse(output) as {
+    readonly credentials: readonly { readonly slot: string; readonly configured: boolean; readonly writable: boolean }[];
+  };
+  assert.deepEqual(auth.credentials.map((item) => ({
+    slot: item.slot, configured: item.configured, writable: item.writable,
+  })), [{ slot: "apiKey", configured: false, writable: false }]);
 });
 
 test("one checked-in fixture closes the complete provider-free video plan", async () => {
@@ -517,6 +550,9 @@ const catalog = ${JSON.stringify(catalog)};
 export default {
   async build() { throw new Error("not used"); },
   async builds() { return [catalog]; },
+  async credentials() { return []; },
+  async putCredential() { throw new Error("not used"); },
+  async deleteCredential() { throw new Error("not used"); },
   async status(id) { return { build: id === "archive-1" ? { build: id, revision: 7, state: ${JSON.stringify(state)} } : undefined, catalog: id === "archive-1" ? catalog : undefined, operations: [] }; },
   async readArtifact(digest) {
     if (digest === ${JSON.stringify(artifactDigest)}) return bytes;

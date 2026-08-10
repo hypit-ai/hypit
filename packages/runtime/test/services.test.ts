@@ -33,6 +33,13 @@ function servicePackage(close?: () => void) {
         },
       },
       {
+        role: "worker",
+        facet: "worker",
+        instance: "worker.example",
+        implementation: { locator: "example.runtime-services/worker", digest: digestOf("worker") },
+        service: { create() { return { async runOnce() { return undefined; }, async run() {} }; } },
+      },
+      {
         role: "build-store",
         facet: "build-store",
         instance: "builds.example",
@@ -54,6 +61,41 @@ function servicePackage(close?: () => void) {
         configuration: { database: "fixture" },
         service: new MemoryOperationStore(),
       },
+      {
+        role: "dispatch-store",
+        facet: "dispatch-store",
+        instance: "dispatch.example",
+        implementation: { locator: "example.runtime-services/dispatch", digest: digestOf("dispatch") },
+        service: Object.fromEntries([
+          "create", "read", "list", "claim", "heartbeat", "release", "finish", "requestCancellation",
+          "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
+        ].map((name) => [name, async () => undefined])) as never,
+      },
+      {
+        role: "runtime-journal",
+        facet: "runtime-journal",
+        instance: "journal.example",
+        implementation: { locator: "example.runtime-services/journal", digest: digestOf("journal") },
+        service: { async append() { throw new Error("unused"); }, async list() { return []; } },
+      },
+      {
+        role: "artifact-store",
+        facet: "artifact-store",
+        instance: "artifacts.example",
+        implementation: { locator: "example.runtime-services/artifacts", digest: digestOf("artifacts") },
+        service: {
+          async put() { throw new Error("unused"); },
+          async get() { return undefined; },
+          async has() { return false; },
+        },
+      },
+      {
+        role: "credential-store",
+        facet: "credential-store",
+        instance: "credentials.example",
+        implementation: { locator: "example.runtime-services/credentials", digest: digestOf("credentials") },
+        service: { async resolve() { return undefined; } },
+      },
     ],
     ...(close === undefined ? {} : { close }),
   });
@@ -64,20 +106,30 @@ test("one physical Runtime package exposes separately selected Scheduler and Sto
   const configured = servicePackage(() => { closes += 1; });
   const assembly = assembleRuntimeServices([configured], {
     scheduler: "scheduler.example",
+    worker: "worker.example",
     stores: {
       build: "builds.example",
       operations: "operations.example",
+      dispatch: "dispatch.example",
+      journal: "journal.example",
+      artifacts: "artifacts.example",
+      credentials: ["credentials.example"],
     },
   });
   assert.equal(assembly.manifests.length, 1);
   assert.deepEqual(assembly.instances.map((item) => item.id), [
     "scheduler.example",
+    "worker.example",
     "builds.example",
     "operations.example",
+    "dispatch.example",
+    "journal.example",
+    "artifacts.example",
+    "credentials.example",
   ]);
   assert.ok(assembly.buildStore);
   assert.ok(assembly.operationStore);
-  assert.equal(assembly.artifactStore, undefined);
+  assert.ok(assembly.artifactStore);
   assert.equal((await assembly.scheduler.create({
     prepare() { throw new Error("unused"); },
     async executeCommand() { throw new Error("unused"); },
@@ -93,7 +145,15 @@ test("Runtime service configuration is identity-bound and role selection is exac
   assert.throws(
     () => assembleRuntimeServices([configured], {
       scheduler: "builds.example",
-      stores: {},
+      worker: "worker.example",
+      stores: {
+        build: "builds.example",
+        operations: "operations.example",
+        dispatch: "dispatch.example",
+        journal: "journal.example",
+        artifacts: "artifacts.example",
+        credentials: ["credentials.example"],
+      },
     }),
     /not scheduler/u,
   );

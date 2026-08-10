@@ -6,6 +6,8 @@ import type {
   Digest,
 } from "@narratage/protocol";
 import type { RuntimeClosure } from "./profile.js";
+import type { BuildDispatchSnapshot, BuildDispatchStore, RuntimeJournal } from "./dispatch.js";
+import type { OperationSnapshot } from "./operations.js";
 
 export type RuntimeBlockedCommand = {
   readonly command: string;
@@ -19,6 +21,47 @@ export type RuntimeRunnableCommand = {
   readonly lane: string;
   /** Registration default; a Runtime Profile may explicitly override it for this Scheduler. */
   readonly maxConcurrency: number;
+  /** Recoverable work retains one shared in-flight reservation while polling. */
+  readonly capacityMode?: "active" | "recoverable";
+  readonly maxInFlight?: number;
+};
+
+export type RuntimeExecutionStores = {
+  readonly builds: BuildStore;
+  readonly operations: import("./operations.js").OperationStore;
+  readonly dispatch: BuildDispatchStore;
+  readonly journal: RuntimeJournal;
+  readonly artifacts: ArtifactStore;
+};
+
+export type RuntimeWorkerRunOptions = {
+  readonly owner: string;
+  readonly leaseMs: number;
+  readonly idlePollMs: number;
+  readonly signal?: AbortSignal;
+};
+
+export type RuntimeWorker = {
+  /** Claim and advance at most one Build. Undefined means no Dispatch was ready. */
+  runOnce(options: Omit<RuntimeWorkerRunOptions, "idlePollMs" | "signal">): Promise<BuildDispatchSnapshot | undefined>;
+  /** Continue until the caller-owned process signal is aborted. */
+  run(options: RuntimeWorkerRunOptions): Promise<void>;
+};
+
+export type RuntimeWorkerFactoryOptions = {
+  readonly scheduler: BuildSchedulerFactory;
+  readonly stores: RuntimeExecutionStores;
+  readonly scheduling: BuildSchedulerOptions;
+  readonly runtimeClosure?: RuntimeClosure;
+};
+
+/** Selected execution strategy. Process supervision remains a generic Host concern. */
+export type RuntimeWorkerFactory = {
+  create(executor: RuntimeCommandExecutor, options: RuntimeWorkerFactoryOptions): RuntimeWorker;
+};
+
+export type RuntimeQueueStatus = {
+  readonly dispatches: readonly BuildDispatchSnapshot[];
 };
 
 export type RuntimePreparation = {
@@ -47,6 +90,11 @@ export type RuntimeCommandExecutor = {
     commandId: string,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult>;
+  cancelOperation?(
+    state: BuildState,
+    operation: OperationSnapshot,
+    requestedAt: number,
+  ): Promise<OperationSnapshot>;
 };
 
 /** Content-addressed bytes. Location, retention and remote transport are adapter policy. */
@@ -146,4 +194,3 @@ export type BuildScheduler = {
 export type BuildSchedulerFactory = {
   create(executor: RuntimeCommandExecutor, options?: BuildSchedulerOptions): BuildScheduler;
 };
-

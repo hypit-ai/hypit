@@ -12,12 +12,15 @@ import type {
   BuildSchedulerOptions,
   BuildSnapshot,
   BuildStore,
+  BuildDispatchSnapshot,
   CredentialStore,
   OperationStore,
   OperationSnapshot,
   RuntimeModuleRegistry,
   RuntimeServicePackage,
-  ScheduledBuildResult,
+  RuntimeServiceSelection,
+  RuntimeJournal,
+  RuntimeWorkerFactory,
 } from "@narratage/runtime";
 import type { TypeValidatorRegistrar, TypeValidatorRegistryLike } from "@narratage/validation";
 
@@ -38,13 +41,16 @@ export type CreateLocalRuntimeOptions = {
   readonly buildStore: BuildStore;
   /** Host presentation metadata only; never part of Runtime Closure or Core state. */
   readonly buildCatalog?: BuildCatalog;
-  readonly operationStore?: OperationStore;
+  readonly operationStore: OperationStore;
+  readonly dispatchStore: import("@narratage/runtime").BuildDispatchStore;
+  readonly journal: RuntimeJournal;
   readonly artifactStore: ArtifactStore;
-  readonly credentialStore?: CredentialStore;
-  readonly scheduler?: BuildSchedulerFactory;
+  readonly credentialStore: CredentialStore;
+  readonly scheduler: BuildSchedulerFactory;
+  readonly worker: RuntimeWorkerFactory;
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
-  readonly closure?: LocalRuntimeClosureOptions;
+  readonly closure: LocalRuntimeClosureOptions;
   readonly scheduling?: Omit<BuildSchedulerOptions, "buildStore" | "runtimeClosure">;
   readonly validators?: LocalTypeValidatorRegistry;
   /** Expected implementation package closure already bound into BuildRequest. */
@@ -56,24 +62,22 @@ export type ProjectLocalRuntimeOptions = {
   readonly root?: string;
   /** Host directory whose node_modules contains the packages named by packageLock. Defaults to root. */
   readonly packageRoot?: string;
-  readonly statePath?: string;
-  /** Optional separate Host catalog database. Defaults to statePath when using local SQLite state. */
-  readonly catalogPath?: string;
-  readonly artifactPath?: string;
   readonly buildCatalog?: BuildCatalog;
   /** Exact installed implementation package lock. Source imports cannot change this selection. */
   readonly packageLock?: string;
   /**
    * Replaceable parts of the Runtime itself. One package may fill several roles;
-   * a supplied role replaces that role's local default, and two packages filling
-   * one role is a configuration error rather than a choice made here.
+   * every selected role is explicit, and two packages exposing the same instance
+   * id are a configuration error rather than a choice made here.
    */
-  readonly runtimeServices?: readonly RuntimeServicePackage[];
+  readonly runtimeServices: readonly RuntimeServicePackage[];
+  /** Exact service instances selected from runtimeServices; no role is inferred by uniqueness. */
+  readonly runtimeSelection: RuntimeServiceSelection;
   readonly components?: readonly ComponentPackage[];
   readonly endpoints?: readonly EndpointPackage[];
-  readonly allowedPermissions?: readonly string[];
-  readonly scheduling?: {
-    readonly maxConcurrency?: number;
+  readonly allowedPermissions: readonly string[];
+  readonly scheduling: {
+    readonly maxConcurrency: number;
     readonly lanes?: Readonly<Record<string, number>>;
     readonly maxEventsPerBuild?: number;
   };
@@ -91,7 +95,7 @@ export type LocalBuildRequest = {
 };
 
 export type LocalBuildOptions = {
-  /** Keep resuming pending Operations according to wakeAt until completion, pause, abort or deadline. */
+  /** Observe the durable Dispatch until terminal; execution remains owned by a Worker process. */
   readonly follow?: boolean;
   readonly pollIntervalMs?: number;
   readonly maxWaitMs?: number;
@@ -102,6 +106,24 @@ export type LocalRuntimeStatus = {
   readonly build: BuildSnapshot | undefined;
   readonly catalog: BuildCatalogEntry | undefined;
   readonly operations: readonly OperationSnapshot[];
+  readonly dispatch: BuildDispatchSnapshot | undefined;
+};
+
+export type LocalRuntimeQueue = {
+  readonly dispatches: readonly BuildDispatchSnapshot[];
+  readonly capacity: readonly import("@narratage/runtime").CapacityReservation[];
+};
+
+export type LocalCredentialStatus = import("@narratage/endpoint-kit").EndpointCredentialDescription & {
+  readonly configured: boolean;
+  readonly writable: boolean;
+};
+
+export type LocalBuildSubmission = {
+  readonly id: string;
+  readonly state: BuildState;
+  readonly status: "queued" | "running" | "waiting" | "blocked" | "settling" | "complete" | "failed" | "cancelled";
+  readonly dispatch: BuildDispatchSnapshot;
 };
 
 export type ArtifactGarbageCollection = {
@@ -111,11 +133,19 @@ export type ArtifactGarbageCollection = {
 };
 
 export type LocalRuntime = {
-  build(request: LocalBuildRequest, options?: LocalBuildOptions): Promise<ScheduledBuildResult>;
-  buildMany(requests: readonly LocalBuildRequest[]): Promise<readonly ScheduledBuildResult[]>;
+  build(request: LocalBuildRequest, options?: LocalBuildOptions): Promise<LocalBuildSubmission>;
+  buildMany(requests: readonly LocalBuildRequest[]): Promise<readonly LocalBuildSubmission[]>;
   status(build: string): Promise<LocalRuntimeStatus>;
+  queue(): Promise<LocalRuntimeQueue>;
+  operation(id: Digest): Promise<OperationSnapshot | undefined>;
+  journal(query?: import("@narratage/runtime").RuntimeJournalQuery): Promise<readonly import("@narratage/runtime").RuntimeJournalEntry[]>;
+  credentials(endpoint?: string): Promise<readonly LocalCredentialStatus[]>;
+  putCredential(endpoint: string, slot: string, secret: string): Promise<LocalCredentialStatus>;
+  deleteCredential(endpoint: string, slot: string): Promise<{ readonly deleted: boolean; readonly credential: LocalCredentialStatus }>;
   builds(): Promise<readonly BuildCatalogEntry[]>;
-  cancel(build: string): Promise<ScheduledBuildResult | undefined>;
+  cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
+  workOnce(options: { readonly owner: string; readonly leaseMs: number }): Promise<BuildDispatchSnapshot | undefined>;
+  work(options: import("@narratage/runtime").RuntimeWorkerRunOptions): Promise<void>;
   readArtifact(digest: Digest): Promise<Uint8Array | undefined>;
   openArtifact(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
   /** Explicit maintenance only. apply=false is a read-only reachability report. */
