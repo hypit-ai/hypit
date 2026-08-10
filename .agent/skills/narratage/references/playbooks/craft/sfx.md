@@ -7,5 +7,6 @@
 - Trigger at the audience-perceived event, not automatically at every shot boundary.
 - Keep a consistent sound vocabulary for repeated cards/UI/actions. Music owns continuous emotion;
   SFX owns discrete events.
-- Review dialogue alone, then music, then effects. Check headphones and phone speakers, and listen to
+- Review dialogue alone, then music, then effects. Author each contribution as an `audio:Clip` inside
+  an `audio:Track`; check headphones and phone speakers, and listen to
   the entire program for density rather than approving isolated loops.
