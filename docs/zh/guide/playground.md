@@ -29,12 +29,17 @@ pnpm playground
 
 ## 硬边界
 
-Playground 只能消费系统，不能定义系统语义。生产 Protocol、Core 与领域包中不得出现任何
-Playground 默认值、UI 提示、fixture 或预览辅助函数。
+两条规则永久成立：
+
+1. Playground 只能消费系统，不能定义系统语义。生产 Protocol、Core 与领域包中不得出现任何
+   Playground 默认值、UI 提示、fixture、facet 或预览辅助函数。
+2. Playground 不维护组件、Recipe、Story、Scenario 或示例注册表，也不定义一套平行的源码格式。
+   启动命令可以为本次会话选择包和普通 SVML/SVS/Run 源码；这种局部选择不是中央目录。
 
 通用表单只消费生产合同本来就需要的事实：schema 类型、枚举和数值边界。画布大小、时长、
 帧率、背景色和空白表单值都只是本工具内部的会话状态。如果以后需要更丰富的控件或 fixture，
 必须在 `tools/playground` 内部实现，不能要求生产包为预览便利而改变。
+示例同样必须是普通项目源码，不能成为 Playground 自有注册表中的条目。
 
 ## 媒体
 

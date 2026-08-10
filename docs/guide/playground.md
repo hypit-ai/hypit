@@ -33,15 +33,23 @@ that declares a Producer emitting a `VisualTrack` appears on its own.
 
 ## Hard boundary
 
-The Playground is a consumer of the system, never an author of system
-semantics. Production Protocol, Core and domain packages contain no Playground
-defaults, UI hints, fixtures or preview helpers.
+Two rules are permanent:
+
+1. The Playground is a consumer of the system, never an author of system
+   semantics. Production Protocol, Core and domain packages contain no
+   Playground defaults, UI hints, fixtures, facets or preview helpers.
+2. The Playground maintains no component, Recipe, Story, Scenario or example
+   registry and defines no parallel source format. A startup command may select
+   packages and ordinary SVML/SVS/Run sources for that session; selection is not
+   a central catalog.
 
 The generic form uses only facts the production contract already needs:
 schema kinds, enums and numeric bounds. Canvas size, duration, frame rate,
 background and blank form values are local session state owned by this tool.
 If the Playground later needs richer controls or fixtures, they must be added
 inside `tools/playground`; a production package must not change for that reason.
+Likewise, examples remain normal project sources rather than entries in a
+Playground-owned registry.
 
 ## Media
 

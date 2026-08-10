@@ -108,11 +108,13 @@ test("official production packages have no dependency cycle", async () => {
 });
 
 test("Playground cannot add semantics or metadata to production packages", async () => {
+  let productionSource = "";
   for (const entry of await readdir(packageRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const sourceRoot = new URL(`./${entry.name}/src/`, packageRoot);
     for (const file of await sourceFiles(sourceRoot)) {
       const source = await readFile(file, "utf8");
+      productionSource += source;
       assert.ok(!/\bplayground\b/iu.test(source),
         `${file.pathname} mentions Playground; the dependency must point from the tool to production only`);
     }
@@ -125,6 +127,36 @@ test("Playground cannot add semantics or metadata to production packages", async
   const valueSchemas = await readFile(new URL("./protocol/src/value.ts", packageRoot), "utf8");
   assert.ok(!/readonly\s+format\??\s*:/u.test(valueSchemas),
     "ValueSchema must not carry presentation hints for a tool");
+
+  const componentKit = await readFile(new URL("./component-kit/src/index.ts", packageRoot), "utf8");
+  assert.ok(!/\bRecipeFacet\b|readonly\s+recipes\??\s*:/u.test(componentKit),
+    "ComponentPackage must not grow an editor or Playground Recipe facet");
+
+  for (const helper of [
+    "defaultProgramSpace", "defaultCanvasSpace", "defaultFilmProgram", "defaultScreenOverlayProgram",
+  ]) {
+    assert.ok(!productionSource.includes(helper),
+      `${helper} is a preview starting value and must stay outside production packages`);
+  }
+});
+
+test("Playground has no hard-coded component registry", async () => {
+  const root = new URL("../tools/playground/src/", import.meta.url);
+  const allowedWaists = new Set([
+    "@narratage/composition",
+    "@narratage/core",
+    "@narratage/program-space",
+    "@narratage/protocol",
+  ]);
+  for (const file of await sourceFiles(root)) {
+    const source = await readFile(file, "utf8");
+    for (const match of source.matchAll(/["'](@narratage\/[a-z0-9-]+)["']/gu)) {
+      assert.ok(allowedWaists.has(match[1]),
+        `${file.pathname} names ${match[1]}; components must be selected or discovered, never registered here`);
+    }
+    assert.ok(!/\b(?:Story|Scenario|Recipe)Registry\b/u.test(source),
+      `${file.pathname} introduces a parallel Playground registry`);
+  }
 });
 
 test("Markup syntax, graph Text and video Typography keep distinct package identities", async () => {
