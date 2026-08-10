@@ -73,11 +73,12 @@ The repository implements:
 - three exact MiMo TTS models, independently reached through Xiaomi's official Provider;
 - local ffprobe/ffmpeg media processing;
 - S3 multipart Artifact streaming and AWS Lambda media processing;
-- local pinned WhisperX service;
+- managed warm local WhisperX service;
 - Vertex Gemini display-only Caption planning;
 - local frame-parallel HyperFrames rendering;
 - recoverable Step Functions/Lambda HyperFrames rendering;
-- Speech, Caption, Text, B-roll, Film, audio and final mux vertical slices.
+- Speech, Fine Caption, Typography, Media Item/Sequence, Deck, Ranking, Comment Sticker, Audio and
+  Screen Overlay packages lowering to peer Tracks, followed by Film, HyperFrames and final mux.
 
 The complete live path is:
 
@@ -187,9 +188,9 @@ packages/run             syntax-neutral Run Source closure and complete Run Grap
 packages/run-markup        optional official human-readable Run Frontend
 packages/runtime         environment-neutral scheduling and Store ports
 packages/driver-node     trusted Node command execution
-packages/local           zero-service SQLite/filesystem developer assembly
+packages/local           in-process SQLite/filesystem developer assembly
 packages/*               optional Frontend, domain, Endpoint and adapter packages
-services/whisperx        pinned local WhisperX sidecar
+services/whisperx        managed warm local WhisperX External Service
 spec                     current normative contracts
 docs                     architecture, status, roadmap and focused implementation records
 examples                 source-closure checks and the live acceptance witness
@@ -211,11 +212,10 @@ pnpm smoke:kie   # opt-in paid Provider smoke test; requires credentials
 
 ## Current priorities
 
-The domain-neutral Run/Runtime foundation, developer inspection path and replaceable local/AWS
-Endpoint environments are implemented. Current work is split between preparing trusted-developer
-distribution and completing the video-domain packages needed by real deliveries. Fresh generation,
-historical reuse and previews remain ordinary explicit `.svrun` choices rather than a second
-workflow layer. Caption, exact Audio and self-contained Screen Overlay execute; Text and Media
-remain vertical slices, while their full visual breadth, Deck, Ranking and the final video
-compatibility freeze remain active work. See the
+The domain-neutral Run/Runtime foundation, developer inspection path, replaceable local/AWS
+Endpoint environments and current pre-release video packages are implemented. Current work is
+delivery-driven correction, deployment hardening and preparing a source-checkout project for its
+first public package release. Fresh generation, historical reuse and previews remain ordinary
+explicit `.svrun` choices rather than a second workflow layer. The repository-internal Track and
+Visual IR waist is frozen; author-facing video Surfaces remain pre-release. See the
 [implementation status](docs/implementation-status.md) and [roadmap](docs/roadmap.md).

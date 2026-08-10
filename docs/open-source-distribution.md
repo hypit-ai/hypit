@@ -103,4 +103,4 @@ The repository should not claim npm-ready open-source distribution until it has:
 7. published binaries that map the generic command engine and explicit video Distribution.
 
 Untrusted extension isolation, a marketplace and hosted multi-tenant services may follow later.
-They are not prerequisites for a useful trusted-developer release.
+They are not prerequisites for a useful source-checkout release.

@@ -76,10 +76,10 @@ Candidates and Operations.
 | `caption-fine:Style` / `caption:Program` | Fine + common Caption | explicit default over all words + ordered whole-Style replacement by Role or word subset | implemented |
 | `caption-ai:Planner` | `@narratage/caption-gemini` | immutable display Atoms/Words + per-run requirements -> whole-Atom Cue cuts and optional per-Word fields | implemented; Google Vertex Endpoint implemented separately |
 | `caption-fine:Track` | `@narratage/caption-fine` | CaptionPlan + independent SemanticMap + complete Fine Styles -> VisualTrack | implemented |
-| `text:Track` | `@narratage/typography-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
+| `text:Track` | `@narratage/typography-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering and exact `fonts-open` stack implemented |
 | `film:Film` | `@narratage/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
 | `render:Video` | `@narratage/render-hyperframes` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
-| `studio.svs` | `@narratage/svs` | generic immutable Recipe Records; consuming packages validate and lower them | parser, imports and current package consumers implemented; exact font assets remain |
+| `studio.svs` | `@narratage/svs` | generic immutable Recipe Records; consuming packages validate and lower them | parser, imports and current package consumers implemented; fonts are separate explicit graph values |
 
 The remaining work is intentionally package-local. None of these rows requires a new Core video type,
 a component-family registry in Core, a privileged Film root or another Track kind.

@@ -2,8 +2,9 @@
 
 Status: executable foundational authority for shared Spatial geometry. `@narratage/spatial`
 implements CanvasSpace, Frame/Point/Path, IntrinsicExtent, ContentFit and pure fitting; Film now
-consumes the same explicit CanvasSpace as Track layout. Text, Media and all four Ranking migration
-witnesses execute; only the final shared Visual IR compatibility audit and public ABI freeze remain.
+consumes the same explicit CanvasSpace as Track layout. Text, Media and all four Ranking witnesses
+execute, and the repository-internal Visual IR compatibility audit passes. Public package ABI
+publication remains separate.
 
 ## 1. Conclusion
 
@@ -47,7 +48,7 @@ the same Artifact. There is no single global "inner frame" shared by every layer
 
 ## 2. Boundary
 
-The focused video-domain package is provisionally named `@narratage/spatial`. It owns pure types,
+The focused video-domain package is `@narratage/spatial`. It owns pure types,
 validators, author Surfaces for reusable geometry and deterministic geometry Producers. It does not
 own:
 

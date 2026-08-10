@@ -1,6 +1,6 @@
 # SVML Video Track Authoring Model
 
-Status: executable temporal authority for the next official Track-package migration. The focused
+Status: executable temporal authority shared by the official Track packages. The focused
 `@narratage/temporal` package implements strict occurrence expansion, exact rational window
 projection and triggered sibling schedules. Shared Spatial, Text, Ranking, Media,
 Audio and Screen Overlay are now specified in [`spatial-layout.md`](./spatial-layout.md),
@@ -170,8 +170,8 @@ repeating an occurrence-invariant projection would otherwise manufacture identic
 
 ## 4. Occurrence expansion is strict and precedes projection
 
-The old shape `{ kind: "single", cardinality: "exactly_one" }` repeats one fact twice. The new
-contract should have two non-overlapping choices, provisionally named:
+The old shape `{ kind: "single", cardinality: "exactly_one" }` repeats one fact twice. The executable
+contract has two non-overlapping choices:
 
 ```ts
 type OccurrenceExpansion =
@@ -179,8 +179,8 @@ type OccurrenceExpansion =
   | { readonly kind: "each" };
 ```
 
-`each` means compile-time expansion, not media looping. The final author spelling may use
-`for-each` if that avoids confusion with playback terminology.
+`each` means compile-time expansion, not media looping. Author Surfaces expose it through their
+own explicit occurrence setting and lower to this exact value.
 
 ### `one`
 
@@ -393,8 +393,8 @@ The former umbrella `contracts` package is intentionally absent. Nominal shared 
 by focused modules such as Narrative, ProgramSpace, Media and Composition; Core has no registry of
 video-domain unions.
 
-The temporal algebra in this document should therefore become a focused video-domain package,
-provisionally `@narratage/temporal`. It should own the projection types, validators and pure
+The temporal algebra in this document is implemented by the focused video-domain package
+`@narratage/temporal`. It owns the projection types, validators and pure
 frame-window projection. It may consume Narrative point references, SemanticMap location and
 ProgramSpace, but it must not know Text, Media Track, Ranking, Comment Sticker, Film, HyperFrames,
 Runtime or a Provider.
@@ -417,11 +417,11 @@ structural cuts are Narrative Selection consumption.
 
 ## 8. Migration consequences
 
-The current simple `typography-track` Surface still supports only `during="full"` or an identity
-Selection mapping. It must not independently grow another timing enum. Its rewrite must consume the
-shared temporal package. Media Track already consumes that package for Item and Sequence timing.
+The current `typography-track` Surface consumes the shared temporal package for Program, Selection
+and Moment bindings, explicit point expressions and `one`/`each` expansion. It does not maintain a
+second timing enum. Media Track consumes the same package for Item and Sequence timing.
 
-The first implementation batch must include tests for:
+The executable acceptance coverage includes:
 
 - Selection and Moment `one` success and cardinality failure;
 - Selection and Moment `each`, stable occurrence identity and source-order preservation;

@@ -19,7 +19,7 @@ Prerequisites for the exact checked-in Runtime Profile:
 - `GOOGLE_CLOUD_PROJECT` naming a project with Vertex AI enabled;
 - `GOOGLE_APPLICATION_CREDENTIALS_JSON` containing the credential JSON, not a committed path or
   secret file;
-- `ffmpeg`, `ffprobe`, Chrome/HyperFrames and the prepared local WhisperX sidecar.
+- `ffmpeg`, `ffprobe`, Chrome/HyperFrames and the prepared managed local WhisperX service.
 
 Prepare and health-check WhisperX as described in
 [`../../services/whisperx/README.md`](../../services/whisperx/README.md). `narratage check` validates

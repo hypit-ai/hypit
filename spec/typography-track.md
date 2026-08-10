@@ -441,7 +441,8 @@ or package-owned resolved geometry used to materialize a Surface.
 
 ## 11. Terminal Visual IR findings
 
-The candidate `svml.visual-ir@1` now carries the smallest additions proven by this migration:
+The frozen repository-internal `svml.visual-ir@1` carries the smallest additions proven by this
+migration:
 
 - `text-flow` owns the bounded rich document, exact typography, ordered Paint and sequence values;
 - `path-text` owns typed vector commands and exact path-flow facts;

@@ -149,7 +149,7 @@ with Recraft without leaking that vendor choice into Core.
 
 ## C. Current video-domain work after the terminal waist freeze
 
-The next official Track-package migration is governed by
+Official Track-package authoring is governed by
 [`../spec/track-authoring.md`](../spec/track-authoring.md). Its temporal projection, strict
 occurrence expansion, rational frame quantization and triggered scheduling now execute in the
 focused `@narratage/temporal` package. Shared Canvas/Frame/Point/Path geometry and two-frame fitting
