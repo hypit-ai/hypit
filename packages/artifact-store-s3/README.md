@@ -9,9 +9,14 @@ Objects use deterministic keys:
 ```
 
 Writes use `If-None-Match: *`; an already-existing object is downloaded and digest-verified rather
-than trusted by key. Reads always recompute SHA-256. The current port transfers whole objects, so
-multipart upload and ranged streaming remain a later ArtifactStore extension rather than hidden
-behavior in this adapter.
+than trusted by key. Whole-object reads always recompute SHA-256. The AWS client also exposes the
+optional streaming and retention facets: streamed writes use multipart upload to an isolated
+staging key followed by a server-side copy to the content-addressed key; streamed reads verify the
+digest before their iterator completes; `list`/`delete` support explicit reachability GC.
+
+Those optional facets are attached only when an injected client supplies every operation needed to
+implement them. A reduced test or MinIO client therefore advertises only the capabilities it can
+actually perform instead of failing midway through a Build.
 
 ```ts
 const artifacts = createS3ArtifactStorePackage({

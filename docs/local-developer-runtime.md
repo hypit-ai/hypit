@@ -52,7 +52,8 @@ the shared media execution body; the latter owns one recoverable Step Functions 
 
 SQLite is deliberately optional. `createLocalRuntime()` accepts any implementation of the same
 ports, so an internal server can use Postgres and S3 without changing Core or Endpoint packages.
-`createProjectLocalRuntime()` selects the zero-service SQLite/filesystem defaults.
+`createProjectLocalRuntime()` selects the in-process SQLite/filesystem defaults. Capability
+Endpoints may still be local processes, Lambda functions or remote services.
 
 ## 3. Project entities
 

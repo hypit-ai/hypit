@@ -1,7 +1,9 @@
 # Media Execution Boundary
 
-Status: local reference path and AWS media/HyperFrames Endpoint variants are implemented. Both AWS
-variants have passed complete live acceptance runs. This is not yet a public compatibility freeze.
+Status: local reference path and AWS media/HyperFrames Endpoint variants are implemented.
+HyperFrames has passed its complete live acceptance run. The media Lambda has live evidence for its
+original five-operation path; three newer shared utility operations await a deployment refresh and
+expanded canary. This is not yet a public compatibility freeze.
 
 ## The rule
 

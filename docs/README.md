@@ -9,8 +9,8 @@ the working tree contains only documents that should inform current implementati
 2. [`architecture.md`](./architecture.md) — current Author Graph, Run Graph, Satisfaction, Runtime
    and package boundaries.
 3. [`implementation-status.md`](./implementation-status.md) — what actually executes today.
-4. [`roadmap.md`](./roadmap.md) — active domain-neutral and environment/Provider work; deferred video
-   work is separated explicitly.
+4. [`roadmap.md`](./roadmap.md) — active domain-neutral, environment/Provider and delivery-driven
+   video-package work.
 5. [`open-source-distribution.md`](./open-source-distribution.md) — what can ship independently,
    current packaging truth and public-release gates.
 6. [`../spec/core-kernel.md`](../spec/core-kernel.md) — compact normative Kernel laws for the
@@ -51,7 +51,7 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/typography-track.md`](../spec/typography-track.md) — complete two-dimensional Text model, old-system
   and editor attack audit, terminal-IR gaps and Caption feedback.
 - [`../spec/ranking-track.md`](../spec/ranking-track.md) — old Ranking audit, separate official
-  components, triggered group schedule and renderer-neutral migration plan.
+  components, triggered group schedule and executable renderer-neutral lowering.
 - [`../spec/media-track.md`](../spec/media-track.md) — unified Item/Sequence media model, ordered
   layers, playback, motion, internal handoffs, audio projection and Speech reuse.
 - [`../spec/deck-track.md`](../spec/deck-track.md) — independent depth-stack Deck Track, collection
