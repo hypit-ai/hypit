@@ -52,8 +52,8 @@ export type FineCaptionBoxPaint = {
   readonly paddingXPx: number;
   readonly paddingYPx: number;
   readonly radiusPx: number;
-  readonly enter: "none" | "fade" | "pop";
-  readonly exit: "none" | "fade" | "pop";
+  readonly enter: FineCaptionOneShotMotion;
+  readonly exit: FineCaptionOneShotMotion;
   readonly transitionFrames: number;
 };
 
@@ -61,12 +61,27 @@ export type FineCaptionOneShotMotion =
   | "none"
   | "fade"
   | "pop"
+  | "scale"
   | "spring"
+  | "bounce"
+  | "elastic"
+  | "stamp"
+  | "tilt"
+  | "zoom-blur"
+  | "flip-x"
+  | "flip-y"
+  | "spin"
+  | "squash"
+  | "stretch"
   | "slide-left"
   | "slide-right"
   | "slide-up"
   | "slide-down"
-  | "blur-in";
+  | "blur-in"
+  | "wipe-left"
+  | "wipe-right"
+  | "wipe-up"
+  | "wipe-down";
 
 export type FineCaptionParameters = {
   readonly contract: "svml.caption-fine-parameters@1";
@@ -117,12 +132,14 @@ export type FineCaptionParameters = {
     readonly cueExitFrames: number;
     readonly atomEnter: FineCaptionOneShotMotion;
     readonly atomEnterFrames: number;
+    readonly atomExit: FineCaptionOneShotMotion;
+    readonly atomExitFrames: number;
     readonly atomReveal: "all" | "on-start" | "typewriter";
-    readonly activeResponse: "none" | "scale" | "pop" | "spring";
+    readonly activeResponse: FineCaptionOneShotMotion;
     readonly activeResponseFrames: number;
     readonly activeScale: number;
     readonly slideDistancePx: number;
-    readonly loop: "none" | "shake" | "wobble" | "glow-pulse";
+    readonly loop: "none" | "shake" | "wobble" | "glow-pulse" | "breathe" | "float" | "pulse" | "flicker";
     readonly loopTarget: "cue" | "active-atom";
     readonly loopPeriodFrames: number;
     readonly loopIntensity: number;

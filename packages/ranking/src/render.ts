@@ -32,6 +32,8 @@ import {
   assertTierBoardProgram,
   assertTopThreeProgram,
   assertTypewriterListProgram,
+  fitRankingStageMotion,
+  fitTypewriterStage,
   graphemes,
 } from "./schedule.js";
 import type {
@@ -305,12 +307,13 @@ export function renderTierBoard(space: ProgramSpace, program: TierBoardProgram):
     assert(x + style.iconSizePx <= frame.xPx + frame.widthPx - style.paddingPx,
       `TierBoard row ${item.tier} cannot fit Item ${item.id}.`);
     const duration = entry.stage.endFrameExclusive - entry.stage.startFrame;
+    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, item.entry === "stage");
     const rootAnimation = item.entry === "direct"
-      ? directItemAnimation(duration, style.motion.appearFrames)
+      ? directItemAnimation(duration, fitted.appearFrames)
       : settledItemAnimation({
           duration,
-          appearFrames: style.motion.appearFrames,
-          moveStart: entry.stage.endFrameExclusive - style.motion.moveFrames - entry.triggerFrame,
+          appearFrames: fitted.appearFrames,
+          moveStart: entry.stage.endFrameExclusive - fitted.moveFrames - entry.triggerFrame,
           moveEnd: entry.stage.endFrameExclusive - entry.triggerFrame,
           stageTransform: stageTransform(
             x, y,
@@ -400,13 +403,14 @@ export function renderColumn(space: ProgramSpace, program: ColumnProgram): Visua
     const y = rowY(frame.yPx, frame.heightPx, style.paddingPx, program.items.length, index, style.rowHeightPx, style.rowGapPx);
     const width = frame.widthPx - style.paddingPx * 2;
     const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
+    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, true);
     const targetStageX = frame.xPx + frame.widthPx * style.stagePoint.x - width / 2;
     const targetStageY = frame.yPx + frame.heightPx * style.stagePoint.y - style.rowHeightPx / 2;
     const root = `column-item-${item.id}`;
     const rootAnimation = settledItemAnimation({
       duration,
-      appearFrames: style.motion.appearFrames,
-      moveStart: entry.stage.endFrameExclusive - style.motion.moveFrames - entry.triggerFrame,
+      appearFrames: fitted.appearFrames,
+      moveStart: entry.stage.endFrameExclusive - fitted.moveFrames - entry.triggerFrame,
       moveEnd: entry.stage.endFrameExclusive - entry.triggerFrame,
       stageTransform: stageTransform(x, y, targetStageX, targetStageY, style.stageSizePx / style.rowHeightPx),
       easing: style.motion.easing,
@@ -493,7 +497,8 @@ export function renderTopThree(space: ProgramSpace, program: TopThreeProgram): V
       const elements: VisualElement[] = [absoluteBox({
         id: root, order: 0, x, y, width: style.iconSizePx,
         height: style.iconSizePx + style.labelGapPx + style.text.sizePx * style.text.lineHeight,
-        ...(active ? { animation: directItemAnimation(duration, style.motion.appearFrames) } : {}),
+        ...(active ? { animation: directItemAnimation(duration,
+          fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, false).appearFrames) } : {}),
       })];
       if (active) elements.push(absoluteBox({ id: accent, parent: root, order: 1, x: 0, y: 0, width: style.iconSizePx, height: style.iconSizePx,
         style: [
@@ -601,7 +606,7 @@ export function renderTypewriterList(space: ProgramSpace, program: TypewriterLis
     const entry = schedule.entries[index]!;
     const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
     const count = graphemes(item.text).length;
-    const typedFrames = count * style.framesPerGrapheme;
+    const fitted = fitTypewriterStage(duration, count, style.framesPerGrapheme, item.winner ? style.winnerFrames : 0);
     const root = `typewriter-item-${item.id}`;
     const y = firstRowY + index * (rowHeight + style.rowGapPx);
     const paints: VisualTextPaintLayer[] = [{ kind: "fill", paint: { kind: "solid", color: style.item.color } }];
@@ -618,15 +623,18 @@ export function renderTypewriterList(space: ProgramSpace, program: TypewriterLis
         ],
         document: typewriterDocument(item, style), typography: visualTypography(style.item), paints,
         flow: areaFlow,
-        sequences: active ? [{
-          id: `${item.id}-typing`, unit: "grapheme", range: { start: 0, endExclusive: count },
-          order: "forward", startFrame: 0, unitDurationFrames: 1, staggerFrames: style.framesPerGrapheme,
-          cycles: 1,
-          keyframes: [
-            { atProgress: 0, style: [{ name: "opacity", value: 0 }] },
-            { atProgress: 1, style: [{ name: "opacity", value: 1 }] },
-          ],
-        }] : [],
+        sequences: active && fitted.typingFrames > 0
+          ? Array.from({ length: count }, (_, grapheme) => ({
+              id: `${item.id}-typing-${grapheme + 1}`, unit: "grapheme" as const,
+              range: { start: grapheme, endExclusive: grapheme + 1 }, order: "forward" as const,
+              startFrame: Math.floor(grapheme * fitted.typingFrames / count),
+              unitDurationFrames: 1, staggerFrames: 0, cycles: 1,
+              keyframes: [
+                { atProgress: 0, style: [{ name: "opacity", value: 0 }] },
+                { atProgress: 1, style: [{ name: "opacity", value: 1 }] },
+              ],
+            }))
+          : [],
       }];
       if (item.winner) elements.push(simpleText({
         id: "winner", parent: root, order: 2, text: "★",
@@ -634,8 +642,8 @@ export function renderTypewriterList(space: ProgramSpace, program: TypewriterLis
         x: frame.widthPx - style.paddingPx - rowHeight, y, width: rowHeight, height: rowHeight,
         ...(active ? { animation: animation(duration, [
             { atFrame: 0, style: transformStyle("scale(0.5)", 0) },
-            { atFrame: typedFrames, style: transformStyle("scale(0.5)", 0), easing: "ease-out" },
-            { atFrame: typedFrames + style.winnerFrames, style: transformStyle("scale(1)", 1) },
+            { atFrame: fitted.typingFrames, style: transformStyle("scale(0.5)", 0), easing: "ease-out" },
+            { atFrame: fitted.typingFrames + fitted.winnerFrames, style: transformStyle("scale(1)", 1) },
           ]) } : {}),
       }));
       return elements;

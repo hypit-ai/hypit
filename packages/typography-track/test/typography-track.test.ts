@@ -549,7 +549,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     id: "sequenced",
     item: { keyframes: [
       { atFrame: 0, style: [{ name: "opacity", value: 0 }, { name: "transform", value: "translateY(20px)" }] },
-      { atFrame: 150, easing: "ease-out", style: [{ name: "opacity", value: 1 }, { name: "transform", value: "translateY(0px)" }] },
+      { atFrame: 10, easing: "ease-out", style: [{ name: "opacity", value: 1 }, { name: "transform", value: "translateY(0px)" }] },
     ] },
     sequences: [
       {
@@ -572,7 +572,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
   });
   const pathMotion = sealTextMotion({
     contract: "svml.text-motion@1", id: "path-motion", sequences: [],
-    pathMargin: { keyframes: [{ atFrame: 0, startMarginPx: 0 }, { atFrame: 150, startMarginPx: 120, easing: "ease-in-out" }] },
+    pathMargin: { keyframes: [{ atFrame: 0, startMarginPx: 0 }, { atFrame: 180, startMarginPx: 120, easing: "ease-in-out" }] },
   });
   const track = renderTypographyTrack(space, sealTypographyTrackProgram({
     contract: "svml.typography-track-program@1",

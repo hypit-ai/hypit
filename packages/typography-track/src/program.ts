@@ -607,24 +607,13 @@ function maskTextElement(item: TextItem): VisualTextElement {
   };
 }
 
-function assertMotionDomain(item: TextItem, durationFrames: number): void {
-  if (item.motion.item !== undefined && item.motion.item.keyframes.at(-1)?.atFrame !== durationFrames) {
-    throw new Error(`${item.id} item motion does not cover its complete window.`);
-  }
-  if (item.motion.item !== undefined && item.motion.item.keyframes[0]?.atFrame !== 0) {
-    throw new Error(`${item.id} item motion must start at frame zero.`);
-  }
+function assertMotionDomain(item: TextItem): void {
   if (item.motion.pathMargin !== undefined) {
     if (item.geometry.kind !== "path") throw new Error(`${item.id} path-margin motion requires Path Text.`);
-    if (item.motion.pathMargin.keyframes[0]?.atFrame !== 0
-      || item.motion.pathMargin.keyframes.at(-1)?.atFrame !== durationFrames) {
-      throw new Error(`${item.id} path-margin motion must cover its complete window.`);
-    }
   }
 }
 
 function elements(item: TextItem): VisualElement[] {
-  const durationFrames = item.span.endFrameExclusive - item.span.startFrame;
   const rootStyle = baseBoxStyle(item.geometry);
   const anchor = pointAnchorTransform(item);
   if (anchor !== undefined) rootStyle.push({ name: "transform", value: anchor });
@@ -639,7 +628,7 @@ function elements(item: TextItem): VisualElement[] {
       : [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
     ...(item.motion.item === undefined ? {} : { animation: item.motion.item }),
   };
-  assertMotionDomain(item, durationFrames);
+  assertMotionDomain(item);
   return [root, motion, terminalTextElement(item, "motion", 2)];
 }
 
@@ -677,8 +666,7 @@ export function renderTextMaskTrack(
     visualIr: "svml.visual-ir@1",
     id: spec.id,
     presents: program.items.map((item) => {
-      const durationFrames = item.span.endFrameExclusive - item.span.startFrame;
-      assertMotionDomain(item, durationFrames);
+      assertMotionDomain(item);
       const style = baseBoxStyle(item.geometry);
       const anchor = pointAnchorTransform(item);
       if (anchor !== undefined) style.push({ name: "transform", value: anchor });

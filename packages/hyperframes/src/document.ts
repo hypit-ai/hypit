@@ -6,6 +6,7 @@ import { assertCompositionIdentity } from "@narratage/composition";
 import type {
   Composition,
   Track,
+  VisualAnimation,
   VisualAttribute,
   VisualElement,
   VisualPresent,
@@ -239,12 +240,16 @@ function renderElement(
   const animationProperties = element.animation === undefined
     ? []
     : [...new Set(element.animation.keyframes.flatMap((keyframe) => keyframe.style.map((declaration) => declaration.name)))].sort();
+  const animationDurationFrames = element.animation === undefined
+    ? context.presentDurationFrames
+    : Math.max(context.presentDurationFrames, element.animation.keyframes.at(-1)?.atFrame ?? 0);
+  const animationDuration = frameSeconds(animationDurationFrames, context.programNumerator, context.programDenominator);
   const inlineStyle = [
     css(element.style),
     ...exactFontStyle(element),
     ...(animationName === undefined ? [] : [
       `animation-name:${animationName}`,
-      `animation-duration:${context.presentDuration}s`,
+      `animation-duration:${animationDuration}s`,
       "animation-fill-mode:both",
       // An independently launched render worker may begin at any frame. Keep
       // CSS animations inert from first paint so HyperFrames' exact seek is
@@ -257,7 +262,7 @@ function renderElement(
   const commonAttributes = `id="${id}" data-svml-element-id="${escapeHtml(element.id)}"${attributes(element.attributes)}`;
   const animationAttributes = animationName === undefined
     ? ""
-    : ` data-svml-frame-animation data-svml-animation-start-frame="${context.presentStartFrame}" data-svml-animation-duration-frames="${context.presentDurationFrames}" data-svml-animation-properties="${animationProperties.join(",")}"`;
+    : ` data-svml-frame-animation data-svml-animation-start-frame="${context.presentStartFrame}" data-svml-animation-duration-frames="${animationDurationFrames}" data-svml-animation-sample-frames="${context.presentDurationFrames}" data-svml-animation-properties="${animationProperties.join(",")}"`;
   const common = `${commonAttributes}${animationAttributes} style="${escapeHtml(inlineStyle)}"`;
   if (element.kind === "mask") {
     const direct = children.get(element.id) ?? [];
@@ -428,20 +433,18 @@ function renderVisualPresent(
 }
 
 function renderAnimationRules(track: VisualTrack, present: VisualPresent): string[] {
-  const durationFrames = present.span.endFrameExclusive - present.span.startFrame;
+  const presentDurationFrames = present.span.endFrameExclusive - present.span.startFrame;
   return present.elements.flatMap((element) => {
-    if (element.kind === "text-flow" || element.kind === "path-text") {
-      if (element.animation === undefined) return [];
-      const name = stableDomId(["animation", track.id, present.id, element.id]);
-      const frames = element.animation.keyframes.map((keyframe) => {
-        const easing = keyframe.easing === undefined ? "" : `;animation-timing-function:${keyframe.easing}`;
-        return `${percentage(keyframe.atFrame, durationFrames)}{${css(keyframe.style)}${easing}}`;
-      }).join("");
-      return [`@keyframes ${name}{${frames}}`];
-    }
     if (element.animation === undefined) return [];
+    const durationFrames = Math.max(presentDurationFrames, element.animation.keyframes.at(-1)?.atFrame ?? 0);
     const name = stableDomId(["animation", track.id, present.id, element.id]);
-    const frames = element.animation.keyframes.map((keyframe) => {
+    const keyframes: VisualAnimation["keyframes"] = element.animation.keyframes.at(-1)?.atFrame === durationFrames
+      ? element.animation.keyframes
+      : [...element.animation.keyframes, {
+          atFrame: durationFrames,
+          style: element.animation.keyframes.at(-1)!.style,
+        }];
+    const frames = keyframes.map((keyframe) => {
       const easing = keyframe.easing === undefined ? "" : `;animation-timing-function:${keyframe.easing}`;
       return `${percentage(keyframe.atFrame, durationFrames)}{${css(keyframe.style)}${easing}}`;
     }).join("");
@@ -584,10 +587,11 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
     if (animation === undefined) throw new Error("Visual IR frame animation did not materialize.");
     const start = Number(element.getAttribute("data-svml-animation-start-frame"));
     const duration = Number(element.getAttribute("data-svml-animation-duration-frames"));
+    const sampleDuration = Number(element.getAttribute("data-svml-animation-sample-frames"));
     const properties = String(element.getAttribute("data-svml-animation-properties") || "")
       .split(",").filter(Boolean);
     const frames = [];
-    for (let frame = 0; frame <= duration; frame += 1) {
+    for (let frame = 0; frame <= sampleDuration; frame += 1) {
       animation.currentTime = frame * millisecondsPerFrame;
       animation.pause();
       const style = getComputedStyle(element);
@@ -595,7 +599,7 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
     }
     animation.cancel();
     element.style.animationName = "none";
-    timelines.push({ element, start, duration, frames });
+    timelines.push({ element, start, duration: sampleDuration, frames });
   }
   const applyFrame = (time) => {
     const programFrame = Math.max(0, Math.round(Number(time || 0) * numerator / denominator));

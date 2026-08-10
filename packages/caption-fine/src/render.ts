@@ -153,28 +153,75 @@ function stepOffsets(...boundaries: number[]): number[] {
   return boundaries.flatMap((boundary) => [boundary - 1, boundary]);
 }
 
-type MotionSnapshot = { readonly opacity: number; readonly transform: string; readonly filter: string };
+type MotionSnapshot = {
+  readonly opacity: number;
+  readonly transform: string;
+  readonly filter: string;
+  readonly clipPath: string;
+};
+
+function easeOut(value: number): number {
+  return 1 - Math.pow(1 - value, 3);
+}
+
+function easeOutBack(value: number): number {
+  const c1 = 1.3;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(value - 1, 3) + c1 * Math.pow(value - 1, 2);
+}
+
+function easeOutBounce(value: number): number {
+  let x = value;
+  const n1 = 7.5625;
+  const d1 = 2.75;
+  if (x < 1 / d1) return n1 * x * x;
+  if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + 0.75;
+  if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + 0.9375;
+  return n1 * (x -= 2.625 / d1) * x + 0.984375;
+}
+
+function easeOutElastic(value: number): number {
+  if (value === 0 || value === 1) return value;
+  return Math.pow(2, -10 * value) * Math.sin((value * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
+}
+
+const neutralMotion: MotionSnapshot = { opacity: 1, transform: "none", filter: "none", clipPath: "inset(0% 0% 0% 0%)" };
 
 function motionSnapshot(kind: FineCaptionOneShotMotion, progress: number, distancePx: number): MotionSnapshot {
   const value = clamp(progress, 0, 1);
-  if (kind === "none") return { opacity: 1, transform: "none", filter: "none" };
-  if (kind === "fade") return { opacity: value, transform: "none", filter: "none" };
-  if (kind === "blur-in") {
-    return { opacity: value, transform: "none", filter: `blur(${compactNumber((1 - value) * 12)}px)` };
-  }
-  if (kind === "pop") {
-    return { opacity: value, transform: `scale(${compactNumber(0.78 + 0.22 * value)})`, filter: "none" };
-  }
+  const eased = easeOut(value);
+  const state = (opacity: number, transform = "none", filter = "none", clipPath = neutralMotion.clipPath): MotionSnapshot =>
+    ({ opacity, transform, filter, clipPath });
+  if (kind === "none") return neutralMotion;
+  if (kind === "fade") return state(eased);
+  if (kind === "blur-in") return state(eased, `scale(${compactNumber(0.96 + 0.04 * eased)})`, `blur(${compactNumber((1 - eased) * 16)}px)`);
+  if (kind === "pop") return state(eased, `scale(${compactNumber(0.6 + 0.4 * easeOutBack(value))})`);
+  if (kind === "scale") return state(eased, `scale(${compactNumber(0.2 + 0.8 * eased)})`);
   if (kind === "spring") {
     const settled = value >= 1 ? 1 : 1 - Math.exp(-5 * value) * Math.cos(10 * value);
-    return { opacity: value, transform: `scale(${compactNumber(0.72 + 0.28 * settled)})`, filter: "none" };
+    return state(eased, `scale(${compactNumber(0.72 + 0.28 * settled)})`);
   }
+  if (kind === "bounce") return state(eased, `scale(${compactNumber(easeOutBounce(value))})`);
+  if (kind === "elastic") return state(eased, `scale(${compactNumber(easeOutElastic(value))})`);
+  if (kind === "stamp") return state(eased, `scale(${compactNumber(1.35 - 0.35 * easeOutBack(value))})`);
+  if (kind === "tilt") return state(eased, `rotate(${compactNumber((1 - eased) * -8)}deg) scale(${compactNumber(0.94 + 0.06 * eased)})`);
+  if (kind === "zoom-blur") return state(eased, `scale(${compactNumber(1.18 - 0.18 * eased)})`, `blur(${compactNumber((1 - eased) * 18)}px)`);
+  if (kind === "flip-x") return state(eased, `perspective(600px) rotateX(${compactNumber((1 - eased) * 88)}deg) scale(${compactNumber(0.92 + 0.08 * eased)})`);
+  if (kind === "flip-y") return state(eased, `perspective(600px) rotateY(${compactNumber((1 - eased) * -88)}deg) scale(${compactNumber(0.92 + 0.08 * eased)})`);
+  if (kind === "spin") return state(eased, `rotate(${compactNumber((1 - eased) * -180)}deg) scale(${compactNumber(0.55 + 0.45 * eased)})`);
+  if (kind === "squash") return state(eased, `scaleX(${compactNumber(1.28 - 0.28 * easeOutBack(value))}) scaleY(${compactNumber(0.48 + 0.52 * easeOutBack(value))})`);
+  if (kind === "stretch") return state(eased, `scaleX(${compactNumber(0.5 + 0.5 * easeOutBack(value))}) scaleY(${compactNumber(1.35 - 0.35 * easeOutBack(value))})`);
+  const hidden = compactNumber((1 - eased) * 100);
+  if (kind === "wipe-left") return state(1, "none", "none", `inset(0% 0% 0% ${hidden}%)`);
+  if (kind === "wipe-right") return state(1, "none", "none", `inset(0% ${hidden}% 0% 0%)`);
+  if (kind === "wipe-up") return state(1, "none", "none", `inset(0% 0% ${hidden}% 0%)`);
+  if (kind === "wipe-down") return state(1, "none", "none", `inset(${hidden}% 0% 0% 0%)`);
   const remaining = compactNumber((1 - value) * distancePx);
   const transform = kind === "slide-left" ? `translateX(-${remaining}px)`
     : kind === "slide-right" ? `translateX(${remaining}px)`
       : kind === "slide-up" ? `translateY(-${remaining}px)`
         : `translateY(${remaining}px)`;
-  return { opacity: value, transform, filter: "none" };
+  return state(eased, transform);
 }
 
 function snapshotStyle(snapshot: MotionSnapshot): VisualStyleDeclaration[] {
@@ -182,12 +229,13 @@ function snapshotStyle(snapshot: MotionSnapshot): VisualStyleDeclaration[] {
     { name: "opacity", value: snapshot.opacity },
     { name: "transform", value: snapshot.transform },
     { name: "filter", value: snapshot.filter },
+    { name: "clip-path", value: snapshot.clipPath },
   ];
 }
 
 function transitionOffsets(start: number, frames: number, kind: FineCaptionOneShotMotion): number[] {
   if (frames === 0) return stepOffsets(start);
-  const samples = kind === "spring" ? Math.min(frames, 8) : Math.min(frames, 4);
+  const samples = ["spring", "bounce", "elastic"].includes(kind) ? Math.min(frames, 12) : Math.min(frames, 4);
   return Array.from({ length: samples + 1 }, (_, index) => start + Math.round(frames * index / samples));
 }
 
@@ -209,20 +257,32 @@ function cueAnimation(parameters: FineCaptionParameters, durationFrames: number)
   });
 }
 
-function atomEntryAnimation(
+function atomLifecycleAnimation(
   parameters: FineCaptionParameters,
   startFrame: number,
+  endFrame: number,
   durationFrames: number,
 ): VisualAnimation | undefined {
   const shouldWait = parameters.motion.atomReveal === "on-start" || parameters.motion.atomEnter !== "none";
-  if (!shouldWait) return undefined;
+  if (!shouldWait && parameters.motion.atomExit === "none") return undefined;
   const enterFrames = parameters.motion.atomEnter === "none" ? 0
-    : Math.min(parameters.motion.atomEnterFrames, Math.max(0, durationFrames - startFrame));
-  return animationFrom(durationFrames, transitionOffsets(startFrame, enterFrames, parameters.motion.atomEnter), (frame) => {
-    if (frame < startFrame) return [{ name: "opacity", value: 0 }];
-    if (parameters.motion.atomEnter === "none") return [{ name: "opacity", value: 1 }];
-    const progress = enterFrames === 0 ? 1 : (frame - startFrame) / enterFrames;
-    return snapshotStyle(motionSnapshot(parameters.motion.atomEnter, progress, parameters.motion.slideDistancePx));
+    : Math.min(parameters.motion.atomEnterFrames, Math.max(0, endFrame - startFrame));
+  const exitFrames = parameters.motion.atomExit === "none" ? 0
+    : Math.min(parameters.motion.atomExitFrames, Math.max(0, endFrame - startFrame - enterFrames));
+  const offsets = [
+    ...transitionOffsets(startFrame, enterFrames, parameters.motion.atomEnter),
+    ...transitionOffsets(endFrame - exitFrames, exitFrames, parameters.motion.atomExit),
+    ...stepOffsets(endFrame),
+  ];
+  return animationFrom(durationFrames, offsets, (frame) => {
+    if (frame < startFrame) return shouldWait ? [{ name: "opacity", value: 0 }] : snapshotStyle(neutralMotion);
+    if (frame >= endFrame && parameters.motion.atomExit !== "none") {
+      return snapshotStyle(motionSnapshot(parameters.motion.atomExit, 0, parameters.motion.slideDistancePx));
+    }
+    const enterProgress = enterFrames === 0 ? 1 : clamp((frame - startFrame) / enterFrames, 0, 1);
+    const exitProgress = exitFrames === 0 ? 1 : clamp((endFrame - frame) / exitFrames, 0, 1);
+    if (enterProgress < 1) return snapshotStyle(motionSnapshot(parameters.motion.atomEnter, enterProgress, parameters.motion.slideDistancePx));
+    return snapshotStyle(motionSnapshot(parameters.motion.atomExit, exitProgress, parameters.motion.slideDistancePx));
   });
 }
 
@@ -306,13 +366,16 @@ function activeResponseAnimation(
   }
   const frames = Math.min(parameters.motion.activeResponseFrames, Math.max(1, endFrame - startFrame));
   return animationFrom(durationFrames, transitionOffsets(startFrame, frames, response), (frame) => {
-    if (frame < startFrame || frame > startFrame + frames) return [{ name: "transform", value: "scale(1)" }];
+    if (frame < startFrame || frame > startFrame + frames) return snapshotStyle(neutralMotion);
     const progress = clamp((frame - startFrame) / frames, 0, 1);
-    const amplitude = parameters.motion.activeScale - 1;
-    const responseScale = response === "pop"
-      ? 1 + amplitude * Math.sin(Math.PI * progress)
-      : 1 + amplitude * Math.exp(-4 * progress) * Math.sin(12 * progress);
-    return [{ name: "transform", value: `scale(${compactNumber(responseScale)})` }];
+    if (response === "pop" || response === "spring") {
+      const amplitude = parameters.motion.activeScale - 1;
+      const responseScale = response === "pop"
+        ? 1 + amplitude * Math.sin(Math.PI * progress)
+        : 1 + amplitude * Math.exp(-4 * progress) * Math.sin(12 * progress);
+      return [{ name: "transform", value: `scale(${compactNumber(responseScale)})` }];
+    }
+    return snapshotStyle(motionSnapshot(response, progress, parameters.motion.slideDistancePx));
   });
 }
 
@@ -331,13 +394,26 @@ function loopAnimation(
     const active = frame >= start && (frame < end || (end === durationFrames && frame === durationFrames));
     if (!active) return parameters.motion.loop === "glow-pulse"
       ? [{ name: "filter", value: "none" }]
-      : [{ name: "transform", value: "none" }];
+      : parameters.motion.loop === "flicker" ? [{ name: "opacity", value: 1 }]
+        : [{ name: "transform", value: "none" }];
     const phase = 2 * Math.PI * ((frame - start) % period) / period;
     if (parameters.motion.loop === "shake") {
       return [{ name: "transform", value: `translateX(${compactNumber(Math.sin(phase * 2) * 3 * parameters.motion.loopIntensity)}px)` }];
     }
     if (parameters.motion.loop === "wobble") {
       return [{ name: "transform", value: `rotate(${compactNumber(Math.sin(phase) * 2.5 * parameters.motion.loopIntensity)}deg)` }];
+    }
+    if (parameters.motion.loop === "breathe") {
+      return [{ name: "transform", value: `scale(${compactNumber(1 + Math.sin(phase) * 0.035 * parameters.motion.loopIntensity)})` }];
+    }
+    if (parameters.motion.loop === "float") {
+      return [{ name: "transform", value: `translateY(${compactNumber(Math.sin(phase) * 3.2 * parameters.motion.loopIntensity)}px)` }];
+    }
+    if (parameters.motion.loop === "pulse") {
+      return [{ name: "transform", value: `scale(${compactNumber(1 + (Math.sin(phase) + 1) * 0.0375 * parameters.motion.loopIntensity)})` }];
+    }
+    if (parameters.motion.loop === "flicker") {
+      return [{ name: "opacity", value: clamp(1 - (Math.sin(phase * 5) + 1) * 0.11 * parameters.motion.loopIntensity, 0.15, 1) }];
     }
     const strength = (0.35 + 0.65 * (Math.sin(phase) + 1) / 2) * parameters.motion.loopIntensity;
     const paint = activeWindow === undefined ? parameters.basePaint : parameters.activePaint;
@@ -361,8 +437,8 @@ function activeBoxAnimation(
   const exitFrames = box.exit === "none" ? 0 : Math.min(box.transitionFrames, Math.max(0, logicalEnd - startFrame));
   const offsets = [
     ...stepOffsets(startFrame, logicalEnd),
-    ...transitionOffsets(startFrame, enterFrames, box.enter === "pop" ? "pop" : box.enter),
-    ...transitionOffsets(logicalEnd - exitFrames, exitFrames, box.exit === "pop" ? "pop" : box.exit),
+    ...transitionOffsets(startFrame, enterFrames, box.enter),
+    ...transitionOffsets(logicalEnd - exitFrames, exitFrames, box.exit),
   ];
   return animationFrom(durationFrames, offsets, (frame) => {
     if (frame < startFrame || frame > logicalEnd || (frame === logicalEnd && logicalEnd !== durationFrames)) {
@@ -370,12 +446,8 @@ function activeBoxAnimation(
     }
     const enterProgress = enterFrames === 0 ? 1 : clamp((frame - startFrame) / enterFrames, 0, 1);
     const exitProgress = exitFrames === 0 ? 1 : clamp((logicalEnd - frame) / exitFrames, 0, 1);
-    const progress = Math.min(enterProgress, exitProgress);
-    const isPop = (enterProgress < 1 ? box.enter : box.exit) === "pop";
-    return [
-      { name: "opacity", value: (enterProgress < 1 ? box.enter : box.exit) === "none" ? 1 : progress },
-      { name: "transform", value: isPop ? `scale(${compactNumber(0.82 + 0.18 * progress)})` : "scale(1)" },
-    ];
+    const kind = enterProgress < 1 ? box.enter : box.exit;
+    return snapshotStyle(motionSnapshot(kind, Math.min(enterProgress, exitProgress), parameters.motion.slideDistancePx));
   }) ?? { keyframes: [
     { atFrame: 0, style: [{ name: "opacity", value: 1 }] },
     { atFrame: durationFrames, style: [{ name: "opacity", value: 1 }] },
@@ -518,7 +590,7 @@ function cueElements(
     const typewriterId = `${atomId}-typewriter`;
     const loopId = `${atomId}-loop`;
     const responseId = `${atomId}-response`;
-    const entryAnimation = atomEntryAnimation(parameters, timing.start, durationFrames);
+    const entryAnimation = atomLifecycleAnimation(parameters, timing.start, timing.end, durationFrames);
     const writerAnimation = typewriterAnimation(atomText, parameters, timing.start, timing.end, durationFrames);
     const atomLoop = parameters.motion.loopTarget === "active-atom"
       ? loopAnimation(parameters, durationFrames, timing) : undefined;

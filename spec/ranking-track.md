@@ -51,7 +51,8 @@ survive. The old implementation had these structural problems:
 5. one global z-index prevented the board and individual icons from interleaving with peer Tracks;
 6. raw URLs, environment font names, Remotion component ids and three mirrored registries leaked
    environment/renderer details into the component;
-7. short windows could silently suppress motion sound instead of rejecting an impossible schedule.
+7. short windows could silently suppress motion sound instead of fitting visual and sound phases to
+   one shared finite schedule.
 
 Migration preserves the useful visual capabilities, not these accidental semantics.
 
@@ -284,7 +285,8 @@ Acceptance requires:
 
 - trigger/item cardinality, stable identities and all boundary failures are tested;
 - `T < O` visibly proves a final settled suffix;
-- short stages reject impossible animation rather than repairing it;
+- short stages deterministically fit their local animation and sound phases without changing stage
+  boundaries; a very short Typewriter stage may reveal several graphemes on the same frame;
 - board and per-item Presents interleave with a peer Track at unrelated absolute z positions;
 - visual and sound event frames agree exactly;
 - missing optional images work only for variants that declare them optional;

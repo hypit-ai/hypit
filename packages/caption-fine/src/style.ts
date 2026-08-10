@@ -23,7 +23,7 @@ const OPTIONAL_PROPERTIES = [
   "active-response", "active-response-frames", "active-scale", "active-shadow-blur", "active-shadow-color", "active-shadow-opacity",
   "active-shadow-x", "active-shadow-y", "active-stroke-color", "active-stroke-width", "active-underline",
   "active-underline-color", "active-underline-offset", "active-underline-thickness", "anchor-x", "anchor-y",
-  "atom-enter", "atom-enter-frames", "atom-reveal", "border-color", "border-width", "cue-enter",
+  "atom-enter", "atom-enter-frames", "atom-exit", "atom-exit-frames", "atom-reveal", "border-color", "border-width", "cue-enter",
   "cue-enter-frames", "cue-exit", "cue-exit-frames", "direction", "font-style", "glow-blur", "glow-color",
   "glow-opacity", "gradient-angle", "gradient-from", "gradient-to", "karaoke", "karaoke-transition",
   "letter-spacing", "long-shadow-angle", "long-shadow-color", "long-shadow-distance", "long-shadow-opacity",
@@ -193,7 +193,9 @@ export function fineCaptionParameters(
   const fontSizePx = number(recipe, "size");
   const basePaint = glyphPaint(recipe, "");
   const oneShotMotions = [
-    "none", "fade", "pop", "spring", "slide-left", "slide-right", "slide-up", "slide-down", "blur-in",
+    "none", "fade", "pop", "scale", "spring", "bounce", "elastic", "stamp", "tilt", "zoom-blur",
+    "flip-x", "flip-y", "spin", "squash", "stretch", "slide-left", "slide-right", "slide-up", "slide-down",
+    "blur-in", "wipe-left", "wipe-right", "wipe-up", "wipe-down",
   ] as const;
   const parameters: FineCaptionParameters = {
     contract: "svml.caption-fine-parameters@1",
@@ -255,8 +257,8 @@ export function fineCaptionParameters(
       paddingXPx: activeBoxPadding.x,
       paddingYPx: activeBoxPadding.y,
       radiusPx: number(recipe, "active-box-radius", 8),
-      enter: choice(recipe, "active-box-enter", ["none", "fade", "pop"] as const, "none"),
-      exit: choice(recipe, "active-box-exit", ["none", "fade", "pop"] as const, "none"),
+      enter: choice(recipe, "active-box-enter", oneShotMotions, "none"),
+      exit: choice(recipe, "active-box-exit", oneShotMotions, "none"),
       transitionFrames: integer(recipe, "active-box-transition-frames", 0),
     },
     motion: {
@@ -266,12 +268,14 @@ export function fineCaptionParameters(
       cueExitFrames: integer(recipe, "cue-exit-frames", 0),
       atomEnter: choice(recipe, "atom-enter", oneShotMotions, "none"),
       atomEnterFrames: integer(recipe, "atom-enter-frames", 0),
+      atomExit: choice(recipe, "atom-exit", oneShotMotions, "none"),
+      atomExitFrames: integer(recipe, "atom-exit-frames", 0),
       atomReveal: choice(recipe, "atom-reveal", ["all", "on-start", "typewriter"] as const, "all"),
-      activeResponse: choice(recipe, "active-response", ["none", "scale", "pop", "spring"] as const, "none"),
+      activeResponse: choice(recipe, "active-response", oneShotMotions, "none"),
       activeResponseFrames: integer(recipe, "active-response-frames", 6),
       activeScale: number(recipe, "active-scale", 1.08),
       slideDistancePx: number(recipe, "slide-distance", 24),
-      loop: choice(recipe, "loop", ["none", "shake", "wobble", "glow-pulse"] as const, "none"),
+      loop: choice(recipe, "loop", ["none", "shake", "wobble", "glow-pulse", "breathe", "float", "pulse", "flicker"] as const, "none"),
       loopTarget: choice(recipe, "loop-target", ["cue", "active-atom"] as const, "cue"),
       loopPeriodFrames: integer(recipe, "loop-period-frames", 12),
       loopIntensity: number(recipe, "loop-intensity", 1),
@@ -293,14 +297,16 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
     value.underline.thicknessPx, value.underline.offsetPx, value.activeUnderline.thicknessPx,
     value.activeUnderline.offsetPx, value.activeBox.borderWidthPx, value.activeBox.paddingXPx,
     value.activeBox.paddingYPx, value.activeBox.radiusPx, value.activeBox.transitionFrames,
-    value.motion.cueEnterFrames, value.motion.cueExitFrames, value.motion.atomEnterFrames, value.motion.activeResponseFrames,
+    value.motion.cueEnterFrames, value.motion.cueExitFrames, value.motion.atomEnterFrames, value.motion.atomExitFrames,
+    value.motion.activeResponseFrames,
     value.motion.slideDistancePx, value.motion.loopPeriodFrames, value.motion.loopIntensity,
   ];
   if (nonNegative.some((item) => !Number.isFinite(item) || item < 0)
     || value.placement.x > 1 || value.placement.y > 1 || value.placement.width <= 0 || value.placement.width > 1
     || value.typography.fontSizePx <= 0 || value.layout.lineHeight <= 0
     || !Number.isSafeInteger(value.motion.cueEnterFrames) || !Number.isSafeInteger(value.motion.cueExitFrames)
-    || !Number.isSafeInteger(value.motion.atomEnterFrames) || !Number.isSafeInteger(value.motion.loopPeriodFrames)
+    || !Number.isSafeInteger(value.motion.atomEnterFrames) || !Number.isSafeInteger(value.motion.atomExitFrames)
+    || !Number.isSafeInteger(value.motion.loopPeriodFrames)
     || !Number.isSafeInteger(value.motion.activeResponseFrames)
     || !Number.isSafeInteger(value.activeBox.transitionFrames) || value.motion.loopPeriodFrames <= 0
     || value.motion.activeScale <= 0
