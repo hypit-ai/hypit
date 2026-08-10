@@ -70,7 +70,7 @@ Role Cue 会产生不同的文本投影：
 | **speech** | `What time is it?`<br>`It's 8:30.` |
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
-dialogue `Text` 包含 Role Cue 前缀，speech `Text` 和 caption 投影会去除前缀。给 `seedance:ReferenceVideo` 提供输入的 Prompt Program 可以使用 `{story.segment.dialogue.dialogue}`（带标签）。Script 还会显式输出 `{story.caption}` 作为有序的显示 Atom/Word 全集，并以 `{story.caption.correspondence}` 单独提供 Atom 到口播 token 的对应；只有定时汇合处需要后者。
+dialogue 投影包含 Role Cue 前缀。speech 和 caption 投影会去除前缀。像 `seedance:Speech` 这样的组件使用 `{story.segment.dialogue.dialogue}`（带标签），而 `caption:Track` 使用 caption 投影（不带标签）。
 
 ## Dual Text
 

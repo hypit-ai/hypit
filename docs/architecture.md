@@ -3,6 +3,12 @@
 Status: current architecture, 2026-08-08. Wire formats mentioned here are executable `@1`
 contracts, not sketches.
 
+Narratage is still pre-release. Every project-owned source locator, wire contract, Surface ABI and
+Host ABI therefore remains at major `1`; implementation changes are identified by content and
+implementation digests plus package locks, not by inventing later public majors before the first
+compatibility contract exists. Package-manager versions of third-party dependencies are unrelated
+to this rule.
+
 Narratage has two deliberately separate ideas:
 
 1. a domain-neutral system for compiling an authored graph plus explicit run choices into a
@@ -37,7 +43,7 @@ Author Source + author packages
 ```
 
 Every source starts with a mandatory self-description such as
-`<?svml using="@narratage/text@1"?>`. The suffix is only an editor and human convention; the Header
+`<?svml using="@narratage/markup@1"?>`. The suffix is only an editor and human convention; the Header
 selects the exact trusted Frontend. There is no implicit Text, SVS or Run parser.
 
 No external command is issued before the BuildPlan is frozen. Execution never chooses a Candidate,
@@ -72,38 +78,60 @@ The Author Graph may contain authored Records, Candidates and Operations. A sour
 an arbitrary finite internal Fragment while still exporting a small, readable component interface.
 That is ordinary static expansion, not a privileged macro path in Core.
 
-`@narratage/text` is the official markup Frontend normally used by `.svml`. `@narratage/svs` is the official
+`@narratage/markup` is the official markup Frontend normally used by `.svml`. `@narratage/svs` is the official
 reusable Recipe Frontend normally used by `.svs`. Neither suffix selects a parser, neither syntax is
 built into Core, and another Frontend may produce the same typed Author Graph. A source-to-source
 import names only a locator and alias; the imported source's own Header selects how it is read.
 
-SVS Recipes are inert typed values, not executable templates. `@narratage/text` supplies
-graph-native text values, templates and deterministic rendering. A package-owned Surface binds
-domain inputs into one text invocation and lowers it during author compilation to an ordered
-`PromptProgram`; no Prompt axis, branch or concatenation becomes a Runtime Operation. For example,
-`@narratage/seedance-speaker` binds Script dialogue, explicit media references, one project Recipe and
-the explicitly referenced `official-ugc-v1.svs` Source Module, then emits authored PromptProgram
-and Seedance SpeechProgram Records. The Run Graph begins at duration-dependent Seedance request
-compilation. SVS never executes conditions, Prompt Kit has no Speaker or Seedance knowledge, and
-Provider code never sees the higher-level mapping.
+SVS Recipes are inert typed values, not executable templates. `@narratage/text` defines a separate,
+domain-neutral text-value waist: `TextTemplate`, explicit `TextBindings`, and deterministic graph
+Operations that render an ordinary `Text` Record. Its bounded expression algebra covers literals,
+slots, sequence/join, finite conditions, lists, replacement, transforms and named acyclic
+definitions. It has no model, prompt, video, Provider or Markup knowledge.
+
+`@narratage/text/svs@1` is only an optional authoring Frontend for one flat Recipe convention. It
+lowers fixed/axis/variant/slot Recipes to the same `TextTemplate`; it is not the execution engine and
+SVS itself still evaluates nothing. Generic `text:Render` may project a referenced Recipe's declared
+scalar properties into template bindings, with explicit Params taking precedence. A domain Surface
+may bind Script text or other graph-produced `Text` values into that template, but the resulting render remains a visible graph component whose
+`Text` output is targetable and replaceable like any other logical result.
+
+`@narratage/seedance-kits` demonstrates the boundary: Speaker, B-roll, Podcast, Call, Street Interview,
+Motion Reference and Camera Reference are seven data-only Text Templates. They do not declare model
+ports or execution. Their rendered Text and explicitly referenced media feed the same generic
+`seedance:ReferenceVideo` Surface.
+
+For example, `speaker-v1.svs` consumes selected static axes and Script's ordinary dialogue `Text`
+through generic `text:Render`. The rendered output then enters Seedance's exact `prompt` port;
+image and audio references remain explicit children of `seedance:ReferenceVideo`. Script emits
+speech and dialogue as independent Text Records rather than copying
+either serialization into Narrative payloads. The same Text component can feed GPT Image or another model
+port; Provider code receives only the finalized model request and never knows which template or
+Surface produced it.
+
+The same waist reaches visible consumers without creating a text subsystem in Core. Typography
+Point/Area/Path content, dynamic Ranking labels and Typewriter copy, Comment Sticker fields and Deck
+labels accept ordinary `Text` edges. Their layout, timing, appearance and domain structure remain
+owned by the consumer package. Static literals are compact authoring sugar; values produced by
+another component are never copied into hidden Surface state.
 
 This extension boundary is deliberately smaller than a general compiler-plugin API:
 
 - an `AuthorFrontend` owns one complete source grammar and is selected only by that source's Header;
-- a Text `Surface` owns one imported module declaration and may lower only that declaration;
-- a pure compile library such as Prompt Kit may be called by a Frontend or Surface but receives no
-  Host registry, source filesystem, Runtime or whole-graph mutation authority;
+- a Markup `Surface` owns one imported module declaration and may lower only that declaration;
+- a pure compile library such as the Text Template verifier receives no Host registry, source
+  filesystem, Runtime or whole-graph mutation authority;
 - the Elaborator links all returned typed declarations and is the only layer that freezes the
   complete Author Graph.
 
 Therefore adding a new domain-specific author compiler means installing and locking an ordinary
-package contribution. It does not mean adding a switch branch to Core, Text, the video CLI or a
+package contribution. It does not mean adding a switch branch to Core, Markup, the video CLI or a
 global graph-rewrite hook.
 
-A domain package that contributes a Text Surface therefore depends on `@narratage/text` in exactly
+A domain package that contributes a Markup Surface therefore depends on `@narratage/markup` in exactly
 two places: its Surface decoder consumes the structured-element types, and its activation entry
-wraps that decoder with the `svml.text-surface-host@1` facet constructor. Domain contracts,
-Producers and Fragments do not import Text. A future second Frontend would publish its own Surface
+wraps that decoder with the `svml.markup-surface-host@1` facet constructor. Domain contracts,
+Producers and Fragments do not import Markup. A future second Frontend would publish its own Surface
 ABI and receive a parallel activation entry; it does not require rewriting domain logic or an
 anticipatory Frontend-neutral Surface abstraction today.
 
@@ -250,6 +278,9 @@ and every request uses one `svml.generation-request@1` envelope keyed by those p
 contributes only a `svml.generation-wire-mapping@1`: which of its own fields carries each port, and
 which of its own endpoints serves which port combination. Providers therefore import no model
 package, and a repository test proves each mapping covers every declared port before any paid call.
+The exact model additionally owns a Request Draft plus media Binding and finalize Producers. They
+keep runtime-produced references as graph edges while ensuring the Provider receives only the fully
+validated request; Core does not learn image, video, audio or model semantics.
 See [`model-input-ports.md`](./model-input-ports.md).
 
 ## 7. Package and authority boundaries
@@ -278,7 +309,7 @@ identity, and only the Run Host validates and installs its Fragment exports. The
 special `runFragments` branch and does not interpret Run syntax.
 
 The reference local Host accepts `svml.runtime.json`. A separate `runtimePackageLock` selects
-physical packages whose verified `svml.runtime-adapter-host@2` facets may validate configuration and construct Endpoints and
+physical packages whose verified `svml.runtime-adapter-host@1` facets may validate configuration and construct Endpoints and
 services. Exact `use` names resolve only inside that locked inventory. The Host rebinds each Runtime
 implementation identity to the package Artifact digest and that package's transitive dependency closure before
 resolving the Runtime Profile/Closure. The JSON contains non-secret configuration and credential
@@ -332,16 +363,16 @@ The reusable domain-neutral stack is:
 @narratage/cli                 generic command engine; requires an explicit Distribution
 ```
 
-`@narratage/run-markup`, `@narratage/markup`, `@narratage/script`, `@narratage/svs`, video contracts and every Provider are
+`@narratage/run-markup`, `@narratage/markup`, `@narratage/text`, `@narratage/script`, `@narratage/svs`, video contracts and every Provider are
 optional language, domain or application packages.
 
 `@narratage/compiler-markup-node` is the optional reference assembly that selects the official Markup entry
-Frontend and installs only `svml.text-surface-host@1` Host facets. The same locked physical package
+Frontend and installs only `svml.markup-surface-host@1` Host facets. The same locked physical package
 may carry deterministic compute facets into `@narratage/local` without either the Loader or Runtime
-depending on Text. Other Host-facet ABIs remain inert until another explicit Host selects them.
+depending on Markup. Other Host-facet ABIs remain inert until another explicit Host selects them.
 
 `@narratage/video-cli` is the optional video command application. It supplies the generic CLI with the
-Text compiler assembly, but starts with no author, Run or Provider package contribution. One
+Markup compiler assembly, but starts with no author, Run or Provider package contribution. One
 reviewed implementation lock activates deterministic compute; a separate Runtime package lock
 activates only deployment adapters. Thus adding an author package or Provider requires no Core,
 CLI or aggregate-package release.
@@ -358,6 +389,13 @@ real process/Wasm isolation boundary, permission grants, resource limits and cod
 Package installation is also outside source semantics: importing a module never authorizes npm
 installation or execution.
 
+A trusted installed Surface may contribute package-owned static bytes—fonts today, and potentially
+LUTs or templates later—through the same Host asset gate as an author file. The Node Compiler hashes
+the bytes, records their `BlobRef` in the Source Closure and returns them in its Host transfer bundle;
+the bytes never enter Core state. This is not a hidden network fetch: installation has already
+resolved the locked physical package, and compilation only reads that installed closure. A Surface
+cannot turn an SVML import into package installation.
+
 ## 10. Video is an ordinary distribution
 
 The old umbrella `@narratage/video-contracts` package no longer exists. Public video communication
@@ -365,7 +403,7 @@ is owned by small, independently versioned modules:
 
 | Package | Owns |
 |---|---|
-| `@narratage/narrative` | authored tokens, Segments, excerpts, selections and Caption display projection |
+| `@narratage/narrative` | authored tokens, Segments, excerpts, anchor-only selections/moments, Caption display projection and ordered Caption words/subsets |
 | `@narratage/media` | inspected/normalized media facts, renderer outputs and typed media/font/surface references |
 | `@narratage/program-space` | duration and exact rational frame domain |
 | `@narratage/speech` | speech duration, atomic SpeechBasis and alignment-audio facts |
@@ -377,6 +415,22 @@ is owned by small, independently versioned modules:
 These are domain contracts, not a second Core. Installing a ninth contract package needs no Core
 change: it publishes its own Manifest and nominal Types, and components communicate through normal
 graph edges.
+
+Caption follows the same separation. `@narratage/caption` owns the family-neutral word-to-Cue Plan,
+total Style assignment and SemanticMap timing join. A concrete family such as
+`@narratage/caption-fine` owns its Recipe schema, layout and visual lowering. Using Caption Types is
+not authority to add a concrete Style parameter to the common package: changing a Fine position,
+font, box or paint rule must not change Caption, Composition or Core.
+
+`@narratage/media` owns the identity of renderable bytes, including `FontArtifactRef` and the generic
+ordered `FontStackRef`; it does not
+own typography choices. Its `<media:Font>` author Surface turns an explicitly referenced custom font
+file into that existing value. The optional `@narratage/fonts-open` package exposes a curated,
+version-pinned catalog of installed open faces and compact stack authoring through those contracts.
+A consuming Text/Caption/Ranking package chooses faces through normal graph references. Fine Caption
+accepts either a primary `Style.font` plus ordered package-owned `Fallback` children or one
+`FontStackRef`; no font fact is added to Core or
+propagated through unrelated intermediate values.
 
 Speech implementation packages now describe what they actually do:
 
@@ -411,8 +465,10 @@ All official video packages use the same Graph, Candidate, Satisfaction, Need an
 as any other domain. Film is an ordinary Composition target and each renderer is an ordinary
 downstream implementation; neither is a Core root.
 
-The current audiovisual narrow waist remains pre-freeze. Its expressiveness work is intentionally
-deferred while the domain-neutral run language and deployment paths are completed.
+The repository-internal audiovisual narrow waist is frozen at `svml.visual-track@1` and
+`svml.visual-ir@1`: exact fonts, typed and byte-verified Surfaces, renderer implementation receipts
+and the no-family/no-cross-Track audit all execute. Individual author Surfaces and public package
+distribution remain pre-release work and can evolve without reopening that terminal contract.
 
 See [`open-source-distribution.md`](./open-source-distribution.md) for independent publication,
 restart and current release-readiness boundaries.
