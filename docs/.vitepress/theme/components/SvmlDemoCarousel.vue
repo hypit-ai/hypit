@@ -199,18 +199,19 @@ onBeforeUnmount(() => { activationId += 1; });
 
 <style scoped>
 .svml-demo-carousel { width: calc(100% - 128px); max-width: 1180px; margin: 0 auto; padding: 48px 32px 96px; overflow: visible; box-sizing: border-box; }
-.demo-carousel-stage { display: grid; width: min(100%, 1000px); overflow: visible; perspective: 1600px; }
+.demo-carousel-stage { display: grid; width: min(100%, 1000px); margin-inline: auto; overflow: visible; perspective: 1600px; }
 .carousel-heading { width: min(100%, 1000px); margin-right: 0; margin-left: 0; }
-.demo-card { position: relative; grid-area: 1 / 1; justify-self: center; width: 100%; overflow: hidden; border-radius: 2px; background: #272022; transform-origin: center center; will-change: transform, opacity, filter; transition: transform 850ms cubic-bezier(.16,1,.3,1), opacity 850ms cubic-bezier(.16,1,.3,1), filter 850ms cubic-bezier(.16,1,.3,1); }
-.demo-card.is-center { z-index: 3; opacity: 1; filter: brightness(1); transform: translateX(0) scale(1); }
-.demo-card.is-left { z-index: 1; opacity: .3; filter: brightness(.82) saturate(.68); transform: translateX(calc(-100% + 58px)) scale(.86); }
-.demo-card.is-right { z-index: 1; opacity: .3; filter: brightness(.82) saturate(.68); transform: translateX(calc(100% - 58px)) scale(.86); }
+.demo-card { position: relative; grid-area: 1 / 1; justify-self: center; width: 100%; overflow: visible; border-radius: 2px; background: transparent; transform-origin: center center; will-change: transform, opacity; transition: transform 850ms cubic-bezier(.16,1,.3,1), opacity 850ms cubic-bezier(.16,1,.3,1); }
+.demo-card.is-center { z-index: 3; opacity: 1; transform: translateX(0) scale(1); }
+.demo-card.is-left { z-index: 1; opacity: .3; transform: translateX(calc(-100% + 34px)) scale(.86); }
+.demo-card.is-right { z-index: 1; opacity: .3; transform: translateX(calc(100% - 34px)) scale(.86); }
 .demo-card-select { position: absolute; z-index: 10; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; cursor: pointer; }
 .demo-card-select:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; border-radius: 2px; }
-.demo-card-content { min-width: 0; }
+.demo-card-content { min-width: 0; overflow: hidden; border-radius: 2px; background: #272022; filter: brightness(1); transition: filter 850ms cubic-bezier(.16,1,.3,1); }
+.demo-card.is-left .demo-card-content,
+.demo-card.is-right .demo-card-content { filter: brightness(.82) saturate(.68); }
 .demo-card-content :deep(.svml-demo) { margin-top: 0; }
 .demo-card-content :deep(.demo-shell) { box-shadow: none; }
-.demo-card.is-left :deep(.real-preview-body) { justify-items: end; padding-right: 0; }
 .demo-loading { display: grid; place-content: center; justify-items: center; gap: 14px; min-height: 720px; border: 0; border-radius: 2px; background: #272022; color: #BBAAB0; font-family: var(--font-ui); font-size: 12px; letter-spacing: .04em; }
 .demo-loading-spinner { width: 30px; height: 30px; border: 2px solid #EB609133; border-top-color: #49D6E9; border-radius: 50%; animation: demo-loading-spin .7s linear infinite; }
 .demo-carousel-controls { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 22px 0 2px; }
@@ -227,8 +228,8 @@ onBeforeUnmount(() => { activationId += 1; });
 
 @media (max-width: 959px) {
   .svml-demo-carousel { width: calc(100% - 96px); }
-  .demo-card.is-left { transform: translateX(calc(-100% + 34px)) scale(.88); }
-  .demo-card.is-right { transform: translateX(calc(100% - 34px)) scale(.88); }
+  .demo-card.is-left { transform: translateX(calc(-100% + 18px)) scale(.88); }
+  .demo-card.is-right { transform: translateX(calc(100% - 18px)) scale(.88); }
   .demo-loading { min-height: 990px; }
 }
 
@@ -238,8 +239,8 @@ onBeforeUnmount(() => { activationId += 1; });
 
 @media (max-width: 520px) {
   .svml-demo-carousel { padding: 48px 24px 72px; }
-  .demo-card.is-left { transform: translateX(calc(-100% + 20px)) scale(.9); }
-  .demo-card.is-right { transform: translateX(calc(100% - 20px)) scale(.9); }
+  .demo-card.is-left { transform: translateX(calc(-100% + 8px)) scale(.9); }
+  .demo-card.is-right { transform: translateX(calc(100% - 8px)) scale(.9); }
 }
 
 @media (prefers-reduced-motion: reduce) {
