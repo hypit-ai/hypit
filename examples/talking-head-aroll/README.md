@@ -12,9 +12,9 @@ Every take uses the same voice-timbre reference. The visual reference sequence i
 alternate, base.
 
 `@narratage/seedance-speaker` binds the reusable project SVS Recipe, Script dialogue and explicit
-references into a Prompt Kit Invocation. The generic `@narratage/prompt-kit` author compiler applies the
-separately imported `official-ugc-v1.svs` mapping. It emits an ordered Prompt Program and exact
-Seedance Speech Program while compiling `main.svml`; neither operation is a Runtime task.
+references into Text Bindings. The separately imported `official-ugc-v1.svs` compiles to a
+domain-neutral Text Template. A visible Text render Operation produces each prompt and connects it
+to the exact Seedance request; prompt assembly is therefore part of the graph, not hidden package logic.
 The four generated videos are normalized and concatenated into one Speech Spine. One canonical
 audio projection goes through WhisperX, direct Script alignment produces the complete SemanticMap,
 Gemini plans Cue cuts without seeing timing, and the resulting Caption
@@ -35,12 +35,13 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/speech \
   --package @narratage/speech-evidence \
   --package @narratage/semantic-map \
+  --package @narratage/spatial \
   --package @narratage/visual-ir \
   --package @narratage/composition \
   --package @narratage/svs \
   --package @narratage/script \
   --package @narratage/estimate \
-  --package @narratage/prompt-kit \
+  --package @narratage/text \
   --package @narratage/generation \
   --package @narratage/seedance \
   --package @narratage/seedance-speaker \
@@ -56,7 +57,7 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/hyperframes \
   --package @narratage/media-pipeline \
   --package @narratage/render-hyperframes \
-  --package @narratage/run-text \
+  --package @narratage/run-markup \
   --root .
 
 pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.lock \
@@ -68,7 +69,7 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.l
   --root .
 ```
 
-Inspect all authored outputs—including `*.prompt` and `*.program`—without a paid call:
+Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:
 
 ```sh
 pnpm narratage check examples/talking-head-aroll/main.svml \

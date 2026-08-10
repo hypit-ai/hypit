@@ -8,6 +8,7 @@ import { artifactDependency, artifactTypes } from "@narratage/artifact";
 import { sealGraphFragment } from "@narratage/elaborator";
 import {
   bindGenerationMedia,
+  bindGenerationText,
   finalizeGenerationRequestDraft,
   generationManifestDigest,
   generationModuleRef,
@@ -26,6 +27,8 @@ import type {
   GenerationPortTable,
   GenerationRequestDraft,
 } from "@narratage/generation";
+import { textDependency, textTypes } from "@narratage/text";
+import type { Text } from "@narratage/text";
 import {
   canonicalize,
   digestOf,
@@ -66,6 +69,7 @@ export type ExactModelEndpoint = {
   readonly finalizeProducer: ProducerRef;
   readonly finalizeImplementationDigest: Digest;
   readonly mediaBindings: Readonly<Record<string, ExactModelMediaBindingEndpoint>>;
+  readonly textBindings: Readonly<Record<string, ExactModelTextBindingEndpoint>>;
   readonly ports: GenerationPortTable;
   readonly fragment: ReturnType<typeof sealGraphFragment>;
 };
@@ -77,10 +81,23 @@ export type ExactModelMediaBindingEndpoint = {
   readonly implementationDigest: Digest;
 };
 
+export type ExactModelTextBindingEndpoint = {
+  readonly port: string;
+  readonly producer: ProducerRef;
+  readonly implementationDigest: Digest;
+};
+
 export type ExactModelMediaInput = {
   /** Stable local input name inside this Fragment shape. */
   readonly name: string;
   /** Exact model media port receiving the artifact. */
+  readonly port: string;
+};
+
+export type ExactModelTextInput = {
+  /** Stable local input name inside this Fragment shape. */
+  readonly name: string;
+  /** Exact model text port receiving the Text value. */
   readonly port: string;
 };
 
@@ -126,6 +143,13 @@ function endpointRef(module: ModuleRef, spec: ExactModelEndpointSpec) {
       producer: { module, name: `bind-${spec.producerName}-${port.name}` },
       implementationDigest: digestOf(`${module.name}/bind-${spec.producerName}-${port.name}@1`),
     } satisfies ExactModelMediaBindingEndpoint]));
+  const textBindings = Object.fromEntries(spec.ports.ports
+    .filter((port) => port.value.kind === "text")
+    .map((port) => [port.name, {
+      port: port.name,
+      producer: { module, name: `bind-${spec.producerName}-${port.name}-text` },
+      implementationDigest: digestOf(`${module.name}/bind-${spec.producerName}-${port.name}-text@1`),
+    } satisfies ExactModelTextBindingEndpoint]));
   return {
     requestType,
     draftType,
@@ -138,6 +162,7 @@ function endpointRef(module: ModuleRef, spec: ExactModelEndpointSpec) {
     finalizeProducer,
     finalizeImplementationDigest,
     mediaBindings,
+    textBindings,
   };
 }
 
@@ -184,6 +209,7 @@ export function defineExactModelModule<const Key extends string>(
     dependencies: [
       { module: generationModuleRef, digest: generationManifestDigest },
       artifactDependency,
+      textDependency,
     ],
     types: endpointData.flatMap((item) => [
       {
@@ -253,6 +279,20 @@ export function defineExactModelModule<const Key extends string>(
           digest: binding.implementationDigest,
         },
       })),
+      ...Object.values(item.textBindings).map((binding) => ({
+        name: binding.producer.name,
+        inputs: [
+          { name: "draft", type: item.draftType },
+          { name: "text", type: textTypes.text },
+        ],
+        outputs: [{ name: "draft", type: item.draftType }],
+        needs: [],
+        implementation: {
+          kind: "registered" as const,
+          locator: `${options.module.name}/${item.spec.key}/bind-${binding.port}-text`,
+          digest: binding.implementationDigest,
+        },
+      })),
       {
         name: item.finalizeProducer.name,
         inputs: [{ name: "draft", type: item.draftType }],
@@ -298,6 +338,7 @@ export function defineExactModelModule<const Key extends string>(
       finalizeProducer: item.finalizeProducer,
       finalizeImplementationDigest: item.finalizeImplementationDigest,
       mediaBindings: item.mediaBindings,
+      textBindings: item.textBindings,
       ports: item.spec.ports,
       fragment,
     } satisfies ExactModelEndpoint];
@@ -358,6 +399,23 @@ export function defineExactModelModule<const Key extends string>(
             };
           },
         })),
+        ...Object.values(item.textBindings).map((binding) => ({
+          producer: binding.producer,
+          implementationDigest: binding.implementationDigest,
+          handler: ({ inputs }: ProducerHandlerContext) => {
+            const draft = inlineValue<GenerationRequestDraft>(inputs.draft!.value, `${item.spec.key} draft`);
+            const text = inlineValue<Text>(inputs.text!.value, `${binding.port} Text`);
+            return {
+              outputs: {
+                draft: {
+                  kind: "inline" as const,
+                  value: canonicalize(bindGenerationText(item.spec.ports, draft, binding.port, text)),
+                },
+              },
+              needs: {},
+            };
+          },
+        })),
         {
           producer: item.finalizeProducer,
           implementationDigest: item.finalizeImplementationDigest,
@@ -387,6 +445,11 @@ export function exactModelMediaInputNames(name: string): {
   return { artifact: `${name}:artifact`, binding: `${name}:binding` };
 }
 
+export function exactModelTextInputName(name: string): string {
+  assert(name.trim().length > 0, "Exact model text input name is empty");
+  return `${name}:text`;
+}
+
 /**
  * Expand one exact-model invocation into a deterministic request-assembly
  * graph. Every runtime-produced media artifact remains a real Fragment input;
@@ -396,9 +459,10 @@ export function exactModelMediaInputNames(name: string): {
 export function createExactModelPrimaryGenerationFragment(
   endpoint: ExactModelEndpoint,
   mediaInputs: readonly ExactModelMediaInput[] = [],
+  textInputs: readonly ExactModelTextInput[] = [],
 ) {
-  const names = mediaInputs.map((item) => item.name);
-  assert(new Set(names).size === names.length, "Exact model media input names must be unique");
+  const names = [...mediaInputs, ...textInputs].map((item) => item.name);
+  assert(new Set(names).size === names.length, "Exact model input names must be unique");
   const inputs = [{ name: "draft", type: endpoint.draftType }];
   const operations: Array<{
     readonly id: string;
@@ -409,6 +473,21 @@ export function createExactModelPrimaryGenerationFragment(
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
   let draft = input("draft") as ReturnType<typeof input> | ReturnType<typeof operation>;
+
+  for (const [index, item] of textInputs.entries()) {
+    const binding = endpoint.textBindings[item.port];
+    assert(binding !== undefined, `${endpoint.ports.model} has no text port ${item.port}`);
+    const inputName = exactModelTextInputName(item.name);
+    inputs.push({ name: inputName, type: textTypes.text });
+    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.port}`;
+    operations.push({
+      id,
+      producer: binding.producer,
+      inputs: { draft, text: input(inputName) },
+      result: { kind: "output", name: "draft" },
+    });
+    draft = operation(id);
+  }
 
   for (const [index, item] of mediaInputs.entries()) {
     const binding = endpoint.mediaBindings[item.port];
@@ -453,7 +532,10 @@ export function createExactModelPrimaryGenerationFragment(
     result: { kind: "output", name: result },
   });
   const semanticInputs = inputs.map((entry) => entry.name);
-  const shape = mediaInputs.map((item) => `${item.name}=${item.port}`).join(",") || "no-media";
+  const shape = [
+    ...textInputs.map((item) => `${item.name}=${item.port}:text`),
+    ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
+  ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
     name: `${endpoint.producer.module.name}/${endpoint.key}-assembled-primary-${result}[${shape}]@1`,
     inputs,

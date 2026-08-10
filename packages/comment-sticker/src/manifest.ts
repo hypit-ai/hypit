@@ -8,6 +8,7 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narrata
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
 import { temporalDependency } from "@narratage/temporal";
+import { textDependency, textTypes } from "@narratage/text";
 
 import { commentStickerImplementationDigests, commentStickerValidatorDigests } from "./program.js";
 
@@ -17,6 +18,7 @@ export const commentStickerTypes = {
   header: { module: commentStickerModuleRef, name: "CommentStickerHeader" },
   style: { module: commentStickerModuleRef, name: "CommentStickerStyle" },
   itemSpec: { module: commentStickerModuleRef, name: "CommentStickerItemSpec" },
+  content: { module: commentStickerModuleRef, name: "CommentStickerContent" },
   set: { module: commentStickerModuleRef, name: "CommentStickerSet" },
   program: { module: commentStickerModuleRef, name: "CommentStickerProgram" },
 } satisfies Record<string, TypeRef>;
@@ -31,6 +33,10 @@ export const commentStickerProducers = {
   appendMomentAvatar: { module: commentStickerModuleRef, name: "append-moment-comment-sticker-avatar" },
   finalize: { module: commentStickerModuleRef, name: "finalize-comment-sticker" },
   render: { module: commentStickerModuleRef, name: "render-comment-sticker" },
+  createContent: { module: commentStickerModuleRef, name: "create-comment-sticker-content" },
+  setContentAuthor: { module: commentStickerModuleRef, name: "set-comment-sticker-content-author" },
+  setContentHeader: { module: commentStickerModuleRef, name: "set-comment-sticker-content-header" },
+  setContentMeta: { module: commentStickerModuleRef, name: "set-comment-sticker-content-meta" },
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
@@ -102,12 +108,13 @@ const style = object({
   }) },
 });
 const content = object({
+  contract: { schema: { kind: "literal", value: "svml.comment-sticker-content@1" } },
   comment: { schema: string }, author: { schema: string, optional: true },
   header: { schema: string, optional: true }, meta: { schema: string, optional: true },
 });
 const itemSpec = object({
   contract: { schema: { kind: "literal", value: "svml.comment-sticker-item-spec@1" } },
-  id: { schema: string }, content: { schema: content }, projection: { schema: projection },
+  id: { schema: string }, projection: { schema: projection },
   expansion: { schema: object({ kind: { schema: enumString(["one", "each"]) } }) },
 });
 const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
@@ -138,26 +145,39 @@ const appendInputs = [
   { name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header },
   { name: "frame", type: spatialTypes.frame }, { name: "style", type: commentStickerTypes.style },
   { name: "space", type: programSpaceTypes.programSpace }, { name: "spec", type: commentStickerTypes.itemSpec },
+  { name: "content", type: commentStickerTypes.content },
 ] as const;
 
 export const commentStickerManifest: ModuleManifest = {
   format: "svml.module@1",
   name: commentStickerModuleRef.name,
   version: commentStickerModuleRef.version,
-  dependencies: [artifactDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency],
+  dependencies: [artifactDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency, textDependency],
   types: [
     { name: commentStickerTypes.header.name, schema: commentStickerHeaderSchema },
     { name: commentStickerTypes.style.name, schema: commentStickerStyleSchema },
     { name: commentStickerTypes.itemSpec.name, schema: commentStickerItemSpecSchema },
+    { name: commentStickerTypes.content.name, schema: content },
     { name: commentStickerTypes.set.name, schema: commentStickerSetSchema },
     { name: commentStickerTypes.program.name, schema: commentStickerProgramSchema, validator: validator("@narratage/comment-sticker/validate-program", commentStickerValidatorDigests.program) },
   ],
   capabilities: [],
   surfaces: [
     { name: "style", tag: "Style", mode: "structured", outputs: [commentStickerTypes.style], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/comment-sticker/style-surface", digest: commentStickerStyleSurfaceImplementationDigest } },
-    { name: "track", tag: "Track", mode: "structured", outputs: [commentStickerTypes.header, commentStickerTypes.itemSpec, commentStickerTypes.program, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/comment-sticker/track-surface", digest: commentStickerTrackSurfaceImplementationDigest } },
+    { name: "track", tag: "Track", mode: "structured", outputs: [textTypes.text, commentStickerTypes.header, commentStickerTypes.itemSpec, commentStickerTypes.program, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/comment-sticker/track-surface", digest: commentStickerTrackSurfaceImplementationDigest } },
   ],
   producers: [
+    { name: commentStickerProducers.createContent.name, inputs: [{ name: "comment", type: textTypes.text }], outputs: [{ name: "content", type: commentStickerTypes.content }], needs: [], implementation: registered("@narratage/comment-sticker/create-content", commentStickerImplementationDigests.createContent) },
+    ...([
+      [commentStickerProducers.setContentAuthor, commentStickerImplementationDigests.setContentAuthor, "author"],
+      [commentStickerProducers.setContentHeader, commentStickerImplementationDigests.setContentHeader, "header"],
+      [commentStickerProducers.setContentMeta, commentStickerImplementationDigests.setContentMeta, "meta"],
+    ] as const).map(([producer, implementationDigest, field]) => ({
+      name: producer.name,
+      inputs: [{ name: "content", type: commentStickerTypes.content }, { name: field, type: textTypes.text }],
+      outputs: [{ name: "content", type: commentStickerTypes.content }], needs: [],
+      implementation: registered(`@narratage/comment-sticker/set-content-${field}`, implementationDigest),
+    })),
     { name: commentStickerProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: commentStickerTypes.set }], needs: [], implementation: registered("@narratage/comment-sticker/create-set", commentStickerImplementationDigests.createSet) },
     ...([
       [commentStickerProducers.appendProgram, commentStickerImplementationDigests.appendProgram, "@narratage/comment-sticker/append-program", []],

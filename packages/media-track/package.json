@@ -21,7 +21,7 @@
     "@narratage/semantic-map": "workspace:*",
     "@narratage/spatial": "workspace:*",
     "@narratage/svs": "workspace:*",
-    "@narratage/text": "workspace:*",
+    "@narratage/markup": "workspace:*",
     "@narratage/temporal": "workspace:*"
   }
 }

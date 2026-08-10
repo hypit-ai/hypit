@@ -1,14 +1,13 @@
-import { narrativeTypes } from "@narratage/narrative";
-import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
 import type { CanonicalValue } from "@narratage/protocol";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
+import { textTypes } from "@narratage/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { speechEstimateFragment } from "./fragment.js";
 import { estimateTypes } from "./manifest.js";
@@ -43,7 +42,7 @@ function attributes(element: StructuredElement): void {
 }
 
 function wholeReference(element: StructuredElement, name: string): string {
-  const raw: TextAttributeValue | undefined = element.attributes[name];
+  const raw: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof raw !== "object" || raw.kind !== "reference" || raw.path.length === 0) {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }
@@ -121,13 +120,13 @@ function reference(
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {
-  const raw: TextAttributeValue | undefined = element.attributes.source;
+  const raw: MarkupAttributeValue | undefined = element.attributes.source;
   if (typeof raw !== "object" || raw.kind !== "reference") {
     throw new Error(`${element.name}.source must be a whole-value reference`);
   }
   const result = resolveReference(raw.path);
-  if (result === undefined || !sameType(result.type, narrativeTypes.speechExcerpt)) {
-    throw new Error(`${element.name}.source must reference a NarrativeSpeechExcerpt`);
+  if (result === undefined || !sameType(result.type, textTypes.text)) {
+    throw new Error(`${element.name}.source must reference Text`);
   }
   return result;
 }

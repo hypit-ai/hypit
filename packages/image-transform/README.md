@@ -14,7 +14,7 @@ the Need/Receipt records the selected execution endpoint.
 chroma 10, 7/21 windows and 1.02 saturation recovery, followed by PNG encoding. It is now an
 explicit reusable Program rather than hidden behavior inside GPT Image generation.
 
-The official Text Surface separates declaration from use:
+The official Markup Surface separates declaration from use:
 
 ```xml
 <image:Program id="clean-gpt-image">

@@ -10,8 +10,8 @@ import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmTypes } from "./manifest.js";
@@ -38,7 +38,7 @@ function stringAttribute(element: StructuredElement, name: string): string {
 }
 
 function referenceAttribute(element: StructuredElement, name: string): string {
-  const value: TextAttributeValue | undefined = element.attributes[name];
+  const value: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof value !== "object" || value.kind !== "reference" || value.path.length === 0) {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }

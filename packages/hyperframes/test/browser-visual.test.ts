@@ -37,14 +37,14 @@ import { sealCanvasSpace } from "@narratage/spatial";
 import type { SvsRecipe } from "@narratage/svs";
 import {
   renderTextMaskTrack,
-  renderTextTrack,
+  renderTypographyTrack,
   sealTextMaskSpec,
   sealTextMotion,
   sealTextStyle,
-  sealTextTrackProgram,
+  sealTypographyTrackProgram,
   stillTextMotion,
-} from "@narratage/text-track";
-import type { TextStyle } from "@narratage/text-track";
+} from "@narratage/typography-track";
+import type { TextStyle } from "@narratage/typography-track";
 
 const enabled = process.env.SVML_BROWSER_TESTS === "1";
 const localFont = process.env.SVML_TEST_FONT_PATH
@@ -834,8 +834,8 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       contract: "svml.text-motion@1", id: "path-motion", sequences: [],
       pathMargin: { keyframes: [{ atFrame: 0, startMarginPx: 20 }, { atFrame: frames, startMarginPx: 150, easing: "ease-in-out" }] },
     });
-    const textProgram = sealTextTrackProgram({
-      contract: "svml.text-track-program@1", id: "complete-text",
+    const textProgram = sealTypographyTrackProgram({
+      contract: "svml.typography-track-program@1", id: "complete-text",
       items: [
         {
           id: "point", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "point",
@@ -882,7 +882,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
         },
       ],
     });
-    const textTrack = renderTextTrack(space, textProgram);
+    const typographyTrack = renderTypographyTrack(space, textProgram);
     const maskMaterialBytes = rgbaPng(380, 120, [255, 0, 180, 255]);
     const maskMaterialDigest = digest(maskMaterialBytes);
     const maskMaterial: CompositableSurfaceRef = {
@@ -898,8 +898,8 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
       paints: [{ kind: "fill", paint: { kind: "solid", color: "#ffffff" } }],
       area: { ...plain.area, wrap: "none" },
     });
-    const maskTrack = renderTextMaskTrack(space, sealTextTrackProgram({
-      contract: "svml.text-track-program@1", id: "mask-shape",
+    const maskTrack = renderTextMaskTrack(space, sealTypographyTrackProgram({
+      contract: "svml.typography-track-program@1", id: "mask-shape",
       items: [{
         id: "mask", sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: frames }, tieBreak: "mask",
         geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", xPx: 520, yPx: 500, widthPx: 380, heightPx: 120 } },
@@ -911,7 +911,7 @@ test("complete Text flow, Path, local mask and motion stay exact under parallel 
     }));
     const document = compileHyperframesDocument(sealComposition({
       contract: "svml.composition@1", id: "complete-text-browser",
-      canvas: { width, height, clearColor: "#000000" }, tracks: [textTrack, maskTrack],
+      canvas: { width, height, clearColor: "#000000" }, tracks: [typographyTrack, maskTrack],
     }), space);
     assert.match(document.html, /data-svml-text-shrink-scale/u);
     assert.match(document.html, /data-svml-text-path-upright/u);
@@ -1057,8 +1057,8 @@ test("Text box targets, rich runs and every sequence direction remain stable acr
       { id: "forward-line", unit: "line", order: "forward", target: "word", continuity: "joined", color: "#0f766e" },
       { id: "reverse-line", unit: "line", order: "reverse", target: "grapheme", continuity: "isolated", color: "#a16207" },
     ] as const;
-    const track = renderTextTrack(space, sealTextTrackProgram({
-      contract: "svml.text-track-program@1", id: "text-box-sequence",
+    const track = renderTypographyTrack(space, sealTypographyTrackProgram({
+      contract: "svml.typography-track-program@1", id: "text-box-sequence",
       items: cases.map((entry, index) => {
         const lineUnit = entry.unit === "line";
         const document = index === 1
@@ -1225,8 +1225,8 @@ test("vertical Text paints in its authored direction and bounded shrink fails cl
     const compile = (id: string, text: string, frame: { xPx: number; yPx: number; widthPx: number; heightPx: number }, textStyle: TextStyle) => compileHyperframesDocument(sealComposition({
       contract: "svml.composition@1", id,
       canvas: { width, height, clearColor: "#000000" },
-      tracks: [renderTextTrack(space, sealTextTrackProgram({
-        contract: "svml.text-track-program@1", id,
+      tracks: [renderTypographyTrack(space, sealTypographyTrackProgram({
+        contract: "svml.typography-track-program@1", id,
         items: [{
           id, sourceOccurrenceId: "program", span: { startFrame: 0, endFrameExclusive: 1 }, tieBreak: id,
           geometry: { kind: "area", frame: { contract: "svml.spatial-frame@1", ...frame } },

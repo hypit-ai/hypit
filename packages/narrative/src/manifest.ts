@@ -4,20 +4,16 @@ import {
   captionCorrespondenceSchema,
   captionDisplaySequenceSchema,
   captionDisplayWordSubsetSchema,
-  narrativeDialogueExcerptSchema,
   narrativeExcerptSchema,
   narrativeSchema,
   narrativeMomentSchema,
   narrativeSelectionSchema,
-  narrativeSpeechExcerptSchema,
 } from "./schema.js";
 
 export const narrativeModuleRef = { name: "@narratage/narrative", version: "1" } as const;
 export const narrativeTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },
   excerpt: { module: narrativeModuleRef, name: "NarrativeExcerpt" },
-  dialogueExcerpt: { module: narrativeModuleRef, name: "NarrativeDialogueExcerpt" },
-  speechExcerpt: { module: narrativeModuleRef, name: "NarrativeSpeechExcerpt" },
   selection: { module: narrativeModuleRef, name: "NarrativeSelection" },
   moment: { module: narrativeModuleRef, name: "NarrativeMoment" },
   captionDisplay: { module: narrativeModuleRef, name: "CaptionDisplaySequence" },
@@ -30,8 +26,6 @@ export const narrativeManifest: ModuleManifest = {
   types: [
     { name: narrativeTypes.narrative.name, schema: narrativeSchema },
     { name: narrativeTypes.excerpt.name, schema: narrativeExcerptSchema },
-    { name: narrativeTypes.dialogueExcerpt.name, schema: narrativeDialogueExcerptSchema },
-    { name: narrativeTypes.speechExcerpt.name, schema: narrativeSpeechExcerptSchema },
     { name: narrativeTypes.selection.name, schema: narrativeSelectionSchema },
     { name: narrativeTypes.moment.name, schema: narrativeMomentSchema },
     { name: narrativeTypes.captionDisplay.name, schema: captionDisplaySequenceSchema },

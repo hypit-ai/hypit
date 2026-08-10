@@ -4,7 +4,7 @@ Status: executable temporal authority for the next official Track-package migrat
 `@narratage/temporal` package implements strict occurrence expansion, exact rational window
 projection and triggered sibling schedules. Shared Spatial, Text, Ranking, Media,
 Audio and Screen Overlay are now specified in [`spatial-layout.md`](./spatial-layout.md),
-[`text-track.md`](./text-track.md), [`ranking-track.md`](./ranking-track.md),
+[`typography-track.md`](./typography-track.md), [`ranking-track.md`](./ranking-track.md),
 [`media-track.md`](./media-track.md), [`deck-track.md`](./deck-track.md),
 [`audio-track.md`](./audio-track.md) and
 [`screen-overlay.md`](./screen-overlay.md). Comment Sticker remains independent future work and
@@ -416,7 +416,7 @@ structural cuts are Narrative Selection consumption.
 
 ## 8. Migration consequences
 
-The current simple `text-track` Surface still supports only `during="full"` or an identity
+The current simple `typography-track` Surface still supports only `during="full"` or an identity
 Selection mapping. It must not independently grow another timing enum. Its rewrite must consume the
 shared temporal package. Media Track already consumes that package for Item and Sequence timing.
 

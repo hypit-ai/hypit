@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeDepthStackLabelSurface,
@@ -18,14 +18,14 @@ export const svmlPackage = {
   }],
   components: [depthStackComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: depthStackModuleRef,
       surface: "label",
       mode: "structured",
       implementationDigest: depthStackSurfaceImplementationDigests.label,
       handler: decodeDepthStackLabelSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: depthStackModuleRef,
       surface: "track",
       mode: "structured",

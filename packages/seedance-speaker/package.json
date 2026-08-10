@@ -14,12 +14,11 @@
     "@narratage/elaborator": "workspace:*",
     "@narratage/generation": "workspace:*",
     "@narratage/model-kit": "workspace:*",
-    "@narratage/narrative": "workspace:*",
-    "@narratage/prompt-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/seedance": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/svs": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/text": "workspace:*",
+    "@narratage/markup": "workspace:*"
   }
 }

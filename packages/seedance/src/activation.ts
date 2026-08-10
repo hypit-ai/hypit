@@ -1,7 +1,6 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
-  decodeSeedancePromptSurface,
   decodeSeedanceSpeechSurface,
   decodeSeedanceVideoSurface,
   seedanceComponent,
@@ -16,21 +15,14 @@ export const svmlPackage = {
   modules: [{ manifest: seedanceManifest, specifiers: ["@narratage/seedance", "@narratage/seedance@1"] }],
   components: [seedanceComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({
-      module: seedanceModuleRef,
-      surface: "prompt",
-      mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.prompt,
-      handler: decodeSeedancePromptSurface,
-    }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
       surface: "speech",
       mode: "structured",
       implementationDigest: seedanceSurfaceImplementationDigests.speech,
       handler: decodeSeedanceSpeechSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
       surface: "video",
       mode: "structured",

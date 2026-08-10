@@ -1,5 +1,5 @@
-import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { speechDependency, speechTypes } from "@narratage/speech";
+import { textDependency, textTypes } from "@narratage/text";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { svsManifest, svsRecipeType } from "@narratage/svs";
@@ -34,8 +34,8 @@ export const estimateManifest: ModuleManifest = {
   name: estimateModuleRef.name,
   version: estimateModuleRef.version,
   dependencies: [
-    narrativeDependency,
     speechDependency,
+    textDependency,
     { module: svsRecipeType.module, digest: digestOf(svsManifest) },
   ],
   types: [{ name: estimateTypes.speechPolicy.name, schema: speechEstimatePolicySchema }],
@@ -54,7 +54,7 @@ export const estimateManifest: ModuleManifest = {
   producers: [{
     name: estimateProducers.speech.name,
     inputs: [
-      { name: "speech", type: narrativeTypes.speechExcerpt },
+      { name: "speech", type: textTypes.text },
       { name: "policy", type: estimateTypes.speechPolicy },
     ],
     outputs: [{ name: "duration", type: speechTypes.duration }],

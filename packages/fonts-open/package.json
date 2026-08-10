@@ -121,6 +121,6 @@
     "@infolektuell/noto-color-emoji": "0.2.0",
     "@narratage/media": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   }
 }

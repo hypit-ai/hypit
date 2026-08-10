@@ -4,9 +4,9 @@ Exact Seedance author model module. It owns the request schema and the namespace
 and `Speech` Surfaces; it does not contain KIE credentials, HTTP code, queues or runtime routing.
 
 `Video` and `Speech` preserve the remote result as one atomic `GeneratedVideoSet`, then expose its
-first ordered member through the shared deterministic primary-video projection. `Speech` consumes a
-shared `NarrativeDialogueExcerpt`, so a third-party narrative Surface can feed it without importing the
-official Script parser.
+first ordered member through the shared deterministic primary-video projection. Their prompt ports
+consume ordinary `Text`, so Script, a generic Text Template or any third-party author Surface can
+feed them without importing the official Script parser.
 
 Duration is explicit in this low-level model Surface. A later Speech scheduling package may wrap it
 with estimation without changing Core or the exact Seedance/KIE contracts.

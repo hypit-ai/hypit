@@ -9,13 +9,16 @@ import { semanticMapTypes } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
+import { sealText, textTypes } from "@narratage/text";
+import { sealGraphFragment } from "@narratage/elaborator";
+import type { AuthorValueRef } from "@narratage/elaborator";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import {
   decodeDepthStackCardSpec,
@@ -29,13 +32,13 @@ import type {
   DepthStackFragmentCard,
   DepthStackFragmentTerminal,
 } from "./fragment.js";
-import { depthStackTypes } from "./manifest.js";
+import { depthStackProducers, depthStackTypes } from "./manifest.js";
 import {
   noDepthStackCardLabel,
-  sealDepthStackCardLabel,
+  sealDepthStackCardLabelStyle,
   sealDepthStackHeader,
 } from "./program.js";
-import type { DepthStackCardLabel } from "./types.js";
+import type { DepthStackCardLabelStyle } from "./types.js";
 
 function sameType(left: TypeRef, right: TypeRef): boolean {
   return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
@@ -76,7 +79,7 @@ function numeric(element: StructuredElement, name: string, fallback: number): nu
 }
 
 function reference(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: TypeRef,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
@@ -88,7 +91,7 @@ function reference(
 }
 
 function oneOfReference(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: readonly TypeRef[],
   resolve: (path: string) => SurfaceResolvedReference | undefined,
@@ -105,7 +108,7 @@ function inline<T>(value: SurfaceResolvedReference, label: string): T {
 }
 
 function recipe(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
 ): SvsRecipe {
@@ -119,8 +122,22 @@ function labelText(element: StructuredElement): string {
   return value;
 }
 
+function labelFragment(id: string) {
+  const input = (name: string) => ({ kind: "fragment-input" as const, name });
+  const operation = { kind: "fragment-operation" as const, operation: "bind" };
+  return sealGraphFragment({
+    name: `@narratage/deck-track/label-surface/${id}@1`,
+    inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }],
+    operations: [{
+      id: "bind", producer: depthStackProducers.bindLabelText,
+      inputs: { style: input("style"), content: input("content") }, result: { kind: "output", name: "label" },
+    }],
+    exports: [{ name: "label", type: depthStackTypes.cardLabel, root: operation, semanticInputs: ["style", "content"], fidelity: "exact" }],
+  });
+}
+
 export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  allowed(element, ["id", "font", "size", "color", "align", "block", "padding"]);
+  allowed(element, ["id", "content", "font", "size", "color", "align", "block", "padding"]);
   const id = text(element, "id");
   const stack = inline<FontStackRef>(reference(element.attributes.font, `${element.name}.font`, mediaTypes.fontStack, resolveReference), `${element.name}.font`);
   const primary = stack.faces[0];
@@ -130,10 +147,8 @@ export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element
   if (!["start", "center", "end", "justify"].includes(align)) throw new Error(`${element.name}.align is invalid.`);
   if (!["start", "center", "end"].includes(block)) throw new Error(`${element.name}.block is invalid.`);
   const padding = numeric(element, "padding", 20);
-  const value: DepthStackCardLabel = sealDepthStackCardLabel({
-    contract: "svml.depth-stack-card-label@1",
-    kind: "text",
-    document: { paragraphs: [{ id: `${id}:paragraph`, inlines: [{ kind: "text", id: `${id}:text`, text: labelText(element) }] }] },
+  const style: DepthStackCardLabelStyle = sealDepthStackCardLabelStyle({
+    contract: "svml.depth-stack-card-label-style@1",
     typography: {
       fonts: structuredClone(stack.faces), sizePx: numeric(element, "size", 34), weight: primary.weight, style: primary.style,
       axes: [], features: [], synthesis: "none", kerning: "normal", trackingPx: 0, wordSpacingPx: 0,
@@ -150,9 +165,22 @@ export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element
       wrap: "word", overflow: "clip", clipToFrame: true, columns: 1, columnGapPx: 0, metricEdge: "line-box",
     },
   });
+  const styleId = `${id}.__style`;
+  const records: SurfaceRecordDraft[] = [{ id: styleId, type: depthStackTypes.cardLabelStyle, value: { kind: "inline", value: style }, range: element.range }];
+  let contentRef: AuthorValueRef;
+  if (element.attributes.content === undefined) {
+    const contentId = `${id}.__content`;
+    records.push({ id: contentId, type: textTypes.text, value: { kind: "inline", value: sealText(labelText(element)) }, range: element.range });
+    contentRef = { kind: "record", id: contentId };
+  } else {
+    empty(element);
+    contentRef = reference(element.attributes.content, `${element.name}.content`, textTypes.text, resolveReference).ref;
+  }
+  const fragment = labelFragment(id);
   return {
-    records: [{ id, type: depthStackTypes.cardLabel, value: { kind: "inline", value }, range: element.range }],
-    components: [], fragments: [],
+    records,
+    components: [{ id, fragment: fragment.id, inputs: { style: { kind: "record", id: styleId }, content: contentRef }, outputs: { label: id }, range: element.range }],
+    fragments: [fragment],
   };
 };
 

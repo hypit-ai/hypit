@@ -50,8 +50,9 @@ a Script.
 - Segments cannot nest — every Segment is a top-level child of `<script>`.
 - Segment names follow XML naming rules: letters, digits, hyphens, underscores.
 
-Other components reference individual Segments via `{story.segment.opening}` and their text
-projections via `{story.segment.opening.dialogue}` or `{story.segment.opening.speech}`.
+Other components reference individual Segments via `{story.segment.opening}`. Both
+`{story.segment.opening.dialogue}` and `{story.segment.opening.speech}` are ordinary `Text` values;
+the former preserves explicit Role prefixes and the latter contains pronunciation only.
 
 ## Role Cues
 
@@ -77,7 +78,7 @@ Role Cues produce different text projections:
 | **speech** | `What time is it?`<br>`It's 8:30.` |
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
-The dialogue projection includes Role Cue prefixes. Speech and caption projections strip them.
+The dialogue `Text` includes Role Cue prefixes. Speech `Text` and caption projection strip them.
 Components like `seedance:Speech` use `{story.segment.dialogue.dialogue}` (with labels). Script also
 emits `{story.caption}` as the ordered display Atom/Word universe and
 `{story.caption.correspondence}` as the separate Atom-to-speech edge used only when timing joins.

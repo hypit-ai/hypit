@@ -1,9 +1,5 @@
-import {
-  sealPromptKitInvocation,
-  verifyPromptKitInvocation,
-  verifyPromptProgram,
-} from "@narratage/prompt-kit";
-import type { PromptKitInvocation, PromptKitScalar, PromptProgram } from "@narratage/prompt-kit";
+import { sealTextBindings } from "@narratage/text";
+import type { TextBindings, TextScalar } from "@narratage/text";
 import {
   sealSeedanceSpeechProgram,
   seedanceModels,
@@ -49,10 +45,8 @@ export function verifySpeakerTakeIntent(value: unknown): asserts value is Speake
     || intent.promptParameters === null
     || typeof intent.promptParameters !== "object"
     || Array.isArray(intent.promptParameters)
-    || typeof intent.segment?.dialogue !== "string"
-    || intent.segment.dialogue.trim().length === 0
   ) {
-    throw new Error("Speaker TakeIntent identity, parameters or dialogue is invalid");
+    throw new Error("Speaker TakeIntent identity or parameters are invalid");
   }
   for (const [name, item] of Object.entries(intent.promptParameters)) {
     if (!/^[a-z][a-z0-9-]{0,95}$/u.test(name)) throw new Error(`Speaker prompt parameter ${name} is invalid`);
@@ -77,40 +71,25 @@ function audioCount(intent: SpeakerTakeIntent): "zero" | "one" | "many" {
   return count === 0 ? "zero" : count === 1 ? "one" : "many";
 }
 
-export function bindSpeakerPromptKit(intent: SpeakerTakeIntent): PromptKitInvocation {
+export function createSpeakerTextBindings(intent: SpeakerTakeIntent): TextBindings {
   verifySpeakerTakeIntent(intent);
-  const parameters: Record<string, PromptKitScalar> = {};
+  const values: Record<string, TextScalar> = {};
   for (const [name, value] of Object.entries(intent.promptParameters)) {
-    parameters[name] = value as PromptKitScalar;
+    values[name] = value as TextScalar;
   }
-  const invocation = sealPromptKitInvocation({
-    contract: "svml.prompt-kit-invocation@1",
-    parameters,
-    selectors: {
-      "image-count": intent.references.filter((item) => item.kind === "image").length === 1 ? "one" : "many",
-      "audio-count": audioCount(intent),
-    },
-    slots: {
-      dialogue: intent.segment.dialogue,
-      ...(intent.actionPrompt === undefined ? {} : { action: intent.actionPrompt }),
-      ...(intent.extraPrompt === undefined ? {} : { extra: intent.extraPrompt }),
-    },
+  return sealTextBindings({
+    ...values,
+    "image-count": intent.references.filter((item) => item.kind === "image").length === 1 ? "one" : "many",
+    "audio-count": audioCount(intent),
   });
-  verifyPromptKitInvocation(invocation);
-  return invocation;
 }
 
-export function renderSpeakerSpeechProgram(
-  program: PromptProgram,
-  intent: SpeakerTakeIntent,
-): SeedanceSpeechProgram {
-  verifyPromptProgram(program);
+export function createSpeakerSpeechProgram(intent: SpeakerTakeIntent): SeedanceSpeechProgram {
   verifySpeakerTakeIntent(intent);
   return sealSeedanceSpeechProgram({
     contract: "svml.seedance-speech-spine@1",
     model: intent.model,
     ports: {
-      prompt: [program.blocks.map((item) => item.text).join(program.separator)],
       resolution: [intent.resolution],
       aspectRatio: [intent.aspectRatio],
       generateAudio: [true],

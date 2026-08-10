@@ -53,6 +53,7 @@ import {
   renderTopThree,
   renderTypewriterList,
   rankingManifest,
+  rankingProducers,
   rankingTypes,
   sealRankingHeader,
 } from "@narratage/ranking";
@@ -70,12 +71,13 @@ import { programSpaceTypes } from "@narratage/program-space";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
+import { sealText, textManifest, textTypes } from "@narratage/text";
 import type {
   StructuredElement,
   StructuredNode,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",
@@ -340,10 +342,10 @@ test("each component owns a distinct event law and repeated lowering is canonica
 });
 
 test("all four author Surfaces preserve explicit semantic, spatial, font, image and optional sound graph edges", async () => {
-  createResolvedClosure([...videoContractManifests, rankingManifest]);
+  createResolvedClosure([...videoContractManifests, textManifest, rankingManifest]);
   const range = { source: "ranking.svml", start: 0, end: 1 };
-  const ref = (path: string): TextAttributeValue => ({ kind: "reference", path });
-  const node = (name: string, attributes: Record<string, TextAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({ kind: "element", name, attributes, children, range });
+  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
+  const node = (name: string, attributes: Record<string, MarkupAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({ kind: "element", name, attributes, children, range });
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
   const inlineReference = (path: string, type: SurfaceResolvedReference["type"], value: unknown): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type,
@@ -361,6 +363,7 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
     ["appear", plain("appear", mediaTypes.synchronized)],
     ["move", plain("move", mediaTypes.synchronized)],
     ["font", inlineReference("font", mediaTypes.fontArtifact, font)],
+    ["copy", inlineReference("copy", textTypes.text, sealText("Dynamic ranking copy"))],
   ]);
   const styleCases = [
     ["tier-style", rankingTypes.tierStyle, decodeTierBoardStyleSurface, { rows: "s:S:#ef4444|a:A:#22c55e" }],
@@ -391,7 +394,7 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
       id: "column", map: ref("map"), space: ref("space"), frame: ref("frame"), during: ref("outer"),
       triggers: ref("triggers"), terminal: ref("terminal"), style: ref("column-style"),
       "appear-sound": ref("appear"), "move-sound": ref("move"),
-    }, [node("ranking:ColumnItem", { id: "column-one", label: "One" }), node("ranking:ColumnItem", { id: "column-two", label: "Two", icon: ref("icon-2") })])],
+    }, [node("ranking:ColumnItem", { id: "column-one", label: ref("copy") }), node("ranking:ColumnItem", { id: "column-two", label: "Two", icon: ref("icon-2") })])],
     [decodeTopThreeSurface, node("ranking:TopThree", {
       id: "top", map: ref("map"), space: ref("space"), frame: ref("frame"), during: ref("outer"),
       triggers: ref("triggers"), terminal: ref("terminal"), style: ref("top-style"),
@@ -421,6 +424,7 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
   const audio = column.fragments[0]!.exports.find((output) => output.name === "audio");
+  assert.ok(column.fragments[0]!.operations.some((operation) => operation.producer.name === rankingProducers.materializeTextItem.name));
   assert(audio !== undefined);
   assert.equal(audio.semanticInputs.includes("frame"), false);
   assert.equal(audio.semanticInputs.some((name) => name.endsWith("icon")), false);
@@ -429,7 +433,7 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
 
 test("Ranking author Surfaces fail closed on impossible image and sound combinations", async () => {
   const range = { source: "ranking.svml", start: 0, end: 1 };
-  const ref = (path: string): TextAttributeValue => ({ kind: "reference", path });
+  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
   const references = new Map<string, SurfaceResolvedReference>([
     ["map", plain("map", semanticMapTypes.complete)], ["space", plain("space", programSpaceTypes.programSpace)],

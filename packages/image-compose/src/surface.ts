@@ -1,7 +1,7 @@
 import { artifactTypes } from "@narratage/artifact";
 import type { CanonicalValue } from "@narratage/protocol";
 import { spatialTypes } from "@narratage/spatial";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
 
 import { createImageComposeFragment } from "./fragment.js";
 import { imageComposeTypes } from "./manifest.js";
@@ -29,7 +29,7 @@ function number(element: StructuredElement, name: string, fallback: number): num
   return value;
 }
 function reference(element: StructuredElement, name: string, expected: SurfaceResolvedReference["type"], resolve: (path: string) => SurfaceResolvedReference | undefined): SurfaceResolvedReference {
-  const raw: TextAttributeValue | undefined = element.attributes[name];
+  const raw: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${element.name}.${name} must be a reference.`);
   const result = resolve(raw.path);
   if (result === undefined || !sameType(result.type, expected)) throw new Error(`${element.name}.${name} has the wrong Type.`);

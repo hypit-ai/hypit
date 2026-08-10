@@ -56,24 +56,25 @@ Implemented:
 - `@narratage/run`: syntax-neutral Run Source Closure, complete mandatory Run Graph, typed Candidate
   fragments, inert Build-Record Candidates, named Target sets,
   Provided/Build-Record/Fragment Candidates and explicit Satisfaction edges;
-- `@narratage/run-text`: optional official `.svrun` Text Frontend;
+- `@narratage/run-markup`: optional official `.svrun` Markup Frontend;
 - official compilation binds both Author Graph and Run Graph identities before deriving a finite
   BuildPlan; `plan` and `build` accept no hidden Target/Pin CLI intent;
 - Run-only Fragment Producer Modules extend a separately bound execution Program Closure without
   changing Author imports or Author Graph identity;
 - `@narratage/validation`: package-owned semantic validators and common Record admission;
 - `@narratage/component-kit`: host-neutral deterministic Producer/validator registration;
-- `@narratage/prompt-kit`: immutable author-time compilation of declarative fixed/axis/variant/slot
-  Kit Specs and Invocations into authored ordered Prompt Programs;
+- `@narratage/text`: domain-neutral `TextTemplate`, explicit graph `TextBindings` and deterministic
+  render Operations producing ordinary targetable/replaceable `Text`; its optional self-described
+  SVS Frontend lowers the fixed/axis/variant/slot Recipe convention into the same expression algebra;
 - `@narratage/host`, `@narratage/workspace-fs-node`, `@narratage/compiler-node`: replaceable Workspace and the
   reference Node compiler Host;
 - `@narratage/package-loader-node`: syntax-neutral installed-package byte locking and trusted facet
   loading;
-- `@narratage/compiler-text-node`: the explicit official Text Frontend and Text Surface Host assembly;
+- `@narratage/compiler-markup-node`: the explicit official Markup Frontend and Markup Surface Host assembly;
 - `@narratage/cli`: a generic command engine requiring one explicit `CliDistribution`;
-- `@narratage/video-cli`: the current video command application selecting the Text compiler, with no
+- `@narratage/video-cli`: the current video command application selecting the Markup compiler, with no
   built-in author-package aggregate or Provider registry;
-- `@narratage/text`, `@narratage/script`, `@narratage/svs`: official markup, Script and Recipe Frontends without
+- `@narratage/markup`, `@narratage/script`, `@narratage/svs`: official markup, Script and Recipe Frontends without
   Core parser branches; `.svml` and `.svs` remain human suffix conventions only;
 - `@narratage/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
   recoverable Endpoint lifecycle;
@@ -189,10 +190,12 @@ Implemented and executable:
   projections;
 - authored image/audio Blob references and reusable SVS-backed speech-estimate policies;
 - `@narratage/seedance-speaker`: a thin official UGC binding from Script dialogue, explicit image/audio
-  references, an inert project SVS Recipe and one explicitly imported PromptKitSpec; the
+  references, an inert project SVS Recipe and one explicitly imported TextTemplate; the
   self-described `official-ugc-v1.svs` Source Module contains defaults, ordering,
-  parameter-to-Prompt mappings and finite reference-count branches, all lowered during author
-  compilation before the existing exact Seedance request path;
+  parameter-to-text mappings and finite reference-count branches; Script dialogue is already an
+  ordinary Text value and feeds the visible Text render and exact Seedance request path through its
+  ordinary `prompt` port, while optional action/extra content also
+  enters through Text edges rather than Recipe fields;
 - graph-native Seedance reference assembly for both generic video and speech paths, including a
   tested person/product → holding → walking/interview → three-image montage topology and selective
   zero-input Candidate pruning;
@@ -219,11 +222,15 @@ Implemented and executable:
   Frames, intrinsic extents and deterministic two-frame ContentFit with independent focal points;
   its complete aspect/sizing/alignment matrix and final Chromium pixels are covered, including
   bounded/free focal displacement and off-Canvas Frames;
-- `@narratage/text-track`: complete pre-release Point/Area/Path Text authoring over explicit
+- `@narratage/typography-track`: complete pre-release Point/Area/Path Markup authoring over explicit
   Temporal and Spatial edges, bounded rich documents, exact font stacks, ordered repeated Paint,
   all seven Box targets, deterministic clip/ellipsis/shrink, horizontal/vertical/bidi layout,
   item/path motion and forward/reverse/seeded Unicode unit sequences; real Chromium witnesses cover
   the declared layout, Paint, mask and partition laws, including fail-closed minimum shrink;
+- graph-produced ordinary `Text` enters Typography Point/Area/Path content, Ranking
+  Column/TopThree/Typewriter copy, Comment Sticker fields and Deck labels through explicit Fragment
+  inputs; each consumer retains its own style/layout/timing contract and no Text metadata is copied
+  through intermediate payloads;
 - separately imported `<text:Mask>` consumes an authored Text Program plus one owned still Surface;
   unsupported rich/path/timed cases explicitly materialize rather than sampling another Track;
 - `@narratage/media-track` implements independently timed Item and ordered Sequence Surfaces over

@@ -1,15 +1,15 @@
 ---
-title: 字幕、Media 与文字
-description: 视觉 Track 组件——字幕、媒体叠加层和文字叠加层。
+title: 字幕、Media 与 Typography
+description: 视觉 Track 组件——字幕、媒体叠加层和排版叠加层。
 ---
 
-# 字幕、Media 与文字
+# 字幕、Media 与 Typography
 
-> **发布前说明：** Caption Fine、Media Track 与 Text 都执行各自声明的作者 Surface。
+> **发布前说明：** Caption Fine、Media Track 与 Typography Track 都执行各自声明的作者 Surface。
 > 它们的作者 API 仍可演进；共享终端 Track/Visual IR 窄腰已在仓库内冻结，但尚未作为
 > npm ABI 发布。
 
-每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三个官方视觉 Track 包：字幕、Media 和文字叠加层。
+每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三个官方视觉 Track 包：字幕、Media 和 Typography 叠加层。
 
 ## 字幕系统
 
@@ -129,6 +129,7 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 ```svml
 <import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
 ```
 
 ### media-track:Track 与 media-track:Item
@@ -136,14 +137,14 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 位置是一条显式 Spatial Frame 边，外观和运动则是可复用的 SVS 值：
 
 ```svml
-<seedance:Prompt id="product-direction">
+<wording:Value id="product-direction">
   A clean vertical product film: the written script becomes semantic regions,
   then those regions assemble into a finished video.
-</seedance:Prompt>
+</wording:Value>
 
 <seedance:Video id="product-motion" model="mini"
   prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
+  <seedance:Reference image={product-reference}/>
 </seedance:Video>
 
 <pipeline:Normalize id="product-media" source={product-motion.video}
@@ -172,7 +173,8 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 在屏幕上显示的静态或定时文字——标题、标注、下方三分之一字幕条。
 
 ```svml
-<import as="text" from="@narratage/text-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
 ```
 
 ### text:Track
@@ -212,7 +214,7 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `id` | 是 | 稳定的 Item 身份 |
-| 子内容 | 是 | 纯文本，或用于富文本的 `P`、`Span` 与 `Break` |
+| 子内容或 `content` | 是 | 内联纯文本/富文本，或普通图 `Text` 引用；两种形式互斥 |
 | `during` | 是 | `"program"` 或 Selection 引用；也可使用 `at` 与显式 `start`/`end` |
 | `placement` | 是 | 与 Item 形式匹配的 `SpatialPoint`、`SpatialFrame` 或 `SpatialPath` |
 | `style` | 是 | 由 SVS Recipe 与精确字体字节共同编译出的 `text:Style` |
@@ -229,6 +231,19 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 </text:Track>
 ```
 
+图中产生的文字会保留为显式边：
+
+```svml
+<wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
+<text:Track id="callout" space={speech.space}>
+  <text:Area id="callout-copy" content={headline}
+    placement={callout-frame} style={callout-style} during="program"/>
+</text:Track>
+```
+
+通用 `Text` 只提供字符；Typography 仍然拥有文档包装、位置、时间、样式与动画。作者需要富文本
+Run 时，继续使用内联 `P`/`Span`/`Break`。
+
 **输出：**`{titles.track}` —— 添加到 `film:Film` 的 VisualTrack。
 
 ## 组合示例
@@ -242,7 +257,7 @@ Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同�
 <import as="fonts" from="@narratage/fonts-open@1"/>
 <import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
-<import as="text" from="@narratage/text-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->

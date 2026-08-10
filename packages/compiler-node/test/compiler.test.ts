@@ -43,13 +43,13 @@ import {
   RunFragmentRegistry,
   RunFrontendRegistry,
 } from "@narratage/run";
-import { runTextFrontend } from "@narratage/run-text";
+import { runMarkupFrontend } from "@narratage/run-markup";
 import type { Workspace } from "@narratage/host";
 import { WorkspaceError } from "@narratage/host";
 import {
-  createTextAuthorFrontend,
-  TextSurfaceRegistry,
-} from "@narratage/text";
+  createMarkupAuthorFrontend,
+  MarkupSurfaceRegistry,
+} from "@narratage/markup";
 import { NodeFilesystemWorkspace } from "@narratage/workspace-fs-node";
 
 function emptyManifest(name: string, version = "1"): ModuleManifest {
@@ -186,7 +186,7 @@ function compiler(root: string, additional: readonly ModuleManifest[] = []): Nod
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: laboratoryManifest });
   for (const manifest of additional) modules.register({ manifest });
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured(laboratory, "result", surfaceDigest, ({ element }) => {
     const id = element.attributes.id;
     if (typeof id !== "string") throw new Error("Result id is required");
@@ -203,7 +203,7 @@ function compiler(root: string, additional: readonly ModuleManifest[] = []): Nod
     };
   });
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request): ModuleRef {
       const resolved = modules.resolve(request.from);
@@ -255,7 +255,7 @@ const previewFragment = sealGraphFragment({
 function assetCompiler(environment: { readonly root: string } | { readonly workspace: Workspace }): NodeCompiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: assetManifest });
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured(assetLaboratory, "asset", assetSurfaceDigest, async ({ element, resolveAsset }) => {
     const id = element.attributes.id;
     const src = element.attributes.src;
@@ -275,7 +275,7 @@ function assetCompiler(environment: { readonly root: string } | { readonly works
     };
   });
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request): ModuleRef {
       const resolved = modules.resolve(request.from);
@@ -323,7 +323,7 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
 test("Node Compiler discovers real imports and emits a named public Author Graph export", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-compiler-node-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
@@ -337,7 +337,7 @@ test("Node Compiler discovers real imports and emits a named public Author Graph
 
 test("Author Frontend identity comes only from the mandatory Source Header, never the suffix", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-self-described-source-"));
-  const text = `<?svml using="@narratage/text@1"?>
+  const text = `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
@@ -363,12 +363,12 @@ test("Run-only Fragment modules extend the execution closure without polluting t
   const root = await mkdtemp(join(tmpdir(), "svml-dual-graph-closure-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
-  await writeFile(authorFile, `<?svml using="@narratage/text@1"?>
+  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
-  await writeFile(runFile, `<?svml using="@narratage/run-text@1"?>
+  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
   <svrun version="1" targets="preview">
     <author source="./main.svml"/>
     <import from="@example/preview" as="preview"/>
@@ -379,7 +379,7 @@ test("Run-only Fragment modules extend the execution closure without polluting t
 
   const authorCompiler = compiler(root, [previewManifest]);
   const frontends = new RunFrontendRegistry();
-  frontends.register(runTextFrontend);
+  frontends.register(runMarkupFrontend);
   const fragments = new RunFragmentRegistry();
   fragments.register({ name: "@example/preview", fragments: { result: previewFragment } });
   const runCompiler = new NodeRunCompiler({ authorCompiler, frontends, fragments, root });
@@ -403,7 +403,7 @@ test("source assets are content addressed, closure-bound and returned as a Host 
   const root = await mkdtemp(join(tmpdir(), "svml-source-assets-"));
   const file = join(root, "main.svml");
   const asset = join(root, "reference.bin");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>
@@ -441,7 +441,7 @@ test("source assets are content addressed, closure-bound and returned as a Host 
 test("an installed package Surface can contribute locked bytes without an author file or network", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-embedded-assets-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="embedded" src="package:example.asset-lab/embedded.bin"/>
@@ -508,7 +508,7 @@ test("filesystem Workspace contains symlinks and reads each canonical source onl
 test("filesystem and in-memory Workspaces compile identical source and bytes to one semantic result", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-workspace-equivalence-"));
   const file = join(root, "main.svml");
-  const source = `<?svml using="@narratage/text@1"?>
+  const source = `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
     <asset:Asset id="reference" src="./reference.bin"/>

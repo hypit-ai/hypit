@@ -21,6 +21,7 @@ export {
   appendMomentCommentSticker,
   appendProgramCommentSticker,
   appendSelectionCommentSticker,
+  assertCommentStickerContent,
   assertCommentStickerHeader,
   assertCommentStickerItemSpec,
   assertCommentStickerProgram,
@@ -29,12 +30,14 @@ export {
   commentStickerImplementationDigests,
   commentStickerValidatorDigests,
   createCommentStickerSet,
+  createCommentStickerContent,
   finalizeCommentSticker,
   renderCommentSticker,
   sealCommentStickerHeader,
   sealCommentStickerItemSpec,
   sealCommentStickerProgram,
   sealCommentStickerStyle,
+  setCommentStickerContentText,
 } from "./program.js";
 export { decodeCommentStickerStyleSurface, decodeCommentStickerTrackSurface } from "./surface.js";
 export type * from "./types.js";

@@ -68,7 +68,7 @@ test("Composition and render adapters reach no author-package family", async () 
     "@narratage/media-track",
     "@narratage/ranking",
     "@narratage/screen-overlay",
-    "@narratage/text-track",
+    "@narratage/typography-track",
   ]);
   for (const name of ["composition", "hyperframes", "render-hyperframes", "provider-hyperframes-local"]) {
     const manifest = await packageManifest(name);

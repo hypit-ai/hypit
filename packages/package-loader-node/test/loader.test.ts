@@ -130,9 +130,9 @@ async function fixture(): Promise<{
         specifiers: ["example.card@1"],
       }],
       hostFacets: [{
-        abi: "svml.text-surface-host@1",
+        abi: "svml.markup-surface-host@1",
         identity: {
-          contract: "svml.text-surface-host-facet@1",
+          contract: "svml.markup-surface-host-facet@1",
           module,
           surface: "card",
           mode: "structured",
@@ -178,7 +178,7 @@ async function fixture(): Promise<{
     };
   `, "utf8");
   const source = join(root, "main.svml");
-  await writeFile(source, `<?svml using="@narratage/text@1"?>
+  await writeFile(source, `<?svml using="@narratage/markup@1"?>
 <svml>
     <import as="example" from="example.card@1"/>
     <example:Card/>
@@ -194,7 +194,7 @@ test("an installed locked package carries inert Host facets and activatable comp
   const packages = await loadNodePackageContributions(item.lock, item.root);
 
   assert.equal(packages[0]?.name, "example-card");
-  assert.equal(packages[0]?.hostFacets?.[0]?.abi, "svml.text-surface-host@1");
+  assert.equal(packages[0]?.hostFacets?.[0]?.abi, "svml.markup-surface-host@1");
 
   const registered: Array<{ readonly producer: ProducerRef; readonly digest: string }> = [];
   installNodePackageComponents(packages, {

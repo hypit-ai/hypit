@@ -47,7 +47,7 @@ the working tree contains only documents that should inform current implementati
   its temporal projection and occurrence-expansion laws are implemented across the current Track packages.
 - [`../spec/spatial-layout.md`](../spec/spatial-layout.md) — shared Canvas/Frame/Point/Path geometry,
   two-frame fitting, alignment and explicit backing-layer boundary.
-- [`../spec/text-track.md`](../spec/text-track.md) — complete two-dimensional Text model, old-system
+- [`../spec/typography-track.md`](../spec/typography-track.md) — complete two-dimensional Text model, old-system
   and editor attack audit, terminal-IR gaps and Caption feedback.
 - [`../spec/ranking-track.md`](../spec/ranking-track.md) — old Ranking audit, separate official
   components, triggered group schedule and renderer-neutral migration plan.
@@ -63,7 +63,7 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
 - [`../spec/visual-ir.md`](../spec/visual-ir.md)
 - [`twinit-capability-migration.md`](./twinit-capability-migration.md) — one explicit ledger for every
-  active Twinit node: complete replacement, expressible-but-missing Kit, backlog or deliberate omission.
+  active Twinit node: complete replacement, expressible-but-missing Template, backlog or deliberate omission.
 
 The shared `svml.visual-track@1` / `svml.visual-ir@1` terminal waist is frozen inside the repository
 before publication. Individual author Surfaces remain pre-release unless their own specification

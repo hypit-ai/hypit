@@ -10,21 +10,28 @@ The author surface keeps the three independent concerns visible:
 - the shared Temporal projection owns when an item exists.
 
 ```xml
+<import as="copy" from="@narratage/text@1"/>
+
+<copy:Value id="comment-copy">This part finally made the idea click.</copy:Value>
+<copy:Value id="comment-author">@viewer</copy:Value>
+
 <comment:Style id="social-comment" recipe={styles.comment} font={fonts.ui}/>
 
 <comment:Track id="comments" canvas={video.canvas} space={video.space}>
   <comment:Sticker
     id="opening-comment"
+    comment={comment-copy}
     frame={layout.comment}
     style={social-comment}
-    author="@viewer"
+    author={comment-author}
     meta="Featured comment"
     during="program"
-  >
-    This part finally made the idea click.
-  </comment:Sticker>
+  />
 </comment:Track>
 ```
 
-`author`, `avatar`, `header`, and `meta` are optional. Metadata is never fabricated: if `meta` is
-absent, no metadata row is rendered. Sound effects remain a separate Audio Track.
+Body text remains the compact literal form. `comment`, `author`, `header` and `meta` also accept
+ordinary graph `Text` references; `comment={...}` is exclusive with body text. The Fragment builds
+one package-owned content value through explicit Text edges before temporal placement. `avatar` is
+an independent Artifact edge. Metadata is never fabricated: if `meta` is absent, no metadata row
+is rendered. Sound effects remain a separate Audio Track.

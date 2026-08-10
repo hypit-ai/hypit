@@ -2,37 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { artifactTypes } from "@narratage/artifact";
-import { digestOf } from "@narratage/protocol";
-import { parseStructuredElement } from "@narratage/text";
-import type { SurfaceResolvedReference } from "@narratage/text";
+import { parseStructuredElement } from "@narratage/markup";
+import type { SurfaceResolvedReference } from "@narratage/markup";
+import { textTypes } from "@narratage/text";
 
 import {
   decodeSeedanceVideoSurface,
-  sealSeedancePrompt,
-  seedanceTypes,
 } from "../src/index.js";
 
-test("Seedance keeps an upstream generated image as a graph edge", async () => {
+test("Seedance keeps upstream generated Text and image as graph edges", async () => {
   const element = parseStructuredElement({
     name: "dynamic-reference.svml",
     text: `<seedance:Video id="motion" model="mini" prompt={direction} duration="6" resolution="720p" aspect-ratio="9:16">
-      <seedance:Reference image={generated.image} role="montage reference"/>
+      <seedance:Reference image={generated.image}/>
     </seedance:Video>`,
   }, 0).element;
-  const prompt = sealSeedancePrompt("Create a coherent montage.");
   const refs = new Map<string, SurfaceResolvedReference>([
     ["direction", {
       path: "direction",
-      ref: { kind: "record", id: "direction" },
-      type: seedanceTypes.prompt,
-      record: {
-        id: "direction",
-        type: seedanceTypes.prompt,
-        value: { kind: "inline", value: prompt },
-        digest: digestOf(prompt),
-        conformance: "exact",
-        origin: { kind: "authored", sourceDigest: digestOf("source"), frontendClosureDigest: digestOf("frontend") },
-      },
+      ref: { kind: "component-output", component: "assembled-direction", output: "text" },
+      type: textTypes.text,
     }],
     ["generated.image", {
       path: "generated.image",
@@ -51,6 +40,9 @@ test("Seedance keeps an upstream generated image as a graph edge", async () => {
     kind: "component-output", component: "generated", output: "image",
   });
   assert.equal(component.inputs["media-0001:binding"]?.kind, "record");
+  assert.deepEqual(component.inputs["prompt:text"], {
+    kind: "component-output", component: "assembled-direction", output: "text",
+  });
   const draft = result.records.find((record) => record.id === "motion.draft");
   assert.ok(draft?.value.kind === "inline");
   assert.equal(JSON.stringify(draft.value).includes("referenceImage"), false);

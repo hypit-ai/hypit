@@ -12,6 +12,8 @@ import {
   createDepthStackCardSet,
   decodeDepthStackSpec,
   depthStackManifest,
+  depthStackProducers,
+  depthStackTypes,
   finalizeDepthStack,
   noDepthStackCardLabel,
   renderDepthStack,
@@ -37,13 +39,14 @@ import type { ModuleManifest } from "@narratage/protocol";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import { sealCanvasSpace, sealSpatialFrame, spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
+import { sealText, textManifest, textTypes } from "@narratage/text";
 import type { SvsRecipe } from "@narratage/svs";
 import type {
   StructuredElement,
   StructuredNode,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 import { artifactTypes } from "@narratage/artifact";
 import { mediaTrackManifest } from "@narratage/media-track";
 
@@ -365,8 +368,8 @@ test("rendering is a pure absolute-frame result", () => {
 
 test("the author Surface keeps every source, trigger, terminal, Frame and optional label as graph inputs", async () => {
   const range = { source: "deck.svml", start: 0, end: 1 };
-  const ref = (path: string): TextAttributeValue => ({ kind: "reference", path });
-  const node = (name: string, attributes: Record<string, TextAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({ kind: "element", name, attributes, children, range });
+  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
+  const node = (name: string, attributes: Record<string, MarkupAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({ kind: "element", name, attributes, children, range });
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
   const appearance = (path: string, properties: SvsRecipe["properties"]): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type: svsRecipeType,
@@ -420,11 +423,34 @@ test("Label Surface compiles explicit exact-font text rather than media metadata
     } : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  const value = result.records[0]?.value;
-  assert.equal(value?.kind, "inline");
-  const label = value?.kind === "inline" ? value.value as unknown as DepthStackCardLabel : undefined;
-  assert.equal(label?.kind, "text");
-  if (label?.kind === "text") assert.equal(label.document.paragraphs[0]?.inlines[0]?.kind, "text");
+  assert.equal(result.components.length, 1);
+  assert.equal(result.components[0]?.outputs.label, "proof-label");
+  assert.equal(result.fragments[0]?.operations[0]?.producer.name, depthStackProducers.bindLabelText.name);
+  assert.ok(result.records.some((record) => record.type.name === depthStackTypes.cardLabelStyle.name));
+  assert.ok(result.records.some((record) => record.type.module.name === "@narratage/text" && record.type.name === "Text"));
+});
+
+test("Label Surface accepts ordinary graph Text without copying it during author compilation", async () => {
+  const range = { source: "deck.svml", start: 0, end: 1 };
+  const stack = { contract: "svml.font-stack@1" as const, faces: [font] };
+  const result = await decodeDepthStackLabelSurface({
+    sourceName: "deck.svml",
+    element: {
+      kind: "element", name: "deck:Label", attributes: {
+        id: "dynamic-label", font: { kind: "reference", path: "font" }, content: { kind: "reference", path: "copy" },
+      }, children: [], range,
+    },
+    resolveReference: (path) => path === "font" ? {
+      path, ref: { kind: "record", id: path }, type: mediaTypes.fontStack,
+      record: { value: { kind: "inline", value: stack } } as never,
+    } : path === "copy" ? {
+      path, ref: { kind: "record", id: path }, type: textTypes.text,
+      record: { value: { kind: "inline", value: sealText("Dynamic evidence") } } as never,
+    } : undefined,
+    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
+  });
+  assert.deepEqual(result.components[0]?.inputs.content, { kind: "record", id: "copy" });
+  assert.equal(result.records.some((record) => record.type.name === textTypes.text.name), false);
 });
 
 test("another Deck family can coexist by contributing only the existing VisualTrack waist", () => {
@@ -448,6 +474,7 @@ test("another Deck family can coexist by contributing only the existing VisualTr
   const closure = createResolvedClosure([
     ...videoContractManifests,
     mediaTrackManifest,
+    textManifest,
     depthStackManifest,
     other,
   ]);

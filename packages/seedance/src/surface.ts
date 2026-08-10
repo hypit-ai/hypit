@@ -1,15 +1,12 @@
-import { narrativeTypes } from "@narratage/narrative";
-import type { NarrativeDialogueExcerpt } from "@narratage/narrative";
 import { speechTypes } from "@narratage/speech";
-import type { SpeechDuration } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
 import type { CanonicalValue } from "@narratage/protocol";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import {
   createSeedanceAssembledGenerationFragment,
@@ -21,29 +18,25 @@ import {
   sealGenerationRequestDraft,
 } from "@narratage/generation";
 import type { GenerationMediaPort, GenerationMediaRole, GenerationPortTable } from "@narratage/generation";
-import { exactModelMediaInputNames } from "@narratage/model-kit";
+import { exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
 import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
+import { textTypes, verifyText } from "@narratage/text";
 
 import {
-  sealSeedancePrompt,
   sealSeedanceSpeechProgram,
   seedanceEndpoints,
   seedancePorts,
   seedanceSpeechCompileProducers,
   seedanceTypes,
-  verifySeedancePrompt,
 } from "./index.js";
 import type {
   SeedanceModel,
   SeedancePortMap,
-  SeedancePrompt,
 } from "./index.js";
 
-/** `role` is the media kind the port accepts; `label` is the author's own note about it. */
 type ReferenceInput = {
   readonly role: GenerationMediaRole;
   readonly source: SurfaceResolvedReference;
-  readonly label?: string;
 };
 
 function localName(value: string): string {
@@ -83,7 +76,7 @@ function optionalStringAttribute(element: StructuredElement, name: string): stri
 }
 
 function referenceAttribute(element: StructuredElement, name: string): string {
-  const value: TextAttributeValue | undefined = element.attributes[name];
+  const value: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof value !== "object" || value.kind !== "reference" || value.path.length === 0) {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }
@@ -113,11 +106,13 @@ function inline(reference: SurfaceResolvedReference, subject: string): Canonical
   return value.value;
 }
 
-function prompt(reference: SurfaceResolvedReference, subject: string): SeedancePrompt {
-  if (!sameType(reference.type, seedanceTypes.prompt)) throw new Error(`${subject} must reference a Seedance Prompt`);
-  const value = inline(reference, subject);
-  verifySeedancePrompt(value);
-  return value;
+function prompt(reference: SurfaceResolvedReference, subject: string): void {
+  if (!sameType(reference.type, textTypes.text)) throw new Error(`${subject} must reference Text`);
+  const value = reference.record?.value;
+  if (value !== undefined) {
+    if (value.kind !== "inline") throw new Error(`${subject} has an invalid authored Text value`);
+    verifyText(value.value);
+  }
 }
 
 function mediaReference(reference: SurfaceResolvedReference, role: GenerationMediaRole, subject: string): SurfaceResolvedReference {
@@ -127,19 +122,6 @@ function mediaReference(reference: SurfaceResolvedReference, role: GenerationMed
     throw new Error(`${subject} must reference ${role} media`);
   }
   return reference;
-}
-
-function normalizedText(element: StructuredElement): string {
-  if (element.children.some((child) => child.kind === "element")) {
-    throw new Error(`${element.name} accepts text only`);
-  }
-  const raw = element.children.map((child) => child.kind === "text" ? child.value : "").join("");
-  const lines = raw.replaceAll("\r\n", "\n").split("\n");
-  while (lines[0]?.trim() === "") lines.shift();
-  while (lines.at(-1)?.trim() === "") lines.pop();
-  const indents = lines.filter((line) => line.trim()).map((line) => /^\s*/u.exec(line)?.[0].length ?? 0);
-  const indent = indents.length === 0 ? 0 : Math.min(...indents);
-  return lines.map((line) => line.slice(indent).trimEnd()).join("\n").trim();
 }
 
 function modelSelection(element: StructuredElement) {
@@ -228,13 +210,12 @@ function references(
       continue;
     }
     if (localName(child.name) !== "Reference") throw new Error(`${element.name} accepts only Reference children`);
-    attributes(child, [], [...accepted, "role"]);
+    attributes(child, [], accepted);
     const kinds = accepted.filter((kind) => child.attributes[kind] !== undefined);
     if (kinds.length !== 1) throw new Error(`${child.name} requires exactly one of ${accepted.join(", ")}`);
     const role = kinds[0]!;
     const source = mediaReference(resolved(child, role, resolveReference), role, `${child.name}.${role}`);
-    const label = optionalStringAttribute(child, "role");
-    result.push({ role, source, ...(label === undefined ? {} : { label }) });
+    result.push({ role, source });
   }
   // Every bound below is read from the model's own port table, never repeated here.
   for (const role of accepted) {
@@ -245,13 +226,6 @@ function references(
     }
   }
   return result;
-}
-
-function referencePrompt(values: readonly ReferenceInput[]): string {
-  const roles = values.flatMap((item, index) => item.label === undefined
-    ? []
-    : [`Reference ${item.role} ${index + 1} is the ${item.label}.`]);
-  return roles.length === 0 ? "" : `\n\nReference roles:\n${roles.join("\n")}`;
 }
 
 type AssembledReferences = {
@@ -299,28 +273,6 @@ function assembleReferences(
   return { mediaInputs, records, inputs };
 }
 
-function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): { readonly dialogue: string } {
-  if (!sameType(reference.type, narrativeTypes.dialogueExcerpt)) {
-    throw new Error(`${subject} must reference a NarrativeDialogueExcerpt such as script.segment.opening.dialogue`);
-  }
-  const value = inline(reference, subject) as unknown as {
-    readonly contract: string;
-    readonly dialogue?: string;
-    readonly [key: string]: CanonicalValue | undefined;
-  };
-  if (
-    value.contract !== "svml.narrative-dialogue-excerpt@1"
-    || typeof value.dialogue !== "string"
-    || typeof value.id !== "string"
-    || !Number.isSafeInteger(value.tokenStart)
-    || !Number.isSafeInteger(value.tokenEndExclusive)
-  ) {
-    throw new Error(`${subject} NarrativeDialogueExcerpt is invalid`);
-  }
-  if (value.dialogue.trim().length === 0) throw new Error(`${subject} contains no spoken text`);
-  return { dialogue: value.dialogue };
-}
-
 function speechDurationReference(
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
@@ -337,12 +289,17 @@ function generationOutput(
   element: StructuredElement,
   endpoint: ExactModelEndpoint,
   draft: ReturnType<typeof sealGenerationRequestDraft>,
+  promptSource: SurfaceResolvedReference,
   references: readonly ReferenceInput[],
   output: string,
 ) {
   const id = stringAttribute(element, "id");
   const assembled = assembleReferences(id, endpoint, references, element.range);
-  const fragment = createSeedanceAssembledGenerationFragment(endpoint, assembled.mediaInputs);
+  const fragment = createSeedanceAssembledGenerationFragment(
+    endpoint,
+    assembled.mediaInputs,
+    [{ name: "prompt", port: "prompt" }],
+  );
   const draftId = `${id}.draft`;
   return {
     records: [{
@@ -354,7 +311,11 @@ function generationOutput(
     components: [{
       id,
       fragment: fragment.id,
-      inputs: { draft: { kind: "record" as const, id: draftId }, ...assembled.inputs },
+      inputs: {
+        draft: { kind: "record" as const, id: draftId },
+        [exactModelTextInputName("prompt")]: promptSource.ref,
+        ...assembled.inputs,
+      },
       outputs: { video: output },
       range: element.range,
     }],
@@ -362,54 +323,36 @@ function generationOutput(
   };
 }
 
-export const decodeSeedancePromptSurface: StructuredSurfaceHandler = ({ element }) => {
-  attributes(element, ["id"]);
-  const id = stringAttribute(element, "id");
-  const value = sealSeedancePrompt(normalizedText(element));
-  return {
-    records: [{
-      id,
-      type: seedanceTypes.prompt,
-      value: { kind: "inline", value: value as unknown as CanonicalValue },
-      range: element.range,
-    }],
-    components: [],
-    fragments: [],
-  };
-};
-
 export const decodeSeedanceVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "model", "prompt", "duration"], [
     "resolution", "aspect-ratio", "generate-audio", "web-search",
   ]);
   const selected = modelSelection(element);
-  const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
+  const promptSource = resolved(element, "prompt", resolveReference);
+  prompt(promptSource, `${element.name}.prompt`);
   const refs = references(element, selected.model, resolveReference);
   const draft = sealGenerationRequestDraft(seedancePorts[selected.model], {
-    prompt: [declaredPrompt.text + referencePrompt(refs)],
     ...generationSettings(element, selected.model),
     generateAudio: [booleanAttribute(element, "generate-audio", false)],
   });
-  return generationOutput(element, selected.endpoint, draft, refs, `${stringAttribute(element, "id")}.video`);
+  return generationOutput(element, selected.endpoint, draft, promptSource, refs, `${stringAttribute(element, "id")}.video`);
 };
 
 export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "model", "dialogue", "prompt", "duration"], [
+  attributes(element, ["id", "model", "prompt", "duration"], [
     "resolution", "aspect-ratio", "web-search",
   ]);
   const selected = modelSelection(element);
-  const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
-  const spoken = dialogueExcerpt(resolved(element, "dialogue", resolveReference), `${element.name}.dialogue`);
+  const promptSource = resolved(element, "prompt", resolveReference);
+  prompt(promptSource, `${element.name}.prompt`);
   const refs = references(element, selected.model, resolveReference);
   const duration = speechDurationReference(element, resolveReference);
-  const promptText = `${declaredPrompt.text}${referencePrompt(refs)}\n\nSpoken dialogue — say exactly:\n${spoken.dialogue}`;
   if (duration !== undefined) {
     const { duration: _later, ...settings } = generationSettings(element, selected.model, 4);
     const program = sealSeedanceSpeechProgram({
       contract: "svml.seedance-speech-spine@1",
       model: selected.model,
       ports: {
-        prompt: [promptText],
         ...settings,
         generateAudio: [true],
       },
@@ -421,6 +364,7 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
       selected.endpoint,
       seedanceSpeechCompileProducers[selected.model],
       assembled.mediaInputs,
+      [{ name: "prompt", port: "prompt" }],
     );
     return {
       records: [{
@@ -435,6 +379,7 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
         inputs: {
           program: { kind: "record", id: programId },
           duration: duration.ref,
+          [exactModelTextInputName("prompt")]: promptSource.ref,
           ...assembled.inputs,
         },
         outputs: { video: id },
@@ -444,9 +389,8 @@ export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element,
     };
   }
   const draft = sealGenerationRequestDraft(seedancePorts[selected.model], {
-    prompt: [promptText],
     ...generationSettings(element, selected.model),
     generateAudio: [true],
   });
-  return generationOutput(element, selected.endpoint, draft, refs, stringAttribute(element, "id"));
+  return generationOutput(element, selected.endpoint, draft, promptSource, refs, stringAttribute(element, "id"));
 };

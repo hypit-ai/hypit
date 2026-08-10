@@ -21,6 +21,7 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narrata
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
 import { temporalDependency } from "@narratage/temporal";
+import { textDependency, textTypes } from "@narratage/text";
 
 import { depthStackImplementationDigests, depthStackValidatorDigests } from "./program.js";
 
@@ -30,6 +31,7 @@ export const depthStackTypes = {
   spec: { module: depthStackModuleRef, name: "DepthStackSpec" },
   cardSpec: { module: depthStackModuleRef, name: "DepthStackCardSpec" },
   cardLabel: { module: depthStackModuleRef, name: "DepthStackCardLabel" },
+  cardLabelStyle: { module: depthStackModuleRef, name: "DepthStackCardLabelStyle" },
   cardSet: { module: depthStackModuleRef, name: "DepthStackCardSet" },
   program: { module: depthStackModuleRef, name: "DepthStackProgram" },
 } satisfies Record<string, TypeRef>;
@@ -41,6 +43,7 @@ export const depthStackProducers = {
   finalizeUntilSelectionStart: { module: depthStackModuleRef, name: "finalize-depth-stack-until-selection-start" },
   finalizeUntilSelectionEnd: { module: depthStackModuleRef, name: "finalize-depth-stack-until-selection-end" },
   render: { module: depthStackModuleRef, name: "render-depth-stack" },
+  bindLabelText: { module: depthStackModuleRef, name: "bind-depth-stack-label-text" },
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
@@ -85,6 +88,11 @@ export const depthStackCardLabelSchema: ValueSchema = { kind: "oneOf", variants:
     paints: { schema: { kind: "array", items: visualTextPaintSchema } }, flow: { schema: visualTextFlowSchema },
   }),
 ] };
+export const depthStackCardLabelStyleSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.depth-stack-card-label-style@1" } },
+  typography: { schema: visualTextTypographySchema }, paints: { schema: { kind: "array", items: visualTextPaintSchema } },
+  flow: { schema: visualTextFlowSchema },
+});
 const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const card = object({
   id: { schema: string }, activationFrame: { schema: unsignedInteger }, material: { schema: mediaLayerSetSchema },
@@ -116,20 +124,22 @@ const finalizeInputs = [
 
 export const depthStackManifest: ModuleManifest = {
   format: "svml.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
-  dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency],
+  dependencies: [narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, mediaDependency, mediaTrackDependency, compositionDependency, textDependency],
   types: [
     { name: depthStackTypes.header.name, schema: depthStackHeaderSchema },
     { name: depthStackTypes.spec.name, schema: depthStackSpecSchema },
     { name: depthStackTypes.cardSpec.name, schema: depthStackCardSpecSchema },
     { name: depthStackTypes.cardLabel.name, schema: depthStackCardLabelSchema },
+    { name: depthStackTypes.cardLabelStyle.name, schema: depthStackCardLabelStyleSchema },
     { name: depthStackTypes.cardSet.name, schema: depthStackCardSetSchema },
     { name: depthStackTypes.program.name, schema: depthStackProgramSchema, validator: validator("@narratage/deck-track/validate-program", depthStackValidatorDigests.program) },
   ], capabilities: [],
   surfaces: [
-    { name: "label", tag: "Label", mode: "structured", outputs: [depthStackTypes.cardLabel], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/deck-track/label-surface", digest: depthStackSurfaceImplementationDigests.label } },
+    { name: "label", tag: "Label", mode: "structured", outputs: [textTypes.text, depthStackTypes.cardLabelStyle, depthStackTypes.cardLabel], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/deck-track/label-surface", digest: depthStackSurfaceImplementationDigests.label } },
     { name: "track", tag: "DepthStack", mode: "structured", outputs: [depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec, depthStackTypes.program, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/deck-track/depth-stack-surface", digest: depthStackSurfaceImplementationDigests.track } },
   ],
   producers: [
+    { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], outputs: [{ name: "label", type: depthStackTypes.cardLabel }], needs: [], implementation: registered("@narratage/deck-track/bind-label-text", depthStackImplementationDigests.bindLabelText) },
     { name: depthStackProducers.createCards.name, inputs: [], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [], implementation: registered("@narratage/deck-track/create-cards", depthStackImplementationDigests.createCards) },
     { name: depthStackProducers.appendMomentCard.name, inputs: [
       { name: "set", type: depthStackTypes.cardSet }, { name: "material", type: mediaTrackTypes.layerSet },

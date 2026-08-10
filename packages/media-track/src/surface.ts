@@ -15,8 +15,8 @@ import type {
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 import type {
   OccurrenceExpansion,
   TemporalDuration,
@@ -96,7 +96,7 @@ function numberValue(element: StructuredElement, name: string, fallback?: number
 }
 
 function reference(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: TypeRef,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
@@ -108,7 +108,7 @@ function reference(
 }
 
 function oneOfReferences(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: readonly TypeRef[],
   resolve: (path: string) => SurfaceResolvedReference | undefined,

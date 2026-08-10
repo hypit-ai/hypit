@@ -8,6 +8,7 @@ import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narrata
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@narratage/spatial";
 import { temporalDependency } from "@narratage/temporal";
+import { textDependency, textTypes } from "@narratage/text";
 
 import { rankingImplementationDigests, rankingValidatorDigests } from "./schedule.js";
 
@@ -15,6 +16,7 @@ export const rankingModuleRef = { name: "@narratage/ranking", version: "1" } as 
 export const rankingTypes = {
   header: { module: rankingModuleRef, name: "RankingHeader" },
   itemSpec: { module: rankingModuleRef, name: "RankingItemSpec" },
+  textItemShell: { module: rankingModuleRef, name: "RankingTextItemShell" },
   itemSpecs: { module: rankingModuleRef, name: "RankingItemSpecSet" },
   schedule: { module: rankingModuleRef, name: "RankingSchedule" },
   soundStyle: { module: rankingModuleRef, name: "RankingSoundStyle" },
@@ -32,7 +34,6 @@ export const rankingTypes = {
   columnProgram: { module: rankingModuleRef, name: "ColumnProgram" },
   topThreeProgram: { module: rankingModuleRef, name: "TopThreeProgram" },
   typewriterProgram: { module: rankingModuleRef, name: "TypewriterListProgram" },
-  title: { module: rankingModuleRef, name: "RankingTitle" },
 } satisfies Record<string, TypeRef>;
 
 export const rankingProducers = {
@@ -65,6 +66,7 @@ export const rankingProducers = {
   renderColumn: { module: rankingModuleRef, name: "render-column" },
   renderTopThree: { module: rankingModuleRef, name: "render-top-three" },
   renderTypewriter: { module: rankingModuleRef, name: "render-typewriter-list" },
+  materializeTextItem: { module: rankingModuleRef, name: "materialize-text-item" },
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
@@ -87,6 +89,14 @@ export const rankingItemSpecSchema: ValueSchema = { kind: "oneOf", variants: [
   object({ contract: { schema: { kind: "literal", value: "svml.top-three-item-spec@1" } }, variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase, label: { schema: string } }),
   object({ contract: { schema: { kind: "literal", value: "svml.typewriter-item-spec@1" } }, variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
     text: { schema: string }, winner: { schema: { kind: "boolean" } },
+    emphasis: { optional: true, schema: object({ start: { schema: unsigned }, endExclusive: { schema: unsigned } }) },
+  }),
+] };
+export const rankingTextItemShellSchema: ValueSchema = { kind: "oneOf", variants: [
+  object({ contract: { schema: { kind: "literal", value: "svml.column-text-item-shell@1" } }, variant: { schema: { kind: "literal", value: "column" } }, ...itemBase }),
+  object({ contract: { schema: { kind: "literal", value: "svml.top-three-text-item-shell@1" } }, variant: { schema: { kind: "literal", value: "top-three" } }, ...itemBase }),
+  object({ contract: { schema: { kind: "literal", value: "svml.typewriter-text-item-shell@1" } }, variant: { schema: { kind: "literal", value: "typewriter-list" } }, ...itemBase,
+    winner: { schema: { kind: "boolean" } },
     emphasis: { optional: true, schema: object({ start: { schema: unsigned }, endExclusive: { schema: unsigned } }) },
   }),
 ] };
@@ -120,10 +130,6 @@ export const rankingSoundSetSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.ranking-sound-set@1" } },
   appear: { schema: object({}, true), optional: true }, move: { schema: object({}, true), optional: true },
 });
-export const rankingTitleSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.ranking-title@1" } }, value: { schema: string },
-});
-
 export const rankingSurfaceImplementationDigests = {
   tierStyle: digestOf("@narratage/ranking/tier-board-style-surface@1"),
   columnStyle: digestOf("@narratage/ranking/column-style-surface@1"),
@@ -146,10 +152,11 @@ const programDefinitions = [
 
 export const rankingManifest: ModuleManifest = {
   format: "svml.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,
-  dependencies: [artifactDependency, mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, compositionDependency],
+  dependencies: [artifactDependency, mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
   types: [
     { name: rankingTypes.header.name, schema: rankingHeaderSchema },
     { name: rankingTypes.itemSpec.name, schema: rankingItemSpecSchema },
+    { name: rankingTypes.textItemShell.name, schema: rankingTextItemShellSchema },
     { name: rankingTypes.itemSpecs.name, schema: rankingItemSpecSetSchema },
     { name: rankingTypes.schedule.name, schema: rankingScheduleSchema, validator: validator("@narratage/ranking/validate-schedule", rankingValidatorDigests.schedule) },
     { name: rankingTypes.soundStyle.name, schema: rankingSoundStyleSchema },
@@ -167,7 +174,6 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingTypes.columnProgram.name, schema: programSchema("svml.column-program@1"), validator: validator("@narratage/ranking/validate-column-program", rankingValidatorDigests.columnProgram) },
     { name: rankingTypes.topThreeProgram.name, schema: programSchema("svml.top-three-program@1"), validator: validator("@narratage/ranking/validate-top-three-program", rankingValidatorDigests.topThreeProgram) },
     { name: rankingTypes.typewriterProgram.name, schema: programSchema("svml.typewriter-list-program@1"), validator: validator("@narratage/ranking/validate-typewriter-list-program", rankingValidatorDigests.typewriterProgram) },
-    { name: rankingTypes.title.name, schema: rankingTitleSchema },
   ],
   capabilities: [],
   surfaces: [
@@ -176,11 +182,12 @@ export const rankingManifest: ModuleManifest = {
     { name: "top-three-style", tag: "TopThreeStyle", mode: "structured", outputs: [rankingTypes.topThreeStyle, rankingTypes.soundStyle], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/top-three-style-surface", digest: rankingSurfaceImplementationDigests.topThreeStyle } },
     { name: "typewriter-style", tag: "TypewriterListStyle", mode: "structured", outputs: [rankingTypes.typewriterStyle, rankingTypes.soundStyle], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/typewriter-list-style-surface", digest: rankingSurfaceImplementationDigests.typewriterStyle } },
     { name: "tier", tag: "TierBoard", mode: "structured", outputs: [rankingTypes.schedule, rankingTypes.tierProgram, compositionTypes.visualTrack, compositionTypes.audioTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/tier-board-surface", digest: rankingSurfaceImplementationDigests.tier } },
-    { name: "column", tag: "Column", mode: "structured", outputs: [rankingTypes.schedule, rankingTypes.columnProgram, compositionTypes.visualTrack, compositionTypes.audioTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/column-surface", digest: rankingSurfaceImplementationDigests.column } },
-    { name: "top-three", tag: "TopThree", mode: "structured", outputs: [rankingTypes.schedule, rankingTypes.topThreeProgram, compositionTypes.visualTrack, compositionTypes.audioTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/top-three-surface", digest: rankingSurfaceImplementationDigests.topThree } },
-    { name: "typewriter", tag: "TypewriterList", mode: "structured", outputs: [rankingTypes.schedule, rankingTypes.typewriterProgram, compositionTypes.visualTrack, compositionTypes.audioTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/typewriter-list-surface", digest: rankingSurfaceImplementationDigests.typewriter } },
+    { name: "column", tag: "Column", mode: "structured", outputs: [rankingTypes.textItemShell, rankingTypes.schedule, rankingTypes.columnProgram, compositionTypes.visualTrack, compositionTypes.audioTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/column-surface", digest: rankingSurfaceImplementationDigests.column } },
+    { name: "top-three", tag: "TopThree", mode: "structured", outputs: [rankingTypes.textItemShell, rankingTypes.schedule, rankingTypes.topThreeProgram, compositionTypes.visualTrack, compositionTypes.audioTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/top-three-surface", digest: rankingSurfaceImplementationDigests.topThree } },
+    { name: "typewriter", tag: "TypewriterList", mode: "structured", outputs: [rankingTypes.textItemShell, textTypes.text, rankingTypes.schedule, rankingTypes.typewriterProgram, compositionTypes.visualTrack, compositionTypes.audioTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/ranking/typewriter-list-surface", digest: rankingSurfaceImplementationDigests.typewriter } },
   ],
   producers: [
+    { name: rankingProducers.materializeTextItem.name, inputs: [{ name: "shell", type: rankingTypes.textItemShell }, { name: "content", type: textTypes.text }], outputs: [{ name: "spec", type: rankingTypes.itemSpec }], needs: [], implementation: registered("@narratage/ranking/materialize-text-item", rankingImplementationDigests.materializeTextItem) },
     { name: rankingProducers.createSpecs.name, inputs: [{ name: "header", type: rankingTypes.header }], outputs: [{ name: "set", type: rankingTypes.itemSpecs }], needs: [], implementation: registered("@narratage/ranking/create-item-specs", rankingImplementationDigests.createSpecs) },
     { name: rankingProducers.appendSpec.name, inputs: [{ name: "set", type: rankingTypes.itemSpecs }, { name: "spec", type: rankingTypes.itemSpec }], outputs: [{ name: "set", type: rankingTypes.itemSpecs }], needs: [], implementation: registered("@narratage/ranking/append-item-spec", rankingImplementationDigests.appendSpec) },
     { name: rankingProducers.schedule.name, inputs: [
@@ -213,7 +220,7 @@ export const rankingManifest: ModuleManifest = {
     ...programDefinitions.flatMap(([name, programType, styleType, setType, programProducer, eventProducer, renderProducer, programDigest, eventDigest, renderDigest]) => [
       { name: programProducer.name, inputs: [
         { name: "header", type: rankingTypes.header },
-        ...(name === "typewriter" ? [{ name: "title", type: rankingTypes.title }] : []),
+        ...(name === "typewriter" ? [{ name: "title", type: textTypes.text }] : []),
         { name: "frame", type: spatialTypes.frame }, { name: "schedule", type: rankingTypes.schedule },
         { name: "style", type: styleType }, { name: "set", type: setType },
       ], outputs: [{ name: "program", type: programType }], needs: [], implementation: registered(`@narratage/ranking/build-${name}-program`, programDigest) },

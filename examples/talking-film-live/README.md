@@ -61,7 +61,7 @@ To reuse the paid shot outputs from a verified earlier Build, add two zero-input
 Candidates and their explicit Satisfaction edges to another `.svrun`:
 
 ```xml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
   <target-set id="delivery">

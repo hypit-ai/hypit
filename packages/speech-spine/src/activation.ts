@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeSpeechSpineSurface, speechSpineComponent, speechSpineManifest,
   speechSpineModuleRef, speechSpineSurfaceImplementationDigest,
@@ -12,7 +12,7 @@ export const svmlPackage = {
     specifiers: ["@narratage/speech-spine", "@narratage/speech-spine@1"],
   }],
   components: [speechSpineComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: speechSpineModuleRef, surface: "spine", mode: "structured",
     implementationDigest: speechSpineSurfaceImplementationDigest, handler: decodeSpeechSpineSurface,
   })],

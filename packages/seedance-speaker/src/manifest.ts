@@ -1,12 +1,7 @@
 import { artifactDependency } from "@narratage/artifact";
-import { narrativeDependency } from "@narratage/narrative";
 import { speechDependency } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
-import {
-  promptKitManifestDigest,
-  promptKitModuleRef,
-  promptKitTypes,
-} from "@narratage/prompt-kit";
+import { textDependency, textTypes } from "@narratage/text";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest } from "@narratage/protocol";
 import {
@@ -29,9 +24,8 @@ export const seedanceSpeakerManifest: ModuleManifest = {
   version: seedanceSpeakerModuleRef.version,
   dependencies: [
     artifactDependency,
-    narrativeDependency,
     speechDependency,
-    { module: promptKitModuleRef, digest: promptKitManifestDigest },
+    textDependency,
     { module: seedanceModuleRef, digest: seedanceManifestDigest },
     { module: svsRecipeType.module, digest: digestOf(svsManifest) },
   ],
@@ -42,7 +36,9 @@ export const seedanceSpeakerManifest: ModuleManifest = {
     tag: "Take",
     mode: "structured",
     outputs: [
-      promptKitTypes.program,
+      textTypes.bindings,
+      textTypes.binding,
+      textTypes.text,
       seedanceTypes.speechSpine,
       artifactTypes.blob,
       ...Object.values(seedanceEndpointsByModel).flatMap((endpoint) =>

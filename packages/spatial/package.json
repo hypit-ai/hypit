@@ -13,7 +13,7 @@
     "@narratage/component-kit": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*",
+    "@narratage/markup": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }

@@ -10,6 +10,7 @@ import {
 } from "@narratage/caption";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { speechDependency, speechTypes } from "@narratage/speech";
+import { sealText, textDependency, textImplementationDigests, textManifest, textTypes } from "@narratage/text";
 import {
   createResolvedClosure,
   canonicalize,
@@ -95,6 +96,7 @@ export const videoManifest: ModuleManifest = {
   dependencies: [
     narrativeDependency,
     speechDependency,
+    textDependency,
   ],
   types: [
     { name: videoTypes.estimate.name, schema: object({ durationSec: { schema: number } }) },
@@ -116,7 +118,7 @@ export const videoManifest: ModuleManifest = {
   producers: [
     {
       name: videoProducers.requestEstimate.name,
-      inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+      inputs: [{ name: "speech", type: textTypes.text }],
       outputs: [],
       needs: [{
         name: "estimate",
@@ -132,7 +134,7 @@ export const videoManifest: ModuleManifest = {
     {
       name: videoProducers.requestSeedanceMini.name,
       inputs: [
-        { name: "narrative", type: narrativeTypes.narrative },
+        { name: "dialogue", type: textTypes.text },
         { name: "estimate", type: videoTypes.estimate },
       ],
       outputs: [],
@@ -149,7 +151,7 @@ export const videoManifest: ModuleManifest = {
     },
     {
       name: videoProducers.placeholderEstimate.name,
-      inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+      inputs: [{ name: "speech", type: textTypes.text }],
       outputs: [{ name: "estimate", type: videoTypes.estimate }],
       needs: [],
       implementation: {
@@ -183,18 +185,18 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 const durationEstimateFragment = sealGraphFragment({
   name: "example.video-pipeline/duration-estimate@1",
-  inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+  inputs: [{ name: "speech", type: textTypes.text }],
   operations: [{
     id: "estimate",
     producer: videoProducers.requestEstimate,
-    inputs: { narrative: input("narrative") },
+    inputs: { speech: input("speech") },
     result: { kind: "need", name: "estimate", accepts: "exact" },
   }],
   exports: [{
     name: "estimate",
     type: videoTypes.estimate,
     root: operation("estimate"),
-    semanticInputs: ["narrative"],
+    semanticInputs: ["speech"],
     fidelity: "exact",
   }],
 });
@@ -203,13 +205,14 @@ const speechBasisGenerationFragment = sealGraphFragment({
   name: "example.video-pipeline/seedance-mini-speech-basis@1",
   inputs: [
     { name: "narrative", type: narrativeTypes.narrative },
+    { name: "dialogue", type: textTypes.text },
     { name: "estimate", type: videoTypes.estimate },
   ],
   operations: [
     {
       id: "request-seedance-mini",
       producer: videoProducers.requestSeedanceMini,
-      inputs: { narrative: input("narrative"), estimate: input("estimate") },
+      inputs: { dialogue: input("dialogue"), estimate: input("estimate") },
       result: { kind: "need", name: "media", accepts: "exact" },
     },
     {
@@ -223,25 +226,25 @@ const speechBasisGenerationFragment = sealGraphFragment({
     name: "take",
     type: speechTypes.basis,
     root: operation("assemble-take"),
-    semanticInputs: ["narrative", "estimate"],
+    semanticInputs: ["narrative", "dialogue", "estimate"],
     fidelity: "exact",
   }],
 });
 
 const placeholderEstimateFragment = sealGraphFragment({
   name: "example.video-pipeline/placeholder-estimate@1",
-  inputs: [{ name: "narrative", type: narrativeTypes.narrative }],
+  inputs: [{ name: "speech", type: textTypes.text }],
   operations: [{
     id: "placeholder",
     producer: videoProducers.placeholderEstimate,
-    inputs: { narrative: input("narrative") },
+    inputs: { speech: input("speech") },
     result: { kind: "output", name: "estimate" },
   }],
   exports: [{
     name: "estimate",
     type: videoTypes.estimate,
     root: operation("placeholder"),
-    semanticInputs: ["narrative"],
+    semanticInputs: ["speech"],
     fidelity: "substitute",
   }],
 });
@@ -263,6 +266,7 @@ export type VideoOutputName = keyof typeof videoOutputs;
 
 export const videoClosure = createResolvedClosure([
   ...videoContractManifests,
+  textManifest,
   videoManifest,
   mediaTrackManifest,
   speechBasisManifest,
@@ -307,6 +311,30 @@ function authorProgram(): LinkedProgram {
     conformance: "exact",
     origin,
   });
+  const rawSpeech = sealRecord({
+    id: "narrative:speech",
+    type: textTypes.text,
+    value: { kind: "inline", value: sealText(parsed.serializations.speech) as never },
+    conformance: "exact",
+    origin,
+  });
+  const speech = { ...rawSpeech, validation: sealTypeValidationReceipt({
+    type: rawSpeech.type,
+    recordDigest: rawSpeech.digest,
+    validatorDigest: textImplementationDigests.validateText,
+  }) };
+  const rawDialogue = sealRecord({
+    id: "narrative:dialogue",
+    type: textTypes.text,
+    value: { kind: "inline", value: sealText(parsed.serializations.dialogue) as never },
+    conformance: "exact",
+    origin,
+  });
+  const dialogue = { ...rawDialogue, validation: sealTypeValidationReceipt({
+    type: rawDialogue.type,
+    recordDigest: rawDialogue.digest,
+    validatorDigest: textImplementationDigests.validateText,
+  }) };
   const programRecord = sealRecord({ id: "caption:program", type: captionTypes.program,
     value: { kind: "inline", value: canonicalize(captionProgram) }, conformance: "exact", origin });
   const planRecord = sealRecord({ id: "caption:plan", type: captionTypes.plan,
@@ -353,22 +381,25 @@ function authorProgram(): LinkedProgram {
   return link(videoClosure, [sealTypedModule({
     id: "author:video-pipeline",
     closureDigest: videoClosure.digest,
-    records: [narrative, canvas, ...captionRecords],
+    records: [narrative, speech, dialogue, canvas, ...captionRecords],
   })]);
 }
 
 export function createVideoGraph(program: LinkedProgram): CompiledGraph {
   const narrative = { kind: "record" as const, id: "narrative:root" };
+  const speech = { kind: "record" as const, id: "narrative:speech" };
+  const dialogue = { kind: "record" as const, id: "narrative:dialogue" };
   const estimate = elaborateGraphFragment(program, durationEstimateFragment, {
     id: "opening.estimate",
     fragment: durationEstimateFragment.id,
-    inputs: { narrative },
+    inputs: { speech },
   });
   const take = elaborateGraphFragment(program, speechBasisGenerationFragment, {
     id: "opening.seedance-mini",
     fragment: speechBasisGenerationFragment.id,
     inputs: {
       narrative,
+      dialogue,
       estimate: { kind: "logical-output", id: videoOutputs.estimate },
     },
   });
@@ -441,7 +472,7 @@ export function createVideoFixture(options: VideoBuildOptions = {}): VideoFixtur
   const placeholder = elaborateGraphFragment(program, placeholderEstimateFragment, {
     id: "opening.placeholder-estimate",
     fragment: placeholderEstimateFragment.id,
-    inputs: { narrative: { kind: "record", id: "narrative:root" } },
+    inputs: { speech: { kind: "record", id: "narrative:speech" } },
   });
   const contribution = bindCandidateFragment(placeholder, { estimate: videoOutputs.estimate });
   const overlay = sealRealizationOverlay({

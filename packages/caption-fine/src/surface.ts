@@ -10,8 +10,8 @@ import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { fineCaptionTrackFragment } from "./fragment.js";
 import { fineCaptionStyle } from "./style.js";
@@ -41,7 +41,7 @@ function reference(
   expected: SurfaceResolvedReference["type"],
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {
-  const raw: TextAttributeValue | undefined = element.attributes[name];
+  const raw: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof raw !== "object" || raw.kind !== "reference") {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }

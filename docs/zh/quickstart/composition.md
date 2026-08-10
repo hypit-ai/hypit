@@ -106,10 +106,11 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 ### Author Source (`main.svml`)
 
 ```svml
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
@@ -119,7 +120,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="pipeline" from="@narratage/media-pipeline@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
-  <import as="text" from="@narratage/text-track@1"/>
+  <import as="text" from="@narratage/typography-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
@@ -131,11 +132,10 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
   </script>
 
   <!-- 2. Generation: Seedance talking head + standalone video -->
-  <seedance:Prompt id="direction">
-    Locked medium close-up in a quiet daylight studio.
-  </seedance:Prompt>
+  <wording:Value id="direction">
+    Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.
+  </wording:Value>
   <seedance:Speech id="take" model="mini"
-    dialogue={story.segment.opening.dialogue}
     prompt={direction} duration="5"/>
   <seedance:Video id="motion" model="mini"
     prompt={direction} duration="5"/>
@@ -227,7 +227,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 ### Run Source (`build.svrun`)
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>

@@ -12,6 +12,6 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/raster": "workspace:*",
     "@narratage/spatial": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   }
 }

@@ -6,6 +6,7 @@ import { canonicalize } from "@narratage/protocol";
 import type { BlobRef, StoredValue } from "@narratage/protocol";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import type { SpatialFrame } from "@narratage/spatial";
+import type { Text } from "@narratage/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
 import {
@@ -38,6 +39,7 @@ import {
   createTypewriterItemSet,
   rankingImplementationDigests,
   rankingValidatorDigests,
+  materializeRankingTextItem,
 } from "./schedule.js";
 import {
   renderColumn,
@@ -54,6 +56,7 @@ import type {
   RankingHeader,
   RankingItemSpec,
   RankingItemSpecSet,
+  RankingTextItemShell,
   RankingSchedule,
   RankingSoundEventPlan,
   RankingSoundSet,
@@ -90,6 +93,14 @@ function programInputs(inputs: ProducerHandlerContext["inputs"]) {
 export const rankingComponent = {
   name: "@narratage/ranking",
   producers: [
+    {
+      producer: rankingProducers.materializeTextItem,
+      implementationDigest: rankingImplementationDigests.materializeTextItem,
+      handler: ({ inputs }) => ({ outputs: { spec: output(materializeRankingTextItem(
+        inline<RankingTextItemShell>(inputs.shell?.value, "RankingTextItemShell"),
+        inline<Text>(inputs.content?.value, "Text"),
+      )) }, needs: {} }),
+    },
     {
       producer: rankingProducers.createSpecs,
       implementationDigest: rankingImplementationDigests.createSpecs,
@@ -192,7 +203,7 @@ export const rankingComponent = {
       implementationDigest: rankingImplementationDigests.typewriterProgram,
       handler: ({ inputs }) => {
         const common = programInputs(inputs);
-        const title = inline<{ readonly contract: "svml.ranking-title@1"; readonly value: string }>(inputs.title?.value, "RankingTitle");
+        const title = inline<Text>(inputs.title?.value, "Text");
         return { outputs: { program: output(buildTypewriterListProgram(common.header, title.value, common.frame, common.schedule,
           inline<TypewriterListStyle>(inputs.style?.value, "TypewriterListStyle"), inline<TypewriterItemSet>(inputs.set?.value, "TypewriterItemSet"))) }, needs: {} };
       },
