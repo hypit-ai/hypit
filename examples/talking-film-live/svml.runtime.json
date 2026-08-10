@@ -2,13 +2,31 @@
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials.env"]
+    }
+  },
   "endpoints": [
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.talking-film",
       "lane": "generation",
       "config": {
-        "apiKeyEnv": "KIE_API_KEY",
+        "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
       }
     },
@@ -34,7 +52,7 @@
       "lane": "planning",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
-        "credentialsEnv": "GOOGLE_APPLICATION_CREDENTIALS_JSON",
+        "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
         "defaultConcurrency": 1
       }
     },
@@ -50,6 +68,9 @@
     }
   ],
   "permissions": [
+    "environment:credentials",
+    "filesystem:artifacts",
+    "filesystem:state",
     "filesystem:whisperx-staging",
     "network:aiplatform.googleapis.com",
     "network:api.kie.ai",

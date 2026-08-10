@@ -1,9 +1,8 @@
 # Command-line experience
 
-Status: first domain-neutral renderer slice implemented, 2026-08-10. `check`, `plan` and `doctor`
-now have TTY/plain human rendering plus explicit `--json`; the remaining archive/Runtime commands,
-interactive authentication and durable Worker views still follow this design. Worker execution is
-specified in
+Status: domain-neutral renderer, durable Runtime views and credential commands implemented,
+2026-08-11. Commands produce one structured result rendered as TTY/plain or explicit JSON/JSONL.
+Worker execution and cancellation laws are specified in
 [`runtime-execution-control.md`](./runtime-execution-control.md).
 
 ## 1. Product principle
@@ -56,8 +55,8 @@ The default for a non-interactive terminal, redirected output or `NO_COLOR`:
 Explicit rather than inferred:
 
 ```bash
-narratage status build-42 --json
-narratage queue --watch --jsonl
+narratage status build-42 --runtime ./svml.runtime.json --json
+narratage queue --runtime ./svml.runtime.json --watch --jsonl
 ```
 
 - `--json` emits one versioned JSON result to stdout;
@@ -77,59 +76,60 @@ do not add arbitrary top-level CLI verbs.
 ### 3.1 Authoring and compilation
 
 ```text
-narratage init
 narratage check <source>
 narratage plan <run-source>
-narratage build <run-source> [--follow]
+narratage build <run-source> --runtime <runtime-profile> [--follow]
 ```
 
-- `init` creates explicit project files from a selected installed template. It has no hidden video
-  template in the generic CLI and no central package registry.
 - `check` verifies one self-described Author or Run source.
 - `plan` renders the frozen targets, Candidate choices and demanded graph without execution.
 - `build` compiles, archives and dispatches. `--follow` observes; it does not own execution.
+
+There is no `init` command in the current checkout. A future initializer must name an explicitly
+installed template; the generic CLI will not gain a hidden video template or central package
+registry.
 
 ### 3.2 Build archive and execution
 
 The existing short commands remain readable:
 
 ```text
-narratage builds
-narratage status <build-id> [--watch]
-narratage inspect <build-id>
-narratage operations <build-id>
-narratage operation <operation-id>
-narratage get <build-id> ...
-narratage cancel build <build-id>
-narratage cancel operation <operation-id>
+narratage builds --runtime <runtime-profile>
+narratage status <build-id> --runtime <runtime-profile>
+narratage inspect <build-id> --runtime <runtime-profile>
+narratage operations <build-id> --runtime <runtime-profile>
+narratage operation <operation-id> --runtime <runtime-profile>
+narratage get <build-id> --runtime <runtime-profile> ...
+narratage cancel build <build-id> --runtime <runtime-profile>
+narratage cancel operation <operation-id> --runtime <runtime-profile>
 ```
 
-Cancellation must always name its scope. The current bare `cancel <build-id>` is too ambiguous once
-Operation control exists.
+Cancellation always names its scope; the removed bare `cancel <build-id>` form cannot confuse Build
+control with one Operation attempt.
 
 ### 3.3 Runtime and maintenance
 
 ```text
 narratage doctor <runtime-profile>
 narratage runtime up|status|down|logs <runtime-profile>
-narratage runtime service status|restart|logs <instance>
-narratage queue [--watch]
+narratage services up|status|down <runtime-profile>
+narratage queue --runtime <runtime-profile> [--watch]
 narratage gc <runtime-profile> [--apply]
 ```
 
 `doctor` is a familiar top-level read-only check. `runtime` owns live execution-domain lifecycle.
-`service` remains a child noun for a real daemon. `gc` is explicit maintenance and keeps its dry-run
-default.
+`services` is the narrower external-program-only lifecycle and never starts the Worker. `gc` is
+explicit maintenance and keeps its dry-run default.
 
 ### 3.4 Packages and authentication
 
-Target commands:
+Current commands:
 
 ```text
-narratage packages lock <lock-file> --package <installed-name> ...
-narratage auth status <endpoint-instance>
-narratage auth login  <endpoint-instance>
-narratage auth logout <endpoint-instance>
+narratage lock-packages <lock-file> --package <installed-name> ...
+narratage auth status <endpoint-instance> --runtime <runtime-profile>
+narratage auth login  <endpoint-instance> --runtime <runtime-profile>
+narratage auth logout <endpoint-instance> --runtime <runtime-profile>
 ```
 
 `lock-packages` can become `packages lock` before release. Installing npm packages remains the job
@@ -148,8 +148,8 @@ These actions are often conflated but have different owners:
 |---|---|---|
 | install the Narratage CLI/packages | ordinary JavaScript package manager | repository install works; no public release yet |
 | initialize a project | CLI + explicitly selected installed template | not implemented |
-| prepare local tools | selected Runtime adapters through `runtime up` | partially implemented as `services up`/postinstall |
-| authenticate an Endpoint | Endpoint auth description + selected Credential Store | read-only environment and macOS Keychain Stores exist; interactive login does not |
+| prepare local tools | selected Runtime adapters through `runtime up` | implemented; `services` remains the external-program-only view |
+| authenticate an Endpoint | Endpoint auth description + selected Credential Store | generic status/login/logout implemented for writable Stores; environment injection remains read-only |
 | provision cloud infrastructure | explicit Provider deployment tooling | separate and intentionally not part of login/runtime up |
 
 Before publication, the honest repository onboarding remains `pnpm install` plus explicit lock and
@@ -166,9 +166,9 @@ User-facing `login` is a single entry point, but the selected Endpoint declares 
 - external credential chain: invoke no login and explain the required external command/config;
 - non-interactive deployment: reject prompting and name the required secret reference.
 
-KIE is currently an API-key case. Google Vertex may use Application Default Credentials or an
-explicit JSON credential. AWS normally uses the SDK default credential chain or SSO. The generic
-CLI must not contain a `switch (providerName)` for these differences.
+KIE is currently an API-key case. Google Vertex uses an explicit JSON CredentialRef. AWS normally
+uses its SDK credential chain or SSO. The generic CLI contains no `switch (providerName)` for these
+differences.
 
 ### 4.2 Decentralized auth contribution
 
@@ -203,19 +203,10 @@ still required.
 - `--json` never contains a secret, even under `--debug`;
 - CI never prompts and must use explicit CredentialRefs/environment injection.
 
-Three current Runtime limitations must be removed before `auth login/logout` can be honest:
-
-1. Endpoint config such as KIE currently accepts an environment-specific `apiKeyEnv`; it must accept
-   an ordinary explicit `CredentialRef` instead of baking one Store into the Provider adapter.
-2. the local Runtime currently selects exactly one Credential Store even though `CredentialRef`
-   already contains a Store name; selected Stores must compose by that name and decline references
-   addressed elsewhere;
-3. the macOS Keychain package can read exact keys but cannot write or delete them through a bounded
-   Runtime port.
-
-These are Runtime/adapter changes, not Core or graph changes. Until they are implemented,
-documentation should show environment injection or the bounded `security add-generic-password`
-command rather than pretend login exists.
+These laws now execute through ordinary CredentialRefs, a composite of explicitly selected Stores,
+and the optional bounded writable facet. Environment remains intentionally read-only; macOS
+Keychain supports exact read/write/delete without giving Providers terminal or enumeration
+authority.
 
 ## 5. Visual language
 
@@ -324,8 +315,9 @@ estimated cost unless the exact Endpoint exposes a bounded price quotation.
   Worker    ready · pid 48120
   Queue     position 2
 
-Watch   narratage status launch-2026-08-10-01 --watch
-Stop    narratage cancel build launch-2026-08-10-01
+Watch   narratage queue --runtime ./svml.runtime.json --watch
+Inspect narratage status launch-2026-08-10-01 --runtime ./svml.runtime.json
+Stop    narratage cancel build launch-2026-08-10-01 --runtime ./svml.runtime.json
 ```
 
 With `--follow`, the command transitions into the status view; it does not execute the Build inside
@@ -399,26 +391,21 @@ Run the login required by your selected AWS profile, then verify with:
   narratage auth status aws.production
 ```
 
-### 6.7 Cancellation confirmation
+### 6.7 Cancellation request
 
 ```text
-Cancel Operation op_91ac?
+✓ Operation cancellation requested
 
-  Build       launch-2026-08-10-01
-  Endpoint    kie.personal
-  State       pending · remote task 8f24…
-  Impact      final.video and 6 downstream operations will remain unsatisfied
-  Unrelated   2 operations may continue
-  Stop        unsupported by this Endpoint
-
-! The remote generation may continue and may still be billed.
-  Its result will be retained but not accepted into this Build.
-
-Continue? [y/N]
+  Operation  sha256:91ac…
+  Build      launch-2026-08-10-01
+  Execution  pending
+  Control    requested
 ```
 
-The prompt describes known facts and uncertainty. It never says “cancelled” before the Worker has
-closed admission and the Endpoint outcome is known.
+The command reports only the durable request. Later `operation` views distinguish `accepted`,
+`confirmed`, `unsupported`, `too-late` and natural completion. It never says “cancelled” before a
+remote terminal fact is known. Interactive impact confirmation is not implemented and therefore is
+not part of the current safety claim.
 
 ### 6.8 Error
 
@@ -455,7 +442,7 @@ Every user-facing error has:
 - provider cost is shown only from authoritative Provider data;
 - terminal resize reflows; it must not duplicate hundreds of lines;
 - `CI=1`, redirected streams and `--no-interactive` disable prompts and animation;
-- `--quiet` emits only the requested result; `--verbose` reveals identities and closure details;
+- `--verbose` reveals identities and closure details while the ordinary view stays bounded;
 - `--debug` adds internal stack/context after redaction, never secrets.
 
 ## 8. Renderer architecture
@@ -481,31 +468,20 @@ Minimum common options:
 --json
 --jsonl                 streaming commands only
 --color auto|always|never
---interactive auto|always|never
---quiet
 --verbose
 --debug
---yes                   destructive/control commands only
 ```
 
 `NO_COLOR` is honored. `--color always` may override terminal detection but never machine mode.
+Authentication accepts `--from <file>` for non-interactive secret input; there is no hidden prompt
+mode switch.
 
-## 9. Implementation sequence
+## 9. Implemented sequence
 
-1. define versioned command result, progress event, diagnostic and action-hint shapes;
-2. split current CLI handlers from `JSON.stringify` and raw `Error.message` output;
-3. keep exact machine JSON behavior behind `--json` while adding TTY/plain renderers;
-4. implement check, plan, doctor and existing archive commands first—no Worker dependency;
-5. add Build/queue/Operation watch views with the durable dispatch work;
-6. add explicit Build/Operation cancellation confirmation using the cancellation protocol;
-7. replace Provider-specific `apiKeyEnv` config with explicit ordinary `CredentialRef`s;
-8. compose selected Credential Stores by reference Store name;
-9. add optional writable Credential Store facets and structured Endpoint auth descriptions;
-10. implement `auth status/login/logout` without central Provider branches;
-11. add `init` only after explicit project-template and public package distribution rules exist.
-
-The visual renderer can therefore begin now. Installation shortcuts and interactive login are not
-blockers for improving every existing command.
+The structured renderer, archive commands, Runtime/queue/Operation views, scoped cancellation,
+ordinary CredentialRefs, multi-Store composition, writable facets and generic auth commands are
+implemented. `init` remains intentionally absent until explicit project-template and public package
+distribution rules exist.
 
 ## 10. Acceptance laws
 

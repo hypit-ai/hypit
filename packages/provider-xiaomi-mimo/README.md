@@ -15,7 +15,7 @@ Runtime Profile example:
   "instance": "mimo.official",
   "lane": "xiaomi-mimo",
   "config": {
-    "apiKeyEnv": "MIMO_API_KEY",
+    "apiKey": { "store": "keychain", "key": "xiaomi-mimo.api-key" },
     "defaultConcurrency": 2
   }
 }
@@ -29,7 +29,7 @@ Add the Provider independently to the Runtime package lock:
 ```sh
 pnpm narratage lock-packages svml.runtime-packages.lock \
   --package @narratage/provider-xiaomi-mimo \
-  --root .
+  --package-root .
 ```
 
 The Provider declares a default concurrency limit on its selected Runtime lane. The shared

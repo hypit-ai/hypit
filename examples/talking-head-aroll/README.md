@@ -59,6 +59,10 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package-root .
 
 pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.lock \
+  --package @narratage/local \
+  --package @narratage/store-sqlite \
+  --package @narratage/artifact-store-fs \
+  --package @narratage/credential-store-env \
   --package @narratage/provider-kie \
   --package @narratage/provider-media-local \
   --package @narratage/provider-whisperx-local \
@@ -87,6 +91,8 @@ Build the complete film after preparing the managed local WhisperX service and e
 `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`:
 
 ```sh
+pnpm narratage runtime up examples/talking-head-aroll/svml.runtime.json
+
 pnpm narratage build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --package-lock examples/talking-head-aroll/svml.packages.lock \
@@ -99,6 +105,9 @@ pnpm narratage get talking-head-film-001 \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
+
+`build` returns after durable submission unless `--follow` is present. Even with `--follow`, the
+terminal remains an observer; interrupting it leaves the Worker and Build running.
 
 Run the same downstream film from the four archived generated shots without another Seedance
 submission:

@@ -11,6 +11,9 @@ serializes the environment. Secret values are handed only to that Endpoint call 
 BuildState, Runtime Closure, Operation checkpoints, logs or SQLite through framework code.
 
 `createEnvironmentCredentialStorePackage()` exposes it through the same generic Runtime service
-package ABI as every other CredentialStore. `createProjectLocalRuntime()` activates it by default.
-Production deployments may replace
-it with a keychain, Vault, KMS or tenant-scoped implementation of the same `CredentialStore` port.
+package ABI as every other CredentialStore. A Runtime Profile must activate and select it
+explicitly; `@narratage/local` supplies no credential default. Several selected Stores may coexist,
+and this one declines every reference whose `store` is not `env`.
+
+The environment facet is intentionally read-only. Interactive `auth login/logout` requires a
+selected Store with the optional bounded writable facet, such as the macOS Keychain adapter.

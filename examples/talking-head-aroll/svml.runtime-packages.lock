@@ -1,11 +1,15 @@
 {
   "format": "svml.node-package-lock@1",
   "selected": [
+    "@narratage/artifact-store-fs",
+    "@narratage/credential-store-env",
+    "@narratage/local",
     "@narratage/provider-google-vertex",
     "@narratage/provider-hyperframes-local",
     "@narratage/provider-kie",
     "@narratage/provider-media-local",
-    "@narratage/provider-whisperx-local"
+    "@narratage/provider-whisperx-local",
+    "@narratage/store-sqlite"
   ],
   "artifacts": [
     {
@@ -34,6 +38,11 @@
       "digest": "sha256:9004aaba5f83bb21b33ede79ad6420cef93105d4e7347622c2bf778407152b88"
     },
     {
+      "name": "@narratage/artifact-store-fs",
+      "version": "0.0.0-dev",
+      "digest": "sha256:a9d1cd5699df848cf89887897ece565cedd25af1eef1cac453e5b35caa52c3f2"
+    },
+    {
       "name": "@narratage/artifact",
       "version": "0.0.0-dev",
       "digest": "sha256:0821530c8f8bdede8095bbb2bdcc27c11c3e92a1cdfd126758d1d441999a9bad"
@@ -54,6 +63,11 @@
       "digest": "sha256:d365d74d385b56d25bbe9fa08e0d70a58dafaef3cc51683a43821d9cf8da08de"
     },
     {
+      "name": "@narratage/compiler-node",
+      "version": "0.0.0-dev",
+      "digest": "sha256:019d7603c28d726e9fc8127e5786c2cd22575a8faa84d91dfd77139fda0927af"
+    },
+    {
       "name": "@narratage/component-kit",
       "version": "0.0.0-dev",
       "digest": "sha256:119069ad7c4d5a73c9bfe04fb5a1dc23eadcdac66b2ff88c8ea9454927241c0f"
@@ -66,7 +80,17 @@
     {
       "name": "@narratage/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:651c4d546708cd8648e1730a906fc3f9f9fc274db421e6374afee83574cecc7d"
+      "digest": "sha256:1c1b9855eb71e7c9472e77edea95885f0b21b54cec9f8d707bd195802158e539"
+    },
+    {
+      "name": "@narratage/credential-store-env",
+      "version": "0.0.0-dev",
+      "digest": "sha256:b60d7d7b54b5c63cc4fc5e503c69ed8c49d9a6b8251ddc2d4e5763e24c8889ac"
+    },
+    {
+      "name": "@narratage/driver-node",
+      "version": "0.0.0-dev",
+      "digest": "sha256:9f7df9d719422b91ac6d51995a6657d2b01cc32f80204a98240c9102ac278791"
     },
     {
       "name": "@narratage/elaborator",
@@ -76,7 +100,7 @@
     {
       "name": "@narratage/endpoint-kit",
       "version": "0.0.0-dev",
-      "digest": "sha256:2f377c58c0dbec426d90adcb4794356507b3b4c55eb3d2533f54b44fcc20be03"
+      "digest": "sha256:94b455390d37d675a55c1888cc4b665d777f017e279510852cb5033436aee3ed"
     },
     {
       "name": "@narratage/generation",
@@ -92,6 +116,11 @@
       "name": "@narratage/hyperframes",
       "version": "0.0.0-dev",
       "digest": "sha256:dde9143aed4fa8731a1a91f860bb2a8a9f426c7515b5c12bed8b2fac24c0a416"
+    },
+    {
+      "name": "@narratage/local",
+      "version": "0.0.0-dev",
+      "digest": "sha256:f833c604b93c46f7596951d41e89ddb630dad1404bee6029c44ed541c437d151"
     },
     {
       "name": "@narratage/markup",
@@ -119,6 +148,11 @@
       "digest": "sha256:04a9e9aaf2005e9a12befea7a29d24ab0aa74fda87e4ff39eb149342c6f8a256"
     },
     {
+      "name": "@narratage/package-loader-node",
+      "version": "0.0.0-dev",
+      "digest": "sha256:1296c0ef3170e77cfdaa8cde0e1753fad2822b254507e0978429498d84c73ed0"
+    },
+    {
       "name": "@narratage/program-space",
       "version": "0.0.0-dev",
       "digest": "sha256:d4e5a074cb935fd6d351354c0c3115d7ecb702b032915c436f28508a872a5c4e"
@@ -131,7 +165,7 @@
     {
       "name": "@narratage/provider-google-vertex",
       "version": "0.0.0-dev",
-      "digest": "sha256:64e7d806f93eafc73312af93515d65d0f8116ec42c6167de671ccd0a5907d363"
+      "digest": "sha256:b9de2ae61195991b65626a51053e71d79747b37274dd24dfbfdd0b855df455bd"
     },
     {
       "name": "@narratage/provider-hyperframes-local",
@@ -141,12 +175,12 @@
     {
       "name": "@narratage/provider-kie",
       "version": "0.0.0-dev",
-      "digest": "sha256:e3d5b5752f13d8069a54c6157b1cbcec0a90ba0c22bbf54c6f6b8bf97fe8af5e"
+      "digest": "sha256:22612e3da4f12a5b780bcca5de5bf5585370772343aea749329715afe1988a88"
     },
     {
       "name": "@narratage/provider-media-local",
       "version": "0.0.0-dev",
-      "digest": "sha256:afedec770515f6cf0e06d42321406a1ecdf9e06c249c0575791518f924381480"
+      "digest": "sha256:241bfaeacef8ec59694c127bc2dacf8cbac4fd48d10cbe04d1f2d0aa25f84d36"
     },
     {
       "name": "@narratage/provider-whisperx-local",
@@ -159,6 +193,11 @@
       "digest": "sha256:5f30fd4c9ce4de8984408d125498f58b06899011d6e07b43bea6ff3498490fe1"
     },
     {
+      "name": "@narratage/run",
+      "version": "0.0.0-dev",
+      "digest": "sha256:d734eb7ef18623d279d7176ce3fb1ed8b9c3a457aec7fcec2d439129815efaff"
+    },
+    {
       "name": "@narratage/runtime-adapter-node",
       "version": "0.0.0-dev",
       "digest": "sha256:5f6171e23167912886e13f6c4638fbbc6b38459027bf3490e19e4d31c6bb3657"
@@ -166,12 +205,12 @@
     {
       "name": "@narratage/runtime-adapter",
       "version": "0.0.0-dev",
-      "digest": "sha256:277ce723c443f2e29bf60ca98dc33113cf11824ecba25868f159c9b597a1d6b9"
+      "digest": "sha256:357fc3c81876d25e553eaa555dd3308ff3db51715d230e6dd44573667058add2"
     },
     {
       "name": "@narratage/runtime",
       "version": "0.0.0-dev",
-      "digest": "sha256:8e1e15aaed7ee09ac2aa51d9be0484706caae6481a4eaa1dc2e96bcc2d38be00"
+      "digest": "sha256:0f383c247e08abb30ab69ef6ce9d6bbf8b0f8fabc72b057ac97970c7f99ed4b2"
     },
     {
       "name": "@narratage/semantic-map",
@@ -204,6 +243,11 @@
       "digest": "sha256:ad66df5763802600b43d5df3538e5dc43bfe52cb7f1dabe63497e79834cfbe09"
     },
     {
+      "name": "@narratage/store-sqlite",
+      "version": "0.0.0-dev",
+      "digest": "sha256:cf7e739e38b5d7094488cd3da0aaae16f66cdb229ed48ec59999ccbe381aedcd"
+    },
+    {
       "name": "@narratage/svs",
       "version": "0.0.0-dev",
       "digest": "sha256:2658027814f0be50cfea761cf5a7ee42004dc30d7b9e252750940a7a8fcddca5"
@@ -227,6 +271,11 @@
       "name": "@narratage/whisperx",
       "version": "0.0.0-dev",
       "digest": "sha256:7ee7f559fdc0508b6a7447838eb0a121cbe60c03522c6969638e0e8d3c04068f"
+    },
+    {
+      "name": "@narratage/workspace-fs-node",
+      "version": "0.0.0-dev",
+      "digest": "sha256:3ed827c6a586ccb5a9bc023ccea5c05a1fbe1a317a79df88314073c18cfa8ea3"
     },
     {
       "name": "@protobufjs/aspromise",
@@ -871,13 +920,40 @@
   ],
   "packages": [
     {
+      "specifier": "@narratage/artifact-store-fs",
+      "package": {
+        "name": "@narratage/artifact-store-fs",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:914018276b9218afc13940ca5c362dc95fa19d574fc07b06b6fe005c5eb30315",
+      "closureDigest": "sha256:486228772cda98bfe09c6262bc6f06f6cc5601928856c184087d1719d7497e49"
+    },
+    {
+      "specifier": "@narratage/credential-store-env",
+      "package": {
+        "name": "@narratage/credential-store-env",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:ee33ba638bbf2f88eee8f34a2f3179f435a0af9ccbae3fbb7d2a81bd6aeac612",
+      "closureDigest": "sha256:dee6b5e342b981185fce3dd86112d7a30bc11e0aa7132f4c4cbfa9ccfd086dda"
+    },
+    {
+      "specifier": "@narratage/local",
+      "package": {
+        "name": "@narratage/local",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:6689aed79b0947c7315aef65e46806ce73da01de3d73b454e1497b8d847ffa61",
+      "closureDigest": "sha256:4a22531c658b24975a7b1c083102bc90bd107d97c20286da818a9f964c6bbc86"
+    },
+    {
       "specifier": "@narratage/provider-google-vertex",
       "package": {
         "name": "@narratage/provider-google-vertex",
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b2636492ab0b0b500d674899ab2ff14fc61c7f2b22ef44eb8f816f141b21ec4d",
-      "closureDigest": "sha256:4de4e5316cdb31753efd871fc1cc443661f7cf4788645082e00de84a762d7bda"
+      "closureDigest": "sha256:8b92e7871fa616ed3a6adce14a6bb7d705532dc0807e453492cd8a878558d9a7"
     },
     {
       "specifier": "@narratage/provider-hyperframes-local",
@@ -886,7 +962,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b14b721bdc0c9d5d9ced1c345107c92a3a5878f3383dea2ecd3e310442c2a40c",
-      "closureDigest": "sha256:47a45ecf94238c7e06bbd87e28ec17b74ac2421293b03ad77936a41728948089"
+      "closureDigest": "sha256:1102b66d7613c516cbd67ded83961b8bd96ad0d45772fe185c28962084692daf"
     },
     {
       "specifier": "@narratage/provider-kie",
@@ -895,7 +971,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e61ebb911a33d4c5d0e4e4ee4fb69cdb790f4ced050ef35f7472bfbd72013d9b",
-      "closureDigest": "sha256:c7526eb040617e45080b72a4f50f8f32ae6dc33fcc08ebaefecccd478b23d8c7"
+      "closureDigest": "sha256:b6d39b1697767893f05c27d7d3c2b5e683e9c559d020c8de0a412ec76226cea0"
     },
     {
       "specifier": "@narratage/provider-media-local",
@@ -904,7 +980,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:701abcc923bf8a711c20b6e308d8cc8be27bf560f249b8c5a801e1dbd9cb3979",
-      "closureDigest": "sha256:4382ac1151fd841cd673bfd49ba1c64df7e1a0ae6ed5610f6b4ecd26aa98f241"
+      "closureDigest": "sha256:8704836ca23624ca38023f5a3b0d7427e817a38412880e97dc5932fb7268d493"
     },
     {
       "specifier": "@narratage/provider-whisperx-local",
@@ -913,8 +989,17 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:3686b84c42cc2b1bcaccf57cbdcda25a15c7d9d3778fb92d25437f9880ed8f5d",
-      "closureDigest": "sha256:1f4387ca08d77d88c2a02faa0a40ba0d5c76f676f6128a94215ab39010112266"
+      "closureDigest": "sha256:7ff51a768a942fbe72ec4ef11b2d19c3066cc38c77f1a94261aa3cacd6a8e56d"
+    },
+    {
+      "specifier": "@narratage/store-sqlite",
+      "package": {
+        "name": "@narratage/store-sqlite",
+        "version": "0.0.0-dev"
+      },
+      "facetsDigest": "sha256:5bccf73cd953710fc31ef44672fef1bfc396fd4aa2eff4b53108e8ff87e749c3",
+      "closureDigest": "sha256:46d6044b5fee1777c27718094480b5b6e2606d35bfe8347a4f9c0a5034419bb8"
     }
   ],
-  "digest": "sha256:e635b2789745d90ddb8e32b30dd3261f738d44d62a508f33ceaca97629d0a898"
+  "digest": "sha256:a7d0d90fe7ab45a8a8bf113e08f7348ab53d91396f7e08955cb90b7db6444524"
 }
