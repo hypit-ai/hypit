@@ -24,7 +24,7 @@ test("Operation identity locks Build, Command, Endpoint, implementation and Runt
   const first = identity();
   assert.equal(first.id, identity().id);
   assert.equal(first.submissionKey, identity().submissionKey);
-  assert.notEqual(first.id, identity({ endpoint: "hyperframes.hypit" }).id);
+  assert.notEqual(first.id, identity({ endpoint: "hyperframes.hosted" }).id);
   assert.notEqual(first.id, identity({ runtimeClosure: digestOf("runtime-closure:hosted") }).id);
 });
 

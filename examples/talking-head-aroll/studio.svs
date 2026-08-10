@@ -10,17 +10,11 @@
   }
 
   speaker.host {
-    kind: ugc-talking-head;
-    model: mini;
-    resolution: 720p;
-    aspect-ratio: 9:16;
-
     composition-stability: soft-locked;
     camera-motion: none;
     edit-rhythm: continuous-take;
     performance: natural-explainer;
     gesture: natural;
-    voice-mode: single-speaker;
   }
 
   film.vertical {

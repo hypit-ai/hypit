@@ -17,7 +17,6 @@ import programSpace from "../../program-space/src/activation.js";
 import text from "../../text/src/activation.js";
 import runMarkup from "../../run-markup/src/activation.js";
 import script from "../../script/src/activation.js";
-import seedanceSpeaker from "../../seedance-speaker/src/activation.js";
 import seedance from "../../seedance/src/activation.js";
 import speechAlignment from "../../speech-alignment/src/activation.js";
 import speechSpine from "../../speech-spine/src/activation.js";
@@ -50,7 +49,6 @@ export const videoTestPackages = [
   text,
   generation,
   seedance,
-  seedanceSpeaker,
   caption,
   captionFine,
   captionGemini,

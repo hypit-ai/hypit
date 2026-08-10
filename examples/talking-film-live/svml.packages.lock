@@ -599,7 +599,7 @@
     {
       "name": "@narratage/fonts-open",
       "version": "0.0.0-dev",
-      "digest": "sha256:2636ba4fa9323b3d5715db76f819ed702ff55fbc8a1e7f44f0401389f2a7bdb6"
+      "digest": "sha256:14f53b6b08cfa1a24d0e62c80755e9e24891de9fec7285bfca449019fd0cf965"
     },
     {
       "name": "@narratage/generation",
@@ -659,7 +659,7 @@
     {
       "name": "@narratage/render-hyperframes",
       "version": "0.0.0-dev",
-      "digest": "sha256:18d5f3a63c71135771af5e9b47f8bcd6cf41662adcb3f1d1628dce6138f75931"
+      "digest": "sha256:5f30fd4c9ce4de8984408d125498f58b06899011d6e07b43bea6ff3498490fe1"
     },
     {
       "name": "@narratage/run-markup",
@@ -754,7 +754,7 @@
     {
       "name": "@narratage/whisperx",
       "version": "0.0.0-dev",
-      "digest": "sha256:7209d52d61e9c9237b59695a30f2f04a055d83053f06439ba9e9a31dd6cd189c"
+      "digest": "sha256:7ee7f559fdc0508b6a7447838eb0a121cbe60c03522c6969638e0e8d3c04068f"
     },
     {
       "name": "cmu-pronouncing-dictionary",
@@ -833,7 +833,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:31b51352edcb4f34beccc9d9ac8cf7397125a840971a72c912df3d34d1f3feda",
-      "closureDigest": "sha256:cf404e70036afe899420d8271a0fa29e640fbe727fe25020c0a852c33db25cae"
+      "closureDigest": "sha256:31d17d4d2f19841ed32f85ac7f9ffe6e77b45b2514cd4cd52a96a979cc848ba0"
     },
     {
       "specifier": "@narratage/generation",
@@ -905,7 +905,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:4210736adc699b3b5f86bf8b0cd84cd7a3c946754c8f19ceae5e0390a3d1d9c5",
-      "closureDigest": "sha256:24acdfad8a63da6d5b9f3205e0bd04cb060fafea67b9c0d20623f108514644f0"
+      "closureDigest": "sha256:396057461f2715ea0a2890418e237c35a51ccc379ead2cef85392cdfb54015dd"
     },
     {
       "specifier": "@narratage/run-markup",
@@ -1049,8 +1049,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:73fceef213e8d6bcad92532c5d712842e62921743b81bc7bb4d9022a92067359",
-      "closureDigest": "sha256:e24bf6745248f12fd2fe968f693e7629800a61a6eafda464dd8c3b08c93215f5"
+      "closureDigest": "sha256:6866f06f64152df2bf378c2788d187cfc1718a83e7471104342ef6818d5da5e7"
     }
   ],
-  "digest": "sha256:da78b2c820e608852e318e7828eab47c705e1f15b3657fa879e4316aa9d69b7e"
+  "digest": "sha256:7006af694856f3e7e10e2c5bc00d653fbe7f7702f6172ec292ccbe4de459293f"
 }

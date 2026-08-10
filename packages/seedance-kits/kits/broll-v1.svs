@@ -4,7 +4,6 @@
   text-template.broll-v1 {
     separator: paragraph;
     default-material-mode: practical-real;
-    default-reference-plan: single-stage;
     default-story-shape: single-moment;
     default-edit-language: continuous-shot;
     default-camera-language: reference-locked;
@@ -13,7 +12,7 @@
 
   text-template.broll-v1.block.base { kind: fixed; order: 10; text: "Create a silent B-roll micro-film using the provided reference image or images."; }
   text-template.broll-v1.block.contract { kind: fixed; order: 20; text: "B-ROLL CONTRACT: create visual support footage. Focus on visible action, object behavior, camera movement, and editing rhythm. Visible people perform visual actions rather than speaking to camera."; }
-  text-template.broll-v1.block.reference { kind: fixed; order: 30; text: "REFERENCE CONTRACT: preserve the intended identity, product, UI, props, setting, lighting, texture, wardrobe, and composition from the reference images and story."; }
+  text-template.broll-v1.block.reference { kind: fixed; order: 30; text: "REFERENCE CONTRACT: preserve the intended identity, product, UI, props, setting, lighting, texture, wardrobe, and composition from the reference images. Use the references in their authored order and follow the story's explicit description of each reference's role."; }
 
   text-template.broll-v1.block.material { kind: axis; order: 40; parameter: material-mode; }
   text-template.broll-v1.choice.material.practical-real { text: "MATERIAL MODE: practical real-world UGC footage with believable physical causality and a lived-in phone-camera feeling."; }
@@ -21,11 +20,6 @@
   text-template.broll-v1.choice.material.product-beauty { text: "MATERIAL MODE: product beauty footage focused on object presence, packaging, texture, tabletop detail, or studio product motion."; }
   text-template.broll-v1.choice.material.proof-capture { text: "MATERIAL MODE: proof capture such as a website, certificate, receipt, review, chart, or credibility page, treated as visual evidence."; }
   text-template.broll-v1.choice.material.stylized-vfx { text: "MATERIAL MODE: an intentional visual-effects metaphor used as an expressive explainer rather than practical documentation."; }
-
-  text-template.broll-v1.block.references { kind: axis; order: 50; parameter: reference-plan; }
-  text-template.broll-v1.choice.references.single-stage { text: "REFERENCE PLAN: use @image1 as the scene and stage reference for the whole clip."; }
-  text-template.broll-v1.choice.references.scene-plus-refs { text: "REFERENCE PLAN: use @image1 as the scene and stage; later images preserve product, UI, logo, prop, or proof details."; }
-  text-template.broll-v1.choice.references.ordered-montage { text: "REFERENCE PLAN: use @image1, @image2, @image3 and later images as ordered shots in one same-theme montage."; }
 
   text-template.broll-v1.block.story-shape { kind: axis; order: 60; parameter: story-shape; }
   text-template.broll-v1.choice.story-shape.single-moment { text: "STORY SHAPE: one continuous visual moment with a small readable change or payoff."; }
@@ -55,5 +49,4 @@
 
   text-template.broll-v1.block.hygiene { kind: fixed; order: 100; text: "SCREEN AND TEXT HYGIENE: add no subtitles, captions, floating words, labels, logos, or ad overlays. Referenced physical labels, screens, websites, and documents remain attached to their objects."; }
   text-template.broll-v1.block.story { kind: slot; order: 110; slot: story; optional: false; label: "MICRO-STORY PROMPT:"; }
-  text-template.broll-v1.block.extra { kind: slot; order: 120; slot: extra; optional: true; }
 </sheet>

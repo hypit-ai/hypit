@@ -408,7 +408,7 @@ does not gain source, role, timing or Artifact digests. `VisualTrack` does not g
 or Text fields. Affinity is validated by the multi-input fitting/lowering Operation rather than by
 copying lineage metadata through every value.
 
-## 12. Twinit findings retained and retired
+## 12. Legacy findings retained and retired
 
 Retained:
 

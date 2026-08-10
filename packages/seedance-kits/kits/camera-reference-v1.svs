@@ -5,5 +5,5 @@
   text-template.camera-reference-v1.block.subject { kind: fixed; order: 10; text: "Use @image1 as the subject and preserve the subject's identity, outfit, and physical features."; }
   text-template.camera-reference-v1.block.transfer { kind: fixed; order: 20; text: "Replicate @video1's camera framing, lens choice, camera height, movement, and photographic rhythm, applying that camera language to the subject from @image1 in a coherent setting."; }
   text-template.camera-reference-v1.block.exclude { kind: fixed; order: 30; text: "Do not copy @video1's subject pose or body action. Let the subject move naturally for the transferred camera treatment."; }
-  text-template.camera-reference-v1.block.extra { kind: slot; order: 40; slot: extra; optional: true; }
+  text-template.camera-reference-v1.block.direction { kind: slot; order: 40; slot: direction; optional: true; label: "ADDITIONAL DIRECTION:"; }
 </sheet>
