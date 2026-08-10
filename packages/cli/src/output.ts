@@ -379,6 +379,7 @@ export function writeCliHelp(io: CliIo): void {
     "  inspect <build-id>         inspect accepted Records and demanded outputs",
     "  get <build-id>             read or materialize one archived result",
     "  cancel build <build-id>    close admission and request honest cancellation",
+    "  cancel operation <digest>  suppress one exact Operation realization",
     "  operations <build-id>      inspect external Operation facts",
     "  operation <digest>         inspect one external Operation",
     "",

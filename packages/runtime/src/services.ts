@@ -156,7 +156,7 @@ function verifyServicePort(service: RuntimeService): void {
       break;
     case "dispatch-store":
       for (const method of [
-        "create", "read", "list", "claim", "heartbeat", "release", "finish", "requestCancellation",
+        "create", "read", "list", "claim", "heartbeat", "release", "finish", "requestCancellation", "wake",
         "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
       ]) callable(service.service, method, service.instance.id);
       break;

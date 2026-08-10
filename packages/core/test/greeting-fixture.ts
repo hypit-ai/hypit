@@ -126,7 +126,7 @@ export const manifest: ModuleManifest = {
   ],
 };
 
-export function greetingGraph(program: LinkedProgram): CompiledGraph {
+export function greetingGraph(program: LinkedProgram, includeSide = false): CompiledGraph {
   return sealCompiledGraph({
     program: program.semanticDigest,
     outputs: [
@@ -148,12 +148,27 @@ export function greetingGraph(program: LinkedProgram): CompiledGraph {
         primary: "assemble",
         semanticInputs: [{ kind: "logical-output", id: "generated" }],
       },
+      ...(includeSide ? [{
+        id: "side-generated",
+        type: types.generated,
+        primary: "side-placeholder",
+        semanticInputs: [{ kind: "logical-output" as const, id: "prompt" }],
+      }, {
+        id: "side-document",
+        type: types.document,
+        primary: "side-assemble",
+        semanticInputs: [{ kind: "logical-output" as const, id: "side-generated" }],
+      }] : []),
     ],
     candidates: [
       { id: "make-prompt", type: types.prompt, root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } } },
       { id: "request-text", type: types.generated, root: { kind: "operation", result: { kind: "operation-result", operation: "request-text" } } },
       { id: "placeholder-text", type: types.generated, root: { kind: "operation", result: { kind: "operation-result", operation: "placeholder-text" } } },
       { id: "assemble", type: types.document, root: { kind: "operation", result: { kind: "operation-result", operation: "assemble" } } },
+      ...(includeSide ? [
+        { id: "side-placeholder", type: types.generated, root: { kind: "operation" as const, result: { kind: "operation-result" as const, operation: "side-placeholder" } } },
+        { id: "side-assemble", type: types.document, root: { kind: "operation" as const, result: { kind: "operation-result" as const, operation: "side-assemble" } } },
+      ] : []),
     ],
     operations: [
       {
@@ -180,6 +195,17 @@ export function greetingGraph(program: LinkedProgram): CompiledGraph {
         inputs: { generated: { kind: "logical-output", id: "generated" } },
         result: { kind: "output", name: "document", record: "document:root" },
       },
+      ...(includeSide ? [{
+        id: "side-placeholder",
+        producer: producers.placeholderText,
+        inputs: { prompt: { kind: "logical-output" as const, id: "prompt" } },
+        result: { kind: "output" as const, name: "generated", record: "generated:side" },
+      }, {
+        id: "side-assemble",
+        producer: producers.assemble,
+        inputs: { generated: { kind: "logical-output" as const, id: "side-generated" } },
+        result: { kind: "output" as const, name: "document", record: "document:side" },
+      }] : []),
     ],
   });
 }
@@ -188,6 +214,7 @@ export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
   readonly goalAccepts?: "exact" | "substitute";
   readonly implementationClosure?: import("@narratage/protocol").Digest;
+  readonly includeSideTarget?: boolean;
 }): BuildState {
   const closure = createResolvedClosure([manifest]);
   const authored = sealRecord({
@@ -208,13 +235,13 @@ export function createGreetingBuild(options?: {
     records: [authored],
   });
   const program = link(closure, [typedModule]);
-  const graph = greetingGraph(program);
+  const graph = greetingGraph(program, options?.includeSideTarget ?? false);
   const request = sealBuildRequest({
     graph: graph.id,
     ...(options?.implementationClosure === undefined
       ? {}
       : { implementationClosure: options.implementationClosure }),
-    targets: [{
+    targets: [...(options?.includeSideTarget ? [{ output: "side-document", accepts: "exact" as const }] : []), {
       output: "document",
       accepts: options?.goalAccepts ?? "exact",
     }],

@@ -67,7 +67,7 @@ function servicePackage(close?: () => void) {
         instance: "dispatch.example",
         implementation: { locator: "example.runtime-services/dispatch", digest: digestOf("dispatch") },
         service: Object.fromEntries([
-          "create", "read", "list", "claim", "heartbeat", "release", "finish", "requestCancellation",
+          "create", "read", "list", "wake", "claim", "heartbeat", "release", "finish", "requestCancellation",
           "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
         ].map((name) => [name, async () => undefined])) as never,
       },
