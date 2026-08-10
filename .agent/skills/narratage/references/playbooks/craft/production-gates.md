@@ -10,8 +10,8 @@
   unwanted text, and impossible camera relationships.
 - Review each video shot independently: motion starts from the reference, stays in 4–15 seconds,
   preserves props/wardrobe/space, and contains no generated overlays.
-- Review captions, typography, and media overlays on the real base program for safe zones, occlusion,
-  phrase anchors, and stacking.
+- Review `caption-fine:Track`, `text:Track`, and `media-track:Track` on the real base program for
+  safe zones, occlusion, semantic timing, and stacking.
 - Use mock/provider-free inputs to validate topology and timing. Do not mock the only audio source
   when acceptance depends on real speech or TTS.
 - Regenerate only failed shots and reuse accepted Artifacts explicitly in a later Run Source; there

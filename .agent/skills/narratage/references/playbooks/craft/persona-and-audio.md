@@ -8,4 +8,5 @@
   reference-duration limits and inspect duration before planning.
 - Choose the voice before finalizing shot timing when TTS is the sole source. One continuous voiceover
   can cover independently selected visual cuts; do not split TTS merely to mirror each shot.
-- Keep speech, music, and effects as separate explicit audio contributions. Dialogue wins the mix.
+- Keep speech, music, and effects as separate explicit `audio:Track` contributions made of
+  `audio:Clip` items. Dialogue wins the mix.

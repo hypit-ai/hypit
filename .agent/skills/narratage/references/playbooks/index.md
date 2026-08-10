@@ -1,16 +1,20 @@
 # Narratage production playbooks
 
-Portable production patterns extracted from `twinit/playbooks` and rewritten for Narratage. These
-files describe what to author and inspect, not twinit canvas nodes or JSON contracts.
+Portable production patterns for Narratage. These files describe what to author and inspect, not
+private renderer internals or an analysis-data contract.
 
 ## Decision path
 
 1. Identify the format: talking head, street interview, two-person podcast, voiceover desk demo, or
-   silent mixcut.
+   silent mixcut. Treat format files as editorial recipes; Narratage does not provide a native
+   generation surface for every format.
 2. Apply universal gates: `production-gates`, `visual-continuity`, and `seedance-directing`.
 3. Add focused craft: `image-prompt-style`, `b-roll`, `overlays`, `captions`, `persona-and-audio`,
    or `screen-demo`.
-4. Map the result to Script, Seedance, Speech Spine, SemanticMap, peer Tracks, Film, and Run Source.
+4. Read `svml-mapping.md`, then map the result to actual Narratage surfaces: Script, Seedance `TextVideo`/`FrameVideo`/
+   `ReferenceVideo`, Speech Spine, SemanticMap, peer Tracks, Film, and Run Source. If a format needs
+   a capability not present in the package surface, use supplied media or supported primitives and
+   record the gap.
 5. Run provider-free `check`/`plan`; only then release paid generation.
 
 ## Universal prompt policy
@@ -20,7 +24,7 @@ files describe what to author and inspect, not twinit canvas nodes or JSON contr
 - Describe desired states directly. Do not mention mutually exclusive alternatives or objects that
   should not appear; generation models can materialize them.
 - Never ask Seedance to render subtitles, captions, floating labels, stickers, or UI overlays. Author
-  those as Caption, Typography, or Media Tracks.
+  those as `caption-fine:Track`, `text:Track`, or `media-track:Track`.
 
 ## Craft
 
