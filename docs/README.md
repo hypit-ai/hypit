@@ -65,6 +65,10 @@ the working tree contains only documents that should inform current implementati
 - [`twinit-capability-migration.md`](./twinit-capability-migration.md) — one explicit ledger for every
   active Twinit node: complete replacement, expressible-but-missing Template, backlog or deliberate omission.
 
+The finite six-member Seedance Kit migration recorded in the ledger is complete as data-only Text
+Templates. Low-level Seedance invocation, Estimate, media utilities and final Blob flow remain
+shared and must not be reopened as Kit-specific execution code.
+
 The shared `svml.visual-track@1` / `svml.visual-ir@1` terminal waist is frozen inside the repository
 before publication. Individual author Surfaces remain pre-release unless their own specification
 says otherwise.

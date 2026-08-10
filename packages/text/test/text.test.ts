@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseStructuredElement } from "@narratage/markup";
 import type { SurfaceResolvedReference } from "@narratage/markup";
+import { svsRecipeType } from "@narratage/svs";
 
 import {
   bindText,
@@ -166,4 +167,50 @@ test("Markup Text Surfaces expose literal and assembled Text as ordinary graph v
   assert.deepEqual((initial?.value as { value?: { values?: unknown } }).value?.values,
     { camera: "handheld", strict: true });
   assert.equal(result.records.filter((record) => record.type.name === "TextBinding").length, 3);
+});
+
+test("Text Render projects only declared SVS Recipe properties and lets explicit Params override them", async () => {
+  const template = sealTextTemplate({
+    contract: "svml.text-template@1",
+    defaults: { camera: "locked", energy: "natural" },
+    root: {
+      kind: "join",
+      separator: " / ",
+      items: [
+        { kind: "slot", binding: "camera" },
+        { kind: "slot", binding: "energy" },
+      ],
+    },
+  });
+  const element = parseStructuredElement({
+    name: "recipe.svml",
+    text: `<text:Render id="prompt" template={kit} recipe={studio.shot}>
+      <text:Param name="energy" value="calm"/>
+    </text:Render>`,
+  }, 0).element;
+  const refs = new Map<string, SurfaceResolvedReference>([
+    ["kit", {
+      path: "kit", ref: { kind: "record", id: "kit" }, type: textTypes.template,
+      record: { value: { kind: "inline", value: template } } as unknown as NonNullable<SurfaceResolvedReference["record"]>,
+    }],
+    ["studio.shot", {
+      path: "studio.shot", ref: { kind: "record", id: "studio.shot" }, type: svsRecipeType,
+      record: { value: { kind: "inline", value: {
+        contract: "svml.svs-recipe@1",
+        path: "studio.shot",
+        properties: { camera: "handheld", energy: "high", model: "mini" },
+      } } } as unknown as NonNullable<SurfaceResolvedReference["record"]>,
+    }],
+  ]);
+  const result = await decodeTextRenderSurface({
+    sourceName: "recipe.svml",
+    element,
+    resolveReference: (path) => refs.get(path),
+    resolveAsset: () => { throw new Error("no asset"); },
+  });
+  const initial = result.records.find((record) => record.id === "prompt.bindings");
+  assert.deepEqual((initial?.value as { value?: { values?: unknown } }).value?.values, {
+    camera: "handheld",
+    energy: "calm",
+  });
 });

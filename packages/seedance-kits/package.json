@@ -1,0 +1,18 @@
+{
+  "name": "@narratage/seedance-kits",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./broll": "./kits/broll-v1.svs",
+    "./podcast": "./kits/podcast-v1.svs",
+    "./call": "./kits/call-v1.svs",
+    "./street-interview": "./kits/street-interview-v1.svs",
+    "./motion-reference": "./kits/motion-reference-v1.svs",
+    "./camera-reference": "./kits/camera-reference-v1.svs"
+  },
+  "files": [
+    "kits",
+    "README.md"
+  ]
+}

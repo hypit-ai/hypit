@@ -171,6 +171,35 @@ Seedance 只暴露模型能力，不暴露“口播”“B-roll”等创作用�
 指定帧或指定时间取图）。本地 FFmpeg 与 AWS Lambda 只是这些精确 Need 的可互换 Runtime
 Endpoint，不会改变作者图。
 
+## Seedance 语义 Kit
+
+`@narratage/seedance-kits` 包含六个纯数据 Text Template。Kit 不是模型包装器：先用通用
+`text:Render` 生成 prompt，再把该 Text 与真实媒体引用显式接入低层 Seedance Surface。
+
+```svml
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="broll-kit" source="../../packages/seedance-kits/kits/broll-v1.svs"/>
+
+<text:Render id="demo-prompt"
+  template={broll-kit.broll-v1}
+  recipe={studio.broll.product-demo}>
+  <text:Set name="story" text={copy.product-demo}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="demo" model="mini"
+  prompt={demo-prompt} duration={demo-duration.duration}
+  resolution="720p" aspect-ratio="9:16" generate-audio="false">
+  <seedance:Reference image={scene}/>
+  <seedance:Reference image={product}/>
+</seedance:ReferenceVideo>
+```
+
+项目 Recipe 选择模板声明的轴；显式 `text:Param` 可以覆盖 Recipe。动态 story、dialogue、
+action 和 extra 仍经由 `text:Set` 作为图边进入。现有六个模板是 `broll-v1`、`podcast-v1`、
+`call-v1`、`street-interview-v1`、`motion-reference-v1`、`camera-reference-v1`。
+媒体数量与顺序仍清楚地写在 `seedance:ReferenceVideo` 里，不藏进 Kit 代码。
+
 ## speaker:Take
 
 基于领域无关 Text Program 构建的更高层口播组件。无需内联原始提示，只需提供生成 Recipe 和显式组装模型输入文字的 Text Template。

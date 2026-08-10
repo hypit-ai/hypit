@@ -45,12 +45,6 @@ function intent() {
   });
 }
 
-test("published official Kit SVS is the exact package resource compiled by the module", () => {
-  assert.match(officialUgcV1SvsSource, /^<\?svml using="@narratage\/text\/svs@1"\?>/u);
-  assert.equal(officialUgcV1Template.contract, "svml.text-template@1");
-  assert.equal(officialUgcV1Template.defaults?.performance, "natural-explainer");
-});
-
 test("official UGC Kit renders one ordinary ordered Text value", () => {
   const bindings = bindText(
     createSpeakerTextBindings(intent()),

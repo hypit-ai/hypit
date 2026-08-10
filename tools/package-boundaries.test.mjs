@@ -247,8 +247,20 @@ test("every package is reachable: imported, activatable, or a declared entry poi
     .filter(([, manifest]) => manifest.svml?.activation !== undefined)
     .map(([name]) => name));
 
+  // A data-only author package can deliberately export self-describing Source
+  // Modules without shipping executable activation code. Those exports are
+  // public entry points just as surely as a CLI binary is.
+  const sourceResources = new Set([...packages]
+    .filter(([, manifest]) => manifest.exports !== null
+      && typeof manifest.exports === "object"
+      && Object.values(manifest.exports).some((target) => typeof target === "string" && target.endsWith(".svs")))
+    .map(([name]) => name));
+
   const unreachable = [...packages.keys()]
-    .filter((name) => !imported.has(name) && !activatable.has(name) && !entryPoints.has(name))
+    .filter((name) => !imported.has(name)
+      && !activatable.has(name)
+      && !sourceResources.has(name)
+      && !entryPoints.has(name))
     .sort();
   assert.deepEqual(unreachable, [],
     "packages nothing imports, nothing can activate, and no one runs — delete them or give them a consumer");
