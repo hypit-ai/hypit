@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -26,7 +26,12 @@ function tracked() {
 test("no playground source carries a raw control byte", () => {
   const offenders = [];
   for (const path of tracked()) {
-    const bytes = readFileSync(new URL(path, new URL("..", import.meta.url)));
+    const url = new URL(path, new URL("..", import.meta.url));
+    // `git ls-files -c` includes a tracked deletion until it is staged. A
+    // deleted source cannot contain a control byte and must not make this
+    // source-content check depend on Git's index timing.
+    if (!existsSync(url)) continue;
+    const bytes = readFileSync(url);
     for (const [index, byte] of bytes.entries()) {
       // Tab, newline and carriage return are the only control bytes text needs.
       if (byte < 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d) {

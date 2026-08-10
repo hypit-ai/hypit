@@ -28,8 +28,8 @@ function workspaceAliases(): Array<{ find: string; replacement: string }> {
       }
       const entryPoint = (manifest.exports as Record<string, unknown> | undefined)?.["."];
       if (typeof manifest.name !== "string" || typeof entryPoint !== "string") return [];
-      // Exact-or-followed-by-slash matching keeps "@narratage/speech" from
-      // swallowing "@narratage/speech-basis".
+      // Exact-or-followed-by-slash matching keeps one package prefix from
+      // swallowing another package whose name happens to extend it.
       return [{ find: manifest.name, replacement: join(packages, entry.name, entryPoint) }];
     });
 }

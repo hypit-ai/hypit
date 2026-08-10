@@ -30,21 +30,44 @@ function workspace(): PreviewSources {
   return { manifests: entries, components };
 }
 
-test("previewable modules are the ones declaring a VisualTrack Producer", async () => {
-  const found = await discoverPreviewProducers(workspace());
-  assert.deepEqual(
-    [...new Set(found.map((producer) => producer.moduleName))].sort(),
-    [
-      "@narratage/caption-fine",
-      "@narratage/comment-sticker",
-      "@narratage/deck-track",
-      "@narratage/media-track",
-      "@narratage/ranking",
-      "@narratage/screen-overlay",
-      "@narratage/speech-basis",
-      "@narratage/typography-track",
-    ],
-  );
+test("an arbitrary supplied visual module is discovered without registration", async () => {
+  const module = { name: "@example/visual", version: "1" } as const;
+  const input = { module, name: "Input" } as const;
+  const track = {
+    module: { name: "@narratage/composition", version: "1" },
+    name: "VisualTrack",
+  } as const;
+  const implementation = {
+    kind: "registered", locator: "@example/visual/render",
+    digest: `sha256:${"0".repeat(64)}`,
+  } as const;
+
+  const found = await discoverPreviewProducers({
+    manifests: {
+      arbitrary: async () => ({ manifest: {
+        format: "svml.module@1", name: module.name, version: module.version,
+        dependencies: [], capabilities: [], surfaces: [],
+        types: [{ name: input.name, schema: { kind: "string" } }],
+        producers: [{
+          name: "render", inputs: [{ name: "input", type: input }],
+          outputs: [{ name: "track", type: track }], needs: [], implementation,
+        }],
+      } }),
+    },
+    components: {
+      arbitrary: async () => ({ component: {
+        name: module.name,
+        producers: [{
+          producer: { module, name: "render" },
+          handler: () => ({ outputs: { track: { value: "arbitrary-output" } } }),
+        }],
+      } }),
+    },
+  });
+
+  assert.equal(found.length, 1);
+  assert.equal(found[0]?.id, "@example/visual#render");
+  assert.deepEqual(found[0]?.inputs.map((entry) => entry.name), ["input"]);
 });
 
 test("each producer carries its inputs' declared schemas", async () => {

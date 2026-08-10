@@ -35,5 +35,3 @@ export type {
   TypeRef,
   ValueSchema,
 } from "@narratage/protocol";
-
-export type { MediaArtifactRef } from "@narratage/media";
