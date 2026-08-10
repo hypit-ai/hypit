@@ -41,10 +41,3 @@ export type {
 } from "@narratage/protocol";
 
 export type { MediaArtifactRef } from "@narratage/media";
-
-// Stylesheets are read to fill a form, never to decide what a component is.
-export { parseSvs } from "@narratage/svs";
-export type { SvsRecipe } from "@narratage/svs";
-export { maskSourceHeader, parseSourceHeader } from "@narratage/source";
-
-export { defaultFilmProgram, filmAppearanceFromRecipe, filmRecipeKeys } from "@narratage/film";
