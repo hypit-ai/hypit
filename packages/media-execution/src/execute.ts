@@ -3,26 +3,32 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifyTimelineAudio } from "@narratage/media";
-import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
+import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
+import type { MediaAudioStream, MediaInspection, MediaRational, MediaStream, MediaStreamSelection, MediaTimestamp, MediaVideoStream, MuxedMedia, RenderedVisual, SynchronizedMedia, TimelineAudio } from "@narratage/media";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleBoundary, speechTypes } from "@narratage/speech";
 import type { SpeechEvidenceAudio } from "@narratage/speech";
 import {
   mediaPipelineCapabilities,
+  verifyAudioExtractionRequest,
   verifyAudioProgramPlan,
+  verifyFrameExtractionRequest,
+  verifyMediaTransformProgram,
+  type ExtractAudioNeed,
+  type ExtractFrameNeed,
   type InspectMediaNeed,
   type MuxMediaNeed,
   type NormalizeMediaNeed,
   type ProjectSpeechEvidenceAudioNeed,
   type RenderAudioNeed,
+  type TransformMediaNeed,
 } from "@narratage/media-pipeline";
-import type { AudioProgramClip, AudioProgramPlan } from "@narratage/media-pipeline";
+import type { AudioProgramClip, AudioProgramPlan, MediaTransformOperation } from "@narratage/media-pipeline";
 import {
   canonicalize,
   digestOf,
 } from "@narratage/protocol";
-import type { BlobRef, CanonicalValue } from "@narratage/protocol";
+import type { BlobRef, CanonicalValue, StoredValue } from "@narratage/protocol";
 
 import { parseMediaInspection } from "./probe.js";
 import {
@@ -36,7 +42,7 @@ import type { AnimatedWebp } from "./webp.js";
 /**
  * Where the bytes live and which binaries transform them.
  *
- * These five operations are the whole of Narratage's media execution, and they
+ * These byte operations are the whole of Narratage's media execution, and they
  * are written once. A local Provider supplies the Build's own ArtifactStore and
  * the ffmpeg on its PATH; a Lambda Provider supplies an S3-backed gateway and
  * the ffmpeg carried by its deployment. Nothing below knows which it is, so the two
@@ -60,7 +66,7 @@ export type MediaExecutionEnvironment = {
 };
 
 export type MediaOperationResult = {
-  readonly value: CanonicalValue;
+  readonly value: StoredValue;
   readonly metadata: CanonicalValue;
 };
 
@@ -68,6 +74,9 @@ export type MediaOperationResult = {
 export const mediaOperationContracts = {
   inspect: "svml.inspect-media-request@1",
   normalize: "svml.normalize-media-request@1",
+  transform: "svml.transform-media-request@1",
+  extractAudio: "svml.extract-audio-request@1",
+  extractFrame: "svml.extract-frame-request@1",
   projectSpeechEvidenceAudio: "svml.project-speech-evidence-audio-request@1",
   renderAudio: "svml.render-audio-request@1",
   mux: "svml.mux-media-request@1",
@@ -423,7 +432,11 @@ async function outputInspection(args: {
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }) });
 }
 
-function result(value: CanonicalValue, metadata: CanonicalValue): MediaOperationResult {
+function inlineResult(value: CanonicalValue, metadata: CanonicalValue): MediaOperationResult {
+  return { value: { kind: "inline", value }, metadata };
+}
+
+function artifactResult(value: BlobRef, metadata: CanonicalValue): MediaOperationResult {
   return { value, metadata };
 }
 
@@ -443,6 +456,48 @@ function normalizeNeed(value: CanonicalValue): NormalizeMediaNeed {
   assert(item.audio.sampleRate === 48_000 && item.audio.channels === 2
     && item.audio.codec === "pcm_s16le" && item.audio.loudness === "preserve",
   "NormalizeMediaNeed audio profile is unsupported");
+  return item;
+}
+
+function transformNeed(value: CanonicalValue): TransformMediaNeed {
+  const item = object(value, "TransformMediaNeed") as unknown as TransformMediaNeed;
+  assert(item.contract === "svml.transform-media-request@1", "TransformMediaNeed is invalid");
+  verifySynchronizedMedia(item.media);
+  verifyMediaTransformProgram(item.program);
+  assert(item.media.visual !== undefined, "TransformMediaNeed requires synchronized visual media");
+  return item;
+}
+
+function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
+  const item = object(value, "ExtractAudioNeed") as unknown as ExtractAudioNeed;
+  assert(item.contract === "svml.extract-audio-request@1" && item.source?.kind === "blob",
+    "ExtractAudioNeed is invalid");
+  assert(Number.isSafeInteger(item.streamIndex) && item.streamIndex >= 0,
+    "ExtractAudioNeed streamIndex is invalid");
+  verifyAudioExtractionRequest({
+    contract: "svml.audio-extraction-request@1",
+    audio: { mode: "stream-index", streamIndex: item.streamIndex },
+    output: item.output,
+  });
+  return item;
+}
+
+function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
+  const item = object(value, "ExtractFrameNeed") as unknown as ExtractFrameNeed;
+  assert(item.contract === "svml.extract-frame-request@1" && item.source?.kind === "blob",
+    "ExtractFrameNeed is invalid");
+  assert(Number.isSafeInteger(item.streamIndex) && item.streamIndex >= 0
+    && Number.isSafeInteger(item.sourceFrameCount) && item.sourceFrameCount > 0,
+  "ExtractFrameNeed stream domain is invalid");
+  verifyFrameExtractionRequest({
+    contract: "svml.frame-extraction-request@1",
+    video: { mode: "stream-index", streamIndex: item.streamIndex },
+    at: item.at,
+    output: item.output,
+  });
+  if (item.at.kind === "frame") {
+    assert(item.at.index < item.sourceFrameCount, "ExtractFrameNeed frame lies outside the source stream");
+  }
   return item;
 }
 
@@ -566,7 +621,7 @@ export async function executeInspectMedia(
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       })
       : animatedWebpInspection(need.source, animation);
-    return result(canonicalize(inspection), canonicalize({ provider: env.label, operation: "inspect" }));
+    return inlineResult(canonicalize(inspection), canonicalize({ provider: env.label, operation: "inspect" }));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -708,8 +763,232 @@ export async function executeNormalizeMedia(
         },
       }),
     });
-    return result(canonicalize(media), canonicalize({ provider: env.label, operation: "normalize",
+    return inlineResult(canonicalize(media), canonicalize({ provider: env.label, operation: "normalize",
       visual: visualArtifact !== undefined, audio: audioArtifact !== undefined }));
+  } finally {
+    await rm(work, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+type TransformPlan = {
+  readonly videoFilters: readonly string[];
+  readonly audioFilters: readonly string[];
+  readonly frameCount: number;
+  readonly sampleFrames: number;
+  readonly durationSec: number;
+};
+
+function decimal(value: number): string {
+  assert(Number.isFinite(value), "Media transform produced a non-finite time");
+  return value.toPrecision(15);
+}
+
+function compileTransformPlan(media: SynchronizedMedia, operations: readonly MediaTransformOperation[]): TransformPlan {
+  const rate = media.timeline.frameRate.numerator / media.timeline.frameRate.denominator;
+  let durationSec = media.timeline.frameCount / rate;
+  const videoFilters: string[] = ["setpts=PTS-STARTPTS"];
+  const audioFilters: string[] = ["asetpts=N/SR/TB"];
+  for (const [index, operation] of operations.entries()) {
+    if (operation.kind === "trim") {
+      const start = operation.startSec ?? 0;
+      const end = operation.endSec ?? (operation.tailSec === undefined
+        ? durationSec
+        : durationSec - operation.tailSec);
+      assert(start >= 0 && start < durationSec,
+        `Media transform trim ${index} starts outside its current ${durationSec}s timeline`);
+      assert(end > start && end <= durationSec + 1e-9,
+        `Media transform trim ${index} ends outside its current ${durationSec}s timeline`);
+      const boundedEnd = Math.min(end, durationSec);
+      videoFilters.push(`trim=start=${decimal(start)}:end=${decimal(boundedEnd)}`, "setpts=PTS-STARTPTS");
+      audioFilters.push(`atrim=start=${decimal(start)}:end=${decimal(boundedEnd)}`, "asetpts=N/SR/TB");
+      durationSec = boundedEnd - start;
+      continue;
+    }
+    videoFilters.push(`setpts=PTS/${decimal(operation.rate)}`);
+    audioFilters.push(...atempo(operation.rate));
+    durationSec /= operation.rate;
+  }
+  const frameCount = Math.max(1, Math.round(durationSec * rate));
+  assert(Number.isSafeInteger(frameCount), "Media transform output frame count exceeds safe arithmetic");
+  const sampleFrames = roundPositive(
+    BigInt(frameCount) * 48_000n * BigInt(media.timeline.frameRate.denominator),
+    BigInt(media.timeline.frameRate.numerator),
+  );
+  const fps = `${media.timeline.frameRate.numerator}/${media.timeline.frameRate.denominator}`;
+  videoFilters.push(
+    `fps=fps=${fps}:round=near:start_time=0:eof_action=round`,
+    `trim=start_frame=0:end_frame=${frameCount}`,
+    `setpts=N*${media.timeline.frameRate.denominator}/(${media.timeline.frameRate.numerator}*TB)`,
+  );
+  audioFilters.push(
+    `apad=whole_len=${sampleFrames}`,
+    `atrim=start_sample=0:end_sample=${sampleFrames}`,
+    "asetpts=N/SR/TB",
+  );
+  return { videoFilters, audioFilters, frameCount, sampleFrames, durationSec };
+}
+
+/** Ordered trim/retime over one exact synchronized A/V value. */
+export async function executeTransformMedia(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const need = transformNeed(constraints);
+  const media = need.media;
+  const plan = compileTransformPlan(media, need.program.operations);
+  const work = await mkdtemp(join(tmpdir(), "svml-media-transform-"));
+  try {
+    const visualPath = join(work, "visual.mp4");
+    const audioPath = join(work, "audio.wav");
+    const output = join(work, "transformed.mp4");
+    await stageArtifact(env, media.visual!.artifact, visualPath);
+    if (media.audio !== undefined) await stageArtifact(env, media.audio.artifact, audioPath);
+    const argv = ["-y", "-i", visualPath];
+    if (media.audio !== undefined) {
+      argv.push(
+        "-i", audioPath,
+        "-filter_complex",
+        `[0:v:0]${plan.videoFilters.join(",")}[video];[1:a:0]${plan.audioFilters.join(",")}[audio]`,
+        "-map", "[video]", "-map", "[audio]",
+        "-c:a", "aac", "-ar", "48000", "-ac", "2",
+      );
+    } else {
+      argv.push("-map", "0:v:0", "-an", "-vf", plan.videoFilters.join(","));
+    }
+    argv.push(
+      "-frames:v", String(plan.frameCount), "-fps_mode", "cfr",
+      "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+      "-movflags", "+faststart", output,
+    );
+    await runProcess({
+      executable: env.ffmpegPath,
+      argv,
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: 64 * 1024,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const inspected = await outputInspection({
+      path: output,
+      mediaType: "video/mp4",
+      ffprobePath: env.ffprobePath,
+      timeoutMs: env.processTimeoutMs,
+      maxProbeOutputBytes: env.maxProbeOutputBytes,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const videos = inspected.streams.filter((item): item is MediaVideoStream => item.kind === "video");
+    const audios = inspected.streams.filter((item): item is MediaAudioStream => item.kind === "audio");
+    assert(videos.length === 1 && videos[0]!.role === "moving"
+      && videos[0]!.decodedUnitCount === plan.frameCount,
+    "Transformed media video differs from its compiled frame domain");
+    assert(audios.length === (media.audio === undefined ? 0 : 1),
+      "Transformed media audio presence differs from its synchronized input");
+    if (audios[0] !== undefined) {
+      assert(audios[0].sampleRate === 48_000 && audios[0].channels === 2,
+        "Transformed media audio is not 48 kHz stereo");
+    }
+    const artifact = await env.artifacts.put(await readFile(output), "video/mp4");
+    return artifactResult(artifact, canonicalize({
+      provider: env.label,
+      operation: "transform",
+      operations: need.program.operations.length,
+      frameCount: plan.frameCount,
+      sampleFrames: plan.sampleFrames,
+    }));
+  } finally {
+    await rm(work, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/** Generic model-reference audio: no Narrative, SpeechBasis or alignment claim is introduced. */
+export async function executeExtractAudio(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const need = extractAudioNeed(constraints);
+  const work = await mkdtemp(join(tmpdir(), "svml-media-extract-audio-"));
+  try {
+    const input = join(work, "source.bin");
+    const output = join(work, "audio.wav");
+    await stageArtifact(env, need.source, input);
+    await runProcess({
+      executable: env.ffmpegPath,
+      argv: [
+        "-y", "-i", input, "-map", `0:${need.streamIndex}`, "-vn",
+        "-af", "asetpts=PTS-STARTPTS,aresample=48000:async=0:first_pts=0,aformat=sample_rates=48000:channel_layouts=stereo",
+        "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", output,
+      ],
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: 64 * 1024,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const bytes = await readFile(output);
+    const artifact = await env.artifacts.put(bytes, "audio/wav");
+    await assertCanonicalWav({
+      path: output,
+      source: artifact,
+      ffprobePath: env.ffprobePath,
+      timeoutMs: env.processTimeoutMs,
+      maxProbeOutputBytes: env.maxProbeOutputBytes,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    return artifactResult(artifact, canonicalize({
+      provider: env.label,
+      operation: "extract-audio",
+      sourceStream: need.streamIndex,
+    }));
+  } finally {
+    await rm(work, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+export async function executeExtractFrame(
+  env: MediaExecutionEnvironment,
+  constraints: CanonicalValue,
+): Promise<MediaOperationResult> {
+  const need = extractFrameNeed(constraints);
+  const work = await mkdtemp(join(tmpdir(), "svml-media-extract-frame-"));
+  try {
+    const input = join(work, "source.bin");
+    const output = join(work, "frame.png");
+    await stageArtifact(env, need.source, input);
+    const selection = need.at.kind === "first"
+      ? "eq(n\\,0)"
+      : need.at.kind === "last"
+        ? `eq(n\\,${need.sourceFrameCount - 1})`
+        : need.at.kind === "frame"
+          ? `eq(n\\,${need.at.index})`
+          : `gte(t\\,${decimal(need.at.seconds)})`;
+    await runProcess({
+      executable: env.ffmpegPath,
+      argv: [
+        "-y", "-i", input, "-map", `0:${need.streamIndex}`, "-an",
+        "-vf", `setpts=PTS-STARTPTS,select=${selection}`,
+        "-frames:v", "1", "-fps_mode", "vfr", "-c:v", "png", output,
+      ],
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: 64 * 1024,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const bytes = await readFile(output);
+    assert(bytes.byteLength > 0, "Frame extraction produced no image");
+    const inspected = await outputInspection({
+      path: output,
+      mediaType: "image/png",
+      ffprobePath: env.ffprobePath,
+      timeoutMs: env.processTimeoutMs,
+      maxProbeOutputBytes: env.maxProbeOutputBytes,
+      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    });
+    const images = inspected.streams.filter((item): item is MediaVideoStream => item.kind === "video");
+    assert(images.length === 1 && images[0]!.decodedUnitCount === 1,
+      "Frame extraction output must decode to exactly one image");
+    const artifact = await env.artifacts.put(bytes, "image/png");
+    return artifactResult(artifact, canonicalize({
+      provider: env.label,
+      operation: "extract-frame",
+      sourceStream: need.streamIndex,
+      at: need.at,
+    }));
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -787,7 +1066,7 @@ export async function executeProjectSpeechEvidenceAudio(
       },
     });
     assertSpeechEvidenceAudioIdentity(evidence);
-    return result(canonicalize(evidence), canonicalize({
+    return inlineResult(canonicalize(evidence), canonicalize({
       provider: env.label,
       operation: "project-speech-evidence-audio",
       sourceSampleFrames: need.sourceSampleFrames,
@@ -885,7 +1164,7 @@ export async function executeRenderTimelineAudio(
       sampleFrames: plan.sampleFrames,
       loudness: "planned",
     });
-    return result(canonicalize(value), canonicalize({
+    return inlineResult(canonicalize(value), canonicalize({
       provider: env.label,
       operation: "render-audio",
       clips: plan.clips.length,
@@ -984,7 +1263,7 @@ export async function executeMuxProgramMedia(
       presentationSampleFrames: need.audio.sampleFrames,
       artifact,
     });
-    return result(canonicalize(value), canonicalize({
+    return inlineResult(canonicalize(value), canonicalize({
       provider: env.label,
       operation: "mux",
       videoStream: finalVideo[0]!.index,

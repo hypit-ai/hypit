@@ -3,10 +3,13 @@ import { AwsS3ObjectClient } from "@narratage/artifact-store-s3";
 import type { S3ObjectClient } from "@narratage/artifact-store-s3";
 import {
   executeInspectMedia,
+  executeExtractAudio,
+  executeExtractFrame,
   executeMuxProgramMedia,
   executeNormalizeMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
+  executeTransformMedia,
 } from "@narratage/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@narratage/media-execution";
 import { execFile } from "node:child_process";
@@ -33,6 +36,9 @@ const OPERATIONS: Record<
 > = {
   "inspect": executeInspectMedia,
   "normalize": executeNormalizeMedia,
+  "transform": executeTransformMedia,
+  "extract-audio": executeExtractAudio,
+  "extract-frame": executeExtractFrame,
   "project-speech-evidence-audio": executeProjectSpeechEvidenceAudio,
   "render-audio": executeRenderTimelineAudio,
   "mux": executeMuxProgramMedia,

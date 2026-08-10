@@ -93,41 +93,43 @@
   />
 
   <!-- The author explicitly chooses Seedance Mini. Runtime only binds a matching endpoint. -->
-  <seedance:Speech
+  <seedance:ReferenceVideo
     id="alice-take"
     model="mini"
     prompt={alice-direction}
     duration="8"
+    generate-audio="true"
   >
     <seedance:Reference image={alice-reference}/>
-  </seedance:Speech>
+  </seedance:ReferenceVideo>
 
-  <seedance:Speech
+  <seedance:ReferenceVideo
     id="bob-take"
     model="mini"
     prompt={bob-direction}
     duration="8"
+    generate-audio="true"
   >
     <seedance:Reference image={bob-reference}/>
-  </seedance:Speech>
+  </seedance:ReferenceVideo>
 
   <!-- Ordered generated Takes become one audio basis plus its peer visual/audio Tracks. -->
   <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={alice-take} segment={script.segment.opening}/>
-    <speech:Take source={bob-take} segment={script.segment.answer}/>
+    <speech:Take source={alice-take.video} segment={script.segment.opening}/>
+    <speech:Take source={bob-take.video} segment={script.segment.answer}/>
   </speech:Spine>
 
   <!-- One explicit WhisperX path: request, normalize and deterministic Script alignment. -->
   <whisperx:Alignment id="timing" narrative={script} audio={speech.audio}/>
 
-  <seedance:Video
+  <seedance:ReferenceVideo
     id="product-motion"
     model="mini"
     prompt={product-direction}
     duration="5"
   >
     <seedance:Reference image={product-reference}/>
-  </seedance:Video>
+  </seedance:ReferenceVideo>
 
   <pipeline:Normalize id="product-media" source={product-motion.video}
     video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>

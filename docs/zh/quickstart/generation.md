@@ -11,6 +11,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 
 ```svml
 <import as="media" from="@narratage/media@1"/>
+<import as="mediaop" from="@narratage/media-pipeline@1"/>
 <import as="estimate" from="@narratage/estimate@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
 <import as="speaker" from="@narratage/seedance-speaker@1"/>
@@ -29,7 +30,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 | `id` | 是 | 组件的唯一标识符 |
 | `src` | 是 | 图片文件路径，相对于 `.svml` 源文件 |
 
-该图片在下游通过 `{presenter}` 引用——例如，作为 `seedance:Speech` 中的角色参考或作为 B-roll 来源。
+该图片在下游通过 `{presenter}` 引用——例如，作为 `seedance:ReferenceVideo` 中的角色参考或作为 B-roll 来源。
 
 ## media:Audio
 
@@ -48,7 +49,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 
 ## estimate:Speech
 
-基于 Script 文本的确定性语音时长估算。无需外部服务调用——估算根据字数和语速参数在本地计算。
+基于 Script 实际读音文本的确定性语音时长规划。无需外部服务调用——时长根据读音单位和口播密度策略在本地计算。
 
 ```svml
 <estimate:Speech id="hook-duration"
@@ -60,7 +61,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `source` | 是 | 要估算的 Script 文本——通常为 `{script.segment.NAME.speech}` |
-| `policy` | 是 | 控制语速和边界的 SVS 语音 Recipe |
+| `policy` | 否 | 控制语速和边界的 SVS 语音 Recipe；省略时使用内联参数 |
 
 `policy` 引用一个 SVS Recipe（参见 [SVS 样式表](./styles.md#speech-estimation)）：
 
@@ -68,10 +69,9 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 speech.normal {
   language: en;
   pace: normal;
-  padding: 0.3;
   min: 4;
   max: 15;
-  rounding: ceil;
+  rounding: round;
 }
 ```
 
@@ -80,8 +80,13 @@ speech.normal {
 ```svml
 <estimate:Speech id="opening-duration"
   source={story.segment.opening.speech}
-  language="en" pace="normal" padding="0.3" min="4" max="15" rounding="ceil"/>
+  language="en" pace="normal" min="4" max="15" rounding="round"/>
 ```
+
+英语官方档位为 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒。
+项目需要档位之间的连续值时，可以用 `rate="4.75"` 代替 `pace`；二者不能同时出现。
+策略没有隐式值：无论内联还是引用 Recipe，都必须写明 `language`、`min`、`max`、
+`rounding`，并且在 `pace` 和 `rate` 中恰好选择一个。
 
 **输出：** `{hook-duration.duration}`——估算的时长（秒），传递给生成组件。
 
@@ -105,62 +110,66 @@ speech.normal {
 
 元素主体就是精确的 Text 值。`text:Render` 也能用模板和显式图输入产出同一类型。
 
-## seedance:Speech
+## Seedance 三种调用形状
 
-通过 Seedance 模型生成口播视频片段。这是低层生成组件——完整的模型输入 Text 已包含需要朗读的台词。
+Seedance 只暴露模型能力，不暴露“口播”“B-roll”等创作用途。`standard`、`fast`、`mini`
+选择模型版本；调用形状则独立分为三种。三者都消费完整的普通 `Text` Prompt，并输出
+`{id.video}`。
+
+### seedance:TextVideo
+
+纯 Prompt 生成。只有这种形状允许 `web-search`：
 
 ```svml
-<seedance:Speech id="alice-take" model="mini"
+<seedance:TextVideo id="ambient" model="mini"
+  prompt={ambient-direction} duration="5" web-search="false"/>
+```
+
+### seedance:FrameVideo
+
+必须给首帧，可以额外给尾帧：
+
+```svml
+<seedance:FrameVideo id="transition" model="fast"
+  prompt={transition-direction} duration="5"
+  first-frame={opening-image} last-frame={closing-image}/>
+```
+
+### seedance:ReferenceVideo
+
+多模态参考生成。至少需要一个 `Reference` 子元素，可以显式接入图片、视频和音频：
+
+```svml
+<seedance:ReferenceVideo id="alice-take" model="mini"
   prompt={alice-direction}
-  duration="8">
+  duration={alice-duration.duration}
+  generate-audio="true">
   <seedance:Reference image={alice-reference}/>
-</seedance:Speech>
+  <seedance:Reference audio={alice-voice}/>
+</seedance:ReferenceVideo>
 ```
 
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `model` | 是 | Seedance 模型名称：`mini` |
-| `prompt` | 是 | 完整模型输入——引用普通 `Text` |
-| `duration` | 是 | 片段时长（秒）（数字或 `{estimate.duration}` 引用） |
-| `resolution` | 否 | 输出分辨率：`480p`、`720p`（默认值因模型而异） |
-| `aspect-ratio` | 否 | 输出宽高比：`9:16`、`16:9`、`1:1` |
+这个低层组件并不知道它被用来做口播；用途只存在于传入的 Text 或 `speaker:Take` 之类的
+高层包中。公共属性包括 `id`、`model`、`prompt`、`duration`、`resolution`、
+`aspect-ratio`、`generate-audio`；`duration` 可以是字面量或显式 `{estimate.duration}` 边。
 
-### seedance:Reference
-
-提供参考图片以保持角色一致性的子元素：
+可以直接抽取前一段生成视频里的音频，并通过普通图边给后续片段当作参考。这个操作不会
+把音频提升成语音证据，也不会凭空附加说话人语义：
 
 ```svml
-<seedance:Reference image={alice-reference}/>
+<mediaop:ExtractAudio id="voice-from-opening"
+  source={opening.video} audio="default"/>
+
+<seedance:ReferenceVideo id="follow-up" model="mini"
+  prompt={follow-up-direction} duration="5" generate-audio="true">
+  <seedance:Reference image={presenter-reference}/>
+  <seedance:Reference audio={voice-from-opening.audio}/>
+</seedance:ReferenceVideo>
 ```
 
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `image` | 是 | 引用 `media:Image` 组件 |
-
-**输出：** `{alice-take}` 或 `{alice-take.video}`——生成的视频，传递给 `speech:Spine`。
-
-## seedance:Video
-
-生成独立的视频片段（非说话人头部——无对话口型同步）。
-
-```svml
-<seedance:Video id="product-motion" model="mini"
-  prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference}/>
-</seedance:Video>
-```
-
-| 属性 | 必填 | 说明 |
-|---|---|---|
-| `id` | 是 | 唯一标识符 |
-| `model` | 是 | Seedance 模型名称：`mini` |
-| `prompt` | 是 | 完整模型输入——引用普通 `Text` |
-| `duration` | 是 | 片段时长（秒） |
-
-同样接受 `<seedance:Reference>` 子元素作为参考图片。
-
-**输出：** `{product-motion.video}`——用作 B-roll 来源。
+同一个媒体操作包还提供 `Transform`（按顺序截取、变速）和 `ExtractFrame`（首帧、尾帧、
+指定帧或指定时间取图）。本地 FFmpeg 与 AWS Lambda 只是这些精确 Need 的可互换 Runtime
+Endpoint，不会改变作者图。
 
 ## speaker:Take
 

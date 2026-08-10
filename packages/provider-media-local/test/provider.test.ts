@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { artifactTypes } from "@narratage/artifact";
 import { mediaTypes, sealRenderedVisual, verifyMediaInspection, verifyMuxedMedia, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
 import type { MediaAudioStream, MediaInspection, MuxedMedia, SynchronizedMedia, TimelineAudio } from "@narratage/media";
 import { assertSpeechEvidenceAudioIdentity, speechTypes } from "@narratage/speech";
@@ -524,6 +525,96 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
     assert.throws(() => selectMediaStreams(inspection, invalid), /no eligible stream/u);
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("local media Provider transforms A/V and extracts ordinary audio and frame Artifacts", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-ordinary-ops-"));
+  try {
+    const sourcePath = await fixture(root);
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
+    const inspection = await inspectArtifact(artifacts, source);
+    const selectionRequest = sealMediaSelectionRequest({
+      contract: "svml.media-selection-request@1",
+      video: { mode: "primary-moving" },
+      audio: { mode: "default" },
+      spanAuthority: "video",
+      frameRate: { numerator: 30, denominator: 1 },
+    });
+    const selection = selectMediaStreams(inspection, selectionRequest);
+    const normalized = await normalizeArtifact({
+      artifacts, source, inspection, selection, frameRate: selectionRequest.frameRate,
+    });
+    const executeArtifact = async (request: Need) => {
+      const provider = await handlerFor(request);
+      const result = await provider.handler({
+        command: { kind: "fulfill-need", id: `command:${request.id}`, need: request },
+        need: request,
+        artifacts,
+        credentials: {},
+      });
+      assert.equal(result.value.kind, "blob");
+      return result.value.kind === "blob" ? result.value : (() => { throw new Error("expected BlobArtifact"); })();
+    };
+
+    const transformed = await executeArtifact(need(
+      "need:transform",
+      mediaPipelineCapabilities.transform,
+      artifactTypes.blob,
+      canonicalize({
+        contract: "svml.transform-media-request@1",
+        media: normalized,
+        program: {
+          contract: "svml.media-transform-program@1",
+          operations: [
+            { kind: "trim", tailSec: 0.2 },
+            { kind: "retime", rate: 2, pitch: "preserve" },
+          ],
+        },
+      }),
+    ));
+    const transformedInspection = await inspectArtifact(artifacts, transformed);
+    assert.equal(transformedInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 12);
+
+    const audioIndex = inspection.streams.find((item) => item.kind === "audio")!.index;
+    const extractedAudio = await executeArtifact(need(
+      "need:extract-audio",
+      mediaPipelineCapabilities.extractAudio,
+      artifactTypes.blob,
+      canonicalize({
+        contract: "svml.extract-audio-request@1",
+        source,
+        streamIndex: audioIndex,
+        output: { container: "wav", codec: "pcm_s16le", sampleRate: 48_000, channels: 2 },
+      }),
+    ));
+    assert.equal(extractedAudio.mediaType, "audio/wav");
+    const audioInspection = await inspectArtifact(artifacts, extractedAudio);
+    const audio = audioInspection.streams.find((item) => item.kind === "audio");
+    assert.ok(audio?.kind === "audio" && audio.sampleRate === 48_000 && audio.channels === 2);
+
+    const video = inspection.streams.find((item) => item.kind === "video" && item.role === "moving")!;
+    const extractedFrame = await executeArtifact(need(
+      "need:extract-frame",
+      mediaPipelineCapabilities.extractFrame,
+      artifactTypes.blob,
+      canonicalize({
+        contract: "svml.extract-frame-request@1",
+        source,
+        streamIndex: video.index,
+        sourceFrameCount: video.decodedUnitCount,
+        at: { kind: "last" },
+        output: { format: "png" },
+      }),
+    ));
+    assert.equal(extractedFrame.mediaType, "image/png");
+    const frameInspection = await inspectArtifact(artifacts, extractedFrame);
+    assert.equal(frameInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true }).catch(() => {});
   }
 });
 

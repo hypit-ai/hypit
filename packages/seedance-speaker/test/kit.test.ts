@@ -12,7 +12,7 @@ import {
 } from "@narratage/text";
 import { parseSvs } from "@narratage/svs";
 import {
-  createSpeakerSpeechProgram,
+  createSpeakerDurationProgram,
   createSpeakerTextBindings,
   sealSpeakerTakeIntent,
   speakerMethodDefaults,
@@ -67,7 +67,7 @@ test("official UGC Kit renders one ordinary ordered Text value", () => {
 
 test("Speaker method preserves exact Seedance settings while prompt and media stay on graph edges", () => {
   const take = intent();
-  const program = createSpeakerSpeechProgram(take);
+  const program = createSpeakerDurationProgram(take);
   assert.equal(program.model, "seedance-2-mini");
   assert.deepEqual(program.ports.resolution, ["720p"]);
   assert.deepEqual(program.ports.aspectRatio, ["9:16"]);
