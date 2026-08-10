@@ -15,15 +15,16 @@
     "@narratage/elaborator": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
+    "@narratage/spatial": "workspace:*",
     "@narratage/svs": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
     "@narratage/component-kit": "workspace:*",
     "@narratage/core": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/hyperframes": "workspace:*",
-    "@narratage/text-track": "workspace:*",
+    "@narratage/typography-track": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }

@@ -1,62 +1,61 @@
-import { narrativeTypes } from "@narratage/narrative";
-import type { NarrativeDialogueExcerpt } from "@narratage/narrative";
-import { speechTypes } from "@narratage/speech";
-import type { SpeechDuration } from "@narratage/speech";
 import { artifactTypes } from "@narratage/artifact";
-import type { BlobRef, CanonicalValue } from "@narratage/protocol";
+import {
+  generationPort,
+  sealGenerationMediaBinding,
+  sealGenerationRequestDraft,
+} from "@narratage/generation";
 import type {
+  GenerationMediaPort,
+  GenerationMediaRole,
+  GenerationPortTable,
+} from "@narratage/generation";
+import { exactModelMediaInputNames, exactModelTextInputName } from "@narratage/model-kit";
+import type { ExactModelEndpoint, ExactModelMediaInput } from "@narratage/model-kit";
+import type { CanonicalValue } from "@narratage/protocol";
+import { speechTypes } from "@narratage/speech";
+import { textTypes, verifyText } from "@narratage/text";
+import type {
+  MarkupAttributeValue,
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+} from "@narratage/markup";
 
 import {
-  createSeedanceGenerationFragment,
-  createSeedanceSpeechGenerationFragment,
+  createSeedanceAssembledGenerationFragment,
+  createSeedanceDurationGenerationFragment,
 } from "./fragment.js";
-import { generationPort } from "@narratage/generation";
-import type { GenerationMediaRole, GenerationPortTable } from "@narratage/generation";
-
 import {
-  sealSeedancePrompt,
-  sealSeedanceRequest,
-  sealSeedanceSpeechProgram,
+  sealSeedanceDurationProgram,
+  seedanceDurationCompileProducers,
   seedanceEndpoints,
   seedancePorts,
-  seedanceSpeechCompileProducers,
   seedanceTypes,
-  verifySeedancePrompt,
 } from "./index.js";
-import type {
-  SeedanceModel,
-  SeedancePortMap,
-  SeedancePrompt,
-} from "./index.js";
+import type { SeedanceModel, SeedancePortMap } from "./index.js";
 
-/** `role` is the media kind the port accepts; `label` is the author's own note about it. */
-type ReferenceInput = {
+type MediaInput = {
+  readonly port: "referenceImage" | "referenceVideo" | "referenceAudio" | "firstFrame" | "lastFrame";
   readonly role: GenerationMediaRole;
-  readonly artifact: BlobRef;
-  readonly label?: string;
+  readonly source: SurfaceResolvedReference;
 };
 
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
 }
 
-function attributes(
-  element: StructuredElement,
-  required: readonly string[],
-  optional: readonly string[] = [],
-): void {
+function attributes(element: StructuredElement, required: readonly string[], optional: readonly string[] = []): void {
   const allowed = new Set([...required, ...optional]);
   const unknown = Object.keys(element.attributes).filter((name) => !allowed.has(name));
   if (unknown.length > 0 || required.some((name) => element.attributes[name] === undefined)) {
-    throw new Error(
-      `${element.name} requires ${required.join(", ")}`
-      + (optional.length === 0 ? "" : `; optional: ${optional.join(", ")}`),
-    );
+    throw new Error(`${element.name} requires ${required.join(", ")}`
+      + (optional.length === 0 ? "" : `; optional: ${optional.join(", ")}`));
+  }
+}
+
+function empty(element: StructuredElement): void {
+  if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
+    throw new Error(`${element.name} must be empty`);
   }
 }
 
@@ -77,8 +76,8 @@ function optionalStringAttribute(element: StructuredElement, name: string): stri
   return value.trim();
 }
 
-function referenceAttribute(element: StructuredElement, name: string): string {
-  const value: TextAttributeValue | undefined = element.attributes[name];
+function referencePath(element: StructuredElement, name: string): string {
+  const value: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof value !== "object" || value.kind !== "reference" || value.path.length === 0) {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }
@@ -86,9 +85,7 @@ function referenceAttribute(element: StructuredElement, name: string): string {
 }
 
 function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
+  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
 }
 
 function resolved(
@@ -96,43 +93,32 @@ function resolved(
   name: string,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {
-  const path = referenceAttribute(element, name);
+  const path = referencePath(element, name);
   const value = resolveReference(path);
   if (value === undefined) throw new Error(`${element.name}.${name} cannot resolve ${path}`);
   return value;
 }
 
-function inline(reference: SurfaceResolvedReference, subject: string): CanonicalValue {
+function prompt(reference: SurfaceResolvedReference, subject: string): void {
+  if (!sameType(reference.type, textTypes.text)) throw new Error(`${subject} must reference Text`);
   const value = reference.record?.value;
-  if (value?.kind !== "inline") throw new Error(`${subject} must reference an authored value declared before use`);
-  return value.value;
+  if (value !== undefined) {
+    if (value.kind !== "inline") throw new Error(`${subject} has an invalid authored Text value`);
+    verifyText(value.value);
+  }
 }
 
-function prompt(reference: SurfaceResolvedReference, subject: string): SeedancePrompt {
-  if (!sameType(reference.type, seedanceTypes.prompt)) throw new Error(`${subject} must reference a Seedance Prompt`);
-  const value = inline(reference, subject);
-  verifySeedancePrompt(value);
-  return value;
-}
-
-function blob(reference: SurfaceResolvedReference, subject: string): BlobRef {
+function mediaReference(
+  reference: SurfaceResolvedReference,
+  role: GenerationMediaRole,
+  subject: string,
+): SurfaceResolvedReference {
   if (!sameType(reference.type, artifactTypes.blob)) throw new Error(`${subject} must reference a BlobArtifact`);
   const value = reference.record?.value;
-  if (value?.kind !== "blob") throw new Error(`${subject} must reference an authored artifact declared before use`);
-  return value;
-}
-
-function normalizedText(element: StructuredElement): string {
-  if (element.children.some((child) => child.kind === "element")) {
-    throw new Error(`${element.name} accepts text only`);
+  if (value !== undefined && (value.kind !== "blob" || !value.mediaType.startsWith(`${role}/`))) {
+    throw new Error(`${subject} must reference ${role} media`);
   }
-  const raw = element.children.map((child) => child.kind === "text" ? child.value : "").join("");
-  const lines = raw.replaceAll("\r\n", "\n").split("\n");
-  while (lines[0]?.trim() === "") lines.shift();
-  while (lines.at(-1)?.trim() === "") lines.pop();
-  const indents = lines.filter((line) => line.trim()).map((line) => /^\s*/u.exec(line)?.[0].length ?? 0);
-  const indent = indents.length === 0 ? 0 : Math.min(...indents);
-  return lines.map((line) => line.slice(indent).trimEnd()).join("\n").trim();
+  return reference;
 }
 
 function modelSelection(element: StructuredElement) {
@@ -163,7 +149,6 @@ function booleanAttribute(element: StructuredElement, name: string, fallback: bo
   throw new Error(`${element.name}.${name} must be true or false`);
 }
 
-/** The model's own port table is the only source of truth for these bounds. */
 function enumeratedPort(table: GenerationPortTable, name: string): readonly (string | number)[] {
   const port = generationPort(table, name);
   if (port.value.kind !== "enum") throw new Error(`${table.model} port ${name} is not enumerated`);
@@ -190,13 +175,12 @@ function generationSettings(
   }
   const aspectRatios = enumeratedPort(table, "aspectRatio");
   const aspectRatio = optionalStringAttribute(element, "aspect-ratio") ?? "9:16";
-  if (!aspectRatios.includes(aspectRatio)) {
-    throw new Error(`${element.name}.aspect-ratio is not supported by Seedance`);
-  }
+  if (!aspectRatios.includes(aspectRatio)) throw new Error(`${element.name}.aspect-ratio is not supported by Seedance`);
   return {
     duration: [durationSec],
     resolution: [resolution],
     aspectRatio: [aspectRatio],
+    generateAudio: [booleanAttribute(element, "generate-audio", false)],
     webSearch: [booleanAttribute(element, "web-search", false)],
   };
 }
@@ -205,84 +189,96 @@ const REFERENCE_PORTS = {
   image: "referenceImage",
   video: "referenceVideo",
   audio: "referenceAudio",
-} as const satisfies Record<GenerationMediaRole, string>;
+} as const;
 
-function references(
+function referenceInputs(
   element: StructuredElement,
   model: SeedanceModel,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
-): ReferenceInput[] {
-  const table = seedancePorts[model];
+): MediaInput[] {
   const accepted = Object.keys(REFERENCE_PORTS) as readonly GenerationMediaRole[];
-  const result: ReferenceInput[] = [];
+  const result: MediaInput[] = [];
   for (const child of element.children) {
     if (child.kind === "text") {
       if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Reference children`);
       continue;
     }
     if (localName(child.name) !== "Reference") throw new Error(`${element.name} accepts only Reference children`);
-    attributes(child, [], [...accepted, "role"]);
+    attributes(child, [], accepted);
+    empty(child);
     const kinds = accepted.filter((kind) => child.attributes[kind] !== undefined);
     if (kinds.length !== 1) throw new Error(`${child.name} requires exactly one of ${accepted.join(", ")}`);
     const role = kinds[0]!;
-    const source = resolved(child, role, resolveReference);
-    const artifact = blob(source, `${child.name}.${role}`);
-    if (!artifact.mediaType.startsWith(`${role}/`)) {
-      throw new Error(`${child.name}.${role} must reference ${role} media`);
-    }
-    const label = optionalStringAttribute(child, "role");
-    result.push({ role, artifact, ...(label === undefined ? {} : { label }) });
+    result.push({
+      role,
+      port: REFERENCE_PORTS[role],
+      source: mediaReference(resolved(child, role, resolveReference), role, `${child.name}.${role}`),
+    });
   }
-  // Every bound below is read from the model's own port table, never repeated here.
+  if (result.length === 0) throw new Error(`${element.name} requires at least one Reference child`);
+  const table = seedancePorts[model];
   for (const role of accepted) {
     const port = generationPort(table, REFERENCE_PORTS[role]);
     const used = result.filter((item) => item.role === role).length;
-    if (used > port.maxItems) {
-      throw new Error(`${element.name} accepts at most ${port.maxItems} ${role} references`);
-    }
+    if (used > port.maxItems) throw new Error(`${element.name} accepts at most ${port.maxItems} ${role} references`);
   }
   return result;
 }
 
-function referencePrompt(values: readonly ReferenceInput[]): string {
-  const roles = values.flatMap((item, index) => item.label === undefined
-    ? []
-    : [`Reference ${item.role} ${index + 1} is the ${item.label}.`]);
-  return roles.length === 0 ? "" : `\n\nReference roles:\n${roles.join("\n")}`;
-}
-
-/** Authored references split into the model's per-modality ports; labels never reach the wire. */
-function referencePorts(values: readonly ReferenceInput[]): SeedancePortMap {
-  return Object.fromEntries((Object.keys(REFERENCE_PORTS) as readonly GenerationMediaRole[])
-    .map((role) => [REFERENCE_PORTS[role], values
-      .filter((item) => item.role === role)
-      .map(({ artifact }) => ({ role, artifact }))])
-    .filter(([, items]) => (items as readonly unknown[]).length > 0));
-}
-
-function dialogueExcerpt(reference: SurfaceResolvedReference, subject: string): { readonly dialogue: string } {
-  if (!sameType(reference.type, narrativeTypes.dialogueExcerpt)) {
-    throw new Error(`${subject} must reference a NarrativeDialogueExcerpt such as script.segment.opening.dialogue`);
+function frameInputs(
+  element: StructuredElement,
+  resolveReference: (path: string) => SurfaceResolvedReference | undefined,
+): MediaInput[] {
+  const first = mediaReference(resolved(element, "first-frame", resolveReference), "image", `${element.name}.first-frame`);
+  const result: MediaInput[] = [{ port: "firstFrame", role: "image", source: first }];
+  if (element.attributes["last-frame"] !== undefined) {
+    result.push({
+      port: "lastFrame",
+      role: "image",
+      source: mediaReference(resolved(element, "last-frame", resolveReference), "image", `${element.name}.last-frame`),
+    });
   }
-  const value = inline(reference, subject) as unknown as {
-    readonly contract: string;
-    readonly dialogue?: string;
-    readonly [key: string]: CanonicalValue | undefined;
-  };
-  if (
-    value.contract !== "svml.narrative-dialogue-excerpt@1"
-    || typeof value.dialogue !== "string"
-    || typeof value.id !== "string"
-    || !Number.isSafeInteger(value.tokenStart)
-    || !Number.isSafeInteger(value.tokenEndExclusive)
-  ) {
-    throw new Error(`${subject} NarrativeDialogueExcerpt is invalid`);
-  }
-  if (value.dialogue.trim().length === 0) throw new Error(`${subject} contains no spoken text`);
-  return { dialogue: value.dialogue };
+  return result;
 }
 
-function speechDurationReference(
+function assembleMedia(
+  id: string,
+  endpoint: ExactModelEndpoint,
+  values: readonly MediaInput[],
+  range: StructuredElement["range"],
+) {
+  const records: Array<{
+    readonly id: string;
+    readonly type: SurfaceResolvedReference["type"];
+    readonly value: { readonly kind: "inline"; readonly value: CanonicalValue };
+    readonly range: StructuredElement["range"];
+  }> = [];
+  const inputs: Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {};
+  const mediaInputs = values.map((value, index): ExactModelMediaInput => {
+    const name = `media-${String(index + 1).padStart(4, "0")}`;
+    const binding = endpoint.mediaBindings[value.port];
+    if (binding === undefined) throw new Error(`${endpoint.ports.model} has no media port ${value.port}`);
+    const port = generationPort(endpoint.ports, value.port);
+    if (port.value.kind !== "media") throw new Error(`${endpoint.ports.model} port ${value.port} is not media`);
+    const bindingId = `${id}.${name}.binding`;
+    records.push({
+      id: bindingId,
+      type: binding.type,
+      value: {
+        kind: "inline",
+        value: sealGenerationMediaBinding(port as GenerationMediaPort, { role: value.role }) as unknown as CanonicalValue,
+      },
+      range,
+    });
+    const names = exactModelMediaInputNames(name);
+    inputs[names.binding] = { kind: "record", id: bindingId };
+    inputs[names.artifact] = value.source.ref;
+    return { name, port: value.port };
+  });
+  return { mediaInputs, records, inputs };
+}
+
+function durationReference(
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference | undefined {
@@ -294,118 +290,115 @@ function speechDurationReference(
   return result;
 }
 
-function generationOutput(
-  element: StructuredElement,
-  request: ReturnType<typeof sealSeedanceRequest>,
-  output: string,
-) {
-  const { endpoint } = modelSelection(element);
-  const fragment = createSeedanceGenerationFragment(endpoint);
-  const requestId = `${stringAttribute(element, "id")}.request`;
+function generationOutput(args: {
+  readonly element: StructuredElement;
+  readonly endpoint: ExactModelEndpoint;
+  readonly model: SeedanceModel;
+  readonly promptSource: SurfaceResolvedReference;
+  readonly media: readonly MediaInput[];
+  readonly resolveReference: (path: string) => SurfaceResolvedReference | undefined;
+}) {
+  const { element, endpoint, model, promptSource } = args;
   const id = stringAttribute(element, "id");
+  const assembled = assembleMedia(id, endpoint, args.media, element.range);
+  const duration = durationReference(element, args.resolveReference);
+  if (duration !== undefined) {
+    const { duration: _later, ...ports } = generationSettings(element, model, 4);
+    const program = sealSeedanceDurationProgram({
+      contract: "svml.seedance-duration-program@1",
+      model,
+      ports,
+    });
+    const programId = `${id}.duration-program`;
+    const fragment = createSeedanceDurationGenerationFragment(
+      endpoint,
+      seedanceDurationCompileProducers[model],
+      assembled.mediaInputs,
+      [{ name: "prompt", port: "prompt" }],
+    );
+    return {
+      records: [{
+        id: programId,
+        type: seedanceTypes.durationProgram,
+        value: { kind: "inline" as const, value: program as unknown as CanonicalValue },
+        range: element.range,
+      }, ...assembled.records],
+      components: [{
+        id,
+        fragment: fragment.id,
+        inputs: {
+          program: { kind: "record" as const, id: programId },
+          duration: duration.ref,
+          [exactModelTextInputName("prompt")]: promptSource.ref,
+          ...assembled.inputs,
+        },
+        outputs: { video: `${id}.video` },
+        range: element.range,
+      }],
+      fragments: [fragment],
+    };
+  }
+  const draft = sealGenerationRequestDraft(seedancePorts[model], generationSettings(element, model));
+  const fragment = createSeedanceAssembledGenerationFragment(
+    endpoint,
+    assembled.mediaInputs,
+    [{ name: "prompt", port: "prompt" }],
+  );
+  const draftId = `${id}.draft`;
   return {
     records: [{
-      id: requestId,
-      type: endpoint.requestType,
-      value: { kind: "inline" as const, value: request as unknown as CanonicalValue },
+      id: draftId,
+      type: endpoint.draftType,
+      value: { kind: "inline" as const, value: draft as unknown as CanonicalValue },
       range: element.range,
-    }],
+    }, ...assembled.records],
     components: [{
       id,
       fragment: fragment.id,
-      inputs: { request: { kind: "record" as const, id: requestId } },
-      outputs: { video: output },
+      inputs: {
+        draft: { kind: "record" as const, id: draftId },
+        [exactModelTextInputName("prompt")]: promptSource.ref,
+        ...assembled.inputs,
+      },
+      outputs: { video: `${id}.video` },
       range: element.range,
     }],
     fragments: [fragment],
   };
 }
 
-export const decodeSeedancePromptSurface: StructuredSurfaceHandler = ({ element }) => {
-  attributes(element, ["id"]);
-  const id = stringAttribute(element, "id");
-  const value = sealSeedancePrompt(normalizedText(element));
-  return {
-    records: [{
-      id,
-      type: seedanceTypes.prompt,
-      value: { kind: "inline", value: value as unknown as CanonicalValue },
-      range: element.range,
-    }],
-    components: [],
-    fragments: [],
-  };
+const COMMON_OPTIONAL = ["resolution", "aspect-ratio", "generate-audio"] as const;
+
+export const decodeSeedanceTextVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  attributes(element, ["id", "model", "prompt", "duration"], [...COMMON_OPTIONAL, "web-search"]);
+  empty(element);
+  const selected = modelSelection(element);
+  const promptSource = resolved(element, "prompt", resolveReference);
+  prompt(promptSource, `${element.name}.prompt`);
+  return generationOutput({ element, ...selected, promptSource, media: [], resolveReference });
 };
 
-export const decodeSeedanceVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "model", "prompt", "duration"], [
-    "resolution", "aspect-ratio", "generate-audio", "web-search",
-  ]);
+export const decodeSeedanceFrameVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  attributes(element, ["id", "model", "prompt", "duration", "first-frame"], [...COMMON_OPTIONAL, "last-frame"]);
+  empty(element);
   const selected = modelSelection(element);
-  const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
-  const refs = references(element, selected.model, resolveReference);
-  const request = sealSeedanceRequest(selected.model, {
-    prompt: [declaredPrompt.text + referencePrompt(refs)],
-    ...referencePorts(refs),
-    ...generationSettings(element, selected.model),
-    generateAudio: [booleanAttribute(element, "generate-audio", false)],
+  const promptSource = resolved(element, "prompt", resolveReference);
+  prompt(promptSource, `${element.name}.prompt`);
+  return generationOutput({
+    element, ...selected, promptSource, media: frameInputs(element, resolveReference), resolveReference,
   });
-  return generationOutput(element, request, `${stringAttribute(element, "id")}.video`);
 };
 
-export const decodeSeedanceSpeechSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "model", "dialogue", "prompt", "duration"], [
-    "resolution", "aspect-ratio", "web-search",
-  ]);
+export const decodeSeedanceReferenceVideoSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  attributes(element, ["id", "model", "prompt", "duration"], COMMON_OPTIONAL);
   const selected = modelSelection(element);
-  const declaredPrompt = prompt(resolved(element, "prompt", resolveReference), `${element.name}.prompt`);
-  const spoken = dialogueExcerpt(resolved(element, "dialogue", resolveReference), `${element.name}.dialogue`);
-  const refs = references(element, selected.model, resolveReference);
-  const duration = speechDurationReference(element, resolveReference);
-  const promptText = `${declaredPrompt.text}${referencePrompt(refs)}\n\nSpoken dialogue — say exactly:\n${spoken.dialogue}`;
-  if (duration !== undefined) {
-    const { duration: _later, ...settings } = generationSettings(element, selected.model, 4);
-    const program = sealSeedanceSpeechProgram({
-      contract: "svml.seedance-speech-spine@1",
-      model: selected.model,
-      ports: {
-        prompt: [promptText],
-        ...referencePorts(refs),
-        ...settings,
-        generateAudio: [true],
-      },
-    });
-    const id = stringAttribute(element, "id");
-    const programId = `${id}.program`;
-    const fragment = createSeedanceSpeechGenerationFragment(
-      selected.endpoint,
-      seedanceSpeechCompileProducers[selected.model],
-    );
-    return {
-      records: [{
-        id: programId,
-        type: seedanceTypes.speechSpine,
-        value: { kind: "inline", value: program as unknown as CanonicalValue },
-        range: element.range,
-      }],
-      components: [{
-        id,
-        fragment: fragment.id,
-        inputs: {
-          program: { kind: "record", id: programId },
-          duration: duration.ref,
-        },
-        outputs: { video: id },
-        range: element.range,
-      }],
-      fragments: [fragment],
-    };
-  }
-  const request = sealSeedanceRequest(selected.model, {
-    prompt: [promptText],
-    ...referencePorts(refs),
-    ...generationSettings(element, selected.model),
-    generateAudio: [true],
+  const promptSource = resolved(element, "prompt", resolveReference);
+  prompt(promptSource, `${element.name}.prompt`);
+  return generationOutput({
+    element,
+    ...selected,
+    promptSource,
+    media: referenceInputs(element, selected.model, resolveReference),
+    resolveReference,
   });
-  return generationOutput(element, request, stringAttribute(element, "id"));
 };

@@ -54,11 +54,13 @@ function validateBasis(narrative: Narrative, basis: SpeechAudioBasis): void {
   if (
     !Number.isFinite(basis.programSpace.durationSec)
     || basis.programSpace.durationSec <= 0
-    || Math.abs(basis.audio.durationSec - basis.programSpace.durationSec) > EPSILON
   ) {
-    fail("SPEECH_BASIS_DURATION", "SpeechAudioBasis audio and ProgramSpace must have the same positive duration.");
+    fail("SPEECH_BASIS_DURATION", "SpeechAudioBasis ProgramSpace must have a positive duration.");
   }
-  if (!isDigest(basis.audio.digest)) fail("SPEECH_AUDIO_DIGEST", "SpeechBasis audio digest is invalid.");
+  if (basis.audio.kind !== "blob" || !isDigest(basis.audio.digest)
+    || basis.audio.mediaType !== "audio/wav" || !Number.isSafeInteger(basis.audio.size) || basis.audio.size < 0) {
+    fail("SPEECH_AUDIO_DIGEST", "SpeechBasis audio BlobRef is invalid.");
+  }
   if (basis.segments.length !== narrative.segments.length) {
     fail("SPEECH_BASIS_SEGMENTS", "SpeechAudioBasis must cover every Narrative Segment exactly once.");
   }

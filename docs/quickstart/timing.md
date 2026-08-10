@@ -12,6 +12,7 @@ steps produce the **ProgramSpace** and **SemanticMap** that every downstream com
 ```svml
 <import as="speech" from="@narratage/speech-spine@1"/>
 <import as="whisperx" from="@narratage/whisperx@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 ```
 
 ## speech:Spine
@@ -20,7 +21,8 @@ Concatenates multiple takes into one ordered audio/visual coordinate space. The 
 program order — the final sequence of Segments in the finished video.
 
 ```svml
-<speech:Spine id="speech">
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<speech:Spine id="speech" canvas={vertical}>
   <speech:Take source={hook-take.video} segment={story.segment.hook}/>
   <speech:Take source={meeting-take.video} segment={story.segment.meeting}/>
   <speech:Take source={evidence-take.video} segment={story.segment.evidence}/>
@@ -31,6 +33,7 @@ program order — the final sequence of Segments in the finished video.
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Unique identifier |
+| `canvas` | yes | Explicit CanvasSpace used by the restricted Media visual projection |
 
 ### speech:Take
 
@@ -38,7 +41,7 @@ Each `<speech:Take>` child binds a generated video to a Script Segment:
 
 | Attribute | Required | Description |
 |---|---|---|
-| `source` | yes | Generated video — from `seedance:Speech`, `speaker:Take`, etc. |
+| `source` | yes | Generated video — for example, from `seedance:ReferenceVideo` |
 | `segment` | yes | Script Segment this take corresponds to — e.g. `{story.segment.hook}` |
 
 The order of `<speech:Take>` children **determines the program order**. The first take starts at
@@ -74,7 +77,7 @@ This produces the **SemanticMap** — the bridge between Script text and physica
 
 | Output | Type | Used by |
 |---|---|---|
-| `{timing.map}` | CompleteSemanticMap | `caption:Track`, `broll:Track`, `text:Track` — timed placement |
+| `{timing.map}` | CompleteSemanticMap | Caption Style-family Tracks, `media-track:Track`, `text:Track` — timed placement |
 
 The SemanticMap maps every authored Script anchor to a time point. It covers all `2M + 2N` identities
 (where M = total speech tokens, N = number of Segments). This is how Selections and Moments declared
@@ -86,8 +89,8 @@ ProgramSpace is not a component you declare — it is produced by `speech:Spine`
 component that needs to know the total program duration and frame domain.
 
 ```svml
-<film:Film id="main" space={speech.space} ...>
-<caption:Track id="captions" ... space={speech.space} .../>
+<film:Film id="main" canvas={vertical} space={speech.space} ...>
+<caption-fine:Track id="captions" ... space={speech.space} .../>
 <text:Track id="titles" space={speech.space}>
 <render:Video id="final" composition={main.composition} space={speech.space}/>
 ```
@@ -104,22 +107,21 @@ Every component that operates in the time domain takes a `space` attribute point
 ## SemanticMap
 
 The SemanticMap is the typed bridge between Script text and physical time. When you write
-`during={story.selection.demo}` on a B-roll item, the component uses the SemanticMap to look up the
+`during={story.selection.demo}` on a Media Item, the component uses the SemanticMap to look up the
 exact frame range that Selection covers. Without a SemanticMap, Selections and Moments have no
 physical meaning.
 
 Components that use the map take it via the `map` attribute:
 
 ```svml
-<broll:Track id="cards" map={timing.map} ...>
-<caption:Track id="captions" ... map={timing.map} .../>
+<media-track:Track id="cards" map={timing.map} ...>
+<caption-fine:Track id="captions" ... map={timing.map} .../>
 ```
 
-Each point in the map can be:
-
-- **measured** — directly observed by WhisperX alignment
-- **derived** — computed from measured points via interpolation
-- **estimated** — from the initial duration estimate (used before alignment runs)
+The map contains final token windows and semantic anchor points only. It does not propagate
+`measured`, `derived` or `estimated` labels. WhisperX evidence and the deterministic M:N aligner are
+responsible for using the available recording evidence; downstream Tracks receive one complete map
+and do not reinterpret how each point was obtained.
 
 ## Combination example
 
@@ -128,11 +130,13 @@ The complete timing stage, from generated takes to map and space:
 ```svml
 <import as="speech" from="@narratage/speech-spine@1"/>
 <import as="whisperx" from="@narratage/whisperx@1"/>
+<import as="space" from="@narratage/spatial@1"/>
 
 <!-- Assemble takes in program order -->
-<speech:Spine id="speech">
-  <speech:Take source={opening-take} segment={story.segment.opening}/>
-  <speech:Take source={answer-take} segment={story.segment.answer}/>
+<space:Canvas id="vertical" width="1080" height="1920"/>
+<speech:Spine id="speech" canvas={vertical}>
+  <speech:Take source={opening-take.video} segment={story.segment.opening}/>
+  <speech:Take source={answer-take.video} segment={story.segment.answer}/>
 </speech:Spine>
 
 <!-- Measure word timing -->
@@ -148,13 +152,13 @@ The complete timing stage, from generated takes to map and space:
 The data flow:
 
 ```text
-speaker:Take outputs ──► speech:Spine ──► whisperx:Alignment
+generated video(s) ─────► speech:Spine ──► whisperx:Alignment
                               │                    │
                          .visual              .map (SemanticMap)
                          .audio                    │
                          .audioTrack               ▼
-                         .space ──────────► caption:Track
-                              │            broll:Track
+                         .space ──────────► caption-fine:Track
+                              │            media-track:Track
                               │            text:Track
                               ▼            film:Film
                          film:Film         render:Video

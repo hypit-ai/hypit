@@ -19,7 +19,7 @@
     "@narratage/speech": "workspace:*",
     "@narratage/speech-alignment": "workspace:*",
     "@narratage/speech-evidence": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
     "@narratage/program-space": "workspace:*"

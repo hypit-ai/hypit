@@ -5,7 +5,7 @@ import type {
   ValueSchema,
 } from "@narratage/protocol";
 
-export const artifactModuleRef = { name: "@narratage/artifact", version: "0.0.0-dev" } as const;
+export const artifactModuleRef = { name: "@narratage/artifact", version: "1" } as const;
 
 export const artifactTypes = {
   blob: { module: artifactModuleRef, name: "BlobArtifact" },

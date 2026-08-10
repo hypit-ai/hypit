@@ -6,14 +6,15 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
+    "@narratage/component-kit": "workspace:*",
     "@narratage/core": "workspace:*",
     "@narratage/elaborator": "workspace:*",
-    "@narratage/host": "workspace:*",
-    "@narratage/protocol": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/narrative": "workspace:*",
-    "@narratage/script": "workspace:*"
+    "@narratage/markup": "workspace:*",
+    "@narratage/protocol": "workspace:*",
+    "@narratage/svs": "workspace:*"
   }
 }

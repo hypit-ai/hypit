@@ -17,7 +17,7 @@ type CliDistribution = {
 ```
 
 A Distribution is trusted application assembly, not Core data or source-import authority. The
-official `@narratage/video-cli` selects `@narratage/compiler-text-node` and the current video Runtime
+official `@narratage/video-cli` selects `@narratage/compiler-markup-node` and the current video Runtime
 adapters, but no author-package aggregate. A package lock selects the exact Author/Run packages.
 Another domain can reuse this command engine without installing any video package.
 

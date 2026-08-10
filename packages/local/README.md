@@ -15,7 +15,7 @@ The convenience assembly uses:
 - separately selected external Endpoint packages.
 
 Package loading is syntax-neutral. The local Runtime activates only locked deterministic Producer
-and Validator facets; it neither depends on `@narratage/text` nor installs any package Host facet.
+and Validator facets; it neither depends on `@narratage/markup` nor installs any package Host facet.
 
 Normal CLI projects may express the same assembly as closed data:
 
@@ -63,7 +63,7 @@ export default await createProjectLocalRuntime({
   root: import.meta.dirname,
   packageLock: "./svml.packages.lock",
   runtimeServices: [createS3ArtifactStorePackage({
-    bucket: "hypit-svml-artifacts",
+    bucket: "team-svml-artifacts",
     prefix: "development",
     region: "us-east-1",
   })],
@@ -97,7 +97,7 @@ deletes only objects unreachable from every retained BuildState and Operation. T
 maintenance, never a Core transition or automatic cache policy. `narratage doctor
 <runtime-profile.json>` verifies package bytes, closed adapter configuration, required environment
 credentials, executables and declared service health without running a Build. Runtime Adapter Host
-ABI `@2` requires a pure configuration gate separate from construction: `doctor` never invokes an
+ABI `@1` requires a pure configuration gate separate from construction: `doctor` never invokes an
 adapter factory, starts a service, writes Runtime state or submits work. Valid instances may perform
 bounded read-only environment probes.
 

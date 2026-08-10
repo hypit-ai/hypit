@@ -1,6 +1,6 @@
-import { assertCaptionProgramForNarrative } from "@narratage/caption";
+import { assertCaptionProgramForDisplay } from "@narratage/caption";
 import type { CaptionFieldDeclaration, CaptionProgram } from "@narratage/caption";
-import type { Narrative } from "@narratage/narrative";
+import type { CaptionDisplaySequence } from "@narratage/narrative";
 
 import { verifyCaptionGeminiProgram } from "./program.js";
 import type {
@@ -13,41 +13,46 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function fieldInstruction(field: CaptionFieldDeclaration): string {
-  const value = field.value.kind === "boolean"
-    ? 'the string "true"; omit the assignment when the field does not apply'
-    : field.value.kind === "enum"
-      ? `one of ${field.value.values.map((item) => JSON.stringify(item)).join(", ")}`
-      : "a finite base-10 number encoded as a string";
-  return `${field.id}: ${field.minimumPerCue}..${field.maximumPerCue} atom assignments per cue; value=${value}. ${field.instruction}`;
+function fieldPromptDeclaration(field: CaptionFieldDeclaration) {
+  return {
+    id: field.id,
+    value: field.value.kind === "enum"
+      ? { kind: "enum", values: [...field.value.values] }
+      : field.value.kind === "number"
+        ? {
+            kind: "number",
+            ...(field.value.minimum === undefined ? {} : { minimum: field.value.minimum }),
+            ...(field.value.maximum === undefined ? {} : { maximum: field.value.maximum }),
+          }
+        : { kind: "boolean", sparse_true: true },
+    per_cue: { minimum: field.minimumPerCue, maximum: field.maximumPerCue },
+    instruction: field.instruction,
+  };
 }
 
-export function captionGeminiSystemInstruction(runs: readonly CaptionPlanningRun[]): string {
-  const styleRules = new Map<string, CaptionPlanningRun>();
-  runs.forEach((run) => styleRules.set(run.styleId, run));
+export function captionGeminiSystemInstruction(): string {
   return [
-    "You are a caption cue and per-word attribute planner. Display atoms are immutable author truth.",
+    "You are a caption cue and per-word attribute planner. Display words are immutable author truth.",
     "Return only response-schema JSON. Never return corrected text, replacement text, pronunciation text, timestamps, Markdown, or explanations.",
     "Each run is a hard boundary. Plan every run independently; a cue may never cross a run boundary.",
-    "Within each run, cues must preserve and exactly partition atom_ids. Return only each cue's final after_atom_id; the final cue must end at the run's final atom.",
-    "Every field assignment targets exactly one atom inside its cue and uses a field declared by that run's style.",
-    ...[...styleRules.values()].flatMap((run) => [
-      `Style ${run.styleId} cue judgment: ${run.cueInstruction.trim()}`,
-      ...run.fields.map((field) => `Style ${run.styleId} field ${fieldInstruction(field)}`),
-    ]),
-    "Echo every run exactly once. Use an empty fields array when no declaration applies. Never invent ids.",
+    "Each inner array in atoms is one indivisible display atom; each string inside it is one immutable display word including its authored punctuation.",
+    "Group consecutive whole atoms into cues; never split, rewrite, omit, repeat, or reorder an atom or word.",
+    "Count the inner-array words when applying cue_words. If one atom alone exceeds the preferred maximum, keep it whole as its own cue.",
+    "For every cue, atom_count is the number of consecutive unread atoms it consumes. The atom counts must partition the run exactly.",
+    "Every field assignment targets one display word by one-based atom_number inside its cue and one-based word_number inside that atom.",
+    "Return every run exactly once and in input order. Use an empty fields array when no declaration applies.",
   ].join("\n");
 }
 
-function promptContent(request: Pick<CaptionGeminiRequest, "atoms" | "runs">): string {
+function promptContent(request: Pick<CaptionGeminiRequest, "runs">): string {
   return JSON.stringify({
-    display_atoms: request.atoms,
     runs: request.runs.map((run) => ({
-      run_id: run.id,
-      style_id: run.styleId,
-      atom_ids: run.atomIds,
+      atoms: run.atoms.map((atom) => atom.words.map((word) => word.text)),
+      cue_words: { minimum: run.cueMinimumWords, maximum: run.cueMaximumWords },
       cue_instruction: run.cueInstruction,
-      field_declarations: run.fields,
+      ...(run.fields.length === 0 ? {} : {
+        field_declarations: run.fields.map((field) => fieldPromptDeclaration(field)),
+      }),
     })),
   }, null, 2);
 }
@@ -56,11 +61,15 @@ function requestContent(value: CaptionGeminiRequest) {
   return {
     contract: "svml.caption-gemini-request@1" as const,
     model: value.model,
-    atoms: value.atoms.map((atom) => ({ ...atom })),
     runs: value.runs.map((run) => ({
       id: run.id,
       styleId: run.styleId,
-      atomIds: [...run.atomIds],
+      atoms: run.atoms.map((atom) => ({
+        id: atom.id,
+        words: atom.words.map((word) => ({ ...word })),
+      })),
+      cueMinimumWords: run.cueMinimumWords,
+      cueMaximumWords: run.cueMaximumWords,
       cueInstruction: run.cueInstruction.trim(),
       fields: run.fields.map((field) => structuredClone(field)),
     })),
@@ -71,31 +80,46 @@ function requestContent(value: CaptionGeminiRequest) {
 }
 
 export function compileCaptionGeminiRequest(
-  narrative: Narrative,
+  display: CaptionDisplaySequence,
   captionProgram: CaptionProgram,
   program: CaptionGeminiProgram,
 ): CaptionGeminiRequest {
-  assertCaptionProgramForNarrative(captionProgram, narrative);
+  assertCaptionProgramForDisplay(captionProgram, display);
   verifyCaptionGeminiProgram(program);
   const styles = new Map(captionProgram.styles.map((style) => [style.id, style]));
+  const wordById = new Map(display.words.map((word) => [word.id, word]));
+  const atomById = new Map(display.atoms.map((atom) => [atom.id, atom]));
   const runs = captionProgram.runs.map((run) => {
     const style = styles.get(run.styleId);
     assert(style !== undefined, `Caption run ${run.id} references an unknown Style`);
     return {
       id: run.id,
       styleId: run.styleId,
-      atomIds: [...run.atomIds],
-      cueInstruction: style.planning.cueInstruction,
+      atoms: [...new Set(run.wordIds.map((wordId) => wordById.get(wordId)?.atomId))].map((atomId) => {
+        assert(atomId !== undefined, `Caption run ${run.id} references an unknown display word`);
+        const atom = atomById.get(atomId);
+        assert(atom !== undefined, `Caption run ${run.id} references unknown Atom ${atomId}`);
+        return {
+          id: atom.id,
+          words: atom.wordIds.map((wordId) => {
+            const word = wordById.get(wordId);
+            assert(word !== undefined, `Caption Atom ${atom.id} references unknown word ${wordId}`);
+            return { id: word.id, text: word.text };
+          }),
+        };
+      }),
+      cueMinimumWords: style.planning.cue.minimumWords,
+      cueMaximumWords: style.planning.cue.maximumWords,
+      cueInstruction: style.planning.cue.instruction,
       fields: style.planning.fields.map((field) => structuredClone(field)),
     };
   });
   const base = {
     contract: "svml.caption-gemini-request@1" as const,
     model: program.model,
-    atoms: captionProgram.atoms.map((atom) => ({ id: atom.id, text: atom.text })),
     runs,
   };
-  const systemInstruction = captionGeminiSystemInstruction(runs);
+  const systemInstruction = captionGeminiSystemInstruction();
   const prompt = promptContent(base);
   const request = requestContent({ ...base, systemInstruction, prompt, temperature: 0.2 });
   verifyCaptionGeminiRequest(request);
@@ -108,19 +132,24 @@ export function verifyCaptionGeminiRequest(value: unknown): asserts value is Cap
   assert(request.contract === "svml.caption-gemini-request@1", "Caption Gemini request contract is invalid");
   assert(request.model === "gemini-2.5-flash" || request.model === "gemini-3.1-pro-preview", "Caption Gemini request model is unsupported");
   assert(request.temperature === 0.2, "Caption Gemini temperature is not the package-owned value");
-  assert(Array.isArray(request.atoms) && request.atoms.length > 0, "Caption Gemini request atoms are empty");
-  const atomIds = request.atoms.map((atom) => atom.id);
-  assert(atomIds.every((id) => typeof id === "string" && id.length > 0) && new Set(atomIds).size === atomIds.length,
-    "Caption Gemini atom ids are invalid or repeated");
-  assert(request.atoms.every((atom) => typeof atom.text === "string" && atom.text.length > 0),
-    "Caption Gemini display atom text is invalid");
-  const atomSet = new Set(atomIds);
-  const planned = request.runs.flatMap((run) => run.atomIds);
-  assert(request.runs.length > 0 && planned.length === atomIds.length && new Set(planned).size === atomIds.length
-    && planned.every((id) => atomSet.has(id)), "Caption Gemini runs are not an exact display-atom partition");
-  assert(request.runs.every((run) => run.atomIds.length > 0 && run.cueInstruction.trim().length > 0),
+  assert(Array.isArray(request.runs) && request.runs.length > 0, "Caption Gemini request runs are empty");
+  const plannedAtoms = request.runs.flatMap((run: CaptionPlanningRun) =>
+    run.atoms.map((atom: CaptionPlanningRun["atoms"][number]) => atom.id));
+  const plannedWords = request.runs.flatMap((run: CaptionPlanningRun) =>
+    run.atoms.flatMap((atom: CaptionPlanningRun["atoms"][number]) =>
+      atom.words.map((word: CaptionPlanningRun["atoms"][number]["words"][number]) => word.id)));
+  assert(plannedAtoms.length > 0 && new Set(plannedAtoms).size === plannedAtoms.length
+    && plannedWords.length > 0 && new Set(plannedWords).size === plannedWords.length,
+    "Caption Gemini atoms repeat or omit internal display-word identities");
+  assert(request.runs.every((run) => run.atoms.length > 0
+    && run.atoms.every((atom: CaptionPlanningRun["atoms"][number]) =>
+      atom.id.length > 0 && atom.words.length > 0
+      && atom.words.every((word) => word.id.length > 0 && word.text.trim().length > 0))
+    && Number.isSafeInteger(run.cueMinimumWords) && run.cueMinimumWords > 0
+    && Number.isSafeInteger(run.cueMaximumWords) && run.cueMaximumWords >= run.cueMinimumWords
+    && run.cueInstruction.trim().length > 0),
     "Caption Gemini request contains an empty run");
-  assert(request.systemInstruction === captionGeminiSystemInstruction(request.runs),
+  assert(request.systemInstruction === captionGeminiSystemInstruction(),
     "Caption Gemini system instruction differs from the model package");
   assert(request.prompt === promptContent(request), "Caption Gemini prompt differs from immutable display facts");
 }

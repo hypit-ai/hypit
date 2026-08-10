@@ -1,4 +1,4 @@
-import { compositionComponent } from "../../test-support/video-domain.js";
+import { compositionComponent, spatialComponent } from "../../test-support/video-domain.js";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
@@ -9,6 +9,7 @@ import {
 } from "@narratage/caption";
 import type { TimedCaptionProjection } from "@narratage/caption";
 import type { Narrative } from "@narratage/narrative";
+import type { Text } from "@narratage/text";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealSpeechBasis, sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
 import type { SpeechAudioBasis, SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
@@ -80,6 +81,7 @@ function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();
   registerTypeValidatorFacets(registry, captionComponent.validators ?? []);
   registerTypeValidatorFacets(registry, compositionComponent.validators);
+  registerTypeValidatorFacets(registry, spatialComponent.validators);
   return registry;
 }
 
@@ -122,23 +124,23 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
 
   host.registerProducer(videoProducers.requestEstimate, videoImplementations.requestEstimate, ({ inputs }) => {
     calls.estimate += 1;
-    assert.equal(inputs.narrative?.value.kind, "inline");
-    const narrative = inlineValue<Narrative>(inputs.narrative.value.value);
+    assert.equal(inputs.speech?.value.kind, "inline");
+    const speech = inlineValue<Text>(inputs.speech.value.value);
     return {
       outputs: {},
       needs: {
         estimate: {
           contract: "example.official-speech-estimate-request@1",
-          speech: narrative.serializations.speech,
+          speech: speech.value,
         },
       },
     };
   });
   host.registerProducer(videoProducers.requestSeedanceMini, videoImplementations.requestSeedanceMini, ({ inputs }) => {
     calls.seedance += 1;
-    assert.equal(inputs.narrative?.value.kind, "inline");
+    assert.equal(inputs.dialogue?.value.kind, "inline");
     assert.equal(inputs.estimate?.value.kind, "inline");
-    const narrative = inlineValue<Narrative>(inputs.narrative.value.value);
+    const dialogue = inlineValue<Text>(inputs.dialogue.value.value);
     const estimate = inlineObject(inputs.estimate.value.value);
     return {
       outputs: {},
@@ -146,7 +148,7 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
         media: {
           contract: "example.seedance-mini-speech-request@1",
           model: "mini",
-          script: narrative.serializations.speech,
+          script: dialogue.value,
           durationSec: estimate.durationSec as number,
         },
       },
@@ -169,12 +171,13 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
     const basis = sealSpeechBasis({
       contract: "svml.speech-basis@1",
       programSpace,
-      audio: { digest: audioDigest, size: 1, mediaType: "audio/wav", durationSec },
+      audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
       visualTrack: { clips: [{
         segmentId: "line",
-        artifact: { digest: visualDigest, size: 1, mediaType: "video/mp4", durationSec },
-        startSec: 0,
-        endSec: durationSec,
+        artifact: { kind: "blob", digest: visualDigest, size: 1, mediaType: "video/mp4" },
+        extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+        frameRate: { ...programSpace.frameRate },
+        frameCount: Math.round(durationSec * 1_000),
       }] },
       segments: [{ segmentId: "line", startSec: 0, endSec: durationSec }],
     });
@@ -233,11 +236,15 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
     ({ inputs }) => {
       calls.projectVisual += 1;
       assert.equal(inputs.basis?.value.kind, "inline");
+      assert(inputs.canvas?.value.kind === "inline");
       return {
         outputs: {
           visual: {
             kind: "inline",
-            value: projectSpeechVisual(inlineValue<SpeechBasis>(inputs.basis.value.value)),
+            value: projectSpeechVisual(
+              inlineValue<SpeechBasis>(inputs.basis.value.value),
+              inlineValue(inputs.canvas.value.value),
+            ),
           },
         },
         needs: {},
@@ -446,8 +453,8 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
     captionRecord?.value.kind === "inline" ? captionRecord.value.value : {},
   );
   assert.deepEqual(
-    [value.text, value.regions[0]?.display, value.regions[0]?.startSec, value.regions[0]?.endSec],
-    ["that was insane", "that was insane", 0.1, 0.72],
+    [value.cues[0]?.startSec, value.cues[0]?.endSec, value.cues[0]?.atoms.length],
+    [0.1, 0.72, 1],
   );
 
   const mapRecordId = selectedRecord(completed.state, videoOutputs.map);
@@ -498,7 +505,7 @@ test("Targets prune official Fragments while shared SpeechBasis generation stays
   assert.equal(producerCount(visual, speechBasisProducers.projectVisual), 1);
   assert.equal(producerCount(visual, speechBasisProducers.projectAudio), 0);
   assert.equal(producerCount(visual, whisperXProducers.request), 0);
-  assert.equal(producerCount(visual, captionProducers.temporalize), 0);
+  assert.equal(producerCount(visual, captionProducers.temporalizePlan), 0);
 
   const map = createVideoBuild({ targets: ["map"] });
   assert.equal(producerCount(map, speechBasisProducers.projectAudio), 1);
@@ -506,7 +513,7 @@ test("Targets prune official Fragments while shared SpeechBasis generation stays
   assert.equal(producerCount(map, whisperXProducers.request), 1);
   assert.equal(producerCount(map, whisperXProducers.normalize), 1);
   assert.equal(producerCount(map, speechAlignmentProducers.locate), 1);
-  assert.equal(producerCount(map, captionProducers.temporalize), 0);
+  assert.equal(producerCount(map, captionProducers.temporalizePlan), 0);
 
   const bothTakeProjections = createVideoBuild({ targets: ["audio", "visual"] });
   assert.equal(producerCount(bothTakeProjections, videoProducers.requestSeedanceMini), 1);
@@ -537,16 +544,17 @@ test("an Existing SpeechBasis cuts generation while a visual substitute cuts the
     contract: "svml.speech-basis@1",
     programSpace,
     audio: {
+      kind: "blob",
       digest: digestOf("existing-take:audio"),
       size: 1,
       mediaType: "audio/wav",
-      durationSec: 1,
     },
     visualTrack: { clips: [{
       segmentId: "line",
-      artifact: { digest: visualDigest, size: 1, mediaType: "video/mp4", durationSec: 1 },
-      startSec: 0,
-      endSec: 1,
+      artifact: { kind: "blob", digest: visualDigest, size: 1, mediaType: "video/mp4" },
+      extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
+      frameRate: { ...programSpace.frameRate },
+      frameCount: 1_000,
     }] },
     segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
   });
@@ -571,7 +579,7 @@ test("an Existing SpeechBasis cuts generation while a visual substitute cuts the
   assert.equal(producerCount(captionFromExisting, videoProducers.assembleBasis), 0);
   assert.equal(producerCount(captionFromExisting, speechBasisProducers.projectAudio), 1);
   assert.equal(producerCount(captionFromExisting, whisperXProducers.request), 1);
-  assert.equal(producerCount(captionFromExisting, captionProducers.temporalize), 1);
+  assert.equal(producerCount(captionFromExisting, captionProducers.temporalizePlan), 1);
 
   const black: VisualTrack = sealVisualTrack({
     contract: "svml.visual-track@1",

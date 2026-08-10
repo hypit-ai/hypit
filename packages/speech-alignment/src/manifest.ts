@@ -6,7 +6,7 @@ import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
 import { speechLocatorDigest } from "./locate.js";
 
-export const speechAlignmentModuleRef = { name: "@narratage/speech-alignment", version: "0.0.0-dev" } as const;
+export const speechAlignmentModuleRef = { name: "@narratage/speech-alignment", version: "1" } as const;
 export const speechAlignmentProducers = {
   locate: { module: speechAlignmentModuleRef, name: "locate-speech" },
 } satisfies Record<string, ProducerRef>;

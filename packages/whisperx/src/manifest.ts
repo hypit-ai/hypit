@@ -6,7 +6,7 @@ import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema }
 import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
 import { speechAlignmentManifest, speechAlignmentModuleRef } from "@narratage/speech-alignment";
 
-export const whisperXModuleRef = { name: "@narratage/whisperx", version: "0.0.0-dev" } as const;
+export const whisperXModuleRef = { name: "@narratage/whisperx", version: "1" } as const;
 export const whisperXTypes = {
   alignmentEvidence: { module: whisperXModuleRef, name: "WhisperXAlignmentEvidence" },
 } satisfies Record<string, TypeRef>;
@@ -18,8 +18,8 @@ export const whisperXProducers = {
   normalize: { module: whisperXModuleRef, name: "normalize-whisperx-alignment" },
 } satisfies Record<string, ProducerRef>;
 export const whisperXImplementationDigests = {
-  request: digestOf("@narratage/whisperx/request@2"),
-  normalize: digestOf("@narratage/whisperx/normalize@2"),
+  request: digestOf("@narratage/whisperx/request@1"),
+  normalize: digestOf("@narratage/whisperx/normalize@1"),
   surface: digestOf("@narratage/whisperx/alignment-surface@1"),
 };
 

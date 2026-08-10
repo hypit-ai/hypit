@@ -1,9 +1,9 @@
-export class CaptionProjectionError extends Error {
+export class CaptionTimingError extends Error {
   readonly code: string;
 
   constructor(code: string, message: string) {
     super(message);
-    this.name = "CaptionProjectionError";
+    this.name = "CaptionTimingError";
     this.code = code;
   }
 }

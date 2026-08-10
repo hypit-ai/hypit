@@ -1,6 +1,6 @@
 import { mediaComponent } from "@narratage/media";
 import type { ComponentPackage } from "@narratage/component-kit";
-import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifyTimelineAudio } from "@narratage/media";
+import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
 import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
 import { programSpaceSampleFrames } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
@@ -23,13 +23,25 @@ import {
   selectMediaStreams,
   verifyMediaSelectionRequest,
 } from "./selection.js";
+import {
+  selectAudioStream,
+  selectVideoStream,
+  verifyAudioExtractionRequest,
+  verifyFrameExtractionRequest,
+  verifyMediaTransformProgram,
+} from "./operations.js";
 import type {
+  AudioExtractionRequest,
+  ExtractAudioNeed,
+  ExtractFrameNeed,
+  FrameExtractionRequest,
   InspectMediaNeed,
   MuxMediaNeed,
   MediaSelectionRequest,
   NormalizeMediaNeed,
   ProjectSpeechEvidenceAudioNeed,
   RenderAudioNeed,
+  TransformMediaNeed,
 } from "./types.js";
 
 function inline(value: StoredValue, subject: string): CanonicalValue {
@@ -57,6 +69,27 @@ export const mediaPipelineComponent = {
       implementationDigest: mediaPipelineImplementationDigests.audioPlanValidator,
       handler: ({ value }) => {
         verifyAudioProgramPlan(inline(value, "AudioProgramPlan"));
+      },
+    },
+    {
+      type: mediaPipelineTypes.transformProgram,
+      implementationDigest: mediaPipelineImplementationDigests.transformProgramValidator,
+      handler: ({ value }) => {
+        verifyMediaTransformProgram(inline(value, "MediaTransformProgram"));
+      },
+    },
+    {
+      type: mediaPipelineTypes.audioExtractionRequest,
+      implementationDigest: mediaPipelineImplementationDigests.audioExtractionValidator,
+      handler: ({ value }) => {
+        verifyAudioExtractionRequest(inline(value, "AudioExtractionRequest"));
+      },
+    },
+    {
+      type: mediaPipelineTypes.frameExtractionRequest,
+      implementationDigest: mediaPipelineImplementationDigests.frameExtractionValidator,
+      handler: ({ value }) => {
+        verifyFrameExtractionRequest(inline(value, "FrameExtractionRequest"));
       },
     },
   ],
@@ -106,6 +139,66 @@ export const mediaPipelineComponent = {
           audio: { sampleRate: 48_000, channels: 2, codec: "pcm_s16le", loudness: "preserve" },
         };
         return { outputs: {}, needs: { media: canonicalize(need) } };
+      },
+    },
+    {
+      producer: mediaPipelineProducers.transform,
+      implementationDigest: mediaPipelineImplementationDigests.transform,
+      handler: ({ inputs }) => {
+        const media = inline(inputs.media!.value, "SynchronizedMedia");
+        const program = inline(inputs.program!.value, "MediaTransformProgram");
+        verifySynchronizedMedia(media);
+        verifyMediaTransformProgram(program);
+        if (media.visual === undefined) throw new Error("Media transform requires a visual stream");
+        const need: TransformMediaNeed = {
+          contract: "svml.transform-media-request@1",
+          media,
+          program,
+        };
+        return { outputs: {}, needs: { video: canonicalize(need) } };
+      },
+    },
+    {
+      producer: mediaPipelineProducers.extractAudio,
+      implementationDigest: mediaPipelineImplementationDigests.extractAudio,
+      handler: ({ inputs }) => {
+        const source = blob(inputs.source!.value, "Audio extraction source");
+        const inspection = inline(inputs.inspection!.value, "MediaInspection");
+        const request = inline(inputs.request!.value, "AudioExtractionRequest") as unknown as AudioExtractionRequest;
+        verifyMediaInspection(inspection);
+        verifyAudioExtractionRequest(request);
+        const selected = selectAudioStream(inspection, request.audio);
+        const need: ExtractAudioNeed = {
+          contract: "svml.extract-audio-request@1",
+          source,
+          streamIndex: selected.index,
+          output: request.output,
+        };
+        return { outputs: {}, needs: { audio: canonicalize(need) } };
+      },
+    },
+    {
+      producer: mediaPipelineProducers.extractFrame,
+      implementationDigest: mediaPipelineImplementationDigests.extractFrame,
+      handler: ({ inputs }) => {
+        const source = blob(inputs.source!.value, "Frame extraction source");
+        const inspection = inline(inputs.inspection!.value, "MediaInspection");
+        const request = inline(inputs.request!.value, "FrameExtractionRequest") as unknown as FrameExtractionRequest;
+        verifyMediaInspection(inspection);
+        verifyFrameExtractionRequest(request);
+        const selected = selectVideoStream(inspection, request.video);
+        if (request.at.kind === "frame" && request.at.index >= selected.decodedUnitCount) {
+          throw new Error(`Frame ${request.at.index} is outside the selected stream (${selected.decodedUnitCount} frames)`);
+        }
+        const need: ExtractFrameNeed = {
+          contract: "svml.extract-frame-request@1",
+          source,
+          streamIndex: selected.index,
+          sourceFrameCount: selected.decodedUnitCount,
+          at: request.at,
+          output: request.output,
+        };
+        return { outputs: {}, needs: { image: canonicalize(need) } };
       },
     },
     {
@@ -186,19 +279,8 @@ export const mediaPipelineComponent = {
       handler: ({ inputs }) => {
         const media = inline(inputs.media!.value, "MuxedMedia");
         verifyMuxedMedia(media);
-        const durationSec = media.frameCount * media.frameRate.denominator / media.frameRate.numerator;
         return {
-          outputs: {
-            video: {
-              kind: "inline",
-              value: canonicalize({
-                digest: media.artifact.digest,
-                size: media.artifact.size,
-                mediaType: media.artifact.mediaType,
-                durationSec,
-              }),
-            },
-          },
+          outputs: { video: media.artifact },
           needs: {},
         };
       },

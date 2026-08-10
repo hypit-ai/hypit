@@ -25,18 +25,8 @@ function workspaceCommand(entry: string): { command: string; args: readonly stri
   return { command: "uv", args: ["run", "--project", WORKSPACE_PROJECT, "--frozen", entry] };
 }
 
-function command(
-  value: unknown,
-  fallback: { readonly command: string; readonly args: readonly string[] } | undefined,
-  key: string,
-) {
-  if (value === undefined) {
-    if (fallback !== undefined) return fallback;
-    throw new Error(
-      `WhisperX ${key} is required: the pinned uv project is not at ${WORKSPACE_PROJECT},`
-      + " so this deployment must say what command runs WhisperX",
-    );
-  }
+function configuredCommand(value: unknown, key: string) {
+  if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string")) {
     throw new Error(`WhisperX ${key} must be a non-empty array of strings`);
   }
@@ -56,10 +46,19 @@ export function localWhisperXService(context: RuntimeAdapterFactoryContext): Run
     punktTabDigest: runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest")
       ?? localWhisperXPunktTabDigest,
   };
+  const customStart = configuredCommand(config.serviceCommand, "serviceCommand");
+  const customPrepare = configuredCommand(config.servicePrepareCommand, "servicePrepareCommand");
+  // Any lifecycle override transfers ownership to the deployment. This avoids
+  // preparing the repository uv project before starting an unrelated conda,
+  // systemd or container command. With no override the bundled project is the
+  // managed default; when it is not present this becomes probe-only.
+  const managed = customStart === undefined && customPrepare === undefined;
+  const prepare = customPrepare ?? (managed ? workspaceCommand("svml-whisperx-prepare") : undefined);
+  const start = customStart ?? (managed ? workspaceCommand("svml-whisperx-service") : undefined);
   return {
     id: "whisperx",
-    prepare: command(config.servicePrepareCommand, workspaceCommand("svml-whisperx-prepare"), "servicePrepareCommand"),
-    start: command(config.serviceCommand, workspaceCommand("svml-whisperx-service"), "serviceCommand"),
+    ...(prepare === undefined ? {} : { prepare }),
+    ...(start === undefined ? {} : { start }),
     async probe(): Promise<RuntimeServiceState> {
       let health: Record<string, unknown>;
       try {

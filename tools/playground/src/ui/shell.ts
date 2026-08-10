@@ -2,9 +2,10 @@ import type { PreviewProducer } from "../discovery/producers.js";
 import { workspacePreviewProducers } from "../discovery/workspace.js";
 import { renderPreview } from "../preview/render.js";
 import {
+  defaultCanvasSpace,
   defaultFilmProgram,
   defaultProgramSpace,
-  filmCanvasFromRecipe,
+  filmAppearanceFromRecipe,
   filmRecipeKeys,
   maskSourceHeader,
   parseSourceHeader,
@@ -88,13 +89,20 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     picker.append(option);
   }
 
-  // The Film module owns what an undeclared frame looks like, so the canvas
-  // starts as whatever it says rather than as numbers chosen here.
+  // Spatial owns geometry, Film owns appearance and ProgramSpace owns time.
+  // The preview starts from those three package-owned values instead of a
+  // second playground-specific model of a frame.
+  const canvasSpace = defaultCanvasSpace();
   const film = defaultFilmProgram();
-  const canvas = { ...film.canvas };
+  const defaultSpace = defaultProgramSpace();
+  const canvas = {
+    width: canvasSpace.widthPx,
+    height: canvasSpace.heightPx,
+    clearColor: film.clearColor,
+  };
   const space = {
-    fps: film.frameRate.numerator / film.frameRate.denominator,
-    durationSec: defaultProgramSpace().durationSec,
+    fps: defaultSpace.frameRate.numerator / defaultSpace.frameRate.denominator,
+    durationSec: defaultSpace.durationSec,
   };
 
   /**
@@ -171,11 +179,11 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   note.className = "sheet-note";
 
   /**
-   * Reads a chosen stylesheet for its canvas.
+   * Reads a chosen stylesheet for Film appearance.
    *
-   * A Film Recipe is where a frame size comes from, so a sheet is offered as
-   * a way to adopt one. Nothing else in it is read: what a component looks
-   * like comes from the module that owns it.
+   * Geometry and time are graph inputs, not style. A Film Recipe may therefore
+   * change only the Composition background; component Recipes remain owned by
+   * their own modules.
    */
   function loadSheet(file: File): void {
     void file.text().then((source) => {
@@ -188,18 +196,12 @@ export async function mountShell(root: HTMLElement): Promise<void> {
       const found = sheet.recipes.find((recipe) =>
         Object.keys(recipe.value.properties).sort().join(" ") === filmShape);
       if (found === undefined) {
-        note.textContent = `${file.name} declares no Film Recipe, so the canvas is unchanged.`;
+        note.textContent = `${file.name} declares no Film Recipe, so the background is unchanged.`;
         return;
       }
-      const read = filmCanvasFromRecipe(found.value.properties);
-      canvas.width = read.canvas.width;
-      canvas.height = read.canvas.height;
-      canvas.clearColor = read.canvas.clearColor;
-      space.fps = read.frameRate.numerator / read.frameRate.denominator;
-      widthInput.value = String(canvas.width);
-      heightInput.value = String(canvas.height);
-      fpsInput.value = String(space.fps);
-      note.replaceChildren(document.createTextNode("Canvas from "));
+      const read = filmAppearanceFromRecipe(found.value.properties);
+      canvas.clearColor = read.clearColor;
+      note.replaceChildren(document.createTextNode("Background from "));
       const which = document.createElement("b");
       which.textContent = found.value.path;
       note.append(which);
@@ -228,7 +230,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   function renderRail(): void {
     const values = draft(active);
     moduleLine.textContent = active.moduleName;
-    body.replaceChildren(section("Canvas from a stylesheet"), sheetPicker, note);
+    body.replaceChildren(section("Appearance from a stylesheet"), sheetPicker, note);
 
     for (const input of active.inputs) {
       // The shell owns the frame domain; offering it again would be a second

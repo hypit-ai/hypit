@@ -11,30 +11,48 @@ importers:
       '@narratage/artifact':
         specifier: workspace:*
         version: link:packages/artifact
-      '@narratage/broll':
+      '@narratage/audio-track':
         specifier: workspace:*
-        version: link:packages/broll
+        version: link:packages/audio-track
+      '@narratage/background-removal':
+        specifier: workspace:*
+        version: link:packages/background-removal
       '@narratage/caption':
         specifier: workspace:*
         version: link:packages/caption
+      '@narratage/caption-fine':
+        specifier: workspace:*
+        version: link:packages/caption-fine
       '@narratage/caption-gemini':
         specifier: workspace:*
         version: link:packages/caption-gemini
+      '@narratage/comment-sticker':
+        specifier: workspace:*
+        version: link:packages/comment-sticker
       '@narratage/composition':
         specifier: workspace:*
         version: link:packages/composition
+      '@narratage/deck-track':
+        specifier: workspace:*
+        version: link:packages/deck-track
       '@narratage/estimate':
         specifier: workspace:*
         version: link:packages/estimate
       '@narratage/film':
         specifier: workspace:*
         version: link:packages/film
+      '@narratage/fonts-open':
+        specifier: workspace:*
+        version: link:packages/fonts-open
       '@narratage/generation':
         specifier: workspace:*
         version: link:packages/generation
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:packages/hyperframes
+      '@narratage/image-compose':
+        specifier: workspace:*
+        version: link:packages/image-compose
       '@narratage/image-transform':
         specifier: workspace:*
         version: link:packages/image-transform
@@ -47,15 +65,18 @@ importers:
       '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:packages/media-pipeline
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:packages/media-track
+      '@narratage/mimo-tts':
+        specifier: workspace:*
+        version: link:packages/mimo-tts
       '@narratage/narrative':
         specifier: workspace:*
         version: link:packages/narrative
       '@narratage/program-space':
         specifier: workspace:*
         version: link:packages/program-space
-      '@narratage/prompt-kit':
-        specifier: workspace:*
-        version: link:packages/prompt-kit
       '@narratage/protocol':
         specifier: workspace:*
         version: link:packages/protocol
@@ -77,30 +98,45 @@ importers:
       '@narratage/provider-whisperx-local':
         specifier: workspace:*
         version: link:packages/provider-whisperx-local
+      '@narratage/provider-xiaomi-mimo':
+        specifier: workspace:*
+        version: link:packages/provider-xiaomi-mimo
+      '@narratage/ranking':
+        specifier: workspace:*
+        version: link:packages/ranking
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:packages/raster
       '@narratage/render-hyperframes':
         specifier: workspace:*
         version: link:packages/render-hyperframes
-      '@narratage/run-text':
+      '@narratage/run-markup':
         specifier: workspace:*
-        version: link:packages/run-text
+        version: link:packages/run-markup
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:packages/runtime-adapter
       '@narratage/runtime-adapter-node':
         specifier: workspace:*
         version: link:packages/runtime-adapter-node
+      '@narratage/screen-overlay':
+        specifier: workspace:*
+        version: link:packages/screen-overlay
       '@narratage/script':
         specifier: workspace:*
         version: link:packages/script
       '@narratage/seedance':
         specifier: workspace:*
         version: link:packages/seedance
-      '@narratage/seedance-speaker':
+      '@narratage/seedance-kits':
         specifier: workspace:*
-        version: link:packages/seedance-speaker
+        version: link:packages/seedance-kits
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:packages/semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:packages/spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:packages/speech
@@ -119,9 +155,15 @@ importers:
       '@narratage/svs':
         specifier: workspace:*
         version: link:packages/svs
-      '@narratage/text-track':
+      '@narratage/temporal':
         specifier: workspace:*
-        version: link:packages/text-track
+        version: link:packages/temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:packages/text
+      '@narratage/typography-track':
+        specifier: workspace:*
+        version: link:packages/typography-track
       '@narratage/visual-ir':
         specifier: workspace:*
         version: link:packages/visual-ir
@@ -174,7 +216,40 @@ importers:
         specifier: workspace:*
         version: link:../runtime-adapter
 
-  packages/broll:
+  packages/audio-track:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+
+  packages/background-removal:
     dependencies:
       '@narratage/artifact':
         specifier: workspace:*
@@ -182,70 +257,36 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@narratage/media':
+      '@narratage/markup':
         specifier: workspace:*
-        version: link:../media
-      '@narratage/media-pipeline':
-        specifier: workspace:*
-        version: link:../media-pipeline
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@narratage/program-space':
-        specifier: workspace:*
-        version: link:../program-space
+        version: link:../markup
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/semantic-map':
-        specifier: workspace:*
-        version: link:../semantic-map
-      '@narratage/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
-    devDependencies:
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
 
   packages/caption:
     dependencies:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
-      '@narratage/program-space':
-        specifier: workspace:*
-        version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:../semantic-map
-      '@narratage/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
     devDependencies:
       '@narratage/script':
         specifier: workspace:*
@@ -260,6 +301,46 @@ importers:
         specifier: workspace:*
         version: link:../speech-evidence
 
+  packages/caption-fine:
+    dependencies:
+      '@narratage/caption':
+        specifier: workspace:*
+        version: link:../caption
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+    devDependencies:
+      '@narratage/script':
+        specifier: workspace:*
+        version: link:../script
+
   packages/caption-gemini:
     dependencies:
       '@narratage/caption':
@@ -271,15 +352,15 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
     devDependencies:
       '@narratage/script':
         specifier: workspace:*
@@ -312,6 +393,79 @@ importers:
         specifier: workspace:*
         version: link:../source
 
+  packages/comment-sticker:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/compiler-markup-node:
+    dependencies:
+      '@narratage/compiler-node':
+        specifier: workspace:*
+        version: link:../compiler-node
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/host':
+        specifier: workspace:*
+        version: link:../host
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/package-loader-node':
+        specifier: workspace:*
+        version: link:../package-loader-node
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
+    devDependencies:
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/compiler-node:
     dependencies:
       '@narratage/core':
@@ -339,40 +493,12 @@ importers:
         specifier: workspace:*
         version: link:../workspace-fs-node
     devDependencies:
-      '@narratage/run-text':
+      '@narratage/markup':
         specifier: workspace:*
-        version: link:../run-text
-      '@narratage/text':
+        version: link:../markup
+      '@narratage/run-markup':
         specifier: workspace:*
-        version: link:../text
-
-  packages/compiler-text-node:
-    dependencies:
-      '@narratage/compiler-node':
-        specifier: workspace:*
-        version: link:../compiler-node
-      '@narratage/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
-      '@narratage/package-loader-node':
-        specifier: workspace:*
-        version: link:../package-loader-node
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
-      '@narratage/validation':
-        specifier: workspace:*
-        version: link:../validation
-    devDependencies:
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
+        version: link:../run-markup
 
   packages/component-kit:
     dependencies:
@@ -454,6 +580,51 @@ importers:
         specifier: workspace:*
         version: link:../credential-store-env
 
+  packages/deck-track:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:../media-track
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+
   packages/driver-node:
     dependencies:
       '@narratage/component-kit':
@@ -524,9 +695,9 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
-      '@narratage/narrative':
+      '@narratage/markup':
         specifier: workspace:*
-        version: link:../narrative
+        version: link:../markup
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -539,6 +710,9 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+      cmu-pronouncing-dictionary:
+        specifier: 3.0.0
+        version: 3.0.0
 
   packages/film:
     dependencies:
@@ -551,18 +725,21 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/program-space':
         specifier: workspace:*
         version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
@@ -573,12 +750,351 @@ importers:
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
-      '@narratage/text-track':
+      '@narratage/typography-track':
         specifier: workspace:*
-        version: link:../text-track
+        version: link:../typography-track
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+
+  packages/fonts-open:
+    dependencies:
+      '@fontsource-variable/archivo':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/bodoni-moda':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/cabin':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/caveat':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/cinzel':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/cormorant-garamond':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/crimson-pro':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/dm-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/eb-garamond':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/figtree':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/fira-code':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/fraunces':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/fredoka':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/geist':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/geist-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/instrument-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/inter':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/jetbrains-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/josefin-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/jost':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/league-spartan':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/lexend':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/libre-baskerville':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/lora':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/manrope':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/merriweather':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/montserrat':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/mulish':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/newsreader':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-emoji':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-naskh-arabic':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-arabic':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-devanagari':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-hebrew':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-hk':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-jp':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-kr':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-sc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-tc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-thai':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-serif-jp':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-serif-kr':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-serif-sc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-serif-tc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/nunito-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/onest':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/open-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/oswald':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/outfit':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/playfair-display':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/playpen-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/plus-jakarta-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/quicksand':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/raleway':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/rethink-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/roboto':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/roboto-condensed':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/roboto-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/roboto-slab':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/rubik':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/shantell-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/sora':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/source-serif-4':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/space-grotesk':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/unbounded':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/urbanist':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/vollkorn':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/work-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/abril-fatface':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/alfa-slab-one':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/anton':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/architects-daughter':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/archivo-black':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/bangers':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/barlow':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/barlow-condensed':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/bebas-neue':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/black-ops-one':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/bungee':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/coming-soon':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/dm-serif-display':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/fira-sans-condensed':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/gloock':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/handlee':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/ibm-plex-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/instrument-serif':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/kalam':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/kanit':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/lato':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/lilita-one':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/liu-jian-mao-cao':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/long-cang':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/luckiest-guy':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/ma-shan-zheng':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/pacifico':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/patrick-hand':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/permanent-marker':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/pinyon-script':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/poppins':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/righteous':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/satisfy':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/shadows-into-light':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/short-stack':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/space-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/zcool-kuaile':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/zcool-qingke-huangyou':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/zcool-xiaowei':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@infolektuell/noto-color-emoji':
+        specifier: 0.2.0
+        version: 0.2.0
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/gemini-omni:
     dependencies:
@@ -603,6 +1119,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
     devDependencies:
       '@narratage/driver-node':
         specifier: workspace:*
@@ -613,15 +1132,27 @@ importers:
 
   packages/gpt-image:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/image-transform':
+        specifier: workspace:*
+        version: link:../image-transform
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/grok-imagine:
     dependencies:
@@ -668,6 +1199,30 @@ importers:
         specifier: workspace:*
         version: link:../visual-ir
 
+  packages/image-compose:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:../raster
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+
   packages/image-transform:
     dependencies:
       '@narratage/artifact':
@@ -679,12 +1234,15 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/text':
+      '@narratage/raster':
         specifier: workspace:*
-        version: link:../text
+        version: link:../raster
 
   packages/local:
     dependencies:
@@ -729,6 +1287,28 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/markup:
+    dependencies:
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/host':
+        specifier: workspace:*
+        version: link:../host
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/script':
+        specifier: workspace:*
+        version: link:../script
+
   packages/media:
     dependencies:
       '@narratage/artifact':
@@ -737,12 +1317,12 @@ importers:
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
 
   packages/media-execution:
     dependencies:
@@ -773,6 +1353,9 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
@@ -795,6 +1378,72 @@ importers:
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
+
+  packages/media-track:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+
+  packages/mimo-tts:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/model-kit':
+        specifier: workspace:*
+        version: link:../model-kit
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/minimax-h3:
     dependencies:
@@ -822,6 +1471,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/nano-banana:
     dependencies:
@@ -897,24 +1549,6 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
-  packages/prompt-kit:
-    dependencies:
-      '@narratage/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/svs':
-        specifier: workspace:*
-        version: link:../svs
-
   packages/protocol: {}
 
   packages/provider-google-vertex:
@@ -960,8 +1594,8 @@ importers:
         specifier: ^3.700.0
         version: 3.1106.0
       '@hyperframes/aws-lambda':
-        specifier: 0.7.84
-        version: 0.7.84
+        specifier: 0.7.101
+        version: 0.7.101
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1005,6 +1639,9 @@ importers:
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
+      '@narratage/media-execution':
+        specifier: workspace:*
+        version: link:../media-execution
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -1018,8 +1655,8 @@ importers:
         specifier: workspace:*
         version: link:../runtime-adapter-node
       hyperframes:
-        specifier: 0.7.84
-        version: 0.7.84(@types/node@24.10.1)
+        specifier: 0.7.101
+        version: 0.7.101(@types/node@24.10.1)
     devDependencies:
       '@narratage/composition':
         specifier: workspace:*
@@ -1042,12 +1679,12 @@ importers:
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
-      '@narratage/image-transform':
-        specifier: workspace:*
-        version: link:../image-transform
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/raster':
+        specifier: workspace:*
+        version: link:../raster
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
@@ -1061,6 +1698,12 @@ importers:
 
   packages/provider-kie:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/background-removal':
+        specifier: workspace:*
+        version: link:../background-removal
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1134,6 +1777,9 @@ importers:
 
   packages/provider-media-aws-lambda:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1168,6 +1814,9 @@ importers:
 
   packages/provider-media-local:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/endpoint-kit':
         specifier: workspace:*
         version: link:../endpoint-kit
@@ -1240,8 +1889,89 @@ importers:
         specifier: workspace:*
         version: link:../driver-node
 
+  packages/provider-xiaomi-mimo:
+    dependencies:
+      '@narratage/endpoint-kit':
+        specifier: workspace:*
+        version: link:../endpoint-kit
+      '@narratage/generation':
+        specifier: workspace:*
+        version: link:../generation
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
+      '@narratage/runtime-adapter-node':
+        specifier: workspace:*
+        version: link:../runtime-adapter-node
+
+  packages/ranking:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+
+  packages/raster:
+    dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+
   packages/render-hyperframes:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
@@ -1254,6 +1984,9 @@ importers:
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:../hyperframes
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
@@ -1266,9 +1999,6 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
     devDependencies:
       '@narratage/core':
         specifier: workspace:*
@@ -1298,24 +2028,24 @@ importers:
         specifier: workspace:*
         version: link:../source
     devDependencies:
-      '@narratage/run-text':
+      '@narratage/run-markup':
         specifier: workspace:*
-        version: link:../run-text
+        version: link:../run-markup
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
 
-  packages/run-text:
+  packages/run-markup:
     dependencies:
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@narratage/run':
         specifier: workspace:*
         version: link:../run
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
 
   packages/runtime:
     dependencies:
@@ -1347,11 +2077,47 @@ importers:
         specifier: workspace:*
         version: link:../runtime-adapter
 
+  packages/screen-overlay:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+
   packages/script:
     dependencies:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
@@ -1373,6 +2139,9 @@ importers:
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
@@ -1389,41 +2158,7 @@ importers:
         specifier: workspace:*
         version: link:../text
 
-  packages/seedance-speaker:
-    dependencies:
-      '@narratage/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@narratage/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@narratage/prompt-kit':
-        specifier: workspace:*
-        version: link:../prompt-kit
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/seedance':
-        specifier: workspace:*
-        version: link:../seedance
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@narratage/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
+  packages/seedance-kits: {}
 
   packages/seedream:
     dependencies:
@@ -1454,6 +2189,24 @@ importers:
 
   packages/source: {}
 
+  packages/spatial:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/validation':
+        specifier: workspace:*
+        version: link:../validation
+
   packages/speech:
     dependencies:
       '@narratage/media':
@@ -1468,6 +2221,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
 
   packages/speech-alignment:
     dependencies:
@@ -1508,12 +2264,18 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/media-track':
+        specifier: workspace:*
+        version: link:../media-track
       '@narratage/program-space':
         specifier: workspace:*
         version: link:../program-space
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -1551,6 +2313,9 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
@@ -1566,15 +2331,15 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
       '@narratage/speech-basis':
         specifier: workspace:*
         version: link:../speech-basis
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
     devDependencies:
       '@narratage/caption':
         specifier: workspace:*
@@ -1628,46 +2393,15 @@ importers:
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/source':
         specifier: workspace:*
         version: link:../source
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
 
-  packages/text:
+  packages/temporal:
     dependencies:
-      '@narratage/core':
-        specifier: workspace:*
-        version: link:../core
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/host':
-        specifier: workspace:*
-        version: link:../host
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-    devDependencies:
-      '@narratage/narrative':
-        specifier: workspace:*
-        version: link:../narrative
-      '@narratage/script':
-        specifier: workspace:*
-        version: link:../script
-
-  packages/text-track:
-    dependencies:
-      '@narratage/component-kit':
-        specifier: workspace:*
-        version: link:../component-kit
-      '@narratage/composition':
-        specifier: workspace:*
-        version: link:../composition
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
@@ -1680,16 +2414,27 @@ importers:
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:../semantic-map
+
+  packages/text:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/core':
+        specifier: workspace:*
+        version: link:../core
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@narratage/svs':
         specifier: workspace:*
         version: link:../svs
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
-    devDependencies:
-      '@narratage/hyperframes':
-        specifier: workspace:*
-        version: link:../hyperframes
 
   packages/transport:
     dependencies:
@@ -1709,6 +2454,52 @@ importers:
         specifier: workspace:*
         version: link:../transport
 
+  packages/typography-track:
+    dependencies:
+      '@narratage/component-kit':
+        specifier: workspace:*
+        version: link:../component-kit
+      '@narratage/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@narratage/elaborator':
+        specifier: workspace:*
+        version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@narratage/media':
+        specifier: workspace:*
+        version: link:../media
+      '@narratage/narrative':
+        specifier: workspace:*
+        version: link:../narrative
+      '@narratage/program-space':
+        specifier: workspace:*
+        version: link:../program-space
+      '@narratage/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@narratage/semantic-map':
+        specifier: workspace:*
+        version: link:../semantic-map
+      '@narratage/spatial':
+        specifier: workspace:*
+        version: link:../spatial
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
+      '@narratage/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
+    devDependencies:
+      '@narratage/hyperframes':
+        specifier: workspace:*
+        version: link:../hyperframes
+
   packages/validation:
     dependencies:
       '@narratage/core':
@@ -1723,9 +2514,9 @@ importers:
       '@narratage/cli':
         specifier: workspace:*
         version: link:../cli
-      '@narratage/compiler-text-node':
+      '@narratage/compiler-markup-node':
         specifier: workspace:*
-        version: link:../compiler-text-node
+        version: link:../compiler-markup-node
       '@narratage/local':
         specifier: workspace:*
         version: link:../local
@@ -1747,6 +2538,9 @@ importers:
       '@narratage/elaborator':
         specifier: workspace:*
         version: link:../elaborator
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/media-pipeline':
         specifier: workspace:*
         version: link:../media-pipeline
@@ -1768,9 +2562,6 @@ importers:
       '@narratage/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
     devDependencies:
       '@narratage/program-space':
         specifier: workspace:*
@@ -2477,14 +3268,269 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@fontsource-variable/archivo@5.3.0':
+    resolution: {integrity: sha512-HogK8FJelrD1o7TlZlkIVtHgc20bO5PZRWE7mUeUTdMN055alznQV6/00J00IBeu8FQAH4s3zW9UJNvKExXf+g==}
+
+  '@fontsource-variable/bodoni-moda@5.3.0':
+    resolution: {integrity: sha512-yTDXk4+/J8I20KjtkHBbXDQNeE5PR3BZa0gv/YRza+kyxsz+mmg0la/n/hsr6+WvSfVP7Lc8lRTjHGIYwBW43A==}
+
+  '@fontsource-variable/cabin@5.3.0':
+    resolution: {integrity: sha512-VDe9LHdI/XrmYDPCgBVkY+9ZLxAZFrTD3KhpJ/I0y3Ug9uCMDiNr0uKRaI7l1s1InANj1xH/Nsc7mOjkFJfK9w==}
+
+  '@fontsource-variable/caveat@5.3.0':
+    resolution: {integrity: sha512-Q3mjghoYIlXgwqBPJKZ4q6f3zu921Gq7UU76r9Z+NAmhapHfX130GIFpOCYf8vt2SIcgCi9RHDT7anfJKg/kiA==}
+
+  '@fontsource-variable/cinzel@5.3.0':
+    resolution: {integrity: sha512-eFcU0TwaAP5QESF2pV8VoOPJJXJ6sSGm/6mXMwqTdMBPAJMaLhfa6oISHuOtFeddsoHP9RYm4Io0j1j3mNEz2Q==}
+
+  '@fontsource-variable/cormorant-garamond@5.3.0':
+    resolution: {integrity: sha512-rgZJ/5w3hi60swAPnrOXpZf5wEH6NTrvm4H8D9Y4b1QIFUqlX14eM3QTMU/eAznjfh0eXpO1QUqsFhiy58aoMg==}
+
+  '@fontsource-variable/crimson-pro@5.3.0':
+    resolution: {integrity: sha512-CmtGOKsw1H/JcXOcncu8SWOnhWlyLaAMbCVlG9yR5kz95hrxYU3A1+0DxdRbz/MFhCJGxchgqwPxLAlL0cWvdQ==}
+
+  '@fontsource-variable/dm-sans@5.3.0':
+    resolution: {integrity: sha512-BpUG5bqePiDFMBM4ZtLSlPdAIOM990uB1dlXzIf4aw21yQR7BmykedLXXXMqGWsR18aMLOsbWccwJNh3ztTQaA==}
+
+  '@fontsource-variable/eb-garamond@5.3.0':
+    resolution: {integrity: sha512-656OJsA9Vv24yhqRZFEzXnzS2AYgKdEILLgHJYLzzXndgcWFKfSXFqzbRI5/6Yk1Yt7UfWrUeppE5nRQPQMwlQ==}
+
+  '@fontsource-variable/figtree@5.3.0':
+    resolution: {integrity: sha512-VRVodD7OiG7apQwE8/2fMjaqpY/a0qRJqL5HtYj8CKIVps+9amaFcdfKmDIf7iqYQx6iPLlArVXAfKeIZmVcNQ==}
+
+  '@fontsource-variable/fira-code@5.3.0':
+    resolution: {integrity: sha512-ZhvHeknlicraKVSJBa1NrJnXDVByUkC407zwgELYfmnx3p9g8vwIPfQCxx8YD3K7dAeCdLuHJOHlpMfRsIcApQ==}
+
+  '@fontsource-variable/fraunces@5.3.0':
+    resolution: {integrity: sha512-9BYGySn4AHEJdgp9Z28tQ3X+laJMEOITXkQarZXeloWQZDq5oOvXJ3kDA8c7MGIfpogIaZfjrQBqmda8POOCKA==}
+
+  '@fontsource-variable/fredoka@5.3.0':
+    resolution: {integrity: sha512-13w98iw2RcmYfZQRZPLSu+0YJK3HHm5A2XrpU26moFIAePmfiKfvkmEJUgkc8r5GNR+pbDijOueS1KdGAMAWmQ==}
+
+  '@fontsource-variable/geist-mono@5.3.0':
+    resolution: {integrity: sha512-vBbuwDEo9AkrqADMXOrlAR3DFcJi4/JxeuU43FoiQERnNwsfXNnvxvReZG02cQKmyk4DZkZdBZX3oTDvy2zBAw==}
+
+  '@fontsource-variable/geist@5.3.0':
+    resolution: {integrity: sha512-j0m+vLQuG5XAYoHtGCVu0spvlGreR3EzpECUVzkFmI1mTVnAO38l/NEPDCFgZ177JxzYJCLSmTQibIiYPilGrA==}
+
+  '@fontsource-variable/instrument-sans@5.3.0':
+    resolution: {integrity: sha512-u4gKbDBTNFGkg997tfQn3eHOhHuquWUFTRT/rwzuKtrxX5P2ekfs2x+LgBPP4P32+cC+vUwF1Cr+IdRoPQbrGw==}
+
+  '@fontsource-variable/inter@5.3.0':
+    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0':
+    resolution: {integrity: sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw==}
+
+  '@fontsource-variable/josefin-sans@5.3.0':
+    resolution: {integrity: sha512-duVgkuzE/co4iuIfJ7jM2qX0ED3b6qdY+SlSjNMs6zfhz7EE7kJxV0qF65hQCv1kN0A20j4FwsGAYJvfpU+iSg==}
+
+  '@fontsource-variable/jost@5.3.0':
+    resolution: {integrity: sha512-9FS8iBMJnfyPqQOi9dfMjSwYBIWd0kBD3/jl8VvtbIMY2pK+CSp3oAaTLS1V60rDoM7AfyPvuT+IUfJfGeCTKg==}
+
+  '@fontsource-variable/league-spartan@5.3.0':
+    resolution: {integrity: sha512-dn7OVujDOZ6//Bs0TEhi7QTZvwOJ8YNdNfviT29AC219TKaimMpWtyMGTCdN7IB3ho6HxQj7VEbolHah2tER3g==}
+
+  '@fontsource-variable/lexend@5.3.0':
+    resolution: {integrity: sha512-3SXtiZ8rFbT0oaPzEboCG5RM3jtyhpNxandh1jWNLqvrJRfV/eP3R+GGw+o5e3hS1uqmAGutKxSvaWG5oyrimA==}
+
+  '@fontsource-variable/libre-baskerville@5.3.0':
+    resolution: {integrity: sha512-lIjXwDhcdr0OxSdzlAU4G7Tnny1LhgAiPFdp3/PjwRMqYt2JLU6pQiLwz/M5lRBs/kRtHwxknPUqRt37AnqPFg==}
+
+  '@fontsource-variable/lora@5.3.0':
+    resolution: {integrity: sha512-2ph8KiZ8Bn141hWuC3ErtpJ+Ui8p2MJQn8TJNRSRmLmnCIOCtHfiBM9R7WLRPeUG/q6hXyHOxWQ8DvRSX+ixvQ==}
+
+  '@fontsource-variable/manrope@5.3.0':
+    resolution: {integrity: sha512-6D5dgokHsWDDMtmXHznKa0hK229NN+1a4BLPmUCLqcO1Pw5EEhWY5RFt0AcXnVRAljFFPfRtLkJePQj6LSsV6g==}
+
+  '@fontsource-variable/merriweather@5.3.0':
+    resolution: {integrity: sha512-wK7S4NtPXWUWll/sZCdub93pqSCnFkpKFbnoOE8fh+9Ut6JFjgkc9UlBxHJ0RVMkDpoWwGwMwYYTMvd3G9aAXA==}
+
+  '@fontsource-variable/montserrat@5.3.0':
+    resolution: {integrity: sha512-7PaZoxaxrWLAyrhO46v65An9LhUhfkTExWLhfbywYZCnZEgg/W1rEHnlNmZKjNZ3nJTVYyicqxlJt10z/26yTA==}
+
+  '@fontsource-variable/mulish@5.3.0':
+    resolution: {integrity: sha512-CLh1WAcz2noJmoAun0/dsE7+0ZO6Kq/MBd+x00CcZ9dmThXqYqdhSssXGOdqb3G9YVaeGOmVkMS5yrZd1BHr9Q==}
+
+  '@fontsource-variable/newsreader@5.3.0':
+    resolution: {integrity: sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw==}
+
+  '@fontsource-variable/noto-emoji@5.3.0':
+    resolution: {integrity: sha512-omw94ZtSEOTYPyNFIgMeFMTLhry0GA6VgOWATfcuvKgUvV4TxPwoKnaWFMDbZtp41HTXPntoMYpbxZQhv0TPCw==}
+
+  '@fontsource-variable/noto-naskh-arabic@5.3.0':
+    resolution: {integrity: sha512-Ot0G5iln5MeLPKp1WNt6AGi4KHbPIVm0GEow2ED6rZ+8Rao+OuswhX4D+RPerc3aQ6teneLdqXSL8VPGorJvGg==}
+
+  '@fontsource-variable/noto-sans-arabic@5.3.0':
+    resolution: {integrity: sha512-Rz8+DBzza3//cmN+DBQajJhx3x+Dx12eUgnQsTOgPWbOT0+In6APmE8z4I/QQnUWfAx+s8l93+60qDT5vJH1sA==}
+
+  '@fontsource-variable/noto-sans-devanagari@5.3.0':
+    resolution: {integrity: sha512-52XBcJS3jRvZ5ugFXJvdKgffXPYnN08LeodXkgCbepOdMKVRVTQu1yj071cq8S3zmUwT6w6XKKXRSQlQkwwNNg==}
+
+  '@fontsource-variable/noto-sans-hebrew@5.3.0':
+    resolution: {integrity: sha512-jGIZ2EOCTtT1ZhLthz6nEpPXGMniSPI/0tv5CDFDZ7MPYyoj6FskW7WJ0YTyesFADdzjx7F2Pg5W1PWD6y9UFw==}
+
+  '@fontsource-variable/noto-sans-hk@5.3.0':
+    resolution: {integrity: sha512-rnFumK0uvcJHoBGRah7j88W8XpdrKTKjUQIp565vLuWl01ZkDRJLutDnCDc2JosPwgLudVA0byNEh8ICGUcl3A==}
+
+  '@fontsource-variable/noto-sans-jp@5.3.0':
+    resolution: {integrity: sha512-XVL9GfGBRjj523v9w3Bctu4mNq7E5rUa+AMZm8DK1EM3LAGlKC3DZMvuqkLn4DB4TwwoAjcsJUCiRpUTDzzOkw==}
+
+  '@fontsource-variable/noto-sans-kr@5.3.0':
+    resolution: {integrity: sha512-h863ZOIVMKjX0PSr0hLMUp/SjrwOul2yp0f5P61avqXdhqDABSkakzG2Ee07d3W8gVYgS9dMmxULdCkoN09f1A==}
+
+  '@fontsource-variable/noto-sans-sc@5.3.0':
+    resolution: {integrity: sha512-lNar1dF7Ik/lHNPo/7JWG0TolXY29LtsqYgMvEysooZ5bsO9uH4shJmRrwyJ3PjyTPljhpMJEK0jDuLSU4vJ1w==}
+
+  '@fontsource-variable/noto-sans-tc@5.3.0':
+    resolution: {integrity: sha512-sniyvTx+yRXlce9bjBV0i3kBG3/YFJiz6SZA9plNJLCR4TbY8il+G759gAXWHZu01eAclbJEN2YR+qbQjZTjkg==}
+
+  '@fontsource-variable/noto-sans-thai@5.3.0':
+    resolution: {integrity: sha512-jHEC1vo8gD09GKf8jtH1IMoPqWmQQSKH3gkyD3ibCIMEkVpEqJ9NJ2c181VHKbTHXc7Wu9CbuBU3yjQNvpbEbw==}
+
+  '@fontsource-variable/noto-sans@5.3.0':
+    resolution: {integrity: sha512-e3ZuxzY9AL2psXPZlhwhnYrHUHv6PMoyK9MQ7croF0CUgURLqu9EMjW7q2FgVLwij1tjLsIHQrnwQ8aUcg4BiA==}
+
+  '@fontsource-variable/noto-serif-jp@5.3.0':
+    resolution: {integrity: sha512-+kD6gj7RhZ8bjA8WxT5UxnwqWUCcFhCaM2t30zjKTS1sAXbDmJEdj+mrCEYIof1SjDy43VElQQCITouTvrGNuA==}
+
+  '@fontsource-variable/noto-serif-kr@5.3.0':
+    resolution: {integrity: sha512-sy7jHCFyLRfo86KbolWCUDuWYroUvbUZqxQikjOv1F6+rOjS5PtGPS9MLB5MBCCB1gcKfBaZKzKCu3I0OqOqnw==}
+
+  '@fontsource-variable/noto-serif-sc@5.3.0':
+    resolution: {integrity: sha512-7LcN2NEf4HDjoSkGWc79WqDDyMK8JvSPdA/gsHjJpZ8l9A9mcK/GQTazp3klmkBwJooy0eqeNvlmaZFXPupHrA==}
+
+  '@fontsource-variable/noto-serif-tc@5.3.0':
+    resolution: {integrity: sha512-V2teMMI26OmWNJd1d2o7J1DdsnMkyo/wwBoEnME3Qk6FDJ9KuTqpMuaeI3a/Sj3h0iAtmp2gKcg8phRdm4CyAw==}
+
+  '@fontsource-variable/nunito-sans@5.3.0':
+    resolution: {integrity: sha512-Vk1PSfckNDwgw2yGcsvJP3o/0zEW8Rp6KzbD8Ql/6iRHQshnhhAjt+cSIfAUyp5vQuSlleGHFW2LfYaaex0diw==}
+
+  '@fontsource-variable/onest@5.3.0':
+    resolution: {integrity: sha512-K4Es0F3M+iFnVY5mfunimhPSk1Uvl3eyovQVWjtf8oS00a7WSrSg2BD5Bh/pAcAZUe4ocV4M08dg5tvCULBJ7Q==}
+
+  '@fontsource-variable/open-sans@5.3.0':
+    resolution: {integrity: sha512-VOfhZfLIOBVa6K/dTEu7scqQXYdGa4jBX8quFpQ0S6574B+W2EOBJf9PkqyVtMEI7WWIWNEbpvPc3vY1mN2mmQ==}
+
+  '@fontsource-variable/oswald@5.3.0':
+    resolution: {integrity: sha512-sSZzcTeaQGNyZbTVlS4tNNHElK38UktFLqKd6NQDLFCBV27320rQC3kXSZVytYm1PPjKmPxqVaGwqj7LEKUWQw==}
+
+  '@fontsource-variable/outfit@5.3.0':
+    resolution: {integrity: sha512-fPb5XnYK0k7SbR++HEmm4+ZqDszmLKQ+sPRUr8oQ/KNC0vy6r6hazJFe8iYozv4cqlHbvJ/JECkJWrfDodUMVQ==}
+
+  '@fontsource-variable/playfair-display@5.3.0':
+    resolution: {integrity: sha512-IHdzTvE8eGIXHteZql7KXoqdc3Gfm+Zs1u4XlSC3MeplkwviT3sx/P6gI0tLwg/xIYLF4ZJYveZ5V+bl9cnDwA==}
+
+  '@fontsource-variable/playpen-sans@5.3.0':
+    resolution: {integrity: sha512-IoqGZSrVkaGXgD61IGkSOF0nTNmb8I4gyxZxpuHXCocAj4he5sL4oLWy1BmyiZiDv0pUeopaKQv9Q2Zpnse87Q==}
+
+  '@fontsource-variable/plus-jakarta-sans@5.3.0':
+    resolution: {integrity: sha512-/l/4r0yyWK9JzAlmA0LiYgGgmJe/Gswt4jTJEzr5QhJfwMbvJZDmYWyW0M4X7yCK69BajMVlV/Lx8g7WDc1+sw==}
+
+  '@fontsource-variable/quicksand@5.3.0':
+    resolution: {integrity: sha512-EMyoXnGC0uIbjyHDB01MTJoQuODsMo7Q/4XLEwN97YJEeV1WIVFI0QBiW2exGnxvhnMHb+IwQ9E5QZDgGMWCHw==}
+
+  '@fontsource-variable/raleway@5.3.0':
+    resolution: {integrity: sha512-aSV2k+V6Zz+od0dHpBOzkVxEzmgEdiXcxDfant39jLOx+T89dielQRrZylukwK3Fp+FY255gPqz67ruOfs1rqA==}
+
+  '@fontsource-variable/rethink-sans@5.3.0':
+    resolution: {integrity: sha512-TxcGrNeylZZ3eL5WuNxvm1OLOMOrmYTRZcqMUoYhOfpcMgvE6PhssC6JGkPHhN93phU569RLD8cSykOjyHCuxg==}
+
+  '@fontsource-variable/roboto-condensed@5.3.0':
+    resolution: {integrity: sha512-RpYyF6G0h0nsVcCDLRIbZbK+l8cVDoe1PVbzvzVhtLzCiPqIEEGDs9xB9ZWPJawKS4bJzpKn42KgZFISF/AOuQ==}
+
+  '@fontsource-variable/roboto-mono@5.3.0':
+    resolution: {integrity: sha512-h5r+KY/6qy8JEOj33JgcrFO81YAnvrc1EAwMpl/EPJLb2OIvOy0/jmB5M7qs7x/uXk5JUP5Ux4LrkeOK7faHkQ==}
+
+  '@fontsource-variable/roboto-slab@5.3.0':
+    resolution: {integrity: sha512-eByKAjLM9td0qsXCOZhlUGfhsjen//epd6/cAJOg+o73RtYBijrI1jz+lTp2X0ebwTCLmKB1+Kt/QiRMgmNPTw==}
+
+  '@fontsource-variable/roboto@5.3.0':
+    resolution: {integrity: sha512-BoaaZiQf8fgtxv07KXkTwx1bKz/EoqIlTXq2OOKKXINxp6qXWdnlChqV+hSaDANS49yyUASFl3OVBMMDTCIHFA==}
+
+  '@fontsource-variable/rubik@5.3.0':
+    resolution: {integrity: sha512-yQUf8qle24MJYA+EuauyF+cqjjN6I715nGjitt3sGmwZA0XfA4fWJcLq1C/diREZl4Qzn1E80nLMc0ipC/a4Lg==}
+
+  '@fontsource-variable/shantell-sans@5.3.0':
+    resolution: {integrity: sha512-FPdHvSi6cngE/DMVCm7Xlls70U0b4/NMJLlcAPvVoq6eot1X8tNOZMRc22Rh9KoAfmmBz7yjsSXvpsYmkhXXVQ==}
+
+  '@fontsource-variable/sora@5.3.0':
+    resolution: {integrity: sha512-h8kHta4Z8SkfUGeI82TUy1n3rbrKpBRGwuk4t4qCwto5oEHxlbOFD2yGP+Df5fbmTXwKGn+o667vYp0E4K8Whw==}
+
+  '@fontsource-variable/source-serif-4@5.3.0':
+    resolution: {integrity: sha512-9vch9WqxjaaA+1o9Ur8pOgIGbCYLjRReOUel23A6lOpD1syptgjtkORevvNmldJ5kGXQL29onQUqI5Ltz0s3bQ==}
+
+  '@fontsource-variable/space-grotesk@5.3.0':
+    resolution: {integrity: sha512-2IxmvfB08i9vnGB3Ym/AXvhRE+8XOjWMXIyDum03c+tPwH0FUoMNQfGpU8NXPxjbws0Vvss3AH0Zqt4oJBBAdw==}
+
+  '@fontsource-variable/unbounded@5.3.0':
+    resolution: {integrity: sha512-ea565Ncn4r7gPdBEHcmaF31V11hDfkL7b/JCklLobQbMfbu2ZZQrVWNgdeEFWFLqNh36yhieZWOgxdAnMTzrLg==}
+
+  '@fontsource-variable/urbanist@5.3.0':
+    resolution: {integrity: sha512-riHbcRgoOhEdCwVw3n3R1JLEwvRD1N9GlXtBcwl/UJ2KabfyDBuryE2Yq10308QJgbXw3F/IFF+VoMuuqwVfIA==}
+
+  '@fontsource-variable/vollkorn@5.3.0':
+    resolution: {integrity: sha512-EYzMw2FGZXrR6oB7A3/pck3HY2ZjIGfoTFIZV5OsXexLu0nqPELuCmOoS7oQiQ6TkNjlQ3UgUIU24tNvxEKzcw==}
+
+  '@fontsource-variable/work-sans@5.3.0':
+    resolution: {integrity: sha512-le8h/OIIuhm5Z7TdvuMw0yKg2gaCZUiMec8zaumsVVjzeJRBPEF0bQI/MkaZDHCVzZDvZoP/O2LiGOSfDLSbaw==}
+
+  '@fontsource/abril-fatface@5.3.0':
+    resolution: {integrity: sha512-voKCJEhGGZNdlk+OS3uFRSDV/HWbs6TAy7qKe9wXq96Uzwadfksyk5eyXLa1T5FkEazBgpHRMRSFBKfA3rbKbg==}
+
+  '@fontsource/alfa-slab-one@5.3.0':
+    resolution: {integrity: sha512-J/ANFZ7S9CbZClr/QhMjmBtpFmmKipVkEXHj20aurR5uqJPCBChVPJn1/kx6vtrwnfnDY0kQaYSTYasSt4GruA==}
+
+  '@fontsource/anton@5.3.0':
+    resolution: {integrity: sha512-OR1D5n124n2XRs66SbX7IjcOSptljEJE8FcDNnlni2y1/M6KpTx7cU2PIWzTSsBj4WFkHPw24On8qw3qkQZuTw==}
+
+  '@fontsource/architects-daughter@5.3.0':
+    resolution: {integrity: sha512-uezOgAlbhmf9nDW69VYq31lXNA+0uRFWXBGCSFWLXVcrNESFHpNjvu11kJss1PMsfH/YKz1hnnYB+JSNI/t+ew==}
+
   '@fontsource/archivo-black@5.3.0':
     resolution: {integrity: sha512-7EsTIQ+Blf96ktpzTUpI7msi+u9/AJxM/GZxOSkEubVd1jSTrFSTNxMgfpX/8rQsjZ+19a+qvRbtcTEp5J/72g==}
+
+  '@fontsource/bangers@5.3.0':
+    resolution: {integrity: sha512-tSRpmWwkqrO9PCqo9wjA/99/5sLOIWm5cf51G3ooEHd8qZus8sVSSJoWp/7EvM5rIgZMjKRG6XtY9yeisKxE7g==}
+
+  '@fontsource/barlow-condensed@5.3.0':
+    resolution: {integrity: sha512-RA7MmIx0v3eQ6Gcf74qLVLOwLB0GpPOzx+eU9iG/AmCnSJGcIWYeU8y6CEMGZ210MGwGg5CZhzLkkvyZdTTk1g==}
+
+  '@fontsource/barlow@5.3.0':
+    resolution: {integrity: sha512-tGR0y6QObRtKv71MOth44222+mdNFM/ZWFWDV1VLzNbG4oK9PNRlyJzmkck4vHAi9ibHBXgt4SlY51amFP55CA==}
+
+  '@fontsource/bebas-neue@5.3.0':
+    resolution: {integrity: sha512-nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==}
+
+  '@fontsource/black-ops-one@5.3.0':
+    resolution: {integrity: sha512-kDqkJFtvMErjajEeMXv6nyIW3t6UKb5usW+1/sQox9vA5q8dyMpAdAW9tU6+aIWo6xIQlatqNrfUlrBdJu6D4A==}
+
+  '@fontsource/bungee@5.3.0':
+    resolution: {integrity: sha512-vKwbDE7yMrqfGxgFan+diPLwgWp9j4FGYaLm+OhUoqYO6Pr02QIi/p0KiTW0E/7uiXqfTd6cMj+/E4h2sc3Ocg==}
+
+  '@fontsource/coming-soon@5.3.0':
+    resolution: {integrity: sha512-a5SW74ZAVTiGhu3Ml+rRvySYiW4kCXps+CTfPGIoEMbOl11Cy2xOF5UE2Pxlili4fGYrd/bAStaDFqbtEemx6A==}
+
+  '@fontsource/dm-serif-display@5.3.0':
+    resolution: {integrity: sha512-ecRclUcYeto9fB7ghkB36H4MtUoaUYFjjornWYYeLCMHzaWEDPk2kIWgZOq0mKBNRxclRSieKcFeLonlMYDTKg==}
 
   '@fontsource/eb-garamond@5.3.0':
     resolution: {integrity: sha512-VplwHpB8FLuzl+4G5LDci1b3Z4SghiuXH8XEgaxjnOb5aue5mEt1njmDKeO6iyLeGa73LffU7PC7hzncLRx0ZA==}
 
+  '@fontsource/fira-sans-condensed@5.3.0':
+    resolution: {integrity: sha512-aYiPJnAwfvhHW1Yra+YPGdFvhvJhQax1wHb6aa6979ixPe51CspvxgZTJ8JNfIs3Gu7UcclUl6d2MuDnw1wsdg==}
+
+  '@fontsource/gloock@5.3.0':
+    resolution: {integrity: sha512-vGvBRavw/y3aTCsz1uTNydQjCfRLGNOnSpmn/Qs3EZDqPAKBg6Id4OdHGnWLWXQ57IkzuNk/e9+KdMze+azOxA==}
+
+  '@fontsource/handlee@5.3.0':
+    resolution: {integrity: sha512-bginDzMq4WhtYCcCR5O/WUh6mjXgZ17miwY4mSCR6+Z5iXaUGc71GuFHdFKsZBTO+9CZqRRfXaGtTSz4IIf29Q==}
+
   '@fontsource/ibm-plex-mono@5.3.0':
     resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
+
+  '@fontsource/instrument-serif@5.3.0':
+    resolution: {integrity: sha512-mDiaIg0u67sYV59fie92Wz4sM8UiVlbL7fLxnFPCKkX15DMASEnQTREbaP5S5/3DCcsoAOcQ0sV9E4AeY4QqYQ==}
 
   '@fontsource/inter@5.3.0':
     resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
@@ -2492,8 +3538,32 @@ packages:
   '@fontsource/jetbrains-mono@5.3.0':
     resolution: {integrity: sha512-fqDfB5I9f1p1TV486aUgB9t8zP84P0O1FtQR5Ol9vjwPy+S+EIGlVYm1cvj2W5shcZMTg2nZFdVMoH5wFu8a1A==}
 
+  '@fontsource/kalam@5.3.0':
+    resolution: {integrity: sha512-FDkVoDfPDCSN/eO81FOYtUI67eMgpVBJmjBtAqSL0PmEhJyeFY2biC+CR+yEttksgXR9+swpFdYmQTyjwBq80Q==}
+
+  '@fontsource/kanit@5.3.0':
+    resolution: {integrity: sha512-XrVxf5NWb8QLAEbQS2GYir3AY0WbOLr5Q80fWurnoFWXyc7CWvioGNPC2dxRGZKocMUXbwGhuK+sJqWkRLAWNA==}
+
+  '@fontsource/lato@5.3.0':
+    resolution: {integrity: sha512-0WhF/4rhrw+ErIyneKvhHn2YAl+xf8GDtllgOgOzDmeaSlLQtjpChXaQOpWhG2BchQW0WJy2zLV12Hdg0ndOMw==}
+
   '@fontsource/league-gothic@5.3.0':
     resolution: {integrity: sha512-gqedetX+UlaiJgLiPnOzWGB1sY3OtNhS8YMjTy2D73AcsagIqpdIizssr1MStcUYf3D/zzanECuXawIgMGZxDg==}
+
+  '@fontsource/lilita-one@5.3.0':
+    resolution: {integrity: sha512-bNW3tD+m5pOsAQpW/NvtRbFthFe+B73hDJK2DLLCFCtF+1p+UMBgo7ibxdcb9Sftr06LKAVbt080wiMdSqGbOg==}
+
+  '@fontsource/liu-jian-mao-cao@5.3.0':
+    resolution: {integrity: sha512-OaFm4okm77XoGA9jp1J89tDjdWlzb68yJCUL7LV75QxUWF/qOBRVqmhP7XFFsgcn/PL+nc2dPvRGT/8yit5LZg==}
+
+  '@fontsource/long-cang@5.3.0':
+    resolution: {integrity: sha512-lCcBJb+LWZpYCVtGvQRiZPy5/EaGPuYLycpJXUIOz28EYGGqhTVWBRqY6ucaW8l1F8gvfjutY1PoAPUrFiP0wg==}
+
+  '@fontsource/luckiest-guy@5.3.0':
+    resolution: {integrity: sha512-wCtuVkExxmKeW0FngmKVTcCK9T0elvjoP4/ZZaINqsUjlk9CB17Rr9FQ6pIDlN4nzouDMGSuqYvge3VoKqslPA==}
+
+  '@fontsource/ma-shan-zheng@5.3.0':
+    resolution: {integrity: sha512-3p0aUEYOFBa4mvHIRDksZZ9Uf35jQdq5mpwp6NZHiNYt/jDj/g83OwTAWjzy+9ZJAxYC9NLLobIKuW1BEcnv0Q==}
 
   '@fontsource/montserrat@5.3.0':
     resolution: {integrity: sha512-iQPDtZOnmM5ih4JBGaMSXisRap0ixb9bAUw2hDtY7EjVfaqiiNlKtVuJl9XclxUwtwMMHNcWXfQR6zI9x05+Tg==}
@@ -2507,8 +3577,44 @@ packages:
   '@fontsource/outfit@5.3.0':
     resolution: {integrity: sha512-0AVHzTTVJSxWDOxPKSfMeHhZeBFDU3cmgrcOb76ZEyhGo0+xgyG3GsLF3h9+X8w0IX7G4jzjJgFQEBiWdX6VgA==}
 
+  '@fontsource/pacifico@5.3.0':
+    resolution: {integrity: sha512-bWv0fHR1n36p7scRn+maaEaVeQCOq9yvfVfjyAeUzKrK4Y/3qiRAEj4hJgfxj/sjgZZGkeHyKPrbWdDaZtpCVw==}
+
+  '@fontsource/patrick-hand@5.3.0':
+    resolution: {integrity: sha512-V8C38IlIFfdWg0Xtri3F7sLCVpm069rUwn6w4n+oyn38gt7H4arOJmuReg3tAw1Q6jHqZp89wTnAAJagq4Atxw==}
+
+  '@fontsource/permanent-marker@5.3.0':
+    resolution: {integrity: sha512-ZO/NtYW4SCc/iY8N3dmjWyDITcXJ/vhWZFgnwRcvzwCKKnScMrM/a2/6VHlsjCVuIgmPzNrCFbedEYhv+/jJBg==}
+
+  '@fontsource/pinyon-script@5.3.0':
+    resolution: {integrity: sha512-ilhy4l5apzyDkfuKb7PZBUT5Sf6nfxucdXT5TQ0wQDyWtDPlouLy1lQq3lMEPk1lPsHHVrd11EkPnEG8FqDgUA==}
+
+  '@fontsource/poppins@5.3.0':
+    resolution: {integrity: sha512-cms1nM7U6SN8epIV1WMVOV8VsA645aSm3wHfzIQnkk188U341ThbJGSl2Sv54V29gnDbT2arMPfLzvVIIVCceQ==}
+
+  '@fontsource/righteous@5.3.0':
+    resolution: {integrity: sha512-xr3w0E1jtc7xoXLfgJrcaKqWjvh5XiAAthVLrl9v9HKC7TfwMy3nARytetfi2GIgo51+aWsEJ51Uyd3XEXbj/A==}
+
+  '@fontsource/satisfy@5.3.0':
+    resolution: {integrity: sha512-dQ+Cy85XdwYnwlzWcbkmA2Qkpxam0ZHDaGm/qoGHlyHKRVgM/BJN8RLHpRm31R0REFBQe5Yl8Ke5oTdpcKdPIA==}
+
+  '@fontsource/shadows-into-light@5.3.0':
+    resolution: {integrity: sha512-3dvv0i8/ZwLMY08AAlTLivHUdNQYB6Fxe92d7BZiGbHY2GQnCxEd8JC9CBzxTiP4iyWNa6OZn9LXF+xjc9LaGw==}
+
+  '@fontsource/short-stack@5.3.0':
+    resolution: {integrity: sha512-nhIm4HgWq6AsM9Sg32OrsC298avDiDhqoMRMYpv5T5OSCIpAwPXpnIgJYJVLzkSC9hOqhKxX5NGZ2ViaDM+7MQ==}
+
   '@fontsource/space-mono@5.3.0':
     resolution: {integrity: sha512-FrpBMOVWn3PRdRHlrZWC55X3kZG/2BTH7SM5ZyS/bky3iKya2BturI5lk+t0RoDQL2JyHzURsVq/EisCsxpI5A==}
+
+  '@fontsource/zcool-kuaile@5.3.0':
+    resolution: {integrity: sha512-jn4vpQ6QSVEckUn7uk5a9XcZMxEksTRqljmeE1VKRGMjGd6VoXdMyLGSdnTXSVwZLCCEHaIcm/2cdQuwvasJ9w==}
+
+  '@fontsource/zcool-qingke-huangyou@5.3.0':
+    resolution: {integrity: sha512-6/ld8x/knq1NjDQxLSyg9pDnBPOmtWDb30ZTFk+n8OxfkBoUvPAxh3aV/6+UFGmA5CekJfcgpUwd2/x/weLvSQ==}
+
+  '@fontsource/zcool-xiaowei@5.3.0':
+    resolution: {integrity: sha512-iRuUPl9ONFbYzi6JcEshpE4VedINyzQ4hv0Z5XEt0cB0pMPiQeqc2Qvv1NwJCNzkPwG02VCdcO+cF2K8ylYn2A==}
 
   '@google/genai@1.52.0':
     resolution: {integrity: sha512-gwSvbpiN/17O9TbsqSsE/OzZcpv5Fo4RQjdngGgogtuB9RsyJ8ZHhX5KjHj1bp5N9snN2eK8LDGXSaWW2hof8Q==}
@@ -2525,8 +3631,8 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@hyperframes/aws-lambda@0.7.84':
-    resolution: {integrity: sha512-ampI/JKXixe/ilmbLgo9Mg5BaWvrBSEWC2Ovc9rzIFkJ3V+6z736tOWhK5hQ70r6xmSfw2a+As/+trhGsujl7Q==}
+  '@hyperframes/aws-lambda@0.7.101':
+    resolution: {integrity: sha512-SNv2b2cn/TKEuSWDeJ6POz29DYqFEnbhDkQ+57+6dv3Ztu4344ChGKlofzK8LxyVXGqLimOnxI8RG0cRxXBxFg==}
     engines: {node: '>=22'}
     peerDependencies:
       aws-cdk-lib: ^2.130.0
@@ -2725,6 +3831,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@infolektuell/noto-color-emoji@0.2.0':
+    resolution: {integrity: sha512-B6kpvqeD0ukTR7sydGKpktvO3VhZkOwQxAdLLGPdSHxQxREa2+sH6B9ODop6quPGjhmsZkJ/hL01rQ8At5xDew==}
+
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
     engines: {node: '>=18.0.0'}
@@ -2765,19 +3874,6 @@ packages:
 
   '@protobufjs/utf8@1.1.2':
     resolution: {integrity: sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==}
-
-  '@puppeteer/browsers@3.0.6':
-    resolution: {integrity: sha512-B/gKoqlFkzhvzsI6jo9K1cZz9o5ypviVv/xu8CwA4grZzyVwN+XfkT+tu8T1zrauuEXv6VhS2oGX+6NL95WcKA==}
-    engines: {node: '>=22.12.0'}
-    hasBin: true
-    peerDependencies:
-      proxy-agent: '>=8.0.1'
-      yauzl: ^2.10.0 || ^3.4.0
-    peerDependenciesMeta:
-      proxy-agent:
-        optional: true
-      yauzl:
-        optional: true
 
   '@puppeteer/browsers@3.1.0':
     resolution: {integrity: sha512-RDLpio3fH/qrj5k4DVY6eyiN8tCS0Zovd/6jW//n605oeqkWcUjn+3k+9ZtZBnbwMpsu0F7xDIiKXvVmG5c5Bw==}
@@ -3268,6 +4364,9 @@ packages:
     resolution: {integrity: sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w==}
     engines: {node: '>=0.8'}
 
+  cmu-pronouncing-dictionary@3.0.0:
+    resolution: {integrity: sha512-6y5X4OxsYFnHERo6WSVPnLrk53G07MOQ8aUb2z555JgwynpbZsHR0a//WdN6DUcmE1j2auTF2TtL4PpoKze8QQ==}
+
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
@@ -3570,8 +4669,8 @@ packages:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
 
-  hyperframes@0.7.84:
-    resolution: {integrity: sha512-JkfJtHRjPezHPdXoyoHjgnBEGQOffzjvAe4+bsHgbo1VBp3vYQI47GdL2bn3EydPa7p8c/shs7Ffs503ZrO4xA==}
+  hyperframes@0.7.101:
+    resolution: {integrity: sha512-Y6+qLyEo5rwHfMJzPXLACDvV5QlGo0qs2BgVmq/Jn2pgWg+N9VXsF9drBXnIG7v5DpDvqGumCttfsv/tmq3ixQ==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -3766,10 +4865,6 @@ packages:
 
   pump@3.0.4:
     resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
-
-  puppeteer-core@25.4.0:
-    resolution: {integrity: sha512-K1plkLOdeoUnGeT1OvdqF3qxl33v+Ra/uH5VyPEhXdMcpvGiEskHzxxEU3fgpccJpJLIipB/rPUsvkZRWeKqOA==}
-    engines: {node: '>=22.12.0'}
 
   puppeteer-core@25.5.0:
     resolution: {integrity: sha512-XPNT0dQJtphqQ4I29zxlG4IIPbg1iEHAQKWuQgtMJGXjACV77pZSmJvDi51IIIfd+DTKICcopJwUx4upVQ4XbA==}
@@ -4668,17 +5763,203 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
+  '@fontsource-variable/archivo@5.3.0': {}
+
+  '@fontsource-variable/bodoni-moda@5.3.0': {}
+
+  '@fontsource-variable/cabin@5.3.0': {}
+
+  '@fontsource-variable/caveat@5.3.0': {}
+
+  '@fontsource-variable/cinzel@5.3.0': {}
+
+  '@fontsource-variable/cormorant-garamond@5.3.0': {}
+
+  '@fontsource-variable/crimson-pro@5.3.0': {}
+
+  '@fontsource-variable/dm-sans@5.3.0': {}
+
+  '@fontsource-variable/eb-garamond@5.3.0': {}
+
+  '@fontsource-variable/figtree@5.3.0': {}
+
+  '@fontsource-variable/fira-code@5.3.0': {}
+
+  '@fontsource-variable/fraunces@5.3.0': {}
+
+  '@fontsource-variable/fredoka@5.3.0': {}
+
+  '@fontsource-variable/geist-mono@5.3.0': {}
+
+  '@fontsource-variable/geist@5.3.0': {}
+
+  '@fontsource-variable/instrument-sans@5.3.0': {}
+
+  '@fontsource-variable/inter@5.3.0': {}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0': {}
+
+  '@fontsource-variable/josefin-sans@5.3.0': {}
+
+  '@fontsource-variable/jost@5.3.0': {}
+
+  '@fontsource-variable/league-spartan@5.3.0': {}
+
+  '@fontsource-variable/lexend@5.3.0': {}
+
+  '@fontsource-variable/libre-baskerville@5.3.0': {}
+
+  '@fontsource-variable/lora@5.3.0': {}
+
+  '@fontsource-variable/manrope@5.3.0': {}
+
+  '@fontsource-variable/merriweather@5.3.0': {}
+
+  '@fontsource-variable/montserrat@5.3.0': {}
+
+  '@fontsource-variable/mulish@5.3.0': {}
+
+  '@fontsource-variable/newsreader@5.3.0': {}
+
+  '@fontsource-variable/noto-emoji@5.3.0': {}
+
+  '@fontsource-variable/noto-naskh-arabic@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-arabic@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-devanagari@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-hebrew@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-hk@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-jp@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-kr@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-sc@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-tc@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-thai@5.3.0': {}
+
+  '@fontsource-variable/noto-sans@5.3.0': {}
+
+  '@fontsource-variable/noto-serif-jp@5.3.0': {}
+
+  '@fontsource-variable/noto-serif-kr@5.3.0': {}
+
+  '@fontsource-variable/noto-serif-sc@5.3.0': {}
+
+  '@fontsource-variable/noto-serif-tc@5.3.0': {}
+
+  '@fontsource-variable/nunito-sans@5.3.0': {}
+
+  '@fontsource-variable/onest@5.3.0': {}
+
+  '@fontsource-variable/open-sans@5.3.0': {}
+
+  '@fontsource-variable/oswald@5.3.0': {}
+
+  '@fontsource-variable/outfit@5.3.0': {}
+
+  '@fontsource-variable/playfair-display@5.3.0': {}
+
+  '@fontsource-variable/playpen-sans@5.3.0': {}
+
+  '@fontsource-variable/plus-jakarta-sans@5.3.0': {}
+
+  '@fontsource-variable/quicksand@5.3.0': {}
+
+  '@fontsource-variable/raleway@5.3.0': {}
+
+  '@fontsource-variable/rethink-sans@5.3.0': {}
+
+  '@fontsource-variable/roboto-condensed@5.3.0': {}
+
+  '@fontsource-variable/roboto-mono@5.3.0': {}
+
+  '@fontsource-variable/roboto-slab@5.3.0': {}
+
+  '@fontsource-variable/roboto@5.3.0': {}
+
+  '@fontsource-variable/rubik@5.3.0': {}
+
+  '@fontsource-variable/shantell-sans@5.3.0': {}
+
+  '@fontsource-variable/sora@5.3.0': {}
+
+  '@fontsource-variable/source-serif-4@5.3.0': {}
+
+  '@fontsource-variable/space-grotesk@5.3.0': {}
+
+  '@fontsource-variable/unbounded@5.3.0': {}
+
+  '@fontsource-variable/urbanist@5.3.0': {}
+
+  '@fontsource-variable/vollkorn@5.3.0': {}
+
+  '@fontsource-variable/work-sans@5.3.0': {}
+
+  '@fontsource/abril-fatface@5.3.0': {}
+
+  '@fontsource/alfa-slab-one@5.3.0': {}
+
+  '@fontsource/anton@5.3.0': {}
+
+  '@fontsource/architects-daughter@5.3.0': {}
+
   '@fontsource/archivo-black@5.3.0': {}
+
+  '@fontsource/bangers@5.3.0': {}
+
+  '@fontsource/barlow-condensed@5.3.0': {}
+
+  '@fontsource/barlow@5.3.0': {}
+
+  '@fontsource/bebas-neue@5.3.0': {}
+
+  '@fontsource/black-ops-one@5.3.0': {}
+
+  '@fontsource/bungee@5.3.0': {}
+
+  '@fontsource/coming-soon@5.3.0': {}
+
+  '@fontsource/dm-serif-display@5.3.0': {}
 
   '@fontsource/eb-garamond@5.3.0': {}
 
+  '@fontsource/fira-sans-condensed@5.3.0': {}
+
+  '@fontsource/gloock@5.3.0': {}
+
+  '@fontsource/handlee@5.3.0': {}
+
   '@fontsource/ibm-plex-mono@5.3.0': {}
+
+  '@fontsource/instrument-serif@5.3.0': {}
 
   '@fontsource/inter@5.3.0': {}
 
   '@fontsource/jetbrains-mono@5.3.0': {}
 
+  '@fontsource/kalam@5.3.0': {}
+
+  '@fontsource/kanit@5.3.0': {}
+
+  '@fontsource/lato@5.3.0': {}
+
   '@fontsource/league-gothic@5.3.0': {}
+
+  '@fontsource/lilita-one@5.3.0': {}
+
+  '@fontsource/liu-jian-mao-cao@5.3.0': {}
+
+  '@fontsource/long-cang@5.3.0': {}
+
+  '@fontsource/luckiest-guy@5.3.0': {}
+
+  '@fontsource/ma-shan-zheng@5.3.0': {}
 
   '@fontsource/montserrat@5.3.0': {}
 
@@ -4688,7 +5969,31 @@ snapshots:
 
   '@fontsource/outfit@5.3.0': {}
 
+  '@fontsource/pacifico@5.3.0': {}
+
+  '@fontsource/patrick-hand@5.3.0': {}
+
+  '@fontsource/permanent-marker@5.3.0': {}
+
+  '@fontsource/pinyon-script@5.3.0': {}
+
+  '@fontsource/poppins@5.3.0': {}
+
+  '@fontsource/righteous@5.3.0': {}
+
+  '@fontsource/satisfy@5.3.0': {}
+
+  '@fontsource/shadows-into-light@5.3.0': {}
+
+  '@fontsource/short-stack@5.3.0': {}
+
   '@fontsource/space-mono@5.3.0': {}
+
+  '@fontsource/zcool-kuaile@5.3.0': {}
+
+  '@fontsource/zcool-qingke-huangyou@5.3.0': {}
+
+  '@fontsource/zcool-xiaowei@5.3.0': {}
 
   '@google/genai@1.52.0':
     dependencies:
@@ -4705,7 +6010,7 @@ snapshots:
     dependencies:
       hono: 4.12.32
 
-  '@hyperframes/aws-lambda@0.7.84':
+  '@hyperframes/aws-lambda@0.7.101':
     dependencies:
       '@aws-sdk/client-s3': 3.1103.0
       '@aws-sdk/client-sfn': 3.1106.0
@@ -4713,7 +6018,7 @@ snapshots:
       '@sparticuz/chromium': 148.0.0
       ffmpeg-static: 5.3.0
       ffprobe-static: 3.1.0
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
       tar: 7.5.22
     transitivePeerDependencies:
       - bare-abort-controller
@@ -4748,7 +6053,7 @@ snapshots:
       hono: 4.12.32
       linkedom: 0.18.13
       puppeteer: 25.5.0
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
     transitivePeerDependencies:
       - bufferutil
       - canvas
@@ -4800,7 +6105,7 @@ snapshots:
       linkedom: 0.18.13
       postcss: 8.5.25
       puppeteer: 25.5.0
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
       wawoff2: 2.0.1
     transitivePeerDependencies:
       - bufferutil
@@ -4932,6 +6237,8 @@ snapshots:
   '@img/sharp-win32-x64@0.35.3':
     optional: true
 
+  '@infolektuell/noto-color-emoji@0.2.0': {}
+
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
       minipass: 7.1.3
@@ -4960,11 +6267,6 @@ snapshots:
   '@protobufjs/pool@1.1.0': {}
 
   '@protobufjs/utf8@1.1.2': {}
-
-  '@puppeteer/browsers@3.0.6':
-    dependencies:
-      modern-tar: 0.7.7
-      yargs: 18.1.0
 
   '@puppeteer/browsers@3.1.0':
     dependencies:
@@ -5394,6 +6696,8 @@ snapshots:
 
   clone@2.1.2: {}
 
+  cmu-pronouncing-dictionary@3.0.0: {}
+
   comma-separated-tokens@2.0.3: {}
 
   compare-versions@6.1.1: {}
@@ -5781,10 +7085,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  hyperframes@0.7.84(@types/node@24.10.1):
+  hyperframes@0.7.101(@types/node@24.10.1):
     dependencies:
       '@hono/node-server': 2.0.12(hono@4.12.32)
-      '@puppeteer/browsers': 3.0.6
+      '@puppeteer/browsers': 3.1.0
       adm-zip: 0.6.0
       citty: 0.2.2
       compare-versions: 6.1.1
@@ -5798,7 +7102,7 @@ snapshots:
       open: 10.2.0
       postcss: 8.5.25
       prettier: 3.9.6
-      puppeteer-core: 25.4.0
+      puppeteer-core: 25.5.0
       sharp: 0.35.3(@types/node@24.10.1)
     optionalDependencies:
       '@google/genai': 1.52.0
@@ -6000,20 +7304,6 @@ snapshots:
     dependencies:
       end-of-stream: 1.4.5
       once: 1.4.0
-
-  puppeteer-core@25.4.0:
-    dependencies:
-      '@puppeteer/browsers': 3.0.6
-      chromium-bidi: 17.0.2(devtools-protocol@0.0.1653615)
-      devtools-protocol: 0.0.1653615
-      typed-query-selector: 2.12.2
-      webdriver-bidi-protocol: 0.4.2
-      ws: 8.21.1
-    transitivePeerDependencies:
-      - bufferutil
-      - proxy-agent
-      - utf-8-validate
-      - yauzl
 
   puppeteer-core@25.5.0:
     dependencies:

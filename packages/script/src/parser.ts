@@ -5,7 +5,6 @@ import type {
   Affinity,
   MarkerBoundary,
   ParsedAtom,
-  ParsedCaptionRefinement,
   ParsedCaptionRegion,
   ParsedMoment,
   ParsedMomentOccurrence,
@@ -45,100 +44,17 @@ const RESERVED_SEGMENT_IDS = new Set(["script"]);
 /** A marker's structural position before its affinity picks one anchor. */
 type RawMarkerBoundary = Omit<MarkerBoundary, "anchorId">;
 type RawEdge<T> = Omit<T, "boundary"> & { readonly boundary: RawMarkerBoundary };
-type RawSelectionOccurrence = Omit<ParsedSelectionOccurrence, "open" | "close"> & {
+type RawSelectionOccurrence = Omit<ParsedSelectionOccurrence, "startAnchorId" | "endAnchorId" | "open" | "close"> & {
   readonly open: RawEdge<ParsedSelectionOccurrence["open"]>;
   readonly close: RawEdge<ParsedSelectionOccurrence["close"]>;
 };
-type RawMomentOccurrence = Omit<ParsedMomentOccurrence, "boundary"> & { readonly boundary: RawMarkerBoundary };
+type RawMomentOccurrence = Omit<ParsedMomentOccurrence, "anchorId" | "boundary"> & { readonly boundary: RawMarkerBoundary };
 
 function normalizeWord(value: string): string {
   return value
     .normalize("NFKC")
     .toLocaleLowerCase("en")
     .replace(/[^\p{L}\p{M}\p{N}]+/gu, "");
-}
-
-type WordLexeme = {
-  readonly text: string;
-  readonly normalized: string;
-  readonly start: number;
-  readonly end: number;
-};
-
-function wordLexemes(value: string): WordLexeme[] {
-  const lexemes: WordLexeme[] = [];
-  WORD.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = WORD.exec(value))) {
-    const normalized = normalizeWord(match[0]);
-    if (!normalized) continue;
-    lexemes.push({
-      text: match[0],
-      normalized,
-      start: match.index,
-      end: match.index + match[0].length,
-    });
-  }
-  return lexemes;
-}
-
-function exactCaptionRefinements(
-  regionId: string,
-  display: string,
-  speechTokens: readonly ParsedToken[],
-): ParsedCaptionRefinement[] {
-  const displayWords = wordLexemes(display);
-  if (!displayWords.length || !speechTokens.length) return [];
-
-  let matches: Array<{ readonly displayIndex: number; readonly speechIndex: number }>;
-  if (
-    displayWords.length === speechTokens.length
-    && displayWords.every((word, index) => word.normalized === speechTokens[index]!.normalized)
-  ) {
-    matches = displayWords.map((_, index) => ({ displayIndex: index, speechIndex: index }));
-  } else {
-    const displayCounts = new Map<string, number>();
-    const speechCounts = new Map<string, number>();
-    for (const word of displayWords) displayCounts.set(word.normalized, (displayCounts.get(word.normalized) ?? 0) + 1);
-    for (const token of speechTokens) speechCounts.set(token.normalized, (speechCounts.get(token.normalized) ?? 0) + 1);
-    const candidates = displayWords.flatMap((word, displayIndex) => {
-      if (displayCounts.get(word.normalized) !== 1 || speechCounts.get(word.normalized) !== 1) return [];
-      const speechIndex = speechTokens.findIndex((token) => token.normalized === word.normalized);
-      return speechIndex < 0 ? [] : [{ displayIndex, speechIndex }];
-    });
-
-    // Keep a longest monotonic chain. Exact words that cross after an alias
-    // rewrite are individually plausible, but cannot form a temporal caption
-    // refinement without reversing display order.
-    const chains: Array<Array<{ readonly displayIndex: number; readonly speechIndex: number }>> = [];
-    for (let index = 0; index < candidates.length; index += 1) {
-      let best: Array<{ readonly displayIndex: number; readonly speechIndex: number }> = [];
-      for (let before = 0; before < index; before += 1) {
-        if (candidates[before]!.speechIndex < candidates[index]!.speechIndex && chains[before]!.length > best.length) {
-          best = chains[before]!;
-        }
-      }
-      chains.push([...best, candidates[index]!]);
-    }
-    matches = chains.reduce<typeof candidates>(
-      (best, chain) => chain.length > best.length ? chain : best,
-      [],
-    );
-  }
-
-  return matches.map(({ displayIndex, speechIndex }, index) => {
-    const word = displayWords[displayIndex]!;
-    const token = speechTokens[speechIndex]!;
-    return {
-      id: `${regionId}:exact:${index + 1}`,
-      display: word.text,
-      displayStart: word.start,
-      displayEnd: word.end,
-      startToken: token.index,
-      endTokenExclusive: token.index + 1,
-      relation: "exact",
-    };
-  });
 }
 
 function cleanProjection(value: string): string {
@@ -418,7 +334,6 @@ export function parseScript(
         startToken: tokenStart,
         endTokenExclusive: tokens.length,
         kind: "identity",
-        refinements: exactCaptionRefinements(id, display, tokens.slice(tokenStart)),
         range: { start: sourceOffset + start, end: sourceOffset + end },
       });
     }
@@ -461,15 +376,13 @@ export function parseScript(
     if (tokens.length > startToken) {
       const display = cleanProjection(caption);
       const id = `caption-region:${captionRegions.length + 1}`;
-      const speechTokens = tokens.slice(startToken);
       captionRegions.push({
         id,
         display,
         segmentId: current!.id,
         startToken,
         endTokenExclusive: tokens.length,
-        kind: display ? (cleanProjection(speechTokens.map((token) => token.text).join(" ")) === display ? "identity" : "alias") : "hidden",
-        refinements: exactCaptionRefinements(id, display, speechTokens),
+        kind: display ? "alias" : "hidden",
         range: { start: sourceOffset + absoluteStart, end: sourceOffset + absoluteStart + raw.length },
       });
     }
@@ -733,18 +646,26 @@ export function parseScript(
     turns,
     selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
       id,
-      occurrences: occurrences.map((occurrence) => ({
-        ...occurrence,
-        open: anchored(occurrence.open),
-        close: anchored(occurrence.close),
-      })),
+      occurrences: occurrences.map((occurrence) => {
+        const open = anchored(occurrence.open);
+        const close = anchored(occurrence.close);
+        return {
+          ...occurrence,
+          startAnchorId: open.boundary.anchorId,
+          endAnchorId: close.boundary.anchorId,
+          open,
+          close,
+        };
+      }),
     })),
     moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([id, occurrences]) => ({
       id,
-      occurrences: occurrences.map(anchored),
+      occurrences: occurrences.map((occurrence) => {
+        const value = anchored(occurrence);
+        return { ...value, anchorId: value.boundary.anchorId };
+      }),
     })),
     captionProjection: {
-      contract: "svml.caption-projection@1",
       text: captionSegments.join("\n"),
       regions: captionRegions,
     },

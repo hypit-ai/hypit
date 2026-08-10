@@ -10,7 +10,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export const captionGeminiPlanningFragment = sealGraphFragment({
   name: "@narratage/caption-gemini/planning@1",
   inputs: [
-    { name: "narrative", type: narrativeTypes.narrative },
+    { name: "display", type: narrativeTypes.captionDisplay },
     { name: "captionProgram", type: captionTypes.program },
     { name: "program", type: captionGeminiTypes.program },
   ],
@@ -18,7 +18,7 @@ export const captionGeminiPlanningFragment = sealGraphFragment({
     {
       id: "caption-gemini:compile",
       producer: captionGeminiProducers.compile,
-      inputs: { narrative: input("narrative"), captionProgram: input("captionProgram"), program: input("program") },
+      inputs: { display: input("display"), captionProgram: input("captionProgram"), program: input("program") },
       result: { kind: "output", name: "request" },
     },
     {
@@ -32,7 +32,7 @@ export const captionGeminiPlanningFragment = sealGraphFragment({
     name: "plan",
     type: captionTypes.plan,
     root: operation("caption-gemini:plan"),
-    semanticInputs: ["narrative", "captionProgram", "program"],
+    semanticInputs: ["display", "captionProgram", "program"],
     fidelity: "exact",
   }],
 });

@@ -51,3 +51,15 @@ export const generatedVideoSetSchema = generationObjectSchema({
     },
   },
 });
+
+export const generatedAudioSetSchema = generationObjectSchema({
+  contract: { schema: { kind: "literal", value: "svml.generated-audio-set@1" } },
+  audios: {
+    schema: {
+      kind: "array",
+      minItems: 1,
+      maxItems: 16,
+      items: generationBlobRefSchema,
+    },
+  },
+});

@@ -38,6 +38,8 @@ function grokInspection(): MediaInspection {
         role: "moving",
         width: 464,
         height: 688,
+        sampleAspectRatio: { numerator: 1, denominator: 1 },
+        rotationDegrees: 0,
         averageFrameRate: { numerator: 24, denominator: 1 },
         nominalFrameRate: { numerator: 24, denominator: 1 },
       },
@@ -71,6 +73,8 @@ function grokInspection(): MediaInspection {
         role: "attached-picture",
         width: 464,
         height: 688,
+        sampleAspectRatio: { numerator: 1, denominator: 1 },
+        rotationDegrees: 0,
       },
     ],
   });

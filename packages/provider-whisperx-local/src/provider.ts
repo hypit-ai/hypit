@@ -19,7 +19,7 @@ import type {
 
 export const localWhisperXProviderModuleRef = {
   name: "@narratage/provider-whisperx-local",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const localWhisperXProviderImplementationDigest = digestOf(
   "@narratage/provider-whisperx-local/svml-service@1",

@@ -1,15 +1,18 @@
 # `@narratage/provider-kie`
 
-Recoverable KIE Market Provider for the eleven explicitly selected exact models.
+Recoverable KIE Market Provider for the eleven explicitly selected exact models and one generic
+background-removal capability.
 
 This package is deployment code. Author source imports model modules such as `@narratage/seedance` or
 `@narratage/gpt-image`; trusted Runtime configuration installs `createKieProvider()`. The Provider binds
-only those exact capabilities and never interprets a generic image/video request as permission to
+only those exact model capabilities and never interprets a generic image/video request as permission to
 choose another model.
 
-It imports no model package. Each model declares the inputs it accepts, and this package contributes
-only the wire mapping over those ports — including the routes where KIE serves one model from several
-of its own endpoint slugs. See [`model-input-ports.md`](../../docs/model-input-ports.md).
+It imports no exact-model package. Every supported Capability contributes one `KieRoute`: exact
+Capability, return Type, request compiler, media/count limits and result packer. All Routes share one
+upload, admission, paid submission, checkpoint, polling and download state machine. Model mappings
+generate eleven Routes; Background Removal contributes the twelfth. See
+[`model-input-ports.md`](../../docs/model-input-ports.md).
 
 ## Supported catalog
 
@@ -25,6 +28,7 @@ routes rather than extra Capabilities.
 | `@narratage/gpt-image` | `gpt-image-2` | `gpt-image-2-{text,image}-to-image` |
 | `@narratage/nano-banana` | `nano-banana-2`, `-pro` | `nano-banana-2`, `nano-banana-pro` |
 | `@narratage/seedream` | `seedream-5-lite` | `seedream/5-lite-{text,image}-to-image` |
+| `@narratage/background-removal` | `remove-background` | `recraft/remove-background` |
 
 There is deliberately no Grok image capability and no MiMo capability in this release. Seedream's
 `nsfwCheck` is explicit author request content; KIE cannot silently enable or disable it. A

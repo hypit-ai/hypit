@@ -32,6 +32,7 @@ the working tree contains only documents that should inform current implementati
   Artifact retention and optional Host materialization as four separate concerns.
 - [`speech-alignment.md`](./speech-alignment.md) — the Script and the recording as two
   independent observations, and what locating guarantees.
+- [`demo-assets.md`](./demo-assets.md) — distribution boundary and provenance gate for documentation media.
 - [`source-and-run-compilation.md`](./source-and-run-compilation.md) — mandatory Source Header,
   peer Author/Run graphs, deterministic composition and compilation data gates.
 - package READMEs under [`../packages`](../packages) — executable APIs and ownership.
@@ -41,11 +42,36 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/script-surface.md`](../spec/script-surface.md)
 - [`../spec/author-surface-binding.md`](../spec/author-surface-binding.md)
 - [`../spec/caption-program.md`](../spec/caption-program.md)
+- [`../spec/caption-fine.md`](../spec/caption-fine.md) — implemented first field-free Caption Style
+  family and its completed browser evidence.
+- [`../spec/track-authoring.md`](../spec/track-authoring.md) — shared package-authoring discipline;
+  its temporal projection and occurrence-expansion laws are implemented across the current Track packages.
+- [`../spec/spatial-layout.md`](../spec/spatial-layout.md) — shared Canvas/Frame/Point/Path geometry,
+  two-frame fitting, alignment and explicit backing-layer boundary.
+- [`../spec/typography-track.md`](../spec/typography-track.md) — complete two-dimensional Text model, old-system
+  and editor attack audit, terminal-IR gaps and Caption feedback.
+- [`../spec/ranking-track.md`](../spec/ranking-track.md) — old Ranking audit, separate official
+  components, triggered group schedule and renderer-neutral migration plan.
+- [`../spec/media-track.md`](../spec/media-track.md) — unified Item/Sequence media model, ordered
+  layers, playback, motion, internal handoffs, audio projection and Speech reuse.
+- [`../spec/deck-track.md`](../spec/deck-track.md) — independent depth-stack Deck Track, collection
+  state, visible neighborhood and deterministic whole-group reflow.
+- [`../spec/audio-track.md`](../spec/audio-track.md) — explicit normalized audio inputs, temporal
+  placement, sample occupancy, mixing boundary and old-system migration.
+- [`../spec/screen-overlay.md`](../spec/screen-overlay.md) — self-contained full-canvas visual
+  contributions and the hard boundary against cross-Track adjustment effects.
 - [`../spec/track-composition.md`](../spec/track-composition.md)
 - [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
 - [`../spec/visual-ir.md`](../spec/visual-ir.md)
 
-These video contracts are executable candidates, not yet an open-source compatibility freeze.
+The finite seven-member Seedance Kit family is complete as data-only Text Templates. Low-level
+Seedance invocation, Estimate, media utilities and final Blob flow remain shared and must not be
+reopened as Kit-specific execution code. Superseded migration ledgers live in Git history rather
+than the current documentation tree.
+
+The shared `svml.visual-track@1` / `svml.visual-ir@1` terminal waist is frozen inside the repository
+before publication. Individual author Surfaces remain pre-release unless their own specification
+says otherwise.
 
 ## Video execution records
 
@@ -54,7 +80,7 @@ These video contracts are executable candidates, not yet an open-source compatib
 - [`media-execution-boundary.md`](./media-execution-boundary.md)
 - [`hyperframes-aws-runtime.md`](./hyperframes-aws-runtime.md) — recoverable Endpoint semantics,
   deployment resource review and the live AWS canary.
-- [`image-transform.md`](./image-transform.md)
+- [`image-transform.md`](./image-transform.md) — transforms, ordered composition and external cutout boundaries
 - [`caption-gemini-provider-contract.md`](./caption-gemini-provider-contract.md)
 - [`../services/whisperx/README.md`](../services/whisperx/README.md)
 - [`../examples/talking-head-aroll/README.md`](../examples/talking-head-aroll/README.md) — current four-take
@@ -68,6 +94,8 @@ These video contracts are executable candidates, not yet an open-source compatib
 - `docs/implementation-status.md` states repository reality.
 - `docs/roadmap.md` states planned work and non-goals.
 - package and example READMEs explain one executable unit.
+- `docs/public/` contains documentation media cleared for redistribution; its provenance rules are
+  tracked in `demo-assets.md`.
 
 Do not preserve a superseded design in the current tree merely as a discussion log. Keep durable
 decisions in the current architecture/specification, and rely on Git history for rejected drafts.

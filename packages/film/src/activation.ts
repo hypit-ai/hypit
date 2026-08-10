@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeFilmSurface, filmComponent, filmManifest, filmModuleRef, filmSurfaceImplementationDigest,
 } from "./index.js";
@@ -8,7 +8,7 @@ export const svmlPackage = {
   name: "@narratage/film",
   modules: [{ manifest: filmManifest, specifiers: ["@narratage/film", "@narratage/film@1"] }],
   components: [filmComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: filmModuleRef, surface: "film", mode: "structured",
     implementationDigest: filmSurfaceImplementationDigest, handler: decodeFilmSurface,
   })],

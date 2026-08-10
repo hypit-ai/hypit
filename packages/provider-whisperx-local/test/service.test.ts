@@ -25,6 +25,13 @@ test("the Provider declares how to bring WhisperX up and how to recognise it", (
 test("a deployment that installs WhisperX elsewhere overrides the command", () => {
   const service = localWhisperXService(context({ serviceCommand: ["conda", "run", "whisperx-serve"] }));
   assert.deepEqual(service.start, { command: "conda", args: ["run", "whisperx-serve"] });
+  assert.equal(service.prepare, undefined);
+});
+
+test("custom prepare and probe-only deployments do not inherit managed lifecycle commands", () => {
+  const prepared = localWhisperXService(context({ servicePrepareCommand: ["make", "models"] }));
+  assert.deepEqual(prepared.prepare, { command: "make", args: ["models"] });
+  assert.equal(prepared.start, undefined);
 });
 
 test("a program answering with another identity is reported, never used", async () => {

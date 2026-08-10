@@ -10,6 +10,7 @@
     "@narratage/component-kit": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/generation": "workspace:*",
-    "@narratage/protocol": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

@@ -1,3 +1,4 @@
+import { artifactDependency } from "@narratage/artifact";
 import { mediaDependency, mediaTypes } from "@narratage/media";
 import { compositionDependency } from "@narratage/composition";
 import {
@@ -21,7 +22,7 @@ import {
   requestHyperframesVisualImplementationDigest,
 } from "./product.js";
 
-export const renderHyperframesModuleRef = { name: "@narratage/render-hyperframes", version: "0.0.0-dev" } as const;
+export const renderHyperframesModuleRef = { name: "@narratage/render-hyperframes", version: "1" } as const;
 export const renderHyperframesSurfaceImplementationDigest = digestOf("@narratage/render-hyperframes/surface@1");
 export const renderHyperframesCapabilities = {
   renderVisual: { module: renderHyperframesModuleRef, name: "render-visual" },
@@ -35,6 +36,7 @@ export const renderHyperframesManifest: ModuleManifest = {
   name: renderHyperframesModuleRef.name,
   version: renderHyperframesModuleRef.version,
   dependencies: [
+    artifactDependency,
     mediaDependency,
     compositionDependency,
     { module: hyperframesModuleRef, digest: hyperframesManifestDigest },

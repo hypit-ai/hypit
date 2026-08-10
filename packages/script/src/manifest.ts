@@ -1,24 +1,25 @@
 import { narrativeDependency, narrativeSchema, narrativeTypes } from "@narratage/narrative";
+import { textDependency, textTypes } from "@narratage/text";
 import { digestOf } from "@narratage/core";
 import type { ModuleManifest, TypeRef } from "@narratage/protocol";
 
-export const scriptModuleRef = { name: "@narratage/script", version: "0.0.0-dev" } as const;
+export const scriptModuleRef = { name: "@narratage/script", version: "1" } as const;
 export const narrativeType: TypeRef = narrativeTypes.narrative;
 export const narrativeExcerptType: TypeRef = narrativeTypes.excerpt;
-export const narrativeDialogueExcerptType: TypeRef = narrativeTypes.dialogueExcerpt;
-export const narrativeSpeechExcerptType: TypeRef = narrativeTypes.speechExcerpt;
 export const narrativeSelectionType: TypeRef = narrativeTypes.selection;
 export const narrativeMomentType: TypeRef = narrativeTypes.moment;
-export const captionProjectionType: TypeRef = narrativeTypes.captionProjection;
+export const captionDisplayType: TypeRef = narrativeTypes.captionDisplay;
+export const captionCorrespondenceType: TypeRef = narrativeTypes.captionCorrespondence;
+export const captionDisplayWordSubsetType: TypeRef = narrativeTypes.captionDisplayWordSubset;
 export { narrativeSchema };
 
-export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/surface@2");
+export const scriptSurfaceImplementationDigest = digestOf("@narratage/script/display-atoms-surface@1");
 
 export const scriptManifest: ModuleManifest = {
   format: "svml.module@1",
   name: scriptModuleRef.name,
   version: scriptModuleRef.version,
-  dependencies: [narrativeDependency],
+  dependencies: [narrativeDependency, textDependency],
   types: [],
   capabilities: [],
   surfaces: [
@@ -29,11 +30,12 @@ export const scriptManifest: ModuleManifest = {
       outputs: [
         narrativeType,
         narrativeExcerptType,
-        narrativeDialogueExcerptType,
-        narrativeSpeechExcerptType,
+        textTypes.text,
         narrativeSelectionType,
         narrativeMomentType,
-        captionProjectionType,
+        captionDisplayType,
+        captionCorrespondenceType,
+        captionDisplayWordSubsetType,
       ],
       implementation: {
         kind: "trusted-frontend-surface",

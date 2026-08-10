@@ -1,13 +1,3 @@
-export type Affinity = "left" | "right";
-
-export type MarkerBoundary = {
-  readonly tokenIndex: number;
-  readonly structuralPosition: number;
-  readonly segmentId?: string;
-  /** The exact 2M+2N anchor this marker's affinity resolves to, fixed at parse time. */
-  readonly anchorId: string;
-};
-
 export type NarrativeSegment = {
   readonly id: string;
   readonly index: number;
@@ -38,8 +28,9 @@ export type NarrativeTurn = {
 
 export type NarrativeSelectionOccurrence = {
   readonly occurrence: number;
-  readonly open: { readonly affinity: Affinity; readonly boundary: MarkerBoundary };
-  readonly close: { readonly affinity: Affinity; readonly boundary: MarkerBoundary };
+  /** The exact semantic anchors chosen by the author Surface's affinity syntax. */
+  readonly startAnchorId: string;
+  readonly endAnchorId: string;
 };
 
 export type NarrativeSelection = {
@@ -54,8 +45,8 @@ export type NarrativeSelectionRef = NarrativeSelection & {
 
 export type NarrativeMomentOccurrence = {
   readonly occurrence: number;
-  readonly affinity: Affinity;
-  readonly boundary: MarkerBoundary;
+  /** The exact semantic anchor chosen by the author Surface's affinity syntax. */
+  readonly anchorId: string;
 };
 
 export type NarrativeMoment = {
@@ -68,34 +59,52 @@ export type NarrativeMomentRef = NarrativeMoment & {
   readonly contract: "svml.narrative-moment@1";
 };
 
-export type CaptionRefinement = {
+/** One author-visible word surface. Punctuation owned by the surface is preserved. */
+export type CaptionDisplayWord = {
   readonly id: string;
-  readonly display: string;
-  readonly displayStart: number;
-  readonly displayEnd: number;
-  readonly startToken: number;
-  readonly endTokenExclusive: number;
-  readonly relation: "exact";
-};
-
-export type CaptionRegion = {
-  readonly id: string;
-  readonly display: string;
+  readonly index: number;
+  readonly atomId: string;
   readonly segmentId: string;
-  readonly startToken: number;
-  readonly endTokenExclusive: number;
-  readonly kind: "identity" | "alias" | "hidden";
-  readonly refinements: readonly CaptionRefinement[];
-};
-
-export type CaptionProjection = {
-  readonly contract: "svml.caption-projection@1";
+  readonly turnId: string;
+  readonly role?: string;
   readonly text: string;
-  readonly regions: readonly CaptionRegion[];
 };
 
-/** Whole authored display projection. It contains no pronunciation replacement text. */
-export type CaptionProjectionRef = CaptionProjection;
+/** One indivisible Cue-planning unit. Fields may still address its ordered words. */
+export type CaptionDisplayAtom = {
+  readonly id: string;
+  readonly index: number;
+  readonly segmentId: string;
+  readonly turnId: string;
+  readonly role?: string;
+  readonly wordIds: readonly string[];
+};
+
+/** Complete visible Caption truth. It contains no pronunciation or timing facts. */
+export type CaptionDisplaySequence = {
+  readonly contract: "svml.caption-display-sequence@1";
+  readonly id: string;
+  readonly atoms: readonly CaptionDisplayAtom[];
+  readonly words: readonly CaptionDisplayWord[];
+};
+
+/** Author-declared whole-Atom correspondence to spoken Script tokens; never an inferred refinement. */
+export type CaptionCorrespondence = {
+  readonly contract: "svml.caption-correspondence@1";
+  readonly displaySequenceId: string;
+  readonly atoms: readonly {
+    readonly atomId: string;
+    readonly sourceTokenIds: readonly string[];
+  }[];
+};
+
+/** One ordered subset of an exact CaptionDisplaySequence, projected by Script structure. */
+export type CaptionDisplayWordSubset = {
+  readonly contract: "svml.caption-display-word-subset@1";
+  readonly id: string;
+  readonly sequenceId: string;
+  readonly wordIds: readonly string[];
+};
 
 export type SemanticAnchor = {
   readonly id: string;
@@ -112,14 +121,9 @@ export type Narrative = {
   readonly turns: readonly NarrativeTurn[];
   readonly selections: readonly NarrativeSelection[];
   readonly moments: readonly NarrativeMoment[];
-  readonly captionProjection: CaptionProjection;
   readonly semanticIndex: {
     readonly contract: "svml.semantic-index@1";
     readonly anchors: readonly SemanticAnchor[];
-  };
-  readonly serializations: {
-    readonly dialogue: string;
-    readonly speech: string;
   };
 };
 
@@ -134,28 +138,4 @@ export type NarrativeExcerpt = {
   readonly id: string;
   readonly tokenStart: number;
   readonly tokenEndExclusive: number;
-  readonly serializations: {
-    readonly dialogue: string;
-    readonly speech: string;
-  };
-};
-
-/** The exact dialogue prompt for one Segment, including only explicitly authored Role prefixes. */
-export type NarrativeDialogueExcerpt = {
-  readonly contract: "svml.narrative-dialogue-excerpt@1";
-  readonly kind: "segment";
-  readonly id: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly dialogue: string;
-};
-
-/** The exact spoken wording for one Segment, without Role prefixes. */
-export type NarrativeSpeechExcerpt = {
-  readonly contract: "svml.narrative-speech-excerpt@1";
-  readonly kind: "segment";
-  readonly id: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly speech: string;
 };

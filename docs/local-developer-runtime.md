@@ -15,10 +15,10 @@ build.svrun -> main.svml
   -> Core BuildState
   -> @narratage/local Scheduler
        -> local deterministic component code
-       -> KIE / Volcengine / Hypit Seedance Endpoint
-       -> local OpenCV image-transform Endpoint
-       -> local / team-hosted / Hypit warm WhisperX service Endpoint
-       -> local workers / Lambda / Hypit HyperFrames Endpoint
+       -> KIE / Volcengine / hosted Seedance Endpoint
+       -> one local OpenCV Raster Endpoint
+       -> local / team-hosted warm WhisperX service Endpoint
+       -> local workers / Lambda / hosted HyperFrames Endpoint
 
 durable facts       .svml/runtime.sqlite
 artifact bytes      .svml/artifacts/ (or an S3 ArtifactStore)
@@ -77,7 +77,7 @@ The SQLite schema contains opaque, versioned framework facts:
 - Operation identities, stable submission keys, checkpoints and completions.
 
 It contains no component-specific business tables and no ready-command queue. Installing a new
-Caption, Seedance or B-roll package does not add a table. Core regenerates ready Commands from the
+Caption, Seedance or Media Track package does not add a table. Core regenerates ready Commands from the
 last verified BuildState after every restart.
 
 Artifacts are not SQLite blobs. Credentials are not stored in BuildState, Operation metadata,
@@ -149,7 +149,7 @@ export default await createProjectLocalRuntime({
   packageLock: "./svml.packages.lock",
   runtimeServices: [createS3ArtifactStorePackage({
     instance: "artifacts.team",
-    bucket: "hypit-svml-artifacts",
+    bucket: "team-svml-artifacts",
     prefix: "development",
     region: "us-east-1",
   })],
@@ -222,7 +222,7 @@ Endpoint/Store implementation digest from the physical package Artifact, that pa
 dependency closure, adapter identity and declared facet. Editing implementation bytes without regenerating the lock fails
 before any Provider call. Source `<import>` cannot add an adapter to this closure.
 
-The KIE, local media, local OpenCV image-transform, local WhisperX and local HyperFrames package
+The KIE, local media, local OpenCV Raster, local WhisperX and local HyperFrames package
 functions in this example are implemented. `@narratage/endpoint-kit` implements the host-neutral
 `EndpointPackage` definition path and lets those packages contribute:
 
@@ -315,7 +315,7 @@ port so large-object adapters can avoid making whole-object transfer a framework
 There are still two distinct scheduling scopes:
 
 1. the local Build Scheduler limits already-authorized Core Commands across Builds and lanes;
-2. a Provider Endpoint may submit one Command into KIE, Lambda, SQS or a Hypit job system.
+2. a Provider Endpoint may submit one Command into KIE, Lambda, SQS or a hosted job system.
 
 Redis is unnecessary for the single-process developer Runtime. A future multi-process Host may use
 a dispatcher transport, but Redis/SQS cannot become Build truth and cannot replace BuildStore CAS.
@@ -332,10 +332,10 @@ the SQLite file on S3 or a network filesystem.
 | WhisperX local to a persistent remote service | exact WhisperX Provider package | author-declared WhisperX method |
 | KIE to Volcengine for an explicitly supported method | Provider package and locked binding | source unless author parameters differ |
 | local HyperFrames to Lambda | HyperFrames Provider package | HyperframesDocument and frame domain |
-| local Build to Hypit hosted Build | whole Runtime distribution | author/module closure and Core protocol |
+| local Build to a hosted Build | whole Runtime distribution | author/module closure and Core protocol |
 
-Provider replacement is never a creative router guessing whether `<speaker>` means Seedance or
-Kling. The author package fixes the demanded capability/model. Runtime configuration selects the
+Provider replacement is never a creative router guessing whether a talking-head prompt means
+Seedance or Kling. The explicit model component fixes the demanded capability/model. Runtime configuration selects the
 exact implementation endpoint or an explicit Candidate chosen outside the source.
 
 ## 8. Remaining vertical work
@@ -344,12 +344,11 @@ The durable local chassis and one real talking-video path are implemented. Diffe
 and preview executions belong in explicit Run sources; the local Runtime needs no example-specific
 acceptance orchestrator. Remaining work is to:
 
-1. finish package-owned Caption field-to-word painting, Text three-box/exact-font authoring and
-   B-roll content-frame behavior before freezing those author Surfaces;
-2. migrate Ranking and other production components only after their meanings fit the peer-Track
-   contract;
-3. add a persistent remote WhisperX Provider or further environment variants only when a concrete
+1. keep the implemented Text, Media, Deck and Ranking package acceptance matrices green while their
+   author Surfaces remain pre-release; the shared terminal Track/Visual IR waist and field-free
+   Caption Fine browser evidence are already complete;
+2. add a persistent remote WhisperX Provider or further environment variants only when a concrete
    deployment requires them.
 
-Hosted tenant auth, credits, Redis, a distributed queue and Hypit-wide Build hosting remain outside
+Hosted tenant auth, credits, Redis, a distributed queue and product-wide Build hosting remain outside
 this phase.

@@ -1,36 +1,17 @@
 import type { SvsRecipe } from "@narratage/svs";
 
-import type { FilmProgram } from "./types.js";
-
 /**
- * The Film Recipe: what a stylesheet says about the frame itself.
- *
- * Not an appearance among others — a Film Recipe is where a canvas comes from,
- * so anything that has to choose a frame size before compiling reads it here.
+ * The Film Recipe owns Film appearance only. Canvas geometry and ProgramSpace
+ * remain separate graph inputs and cannot be smuggled into a stylesheet.
  */
 
-export type FilmCanvas = {
-  readonly frameRate: FilmProgram["frameRate"];
-  readonly canvas: FilmProgram["canvas"];
-};
+export type FilmAppearance = { readonly clearColor: string };
 
-/** One vertical frame at 30. Its keys are the Recipe's required property set. */
-export const defaultFilmRecipe: Readonly<Record<string, string | number>> = {
+export const defaultFilmRecipe: Readonly<Record<string, string>> = {
   background: "#09090b",
-  "frame-rate": 30,
-  height: 1920,
-  width: 1080,
 };
 
 export const filmRecipeKeys: readonly string[] = Object.keys(defaultFilmRecipe);
-
-function number(properties: SvsRecipe["properties"], name: string): number {
-  const property = properties[name];
-  if (typeof property !== "number" || !Number.isFinite(property)) {
-    throw new Error(`Film Recipe ${name} must be a number`);
-  }
-  return property;
-}
 
 export function assertFilmRecipe(properties: SvsRecipe["properties"]): void {
   const actual = Object.keys(properties).sort().join(" ");
@@ -40,18 +21,11 @@ export function assertFilmRecipe(properties: SvsRecipe["properties"]): void {
   }
 }
 
-export function filmCanvasFromRecipe(properties: SvsRecipe["properties"]): FilmCanvas {
+export function filmAppearanceFromRecipe(properties: SvsRecipe["properties"]): FilmAppearance {
   assertFilmRecipe(properties);
   const background = properties["background"];
-  if (typeof background !== "string" || !background.trim()) {
-    throw new Error("Film Recipe background must be a string");
+  if (typeof background !== "string" || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(background)) {
+    throw new Error("Film Recipe background must be a hexadecimal color");
   }
-  return {
-    frameRate: { numerator: number(properties, "frame-rate"), denominator: 1 },
-    canvas: {
-      width: number(properties, "width"),
-      height: number(properties, "height"),
-      clearColor: background.trim(),
-    },
-  };
+  return { clearColor: background };
 }

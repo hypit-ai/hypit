@@ -36,9 +36,7 @@ import type {
   RuntimeServicePackage,
 } from "@narratage/runtime";
 
-const databaseSchemaVersion = 2;
-/** Build/Operation table semantics are unchanged by the Host-only Catalog migration. */
-const executionStoreSchemaVersion = 1;
+const databaseSchemaVersion = 1;
 
 export const sqliteStoreModuleRef = {
   name: "@narratage/store-sqlite",
@@ -393,32 +391,20 @@ export class SqliteRuntimeState {
         completion_json TEXT,
         failure_json TEXT
       ) STRICT;
-    `);
-    const catalogSchema = `
-      CREATE TABLE svml_build_catalog (
+      CREATE TABLE IF NOT EXISTS svml_build_catalog (
         build_id TEXT PRIMARY KEY,
         core_id TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         descriptor_json TEXT NOT NULL
       ) STRICT;
-    `;
+    `);
     const version = this.#database.prepare("SELECT schema_version FROM svml_store_meta WHERE singleton = 1").get() as Row | undefined;
     if (version === undefined) {
-      this.#database.exec(`BEGIN IMMEDIATE; ${catalogSchema}`);
       this.#database.prepare("INSERT INTO svml_store_meta (singleton, schema_version) VALUES (1, ?)").run(databaseSchemaVersion);
-      this.#database.exec("COMMIT");
-    } else if (version.schema_version === 1) {
-      this.#database.exec(`BEGIN IMMEDIATE; ${catalogSchema}`);
-      this.#database.prepare("UPDATE svml_store_meta SET schema_version = ? WHERE singleton = 1").run(databaseSchemaVersion);
-      this.#database.exec("COMMIT");
     } else {
       assert(version.schema_version === databaseSchemaVersion,
         `unsupported @narratage/store-sqlite schema ${String(version.schema_version)}`);
-      const catalog = this.#database.prepare(`
-        SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'svml_build_catalog'
-      `).get() as Row | undefined;
-      assert(catalog?.name === "svml_build_catalog", "SQLite v2 database is missing the Build Catalog table");
     }
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
@@ -454,7 +440,7 @@ export function createSqliteRuntimeServicePackage(
           permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
-            schemaVersion: executionStoreSchemaVersion,
+            schemaVersion: databaseSchemaVersion,
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
           service: state.builds,
@@ -470,7 +456,7 @@ export function createSqliteRuntimeServicePackage(
           permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
-            schemaVersion: executionStoreSchemaVersion,
+            schemaVersion: databaseSchemaVersion,
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
           service: state.operations,

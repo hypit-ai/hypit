@@ -27,7 +27,7 @@ package never activates all of its facets.
 ## 2. Package contract
 
 A runtime-capable physical package declares `svml.activation` and contributes one or more generic
-Host facets with ABI `svml.runtime-adapter-host@2`. Each facet has only:
+Host facets with ABI `svml.runtime-adapter-host@1`. Each facet has only:
 
 - an exact `use` name;
 - kind `endpoint` or `runtime-service`;

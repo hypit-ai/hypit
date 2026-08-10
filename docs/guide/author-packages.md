@@ -32,7 +32,7 @@ mkdir -p packages/my-component/src packages/my-component/test
   "dependencies": {
     "@narratage/protocol": "workspace:*",
     "@narratage/elaborator": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   }
 }
 ```
@@ -64,13 +64,13 @@ type — installing a new package can add a new Type without a Core release.
 
 ## 4. Implement the Surface handler
 
-The Surface handler decodes the Text Frontend's XML elements into typed author declarations.
+The Surface handler decodes the Markup Frontend's XML elements into typed author declarations.
 
 ```typescript
 // src/surface.ts
-import type { TextSurfaceDecoder } from "@narratage/text";
+import type { MarkupSurfaceDecoder } from "@narratage/markup";
 
-export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) => {
+export const decodeMyComponentSurface: MarkupSurfaceDecoder = (element, context) => {
   // Read attributes and children from the XML element
   // Validate inputs
   // Emit typed Records and Operations into context
@@ -80,14 +80,14 @@ export const decodeMyComponentSurface: TextSurfaceDecoder = (element, context) =
 
 Look at existing Surface implementations for reference:
 - `packages/seedance/src/surface.ts` — Prompt, Speech and Video Surfaces
-- `packages/caption/src/surface.ts` — Style, Program and Track Surfaces
-- `packages/broll/src/surface.ts` — Track and Item Surfaces
+- `packages/caption/src/surface.ts` — the common Program Surface; concrete Style/Track Surfaces live in Style-family packages
+- `packages/media-track/src/surface.ts` — Track, Item and Sequence Surfaces
 
 ## 5. Write the activation descriptor
 
 ```typescript
 // src/activation.ts
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   myComponentManifest,
   myComponentModuleRef,
@@ -102,7 +102,7 @@ export const svmlPackage = {
     specifiers: ["@narratage/my-component", "@narratage/my-component@1"],
   }],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: myComponentModuleRef,
       surface: "my-widget",
       mode: "structured",
@@ -129,7 +129,7 @@ Add the path mapping so TypeScript resolves `@narratage/my-component` to source:
 ## 7. Install and lock
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 
 pnpm narratage lock-packages <lock-file> \
   --package @narratage/my-component \
@@ -140,7 +140,7 @@ pnpm narratage lock-packages <lock-file> \
 ## 8. Use in Author Source
 
 ```xml
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 <svml>
   <import as="mine" from="@narratage/my-component@1"/>
 
@@ -156,8 +156,9 @@ authority.
 | Package | What it demonstrates |
 |---|---|
 | `packages/seedance/` | Model family with multiple Surfaces (Prompt, Speech, Video) |
-| `packages/seedance-speaker/` | Higher-level binding that composes Script, Prompt Kit and Seedance |
-| `packages/caption/` | Style, Program and Track Surfaces with typed field declarations |
-| `packages/broll/` | Track with Item/transition behavior |
-| `packages/text-track/` | Simple text overlay Track |
+| `packages/seedance-speaker/` | Higher-level binding that composes Script, a Text Template and Seedance |
+| `packages/caption/` | common Program, Cue/field contracts and whole-Atom timing |
+| `packages/caption-fine/` | one field-free Style and Track Surface family |
+| `packages/media-track/` | Track with Item/Sequence, layer, motion and handoff behavior |
+| `packages/typography-track/` | Typography overlay Track |
 | `packages/film/` | Composition target that consumes peer Tracks |

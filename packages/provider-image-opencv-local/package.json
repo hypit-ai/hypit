@@ -13,8 +13,8 @@
   "dependencies": {
     "@narratage/artifact": "workspace:*",
     "@narratage/endpoint-kit": "workspace:*",
-    "@narratage/image-transform": "workspace:*",
     "@narratage/protocol": "workspace:*",
+    "@narratage/raster": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
     "@narratage/runtime-adapter-node": "workspace:*"
   },

@@ -10,18 +10,19 @@ description: Getting started with Narratage development.
 | Tool | Version | Required for |
 |---|---|---|
 | Node.js | 22+ | everything |
-| pnpm | 9+ | workspace management |
+| pnpm | 10.33.x | workspace management; selected by the root `packageManager` field |
 | Python | 3.10–3.13 | WhisperX and OpenCV [local services](./services.md) |
 | uv | latest | Python environment management |
 | ffmpeg / ffprobe | recent stable | media processing |
-| Chrome / Chromium | recent stable | HyperFrames rendering |
+| Chrome / Chromium | managed by HyperFrames | local HyperFrames rendering |
 
 Node.js and pnpm are the only hard requirements. The rest are needed only for live Builds.
 
 ## Daily workflow
 
 ```bash
-pnpm install          # after pulling or changing dependencies
+corepack enable
+pnpm install --frozen-lockfile # after pulling or changing dependencies
 pnpm check            # TypeScript type-check
 pnpm test             # full test suite
 ```
@@ -29,7 +30,7 @@ pnpm test             # full test suite
 | Command | What it runs |
 |---|---|
 | `pnpm check` | `tsc -p tsconfig.json --noEmit` |
-| `pnpm test` | `node --import tsx --test 'packages/*/test/**/*.test.ts' 'tools/*.test.mjs'` |
+| `pnpm test` | package, service-adapter and repository-boundary tests through Node's test runner |
 
 See [Testing](./testing.md) for environment-gated tests and test patterns.
 
@@ -37,8 +38,8 @@ See [Testing](./testing.md) for environment-gated tests and test patterns.
 
 ```text
 narratage/
-├── packages/              78 workspace packages
-├── spec/                  7 normative specification documents
+├── packages/              86 workspace packages
+├── spec/                  16 normative specification documents
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
 ├── services/              Python services (whisperx, image-opencv)
@@ -52,7 +53,7 @@ narratage/
 
 | Guide | Topic |
 |---|---|
-| [Package architecture](./packages.md) | The four layers, dependency rules, package anatomy, facets |
+| [Package architecture](./packages.md) | The five layers, dependency rules, package anatomy, facets |
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime Profile](./runtime-profile.md) | JSON and TypeScript configuration, diagnostics, Build archive |

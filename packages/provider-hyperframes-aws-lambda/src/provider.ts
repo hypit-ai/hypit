@@ -15,9 +15,9 @@ import type {
 } from "@narratage/endpoint-kit";
 import {
   assertHyperframesDocument,
-  stageHyperframesProject,
 } from "@narratage/hyperframes";
 import type { HyperframesDocument } from "@narratage/hyperframes";
+import { stageHyperframesProject } from "@narratage/hyperframes/project";
 import {
   mediaTypes,
   sealRenderedVisual,
@@ -48,14 +48,14 @@ import type {
   HyperframesLambdaSite,
 } from "./client.js";
 
-const HYPERFRAMES_VERSION = "0.7.84";
+const HYPERFRAMES_VERSION = "0.7.101";
 const REQUEST_CONTRACT = "svml.hyperframes-visual-render-request@1";
 const CHECKPOINT_CONTRACT = "svml.hyperframes-aws-lambda-operation@1";
 const SUPPORTED_FPS = new Set([24, 30, 60]);
 
 export const awsLambdaHyperframesProviderModuleRef = {
   name: "@narratage/provider-hyperframes-aws-lambda",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const awsLambdaHyperframesProviderImplementationDigest = digestOf(
   `@narratage/provider-hyperframes-aws-lambda/render@1+hyperframes@${HYPERFRAMES_VERSION}`,
@@ -68,6 +68,8 @@ export type CreateAwsLambdaHyperframesProviderOptions = {
   readonly lane?: string;
   readonly stateMachineArn: string;
   readonly bucketName: string;
+  /** Content identity of the deployed remote renderer, not merely its mutable ARN. */
+  readonly rendererImplementationDigest: Digest;
   readonly region?: string;
   readonly quality?: HyperframesLambdaQuality;
   readonly chunkSize?: number;
@@ -144,7 +146,9 @@ function requestDocument(value: CanonicalValue): HyperframesDocument {
 export function supportsAwsLambdaHyperframes(value: CanonicalValue): boolean {
   try {
     const document = requestDocument(value);
-    return document.frameRate.denominator === 1 && SUPPORTED_FPS.has(document.frameRate.numerator);
+    return document.surfaces.length === 0
+      && document.frameRate.denominator === 1
+      && SUPPORTED_FPS.has(document.frameRate.numerator);
   } catch {
     return false;
   }
@@ -322,6 +326,7 @@ function fulfillment(
   artifact: BlobRef,
   checkpoint: HyperframesCheckpoint,
   progress: HyperframesLambdaProgress,
+  rendererImplementationDigest: Digest,
 ): EndpointFulfillment {
   const value: RenderedVisual = sealRenderedVisual({
     contract: "svml.rendered-visual@1",
@@ -336,7 +341,11 @@ function fulfillment(
     conformance: "exact",
     delivery: "executed",
     metadata: canonicalize({
+      contract: "svml.hyperframes-renderer-attestation@1",
       provider: "hyperframes.aws-lambda",
+      providerImplementationDigest: awsLambdaHyperframesProviderImplementationDigest,
+      rendererImplementationDigest,
+      documentDigest: digestOf(document),
       hyperframesVersion: HYPERFRAMES_VERSION,
       renderId: checkpoint.renderId,
       executionArn: checkpoint.executionArn,
@@ -355,6 +364,8 @@ function renderConfiguration(document: HyperframesDocument, options: {
   readonly maxParallelChunks: number;
   readonly targetChunkFrames?: number;
 }): HyperframesLambdaRenderConfig {
+  assert(document.surfaces.length === 0,
+    "AWS Lambda HyperFrames has no deployed Surface-byte verifier");
   assert(document.frameRate.denominator === 1 && SUPPORTED_FPS.has(document.frameRate.numerator),
     "AWS Lambda HyperFrames supports only integer 24, 30 or 60 fps documents");
   return {
@@ -426,6 +437,8 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     && !config.bucketName.includes("-.")
     && !/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(config.bucketName),
     "HyperFrames bucketName is invalid");
+  assert(isDigest(config.rendererImplementationDigest),
+    "HyperFrames rendererImplementationDigest is invalid");
   const quality = config.quality ?? "standard";
   assert(["draft", "standard", "high"].includes(quality), "HyperFrames quality is invalid");
   const chunkSize = config.chunkSize === undefined ? undefined : positiveInteger(config.chunkSize, "chunkSize");
@@ -614,7 +627,10 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       }
       try {
         const artifact = await storeOutput(context, client, progress, next, region, maxRenderedBytes);
-        return { status: "completed", result: fulfillment(document, artifact, next, progress) };
+        return {
+          status: "completed",
+          result: fulfillment(document, artifact, next, progress, config.rendererImplementationDigest),
+        };
       } catch (error) {
         return implementationFailure("HYPERFRAMES_OUTPUT_INVALID", error, true);
       }
@@ -654,6 +670,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     configuration: canonicalize({
       stateMachineArn: machine.arn,
       bucketName: config.bucketName,
+      rendererImplementationDigest: config.rendererImplementationDigest,
       region,
       hyperframesVersion: HYPERFRAMES_VERSION,
       planProtocol: "v2",

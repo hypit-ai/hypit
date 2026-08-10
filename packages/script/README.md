@@ -1,6 +1,6 @@
 # `@narratage/script`
 
-Official raw Script Surface for the Text Frontend. It parses prose-first named Segment blocks,
+Official raw Script Surface for the Markup Frontend. It parses prose-first named Segment blocks,
 newline-independent Role Cues, Dual Text, Selection, Moment and Slot syntax, and lowers them to a
 canonical authored Narrative value with exactly `2M + 2N` semantic anchor identities.
 
@@ -37,14 +37,16 @@ components without importing Script internals.
 
 The Surface exports one full Narrative plus narrow, immutable views:
 
-- `script.segment.<id>` is a `NarrativeExcerpt` used to associate a generated Take with one Segment;
-- `script.segment.<id>.dialogue` is display-independent dialogue, including optional Role cues and
-  right-side Dual Text pronunciation, for a speech-video model;
-- `script.segment.<id>.speech` is pronunciation-only text for duration estimation;
-- `script.caption` is the whole left-side `CaptionProjection` and is not split by Segment for the
-  Caption planner;
+- `script.segment.<id>` is a narrow `NarrativeExcerpt` used to associate a generated Take with one Segment;
+- `script.segment.<id>.dialogue` is ordinary `Text`: display-independent dialogue, including optional
+  Role cues and right-side Dual Text pronunciation, for a speech-video model;
+- `script.segment.<id>.speech` is ordinary pronunciation-only `Text` for duration estimation or TTS;
+- `script.caption` is the complete left-side `CaptionDisplaySequence`;
+- `script.caption.correspondence` maps each whole display Atom to its authored speech-token range;
+- `script.caption.selection.<id>` is the display-word subset wholly owned by one Selection;
 - `script.selection.<id>` is a reusable explicit Selection.
 
-Seedance consumes the dialogue excerpt, Speech Spine consumes the Segment excerpt, and Caption
-consumes the whole Narrative/Caption projection. None imports Script's parser AST. Another authoring
-package may produce the same contracts.
+Seedance consumes dialogue `Text`, Estimate and TTS consume speech `Text`, Speech Spine consumes the
+Segment excerpt, and Caption consumes the explicit display and correspondence edges. None imports
+Script's parser AST. Another authoring package may produce the same ordinary Text and structured
+Narrative contracts.
