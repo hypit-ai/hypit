@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   commentStickerComponent,
@@ -19,14 +19,14 @@ export const svmlPackage = {
   }],
   components: [commentStickerComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: commentStickerModuleRef,
       surface: "style",
       mode: "structured",
       implementationDigest: commentStickerStyleSurfaceImplementationDigest,
       handler: decodeCommentStickerStyleSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: commentStickerModuleRef,
       surface: "track",
       mode: "structured",

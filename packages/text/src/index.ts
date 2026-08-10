@@ -1,24 +1,29 @@
-export { TextFrontendError } from "./error.js";
+export { textComponent } from "./component.js";
+export { textSvsFrontend, textSvsFrontendId } from "./frontend.js";
+export { createTextRenderFragment } from "./fragment.js";
+export type { TextFragmentBinding } from "./fragment.js";
 export {
-  decodeText,
-  createTextAuthorFrontend,
-  textAuthorFrontendId,
-  textFrontend,
-  textFrontendImplementationDigest,
-  textFrontendRef,
-} from "./frontend.js";
-export { TextSurfaceRegistry } from "./registry.js";
+  textDependency,
+  textImplementationDigests,
+  textManifest,
+  textManifestDigest,
+  textModuleRef,
+  textProducers,
+  textTypes,
+} from "./manifest.js";
 export {
-  createTextSurfaceHostFacet,
-  installTextSurfaceHostFacets,
-  textSurfaceHostFacetAbi,
-} from "./host-facet.js";
-export type { TextSurfaceHostFacetOptions } from "./host-facet.js";
-export {
-  closeDocument,
-  discoverText,
-  parseOpeningTag,
-  parseStructuredElement,
-  skipTextTrivia,
-} from "./syntax.js";
+  bindText,
+  renderText,
+  sealText,
+  sealTextBinding,
+  sealTextBindings,
+  sealTextTemplate,
+  textTemplateBindingNames,
+  verifyText,
+  verifyTextBinding,
+  verifyTextBindings,
+  verifyTextTemplate,
+} from "./program.js";
+export { textTemplateFromSvsRecipes } from "./svs.js";
+export { decodeTextRenderSurface, decodeTextValueSurface } from "./surface.js";
 export type * from "./types.js";

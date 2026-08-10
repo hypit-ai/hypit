@@ -8,8 +8,8 @@ import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { createSpeechSpineFragment } from "./fragment.js";
 import { speechSpineTypes } from "./manifest.js";
@@ -33,7 +33,7 @@ function stringAttribute(element: StructuredElement, name: string): string {
 }
 
 function referencePath(element: StructuredElement, name: string): string {
-  const value: TextAttributeValue | undefined = element.attributes[name];
+  const value: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof value !== "object" || value.kind !== "reference" || !value.path) {
     throw new Error(`${element.name}.${name} must be a whole-value reference`);
   }

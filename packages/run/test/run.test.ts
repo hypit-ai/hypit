@@ -28,7 +28,7 @@ import {
   RunSourceError,
   verifyRunSourceClosure,
 } from "@narratage/run";
-import { parseRunDocument, runTextFrontend } from "@narratage/run-text";
+import { parseRunDocument, runMarkupFrontend } from "@narratage/run-markup";
 
 const moduleRef = { name: "example.run", version: "1" } as const;
 const promptType = { module: moduleRef, name: "Prompt" } satisfies TypeRef;
@@ -155,11 +155,11 @@ test("Run Fragments enter the Host only through the locked Run facet ABI", () =>
 
 async function compileDocument(body: string) {
   const frontends = new RunFrontendRegistry();
-  frontends.register(runTextFrontend);
+  frontends.register(runMarkupFrontend);
   return await compileRunSource({
     id: "/project/build.svrun",
     name: "build.svrun",
-    text: `<?svml using="@narratage/run-text@1"?>\n${body}`,
+    text: `<?svml using="@narratage/run-markup@1"?>\n${body}`,
   }, frontends);
 }
 
@@ -374,7 +374,7 @@ test("Run Source Closure binds source bytes, Frontend implementation and semanti
   );
 
   const alternate = {
-    ...runTextFrontend,
+    ...runMarkupFrontend,
     id: "example.run-text-compatible@1",
     implementationDigest: digestOf("example.run-text-compatible/implementation@1"),
   };

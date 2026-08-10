@@ -45,7 +45,8 @@ Segment 是按顺序排列的语音内容块。标签名**即**其 id——在�
 - Segment 不能嵌套——每个 Segment 都是 `<script>` 的顶层子元素。
 - Segment 名称遵循 XML 命名规则：字母、数字、连字符、下划线。
 
-其他组件通过 `{story.segment.opening}` 引用单个 Segment，通过 `{story.segment.opening.dialogue}` 或 `{story.segment.opening.speech}` 引用其文本投影。
+其他组件通过 `{story.segment.opening}` 引用单个 Segment。`{story.segment.opening.dialogue}` 与
+`{story.segment.opening.speech}` 都是普通 `Text`：前者保留显式 Role 前缀，后者只有实际读音。
 
 ## Role Cue
 
@@ -70,7 +71,7 @@ Role Cue 会产生不同的文本投影：
 | **speech** | `What time is it?`<br>`It's 8:30.` |
 | **caption** | `What time is it?`<br>`It's 8:30.` |
 
-dialogue 投影包含 Role Cue 前缀，speech 和 caption 投影会去除前缀。像 `seedance:Speech` 这样的组件使用 `{story.segment.dialogue.dialogue}`（带标签）。Script 还会显式输出 `{story.caption}` 作为有序的显示 Atom/Word 全集，并以 `{story.caption.correspondence}` 单独提供 Atom 到口播 token 的对应；只有定时汇合处需要后者。
+dialogue `Text` 包含 Role Cue 前缀，speech `Text` 和 caption 投影会去除前缀。像 `seedance:Speech` 这样的组件使用 `{story.segment.dialogue.dialogue}`（带标签）。Script 还会显式输出 `{story.caption}` 作为有序的显示 Atom/Word 全集，并以 `{story.caption.correspondence}` 单独提供 Atom 到口播 token 的对应；只有定时汇合处需要后者。
 
 ## Dual Text
 

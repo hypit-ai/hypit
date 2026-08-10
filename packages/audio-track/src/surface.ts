@@ -7,8 +7,8 @@ import type {
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 import type { TemporalDuration, TemporalPointExpression } from "@narratage/temporal";
 
 import { createAudioTrackFragment } from "./fragment.js";
@@ -41,7 +41,7 @@ function optionalText(element: StructuredElement, name: string): string | undefi
 }
 
 function resolved(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: SurfaceResolvedReference["type"],
   resolve: (path: string) => SurfaceResolvedReference | undefined,

@@ -179,12 +179,12 @@ packages/core            domain-neutral Demand compiler and Build state machine
 packages/source          mandatory Source Header; no syntax default
 packages/elaborator      author declarations and hygienic Fragment expansion
 packages/compiler-node   reference Node compiler Host
-packages/compiler-text-node  optional official Text compiler assembly
+packages/compiler-markup-node  optional official Markup compiler assembly
 packages/package-loader-node syntax-neutral trusted physical-package loading
 packages/cli             generic commands requiring an explicit Distribution
 packages/video-cli       official video command application; no author-package aggregate
 packages/run             syntax-neutral Run Source closure and complete Run Graph compiler
-packages/run-text        optional official human-readable Run Frontend
+packages/run-markup        optional official human-readable Run Frontend
 packages/runtime         environment-neutral scheduling and Store ports
 packages/driver-node     trusted Node command execution
 packages/local           zero-service SQLite/filesystem developer assembly

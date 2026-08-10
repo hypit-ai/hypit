@@ -10,6 +10,7 @@ export {
   assertRankingHeader,
   assertRankingItemSpec,
   assertRankingItemSpecSet,
+  assertRankingTextItemShell,
   assertRankingSchedule,
   assertRankingSoundEventPlan,
   assertRankingSoundStyle,
@@ -38,6 +39,8 @@ export {
   rankingImplementationDigests,
   rankingValidatorDigests,
   sealRankingHeader,
+  sealRankingTextItemShell,
+  materializeRankingTextItem,
 } from "./schedule.js";
 export {
   decodeColumnStyle,
@@ -59,6 +62,7 @@ export {
   rankingDependency,
   rankingHeaderSchema,
   rankingItemSpecSchema,
+  rankingTextItemShellSchema,
   rankingItemSpecSetSchema,
   rankingManifest,
   rankingManifestDigest,
@@ -69,7 +73,6 @@ export {
   rankingSoundSetSchema,
   rankingSoundStyleSchema,
   rankingSurfaceImplementationDigests,
-  rankingTitleSchema,
   rankingTypes,
 } from "./manifest.js";
 export {

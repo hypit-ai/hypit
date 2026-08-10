@@ -14,8 +14,8 @@
     "@narratage/elaborator": "workspace:*",
     "@narratage/generation": "workspace:*",
     "@narratage/model-kit": "workspace:*",
-    "@narratage/narrative": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/text": "workspace:*",
+    "@narratage/markup": "workspace:*"
   }
 }

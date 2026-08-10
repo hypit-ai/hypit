@@ -55,6 +55,7 @@ export type {
 } from "./ports.js";
 export {
   bindGenerationMedia,
+  bindGenerationText,
   finalizeGenerationRequestDraft,
   GENERATION_MEDIA_BINDING_V1,
   GENERATION_REQUEST_DRAFT_V1,

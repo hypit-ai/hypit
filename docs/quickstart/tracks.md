@@ -1,17 +1,17 @@
 ---
-title: Caption, Media & Text
-description: Visual track components — captions, media overlays and text overlays.
+title: Caption, Media & Typography
+description: Visual track components — captions, media overlays and typography overlays.
 ---
 
-# Caption, Media & Text
+# Caption, Media & Typography
 
-> **Pre-release note:** Caption Fine, Media Track and Text execute their declared author Surfaces.
+> **Pre-release note:** Caption Fine, Media Track and Typography Track execute their declared author Surfaces.
 > Their author APIs may still evolve; the shared terminal Track/Visual IR waist is frozen inside the
 > repository but has not been published as an npm ABI.
 
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and their z-order is determined by the `stack-order` property in SVS. This page
-covers three official visual Track packages: captions, media, and text overlays.
+covers three official visual Track packages: captions, media, and typography overlays.
 
 ## Caption system
 
@@ -159,6 +159,7 @@ place a normalized image, video, animation or compositable Surface at a semantic
 ```svml
 <import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
 ```
 
 ### media-track:Track and media-track:Item
@@ -166,14 +167,14 @@ place a normalized image, video, animation or compositable Surface at a semantic
 Placement is an explicit Spatial Frame edge; appearance and motion remain reusable SVS values.
 
 ```svml
-<seedance:Prompt id="product-direction">
+<wording:Value id="product-direction">
   A clean vertical product film: the written script becomes semantic regions,
   then those regions assemble into a finished video.
-</seedance:Prompt>
+</wording:Value>
 
 <seedance:Video id="product-motion" model="mini"
   prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
+  <seedance:Reference image={product-reference}/>
 </seedance:Video>
 
 <pipeline:Normalize id="product-media" source={product-motion.video}
@@ -202,7 +203,8 @@ child layers, source occupancy and explicit Sequences are available when one sou
 Static or timed text displayed on screen — titles, callouts, lower thirds.
 
 ```svml
-<import as="text" from="@narratage/text-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
+<import as="wording" from="@narratage/text@1"/>
 ```
 
 ### text:Track
@@ -242,7 +244,7 @@ places flowing text inside a `SpatialFrame`:
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Stable item identity |
-| child content | yes | Plain text, or `P`, `Span` and `Break` for rich text |
+| child content or `content` | yes | Inline plain/rich content, or an ordinary graph `Text` reference; the two forms are exclusive |
 | `during` | yes | `"program"` or a Selection reference; `at` and explicit `start`/`end` are also available |
 | `placement` | yes | `SpatialPoint`, `SpatialFrame` or `SpatialPath`, matching the item form |
 | `style` | yes | A `text:Style` compiled from an SVS Recipe plus exact font bytes |
@@ -260,6 +262,19 @@ or a Selection reference for semantic timing:
 </text:Track>
 ```
 
+Graph-produced copy remains visible as an edge:
+
+```svml
+<wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
+<text:Track id="callout" space={speech.space}>
+  <text:Area id="callout-copy" content={headline}
+    placement={callout-frame} style={callout-style} during="program"/>
+</text:Track>
+```
+
+The generic Text value supplies only characters. Typography still owns the item document wrapper,
+placement, timing, style and motion. Use inline `P`/`Span`/`Break` when the author needs rich runs.
+
 **Output:** `{titles.track}` — a VisualTrack added to `film:Film`.
 
 ## Combination example
@@ -273,7 +288,7 @@ All three track types together in one source file:
 <import as="fonts" from="@narratage/fonts-open@1"/>
 <import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
-<import as="text" from="@narratage/text-track@1"/>
+<import as="text" from="@narratage/typography-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->

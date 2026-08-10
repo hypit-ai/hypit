@@ -89,35 +89,38 @@ You can also specify estimation parameters inline instead of using an SVS policy
 **Output:** `{hook-duration.duration}` — the estimated duration in seconds, passed to generation
 components.
 
-## seedance:Prompt
+## text:Value
 
-A reusable text block that provides visual direction for Seedance generation.
+A reusable literal `Text` value. It is model-neutral and can feed Seedance, GPT Image or any other
+declared text port.
 
 ```svml
-<seedance:Prompt id="alice-direction">
+<import as="text" from="@narratage/text@1"/>
+
+<text:Value id="alice-direction">
   Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
   Calm, curious delivery; natural breathing and restrained hand movement.
-</seedance:Prompt>
+  Spoken dialogue — say exactly: What if editing began with meaning?
+</text:Value>
 ```
 
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Unique identifier |
 
-The element body is the prompt text. Referenced by `seedance:Speech` and `seedance:Video` via their
-`prompt` attribute.
+The element body is the exact Text value. `text:Render` can produce the same type from a template
+and explicit graph inputs.
 
 ## seedance:Speech
 
 Generates a talking-head video clip via the Seedance model. This is the low-level generation
-component — it directly specifies the dialogue, prompt, and duration.
+component — its complete model input Text already includes any spoken dialogue.
 
 ```svml
 <seedance:Speech id="alice-take" model="mini"
-  dialogue={story.segment.opening.dialogue}
   prompt={alice-direction}
   duration="8">
-  <seedance:Reference image={alice-reference} role="character"/>
+  <seedance:Reference image={alice-reference}/>
 </seedance:Speech>
 ```
 
@@ -125,8 +128,7 @@ component — it directly specifies the dialogue, prompt, and duration.
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `model` | yes | Seedance model name: `mini` |
-| `dialogue` | yes | Script text to lip-sync — typically `{script.segment.NAME.dialogue}` |
-| `prompt` | yes | Visual direction — reference to a `seedance:Prompt` |
+| `prompt` | yes | Complete model input — reference to ordinary `Text` |
 | `duration` | yes | Clip duration in seconds (number or `{estimate.duration}` reference) |
 | `resolution` | no | Output resolution: `480p`, `720p` (default varies by model) |
 | `aspect-ratio` | no | Output aspect ratio: `9:16`, `16:9`, `1:1` |
@@ -136,13 +138,12 @@ component — it directly specifies the dialogue, prompt, and duration.
 Child element that provides a reference image for character consistency:
 
 ```svml
-<seedance:Reference image={alice-reference} role="character"/>
+<seedance:Reference image={alice-reference}/>
 ```
 
 | Attribute | Required | Description |
 |---|---|---|
 | `image` | yes | Reference to a `media:Image` component |
-| `role` | yes | How this reference is used: `character`, `subject` |
 
 **Output:** `{alice-take}` or `{alice-take.video}` — the generated video, passed to `speech:Spine`.
 
@@ -153,7 +154,7 @@ Generates a standalone video clip (not a talking-head — no dialogue lip-sync).
 ```svml
 <seedance:Video id="product-motion" model="mini"
   prompt={product-direction} duration="5">
-  <seedance:Reference image={product-reference} role="subject"/>
+  <seedance:Reference image={product-reference}/>
 </seedance:Video>
 ```
 
@@ -161,7 +162,7 @@ Generates a standalone video clip (not a talking-head — no dialogue lip-sync).
 |---|---|---|
 | `id` | yes | Unique identifier |
 | `model` | yes | Seedance model name: `mini` |
-| `prompt` | yes | Visual direction — reference to a `seedance:Prompt` |
+| `prompt` | yes | Complete model input — reference to ordinary `Text` |
 | `duration` | yes | Clip duration in seconds |
 
 Also accepts `<seedance:Reference>` children for reference images.
@@ -170,8 +171,9 @@ Also accepts `<seedance:Reference>` children for reference images.
 
 ## speaker:Take
 
-A higher-level talking-head component built on top of Prompt Kit. Instead of writing a raw prompt,
-you provide a Recipe with generation settings and a Kit that assembles the prompt automatically.
+A higher-level talking-head component built on the domain-neutral Text Program. Instead of writing
+a raw prompt, you provide a Recipe with generation settings and a Text Template that assembles the
+model input explicitly in the graph.
 
 ```svml
 <import as="speaker" from="@narratage/seedance-speaker@1"/>
@@ -193,7 +195,7 @@ you provide a Recipe with generation settings and a Kit that assembles the promp
 | `dialogue` | yes | Script text — typically `{script.segment.NAME.dialogue}` |
 | `duration` | yes | Estimated duration from `estimate:Speech` |
 | `recipe` | yes | SVS speaker Recipe (see [SVS Stylesheets](./styles.md#speaker)) |
-| `kit` | yes | Prompt Kit SVS — the template that assembles the prompt |
+| `kit` | yes | Text Template SVS — the template that assembles model input text |
 
 ### speaker:Reference
 
@@ -212,21 +214,21 @@ Child element providing reference media. Accepts both images and audio:
 
 **Output:** `{hook-take.video}` — the generated video, passed to `speech:Spine`.
 
-### Prompt Kits
+### Text Templates
 
-A Prompt Kit is a special SVS file that defines a structured prompt template with ordered blocks,
-variant choices, axis parameters, and slots. The official kit is at
+A Text Template can be authored as an SVS file with ordered blocks, variant choices, axis
+parameters and slots. The official template is at
 `packages/seedance-speaker/kits/official-ugc-v1.svs`.
 
-The kit is imported using the Prompt Kit SVS parser:
+That source selects the optional Text Template SVS Frontend itself:
 
 ```svs
-<?svml using="@narratage/prompt-kit/svs@1"?>
+<?svml using="@narratage/text/svs@1"?>
 ```
 
-The Recipe in `studio.svs` sets the axis parameter values (composition-stability, camera-motion,
-edit-rhythm, performance, gesture, voice-mode), and the kit assembles them into a complete prompt
-automatically.
+The Recipe in `studio.svs` sets the axis parameter values. `speaker:Take` turns those values and
+Script dialogue into explicit Text Bindings; the Text render output then enters Seedance's exact
+`prompt` port through an ordinary graph edge.
 
 ## Combination example
 

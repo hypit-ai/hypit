@@ -2,7 +2,7 @@ import { artifactTypes } from "@narratage/artifact";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
-} from "@narratage/text";
+} from "@narratage/markup";
 
 import { assertFontArtifactRef } from "./render.js";
 import { mediaTypes } from "./manifest.js";

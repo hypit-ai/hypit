@@ -25,15 +25,16 @@ New Builds can use the newly locked package without a Core release.
 
 A logical Module is not required to become one physical npm package. Author meanings such as
 Seedance Speaker, Media Track and Podcast should retain separate Manifests and import identities, while a
-public Seedance distribution may ship all of those facets and their static Kit data from one
+public Seedance distribution may ship all of those facets and their static template data from one
 physical package. Internal private workspace packages remain convenient development boundaries and
-do not settle the public package topology. Shared mechanics such as `@narratage/prompt-kit` prevent those
-logical modules from duplicating Prompt assembly code without collapsing them into one mode-heavy
+do not settle the public package topology. Shared mechanics such as `@narratage/text` prevent those
+logical modules from duplicating text assembly code without collapsing them into one mode-heavy
 component.
 
 Another domain needs only `@narratage/protocol` and `@narratage/core` for the irreducible state machine. It
 will usually also choose `@narratage/source`, an Elaborator, `@narratage/run`, a compiler Host, Driver and
-Runtime adapters. It does not need the official Text, SVS or Run Text Frontends, video contracts or
+Runtime adapters. It does not need the official Markup, SVS or Run Markup Frontends, text programs,
+video contracts or
 any video Endpoint.
 
 ## 2. Installation is not authority
@@ -58,10 +59,10 @@ syntax. Host-specific
 executable facets carry an exact ABI and canonical identity, and stay inert until a matching Host
 selects them.
 
-`@narratage/compiler-text-node` is the explicitly named Text assembly. It installs only Text Surface
+`@narratage/compiler-markup-node` is the explicitly named Markup assembly. It installs only Markup Surface
 Host facets and combines them with the syntax-neutral compiler. `@narratage/cli` is now the generic
 command engine and has no video author-package aggregate or video Endpoint dependency.
-`@narratage/video-cli` supplies the Text compiler only. One explicit package lock selects every
+`@narratage/video-cli` supplies the Markup compiler only. One explicit package lock selects every
 Author/Run Frontend, Surface and deterministic component package; a separate Runtime package lock
 selects Provider and Store adapter facets. Public publication of those already separated packages
 remains deferred work.

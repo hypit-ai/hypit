@@ -188,6 +188,12 @@ export type TypewriterItemSpec = {
 
 export type RankingItemSpec = TierBoardItemSpec | ColumnItemSpec | TopThreeItemSpec | TypewriterItemSpec;
 
+/** Structural half of an Item whose visible copy arrives on a Text graph edge. */
+export type RankingTextItemShell =
+  | Omit<ColumnItemSpec, "contract" | "label"> & { readonly contract: "svml.column-text-item-shell@1" }
+  | Omit<TopThreeItemSpec, "contract" | "label"> & { readonly contract: "svml.top-three-text-item-shell@1" }
+  | Omit<TypewriterItemSpec, "contract" | "text"> & { readonly contract: "svml.typewriter-text-item-shell@1" };
+
 export type RankingItemSpecSet = {
   readonly contract: "svml.ranking-item-spec-set@1";
   readonly variant: RankingVariant;

@@ -173,7 +173,7 @@ remote renderer-deployment digest in receipt-covered metadata. Shared ffprobe-ba
 verification proves declared dimensions, timing, SDR/sRGB and alpha facts before local staging;
 Endpoints without this ability decline Surface-bearing documents.
 
-E1–E5, E7 and E8 now have their official package witnesses. `@narratage/text-track` proves the
+E1–E5, E7 and E8 now have their official package witnesses. `@narratage/typography-track` proves the
 complete three-box/Text terminal model without public Text fields; Caption and Media prove their
 independent package models. `@narratage/audio-track` proves the exact
 48 kHz source/target mapping, overlap law, bounded stretch and one shared local/remote

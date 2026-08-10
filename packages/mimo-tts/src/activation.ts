@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeMimoPresetSurface,
@@ -16,15 +16,15 @@ export const svmlPackage = {
   modules: [{ manifest: mimoTtsManifest, specifiers: ["@narratage/mimo-tts", "@narratage/mimo-tts@1"] }],
   components: [mimoTtsComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: mimoTtsModuleRef, surface: "preset", mode: "structured",
       implementationDigest: mimoTtsSurfaceDigests.preset, handler: decodeMimoPresetSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: mimoTtsModuleRef, surface: "voiceDesign", mode: "structured",
       implementationDigest: mimoTtsSurfaceDigests.voiceDesign, handler: decodeMimoVoiceDesignSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: mimoTtsModuleRef, surface: "voiceClone", mode: "structured",
       implementationDigest: mimoTtsSurfaceDigests.voiceClone, handler: decodeMimoVoiceCloneSurface,
     }),

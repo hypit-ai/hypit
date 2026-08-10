@@ -6,6 +6,7 @@ import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import type { CanvasSpace, SpatialFrame } from "@narratage/spatial";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import type { MediaLayerSet } from "@narratage/media-track";
+import type { Text } from "@narratage/text";
 
 import { renderDepthStack } from "./lower.js";
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
@@ -18,9 +19,11 @@ import {
   finalizeDepthStackAtProgramEnd,
   finalizeDepthStackUntilMoment,
   finalizeDepthStackUntilSelection,
+  bindDepthStackCardLabelText,
 } from "./program.js";
 import type {
   DepthStackCardLabel,
+  DepthStackCardLabelStyle,
   DepthStackCardSet,
   DepthStackCardSpec,
   DepthStackHeader,
@@ -47,6 +50,14 @@ function finalizeInputs(inputs: ProducerHandlerContext["inputs"]) {
 export const depthStackComponent = {
   name: "@narratage/deck-track",
   producers: [
+    {
+      producer: depthStackProducers.bindLabelText,
+      implementationDigest: depthStackImplementationDigests.bindLabelText,
+      handler: ({ inputs }) => ({ outputs: { label: output(bindDepthStackCardLabelText(
+        inline<DepthStackCardLabelStyle>(inputs.style?.value, "DepthStackCardLabelStyle"),
+        inline<Text>(inputs.content?.value, "Text"),
+      )) }, needs: {} }),
+    },
     {
       producer: depthStackProducers.createCards,
       implementationDigest: depthStackImplementationDigests.createCards,

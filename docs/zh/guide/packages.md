@@ -43,16 +43,20 @@ description: 五个分层、依赖边界、包的结构与 facet。
 
 ### Layer 2：作者语言层
 
-面向作者的词汇：文本 Frontend、Script Surface、SVS Recipe、Run 文本 Frontend 以及可复用的编译库。
+面向作者的词汇：Markup Frontend、Script Surface、SVS Recipe、Run Markup Frontend，以及可复用的确定性文字编译。
 
 ```text
-@narratage/text                  official .svml markup Frontend
+@narratage/markup                official .svml Markup Frontend
 @narratage/script                Script Surface
 @narratage/svs                   SVS Recipe Frontend
-@narratage/run-text              official .svrun Frontend
-@narratage/prompt-kit            declarative prompt compilation
-@narratage/compiler-text-node    Text Frontend + Surface Host assembly
+@narratage/run-markup            official .svrun Markup Frontend
+@narratage/text                  图原生文字值、模板和确定性渲染
+@narratage/compiler-markup-node  Markup Frontend + Surface Host assembly
 ```
+
+`@narratage/text` 的语义与领域无关，只是位于作者语言层。它输出的普通 `Text` 可以进入模型端口，
+也可以进入可见的视频组件。消费者依赖 Text 窄腰；Text 绝不会反向依赖 Typography、Ranking、
+Sticker、Deck 或任何模型家族。
 
 ### Layer 3：视频领域层
 
@@ -88,7 +92,7 @@ description: 五个分层、依赖边界、包的结构与 facet。
 @narratage/caption-fine          无字段细粒度字幕 Track family
 @narratage/fonts-open            exact redistributable font catalog
 @narratage/media-track           统一的 Media Item/Sequence Track
-@narratage/text-track            text overlay Track
+@narratage/typography-track      typography overlay Track
 @narratage/audio-track           arbitrary sample-domain Audio Track
 @narratage/deck-track            depth-stack collection Track
 @narratage/ranking               four ranking component families
@@ -126,7 +130,7 @@ description: 五个分层、依赖边界、包的结构与 facet。
 
 ```text
 @narratage/cli           generic command engine (requires explicit Distribution)
-@narratage/video-cli     video command application (selects Text compiler, no built-in author packages)
+@narratage/video-cli     video command application (selects Markup compiler, no built-in author packages)
 ```
 
 ## 依赖规则
@@ -137,7 +141,7 @@ description: 五个分层、依赖边界、包的结构与 facet。
 
 2. **领域无关闭包。** 每个 Layer 1 包的传递闭包只包含 Layer 1 的包。`@narratage/core` 只依赖 `@narratage/protocol`。
 
-3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance-speaker`、`@narratage/media-track`、`@narratage/text-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
+3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance-speaker`、`@narratage/media-track`、`@narratage/typography-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
 
 ## 包的结构
 

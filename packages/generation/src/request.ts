@@ -1,5 +1,7 @@
 import { canonicalize } from "@narratage/protocol";
 import type { BlobRef, ObjectFieldSchema, ValueSchema } from "@narratage/protocol";
+import { verifyText } from "@narratage/text";
+import type { Text } from "@narratage/text";
 
 import { assertGenerationBlobRef, sealGenerationRequest } from "./identity.js";
 import { generationBlobRefSchema, generationObjectSchema } from "./schema.js";
@@ -164,11 +166,13 @@ export function requestSchemaFromPorts(table: GenerationPortTable): ValueSchema 
 
 /** Structural schema for the model-owned request draft used by graph assembly. */
 export function requestDraftSchemaFromPorts(table: GenerationPortTable): ValueSchema {
-  const media = table.ports.filter(isMediaPort).map((port) => port.name);
+  const deferred = table.ports
+    .filter((port) => isMediaPort(port) || port.value.kind === "text")
+    .map((port) => port.name);
   return generationObjectSchema({
     contract: { schema: { kind: "literal", value: GENERATION_REQUEST_DRAFT_V1 } },
     model: { schema: { kind: "literal", value: table.model } },
-    ports: { schema: portsObjectSchema(table, { defer: media }) },
+    ports: { schema: portsObjectSchema(table, { defer: deferred }) },
   });
 }
 
@@ -310,8 +314,10 @@ export function verifyPortsAgainstTable(
   }
 }
 
-function mediaPorts(table: GenerationPortTable): readonly GenerationMediaPort[] {
-  return table.ports.filter(isMediaPort);
+function deferredPorts(table: GenerationPortTable): readonly string[] {
+  return table.ports
+    .filter((port) => isMediaPort(port) || port.value.kind === "text")
+    .map((port) => port.name);
 }
 
 export function verifyRequestDraftAgainstPorts(
@@ -321,7 +327,7 @@ export function verifyRequestDraftAgainstPorts(
   const draft = plainObject(value, `${table.model} request draft`);
   assert(draft.contract === GENERATION_REQUEST_DRAFT_V1, `${table.model} request draft contract is invalid`);
   assert(draft.model === table.model, `${table.model} request draft model is invalid`);
-  verifyPortsAgainstTable(table, draft.ports, { defer: mediaPorts(table).map((port) => port.name) });
+  verifyPortsAgainstTable(table, draft.ports, { defer: deferredPorts(table) });
 }
 
 export function sealGenerationRequestDraft(
@@ -381,6 +387,24 @@ export function bindGenerationMedia(
   return sealGenerationRequestDraft(table, {
     ...draft.ports,
     [portName]: [...(draft.ports[portName] ?? []), value],
+  });
+}
+
+/** Attach one graph Text edge to an exact text port without hiding it in metadata. */
+export function bindGenerationText(
+  table: GenerationPortTable,
+  draft: GenerationRequestDraft,
+  portName: string,
+  text: Text,
+): GenerationRequestDraft {
+  verifyRequestDraftAgainstPorts(table, draft);
+  verifyText(text);
+  const port = table.ports.find((candidate) =>
+    candidate.name === portName && candidate.value.kind === "text");
+  assert(port !== undefined, `${table.model} has no text port ${portName}`);
+  return sealGenerationRequestDraft(table, {
+    ...draft.ports,
+    [portName]: [...(draft.ports[portName] ?? []), text.value],
   });
 }
 

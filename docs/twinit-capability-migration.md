@@ -7,8 +7,8 @@ outcomes only when they fit the current graph, peer-Track and explicit-provider 
 ## Status vocabulary
 
 - **Complete:** a current author package or graph composition provides the production outcome.
-- **Expressible; Kit missing:** current model/graph contracts can express the request, but the old
-  named author experience and Prompt Kit have not been migrated.
+- **Expressible; Template missing:** current model/graph contracts can express the request, but the
+  old named author experience and its Text Template have not been migrated.
 - **Backlog:** technically compatible with the architecture, but no current package provides it.
 - **Deliberately omitted:** consciously outside the current product or architecture; not accidental.
 
@@ -27,18 +27,18 @@ a finished author package, and a deferred package is not an impossible feature.
 | `image_overlay` | Complete | `@narratage/image-compose` replaces the fixed base/sticker special case with an explicit Canvas and ordered image Layers; the local OpenCV Endpoint produces one reusable PNG Artifact. |
 | `estimate_duration` | Complete | `@narratage/estimate` plus an explicit SVS policy. |
 | `speech_script` | Complete | Script/Narrative, Segment and Role projections, Selection/Moment anchors and Caption atoms. |
-| `text_concat` | Backlog | A generic deterministic string-assembly component is not currently published. Prompt Kit does not replace every graph-level use. |
-| `text_replace` | Backlog | A generic deterministic replacement component is not currently published. |
+| `text_concat` | Complete | `@narratage/text` provides deterministic sequence/join expressions and an ordinary graph `Text` output. |
+| `text_replace` | Deliberately omitted | The old pronunciation-rewrite workflow is superseded by Script Dual Text. Generic Text templates may still perform an explicitly authored substitution for unrelated work, but no speech path rewrites the author's text. |
 | `seedance_avatar` | Complete | The official Seedance Speaker path covers the single-speaker reference-image/audio case. |
-| `seedance_speaker` | Complete | `@narratage/seedance-speaker` with one explicit six-axis Prompt Kit and SVS invocation. |
-| `seedance_broll` | Expressible; Kit missing | Generic Seedance now accepts runtime-produced image/audio/video edges; a tested three-image montage topology exists. Only the named Prompt author Kit is intentionally deferred. |
-| `seedance_podcast` | Expressible; Kit missing | Seedance accepts the required multimodal references; the two-speaker podcast Prompt Kit and author Surface are absent. |
-| `seedance_call` | Expressible; Kit missing | Model ports exist; the call-layout Prompt Kit and author Surface are absent. |
-| `seedance_street_interview` | Expressible; Kit missing | Model ports exist; the street-interview Script/Prompt Kit is absent. |
-| `seedance_keyframe` | Expressible; Kit missing | Seedance exposes explicit first/last-frame ports; no dedicated convenience Surface is shipped. |
-| `seedance_reference` | Expressible; Kit missing | Seedance exposes image/video/audio reference ports; no old-style named reference Kit is shipped. |
-| `seedance_motion_ref` | Expressible; Kit missing | Reference-video input exists; the motion-only semantic Prompt Kit is absent. |
-| `seedance_camera_ref` | Expressible; Kit missing | Reference-video input exists; the camera-only semantic Prompt Kit is absent. |
+| `seedance_speaker` | Complete | `@narratage/seedance-speaker` with one explicit six-axis Text Template, SVS settings and visible Text render edge. |
+| `seedance_broll` | Expressible; Template missing | Generic Seedance accepts runtime-produced Text/image/audio/video edges; a tested three-image montage topology exists. Only the named author template is deferred. |
+| `seedance_podcast` | Expressible; Template missing | Seedance accepts the required multimodal references; the two-speaker Text Template and author Surface are absent. |
+| `seedance_call` | Expressible; Template missing | Model ports exist; the call-layout Text Template and author Surface are absent. |
+| `seedance_street_interview` | Expressible; Template missing | Model ports exist; the street-interview Script/Text Template is absent. |
+| `seedance_keyframe` | Expressible; Template missing | Seedance exposes explicit first/last-frame ports; no dedicated convenience Surface is shipped. |
+| `seedance_reference` | Expressible; Template missing | Seedance exposes image/video/audio reference ports; no old-style named template is shipped. |
+| `seedance_motion_ref` | Expressible; Template missing | Reference-video input exists; the motion-only semantic Text Template is absent. |
+| `seedance_camera_ref` | Expressible; Template missing | Reference-video input exists; the camera-only semantic Text Template is absent. |
 | `concat` | Complete | Ordered Media/Speech graph composition replaces clip concatenation as a special node. |
 | `base_track` | Complete | Speech Spine, Media Track and Film replace the privileged base lane. |
 | `video_enhance` | Backlog | Add an explicit video-in/video-out enhancement component and Provider profile if delivery needs it. |
@@ -46,7 +46,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `deck_track` | Complete | `@narratage/deck-track` implements the independent DepthStack collection model. |
 | `cluely_ui_track` | Deliberately omitted | Product-specific UI recreation was explicitly removed from the migration scope. |
 | `comment_sticker_track` | Complete | Independent `@narratage/comment-sticker` Style/Track Surfaces lower explicit content, Spatial Frames and shared Temporal projections to a self-contained peer Visual Track. |
-| `text_track` | Complete | `@narratage/text-track` implements Point/Area/Path text, rich paint, boxes, layout, masks and motion. |
+| `text_track` | Complete | `@narratage/typography-track` implements Point/Area/Path text, rich paint, boxes, layout, masks and motion. |
 | `subtitle_track` | Complete | Caption Plan, Gemini planner and `@narratage/caption-fine` replace the monolithic subtitle node. |
 | `fx_track` | Deliberately omitted | Base/lower-composite sampling violates peer self-contained Track laws; no placeholder is reserved. |
 | `audio_track` | Complete | `@narratage/audio-track` provides exact sample-domain placement, playback, fades and mixing inputs. |
@@ -55,7 +55,68 @@ a finished author package, and a deferred package is not an impossible feature.
 | `locate` | Complete | WhisperX evidence, Speech Alignment, SemanticMap, Temporal, Spatial and Film replace one privileged locate phase. |
 | `export` | Complete | Composition, HyperFrames document compilation, visual rendering, audio rendering and mux are explicit graph operations. |
 
-Totals: **21 Complete**, **8 Expressible; Kit missing**, **3 Backlog**, **3 Deliberately omitted**.
+Totals: **22 Complete**, **8 Expressible; Template missing**, **1 Backlog**, **4 Deliberately omitted**.
+
+## Prompt and Text audit
+
+The migration decision is based on Twinit's current Seedance executors, the maintained operator node
+manuals and the production graph-patch evidence that introduced and tuned the prompt axes. The old
+node names are evidence, not an API to reproduce.
+
+### Boundary retained in Narratage
+
+- `@narratage/text` owns only finite data-only templates, bindings and ordinary `Text` values. It has
+  no model, media, Provider, queue, credential, network or cache authority.
+- Static Recipe settings may lower to initial bindings during author compilation. Every text value
+  produced elsewhere remains an explicit graph input; it cannot be copied into hidden Frontend
+  state.
+- The Seedance Speaker path now records
+  `Script dialogue Text -> TextTemplate -> Seedance prompt` as real Operations and edges.
+  Optional action and extra direction are Text inputs, not magic strings embedded in the Recipe.
+- Exact model packages declare text ports. Provider packages only translate a finalized exact model
+  request to one service API. Neither layer assembles creative prompts.
+- Ordinary Text also feeds visible consumers through graph edges: Typography content, Ranking
+  labels/title/rows, Comment Sticker copy and Deck labels. Consumer-specific style, timing and
+  layout never move into `@narratage/text`.
+
+### Twinit Seedance judgement
+
+| Old surface | Decision | Reason |
+|---|---|---|
+| `seedance_avatar` | Retire the named duplicate | Its useful single-speaker outcome is covered by Speaker. Its hard-coded gender, seven always-on craft paragraphs and conflicting locked-shot/jump-cut advice are old policy, not model capability. |
+| `seedance_speaker` | Keep and refine | Reference preservation, dialogue/voice mapping and the six axes are useful author semantics. They belong in an imported Text Template plus a thin role-aware author Surface. |
+| `seedance_broll` | Keep as a future author Kit | Silent visual support is a real semantic contract. Material, reference plan, story shape, edit language, camera language and motion intensity are a useful initial orthogonal vocabulary, but remain editable template data. |
+| `seedance_podcast` | Keep as a distinct future Kit | Two co-present hosts, two view references, voice roles and A/B dialogue are a genuine stage contract, not a runtime mode guess. |
+| `seedance_call` | Keep as a distinct future Kit | Main-tile/PiP geometry and live listener behavior differ materially from a co-present podcast. It should not be a `mode` hidden inside one conversation component. |
+| `seedance_street_interview` | Keep as a distinct future Kit | Interviewer/guest roles and microphone handoff are real authored staging semantics. |
+| `seedance_reference` | Do not recreate as a prompt Kit | It was the low-level escape hatch with no prompt scaffold. Generic exact Seedance plus ordinary Text and media edges already is that abstraction. |
+| `seedance_keyframe` | Keep low-level | First/last frame and motion Text are exact model ports; a dedicated named author Surface is optional convenience, not missing semantics. |
+| `seedance_motion_ref` / `seedance_camera_ref` | Preserve as two small templates | “Copy body motion” and “copy camera path” are genuinely different reference interpretations. They need small explicit templates, not new Provider logic or duplicated model executors. |
+
+The old `tight_cuts`, `varied_emphasis` and `skeptical_reacts` aliases that emitted identical text are
+not migrated. Silent resolution clamps, parameters displayed but ignored by execution, inline
+`data.prompt` fallbacks and `prompt + extra_prompt` concatenation inside a model executor are also
+rejected. The graph must show the selected Text and every dynamic contribution before a request is
+finalized.
+
+Twinit also contains an opt-in GPT Image prefix/suffix repairer. It is not GPT Image capability: it
+is one historical real-shot style template. If retained for a project, it belongs in an ordinary
+Text Template and must remain visible before the exact GPT Image prompt edge. It does not justify
+model-specific prompt code in `@narratage/gpt-image`.
+
+### VLM work is deferred beyond this version
+
+Twinit's temporal intent VLM and spatial query paths are acknowledged but intentionally not being
+migrated in the current version. They are inference components, not missing branches of Locate:
+
+```text
+Video + Text intent -> temporal selection/evidence
+Video + Text intent -> spatial selection/evidence
+```
+
+If real delivery demand brings them back, each path must be a separately imported author/model
+package with explicit inputs, an exact model capability and explicit graph outputs. Neither may
+read hidden context, mutate a SemanticMap, become a Runtime guess or add VLM meaning to Core.
 
 ## Retired behavior inside migrated families
 
@@ -69,24 +130,25 @@ Totals: **21 Complete**, **8 Expressible; Kit missing**, **3 Backlog**, **3 Deli
 - Cross-Track masks, adjustment layers and Base FX remain incompatible with the current peer-Track
   contract. A component may transform only pixels and audio it owns.
 
-## Package naming debt before publication
+## Package naming resolution
 
 The physical package taxonomy is mostly regular: `provider-*`, `artifact-store-*`,
 `credential-store-*`, `transport-*`, `*-track`, `*-local`, `*-aws-lambda` and `*-node` communicate
-their roles. The following names need one deliberate pre-publication decision rather than piecemeal
-renaming:
+their roles. The former overloaded `text` name has been resolved atomically:
 
-| Current name | Ambiguity to resolve |
+| Current name | Exact role |
 |---|---|
-| `@narratage/text` | It is the SVML markup Frontend, while `text-track` is video text. |
-| `@narratage/run-text` | It is also a Frontend, but the role is not named consistently with `text`. |
-| `@narratage/compiler-text-node` | It is a Node compiler assembly selecting the Text Frontend; the word order obscures that. |
+| `@narratage/markup` | Official XML-like authoring Frontend; it owns syntax, not text values. |
+| `@narratage/run-markup` | Official XML-like Run Frontend, named by the syntax it reads. |
+| `@narratage/compiler-markup-node` | Node compiler assembly selecting the Markup Frontend. |
+| `@narratage/typography-track` | Video typography; separate from both Markup syntax and domain-neutral Text values. |
+| `@narratage/text` | Domain-neutral, graph-native text programs and rendered Text values. |
 | `@narratage/local` | It is a Node local Runtime/developer distribution, not a generic notion of locality. |
 | `@narratage/hyperframes` / `render-hyperframes` | One compiles terminal Visual IR; the other is the author-visible render graph package. |
 | `@narratage/media-pipeline` / `media-execution` | One owns provider-neutral contracts and plans; the other is the shared FFmpeg execution body. |
 
-No rename should happen until the complete mapping is chosen, updated atomically and protected by a
-repository test.
+The remaining `local`, HyperFrames and media naming questions are independent publication choices;
+they no longer overload one word across syntax, graph text and video typography.
 
 ## Version invariant
 
@@ -108,7 +170,9 @@ comes from the locked package bytes and closure digests.
 2. preserve the enforced logical `@1` identity invariant while packages remain unpublished;
 3. settle the package rename map before npm publication work;
 4. choose concrete Backlog packages from real delivery demand;
-5. migrate a Seedance author Kit only with a real example that proves its semantic value.
+5. finish Fine Caption style migration, audit distinct Seedance author templates and improve
+   deterministic Estimate;
+6. keep VLM temporal/spatial interpretation outside the current version.
 
 This ledger changes when implementation evidence changes. A package moves to **Complete** only after
 its author Surface, graph lowering and relevant execution/render evidence exist.

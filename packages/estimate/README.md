@@ -2,8 +2,8 @@
 
 Provider-free deterministic speech-duration planning.
 
-`<estimate:Speech>` consumes the public `NarrativeSpeechExcerpt` contract and produces the public
-`SpeechDuration` contract. It uses a language-aware syllable/character/mora rate, then applies an
+`<estimate:Speech>` consumes an ordinary `Text` value and produces the public `SpeechDuration`
+contract. It uses a language-aware syllable/character/mora rate, then applies an
 explicit tail padding, bounds and rounding policy. It performs no network or media work.
 
 ```xml

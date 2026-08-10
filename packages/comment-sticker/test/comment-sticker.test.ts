@@ -10,14 +10,17 @@ import { digestOf } from "@narratage/protocol";
 import { spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
-import { parseStructuredElement } from "@narratage/text";
-import type { SurfaceResolvedReference } from "@narratage/text";
+import { parseStructuredElement } from "@narratage/markup";
+import type { SurfaceResolvedReference } from "@narratage/markup";
+import { sealText } from "@narratage/text";
+import { textTypes } from "@narratage/text";
 
 import {
   appendProgramCommentSticker,
   commentStickerProducers,
   commentStickerTypes,
   createCommentStickerSet,
+  createCommentStickerContent,
   decodeCommentStickerStyle,
   decodeCommentStickerStyleSurface,
   decodeCommentStickerTrackSurface,
@@ -25,6 +28,7 @@ import {
   renderCommentSticker,
   sealCommentStickerHeader,
   sealCommentStickerItemSpec,
+  setCommentStickerContentText,
 } from "../src/index.js";
 
 const font: FontArtifactRef = {
@@ -46,18 +50,24 @@ const canvas = { contract: "svml.canvas-space@1" as const, widthPx: 1080, height
 const space = sealProgramSpace({ contract: "svml.program-space@1", durationSec: 3, frameRate: { numerator: 30, denominator: 1 } });
 const header = sealCommentStickerHeader({ contract: "svml.comment-sticker-header@1", id: "comments" });
 
-function item(id: string, meta?: string) {
+function item(id: string) {
   return sealCommentStickerItemSpec({
     contract: "svml.comment-sticker-item-spec@1",
     id,
-    content: { comment: "This part finally made the idea click.", author: "@viewer", ...(meta === undefined ? {} : { meta }) },
     projection: { start: { ref: "program.start" }, end: { ref: "program.end" } },
     expansion: { kind: "one" },
   });
 }
 
+function content(meta?: string) {
+  let value = createCommentStickerContent(sealText("This part finally made the idea click."));
+  value = setCommentStickerContentText(value, "author", sealText("@viewer"));
+  if (meta !== undefined) value = setCommentStickerContentText(value, "meta", sealText(meta));
+  return value;
+}
+
 function track(meta?: string) {
-  const set = appendProgramCommentSticker(createCommentStickerSet(), header, frame, style, space, item("opening", meta));
+  const set = appendProgramCommentSticker(createCommentStickerSet(), header, frame, style, space, item("opening"), content(meta));
   return renderCommentSticker(canvas, space, finalizeCommentSticker(set, header));
 }
 
@@ -137,13 +147,12 @@ test("Track Surface lowers mixed program and semantic Stickers to a finite expli
     ["layout.comment", authored("layout.comment", spatialTypes.frame, frame)],
     ["social", authored("social", commentStickerTypes.style, style)],
     ["avatar", authored("avatar", artifactTypes.blob, blob)],
+    ["copy", authored("copy", textTypes.text, sealText("This is graph-supplied comment content."))],
   ]);
   const result = await decodeCommentStickerTrackSurface({
     sourceName: "fixture.svml",
     element: parsed(`<comment:Track id="comments" canvas={video.canvas} space={video.space}>
-      <comment:Sticker id="one" frame={layout.comment} style={social} avatar={avatar} author="@viewer" meta="Featured" during="program">
-        This is explicit author content.
-      </comment:Sticker>
+      <comment:Sticker id="one" comment={copy} frame={layout.comment} style={social} avatar={avatar} author="@viewer" meta="Featured" during="program"/>
     </comment:Track>`),
     resolveReference: (path) => refs.get(path),
     resolveAsset: noAsset,
@@ -151,6 +160,9 @@ test("Track Surface lowers mixed program and semantic Stickers to a finite expli
   assert.equal(result.components.length, 1);
   assert.deepEqual(result.fragments[0]?.operations.map((operation) => operation.producer.name).sort(), [
     commentStickerProducers.createSet.name,
+    commentStickerProducers.createContent.name,
+    commentStickerProducers.setContentAuthor.name,
+    commentStickerProducers.setContentMeta.name,
     commentStickerProducers.appendProgramAvatar.name,
     commentStickerProducers.finalize.name,
     commentStickerProducers.render.name,

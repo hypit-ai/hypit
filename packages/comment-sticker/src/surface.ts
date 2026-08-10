@@ -7,13 +7,14 @@ import { semanticMapTypes } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
+import { sealText, textTypes } from "@narratage/text";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceRecordDraft,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 import type { TemporalDuration, TemporalPointExpression } from "@narratage/temporal";
 
 import { decodeCommentStickerStyle } from "./author.js";
@@ -47,7 +48,7 @@ function optionalText(element: StructuredElement, name: string): string | undefi
   return value.trim();
 }
 function reference(
-  raw: TextAttributeValue | undefined,
+  raw: MarkupAttributeValue | undefined,
   label: string,
   expected: SurfaceResolvedReference["type"],
   resolve: (path: string) => SurfaceResolvedReference | undefined,
@@ -143,6 +144,15 @@ function dedent(value: string): string {
   return lines.map((line) => line.slice(Number.isFinite(indentation) ? indentation : 0)).join("\n").trim();
 }
 
+function graphText(
+  raw: MarkupAttributeValue | undefined,
+  label: string,
+  resolve: (path: string) => SurfaceResolvedReference | undefined,
+): string | SurfaceResolvedReference {
+  if (typeof raw === "string" && raw.trim().length > 0) return raw.trim();
+  return reference(raw, label, textTypes.text, resolve);
+}
+
 export const decodeCommentStickerStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   allowed(element, ["id", "recipe", "font"], ["id", "recipe", "font"]);
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) throw new Error(`${element.name} must be empty.`);
@@ -175,9 +185,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     }
     if (localName(child.name) !== "Sticker") throw new Error(`${element.name} accepts only Sticker children.`);
     if (child.children.some((node) => node.kind === "element")) throw new Error(`${child.name} accepts plain comment text only.`);
-    allowed(child, ["id", "frame", "style", "avatar", "author", "header", "meta", ...TIMING], ["id", "frame", "style"]);
-    const comment = dedent(child.children.map((node) => node.kind === "text" ? node.value : "").join(""));
-    if (!comment) throw new Error(`${child.name} requires comment text.`);
+    allowed(child, ["id", "comment", "frame", "style", "avatar", "author", "header", "meta", ...TIMING], ["id", "frame", "style"]);
     const temporal = binding(child, resolveReference);
     const occurrences = text(child, "occurrences", "one");
     if (occurrences !== "one" && occurrences !== "each") throw new Error(`${child.name}.occurrences must be one or each.`);
@@ -185,9 +193,16 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     const frame = reference(child.attributes.frame, `${child.name}.frame`, spatialTypes.frame, resolveReference);
     const style = reference(child.attributes.style, `${child.name}.style`, commentStickerTypes.style, resolveReference);
     const avatar = child.attributes.avatar === undefined ? undefined : reference(child.attributes.avatar, `${child.name}.avatar`, artifactTypes.blob, resolveReference);
-    const author = optionalText(child, "author");
-    const displayHeader = optionalText(child, "header");
-    const meta = optionalText(child, "meta");
+    const comment = child.attributes.comment === undefined
+      ? dedent(child.children.map((node) => node.kind === "text" ? node.value : "").join(""))
+      : graphText(child.attributes.comment, `${child.name}.comment`, resolveReference);
+    if (child.attributes.comment !== undefined && child.children.some((node) => node.kind === "element" || node.value.trim())) {
+      throw new Error(`${child.name} cannot combine comment with body text.`);
+    }
+    if (typeof comment === "string" && !comment) throw new Error(`${child.name} requires comment text.`);
+    const author = child.attributes.author === undefined ? undefined : graphText(child.attributes.author, `${child.name}.author`, resolveReference);
+    const displayHeader = child.attributes.header === undefined ? undefined : graphText(child.attributes.header, `${child.name}.header`, resolveReference);
+    const meta = child.attributes.meta === undefined ? undefined : graphText(child.attributes.meta, `${child.name}.meta`, resolveReference);
     const specId = `${id}.item.${suffix}.spec`;
     records.push({
       id: specId,
@@ -195,12 +210,6 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
       value: { kind: "inline", value: sealCommentStickerItemSpec({
         contract: "svml.comment-sticker-item-spec@1",
         id: text(child, "id"),
-        content: {
-          comment,
-          ...(author === undefined ? {} : { author }),
-          ...(displayHeader === undefined ? {} : { header: displayHeader }),
-          ...(meta === undefined ? {} : { meta }),
-        },
         projection: temporal.projection,
         expansion: { kind: occurrences },
       }) },
@@ -208,14 +217,28 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     });
     const specName = `item-${suffix}-spec`; const frameName = `item-${suffix}-frame`; const styleName = `item-${suffix}-style`;
     inputs[specName] = { kind: "record", id: specId }; inputs[frameName] = frame.ref; inputs[styleName] = style.ref;
+    const attachText = (field: string, value: string | SurfaceResolvedReference): string => {
+      const name = `item-${suffix}-${field}`;
+      if (typeof value === "string") {
+        const recordId = `${id}.item.${suffix}.${field}`;
+        records.push({ id: recordId, type: textTypes.text, value: { kind: "inline", value: sealText(value) }, range: child.range });
+        inputs[name] = { kind: "record", id: recordId };
+      } else inputs[name] = value.ref;
+      return name;
+    };
+    const commentName = attachText("comment", comment);
+    const authorName = author === undefined ? undefined : attachText("author", author);
+    const headerTextName = displayHeader === undefined ? undefined : attachText("header", displayHeader);
+    const metaName = meta === undefined ? undefined : attachText("meta", meta);
     const avatarName = avatar === undefined ? undefined : `item-${suffix}-avatar`;
     if (avatar !== undefined) inputs[avatarName!] = avatar.ref;
-    if (temporal.kind === "program") items.push({ kind: "program", specName, frameName, styleName, ...(avatarName === undefined ? {} : { avatarName }) });
+    const copy = { commentName, ...(authorName === undefined ? {} : { authorName }), ...(headerTextName === undefined ? {} : { headerTextName }), ...(metaName === undefined ? {} : { metaName }) };
+    if (temporal.kind === "program") items.push({ kind: "program", specName, frameName, styleName, ...copy, ...(avatarName === undefined ? {} : { avatarName }) });
     else {
       usesMap = true;
       const sourceName = `item-${suffix}-${temporal.kind}`;
       inputs[sourceName] = temporal.source!.ref;
-      items.push({ kind: temporal.kind, specName, frameName, styleName, sourceName, mapName: "map", ...(avatarName === undefined ? {} : { avatarName }) });
+      items.push({ kind: temporal.kind, specName, frameName, styleName, ...copy, sourceName, mapName: "map", ...(avatarName === undefined ? {} : { avatarName }) });
     }
   }
   if (items.length === 0) throw new Error(`${element.name} requires at least one Sticker.`);

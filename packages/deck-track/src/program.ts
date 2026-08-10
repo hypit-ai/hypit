@@ -14,6 +14,8 @@ import {
 } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { canonicalize, digestOf } from "@narratage/protocol";
+import { verifyText } from "@narratage/text";
+import type { Text } from "@narratage/text";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { assertSpatialFrame } from "@narratage/spatial";
 import type { SpatialFrame } from "@narratage/spatial";
@@ -25,6 +27,7 @@ import {
 import type {
   DeckCardTone,
   DepthStackCardLabel,
+  DepthStackCardLabelStyle,
   DepthStackCardSet,
   DepthStackCardSpec,
   DepthStackHeader,
@@ -36,6 +39,7 @@ import type {
 } from "./types.js";
 
 export const depthStackImplementationDigests = {
+  bindLabelText: digestOf("@narratage/deck-track/bind-label-text@1"),
   createCards: digestOf("@narratage/deck-track/create-cards@1"),
   appendMomentCard: digestOf("@narratage/deck-track/append-moment-card@1"),
   finalizeProgramEnd: digestOf("@narratage/deck-track/finalize-program-end@1"),
@@ -138,6 +142,33 @@ export function assertDepthStackCardLabel(value: DepthStackCardLabel): void {
 export function sealDepthStackCardLabel(value: DepthStackCardLabel): DepthStackCardLabel {
   assertDepthStackCardLabel(value);
   return canonicalize(value) as unknown as DepthStackCardLabel;
+}
+
+export function assertDepthStackCardLabelStyle(value: DepthStackCardLabelStyle): void {
+  assert(value.contract === "svml.depth-stack-card-label-style@1", "Unsupported DepthStackCardLabelStyle contract.");
+  assert(value.typography.fonts.length > 0, "DepthStackCardLabelStyle requires exact fonts.");
+  value.typography.fonts.forEach((font, index) => assertFontArtifactRef(font, `DepthStackCardLabelStyle.fonts.${index}`));
+  assert(value.typography.synthesis === "none", "DepthStackCardLabelStyle cannot synthesize an exact font.");
+  assert(value.flow.form.kind === "area", "DepthStackCardLabelStyle uses Area flow inside its Card.");
+}
+
+export function sealDepthStackCardLabelStyle(value: DepthStackCardLabelStyle): DepthStackCardLabelStyle {
+  assertDepthStackCardLabelStyle(value);
+  return canonicalize(value) as unknown as DepthStackCardLabelStyle;
+}
+
+export function bindDepthStackCardLabelText(style: DepthStackCardLabelStyle, content: Text): DepthStackCardLabel {
+  assertDepthStackCardLabelStyle(style);
+  verifyText(content);
+  assert(content.value.trim().length > 0, "DepthStack Card label Text is empty.");
+  return sealDepthStackCardLabel({
+    contract: "svml.depth-stack-card-label@1",
+    kind: "text",
+    document: { paragraphs: [{ id: "label:paragraph", inlines: [{ kind: "text", id: "label:text", text: content.value }] }] },
+    typography: structuredClone(style.typography),
+    paints: structuredClone(style.paints),
+    flow: structuredClone(style.flow),
+  });
 }
 
 export const noDepthStackCardLabel = (): DepthStackCardLabel => ({

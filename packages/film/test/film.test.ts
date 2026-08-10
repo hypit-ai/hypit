@@ -49,17 +49,18 @@ import {
 } from "@narratage/hyperframes";
 import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@narratage/protocol";
 import { svsManifest } from "@narratage/svs";
+import { textManifest } from "@narratage/text";
 import {
-  renderTextTrack,
-  renderTextTrackImplementationDigest,
-  sealTextTrackProgram,
+  renderTypographyTrack,
+  renderTypographyTrackImplementationDigest,
+  sealTypographyTrackProgram,
   stillTextMotion,
-  textTrackFragment,
-  textTrackManifest,
-  textTrackProducers,
-  textTrackTypes,
-} from "@narratage/text-track";
-import type { TextStyle } from "@narratage/text-track";
+  typographyTrackFragment,
+  typographyTrackManifest,
+  typographyTrackProducers,
+  typographyTrackTypes,
+} from "@narratage/typography-track";
+import type { TextStyle } from "@narratage/typography-track";
 import { admitRecord, TypeValidatorRegistry } from "@narratage/validation";
 
 const space = sealProgramSpace({
@@ -118,8 +119,8 @@ const titleStyle: TextStyle = {
   point: { anchorInline: "center", anchorBlock: "center" },
   path: { side: "left", orientation: "follow", startMarginPx: 0, endMarginPx: 0, align: "start", reverse: false, overflow: "visible" },
 };
-const textProgram = sealTextTrackProgram({
-  contract: "svml.text-track-program@1",
+const textProgram = sealTypographyTrackProgram({
+  contract: "svml.typography-track-program@1",
   id: "title-track",
   items: [{
     id: "title",
@@ -163,8 +164,9 @@ const closure = createResolvedClosure([
   ...videoContractManifests,
   svsManifest,
   hyperframesManifest,
+  textManifest,
   filmManifest,
-  textTrackManifest,
+  typographyTrackManifest,
 ]);
 const origin = {
   kind: "authored" as const,
@@ -175,15 +177,15 @@ const records = await Promise.all([
   sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space), conformance: "exact", origin }),
   sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas), conformance: "exact", origin }),
   sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram), conformance: "exact", origin }),
-  sealRecord({ id: "text-program", type: textTrackTypes.program, value: stored(textProgram), conformance: "exact", origin }),
+  sealRecord({ id: "text-program", type: typographyTrackTypes.program, value: stored(textProgram), conformance: "exact", origin }),
   sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), conformance: "exact", origin }),
   sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), conformance: "exact", origin }),
 ].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
 const linked = link(closure, [sealTypedModule({ id: "author:film-test", closureDigest: closure.digest, records })]);
 
-const textInstance = elaborateGraphFragment(linked, textTrackFragment, {
+const textInstance = elaborateGraphFragment(linked, typographyTrackFragment, {
   id: "title",
-  fragment: textTrackFragment.id,
+  fragment: typographyTrackFragment.id,
   inputs: {
     space: { kind: "record", id: "space" },
     program: { kind: "record", id: "text-program" },
@@ -250,7 +252,7 @@ function producerModules(target: string): string[] {
 }
 
 test("Film stops at Composition and Hyperframes remains an ordinary downstream Fragment", () => {
-  assert.deepEqual(producerNames("title.track"), [textTrackProducers.render.name]);
+  assert.deepEqual(producerNames("title.track"), [typographyTrackProducers.render.name]);
   assert.equal(producerModules("main.composition").includes(hyperframesProducers.compile.module.name), false);
   assert.deepEqual(producerNames("main.composition").filter((name) => name.startsWith("append-")).sort(), [
     filmProducers.appendAudioTrack.name,
@@ -265,8 +267,8 @@ test("Film stops at Composition and Hyperframes remains an ordinary downstream F
 
 test("the Driver folds peer Tracks, then independently compiles the Composition", async () => {
   const registry = new ProducerRegistry();
-  registry.registerProducer(textTrackProducers.render, renderTextTrackImplementationDigest, ({ inputs }) => ({
-    outputs: { track: stored(renderTextTrack(inline(inputs.space) as typeof space, inline(inputs.program) as typeof textProgram)) },
+  registry.registerProducer(typographyTrackProducers.render, renderTypographyTrackImplementationDigest, ({ inputs }) => ({
+    outputs: { track: stored(renderTypographyTrack(inline(inputs.space) as typeof space, inline(inputs.program) as typeof textProgram)) },
     needs: {},
   }));
   registry.registerProducer(filmProducers.createTrackSet, createFilmTrackSetImplementationDigest, () => ({

@@ -1,4 +1,4 @@
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 
 <svml>
   <import from="@narratage/script@1"/>

@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 import {
   decodeScreenOverlaySurface, screenOverlayComponent, screenOverlayManifest, screenOverlayModuleRef,
   screenOverlaySurfaceImplementationDigest,
@@ -7,7 +7,7 @@ export const svmlPackage = {
   format: "svml.node-package@1" as const, name: "@narratage/screen-overlay",
   modules: [{ manifest: screenOverlayManifest, specifiers: [screenOverlayModuleRef.name, `${screenOverlayModuleRef.name}@1`] }],
   components: [screenOverlayComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: screenOverlayModuleRef, surface: "track", mode: "structured",
     implementationDigest: screenOverlaySurfaceImplementationDigest, handler: decodeScreenOverlaySurface,
   })],

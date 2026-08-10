@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeImageComposeSurface,
@@ -13,7 +13,7 @@ export const svmlPackage = {
   name: "@narratage/image-compose",
   modules: [{ manifest: imageComposeManifest, specifiers: ["@narratage/image-compose", "@narratage/image-compose@1"] }],
   components: [imageComposeComponent],
-  hostFacets: [{ ...createTextSurfaceHostFacet({
+  hostFacets: [{ ...createMarkupSurfaceHostFacet({
     module: imageComposeModuleRef, surface: "image", mode: "structured",
     implementationDigest: imageComposeImplementationDigests.surface, handler: decodeImageComposeSurface,
   }) }],

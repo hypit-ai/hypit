@@ -90,6 +90,23 @@ test("official production packages have no dependency cycle", async () => {
   for (const name of graph.keys()) visit(name, []);
 });
 
+test("Markup syntax, graph Text and video Typography keep distinct package identities", async () => {
+  const packages = await workspacePackages();
+  for (const name of [
+    "@narratage/markup",
+    "@narratage/run-markup",
+    "@narratage/compiler-markup-node",
+    "@narratage/text",
+    "@narratage/typography-track",
+  ]) assert.ok(packages.has(name), `${name} is absent`);
+  for (const retired of [
+    "@narratage/run-text",
+    "@narratage/compiler-text-node",
+    "@narratage/text-track",
+    "@narratage/prompt-kit",
+  ]) assert.ok(!packages.has(retired), `${retired} must stay retired`);
+});
+
 test("the declared domain-neutral distribution closes without syntax, AIGC or video packages", async () => {
   const packages = await workspacePackages();
   const graph = productionGraph(packages);
@@ -152,11 +169,11 @@ test("the speech time map is an opaque handle: no consumer reads its fields", as
   }
 });
 
-test("Text compilation is one explicit leaf assembly, not a Package Loader or Local Runtime dependency", async () => {
+test("Markup compilation is one explicit leaf assembly, not a Package Loader or Local Runtime dependency", async () => {
   const graph = productionGraph(await workspacePackages());
-  assert.ok(transitive(graph, "@narratage/compiler-text-node").has("@narratage/text"));
-  assert.ok(!transitive(graph, "@narratage/package-loader-node").has("@narratage/text"));
-  assert.ok(!transitive(graph, "@narratage/local").has("@narratage/text"));
+  assert.ok(transitive(graph, "@narratage/compiler-markup-node").has("@narratage/markup"));
+  assert.ok(!transitive(graph, "@narratage/package-loader-node").has("@narratage/markup"));
+  assert.ok(!transitive(graph, "@narratage/local").has("@narratage/markup"));
 });
 
 test("generic and video CLIs reach no Provider package and video CLI activates no author aggregate", async () => {
@@ -170,12 +187,12 @@ test("generic and video CLIs reach no Provider package and video CLI activates n
   assert.ok(!videoDependencies.has("@narratage/script"));
   assert.ok(!videoDependencies.has("@narratage/seedance-speaker"));
   assert.ok(!videoDependencies.has("@narratage/media-track"));
-  assert.ok(!videoDependencies.has("@narratage/text-track"));
+  assert.ok(!videoDependencies.has("@narratage/typography-track"));
   assert.ok(!videoDependencies.has("@narratage/film"));
   assert.ok(videoDependencies.has("@narratage/cli"));
 });
 
-test("domain packages confine their Text dependency to Surface and activation entries", async () => {
+test("domain packages confine their Markup dependency to Surface and activation entries", async () => {
   const { readdir, readFile } = await import("node:fs/promises");
   const surfaceOnly = [
     "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
@@ -187,8 +204,8 @@ test("domain packages confine their Text dependency to Surface and activation en
     for (const file of await readdir(root)) {
       if (!file.endsWith(".ts") || allowed.has(file)) continue;
       const content = await readFile(new URL(file, root), "utf8");
-      assert.ok(!content.includes("\"@narratage/text\""),
-        `${name}/src/${file} imports @narratage/text outside its Surface boundary`);
+      assert.ok(!content.includes("\"@narratage/markup\""),
+        `${name}/src/${file} imports @narratage/markup outside its Surface boundary`);
     }
   }
 });

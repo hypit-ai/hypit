@@ -1,7 +1,8 @@
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
   <import as="media" from="@narratage/media@1"/>
   <import as="estimate" from="@narratage/estimate@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
@@ -11,7 +12,7 @@
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="fonts" from="@narratage/fonts-open@1"/>
-  <import as="text" from="@narratage/text-track@1"/>
+  <import as="text" from="@narratage/typography-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
@@ -48,40 +49,40 @@
     rounding="ceil"
   />
 
-  <seedance:Prompt id="opening-direction">
+  <wording:Value id="opening-direction">
     Vertical medium close-up of the reference presenter in a quiet daylight studio.
     She looks directly into camera and speaks in a calm, clear, conversational voice.
     Natural breathing, restrained movement, locked camera, no text in the scene.
-  </seedance:Prompt>
+    Spoken dialogue — say exactly: Video editing begins with meaning, not a pile of clips on a timeline.
+  </wording:Value>
 
-  <seedance:Prompt id="answer-direction">
+  <wording:Value id="answer-direction">
     Continue with the same reference presenter, studio and calm female voice.
     Vertical medium close-up, direct eye contact, slightly more assured delivery,
     restrained movement, locked camera, no text in the scene.
-  </seedance:Prompt>
+    Spoken dialogue — say exactly: Then every caption and visual can arrive at exactly the right moment.
+  </wording:Value>
 
   <seedance:Speech
     id="opening-take"
     model="mini"
-    dialogue={story.segment.opening.dialogue}
     prompt={opening-direction}
     duration={opening-duration.duration}
     resolution="480p"
     aspect-ratio="9:16"
   >
-    <seedance:Reference image={presenter} role="character"/>
+    <seedance:Reference image={presenter}/>
   </seedance:Speech>
 
   <seedance:Speech
     id="answer-take"
     model="mini"
-    dialogue={story.segment.answer.dialogue}
     prompt={answer-direction}
     duration={answer-duration.duration}
     resolution="480p"
     aspect-ratio="9:16"
   >
-    <seedance:Reference image={presenter} role="character"/>
+    <seedance:Reference image={presenter}/>
   </seedance:Speech>
 
   <space:Canvas id="vertical" width="480" height="854"/>

@@ -14,8 +14,8 @@ import mediaTrack from "../../media-track/src/activation.js";
 import media from "../../media/src/activation.js";
 import narrative from "../../narrative/src/activation.js";
 import programSpace from "../../program-space/src/activation.js";
-import promptKit from "../../prompt-kit/src/activation.js";
-import runText from "../../run-text/src/activation.js";
+import text from "../../text/src/activation.js";
+import runMarkup from "../../run-markup/src/activation.js";
 import script from "../../script/src/activation.js";
 import seedanceSpeaker from "../../seedance-speaker/src/activation.js";
 import seedance from "../../seedance/src/activation.js";
@@ -29,7 +29,7 @@ import spatial from "../../spatial/src/activation.js";
 import temporal from "../../temporal/src/activation.js";
 import visualIr from "../../visual-ir/src/activation.js";
 import svs from "../../svs/src/activation.js";
-import textTrack from "../../text-track/src/activation.js";
+import typographyTrack from "../../typography-track/src/activation.js";
 import whisperX from "../../whisperx/src/activation.js";
 
 /** Test-only explicit environment; production video CLI starts with no author packages. */
@@ -47,7 +47,7 @@ export const videoTestPackages = [
   script,
   estimate,
   fontsOpen,
-  promptKit,
+  text,
   generation,
   seedance,
   seedanceSpeaker,
@@ -61,10 +61,10 @@ export const videoTestPackages = [
   spatial,
   temporal,
   mediaTrack,
-  textTrack,
+  typographyTrack,
   film,
   hyperframes,
   mediaPipeline,
   renderHyperframes,
-  runText,
+  runMarkup,
 ] as const;

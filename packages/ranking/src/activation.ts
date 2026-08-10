@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeColumnStyleSurface,
@@ -34,7 +34,7 @@ export const svmlPackage = {
     specifiers: [rankingModuleRef.name, `${rankingModuleRef.name}@1`],
   }],
   components: [rankingComponent],
-  hostFacets: facets.map(([surface, implementationDigest, handler]) => createTextSurfaceHostFacet({
+  hostFacets: facets.map(([surface, implementationDigest, handler]) => createMarkupSurfaceHostFacet({
     module: rankingModuleRef,
     surface,
     mode: "structured",

@@ -4,8 +4,8 @@ import type {
   StructuredElement,
   StructuredSurfaceHandler,
   SurfaceResolvedReference,
-  TextAttributeValue,
-} from "@narratage/text";
+  MarkupAttributeValue,
+} from "@narratage/markup";
 
 import { whisperXSpeechAlignmentFragment } from "./fragment.js";
 
@@ -31,7 +31,7 @@ function reference(
   expected: SurfaceResolvedReference["type"],
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {
-  const raw: TextAttributeValue | undefined = element.attributes[name];
+  const raw: MarkupAttributeValue | undefined = element.attributes[name];
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${element.name}.${name} must be a whole-value reference`);
   const value = resolveReference(raw.path);
   if (value === undefined) throw new Error(`${element.name}.${name} cannot resolve ${raw.path}`);

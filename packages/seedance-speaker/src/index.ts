@@ -1,7 +1,7 @@
 export { createSeedanceSpeakerTakeFragment } from "./fragment.js";
 export {
-  bindSpeakerPromptKit,
-  renderSpeakerSpeechProgram,
+  createSpeakerSpeechProgram,
+  createSpeakerTextBindings,
   sealSpeakerTakeIntent,
   speakerMethodDefaults,
   verifySpeakerTakeIntent,
