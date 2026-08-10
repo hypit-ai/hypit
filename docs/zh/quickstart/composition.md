@@ -52,7 +52,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 | `{speech.visual}` | VisualTrack | `speech:Spine`——全屏说话人画面 |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine`——同步音频 |
 | `{captions.track}` | VisualTrack | Caption 样式族 Track——定时字幕 |
-| `{cards.visual}` | VisualTrack | `media-track:Track`——Media 叠加层或 B-roll |
+| `{cards.visual}` | VisualTrack | `media-track:Track`——Media 叠加层 |
 | `{titles.track}` | VisualTrack | `text:Track`——文字叠加层 |
 
 ### Track 堆叠

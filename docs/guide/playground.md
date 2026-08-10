@@ -22,14 +22,12 @@ no credentials, no local services.
 |---|---|
 | Component list | Every module that can put pixels on a frame |
 | W / H / fps / sec | The canvas and the frame domain |
-| Appearance from a stylesheet | Adopt a `.svs` Film Recipe's background |
+| Canvas from a stylesheet | Adopt a `.svs` file's frame size |
 | Input forms | One per input the component takes |
 | Scrubber | Frame-exact; the counter shows `frame / last` |
 
-The preview uses the installed modules' real Producer handlers. For example,
-Fine Caption, Media Track, Screen Overlay, Speech Basis and Typography Track
-all lower to `VisualTrack`, then `compileHyperframesDocument` produces the same
-document a Build would render.
+The preview is the real thing. Each component's own renderer runs and
+`compileHyperframesDocument` produces the same document a Build would render.
 
 ## It lists nothing
 
@@ -72,17 +70,16 @@ A `format: "digest"` field takes a file. The playground hashes it with SHA-256
 and registers a real content-addressed identity, because a compiled document
 cross-checks every Artifact reference and would reject a stub.
 
-Modules that draw supplied footage — B-roll, speaker footage — therefore have no
-default: a module has no bytes to point at, so it says nothing rather than
-inventing a digest. Until you choose a file those components draw nothing, which
-is a state to pass through and not an error.
+Modules that draw supplied footage — media track items, speaker footage —
+therefore have no default: a module has no bytes to point at, so it says nothing
+rather than inventing a digest. Until you choose a file those components draw
+nothing, which is a state to pass through and not an error.
 
 ## Stylesheets
 
-Choosing a `.svs` file reads **only its Film Recipe**, and only for Film
-appearance. Point it at `examples/talking-film-golden/studio.svs` and the
-preview adopts that Recipe's background. Canvas dimensions and time remain
-explicit preview-environment controls.
+Choosing a `.svs` file reads **only its Film Recipe**, and only for the frame
+size. Point it at a studio stylesheet and the canvas becomes its configured
+dimensions and background.
 
 Nothing else in the sheet is read. What a component looks like comes from the
 module that owns it, not from a stylesheet the playground happened to open.
