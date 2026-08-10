@@ -22,8 +22,6 @@ time:
 | Which modules can be previewed | manifests declaring a Producer whose output type is `@narratage/composition.VisualTrack` |
 | What each needs | that Producer's `inputs`, each a `TypeRef` |
 | What shape each input has | the declaring module's `TypeDeclaration.schema` |
-| What a control should look like | `ValueSchema.format` — `color`, `unit-fraction`, `multiline`, `digest`, `duration` |
-| What to start from | `TypeDeclaration.default`, given by the module that owns the type |
 | How to run it | the module's `component.producers[].handler` |
 
 A module that gains a visual Producer appears here on its own; one that loses it
@@ -48,20 +46,27 @@ self-sufficient — a real render supplies a producer for the rest. The shim in
   `getAnimations()` plus an explicit `currentTime` — the same technique the
   production renderer uses.
 
-## Making a module previewable
+## Dependency boundary
 
-Nothing to add here. In the module: declare a Producer that outputs a
-`VisualTrack`, give each input type a `schema`, and give it a `default` where
-one exists. A type carrying content-addressed media has none, and the playground
-asks the operator for a file instead.
+The dependency is one-way: the Playground may consume public production
+contracts, but production contracts and packages contain no Playground
+defaults, form hints, fixtures or preview helpers.
 
-Annotate a field with `format` where its type alone is ambiguous — a colour and
-a font family are both strings.
+To become discoverable, a module only declares its real Producer, ports and
+structural input schemas. The Playground creates blank form state and its own
+canvas, duration, frame rate and background locally. Those values are UI session
+state, not SVML semantics.
+
+The generic form uses only schema kinds, enums and numeric bounds. A richer
+editor or fixture system must be implemented inside this tool; it must not make
+a production package change merely to improve a preview.
 
 ## Known divergences from a real render
 
 - Fonts lower to a plain CSS `font-family` string. The production
   `FontArtifactRef` path with hashed `@font-face` families is not exercised.
+- Content-addressed media must currently be entered as an existing digest; the
+  generic form does not infer that a string should be a file picker.
 - Audio tracks are not played.
 - A `ProgramSpace` input is filled from the canvas controls rather than offered
   in a form.

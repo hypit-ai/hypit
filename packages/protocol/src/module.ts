@@ -1,5 +1,5 @@
 import type { CapabilityRef, Digest, ModuleRef, ProducerRef, TypeRef } from "./identity.js";
-import type { CanonicalValue, ValueSchema } from "./value.js";
+import type { ValueSchema } from "./value.js";
 
 export type ModuleDependency = {
   readonly module: ModuleRef;
@@ -12,17 +12,6 @@ export type TypeDeclaration = {
   readonly description?: string;
   /** Optional package-owned semantic refinement beyond the structural Schema. */
   readonly validator?: TypeValidatorDeclaration;
-  /**
-   * One value of this type, for anything that must show or exercise it before a
-   * Build has produced one.
-   *
-   * The module that defines a type is the only place that knows what an
-   * unspecified one should look like. Without this, every consumer invents its
-   * own and they drift apart with nothing to notice. Omitted where no honest
-   * default exists — a type carrying content-addressed media cannot have one,
-   * because the module has no bytes to point at.
-   */
-  readonly default?: CanonicalValue;
 };
 
 export type TypeValidatorDeclaration = {

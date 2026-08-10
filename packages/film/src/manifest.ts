@@ -10,7 +10,6 @@ import {
   appendFilmVisualTrackImplementationDigest,
   compileFilmCompositionImplementationDigest,
   createFilmTrackSetImplementationDigest,
-  defaultFilmProgram,
 } from "./program.js";
 
 export const filmModuleRef = { name: "@narratage/film", version: "1" } as const;
@@ -59,7 +58,7 @@ export const filmManifest: ModuleManifest = {
     { module: svsModuleRef, digest: digestOf(svsManifest) },
   ],
   types: [
-    { name: filmTypes.program.name, schema: filmProgramSchema, default: defaultFilmProgram() },
+    { name: filmTypes.program.name, schema: filmProgramSchema },
     { name: filmTypes.trackSet.name, schema: filmTrackSetSchema },
   ],
   capabilities: [],

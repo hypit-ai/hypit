@@ -25,24 +25,20 @@ pnpm playground
 
 预览运行的是已安装模块真正的 Producer handler，编译出的文档与 Build 渲染的是同一份。
 
-下拉与表单都读自各个 manifest，所以只要模块声明了「输出 `VisualTrack` 的 Producer」，它自己就会出现。
+下拉与结构化表单都读自公开 manifest，所以只要模块声明了「输出 `VisualTrack` 的 Producer」，它自己就会出现。
 
-## 控件
+## 硬边界
 
-模块用 `format` 标注一个字段，说明它的值是什么：
+Playground 只能消费系统，不能定义系统语义。生产 Protocol、Core 与领域包中不得出现任何
+Playground 默认值、UI 提示、fixture 或预览辅助函数。
 
-| format | 控件 |
-|---|---|
-| `color` | 色板配文本框。要带 alpha 就在文本框里写 `#RRGGBBAA` |
-| `unit-fraction` | 滑块加数字框 |
-| `multiline` | 多行文本框 |
-| `digest` | 文件选择 |
-| `duration` | 数字框，单位秒 |
+通用表单只消费生产合同本来就需要的事实：schema 类型、枚举和数值边界。画布大小、时长、
+帧率、背景色和空白表单值都只是本工具内部的会话状态。如果以后需要更丰富的控件或 fixture，
+必须在 `tools/playground` 内部实现，不能要求生产包为预览便利而改变。
 
 ## 媒体
 
-`format: "digest"` 的字段接受一个文件，选中即计算哈希。绘制外部素材的组件（B-roll、说话人画面）
-在你选择文件之前不画任何东西。
+内容寻址媒体目前需要填写已有 digest。通用表单不会把生产合同中的任意字符串擅自解释成文件选择器。
 
 ## 出错时
 

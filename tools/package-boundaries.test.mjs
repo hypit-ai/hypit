@@ -24,6 +24,23 @@ async function workspacePackages() {
   return manifests;
 }
 
+async function sourceFiles(directory) {
+  const found = [];
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === "ENOENT") return found;
+    throw error;
+  }
+  for (const entry of entries) {
+    const path = new URL(`./${entry.name}${entry.isDirectory() ? "/" : ""}`, directory);
+    if (entry.isDirectory()) found.push(...await sourceFiles(path));
+    else if (entry.name.endsWith(".ts")) found.push(path);
+  }
+  return found;
+}
+
 function productionGraph(packages) {
   return new Map([...packages].map(([name, manifest]) => [
     name,
@@ -88,6 +105,26 @@ test("official production packages have no dependency cycle", async () => {
     complete.add(name);
   };
   for (const name of graph.keys()) visit(name, []);
+});
+
+test("Playground cannot add semantics or metadata to production packages", async () => {
+  for (const entry of await readdir(packageRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const sourceRoot = new URL(`./${entry.name}/src/`, packageRoot);
+    for (const file of await sourceFiles(sourceRoot)) {
+      const source = await readFile(file, "utf8");
+      assert.ok(!/\bplayground\b/iu.test(source),
+        `${file.pathname} mentions Playground; the dependency must point from the tool to production only`);
+    }
+  }
+
+  const typeDeclarations = await readFile(new URL("./protocol/src/module.ts", packageRoot), "utf8");
+  assert.ok(!/readonly\s+default\??\s*:/u.test(typeDeclarations),
+    "TypeDeclaration must not carry preview defaults");
+
+  const valueSchemas = await readFile(new URL("./protocol/src/value.ts", packageRoot), "utf8");
+  assert.ok(!/readonly\s+format\??\s*:/u.test(valueSchemas),
+    "ValueSchema must not carry presentation hints for a tool");
 });
 
 test("Markup syntax, graph Text and video Typography keep distinct package identities", async () => {

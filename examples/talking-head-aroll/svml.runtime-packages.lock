@@ -59,7 +59,7 @@
     {
       "name": "@narratage/core",
       "version": "0.0.0-dev",
-      "digest": "sha256:44e4bf3a81a43ef3104caca89648963e4d8f7c84dbc0bb75432b1787c4ee8f27"
+      "digest": "sha256:651c4d546708cd8648e1730a906fc3f9f9fc274db421e6374afee83574cecc7d"
     },
     {
       "name": "@narratage/elaborator",
@@ -99,12 +99,12 @@
     {
       "name": "@narratage/media-pipeline",
       "version": "0.0.0-dev",
-      "digest": "sha256:1e7d4aeab2baf6a36a3f89e87fbcc25e287ce120f087d163b307a7221a38c5e6"
+      "digest": "sha256:5b11d105aa3e51cf8bd5edf30c2e4ff885b1d4b337d8c2cb401abd7b51d92c0d"
     },
     {
       "name": "@narratage/media",
       "version": "0.0.0-dev",
-      "digest": "sha256:b1d896926ad91ce34ccbd743a6b6785e0c21c90b1072b337421225e5f876a209"
+      "digest": "sha256:3a6915c8344e579ea32ce0d93221485dbf35eda882de800246a41325ed31923d"
     },
     {
       "name": "@narratage/narrative",
@@ -114,12 +114,12 @@
     {
       "name": "@narratage/program-space",
       "version": "0.0.0-dev",
-      "digest": "sha256:e7bbc857d07483aecce6d35fff1e91a51a6c785d13f3223607a91c3fe6e93b5f"
+      "digest": "sha256:d4e5a074cb935fd6d351354c0c3115d7ecb702b032915c436f28508a872a5c4e"
     },
     {
       "name": "@narratage/protocol",
       "version": "0.0.0-dev",
-      "digest": "sha256:6774f0461a8a248b6f24aa9014738bca328e8aff9704175656ee04f255d8b083"
+      "digest": "sha256:b541192f2738fc10940592a6082fb1669967608cbd9b715296b9e5f576aedebd"
     },
     {
       "name": "@narratage/provider-google-vertex",
@@ -179,7 +179,7 @@
     {
       "name": "@narratage/spatial",
       "version": "0.0.0-dev",
-      "digest": "sha256:651ab54204dba22f2815536bf0c03656b17dac8e01032c589f6be132d3921ed3"
+      "digest": "sha256:4b41917023c9a9fc9b1e4a3a2c6d82fafeb3d732733c6e4ca6721ae2009edbdf"
     },
     {
       "name": "@narratage/speech-alignment",
@@ -870,7 +870,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b2636492ab0b0b500d674899ab2ff14fc61c7f2b22ef44eb8f816f141b21ec4d",
-      "closureDigest": "sha256:46c187a7b5c287e895e72d5016a8ce66abbba7d6d014e68332dfcea688446aad"
+      "closureDigest": "sha256:4de4e5316cdb31753efd871fc1cc443661f7cf4788645082e00de84a762d7bda"
     },
     {
       "specifier": "@narratage/provider-hyperframes-local",
@@ -879,7 +879,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b14b721bdc0c9d5d9ced1c345107c92a3a5878f3383dea2ecd3e310442c2a40c",
-      "closureDigest": "sha256:809fb41176bafd674f0875c47314e4ebaa46fe0993adc1cc460dfc88b16af317"
+      "closureDigest": "sha256:47a45ecf94238c7e06bbd87e28ec17b74ac2421293b03ad77936a41728948089"
     },
     {
       "specifier": "@narratage/provider-kie",
@@ -888,7 +888,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e61ebb911a33d4c5d0e4e4ee4fb69cdb790f4ced050ef35f7472bfbd72013d9b",
-      "closureDigest": "sha256:51336290bc59dac73c36bbe38d4d6f2d4627a446c2cad081cea082f5be23e86a"
+      "closureDigest": "sha256:d9fe3a4539facd6ddbc8119096e6abc26f1d6c130963f0a548b02ede667c83fd"
     },
     {
       "specifier": "@narratage/provider-media-local",
@@ -897,7 +897,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:701abcc923bf8a711c20b6e308d8cc8be27bf560f249b8c5a801e1dbd9cb3979",
-      "closureDigest": "sha256:470fe327b8ffc5d43dd31d22c7c699e3a76e0bdc14e1f8d0bb5609df136a77d1"
+      "closureDigest": "sha256:4382ac1151fd841cd673bfd49ba1c64df7e1a0ae6ed5610f6b4ecd26aa98f241"
     },
     {
       "specifier": "@narratage/provider-whisperx-local",
@@ -906,8 +906,8 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:3686b84c42cc2b1bcaccf57cbdcda25a15c7d9d3778fb92d25437f9880ed8f5d",
-      "closureDigest": "sha256:daa223d9c0864dc2efa428d87f98d4927b452d379a27289f8f8a5a9ee3591bec"
+      "closureDigest": "sha256:1f4387ca08d77d88c2a02faa0a40ba0d5c76f676f6128a94215ab39010112266"
     }
   ],
-  "digest": "sha256:70e892eed31df5635f55517993da1120fe280d85ea8d7c9e082e2089b72e9de7"
+  "digest": "sha256:e18633dbebec6ba3bc44490c83e5218f2b46578f00e09eed098ae8289ccab0fe"
 }

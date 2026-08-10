@@ -57,23 +57,12 @@ test("each producer carries its inputs' declared schemas", async () => {
   }
 });
 
-test("no preview producer invents a ProgramSpace or media input", async () => {
+test("discovery never obtains authored values from production type declarations", async () => {
   const found = await discoverPreviewProducers(workspace());
-  const ready = found.filter((producer) =>
-    producer.inputs.every((input) => input.initial !== undefined));
-
-  assert.deepEqual(ready, []);
-});
-
-test("a module offering no default for a media input says so rather than inventing one", async () => {
-  const found = await discoverPreviewProducers(workspace());
-  // Media Track and speech both take a value carrying a content-addressed Artifact,
-  // and a module has no bytes to point at, so neither offers a default. Saying
-  // nothing is the honest answer; a stub digest would be rejected downstream.
-  for (const moduleName of ["@narratage/media-track", "@narratage/speech-basis"]) {
-    const producer = found.find((entry) => entry.moduleName === moduleName)!;
-    assert.ok(producer.inputs.some((input) => input.initial === undefined),
-      `${moduleName} should decline to default its media-bearing input`);
+  for (const producer of found) {
+    for (const input of producer.inputs) {
+      assert.deepEqual(Object.keys(input).sort(), ["name", "schema", "type"]);
+    }
   }
 });
 
