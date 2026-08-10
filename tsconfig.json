@@ -33,6 +33,24 @@
       "@narratage/program-space": [
         "packages/program-space/src/index.ts"
       ],
+      "@narratage/temporal": [
+        "packages/temporal/src/index.ts"
+      ],
+      "@narratage/spatial": [
+        "packages/spatial/src/index.ts"
+      ],
+      "@narratage/media-track": [
+        "packages/media-track/src/index.ts"
+      ],
+      "@narratage/mimo-tts": [
+        "packages/mimo-tts/src/index.ts"
+      ],
+      "@narratage/deck-track": [
+        "packages/deck-track/src/index.ts"
+      ],
+      "@narratage/ranking": [
+        "packages/ranking/src/index.ts"
+      ],
       "@narratage/speech": [
         "packages/speech/src/index.ts"
       ],
@@ -44,6 +62,24 @@
       ],
       "@narratage/composition": [
         "packages/composition/src/index.ts"
+      ],
+      "@narratage/audio-track": [
+        "packages/audio-track/src/index.ts"
+      ],
+      "@narratage/screen-overlay": [
+        "packages/screen-overlay/src/index.ts"
+      ],
+      "@narratage/comment-sticker": [
+        "packages/comment-sticker/src/index.ts"
+      ],
+      "@narratage/background-removal": [
+        "packages/background-removal/src/index.ts"
+      ],
+      "@narratage/image-compose": [
+        "packages/image-compose/src/index.ts"
+      ],
+      "@narratage/raster": [
+        "packages/raster/src/index.ts"
       ],
       "@narratage/visual-ir": [
         "packages/visual-ir/src/index.ts"
@@ -60,6 +96,9 @@
       "@narratage/script": [
         "packages/script/src/index.ts"
       ],
+      "@narratage/markup": [
+        "packages/markup/src/index.ts"
+      ],
       "@narratage/text": [
         "packages/text/src/index.ts"
       ],
@@ -72,6 +111,9 @@
       "@narratage/caption": [
         "packages/caption/src/index.ts"
       ],
+      "@narratage/caption-fine": [
+        "packages/caption-fine/src/index.ts"
+      ],
       "@narratage/speech-basis": [
         "packages/speech-basis/src/index.ts"
       ],
@@ -81,8 +123,8 @@
       "@narratage/run": [
         "packages/run/src/index.ts"
       ],
-      "@narratage/run-text": [
-        "packages/run-text/src/index.ts"
+      "@narratage/run-markup": [
+        "packages/run-markup/src/index.ts"
       ],
       "@narratage/runtime": [
         "packages/runtime/src/index.ts"
@@ -115,9 +157,6 @@
       "@narratage/model-kit": [
         "packages/model-kit/src/index.ts"
       ],
-      "@narratage/prompt-kit": [
-        "packages/prompt-kit/src/index.ts"
-      ],
       "@narratage/seedance": [
         "packages/seedance/src/index.ts"
       ],
@@ -149,6 +188,9 @@
       "@narratage/provider-media-aws-lambda": ["packages/provider-media-aws-lambda/src/index.ts"],
       "@narratage/provider-media-local": [
         "packages/provider-media-local/src/index.ts"
+      ],
+      "@narratage/provider-xiaomi-mimo": [
+        "packages/provider-xiaomi-mimo/src/index.ts"
       ],
       "@narratage/provider-hyperframes-aws-lambda": [
         "packages/provider-hyperframes-aws-lambda/src/index.ts"
@@ -186,20 +228,20 @@
       "@narratage/render-hyperframes": [
         "packages/render-hyperframes/src/index.ts"
       ],
-      "@narratage/broll": [
-        "packages/broll/src/index.ts"
-      ],
       "@narratage/film": [
         "packages/film/src/index.ts"
       ],
-      "@narratage/text-track": [
-        "packages/text-track/src/index.ts"
+      "@narratage/typography-track": [
+        "packages/typography-track/src/index.ts"
       ],
       "@narratage/svs": [
         "packages/svs/src/index.ts"
       ],
       "@narratage/compiler-node": [
         "packages/compiler-node/src/index.ts"
+      ],
+      "@narratage/compiler-markup-node": [
+        "packages/compiler-markup-node/src/index.ts"
       ],
       "@narratage/package-loader-node": [
         "packages/package-loader-node/src/index.ts"

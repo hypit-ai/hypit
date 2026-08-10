@@ -4,15 +4,17 @@ import test from "node:test";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { createResolvedClosure } from "@narratage/core";
 import { canonicalize, digestOf } from "@narratage/protocol";
+import type { BlobRef } from "@narratage/protocol";
 import { TypeValidatorRegistry, validateValue } from "@narratage/validation";
 import { artifactManifest } from "@narratage/artifact";
-import type { MediaArtifactRef } from "@narratage/media";
+import type { FontArtifactRef, MediaArtifactRef } from "@narratage/media";
 import { mediaManifest } from "@narratage/media";
 import { narrativeManifest } from "@narratage/narrative";
 import { programSpaceManifest, sealProgramSpace } from "@narratage/program-space";
 import { speechManifest } from "@narratage/speech";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { semanticMapManifest } from "@narratage/semantic-map";
+import { spatialManifest } from "@narratage/spatial";
 import { VISUAL_IR_V1, visualIrManifest } from "@narratage/visual-ir";
 
 import {
@@ -28,7 +30,7 @@ import {
 import type { VisualTrack } from "../src/index.js";
 
 const videoContractManifests = [artifactManifest, narrativeManifest, mediaManifest, programSpaceManifest,
-  speechManifest, speechEvidenceManifest, semanticMapManifest, visualIrManifest, compositionManifest] as const;
+  speechManifest, speechEvidenceManifest, semanticMapManifest, spatialManifest, visualIrManifest, compositionManifest] as const;
 
 const image: MediaArtifactRef = {
   digest: digestOf("image"),
@@ -36,11 +38,17 @@ const image: MediaArtifactRef = {
   mediaType: "image/png",
   durationSec: 0,
 };
-const audio: MediaArtifactRef = {
+const font: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  sources: [{ artifact: { kind: "blob", digest: digestOf("track:test-font"), size: 1_024, mediaType: "font/woff2" } }],
+  weight: 700,
+  style: "normal",
+};
+const audio: BlobRef = {
+  kind: "blob",
   digest: digestOf("audio"),
   size: 24,
   mediaType: "audio/wav",
-  durationSec: 4,
 };
 
 function fixture() {
@@ -59,14 +67,24 @@ function fixture() {
       stacking: { order: 100, tieBreak: "caption" },
       elements: [
         { id: "root", order: 0, kind: "box", style: [{ name: "position", value: "absolute" }] },
-        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello", style: [] },
+        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello", fonts: [font], style: [] },
       ],
     }],
   });
   const sound = sealAudioTrack({
     contract: "svml.audio-track@1",
     id: "speech",
-    clips: [{ id: "speech", span: { startFrame: 0, endFrameExclusive: 120 }, artifact: audio, bus: "speech" }],
+    clips: [{
+      id: "speech",
+      artifact: audio,
+      target: { startSample: 0, endSampleExclusive: 192_000 },
+      source: { sampleFrames: 192_000, startSample: 0, endSampleExclusive: 192_000, loop: false, phaseSample: 0 },
+      playbackRate: 1,
+      pitch: "preserve",
+      gain: 1,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
+    }],
   });
   return { programSpace, visual, sound };
 }
@@ -187,7 +205,7 @@ test("VisualTrack explicitly binds the visual IR instead of trusting the Runtime
   assert.throws(
     () => assertVisualTrackIdentity({
       ...visual,
-      visualIr: "third-party.browser-css@9",
+      visualIr: "third-party.browser-css@1",
     } as unknown as VisualTrack, programSpace),
     /Unsupported VisualTrack visual IR/u,
   );
@@ -276,7 +294,7 @@ test("one authoring Track may contribute independently stacked Presents", () => 
   assert.deepEqual(interleaved.presents.map((present) => present.stacking.order), [30, 80]);
 });
 
-test("Visual Present animations are frame-exact and cannot animate cross-Track styles", () => {
+test("Visual Present animations may finish before or after their visibility window without changing Track isolation", () => {
   const { programSpace, visual } = fixture();
   const present = visual.presents[0]!;
   const root = present.elements[0]!;
@@ -289,7 +307,7 @@ test("Visual Present animations are frame-exact and cannot animate cross-Track s
         animation: {
           keyframes: [
             { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
-            { atFrame: 60, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
+            { atFrame: 10, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
           ],
         },
       }],
@@ -300,6 +318,27 @@ test("Visual Present animations are frame-exact and cannot animate cross-Track s
     id: "animated",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [animated],
+  }), programSpace));
+  const clipped = sealVisualTrack({
+    ...visual,
+    presents: [{
+      ...present,
+      elements: [{
+        ...root,
+        animation: {
+          keyframes: [
+            { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
+            { atFrame: 90, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
+          ],
+        },
+      }],
+    }],
+  });
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
+    contract: "svml.composition@1",
+    id: "clipped-animation",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    tracks: [clipped],
   }), programSpace));
   const invasive = sealVisualTrack({
     ...visual,

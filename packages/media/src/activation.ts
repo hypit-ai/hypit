@@ -1,7 +1,7 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
-  decodeMediaAudioSurface, decodeMediaImageSurface, mediaComponent,
+  decodeMediaAudioSurface, decodeMediaFontSurface, decodeMediaImageSurface, mediaComponent,
   mediaManifest,
   mediaModuleRef,
   mediaSurfaceImplementationDigests,
@@ -13,19 +13,26 @@ export const svmlPackage = {
   modules: [{ manifest: mediaManifest, specifiers: ["@narratage/media", "@narratage/media@1"] }],
   components: [mediaComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: mediaModuleRef,
       surface: "image",
       mode: "structured",
       implementationDigest: mediaSurfaceImplementationDigests.image,
       handler: decodeMediaImageSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: mediaModuleRef,
       surface: "audio",
       mode: "structured",
       implementationDigest: mediaSurfaceImplementationDigests.audio,
       handler: decodeMediaAudioSurface,
+    }),
+    createMarkupSurfaceHostFacet({
+      module: mediaModuleRef,
+      surface: "font",
+      mode: "structured",
+      implementationDigest: mediaSurfaceImplementationDigests.font,
+      handler: decodeMediaFontSurface,
     }),
   ],
 };

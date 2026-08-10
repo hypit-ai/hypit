@@ -7,21 +7,22 @@ import { fileURLToPath } from "node:url";
 import { artifactTypes } from "@narratage/artifact";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { EndpointFulfillment } from "@narratage/endpoint-kit";
-import {
-  imageTransformCapabilities,
-  verifyImageTransformProgram,
-} from "@narratage/image-transform";
-import type { ImageTransformRequest } from "@narratage/image-transform";
-import type { ImageEncodeOperation } from "@narratage/image-transform";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue } from "@narratage/protocol";
+import {
+  assertRasterRequest,
+  rasterCapabilities,
+  rasterOutputMediaType,
+  rasterSources,
+} from "@narratage/raster";
+import type { RasterRequest } from "@narratage/raster";
 
 export const localOpenCvImageProviderModuleRef = {
   name: "@narratage/provider-image-opencv-local",
-  version: "0.0.0-dev",
+  version: "1",
 } as const;
 export const localOpenCvImageProviderImplementationDigest = digestOf(
-  "@narratage/provider-image-opencv-local/opencv@1",
+  "@narratage/provider-image-opencv-local/raster-opencv@1",
 );
 
 export type CreateLocalOpenCvImageProviderOptions = {
@@ -43,22 +44,11 @@ function positiveInteger(value: number, subject: string): number {
   return value;
 }
 
-function request(value: CanonicalValue): ImageTransformRequest {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value),
-    "Image transform request must be an object");
-  const item = value as unknown as ImageTransformRequest;
-  assert(item.contract === "svml.image-transform-request@1"
-    && item.source?.kind === "blob"
-    && item.source.mediaType.startsWith("image/"),
-  "Image transform request is invalid");
-  verifyImageTransformProgram(item.program);
+function request(value: CanonicalValue): RasterRequest {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), "Raster request must be an object");
+  const item = value as unknown as RasterRequest;
+  assertRasterRequest(item);
   return item;
-}
-
-function outputMediaType(program: ImageTransformRequest["program"]): string {
-  const format = program.operations.find((operation): operation is ImageEncodeOperation =>
-    operation.kind === "encode")?.format ?? "png";
-  return format === "jpeg" ? "image/jpeg" : format === "webp" ? "image/webp" : "image/png";
 }
 
 async function runProcess(options: {
@@ -105,14 +95,14 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
   const processTimeoutMs = positiveInteger(config.processTimeoutMs ?? 5 * 60_000, "processTimeoutMs");
   const maxInputBytes = positiveInteger(config.maxInputBytes ?? 128 * 1024 * 1024, "maxInputBytes");
   const maxOutputBytes = positiveInteger(config.maxOutputBytes ?? 256 * 1024 * 1024, "maxOutputBytes");
-  const script = fileURLToPath(new URL("../runtime/image_transform.py", import.meta.url));
+  const script = fileURLToPath(new URL("../runtime/raster_execute.py", import.meta.url));
   return defineEndpointPackage({
     module: localOpenCvImageProviderModuleRef,
-    facet: "image-transform",
+    facet: "raster",
     instance: config.instance ?? "image.opencv.local",
     ...(config.lane === undefined ? {} : { lane: config.lane }),
     implementation: {
-      locator: "@narratage/provider-image-opencv-local/opencv",
+      locator: "@narratage/provider-image-opencv-local/raster-opencv",
       digest: localOpenCvImageProviderImplementationDigest,
     },
     permissions: ["process:image"],
@@ -120,7 +110,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
-      capability: imageTransformCapabilities.transform,
+      capability: rasterCapabilities.execute,
       returns: artifactTypes.blob,
       supports: (need) => {
         try {
@@ -132,33 +122,48 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
       },
       handler: async (context): Promise<EndpointFulfillment> => {
         const need = request(context.need.constraints);
-        assert(need.source.size <= maxInputBytes, "Image transform input exceeds its configured byte limit");
-        const bytes = await context.artifacts.get(need.source.digest);
-        assert(bytes !== undefined, `Image transform source Artifact ${need.source.digest} is unavailable`);
-        assert(bytes.byteLength === need.source.size, "Image transform source size differs from its BlobRef");
-        const work = await mkdtemp(join(tmpdir(), "svml-image-opencv-"));
+        const sources = [...new Map(rasterSources(need).map((source) => [source.digest, source])).values()];
+        const totalInputBytes = sources.reduce((sum, source) => sum + source.size, 0);
+        assert(totalInputBytes <= maxInputBytes, "Raster inputs exceed their configured byte limit");
+        const work = await mkdtemp(join(tmpdir(), "svml-raster-opencv-"));
         try {
-          const input = join(work, "input.bin");
-          const program = join(work, "program.json");
+          const paths = new Map<string, string>();
+          for (const [index, source] of sources.entries()) {
+            const bytes = await context.artifacts.get(source.digest);
+            assert(bytes !== undefined, `Raster source Artifact ${source.digest} is unavailable`);
+            assert(bytes.byteLength === source.size, "Raster source size differs from its BlobRef");
+            const path = join(work, `source-${String(index + 1).padStart(4, "0")}.bin`);
+            await writeFile(path, bytes);
+            paths.set(source.digest, path);
+          }
+          const runtimeRequest = need.kind === "transform"
+            ? { kind: "transform", source: paths.get(need.source.digest), operations: need.operations }
+            : {
+                kind: "compose", canvas: need.canvas, background: need.background,
+                layers: need.layers.map((layer) => ({
+                  source: paths.get(layer.source.digest), frame: layer.frame, fit: layer.fit,
+                  interpolation: layer.interpolation, opacity: layer.opacity,
+                })),
+              };
+          const program = join(work, "request.json");
           const output = join(work, "output.bin");
-          await writeFile(input, bytes);
-          await writeFile(program, JSON.stringify(need.program), "utf8");
+          await writeFile(program, JSON.stringify(runtimeRequest), "utf8");
           await runProcess({
             executable: pythonExecutable,
-            args: [script, input, program, output],
+            args: [script, program, output],
             timeoutMs: processTimeoutMs,
             maxStderrBytes: 256 * 1024,
           });
           const info = await stat(output);
           assert(info.isFile() && info.size > 0 && info.size <= maxOutputBytes,
-            "OpenCV image transform produced an invalid output size");
-          const mediaType = outputMediaType(need.program);
+            "OpenCV raster execution produced an invalid output size");
+          const mediaType = rasterOutputMediaType(need);
           const artifact = await context.artifacts.put(await readFile(output), mediaType);
           return {
             value: artifact,
             conformance: "exact",
             delivery: "executed",
-            metadata: canonicalize({ provider: "opencv.local", operation: "image-transform" }),
+            metadata: canonicalize({ provider: "opencv.local", operation: need.kind }),
           };
         } finally {
           await rm(work, { recursive: true, force: true }).catch(() => {});

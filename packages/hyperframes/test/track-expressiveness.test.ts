@@ -1,7 +1,9 @@
-import type { CompositableSurfaceRef, MediaArtifactRef } from "@narratage/media";
-import { sealProgramSpace } from "@narratage/program-space";
-import { sealComposition, sealVisualTrack } from "@narratage/composition";
+import { mediaDependency, mediaTypes } from "@narratage/media";
+import type { CompositableSurfaceRef, FontArtifactRef } from "@narratage/media";
+import { programSpaceDependency, programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
+import { compositionDependency, compositionTypes, sealComposition, sealVisualTrack } from "@narratage/composition";
 import type { Track, VisualElement, VisualPresent, VisualTrack } from "@narratage/composition";
+import { createResolvedClosure } from "@narratage/core";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -10,12 +12,22 @@ import {
   compileHyperframesDocument,
 } from "@narratage/hyperframes";
 import { digestOf } from "@narratage/protocol";
+import type { BlobRef, ModuleManifest } from "@narratage/protocol";
+import * as rankingTrack from "@narratage/ranking";
+import { videoContractManifests } from "../../test-support/video-domain.js";
 
 const programSpace = sealProgramSpace({
   contract: "svml.program-space@1",
   durationSec: 10,
   frameRate: { numerator: 30, denominator: 1 },
 });
+
+const witnessFont: FontArtifactRef = {
+  contract: "svml.font-artifact@1",
+  sources: [{ artifact: { kind: "blob", digest: digestOf("visual-ir:witness-font"), size: 32, mediaType: "font/woff2" } }],
+  weight: 700,
+  style: "normal",
+};
 
 function composition(id: string, tracks: readonly VisualTrack[]) {
   return sealComposition({
@@ -90,8 +102,8 @@ function textPresent(
       order: 4,
       kind: "text",
       text: "Intent",
+      fonts: [witnessFont],
       style: [
-        { name: "font-family", value: "Inter, sans-serif" },
         { name: "font-size", value: "64px" },
         { name: "box-shadow", value: "0 12px 32px rgba(0,0,0,0.4)" },
         ...(paintTarget === "word" ? painted : []),
@@ -103,8 +115,8 @@ function textPresent(
       order: 5,
       kind: "text",
       text: " first",
+      fonts: [witnessFont],
       style: [
-        { name: "font-family", value: "Noto Sans SC, sans-serif" },
         { name: "font-size", value: "64px" },
       ],
     },
@@ -217,7 +229,8 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
           order: 3,
           kind: "text",
           text: "semantic ",
-          style: [{ name: "font-family", value: "Playfair Display, serif" }],
+          fonts: [witnessFont],
+          style: [],
           animation: wordAnimation(1, 20),
         },
         {
@@ -226,7 +239,8 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
           order: 4,
           kind: "text",
           text: "video",
-          style: [{ name: "font-family", value: "Inter, sans-serif" }, { name: "background-color", value: "#00ff66" }],
+          fonts: [witnessFont],
+          style: [{ name: "background-color", value: "#00ff66" }],
           animation: wordAnimation(21, 50),
         },
       ],
@@ -238,17 +252,17 @@ test("Caption range/cue/content boxes and word-local timing remain an ordinary V
   assert.match(document.html, /data-svml-element-id="range"/u);
   assert.match(document.html, /data-svml-element-id="cue"/u);
   assert.match(document.html, /data-svml-element-id="content"/u);
-  assert.match(document.html, /Playfair Display, serif/u);
-  assert.match(document.html, /Inter, sans-serif/u);
+  assert.match(document.html, /@font-face\{font-family:svml-/u);
+  assert.match(document.html, new RegExp(witnessFont.sources[0]!.artifact.digest.slice("sha256:".length), "u"));
   assert.match(document.html, /drop-shadow\(0 0 18px #00ffff\)/u);
 });
 
 test("one content box lowers independent backdrop and foreground samples of one media Artifact", () => {
-  const media: MediaArtifactRef = {
+  const media: BlobRef = {
+    kind: "blob",
     digest: digestOf("two-box-source"),
     size: 1_024,
     mediaType: "video/mp4",
-    durationSec: 4,
   };
   const track = sealVisualTrack({
     contract: "svml.visual-track@1",
@@ -323,31 +337,37 @@ test("one content box lowers independent backdrop and foreground samples of one 
 });
 
 test("Presents from one authoring Track interleave with a peer Track by absolute stacking", () => {
-  const ranking = sealVisualTrack({
-    contract: "svml.visual-track@1",
-    visualIr: "svml.visual-ir@1",
-    id: "ranking-witness",
-    presents: [
-      {
-        id: "board",
-        span: { startFrame: 0, endFrameExclusive: 300 },
-        stacking: { order: 30, tieBreak: "board" },
-        elements: [{ id: "board", order: 0, kind: "box", style: [{ name: "background-color", value: "#ffffff" }] }],
-      },
-      {
-        id: "icon-1",
-        span: { startFrame: 30, endFrameExclusive: 300 },
-        stacking: { order: 80, tieBreak: "icon-1" },
-        elements: [{ id: "icon", order: 0, kind: "text", text: "★", style: [{ name: "font-size", value: "72px" }] }],
-      },
-      {
-        id: "icon-2",
-        span: { startFrame: 60, endFrameExclusive: 300 },
-        stacking: { order: 90, tieBreak: "icon-2" },
-        elements: [{ id: "icon", order: 0, kind: "text", text: "◆", style: [{ name: "font-size", value: "72px" }] }],
-      },
-    ],
-  });
+  const header = rankingTrack.sealRankingHeader({ contract: "svml.ranking-header@1", id: "ranking-witness", variant: "column" });
+  const first = { contract: "svml.column-item-spec@1", variant: "column", id: "icon-1", label: "One", stackingOrder: 80 } as const;
+  const second = { contract: "svml.column-item-spec@1", variant: "column", id: "icon-2", label: "Two", stackingOrder: 90 } as const;
+  let items = rankingTrack.createColumnItemSet();
+  items = rankingTrack.appendColumnItem(items, first);
+  items = rankingTrack.appendColumnItem(items, second);
+  const font: FontArtifactRef = {
+    contract: "svml.font-artifact@1",
+    sources: [{ artifact: { kind: "blob", digest: digestOf("ranking-interleave-font"), size: 32, mediaType: "font/woff2" } }],
+    weight: 700, style: "normal",
+  };
+  const style = rankingTrack.decodeColumnStyle({
+    contract: "svml.svs-recipe@1", path: "ranking.interleave",
+    properties: { "board-stack": 30, "stage-stack": 40, "item-stack": 80 },
+  }, font).style;
+  const ranking = rankingTrack.renderColumn(programSpace, rankingTrack.buildColumnProgram(
+    header,
+    { contract: "svml.spatial-frame@1", xPx: 80, yPx: 180, widthPx: 920, heightPx: 900 },
+    {
+      contract: "svml.ranking-schedule@1", id: "ranking-witness.schedule", variant: "column",
+      outer: { startFrame: 0, endFrameExclusive: 300 }, terminalFrame: 240,
+      entries: [
+        { itemId: "icon-1", triggerOccurrenceId: "next#0", triggerFrame: 30,
+          stage: { startFrame: 30, endFrameExclusive: 90 }, cumulative: { startFrame: 30, endFrameExclusive: 300 }, settled: { startFrame: 90, endFrameExclusive: 300 } },
+        { itemId: "icon-2", triggerOccurrenceId: "next#1", triggerFrame: 90,
+          stage: { startFrame: 90, endFrameExclusive: 240 }, cumulative: { startFrame: 90, endFrameExclusive: 300 }, settled: { startFrame: 240, endFrameExclusive: 300 } },
+      ],
+    },
+    style,
+    items,
+  ));
   const peer = sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
@@ -356,19 +376,45 @@ test("Presents from one authoring Track interleave with a peer Track by absolute
       id: "peer",
       span: { startFrame: 0, endFrameExclusive: 300 },
       stacking: { order: 50, tieBreak: "peer" },
-      elements: [{ id: "peer", order: 0, kind: "text", text: "between", style: [] }],
+      elements: [{ id: "peer", order: 0, kind: "text", text: "between", fonts: [font], style: [] }],
     }],
   });
   const document = compileHyperframesDocument(composition("interleaved-ranking", [ranking, peer]), programSpace);
-  const boardAt = document.html.indexOf('data-svml-present-id="board"');
+  const boardAt = document.html.indexOf('data-svml-present-id="ranking-witness:board"');
   const peerAt = document.html.indexOf('data-svml-present-id="peer"');
-  const icon1At = document.html.indexOf('data-svml-present-id="icon-1"');
-  const icon2At = document.html.indexOf('data-svml-present-id="icon-2"');
+  const icon1At = document.html.indexOf('data-svml-present-id="ranking-witness:item:icon-1:stage"');
+  const icon2At = document.html.indexOf('data-svml-present-id="ranking-witness:item:icon-2:stage"');
   assert.ok(boardAt < peerAt && peerAt < icon1At && icon1At < icon2At);
   assert.doesNotMatch(document.html, /svml-visual-track|isolation:isolate/u);
 });
 
-test("a complex owned visual may materialize as a typed compositable Surface without a component discriminator", () => {
+test("an independently installed non-native Text package crosses only the typed Surface waist", () => {
+  const externalModule = { name: "example.volumetric-text", version: "1" } as const;
+  const externalManifest: ModuleManifest = {
+    format: "svml.module@1",
+    name: externalModule.name,
+    version: externalModule.version,
+    dependencies: [programSpaceDependency, mediaDependency, compositionDependency],
+    types: [],
+    capabilities: [],
+    surfaces: [],
+    producers: [{
+      name: "place-materialized-text",
+      inputs: [
+        { name: "space", type: programSpaceTypes.programSpace },
+        { name: "surface", type: mediaTypes.compositableSurface },
+      ],
+      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
+      needs: [],
+      implementation: {
+        kind: "registered",
+        locator: "example.volumetric-text/place-materialized-text",
+        digest: digestOf("example.volumetric-text/place-materialized-text@1"),
+      },
+    }],
+  };
+  const closure = createResolvedClosure([...videoContractManifests, externalManifest]);
+  assert.ok(closure.modules.some((module) => module.ref.name === externalModule.name));
   const materialized: CompositableSurfaceRef = {
     contract: "svml.compositable-surface@1",
     artifact: {
@@ -411,5 +457,11 @@ test("a complex owned visual may materialize as a typed compositable Surface wit
   assert.match(document.html, /data-svml-alpha-mode="straight"/u);
   assert.equal("renderer" in track, false);
   assert.equal("component" in track, false);
-  // The Surface contract, not the WebM extension, now carries the compositing promise.
+  assert.deepEqual(externalManifest.producers[0]?.inputs.map((input) => input.type), [
+    programSpaceTypes.programSpace,
+    mediaTypes.compositableSurface,
+  ]);
+  // The separately installed package owns extrusion/material/light/camera
+  // semantics before this boundary. Public Track and HyperFrames see only the
+  // declared Surface, never an advanced-Text discriminator.
 });

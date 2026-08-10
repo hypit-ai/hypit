@@ -25,6 +25,24 @@ The current normalization profile uses one source presentation origin, a request
 rate, and a 48 kHz stereo PCM render stem. It preserves input level: loudness/mastering remains a
 separate author policy.
 
+Three ordinary author operations reuse that same inspection/execution boundary:
+
+```xml
+<media:Transform id="prepared" source={shot.video}
+  video="primary-moving" audio="default" span-authority="video" frame-rate="30">
+  <media:Trim tail="0.25s"/>
+  <media:Retime rate="1.05" pitch="preserve"/>
+</media:Transform>
+
+<media:ExtractAudio id="voice-reference" source={prepared.video} audio="default"/>
+<media:ExtractFrame id="continuity" source={prepared.video} video="primary-moving" at="last"/>
+```
+
+Every result is an ordinary `BlobArtifact`. Audio extraction emits a deterministic 48 kHz stereo PCM
+WAV but makes no `SpeechBasis`, speaker or alignment claim; it can therefore feed a later model
+reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
+`time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
+
 The same package also owns two provider-neutral finalization plans/capabilities:
 
 ```text

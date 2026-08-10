@@ -94,11 +94,24 @@ export type Need = {
   readonly requestDigest: Digest;
 };
 
+/**
+ * Host-attested identity of the configured Runtime implementation that fulfilled a Need.
+ *
+ * The Endpoint never supplies this value itself. A trusted Driver derives it from the locked
+ * Endpoint registration and, when present, the applied Runtime Closure.
+ */
+export type FulfillerImplementation = {
+  readonly digest: Digest;
+  readonly configurationDigest: Digest;
+  readonly runtimeClosure?: Digest;
+};
+
 export type Receipt = {
   readonly id: ReceiptId;
   readonly need: NeedId;
   readonly requestDigest: Digest;
   readonly fulfiller: string;
+  readonly implementation?: FulfillerImplementation;
   /** Conformance reported by the external fulfiller before upstream quality is applied. */
   readonly fulfillmentConformance: Conformance;
   /** Effective conformance after applying the Need's inherited floor. */
@@ -326,6 +339,7 @@ export type NeedFulfilledEvent = {
   readonly value: StoredValue;
   readonly requestDigest: Digest;
   readonly fulfiller: string;
+  readonly implementation?: FulfillerImplementation;
   readonly conformance: Conformance;
   readonly delivery: Delivery;
   readonly metadata: CanonicalValue;

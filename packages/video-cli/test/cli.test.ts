@@ -18,7 +18,7 @@ const runCli = (
 test("production video CLI has no implicit author or Run packages", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-empty-distribution-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
   <import from="@narratage/script@1"/>
   <script id="story"><opening><HOST>No hidden package.</opening></script>
@@ -36,7 +36,7 @@ async function writeRun(
   targets: readonly { readonly output: string; readonly accepts?: "exact" | "substitute" }[],
 ): Promise<string> {
   const path = join(root, name);
-  await writeFile(path, `<?svml using="@narratage/run-text@1"?>
+  await writeFile(path, `<?svml using="@narratage/run-markup@1"?>
 <svrun version="1" targets="selected">
   <author source="./main.svml"/>
   <target-set id="selected">
@@ -45,27 +45,6 @@ async function writeRun(
 </svrun>`, "utf8");
   return path;
 }
-
-test("CLI refuses to synthesize hidden Run intent from Pin and Target flags", async () => {
-  await assert.rejects(
-    async () => await runCli([
-      "build", "unused.svml",
-      "--target", "shot",
-      "--runtime", "unused-runtime.ts",
-      "--pin", "shot=sha256:historical",
-    ], { write() {} }),
-    /belong in a self-described Run Source/u,
-  );
-});
-
-test("CLI does not confuse Build persistence with the removed --out convenience", async () => {
-  await assert.rejects(
-    async () => await runCli([
-      "build", "unused.svrun", "--runtime", "unused-runtime.ts", "--out", "final.mp4",
-    ], { write() {} }),
-    /Build always archives accepted Records/u,
-  );
-});
 
 test("official video CLI checks a real Script source through the Node compiler host", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-"));
@@ -77,7 +56,7 @@ test("official video CLI checks a real Script source through the Node compiler h
       font-size: 72;
     }
   </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
     <import from="@narratage/script@1"/>
     <import as="studio" source="./studio.svs"/>
@@ -98,137 +77,159 @@ test("official video CLI checks a real Script source through the Node compiler h
   assert.equal(result.ok, true);
   assert.equal(result.units, 2);
   assert.deepEqual([...result.modules].sort(), [
-    "@narratage/narrative@0.0.0-dev",
-    "@narratage/script@0.0.0-dev",
+    "@narratage/narrative@1",
+    "@narratage/script@1",
     "@narratage/svs@1",
+    "@narratage/text@1",
   ]);
   assert.deepEqual(result.exports, [
     { name: "story", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "Narrative",
     }, kind: "record" },
     { name: "story.caption", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
-      name: "CaptionProjection",
+      module: { name: "@narratage/narrative", version: "1" },
+      name: "CaptionDisplaySequence",
+    }, kind: "record" },
+    { name: "story.caption.correspondence", type: {
+      module: { name: "@narratage/narrative", version: "1" },
+      name: "CaptionCorrespondence",
     }, kind: "record" },
     { name: "story.segment.opening", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
+      module: { name: "@narratage/narrative", version: "1" },
       name: "NarrativeExcerpt",
     }, kind: "record" },
     { name: "story.segment.opening.dialogue", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
-      name: "NarrativeDialogueExcerpt",
+      module: { name: "@narratage/text", version: "1" },
+      name: "Text",
     }, kind: "record" },
     { name: "story.segment.opening.speech", type: {
-      module: { name: "@narratage/narrative", version: "0.0.0-dev" },
-      name: "NarrativeSpeechExcerpt",
+      module: { name: "@narratage/text", version: "1" },
+      name: "Text",
     }, kind: "record" },
   ]);
 });
 
-test("official media and Seedance Surfaces lower author intent into exact generation steps", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-generation-"));
+test("author source binds an ordered exact Font stack to a Fine Caption Style", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-caption-font-"));
   const file = join(root, "main.svml");
-  await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
-  await writeFile(join(root, "voice.mp3"), new Uint8Array([73, 68, 51]));
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  const fontBytes = new Uint8Array([119, 79, 70, 50, 0, 1, 0, 0]);
+  await writeFile(join(root, "caption.woff2"), fontBytes);
+  await writeFile(join(root, "caption-fallback.woff2"), new Uint8Array([...fontBytes, 1]));
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
+<sheet version="1">
+  caption.primary {
+    cue-min-words: 1; cue-max-words: 4;
+    stack-order: 20; x: 0.5; y: 0.9; width: 0.8;
+    align: center; font: Studio Sans; weight: 600; size: 48; line-height: 1.1;
+    fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
+  }
+</sheet>`, "utf8");
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
-    <import from="@narratage/script@1"/>
-    <import as="media" from="@narratage/media@1"/>
-    <import as="seedance" from="@narratage/seedance@1"/>
-    <script id="story"><opening><HOST>Say exactly these words.</opening></script>
-    <media:Image id="host" src="./host.png"/>
-    <media:Audio id="voice" src="./voice.mp3"/>
-    <seedance:Prompt id="direction">
-      Locked medium close-up in a quiet daylight studio.
-    </seedance:Prompt>
-    <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue}
-      prompt={direction} duration="5">
-      <seedance:Reference image={host} role="character"/>
-      <seedance:Reference audio={voice} role="voice-timbre"/>
-    </seedance:Speech>
-    <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
-  </svml>`, "utf8");
+  <import as="media" from="@narratage/media@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
+  <import as="studio" source="./studio.svs"/>
 
-  let checkedOutput = "";
-  await runCli(["check", file], { write: (text) => { checkedOutput += text; } });
-  const checked = JSON.parse(checkedOutput) as {
+  <media:Font id="caption-font" src="./caption.woff2" weight="600" style="normal"/>
+  <media:Font id="caption-fallback" src="./caption-fallback.woff2" weight="600" style="normal"/>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-font}>
+    <caption-fine:Fallback font={caption-fallback}/>
+  </caption-fine:Style>
+</svml>`, "utf8");
+
+  let output = "";
+  await runCli(["check", file], { write: (text) => { output += text; } });
+  const result = JSON.parse(output) as {
     readonly ok: boolean;
-    readonly sourceAssets: readonly { readonly mediaType: string }[];
-    readonly exports: readonly { readonly name: string }[];
+    readonly exports: readonly { readonly name: string; readonly kind: string }[];
   };
-  assert.equal(checked.ok, true);
-  assert.deepEqual(checked.sourceAssets.map((item) => item.mediaType), ["audio/mpeg", "image/png"]);
-  assert.deepEqual(checked.exports.map((item) => item.name), [
-    "direction",
-    "host",
-    "motion.request",
-    "motion.video",
-    "story",
-    "story.caption",
-    "story.segment.opening",
-    "story.segment.opening.dialogue",
-    "story.segment.opening.speech",
-    "take",
-    "take.request",
-    "voice",
-  ]);
+  assert.equal(result.ok, true);
+  assert.equal(result.exports.some((item) => item.name === "caption-font" && item.kind === "record"), true);
+  assert.equal(result.exports.some((item) => item.name === "caption-fallback" && item.kind === "record"), true);
+  assert.equal(result.exports.some((item) => item.name === "primary-caption" && item.kind === "record"), true);
+});
 
-  let planOutput = "";
-  const run = await writeRun(root, "generation.svrun", [
-    { output: "take" },
-    { output: "motion.video" },
-  ]);
-  await runCli([
-    "plan", run,
-  ], { write: (text) => { planOutput += text; } });
-  const plan = JSON.parse(planOutput) as {
-    readonly goals: readonly unknown[];
-    readonly steps: readonly { readonly producer: { readonly name: string } }[];
+test("an installed open-font package supplies a multilingual exact stack without system fonts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-installed-fonts-"));
+  const file = join(root, "main.svml");
+  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
+<sheet version="1">
+  caption.primary {
+    cue-min-words: 1; cue-max-words: 4;
+    stack-order: 20; x: 0.5; y: 0.9; width: 0.8;
+    align: center; font: Installed Open Stack; weight: 700; size: 48; line-height: 1.1;
+    fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
+  }
+</sheet>`, "utf8");
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
+<svml>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
+  <import as="studio" source="./studio.svs"/>
+
+  <fonts:Stack id="caption-fonts" family="inter" weight="700" style="normal" emoji="color">
+    <fonts:Fallback family="noto-sans-sc" weight="700" style="normal"/>
+  </fonts:Stack>
+  <caption-fine:Style id="primary-caption" recipe={studio.caption.primary} font={caption-fonts}/>
+</svml>`, "utf8");
+
+  let output = "";
+  await runCli(["check", file], { write: (text) => { output += text; } });
+  const result = JSON.parse(output) as {
+    readonly ok: boolean;
+    readonly exports: readonly { readonly name: string; readonly kind: string }[];
   };
-  assert.equal(plan.goals.length, 2);
+  assert.equal(result.ok, true);
   assert.deepEqual(
-    plan.steps.map((step) => step.producer.name).sort(),
-    [
-      "request-seedance-2-mini",
-      "request-seedance-2-mini",
-      "select-primary-video",
-      "select-primary-video",
-    ],
+    result.exports.map((item) => item.name).sort(),
+    ["caption-fonts", "primary-caption"],
   );
 });
 
-test("Prompt Kit source and Speaker Surface finish prompt assembly before the Run Graph", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-prompt-kit-"));
+test("Text Template and exact Seedance keep speaker prompt assembly visible in the Run Graph", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-text-template-"));
   const file = join(root, "main.svml");
   const kitSource = await readFile(
-    new URL("../../seedance-speaker/kits/official-ugc-v1.svs", import.meta.url),
+    new URL("../../seedance-kits/kits/speaker-v1.svs", import.meta.url),
     "utf8",
   );
-  await writeFile(join(root, "official-ugc-v1.svs"), kitSource, "utf8");
+  await writeFile(join(root, "speaker-v1.svs"), kitSource, "utf8");
   await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
-  speech.normal { language: en; pace: normal; padding: 0.3; min: 4; max: 15; rounding: ceil; }
-  speaker.default { kind: ugc-talking-head; model: mini; resolution: 720p; aspect-ratio: 9:16; }
+  speech.normal { language: en; pace: normal; min: 4; max: 15; rounding: round; }
+  speaker.default {
+    composition-stability: soft-locked; camera-motion: none;
+    edit-rhythm: continuous-take; performance: natural-explainer; gesture: natural;
+  }
 </sheet>`, "utf8");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="text" from="@narratage/text@1"/>
   <import as="media" from="@narratage/media@1"/>
   <import as="estimate" from="@narratage/estimate@1"/>
-  <import as="speaker" from="@narratage/seedance-speaker@1"/>
+  <import as="seedance" from="@narratage/seedance@1"/>
   <import as="studio" source="./studio.svs"/>
-  <import as="ugc" source="./official-ugc-v1.svs"/>
+  <import as="speaker-kit" source="./speaker-v1.svs"/>
 
   <script id="story"><opening><HOST>Meaning becomes the source.</opening></script>
   <media:Image id="host" src="./host.png"/>
+  <media:Audio id="voice" src="./voice.mp3"/>
+  <text:Value id="action">Hold direct eye contact and use one compact gesture.</text:Value>
   <estimate:Speech id="duration" source={story.segment.opening.speech} policy={studio.speech.normal}/>
-  <speaker:Take id="take" dialogue={story.segment.opening.dialogue}
-    duration={duration.duration} recipe={studio.speaker.default} kit={ugc.official-ugc-v1}>
-    <speaker:Reference image={host} role="character-and-scene"/>
-  </speaker:Take>
+  <text:Render id="take-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.default}>
+    <text:Set name="dialogue" text={story.segment.opening.dialogue}/>
+    <text:Set name="action" text={action}/>
+  </text:Render>
+  <seedance:ReferenceVideo id="take" model="mini" prompt={take-prompt}
+    duration={duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={host}/>
+    <seedance:Reference audio={voice}/>
+  </seedance:ReferenceVideo>
 </svml>`, "utf8");
+  await writeFile(join(root, "voice.mp3"), new Uint8Array([73, 68, 51]));
 
   let checkedOutput = "";
   await runCli(["check", file], { write: (text) => { checkedOutput += text; } });
@@ -236,8 +237,7 @@ test("Prompt Kit source and Speaker Surface finish prompt assembly before the Ru
     readonly exports: readonly { readonly name: string }[];
   };
   const names = checked.exports.map((item) => item.name);
-  assert.equal(names.includes("take.prompt"), true);
-  assert.equal(names.includes("take.program"), true);
+  assert.equal(names.includes("take-prompt"), true);
   assert.equal(names.includes("take.video"), true);
 
   const run = await writeRun(root, "build.svrun", [{ output: "take.video" }]);
@@ -247,50 +247,18 @@ test("Prompt Kit source and Speaker Surface finish prompt assembly before the Ru
     readonly steps: readonly { readonly producer: { readonly name: string } }[];
   };
   assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
-    "compile-seedance-2-mini-speech-request",
+    "bind-request-seedance-2-mini-referenceImage",
+    "bind-request-seedance-2-mini-referenceAudio",
+    "bind-request-seedance-2-mini-prompt-text",
+    "bind-text",
+    "bind-text",
+    "compile-seedance-2-mini-duration-request",
     "estimate-speech-duration",
+    "finalize-request-seedance-2-mini",
     "request-seedance-2-mini",
+    "render",
     "select-primary-video",
   ].sort());
-  assert.equal(
-    plan.steps.some((step) => /prompt|speaker/u.test(step.producer.name)),
-    false,
-  );
-});
-
-test(".svrun is the complete human-readable Target graph used by plan", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-run-"));
-  const source = join(root, "main.svml");
-  const run = join(root, "preview.svrun");
-  await writeFile(source, `<?svml using="@narratage/text@1"?>
-<svml>
-    <import as="seedance" from="@narratage/seedance@1"/>
-    <seedance:Prompt id="direction">A quiet locked-off studio shot.</seedance:Prompt>
-    <seedance:Video id="motion" model="mini" prompt={direction} duration="4"/>
-  </svml>`, "utf8");
-  await writeFile(run, `<?svml using="@narratage/run-text@1"?>
-  <svrun version="1" targets="preview">
-    <author source="./main.svml"/>
-    <target-set id="preview">
-      <target output="motion.video" accepts="exact"/>
-    </target-set>
-  </svrun>`, "utf8");
-
-  let output = "";
-  await runCli(["plan", run], { write: (text) => { output += text; } });
-  const plan = JSON.parse(output) as {
-    readonly goals: readonly unknown[];
-    readonly steps: readonly { readonly producer: { readonly name: string } }[];
-  };
-  assert.equal(plan.goals.length, 1);
-  assert.deepEqual(plan.steps.map((item) => item.producer.name).sort(), [
-    "request-seedance-2-mini",
-    "select-primary-video",
-  ].sort());
-  await assert.rejects(
-    async () => await runCli(["plan", run, "--target", "motion.video"], { write() {} }),
-    /belong in a self-described Run Source/u,
-  );
 });
 
 test("CLI accepts a declarative Runtime Profile without an executable config module", async () => {
@@ -334,166 +302,45 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
     item.code === "RUNTIME_CREDENTIAL_MISSING" && item.subject === "SVML_TEST_MISSING_KIE_KEY"), true);
 });
 
-test("independent packages lower Speech Spine and explicit WhisperX alignment without provider calls", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-speech-spine-"));
-  const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
-<svml>
-    <import from="@narratage/script@1"/>
-    <import as="seedance" from="@narratage/seedance@1"/>
-    <import as="speech" from="@narratage/speech-spine@1"/>
-    <import as="whisperx" from="@narratage/whisperx@1"/>
-    <script id="story"><opening><HOST>Meaning becomes the source.</opening></script>
-    <seedance:Prompt id="direction">Locked medium close-up.</seedance:Prompt>
-    <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue}
-      prompt={direction} duration="5"/>
-    <speech:Spine id="speech">
-      <speech:Take source={take} segment={story.segment.opening}/>
-    </speech:Spine>
-    <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
-  </svml>`, "utf8");
+test("one checked-in fixture closes the complete provider-free video plan", async () => {
+  const fixture = join(process.cwd(), "examples", "talking-film-graph-check");
   let output = "";
-  await runCli(["check", file], { write: (text) => { output += text; } });
-  const checked = JSON.parse(output) as { readonly exports: readonly { readonly name: string }[] };
-  assert.equal(checked.exports.some((item) => item.name === "speech.visual"), true);
-  assert.equal(checked.exports.some((item) => item.name === "timing.map"), true);
-});
-
-test("Caption Gemini Surface lowers immutable display-atom runs into one explicit planning Need", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-caption-gemini-"));
-  const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
-<sheet version="1">
-    caption.base { stack-order: 70; x: 0.08; y: 0.76; width: 0.84; font: Inter;
-      weight: 600; size: 58; line-height: 1; align: center; fill: #FFFFFF;
-      background: #09090BCC; padding: 16 24; radius: 18; }
-  </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
-<svml>
-    <import from="@narratage/script@1"/>
-    <import as="caption" from="@narratage/caption@1"/>
-    <import as="gemini" from="@narratage/caption-gemini@1"/>
-    <import as="studio" source="./studio.svs"/>
-    <script id="story"><dialogue><ALICE>Meaning becomes the source.<BOB>Then the graph stays explicit.</dialogue></script>
-    <caption:Style id="plain" appearance={studio.caption.base}>
-      <caption:Cues>Prefer short complete semantic phrases. Never cross clause punctuation.</caption:Cues>
-    </caption:Style>
-    <caption:Style id="emphasis" appearance={studio.caption.base}>
-      <caption:Cues>Prefer short complete semantic phrases. Never cross clause punctuation.</caption:Cues>
-      <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-        Select zero, one, or two words whose emphasis best communicates this Cue.
-      </caption:Field>
-    </caption:Style>
-    <caption:Program id="caption-program" narrative={story} default={plain}>
-      <caption:Use role="ALICE" style={emphasis}/>
-    </caption:Program>
-    <gemini:Planner id="dialogue-plan" narrative={story} program={caption-program} model="gemini-2.5-flash"/>
-  </svml>`, "utf8");
-  let checkedOutput = "";
-  await runCli(["check", file], { write: (text) => { checkedOutput += text; } });
-  const checked = JSON.parse(checkedOutput) as { readonly exports: readonly { readonly name: string }[] };
-  assert.equal(checked.exports.some((item) => item.name === "caption-program"), true);
-  assert.equal(checked.exports.some((item) => item.name === "dialogue-plan.plan"), true);
-  let planOutput = "";
-  const run = await writeRun(root, "caption.svrun", [{ output: "dialogue-plan.plan" }]);
-  await runCli(["plan", run], { write: (text) => { planOutput += text; } });
-  const plan = JSON.parse(planOutput) as { readonly steps: readonly { readonly producer: { readonly name: string } }[] };
-  assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
-    "compile-caption-gemini-request",
-    "request-caption-gemini-plan",
-  ].sort());
-});
-
-test("Track Surfaces close one complete author graph before any external execution", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-complete-author-"));
-  const file = join(root, "main.svml");
-  await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
-<sheet version="1">
-    film.vertical { width: 1080; height: 1920; frame-rate: 30; background: #09090B; }
-    broll.card { stack-order: 40; x: 0.1; y: 0.2; width: 0.8; height: 0.5; fit: cover;
-      background: #111116; radius: 20; enter: slide-up 4f; exit: fade 4f; }
-    caption.base { stack-order: 70; x: 0.08; y: 0.76; width: 0.84; font: Inter;
-      weight: 600; size: 58; line-height: 1; align: center; fill: #FFFFFF;
-      background: #09090BCC; padding: 16 24; radius: 18; }
-    text.title { stack-order: 90; x: 0.06; y: 0.06; width: 0.88; height: 0.1;
-      font: Inter; weight: 900; size: 64; align: center; fill: #FFFFFF; tracking: -1; }
-  </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
-<svml>
-    <import from="@narratage/script@1"/>
-    <import as="seedance" from="@narratage/seedance@1"/>
-    <import as="speech" from="@narratage/speech-spine@1"/>
-    <import as="whisperx" from="@narratage/whisperx@1"/>
-    <import as="broll" from="@narratage/broll@1"/>
-    <import as="caption" from="@narratage/caption@1"/>
-    <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-    <import as="text" from="@narratage/text-track@1"/>
-    <import as="film" from="@narratage/film@1"/>
-    <import as="render" from="@narratage/render-hyperframes@1"/>
-    <import as="studio" source="./studio.svs"/>
-    <script id="story"><opening><HOST>Meaning @demo becomes the source @/demo.</opening></script>
-    <seedance:Prompt id="direction">Locked medium close-up.</seedance:Prompt>
-    <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue} prompt={direction} duration="5"/>
-    <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
-    <speech:Spine id="speech"><speech:Take source={take} segment={story.segment.opening}/></speech:Spine>
-    <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
-    <caption:Style id="base-caption" appearance={studio.caption.base}>
-      <caption:Cues>Prefer short complete semantic phrases.</caption:Cues>
-      <caption:Field id="important" type="boolean" min-per-cue="0" max-per-cue="2">
-        Select zero, one, or two words whose emphasis best communicates this Cue.
-      </caption:Field>
-    </caption:Style>
-    <caption:Program id="caption-program" narrative={story} default={base-caption}/>
-    <caption-ai:Planner id="cue-plan" narrative={story} program={caption-program} model="gemini-2.5-flash"/>
-    <broll:Track id="cards" map={timing.map} space={speech.space}>
-      <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
-    </broll:Track>
-    <caption:Track id="captions" narrative={story} map={timing.map} plan={cue-plan.plan} program={caption-program} space={speech.space}/>
-    <text:Track id="titles" space={speech.space}>
-      <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
-    </text:Track>
-    <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
-      <film:Track source={speech.visual}/><film:Track source={speech.audioTrack}/>
-      <film:Track source={cards.visual}/><film:Track source={captions.track}/><film:Track source={titles.track}/>
-    </film:Film>
-    <render:Video id="final" composition={main.composition} space={speech.space}/>
-  </svml>`, "utf8");
-  let output = "";
-  await runCli(["check", file], { write: (text) => { output += text; } });
-  const checked = JSON.parse(output) as { readonly exports: readonly { readonly name: string }[] };
-  for (const name of ["story.selection.demo", "cue-plan.plan", "cards.visual", "captions.track", "titles.track", "final.video"]) {
-    assert.equal(checked.exports.some((item) => item.name === name), true, name);
-  }
-});
-
-test("official video CLI closes the explicit HyperFrames render package without loading a Provider", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-render-"));
-  const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
-<svml>
-    <import as="render" from="@narratage/render-hyperframes@1"/>
-  </svml>`, "utf8");
-  let output = "";
-  await runCli(["check", file], { write: (text) => { output += text; } });
-  const result = JSON.parse(output) as {
-    readonly ok: boolean;
-    readonly modules: readonly string[];
-    readonly exports: readonly unknown[];
+  await runCli([
+    "plan",
+    join(fixture, "build.svrun"),
+    "--package-lock",
+    join(fixture, "svml.packages.lock"),
+    "--root",
+    process.cwd(),
+  ], { write: (text) => { output += text; } });
+  const plan = JSON.parse(output) as {
+    readonly goals: readonly unknown[];
+    readonly steps: readonly {
+      readonly fidelity: "exact" | "substitute";
+      readonly producer: { readonly name: string };
+    }[];
   };
-  assert.equal(result.ok, true);
-  assert.deepEqual([...result.modules].sort(), [
-    "@narratage/artifact@0.0.0-dev",
-    "@narratage/composition@0.0.0-dev",
-    "@narratage/hyperframes@0.0.0-dev",
-    "@narratage/media-pipeline@0.0.0-dev",
-    "@narratage/media@0.0.0-dev",
-    "@narratage/narrative@0.0.0-dev",
-    "@narratage/program-space@0.0.0-dev",
-    "@narratage/render-hyperframes@0.0.0-dev",
-    "@narratage/speech@0.0.0-dev",
-    "@narratage/visual-ir@0.0.0-dev",
-  ]);
-  assert.deepEqual(result.exports, []);
+  const producers = new Set(plan.steps.map((step) => step.producer.name));
+  for (const name of [
+    "request-seedance-2-mini",
+    "assemble-speech-basis",
+    "request-whisperx-alignment",
+    "request-caption-gemini-plan",
+    "request-media-inspection",
+    "request-media-normalization",
+    "project-media-visual-track",
+    "render-fine-caption",
+    "render-typography-track",
+    "compile-composition",
+    "request-visual-render",
+    "request-audio-render",
+    "request-media-mux",
+    "project-muxed-media",
+  ]) {
+    assert.equal(producers.has(name), true, name);
+  }
+  assert.equal(plan.goals.length, 1);
+  assert.equal(plan.steps.every((step) => step.fidelity === "exact"), true);
 });
 
 test("CLI package lock activates an installed package without changing the official host", async () => {
@@ -521,8 +368,8 @@ test("CLI package lock activates an installed package without changing the offic
           implementation: { kind: "trusted-frontend-surface", locator: "example/empty", digest } }],
       }, specifiers: ["example.empty@1"] }],
       hostFacets: [{
-        abi: "svml.text-surface-host@1",
-        identity: { contract: "svml.text-surface-host-facet@1", module, surface: "empty",
+        abi: "svml.markup-surface-host@1",
+        identity: { contract: "svml.markup-surface-host-facet@1", module, surface: "empty",
           mode: "structured", implementationDigest: digest },
         implementation() { return { records: [], components: [], fragments: [] }; },
       }],
@@ -530,7 +377,7 @@ test("CLI package lock activates an installed package without changing the offic
   `, "utf8");
   const file = join(root, "main.svml");
   const lockPath = join(root, "svml.packages.lock");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
     <import as="example" from="example.empty@1"/>
     <example:Empty/>

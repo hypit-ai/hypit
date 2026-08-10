@@ -1,9 +1,9 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
-  decodeSeedancePromptSurface,
-  decodeSeedanceSpeechSurface,
-  decodeSeedanceVideoSurface,
+  decodeSeedanceFrameVideoSurface,
+  decodeSeedanceReferenceVideoSurface,
+  decodeSeedanceTextVideoSurface,
   seedanceComponent,
   seedanceManifest,
   seedanceModuleRef,
@@ -16,26 +16,26 @@ export const svmlPackage = {
   modules: [{ manifest: seedanceManifest, specifiers: ["@narratage/seedance", "@narratage/seedance@1"] }],
   components: [seedanceComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "prompt",
+      surface: "text-video",
       mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.prompt,
-      handler: decodeSeedancePromptSurface,
+      implementationDigest: seedanceSurfaceImplementationDigests.textVideo,
+      handler: decodeSeedanceTextVideoSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "speech",
+      surface: "frame-video",
       mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.speech,
-      handler: decodeSeedanceSpeechSurface,
+      implementationDigest: seedanceSurfaceImplementationDigests.frameVideo,
+      handler: decodeSeedanceFrameVideoSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: seedanceModuleRef,
-      surface: "video",
+      surface: "reference-video",
       mode: "structured",
-      implementationDigest: seedanceSurfaceImplementationDigests.video,
-      handler: decodeSeedanceVideoSurface,
+      implementationDigest: seedanceSurfaceImplementationDigests.referenceVideo,
+      handler: decodeSeedanceReferenceVideoSurface,
     }),
   ],
 };

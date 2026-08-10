@@ -16,6 +16,6 @@
   },
   "devDependencies": {
     "@narratage/source": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   }
 }

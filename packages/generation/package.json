@@ -12,7 +12,8 @@
   "dependencies": {
     "@narratage/artifact": "workspace:*",
     "@narratage/component-kit": "workspace:*",
-    "@narratage/protocol": "workspace:*"
+    "@narratage/protocol": "workspace:*",
+    "@narratage/text": "workspace:*"
   },
   "devDependencies": {
     "@narratage/driver-node": "workspace:*",

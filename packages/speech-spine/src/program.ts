@@ -150,12 +150,16 @@ export function compileSpeechSpineAudio(program: SpeechSpineProgram, set: Speech
       artifact: audio.artifact,
       targetStartSample,
       targetEndSampleExclusive,
+      sourceSampleFrames: audio.sampleFrames,
       sourceStartSample: 0,
+      sourceEndSampleExclusive: audio.sampleFrames,
+      sourceLoop: false,
+      sourcePhaseSample: 0,
       playbackRate: 1,
+      pitch: "preserve" as const,
       gain: 1,
       fadeInSamples: 0,
       fadeOutSamples: 0,
-      bus: "speech" as const,
     };
   });
   const plan = sealAudioProgramPlan({
@@ -191,24 +195,19 @@ export function assembleSpeechBasis(
   });
   const visualClips = set.takes.map((take, index) => ({
     segmentId: take.segment.id,
-    artifact: {
-      digest: take.media.visual!.artifact.digest,
-      size: take.media.visual!.artifact.size,
-      mediaType: take.media.visual!.artifact.mediaType,
-      durationSec: seconds(take.media.timeline.frameCount),
+    artifact: structuredClone(take.media.visual!.artifact),
+    extent: {
+      contract: "svml.intrinsic-extent@1" as const,
+      widthPx: take.media.visual!.width,
+      heightPx: take.media.visual!.height,
     },
-    startSec: segments[index]!.startSec,
-    endSec: segments[index]!.endSec,
+    frameRate: { ...take.media.visual!.frameRate },
+    frameCount: take.media.visual!.frameCount,
   }));
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
     programSpace: space,
-    audio: {
-      digest: audio.artifact.digest,
-      size: audio.artifact.size,
-      mediaType: audio.artifact.mediaType,
-      durationSec: space.durationSec,
-    },
+    audio: structuredClone(audio.artifact),
     visualTrack: { clips: visualClips },
     segments,
   });

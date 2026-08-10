@@ -21,7 +21,8 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/speech-basis": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/spatial": "workspace:*",
+    "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
     "@narratage/caption": "workspace:*",

@@ -2,7 +2,7 @@ import { sealGenerationPortRequest, sealGenerationPortTable } from "@narratage/g
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
 
-export const minimaxH3ModuleRef = { name: "@narratage/minimax-h3", version: "0.0.0-dev" } as const;
+export const minimaxH3ModuleRef = { name: "@narratage/minimax-h3", version: "1" } as const;
 
 /**
  * What MiniMax H3 accepts is a property of the trained model, not of whichever

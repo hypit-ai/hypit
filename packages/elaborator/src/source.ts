@@ -66,6 +66,11 @@ export type AuthorSourceAssetRequest = {
   readonly from: string;
   /** Exact media type the consuming Surface assigns to these bytes. */
   readonly mediaType: string;
+  /**
+   * Bytes already carried by a trusted installed package Surface. The Host still hashes and
+   * stages them; they never enter SourceClosure or Core state. Ordinary author assets omit this.
+   */
+  readonly bytes?: Uint8Array;
   readonly range?: SourceRange;
 };
 
@@ -513,6 +518,23 @@ export async function compileSourceClosure(
             `${source.name} assigns conflicting media types to ${assetRequest.from}`,
             assetRequest.from,
           );
+          if (assetRequest.bytes !== undefined) {
+            assert(
+              request.resolveAsset !== undefined,
+              "SOURCE_ASSET_RESOLVER_MISSING",
+              `${source.name} requires embedded asset ${assetRequest.from}, but the Host has no asset resolver`,
+              assetRequest.from,
+            );
+            const repeated = await request.resolveAsset(rawSource, assetRequest);
+            assert(
+              repeated.artifact.digest === existing.artifact.digest
+                && repeated.artifact.size === existing.artifact.size
+                && repeated.artifact.mediaType === existing.artifact.mediaType,
+              "SOURCE_ASSET_CONTENT_CONFLICT",
+              `${source.name} supplies conflicting bytes for ${assetRequest.from}`,
+              assetRequest.from,
+            );
+          }
           return { artifact: existing.artifact };
         }
         assert(

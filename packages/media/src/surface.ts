@@ -2,7 +2,10 @@ import { artifactTypes } from "@narratage/artifact";
 import type {
   StructuredElement,
   StructuredSurfaceHandler,
-} from "@narratage/text";
+} from "@narratage/markup";
+
+import { assertFontArtifactRef } from "./render.js";
+import { mediaTypes } from "./manifest.js";
 
 const IMAGE_MEDIA_TYPES = new Map([
   [".avif", "image/avif"],
@@ -24,6 +27,13 @@ const AUDIO_MEDIA_TYPES = new Map([
   [".wav", "audio/wav"],
 ]);
 
+const FONT_MEDIA_TYPES = new Map([
+  [".otf", "font/otf"],
+  [".ttf", "font/ttf"],
+  [".woff", "font/woff"],
+  [".woff2", "font/woff2"],
+]);
+
 function stringAttribute(element: StructuredElement, name: string): string {
   const value = element.attributes[name];
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -41,7 +51,7 @@ function assertChildrenEmpty(element: StructuredElement): void {
 function mediaTypeFor(
   element: StructuredElement,
   source: string,
-  kind: "image" | "audio",
+  kind: "image" | "audio" | "font",
   known: ReadonlyMap<string, string>,
 ): string {
   const explicit = element.attributes["media-type"];
@@ -96,3 +106,36 @@ export const decodeMediaImageSurface: StructuredSurfaceHandler = async ({ elemen
 
 export const decodeMediaAudioSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) =>
   await decodeMediaAssetSurface(element, resolveAsset, "audio", AUDIO_MEDIA_TYPES);
+
+export const decodeMediaFontSurface: StructuredSurfaceHandler = async ({ element, resolveAsset }) => {
+  const names = Object.keys(element.attributes).sort();
+  if (names.join(",") !== "id,src,style,weight" && names.join(",") !== "id,media-type,src,style,weight") {
+    throw new Error(`${element.name} requires id, src, weight and style, with optional media-type`);
+  }
+  assertChildrenEmpty(element);
+  const id = stringAttribute(element, "id");
+  const source = stringAttribute(element, "src");
+  const weight = Number(stringAttribute(element, "weight"));
+  if (!Number.isSafeInteger(weight) || weight < 1 || weight > 1_000) {
+    throw new Error(`${element.name}.weight must be an integer from 1 to 1000`);
+  }
+  const style = stringAttribute(element, "style");
+  if (style !== "normal" && style !== "italic" && style !== "oblique") {
+    throw new Error(`${element.name}.style must be normal, italic or oblique`);
+  }
+  const fontStyle = style as "normal" | "italic" | "oblique";
+  const mediaType = mediaTypeFor(element, source, "font", FONT_MEDIA_TYPES);
+  const resolved = await resolveAsset({ from: source, mediaType, range: element.range });
+  const font = {
+    contract: "svml.font-artifact@1" as const,
+    sources: [{ artifact: resolved.artifact }],
+    weight,
+    style: fontStyle,
+  };
+  assertFontArtifactRef(font, `${element.name}.${id}`);
+  return {
+    records: [{ id, type: mediaTypes.fontArtifact, value: { kind: "inline" as const, value: font }, range: element.range }],
+    components: [],
+    fragments: [],
+  };
+};

@@ -1,0 +1,9 @@
+<?svml using="@narratage/text/svs@1"?>
+
+<sheet version="1" id="motion-reference-v1">
+  text-template.motion-reference-v1 { separator: paragraph; }
+  text-template.motion-reference-v1.block.subject { kind: fixed; order: 10; text: "Use @image1 as the subject and preserve the subject's identity, outfit, and physical features."; }
+  text-template.motion-reference-v1.block.transfer { kind: fixed; order: 20; text: "Replicate the body motion, gestures, and pose dynamics from @video1 exactly. The subject from @image1 performs that motion in their own setting."; }
+  text-template.motion-reference-v1.block.exclude { kind: fixed; order: 30; text: "Do not copy @video1's camera framing or lens. Let the camera move naturally to capture the transferred action."; }
+  text-template.motion-reference-v1.block.direction { kind: slot; order: 40; slot: direction; optional: true; label: "ADDITIONAL DIRECTION:"; }
+</sheet>

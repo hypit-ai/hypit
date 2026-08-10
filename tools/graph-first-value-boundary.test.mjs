@@ -29,7 +29,7 @@ async function contents(packageNames) {
 }
 
 const domainValuePackages = [
-  "broll",
+  "media-track",
   "caption",
   "caption-gemini",
   "estimate",
@@ -39,14 +39,13 @@ const domainValuePackages = [
   "render-hyperframes",
   "image-transform",
   "media-pipeline",
-  "prompt-kit",
+  "text",
   "script",
   "seedance",
-  "seedance-speaker",
   "speech-alignment",
   "speech-spine",
   "speech-basis",
-  "text-track",
+  "typography-track",
   "whisperx",
 ];
 
@@ -100,10 +99,10 @@ test("the generic graph stack has no payload-affinity side channel", async () =>
 
 test("fold values retain members, not hidden identity or policy context", async () => {
   const declarations = [
-    ["broll", "types.ts", "BrollSet"],
+    ["media-track", "types.ts", "MediaTrackSet"],
     ["film", "types.ts", "FilmTrackSet"],
     ["speech-spine", "types.ts", "SpeechSpineSet"],
-    ["text-track", "types.ts", "TextTrackSet"],
+    ["typography-track", "types.ts", "TypographyTrackSet"],
   ];
   for (const [packageName, fileName, typeName] of declarations) {
     const path = new URL(`./${packageName}/src/${fileName}`, packageRoot);

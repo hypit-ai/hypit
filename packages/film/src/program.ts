@@ -1,5 +1,7 @@
 import { assertProgramSpaceIdentity } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
+import { assertCanvasSpace } from "@narratage/spatial";
+import type { CanvasSpace } from "@narratage/spatial";
 import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealComposition } from "@narratage/composition";
 import type { AudioTrack, Composition, Track, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
@@ -23,8 +25,7 @@ function filmProgramContent(value: FilmProgram): FilmProgram {
   return {
     contract: "svml.film-program@1",
     id: value.id,
-    frameRate: { ...value.frameRate },
-    canvas: { ...value.canvas },
+    clearColor: value.clearColor,
   };
 }
 
@@ -37,20 +38,12 @@ function filmTrackSetContent(value: FilmTrackSet): FilmTrackSet {
   };
 }
 
-/**
- * One vertical frame at 30, for anything that must choose a canvas before an
- * author has declared a Film.
- *
- * The package that defines what a frame is decides what an undeclared one
- * looks like. Anything else picking its own numbers would be a second, silent
- * answer.
- */
+/** One neutral Film appearance for tools that need an editable starting value. */
 export function defaultFilmProgram(id = "film"): FilmProgram {
   return sealFilmProgram({
     contract: "svml.film-program@1",
     id,
-    frameRate: { numerator: 30, denominator: 1 },
-    canvas: { width: 1080, height: 1920, clearColor: "#09090b" },
+    clearColor: "#09090b",
   });
 }
 
@@ -61,22 +54,8 @@ export function sealFilmProgram(value: FilmProgram): FilmProgram {
 export function assertFilmProgramIdentity(program: FilmProgram): void {
   if (program.contract !== "svml.film-program@1") throw new Error("Unsupported FilmProgram contract.");
   assertNonEmpty(program.id, "FilmProgram id");
-  if (
-    !Number.isSafeInteger(program.frameRate.numerator)
-    || program.frameRate.numerator <= 0
-    || !Number.isSafeInteger(program.frameRate.denominator)
-    || program.frameRate.denominator <= 0
-  ) {
-    throw new Error("FilmProgram frame rate is invalid.");
-  }
-  if (
-    !Number.isSafeInteger(program.canvas.width)
-    || program.canvas.width <= 0
-    || !Number.isSafeInteger(program.canvas.height)
-    || program.canvas.height <= 0
-    || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(program.canvas.clearColor)
-  ) {
-    throw new Error("FilmProgram canvas is invalid.");
+  if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(program.clearColor)) {
+    throw new Error("FilmProgram clear color is invalid.");
   }
 }
 
@@ -124,20 +103,24 @@ export function appendFilmAudioTrack(set: FilmTrackSet, programSpace: ProgramSpa
   return appendTrack(set, programSpace, track);
 }
 
-export function compileFilmComposition(program: FilmProgram, programSpace: ProgramSpace, set: FilmTrackSet): Composition {
+export function compileFilmComposition(
+  program: FilmProgram,
+  canvas: CanvasSpace,
+  programSpace: ProgramSpace,
+  set: FilmTrackSet,
+): Composition {
   assertFilmProgramIdentity(program);
+  assertCanvasSpace(canvas);
   assertProgramSpaceIdentity(programSpace);
   assertFilmTrackSetIdentity(set);
-  if (
-    program.frameRate.numerator !== programSpace.frameRate.numerator
-    || program.frameRate.denominator !== programSpace.frameRate.denominator
-  ) {
-    throw new Error("FilmProgram and FilmTrackSet use different frame rates.");
-  }
   const composition = sealComposition({
     contract: "svml.composition@1",
     id: program.id,
-    canvas: program.canvas,
+    canvas: {
+      width: canvas.widthPx,
+      height: canvas.heightPx,
+      clearColor: program.clearColor,
+    },
     tracks: set.tracks,
   });
   assertCompositionIdentity(composition, programSpace);

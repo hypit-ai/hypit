@@ -1,174 +1,119 @@
-import type { Narrative } from "@narratage/narrative";
+import type { CaptionCorrespondence, CaptionDisplaySequence } from "@narratage/narrative";
 import { tokenSpanSeconds } from "@narratage/semantic-map";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 
-import { CaptionProjectionError } from "./error.js";
-import type {
-  CaptionPlan,
-  CaptionProgram,
-  CaptionDisplayAtom,
-  TimedCaptionProjection,
-  TimedCaptionRefinement,
-  TimedCaptionRegion,
-} from "./types.js";
+import { CaptionTimingError } from "./error.js";
+import { assertCaptionCorrespondence, assertCaptionDisplaySequence } from "./display.js";
 import { assertCaptionPlanForProgram } from "./plan.js";
-import { displayTextForAtoms } from "./display.js";
-import { assertCaptionProgramForNarrative } from "./style.js";
+import { assertCaptionProgramForDisplay } from "./style.js";
+import type { CaptionPlan, CaptionProgram, TimedCaptionProjection } from "./types.js";
 
-export function temporalizeCaption(
-  narrative: Narrative,
-  map: CompleteSemanticMap,
+/**
+ * Apply Caption-owned post-planning visibility without changing Cue identity, timing or grouping.
+ * The operation is idempotent so Style-family renderers may enforce the contract defensively.
+ */
+export function applyCaptionMute(
+  projection: TimedCaptionProjection,
+  program: CaptionProgram,
+  display: CaptionDisplaySequence,
 ): TimedCaptionProjection {
-  const sourceTiming = (startToken: number, endTokenExclusive: number, owner: string) => {
-    const source = narrative.tokens.slice(startToken, endTokenExclusive);
-    const window = tokenSpanSeconds(map, source.map((token) => token.id));
-    if (window === undefined) {
-      throw new CaptionProjectionError(
-        "CAPTION_SPEECH_COVERAGE",
-        `${owner} is not covered by the complete speech time map.`,
-      );
-    }
-    return {
-      sourceTokenIds: source.map((token) => token.id),
-      startSec: window.startSec,
-      endSec: window.endSec,
-    };
+  assertTimedCaptionProjection(projection);
+  assertCaptionProgramForDisplay(program, display);
+  if (projection.displaySequenceId !== display.id) {
+    throw new Error("Caption Mute received another display sequence");
+  }
+  const mutedWords = new Set(program.mutedWordIds);
+  const mutedAtoms = new Set(display.atoms
+    .filter((atom) => atom.wordIds.every((wordId) => mutedWords.has(wordId)))
+    .map((atom) => atom.id));
+  const result: TimedCaptionProjection = {
+    contract: "svml.timed-caption-projection@1",
+    displaySequenceId: projection.displaySequenceId,
+    cues: projection.cues.flatMap((cue) => {
+      const atoms = cue.atoms.filter((atom) => !mutedAtoms.has(atom.atomId));
+      if (atoms.length === 0) return [];
+      return [{
+        ...cue,
+        atoms,
+        fields: cue.fields.filter((field) => !mutedWords.has(field.wordId)),
+      }];
+    }),
   };
-
-  const regions: TimedCaptionRegion[] = narrative.captionProjection.regions.map((region) => {
-    const refinements: TimedCaptionRefinement[] = region.refinements.map((refinement) => ({
-      id: refinement.id,
-      display: refinement.display,
-      displayStart: refinement.displayStart,
-      displayEnd: refinement.displayEnd,
-      ...sourceTiming(refinement.startToken, refinement.endTokenExclusive, refinement.id),
-      relation: refinement.relation,
-    }));
-    return {
-      id: region.id,
-      display: region.display,
-      segmentId: region.segmentId,
-      kind: region.kind,
-      ...sourceTiming(region.startToken, region.endTokenExclusive, region.id),
-      refinements,
-    };
-  });
-  const payload = {
-    contract: "svml.timed-caption-projection@1" as const,
-    text: narrative.captionProjection.text,
-    regions,
-  };
-  return payload;
+  assertTimedCaptionProjection(result);
+  return result;
 }
 
-function cleanDisplay(value: string): string {
-  return value.replace(/\s+/gu, " ").replace(/\s+([,.;:!?])/gu, "$1").trim();
-}
-
-/** Join planner-neutral Cue/field facts with the one authoritative Script map. */
+/** Join whole authored Caption Atoms to measured speech time. No display-word time is invented. */
 export function temporalizeCaptionPlan(
-  narrative: Narrative,
+  display: CaptionDisplaySequence,
+  correspondence: CaptionCorrespondence,
   map: CompleteSemanticMap,
   program: CaptionProgram,
   plan: CaptionPlan,
 ): TimedCaptionProjection {
-  assertCaptionProgramForNarrative(program, narrative);
-  assertCaptionPlanForProgram(plan, program);
-  const atomById = new Map(program.atoms.map((atom) => [atom.id, atom]));
-  const regionById = new Map(narrative.captionProjection.regions.map((region) => [region.id, region]));
-  const atomsByRegion = new Map<string, CaptionDisplayAtom[]>();
-  for (const atom of program.atoms) {
-    const values = atomsByRegion.get(atom.regionId) ?? [];
-    values.push(atom);
-    atomsByRegion.set(atom.regionId, values);
-  }
-  const atomWindow = (atom: CaptionDisplayAtom) => {
-    const sourceIds = narrative.tokens
-      .slice(atom.sourceTokenStart, atom.sourceTokenEndExclusive)
-      .map((token) => token.id);
-    const window = tokenSpanSeconds(map, sourceIds);
-    if (window === undefined) {
-      throw new CaptionProjectionError("CAPTION_SPEECH_COVERAGE", `Caption display atom ${atom.id} is absent from the complete speech map.`);
+  assertCaptionDisplaySequence(display);
+  assertCaptionCorrespondence(correspondence, display);
+  assertCaptionProgramForDisplay(program, display);
+  assertCaptionPlanForProgram(plan, program, display);
+  const atomById = new Map(display.atoms.map((atom) => [atom.id, atom]));
+  const sourceByAtom = new Map(correspondence.atoms.map((item) => [item.atomId, item.sourceTokenIds]));
+  const cues = plan.runs.flatMap((run) => run.cues.map((cue) => {
+    const atoms = cue.atomIds.map((atomId) => {
+      const atom = atomById.get(atomId);
+      const sourceTokenIds = sourceByAtom.get(atomId);
+      if (atom === undefined || sourceTokenIds === undefined) {
+        throw new CaptionTimingError("CAPTION_ATOM", `Caption Cue ${cue.id} references unknown Atom ${atomId}.`);
+      }
+      const window = tokenSpanSeconds(map, sourceTokenIds);
+      if (window === undefined) {
+        throw new CaptionTimingError(
+          "CAPTION_SPEECH_COVERAGE",
+          `Caption Atom ${atomId} is absent from the complete speech map.`,
+        );
+      }
+      return { atom, timing: { atomId, startSec: window.startSec, endSec: window.endSec } };
+    });
+    if (new Set(atoms.map((item) => item.atom.segmentId)).size !== 1) {
+      throw new CaptionTimingError("CAPTION_PLAN_SEGMENT", `Caption Cue ${cue.id} crosses a Script Segment.`);
     }
-    if (atom.correspondence === "exact") return window;
-    const region = regionById.get(atom.regionId);
-    if (region === undefined || region.display.length === 0) {
-      throw new CaptionProjectionError("CAPTION_DISPLAY_REGION", `Caption display atom ${atom.id} has no owning display region.`);
-    }
-    const siblings = atomsByRegion.get(atom.regionId) ?? [];
-    const next = siblings.find((candidate) => candidate.displayStart > atom.displayStart);
-    const duration = window.endSec - window.startSec;
     return {
-      startSec: window.startSec + duration * atom.displayStart / region.display.length,
-      endSec: window.startSec + duration * (next?.displayStart ?? region.display.length) / region.display.length,
+      id: cue.id,
+      runId: run.id,
+      styleId: run.styleId,
+      segmentId: atoms[0]!.atom.segmentId,
+      startSec: atoms[0]!.timing.startSec,
+      endSec: atoms.at(-1)!.timing.endSec,
+      atoms: atoms.map((item) => item.timing),
+      fields: cue.fields.map((field) => ({ ...field })),
     };
-  };
-  const visible = new Set(program.atoms.map((atom) => atom.id));
-  const plannedIds = plan.runs.flatMap((run) => run.cues.flatMap((cue) => cue.atomIds));
-  if (plannedIds.length !== visible.size || new Set(plannedIds).size !== visible.size || plannedIds.some((id) => !visible.has(id))) {
-    throw new CaptionProjectionError(
-      "CAPTION_PLAN_COVERAGE",
-      "CaptionPlan Cues must be disjoint and cover every display atom exactly once.",
-    );
+  }));
+  const result = applyCaptionMute({
+    contract: "svml.timed-caption-projection@1",
+    displaySequenceId: display.id,
+    cues,
+  }, program, display);
+  return result;
+}
+
+export function assertTimedCaptionProjection(projection: TimedCaptionProjection): void {
+  if (projection.contract !== "svml.timed-caption-projection@1" || projection.displaySequenceId.length === 0) {
+    throw new Error("Unsupported TimedCaptionProjection contract.");
   }
-  const programRuns = new Map(program.runs.map((run) => [run.id, run]));
-  const regions: TimedCaptionRegion[] = [];
-  for (const run of plan.runs) {
-    const expectedRun = programRuns.get(run.id);
-    if (expectedRun === undefined || expectedRun.styleId !== run.styleId) {
-      throw new CaptionProjectionError("CAPTION_PLAN_RUN", `Caption run ${run.id} differs from its Program.`);
+  const cueIds = new Set<string>();
+  const atomIds = new Set<string>();
+  for (const cue of projection.cues) {
+    if (cue.id.length === 0 || cueIds.has(cue.id) || cue.runId.length === 0 || cue.styleId.length === 0
+      || cue.segmentId.length === 0 || cue.atoms.length === 0
+      || !Number.isFinite(cue.startSec) || !Number.isFinite(cue.endSec) || cue.endSec < cue.startSec) {
+      throw new Error("TimedCaptionProjection contains an invalid Cue");
     }
-    const runAtoms = run.cues.flatMap((cue) => cue.atomIds);
-    if (runAtoms.join("\0") !== expectedRun.atomIds.join("\0")) {
-      throw new CaptionProjectionError("CAPTION_PLAN_RUN", `Caption run ${run.id} changes its Program atom order.`);
-    }
-    for (const cue of run.cues) {
-      const source = cue.atomIds.map((id) => atomById.get(id));
-      if (source.some((atom) => atom === undefined)) {
-        throw new CaptionProjectionError("CAPTION_PLAN_ATOM", `Caption Cue ${cue.id} references an unknown display atom.`);
+    cueIds.add(cue.id);
+    for (const atom of cue.atoms) {
+      if (atom.atomId.length === 0 || atomIds.has(atom.atomId)
+        || !Number.isFinite(atom.startSec) || !Number.isFinite(atom.endSec) || atom.endSec < atom.startSec) {
+        throw new Error("TimedCaptionProjection contains an invalid or repeated Atom timing");
       }
-      const atoms = source as CaptionDisplayAtom[];
-      if (atoms.some((atom, index) => index > 0 && atom.index <= atoms[index - 1]!.index)) {
-        throw new CaptionProjectionError("CAPTION_PLAN_ORDER", `Caption Cue ${cue.id} changes display atom order.`);
-      }
-      if (new Set(atoms.map((atom) => atom.segmentId)).size !== 1) {
-        throw new CaptionProjectionError("CAPTION_PLAN_SEGMENT", `Caption Cue ${cue.id} crosses a Script Segment.`);
-      }
-      const sourceIndexes = [...new Set(atoms.flatMap((atom) => Array.from(
-        { length: atom.sourceTokenEndExclusive - atom.sourceTokenStart },
-        (_, offset) => atom.sourceTokenStart + offset,
-      )))].sort((left, right) => left - right);
-      const sourceTokens = sourceIndexes.map((index) => narrative.tokens[index]);
-      if (sourceTokens.some((token) => token === undefined)
-        || tokenSpanSeconds(map, sourceTokens.map((token) => token!.id)) === undefined) {
-        throw new CaptionProjectionError("CAPTION_SPEECH_COVERAGE", `Caption Cue ${cue.id} is absent from the complete speech map.`);
-      }
-      const firstWindow = atomWindow(atoms[0]!);
-      const lastWindow = atomWindow(atoms.at(-1)!);
-      for (const field of cue.fields) {
-        if (!cue.atomIds.includes(field.atomId)) {
-          throw new CaptionProjectionError("CAPTION_PLAN_FIELD", `Caption field ${field.declarationId} lies outside Cue ${cue.id}.`);
-        }
-      }
-      regions.push({
-        id: cue.id,
-        runId: run.id,
-        styleId: run.styleId,
-        display: displayTextForAtoms(narrative, atoms),
-        segmentId: atoms[0]!.segmentId,
-        kind: atoms.some((atom) => atom.correspondence === "region-envelope") ? "alias" : "identity",
-        sourceTokenIds: sourceTokens.map((token) => token!.id),
-        startSec: firstWindow.startSec,
-        endSec: lastWindow.endSec,
-        refinements: [],
-        fields: cue.fields.map((field) => ({ ...field })),
-      });
+      atomIds.add(atom.atomId);
     }
   }
-  const payload = {
-    contract: "svml.timed-caption-projection@1" as const,
-    text: cleanDisplay(regions.map((region) => region.display).join(" ")),
-    regions,
-  };
-  return payload;
 }

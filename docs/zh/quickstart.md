@@ -11,14 +11,15 @@ Glory*》的一篇影评。那位影评人造出这个词，用来描述当时�
 
 这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
 文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
-扩展名为 `.svml`；工作区包则发布在 `@narratage` 作用域下。
+扩展名为 `.svml`；当前工作区的开发包预留 `@narratage` 作用域，但尚未发布到 npm。
 
 ## 安装
 
 需要 Node.js 22+ 与 pnpm。
 
 ```bash
-pnpm install
+corepack enable
+pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 ```
@@ -57,9 +58,8 @@ pnpm narratage plan examples/talking-film-graph-check/build.svrun \
 |---|---|
 | [Script](./quickstart/script.md) | Segment、Role Cue、Dual Text、Selection、Moment、文字投影 |
 | [SVS 样式表](./quickstart/styles.md) | CSS 风格的 Recipe：film、caption、B-roll、text、speech、字体 |
-| [媒体与生成](./quickstart/generation.md) | media:Image、media:Audio、estimate:Speech、Seedance、speaker:Take |
+| [媒体与生成](./quickstart/generation.md) | media:Image、media:Audio、estimate:Speech、Text Template、Seedance |
 | [时序与装配](./quickstart/timing.md) | speech:Spine、whisperx:Alignment、ProgramSpace、SemanticMap |
-| [字幕、B-roll 与文字](./quickstart/tracks.md) | caption:Style/Program/Planner/Track、broll:Track、text:Track |
+| [字幕、Media 与文字](./quickstart/tracks.md) | caption-fine:Style/Track、caption:Program、Planner、Media Track 与 Text |
 | [Film 与渲染](./quickstart/composition.md) | film:Film、render:Video、完整流水线演练 |
 | [Run Source 与 Build](./quickstart/run.md) | .svrun 语法、targets、复用、runtime profile、build 工作流 |
-

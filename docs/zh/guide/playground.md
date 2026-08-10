@@ -20,13 +20,13 @@ pnpm playground
 |---|---|
 | 组件下拉 | 所有能在画面上产生像素的模块 |
 | W / H / fps / sec | 画布与帧域 |
-| Canvas from a stylesheet | 采用某个 `.svs` 的画幅 |
+| Appearance from a stylesheet | 采用某个 `.svs` Film Recipe 的背景 |
 | 输入表单 | 组件每个输入各一份 |
 | 刻度条 | 帧精确，计数显示为 `当前帧 / 末帧` |
 
-预览的是真实结果。跑的是各组件自己的渲染器——`renderCaptionTrack`、`renderTextTrack`、
-`compileBrollProduct`、`projectSpeechVisual`——再由 `compileHyperframesDocument` 产出与
-Build 相同的文档。
+预览运行的是已安装模块真正的 Producer handler。例如 Fine Caption、Media Track、
+Screen Overlay、Speech Basis 和 Typography Track 都会降低为 `VisualTrack`，再由
+`compileHyperframesDocument` 产出与 Build 相同的文档。
 
 ## 它不维护任何清单
 
@@ -69,8 +69,9 @@ digest，不如什么都不说。在你选择文件之前这些组件不画任�
 
 ## 样式表
 
-选择 `.svs` 文件**只读其中的 Film Recipe**，且只用于画幅。指向
-`examples/talking-film-golden/studio.svs`，画布就会变成 1080×1920@30 并采用该表的背景色。
+选择 `.svs` 文件**只读其中的 Film Recipe**，且只用于 Film 外观。指向
+`examples/talking-film-golden/studio.svs`，预览会采用该 Recipe 的背景色；画布尺寸与时间仍由
+预览环境的显式控件决定。
 
 表里其余内容一概不读。组件长什么样由拥有它的模块决定，而不是由 Playground 恰好打开的某张样式表决定。
 

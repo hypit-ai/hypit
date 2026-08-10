@@ -1,4 +1,5 @@
 import { compositionComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { artifactTypes } from "@narratage/artifact";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,
@@ -52,10 +53,13 @@ import {
 } from "@narratage/render-hyperframes";
 import {
   compileAudioProgramPlan,
+  decodeExtractFrameSurface,
   mediaPipelineComponent,
   mediaPipelineComponents,
   mediaPipelineCapabilities,
   mediaPipelineManifest,
+  mediaPipelineModuleRef,
+  mediaOperationSurfaceImplementationDigests,
   mediaPipelineProducers,
 } from "@narratage/media-pipeline";
 import {
@@ -70,9 +74,9 @@ import type {
   TypedRecord,
 } from "@narratage/protocol";
 import {
-  createTextAuthorFrontend,
-  TextSurfaceRegistry,
-} from "@narratage/text";
+  createMarkupAuthorFrontend,
+  MarkupSurfaceRegistry,
+} from "@narratage/markup";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",
@@ -280,14 +284,12 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
   }).run(build());
   assert.equal(result.status, "complete");
   const video = result.state.records.find((record) =>
-    record.type.module.name === mediaTypes.artifact.module.name
-    && record.type.name === mediaTypes.artifact.name);
-  assert.deepEqual(inline(video), {
-    digest: finalArtifact.digest,
-    size: finalArtifact.size,
-    mediaType: finalArtifact.mediaType,
-    durationSec: space.durationSec,
-  });
+    record.type.module.name === artifactTypes.blob.module.name
+    && record.type.name === artifactTypes.blob.name
+    && record.value.kind === "blob"
+    && record.value.digest === finalArtifact.digest);
+  assert(video, "missing final BlobArtifact");
+  assert.deepEqual(video.value, finalArtifact);
 });
 
 test("a render Product with another frame domain is rejected by the explicit downstream join", async () => {
@@ -383,11 +385,11 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@narratage/text@1"?>\n${text}`,
+    text: `<?svml using="@narratage/markup@1"?>\n${text}`,
   };
 }
 
-test("the official render Surface lowers real author source to the same BuildPlan", async () => {
+test("the final rendered video is an ordinary BlobArtifact that can feed another author component", async () => {
   const sourceClosure = createResolvedClosure([
     ...videoContractManifests,
     hyperframesManifest,
@@ -395,7 +397,7 @@ test("the official render Surface lowers real author source to the same BuildPla
     renderHyperframesManifest,
     fixtureManifest,
   ]);
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured(fixtureModule, "composition", fixtureSurfaceDigest, ({ element }) => ({
     records: [
       { id: "composition", type: compositionTypes.composition, value: stored(composition), range: element.range },
@@ -410,21 +412,29 @@ test("the official render Surface lowers real author source to the same BuildPla
     renderHyperframesSurfaceImplementationDigest,
     decodeHyperframesRenderSurface,
   );
+  surfaces.registerStructured(
+    mediaPipelineModuleRef,
+    "extract-frame",
+    mediaOperationSurfaceImplementationDigests.extractFrame,
+    decodeExtractFrameSurface,
+  );
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
-      return request.from.startsWith("@narratage/render-hyperframes")
-        ? renderHyperframesModuleRef
-        : fixtureModule;
+      if (request.from.startsWith("@narratage/render-hyperframes")) return renderHyperframesModuleRef;
+      if (request.from.startsWith("@narratage/media-pipeline")) return mediaPipelineModuleRef;
+      return fixtureModule;
     },
   }));
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import as="fixture" from="example.composition-fixture@1"/>
       <import as="render" from="@narratage/render-hyperframes@1"/>
+      <import as="media" from="@narratage/media-pipeline@1"/>
       <fixture:Composition/>
       <render:Video id="final" composition={composition} space={space}/>
+      <media:ExtractFrame id="poster" source={final.video} video="primary-moving" at="last"/>
     </svml>`),
     closure: sourceClosure,
     frontends,
@@ -433,7 +443,7 @@ test("the official render Surface lowers real author source to the same BuildPla
     },
     admitRecord: createRecordAdmitter(validatorRegistry()),
   });
-  const target = resolveCompiledSourceExport(compiled, "final.video", mediaTypes.artifact);
+  const target = resolveCompiledSourceExport(compiled, "poster.image", artifactTypes.blob);
   assert.equal(target.ref.kind, "logical-output");
   const state = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
@@ -447,5 +457,7 @@ test("the official render Surface lowers real author source to the same BuildPla
     mediaPipelineProducers.renderAudio.name,
     mediaPipelineProducers.mux.name,
     mediaPipelineProducers.projectMuxed.name,
+    mediaPipelineProducers.inspect.name,
+    mediaPipelineProducers.extractFrame.name,
   ].sort());
 });

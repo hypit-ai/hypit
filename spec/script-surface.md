@@ -62,21 +62,21 @@ Script 编译必须先生成保留源码映射的 Narrative IR，再从同一份
 </script>
 ```
 
-若 `product = "Hypit"`、`product_pronunciation = "high pit"`，三个文本投影
+若 `product = "SVML"`、`product_pronunciation = "ess vee em ell"`，三个文本投影
 分别是：
 
 ```text
 dialogue
 A: I just laughed my ass out.
-B: Meet high pit.
+B: Meet ess vee em ell.
 
 speech
 I just laughed my ass out.
-Meet high pit.
+Meet ess vee em ell.
 
 caption
 I just lmao.
-Meet Hypit.
+Meet SVML.
 ```
 
 `silence` 只是 Selection 的名字，不会自动让音频静音。它完整选择了空
@@ -86,7 +86,7 @@ Segment 的两个独立结构端点；真正的静音或素材行为由外部 Pr
 
 ## 1. 文档与 Segment
 
-在官方 Text Frontend 中，一个 `<script>` Surface 实例产生一份 Narrative；
+在官方 Markup Frontend 中，一个 `<script>` Surface 实例产生一份 Narrative；
 `<script>` 外壳由 Text 根据导入后的 Surface Registry 分派，Script Parser 接收的
 只是它的 raw body。Script body 的 Segment 形式只有具名块和具名空块：
 
@@ -156,10 +156,10 @@ B: It’s 8:30.
 ```
 
 在 `speech` 和 `caption` 投影中，`<A>`、`<B>` 都被移除。Role Cue 不是
-speaker 数据模型，不建立人物实体，不选择音色，不成为可接线字段，也不对
-字幕隐式分组。外部 Program 可以显式写 `role="A"` 查询这些 spoken turn；
-Compiler 将结果降低为一个可非连通的派生 SelectionSet。仅有 `<A>` 本身不触发
-任何样式、人物、音色或素材行为。
+speaker 数据模型，不建立人物实体，不选择音色，也不对字幕隐式分组。外部
+Program 可以显式写 `role="A"` 查询这些 spoken turn。Caption Program 将这类
+查询直接降低为 `CaptionDisplayWordSubset`；它不是时间 Selection，也不伪造 Selection
+Record。仅有 `<A>` 本身不触发任何样式、人物、音色或素材行为。
 
 为消除歧义：
 
@@ -223,16 +223,18 @@ Dual Text 只表达“实际说了什么”。IPA、SSML、重音、语速、语
 
 ## 4. Selection
 
-Selection 是区间声明，不是供下游自行拼接的两个公开锚点：
+Selection 是由作者显式闭合的语义区间声明：
 
 ```svml
 @id ... @/id
 ~@id ... @/id~
 ```
 
-每个开始标记都必须有同 id 的结束标记。编译器输出一个完整
-`SelectionSet`，消费者只接收该集合中的闭合 range；不存在 start-only
-对象、消费者默认补尾或“信息传了一半”的状态。
+每个开始标记都必须有同 id 的结束标记。Script 的公开值为每个 occurrence
+输出已经解析好的 `startAnchorId` 与 `endAnchorId`；不存在 start-only 对象、
+消费者默认补尾或“信息传了一半”的状态。左右 affinity、token 下标和源码范围
+属于 Parser/Source Map，不泄漏到公开 Selection。需要物理时间的下游必须把这
+两个身份与显式连接的 `CompleteSemanticMap` 投影为区间。
 
 “闭合”指源码的两个端点都被明确声明。物理运行时使用半开
 `[startFrame, endFrameExclusive)` Frame Span。
@@ -273,7 +275,7 @@ before ~@x hello @/x~ after
 
 ### 4.2 闭合、交叉与非连通
 
-同一个 id 可以顺序出现多次，编译为一个非连通 SelectionSet：
+同一个 id 可以顺序出现多次，编译为一个含多个独立锚点对的非连通 Selection：
 
 ```svml
 @beat one @/beat ... @beat three @/beat
@@ -376,7 +378,7 @@ gap        B.start >  A.end
 若未来需要真正重排或并行 speech，应发布显式的非线性叙事模型；v1 不让普通
 Range 在不同 Locator 下反向或消失。
 
-同一份 SelectionSet 在不同 fulfillment 产生的 `CompleteSemanticMap` 上可得到
+同一份 Selection 在不同 fulfillment 产生的 `CompleteSemanticMap` 上可得到
 预览或成片区间。Map 使用相同 identity。Script 本身不含秒数、帧号或采样点。
 Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只
 量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
@@ -419,8 +421,8 @@ overlap 或 gap 落在不同点。
 
 规范规则：
 
-- 同 id 的 `@id!` / `~@id!` 可以重复，按源码顺序编译成一个
-  `MomentSet`；一次 occurrence 是单 Moment，多次只是同一集合含多个点。
+- 同 id 的 `@id!` / `~@id!` 可以重复，按源码顺序编译成一个 Moment；每个
+  occurrence 的公开值只有一个已解析的 `anchorId`。
 - Selection 与 Moment 共享 temporal name namespace。同一个 id 不能同时
   声明两种类型；`@x! ... @/x` 必须以类型冲突失败。
 - 单独的 `@x` 永远是未闭合 Selection open，必须报错；解析器不得因为没有
@@ -432,14 +434,14 @@ overlap 或 gap 落在不同点。
   Dual Text 的 speech 侧，但均不得切入 v1 speech token。
 - Moment 只选择 Semantic Anchor Index 中已有的一个候选点，不新增 anchor
   identity；因此 `2M + 2N` 的精确计数不因 Moment 数量改变。
-- MomentSet 与 SelectionSet 复用同一份 CompleteSemanticMap 和一次性
+- Moment 与 Selection 复用同一份 CompleteSemanticMap 和一次性
   帧量化；区别只在最终载体是 `Point[]` 而不是 `Range[]`。
 
 消费端保持两个互不相混的类型：
 
 ```text
-SelectionSet = Range[]
-MomentSet    = Point[]
+NarrativeSelection = { startAnchorId, endAnchorId }[]
+NarrativeMoment    = { anchorId }[]
 ```
 
 推荐的显式使用关系是：
@@ -539,31 +541,37 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 - 每个 Segment 的有序 spoken turn，以及各 turn 的稳定 identity、可选 Role Cue、
   token range 和 source range；
 - plain / Dual Text / Slot atom 及其源码范围；
-- caption atom 到一个或多个 speech token 的显式映射；
-- 每个 SelectionSet 的一个或多个有序 occurrence；
-- 每个端点的左右 affinity 和端点源码位置。
-- 每个 MomentSet 的一个或多个有序 point、左右 affinity 和源码位置。
+- Caption display Atom、其内部有序 display Word，以及 Atom 到一个或多个 speech token
+  的独立显式映射；
+- 每个 Selection 的一个或多个有序 occurrence，以及各 occurrence 已解析的
+  `startAnchorId` / `endAnchorId`；
+- 每个 Moment 的一个或多个有序 occurrence，以及各 occurrence 已解析的
+  `anchorId`；
+- Parser/Source Map 内部另行保留 affinity、token/source range，公开值不携带它们；
+- 完整有序的 `CaptionDisplaySequence`、独立的 `CaptionCorrespondence`，以及每个显式
+  Selection 对应的 `CaptionDisplayWordSubset`。字幕无需也不得从公开 Selection 反推词下标。
 
-外部 Program 的 `role="label"` selector 可以从上述 Turn 范围投影自己的选择集合；
-同一 label 的多次 Turn 是多个有序、互不相邻的命中。它是消费组件内部的显式查询，
-不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。当前 Caption Program 直接把
-该查询投影到可见 Display Atom，不伪造一个作者写下的 Selection Record。
+外部 Program 的 `role="label"` selector 可以从上述词全集投影自己的词子集；
+同一 label 的多次 Turn 是多个有序、互不相邻的命中。它是 Caption author surface
+内部的显式查询，不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。
 
 SelectionSet/MomentSet 是消费者边界，不是 Segment 的子对象。典型外部
 关系是：
 
 ```text
-Script ──compile──> Narrative IR ──project──> dialogue / speech / caption
-                           │
-                           └──resolve──> SelectionSet[] / MomentSet[]
+Script ──compile──> Narrative IR ──project──> dialogue / speech
+                           ├──resolve──> NarrativeSelection[] / NarrativeMoment[]
+                           └──project──> CaptionDisplaySequence
+                                         + CaptionCorrespondence
+                                         + CaptionDisplayWordSubset[]
 
-SelectionSet A ──during──> consumer.port_1
-MomentSet P    ──at──────> consumer.port_2
-SelectionSet C ──during──> consumer.item_3
+NarrativeSelection A ──during──> consumer.port_1
+NarrativeMoment P    ──at──────> consumer.port_2
+CaptionDisplayWordSubset C ──words──> caption.Program
 ```
 
 一个 Ranking、B-roll 或其他节点可以有多个动态端口，各端口接受不同
-SelectionSet/MomentSet；同一集合也可以被多个消费者复用。未来 Graph
+Selection/Moment；同一集合也可以被多个消费者复用。未来 Graph
 语法可以把这些类型边写成 `during=` / `at=`，但它们必须引用已解析的名字
 或端点投影，不能接受模糊自然语言 locator。
 

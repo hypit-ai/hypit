@@ -13,9 +13,11 @@
     "@narratage/component-kit": "workspace:*",
     "@narratage/composition": "workspace:*",
     "@narratage/elaborator": "workspace:*",
+    "@narratage/media-track": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/speech": "workspace:*"
+    "@narratage/speech": "workspace:*",
+    "@narratage/spatial": "workspace:*"
   },
   "devDependencies": {
     "@narratage/core": "workspace:*",

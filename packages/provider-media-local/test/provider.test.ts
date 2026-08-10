@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { artifactTypes } from "@narratage/artifact";
 import { mediaTypes, sealRenderedVisual, verifyMediaInspection, verifyMuxedMedia, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
 import type { MediaAudioStream, MediaInspection, MuxedMedia, SynchronizedMedia, TimelineAudio } from "@narratage/media";
 import { assertSpeechEvidenceAudioIdentity, speechTypes } from "@narratage/speech";
@@ -24,9 +25,25 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@narratage/protocol";
 
 import { createLocalMediaProvider } from "../src/index.js";
+import { localMediaToolchainService } from "../src/service.js";
 
 const hasMediaBinaries = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0
   && spawnSync("ffprobe", ["-version"], { stdio: "ignore" }).status === 0;
+
+test("the local media Provider declares its external toolchain without owning a second daemon", async () => {
+  const service = localMediaToolchainService({ root: "/project", instance: "media", config: {} });
+  assert.equal(service.id, "media-ffmpeg-toolchain");
+  assert.equal(service.prepare, undefined);
+  assert.equal(service.start, undefined);
+  const state = await service.probe();
+  assert.equal(state.state, hasMediaBinaries ? "ready" : "down");
+});
+
+// Five 64x48 lossless frames at 100 ms each. Later frames are partial alpha
+// rectangles, so this fixture exercises WebP blend and canvas persistence.
+const animatedWebp = Buffer.from([
+  "UklGRjQEAABXRUJQVlA4WAoAAAASAAAAPwAALwAAQU5JTQYAAAAAbPz/AABBTk1GpgIAAAAAAAAAAD8AAC8AAGQAAAJWUDhMjQIAAC8/wAsAp8EQkiRJeQ9KwxzeARbKgjBq20iQd/egFMzCOSgH58AUyjwIBCEy0kojzX8gd0AYXnAa/lMIRRkGIQiDELwMG5RBcaEUJQhCDyEIwkotw3l4P34IQlA+o4RdINm27bZt6KLGC9aIhJAnMGqge/f/fxzee1C06Iwyiei/A7dtI6nGCh0PvOk1g3nD02opOIu6Seg2ofsrKS4wj3qYs66vH6+l1G/59+0qqXlC1wktVyYwAaBPqCorqTI7pYgRASOzP2iulqdwCiEYGHS9ZlFpnpIKo+bxoJmAiej6XvoxX3C/qs4gqG6I+WMS5nQpMgWEUfqq30sg0I72QFk473xR9L1MtLXzzhtjgttxAYyCAaPzzpd35Z3zq2UI5mWXg3Z59+kauK9Sox42v7B9NlkcFxfQ9/Hq17l7LrtPv57NALIADBFZThD1XetdU1Vk2SYiy/eJEPI3D4xk+T/FOA+zmYElA85Z4gTnGj+0RWUp2hmPhwOWwgi/y8NoiROWuIBEvnMgS7Yeftdk9bkj23hveDx44QL63PH4hlqOcyGA7S63ZKn+HmpL2rbUuD9iPYznAtq2VH981WKcH0nbKttGu6rqhG2VbUVf20eyl9j1R8I+KfsUAby+a/uQsvFKeb73KL9c0/jPItqxXFW2g1vDD8a8OHABjHjzHHjj8X3dlc+uYQAb2hHyrnS0cUUZ0dYRdbuh3TYzmdmJAmFEDoQR8G7H4yu9EzDA+edOhItLnjvBo7SZFzx32UkqU8891HPfy2dPAMB0752FwnTvHW1P9d5J2VO9dy6wKxk+B/3eSduzye3/gOdOabrvNm6LSZvGdN+dE178mKYTix8NHeCE8H/UxT9/7q4BAEFOTUZSAAAAAAAAAAAABwAACQAAZAAAAFZQOEw6AAAALwdAAhA/EIraSIFWzCkFgchDCg+BQJK/ypDPf4C3zAiyOaCQkSTmFA7mCd6k+0M0hIj+JwfeYjBtNEFOTUZOAAAAAAAAAQAACQAABwAAZAAAAFZQOEw2AAAALwnAARA3MGxq2jZgCrD8NaH0mKr5D8A1EMgogKBt25jCxuUIqvE4fxolEdH/GGRxg/T6q+kDQU5NRl4AAAABAAABAAAJAAAJAABkAAAAVlA4TEYAAAAvCUACEEcgFkzmfwUYmEK2EaCDmT/PfTBTNf9BQOA5mQ8F4KiRJEeKdUCq1r0dkMV01I9ERP+jbSWJ4gre4grOQv78FnwHQU5NRkQAAAACAAACAAAHAAAJAABkAAAAVlA4TCwAAAAvB0ACECcQAoFkmPyJhpmq+Y8gbqCQjSRoGNZgzuDz5zuEiP5nKqXKvxvuAA==",
+].join(""), "base64");
 
 async function run(executable: string, args: readonly string[]): Promise<void> {
   await new Promise<void>((resolve, reject) => {
@@ -36,6 +53,21 @@ async function run(executable: string, args: readonly string[]): Promise<void> {
     child.on("error", reject);
     child.on("close", (code) => code === 0 ? resolve() : reject(new Error(`${executable} ${String(code)}: ${stderr}`)));
   });
+}
+
+function rampWav(sampleFrames: number): Buffer {
+  const dataBytes = sampleFrames * 2 * 2;
+  const bytes = Buffer.alloc(44 + dataBytes);
+  bytes.write("RIFF", 0); bytes.writeUInt32LE(36 + dataBytes, 4); bytes.write("WAVE", 8);
+  bytes.write("fmt ", 12); bytes.writeUInt32LE(16, 16); bytes.writeUInt16LE(1, 20);
+  bytes.writeUInt16LE(2, 22); bytes.writeUInt32LE(48_000, 24); bytes.writeUInt32LE(48_000 * 4, 28);
+  bytes.writeUInt16LE(4, 32); bytes.writeUInt16LE(16, 34); bytes.write("data", 36); bytes.writeUInt32LE(dataBytes, 40);
+  for (let frame = 0; frame < sampleFrames; frame += 1) {
+    const value = frame + 1;
+    bytes.writeInt16LE(value, 44 + frame * 4);
+    bytes.writeInt16LE(value, 46 + frame * 4);
+  }
+  return bytes;
 }
 
 function presentationSampleFrames(stream: MediaAudioStream): number {
@@ -238,6 +270,110 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
   }
 });
 
+test("local media normalization materializes rotation and sample aspect before Spatial", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-display-geometry-"));
+  try {
+    const base = join(root, "base.mp4");
+    const sourcePath = join(root, "rotated.mp4");
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=160x96:r=4:d=0.5",
+      "-vf", "setsar=2/1", "-c:v", "libx264", "-pix_fmt", "yuv420p", base,
+    ]);
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-display_rotation", "90", "-i", base, "-c", "copy", sourcePath,
+    ]);
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
+    const inspection = await inspectArtifact(artifacts, source);
+    const inputVideo = inspection.streams.find((stream) => stream.kind === "video");
+    assert.equal(inputVideo?.kind, "video");
+    if (inputVideo?.kind !== "video") return;
+    assert.deepEqual(inputVideo.sampleAspectRatio, { numerator: 2, denominator: 1 });
+    assert.equal(inputVideo.rotationDegrees, 90);
+    const request = sealMediaSelectionRequest({
+      contract: "svml.media-selection-request@1",
+      video: { mode: "primary-moving" }, audio: { mode: "none" },
+      spanAuthority: "video", frameRate: { numerator: 4, denominator: 1 },
+    });
+    const selection = selectMediaStreams(inspection, request);
+    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    assert.equal(normalized.visual?.width, 96);
+    assert.equal(normalized.visual?.height, 320);
+    const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+    const outputVideo = output.streams.find((stream) => stream.kind === "video");
+    assert.equal(outputVideo?.kind, "video");
+    if (outputVideo?.kind !== "video") return;
+    assert.deepEqual(outputVideo.sampleAspectRatio, { numerator: 1, denominator: 1 });
+    assert.equal(outputVideo.rotationDegrees, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("animated WebP keeps its authored frame timing before fixed-rate normalization", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const artifacts = new MemoryArtifactStore();
+  const source = await artifacts.put(animatedWebp, "image/webp");
+  const inspection = await inspectArtifact(artifacts, source);
+  assert.deepEqual(inspection.container.formatNames, ["webp", "webp-animation"]);
+  assert.deepEqual(inspection.streams.map((stream) => [stream.kind, stream.kind === "video" ? stream.role : undefined,
+    stream.decodedUnitCount]), [["video", "moving", 5]]);
+  const video = inspection.streams[0];
+  assert.equal(video?.kind, "video");
+  assert.equal(video?.startPts?.ticks, "0");
+  assert.equal(video?.endPts?.ticks, "500");
+  const request = sealMediaSelectionRequest({
+    contract: "svml.media-selection-request@1",
+    video: { mode: "primary-moving" },
+    audio: { mode: "none" },
+    spanAuthority: "video",
+    frameRate: { numerator: 20, denominator: 1 },
+  });
+  const selection = selectMediaStreams(inspection, request);
+  const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+  assert.equal(normalized.timeline.frameCount, 10);
+  assert.equal(normalized.visual?.frameCount, 10);
+  assert.equal(normalized.visual?.width, 64);
+  assert.equal(normalized.visual?.height, 48);
+  const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+  assert.equal(output.streams[0]?.decodedUnitCount, 10);
+});
+
+test("animated GIF keeps its authored frame timing before fixed-rate normalization", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-gif-"));
+  try {
+    const path = join(root, "animated.gif");
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=64x48:r=10:d=0.5",
+      "-frames:v", "5", path,
+    ]);
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(await readFile(path), "image/gif");
+    const inspection = await inspectArtifact(artifacts, source);
+    assert.deepEqual(inspection.streams.map((stream) => [stream.kind, stream.kind === "video" ? stream.role : undefined,
+      stream.decodedUnitCount]), [["video", "moving", 5]]);
+    const request = sealMediaSelectionRequest({
+      contract: "svml.media-selection-request@1",
+      video: { mode: "primary-moving" },
+      audio: { mode: "none" },
+      spanAuthority: "video",
+      frameRate: { numerator: 20, denominator: 1 },
+    });
+    const selection = selectMediaStreams(inspection, request);
+    const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
+    assert.equal(normalized.timeline.frameCount, 10);
+    const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
+    assert.equal(output.streams[0]?.decodedUnitCount, 10);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("local media Provider derives one exact 16 kHz mono WhisperX evidence artifact without a hidden second transcode", {
   skip: !hasMediaBinaries,
 }, async () => {
@@ -392,6 +528,96 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
   }
 });
 
+test("local media Provider transforms A/V and extracts ordinary audio and frame Artifacts", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-ordinary-ops-"));
+  try {
+    const sourcePath = await fixture(root);
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(await readFile(sourcePath), "video/mp4");
+    const inspection = await inspectArtifact(artifacts, source);
+    const selectionRequest = sealMediaSelectionRequest({
+      contract: "svml.media-selection-request@1",
+      video: { mode: "primary-moving" },
+      audio: { mode: "default" },
+      spanAuthority: "video",
+      frameRate: { numerator: 30, denominator: 1 },
+    });
+    const selection = selectMediaStreams(inspection, selectionRequest);
+    const normalized = await normalizeArtifact({
+      artifacts, source, inspection, selection, frameRate: selectionRequest.frameRate,
+    });
+    const executeArtifact = async (request: Need) => {
+      const provider = await handlerFor(request);
+      const result = await provider.handler({
+        command: { kind: "fulfill-need", id: `command:${request.id}`, need: request },
+        need: request,
+        artifacts,
+        credentials: {},
+      });
+      assert.equal(result.value.kind, "blob");
+      return result.value.kind === "blob" ? result.value : (() => { throw new Error("expected BlobArtifact"); })();
+    };
+
+    const transformed = await executeArtifact(need(
+      "need:transform",
+      mediaPipelineCapabilities.transform,
+      artifactTypes.blob,
+      canonicalize({
+        contract: "svml.transform-media-request@1",
+        media: normalized,
+        program: {
+          contract: "svml.media-transform-program@1",
+          operations: [
+            { kind: "trim", tailSec: 0.2 },
+            { kind: "retime", rate: 2, pitch: "preserve" },
+          ],
+        },
+      }),
+    ));
+    const transformedInspection = await inspectArtifact(artifacts, transformed);
+    assert.equal(transformedInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 12);
+
+    const audioIndex = inspection.streams.find((item) => item.kind === "audio")!.index;
+    const extractedAudio = await executeArtifact(need(
+      "need:extract-audio",
+      mediaPipelineCapabilities.extractAudio,
+      artifactTypes.blob,
+      canonicalize({
+        contract: "svml.extract-audio-request@1",
+        source,
+        streamIndex: audioIndex,
+        output: { container: "wav", codec: "pcm_s16le", sampleRate: 48_000, channels: 2 },
+      }),
+    ));
+    assert.equal(extractedAudio.mediaType, "audio/wav");
+    const audioInspection = await inspectArtifact(artifacts, extractedAudio);
+    const audio = audioInspection.streams.find((item) => item.kind === "audio");
+    assert.ok(audio?.kind === "audio" && audio.sampleRate === 48_000 && audio.channels === 2);
+
+    const video = inspection.streams.find((item) => item.kind === "video" && item.role === "moving")!;
+    const extractedFrame = await executeArtifact(need(
+      "need:extract-frame",
+      mediaPipelineCapabilities.extractFrame,
+      artifactTypes.blob,
+      canonicalize({
+        contract: "svml.extract-frame-request@1",
+        source,
+        streamIndex: video.index,
+        sourceFrameCount: video.decodedUnitCount,
+        at: { kind: "last" },
+        output: { format: "png" },
+      }),
+    ));
+    assert.equal(extractedFrame.mediaType, "image/png");
+    const frameInspection = await inspectArtifact(artifacts, extractedFrame);
+    assert.equal(frameInspection.streams.find((item) => item.kind === "video")?.decodedUnitCount, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
 test("local media Provider renders one frame-domain audio plan and muxes exactly one silent visual with it", {
   skip: !hasMediaBinaries,
 }, async () => {
@@ -435,24 +661,32 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
           artifact: first,
           targetStartSample: 0,
           targetEndSampleExclusive: 24_000,
+          sourceSampleFrames: 24_000,
           sourceStartSample: 0,
+          sourceEndSampleExclusive: 24_000,
+          sourceLoop: false,
+          sourcePhaseSample: 0,
           playbackRate: 1,
+          pitch: "preserve",
           gain: 1,
           fadeInSamples: 0,
           fadeOutSamples: 0,
-          bus: "speech",
         },
         {
           id: "speech:second",
           artifact: second,
           targetStartSample: 24_000,
           targetEndSampleExclusive: 48_000,
+          sourceSampleFrames: 24_000,
           sourceStartSample: 0,
+          sourceEndSampleExclusive: 24_000,
+          sourceLoop: false,
+          sourcePhaseSample: 0,
           playbackRate: 1,
+          pitch: "preserve",
           gain: 1,
           fadeInSamples: 0,
           fadeOutSamples: 0,
-          bus: "speech",
         },
       ],
       mix: { normalize: false, limiter: "none" },
@@ -502,6 +736,63 @@ test("local media Provider renders one frame-domain audio plan and muxes exactly
       "AAC packet duration/padding metadata must preserve the authoritative presentation span");
     assert.ok(audios[0]?.kind === "audio" && audios[0].decodedSampleFrames >= 48_000,
       "AAC coding frames may include padding, but must cover the complete presentation span");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("local media Provider executes an end-aligned loop from the exact authored sample phase", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-provider-media-loop-"));
+  try {
+    const artifacts = new MemoryArtifactStore();
+    const source = await artifacts.put(rampWav(100), "audio/wav");
+    const plan = sealAudioProgramPlan({
+      contract: "svml.audio-program-plan@1",
+      frameRate: { numerator: 30, denominator: 1 },
+      frameCount: 30,
+      sampleRate: 48_000,
+      sampleFrames: 48_000,
+      clips: [{
+        id: "loop:end",
+        artifact: source,
+        targetStartSample: 0,
+        targetEndSampleExclusive: 250,
+        sourceSampleFrames: 100,
+        sourceStartSample: 0,
+        sourceEndSampleExclusive: 100,
+        sourceLoop: true,
+        sourcePhaseSample: 50,
+        playbackRate: 1,
+        pitch: "preserve",
+        gain: 1,
+        fadeInSamples: 0,
+        fadeOutSamples: 0,
+      }],
+      mix: { normalize: false, limiter: "none" },
+    });
+    const value = await fulfillInline(artifacts, need(
+      "need:render-loop-audio",
+      mediaPipelineCapabilities.renderAudio,
+      mediaTypes.timelineAudio,
+      canonicalize({ contract: "svml.render-audio-request@1", plan }),
+    ));
+    verifyTimelineAudio(value);
+    const audio = value as unknown as TimelineAudio;
+    assert.equal(audio.sampleFrames, 48_000);
+    const wav = await artifacts.get(audio.artifact.digest);
+    assert(wav);
+    const wavPath = join(root, "loop.wav");
+    const rawPath = join(root, "loop.raw");
+    await writeFile(wavPath, wav);
+    await run("ffmpeg", ["-v", "error", "-y", "-i", wavPath, "-f", "s16le", "-acodec", "pcm_s16le", rawPath]);
+    const raw = await readFile(rawPath);
+    assert.equal(raw.readInt16LE(0), 51, "end alignment must begin at source phase 50");
+    assert.equal(raw.readInt16LE(49 * 4), 100);
+    assert.equal(raw.readInt16LE(50 * 4), 1, "the complete authored source interval must loop");
+    assert.equal(raw.readInt16LE(249 * 4), 100);
+    assert.equal(raw.readInt16LE(250 * 4), 0, "silence is absence after the audible target interval");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

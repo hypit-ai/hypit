@@ -26,10 +26,9 @@ function workspace(): PreviewSources {
   const components: Record<string, () => Promise<unknown>> = {};
   for (const dir of readdirSync(packages, { withFileTypes: true })) {
     if (!dir.isDirectory()) continue;
-    // A small module states its manifest in its entry rather than in a file of
-    // its own, and a Producer taking one of its types still needs the schema.
+    // The browser follows this same dedicated metadata boundary. Importing
+    // package indexes would pull Node-only Providers and Drivers into Vite.
     entries[`${dir.name}/manifest`] = async () => await import(`${packages}/${dir.name}/src/manifest.ts`);
-    entries[`${dir.name}/index`] = async () => await import(`${packages}/${dir.name}/src/index.ts`);
     components[dir.name] = async () => await import(`${packages}/${dir.name}/src/component.ts`);
   }
   return { manifests: entries, components };
@@ -46,7 +45,16 @@ test("previewable modules are the ones declaring a VisualTrack Producer", async 
   const found = await discoverPreviewProducers(workspace());
   assert.deepEqual(
     [...new Set(found.map((producer) => producer.moduleName))].sort(),
-    ["@narratage/broll", "@narratage/caption", "@narratage/speech-basis", "@narratage/text-track"],
+    [
+      "@narratage/caption-fine",
+      "@narratage/comment-sticker",
+      "@narratage/deck-track",
+      "@narratage/media-track",
+      "@narratage/ranking",
+      "@narratage/screen-overlay",
+      "@narratage/speech-basis",
+      "@narratage/typography-track",
+    ],
   );
 });
 
@@ -65,9 +73,9 @@ test("a producer whose inputs all carry defaults renders without anything being 
   const ready = found.filter((producer) =>
     producer.inputs.every((input) => input.initial !== undefined));
 
-  // The modules that can answer for themselves entirely: caption and text.
-  // B-roll and speech take content-addressed media, which no module can default.
-  assert.ok(ready.length >= 2, "at least two producers should be fully defaulted");
+  assert.deepEqual(ready.map((producer) => producer.id), [
+    "@narratage/screen-overlay#render-screen-overlay",
+  ]);
 
   for (const producer of ready) {
     const values = Object.fromEntries(producer.inputs.map((input) =>
@@ -87,17 +95,17 @@ test("a producer whose inputs all carry defaults renders without anything being 
 
 test("a module offering no default for a media input says so rather than inventing one", async () => {
   const found = await discoverPreviewProducers(workspace());
-  // B-roll and speech both take a value carrying a content-addressed Artifact,
+  // Media Track and speech both take a value carrying a content-addressed Artifact,
   // and a module has no bytes to point at, so neither offers a default. Saying
   // nothing is the honest answer; a stub digest would be rejected downstream.
-  for (const moduleName of ["@narratage/broll", "@narratage/speech-basis"]) {
+  for (const moduleName of ["@narratage/media-track", "@narratage/speech-basis"]) {
     const producer = found.find((entry) => entry.moduleName === moduleName)!;
     assert.ok(producer.inputs.some((input) => input.initial === undefined),
       `${moduleName} should decline to default its media-bearing input`);
   }
 });
 
-test("each producer is discovered once, however many files re-export its module", async () => {
+test("each producer is discovered exactly once", async () => {
   const found = await discoverPreviewProducers(workspace());
   assert.equal(new Set(found.map((producer) => producer.id)).size, found.length);
 });

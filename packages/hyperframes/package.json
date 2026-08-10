@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./project": "./src/project.ts"
   },
   "svml": {
     "activation": "./src/activation.ts"

@@ -1,6 +1,6 @@
 # `@narratage/video-cli`
 
-Official video command application. It selects the Text compiler Host, but deliberately carries
+Official video command application. It selects the Markup compiler Host, but deliberately carries
 no built-in author, Run, Provider or Store package.
 
 Every Frontend, Surface, deterministic Producer and Validator is activated from an explicit
@@ -12,7 +12,7 @@ From the repository:
 
 ```bash
 pnpm narratage lock-packages ./svml.packages.lock \
-  --package @narratage/run-text --package @narratage/script --package @example/cards --root .
+  --package @narratage/run-markup --package @narratage/script --package @example/cards --root .
 pnpm narratage lock-packages ./svml.runtime-packages.lock \
   --package @narratage/provider-kie --package @narratage/provider-media-local --root .
 pnpm narratage check path/to/main.svml --package-lock ./svml.packages.lock --root .

@@ -45,6 +45,7 @@ import {
   sealSeedreamRequest,
 } from "@narratage/seedream";
 import type { CapabilityRef, LinkedProgram } from "@narratage/protocol";
+import { textManifest } from "@narratage/text";
 
 /**
  * Every exact model this repository ships, paired with the Capability it publishes.
@@ -121,6 +122,7 @@ test("all model manifests close over the shared generation contract and every Fr
   ];
   const closure = createResolvedClosure([
     ...videoContractManifests,
+    textManifest,
     generationManifest,
     seedanceManifest,
     minimaxH3Manifest,

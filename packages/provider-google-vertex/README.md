@@ -20,6 +20,6 @@ keeps filesystem authority out of the Provider. A deployment may bind another `C
 and pass its `CredentialRef`. Credentials never enter author source, Runtime Closure, BuildState,
 Operation state, Prompt or Receipt metadata.
 
-The old `twinit` implementation used `GOOGLE_APPLICATION_CREDENTIALS` as an ADC file path. A host
+The legacy implementation used `GOOGLE_APPLICATION_CREDENTIALS` as an ADC file path. A host
 may preserve that deployment mechanism in a file-backed CredentialStore, but the Provider itself
 does not read arbitrary paths or ambient environment variables.

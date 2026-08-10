@@ -9,8 +9,8 @@ Script -> deterministic Estimate -> two Seedance Mini 480p generations
        -> Selection-located Text Track -> Film -> HyperFrames -> audio mix -> mux
 ```
 
-Both English lines resolve to five seconds with `pace="normal"`, `padding="0.3"`, a four-second
-minimum and `ceil` rounding. The generated presenter image is intentionally ignored by Git under
+Both English lines use a fully explicit duration policy. The package does not add a hidden pause,
+padding interval, model bound, or rounding choice. The generated presenter image is intentionally ignored by Git under
 `assets/`; supply or regenerate `assets/presenter.png` before checking or building.
 
 Prerequisites for the exact checked-in Runtime Profile:
@@ -61,7 +61,7 @@ To reuse the paid shot outputs from a verified earlier Build, add two zero-input
 Candidates and their explicit Satisfaction edges to another `.svrun`:
 
 ```xml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
   <target-set id="delivery">

@@ -1,14 +1,19 @@
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
   <import as="whisperx" from="@narratage/whisperx@1"/>
-  <import as="broll" from="@narratage/broll@1"/>
+  <import as="pipeline" from="@narratage/media-pipeline@1"/>
+  <import as="media-track" from="@narratage/media-track@1"/>
   <import as="caption" from="@narratage/caption@1"/>
+  <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
-  <import as="text" from="@narratage/text-track@1"/>
+  <import as="fonts" from="@narratage/fonts-open@1"/>
+  <import as="text" from="@narratage/typography-track@1"/>
+  <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -17,35 +22,44 @@
     <opening><HOST>Meaning @demo becomes the source @/demo.</opening>
   </script>
 
-  <seedance:Prompt id="direction">Locked medium close-up in a quiet daylight studio.</seedance:Prompt>
-  <seedance:Speech id="take" model="mini" dialogue={story.segment.opening.dialogue} prompt={direction} duration="5"/>
-  <seedance:Video id="motion" model="mini" prompt={direction} duration="5"/>
+  <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="title-frame" within={vertical}
+    left="6%" top="6%" right="6%" bottom="84%"/>
+  <space:Frame id="card-frame" within={vertical}
+    left="10%" top="20%" right="10%" bottom="30%"/>
 
-  <speech:Spine id="speech">
-    <speech:Take source={take} segment={story.segment.opening}/>
+  <wording:Value id="direction">Locked medium close-up in a quiet daylight studio. Spoken dialogue — say exactly: Meaning becomes the source.</wording:Value>
+  <seedance:TextVideo id="take" model="mini" prompt={direction} duration="5" generate-audio="true"/>
+  <seedance:TextVideo id="motion" model="mini" prompt={direction} duration="5"/>
+
+  <speech:Spine id="speech" canvas={vertical}>
+    <speech:Take source={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
-  <caption:Style id="base-caption" appearance={studio.caption.base}>
-    <caption:Cues>Prefer short complete semantic phrases. Never cross clause punctuation.</caption:Cues>
-    <caption:Field id="important" type="boolean"
-      min-per-cue="0" max-per-cue="2">
-      Select zero, one, or two words whose emphasis best communicates this Cue.
-    </caption:Field>
-  </caption:Style>
-  <caption:Program id="caption-program" narrative={story} default={base-caption}/>
-  <caption-ai:Planner id="cue-plan" narrative={story} program={caption-program} model="gemini-2.5-flash"/>
+  <fonts:Stack id="caption-font" family="inter" weight="700" style="normal"/>
+  <fonts:Stack id="title-font" family="inter" weight="900" style="normal"/>
+  <caption-fine:Style id="base-caption" recipe={studio.caption.base} font={caption-font}/>
+  <caption:Program id="caption-program" display={story.caption} default={base-caption}/>
+  <caption-ai:Planner id="cue-plan" display={story.caption} program={caption-program} model="gemini-2.5-flash"/>
 
-  <broll:Track id="cards" map={timing.map} space={speech.space}>
-    <broll:Item source={motion.video} during={story.selection.demo} appearance={studio.broll.card}/>
-  </broll:Track>
-  <caption:Track id="captions" narrative={story} map={timing.map} space={speech.space}
+  <pipeline:Normalize id="motion-media" source={motion.video}
+    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
+  <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
+    <media-track:Item source={motion-media.media} during={story.selection.demo}
+      frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
+  </media-track:Track>
+  <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence}
+    map={timing.map} space={speech.space}
     plan={cue-plan.plan} program={caption-program}/>
+  <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>
   <text:Track id="titles" space={speech.space}>
-    <text:Item text="MEANING" during="full" appearance={studio.text.title}/>
+    <text:Area id="meaning" placement={title-frame} style={title-style} during="program">
+      MEANING
+    </text:Area>
   </text:Track>
 
-  <film:Film id="main" space={speech.space} appearance={studio.film.vertical}>
+  <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
     <film:Track source={speech.visual}/>
     <film:Track source={speech.audioTrack}/>
     <film:Track source={cards.visual}/>

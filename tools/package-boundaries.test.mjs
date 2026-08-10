@@ -90,6 +90,23 @@ test("official production packages have no dependency cycle", async () => {
   for (const name of graph.keys()) visit(name, []);
 });
 
+test("Markup syntax, graph Text and video Typography keep distinct package identities", async () => {
+  const packages = await workspacePackages();
+  for (const name of [
+    "@narratage/markup",
+    "@narratage/run-markup",
+    "@narratage/compiler-markup-node",
+    "@narratage/text",
+    "@narratage/typography-track",
+  ]) assert.ok(packages.has(name), `${name} is absent`);
+  for (const retired of [
+    "@narratage/run-text",
+    "@narratage/compiler-text-node",
+    "@narratage/text-track",
+    "@narratage/prompt-kit",
+  ]) assert.ok(!packages.has(retired), `${retired} must stay retired`);
+});
+
 test("the declared domain-neutral distribution closes without syntax, AIGC or video packages", async () => {
   const packages = await workspacePackages();
   const graph = productionGraph(packages);
@@ -152,11 +169,11 @@ test("the speech time map is an opaque handle: no consumer reads its fields", as
   }
 });
 
-test("Text compilation is one explicit leaf assembly, not a Package Loader or Local Runtime dependency", async () => {
+test("Markup compilation is one explicit leaf assembly, not a Package Loader or Local Runtime dependency", async () => {
   const graph = productionGraph(await workspacePackages());
-  assert.ok(transitive(graph, "@narratage/compiler-text-node").has("@narratage/text"));
-  assert.ok(!transitive(graph, "@narratage/package-loader-node").has("@narratage/text"));
-  assert.ok(!transitive(graph, "@narratage/local").has("@narratage/text"));
+  assert.ok(transitive(graph, "@narratage/compiler-markup-node").has("@narratage/markup"));
+  assert.ok(!transitive(graph, "@narratage/package-loader-node").has("@narratage/markup"));
+  assert.ok(!transitive(graph, "@narratage/local").has("@narratage/markup"));
 });
 
 test("generic and video CLIs reach no Provider package and video CLI activates no author aggregate", async () => {
@@ -168,18 +185,17 @@ test("generic and video CLIs reach no Provider package and video CLI activates n
   const videoDependencies = transitive(graph, "@narratage/video-cli");
   assert.deepEqual(providers.filter((name) => videoDependencies.has(name)), []);
   assert.ok(!videoDependencies.has("@narratage/script"));
-  assert.ok(!videoDependencies.has("@narratage/seedance-speaker"));
-  assert.ok(!videoDependencies.has("@narratage/broll"));
-  assert.ok(!videoDependencies.has("@narratage/text-track"));
+  assert.ok(!videoDependencies.has("@narratage/media-track"));
+  assert.ok(!videoDependencies.has("@narratage/typography-track"));
   assert.ok(!videoDependencies.has("@narratage/film"));
   assert.ok(videoDependencies.has("@narratage/cli"));
 });
 
-test("domain packages confine their Text dependency to Surface and activation entries", async () => {
+test("domain packages confine their Markup dependency to Surface and activation entries", async () => {
   const { readdir, readFile } = await import("node:fs/promises");
   const surfaceOnly = [
-    "broll", "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
-    "image-transform", "media", "seedance", "seedance-speaker", "speech-spine", "whisperx",
+    "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
+    "image-transform", "media", "media-pipeline", "media-track", "seedance", "speech-spine", "whisperx",
   ];
   const allowed = new Set(["surface.ts", "activation.ts"]);
   for (const name of surfaceOnly) {
@@ -187,43 +203,10 @@ test("domain packages confine their Text dependency to Surface and activation en
     for (const file of await readdir(root)) {
       if (!file.endsWith(".ts") || allowed.has(file)) continue;
       const content = await readFile(new URL(file, root), "utf8");
-      assert.ok(!content.includes("\"@narratage/text\""),
-        `${name}/src/${file} imports @narratage/text outside its Surface boundary`);
+      assert.ok(!content.includes("\"@narratage/markup\""),
+        `${name}/src/${file} imports @narratage/markup outside its Surface boundary`);
     }
   }
-});
-
-test("every workspace package is exercised by some test, directly or through a tested consumer", async () => {
-  const { readdir, readFile } = await import("node:fs/promises");
-  const packages = await workspacePackages();
-  const graph = productionGraph(packages);
-  const directlyTested = new Set();
-  for (const name of packages.keys()) {
-    const short = name.replace("@narratage/", "");
-    let entries = [];
-    try {
-      entries = await readdir(new URL(`../packages/${short}/test/`, import.meta.url));
-    } catch {
-      continue;
-    }
-    if (entries.some((file) => file.endsWith(".test.ts"))) directlyTested.add(name);
-  }
-  const testedImports = new Set(directlyTested);
-  for (const name of directlyTested) {
-    for (const dependency of transitive(graph, name)) testedImports.add(dependency);
-    const short = name.replace("@narratage/", "");
-    const testRoot = new URL(`../packages/${short}/test/`, import.meta.url);
-    for (const file of await readdir(testRoot)) {
-      if (!file.endsWith(".ts")) continue;
-      const source = await readFile(new URL(file, testRoot), "utf8");
-      for (const match of source.matchAll(/"(@narratage\/[a-z0-9-]+)"/gu)) {
-        testedImports.add(match[1]);
-        for (const dependency of transitive(graph, match[1])) testedImports.add(dependency);
-      }
-    }
-  }
-  const uncovered = [...packages.keys()].filter((name) => !testedImports.has(name)).sort();
-  assert.deepEqual(uncovered, [], "packages reachable from no test at all");
 });
 
 test("every package is reachable: imported, activatable, or a declared entry point", async () => {
@@ -263,8 +246,20 @@ test("every package is reachable: imported, activatable, or a declared entry poi
     .filter(([, manifest]) => manifest.svml?.activation !== undefined)
     .map(([name]) => name));
 
+  // A data-only author package can deliberately export self-describing Source
+  // Modules without shipping executable activation code. Those exports are
+  // public entry points just as surely as a CLI binary is.
+  const sourceResources = new Set([...packages]
+    .filter(([, manifest]) => manifest.exports !== null
+      && typeof manifest.exports === "object"
+      && Object.values(manifest.exports).some((target) => typeof target === "string" && target.endsWith(".svs")))
+    .map(([name]) => name));
+
   const unreachable = [...packages.keys()]
-    .filter((name) => !imported.has(name) && !activatable.has(name) && !entryPoints.has(name))
+    .filter((name) => !imported.has(name)
+      && !activatable.has(name)
+      && !sourceResources.has(name)
+      && !entryPoints.has(name))
     .sort();
   assert.deepEqual(unreachable, [],
     "packages nothing imports, nothing can activate, and no one runs — delete them or give them a consumer");

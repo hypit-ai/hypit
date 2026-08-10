@@ -7,9 +7,11 @@ import {
   generationComponent,
   generationProducers,
   generationTypes,
+  sealGeneratedAudioSet,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
   verifyGeneratedImageSet,
+  verifyGeneratedAudioSet,
 } from "@narratage/generation";
 import { TypeValidatorRegistry } from "@narratage/validation";
 
@@ -25,6 +27,22 @@ test("generated media validators bind artifacts and result contents", async () =
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, generationComponent.validators);
   assert.ok(validators.resolve(generationTypes.imageSet));
+});
+
+test("generated audio is an ordinary content-addressed media result", async () => {
+  const store = new MemoryArtifactStore();
+  const audio = await store.put(new Uint8Array([7, 8, 9]), "audio/wav");
+  const set = sealGeneratedAudioSet({ contract: "svml.generated-audio-set@1", audios: [audio] });
+  verifyGeneratedAudioSet(set);
+  const facet = generationComponent.producers.find((item) =>
+    item.producer.name === generationProducers.primaryAudio.name);
+  assert.ok(facet);
+  const result = await facet.handler({ inputs: { set: { value: { kind: "inline", value: set } } } } as never);
+  assert.ok("audio" in result.outputs);
+  assert.deepEqual(result.outputs.audio, audio);
+  const validators = new TypeValidatorRegistry();
+  registerTypeValidatorFacets(validators, generationComponent.validators);
+  assert.ok(validators.resolve(generationTypes.audioSet));
 });
 
 test("the primary-video projection returns the ordered Product member as a Blob value", async () => {

@@ -3,9 +3,11 @@ export { NodeDriver } from "./driver.js";
 export {
   loadModuleManifest,
   loadResolvedClosure,
+} from "./module-files.js";
+export {
   parseModuleManifest,
   parseModuleManifestText,
-} from "./manifest.js";
+} from "@narratage/protocol";
 export { parseBuildState, serializeBuildState } from "./persistence.js";
 export {
   ProducerRegistry,

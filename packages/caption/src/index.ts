@@ -1,59 +1,35 @@
-export { CaptionProjectionError } from "./error.js";
+export { CaptionTimingError } from "./error.js";
 export {
-  assertCaptionAppearanceRecipe,
-  captionAppearanceFromRecipe,
-  captionAppearanceRecipeKeys,
-  captionRecipePadding,
-  defaultCaptionAppearanceRecipe,
-} from "./recipe.js";
-export type { CaptionAppearance } from "./recipe.js";
-export { captionDisplayAtoms, displayAtomMatchesSelection, displayTextForAtoms } from "./display.js";
+  assertCaptionCorrespondence,
+  assertCaptionDisplaySequence,
+  assertCaptionDisplayWordSubset,
+  captionWordsForRole,
+} from "./display.js";
 export { captionComponent } from "./component.js";
-export { captionTrackSurfaceFragment, plannedCaptionTrackSurfaceFragment } from "./fragment.js";
+export { plannedCaptionTimingFragment } from "./fragment.js";
 export {
-  captionImplementationDigest,
   captionProgramSchema,
   captionProgramSurfaceImplementationDigest,
   captionPlanImplementationDigest,
   captionPlanSchema,
-  captionSurfaceImplementationDigest,
   captionStyleSchema,
-  captionStyleSurfaceImplementationDigest,
   captionManifest,
   captionModuleRef,
   captionProducers,
-  captionTrackProgramSchema,
   captionTypes,
   captionValidatorDigests,
   timedCaptionProjectionSchema,
 } from "./manifest.js";
-export {
-  decodeCaptionProgramSurface,
-  decodeCaptionStyleSurface,
-  decodeCaptionTrackSurface,
-} from "./surface.js";
-export { planCaptionPresentation } from "./presentation.js";
+export { decodeCaptionProgramSurface } from "./surface.js";
 export { assertCaptionPlan, assertCaptionPlanForProgram, sealCaptionPlan } from "./plan.js";
 export {
   assertCaptionProgram,
-  assertCaptionProgramForNarrative,
+  assertCaptionProgramForDisplay,
   assertCaptionStyle,
   resolveCaptionProgram,
   sealCaptionProgram,
   sealCaptionStyle,
 } from "./style.js";
-export type { CaptionStyleApplication, CaptionStyleSelector } from "./style.js";
-export { temporalizeCaption, temporalizeCaptionPlan } from "./temporalize.js";
-export {
-  assertCaptionTrackProgram,
-  assertTimedCaptionProjection,
-  defaultCaptionTrackProgram,
-  defaultTimedCaptionProjection,
-  renderCaptionTrack,
-  renderCaptionProgram,
-  renderCaptionTrackImplementationDigest,
-  renderCaptionProgramImplementationDigest,
-  sealCaptionTrackProgram,
-} from "./track.js";
+export type { CaptionMuteApplication, CaptionStyleApplication } from "./style.js";
+export { applyCaptionMute, assertTimedCaptionProjection, temporalizeCaptionPlan } from "./temporalize.js";
 export type * from "./types.js";
-export { captionTimingFragment, captionTrackFragment } from "./fragment.js";

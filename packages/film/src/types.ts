@@ -4,15 +4,7 @@ import type { Track } from "@narratage/composition";
 export type FilmProgram = {
   readonly contract: "svml.film-program@1";
   readonly id: string;
-  readonly frameRate: {
-    readonly numerator: number;
-    readonly denominator: number;
-  };
-  readonly canvas: {
-    readonly width: number;
-    readonly height: number;
-    readonly clearColor: string;
-  };
+  readonly clearColor: string;
 };
 
 /**

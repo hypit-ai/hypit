@@ -16,7 +16,7 @@ behavior in this adapter.
 ```ts
 const artifacts = createS3ArtifactStorePackage({
   instance: "artifacts.team",
-  bucket: "hypit-svml-artifacts",
+  bucket: "team-svml-artifacts",
   prefix: "development",
   region: "us-east-1",
   expectedBucketOwner: "123456789012",

@@ -14,13 +14,13 @@ Run Source（`.svrun`）声明**要构建什么**——需要哪些输出、接�
 每个 `.svrun` 文件都以其处理指令开头：
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 ```
 
 ### 最简 Run Source
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
@@ -80,7 +80,7 @@ Run Source（`.svrun`）声明**要构建什么**——需要哪些输出、接�
 Narratage 没有隐式缓存。复用结果是显式的运行图编写——你将历史 Record 声明为零输入 Candidate，并通过 Satisfaction 边将它们连接起来。
 
 ```svml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
