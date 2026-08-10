@@ -84,7 +84,7 @@ Implemented:
 - `@narratage/artifact-store-fs`, `@narratage/artifact-store-s3`: interchangeable content-addressed bytes;
 - `@narratage/credential-store-env`, `@narratage/credential-store-keychain`: explicit credential
   slots without secrets in BuildState, each answering only for its own `CredentialRef.store` name;
-- `@narratage/local`: zero-service developer assembly over SQLite and filesystem defaults;
+- `@narratage/local`: in-process developer assembly over SQLite and filesystem defaults;
 - declarative `svml.runtime.json` loading through a separate locked Runtime Adapter package closure,
   with TypeScript Runtime assembly retained as the advanced embedding API;
 - domain-neutral Build archive inspection and Record egress: accepted intermediate Records remain
@@ -311,4 +311,4 @@ The repository is usable from a checkout, but no npm-ready package distribution 
 [`open-source-distribution.md`](./open-source-distribution.md).
 
 See [`architecture.md`](./architecture.md) for boundaries and [`roadmap.md`](./roadmap.md) for the
-two active workstreams.
+current priorities.

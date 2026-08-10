@@ -9,7 +9,7 @@ define a universal Deck protocol.
 A Deck is not a Media Item mode and is not the third primitive of Media Track. It is a higher-order
 visual component whose members happen to use media material.
 
-The first official implementation is provisionally `@narratage/deck-track`. Its honest author
+The first official implementation is `@narratage/deck-track`. Its honest author
 meaning is a **depth-stack Deck**:
 
 ```text

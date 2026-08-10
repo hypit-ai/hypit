@@ -83,7 +83,7 @@ pnpm narratage plan examples/talking-head-aroll/build.svrun \
   --root .
 ```
 
-Build the complete film after starting the local WhisperX sidecar and exposing `KIE_API_KEY`,
+Build the complete film after preparing the managed local WhisperX service and exposing `KIE_API_KEY`,
 `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`:
 
 ```sh

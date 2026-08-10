@@ -25,7 +25,7 @@ optional owned pairwise replacement relationship
 optional explicit audio projection
 ```
 
-They belong in one video-domain package, provisionally `@narratage/media-track`, and all lower to
+They belong in one video-domain package, `@narratage/media-track`, and all lower to
 ordinary peer `VisualTrack` and, only when explicitly authored, `AudioTrack` values.
 
 One package does not mean one conditional super-component. The author Surface exposes two
