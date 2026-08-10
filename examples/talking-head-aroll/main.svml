@@ -154,11 +154,11 @@
   <space:Canvas id="vertical" width="720" height="1280"/>
 
   <!-- Four equal Takes become one ordered speech coordinate space and two peer Tracks. -->
-  <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={hook-take.video} segment={story.segment.hook}/>
-    <speech:Take source={meeting-take.video} segment={story.segment.meeting}/>
-    <speech:Take source={evidence-take.video} segment={story.segment.evidence}/>
-    <speech:Take source={payoff-take.video} segment={story.segment.payoff}/>
+  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+    <speech:Take video={hook-take.video} segment={story.segment.hook}/>
+    <speech:Take video={meeting-take.video} segment={story.segment.meeting}/>
+    <speech:Take video={evidence-take.video} segment={story.segment.evidence}/>
+    <speech:Take video={payoff-take.video} segment={story.segment.payoff}/>
   </speech:Spine>
 
   <!-- One measured evidence pass locates the complete authored Script. -->

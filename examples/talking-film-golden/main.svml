@@ -17,7 +17,6 @@
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="fonts" from="@narratage/fonts-open@1"/>
-  <import as="pipeline" from="@narratage/media-pipeline@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/typography-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
@@ -114,9 +113,9 @@
   </seedance:ReferenceVideo>
 
   <!-- Ordered generated Takes become one audio basis plus its peer visual/audio Tracks. -->
-  <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={alice-take.video} segment={script.segment.opening}/>
-    <speech:Take source={bob-take.video} segment={script.segment.answer}/>
+  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+    <speech:Take video={alice-take.video} segment={script.segment.opening}/>
+    <speech:Take video={bob-take.video} segment={script.segment.answer}/>
   </speech:Spine>
 
   <!-- One explicit WhisperX path: request, normalize and deterministic Script alignment. -->
@@ -131,13 +130,10 @@
     <seedance:Reference image={product-reference}/>
   </seedance:ReferenceVideo>
 
-  <pipeline:Normalize id="product-media" source={product-motion.video}
-    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
-
   <media-track:Track id="product-broll" map={timing.map}
     space={speech.space} canvas={vertical}>
     <media-track:Item
-      source={product-media.media}
+      video={product-motion.video}
       during={script.selection.product-demo}
       frame={product-frame}
       appearance={studio.media.product}

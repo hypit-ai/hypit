@@ -31,6 +31,7 @@ import type {
 } from "@narratage/deck-track";
 import type { FontArtifactRef } from "@narratage/media";
 import { mediaTypes } from "@narratage/media";
+import { mediaPipelineManifest } from "@narratage/media-pipeline";
 import type { MediaLayerSet } from "@narratage/media-track";
 import { narrativeTypes } from "@narratage/narrative";
 import { programSpaceTypes, sealProgramSpace } from "@narratage/program-space";
@@ -473,6 +474,7 @@ test("another Deck family can coexist by contributing only the existing VisualTr
   };
   const closure = createResolvedClosure([
     ...videoContractManifests,
+    mediaPipelineManifest,
     mediaTrackManifest,
     textManifest,
     depthStackManifest,

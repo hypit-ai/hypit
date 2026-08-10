@@ -3,7 +3,6 @@ import { workspacePreviewProducers } from "../discovery/workspace.js";
 import { renderPreview } from "../preview/render.js";
 import {
   defaultCanvasSpace,
-  defaultProgramSpace,
   sealProgramSpace,
 } from "../svml.js";
 import type { CanonicalValue, ProgramSpace, Track } from "../svml.js";
@@ -87,7 +86,11 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   // frame. The clear colour belongs to a Composition, and a preview assembles
   // none, so it is a stage control the operator sets like the others.
   const canvasSpace = defaultCanvasSpace();
-  const defaultSpace = defaultProgramSpace();
+  const defaultSpace: ProgramSpace = {
+    contract: "svml.program-space@1",
+    durationSec: 4,
+    frameRate: { numerator: 30, denominator: 1 },
+  };
   const canvas = {
     width: canvasSpace.widthPx,
     height: canvasSpace.heightPx,

@@ -7,6 +7,7 @@ import { sealProgramSpace } from "@narratage/program-space";
 import { sealSpeechBasis, speechDependency, speechTypes } from "@narratage/speech";
 import type { SpeechBasis } from "@narratage/speech";
 import { compositionTypes, compositionValidatorDigests } from "@narratage/composition";
+import { mediaPipelineManifest } from "@narratage/media-pipeline";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -81,7 +82,13 @@ const testManifest: ModuleManifest = {
   }],
 };
 
-const closure = createResolvedClosure([...videoContractManifests, mediaTrackManifest, speechBasisManifest, testManifest]);
+const closure = createResolvedClosure([
+  ...videoContractManifests,
+  mediaPipelineManifest,
+  mediaTrackManifest,
+  speechBasisManifest,
+  testManifest,
+]);
 
 function validatorRegistry(): TypeValidatorRegistry {
   const registry = new TypeValidatorRegistry();

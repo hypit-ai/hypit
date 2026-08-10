@@ -119,7 +119,6 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
   <import as="caption-ai" from="@narratage/caption-gemini@1"/>
   <import as="fonts" from="@narratage/fonts-open@1"/>
-  <import as="pipeline" from="@narratage/media-pipeline@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
   <import as="text" from="@narratage/typography-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
@@ -148,8 +147,8 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
     left="10%" top="20%" right="10%" bottom="30%"/>
 
   <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech" canvas={vertical}>
-    <speech:Take source={take.video} segment={story.segment.opening}/>
+  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+    <speech:Take video={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
 
@@ -164,11 +163,9 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   <caption-fine:Track id="captions" display={story.caption} correspondence={story.caption.correspondence} map={timing.map}
     space={speech.space} plan={cue-plan.plan} program={caption-program}/>
 
-  <pipeline:Normalize id="motion-media" source={motion.video}
-    video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
   <media-track:Track id="cards" map={timing.map}
     space={speech.space} canvas={vertical}>
-    <media-track:Item source={motion-media.media} during={story.selection.demo}
+    <media-track:Item video={motion.video} during={story.selection.demo}
       frame={card-frame} appearance={studio.media.card} motion={studio.motion.card}/>
   </media-track:Track>
   <text:Style id="title-style" recipe={studio.text.title} font={title-font}/>

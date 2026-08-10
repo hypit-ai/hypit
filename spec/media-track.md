@@ -53,6 +53,7 @@ The unified package is an author package and deterministic compiler:
 
 ```text
 @narratage/media             intrinsic media facts and normalized sources
+@narratage/media-pipeline    inspection, stream selection and normalization vocabulary
 @narratage/temporal          points, occurrences, windows and trigger schedules
 @narratage/spatial           Canvas, Placement Frame, Content Fit and fitted geometry
 @narratage/media-track       Item / Sequence author Programs and lowering
@@ -65,7 +66,7 @@ It does not:
 - generate images or videos;
 - choose a model or Provider;
 - inspect credentials, URLs or local executables;
-- infer which container stream is primary;
+- let a Runtime or Provider invent stream-selection policy;
 - own the Program clock or Canvas;
 - read a sibling Track or the accumulated lower composite;
 - add a B-roll, Sequence, Deck or Speech branch to Core, Film, Composition or HyperFrames.
@@ -76,10 +77,12 @@ motion, transitions or audio policy.
 
 ## 3. Source truth
 
-Every visual sample enters through an explicit graph edge and already has intrinsic media truth.
-The first complete implementation needs to consume:
+Every visual sample enters through an explicit graph edge. The author Surface distinguishes four
+forms rather than guessing from one Blob type:
 
 - still image material with a content-addressed Artifact and exact display-oriented extent;
+- generated/raw video material, lowered through the generic Media Pipeline using the Track's
+  ProgramSpace rate and an explicit visual-only or A/V policy;
 - normalized timed visual material with exact frame rate, frame count and extent;
 - typed `CompositableSurface` material with exact still/frame timing and alpha mode.
 
@@ -143,7 +146,7 @@ shape is:
 <media:Track id="editorial-media" map={timing.map} space={speech.space} canvas={vertical}>
   <media:Item
     id="full-cutaway"
-    source={demo.video}
+    video={demo.video}
     during={story.selection.demo}
     frame={vertical}
     appearance={studio.media.full-cutaway}
@@ -151,7 +154,7 @@ shape is:
 
   <media:Item
     id="corner-loop"
-    source={reaction.surface}
+    surface={reaction.surface}
     at={story.moment.reaction}
     for="2s"
     frame={layout.top-right-sticker}
@@ -164,9 +167,9 @@ shape is:
     appearance={studio.media.evidence-sequence}
     until={story.selection.explanation.end}
   >
-    <media:Member id="step-1" source={step1.image} at={story.moment.step1}/>
-    <media:Member id="step-2" source={step2.image} at={story.moment.step2}/>
-    <media:Member id="step-3" source={step3.video} at={story.moment.step3}/>
+    <media:Member id="step-1" image={step1.image} extent={step1.extent} at={story.moment.step1}/>
+    <media:Member id="step-2" image={step2.image} extent={step2.extent} at={story.moment.step2}/>
+    <media:Member id="step-3" video={step3.video} at={story.moment.step3}/>
     <media:Handoff from="step-1" transition={studio.media.transitions.push-left}/>
     <media:Handoff from="step-2" transition={studio.media.transitions.crossfade}/>
   </media:Sequence>
@@ -178,6 +181,8 @@ This syntax is illustrative. The normative points are:
 
 - declarations and reusable appearance stay outside usage sites;
 - every source, Frame, Selection and Moment is an explicit reference;
+- `image`, `video`, `media` and `surface` name mutually exclusive source forms; a generic Blob is
+  never guessed to be a still or moving source;
 - `Item` and `Sequence` are visibly different author meanings;
 - shorthand such as `during`, `at`, `for` and `until` lowers to the one shared Temporal algebra;
 - no runtime chooses whether something is a cutaway, card or sticker.
@@ -205,7 +210,7 @@ smaller than Canvas. Structure remains readable at the use site:
 <media:Track id="proof" map={timing.map} space={speech.space} canvas={vertical}>
   <media:Item
     id="product-proof"
-    source={product.video}
+    video={product.video}
     during={story.selection.proof}
     frame={product-inset}
     appearance={studio.media.fuzzy-card}
@@ -240,7 +245,7 @@ A normal soft or glowing edge lowers to an owned border plus box shadow/drop sha
 irregular furry, torn-paper or noisy edge is not a magic `border-style`: it is an explicit local
 layer, such as a transparent frame Artifact or a deterministic `CompositableSurface`. Because that
 layer affects graph topology and Artifact collection, its source must be connected in SVML (for
-example as `<media:Layer source={fuzzyFrame.surface}/>`); SVS may style it but cannot hide the source
+example as `<media:Layer surface={fuzzyFrame.surface}/>`); SVS may style it but cannot hide the source
 edge. The outer lifecycle wrapper moves the frame Paint, edge layer and content together.
 
 Built-in easing names may lower directly to Visual IR. A richer Bézier or spring Recipe remains a
@@ -509,7 +514,7 @@ Speech Spine should stop maintaining a second ad-hoc media renderer. Its visual 
 same Media lowering implementation with a deliberately restricted generated Program:
 
 ```text
-one normalized visual take per speech Segment
+one normalized A/V take per speech Segment
 exact already-established Segment frame span
 Canvas Placement Frame
 one foreground layer
@@ -521,8 +526,11 @@ no Sequence state
 no source-audio projection
 ```
 
-Speech audio remains the separate canonical `SpeechAudioBasis -> AudioTrack` projection. The visual
-projection does not inspect or extract audio from generated MP4 containers.
+The Speech author Surface accepts raw `video=` and expands the same generic inspection and
+normalization graph before assembly, selecting primary moving video plus default audio at the
+Spine's explicit frame rate. It also accepts prepared `media=` directly. After assembly, Speech
+audio remains the separate canonical `SpeechAudioBasis -> AudioTrack` projection; the restricted
+visual lowerer itself remains muted and does not rediscover container audio.
 
 This can be a code dependency on focused Media lowering helpers. It does not require exposing a
 public `MediaProgram` graph Type when no external component consumes that intermediate value. If a
@@ -612,6 +620,8 @@ Implement only after the shared Temporal and Spatial slices exist:
 9. **Implemented:** close the package-local acceptance matrix with structural, real-media and
    partitioned-browser evidence. The independent shared Track/Visual IR gates in
    [`track-expressiveness.md`](./track-expressiveness.md) also pass.
+10. **Implemented:** let `video=` lower to the shared Media Pipeline at the connected ProgramSpace
+    rate while preserving explicit `media=` as the prepared-media escape hatch.
 
 No step requires a Core, Runtime, queue or Provider change. Surface materialization may use an
 existing explicitly registered Provider capability, but ordinary Item/Sequence lowering is
@@ -623,7 +633,8 @@ deterministic local compilation.
 
 - opaque and alpha still images;
 - portrait, landscape and square images;
-- normalized video with and without a selected audio stream;
+- generated/raw video automatically normalized with and without explicitly selected audio;
+- explicitly prepared normalized video connected without a second normalization;
 - animated GIF/WebP normalized to exact frame timing;
 - still and animated Compositable Surfaces;
 - repeated use of one Artifact without duplicated storage or duplicated source audio.
