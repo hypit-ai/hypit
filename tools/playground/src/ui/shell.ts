@@ -3,13 +3,7 @@ import { workspacePreviewProducers } from "../discovery/workspace.js";
 import { renderPreview } from "../preview/render.js";
 import {
   defaultCanvasSpace,
-  defaultFilmProgram,
   defaultProgramSpace,
-  filmAppearanceFromRecipe,
-  filmRecipeKeys,
-  maskSourceHeader,
-  parseSourceHeader,
-  parseSvs,
   sealProgramSpace,
 } from "../svml.js";
 import type { CanonicalValue, ProgramSpace, Track } from "../svml.js";
@@ -33,14 +27,11 @@ const CSS = `
 .section { color: var(--accent); font-size: 11px; margin: 15px 0 4px; }
 .section:first-child { margin-top: 0; }
 .module { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 4px; }
-.sheet-note { color: var(--muted); font-size: 12px; margin-top: 7px; }
-.sheet-note b { color: var(--accent); font-weight: 500; }
-.sheet-file { font-size: 11px; color: var(--muted); max-width: 100%; }
-.sheet-file::file-selector-button {
-  border: 1px solid var(--line); border-radius: 5px; background: #1c1c21;
-  color: var(--text); font: inherit; font-size: 11px; padding: 3px 9px; margin-right: 7px; cursor: pointer;
+.hint { color: var(--muted); font-size: 12px; margin-top: 7px; }
+.rail-canvas input[type=color] {
+  width: 100%; height: 24px; padding: 0; border: 1px solid var(--line);
+  background: none; border-radius: 5px;
 }
-.sheet-file::file-selector-button:hover { border-color: #3a3a42; }
 ${FORM_CSS}
 `;
 
@@ -61,6 +52,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
         <span>H</span><input type="number" data-height min="16" step="2" />
         <span>fps</span><input type="number" data-fps min="1" step="1" />
         <span>sec</span><input type="number" data-duration min="0.1" step="0.1" />
+        <span>bg</span><input type="color" data-background />
       </div>
     </div>
     <div class="rail-body"></div>
@@ -73,6 +65,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   const heightInput = rail.querySelector<HTMLInputElement>("[data-height]")!;
   const fpsInput = rail.querySelector<HTMLInputElement>("[data-fps]")!;
   const durationInput = rail.querySelector<HTMLInputElement>("[data-duration]")!;
+  const backgroundInput = rail.querySelector<HTMLInputElement>("[data-background]")!;
 
   const stage = createStage();
   root.append(rail, stage.element);
@@ -89,16 +82,16 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     picker.append(option);
   }
 
-  // Spatial owns geometry, Film owns appearance and ProgramSpace owns time.
-  // The preview starts from those three package-owned values instead of a
-  // second playground-specific model of a frame.
+  // Spatial owns geometry and ProgramSpace owns time, so the preview starts
+  // from those package-owned values rather than a second playground model of a
+  // frame. The clear colour belongs to a Composition, and a preview assembles
+  // none, so it is a stage control the operator sets like the others.
   const canvasSpace = defaultCanvasSpace();
-  const film = defaultFilmProgram();
   const defaultSpace = defaultProgramSpace();
   const canvas = {
     width: canvasSpace.widthPx,
     height: canvasSpace.heightPx,
-    clearColor: film.clearColor,
+    clearColor: "#09090b",
   };
   const space = {
     fps: defaultSpace.frameRate.numerator / defaultSpace.frameRate.denominator,
@@ -175,51 +168,6 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     }
   }
 
-  const note = document.createElement("div");
-  note.className = "sheet-note";
-
-  /**
-   * Reads a chosen stylesheet for Film appearance.
-   *
-   * Geometry and time are graph inputs, not style. A Film Recipe may therefore
-   * change only the Composition background; component Recipes remain owned by
-   * their own modules.
-   */
-  function loadSheet(file: File): void {
-    void file.text().then((source) => {
-      const header = parseSourceHeader(file.name, source);
-      if (!header.using.startsWith("@narratage/svs@")) {
-        throw new Error(`${file.name} is a ${header.using} source, not a stylesheet.`);
-      }
-      const sheet = parseSvs(file.name, maskSourceHeader(source, header));
-      const filmShape = [...filmRecipeKeys].sort().join(" ");
-      const found = sheet.recipes.find((recipe) =>
-        Object.keys(recipe.value.properties).sort().join(" ") === filmShape);
-      if (found === undefined) {
-        note.textContent = `${file.name} declares no Film Recipe, so the background is unchanged.`;
-        return;
-      }
-      const read = filmAppearanceFromRecipe(found.value.properties);
-      canvas.clearColor = read.clearColor;
-      note.replaceChildren(document.createTextNode("Background from "));
-      const which = document.createElement("b");
-      which.textContent = found.value.path;
-      note.append(which);
-      render();
-    }).catch((error: unknown) => {
-      note.textContent = error instanceof Error ? error.message : String(error);
-    });
-  }
-
-  const sheetPicker = document.createElement("input");
-  sheetPicker.type = "file";
-  sheetPicker.accept = ".svs";
-  sheetPicker.className = "sheet-file";
-  sheetPicker.addEventListener("change", () => {
-    const file = sheetPicker.files?.[0];
-    if (file !== undefined) loadSheet(file);
-  });
-
   function section(title: string): HTMLElement {
     const element = document.createElement("div");
     element.className = "section";
@@ -230,7 +178,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   function renderRail(): void {
     const values = draft(active);
     moduleLine.textContent = active.moduleName;
-    body.replaceChildren(section("Appearance from a stylesheet"), sheetPicker, note);
+    body.replaceChildren();
 
     for (const input of active.inputs) {
       // The shell owns the frame domain; offering it again would be a second
@@ -239,14 +187,14 @@ export async function mountShell(root: HTMLElement): Promise<void> {
       body.append(section(input.name));
       if (input.schema === undefined) {
         const missing = document.createElement("div");
-        missing.className = "sheet-note";
+        missing.className = "hint";
         missing.textContent = `${input.type.module.name} declares no schema for ${input.type.name}.`;
         body.append(missing);
         continue;
       }
       if (values[input.name] === null || values[input.name] === undefined) {
         const empty = document.createElement("div");
-        empty.className = "sheet-note";
+        empty.className = "hint";
         empty.textContent = `${input.type.module.name} offers no default for ${input.type.name}.`;
         body.append(empty);
       }
@@ -264,6 +212,11 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   heightInput.value = String(canvas.height);
   fpsInput.value = String(space.fps);
   durationInput.value = String(space.durationSec);
+  backgroundInput.value = canvas.clearColor;
+  backgroundInput.addEventListener("input", () => {
+    canvas.clearColor = backgroundInput.value;
+    schedule();
+  });
   for (const [input, apply] of [
     [widthInput, (n: number) => { canvas.width = n; }],
     [heightInput, (n: number) => { canvas.height = n; }],
