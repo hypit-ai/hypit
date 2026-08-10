@@ -31,10 +31,13 @@ Run the complete graph through the explicit Run Graph and declarative local Runt
 The checked-in `svml.packages.lock` selects each author, Run and deterministic compute package
 independently; there is no implicit video bundle. Regenerate it after changing one of those package
 implementations with the package list documented in the lock file.
-The independent `svml.runtime-packages.lock` selects only KIE, local media, local WhisperX, Vertex
-and local HyperFrames deployment adapters; adding another Provider does not change the CLI.
+The independent `svml.runtime-packages.lock` selects Local execution, SQLite state, filesystem
+Artifacts, environment credentials, KIE, local media, local WhisperX, Vertex and local HyperFrames
+adapters; adding another implementation does not change the CLI.
 
 ```bash
+pnpm narratage runtime up examples/talking-film-live/svml.runtime.json
+
 pnpm narratage build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
   --package-lock examples/talking-film-live/svml.packages.lock \
@@ -50,6 +53,9 @@ pnpm narratage get talking-film-live \
   --name final.video \
   --to examples/talking-film-live/output/final.mp4
 ```
+
+`build` is a durable submission. `--follow` only observes the detached Worker; closing this terminal
+does not cancel the Build.
 
 `build.svrun` owns the selected Target and fidelity. `svml.runtime.json` owns Provider instances,
 permissions and concurrency. The Build archives all accepted intermediate Records and referenced

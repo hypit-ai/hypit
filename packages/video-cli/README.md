@@ -14,6 +14,8 @@ From the repository:
 pnpm narratage lock-packages ./svml.packages.lock \
   --package @narratage/run-markup --package @narratage/script --package @example/cards --package-root .
 pnpm narratage lock-packages ./svml.runtime-packages.lock \
+  --package @narratage/local --package @narratage/store-sqlite \
+  --package @narratage/artifact-store-fs --package @narratage/credential-store-env \
   --package @narratage/provider-kie --package @narratage/provider-media-local --package-root .
 pnpm narratage check path/to/main.svml --package-lock ./svml.packages.lock --root .
 pnpm narratage check path/to/build.svrun --package-lock ./svml.packages.lock --root .
@@ -24,7 +26,8 @@ pnpm narratage status <build-id> --runtime ./svml.runtime.json
 pnpm narratage builds --runtime ./svml.runtime.json
 pnpm narratage inspect <build-id> --runtime ./svml.runtime.json
 pnpm narratage get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
-pnpm narratage cancel <build-id> --runtime ./svml.runtime.json
+pnpm narratage cancel build <build-id> --runtime ./svml.runtime.json
+pnpm narratage cancel operation <operation-id> --runtime ./svml.runtime.json
 pnpm narratage doctor ./svml.runtime.json
 pnpm narratage gc ./svml.runtime.json
 ```
@@ -49,11 +52,12 @@ loaded Runtime implementation identity is rebound to the actual package bytes. A
 module remains trusted deployment code with normal Node authority. Neither form is discovered from
 a source import.
 
-Without `--follow`, a pending remote job returns `paused` and a later identical command resumes it.
-With `--follow`, the CLI stays attached and follows endpoint `wakeAt` hints until completion, a
-non-retryable failure, cancellation or `--max-wait-ms`. `status` reads durable verified state;
-`cancel` invokes active endpoints and then records the resulting terminal Build failure. None of
-these commands creates a second ready-command queue.
+Without `--follow`, `build` returns after durable submission and the detached Worker continues.
+With `--follow`, the CLI observes dispatch and Operation facts until terminal state or
+`--max-wait-ms`; Ctrl-C only detaches that observer. `status` reads durable verified state. Scoped
+Build/Operation cancellation records control separately from execution, continues reconciliation
+after `accepted` or `unsupported`, and never selects another Candidate. None of these commands
+creates or stores a ready-Command queue.
 
 `build` archives every accepted Record in the demanded closure and every referenced byte Artifact,
 whether or not the user wants a conventional filesystem copy. `inspect` lists Targets, demanded

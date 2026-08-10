@@ -51,7 +51,7 @@ import type { EndpointManifest } from "@narratage/endpoint-kit";
 export function createMyServiceProvider(options: {
   instance: string;
   lane?: string;
-  apiKey?: { env: string };
+  apiKey: CredentialRef;
   defaultConcurrency?: number;
 }) {
   // 返回一个包含以下内容的对象：
@@ -76,33 +76,36 @@ export function createMyServiceProvider(options: {
 // src/activation.ts
 import {
   createRuntimeEndpointAdapterFacet,
+  runtimeConfigCredentialRef,
+  runtimeConfigExact,
   runtimeConfigObject,
-  runtimeConfigString,
   runtimeConfigPositiveInteger,
 } from "@narratage/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 import { createMyServiceProvider } from "./provider.js";
 
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
 
+  validate(context) {
+    const config = runtimeConfigObject(context.config, "MyService");
+    runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
+    if (runtimeConfigCredentialRef(config.apiKey, "MyService apiKey") === undefined) {
+      throw new Error("MyService apiKey CredentialRef is required");
+    }
+    runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
+  },
+
   create(context) {
     const config = runtimeConfigObject(context.config, "MyService");
-    const apiKeyEnv = runtimeConfigString(config.apiKeyEnv, "MyService apiKeyEnv");
+    const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
+    if (apiKey === undefined) throw new Error("MyService apiKey CredentialRef is required");
     return createMyServiceProvider({
       instance: context.instance,
       lane: context.lane,
-      ...(apiKeyEnv === undefined ? {} : { apiKey: { env: apiKeyEnv } }),
+      apiKey,
       ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency") === undefined
         ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
     });
-  },
-
-  doctor(context) {
-    const config = runtimeConfigObject(context.config, "MyService");
-    const apiKeyEnv = runtimeConfigString(config.apiKeyEnv, "MyService apiKeyEnv")
-      ?? "MY_SERVICE_API_KEY";
-    return diagnoseRuntimeEnvironmentCredential(apiKeyEnv, "MyService");
   },
 });
 
@@ -115,7 +118,8 @@ export const svmlPackage = {
 export default svmlPackage;
 ```
 
-`create` 函数根据 Runtime 配置构造 Endpoint。`doctor` 函数返回诊断信息（凭据是否存在、可执行文件是否可用），不构造也不调用任何东西。
+`validate` 是无副作用的纯校验；通过 Profile、lock 与权限校验后才会调用 `create`。凭据是否
+存在由通用 CredentialStore 与 Endpoint 描述路径诊断，Provider 不得硬编码环境变量 Store。
 
 ## 5. 声明外部服务（如需要）
 
@@ -148,9 +152,8 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`pnpm install` 会自动执行 `prepare`，`narratage build` 会在第一个 Operation 之前调用 `start`
-和 `probe`。只调用远程 API 的 Provider（没有本地程序）跳过这一步——`package.json` 中不写
-`"service"`。
+`narratage runtime up` 会准备、启动并探测外部程序，然后启动耐久 Worker。`build` 会确保
+Runtime 已运行。只调用远程 API 的 Provider 不声明 service。
 
 ## 6. 注册并锁定
 
@@ -178,7 +181,7 @@ pnpm narratage lock-packages <runtime-lock> \
       "instance": "my-service.project",
       "lane": "generation",
       "config": {
-        "apiKeyEnv": "MY_SERVICE_API_KEY",
+        "apiKey": { "store": "keychain", "key": "my-service.api-key" },
         "defaultConcurrency": 2
       }
     }

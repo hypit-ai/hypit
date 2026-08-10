@@ -67,14 +67,9 @@ Use it for compilation:
 narratage check ./main.svml --package-lock ./svml.packages.lock --root .
 ```
 
-Use the same lock in a local Runtime configuration:
-
-```ts
-export default await createProjectLocalRuntime({
-  root: import.meta.dirname,
-  packageLock: "./svml.packages.lock",
-});
-```
+The Runtime Profile references the same author implementation lock separately from its privileged
+Runtime-package lock. It must also select every Scheduler/Worker/Store role explicitly; package
+activation never fabricates an execution environment.
 
 Lock creation is the trust action. Normal loading:
 

@@ -1,6 +1,6 @@
 # Narratage roadmap
 
-Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-10.
+Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-11.
 
 Narratage can already execute one real paid talking-video build. The active roadmap is no longer
 “make a video possible.” It is to finish the few remaining domain-neutral operational gaps, keep
@@ -34,7 +34,7 @@ graph model.
 ### A2. Runtime Profile usability — first public slice implemented
 
 The typed Runtime Profile/Closure API now has a declarative `svml.runtime.json` Host frontend for
-Scheduler defaults, replacement services, credential references, Endpoints, lanes and permissions.
+exact Scheduler/Worker and Store selection, credential references, Endpoints, lanes and permissions.
 Adapter names resolve from a separately verified physical package closure; the generic and video
 CLIs import no Provider implementation. Effective Runtime implementation identity binds actual
 package bytes, not a self-asserted development label. `doctor` checks locks, configuration,
@@ -90,34 +90,32 @@ Add richer graph/plan views and structured diagnostics after this slice. The Cat
 later support richer history search, but it must only help the user author explicit Candidates.
 There is no automatic result reuse or hidden Candidate selection.
 
-### A6. Durable local dispatch and execution control — designed, not implemented
+### A6. Durable local dispatch and execution control — implemented
 
-The current CLI owns one queue-free in-process Scheduler. Without `--follow` it returns when a
-recoverable Endpoint becomes pending; with `--follow` that same terminal process waits and resumes.
-This does not yet provide a durable background Worker, authority-wide capacity across CLI processes
-or honest cancellation for Endpoints whose remote stop is asynchronous or unsupported.
+The local reference Runtime now persists Build dispatch, Runtime journal, fenced leases and shared
+capacity in the explicitly selected Store. `build` is a durable submission; a detached Worker owns
+execution; `--follow` is an observer. Multiple processes share global/lane capacity, expired leases
+are fenced, and restart regenerates Commands from verified BuildState rather than serialized work.
 
 The target design is recorded in
 [`runtime-execution-control.md`](./runtime-execution-control.md):
 
-- dispatch durable Build identities, never serialized Core Commands;
-- run one or more fenced Workers against the same execution domain;
-- keep active and remote in-flight capacity visible and shared;
-- make `build` a cheap submit operation and `--follow` an observer only;
-- place tools, managed daemons, Workers and dependency probes beneath `runtime` lifecycle commands;
-- separate cancellation request, admission closure, Endpoint acknowledgment and factual terminal
-  outcome;
-- retain late paid Artifacts without reducing them into a suppressed Build branch.
+- `runtime up/status/logs/down`, `queue --watch`, Build and Operation inspection are public;
+- Build and Operation cancellation separate request, admission closure, Endpoint acknowledgment and
+  factual terminal outcome;
+- accepted/unsupported cancellation continues reconciliation; late paid Artifacts remain retained
+  without reducing them into a suppressed Build branch;
+- cancelling one Operation suppresses only its exact Command realization and never selects another
+  Candidate or Endpoint.
 
 The first implementation remains local SQLite/filesystem. Hosted auth, billing, multi-tenancy and
 distributed deployment are not prerequisites.
 
-### A7. Command-line product surface — first renderer slice implemented
+### A7. Command-line product surface — operational slice implemented
 
-The command engine is domain-neutral and functional. `check`, `plan` and `doctor` now pass structured
-results through compact TTY/plain and explicit JSON renderers; the executable entrypoint also emits
-structured JSON errors under `--json` and human error panels otherwise. The complete terminal
-product remains specified in
+The command engine is domain-neutral. Compilation, archive, Runtime, queue, Operation, cancellation,
+service, GC and authentication commands pass structured results through compact TTY/plain and
+explicit JSON/JSONL renderers. The terminal product is specified in
 [`cli-experience.md`](./cli-experience.md):
 
 - separate TTY, plain/CI and explicit JSON/JSONL renderers over one structured command result;
@@ -127,8 +125,8 @@ product remains specified in
 - `auth login/status/logout` without a central Provider switch or secret leakage;
 - public `init` only after explicit template and package-distribution work exists.
 
-Next extend the same renderer to archive and current service commands. Queue/Operation watch screens
-and honest cancellation depend on A6.
+`init` and installation shortcuts remain release work because they require an explicit template and
+package-distribution decision, not another Runtime mechanism.
 
 ## B. Environment and Provider work
 
@@ -164,8 +162,8 @@ contract; Lambda placement cannot define another media meaning.
 
 ### B3. Production environment adapters
 
-- Secrets Manager, Vault or multi-store credential composition only when a concrete deployment
-  requires one; environment and Keychain stores already exist, and current profiles select one;
+- Secrets Manager or Vault only when a concrete deployment requires one; multi-store composition,
+  read-only environment credentials and writable macOS Keychain credentials already execute;
 - hosted Build/Operation stores and distributed leases only for a real multi-process deployment;
 - Build release/retention windows and S3 lifecycle policy.
 
