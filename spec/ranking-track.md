@@ -58,7 +58,7 @@ Migration preserves the useful visual capabilities, not these accidental semanti
 
 ## 3. Author-facing shape
 
-The exact XML spelling will be fixed with the temporal Surface parser. The intended shape is:
+The executable author Surface is:
 
 ```svml
 <import as="ranking" from="@narratage/ranking@1"/>

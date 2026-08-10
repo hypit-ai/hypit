@@ -53,5 +53,5 @@ RenderedVisual + TimelineAudio -> mux-program-media Need -> MuxedMedia
 Compiling an `AudioProgramPlan` is ordinary deterministic code. Reading Artifact bytes, decoding,
 resampling, mixing, encoding or muxing is never a Producer shortcut: it is an explicit Provider
 Need. The plan fixes exact 48 kHz sample boundaries, gain/fade/playback parameters and the absence
-of hidden normalization/limiting. A local FFmpeg Provider and a future Lambda Provider must consume
-the same plan and return the same public contracts.
+of hidden normalization/limiting. The local FFmpeg and AWS Lambda Providers consume the same shared
+execution body and return the same public contracts.

@@ -19,8 +19,9 @@ createLocalWhisperXProvider({
 ```
 
 The service must be on loopback because this protocol deliberately passes a local staged path. A
-future Lambda/hosted Provider should use an Artifact URL or request payload owned by that Provider;
-it is a different deployment package but must return the same `WhisperXAlignmentEvidence` type.
+future persistent remote Provider should use an Artifact URL or request payload owned by that
+Provider; it is a different deployment package but must return the same
+`WhisperXAlignmentEvidence` type. Lambda is deliberately not the target for this warm model.
 
 The configured model, device, compute mode, batch size, service version, WhisperX version and
 sentence-tokenizer data digest are checked through `/health` and contribute to Provider identity.

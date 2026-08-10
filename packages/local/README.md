@@ -1,8 +1,9 @@
 # `@narratage/local`
 
-The trusted, zero-service developer distribution. It keeps Core and the authoritative Build
-Scheduler in the current Node process while allowing every capability Endpoint to run in a different
-place.
+The in-process developer assembly. It keeps Core and the authoritative Build Scheduler in the
+current Node process while allowing every capability Endpoint to run in a different place. Loaded
+implementation packages are trusted and byte-locked; that trust boundary describes code execution,
+not a special class of user.
 
 The convenience assembly uses:
 

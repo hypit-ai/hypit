@@ -1,8 +1,8 @@
 # Narratage media execution service
 
-This service answers the five media Needs — inspect, normalize, speech-evidence projection,
-timeline audio and mux — in AWS Lambda. It is deployment state, not an author-importable SVML
-package.
+This service answers eight media Needs in AWS Lambda: inspect, normalize, transform, extract audio,
+extract frame, speech-evidence projection, timeline audio and mux. It is deployment state, not an
+author-importable SVML package.
 
 It owns no media semantics. `@narratage/media-execution` contains the FFmpeg commands and
 frame/sample arithmetic shared with `@narratage/provider-media-local`. This directory contributes
@@ -100,8 +100,11 @@ meaning because a newer deployment happened.
 
 ## Live canary
 
-The canary generates a one-second local fixture and runs all five remote media operations. Its S3
-prefix is isolated and removed after success or failure unless `NARRATAGE_MEDIA_CANARY_KEEP=1`.
+The current deployed canary generates a one-second local fixture and runs the original five remote
+media operations: inspect/normalize, speech-evidence projection, timeline audio and mux. The three
+newer utility operations use the same tested handler but still need to be added to the live canary
+before all eight can be claimed as remotely witnessed. Its S3 prefix is isolated and removed after
+success or failure unless `NARRATAGE_MEDIA_CANARY_KEEP=1`.
 
 ```bash
 export NARRATAGE_MEDIA_FUNCTION_ARN=arn:aws:lambda:us-east-1:123456789012:function:narratage-media-dev:1
