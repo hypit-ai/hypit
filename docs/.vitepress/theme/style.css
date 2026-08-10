@@ -226,9 +226,7 @@ html.home-page .VPPage { background: var(--paper); }
 .hero-statement-viewport-en,
 .hero-statement-viewport-zh,
 .VPHome .VPHero .actions,
-.VPHome .carousel-heading,
-.VPHome .demo-carousel-stage,
-.VPHome .demo-carousel-controls {
+.VPHome .carousel-heading {
   opacity: 0;
   transform: translateY(12px);
   animation: hero-content-rise .4s cubic-bezier(.22,1,.36,1) forwards;
@@ -237,14 +235,10 @@ html.home-page .VPPage { background: var(--paper); }
 .hero-statement-viewport-zh { animation-delay: 1.17s; }
 .VPHome .VPHero .actions { animation-delay: 1.31s; }
 .VPHome .carousel-heading { animation-delay: 1.45s; }
-.VPHome .demo-carousel-stage { animation-delay: 1.59s; }
-.VPHome .demo-carousel-controls { animation-delay: 1.73s; }
 .hero-intro-seen .hero-statement-viewport-en,
 .hero-intro-seen .hero-statement-viewport-zh,
 .hero-intro-seen .VPHome .VPHero .actions,
-.hero-intro-seen .VPHome .carousel-heading,
-.hero-intro-seen .VPHome .demo-carousel-stage,
-.hero-intro-seen .VPHome .demo-carousel-controls {
+.hero-intro-seen .VPHome .carousel-heading {
   opacity: 1;
   transform: none;
   animation: none;
@@ -293,7 +287,7 @@ html.home-page .VPPage { background: var(--paper); }
 .vp-doc .demo-heading h2 { margin: 0; border: 0; padding: 0; color: var(--ink); font-family: var(--font-ui); font-size: clamp(20px, 2vw, 26px); font-weight: 600; line-height: 1.2; letter-spacing: -.025em; }
 .VPHome .vp-doc .demo-heading h2 { font-size: 19px; }
 .touch-interaction-copy { display: none; }
-.demo-shell { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); min-height: 670px; overflow: hidden; border: 0; border-radius: 2px; background: var(--demo-card-bg); }
+.demo-shell { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 670px; overflow: hidden; border: 0; border-radius: 2px; background: var(--demo-card-bg); }
 .source-panel, .preview-panel { min-width: 0; }
 .source-panel { position: relative; border: 0; background: var(--demo-code-bg); }
 .preview-panel { display: flex; flex-direction: column; background: var(--demo-preview-bg); }
@@ -421,8 +415,6 @@ html.home-page .VPPage { background: var(--paper); }
   .hero-statement-viewport-en,
   .hero-statement-viewport-zh,
   .VPHome .VPHero .actions,
-  .VPHome .carousel-heading,
-  .VPHome .demo-carousel-stage,
-  .VPHome .demo-carousel-controls { opacity: 1; transform: none; animation: none !important; }
+  .VPHome .carousel-heading { opacity: 1; transform: none; animation: none !important; }
   .hero-statement-swap-enter-from, .hero-statement-swap-leave-to { filter: none; transform: none; }
 }
