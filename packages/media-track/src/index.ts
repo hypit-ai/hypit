@@ -5,7 +5,10 @@ export {
   decodeMediaMotion,
   decodeMediaPresentation,
   decodeMediaSampleSpec,
+  decodeMediaStackingOrder,
+  isMediaFramePaintLayerId,
   mediaAppearanceKeys,
+  mediaFramePaintLayerId,
 } from "./author.js";
 export { renderMediaTrackFragment, stillMediaTrackFragment } from "./fragment.js";
 export {
@@ -92,6 +95,13 @@ export {
   sealMediaTrackHeader,
   sealMediaTrackProgram,
 } from "./program.js";
+export { mediaAppearanceRecipeFacet, mediaMotionRecipeFacet } from "./recipe-facet.js";
+export {
+  mediaAppearanceRecipeProperties,
+  mediaAppearanceRecipeSchema,
+  mediaMotionRecipeProperties,
+  mediaMotionRecipeSchema,
+} from "./recipe-schema.js";
 export { resolveVisualSampling } from "./sampling.js";
 export { lowerRestrictedSpeechVisualPresents } from "./restricted-speech.js";
 export type { RestrictedSpeechVisualClip } from "./restricted-speech.js";

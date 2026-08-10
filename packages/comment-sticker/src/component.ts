@@ -21,6 +21,7 @@ import {
   finalizeCommentSticker,
   renderCommentSticker,
 } from "./program.js";
+import { commentStickerRecipeFacet } from "./recipe-facet.js";
 import type {
   CommentStickerHeader,
   CommentStickerContent,
@@ -146,4 +147,5 @@ export const commentStickerComponent = {
     implementationDigest: commentStickerValidatorDigests.program,
     handler: ({ value }) => assertCommentStickerProgram(inline<CommentStickerProgram>(value, "CommentStickerProgram")),
   }],
+  recipes: [commentStickerRecipeFacet],
 } satisfies ComponentPackage;

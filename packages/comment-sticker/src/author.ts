@@ -5,7 +5,8 @@ import type { SvsRecipe } from "@narratage/svs";
 import { sealCommentStickerStyle } from "./program.js";
 import type { CommentStickerStyle, CommentStickerTextStyle } from "./types.js";
 
-const KEYS = new Set([
+/** Exported because the Recipe schema states the type of each of these, and a second list would drift. */
+export const STYLE_PROPERTIES = [
   "stack-order",
   "background", "border-color", "border-width", "radius", "padding-x", "padding-y", "gap", "rotation",
   "shadow-color", "shadow-x", "shadow-y", "shadow-blur", "shadow-spread",
@@ -17,7 +18,9 @@ const KEYS = new Set([
   "enter", "enter-frames", "enter-offset-y", "enter-start-scale", "enter-rotation-delta", "enter-easing",
   "exit", "exit-frames", "exit-offset-y", "exit-easing",
   "hold", "hold-amplitude-y", "hold-rotation-amplitude", "hold-period-frames",
-]);
+] as const;
+
+const KEYS = new Set<string>(STYLE_PROPERTIES);
 
 function fail(recipe: SvsRecipe, message: string): never {
   throw new Error(`Comment Sticker Recipe ${recipe.path} ${message}`);

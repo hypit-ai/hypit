@@ -51,10 +51,16 @@ export {
   sealTextStyle,
   stillTextMotion,
 } from "./program.js";
+export { typographyRecipeFacet } from "./recipe-facet.js";
+export { typographyRecipeProperties, typographyRecipeSchema } from "./recipe-schema.js";
 export {
   decodeTypographyMotionSurface,
   decodeTypographyStyleSurface,
   decodeTypographyTrackSurface,
   decodeTypographyMaskSurface,
+  REQUIRED_STYLE_PROPERTIES,
+  STYLE_PROPERTIES,
+  typographyTextStyle,
 } from "./surface.js";
+export type { TextStyleChildren } from "./surface.js";
 export type * from "./types.js";

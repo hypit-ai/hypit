@@ -1,4 +1,4 @@
-import type { PreviewProducer } from "../discovery/producers.js";
+import type { BoundRecipe, PreviewProducer } from "../discovery/producers.js";
 import { workspacePreviewProducers } from "../discovery/workspace.js";
 import { renderPreview } from "../preview/render.js";
 import {
@@ -168,8 +168,8 @@ export async function mountShell(root: HTMLElement): Promise<void> {
 
   /** Lowers the written Recipe. Throws in the module's own words. */
   function recipeFilled(producer: PreviewProducer): Readonly<Record<string, CanonicalValue>> {
-    const facet = producer.recipes[0];
-    const written = recipeDrafts.get(producer.id);
+    const facet = facetOf(producer);
+    const written = recipeDrafts.get(draftKey(producer));
     if (facet === undefined || written === undefined) return {};
     return facet.apply(written, draft(producer));
   }
@@ -228,13 +228,38 @@ export async function mountShell(root: HTMLElement): Promise<void> {
    */
   const recipeDrafts = new Map<string, Record<string, CanonicalValue>>();
 
+  /**
+   * Which of a module's Recipes is being written.
+   *
+   * A module may publish several: some are alternatives, one per variant it can
+   * render, and some are companions written together. Nothing in a Manifest
+   * distinguishes those two cases, so this does not guess — the operator says
+   * which one they are writing, and only that one is lowered.
+   */
+  const chosenFacet = new Map<string, number>();
+
+  function facetIndex(producer: PreviewProducer): number {
+    const at = chosenFacet.get(producer.id) ?? 0;
+    return at < producer.recipes.length ? at : 0;
+  }
+
+  function facetOf(producer: PreviewProducer): BoundRecipe | undefined {
+    return producer.recipes[facetIndex(producer)];
+  }
+
+  /** Drafts are per Recipe, so switching between them keeps both. */
+  function draftKey(producer: PreviewProducer): string {
+    return `${producer.id}#${facetIndex(producer)}`;
+  }
+
   function recipeDraft(producer: PreviewProducer): Record<string, CanonicalValue> | undefined {
-    const facet = producer.recipes[0];
+    const facet = facetOf(producer);
     if (facet === undefined) return undefined;
-    const existing = recipeDrafts.get(producer.id);
+    const key = draftKey(producer);
+    const existing = recipeDrafts.get(key);
     if (existing !== undefined) return existing;
     const created = blankValue(facet.schema) as Record<string, CanonicalValue>;
-    recipeDrafts.set(producer.id, created);
+    recipeDrafts.set(key, created);
     return created;
   }
 
@@ -266,7 +291,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
 
   /** The Recipe as it would be written in a stylesheet. */
   function svsText(producer: PreviewProducer): string {
-    const written = recipeDrafts.get(producer.id) ?? {};
+    const written = recipeDrafts.get(draftKey(producer)) ?? {};
     const short = producer.moduleName.replace(/^@narratage\//u, "").replace(/-.*$/u, "");
     const lines = Object.entries(written)
       .filter(([, value]) => value !== undefined && value !== "")
@@ -304,7 +329,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
 
   /** Loads one Recipe's properties into the form, replacing what is there. */
   function adopt(producer: PreviewProducer, recipe: SvsRecipe): void {
-    const written = recipeDrafts.get(producer.id);
+    const written = recipeDrafts.get(draftKey(producer));
     if (written === undefined) return;
     for (const name of Object.keys(written)) delete written[name];
     Object.assign(written, recipe.properties);
@@ -345,8 +370,30 @@ export async function mountShell(root: HTMLElement): Promise<void> {
 
     const written = recipeDraft(active);
     if (written !== undefined) {
-      const schema = active.recipes[0]!.schema;
-      body.append(section("Recipe"), ...sheetControls(active, schema));
+      const schema = facetOf(active)!.schema;
+      body.append(section("Recipe"));
+      if (active.recipes.length > 1) {
+        // Named by Surface, and by position where a module writes more than one
+        // Recipe against the same Surface.
+        const which = document.createElement("select");
+        active.recipes.forEach((facet, at) => {
+          const option = document.createElement("option");
+          option.value = String(at);
+          const sameName = active.recipes.filter((other) => other.surface === facet.surface);
+          option.textContent = sameName.length > 1
+            ? `${facet.surface} ${sameName.indexOf(facet) + 1}`
+            : facet.surface;
+          which.append(option);
+        });
+        which.value = String(facetIndex(active));
+        which.addEventListener("input", () => {
+          chosenFacet.set(active.id, Number(which.value));
+          renderRail();
+          render();
+        });
+        body.append(which);
+      }
+      body.append(...sheetControls(active, schema));
       body.append(buildForm(schema, written, schedule));
       const copy = document.createElement("button");
       copy.type = "button";

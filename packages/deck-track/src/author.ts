@@ -37,6 +37,25 @@ const DECK_KEYS = [
   "reflow-frames", "reflow-easing", "playback-future", "playback-past",
 ] as const;
 
+/**
+ * Every property a DepthStack Recipe accepts.
+ *
+ * The stack's own depth model, and the four media appearance groups it hands on
+ * to `@narratage/media-track`, are one list rather than two, because the check
+ * below and anything that offers an author a Recipe have to be reading the same
+ * set. A name that appears in one and not the other is a control that either
+ * cannot be written or does nothing.
+ */
+export const depthStackRecipeKeys = [
+  ...DECK_KEYS,
+  ...mediaAppearanceKeys.fit,
+  ...mediaAppearanceKeys.sample,
+  ...mediaAppearanceKeys.frame,
+  ...mediaAppearanceKeys.motion,
+] as const;
+
+const ALLOWED_KEYS = new Set<string>(depthStackRecipeKeys);
+
 function fail(recipe: SvsRecipe, message: string): never {
   throw new Error(`DepthStack Recipe ${recipe.path} ${message}`);
 }
@@ -92,11 +111,15 @@ function mediaRecipe(recipe: SvsRecipe, keys: readonly string[]): SvsRecipe {
   return { ...recipe, properties: selected };
 }
 
-function tone(recipe: SvsRecipe, prefix: string, fallback: DeckCardTone): DeckCardTone {
+/**
+ * The current Card states a tone; a neighbour states how much of it survives one
+ * step of depth, and every other per-depth property says so with `-step`.
+ */
+function tone(recipe: SvsRecipe, prefix: string, suffix: string, fallback: DeckCardTone): DeckCardTone {
   return {
-    brightness: number(recipe, `${prefix}-brightness`, fallback.brightness),
-    contrast: number(recipe, `${prefix}-contrast`, fallback.contrast),
-    saturation: number(recipe, `${prefix}-saturation`, fallback.saturation),
+    brightness: number(recipe, `${prefix}-brightness${suffix}`, fallback.brightness),
+    contrast: number(recipe, `${prefix}-contrast${suffix}`, fallback.contrast),
+    saturation: number(recipe, `${prefix}-saturation${suffix}`, fallback.saturation),
   };
 }
 
@@ -113,19 +136,12 @@ function step(
     rotationMode: oneOf(recipe, `${prefix}-rotation-mode`, ["linear", "alternate"] as const, defaults.rotationMode),
     opacityPerDepth: number(recipe, `${prefix}-opacity-step`, defaults.opacityPerDepth),
     stackingPerDepth: integer(recipe, `${prefix}-stacking-step`, defaults.stackingPerDepth),
-    tonePerDepth: tone(recipe, `${prefix}`, defaults.tonePerDepth),
+    tonePerDepth: tone(recipe, prefix, "-step", defaults.tonePerDepth),
   };
 }
 
 function assertKnownKeys(recipe: SvsRecipe): void {
-  const allowed = new Set<string>([
-    ...DECK_KEYS,
-    ...mediaAppearanceKeys.fit,
-    ...mediaAppearanceKeys.sample,
-    ...mediaAppearanceKeys.frame,
-    ...mediaAppearanceKeys.motion,
-  ]);
-  const unknown = Object.keys(recipe.properties).filter((key) => !allowed.has(key));
+  const unknown = Object.keys(recipe.properties).filter((key) => !ALLOWED_KEYS.has(key));
   if (unknown.length > 0) fail(recipe, `does not accept ${unknown.join(", ")}.`);
 }
 
@@ -168,7 +184,7 @@ export function decodeDepthStackSpec(recipe: SvsRecipe): DepthStackSpec {
         rotationDeg: number(recipe, "current-rotation", 0),
         opacity: number(recipe, "current-opacity", 1),
         stacking: integer(recipe, "current-stacking", 0),
-        tone: tone(recipe, "current", { brightness: 1, contrast: 1, saturation: 1 }),
+        tone: tone(recipe, "current", "", { brightness: 1, contrast: 1, saturation: 1 }),
       },
       previous: step(recipe, "previous", previousDefaults),
       next: step(recipe, "next", nextDefaults),

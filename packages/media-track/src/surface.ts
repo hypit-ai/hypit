@@ -33,6 +33,7 @@ import {
   decodeMediaPaintSpec,
   decodeMediaSampleSpec,
   decodeMediaSequenceSpec,
+  mediaFramePaintLayerId,
 } from "./author.js";
 import {
   sealMediaSequenceMemberSpec,
@@ -514,10 +515,11 @@ function unitLayers(
 ): readonly FragmentLayer[] {
   const layers: FragmentLayer[] = [];
   if (input.allowFramePaint) {
-    const framePaint = decodeMediaFramePaint(input.appearance, `${input.trackId}.${input.unitSuffix}.frame-paint`);
+    const paintId = mediaFramePaintLayerId(`${input.trackId}.${input.unitSuffix}`);
+    const framePaint = decodeMediaFramePaint(input.appearance, paintId);
     if (framePaint !== undefined) {
       const name = `${input.unitSuffix}-frame-paint`;
-      state.addRecord(name, `${input.trackId}.${input.unitSuffix}.frame-paint`, mediaTrackTypes.paintLayerSpec, framePaint, input.element.range);
+      state.addRecord(name, paintId, mediaTrackTypes.paintLayerSpec, framePaint, input.element.range);
       layers.push({ kind: "paint", specName: name });
     }
   }

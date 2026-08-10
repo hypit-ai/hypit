@@ -101,11 +101,25 @@ const visualKeyframe = object({
 });
 const visualAnimation = object({ keyframes: { schema: { kind: "array", minItems: 2, items: visualKeyframe } } });
 
+/**
+ * A Style says how text flows without saying which geometry it flows into, so
+ * `form` is dropped. `minimumScale` keeps every bound Composition states and
+ * gains the one thing Composition has no reason to state: it is a fraction of
+ * the natural type size rather than a count, which nothing offering the property
+ * to an author can tell from `(0, 1]` alone.
+ */
 const areaFlow = (() => {
   const schema = visualTextFlowSchema;
   if (schema.kind !== "object") throw new Error("Visual Text flow schema must be an object.");
   const { form: _form, ...fields } = schema.fields;
-  return object(fields);
+  const minimumScale = fields["minimumScale"];
+  if (minimumScale?.schema.kind !== "number") {
+    throw new Error("Visual Text flow minimumScale must be a number.");
+  }
+  return object({
+    ...fields,
+    minimumScale: { ...minimumScale, schema: { ...minimumScale.schema, format: "unit-fraction" } },
+  });
 })();
 
 export const textStyleSchema: ValueSchema = object({

@@ -345,7 +345,7 @@ function parsePaintLayer(element: StructuredElement): VisualTextPaintLayer {
   throw new Error(`${element.name} is not a Text Paint layer.`);
 }
 
-const STYLE_PROPERTIES = new Set([
+export const STYLE_PROPERTIES = new Set([
   "stack-order", "size", "weight", "font-style", "line-height", "tracking", "word-spacing",
   "kerning", "synthesis", "language", "direction", "writing-mode", "baseline-shift", "vertical-align", "tab-size", "indent",
   "paragraph-before", "paragraph-after", "transform", "caps", "cjk-spacing", "punctuation-trim",
@@ -355,20 +355,116 @@ const STYLE_PROPERTIES = new Set([
   "path-end-margin", "path-align", "path-reverse", "path-overflow",
 ]);
 
+/**
+ * The properties the lowering has no fallback for. Everything else answers with
+ * a default, so a Recipe that says these two says enough to be lowered.
+ */
+export const REQUIRED_STYLE_PROPERTIES = new Set(["stack-order", "size"]);
+
+/**
+ * What a Style element's children contribute and a Recipe has no room for:
+ * Stroke, Shadow, Glow and Box layers, variable-font axes, OpenType features
+ * and Decorations. They are stated rather than defaulted because whoever holds
+ * a Recipe holds these too, and dropping them silently restyles a Style.
+ */
+export type TextStyleChildren = {
+  readonly paints: readonly VisualTextPaintLayer[];
+  readonly axes: VisualTextTypography["axes"];
+  readonly features: VisualTextTypography["features"];
+  readonly decorations: VisualTextTypography["decorations"];
+};
+
+/**
+ * One Text Recipe, read once.
+ *
+ * The Style Surface arrives here from an authored element and the Recipe facet
+ * arrives from loose properties, so the two cannot come to differing readings of
+ * the same words.
+ */
+export function typographyTextStyle(
+  id: string,
+  value: SvsRecipe,
+  fonts: readonly FontArtifactRef[],
+  label: string,
+  children: TextStyleChildren,
+): TextStyle {
+  const unknown = Object.keys(value.properties).filter((name) => !STYLE_PROPERTIES.has(name));
+  if (unknown.length > 0) throw new Error(`Text Recipe does not accept ${unknown[0]}.`);
+  const missing = [...REQUIRED_STYLE_PROPERTIES].filter((name) => value.properties[name] === undefined);
+  if (missing.length > 0) throw new Error(`Text Recipe requires ${missing.join(", ")}.`);
+  const padding = splitNumbers(propString(value, "padding", "0"), "Text Recipe padding", 4);
+  const overflow = propString(value, "overflow", "visible") as TextStyle["area"]["overflow"];
+  const paints: readonly VisualTextPaintLayer[] = value.properties.fill === undefined
+    ? children.paints
+    : [{ kind: "fill", paint: { kind: "solid", color: propString(value, "fill") } }, ...children.paints];
+  if (!paints.some((paint) => paint.kind === "fill" || paint.kind === "stroke")) {
+    throw new Error(`${label} requires at least one visible glyph Fill or Stroke.`);
+  }
+  return sealTextStyle({
+    contract: "svml.text-style@1", id,
+    stackingOrder: propNumber(value, "stack-order"),
+    typography: {
+      fonts,
+      sizePx: propNumber(value, "size"), weight: propNumber(value, "weight", 400),
+      style: propString(value, "font-style", "normal") as "normal" | "italic" | "oblique",
+      axes: children.axes, features: children.features,
+      synthesis: propString(value, "synthesis", "none") as TextStyle["typography"]["synthesis"],
+      kerning: propString(value, "kerning", "auto") as TextStyle["typography"]["kerning"],
+      trackingPx: propNumber(value, "tracking", 0), wordSpacingPx: propNumber(value, "word-spacing", 0),
+      lineHeight: propNumber(value, "line-height", 1.2),
+      ...(value.properties.language === undefined ? {} : { language: propString(value, "language") }),
+      direction: propString(value, "direction", "auto") as TextStyle["typography"]["direction"],
+      writingMode: propString(value, "writing-mode", "horizontal-tb") as TextStyle["typography"]["writingMode"],
+      baselineShiftPx: propNumber(value, "baseline-shift", 0), tabSize: propNumber(value, "tab-size", 4),
+      indentationPx: propNumber(value, "indent", 0), paragraphBeforePx: propNumber(value, "paragraph-before", 0),
+      paragraphAfterPx: propNumber(value, "paragraph-after", 0),
+      transform: propString(value, "transform", "none") as TextStyle["typography"]["transform"],
+      variantCaps: propString(value, "caps", "normal") as TextStyle["typography"]["variantCaps"],
+      verticalAlign: propString(value, "vertical-align", "baseline") as TextStyle["typography"]["verticalAlign"],
+      decorations: children.decorations,
+      cjk: {
+        textSpacing: propString(value, "cjk-spacing", "normal") as "normal" | "none",
+        punctuationTrim: propString(value, "punctuation-trim", "none") as "none" | "start" | "end" | "adjacent" | "all",
+      },
+    },
+    paints,
+    area: {
+      inlineSize: propString(value, "inline-size", "fixed") as "hug" | "fixed",
+      blockSize: propString(value, "block-size", "fixed") as "hug" | "fixed",
+      paddingPx: { inlineStart: padding[3]!, inlineEnd: padding[1]!, blockStart: padding[0]!, blockEnd: padding[2]! },
+      inlineAlign: propString(value, "align", "center") as TextStyle["area"]["inlineAlign"],
+      blockAlign: propString(value, "block-align", "center") as TextStyle["area"]["blockAlign"],
+      wrap: propString(value, "wrap", "word") as TextStyle["area"]["wrap"],
+      overflow,
+      ...(value.properties["max-lines"] === undefined ? {} : { maxLines: propNumber(value, "max-lines") }),
+      ...(overflow !== "shrink" ? {} : { minimumScale: propNumber(value, "minimum-scale") }),
+      clipToFrame: propBoolean(value, "clip", false), columns: propNumber(value, "columns", 1),
+      columnGapPx: propNumber(value, "column-gap", 0),
+      metricEdge: propString(value, "metric-edge", "line-box") as TextStyle["area"]["metricEdge"],
+    },
+    point: {
+      anchorInline: propString(value, "point-anchor-inline", "center") as TextStyle["point"]["anchorInline"],
+      anchorBlock: propString(value, "point-anchor-block", "center") as TextStyle["point"]["anchorBlock"],
+    },
+    path: {
+      side: propString(value, "path-side", "left") as "left" | "right",
+      orientation: propString(value, "path-orientation", "follow") as "follow" | "upright",
+      startMarginPx: propNumber(value, "path-start-margin", 0), endMarginPx: propNumber(value, "path-end-margin", 0),
+      align: propString(value, "path-align", "start") as "start" | "center" | "end",
+      reverse: propBoolean(value, "path-reverse", false), overflow: propString(value, "path-overflow", "visible") as "visible" | "clip",
+    },
+  });
+}
+
 export const decodeTypographyStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   allowed(element, ["id", "recipe", "font"], ["id", "recipe", "font"]);
   const id = text(element, "id");
   const value = recipe(reference(element.attributes.recipe, `${element.name}.recipe`, svsRecipeType, resolveReference), `${element.name}.recipe`);
-  const unknown = Object.keys(value.properties).filter((name) => !STYLE_PROPERTIES.has(name));
-  if (unknown.length > 0) throw new Error(`Text Recipe does not accept ${unknown[0]}.`);
   const fonts = exactFonts(element, resolveReference);
-  const padding = splitNumbers(propString(value, "padding", "0"), "Text Recipe padding", 4);
-  const overflow = propString(value, "overflow", "visible") as TextStyle["area"]["overflow"];
   const paints: VisualTextPaintLayer[] = [];
   const axes: VisualTextTypography["axes"][number][] = [];
   const features: VisualTextTypography["features"][number][] = [];
   const decorations: VisualTextTypography["decorations"][number][] = [];
-  if (value.properties.fill !== undefined) paints.push({ kind: "fill", paint: { kind: "solid", color: propString(value, "fill") } });
   for (const child of element.children) {
     if (child.kind === "text") {
       if (child.value.trim()) throw new Error(`${element.name} accepts only Paint children.`);
@@ -403,62 +499,7 @@ export const decodeTypographyStyleSurface: StructuredSurfaceHandler = ({ element
       });
     } else paints.push(parsePaintLayer(child));
   }
-  if (!paints.some((paint) => paint.kind === "fill" || paint.kind === "stroke")) {
-    throw new Error(`${element.name} requires at least one visible glyph Fill or Stroke.`);
-  }
-  const style = sealTextStyle({
-    contract: "svml.text-style@1", id,
-    stackingOrder: propNumber(value, "stack-order"),
-    typography: {
-      fonts,
-      sizePx: propNumber(value, "size"), weight: propNumber(value, "weight", 400),
-      style: propString(value, "font-style", "normal") as "normal" | "italic" | "oblique",
-      axes, features, synthesis: propString(value, "synthesis", "none") as TextStyle["typography"]["synthesis"],
-      kerning: propString(value, "kerning", "auto") as TextStyle["typography"]["kerning"],
-      trackingPx: propNumber(value, "tracking", 0), wordSpacingPx: propNumber(value, "word-spacing", 0),
-      lineHeight: propNumber(value, "line-height", 1.2),
-      ...(value.properties.language === undefined ? {} : { language: propString(value, "language") }),
-      direction: propString(value, "direction", "auto") as TextStyle["typography"]["direction"],
-      writingMode: propString(value, "writing-mode", "horizontal-tb") as TextStyle["typography"]["writingMode"],
-      baselineShiftPx: propNumber(value, "baseline-shift", 0), tabSize: propNumber(value, "tab-size", 4),
-      indentationPx: propNumber(value, "indent", 0), paragraphBeforePx: propNumber(value, "paragraph-before", 0),
-      paragraphAfterPx: propNumber(value, "paragraph-after", 0),
-      transform: propString(value, "transform", "none") as TextStyle["typography"]["transform"],
-      variantCaps: propString(value, "caps", "normal") as TextStyle["typography"]["variantCaps"],
-      verticalAlign: propString(value, "vertical-align", "baseline") as TextStyle["typography"]["verticalAlign"],
-      decorations,
-      cjk: {
-        textSpacing: propString(value, "cjk-spacing", "normal") as "normal" | "none",
-        punctuationTrim: propString(value, "punctuation-trim", "none") as "none" | "start" | "end" | "adjacent" | "all",
-      },
-    },
-    paints,
-    area: {
-      inlineSize: propString(value, "inline-size", "fixed") as "hug" | "fixed",
-      blockSize: propString(value, "block-size", "fixed") as "hug" | "fixed",
-      paddingPx: { inlineStart: padding[3]!, inlineEnd: padding[1]!, blockStart: padding[0]!, blockEnd: padding[2]! },
-      inlineAlign: propString(value, "align", "center") as TextStyle["area"]["inlineAlign"],
-      blockAlign: propString(value, "block-align", "center") as TextStyle["area"]["blockAlign"],
-      wrap: propString(value, "wrap", "word") as TextStyle["area"]["wrap"],
-      overflow,
-      ...(value.properties["max-lines"] === undefined ? {} : { maxLines: propNumber(value, "max-lines") }),
-      ...(overflow !== "shrink" ? {} : { minimumScale: propNumber(value, "minimum-scale") }),
-      clipToFrame: propBoolean(value, "clip", false), columns: propNumber(value, "columns", 1),
-      columnGapPx: propNumber(value, "column-gap", 0),
-      metricEdge: propString(value, "metric-edge", "line-box") as TextStyle["area"]["metricEdge"],
-    },
-    point: {
-      anchorInline: propString(value, "point-anchor-inline", "center") as TextStyle["point"]["anchorInline"],
-      anchorBlock: propString(value, "point-anchor-block", "center") as TextStyle["point"]["anchorBlock"],
-    },
-    path: {
-      side: propString(value, "path-side", "left") as "left" | "right",
-      orientation: propString(value, "path-orientation", "follow") as "follow" | "upright",
-      startMarginPx: propNumber(value, "path-start-margin", 0), endMarginPx: propNumber(value, "path-end-margin", 0),
-      align: propString(value, "path-align", "start") as "start" | "center" | "end",
-      reverse: propBoolean(value, "path-reverse", false), overflow: propString(value, "path-overflow", "visible") as "visible" | "clip",
-    },
-  });
+  const style = typographyTextStyle(id, value, fonts, element.name, { paints, axes, features, decorations });
   return { records: [{ id, type: typographyTrackTypes.style, value: { kind: "inline", value: style }, range: element.range }], components: [], fragments: [] };
 };
 

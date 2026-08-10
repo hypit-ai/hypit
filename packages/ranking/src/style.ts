@@ -28,39 +28,67 @@ import type {
   TypewriterListStyle,
 } from "./types.js";
 
-const COMMON_KEYS = [
-  "font-size", "font-weight", "text-color", "line-height",
-  "appear-frames", "move-frames", "motion-easing",
+/**
+ * One group per reader below, so a variant's list of properties is the list of
+ * readers its decoder calls. Everything else that offers these properties — an
+ * author's Recipe form, above all — composes the same groups, so a property
+ * added to a reader reaches a form without anyone remembering to add it twice.
+ */
+const TEXT_KEYS = ["font-size", "font-weight", "text-color", "line-height"] as const;
+
+const BOARD_KEYS = [
   "board-background", "board-border-color", "board-border-width", "board-radius",
   "board-shadow-x", "board-shadow-y", "board-shadow-blur", "board-shadow-spread", "board-shadow-color",
-  "board-stack", "item-stack", "stage-stack",
-  "appear-gain", "move-gain", "sound-fade-frames",
 ] as const;
 
-const TIER_KEYS = [
-  ...COMMON_KEYS,
+const MOTION_KEYS = ["appear-frames", "move-frames", "motion-easing"] as const;
+
+const SOUND_KEYS = ["appear-gain", "move-gain", "sound-fade-frames"] as const;
+
+const STACK_KEYS = ["board-stack", "item-stack"] as const;
+
+/** Where an item waits, and how large it is, before it flies to its place. */
+const STAGE_KEYS = ["stage-x", "stage-y", "stage-size", "stage-stack"] as const;
+
+const ICON_KEYS = ["icon-size", "icon-radius", "icon-fit"] as const;
+
+export const TIER_BOARD_PROPERTIES = [
+  ...TEXT_KEYS, ...BOARD_KEYS, ...MOTION_KEYS, ...SOUND_KEYS, ...STACK_KEYS, ...STAGE_KEYS, ...ICON_KEYS,
   "rows", "label-width", "padding", "row-height", "row-gap", "cell-gap",
-  "icon-size", "icon-radius", "icon-fit", "stage-x", "stage-y", "stage-size",
 ] as const;
 
-const COLUMN_KEYS = [
-  ...COMMON_KEYS,
-  "rank-colors", "padding", "row-height", "row-gap", "icon-size", "icon-radius", "icon-fit",
-  "stage-x", "stage-y", "stage-size",
+export const COLUMN_PROPERTIES = [
+  ...TEXT_KEYS, ...BOARD_KEYS, ...MOTION_KEYS, ...SOUND_KEYS, ...STACK_KEYS, ...STAGE_KEYS, ...ICON_KEYS,
+  "rank-colors", "padding", "row-height", "row-gap",
 ] as const;
 
-const TOP_KEYS = [
-  ...COMMON_KEYS,
-  "slot-colors", "center-x", "baseline-y", "slot-gap", "icon-size", "icon-radius", "icon-fit",
-  "ring-width", "label-gap",
+/** No board and no stage: three slots are drawn straight onto the frame. */
+export const TOP_THREE_PROPERTIES = [
+  ...TEXT_KEYS, ...MOTION_KEYS, ...SOUND_KEYS, ...STACK_KEYS, ...ICON_KEYS,
+  "slot-colors", "center-x", "baseline-y", "slot-gap", "ring-width", "label-gap",
 ] as const;
 
-const TYPEWRITER_KEYS = [
-  ...COMMON_KEYS,
+/** Two typographies rather than one, and letters appear instead of moving. */
+export const TYPEWRITER_LIST_PROPERTIES = [
+  ...BOARD_KEYS, ...SOUND_KEYS, ...STACK_KEYS,
   "title-font-size", "title-font-weight", "title-color", "title-line-height",
   "item-font-size", "item-font-weight", "item-color", "item-line-height",
   "emphasis-color", "winner-color", "padding", "row-gap", "title-gap", "rotation",
   "frames-per-grapheme", "winner-frames",
+] as const;
+
+/**
+ * The two variants that read less than they were once handed.
+ *
+ * Both were written against a single list common to all four and so still accept
+ * properties they never consult. Rejecting those now would turn Recipes that are
+ * merely wasteful into Recipes that fail, so they remain accepted here and stay
+ * out of the lists above, which say what a variant honours.
+ */
+const TOP_THREE_ACCEPTED = [...TOP_THREE_PROPERTIES, ...BOARD_KEYS, "stage-stack"] as const;
+
+const TYPEWRITER_ACCEPTED = [
+  ...TYPEWRITER_LIST_PROPERTIES, ...TEXT_KEYS, ...MOTION_KEYS, "stage-stack",
 ] as const;
 
 function fail(recipe: SvsRecipe, message: string): never {
@@ -179,7 +207,7 @@ export function decodeTierBoardStyle(
   recipe: SvsRecipe,
   font: FontStackRef | FontArtifactRef,
 ): { readonly style: TierBoardStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, TIER_KEYS);
+  known(recipe, TIER_BOARD_PROPERTIES);
   const fonts = exactFonts(font);
   const style: TierBoardStyle = {
     contract: "svml.tier-board-style@1",
@@ -209,7 +237,7 @@ export function decodeColumnStyle(
   recipe: SvsRecipe,
   font: FontStackRef | FontArtifactRef,
 ): { readonly style: ColumnStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, COLUMN_KEYS);
+  known(recipe, COLUMN_PROPERTIES);
   const fonts = exactFonts(font);
   const style: ColumnStyle = {
     contract: "svml.column-style@1",
@@ -237,7 +265,7 @@ export function decodeTopThreeStyle(
   recipe: SvsRecipe,
   font: FontStackRef | FontArtifactRef,
 ): { readonly style: TopThreeStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, TOP_KEYS);
+  known(recipe, TOP_THREE_ACCEPTED);
   const fonts = exactFonts(font);
   const style: TopThreeStyle = {
     contract: "svml.top-three-style@1",
@@ -263,7 +291,7 @@ export function decodeTypewriterListStyle(
   recipe: SvsRecipe,
   font: FontStackRef | FontArtifactRef,
 ): { readonly style: TypewriterListStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, TYPEWRITER_KEYS);
+  known(recipe, TYPEWRITER_ACCEPTED);
   const fonts = exactFonts(font);
   const style: TypewriterListStyle = {
     contract: "svml.typewriter-list-style@1",

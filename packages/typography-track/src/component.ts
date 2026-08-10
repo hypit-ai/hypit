@@ -9,6 +9,7 @@ import type { Text } from "@narratage/text";
 import { canonicalize } from "@narratage/protocol";
 
 import { typographyTrackProducers } from "./manifest.js";
+import { typographyRecipeFacet } from "./recipe-facet.js";
 import {
   appendMomentTextItem,
   appendProgramTextItem,
@@ -153,4 +154,5 @@ export const typographyTrackComponent = {
       )) }, needs: {} }),
     },
   ],
+  recipes: [typographyRecipeFacet],
 } satisfies ComponentPackage;

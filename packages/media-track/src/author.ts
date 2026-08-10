@@ -124,6 +124,18 @@ const SAMPLE_KEYS = ["opacity", "blur", "brightness", "contrast", "saturation", 
 const FRAME_KEYS = ["stack-order", "clip", "radius", "padding", "border-width", "border-style", "border-color", "shadows", "frame-paint"] as const;
 const MOTION_KEYS = ["enter", "enter-frames", "enter-easing", "enter-direction", "enter-amount", "enter-origin", "sustain", "exit", "exit-frames", "exit-easing", "exit-direction", "exit-amount", "exit-origin"] as const;
 
+/**
+ * The appearance properties that have no fallback.
+ *
+ * Every other name answers with a default when a Recipe stays silent, so this
+ * is the whole of what an Item or a Sequence must be told before it can exist.
+ */
+const REQUIRED_KEYS = ["stack-order"] as const;
+
+export function decodeMediaStackingOrder(recipe: SvsRecipe): number {
+  return number(recipe, REQUIRED_KEYS[0]);
+}
+
 export function decodeMediaFit(recipe: SvsRecipe): ContentFit {
   return sealContentFit({
     contract: "svml.content-fit@1",
@@ -266,9 +278,24 @@ export function decodeMediaItemSpec(
     expansion: input.expansion,
     presentation: decodeMediaPresentation(recipe),
     motion: input.motion,
-    stackingOrder: number(recipe, "stack-order"),
+    stackingOrder: decodeMediaStackingOrder(recipe),
     ...(input.sourceAudio === undefined ? {} : { sourceAudio: input.sourceAudio }),
   });
+}
+
+const FRAME_PAINT_SUFFIX = ".frame-paint";
+
+/**
+ * A frame's own backdrop is a Layer like any other, so it needs a name, and it
+ * has to be recognizable again later by anything that rewrites what a Recipe
+ * decided. Both halves live here so neither can drift.
+ */
+export function mediaFramePaintLayerId(unitId: string): string {
+  return `${unitId}${FRAME_PAINT_SUFFIX}`;
+}
+
+export function isMediaFramePaintLayerId(id: string): boolean {
+  return id.endsWith(FRAME_PAINT_SUFFIX);
 }
 
 export function decodeMediaFramePaint(recipe: SvsRecipe, id: string): MediaPaintLayerSpec | undefined {
@@ -313,8 +340,8 @@ export function decodeMediaSequenceSpec(
   return sealMediaSequenceSpec({
     contract: "svml.media-sequence-spec@1", id,
     presentation: decodeMediaPresentation(recipe), motion,
-    stackingOrder: number(recipe, "stack-order"), handoffs,
+    stackingOrder: decodeMediaStackingOrder(recipe), handoffs,
   });
 }
 
-export const mediaAppearanceKeys = { fit: FIT_KEYS, sample: SAMPLE_KEYS, frame: FRAME_KEYS, motion: MOTION_KEYS } as const;
+export const mediaAppearanceKeys = { fit: FIT_KEYS, sample: SAMPLE_KEYS, frame: FRAME_KEYS, motion: MOTION_KEYS, required: REQUIRED_KEYS } as const;

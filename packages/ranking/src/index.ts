@@ -56,6 +56,20 @@ export {
   renderTypewriterList,
 } from "./render.js";
 export { rankingComponent } from "./component.js";
+export {
+  columnRecipeFacet,
+  rankingRecipeFacets,
+  tierBoardRecipeFacet,
+  topThreeRecipeFacet,
+  typewriterListRecipeFacet,
+} from "./recipe-facet.js";
+export {
+  columnRecipeSchema,
+  rankingRecipeProperties,
+  tierBoardRecipeSchema,
+  topThreeRecipeSchema,
+  typewriterListRecipeSchema,
+} from "./recipe-schema.js";
 export { createRankingFragment } from "./fragment.js";
 export type { RankingFragmentItem, RankingFragmentSound } from "./fragment.js";
 export {

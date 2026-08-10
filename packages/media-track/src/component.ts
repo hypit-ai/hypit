@@ -15,6 +15,7 @@ import {
   createMediaLayerSet,
 } from "./layers.js";
 import { mediaTrackProducers, mediaTrackTypes } from "./manifest.js";
+import { mediaAppearanceRecipeFacet, mediaMotionRecipeFacet } from "./recipe-facet.js";
 import {
   appendMediaSequenceUntilMoment,
   appendMediaSequenceUntilProgramEnd,
@@ -222,4 +223,6 @@ export const mediaTrackComponent = {
     implementationDigest: mediaTrackValidatorDigests.program,
     handler: ({ value }) => assertMediaTrackProgram(inline<MediaTrackProgram>(value, "MediaTrackProgram")),
   }],
+  // Appearance leads because it is the Recipe a Track cannot do without.
+  recipes: [mediaAppearanceRecipeFacet, mediaMotionRecipeFacet],
 } satisfies ComponentPackage;

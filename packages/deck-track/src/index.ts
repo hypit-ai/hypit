@@ -2,6 +2,7 @@ export {
   decodeDepthStackCardSpec,
   decodeDepthStackMaterial,
   decodeDepthStackSpec,
+  depthStackRecipeKeys,
 } from "./author.js";
 export { depthStackComponent } from "./component.js";
 export { createDepthStackFragment } from "./fragment.js";
@@ -11,6 +12,8 @@ export {
   decodeDepthStackSurface,
 } from "./surface.js";
 export { renderDepthStack } from "./lower.js";
+export { depthStackRecipeFacet } from "./recipe-facet.js";
+export { depthStackRecipeProperties, depthStackRecipeSchema } from "./recipe-schema.js";
 export {
   depthStackCardLabelSchema,
   depthStackCardLabelStyleSchema,

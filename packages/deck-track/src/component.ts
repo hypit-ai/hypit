@@ -10,6 +10,7 @@ import type { Text } from "@narratage/text";
 
 import { renderDepthStack } from "./lower.js";
 import { depthStackProducers, depthStackTypes } from "./manifest.js";
+import { depthStackRecipeFacet } from "./recipe-facet.js";
 import {
   appendDepthStackMomentCard,
   assertDepthStackProgram,
@@ -129,4 +130,5 @@ export const depthStackComponent = {
     implementationDigest: depthStackValidatorDigests.program,
     handler: ({ value }) => assertDepthStackProgram(inline<DepthStackProgram>(value, "DepthStackProgram")),
   }],
+  recipes: [depthStackRecipeFacet],
 } satisfies ComponentPackage;

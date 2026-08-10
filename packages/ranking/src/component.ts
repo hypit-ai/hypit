@@ -9,6 +9,7 @@ import type { SpatialFrame } from "@narratage/spatial";
 import type { Text } from "@narratage/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
+import { rankingRecipeFacets } from "./recipe-facet.js";
 import {
   appendColumnItem,
   appendRankingItemSpec,
@@ -272,4 +273,5 @@ export const rankingComponent = {
     { type: rankingTypes.soundEvents, implementationDigest: rankingValidatorDigests.events,
       handler: ({ value }) => assertRankingSoundEventPlan(inline<RankingSoundEventPlan>(value, "RankingSoundEventPlan")) },
   ],
+  recipes: rankingRecipeFacets,
 } satisfies ComponentPackage;
