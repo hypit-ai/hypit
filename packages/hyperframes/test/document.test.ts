@@ -198,7 +198,30 @@ test("HyperFrames emits frame-bound local animation without creating a Track sta
   assert.match(document.html, /@keyframes svml-/u);
   assert.match(document.html, /33\.333333333%\{opacity:1;transform:translateY\(0%\)/u);
   assert.match(document.html, /animation-duration:1\.001s/u);
+  assert.match(document.html, /100%\{opacity:1;transform:translateY\(0%\)\}/u);
   assert.doesNotMatch(document.html, /isolation:isolate/u);
+});
+
+test("HyperFrames clips a long animation by Present visibility instead of rejecting it", () => {
+  const { composition, programSpace } = fixture();
+  const lower = composition.tracks.find((track) => track.id === "lower");
+  assert(lower?.contract === "svml.visual-track@1");
+  const present = lower.presents[0]!;
+  const media = present.elements[0]!;
+  const animated = sealVisualTrack({
+    ...lower,
+    presents: [{ ...present, elements: [{ ...media, animation: { keyframes: [
+      { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
+      { atFrame: 45, style: [{ name: "opacity", value: 1 }] },
+    ] } }] }],
+  });
+  const document = compileHyperframesDocument(sealComposition({
+    ...composition,
+    tracks: composition.tracks.map((track) => track.id === "lower" ? animated : track),
+  }), programSpace);
+  assert.match(document.html, /animation-duration:1\.5015s/u);
+  assert.match(document.html, /data-svml-animation-duration-frames="45" data-svml-animation-sample-frames="30"/u);
+  assert.match(document.html, /100%\{opacity:1\}/u);
 });
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {

@@ -271,7 +271,7 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
   assert.deepEqual(parameters.karaoke, { mode: "trail", transition: "wipe" });
   assert.deepEqual(parameters.motion, {
     cueEnter: "spring", cueExit: "blur-in", cueEnterFrames: 6, cueExitFrames: 6,
-    atomEnter: "slide-up", atomEnterFrames: 5, atomReveal: "typewriter",
+    atomEnter: "slide-up", atomEnterFrames: 5, atomExit: "none", atomExitFrames: 0, atomReveal: "typewriter",
     activeResponse: "spring", activeResponseFrames: 7, activeScale: 1.12, slideDistancePx: 20,
     loop: "wobble", loopTarget: "active-atom", loopPeriodFrames: 14, loopIntensity: 0.8,
   });
@@ -559,12 +559,14 @@ test("every declared one-shot and loop motion lowers through the same wrapper vo
     return renderFineCaption(projection, program, display, space).presents[0]!.elements;
   };
   for (const kind of [
-    "fade", "pop", "spring", "slide-left", "slide-right", "slide-up", "slide-down", "blur-in",
+    "fade", "pop", "scale", "spring", "bounce", "elastic", "stamp", "tilt", "zoom-blur",
+    "flip-x", "flip-y", "spin", "squash", "stretch", "slide-left", "slide-right", "slide-up", "slide-down",
+    "blur-in", "wipe-left", "wipe-right", "wipe-up", "wipe-down",
   ] as const) {
     const elements = render(`enter-${kind}`, { "cue-enter": kind, "cue-enter-frames": 6 });
     assert.ok(elements.find((element) => element.id === "cue-motion")?.animation, `${kind} emitted no Cue animation`);
   }
-  for (const kind of ["shake", "wobble", "glow-pulse"] as const) {
+  for (const kind of ["shake", "wobble", "glow-pulse", "breathe", "float", "pulse", "flicker"] as const) {
     const elements = render(`loop-${kind}`, { loop: kind, "loop-target": "cue", "loop-period-frames": 8 });
     assert.ok(elements.find((element) => element.id === "cue-loop")?.animation, `${kind} emitted no loop animation`);
   }
@@ -575,4 +577,7 @@ test("every declared one-shot and loop motion lowers through the same wrapper vo
     assert.ok(elements.find((element) => element.id === "atom-1-response")?.animation,
       `${kind} emitted no active response`);
   }
+  const exiting = render("atom-exit", { "atom-exit": "wipe-left", "atom-exit-frames": 4 });
+  assert.ok(exiting.find((element) => element.id === "atom-1-entry")?.animation,
+    "Atom exit emitted no lifecycle animation");
 });

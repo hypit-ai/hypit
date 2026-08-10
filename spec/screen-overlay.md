@@ -121,8 +121,9 @@ an edge from one side to another; Grain may remain steady. The old universal tri
 at 30% of every effect's duration is retired as hidden presentation policy.
 
 Recipe defaults may supply an envelope, but the resolved Program must contain the exact parameters.
-An effect cannot expand its projected window to fit an animation. Invalid or zero-length windows
-fail through the common temporal validator.
+An effect cannot expand its projected window to fit an animation. A longer authored envelope is
+simply clipped by that window; it is not rejected or secretly sped up. Invalid or zero-length
+windows still fail through the common temporal validator.
 
 ## 5. Portable official component set
 
