@@ -69,6 +69,7 @@ Sticker、Deck 或任何模型家族。
 @narratage/generation            图像/视频/音频生成合同
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
+@narratage/seedance-kits         数据化的 Seedance 语义 Text Template
 @narratage/seedance-speaker      Seedance Speaker binding
 @narratage/minimax-h3            MiniMax H3 model family
 @narratage/gemini-omni           Gemini Omni model family

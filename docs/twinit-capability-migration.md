@@ -7,8 +7,8 @@ outcomes only when they fit the current graph, peer-Track and explicit-provider 
 ## Status vocabulary
 
 - **Complete:** a current author package or graph composition provides the production outcome.
-- **Expressible; Template missing:** current model/graph contracts can express the request, but the
-  old named author experience and its Text Template have not been migrated.
+- **Expressible; Template missing:** current model/graph contracts can express the request, but a
+  reusable author Text Template has not been migrated.
 - **Backlog:** technically compatible with the architecture, but no current package provides it.
 - **Deliberately omitted:** consciously outside the current product or architecture; not accidental.
 
@@ -31,14 +31,14 @@ a finished author package, and a deferred package is not an impossible feature.
 | `text_replace` | Deliberately omitted | The old pronunciation-rewrite workflow is superseded by Script Dual Text. Generic Text templates may still perform an explicitly authored substitution for unrelated work, but no speech path rewrites the author's text. |
 | `seedance_avatar` | Complete | The official Seedance Speaker path covers the single-speaker reference-image/audio case. |
 | `seedance_speaker` | Complete | `@narratage/seedance-speaker` with one explicit six-axis Text Template, SVS settings and visible Text render edge. |
-| `seedance_broll` | Expressible; Template missing | Generic Seedance accepts runtime-produced Text/image/audio/video edges; a tested three-image montage topology exists. Only the named author template is deferred. |
-| `seedance_podcast` | Expressible; Template missing | Seedance accepts the required multimodal references; the two-speaker Text Template and author Surface are absent. |
-| `seedance_call` | Expressible; Template missing | Model ports exist; the call-layout Text Template and author Surface are absent. |
-| `seedance_street_interview` | Expressible; Template missing | Model ports exist; the street-interview Script/Text Template is absent. |
+| `seedance_broll` | Complete | `@narratage/seedance-kits/broll` is a six-axis silent micro-story Text Template; its output and every image reference enter generic `seedance:ReferenceVideo` through explicit edges. |
+| `seedance_podcast` | Complete | `@narratage/seedance-kits/podcast` preserves the two-view/two-voice stage contract as data; generic Text and Seedance Surfaces own execution. |
+| `seedance_call` | Complete | `@narratage/seedance-kits/call` preserves live main-tile/PiP reverse views without adding a call mode to the model package. |
+| `seedance_street_interview` | Complete | `@narratage/seedance-kits/street-interview` owns role, voice, microphone-handoff and shared-scene semantics as a Text Template. |
 | `seedance_keyframe` | Complete | Generic `seedance:FrameVideo` exposes explicit first-frame and optional last-frame ports; author Text remains a separate graph input. |
 | `seedance_reference` | Complete | `seedance:TextVideo`, `seedance:FrameVideo` and `seedance:ReferenceVideo` expose the three exact model request shapes without prompt assembly in the model package. |
-| `seedance_motion_ref` | Expressible; Template missing | Reference-video input exists; the motion-only semantic Text Template is absent. |
-| `seedance_camera_ref` | Expressible; Template missing | Reference-video input exists; the camera-only semantic Text Template is absent. |
+| `seedance_motion_ref` | Complete | `@narratage/seedance-kits/motion-reference` states the motion-only transfer; subject image and reference video remain ordinary media edges. |
+| `seedance_camera_ref` | Complete | `@narratage/seedance-kits/camera-reference` states the camera-only transfer over the same generic media topology. |
 | `concat` | Complete | Ordered Media/Speech graph composition replaces clip concatenation as a special node. |
 | `base_track` | Complete | Speech Spine, Media Track and Film replace the privileged base lane. |
 | `video_enhance` | Deliberately omitted | Explicitly outside this migration. A future video-in/video-out package can be added without reserving a Core or media-pipeline mode. |
@@ -55,7 +55,7 @@ a finished author package, and a deferred package is not an impossible feature.
 | `locate` | Complete | WhisperX evidence, Speech Alignment, SemanticMap, Temporal, Spatial and Film replace one privileged locate phase. |
 | `export` | Complete | Composition, HyperFrames document compilation, visual rendering, audio rendering and mux are explicit graph operations. |
 
-Totals: **24 Complete**, **6 Expressible; Template missing**, **0 Backlog**, **5 Deliberately omitted**.
+Totals: **30 Complete**, **0 Expressible; Template missing**, **0 Backlog**, **5 Deliberately omitted**.
 
 ## Prompt and Text audit
 
@@ -67,7 +67,9 @@ node names are evidence, not an API to reproduce.
 
 - `@narratage/text` owns only finite data-only templates, bindings and ordinary `Text` values. It has
   no model, media, Provider, queue, credential, network or cache authority.
-- Static Recipe settings may lower to initial bindings during author compilation. Every text value
+- `text:Render` may project only the scalar Recipe properties actually declared by its template;
+  explicit `Param` children override them. This is the reusable style → recipe → parameter bridge,
+  not Seedance-specific code. Every text value
   produced elsewhere remains an explicit graph input; it cannot be copied into hidden Frontend
   state.
 - The Seedance Speaker path now records
@@ -85,10 +87,10 @@ node names are evidence, not an API to reproduce.
 |---|---|---|
 | `seedance_avatar` | Retire the named duplicate | Its useful single-speaker outcome is covered by Speaker. Its hard-coded gender, seven always-on craft paragraphs and conflicting locked-shot/jump-cut advice are old policy, not model capability. |
 | `seedance_speaker` | Keep and refine | Reference preservation, dialogue/voice mapping and the six axes are useful author semantics. They belong in an imported Text Template plus a thin role-aware author Surface. |
-| `seedance_broll` | Keep as a future author Kit | Silent visual support is a real semantic contract. Material, reference plan, story shape, edit language, camera language and motion intensity are a useful initial orthogonal vocabulary, but remain editable template data. |
-| `seedance_podcast` | Keep as a distinct future Kit | Two co-present hosts, two view references, voice roles and A/B dialogue are a genuine stage contract, not a runtime mode guess. |
-| `seedance_call` | Keep as a distinct future Kit | Main-tile/PiP geometry and live listener behavior differ materially from a co-present podcast. It should not be a `mode` hidden inside one conversation component. |
-| `seedance_street_interview` | Keep as a distinct future Kit | Interviewer/guest roles and microphone handoff are real authored staging semantics. |
+| `seedance_broll` | Keep as a data-only author Kit | Silent visual support is a real semantic contract. Its six prompt axes remain editable template data. |
+| `seedance_podcast` | Keep as a distinct data-only Kit | Two co-present views, two voices and A/B dialogue are a genuine stage contract, not a runtime mode guess. |
+| `seedance_call` | Keep as a distinct data-only Kit | Main-tile/PiP geometry and live listener behavior differ materially from a co-present podcast. It is not a hidden `mode`. |
+| `seedance_street_interview` | Keep as a distinct data-only Kit | Interviewer/guest roles and microphone handoff are real authored staging semantics. |
 | `seedance_reference` | Do not recreate as a prompt Kit | It was the low-level escape hatch with no prompt scaffold. Generic exact Seedance plus ordinary Text and media edges already is that abstraction. |
 | `seedance_keyframe` | Keep low-level | First/last frame and motion Text are exact model ports; a dedicated named author Surface is optional convenience, not missing semantics. |
 | `seedance_motion_ref` / `seedance_camera_ref` | Preserve as two small templates | “Copy body motion” and “copy camera path” are genuinely different reference interpretations. They need small explicit templates, not new Provider logic or duplicated model executors. |
@@ -169,8 +171,8 @@ comes from the locked package bytes and closure digests.
 1. keep public and engineering documentation factual and brand-neutral;
 2. preserve the enforced logical `@1` identity invariant while packages remain unpublished;
 3. settle the package rename map before npm publication work;
-4. migrate the six remaining distinct Seedance author templates from real delivery demand;
+4. exercise the completed Seedance templates in real delivery graphs without adding model wrappers;
 5. keep VLM temporal/spatial interpretation outside the current version.
 
-This ledger changes when implementation evidence changes. A package moves to **Complete** only after
-its author Surface, graph lowering and relevant execution/render evidence exist.
+This ledger changes when implementation evidence changes. A capability moves to **Complete** only
+after its author data/Surface, graph lowering and relevant execution evidence exist.

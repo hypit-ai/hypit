@@ -319,6 +319,27 @@ Referenced by `speaker:Take` via the `recipe` attribute:
   duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
 ```
 
+## Generic Text Template Recipes
+
+The same precedence is available without a domain wrapper. `text:Render` can read any SVS Recipe,
+project only properties declared by its template, and let explicit `text:Param` children override
+them. This is how the data-only Seedance B-roll, Podcast, Call, Street Interview and reference
+transfer Kits remain separate from Seedance execution.
+
+```svs
+broll.product-demo {
+  material-mode: product-beauty;
+  reference-plan: scene-plus-refs;
+  story-shape: process-demo;
+  edit-language: insert-cutaway;
+  camera-language: product-macro;
+  motion-intensity: readable;
+}
+```
+
+Model, resolution, duration and reference media are not template policy. They stay on the exact
+model Surface and graph edges.
+
 ## Exact font declarations
 
 SVS describes typography policy, but it does not choose or open font bytes. For common open fonts,

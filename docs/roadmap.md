@@ -1,6 +1,6 @@
 # Narratage roadmap
 
-Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-09.
+Status: active priorities after the `svml.graph@1` / Satisfaction redesign, 2026-08-10.
 
 Narratage can already execute one real paid talking-video build. The active roadmap is no longer
 “make a video possible.” It is to finish the few remaining domain-neutral operational gaps, keep
@@ -110,8 +110,10 @@ a missing compiler feature and not a reason to add an example-specific TypeScrip
 
 Local media, WhisperX and parallel HyperFrames execution are implemented. S3 Artifact streaming,
 AWS media execution and the recoverable AWS HyperFrames Endpoint are also implemented. The exact
-FFmpeg Layer plus ZIP-packaged media service have passed their complete five-operation live canary;
-HyperFrames has passed a real distributed render, recovery, ingestion and cleanup canary.
+FFmpeg Layer plus ZIP-packaged media service have passed the original five-operation live canary;
+the shared implementation now also contains generic trim/retime and audio/frame extraction, whose
+Lambda deployment still needs refreshing. HyperFrames has passed a real distributed render,
+recovery, ingestion and cleanup canary.
 Complete the remaining deployment work only when a deployment needs it:
 
 - deploy WhisperX only as a persistent warm service and add the corresponding remote-service
@@ -191,14 +193,19 @@ The current implementations remain executable vertical slices and regression wit
 does not wait for release packaging, optional Providers or arbitrary-code isolation, and it must not
 reopen Core to add video-specific meaning.
 
-### C1. Next video package batch
+### C1. Seedance author templates complete
 
 Fine Caption's field-free Style surface, measured display-Atom timing and documented motion
 vocabulary are implemented. Deterministic speech Estimate is now a Text-to-duration graph component
 with an explicit authored policy and model-admissible duration output; it remains separate from
-measured speech timing. The next author/domain task is deliberately narrow: migrate only the
-distinct author semantics from Twinit's named Seedance components as Text Templates/thin Surfaces,
-and delete aliases that merely duplicate prompt assembly.
+measured speech timing. Twinit's distinct named Seedance author semantics are now finite data-only
+Text Templates, and aliases that merely duplicated prompt assembly were removed.
+
+The retained set is finite: silent B-roll, co-present Podcast, video Call, Street Interview,
+body-Motion Reference and camera-Path Reference. Keyframe and generic multimodal reference remain
+the low-level `FrameVideo` and `ReferenceVideo` surfaces, not additional Kits. All six use generic
+`text:Render` plus exact Seedance fragments; none adds Provider, queue, media-processing or Core
+code. The next work is real-delivery use and correction of template prose, not another layer.
 
 VLM-assisted temporal or spatial interpretation is not part of this version. If later demanded,
 it must arrive as separately imported packages with explicit Video + Text inputs and explicit

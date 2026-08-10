@@ -23,13 +23,13 @@ An active Build remains bound to its source closure, implementation closure and 
 Updating an installed package does not silently change or resume that Build under a new identity.
 New Builds can use the newly locked package without a Core release.
 
-A logical Module is not required to become one physical npm package. Author meanings such as
-Seedance Speaker, Media Track and Podcast should retain separate Manifests and import identities, while a
-public Seedance distribution may ship all of those facets and their static template data from one
-physical package. Internal private workspace packages remain convenient development boundaries and
-do not settle the public package topology. Shared mechanics such as `@narratage/text` prevent those
-logical modules from duplicating text assembly code without collapsing them into one mode-heavy
-component.
+A logical Module is not required to become one physical npm package, and data-only author policy
+does not need a logical Module at all. The six reusable Seedance semantic Kits are ordinary
+`TextTemplate` source resources shipped together by `@narratage/seedance-kits`; they feed the one
+generic Text and Seedance graph vocabulary. A component that owns real lowering semantics, such as
+Seedance Speaker or Media Track, keeps its own Manifest/import identity. Internal private workspace
+packages remain convenient development boundaries and do not settle the final public package
+topology.
 
 Another domain needs only `@narratage/protocol` and `@narratage/core` for the irreducible state machine. It
 will usually also choose `@narratage/source`, an Elaborator, `@narratage/run`, a compiler Host, Driver and

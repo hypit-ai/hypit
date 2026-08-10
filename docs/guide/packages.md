@@ -74,6 +74,7 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/generation            image/video/audio generation contracts
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
+@narratage/seedance-kits         data-only Seedance semantic Text Templates
 @narratage/seedance-speaker      Seedance Speaker binding
 @narratage/minimax-h3            MiniMax H3 model family
 @narratage/gemini-omni           Gemini Omni model family

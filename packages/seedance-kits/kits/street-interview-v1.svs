@@ -1,0 +1,56 @@
+<?svml using="@narratage/text/svs@1"?>
+
+<sheet version="1" id="street-interview-v1">
+  text-template.street-interview-v1 {
+    separator: paragraph;
+    default-framing: soft-handheld;
+    default-edit-language: pause-trim;
+    default-pacing: compact;
+    default-performance: natural-street;
+    default-reaction: active;
+    default-gesture: natural;
+  }
+  text-template.street-interview-v1.block.base { kind: fixed; order: 10; text: "Create a realistic vertical street-interview clip from one final street-interview reference image."; }
+  text-template.street-interview-v1.block.reference { kind: fixed; order: 20; text: "REFERENCE CONTRACT: @image1 is the complete scene. Preserve both identities, outfits, street location, props, microphone, lighting, camera height, lens feel, and composition."; }
+  text-template.street-interview-v1.block.roles { kind: fixed; order: 30; text: "ROLE MAP: A is the interviewer holding the microphone. B is the guest. Follow A: and B: exactly. A uses @audio1; B uses @audio2; only the current speaker moves their mouth."; }
+  text-template.street-interview-v1.block.microphone { kind: fixed; order: 40; text: "MICROPHONE CONTRACT: A always holds the same microphone. On A: lines it stays near A's mouth; on B: lines A naturally extends it toward B with realistic wrist, hand, and arm adjustments."; }
+  text-template.street-interview-v1.block.scene { kind: fixed; order: 50; text: "SINGLE-SCENE CONTRACT: keep both people in the same street-interview spatial relationship and camera perspective throughout."; }
+
+  text-template.street-interview-v1.block.framing { kind: axis; order: 60; parameter: framing; }
+  text-template.street-interview-v1.choice.framing.locked-scene { text: "FRAMING: preserve the reference composition, crop, scale, camera height, and lens feel."; }
+  text-template.street-interview-v1.choice.framing.soft-handheld { text: "FRAMING: realistic handheld drift, tiny sway, and operator breathing while preserving composition."; }
+  text-template.street-interview-v1.choice.framing.subject-push { text: "FRAMING: a modest handheld push toward the active speaker, then settle back."; }
+
+  text-template.street-interview-v1.block.edit { kind: axis; order: 70; parameter: edit-language; }
+  text-template.street-interview-v1.choice.edit.continuous { text: "EDITING: a continuous take with real-time reactions, breathing, and conversational timing."; }
+  text-template.street-interview-v1.choice.edit.pause-trim { text: "EDITING: trim silent gaps while preserving the same continuous street scene."; }
+  text-template.street-interview-v1.choice.edit.beat-cut { text: "EDITING: question, answer, reaction, and punchline land as short beats inside the same scene."; }
+
+  text-template.street-interview-v1.block.pacing { kind: axis; order: 80; parameter: pacing; }
+  text-template.street-interview-v1.choice.pacing.measured { text: "PACING: measured question and answer delivery with a natural beat between thoughts."; }
+  text-template.street-interview-v1.choice.pacing.compact { text: "PACING: compact responsive handoffs while every line remains understandable."; }
+  text-template.street-interview-v1.choice.pacing.rapid-qna { text: "PACING: rapid street Q and A with crisp short-form momentum."; }
+  text-template.street-interview-v1.choice.pacing.varied-emphasis { text: "PACING: compact handoffs with important punchlines slowed slightly to land meaning."; }
+
+  text-template.street-interview-v1.block.performance { kind: axis; order: 90; parameter: performance; }
+  text-template.street-interview-v1.choice.performance.natural-street { text: "PERFORMANCE: curious interviewer and candid, spontaneous, believable guest."; }
+  text-template.street-interview-v1.choice.performance.high-energy { text: "PERFORMANCE: vivid, fast, charismatic short-form street energy."; }
+  text-template.street-interview-v1.choice.performance.calm-expert { text: "PERFORMANCE: composed thoughtful guest and visibly attentive interviewer."; }
+  text-template.street-interview-v1.choice.performance.playful-skeptic { text: "PERFORMANCE: playful skepticism, teasing smiles, reversals, and small laughs."; }
+
+  text-template.street-interview-v1.block.reaction { kind: axis; order: 100; parameter: reaction; }
+  text-template.street-interview-v1.choice.reaction.subtle { text: "REACTIONS: tiny nods, eye focus, breath, and small expression changes."; }
+  text-template.street-interview-v1.choice.reaction.active { text: "REACTIONS: visible nods, smiles, eye movement, and readable facial shifts."; }
+  text-template.street-interview-v1.choice.reaction.big { text: "REACTIONS: lively but realistic surprise, laughter, disbelief, and delight."; }
+
+  text-template.street-interview-v1.block.gesture { kind: axis; order: 110; parameter: gesture; }
+  text-template.street-interview-v1.choice.gesture.restrained { text: "GESTURE: restrained body language; face, voice, and microphone movement carry meaning."; }
+  text-template.street-interview-v1.choice.gesture.compact { text: "GESTURE: compact semantic beats near the body, bag, and microphone."; }
+  text-template.street-interview-v1.choice.gesture.natural { text: "GESTURE: natural open palms, small points, nods, and posture shifts."; }
+  text-template.street-interview-v1.choice.gesture.expressive { text: "GESTURE: richer hand, shoulder, posture, and face changes while preserving candid realism."; }
+
+  text-template.street-interview-v1.block.hygiene { kind: fixed; order: 120; text: "AUDIO AND TEXTURE: clean dialogue, natural outdoor room tone, stable faces, hands, microphone, and photoreal motion. Add no subtitles, captions, labels, cards, or overlays; preserve physical signs and text already in the scene."; }
+  text-template.street-interview-v1.block.dialogue { kind: slot; order: 130; slot: dialogue; optional: false; label: "DIALOGUE SCRIPT TO DELIVER:"; }
+  text-template.street-interview-v1.block.action { kind: slot; order: 140; slot: action; optional: true; }
+  text-template.street-interview-v1.block.extra { kind: slot; order: 150; slot: extra; optional: true; }
+</sheet>

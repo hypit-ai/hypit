@@ -1,0 +1,59 @@
+<?svml using="@narratage/text/svs@1"?>
+
+<sheet version="1" id="broll-v1">
+  text-template.broll-v1 {
+    separator: paragraph;
+    default-material-mode: practical-real;
+    default-reference-plan: single-stage;
+    default-story-shape: single-moment;
+    default-edit-language: continuous-shot;
+    default-camera-language: reference-locked;
+    default-motion-intensity: readable;
+  }
+
+  text-template.broll-v1.block.base { kind: fixed; order: 10; text: "Create a silent B-roll micro-film using the provided reference image or images."; }
+  text-template.broll-v1.block.contract { kind: fixed; order: 20; text: "B-ROLL CONTRACT: create visual support footage. Focus on visible action, object behavior, camera movement, and editing rhythm. Visible people perform visual actions rather than speaking to camera."; }
+  text-template.broll-v1.block.reference { kind: fixed; order: 30; text: "REFERENCE CONTRACT: preserve the intended identity, product, UI, props, setting, lighting, texture, wardrobe, and composition from the reference images and story."; }
+
+  text-template.broll-v1.block.material { kind: axis; order: 40; parameter: material-mode; }
+  text-template.broll-v1.choice.material.practical-real { text: "MATERIAL MODE: practical real-world UGC footage with believable physical causality and a lived-in phone-camera feeling."; }
+  text-template.broll-v1.choice.material.screen-demo { text: "MATERIAL MODE: a practical filmed screen demo. Interface elements remain physically contained on the device screen."; }
+  text-template.broll-v1.choice.material.product-beauty { text: "MATERIAL MODE: product beauty footage focused on object presence, packaging, texture, tabletop detail, or studio product motion."; }
+  text-template.broll-v1.choice.material.proof-capture { text: "MATERIAL MODE: proof capture such as a website, certificate, receipt, review, chart, or credibility page, treated as visual evidence."; }
+  text-template.broll-v1.choice.material.stylized-vfx { text: "MATERIAL MODE: an intentional visual-effects metaphor used as an expressive explainer rather than practical documentation."; }
+
+  text-template.broll-v1.block.references { kind: axis; order: 50; parameter: reference-plan; }
+  text-template.broll-v1.choice.references.single-stage { text: "REFERENCE PLAN: use @image1 as the scene and stage reference for the whole clip."; }
+  text-template.broll-v1.choice.references.scene-plus-refs { text: "REFERENCE PLAN: use @image1 as the scene and stage; later images preserve product, UI, logo, prop, or proof details."; }
+  text-template.broll-v1.choice.references.ordered-montage { text: "REFERENCE PLAN: use @image1, @image2, @image3 and later images as ordered shots in one same-theme montage."; }
+
+  text-template.broll-v1.block.story-shape { kind: axis; order: 60; parameter: story-shape; }
+  text-template.broll-v1.choice.story-shape.single-moment { text: "STORY SHAPE: one continuous visual moment with a small readable change or payoff."; }
+  text-template.broll-v1.choice.story-shape.reaction-beat { text: "STORY SHAPE: stimulus, realization, then a clearly visible reaction."; }
+  text-template.broll-v1.choice.story-shape.process-demo { text: "STORY SHAPE: a stepwise demonstration whose practical stages remain legible."; }
+  text-template.broll-v1.choice.story-shape.before-after { text: "STORY SHAPE: a clear and visually legible contrast between before and after states."; }
+  text-template.broll-v1.choice.story-shape.montage-sequence { text: "STORY SHAPE: several short shots around one idea, each adding distinct evidence or feeling."; }
+
+  text-template.broll-v1.block.edit { kind: axis; order: 70; parameter: edit-language; }
+  text-template.broll-v1.choice.edit.continuous-shot { text: "EDIT LANGUAGE: continuous-shot timing; let the visual action play as one coherent moment."; }
+  text-template.broll-v1.choice.edit.jump-cut-beats { text: "EDIT LANGUAGE: crisp jump-cut beats, with each meaningful action stage landing cleanly."; }
+  text-template.broll-v1.choice.edit.match-cut-montage { text: "EDIT LANGUAGE: match-cut montage connecting similar framing, motion, or composition across shots."; }
+  text-template.broll-v1.choice.edit.insert-cutaway { text: "EDIT LANGUAGE: relevant detail cutaways such as hand, screen, product, face, or reaction."; }
+
+  text-template.broll-v1.block.camera { kind: axis; order: 80; parameter: camera-language; }
+  text-template.broll-v1.choice.camera.reference-locked { text: "CAMERA LANGUAGE: preserve the reference framing with minimal drift and let subject action carry the shot."; }
+  text-template.broll-v1.choice.camera.selfie-vlog { text: "CAMERA LANGUAGE: intimate selfie, mirror, or vlog phone camera with natural arm and camera bob."; }
+  text-template.broll-v1.choice.camera.handheld-follow { text: "CAMERA LANGUAGE: a handheld follow camera moving with the subject or object through space."; }
+  text-template.broll-v1.choice.camera.push-reveal { text: "CAMERA LANGUAGE: a motivated push, tilt, or reveal guiding attention to the key discovery."; }
+  text-template.broll-v1.choice.camera.product-macro { text: "CAMERA LANGUAGE: close product macro, orbit, parallax, or detail-focused movement."; }
+
+  text-template.broll-v1.block.motion { kind: axis; order: 90; parameter: motion-intensity; }
+  text-template.broll-v1.choice.motion.micro { text: "MOTION INTENSITY: micro motion only, prioritizing proof, product, or still-evidence clarity."; }
+  text-template.broll-v1.choice.motion.readable { text: "MOTION INTENSITY: readable action with clear movement that remains easy to understand."; }
+  text-template.broll-v1.choice.motion.lively { text: "MOTION INTENSITY: lively UGC body, camera, or object movement."; }
+  text-template.broll-v1.choice.motion.impact { text: "MOTION INTENSITY: high-impact physical or sensory motion such as splash, burst, or fast reveal."; }
+
+  text-template.broll-v1.block.hygiene { kind: fixed; order: 100; text: "SCREEN AND TEXT HYGIENE: add no subtitles, captions, floating words, labels, logos, or ad overlays. Referenced physical labels, screens, websites, and documents remain attached to their objects."; }
+  text-template.broll-v1.block.story { kind: slot; order: 110; slot: story; optional: false; label: "MICRO-STORY PROMPT:"; }
+  text-template.broll-v1.block.extra { kind: slot; order: 120; slot: extra; optional: true; }
+</sheet>

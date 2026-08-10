@@ -1,6 +1,6 @@
 # Implementation status
 
-Repository reality as of 2026-08-09. Specifications define laws; this page says what currently
+Repository reality as of 2026-08-10. Specifications define laws; this page says what currently
 executes. Narratage is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
@@ -129,7 +129,9 @@ Implemented:
   ports without importing any model package;
 - `@narratage/provider-google-vertex`: display-only Gemini Caption planning;
 - provider-neutral all-stream media inspection, attached-picture-safe selection, synchronized A/V
-  normalization, audio-program rendering and final mux contracts;
+  normalization, ordered trim/retime, audio/frame extraction, audio-program rendering and final mux
+  contracts; the final render exports its verified mux bytes unchanged as an ordinary `BlobArtifact`
+  that can feed any later Blob consumer;
 - `@narratage/provider-media-local`: bounded shell-free ffprobe/ffmpeg realization, with a shared
   compatibility probe for the encoders and filters actually consumed by media execution;
 - canonical 48 kHz speech master to content-addressed 16 kHz mono evidence-audio projection;
@@ -139,9 +141,11 @@ Implemented:
   validation and profile-scoped HyperFrames browser preparation;
 - `@narratage/artifact-store-s3`: conditional content-addressed writes, multipart streaming,
   streamed digest verification and explicit retention facets;
-- `@narratage/provider-media-aws-lambda`: the same five media operations as the local Provider,
-  executed through one Lambda function and the shared `@narratage/media-execution` body; the exact
-  FFmpeg Layer and ZIP service passed their complete live AWS canary;
+- `@narratage/provider-media-aws-lambda`: the same eight media capabilities as the local Provider,
+  executed through one Lambda function and the shared `@narratage/media-execution` body; the original
+  five normalization/evidence/audio-render/mux operations passed the deployed live AWS canary, while
+  the three newer utility operations share the tested execution body but still need that deployment
+  refreshed before they can be claimed as remotely live;
 - `@narratage/provider-hyperframes-aws-lambda`: recoverable plan-v2 rendering through the locked
   HyperFrames 0.7.101 SDK, deterministic Step Functions execution identity, checkpointed polling and
   streamed S3 output persistence; the deployed stack passed a complete distributed render,
@@ -196,6 +200,12 @@ Implemented and executable:
   ordinary Text value and feeds the visible Text render and exact Seedance request path through its
   ordinary `prompt` port, while optional action/extra content also
   enters through Text edges rather than Recipe fields;
+- `@narratage/seedance`: three low-level author invocation shapes—text-only, first/optional-last
+  frame, and heterogeneous references—over the same exact model port tables; these surfaces expose
+  model capability and never assemble B-roll, podcast, call or interview creative semantics;
+- `@narratage/seedance-kits`: six data-only Text Template resources for B-roll, Podcast, Call,
+  Street Interview, Motion Reference and Camera Reference; all reuse generic `text:Render` Recipe
+  projection and low-level Seedance, with no Kit-specific Provider, queue, media or Core code;
 - graph-native Seedance reference assembly for both generic video and speech paths, including a
   tested person/product → holding → walking/interview → three-image montage topology and selective
   zero-input Candidate pruning;
@@ -298,8 +308,9 @@ permission enforcement and loaded-code attestation remain release work.
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;
-- the deployed AWS media function has passed all five real operations through its exact FFmpeg
-  Layer, and the deployed HyperFrames stack has passed the Narratage Provider's real distributed
+- the deployed AWS media function has passed its original five operations through its exact FFmpeg
+  Layer; the three newer generic utility operations await a service refresh. The deployed HyperFrames
+  stack has passed the Narratage Provider's real distributed
   rendering, ingestion, frame verification and cleanup canary;
 - generated credentials, media outputs and local databases are ignored by Git.
 

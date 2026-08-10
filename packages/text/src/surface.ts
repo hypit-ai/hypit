@@ -1,4 +1,6 @@
 import type { CanonicalValue } from "@narratage/protocol";
+import { svsRecipeType } from "@narratage/svs";
+import type { SvsRecipe } from "@narratage/svs";
 import type {
   MarkupAttributeValue,
   StructuredElement,
@@ -7,9 +9,15 @@ import type {
 } from "@narratage/markup";
 
 import { createTextRenderFragment } from "./fragment.js";
-import { sealText, sealTextBinding, sealTextBindings } from "./program.js";
+import {
+  sealText,
+  sealTextBinding,
+  sealTextBindings,
+  textTemplateBindingNames,
+  verifyTextTemplate,
+} from "./program.js";
 import { textTypes } from "./manifest.js";
-import type { TextBindingValue, TextScalar } from "./types.js";
+import type { TextBindingValue, TextScalar, TextTemplate } from "./types.js";
 
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
@@ -55,6 +63,11 @@ function reference(
   if (result === undefined) throw new Error(`${element.name}.${name} cannot resolve ${path}`);
   if (!sameType(result.type, expected)) throw new Error(`${element.name}.${name} has the wrong type`);
   return result;
+}
+
+function inline<T>(value: SurfaceResolvedReference, subject: string): T {
+  if (value.record?.value.kind !== "inline") throw new Error(`${subject} must reference an authored inline value`);
+  return value.record.value.value as unknown as T;
 }
 
 function bodyText(element: StructuredElement): string {
@@ -108,10 +121,26 @@ export const decodeTextValueSurface: StructuredSurfaceHandler = ({ element }) =>
  * children attach ordinary Text graph edges in source order.
  */
 export const decodeTextRenderSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exact(element, ["id", "template"], ["id", "template"]);
+  exact(element, ["id", "template", "recipe"], ["id", "template"]);
   const id = stringAttribute(element, "id");
   const template = reference(element, "template", textTypes.template, resolveReference);
   const initial: Record<string, TextBindingValue> = {};
+  if (element.attributes.recipe !== undefined) {
+    const templateValue = inline<TextTemplate>(template, `${element.name}.template`);
+    verifyTextTemplate(templateValue);
+    const consumed = textTemplateBindingNames(templateValue);
+    const recipe = reference(element, "recipe", svsRecipeType, resolveReference);
+    const value = inline<SvsRecipe>(recipe, `${element.name}.recipe`);
+    if (value.contract !== "svml.svs-recipe@1") throw new Error(`${element.name}.recipe is invalid`);
+    for (const [name, item] of Object.entries(value.properties)) {
+      if (!consumed.has(name)) continue;
+      if (typeof item !== "string" && typeof item !== "boolean" && !(typeof item === "number" && Number.isFinite(item))) {
+        throw new Error(`${value.path}.${name} must be text, boolean or a finite number`);
+      }
+      initial[name] = item;
+    }
+  }
+  const explicitParams = new Set<string>();
   const dynamic: Array<{
     readonly input: string;
     readonly name: string;
@@ -128,7 +157,8 @@ export const decodeTextRenderSurface: StructuredSurfaceHandler = ({ element, res
     if (kind === "Param") {
       exact(child, ["name", "value", "type"], ["name", "value"]);
       const name = stringAttribute(child, "name");
-      if (initial[name] !== undefined) throw new Error(`${element.name} repeats Param ${name}`);
+      if (explicitParams.has(name)) throw new Error(`${element.name} repeats Param ${name}`);
+      explicitParams.add(name);
       initial[name] = parameterValue(child);
       continue;
     }

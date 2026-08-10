@@ -312,6 +312,25 @@ speaker.host {
   duration={hook-duration.duration} recipe={studio.speaker.host} kit={ugc.official-ugc-v1}>
 ```
 
+## 通用 Text Template Recipe
+
+无需领域包装器也能使用同一优先级。`text:Render` 可以读取任意 SVS Recipe，只投影模板
+明确声明的属性，并允许显式 `text:Param` 覆盖。这使 Seedance 的 B-roll、Podcast、Call、
+Street Interview 与参考迁移 Kit 可以保持为纯数据，而不进入 Seedance 执行代码。
+
+```svs
+broll.product-demo {
+  material-mode: product-beauty;
+  reference-plan: scene-plus-refs;
+  story-shape: process-demo;
+  edit-language: insert-cutaway;
+  camera-language: product-macro;
+  motion-intensity: readable;
+}
+```
+
+模型、分辨率、时长和参考媒体不是模板策略；它们继续存在于精确模型 Surface 与显式图边中。
+
 ## 精确字体声明
 
 SVS 描述字体策略，但不选择或打开字体字节。常用开源字体由私有的预发布字体目录显式
