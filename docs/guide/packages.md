@@ -75,6 +75,7 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
 @narratage/seedance-kits         data-only Seedance semantic Text Templates
+@narratage/seedance-speaker      Seedance Speaker binding
 @narratage/minimax-h3            MiniMax H3 model family
 @narratage/gemini-omni           Gemini Omni model family
 @narratage/grok-imagine          Grok Imagine model family
@@ -102,6 +103,7 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/deck-track            depth-stack collection Track
 @narratage/ranking               four ranking component families
 @narratage/screen-overlay        self-contained full-canvas overlays
+@narratage/comment-sticker       anchored comment sticker overlay
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
 @narratage/visual-ir             renderer-neutral visual vocabulary
@@ -129,7 +131,7 @@ never on exact-model packages or the CLI.
 @narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
 @narratage/provider-image-opencv-local   local OpenCV Raster execution
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
-@narratage/provider-xiaomi-mimo           official Xiaomi MiMo TTS API
+@narratage/provider-xiaomi-mimo          official Xiaomi MiMo TTS API
 ```
 
 ### Layer 5: Application
@@ -150,7 +152,7 @@ never on exact-model packages or the CLI.
 
 3. **CLI independence.** Neither `@narratage/cli` nor `@narratage/video-cli` transitively depends on any
    Provider package. The video CLI also does not depend on any author-level video package
-   (`@narratage/script`, `@narratage/seedance`, `@narratage/media-track`, `@narratage/typography-track`, `@narratage/film`).
+   (`@narratage/script`, `@narratage/seedance-speaker`, `@narratage/media-track`, `@narratage/typography-track`, `@narratage/film`).
    Author packages are activated through the explicit package lock, not compile-time CLI
    dependencies.
 

@@ -70,6 +70,7 @@ Sticker、Deck 或任何模型家族。
 @narratage/model-kit             model family abstractions
 @narratage/seedance              Seedance model family + author Surface
 @narratage/seedance-kits         数据化的 Seedance 语义 Text Template
+@narratage/seedance-speaker      Seedance Speaker binding
 @narratage/minimax-h3            MiniMax H3 model family
 @narratage/gemini-omni           Gemini Omni model family
 @narratage/grok-imagine          Grok Imagine model family
@@ -97,6 +98,7 @@ Sticker、Deck 或任何模型家族。
 @narratage/deck-track            depth-stack collection Track
 @narratage/ranking               four ranking component families
 @narratage/screen-overlay        self-contained full-canvas overlays
+@narratage/comment-sticker       锚定评论贴纸叠加
 @narratage/film                  Film composition
 @narratage/composition           peer Track composition
 @narratage/visual-ir             renderer-neutral visual vocabulary
@@ -123,7 +125,7 @@ Sticker、Deck 或任何模型家族。
 @narratage/provider-hyperframes-aws-lambda recoverable distributed rendering
 @narratage/provider-image-opencv-local   本地 OpenCV 光栅执行
 @narratage/provider-media-aws-lambda     synchronous AWS media execution
-@narratage/provider-xiaomi-mimo           Xiaomi 官方 MiMo TTS API
+@narratage/provider-xiaomi-mimo          Xiaomi 官方 MiMo TTS API
 ```
 
 ### Layer 5：应用层
@@ -141,7 +143,7 @@ Sticker、Deck 或任何模型家族。
 
 2. **领域无关闭包。** 每个 Layer 1 包的传递闭包只包含 Layer 1 的包。`@narratage/core` 只依赖 `@narratage/protocol`。
 
-3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance`、`@narratage/media-track`、`@narratage/typography-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
+3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance-speaker`、`@narratage/media-track`、`@narratage/typography-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
 
 ## 包的结构
 
