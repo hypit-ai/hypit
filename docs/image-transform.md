@@ -49,7 +49,7 @@ Declaration and use are separate:
 />
 ```
 
-The shipped `gptImageDenoiseV1` program is the exact useful behavior extracted from Twinit's hidden
+The shipped `gptImageDenoiseV1` program is the exact useful behavior extracted from the legacy hidden
 GPT Image post-step. It is no longer mandatory behavior of GPT Image generation.
 
 The same physical GPT Image package also exposes the optional logical module

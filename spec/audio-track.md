@@ -208,7 +208,7 @@ not a privileged lane. A package that naturally owns one visual hit and one soun
 `VisualTrack` and `AudioTrack` outputs from one Fragment, while Film receives both through ordinary
 edges.
 
-## 8. Twinit migration audit
+## 8. Legacy migration audit
 
 Retain:
 

@@ -21,7 +21,7 @@ The source explicitly chooses:
 
 It does not contain API keys, endpoint URLs, queue names, database names or deployment topology.
 Those facts belong to a Runtime Profile. Runtime may bind `seedance.mini.*` to KIE, Volcengine or
-Hypit, but it may not reinterpret Seedance as Kling or silently replace Gemini cue planning with a
+a hosted deployment, but it may not reinterpret Seedance as Kling or silently replace Gemini cue planning with a
 different model family.
 
 Prompt declarations, media declarations and `.svs` recipes appear before their uses. The Script
@@ -97,7 +97,7 @@ bindings:
   hyperframes.render@1: hyperframes.local
 ```
 
-A Hypit profile changes endpoint bindings, not `main.svml`. Existing Values, black frames and other
+A hosted profile changes endpoint bindings, not `main.svml`. Existing Values, black frames and other
 preview realizations remain explicitly selected Candidates in a BuildRequest; they do not alter
 the author source or teach Runtime to guess a creative method.
 

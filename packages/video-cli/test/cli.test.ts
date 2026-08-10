@@ -187,37 +187,49 @@ test("an installed open-font package supplies a multilingual exact stack without
   );
 });
 
-test("Text Template and Speaker keep prompt assembly visible in the Run Graph", async () => {
+test("Text Template and exact Seedance keep speaker prompt assembly visible in the Run Graph", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-text-template-"));
   const file = join(root, "main.svml");
   const kitSource = await readFile(
-    new URL("../../seedance-speaker/kits/official-ugc-v1.svs", import.meta.url),
+    new URL("../../seedance-kits/kits/speaker-v1.svs", import.meta.url),
     "utf8",
   );
-  await writeFile(join(root, "official-ugc-v1.svs"), kitSource, "utf8");
+  await writeFile(join(root, "speaker-v1.svs"), kitSource, "utf8");
   await writeFile(join(root, "studio.svs"), `<?svml using="@narratage/svs@1"?>
 <sheet version="1">
   speech.normal { language: en; pace: normal; min: 4; max: 15; rounding: round; }
-  speaker.default { kind: ugc-talking-head; model: mini; resolution: 720p; aspect-ratio: 9:16; }
+  speaker.default {
+    composition-stability: soft-locked; camera-motion: none;
+    edit-rhythm: continuous-take; performance: natural-explainer; gesture: natural;
+  }
 </sheet>`, "utf8");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
   await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="text" from="@narratage/text@1"/>
   <import as="media" from="@narratage/media@1"/>
   <import as="estimate" from="@narratage/estimate@1"/>
-  <import as="speaker" from="@narratage/seedance-speaker@1"/>
+  <import as="seedance" from="@narratage/seedance@1"/>
   <import as="studio" source="./studio.svs"/>
-  <import as="ugc" source="./official-ugc-v1.svs"/>
+  <import as="speaker-kit" source="./speaker-v1.svs"/>
 
   <script id="story"><opening><HOST>Meaning becomes the source.</opening></script>
   <media:Image id="host" src="./host.png"/>
+  <media:Audio id="voice" src="./voice.mp3"/>
+  <text:Value id="action">Hold direct eye contact and use one compact gesture.</text:Value>
   <estimate:Speech id="duration" source={story.segment.opening.speech} policy={studio.speech.normal}/>
-  <speaker:Take id="take" dialogue={story.segment.opening.dialogue}
-    duration={duration.duration} recipe={studio.speaker.default} kit={ugc.official-ugc-v1}>
-    <speaker:Reference image={host} role="character-and-scene"/>
-  </speaker:Take>
+  <text:Render id="take-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.default}>
+    <text:Set name="dialogue" text={story.segment.opening.dialogue}/>
+    <text:Set name="action" text={action}/>
+  </text:Render>
+  <seedance:ReferenceVideo id="take" model="mini" prompt={take-prompt}
+    duration={duration.duration} resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={host}/>
+    <seedance:Reference audio={voice}/>
+  </seedance:ReferenceVideo>
 </svml>`, "utf8");
+  await writeFile(join(root, "voice.mp3"), new Uint8Array([73, 68, 51]));
 
   let checkedOutput = "";
   await runCli(["check", file], { write: (text) => { checkedOutput += text; } });
@@ -225,8 +237,7 @@ test("Text Template and Speaker keep prompt assembly visible in the Run Graph", 
     readonly exports: readonly { readonly name: string }[];
   };
   const names = checked.exports.map((item) => item.name);
-  assert.equal(names.includes("take.prompt"), true);
-  assert.equal(names.includes("take.program"), true);
+  assert.equal(names.includes("take-prompt"), true);
   assert.equal(names.includes("take.video"), true);
 
   const run = await writeRun(root, "build.svrun", [{ output: "take.video" }]);
@@ -237,7 +248,9 @@ test("Text Template and Speaker keep prompt assembly visible in the Run Graph", 
   };
   assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
     "bind-request-seedance-2-mini-referenceImage",
+    "bind-request-seedance-2-mini-referenceAudio",
     "bind-request-seedance-2-mini-prompt-text",
+    "bind-text",
     "bind-text",
     "compile-seedance-2-mini-duration-request",
     "estimate-speech-duration",

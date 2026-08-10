@@ -3,7 +3,7 @@
 Status: implemented executable authority for the official Ranking migration. All four author
 components, their shared triggered schedule, optional peer AudioTrack lowering, author Surfaces and
 real-browser evidence execute in `@narratage/ranking`. It is not a compatibility promise for the
-historical Twinit node format or a frozen public ABI.
+historical node format or a frozen public ABI.
 
 ## 1. What Ranking means
 

@@ -532,7 +532,7 @@ still does not register Media meaning.
 The author imports Speech Spine, whose manifest declares its package dependency. Authors do not
 need to import a second parser merely because the implementation reuses Media lowering.
 
-## 14. Twinit audit: retained and retired
+## 14. Legacy audit: retained and retired
 
 Retain:
 

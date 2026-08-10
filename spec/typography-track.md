@@ -58,9 +58,9 @@ It currently cannot represent:
 This is a useful end-to-end witness only. Extending `TextAppearance` field by field would preserve
 the wrong model.
 
-### 2.2 Twinit evidence
+### 2.2 Legacy evidence
 
-Twinit's later `TextLayoutV2` discovered several correct separations:
+The legacy `TextLayoutV2` discovered several correct separations:
 
 - inline/block `hug | fixed` sizing;
 - independent padding and inline/block alignment;

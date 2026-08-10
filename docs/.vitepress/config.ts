@@ -107,6 +107,7 @@ export default defineConfig({
     "open-source-distribution.md",
     "build-archive-and-egress.md",
     "caption-gemini-provider-contract.md",
+    "demo-assets.md",
     "graph-first-value-boundary.md",
     "hyperframes-aws-runtime.md",
     "image-transform.md",
@@ -119,7 +120,6 @@ export default defineConfig({
     "runtime-adapter-loading.md",
     "source-and-run-compilation.md",
     "speech-alignment.md",
-    "twinit-capability-migration.md",
   ],
   markdown: {
     theme: {

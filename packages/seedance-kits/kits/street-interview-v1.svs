@@ -51,6 +51,5 @@
 
   text-template.street-interview-v1.block.hygiene { kind: fixed; order: 120; text: "AUDIO AND TEXTURE: clean dialogue, natural outdoor room tone, stable faces, hands, microphone, and photoreal motion. Add no subtitles, captions, labels, cards, or overlays; preserve physical signs and text already in the scene."; }
   text-template.street-interview-v1.block.dialogue { kind: slot; order: 130; slot: dialogue; optional: false; label: "DIALOGUE SCRIPT TO DELIVER:"; }
-  text-template.street-interview-v1.block.action { kind: slot; order: 140; slot: action; optional: true; }
-  text-template.street-interview-v1.block.extra { kind: slot; order: 150; slot: extra; optional: true; }
+  text-template.street-interview-v1.block.action { kind: slot; order: 140; slot: action; optional: true; label: "ACTION DIRECTION:"; }
 </sheet>

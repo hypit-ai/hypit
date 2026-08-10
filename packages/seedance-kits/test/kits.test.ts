@@ -5,6 +5,7 @@ import { parseSvs } from "@narratage/svs";
 import { renderText, sealTextBindings, textTemplateFromSvsRecipes } from "@narratage/text";
 
 const cases = [
+  { file: "speaker-v1.svs", id: "speaker-v1", bindings: { dialogue: "HOST: Meaning comes first." }, marker: "@audio1 is the speaker's voice-timbre reference" },
   { file: "broll-v1.svs", id: "broll-v1", bindings: { story: "A hand opens the product." }, marker: "silent B-roll" },
   { file: "podcast-v1.svs", id: "podcast-v1", bindings: { dialogue: "A: Hello.\nB: Hi." }, marker: "Host A uses @audio1" },
   { file: "call-v1.svs", id: "call-v1", bindings: { dialogue: "A: Hello.\nB: Hi." }, marker: "both tiles are live feeds" },
@@ -21,4 +22,17 @@ test("Seedance Kits are finite data programs with distinct rendered semantics", 
     const output = renderText(template, sealTextBindings(item.bindings));
     assert.match(output.value, new RegExp(item.marker, "u"), item.file);
   }
+});
+
+test("official Seedance Kits select semantics by file and explicit axes, never inferred branches", () => {
+  for (const item of cases) {
+    const source = readFileSync(new URL(`../kits/${item.file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /kind:\s*variant|when-(?:param|select)-/u, item.file);
+    assert.doesNotMatch(source, /slot:\s*extra/u, item.file);
+  }
+  const broll = readFileSync(new URL("../kits/broll-v1.svs", import.meta.url), "utf8");
+  assert.doesNotMatch(broll, /reference-plan/u);
+  const speaker = readFileSync(new URL("../kits/speaker-v1.svs", import.meta.url), "utf8");
+  assert.match(speaker, /slot:\s*dialogue/u);
+  assert.match(speaker, /slot:\s*action/u);
 });

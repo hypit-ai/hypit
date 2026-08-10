@@ -24,10 +24,10 @@ Updating an installed package does not silently change or resume that Build unde
 New Builds can use the newly locked package without a Core release.
 
 A logical Module is not required to become one physical npm package, and data-only author policy
-does not need a logical Module at all. The six reusable Seedance semantic Kits are ordinary
+does not need a logical Module at all. The seven reusable Seedance semantic Kits are ordinary
 `TextTemplate` source resources shipped together by `@narratage/seedance-kits`; they feed the one
 generic Text and Seedance graph vocabulary. A component that owns real lowering semantics, such as
-Seedance Speaker or Media Track, keeps its own Manifest/import identity. Internal private workspace
+Media Track, keeps its own Manifest/import identity. Internal private workspace
 packages remain convenient development boundaries and do not settle the final public package
 topology.
 

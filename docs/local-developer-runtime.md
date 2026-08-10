@@ -15,10 +15,10 @@ build.svrun -> main.svml
   -> Core BuildState
   -> @narratage/local Scheduler
        -> local deterministic component code
-       -> KIE / Volcengine / Hypit Seedance Endpoint
+       -> KIE / Volcengine / hosted Seedance Endpoint
        -> one local OpenCV Raster Endpoint
-       -> local / team-hosted / Hypit warm WhisperX service Endpoint
-       -> local workers / Lambda / Hypit HyperFrames Endpoint
+       -> local / team-hosted warm WhisperX service Endpoint
+       -> local workers / Lambda / hosted HyperFrames Endpoint
 
 durable facts       .svml/runtime.sqlite
 artifact bytes      .svml/artifacts/ (or an S3 ArtifactStore)
@@ -149,7 +149,7 @@ export default await createProjectLocalRuntime({
   packageLock: "./svml.packages.lock",
   runtimeServices: [createS3ArtifactStorePackage({
     instance: "artifacts.team",
-    bucket: "hypit-svml-artifacts",
+    bucket: "team-svml-artifacts",
     prefix: "development",
     region: "us-east-1",
   })],
@@ -315,7 +315,7 @@ port so large-object adapters can avoid making whole-object transfer a framework
 There are still two distinct scheduling scopes:
 
 1. the local Build Scheduler limits already-authorized Core Commands across Builds and lanes;
-2. a Provider Endpoint may submit one Command into KIE, Lambda, SQS or a Hypit job system.
+2. a Provider Endpoint may submit one Command into KIE, Lambda, SQS or a hosted job system.
 
 Redis is unnecessary for the single-process developer Runtime. A future multi-process Host may use
 a dispatcher transport, but Redis/SQS cannot become Build truth and cannot replace BuildStore CAS.
@@ -332,10 +332,10 @@ the SQLite file on S3 or a network filesystem.
 | WhisperX local to a persistent remote service | exact WhisperX Provider package | author-declared WhisperX method |
 | KIE to Volcengine for an explicitly supported method | Provider package and locked binding | source unless author parameters differ |
 | local HyperFrames to Lambda | HyperFrames Provider package | HyperframesDocument and frame domain |
-| local Build to Hypit hosted Build | whole Runtime distribution | author/module closure and Core protocol |
+| local Build to a hosted Build | whole Runtime distribution | author/module closure and Core protocol |
 
-Provider replacement is never a creative router guessing whether `<speaker>` means Seedance or
-Kling. The author package fixes the demanded capability/model. Runtime configuration selects the
+Provider replacement is never a creative router guessing whether a talking-head prompt means
+Seedance or Kling. The explicit model component fixes the demanded capability/model. Runtime configuration selects the
 exact implementation endpoint or an explicit Candidate chosen outside the source.
 
 ## 8. Remaining vertical work
@@ -350,5 +350,5 @@ acceptance orchestrator. Remaining work is to:
 2. add a persistent remote WhisperX Provider or further environment variants only when a concrete
    deployment requires them.
 
-Hosted tenant auth, credits, Redis, a distributed queue and Hypit-wide Build hosting remain outside
+Hosted tenant auth, credits, Redis, a distributed queue and product-wide Build hosting remain outside
 this phase.

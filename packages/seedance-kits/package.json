@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./speaker": "./kits/speaker-v1.svs",
     "./broll": "./kits/broll-v1.svs",
     "./podcast": "./kits/podcast-v1.svs",
     "./call": "./kits/call-v1.svs",

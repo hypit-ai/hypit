@@ -15,7 +15,7 @@ import { rasterCapabilities } from "@narratage/raster";
 import { digestOf } from "@narratage/protocol";
 import type { CanonicalValue, TypedRecord } from "@narratage/protocol";
 
-test("the Twinit GPT Image cleanup is one explicit reusable Program", () => {
+test("the legacy GPT Image cleanup is one explicit reusable Program", () => {
   assert.deepEqual(gptImageDenoiseV1.operations, [{
     kind: "denoise",
     method: "nlm-ycrcb",
