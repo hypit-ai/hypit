@@ -5,9 +5,9 @@ description: Configuring where Builds execute, diagnostics and Build archive.
 
 # Runtime Profile
 
-The Runtime Profile declares *where* a frozen Build executes: Endpoints, credentials, concurrency,
-permissions. It is deployment configuration, not creative content — it never enters Author or Run
-graph identity.
+The Runtime Profile declares *where* a frozen Build executes: the Scheduler and Worker, all durable
+Stores, Endpoints, credentials, concurrency and permissions. It is deployment configuration, not
+creative content—it never enters Author or Run graph identity.
 
 Two forms are supported:
 
@@ -23,13 +23,31 @@ Two forms are supported:
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-keychain", "instance": "credentials.keychain", "config": { "service": "narratage" } }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials.keychain"]
+    }
+  },
   "endpoints": [
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.production",
       "lane": "generation",
       "config": {
-        "apiKeyEnv": "KIE_API_KEY",
+        "apiKey": { "store": "keychain", "key": "kie.api-key" },
         "defaultConcurrency": 2
       }
     },
@@ -51,7 +69,7 @@ Two forms are supported:
       "lane": "planning",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
-        "credentialsEnv": "GOOGLE_APPLICATION_CREDENTIALS_JSON",
+        "credentials": { "store": "keychain", "key": "google.vertex-json" },
         "defaultConcurrency": 1
       }
     },
@@ -63,6 +81,9 @@ Two forms are supported:
     }
   ],
   "permissions": [
+    "process:keychain",
+    "filesystem:artifacts",
+    "filesystem:state",
     "filesystem:whisperx-staging",
     "network:aiplatform.googleapis.com",
     "network:api.kie.ai",
@@ -90,9 +111,18 @@ Two forms are supported:
 | `use` | Adapter name, resolved from `runtimePackageLock` |
 | `instance` | Unique identifier for this Endpoint instance |
 | `lane` | Scheduling lane governing concurrency |
-| `config` | Adapter-specific configuration (credential env vars, concurrency, timeouts) |
+| `config` | Adapter-specific non-secret configuration, CredentialRefs, concurrency and timeouts |
 
-Credentials are referenced by environment variable name, never stored in the Profile.
+Credentials are addressed as `{ "store": "…", "key": "…" }`; secret bytes never enter the
+Profile. More than one selected CredentialStore may coexist, and each answers only for its own
+store name.
+
+### Runtime service fields
+
+`runtimeServices` activates installed service adapters. `services` selects every required role by
+its exact instance id: Scheduler, Worker, BuildStore, OperationStore, DispatchStore,
+RuntimeJournal, ArtifactStore and one or more CredentialStores. No role is inferred from package
+presence or filled by `@narratage/local`.
 
 ### Filesystem fields
 
@@ -109,8 +139,9 @@ Neither value enters Author or Run graph identity.
 
 ### Scheduling
 
-`maxConcurrency` caps total concurrent Operations across all lanes. Each named `lane` has its own
-sub-cap. Lanes are declared by the Endpoint and enforced by the Scheduler.
+`maxConcurrency` caps admitted Operations across all Workers sharing the DispatchStore. Each named
+`lane` has its own sub-cap. Capacity reservations are durable and fenced by the Build lease rather
+than process-local counters.
 
 ### Permissions
 
@@ -125,15 +156,33 @@ Each permission string grants one specific authority to the locked Endpoints:
 For advanced embedding, construct the Runtime programmatically:
 
 ```typescript
-import { createProjectLocalRuntime } from "@narratage/local";
+import { join } from "node:path";
+import { createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
+import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
+import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/local";
 import { createKieProvider } from "@narratage/provider-kie";
 import { createLocalMediaProvider } from "@narratage/provider-media-local";
+import { credentialRef } from "@narratage/runtime";
+import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
 
 export default async function createRuntime() {
+  const root = import.meta.dirname;
+  const execution = createLocalExecutionPackage("execution");
+  const state = createSqliteRuntimeServicePackage({
+    path: join(root, ".svml/runtime.sqlite"),
+    name: "state",
+    buildInstance: "state.builds",
+    operationInstance: "state.operations",
+    dispatchInstance: "state.dispatch",
+    journalInstance: "state.journal",
+  });
+  const artifacts = createFileArtifactStorePackage({ root: join(root, ".svml/artifacts"), instance: "artifacts" });
+  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
   const endpoints = [
     createKieProvider({
       instance: "kie.prod",
       lane: "generation",
+      apiKey: credentialRef("env", "KIE_API_KEY"),
       defaultConcurrency: 2,
     }),
     createLocalMediaProvider({
@@ -144,11 +193,26 @@ export default async function createRuntime() {
   ];
 
   return await createProjectLocalRuntime({
-    root: import.meta.dirname,
+    root,
     packageLock: "./svml.packages.lock",
+    runtimeServices: [execution, state, artifacts, credentials],
+    runtimeSelection: {
+      scheduler: "execution.scheduler",
+      worker: "execution.worker",
+      stores: {
+        build: "state.builds",
+        operations: "state.operations",
+        dispatch: "state.dispatch",
+        journal: "state.journal",
+        artifacts: "artifacts",
+        credentials: ["credentials.env"],
+      },
+    },
     endpoints,
-    allowedPermissions: endpoints.flatMap(e =>
-      e.manifest.facets.flatMap(f => f.permissions)),
+    allowedPermissions: [
+      "environment:credentials", "filesystem:artifacts", "filesystem:state",
+      ...endpoints.flatMap(e => e.manifest.facets.flatMap(f => f.permissions)),
+    ],
     scheduling: {
       maxConcurrency: 4,
       lanes: { generation: 2, media: 2 },
@@ -164,6 +228,9 @@ pnpm narratage build build.svrun --runtime ./svml.runtime.json
 pnpm narratage build build.svrun --runtime ./svml.runtime.ts
 ```
 
+Both forms describe the same explicit assembly. The TypeScript form is trusted embedding code, not
+a source-language escape hatch or a place for author intent.
+
 ## Diagnostics
 
 ### doctor
@@ -178,7 +245,7 @@ Validates:
 - Package locks exist and are readable
 - Adapter byte digests match
 - Configuration keys are valid for each adapter
-- Referenced credentials exist in the environment
+- Referenced credentials resolve from their selected stores
 - Required executables (ffmpeg, ffprobe, chrome) are found
 - Declared external services are reachable and match the selected profile
 
@@ -187,6 +254,19 @@ factory. `doctor` never constructs an Endpoint or Store, starts a service, write
 submits work. After configuration passes it may make bounded read-only environment probes. The first
 configuration or prerequisite failure for one instance suppresses diagnostics that merely result
 from that same failure.
+
+## Runtime lifecycle
+
+```bash
+pnpm narratage runtime up svml.runtime.json
+pnpm narratage runtime status svml.runtime.json
+pnpm narratage runtime logs svml.runtime.json
+pnpm narratage runtime down svml.runtime.json
+```
+
+`runtime up` owns the detached Worker plus declared external programs. `services` remains a narrow
+expert command for those external programs only. A Build submission ensures the Runtime is up, but
+the Build terminal never owns execution.
 
 ### gc (garbage collection)
 

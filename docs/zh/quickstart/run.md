@@ -146,13 +146,31 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials.env"]
+    }
+  },
   "endpoints": [
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.main",
       "lane": "generation",
       "config": {
-        "apiKeyEnv": "KIE_API_KEY",
+        "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
       }
     },
@@ -174,7 +192,7 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
       "lane": "planning",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
-        "credentialsEnv": "GOOGLE_APPLICATION_CREDENTIALS_JSON",
+        "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
         "location": "global",
         "defaultConcurrency": 1
       }
@@ -191,6 +209,9 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     }
   ],
   "permissions": [
+    "environment:credentials",
+    "filesystem:artifacts",
+    "filesystem:state",
     "filesystem:whisperx-staging",
     "network:aiplatform.googleapis.com",
     "network:api.kie.ai",
@@ -221,7 +242,7 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
 | `use` | Provider 包名（例如 `@narratage/provider-kie`） |
 | `instance` | 唯一的实例标识符 |
 | `lane` | 用于并发控制的调度通道 |
-| `config` | Provider 专属配置（API 密钥、并发数等） |
+| `config` | Provider 专属非秘密配置、CredentialRef 与并发数 |
 
 ### 权限
 
@@ -243,7 +264,8 @@ pnpm install
 如果 `uv` 不在 PATH 中，Python 步骤会跳过并给出提示——需要本地对齐或图像处理时请先安装
 [uv](https://docs.astral.sh/uv/)。
 
-`narratage build` 会自动启动所需的服务，无需手动启动。
+`narratage runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
+Worker。
 
 #### 把正式视频项目放在 Narratage 仓库之外
 
@@ -274,8 +296,27 @@ Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author S
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials.env"]
+    }
+  },
   "endpoints": [],
-  "permissions": []
+  "permissions": ["environment:credentials", "filesystem:artifacts", "filesystem:state"],
+  "scheduling": { "maxConcurrency": 4 }
 }
 ```
 
@@ -288,7 +329,8 @@ Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只�
 pnpm narratage doctor examples/talking-head-aroll/svml.runtime.json
 ```
 
-Doctor 检查每个 endpoint 是否可达、凭证是否有效，以及所需的可执行文件（`ffmpeg`、`ffprobe`、Chrome）是否可用。
+Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；
+它不启动 Worker，也不发付费请求。
 
 ### 2. 检查计划
 
@@ -309,6 +351,9 @@ pnpm narratage build examples/talking-head-aroll/build.svrun \
   --build-id my-film-001 \
   --follow
 ```
+
+不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是
+观察者；Ctrl-C 不会取消任务。
 
 | 标志 | 说明 |
 |---|---|

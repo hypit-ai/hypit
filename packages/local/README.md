@@ -1,119 +1,80 @@
 # `@narratage/local`
 
-The in-process developer assembly. It keeps Core and the authoritative Build Scheduler in the
-current Node process while allowing every capability Endpoint to run in a different place. Loaded
-implementation packages are trusted and byte-locked; that trust boundary describes code execution,
-not a special class of user.
+Node-hosted assembly and process lifecycle for an explicitly selected Runtime. It is not a bundle of
+default Stores and it contains no authoring, video, Provider or package-routing policy.
 
-The convenience assembly uses:
+`@narratage/local` contributes two replaceable Runtime services:
 
-- `@narratage/store-sqlite` for durable Build and Operation facts;
-- `@narratage/artifact-store-fs` for content-addressed project bytes;
-- optional replacement of Scheduler, BuildStore, OperationStore, ArtifactStore or CredentialStore
-  by permission-checked Runtime service packages;
-- an in-process, queue-free Scheduler whose ready work always comes from Core;
-- an exact implementation package lock for deterministic component packages;
-- separately selected external Endpoint packages.
+- `scheduler`: regenerates ready Core commands from verified BuildState;
+- `worker`: claims durable Build dispatches, maintains fenced leases and advances them.
 
-Package loading is syntax-neutral. The local Runtime activates only locked deterministic Producer
-and Validator facets; it neither depends on `@narratage/markup` nor installs any package Host facet.
-
-Normal CLI projects may express the same assembly as closed data:
+A Runtime Profile must separately select every service:
 
 ```json
 {
   "format": "svml.runtime-config@1",
+  "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
-  "services": [],
-  "endpoints": [
-    {
-      "use": "@narratage/provider-kie",
-      "instance": "kie.project",
-      "lane": "generation",
-      "config": { "apiKeyEnv": "KIE_API_KEY", "defaultConcurrency": 2 }
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-keychain", "instance": "credentials", "config": {} }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials"]
     }
-  ],
-  "permissions": [
-    "network:api.kie.ai",
-    "network:kieai.redpandaai.co"
-  ],
-  "scheduling": { "maxConcurrency": 4, "lanes": { "generation": 2 } }
+  },
+  "endpoints": [],
+  "permissions": ["filesystem:state", "filesystem:artifacts", "process:keychain"],
+  "scheduling": { "maxConcurrency": 4 }
 }
 ```
 
-`runtimePackageLock` selects the physical packages allowed to contribute privileged Runtime Adapter
-facets. The generic local Host verifies their complete package closure before activation; the video
-CLI imports no Provider or Store implementation. Each exact `use` selects one adapter from that
-verified inventory. The data file can choose instances, non-secret configuration, permissions and
-concurrency, but it cannot embed code or secrets. Unknown adapters fail rather than being guessed.
-`createProjectLocalRuntime(...)` remains the advanced trusted TypeScript embedding API.
+No role is inferred by uniqueness. An empty or incomplete selection fails before work starts.
+`@narratage/local` has no production dependency on SQLite, the filesystem ArtifactStore, an
+environment credential source, or any Provider.
 
-`packageLock` and `runtimePackageLock` are deliberately different. The former closes deterministic
-Producer/Validator code used by the author graph. The latter closes deployment code that may read
-credentials, spawn processes or call networks. Source imports can affect neither. Loaded Endpoint
-and Store implementation identities are rebound to actual physical package bytes and that package's
-transitive dependency closure, rather than trusting a package's development label or unrelated
-selected adapters.
+## Execution law
 
-Deterministic packages implement the host-neutral `@narratage/component-kit` contract. `@narratage/local`
-adapts them to `ProducerRegistry`; the component never imports the Node Driver or receives Runtime
-services.
+`LocalRuntime.build()` stages source attachments, creates verified BuildState and one durable
+dispatch, then returns. A Worker process owns execution. `--follow` polls that dispatch and never
+becomes its executor; interrupting the observer does not cancel the Build.
 
-```ts
-export default await createProjectLocalRuntime({
-  root: import.meta.dirname,
-  // May point at a separate Narratage installation when this project owns no node_modules.
-  packageRoot: "/opt/narratage",
-  packageLock: "./svml.packages.lock",
-  runtimeServices: [createS3ArtifactStorePackage({
-    bucket: "team-svml-artifacts",
-    prefix: "development",
-    region: "us-east-1",
-  })],
-  endpoints: [createKieProvider({ apiKey: credentialRef("env", "KIE_API_KEY") })],
-  allowedPermissions: ["network:aws:s3", "network:api.kie.ai", "network:kieai.redpandaai.co"],
-  scheduling: {
-    maxConcurrency: 8,
-    lanes: { "endpoint:kie.personal": 2 },
-  },
-});
-```
+The Worker stores no serialized Core command. After every restart it reopens verified BuildState and
+asks the selected Scheduler to regenerate the current commands. Recoverable Provider checkpoints
+remain in `OperationStore`; dispatch lease, heartbeat, admission and shared lane capacity remain in
+`BuildDispatchStore`; operational history remains in `RuntimeJournal`.
 
-The implementation lock may contain `generationComponent`, exact-model components and media
-pipeline Producers without adding imports to this deployment source. Its digest is bound into the
-BuildRequest, so a persisted Build cannot resume under another deterministic component closure.
-The KIE Endpoint remains an independently selected privileged endpoint; swapping it changes an
-Endpoint implementation and lane, not the `.svml` author document.
-`createProjectLocalRuntime` infers a role when exactly one configured service package supplies it.
-When several instances provide the same role, `runtimeSelection` must name the exact instance.
-The same mechanism covers Postgres, S3, keychains and replacement Schedulers; none requires a
-change to `@narratage/local`. Advanced hosts may still call `createLocalRuntime` with raw ports.
+Cancellation first closes admission. Existing Operations keep their own execution fact and a
+separate cancellation-control fact. Provider acceptance is not reported as cancellation; unsupported
+or too-late requests continue reconciling the same Operation and never select another Candidate.
 
-`LocalRuntime.status(build)` exposes the verified durable Build archive, and
-`LocalRuntime.readArtifact(digest)` is the generic byte-egress seam used by CLI `get`. They expose
-Record and content identities, not private filesystem layout, so filesystem and S3 stores remain
-interchangeable. Egress never determines whether a Build result is retained.
+## Boundaries
 
-The filesystem ArtifactStore additionally implements optional streaming transfer and explicit
-retention capabilities. `narratage gc <runtime-profile.json>` is read-only by default; `--apply`
-deletes only objects unreachable from every retained BuildState and Operation. This is Host
-maintenance, never a Core transition or automatic cache policy. `narratage doctor
-<runtime-profile.json>` verifies package bytes, closed adapter configuration, required environment
-credentials, executables and declared service health without running a Build. Runtime Adapter Host
-ABI `@1` requires a pure configuration gate separate from construction: `doctor` never invokes an
-adapter factory, starts a service, writes Runtime state or submits work. Valid instances may perform
-bounded read-only environment probes.
+- `svml.packages.lock` closes deterministic Producer and Validator code used by the graph.
+- `svml.runtime-packages.lock` closes privileged Runtime adapters that may access files, credentials,
+  processes or networks.
+- `.svml` and `.svrun` source can affect neither lock.
+- loaded implementation identities are rebound to actual package and dependency bytes.
+- Runtime credentials are resolved only from explicitly selected `CredentialStore` instances.
 
-`LocalRuntime.builds()` reads a separate Host `BuildCatalog`. With the default local assembly the
-catalog shares the SQLite file physically; deployments with replacement execution Stores default
-to `.svml/catalog.sqlite` or may select `catalogPath`/inject a `BuildCatalog`. This index is kept out
-of Runtime service selection and Closure identity because changing a source path or display alias
-must not invalidate or resume a different execution.
+`LocalBuildRequest.attachments` is explicit Host ingress into the selected ArtifactStore. The Store's
+returned digest, media type and size must equal the claimed `BlobRef` before Core execution. Artifact
+retention is explicit maintenance: `narratage gc` previews by default and `--apply` removes only bytes
+unreachable from retained Build and Operation facts.
 
-`LocalBuildRequest.attachments` is the explicit ingress from a trusted Host into the selected
-ArtifactStore. Each attachment carries claimed `BlobRef` metadata plus bytes; Local Runtime copies
-the bytes, stores them content-addressably and requires the Store's returned digest, size and media
-type to match before any Core command can consume the reference. Attachments never enter
-BuildState, SQLite or author source, and Runtime does not know whether they came from source assets,
-an upload, a provided Candidate, Git or an API. Reusing a Build after restart needs no reattachment when the
-chosen durable ArtifactStore still contains those digests.
+`BuildCatalog` is optional Host presentation metadata. SQLite may expose one beside its execution
+facets, but Local never creates a second hidden database or treats aliases and source paths as Build
+truth.
+
+Advanced embeddings may call `createProjectLocalRuntime()` with explicitly constructed service and
+Endpoint packages. That TypeScript API has the same selection laws as the JSON Profile.

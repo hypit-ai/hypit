@@ -11,13 +11,14 @@ Run, Cue endpoint, atom assignment, field value and per-Cue cardinality.
 createGoogleVertexCaptionProvider({
   project: "my-google-cloud-project",
   location: "global",
+  credentialsJson: credentialRef("keychain", "google.vertex.credentials"),
 });
 ```
 
-The default credential reference is the explicit environment key
-`GOOGLE_APPLICATION_CREDENTIALS_JSON`, whose value is the JSON contents rather than a path. This
-keeps filesystem authority out of the Provider. A deployment may bind another `CredentialStore`
-and pass its `CredentialRef`. Credentials never enter author source, Runtime Closure, BuildState,
+The Runtime Profile must provide an ordinary `{ store, key }` credential reference. The referenced
+value is the JSON contents rather than a path, keeping filesystem authority out of the Provider.
+The low-level TypeScript factory retains an environment-reference convenience for embeddings;
+declarative Runtime activation has no implicit credential source. Credentials never enter author source, Runtime Closure, BuildState,
 Operation state, Prompt or Receipt metadata.
 
 The legacy implementation used `GOOGLE_APPLICATION_CREDENTIALS` as an ADC file path. A host

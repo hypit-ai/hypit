@@ -1,8 +1,7 @@
 # Runtime execution, dispatch and cancellation
 
-Status: target domain-neutral design, 2026-08-10. The current in-process Scheduler and
-`services` commands do not yet implement this complete design. This document defines the next
-execution slice; it does not change Core, Author Graph or Run Graph semantics.
+Status: local durable slice implemented, 2026-08-11. This document records the execution laws and
+their extension boundary; it does not change Core, Author Graph or Run Graph semantics.
 
 ## 1. Outcome
 
@@ -101,20 +100,17 @@ public aggregate is `runtime`:
 ```bash
 narratage runtime up      ./svml.runtime.json
 narratage runtime status  ./svml.runtime.json
-narratage runtime logs    ./svml.runtime.json --follow
+narratage runtime logs    ./svml.runtime.json
 narratage runtime down    ./svml.runtime.json
 ```
 
-`service` is only a subordinate noun for an actual long-lived program:
+The current expert command for actual external programs remains deliberately narrow:
 
 ```bash
-narratage runtime service status  whisperx.local
-narratage runtime service restart whisperx.local
-narratage runtime service logs    whisperx.local --follow
+narratage services up|status|down ./svml.runtime.json
 ```
 
-The present code overloads *service* for in-process Store objects, tools and daemons. The target
-model separates them:
+It never names an in-process Store or starts the Worker. The model separates:
 
 | Runtime dependency | Lifecycle | Examples |
 |---|---|---|
@@ -128,6 +124,12 @@ model separates them:
 `runtime up` may prepare selected local tools, probe dependencies, start selected managed daemons
 and start the Worker last. It must never create cloud infrastructure, mutate IAM, log in to a
 Provider or deploy Lambda. Those are explicit provisioning operations.
+
+The detached process record binds the canonical Profile path and an effective revision covering
+the Profile bytes plus both package locks it names. If the Profile or either lock changes while a
+Worker is alive, `runtime status` reports `stale`; the next `runtime up` or `build` stops that
+process and starts one from the new closure instead of silently executing new dispatches under old
+configuration.
 
 `doctor` remains read-only. It validates the profile, locks, credentials and prerequisites. A
 healthy remote credential and a currently running local daemon are different diagnostics; liveness
@@ -156,7 +158,7 @@ type BuildDispatch = {
 };
 ```
 
-The exact wire schema remains implementation work, but these laws are fixed:
+The `svml.build-dispatch@1` wire schema implements these laws:
 
 - dispatch is idempotent by Build identity;
 - the ticket binds the same Core Build and Runtime Closure as the archived Build;
@@ -201,12 +203,12 @@ at most two paid remote generations outstanding. A media lane may need only acti
 its process ends with the admitted call. Provider rate limiting remains Endpoint policy; it is not
 creative graph selection.
 
-Capacity is shared by every Build in one execution domain. Separate CLI processes must not each
-receive their own private limit, which is a limitation of the current in-process Scheduler.
+Capacity is shared by every Build and Worker in one execution domain through DispatchStore. Separate
+CLI processes do not receive private copies of the limit.
 
 ## 5. Build submission and observation
 
-The target `build` sequence is ordered to keep failures free and deterministic for as long as
+The implemented `build` sequence is ordered to keep failures free and deterministic for as long as
 possible:
 
 1. read Headers and lock-selected Frontends;
@@ -445,7 +447,7 @@ claim that admission is already closed.
 | Action | Meaning |
 |---|---|
 | detach `--follow` / press Ctrl-C | stop observing only |
-| `runtime down` | stop this Runtime's admission and processes; preserve Builds for later recovery |
+| `runtime down` | stop this Runtime Worker from claiming more dispatch leases and stop owned programs; preserve Builds for later recovery |
 | stop/restart WhisperX | manage one daemon; do not rewrite Build intent |
 | remove a queued notification | not allowed as a substitute for closing the authoritative dispatch ticket |
 | Provider timeout | factual Operation failure or pending uncertainty, not operator cancellation |
@@ -457,9 +459,9 @@ drain, checkpoint remote pending Operations, release leases and then stop owned 
 sends Provider cancellation requests. A forced shutdown is crash semantics and must be described as
 such; it is still not a creative or cancellation decision.
 
-## 9. Required implementation slices
+## 9. Implemented local slices
 
-The design should be implemented in this order:
+The local reference implementation contains:
 
 1. add an environment-neutral `BuildDispatchStore`/lease port and Runtime journal vocabulary;
 2. implement the local durable ticket, lease and journal in SQLite;
@@ -471,8 +473,9 @@ The design should be implemented in this order:
 8. split tools, managed daemons and remote diagnostics beneath `runtime` lifecycle commands;
 9. make `doctor` purely read-only and stop auto-starting services before source validation.
 
-The first vertical slice should use the existing SQLite, filesystem ArtifactStore and current local
-Providers. Hosted queues, auth, billing, multi-tenancy and cloud deployment are not prerequisites.
+The first vertical slice uses explicit SQLite, filesystem ArtifactStore and current local
+Providers. Hosted queues, billing, multi-tenancy and cloud deployment remain separate adapters or
+embedding-product concerns.
 
 ## 10. Acceptance laws
 

@@ -156,13 +156,31 @@ The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials.env"]
+    }
+  },
   "endpoints": [
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.main",
       "lane": "generation",
       "config": {
-        "apiKeyEnv": "KIE_API_KEY",
+        "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
       }
     },
@@ -184,7 +202,7 @@ The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each
       "lane": "planning",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
-        "credentialsEnv": "GOOGLE_APPLICATION_CREDENTIALS_JSON",
+        "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
         "location": "global",
         "defaultConcurrency": 1
       }
@@ -201,6 +219,9 @@ The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each
     }
   ],
   "permissions": [
+    "environment:credentials",
+    "filesystem:artifacts",
+    "filesystem:state",
     "filesystem:whisperx-staging",
     "network:aiplatform.googleapis.com",
     "network:api.kie.ai",
@@ -231,7 +252,7 @@ Each endpoint binds a Provider package to a named instance with a concurrency la
 | `use` | Provider package name (e.g. `@narratage/provider-kie`) |
 | `instance` | Unique instance identifier |
 | `lane` | Scheduling lane for concurrency control |
-| `config` | Provider-specific configuration (API keys, concurrency, etc.) |
+| `config` | Provider-specific non-secret configuration and ordinary CredentialRefs |
 
 ### Permissions
 
@@ -255,8 +276,9 @@ This installs Node dependencies **and** prepares the Python services (WhisperX, 
 Builds need. When `uv` is not on your PATH the Python step is skipped with a warning — install
 [uv](https://docs.astral.sh/uv/) first if you need local alignment or image processing.
 
-`narratage build` will start the required services automatically; you do not need to launch them
-yourself.
+`narratage runtime up` starts the durable Worker and the external programs declared by the selected
+adapters. `build` also ensures that execution domain is running before it submits, but never owns
+the Worker.
 
 #### Keep production projects outside the Narratage checkout
 
@@ -290,8 +312,27 @@ Runtime Profile, so the Profile remains portable:
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials.env"]
+    }
+  },
   "endpoints": [],
-  "permissions": []
+  "permissions": ["environment:credentials", "filesystem:artifacts", "filesystem:state"],
+  "scheduling": { "maxConcurrency": 4 }
 }
 ```
 
@@ -305,8 +346,8 @@ other than the CLI installation.
 pnpm narratage doctor examples/talking-head-aroll/svml.runtime.json
 ```
 
-Doctor checks that every endpoint is reachable, credentials are valid, and required executables
-(`ffmpeg`, `ffprobe`, Chrome) are available.
+Doctor validates both locks, every selected Runtime role, Endpoint configuration, credential
+presence and bounded environment probes. It never starts the Worker or performs a paid request.
 
 ### 2. Inspect the plan
 
@@ -328,6 +369,9 @@ pnpm narratage build examples/talking-head-aroll/build.svrun \
   --build-id my-film-001 \
   --follow
 ```
+
+Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
+`--follow`, the terminal is only an observer; interrupting it leaves the Build running.
 
 | Flag | Description |
 |---|---|

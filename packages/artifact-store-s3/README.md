@@ -27,13 +27,11 @@ const artifacts = createS3ArtifactStorePackage({
   expectedBucketOwner: "123456789012",
 });
 
-export default createProjectLocalRuntime({
-  root: import.meta.dirname,
-  runtimeServices: [artifacts],
-  allowedPermissions: ["network:aws:s3"],
-  endpoints: [],
-});
+// Supply this package beside explicit Scheduler/Worker, state and CredentialStore packages,
+// then select `artifacts.team` as runtimeSelection.stores.artifacts.
 ```
+
+`createProjectLocalRuntime()` never infers the other required services from this package.
 
 The AWS SDK default credential chain or an explicitly injected trusted client owns AWS
 authentication. Secret bytes never enter the package contribution or Runtime Closure; bucket,

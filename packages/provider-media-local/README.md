@@ -4,15 +4,13 @@ Trusted local ffprobe/ffmpeg implementation of `@narratage/media-pipeline`'s eig
 capabilities. It is Runtime configuration and is never imported by author `.svml`.
 
 ```ts
-import { createProjectLocalRuntime } from "@narratage/local";
 import { createLocalMediaProvider } from "@narratage/provider-media-local";
 
-const runtime = await createProjectLocalRuntime({
-  packageLock: "./svml.packages.lock",
-  endpoints: [createLocalMediaProvider({ defaultConcurrency: 1 })],
-  allowedPermissions: ["process:media"],
-});
+const media = createLocalMediaProvider({ instance: "media.local", defaultConcurrency: 1 });
 ```
+
+An embedding adds `media` to a complete explicit Runtime assembly and grants `process:media`; the
+declarative form selects this package from `runtimePackageLock`.
 
 The Endpoint:
 

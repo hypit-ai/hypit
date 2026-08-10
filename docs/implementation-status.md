@@ -1,6 +1,6 @@
 # Implementation status
 
-Repository reality as of 2026-08-10. Specifications define laws; this page says what currently
+Repository reality as of 2026-08-11. Specifications define laws; this page says what currently
 executes. Narratage is pre-release and no author-facing video ABI is frozen.
 
 ## End-to-end status
@@ -79,16 +79,23 @@ Implemented:
   built-in author-package aggregate or Provider registry;
 - `@narratage/markup`, `@narratage/script`, `@narratage/svs`: official markup, Script and Recipe Frontends without
   Core parser branches; `.svml` and `.svs` remain human suffix conventions only;
-- `@narratage/runtime`: Scheduler/Store ports, Profile/Closure locking, concurrency lanes and
-  recoverable Endpoint lifecycle;
+- `@narratage/runtime`: Profile/Closure locking, BuildDispatchStore, RuntimeJournal, fenced leases,
+  shared capacity, Scheduler/Worker/Store ports and recoverable Endpoint lifecycle;
 - `@narratage/runtime-adapter`, `@narratage/runtime-adapter-node`: locked deployment-adapter ABI, physical
   package-byte identity, project-root executable resolution and diagnostic hooks;
 - `@narratage/driver-node`: trusted Node Producer/Endpoint execution and exact command regeneration;
-- `@narratage/store-sqlite`: durable CAS BuildStore and OperationStore;
+- `@narratage/store-sqlite`: durable CAS BuildStore/OperationStore, Build dispatch, Runtime journal,
+  fencing and authority-wide capacity without serialized Core Commands or domain tables;
 - `@narratage/artifact-store-fs`, `@narratage/artifact-store-s3`: interchangeable content-addressed bytes;
-- `@narratage/credential-store-env`, `@narratage/credential-store-keychain`: explicit credential
-  slots without secrets in BuildState, each answering only for its own `CredentialRef.store` name;
-- `@narratage/local`: in-process developer assembly over SQLite and filesystem defaults;
+- `@narratage/credential-store-env`, `@narratage/credential-store-keychain`: composable explicit
+  credential slots without secrets in BuildState, each answering only for its own
+  `CredentialRef.store`; Keychain exposes bounded write/delete for generic auth commands;
+- `@narratage/local`: Node local Scheduler/Worker and process lifecycle assembly, with every concrete
+  Store supplied and selected explicitly;
+- durable asynchronous `build`, detached Worker recovery, observer-only `--follow`,
+  `runtime up/status/logs/down`, queue/watch and Build/Operation inspection;
+- honest Build and scoped Operation cancellation separating request, admission, acknowledgment and
+  factual terminal state; late results remain archived without entering suppressed branches;
 - declarative `svml.runtime.json` loading through a separate locked Runtime Adapter package closure,
   with TypeScript Runtime assembly retained as the advanced embedding API;
 - domain-neutral Build archive inspection and Record egress: accepted intermediate Records remain
@@ -175,7 +182,8 @@ Implemented:
   with a locked Python 3.13 environment, one Raster capability, one Handler and one shared pixel
   interpreter, returning only a new content-addressed image Blob; an explicitly configured Python
   transfers lifecycle ownership to the deployment instead of preparing the managed uv project;
-- one Scheduler with global and named lane concurrency shared across Builds.
+- shared global and named-lane capacity enforced across Builds and Worker processes by the selected
+  DispatchStore.
 
 Not implemented:
 
@@ -184,8 +192,8 @@ Not implemented:
 - a persistent remote WhisperX service Provider; AWS Lambda is explicitly not its target;
 - publication-ready redistributable Media/HyperFrames AWS deployment bundles; the current team
   resources are live deployments, not public release artifacts;
-- Secrets Manager, Vault or multi-store credential adapters; environment and Keychain stores exist,
-  and a current Runtime selects one store;
+- Secrets Manager or Vault adapters; multiple selected CredentialStores already compose by store
+  name, with environment and Keychain implementations available;
 - deployment-specific Build release policy;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
 - arbitrary Volcengine, Fal, API-key Gemini or hosted-service Endpoint packages.
@@ -311,9 +319,21 @@ permission enforcement and loaded-code attestation remain release work.
 
 ## Current verification
 
-- the TypeScript check and the package test suites pass; browser, paid-Provider and heavyweight
-  local-service acceptance tests remain environment-gated and are skipped when their prerequisites
-  are absent;
+- `pnpm check`, the complete 640-test repository run and the documentation build pass; 16 browser,
+  paid-Provider or heavyweight local-service acceptances remain explicitly environment-gated and
+  are skipped when their prerequisites are absent;
+- one process-level non-video Build lives in a repository-external Workspace with independent
+  Author and Runtime locks: foreground submission exits, `--follow` detaches without cancelling,
+  the Worker process is stopped and replaced, and the durable Build completes after recovery;
+- two independently assembled Workers sharing one SQLite authority obey one global capacity limit
+  even when an Operation outlives its initial capacity lease; expired leases are fenced, a
+  cancellation racing with Worker release cannot lose its durable wake, recovered Endpoint
+  submission keys are reused and Core Event replay is idempotent;
+- Build and Operation cancellation tests cover pre-admission closure, concurrent submission,
+  accepted/confirmed/unsupported/too-late outcomes, completion racing with control, late-result
+  retention, exact-Command suppression and progress of an unrelated branch;
+- human and JSON queue, Build, Operation and cancellation views execute through the same CLI
+  renderer; an empty Runtime service selection fails rather than manufacturing a local default;
 - the checked-in self-described talking-film Author Source passes `check`, and its mandatory Run
   Source passes `plan` through the dual-graph compiler without invoking a Provider;
 - live KIE, local media, local WhisperX and two-worker HyperFrames paths have passed separately;

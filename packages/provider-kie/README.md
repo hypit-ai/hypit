@@ -37,48 +37,39 @@ requests, not in Provider routing.
 
 ## Local Runtime
 
+Declarative activation names an ordinary CredentialRef, not an environment-specific Provider field:
+
+```json
+{
+  "use": "@narratage/provider-kie",
+  "instance": "kie.personal",
+  "lane": "generation",
+  "config": {
+    "apiKey": { "store": "keychain", "key": "kie.api-key" },
+    "defaultConcurrency": 2
+  }
+}
+```
+
+The selected writable CredentialStore then enables `narratage auth login kie.personal --runtime
+svml.runtime.json`; KIE contributes the credential description and the generic CLI contains no KIE
+branch.
+
 ```ts
-import { geminiOmniComponent } from "@narratage/gemini-omni";
-import { generationComponent } from "@narratage/generation";
-import { gptImageComponent } from "@narratage/gpt-image";
-import { grokImagineComponent } from "@narratage/grok-imagine";
-import { createProjectLocalRuntime } from "@narratage/local";
-import { minimaxH3Component } from "@narratage/minimax-h3";
-import { nanoBananaComponent } from "@narratage/nano-banana";
 import { createKieProvider } from "@narratage/provider-kie";
 import { credentialRef } from "@narratage/runtime";
-import { seedanceComponent } from "@narratage/seedance";
-import { seedreamComponent } from "@narratage/seedream";
 
-export default await createProjectLocalRuntime({
-  components: [
-    generationComponent,
-    seedanceComponent,
-    minimaxH3Component,
-    geminiOmniComponent,
-    grokImagineComponent,
-    gptImageComponent,
-    nanoBananaComponent,
-    seedreamComponent,
-  ],
-  endpoints: [createKieProvider({
-    instance: "kie.personal",
-    apiKey: credentialRef("env", "KIE_API_KEY"),
-    defaultConcurrency: 2,
-  })],
-  allowedPermissions: [
-    "network:api.kie.ai",
-    "network:kieai.redpandaai.co",
-  ],
+const kie = createKieProvider({
+  instance: "kie.personal",
+  apiKey: credentialRef("env", "KIE_API_KEY"),
+  defaultConcurrency: 2,
 });
 ```
 
-The explicit `components` list above is the low-level embedding form; a reproducible project should
-publish the same set through an installed aggregate and select it with `packageLock`. The shared
-`generationComponent` publishes semantic validators for generated-media Products. Each
-model component installs its exact request validators and deterministic request-to-Need Producers.
-The `.svml` Module Closure separately contains only the model Manifests actually imported by the
-author document; installing Runtime code does not implicitly add author intent.
+An advanced embedding adds `kie` to its Endpoint list beside a complete, explicit set of Runtime
+service packages and selections. A reproducible project normally activates deterministic model
+components through `packageLock`. The `.svml` Module Closure separately contains only the model
+Manifests actually imported by the author document; installing KIE does not add author intent.
 
 ## Paid-operation law
 
@@ -91,8 +82,9 @@ author document; installing Runtime code does not implicitly add author intent.
 4. Successful result URLs are converted to short-lived download URLs, bounded while streaming,
    immediately written to the configured content-addressed ArtifactStore, and removed from durable
    result metadata.
-5. `@narratage/local` owns Build concurrency. This Provider contributes one KIE lane and a conservative
-   create-task interval; it does not introduce Redis or another source of Build truth.
+5. The selected `BuildDispatchStore` owns shared Build capacity. This Provider contributes one KIE
+   lane and a conservative create-task interval; it does not introduce Redis or another source of
+   Build truth.
 
 The automated suite uses an adversarial fake KIE service. The credentialed smoke command is a paid
 deployment test and is intentionally not run by the public repository test suite. It must be enabled

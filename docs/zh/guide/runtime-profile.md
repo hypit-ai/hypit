@@ -1,232 +1,134 @@
 ---
 title: Runtime Profile
-description: 配置 Build 在哪里执行、诊断与 Build 归档。
+description: 显式配置 Build 的执行环境、状态存储、凭据与并发。
 ---
 
 # Runtime Profile
 
-Runtime Profile 声明冻结后的 Build *在哪里*执行：Endpoint、凭据、并发、权限。它属于部署配置，而不是创作内容——它绝不进入 Author Graph 或 Run Graph 的身份。
+Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker、全部 Store、Endpoint、
+凭据、并发和权限。它属于部署配置，绝不进入 Author Graph 或 Run Graph 身份。
 
-支持两种形式：
-
-| 形式 | 文件 | 适用场景 |
-|---|---|---|
-| 声明式 JSON | `svml.runtime.json` | 标准路径 |
-| 可执行 TypeScript | `svml.runtime.ts` | 高级嵌入 API |
-
-## 声明式 JSON
+## 声明式 Profile
 
 ```json
 {
   "format": "svml.runtime-config@1",
   "packageLock": "./svml.packages.lock",
   "runtimePackageLock": "./svml.runtime-packages.lock",
+  "runtimeServices": [
+    { "use": "@narratage/local", "instance": "execution" },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
+    { "use": "@narratage/credential-store-keychain", "instance": "credentials.keychain", "config": { "service": "narratage" } }
+  ],
+  "services": {
+    "scheduler": "execution.scheduler",
+    "worker": "execution.worker",
+    "stores": {
+      "build": "state.builds",
+      "operations": "state.operations",
+      "dispatch": "state.dispatch",
+      "journal": "state.journal",
+      "artifacts": "artifacts",
+      "credentials": ["credentials.keychain"]
+    }
+  },
   "endpoints": [
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.production",
       "lane": "generation",
       "config": {
-        "apiKeyEnv": "KIE_API_KEY",
+        "apiKey": { "store": "keychain", "key": "kie.api-key" },
         "defaultConcurrency": 2
       }
-    },
-    {
-      "use": "@narratage/provider-media-local",
-      "instance": "media.local",
-      "lane": "media",
-      "config": { "defaultConcurrency": 2 }
-    },
-    {
-      "use": "@narratage/provider-whisperx-local",
-      "instance": "whisperx.local",
-      "lane": "alignment",
-      "config": { "defaultConcurrency": 1 }
-    },
-    {
-      "use": "@narratage/provider-google-vertex",
-      "instance": "vertex.local",
-      "lane": "planning",
-      "config": {
-        "projectEnv": "GOOGLE_CLOUD_PROJECT",
-        "credentialsEnv": "GOOGLE_APPLICATION_CREDENTIALS_JSON",
-        "defaultConcurrency": 1
-      }
-    },
-    {
-      "use": "@narratage/provider-hyperframes-local",
-      "instance": "hyperframes.local",
-      "lane": "render",
-      "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
     }
   ],
   "permissions": [
-    "filesystem:whisperx-staging",
-    "network:aiplatform.googleapis.com",
+    "filesystem:artifacts",
+    "filesystem:state",
+    "process:keychain",
     "network:api.kie.ai",
-    "network:whisperx-loopback",
-    "process:hyperframes",
-    "process:media"
+    "network:kieai.redpandaai.co"
   ],
   "scheduling": {
     "maxConcurrency": 4,
-    "lanes": {
-      "generation": 2,
-      "media": 2,
-      "alignment": 1,
-      "planning": 1,
-      "render": 1
-    }
+    "lanes": { "generation": 2 }
   }
 }
 ```
 
-### Endpoint 字段
+`runtimeServices` 激活已安装的实现；`services` 按实例 id 逐项选择 Scheduler、Worker、
+BuildStore、OperationStore、DispatchStore、RuntimeJournal、ArtifactStore 和一个或多个
+CredentialStore。不存在“因为只装了一个所以自动选中”，`@narratage/local` 也不补 SQLite、
+文件系统或凭据默认值。
+
+凭据只写地址：`{ "store": "…", "key": "…" }`，秘密字节不进 Profile。多个 Store 可以
+并存，每个 Store 只响应属于自己命名空间的引用。
+
+## 文件边界
 
 | 字段 | 含义 |
 |---|---|
-| `use` | 适配器名称，从 `runtimePackageLock` 解析 |
-| `instance` | 该 Endpoint 实例的唯一标识 |
-| `lane` | 管辖并发的调度 lane |
-| `config` | 适配器专属配置（凭据环境变量、并发、超时） |
+| `root` | Runtime 数据与相对 lock 的根目录；默认是 Profile 所在目录 |
+| `packageRoot` | 提供已安装 `node_modules` 的 Host 位置；与项目数据目录无关 |
+| `packageLock` | 确定性 Producer/Validator 包闭包 |
+| `runtimePackageLock` | 有权限的 Runtime Adapter 包闭包 |
 
-凭据通过环境变量名引用，绝不存放在 Profile 里。
+外部项目可以把源文件、锁、SQLite 和 Artifact 全部留在自己的目录，同时从另一个
+Narratage 安装目录加载校验后的包。
 
-### 文件系统字段
+## 并发与权限
 
-| 字段 | 含义 |
-|---|---|
-| `root` | Runtime 数据根目录；状态数据库、Artifact 存储和相对 lock 路径都以此为基准。默认是 Profile 所在目录。 |
-| `packageRoot` | 为两份 lock 提供 `node_modules` 的可选 Host 覆盖项。官方 CLI 默认使用自身安装位置；直接调用本地 API 时默认等于 `root`。 |
-| `packageLock` | 确定性实现包的 lock；相对 `root` 解析。 |
-| `runtimePackageLock` | 有权限的 Runtime Adapter lock；相对 `root` 解析。 |
+`maxConcurrency` 和每个 lane 的上限由 DispatchStore 在所有共享 Worker 之间执行，不是某个
+CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；过期 Worker 不能继续准入结果。
 
-`root` 与 `packageRoot` 有意分离。外部视频项目可以把全部数据留在自己的目录，同时从一个
-Narratage 安装目录加载经过校验的可执行包。两者都不进入 Author Graph 或 Run Graph 身份。
+权限仍是显式 allowlist，例如 `network:<host>`、`filesystem:<scope>`、`process:<name>`。
 
-### 调度
-
-`maxConcurrency` 限制所有 lane 上并发 Operation 的总量。每个具名 lane 还有自己的子上限。lane 由 Endpoint 声明，并由 Scheduler 强制执行。
-
-### 权限
-
-每个权限字符串向已锁定的 Endpoint 授予一项具体权能：
-
-- `network:<host>` — 到该主机的出站 HTTP
-- `filesystem:<scope>` — 在具名作用域内的文件访问
-- `process:<name>` — 本地进程执行
-
-## 可执行 TypeScript
-
-用于高级嵌入场景，以编程方式构造 Runtime：
-
-```typescript
-import { createProjectLocalRuntime } from "@narratage/local";
-import { createKieProvider } from "@narratage/provider-kie";
-import { createLocalMediaProvider } from "@narratage/provider-media-local";
-
-export default async function createRuntime() {
-  const endpoints = [
-    createKieProvider({
-      instance: "kie.prod",
-      lane: "generation",
-      defaultConcurrency: 2,
-    }),
-    createLocalMediaProvider({
-      instance: "media.prod",
-      lane: "media",
-      defaultConcurrency: 2,
-    }),
-  ];
-
-  return await createProjectLocalRuntime({
-    root: import.meta.dirname,
-    packageLock: "./svml.packages.lock",
-    endpoints,
-    allowedPermissions: endpoints.flatMap(e =>
-      e.manifest.facets.flatMap(f => f.permissions)),
-    scheduling: {
-      maxConcurrency: 4,
-      lanes: { generation: 2, media: 2 },
-    },
-  });
-}
-```
-
-两种形式都可以传给 `--runtime`：
-
-```bash
-pnpm narratage build build.svrun --runtime ./svml.runtime.json
-pnpm narratage build build.svrun --runtime ./svml.runtime.ts
-```
-
-## 诊断
-
-### doctor
-
-在不运行 Build、不发出付费请求的前提下检查 Runtime Profile：
+## 生命周期
 
 ```bash
 pnpm narratage doctor svml.runtime.json
+pnpm narratage runtime up svml.runtime.json
+pnpm narratage runtime status svml.runtime.json
+pnpm narratage runtime logs svml.runtime.json
+pnpm narratage runtime down svml.runtime.json
 ```
 
-校验内容：
-- 包锁文件存在且可读
-- 适配器字节摘要匹配
-- 配置键对各适配器有效
-- 引用的凭据在环境中存在
-- 找得到所需的可执行文件（ffmpeg、ffprobe、chrome）
-- 声明的外部服务可达且与当前 Profile 匹配
+`runtime up` 管理耐久 Worker 与声明的外部程序。`services up/status/down` 只管理外部程序，
+不会启动 Worker。`build` 会确保 Runtime 已启动，但 Build 所在终端从不拥有执行权。
+后台进程绑定覆盖 Profile 与两份 package lock 的有效修订摘要；任一文件变化后状态变为
+`stale`，下一次启动或提交会按新执行闭包替换进程，而不是继续复用旧装配。
 
-Runtime Adapter Host ABI `@1` 把必需的纯配置校验与 Adapter 工厂彻底分开。`doctor`
-不会构造 Endpoint 或 Store、启动服务、写入 Runtime 状态或提交任务。配置通过后，它可以执行
-有边界的只读环境探测；同一实例的首个配置或前置条件错误会截断由它连带产生的重复诊断。
-
-### gc（垃圾回收）
+## Build、队列与归档
 
 ```bash
-pnpm narratage gc svml.runtime.json            # dry-run
-pnpm narratage gc svml.runtime.json --apply     # delete unreachable Artifacts
-```
-
-遍历每个保留的 BuildState 与 Operation，计算可达的 Artifact 摘要，并报告（或删除）不可达的孤儿对象。
-
-## Build 归档与检视
-
-每次 Build 都会持久归档全部已接受的 Record 与被引用的 Artifact，与任何 `--to` 目标路径无关。
-
-### 列出 Build
-
-```bash
-pnpm narratage builds --runtime svml.runtime.json
-```
-
-### 检视
-
-```bash
+pnpm narratage build build.svrun --runtime svml.runtime.json
+pnpm narratage build build.svrun --runtime svml.runtime.json --follow
+pnpm narratage queue --runtime svml.runtime.json --watch
+pnpm narratage status <build-id> --runtime svml.runtime.json
+pnpm narratage operations <build-id> --runtime svml.runtime.json
+pnpm narratage operation <operation-id> --runtime svml.runtime.json
 pnpm narratage inspect <build-id> --runtime svml.runtime.json
+pnpm narratage get <build-id> --runtime svml.runtime.json --name final.video --to output.mp4
 ```
 
-显示 target 绑定、被请求的 Logical Output、每个已接受的 Record 以及 Operation 状态。
+不带 `--follow` 时，`build` 在耐久提交后退出；Worker 继续执行。`--follow` 只是观察，Ctrl-C
+不会取消任务。所有已接受 Record 与引用的 Artifact 都会归档，`get` 只是可选导出。
 
-### 取回 Record
+## 取消
 
 ```bash
-# By source output name
-pnpm narratage get <build-id> --runtime svml.runtime.json \
-  --name final.video --to output.mp4
-
-# By Record id
-pnpm narratage get <build-id> --runtime svml.runtime.json \
-  --record <record-id> --to output.json
-
-# By Logical Output id
-pnpm narratage get <build-id> --runtime svml.runtime.json \
-  --output <output-id>
-
-# By Artifact digest
-pnpm narratage get <build-id> --runtime svml.runtime.json \
-  --artifact <sha256:...> --to file.bin
+pnpm narratage cancel build <build-id> --runtime svml.runtime.json
+pnpm narratage cancel operation <operation-id> --runtime svml.runtime.json
 ```
 
-`--name` 使用 Host-only Build Catalog 中的来源输出别名。Catalog 只是展示层的便利设施，不进入 Core 的 Build 身份。
+Build 取消先关闭准入；Operation 取消只抑制那个精确实现。`accepted` 只是远端接受停止请求，
+不等于已停止；系统继续协调到 `confirmed`、`unsupported`、`too-late` 或自然结束。迟到的付费
+产物继续归档，但不能进入被抑制的 Core 分支。Runtime 不会因此偷偷换 Candidate 或 Provider。
+
+## 高级 TypeScript 嵌入
+
+`svml.runtime.ts` 仍可用于可信的私有部署代码，但必须构造与选择同样完整的一组 Runtime
+service package。它不是作者语言逃生口，也没有隐藏默认值。仓库中的
+`examples/talking-film-live/svml.runtime.ts` 是可执行参考。
