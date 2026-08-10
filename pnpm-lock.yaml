@@ -1098,15 +1098,24 @@ importers:
 
   packages/gemini-omni:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/generation:
     dependencies:
@@ -1144,6 +1153,9 @@ importers:
       '@narratage/image-transform':
         specifier: workspace:*
         version: link:../image-transform
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
@@ -1156,15 +1168,24 @@ importers:
 
   packages/grok-imagine:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/host:
     dependencies:
@@ -1447,15 +1468,24 @@ importers:
 
   packages/minimax-h3:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/model-kit:
     dependencies:
@@ -1477,15 +1507,24 @@ importers:
 
   packages/nano-banana:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/narrative:
     dependencies:
@@ -2162,15 +2201,24 @@ importers:
 
   packages/seedream:
     dependencies:
+      '@narratage/artifact':
+        specifier: workspace:*
+        version: link:../artifact
       '@narratage/generation':
         specifier: workspace:*
         version: link:../generation
+      '@narratage/markup':
+        specifier: workspace:*
+        version: link:../markup
       '@narratage/model-kit':
         specifier: workspace:*
         version: link:../model-kit
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/semantic-map:
     dependencies:

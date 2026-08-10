@@ -153,7 +153,15 @@ Implemented:
   extracted legacy GPT Image YCrCb denoise preset;
 - `@narratage/gpt-image/clean`: an optional logical module from the GPT Image physical package that
   expands generation plus the shared denoise transform as two visible graph operations and exports
-  one clean image; a high-level Prompt Surface remains intentionally deferred;
+  one clean image; both raw and clean logical modules now carry their own package-local `Image`
+  Surface, with Prompt and every reference image preserved as explicit graph edges;
+- the five remaining exact generation packages now own their author syntax too:
+  `@narratage/nano-banana` exposes base and Pro image Surfaces, `@narratage/seedream` separates text
+  and reference image modes, `@narratage/minimax-h3` separates text, frame and multimodal-reference
+  video modes, `@narratage/gemini-omni` preserves media excerpts and opaque service IDs, and
+  `@narratage/grok-imagine` separates standard and preview video models. Every package lowers its own
+  syntax to explicit Text/Artifact graph edges and an exact request; none adds model routing to Core,
+  a Provider or a shared Surface registry;
 - `@narratage/image-compose`: explicit Canvas plus ordered image Layers to one reusable PNG Artifact,
   with no privileged base/sticker roles or hidden layout metadata;
 - `@narratage/raster`: one closed deterministic execution waist shared by Transform and Compose;
