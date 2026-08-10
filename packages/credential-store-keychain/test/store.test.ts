@@ -54,6 +54,22 @@ test("it can say how to put a secret where it will be found", () => {
   assert.equal(keychainAddCommand("KIE_API_KEY"), "security add-generic-password -s narratage -a KIE_API_KEY -w");
 });
 
+test("writable facet stores and removes only keychain-owned references", async () => {
+  const values = new Map<string, string>();
+  const store = new KeychainCredentialStore({
+    read: async (_service, account) => values.get(account),
+    write: async (_service, account, secret) => { values.set(account, secret); },
+    remove: async (_service, account) => values.delete(account),
+  });
+  const ref = credentialRef("keychain", "provider.api-key");
+  assert.equal(store.owns(ref), true);
+  await store.put(ref, { secret: "new-secret" });
+  assert.deepEqual(await store.resolve(ref), { secret: "new-secret" });
+  assert.equal(await store.delete(ref), true);
+  assert.equal(await store.resolve(ref), undefined);
+  await assert.rejects(store.put(credentialRef("env", "PROVIDER_KEY"), { secret: "x" }), /does not own/u);
+});
+
 /**
  * The reason a second implementation was written.
  *

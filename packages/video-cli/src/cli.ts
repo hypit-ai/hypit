@@ -13,8 +13,40 @@ const color = !json && colorMode !== "never" && process.env.TERM !== "dumb"
   && (colorMode === "always" || (process.env.NO_COLOR === undefined && process.stdout.isTTY === true));
 const unicode = process.env.TERM !== "dumb";
 
+async function readSecret(prompt: string): Promise<string> {
+  if (process.stdin.isTTY !== true || typeof process.stdin.setRawMode !== "function") {
+    const chunks: Buffer[] = [];
+    for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks).toString("utf8");
+  }
+  process.stderr.write(prompt);
+  return await new Promise<string>((resolve, reject) => {
+    let value = "";
+    const finish = (error?: Error): void => {
+      process.stdin.off("data", input);
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      process.stderr.write("\n");
+      if (error === undefined) resolve(value);
+      else reject(error);
+    };
+    const input = (chunk: Buffer): void => {
+      for (const byte of chunk) {
+        if (byte === 3) { finish(new Error("credential input cancelled")); return; }
+        if (byte === 10 || byte === 13) { finish(); return; }
+        if (byte === 8 || byte === 127) { value = value.slice(0, -1); continue; }
+        value += String.fromCharCode(byte);
+      }
+    };
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.on("data", input);
+  });
+}
+
 const io: CliIo = {
   write: (text) => process.stdout.write(text),
+  readSecret,
   terminal: {
     isTTY: process.stdout.isTTY === true,
     color,

@@ -217,6 +217,9 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
     credentials: {
       googleCredentials: options.credentialsJson ?? credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),
     },
+    credentialInputs: {
+      googleCredentials: { label: "Google Cloud credentials JSON", kind: "json" },
+    },
     defaultConcurrency: options.defaultConcurrency ?? 2,
     capabilities: [{
       capability: captionGeminiCapabilities.plan,

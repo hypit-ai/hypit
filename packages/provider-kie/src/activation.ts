@@ -1,12 +1,11 @@
-import { credentialRef } from "@narratage/runtime";
 import {
   createRuntimeEndpointAdapterFacet,
+  runtimeConfigCredentialRef,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
 } from "@narratage/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 
 import { createKieProvider } from "./provider.js";
 
@@ -15,7 +14,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   validate(context) {
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
-      "apiBaseUrl", "uploadBaseUrl", "apiKeyEnv", "defaultConcurrency", "pollIntervalMs",
+      "apiBaseUrl", "uploadBaseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs",
       "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
     ], "KIE");
     for (const [key, subject] of [["apiBaseUrl", "KIE apiBaseUrl"], ["uploadBaseUrl", "KIE uploadBaseUrl"]] as const) {
@@ -26,7 +25,9 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         throw new Error(`${subject} must use HTTPS or localhost`);
       }
     }
-    runtimeConfigString(config.apiKeyEnv, "KIE apiKeyEnv");
+    if (runtimeConfigCredentialRef(config.apiKey, "KIE apiKey") === undefined) {
+      throw new Error("KIE apiKey CredentialRef is required");
+    }
     runtimeConfigPositiveInteger(config.defaultConcurrency, "KIE defaultConcurrency");
     runtimeConfigPositiveInteger(config.pollIntervalMs, "KIE pollIntervalMs");
     runtimeConfigPositiveInteger(config.submissionIntervalMs, "KIE submissionIntervalMs");
@@ -37,10 +38,11 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   create(context) {
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
-      "apiBaseUrl", "uploadBaseUrl", "apiKeyEnv", "defaultConcurrency", "pollIntervalMs",
+      "apiBaseUrl", "uploadBaseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs",
       "submissionIntervalMs", "requestTimeoutMs", "maxOperationMs", "maxArtifactBytes",
     ], "KIE");
-    const apiKeyEnv = runtimeConfigString(config.apiKeyEnv, "KIE apiKeyEnv");
+    const apiKey = runtimeConfigCredentialRef(config.apiKey, "KIE apiKey");
+    if (apiKey === undefined) throw new Error("KIE apiKey CredentialRef is required");
     return createKieProvider({
       instance: context.instance,
       ...(context.lane === undefined ? {} : { lane: context.lane }),
@@ -48,7 +50,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ? {} : { apiBaseUrl: config.apiBaseUrl as string }),
       ...(runtimeConfigString(config.uploadBaseUrl, "KIE uploadBaseUrl") === undefined
         ? {} : { uploadBaseUrl: config.uploadBaseUrl as string }),
-      ...(apiKeyEnv === undefined ? {} : { apiKey: credentialRef("env", apiKeyEnv) }),
+      apiKey,
       ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "KIE defaultConcurrency") === undefined
         ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
       ...(runtimeConfigPositiveInteger(config.pollIntervalMs, "KIE pollIntervalMs") === undefined
@@ -62,11 +64,6 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       ...(runtimeConfigPositiveInteger(config.maxArtifactBytes, "KIE maxArtifactBytes") === undefined
         ? {} : { maxArtifactBytes: config.maxArtifactBytes as number }),
     });
-  },
-  doctor(context) {
-    const config = runtimeConfigObject(context.config, "KIE");
-    const apiKeyEnv = runtimeConfigString(config.apiKeyEnv, "KIE apiKeyEnv") ?? "KIE_API_KEY";
-    return diagnoseRuntimeEnvironmentCredential(apiKeyEnv, "KIE");
   },
 });
 

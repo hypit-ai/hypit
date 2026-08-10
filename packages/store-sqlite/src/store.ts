@@ -6,7 +6,7 @@ import {
   canonicalStringify,
   verifyBuildState,
 } from "@narratage/core";
-import { digestOf } from "@narratage/protocol";
+import { canonicalize, digestOf } from "@narratage/protocol";
 import type {
   BuildState,
   Digest,
@@ -15,17 +15,35 @@ import {
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
   defineRuntimeServicePackage,
+  capacityReservationId,
   sealOperationCompletion,
+  verifyBuildDispatchIdentity,
+  verifyBuildDispatchSnapshot,
+  verifyCapacityLimits,
+  verifyCapacityReservation,
+  verifyDispatchLease,
   verifyOperationIdentity,
   verifyOperationSnapshot,
+  verifyRuntimeJournalEntry,
 } from "@narratage/runtime";
 import type {
+  BuildDispatchClaim,
+  BuildDispatchCreate,
+  BuildDispatchIdentity,
+  BuildDispatchRelease,
+  BuildDispatchSnapshot,
+  BuildDispatchStore,
   BuildCatalog,
   BuildCatalogDescriptor,
   BuildCatalogEntry,
   BuildSnapshot,
   BuildStore,
   BuildStoreWrite,
+  CapacityAcquire,
+  CapacityAcquireRequest,
+  CapacityReservation,
+  DispatchLease,
+  DispatchQuery,
   OperationCreate,
   OperationIdentity,
   OperationQuery,
@@ -33,10 +51,13 @@ import type {
   OperationStore,
   OperationStoreWrite,
   OperationUpdate,
+  RuntimeJournal,
+  RuntimeJournalEntry,
+  RuntimeJournalQuery,
   RuntimeServicePackage,
 } from "@narratage/runtime";
 
-const databaseSchemaVersion = 1;
+const databaseSchemaVersion = 3;
 
 export const sqliteStoreModuleRef = {
   name: "@narratage/store-sqlite",
@@ -51,6 +72,14 @@ export const sqliteOperationStoreImplementationDigest = digestOf(
   "@narratage/store-sqlite/operation-store@1",
 );
 
+export const sqliteDispatchStoreImplementationDigest = digestOf(
+  "@narratage/store-sqlite/dispatch-store@1",
+);
+
+export const sqliteRuntimeJournalImplementationDigest = digestOf(
+  "@narratage/store-sqlite/runtime-journal@1",
+);
+
 export type SqliteRuntimeStateOptions = {
   readonly busyTimeoutMs?: number;
 };
@@ -60,6 +89,8 @@ export type CreateSqliteRuntimeServicePackageOptions = SqliteRuntimeStateOptions
   readonly name?: string;
   readonly buildInstance?: string;
   readonly operationInstance?: string;
+  readonly dispatchInstance?: string;
+  readonly journalInstance?: string;
 };
 
 type Row = Record<string, unknown>;
@@ -71,6 +102,23 @@ function assert(condition: unknown, message: string): asserts condition {
 function positiveInteger(value: number, subject: string): number {
   assert(Number.isSafeInteger(value) && value > 0, `${subject} must be a positive safe integer`);
   return value;
+}
+
+function nonNegativeInteger(value: number, subject: string): number {
+  assert(Number.isSafeInteger(value) && value >= 0, `${subject} must be a non-negative safe integer`);
+  return value;
+}
+
+function transaction<T>(database: DatabaseSync, body: () => T): T {
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    const result = body();
+    database.exec("COMMIT");
+    return result;
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 function durableBuildState(state: BuildState): BuildState {
@@ -129,11 +177,15 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
       : row.status === "failed"
         ? { failure: JSON.parse(String(row.failure_json)) }
         : {};
+  const cancellation = typeof row.cancellation_json === "string"
+    ? { cancellation: JSON.parse(row.cancellation_json) }
+    : {};
   const snapshot = {
     ...identity,
     revision: row.revision,
     status: row.status,
     ...mutable,
+    ...cancellation,
   } as OperationSnapshot;
   verifyOperationSnapshot(snapshot);
   return snapshot;
@@ -279,8 +331,8 @@ class SqliteOperationStore implements OperationStore {
     const result = this.#database.prepare(`
       INSERT OR IGNORE INTO svml_operations (
         operation_id, revision, status, identity_json,
-        checkpoint_json, completion_json, failure_json
-      ) VALUES (?, 0, 'created', ?, NULL, NULL, NULL)
+        checkpoint_json, completion_json, failure_json, cancellation_json
+      ) VALUES (?, 0, 'created', ?, NULL, NULL, NULL, NULL)
     `).run(identity.id, canonicalStringify(identity));
     const snapshot: OperationSnapshot = {
       ...copy(identity),
@@ -297,7 +349,7 @@ class SqliteOperationStore implements OperationStore {
 
   async read(id: Digest): Promise<OperationSnapshot | undefined> {
     const row = this.#database.prepare(`
-      SELECT identity_json, revision, status, checkpoint_json, completion_json, failure_json
+      SELECT identity_json, revision, status, checkpoint_json, completion_json, failure_json, cancellation_json
       FROM svml_operations
       WHERE operation_id = ?
     `).get(id) as Row | undefined;
@@ -306,7 +358,7 @@ class SqliteOperationStore implements OperationStore {
 
   async list(query: OperationQuery): Promise<readonly OperationSnapshot[]> {
     const rows = this.#database.prepare(`
-      SELECT identity_json, revision, status, checkpoint_json, completion_json, failure_json
+      SELECT identity_json, revision, status, checkpoint_json, completion_json, failure_json, cancellation_json
       FROM svml_operations
       ORDER BY operation_id ASC
     `).all() as Row[];
@@ -328,7 +380,25 @@ class SqliteOperationStore implements OperationStore {
     const current = await this.read(id);
     if (current === undefined) throw new Error(`Operation ${id} does not exist`);
     if (current.revision !== expectedRevision) return { status: "conflict", current };
-    assert(current.status !== "completed" && current.status !== "failed", `Operation ${id} is already terminal`);
+    if (update.status !== "control") {
+      assert(current.status !== "completed" && current.status !== "failed" && current.status !== "cancelled",
+        `Operation ${id} is already terminal`);
+    }
+    if (update.status === "control") {
+      const result = this.#database.prepare(`
+        UPDATE svml_operations
+        SET revision = ?, cancellation_json = ?
+        WHERE operation_id = ? AND revision = ?
+      `).run(expectedRevision + 1, canonicalStringify(update.cancellation), id, expectedRevision);
+      if (result.changes !== 1) {
+        const conflict = await this.read(id);
+        if (conflict === undefined) throw new Error(`Operation ${id} disappeared during update`);
+        return { status: "conflict", current: conflict };
+      }
+      const stored = await this.read(id);
+      if (stored === undefined) throw new Error(`Operation ${id} disappeared after update`);
+      return { status: "stored", snapshot: stored };
+    }
     const checkpoint = update.status === "pending" ? canonicalStringify({
       format: "svml.operation-pending@1",
       checkpoint: update.checkpoint,
@@ -338,11 +408,14 @@ class SqliteOperationStore implements OperationStore {
       ? canonicalStringify(sealOperationCompletion(update.completion))
       : null;
     const failure = update.status === "failed" ? canonicalStringify(update.failure) : null;
+    const cancellation = update.status === "cancelled"
+      ? canonicalStringify(update.cancellation)
+      : current.cancellation === undefined ? null : canonicalStringify(current.cancellation);
     const result = this.#database.prepare(`
       UPDATE svml_operations
-      SET revision = ?, status = ?, checkpoint_json = ?, completion_json = ?, failure_json = ?
-      WHERE operation_id = ? AND revision = ? AND status NOT IN ('completed', 'failed')
-    `).run(expectedRevision + 1, update.status, checkpoint, completion, failure, id, expectedRevision);
+      SET revision = ?, status = ?, checkpoint_json = ?, completion_json = ?, failure_json = ?, cancellation_json = ?
+      WHERE operation_id = ? AND revision = ? AND status NOT IN ('completed', 'failed', 'cancelled')
+    `).run(expectedRevision + 1, update.status, checkpoint, completion, failure, cancellation, id, expectedRevision);
     if (result.changes !== 1) {
       const conflict = await this.read(id);
       if (conflict === undefined) throw new Error(`Operation ${id} disappeared during update`);
@@ -354,11 +427,419 @@ class SqliteOperationStore implements OperationStore {
   }
 }
 
-/** One local database, two execution stores, one Host catalog, and no durable ready queue. */
+function dispatchLease(row: Row): DispatchLease | undefined {
+  if (row.lease_owner === null || row.lease_owner === undefined) return undefined;
+  assert(typeof row.lease_owner === "string", "SQLite Dispatch lease owner is invalid");
+  assert(typeof row.lease_token === "string", "SQLite Dispatch lease token is invalid");
+  assert(typeof row.lease_fence === "number", "SQLite Dispatch lease fence is invalid");
+  assert(typeof row.lease_expires_at === "number", "SQLite Dispatch lease expiry is invalid");
+  return {
+    owner: row.lease_owner,
+    token: row.lease_token,
+    fence: row.lease_fence,
+    expiresAt: row.lease_expires_at,
+  };
+}
+
+function parseDispatchSnapshot(row: Row): BuildDispatchSnapshot {
+  assert(typeof row.identity_json === "string", "SQLite Dispatch row has no identity");
+  assert(typeof row.revision === "number", "SQLite Dispatch row has no revision");
+  assert(typeof row.created_at === "number" && typeof row.updated_at === "number", "SQLite Dispatch timestamps are invalid");
+  assert(typeof row.priority === "number" && typeof row.available_at === "number", "SQLite Dispatch schedule is invalid");
+  assert(typeof row.admission === "string" && typeof row.phase === "string", "SQLite Dispatch state is invalid");
+  const identity = JSON.parse(row.identity_json) as BuildDispatchIdentity;
+  const lease = dispatchLease(row);
+  const snapshot = {
+    ...identity,
+    revision: row.revision,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    priority: row.priority,
+    availableAt: row.available_at,
+    admission: row.admission,
+    phase: row.phase,
+    ...(lease === undefined ? {} : { lease }),
+    ...(typeof row.reason === "string" ? { reason: row.reason } : {}),
+    ...(typeof row.cancel_requested_at === "number"
+      ? { cancellation: {
+          requestedAt: row.cancel_requested_at,
+          ...(typeof row.cancel_reason === "string" ? { reason: row.cancel_reason } : {}),
+        } }
+      : {}),
+    ...(typeof row.terminal === "string" ? { terminal: row.terminal } : {}),
+  } as BuildDispatchSnapshot;
+  verifyBuildDispatchSnapshot(snapshot);
+  return snapshot;
+}
+
+function leaseMatches(row: Row, lease: DispatchLease): boolean {
+  return row.lease_owner === lease.owner
+    && row.lease_token === lease.token
+    && row.lease_fence === lease.fence;
+}
+
+class SqliteBuildDispatchStore implements BuildDispatchStore {
+  readonly #database: DatabaseSync;
+
+  constructor(database: DatabaseSync) {
+    this.#database = database;
+  }
+
+  async create(
+    identity: BuildDispatchIdentity,
+    options: { readonly priority?: number; readonly availableAt?: number; readonly now?: number } = {},
+  ): Promise<BuildDispatchCreate> {
+    verifyBuildDispatchIdentity(identity);
+    const now = nonNegativeInteger(options.now ?? Date.now(), "Dispatch creation time");
+    const priority = options.priority ?? 0;
+    assert(Number.isSafeInteger(priority), "Dispatch priority must be a safe integer");
+    const availableAt = nonNegativeInteger(options.availableAt ?? now, "Dispatch availableAt");
+    const result = this.#database.prepare(`
+      INSERT OR IGNORE INTO svml_dispatches (
+        build_id, identity_json, revision, created_at, updated_at, priority, available_at,
+        admission, phase, lease_owner, lease_token, lease_fence, lease_expires_at,
+        reason, cancel_requested_at, cancel_reason, terminal
+      ) VALUES (?, ?, 0, ?, ?, ?, ?, 'open', 'queued', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL)
+    `).run(identity.build, canonicalStringify(identity), now, now, priority, availableAt);
+    const snapshot = await this.read(identity.build);
+    if (snapshot === undefined) throw new Error(`Dispatch ${identity.build} disappeared after create`);
+    assert(canonicalStringify({ format: snapshot.format, id: snapshot.id, build: snapshot.build, core: snapshot.core, runtimeClosure: snapshot.runtimeClosure })
+      === canonicalStringify(identity), `Dispatch ${identity.build} already names another Build or Runtime Closure`);
+    return { status: result.changes === 1 ? "created" : "existing", snapshot };
+  }
+
+  async read(build: string): Promise<BuildDispatchSnapshot | undefined> {
+    const row = this.#database.prepare("SELECT * FROM svml_dispatches WHERE build_id = ?").get(build) as Row | undefined;
+    return row === undefined ? undefined : parseDispatchSnapshot(row);
+  }
+
+  async list(query: DispatchQuery = {}): Promise<readonly BuildDispatchSnapshot[]> {
+    const rows = this.#database.prepare(`
+      SELECT * FROM svml_dispatches
+      ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
+    `).all() as Row[];
+    return rows.map(parseDispatchSnapshot)
+      .filter((item) => query.phases === undefined || query.phases.includes(item.phase))
+      .filter((item) => query.admission === undefined || item.admission === query.admission);
+  }
+
+  async claim(request: BuildDispatchClaim): Promise<BuildDispatchSnapshot | undefined> {
+    assert(request.owner.trim().length > 0 && request.token.trim().length > 0, "Dispatch claim identity is empty");
+    const now = nonNegativeInteger(request.now, "Dispatch claim time");
+    const leaseMs = positiveInteger(request.leaseMs, "Dispatch leaseMs");
+    return transaction(this.#database, () => {
+      const row = this.#database.prepare(`
+        SELECT * FROM svml_dispatches
+        WHERE phase != 'terminal'
+          AND available_at <= ?
+          AND (lease_owner IS NULL OR lease_expires_at <= ?)
+        ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
+        LIMIT 1
+      `).get(now, now) as Row | undefined;
+      if (row === undefined) return undefined;
+      assert(typeof row.build_id === "string" && typeof row.revision === "number" && typeof row.lease_fence === "number",
+        "SQLite Dispatch claim row is invalid");
+      const fence = row.lease_fence + 1;
+      const updated = this.#database.prepare(`
+        UPDATE svml_dispatches
+        SET revision = revision + 1, updated_at = ?, phase = 'leased',
+            lease_owner = ?, lease_token = ?, lease_fence = ?, lease_expires_at = ?
+        WHERE build_id = ? AND revision = ?
+          AND phase != 'terminal' AND (lease_owner IS NULL OR lease_expires_at <= ?)
+      `).run(now, request.owner, request.token, fence, now + leaseMs, row.build_id, row.revision, now);
+      assert(updated.changes === 1, `Dispatch ${row.build_id} claim lost its transaction`);
+      const claimed = this.#database.prepare("SELECT * FROM svml_dispatches WHERE build_id = ?").get(row.build_id) as Row;
+      return parseDispatchSnapshot(claimed);
+    });
+  }
+
+  async heartbeat(build: string, lease: DispatchLease, now: number, leaseMs: number): Promise<BuildDispatchSnapshot> {
+    verifyDispatchLease(lease);
+    nonNegativeInteger(now, "Dispatch heartbeat time");
+    positiveInteger(leaseMs, "Dispatch heartbeat leaseMs");
+    const updated = this.#database.prepare(`
+      UPDATE svml_dispatches
+      SET revision = revision + 1, updated_at = ?, lease_expires_at = ?
+      WHERE build_id = ? AND phase = 'leased'
+        AND lease_owner = ? AND lease_token = ? AND lease_fence = ? AND lease_expires_at > ?
+    `).run(now, now + leaseMs, build, lease.owner, lease.token, lease.fence, now);
+    assert(updated.changes === 1, `Dispatch ${build} lease is stale`);
+    return (await this.read(build))!;
+  }
+
+  async release(
+    build: string,
+    lease: DispatchLease,
+    update: BuildDispatchRelease,
+    now = Date.now(),
+  ): Promise<BuildDispatchSnapshot> {
+    verifyDispatchLease(lease);
+    nonNegativeInteger(now, "Dispatch release time");
+    nonNegativeInteger(update.availableAt, "Dispatch release availableAt");
+    const updated = this.#database.prepare(`
+      UPDATE svml_dispatches
+      SET revision = revision + 1, updated_at = ?, phase = ?, available_at = ?, reason = ?,
+          lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
+      WHERE build_id = ? AND phase = 'leased'
+        AND lease_owner = ? AND lease_token = ? AND lease_fence = ?
+    `).run(now, update.phase, update.availableAt, update.reason ?? null,
+      build, lease.owner, lease.token, lease.fence);
+    assert(updated.changes === 1, `Dispatch ${build} lease is stale`);
+    return (await this.read(build))!;
+  }
+
+  async finish(
+    build: string,
+    lease: DispatchLease,
+    terminal: "complete" | "failed" | "cancelled",
+    reason?: string,
+    now = Date.now(),
+  ): Promise<BuildDispatchSnapshot> {
+    verifyDispatchLease(lease);
+    const updated = this.#database.prepare(`
+      UPDATE svml_dispatches
+      SET revision = revision + 1, updated_at = ?, phase = 'terminal', admission = 'closed',
+          terminal = ?, reason = ?, lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
+      WHERE build_id = ? AND phase = 'leased'
+        AND lease_owner = ? AND lease_token = ? AND lease_fence = ?
+    `).run(now, terminal, reason ?? null, build, lease.owner, lease.token, lease.fence);
+    assert(updated.changes === 1, `Dispatch ${build} lease is stale`);
+    return (await this.read(build))!;
+  }
+
+  async requestCancellation(build: string, reason?: string, now = Date.now()): Promise<BuildDispatchSnapshot> {
+    nonNegativeInteger(now, "cancellation request time");
+    const updated = this.#database.prepare(`
+      UPDATE svml_dispatches
+      SET revision = revision + 1, updated_at = ?, admission = 'closing',
+          cancel_requested_at = COALESCE(cancel_requested_at, ?),
+          cancel_reason = COALESCE(cancel_reason, ?), available_at = MIN(available_at, ?)
+      WHERE build_id = ? AND phase != 'terminal'
+    `).run(now, now, reason ?? null, now, build);
+    if (updated.changes === 0) {
+      const current = await this.read(build);
+      if (current === undefined) throw new Error(`Dispatch ${build} does not exist`);
+      return current;
+    }
+    return (await this.read(build))!;
+  }
+
+  async acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire> {
+    assert(request.owner.trim().length > 0 && request.token.trim().length > 0, "Capacity claimant is empty");
+    assert(request.lane.trim().length > 0, "Capacity lane is empty");
+    nonNegativeInteger(request.now, "Capacity acquisition time");
+    positiveInteger(request.leaseMs, "Capacity leaseMs");
+    verifyCapacityLimits(request.limits);
+    verifyDispatchLease(request.buildLease);
+    const id = capacityReservationId(request.build, request.command);
+    return transaction(this.#database, () => {
+      const dispatch = this.#database.prepare(`
+        SELECT lease_owner, lease_token, lease_fence FROM svml_dispatches
+        WHERE build_id = ? AND phase = 'leased'
+      `).get(request.build) as Row | undefined;
+      assert(dispatch !== undefined && leaseMatches(dispatch, request.buildLease),
+        `Dispatch ${request.build} lease is stale`);
+      const existing = this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row | undefined;
+      if (existing !== undefined && typeof existing.active_expires_at === "number" && existing.active_expires_at > request.now) {
+        return { status: "blocked", retryAt: existing.active_expires_at, reason: "lane-active" };
+      }
+      const activeGlobal = this.#database.prepare(`
+        SELECT COUNT(*) AS count FROM svml_capacity
+        WHERE active_owner IS NOT NULL AND active_expires_at > ? AND reservation_id != ?
+      `).get(request.now, id) as Row;
+      const activeLane = this.#database.prepare(`
+        SELECT COUNT(*) AS count FROM svml_capacity
+        WHERE lane = ? AND active_owner IS NOT NULL AND active_expires_at > ? AND reservation_id != ?
+      `).get(request.lane, request.now, id) as Row;
+      const inFlightLane = this.#database.prepare(`
+        SELECT COUNT(*) AS count FROM svml_capacity
+        WHERE lane = ? AND in_flight = 1 AND reservation_id != ?
+      `).get(request.lane, id) as Row;
+      assert(typeof activeGlobal.count === "number" && typeof activeLane.count === "number" && typeof inFlightLane.count === "number",
+        "SQLite Capacity counts are invalid");
+      const retryAtRow = this.#database.prepare(`
+        SELECT MIN(active_expires_at) AS retry_at FROM svml_capacity
+        WHERE active_owner IS NOT NULL AND active_expires_at > ?
+      `).get(request.now) as Row;
+      const retryAt = typeof retryAtRow.retry_at === "number" ? retryAtRow.retry_at : request.now + 100;
+      if (activeGlobal.count >= request.limits.globalActive) return { status: "blocked", retryAt, reason: "global-active" };
+      if (activeLane.count >= request.limits.laneActive) return { status: "blocked", retryAt, reason: "lane-active" };
+      const alreadyInFlight = existing?.in_flight === 1;
+      if (request.mode === "recoverable" && !alreadyInFlight && inFlightLane.count >= request.limits.laneInFlight) {
+        return { status: "blocked", retryAt, reason: "lane-in-flight" };
+      }
+      const fence = typeof existing?.active_fence === "number" ? existing.active_fence + 1 : 1;
+      if (existing === undefined) {
+        this.#database.prepare(`
+          INSERT INTO svml_capacity (
+            reservation_id, build_id, command_id, lane, mode, in_flight,
+            active_owner, active_token, active_fence, active_expires_at, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(id, request.build, request.command, request.lane, request.mode,
+          request.mode === "recoverable" ? 1 : 0,
+          request.owner, request.token, fence, request.now + request.leaseMs, request.now, request.now);
+      } else {
+        assert(existing.build_id === request.build && existing.command_id === request.command
+          && existing.lane === request.lane && existing.mode === request.mode,
+        `Capacity reservation ${id} identity differs`);
+        this.#database.prepare(`
+          UPDATE svml_capacity
+          SET in_flight = MAX(in_flight, ?), active_owner = ?, active_token = ?,
+              active_fence = ?, active_expires_at = ?, updated_at = ?
+          WHERE reservation_id = ?
+        `).run(request.mode === "recoverable" ? 1 : 0, request.owner, request.token,
+          fence, request.now + request.leaseMs, request.now, id);
+      }
+      return { status: "acquired", reservation: parseCapacityReservation(
+        this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row,
+      ) };
+    });
+  }
+
+  async heartbeatCapacity(id: Digest, lease: DispatchLease, now: number, leaseMs: number): Promise<CapacityReservation> {
+    verifyDispatchLease(lease, "Capacity lease");
+    const updated = this.#database.prepare(`
+      UPDATE svml_capacity SET active_expires_at = ?, updated_at = ?
+      WHERE reservation_id = ? AND active_owner = ? AND active_token = ? AND active_fence = ? AND active_expires_at > ?
+    `).run(now + leaseMs, now, id, lease.owner, lease.token, lease.fence, now);
+    assert(updated.changes === 1, `Capacity reservation ${id} lease is stale`);
+    return parseCapacityReservation(this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row);
+  }
+
+  async parkCapacity(id: Digest, lease: DispatchLease, inFlight: boolean, now = Date.now()): Promise<CapacityReservation> {
+    verifyDispatchLease(lease, "Capacity lease");
+    const updated = this.#database.prepare(`
+      UPDATE svml_capacity
+      SET in_flight = ?, active_owner = NULL, active_token = NULL, active_expires_at = NULL, updated_at = ?
+      WHERE reservation_id = ? AND active_owner = ? AND active_token = ? AND active_fence = ?
+    `).run(inFlight ? 1 : 0, now, id, lease.owner, lease.token, lease.fence);
+    assert(updated.changes === 1, `Capacity reservation ${id} lease is stale`);
+    return parseCapacityReservation(this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row);
+  }
+
+  async releaseCapacity(id: Digest, lease: DispatchLease): Promise<void> {
+    verifyDispatchLease(lease, "Capacity lease");
+    const removed = this.#database.prepare(`
+      DELETE FROM svml_capacity
+      WHERE reservation_id = ? AND active_owner = ? AND active_token = ? AND active_fence = ?
+    `).run(id, lease.owner, lease.token, lease.fence);
+    assert(removed.changes === 1, `Capacity reservation ${id} lease is stale`);
+  }
+
+  async clearCapacity(id: Digest, build: string, buildLease: DispatchLease): Promise<void> {
+    verifyDispatchLease(buildLease);
+    transaction(this.#database, () => {
+      const dispatch = this.#database.prepare(`
+        SELECT lease_owner, lease_token, lease_fence FROM svml_dispatches
+        WHERE build_id = ? AND phase = 'leased'
+      `).get(build) as Row | undefined;
+      assert(dispatch !== undefined && leaseMatches(dispatch, buildLease),
+        `Dispatch ${build} lease is stale`);
+      this.#database.prepare(`
+        DELETE FROM svml_capacity WHERE reservation_id = ? AND build_id = ?
+      `).run(id, build);
+    });
+  }
+
+  async listCapacity(): Promise<readonly CapacityReservation[]> {
+    return (this.#database.prepare("SELECT * FROM svml_capacity ORDER BY created_at ASC, reservation_id ASC").all() as Row[])
+      .map(parseCapacityReservation);
+  }
+}
+
+function parseCapacityReservation(row: Row): CapacityReservation {
+  assert(typeof row.reservation_id === "string" && typeof row.build_id === "string"
+    && typeof row.command_id === "string" && typeof row.lane === "string" && typeof row.mode === "string",
+  "SQLite Capacity row identity is invalid");
+  assert(typeof row.in_flight === "number" && typeof row.created_at === "number" && typeof row.updated_at === "number",
+    "SQLite Capacity row state is invalid");
+  const active = row.active_owner === null || row.active_owner === undefined ? undefined : (() => {
+    assert(typeof row.active_owner === "string" && typeof row.active_token === "string"
+      && typeof row.active_fence === "number" && typeof row.active_expires_at === "number",
+    "SQLite Capacity active lease is invalid");
+    return { owner: row.active_owner, token: row.active_token, fence: row.active_fence, expiresAt: row.active_expires_at };
+  })();
+  const value = {
+    format: "svml.capacity-reservation@1" as const,
+    id: row.reservation_id as Digest,
+    build: row.build_id,
+    command: row.command_id,
+    lane: row.lane,
+    mode: row.mode,
+    inFlight: row.in_flight === 1,
+    ...(active === undefined ? {} : { active }),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  } as CapacityReservation;
+  verifyCapacityReservation(value);
+  return value;
+}
+
+class SqliteRuntimeJournal implements RuntimeJournal {
+  readonly #database: DatabaseSync;
+
+  constructor(database: DatabaseSync) {
+    this.#database = database;
+  }
+
+  async append(entry: Omit<RuntimeJournalEntry, "format" | "sequence">): Promise<RuntimeJournalEntry> {
+    nonNegativeInteger(entry.at, "Runtime Journal timestamp");
+    const detail = canonicalize(entry.detail);
+    const result = this.#database.prepare(`
+      INSERT INTO svml_runtime_journal (at, kind, build_id, operation_id, worker_id, detail_json)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(entry.at, entry.kind, entry.build ?? null, entry.operation ?? null, entry.worker ?? null,
+      canonicalStringify(detail));
+    assert(typeof result.lastInsertRowid === "number" || typeof result.lastInsertRowid === "bigint",
+      "SQLite Runtime Journal returned no sequence");
+    const sequence = Number(result.lastInsertRowid);
+    const value: RuntimeJournalEntry = {
+      format: "svml.runtime-journal-entry@1",
+      sequence,
+      ...entry,
+      detail,
+    };
+    verifyRuntimeJournalEntry(value);
+    return value;
+  }
+
+  async list(query: RuntimeJournalQuery = {}): Promise<readonly RuntimeJournalEntry[]> {
+    const after = query.after ?? 0;
+    const limit = query.limit ?? 1_000;
+    nonNegativeInteger(after, "Runtime Journal after");
+    positiveInteger(limit, "Runtime Journal limit");
+    const rows = this.#database.prepare(`
+      SELECT sequence, at, kind, build_id, operation_id, worker_id, detail_json
+      FROM svml_runtime_journal WHERE sequence > ? ORDER BY sequence ASC LIMIT ?
+    `).all(after, limit) as Row[];
+    return rows.map((row) => {
+      assert(typeof row.sequence === "number" && typeof row.at === "number" && typeof row.kind === "string"
+        && typeof row.detail_json === "string", "SQLite Runtime Journal row is invalid");
+      const entry = {
+        format: "svml.runtime-journal-entry@1" as const,
+        sequence: row.sequence,
+        at: row.at,
+        kind: row.kind,
+        ...(typeof row.build_id === "string" ? { build: row.build_id } : {}),
+        ...(typeof row.operation_id === "string" ? { operation: row.operation_id as Digest } : {}),
+        ...(typeof row.worker_id === "string" ? { worker: row.worker_id } : {}),
+        detail: JSON.parse(row.detail_json),
+      } as RuntimeJournalEntry;
+      verifyRuntimeJournalEntry(entry);
+      return entry;
+    }).filter((entry) => query.build === undefined || entry.build === query.build)
+      .filter((entry) => query.operation === undefined || entry.operation === query.operation)
+      .filter((entry) => query.worker === undefined || entry.worker === query.worker);
+  }
+}
+
+/** One local database with domain-neutral execution facts and Host presentation catalog. */
 export class SqliteRuntimeState {
   readonly path: string;
   readonly builds: BuildStore;
   readonly operations: OperationStore;
+  readonly dispatch: BuildDispatchStore;
+  readonly journal: RuntimeJournal;
   readonly catalog: BuildCatalog;
   readonly #database: DatabaseSync;
 
@@ -385,11 +866,12 @@ export class SqliteRuntimeState {
       CREATE TABLE IF NOT EXISTS svml_operations (
         operation_id TEXT PRIMARY KEY,
         revision INTEGER NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('created', 'pending', 'completed', 'failed')),
+        status TEXT NOT NULL CHECK (status IN ('created', 'pending', 'completed', 'failed', 'cancelled')),
         identity_json TEXT NOT NULL,
         checkpoint_json TEXT,
         completion_json TEXT,
-        failure_json TEXT
+        failure_json TEXT,
+        cancellation_json TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS svml_build_catalog (
         build_id TEXT PRIMARY KEY,
@@ -398,6 +880,54 @@ export class SqliteRuntimeState {
         updated_at INTEGER NOT NULL,
         descriptor_json TEXT NOT NULL
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS svml_dispatches (
+        build_id TEXT PRIMARY KEY,
+        identity_json TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        priority INTEGER NOT NULL,
+        available_at INTEGER NOT NULL,
+        admission TEXT NOT NULL CHECK (admission IN ('open', 'closing', 'closed')),
+        phase TEXT NOT NULL CHECK (phase IN ('queued', 'leased', 'waiting', 'blocked', 'settling', 'terminal')),
+        lease_owner TEXT,
+        lease_token TEXT,
+        lease_fence INTEGER NOT NULL,
+        lease_expires_at INTEGER,
+        reason TEXT,
+        cancel_requested_at INTEGER,
+        cancel_reason TEXT,
+        terminal TEXT CHECK (terminal IS NULL OR terminal IN ('complete', 'failed', 'cancelled'))
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS svml_dispatch_ready
+        ON svml_dispatches (phase, available_at, priority DESC);
+      CREATE TABLE IF NOT EXISTS svml_capacity (
+        reservation_id TEXT PRIMARY KEY,
+        build_id TEXT NOT NULL,
+        command_id TEXT NOT NULL,
+        lane TEXT NOT NULL,
+        mode TEXT NOT NULL CHECK (mode IN ('active', 'recoverable')),
+        in_flight INTEGER NOT NULL CHECK (in_flight IN (0, 1)),
+        active_owner TEXT,
+        active_token TEXT,
+        active_fence INTEGER NOT NULL,
+        active_expires_at INTEGER,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE (build_id, command_id)
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS svml_capacity_lane ON svml_capacity (lane, in_flight, active_expires_at);
+      CREATE TABLE IF NOT EXISTS svml_runtime_journal (
+        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        at INTEGER NOT NULL,
+        kind TEXT NOT NULL,
+        build_id TEXT,
+        operation_id TEXT,
+        worker_id TEXT,
+        detail_json TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS svml_runtime_journal_build ON svml_runtime_journal (build_id, sequence);
+      CREATE INDEX IF NOT EXISTS svml_runtime_journal_operation ON svml_runtime_journal (operation_id, sequence);
     `);
     const version = this.#database.prepare("SELECT schema_version FROM svml_store_meta WHERE singleton = 1").get() as Row | undefined;
     if (version === undefined) {
@@ -408,6 +938,8 @@ export class SqliteRuntimeState {
     }
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
+    this.dispatch = new SqliteBuildDispatchStore(database);
+    this.journal = new SqliteRuntimeJournal(database);
     this.catalog = new SqliteBuildCatalog(database);
   }
 
@@ -424,6 +956,8 @@ export function createSqliteRuntimeServicePackage(
   });
   const buildInstance = options.buildInstance ?? "builds.sqlite";
   const operationInstance = options.operationInstance ?? "operations.sqlite";
+  const dispatchInstance = options.dispatchInstance ?? "dispatch.sqlite";
+  const journalInstance = options.journalInstance ?? "journal.sqlite";
   try {
     return Object.assign(defineRuntimeServicePackage({
       name: options.name ?? "state.sqlite",
@@ -460,6 +994,38 @@ export function createSqliteRuntimeServicePackage(
             busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
           },
           service: state.operations,
+        },
+        {
+          role: "dispatch-store",
+          facet: "dispatch-store",
+          instance: dispatchInstance,
+          implementation: {
+            locator: "@narratage/store-sqlite/dispatch-store",
+            digest: sqliteDispatchStoreImplementationDigest,
+          },
+          permissions: ["filesystem:state"],
+          configuration: {
+            path: state.path,
+            schemaVersion: databaseSchemaVersion,
+            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
+          },
+          service: state.dispatch,
+        },
+        {
+          role: "runtime-journal",
+          facet: "runtime-journal",
+          instance: journalInstance,
+          implementation: {
+            locator: "@narratage/store-sqlite/runtime-journal",
+            digest: sqliteRuntimeJournalImplementationDigest,
+          },
+          permissions: ["filesystem:state"],
+          configuration: {
+            path: state.path,
+            schemaVersion: databaseSchemaVersion,
+            busyTimeoutMs: options.busyTimeoutMs ?? 5_000,
+          },
+          service: state.journal,
         },
       ],
       close: () => state.close(),

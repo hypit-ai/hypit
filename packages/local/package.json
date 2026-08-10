@@ -8,10 +8,11 @@
     "./config": "./src/config.ts",
     "./external-services": "./src/external-services.ts"
   },
+  "svml": {
+    "activation": "./src/activation.ts"
+  },
   "dependencies": {
-    "@narratage/artifact-store-fs": "workspace:*",
     "@narratage/component-kit": "workspace:*",
-    "@narratage/credential-store-env": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/endpoint-kit": "workspace:*",
     "@narratage/host": "workspace:*",
@@ -19,10 +20,12 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/store-sqlite": "workspace:*",
     "@narratage/validation": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/core": "workspace:*"
+    "@narratage/artifact-store-fs": "workspace:*",
+    "@narratage/credential-store-env": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/store-sqlite": "workspace:*"
   }
 }

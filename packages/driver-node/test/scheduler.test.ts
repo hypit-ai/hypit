@@ -216,6 +216,22 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
         },
         permissions: [],
       },
+      ...([
+        ["worker", "worker"],
+        ["builds", "build-store"],
+        ["dispatch", "dispatch-store"],
+        ["journal", "runtime-journal"],
+        ["artifacts", "artifact-store"],
+        ["credentials", "credential-store"],
+      ] as const).map(([name, role]) => ({
+        name,
+        role,
+        implementation: {
+          locator: `example.scheduler-runtime/${name}`,
+          digest: digestOf(`example.scheduler-runtime/${name}@1`),
+        },
+        permissions: [],
+      })),
       {
         name: providerFacet.name,
         role: "capability-endpoint",
@@ -236,11 +252,25 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
     name: "scheduler-test",
     instances: [
       { id: "scheduler.local", facet: { module: runtimeModule, name: "scheduler" } },
+      { id: "worker.local", facet: { module: runtimeModule, name: "worker" } },
+      { id: "builds.memory", facet: { module: runtimeModule, name: "builds" } },
       { id: "operations.memory", facet: { module: runtimeModule, name: "operations" } },
+      { id: "dispatch.memory", facet: { module: runtimeModule, name: "dispatch" } },
+      { id: "journal.memory", facet: { module: runtimeModule, name: "journal" } },
+      { id: "artifacts.memory", facet: { module: runtimeModule, name: "artifacts" } },
+      { id: "credentials.memory", facet: { module: runtimeModule, name: "credentials" } },
       { id: "generation.local", facet: providerFacet, lane: "endpoint:generation.local" },
     ],
     scheduler: "scheduler.local",
-    stores: { operations: "operations.memory" },
+    worker: "worker.local",
+    stores: {
+      build: "builds.memory",
+      operations: "operations.memory",
+      dispatch: "dispatch.memory",
+      journal: "journal.memory",
+      artifacts: "artifacts.memory",
+      credentials: ["credentials.memory"],
+    },
     endpoints: [{
       capability: capabilities.generation,
       returns: types.generated,
@@ -755,6 +785,7 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
     cancel({ checkpoint }) {
       cancels += 1;
       assert.deepEqual(checkpoint, { remoteJob: "job-wait" });
+      return { status: "confirmed" };
     },
   };
   const executor = recoverableExecutor(endpoint, operations, runtime).executor;
@@ -769,9 +800,66 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
 
   const operation = await operations.read(operationId);
   assert.ok(operation);
-  await executor.cancelOperation(early!.state, operation);
+  await executor.cancelOperation(early!.state, operation, Date.now());
   assert.equal(cancels, 1);
   const [cancelled] = await scheduler.run([{ id: "cancel-video", state: early!.state }]);
   assert.equal(cancelled?.status, "failed");
   assert.equal(cancelled?.state.diagnostics.at(-1)?.code, "CANCELLED");
+});
+
+test("cancellation acknowledgement never invents a remote terminal fact", async () => {
+  const operations = new MemoryOperationStore();
+  const runtime = resolvedRuntime(1, "recoverable");
+  const endpoint: RecoverableEndpoint = {
+    start() {
+      return { status: "pending", checkpoint: { remoteJob: "still-running" } };
+    },
+    resume({ checkpoint }) {
+      return { status: "pending", checkpoint: checkpoint ?? { remoteJob: "still-running" } };
+    },
+    cancel() {
+      return { status: "accepted" };
+    },
+  };
+  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
+  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
+  const [first] = await scheduler.run([{ id: "accepted-cancel", state: createGreetingBuild() }]);
+  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  assert.ok(operationId);
+  const operation = await operations.read(operationId);
+  assert.ok(operation);
+  const controlled = await executor.cancelOperation(first!.state, operation, 123);
+  assert.equal(controlled.status, "pending");
+  assert.equal(controlled.cancellation?.status, "accepted");
+});
+
+test("an Endpoint without cancellation stays observable instead of changing Candidate or fact", async () => {
+  const operations = new MemoryOperationStore();
+  const runtime = resolvedRuntime(1, "recoverable");
+  const endpoint: RecoverableEndpoint = {
+    start() {
+      return { status: "pending", checkpoint: { remoteJob: "cannot-cancel" } };
+    },
+    resume() {
+      return {
+        status: "completed",
+        result: {
+          value: { kind: "inline", value: "late but real" },
+          conformance: "exact",
+          delivery: "executed",
+          metadata: {},
+        },
+      };
+    },
+  };
+  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
+  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
+  const [first] = await scheduler.run([{ id: "unsupported-cancel", state: createGreetingBuild() }]);
+  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  assert.ok(operationId);
+  const operation = await operations.read(operationId);
+  assert.ok(operation);
+  const observed = await executor.cancelOperation(first!.state, operation, 456);
+  assert.equal(observed.status, "completed");
+  assert.equal(observed.cancellation?.status, "unsupported");
 });

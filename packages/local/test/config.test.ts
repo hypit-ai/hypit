@@ -16,35 +16,41 @@ import {
   RuntimeAdapterRegistry,
 } from "@narratage/local";
 
-test("declarative Runtime config starts the domain-neutral local defaults", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-runtime-config-"));
-  const path = join(root, "svml.runtime.json");
-  await writeFile(path, JSON.stringify({
+const services = {
+  scheduler: "execution.scheduler",
+  worker: "execution.worker",
+  stores: {
+    build: "state.builds",
+    operations: "state.operations",
+    dispatch: "state.dispatch",
+    journal: "state.journal",
+    artifacts: "artifacts",
+    credentials: ["credentials"],
+  },
+};
+
+const required = { runtimeServices: [], services, scheduling: { maxConcurrency: 3 } } as const;
+
+test("declarative Runtime config has no implicit local services", () => {
+  assert.throws(() => parseRuntimeConfig({
     format: "svml.runtime-config@1",
     endpoints: [],
     permissions: [],
-    scheduling: { maxConcurrency: 3, lanes: { generation: 2 } },
-  }));
-  const runtime = await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() });
-  try {
-    assert.equal((await runtime.status("absent")).build, undefined);
-  } finally {
-    await runtime.close();
-  }
+  }), /runtimeServices/u);
 });
 
 test("Runtime config is closed data and rejects unknown environment authority", () => {
   const parsed = parseRuntimeConfig({
     format: "svml.runtime-config@1",
+    ...required,
     packageRoot: "/opt/narratage",
-    catalogPath: ".svml/catalog.sqlite",
     endpoints: [],
     permissions: [],
   });
-  assert.equal(parsed.catalogPath, ".svml/catalog.sqlite");
   assert.equal(parsed.packageRoot, "/opt/narratage");
   assert.throws(() => parseRuntimeConfig({
     format: "svml.runtime-config@1",
+    ...required,
     endpoints: [],
     permissions: [],
     apiKey: "must-not-live-here",
@@ -56,6 +62,7 @@ test("declarative adapters are explicit and never guessed", async () => {
   const path = join(root, "svml.runtime.json");
   await writeFile(path, JSON.stringify({
     format: "svml.runtime-config@1",
+    ...required,
     endpoints: [{ use: "example.missing", instance: "missing", config: {} }],
     permissions: [],
   }));
@@ -70,6 +77,7 @@ test("runtimeServices names the Runtime's own replaceable parts, apart from exte
   const path = join(root, "svml.runtime.json");
   await writeFile(path, JSON.stringify({
     format: "svml.runtime-config@1",
+    ...required,
     runtimeServices: [{ use: "@example/store", instance: "artifacts.example" }],
     endpoints: [],
     permissions: [],
@@ -77,17 +85,7 @@ test("runtimeServices names the Runtime's own replaceable parts, apart from exte
   const document = parseRuntimeConfig(JSON.parse(await readFile(path, "utf8")));
   assert.deepEqual(document.runtimeServices, [{ use: "@example/store", instance: "artifacts.example" }]);
 
-  await writeFile(path, JSON.stringify({
-    format: "svml.runtime-config@1",
-    services: [],
-    endpoints: [],
-    permissions: [],
-  }));
-  await assert.rejects(
-    async () => parseRuntimeConfig(JSON.parse(await readFile(path, "utf8"))),
-    /does not accept services/u,
-    "the word services now belongs to the external processes a deployment must have running",
-  );
+  assert.deepEqual(document.services, services);
   await rm(root, { recursive: true, force: true });
 });
 
@@ -96,6 +94,7 @@ test("doctor names the external program a Provider needs, and the command that s
   const path = join(root, "svml.runtime.json");
   await writeFile(path, JSON.stringify({
     format: "svml.runtime-config@1",
+    ...required,
     endpoints: [
       { use: "example.absent", instance: "absent", config: {} },
       { use: "example.wrong", instance: "wrong", config: {} },
@@ -146,6 +145,7 @@ test("doctor validates closed config without constructing adapters or cascading 
   const path = join(root, "svml.runtime.json");
   await writeFile(path, JSON.stringify({
     format: "svml.runtime-config@1",
+    ...required,
     runtimeServices: [{ use: "example.store", instance: "store", config: { mode: "valid" } }],
     endpoints: [
       { use: "example.invalid", instance: "invalid", config: { mode: "bad" } },

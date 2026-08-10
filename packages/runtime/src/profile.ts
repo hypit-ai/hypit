@@ -10,8 +10,11 @@ import type {
 
 export type RuntimeFacetRole =
   | "scheduler"
+  | "worker"
   | "build-store"
   | "operation-store"
+  | "dispatch-store"
+  | "runtime-journal"
   | "artifact-store"
   | "credential-store"
   | "capability-endpoint";
@@ -81,11 +84,14 @@ export type RuntimeProfile = {
   readonly name: string;
   readonly instances: readonly RuntimeProfileInstance[];
   readonly scheduler: string;
+  readonly worker: string;
   readonly stores: {
-    readonly build?: string;
-    readonly operations?: string;
-    readonly artifacts?: string;
-    readonly credentials?: string;
+    readonly build: string;
+    readonly operations: string;
+    readonly dispatch: string;
+    readonly journal: string;
+    readonly artifacts: string;
+    readonly credentials: readonly string[];
   };
   readonly endpoints: readonly RuntimeEndpointBinding[];
   readonly scheduling: {
@@ -126,6 +132,7 @@ export type RuntimeClosure = {
   readonly modules: readonly { readonly module: ModuleRef; readonly digest: Digest }[];
   readonly instances: readonly ResolvedRuntimeInstance[];
   readonly scheduler: string;
+  readonly worker: string;
   readonly stores: RuntimeProfile["stores"];
   readonly endpoints: readonly RuntimeEndpointBinding[];
   readonly scheduling: RuntimeProfile["scheduling"];
@@ -311,11 +318,14 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     scheduler: profile.scheduler,
+    worker: profile.worker,
     stores: {
-      ...(profile.stores.build === undefined ? {} : { build: profile.stores.build }),
-      ...(profile.stores.operations === undefined ? {} : { operations: profile.stores.operations }),
-      ...(profile.stores.artifacts === undefined ? {} : { artifacts: profile.stores.artifacts }),
-      ...(profile.stores.credentials === undefined ? {} : { credentials: profile.stores.credentials }),
+      build: profile.stores.build,
+      operations: profile.stores.operations,
+      dispatch: profile.stores.dispatch,
+      journal: profile.stores.journal,
+      artifacts: profile.stores.artifacts,
+      credentials: [...profile.stores.credentials].sort(),
     },
     endpoints: [...profile.endpoints]
       .map((binding) => ({ ...normalizeCapability(binding), endpoint: binding.endpoint }))
@@ -333,6 +343,18 @@ function verifyProfileShape(profile: RuntimeProfile): void {
   assert(profile.format === "svml.runtime-profile@1", "unsupported Runtime Profile format");
   assert(profile.name.trim().length > 0, "Runtime Profile name is empty");
   assert(profile.scheduler.trim().length > 0, "Runtime Profile scheduler is empty");
+  assert(profile.worker.trim().length > 0, "Runtime Profile worker is empty");
+  for (const [name, id] of Object.entries({
+    build: profile.stores.build,
+    operations: profile.stores.operations,
+    dispatch: profile.stores.dispatch,
+    journal: profile.stores.journal,
+    artifacts: profile.stores.artifacts,
+  })) assert(id.trim().length > 0, `Runtime Profile ${name} store is empty`);
+  assert(profile.stores.credentials.length > 0, "Runtime Profile selects no CredentialStore");
+  for (const id of profile.stores.credentials) assert(id.trim().length > 0, "Runtime Profile CredentialStore id is empty");
+  assert(new Set(profile.stores.credentials).size === profile.stores.credentials.length,
+    "Runtime Profile repeats a CredentialStore");
   positiveInteger(profile.scheduling.maxConcurrency, "Runtime Profile maxConcurrency");
   const ids = profile.instances.map((instance) => {
     assert(instance.id.trim().length > 0, "Runtime Profile instance id is empty");
@@ -385,6 +407,7 @@ function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest">
     instances: [...closure.instances].map((instance) => structuredClone(instance))
       .sort((left, right) => left.id.localeCompare(right.id)),
     scheduler: closure.scheduler,
+    worker: closure.worker,
     stores: { ...closure.stores },
     endpoints: [...closure.endpoints].map((binding) => structuredClone(binding))
       .sort((left, right) => bindingKey(left).localeCompare(bindingKey(right))),
@@ -431,15 +454,21 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
   }
   const schedulers = closure.instances.filter((instance) => instance.role === "scheduler");
   assert(schedulers.length === 1 && schedulers[0]?.id === closure.scheduler, "Runtime Closure must select exactly one scheduler");
+  const workers = closure.instances.filter((instance) => instance.role === "worker");
+  assert(workers.length === 1 && workers[0]?.id === closure.worker, "Runtime Closure must select exactly one worker");
   const roles = {
     build: "build-store",
     operations: "operation-store",
+    dispatch: "dispatch-store",
+    journal: "runtime-journal",
     artifacts: "artifact-store",
-    credentials: "credential-store",
   } as const;
   for (const [name, role] of Object.entries(roles) as [keyof typeof roles, typeof roles[keyof typeof roles]][]) {
     const id = closure.stores[name];
-    if (id !== undefined) assert(instances.get(id)?.role === role, `Runtime Closure ${name} store has the wrong role`);
+    assert(instances.get(id)?.role === role, `Runtime Closure ${name} store has the wrong role`);
+  }
+  for (const id of closure.stores.credentials) {
+    assert(instances.get(id)?.role === "credential-store", `Runtime Closure credential store ${id} has the wrong role`);
   }
   for (const binding of closure.endpoints) {
     const endpoint = instances.get(binding.endpoint);
@@ -449,10 +478,10 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
   assert(new Set(closure.endpoints.map(bindingKey)).size === closure.endpoints.length,
     "Runtime Closure repeats an Endpoint binding");
   if (closure.instances.some((instance) => instance.role === "capability-endpoint" && instance.lifecycle === "recoverable")) {
-    assert(closure.stores.operations !== undefined, "recoverable Endpoints require an OperationStore");
+    assert(instances.get(closure.stores.operations)?.role === "operation-store", "recoverable Endpoints require an OperationStore");
   }
   if (closure.instances.some((instance) => instance.role === "capability-endpoint" && instance.credentialSlots.length > 0)) {
-    assert(closure.stores.credentials !== undefined, "credentialed Endpoints require a CredentialStore");
+    assert(closure.stores.credentials.length > 0, "credentialed Endpoints require a CredentialStore");
   }
 }
 
@@ -495,15 +524,22 @@ export function resolveRuntimeProfile(
   const schedulers = instances.filter((instance) => instance.role === "scheduler");
   assert(schedulers.length === 1, "Runtime Profile must activate exactly one scheduler instance");
   assert(schedulers[0]?.id === profile.scheduler, `Runtime Profile selects unknown scheduler ${profile.scheduler}`);
+  const workers = instances.filter((instance) => instance.role === "worker");
+  assert(workers.length === 1, "Runtime Profile must activate exactly one worker instance");
+  assert(workers[0]?.id === profile.worker, `Runtime Profile selects unknown worker ${profile.worker}`);
   const storeRoles = {
     build: "build-store",
     operations: "operation-store",
+    dispatch: "dispatch-store",
+    journal: "runtime-journal",
     artifacts: "artifact-store",
-    credentials: "credential-store",
   } as const;
   for (const [name, role] of Object.entries(storeRoles) as [keyof typeof storeRoles, typeof storeRoles[keyof typeof storeRoles]][]) {
     const id = profile.stores[name];
-    if (id !== undefined) assert(byId.get(id)?.role === role, `Runtime Profile ${name} store ${id} has the wrong role`);
+    assert(byId.get(id)?.role === role, `Runtime Profile ${name} store ${id} has the wrong role`);
+  }
+  for (const id of profile.stores.credentials) {
+    assert(byId.get(id)?.role === "credential-store", `Runtime Profile credential store ${id} has the wrong role`);
   }
   for (const binding of profile.endpoints) {
     const endpoint = byId.get(binding.endpoint);
@@ -511,10 +547,10 @@ export function resolveRuntimeProfile(
     assert(endpoint.fulfills.some((item) => sameCapability(item, binding)), `${binding.endpoint} does not fulfill ${bindingKey(binding)}`);
   }
   if (instances.some((instance) => instance.role === "capability-endpoint" && instance.lifecycle === "recoverable")) {
-    assert(profile.stores.operations !== undefined, "recoverable Endpoints require an OperationStore");
+    assert(byId.get(profile.stores.operations)?.role === "operation-store", "recoverable Endpoints require an OperationStore");
   }
   if (instances.some((instance) => instance.role === "capability-endpoint" && instance.credentialSlots.length > 0)) {
-    assert(profile.stores.credentials !== undefined, "credentialed Endpoints require a CredentialStore");
+    assert(profile.stores.credentials.length > 0, "credentialed Endpoints require a CredentialStore");
   }
   const draft: RuntimeClosure = {
     format: "svml.runtime-closure@1",
@@ -523,6 +559,7 @@ export function resolveRuntimeProfile(
     modules: [...modules.values()],
     instances,
     scheduler: profile.scheduler,
+    worker: profile.worker,
     stores: { ...profile.stores },
     endpoints: profile.endpoints.map((binding) => structuredClone(binding)),
     scheduling: structuredClone(profile.scheduling),

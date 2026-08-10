@@ -581,6 +581,7 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
       fetchImplementationDigest,
     }),
     credentials: { apiKey: config.apiKey ?? credentialRef("env", "KIE_API_KEY") },
+    credentialInputs: { apiKey: { label: "KIE API key" } },
     defaultConcurrency: config.defaultConcurrency ?? 2,
     capabilities: kieRoutes.map((route) => ({
       capability: route.capability,

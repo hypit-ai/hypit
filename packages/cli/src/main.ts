@@ -1,9 +1,11 @@
 import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { readFile } from "node:fs/promises";
 
 import type { ExternalServiceReport, LocalRuntime } from "@narratage/local";
 import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
 import type { BuildCatalogDescriptor } from "@narratage/runtime";
+import { isDigest } from "@narratage/protocol";
 import { parseSourceHeader } from "@narratage/source";
 import {
   createNodePackageLock,
@@ -24,10 +26,17 @@ import { collectRunFrontends, loadRunFile } from "./run-file.js";
 import type { CliDistribution } from "./distribution.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
+import {
+  ensureRuntimeProcess,
+  markRuntimeProcessReady,
+  runtimeProcessLogs,
+  runtimeProcessStatus,
+  stopRuntimeProcess,
+} from "./runtime-process.js";
 
 type ParsedArgs = {
   readonly command: string | undefined;
-  /** Second command word. Only `services` takes one. */
+  /** Second command word for scoped commands such as runtime and cancel. */
   readonly action: string | undefined;
   readonly file: string | undefined;
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
@@ -54,14 +63,22 @@ type ParsedArgs = {
   readonly json: boolean;
   readonly color: CliColorMode;
   readonly verbose: boolean;
+  readonly watch: boolean;
+  readonly jsonl: boolean;
+  readonly readyFile: string | undefined;
+  readonly reason: string | undefined;
+  readonly slot: string | undefined;
+  readonly from: string | undefined;
 };
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, ...tail] = argv;
-  const action = command === "services" ? tail[0] : undefined;
-  const positional = command === "services" ? tail.slice(1) : tail;
-  const file = command === "builds" ? undefined : positional[0];
-  const rest = command === "builds" ? positional : positional.slice(1);
+  const scoped = command === "services" || command === "runtime" || command === "cancel" || command === "auth";
+  const action = scoped ? tail[0] : undefined;
+  const positional = scoped ? tail.slice(1) : tail;
+  const noFile = command === "builds" || command === "queue";
+  const file = noFile ? undefined : positional[0];
+  const rest = noFile ? positional : positional.slice(1);
   const targets: string[] = [];
   let workspaceRoot: string | undefined;
   let packageRoot: string | undefined;
@@ -83,10 +100,24 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let json = false;
   let color: CliColorMode = "auto";
   let verbose = false;
+  let watch = false;
+  let jsonl = false;
+  let readyFile: string | undefined;
+  let reason: string | undefined;
+  let slot: string | undefined;
+  let from: string | undefined;
   for (let index = 0; index < rest.length; index += 1) {
     const item = rest[index];
     if (item === "--json") {
       json = true;
+      continue;
+    }
+    if (item === "--jsonl") {
+      jsonl = true;
+      continue;
+    }
+    if (item === "--watch") {
+      watch = true;
       continue;
     }
     if (item === "--verbose") {
@@ -231,6 +262,34 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
+    if (item === "--ready-file") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--ready-file requires a path");
+      readyFile = resolve(value);
+      index += 1;
+      continue;
+    }
+    if (item === "--reason") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--reason requires text");
+      reason = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--slot") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--slot requires a credential slot");
+      slot = value;
+      index += 1;
+      continue;
+    }
+    if (item === "--from") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--from requires a credential file");
+      from = resolve(value);
+      index += 1;
+      continue;
+    }
     throw new Error(`unknown option ${item}`);
   }
   return {
@@ -258,6 +317,12 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     json,
     color,
     verbose,
+    watch,
+    jsonl,
+    readyFile,
+    reason,
+    slot,
+    from,
   };
 }
 
@@ -267,6 +332,8 @@ function usage(): string {
     "  narratage lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--package-root directory]",
     "  narratage doctor <runtime-profile.json>",
     "  narratage services up|down|status <runtime-profile.json> [--max-wait-ms milliseconds]",
+    "  narratage runtime up|status|logs|down <runtime-profile.json>",
+    "  narratage queue --runtime profile.json [--watch]",
     "  narratage gc <runtime-profile.json> [--apply]",
     "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--package-root directory] [--root workspace]",
     "  narratage plan <run-source> [--runtime profile.json] [--package-lock file] [--package-root directory] [--root workspace]",
@@ -275,7 +342,10 @@ function usage(): string {
     "  narratage builds --runtime profile.json|./svml.runtime.ts",
     "  narratage inspect <build-id> --runtime profile.json|./svml.runtime.ts",
     "  narratage get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
-    "  narratage cancel <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  narratage operations <build-id> --runtime profile.json|./svml.runtime.ts",
+    "  narratage operation <operation-id> --runtime profile.json|./svml.runtime.ts",
+    "  narratage cancel build <build-id> --runtime profile.json|./svml.runtime.ts [--reason text]",
+    "  narratage auth status|login|logout <endpoint-instance> --runtime profile.json [--slot name] [--from secret-file]",
     "",
     "output:",
     "  --json  --verbose  --color auto|always|never  --no-color  --debug",
@@ -291,6 +361,12 @@ function isLocalRuntime(value: unknown): value is LocalRuntime {
     && typeof value.builds === "function"
     && "readArtifact" in value
     && typeof value.readArtifact === "function"
+    && "credentials" in value
+    && typeof value.credentials === "function"
+    && "putCredential" in value
+    && typeof value.putCredential === "function"
+    && "deleteCredential" in value
+    && typeof value.deleteCredential === "function"
     && "close" in value
     && typeof value.close === "function";
 }
@@ -384,11 +460,49 @@ export async function runCli(
     return;
   }
   const args = parseArgs(argv);
+  const writeOperational = (
+    machine: unknown,
+    title: string,
+    status: "success" | "warning" | "error" | "info" = "info",
+    facts: readonly (readonly [string, string])[] = [],
+    lines: readonly string[] = [],
+  ): void => writeCliOutput(io, {
+    json: args.json || args.jsonl,
+    jsonl: args.jsonl,
+    color: args.color,
+    verbose: args.verbose,
+  }, { kind: "operational", machine, title, status, facts, lines });
+  if (args.command === "_worker") {
+    if (args.file === undefined || args.readyFile === undefined) throw new Error("internal Worker launch is incomplete");
+    const runtime = await loadLocalRuntime(resolve(args.file), distribution);
+    const abort = new AbortController();
+    const stop = (): void => abort.abort();
+    process.once("SIGTERM", stop);
+    process.once("SIGINT", stop);
+    try {
+      await markRuntimeProcessReady(args.readyFile);
+      await runtime.work({
+        owner: `worker-${process.pid}`,
+        leaseMs: 30_000,
+        idlePollMs: 250,
+        signal: abort.signal,
+      });
+    } finally {
+      process.removeListener("SIGTERM", stop);
+      process.removeListener("SIGINT", stop);
+      await runtime.close();
+    }
+    return;
+  }
   const known = args.command === "lock-packages" || args.command === "check" || args.command === "plan"
     || args.command === "build" || args.command === "status" || args.command === "builds"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
-    || args.command === "doctor" || args.command === "gc" || args.command === "services";
-  if (!known || (args.command !== "builds" && args.file === undefined)) {
+    || args.command === "doctor" || args.command === "gc" || args.command === "services"
+    || args.command === "runtime" || args.command === "queue" || args.command === "operations"
+    || args.command === "operation";
+  const operational = known || args.command === "auth";
+  const fileOptional = args.command === "builds" || args.command === "queue";
+  if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
   }
   if (args.command === "lock-packages") {
@@ -401,7 +515,10 @@ export async function runCli(
     const packageRoot = args.packageRoot ?? distribution.packageRoot ?? dirname(output);
     const lock = await createNodePackageLock(args.packages, packageRoot);
     await writeNodePackageLock(output, lock);
-    io.write(`${JSON.stringify({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages }, null, 2)}\n`);
+    writeOperational({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages },
+      "Package lock written", "success", [
+        ["Path", output], ["Packages", String(lock.packages.length)], ["Digest", lock.digest],
+      ]);
     return;
   }
   if (args.command === "doctor") {
@@ -439,11 +556,76 @@ export async function runCli(
       : args.action === "down"
         ? await distribution.externalServices.down(profile)
         : await distribution.externalServices.report(profile);
-    io.write(`${JSON.stringify({
+    const machine = {
       ok: result.services.every((item) => (args.action === "down" ? item.state.state !== "ready" : item.state.state === "ready")),
       root: result.root,
       services: result.services,
-    }, null, 2)}\n`);
+    };
+    writeOperational(machine, `External services ${args.action}`, machine.ok ? "success" : "warning", [
+      ["Root", result.root],
+      ["Services", String(result.services.length)],
+      ["Ready", String(result.services.filter((item) => item.state.state === "ready").length)],
+    ]);
+    return;
+  }
+  if (args.command === "runtime") {
+    if (args.action !== "up" && args.action !== "down" && args.action !== "status" && args.action !== "logs") {
+      throw new Error("runtime takes up, down, status or logs");
+    }
+    const profile = resolve(args.file!);
+    if (args.action === "up") {
+      const external = await distribution.externalServices.up(profile, {
+        ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+      });
+      const processState = await ensureRuntimeProcess(
+        profile,
+        distribution.runtimeWorkerLaunch(),
+        args.maxWaitMs ?? 10_000,
+      );
+      writeOperational({ ok: true, worker: processState, services: external.services }, "Runtime is up", "success", [
+        ["Worker", String(processState.pid)],
+        ["External services", String(external.services.length)],
+      ]);
+      return;
+    }
+    if (args.action === "logs") {
+      const logs = await runtimeProcessLogs(profile);
+      if (!args.json && !args.jsonl) io.write(logs.text);
+      else writeOperational(logs, "Runtime logs");
+      return;
+    }
+    if (args.action === "down") {
+      const worker = await stopRuntimeProcess(profile, args.maxWaitMs ?? 10_000);
+      const external = await distribution.externalServices.down(profile);
+      writeOperational({ ok: true, worker, services: external.services }, "Runtime is down", "success", [
+        ["Worker", worker.state],
+        ["External services", String(external.services.length)],
+      ]);
+      return;
+    }
+    const worker = await runtimeProcessStatus(profile);
+    const external = await distribution.externalServices.report(profile);
+    const runtime = await loadLocalRuntime(profile, distribution);
+    try {
+      const queue = await runtime.queue();
+      const counts = Object.fromEntries(["queued", "leased", "waiting", "blocked", "settling", "terminal"]
+        .map((phase) => [phase, queue.dispatches.filter((item) => item.phase === phase).length]));
+      const machine = {
+        ok: worker.state === "running" && external.services.every((item) => item.state.state === "ready"),
+        worker,
+        queue: { counts, capacity: queue.capacity },
+        services: external.services,
+      };
+      writeOperational(machine, "Runtime status", machine.ok ? "success" : "warning", [
+        ["Worker", worker.state],
+        ["Queued", String(counts.queued ?? 0)],
+        ["Running", String(counts.leased ?? 0)],
+        ["Waiting", String(counts.waiting ?? 0)],
+        ["Capacity", String(queue.capacity.length)],
+      ]);
+    } finally {
+      await runtime.close();
+    }
     return;
   }
   if (args.command === "gc") {
@@ -457,12 +639,67 @@ export async function runCli(
         throw new Error("selected Runtime does not expose Artifact maintenance");
       }
       const report = await runtime.garbageCollectArtifacts({ apply: args.apply });
-      io.write(`${JSON.stringify({
+      const machine = {
         applied: args.apply,
         reachable: report.reachable,
         unreachable: report.unreachable,
         deleted: report.deleted,
-      }, null, 2)}\n`);
+      };
+      writeOperational(machine, args.apply ? "Artifact garbage collection applied" : "Artifact garbage collection preview",
+        report.unreachable.length === 0 ? "success" : "warning", [
+          ["Reachable", String(report.reachable.length)],
+          ["Unreachable", String(report.unreachable.length)],
+          ["Deleted", String(report.deleted.length)],
+        ]);
+    } finally {
+      await runtime.close();
+    }
+    return;
+  }
+  if (args.command === "auth") {
+    if (args.action !== "status" && args.action !== "login" && args.action !== "logout") {
+      throw new Error("auth takes status, login or logout");
+    }
+    if (args.runtime === undefined) throw new Error("auth requires --runtime");
+    if (args.from !== undefined && args.action !== "login") throw new Error("--from applies only to auth login");
+    const runtime = await loadLocalRuntime(args.runtime, distribution);
+    try {
+      let credentials = await runtime.credentials(args.file!);
+      if (args.slot !== undefined) credentials = credentials.filter((item) => item.slot === args.slot);
+      if (credentials.length === 0) throw new Error(`Endpoint ${args.file} has no matching credential`);
+      if (args.slot === undefined && credentials.length > 1 && args.action !== "status") {
+        throw new Error(`Endpoint ${args.file} has several credentials; select one with --slot`);
+      }
+      if (args.action === "status") {
+        writeOperational({ endpoint: args.file, credentials }, "Credential status", "info", [
+          ["Endpoint", args.file!],
+          ["Configured", `${credentials.filter((item) => item.configured).length}/${credentials.length}`],
+        ], credentials.map((item) => `${item.slot}: ${item.configured ? "configured" : "missing"} · ${item.writable ? "writable" : "read-only"}`));
+      } else if (args.action === "login") {
+        const [item] = credentials;
+        if (item === undefined) throw new Error(`Endpoint ${args.file} has no matching credential`);
+        const raw = args.from === undefined
+          ? await io.readSecret?.(`${item.label}: `)
+          : await readFile(args.from, "utf8");
+        if (raw === undefined) throw new Error("interactive credential input is unavailable; use --from <file>");
+        const secret = raw.trim();
+        if (secret.length === 0) throw new Error("credential input is empty");
+        if (item.kind === "json") {
+          try { JSON.parse(secret); } catch { throw new Error(`${item.label} is not valid JSON`); }
+        }
+        const stored = await runtime.putCredential(item.endpoint, item.slot, secret);
+        writeOperational({ endpoint: args.file, stored }, "Credential stored", "success", [
+          ["Endpoint", args.file!], ["Slot", stored.slot], ["Store", stored.ref.store],
+        ]);
+      } else {
+        const [item] = credentials;
+        if (item === undefined) throw new Error(`Endpoint ${args.file} has no matching credential`);
+        const removed = await runtime.deleteCredential(item.endpoint, item.slot);
+        writeOperational({ endpoint: args.file, ...removed }, removed.deleted ? "Credential removed" : "Credential was absent",
+          removed.deleted ? "success" : "warning", [
+            ["Endpoint", args.file!], ["Slot", removed.credential.slot], ["Store", removed.credential.ref.store],
+          ]);
+      }
     } finally {
       await runtime.close();
     }
@@ -481,11 +718,46 @@ export async function runCli(
     throw new Error("Targets, Candidate selections and fidelity belong in a self-described Run Source; CLI --target, --pin and --accept-substitute are not supported");
   }
   if (args.command === "status" || args.command === "builds" || args.command === "inspect"
-    || args.command === "get" || args.command === "cancel") {
+    || args.command === "get" || args.command === "cancel" || args.command === "queue"
+    || args.command === "operations" || args.command === "operation") {
     if (args.runtime === undefined) throw new Error(`${args.command} requires --runtime`);
     const runtime = await loadLocalRuntime(args.runtime, distribution);
     try {
-      if (args.command === "builds") {
+      if (args.command === "queue") {
+        const writeQueue = async (): Promise<boolean> => {
+          const queue = await runtime.queue();
+          const value = {
+            format: "narratage.cli-queue@1",
+            at: Date.now(),
+            dispatches: queue.dispatches,
+            capacity: queue.capacity,
+          };
+          const active = queue.dispatches.filter((item) => item.phase !== "terminal");
+          writeOperational(value, "Runtime queue", active.length === 0 ? "success" : "info", [
+            ["Active Builds", String(active.length)],
+            ["Total Builds", String(queue.dispatches.length)],
+            ["Reserved capacity", String(queue.capacity.length)],
+          ], active.slice(0, args.verbose ? undefined : 12).map((item) =>
+            `${item.build}: ${item.phase}${item.admission === "open" ? "" : ` · ${item.admission}`}`));
+          return queue.dispatches.every((item) => item.phase === "terminal");
+        };
+        if (!args.watch) await writeQueue();
+        else while (!(await writeQueue())) await new Promise((resolveWait) => setTimeout(resolveWait, 1_000));
+      } else if (args.command === "operations") {
+        const status = await runtime.status(args.file!);
+        const machine = { build: args.file, operations: status.operations };
+        writeOperational(machine, "Build operations", "info", [
+          ["Build", args.file!], ["Operations", String(status.operations.length)],
+        ], status.operations.map((item) => `${item.id}: ${item.status} · ${item.endpoint}`));
+      } else if (args.command === "operation") {
+        if (!isDigest(args.file!)) throw new Error("operation id must be a content digest");
+        const operation = await runtime.operation(args.file!);
+        writeOperational({ operation }, operation === undefined ? "Operation not found" : "Operation detail",
+          operation === undefined ? "warning" : "info", operation === undefined ? [] : [
+            ["Operation", operation.id], ["Status", operation.status], ["Endpoint", operation.endpoint],
+            ["Attempt", String(operation.attempt)],
+          ]);
+      } else if (args.command === "builds") {
         const entries = await runtime.builds();
         const builds = await Promise.all(entries.map(async (entry) => {
           const status = await runtime.status(entry.build);
@@ -498,10 +770,11 @@ export async function runCli(
             ...summarizeBuildCatalog(entry, status.build?.state),
           };
         }));
-        io.write(`${JSON.stringify({ builds }, null, 2)}\n`);
+        writeOperational({ builds }, "Build archive", "info", [["Builds", String(builds.length)]],
+          builds.slice(0, args.verbose ? undefined : 20).map((item) => `${item.build}: ${item.status ?? "unknown"}`));
       } else if (args.command === "status") {
         const status = await runtime.status(args.file!);
-        io.write(`${JSON.stringify({
+        const machine = {
           build: status.build === undefined ? undefined : {
             id: status.build.build,
             revision: status.build.revision,
@@ -520,12 +793,22 @@ export async function runCli(
             status: operation.status,
             ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
             ...(operation.failure === undefined ? {} : { failure: operation.failure }),
+            ...(operation.cancellation === undefined ? {} : { cancellation: operation.cancellation }),
           })),
-        }, null, 2)}\n`);
+          dispatch: status.dispatch,
+        };
+        const phase = status.dispatch?.phase ?? "missing";
+        writeOperational(machine, status.build === undefined ? "Build not found" : "Build status",
+          status.build === undefined ? "warning" : status.dispatch?.terminal === "failed" ? "error" : "info", [
+            ["Build", args.file!],
+            ["Core", status.build?.state.status ?? "missing"],
+            ["Dispatch", phase],
+            ["Operations", String(status.operations.length)],
+          ]);
       } else if (args.command === "inspect") {
         const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
-        io.write(`${JSON.stringify({
+        const machine = {
           build: status.build.build,
           revision: status.build.revision,
           archive: inspectBuild(status.build.state, status.catalog),
@@ -538,7 +821,11 @@ export async function runCli(
             ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
             ...(operation.failure === undefined ? {} : { failure: operation.failure }),
           })),
-        }, null, 2)}\n`);
+        };
+        writeOperational(machine, "Build archive detail", "info", [
+          ["Build", status.build.build], ["Revision", String(status.build.revision)],
+          ["Operations", String(status.operations.length)],
+        ]);
       } else if (args.command === "get") {
         const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
@@ -549,17 +836,22 @@ export async function runCli(
           const references = findArchivedArtifact(status.build.state, args.artifact);
           if (references.length === 0) throw new Error(`Build ${args.file} does not reference Artifact ${args.artifact}`);
           if (args.to === undefined) {
-            io.write(`${JSON.stringify({ build: status.build.build, artifact: args.artifact, references }, null, 2)}\n`);
+            writeOperational({ build: status.build.build, artifact: args.artifact, references }, "Artifact references", "info", [
+              ["Build", status.build.build], ["Artifact", args.artifact], ["References", String(references.length)],
+            ]);
           } else {
             const [first] = references;
             if (first === undefined) throw new Error(`Build ${args.file} does not reference Artifact ${args.artifact}`);
             const materialized = await materializeArtifact(runtime, first, args.to, `Build ${args.file}`);
-            io.write(`${JSON.stringify({
+            const machine = {
               build: status.build.build,
               artifact: args.artifact,
               references,
               materialized,
-            }, null, 2)}\n`);
+            };
+            writeOperational(machine, "Artifact materialized", "success", [
+              ["Build", status.build.build], ["Artifact", args.artifact], ["Path", materialized.path],
+            ]);
           }
           return;
         }
@@ -570,28 +862,41 @@ export async function runCli(
           ...(status.catalog === undefined ? {} : { catalog: status.catalog }),
         });
         if (args.to === undefined) {
-          io.write(`${JSON.stringify({
+          const machine = {
             build: status.build.build,
             revision: status.build.revision,
             record,
             artifacts: collectArtifacts(record.value.kind === "blob" ? record.value : record.value.value),
-          }, null, 2)}\n`);
+          };
+          writeOperational(machine, "Archived Record", "info", [
+            ["Build", status.build.build], ["Record", record.id],
+            ["Artifacts", String(machine.artifacts.length)],
+          ]);
         } else {
           const materialized = await materializeRecord(runtime, record, args.to);
-          io.write(`${JSON.stringify({
+          const machine = {
             build: status.build.build,
             record: record.id,
             materialized,
-          }, null, 2)}\n`);
+          };
+          writeOperational(machine, "Record materialized", "success", [
+            ["Build", status.build.build], ["Record", record.id], ["Path", materialized.path],
+          ]);
         }
       } else {
-        const result = await runtime.cancel(args.file!);
-        io.write(`${JSON.stringify({
+        if (args.action !== "build") throw new Error("cancel must name its scope: cancel build <build-id>");
+        const result = await runtime.cancel(args.file!, args.reason);
+        const machine = {
           build: args.file,
           cancelled: result !== undefined,
-          status: result?.status,
-          diagnostics: result?.state.diagnostics ?? [],
-        }, null, 2)}\n`);
+          phase: result?.phase,
+          admission: result?.admission,
+          terminal: result?.terminal,
+        };
+        writeOperational(machine, result === undefined ? "Build not found" : "Cancellation requested",
+          result === undefined ? "warning" : "success", [
+            ["Build", args.file!], ["Admission", result?.admission ?? "missing"], ["Phase", result?.phase ?? "missing"],
+          ]);
       }
     } finally {
       await runtime.close();
@@ -695,7 +1000,6 @@ export async function runCli(
   }
   if (args.command === "build") {
     if (args.runtime === undefined) throw new Error("build requires --runtime with a Runtime Profile or trusted local config module");
-    const services = args.noServices ? undefined : await startDeclaredServices(args.runtime, distribution);
     const runtime = await loadLocalRuntime(args.runtime, distribution);
     try {
       const loadedRun = await loadRunFile({
@@ -706,7 +1010,7 @@ export async function runCli(
         runtime,
       });
       const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
-      const built = await runtime.build({
+      const request = {
         id: args.buildId ?? result.state.id,
         state: result.state,
         catalog: createCatalogDescriptor({
@@ -719,14 +1023,25 @@ export async function runCli(
           },
         }),
         attachments: result.compilation.attachments,
-      }, {
-        follow: args.follow,
-        ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
-      });
-      io.write(`${JSON.stringify({
+      } as const;
+      const services = args.noServices ? undefined : await startDeclaredServices(args.runtime, distribution);
+      let built = await runtime.build(request);
+      const worker = await ensureRuntimeProcess(
+        args.runtime,
+        distribution.runtimeWorkerLaunch(),
+        args.maxWaitMs ?? 10_000,
+      );
+      if (args.follow) {
+        built = await runtime.build(request, {
+          follow: true,
+          ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
+        });
+      }
+      const machine = {
         build: built.id,
         core: built.state.id,
         status: built.status,
+        worker,
         ...(services === undefined ? {} : {
           services: services.map((item) => ({ id: item.id, action: item.action })),
         }),
@@ -739,9 +1054,19 @@ export async function runCli(
             ...(record === undefined ? {} : { digest: record.digest, value: record.value }),
           };
         }),
-        blocked: built.blocked,
-        journal: built.journal,
-      }, null, 2)}\n`);
+        dispatch: {
+          phase: built.dispatch.phase,
+          admission: built.dispatch.admission,
+          ...(built.dispatch.reason === undefined ? {} : { reason: built.dispatch.reason }),
+        },
+      };
+      writeOperational(machine, args.follow ? "Build observation finished" : "Build submitted",
+        built.status === "failed" ? "error" : built.status === "cancelled" ? "warning" : "success", [
+          ["Build", built.id],
+          ["Status", built.status],
+          ["Worker", String(worker.pid)],
+          ["Goals", String(machine.goals.length)],
+        ]);
     } finally {
       await runtime.close();
     }

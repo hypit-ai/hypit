@@ -25,6 +25,8 @@ export type CliDistribution = {
   readonly runFrontends: readonly RunFrontend[];
   createCompiler(options: CliCompilerOptions): NodeCompiler;
   createRuntimeFromConfig(path: string): Promise<LocalRuntime>;
+  /** Re-enter this exact Distribution as the hidden durable Worker process. */
+  runtimeWorkerLaunch(): { readonly command: string; readonly args: readonly string[] };
   doctorRuntimeConfig(path: string): Promise<RuntimeConfigDoctorResult>;
   /** The external programs a Runtime Profile implies: probe, prepare and start them. */
   readonly externalServices: {

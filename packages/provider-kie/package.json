@@ -16,13 +16,13 @@
     "@narratage/generation": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*"
+    "@narratage/runtime-adapter": "workspace:*"
   },
   "devDependencies": {
     "@narratage/artifact-store-fs": "workspace:*",
     "@narratage/component-kit": "workspace:*",
     "@narratage/core": "workspace:*",
+    "@narratage/credential-store-env": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/gemini-omni": "workspace:*",
@@ -36,6 +36,7 @@
     "@narratage/narrative": "workspace:*",
     "@narratage/seedance": "workspace:*",
     "@narratage/seedream": "workspace:*",
+    "@narratage/store-sqlite": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }
