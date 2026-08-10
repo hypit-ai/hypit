@@ -40,7 +40,7 @@ caption.primary {
   cue-min-words: 2; cue-max-words: 7;
   stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
   anchor-x: center; anchor-y: bottom;
-  font: Inter; weight: 700; size: 58; line-height: 1; align: center;
+  size: 58; line-height: 1; align: center;
   fill: #FFFFFF; stroke-color: #09090B; stroke-width: 2;
   background: #00000000; padding: 0; radius: 0;
   karaoke: trail; karaoke-transition: wipe; active-fill: #FFD54A;
@@ -60,11 +60,11 @@ caption.primary {
   font={caption-fonts}/>
 ```
 
-必填的 `font=` 边携带一个按字节复现的 `FontStackRef`。主字体必须与 Recipe
-的 weight/style 一致；每个 Fallback 保留自己的真实字体信息。省略字体栈会在编译时
+必填的 `font=` 边携带一个按字节复现的 `FontStackRef`。字体家族、字重和字形只在这条
+边上声明一次；每个 Fallback 保留自己的真实字体信息。省略字体栈会在编译时
 失败，不会退回当前机器上的同名字体。
 
-Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字体/框参数。Fine 不声明任何
+Recipe 同时包含 `cue-min-words`、`cue-max-words` 和完整字号/外观/框参数。Fine 不声明任何
 逐词字段；其他字幕包可以定义完全不同的字段和渲染方式，无需修改公共 Caption。
 
 Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill

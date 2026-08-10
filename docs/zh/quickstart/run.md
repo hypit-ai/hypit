@@ -245,6 +245,43 @@ pnpm install
 
 `narratage build` 会自动启动所需的服务，无需手动启动。
 
+#### 把正式视频项目放在 Narratage 仓库之外
+
+作者文件不必位于本仓库之下。例如，项目放在 `/work/my-film`，同时复用
+`/opt/narratage` 中已安装的包：
+
+```bash
+cd /opt/narratage
+
+pnpm narratage lock-packages /work/my-film/svml.packages.lock \
+  --package @narratage/script \
+  --package @narratage/estimate
+
+pnpm narratage plan /work/my-film/build.svrun \
+  --package-lock /work/my-film/svml.packages.lock
+```
+
+Source Workspace 默认是 `build.svrun` 所在目录；相对引用的 Author Source 与素材都必须留在
+这个边界内。`--package-root` 是另一项无关的 Host 覆盖项：它只负责指定已安装的
+`node_modules`，然后按照 lock 校验包字节。官方 CLI 通常会自动提供自身的安装位置，所以
+上面的命令无需填写包路径。只有需要主动扩大源码边界时才传 `--root`。不要把外部项目软
+链接进仓库；canonical path 的边界检查会有意拒绝这种逃逸。
+
+官方 CLI 读取外部项目的 Runtime Profile 时也会提供同一个安装位置，因此 Profile 仍可移植：
+
+```json
+{
+  "format": "svml.runtime-config@1",
+  "packageLock": "./svml.packages.lock",
+  "runtimePackageLock": "./svml.runtime-packages.lock",
+  "endpoints": [],
+  "permissions": []
+}
+```
+
+Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只有包被有意安装在 CLI
+之外时，才使用 `--package-root` 或 Profile 的 `packageRoot` 覆盖位置。
+
 ### 1. 诊断环境
 
 ```bash
@@ -277,7 +314,8 @@ pnpm narratage build examples/talking-head-aroll/build.svrun \
 |---|---|
 | `--runtime` | Runtime Profile 的路径 |
 | `--package-lock` | 包锁定文件的路径 |
-| `--root` | 工作区根目录 |
+| `--package-root` | 存放 lock 所列已安装包的 Host 目录 |
+| `--root` | 可选的 Source Workspace 边界；默认是入口 Source 所在目录 |
 | `--build-id` | 用户为此 Build 选择的标识符（用于检索和复用） |
 | `--follow` | 将 Build 进度流式输出到终端 |
 

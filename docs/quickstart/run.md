@@ -258,6 +258,47 @@ Builds need. When `uv` is not on your PATH the Python step is skipped with a war
 `narratage build` will start the required services automatically; you do not need to launch them
 yourself.
 
+#### Keep production projects outside the Narratage checkout
+
+Author files do not have to live under this repository. For example, keep a project at
+`/work/my-film` while using packages installed in `/opt/narratage`:
+
+```bash
+cd /opt/narratage
+
+pnpm narratage lock-packages /work/my-film/svml.packages.lock \
+  --package @narratage/script \
+  --package @narratage/estimate
+
+pnpm narratage plan /work/my-film/build.svrun \
+  --package-lock /work/my-film/svml.packages.lock
+```
+
+The Source Workspace defaults to the directory containing `build.svrun`; its relative Author
+Sources and assets stay inside that boundary. `--package-root` has one unrelated Host purpose: it
+overrides where the CLI locates the installed `node_modules` whose bytes are verified against the
+lock. The official CLI normally supplies its own installation location, so no package path is
+needed above. Use `--root` only when deliberately widening the Source Workspace above the Run
+Source directory. Do not symlink a project into this repository: canonical-path containment
+intentionally rejects that escape.
+
+The official CLI supplies the same installation location while reading the external project's
+Runtime Profile, so the Profile remains portable:
+
+```json
+{
+  "format": "svml.runtime-config@1",
+  "packageLock": "./svml.packages.lock",
+  "runtimePackageLock": "./svml.runtime-packages.lock",
+  "endpoints": [],
+  "permissions": []
+}
+```
+
+Runtime state, archived Artifacts and the lock files remain under `/work/my-film`. Set
+`--package-root` or the Profile's `packageRoot` only when the packages intentionally live somewhere
+other than the CLI installation.
+
 ### 1. Diagnose the environment
 
 ```bash
@@ -292,7 +333,8 @@ pnpm narratage build examples/talking-head-aroll/build.svrun \
 |---|---|
 | `--runtime` | Path to the Runtime Profile |
 | `--package-lock` | Path to the package lock file |
-| `--root` | Workspace root directory |
+| `--package-root` | Host directory containing the installed packages named by the lock |
+| `--root` | Optional Source Workspace boundary; defaults to the entry Source directory |
 | `--build-id` | User-chosen identifier for this Build (used for retrieval and reuse) |
 | `--follow` | Stream Build progress to the terminal |
 

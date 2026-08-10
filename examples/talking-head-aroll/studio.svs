@@ -28,8 +28,6 @@
     x: 0.08;
     y: 0.74;
     width: 0.84;
-    font: Inter;
-    weight: 800;
     size: 44;
     line-height: 1;
     align: center;

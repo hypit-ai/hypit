@@ -231,8 +231,11 @@ test("project local runtime resumes durable work while component and endpoint pa
 
 test("project local runtime activates locked compute facets without deployment source registration", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-locked-components-"));
-  const packageRoot = join(directory, "node_modules", "example-greeting-components");
+  const runtimeRoot = join(directory, "external-project");
+  const installedRoot = join(directory, "narratage-install");
+  const packageRoot = join(installedRoot, "node_modules", "example-greeting-components");
   const lockPath = join(directory, "svml.packages.lock");
+  await mkdir(runtimeRoot, { recursive: true });
   await mkdir(packageRoot, { recursive: true });
   await writeFile(join(packageRoot, "package.json"), JSON.stringify({
     name: "example-greeting-components",
@@ -280,11 +283,12 @@ test("project local runtime activates locked compute facets without deployment s
   `, "utf8");
 
   try {
-    const lock = await createNodePackageLock(["example-greeting-components"], directory);
+    const lock = await createNodePackageLock(["example-greeting-components"], installedRoot);
     await writeNodePackageLock(lockPath, lock);
     const runtime = await createProjectLocalRuntime({
-      root: directory,
-      packageLock: "svml.packages.lock",
+      root: runtimeRoot,
+      packageRoot: installedRoot,
+      packageLock: "../svml.packages.lock",
     });
     await assert.rejects(
       async () => await runtime.build({

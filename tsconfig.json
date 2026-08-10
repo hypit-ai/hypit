@@ -249,6 +249,9 @@
       "@narratage/cli": [
         "packages/cli/src/index.ts"
       ],
+      "@narratage/video-cli": [
+        "packages/video-cli/src/index.ts"
+      ],
       "@narratage/validation": [
         "packages/validation/src/index.ts"
       ],
@@ -266,8 +269,8 @@
   "include": [
     "packages/**/*.ts",
     "services/media-lambda/src/**/*.ts",
-    "tools/playground/**/*.ts",
-    "test/playground-*.test.ts"
+    "tools/caption-playground/**/*.ts",
+    "test/caption-playground-*.test.ts"
   ],
   "exclude": [
     "dist",

@@ -115,14 +115,14 @@ Create the two closures explicitly:
 
 ```bash
 narratage lock-packages ./svml.packages.lock \
-  --package @narratage/script --package @narratage/seedance --root .
+  --package @narratage/script --package @narratage/seedance --package-root .
 
 narratage lock-packages ./svml.runtime-packages.lock \
   --package @narratage/provider-kie \
   --package @narratage/provider-media-local \
   --package @narratage/provider-whisperx-local \
   --package @narratage/provider-hyperframes-local \
-  --root .
+  --package-root .
 
 narratage doctor ./svml.runtime.json
 ```
@@ -210,8 +210,10 @@ requests, while all supplied packages are closed exactly once so an unselected d
 cannot leak resources. Package code is still trusted deployment code and is never activated by
 author imports.
 
-`svml.packages.lock` is created from explicitly selected physical packages with
-`narratage lock-packages`. It supplies enumerable deterministic Producer and Validator facets; the
+`svml.packages.lock` is created from directly selected physical package roots with
+`narratage lock-packages`. Exact logical Module dependencies are closed automatically from those
+roots' installed dependency graph; they do not need duplicate `--package` flags. The lock supplies
+enumerable deterministic Producer and Validator facets; the
 Runtime config no longer imports each component by name. Its digest must equal the
 `BuildRequest.implementationClosure` produced by `plan`/`build` with the same lock, so durable work
 cannot resume after an unnoticed component-closure swap. The low-level `components` option remains

@@ -165,7 +165,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
 ```bash
 pnpm narratage lock-packages <runtime-lock> \
   --package @narratage/provider-my-service \
-  --root .
+  --package-root .
 ```
 
 ## 7. 在 svml.runtime.json 中引用

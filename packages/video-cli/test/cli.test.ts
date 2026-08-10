@@ -121,7 +121,7 @@ test("author source binds an ordered exact Font stack to a Fine Caption Style", 
   caption.primary {
     cue-min-words: 1; cue-max-words: 4;
     stack-order: 20; x: 0.5; y: 0.9; width: 0.8;
-    align: center; font: Studio Sans; weight: 600; size: 48; line-height: 1.1;
+    align: center; size: 48; line-height: 1.1;
     fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
   }
 </sheet>`, "utf8");
@@ -158,7 +158,7 @@ test("an installed open-font package supplies a multilingual exact stack without
   caption.primary {
     cue-min-words: 1; cue-max-words: 4;
     stack-order: 20; x: 0.5; y: 0.9; width: 0.8;
-    align: center; font: Installed Open Stack; weight: 700; size: 48; line-height: 1.1;
+    align: center; size: 48; line-height: 1.1;
     fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
   }
 </sheet>`, "utf8");
@@ -271,7 +271,7 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
   );
   await writeFile(profile, JSON.stringify({
     format: "svml.runtime-config@1",
-    root: process.cwd(),
+    root,
     statePath: join(root, "state.sqlite"),
     catalogPath: join(root, "catalog.sqlite"),
     artifactPath: join(root, "artifacts"),
@@ -344,18 +344,21 @@ test("one checked-in fixture closes the complete provider-free video plan", asyn
 });
 
 test("CLI package lock activates an installed package without changing the official host", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-package-lock-"));
-  const packageRoot = join(root, "node_modules", "example-empty");
-  await mkdir(packageRoot, { recursive: true });
+  const directory = await mkdtemp(join(tmpdir(), "svml-cli-package-lock-"));
+  const projectRoot = join(directory, "external-video-project");
+  const installedPackage = join(directory, "narratage-install", "node_modules", "example-empty");
+  const packageRoot = join(directory, "narratage-install");
+  await mkdir(projectRoot, { recursive: true });
+  await mkdir(installedPackage, { recursive: true });
   const implementationDigest = `sha256:${"2".repeat(64)}`;
-  await writeFile(join(packageRoot, "package.json"), JSON.stringify({
+  await writeFile(join(installedPackage, "package.json"), JSON.stringify({
     name: "example-empty",
     version: "1.0.0",
     type: "module",
     exports: "./activation.mjs",
     svml: { activation: "./activation.mjs" },
   }), "utf8");
-  await writeFile(join(packageRoot, "activation.mjs"), `
+  await writeFile(join(installedPackage, "activation.mjs"), `
     const module = { name: "example.empty", version: "1" };
     const digest = ${JSON.stringify(implementationDigest)};
     export default {
@@ -375,8 +378,8 @@ test("CLI package lock activates an installed package without changing the offic
       }],
     };
   `, "utf8");
-  const file = join(root, "main.svml");
-  const lockPath = join(root, "svml.packages.lock");
+  const file = join(projectRoot, "main.svml");
+  const lockPath = join(projectRoot, "svml.packages.lock");
   await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
     <import as="example" from="example.empty@1"/>
@@ -384,18 +387,18 @@ test("CLI package lock activates an installed package without changing the offic
   </svml>`, "utf8");
 
   await assert.rejects(
-    async () => await runCli(["check", file, "--root", root], { write() {} }),
+    async () => await runCli(["check", file], { write() {} }),
     /No registered module satisfies example\.empty@1/,
   );
 
   let lockOutput = "";
-  await runCli(["lock-packages", lockPath, "--package", "example-empty", "--root", root], {
+  await runCli(["lock-packages", lockPath, "--package", "example-empty", "--package-root", packageRoot], {
     write: (text) => { lockOutput += text; },
   });
   assert.equal(JSON.parse(lockOutput).ok, true);
 
   let checkOutput = "";
-  await runCli(["check", file, "--package-lock", lockPath, "--root", root], {
+  await runCli(["check", file, "--package-lock", lockPath, "--package-root", packageRoot], {
     write: (text) => { checkOutput += text; },
   });
   const checked = JSON.parse(checkOutput) as { readonly ok: boolean; readonly modules: readonly string[] };

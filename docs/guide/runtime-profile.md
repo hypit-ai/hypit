@@ -94,6 +94,19 @@ Two forms are supported:
 
 Credentials are referenced by environment variable name, never stored in the Profile.
 
+### Filesystem fields
+
+| Field | Meaning |
+|---|---|
+| `root` | Runtime data root. State databases, Artifact storage and relative lock paths are based here. Defaults to the Profile directory. |
+| `packageRoot` | Optional Host override for the `node_modules` supplying both locks. The official CLI defaults to its own installation; the direct local API defaults to `root`. |
+| `packageLock` | Locked deterministic implementation packages, resolved relative to `root`. |
+| `runtimePackageLock` | Locked privileged Runtime adapters, resolved relative to `root`. |
+
+`root` and `packageRoot` are deliberately separate. An external video project can retain all data
+in its own directory while loading verified executable packages from one Narratage installation.
+Neither value enters Author or Run graph identity.
+
 ### Scheduling
 
 `maxConcurrency` caps total concurrent Operations across all lanes. Each named `lane` has its own
