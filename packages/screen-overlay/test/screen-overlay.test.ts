@@ -86,7 +86,8 @@ test("every declared Screen Overlay component lowers to a self-contained determi
 test("Flash owns its exact envelope instead of inheriting a universal peak", () => {
   const flash = trackFor(components[0]!);
   assert.deepEqual(flash.presents[0]?.elements[0]?.animation?.keyframes.map((frame) => frame.atFrame), [0, 2, 5, 10, 60]);
-  assert.throws(() => trackFor({ kind: "flash", color: "#ffffff", intensity: 1, attackFrames: 30, holdFrames: 30, decayFrames: 30 }), /envelope exceeds/u);
+  const clipped = trackFor({ kind: "flash", color: "#ffffff", intensity: 1, attackFrames: 30, holdFrames: 30, decayFrames: 30 });
+  assert.deepEqual(clipped.presents[0]?.elements[0]?.animation?.keyframes.map((frame) => frame.atFrame), [0, 30, 60, 90]);
 });
 
 test("explicit seeds control stochastic component identity", () => {

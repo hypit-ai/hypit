@@ -193,7 +193,7 @@ test("variant Style decoders reject unknown Recipes and keep exact fonts and ind
   assert.equal(decodeTypewriterListStyle(recipe("ranking.typewriter"), font).style.framesPerGrapheme, 2);
 });
 
-test("TierBoard owns cumulative direct/stage placement and rejects impossible stages", () => {
+test("TierBoard owns cumulative direct/stage placement and rejects invalid schedule boundaries", () => {
   const owner = header("tier-board", "tiers");
   const semantic = [tierSpec("alpha", "s", "stage"), tierSpec("beta", "a")];
   const style = decodeTierBoardStyle(recipe("ranking.tier", {
@@ -270,14 +270,18 @@ test("Typewriter uses Unicode graphemes, explicit emphasis and winner timing wit
   const row = track.presents.find((item) => item.id.endsWith(":item:first:stage"))!;
   const text = row.elements.find((item) => item.kind === "text-flow");
   assert.equal(text?.kind, "text-flow");
-  assert.equal(text?.sequences[0]?.range.endExclusive, 3);
+  assert.deepEqual(text?.sequences.map((sequence) => sequence.range), [
+    { start: 0, endExclusive: 1 },
+    { start: 1, endExclusive: 2 },
+    { start: 2, endExclusive: 3 },
+  ]);
   const emphasis = text?.document.paragraphs[0]?.inlines[1];
   assert.equal(emphasis?.kind, "text");
   assert.equal(emphasis.kind === "text" ? emphasis.text : undefined, "👩‍💻");
   assert.ok(row.elements.some((item) => item.kind === "text" && item.text === "★"));
-  assert.throws(() => buildTypewriterListProgram(owner, "Tools", frame, schedule(owner, semantic), {
+  assert.doesNotThrow(() => buildTypewriterListProgram(owner, "Tools", frame, schedule(owner, semantic), {
     ...style, framesPerGrapheme: 20,
-  }, set), /requires/u);
+  }, set));
 });
 
 const sound = (id: string, sampleFrames = 4_800): SynchronizedMedia => ({

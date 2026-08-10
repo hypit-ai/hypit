@@ -104,6 +104,29 @@ test("SVS controls appearance and local motion but cannot smuggle geometry", () 
   assert.throws(() => decodeCommentStickerStyle({ ...recipe, properties: { x: 0.2 } }, fonts, "bad"), /does not accept x/u);
 });
 
+test("short Sticker windows compose overlapping enter and exit motion instead of rejecting them", () => {
+  const compressed = decodeCommentStickerStyle({
+    ...recipe,
+    properties: {
+      enter: "slide-pop",
+      "enter-frames": 70,
+      exit: "fade-up",
+      "exit-frames": 60,
+      hold: "none",
+    },
+  }, fonts, "compressed");
+  const set = appendProgramCommentSticker(
+    createCommentStickerSet(), header, frame, compressed, space, item("compressed"), content(),
+  );
+  const rendered = renderCommentSticker(canvas, space, finalizeCommentSticker(set, header));
+  const animation = rendered.presents[0]?.elements.find((element) => element.animation !== undefined)?.animation;
+  assert.ok(animation);
+  const overlap = animation.keyframes.find((keyframe) => keyframe.atFrame === 45)!;
+  const opacity = overlap.style.find((declaration) => declaration.name === "opacity")?.value;
+  assert.equal(typeof opacity, "number");
+  assert.ok((opacity as number) > 0 && (opacity as number) < 1);
+});
+
 function parsed(source: string) {
   return parseStructuredElement({ name: "fixture.svml", text: source }, 0).element;
 }

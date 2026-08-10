@@ -153,22 +153,26 @@ internal Word timestamps that the author and audio evidence never supplied.
 
 ### 7. Layered local motion
 
-- Cue enter/exit: `none | fade | pop | spring | slide-left | slide-right | slide-up | slide-down | blur-in`
-- Atom entry: the same one-shot vocabulary
+- Cue enter/exit: `none | fade | pop | scale | spring | bounce | elastic | stamp | tilt |
+  zoom-blur | flip-x | flip-y | spin | squash | stretch | slide-left | slide-right | slide-up |
+  slide-down | blur-in | wipe-left | wipe-right | wipe-up | wipe-down`
+- Atom entry and exit: the same one-shot vocabulary, with independent durations
 - Atom reveal: `all | on-start | typewriter`
-- active response: `none | scale | pop | spring`
-- active-box enter/exit: `none | fade | pop`
-- continuous local loop: `none | shake | wobble | glow-pulse`, targeted at the Cue or active Atom
+- active response and active-box enter/exit: the same one-shot vocabulary
+- continuous local loop: `none | shake | wobble | glow-pulse | breathe | float | pulse | flicker`,
+  targeted at the Cue or active Atom
 
 The flat Recipe names are `cue-enter`, `cue-exit`, their independent `*-frames`; `atom-enter`,
-`atom-enter-frames`, `atom-reveal`; `active-response`, `active-response-frames`, `active-scale`;
+`atom-enter-frames`, `atom-exit`, `atom-exit-frames`, `atom-reveal`; `active-response`,
+`active-response-frames`, `active-scale`;
 `slide-distance`; and `loop`, `loop-target`, `loop-period-frames`, `loop-intensity`.
 
-Cue, Atom entry, active response and loop own separate wrappers, so their transforms compose instead
+Cue, Atom lifecycle, active response and loop own separate wrappers, so their transforms compose instead
 of overwriting one another. Typewriter reveals authored display graphemes inside a whole Atom; it is
 visual interpolation, not a claim of character timestamps and never changes Atom boundaries.
-Continuous motion is a bounded deterministic frame function with no random input. Bounce, arbitrary
-rotation, path motion and random variation remain outside Fine.
+Continuous motion is a bounded deterministic frame function with no random input. Arbitrary path
+motion and random variation remain outside Fine; they belong to generic Typography or a separate
+effect package rather than a Caption preset vocabulary.
 
 ## One renderer, one layout tree
 

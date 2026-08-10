@@ -340,6 +340,12 @@ finite or analytically bounded package-owned motion values before terminal rende
 channels compose through separate owned wrappers or an explicit transform composition order; the
 last one does not overwrite the previous one.
 
+Animation lifetime is independent from Item visibility. A motion may finish before its Item window;
+its final authored state then holds until the Item disappears. A motion may also extend beyond the
+window; the Item window clips it without rewriting its timing. Sequence and Path Text motion follow
+the same rule. This avoids rejecting a perfectly meaningful fast title animation merely because the
+title remains visible, and avoids silently retiming a slow animation to fit a short window.
+
 ## 9. Style declaration, SVS and readable authoring
 
 Declaration and use remain separate. SVS stays a generic scalar Recipe language; it must not learn

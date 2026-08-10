@@ -294,7 +294,7 @@ test("one authoring Track may contribute independently stacked Presents", () => 
   assert.deepEqual(interleaved.presents.map((present) => present.stacking.order), [30, 80]);
 });
 
-test("Visual Present animations are frame-exact and cannot animate cross-Track styles", () => {
+test("Visual Present animations may finish before or after their visibility window without changing Track isolation", () => {
   const { programSpace, visual } = fixture();
   const present = visual.presents[0]!;
   const root = present.elements[0]!;
@@ -307,7 +307,7 @@ test("Visual Present animations are frame-exact and cannot animate cross-Track s
         animation: {
           keyframes: [
             { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
-            { atFrame: 60, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
+            { atFrame: 10, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
           ],
         },
       }],
@@ -318,6 +318,27 @@ test("Visual Present animations are frame-exact and cannot animate cross-Track s
     id: "animated",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     tracks: [animated],
+  }), programSpace));
+  const clipped = sealVisualTrack({
+    ...visual,
+    presents: [{
+      ...present,
+      elements: [{
+        ...root,
+        animation: {
+          keyframes: [
+            { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
+            { atFrame: 90, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
+          ],
+        },
+      }],
+    }],
+  });
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
+    contract: "svml.composition@1",
+    id: "clipped-animation",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    tracks: [clipped],
   }), programSpace));
   const invasive = sealVisualTrack({
     ...visual,

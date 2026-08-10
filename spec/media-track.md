@@ -367,8 +367,10 @@ Operates on one media layer's already fitted Content Frame. Normalized keyframes
 source/content-point displacement and rotation. Ken Burns is a sampling-motion Recipe, not a Base
 effect and not an occupancy mode.
 
-Entry plus exit durations that overlap are rejected unless one explicit component defines the
-combined behavior. The compiler does not proportionally shorten both as Twinit's renderer did.
+Entry and exit keep their authored durations even when they overlap. The package evaluates both at
+each frame and deterministically composes their independent opacity, transform, filter and clip
+channels. It never proportionally shortens either side and never runs the Item twice. The visible
+Item window remains the final clip.
 
 The transform stack is fixed so channels cannot overwrite one another:
 
@@ -635,7 +637,7 @@ deterministic local compilation.
 - transparent, solid, gradient, self-blur and alternate-source backing layers;
 - every Content Fit and unequal content/frame focal point;
 - entry, sustain, exit and sampling motion separately and in combination;
-- explicit failure for overlapping entry/exit durations.
+- deterministic composition for overlapping entry/exit durations without hidden retiming.
 
 ### Sequence
 

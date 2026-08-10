@@ -819,7 +819,7 @@ function assertTextFlow(flow: VisualTextFlow, label: string): void {
 
 function assertTextSequences(
   sequences: readonly VisualTextSequenceAnimation[],
-  durationFrames: number,
+  _durationFrames: number,
   label: string,
 ): void {
   const ids = new Set<string>();
@@ -834,7 +834,7 @@ function assertTextSequences(
     }
     if (!Number.isSafeInteger(sequence.range.start) || !Number.isSafeInteger(sequence.range.endExclusive)
       || sequence.range.start < 0 || sequence.range.endExclusive <= sequence.range.start
-      || !Number.isSafeInteger(sequence.startFrame) || sequence.startFrame < 0 || sequence.startFrame > durationFrames
+      || !Number.isSafeInteger(sequence.startFrame) || sequence.startFrame < 0
       || !Number.isSafeInteger(sequence.unitDurationFrames) || sequence.unitDurationFrames <= 0
       || !Number.isSafeInteger(sequence.staggerFrames) || sequence.staggerFrames < 0
       || !Number.isSafeInteger(sequence.cycles) || sequence.cycles <= 0
@@ -844,10 +844,6 @@ function assertTextSequences(
     if ((sequence.order === "random") !== (sequence.seed !== undefined)) {
       throw new Error(`${item} random order requires one explicit seed, and other orders forbid it.`);
     }
-    const lastUnitEnd = sequence.startFrame
-      + (sequence.range.endExclusive - sequence.range.start - 1) * sequence.staggerFrames
-      + sequence.unitDurationFrames * sequence.cycles;
-    if (lastUnitEnd > durationFrames) throw new Error(`${item} animation exceeds its Present span.`);
     if (sequence.keyframes.length < 2 || sequence.keyframes[0]?.atProgress !== 0 || sequence.keyframes.at(-1)?.atProgress !== 1) {
       throw new Error(`${item} keyframes must cover progress [0, 1].`);
     }
@@ -877,7 +873,7 @@ function assertPathCommands(path: readonly VisualVectorPathCommand[], label: str
   }
 }
 
-function assertAnimation(animation: VisualAnimation | undefined, durationFrames: number, label: string): void {
+function assertAnimation(animation: VisualAnimation | undefined, _durationFrames: number, label: string): void {
   if (animation === undefined) return;
   if (animation.keyframes.length < 2) throw new Error(`${label} animation must contain at least two keyframes.`);
   let previous = -1;
@@ -885,7 +881,6 @@ function assertAnimation(animation: VisualAnimation | undefined, durationFrames:
     if (
       !Number.isSafeInteger(keyframe.atFrame)
       || keyframe.atFrame < 0
-      || keyframe.atFrame > durationFrames
       || keyframe.atFrame <= previous
     ) {
       throw new Error(`${label} animation keyframe ${index + 1} has an invalid frame offset.`);
@@ -904,9 +899,6 @@ function assertAnimation(animation: VisualAnimation | undefined, durationFrames:
       }
     }
     previous = keyframe.atFrame;
-  }
-  if (animation.keyframes[0]!.atFrame !== 0 || animation.keyframes.at(-1)!.atFrame !== durationFrames) {
-    throw new Error(`${label} animation must cover the complete Present span.`);
   }
 }
 
@@ -997,10 +989,7 @@ function assertPresent(present: VisualPresent, programSpace: ProgramSpace | unde
         nonNegative(element.endMarginPx, `${label}.endMarginPx`);
         if (element.marginAnimation !== undefined) {
           const frames = element.marginAnimation.keyframes;
-          if (frames.length < 2 || frames[0]?.atFrame !== 0
-            || frames.at(-1)?.atFrame !== present.span.endFrameExclusive - present.span.startFrame) {
-            throw new Error(`${label}.marginAnimation must cover the complete Present span.`);
-          }
+          if (frames.length < 2) throw new Error(`${label}.marginAnimation requires two keyframes.`);
           let previous = -1;
           for (const [index, keyframe] of frames.entries()) {
             if (!Number.isSafeInteger(keyframe.atFrame) || keyframe.atFrame <= previous) {
