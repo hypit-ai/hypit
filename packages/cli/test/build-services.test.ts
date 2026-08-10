@@ -46,7 +46,7 @@ async function runSource(): Promise<string> {
   return path;
 }
 
-test("a declared service that is not ready stops the Build before it spends anything", async () => {
+test("a Build that cannot construct its Runtime starts no declared external service", async () => {
   const calls: string[] = [];
   const source = await runSource();
   await assert.rejects(
@@ -61,15 +61,9 @@ test("a declared service that is not ready stops the Build before it spends anyt
         detail: "uv failed: no such project",
       }]),
     ),
-    // Both reasons reach the operator: what the probe saw, and why the attempt
-    // to fix it fell short. Each names a different repair.
-    (error: Error) => /1 external service is not ready/u.test(error.message)
-      && /whisperx: down/u.test(error.message)
-      && /nothing is answering/u.test(error.message)
-      && /uv failed: no such project/u.test(error.message)
-      && /--no-services/u.test(error.message),
+    /createRuntimeFromConfig/u,
   );
-  assert.deepEqual(calls, ["up /p/svml.runtime.json"]);
+  assert.deepEqual(calls, []);
 });
 
 test("--no-services leaves the declared programs alone", async () => {
@@ -91,25 +85,6 @@ test("--no-services leaves the declared programs alone", async () => {
     /createRuntimeFromConfig/u,
   );
   assert.deepEqual(calls, []);
-});
-
-test("a Build whose services are all ready proceeds to compile", async () => {
-  const calls: string[] = [];
-  const source = await runSource();
-  await assert.rejects(
-    async () => await runCli(
-      ["build", source, "--runtime", "/p/svml.runtime.json"],
-      io,
-      distribution(calls, [{
-        id: "whisperx",
-        instances: ["whisperx.local"],
-        action: "already-running",
-        state: { state: "ready" },
-      }]),
-    ),
-    /createRuntimeFromConfig/u,
-  );
-  assert.deepEqual(calls, ["up /p/svml.runtime.json"]);
 });
 
 test("--no-services belongs to build, the only command that starts a program", async () => {

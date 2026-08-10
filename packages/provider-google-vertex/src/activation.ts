@@ -1,6 +1,6 @@
-import { credentialRef } from "@narratage/runtime";
 import {
   createRuntimeEndpointAdapterFacet,
+  runtimeConfigCredentialRef,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
@@ -15,16 +15,18 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   validate(context) {
     const config = runtimeConfigObject(context.config, "Google Vertex");
     runtimeConfigExact(config, [
-      "project", "projectEnv", "location", "credentialsEnv", "defaultConcurrency",
+      "project", "projectEnv", "location", "credentials", "defaultConcurrency",
       "requestTimeoutMs", "maxResponseBytes",
     ], "Google Vertex");
     const project = runtimeConfigString(config.project, "Google Vertex project");
     const projectEnv = runtimeConfigString(config.projectEnv, "Google Vertex projectEnv");
-    if (project !== undefined && projectEnv !== undefined) {
-      throw new Error("Google Vertex accepts project or projectEnv, not both");
+    if ((project === undefined) === (projectEnv === undefined)) {
+      throw new Error("Google Vertex requires exactly one of project or projectEnv");
     }
     runtimeConfigString(config.location, "Google Vertex location");
-    runtimeConfigString(config.credentialsEnv, "Google Vertex credentialsEnv");
+    if (runtimeConfigCredentialRef(config.credentials, "Google Vertex credentials") === undefined) {
+      throw new Error("Google Vertex credentials CredentialRef is required");
+    }
     runtimeConfigPositiveInteger(config.defaultConcurrency, "Google Vertex defaultConcurrency");
     runtimeConfigPositiveInteger(config.requestTimeoutMs, "Google Vertex requestTimeoutMs");
     runtimeConfigPositiveInteger(config.maxResponseBytes, "Google Vertex maxResponseBytes");
@@ -32,24 +34,25 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   create(context) {
     const config = runtimeConfigObject(context.config, "Google Vertex");
     runtimeConfigExact(config, [
-      "project", "projectEnv", "location", "credentialsEnv", "defaultConcurrency",
+      "project", "projectEnv", "location", "credentials", "defaultConcurrency",
       "requestTimeoutMs", "maxResponseBytes",
     ], "Google Vertex");
     const projectValue = runtimeConfigString(config.project, "Google Vertex project");
     const projectEnv = runtimeConfigString(config.projectEnv, "Google Vertex projectEnv");
-    if (projectValue !== undefined && projectEnv !== undefined) {
-      throw new Error("Google Vertex accepts project or projectEnv, not both");
+    if ((projectValue === undefined) === (projectEnv === undefined)) {
+      throw new Error("Google Vertex requires exactly one of project or projectEnv");
     }
-    const project = projectValue ?? (projectEnv === undefined ? undefined : process.env[projectEnv]?.trim());
-    if (project === undefined || project.length === 0) throw new Error("Google Vertex project is required");
-    const credentialsEnv = runtimeConfigString(config.credentialsEnv, "Google Vertex credentialsEnv");
+    const project = projectValue ?? process.env[projectEnv!]?.trim();
+    if (project === undefined || project.length === 0) throw new Error(`Google Vertex project environment ${projectEnv} is empty`);
+    const credentials = runtimeConfigCredentialRef(config.credentials, "Google Vertex credentials");
+    if (credentials === undefined) throw new Error("Google Vertex credentials CredentialRef is required");
     return createGoogleVertexCaptionProvider({
       project,
       instance: context.instance,
       ...(context.lane === undefined ? {} : { lane: context.lane }),
       ...(runtimeConfigString(config.location, "Google Vertex location") === undefined
         ? {} : { location: config.location as string }),
-      ...(credentialsEnv === undefined ? {} : { credentialsJson: credentialRef("env", credentialsEnv) }),
+      credentialsJson: credentials,
       ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "Google Vertex defaultConcurrency") === undefined
         ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
       ...(runtimeConfigPositiveInteger(config.requestTimeoutMs, "Google Vertex requestTimeoutMs") === undefined
@@ -60,16 +63,8 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   },
   doctor(context) {
     const config = runtimeConfigObject(context.config, "Google Vertex");
-    const project = runtimeConfigString(config.project, "Google Vertex project");
     const projectEnv = runtimeConfigString(config.projectEnv, "Google Vertex projectEnv");
-    const credentialsEnv = runtimeConfigString(config.credentialsEnv, "Google Vertex credentialsEnv")
-      ?? "GOOGLE_APPLICATION_CREDENTIALS_JSON";
-    return [
-      ...(project !== undefined
-        ? []
-        : diagnoseRuntimeEnvironmentCredential(projectEnv ?? "GOOGLE_CLOUD_PROJECT", "Google Vertex project")),
-      ...diagnoseRuntimeEnvironmentCredential(credentialsEnv, "Google Vertex credentials"),
-    ];
+    return projectEnv === undefined ? [] : diagnoseRuntimeEnvironmentCredential(projectEnv, "Google Vertex project");
   },
 });
 

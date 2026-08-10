@@ -1,46 +1,22 @@
-import { resolve } from "node:path";
-
-import { createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
-import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
 import {
   assembleRuntimeServices,
   verifyRuntimeServicePackage,
 } from "@narratage/runtime";
 import type {
-  ArtifactStore,
   BuildCatalog,
-  BuildStore,
-  CredentialStore,
-  OperationStore,
   RuntimeServiceAssembly,
-  RuntimeServiceFacetRole,
   RuntimeServicePackage,
+  RuntimeServiceSelection,
 } from "@narratage/runtime";
-import { createSqliteRuntimeServicePackage, SqliteRuntimeState } from "@narratage/store-sqlite";
 
-import { createLocalSchedulerPackage } from "./scheduler-package.js";
 import type { ProjectLocalRuntimeOptions } from "./types.js";
 
-export type ProjectRuntimeServiceSelection = {
-  readonly scheduler: string;
-  readonly stores: {
-    readonly build: string;
-    readonly operations: string;
-    readonly artifacts: string;
-    readonly credentials: string;
-  };
-};
-
-export type ProjectRuntimeServiceAssembly = RuntimeServiceAssembly & {
-  readonly buildStore: BuildStore;
-  readonly operationStore: OperationStore;
-  readonly artifactStore: ArtifactStore;
-  readonly credentialStore: CredentialStore;
-};
+export type ProjectRuntimeServiceSelection = RuntimeServiceSelection;
+export type ProjectRuntimeServiceAssembly = RuntimeServiceAssembly;
 
 export type AssembledProjectRuntimeServices = {
   readonly assembly: ProjectRuntimeServiceAssembly;
-  readonly catalog: BuildCatalog;
+  readonly catalog: BuildCatalog | undefined;
   readonly selection: ProjectRuntimeServiceSelection;
   readonly allowedPermissions: readonly string[];
   close(): Promise<void>;
@@ -50,177 +26,45 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function configuredServiceIds(
+function packageCatalog(
   packages: readonly RuntimeServicePackage[],
-  role: RuntimeServiceFacetRole,
-): readonly string[] {
-  return packages.flatMap((item) => item.services
-    .filter((service) => service.role === role)
-    .map((service) => service.instance.id));
+  buildStore: string,
+): BuildCatalog | undefined {
+  const owner = packages.find((item) => item.services.some((service) =>
+    service.role === "build-store" && service.instance.id === buildStore));
+  if (owner === undefined || !("catalog" in owner)) return undefined;
+  const catalog = (owner as { readonly catalog?: unknown }).catalog;
+  if (catalog === undefined) return undefined;
+  assert(catalog !== null && typeof catalog === "object"
+    && "record" in catalog && typeof catalog.record === "function"
+    && "read" in catalog && typeof catalog.read === "function"
+    && "list" in catalog && typeof catalog.list === "function",
+  `Runtime package ${owner.name} exposes an invalid Build Catalog`);
+  return catalog as BuildCatalog;
 }
 
 /**
- * A Runtime fills each role exactly once. One package may fill several roles —
- * the SQLite package supplies both stores from one file — but two packages
- * filling the same role is a configuration to correct, not an ambiguity to
- * resolve after the fact.
+ * Assemble only the services named by the Runtime Profile. This layer never manufactures a
+ * Scheduler, Worker, Store, path, permission or credential source on the project's behalf.
  */
-function chooseService(
-  packages: readonly RuntimeServicePackage[],
-  role: RuntimeServiceFacetRole,
-  fallback: string,
-): string {
-  const configured = configuredServiceIds(packages, role);
-  if (configured.length === 0) return fallback;
-  if (configured.length === 1) return configured[0]!;
-  throw new Error(
-    `runtimeServices configures ${configured.length} ${role} implementations (${configured.join(", ")}); a Runtime uses one`,
-  );
-}
-
-function hasConfiguredService(
-  packages: readonly RuntimeServicePackage[],
-  id: string,
-): boolean {
-  return packages.some((item) => item.services.some((service) => service.instance.id === id));
-}
-
-function manifestPermissions(packages: readonly RuntimeServicePackage[]): readonly string[] {
-  return [...new Set(packages.flatMap((item) => item.manifest.facets.flatMap((facet) => facet.permissions)))];
-}
-
-async function closeServicePackages(packages: readonly RuntimeServicePackage[]): Promise<void> {
-  const closed = new Set<RuntimeServicePackage>();
-  for (const item of [...packages].reverse()) {
-    if (closed.has(item)) continue;
-    closed.add(item);
-    await item.close?.();
-  }
-}
-
-async function closeAfterFailure(
-  packages: readonly RuntimeServicePackage[],
-  error: unknown,
-): Promise<never> {
-  try {
-    await closeServicePackages(packages);
-  } catch (closeError) {
-    throw new AggregateError([error, closeError], "Runtime service assembly and cleanup both failed");
-  }
-  throw error;
-}
-
-function projectSelection(
-  packages: readonly RuntimeServicePackage[],
-  options: ProjectLocalRuntimeOptions,
-): ProjectRuntimeServiceSelection {
-  return {
-    scheduler: chooseService(packages, "scheduler", "scheduler.local"),
-    stores: {
-      build: chooseService(packages, "build-store", "builds.sqlite"),
-      operations: chooseService(packages, "operation-store", "operations.sqlite"),
-      artifacts: chooseService(packages, "artifact-store", "artifacts.fs"),
-      credentials: chooseService(packages, "credential-store", "credentials.env"),
-    },
-  };
-}
-
-/** Local-distribution defaults and exact service selection, separate from Build execution. */
 export async function createProjectRuntimeServices(
-  root: string,
+  _root: string,
   options: ProjectLocalRuntimeOptions,
 ): Promise<AssembledProjectRuntimeServices> {
-  const configured = [...(options.runtimeServices ?? [])];
-  let selection: ProjectRuntimeServiceSelection;
+  const packages = [...options.runtimeServices];
   try {
-    for (const item of configured) verifyRuntimeServicePackage(item);
-    selection = projectSelection(configured, options);
-  } catch (error) {
-    return await closeAfterFailure(configured, error);
-  }
-
-  const defaults: RuntimeServicePackage[] = [];
-  let defaultCatalog: BuildCatalog | undefined;
-  let standaloneCatalog: SqliteRuntimeState | undefined;
-  try {
-    if (!hasConfiguredService(configured, selection.scheduler)) {
-      assert(selection.scheduler === "scheduler.local", `unknown selected scheduler ${selection.scheduler}`);
-      defaults.push(createLocalSchedulerPackage(selection.scheduler));
-    }
-    const needsDefaultBuild = !hasConfiguredService(configured, selection.stores.build);
-    const needsDefaultOperations = !hasConfiguredService(configured, selection.stores.operations);
-    if (needsDefaultBuild || needsDefaultOperations) {
-      assert((!needsDefaultBuild || selection.stores.build === "builds.sqlite")
-        && (!needsDefaultOperations || selection.stores.operations === "operations.sqlite"),
-      "unknown selected BuildStore or OperationStore");
-      const sqlite = createSqliteRuntimeServicePackage({
-        path: resolve(root, options.statePath ?? ".svml/runtime.sqlite"),
-        buildInstance: "builds.sqlite",
-        operationInstance: "operations.sqlite",
-      });
-      defaults.push(sqlite);
-      defaultCatalog = sqlite.catalog;
-    } else if (options.statePath !== undefined) {
-      throw new Error("statePath configures the default SQLite services, but neither was selected");
-    }
-    if (!hasConfiguredService(configured, selection.stores.artifacts)) {
-      assert(selection.stores.artifacts === "artifacts.fs",
-        `unknown selected ArtifactStore ${selection.stores.artifacts}`);
-      defaults.push(createFileArtifactStorePackage({
-        root: resolve(root, options.artifactPath ?? ".svml/artifacts"),
-        instance: selection.stores.artifacts,
-      }));
-    } else if (options.artifactPath !== undefined) {
-      throw new Error("artifactPath configures the default filesystem ArtifactStore, but it was not selected");
-    }
-    if (!hasConfiguredService(configured, selection.stores.credentials)) {
-      assert(selection.stores.credentials === "credentials.env",
-        `unknown selected CredentialStore ${selection.stores.credentials}`);
-      defaults.push(createEnvironmentCredentialStorePackage({ instance: selection.stores.credentials }));
-    }
-    if (options.buildCatalog !== undefined && options.catalogPath !== undefined) {
-      throw new Error("buildCatalog and catalogPath are mutually exclusive");
-    }
-    let catalog = options.buildCatalog;
-    if (catalog === undefined && options.catalogPath !== undefined) {
-      standaloneCatalog = new SqliteRuntimeState(resolve(root, options.catalogPath));
-      catalog = standaloneCatalog.catalog;
-    }
-    if (catalog === undefined) catalog = defaultCatalog;
-    if (catalog === undefined) {
-      standaloneCatalog = new SqliteRuntimeState(resolve(root, ".svml/catalog.sqlite"));
-      catalog = standaloneCatalog.catalog;
-    }
-    const assembly = assembleRuntimeServices([...configured, ...defaults], selection);
-    assert(assembly.buildStore !== undefined, "project Runtime requires a BuildStore");
-    assert(assembly.operationStore !== undefined, "project Runtime requires an OperationStore");
-    assert(assembly.artifactStore !== undefined, "project Runtime requires an ArtifactStore");
-    assert(assembly.credentialStore !== undefined, "project Runtime requires a CredentialStore");
-    const complete: ProjectRuntimeServiceAssembly = {
-      ...assembly,
-      buildStore: assembly.buildStore,
-      operationStore: assembly.operationStore,
-      artifactStore: assembly.artifactStore,
-      credentialStore: assembly.credentialStore,
-    };
+    for (const item of packages) verifyRuntimeServicePackage(item);
+    const assembly = assembleRuntimeServices(packages, options.runtimeSelection);
+    const catalog = options.buildCatalog ?? packageCatalog(packages, options.runtimeSelection.stores.build);
     return {
-      assembly: complete,
+      assembly,
       catalog,
-      selection,
-      allowedPermissions: [
-        ...manifestPermissions(defaults),
-        ...(options.allowedPermissions ?? []),
-      ],
-      async close() {
-        try {
-          await complete.close();
-        } finally {
-          standaloneCatalog?.close();
-        }
-      },
+      selection: options.runtimeSelection,
+      allowedPermissions: [...options.allowedPermissions],
+      close: () => assembly.close(),
     };
   } catch (error) {
-    standaloneCatalog?.close();
-    return await closeAfterFailure([...configured, ...defaults], error);
+    for (const item of [...packages].reverse()) await item.close?.();
+    throw error;
   }
 }

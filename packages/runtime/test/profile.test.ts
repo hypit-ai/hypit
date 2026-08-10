@@ -38,24 +38,23 @@ function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
         },
         permissions: [],
       },
-      {
-        name: "memory-build-store",
-        role: "build-store",
+      ...([
+        ["local-worker", "worker"],
+        ["memory-build-store", "build-store"],
+        ["memory-operation-store", "operation-store"],
+        ["memory-dispatch-store", "dispatch-store"],
+        ["memory-runtime-journal", "runtime-journal"],
+        ["memory-artifact-store", "artifact-store"],
+        ["memory-credential-store", "credential-store"],
+      ] as const).map(([name, role]) => ({
+        name,
+        role,
         implementation: {
-          locator: "example.runtime-fixture/memory-build-store",
-          digest: digestOf("example.runtime-fixture/memory-build-store@1"),
+          locator: `example.runtime-fixture/${name}`,
+          digest: digestOf(`example.runtime-fixture/${name}@1`),
         },
         permissions: [],
-      },
-      {
-        name: "memory-operation-store",
-        role: "operation-store",
-        implementation: {
-          locator: "example.runtime-fixture/memory-operation-store",
-          digest: digestOf("example.runtime-fixture/memory-operation-store@1"),
-        },
-        permissions: [],
-      },
+      })),
       {
         name: endpointFacet.name,
         role: "capability-endpoint",
@@ -77,11 +76,16 @@ function profile(options: { readonly operations?: boolean; readonly lane?: numbe
     name: "fixture.local",
     instances: [
       { id: "scheduler.local", facet: { module: runtimeModule, name: "local-scheduler" } },
+      { id: "worker.local", facet: { module: runtimeModule, name: "local-worker" } },
       { id: "build.memory", facet: { module: runtimeModule, name: "memory-build-store" } },
       ...(options.operations === false ? [] : [{
         id: "operations.memory",
         facet: { module: runtimeModule, name: "memory-operation-store" },
       }]),
+      { id: "dispatch.memory", facet: { module: runtimeModule, name: "memory-dispatch-store" } },
+      { id: "journal.memory", facet: { module: runtimeModule, name: "memory-runtime-journal" } },
+      { id: "artifacts.memory", facet: { module: runtimeModule, name: "memory-artifact-store" } },
+      { id: "credentials.memory", facet: { module: runtimeModule, name: "memory-credential-store" } },
       {
         id: "greeting.local",
         facet: endpointFacet,
@@ -89,9 +93,14 @@ function profile(options: { readonly operations?: boolean; readonly lane?: numbe
       },
     ],
     scheduler: "scheduler.local",
+    worker: "worker.local",
     stores: {
       build: "build.memory",
-      ...(options.operations === false ? {} : { operations: "operations.memory" }),
+      operations: "operations.memory",
+      dispatch: "dispatch.memory",
+      journal: "journal.memory",
+      artifacts: "artifacts.memory",
+      credentials: ["credentials.memory"],
     },
     endpoints: [{
       capability: capabilities.generation,
@@ -165,11 +174,11 @@ test("recoverable Endpoints require an OperationStore before any paid execution"
   registry.register(manifest());
   assert.throws(
     () => resolveRuntimeProfile(registry, profile({ operations: false })),
-    /require an OperationStore/u,
+    /operations store/u,
   );
 });
 
-test("credentialed Endpoints require an explicitly selected CredentialStore", () => {
+test("a selected CredentialStore is part of every explicit Runtime Profile", () => {
   const registry = new RuntimeModuleRegistry();
   const configured = manifest();
   registry.register({
@@ -178,10 +187,7 @@ test("credentialed Endpoints require an explicitly selected CredentialStore", ()
       ? { ...facet, credentialSlots: ["apiKey"] }
       : facet),
   });
-  assert.throws(
-    () => resolveRuntimeProfile(registry, profile()),
-    /require a CredentialStore/u,
-  );
+  assert.doesNotThrow(() => resolveRuntimeProfile(registry, profile()));
 });
 
 test("Runtime permissions require an explicit Host allowlist", () => {

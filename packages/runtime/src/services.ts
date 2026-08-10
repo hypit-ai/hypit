@@ -1,7 +1,9 @@
 import { canonicalize, digestOf, isDigest } from "@narratage/protocol";
 import type { CanonicalValue, Digest, ModuleRef } from "@narratage/protocol";
 
+import { CompositeCredentialStore } from "./credentials.js";
 import type { CredentialStore } from "./credentials.js";
+import type { BuildDispatchStore, RuntimeJournal } from "./dispatch.js";
 import type { OperationStore } from "./operations.js";
 import {
   RuntimeModuleRegistry,
@@ -15,6 +17,7 @@ import type {
   ArtifactStore,
   BuildSchedulerFactory,
   BuildStore,
+  RuntimeWorkerFactory,
 } from "./types.js";
 
 type RuntimeServiceBase<Role extends RuntimeServiceFacetRole, Service> = {
@@ -24,15 +27,21 @@ type RuntimeServiceBase<Role extends RuntimeServiceFacetRole, Service> = {
 };
 
 export type RuntimeSchedulerService = RuntimeServiceBase<"scheduler", BuildSchedulerFactory>;
+export type RuntimeWorkerService = RuntimeServiceBase<"worker", RuntimeWorkerFactory>;
 export type RuntimeBuildStoreService = RuntimeServiceBase<"build-store", BuildStore>;
 export type RuntimeOperationStoreService = RuntimeServiceBase<"operation-store", OperationStore>;
+export type RuntimeDispatchStoreService = RuntimeServiceBase<"dispatch-store", BuildDispatchStore>;
+export type RuntimeJournalService = RuntimeServiceBase<"runtime-journal", RuntimeJournal>;
 export type RuntimeArtifactStoreService = RuntimeServiceBase<"artifact-store", ArtifactStore>;
 export type RuntimeCredentialStoreService = RuntimeServiceBase<"credential-store", CredentialStore>;
 
 export type RuntimeService =
   | RuntimeSchedulerService
+  | RuntimeWorkerService
   | RuntimeBuildStoreService
   | RuntimeOperationStoreService
+  | RuntimeDispatchStoreService
+  | RuntimeJournalService
   | RuntimeArtifactStoreService
   | RuntimeCredentialStoreService;
 
@@ -59,8 +68,11 @@ type RuntimeServiceDefinitionBase<Role extends RuntimeServiceFacetRole, Service>
 
 export type RuntimeServiceDefinition =
   | RuntimeServiceDefinitionBase<"scheduler", BuildSchedulerFactory>
+  | RuntimeServiceDefinitionBase<"worker", RuntimeWorkerFactory>
   | RuntimeServiceDefinitionBase<"build-store", BuildStore>
   | RuntimeServiceDefinitionBase<"operation-store", OperationStore>
+  | RuntimeServiceDefinitionBase<"dispatch-store", BuildDispatchStore>
+  | RuntimeServiceDefinitionBase<"runtime-journal", RuntimeJournal>
   | RuntimeServiceDefinitionBase<"artifact-store", ArtifactStore>
   | RuntimeServiceDefinitionBase<"credential-store", CredentialStore>;
 
@@ -73,11 +85,14 @@ export type DefineRuntimeServicePackageOptions = {
 
 export type RuntimeServiceSelection = {
   readonly scheduler: string;
+  readonly worker: string;
   readonly stores: {
-    readonly build?: string;
-    readonly operations?: string;
-    readonly artifacts?: string;
-    readonly credentials?: string;
+    readonly build: string;
+    readonly operations: string;
+    readonly dispatch: string;
+    readonly journal: string;
+    readonly artifacts: string;
+    readonly credentials: readonly string[];
   };
 };
 
@@ -85,10 +100,13 @@ export type RuntimeServiceAssembly = {
   readonly manifests: readonly RuntimeModuleManifest[];
   readonly instances: readonly RuntimeProfileInstance[];
   readonly scheduler: BuildSchedulerFactory;
-  readonly buildStore?: BuildStore;
-  readonly operationStore?: OperationStore;
-  readonly artifactStore?: ArtifactStore;
-  readonly credentialStore?: CredentialStore;
+  readonly worker: RuntimeWorkerFactory;
+  readonly buildStore: BuildStore;
+  readonly operationStore: OperationStore;
+  readonly dispatchStore: BuildDispatchStore;
+  readonly journal: RuntimeJournal;
+  readonly artifactStore: ArtifactStore;
+  readonly credentialStore: CredentialStore;
   close(): Promise<void>;
 };
 
@@ -122,6 +140,9 @@ function verifyServicePort(service: RuntimeService): void {
     case "scheduler":
       callable(service.service, "create", service.instance.id);
       break;
+    case "worker":
+      callable(service.service, "create", service.instance.id);
+      break;
     case "build-store":
       callable(service.service, "create", service.instance.id);
       callable(service.service, "read", service.instance.id);
@@ -132,6 +153,16 @@ function verifyServicePort(service: RuntimeService): void {
       callable(service.service, "read", service.instance.id);
       callable(service.service, "list", service.instance.id);
       callable(service.service, "compareAndSwap", service.instance.id);
+      break;
+    case "dispatch-store":
+      for (const method of [
+        "create", "read", "list", "claim", "heartbeat", "release", "finish", "requestCancellation",
+        "acquireCapacity", "heartbeatCapacity", "parkCapacity", "releaseCapacity", "clearCapacity", "listCapacity",
+      ]) callable(service.service, method, service.instance.id);
+      break;
+    case "runtime-journal":
+      callable(service.service, "append", service.instance.id);
+      callable(service.service, "list", service.instance.id);
       break;
     case "artifact-store":
       callable(service.service, "put", service.instance.id);
@@ -255,11 +286,15 @@ export function assembleRuntimeServices(
     }
   }
   const scheduler = selectedService(services, selection.scheduler, "scheduler")!;
+  const worker = selectedService(services, selection.worker, "worker")!;
   const build = selectedService(services, selection.stores.build, "build-store");
   const operations = selectedService(services, selection.stores.operations, "operation-store");
+  const dispatch = selectedService(services, selection.stores.dispatch, "dispatch-store");
+  const journal = selectedService(services, selection.stores.journal, "runtime-journal");
   const artifacts = selectedService(services, selection.stores.artifacts, "artifact-store");
-  const credentials = selectedService(services, selection.stores.credentials, "credential-store");
-  const selected = [scheduler, build, operations, artifacts, credentials]
+  assert(selection.stores.credentials.length > 0, "Runtime must explicitly select at least one CredentialStore");
+  const credentialServices = selection.stores.credentials.map((id) => selectedService(services, id, "credential-store")!);
+  const selected = [scheduler, worker, build, operations, dispatch, journal, artifacts, ...credentialServices]
     .filter((item): item is NonNullable<typeof item> => item !== undefined);
   const selectedPackages = [...new Set(selected.map((item) => item.package))];
   let closed = false;
@@ -267,10 +302,13 @@ export function assembleRuntimeServices(
     manifests: selectedPackages.map((item) => item.manifest),
     instances: selected.map((item) => item.service.instance),
     scheduler: scheduler.service.service,
-    ...(build === undefined ? {} : { buildStore: build.service.service }),
-    ...(operations === undefined ? {} : { operationStore: operations.service.service }),
-    ...(artifacts === undefined ? {} : { artifactStore: artifacts.service.service }),
-    ...(credentials === undefined ? {} : { credentialStore: credentials.service.service }),
+    worker: worker.service.service,
+    buildStore: build!.service.service,
+    operationStore: operations!.service.service,
+    dispatchStore: dispatch!.service.service,
+    journal: journal!.service.service,
+    artifactStore: artifacts!.service.service,
+    credentialStore: new CompositeCredentialStore(credentialServices.map((item) => item.service.service)),
     async close() {
       if (closed) return;
       closed = true;

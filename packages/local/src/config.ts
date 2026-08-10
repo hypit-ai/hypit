@@ -14,6 +14,7 @@ import type {
   RuntimeExternalService,
   RuntimeServiceState,
 } from "@narratage/runtime-adapter";
+import type { RuntimeServiceSelection } from "@narratage/runtime";
 
 import type { LocalRuntime } from "./types.js";
 
@@ -30,18 +31,16 @@ export type RuntimeConfigDocument = {
   readonly root?: string;
   /** Resolved relative to the configuration file. Locates installed Node packages, not Runtime data. */
   readonly packageRoot?: string;
-  readonly statePath?: string;
-  readonly catalogPath?: string;
-  readonly artifactPath?: string;
   readonly packageLock?: string;
   /** Locked physical packages allowed to configure privileged Runtime adapters. */
   readonly runtimePackageLock?: string;
   /** Replaceable parts of the Runtime itself. One package may fill several roles. */
   readonly runtimeServices: readonly RuntimeConfigEntry[];
+  readonly services: RuntimeServiceSelection;
   readonly endpoints: readonly RuntimeConfigEntry[];
   readonly permissions: readonly string[];
-  readonly scheduling?: {
-    readonly maxConcurrency?: number;
+  readonly scheduling: {
+    readonly maxConcurrency: number;
     readonly lanes?: Readonly<Record<string, number>>;
     readonly maxEventsPerBuild?: number;
   };
@@ -97,7 +96,7 @@ function entry(value: unknown, subject: string, laneAllowed: boolean): RuntimeCo
 
 
 function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
-  if (value === undefined) return undefined;
+  if (value === undefined) throw new Error("$runtime.scheduling is required");
   const item = object(value, "$runtime.scheduling");
   exactKeys(item, ["maxConcurrency", "lanes", "maxEventsPerBuild"], "$runtime.scheduling");
   const lanes = item.lanes === undefined ? undefined : object(item.lanes, "$runtime.scheduling.lanes");
@@ -105,10 +104,10 @@ function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
     if (name.trim().length === 0) throw new Error("Runtime lane name must not be empty");
     return [name, positiveInteger(limit, `$runtime.scheduling.lanes.${name}`)!];
   }));
+  const maxConcurrency = positiveInteger(item.maxConcurrency, "$runtime.scheduling.maxConcurrency");
+  if (maxConcurrency === undefined) throw new Error("$runtime.scheduling.maxConcurrency is required");
   return {
-    ...(positiveInteger(item.maxConcurrency, "$runtime.scheduling.maxConcurrency") === undefined
-      ? {}
-      : { maxConcurrency: item.maxConcurrency as number }),
+    maxConcurrency,
     ...(normalizedLanes === undefined ? {} : { lanes: normalizedLanes }),
     ...(positiveInteger(item.maxEventsPerBuild, "$runtime.scheduling.maxEventsPerBuild") === undefined
       ? {}
@@ -116,18 +115,39 @@ function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
   };
 }
 
+function serviceSelection(value: unknown): RuntimeServiceSelection {
+  const item = object(value, "$runtime.services");
+  exactKeys(item, ["scheduler", "worker", "stores"], "$runtime.services");
+  const stores = object(item.stores, "$runtime.services.stores");
+  exactKeys(stores, ["build", "operations", "dispatch", "journal", "artifacts", "credentials"],
+    "$runtime.services.stores");
+  const credentials = stringList(stores.credentials, "$runtime.services.stores.credentials");
+  if (credentials.length === 0) throw new Error("$runtime.services.stores.credentials must select at least one store");
+  return {
+    scheduler: requiredString(item.scheduler, "$runtime.services.scheduler"),
+    worker: requiredString(item.worker, "$runtime.services.worker"),
+    stores: {
+      build: requiredString(stores.build, "$runtime.services.stores.build"),
+      operations: requiredString(stores.operations, "$runtime.services.stores.operations"),
+      dispatch: requiredString(stores.dispatch, "$runtime.services.stores.dispatch"),
+      journal: requiredString(stores.journal, "$runtime.services.stores.journal"),
+      artifacts: requiredString(stores.artifacts, "$runtime.services.stores.artifacts"),
+      credentials,
+    },
+  };
+}
+
 export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
   exactKeys(item, [
-    "format", "root", "packageRoot", "statePath", "catalogPath", "artifactPath", "packageLock", "runtimePackageLock",
-    "runtimeServices", "endpoints",
+    "format", "root", "packageRoot", "packageLock", "runtimePackageLock",
+    "runtimeServices", "services", "endpoints",
     "permissions", "scheduling",
   ], "$runtime");
   if (item.format !== "svml.runtime-config@1") throw new Error("$runtime.format must be svml.runtime-config@1");
-  const runtimeServices = item.runtimeServices === undefined ? [] : (() => {
-    if (!Array.isArray(item.runtimeServices)) throw new Error("$runtime.runtimeServices must be an array");
-    return item.runtimeServices.map((value, index) => entry(value, `$runtime.runtimeServices[${index}]`, false));
-  })();
+  if (!Array.isArray(item.runtimeServices)) throw new Error("$runtime.runtimeServices must be an array");
+  const runtimeServices = item.runtimeServices.map((value, index) =>
+    entry(value, `$runtime.runtimeServices[${index}]`, false));
   const endpoints = item.endpoints === undefined ? [] : (() => {
     if (!Array.isArray(item.endpoints)) throw new Error("$runtime.endpoints must be an array");
     return item.endpoints.map((value, index) => entry(value, `$runtime.endpoints[${index}]`, true));
@@ -141,17 +161,15 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
     ...(optionalString(item.packageRoot, "$runtime.packageRoot") === undefined
       ? {}
       : { packageRoot: item.packageRoot as string }),
-    ...(optionalString(item.statePath, "$runtime.statePath") === undefined ? {} : { statePath: item.statePath as string }),
-    ...(optionalString(item.catalogPath, "$runtime.catalogPath") === undefined ? {} : { catalogPath: item.catalogPath as string }),
-    ...(optionalString(item.artifactPath, "$runtime.artifactPath") === undefined ? {} : { artifactPath: item.artifactPath as string }),
     ...(optionalString(item.packageLock, "$runtime.packageLock") === undefined ? {} : { packageLock: item.packageLock as string }),
     ...(optionalString(item.runtimePackageLock, "$runtime.runtimePackageLock") === undefined
       ? {}
       : { runtimePackageLock: item.runtimePackageLock as string }),
     runtimeServices,
+    services: serviceSelection(item.services),
     endpoints,
     permissions: stringList(item.permissions, "$runtime.permissions"),
-    ...(scheduled === undefined ? {} : { scheduling: scheduled }),
+    scheduling: scheduled,
   };
 }
 
@@ -383,14 +401,12 @@ export async function createRuntimeFromConfig(
   return await createProjectLocalRuntime({
     root,
     packageRoot,
-    ...(document.statePath === undefined ? {} : { statePath: document.statePath }),
-    ...(document.catalogPath === undefined ? {} : { catalogPath: document.catalogPath }),
-    ...(document.artifactPath === undefined ? {} : { artifactPath: document.artifactPath }),
     ...(document.packageLock === undefined ? {} : { packageLock: document.packageLock }),
     runtimeServices,
+    runtimeSelection: document.services,
     components: options.components ?? [],
     endpoints,
     allowedPermissions: document.permissions,
-    ...(document.scheduling === undefined ? {} : { scheduling: document.scheduling }),
+    scheduling: document.scheduling,
   });
 }

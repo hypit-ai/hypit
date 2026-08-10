@@ -253,6 +253,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
       apiBaseUrl, requestTimeoutMs, maxResponseBytes, maxVoiceSampleBase64Bytes, transportDigest,
     }),
     credentials: { apiKey: options.apiKey ?? credentialRef("env", "MIMO_API_KEY") },
+    credentialInputs: { apiKey: { label: "Xiaomi MiMo API key" } },
     defaultConcurrency: options.defaultConcurrency ?? 2,
     capabilities: endpointCapabilities,
   });
