@@ -33,7 +33,7 @@ program order — the final sequence of Segments in the finished video.
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Unique identifier |
-| `canvas` | yes | Explicit CanvasSpace used by the restricted Media visual projection |
+| `canvas` | yes | CanvasSpace used explicitly by constrained Media visual projections |
 
 ### speech:Take
 
@@ -41,7 +41,7 @@ Each `<speech:Take>` child binds a generated video to a Script Segment:
 
 | Attribute | Required | Description |
 |---|---|---|
-| `source` | yes | Generated video — for example, from `seedance:ReferenceVideo` |
+| `source` | yes | Generated video — from `seedance:Speech`, `speaker:Take`, etc. |
 | `segment` | yes | Script Segment this take corresponds to — e.g. `{story.segment.hook}` |
 
 The order of `<speech:Take>` children **determines the program order**. The first take starts at
@@ -77,7 +77,7 @@ This produces the **SemanticMap** — the bridge between Script text and physica
 
 | Output | Type | Used by |
 |---|---|---|
-| `{timing.map}` | CompleteSemanticMap | Caption Style-family Tracks, `media-track:Track`, `text:Track` — timed placement |
+| `{timing.map}` | CompleteSemanticMap | `caption-fine:Track`, `media-track:Track`, `text:Track` — timed placement |
 
 The SemanticMap maps every authored Script anchor to a time point. It covers all `2M + 2N` identities
 (where M = total speech tokens, N = number of Segments). This is how Selections and Moments declared
@@ -107,7 +107,7 @@ Every component that operates in the time domain takes a `space` attribute point
 ## SemanticMap
 
 The SemanticMap is the typed bridge between Script text and physical time. When you write
-`during={story.selection.demo}` on a Media Item, the component uses the SemanticMap to look up the
+`during={story.selection.demo}` on a Media item, the component uses the SemanticMap to look up the
 exact frame range that Selection covers. Without a SemanticMap, Selections and Moments have no
 physical meaning.
 
@@ -118,10 +118,10 @@ Components that use the map take it via the `map` attribute:
 <caption-fine:Track id="captions" ... map={timing.map} .../>
 ```
 
-The map contains final token windows and semantic anchor points only. It does not propagate
-`measured`, `derived` or `estimated` labels. WhisperX evidence and the deterministic M:N aligner are
-responsible for using the available recording evidence; downstream Tracks receive one complete map
-and do not reinterpret how each point was obtained.
+The Map contains only the final word windows and semantic anchors — it does not propagate
+"measured, derived, estimated" labels. WhisperX Evidence and the deterministic M:N aligner are
+responsible for making full use of recorded evidence; downstream Tracks receive one complete Map
+and no longer interpret how each point was obtained.
 
 ## Combination example
 
@@ -152,7 +152,7 @@ The complete timing stage, from generated takes to map and space:
 The data flow:
 
 ```text
-generated video(s) ─────► speech:Spine ──► whisperx:Alignment
+speaker:Take outputs ──► speech:Spine ──► whisperx:Alignment
                               │                    │
                          .visual              .map (SemanticMap)
                          .audio                    │
