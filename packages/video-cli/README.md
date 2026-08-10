@@ -12,9 +12,9 @@ From the repository:
 
 ```bash
 pnpm narratage lock-packages ./svml.packages.lock \
-  --package @narratage/run-markup --package @narratage/script --package @example/cards --root .
+  --package @narratage/run-markup --package @narratage/script --package @example/cards --package-root .
 pnpm narratage lock-packages ./svml.runtime-packages.lock \
-  --package @narratage/provider-kie --package @narratage/provider-media-local --root .
+  --package @narratage/provider-kie --package @narratage/provider-media-local --package-root .
 pnpm narratage check path/to/main.svml --package-lock ./svml.packages.lock --root .
 pnpm narratage check path/to/build.svrun --package-lock ./svml.packages.lock --root .
 pnpm narratage plan path/to/build.svrun --package-lock ./svml.packages.lock --root .
@@ -28,6 +28,13 @@ pnpm narratage cancel <build-id> --runtime ./svml.runtime.json
 pnpm narratage doctor ./svml.runtime.json
 pnpm narratage gc ./svml.runtime.json
 ```
+
+`--root` is only the Source Workspace containment boundary. `--package-root` is only the Host
+override used to resolve the installed packages named by a lock; by default this Distribution uses
+its own installation location. Keeping the two concepts separate lets a video project live outside
+this checkout without weakening canonical-path source and asset containment. A JSON Runtime Profile
+has the same optional `packageRoot` override while retaining state and Artifacts under its own
+`root`.
 
 `check` is usable for an Author Source or a complete Run Source. `plan` and `build` require a Run
 Source because an Author Graph without execution intent is not a Build. The live example executes

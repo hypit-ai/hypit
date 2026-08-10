@@ -1,5 +1,36 @@
 {
   "format": "svml.node-package-lock@1",
+  "selected": [
+    "@narratage/artifact",
+    "@narratage/caption",
+    "@narratage/caption-fine",
+    "@narratage/caption-gemini",
+    "@narratage/composition",
+    "@narratage/estimate",
+    "@narratage/film",
+    "@narratage/fonts-open",
+    "@narratage/generation",
+    "@narratage/hyperframes",
+    "@narratage/media",
+    "@narratage/media-pipeline",
+    "@narratage/narrative",
+    "@narratage/program-space",
+    "@narratage/render-hyperframes",
+    "@narratage/run-markup",
+    "@narratage/script",
+    "@narratage/seedance",
+    "@narratage/semantic-map",
+    "@narratage/spatial",
+    "@narratage/speech",
+    "@narratage/speech-alignment",
+    "@narratage/speech-basis",
+    "@narratage/speech-evidence",
+    "@narratage/speech-spine",
+    "@narratage/svs",
+    "@narratage/text",
+    "@narratage/visual-ir",
+    "@narratage/whisperx"
+  ],
   "artifacts": [
     {
       "name": "@fontsource-variable/archivo",
@@ -554,7 +585,7 @@
     {
       "name": "@narratage/caption-fine",
       "version": "0.0.0-dev",
-      "digest": "sha256:8094384ca1980ee72e0a5621a7ee9d62aec167521fdb536eb068eeeecee2ec9c"
+      "digest": "sha256:b66c7ab8ce58cad4c6254f1d18b4be3fbdd353b6910fc7a2657cb09781a6ecc7"
     },
     {
       "name": "@narratage/caption-gemini",
@@ -724,7 +755,7 @@
     {
       "name": "@narratage/svs",
       "version": "0.0.0-dev",
-      "digest": "sha256:e44ae945c23e041602eb2f029a4c72b96fc2525e6c767e117e2bf0f11a830e0e"
+      "digest": "sha256:2658027814f0be50cfea761cf5a7ee42004dc30d7b9e252750940a7a8fcddca5"
     },
     {
       "name": "@narratage/temporal",
@@ -783,7 +814,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:c5616408dd56ce9c903523319b2a697ff6b8af5bfe1dc66fe793a11e4629f3cf",
-      "closureDigest": "sha256:79c0da36f1526e8fab9682b3255667599d9dcd67b584602b7b60713fee841f97"
+      "closureDigest": "sha256:3ba4088d7e8703f27748b52ba9e4964d799d474c22d9da17afb2c0d7625a8a80"
     },
     {
       "specifier": "@narratage/caption-gemini",
@@ -810,7 +841,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:9975815b3109520eb6bba276554a90767a9aebff6498c2768d9faf4763219bef",
-      "closureDigest": "sha256:8c7022b670c9ba8bb33c58540775a65f0da7e5f8d149ca2494bba34fbd3df8a2"
+      "closureDigest": "sha256:811be87579f5934cdcf1289253cc31e835b3fc9f97a4911ad88fc01a387f7d65"
     },
     {
       "specifier": "@narratage/film",
@@ -819,7 +850,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:8e58b5630b9a68a8ce7314620f5f1c7cda973a05c179c18d61e10d68002964f0",
-      "closureDigest": "sha256:defb86a53cf0e6683fe54592ac168e307a5e32b1e76ce851d5d9804fd0ef7095"
+      "closureDigest": "sha256:f78c843e6e47e0571f922caecb294c60dd5b423658a0b98fc7377db3cbdafbd0"
     },
     {
       "specifier": "@narratage/fonts-open",
@@ -837,7 +868,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:d74a57a3210267e665366513324db5c313b3ca0f770da66e74cc38aee5048efb",
-      "closureDigest": "sha256:f0999a26b4590b0110e25256f892ad580540618c07c436e916672c3cb371eca2"
+      "closureDigest": "sha256:0a3093f555ce7e80832dd1fec8a5d575fcf2b3b86a0ecf4e840babd7d9080120"
     },
     {
       "specifier": "@narratage/hyperframes",
@@ -909,7 +940,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:69e1c08a5f07c73a506ca8286426a0386485738649e86463cca0b291f319ee4e",
-      "closureDigest": "sha256:dfded35adc0aa0d163fba58d375fccc9a69b4ad1168744dc9c2826b9f914cd78"
+      "closureDigest": "sha256:5031128c71900c50b7ca9527bbbfabc85b0f310a9fc84034959df8b4b35c65d2"
     },
     {
       "specifier": "@narratage/seedance",
@@ -918,7 +949,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e889ca3808a19f544e7aa5e27453beb5a09464c645633b0b1b1d9a4b7ce6591a",
-      "closureDigest": "sha256:dfba58117095497c73bd830149da98ce3e560d4ef9201a3e793286c059ade869"
+      "closureDigest": "sha256:193c1f9937adbd21bc0dbac47cbfb18a0f5cc15d7748de3d7717fb1683739004"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -963,7 +994,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:f01f21badb0ccdd5cc62b131be05f46030bffee96042c7323a0c572786d012ef",
-      "closureDigest": "sha256:992c1bda3746087ee746b03eee75fe8309d0b5f351f9ebb1da7e6b5793d37e54"
+      "closureDigest": "sha256:725bd1a8411596f0ad284260e7f3c189eaa9d20bd46706ee824b0848eadc019e"
     },
     {
       "specifier": "@narratage/speech-evidence",
@@ -981,7 +1012,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:a27dd4349d6bb1aaa7f382ad09f883e9894157579e48285b00e8fa24456190f7",
-      "closureDigest": "sha256:8f52117330a8c3c08e2346ba08e8c61fe05a92d776a142e405e1b397ee778584"
+      "closureDigest": "sha256:af643b38d811656e465a06d24eaebe7d0de7c184f86a13db56b244a4463373b8"
     },
     {
       "specifier": "@narratage/svs",
@@ -990,7 +1021,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:9cc7c397d2cd97b5a3e814886b6553b6d236fd8825df0d056e328b7f0cf20163",
-      "closureDigest": "sha256:6ee450114180d7f6f515b834a9cf1000795007b3ec8e57ba6860b30320fb2eba"
+      "closureDigest": "sha256:4c93cdef1bbace70ff11792777622049b5262a593a2b4d7b890afc9543955ba2"
     },
     {
       "specifier": "@narratage/text",
@@ -999,7 +1030,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:4435dd4bd38e5e017013f775e28e379e3e235211649ee8f3913378f7f9e60b58",
-      "closureDigest": "sha256:888a51aafa5225bee3cd589318f12e2974735ddea62e96d2bf8a098ad39b1389"
+      "closureDigest": "sha256:9d50fa2a214341b4af403dbf3e89332ac4b35aefc234ff35e0b066b32ee20243"
     },
     {
       "specifier": "@narratage/visual-ir",
@@ -1020,5 +1051,5 @@
       "closureDigest": "sha256:100c9aef680d5cba8ebf6abe9e51bf1c6cdf7ae092144fbed3e35857ad8d88b9"
     }
   ],
-  "digest": "sha256:0bf37c5517d23404c45c279eabe0d91465ab42045ca3d0826fcc9bac79e5cce4"
+  "digest": "sha256:ea6a07f8606486b61fc6422b8104a3047f9039ed7a99107d8734299f9ea60509"
 }

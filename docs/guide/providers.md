@@ -172,7 +172,7 @@ Lock into a Runtime package lock:
 ```bash
 pnpm narratage lock-packages <runtime-lock> \
   --package @narratage/provider-my-service \
-  --root .
+  --package-root .
 ```
 
 ## 7. Reference from svml.runtime.json

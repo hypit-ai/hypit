@@ -9,6 +9,7 @@ must pass one explicit `CliDistribution`:
 ```ts
 type CliDistribution = {
   name: string;
+  packageRoot?: string;
   builtInPackageContributions: readonly NodePackageContribution[];
   runFrontends: readonly RunFrontend[];
   createCompiler(options): NodeCompiler;

@@ -78,8 +78,6 @@ caption.dialogue {
   x: 0.08;
   y: 0.76;
   width: 0.84;
-  font: Inter;
-  weight: 600;
   size: 58;
   line-height: 0.96;
   align: center;
@@ -96,8 +94,6 @@ caption.dialogue {
 | `stack-order` | Z-stacking order among all Tracks (higher = on top) |
 | `x`, `y` | Position as fraction of canvas (0–1) |
 | `width` | Width as fraction of canvas |
-| `font` | Readable Recipe label; exact bytes come from the required `font=` graph edge |
-| `weight` | Requested font weight (1–1000) |
 | `size` | Font size in pixels |
 | `line-height` | Line height multiplier |
 | `align` | Text alignment: `left`, `center`, `right` |
@@ -107,7 +103,7 @@ caption.dialogue {
 | `radius` | Container border radius in pixels |
 
 For reproducible rendering, select an exact installed face in the `.svml` source and pass that
-Record to the Fine Style. The primary face's `weight` and `style` must match the Recipe:
+Record to the Fine Style. Family, weight and style have one source of truth on this exact font edge:
 
 ```svml
 <fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
@@ -124,7 +120,7 @@ caption.alice {
   cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
-  font: Inter; weight: 600; size: 58;
+  size: 58;
   fill: #73FBD3;
   background: #09090BCC;
   padding: 16 24; radius: 18;
@@ -134,7 +130,7 @@ caption.bob {
   cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
-  font: Inter; weight: 600; size: 58;
+  size: 58;
   fill: #FFD166;
   background: #09090BCC;
   padding: 16 24; radius: 18;
@@ -364,8 +360,8 @@ never guesses a font:
   font={caption-fonts}/>
 ```
 
-`fonts:Stack` emits one generic `FontStackRef`: its primary must match the Recipe's weight/style and
-its fallbacks preserve their own honest metadata. CJK and Emoji can be split into several
+`fonts:Stack` emits one generic `FontStackRef`; its primary and fallbacks preserve their own honest
+metadata. The Caption Recipe does not repeat family, weight or style. CJK and Emoji can be split into several
 Unicode-range files while remaining one logical graph edge. Terminal Text and Fine Caption reject
 an omitted stack; machine-font fallback is not part of Visual IR.
 For a symbol with both text and Emoji presentation, write the authored Unicode Emoji sequence
@@ -414,8 +410,6 @@ A complete `studio.svs` file for a four-take talking-head project:
     x: 0.08;
     y: 0.74;
     width: 0.84;
-    font: Inter;
-    weight: 800;
     size: 44;
     line-height: 1;
     align: center;

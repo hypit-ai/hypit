@@ -211,7 +211,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   caption.base {
     cue-min-words: 1; cue-max-words: 5;
     stack-order: 70; x: 0.08; y: 0.76; width: 0.84;
-    font: Inter; weight: 600; size: 58; line-height: 1; align: center;
+    size: 58; line-height: 1; align: center;
     fill: #FFFFFF; background: #09090BCC; padding: 16 24; radius: 18;
   }
   text.title {

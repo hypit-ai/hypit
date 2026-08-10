@@ -102,7 +102,7 @@ function exactFonts(
 }
 
 export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  attributes(element, ["id", "recipe"], ["font"]);
+  attributes(element, ["id", "recipe", "font"]);
   const id = stringAttribute(element, "id");
   const recipe = inline<SvsRecipe>(reference(element, "recipe", svsRecipeType, resolveReference), `${element.name}.recipe`);
   const style = fineCaptionStyle(id, recipe, exactFonts(element, resolveReference));

@@ -57,7 +57,7 @@ narratage/
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
 | [Runtime Profile](./runtime-profile.md) | JSON and TypeScript configuration, diagnostics, Build archive |
-| [Component playground](./playground.md) | Previewing one visual component without a Build |
+| [Caption Playground](./caption-playground.md) | Edit real Caption SVML/SVS with live feedback |
 | [Local services](./services.md) | WhisperX and OpenCV setup |
 | [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
 | [Conventions](./conventions.md) | Naming, module boundaries, wire data, TypeScript config |

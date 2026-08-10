@@ -412,3 +412,18 @@ test("quoted Recipe values may contain Prompt punctuation without changing SVS s
   );
   assert.equal(sheet.recipes[0]?.value.properties.text, "first; second } /* literal */");
 });
+
+test("SVS exposes exact property and value spans without inventing editor metadata", () => {
+  const source = `<sheet version="1">
+  caption.primary {
+    size : 58 ; /* preserve me */
+    padding: 16 24;
+  }
+</sheet>`;
+  const recipe = parseSvs("editable.svs", source).recipes[0]!;
+  const size = recipe.properties.find((property) => property.name === "size")!;
+  assert.equal(source.slice(size.range.start, size.range.end), "size : 58 ;");
+  assert.equal(source.slice(size.valueRange.start, size.valueRange.end), "58");
+  const padding = recipe.properties.find((property) => property.name === "padding")!;
+  assert.equal(source.slice(padding.valueRange.start, padding.valueRange.end), "16 24");
+});

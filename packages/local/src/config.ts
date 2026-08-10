@@ -29,6 +29,8 @@ export type RuntimeConfigDocument = {
   readonly format: "svml.runtime-config@1";
   /** Resolved relative to the configuration file. Defaults to its directory. */
   readonly root?: string;
+  /** Resolved relative to the configuration file. Locates installed Node packages, not Runtime data. */
+  readonly packageRoot?: string;
   readonly statePath?: string;
   readonly catalogPath?: string;
   readonly artifactPath?: string;
@@ -118,7 +120,7 @@ function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
 export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
   exactKeys(item, [
-    "format", "root", "statePath", "catalogPath", "artifactPath", "packageLock", "runtimePackageLock",
+    "format", "root", "packageRoot", "statePath", "catalogPath", "artifactPath", "packageLock", "runtimePackageLock",
     "runtimeServices", "endpoints",
     "permissions", "scheduling",
   ], "$runtime");
@@ -137,6 +139,9 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   return {
     format: "svml.runtime-config@1",
     ...(optionalString(item.root, "$runtime.root") === undefined ? {} : { root: item.root as string }),
+    ...(optionalString(item.packageRoot, "$runtime.packageRoot") === undefined
+      ? {}
+      : { packageRoot: item.packageRoot as string }),
     ...(optionalString(item.statePath, "$runtime.statePath") === undefined ? {} : { statePath: item.statePath as string }),
     ...(optionalString(item.catalogPath, "$runtime.catalogPath") === undefined ? {} : { catalogPath: item.catalogPath as string }),
     ...(optionalString(item.artifactPath, "$runtime.artifactPath") === undefined ? {} : { artifactPath: item.artifactPath as string }),
@@ -155,6 +160,8 @@ export type LoadRuntimeConfigOptions = {
   /** Trusted embedding adapters. Locked installed adapters are normally selected by runtimePackageLock. */
   readonly registry?: RuntimeAdapterRegistry;
   readonly components?: readonly ComponentPackage[];
+  /** Host package installation used when the Profile does not explicitly select packageRoot. */
+  readonly packageRoot?: string;
 };
 
 export type RuntimeConfigDoctorResult = {
@@ -165,10 +172,11 @@ export type RuntimeConfigDoctorResult = {
 async function installLockedRuntimeAdapters(
   registry: RuntimeAdapterRegistry,
   path: string | undefined,
-  root: string,
+  lockRoot: string,
+  packageRoot: string,
 ): Promise<void> {
   if (path === undefined) return;
-  const loaded = await loadNodePackageSet(resolve(root, path), root);
+  const loaded = await loadNodePackageSet(resolve(lockRoot, path), packageRoot);
   const lockedPackages = new Map(loaded.lock.packages.map((item) => [item.package.name, item]));
   const artifacts = new Map(loaded.lock.artifacts.map((item) => [`${item.name}@${item.version}`, item]));
   for (const contribution of loaded.contributions) {
@@ -206,8 +214,9 @@ export async function declaredExternalServices(
   const absolute = resolve(path);
   const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
   const root = resolve(dirname(absolute), document.root ?? ".");
+  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root);
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
   const services: DeclaredExternalService[] = [];
   for (const item of document.endpoints) {
     if (!registry.has(item.use, "endpoint")) {
@@ -241,6 +250,7 @@ export async function doctorRuntimeConfig(
   const absolute = resolve(path);
   const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
   const root = resolve(dirname(absolute), document.root ?? ".");
+  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
   const diagnostics: RuntimeDoctorDiagnostic[] = [];
   try {
     if (!(await stat(root)).isDirectory()) throw new Error(`Runtime root ${root} is not a directory`);
@@ -250,14 +260,14 @@ export async function doctorRuntimeConfig(
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
   try {
-    await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root);
+    await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
   } catch (error) {
     diagnostics.push(diagnostic(error, "RUNTIME_PACKAGE_LOCK_INVALID", document.runtimePackageLock));
     return { root, diagnostics };
   }
   if (document.packageLock !== undefined) {
     try {
-      await loadNodePackageSet(resolve(root, document.packageLock), root);
+      await loadNodePackageSet(resolve(root, document.packageLock), packageRoot);
     } catch (error) {
       diagnostics.push(diagnostic(error, "IMPLEMENTATION_PACKAGE_LOCK_INVALID", document.packageLock));
     }
@@ -350,8 +360,9 @@ export async function createRuntimeFromConfig(
   const absolute = resolve(path);
   const document = parseRuntimeConfig(JSON.parse(await readFile(absolute, "utf8")));
   const root = resolve(dirname(absolute), document.root ?? ".");
+  const packageRoot = resolve(dirname(absolute), document.packageRoot ?? options.packageRoot ?? document.root ?? ".");
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root);
+  await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
   const runtimeServices = await Promise.all(document.runtimeServices.map(async (item) => {
     return await registry.createService(item.use, {
       root,
@@ -369,6 +380,7 @@ export async function createRuntimeFromConfig(
   }));
   return await createProjectLocalRuntime({
     root,
+    packageRoot,
     ...(document.statePath === undefined ? {} : { statePath: document.statePath }),
     ...(document.catalogPath === undefined ? {} : { catalogPath: document.catalogPath }),
     ...(document.artifactPath === undefined ? {} : { artifactPath: document.artifactPath }),

@@ -49,11 +49,6 @@ function alphaColor(hex: string, opacity: number): string {
 function typographyStyle(parameters: FineCaptionParameters): VisualStyleDeclaration[] {
   return [
     { name: "font-size", value: `${compactNumber(parameters.typography.fontSizePx)}px` },
-    ...(parameters.typography.exactFonts === undefined ? [
-      { name: "font-family", value: parameters.typography.fontFamily },
-      { name: "font-style", value: parameters.typography.fontStyle },
-      { name: "font-weight", value: parameters.typography.fontWeight },
-    ] as const : []),
     { name: "letter-spacing", value: `${compactNumber(parameters.layout.letterSpacingPx)}px` },
     { name: "line-height", value: parameters.layout.lineHeight },
     { name: "text-transform", value: parameters.typography.textTransform },

@@ -18,6 +18,7 @@ import {
 } from "@narratage/package-loader-node";
 import { RuntimeAdapterRegistry } from "@narratage/runtime-adapter";
 import { TypeValidatorRegistry } from "@narratage/validation";
+import { digestOf } from "@narratage/protocol";
 import type { ProducerRef } from "@narratage/protocol";
 
 const implementationDigest = `sha256:${"1".repeat(64)}`;
@@ -27,12 +28,15 @@ async function fixture(): Promise<{
   readonly root: string;
   readonly activation: string;
   readonly dependency: string;
+  readonly helperDigest: string;
   readonly source: string;
   readonly lock: string;
 }> {
   const root = await mkdtemp(join(tmpdir(), "svml-package-loader-"));
   const packageRoot = join(root, "node_modules", "example-card");
-  const dependencyRoot = join(root, "node_modules", "example-helper");
+  // Keep the logical Module provider nested: normal loading must rediscover it from the selected
+  // root's physical closure, not assume every activated dependency is resolvable from Workspace root.
+  const dependencyRoot = join(packageRoot, "node_modules", "example-helper");
   const typesRoot = join(root, "node_modules", "example-types");
   const extraRoot = join(root, "node_modules", "example-extra");
   await mkdir(packageRoot, { recursive: true });
@@ -41,13 +45,28 @@ async function fixture(): Promise<{
   await mkdir(extraRoot, { recursive: true });
   const activation = join(packageRoot, "activation.mjs");
   const dependency = join(dependencyRoot, "index.mjs");
+  const helperManifest = {
+    format: "svml.module@1" as const,
+    name: "example.helper",
+    version: "1",
+    dependencies: [],
+    types: [],
+    capabilities: [],
+    surfaces: [],
+    producers: [],
+  };
   await writeFile(join(dependencyRoot, "package.json"), JSON.stringify({
     name: "example-helper",
     version: "1.0.0",
     type: "module",
     exports: "./index.mjs",
+    svml: { activation: "./index.mjs" },
   }, null, 2), "utf8");
-  await writeFile(dependency, "export const helper = true;\n", "utf8");
+  await writeFile(dependency, `export default {
+    format: "svml.node-package@1",
+    name: "example-helper",
+    modules: [{ manifest: ${JSON.stringify(helperManifest)} }],
+  };\n`, "utf8");
   await writeFile(join(typesRoot, "package.json"), JSON.stringify({
     name: "example-types",
     version: "1.0.0",
@@ -90,7 +109,10 @@ async function fixture(): Promise<{
           format: "svml.module@1",
           name: module.name,
           version: module.version,
-          dependencies: [],
+          dependencies: [{
+            module: { name: "example.helper", version: "1" },
+            digest: ${JSON.stringify(digestOf(helperManifest))},
+          }],
           types: [{
             name: resultType.name,
             schema: { kind: "string", minLength: 1 },
@@ -183,17 +205,27 @@ async function fixture(): Promise<{
     <import as="example" from="example.card@1"/>
     <example:Card/>
   </svml>`, "utf8");
-  return { root, activation, dependency, source, lock: join(root, "svml.packages.lock") };
+  return {
+    root,
+    activation,
+    dependency,
+    helperDigest: digestOf(helperManifest),
+    source,
+    lock: join(root, "svml.packages.lock"),
+  };
 }
 
 test("an installed locked package carries inert Host facets and activatable compute", async () => {
   const item = await fixture();
   const lock = await createNodePackageLock(["example-card"], item.root);
   assert.deepEqual(lock.artifacts.map((artifact) => artifact.name), ["example-card", "example-helper", "example-types"]);
+  assert.deepEqual(lock.selected, ["example-card"]);
+  assert.deepEqual(lock.packages.map((value) => value.specifier), ["example-card", "example-helper"]);
   await writeNodePackageLock(item.lock, lock);
   const packages = await loadNodePackageContributions(item.lock, item.root);
 
   assert.equal(packages[0]?.name, "example-card");
+  assert.equal(packages[1]?.name, "example-helper");
   assert.equal(packages[0]?.hostFacets?.[0]?.abi, "svml.markup-surface-host@1");
 
   const registered: Array<{ readonly producer: ProducerRef; readonly digest: string }> = [];
@@ -217,6 +249,49 @@ test("dependency bytes are rejected before a locked contribution entry is reused
   await assert.rejects(
     async () => await loadNodePackageContributions(item.lock, item.root),
     /installed Node package bytes do not match the lock/,
+  );
+});
+
+test("a missing exact Module provider is rejected while the lock is created", async () => {
+  const item = await fixture();
+  await writeFile(
+    item.activation,
+    (await readFile(item.activation, "utf8")).replace(item.helperDigest, `sha256:${"9".repeat(64)}`),
+    "utf8",
+  );
+
+  await assert.rejects(
+    async () => await createNodePackageLock(["example-card"], item.root),
+    /no installed package .* provides required Module example\.helper@1/u,
+  );
+});
+
+test("two physical packages cannot ambiguously provide one required Module", async () => {
+  const item = await fixture();
+  const copyRoot = join(item.root, "node_modules", "example-helper-copy");
+  await mkdir(copyRoot, { recursive: true });
+  await writeFile(join(copyRoot, "package.json"), JSON.stringify({
+    name: "example-helper-copy",
+    version: "1.0.0",
+    type: "module",
+    exports: "./index.mjs",
+    svml: { activation: "./index.mjs" },
+  }, null, 2), "utf8");
+  await writeFile(
+    join(copyRoot, "index.mjs"),
+    (await readFile(item.dependency, "utf8")).replace('name: "example-helper"', 'name: "example-helper-copy"'),
+    "utf8",
+  );
+  const cardPackagePath = join(item.root, "node_modules", "example-card", "package.json");
+  const cardPackage = JSON.parse(await readFile(cardPackagePath, "utf8")) as {
+    dependencies: Record<string, string>;
+  };
+  cardPackage.dependencies["example-helper-copy"] = "1.0.0";
+  await writeFile(cardPackagePath, JSON.stringify(cardPackage, null, 2), "utf8");
+
+  await assert.rejects(
+    async () => await createNodePackageLock(["example-card"], item.root),
+    /multiple installed packages .* provide required Module example\.helper@1/u,
   );
 });
 

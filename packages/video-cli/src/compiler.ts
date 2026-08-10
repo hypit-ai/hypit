@@ -7,6 +7,6 @@ export const videoBuiltInPackageContributions = [] as const;
 /** Assemble the Markup compiler Host from only the packages selected for this invocation. */
 export function createVideoCompiler(options: CliCompilerOptions) {
   return createMarkupNodeCompiler(options.packageContributions, {
-    ...(options.root === undefined ? {} : { root: options.root }),
+    ...(options.workspaceRoot === undefined ? {} : { root: options.workspaceRoot }),
   });
 }

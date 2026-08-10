@@ -1,5 +1,12 @@
 {
   "format": "svml.node-package-lock@1",
+  "selected": [
+    "@narratage/provider-google-vertex",
+    "@narratage/provider-hyperframes-local",
+    "@narratage/provider-kie",
+    "@narratage/provider-media-local",
+    "@narratage/provider-whisperx-local"
+  ],
   "artifacts": [
     {
       "name": "@esbuild/darwin-arm64",
@@ -199,7 +206,7 @@
     {
       "name": "@narratage/svs",
       "version": "0.0.0-dev",
-      "digest": "sha256:e44ae945c23e041602eb2f029a4c72b96fc2525e6c767e117e2bf0f11a830e0e"
+      "digest": "sha256:2658027814f0be50cfea761cf5a7ee42004dc30d7b9e252750940a7a8fcddca5"
     },
     {
       "name": "@narratage/text",
@@ -888,7 +895,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e61ebb911a33d4c5d0e4e4ee4fb69cdb790f4ced050ef35f7472bfbd72013d9b",
-      "closureDigest": "sha256:d9fe3a4539facd6ddbc8119096e6abc26f1d6c130963f0a548b02ede667c83fd"
+      "closureDigest": "sha256:c7526eb040617e45080b72a4f50f8f32ae6dc33fcc08ebaefecccd478b23d8c7"
     },
     {
       "specifier": "@narratage/provider-media-local",
@@ -909,5 +916,5 @@
       "closureDigest": "sha256:1f4387ca08d77d88c2a02faa0a40ba0d5c76f676f6128a94215ab39010112266"
     }
   ],
-  "digest": "sha256:e18633dbebec6ba3bc44490c83e5218f2b46578f00e09eed098ae8289ccab0fe"
+  "digest": "sha256:e635b2789745d90ddb8e32b30dd3261f738d44d62a508f33ceaca97629d0a898"
 }

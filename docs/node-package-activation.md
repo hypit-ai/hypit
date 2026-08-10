@@ -13,6 +13,7 @@ implementation closure:
 installed package bytes
   -> explicit lock-packages command
   -> physical declared-dependency-closure digests
+  -> exact Manifest dependency closure
   -> Module / Frontend / Host Facet / Producer / Type Validator identities
   -> verified NodePackageContribution
   -> Host grants only the selected author or compute registries
@@ -57,7 +58,7 @@ Create the lock only after installing and reviewing the selected packages:
 ```bash
 narratage lock-packages ./svml.packages.lock \
   --package @example/cards \
-  --root .
+  --package-root .
 ```
 
 Use it for compilation:
@@ -77,14 +78,22 @@ export default await createProjectLocalRuntime({
 
 Lock creation is the trust action. Normal loading:
 
-1. parses and verifies the lock digest;
-2. resolves the complete installed declared-dependency closure;
-3. hashes every package file except nested `node_modules` and `.git` directories;
-4. rejects any artifact-set difference before importing activation code;
-5. imports each activation entry;
-6. compares all declared facet identities with the lock;
-7. checks Producer and Validator facets against their Module Manifests;
-8. grants only the registries requested by the Host.
+1. records the packages named explicitly with `--package` as physical selection roots;
+2. follows each selected contribution's exact Manifest dependencies (`ModuleRef + digest`);
+3. adds the unique provider found inside the selected roots' installed dependency closure;
+4. rejects missing, digest-mismatched or ambiguous Module providers;
+5. hashes every package file except nested `node_modules` and `.git` directories;
+6. on normal loading, rejects any artifact-set difference before importing activation code;
+7. imports only the contributions recorded in the lock and compares all facet identities;
+8. checks Producer and Validator facets against their Module Manifests;
+9. grants only the registries requested by the Host.
+
+`--package` therefore names direct trust roots, not every transitive logical dependency. The lock's
+`selected` field preserves that authored choice; `packages` is the deterministically derived
+activation closure. The Loader has no knowledge of official package names and consults no central
+catalogue. Lock creation may inspect activation entries inside the selected roots' already installed
+physical dependency closure to find the exact provider; ordinary loading executes only the
+contributions recorded in the verified lock.
 
 Changing any selected package or dependency byte requires a new lock. A Source import never updates
 the lock and cannot download or activate a physical package.

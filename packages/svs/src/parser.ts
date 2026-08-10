@@ -1,6 +1,11 @@
 import type { CanonicalValue } from "@narratage/protocol";
 
-import type { ParsedSvsRecipe, ParsedSvsSheet, SvsRecipe } from "./types.js";
+import type {
+  ParsedSvsProperty,
+  ParsedSvsRecipe,
+  ParsedSvsSheet,
+  SvsRecipe,
+} from "./types.js";
 
 const RULE = /^[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)+/u;
 const PROPERTY = /^[a-z][a-z0-9-]*/u;
@@ -174,12 +179,17 @@ function parseProperties(
   sourceName: string,
   text: string,
   offset: number,
-): Readonly<Record<string, CanonicalValue>> {
+): {
+  readonly values: Readonly<Record<string, CanonicalValue>>;
+  readonly parsed: readonly ParsedSvsProperty[];
+} {
   const properties: Record<string, CanonicalValue> = {};
+  const parsed: ParsedSvsProperty[] = [];
   let cursor = 0;
   while (cursor < text.length) {
     cursor = skipSpace(text, cursor);
     if (cursor >= text.length) break;
+    const propertyStart = cursor;
     const match = PROPERTY.exec(text.slice(cursor));
     if (!match) fail(sourceName, "SVS_PROPERTY", "Expected a recipe property.", offset + cursor);
     const name = match[0];
@@ -193,9 +203,18 @@ function parseProperties(
     const semicolon = valueSemicolon(text, valueStart);
     if (semicolon < 0) fail(sourceName, "SVS_PROPERTY_SEMICOLON", `Property ${name} requires ';'.`, offset + valueStart);
     properties[name] = parseValue(sourceName, text.slice(valueStart, semicolon), offset + valueStart);
+    let trimmedStart = valueStart;
+    let trimmedEnd = semicolon;
+    while (/\s/u.test(text[trimmedStart] ?? "")) trimmedStart += 1;
+    while (trimmedEnd > trimmedStart && /\s/u.test(text[trimmedEnd - 1] ?? "")) trimmedEnd -= 1;
+    parsed.push({
+      name,
+      range: { start: offset + propertyStart, end: offset + semicolon + 1 },
+      valueRange: { start: offset + trimmedStart, end: offset + trimmedEnd },
+    });
     cursor = semicolon + 1;
   }
-  return properties;
+  return { values: properties, parsed };
 }
 
 export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
@@ -228,12 +247,13 @@ export function parseSvs(sourceName: string, source: string): ParsedSvsSheet {
     const blockStart = cursor + 1;
     const blockEnd = closingBrace(text, blockStart, close);
     if (blockEnd < 0 || blockEnd > close) fail(sourceName, "SVS_RULE_UNCLOSED", `Recipe ${path} is not closed.`, start);
+    const parsedProperties = parseProperties(sourceName, text.slice(blockStart, blockEnd), blockStart);
     const value: SvsRecipe = {
       contract: "svml.svs-recipe@1",
       path,
-      properties: parseProperties(sourceName, text.slice(blockStart, blockEnd), blockStart),
+      properties: parsedProperties.values,
     };
-    recipes.push({ value, range: { start, end: blockEnd + 1 } });
+    recipes.push({ value, range: { start, end: blockEnd + 1 }, properties: parsedProperties.parsed });
     cursor = blockEnd + 1;
   }
   return {

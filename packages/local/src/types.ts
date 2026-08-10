@@ -54,6 +54,8 @@ export type CreateLocalRuntimeOptions = {
 export type ProjectLocalRuntimeOptions = {
   /** Project directory containing the private .svml Runtime directory. Defaults to cwd. */
   readonly root?: string;
+  /** Host directory whose node_modules contains the packages named by packageLock. Defaults to root. */
+  readonly packageRoot?: string;
   readonly statePath?: string;
   /** Optional separate Host catalog database. Defaults to statePath when using local SQLite state. */
   readonly catalogPath?: string;

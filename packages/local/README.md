@@ -62,6 +62,8 @@ services.
 ```ts
 export default await createProjectLocalRuntime({
   root: import.meta.dirname,
+  // May point at a separate Narratage installation when this project owns no node_modules.
+  packageRoot: "/opt/narratage",
   packageLock: "./svml.packages.lock",
   runtimeServices: [createS3ArtifactStorePackage({
     bucket: "team-svml-artifacts",

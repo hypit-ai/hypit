@@ -56,7 +56,7 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/media-pipeline \
   --package @narratage/render-hyperframes \
   --package @narratage/run-markup \
-  --root .
+  --package-root .
 
 pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.lock \
   --package @narratage/provider-kie \
@@ -64,7 +64,7 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.l
   --package @narratage/provider-whisperx-local \
   --package @narratage/provider-google-vertex \
   --package @narratage/provider-hyperframes-local \
-  --root .
+  --package-root .
 ```
 
 Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:

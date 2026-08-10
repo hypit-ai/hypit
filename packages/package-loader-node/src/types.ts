@@ -43,7 +43,10 @@ export type LockedNodePackage = {
 export type NodePackageLock = {
   readonly format: "svml.node-package-lock@1";
   readonly digest: Digest;
+  /** Physical packages selected explicitly by the lock author. */
+  readonly selected: readonly string[];
   readonly artifacts: readonly LockedPackageArtifact[];
+  /** Selected contributions plus the exact Module providers required by their Manifests. */
   readonly packages: readonly LockedNodePackage[];
 };
 
