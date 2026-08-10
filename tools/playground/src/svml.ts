@@ -26,8 +26,6 @@ export {
 } from "@narratage/program-space";
 export type { ProgramSpace } from "@narratage/program-space";
 
-export { defaultCanvasSpace } from "@narratage/spatial";
-
 export { validateStoredValue } from "@narratage/core";
 
 export type {
@@ -35,7 +33,6 @@ export type {
   ModuleManifest,
   ProducerDeclaration,
   TypeRef,
-  ValueFormat,
   ValueSchema,
 } from "@narratage/protocol";
 

@@ -1,7 +1,7 @@
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@narratage/protocol";
 
-import { defaultCanvasSpace, spatialImplementationDigests, spatialValidatorDigests } from "./geometry.js";
+import { spatialImplementationDigests, spatialValidatorDigests } from "./geometry.js";
 import {
   anchoredFrameProgramSchema,
   aspectFrameProgramSchema,
@@ -56,7 +56,7 @@ export const spatialManifest: ModuleManifest = {
   version: spatialModuleRef.version,
   dependencies: [],
   types: [
-    { name: spatialTypes.canvas.name, schema: canvasSpaceSchema, default: defaultCanvasSpace(), validator: validator("@narratage/spatial/validate-canvas", spatialValidatorDigests.canvas) },
+    { name: spatialTypes.canvas.name, schema: canvasSpaceSchema, validator: validator("@narratage/spatial/validate-canvas", spatialValidatorDigests.canvas) },
     { name: spatialTypes.point.name, schema: spatialPointSchema, validator: validator("@narratage/spatial/validate-point", spatialValidatorDigests.point) },
     { name: spatialTypes.frame.name, schema: spatialFrameSchema, validator: validator("@narratage/spatial/validate-frame", spatialValidatorDigests.frame) },
     { name: spatialTypes.path.name, schema: spatialPathSchema, validator: validator("@narratage/spatial/validate-path", spatialValidatorDigests.path) },

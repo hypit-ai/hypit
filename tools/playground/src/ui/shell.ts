@@ -1,10 +1,7 @@
 import type { PreviewProducer } from "../discovery/producers.js";
 import { workspacePreviewProducers } from "../discovery/workspace.js";
 import { renderPreview } from "../preview/render.js";
-import {
-  defaultCanvasSpace,
-  sealProgramSpace,
-} from "../svml.js";
+import { sealProgramSpace } from "../svml.js";
 import type { CanonicalValue, ProgramSpace, Track } from "../svml.js";
 import { FORM_CSS, blankValue, buildForm } from "./form.js";
 import { createStage } from "./stage.js";
@@ -33,6 +30,13 @@ const CSS = `
 }
 ${FORM_CSS}
 `;
+
+// This is local UI session state. It is deliberately not exported by, read
+// from, or written back into any compiler, protocol or video-domain package.
+const INITIAL_PREVIEW_ENVIRONMENT = {
+  canvas: { width: 1080, height: 1920, clearColor: "#09090b" },
+  program: { durationSec: 4, frameRate: { numerator: 30, denominator: 1 } },
+} as const;
 
 export async function mountShell(root: HTMLElement): Promise<void> {
   const style = document.createElement("style");
@@ -81,24 +85,15 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     picker.append(option);
   }
 
-  // Spatial owns geometry and ProgramSpace owns time, so the preview starts
-  // from those package-owned values rather than a second playground model of a
-  // frame. The clear colour belongs to a Composition, and a preview assembles
-  // none, so it is a stage control the operator sets like the others.
-  const canvasSpace = defaultCanvasSpace();
-  const defaultSpace: ProgramSpace = {
-    contract: "svml.program-space@1",
-    durationSec: 4,
-    frameRate: { numerator: 30, denominator: 1 },
+  // The shell is a consumer of production contracts. These editable values
+  // belong only to this preview session and carry no language-level default.
+  const canvas: { width: number; height: number; clearColor: string } = {
+    ...INITIAL_PREVIEW_ENVIRONMENT.canvas,
   };
-  const canvas = {
-    width: canvasSpace.widthPx,
-    height: canvasSpace.heightPx,
-    clearColor: "#09090b",
-  };
-  const space = {
-    fps: defaultSpace.frameRate.numerator / defaultSpace.frameRate.denominator,
-    durationSec: defaultSpace.durationSec,
+  const space: { fps: number; durationSec: number } = {
+    fps: INITIAL_PREVIEW_ENVIRONMENT.program.frameRate.numerator
+      / INITIAL_PREVIEW_ENVIRONMENT.program.frameRate.denominator,
+    durationSec: INITIAL_PREVIEW_ENVIRONMENT.program.durationSec,
   };
 
   /**
@@ -117,11 +112,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
   }
 
   const drafts = new Map<string, Record<string, CanonicalValue>>();
-  // Open on something that draws. A producer whose inputs its own modules can
-  // all supply shows a frame immediately; one waiting on media would greet the
-  // operator with a failure they have not caused yet.
-  let active: PreviewProducer = producers.find((producer) =>
-    producer.inputs.every((input) => input.initial !== undefined)) ?? producers[0]!;
+  let active: PreviewProducer = producers[0]!;
   picker.value = active.id;
 
   function draft(producer: PreviewProducer): Record<string, CanonicalValue> {
@@ -129,12 +120,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     if (existing !== undefined) return existing;
     const created: Record<string, CanonicalValue> = {};
     for (const input of producer.inputs) {
-      // Whatever the declaring module says one of these looks like. Where it
-      // declines — because the value carries media it has no bytes for — the
-      // schema still says what shape the operator has to fill in.
-      created[input.name] = input.initial !== undefined
-        ? structuredClone(input.initial) as CanonicalValue
-        : input.schema === undefined ? null : blankValue(input.schema);
+      created[input.name] = input.schema === undefined ? null : blankValue(input.schema);
     }
     drafts.set(producer.id, created);
     return created;
@@ -198,7 +184,7 @@ export async function mountShell(root: HTMLElement): Promise<void> {
       if (values[input.name] === null || values[input.name] === undefined) {
         const empty = document.createElement("div");
         empty.className = "hint";
-        empty.textContent = `${input.type.module.name} offers no default for ${input.type.name}.`;
+        empty.textContent = `${input.type.module.name} requires an explicit ${input.type.name} value.`;
         body.append(empty);
       }
       body.append(buildForm(input.schema, values[input.name] ?? {}, schedule));

@@ -1,4 +1,3 @@
-import { artifactLabel, registerFile } from "../preview/artifacts.js";
 import type { CanonicalValue, ValueSchema } from "../svml.js";
 
 export const FORM_CSS = `
@@ -6,20 +5,10 @@ export const FORM_CSS = `
 .form-row { display: grid; grid-template-columns: 108px 1fr; gap: 8px; align-items: center; padding: 3px 0; }
 .form-row > label { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
 .form-control { display: flex; gap: 6px; align-items: center; min-width: 0; }
-.form-control input[type=text], .form-control input[type=number], .form-control select, .form-control textarea {
+.form-control input[type=text], .form-control input[type=number], .form-control select {
   flex: 1; min-width: 0; background: #1c1c21; color: var(--text);
   border: 1px solid var(--line); border-radius: 5px; padding: 4px 7px; font: inherit; font-size: 12px;
 }
-.form-control textarea { resize: vertical; min-height: 46px; font-family: inherit; }
-.form-control input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
-.form-control input[type=color] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--line); background: none; border-radius: 4px; }
-.form-control .narrow { flex: 0 0 68px; }
-.form-control .form-file { flex: 0 0 auto; font-size: 11px; color: var(--muted); max-width: 118px; }
-.form-control .form-file::file-selector-button {
-  border: 1px solid var(--line); border-radius: 5px; background: #1c1c21;
-  color: var(--text); font: inherit; font-size: 11px; padding: 2px 7px; margin-right: 6px; cursor: pointer;
-}
-.form-control .form-file-label { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .form-group { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 5px 0; }
 .form-group > legend { color: var(--accent); font-size: 11px; padding: 0 5px; }
 .form-item { border-top: 1px dashed var(--line); padding-top: 7px; margin-top: 7px; }
@@ -50,98 +39,11 @@ function row(name: string, control: HTMLElement): HTMLElement {
 }
 
 /**
- * A colour, edited as text with a swatch beside it.
- *
- * The text is authoritative: `format: "color"` admits `#RRGGBBAA` and
- * `<input type=color>` cannot carry the alpha byte.
- */
-function colorControl(value: string, onChange: (next: string) => void): HTMLElement {
-  const holder = document.createElement("div");
-  holder.className = "form-control";
-  const swatch = document.createElement("input");
-  swatch.type = "color";
-  swatch.value = /^#[0-9a-f]{6}/iu.test(value) ? value.slice(0, 7) : "#000000";
-  const exact = document.createElement("input");
-  exact.type = "text";
-  exact.value = value;
-  swatch.addEventListener("input", () => {
-    const alpha = exact.value.length === 9 ? exact.value.slice(7) : "";
-    exact.value = swatch.value + alpha;
-    onChange(exact.value);
-  });
-  exact.addEventListener("input", () => {
-    if (/^#[0-9a-f]{6}/iu.test(exact.value)) swatch.value = exact.value.slice(0, 7);
-    onChange(exact.value);
-  });
-  holder.append(swatch, exact);
-  return holder;
-}
-
-function fractionControl(
-  value: number,
-  schema: { minimum?: number; maximum?: number },
-  onChange: (next: number) => void,
-): HTMLElement {
-  const holder = document.createElement("div");
-  holder.className = "form-control";
-  const slider = document.createElement("input");
-  slider.type = "range";
-  slider.min = String(schema.minimum ?? 0);
-  slider.max = String(schema.maximum ?? 1);
-  slider.step = "0.001";
-  slider.value = String(value);
-  const exact = document.createElement("input");
-  exact.type = "number";
-  exact.className = "narrow";
-  exact.step = "0.001";
-  exact.value = String(value);
-  slider.addEventListener("input", () => { exact.value = slider.value; onChange(Number(slider.value)); });
-  exact.addEventListener("input", () => { slider.value = exact.value; onChange(Number(exact.value)); });
-  holder.append(slider, exact);
-  return holder;
-}
-
-/**
- * Media, addressed by digest.
- *
- * A `format: "digest"` field is content-addressed, so the control produces one
- * by hashing the chosen file. The form value stays the digest; the bytes live
- * in the Artifact registry.
- */
-function digestControl(
-  current: CanonicalValue | undefined,
-  onChange: (next: CanonicalValue) => void,
-): HTMLElement {
-  const holder = document.createElement("div");
-  holder.className = "form-control";
-  const picker = document.createElement("input");
-  picker.type = "file";
-  picker.className = "form-file";
-  const label = document.createElement("span");
-  label.className = "form-file-label";
-  label.textContent = artifactLabel(typeof current === "string" && current !== "" ? current : undefined);
-  picker.addEventListener("change", () => {
-    const file = picker.files?.[0];
-    if (file === undefined) return;
-    label.textContent = "hashing…";
-    void registerFile(file).then((ref) => {
-      label.textContent = artifactLabel(ref.digest);
-      onChange(ref.digest);
-    }).catch((error: unknown) => {
-      label.textContent = error instanceof Error ? error.message : String(error);
-    });
-  });
-  holder.append(picker, label);
-  return holder;
-}
-
-/**
  * Builds controls from a ValueSchema.
  *
- * Every choice here comes from the schema: `enum` becomes a list, `format`
- * decides between a colour, a slider, a prose box and a file, bounds become
- * limits. Nothing is keyed on a field's name, so a module that declares a new
- * field gets a usable control without this file knowing it exists.
+ * Only structural contract facts are consumed: `enum` becomes a list and
+ * numeric bounds become input limits. Presentation conveniences belong to the
+ * Playground and must never be added to a production schema to steer this UI.
  *
  * Nothing here validates. `validateStoredValue` and the packages' own assert
  * functions are the judge — they are what a real Build runs.
@@ -211,9 +113,6 @@ function scalarControl(
   }
 
   if (schema.kind === "number") {
-    if (schema.format === "unit-fraction") {
-      return fractionControl(typeof current === "number" ? current : 0, schema, onChange);
-    }
     const input = document.createElement("input");
     input.type = "number";
     if (schema.minimum !== undefined) input.min = String(schema.minimum);
@@ -238,16 +137,6 @@ function scalarControl(
       select.value = typeof current === "string" ? current : (schema.enum[0] ?? "");
       select.addEventListener("input", () => onChange(select.value));
       return select;
-    }
-    if (schema.format === "color") {
-      return colorControl(typeof current === "string" ? current : "#ffffff", onChange);
-    }
-    if (schema.format === "digest") return digestControl(current, onChange);
-    if (schema.format === "multiline") {
-      const area = document.createElement("textarea");
-      area.value = typeof current === "string" ? current : "";
-      area.addEventListener("input", () => onChange(area.value));
-      return area;
     }
     const input = document.createElement("input");
     input.type = "text";
