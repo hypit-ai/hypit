@@ -18,6 +18,10 @@ import {
   decodeTierBoardStyle,
   decodeTopThreeStyle,
   decodeTypewriterListStyle,
+  reportColumnStyle,
+  reportTierBoardStyle,
+  reportTopThreeStyle,
+  reportTypewriterListStyle,
 } from "./style.js";
 import type { RankingSoundStyle } from "./types.js";
 
@@ -138,33 +142,43 @@ function facet(
     readonly style: unknown;
     readonly sound: RankingSoundStyle;
   },
+  report: (recipe: SvsRecipe) => Readonly<Record<string, CanonicalValue>>,
 ): RecipeFacet {
+  const written = (properties: Readonly<Record<string, CanonicalValue>>): SvsRecipe =>
+    ({ contract: "svml.svs-recipe@1", path: `ranking.${surface}`, properties });
   return {
     surface,
     schema,
     defaults,
+    // The decoders hold every fallback a Recipe leans on, and a form asking what
+    // it will render is asking them, not this. So the report runs the same
+    // readers over the same properties and states what they came to, down to the
+    // ones the author already decided, which come back through untouched.
+    effective: (properties) => report(written(properties)),
     apply: (properties, current) => {
       const program = asProgram(current["program"]);
       // The same Recipe also states how loud the Ranking sounds, and that half
       // is read by the audio Producer, which takes a Style of its own. The
       // render Producers reached here are given a Program and never see it.
-      const { style } = decode(
-        { contract: "svml.svs-recipe@1", path: `ranking.${surface}`, properties },
-        carriedFaces(program, from),
-      );
+      const { style } = decode(written(properties), carriedFaces(program, from));
       return { program: { ...program, style } as unknown as CanonicalValue };
     },
   };
 }
 
-export const tierBoardRecipeFacet =
-  facet("tier-style", tierBoardRecipeSchema, tierBoardDefaultRecipe, "text", decodeTierBoardStyle);
-export const columnRecipeFacet =
-  facet("column-style", columnRecipeSchema, columnDefaultRecipe, "text", decodeColumnStyle);
-export const topThreeRecipeFacet =
-  facet("top-three-style", topThreeRecipeSchema, topThreeDefaultRecipe, "text", decodeTopThreeStyle);
+export const tierBoardRecipeFacet = facet(
+  "tier-style", tierBoardRecipeSchema, tierBoardDefaultRecipe, "text",
+  decodeTierBoardStyle, reportTierBoardStyle,
+);
+export const columnRecipeFacet = facet(
+  "column-style", columnRecipeSchema, columnDefaultRecipe, "text", decodeColumnStyle, reportColumnStyle,
+);
+export const topThreeRecipeFacet = facet(
+  "top-three-style", topThreeRecipeSchema, topThreeDefaultRecipe, "text", decodeTopThreeStyle, reportTopThreeStyle,
+);
 export const typewriterListRecipeFacet = facet(
-  "typewriter-style", typewriterListRecipeSchema, typewriterListDefaultRecipe, "title", decodeTypewriterListStyle,
+  "typewriter-style", typewriterListRecipeSchema, typewriterListDefaultRecipe, "title",
+  decodeTypewriterListStyle, reportTypewriterListStyle,
 );
 
 export const rankingRecipeFacets: readonly RecipeFacet[] = [

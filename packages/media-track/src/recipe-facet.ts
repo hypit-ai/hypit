@@ -11,12 +11,19 @@ import {
   decodeMediaStackingOrder,
   isMediaFramePaintLayerId,
   mediaFramePaintLayerId,
+  spellMediaFramePaint,
+  spellMediaPadding,
+  spellMediaPlayback,
+  spellMediaShadows,
+  spellMediaSustain,
 } from "./author.js";
+import { mediaEdgeAmount } from "./motion.js";
 import {
   mediaAppearanceRecipeSchema,
   mediaMotionRecipeSchema,
 } from "./recipe-schema.js";
 import type {
+  MediaEdgeMotion,
   MediaFramePresentation,
   MediaItemProgram,
   MediaLayerProgram,
@@ -132,6 +139,85 @@ if (statedAppearance !== demanded(mediaAppearanceRecipeSchema).join(" ")) {
   throw new Error("Media appearance default Recipe must state exactly the required properties");
 }
 
+/**
+ * The unit a report is read off.
+ *
+ * Nothing is being built, so the name only has to be a legal one and the same
+ * one throughout, a frame's backdrop Layer being named after the unit it backs.
+ */
+const REPORTED_ID = "preview";
+
+/**
+ * A colour to reach a border style beside, and never to report.
+ *
+ * The style and the radius are read only once a frame has a border, and a
+ * border may not have width without a colour, so a colour has to be in the
+ * Recipe before either can be asked for. Which one it is does not reach the
+ * style, so this one is never spoken back: `border-color` is reported only
+ * where an author wrote it, that being the only place a colour exists. The
+ * decoder has no fallback to report — it refuses a width standing alone — and
+ * saying otherwise would put a colour on screen that the module denies having.
+ */
+const PROBE_BORDER_COLOR = "#00000000";
+
+function effectiveAppearance(
+  properties: Readonly<Record<string, CanonicalValue>>,
+): Readonly<Record<string, CanonicalValue>> {
+  // `stack-order` is the one name with nothing behind it, so where a Recipe has
+  // not written one there is nothing to read but the Recipe a form opens on,
+  // which is the only place that judgement is kept.
+  const stated: Record<string, CanonicalValue> = { ...mediaAppearanceDefaultRecipe, ...properties };
+  const recipe = written(stated, APPEARANCE_PATH);
+  const wroteColor = stated["border-color"] !== undefined;
+  const standing = wroteColor ? stated : { ...stated, "border-color": PROBE_BORDER_COLOR };
+  const frame = decodeMediaPresentation(written(standing, APPEARANCE_PATH));
+  // A square frame with no border never reaches the radius or the border style
+  // the decoder holds ready for one, so both are read off a frame made to have
+  // them. What the Recipe came to is still read from the frame it asked for.
+  const shaped = decodeMediaPresentation(written({
+    ...standing, "clip": "rounded", "border-width": frame.border?.widthPx ?? 1,
+  }, APPEARANCE_PATH));
+  const border = frame.border ?? shaped.border!;
+  const fit = decodeMediaFit(recipe);
+  // Whether playback and trim may be asked for at all is the material's to say,
+  // and no material is in reach. Reading the sample as timed would answer for
+  // all three, but a still refuses all three, so those answers cannot be written
+  // back down over half the Tracks this module builds. The sample is read as the
+  // kind that asks nothing instead, which leaves the three to be reported only
+  // where an author wrote them and the material therefore already allowed them.
+  const timed = ["playback", "trim-start", "trim-end"].some((name) => stated[name] !== undefined);
+  const sample = decodeMediaSampleSpec(recipe, REPORTED_ID, timed ? "timed" : "still", undefined, true);
+  return {
+    "fit": fit.sizing,
+    "frame-x": fit.framePoint.x,
+    "frame-y": fit.framePoint.y,
+    "content-x": fit.contentPoint.x,
+    "content-y": fit.contentPoint.y,
+    "fit-offset-x": fit.offsetPx.x,
+    "fit-offset-y": fit.offsetPx.y,
+    "fit-constraint": fit.constraint,
+    "opacity": sample.appearance.opacity,
+    "blur": sample.appearance.filter.blurPx,
+    "brightness": sample.appearance.filter.brightness,
+    "contrast": sample.appearance.filter.contrast,
+    "saturation": sample.appearance.filter.saturation,
+    ...(sample.occupancy === undefined ? {} : { "playback": spellMediaPlayback(sample.occupancy) }),
+    ...(sample.trim === undefined
+      ? {}
+      : { "trim-start": sample.trim.startFrame, "trim-end": sample.trim.endFrameExclusive }),
+    "stack-order": decodeMediaStackingOrder(recipe),
+    "clip": frame.clip.kind,
+    "radius": shaped.clip.kind === "rounded" ? shaped.clip.radiusPx : 0,
+    "padding": spellMediaPadding(frame.padding),
+    // No border is a border of no width, which is how the decoder says it.
+    "border-width": frame.border?.widthPx ?? 0,
+    "border-style": border.style,
+    ...(wroteColor ? { "border-color": border.color } : {}),
+    "shadows": spellMediaShadows(frame.shadows),
+    "frame-paint": spellMediaFramePaint(recipe, mediaFramePaintLayerId(REPORTED_ID)),
+  };
+}
+
 export const mediaAppearanceRecipeFacet: RecipeFacet = {
   surface: "track",
   schema: mediaAppearanceRecipeSchema,
@@ -160,6 +246,7 @@ export const mediaAppearanceRecipeFacet: RecipeFacet = {
       } as unknown as CanonicalValue,
     };
   },
+  effective: effectiveAppearance,
 };
 
 /**
@@ -175,6 +262,80 @@ export const mediaMotionDefaultRecipe: Readonly<Record<string, CanonicalValue>> 
 const statedMotion = new Set(Object.keys(mediaMotionDefaultRecipe));
 if (demanded(mediaMotionRecipeSchema).some((name) => !statedMotion.has(name))) {
   throw new Error("Media motion default Recipe must state every required property");
+}
+
+/**
+ * An edge to read the answers off where a Recipe has asked for none.
+ *
+ * `enter` and `exit` decide whether anything else in their group is looked at,
+ * and a duration is the one thing an operator demands rather than answers for,
+ * so with either missing the decoder never reaches the easing it would have
+ * chosen. Standing both in front of it lets it choose, and beside an edge that
+ * does nothing what it chose does nothing either. Neither of the two is spoken
+ * back: the operator because the edge does not have one, and the duration
+ * because the decoder refuses a duration rather than settling on one.
+ */
+const STANDING_OPERATOR = "fade";
+const STANDING_FRAMES = 1;
+
+/**
+ * What one edge of a lifecycle comes to.
+ *
+ * An absent operator is an absent edge, so `enter` says `none` and the names
+ * under it say what they are worth beside it, which is nothing. An amount is
+ * the distance that operator travels on its own, which is what an author
+ * writing one down would be replacing.
+ *
+ * Two of the six can only be reported where an author wrote them. A duration is
+ * demanded by every operator and answered for by none, so on an edge that runs
+ * without one the module errors rather than choosing, and a number here would
+ * promise what it then refuses. A direction is the same wherever an operator
+ * needs one and is never read where an operator does not, so the decoder holds
+ * one exactly when it was written.
+ *
+ * An edge that starts outside the Canvas measures its distance from the Canvas
+ * rather than carrying one, and the two together are refused outright, so no
+ * amount is reported beside an origin: stating one turns a Recipe that renders
+ * into a Recipe that cannot be built.
+ */
+function edgeReported(
+  prefix: "enter" | "exit",
+  asked: MediaEdgeMotion | undefined,
+  standing: MediaEdgeMotion,
+  wroteFrames: boolean,
+): Record<string, CanonicalValue> {
+  return {
+    [prefix]: asked?.operator ?? "none",
+    ...(wroteFrames ? { [`${prefix}-frames`]: standing.durationFrames } : {}),
+    [`${prefix}-easing`]: standing.easing,
+    ...(standing.direction === undefined ? {} : { [`${prefix}-direction`]: standing.direction }),
+    ...(standing.origin === undefined ? { [`${prefix}-amount`]: mediaEdgeAmount(standing) } : {}),
+    [`${prefix}-origin`]: standing.origin ?? "none",
+  };
+}
+
+function effectiveMotion(
+  properties: Readonly<Record<string, CanonicalValue>>,
+): Readonly<Record<string, CanonicalValue>> {
+  const stated: Record<string, CanonicalValue> = { ...mediaMotionDefaultRecipe, ...properties };
+  const durations: Record<string, CanonicalValue> = {
+    ...stated,
+    ...(stated["enter-frames"] === undefined ? { "enter-frames": STANDING_FRAMES } : {}),
+    ...(stated["exit-frames"] === undefined ? { "exit-frames": STANDING_FRAMES } : {}),
+  };
+  // Which edges exist is the decoder's to say, and it says it by answering with
+  // an edge or with nothing, so it is asked before anything is stood in.
+  const asked = decodeMediaMotion(written(durations, MOTION_PATH));
+  const standing = decodeMediaMotion(written({
+    ...durations,
+    ...(asked.enter === undefined ? { "enter": STANDING_OPERATOR } : {}),
+    ...(asked.exit === undefined ? { "exit": STANDING_OPERATOR } : {}),
+  }, MOTION_PATH));
+  return {
+    ...edgeReported("enter", asked.enter, standing.enter!, stated["enter-frames"] !== undefined),
+    "sustain": spellMediaSustain(asked.sustain),
+    ...edgeReported("exit", asked.exit, standing.exit!, stated["exit-frames"] !== undefined),
+  };
 }
 
 export const mediaMotionRecipeFacet: RecipeFacet = {
@@ -196,4 +357,5 @@ export const mediaMotionRecipeFacet: RecipeFacet = {
       } as unknown as CanonicalValue,
     };
   },
+  effective: effectiveMotion,
 };

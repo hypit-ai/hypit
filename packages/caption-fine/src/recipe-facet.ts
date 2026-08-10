@@ -4,6 +4,7 @@ import type { FontArtifactRef } from "@narratage/media";
 import type { CanonicalValue } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
+import { fineCaptionEffective } from "./recipe-effective.js";
 import { fineCaptionRecipeSchema } from "./recipe-schema.js";
 import { REQUIRED_PROPERTIES, fineCaptionStyle } from "./style.js";
 
@@ -71,6 +72,7 @@ export const fineCaptionRecipeFacet: RecipeFacet = {
   surface: "style",
   schema: fineCaptionRecipeSchema,
   defaults: fineCaptionDefaultRecipe,
+  effective: (properties) => fineCaptionEffective({ ...fineCaptionDefaultRecipe, ...properties }),
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
     const style = fineCaptionStyle(

@@ -150,6 +150,7 @@ export function buildForm(
   schema: ValueSchema,
   value: CanonicalValue,
   emit: Emit,
+  effective: Readonly<Record<string, CanonicalValue>> = {},
 ): HTMLElement {
   const container = document.createElement("div");
   container.className = "form";
@@ -196,7 +197,7 @@ export function buildForm(
       if (next === "" && field.optional === true) delete bag[name];
       else bag[name] = next;
       emit();
-    }, field.optional === true)));
+    }, field.optional === true, effective[name])));
   }
   return container;
 }
@@ -214,6 +215,7 @@ function scalarControl(
   current: CanonicalValue | undefined,
   onChange: (next: CanonicalValue) => void,
   unset = false,
+  effective?: CanonicalValue,
 ): HTMLElement {
   if (schema.kind === "boolean") {
     const box = document.createElement("input");
@@ -234,7 +236,7 @@ function scalarControl(
     input.step = schema.integer === true ? "1" : "any";
     input.value = typeof current === "number" ? String(current)
       : unset ? "" : String(schema.minimum ?? 0);
-    if (unset) input.placeholder = "module default";
+    if (unset && effective !== undefined) input.placeholder = String(effective);
     input.addEventListener("input", () => {
       if (input.value !== "") onChange(Number(input.value));
     });
@@ -249,7 +251,7 @@ function scalarControl(
       if (unset && typeof current !== "string") {
         const none = document.createElement("option");
         none.value = "";
-        none.textContent = "module default";
+        none.textContent = typeof effective === "string" ? effective : "unset";
         select.append(none);
       }
       for (const option of schema.enum) {
@@ -276,6 +278,7 @@ function scalarControl(
     const input = document.createElement("input");
     input.type = "text";
     input.value = typeof current === "string" ? current : "";
+    if (unset && typeof effective === "string") input.placeholder = effective;
     input.addEventListener("input", () => onChange(input.value));
     return input;
   }

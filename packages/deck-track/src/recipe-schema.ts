@@ -94,8 +94,12 @@ const ENUMS: Readonly<Record<string, readonly string[]>> = {
   "exit-easing": EASINGS,
   "enter-direction": DIRECTIONS,
   "exit-direction": DIRECTIONS,
-  "enter-origin": ["outside-canvas"],
-  "exit-origin": ["outside-canvas"],
+  // An edge has one place to start from other than where it lies, and a word for
+  // not using it. The reader this module delegates to takes both, so both are
+  // stated: an edge beginning where it lies can then be written down rather than
+  // only left out.
+  "enter-origin": ["none", "outside-canvas"],
+  "exit-origin": ["none", "outside-canvas"],
 };
 
 /** What each group means, resolved per property. */

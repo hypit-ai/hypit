@@ -7,6 +7,7 @@ import type {
   FontStackRef,
 } from "@narratage/media";
 import { canonicalize } from "@narratage/protocol";
+import type { CanonicalValue } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
 import {
@@ -136,6 +137,17 @@ function exactFonts(value: FontStackRef | FontArtifactRef): FontArtifactRef[] {
   return [structuredClone(value)];
 }
 
+/**
+ * The other direction: what a reader came to, spelled as a `.svs` spells it.
+ *
+ * A Recipe leaves nearly all of itself to the fallbacks above, and those live
+ * in the readers and nowhere else, so what a property comes to is read back out
+ * of what a decoder built rather than stated a second time here. Only spelling
+ * is this half's own work, and only where a reader took one property apart:
+ * each rejoining sits beside the split it undoes so the two cannot drift.
+ */
+type Written = Readonly<Record<string, CanonicalValue>>;
+
 function typography(
   recipe: SvsRecipe,
   fonts: readonly FontArtifactRef[],
@@ -150,6 +162,15 @@ function typography(
     weight: integer(recipe, `${prefix}font-weight`, defaults.weight),
     color: text(recipe, `${prefix}${prefix.length === 0 ? "text-color" : "color"}`, defaults.color),
     lineHeight: number(recipe, `${prefix}line-height`, defaults.lineHeight),
+  };
+}
+
+function typographyWritten(value: RankingTextStyle, prefix: "" | "title-" | "item-" = ""): Written {
+  return {
+    [`${prefix}font-size`]: value.sizePx,
+    [`${prefix}font-weight`]: value.weight,
+    [`${prefix}${prefix.length === 0 ? "text-color" : "color"}`]: value.color,
+    [`${prefix}line-height`]: value.lineHeight,
   };
 }
 
@@ -169,6 +190,20 @@ function board(recipe: SvsRecipe): RankingBoardPaint {
   };
 }
 
+function boardWritten(value: RankingBoardPaint): Written {
+  return {
+    "board-background": value.background,
+    "board-border-color": value.borderColor,
+    "board-border-width": value.borderWidthPx,
+    "board-radius": value.radiusPx,
+    "board-shadow-x": value.shadow.offsetX,
+    "board-shadow-y": value.shadow.offsetY,
+    "board-shadow-blur": value.shadow.blurPx,
+    "board-shadow-spread": value.shadow.spreadPx,
+    "board-shadow-color": value.shadow.color,
+  };
+}
+
 function motion(recipe: SvsRecipe): RankingMotionStyle {
   return {
     appearFrames: integer(recipe, "appear-frames", 6),
@@ -177,15 +212,35 @@ function motion(recipe: SvsRecipe): RankingMotionStyle {
   };
 }
 
-function sound(recipe: SvsRecipe): RankingSoundStyle {
-  const value: RankingSoundStyle = {
+function motionWritten(value: RankingMotionStyle): Written {
+  return {
+    "appear-frames": value.appearFrames,
+    "move-frames": value.moveFrames,
+    "motion-easing": value.easing,
+  };
+}
+
+function soundStyle(recipe: SvsRecipe): RankingSoundStyle {
+  return {
     contract: "svml.ranking-sound-style@1",
     appearGain: number(recipe, "appear-gain", 1),
     moveGain: number(recipe, "move-gain", 1),
     fadeFrames: integer(recipe, "sound-fade-frames", 0),
   };
+}
+
+function sound(recipe: SvsRecipe): RankingSoundStyle {
+  const value = soundStyle(recipe);
   assertRankingSoundStyle(value);
   return canonicalize(value) as unknown as RankingSoundStyle;
+}
+
+function soundWritten(value: RankingSoundStyle): Written {
+  return {
+    "appear-gain": value.appearGain,
+    "move-gain": value.moveGain,
+    "sound-fade-frames": value.fadeFrames,
+  };
 }
 
 function rowList(recipe: SvsRecipe): TierRowStyle[] {
@@ -197,19 +252,60 @@ function rowList(recipe: SvsRecipe): TierRowStyle[] {
   });
 }
 
+function rowsWritten(rows: readonly TierRowStyle[]): string {
+  return rows.map((row) => `${row.id}:${row.label}:${row.color}`).join("|");
+}
+
 function colorList(recipe: SvsRecipe, name: string, fallback: string): string[] {
   const result = text(recipe, name, fallback).split("|").map((value) => value.trim()).filter(Boolean);
   if (result.length === 0) fail(recipe, `${name} is empty.`);
   return result;
 }
 
-export function decodeTierBoardStyle(
-  recipe: SvsRecipe,
-  font: FontStackRef | FontArtifactRef,
-): { readonly style: TierBoardStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, TIER_BOARD_PROPERTIES);
-  const fonts = exactFonts(font);
-  const style: TierBoardStyle = {
+function colorsWritten(colors: readonly string[]): string {
+  return colors.join("|");
+}
+
+/** The three groups each decoder reads inline, and so reports inline as well. */
+function iconsWritten(
+  style: { readonly iconSizePx: number; readonly iconRadiusPx: number; readonly iconFit: "contain" | "cover" },
+): Written {
+  return { "icon-size": style.iconSizePx, "icon-radius": style.iconRadiusPx, "icon-fit": style.iconFit };
+}
+
+function stageWritten(
+  style: {
+    readonly stagePoint: { readonly x: number; readonly y: number };
+    readonly stageSizePx: number;
+    readonly stageStackingOrder: number;
+  },
+): Written {
+  return {
+    "stage-x": style.stagePoint.x,
+    "stage-y": style.stagePoint.y,
+    "stage-size": style.stageSizePx,
+    "stage-stack": style.stageStackingOrder,
+  };
+}
+
+function stacksWritten(
+  style: { readonly boardStackingOrder: number; readonly itemStackingOrder: number },
+): Written {
+  return { "board-stack": style.boardStackingOrder, "item-stack": style.itemStackingOrder };
+}
+
+/**
+ * Building a Style and judging it are separate, so that a Recipe can be read
+ * back without media.
+ *
+ * A report is of the properties, and no property names a font — but a Style is
+ * not valid without one, and its validator says so. Each decoder therefore
+ * builds first and asserts after, and the report builds with no faces at all
+ * and never asserts. Lowering keeps both halves, so nothing reaches a Producer
+ * unjudged.
+ */
+function tierBoardStyle(recipe: SvsRecipe, fonts: readonly FontArtifactRef[]): TierBoardStyle {
+  return {
     contract: "svml.tier-board-style@1",
     rows: rowList(recipe),
     board: board(recipe),
@@ -229,17 +325,10 @@ export function decodeTierBoardStyle(
     stageStackingOrder: integer(recipe, "stage-stack", 25),
     itemStackingOrder: integer(recipe, "item-stack", 30),
   };
-  assertTierBoardStyle(style);
-  return { style: canonicalize(style) as unknown as TierBoardStyle, sound: sound(recipe) };
 }
 
-export function decodeColumnStyle(
-  recipe: SvsRecipe,
-  font: FontStackRef | FontArtifactRef,
-): { readonly style: ColumnStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, COLUMN_PROPERTIES);
-  const fonts = exactFonts(font);
-  const style: ColumnStyle = {
+function columnStyle(recipe: SvsRecipe, fonts: readonly FontArtifactRef[]): ColumnStyle {
+  return {
     contract: "svml.column-style@1",
     board: board(recipe),
     text: typography(recipe, fonts),
@@ -257,17 +346,10 @@ export function decodeColumnStyle(
     stageStackingOrder: integer(recipe, "stage-stack", 25),
     itemStackingOrder: integer(recipe, "item-stack", 30),
   };
-  assertColumnStyle(style);
-  return { style: canonicalize(style) as unknown as ColumnStyle, sound: sound(recipe) };
 }
 
-export function decodeTopThreeStyle(
-  recipe: SvsRecipe,
-  font: FontStackRef | FontArtifactRef,
-): { readonly style: TopThreeStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, TOP_THREE_ACCEPTED);
-  const fonts = exactFonts(font);
-  const style: TopThreeStyle = {
+function topThreeStyle(recipe: SvsRecipe, fonts: readonly FontArtifactRef[]): TopThreeStyle {
+  return {
     contract: "svml.top-three-style@1",
     text: typography(recipe, fonts),
     slotColors: colorList(recipe, "slot-colors", "#facc15|#d1d5db|#fb923c"),
@@ -283,17 +365,10 @@ export function decodeTopThreeStyle(
     boardStackingOrder: integer(recipe, "board-stack", 20),
     itemStackingOrder: integer(recipe, "item-stack", 30),
   };
-  assertTopThreeStyle(style);
-  return { style: canonicalize(style) as unknown as TopThreeStyle, sound: sound(recipe) };
 }
 
-export function decodeTypewriterListStyle(
-  recipe: SvsRecipe,
-  font: FontStackRef | FontArtifactRef,
-): { readonly style: TypewriterListStyle; readonly sound: RankingSoundStyle } {
-  known(recipe, TYPEWRITER_ACCEPTED);
-  const fonts = exactFonts(font);
-  const style: TypewriterListStyle = {
+function typewriterListStyle(recipe: SvsRecipe, fonts: readonly FontArtifactRef[]): TypewriterListStyle {
+  return {
     contract: "svml.typewriter-list-style@1",
     paper: board(recipe),
     title: typography(recipe, fonts, "title-", { size: 34, weight: 800, color: "#111827", lineHeight: 1.1 }),
@@ -309,6 +384,125 @@ export function decodeTypewriterListStyle(
     boardStackingOrder: integer(recipe, "board-stack", 20),
     itemStackingOrder: integer(recipe, "item-stack", 30),
   };
+}
+
+export function decodeTierBoardStyle(
+  recipe: SvsRecipe,
+  font: FontStackRef | FontArtifactRef,
+): { readonly style: TierBoardStyle; readonly sound: RankingSoundStyle } {
+  known(recipe, TIER_BOARD_PROPERTIES);
+  const style = tierBoardStyle(recipe, exactFonts(font));
+  assertTierBoardStyle(style);
+  return { style: canonicalize(style) as unknown as TierBoardStyle, sound: sound(recipe) };
+}
+
+export function reportTierBoardStyle(recipe: SvsRecipe): Written {
+  known(recipe, TIER_BOARD_PROPERTIES);
+  const style = tierBoardStyle(recipe, []);
+  return {
+    ...typographyWritten(style.text),
+    ...boardWritten(style.board),
+    ...motionWritten(style.motion),
+    ...soundWritten(soundStyle(recipe)),
+    ...stacksWritten(style),
+    ...stageWritten(style),
+    ...iconsWritten(style),
+    rows: rowsWritten(style.rows),
+    "label-width": style.labelWidthPx,
+    padding: style.paddingPx,
+    "row-height": style.rowHeightPx,
+    "row-gap": style.rowGapPx,
+    "cell-gap": style.cellGapPx,
+  };
+}
+
+export function decodeColumnStyle(
+  recipe: SvsRecipe,
+  font: FontStackRef | FontArtifactRef,
+): { readonly style: ColumnStyle; readonly sound: RankingSoundStyle } {
+  known(recipe, COLUMN_PROPERTIES);
+  const style = columnStyle(recipe, exactFonts(font));
+  assertColumnStyle(style);
+  return { style: canonicalize(style) as unknown as ColumnStyle, sound: sound(recipe) };
+}
+
+export function reportColumnStyle(recipe: SvsRecipe): Written {
+  known(recipe, COLUMN_PROPERTIES);
+  const style = columnStyle(recipe, []);
+  return {
+    ...typographyWritten(style.text),
+    ...boardWritten(style.board),
+    ...motionWritten(style.motion),
+    ...soundWritten(soundStyle(recipe)),
+    ...stacksWritten(style),
+    ...stageWritten(style),
+    ...iconsWritten(style),
+    "rank-colors": colorsWritten(style.rankColors),
+    padding: style.paddingPx,
+    "row-height": style.rowHeightPx,
+    "row-gap": style.rowGapPx,
+  };
+}
+
+export function decodeTopThreeStyle(
+  recipe: SvsRecipe,
+  font: FontStackRef | FontArtifactRef,
+): { readonly style: TopThreeStyle; readonly sound: RankingSoundStyle } {
+  known(recipe, TOP_THREE_ACCEPTED);
+  const style = topThreeStyle(recipe, exactFonts(font));
+  assertTopThreeStyle(style);
+  return { style: canonicalize(style) as unknown as TopThreeStyle, sound: sound(recipe) };
+}
+
+/**
+ * The report answers for what the variant honours, and the decoder accepts more
+ * than that. A Recipe carrying a board it never draws is still decodable, so it
+ * is still reportable, and the board simply goes unmentioned.
+ */
+export function reportTopThreeStyle(recipe: SvsRecipe): Written {
+  known(recipe, TOP_THREE_ACCEPTED);
+  const style = topThreeStyle(recipe, []);
+  return {
+    ...typographyWritten(style.text),
+    ...motionWritten(style.motion),
+    ...soundWritten(soundStyle(recipe)),
+    ...stacksWritten(style),
+    ...iconsWritten(style),
+    "slot-colors": colorsWritten(style.slotColors),
+    "center-x": style.centerX,
+    "baseline-y": style.baselineY,
+    "slot-gap": style.slotGapPx,
+    "ring-width": style.ringWidthPx,
+    "label-gap": style.labelGapPx,
+  };
+}
+
+export function decodeTypewriterListStyle(
+  recipe: SvsRecipe,
+  font: FontStackRef | FontArtifactRef,
+): { readonly style: TypewriterListStyle; readonly sound: RankingSoundStyle } {
+  known(recipe, TYPEWRITER_ACCEPTED);
+  const style = typewriterListStyle(recipe, exactFonts(font));
   assertTypewriterListStyle(style);
   return { style: canonicalize(style) as unknown as TypewriterListStyle, sound: sound(recipe) };
+}
+
+export function reportTypewriterListStyle(recipe: SvsRecipe): Written {
+  known(recipe, TYPEWRITER_ACCEPTED);
+  const style = typewriterListStyle(recipe, []);
+  return {
+    ...typographyWritten(style.title, "title-"),
+    ...typographyWritten(style.item, "item-"),
+    ...boardWritten(style.paper),
+    ...soundWritten(soundStyle(recipe)),
+    ...stacksWritten(style),
+    "emphasis-color": style.emphasisColor,
+    "winner-color": style.winnerColor,
+    padding: style.paddingPx,
+    "row-gap": style.rowGapPx,
+    "title-gap": style.titleGapPx,
+    rotation: style.rotationDeg,
+    "frames-per-grapheme": style.framesPerGrapheme,
+    "winner-frames": style.winnerFrames,
+  };
 }

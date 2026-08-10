@@ -1,7 +1,8 @@
-import type { ValueSchema } from "@narratage/protocol";
+import type { CanonicalValue, ValueSchema } from "@narratage/protocol";
 
 import { textStyleSchema } from "./manifest.js";
-import { REQUIRED_STYLE_PROPERTIES, STYLE_PROPERTIES } from "./surface.js";
+import { REQUIRED_STYLE_PROPERTIES, STYLE_PROPERTIES, spelledStyleProperties } from "./surface.js";
+import type { TextStyle } from "./types.js";
 
 /**
  * The properties an author writes in a Text Recipe.
@@ -110,3 +111,40 @@ export const typographyRecipeSchema: ValueSchema = { kind: "object", fields: fie
 /** Every property name the schema states, for callers that need the set. */
 export const typographyRecipeProperties: readonly string[] =
   Object.keys((typographyRecipeSchema as { fields: object }).fields).sort();
+
+function valueAt(style: TextStyle, path: readonly string[]): CanonicalValue | undefined {
+  let value: unknown = style;
+  for (const step of path) {
+    if (value === null || typeof value !== "object") return undefined;
+    value = (value as Record<string, unknown>)[step];
+  }
+  return value as CanonicalValue | undefined;
+}
+
+/**
+ * A lowered Style read back as the Recipe that would produce it.
+ *
+ * The answers are taken from the Style the reader built rather than stated
+ * again, using the same map of where each written word lands, so what an editor
+ * shows for a property nobody wrote is what the lowering used for it. Two are
+ * read from `spelledStyleProperties` instead, being the two the reader puts
+ * somewhere no author writes.
+ *
+ * Four properties can have no answer, and are then left out rather than given
+ * one. A language, a line limit and a shrink floor under an overflow that does
+ * not shrink are absent from a lowered Style rather than defaulted to anything,
+ * so there is no value to report; and the glyph fill of a Recipe that names no
+ * colour is whichever one the Item being restyled arrived carrying, which a
+ * Recipe on its own cannot see. Saying a colour there would be inventing the
+ * one thing an author would most take at its word.
+ */
+export function typographyStyleProperties(style: TextStyle): Readonly<Record<string, CanonicalValue>> {
+  const spelled = spelledStyleProperties(style);
+  const reported: Record<string, CanonicalValue> = {};
+  for (const name of typographyRecipeProperties) {
+    const path = FIELDS[name];
+    const value = path === undefined ? spelled[name] : valueAt(style, path);
+    if (value !== undefined) reported[name] = value;
+  }
+  return reported;
+}

@@ -247,22 +247,42 @@ function eased(progress: number, easing: VisualEasing): number {
   return cubicCoordinate((low + high) / 2, curve[1], curve[3]);
 }
 
+/**
+ * How far an edge travels when its Recipe does not say.
+ *
+ * Each operator measures its amount in units of its own — pixels for a slide,
+ * a factor for a scale, degrees for a spin — so each carries a distance of its
+ * own to fall back on. They are gathered here because a Recipe reporting what
+ * it comes to has to name the same distances, and two lists of them would
+ * disagree the moment either moved.
+ */
+export function mediaEdgeAmount(value: MediaEdgeMotion): number {
+  if (value.amount !== undefined) return value.amount;
+  switch (value.operator) {
+    case "pop": return 0.7;
+    case "scale": return 0.8;
+    case "blur-reveal": return 16;
+    case "bounce": return 80;
+    case "flip": return 90;
+    case "spin": return 180;
+    default: return 100;
+  }
+}
+
 function edgeStateAt(value: MediaEdgeMotion, progressToNeutral: number): MotionState {
   const progress = clean(progressToNeutral);
   const inverse = clean(1 - progress);
-  const amount = value.amount ?? (value.operator === "blur-reveal" ? 16 : value.operator === "scale" ? 0.8 : 100);
+  const amount = mediaEdgeAmount(value);
   switch (value.operator) {
     case "fade": return { ...neutral, opacity: progress };
     case "slide": return { ...neutral, transform: translate(value.direction!, clean(amount * inverse)) };
     case "scale": return { ...neutral, transform: `scale(${clean(amount + ((1 - amount) * progress))})` };
-    case "pop": {
-      const start = value.amount ?? 0.7;
-      return { ...neutral, opacity: progress, transform: `scale(${clean(start + ((1 - start) * progress))})` };
-    }
+    case "pop":
+      return { ...neutral, opacity: progress, transform: `scale(${clean(amount + ((1 - amount) * progress))})` };
     case "bounce": return {
       ...neutral,
       opacity: progress,
-      transform: `translateY(${clean((value.amount ?? 80) * inverse)}px) scale(${clean(0.92 + (0.08 * progress))})`,
+      transform: `translateY(${clean(amount * inverse)}px) scale(${clean(0.92 + (0.08 * progress))})`,
     };
     case "blur-reveal": return { ...neutral, opacity: progress, filter: `blur(${clean(amount * inverse)}px)` };
     case "wipe": {
@@ -276,10 +296,10 @@ function edgeStateAt(value: MediaEdgeMotion, progressToNeutral: number): MotionS
       const axis = value.direction === "left" || value.direction === "right" ? "Y" : "X";
       const sign = value.direction === "left" || value.direction === "up" ? -1 : 1;
       return { ...neutral, opacity: progress,
-        transform: `perspective(800px) rotate${axis}(${clean(sign * (value.amount ?? 90) * inverse)}deg)` };
+        transform: `perspective(800px) rotate${axis}(${clean(sign * amount * inverse)}deg)` };
     }
     case "spin": return { ...neutral, opacity: progress,
-      transform: `rotate(${clean((value.amount ?? 180) * inverse)}deg) scale(${clean(0.8 + (0.2 * progress))})` };
+      transform: `rotate(${clean(amount * inverse)}deg) scale(${clean(0.8 + (0.2 * progress))})` };
   }
 }
 

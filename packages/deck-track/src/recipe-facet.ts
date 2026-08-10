@@ -8,6 +8,7 @@ import {
   decodeDepthStackMaterial,
   decodeDepthStackSpec,
 } from "./author.js";
+import { depthStackEffective } from "./recipe-effective.js";
 import { depthStackRecipeSchema } from "./recipe-schema.js";
 import type { DepthStackCard, DepthStackProgram } from "./types.js";
 
@@ -112,6 +113,7 @@ export const depthStackRecipeFacet: RecipeFacet = {
   surface: "track",
   schema: depthStackRecipeSchema,
   defaults: depthStackDefaultRecipe,
+  effective: depthStackEffective,
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
     const stackId = typeof program.id === "string" ? program.id : STACK_ID;

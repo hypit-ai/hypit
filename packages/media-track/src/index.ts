@@ -9,6 +9,11 @@ export {
   isMediaFramePaintLayerId,
   mediaAppearanceKeys,
   mediaFramePaintLayerId,
+  spellMediaFramePaint,
+  spellMediaPadding,
+  spellMediaPlayback,
+  spellMediaShadows,
+  spellMediaSustain,
 } from "./author.js";
 export { renderMediaTrackFragment, stillMediaTrackFragment } from "./fragment.js";
 export {
@@ -55,6 +60,7 @@ export {
   assertMediaLifecycleMotion,
   assertMediaSustainMotion,
   lifecycleAnimation,
+  mediaEdgeAmount,
   samplingAnimation,
   lifecycleAnimationWindow,
   resolveMediaLifecycleMotion,

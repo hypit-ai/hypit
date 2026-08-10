@@ -3,7 +3,7 @@ import type { FontStackRef } from "@narratage/media";
 import type { CanonicalValue } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
-import { decodeCommentStickerStyle } from "./author.js";
+import { decodeCommentStickerStyle, reportCommentStickerStyle } from "./author.js";
 import { commentStickerRecipeProperties, commentStickerRecipeSchema } from "./recipe-schema.js";
 import type { CommentStickerItemProgram, CommentStickerProgram } from "./types.js";
 
@@ -36,13 +36,16 @@ function carriedStack(item: Partial<CommentStickerItemProgram>): FontStackRef {
   return { contract: "svml.font-stack@1", faces: Array.isArray(faces) ? faces : [] };
 }
 
+function recipeFor(properties: Readonly<Record<string, CanonicalValue>>, id: string): SvsRecipe {
+  return { contract: "svml.svs-recipe@1", path: `comment-sticker.${id}`, properties } as SvsRecipe;
+}
+
 function styleFor(
   properties: Readonly<Record<string, CanonicalValue>>,
   item: Partial<CommentStickerItemProgram>,
 ) {
   const id = item.style?.id ?? STYLE_ID;
-  const recipe = { contract: "svml.svs-recipe@1", path: `comment-sticker.${id}`, properties } as SvsRecipe;
-  return decodeCommentStickerStyle(recipe, carriedStack(item), id);
+  return decodeCommentStickerStyle(recipeFor(properties, id), carriedStack(item), id);
 }
 
 /** How the sticker arrives, waits and leaves, as opposed to what it looks like standing still. */
@@ -89,4 +92,9 @@ export const commentStickerRecipeFacet: RecipeFacet = {
       } as unknown as CanonicalValue,
     };
   },
+  // Fifty-one blank fields say nothing about what a sticker will look like, and
+  // only the decoder knows what they come to, so the decoder is asked. An id
+  // reaches no property, and faces reach only the parts a Recipe cannot state,
+  // so neither is needed to answer.
+  effective: (properties) => reportCommentStickerStyle(recipeFor(properties, STYLE_ID), STYLE_ID),
 };

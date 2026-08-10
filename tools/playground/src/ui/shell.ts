@@ -397,7 +397,15 @@ export async function mountShell(root: HTMLElement): Promise<void> {
         body.append(which);
       }
       body.append(...sheetControls(active, schema));
-      body.append(buildForm(schema, written, schedule));
+      // What the module says each property comes to, so an untouched field
+      // shows the number that will render rather than a blank or a zero.
+      let effective: Readonly<Record<string, CanonicalValue>> = {};
+      try {
+        effective = facetOf(active)!.effective(written);
+      } catch {
+        // A module that cannot report is no worse off than before it could.
+      }
+      body.append(buildForm(schema, written, schedule, effective));
       const copy = document.createElement("button");
       copy.type = "button";
       copy.className = "copy-svs";

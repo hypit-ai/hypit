@@ -202,6 +202,33 @@ function splitNumbers(value: string, label: string, count: 1 | 2 | 4): number[] 
   return result;
 }
 
+/**
+ * The same edges back in one string.
+ *
+ * `splitNumbers` widens one or two numbers into four, and this narrows four
+ * back to the shortest spelling that widens into them again, so a Recipe
+ * reported out of a lowered Style reads the way one is written.
+ */
+function spellNumbers(values: readonly [number, number, number, number]): string {
+  const [top, right, bottom, left] = values;
+  if (top === right && right === bottom && bottom === left) return String(top);
+  if (top === bottom && right === left) return `${top} ${right}`;
+  return `${top} ${right} ${bottom} ${left}`;
+}
+
+/**
+ * A colour an editor can show a swatch for.
+ *
+ * The module takes any safe CSS colour and keeps whichever one was written, so
+ * this only widens the hex shorthands into the form a colour input reads; a
+ * name or a function is already the author's own word for the colour and stays
+ * as it was typed.
+ */
+function spellColor(value: string): string {
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f]?)$/iu.exec(value.trim());
+  return short === null ? value.trim() : `#${short.slice(1).map((digit) => digit + digit).join("")}`;
+}
+
 function gradientStops(element: StructuredElement): Array<{ readonly offset: number; readonly color: string; readonly opacity: number }> {
   const stops = element.children.flatMap((child) => {
     if (child.kind === "text") {
@@ -380,12 +407,17 @@ export type TextStyleChildren = {
  * The Style Surface arrives here from an authored element and the Recipe facet
  * arrives from loose properties, so the two cannot come to differing readings of
  * the same words.
+ *
+ * Reading is separate from sealing because a Recipe is worth reading before
+ * there is a face to set it in. An editor showing what a Recipe comes to holds
+ * no font and no Item's paint, and needs neither to answer for a property, so
+ * the exact font stack and the visible glyph a rendering Style must have are
+ * demanded by `typographyTextStyle` below rather than here.
  */
-export function typographyTextStyle(
+export function textStyleContent(
   id: string,
   value: SvsRecipe,
   fonts: readonly FontArtifactRef[],
-  label: string,
   children: TextStyleChildren,
 ): TextStyle {
   const unknown = Object.keys(value.properties).filter((name) => !STYLE_PROPERTIES.has(name));
@@ -397,10 +429,7 @@ export function typographyTextStyle(
   const paints: readonly VisualTextPaintLayer[] = value.properties.fill === undefined
     ? children.paints
     : [{ kind: "fill", paint: { kind: "solid", color: propString(value, "fill") } }, ...children.paints];
-  if (!paints.some((paint) => paint.kind === "fill" || paint.kind === "stroke")) {
-    throw new Error(`${label} requires at least one visible glyph Fill or Stroke.`);
-  }
-  return sealTextStyle({
+  return {
     contract: "svml.text-style@1", id,
     stackingOrder: propNumber(value, "stack-order"),
     typography: {
@@ -453,7 +482,50 @@ export function typographyTextStyle(
       align: propString(value, "path-align", "start") as "start" | "center" | "end",
       reverse: propBoolean(value, "path-reverse", false), overflow: propString(value, "path-overflow", "visible") as "visible" | "clip",
     },
-  });
+  };
+}
+
+/**
+ * The same reading, made into a Style that renders.
+ *
+ * Text cannot be set without a face, and glyphs nothing paints are text nobody
+ * sees, so both are required of what leaves here. A Recipe that names no fill
+ * takes the one the Item it restyles arrived carrying, which is why the demand
+ * is made of the finished paint stack rather than of the property.
+ */
+export function typographyTextStyle(
+  id: string,
+  value: SvsRecipe,
+  fonts: readonly FontArtifactRef[],
+  label: string,
+  children: TextStyleChildren,
+): TextStyle {
+  const style = textStyleContent(id, value, fonts, children);
+  if (!style.paints.some((paint) => paint.kind === "fill" || paint.kind === "stroke")) {
+    throw new Error(`${label} requires at least one visible glyph Fill or Stroke.`);
+  }
+  return sealTextStyle(style);
+}
+
+/**
+ * The two properties a lowered Style holds in a shape nobody writes, spelled
+ * back into the shape they were written in.
+ *
+ * They sit beside the reading above so that widening and narrowing stay one
+ * decision: the solid glyph fill is the first layer of a paint stack, and the
+ * four padding edges are the one, two or four numbers a stylesheet spells them
+ * with. A fill nothing wrote, or one a gradient rather than a colour answers
+ * for, has no colour to give and says so by giving none.
+ */
+export function spelledStyleProperties(style: TextStyle): Readonly<Record<string, string | undefined>> {
+  const fill = style.paints.find(
+    (paint): paint is Extract<VisualTextPaintLayer, { kind: "fill" }> => paint.kind === "fill",
+  );
+  const padding = style.area.paddingPx;
+  return {
+    "fill": fill?.paint.kind === "solid" ? spellColor(fill.paint.color) : undefined,
+    "padding": spellNumbers([padding.blockStart, padding.inlineEnd, padding.blockEnd, padding.inlineStart]),
+  };
 }
 
 export const decodeTypographyStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {

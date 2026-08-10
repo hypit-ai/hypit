@@ -180,7 +180,14 @@ function assertPaint(value: FineCaptionGlyphPaint, label: string): void {
   }
 }
 
-export function fineCaptionParameters(
+/**
+ * Every parameter a Recipe comes to, without judging the result.
+ *
+ * Lowering demands a face because a caption cannot render without one, but
+ * reading back what a property came to does not — so the assertion belongs to
+ * `fineCaptionParameters` below and not to the reading.
+ */
+export function buildFineCaptionParameters(
   recipe: SvsRecipe,
   exactFonts: readonly FontArtifactRef[],
 ): FineCaptionParameters {
@@ -281,6 +288,14 @@ export function fineCaptionParameters(
       loopIntensity: number(recipe, "loop-intensity", 1),
     },
   };
+  return parameters;
+}
+
+export function fineCaptionParameters(
+  recipe: SvsRecipe,
+  exactFonts: readonly FontArtifactRef[],
+): FineCaptionParameters {
+  const parameters = buildFineCaptionParameters(recipe, exactFonts);
   assertFineCaptionParameters(parameters);
   return parameters;
 }

@@ -107,6 +107,21 @@ export type RecipeFacet = {
     properties: Readonly<Record<string, CanonicalValue>>,
     current: Readonly<Record<string, CanonicalValue>>,
   ) => Readonly<Record<string, CanonicalValue>>;
+  /**
+   * What every property actually comes to, given what has been written.
+   *
+   * A Recipe leaves most of itself unsaid, and what the decoder then uses is
+   * knowable only to the decoder: some of it fixed, some computed from another
+   * property, some inherited from a value the author did set. Reporting it is
+   * how an editor can show a complete Recipe without inventing one — the
+   * numbers shown are the ones that rendered, not a second opinion about them.
+   *
+   * Answers for every property the schema declares, in the vocabulary and shape
+   * an author would write, and needs no media to do it.
+   */
+  readonly effective: (
+    properties: Readonly<Record<string, CanonicalValue>>,
+  ) => Readonly<Record<string, CanonicalValue>>;
 };
 
 /** Trusted deterministic implementation package; it selects no Provider or Runtime service. */

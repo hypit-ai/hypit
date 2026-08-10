@@ -66,8 +66,10 @@ const ENUMS: Readonly<Record<string, readonly string[]>> = {
   "exit-easing": EASINGS,
   "enter-direction": DIRECTIONS,
   "exit-direction": DIRECTIONS,
-  "enter-origin": ["outside-canvas"],
-  "exit-origin": ["outside-canvas"],
+  // An origin has one place to start from and a word for not using it, so that
+  // an edge which begins where it lies can be written down rather than only left out.
+  "enter-origin": ["none", "outside-canvas"],
+  "exit-origin": ["none", "outside-canvas"],
 };
 
 const REQUIRED = new Set<string>(mediaAppearanceKeys.required);

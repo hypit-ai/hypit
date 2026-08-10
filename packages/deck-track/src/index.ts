@@ -13,6 +13,7 @@ export {
 } from "./surface.js";
 export { renderDepthStack } from "./lower.js";
 export { depthStackDefaultRecipe, depthStackRecipeFacet } from "./recipe-facet.js";
+export { depthStackEffective } from "./recipe-effective.js";
 export { depthStackRecipeProperties, depthStackRecipeSchema } from "./recipe-schema.js";
 export {
   depthStackCardLabelSchema,

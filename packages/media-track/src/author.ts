@@ -83,6 +83,21 @@ function padding(recipe: SvsRecipe): MediaFramePresentation["padding"] {
   return { topPx: values[0]!, rightPx: values[1]!, bottomPx: values[2]!, leftPx: values[3]! };
 }
 
+/**
+ * The one string a stylesheet spells a padding with.
+ *
+ * The reader above takes one, two or four numbers and always answers with four
+ * sides, so writing four back would put a spelling on screen that no author
+ * uses. The shortest one that reads back the same is the one they wrote, and it
+ * is worked out here so it cannot drift from the reader beside it.
+ */
+export function spellMediaPadding(value: MediaFramePresentation["padding"]): string {
+  const { topPx, rightPx, bottomPx, leftPx } = value;
+  if (topPx === rightPx && rightPx === bottomPx && bottomPx === leftPx) return `${topPx}`;
+  if (topPx === bottomPx && rightPx === leftPx) return `${topPx} ${rightPx}`;
+  return `${topPx} ${rightPx} ${bottomPx} ${leftPx}`;
+}
+
 function gradientStops(recipe: SvsRecipe, source: string): readonly { readonly offset: number; readonly color: string }[] {
   const stops = source.split(",").map((entry) => {
     const match = /^(.+?)@((?:0(?:\.\d+)?)|(?:1(?:\.0+)?))$/u.exec(entry.trim());
@@ -117,6 +132,14 @@ function shadows(recipe: SvsRecipe): MediaFramePresentation["shadows"] {
       spreadPx: Number(match[4]), color: match[5]!.trim(),
     };
   });
+}
+
+/** The `x y blur spread color` list the reader above takes, written back; no shadow is `none`. */
+export function spellMediaShadows(value: MediaFramePresentation["shadows"]): string {
+  if (value.length === 0) return "none";
+  return value
+    .map((shadow) => `${shadow.offsetX} ${shadow.offsetY} ${shadow.blurPx} ${shadow.spreadPx} ${shadow.color}`)
+    .join(";");
 }
 
 const FIT_KEYS = ["fit", "frame-x", "frame-y", "content-x", "content-y", "fit-offset-x", "fit-offset-y", "fit-constraint"] as const;
@@ -159,6 +182,11 @@ function occupancy(recipe: SvsRecipe): MediaVisualOccupancy {
   }
 }
 
+/** The `playback` word the reader above turns into this occupancy. */
+export function spellMediaPlayback(value: MediaVisualOccupancy): string {
+  return value.mode === "stretch" ? "stretch" : `${value.mode}-${value.align}`;
+}
+
 function trim(recipe: SvsRecipe): MediaVisualTrim | undefined {
   const startFrame = optionalNumber(recipe, "trim-start");
   const endFrameExclusive = optionalNumber(recipe, "trim-end");
@@ -171,6 +199,12 @@ function trim(recipe: SvsRecipe): MediaVisualTrim | undefined {
   ) {
     fail(recipe, "trim-start and trim-end must both be integer frames.");
   }
+  // A window that ends where it begins holds no frames, and no Layer may carry
+  // one — `assertMediaVisualTrim` has always refused it — so leaving it out was
+  // the only way to write a sample nobody has cut. It is that sample now, which
+  // gives the untrimmed sample the two numbers it needs to be written down at
+  // all. Every other empty or backwards window is still refused where it lands.
+  if (startFrame === 0 && endFrameExclusive === 0) return undefined;
   return { startFrame, endFrameExclusive };
 }
 
@@ -211,13 +245,18 @@ function edge(recipe: SvsRecipe, prefix: "enter" | "exit"): MediaLifecycleMotion
   const allowed = ["fade", "slide", "scale", "pop", "bounce", "blur-reveal", "wipe", "flip", "spin"] as const;
   if (!allowed.includes(operator as typeof allowed[number])) fail(recipe, `${prefix} operator is invalid.`);
   const direction = optionalString(recipe, `${prefix}-direction`);
+  // An edge that starts where it lies had no way to say so: `outside-canvas`
+  // was the only word an origin had, and leaving the property out was the only
+  // way to mean the other thing. It takes `none` now, as the operators and the
+  // sustain and the shadows already do, so a Recipe can state the origin it is
+  // not using instead of only being able to omit it.
   const origin = optionalString(recipe, `${prefix}-origin`);
   return {
     operator: operator as typeof allowed[number],
     durationFrames: number(recipe, `${prefix}-frames`),
     easing: oneOf(recipe, `${prefix}-easing`, ["linear", "ease-in", "ease-out", "ease-in-out"] as const, "ease-in-out"),
     ...(direction === undefined ? {} : { direction: oneOf(recipe, `${prefix}-direction`, ["left", "right", "up", "down"] as const) }),
-    ...(origin === undefined ? {} : { origin: oneOf(recipe, `${prefix}-origin`, ["outside-canvas"] as const) }),
+    ...(origin === undefined || origin === "none" ? {} : { origin: oneOf(recipe, `${prefix}-origin`, ["outside-canvas"] as const) }),
     ...(optionalNumber(recipe, `${prefix}-amount`) === undefined ? {} : { amount: number(recipe, `${prefix}-amount`) }),
   };
 }
@@ -234,6 +273,14 @@ function sustain(recipe: SvsRecipe): MediaLifecycleMotion["sustain"] {
       ...(match[4] === undefined ? {} : { direction: match[4] as "left" | "right" | "up" | "down" }),
     };
   });
+}
+
+/** The `operator amount cycles [direction]` list the reader above takes, written back. */
+export function spellMediaSustain(value: MediaLifecycleMotion["sustain"]): string {
+  if (value.length === 0) return "none";
+  return value
+    .map((entry) => `${entry.operator} ${entry.amount} ${entry.cycles}${entry.direction === undefined ? "" : ` ${entry.direction}`}`)
+    .join(", ");
 }
 
 export function decodeMediaMotion(recipe: SvsRecipe | undefined): MediaLifecycleMotion {
@@ -303,6 +350,18 @@ export function decodeMediaFramePaint(recipe: SvsRecipe, id: string): MediaPaint
   if (source === undefined || source === "transparent") return undefined;
   const adapted: SvsRecipe = { ...recipe, properties: { paint: source } };
   return sealMediaPaintLayerSpec({ contract: "svml.media-paint-layer-spec@1", id, paint: paint(adapted), opacity: 1 });
+}
+
+/**
+ * The `frame-paint` string that reads back as this frame's backdrop.
+ *
+ * The reader above answers with a Layer or with nothing, and nothing is what a
+ * transparent frame is, so the word for it is decided here rather than by
+ * whoever is reading the answer.
+ */
+export function spellMediaFramePaint(recipe: SvsRecipe, id: string): string {
+  const source = optionalString(recipe, "frame-paint");
+  return source !== undefined && decodeMediaFramePaint(recipe, id) !== undefined ? source : "transparent";
 }
 
 export function decodeMediaPaintSpec(recipe: SvsRecipe, id: string): MediaPaintLayerSpec {

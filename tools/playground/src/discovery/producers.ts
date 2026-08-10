@@ -37,6 +37,10 @@ export type BoundRecipe = {
   readonly schema: ValueSchema;
   /** A Recipe the module says renders, so a form opens on something legible. */
   readonly defaults: Readonly<Record<string, CanonicalValue>>;
+  /** What each property comes to, so a form can show it rather than a blank. */
+  readonly effective: (
+    properties: Readonly<Record<string, CanonicalValue>>,
+  ) => Readonly<Record<string, CanonicalValue>>;
   readonly apply: (
     properties: Readonly<Record<string, CanonicalValue>>,
     current: Readonly<Record<string, CanonicalValue>>,

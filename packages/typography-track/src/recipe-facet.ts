@@ -4,8 +4,8 @@ import type { CanonicalValue } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
 import { sealTypographyTrackProgram } from "./program.js";
-import { typographyRecipeSchema } from "./recipe-schema.js";
-import { REQUIRED_STYLE_PROPERTIES, typographyTextStyle } from "./surface.js";
+import { typographyRecipeSchema, typographyStyleProperties } from "./recipe-schema.js";
+import { REQUIRED_STYLE_PROPERTIES, textStyleContent, typographyTextStyle } from "./surface.js";
 import type { TextStyleChildren } from "./surface.js";
 import type { TextItem, TextStyle, TypographyTrackProgram } from "./types.js";
 
@@ -27,6 +27,10 @@ const LABEL = "Text Recipe";
 
 function asProgram(value: CanonicalValue | undefined): Partial<TypographyTrackProgram> {
   return value !== null && typeof value === "object" ? value as Partial<TypographyTrackProgram> : {};
+}
+
+function asRecipe(properties: Readonly<Record<string, CanonicalValue>>): SvsRecipe {
+  return { contract: "svml.svs-recipe@1", path: `text.${STYLE_ID}`, properties } as SvsRecipe;
 }
 
 /**
@@ -90,9 +94,7 @@ export const typographyRecipeFacet: RecipeFacet = {
   defaults: typographyDefaultRecipe,
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
-    const recipe = {
-      contract: "svml.svs-recipe@1", path: `text.${STYLE_ID}`, properties,
-    } as SvsRecipe;
+    const recipe = asRecipe(properties);
     // Every Item embeds a whole Style rather than naming a shared one, so a
     // Recipe is written into each; the id it was authored under is the Item's
     // own and outlives being restyled.
@@ -112,4 +114,13 @@ export const typographyRecipeFacet: RecipeFacet = {
       ) as unknown as CanonicalValue,
     };
   },
+  // The lowering answers for every property, so what one comes to is read back
+  // out of a Style lowered from what was written, with no face to set it in and
+  // no Item's paint to keep. The two the lowering has no fallback for come from
+  // the Recipe above when nothing has been written yet, which is the size and
+  // the order a form opens on rather than a size invented here.
+  effective: (properties) => typographyStyleProperties(textStyleContent(
+    STYLE_ID, asRecipe({ ...typographyDefaultRecipe, ...properties }), [],
+    { paints: [], axes: [], features: [], decorations: [] },
+  )),
 };
