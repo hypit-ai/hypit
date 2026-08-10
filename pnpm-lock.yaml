@@ -11,6 +11,9 @@ importers:
       '@narratage/artifact':
         specifier: workspace:*
         version: link:packages/artifact
+      '@narratage/artifact-store-fs':
+        specifier: workspace:*
+        version: link:packages/artifact-store-fs
       '@narratage/audio-track':
         specifier: workspace:*
         version: link:packages/audio-track
@@ -32,6 +35,12 @@ importers:
       '@narratage/composition':
         specifier: workspace:*
         version: link:packages/composition
+      '@narratage/credential-store-env':
+        specifier: workspace:*
+        version: link:packages/credential-store-env
+      '@narratage/credential-store-keychain':
+        specifier: workspace:*
+        version: link:packages/credential-store-keychain
       '@narratage/deck-track':
         specifier: workspace:*
         version: link:packages/deck-track
@@ -152,6 +161,9 @@ importers:
       '@narratage/speech-spine':
         specifier: workspace:*
         version: link:packages/speech-spine
+      '@narratage/store-sqlite':
+        specifier: workspace:*
+        version: link:packages/store-sqlite
       '@narratage/svs':
         specifier: workspace:*
         version: link:packages/svs
@@ -200,6 +212,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
 
   packages/artifact-store-s3:
     dependencies:
@@ -563,6 +578,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
 
   packages/credential-store-keychain:
     dependencies:
@@ -1267,15 +1285,9 @@ importers:
 
   packages/local:
     dependencies:
-      '@narratage/artifact-store-fs':
-        specifier: workspace:*
-        version: link:../artifact-store-fs
       '@narratage/component-kit':
         specifier: workspace:*
         version: link:../component-kit
-      '@narratage/credential-store-env':
-        specifier: workspace:*
-        version: link:../credential-store-env
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -1297,16 +1309,22 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@narratage/store-sqlite':
-        specifier: workspace:*
-        version: link:../store-sqlite
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
     devDependencies:
+      '@narratage/artifact-store-fs':
+        specifier: workspace:*
+        version: link:../artifact-store-fs
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
+      '@narratage/credential-store-env':
+        specifier: workspace:*
+        version: link:../credential-store-env
+      '@narratage/store-sqlite':
+        specifier: workspace:*
+        version: link:../store-sqlite
 
   packages/markup:
     dependencies:
@@ -1761,9 +1779,6 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@narratage/runtime-adapter-node':
-        specifier: workspace:*
-        version: link:../runtime-adapter-node
     devDependencies:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
@@ -1774,6 +1789,9 @@ importers:
       '@narratage/core':
         specifier: workspace:*
         version: link:../core
+      '@narratage/credential-store-env':
+        specifier: workspace:*
+        version: link:../credential-store-env
       '@narratage/driver-node':
         specifier: workspace:*
         version: link:../driver-node
@@ -1813,6 +1831,9 @@ importers:
       '@narratage/seedream':
         specifier: workspace:*
         version: link:../seedream
+      '@narratage/store-sqlite':
+        specifier: workspace:*
+        version: link:../store-sqlite
       '@narratage/validation':
         specifier: workspace:*
         version: link:../validation
@@ -1948,9 +1969,6 @@ importers:
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
-      '@narratage/runtime-adapter-node':
-        specifier: workspace:*
-        version: link:../runtime-adapter-node
 
   packages/ranking:
     dependencies:
@@ -2431,6 +2449,9 @@ importers:
       '@narratage/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@narratage/runtime-adapter':
+        specifier: workspace:*
+        version: link:../runtime-adapter
 
   packages/svs:
     dependencies:

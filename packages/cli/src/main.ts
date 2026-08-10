@@ -345,6 +345,7 @@ function usage(): string {
     "  narratage operations <build-id> --runtime profile.json|./svml.runtime.ts",
     "  narratage operation <operation-id> --runtime profile.json|./svml.runtime.ts",
     "  narratage cancel build <build-id> --runtime profile.json|./svml.runtime.ts [--reason text]",
+    "  narratage cancel operation <operation-id> --runtime profile.json|./svml.runtime.ts [--reason text]",
     "  narratage auth status|login|logout <endpoint-instance> --runtime profile.json [--slot name] [--from secret-file]",
     "",
     "output:",
@@ -505,6 +506,11 @@ export async function runCli(
   if (!operational || (!fileOptional && args.file === undefined)) {
     throw new Error(usage());
   }
+  if (args.watch && args.command !== "queue") throw new Error("--watch applies only to queue");
+  if (args.jsonl && (args.command !== "queue" || !args.watch)) {
+    throw new Error("--jsonl applies only to queue --watch");
+  }
+  if (args.watch && args.json) throw new Error("queue --watch is a stream; use --jsonl instead of --json");
   if (args.command === "lock-packages") {
     if (args.packages.length === 0) throw new Error("lock-packages requires at least one --package");
     if (args.packageLock !== undefined) throw new Error("lock-packages does not accept --package-lock");
@@ -590,8 +596,16 @@ export async function runCli(
     }
     if (args.action === "logs") {
       const logs = await runtimeProcessLogs(profile);
-      if (!args.json && !args.jsonl) io.write(logs.text);
-      else writeOperational(logs, "Runtime logs");
+      const lines = logs.text.length === 0 ? [] : logs.text.replace(/\n$/u, "").split("\n");
+      const shown = args.verbose ? lines : lines.slice(-100);
+      writeOperational({
+        format: "narratage.cli-runtime-logs@1",
+        path: logs.path,
+        text: logs.text,
+      }, "Runtime logs", "info", [
+        ["Path", logs.path],
+        ["Lines", String(lines.length)],
+      ], shown.length === 0 ? ["No log output."] : shown);
       return;
     }
     if (args.action === "down") {
@@ -884,19 +898,41 @@ export async function runCli(
           ]);
         }
       } else {
-        if (args.action !== "build") throw new Error("cancel must name its scope: cancel build <build-id>");
-        const result = await runtime.cancel(args.file!, args.reason);
-        const machine = {
-          build: args.file,
-          cancelled: result !== undefined,
-          phase: result?.phase,
-          admission: result?.admission,
-          terminal: result?.terminal,
-        };
-        writeOperational(machine, result === undefined ? "Build not found" : "Cancellation requested",
-          result === undefined ? "warning" : "success", [
-            ["Build", args.file!], ["Admission", result?.admission ?? "missing"], ["Phase", result?.phase ?? "missing"],
-          ]);
+        if (args.action === "build") {
+          const result = await runtime.cancel(args.file!, args.reason);
+          const machine = {
+            scope: "build",
+            build: args.file,
+            requested: result !== undefined,
+            phase: result?.phase,
+            admission: result?.admission,
+            terminal: result?.terminal,
+          };
+          writeOperational(machine, result === undefined ? "Build not found" : "Build cancellation requested",
+            result === undefined ? "warning" : "success", [
+              ["Build", args.file!], ["Admission", result?.admission ?? "missing"], ["Phase", result?.phase ?? "missing"],
+            ]);
+        } else if (args.action === "operation") {
+          if (args.file === undefined || !isDigest(args.file)) {
+            throw new Error("cancel operation requires an Operation digest");
+          }
+          const result = await runtime.cancelOperation(args.file!, args.reason);
+          const machine = {
+            scope: "operation",
+            operation: args.file,
+            requested: result !== undefined,
+            build: result?.build,
+            execution: result?.status,
+            control: result?.cancellation?.status,
+          };
+          writeOperational(machine, result === undefined ? "Operation not found" : "Operation cancellation requested",
+            result === undefined ? "warning" : "success", [
+              ["Operation", args.file!], ["Build", result?.build ?? "missing"],
+              ["Execution", result?.status ?? "missing"], ["Control", result?.cancellation?.status ?? "missing"],
+            ]);
+        } else {
+          throw new Error("cancel must name its scope: cancel build <build-id> or cancel operation <operation-id>");
+        }
       }
     } finally {
       await runtime.close();

@@ -144,6 +144,8 @@ export type LocalRuntime = {
   deleteCredential(endpoint: string, slot: string): Promise<{ readonly deleted: boolean; readonly credential: LocalCredentialStatus }>;
   builds(): Promise<readonly BuildCatalogEntry[]>;
   cancel(build: string, reason?: string): Promise<BuildDispatchSnapshot | undefined>;
+  /** Request control of one exact Operation attempt without closing the whole Build. */
+  cancelOperation(id: Digest, reason?: string): Promise<OperationSnapshot | undefined>;
   workOnce(options: { readonly owner: string; readonly leaseMs: number }): Promise<BuildDispatchSnapshot | undefined>;
   work(options: import("@narratage/runtime").RuntimeWorkerRunOptions): Promise<void>;
   readArtifact(digest: Digest): Promise<Uint8Array | undefined>;

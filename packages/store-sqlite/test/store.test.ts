@@ -159,7 +159,7 @@ test("Host Catalog schema changes do not change the execution Runtime Closure", 
     assert.deepEqual(
       services.services.map((item) => item.instance.configurationDigest),
       [
-        ...Array(4).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 3, busyTimeoutMs: 5_000 })),
+        ...Array(4).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 4, busyTimeoutMs: 5_000 })),
       ],
     );
     await services.close?.();
@@ -202,6 +202,18 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     });
     assert.equal(reserved.status, "acquired");
 
+    // A control request can race with the leased Worker's final release. The Store must retain the
+    // wake independently of the old ready timestamp so that release cannot overwrite it.
+    await state.dispatch.wake("build-a", 113);
+    const woken = await state.dispatch.release(
+      "build-a",
+      second.lease,
+      { phase: "waiting", availableAt: 10_000 },
+      114,
+    );
+    assert.equal(woken.availableAt, 113);
+    assert.equal(woken.phase, "waiting");
+
     await state.dispatch.create(createBuildDispatchIdentity({
       build: "build-b", core: digestOf("core:b"), runtimeClosure: closure,
     }), { now: 112 });
@@ -213,6 +225,22 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
       limits: { globalActive: 1, laneActive: 1, laneInFlight: 1 },
     });
     assert.equal(blocked.status, "blocked");
+
+    await state.dispatch.create(createBuildDispatchIdentity({
+      build: "build-c", core: digestOf("core:c"), runtimeClosure: closure,
+    }), { now: 200, priority: 100 });
+    const fourth = await state.dispatch.claim({ owner: "worker-d", token: "lease-d", now: 200, leaseMs: 10 });
+    assert.ok(fourth?.lease);
+    await state.dispatch.requestCancellation("build-c", "stop", 201);
+    const cancelledWake = await state.dispatch.release(
+      "build-c",
+      fourth.lease,
+      { phase: "waiting", availableAt: 20_000 },
+      202,
+    );
+    assert.equal(cancelledWake.admission, "closing");
+    assert.equal(cancelledWake.availableAt, 201,
+      "a cancellation racing with release cannot be delayed by the Worker's stale schedule");
     state.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

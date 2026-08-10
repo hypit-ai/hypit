@@ -9,10 +9,12 @@ export type RuntimeWorkerLaunch = {
 };
 
 export type RuntimeProcessState = {
-  readonly state: "running" | "stopped";
+  readonly state: "running" | "stale" | "stopped";
   readonly profile: string;
   readonly pid?: number;
   readonly startedAt?: number;
+  readonly profileDigest?: string;
+  readonly currentProfileDigest?: string;
   readonly logPath: string;
 };
 
@@ -21,6 +23,8 @@ type ProcessRecord = {
   readonly profile: string;
   readonly pid: number;
   readonly startedAt: number;
+  /** Optional only so a pre-digest development record can still be stopped safely. */
+  readonly profileDigest?: string;
 };
 
 function paths(profile: string) {
@@ -54,6 +58,31 @@ function alive(pid: number): boolean {
   }
 }
 
+async function digestProfile(profile: string): Promise<string> {
+  const absolute = resolve(profile);
+  const bytes = await readFile(absolute);
+  const hash = createHash("sha256");
+  hash.update("profile\0");
+  hash.update(bytes);
+  if (absolute.endsWith(".json")) {
+    const document = JSON.parse(bytes.toString("utf8")) as {
+      readonly root?: unknown;
+      readonly packageLock?: unknown;
+      readonly runtimePackageLock?: unknown;
+    };
+    const root = resolve(dirname(absolute), typeof document.root === "string" ? document.root : ".");
+    for (const [name, value] of [
+      ["packageLock", document.packageLock],
+      ["runtimePackageLock", document.runtimePackageLock],
+    ] as const) {
+      if (typeof value !== "string") continue;
+      hash.update(`\0${name}\0${resolve(root, value)}\0`);
+      hash.update(await readFile(resolve(root, value)));
+    }
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
 async function record(profile: string): Promise<ProcessRecord | undefined> {
   const path = paths(profile).pid;
   try {
@@ -73,11 +102,25 @@ export async function runtimeProcessStatus(profile: string): Promise<RuntimeProc
   if (current === undefined || !alive(current.pid)) {
     return { state: "stopped", profile: resolve(profile), logPath: location.log };
   }
+  const currentProfileDigest = await digestProfile(profile).catch(() => undefined);
+  if (current.profileDigest === undefined || current.profileDigest !== currentProfileDigest) {
+    return {
+      state: "stale",
+      profile: current.profile,
+      pid: current.pid,
+      startedAt: current.startedAt,
+      ...(current.profileDigest === undefined ? {} : { profileDigest: current.profileDigest }),
+      ...(currentProfileDigest === undefined ? {} : { currentProfileDigest }),
+      logPath: location.log,
+    };
+  }
   return {
     state: "running",
     profile: current.profile,
     pid: current.pid,
     startedAt: current.startedAt,
+    profileDigest: current.profileDigest,
+    currentProfileDigest,
     logPath: location.log,
   };
 }
@@ -92,7 +135,7 @@ async function waitForReady(profile: string, timeoutMs: number): Promise<Runtime
       throw new Error(`Runtime Worker exited before becoming ready${log.length === 0 ? "" : `: ${log.trim().split("\n").at(-1)}`}`);
     }
     if (await exists(location.ready)) return state;
-    await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+    await new Promise((resolveWait) => setTimeout(resolveWait, 10));
   }
   throw new Error(`Runtime Worker did not become ready within ${timeoutMs}ms; log: ${location.log}`);
 }
@@ -104,8 +147,12 @@ export async function ensureRuntimeProcess(
 ): Promise<RuntimeProcessState> {
   const current = await runtimeProcessStatus(profile);
   if (current.state === "running") return current;
+  if (current.state === "stale") {
+    await stopRuntimeProcess(profile, timeoutMs);
+  }
   const absolute = resolve(profile);
   const location = paths(absolute);
+  const profileDigest = await digestProfile(absolute);
   await mkdir(location.root, { recursive: true });
   await unlink(location.ready).catch(() => undefined);
   const log = await open(location.log, "a");
@@ -128,6 +175,7 @@ export async function ensureRuntimeProcess(
     profile: absolute,
     pid: child.pid,
     startedAt,
+    profileDigest,
   } satisfies ProcessRecord), "utf8");
   child.unref();
   await log.close();
