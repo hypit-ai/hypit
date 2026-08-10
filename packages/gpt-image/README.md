@@ -14,6 +14,32 @@ The one physical package exposes two independently importable logical modules:
 - `@narratage/gpt-image/clean@1`: generation followed by the existing explicit image-transform
   Program, exporting one cleaned image while retaining both operations in the graph.
 
-It currently exposes low-level Draft/Fragment factories rather than a high-level Prompt Surface.
-Prompt authoring and assembly are intentionally deferred to the separate Prompt redesign; that work
-will not change the media edges, exact request or Provider contract described here.
+Both modules own an `Image` Markup Surface. They use the same author shape, so choosing the clean
+module changes the visible graph expansion rather than the document structure:
+
+```svml
+<import as="text" from="@narratage/text@1"/>
+<import as="gpt" from="@narratage/gpt-image/clean@1"/>
+
+<text:Value id="prompt">
+  A woman holding the product, editorial photography.
+</text:Value>
+
+<gpt:Image
+  id="holding"
+  prompt={prompt}
+  aspect-ratio="9:16"
+  resolution="2K"
+>
+  <gpt:Reference image={person}/>
+  <gpt:Reference image={product}/>
+</gpt:Image>
+```
+
+`prompt` is an ordinary `Text` graph edge. Every `Reference` is an ordinary image Artifact edge;
+the Surface does not copy runtime media into request metadata. The raw module expands to request
+assembly, generation and primary-image selection. The clean module then adds the official
+`gptImageDenoiseV1` Program and the shared image-transform Need as one further visible operation.
+
+The Surface implementation belongs to this package. `model-kit` remains responsible only for the
+exact request and Fragment shell; it owns no author-Surface registry or model syntax.
