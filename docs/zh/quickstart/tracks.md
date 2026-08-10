@@ -124,10 +124,9 @@ Dual Text 右侧。
 ## Media 叠加层与 B-roll
 
 B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族。一个 Item 可以在语义
-或绝对窗口内放置规范化图片、视频、动画或 Compositable Surface。
+或绝对窗口内放置图片、生成视频、已规范化含时素材或 Compositable Surface。
 
 ```svml
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="wording" from="@narratage/text@1"/>
 ```
@@ -147,15 +146,12 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
   <seedance:Reference image={product-reference}/>
 </seedance:ReferenceVideo>
 
-<pipeline:Normalize id="product-media" source={product-motion.video}
-  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
-
 <space:Frame id="product-frame" within={vertical}
   left="8%" top="20%" right="8%" bottom="32%"/>
 
 <media-track:Track id="product-broll" map={timing.map}
   space={speech.space} canvas={vertical}>
-  <media-track:Item source={product-media.media} frame={product-frame}
+  <media-track:Item video={product-motion.video} frame={product-frame}
     during={story.selection.product-demo}
     appearance={studio.media.product}
     motion={studio.motion.product}/>
@@ -164,6 +160,20 @@ B-roll 是通用 Media Track 的一种剪辑用途，不是独立 Track 家族�
 
 Selection 只贡献语义点；Media 包负责将这些点投影为窗口。同一个 Item 模型也能表达全屏
 切换、分屏和角落小窗。需要多个素材时，可以使用有序局部 Layer 或显式 Sequence。
+
+每个 Item、Member 或采样 Layer 都必须且只能声明一种视觉输入形式：
+
+| 输入 | 值 | 含义 |
+|---|---|---|
+| `image={...}` + `extent={...}` | Blob + 作者声明的像素尺寸 | 没有自带时长的静态图 |
+| `video={...}` | 生成/原始视频 Blob | 自动检查、选流并按本 Track 的 `space` 规范化 |
+| `media={...}` | `SynchronizedMedia` | 直接连接显式准备好的含时素材 |
+| `surface={...}` | `CompositableSurfaceRef` | 直接连接带透明度语义的静态或含时 Surface |
+
+原始 `video=` 默认只取画面；需要它自己的声音时添加 `audio="include"`，并可继续用
+`audio-gain` 调节所选源音频。输入名必须显式，是为了绝不靠猜测把一个通用 Blob 当成图片
+或视频。简洁语法没有绕过图：`video=` 会展开为普通的绑定请求、检查、选流、规范化
+Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`，再把结果用 `media=` 接入。
 
 **输出：**`{product-broll.visual}`；只有作者显式选择了源音频或 SFX 时才会出现
 `{product-broll.audio}`。
@@ -255,7 +265,6 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="fonts" from="@narratage/fonts-open@1"/>
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/typography-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
@@ -278,10 +287,8 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
   left="10%" top="20%" right="10%" bottom="30%"/>
 
 <!-- Media：Selection 期间显示一个普通 Item -->
-<pipeline:Normalize id="motion-media" source={motion.video}
-  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
 <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
-  <media-track:Item source={motion-media.media} frame={card-frame}
+  <media-track:Item video={motion.video} frame={card-frame}
     during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
 </media-track:Track>
 

@@ -1,5 +1,6 @@
 import { narrativeTypes } from "@narratage/narrative";
 import { artifactTypes } from "@narratage/artifact";
+import { mediaTypes } from "@narratage/media";
 import {
   sealMediaSelectionRequest,
   synchronizedMediaFragment,
@@ -30,6 +31,18 @@ function stringAttribute(element: StructuredElement, name: string): string {
   const value = element.attributes[name];
   if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${element.name}.${name} must be a non-empty string`);
   return value.trim();
+}
+
+function frameRate(element: StructuredElement): { readonly numerator: number; readonly denominator: number } {
+  const value = stringAttribute(element, "frame-rate");
+  const match = /^(\d+)(?:\/(\d+))?$/u.exec(value);
+  if (match === null) throw new Error(`${element.name}.frame-rate must be a positive rational such as 30 or 30000/1001`);
+  const numerator = Number(match[1]);
+  const denominator = Number(match[2] ?? "1");
+  if (!Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator) || denominator <= 0) {
+    throw new Error(`${element.name}.frame-rate is invalid`);
+  }
+  return { numerator, denominator };
 }
 
 function referencePath(element: StructuredElement, name: string): string {
@@ -65,7 +78,6 @@ function takes(element: StructuredElement): StructuredElement[] {
       continue;
     }
     if (localName(child.name) !== "Take") throw new Error(`${element.name} accepts only Take children`);
-    exactAttributes(child, ["source", "segment"]);
     result.push(child);
   }
   if (result.length === 0) throw new Error(`${element.name} requires at least one Take`);
@@ -73,45 +85,56 @@ function takes(element: StructuredElement): StructuredElement[] {
 }
 
 export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  exactAttributes(element, ["id", "canvas"]);
+  exactAttributes(element, ["id", "canvas", "frame-rate"]);
   const id = stringAttribute(element, "id");
   const canvas = resolve(element, "canvas", spatialTypes.canvas, resolveReference);
-  const declaredTakes = takes(element).map((take, index) => ({
-    mediaName: `take-${String(index + 1).padStart(4, "0")}-media`,
-    segmentName: `take-${String(index + 1).padStart(4, "0")}-segment`,
-    source: resolve(take, "source", artifactTypes.blob, resolveReference),
-    segment: resolve(take, "segment", narrativeTypes.excerpt, resolveReference),
-    range: take.range,
-  }));
+  const rate = frameRate(element);
+  const declaredTakes = takes(element).map((take, index) => {
+    const hasVideo = take.attributes.video !== undefined;
+    const hasMedia = take.attributes.media !== undefined;
+    if (Number(hasVideo) + Number(hasMedia) !== 1) {
+      throw new Error(`${take.name} requires exactly one of video or media`);
+    }
+    exactAttributes(take, [hasVideo ? "video" : "media", "segment"]);
+    return {
+      mediaName: `take-${String(index + 1).padStart(4, "0")}-media`,
+      segmentName: `take-${String(index + 1).padStart(4, "0")}-segment`,
+      sourceKind: hasVideo ? "video" as const : "media" as const,
+      source: resolve(take, hasVideo ? "video" : "media", hasVideo ? artifactTypes.blob : mediaTypes.synchronized, resolveReference),
+      segment: resolve(take, "segment", narrativeTypes.excerpt, resolveReference),
+      range: take.range,
+    };
+  });
   const programId = `${id}.program`;
   const requestId = `${id}.selection`;
   const program = sealSpeechSpineProgram({
     contract: "svml.speech-spine-program@1",
     id,
-    frameRate: { numerator: 30, denominator: 1 },
+    frameRate: rate,
   });
   const request = sealMediaSelectionRequest({
     contract: "svml.media-selection-request@1",
     video: { mode: "primary-moving" },
     audio: { mode: "default" },
     spanAuthority: "video",
-    frameRate: { numerator: 30, denominator: 1 },
+    frameRate: rate,
   });
   const assembly = createSpeechSpineFragment({
     name: `@narratage/speech-spine/surface/${id}@1`,
     takes: declaredTakes.map(({ mediaName, segmentName }) => ({ mediaName, segmentName })),
   });
-  const normalizationComponents = declaredTakes.map((take, index) => ({
+  const normalizationComponents = declaredTakes.flatMap((take, index) => take.sourceKind === "media" ? [] : [{
     id: `${id}.normalize.${String(index + 1).padStart(4, "0")}`,
     fragment: synchronizedMediaFragment.id,
     inputs: { source: take.source.ref, request: { kind: "record" as const, id: requestId } },
     outputs: { media: `${id}.normalized.${String(index + 1).padStart(4, "0")}` },
     range: take.range,
-  }));
+  }]);
+  const normalizationByTake = new Map(normalizationComponents.map((component) => [component.id.split(".").at(-1), component]));
   return {
     records: [
       { id: programId, type: speechSpineTypes.spineProgram, value: { kind: "inline", value: program }, range: element.range },
-      { id: requestId, type: { module: { name: "@narratage/media-pipeline", version: "1" }, name: "MediaSelectionRequest" }, value: { kind: "inline", value: request }, range: element.range },
+      ...(normalizationComponents.length === 0 ? [] : [{ id: requestId, type: { module: { name: "@narratage/media-pipeline", version: "1" }, name: "MediaSelectionRequest" }, value: { kind: "inline" as const, value: request }, range: element.range }]),
     ],
     components: [
       ...normalizationComponents,
@@ -122,7 +145,11 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
           program: { kind: "record", id: programId },
           canvas: canvas.ref,
           ...Object.fromEntries(declaredTakes.flatMap((take, index) => [
-            [take.mediaName, { kind: "component-output" as const, component: normalizationComponents[index]!.id, output: "media" }],
+            [take.mediaName, take.sourceKind === "media" ? take.source.ref : {
+              kind: "component-output" as const,
+              component: normalizationByTake.get(String(index + 1).padStart(4, "0"))!.id,
+              output: "media",
+            }],
             [take.segmentName, take.segment.ref],
           ])),
         },
@@ -136,6 +163,6 @@ export const decodeSpeechSpineSurface: StructuredSurfaceHandler = ({ element, re
         range: element.range,
       },
     ],
-    fragments: [synchronizedMediaFragment, assembly],
+    fragments: [...(normalizationComponents.length === 0 ? [] : [synchronizedMediaFragment]), assembly],
   };
 };

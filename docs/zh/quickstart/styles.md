@@ -199,7 +199,7 @@ motion.product {
 ```svml
 <space:Frame id="product-frame" within={vertical}
   left="8%" top="20%" right="8%" bottom="32%"/>
-<media-track:Item source={product-media.media}
+<media-track:Item video={product-motion.video}
   during={story.selection.demo} frame={product-frame}
   appearance={studio.media.product} motion={studio.motion.product}/>
 ```

@@ -19,11 +19,11 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<speech:Spine id="speech" canvas={vertical}>
-  <speech:Take source={hook-take.video} segment={story.segment.hook}/>
-  <speech:Take source={meeting-take.video} segment={story.segment.meeting}/>
-  <speech:Take source={evidence-take.video} segment={story.segment.evidence}/>
-  <speech:Take source={payoff-take.video} segment={story.segment.payoff}/>
+<speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Take video={hook-take.video} segment={story.segment.hook}/>
+  <speech:Take video={meeting-take.video} segment={story.segment.meeting}/>
+  <speech:Take video={evidence-take.video} segment={story.segment.evidence}/>
+  <speech:Take video={payoff-take.video} segment={story.segment.payoff}/>
 </speech:Spine>
 ```
 
@@ -31,6 +31,7 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
 | `canvas` | 是 | 受限 Media 视觉投影显式使用的 CanvasSpace |
+| `frame-rate` | 是 | 节目帧率，写整数或有理数，例如 `30`、`30000/1001` |
 
 ### speech:Take
 
@@ -38,8 +39,15 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 
 | 属性 | 必填 | 描述 |
 |---|---|---|
-| `source` | 是 | 生成的视频——例如来自 `seedance:ReferenceVideo` |
+| `video` | 二选一 | 生成/原始视频 Blob，例如 Seedance 产出的 `{take.video}` |
+| `media` | 二选一 | 已准备好的 `SynchronizedMedia`；跳过自动规范化 |
 | `segment` | 是 | 此片段对应的 Script Segment——例如 `{story.segment.hook}` |
+
+`video` 与 `media` 必须且只能选一个。AIGC 的正常路径就是 `video={take.video}`。Speech
+Surface 会把这句易读声明展开为普通 Media Pipeline Operation：检查容器、选择主动态视频流
+和默认音轨，再按 Spine 声明的帧率规范化。把 30 fps 素材接入 60 fps Spine 时，时长不变，
+帧序列会被确定性重采样为 60 fps，而不是把视频播放加速一倍。只有上游图已经明确产出所需
+`SynchronizedMedia` 时才使用 `media=`。
 
 `<speech:Take>` 子元素的排列顺序**决定了节目顺序**。第一个片段从时间零点开始；后续片段依次紧接。
 
@@ -78,7 +86,8 @@ SemanticMap 将每个 Script 中标注的锚点映射到一个时间点。它覆
 
 ## ProgramSpace
 
-ProgramSpace 不是一个需要声明的组件——它由 `speech:Spine` 产生，并传递给每个需要知道总节目时长和帧域的组件。
+ProgramSpace 不来自任何全局默认值。`speech:Spine` 用显式 `frame-rate` 和规范化后各 Take
+的精确时长生成它，再传给每个需要知道总节目时长和帧域的组件。
 
 ```svml
 <film:Film id="main" canvas={vertical} space={speech.space} ...>
@@ -121,9 +130,9 @@ Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估�
 
 <!-- Assemble takes in program order -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<speech:Spine id="speech" canvas={vertical}>
-  <speech:Take source={opening-take.video} segment={story.segment.opening}/>
-  <speech:Take source={answer-take.video} segment={story.segment.answer}/>
+<speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Take video={opening-take.video} segment={story.segment.opening}/>
+  <speech:Take video={answer-take.video} segment={story.segment.answer}/>
 </speech:Spine>
 
 <!-- Measure word timing -->

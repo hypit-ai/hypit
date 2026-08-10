@@ -1420,6 +1420,9 @@ importers:
       '@narratage/media':
         specifier: workspace:*
         version: link:../media
+      '@narratage/media-pipeline':
+        specifier: workspace:*
+        version: link:../media-pipeline
       '@narratage/narrative':
         specifier: workspace:*
         version: link:../narrative
