@@ -14,5 +14,7 @@ export {
   fineCaptionParameters,
   fineCaptionStyle,
 } from "./style.js";
+export { fineCaptionRecipeFacet } from "./recipe-facet.js";
+export { fineCaptionRecipeProperties, fineCaptionRecipeSchema } from "./recipe-schema.js";
 export { decodeFineCaptionStyleSurface, decodeFineCaptionTrackSurface } from "./surface.js";
 export type * from "./types.js";

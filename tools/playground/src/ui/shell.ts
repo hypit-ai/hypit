@@ -28,6 +28,11 @@ const CSS = `
 .section:first-child { margin-top: 0; }
 .module { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 4px; }
 .hint { color: var(--muted); font-size: 12px; margin-top: 7px; }
+.copy-svs {
+  margin-top: 8px; border: 1px solid var(--line); border-radius: 5px; background: #1c1c21;
+  color: var(--text); font: inherit; font-size: 11px; padding: 3px 9px; cursor: pointer;
+}
+.copy-svs:hover { border-color: #3a3a42; }
 .rail-canvas input[type=color] {
   width: 100%; height: 24px; padding: 0; border: 1px solid var(--line);
   background: none; border-radius: 5px;
@@ -148,9 +153,34 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     queued = window.setTimeout(render, 120);
   }
 
+  /** Lowers the written Recipe. Throws in the module's own words. */
+  function recipeFilled(producer: PreviewProducer): Readonly<Record<string, CanonicalValue>> {
+    const facet = producer.recipes[0];
+    const written = recipeDrafts.get(producer.id);
+    if (facet === undefined || written === undefined) return {};
+    return facet.apply(written, draft(producer));
+  }
+
+  /**
+   * Which inputs the Recipe answers for, for laying out the form.
+   *
+   * A Recipe naming a font nothing has bytes for cannot be lowered, and the
+   * canvas already says so — so here it simply answers for nothing, and the
+   * form keeps offering those inputs rather than hiding them behind something
+   * that is not working.
+   */
+  function recipeInputNames(producer: PreviewProducer): ReadonlySet<string> {
+    try {
+      return new Set(Object.keys(recipeFilled(producer)));
+    } catch {
+      return new Set();
+    }
+  }
+
   function render(): void {
     const values = { ...draft(active) };
     try {
+      Object.assign(values, recipeFilled(active));
       const resolved = programSpace();
       for (const input of active.inputs) {
         if (isProgramSpace(input.name, active)) values[input.name] = resolved as never;
@@ -175,15 +205,66 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     return element;
   }
 
+  /**
+   * Properties the operator has written, per module.
+   *
+   * A Recipe is authored in its own vocabulary — the one that goes into a `.svs`
+   * — so these are kept as written and lowered on every render, rather than
+   * folded into the Producer inputs where they could no longer be read back out
+   * or copied into a project.
+   */
+  const recipeDrafts = new Map<string, Record<string, CanonicalValue>>();
+
+  function recipeDraft(producer: PreviewProducer): Record<string, CanonicalValue> | undefined {
+    const facet = producer.recipes[0];
+    if (facet === undefined) return undefined;
+    const existing = recipeDrafts.get(producer.id);
+    if (existing !== undefined) return existing;
+    const created = blankValue(facet.schema) as Record<string, CanonicalValue>;
+    recipeDrafts.set(producer.id, created);
+    return created;
+  }
+
+  /** The Recipe as it would be written in a stylesheet. */
+  function svsText(producer: PreviewProducer): string {
+    const written = recipeDrafts.get(producer.id) ?? {};
+    const short = producer.moduleName.replace(/^@narratage\//u, "").replace(/-.*$/u, "");
+    const lines = Object.entries(written)
+      .filter(([, value]) => value !== undefined && value !== "")
+      .map(([name, value]) => `  ${name}: ${String(value)};`);
+    return `${short}.preview {\n${lines.join("\n")}\n}`;
+  }
+
   function renderRail(): void {
     const values = draft(active);
     moduleLine.textContent = active.moduleName;
     body.replaceChildren();
 
+    const written = recipeDraft(active);
+    if (written !== undefined) {
+      body.append(section("Recipe"), buildForm(active.recipes[0]!.schema, written, schedule));
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "copy-svs";
+      copy.textContent = "Copy as .svs";
+      copy.addEventListener("click", () => {
+        void navigator.clipboard.writeText(svsText(active)).then(
+          () => { copy.textContent = "Copied"; },
+          () => { copy.textContent = "Copy failed"; },
+        ).finally(() => {
+          window.setTimeout(() => { copy.textContent = "Copy as .svs"; }, 1200);
+        });
+      });
+      body.append(copy);
+    }
+
+    const fromRecipe = recipeInputNames(active);
     for (const input of active.inputs) {
       // The shell owns the frame domain; offering it again would be a second
-      // answer free to disagree with the canvas controls.
+      // answer free to disagree with the canvas controls. The same reasoning
+      // hides an input the Recipe above already answers for.
       if (isProgramSpace(input.name, active)) continue;
+      if (fromRecipe.has(input.name)) continue;
       body.append(section(input.name));
       if (input.schema === undefined) {
         const missing = document.createElement("div");

@@ -9,12 +9,12 @@ import type { FineCaptionGlyphPaint, FineCaptionParameters } from "./types.js";
 
 export const FINE_CAPTION_FAMILY = "@narratage/caption-fine@1";
 
-const REQUIRED_PROPERTIES = [
+export const REQUIRED_PROPERTIES = [
   "align", "background", "cue-max-words", "cue-min-words", "fill", "font",
   "line-height", "padding", "radius", "size", "stack-order", "weight", "width", "x", "y",
 ] as const;
 
-const OPTIONAL_PROPERTIES = [
+export const OPTIONAL_PROPERTIES = [
   "active-box", "active-box-background", "active-box-border-color", "active-box-border-width",
   "active-box-continuity", "active-box-enter", "active-box-exit", "active-box-padding", "active-box-radius",
   "active-box-transition-frames", "active-fill", "active-glow-blur", "active-glow-color", "active-glow-opacity",

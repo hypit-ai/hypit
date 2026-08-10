@@ -6,6 +6,7 @@ import type {
   StoredValue,
   TypeRef,
   TypedRecord,
+  ValueSchema,
 } from "@narratage/protocol";
 import type {
   TypeValidatorHandler,
@@ -74,9 +75,35 @@ export function registerTypeValidatorFacets(
   }
 }
 
+/**
+ * What a module's Recipe looks like, and what writing one does.
+ *
+ * A Recipe's properties are decided by the code that reads them, which is
+ * enough to compile a stylesheet and not enough for a tool to offer one. This
+ * states the shape as data and pairs it with the same lowering the Surface
+ * performs, so an editor can present a Recipe and see the result without
+ * knowing which module it belongs to.
+ *
+ * `apply` returns values for the module's own Producer inputs. It is partial in
+ * both directions — only the inputs a Recipe speaks for, and within those, only
+ * the fields it owns — so `current` carries the rest, including media a
+ * stylesheet can name but not contain.
+ */
+export type RecipeFacet = {
+  /** The Surface this Recipe is written for, as named in the Manifest. */
+  readonly surface: string;
+  /** The properties an author may write, with their formats and bounds. */
+  readonly schema: ValueSchema;
+  readonly apply: (
+    properties: Readonly<Record<string, CanonicalValue>>,
+    current: Readonly<Record<string, CanonicalValue>>,
+  ) => Readonly<Record<string, CanonicalValue>>;
+};
+
 /** Trusted deterministic implementation package; it selects no Provider or Runtime service. */
 export type ComponentPackage = {
   readonly name: string;
   readonly producers?: readonly ProducerFacet[];
   readonly validators?: readonly TypeValidatorFacet[];
+  readonly recipes?: readonly RecipeFacet[];
 };

@@ -25,9 +25,26 @@ type BoundProducer = {
   }) => { readonly outputs: Readonly<Record<string, { readonly value: unknown }>> };
 };
 
+/**
+ * What a module says an author may write, and what writing it does.
+ *
+ * Nothing here reads a Recipe or knows one's shape: the module states both, so
+ * a form can be built and a frame drawn without this file learning what a
+ * caption or a card is.
+ */
+export type BoundRecipe = {
+  readonly surface: string;
+  readonly schema: ValueSchema;
+  readonly apply: (
+    properties: Readonly<Record<string, CanonicalValue>>,
+    current: Readonly<Record<string, CanonicalValue>>,
+  ) => Readonly<Record<string, CanonicalValue>>;
+};
+
 type ComponentModule = {
   readonly name: string;
   readonly producers: readonly BoundProducer[];
+  readonly recipes?: readonly BoundRecipe[];
 };
 
 export type PreviewInput = {
@@ -45,6 +62,8 @@ export type PreviewProducer = {
   readonly inputs: readonly PreviewInput[];
   readonly outputName: string;
   readonly invoke: (values: Readonly<Record<string, CanonicalValue>>) => unknown;
+  /** Empty where the module publishes no Recipe, which is a fact about it. */
+  readonly recipes: readonly BoundRecipe[];
 };
 
 function typeKey(ref: TypeRef): string {
@@ -130,9 +149,9 @@ export async function discoverPreviewProducers(
   const found: PreviewProducer[] = [];
   for (const manifest of manifests) {
     const visual = manifest.producers.filter(outputsVisualTrack);
+    const component = components.get(manifest.name);
     for (const declaration of visual) {
-      const bound = components.get(manifest.name)
-        ?.producers.find((entry) => entry.producer.name === declaration.name);
+      const bound = component?.producers.find((entry) => entry.producer.name === declaration.name);
       // A declared Producer with no bound handler is declared but not runnable.
       if (bound === undefined) continue;
       const outputName = declaration.outputs.find((port) =>
@@ -143,6 +162,7 @@ export async function discoverPreviewProducers(
         label: label(manifest.name, declaration, visual.length),
         moduleName: manifest.name,
         outputName,
+        recipes: component?.recipes ?? [],
         inputs: declaration.inputs.map((port) => {
           const declared = types.get(typeKey(port.type));
           return {

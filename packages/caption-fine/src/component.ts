@@ -6,6 +6,7 @@ import type { StoredValue } from "@narratage/protocol";
 import { canonicalize } from "@narratage/protocol";
 
 import { captionFineProducers } from "./manifest.js";
+import { fineCaptionRecipeFacet } from "./recipe-facet.js";
 import { renderFineCaption, renderFineCaptionImplementationDigest } from "./render.js";
 
 function inline<T>(value: StoredValue | undefined, subject: string): T {
@@ -28,4 +29,5 @@ export const captionFineComponent = {
       needs: {},
     }),
   }],
+  recipes: [fineCaptionRecipeFacet],
 } satisfies ComponentPackage;
