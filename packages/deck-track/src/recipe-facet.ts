@@ -78,9 +78,40 @@ function restyle(recipe: SvsRecipe, stackId: string, card: DepthStackCard): Dept
   };
 }
 
+/**
+ * Nothing, because a Depth Stack requires nothing.
+ *
+ * Every reader answers with a fallback, so the empty Recipe lowers and what it
+ * lowers to is the deck this module draws. Writing a frame treatment here would
+ * read better and say less: it would hide which of those values are the
+ * module's own and freeze them against its later judgement.
+ *
+ * That the schema still requires nothing this leaves unsaid is checked at load,
+ * so a new requirement cannot leave this behind.
+ */
+export const depthStackDefaultRecipe: Readonly<Record<string, CanonicalValue>> = {};
+
+const schemaFields = (depthStackRecipeSchema as {
+  fields: Record<string, { optional?: true }>;
+}).fields;
+
+const stray = Object.keys(depthStackDefaultRecipe).filter((name) => !Object.hasOwn(schemaFields, name));
+if (stray.length > 0) {
+  throw new Error(`DepthStack default Recipe states unknown ${stray.join(", ")}`);
+}
+
+const unsaid = Object.entries(schemaFields)
+  .filter(([, field]) => field.optional !== true)
+  .map(([name]) => name)
+  .filter((name) => !Object.hasOwn(depthStackDefaultRecipe, name));
+if (unsaid.length > 0) {
+  throw new Error(`DepthStack default Recipe leaves required ${unsaid.join(", ")} unset`);
+}
+
 export const depthStackRecipeFacet: RecipeFacet = {
   surface: "track",
   schema: depthStackRecipeSchema,
+  defaults: depthStackDefaultRecipe,
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
     const stackId = typeof program.id === "string" ? program.id : STACK_ID;

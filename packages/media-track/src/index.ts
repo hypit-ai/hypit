@@ -95,7 +95,12 @@ export {
   sealMediaTrackHeader,
   sealMediaTrackProgram,
 } from "./program.js";
-export { mediaAppearanceRecipeFacet, mediaMotionRecipeFacet } from "./recipe-facet.js";
+export {
+  mediaAppearanceDefaultRecipe,
+  mediaAppearanceRecipeFacet,
+  mediaMotionDefaultRecipe,
+  mediaMotionRecipeFacet,
+} from "./recipe-facet.js";
 export {
   mediaAppearanceRecipeProperties,
   mediaAppearanceRecipeSchema,

@@ -39,7 +39,7 @@ export {
   sealCommentStickerStyle,
   setCommentStickerContentText,
 } from "./program.js";
-export { commentStickerRecipeFacet } from "./recipe-facet.js";
+export { commentStickerDefaultRecipe, commentStickerRecipeFacet } from "./recipe-facet.js";
 export { commentStickerRecipeProperties, commentStickerRecipeSchema } from "./recipe-schema.js";
 export { decodeCommentStickerStyleSurface, decodeCommentStickerTrackSurface } from "./surface.js";
 export type * from "./types.js";

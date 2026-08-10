@@ -258,7 +258,10 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     const key = draftKey(producer);
     const existing = recipeDrafts.get(key);
     if (existing !== undefined) return existing;
-    const created = blankValue(facet.schema) as Record<string, CanonicalValue>;
+    // The module's own starting Recipe, not a blank one. A form of zeroes is a
+    // Recipe no decoder would accept, so it would open on an error the operator
+    // has not caused.
+    const created = { ...facet.defaults } as Record<string, CanonicalValue>;
     recipeDrafts.set(key, created);
     return created;
   }

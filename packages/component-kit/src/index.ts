@@ -94,6 +94,15 @@ export type RecipeFacet = {
   readonly surface: string;
   /** The properties an author may write, with their formats and bounds. */
   readonly schema: ValueSchema;
+  /**
+   * A complete Recipe that renders, for a tool that has to start somewhere.
+   *
+   * Every property the decoder requires, and nothing it does not: an author
+   * writes the required ones and leaves the rest to the fallbacks the decoder
+   * already holds, so a starting point that named all of them would be unlike
+   * anything anyone writes.
+   */
+  readonly defaults: Readonly<Record<string, CanonicalValue>>;
   readonly apply: (
     properties: Readonly<Record<string, CanonicalValue>>,
     current: Readonly<Record<string, CanonicalValue>>,

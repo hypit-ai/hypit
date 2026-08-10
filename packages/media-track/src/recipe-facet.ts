@@ -1,5 +1,5 @@
 import type { RecipeFacet } from "@narratage/component-kit";
-import type { CanonicalValue } from "@narratage/protocol";
+import type { CanonicalValue, ValueSchema } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
 import {
@@ -107,9 +107,35 @@ function layers(
     : [{ id: painted.id, kind: "paint", paint: painted.paint, opacity: painted.opacity }, ...kept];
 }
 
+/** The names a schema gives no fallback for, read back from the schema itself. */
+function demanded(schema: ValueSchema): readonly string[] {
+  const fields = (schema as { fields: Record<string, { optional?: true }> }).fields;
+  return Object.keys(fields).filter((name) => fields[name]?.optional !== true).sort();
+}
+
+/**
+ * A media frame that is somewhere sensible in the stack.
+ *
+ * Only `stack-order` has no fallback, so only `stack-order` is stated: every
+ * other name answers for itself, and a Recipe that repeated those answers would
+ * be unlike anything an author writes and would hide what the decoder does when
+ * left alone. Forty is what both `media.card` and `media.product` in the example
+ * stylesheets give a framed insert — above a full-bleed backdrop at ten, under
+ * the captions at seventy.
+ */
+export const mediaAppearanceDefaultRecipe: Readonly<Record<string, CanonicalValue>> = {
+  "stack-order": 40,
+};
+
+const statedAppearance = Object.keys(mediaAppearanceDefaultRecipe).sort().join(" ");
+if (statedAppearance !== demanded(mediaAppearanceRecipeSchema).join(" ")) {
+  throw new Error("Media appearance default Recipe must state exactly the required properties");
+}
+
 export const mediaAppearanceRecipeFacet: RecipeFacet = {
   surface: "track",
   schema: mediaAppearanceRecipeSchema,
+  defaults: mediaAppearanceDefaultRecipe,
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
     const recipe = written(properties, APPEARANCE_PATH);
@@ -136,9 +162,25 @@ export const mediaAppearanceRecipeFacet: RecipeFacet = {
   },
 };
 
+/**
+ * Nothing, because motion requires nothing.
+ *
+ * Silence about an edge is a legal Recipe meaning the edge does nothing, so the
+ * empty one lowers. Naming an operator would create the very demand that would
+ * then justify naming a duration beside it — a pair no author asked for, and a
+ * form opening on a fade nobody wrote.
+ */
+export const mediaMotionDefaultRecipe: Readonly<Record<string, CanonicalValue>> = {};
+
+const statedMotion = new Set(Object.keys(mediaMotionDefaultRecipe));
+if (demanded(mediaMotionRecipeSchema).some((name) => !statedMotion.has(name))) {
+  throw new Error("Media motion default Recipe must state every required property");
+}
+
 export const mediaMotionRecipeFacet: RecipeFacet = {
   surface: "track",
   schema: mediaMotionRecipeSchema,
+  defaults: mediaMotionDefaultRecipe,
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
     // `enter-origin` becomes a distance from the Canvas edge, and no Canvas

@@ -5,7 +5,7 @@ import type { SvsRecipe } from "@narratage/svs";
 
 import { sealTypographyTrackProgram } from "./program.js";
 import { typographyRecipeSchema } from "./recipe-schema.js";
-import { typographyTextStyle } from "./surface.js";
+import { REQUIRED_STYLE_PROPERTIES, typographyTextStyle } from "./surface.js";
 import type { TextStyleChildren } from "./surface.js";
 import type { TextItem, TextStyle, TypographyTrackProgram } from "./types.js";
 
@@ -60,9 +60,34 @@ function carriedChildren(style: Partial<TextStyle> | undefined, fill: boolean): 
   };
 }
 
+/**
+ * A title at the size a title is written at.
+ *
+ * Stated rather than derived, because a starting point is a judgement and the
+ * decoder holds none: it requires these two and says nothing about what good
+ * values are. Their being exactly the required set is checked at load, so a new
+ * requirement cannot leave this behind.
+ *
+ * It is two properties and not more because a Recipe here restyles Items that
+ * were authored with a Style already, and everything else the lowering answers
+ * for itself. A weight or a fill written in would be this speaking over the
+ * module's own fallbacks and over the paint an Item arrived carrying.
+ */
+export const typographyDefaultRecipe: Readonly<Record<string, CanonicalValue>> = {
+  "size": 64,
+  "stack-order": 90,
+};
+
+const stated = Object.keys(typographyDefaultRecipe).sort().join(" ");
+const demanded = [...REQUIRED_STYLE_PROPERTIES].sort().join(" ");
+if (stated !== demanded) {
+  throw new Error("Text default Recipe must state exactly the required properties");
+}
+
 export const typographyRecipeFacet: RecipeFacet = {
   surface: "style",
   schema: typographyRecipeSchema,
+  defaults: typographyDefaultRecipe,
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
     const recipe = {

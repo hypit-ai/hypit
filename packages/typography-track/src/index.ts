@@ -51,7 +51,7 @@ export {
   sealTextStyle,
   stillTextMotion,
 } from "./program.js";
-export { typographyRecipeFacet } from "./recipe-facet.js";
+export { typographyDefaultRecipe, typographyRecipeFacet } from "./recipe-facet.js";
 export { typographyRecipeProperties, typographyRecipeSchema } from "./recipe-schema.js";
 export {
   decodeTypographyMotionSurface,

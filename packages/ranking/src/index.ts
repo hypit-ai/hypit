@@ -57,10 +57,14 @@ export {
 } from "./render.js";
 export { rankingComponent } from "./component.js";
 export {
+  columnDefaultRecipe,
   columnRecipeFacet,
   rankingRecipeFacets,
+  tierBoardDefaultRecipe,
   tierBoardRecipeFacet,
+  topThreeDefaultRecipe,
   topThreeRecipeFacet,
+  typewriterListDefaultRecipe,
   typewriterListRecipeFacet,
 } from "./recipe-facet.js";
 export {

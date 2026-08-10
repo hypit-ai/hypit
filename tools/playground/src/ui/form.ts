@@ -190,17 +190,30 @@ export function buildForm(
       continue;
     }
     container.append(row(name, scalarControl(field.schema, current, (next) => {
-      bag[name] = next;
+      // Choosing the module's default back again removes the property, because
+      // that is what an author would do: an absent one takes the fallback,
+      // where an empty one is a value the decoder has to reject.
+      if (next === "" && field.optional === true) delete bag[name];
+      else bag[name] = next;
       emit();
-    })));
+    }, field.optional === true)));
   }
   return container;
 }
 
+/**
+ * One control for one value.
+ *
+ * `unset` is the difference between a property an author left out and one they
+ * set to zero. A Recipe means those differently — an absent property takes the
+ * decoder's own fallback — so an untouched optional field stays empty rather
+ * than showing a number nobody chose.
+ */
 function scalarControl(
   schema: ValueSchema,
   current: CanonicalValue | undefined,
   onChange: (next: CanonicalValue) => void,
+  unset = false,
 ): HTMLElement {
   if (schema.kind === "boolean") {
     const box = document.createElement("input");
@@ -219,7 +232,9 @@ function scalarControl(
     if (schema.minimum !== undefined) input.min = String(schema.minimum);
     if (schema.maximum !== undefined) input.max = String(schema.maximum);
     input.step = schema.integer === true ? "1" : "any";
-    input.value = String(typeof current === "number" ? current : schema.minimum ?? 0);
+    input.value = typeof current === "number" ? String(current)
+      : unset ? "" : String(schema.minimum ?? 0);
+    if (unset) input.placeholder = "module default";
     input.addEventListener("input", () => {
       if (input.value !== "") onChange(Number(input.value));
     });
@@ -229,18 +244,27 @@ function scalarControl(
   if (schema.kind === "string") {
     if (schema.enum !== undefined) {
       const select = document.createElement("select");
+      // Leaving it out is a choice of its own where the decoder has a fallback,
+      // and picking the first name would silently make it for the author.
+      if (unset && typeof current !== "string") {
+        const none = document.createElement("option");
+        none.value = "";
+        none.textContent = "module default";
+        select.append(none);
+      }
       for (const option of schema.enum) {
         const item = document.createElement("option");
         item.value = option;
         item.textContent = option;
         select.append(item);
       }
-      select.value = typeof current === "string" ? current : (schema.enum[0] ?? "");
+      select.value = typeof current === "string" ? current : unset ? "" : (schema.enum[0] ?? "");
       select.addEventListener("input", () => onChange(select.value));
       return select;
     }
     if (schema.format === "color") {
-      return colorControl(typeof current === "string" ? current : "#ffffff", onChange);
+      return colorControl(
+        typeof current === "string" ? current : unset ? "" : "#ffffff", onChange);
     }
     if (schema.format === "digest") return digestControl(current, onChange);
     if (schema.format === "multiline") {

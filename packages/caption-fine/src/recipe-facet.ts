@@ -5,7 +5,7 @@ import type { CanonicalValue } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
 import { fineCaptionRecipeSchema } from "./recipe-schema.js";
-import { fineCaptionStyle } from "./style.js";
+import { REQUIRED_PROPERTIES, fineCaptionStyle } from "./style.js";
 
 /**
  * Writing a Fine Caption Recipe, without a stylesheet around it.
@@ -35,9 +35,42 @@ function carriedFonts(program: Partial<CaptionProgram>): readonly FontArtifactRe
   return Array.isArray(fonts) ? fonts : [];
 }
 
+/**
+ * A legible caption on a vertical frame.
+ *
+ * Stated rather than derived, because a starting point is a judgement and the
+ * decoder holds none: it requires these fifteen and says nothing about what
+ * good values are. Their being exactly the required set is checked at load, so
+ * a new requirement cannot leave this behind.
+ */
+export const fineCaptionDefaultRecipe: Readonly<Record<string, CanonicalValue>> = {
+  "align": "center",
+  "background": "#09090BCC",
+  "cue-max-words": 5,
+  "cue-min-words": 2,
+  "fill": "#FFFFFF",
+  "font": "Inter",
+  "line-height": 0.96,
+  "padding": "16 24",
+  "radius": 18,
+  "size": 58,
+  "stack-order": 70,
+  "weight": 600,
+  "width": 0.84,
+  "x": 0.08,
+  "y": 0.76,
+};
+
+const stated = Object.keys(fineCaptionDefaultRecipe).sort().join(" ");
+const demanded = [...REQUIRED_PROPERTIES].sort().join(" ");
+if (stated !== demanded) {
+  throw new Error("Fine Caption default Recipe must state exactly the required properties");
+}
+
 export const fineCaptionRecipeFacet: RecipeFacet = {
   surface: "style",
   schema: fineCaptionRecipeSchema,
+  defaults: fineCaptionDefaultRecipe,
   apply: (properties, current) => {
     const program = asProgram(current["program"]);
     const style = fineCaptionStyle(
