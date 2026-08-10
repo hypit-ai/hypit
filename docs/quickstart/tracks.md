@@ -44,7 +44,7 @@ caption.primary {
   cue-max-words: 7;
   stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
   anchor-x: center; anchor-y: bottom;
-  font: Inter; weight: 700; size: 58; font-style: normal;
+  size: 58;
   line-height: 0.96; letter-spacing: -0.5; word-gap: 14;
   align: center; direction: ltr;
   fill: #FFFFFF; opacity: 1;
@@ -77,8 +77,8 @@ caption.primary {
   font={caption-fonts}/>
 ```
 
-The required `font=` edge carries one byte-reproducible `FontStackRef`. The primary face must match
-the Recipe's weight/style; each fallback retains its own exact face metadata. Fine rejects a Style
+The required `font=` edge carries one byte-reproducible `FontStackRef`. Family, weight and style
+exist only on that edge; each fallback retains its own exact face metadata. Fine rejects a Style
 without that stack instead of falling back to machine fonts.
 
 Another Caption package may define completely different planning fields and visual parameters

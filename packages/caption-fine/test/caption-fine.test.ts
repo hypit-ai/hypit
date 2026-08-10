@@ -20,8 +20,6 @@ const recipe: SvsRecipe = {
     x: 0.08,
     y: 0.76,
     width: 0.84,
-    font: "Inter",
-    weight: 800,
     size: 58,
     "line-height": 1,
     align: "center",
@@ -169,7 +167,6 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
       direction: "rtl",
       "letter-spacing": -1.5,
       "word-gap": 11,
-      "font-style": "italic",
       "text-transform": "uppercase",
       opacity: 0.9,
       "gradient-from": "#FFFFFF",
@@ -252,7 +249,7 @@ test("Fine resolves the complete orthogonal Paint, anchor, karaoke and motion su
     x: 0.08, y: 0.76, width: 0.84, anchorX: "center", anchorY: "bottom",
   });
   assert.equal(parameters.layout.direction, "rtl");
-  assert.equal(parameters.typography.fontStyle, "italic");
+  assert.equal(parameters.typography.exactFonts[0]?.style, "italic");
   assert.equal(parameters.typography.textTransform, "uppercase");
   assert.deepEqual(parameters.basePaint.gradient, { from: "#FFFFFF", to: "#55CCFF", angleDeg: 120 });
   assert.equal(parameters.basePaint.stroke.widthPx, 3);
@@ -371,7 +368,7 @@ test("an exact Font is explicit Style input and reaches every base and active gl
   for (const glyph of glyphs) {
     if (glyph.kind === "text") assert.deepEqual(glyph.fonts, [exactFont]);
   }
-  assert.throws(() => fineCaptionStyle("mismatch", recipe, [{ ...exactFont, weight: 700 }]), /must match/u);
+  assert.doesNotThrow(() => fineCaptionStyle("another-exact-face", recipe, [{ ...exactFont, weight: 700 }]));
 });
 
 test("an ordered exact Font stack preserves honest fallback faces and rejects duplicates", () => {

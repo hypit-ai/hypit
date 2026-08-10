@@ -60,8 +60,6 @@
     x: 0.08;
     y: 0.76;
     width: 0.84;
-    font: inter-semibold;
-    weight: 600;
     size: 58;
     line-height: 0.96;
     align: center;
@@ -78,8 +76,6 @@
     x: 0.08;
     y: 0.76;
     width: 0.84;
-    font: inter-semibold;
-    weight: 600;
     size: 58;
     line-height: 0.96;
     align: center;
@@ -96,8 +92,6 @@
     x: 0.08;
     y: 0.76;
     width: 0.84;
-    font: inter-semibold;
-    weight: 600;
     size: 58;
     line-height: 0.96;
     align: center;

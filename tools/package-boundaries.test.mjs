@@ -107,7 +107,7 @@ test("official production packages have no dependency cycle", async () => {
   for (const name of graph.keys()) visit(name, []);
 });
 
-test("Playground cannot add semantics or metadata to production packages", async () => {
+test("Caption Playground cannot add semantics or metadata to production packages", async () => {
   let productionSource = "";
   for (const entry of await readdir(packageRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -140,22 +140,30 @@ test("Playground cannot add semantics or metadata to production packages", async
   }
 });
 
-test("Playground has no hard-coded component registry", async () => {
-  const root = new URL("../tools/playground/src/", import.meta.url);
-  const allowedWaists = new Set([
+test("Caption Playground is a selected source editor, not a component registry", async () => {
+  const root = new URL("../tools/caption-playground/src/", import.meta.url);
+  const allowedPackages = new Set([
+    "@narratage/caption",
+    "@narratage/caption-fine",
     "@narratage/composition",
-    "@narratage/core",
+    "@narratage/fonts-open",
+    "@narratage/host",
+    "@narratage/narrative",
+    "@narratage/package-loader-node",
     "@narratage/program-space",
     "@narratage/protocol",
+    "@narratage/svs",
+    "@narratage/video-cli",
   ]);
   for (const file of await sourceFiles(root)) {
     const source = await readFile(file, "utf8");
     for (const match of source.matchAll(/["'](@narratage\/[a-z0-9-]+)["']/gu)) {
-      assert.ok(allowedWaists.has(match[1]),
-        `${file.pathname} names ${match[1]}; components must be selected or discovered, never registered here`);
+      assert.ok(allowedPackages.has(match[1]), `${file.pathname} unexpectedly names ${match[1]}`);
     }
     assert.ok(!/\b(?:Story|Scenario|Recipe)Registry\b/u.test(source),
-      `${file.pathname} introduces a parallel Playground registry`);
+      `${file.pathname} introduces a parallel Caption Playground registry`);
+    assert.ok(!/import\.meta\.glob|discoverPreviewProducers/u.test(source),
+      `${file.pathname} scans the workspace instead of editing the explicitly selected Caption source`);
   }
 });
 
