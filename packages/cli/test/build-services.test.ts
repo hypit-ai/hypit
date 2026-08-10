@@ -21,10 +21,10 @@ function distribution(
   return {
     name: "test",
     builtInPackageContributions: [],
-    runFrontends: [{ id: "@narratage/run-text@1" }],
+    runFrontends: [{ id: "@narratage/run-markup@1" }],
     createCompiler: () => ({
       openFile: async (path: string) => ({
-        entry: { name: path, text: '<?svml using="@narratage/run-text@1"?>\n<svrun/>\n' },
+        entry: { name: path, text: '<?svml using="@narratage/run-markup@1"?>\n<svrun/>\n' },
       }),
       supportsFrontend: () => false,
     }),
@@ -42,7 +42,7 @@ function distribution(
 async function runSource(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "svml-build-services-"));
   const path = join(root, "build.svrun");
-  await writeFile(path, '<?svml using="@narratage/run-text@1"?>\n<svrun/>\n', "utf8");
+  await writeFile(path, '<?svml using="@narratage/run-markup@1"?>\n<svrun/>\n', "utf8");
   return path;
 }
 
