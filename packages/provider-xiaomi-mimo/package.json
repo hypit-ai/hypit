@@ -14,7 +14,6 @@
     "@narratage/generation": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
-    "@narratage/runtime-adapter": "workspace:*",
-    "@narratage/runtime-adapter-node": "workspace:*"
+    "@narratage/runtime-adapter": "workspace:*"
   }
 }

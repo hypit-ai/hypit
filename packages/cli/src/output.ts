@@ -11,6 +11,8 @@ export type CliTerminal = {
 
 export type CliIo = {
   readonly write: (text: string) => void;
+  /** Interactive secret input supplied by the concrete CLI shell; never echoed or logged. */
+  readonly readSecret?: (prompt: string) => Promise<string>;
   readonly terminal?: CliTerminal;
 };
 
@@ -18,6 +20,7 @@ export type CliColorMode = "auto" | "always" | "never";
 
 export type CliOutputOptions = {
   readonly json: boolean;
+  readonly jsonl?: boolean;
   readonly color: CliColorMode;
   readonly verbose: boolean;
 };
@@ -95,6 +98,14 @@ export type CliPresentation =
       readonly machine: BuildPlan;
       readonly run: string;
       readonly targetSet: string;
+    }
+  | {
+      readonly kind: "operational";
+      readonly machine: unknown;
+      readonly title: string;
+      readonly status?: "success" | "warning" | "error" | "info";
+      readonly facts?: readonly (readonly [string, string])[];
+      readonly lines?: readonly string[];
     };
 
 type Palette = {
@@ -318,13 +329,24 @@ function renderPlan(
   return `${lines.join("\n")}\n`;
 }
 
+function renderOperational(
+  view: Extract<CliPresentation, { kind: "operational" }>,
+  io: CliIo,
+  colors: Palette,
+): string {
+  const lines = [heading(view.status ?? "info", view.title, io, colors)];
+  if ((view.facts?.length ?? 0) > 0) lines.push("", ...facts(view.facts!, colors));
+  if ((view.lines?.length ?? 0) > 0) lines.push("", ...view.lines!);
+  return `${lines.join("\n")}\n`;
+}
+
 export function writeCliOutput(
   io: CliIo,
   options: CliOutputOptions,
   presentation: CliPresentation,
 ): void {
   if (options.json) {
-    io.write(`${JSON.stringify(presentation.machine, null, 2)}\n`);
+    io.write(`${JSON.stringify(presentation.machine, null, options.jsonl === true ? 0 : 2)}\n`);
     return;
   }
   const colors = palette(colorEnabled(io, options.color));
@@ -334,7 +356,9 @@ export function writeCliOutput(
       ? renderAuthorCheck(presentation, io, colors, options.verbose)
       : presentation.kind === "check-run"
         ? renderRunCheck(presentation, io, colors, options.verbose)
-        : renderPlan(presentation, io, colors, options.verbose);
+        : presentation.kind === "plan"
+          ? renderPlan(presentation, io, colors, options.verbose)
+          : renderOperational(presentation, io, colors);
   io.write(output);
 }
 
@@ -354,11 +378,16 @@ export function writeCliHelp(io: CliIo): void {
     "  status <build-id>          show Build and Operation status",
     "  inspect <build-id>         inspect accepted Records and demanded outputs",
     "  get <build-id>             read or materialize one archived result",
-    "  cancel <build-id>          request cancellation (transitional command)",
+    "  cancel build <build-id>    close admission and request honest cancellation",
+    "  operations <build-id>      inspect external Operation facts",
+    "  operation <digest>         inspect one external Operation",
     "",
     colors.strong("Runtime"),
     "  doctor <profile>           validate deployment without executing",
-    "  services up|status|down    manage current local dependencies",
+    "  runtime up|status|logs|down manage the durable Worker and dependencies",
+    "  services up|status|down    manage declared external programs only",
+    "  queue [--watch]            inspect durable dispatch and shared capacity",
+    "  auth status|login|logout   manage Endpoint-declared credential references",
     "  gc <profile>               report unreachable Artifacts; --apply deletes",
     "",
     colors.strong("Packages"),

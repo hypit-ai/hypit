@@ -6,15 +6,31 @@ export {
 } from "./catalog.js";
 export type * from "./catalog.js";
 export {
+  CompositeCredentialStore,
   credentialRef,
+  isWritableCredentialStore,
+  writableCredentialStore,
   verifyCredentialRef,
 } from "./credentials.js";
 export type * from "./credentials.js";
 export {
+  capacityReservationId,
+  createBuildDispatchIdentity,
+  verifyBuildDispatchIdentity,
+  verifyBuildDispatchSnapshot,
+  verifyCapacityLimits,
+  verifyCapacityReservation,
+  verifyDispatchLease,
+  verifyRuntimeJournalEntry,
+} from "./dispatch.js";
+export type * from "./dispatch.js";
+export {
   MemoryOperationStore,
+  operationCancellationRequestId,
   sealOperationCompletion,
   sealOperationIdentity,
   verifyOperationIdentity,
+  verifyOperationCancellationControl,
   verifyOperationSnapshot,
 } from "./operations.js";
 export type * from "./operations.js";

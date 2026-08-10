@@ -15,15 +15,14 @@ import {
 } from "@narratage/package-loader-node";
 import { isDigest } from "@narratage/protocol";
 import {
-  LocalBuildScheduler,
-  MemoryBuildCatalog,
   RuntimeModuleRegistry,
+  createBuildDispatchIdentity,
   isEnumerableBuildStore,
   isManagedArtifactStore,
   isStreamingArtifactStore,
-  localSchedulerOptionsFromClosure,
   resolveRuntimeProfile,
   sealRuntimeProfile,
+  writableCredentialStore,
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
 import type {
@@ -36,6 +35,7 @@ import type {
   CreateLocalRuntimeOptions,
   LocalBuildOptions,
   LocalBuildRequest,
+  LocalBuildSubmission,
   LocalRuntime,
   EndpointPackage,
   ProjectLocalRuntimeOptions,
@@ -141,10 +141,8 @@ function verifyEndpointPackages(packages: readonly EndpointPackage[]): void {
 export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
-  const buildCatalog = options.buildCatalog ?? new MemoryBuildCatalog();
-  if (options.closure !== undefined
-    && (options.scheduling?.maxConcurrency !== undefined
-      || options.scheduling?.laneLimits !== undefined)) {
+  const buildCatalog = options.buildCatalog;
+  if (options.scheduling?.maxConcurrency !== undefined || options.scheduling?.laneLimits !== undefined) {
     throw new Error("a locked Runtime Closure owns maxConcurrency and lane limits");
   }
   const producers = new ProducerRegistry();
@@ -159,35 +157,52 @@ export async function createLocalRuntime(
     registerProducerFacets(producers, component.producers ?? []);
   }
   for (const endpoint of options.endpoints ?? []) await endpoint.install(endpoints);
-  if (options.closure !== undefined) {
-    endpoints.applyRuntimeClosure(
-      options.closure.value,
-      options.closure.modules,
-      { allowedPermissions: options.closure.allowedPermissions ?? [] },
-    );
-  }
+  endpoints.applyRuntimeClosure(
+    options.closure.value,
+    options.closure.modules,
+    { allowedPermissions: options.closure.allowedPermissions ?? [] },
+  );
   const driver = new NodeDriver({
     producers,
     endpoints,
     artifacts: options.artifactStore,
-    ...(options.credentialStore === undefined ? {} : { credentials: options.credentialStore }),
-    ...(options.operationStore === undefined ? {} : { operations: options.operationStore }),
+    credentials: options.credentialStore,
+    operations: options.operationStore,
     validators,
     ...(options.implementationClosure === undefined
       ? {}
       : { implementationClosure: options.implementationClosure }),
   });
-  const closureScheduling = options.closure === undefined
-    ? {}
-    : localSchedulerOptionsFromClosure(options.closure.value);
-  const scheduler = (options.scheduler ?? {
-    create(executor, schedulerOptions) {
-      return new LocalBuildScheduler(executor, schedulerOptions);
+  const scheduling = {
+    maxConcurrency: options.closure.value.scheduling.maxConcurrency,
+    laneLimits: Object.fromEntries(options.closure.value.scheduling.lanes.map((lane) => [lane.name, lane.maxConcurrency])),
+    ...(options.scheduling?.maxEventsPerBuild === undefined
+      ? {} : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
+  };
+  const worker = options.worker.create(driver, {
+    scheduler: options.scheduler,
+    stores: {
+      builds: options.buildStore,
+      operations: options.operationStore,
+      dispatch: options.dispatchStore,
+      journal: options.journal,
+      artifacts: options.artifactStore,
     },
-  }).create(driver, {
-    ...closureScheduling,
-    ...(options.scheduling ?? {}),
-    buildStore: options.buildStore,
+    scheduling,
+    runtimeClosure: options.closure.value,
+  });
+  const credentialDescriptions = (options.endpoints ?? []).flatMap((item) => item.credentials);
+  const credential = (endpoint: string, slot: string) => {
+    const matches = credentialDescriptions.filter((item) => item.endpoint === endpoint && item.slot === slot);
+    assert(matches.length === 1, matches.length === 0
+      ? `Endpoint ${endpoint} has no credential slot ${slot}`
+      : `Endpoint ${endpoint} repeats credential slot ${slot}`);
+    return matches[0]!;
+  };
+  const credentialStatus = async (item: typeof credentialDescriptions[number]) => ({
+    ...structuredClone(item),
+    configured: await options.credentialStore.resolve(item.ref) !== undefined,
+    writable: await writableCredentialStore(options.credentialStore, item.ref) !== undefined,
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
     for (const item of request.attachments ?? []) {
@@ -200,72 +215,134 @@ export async function createLocalRuntime(
       );
     }
   };
-  const scheduled = (request: LocalBuildRequest) => ({ id: request.id, state: request.state });
+  const presentation = async (build: string): Promise<LocalBuildSubmission> => {
+    const [snapshot, dispatch] = await Promise.all([
+      options.buildStore.read(build),
+      options.dispatchStore.read(build),
+    ]);
+    assert(snapshot !== undefined && dispatch !== undefined, `Build ${build} has no durable Runtime state`);
+    const status: LocalBuildSubmission["status"] = dispatch.phase === "terminal"
+      ? dispatch.terminal!
+      : dispatch.phase === "leased" ? "running" : dispatch.phase;
+    return { id: build, state: snapshot.state, status, dispatch };
+  };
+
+  const submit = async (request: LocalBuildRequest): Promise<LocalBuildSubmission> => {
+    assert(request.id.trim().length > 0, "Build id must not be empty");
+    await stageAttachments(request);
+    let stored = await options.buildStore.read(request.id);
+    if (stored === undefined) {
+      try {
+        stored = await options.buildStore.create(request.id, request.state);
+      } catch (error) {
+        stored = await options.buildStore.read(request.id);
+        if (stored === undefined) throw error;
+      }
+    }
+    assert(stored.state.id === request.state.id,
+      `Build ${request.id} already names another Core Build`);
+    const created = await options.dispatchStore.create(createBuildDispatchIdentity({
+      build: request.id,
+      core: request.state.id,
+      runtimeClosure: options.closure.value.digest,
+    }));
+    if (created.status === "created") {
+      await options.journal.append({
+        at: Date.now(),
+        kind: "dispatch-created",
+        build: request.id,
+        detail: { dispatch: created.snapshot.id },
+      });
+    }
+    if (request.catalog !== undefined) {
+      assert(buildCatalog !== undefined, "Build supplied Host catalog metadata but no BuildCatalog was selected");
+      assert(request.catalog.core === request.state.id,
+        `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
+      await buildCatalog.record(request.id, request.catalog);
+    }
+    return await presentation(request.id);
+  };
+
   const runBuild = async (
     request: LocalBuildRequest,
     follow: LocalBuildOptions = {},
-  ) => {
-    await stageAttachments(request);
-    if (request.catalog !== undefined) {
-      assert(request.catalog.core === request.state.id,
-        `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
-    }
+  ): Promise<LocalBuildSubmission> => {
+    let result = await submit(request);
     const startedAt = Date.now();
     const pollIntervalMs = nonNegativeInteger(follow.pollIntervalMs ?? 1_000, "pollIntervalMs");
     const maxWaitMs = follow.maxWaitMs === undefined
       ? undefined
       : nonNegativeInteger(follow.maxWaitMs, "maxWaitMs");
-    let [result] = await scheduler.run([scheduled(request)]);
-    if (result === undefined) throw new Error(`Local Scheduler returned no result for ${request.id}`);
-    if (request.catalog !== undefined) await buildCatalog.record(request.id, request.catalog);
-    while (true) {
-      if (follow.follow !== true || result.status !== "paused") return result;
-      const pending = result.journal.filter((item) => item.status === "pending");
-      if (pending.length === 0) return result;
-      const now = Date.now();
-      const wakeAt = Math.min(...pending.map((item) => item.wakeAt ?? now + pollIntervalMs));
-      const delay = Math.max(0, wakeAt - now);
-      if (maxWaitMs !== undefined && now - startedAt + delay > maxWaitMs) return result;
-      await wait(delay, follow.signal);
-      [result] = await scheduler.run([scheduled(request)]);
-      if (result === undefined) throw new Error(`Local Scheduler returned no result for ${request.id}`);
+    while (follow.follow === true && !["complete", "failed", "cancelled"].includes(result.status)) {
+      if (maxWaitMs !== undefined && Date.now() - startedAt + pollIntervalMs > maxWaitMs) return result;
+      await wait(pollIntervalMs, follow.signal);
+      result = await presentation(request.id);
     }
+    return result;
   };
   return {
     build: runBuild,
     async buildMany(requests) {
-      await Promise.all(requests.map(stageAttachments));
-      for (const request of requests) {
-        if (request.catalog === undefined) continue;
-        assert(request.catalog.core === request.state.id,
-          `Build Catalog Core ${request.catalog.core} differs from Build ${request.state.id}`);
-      }
-      const results = await scheduler.run(requests.map(scheduled));
-      await Promise.all(requests.map(async (request) => {
-        if (request.catalog !== undefined) await buildCatalog.record(request.id, request.catalog);
-      }));
-      return results;
+      return await Promise.all(requests.map(submit));
     },
     async status(build) {
       return {
         build: await options.buildStore.read(build),
-        catalog: await buildCatalog.read(build),
-        operations: options.operationStore === undefined ? [] : await options.operationStore.list({ build }),
+        catalog: await buildCatalog?.read(build),
+        operations: await options.operationStore.list({ build }),
+        dispatch: await options.dispatchStore.read(build),
       };
     },
-    async builds() {
-      return await buildCatalog.list();
+    async queue() {
+      return {
+        dispatches: await options.dispatchStore.list(),
+        capacity: await options.dispatchStore.listCapacity(),
+      };
     },
-    async cancel(build) {
-      if (options.operationStore === undefined) throw new Error("Local Runtime has no OperationStore");
-      const snapshot = await options.buildStore.read(build);
-      if (snapshot === undefined) return undefined;
-      const active = (await options.operationStore.list({ build }))
-        .filter((operation) => operation.status === "created" || operation.status === "pending");
-      if (active.length === 0) return undefined;
-      for (const operation of active) await driver.cancelOperation(snapshot.state, operation);
-      const [result] = await scheduler.run([{ id: build, state: snapshot.state }]);
-      return result;
+    async operation(id) {
+      return await options.operationStore.read(id);
+    },
+    async journal(query) {
+      return await options.journal.list(query);
+    },
+    async credentials(endpoint) {
+      const selected = credentialDescriptions.filter((item) => endpoint === undefined || item.endpoint === endpoint);
+      return await Promise.all(selected.map(credentialStatus));
+    },
+    async putCredential(endpoint, slot, secret) {
+      assert(secret.length > 0, "credential secret is empty");
+      const item = credential(endpoint, slot);
+      const store = await writableCredentialStore(options.credentialStore, item.ref);
+      assert(store !== undefined, `CredentialStore ${item.ref.store} is not writable`);
+      await store.put(item.ref, { secret });
+      return await credentialStatus(item);
+    },
+    async deleteCredential(endpoint, slot) {
+      const item = credential(endpoint, slot);
+      const store = await writableCredentialStore(options.credentialStore, item.ref);
+      assert(store !== undefined, `CredentialStore ${item.ref.store} is not writable`);
+      const deleted = await store.delete(item.ref);
+      return { deleted, credential: await credentialStatus(item) };
+    },
+    async builds() {
+      return await buildCatalog?.list() ?? [];
+    },
+    async cancel(build, reason) {
+      if (await options.dispatchStore.read(build) === undefined) return undefined;
+      const dispatch = await options.dispatchStore.requestCancellation(build, reason);
+      await options.journal.append({
+        at: Date.now(),
+        kind: "cancellation-requested",
+        build,
+        detail: { ...(reason === undefined ? {} : { reason }) },
+      });
+      return dispatch;
+    },
+    async workOnce(workOptions) {
+      return await worker.runOnce(workOptions);
+    },
+    async work(workOptions) {
+      await worker.run(workOptions);
     },
     async readArtifact(digest) {
       return await options.artifactStore.get(digest);
@@ -282,9 +359,7 @@ export async function createLocalRuntime(
         "selected BuildStore does not expose the maintenance index required for Artifact GC");
       const reachable = new Set<import("@narratage/protocol").Digest>();
       for (const snapshot of await options.buildStore.list()) collectArtifactDigests(snapshot.state, reachable);
-      if (options.operationStore !== undefined) {
-        for (const operation of await options.operationStore.list({})) collectArtifactDigests(operation, reachable);
-      }
+      for (const operation of await options.operationStore.list({})) collectArtifactDigests(operation, reachable);
       const stored = await options.artifactStore.list();
       const unreachable = stored.filter((digest) => !reachable.has(digest)).sort();
       const deleted: import("@narratage/protocol").Digest[] = [];
@@ -308,7 +383,7 @@ export async function createLocalRuntime(
  * Capability Endpoints may execute locally, in a vendor API, in Lambda, or on a hosted service.
  */
 export async function createProjectLocalRuntime(
-  options: ProjectLocalRuntimeOptions = {},
+  options: ProjectLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
   const root = resolve(options.root ?? process.cwd());
   const packageRoot = resolve(options.packageRoot ?? root);
@@ -338,16 +413,19 @@ export async function createProjectLocalRuntime(
         ...endpointPackages.map((item) => item.instance),
       ],
       scheduler: selection.scheduler,
+      worker: selection.worker,
       stores: {
         build: selection.stores.build,
         operations: selection.stores.operations,
+        dispatch: selection.stores.dispatch,
+        journal: selection.stores.journal,
         artifacts: selection.stores.artifacts,
         credentials: selection.stores.credentials,
       },
       endpoints: endpointPackages.flatMap((item) => item.bindings),
       scheduling: {
-        maxConcurrency: options.scheduling?.maxConcurrency ?? 4,
-        lanes: Object.entries(options.scheduling?.lanes ?? {}).map(([name, maxConcurrency]) => ({
+        maxConcurrency: options.scheduling.maxConcurrency,
+        lanes: Object.entries(options.scheduling.lanes ?? {}).map(([name, maxConcurrency]) => ({
           name,
           maxConcurrency,
         })),
@@ -358,18 +436,21 @@ export async function createProjectLocalRuntime(
     });
     const runtime = await createLocalRuntime({
       buildStore: services.buildStore,
-      buildCatalog: projectServices.catalog,
+      ...(projectServices.catalog === undefined ? {} : { buildCatalog: projectServices.catalog }),
       operationStore: services.operationStore,
+      dispatchStore: services.dispatchStore,
+      journal: services.journal,
       artifactStore: services.artifactStore,
       credentialStore: services.credentialStore,
       scheduler: services.scheduler,
+      worker: services.worker,
       ...(configuredComponents.length === 0
         ? {}
         : { components: configuredComponents }),
       endpoints: endpointPackages,
       closure: { modules, value: closure, allowedPermissions: projectServices.allowedPermissions },
       scheduling: {
-        ...(options.scheduling?.maxEventsPerBuild === undefined
+        ...(options.scheduling.maxEventsPerBuild === undefined
           ? {}
           : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
       },
@@ -380,8 +461,16 @@ export async function createProjectLocalRuntime(
       build: runtime.build,
       buildMany: runtime.buildMany,
       status: runtime.status,
+      queue: runtime.queue,
+      operation: runtime.operation,
+      journal: runtime.journal,
+      credentials: runtime.credentials,
+      putCredential: runtime.putCredential,
+      deleteCredential: runtime.deleteCredential,
       builds: runtime.builds,
       cancel: runtime.cancel,
+      workOnce: runtime.workOnce,
+      work: runtime.work,
       readArtifact: runtime.readArtifact,
       openArtifact: runtime.openArtifact,
       garbageCollectArtifacts: runtime.garbageCollectArtifacts,

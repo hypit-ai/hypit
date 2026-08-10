@@ -1,4 +1,5 @@
 import type { CliDistribution } from "@narratage/cli";
+import { fileURLToPath } from "node:url";
 import {
   createVideoCompiler,
   videoBuiltInPackageContributions,
@@ -13,6 +14,10 @@ export const videoCliDistribution: CliDistribution = {
   builtInPackageContributions: videoBuiltInPackageContributions,
   runFrontends: [],
   createCompiler: createVideoCompiler,
+  runtimeWorkerLaunch: () => ({
+    command: process.execPath,
+    args: [...process.execArgv, fileURLToPath(new URL("./cli.ts", import.meta.url))],
+  }),
   createRuntimeFromConfig: async (path) => {
     const { createVideoRuntimeFromConfig } = await import("./runtime-config.js");
     return await createVideoRuntimeFromConfig(path);

@@ -1,12 +1,11 @@
-import { credentialRef } from "@narratage/runtime";
 import {
   createRuntimeEndpointAdapterFacet,
+  runtimeConfigCredentialRef,
   runtimeConfigExact,
   runtimeConfigObject,
   runtimeConfigPositiveInteger,
   runtimeConfigString,
 } from "@narratage/runtime-adapter";
-import { diagnoseRuntimeEnvironmentCredential } from "@narratage/runtime-adapter-node";
 
 import { createXiaomiMimoProvider } from "./provider.js";
 
@@ -15,7 +14,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
   validate(context) {
     const config = runtimeConfigObject(context.config, "Xiaomi MiMo");
     runtimeConfigExact(config, [
-      "apiBaseUrl", "apiKeyEnv", "defaultConcurrency", "requestTimeoutMs",
+      "apiBaseUrl", "apiKey", "defaultConcurrency", "requestTimeoutMs",
       "maxResponseBytes", "maxVoiceSampleBase64Bytes",
     ], "Xiaomi MiMo");
     const base = runtimeConfigString(config.apiBaseUrl, "Xiaomi MiMo apiBaseUrl");
@@ -25,7 +24,9 @@ const adapter = createRuntimeEndpointAdapterFacet({
         throw new Error("Xiaomi MiMo apiBaseUrl must use HTTPS or loopback");
       }
     }
-    runtimeConfigString(config.apiKeyEnv, "Xiaomi MiMo apiKeyEnv");
+    if (runtimeConfigCredentialRef(config.apiKey, "Xiaomi MiMo apiKey") === undefined) {
+      throw new Error("Xiaomi MiMo apiKey CredentialRef is required");
+    }
     runtimeConfigPositiveInteger(config.defaultConcurrency, "Xiaomi MiMo defaultConcurrency");
     runtimeConfigPositiveInteger(config.requestTimeoutMs, "Xiaomi MiMo requestTimeoutMs");
     runtimeConfigPositiveInteger(config.maxResponseBytes, "Xiaomi MiMo maxResponseBytes");
@@ -33,13 +34,14 @@ const adapter = createRuntimeEndpointAdapterFacet({
   },
   create(context) {
     const config = runtimeConfigObject(context.config, "Xiaomi MiMo");
-    const apiKeyEnv = runtimeConfigString(config.apiKeyEnv, "Xiaomi MiMo apiKeyEnv");
+    const apiKey = runtimeConfigCredentialRef(config.apiKey, "Xiaomi MiMo apiKey");
+    if (apiKey === undefined) throw new Error("Xiaomi MiMo apiKey CredentialRef is required");
     return createXiaomiMimoProvider({
       instance: context.instance,
       ...(context.lane === undefined ? {} : { lane: context.lane }),
       ...(runtimeConfigString(config.apiBaseUrl, "Xiaomi MiMo apiBaseUrl") === undefined
         ? {} : { apiBaseUrl: config.apiBaseUrl as string }),
-      ...(apiKeyEnv === undefined ? {} : { apiKey: credentialRef("env", apiKeyEnv) }),
+      apiKey,
       ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "Xiaomi MiMo defaultConcurrency") === undefined
         ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
       ...(runtimeConfigPositiveInteger(config.requestTimeoutMs, "Xiaomi MiMo requestTimeoutMs") === undefined
@@ -49,13 +51,6 @@ const adapter = createRuntimeEndpointAdapterFacet({
       ...(runtimeConfigPositiveInteger(config.maxVoiceSampleBase64Bytes, "Xiaomi MiMo maxVoiceSampleBase64Bytes") === undefined
         ? {} : { maxVoiceSampleBase64Bytes: config.maxVoiceSampleBase64Bytes as number }),
     });
-  },
-  doctor(context) {
-    const config = runtimeConfigObject(context.config, "Xiaomi MiMo");
-    return diagnoseRuntimeEnvironmentCredential(
-      runtimeConfigString(config.apiKeyEnv, "Xiaomi MiMo apiKeyEnv") ?? "MIMO_API_KEY",
-      "Xiaomi MiMo",
-    );
   },
 });
 

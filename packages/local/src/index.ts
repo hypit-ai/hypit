@@ -1,7 +1,9 @@
 export {
   createLocalSchedulerPackage,
+  createLocalExecutionPackage,
   localRuntimeModuleRef,
   localSchedulerImplementationDigest,
+  localWorkerImplementationDigest,
 } from "./scheduler-package.js";
 export {
   createLocalRuntime,
