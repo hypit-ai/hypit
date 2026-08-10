@@ -48,9 +48,15 @@ self-sufficient — a real render supplies a producer for the rest. The shim in
 
 ## Dependency boundary
 
-The dependency is one-way: the Playground may consume public production
-contracts, but production contracts and packages contain no Playground
-defaults, form hints, fixtures or preview helpers.
+Two rules are non-negotiable:
+
+1. The dependency is one-way. The Playground may consume public production
+   contracts; Protocol, Core and every other package contain no Playground
+   defaults, form hints, fixtures, facets or preview helpers.
+2. The Playground owns no component, Recipe, Story, Scenario or example
+   registry. It discovers what a selected environment actually exposes and may
+   read ordinary SVML/SVS/Run sources; it does not maintain a second data format
+   describing the system.
 
 To become discoverable, a module only declares its real Producer, ports and
 structural input schemas. The Playground creates blank form state and its own
@@ -60,6 +66,12 @@ state, not SVML semantics.
 The generic form uses only schema kinds, enums and numeric bounds. A richer
 editor or fixture system must be implemented inside this tool; it must not make
 a production package change merely to improve a preview.
+
+The current workspace scan is discovery, not registration: it enumerates the
+selected workspace at startup and derives eligibility from an ordinary
+`VisualTrack` output. There is no checked-in list of package names. In a
+project-oriented Playground, the startup command and the imported source/lock
+closure will select the environment instead; no central catalog is introduced.
 
 ## Known divergences from a real render
 
