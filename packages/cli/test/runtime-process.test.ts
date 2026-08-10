@@ -14,7 +14,14 @@ import {
 test("one detached Runtime Worker is observable, reusable and explicitly stoppable", async () => {
   const root = await mkdtemp(join(tmpdir(), "narratage-runtime-process-"));
   const profile = join(root, "runtime.json");
-  await writeFile(profile, "{}\n", "utf8");
+  const authorLock = join(root, "author.lock");
+  const runtimeLock = join(root, "runtime.lock");
+  await writeFile(authorLock, "author-v1\n", "utf8");
+  await writeFile(runtimeLock, "runtime-v1\n", "utf8");
+  await writeFile(profile, JSON.stringify({
+    packageLock: "./author.lock",
+    runtimePackageLock: "./runtime.lock",
+  }), "utf8");
   const program = `
     const fs = require("node:fs");
     const path = require("node:path");
@@ -34,6 +41,20 @@ test("one detached Runtime Worker is observable, reusable and explicitly stoppab
     assert.equal(second.pid, first.pid);
     assert.equal((await runtimeProcessStatus(profile)).state, "running");
     assert.match((await runtimeProcessLogs(profile)).text, /worker-ready/u);
+    await writeFile(runtimeLock, "runtime-v2\n", "utf8");
+    assert.equal((await runtimeProcessStatus(profile)).state, "stale");
+    const replaced = await ensureRuntimeProcess(profile, { command: process.execPath, args: ["-e", program] }, 5_000);
+    assert.notEqual(replaced.pid, first.pid);
+    assert.equal(replaced.state, "running");
+    await writeFile(profile, JSON.stringify({
+      root: ".",
+      packageLock: "./author.lock",
+      runtimePackageLock: "./runtime.lock",
+    }), "utf8");
+    assert.equal((await runtimeProcessStatus(profile)).state, "stale");
+    const replacedAgain = await ensureRuntimeProcess(profile, { command: process.execPath, args: ["-e", program] }, 5_000);
+    assert.notEqual(replacedAgain.pid, replaced.pid);
+    assert.equal(replacedAgain.state, "running");
     assert.equal((await stopRuntimeProcess(profile, 5_000)).state, "stopped");
     assert.equal((await runtimeProcessStatus(profile)).state, "stopped");
   } finally {

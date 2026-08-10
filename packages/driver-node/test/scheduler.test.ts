@@ -810,6 +810,7 @@ test("wakeAt prevents early polling and Runtime cancellation becomes a terminal 
 test("cancellation acknowledgement never invents a remote terminal fact", async () => {
   const operations = new MemoryOperationStore();
   const runtime = resolvedRuntime(1, "recoverable");
+  let cancelCalls = 0;
   const endpoint: RecoverableEndpoint = {
     start() {
       return { status: "pending", checkpoint: { remoteJob: "still-running" } };
@@ -818,7 +819,8 @@ test("cancellation acknowledgement never invents a remote terminal fact", async 
       return { status: "pending", checkpoint: checkpoint ?? { remoteJob: "still-running" } };
     },
     cancel() {
-      return { status: "accepted" };
+      cancelCalls += 1;
+      return cancelCalls === 1 ? { status: "accepted" } : { status: "confirmed" };
     },
   };
   const executor = recoverableExecutor(endpoint, operations, runtime).executor;
@@ -831,6 +833,63 @@ test("cancellation acknowledgement never invents a remote terminal fact", async 
   const controlled = await executor.cancelOperation(first!.state, operation, 123);
   assert.equal(controlled.status, "pending");
   assert.equal(controlled.cancellation?.status, "accepted");
+  const confirmed = await executor.cancelOperation(first!.state, controlled, 123);
+  assert.equal(confirmed.status, "cancelled");
+  assert.equal(confirmed.cancellation?.status, "confirmed");
+  assert.equal(cancelCalls, 2, "accepted acknowledgement is reconciled until a terminal fact exists");
+});
+
+test("a completion racing with cancellation is recorded as too late instead of overwritten", async () => {
+  const stored = new MemoryOperationStore();
+  let race = false;
+  const operations: OperationStore = {
+    create: (identity) => stored.create(identity),
+    read: (id) => stored.read(id),
+    list: (query) => stored.list(query),
+    async compareAndSwap(id, revision, update) {
+      if (race && update.status === "control") {
+        race = false;
+        const completed = await stored.compareAndSwap(id, revision, {
+          status: "completed",
+          completion: {
+            value: { kind: "inline", value: "remote fact won the race" },
+            conformance: "exact",
+            delivery: "executed",
+            metadata: {},
+          },
+        });
+        assert.equal(completed.status, "stored");
+        return { status: "conflict", current: completed.snapshot };
+      }
+      return await stored.compareAndSwap(id, revision, update);
+    },
+  };
+  let cancelCalls = 0;
+  const endpoint: RecoverableEndpoint = {
+    start() {
+      return { status: "pending", checkpoint: { remoteJob: "finishing" } };
+    },
+    resume() {
+      throw new Error("the raced terminal fact must be observed before resume");
+    },
+    cancel() {
+      cancelCalls += 1;
+      return { status: "confirmed" };
+    },
+  };
+  const runtime = resolvedRuntime(1, "recoverable");
+  const executor = recoverableExecutor(endpoint, operations, runtime).executor;
+  const scheduler = new LocalBuildScheduler(executor, localSchedulerOptionsFromClosure(runtime.closure));
+  const [first] = await scheduler.run([{ id: "cancel-completion-race", state: createGreetingBuild() }]);
+  const operationId = first?.journal.find((item) => item.status === "pending")?.operation;
+  assert.ok(operationId);
+  const operation = await operations.read(operationId);
+  assert.ok(operation);
+  race = true;
+  const observed = await executor.cancelOperation(first!.state, operation, 789);
+  assert.equal(observed.status, "completed");
+  assert.equal(observed.cancellation?.status, "too-late");
+  assert.equal(cancelCalls, 0);
 });
 
 test("an Endpoint without cancellation stays observable instead of changing Candidate or fact", async () => {

@@ -20,6 +20,7 @@ import {
   isEnumerableBuildStore,
   isManagedArtifactStore,
   isStreamingArtifactStore,
+  operationCancellationRequestId,
   resolveRuntimeProfile,
   sealRuntimeProfile,
   writableCredentialStore,
@@ -338,6 +339,37 @@ export async function createLocalRuntime(
       });
       return dispatch;
     },
+    async cancelOperation(id, reason) {
+      let current = await options.operationStore.read(id);
+      if (current === undefined) return undefined;
+      if (current.cancellation === undefined) {
+        const requestedAt = Date.now();
+        while (current.cancellation === undefined) {
+          const status = current.status === "completed" || current.status === "failed" || current.status === "cancelled"
+            ? "too-late" as const
+            : "requested" as const;
+          const written = await options.operationStore.compareAndSwap(current.id, current.revision, {
+            status: "control",
+            cancellation: {
+              requestedAt,
+              requestId: operationCancellationRequestId(current.id, requestedAt),
+              status,
+              attempts: 0,
+            },
+          });
+          current = written.status === "stored" ? written.snapshot : written.current;
+        }
+        await options.journal.append({
+          at: requestedAt,
+          kind: "cancellation-requested",
+          build: current.build,
+          operation: current.id,
+          detail: { scope: "operation", ...(reason === undefined ? {} : { reason }) },
+        });
+      }
+      await options.dispatchStore.wake(current.build);
+      return current;
+    },
     async workOnce(workOptions) {
       return await worker.runOnce(workOptions);
     },
@@ -379,8 +411,9 @@ export async function createLocalRuntime(
 }
 
 /**
- * Zero-service local distribution. The Runtime authority stays in this process while configured
- * Capability Endpoints may execute locally, in a vendor API, in Lambda, or on a hosted service.
+ * Node project assembly over only the Runtime service packages selected by the caller. Capability
+ * Endpoints may execute locally, in a vendor API, in Lambda, or on a hosted service; none is
+ * inferred from this local process boundary.
  */
 export async function createProjectLocalRuntime(
   options: ProjectLocalRuntimeOptions,
@@ -469,6 +502,7 @@ export async function createProjectLocalRuntime(
       deleteCredential: runtime.deleteCredential,
       builds: runtime.builds,
       cancel: runtime.cancel,
+      cancelOperation: runtime.cancelOperation,
       workOnce: runtime.workOnce,
       work: runtime.work,
       readArtifact: runtime.readArtifact,
