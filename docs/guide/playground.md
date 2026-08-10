@@ -28,26 +28,26 @@ no credentials, no local services.
 The preview runs the installed modules' real Producer handlers and compiles the
 same document a Build would render.
 
-The list and the forms are read from the manifests, so a module that declares a
-Producer emitting a `VisualTrack` appears on its own.
+The list and the structural forms are read from public manifests, so a module
+that declares a Producer emitting a `VisualTrack` appears on its own.
 
-## Controls
+## Hard boundary
 
-A module annotates a field with `format` to say what the value means:
+The Playground is a consumer of the system, never an author of system
+semantics. Production Protocol, Core and domain packages contain no Playground
+defaults, UI hints, fixtures or preview helpers.
 
-| Format | Control |
-|---|---|
-| `color` | Swatch beside a text box. Type the value to set alpha: `#RRGGBBAA`. |
-| `unit-fraction` | Slider plus a number box |
-| `multiline` | Text area |
-| `digest` | File picker |
-| `duration` | Number box, in seconds |
+The generic form uses only facts the production contract already needs:
+schema kinds, enums and numeric bounds. Canvas size, duration, frame rate,
+background and blank form values are local session state owned by this tool.
+If the Playground later needs richer controls or fixtures, they must be added
+inside `tools/playground`; a production package must not change for that reason.
 
 ## Media
 
-A `format: "digest"` field takes a file, hashed as you pick it. Components that
-draw supplied footage — B-roll, speaker footage — draw nothing until you choose
-one.
+Content-addressed media is currently entered as an existing digest. The generic
+form deliberately does not reinterpret an arbitrary production string as a file
+picker.
 
 ## When something is wrong
 

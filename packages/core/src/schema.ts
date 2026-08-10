@@ -59,16 +59,6 @@ function validateInline(value: CanonicalValue, schema: ValueSchema, path: string
       if (schema.maxLength !== undefined && [...value].length > schema.maxLength) {
         fail(path, `must contain at most ${schema.maxLength} characters`);
       }
-      // A format that nothing checks drifts from what values actually hold, in
-      // the same way a duplicated constant does. The two with an exact shape
-      // are checked here so a module states the rule once instead of asserting
-      // it again in every consumer.
-      if (schema.format === "color" && !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(value)) {
-        fail(path, "must be #RRGGBB or #RRGGBBAA");
-      }
-      if (schema.format === "digest" && !/^sha256:[0-9a-f]{64}$/u.test(value)) {
-        fail(path, "must be a sha256 digest");
-      }
       return;
     case "literal":
       if (canonicalStringify(value) !== canonicalStringify(schema.value)) {

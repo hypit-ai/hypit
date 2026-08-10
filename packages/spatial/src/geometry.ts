@@ -33,19 +33,6 @@ export const spatialValidatorDigests = {
   fitted: digestOf("@narratage/spatial/validate-fitted@1"),
 } as const;
 
-/** One portrait square-pixel Canvas for editors and previews before author input. */
-export function defaultCanvasSpace(): CanvasSpace {
-  return {
-    contract: "svml.canvas-space@1",
-    widthPx: 1080,
-    heightPx: 1920,
-    origin: "top-left",
-    xDirection: "right",
-    yDirection: "down",
-    pixelAspect: "square",
-  };
-}
-
 function finite(value: number, label: string): void {
   if (!Number.isFinite(value)) throw new Error(`${label} must be finite.`);
 }

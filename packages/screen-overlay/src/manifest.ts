@@ -7,7 +7,7 @@ import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map
 import { spatialDependency, spatialTypes } from "@narratage/spatial";
 import { temporalDependency } from "@narratage/temporal";
 
-import { defaultScreenOverlayProgram, screenOverlayImplementationDigests, screenOverlayValidatorDigests } from "./program.js";
+import { screenOverlayImplementationDigests, screenOverlayValidatorDigests } from "./program.js";
 
 export const screenOverlayModuleRef = { name: "@narratage/screen-overlay", version: "1" } as const;
 export const screenOverlayTypes = {
@@ -82,7 +82,7 @@ export const screenOverlayManifest: ModuleManifest = {
     { name: screenOverlayTypes.header.name, schema: screenOverlayHeaderSchema },
     { name: screenOverlayTypes.itemSpec.name, schema: screenOverlayItemSpecSchema },
     { name: screenOverlayTypes.set.name, schema: screenOverlaySetSchema },
-    { name: screenOverlayTypes.program.name, schema: screenOverlayProgramSchema, default: defaultScreenOverlayProgram(), validator: validator("@narratage/screen-overlay/validate-program", screenOverlayValidatorDigests.program) },
+    { name: screenOverlayTypes.program.name, schema: screenOverlayProgramSchema, validator: validator("@narratage/screen-overlay/validate-program", screenOverlayValidatorDigests.program) },
   ], capabilities: [],
   surfaces: [{ name: "track", tag: "Track", mode: "structured", outputs: [screenOverlayTypes.header, screenOverlayTypes.itemSpec, screenOverlayTypes.program, compositionTypes.visualTrack], implementation: { kind: "trusted-frontend-surface", locator: "@narratage/screen-overlay/track-surface", digest: screenOverlaySurfaceImplementationDigest } }],
   producers: [
