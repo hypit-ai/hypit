@@ -6,6 +6,7 @@ import type { AudioTrack } from "@narratage/composition";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { mediaTypes } from "@narratage/media";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@narratage/media";
+import { mediaPipelineProducers } from "@narratage/media-pipeline";
 import { artifactTypes } from "@narratage/artifact";
 import { narrativeTypes } from "@narratage/narrative";
 import {
@@ -702,6 +703,7 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     ["frame", plain("frame", spatialTypes.frame)],
     ["clip-path", plain("clip-path", spatialTypes.path)],
     ["still", plain("still", artifactTypes.blob)],
+    ["raw-video", plain("raw-video", artifactTypes.blob)],
     ["extent", plain("extent", spatialTypes.extent)],
     ["video", plain("video", mediaTypes.synchronized)],
     ["surface", plain("surface", mediaTypes.compositableSurface)],
@@ -720,18 +722,18 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     ["handoff", appearance("handoff", { operator: "crossfade", "duration-frames": 10, "boundary-ratio": 0.5, audio: "cut" })],
   ]);
   const root = node("media:Track", { id: "editorial", space: ref("space"), canvas: ref("canvas"), map: ref("map") }, [
-    node("media:Item", { id: "still-card", source: ref("still"), extent: ref("extent"), frame: ref("frame"), clip: ref("clip-path"), appearance: ref("still-style"), during: "program" }),
+    node("media:Item", { id: "still-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), clip: ref("clip-path"), appearance: ref("still-style"), during: "program" }),
     node("media:Item", { id: "proof", frame: ref("frame"), appearance: ref("card-style"), motion: ref("motion"), during: ref("selection"), "source-audio": "video", "audio-gain": "0.8" }, [
       node("media:Paint", { id: "backing", appearance: ref("paint-style") }),
-      node("media:Layer", { id: "video", source: ref("video"), appearance: ref("video-style") }, [
+      node("media:Layer", { id: "video", video: ref("raw-video"), audio: "include", appearance: ref("video-style") }, [
         node("media:Sampling", { at: "start", zoom: "1" }),
         node("media:Sampling", { at: "end", zoom: "1.1", y: "-10", easing: "ease-out" }),
       ]),
       node("media:Sound", { id: "proof-enter", source: ref("sfx"), at: "enter", gain: "0.5" }),
     ]),
     node("media:Sequence", { id: "steps", frame: ref("frame"), appearance: ref("sequence-style"), until: ref("terminal"), "until-boundary": "end" }, [
-      node("media:Member", { id: "one", source: ref("still"), extent: ref("extent"), at: ref("cue1") }),
-      node("media:Member", { id: "two", source: ref("surface"), appearance: ref("surface-style"), at: ref("cue2") }),
+      node("media:Member", { id: "one", image: ref("still"), extent: ref("extent"), at: ref("cue1") }),
+      node("media:Member", { id: "two", surface: ref("surface"), appearance: ref("surface-style"), at: ref("cue2") }),
       node("media:Handoff", { id: "one-two", from: "one", transition: ref("handoff") }),
       node("media:Sound", { id: "transition", source: ref("sfx"), handoff: "one-two" }),
     ]),
@@ -748,6 +750,9 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   const producers = fragment.operations.map((entry) => entry.producer.name);
   assert.ok(producers.includes("append-still-media-layer"));
   assert.ok(producers.includes("append-timed-media-layer"));
+  assert.ok(producers.includes(mediaPipelineProducers.bindAvRequest.name));
+  assert.ok(producers.includes(mediaPipelineProducers.inspect.name));
+  assert.ok(producers.includes(mediaPipelineProducers.normalize.name));
   assert.ok(producers.includes("append-surface-media-layer"));
   assert.ok(producers.includes("append-media-paint-layer"));
   assert.ok(producers.includes("bind-media-item-clip-path"));

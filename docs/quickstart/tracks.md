@@ -154,10 +154,10 @@ default and override Styles into one ordinary peer `VisualTrack`: `{captions.tra
 ## Media overlays and B-roll
 
 B-roll is an editorial use of the generic Media Track, not a separate Track family. One Item can
-place a normalized image, video, animation or compositable Surface at a semantic or absolute window.
+place an image, generated video, prepared timed medium or compositable Surface at a semantic or
+absolute window.
 
 ```svml
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="wording" from="@narratage/text@1"/>
 ```
@@ -177,15 +177,12 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
   <seedance:Reference image={product-reference}/>
 </seedance:ReferenceVideo>
 
-<pipeline:Normalize id="product-media" source={product-motion.video}
-  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
-
 <space:Frame id="product-frame" within={vertical}
   left="8%" top="20%" right="8%" bottom="32%"/>
 
 <media-track:Track id="product-broll" map={timing.map}
   space={speech.space} canvas={vertical}>
-  <media-track:Item source={product-media.media} frame={product-frame}
+  <media-track:Item video={product-motion.video} frame={product-frame}
     during={story.selection.product-demo}
     appearance={studio.media.product}
     motion={studio.motion.product}/>
@@ -195,6 +192,22 @@ Placement is an explicit Spatial Frame edge; appearance and motion remain reusab
 The Selection contributes semantic points; Media performs the package-owned window projection.
 The same Item model also covers full-canvas cutaways, split screens and corner overlays. Ordered
 child layers, source occupancy and explicit Sequences are available when one source is not enough.
+
+Every Item, Member or sample Layer declares exactly one visual input form:
+
+| Input | Value | Meaning |
+|---|---|---|
+| `image={...}` + `extent={...}` | Blob + authored pixel extent | A durationless still image |
+| `video={...}` | Generated/raw video Blob | Inspect, select and normalize to this Track's `space` automatically |
+| `media={...}` | `SynchronizedMedia` | Connect an explicitly prepared timed source directly |
+| `surface={...}` | `CompositableSurfaceRef` | Connect an alpha-aware still or timed surface directly |
+
+Raw `video=` is visual-only by default. Add `audio="include"` when its own audio should be
+normalized and emitted by the Track; `audio-gain` remains available for that selected source.
+These forms are explicit so a generic Blob is never guessed to be an image or video. The convenient
+surface syntax does not bypass the graph: `video=` expands to ordinary bind-request, inspect,
+select and normalize Operations. An explicit `<pipeline:Normalize>` remains available for shared
+or specially selected media, whose output then connects through `media=`.
 
 **Outputs:** `{product-broll.visual}` and, only when explicitly authored, `{product-broll.audio}`.
 
@@ -286,7 +299,6 @@ All three track types together in one source file:
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="fonts" from="@narratage/fonts-open@1"/>
-<import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/typography-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
@@ -309,10 +321,8 @@ All three track types together in one source file:
   left="10%" top="20%" right="10%" bottom="30%"/>
 
 <!-- Media: one ordinary Item used editorially as B-roll -->
-<pipeline:Normalize id="motion-media" source={motion.video}
-  video="primary-moving" audio="none" span-authority="video" frame-rate="30"/>
 <media-track:Track id="cards" map={timing.map} space={speech.space} canvas={vertical}>
-  <media-track:Item source={motion-media.media} frame={card-frame}
+  <media-track:Item video={motion.video} frame={card-frame}
     during={story.selection.demo} appearance={studio.media.card} motion={studio.motion.card}/>
 </media-track:Track>
 

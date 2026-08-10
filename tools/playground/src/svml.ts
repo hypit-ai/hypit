@@ -21,7 +21,6 @@ export { sealComposition } from "@narratage/composition";
 export type { Composition, Track, VisualTrack } from "@narratage/composition";
 
 export {
-  defaultProgramSpace,
   programSpaceFrameCount,
   sealProgramSpace,
 } from "@narratage/program-space";

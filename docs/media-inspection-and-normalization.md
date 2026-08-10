@@ -34,6 +34,20 @@ raw BlobArtifact
   -> domain component         optional semantic promotion, e.g. Narrative-bound SpeechBasis
 ```
 
+That boundary does not require every author to spell out four elements. The Surface that knows the
+consumption policy may lower concise syntax into this same graph. The official AIGC paths do so:
+
+```svml
+<speech:Take video={take.video} segment={story.segment.opening}/>
+<media-track:Item video={broll.video} frame={full} during="program"/>
+```
+
+Speech selects primary moving video plus default audio at its explicitly authored Spine frame rate.
+Media Track selects primary moving video at its connected ProgramSpace rate and includes audio only
+when `audio="include"` is authored. Explicit Media Pipeline author operations remain available for
+alternate stream selection, reuse, transformation and extraction. In every case Core sees the same
+typed finite graph and the Provider receives the same Need.
+
 Core does not know any of these Types. They are nominal Types in the logical `@narratage/media` module,
 with digest validators registered by the media component.
 

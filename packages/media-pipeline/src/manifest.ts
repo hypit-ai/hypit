@@ -32,6 +32,8 @@ export const mediaPipelineCapabilities = {
   mux: { module: mediaPipelineModuleRef, name: "mux-program-media" },
 } satisfies Record<string, CapabilityRef>;
 export const mediaPipelineProducers = {
+  bindVisualRequest: { module: mediaPipelineModuleRef, name: "bind-visual-media-request-to-program" },
+  bindAvRequest: { module: mediaPipelineModuleRef, name: "bind-av-media-request-to-program" },
   inspect: { module: mediaPipelineModuleRef, name: "request-media-inspection" },
   select: { module: mediaPipelineModuleRef, name: "select-media-streams" },
   normalize: { module: mediaPipelineModuleRef, name: "request-media-normalization" },
@@ -45,6 +47,8 @@ export const mediaPipelineProducers = {
   projectMuxed: { module: mediaPipelineModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
 export const mediaPipelineImplementationDigests = {
+  bindVisualRequest: digestOf("@narratage/media-pipeline/bind-visual-media-request-to-program@1"),
+  bindAvRequest: digestOf("@narratage/media-pipeline/bind-av-media-request-to-program@1"),
   inspect: digestOf("@narratage/media-pipeline/request-media-inspection@1"),
   select: digestOf("@narratage/media-pipeline/select-media-streams@1"),
   normalize: digestOf("@narratage/media-pipeline/request-media-normalization@1"),
@@ -332,6 +336,28 @@ export const mediaPipelineManifest: ModuleManifest = {
     },
   ],
   producers: [
+    {
+      name: mediaPipelineProducers.bindVisualRequest.name,
+      inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
+      outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
+      needs: [],
+      implementation: {
+        kind: "registered",
+        locator: "@narratage/media-pipeline/bind-visual-media-request-to-program",
+        digest: mediaPipelineImplementationDigests.bindVisualRequest,
+      },
+    },
+    {
+      name: mediaPipelineProducers.bindAvRequest.name,
+      inputs: [{ name: "space", type: programSpaceTypes.programSpace }],
+      outputs: [{ name: "request", type: mediaPipelineTypes.selectionRequest }],
+      needs: [],
+      implementation: {
+        kind: "registered",
+        locator: "@narratage/media-pipeline/bind-av-media-request-to-program",
+        digest: mediaPipelineImplementationDigests.bindAvRequest,
+      },
+    },
     {
       name: mediaPipelineProducers.inspect.name,
       inputs: [{ name: "source", type: artifactTypes.blob }],

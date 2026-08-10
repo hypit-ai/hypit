@@ -25,6 +25,13 @@ The current normalization profile uses one source presentation origin, a request
 rate, and a 48 kHz stereo PCM render stem. It preserves input level: loudness/mastering remains a
 separate author policy.
 
+This package is the shared execution vocabulary, not mandatory authoring boilerplate. A consuming
+Surface that already owns the needed policy may expand the same finite graph itself. For example,
+`speech:Take video={take.video}` selects default A/V at the Spine's explicit frame rate, while
+`media-track:Item video={shot.video}` selects visual-only media at the connected ProgramSpace rate.
+Their lower-level `media=` inputs remain available for an explicitly prepared `SynchronizedMedia`.
+Core and Providers see the same Operations in both forms.
+
 Three ordinary author operations reuse that same inspection/execution boundary:
 
 ```xml

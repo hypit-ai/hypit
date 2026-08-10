@@ -119,9 +119,9 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
       </script>
       <fixture:Media/>
       <space:Canvas id="vertical" width="720" height="1280"/>
-      <speech:Spine id="speech" canvas={vertical}>
-        <speech:Take source={take-one} segment={story.segment.opening}/>
-        <speech:Take source={take-two} segment={story.segment.answer}/>
+      <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+        <speech:Take video={take-one} segment={story.segment.opening}/>
+        <speech:Take video={take-two} segment={story.segment.answer}/>
       </speech:Spine>
     </svml>`),
     closure,

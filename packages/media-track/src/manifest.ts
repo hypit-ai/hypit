@@ -7,6 +7,7 @@ import {
 } from "@narratage/media";
 import { narrativeDependency, narrativeTypes } from "@narratage/narrative";
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
+import { mediaPipelineManifest, mediaPipelineModuleRef } from "@narratage/media-pipeline";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { semanticMapDependency, semanticMapTypes } from "@narratage/semantic-map";
@@ -295,7 +296,17 @@ export const mediaTrackManifest: ModuleManifest = {
   format: "svml.module@1",
   name: mediaTrackModuleRef.name,
   version: mediaTrackModuleRef.version,
-  dependencies: [artifactDependency, mediaDependency, narrativeDependency, semanticMapDependency, programSpaceDependency, temporalDependency, spatialDependency, compositionDependency],
+  dependencies: [
+    artifactDependency,
+    mediaDependency,
+    { module: mediaPipelineModuleRef, digest: digestOf(mediaPipelineManifest) },
+    narrativeDependency,
+    semanticMapDependency,
+    programSpaceDependency,
+    temporalDependency,
+    spatialDependency,
+    compositionDependency,
+  ],
   types: [
     { name: mediaTrackTypes.header.name, schema: mediaTrackHeaderSchema },
     { name: mediaTrackTypes.paintLayerSpec.name, schema: mediaPaintLayerSpecSchema },

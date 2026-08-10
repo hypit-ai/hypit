@@ -28,7 +28,6 @@ export const programSpaceManifest: ModuleManifest = {
   dependencies: [], types: [{
     name: programSpaceTypes.programSpace.name,
     schema: programSpaceSchema,
-    default: { contract: "svml.program-space@1", durationSec: 4, frameRate: { numerator: 30, denominator: 1 } },
   }],
   capabilities: [], surfaces: [], producers: [],
 };
@@ -37,17 +36,6 @@ export const programSpaceDependency = { module: programSpaceModuleRef, digest: p
 
 export function sealProgramSpace(value: ProgramSpace): ProgramSpace { return structuredClone(value); }
 
-/**
- * Four seconds at 30, for anything that must have a frame domain before a
- * Build has measured one.
- */
-export function defaultProgramSpace(): ProgramSpace {
-  return sealProgramSpace({
-    contract: "svml.program-space@1",
-    durationSec: 4,
-    frameRate: { numerator: 30, denominator: 1 },
-  });
-}
 export function programSpaceFrameCount(programSpace: ProgramSpace): number {
   const frames = programSpace.durationSec * programSpace.frameRate.numerator / programSpace.frameRate.denominator;
   const rounded = Math.round(frames);

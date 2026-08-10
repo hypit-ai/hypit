@@ -244,10 +244,15 @@ Implemented and executable:
 - separately imported `<text:Mask>` consumes an authored Text Program plus one owned still Surface;
   unsupported rich/path/timed cases explicitly materialize rather than sampling another Track;
 - `@narratage/media-track` implements independently timed Item and ordered Sequence Surfaces over
-  explicit ProgramSpace, CanvasSpace, SpatialFrame and optional SemanticMap edges: durationless
-  images, normalized video, compositable Surfaces, ordered Paint/sample layers, every ContentFit,
-  trim/occupancy, frame presentation, lifecycle/sampling motion, pairwise handoffs and separate
-  source-audio/SFX projection all lower to ordinary peer Tracks;
+  explicit ProgramSpace, CanvasSpace, SpatialFrame and optional SemanticMap edges: mutually
+  exclusive `image`/raw `video`/prepared `media`/compositable `surface` inputs, automatic raw-video
+  inspection and normalization at the connected ProgramSpace rate, ordered Paint/sample layers,
+  every ContentFit, trim/occupancy, frame presentation, lifecycle/sampling motion, pairwise handoffs
+  and separate source-audio/SFX projection all lower to ordinary peer Tracks;
+- `@narratage/speech-spine` requires an explicit rational frame rate; each generated `video` Take
+  lowers through the same Media Pipeline with A/V selected, while a prepared `media` Take connects
+  directly. It derives one ProgramSpace from the normalized Take spans rather than using a compiler
+  or Type default;
 - `@narratage/deck-track` implements the independent `DepthStack` collection model: explicit ordered
   Cards and semantic triggers, finite/wrapped neighborhoods, relative-depth pose and tone,
   frame-local whole-collection reflow, still/timed inactive playback, exact-font labels and

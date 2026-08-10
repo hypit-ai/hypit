@@ -2,7 +2,7 @@ import { mediaComponent } from "@narratage/media";
 import type { ComponentPackage } from "@narratage/component-kit";
 import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
 import type { MediaInspection, MediaStreamSelection, MuxedMedia, RenderedVisual, TimelineAudio } from "@narratage/media";
-import { programSpaceSampleFrames } from "@narratage/program-space";
+import { assertProgramSpaceIdentity, programSpaceSampleFrames } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertSpeechAudioBasisIdentity, speechEvidenceSampleBoundary } from "@narratage/speech";
 import type { SpeechAudioBasis } from "@narratage/speech";
@@ -20,6 +20,7 @@ import {
   mediaPipelineTypes,
 } from "./manifest.js";
 import {
+  sealMediaSelectionRequest,
   selectMediaStreams,
   verifyMediaSelectionRequest,
 } from "./selection.js";
@@ -52,6 +53,22 @@ function inline(value: StoredValue, subject: string): CanonicalValue {
 function blob(value: StoredValue, subject: string): BlobRef {
   if (value.kind !== "blob") throw new Error(`${subject} must be a BlobArtifact`);
   return value;
+}
+
+function programSpace(value: StoredValue, subject: string): ProgramSpace {
+  const space = inline(value, subject) as unknown as ProgramSpace;
+  assertProgramSpaceIdentity(space);
+  return space;
+}
+
+function requestForProgram(space: ProgramSpace, audio: "default" | "none"): MediaSelectionRequest {
+  return sealMediaSelectionRequest({
+    contract: "svml.media-selection-request@1",
+    video: { mode: "primary-moving" },
+    audio: { mode: audio },
+    spanAuthority: "video",
+    frameRate: { ...space.frameRate },
+  });
 }
 
 export const mediaPipelineComponent = {
@@ -94,6 +111,38 @@ export const mediaPipelineComponent = {
     },
   ],
   producers: [
+    {
+      producer: mediaPipelineProducers.bindVisualRequest,
+      implementationDigest: mediaPipelineImplementationDigests.bindVisualRequest,
+      handler: ({ inputs }) => ({
+        outputs: {
+          request: {
+            kind: "inline",
+            value: canonicalize(requestForProgram(
+              programSpace(inputs.space!.value, "Visual media ProgramSpace"),
+              "none",
+            )),
+          },
+        },
+        needs: {},
+      }),
+    },
+    {
+      producer: mediaPipelineProducers.bindAvRequest,
+      implementationDigest: mediaPipelineImplementationDigests.bindAvRequest,
+      handler: ({ inputs }) => ({
+        outputs: {
+          request: {
+            kind: "inline",
+            value: canonicalize(requestForProgram(
+              programSpace(inputs.space!.value, "A/V media ProgramSpace"),
+              "default",
+            )),
+          },
+        },
+        needs: {},
+      }),
+    },
     {
       producer: mediaPipelineProducers.inspect,
       implementationDigest: mediaPipelineImplementationDigests.inspect,

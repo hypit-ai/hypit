@@ -15,6 +15,7 @@
     "@narratage/composition": "workspace:*",
     "@narratage/elaborator": "workspace:*",
     "@narratage/media": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
     "@narratage/narrative": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
