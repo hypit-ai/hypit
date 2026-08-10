@@ -41,3 +41,10 @@ export type {
 } from "@narratage/protocol";
 
 export type { MediaArtifactRef } from "@narratage/media";
+
+// A stylesheet is parsed, never interpreted. Which Recipe belongs to which
+// component is answered by comparing property names against the schema the
+// module publishes, so no Recipe's shape is known here.
+export { parseSvs } from "@narratage/svs";
+export type { SvsRecipe } from "@narratage/svs";
+export { maskSourceHeader, parseSourceHeader } from "@narratage/source";

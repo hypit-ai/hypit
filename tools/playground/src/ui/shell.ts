@@ -4,9 +4,12 @@ import { renderPreview } from "../preview/render.js";
 import {
   defaultCanvasSpace,
   defaultProgramSpace,
+  maskSourceHeader,
+  parseSourceHeader,
+  parseSvs,
   sealProgramSpace,
 } from "../svml.js";
-import type { CanonicalValue, ProgramSpace, Track } from "../svml.js";
+import type { CanonicalValue, ProgramSpace, SvsRecipe, Track, ValueSchema } from "../svml.js";
 import { FORM_CSS, blankValue, buildForm } from "./form.js";
 import { createStage } from "./stage.js";
 
@@ -33,6 +36,16 @@ const CSS = `
   color: var(--text); font: inherit; font-size: 11px; padding: 3px 9px; cursor: pointer;
 }
 .copy-svs:hover { border-color: #3a3a42; }
+.sheet-file { font-size: 11px; color: var(--muted); max-width: 100%; margin-bottom: 6px; }
+.sheet-file::file-selector-button {
+  border: 1px solid var(--line); border-radius: 5px; background: #1c1c21;
+  color: var(--text); font: inherit; font-size: 11px; padding: 3px 9px; margin-right: 7px; cursor: pointer;
+}
+.sheet-file::file-selector-button:hover { border-color: #3a3a42; }
+.rail-body select {
+  width: 100%; background: #1c1c21; color: var(--text); border: 1px solid var(--line);
+  border-radius: 5px; padding: 4px 7px; font: inherit; font-size: 12px; margin-bottom: 6px;
+}
 .rail-canvas input[type=color] {
   width: 100%; height: 24px; padding: 0; border: 1px solid var(--line);
   background: none; border-radius: 5px;
@@ -225,6 +238,32 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     return created;
   }
 
+  /**
+   * Recipes in a chosen stylesheet that the active component could have been
+   * written with.
+   *
+   * The test is the published schema and nothing else: every property the
+   * schema requires must be present, and no property may be absent from it.
+   * That is the same judgement the module's own decoder makes, so a planner
+   * Recipe sharing a prefix with a styling one is separated by shape rather
+   * than by a name this file would otherwise have to know.
+   */
+  function fittingRecipes(
+    schema: ValueSchema,
+    recipes: readonly SvsRecipe[],
+  ): readonly SvsRecipe[] {
+    const fields = (schema as { fields?: Record<string, { optional?: true }> }).fields ?? {};
+    const known = new Set(Object.keys(fields));
+    const required = Object.entries(fields)
+      .filter(([, field]) => field.optional !== true)
+      .map(([name]) => name);
+    return recipes.filter((recipe) => {
+      const written = Object.keys(recipe.properties);
+      return required.every((name) => written.includes(name))
+        && written.every((name) => known.has(name));
+    });
+  }
+
   /** The Recipe as it would be written in a stylesheet. */
   function svsText(producer: PreviewProducer): string {
     const written = recipeDrafts.get(producer.id) ?? {};
@@ -235,6 +274,70 @@ export async function mountShell(root: HTMLElement): Promise<void> {
     return `${short}.preview {\n${lines.join("\n")}\n}`;
   }
 
+  /** A chosen stylesheet, kept so switching components can re-offer it. */
+  let sheet: { readonly name: string; readonly recipes: readonly SvsRecipe[] } | undefined;
+  const note = document.createElement("div");
+  note.className = "hint";
+
+  const sheetPicker = document.createElement("input");
+  sheetPicker.type = "file";
+  sheetPicker.accept = ".svs";
+  sheetPicker.className = "sheet-file";
+  sheetPicker.addEventListener("change", () => {
+    const file = sheetPicker.files?.[0];
+    if (file === undefined) return;
+    void file.text().then((source) => {
+      const header = parseSourceHeader(file.name, source);
+      if (!header.using.startsWith("@narratage/svs@")) {
+        throw new Error(`${file.name} is a ${header.using} source, not a stylesheet.`);
+      }
+      const parsed = parseSvs(file.name, maskSourceHeader(source, header));
+      sheet = { name: file.name, recipes: parsed.recipes.map((entry) => entry.value) };
+      renderRail();
+      render();
+    }).catch((error: unknown) => {
+      sheet = undefined;
+      note.textContent = error instanceof Error ? error.message : String(error);
+      renderRail();
+    });
+  });
+
+  /** Loads one Recipe's properties into the form, replacing what is there. */
+  function adopt(producer: PreviewProducer, recipe: SvsRecipe): void {
+    const written = recipeDrafts.get(producer.id);
+    if (written === undefined) return;
+    for (const name of Object.keys(written)) delete written[name];
+    Object.assign(written, recipe.properties);
+    renderRail();
+    render();
+  }
+
+  function sheetControls(producer: PreviewProducer, schema: ValueSchema): readonly HTMLElement[] {
+    if (sheet === undefined) return [sheetPicker, note];
+    const fitting = fittingRecipes(schema, sheet.recipes);
+    if (fitting.length === 0) {
+      note.textContent = `${sheet.name} holds no Recipe shaped for this component.`;
+      return [sheetPicker, note];
+    }
+    note.textContent = "";
+    const choose = document.createElement("select");
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = `${fitting.length} in ${sheet.name}…`;
+    choose.append(blank);
+    for (const recipe of fitting) {
+      const option = document.createElement("option");
+      option.value = recipe.path;
+      option.textContent = recipe.path;
+      choose.append(option);
+    }
+    choose.addEventListener("input", () => {
+      const picked = fitting.find((recipe) => recipe.path === choose.value);
+      if (picked !== undefined) adopt(producer, picked);
+    });
+    return [sheetPicker, choose, note];
+  }
+
   function renderRail(): void {
     const values = draft(active);
     moduleLine.textContent = active.moduleName;
@@ -242,7 +345,9 @@ export async function mountShell(root: HTMLElement): Promise<void> {
 
     const written = recipeDraft(active);
     if (written !== undefined) {
-      body.append(section("Recipe"), buildForm(active.recipes[0]!.schema, written, schedule));
+      const schema = active.recipes[0]!.schema;
+      body.append(section("Recipe"), ...sheetControls(active, schema));
+      body.append(buildForm(schema, written, schedule));
       const copy = document.createElement("button");
       copy.type = "button";
       copy.className = "copy-svs";
