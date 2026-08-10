@@ -202,7 +202,6 @@ function animation(duration: number, start: readonly VisualStyleDeclaration[], e
 }
 function flashElements(content: Extract<ScreenOverlayComponent, { kind: "flash" }>, duration: number): readonly VisualElement[] {
   const total = content.attackFrames + content.holdFrames + content.decayFrames;
-  assert(total <= duration, "Flash envelope exceeds its projected window.");
   if (total === 0) return [{ id: "root", order: 0, kind: "box", style: [...rootStyle(), { name: "background-color", value: content.color }, { name: "opacity", value: content.intensity }] }];
   const marks = new Map<number, number>();
   marks.set(0, content.attackFrames === 0 ? content.intensity : 0);

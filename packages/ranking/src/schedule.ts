@@ -523,13 +523,30 @@ function idsEqual(schedule: RankingSchedule, items: readonly { readonly id: stri
   }
 }
 
-function validateStageDurations(schedule: RankingSchedule, style: RankingMotionStyle, needsMove: (index: number) => boolean): void {
-  for (const [index, entry] of schedule.entries.entries()) {
-    const duration = entry.stage.endFrameExclusive - entry.stage.startFrame;
-    const required = style.appearFrames + (needsMove(index) ? style.moveFrames : 0);
-    assert(required <= duration,
-      `Ranking Item ${entry.itemId} stage has ${duration} frames but requires ${required} animation frames.`);
-  }
+export function fitRankingStageMotion(
+  durationFrames: number,
+  preferredAppearFrames: number,
+  preferredMoveFrames: number,
+  needsMove: boolean,
+): { readonly appearFrames: number; readonly moveFrames: number } {
+  assert(Number.isSafeInteger(durationFrames) && durationFrames > 0, "Ranking stage duration is invalid.");
+  if (!needsMove) return { appearFrames: Math.min(preferredAppearFrames, durationFrames), moveFrames: 0 };
+  const moveFrames = Math.min(preferredMoveFrames, durationFrames);
+  return { appearFrames: Math.min(preferredAppearFrames, durationFrames - moveFrames), moveFrames };
+}
+
+export function fitTypewriterStage(
+  durationFrames: number,
+  graphemeCount: number,
+  preferredFramesPerGrapheme: number,
+  preferredWinnerFrames: number,
+): { readonly typingFrames: number; readonly winnerFrames: number } {
+  assert(Number.isSafeInteger(durationFrames) && durationFrames > 0, "Typewriter stage duration is invalid.");
+  const winnerFrames = Math.min(preferredWinnerFrames, durationFrames);
+  return {
+    typingFrames: Math.min(graphemeCount * preferredFramesPerGrapheme, durationFrames - winnerFrames),
+    winnerFrames,
+  };
 }
 
 export function buildTierBoardProgram(header: RankingHeader, frameValue: import("@narratage/spatial").SpatialFrame, schedule: RankingSchedule, style: TierBoardStyle, set: TierBoardItemSet): TierBoardProgram {
@@ -539,7 +556,6 @@ export function buildTierBoardProgram(header: RankingHeader, frameValue: import(
   idsEqual(schedule, set.items);
   const rows = new Set(style.rows.map((row) => row.id));
   for (const item of set.items) assert(rows.has(item.tier), `TierBoard Item ${item.id} references unknown tier ${item.tier}.`);
-  validateStageDurations(schedule, style.motion, (index) => set.items[index]?.entry === "stage");
   const result: TierBoardProgram = { contract: "svml.tier-board-program@1", id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertTierBoardProgram(result);
   return canonicalize(result) as unknown as TierBoardProgram;
@@ -550,7 +566,6 @@ export function buildColumnProgram(header: RankingHeader, frameValue: import("@n
   assertSpatialFrame(frameValue);
   assertColumnStyle(style);
   idsEqual(schedule, set.items);
-  validateStageDurations(schedule, style.motion, () => true);
   const result: ColumnProgram = { contract: "svml.column-program@1", id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertColumnProgram(result);
   return canonicalize(result) as unknown as ColumnProgram;
@@ -562,7 +577,6 @@ export function buildTopThreeProgram(header: RankingHeader, frameValue: import("
   assertTopThreeStyle(style);
   idsEqual(schedule, set.items);
   assert(set.items.length <= 3, "TopThree accepts at most three Items.");
-  validateStageDurations(schedule, style.motion, () => false);
   const result: TopThreeProgram = { contract: "svml.top-three-program@1", id: header.id, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertTopThreeProgram(result);
   return canonicalize(result) as unknown as TopThreeProgram;
@@ -578,14 +592,10 @@ export function buildTypewriterListProgram(header: RankingHeader, title: string,
   assertSpatialFrame(frameValue);
   assertTypewriterListStyle(style);
   idsEqual(schedule, set.items);
-  for (const [index, item] of set.items.entries()) {
+  for (const item of set.items) {
     const count = graphemes(item.text).length;
     if (item.emphasis !== undefined) assert(item.emphasis.endExclusive <= count,
       `Typewriter Item ${item.id} emphasis exceeds its grapheme count.`);
-    const duration = schedule.entries[index]!.stage.endFrameExclusive - schedule.entries[index]!.stage.startFrame;
-    const required = count * style.framesPerGrapheme + (item.winner ? style.winnerFrames : 0);
-    assert(required <= duration,
-      `Typewriter Item ${item.id} stage has ${duration} frames but typing${item.winner ? " and winner mark" : ""} requires ${required}.`);
   }
   const result: TypewriterListProgram = { contract: "svml.typewriter-list-program@1", id: header.id, title, frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items: structuredClone(set.items) };
   assertTypewriterListProgram(result);
@@ -650,8 +660,10 @@ export function buildTierBoardSoundEvents(schedule: RankingSchedule, style: Tier
   idsEqual(schedule, specs.items);
   const events = schedule.entries.flatMap((entry, index) => {
     const spec = specs.items[index] as TierBoardItemSpec;
+    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
+    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, spec.entry === "stage");
     return [event(schedule.id, entry.itemId, "appear", entry.triggerFrame),
-      ...(spec.entry === "stage" ? [event(schedule.id, entry.itemId, "move", entry.stage.endFrameExclusive - style.motion.moveFrames)] : [])];
+      ...(spec.entry === "stage" ? [event(schedule.id, entry.itemId, "move", entry.stage.endFrameExclusive - fitted.moveFrames)] : [])];
   });
   return sealEvents(schedule.id, schedule.variant, events);
 }
@@ -660,10 +672,12 @@ export function buildColumnSoundEvents(schedule: RankingSchedule, style: ColumnS
   assert(schedule.variant === "column" && specs.variant === "column", "Column event inputs disagree.");
   assertColumnStyle(style);
   idsEqual(schedule, specs.items);
-  return sealEvents(schedule.id, schedule.variant, schedule.entries.flatMap((entry) => [
-    event(schedule.id, entry.itemId, "appear", entry.triggerFrame),
-    event(schedule.id, entry.itemId, "move", entry.stage.endFrameExclusive - style.motion.moveFrames),
-  ]));
+  return sealEvents(schedule.id, schedule.variant, schedule.entries.flatMap((entry) => {
+    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
+    const fitted = fitRankingStageMotion(duration, style.motion.appearFrames, style.motion.moveFrames, true);
+    return [event(schedule.id, entry.itemId, "appear", entry.triggerFrame),
+      event(schedule.id, entry.itemId, "move", entry.stage.endFrameExclusive - fitted.moveFrames)];
+  }));
 }
 
 export function buildTopThreeSoundEvents(schedule: RankingSchedule, style: TopThreeStyle, specs: RankingItemSpecSet): RankingSoundEventPlan {
@@ -680,9 +694,11 @@ export function buildTypewriterSoundEvents(schedule: RankingSchedule, style: Typ
   idsEqual(schedule, specs.items);
   return sealEvents(schedule.id, schedule.variant, schedule.entries.flatMap((entry, index) => {
     const spec = specs.items[index] as TypewriterItemSpec;
-    const typed = graphemes(spec.text).length * style.framesPerGrapheme;
+    const duration = entry.stage.endFrameExclusive - entry.triggerFrame;
+    const fitted = fitTypewriterStage(duration, graphemes(spec.text).length, style.framesPerGrapheme,
+      spec.winner ? style.winnerFrames : 0);
     return [event(schedule.id, entry.itemId, "appear", entry.triggerFrame),
-      ...(spec.winner ? [event(schedule.id, entry.itemId, "move", entry.triggerFrame + typed)] : [])];
+      ...(spec.winner ? [event(schedule.id, entry.itemId, "move", entry.triggerFrame + fitted.typingFrames)] : [])];
   }));
 }
 

@@ -343,13 +343,15 @@ test("timed layer trim/hold, lifecycle and sampling motion remain separate wrapp
     { target: { startFrame: 0, endFrameExclusive: 30 }, sourceFrame: { numerator: 10, denominator: 1 }, rate: { numerator: 1, denominator: 1 } },
     { target: { startFrame: 30, endFrameExclusive: 120 }, sourceFrame: { numerator: 39, denominator: 1 }, rate: { numerator: 0, denominator: 1 } },
   ]);
-  assert.throws(() => appendProgramMediaItem(createMediaTrackSet(), header, space, canvas, layers, frame, itemSpec({
-    motion: {
-      enter: { operator: "fade", durationFrames: 70, easing: "linear" },
-      sustain: [],
-      exit: { operator: "fade", durationFrames: 60, easing: "linear" },
-    },
-  }), createMediaSoundSet()), /overlap/u);
+  const overlapping = lifecycleAnimation({
+    enter: { operator: "fade", durationFrames: 70, easing: "linear" },
+    sustain: [],
+    exit: { operator: "fade", durationFrames: 60, easing: "linear" },
+  }, 120)!;
+  const overlapFrame = overlapping.keyframes.find((keyframe) => keyframe.atFrame === 65)!;
+  const overlapOpacity = overlapFrame.style.find((declaration) => declaration.name === "opacity")?.value;
+  assert.equal(typeof overlapOpacity, "number");
+  assert.ok((overlapOpacity as number) > 0 && (overlapOpacity as number) < 1);
 });
 
 test("source audio and edge SFX project separately from the visual Track", () => {

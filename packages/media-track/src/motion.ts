@@ -88,9 +88,6 @@ export function assertMediaLifecycleMotion(value: MediaLifecycleMotion, duration
   if (value.enter !== undefined) assertMediaEdgeMotion(value.enter, `${label}.enter`);
   if (value.exit !== undefined) assertMediaEdgeMotion(value.exit, `${label}.exit`);
   for (const [index, sustain] of value.sustain.entries()) assertMediaSustainMotion(sustain, `${label}.sustain.${index}`);
-  const enter = value.enter?.durationFrames ?? 0;
-  const exit = value.exit?.durationFrames ?? 0;
-  assert(enter + exit <= durationFrames, `${label} entry and exit durations overlap.`);
 }
 
 type MotionState = {
@@ -114,32 +111,6 @@ function translate(directionValue: MediaMotionDirection, amount: number): string
   return `translateY(${amount}px)`;
 }
 
-function wipe(directionValue: MediaMotionDirection): string {
-  if (directionValue === "left") return "inset(0% 0% 0% 100%)";
-  if (directionValue === "right") return "inset(0% 100% 0% 0%)";
-  if (directionValue === "up") return "inset(0% 0% 100% 0%)";
-  return "inset(100% 0% 0% 0%)";
-}
-
-function edgeState(value: MediaEdgeMotion): MotionState {
-  const amount = value.amount ?? (value.operator === "blur-reveal" ? 16 : value.operator === "scale" ? 0.8 : 100);
-  switch (value.operator) {
-    case "fade": return { ...neutral, opacity: 0 };
-    case "slide": return { ...neutral, transform: translate(value.direction!, amount) };
-    case "scale": return { ...neutral, transform: `scale(${amount})` };
-    case "pop": return { ...neutral, opacity: 0, transform: `scale(${value.amount ?? 0.7})` };
-    case "bounce": return { ...neutral, opacity: 0, transform: `translateY(${value.amount ?? 80}px) scale(0.92)` };
-    case "blur-reveal": return { ...neutral, opacity: 0, filter: `blur(${amount}px)` };
-    case "wipe": return { ...neutral, clipPath: wipe(value.direction!) };
-    case "flip": {
-      const axis = value.direction === "left" || value.direction === "right" ? "Y" : "X";
-      const sign = value.direction === "left" || value.direction === "up" ? -1 : 1;
-      return { ...neutral, opacity: 0, transform: `perspective(800px) rotate${axis}(${sign * (value.amount ?? 90)}deg)` };
-    }
-    case "spin": return { ...neutral, opacity: 0, transform: `rotate(${value.amount ?? 180}deg) scale(0.8)` };
-  }
-}
-
 function style(state: MotionState): VisualStyleDeclaration[] {
   return [
     { name: "clip-path", value: state.clipPath },
@@ -149,40 +120,21 @@ function style(state: MotionState): VisualStyleDeclaration[] {
   ];
 }
 
-function addState(
-  states: Map<number, { readonly state: MotionState; readonly easing?: VisualEasing }>,
-  frame: number,
-  state: MotionState,
-  easing?: VisualEasing,
-): void {
-  const previous = states.get(frame);
-  if (previous !== undefined) {
-    assert(JSON.stringify(previous.state) === JSON.stringify(state),
-      `Media lifecycle produces conflicting states at frame ${frame}.`);
-  }
-  states.set(frame, { state, ...(easing === undefined ? {} : { easing }) });
-}
-
 export function lifecycleAnimation(value: MediaLifecycleMotion, durationFrames: number): VisualAnimation | undefined {
   assertMediaLifecycleMotion(value, durationFrames, "Media lifecycle");
   if (value.enter === undefined && value.exit === undefined) return undefined;
-  const states = new Map<number, { readonly state: MotionState; readonly easing?: VisualEasing }>();
-  if (value.enter === undefined) addState(states, 0, neutral);
-  else {
-    addState(states, 0, edgeState(value.enter), value.enter.easing);
-    addState(states, value.enter.durationFrames, neutral);
+  const frames = new Set<number>([0, durationFrames]);
+  if (value.enter !== undefined) {
+    for (let frame = 0; frame <= Math.min(durationFrames, value.enter.durationFrames); frame += 1) frames.add(frame);
   }
-  if (value.exit === undefined) addState(states, durationFrames, neutral);
-  else {
-    const exitStart = durationFrames - value.exit.durationFrames;
-    addState(states, exitStart, neutral, value.exit.easing);
-    addState(states, durationFrames, edgeState(value.exit));
+  if (value.exit !== undefined) {
+    for (let frame = Math.max(0, durationFrames - value.exit.durationFrames); frame <= durationFrames; frame += 1) frames.add(frame);
   }
   return {
-    keyframes: [...states.entries()].sort(([left], [right]) => left - right).map(([atFrame, item]) => ({
+    keyframes: [...frames].sort((left, right) => left - right).map((atFrame) => ({
       atFrame,
-      ...(item.easing === undefined ? {} : { easing: item.easing }),
-      style: style(item.state),
+      easing: "linear",
+      style: style(lifecycleStateAt(value, durationFrames, atFrame)),
     })),
   };
 }
@@ -332,17 +284,30 @@ function edgeStateAt(value: MediaEdgeMotion, progressToNeutral: number): MotionS
 }
 
 function lifecycleStateAt(value: MediaLifecycleMotion, durationFrames: number, frame: number): MotionState {
-  if (value.enter !== undefined && frame < value.enter.durationFrames) {
-    return edgeStateAt(value.enter, eased(frame / value.enter.durationFrames, value.enter.easing));
-  }
+  const enter = value.enter !== undefined && frame < value.enter.durationFrames
+    ? edgeStateAt(value.enter, eased(frame / value.enter.durationFrames, value.enter.easing))
+    : neutral;
+  let exit = neutral;
   if (value.exit !== undefined) {
     const exitStart = durationFrames - value.exit.durationFrames;
     if (frame > exitStart) {
       const progress = eased((frame - exitStart) / value.exit.durationFrames, value.exit.easing);
-      return edgeStateAt(value.exit, 1 - progress);
+      exit = edgeStateAt(value.exit, 1 - progress);
     }
   }
-  return neutral;
+  const transforms = [enter.transform, exit.transform].filter((item) => item !== "none");
+  const filters = [enter.filter, exit.filter].filter((item) => item !== "none");
+  const clip = (input: string): readonly number[] => /^inset\(([-.\d]+)% ([-.\d]+)% ([-.\d]+)% ([-.\d]+)%\)$/u
+    .exec(input)?.slice(1).map(Number) ?? [0, 0, 0, 0];
+  const left = clip(enter.clipPath);
+  const right = clip(exit.clipPath);
+  const clipped = left.map((item, index) => Math.max(item, right[index] ?? 0));
+  return {
+    opacity: clean(enter.opacity * exit.opacity),
+    transform: transforms.join(" ") || "none",
+    filter: filters.join(" ") || "none",
+    clipPath: `inset(${clipped.map((item) => `${clean(item)}%`).join(" ")})`,
+  };
 }
 
 /** Slice one outer lifecycle over a member Present; entry/exit never restart at member boundaries. */

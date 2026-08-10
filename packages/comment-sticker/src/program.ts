@@ -337,64 +337,43 @@ function transform(y: number, rotation: number, scale: number): string {
   return `translate3d(0px,${px(y)},0) rotate(${Number(rotation.toFixed(6))}deg) scale(${Number(scale.toFixed(6))})`;
 }
 
+function motionProgress(value: number, easing: "linear" | "ease-in" | "ease-out" | "ease-in-out"): number {
+  const progress = Math.max(0, Math.min(1, value));
+  if (easing === "linear") return progress;
+  if (easing === "ease-in") return progress * progress * progress;
+  if (easing === "ease-out") return 1 - Math.pow(1 - progress, 3);
+  return progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+}
+
 function motionAnimation(style: CommentStickerStyle, duration: number): VisualAnimation | undefined {
   const enterDuration = style.motion.enter.kind === "none" ? 0 : style.motion.enter.durationFrames;
   const exitDuration = style.motion.exit.kind === "none" ? 0 : style.motion.exit.durationFrames;
-  assert(enterDuration + exitDuration <= duration, "Comment Sticker enter and exit motion exceed its projected window.");
   if (enterDuration === 0 && exitDuration === 0 && style.motion.hold.kind === "none") return undefined;
-  const frames = new Map<number, { easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out"; opacity: number; y: number; rotation: number; scale: number }>();
   const baseRotation = style.card.rotationDeg;
-  const put = (atFrame: number, value: { easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out"; opacity: number; y: number; rotation: number; scale: number }) => {
-    frames.set(atFrame, value);
-  };
-  if (enterDuration > 0) {
-    const enter = style.motion.enter;
-    put(0, {
-      opacity: enter.kind === "fade" ? 0 : 0,
-      y: enter.kind === "slide-pop" ? enter.offsetYPx : 0,
-      rotation: enter.kind === "fade" ? baseRotation : baseRotation + enter.rotationDeltaDeg,
-      scale: enter.kind === "fade" ? 1 : enter.startScale,
-    });
-    put(enterDuration, { easing: enter.easing, opacity: 1, y: 0, rotation: baseRotation, scale: 1 });
-  } else {
-    put(0, { opacity: 1, y: 0, rotation: baseRotation, scale: 1 });
-  }
   const exitStart = duration - exitDuration;
-  if (style.motion.hold.kind === "float" && exitStart > enterDuration) {
-    const quarter = Math.max(1, Math.round(style.motion.hold.periodFrames / 4));
-    for (let frame = enterDuration + quarter; frame < exitStart; frame += quarter) {
-      const phase = (frame - enterDuration) / style.motion.hold.periodFrames * Math.PI * 2;
-      put(frame, {
-        easing: "ease-in-out",
-        opacity: 1,
-        y: Math.sin(phase) * style.motion.hold.amplitudeYPx,
-        rotation: baseRotation + Math.sin(phase) * style.motion.hold.rotationAmplitudeDeg,
-        scale: 1,
-      });
-    }
-    put(exitStart, { easing: "ease-in-out", opacity: 1, y: 0, rotation: baseRotation, scale: 1 });
-  }
-  if (exitDuration > 0) {
-    put(exitStart, { opacity: 1, y: 0, rotation: baseRotation, scale: 1 });
-    put(duration, {
-      easing: style.motion.exit.easing,
-      opacity: 0,
-      y: style.motion.exit.kind === "fade-up" ? style.motion.exit.offsetYPx : 0,
-      rotation: baseRotation,
-      scale: 1,
-    });
-  } else if (!frames.has(duration)) {
-    put(duration, { opacity: 1, y: 0, rotation: baseRotation, scale: 1 });
-  }
   return {
-    keyframes: [...frames].sort(([left], [right]) => left - right).map(([atFrame, value]) => ({
-      atFrame,
-      ...(value.easing === undefined ? {} : { easing: value.easing }),
-      style: [
-        { name: "opacity", value: value.opacity },
-        { name: "transform", value: transform(value.y, value.rotation, value.scale) },
-      ],
-    })),
+    keyframes: Array.from({ length: duration + 1 }, (_, atFrame) => {
+      const enter = style.motion.enter;
+      const enterProgress = enterDuration === 0 ? 1 : motionProgress(atFrame / enterDuration, enter.easing);
+      const exit = style.motion.exit;
+      const exitProgress = exitDuration === 0 ? 0 : motionProgress((atFrame - exitStart) / exitDuration, exit.easing);
+      const holdActive = style.motion.hold.kind === "float" && atFrame >= enterDuration && atFrame <= exitStart;
+      const holdPhase = holdActive ? (atFrame - enterDuration) / style.motion.hold.periodFrames * Math.PI * 2 : 0;
+      const holdY = holdActive ? Math.sin(holdPhase) * style.motion.hold.amplitudeYPx : 0;
+      const holdRotation = holdActive ? Math.sin(holdPhase) * style.motion.hold.rotationAmplitudeDeg : 0;
+      const enterY = enter.kind === "slide-pop" ? enter.offsetYPx * (1 - enterProgress) : 0;
+      const enterRotation = enter.kind === "fade" || enter.kind === "none" ? 0 : enter.rotationDeltaDeg * (1 - enterProgress);
+      const enterScale = enter.kind === "fade" || enter.kind === "none" ? 1 : enter.startScale + ((1 - enter.startScale) * enterProgress);
+      const exitY = exit.kind === "fade-up" ? exit.offsetYPx * exitProgress : 0;
+      return {
+        atFrame,
+        easing: "linear" as const,
+        style: [
+          { name: "opacity", value: enterProgress * (1 - exitProgress) },
+          { name: "transform", value: transform(enterY + holdY + exitY, baseRotation + enterRotation + holdRotation, enterScale) },
+        ],
+      };
+    }),
   };
 }
 
