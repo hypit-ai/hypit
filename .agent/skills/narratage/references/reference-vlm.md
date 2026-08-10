@@ -11,8 +11,10 @@ overlay JSON or introduce a JSON-to-SVML conversion step.
   provided media; generated live-action PIP/B-roll may be real generated media.
 - Anchor recurring people/products/locations at the clearest shot and reuse references topologically.
 - Listen to audio for voice design. Transcribe speech, not burned-in captions.
-- Map transcript to Script; generated media to Seedance; supplied assets to Media; timing to Speech
-  Spine/WhisperX; overlays to Caption/Media/Typography; then Film/Render and a final-video Run Target.
+- Map transcript to Script; generated media to `seedance:TextVideo`/`FrameVideo`/`ReferenceVideo`;
+  supplied assets to `media:Image`/`media:Audio` or `media-track:Item`; timing to `speech:Spine` and
+  `whisperx:Alignment`; overlays to `caption:Program` + `caption-fine:Track`, `media-track:Track`,
+  and `text:Track`; then `film:Film`/`render:Video` and a final-video Run Target.
 
 Generated image prompt structure: English realistic-iPhone reality contract, detailed subject/story,
 camera/reference relationship, then `Natural lighting, detailed realistic skin texture, and no visual artifacts.`

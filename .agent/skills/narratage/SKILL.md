@@ -13,8 +13,8 @@ Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
 - Environment/setup or API keys → read `references/environment.md` and `references/credentials.md`.
 - SVML authoring → read `references/quickstart.md`, then the linked authoritative page under
   `docs/quickstart/`.
-- Production craft or format choice → read `references/playbooks/index.md`, then only the relevant
-  craft/format file.
+- Production craft or format choice → read `references/playbooks/index.md` and
+  `references/playbooks/svml-mapping.md`, then only the relevant craft/format file.
 - Reference-video reverse engineering → read `references/reference-vlm.md`; have VLM emit
   `main.svml`, optional `studio.svs`, and `build.svrun` directly, never a JSON storyboard.
 - Execution → `check` first, `plan` before paid work, then `build`; inspect and retrieve durable
