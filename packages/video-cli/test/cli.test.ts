@@ -13,7 +13,7 @@ import { videoTestPackages } from "./packages.js";
 const runCli = (
   argv: readonly string[],
   io: { readonly write: (text: string) => void },
-) => runVideoCli(argv, io, videoTestPackages);
+) => runVideoCli([...argv, "--json"], io, videoTestPackages);
 
 test("production video CLI has no implicit author or Run packages", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-empty-distribution-"));

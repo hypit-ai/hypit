@@ -5,8 +5,12 @@ description: Setting up the WhisperX and OpenCV services.
 
 # Local Services
 
-Local Builds may depend on managed sidecars, managed tool assets or operator-owned executables.
+Local Builds may depend on managed daemons, prepared tool assets or operator-owned executables.
 They are Runtime deployment concerns, not part of Core or the author language.
+
+This page describes the current pre-Worker command surface. The domain-neutral target separates
+prepared tools, managed daemons, remote dependency probes and the Build Worker beneath one
+`runtime` lifecycle; see [`../runtime-execution-control.md`](../runtime-execution-control.md).
 
 For an installed Runtime Profile, prefer the profile-scoped lifecycle:
 

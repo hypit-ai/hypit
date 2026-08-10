@@ -26,6 +26,10 @@ the working tree contains only documents that should inform current implementati
   locking, contributions and Host-selected facet activation.
 - [`local-developer-runtime.md`](./local-developer-runtime.md) — local SQLite/filesystem
   Runtime, recovery and environment replacement.
+- [`runtime-execution-control.md`](./runtime-execution-control.md) — target durable Build dispatch,
+  Worker lifecycle, transparent queue inspection and unambiguous Build/Operation cancellation.
+- [`cli-experience.md`](./cli-experience.md) — complete human/CI/machine terminal design,
+  command hierarchy, visual language and decentralized Endpoint authentication.
 - [`runtime-adapter-loading.md`](./runtime-adapter-loading.md) — separately locked Provider
   and Store activation, physical-code identity, diagnostics and explicit Artifact maintenance.
 - [`build-archive-and-egress.md`](./build-archive-and-egress.md) — Targets, durable Records,
