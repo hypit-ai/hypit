@@ -142,6 +142,14 @@ function optionalDependency(json: PackageJson, name: string): boolean {
 }
 
 async function packageClosure(entries: readonly string[], root: string): Promise<readonly ResolvedPhysicalPackage[]> {
+  return await packageClosureFromPhysical(
+    await Promise.all(entries.map(async (entry) => await resolvePhysicalPackage(entry, root))),
+  );
+}
+
+async function packageClosureFromPhysical(
+  entries: readonly ResolvedPhysicalPackage[],
+): Promise<readonly ResolvedPhysicalPackage[]> {
   const resolved = new Map<string, ResolvedPhysicalPackage>();
   const visit = async (item: ResolvedPhysicalPackage): Promise<void> => {
     const key = `${item.json.name}@${item.json.version}`;
@@ -160,7 +168,7 @@ async function packageClosure(entries: readonly string[], root: string): Promise
       }
     }
   };
-  for (const entry of entries) await visit(await resolvePhysicalPackage(entry, root));
+  for (const entry of entries) await visit(entry);
   return [...resolved.values()].sort((left, right) =>
     `${left.json.name}@${left.json.version}`.localeCompare(`${right.json.name}@${right.json.version}`),
   );
@@ -265,6 +273,7 @@ async function importContribution(item: ResolvedPhysicalPackage): Promise<NodePa
 function lockContent(lock: Omit<NodePackageLock, "digest">): Omit<NodePackageLock, "digest"> {
   return {
     format: lock.format,
+    selected: [...lock.selected].sort(),
     artifacts: [...lock.artifacts].sort((left, right) =>
       `${left.name}@${left.version}`.localeCompare(`${right.name}@${right.version}`),
     ),
@@ -280,8 +289,11 @@ function sealLock(content: Omit<NodePackageLock, "digest">): NodePackageLock {
 function parseLock(value: unknown): NodePackageLock {
   const parsed = object(value, "$lock");
   assert(parsed.format === "svml.node-package-lock@1", "$lock.format must be svml.node-package-lock@1");
+  assert(Array.isArray(parsed.selected), "$lock.selected must be an array");
   assert(Array.isArray(parsed.artifacts), "$lock.artifacts must be an array");
   assert(Array.isArray(parsed.packages), "$lock.packages must be an array");
+  const selected = parsed.selected.map((raw, index) => string(raw, `$lock.selected[${index}]`));
+  assert(new Set(selected).size === selected.length, "$lock.selected repeats a package");
   const artifacts = parsed.artifacts.map((raw, index) => {
     const item = object(raw, `$lock.artifacts[${index}]`);
     const digest = string(item.digest, `$lock.artifacts[${index}].digest`);
@@ -311,7 +323,7 @@ function parseLock(value: unknown): NodePackageLock {
   });
   const digest = string(parsed.digest, "$lock.digest");
   assert(isDigest(digest), "$lock.digest is invalid");
-  const lock = sealLock({ format: "svml.node-package-lock@1", artifacts, packages });
+  const lock = sealLock({ format: "svml.node-package-lock@1", selected, artifacts, packages });
   assert(lock.digest === digest, "Node package lock digest is invalid");
   return lock;
 }
@@ -329,21 +341,99 @@ function sameArtifacts(left: readonly LockedPackageArtifact[], right: readonly L
     === JSON.stringify([...right].sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`)));
 }
 
-/** Lock creation is the explicit trust action and therefore may inspect the selected package exports. */
+/** The explicit trust action may inspect activation metadata inside the selected physical closure. */
 export async function createNodePackageLock(
   specifiers: readonly string[],
   root: string,
 ): Promise<NodePackageLock> {
   const unique = [...new Set(specifiers)].sort();
   assert(unique.length > 0, "at least one Node package is required");
-  const closure = await packageClosure(unique, root);
+  const selectedPhysical = await Promise.all(unique.map(async (specifier) =>
+    await resolvePhysicalPackage(specifier, root)));
+  const closure = await packageClosureFromPhysical(selectedPhysical);
+  const candidates = new Map<string, {
+    readonly physical: ResolvedPhysicalPackage;
+    readonly contribution: NodePackageContribution;
+  }>();
+  for (const physical of closure) {
+    if (physical.json.svml?.activation === undefined) continue;
+    candidates.set(`${physical.json.name}@${physical.json.version}`, {
+      physical,
+      contribution: await importContribution(physical),
+    });
+  }
+
+  const selectedKeys = new Set(selectedPhysical.map((item) => `${item.json.name}@${item.json.version}`));
+  const activated = new Map<string, {
+    readonly physical: ResolvedPhysicalPackage;
+    readonly contribution: NodePackageContribution;
+  }>();
+  for (const key of selectedKeys) {
+    const candidate = candidates.get(key);
+    assert(candidate !== undefined, `${key} does not declare svml.activation`);
+    activated.set(key, candidate);
+  }
+
+  const moduleKey = (name: string, version: string): string => `${name}@${version}`;
+  const required = new Map<string, string>();
+  const visitContribution = (candidate: {
+    readonly physical: ResolvedPhysicalPackage;
+    readonly contribution: NodePackageContribution;
+  }): void => {
+    for (const module of candidate.contribution.modules ?? []) {
+      for (const dependency of module.manifest.dependencies) {
+        const key = moduleKey(dependency.module.name, dependency.module.version);
+        const existing = required.get(key);
+        assert(existing === undefined || existing === dependency.digest,
+          `Module dependency ${key} is required with two different digests`);
+        required.set(key, dependency.digest);
+      }
+    }
+  };
+  for (const candidate of activated.values()) visitContribution(candidate);
+
+  const satisfied = (): Map<string, string> => {
+    const modules = new Map<string, string>();
+    for (const candidate of activated.values()) {
+      for (const module of candidate.contribution.modules ?? []) {
+        const key = moduleKey(module.manifest.name, module.manifest.version);
+        const digest = digestOf(module.manifest);
+        const existing = modules.get(key);
+        assert(existing === undefined || existing === digest,
+          `activated packages repeat Module ${key} with different digests`);
+        modules.set(key, digest);
+      }
+    }
+    return modules;
+  };
+
+  while (true) {
+    const modules = satisfied();
+    const unresolved = [...required.entries()].find(([key, digest]) => modules.get(key) !== digest);
+    if (unresolved === undefined) break;
+    const [key, digest] = unresolved;
+    const providers = [...candidates.values()].filter((candidate) =>
+      (candidate.contribution.modules ?? []).some((module) =>
+        moduleKey(module.manifest.name, module.manifest.version) === key
+          && digestOf(module.manifest) === digest),
+    );
+    assert(providers.length > 0,
+      `no installed package in the selected physical closure provides required Module ${key} (${digest})`);
+    assert(providers.length === 1,
+      `multiple installed packages in the selected physical closure provide required Module ${key} (${digest})`);
+    const provider = providers[0]!;
+    const providerKey = `${provider.physical.json.name}@${provider.physical.json.version}`;
+    assert(!activated.has(providerKey), `Module dependency ${key} cannot be resolved`);
+    activated.set(providerKey, provider);
+    visitContribution(provider);
+  }
+  collectNodePackageComponents([...activated.values()].map((item) => item.contribution));
+
   const packages: LockedNodePackage[] = [];
-  for (const specifier of unique) {
-    const physical = await resolvePhysicalPackage(specifier, root);
-    const contribution = await importContribution(physical);
-    const ownArtifacts = await resolvedArtifacts(await packageClosure([specifier], root));
+  for (const { physical, contribution } of activated.values()) {
+    const ownArtifacts = await resolvedArtifacts(await packageClosureFromPhysical([physical]));
     packages.push({
-      specifier,
+      specifier: physical.json.name,
       package: { name: physical.json.name, version: physical.json.version },
       facetsDigest: digestOf(contributionMetadata(contribution)),
       closureDigest: digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }),
@@ -351,6 +441,7 @@ export async function createNodePackageLock(
   }
   return sealLock({
     format: "svml.node-package-lock@1",
+    selected: unique,
     artifacts: await resolvedArtifacts(closure),
     packages,
   });
@@ -366,8 +457,7 @@ export async function loadNodePackageSet(
   root = dirname(resolve(path)),
 ): Promise<LoadedNodePackageSet> {
   const lock = parseLock(JSON.parse(await readFile(path, "utf8")));
-  const specifiers = lock.packages.map((item) => item.specifier);
-  const closure = await packageClosure(specifiers, root);
+  const closure = await packageClosure(lock.selected, root);
   const artifacts = await resolvedArtifacts(closure);
   assert(sameArtifacts(artifacts, lock.artifacts), "installed Node package bytes do not match the lock");
   const byName = new Map(closure.map((item) => [`${item.json.name}@${item.json.version}`, item]));
@@ -375,15 +465,16 @@ export async function loadNodePackageSet(
   for (const expected of lock.packages) {
     const physical = byName.get(`${expected.package.name}@${expected.package.version}`);
     assert(physical !== undefined, `${expected.package.name}@${expected.package.version} is not installed`);
-    assert(physical.json.name === expected.specifier, `${expected.specifier} resolved to another package`);
+    assert(physical.json.name === expected.specifier, `${expected.specifier} identifies another package`);
     const contribution = await importContribution(physical);
     assert(digestOf(contributionMetadata(contribution)) === expected.facetsDigest,
       `${expected.specifier} facets do not match the lock`);
-    const ownArtifacts = await resolvedArtifacts(await packageClosure([expected.specifier], root));
+    const ownArtifacts = await resolvedArtifacts(await packageClosureFromPhysical([physical]));
     assert(digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }) === expected.closureDigest,
       `${expected.specifier} dependency closure does not match the lock`);
     values.push(contribution);
   }
+  collectNodePackageComponents(values);
   return { lock, contributions: values };
 }
 

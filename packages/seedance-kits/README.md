@@ -3,6 +3,10 @@
 Data-only authoring Kits for recurring Seedance semantics. They are `TextTemplate` source modules,
 not model wrappers, Providers or new execution nodes.
 
+Vendor the selected `.svs` file into the video project (for example `./kits/speaker-v1.svs`). This
+keeps its bytes inside the project's Source Closure and Workspace boundary; a project must not
+reach back into a Narratage checkout through `../../packages/...`.
+
 Each Kit is rendered by the domain-neutral `text:Render` Surface. Its Text output then feeds one of
 the three low-level `@narratage/seedance` invocation modes. Reference media and duration remain
 ordinary explicit graph edges:
@@ -10,7 +14,7 @@ ordinary explicit graph edges:
 ```svml
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="broll-kit" source="../../packages/seedance-kits/kits/broll-v1.svs"/>
+<import as="broll-kit" source="./kits/broll-v1.svs"/>
 
 <text:Render id="broll-prompt" template={broll-kit.broll-v1} recipe={studio.broll}>
   <text:Set name="story" text={copy.broll}/>
@@ -27,7 +31,7 @@ Speaker uses the same graph vocabulary. The Kit assumes `@image1` is the visible
 `@audio1` is the voice-timbre reference; it owns no media counting or generation wrapper:
 
 ```svml
-<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <text:Render id="hook-prompt"
   template={speaker-kit.speaker-v1}

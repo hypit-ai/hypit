@@ -32,7 +32,10 @@ type ParsedArgs = {
   /** Second command word. Only `services` takes one. */
   readonly action: string | undefined;
   readonly file: string | undefined;
-  readonly root: string | undefined;
+  /** Canonical containment boundary for Author and Run Sources plus source assets. */
+  readonly workspaceRoot: string | undefined;
+  /** Host directory whose node_modules contains the packages named by a package lock. */
+  readonly packageRoot: string | undefined;
   readonly targets: readonly string[];
   readonly substitute: boolean;
   readonly runtime: string | undefined;
@@ -59,7 +62,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   const file = command === "builds" ? undefined : positional[0];
   const rest = command === "builds" ? positional : positional.slice(1);
   const targets: string[] = [];
-  let root: string | undefined;
+  let workspaceRoot: string | undefined;
+  let packageRoot: string | undefined;
   let runtime: string | undefined;
   let buildId: string | undefined;
   let follow = false;
@@ -87,7 +91,14 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     if (item === "--root") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--root requires a directory");
-      root = resolve(value);
+      workspaceRoot = resolve(value);
+      index += 1;
+      continue;
+    }
+    if (item === "--package-root") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--package-root requires a directory");
+      packageRoot = resolve(value);
       index += 1;
       continue;
     }
@@ -198,7 +209,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     command,
     action,
     file,
-    root,
+    workspaceRoot,
+    packageRoot,
     targets,
     substitute,
     runtime,
@@ -221,13 +233,13 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
 function usage(): string {
   return [
     "usage:",
-    "  narratage lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--root directory]",
+    "  narratage lock-packages <svml.packages.lock> --package installed-name [--package installed-name] [--package-root directory]",
     "  narratage doctor <runtime-profile.json>",
     "  narratage services up|down|status <runtime-profile.json> [--max-wait-ms milliseconds]",
     "  narratage gc <runtime-profile.json> [--apply]",
-    "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--root directory]",
-    "  narratage plan <run-source> [--runtime profile.json] [--package-lock file]",
-    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--follow] [--no-services]",
+    "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--package-root directory] [--root workspace]",
+    "  narratage plan <run-source> [--runtime profile.json] [--package-lock file] [--package-root directory] [--root workspace]",
+    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--package-lock file] [--package-root directory] [--root workspace] [--follow] [--no-services]",
     "  narratage status <build-id> --runtime profile.json|./svml.runtime.ts",
     "  narratage builds --runtime profile.json|./svml.runtime.ts",
     "  narratage inspect <build-id> --runtime profile.json|./svml.runtime.ts",
@@ -344,15 +356,19 @@ export async function runCli(
   if (args.command === "lock-packages") {
     if (args.packages.length === 0) throw new Error("lock-packages requires at least one --package");
     if (args.packageLock !== undefined) throw new Error("lock-packages does not accept --package-lock");
+    if (args.workspaceRoot !== undefined) {
+      throw new Error("lock-packages does not compile a Workspace; use --package-root to locate installed packages");
+    }
     const output = resolve(args.file!);
-    const root = args.root ?? dirname(output);
-    const lock = await createNodePackageLock(args.packages, root);
+    const packageRoot = args.packageRoot ?? distribution.packageRoot ?? dirname(output);
+    const lock = await createNodePackageLock(args.packages, packageRoot);
     await writeNodePackageLock(output, lock);
     io.write(`${JSON.stringify({ ok: true, packageLock: output, digest: lock.digest, packages: lock.packages }, null, 2)}\n`);
     return;
   }
   if (args.command === "doctor") {
-    if (args.runtime !== undefined || args.packageLock !== undefined || args.packages.length > 0 || args.apply) {
+    if (args.runtime !== undefined || args.packageLock !== undefined || args.packageRoot !== undefined
+      || args.packages.length > 0 || args.apply) {
       throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
     }
     const result = await distribution.doctorRuntimeConfig(resolve(args.file!));
@@ -364,7 +380,8 @@ export async function runCli(
     return;
   }
   if (args.command === "services") {
-    if (args.runtime !== undefined || args.packageLock !== undefined || args.packages.length > 0 || args.apply) {
+    if (args.runtime !== undefined || args.packageLock !== undefined || args.packageRoot !== undefined
+      || args.packages.length > 0 || args.apply) {
       throw new Error("services reads all deployment selection from the Runtime Profile itself");
     }
     if (args.action !== "up" && args.action !== "down" && args.action !== "status") {
@@ -389,7 +406,8 @@ export async function runCli(
     return;
   }
   if (args.command === "gc") {
-    if (args.runtime !== undefined || args.packageLock !== undefined || args.packages.length > 0) {
+    if (args.runtime !== undefined || args.packageLock !== undefined || args.packageRoot !== undefined
+      || args.packages.length > 0) {
       throw new Error("gc reads all deployment selection from the Runtime Profile itself");
     }
     const runtime = await loadLocalRuntime(resolve(args.file!), distribution);
@@ -540,13 +558,19 @@ export async function runCli(
     return;
   }
   if (args.packages.length > 0) throw new Error("--package is only valid for lock-packages");
+  if (args.packageRoot !== undefined && args.packageLock === undefined) {
+    throw new Error("--package-root locates the installed packages named by --package-lock; provide both options");
+  }
   const loadedPackageSet = args.packageLock === undefined
     ? undefined
-    : await loadNodePackageSet(args.packageLock, args.root ?? dirname(args.packageLock));
+    : await loadNodePackageSet(
+        args.packageLock,
+        args.packageRoot ?? distribution.packageRoot ?? dirname(args.packageLock),
+      );
   const packageContributions = loadedPackageSet?.contributions ?? distribution.builtInPackageContributions;
   const runFrontends = collectRunFrontends(distribution.runFrontends, packageContributions);
   const compiler = distribution.createCompiler({
-    ...(args.root === undefined ? {} : { root: args.root }),
+    ...(args.workspaceRoot === undefined ? {} : { workspaceRoot: args.workspaceRoot }),
     packageContributions,
   });
   const workspace = await compiler.openFile(args.file!);

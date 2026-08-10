@@ -6,33 +6,18 @@ import { digestOf } from "@narratage/protocol";
 import type { SvsRecipe } from "@narratage/svs";
 
 import type { FineCaptionGlyphPaint, FineCaptionParameters } from "./types.js";
+import {
+  fineCaptionOneShotMotions,
+  fineCaptionOptionalRecipeProperties,
+  fineCaptionRequiredRecipeProperties,
+} from "./recipe.js";
 
 export const FINE_CAPTION_FAMILY = "@narratage/caption-fine@1";
 
-const REQUIRED_PROPERTIES = [
-  "align", "background", "cue-max-words", "cue-min-words", "fill", "font",
-  "line-height", "padding", "radius", "size", "stack-order", "weight", "width", "x", "y",
-] as const;
-
-const OPTIONAL_PROPERTIES = [
-  "active-box", "active-box-background", "active-box-border-color", "active-box-border-width",
-  "active-box-continuity", "active-box-enter", "active-box-exit", "active-box-padding", "active-box-radius",
-  "active-box-transition-frames", "active-fill", "active-glow-blur", "active-glow-color", "active-glow-opacity",
-  "active-gradient-angle", "active-gradient-from", "active-gradient-to", "active-long-shadow-angle",
-  "active-long-shadow-color", "active-long-shadow-distance", "active-long-shadow-opacity", "active-opacity",
-  "active-response", "active-response-frames", "active-scale", "active-shadow-blur", "active-shadow-color", "active-shadow-opacity",
-  "active-shadow-x", "active-shadow-y", "active-stroke-color", "active-stroke-width", "active-underline",
-  "active-underline-color", "active-underline-offset", "active-underline-thickness", "anchor-x", "anchor-y",
-  "atom-enter", "atom-enter-frames", "atom-exit", "atom-exit-frames", "atom-reveal", "border-color", "border-width", "cue-enter",
-  "cue-enter-frames", "cue-exit", "cue-exit-frames", "direction", "font-style", "glow-blur", "glow-color",
-  "glow-opacity", "gradient-angle", "gradient-from", "gradient-to", "karaoke", "karaoke-transition",
-  "letter-spacing", "long-shadow-angle", "long-shadow-color", "long-shadow-distance", "long-shadow-opacity",
-  "loop", "loop-intensity", "loop-period-frames", "loop-target", "opacity", "shadow-blur", "shadow-color",
-  "shadow-opacity", "shadow-x", "shadow-y", "slide-distance", "stroke-color", "stroke-width", "text-transform",
-  "underline", "underline-color", "underline-offset", "underline-thickness", "word-gap",
-] as const;
-
-const ALLOWED_PROPERTIES = new Set<string>([...REQUIRED_PROPERTIES, ...OPTIONAL_PROPERTIES]);
+const ALLOWED_PROPERTIES = new Set<string>([
+  ...fineCaptionRequiredRecipeProperties,
+  ...fineCaptionOptionalRecipeProperties,
+]);
 
 function required(value: SvsRecipe, name: string): unknown {
   if (!Object.hasOwn(value.properties, name)) throw new Error(`Fine Caption Recipe requires ${name}`);
@@ -184,7 +169,7 @@ export function fineCaptionParameters(
   recipe: SvsRecipe,
   exactFonts: readonly FontArtifactRef[],
 ): FineCaptionParameters {
-  for (const name of REQUIRED_PROPERTIES) required(recipe, name);
+  for (const name of fineCaptionRequiredRecipeProperties) required(recipe, name);
   const unknown = Object.keys(recipe.properties).filter((name) => !ALLOWED_PROPERTIES.has(name));
   if (unknown.length > 0) throw new Error(`Fine Caption Recipe contains unknown property ${unknown[0]}`);
 
@@ -192,11 +177,6 @@ export function fineCaptionParameters(
   const activeBoxPadding = padding(string(recipe, "active-box-padding", "0"));
   const fontSizePx = number(recipe, "size");
   const basePaint = glyphPaint(recipe, "");
-  const oneShotMotions = [
-    "none", "fade", "pop", "scale", "spring", "bounce", "elastic", "stamp", "tilt", "zoom-blur",
-    "flip-x", "flip-y", "spin", "squash", "stretch", "slide-left", "slide-right", "slide-up", "slide-down",
-    "blur-in", "wipe-left", "wipe-right", "wipe-up", "wipe-down",
-  ] as const;
   const parameters: FineCaptionParameters = {
     contract: "svml.caption-fine-parameters@1",
     stackingOrder: integer(recipe, "stack-order"),
@@ -215,10 +195,7 @@ export function fineCaptionParameters(
       wordGapPx: number(recipe, "word-gap", fontSizePx * 0.25),
     },
     typography: {
-      fontFamily: string(recipe, "font"),
       fontSizePx,
-      fontWeight: integer(recipe, "weight"),
-      fontStyle: choice(recipe, "font-style", ["normal", "italic", "oblique"] as const, "normal"),
       textTransform: choice(recipe, "text-transform", ["none", "uppercase", "lowercase"] as const, "none"),
       exactFonts: [...exactFonts],
     },
@@ -257,21 +234,21 @@ export function fineCaptionParameters(
       paddingXPx: activeBoxPadding.x,
       paddingYPx: activeBoxPadding.y,
       radiusPx: number(recipe, "active-box-radius", 8),
-      enter: choice(recipe, "active-box-enter", oneShotMotions, "none"),
-      exit: choice(recipe, "active-box-exit", oneShotMotions, "none"),
+      enter: choice(recipe, "active-box-enter", fineCaptionOneShotMotions, "none"),
+      exit: choice(recipe, "active-box-exit", fineCaptionOneShotMotions, "none"),
       transitionFrames: integer(recipe, "active-box-transition-frames", 0),
     },
     motion: {
-      cueEnter: choice(recipe, "cue-enter", oneShotMotions, "none"),
-      cueExit: choice(recipe, "cue-exit", oneShotMotions, "none"),
+      cueEnter: choice(recipe, "cue-enter", fineCaptionOneShotMotions, "none"),
+      cueExit: choice(recipe, "cue-exit", fineCaptionOneShotMotions, "none"),
       cueEnterFrames: integer(recipe, "cue-enter-frames", 0),
       cueExitFrames: integer(recipe, "cue-exit-frames", 0),
-      atomEnter: choice(recipe, "atom-enter", oneShotMotions, "none"),
+      atomEnter: choice(recipe, "atom-enter", fineCaptionOneShotMotions, "none"),
       atomEnterFrames: integer(recipe, "atom-enter-frames", 0),
-      atomExit: choice(recipe, "atom-exit", oneShotMotions, "none"),
+      atomExit: choice(recipe, "atom-exit", fineCaptionOneShotMotions, "none"),
       atomExitFrames: integer(recipe, "atom-exit-frames", 0),
       atomReveal: choice(recipe, "atom-reveal", ["all", "on-start", "typewriter"] as const, "all"),
-      activeResponse: choice(recipe, "active-response", oneShotMotions, "none"),
+      activeResponse: choice(recipe, "active-response", fineCaptionOneShotMotions, "none"),
       activeResponseFrames: integer(recipe, "active-response-frames", 6),
       activeScale: number(recipe, "active-scale", 1.08),
       slideDistancePx: number(recipe, "slide-distance", 24),
@@ -292,7 +269,7 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
   }
   const nonNegative = [
     value.placement.x, value.placement.y, value.placement.width, value.typography.fontSizePx,
-    value.typography.fontWeight, value.layout.lineHeight, value.layout.wordGapPx, value.cueBox.paddingXPx,
+    value.layout.lineHeight, value.layout.wordGapPx, value.cueBox.paddingXPx,
     value.cueBox.paddingYPx, value.cueBox.radiusPx, value.cueBox.borderWidthPx,
     value.underline.thicknessPx, value.underline.offsetPx, value.activeUnderline.thicknessPx,
     value.activeUnderline.offsetPx, value.activeBox.borderWidthPx, value.activeBox.paddingXPx,
@@ -313,16 +290,10 @@ export function assertFineCaptionParameters(value: FineCaptionParameters): void 
     || !Number.isFinite(value.motion.activeScale) || !Number.isFinite(value.layout.letterSpacingPx)) {
     throw new Error("Fine Caption parameters contain invalid numeric bounds");
   }
-  if (!value.typography.fontFamily.trim() || value.typography.fontWeight < 1 || value.typography.fontWeight > 1000) {
-    throw new Error("Fine Caption typography is invalid");
-  }
   if (value.typography.exactFonts.length === 0) throw new Error("Fine Caption exact Font stack is empty");
   const faces = new Set<string>();
   for (const [index, font] of value.typography.exactFonts.entries()) {
     assertFontArtifactRef(font, `Fine Caption exact Font ${index + 1}`);
-    if (index === 0 && (font.weight !== value.typography.fontWeight || font.style !== value.typography.fontStyle)) {
-      throw new Error("Fine Caption primary exact Font face must match Recipe weight and font-style");
-    }
     const identity = digestOf(font);
     if (faces.has(identity)) throw new Error("Fine Caption exact Font stack contains a duplicate face");
     faces.add(identity);

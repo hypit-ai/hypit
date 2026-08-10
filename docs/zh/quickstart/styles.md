@@ -74,8 +74,6 @@ caption.dialogue {
   x: 0.08;
   y: 0.76;
   width: 0.84;
-  font: Inter;
-  weight: 600;
   size: 58;
   line-height: 0.96;
   align: center;
@@ -92,8 +90,6 @@ caption.dialogue {
 | `stack-order` | 所有 Track 之间的 Z 轴层叠顺序（值越大越靠前） |
 | `x`、`y` | 位置，以画布比例表示（0–1） |
 | `width` | 宽度，以画布比例表示 |
-| `font` | Recipe 中便于阅读的字体标签；精确字节来自必填的 `font=` 图边 |
-| `weight` | 请求的字体粗细（1–1000） |
 | `size` | 字体大小（像素） |
 | `line-height` | 行高倍数 |
 | `align` | 文本对齐方式：`left`、`center`、`right` |
@@ -103,7 +99,7 @@ caption.dialogue {
 | `radius` | 容器圆角半径（像素） |
 
 若要可复现渲染，应在 `.svml` 源码中显式选择已安装的精确字体，并把该 Record 传给 Fine
-Style。主字体的 `weight` 与 `style` 必须和 Recipe 一致：
+Style。字体家族、字重和字形只在这条精确字体边上声明一次：
 
 ```svml
 <fonts:Face id="caption-font" family="inter" weight="600" style="normal"/>
@@ -120,7 +116,7 @@ caption.alice {
   cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
-  font: Inter; weight: 600; size: 58;
+  size: 58;
   fill: #73FBD3;
   background: #09090BCC;
   padding: 16 24; radius: 18;
@@ -130,7 +126,7 @@ caption.bob {
   cue-min-words: 2; cue-max-words: 5;
   stack-order: 70;
   x: 0.08; y: 0.76; width: 0.84;
-  font: Inter; weight: 600; size: 58;
+  size: 58;
   fill: #FFD166;
   background: #09090BCC;
   padding: 16 24; radius: 18;
@@ -354,8 +350,8 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
   font={caption-fonts}/>
 ```
 
-`fonts:Stack` 产出通用 `FontStackRef`：主字体必须和 Recipe 的 weight/style 一致，Fallback
-保留自己的真实元数据。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是
+`fonts:Stack` 产出通用 `FontStackRef`，主字体与 Fallback 都保留自己的真实元数据；
+Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是
 一条逻辑边。终端 Text 与 Fine Caption 都拒绝省略字体栈；Visual IR 不接受机器字体兜底。
 对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如
 包含 VS16 的 `☎️`）；任何包都不会为了强制彩色而改写显示稿。
@@ -403,8 +399,6 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
     x: 0.08;
     y: 0.74;
     width: 0.84;
-    font: Inter;
-    weight: 800;
     size: 44;
     line-height: 1;
     align: center;

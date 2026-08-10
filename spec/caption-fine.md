@@ -62,14 +62,14 @@ must be a separately connected component whose failure is explicit in the graph.
 
 ### 3. Typography
 
-- `font`, `weight`, `size`, `font-style: normal | italic | oblique`
+- Recipe: `size`
 - `text-transform: none | uppercase | lowercase`
 
 Text transform is terminal presentation only. It never changes `CaptionDisplaySequence`, planner
 input, Word/Atom identity, speech correspondence or timing.
 
-The Recipe's `font` property is a readable family label, not a source of bytes. Every Style must
-import exact installed faces from `@narratage/fonts-open`, or declare custom/brand bytes with
+Family, weight and style are deliberately absent from the Recipe. Every Style must import exact
+installed faces from `@narratage/fonts-open`, or declare custom/brand bytes with
 `<media:Font>`. `font=` accepts one exact face with ordered Style-owned
 Fallback children, or one reusable generic `FontStackRef`. The compact open-font path is:
 
@@ -80,8 +80,8 @@ Fallback children, or one reusable generic `FontStackRef`. The compact open-font
 <caption-fine:Style id="primary" recipe={studio.caption.primary} font={caption-fonts}/>
 ```
 
-The primary face must declare the Recipe's exact weight/style. A fallback preserves its own honest
-face metadata—for example a 700-weight Latin primary may use a 400-weight symbol fallback. Exact
+The font edge is the single source of truth for family, weight and style. A fallback preserves its
+own honest face metadata—for example a 700-weight Latin primary may use a 400-weight symbol fallback. Exact
 duplicate faces are rejected. One logical face may contain several content-addressed Unicode-range
 sources, as the installed CJK and Emoji fonts do. Fine expands `FontStackRef` into the same ordered
 exact faces and puts them only

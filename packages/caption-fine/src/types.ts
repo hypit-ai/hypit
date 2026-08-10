@@ -101,10 +101,7 @@ export type FineCaptionParameters = {
     readonly wordGapPx: number;
   };
   readonly typography: {
-    readonly fontFamily: string;
     readonly fontSizePx: number;
-    readonly fontWeight: number;
-    readonly fontStyle: "normal" | "italic" | "oblique";
     readonly textTransform: "none" | "uppercase" | "lowercase";
     readonly exactFonts: readonly FontArtifactRef[];
   };

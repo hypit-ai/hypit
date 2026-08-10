@@ -35,7 +35,7 @@ caption.primary {
   cue-min-words: 2; cue-max-words: 6;
   stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
   anchor-x: center; anchor-y: bottom; align: center; direction: ltr;
-  font: Inter; weight: 800; size: 58; line-height: 1.05;
+  size: 58; line-height: 1.05;
   fill: #FFFFFF; gradient-from: #FFFFFF; gradient-to: #93C5FD; gradient-angle: 120;
   stroke-color: #09090B; stroke-width: 2;
   shadow-color: #000000; shadow-opacity: 0.7; shadow-x: 0; shadow-y: 3; shadow-blur: 8;
@@ -59,8 +59,8 @@ already-read Pill rather than one capsule per Atom. Text may remain `trail` whil
 
 One Track handles the default and ordered Style replacements. `font=` accepts either one exact
 `FontArtifactRef` plus ordered Style `Fallback` children, or a reusable Media `FontStackRef` such as
-the compact `fonts:Stack` above. The primary must match the Recipe's weight/style; fallbacks keep
-their own honest face metadata. Omitting the stack is invalid rather than an environment-font
+the compact `fonts:Stack` above. Family, weight and style exist only on those exact font values;
+the Recipe owns size and appearance. Fallbacks keep their own honest face metadata. Omitting the stack is invalid rather than an environment-font
 prototype path. Fine never clips author text and intentionally has no `max-lines`.
 Common Caption, Composition and Core know none of Fine's Recipe fields or layout policy. See
 `spec/caption-fine.md` for the full parameter surface, defaults and non-goals.

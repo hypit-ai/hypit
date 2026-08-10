@@ -92,6 +92,18 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Endpoint、凭据�
 
 凭据通过环境变量名引用，绝不存放在 Profile 里。
 
+### 文件系统字段
+
+| 字段 | 含义 |
+|---|---|
+| `root` | Runtime 数据根目录；状态数据库、Artifact 存储和相对 lock 路径都以此为基准。默认是 Profile 所在目录。 |
+| `packageRoot` | 为两份 lock 提供 `node_modules` 的可选 Host 覆盖项。官方 CLI 默认使用自身安装位置；直接调用本地 API 时默认等于 `root`。 |
+| `packageLock` | 确定性实现包的 lock；相对 `root` 解析。 |
+| `runtimePackageLock` | 有权限的 Runtime Adapter lock；相对 `root` 解析。 |
+
+`root` 与 `packageRoot` 有意分离。外部视频项目可以把全部数据留在自己的目录，同时从一个
+Narratage 安装目录加载经过校验的可执行包。两者都不进入 Author Graph 或 Run Graph 身份。
+
 ### 调度
 
 `maxConcurrency` 限制所有 lane 上并发 Operation 的总量。每个具名 lane 还有自己的子上限。lane 由 Endpoint 声明，并由 Scheduler 强制执行。

@@ -311,9 +311,10 @@ export async function createProjectLocalRuntime(
   options: ProjectLocalRuntimeOptions = {},
 ): Promise<LocalRuntime> {
   const root = resolve(options.root ?? process.cwd());
+  const packageRoot = resolve(options.packageRoot ?? root);
   const lockedPackageSet = options.packageLock === undefined
     ? undefined
-    : await loadNodePackageSet(resolve(root, options.packageLock), root);
+    : await loadNodePackageSet(resolve(root, options.packageLock), packageRoot);
   const lockedComponents = lockedPackageSet === undefined
     ? []
     : collectNodePackageComponents(lockedPackageSet.contributions);

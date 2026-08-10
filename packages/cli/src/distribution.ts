@@ -5,7 +5,8 @@ import type { NodePackageContribution } from "@narratage/package-loader-node";
 import type { RunFrontend } from "@narratage/run";
 
 export type CliCompilerOptions = {
-  readonly root?: string;
+  /** Canonical containment boundary for Author and Run Sources plus source assets. */
+  readonly workspaceRoot?: string;
   readonly packageContributions: readonly NodePackageContribution[];
 };
 
@@ -17,6 +18,8 @@ export type CliCompilerOptions = {
  */
 export type CliDistribution = {
   readonly name: string;
+  /** Host location from which installed locked packages resolve. A caller may explicitly override it. */
+  readonly packageRoot?: string;
   readonly builtInPackageContributions: readonly NodePackageContribution[];
   /** Explicitly trusted Run Frontends; source Headers select among them without suffix defaults. */
   readonly runFrontends: readonly RunFrontend[];

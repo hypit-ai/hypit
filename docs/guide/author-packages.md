@@ -133,9 +133,13 @@ pnpm install --frozen-lockfile
 
 pnpm narratage lock-packages <lock-file> \
   --package @narratage/my-component \
-  [--package @narratage/other-dep ...] \
-  --root .
+  [--package @narratage/other-direct-package ...] \
+  --package-root .
 ```
+
+Only name direct packages you chose. Exact logical Module dependencies declared by their Manifests
+are added from the installed physical dependency closure automatically; missing or ambiguous
+providers make lock creation fail.
 
 ## 8. Use in Author Source
 

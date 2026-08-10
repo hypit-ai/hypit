@@ -9,6 +9,12 @@ export {
 } from "./manifest.js";
 export { renderFineCaption, renderFineCaptionImplementationDigest } from "./render.js";
 export {
+  fineCaptionOneShotMotions,
+  fineCaptionOptionalRecipeProperties,
+  fineCaptionRecipeSchema,
+  fineCaptionRequiredRecipeProperties,
+} from "./recipe.js";
+export {
   assertFineCaptionParameters,
   FINE_CAPTION_FAMILY,
   fineCaptionParameters,

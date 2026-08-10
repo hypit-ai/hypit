@@ -128,9 +128,12 @@ pnpm install --frozen-lockfile
 
 pnpm narratage lock-packages <lock-file> \
   --package @narratage/my-component \
-  [--package @narratage/other-dep ...] \
-  --root .
+  [--package @narratage/other-direct-package ...] \
+  --package-root .
 ```
+
+这里只列出你直接选择的包。它们的 Manifest 声明的精确逻辑 Module 依赖，会从已安装的
+物理依赖闭包中自动加入；缺失、摘要不匹配或存在多个候选时，建锁会直接失败。
 
 ## 8. 在 Author Source 中使用
 
