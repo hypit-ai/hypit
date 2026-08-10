@@ -10,7 +10,7 @@ export {
   appendMomentScreenOverlay, appendProgramScreenOverlay, appendSelectionScreenOverlay,
   assertScreenOverlayComponent, assertScreenOverlayHeader, assertScreenOverlayItemSpec,
   assertScreenOverlayProgram, assertScreenOverlaySet, createScreenOverlaySet, finalizeScreenOverlay,
-  defaultScreenOverlayProgram, renderScreenOverlay, screenOverlayImplementationDigests, screenOverlayValidatorDigests,
+  renderScreenOverlay, screenOverlayImplementationDigests, screenOverlayValidatorDigests,
   sealScreenOverlayHeader, sealScreenOverlayItemSpec, sealScreenOverlayProgram,
 } from "./program.js";
 export { decodeScreenOverlaySurface } from "./surface.js";

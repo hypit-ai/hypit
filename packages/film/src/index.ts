@@ -21,7 +21,6 @@ export {
   compileFilmCompositionImplementationDigest,
   createFilmTrackSet,
   createFilmTrackSetImplementationDigest,
-  defaultFilmProgram,
   sealFilmProgram,
 } from "./program.js";
 export {

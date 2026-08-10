@@ -38,15 +38,6 @@ function filmTrackSetContent(value: FilmTrackSet): FilmTrackSet {
   };
 }
 
-/** One neutral Film appearance for tools that need an editable starting value. */
-export function defaultFilmProgram(id = "film"): FilmProgram {
-  return sealFilmProgram({
-    contract: "svml.film-program@1",
-    id,
-    clearColor: "#09090b",
-  });
-}
-
 export function sealFilmProgram(value: FilmProgram): FilmProgram {
   return filmProgramContent(value);
 }

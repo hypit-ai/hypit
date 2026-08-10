@@ -11,7 +11,7 @@ export const programSpaceModuleRef = { name: "@narratage/program-space", version
 export const programSpaceTypes = {
   programSpace: { module: programSpaceModuleRef, name: "ProgramSpace" },
 } satisfies Record<string, TypeRef>;
-const number = { kind: "number", minimum: 0, format: "duration" } as const;
+const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 export const programSpaceSchema: ValueSchema = {
   kind: "object",

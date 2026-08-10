@@ -34,8 +34,6 @@ export type PreviewInput = {
   readonly name: string;
   readonly type: TypeRef;
   readonly schema: ValueSchema | undefined;
-  /** The declaring module's own default, where it has one it can honestly give. */
-  readonly initial: CanonicalValue | undefined;
 };
 
 export type PreviewProducer = {
@@ -108,7 +106,7 @@ export async function discoverPreviewProducers(
 
   // Input types belong to whichever module declares them, which is often not
   // the module that produces the Track — a ProgramSpace comes from elsewhere.
-  const types = new Map<string, { schema: ValueSchema; default?: CanonicalValue }>();
+  const types = new Map<string, { schema: ValueSchema }>();
   for (const manifest of manifests) {
     for (const declaration of manifest.types) {
       types.set(`${manifest.name}::${declaration.name}`, declaration);
@@ -149,7 +147,6 @@ export async function discoverPreviewProducers(
             name: port.name,
             type: port.type,
             schema: declared?.schema,
-            initial: declared?.default,
           };
         }),
         invoke: (values) => bound.handler({

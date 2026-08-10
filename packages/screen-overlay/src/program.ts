@@ -29,21 +29,6 @@ export const screenOverlayImplementationDigests = {
 } as const;
 export const screenOverlayValidatorDigests = { program: digestOf("@narratage/screen-overlay/validate-program@1") } as const;
 
-/** A one-frame, self-contained overlay that gives visual tools an honest starting value. */
-export function defaultScreenOverlayProgram(): ScreenOverlayProgram {
-  return sealScreenOverlayProgram({
-    contract: "svml.screen-overlay-program@1",
-    id: "overlay-preview",
-    items: [{
-      id: "overlay-preview:1",
-      sourceOccurrenceId: "preview",
-      span: { startFrame: 0, endFrameExclusive: 1 },
-      content: { kind: "color-wash", color: "#6c5ce7", opacity: 0.35 },
-      stacking: { order: 100, tieBreak: "overlay-preview" },
-    }],
-  });
-}
-
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 function identity(value: string, label: string): void {
   assert(/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value), `${label} is invalid.`);
