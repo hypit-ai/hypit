@@ -57,7 +57,7 @@ import type {
   RuntimeServicePackage,
 } from "@narratage/runtime";
 
-const databaseSchemaVersion = 3;
+const databaseSchemaVersion = 4;
 
 export const sqliteStoreModuleRef = {
   name: "@narratage/store-sqlite",
@@ -578,11 +578,13 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     nonNegativeInteger(update.availableAt, "Dispatch release availableAt");
     const updated = this.#database.prepare(`
       UPDATE svml_dispatches
-      SET revision = revision + 1, updated_at = ?, phase = ?, available_at = ?, reason = ?,
+      SET revision = revision + 1, updated_at = ?, phase = ?,
+          available_at = CASE WHEN wake_at IS NULL THEN ? ELSE MIN(?, wake_at) END,
+          wake_at = NULL, reason = ?,
           lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
       WHERE build_id = ? AND phase = 'leased'
         AND lease_owner = ? AND lease_token = ? AND lease_fence = ?
-    `).run(now, update.phase, update.availableAt, update.reason ?? null,
+    `).run(now, update.phase, update.availableAt, update.availableAt, update.reason ?? null,
       build, lease.owner, lease.token, lease.fence);
     assert(updated.changes === 1, `Dispatch ${build} lease is stale`);
     return (await this.read(build))!;
@@ -599,7 +601,8 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     const updated = this.#database.prepare(`
       UPDATE svml_dispatches
       SET revision = revision + 1, updated_at = ?, phase = 'terminal', admission = 'closed',
-          terminal = ?, reason = ?, lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
+          terminal = ?, reason = ?, wake_at = NULL,
+          lease_owner = NULL, lease_token = NULL, lease_expires_at = NULL
       WHERE build_id = ? AND phase = 'leased'
         AND lease_owner = ? AND lease_token = ? AND lease_fence = ?
     `).run(now, terminal, reason ?? null, build, lease.owner, lease.token, lease.fence);
@@ -613,9 +616,28 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       UPDATE svml_dispatches
       SET revision = revision + 1, updated_at = ?, admission = 'closing',
           cancel_requested_at = COALESCE(cancel_requested_at, ?),
-          cancel_reason = COALESCE(cancel_reason, ?), available_at = MIN(available_at, ?)
+          cancel_reason = COALESCE(cancel_reason, ?),
+          available_at = CASE WHEN phase = 'leased' THEN available_at ELSE MIN(available_at, ?) END,
+          wake_at = CASE WHEN phase = 'leased' THEN MIN(COALESCE(wake_at, ?), ?) ELSE wake_at END
       WHERE build_id = ? AND phase != 'terminal'
-    `).run(now, now, reason ?? null, now, build);
+    `).run(now, now, reason ?? null, now, now, now, build);
+    if (updated.changes === 0) {
+      const current = await this.read(build);
+      if (current === undefined) throw new Error(`Dispatch ${build} does not exist`);
+      return current;
+    }
+    return (await this.read(build))!;
+  }
+
+  async wake(build: string, now = Date.now()): Promise<BuildDispatchSnapshot> {
+    nonNegativeInteger(now, "Dispatch wake time");
+    const updated = this.#database.prepare(`
+      UPDATE svml_dispatches
+      SET revision = revision + 1, updated_at = ?,
+          available_at = CASE WHEN phase = 'leased' THEN available_at ELSE MIN(available_at, ?) END,
+          wake_at = CASE WHEN phase = 'leased' THEN MIN(COALESCE(wake_at, ?), ?) ELSE wake_at END
+      WHERE build_id = ? AND phase != 'terminal'
+    `).run(now, now, now, now, build);
     if (updated.changes === 0) {
       const current = await this.read(build);
       if (current === undefined) throw new Error(`Dispatch ${build} does not exist`);
@@ -888,6 +910,7 @@ export class SqliteRuntimeState {
         updated_at INTEGER NOT NULL,
         priority INTEGER NOT NULL,
         available_at INTEGER NOT NULL,
+        wake_at INTEGER,
         admission TEXT NOT NULL CHECK (admission IN ('open', 'closing', 'closed')),
         phase TEXT NOT NULL CHECK (phase IN ('queued', 'leased', 'waiting', 'blocked', 'settling', 'terminal')),
         lease_owner TEXT,

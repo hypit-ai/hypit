@@ -564,21 +564,14 @@ export class NodeDriver {
       return result.status === "stored" ? result.snapshot : result.current;
     };
     let current = await operations.read(operation.id) ?? operation;
-    if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") {
-      if (current.cancellation === undefined) {
-        current = await write(current, {
-          status: "control",
-          cancellation: { requestedAt, requestId, status: "too-late", attempts: 0 },
-        });
-      }
-      return current;
-    }
-    if (current.cancellation === undefined) {
+    while (current.cancellation === undefined) {
+      const terminal = current.status === "completed" || current.status === "failed" || current.status === "cancelled";
       current = await write(current, {
         status: "control",
-        cancellation: { requestedAt, requestId, status: "requested", attempts: 0 },
+        cancellation: { requestedAt, requestId, status: terminal ? "too-late" : "requested", attempts: 0 },
       });
     }
+    if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") return current;
     const control = current.cancellation;
     if (control === undefined || control.requestId !== requestId) {
       throw new Error(`Operation ${operation.id} already has another cancellation request`);
@@ -613,7 +606,7 @@ export class NodeDriver {
       operation: identity,
       checkpoint: current.status === "pending" ? structuredClone(current.checkpoint) : undefined,
     };
-    if (control.status === "requested") {
+    if (control.status === "requested" || control.status === "accepted") {
       if (executable.registration.endpoint.cancel === undefined) {
         current = await write(current, {
           status: "control",
@@ -652,10 +645,27 @@ export class NodeDriver {
 
     // Acknowledgement is not a terminal fact. Reconcile the same remote submission until it
     // either confirms cancellation through `cancel`, or naturally completes/fails.
-    const observed = await executable.registration.endpoint.resume({
-      ...endpointContext,
-      checkpoint: current.status === "pending" ? structuredClone(current.checkpoint) : undefined,
-    });
+    let observed: Awaited<ReturnType<typeof executable.registration.endpoint.resume>>;
+    try {
+      observed = await executable.registration.endpoint.resume({
+        ...endpointContext,
+        checkpoint: current.status === "pending" ? structuredClone(current.checkpoint) : undefined,
+      });
+    } catch (error) {
+      const cancellation = current.cancellation;
+      if (cancellation === undefined) throw error;
+      return await write(current, {
+        status: "control",
+        cancellation: {
+          ...cancellation,
+          retryAt: Date.now() + 1_000,
+          lastError: {
+            code: "CANCEL_RECONCILE_FAILED",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        },
+      });
+    }
     if (observed.status === "pending") {
       return await write(current, {
         status: "pending",

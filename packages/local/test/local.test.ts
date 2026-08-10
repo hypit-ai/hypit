@@ -189,9 +189,14 @@ test("project local runtime resumes durable work while component and endpoint pa
   let promptCalls = 0;
   let requestCalls = 0;
   let assembleCalls = 0;
+  let placeholderCalls = 0;
   let starts = 0;
   let resumes = 0;
   let cancels = 0;
+  let cancellationMode: "confirmed" | "unsupported" = "confirmed";
+  let holdNextStart = false;
+  let startEntered: (() => void) | undefined;
+  let releaseStart: (() => void) | undefined;
   const components: ComponentPackage = {
     name: "example.components",
     producers: [
@@ -216,6 +221,16 @@ test("project local runtime resumes durable work while component and endpoint pa
         },
       },
       {
+        producer: producers.placeholderText,
+        implementationDigest: implementationDigests.placeholderText,
+        handler: async ({ inputs }) => {
+          placeholderCalls += 1;
+          assert.equal(inputs.prompt?.value.kind, "inline");
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return { outputs: { generated: { kind: "inline", value: `Preview: ${inputs.prompt.value.value}` } }, needs: {} };
+        },
+      },
+      {
         producer: producers.assemble,
         implementationDigest: implementationDigests.assemble,
         handler: ({ inputs }) => {
@@ -232,7 +247,11 @@ test("project local runtime resumes durable work while component and endpoint pa
   const recoverableEndpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
-      return { status: "pending", checkpoint: { remoteJob: operation.submissionKey }, wakeAt: Date.now() };
+      const pending = { status: "pending" as const, checkpoint: { remoteJob: operation.submissionKey }, wakeAt: Date.now() };
+      if (!holdNextStart) return pending;
+      holdNextStart = false;
+      startEntered?.();
+      return new Promise((resolve) => { releaseStart = () => resolve(pending); });
     },
     resume({ checkpoint }) {
       resumes += 1;
@@ -249,7 +268,7 @@ test("project local runtime resumes durable work while component and endpoint pa
     },
     cancel() {
       cancels += 1;
-      return { status: "confirmed" };
+      return { status: cancellationMode };
     },
   };
   const endpointPackage: EndpointPackage = {
@@ -325,6 +344,9 @@ test("project local runtime resumes durable work while component and endpoint pa
     const followedStatus = await secondRuntime.status("greeting-follow");
     assert.equal(followedStatus.build?.state.status, "complete");
     assert.equal(followedStatus.operations.length, 1);
+    const tooLate = await secondRuntime.cancelOperation(followedStatus.operations[0]!.id);
+    assert.equal(tooLate?.status, "completed");
+    assert.equal(tooLate?.cancellation?.status, "too-late");
 
     const waiting = await secondRuntime.build({ id: "greeting-cancel", state: createGreetingBuild() });
     assert.equal(waiting.status, "queued");
@@ -334,8 +356,152 @@ test("project local runtime resumes durable work while component and endpoint pa
     const cancelled = await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
     assert.equal(cancelled?.terminal, "cancelled");
     assert.equal(cancels, 1);
+
+    await secondRuntime.build({ id: "greeting-operation-cancel", state: createGreetingBuild() });
+    assert.equal(
+      (await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 }))?.phase,
+      "waiting",
+    );
+    const [operation] = (await secondRuntime.status("greeting-operation-cancel")).operations;
+    assert.ok(operation);
+    const operationRequest = await secondRuntime.cancelOperation(operation.id, "stop only this realization");
+    assert.equal(operationRequest?.cancellation?.status, "requested");
+    const stranded = await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    assert.equal(stranded?.phase, "blocked");
+    assert.equal(stranded?.admission, "open", "Operation control does not close unrelated Build admission");
+    assert.equal(stranded?.terminal, undefined);
+    const controlled = await secondRuntime.operation(operation.id);
+    assert.equal(controlled?.status, "cancelled");
+    assert.equal(controlled?.cancellation?.status, "confirmed");
+    assert.notEqual((await secondRuntime.status("greeting-operation-cancel")).build?.state.status, "failed");
+    assert.equal(cancels, 2);
+
+    cancellationMode = "unsupported";
+    await secondRuntime.build({ id: "greeting-operation-late", state: createGreetingBuild() });
+    await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    const [lateOperation] = (await secondRuntime.status("greeting-operation-late")).operations;
+    assert.ok(lateOperation);
+    await secondRuntime.cancelOperation(lateOperation.id);
+    const lateDispatch = await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    assert.equal(lateDispatch?.phase, "blocked");
+    const lateFact = await secondRuntime.operation(lateOperation.id);
+    assert.equal(lateFact?.status, "completed", "an unsupported remote stop keeps the factual result");
+    assert.equal(lateFact?.cancellation?.status, "unsupported");
+    assert.ok(lateFact?.completion, "late paid output remains archived in OperationStore");
+    const lateBuild = await secondRuntime.status("greeting-operation-late");
+    assert.notEqual(lateBuild.build?.state.status, "complete", "late output is not reduced into Core");
+    assert.notEqual(lateBuild.build?.state.status, "failed");
+
+    cancellationMode = "confirmed";
+    const assembledBeforeSide = assembleCalls;
+    holdNextStart = true;
+    const entered = new Promise<void>((resolve) => { startEntered = resolve; });
+    await secondRuntime.build({
+      id: "greeting-operation-side",
+      state: createGreetingBuild({ includeSideTarget: true }),
+    });
+    const firstSideTurn = secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    await entered;
+    const sidePending = await secondRuntime.status("greeting-operation-side");
+    const [sideOperation] = sidePending.operations;
+    assert.ok(sideOperation);
+    await secondRuntime.cancelOperation(sideOperation.id);
+    releaseStart?.();
+    const sideDispatch = await firstSideTurn;
+    assert.equal(placeholderCalls, 1);
+    // The Scheduler may finish the independent side branch in this same leased turn; cancellation
+    // constrains only the exact remote Command and deliberately imposes no ordering on siblings.
+    assert.equal(sideDispatch?.phase, "waiting");
+    assert.ok(sideDispatch.availableAt <= Date.now(), JSON.stringify(sideDispatch));
+    const reconciledSide = await secondRuntime.workOnce({ owner: "worker-two", leaseMs: 5_000 });
+    assert.equal(reconciledSide?.phase, "blocked");
+    const sideStatus = await secondRuntime.status("greeting-operation-side");
+    assert.equal(sideStatus.build?.state.records.some((item) => item.id === "document:side"), true,
+      "an unrelated branch keeps advancing after one Operation is suppressed");
+    assert.equal(assembleCalls, assembledBeforeSide + 1);
+    assert.notEqual(sideStatus.build?.state.status, "failed");
     await secondRuntime.close();
   } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("two durable Workers share one SQLite capacity limit across Runtime instances", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-local-shared-capacity-"));
+  let promptCalls = 0;
+  let entered: (() => void) | undefined;
+  let release: (() => void) | undefined;
+  const firstEntered = new Promise<void>((resolve) => { entered = resolve; });
+  const holdFirst = new Promise<void>((resolve) => { release = resolve; });
+  const components: ComponentPackage = {
+    name: "example.shared-capacity-components",
+    producers: [{
+      producer: producers.makePrompt,
+      implementationDigest: implementationDigests.makePrompt,
+      handler: async ({ inputs }) => {
+        promptCalls += 1;
+        if (promptCalls === 1) {
+          entered?.();
+          await holdFirst;
+        }
+        assert.equal(inputs.intent?.value.kind, "inline");
+        return { outputs: { prompt: { kind: "inline", value: "Greet Ada" } }, needs: {} };
+      },
+    }, {
+      producer: producers.requestText,
+      implementationDigest: implementationDigests.requestText,
+      handler: ({ inputs }) => {
+        assert.equal(inputs.prompt?.value.kind, "inline");
+        return { outputs: {}, needs: { generation: { prompt: inputs.prompt.value.value } } };
+      },
+    }, {
+      producer: producers.placeholderText,
+      implementationDigest: implementationDigests.placeholderText,
+      handler: ({ inputs }) => ({
+        outputs: { generated: { kind: "inline", value: `Preview: ${String(inputs.prompt?.value.kind === "inline" ? inputs.prompt.value.value : "")}` } },
+        needs: {},
+      }),
+    }, {
+      producer: producers.assemble,
+      implementationDigest: implementationDigests.assemble,
+      handler: ({ inputs }) => ({
+        outputs: { document: { kind: "inline", value: { text: String(inputs.generated?.value.kind === "inline" ? inputs.generated.value.value : "") } } },
+        needs: {},
+      }),
+    }],
+  };
+  const options = () => ({
+    ...projectRuntimeFixture(directory),
+    scheduling: { maxConcurrency: 1 },
+    components: [components],
+  } as const);
+  let first: Awaited<ReturnType<typeof createProjectLocalRuntime>> | undefined;
+  let second: Awaited<ReturnType<typeof createProjectLocalRuntime>> | undefined;
+  try {
+    first = await createProjectLocalRuntime({ root: directory, ...options() });
+    second = await createProjectLocalRuntime({ root: directory, ...options() });
+    await first.build({
+      id: "capacity-a",
+      state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+    });
+    await second.build({
+      id: "capacity-b",
+      state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+    });
+    const firstTurn = first.workOnce({ owner: "worker-a", leaseMs: 120 });
+    await firstEntered;
+    const secondTurn = second.workOnce({ owner: "worker-b", leaseMs: 120 });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.equal(promptCalls, 1,
+      "the second Worker cannot enter after the original capacity expiry while its peer keeps heartbeating");
+    assert.equal((await first.queue()).capacity.length, 1);
+    release?.();
+    await Promise.all([firstTurn, secondTurn]);
+    assert.equal(promptCalls, 2);
+  } finally {
+    release?.();
+    await second?.close();
+    await first?.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

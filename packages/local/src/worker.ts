@@ -46,6 +46,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
   readonly #build: string;
   readonly #dispatchLease: DispatchLease;
   readonly #leaseMs: number;
+  readonly #suppressedCommands: ReadonlySet<string>;
 
   constructor(
     delegate: RuntimeCommandExecutor,
@@ -53,16 +54,31 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     build: string,
     dispatchLease: DispatchLease,
     leaseMs: number,
+    suppressedCommands: ReadonlySet<string> = new Set(),
   ) {
     this.#delegate = delegate;
     this.#options = options;
     this.#build = build;
     this.#dispatchLease = dispatchLease;
     this.#leaseMs = leaseMs;
+    this.#suppressedCommands = suppressedCommands;
   }
 
   prepare(state: BuildState): RuntimePreparation {
-    return this.#delegate.prepare(state);
+    const prepared = this.#delegate.prepare(state);
+    const suppressed = prepared.runnable.filter((item) => this.#suppressedCommands.has(item.command.id));
+    return {
+      state: prepared.state,
+      runnable: prepared.runnable.filter((item) => !this.#suppressedCommands.has(item.command.id)),
+      blocked: [
+        ...prepared.blocked,
+        ...suppressed.map((item) => ({
+          command: item.command.id,
+          reason: "the exact Operation was cancelled by Runtime control",
+          subject: item.command.id,
+        })),
+      ],
+    };
   }
 
   async #assertAuthority(): Promise<void> {
@@ -112,8 +128,23 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     const reservation = await this.#acquire(descriptor);
     const lease = reservation.active;
     assert(lease !== undefined, `Capacity reservation ${reservation.id} has no active lease`);
+    let heartbeatError: unknown;
+    let heartbeat = Promise.resolve();
+    const heartbeatTimer = setInterval(() => {
+      heartbeat = heartbeat.then(async () => {
+        await this.#options.stores.dispatch.heartbeatCapacity(
+          reservation.id,
+          lease,
+          Date.now(),
+          this.#leaseMs,
+        );
+      }).catch((error: unknown) => { heartbeatError = error; });
+    }, Math.max(1, Math.floor(this.#leaseMs / 3)));
     try {
       const result = await this.#delegate.executeCommand(state, commandId, context);
+      clearInterval(heartbeatTimer);
+      await heartbeat;
+      if (heartbeatError !== undefined) throw heartbeatError;
       await this.#assertAuthority();
       await this.#options.stores.dispatch.heartbeatCapacity(reservation.id, lease, Date.now(), this.#leaseMs);
       if (result.status === "pending" && (descriptor.capacityMode ?? "active") === "recoverable") {
@@ -121,10 +152,25 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       } else {
         await this.#options.stores.dispatch.releaseCapacity(reservation.id, lease);
       }
+      const controlled = (await this.#options.stores.operations.list({
+        build: this.#build,
+        command: commandId,
+      })).find((item) => item.cancellation !== undefined);
+      if (controlled !== undefined) {
+        return {
+          status: "pending",
+          operation: controlled.id,
+          ...(controlled.cancellation?.retryAt === undefined ? {} : { wakeAt: controlled.cancellation.retryAt }),
+        };
+      }
       return result;
     } catch (error) {
+      clearInterval(heartbeatTimer);
+      await heartbeat;
       await this.#options.stores.dispatch.releaseCapacity(reservation.id, lease).catch(() => undefined);
       throw error;
+    } finally {
+      clearInterval(heartbeatTimer);
     }
   }
 
@@ -134,7 +180,9 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     requestedAt: number,
   ) {
     assert(this.#delegate.cancelOperation !== undefined, "selected executor cannot cancel Operations");
-    return await this.#delegate.cancelOperation(state, operation, requestedAt);
+    const observed = await this.#delegate.cancelOperation(state, operation, requestedAt);
+    await this.#assertAuthority();
+    return observed;
   }
 }
 
@@ -206,6 +254,43 @@ class DurableLocalWorker implements RuntimeWorker {
     );
   }
 
+  async #reconcileOperationControl(
+    state: BuildState,
+    executor: CapacityExecutor,
+    dispatch: BuildDispatchSnapshot,
+    lease: DispatchLease,
+    suppressed: Set<string>,
+  ): Promise<void> {
+    const operations = await this.#options.stores.operations.list({ build: dispatch.build });
+    for (const operation of operations) {
+      const control = operation.cancellation;
+      if (control === undefined) continue;
+      suppressed.add(operation.command);
+      if (operation.status === "completed" || operation.status === "failed" || operation.status === "cancelled") {
+        await this.#options.stores.dispatch.clearCapacity(
+          capacityReservationId(dispatch.build, operation.command),
+          dispatch.build,
+          lease,
+        );
+        continue;
+      }
+      if (control.retryAt !== undefined && control.retryAt > Date.now()) continue;
+      const observed = await executor.cancelOperation(state, operation, control.requestedAt);
+      await this.#journal("operation-control", dispatch.build, lease.owner, {
+        operation: observed.id,
+        execution: observed.status,
+        control: observed.cancellation?.status ?? "none",
+      });
+      if (observed.status === "completed" || observed.status === "failed" || observed.status === "cancelled") {
+        await this.#options.stores.dispatch.clearCapacity(
+          capacityReservationId(dispatch.build, observed.command),
+          dispatch.build,
+          lease,
+        );
+      }
+    }
+  }
+
   async runOnce(options: { readonly owner: string; readonly leaseMs: number }): Promise<BuildDispatchSnapshot | undefined> {
     assert(options.owner.trim().length > 0, "Worker owner is empty");
     const leaseMs = positive(options.leaseMs, "Worker leaseMs");
@@ -228,7 +313,16 @@ class DurableLocalWorker implements RuntimeWorker {
       assert(this.#options.runtimeClosure.digest === dispatch.runtimeClosure,
         `Dispatch ${dispatch.build} Runtime Closure differs`);
     }
-    const controlled = new CapacityExecutor(this.#executor, this.#options, dispatch.build, lease, leaseMs);
+    const suppressedCommands = new Set<string>();
+    const controlled = new CapacityExecutor(
+      this.#executor,
+      this.#options,
+      dispatch.build,
+      lease,
+      leaseMs,
+      suppressedCommands,
+    );
+    await this.#reconcileOperationControl(stored.state, controlled, dispatch, lease, suppressedCommands);
     const scheduler = this.#options.scheduler.create(controlled, {
       ...this.#options.scheduling,
       buildStore: this.#options.stores.builds,
@@ -240,7 +334,7 @@ class DurableLocalWorker implements RuntimeWorker {
       heartbeat = heartbeat.then(async () => {
         await this.#options.stores.dispatch.heartbeat(dispatch.build, lease, Date.now(), leaseMs);
       }).catch((error: unknown) => { heartbeatError = error; });
-    }, Math.max(50, Math.floor(leaseMs / 3)));
+    }, Math.max(1, Math.floor(leaseMs / 3)));
     try {
       const [result] = await scheduler.run([{ id: dispatch.build, state: stored.state }]);
       assert(result !== undefined, `Scheduler returned no result for ${dispatch.build}`);
@@ -263,11 +357,24 @@ class DurableLocalWorker implements RuntimeWorker {
         return terminal;
       }
       const pending = result.journal.filter((item) => item.status === "pending");
-      const wakeAt = pending.length === 0
-        ? Date.now()
-        : Math.min(...pending.map((item) => item.wakeAt ?? Date.now() + 1_000));
+      const controlledOperations = (await this.#options.stores.operations.list({ build: dispatch.build }))
+        .filter((item) => item.cancellation !== undefined)
+        .filter((item) => item.status === "created" || item.status === "pending");
+      const now = Date.now();
+      const wakeTimes = [
+        ...pending.map((item) => item.wakeAt ?? now + 1_000),
+        ...controlledOperations.map((item) => item.cancellation?.status === "requested"
+          && item.cancellation.retryAt === undefined
+          ? now
+          : item.cancellation?.retryAt ?? item.wakeAt ?? now + 1_000),
+      ];
+      const wakeAt = wakeTimes.length === 0
+        ? result.blocked.length > 0 ? Number.MAX_SAFE_INTEGER : Date.now()
+        : Math.min(...wakeTimes);
       const released = await this.#options.stores.dispatch.release(dispatch.build, lease, {
-        phase: pending.length > 0 ? "waiting" : result.blocked.length > 0 ? "blocked" : "queued",
+        phase: pending.length > 0 || controlledOperations.length > 0
+          ? "waiting"
+          : result.blocked.length > 0 ? "blocked" : "queued",
         availableAt: wakeAt,
         ...(result.blocked.length === 0 ? {} : { reason: result.blocked.map((item) => item.reason).join(", ") }),
       });

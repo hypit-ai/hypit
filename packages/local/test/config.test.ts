@@ -39,6 +39,25 @@ test("declarative Runtime config has no implicit local services", () => {
   }), /runtimeServices/u);
 });
 
+test("an explicit empty Runtime service set fails instead of manufacturing local defaults", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-runtime-empty-services-"));
+  const path = join(root, "svml.runtime.json");
+  try {
+    await writeFile(path, JSON.stringify({
+      format: "svml.runtime-config@1",
+      ...required,
+      endpoints: [],
+      permissions: [],
+    }));
+    await assert.rejects(
+      async () => await createRuntimeFromConfig(path, { registry: new RuntimeAdapterRegistry() }),
+      /unknown instance execution\.scheduler/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("Runtime config is closed data and rejects unknown environment authority", () => {
   const parsed = parseRuntimeConfig({
     format: "svml.runtime-config@1",
