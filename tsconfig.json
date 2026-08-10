@@ -96,6 +96,9 @@
       "@narratage/script": [
         "packages/script/src/index.ts"
       ],
+      "@narratage/markup": [
+        "packages/markup/src/index.ts"
+      ],
       "@narratage/text": [
         "packages/text/src/index.ts"
       ],
@@ -120,8 +123,8 @@
       "@narratage/run": [
         "packages/run/src/index.ts"
       ],
-      "@narratage/run-text": [
-        "packages/run-text/src/index.ts"
+      "@narratage/run-markup": [
+        "packages/run-markup/src/index.ts"
       ],
       "@narratage/runtime": [
         "packages/runtime/src/index.ts"
@@ -153,9 +156,6 @@
       ],
       "@narratage/model-kit": [
         "packages/model-kit/src/index.ts"
-      ],
-      "@narratage/prompt-kit": [
-        "packages/prompt-kit/src/index.ts"
       ],
       "@narratage/seedance": [
         "packages/seedance/src/index.ts"
@@ -231,14 +231,17 @@
       "@narratage/film": [
         "packages/film/src/index.ts"
       ],
-      "@narratage/text-track": [
-        "packages/text-track/src/index.ts"
+      "@narratage/typography-track": [
+        "packages/typography-track/src/index.ts"
       ],
       "@narratage/svs": [
         "packages/svs/src/index.ts"
       ],
       "@narratage/compiler-node": [
         "packages/compiler-node/src/index.ts"
+      ],
+      "@narratage/compiler-markup-node": [
+        "packages/compiler-markup-node/src/index.ts"
       ],
       "@narratage/package-loader-node": [
         "packages/package-loader-node/src/index.ts"

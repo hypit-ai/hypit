@@ -46,17 +46,21 @@ Script, Seedance, Film or any video concept.
 
 ### Layer 2: Author language
 
-Author-facing vocabulary: the text Frontend, Script Surface, SVS Recipes, Run text Frontend and
-reusable compilation libraries.
+Author-facing vocabulary: the Markup Frontend, Script Surface, SVS Recipes, Run Markup Frontend and
+reusable deterministic text compilation.
 
 ```text
-@narratage/text                  official .svml markup Frontend
+@narratage/markup                official .svml Markup Frontend
 @narratage/script                Script Surface
 @narratage/svs                   SVS Recipe Frontend
-@narratage/run-text              official .svrun Frontend
-@narratage/prompt-kit            declarative prompt compilation
-@narratage/compiler-text-node    Text Frontend + Surface Host assembly
+@narratage/run-markup            official .svrun Markup Frontend
+@narratage/text                  graph-native text values, templates and deterministic rendering
+@narratage/compiler-markup-node  Markup Frontend + Surface Host assembly
 ```
+
+`@narratage/text` is domain-neutral in meaning even though it is author-language vocabulary. Its
+ordinary `Text` outputs may feed model ports or visible video consumers. Those consumers depend on
+the Text waist; Text never depends back on Typography, Ranking, Sticker, Deck or any model family.
 
 ### Layer 3: Video domain
 
@@ -93,7 +97,7 @@ Depends on Layer 1 and 2 but not on any Provider.
 @narratage/caption-fine          field-free fine caption Track family
 @narratage/fonts-open            exact redistributable font catalog
 @narratage/media-track           unified Media Item/Sequence Track
-@narratage/text-track            text overlay Track
+@narratage/typography-track      typography overlay Track
 @narratage/audio-track           arbitrary sample-domain Audio Track
 @narratage/deck-track            depth-stack collection Track
 @narratage/ranking               four ranking component families
@@ -132,7 +136,7 @@ never on exact-model packages or the CLI.
 
 ```text
 @narratage/cli           generic command engine (requires explicit Distribution)
-@narratage/video-cli     video command application (selects Text compiler, no built-in author packages)
+@narratage/video-cli     video command application (selects Markup compiler, no built-in author packages)
 ```
 
 ## Dependency rules
@@ -146,7 +150,7 @@ never on exact-model packages or the CLI.
 
 3. **CLI independence.** Neither `@narratage/cli` nor `@narratage/video-cli` transitively depends on any
    Provider package. The video CLI also does not depend on any author-level video package
-   (`@narratage/script`, `@narratage/seedance-speaker`, `@narratage/media-track`, `@narratage/text-track`, `@narratage/film`).
+   (`@narratage/script`, `@narratage/seedance-speaker`, `@narratage/media-track`, `@narratage/typography-track`, `@narratage/film`).
    Author packages are activated through the explicit package lock, not compile-time CLI
    dependencies.
 

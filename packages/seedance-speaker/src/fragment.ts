@@ -12,5 +12,10 @@ export function createSeedanceSpeakerTakeFragment(
   compileRequestProducer: ProducerRef,
   mediaInputs: readonly ExactModelMediaInput[] = [],
 ) {
-  return createSeedanceSpeechGenerationFragment(endpoint, compileRequestProducer, mediaInputs);
+  return createSeedanceSpeechGenerationFragment(
+    endpoint,
+    compileRequestProducer,
+    mediaInputs,
+    [{ name: "prompt", port: "prompt" }],
+  );
 }

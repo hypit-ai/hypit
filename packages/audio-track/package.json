@@ -19,6 +19,6 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/semantic-map": "workspace:*",
     "@narratage/temporal": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   }
 }

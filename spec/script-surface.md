@@ -86,7 +86,7 @@ Segment 的两个独立结构端点；真正的静音或素材行为由外部 Pr
 
 ## 1. 文档与 Segment
 
-在官方 Text Frontend 中，一个 `<script>` Surface 实例产生一份 Narrative；
+在官方 Markup Frontend 中，一个 `<script>` Surface 实例产生一份 Narrative；
 `<script>` 外壳由 Text 根据导入后的 Surface Registry 分派，Script Parser 接收的
 只是它的 raw body。Script body 的 Segment 形式只有具名块和具名空块：
 

@@ -1,4 +1,4 @@
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 
 <!--
   SVML authoring golden fixture.
@@ -8,6 +8,7 @@
 -->
 <svml>
   <import from="@narratage/script@1"/>
+  <import as="wording" from="@narratage/text@1"/>
   <import as="media" from="@narratage/media@1"/>
   <import as="seedance" from="@narratage/seedance@1"/>
   <import as="speech" from="@narratage/speech-spine@1"/>
@@ -18,7 +19,7 @@
   <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="pipeline" from="@narratage/media-pipeline@1"/>
   <import as="media-track" from="@narratage/media-track@1"/>
-  <import as="text" from="@narratage/text-track@1"/>
+  <import as="text" from="@narratage/typography-track@1"/>
   <import as="space" from="@narratage/spatial@1"/>
   <import as="film" from="@narratage/film@1"/>
   <import as="render" from="@narratage/render-hyperframes@1"/>
@@ -51,20 +52,22 @@
   <space:Frame id="product-frame" within={vertical}
     left="8%" top="20%" right="8%" bottom="32%"/>
 
-  <seedance:Prompt id="alice-direction">
+  <wording:Value id="alice-direction">
     Locked medium close-up. Alice speaks directly to camera in a quiet daylight studio.
     Calm, curious delivery; natural breathing and restrained hand movement.
-  </seedance:Prompt>
+    Spoken dialogue — say exactly: What if a video could be edited by meaning instead of a timeline?
+  </wording:Value>
 
-  <seedance:Prompt id="bob-direction">
+  <wording:Value id="bob-direction">
     Locked medium close-up. Bob answers from a warm editorial workspace.
     Precise, assured delivery; hold eye contact and keep the background still.
-  </seedance:Prompt>
+    Spoken dialogue — say exactly: Then the script becomes the source. Semantic video markup language lets every visual know why it is there.
+  </wording:Value>
 
-  <seedance:Prompt id="product-direction">
+  <wording:Value id="product-direction">
     A clean vertical product film: the written script becomes semantic regions, then those
     regions assemble into a finished video. No readable UI text and no camera shake.
-  </seedance:Prompt>
+  </wording:Value>
 
   <!-- Complete styles are declared once. Selection and use remain separate. -->
   <fonts:Stack id="caption-font" family="inter" weight="600" style="normal"/>
@@ -93,21 +96,19 @@
   <seedance:Speech
     id="alice-take"
     model="mini"
-    dialogue={script.segment.opening.dialogue}
     prompt={alice-direction}
     duration="8"
   >
-    <seedance:Reference image={alice-reference} role="character"/>
+    <seedance:Reference image={alice-reference}/>
   </seedance:Speech>
 
   <seedance:Speech
     id="bob-take"
     model="mini"
-    dialogue={script.segment.answer.dialogue}
     prompt={bob-direction}
     duration="8"
   >
-    <seedance:Reference image={bob-reference} role="character"/>
+    <seedance:Reference image={bob-reference}/>
   </seedance:Speech>
 
   <!-- Ordered generated Takes become one audio basis plus its peer visual/audio Tracks. -->
@@ -125,7 +126,7 @@
     prompt={product-direction}
     duration="5"
   >
-    <seedance:Reference image={product-reference} role="subject"/>
+    <seedance:Reference image={product-reference}/>
   </seedance:Video>
 
   <pipeline:Normalize id="product-media" source={product-motion.video}

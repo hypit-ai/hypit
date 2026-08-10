@@ -9,6 +9,7 @@ import {
 } from "@narratage/caption";
 import type { TimedCaptionProjection } from "@narratage/caption";
 import type { Narrative } from "@narratage/narrative";
+import type { Text } from "@narratage/text";
 import { sealProgramSpace } from "@narratage/program-space";
 import { sealSpeechBasis, sealSpeechEvidenceAudio, speechTypes } from "@narratage/speech";
 import type { SpeechAudioBasis, SpeechBasis, SpeechEvidenceAudio } from "@narratage/speech";
@@ -123,23 +124,23 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
 
   host.registerProducer(videoProducers.requestEstimate, videoImplementations.requestEstimate, ({ inputs }) => {
     calls.estimate += 1;
-    assert.equal(inputs.narrative?.value.kind, "inline");
-    const narrative = inlineValue<Narrative>(inputs.narrative.value.value);
+    assert.equal(inputs.speech?.value.kind, "inline");
+    const speech = inlineValue<Text>(inputs.speech.value.value);
     return {
       outputs: {},
       needs: {
         estimate: {
           contract: "example.official-speech-estimate-request@1",
-          speech: narrative.serializations.speech,
+          speech: speech.value,
         },
       },
     };
   });
   host.registerProducer(videoProducers.requestSeedanceMini, videoImplementations.requestSeedanceMini, ({ inputs }) => {
     calls.seedance += 1;
-    assert.equal(inputs.narrative?.value.kind, "inline");
+    assert.equal(inputs.dialogue?.value.kind, "inline");
     assert.equal(inputs.estimate?.value.kind, "inline");
-    const narrative = inlineValue<Narrative>(inputs.narrative.value.value);
+    const dialogue = inlineValue<Text>(inputs.dialogue.value.value);
     const estimate = inlineObject(inputs.estimate.value.value);
     return {
       outputs: {},
@@ -147,7 +148,7 @@ test("the Speech Spine pipeline resumes without repeating paid calls", async () 
         media: {
           contract: "example.seedance-mini-speech-request@1",
           model: "mini",
-          script: narrative.serializations.speech,
+          script: dialogue.value,
           durationSec: estimate.durationSec as number,
         },
       },

@@ -6,6 +6,7 @@ import { narrativeTypes } from "@narratage/narrative";
 import { programSpaceTypes } from "@narratage/program-space";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
+import { textTypes } from "@narratage/text";
 
 import { rankingProducers, rankingTypes } from "./manifest.js";
 import type { RankingVariant } from "./types.js";
@@ -17,6 +18,7 @@ export type RankingFragmentItem = {
   readonly suffix: string;
   readonly specName: string;
   readonly iconName?: string;
+  readonly contentName?: string;
 };
 
 export type RankingFragmentSound = {
@@ -69,7 +71,7 @@ export function createRankingFragment(
     { name: "frame", type: spatialTypes.frame },
     { name: "style", type: selected.style },
   ];
-  if (variant === "typewriter-list") inputs.push({ name: "title", type: rankingTypes.title });
+  if (variant === "typewriter-list") inputs.push({ name: "title", type: textTypes.text });
   const operations: FragmentOperation[] = [
     { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output", name: "set" } },
     { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output", name: "set" } },
@@ -77,13 +79,22 @@ export function createRankingFragment(
   let specs = operation("specs");
   let resolved = operation("resolved");
   for (const item of items) {
-    inputs.push({ name: item.specName, type: rankingTypes.itemSpec });
+    inputs.push({ name: item.specName, type: item.contentName === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell });
+    if (item.contentName !== undefined) inputs.push({ name: item.contentName, type: textTypes.text });
     if (item.iconName !== undefined) inputs.push({ name: item.iconName, type: mediaTypes.blobArtifact });
+    const materializedId = `materialize-${item.suffix}`;
+    if (item.contentName !== undefined) operations.push({
+      id: materializedId,
+      producer: rankingProducers.materializeTextItem,
+      inputs: { shell: input(item.specName), content: input(item.contentName) },
+      result: { kind: "output", name: "spec" },
+    });
+    const resolvedSpec = item.contentName === undefined ? input(item.specName) : operation(materializedId);
     const semanticId = `spec-${item.suffix}`;
     operations.push({
       id: semanticId,
       producer: rankingProducers.appendSpec,
-      inputs: { set: specs, spec: input(item.specName) },
+      inputs: { set: specs, spec: resolvedSpec },
       result: { kind: "output", name: "set" },
     });
     specs = operation(semanticId);
@@ -93,7 +104,7 @@ export function createRankingFragment(
       producer: item.iconName === undefined ? selected.append : selected.appendIcon,
       inputs: {
         set: resolved,
-        spec: input(item.specName),
+        spec: resolvedSpec,
         ...(item.iconName === undefined ? {} : { icon: input(item.iconName) }),
       },
       result: { kind: "output", name: "set" },

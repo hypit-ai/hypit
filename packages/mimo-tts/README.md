@@ -11,6 +11,8 @@ The package owns the three distinct model shapes:
 It contains no API URL, credential, retry, queue or Xiaomi wire encoding. Those belong to a Runtime
 Endpoint such as `@narratage/provider-xiaomi-mimo`. Every model returns the shared
 `GeneratedAudioSet`; author Surfaces expose its primary member as an ordinary `BlobArtifact`.
+The `speech` attribute is an ordinary `Text` edge attached through the exact model's `text` port at
+execution time; the Frontend never copies Script words into a request draft.
 
 `optimize_text_preview` is intentionally absent: MiMo may not rewrite Script's exact speech truth.
 

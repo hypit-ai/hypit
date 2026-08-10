@@ -1,6 +1,5 @@
 import {
   generationObjectSchema,
-  generationPromptSchema,
   portsObjectSchema,
   sealGenerationPortRequest,
   sealGenerationRequestDraft,
@@ -14,7 +13,6 @@ import type {
   GenerationRequestDraft,
 } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import { narrativeDependency } from "@narratage/narrative";
 import { assertSpeechDurationIdentity, speechDependency, speechTypes } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
 import { canonicalize, digestOf } from "@narratage/protocol";
@@ -88,11 +86,6 @@ export function sealSeedanceRequest(model: SeedanceModel, ports: SeedancePortMap
   return sealGenerationPortRequest(seedancePorts[model], ports);
 }
 
-export type SeedancePrompt = {
-  readonly contract: "svml.seedance-prompt@1";
-  readonly text: string;
-};
-
 /** One authored generation minus the duration only speech estimation can supply. */
 export type SeedanceSpeechProgram = {
   readonly contract: "svml.seedance-speech-spine@1";
@@ -101,7 +94,6 @@ export type SeedanceSpeechProgram = {
 };
 
 export const seedanceTypes = {
-  prompt: { module: seedanceModuleRef, name: "Prompt" },
   speechSpine: { module: seedanceModuleRef, name: "SpeechProgram" },
 } satisfies Record<string, TypeRef>;
 
@@ -117,7 +109,6 @@ export const seedanceSpeechCompileImplementationDigests = Object.fromEntries(
 ) as Record<SeedanceModel, Digest>;
 
 export const seedanceSurfaceImplementationDigests = {
-  prompt: digestOf("@narratage/seedance/prompt-surface@1"),
   speech: digestOf("@narratage/seedance/speech-surface@1"),
   video: digestOf("@narratage/seedance/video-surface@1"),
 } as const;
@@ -128,21 +119,6 @@ function assertObject(value: unknown): asserts value is Record<string, unknown> 
   }
 }
 
-export function sealSeedancePrompt(text: string): SeedancePrompt {
-  const normalized = text.trim();
-  if (normalized.length === 0 || normalized.length > 20_000) {
-    throw new Error("Seedance Prompt must contain 1 to 20,000 characters");
-  }
-  return { contract: "svml.seedance-prompt@1" as const, text: normalized };
-}
-
-export function verifySeedancePrompt(value: unknown): asserts value is SeedancePrompt {
-  assertObject(value);
-  if (value.contract !== "svml.seedance-prompt@1" || typeof value.text !== "string" || value.text.length === 0) {
-    throw new Error("Seedance Prompt is invalid");
-  }
-}
-
 export function verifySeedanceSpeechProgram(value: unknown): asserts value is SeedanceSpeechProgram {
   assertObject(value);
   if (value.contract !== "svml.seedance-speech-spine@1"
@@ -150,8 +126,10 @@ export function verifySeedanceSpeechProgram(value: unknown): asserts value is Se
     throw new Error("Seedance SpeechProgram identity is invalid");
   }
   const table = seedancePorts[value.model as SeedanceModel];
-  const media = table.ports.filter((port) => port.value.kind === "media").map((port) => port.name);
-  verifyPortsAgainstTable(table, value.ports, { omit: ["duration", ...media] });
+  const later = table.ports
+    .filter((port) => port.value.kind === "media" || port.value.kind === "text")
+    .map((port) => port.name);
+  verifyPortsAgainstTable(table, value.ports, { omit: ["duration", ...later] });
   const generateAudio = (value.ports as SeedancePortMap).generateAudio;
   if (generateAudio?.[0] !== true) throw new Error("Seedance SpeechProgram must generate audio");
 }
@@ -179,7 +157,12 @@ const speechSpineSchema = (model: SeedanceModel): ValueSchema => generationObjec
   model: { schema: { kind: "literal", value: model } },
   ports: {
     schema: portsObjectSchema(seedancePorts[model], {
-      omit: ["duration", ...seedancePorts[model].ports.filter((port) => port.value.kind === "media").map((port) => port.name)],
+      omit: [
+        "duration",
+        ...seedancePorts[model].ports
+          .filter((port) => port.value.kind === "media" || port.value.kind === "text")
+          .map((port) => port.name),
+      ],
     }),
   },
 });
@@ -209,7 +192,6 @@ export const seedanceManifest = {
   ...seedanceBaseDefinition.manifest,
   dependencies: [
     ...seedanceBaseDefinition.manifest.dependencies,
-    narrativeDependency,
     speechDependency,
   ],
   types: [
@@ -218,26 +200,8 @@ export const seedanceManifest = {
       name: seedanceTypes.speechSpine.name,
       schema: { kind: "oneOf", variants: seedanceModels.map(speechSpineSchema) } satisfies ValueSchema,
     },
-    {
-      name: seedanceTypes.prompt.name,
-      schema: generationObjectSchema({
-        contract: { schema: { kind: "literal", value: "svml.seedance-prompt@1" } },
-        text: { schema: generationPromptSchema },
-      }),
-    },
   ],
   surfaces: [
-    {
-      name: "prompt",
-      tag: "Prompt",
-      mode: "structured",
-      outputs: [seedanceTypes.prompt],
-      implementation: {
-        kind: "trusted-frontend-surface",
-        locator: "@narratage/seedance/prompt-surface",
-        digest: seedanceSurfaceImplementationDigests.prompt,
-      },
-    },
     {
       name: "speech",
       tag: "Speech",
@@ -327,7 +291,6 @@ export {
   createSeedanceSpeechGenerationFragment,
 } from "./fragment.js";
 export {
-  decodeSeedancePromptSurface,
   decodeSeedanceSpeechSurface,
   decodeSeedanceVideoSurface,
 } from "./surface.js";

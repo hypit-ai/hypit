@@ -47,6 +47,7 @@ import {
 } from "@narratage/seedance";
 import { speechManifest } from "@narratage/speech";
 import { spatialManifest } from "@narratage/spatial";
+import { textManifest } from "@narratage/text";
 
 const origin = {
   kind: "authored" as const,
@@ -64,6 +65,7 @@ const image = (name: string) => ({
 function fixture() {
   const manifests: ModuleManifest[] = [
     artifactManifest,
+    textManifest,
     generationManifest,
     rasterManifest,
     imageTransformManifest,

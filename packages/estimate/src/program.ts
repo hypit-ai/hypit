@@ -1,4 +1,4 @@
-import type { NarrativeSpeechExcerpt } from "@narratage/narrative";
+import type { Text } from "@narratage/text";
 import { assertSpeechDurationIdentity, sealSpeechDuration } from "@narratage/speech";
 import type { SpeechDuration } from "@narratage/speech";
 import { digestOf } from "@narratage/protocol";
@@ -125,17 +125,12 @@ export function assertSpeechEstimatePolicy(value: SpeechEstimatePolicy): void {
   }
 }
 
-function assertSpeechExcerpt(value: NarrativeSpeechExcerpt): void {
+function assertSpeechText(value: Text): void {
   if (
-    value.contract !== "svml.narrative-speech-excerpt@1"
-    || value.kind !== "segment"
-    || value.id.length === 0
-    || !Number.isSafeInteger(value.tokenStart)
-    || !Number.isSafeInteger(value.tokenEndExclusive)
-    || value.tokenEndExclusive <= value.tokenStart
-    || value.speech.trim().length === 0
+    value.contract !== "svml.text@1"
+    || value.value.trim().length === 0
   ) {
-    throw new Error("NarrativeSpeechExcerpt is invalid");
+    throw new Error("Speech Text is invalid");
   }
 }
 
@@ -146,14 +141,14 @@ function rounded(value: number, mode: SpeechEstimatePolicy["rounding"]): number 
 }
 
 export function estimateSpeechDuration(
-  excerpt: NarrativeSpeechExcerpt,
+  text: Text,
   policy: SpeechEstimatePolicy,
 ): SpeechDuration {
-  assertSpeechExcerpt(excerpt);
+  assertSpeechText(text);
   assertSpeechEstimatePolicy(policy);
-  const language = policy.language === "auto" ? detectSpeechEstimateLanguage(excerpt.speech) : policy.language;
-  const units = countSpeechEstimateUnits(excerpt.speech, language);
-  if (units < 1) throw new Error("NarrativeSpeechExcerpt contains no countable speech units");
+  const language = policy.language === "auto" ? detectSpeechEstimateLanguage(text.value) : policy.language;
+  const units = countSpeechEstimateUnits(text.value, language);
+  if (units < 1) throw new Error("Speech Text contains no countable speech units");
   const raw = units / (BASE_RATE[language] * PACE_MULTIPLIER[policy.pace]) + policy.paddingSec;
   const firstClamp = Math.min(policy.maximumSec, Math.max(policy.minimumSec, raw));
   const durationSec = Math.min(policy.maximumSec, Math.max(policy.minimumSec, rounded(firstClamp, policy.rounding)));

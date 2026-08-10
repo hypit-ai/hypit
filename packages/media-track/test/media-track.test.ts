@@ -59,7 +59,7 @@ import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
 import { svsRecipeType } from "@narratage/svs";
 import type { SvsRecipe } from "@narratage/svs";
-import type { StructuredElement, StructuredNode, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
+import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",
@@ -680,8 +680,8 @@ test("the graph witness keeps every source, extent, fit, frame, time and appeara
 
 test("the Media author Surface emits explicit graph edges for layers, semantic time, Sequence topology and sound", async () => {
   const range = { source: "media-surface.svml", start: 0, end: 1 };
-  const ref = (path: string): TextAttributeValue => ({ kind: "reference", path });
-  const node = (name: string, attributes: Record<string, TextAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({
+  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
+  const node = (name: string, attributes: Record<string, MarkupAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({
     kind: "element", name, attributes, children, range,
   });
   const appearance = (path: string, properties: SvsRecipe["properties"]): SurfaceResolvedReference => ({

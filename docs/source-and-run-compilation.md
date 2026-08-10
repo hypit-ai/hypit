@@ -22,7 +22,7 @@ Target, Candidate, Satisfaction or author component.
 The suffix is never parser authority. Every Author or Run Source begins with exactly one Header:
 
 ```xml
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 ```
 
 `@narratage/source` recognizes only this bounded bootstrap grammar. It does not recognize `<svml>`,
@@ -35,7 +35,7 @@ Headers fail closed; there is no default Frontend.
 A Text-authored entry may import logical modules and other Author Sources:
 
 ```xml
-<?svml using="@narratage/text@1"?>
+<?svml using="@narratage/markup@1"?>
 <svml>
   <import from="@narratage/script@1"/>
   <import as="studio" source="./studio.svs"/>
@@ -63,10 +63,10 @@ may produce the same semantic graph while retaining a different source and Front
 
 ## 3. Run Source closure
 
-The official Text Run Source is likewise self-described:
+The official Markup Run Source is likewise self-described:
 
 ```xml
-<?svml using="@narratage/run-text@1"?>
+<?svml using="@narratage/run-markup@1"?>
 <svrun version="1" targets="delivery">
   <author source="./main.svml"/>
 

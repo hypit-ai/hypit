@@ -37,7 +37,7 @@ import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { speechManifest } from "@narratage/speech";
 import { spatialManifest } from "@narratage/spatial";
 import { temporalManifest } from "@narratage/temporal";
-import { TextSurfaceRegistry, createTextAuthorFrontend } from "@narratage/text";
+import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@narratage/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 import { visualIrManifest } from "@narratage/visual-ir";
 
@@ -288,7 +288,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     audioTrackManifest,
     fixtureManifest,
   ]);
-  const registry = new TextSurfaceRegistry();
+  const registry = new MarkupSurfaceRegistry();
   registry.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
     records: [
       { id: "source", type: mediaTypes.synchronized, value: { kind: "inline", value: media("surface", 48_000) }, range: element.range },
@@ -304,7 +304,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     decodeAudioTrackSurface,
   );
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry,
     resolveModule: (request) => request.from === "example.audio-inputs@1" ? fixtureModule : audioTrackModuleRef,
   }));
@@ -314,7 +314,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     entry: {
       id: "/project/audio.svml",
       name: "audio.svml",
-      text: `<?svml using="@narratage/text@1"?>
+      text: `<?svml using="@narratage/markup@1"?>
       <svml>
         <import as="fixture" from="example.audio-inputs@1"/>
         <import as="audio" from="@narratage/audio-track@1"/>

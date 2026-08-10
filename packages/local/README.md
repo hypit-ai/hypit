@@ -15,7 +15,7 @@ The convenience assembly uses:
 - separately selected external Endpoint packages.
 
 Package loading is syntax-neutral. The local Runtime activates only locked deterministic Producer
-and Validator facets; it neither depends on `@narratage/text` nor installs any package Host facet.
+and Validator facets; it neither depends on `@narratage/markup` nor installs any package Host facet.
 
 Normal CLI projects may express the same assembly as closed data:
 

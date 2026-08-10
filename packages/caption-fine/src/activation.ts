@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   captionFineComponent,
@@ -19,14 +19,14 @@ export const svmlPackage = {
   }],
   components: [captionFineComponent],
   hostFacets: [
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: captionFineModuleRef,
       surface: "style",
       mode: "structured",
       implementationDigest: captionFineStyleSurfaceImplementationDigest,
       handler: decodeFineCaptionStyleSurface,
     }),
-    createTextSurfaceHostFacet({
+    createMarkupSurfaceHostFacet({
       module: captionFineModuleRef,
       surface: "track",
       mode: "structured",

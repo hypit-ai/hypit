@@ -8,7 +8,7 @@ import {
   mediaTypes,
 } from "@narratage/media";
 import type { FontArtifactRef, FontStackRef } from "@narratage/media";
-import type { StructuredElement, StructuredSurfaceHandler } from "@narratage/text";
+import type { StructuredElement, StructuredSurfaceHandler } from "@narratage/markup";
 
 import {
   openFontFamilies,

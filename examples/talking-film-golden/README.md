@@ -27,7 +27,7 @@ different model family.
 Prompt declarations, media declarations and `.svs` recipes appear before their uses. The Script
 remains prose-first and contains no generation, styling or Track configuration.
 
-The outer namespaced `.svml` tags do not each require a custom parser. `@narratage/text` reads them with
+The outer namespaced `.svml` tags do not each require a custom parser. `@narratage/markup` reads them with
 one generic structured parser and validates them against the imported package Manifest; the owning
 package supplies its schema and lowerer. Only the prose-first Script body needs the imported raw
 Script Surface, while the CSS-like `.svs` source deliberately uses the separate `@narratage/svs`
@@ -68,7 +68,7 @@ Candidates and Operations.
 |---|---|---|---|
 | `<script>` | `@narratage/script` | authored `Narrative` and projections | implemented |
 | `media:Image` | `@narratage/media` | content-addressed authored Artifact | implemented |
-| `seedance:Prompt` | `@narratage/seedance` | package-private immutable direction value | implemented |
+| `wording:Value` | `@narratage/text` | model-neutral immutable Text value | implemented |
 | `seedance:Speech model="mini"` | `@narratage/seedance` | explicit Seedance Mini Need plus primary-video projection | implemented; explicit duration remains authored until Speech scheduling exists |
 | `speech:Spine` | `@narratage/speech` | ordered clips -> normalized Takes, one `SpeechBasis`, then ordinary projections | Surface, fold, media normalization and projection components implemented |
 | `whisperx:Alignment` | `@narratage/whisperx` | 48k speech master -> explicit 16k evidence Need -> WhisperX -> provider-neutral `@narratage/speech-alignment` -> Map | Surface, Graph Fragment, deterministic components and local Provider/service implemented |
@@ -77,7 +77,7 @@ Candidates and Operations.
 | `caption-fine:Style` / `caption:Program` | Fine + common Caption | explicit default over all words + ordered whole-Style replacement by Role or word subset | implemented |
 | `caption-ai:Planner` | `@narratage/caption-gemini` | immutable display Atoms/Words + per-run requirements -> whole-Atom Cue cuts and optional per-Word fields | implemented; Google Vertex Endpoint implemented separately |
 | `caption-fine:Track` | `@narratage/caption-fine` | CaptionPlan + independent SemanticMap + complete Fine Styles -> VisualTrack | implemented |
-| `text:Track` | `@narratage/text-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
+| `text:Track` | `@narratage/typography-track` | package Spec + ProgramSpace -> VisualTrack | provider-free Surface/lowering implemented; exact-font use remains |
 | `film:Film` | `@narratage/film` | finite TrackSet fold -> Composition | Graph Fragment and official Surface implemented |
 | `render:Video` | `@narratage/render-hyperframes` | Composition -> silent HyperframesDocument render + explicit program audio + mux -> final video Artifact + Receipt | Surface, Fragment and all local execution Providers implemented |
 | `studio.svs` | `@narratage/svs` | generic immutable Recipe Records; consuming packages validate and lower them | parser, imports and current package consumers implemented; exact font assets remain |

@@ -13,6 +13,7 @@ export {
 export { renderDepthStack } from "./lower.js";
 export {
   depthStackCardLabelSchema,
+  depthStackCardLabelStyleSchema,
   depthStackCardSetSchema,
   depthStackCardSpecSchema,
   depthStackDependency,
@@ -30,6 +31,7 @@ export {
   appendDepthStackCard,
   appendDepthStackMomentCard,
   assertDepthStackCardLabel,
+  assertDepthStackCardLabelStyle,
   assertDepthStackCardSet,
   assertDepthStackCardSpec,
   assertDepthStackHeader,
@@ -47,6 +49,8 @@ export {
   resolveDepthStackPose,
   resolveDepthStackState,
   sealDepthStackCardLabel,
+  sealDepthStackCardLabelStyle,
+  bindDepthStackCardLabelText,
   sealDepthStackCardSpec,
   sealDepthStackHeader,
   sealDepthStackSpec,

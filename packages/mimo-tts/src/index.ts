@@ -1,7 +1,6 @@
 import { sealGenerationPortRequest, sealGenerationRequestDraft, sealGenerationPortTable } from "@narratage/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@narratage/generation";
 import { defineExactModelModule } from "@narratage/model-kit";
-import { narrativeDependency } from "@narratage/narrative";
 import { digestOf } from "@narratage/protocol";
 
 export const mimoTtsModuleRef = { name: "@narratage/mimo-tts", version: "1" } as const;
@@ -99,7 +98,6 @@ export const mimoTtsSurfaceDigests = {
 
 export const mimoTtsManifest = {
   ...base.manifest,
-  dependencies: [...base.manifest.dependencies, narrativeDependency],
   surfaces: [
     {
       name: "preset", tag: "Preset", mode: "structured",

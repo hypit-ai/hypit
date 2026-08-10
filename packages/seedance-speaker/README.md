@@ -3,41 +3,41 @@
 Official deterministic UGC talking-head author module for Seedance. It is currently an internal
 private workspace unit, not a commitment to publish one npm package per Seedance author module.
 
-The package consumes an inert project SVS Recipe, one explicitly imported PromptKitSpec, one Script
-dialogue excerpt and explicit image/audio references. Its Surface binds them into a generic Prompt
-Kit Invocation and compiles an inspectable ordered `PromptProgram` during author compilation. The
-same Surface renders the low-level `@narratage/seedance` `SpeechProgram`; the Run Graph then reuses the
-exact Seedance request and generation contracts. The official Kit source is
+The package consumes an inert project SVS Recipe, one explicitly imported `TextTemplate`, one Script
+dialogue `Text` and explicit image/audio references. Its Surface connects that authored `Text`
+directly to a visible `@narratage/text` render component in the graph. Optional per-Take `action`
+and `extra` values are also ordinary Text edges; they are not
+hidden Recipe strings. The rendered `Text` output is wired to Seedance's exact `prompt` port. The
+same Surface authors the low-level
+`@narratage/seedance` `SpeechProgram`; generation reuses the exact Seedance request contracts. The
+official Text Template source is
 [`official-ugc-v1.svs`](./kits/official-ugc-v1.svs).
 
 It owns no Provider, credentials, queue or HTTP behavior. KIE, Volcengine or another explicitly
 bound Endpoint only receives the already compiled exact Seedance request.
 
-The official `official-ugc-v1` Kit contains a fixed base, reference contract, script contract,
+The official `official-ugc-v1` template contains a fixed base, reference contract, script contract,
 texture and visible-text exclusion plus six configurable axes: composition stability, camera
 motion, edit rhythm, performance, gesture and voice mapping. Project SVS selects values. The
-official Kit SVS declares defaults, block order, value-to-Prompt choices and finite conditions. SVS
-itself executes neither conditions nor concatenation; the generic Prompt Kit compiler does that.
+official SVS declares defaults, block order, value-to-text choices and finite conditions. SVS
+itself executes neither conditions nor concatenation; the domain-neutral Text component does that.
 
 ## Compilation boundary
 
 ```text
-Script dialogue + authored Blob references + SVS Recipe + PromptKitSpec
-                         │
-                         │ Speaker Surface: pure author-time lowering
-                         ▼
-          ordered PromptProgram + Seedance SpeechProgram
-                         │ existing Runtime-graph model compiler
-                         ▼
-              exact Seedance generation Need
+Script dialogue Text ──────────────────────────┐
+optional action/extra Text ────────────────────┼──► render Text
+SVS-selected TextBindings + TextTemplate ──────┘         │
+                                                        │ exact prompt edge
+authored Blob references + Seedance SpeechProgram ──────┼──► generation Need
 ```
 
-`take.prompt` and `take.program` are authored compile artifacts; `take.video` is the ordinary
-Logical Output. The Prompt Program retains every ordered block and its origin; flattening is exactly
-`blocks.map(block => block.text).join("\n\n")`. No Prompt assembly Operation appears in a BuildPlan.
+`take.prompt` and `take.video` are ordinary Logical Outputs; `take.program` is authored configuration.
+Prompt assembly is the deterministic `@narratage/text#render` Operation in the BuildPlan, so the text
+can be targeted or satisfied by another compatible Candidate without a Seedance-specific rule.
 
-The author imports this logical module and imports the selected Kit as an ordinary Source Module.
-The Host package lock activates `@narratage/prompt-kit` and low-level `@narratage/seedance` independently. A
+The author imports this logical module and imports the selected template as an ordinary Source Module.
+The Host package lock activates `@narratage/text` and low-level `@narratage/seedance` independently. A
 future public distribution may offer an optional install bundle, but the current repository keeps
 their activations separate.
 
@@ -63,5 +63,7 @@ lip-sync, coherent reference identity, photoreal texture and no generated readab
 requests generated audio. One to nine image references are required; zero to three audio references
 are allowed. With an audio reference, `@audio1` supplies the visible speaker's voice timbre.
 
-`action` and `extra` are optional escape hatches appended as separate attributable blocks. They do
-not alter Kit control flow.
+`action` and `extra` are optional per-Take Text inputs appended as separate attributable blocks.
+They do not alter Kit control flow. Recipe files select method and style axes only; putting content
+in `recipe.action` or `recipe.extra` is rejected so content dependencies cannot disappear into
+Frontend lowering.

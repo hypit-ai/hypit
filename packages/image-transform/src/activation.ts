@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeImageTransformProgramSurface,
@@ -18,7 +18,7 @@ export const svmlPackage = {
   }],
   components: [imageTransformComponent],
   hostFacets: [{
-    ...createTextSurfaceHostFacet({
+    ...createMarkupSurfaceHostFacet({
       module: imageTransformModuleRef,
       surface: "program",
       mode: "structured",
@@ -26,7 +26,7 @@ export const svmlPackage = {
       handler: decodeImageTransformProgramSurface,
     }),
   }, {
-    ...createTextSurfaceHostFacet({
+    ...createMarkupSurfaceHostFacet({
       module: imageTransformModuleRef,
       surface: "transform",
       mode: "structured",

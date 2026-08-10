@@ -39,26 +39,12 @@ export const narrativeSchema: ValueSchema = object({
       segmentTokenIndex: { schema: integer, optional: true },
     }) } },
   }) },
-  serializations: { schema: object({
-    dialogue: { schema: { kind: "string" } }, speech: { schema: { kind: "string" } },
-  }) },
 });
 
 export const narrativeExcerptSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.narrative-excerpt@1" } },
   kind: { schema: { kind: "literal", value: "segment" } }, id: { schema: string },
   tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer },
-  serializations: { schema: object({ dialogue: { schema: string }, speech: { schema: string } }) },
-});
-export const narrativeDialogueExcerptSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.narrative-dialogue-excerpt@1" } },
-  kind: { schema: { kind: "literal", value: "segment" } }, id: { schema: string },
-  tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer }, dialogue: { schema: string },
-});
-export const narrativeSpeechExcerptSchema: ValueSchema = object({
-  contract: { schema: { kind: "literal", value: "svml.narrative-speech-excerpt@1" } },
-  kind: { schema: { kind: "literal", value: "segment" } }, id: { schema: string },
-  tokenStart: { schema: integer }, tokenEndExclusive: { schema: integer }, speech: { schema: string },
 });
 const captionDisplayWord = object({
   id: { schema: string }, index: { schema: integer }, atomId: { schema: string }, segmentId: { schema: string },

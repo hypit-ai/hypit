@@ -12,7 +12,7 @@ prematurely freezing their public ABI.
 ### A1. Self-described Author/Run compilation — first public slice implemented
 
 Every Author and Run source now carries a mandatory exact Frontend Header. The official
-`@narratage/run-text` `.svrun` Frontend implements:
+`@narratage/run-markup` `.svrun` Frontend implements:
 
 - named Targets and reusable Target sets;
 - Provided-Value and Fragment Candidates;
@@ -154,9 +154,9 @@ focused `@narratage/temporal` package. Shared Canvas/Frame/Point/Path geometry a
 now execute in `@narratage/spatial`; Film consumes CanvasSpace explicitly rather than hiding
 dimensions or frame rate in its Recipe. All four independent Ranking components now execute through
 the shared Temporal/Spatial and peer Track contracts specified in
-[`../spec/ranking-track.md`](../spec/ranking-track.md). Text's old-system/editor attack audit,
+[`../spec/ranking-track.md`](../spec/ranking-track.md). Typography's old-system/editor attack audit,
 complete two-dimensional author model, terminal-IR gaps and Caption feedback are recorded in
-[`../spec/text-track.md`](../spec/text-track.md). The shared Canvas/Frame geometry, two-frame fitting,
+[`../spec/typography-track.md`](../spec/typography-track.md). The shared Canvas/Frame geometry, two-frame fitting,
 focal alignment and backing ownership boundary are recorded in
 [`../spec/spatial-layout.md`](../spec/spatial-layout.md). Generic Audio placement, sample occupancy
 and mix boundaries now execute in `@narratage/audio-track` as exact sample-domain plans.
@@ -191,6 +191,22 @@ The current implementations remain executable vertical slices and regression wit
 does not wait for release packaging, optional Providers or arbitrary-code isolation, and it must not
 reopen Core to add video-specific meaning.
 
+### C1. Next video package batch
+
+The next batch is deliberately limited to three author/domain tasks:
+
+1. finish the remaining Fine Caption style migration against the existing Caption Program and
+   measured display-Atom timing, without adding fields or timing guesses to common Caption;
+2. audit Twinit's named Seedance components, migrate only the distinct author semantics as Text
+   Templates/thin Surfaces, and delete aliases that merely duplicate prompt assembly;
+3. improve the deterministic speech Estimate policy and tests while keeping it a Text-to-duration
+   graph component, never a substitute for measured speech timing.
+
+VLM-assisted temporal or spatial interpretation is not part of this version. If later demanded,
+it must arrive as separately imported packages with explicit Video + Text inputs and explicit
+selection/evidence outputs. It may not become a hidden Locate mode, Core feature or metadata side
+channel.
+
 ## Explicit non-goals for the current phase
 
 - no automatic cache or prompt-based semantic reuse;
@@ -199,3 +215,4 @@ reopen Core to add video-specific meaning.
 - no universal queue package;
 - no hosted multi-tenant platform required for local developer use;
 - no cross-Track effect system or Base FX placeholder.
+- no VLM temporal locator or spatial query package in this version.

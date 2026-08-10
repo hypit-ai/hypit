@@ -2,7 +2,7 @@ import { narrativeTypes } from "@narratage/narrative";
 import { programSpaceTypes } from "@narratage/program-space";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
 import type { TemporalDuration, TemporalPointExpression } from "@narratage/temporal";
 import { createScreenOverlayFragment } from "./fragment.js";
 import { screenOverlayTypes } from "./manifest.js";
@@ -25,7 +25,7 @@ function optionalText(element: StructuredElement, name: string): string | undefi
   const value = element.attributes[name]; if (value === undefined) return undefined;
   if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be text.`); return value.trim();
 }
-function ref(raw: TextAttributeValue | undefined, label: string, expected: SurfaceResolvedReference["type"], resolve: (path: string) => SurfaceResolvedReference | undefined): SurfaceResolvedReference {
+function ref(raw: MarkupAttributeValue | undefined, label: string, expected: SurfaceResolvedReference["type"], resolve: (path: string) => SurfaceResolvedReference | undefined): SurfaceResolvedReference {
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${label} must be a reference.`);
   const value = resolve(raw.path); if (value === undefined || !sameType(value.type, expected)) throw new Error(`${label} has the wrong Type.`); return value;
 }

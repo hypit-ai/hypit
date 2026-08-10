@@ -1,4 +1,4 @@
-import { createTextSurfaceHostFacet } from "@narratage/text";
+import { createMarkupSurfaceHostFacet } from "@narratage/markup";
 
 import {
   decodeSpeechEstimateSurface,
@@ -13,7 +13,7 @@ export const svmlPackage = {
   name: "@narratage/estimate",
   modules: [{ manifest: estimateManifest, specifiers: ["@narratage/estimate", "@narratage/estimate@1"] }],
   components: [estimateComponent],
-  hostFacets: [createTextSurfaceHostFacet({
+  hostFacets: [createMarkupSurfaceHostFacet({
     module: estimateModuleRef,
     surface: "speech",
     mode: "structured",

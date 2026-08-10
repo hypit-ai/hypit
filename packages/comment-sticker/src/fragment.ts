@@ -7,6 +7,7 @@ import { programSpaceTypes } from "@narratage/program-space";
 import type { TypeRef } from "@narratage/protocol";
 import { semanticMapTypes } from "@narratage/semantic-map";
 import { spatialTypes } from "@narratage/spatial";
+import { textTypes } from "@narratage/text";
 
 import { commentStickerProducers, commentStickerTypes } from "./manifest.js";
 
@@ -20,6 +21,10 @@ export type CommentStickerFragmentItem = TimedItem & {
   readonly frameName: string;
   readonly styleName: string;
   readonly avatarName?: string;
+  readonly commentName: string;
+  readonly authorName?: string;
+  readonly headerTextName?: string;
+  readonly metaName?: string;
 };
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
@@ -49,12 +54,40 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
     types.set(item.specName, commentStickerTypes.itemSpec);
     types.set(item.frameName, spatialTypes.frame);
     types.set(item.styleName, commentStickerTypes.style);
+    types.set(item.commentName, textTypes.text);
+    if (item.authorName !== undefined) types.set(item.authorName, textTypes.text);
+    if (item.headerTextName !== undefined) types.set(item.headerTextName, textTypes.text);
+    if (item.metaName !== undefined) types.set(item.metaName, textTypes.text);
     if (item.avatarName !== undefined) types.set(item.avatarName, artifactTypes.blob);
     if (item.kind !== "program") {
       types.set(item.mapName, semanticMapTypes.complete);
       types.set(item.sourceName, item.kind === "selection" ? narrativeTypes.selection : narrativeTypes.moment);
     }
-    const id = `comment:set:append:${String(index + 1).padStart(4, "0")}`;
+    const suffix = String(index + 1).padStart(4, "0");
+    const createContentId = `comment:content:${suffix}:create`;
+    operations.push({
+      id: createContentId,
+      producer: commentStickerProducers.createContent,
+      inputs: { comment: input(item.commentName) },
+      result: { kind: "output", name: "content" },
+    });
+    let content = operation(createContentId);
+    for (const [field, name, producer] of [
+      ["author", item.authorName, commentStickerProducers.setContentAuthor],
+      ["header", item.headerTextName, commentStickerProducers.setContentHeader],
+      ["meta", item.metaName, commentStickerProducers.setContentMeta],
+    ] as const) {
+      if (name === undefined) continue;
+      const fieldId = `comment:content:${suffix}:${field}`;
+      operations.push({
+        id: fieldId,
+        producer,
+        inputs: { content, [field]: input(name) },
+        result: { kind: "output", name: "content" },
+      });
+      content = operation(fieldId);
+    }
+    const id = `comment:set:append:${suffix}`;
     operations.push({
       id,
       producer: appendProducer(item),
@@ -65,6 +98,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
         style: input(item.styleName),
         space: input("space"),
         spec: input(item.specName),
+        content,
         ...(item.avatarName === undefined ? {} : { avatar: input(item.avatarName) }),
         ...(item.kind === "program" ? {} : {
           map: input(item.mapName),

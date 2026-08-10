@@ -78,6 +78,11 @@ export type ParsedNarrative = Omit<
   readonly turns: readonly ParsedTurn[];
   readonly selections: readonly ParsedSelection[];
   readonly moments: readonly ParsedMoment[];
+  /** Script-private renderings used to emit independent public Text values. */
+  readonly serializations: {
+    readonly dialogue: string;
+    readonly speech: string;
+  };
   readonly captionProjection: {
     readonly text: string;
     readonly regions: readonly ParsedCaptionRegion[];

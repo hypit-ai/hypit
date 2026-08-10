@@ -18,7 +18,7 @@
     "@narratage/media-pipeline": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/text": "workspace:*"
+    "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
     "@narratage/core": "workspace:*",

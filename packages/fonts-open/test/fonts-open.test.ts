@@ -12,7 +12,7 @@ import {
   openFontFamilyNames,
 } from "@narratage/fonts-open";
 import type { FontArtifactRef, FontStackRef } from "@narratage/media";
-import type { StructuredElement, StructuredSurfaceHandler } from "@narratage/text";
+import type { StructuredElement, StructuredSurfaceHandler } from "@narratage/markup";
 
 const require = createRequire(import.meta.url);
 const range = { start: 0, end: 80 };

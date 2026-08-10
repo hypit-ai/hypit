@@ -125,10 +125,6 @@ export type Narrative = {
     readonly contract: "svml.semantic-index@1";
     readonly anchors: readonly SemanticAnchor[];
   };
-  readonly serializations: {
-    readonly dialogue: string;
-    readonly speech: string;
-  };
 };
 
 /**
@@ -142,28 +138,4 @@ export type NarrativeExcerpt = {
   readonly id: string;
   readonly tokenStart: number;
   readonly tokenEndExclusive: number;
-  readonly serializations: {
-    readonly dialogue: string;
-    readonly speech: string;
-  };
-};
-
-/** The exact dialogue prompt for one Segment, including only explicitly authored Role prefixes. */
-export type NarrativeDialogueExcerpt = {
-  readonly contract: "svml.narrative-dialogue-excerpt@1";
-  readonly kind: "segment";
-  readonly id: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly dialogue: string;
-};
-
-/** The exact spoken wording for one Segment, without Role prefixes. */
-export type NarrativeSpeechExcerpt = {
-  readonly contract: "svml.narrative-speech-excerpt@1";
-  readonly kind: "segment";
-  readonly id: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly speech: string;
 };

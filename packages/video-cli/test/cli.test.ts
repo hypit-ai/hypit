@@ -18,7 +18,7 @@ const runCli = (
 test("production video CLI has no implicit author or Run packages", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-empty-distribution-"));
   const file = join(root, "main.svml");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
   <import from="@narratage/script@1"/>
   <script id="story"><opening><HOST>No hidden package.</opening></script>
@@ -36,7 +36,7 @@ async function writeRun(
   targets: readonly { readonly output: string; readonly accepts?: "exact" | "substitute" }[],
 ): Promise<string> {
   const path = join(root, name);
-  await writeFile(path, `<?svml using="@narratage/run-text@1"?>
+  await writeFile(path, `<?svml using="@narratage/run-markup@1"?>
 <svrun version="1" targets="selected">
   <author source="./main.svml"/>
   <target-set id="selected">
@@ -56,7 +56,7 @@ test("official video CLI checks a real Script source through the Node compiler h
       font-size: 72;
     }
   </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
     <import from="@narratage/script@1"/>
     <import as="studio" source="./studio.svs"/>
@@ -80,6 +80,7 @@ test("official video CLI checks a real Script source through the Node compiler h
     "@narratage/narrative@1",
     "@narratage/script@1",
     "@narratage/svs@1",
+    "@narratage/text@1",
   ]);
   assert.deepEqual(result.exports, [
     { name: "story", type: {
@@ -99,12 +100,12 @@ test("official video CLI checks a real Script source through the Node compiler h
       name: "NarrativeExcerpt",
     }, kind: "record" },
     { name: "story.segment.opening.dialogue", type: {
-      module: { name: "@narratage/narrative", version: "1" },
-      name: "NarrativeDialogueExcerpt",
+      module: { name: "@narratage/text", version: "1" },
+      name: "Text",
     }, kind: "record" },
     { name: "story.segment.opening.speech", type: {
-      module: { name: "@narratage/narrative", version: "1" },
-      name: "NarrativeSpeechExcerpt",
+      module: { name: "@narratage/text", version: "1" },
+      name: "Text",
     }, kind: "record" },
   ]);
 });
@@ -124,7 +125,7 @@ test("author source binds an ordered exact Font stack to a Fine Caption Style", 
     fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
   }
 </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
   <import as="media" from="@narratage/media@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
@@ -161,7 +162,7 @@ test("an installed open-font package supplies a multilingual exact stack without
     fill: #ffffff; background: #00000000; padding: 0 0; radius: 0;
   }
 </sheet>`, "utf8");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
   <import as="fonts" from="@narratage/fonts-open@1"/>
   <import as="caption-fine" from="@narratage/caption-fine@1"/>
@@ -186,8 +187,8 @@ test("an installed open-font package supplies a multilingual exact stack without
   );
 });
 
-test("Prompt Kit source and Speaker Surface finish prompt assembly before the Run Graph", async () => {
-  const root = await mkdtemp(join(tmpdir(), "svml-cli-prompt-kit-"));
+test("Text Template and Speaker keep prompt assembly visible in the Run Graph", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-text-template-"));
   const file = join(root, "main.svml");
   const kitSource = await readFile(
     new URL("../../seedance-speaker/kits/official-ugc-v1.svs", import.meta.url),
@@ -200,7 +201,7 @@ test("Prompt Kit source and Speaker Surface finish prompt assembly before the Ru
   speaker.default { kind: ugc-talking-head; model: mini; resolution: 720p; aspect-ratio: 9:16; }
 </sheet>`, "utf8");
   await writeFile(join(root, "host.png"), new Uint8Array([137, 80, 78, 71]));
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
   <import from="@narratage/script@1"/>
   <import as="media" from="@narratage/media@1"/>
@@ -236,16 +237,15 @@ test("Prompt Kit source and Speaker Surface finish prompt assembly before the Ru
   };
   assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
     "bind-request-seedance-2-mini-referenceImage",
+    "bind-request-seedance-2-mini-prompt-text",
+    "bind-text",
     "compile-seedance-2-mini-speech-request",
     "estimate-speech-duration",
     "finalize-request-seedance-2-mini",
     "request-seedance-2-mini",
+    "render",
     "select-primary-video",
   ].sort());
-  assert.equal(
-    plan.steps.some((step) => /prompt|speaker/u.test(step.producer.name)),
-    false,
-  );
 });
 
 test("CLI accepts a declarative Runtime Profile without an executable config module", async () => {
@@ -317,7 +317,7 @@ test("one checked-in fixture closes the complete provider-free video plan", asyn
     "request-media-normalization",
     "project-media-visual-track",
     "render-fine-caption",
-    "render-text-track",
+    "render-typography-track",
     "compile-composition",
     "request-visual-render",
     "request-audio-render",
@@ -355,8 +355,8 @@ test("CLI package lock activates an installed package without changing the offic
           implementation: { kind: "trusted-frontend-surface", locator: "example/empty", digest } }],
       }, specifiers: ["example.empty@1"] }],
       hostFacets: [{
-        abi: "svml.text-surface-host@1",
-        identity: { contract: "svml.text-surface-host-facet@1", module, surface: "empty",
+        abi: "svml.markup-surface-host@1",
+        identity: { contract: "svml.markup-surface-host-facet@1", module, surface: "empty",
           mode: "structured", implementationDigest: digest },
         implementation() { return { records: [], components: [], fragments: [] }; },
       }],
@@ -364,7 +364,7 @@ test("CLI package lock activates an installed package without changing the offic
   `, "utf8");
   const file = join(root, "main.svml");
   const lockPath = join(root, "svml.packages.lock");
-  await writeFile(file, `<?svml using="@narratage/text@1"?>
+  await writeFile(file, `<?svml using="@narratage/markup@1"?>
 <svml>
     <import as="example" from="example.empty@1"/>
     <example:Empty/>

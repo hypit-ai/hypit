@@ -32,7 +32,7 @@ import { speechEvidenceManifest } from "@narratage/speech-evidence";
 import { speechManifest } from "@narratage/speech";
 import { sealCanvasSpace, spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@narratage/spatial";
 import { temporalManifest } from "@narratage/temporal";
-import { TextSurfaceRegistry, createTextAuthorFrontend } from "@narratage/text";
+import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@narratage/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 import { visualIrManifest } from "@narratage/visual-ir";
 
@@ -164,7 +164,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     screenOverlayManifest,
     fixtureManifest,
   ]);
-  const registry = new TextSurfaceRegistry();
+  const registry = new MarkupSurfaceRegistry();
   registry.registerStructured(fixtureModule, "inputs", fixtureSurfaceDigest, ({ element }) => ({
     records: [
       { id: "canvas", type: spatialTypes.canvas, value: { kind: "inline", value: canvas }, range: element.range },
@@ -180,7 +180,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     decodeScreenOverlaySurface,
   );
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry,
     resolveModule: (request) => request.from === "example.screen-inputs@1" ? fixtureModule : screenOverlayModuleRef,
   }));
@@ -190,7 +190,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
     entry: {
       id: "/project/screen.svml",
       name: "screen.svml",
-      text: `<?svml using="@narratage/text@1"?>
+      text: `<?svml using="@narratage/markup@1"?>
       <svml>
         <import as="fixture" from="example.screen-inputs@1"/>
         <import as="screen" from="@narratage/screen-overlay@1"/>

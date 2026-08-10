@@ -7,6 +7,7 @@ import type {
   CaptionDisplayWord,
   CaptionDisplayWordSubset,
 } from "@narratage/narrative";
+import { sealText } from "@narratage/text";
 
 import type { ParsedCaptionRegion, ParsedNarrative } from "./types.js";
 
@@ -226,29 +227,6 @@ function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
   return { dialogue: dialogue.join("\n"), speech: joinProjection(speechParts) };
 }
 
-function excerptContent(
-  segment: ParsedNarrative["segments"][number],
-  projection: "dialogue" | "speech",
-): {
-  readonly kind: "segment";
-  readonly id: string;
-  readonly tokenStart: number;
-  readonly tokenEndExclusive: number;
-  readonly dialogue?: string;
-  readonly speech?: string;
-} {
-  const serializations = segmentSerializations(segment);
-  return {
-    kind: "segment",
-    id: segment.id,
-    tokenStart: segment.tokenStart,
-    tokenEndExclusive: segment.tokenEndExclusive,
-    ...(projection === "dialogue"
-      ? { dialogue: serializations.dialogue }
-      : { speech: serializations.speech }),
-  };
-}
-
 export function narrativeSegmentExcerptValue(
   parsed: ParsedNarrative,
   segment: ParsedNarrative["segments"][number],
@@ -259,29 +237,20 @@ export function narrativeSegmentExcerptValue(
     id: segment.id,
     tokenStart: segment.tokenStart,
     tokenEndExclusive: segment.tokenEndExclusive,
-    serializations: segmentSerializations(segment),
   } as const;
   return canonicalize(content);
 }
 
-export function narrativeDialogueExcerptValue(
+export function narrativeDialogueTextValue(
   segment: ParsedNarrative["segments"][number],
 ): CanonicalValue {
-  const content = {
-    contract: "svml.narrative-dialogue-excerpt@1",
-    ...excerptContent(segment, "dialogue"),
-  } as const;
-  return canonicalize(content);
+  return sealText(segmentSerializations(segment).dialogue) as unknown as CanonicalValue;
 }
 
-export function narrativeSpeechExcerptValue(
+export function narrativeSpeechTextValue(
   segment: ParsedNarrative["segments"][number],
 ): CanonicalValue {
-  const content = {
-    contract: "svml.narrative-speech-excerpt@1",
-    ...excerptContent(segment, "speech"),
-  } as const;
-  return canonicalize(content);
+  return sealText(segmentSerializations(segment).speech) as unknown as CanonicalValue;
 }
 
 export function narrativeSelectionValue(selection: ParsedNarrative["selections"][number]): CanonicalValue {
@@ -353,7 +322,6 @@ export function narrativeValue(parsed: ParsedNarrative): CanonicalValue {
       })),
     })),
     semanticIndex: parsed.semanticIndex,
-    serializations: parsed.serializations,
   });
 }
 

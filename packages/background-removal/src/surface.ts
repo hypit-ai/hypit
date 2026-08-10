@@ -1,5 +1,5 @@
 import { artifactTypes } from "@narratage/artifact";
-import type { StructuredSurfaceHandler, SurfaceResolvedReference, TextAttributeValue } from "@narratage/text";
+import type { StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@narratage/markup";
 
 import { backgroundRemovalFragment } from "./fragment.js";
 
@@ -13,7 +13,7 @@ export const decodeBackgroundRemovalSurface: StructuredSurfaceHandler = ({ eleme
   if (element.children.some((child) => child.kind === "element" || child.value.trim())) throw new Error(`${element.name} must be empty.`);
   const id = element.attributes.id;
   if (typeof id !== "string" || !id.trim()) throw new Error(`${element.name}.id must be text.`);
-  const raw: TextAttributeValue | undefined = element.attributes.source;
+  const raw: MarkupAttributeValue | undefined = element.attributes.source;
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${element.name}.source must be a reference.`);
   const source = resolveReference(raw.path);
   if (source === undefined || !sameType(source.type, artifactTypes.blob)) throw new Error(`${element.name}.source must be a Blob Artifact.`);

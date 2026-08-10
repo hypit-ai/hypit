@@ -27,6 +27,7 @@ import {
   scriptSurfaceImplementationDigest,
 } from "@narratage/script";
 import { speechBasisManifest, speechBasisProducers } from "@narratage/speech-basis";
+import { textComponent, textManifest } from "@narratage/text";
 import { mediaTrackManifest } from "@narratage/media-track";
 import {
   decodeSpeechSpineSurface,
@@ -42,9 +43,9 @@ import {
   spatialSurfaceDigests,
 } from "@narratage/spatial";
 import {
-  TextSurfaceRegistry,
-  createTextAuthorFrontend,
-} from "@narratage/text";
+  MarkupSurfaceRegistry,
+  createMarkupAuthorFrontend,
+} from "@narratage/markup";
 import { createRecordAdmitter, TypeValidatorRegistry } from "@narratage/validation";
 
 const fixtureModule = { name: "example.speech-media", version: "1" } as const;
@@ -65,7 +66,7 @@ function source(text: string): AuthorSourceUnit {
   return {
     id: "/project/main.svml",
     name: "main.svml",
-    text: `<?svml using="@narratage/text@1"?>\n${text}`,
+    text: `<?svml using="@narratage/markup@1"?>\n${text}`,
   };
 }
 
@@ -76,10 +77,11 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     mediaTrackManifest,
     speechBasisManifest,
     speechSpineManifest,
+    textManifest,
     scriptManifest,
     fixtureManifest,
   ]);
-  const surfaces = new TextSurfaceRegistry();
+  const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerRaw(scriptModuleRef, "script", scriptSurfaceImplementationDigest, decodeScriptSurface);
   surfaces.registerStructured(speechSpineModuleRef, "spine", speechSpineSurfaceImplementationDigest, decodeSpeechSpineSurface);
   surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
@@ -92,7 +94,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     components: [], fragments: [],
   }));
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createTextAuthorFrontend({
+  frontends.register(createMarkupAuthorFrontend({
     registry: surfaces,
     resolveModule(request) {
       if (request.from.startsWith("@narratage/script")) return scriptModuleRef;
@@ -104,6 +106,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   const validators = new TypeValidatorRegistry();
   registerTypeValidatorFacets(validators, mediaPipelineComponent.validators ?? []);
   registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
+  registerTypeValidatorFacets(validators, textComponent.validators ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import from="@narratage/script@1"/>
