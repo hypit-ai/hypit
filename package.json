@@ -62,6 +62,7 @@
     "@narratage/script": "workspace:*",
     "@narratage/screen-overlay": "workspace:*",
     "@narratage/seedance": "workspace:*",
+    "@narratage/seedance-kits": "workspace:*",
     "@narratage/seedance-speaker": "workspace:*",
     "@narratage/semantic-map": "workspace:*",
     "@narratage/speech": "workspace:*",

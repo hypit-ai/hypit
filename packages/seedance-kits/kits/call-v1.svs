@@ -1,0 +1,56 @@
+<?svml using="@narratage/text/svs@1"?>
+
+<sheet version="1" id="call-v1">
+  text-template.call-v1 {
+    separator: paragraph;
+    default-framing: locked-view;
+    default-edit-language: speaker-cuts;
+    default-pacing: compact;
+    default-performance: natural-banter;
+    default-reaction: active-listening;
+    default-gesture: natural;
+  }
+  text-template.call-v1.block.base { kind: fixed; order: 10; text: "Create a realistic vertical edited two-person video-call clip from two final video-call interface reference images."; }
+  text-template.call-v1.block.reference { kind: fixed; order: 20; text: "REFERENCE CONTRACT: @image1 has Host A in the main tile and Host B in the picture-in-picture tile; @image2 reverses those roles. Preserve identity, outfit, rooms, lighting, webcam perspective, interface layout, borders, controls, and geometry."; }
+  text-template.call-v1.block.live { kind: fixed; order: 30; text: "LIVE TILE CONTRACT: both tiles are live feeds. The speaker has richer face and body action; the other participant stays silent but responsive."; }
+  text-template.call-v1.block.speaker { kind: fixed; order: 40; text: "SPEAKER MAP: follow A: and B: exactly. A: uses @image1 as the visible call view; B: uses @image2."; }
+  text-template.call-v1.block.voice { kind: fixed; order: 50; text: "VOICE MAP: Host A uses @audio1 and speaks only A: lines. Host B uses @audio2 and speaks only B: lines."; }
+
+  text-template.call-v1.block.framing { kind: axis; order: 60; parameter: framing; }
+  text-template.call-v1.choice.framing.locked-view { text: "FRAMING: preserve the exact baseline call layout, crop, scale, and tile relationship."; }
+  text-template.call-v1.choice.framing.soft-push-in { text: "FRAMING: use one subtle digital push-in inside the main tile, then return to baseline."; }
+  text-template.call-v1.choice.framing.emphasis-closeup { text: "FRAMING: use one modest emphasis close-up inside the main tile while preserving the call UI."; }
+
+  text-template.call-v1.block.edit { kind: axis; order: 70; parameter: edit-language; }
+  text-template.call-v1.choice.edit.speaker-cuts { text: "CUT PATTERN: speaker-following reverse views; the current speaker occupies the main tile."; }
+  text-template.call-v1.choice.edit.reaction-cuts { text: "CUT PATTERN: add brief listener-view reaction cutaways during longer explanations, then return to the speaker."; }
+
+  text-template.call-v1.block.pacing { kind: axis; order: 80; parameter: pacing; }
+  text-template.call-v1.choice.pacing.measured { text: "PACING: measured; each line finishes cleanly before a short natural response beat."; }
+  text-template.call-v1.choice.pacing.compact { text: "PACING: compact responsive handoffs with enough articulation for every line."; }
+  text-template.call-v1.choice.pacing.rapid-banter { text: "PACING: rapid banter with interruption-like momentum while remaining intelligible."; }
+  text-template.call-v1.choice.pacing.varied-emphasis { text: "PACING: compact overall, slowing slightly for important names, numbers, doubts, and payoffs."; }
+
+  text-template.call-v1.block.performance { kind: axis; order: 90; parameter: performance; }
+  text-template.call-v1.choice.performance.natural-banter { text: "PERFORMANCE: natural responsive video-call banter."; }
+  text-template.call-v1.choice.performance.high-energy { text: "PERFORMANCE: vivid, quick, expressive short-form video-call energy."; }
+  text-template.call-v1.choice.performance.calm-expert { text: "PERFORMANCE: composed, precise, trustworthy expert discussion."; }
+  text-template.call-v1.choice.performance.playful-skeptic { text: "PERFORMANCE: playful skeptical chemistry with teasing smiles and amused disbelief."; }
+
+  text-template.call-v1.block.reaction { kind: axis; order: 100; parameter: reaction; }
+  text-template.call-v1.choice.reaction.subtle-listening { text: "EXPRESSION: both tiles stay alive through tiny nods, eye focus, breath, and small changes."; }
+  text-template.call-v1.choice.reaction.active-listening { text: "EXPRESSION: both tiles track the conversation with nods, smiles, and readable facial shifts."; }
+  text-template.call-v1.choice.reaction.skeptical-reacts { text: "EXPRESSION: skeptical eyebrows, amused disbelief, tiny laughs, and attentive eye movement."; }
+  text-template.call-v1.choice.reaction.big-reacts { text: "EXPRESSION: lively surprise, laughter, disbelief, and recognition while remaining coherent."; }
+
+  text-template.call-v1.block.gesture { kind: axis; order: 110; parameter: gesture; }
+  text-template.call-v1.choice.gesture.restrained { text: "GESTURE: restrained on-camera body language with very small hand beats."; }
+  text-template.call-v1.choice.gesture.compact { text: "GESTURE: compact semantic gestures kept inside each tile."; }
+  text-template.call-v1.choice.gesture.natural { text: "GESTURE: natural open palms, small points, nods, and posture shifts."; }
+  text-template.call-v1.choice.gesture.expressive { text: "GESTURE: richer hand, shoulder, posture, and face changes within the call framing."; }
+
+  text-template.call-v1.block.hygiene { kind: fixed; order: 120; text: "AUDIO AND TEXTURE: clean dialogue and realistic screen-recorded call footage. Add no subtitles, captions, chat bubbles, notification cards, or readable overlays; preserve interface elements already present in the references."; }
+  text-template.call-v1.block.dialogue { kind: slot; order: 130; slot: dialogue; optional: false; label: "DIALOGUE SCRIPT TO DELIVER:"; }
+  text-template.call-v1.block.action { kind: slot; order: 140; slot: action; optional: true; }
+  text-template.call-v1.block.extra { kind: slot; order: 150; slot: extra; optional: true; }
+</sheet>

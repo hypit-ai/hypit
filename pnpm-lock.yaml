@@ -125,6 +125,9 @@ importers:
       '@narratage/seedance':
         specifier: workspace:*
         version: link:packages/seedance
+      '@narratage/seedance-kits':
+        specifier: workspace:*
+        version: link:packages/seedance-kits
       '@narratage/seedance-speaker':
         specifier: workspace:*
         version: link:packages/seedance-speaker
@@ -2151,6 +2154,8 @@ importers:
       '@narratage/text':
         specifier: workspace:*
         version: link:../text
+
+  packages/seedance-kits: {}
 
   packages/seedance-speaker:
     dependencies:

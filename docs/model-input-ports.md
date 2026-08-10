@@ -250,9 +250,10 @@ relationship is N+M.
 Current status is recorded in [`implementation-status.md`](./implementation-status.md); the shared
 Capability and Endpoint rules are in [`architecture.md`](./architecture.md) §6.
 
-## What this makes cheap next
+## What this keeps cheap
 
-Adding a service is now a mapping or bounded Provider translator plus its transport, with no model
-package or Core touched. The planned next phase brings the common aggregator services in as a batch
-on that basis; its scope, the optimisations deliberately deferred until several mappings exist, and
-the two rules that hold throughout are recorded in [`roadmap.md`](./roadmap.md) B4.
+Adding a service is a mapping or bounded Provider translator plus its transport, with no model
+package or Core touched. A prompt-only author Kit is just a Text Template composed with generic
+Text and exact-model Surfaces; a new Surface is needed only when the Kit owns additional lowering
+semantics. Neither case touches Provider or Core. Additional services are added only when a
+deployment actually selects them; there is no speculative aggregator batch.

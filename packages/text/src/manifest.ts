@@ -19,7 +19,7 @@ export const textProducers = {
 export const textImplementationDigests = {
   svsFrontend: digestOf("@narratage/text/svs-frontend@1"),
   valueSurface: digestOf("@narratage/text/value-surface@1"),
-  renderSurface: digestOf("@narratage/text/render-surface@1"),
+  renderSurface: digestOf("@narratage/text/render-surface-with-recipe@1"),
   validateText: digestOf("@narratage/text/validate-text@1"),
   validateTemplate: digestOf("@narratage/text/validate-template@1"),
   validateBindings: digestOf("@narratage/text/validate-bindings@1"),

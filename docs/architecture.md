@@ -91,11 +91,17 @@ definitions. It has no model, prompt, video, Provider or Markup knowledge.
 
 `@narratage/text/svs@1` is only an optional authoring Frontend for one flat Recipe convention. It
 lowers fixed/axis/variant/slot Recipes to the same `TextTemplate`; it is not the execution engine and
-SVS itself still evaluates nothing. A domain Surface may bind Script text or other graph-produced
-`Text` values into that template, but the resulting render remains a visible graph component whose
+SVS itself still evaluates nothing. Generic `text:Render` may project a referenced Recipe's declared
+scalar properties into template bindings, with explicit Params taking precedence. A domain Surface
+may bind Script text or other graph-produced `Text` values into that template, but the resulting render remains a visible graph component whose
 `Text` output is targetable and replaceable like any other logical result.
 
-For example, `@narratage/seedance-speaker` imports its `official-ugc-v1.svs` Text Template, lowers the
+`@narratage/seedance-kits` demonstrates the boundary: B-roll, Podcast, Call, Street Interview,
+Motion Reference and Camera Reference are six data-only Text Templates. They do not declare model
+ports or execution. Their rendered Text and explicitly referenced media feed the same generic
+`seedance:ReferenceVideo` Surface.
+
+For example, `@narratage/seedance-speaker` consumes an explicitly imported `official-ugc-v1.svs` Text Template, lowers the
 selected static axes to initial bindings, and binds Script's ordinary dialogue `Text` plus optional
 action/extra Text edges into the template. The rendered output then enters Seedance's exact
 `prompt` port. Script emits speech and dialogue as independent Text Records rather than copying
