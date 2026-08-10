@@ -151,6 +151,12 @@
       "@narratage/local": [
         "packages/local/src/index.ts"
       ],
+      "@narratage/local/config": [
+        "packages/local/src/config.ts"
+      ],
+      "@narratage/local/external-services": [
+        "packages/local/src/external-services.ts"
+      ],
       "@narratage/generation": [
         "packages/generation/src/index.ts"
       ],

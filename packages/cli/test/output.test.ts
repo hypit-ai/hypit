@@ -1,0 +1,176 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import type { BuildPlan } from "@narratage/protocol";
+
+import { renderCliError, writeCliHelp, writeCliOutput } from "../src/output.js";
+
+const digest = `sha256:${"1".repeat(64)}` as const;
+
+function capture(
+  options: Parameters<typeof writeCliOutput>[1],
+  presentation: Parameters<typeof writeCliOutput>[2],
+  terminal?: Parameters<typeof writeCliOutput>[0]["terminal"],
+): string {
+  let output = "";
+  writeCliOutput({
+    write(text) { output += text; },
+    ...(terminal === undefined ? {} : { terminal }),
+  }, options, presentation);
+  return output;
+}
+
+const human = { json: false, color: "auto", verbose: false } as const;
+
+test("author check renders a compact human summary without dumping identity", () => {
+  const output = capture(human, {
+    kind: "check-author",
+    source: "/project/main.svml",
+    frontend: "@narratage/markup@1",
+    machine: {
+      format: "narratage.cli-check@1",
+      sourceKind: "author",
+      ok: true,
+      sourceClosure: digest,
+      moduleClosure: digest,
+      graph: digest,
+      units: 2,
+      sourceAssets: [{ digest }],
+      modules: ["@narratage/script@1"],
+      exports: [{
+        name: "story",
+        type: { module: { name: "@narratage/narrative", version: "1" }, name: "Narrative" },
+        kind: "record",
+      }],
+    },
+  });
+  assert.match(output, /✓ Source is valid/u);
+  assert.match(output, /Frontend\s+@narratage\/markup@1/u);
+  assert.match(output, /story\s+@narratage\/narrative@1\/Narrative/u);
+  assert.doesNotMatch(output, /sha256:/u);
+  assert.doesNotMatch(output, /\u001b\[/u);
+});
+
+test("large author exports are bounded until verbose output is requested", () => {
+  const exports = Array.from({ length: 15 }, (_, index) => ({
+    name: `output-${String(index).padStart(2, "0")}`,
+    type: { module: { name: "example", version: "1" }, name: "Value" },
+    kind: "logical-output",
+  }));
+  const presentation = {
+    kind: "check-author" as const,
+    source: "/project/main.svml",
+    frontend: "example@1",
+    machine: {
+      format: "narratage.cli-check@1" as const,
+      sourceKind: "author" as const,
+      ok: true as const,
+      sourceClosure: digest,
+      moduleClosure: digest,
+      graph: digest,
+      units: 1,
+      sourceAssets: [],
+      modules: [],
+      exports,
+    },
+  };
+  const compact = capture(human, presentation);
+  assert.match(compact, /3 more · use --verbose/u);
+  assert.doesNotMatch(compact, /output-14/u);
+  assert.match(capture({ ...human, verbose: true }, presentation), /output-14/u);
+});
+
+test("verbose human output reveals shortened identities", () => {
+  const output = capture({ ...human, verbose: true }, {
+    kind: "check-author",
+    source: "/project/main.svml",
+    frontend: "@narratage/markup@1",
+    machine: {
+      format: "narratage.cli-check@1",
+      sourceKind: "author",
+      ok: true,
+      sourceClosure: digest,
+      moduleClosure: digest,
+      graph: digest,
+      units: 1,
+      sourceAssets: [],
+      modules: [],
+      exports: [],
+    },
+  });
+  assert.match(output, /Identity/u);
+  assert.match(output, /sha256:11111111…111111/u);
+});
+
+test("JSON mode is exact machine data with no terminal decoration", () => {
+  const machine = {
+    format: "narratage.cli-doctor@1" as const,
+    ok: false,
+    root: "/project",
+    diagnostics: [{ severity: "error" as const, code: "MISSING", message: "not found" }],
+  };
+  const output = capture({ json: true, color: "always", verbose: true }, {
+    kind: "doctor",
+    profile: "/project/svml.runtime.json",
+    machine,
+  }, { isTTY: true, color: true, unicode: true, columns: 100 });
+  assert.deepEqual(JSON.parse(output), machine);
+  assert.doesNotMatch(output, /Narratage Doctor/u);
+  assert.doesNotMatch(output, /\u001b\[/u);
+});
+
+test("plan groups operations by their declaring module", () => {
+  const plan: BuildPlan = {
+    format: "svml.plan@1",
+    id: digest,
+    graph: digest,
+    request: digest,
+    initialValues: [],
+    steps: [{
+      id: "step-1",
+      producer: { module: { name: "@narratage/media", version: "1" }, name: "inspect" },
+      fidelity: "exact",
+      inputs: {},
+      outputs: {},
+      needs: {},
+    }, {
+      id: "step-2",
+      producer: { module: { name: "@narratage/media", version: "1" }, name: "normalize" },
+      fidelity: "substitute",
+      inputs: {},
+      outputs: {},
+      needs: {},
+    }],
+    goals: [],
+    selections: [],
+  };
+  const output = capture(human, { kind: "plan", machine: plan, run: "/project/build.svrun", targetSet: "film" });
+  assert.match(output, /2\s+@narratage\/media@1/u);
+  assert.match(output, /Exact\s+1/u);
+  assert.match(output, /Substitute\s+1/u);
+  assert.match(output, /No external work was started\./u);
+});
+
+test("human errors expose stable codes while JSON errors remain parseable", () => {
+  const error = Object.assign(new Error("credential is absent"), { code: "RUNTIME_CREDENTIAL_MISSING" });
+  const humanError = renderCliError(error, { json: false, color: false, unicode: true, debug: false });
+  assert.match(humanError, /× Command failed/u);
+  assert.match(humanError, /RUNTIME_CREDENTIAL_MISSING/u);
+  const machine = JSON.parse(renderCliError(error, {
+    json: true,
+    color: true,
+    unicode: true,
+    debug: false,
+  })) as { readonly format: string; readonly error: { readonly code: string } };
+  assert.equal(machine.format, "narratage.cli-error@1");
+  assert.equal(machine.error.code, "RUNTIME_CREDENTIAL_MISSING");
+});
+
+test("help is a successful product surface rather than a usage error", () => {
+  let output = "";
+  writeCliHelp({ write(text) { output += text; } });
+  assert.match(output, /^Narratage\n/u);
+  assert.match(output, /Authoring/u);
+  assert.match(output, /--json/u);
+  assert.doesNotMatch(output, /CLI_ERROR/u);
+});

@@ -25,3 +25,9 @@ Another domain can reuse this command engine without installing any video packag
 `check` accepts any self-described Author or Run Source whose Header names a trusted Frontend.
 `plan` and `build` require a Run Source. Targets, Candidate selections and substitute fidelity may
 not be synthesized by CLI flags; they are visible Run Graph meaning.
+
+The command engine has one structured presentation seam. `check`, `plan` and `doctor` currently
+render compact human output by default; `--verbose` reveals closure identities and complete lists,
+while explicit `--json` preserves full machine-readable data without ANSI or progress prose.
+TTY capability is supplied only by the executable Distribution entrypoint. Providers, components
+and Frontends return structured facts and never print directly to the terminal.

@@ -38,6 +38,10 @@ Build; no example-specific harness or hidden third workflow graph is required.
 
 Implemented:
 
+- one structured CLI presentation seam with restrained TTY/plain human output for `check`, `plan`
+  and `doctor`, explicit full `--json`, optional verbose identities, bounded default lists and
+  structured JSON/human error rendering; components and Providers receive no terminal authority;
+
 - `@narratage/protocol`: immutable Manifests, Types, Graph, Build and provenance wire data;
 - `@narratage/artifact`: domain-neutral nominal `BlobArtifact` contract, independent of video Media and
   Runtime ArtifactStore implementations;
