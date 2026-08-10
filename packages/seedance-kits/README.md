@@ -23,8 +23,30 @@ ordinary explicit graph edges:
 </seedance:ReferenceVideo>
 ```
 
-The six templates are:
+Speaker uses the same graph vocabulary. The Kit assumes `@image1` is the visible person and
+`@audio1` is the voice-timbre reference; it owns no media counting or generation wrapper:
 
+```svml
+<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+
+<text:Render id="hook-prompt"
+  template={speaker-kit.speaker-v1}
+  recipe={studio.speaker.host}>
+  <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
+  <text:Set name="action" text={hook-action}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="hook-take" model="mini"
+  prompt={hook-prompt} duration={hook-duration.duration}
+  resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={presenter}/>
+  <seedance:Reference audio={voice}/>
+</seedance:ReferenceVideo>
+```
+
+The seven templates are:
+
+- `speaker-v1`: one visible speaker, one character-and-scene image and one voice reference;
 - `broll-v1`: silent visual micro-story;
 - `podcast-v1`: two fixed podcast views with two voices;
 - `call-v1`: two live video-call reverse views;
@@ -32,6 +54,6 @@ The six templates are:
 - `motion-reference-v1`: preserve the subject and transfer body motion only;
 - `camera-reference-v1`: preserve the subject and transfer camera language only.
 
-The first four retain the useful orthogonal prompt axes from Twinit. Historical aliases that emitted
+Speaker, B-roll, Podcast, Call and Street Interview retain useful orthogonal prompt axes from the legacy implementation. Historical aliases that emitted
 identical prose were removed. Speed, trim, last-frame extraction and audio extraction are ordinary
 media operations and intentionally do not live in these templates.

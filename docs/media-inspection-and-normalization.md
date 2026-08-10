@@ -77,7 +77,7 @@ therefore incapable of satisfying `SpeechAudioBasis` by itself.
 
 ## One source presentation origin
 
-The old Twinit implementation proved why independent stream reset is unsafe. A synthetic source had
+The legacy implementation proved why independent stream reset is unsafe. A synthetic source had
 video starting at 0.400s and audio at 0.628s. Independently applying `PTS-STARTPTS` changed their
 relative timing by 228ms.
 

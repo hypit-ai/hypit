@@ -72,6 +72,6 @@ families preserve every Unicode-range shard from their installed CSS as one logi
 faces referenced by the Author Graph enter a Build transfer bundle and ArtifactStore.
 
 Every catalog entry is either SIL OFL 1.1 or Apache 2.0. Tests compare the declared license against
-the installed package's own metadata. The four private/local Twinit fonts were intentionally not
+the installed package's own metadata. The four private/local legacy fonts were intentionally not
 migrated: public redistribution requires an independently verified license, and brand fonts remain
 explicit `<media:Font>` author assets.

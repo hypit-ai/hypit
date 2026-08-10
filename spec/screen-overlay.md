@@ -199,7 +199,7 @@ Composition never switch on the package family and never force it to the top.
 If one overlay package emits multiple Presents at different stacking positions, peer Tracks may
 interleave between them exactly as required by the flat Track law.
 
-## 8. Twinit migration audit
+## 8. Legacy migration audit
 
 Retain:
 

@@ -128,9 +128,6 @@ importers:
       '@narratage/seedance-kits':
         specifier: workspace:*
         version: link:packages/seedance-kits
-      '@narratage/seedance-speaker':
-        specifier: workspace:*
-        version: link:packages/seedance-speaker
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:packages/semantic-map
@@ -2156,39 +2153,6 @@ importers:
         version: link:../text
 
   packages/seedance-kits: {}
-
-  packages/seedance-speaker:
-    dependencies:
-      '@narratage/artifact':
-        specifier: workspace:*
-        version: link:../artifact
-      '@narratage/elaborator':
-        specifier: workspace:*
-        version: link:../elaborator
-      '@narratage/generation':
-        specifier: workspace:*
-        version: link:../generation
-      '@narratage/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@narratage/model-kit':
-        specifier: workspace:*
-        version: link:../model-kit
-      '@narratage/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@narratage/seedance':
-        specifier: workspace:*
-        version: link:../seedance
-      '@narratage/speech':
-        specifier: workspace:*
-        version: link:../speech
-      '@narratage/svs':
-        specifier: workspace:*
-        version: link:../svs
-      '@narratage/text':
-        specifier: workspace:*
-        version: link:../text
 
   packages/seedream:
     dependencies:

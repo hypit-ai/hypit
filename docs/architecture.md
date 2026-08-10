@@ -96,15 +96,15 @@ scalar properties into template bindings, with explicit Params taking precedence
 may bind Script text or other graph-produced `Text` values into that template, but the resulting render remains a visible graph component whose
 `Text` output is targetable and replaceable like any other logical result.
 
-`@narratage/seedance-kits` demonstrates the boundary: B-roll, Podcast, Call, Street Interview,
-Motion Reference and Camera Reference are six data-only Text Templates. They do not declare model
+`@narratage/seedance-kits` demonstrates the boundary: Speaker, B-roll, Podcast, Call, Street Interview,
+Motion Reference and Camera Reference are seven data-only Text Templates. They do not declare model
 ports or execution. Their rendered Text and explicitly referenced media feed the same generic
 `seedance:ReferenceVideo` Surface.
 
-For example, `@narratage/seedance-speaker` consumes an explicitly imported `official-ugc-v1.svs` Text Template, lowers the
-selected static axes to initial bindings, and binds Script's ordinary dialogue `Text` plus optional
-action/extra Text edges into the template. The rendered output then enters Seedance's exact
-`prompt` port. Script emits speech and dialogue as independent Text Records rather than copying
+For example, `speaker-v1.svs` consumes selected static axes and Script's ordinary dialogue `Text`
+through generic `text:Render`. The rendered output then enters Seedance's exact `prompt` port;
+image and audio references remain explicit children of `seedance:ReferenceVideo`. Script emits
+speech and dialogue as independent Text Records rather than copying
 either serialization into Narrative payloads. The same Text component can feed GPT Image or another model
 port; Provider code receives only the finalized model request and never knows which template or
 Surface produced it.

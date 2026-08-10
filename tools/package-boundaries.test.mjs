@@ -185,7 +185,6 @@ test("generic and video CLIs reach no Provider package and video CLI activates n
   const videoDependencies = transitive(graph, "@narratage/video-cli");
   assert.deepEqual(providers.filter((name) => videoDependencies.has(name)), []);
   assert.ok(!videoDependencies.has("@narratage/script"));
-  assert.ok(!videoDependencies.has("@narratage/seedance-speaker"));
   assert.ok(!videoDependencies.has("@narratage/media-track"));
   assert.ok(!videoDependencies.has("@narratage/typography-track"));
   assert.ok(!videoDependencies.has("@narratage/film"));
@@ -196,7 +195,7 @@ test("domain packages confine their Markup dependency to Surface and activation 
   const { readdir, readFile } = await import("node:fs/promises");
   const surfaceOnly = [
     "caption", "caption-gemini", "estimate", "film", "render-hyperframes",
-    "image-transform", "media", "media-pipeline", "media-track", "seedance", "seedance-speaker", "speech-spine", "whisperx",
+    "image-transform", "media", "media-pipeline", "media-track", "seedance", "speech-spine", "whisperx",
   ];
   const allowed = new Set(["surface.ts", "activation.ts"]);
   for (const name of surfaceOnly) {

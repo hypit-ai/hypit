@@ -229,7 +229,7 @@ between them.
 Relative depth determines only ordering among owned Cards. Temporary ordering during reflow exists
 only inside that explicit relationship. It does not allocate a global z band.
 
-## 10. Migration from Twinit
+## 10. Migration from the legacy implementation
 
 Retain from the old Deck implementation:
 
@@ -265,7 +265,7 @@ Retire:
 8. migrate one real old-system Deck and freeze only after the acceptance matrix passes.
 
 Steps 1–8 execute in `@narratage/deck-track`. Package tests cover every state, validation,
-playback, label and extension case below. The real HyperFrames witness renders a Twinit-style
+playback, label and extension case below. The real HyperFrames witness renders a legacy-style
 three-Card depth stack twice—one worker and three partitioned workers—and compares every decoded
 frame byte-for-byte while also proving each authored current state paints. This completes the Deck
 package acceptance matrix, and the independent generic E1–E8 terminal VisualTrack/Visual IR gates

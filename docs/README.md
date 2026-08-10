@@ -32,6 +32,7 @@ the working tree contains only documents that should inform current implementati
   Artifact retention and optional Host materialization as four separate concerns.
 - [`speech-alignment.md`](./speech-alignment.md) — the Script and the recording as two
   independent observations, and what locating guarantees.
+- [`demo-assets.md`](./demo-assets.md) — distribution boundary and provenance gate for documentation media.
 - [`source-and-run-compilation.md`](./source-and-run-compilation.md) — mandatory Source Header,
   peer Author/Run graphs, deterministic composition and compilation data gates.
 - package READMEs under [`../packages`](../packages) — executable APIs and ownership.
@@ -62,12 +63,11 @@ the working tree contains only documents that should inform current implementati
 - [`../spec/track-composition.md`](../spec/track-composition.md)
 - [`../spec/track-expressiveness.md`](../spec/track-expressiveness.md)
 - [`../spec/visual-ir.md`](../spec/visual-ir.md)
-- [`twinit-capability-migration.md`](./twinit-capability-migration.md) — one explicit ledger for every
-  active Twinit node: complete replacement, expressible-but-missing Template, backlog or deliberate omission.
 
-The finite six-member Seedance Kit migration recorded in the ledger is complete as data-only Text
-Templates. Low-level Seedance invocation, Estimate, media utilities and final Blob flow remain
-shared and must not be reopened as Kit-specific execution code.
+The finite seven-member Seedance Kit family is complete as data-only Text Templates. Low-level
+Seedance invocation, Estimate, media utilities and final Blob flow remain shared and must not be
+reopened as Kit-specific execution code. Superseded migration ledgers live in Git history rather
+than the current documentation tree.
 
 The shared `svml.visual-track@1` / `svml.visual-ir@1` terminal waist is frozen inside the repository
 before publication. Individual author Surfaces remain pre-release unless their own specification
@@ -94,6 +94,8 @@ says otherwise.
 - `docs/implementation-status.md` states repository reality.
 - `docs/roadmap.md` states planned work and non-goals.
 - package and example READMEs explain one executable unit.
+- `docs/public/` contains documentation media cleared for redistribution; its provenance rules are
+  tracked in `demo-assets.md`.
 
 Do not preserve a superseded design in the current tree merely as a discussion log. Keep durable
 decisions in the current architecture/specification, and rely on Git history for rejected drafts.

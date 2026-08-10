@@ -17,8 +17,8 @@ Script → Estimate → four KIE Seedance Mini generations
        → audio program → mux → H.264/AAC MP4
 ```
 
-The acceptance used two explicit Build identities. The first submitted the four real paid KIE
-shots. The second used `reuse-generated.svrun` to expose those verified Records as four zero-input
+The acceptance used two explicit Build identities. The first submitted four KIE generation
+requests. The second used `reuse-generated.svrun` to expose the resulting Records as four zero-input
 Build-Record Candidates and selected them through explicit Satisfaction edges. Its compiled plan
 contained no Seedance Operation or KIE Need, while the reachable
 media/WhisperX/Vertex/Film/HyperFrames path executed normally and preserved `substitute` through the
@@ -26,12 +26,11 @@ final Record. This is the intended realization model—not an implicit cache, mu
 Runtime-selected fallback.
 
 The resulting artifact is a 57.13-second 720×1280, 30 fps H.264/AAC MP4. Frame inspection confirmed
-the four ordered speech visuals and measured Caption Track in the final Composition. That paid run
-used a private delivery source. The checked-in brand-neutral
-[`examples/talking-head-aroll`](../examples/talking-head-aroll/README.md) fixture preserves its graph
-topology and explicit fresh/reuse Run shapes; it is not represented as the byte-identical historical
-input. Credentials, presenter assets, Build databases and generated outputs are intentionally
-ignored. Its `build.svrun` is the complete fresh `exact` execution choice, while
+the four ordered speech visuals and measured Caption Track in the final Composition. The
+brand-neutral [`examples/talking-head-aroll`](../examples/talking-head-aroll/README.md) fixture
+preserves the graph topology and explicit fresh/reuse Run shapes. Credentials, presenter assets,
+Build databases and generated outputs are intentionally ignored. Its `build.svrun` is the complete
+fresh `exact` execution choice, while
 `reuse-generated.svrun` is the separate explicit reuse choice. Running either is an ordinary CLI
 Build; no example-specific harness or hidden third workflow graph is required.
 
@@ -151,7 +150,7 @@ Implemented:
   streamed S3 output persistence; the deployed stack passed a complete distributed render,
   ArtifactStore ingestion, ffprobe verification and remote cleanup canary;
 - `@narratage/image-transform`: explicit image-plus-Program to image graph component, including the
-  extracted Twinit GPT Image YCrCb denoise preset;
+  extracted legacy GPT Image YCrCb denoise preset;
 - `@narratage/gpt-image/clean`: an optional logical module from the GPT Image physical package that
   expands generation plus the shared denoise transform as two visible graph operations and exports
   one clean image; a high-level Prompt Surface remains intentionally deferred;
@@ -177,7 +176,7 @@ Not implemented:
   and a current Runtime selects one store;
 - deployment-specific Build release policy;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
-- arbitrary Volcengine, Fal, API-key Gemini or Hypit Endpoint packages.
+- arbitrary Volcengine, Fal, API-key Gemini or hosted-service Endpoint packages.
 
 These are environment adapters. They must implement existing Capabilities and Types rather than
 define alternate Core or video semantics.
@@ -193,18 +192,11 @@ Implemented and executable:
 - deterministic speech estimate, atomic SpeechBasis and peer VisualTrack/AudioTrack
   projections;
 - authored image/audio Blob references and reusable SVS-backed speech-estimate policies;
-- `@narratage/seedance-speaker`: a thin official UGC binding from Script dialogue, explicit image/audio
-  references, an inert project SVS Recipe and one explicitly imported TextTemplate; the
-  self-described `official-ugc-v1.svs` Source Module contains defaults, ordering,
-  parameter-to-text mappings and finite reference-count branches; Script dialogue is already an
-  ordinary Text value and feeds the visible Text render and exact Seedance request path through its
-  ordinary `prompt` port, while optional action/extra content also
-  enters through Text edges rather than Recipe fields;
 - `@narratage/seedance`: three low-level author invocation shapes—text-only, first/optional-last
   frame, and heterogeneous references—over the same exact model port tables; these surfaces expose
   model capability and never assemble B-roll, podcast, call or interview creative semantics;
-- `@narratage/seedance-kits`: six data-only Text Template resources for B-roll, Podcast, Call,
-  Street Interview, Motion Reference and Camera Reference; all reuse generic `text:Render` Recipe
+- `@narratage/seedance-kits`: seven data-only Text Template resources for Speaker, B-roll, Podcast,
+  Call, Street Interview, Motion Reference and Camera Reference; all reuse generic `text:Render` Recipe
   projection and low-level Seedance, with no Kit-specific Provider, queue, media or Core code;
 - graph-native Seedance reference assembly for both generic video and speech paths, including a
   tested person/product → holding → walking/interview → three-image montage topology and selective
