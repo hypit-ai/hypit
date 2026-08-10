@@ -129,13 +129,13 @@ contract; Lambda placement cannot define another media meaning.
 - hosted Build/Operation stores and distributed leases only for a real multi-process deployment;
 - Build release/retention windows and S3 lifecycle policy.
 
-Authentication, tenants, credits, billing and dashboards belong to an embedding product such as
-Hypit, not to open-source Core.
+Authentication, tenants, credits, billing and dashboards belong to an embedding product, not to
+open-source Core.
 
 ### B4. Additional Providers
 
 KIE generation, Xiaomi MiMo TTS, Vertex Caption planning, local media, local OpenCV image transforms,
-local WhisperX and local HyperFrames are implemented. Volcengine, Fal, API-key Gemini or Hypit can
+local WhisperX and local HyperFrames are implemented. Volcengine, Fal, API-key Gemini or a hosted service can
 be added as independent Endpoint packages without changing author model packages or Core. None is a
 current batch-migration target: add one only when a concrete deployment selects that service,
 following the port-mapping laws in [`model-input-ports.md`](./model-input-ports.md).
@@ -198,12 +198,12 @@ reopen Core to add video-specific meaning.
 Fine Caption's field-free Style surface, measured display-Atom timing and documented motion
 vocabulary are implemented. Deterministic speech Estimate is now a Text-to-duration graph component
 with an explicit authored policy and model-admissible duration output; it remains separate from
-measured speech timing. Twinit's distinct named Seedance author semantics are now finite data-only
+measured speech timing. The useful distinct Seedance author semantics are now finite data-only
 Text Templates, and aliases that merely duplicated prompt assembly were removed.
 
-The retained set is finite: silent B-roll, co-present Podcast, video Call, Street Interview,
-body-Motion Reference and camera-Path Reference. Keyframe and generic multimodal reference remain
-the low-level `FrameVideo` and `ReferenceVideo` surfaces, not additional Kits. All six use generic
+The retained set is finite: Speaker, silent B-roll, co-present Podcast, video Call, Street
+Interview, body-Motion Reference and camera-Path Reference. Keyframe and generic multimodal
+reference remain the low-level `FrameVideo` and `ReferenceVideo` surfaces, not additional Kits. All seven use generic
 `text:Render` plus exact Seedance fragments; none adds Provider, queue, media-processing or Core
 code. The next work is real-delivery use and correction of template prose, not another layer.
 

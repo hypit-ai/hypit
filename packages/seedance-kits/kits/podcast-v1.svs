@@ -51,6 +51,5 @@
   text-template.podcast-v1.block.action-contract { kind: fixed; order: 110; text: "ACTION PROMPT: optional segment direction controls specified lines, gestures, expressions, and timing."; }
   text-template.podcast-v1.block.audio { kind: fixed; order: 120; text: "AUDIO AND TEXTURE: clean dialogue, natural room tone, stable faces and hands, microphones, props, and photoreal motion. Add no subtitles, captions, labels, UI text, or floating words."; }
   text-template.podcast-v1.block.dialogue { kind: slot; order: 130; slot: dialogue; optional: false; label: "DIALOGUE SCRIPT TO DELIVER:"; }
-  text-template.podcast-v1.block.action { kind: slot; order: 140; slot: action; optional: true; }
-  text-template.podcast-v1.block.extra { kind: slot; order: 150; slot: extra; optional: true; }
+  text-template.podcast-v1.block.action { kind: slot; order: 140; slot: action; optional: true; label: "ACTION DIRECTION:"; }
 </sheet>

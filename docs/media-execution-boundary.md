@@ -67,15 +67,15 @@ introduced. Normalized media is a typed synchronization product, not a hidden bu
 exports. A concrete author operation should request a byte transformation only when it has an actual
 use case; the media package does not manufacture speculative branches.
 
-## What survives from Twinit
+## What survives from the legacy implementation
 
-Twinit's `SpeechSpineMediaPipelineAdapterV1` correctly recognized four remote-capable operations:
+The legacy `SpeechSpineMediaPipelineAdapterV1` correctly recognized four remote-capable operations:
 source normalization, spine assembly, audio preparation and mux. The old interface coupled those
 operations to Speech and put all four behind one large adapter.
 
 Narratage preserves the execution insight but changes the vocabulary:
 
-| Twinit operation | SVML boundary |
+| Legacy operation | SVML boundary |
 |---|---|
 | `normalize_source` | inspect/select/normalize generic media |
 | `assemble_spine` | an ordinary visual Track plus an `AudioProgramPlan` |

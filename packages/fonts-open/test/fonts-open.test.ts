@@ -66,7 +66,7 @@ test("the catalog exposes 109 publishable open families with frontend metadata",
   }
 });
 
-test("every open font from the Twinit catalog is represented without private local fonts", () => {
+test("every redistributable legacy font is represented without private local fonts", () => {
   const migrated = [
     "caveat", "permanent-marker", "shadows-into-light", "shantell-sans", "playpen-sans",
     "short-stack", "kalam", "patrick-hand", "handlee", "coming-soon", "architects-daughter",

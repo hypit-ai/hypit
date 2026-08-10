@@ -12,7 +12,7 @@ The package owns `<render:Video composition={...}/>` and lowers it to six ordina
 6. expose the verified mux Artifact unchanged as a domain-neutral `BlobArtifact`.
 
 The package is not a renderer and contains no queue, credentials or deployment choice. A local
-HyperFrames process, a hosted Hypit endpoint or another conforming execution package may register a
+HyperFrames process, a hosted endpoint or another conforming execution package may register a
 Provider for the exact visual capability. Media Providers independently realize audio rendering and
 mux. None parses SVML or decides which Composition to render. Every result is bound to the same
 ProgramSpace and exact frame/sample domain before it can become a final video Record.

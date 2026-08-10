@@ -139,7 +139,7 @@ Activation state and decoration geometry are deliberately separate. `current` ac
 Atom whose measured window contains the frame. `trail` retains every activated Atom through the end
 of the Cue. `step` swaps the whole active glyph layer; `wipe` reveals it across the Atom's measured
 window. RTL reverses the wipe direction. Glyphs, boxes and underlines may choose different state
-policies, so the old Twinit behavior—trail text with a current-only pill—is directly expressible.
+policies, so the retained legacy behavior—trail text with a current-only pill—is directly expressible.
 
 An isolated box paints one box per activated Atom. A joined trail paints the one ordered activated
 prefix as continuous inline fragments: atoms on the same rendered line share one background, while

@@ -62,21 +62,21 @@ Script 编译必须先生成保留源码映射的 Narrative IR，再从同一份
 </script>
 ```
 
-若 `product = "Hypit"`、`product_pronunciation = "high pit"`，三个文本投影
+若 `product = "SVML"`、`product_pronunciation = "ess vee em ell"`，三个文本投影
 分别是：
 
 ```text
 dialogue
 A: I just laughed my ass out.
-B: Meet high pit.
+B: Meet ess vee em ell.
 
 speech
 I just laughed my ass out.
-Meet high pit.
+Meet ess vee em ell.
 
 caption
 I just lmao.
-Meet Hypit.
+Meet SVML.
 ```
 
 `silence` 只是 Selection 的名字，不会自动让音频静音。它完整选择了空

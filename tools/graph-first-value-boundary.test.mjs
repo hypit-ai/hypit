@@ -42,7 +42,6 @@ const domainValuePackages = [
   "text",
   "script",
   "seedance",
-  "seedance-speaker",
   "speech-alignment",
   "speech-spine",
   "speech-basis",

@@ -1,5 +1,37 @@
 node_modules/
 dist/
+coverage/
+.nyc_output/
+.DS_Store
+*.log
+*.tmp
+*.temp
+
+# Local editor and agent state is never part of the distribution.
+.claude/
+.codex/
+.agents/
+.idea/
+.vscode/
+
+# Runtime credentials belong to the selected credential store, never Git.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*credentials*.json
+*service-account*.json
+
+# Local databases and test-run reports are deployment state.
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+playwright-report/
+test-results/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 .svml-cache/

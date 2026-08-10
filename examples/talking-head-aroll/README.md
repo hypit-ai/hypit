@@ -11,10 +11,9 @@ Supply these ignored local assets before checking or building:
 Every take uses the same voice-timbre reference. The visual reference sequence is base, alternate,
 alternate, base.
 
-`@narratage/seedance-speaker` binds the reusable project SVS Recipe, Script dialogue and explicit
-references into Text Bindings. The separately imported `official-ugc-v1.svs` compiles to a
-domain-neutral Text Template. A visible Text render Operation produces each prompt and connects it
-to the exact Seedance request; prompt assembly is therefore part of the graph, not hidden package logic.
+The data-only `seedance-kits/speaker` template and project SVS Recipe feed generic Text rendering.
+Each resulting Text output connects to an exact `seedance:ReferenceVideo` beside explicit image,
+audio and duration edges; prompt assembly is therefore part of the graph, not hidden Speaker logic.
 The four generated videos are normalized and concatenated into one Speech Spine. One canonical
 audio projection goes through WhisperX, direct Script alignment produces the complete SemanticMap,
 Gemini plans Cue cuts without seeing timing, and the resulting Caption
@@ -44,7 +43,6 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/text \
   --package @narratage/generation \
   --package @narratage/seedance \
-  --package @narratage/seedance-speaker \
   --package @narratage/speech-alignment \
   --package @narratage/speech-basis \
   --package @narratage/speech-spine \
@@ -120,9 +118,9 @@ logical output as `substitute`. Reverse demand therefore removes all four Seedan
 keeping media normalization, WhisperX, Gemini planning, Film and rendering reachable. This is a new
 Build, not a continuation or automatic cache hit.
 
-This public fixture is intentionally brand-neutral. It preserves the topology and the explicit
-fresh/reuse Run shapes used by an internal paid acceptance, but does not claim that its source bytes
-or generated Records are the private delivery inputs from that run.
+This brand-neutral fixture demonstrates the same topology with two explicit Run shapes: fresh
+generation and reuse through zero-input Build-Record Candidates. Local source assets and generated
+Records are intentionally not committed.
 
 The package lock lists independent packages. It is not a hidden video bundle, and the video CLI
 contains no authoring or Run-language package by default.
