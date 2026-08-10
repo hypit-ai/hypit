@@ -5,7 +5,6 @@ import {
   sealComposition,
 } from "../svml.js";
 import type { Composition, ProgramSpace, Track } from "../svml.js";
-import { artifactUrl } from "./artifacts.js";
 import { injectRuntimeShim } from "./runtime-shim.js";
 
 /** A grey card standing in for an Artifact the playground has not been given. */
@@ -50,10 +49,8 @@ export function renderPreview(input: PreviewInput): PreviewOutput {
 
   const warnings: string[] = [];
   const html = materializeHyperframesHtml(document, (artifact) => {
-    const resolved = artifactUrl(artifact.digest);
-    if (resolved !== undefined) return resolved;
-    // A missing Artifact must not blank the frame: a playground where one
-    // unset image hides everything else teaches nothing.
+    // Artifact fulfillment belongs to a normal author/run graph. The low-level
+    // component inspector owns no parallel registry of files or fixtures.
     warnings.push(`No media registered for ${artifact.digest.slice(0, 19)}…`);
     return MISSING_MEDIA;
   });
