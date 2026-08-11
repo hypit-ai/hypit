@@ -19,14 +19,7 @@
     background: #09090B;
   }
 
-  speech.full {
-    stack-order: 10;
-    x: 0;
-    y: 0;
-    width: 1;
-    height: 1;
-    fit: cover;
-  }
+  speech.visual { fit: cover; }
 
   media.product {
     stack-order: 40;

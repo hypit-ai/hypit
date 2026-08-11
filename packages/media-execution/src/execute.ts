@@ -260,8 +260,6 @@ function stream<T extends MediaStream["kind"]>(
 type NormalizationPlan = {
   readonly video?: MediaVideoStream;
   readonly audio?: MediaAudioStream;
-  readonly origin: MediaTimestamp;
-  readonly end: MediaTimestamp;
   readonly frameCount: number;
   readonly sampleFrames: number;
   readonly audioTrimStartSamples: number;
@@ -300,8 +298,6 @@ function normalizationPlan(
   if (audio === undefined) {
     return {
       ...(video === undefined ? {} : { video }),
-      origin: authority.startPts,
-      end: authority.endPts,
       frameCount,
       sampleFrames,
       audioTrimStartSamples: 0,
@@ -320,8 +316,6 @@ function normalizationPlan(
   return {
     ...(video === undefined ? {} : { video }),
     audio,
-    origin: authority.startPts,
-    end: authority.endPts,
     frameCount,
     sampleFrames,
     audioTrimStartSamples: Math.max(0, -audioStart),
@@ -749,41 +743,19 @@ export async function executeNormalizeMedia(
     const media = sealSynchronizedMedia({
       contract: "svml.synchronized-media@1",
       timeline: {
-        spanAuthority: need.selection.spanAuthority,
         frameRate: need.frameRate,
         frameCount: plan.frameCount,
-        sampleRate: 48_000,
-        sampleFrames: plan.sampleFrames,
-      },
-      sourceMap: {
-        sourceOriginPts: plan.origin,
-        sourceEndPts: plan.end,
-        audioTrimStartSamples: plan.audioTrimStartSamples,
-        audioTrimEndSamples: plan.audioTrimEndSamples,
-        audioHeadSamples: plan.audioHeadSamples,
-        audioContentSamples: plan.audioContentSamples,
-        audioTailSamples: plan.audioTailSamples,
       },
       ...(visualArtifact === undefined ? {} : {
         visual: {
           artifact: visualArtifact,
-          sourceStreamIndex: plan.video!.index,
           width: visualWidth!,
           height: visualHeight!,
-          frameRate: need.frameRate,
-          frameCount: plan.frameCount,
-          muted: true as const,
         },
       }),
       ...(audioArtifact === undefined ? {} : {
         audio: {
           artifact: audioArtifact,
-          sourceStreamIndex: plan.audio!.index,
-          codec: "pcm_s16le" as const,
-          sampleRate: 48_000 as const,
-          channels: 2 as const,
-          sampleFrames: plan.sampleFrames,
-          loudness: "preserved" as const,
         },
       }),
     });

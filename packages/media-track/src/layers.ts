@@ -1,5 +1,6 @@
 import {
   assertCompositableSurfaceRef,
+  synchronizedMediaSampleFrames,
   verifySynchronizedMedia,
 } from "@narratage/media";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@narratage/media";
@@ -276,11 +277,11 @@ export function appendTimedMediaLayer(
       widthPx: media.visual.width,
       heightPx: media.visual.height,
     },
-    frameRate: { ...media.visual.frameRate },
-    frameCount: media.visual.frameCount,
+    frameRate: { ...media.timeline.frameRate },
+    frameCount: media.timeline.frameCount,
     ...(media.audio === undefined ? {} : { audio: {
       artifact: structuredClone(media.audio.artifact),
-      sampleFrames: media.audio.sampleFrames,
+      sampleFrames: synchronizedMediaSampleFrames(media),
     } }),
   };
   return append(set, sampleLayer(source, fit, spec));

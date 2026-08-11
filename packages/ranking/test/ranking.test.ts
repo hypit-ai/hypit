@@ -284,19 +284,11 @@ test("Typewriter uses Unicode graphemes, explicit emphasis and winner timing wit
   }, set));
 });
 
-const sound = (id: string, sampleFrames = 4_800): SynchronizedMedia => ({
+const sound = (id: string): SynchronizedMedia => ({
   contract: "svml.synchronized-media@1",
-  timeline: { spanAuthority: "audio", frameRate: { numerator: 30, denominator: 1 }, frameCount: 3,
-    sampleRate: 48_000, sampleFrames },
-  sourceMap: {
-    sourceOriginPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
-    sourceEndPts: { ticks: String(sampleFrames), timeBase: { numerator: 1, denominator: 48_000 } },
-    audioTrimStartSamples: 0, audioTrimEndSamples: 0, audioHeadSamples: 0,
-    audioContentSamples: sampleFrames, audioTailSamples: 0,
-  },
+  timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 3 },
   audio: {
     artifact: { kind: "blob", digest: digestOf(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
-    sourceStreamIndex: 0, codec: "pcm_s16le", sampleRate: 48_000, channels: 2, sampleFrames, loudness: "preserved",
   },
 });
 

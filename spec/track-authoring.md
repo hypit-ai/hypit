@@ -412,8 +412,9 @@ Audio Track ─────────┘
 ```
 
 Caption's component-owned timed Cue projection may enter the final frame-window stage directly.
-Speech Spine establishes ProgramSpace and contiguous speech takes rather than pretending those
-structural cuts are Narrative Selection consumption.
+Speech Spine establishes ProgramSpace and contiguous speech takes. Other Tracks may address one
+whole Narrative Segment through its two structural anchors directly, without pretending it is an
+authored Selection.
 
 ## 8. Migration consequences
 

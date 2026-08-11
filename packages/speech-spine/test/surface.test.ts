@@ -29,6 +29,7 @@ import {
 import { speechBasisManifest, speechBasisProducers } from "@narratage/speech-basis";
 import { textComponent, textManifest } from "@narratage/text";
 import { mediaTrackManifest } from "@narratage/media-track";
+import { svsManifest, svsModuleRef, svsRecipeType } from "@narratage/svs";
 import {
   decodeSpeechSpineSurface,
   speechSpineManifest,
@@ -38,6 +39,7 @@ import {
 } from "@narratage/speech-spine";
 import {
   decodeCanvasSurface,
+  decodeFrameSurface,
   spatialComponent,
   spatialModuleRef,
   spatialSurfaceDigests,
@@ -54,10 +56,10 @@ const fixtureManifest: ModuleManifest = {
   format: "svml.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
-  dependencies: [artifactDependency, mediaDependency],
+  dependencies: [artifactDependency, mediaDependency, { module: svsModuleRef, digest: digestOf(svsManifest) }],
   types: [], capabilities: [], producers: [],
   surfaces: [{
-    name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob],
+    name: "media", tag: "Media", mode: "structured", outputs: [artifactTypes.blob, svsRecipeType],
     implementation: { kind: "trusted-frontend-surface", locator: "example.speech-media/surface", digest: fixtureSurfaceDigest },
   }],
 };
@@ -75,6 +77,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
     ...videoContractManifests,
     mediaPipelineManifest,
     mediaTrackManifest,
+    svsManifest,
     speechBasisManifest,
     speechSpineManifest,
     textManifest,
@@ -85,12 +88,23 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   surfaces.registerRaw(scriptModuleRef, "script", scriptSurfaceImplementationDigest, decodeScriptSurface);
   surfaces.registerStructured(speechSpineModuleRef, "spine", speechSpineSurfaceImplementationDigest, decodeSpeechSpineSurface);
   surfaces.registerStructured(spatialModuleRef, "canvas", spatialSurfaceDigests.canvas, decodeCanvasSurface);
+  surfaces.registerStructured(spatialModuleRef, "frame", spatialSurfaceDigests.frame, decodeFrameSurface);
   surfaces.registerStructured(fixtureModule, "media", fixtureSurfaceDigest, ({ element }) => ({
-    records: ["take-one", "take-two"].map((id) => ({
-      id, type: artifactTypes.blob,
-      value: { kind: "blob" as const, digest: digestOf(id), size: 128, mediaType: "video/mp4" },
-      range: element.range,
-    })),
+    records: [
+      ...["take-one", "take-two", "voice-one"].map((id) => ({
+        id, type: artifactTypes.blob,
+        value: { kind: "blob" as const, digest: digestOf(id), size: 128,
+          mediaType: id === "voice-one" ? "audio/mpeg" : "video/mp4" },
+        range: element.range,
+      })),
+      {
+        id: "speech-style", type: svsRecipeType,
+        value: { kind: "inline" as const, value: {
+          contract: "svml.svs-recipe@1", path: "speech.base", properties: { fit: "cover" },
+        } },
+        range: element.range,
+      },
+    ],
     components: [], fragments: [],
   }));
   const frontends = new AuthorFrontendRegistry();
@@ -119,8 +133,10 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
       </script>
       <fixture:Media/>
       <space:Canvas id="vertical" width="720" height="1280"/>
-      <speech:Spine id="speech" canvas={vertical} frame-rate="30">
-        <speech:Take video={take-one} segment={story.segment.opening}/>
+      <space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
+      <speech:Spine id="speech" frame-rate="30"
+        visual-frame={speech-frame} visual-appearance={speech-style} visual-z="0">
+        <speech:Take audio={voice-one} segment={story.segment.opening}/>
         <speech:Take video={take-two} segment={story.segment.answer}/>
       </speech:Spine>
     </svml>`),
@@ -138,7 +154,8 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   const names = build.plan.steps.map((step) => step.producer.name);
   assert.equal(names.filter((name) => name === mediaPipelineProducers.inspect.name).length, 2);
   assert.equal(names.filter((name) => name === mediaPipelineProducers.normalize.name).length, 2);
-  assert.equal(names.filter((name) => name === speechSpineProducers.appendTake.name).length, 2);
+  assert.equal(names.filter((name) => name === speechSpineProducers.appendAudioTake.name).length, 1);
+  assert.equal(names.filter((name) => name === speechSpineProducers.appendVisualTake.name).length, 1);
   assert.equal(names.filter((name) => name === speechSpineProducers.compileAudio.name).length, 1);
   assert.equal(names.filter((name) => name === mediaPipelineProducers.renderAudio.name).length, 1);
   assert.equal(names.filter((name) => name === speechBasisProducers.projectVisual.name).length, 1);

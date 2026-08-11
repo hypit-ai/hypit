@@ -1,4 +1,5 @@
 export { spatialComponent } from "./component.js";
+export { contentFitPropertyNames, decodeContentFitProperties } from "./author.js";
 export {
   anchoredFrameFragment,
   aspectFrameFragment,

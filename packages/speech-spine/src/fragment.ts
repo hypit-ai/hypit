@@ -8,6 +8,7 @@ import type { FragmentOperation } from "@narratage/elaborator";
 import { mediaPipelineProducers } from "@narratage/media-pipeline";
 import { speechBasisProducers } from "@narratage/speech-basis";
 import { spatialTypes } from "@narratage/spatial";
+import type { TypeRef } from "@narratage/protocol";
 
 import { speechSpineProducers, speechSpineTypes } from "./manifest.js";
 import type { SpeechSpineFragmentOptions } from "./types.js";
@@ -17,13 +18,25 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
   if (options.takes.length === 0) throw new Error("Speech Spine requires at least one Take");
-  const names = new Set(["program", "canvas"]);
-  for (const take of options.takes) {
-    if (!take.mediaName || !take.segmentName || names.has(take.mediaName) || names.has(take.segmentName)) {
-      throw new Error("Speech Spine Fragment input names are empty or duplicated");
+  const declaredInputs = new Map<string, TypeRef>();
+  const addInput = (name: string, type: TypeRef): void => {
+    if (!name) throw new Error("Speech Spine Fragment input names must not be empty");
+    const previous = declaredInputs.get(name);
+    if (previous !== undefined && (previous.module.name !== type.module.name
+      || previous.module.version !== type.module.version || previous.name !== type.name)) {
+      throw new Error(`Speech Spine Fragment input ${name} is reused with another Type`);
     }
-    names.add(take.mediaName);
-    names.add(take.segmentName);
+    declaredInputs.set(name, type);
+  };
+  addInput("program", speechSpineTypes.spineProgram);
+  for (const take of options.takes) {
+    addInput(take.mediaName, mediaTypes.synchronized);
+    addInput(take.segmentName, narrativeTypes.excerpt);
+    if (take.visual !== undefined) {
+      addInput(take.visual.frameName, spatialTypes.frame);
+      addInput(take.visual.fitName, spatialTypes.fit);
+      addInput(take.visual.visualSpecName, speechSpineTypes.visualSpec);
+    }
   }
   const operations: FragmentOperation[] = [{
     id: "spine:set:empty",
@@ -36,12 +49,17 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     const id = `spine:set:append:${String(index + 1).padStart(4, "0")}`;
     operations.push({
       id,
-      producer: speechSpineProducers.appendTake,
+      producer: take.visual === undefined ? speechSpineProducers.appendAudioTake : speechSpineProducers.appendVisualTake,
       inputs: {
         set: operation(current),
         program: input("program"),
         media: input(take.mediaName),
         segment: input(take.segmentName),
+        ...(take.visual === undefined ? {} : {
+          frame: input(take.visual.frameName),
+          fit: input(take.visual.fitName),
+          visualSpec: input(take.visual.visualSpecName),
+        }),
       },
       result: { kind: "output", name: "set" },
     });
@@ -81,7 +99,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
     {
       id: "spine:visual-track",
       producer: speechBasisProducers.projectVisual,
-      inputs: { basis: operation("spine:basis"), canvas: input("canvas") },
+      inputs: { basis: operation("spine:basis") },
       result: { kind: "output", name: "visual" },
     },
     {
@@ -91,17 +109,14 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
       result: { kind: "output", name: "track" },
     },
   );
-  const semanticInputs = ["program", ...options.takes.flatMap((take) => [take.mediaName, take.segmentName])];
+  const semanticInputs = [...new Set(["program", ...options.takes.flatMap((take) => [
+    take.mediaName, take.segmentName, ...(take.visual === undefined ? [] : [
+      take.visual.frameName, take.visual.fitName, take.visual.visualSpecName,
+    ]),
+  ])])];
   return sealGraphFragment({
     name: options.name?.trim() || "@narratage/speech-spine/spine@1",
-    inputs: [
-      { name: "program", type: speechSpineTypes.spineProgram },
-      { name: "canvas", type: spatialTypes.canvas },
-      ...options.takes.flatMap((take) => [
-        { name: take.mediaName, type: mediaTypes.synchronized },
-        { name: take.segmentName, type: narrativeTypes.excerpt },
-      ]),
-    ],
+    inputs: [...declaredInputs.entries()].map(([name, type]) => ({ name, type })),
     operations,
     exports: [
       { name: "basis", type: speechTypes.basis, root: operation("spine:basis"), semanticInputs, fidelity: "exact" },
@@ -114,7 +129,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
         fidelity: "exact",
       },
       {
-        name: "visual", type: compositionTypes.visualTrack, root: operation("spine:visual-track"), semanticInputs: [...semanticInputs, "canvas"],
+        name: "visual", type: compositionTypes.visualTrack, root: operation("spine:visual-track"), semanticInputs,
         fidelity: "exact",
       },
       {

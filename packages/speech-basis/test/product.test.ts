@@ -42,19 +42,7 @@ import {
   speechBasisProducers,
 } from "@narratage/speech-basis";
 import { TypeValidatorRegistry } from "@narratage/validation";
-import { spatialTypes } from "@narratage/spatial";
-import { spatialValidatorDigests } from "@narratage/spatial";
 import { mediaTrackManifest } from "@narratage/media-track";
-
-const canvas = {
-  contract: "svml.canvas-space@1" as const,
-  widthPx: 720,
-  heightPx: 1280,
-  origin: "top-left" as const,
-  xDirection: "right" as const,
-  yDirection: "down" as const,
-  pixelAspect: "square" as const,
-};
 
 const testModule = { name: "example.speech-basis-product", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "SpeechRequest" } satisfies TypeRef;
@@ -123,10 +111,18 @@ function sampleTake(label = "generated"): SpeechBasis {
     visualTrack: {
       clips: [{
         segmentId: "opening",
+        span: { startFrame: 0, endFrameExclusive: 60 },
         artifact: visual,
         extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
         frameRate: { ...programSpace.frameRate },
         frameCount: 60,
+        frame: { contract: "svml.spatial-frame@1", xPx: 0, yPx: 0, widthPx: 720, heightPx: 1280 },
+        fit: {
+          contract: "svml.content-fit@1", sizing: "cover",
+          framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
+          offsetPx: { x: 0, y: 0 }, constraint: "bounded",
+        },
+        stackingOrder: 0,
       }],
     },
     segments: [{
@@ -149,29 +145,10 @@ function createProgram(): LinkedProgram {
       frontendClosureDigest: digestOf("frontend:speech-basis-product"),
     },
   });
-  const rawCanvasRecord = sealRecord({
-    id: "canvas:vertical",
-    type: spatialTypes.canvas,
-    value: { kind: "inline", value: canvas },
-    conformance: "exact",
-    origin: {
-      kind: "authored",
-      sourceDigest: digestOf("source:speech-basis-product"),
-      frontendClosureDigest: digestOf("frontend:speech-basis-product"),
-    },
-  });
-  const canvasRecord = {
-    ...rawCanvasRecord,
-    validation: sealTypeValidationReceipt({
-      type: rawCanvasRecord.type,
-      recordDigest: rawCanvasRecord.digest,
-      validatorDigest: spatialValidatorDigests.canvas,
-    }),
-  };
   return link(closure, [sealTypedModule({
     id: "author:speech-basis-product",
     closureDigest: closure.digest,
-    records: [request, canvasRecord],
+    records: [request],
   })]);
 }
 
@@ -180,7 +157,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
   const output = (id: string) => ({ kind: "logical-output" as const, id });
   const operation = (id: string) => ({ kind: "operation-result" as const, operation: id });
   const existingTake = sampleTake("approved");
-  const existingVisual = projectSpeechVisual(existingTake, canvas);
+  const existingVisual = projectSpeechVisual(existingTake);
   const existingVisualValue = { kind: "inline" as const, value: existingVisual };
   const existingVisualValidation = sealTypeValidationReceipt({
     type: compositionTypes.visualTrack,
@@ -206,7 +183,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         id: "opening.visual",
         type: compositionTypes.visualTrack,
         primary: "opening.visual.project",
-        semanticInputs: [output("opening.take"), record("canvas:vertical")],
+        semanticInputs: [output("opening.take")],
       },
     ],
     candidates: [
@@ -267,7 +244,7 @@ function createGraph(program: LinkedProgram): CompiledGraph {
       {
         id: "project-opening-visual",
         producer: speechBasisProducers.projectVisual,
-        inputs: { basis: output("opening.take"), canvas: record("canvas:vertical") },
+        inputs: { basis: output("opening.take") },
         result: { kind: "output", name: "visual", record: "visual:opening" },
       },
     ],
@@ -316,7 +293,7 @@ test("SpeechBasis is one Product and audio/visual are ordinary shared projection
 
 test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   const take = sampleTake();
-  const visual = projectSpeechVisual(take, canvas);
+  const visual = projectSpeechVisual(take);
   const audio = projectSpeechAudioTrack(take);
   const programSpace = projectSpeechProgramSpace(take);
   assert.equal(visual.contract, "svml.visual-track@1");

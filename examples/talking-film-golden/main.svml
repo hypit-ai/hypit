@@ -46,6 +46,8 @@
   <media:Image id="product-reference" src="./assets/product.png"/>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
     left="6%" top="6%" right="6%" bottom="84%"/>
   <space:Frame id="product-frame" within={vertical}
@@ -113,7 +115,8 @@
   </seedance:ReferenceVideo>
 
   <!-- Ordered generated Takes become one audio basis plus its peer visual/audio Tracks. -->
-  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
     <speech:Take video={alice-take.video} segment={script.segment.opening}/>
     <speech:Take video={bob-take.video} segment={script.segment.answer}/>
   </speech:Spine>

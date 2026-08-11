@@ -73,6 +73,7 @@ export {
   appendMediaSequenceUntilProgramEnd,
   appendMediaSequenceUntilSelection,
   appendProgramMediaItem,
+  appendSegmentMediaItem,
   appendSelectionMediaItem,
   bindMediaItemClipPath,
   bindMediaSequenceClipPath,

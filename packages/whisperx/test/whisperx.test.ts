@@ -24,18 +24,11 @@ function basis() {
     durationSec: 1,
     frameRate: { numerator: 30, denominator: 1 },
   });
-  const visual = digestOf("whisperx-test:visual");
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
     programSpace,
     audio: { kind: "blob", digest: digestOf("whisperx-test:audio"), size: 1, mediaType: "audio/wav" },
-    visualTrack: { clips: [{
-      segmentId: "line",
-      artifact: { kind: "blob", digest: visual, size: 1, mediaType: "video/mp4" },
-      extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
-      frameRate: { ...programSpace.frameRate },
-      frameCount: 30,
-    }] },
+    visualTrack: { clips: [] },
     segments: [{ segmentId: "line", startSec: 0, endSec: 1 }],
   });
 }

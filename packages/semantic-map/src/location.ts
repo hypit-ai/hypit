@@ -1,4 +1,4 @@
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import { assertProgramSpaceIdentity } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { CompleteSemanticMap } from "./types.js";
@@ -75,6 +75,24 @@ export function selectionFrameSpans(
     const endFrameExclusive = frameFor(frames, occurrence.endAnchorId, `NarrativeSelection ${selection.id}`);
     return { startFrame, endFrameExclusive };
   });
+}
+
+/** Locate one authored Segment by its two structural anchors. */
+export function segmentFrameSpan(
+  map: CompleteSemanticMap,
+  segment: NarrativeExcerpt,
+  programSpace: ProgramSpace,
+): LocatedFrameSpan {
+  assertCompleteSemanticMapIdentity(map);
+  assertProgramSpaceIdentity(programSpace);
+  if (segment.contract !== "svml.narrative-excerpt@1" || segment.kind !== "segment" || segment.id.length === 0) {
+    throw new Error("Narrative Segment excerpt is invalid");
+  }
+  const frames = anchorFrames(map);
+  return {
+    startFrame: frameFor(frames, `segment:${segment.id}:start`, `Narrative Segment ${segment.id}`),
+    endFrameExclusive: frameFor(frames, `segment:${segment.id}:end`, `Narrative Segment ${segment.id}`),
+  };
 }
 
 /**

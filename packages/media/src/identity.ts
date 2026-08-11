@@ -159,62 +159,33 @@ export function sealSynchronizedMedia(value: SynchronizedMedia): SynchronizedMed
   return canonicalize(value) as unknown as SynchronizedMedia;
 }
 
+/** Exact 48 kHz sample span implied by one normalized frame domain. */
+export function synchronizedMediaSampleFrames(value: SynchronizedMedia): number {
+  const numerator = BigInt(value.timeline.frameCount) * 48_000n * BigInt(value.timeline.frameRate.denominator);
+  const denominator = BigInt(value.timeline.frameRate.numerator);
+  const rounded = (numerator * 2n + denominator) / (denominator * 2n);
+  assert(rounded > 0n && rounded <= BigInt(Number.MAX_SAFE_INTEGER),
+    "SynchronizedMedia frame domain has an invalid sample span");
+  return Number(rounded);
+}
+
 export function verifySynchronizedMedia(value: unknown): asserts value is SynchronizedMedia {
   const item = object(value, "SynchronizedMedia") as unknown as SynchronizedMedia;
   assert(item.contract === "svml.synchronized-media@1", "SynchronizedMedia contract is invalid");
-  assert(item.timeline.spanAuthority === "video" || item.timeline.spanAuthority === "audio",
-    "SynchronizedMedia authority is invalid");
   verifyRational(item.timeline.frameRate, "SynchronizedMedia.timeline.frameRate");
   positiveInteger(item.timeline.frameCount, "SynchronizedMedia.timeline.frameCount");
-  assert(item.timeline.sampleRate === 48_000, "SynchronizedMedia sample rate must be 48000");
-  positiveInteger(item.timeline.sampleFrames, "SynchronizedMedia.timeline.sampleFrames");
-  verifyTimestamp(item.sourceMap.sourceOriginPts, "SynchronizedMedia.sourceMap.sourceOriginPts");
-  verifyTimestamp(item.sourceMap.sourceEndPts, "SynchronizedMedia.sourceMap.sourceEndPts");
-  assert(compareTimestamp(item.sourceMap.sourceOriginPts, item.sourceMap.sourceEndPts) < 0,
-    "SynchronizedMedia source interval is empty or reversed");
-  nonNegativeInteger(item.sourceMap.audioTrimStartSamples, "SynchronizedMedia.sourceMap.audioTrimStartSamples");
-  nonNegativeInteger(item.sourceMap.audioTrimEndSamples, "SynchronizedMedia.sourceMap.audioTrimEndSamples");
-  nonNegativeInteger(item.sourceMap.audioHeadSamples, "SynchronizedMedia.sourceMap.audioHeadSamples");
-  nonNegativeInteger(item.sourceMap.audioContentSamples, "SynchronizedMedia.sourceMap.audioContentSamples");
-  nonNegativeInteger(item.sourceMap.audioTailSamples, "SynchronizedMedia.sourceMap.audioTailSamples");
+  synchronizedMediaSampleFrames(item);
   assert(item.visual !== undefined || item.audio !== undefined, "SynchronizedMedia contains no media projection");
   if (item.visual !== undefined) {
     verifyBlob(item.visual.artifact, "SynchronizedMedia.visual.artifact");
     assert(item.visual.artifact.mediaType.startsWith("video/"), "SynchronizedMedia visual artifact is not video");
-    nonNegativeInteger(item.visual.sourceStreamIndex, "SynchronizedMedia.visual.sourceStreamIndex");
     positiveInteger(item.visual.width, "SynchronizedMedia.visual.width");
     positiveInteger(item.visual.height, "SynchronizedMedia.visual.height");
-    verifyRational(item.visual.frameRate, "SynchronizedMedia.visual.frameRate");
-    assert(item.visual.frameRate.numerator === item.timeline.frameRate.numerator
-      && item.visual.frameRate.denominator === item.timeline.frameRate.denominator,
-    "SynchronizedMedia visual frame rate differs from its timeline");
-    assert(item.visual.frameCount === item.timeline.frameCount, "SynchronizedMedia visual frame count differs");
-    assert(item.visual.muted === true, "SynchronizedMedia visual must be muted");
   }
   if (item.audio !== undefined) {
     verifyBlob(item.audio.artifact, "SynchronizedMedia.audio.artifact");
     assert(item.audio.artifact.mediaType === "audio/wav", "SynchronizedMedia audio artifact must be WAV");
-    nonNegativeInteger(item.audio.sourceStreamIndex, "SynchronizedMedia.audio.sourceStreamIndex");
-    assert(item.audio.codec === "pcm_s16le" && item.audio.sampleRate === 48_000 && item.audio.channels === 2,
-      "SynchronizedMedia audio shape is invalid");
-    assert(item.audio.sampleFrames === item.timeline.sampleFrames,
-      "SynchronizedMedia audio sample count differs from its timeline");
-    assert(item.audio.loudness === "preserved", "SynchronizedMedia must not silently normalize loudness");
-    assert(item.sourceMap.audioHeadSamples + item.sourceMap.audioContentSamples + item.sourceMap.audioTailSamples
-      === item.timeline.sampleFrames,
-    "SynchronizedMedia audio transform does not cover its complete timeline");
-  } else {
-    assert(item.sourceMap.audioTrimStartSamples === 0
-      && item.sourceMap.audioTrimEndSamples === 0
-      && item.sourceMap.audioHeadSamples === 0
-      && item.sourceMap.audioContentSamples === 0
-      && item.sourceMap.audioTailSamples === 0,
-    "SynchronizedMedia without audio has an audio transform");
   }
-  assert(item.timeline.spanAuthority !== "video" || item.visual !== undefined,
-    "SynchronizedMedia video authority has no visual projection");
-  assert(item.timeline.spanAuthority !== "audio" || item.audio !== undefined,
-    "SynchronizedMedia audio authority has no audio projection");
 }
 
 export function sealRenderedVisual(value: RenderedVisual): RenderedVisual {

@@ -12,9 +12,17 @@ import {
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 import { speechBasisManifest, speechBasisModuleRef } from "@narratage/speech-basis";
+import {
+  contentFitSchema,
+  spatialDependency,
+  spatialFrameSchema,
+  spatialTypes,
+} from "@narratage/spatial";
+import { svsManifest, svsModuleRef } from "@narratage/svs";
 
 import {
-  appendSpeechSpineTakeImplementationDigest,
+  appendSpeechSpineAudioTakeImplementationDigest,
+  appendSpeechSpineVisualTakeImplementationDigest,
   assembleSpeechBasisImplementationDigest,
   compileSpeechSpineAudioImplementationDigest,
   createSpeechSpineSetImplementationDigest,
@@ -25,10 +33,12 @@ export const speechSpineSurfaceImplementationDigest = digestOf("@narratage/speec
 export const speechSpineTypes = {
   spineProgram: { module: speechSpineModuleRef, name: "SpeechSpineProgram" },
   spineSet: { module: speechSpineModuleRef, name: "SpeechSpineSet" },
+  visualSpec: { module: speechSpineModuleRef, name: "SpeechSpineVisualSpec" },
 } satisfies Record<string, TypeRef>;
 export const speechSpineProducers = {
   createSet: { module: speechSpineModuleRef, name: "create-spine-set" },
-  appendTake: { module: speechSpineModuleRef, name: "append-spine-take" },
+  appendAudioTake: { module: speechSpineModuleRef, name: "append-spine-audio-take" },
+  appendVisualTake: { module: speechSpineModuleRef, name: "append-spine-visual-take" },
   compileAudio: { module: speechSpineModuleRef, name: "compile-spine-audio" },
   assembleBasis: { module: speechSpineModuleRef, name: "assemble-speech-basis" },
 } satisfies Record<string, ProducerRef>;
@@ -52,7 +62,17 @@ export const speechSpineSetSchema: ValueSchema = object({
   takes: { schema: { kind: "array", items: object({
     segment: { schema: narrativeExcerptSchema },
     media: { schema: synchronizedMediaSchema },
+    visual: { schema: object({
+      frame: { schema: spatialFrameSchema },
+      fit: { schema: contentFitSchema },
+      stackingOrder: { schema: { kind: "number", integer: true } },
+    }), optional: true },
   }) } },
+});
+
+export const speechSpineVisualSpecSchema: ValueSchema = object({
+  contract: { schema: { kind: "literal", value: "svml.speech-spine-visual-spec@1" } },
+  stackingOrder: { schema: { kind: "number", integer: true } },
 });
 
 export const speechSpineManifest: ModuleManifest = {
@@ -66,19 +86,23 @@ export const speechSpineManifest: ModuleManifest = {
     programSpaceDependency,
     speechDependency,
     compositionDependency,
+    spatialDependency,
+    { module: svsModuleRef, digest: digestOf(svsManifest) },
     { module: mediaPipelineModuleRef, digest: digestOf(mediaPipelineManifest) },
     { module: speechBasisModuleRef, digest: digestOf(speechBasisManifest) },
   ],
   types: [
     { name: speechSpineTypes.spineProgram.name, schema: speechSpineProgramSchema },
     { name: speechSpineTypes.spineSet.name, schema: speechSpineSetSchema },
+    { name: speechSpineTypes.visualSpec.name, schema: speechSpineVisualSpecSchema },
   ],
   capabilities: [],
   surfaces: [{
     name: "spine",
     tag: "Spine",
     mode: "structured",
-    outputs: [speechSpineTypes.spineProgram, mediaPipelineTypes.selectionRequest,
+    outputs: [speechSpineTypes.spineProgram, speechSpineTypes.visualSpec, spatialTypes.fit,
+      mediaPipelineTypes.selectionRequest,
       speechTypes.basis, programSpaceTypes.programSpace, speechTypes.audioBasis,
       compositionTypes.visualTrack, compositionTypes.audioTrack],
     implementation: {
@@ -96,7 +120,7 @@ export const speechSpineManifest: ModuleManifest = {
       implementation: { kind: "registered", locator: "@narratage/speech-spine/create-spine-set", digest: createSpeechSpineSetImplementationDigest },
     },
     {
-      name: speechSpineProducers.appendTake.name,
+      name: speechSpineProducers.appendAudioTake.name,
       inputs: [
         { name: "set", type: speechSpineTypes.spineSet },
         { name: "program", type: speechSpineTypes.spineProgram },
@@ -105,7 +129,22 @@ export const speechSpineManifest: ModuleManifest = {
       ],
       outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
       needs: [],
-      implementation: { kind: "registered", locator: "@narratage/speech-spine/append-spine-take", digest: appendSpeechSpineTakeImplementationDigest },
+      implementation: { kind: "registered", locator: "@narratage/speech-spine/append-spine-audio-take", digest: appendSpeechSpineAudioTakeImplementationDigest },
+    },
+    {
+      name: speechSpineProducers.appendVisualTake.name,
+      inputs: [
+        { name: "set", type: speechSpineTypes.spineSet },
+        { name: "program", type: speechSpineTypes.spineProgram },
+        { name: "media", type: mediaTypes.synchronized },
+        { name: "segment", type: narrativeTypes.excerpt },
+        { name: "frame", type: spatialTypes.frame },
+        { name: "fit", type: spatialTypes.fit },
+        { name: "visualSpec", type: speechSpineTypes.visualSpec },
+      ],
+      outputs: [{ name: "set", type: speechSpineTypes.spineSet }],
+      needs: [],
+      implementation: { kind: "registered", locator: "@narratage/speech-spine/append-spine-visual-take", digest: appendSpeechSpineVisualTakeImplementationDigest },
     },
     {
       name: speechSpineProducers.compileAudio.name,

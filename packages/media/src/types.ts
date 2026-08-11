@@ -88,39 +88,16 @@ export type MediaStreamSelection = {
 export type SynchronizedMedia = {
   readonly contract: "svml.synchronized-media@1";
   readonly timeline: {
-    readonly spanAuthority: "video" | "audio";
     readonly frameRate: MediaRational;
     readonly frameCount: number;
-    readonly sampleRate: 48_000;
-    readonly sampleFrames: number;
-  };
-  readonly sourceMap: {
-    readonly sourceOriginPts: MediaTimestamp;
-    readonly sourceEndPts: MediaTimestamp;
-    readonly audioTrimStartSamples: number;
-    readonly audioTrimEndSamples: number;
-    readonly audioHeadSamples: number;
-    readonly audioContentSamples: number;
-    readonly audioTailSamples: number;
   };
   readonly visual?: {
     readonly artifact: BlobRef;
-    readonly sourceStreamIndex: number;
     readonly width: number;
     readonly height: number;
-    readonly frameRate: MediaRational;
-    readonly frameCount: number;
-    readonly muted: true;
   };
   readonly audio?: {
     readonly artifact: BlobRef;
-    readonly sourceStreamIndex: number;
-    readonly codec: "pcm_s16le";
-    readonly sampleRate: 48_000;
-    readonly channels: 2;
-    readonly sampleFrames: number;
-    /** Media normalization preserves level. Loudness/mastering is a separate author policy. */
-    readonly loudness: "preserved";
   };
 };
 

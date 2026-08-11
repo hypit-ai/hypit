@@ -11,6 +11,7 @@ import {
   locateSelectionOccurrences,
   projectMomentWindows,
   projectProgramWindow,
+  projectSegmentWindow,
   projectSelectionWindows,
   resolveTriggeredSchedule,
   temporalDurationInSamples,
@@ -31,6 +32,8 @@ const map: CompleteSemanticMap = {
     { identity: "c", timeSec: 3, frame: 90 },
     { identity: "d", timeSec: 4, frame: 120 },
     { identity: "late", timeSec: 8, frame: 240 },
+    { identity: "segment:answer:start", timeSec: 2, frame: 60 },
+    { identity: "segment:answer:end", timeSec: 4, frame: 120 },
   ],
 };
 
@@ -57,6 +60,21 @@ test("one Selection projects exact local points and stable occurrence identity",
     sourceOccurrenceId: "proof#7",
     span: { startFrame: 30, endFrameExclusive: 60 },
   }]);
+});
+
+test("one Segment projects from its own structural start and end anchors", () => {
+  const result = projectSegmentWindow({
+    itemId: "answer-card",
+    map,
+    segment: { contract: "svml.narrative-excerpt@1", kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
+    space,
+    projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
+  });
+  assert.deepEqual(result, {
+    id: "answer-card::answer",
+    sourceOccurrenceId: "answer",
+    span: { startFrame: 60, endFrameExclusive: 120 },
+  });
 });
 
 test("each preserves source order, even when physical time is reversed between occurrences", () => {

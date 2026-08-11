@@ -1,4 +1,4 @@
-import { verifySynchronizedMedia } from "@narratage/media";
+import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@narratage/media";
 import type { SynchronizedMedia } from "@narratage/media";
 import { canonicalize } from "@narratage/protocol";
 
@@ -62,7 +62,7 @@ export function appendMediaSound(
       trigger: structuredClone(spec.trigger),
       source: {
         artifact: structuredClone(media.audio.artifact),
-        sampleFrames: media.audio.sampleFrames,
+        sampleFrames: synchronizedMediaSampleFrames(media),
       },
       gain: spec.gain,
     }],
