@@ -242,10 +242,9 @@ duplicated validation pass from the KIE endpoint.
 
 ## Boundary
 
-`tools/package-boundaries.test.mjs` asserts that no `@narratage/provider-*` package has a production
-dependency on any exact-model package, and that both sides meet at `@narratage/generation`. Adding a
-model no longer edits a Provider; adding a Provider no longer re-implements every model. The
-relationship is N+M.
+Provider packages and exact-model packages meet at `@narratage/generation`; they do not depend on
+one another. Adding a model no longer edits a Provider, and adding a Provider no longer
+re-implements every model. The relationship is N+M.
 
 Current status is recorded in [`implementation-status.md`](./implementation-status.md); the shared
 Capability and Endpoint rules are in [`architecture.md`](./architecture.md) §6.

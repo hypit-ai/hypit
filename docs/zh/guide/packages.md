@@ -135,13 +135,13 @@ Sticker、Deck 或任何模型家族。
 
 ## 依赖规则
 
-`tools/package-boundaries.test.mjs` 在每次提交时强制执行三条不变式：
+包结构遵循三条依赖规则：
 
 1. **无环的生产依赖图。** 任何 `@narratage/*` 包之间都不存在依赖环。
 
 2. **领域无关闭包。** 每个 Layer 1 包的传递闭包只包含 Layer 1 的包。`@narratage/core` 只依赖 `@narratage/protocol`。
 
-3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance`、`@narratage/media-track`、`@narratage/typography-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。
+3. **CLI 独立性。** `@narratage/cli` 和 `@narratage/video-cli` 都不会传递依赖任何 Provider 包。video CLI 同样不依赖任何作者层的视频包（`@narratage/script`、`@narratage/seedance`、`@narratage/media-track`、`@narratage/typography-track`、`@narratage/film`）。作者包通过显式的 package lock 被 activate，而不是通过编译期的 CLI 依赖。这些规则直接体现在 package manifest 中并接受架构审查，不再用源码文本正则来近似证明。
 
 ## 包的结构
 

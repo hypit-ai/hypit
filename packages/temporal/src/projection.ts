@@ -1,9 +1,9 @@
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 
-import { locateMomentOccurrences, locateProgramOccurrence, locateSelectionOccurrences } from "./location.js";
+import { locateMomentOccurrences, locateProgramOccurrence, locateSegmentOccurrence, locateSelectionOccurrences } from "./location.js";
 import {
   add,
   compare,
@@ -18,6 +18,7 @@ import type {
   FrameSpan,
   LocatedMomentOccurrence,
   LocatedProgramOccurrence,
+  LocatedSegmentOccurrence,
   LocatedSelectionOccurrence,
   OccurrenceExpansion,
   ProjectedOccurrence,
@@ -30,6 +31,7 @@ type PointEnvironment = {
   readonly program: LocatedProgramOccurrence;
   readonly selection?: LocatedSelectionOccurrence;
   readonly moment?: LocatedMomentOccurrence;
+  readonly segment?: LocatedSegmentOccurrence;
 };
 
 function usesLocalPoint(expression: TemporalPointExpression, source: "selection" | "moment"): boolean {
@@ -80,6 +82,16 @@ function evaluatePoint(
     case "selection.end": {
       if (environment.selection === undefined) throw new Error("selection.end requires a Selection occurrence.");
       base = environment.selection.end.frame;
+      break;
+    }
+    case "segment.start": {
+      if (environment.segment === undefined) throw new Error("segment.start requires a Segment occurrence.");
+      base = environment.segment.start.frame;
+      break;
+    }
+    case "segment.end": {
+      if (environment.segment === undefined) throw new Error("segment.end requires a Segment occurrence.");
+      base = environment.segment.end.frame;
       break;
     }
     case "moment.cue": {
@@ -180,6 +192,22 @@ export function projectProgramWindow(input: {
     id: projectedId(input.itemId, program.id),
     sourceOccurrenceId: program.id,
     span: projectTemporalWindow(input.projection, { program }, input.space),
+  };
+}
+
+export function projectSegmentWindow(input: {
+  readonly itemId: string;
+  readonly map: CompleteSemanticMap;
+  readonly segment: NarrativeExcerpt;
+  readonly space: ProgramSpace;
+  readonly projection: TemporalWindowProjection;
+}): ProjectedOccurrence {
+  const program = locateProgramOccurrence(input.space);
+  const segment = locateSegmentOccurrence(input.map, input.segment, input.space);
+  return {
+    id: projectedId(input.itemId, segment.id),
+    sourceOccurrenceId: segment.id,
+    span: projectTemporalWindow(input.projection, { program, segment }, input.space),
   };
 }
 

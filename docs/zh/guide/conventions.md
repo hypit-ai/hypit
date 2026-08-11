@@ -21,7 +21,7 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 - 每个包有且只有一个公开入口点：`src/index.ts`。
 - 内部模块使用显式的 `.js` 扩展名（NodeNext 解析）。
 - 跨包导入使用 `@narratage/*`，绝不跨包边界使用相对路径。
-- 禁止循环依赖（由 `tools/package-boundaries.test.mjs` 强制执行）。
+- 禁止生产依赖形成循环。
 
 ## TypeScript 配置
 

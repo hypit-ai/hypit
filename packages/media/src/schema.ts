@@ -43,17 +43,12 @@ export const mediaStreamSelectionSchema: ValueSchema = object({
 });
 export const synchronizedMediaSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.synchronized-media@1" } },
-  timeline: { schema: object({ spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } }, frameRate: { schema: rational },
-    frameCount: { schema: { kind: "number", integer: true, minimum: 1 } }, sampleRate: { schema: { kind: "literal", value: 48_000 } },
-    sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  sourceMap: { schema: object({ sourceOriginPts: { schema: timestamp }, sourceEndPts: { schema: timestamp }, audioTrimStartSamples: { schema: integer },
-    audioTrimEndSamples: { schema: integer }, audioHeadSamples: { schema: integer }, audioContentSamples: { schema: integer }, audioTailSamples: { schema: integer } }) },
-  visual: { schema: object({ artifact: { schema: blobArtifactSchema() }, sourceStreamIndex: { schema: integer },
+  timeline: { schema: object({ frameRate: { schema: rational },
+    frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
+  visual: { schema: object({ artifact: { schema: blobArtifactSchema() },
     width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } },
-    frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } }, muted: { schema: { kind: "literal", value: true } } }), optional: true },
-  audio: { schema: object({ artifact: { schema: blobArtifactSchema(["audio/wav"]) }, sourceStreamIndex: { schema: integer }, codec: { schema: { kind: "literal", value: "pcm_s16le" } },
-    sampleRate: { schema: { kind: "literal", value: 48_000 } }, channels: { schema: { kind: "literal", value: 2 } },
-    sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, loudness: { schema: { kind: "literal", value: "preserved" } } }), optional: true },
+  }), optional: true },
+  audio: { schema: object({ artifact: { schema: blobArtifactSchema(["audio/wav"]) } }), optional: true },
 });
 export const renderedVisualSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.rendered-visual@1" } },
   frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },

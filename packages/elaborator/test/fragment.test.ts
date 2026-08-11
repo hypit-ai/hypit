@@ -140,7 +140,7 @@ function speechFragment(): GraphFragment {
       {
         id: "visual",
         producer: speechBasisProducers.projectVisual,
-        inputs: { basis: operation("generate"), canvas: input("canvas") },
+        inputs: { basis: operation("generate") },
         result: { kind: "output", name: "visual" },
       },
     ],
@@ -163,7 +163,7 @@ function speechFragment(): GraphFragment {
         name: "visual",
         type: compositionTypes.visualTrack,
         root: operation("visual"),
-        semanticInputs: ["request", "style", "canvas"],
+        semanticInputs: ["request", "style"],
         fidelity: "exact",
       },
     ],

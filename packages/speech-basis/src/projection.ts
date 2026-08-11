@@ -1,4 +1,4 @@
-import { programSpaceFrameCount, programSpaceSampleFrames } from "@narratage/program-space";
+import { programSpaceSampleFrames } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import { assertSpeechBasisIdentity } from "@narratage/speech";
 import type { SpeechAudioBasis, SpeechBasis } from "@narratage/speech";
@@ -6,7 +6,6 @@ import { lowerRestrictedSpeechVisualPresents } from "@narratage/media-track";
 import { sealAudioTrack, sealVisualTrack } from "@narratage/composition";
 import type { AudioTrack, VisualTrack } from "@narratage/composition";
 import { digestOf } from "@narratage/protocol";
-import type { CanvasSpace } from "@narratage/spatial";
 
 export const projectSpeechAudioImplementationDigest = digestOf(
   "@narratage/speech-basis/project-audio@1",
@@ -39,14 +38,9 @@ export function projectSpeechAudio(basis: SpeechBasis): SpeechAudioBasis {
   };
 }
 
-function frameAt(basis: SpeechBasis, seconds: number): number {
-  return Math.round(seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator);
-}
-
-export function projectSpeechVisual(basis: SpeechBasis, canvas: CanvasSpace): VisualTrack {
+export function projectSpeechVisual(basis: SpeechBasis): VisualTrack {
   assertSpeechBasisIdentity(basis);
   const trackId = `speech-visual:${basis.segments.map((segment) => segment.segmentId).join("+")}`;
-  const segments = new Map(basis.segments.map((segment) => [segment.segmentId, segment]));
   return sealVisualTrack({
     contract: "svml.visual-track@1",
     visualIr: "svml.visual-ir@1",
@@ -54,26 +48,17 @@ export function projectSpeechVisual(basis: SpeechBasis, canvas: CanvasSpace): Vi
     presents: lowerRestrictedSpeechVisualPresents(
       trackId,
       basis.programSpace,
-      canvas,
-      basis.visualTrack.clips.map((clip) => {
-        const segment = segments.get(clip.segmentId)!;
-        return {
-          id: clip.segmentId,
-          span: { startFrame: frameAt(basis, segment.startSec), endFrameExclusive: frameAt(basis, segment.endSec) },
-          artifact: clip.artifact,
-          extent: clip.extent,
-          frameRate: clip.frameRate,
-          frameCount: clip.frameCount,
-        };
-      }),
-      {
-        contract: "svml.content-fit@1",
-        sizing: "cover",
-        framePoint: { x: 0.5, y: 0.5 },
-        contentPoint: { x: 0.5, y: 0.5 },
-        offsetPx: { x: 0, y: 0 },
-        constraint: "bounded",
-      },
+      basis.visualTrack.clips.map((clip) => ({
+        id: clip.segmentId,
+        span: structuredClone(clip.span),
+        artifact: clip.artifact,
+        extent: clip.extent,
+        frameRate: clip.frameRate,
+        frameCount: clip.frameCount,
+        frame: clip.frame,
+        fit: clip.fit,
+        stackingOrder: clip.stackingOrder,
+      })),
     ),
   });
 }

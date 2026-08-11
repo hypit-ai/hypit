@@ -1,7 +1,6 @@
 import { programSpaceDependency, programSpaceTypes } from "@narratage/program-space";
 import { speechDependency, speechTypes } from "@narratage/speech";
 import { compositionDependency, compositionTypes } from "@narratage/composition";
-import { spatialDependency, spatialTypes } from "@narratage/spatial";
 import { digestOf } from "@narratage/protocol";
 import type { ModuleManifest, ProducerRef } from "@narratage/protocol";
 
@@ -29,7 +28,6 @@ export const speechBasisManifest: ModuleManifest = {
     speechDependency,
     programSpaceDependency,
     compositionDependency,
-    spatialDependency,
   ],
   types: [],
   capabilities: [],
@@ -59,7 +57,7 @@ export const speechBasisManifest: ModuleManifest = {
     },
     {
       name: speechBasisProducers.projectVisual.name,
-      inputs: [{ name: "basis", type: speechTypes.basis }, { name: "canvas", type: spatialTypes.canvas }],
+      inputs: [{ name: "basis", type: speechTypes.basis }],
       outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
       needs: [],
       implementation: {

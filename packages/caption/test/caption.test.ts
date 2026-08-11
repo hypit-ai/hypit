@@ -45,13 +45,7 @@ function locate(narrative: Narrative, durationSec: number, segments: readonly Al
     contract: "svml.speech-basis@1",
     programSpace: space,
     audio,
-    visualTrack: { clips: basisSegments.map((segment) => ({
-      segmentId: segment.segmentId,
-      artifact: { kind: "blob", digest: digestOf(segment.segmentId), size: 1, mediaType: "video/mp4" },
-      extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
-      frameRate: { ...space.frameRate },
-      frameCount: Math.round((segment.endSec - segment.startSec) * 30),
-    })) },
+    visualTrack: { clips: [] },
     segments: basisSegments,
   });
   const evidence = sealAlignedTranscriptEvidence({ contract: "svml.aligned-transcript-evidence@1", durationSec, segments });

@@ -39,6 +39,7 @@ consumption policy may lower concise syntax into this same graph. The official A
 
 ```svml
 <speech:Take video={take.video} segment={story.segment.opening}/>
+<speech:Take audio={voice.audio} segment={story.segment.voiceover}/>
 <media-track:Item video={broll.video} frame={full} during="program"/>
 ```
 
@@ -110,9 +111,9 @@ audioContentSamples     decoded source audio retained in the program span
 audioTailSamples        silence after early-ending source audio
 ```
 
-The public validator requires `head + content + tail = timeline.sampleFrames`, so a Provider cannot
-return a self-digested but internally incomplete sample map. Stream and source intervals must also
-be positive, and the visual frame rate must exactly equal the declared timeline rate.
+These are execution-plan values, not output payload fields. Tests inspect the produced WAV bytes to
+prove that the planned head/content/tail actually happened. `SynchronizedMedia` does not copy the
+authority choice, stream indexes or transform ledger downstream.
 
 Video sources are video-authoritative because AAC packetization may legally extend beyond the last
 picture. The tail is trimmed instead of lengthening the program and exposing black frames. A short
@@ -134,6 +135,23 @@ S(F) = round(F * 48000 * fps.den / fps.num)
 
 No per-item floating duration is independently rounded and then summed.
 
+## Minimal normalized waist
+
+The normalized value contains only facts downstream author packages consume:
+
+```text
+SynchronizedMedia
+  timeline { frameRate, frameCount }
+  visual?  { artifact, width, height }
+  audio?   { artifact }
+```
+
+The contract itself fixes the omitted technical shape: the visual Artifact is silent CFR video
+with square samples and materialized rotation; the audio Artifact is exact-span 48 kHz stereo PCM
+WAV whose level is preserved. Sample count is derived once from `frameRate` and `frameCount` using
+`S(F)` above. Inspection and Selection remain independent graph values, so their information is not
+lost and does not need to be duplicated into every downstream media value.
+
 ## Two different meanings of audio normalization
 
 Media normalization means deterministic technical shape:
@@ -144,9 +162,9 @@ Media normalization means deterministic technical shape:
 - exact trim, delay, pad and sample count;
 - lossless PCM until final program encoding.
 
-It does not mean loudness mastering. The local Provider emits 48 kHz stereo PCM s16 WAV with
-`loudness: preserved`. Gain, ducking, LUFS normalization and final mastering change presentation
-policy and must be explicit downstream audio/mix components.
+It does not mean loudness mastering. The normalized-media contract requires the Provider to preserve
+input level while emitting 48 kHz stereo PCM s16 WAV. Gain, ducking, LUFS normalization and final
+mastering change presentation policy and must be explicit downstream audio/mix components.
 
 WhisperX does not consume the final program mix. The implemented speech execution path explicitly
 derives one 16 kHz mono PCM `SpeechEvidenceAudio` from the Narrative-bound 48 kHz speech master,

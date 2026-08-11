@@ -16,6 +16,7 @@ import {
   appendMediaSequenceMember,
   appendMomentMediaItem,
   appendProgramMediaItem,
+  appendSegmentMediaItem,
   appendSelectionMediaItem,
   appendStillMediaLayer,
   appendSurfaceMediaLayer,
@@ -139,38 +140,16 @@ function timed(id = "timed", withAudio = true): SynchronizedMedia {
   return {
     contract: "svml.synchronized-media@1",
     timeline: {
-      spanAuthority: "video",
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 60,
-      sampleRate: 48_000,
-      sampleFrames,
-    },
-    sourceMap: {
-      sourceOriginPts: { ticks: "0", timeBase: { numerator: 1, denominator: 30 } },
-      sourceEndPts: { ticks: "60", timeBase: { numerator: 1, denominator: 30 } },
-      audioTrimStartSamples: 0,
-      audioTrimEndSamples: 0,
-      audioHeadSamples: 0,
-      audioContentSamples: withAudio ? sampleFrames : 0,
-      audioTailSamples: 0,
     },
     visual: {
       artifact: { kind: "blob", digest: digestOf(`video:${id}`), size: 10_000, mediaType: "video/mp4" },
-      sourceStreamIndex: 0,
       width: 720,
       height: 1280,
-      frameRate: { numerator: 30, denominator: 1 },
-      frameCount: 60,
-      muted: true,
     },
     ...(withAudio ? { audio: {
       artifact: { kind: "blob" as const, digest: digestOf(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
-      sourceStreamIndex: 1,
-      codec: "pcm_s16le" as const,
-      sampleRate: 48_000 as const,
-      channels: 2 as const,
-      sampleFrames,
-      loudness: "preserved" as const,
     } } : {}),
   };
 }
@@ -559,6 +538,28 @@ test("Media Items consume the shared one/each temporal algebra without becoming 
   assert.deepEqual(absolute.items[0]?.span, { startFrame: 7, endFrameExclusive: 19 });
 });
 
+test("a Media Item can consume one whole Narrative Segment without a synthetic Selection", () => {
+  const semanticMap: CompleteSemanticMap = {
+    contract: "svml.complete-semantic-map@1",
+    tokens: [],
+    anchors: [
+      { identity: "segment:answer:start", timeSec: 1, frame: 30 },
+      { identity: "segment:answer:end", timeSec: 3, frame: 90 },
+    ],
+  };
+  const result = appendSegmentMediaItem(
+    createMediaTrackSet(), header, space, canvas, stillLayers(), frame,
+    semanticMap,
+    { contract: "svml.narrative-excerpt@1", kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
+    itemSpec({
+      id: "whole-answer",
+      projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
+    }),
+    createMediaSoundSet(),
+  );
+  assert.deepEqual(result.items.map((item) => item.span), [{ startFrame: 30, endFrameExclusive: 90 }]);
+});
+
 test("every declared lifecycle and sustain operator lowers, and outside-canvas motion resolves from explicit geometry", () => {
   for (const operator of ["fade", "slide", "scale", "pop", "bounce", "blur-reveal", "wipe", "flip", "spin"] as const) {
     const direction = ["slide", "wipe", "flip"].includes(operator) ? { direction: "up" as const } : {};
@@ -709,6 +710,7 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
     ["surface", plain("surface", mediaTypes.compositableSurface)],
     ["sfx", plain("sfx", mediaTypes.synchronized)],
     ["selection", plain("selection", narrativeTypes.selection)],
+    ["answer-segment", plain("answer-segment", narrativeTypes.excerpt)],
     ["terminal", plain("terminal", narrativeTypes.selection)],
     ["cue1", plain("cue1", narrativeTypes.moment)],
     ["cue2", plain("cue2", narrativeTypes.moment)],
@@ -723,6 +725,7 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   ]);
   const root = node("media:Track", { id: "editorial", space: ref("space"), canvas: ref("canvas"), map: ref("map") }, [
     node("media:Item", { id: "still-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), clip: ref("clip-path"), appearance: ref("still-style"), during: "program" }),
+    node("media:Item", { id: "segment-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), appearance: ref("still-style"), during: ref("answer-segment") }),
     node("media:Item", { id: "proof", frame: ref("frame"), appearance: ref("card-style"), motion: ref("motion"), during: ref("selection"), "source-audio": "video", "audio-gain": "0.8" }, [
       node("media:Paint", { id: "backing", appearance: ref("paint-style") }),
       node("media:Layer", { id: "video", video: ref("raw-video"), audio: "include", appearance: ref("video-style") }, [
@@ -749,6 +752,7 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   const fragment = result.fragments[0]!;
   const producers = fragment.operations.map((entry) => entry.producer.name);
   assert.ok(producers.includes("append-still-media-layer"));
+  assert.ok(producers.includes("append-segment-media-item"));
   assert.ok(producers.includes("append-timed-media-layer"));
   assert.ok(producers.includes(mediaPipelineProducers.bindAvRequest.name));
   assert.ok(producers.includes(mediaPipelineProducers.inspect.name));
@@ -765,9 +769,9 @@ test("the Media author Surface emits explicit graph edges for layers, semantic t
   assert.ok(fragment.inputs.some((entry) => entry.type.name === narrativeTypes.selection.name));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === spatialTypes.path.name));
   const itemSpecs = result.records.filter((entry) => entry.type.name === "MediaItemSpec");
-  assert.equal(itemSpecs.length, 2);
-  const selected = itemSpecs[1]!.value.kind === "inline"
-    ? itemSpecs[1]!.value.value as unknown as MediaItemSpec
+  assert.equal(itemSpecs.length, 3);
+  const selected = itemSpecs[2]!.value.kind === "inline"
+    ? itemSpecs[2]!.value.value as unknown as MediaItemSpec
     : undefined;
   assert.equal(selected?.sourceAudio?.fromLayer, "video");
   assert.ok(mediaTrackManifest.surfaces.some((surface) => surface.name === "track"));

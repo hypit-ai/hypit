@@ -86,8 +86,10 @@
   </seedance:ReferenceVideo>
 
   <space:Canvas id="vertical" width="480" height="854"/>
+  <space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
 
-  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
     <speech:Take video={opening-take.video} segment={story.segment.opening}/>
     <speech:Take video={answer-take.video} segment={story.segment.answer}/>
   </speech:Spine>

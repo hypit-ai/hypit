@@ -1,6 +1,6 @@
 import { assertAudioTrackIdentity, sealAudioTrack } from "@narratage/composition";
 import type { AudioClip, AudioTrack } from "@narratage/composition";
-import { verifySynchronizedMedia } from "@narratage/media";
+import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@narratage/media";
 import type { SynchronizedMedia } from "@narratage/media";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import {
@@ -114,10 +114,9 @@ export function assertAudioTrackSet(value: AudioTrackSet): void {
 function sourceFacts(media: SynchronizedMedia): AudioItemProgram["source"] {
   verifySynchronizedMedia(media);
   assert(media.audio !== undefined, "Audio Track source has no explicitly normalized audio member.");
-  const { artifact, sampleFrames } = media.audio;
   return {
-    artifact: structuredClone(artifact),
-    sampleFrames,
+    artifact: structuredClone(media.audio.artifact),
+    sampleFrames: synchronizedMediaSampleFrames(media),
   };
 }
 

@@ -16,8 +16,7 @@
     "@narratage/media-track": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
-    "@narratage/speech": "workspace:*",
-    "@narratage/spatial": "workspace:*"
+    "@narratage/speech": "workspace:*"
   },
   "devDependencies": {
     "@narratage/core": "workspace:*",

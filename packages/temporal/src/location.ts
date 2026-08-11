@@ -1,12 +1,13 @@
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
-import { momentFrames, selectionFrameSpans } from "@narratage/semantic-map";
+import { momentFrames, segmentFrameSpan, selectionFrameSpans } from "@narratage/semantic-map";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 
 import type {
   LocatedMomentOccurrence,
   LocatedProgramOccurrence,
+  LocatedSegmentOccurrence,
   LocatedSelectionOccurrence,
 } from "./types.js";
 
@@ -78,4 +79,22 @@ export function locateMomentOccurrences(
 export function locateProgramOccurrence(space: ProgramSpace): LocatedProgramOccurrence {
   assertProgramSpaceIdentity(space);
   return { id: "program", start: { frame: 0 }, end: { frame: programSpaceFrameCount(space) } };
+}
+
+export function locateSegmentOccurrence(
+  map: CompleteSemanticMap,
+  segment: NarrativeExcerpt,
+  space: ProgramSpace,
+): LocatedSegmentOccurrence {
+  assertProgramSpaceIdentity(space);
+  const totalFrames = programSpaceFrameCount(space);
+  const span = segmentFrameSpan(map, segment, space);
+  assertLocatedFrame(span.startFrame, totalFrames, `Narrative Segment ${segment.id} start`);
+  assertLocatedFrame(span.endFrameExclusive, totalFrames, `Narrative Segment ${segment.id} end`);
+  if (span.endFrameExclusive <= span.startFrame) throw new Error(`Narrative Segment ${segment.id} has no positive frame span.`);
+  return {
+    id: segment.id,
+    start: { frame: span.startFrame },
+    end: { frame: span.endFrameExclusive },
+  };
 }

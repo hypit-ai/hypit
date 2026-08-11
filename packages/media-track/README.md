@@ -5,9 +5,10 @@ Official provider-free Media Item and Sequence authoring package.
 `Track` accepts explicit ProgramSpace, CanvasSpace and, when semantic points are used, a
 CompleteSemanticMap. Each independently timed `Item` receives an explicit SpatialFrame and either
 one direct source or ordered Paint/sample layers. A visual source is always named by its actual
-form: `image`, generated/raw `video`, prepared `media`, or compositable `surface`. Raw video is
-automatically inspected and normalized to the connected ProgramSpace; `audio="include"` opts its
-audio into the same normalization. `Sequence` owns an ordered replacement surface with explicit
+form: `image`, generated/raw `video`, prepared `media`, or compositable `surface`. For raw video the
+Track Surface declares the connected ProgramSpace as its consumption policy and expands ordinary
+Media Pipeline inspect/select/normalize Operations; it does not execute normalization itself.
+`audio="include"` opts audio into that same graph. `Sequence` owns an ordered replacement surface with explicit
 activation points and pairwise Handoffs. Package-owned Recipes cover fitting, source occupancy,
 frame Paint, clipping, borders, shadows, lifecycle motion and sampling motion.
 

@@ -2,8 +2,8 @@ import type { VisualPresent } from "@narratage/composition";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
 import type { BlobRef } from "@narratage/protocol";
-import { assertCanvasSpace, assertContentFit, assertIntrinsicExtent } from "@narratage/spatial";
-import type { CanvasSpace, ContentFit, IntrinsicExtent } from "@narratage/spatial";
+import { assertContentFit, assertIntrinsicExtent, assertSpatialFrame } from "@narratage/spatial";
+import type { ContentFit, IntrinsicExtent, SpatialFrame } from "@narratage/spatial";
 
 import { lowerMediaItemElements } from "./lower.js";
 import type { MediaItemProgram } from "./types.js";
@@ -15,29 +15,32 @@ export type RestrictedSpeechVisualClip = {
   readonly extent: IntrinsicExtent;
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
   readonly frameCount: number;
+  readonly frame: SpatialFrame;
+  readonly fit: ContentFit;
+  readonly stackingOrder: number;
 };
 
 /**
- * Focused reuse point for Speech Spine: one normalized muted take, one full-Canvas
- * foreground layer and no Media author semantics beyond the shared lowering laws.
+ * Focused reuse point for Speech Spine: one normalized muted take and one
+ * explicitly placed foreground layer, without Media Track motion or sequence
+ * semantics.
  */
 export function lowerRestrictedSpeechVisualPresents(
   trackId: string,
   space: ProgramSpace,
-  canvas: CanvasSpace,
   clips: readonly RestrictedSpeechVisualClip[],
-  fit: ContentFit,
 ): readonly VisualPresent[] {
   assertProgramSpaceIdentity(space);
-  assertCanvasSpace(canvas);
-  assertContentFit(fit);
-  if (!trackId || clips.length === 0) throw new Error("Restricted Speech visual requires an id and clips.");
+  if (!trackId) throw new Error("Restricted Speech visual requires an id.");
   const totalFrames = programSpaceFrameCount(space);
   return clips.map((clip, index) => {
     if (clip.artifact.kind !== "blob" || !clip.artifact.mediaType.startsWith("video/")) {
       throw new Error(`Speech visual ${clip.id} is not a normalized moving-video Blob.`);
     }
     assertIntrinsicExtent(clip.extent);
+    assertSpatialFrame(clip.frame);
+    assertContentFit(clip.fit);
+    if (!Number.isSafeInteger(clip.stackingOrder)) throw new Error(`Speech visual ${clip.id} has an invalid stacking order.`);
     if (clip.frameRate.numerator !== space.frameRate.numerator
       || clip.frameRate.denominator !== space.frameRate.denominator) {
       throw new Error(`Speech visual ${clip.id} is not normalized to ProgramSpace frame rate.`);
@@ -52,13 +55,7 @@ export function lowerRestrictedSpeechVisualPresents(
       id: `${trackId}:${clip.id}`,
       sourceOccurrenceId: clip.id,
       span: { ...clip.span },
-      frame: {
-        contract: "svml.spatial-frame@1",
-        xPx: 0,
-        yPx: 0,
-        widthPx: canvas.widthPx,
-        heightPx: canvas.heightPx,
-      },
+      frame: structuredClone(clip.frame),
       presentation: {
         clip: { kind: "frame" },
         padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 },
@@ -74,7 +71,7 @@ export function lowerRestrictedSpeechVisualPresents(
           frameRate: { ...clip.frameRate },
           frameCount: clip.frameCount,
         },
-        fit: structuredClone(fit),
+        fit: structuredClone(clip.fit),
         occupancy: { mode: "once", align: "start" },
         appearance: {
           opacity: 1,
@@ -83,7 +80,7 @@ export function lowerRestrictedSpeechVisualPresents(
       }],
       motion: { sustain: [] },
       stacking: {
-        order: 0,
+        order: clip.stackingOrder,
         tieBreak: `${trackId}:${String(index + 1).padStart(4, "0")}:${clip.id}`,
       },
       sounds: [],

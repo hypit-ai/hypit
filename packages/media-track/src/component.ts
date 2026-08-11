@@ -1,6 +1,6 @@
 import type { ComponentPackage, ProducerHandlerContext } from "@narratage/component-kit";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@narratage/media";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import type { ProgramSpace } from "@narratage/program-space";
 import { canonicalize } from "@narratage/protocol";
 import type { BlobRef, StoredValue } from "@narratage/protocol";
@@ -21,6 +21,7 @@ import {
   appendMediaSequenceUntilSelection,
   appendMomentMediaItem,
   appendProgramMediaItem,
+  appendSegmentMediaItem,
   appendSelectionMediaItem,
   bindMediaItemClipPath,
   bindMediaSequenceClipPath,
@@ -139,6 +140,12 @@ export const mediaTrackComponent = {
       return { outputs: { set: output(appendSelectionMediaItem(value.set, value.header, value.space, value.canvas, value.layers, value.frame,
         inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
         inline<NarrativeSelectionRef>(inputs.selection?.value, "NarrativeSelectionRef"), value.spec, value.sounds)) }, needs: {} };
+    } },
+    { producer: mediaTrackProducers.appendSegmentItem, implementationDigest: mediaTrackImplementationDigests.appendSegmentItem, handler: ({ inputs }) => {
+      const value = itemInputs(inputs);
+      return { outputs: { set: output(appendSegmentMediaItem(value.set, value.header, value.space, value.canvas, value.layers, value.frame,
+        inline<CompleteSemanticMap>(inputs.map?.value, "CompleteSemanticMap"),
+        inline<NarrativeExcerpt>(inputs.segment?.value, "NarrativeExcerpt"), value.spec, value.sounds)) }, needs: {} };
     } },
     { producer: mediaTrackProducers.appendMomentItem, implementationDigest: mediaTrackImplementationDigests.appendMomentItem, handler: ({ inputs }) => {
       const value = itemInputs(inputs);

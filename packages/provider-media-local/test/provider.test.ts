@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { artifactTypes } from "@narratage/artifact";
-import { mediaTypes, sealRenderedVisual, verifyMediaInspection, verifyMuxedMedia, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
+import { mediaTypes, sealRenderedVisual, synchronizedMediaSampleFrames, verifyMediaInspection, verifyMuxedMedia, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
 import type { MediaAudioStream, MediaInspection, MuxedMedia, SynchronizedMedia, TimelineAudio } from "@narratage/media";
 import { assertSpeechEvidenceAudioIdentity, speechTypes } from "@narratage/speech";
 import type { SpeechEvidenceAudio } from "@narratage/speech";
@@ -68,6 +68,47 @@ function rampWav(sampleFrames: number): Buffer {
     bytes.writeInt16LE(value, 46 + frame * 4);
   }
   return bytes;
+}
+
+function pcm16StereoAudibleSpan(bytes: Uint8Array): {
+  readonly firstSample: number;
+  readonly endSampleExclusive: number;
+  readonly sampleFrames: number;
+} {
+  const wav = Buffer.from(bytes);
+  assert.equal(wav.toString("ascii", 0, 4), "RIFF");
+  assert.equal(wav.toString("ascii", 8, 12), "WAVE");
+  let dataStart = -1;
+  let dataBytes = 0;
+  for (let offset = 12; offset + 8 <= wav.length;) {
+    const id = wav.toString("ascii", offset, offset + 4);
+    const size = wav.readUInt32LE(offset + 4);
+    if (id === "fmt ") {
+      assert.equal(wav.readUInt16LE(offset + 8), 1);
+      assert.equal(wav.readUInt16LE(offset + 10), 2);
+      assert.equal(wav.readUInt32LE(offset + 12), 48_000);
+      assert.equal(wav.readUInt16LE(offset + 22), 16);
+    }
+    if (id === "data") {
+      dataStart = offset + 8;
+      dataBytes = size;
+      break;
+    }
+    offset += 8 + size + (size % 2);
+  }
+  assert(dataStart >= 0 && dataStart + dataBytes <= wav.length, "normalized WAV has no complete data chunk");
+  const sampleFrames = Math.floor(dataBytes / 4);
+  let firstSample = sampleFrames;
+  let endSampleExclusive = 0;
+  for (let frame = 0; frame < sampleFrames; frame += 1) {
+    const offset = dataStart + frame * 4;
+    if (Math.max(Math.abs(wav.readInt16LE(offset)), Math.abs(wav.readInt16LE(offset + 2))) > 64) {
+      firstSample = Math.min(firstSample, frame);
+      endSampleExclusive = frame + 1;
+    }
+  }
+  assert(firstSample < endSampleExclusive, "normalized WAV contains no audible samples");
+  return { firstSample, endSampleExclusive, sampleFrames };
 }
 
 function presentationSampleFrames(stream: MediaAudioStream): number {
@@ -223,16 +264,7 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
     const typed = await normalizeArtifact({ artifacts, source, inspection: typedInspection,
       selection, frameRate: selectionRequest.frameRate });
     assert.equal(typed.timeline.frameCount, 30);
-    assert.equal(typed.timeline.sampleFrames, 48_000);
-    assert.equal(typed.visual?.sourceStreamIndex, 0);
-    assert.equal(typed.visual?.muted, true);
-    assert.equal(typed.audio?.sourceStreamIndex, 1);
-    assert.equal(typed.audio?.sampleRate, 48_000);
-    assert.equal(typed.audio?.channels, 2);
-    assert.equal(typed.sourceMap.audioHeadSamples + typed.sourceMap.audioContentSamples
-      + typed.sourceMap.audioTailSamples, typed.timeline.sampleFrames);
-    assert.ok(typed.sourceMap.audioTrimEndSamples > 0, "AAC tail beyond the final picture must be trimmed");
-    assert.equal(typed.sourceMap.audioHeadSamples, 0);
+    assert.equal(synchronizedMediaSampleFrames(typed), 48_000);
     assert.equal("basisDigest" in typed, false);
     assert.equal("narrativeDigest" in typed, false);
     assert.equal(await artifacts.has(typed.visual!.artifact.digest), true);
@@ -265,6 +297,11 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
     };
     assert.deepEqual(outputProbe.streams.map((stream) => stream.codec_type), ["video"]);
     assert.equal(outputProbe.streams[0]?.nb_frames, "30");
+    const audioOutput = await inspectArtifact(artifacts, typed.audio!.artifact);
+    const normalizedAudio = audioOutput.streams.find((stream) => stream.kind === "audio");
+    assert.equal(normalizedAudio?.kind === "audio" && normalizedAudio.sampleRate, 48_000);
+    assert.equal(normalizedAudio?.kind === "audio" && normalizedAudio.channels, 2);
+    assert.equal(normalizedAudio?.kind === "audio" && normalizedAudio.decodedSampleFrames, 48_000);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -335,7 +372,6 @@ test("animated WebP keeps its authored frame timing before fixed-rate normalizat
   const selection = selectMediaStreams(inspection, request);
   const normalized = await normalizeArtifact({ artifacts, source, inspection, selection, frameRate: request.frameRate });
   assert.equal(normalized.timeline.frameCount, 10);
-  assert.equal(normalized.visual?.frameCount, 10);
   assert.equal(normalized.visual?.width, 64);
   assert.equal(normalized.visual?.height, 48);
   const output = await inspectArtifact(artifacts, normalized.visual!.artifact);
@@ -469,14 +505,14 @@ test("local media Provider preserves one source A/V origin when audio starts lat
     const expectedEnd = Math.round((seconds(audio.endPts) - seconds(video.startPts)) * 48_000);
     const expectedTail = 48_000 - Math.min(48_000, expectedEnd);
     assert.equal(normalized.timeline.frameCount, 30);
-    assert.equal(normalized.timeline.sampleFrames, 48_000);
-    assert.equal(normalized.sourceMap.audioHeadSamples, expectedHead,
-      "normalized audio head must preserve the measured stream-start offset");
-    assert.equal(normalized.sourceMap.audioTailSamples, expectedTail,
-      "normalized audio tail must preserve the measured stream end");
-    assert.ok(normalized.sourceMap.audioHeadSamples > 9_000, "fixture must retain a substantial audio lag");
-    assert.equal(normalized.sourceMap.audioTrimStartSamples, 0);
-    assert.equal(normalized.sourceMap.audioTrimEndSamples, 0);
+    const bytes = await artifacts.get(normalized.audio!.artifact.digest);
+    assert(bytes !== undefined);
+    const audible = pcm16StereoAudibleSpan(bytes);
+    assert.equal(audible.sampleFrames, 48_000);
+    assert.ok(Math.abs(audible.firstSample - expectedHead) <= 64,
+      `normalized audio begins at ${audible.firstSample}, expected ${expectedHead}`);
+    assert.ok(Math.abs(audible.endSampleExclusive - (48_000 - expectedTail)) <= 64,
+      `normalized audio ends at ${audible.endSampleExclusive}, expected ${48_000 - expectedTail}`);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -507,13 +543,6 @@ test("a silent generated MP4 remains a visual-only product and cannot satisfy a 
     assert.equal(normalized.timeline.frameCount, 15);
     assert.ok(normalized.visual);
     assert.equal(normalized.audio, undefined);
-    assert.deepEqual({
-      trimStart: normalized.sourceMap.audioTrimStartSamples,
-      trimEnd: normalized.sourceMap.audioTrimEndSamples,
-      head: normalized.sourceMap.audioHeadSamples,
-      content: normalized.sourceMap.audioContentSamples,
-      tail: normalized.sourceMap.audioTailSamples,
-    }, { trimStart: 0, trimEnd: 0, head: 0, content: 0, tail: 0 });
 
     const invalid = sealMediaSelectionRequest({
       contract: "svml.media-selection-request@1",
