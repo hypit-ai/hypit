@@ -742,7 +742,7 @@
     {
       "name": "@narratage/speech-spine",
       "version": "0.0.0-dev",
-      "digest": "sha256:03a18dbf36764e3cd951fb46eb8badb69ead040da5f7b6d258a5bb125950f0a1"
+      "digest": "sha256:972ce74a5ea4788ef6982e08dcaf458404d2611f10e5d1be540567531855652a"
     },
     {
       "name": "@narratage/speech",
@@ -1009,7 +1009,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:d20cdc013e61ea8d7a632d7cea2c10a9186a0bf0736ece2ff0f307c1320b6459",
-      "closureDigest": "sha256:16eb190b79628257a3100ca81b7cbe26ccb1e4d6e95b6f93c629dafac07a2c8d"
+      "closureDigest": "sha256:970eb497a878b46f6524df3ca53730d2cfe99c1a576203705f7d63914f992f28"
     },
     {
       "specifier": "@narratage/svs",
@@ -1066,5 +1066,5 @@
       "closureDigest": "sha256:d0abf29a19cbc43aa0e0cfe239670d4e339da684f89ed5ad413b1aabea18e165"
     }
   ],
-  "digest": "sha256:0b46a81a27f4a980120ba1979abf9a7df33f5b600e0eef0a1e82522b49d966af"
+  "digest": "sha256:1656839b867ddf41d57635dc1ee1e84de0b2a09b0121a345aa4d116008905225"
 }
