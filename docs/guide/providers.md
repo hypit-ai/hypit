@@ -90,26 +90,20 @@ import { createMyServiceProvider } from "./provider.js";
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
 
-  validate(context) {
+  activate(context) {
     const config = runtimeConfigObject(context.config, "MyService");
     runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
-    if (runtimeConfigCredentialRef(config.apiKey, "MyService apiKey") === undefined) {
-      throw new Error("MyService apiKey CredentialRef is required");
-    }
-    runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
-  },
-
-  create(context) {
-    const config = runtimeConfigObject(context.config, "MyService");
     const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
     if (apiKey === undefined) throw new Error("MyService apiKey CredentialRef is required");
-    return createMyServiceProvider({
-      instance: context.instance,
-      lane: context.lane,
-      apiKey,
-      ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency") === undefined
-        ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
-    });
+    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
+    return {
+      endpoint: createMyServiceProvider({
+        instance: context.instance,
+        lane: context.lane,
+        apiKey,
+        ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
+      }),
+    };
   },
 });
 
@@ -122,9 +116,12 @@ export const svmlPackage = {
 export default svmlPackage;
 ```
 
-`validate` is pure and runs before authority is granted. `create` constructs the Endpoint only
-after the profile, lock and permissions pass. Credential presence is diagnosed through the generic
-CredentialStore/Endpoint description path; a Provider must not special-case environment variables.
+`activate` is the one pure deployment declaration. The Endpoint it returns owns the credential
+references, permissions, capabilities and scheduling facts used by both `doctor` and execution.
+Activation must not resolve secrets or environment-sourced deployment values, access the network or
+start work. It keeps environment names as references until a matching Need is handled. Credential
+presence is diagnosed through the generic CredentialStore path; a Provider must not special-case
+environment variables as a secret Store.
 
 ## 5. Declare an external service (if needed)
 
@@ -148,19 +145,24 @@ export function createMyExternalService(): RuntimeExternalService {
 }
 ```
 
-Wire it into the activation descriptor by passing `service` to `createRuntimeEndpointAdapterFacet`:
+Return it beside the Endpoint from the same activation:
 
 ```typescript
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
-  service: createMyExternalService,
-  // create, doctor …
+  activate(context) {
+    return {
+      endpoint: createMyServiceProvider(/* parsed config */),
+      externalService: createMyExternalService(),
+    };
+  },
 });
 ```
 
 `narratage runtime up` prepares, starts and probes declared external programs before starting the
-durable Worker. `build` ensures that Runtime is running before submission. Providers that call only
-remote APIs omit this step entirely—leave `"service"` out of `package.json`.
+durable Worker. `build` starts only services backing capabilities declared by its selected Producer
+steps. Providers that call only remote APIs omit this step entirely—leave `"service"` out of
+`package.json`.
 
 ## 6. Register and lock
 
@@ -173,10 +175,14 @@ Add the path mapping to `tsconfig.json`:
 Lock into a Runtime package lock:
 
 ```bash
-pnpm narratage lock-packages <runtime-lock> \
+node --run narratage -- lock-packages <runtime-lock> \
   --package @narratage/provider-my-service \
   --package-root .
 ```
+
+If the Runtime lock already exists, use `--add @narratage/provider-my-service` instead. This changes
+only the local trust selection; the package remains inert until the Runtime Profile explicitly
+instantiates its `use` id.
 
 ## 7. Reference from svml.runtime.json
 
@@ -202,7 +208,7 @@ pnpm narratage lock-packages <runtime-lock> \
 Verify the configuration:
 
 ```bash
-pnpm narratage doctor svml.runtime.json
+node --run narratage -- doctor svml.runtime.json
 ```
 
 ## Existing Providers to study

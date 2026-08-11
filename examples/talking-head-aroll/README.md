@@ -26,7 +26,7 @@ take at Seedance's 15-second request limit.
 Create the explicit package lock used by this development-workspace example:
 
 ```sh
-pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
+node --run narratage -- lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/artifact \
   --package @narratage/narrative \
   --package @narratage/media \
@@ -58,7 +58,7 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.packages.lock \
   --package @narratage/run-markup \
   --package-root .
 
-pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.lock \
+node --run narratage -- lock-packages examples/talking-head-aroll/svml.runtime-packages.lock \
   --package @narratage/local \
   --package @narratage/store-sqlite \
   --package @narratage/artifact-store-fs \
@@ -71,36 +71,40 @@ pnpm narratage lock-packages examples/talking-head-aroll/svml.runtime-packages.l
   --package-root .
 ```
 
+After package implementation changes, retain these explicit selections without repeating the long
+list:
+
+```sh
+node --run narratage -- lock-packages examples/talking-head-aroll/svml.packages.lock --refresh
+node --run narratage -- lock-packages examples/talking-head-aroll/svml.runtime-packages.lock --refresh
+```
+
 Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:
 
 ```sh
-pnpm narratage check examples/talking-head-aroll/main.svml \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
-  --root .
+node --run narratage -- check examples/talking-head-aroll/main.svml \
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 Inspect the exact paid plan before submitting it:
 
 ```sh
-pnpm narratage plan examples/talking-head-aroll/build.svrun \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
-  --root .
+node --run narratage -- plan examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 Build the complete film after preparing the managed local WhisperX service and exposing `KIE_API_KEY`,
 `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`:
 
 ```sh
-pnpm narratage runtime up examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- runtime up examples/talking-head-aroll/svml.runtime.json
 
-pnpm narratage build examples/talking-head-aroll/build.svrun \
+node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
-  --root . \
   --build-id talking-head-film-001 \
   --follow
 
-pnpm narratage get talking-head-film-001 \
+node --run narratage -- get talking-head-film-001 \
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
@@ -113,10 +117,8 @@ Run the same downstream film from the four archived generated shots without anot
 submission:
 
 ```sh
-pnpm narratage build examples/talking-head-aroll/reuse-generated.svrun \
+node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
-  --root . \
   --build-id talking-head-film-reuse-001 \
   --follow
 ```

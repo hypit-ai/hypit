@@ -126,7 +126,7 @@ export default svmlPackage;
 ```bash
 pnpm install --frozen-lockfile
 
-pnpm narratage lock-packages <lock-file> \
+node --run narratage -- lock-packages <lock-file> \
   --package @narratage/my-component \
   [--package @narratage/other-direct-package ...] \
   --package-root .
@@ -134,6 +134,17 @@ pnpm narratage lock-packages <lock-file> \
 
 这里只列出你直接选择的包。它们的 Manifest 声明的精确逻辑 Module 依赖，会从已安装的
 物理依赖闭包中自动加入；缺失、摘要不匹配或存在多个候选时，建锁会直接失败。
+
+已有锁只需增加这个直接包时，不必重写其他选择：
+
+```bash
+node --run narratage -- lock-packages <lock-file> \
+  --add @narratage/my-component \
+  --package-root .
+```
+
+`--remove` 明确撤销一个直接选择，`--refresh` 在选择不变时接受当前安装字节，`--verify`
+只读验证闭包。重复的 `--package` 始终表示一份完整、精确的直接选择，而不是增量添加。
 
 ## 8. 在 Author Source 中使用
 
