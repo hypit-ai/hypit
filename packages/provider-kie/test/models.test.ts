@@ -65,7 +65,7 @@ function capabilityKey(ref: CapabilityRef): string {
 const upload = async (artifact: { readonly digest: string }) => `https://upload.test/${artifact.digest}`;
 
 test("the selected KIE release is seven exact model families and no Grok image capability", () => {
-  assert.equal(kieModelCatalog.length, 11);
+  assert.equal(kieModelCatalog.length, 12);
   assert.equal(
     kieModelCatalog.some((item) => item.capability.name.startsWith("grok-") && item.result === "image"),
     false,
@@ -195,12 +195,12 @@ test("Seedream safety policy is explicit author content and contributes to reque
   assert.notEqual(digestOf(unchecked), digestOf(checked));
 });
 
-test("all eleven exact capabilities route to their documented KIE model slug", async () => {
+test("all twelve exact capabilities route to their documented KIE model slug", async () => {
   const store = new MemoryArtifactStore();
   const image = await store.put(new Uint8Array([1]), "image/png");
   const video = await store.put(new Uint8Array([2]), "video/mp4");
   const audio = await store.put(new Uint8Array([3]), "audio/wav");
-  const seedance = (model: "seedance-2" | "seedance-2-fast" | "seedance-2-mini") => sealSeedanceRequest(model, {
+  const seedance = (model: "seedance-2" | "seedance-2-fast" | "seedance-2-mini" | "seedance-2.5") => sealSeedanceRequest(model, {
     prompt: ["A studio shot."],
     resolution: [model === "seedance-2" ? "1080p" : "720p"],
     aspectRatio: ["16:9"],
@@ -225,6 +225,7 @@ test("all eleven exact capabilities route to their documented KIE model slug", a
     ["seedance-2", seedance("seedance-2"), "bytedance/seedance-2"],
     ["seedance-2-fast", seedance("seedance-2-fast"), "bytedance/seedance-2-fast"],
     ["seedance-2-mini", seedance("seedance-2-mini"), "bytedance/seedance-2-mini"],
+    ["seedance-2.5", seedance("seedance-2.5"), "bytedance/seedance-2-5"],
     ["minimax-h3", sealMinimaxH3Request({
       prompt: ["A studio shot."],
       duration: [6],
@@ -293,6 +294,31 @@ test("all eleven exact capabilities route to their documented KIE model slug", a
     const task = await compileWireRequest(mapping, request, upload);
     assert.equal(task.model, expectedModel, `${model} -> ${expectedModel}`);
   }
+});
+
+test("Seedance 2.5 maps its exact request without leaking KIE envelope controls into the model", async () => {
+  const request = sealSeedanceRequest("seedance-2.5", {
+    prompt: ["A car crosses the desert."],
+    resolution: ["720p"],
+    aspectRatio: ["21:9"],
+    duration: [30],
+    generateAudio: [true],
+    webSearch: [false],
+  });
+  const mapping = kieModelCatalog.find((item) => item.capability.name === "seedance-2.5");
+  assert.ok(mapping);
+  const task = await compileWireRequest(mapping, request, upload);
+  assert.equal(task.model, "bytedance/seedance-2-5");
+  assert.deepEqual(task.input, {
+    prompt: "A car crosses the desert.",
+    resolution: "720p",
+    aspect_ratio: "21:9",
+    duration: 30,
+    generate_audio: true,
+    web_search: false,
+    return_last_frame: false,
+    output_format: "mp4",
+  });
 });
 
 test("one model reaching a service that splits it keeps the reference roles intact", async () => {

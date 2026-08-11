@@ -82,7 +82,7 @@ test("all KIE capabilities share one recoverable task engine and differ only by 
     fetch: async () => { throw new Error("no request expected"); },
     fetchImplementationDigest: digestOf("provider-kie:route-registry-test"),
   });
-  assert.equal(provider.bindings.length, 12);
+  assert.equal(provider.bindings.length, 13);
   const registry = new EndpointRegistry();
   await provider.install(registry);
   const seed = need(sealSeedanceRequest("seedance-2-mini", {

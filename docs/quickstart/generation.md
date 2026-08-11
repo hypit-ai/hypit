@@ -122,9 +122,21 @@ and explicit graph inputs.
 
 ## Seedance invocation shapes
 
-Seedance exposes model capabilities, not creative usages. `standard`, `fast` and `mini` choose the
-model variant independently of three invocation shapes. All shapes consume a complete ordinary
-`Text` prompt and output `{id.video}`.
+Seedance exposes model capabilities, not creative usages. `standard`, `fast`, `mini` and `2.5`
+choose the exact model independently of three invocation shapes. All shapes consume a complete
+ordinary `Text` prompt and output `{id.video}`.
+
+Seedance 2.5 uses the same Surfaces; it is not a Runtime substitution for another model. Its exact
+contract accepts 480p/720p, up to 30 image, 10 video and 10 audio references, and either `-1` for
+model-selected duration or an integer from 4 through 30 seconds:
+
+```svml
+<seedance:ReferenceVideo id="long-take" model="2.5"
+  prompt={long-direction} duration="30" resolution="720p">
+  <seedance:Reference image={presenter-reference}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
+```
 
 ### seedance:TextVideo
 

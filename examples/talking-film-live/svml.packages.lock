@@ -713,7 +713,7 @@
     {
       "name": "@narratage/seedance",
       "version": "0.0.0-dev",
-      "digest": "sha256:72e172d81787cb632a903ab5f3f56ff7bb12daf57f3e2f927c70045db8140b88"
+      "digest": "sha256:8cd24d91f174c431e3e5537423460345d33aef6bfb70b26746a7fe128c50e3aa"
     },
     {
       "name": "@narratage/semantic-map",
@@ -965,8 +965,8 @@
         "name": "@narratage/seedance",
         "version": "0.0.0-dev"
       },
-      "facetsDigest": "sha256:0832f344b8c327e316a153d8ca4559da5eba452f3e334ffb49c7e94a29f36ecf",
-      "closureDigest": "sha256:3ef4370d01ffcfef671cae12e1a250b1216caaa373b335246d2bfb5d11b148cf"
+      "facetsDigest": "sha256:8b2ab1c897cd410e0933e8d6298be86fb9e44a302499d0070af7bf3df3ddcdeb",
+      "closureDigest": "sha256:7beae6ed6f2ef099c52dee47cff81049f8f802414f00e252f528937d33854fd0"
     },
     {
       "specifier": "@narratage/semantic-map",
@@ -1086,5 +1086,5 @@
       "closureDigest": "sha256:d0abf29a19cbc43aa0e0cfe239670d4e339da684f89ed5ad413b1aabea18e165"
     }
   ],
-  "digest": "sha256:ff48f6c0eaef7beb70cd23ed010836d513a4e0d678c7450d164fd792b75e5288"
+  "digest": "sha256:be1c07e805c5615cfd1784e2a56998c98a54d142f85582cea3453d126921a293"
 }

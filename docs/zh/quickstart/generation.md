@@ -114,8 +114,20 @@ speech.normal {
 ## Seedance 三种调用形状
 
 Seedance 只暴露模型能力，不暴露“口播”“B-roll”等创作用途。`standard`、`fast`、`mini`
-选择模型版本；调用形状则独立分为三种。三者都消费完整的普通 `Text` Prompt，并输出
-`{id.video}`。
+和 `2.5` 选择精确模型；调用形状则独立分为三种。三者都消费完整的普通 `Text` Prompt，
+并输出 `{id.video}`。
+
+Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷偷替换成 2.5。它的精确
+合同支持 480p/720p，最多 30 张参考图、10 段参考视频、10 段参考音频；时长可写 `-1`
+交给模型选择，也可明确写 4–30 秒的整数：
+
+```svml
+<seedance:ReferenceVideo id="long-take" model="2.5"
+  prompt={long-direction} duration="30" resolution="720p">
+  <seedance:Reference image={presenter-reference}/>
+  <seedance:Reference audio={presenter-voice}/>
+</seedance:ReferenceVideo>
+```
 
 ### seedance:TextVideo
 
