@@ -11,6 +11,7 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 <import as="speech" from="@narratage/speech-spine@1"/>
 <import as="whisperx" from="@narratage/whisperx@1"/>
 <import as="space" from="@narratage/spatial@1"/>
+<import as="studio" source="./studio.svs"/>
 ```
 
 ## speech:Spine
@@ -19,7 +20,9 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<speech:Spine id="speech" canvas={vertical} frame-rate="30">
+<space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
+<speech:Spine id="speech" frame-rate="30"
+  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
   <speech:Take video={hook-take.video} segment={story.segment.hook}/>
   <speech:Take video={meeting-take.video} segment={story.segment.meeting}/>
   <speech:Take video={evidence-take.video} segment={story.segment.evidence}/>
@@ -30,24 +33,38 @@ description: Speech Spine 装配与 WhisperX 对齐——将生成的片段连�
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `id` | 是 | 唯一标识符 |
-| `canvas` | 是 | 受限 Media 视觉投影显式使用的 CanvasSpace |
 | `frame-rate` | 是 | 节目帧率，写整数或有理数，例如 `30`、`30000/1001` |
+| `visual-frame` | 是 | 同源 Take 视觉的显式基础 SpatialFrame |
+| `visual-appearance` | 是 | 只包含空间 fit 属性的 SVS Recipe |
+| `visual-z` | 是 | 同源 Take 视觉的基础绝对层级 |
 
 ### speech:Take
 
-每个 `<speech:Take>` 子元素将一个生成的视频绑定到一个 Script Segment：
+每个 `<speech:Take>` 子元素将一个带口播的来源绑定到一个 Script Segment：
 
 | 属性 | 必填 | 描述 |
 |---|---|---|
-| `video` | 二选一 | 生成/原始视频 Blob，例如 Seedance 产出的 `{take.video}` |
-| `media` | 二选一 | 已准备好的 `SynchronizedMedia`；跳过自动规范化 |
+| `video` | 三选一 | 生成/原始视频 Blob，例如 Seedance 产出的 `{take.video}` |
+| `audio` | 三选一 | 纯语音 Blob；贡献节目时长与主音频，不贡献视觉 |
+| `media` | 三选一 | 已准备好的 `SynchronizedMedia`；跳过自动规范化 |
 | `segment` | 是 | 此片段对应的 Script Segment——例如 `{story.segment.hook}` |
+| `frame` | 仅视觉 | 覆盖本 Take 的基础 `visual-frame` |
+| `appearance` | 仅视觉 | 覆盖本 Take 的基础 `visual-appearance` |
+| `z` | 仅视觉 | 覆盖本 Take 的基础 `visual-z` |
 
-`video` 与 `media` 必须且只能选一个。AIGC 的正常路径就是 `video={take.video}`。Speech
+`video`、`audio` 与 `media` 必须且只能选一个。AIGC 的正常路径就是 `video={take.video}`。Speech
 Surface 会把这句易读声明展开为普通 Media Pipeline Operation：检查容器、选择主动态视频流
 和默认音轨，再按 Spine 声明的帧率规范化。把 30 fps 素材接入 60 fps Spine 时，时长不变，
 帧序列会被确定性重采样为 60 fps，而不是把视频播放加速一倍。只有上游图已经明确产出所需
 `SynchronizedMedia` 时才使用 `media=`。
+
+视觉 Take 默认继承 Spine 上显式写出的三个视觉值，也可以逐段覆盖。纯音频 Take 禁止写
+视觉覆盖；它播放时 `speech.visual` 就没有 Present，Film 背景或平级 Track 会自然露出，
+系统不会伪造黑场。fit Recipe 只是普通编译期 SVS 数据，例如：
+
+```svs
+speech.visual { fit: cover; }
+```
 
 `<speech:Take>` 子元素的排列顺序**决定了节目顺序**。第一个片段从时间零点开始；后续片段依次紧接。
 
@@ -57,7 +74,7 @@ Spine 产生四个输出，供下游组件使用：
 
 | 输出 | 类型 | 使用方 |
 |---|---|---|
-| `{speech.visual}` | VisualTrack | `film:Film`——全屏真人出镜视频 |
+| `{speech.visual}` | VisualTrack | `film:Film`——稀疏的同源 Take 视觉 |
 | `{speech.audio}` | Audio | `whisperx:Alignment`——用于词级时序的原始音频 |
 | `{speech.audioTrack}` | AudioTrack | `film:Film`——同步音频 |
 | `{speech.space}` | ProgramSpace | 所有组件——统一的时长和帧域 |
@@ -108,6 +125,8 @@ ProgramSpace 包含：
 
 SemanticMap 是连接 Script 文本与物理时间的类型化桥梁。当你在 Media Item 上写 `during={story.selection.demo}` 时，组件会使用 SemanticMap 查找该 Selection 覆盖的精确帧范围。没有 SemanticMap，Selection 和 Moment 就没有物理意义。
 
+整段使用无需伪造 Selection：`during={story.segment.answer}` 直接消费 Segment 已有的首尾结构锚点。
+
 使用该映射的组件通过 `map` 属性接收它：
 
 ```svml
@@ -127,10 +146,13 @@ Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估�
 <import as="speech" from="@narratage/speech-spine@1"/>
 <import as="whisperx" from="@narratage/whisperx@1"/>
 <import as="space" from="@narratage/spatial@1"/>
+<import as="studio" source="./studio.svs"/>
 
 <!-- Assemble takes in program order -->
 <space:Canvas id="vertical" width="1080" height="1920"/>
-<speech:Spine id="speech" canvas={vertical} frame-rate="30">
+<space:Frame id="speech-frame" within={vertical} left="0%" top="0%" right="100%" bottom="100%"/>
+<speech:Spine id="speech" frame-rate="30"
+  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
   <speech:Take video={opening-take.video} segment={story.segment.opening}/>
   <speech:Take video={answer-take.video} segment={story.segment.answer}/>
 </speech:Spine>
@@ -140,7 +162,7 @@ Map 只包含最终词窗口和语义锚点，不传播“测量、推导、估�
 
 <!-- Downstream components now reference: -->
 <!-- {speech.space}  — ProgramSpace for duration/frame domain -->
-<!-- {speech.visual} — VisualTrack for the talking-head video -->
+<!-- {speech.visual} — 稀疏的同源口播 VisualTrack -->
 <!-- {speech.audioTrack} — AudioTrack for synchronized audio -->
 <!-- {timing.map}    — SemanticMap for Selection/Moment timing -->
 ```

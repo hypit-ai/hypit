@@ -2,6 +2,7 @@
 
 <sheet version="1">
   film.vertical { background: #09090B; }
+  speech.visual { fit: cover; }
   media.card {
     stack-order: 40; fit: cover; playback: hold-start;
     frame-paint: #111116; clip: rounded; radius: 20;

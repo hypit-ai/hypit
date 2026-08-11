@@ -21,7 +21,7 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 - Each package has exactly one public entry point: `src/index.ts`.
 - Internal modules use explicit `.js` extensions (NodeNext resolution).
 - Cross-package imports use `@narratage/*`, never relative paths across package boundaries.
-- Circular dependencies are forbidden (enforced by `tools/package-boundaries.test.mjs`).
+- Circular production dependencies are forbidden.
 
 ## TypeScript configuration
 

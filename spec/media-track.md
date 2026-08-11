@@ -514,11 +514,11 @@ Speech Spine should stop maintaining a second ad-hoc media renderer. Its visual 
 same Media lowering implementation with a deliberately restricted generated Program:
 
 ```text
-one normalized A/V take per speech Segment
+one normalized speech-bearing Take per Segment; its visual stream is optional
 exact already-established Segment frame span
-Canvas Placement Frame
+explicit authored Spatial Frame
 one foreground layer
-explicit contain/cover fit chosen by the speech package
+explicit fit and absolute stacking order chosen by the author
 muted visual
 cut between contiguous takes
 no entry, sustain or exit motion
@@ -528,7 +528,10 @@ no source-audio projection
 
 The Speech author Surface accepts raw `video=` and expands the same generic inspection and
 normalization graph before assembly, selecting primary moving video plus default audio at the
-Spine's explicit frame rate. It also accepts prepared `media=` directly. After assembly, Speech
+Spine's explicit frame rate. Raw `audio=` expands an audio-authoritative normalization graph and
+contributes no visual Present; it never manufactures black media. Prepared `media=` remains a
+direct exact input. Visual Takes inherit the Spine's explicit `visual-frame`,
+`visual-appearance` and `visual-z`, with per-Take overrides for those same limited axes. After assembly, Speech
 audio remains the separate canonical `SpeechAudioBasis -> AudioTrack` projection; the restricted
 visual lowerer itself remains muted and does not rediscover container audio.
 
@@ -539,6 +542,10 @@ still does not register Media meaning.
 
 The author imports Speech Spine, whose manifest declares its package dependency. Authors do not
 need to import a second parser merely because the implementation reuses Media lowering.
+
+Ordinary Media Items may consume `during={story.segment.answer}` directly. This is not an implicit
+Selection: Temporal resolves the Segment's already-existing structural start/end anchors. The same
+Item can still consume authored Selection and Moment values when those are the actual intent.
 
 ## 14. Legacy audit: retained and retired
 
@@ -705,8 +712,8 @@ The matrix above is closed by executable evidence rather than by package status 
 - `packages/hyperframes/test/browser-visual.test.ts` renders opaque images, a straight-alpha
   Surface, two-frame fitting, local motion and a Sequence handoff through real Chromium, then
   compares every decoded RGBA frame across different worker partitions;
-- `tools/package-boundaries.test.mjs` and `tools/graph-first-value-boundary.test.mjs` enforce the
-  absence of a Media family registry and of hidden lineage/provider metadata in values.
+- package manifests contain no Media family registry, while the public value types contain no
+  hidden lineage or Provider metadata.
 
 The local package is therefore complete as a pre-release Media implementation over the frozen
 repository-internal `svml.visual-track@1` / `svml.visual-ir@1` waist. This does not publish or

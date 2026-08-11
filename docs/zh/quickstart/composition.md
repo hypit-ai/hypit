@@ -49,7 +49,7 @@ Composition。然后渲染器将该 Composition 编译为 MP4 视频。
 
 | 来源 | 类型 | 来自 |
 |---|---|---|
-| `{speech.visual}` | VisualTrack | `speech:Spine`——全屏说话人画面 |
+| `{speech.visual}` | VisualTrack | `speech:Spine`——稀疏的同源口播视觉 |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine`——同步音频 |
 | `{captions.track}` | VisualTrack | Caption 样式族 Track——定时字幕 |
 | `{cards.visual}` | VisualTrack | `media-track:Track`——Media 叠加层或 B-roll |
@@ -64,7 +64,7 @@ Track 是**扁平的**——没有嵌套或分组。Z 轴排序完全由每个 T
 
 | stack-order | 内容 |
 |---|---|
-| 10 | 语音画面（全屏说话人画面） |
+| 10 | 示例口播视觉（作者显式选择，不是内置默认值） |
 | 40 | Media 叠加层 |
 | 70 | 字幕 |
 | 90 | 文字叠加层 |
@@ -141,13 +141,16 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
     prompt={direction} duration="5"/>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
     left="6%" top="6%" right="6%" bottom="84%"/>
   <space:Frame id="card-frame" within={vertical}
     left="10%" top="20%" right="10%" bottom="30%"/>
 
   <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
     <speech:Take video={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
@@ -200,6 +203,7 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
   film.vertical {
     background: #09090B;
   }
+  speech.visual { fit: cover; }
   media.card {
     stack-order: 40; fit: cover; playback: hold-start;
     frame-paint: #111116; clip: rounded; radius: 20;

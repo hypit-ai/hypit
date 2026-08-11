@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { momentFrames, selectionFrameSpans } from "@narratage/semantic-map";
+import { momentFrames, segmentFrameSpan, selectionFrameSpans } from "@narratage/semantic-map";
 import type { CompleteSemanticMap } from "@narratage/semantic-map";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import type { ProgramSpace } from "@narratage/program-space";
@@ -84,6 +84,12 @@ test("a Segment cut is an ordinary anchor, so a Selection may start at one", () 
     selectionFrameSpans(map, selection("segment:second:token:2:start", "segment:second:end"), space),
     [{ startFrame: 7, endFrameExclusive: 9 }],
   );
+});
+
+test("a whole Segment is exactly its two structural anchors", () => {
+  assert.deepEqual(segmentFrameSpan(map, {
+    contract: "svml.narrative-excerpt@1", kind: "segment", id: "second", tokenStart: 2, tokenEndExclusive: 4,
+  }, space), { startFrame: 5, endFrameExclusive: 9 });
 });
 
 test("a Moment locates one instant per occurrence", () => {

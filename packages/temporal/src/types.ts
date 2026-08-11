@@ -21,6 +21,12 @@ export type LocatedProgramOccurrence = {
   readonly end: FramePoint;
 };
 
+export type LocatedSegmentOccurrence = {
+  readonly id: string;
+  readonly start: FramePoint;
+  readonly end: FramePoint;
+};
+
 /** Exact author duration. Decimal source spelling is reduced before reaching this value. */
 export type TemporalDuration =
   | { readonly unit: "frames"; readonly value: number }
@@ -32,6 +38,8 @@ export type TemporalPointExpression =
   | { readonly ref: "program.end"; readonly offset?: TemporalDuration }
   | { readonly ref: "selection.start"; readonly offset?: TemporalDuration }
   | { readonly ref: "selection.end"; readonly offset?: TemporalDuration }
+  | { readonly ref: "segment.start"; readonly offset?: TemporalDuration }
+  | { readonly ref: "segment.end"; readonly offset?: TemporalDuration }
   | { readonly ref: "moment.cue"; readonly offset?: TemporalDuration }
   | { readonly ref: "absolute"; readonly at: TemporalDuration };
 

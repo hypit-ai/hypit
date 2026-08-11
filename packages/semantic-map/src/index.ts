@@ -3,6 +3,7 @@ export {
   assertNarrativeMomentIdentity,
   assertNarrativeSelectionIdentity,
   momentFrames,
+  segmentFrameSpan,
   selectionFrameSpans,
   tokenSpanSeconds,
 } from "./location.js";

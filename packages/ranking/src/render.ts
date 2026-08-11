@@ -17,7 +17,7 @@ import type {
   VisualTextTypography,
   VisualTrack,
 } from "@narratage/composition";
-import { verifySynchronizedMedia } from "@narratage/media";
+import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@narratage/media";
 import {
   assertProgramSpaceIdentity,
   programFrameSampleBoundary,
@@ -684,14 +684,15 @@ export function renderRankingAudio(
     const audio = media.audio;
     assert(audio !== undefined, `Ranking ${event.kind} sound has no normalized audio.`);
     const startSample = programFrameSampleBoundary(space, event.frame, 48_000);
-    const length = Math.min(audio.sampleFrames, totalSamples - startSample);
+    const sourceSampleFrames = synchronizedMediaSampleFrames(media);
+    const length = Math.min(sourceSampleFrames, totalSamples - startSample);
     assert(length > 0, `Ranking sound ${event.id} starts after ProgramSpace.`);
     assert(fadeSamples <= length, `Ranking sound ${event.id} fade exceeds its audible interval.`);
     clips.push({
       id: event.id,
       artifact: structuredClone(audio.artifact),
       target: { startSample, endSampleExclusive: startSample + length },
-      source: { sampleFrames: audio.sampleFrames, startSample: 0, endSampleExclusive: length, loop: false, phaseSample: 0 },
+      source: { sampleFrames: sourceSampleFrames, startSample: 0, endSampleExclusive: length, loop: false, phaseSample: 0 },
       playbackRate: 1, pitch: "preserve",
       gain: event.kind === "appear" ? style.appearGain : style.moveGain,
       fadeInSamples: fadeSamples, fadeOutSamples: 0,

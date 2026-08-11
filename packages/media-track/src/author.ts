@@ -1,5 +1,5 @@
 import type { SvsRecipe } from "@narratage/svs";
-import { sealContentFit } from "@narratage/spatial";
+import { decodeContentFitProperties } from "@narratage/spatial";
 import type { ContentFit } from "@narratage/spatial";
 
 import {
@@ -125,14 +125,7 @@ const FRAME_KEYS = ["stack-order", "clip", "radius", "padding", "border-width", 
 const MOTION_KEYS = ["enter", "enter-frames", "enter-easing", "enter-direction", "enter-amount", "enter-origin", "sustain", "exit", "exit-frames", "exit-easing", "exit-direction", "exit-amount", "exit-origin"] as const;
 
 export function decodeMediaFit(recipe: SvsRecipe): ContentFit {
-  return sealContentFit({
-    contract: "svml.content-fit@1",
-    sizing: oneOf(recipe, "fit", ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"] as const, "contain"),
-    framePoint: { x: number(recipe, "frame-x", 0.5), y: number(recipe, "frame-y", 0.5) },
-    contentPoint: { x: number(recipe, "content-x", 0.5), y: number(recipe, "content-y", 0.5) },
-    offsetPx: { x: number(recipe, "fit-offset-x", 0), y: number(recipe, "fit-offset-y", 0) },
-    constraint: oneOf(recipe, "fit-constraint", ["bounded", "free"] as const, "bounded"),
-  });
+  return decodeContentFitProperties(recipe.properties, `Media Recipe ${recipe.path}`);
 }
 
 function occupancy(recipe: SvsRecipe): MediaVisualOccupancy {

@@ -160,7 +160,7 @@ function negate(value: TemporalDuration): TemporalDuration {
 
 function point(value: string, label: string): TemporalPointExpression {
   const trimmed = value.trim();
-  const refs = ["program.start", "program.end", "selection.start", "selection.end", "moment.cue"] as const;
+  const refs = ["program.start", "program.end", "selection.start", "selection.end", "segment.start", "segment.end", "moment.cue"] as const;
   for (const ref of refs) {
     if (trimmed === ref) return { ref };
     const match = new RegExp(`^${ref.replace(".", "\\.")}\\s*([+-])\\s*(.+)$`, "u").exec(trimmed);
@@ -173,7 +173,7 @@ function point(value: string, label: string): TemporalPointExpression {
 }
 
 type TemporalBinding = {
-  readonly kind: "program" | "selection" | "moment";
+  readonly kind: "program" | "selection" | "segment" | "moment";
   readonly projection: TemporalWindowProjection;
   readonly source?: SurfaceResolvedReference;
 };
@@ -187,6 +187,7 @@ function temporalBinding(
   const start = optionalText(element, "start");
   const end = optionalText(element, "end");
   const selection = element.attributes.selection;
+  const segment = element.attributes.segment;
   const moment = element.attributes.moment;
   const forms = Number(during !== undefined) + Number(at !== undefined) + Number(start !== undefined || end !== undefined);
   if (forms !== 1) throw new Error(`${element.name} requires exactly one of during, at/for, or start/end.`);
@@ -195,10 +196,15 @@ function temporalBinding(
       if (during.trim() !== "program") throw new Error(`${element.name}.during text must be program.`);
       return { kind: "program", projection: { start: { ref: "program.start" }, end: { ref: "program.end" } } };
     }
-    return {
+    const source = oneOfReferences(during, `${element.name}.during`, [narrativeTypes.selection, narrativeTypes.excerpt], resolve);
+    return sameType(source.type, narrativeTypes.selection) ? {
       kind: "selection",
-      source: reference(during, `${element.name}.during`, narrativeTypes.selection, resolve),
+      source,
       projection: { start: { ref: "selection.start" }, end: { ref: "selection.end" } },
+    } : {
+      kind: "segment",
+      source,
+      projection: { start: { ref: "segment.start" }, end: { ref: "segment.end" } },
     };
   }
   if (at !== undefined) {
@@ -210,7 +216,9 @@ function temporalBinding(
     };
   }
   if (start === undefined || end === undefined) throw new Error(`${element.name} explicit timing requires start and end.`);
-  if (selection !== undefined && moment !== undefined) throw new Error(`${element.name} cannot bind Selection and Moment together.`);
+  if (Number(selection !== undefined) + Number(segment !== undefined) + Number(moment !== undefined) > 1) {
+    throw new Error(`${element.name} cannot bind Selection, Segment and Moment together.`);
+  }
   if (selection !== undefined) return {
     kind: "selection",
     source: reference(selection, `${element.name}.selection`, narrativeTypes.selection, resolve),
@@ -219,6 +227,11 @@ function temporalBinding(
   if (moment !== undefined) return {
     kind: "moment",
     source: reference(moment, `${element.name}.moment`, narrativeTypes.moment, resolve),
+    projection: { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) },
+  };
+  if (segment !== undefined) return {
+    kind: "segment",
+    source: reference(segment, `${element.name}.segment`, narrativeTypes.excerpt, resolve),
     projection: { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) },
   };
   return { kind: "program", projection: { start: point(start, `${element.name}.start`), end: point(end, `${element.name}.end`) } };
@@ -361,7 +374,8 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
     operations.push({
       id: appendId,
       producer: item.binding === "program" ? mediaTrackProducers.appendProgramItem
-        : item.binding === "selection" ? mediaTrackProducers.appendSelectionItem : mediaTrackProducers.appendMomentItem,
+        : item.binding === "selection" ? mediaTrackProducers.appendSelectionItem
+          : item.binding === "segment" ? mediaTrackProducers.appendSegmentItem : mediaTrackProducers.appendMomentItem,
       inputs: item.binding === "program" ? common : {
         ...common, map: input("map"), [item.binding]: input(item.sourceName!),
       },
@@ -729,7 +743,7 @@ export const decodeMediaTrackSurface: StructuredSurfaceHandler = ({ element, res
       const itemSuffix = suffix(itemIndex);
       allowed(child, [
         "id", "image", "video", "media", "surface", "extent", "audio", "frame", "appearance", "motion", "source-audio", "audio-gain",
-        "clip", "during", "at", "for", "start", "end", "selection", "moment", "occurrences",
+        "clip", "during", "at", "for", "start", "end", "selection", "segment", "moment", "occurrences",
       ]);
       const id = optionalText(child, "id") ?? `${trackId}.item.${itemSuffix}`;
       const appearance = recipe(reference(child.attributes.appearance, `${child.name}.appearance`, svsRecipeType, resolveReference), `${child.name}.appearance`);

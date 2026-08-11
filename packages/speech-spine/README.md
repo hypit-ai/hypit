@@ -10,12 +10,19 @@ auditable reusable graph contributions:
 - WhisperX evidence plus the provider-neutral speech SemanticMap;
 - timed caption projection.
 
-The package also owns `<speech:Spine>`. The Spine explicitly declares its `frame-rate`; each
+The package also owns `<speech:Spine>`. The Spine explicitly declares its `frame-rate` and its
+restricted visual base (`visual-frame`, `visual-appearance`, `visual-z`); each
 `<speech:Take>` connects one `NarrativeExcerpt` and exactly one of:
 
 - `video={...}` — an ordinary generated video Blob. The Surface expands inspection, stream
   selection and A/V normalization before assembly;
+- `audio={...}` — an ordinary voice Blob. The Surface expands audio-authoritative normalization;
+  this Take contributes no visual clip and never invents a black frame;
 - `media={...}` — an already prepared `SynchronizedMedia` value, connected directly.
+
+Visual Takes may override the Spine base with `frame`, `appearance` and `z`. That is the complete
+visual authority of Speech Spine: one same-source visual clip may be placed and stacked. Motion,
+transitions, sequences and independent pictures remain ordinary Media Tracks.
 
 The Surface then expands an immutable append fold, one timeline-audio render and ordinary
 SpeechBasis projections. Whitespace and child layout do not create ports, and Core receives no

@@ -141,7 +141,7 @@ never on exact-model packages or the CLI.
 
 ## Dependency rules
 
-`tools/package-boundaries.test.mjs` enforces three invariants on every commit:
+The package layout follows three dependency rules:
 
 1. **Acyclic production graph.** No dependency cycle among any `@narratage/*` packages.
 
@@ -152,7 +152,8 @@ never on exact-model packages or the CLI.
    Provider package. The video CLI also does not depend on any author-level video package
    (`@narratage/script`, `@narratage/seedance`, `@narratage/media-track`, `@narratage/typography-track`, `@narratage/film`).
    Author packages are activated through the explicit package lock, not compile-time CLI
-   dependencies.
+   dependencies. These rules are kept visible in package manifests and reviewed as architecture,
+   rather than approximated by source-text regex tests.
 
 ## Package anatomy
 

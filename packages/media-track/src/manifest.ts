@@ -50,6 +50,7 @@ export const mediaTrackProducers = {
   createSet: { module: mediaTrackModuleRef, name: "create-media-track-set" },
   appendProgramItem: { module: mediaTrackModuleRef, name: "append-program-media-item" },
   appendSelectionItem: { module: mediaTrackModuleRef, name: "append-selection-media-item" },
+  appendSegmentItem: { module: mediaTrackModuleRef, name: "append-segment-media-item" },
   appendMomentItem: { module: mediaTrackModuleRef, name: "append-moment-media-item" },
   bindItemClipPath: { module: mediaTrackModuleRef, name: "bind-media-item-clip-path" },
   bindSequenceClipPath: { module: mediaTrackModuleRef, name: "bind-media-sequence-clip-path" },
@@ -150,7 +151,7 @@ const signedDuration: ValueSchema = { kind: "oneOf", variants: [
   object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: integer }, denominator: { schema: positiveInteger } }),
 ] };
 const point: ValueSchema = { kind: "oneOf", variants: [
-  ...["program.start", "program.end", "selection.start", "selection.end", "moment.cue"].map((ref) => object({
+  ...["program.start", "program.end", "selection.start", "selection.end", "segment.start", "segment.end", "moment.cue"].map((ref) => object({
     ref: { schema: { kind: "literal", value: ref } }, offset: { schema: signedDuration, optional: true },
   })),
   object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration } }),
@@ -343,6 +344,7 @@ export const mediaTrackManifest: ModuleManifest = {
     { name: mediaTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/create-set", digest: mediaTrackImplementationDigests.createSet } },
     { name: mediaTrackProducers.appendProgramItem.name, inputs: [...itemInputs], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-program-item", digest: mediaTrackImplementationDigests.appendProgramItem } },
     { name: mediaTrackProducers.appendSelectionItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "selection", type: narrativeTypes.selection }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-selection-item", digest: mediaTrackImplementationDigests.appendSelectionItem } },
+    { name: mediaTrackProducers.appendSegmentItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "segment", type: narrativeTypes.excerpt }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-segment-item", digest: mediaTrackImplementationDigests.appendSegmentItem } },
     { name: mediaTrackProducers.appendMomentItem.name, inputs: [...itemInputs, { name: "map", type: semanticMapTypes.complete }, { name: "moment", type: narrativeTypes.moment }], outputs: [{ name: "set", type: mediaTrackTypes.set }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/append-moment-item", digest: mediaTrackImplementationDigests.appendMomentItem } },
     { name: mediaTrackProducers.bindItemClipPath.name, inputs: [{ name: "spec", type: mediaTrackTypes.itemSpec }, { name: "path", type: spatialTypes.path }], outputs: [{ name: "spec", type: mediaTrackTypes.itemSpec }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/bind-item-clip-path", digest: mediaTrackImplementationDigests.bindItemClipPath } },
     { name: mediaTrackProducers.bindSequenceClipPath.name, inputs: [{ name: "spec", type: mediaTrackTypes.sequenceSpec }, { name: "path", type: spatialTypes.path }], outputs: [{ name: "spec", type: mediaTrackTypes.sequenceSpec }], needs: [], implementation: { kind: "registered", locator: "@narratage/media-track/bind-sequence-clip-path", digest: mediaTrackImplementationDigests.bindSequenceClipPath } },

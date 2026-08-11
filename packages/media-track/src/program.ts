@@ -5,7 +5,7 @@ import {
   sealVisualTrack,
 } from "@narratage/composition";
 import type { AudioClip, AudioTrack, VisualTrack } from "@narratage/composition";
-import type { NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
+import type { NarrativeExcerpt, NarrativeMomentRef, NarrativeSelectionRef } from "@narratage/narrative";
 import {
   assertProgramSpaceIdentity,
   programFrameSampleBoundary,
@@ -24,6 +24,7 @@ import {
   locateSelectionOccurrences,
   projectMomentWindows,
   projectProgramWindow,
+  projectSegmentWindow,
   projectSelectionWindows,
 } from "@narratage/temporal";
 import type { ProjectedOccurrence, TemporalDuration, TemporalPointExpression } from "@narratage/temporal";
@@ -74,6 +75,7 @@ export const mediaTrackImplementationDigests = {
   createSet: digestOf("@narratage/media-track/create-set@1"),
   appendProgramItem: digestOf("@narratage/media-track/append-program-item@1"),
   appendSelectionItem: digestOf("@narratage/media-track/append-selection-item@1"),
+  appendSegmentItem: digestOf("@narratage/media-track/append-segment-item@1"),
   appendMomentItem: digestOf("@narratage/media-track/append-moment-item@1"),
   bindItemClipPath: digestOf("@narratage/media-track/bind-item-clip-path@1"),
   bindSequenceClipPath: digestOf("@narratage/media-track/bind-sequence-clip-path@1"),
@@ -130,7 +132,7 @@ function assertDuration(value: TemporalDuration, label: string, signed: boolean)
 }
 
 function assertPoint(value: TemporalPointExpression, label: string): void {
-  assert(["program.start", "program.end", "selection.start", "selection.end", "moment.cue", "absolute"].includes(value.ref),
+  assert(["program.start", "program.end", "selection.start", "selection.end", "segment.start", "segment.end", "moment.cue", "absolute"].includes(value.ref),
     `${label}.ref is invalid.`);
   if (value.ref === "absolute") assertDuration(value.at, `${label}.at`, false);
   else if (value.offset !== undefined) assertDuration(value.offset, `${label}.offset`, true);
@@ -270,6 +272,24 @@ export function appendSelectionMediaItem(
   return realizedItems(set, header, space, canvas, layers, frame, spec, sounds, projectSelectionWindows({
     itemId: spec.id, map, selection, space, expansion: spec.expansion, projection: spec.projection,
   }));
+}
+
+export function appendSegmentMediaItem(
+  set: MediaTrackSet,
+  header: MediaTrackHeader,
+  space: ProgramSpace,
+  canvas: CanvasSpace,
+  layers: MediaLayerSet,
+  frame: MediaItemProgram["frame"],
+  map: CompleteSemanticMap,
+  segment: NarrativeExcerpt,
+  spec: MediaItemSpec,
+  sounds: MediaSoundSet,
+): MediaTrackSet {
+  assert(spec.expansion.kind === "one", `Segment Media Item ${spec.id} must use one occurrence.`);
+  return realizedItems(set, header, space, canvas, layers, frame, spec, sounds, [projectSegmentWindow({
+    itemId: spec.id, map, segment, space, projection: spec.projection,
+  })]);
 }
 
 export function appendMomentMediaItem(
