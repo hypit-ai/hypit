@@ -301,10 +301,10 @@ class DurableLocalWorker implements RuntimeWorker {
     assert(options.owner.trim().length > 0, "Worker owner is empty");
     const leaseMs = positive(options.leaseMs, "Worker leaseMs");
     const runtimeClosure = this.#options.runtimeClosure;
-    assert(runtimeClosure !== undefined, "durable Worker requires one exact Runtime Revision");
+    assert(runtimeClosure !== undefined, "durable Worker requires one exact Runtime Closure");
     const token = randomUUID();
     const dispatch = await this.#options.stores.dispatch.claim({
-      runtimeClosure: runtimeClosure.digest,
+      runtimeRevision: this.#options.runtimeRevision,
       owner: options.owner,
       token,
       now: Date.now(),
@@ -318,8 +318,8 @@ class DurableLocalWorker implements RuntimeWorker {
     const stored = await this.#options.stores.builds.read(dispatch.build);
     assert(stored !== undefined, `Dispatch ${dispatch.build} has no BuildState`);
     assert(stored.state.id === dispatch.core, `Dispatch ${dispatch.build} Core identity differs`);
-    assert(runtimeClosure.digest === dispatch.runtimeClosure,
-      `Dispatch ${dispatch.build} Runtime Closure differs`);
+    assert(this.#options.runtimeRevision === dispatch.runtimeRevision,
+      `Dispatch ${dispatch.build} Runtime Revision differs`);
     const suppressedCommands = new Set<string>();
     const controlled = new CapacityExecutor(
       this.#executor,

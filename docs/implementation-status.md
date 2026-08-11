@@ -199,9 +199,8 @@ Not implemented:
 - Secrets Manager or Vault adapters; multiple selected CredentialStores already compose by store
   name, with environment and Keychain implementations available;
 - deployment-specific Build release policy;
-- retained historical Runtime Revision supervision and explicit Authority
-  `open|draining|suspended|retired` lifecycle control; revision-filtered claiming already prevents
-  unsafe rerouting, so a missing old revision is currently left unclaimed;
+- multi-revision execution within one DispatchStore; this is intentionally rejected rather than
+  implemented with historical code snapshots or a revision supervisor;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
 - arbitrary Volcengine, Fal, API-key Gemini or hosted-service Endpoint packages.
 

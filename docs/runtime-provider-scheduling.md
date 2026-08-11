@@ -6,12 +6,11 @@ This document defines how one execution domain schedules expensive or recoverabl
 domain-neutral: KIE and Seedance are examples, not Runtime concepts. Nothing here changes the
 Author Graph, Run Graph, Candidate selection or Core state machine.
 
-The first implementation slice now provides exact-revision dispatch claims, atomic multi-resource
-capacity, explicit Endpoint Authorities, exact capability Routes in Operation identity, durable
-blocked tickets, and CLI grouping derived from those tickets. Historical-revision retention and
-supervision, Authority lifecycle controls, and priority/`availableAt` ordering between Operation
-tickets remain follow-up slices. Until then, a missing historical revision stays unclaimed; it is
-never rerouted through the current Profile.
+The implementation provides exact-revision dispatch claims, atomic multi-resource capacity,
+explicit Endpoint Authorities, exact capability Routes in Operation identity, durable blocked
+tickets, and CLI grouping derived from those tickets. One DispatchStore is deliberately one
+single-revision execution domain while work is unfinished. The Runtime does not retain old code,
+reconstruct old environments or supervise multiple historical revisions.
 
 ## 1. The four identities
 
@@ -22,7 +21,7 @@ separate:
 |---|---|---|
 | Provider Authority | `kie.main` | one account, deployment or compute pool sharing limits |
 | Capability Route | `@narratage/seedance-2-mini@1#GenerateVideo` | the exact capability requested by the graph |
-| Runtime Revision | a resolved Runtime Closure digest | the exact code, configuration and package closure that can resume work |
+| Runtime Revision | digest of Runtime Closure plus author/runtime package-lock digests | the exact code, configuration and package closure that can resume work |
 | Operation Ticket | one Build plus one regenerated Core Command | one durable request for execution admission |
 
 An Authority id is explicit, stable and non-secret. It must not be derived from an API key. Two
@@ -33,9 +32,9 @@ A Route is derived from the exact capability already present in the Need. Instal
 therefore adds no Core, CLI or Store enum. A non-model Endpoint still has a Route; only the human UI
 may label this level “Model” when the package describes it that way.
 
-The Runtime Revision is immutable for a Build. Changing the current Runtime Profile affects later
-Builds only. An unfinished Build is never silently moved to another Provider or another
-implementation revision.
+The Runtime Revision is immutable for a Build. A Runtime Profile or package-lock change is admitted
+only after every Build in the same execution domain is terminal. An unfinished Build is never
+silently moved to another Provider or implementation revision.
 
 ## 2. One physical ticket store, two logical queue levels
 
@@ -101,52 +100,32 @@ Deterministic Producers may use the same admission mechanism with ordinary resou
 they do not pretend to have a Provider Authority. New component packages remain installable without
 Store migrations.
 
-## 4. Runtime revision-safe Workers
+## 4. One unfinished Runtime Revision per execution domain
 
 A Worker declares exactly which Runtime Revision it can execute. Dispatch claiming is filtered by
 that revision inside the Store transaction. A Worker must never claim a foreign Build and discover
 the mismatch afterward.
 
-`runtime up` supervises an execution domain, not just the current Profile process:
+Admission is intentionally stricter than claim filtering:
 
-1. resolve and retain the current Runtime Revision for new Build submissions;
-2. inspect unfinished dispatches and tickets;
-3. start the current revision;
-4. start only historical revisions still needed by unfinished work, in drain-only mode;
-5. leave unused historical revisions stopped.
+1. Runtime construction inspects all unfinished dispatches before constructing a Worker;
+2. if any belongs to another Runtime Revision, construction fails with the conflicting Build ids;
+3. Dispatch creation repeats that check atomically in the Store transaction;
+4. `runtime up` performs the check before replacing a stale Worker or starting external programs.
 
-The retained revision record contains non-secret resolved configuration, package lock identities
-and implementation locators. Credentials remain in CredentialStore. If the package bytes for an
-old revision are unavailable, its work becomes `blocked: missing-runtime-revision`; it never falls
-through to the current Provider.
+The operator then makes one explicit choice: restore the old Profile and locks to finish or cancel
+the old Builds, wait for them to finish, or select another DispatchStore as another execution
+domain. Completed Builds do not block a revision change.
 
-## 5. Authority lifecycle
+This rule removes Revision Bundles, historical code snapshots, multi-version Worker supervision
+and Authority lifecycle state. Changing KIE to Fal, changing an account, or changing Provider code
+is just a Runtime Revision change and follows the same law. Moving unfinished creative work to
+another Provider remains a new Build with a new Run realization; it is not a queue action.
 
-An Authority has an operational lifecycle independent from package installation:
-
-| State | New Builds | Existing frozen Builds | Worker |
-|---|---|---|---|
-| `open` | accepted | progresses | may run |
-| `draining` | rejected | may create remaining downstream Operations and finish | runs drain-only |
-| `suspended` | rejected | retained without progress | stopped |
-| `retired` | rejected | none may remain | absent |
-
-Lowering a capacity below the current in-flight count never cancels work. It prevents new admission
+Lowering capacity below the current in-flight count never cancels work. It prevents new admission
 until usage falls below the new limit.
 
-Switching the current binding from KIE to Fal marks the KIE Authority `draining` and Fal `open`.
-Old KIE Builds continue under their frozen revision; new Builds use Fal. Returning to the same KIE
-account reopens the same Authority and reuses its queue, rate and history. A different KIE account
-requires a different Authority id.
-
-Changing Provider code while keeping the same account creates a new Runtime Revision under the
-same Authority. Old and new revisions execute separately but share the Authority and Route
-capacities because the external account limits are shared.
-
-Moving unfinished creative work to another Provider is not a queue action. It requires a new Build
-with the new Run realization; completed old Records may be selected explicitly as Candidates.
-
-## 6. Deployment and multi-process law
+## 5. Deployment and multi-process law
 
 One local project may keep the ticket store, BuildStore, OperationStore and Workers in one SQLite
 execution domain. Several processes or machines share account-wide limits only when they share the
@@ -163,7 +142,7 @@ Core readiness ──> Operation Ticket ──> atomic resource admission ──
 They may run in one local Node process initially. A hosted adapter may split them across processes
 without changing Core or graph contracts.
 
-## 7. Runtime Profile boundary
+## 6. Runtime Profile boundary
 
 The deployment explicitly gives each Endpoint instance an Authority id. Provider packages declare
 their exact Routes through capabilities and contribute default resource limits. A Runtime Profile
@@ -173,7 +152,7 @@ There is no implicit `generation` queue, global Provider list or model registry.
 reserved name; it is deployment data. Seedance is not a Runtime enum; it is an installed capability
 package selected by the graph and bound by the Runtime Profile.
 
-## 8. Acceptance laws
+## 7. Acceptance laws
 
 The implementation is complete only when tests establish all of these:
 
@@ -181,11 +160,10 @@ The implementation is complete only when tests establish all of these:
 - one Ticket atomically consumes both Authority and Route capacity;
 - two models share one Authority limit while retaining independent Route limits;
 - the same model on KIE and Fal has independent Authority/Route queues;
-- changing the current Profile never reroutes an unfinished Build;
-- changing code revision for one account shares external capacity but uses the exact old code to
-  resume old Operations;
+- changing the current Profile is rejected while an unfinished Build belongs to the old revision;
+- the rejection happens before a stale Worker is stopped or external programs are started;
+- once every old Build is terminal, the same execution domain admits the new revision;
 - lowering limits does not cancel in-flight work;
-- a missing historical revision blocks visibly without causing a Provider call;
 - queue inspection derives Provider-to-Route grouping from tickets, not a central registry;
 - no ticket contains a serialized Command, Need, request body or credential;
 - installing a new Provider or model requires no Core, CLI or Store schema change.

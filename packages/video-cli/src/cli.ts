@@ -58,7 +58,8 @@ const io: CliIo = {
 
 async function main(): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
-    writeCliHelp(io);
+    const topic = argv[0] === "help" ? argv[1] : argv.includes("--help") ? argv[0] : undefined;
+    writeCliHelp(io, topic);
     return;
   }
   const { runVideoCli } = await import("./index.js");

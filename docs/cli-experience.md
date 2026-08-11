@@ -300,28 +300,38 @@ returns the complete structured result.
 ### 6.2 Plan
 
 ```text
-Narratage  Build plan
+✓ Build plan is valid
 
-  Run       delivery.svrun
-  Targets   final.video
-  Fidelity  exact
+  Run         delivery.svrun
+  Target set  delivery
+  Goals       1
+  Steps       18
+  Exact steps        17
+  Substitute steps    1
+  External requests   5
 
-  18 operations
-  ├─ 4  generation        KIE · Seedance Mini
-  ├─ 7  media             local FFmpeg
-  ├─ 1  alignment         WhisperX
-  ├─ 1  caption planning  Vertex
-  └─ 5  composition       HyperFrames + audio mux
+Operations
+   4  @studio/generation@1
+   9  @studio/media@1
+   5  @studio/composition@1
 
-  Candidates
-  ✓ take-1.video   primary
-  ! take-2.video   historical file · substitute
+External requests
+   4  @studio/generation@1#video
+   1  @studio/media@1#speech-evidence
+
+  These Needs may reach the Endpoints selected by the Runtime Profile during build.
+
+Selections
+  ! take-2.video ← retained-take-2  substitute
 
 No external work was started.
 ```
 
-Plan display is derived from the frozen plan and explicit Satisfaction edges. It never invents
-estimated cost unless the exact Endpoint exposes a bounded price quotation.
+Plan display is derived from the frozen plan and explicit Satisfaction edges. Producer and Need
+names come from the selected packages; output and Candidate labels come from the current Author and
+Run sources. The CLI has no Provider/model registry and never classifies a request as paid by a
+hard-coded list. It never invents estimated cost unless the exact Endpoint exposes a bounded price
+quotation.
 
 ### 6.3 Build submission
 
@@ -503,6 +513,11 @@ every command; pnpm remains only the workspace installer/test runner. A publishe
 exposes one compiled `narratage` executable.
 Changing npm, pnpm, Yarn or Bun must not change Graph, Build or Runtime identity.
 
+`status` is an observation, not a readiness gate. `runtime status` and `services status` return
+success when the selected stores/services were queried successfully and expose readiness as a
+separate `ready` field. `doctor`, `runtime up`, `services up` and `build` remain gates and return a
+nonzero exit code when their requested outcome cannot be reached.
+
 Cold command work is divided explicitly:
 
 ```text
@@ -527,6 +542,11 @@ Archive/control commands (`status`, `queue`, `builds`, `inspect`, `get`, cancell
 assemble only the durable Store control surface selected by the Profile. They do not construct
 Seedance, Vertex, WhisperX, HyperFrames or other execution Endpoints. Provider credentials may be
 absent while a developer inspects or exports already archived work.
+
+Human `builds` inspects only the newest visible page instead of reading every historical
+BuildState. JSON and verbose views remain complete. `history <output>` first filters the catalog's
+declared aliases and opens only Builds that can contain that name. These are query projections over
+package-owned facts, not caches or new identity rules.
 
 Credential commands are narrower again: they construct only the named Endpoint declaration and
 the explicitly selected CredentialStores. They do not open Build state, a Worker or unrelated

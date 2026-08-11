@@ -61,6 +61,7 @@ export type RuntimeWorkerFactoryOptions = {
   readonly scheduler: BuildSchedulerFactory;
   readonly stores: RuntimeExecutionStores;
   readonly scheduling: BuildSchedulerOptions;
+  readonly runtimeRevision: Digest;
   readonly runtimeClosure?: RuntimeClosure;
 };
 

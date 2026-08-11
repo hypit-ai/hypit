@@ -114,8 +114,8 @@ distributed deployment are not prerequisites.
 The first Provider-hierarchy slice is also implemented: every Endpoint has an explicit Authority,
 every exact capability becomes a Route, both resource claims are acquired atomically, capacity
 misses remain durable instead of waiting inside a Worker, and dispatch claiming is filtered by the
-exact Runtime Closure. Historical-revision supervision and Authority lifecycle controls remain the
-next execution slice; see
+exact Runtime Closure. A DispatchStore now rejects a second unfinished Runtime Revision instead of
+retaining historical code or supervising multiple revisions; see
 [`runtime-provider-scheduling.md`](./runtime-provider-scheduling.md).
 
 ### A7. Command-line product surface — operational slice implemented

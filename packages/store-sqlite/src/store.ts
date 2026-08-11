@@ -12,6 +12,7 @@ import type {
   Digest,
 } from "@narratage/protocol";
 import {
+  assertRuntimeRevisionAdmission,
   verifyBuildCatalogDescriptor,
   verifyBuildCatalogEntry,
   defineRuntimeServicePackage,
@@ -57,7 +58,7 @@ import type {
   RuntimeServicePackage,
 } from "@narratage/runtime";
 
-const databaseSchemaVersion = 5;
+const databaseSchemaVersion = 6;
 
 export const sqliteStoreModuleRef = {
   name: "@narratage/store-sqlite",
@@ -168,14 +169,16 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
         readonly progress?: OperationSnapshot["progress"];
       }
     : undefined;
+  if (row.status === "pending") {
+    assert(pending?.format === "svml.operation-pending@1" && pending.checkpoint !== undefined,
+      "SQLite pending Operation has an unsupported checkpoint envelope");
+  }
   const mutable = row.status === "pending"
-    ? pending?.format === "svml.operation-pending@1" && pending.checkpoint !== undefined
-      ? {
-          checkpoint: pending.checkpoint,
-          ...(pending.wakeAt === undefined ? {} : { wakeAt: pending.wakeAt }),
-          ...(pending.progress === undefined ? {} : { progress: pending.progress }),
-        }
-      : { checkpoint: pending }
+    ? {
+        checkpoint: pending!.checkpoint,
+        ...(pending!.wakeAt === undefined ? {} : { wakeAt: pending!.wakeAt }),
+        ...(pending!.progress === undefined ? {} : { progress: pending!.progress }),
+      }
     : row.status === "completed"
       ? { completion: JSON.parse(String(row.completion_json)) }
       : row.status === "failed"
@@ -510,18 +513,45 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
     const priority = options.priority ?? 0;
     assert(Number.isSafeInteger(priority), "Dispatch priority must be a safe integer");
     const availableAt = nonNegativeInteger(options.availableAt ?? now, "Dispatch availableAt");
-    const result = this.#database.prepare(`
-      INSERT OR IGNORE INTO svml_dispatches (
-        build_id, identity_json, revision, created_at, updated_at, priority, available_at,
-        admission, phase, lease_owner, lease_token, lease_fence, lease_expires_at,
-        reason, cancel_requested_at, cancel_reason, terminal
-      ) VALUES (?, ?, 0, ?, ?, ?, ?, 'open', 'queued', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL)
-    `).run(identity.build, canonicalStringify(identity), now, now, priority, availableAt);
-    const snapshot = await this.read(identity.build);
-    if (snapshot === undefined) throw new Error(`Dispatch ${identity.build} disappeared after create`);
-    assert(canonicalStringify({ format: snapshot.format, id: snapshot.id, build: snapshot.build, core: snapshot.core, runtimeClosure: snapshot.runtimeClosure })
-      === canonicalStringify(identity), `Dispatch ${identity.build} already names another Build or Runtime Closure`);
-    return { status: result.changes === 1 ? "created" : "existing", snapshot };
+    return transaction(this.#database, () => {
+      const existingRow = this.#database.prepare(
+        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+      ).get(identity.build) as Row | undefined;
+      if (existingRow !== undefined) {
+        const existing = parseDispatchSnapshot(existingRow);
+        assert(canonicalStringify({
+          format: existing.format,
+          id: existing.id,
+          build: existing.build,
+          core: existing.core,
+          runtimeRevision: existing.runtimeRevision,
+        }) === canonicalStringify(identity),
+        `Dispatch ${identity.build} already names another Build or Runtime Closure`);
+        return { status: "existing", snapshot: existing };
+      }
+
+      const conflictingRows = this.#database.prepare(`
+        SELECT * FROM svml_dispatches
+        WHERE phase != 'terminal'
+          AND json_extract(identity_json, '$.runtimeRevision') != ?
+        ORDER BY created_at ASC, build_id ASC
+      `).all(identity.runtimeRevision) as Row[];
+      assertRuntimeRevisionAdmission(identity.runtimeRevision, conflictingRows.map(parseDispatchSnapshot));
+
+      const result = this.#database.prepare(`
+        INSERT INTO svml_dispatches (
+          build_id, identity_json, revision, created_at, updated_at, priority, available_at,
+          admission, phase, lease_owner, lease_token, lease_fence, lease_expires_at,
+          reason, cancel_requested_at, cancel_reason, terminal
+        ) VALUES (?, ?, 0, ?, ?, ?, ?, 'open', 'queued', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL)
+      `).run(identity.build, canonicalStringify(identity), now, now, priority, availableAt);
+      assert(result.changes === 1, `Dispatch ${identity.build} was not created`);
+      const createdRow = this.#database.prepare(
+        "SELECT * FROM svml_dispatches WHERE build_id = ?",
+      ).get(identity.build) as Row | undefined;
+      if (createdRow === undefined) throw new Error(`Dispatch ${identity.build} disappeared after create`);
+      return { status: "created", snapshot: parseDispatchSnapshot(createdRow) };
+    });
   }
 
   async read(build: string): Promise<BuildDispatchSnapshot | undefined> {
@@ -551,19 +581,19 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async claim(request: BuildDispatchClaim): Promise<BuildDispatchSnapshot | undefined> {
     assert(request.owner.trim().length > 0 && request.token.trim().length > 0, "Dispatch claim identity is empty");
-    assert(/^sha256:[0-9a-f]{64}$/u.test(request.runtimeClosure), "Dispatch claim Runtime Closure is invalid");
+    assert(/^sha256:[0-9a-f]{64}$/u.test(request.runtimeRevision), "Dispatch claim Runtime Revision is invalid");
     const now = nonNegativeInteger(request.now, "Dispatch claim time");
     const leaseMs = positiveInteger(request.leaseMs, "Dispatch leaseMs");
     return transaction(this.#database, () => {
       const row = this.#database.prepare(`
         SELECT * FROM svml_dispatches
         WHERE phase != 'terminal'
-          AND json_extract(identity_json, '$.runtimeClosure') = ?
+          AND json_extract(identity_json, '$.runtimeRevision') = ?
           AND available_at <= ?
           AND (lease_owner IS NULL OR lease_expires_at <= ?)
         ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
         LIMIT 1
-      `).get(request.runtimeClosure, now, now) as Row | undefined;
+      `).get(request.runtimeRevision, now, now) as Row | undefined;
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string" && typeof row.revision === "number" && typeof row.lease_fence === "number",
         "SQLite Dispatch claim row is invalid");

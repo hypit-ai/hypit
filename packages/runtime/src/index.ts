@@ -14,8 +14,11 @@ export {
 } from "./credentials.js";
 export type * from "./credentials.js";
 export {
+  assertRuntimeRevisionAdmission,
   capacityReservationId,
   createBuildDispatchIdentity,
+  createRuntimeRevision,
+  nonTerminalDispatchPhases,
   verifyBuildDispatchIdentity,
   verifyBuildDispatchSnapshot,
   verifyCapacityLimits,
