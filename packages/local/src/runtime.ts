@@ -14,9 +14,12 @@ import {
   collectNodePackageComponents,
 } from "@narratage/package-loader-node";
 import {
+  assertRuntimeRevisionAdmission,
   RuntimeModuleRegistry,
   createBuildDispatchIdentity,
+  createRuntimeRevision,
   isStreamingArtifactStore,
+  nonTerminalDispatchPhases,
   resolveRuntimeProfile,
   sealRuntimeProfile,
 } from "@narratage/runtime";
@@ -124,6 +127,17 @@ export async function createLocalRuntime(
   if (options.scheduling?.maxConcurrency !== undefined || options.scheduling?.resourceLimits !== undefined) {
     throw new Error("a locked Runtime Closure owns maxConcurrency and resource limits");
   }
+  const runtimeRevision = createRuntimeRevision({
+    runtimeClosure: options.closure.value.digest,
+    ...(options.implementationClosure === undefined
+      ? {} : { implementationClosure: options.implementationClosure }),
+    ...(options.runtimePackageClosure === undefined
+      ? {} : { runtimePackageClosure: options.runtimePackageClosure }),
+  });
+  assertRuntimeRevisionAdmission(
+    runtimeRevision,
+    await options.dispatchStore.list({ phases: nonTerminalDispatchPhases }),
+  );
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
   const validators = options.validators ?? new TypeValidatorRegistry();
@@ -168,6 +182,7 @@ export async function createLocalRuntime(
       artifacts: options.artifactStore,
     },
     scheduling,
+    runtimeRevision,
     runtimeClosure: options.closure.value,
   });
   const credentialControl = createLocalCredentialControl({
@@ -240,7 +255,7 @@ export async function createLocalRuntime(
     const created = await options.dispatchStore.create(createBuildDispatchIdentity({
       build: request.id,
       core: request.state.id,
-      runtimeClosure: options.closure.value.digest,
+      runtimeRevision,
     }));
     if (created.status === "created") {
       await options.journal.append({
@@ -376,6 +391,8 @@ export async function createProjectLocalRuntime(
       ...(lockedPackageSet === undefined && options.implementationClosure === undefined
         ? {}
         : { implementationClosure: lockedPackageSet?.lock.digest ?? options.implementationClosure }),
+      ...(options.runtimePackageClosure === undefined
+        ? {} : { runtimePackageClosure: options.runtimePackageClosure }),
     });
     return {
       build: runtime.build,

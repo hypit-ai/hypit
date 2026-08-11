@@ -25,8 +25,8 @@ Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
 ## Required loop
 
 ```bash
-pnpm narratage check path/to/main.svml --package-lock path/to/svml.packages.lock --root .
-pnpm narratage plan path/to/build.svrun --package-lock path/to/svml.packages.lock --root .
+node --run narratage -- check path/to/main.svml --package-lock path/to/svml.packages.lock --root .
+node --run narratage -- plan path/to/build.svrun --package-lock path/to/svml.packages.lock --root .
 ```
 
 Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of commits.

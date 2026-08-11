@@ -100,6 +100,9 @@ export type CliPresentation =
       readonly machine: BuildPlan;
       readonly run: string;
       readonly targetSet: string;
+      /** Presentation names declared by this Author Source and Run Source. Never used to plan. */
+      readonly outputNames?: Readonly<Record<string, string>>;
+      readonly candidateNames?: Readonly<Record<string, string>>;
     }
   | {
       readonly kind: "operational";
@@ -286,18 +289,26 @@ function renderPlan(
   const exact = view.machine.steps.filter((item) => item.fidelity === "exact").length;
   const substitute = view.machine.steps.length - exact;
   const grouped = new Map<string, number>();
+  const requested = new Map<string, number>();
   for (const step of view.machine.steps) {
     const name = `${step.producer.module.name}@${step.producer.module.version}`;
     grouped.set(name, (grouped.get(name) ?? 0) + 1);
+    const needs = Object.keys(step.needs).length;
+    if (needs > 0) {
+      const producer = `${name}#${step.producer.name}`;
+      requested.set(producer, (requested.get(producer) ?? 0) + needs);
+    }
   }
   const lines = [heading("success", "Build plan is valid", io, colors), ""];
+  const requestCount = [...requested.values()].reduce((total, count) => total + count, 0);
   lines.push(...facts([
     ["Run", shortPath(view.run)],
     ["Target set", view.targetSet],
     ["Goals", String(view.machine.goals.length)],
     ["Steps", String(view.machine.steps.length)],
-    ["Exact", String(exact)],
-    ["Substitute", String(substitute)],
+    ["Exact steps", String(exact)],
+    ["Substitute steps", String(substitute)],
+    ["External requests", String(requestCount)],
   ], colors));
   if (grouped.size > 0) {
     lines.push("", colors.strong("Operations"));
@@ -306,6 +317,17 @@ function renderPlan(
     for (const [name, count] of entries) {
       lines.push(`  ${colors.accent(String(count).padStart(countWidth))}  ${name}`);
     }
+  }
+  if (requested.size > 0) {
+    lines.push("", colors.strong("External requests"));
+    const entries = [...requested.entries()].sort(([left], [right]) => left.localeCompare(right));
+    const countWidth = Math.max(...entries.map(([, count]) => String(count).length));
+    for (const [producer, count] of entries) {
+      lines.push(`  ${colors.warning(String(count).padStart(countWidth))}  ${producer}`);
+    }
+    lines.push(`  ${colors.dim("These Needs may reach the Endpoints selected by the Runtime Profile during build.")}`);
+  } else {
+    lines.push("", heading("success", "No external requests", io, colors));
   }
   const visibleSelections = verbose
     ? view.machine.selections
@@ -316,7 +338,14 @@ function renderPlan(
       const status = selection.fidelity === "exact"
         ? colors.success(glyph(io, "✓", "+"))
         : colors.warning("!");
-      lines.push(`  ${status} ${shortOpaque(selection.output)}  ${colors.dim(selection.fidelity)}`);
+      const output = view.outputNames?.[selection.output] ?? shortOpaque(selection.output);
+      const candidate = view.candidateNames?.[selection.candidate];
+      lines.push(`  ${status} ${colors.accent(output)}`
+        + `${candidate === undefined ? "" : ` ← ${candidate}`}`
+        + `  ${colors.dim(selection.fidelity)}`);
+      if (verbose && (output !== selection.output || candidate !== undefined)) {
+        lines.push(`    ${colors.dim(`${shortOpaque(selection.output)} ← ${shortOpaque(selection.candidate)}`)}`);
+      }
     }
   }
   if (verbose) {
@@ -364,8 +393,85 @@ export function writeCliOutput(
   io.write(output);
 }
 
-export function writeCliHelp(io: CliIo): void {
+function commandHelp(topic: string, colors: Palette): readonly string[] | undefined {
+  const common = [
+    "",
+    colors.strong("Output"),
+    "  --json                     complete machine-readable result",
+    "  --verbose                  reveal identities and complete lists",
+    "  --color auto|always|never  control ANSI color",
+    "  --debug                    include internal trace frames on failure",
+    "",
+  ];
+  const topics: Readonly<Record<string, readonly string[]>> = {
+    check: [
+      colors.accent(colors.strong("narratage check")),
+      colors.dim("Validate one self-described Author Source or Run Source without executing it."),
+      "",
+      "  narratage check <source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>]",
+    ],
+    plan: [
+      colors.accent(colors.strong("narratage plan")),
+      colors.dim("Freeze the demanded subgraph and expose every selected Candidate and external Need."),
+      "",
+      "  narratage plan <run-source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>]",
+      "",
+      "Planning never starts external work.",
+    ],
+    build: [
+      colors.accent(colors.strong("narratage build")),
+      colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
+      "",
+      "  narratage build <run-source> --runtime <profile> [--build-id <id>] [--follow] [--no-services]",
+      "",
+      "  --follow                   observe the Build; the Worker still owns execution",
+      "  --no-services              do not start declared external programs",
+      "  --max-wait-ms <ms>         bound startup or follow waiting",
+    ],
+    runtime: [
+      colors.accent(colors.strong("narratage runtime")),
+      colors.dim("Operate the Worker selected by one Runtime Profile."),
+      "",
+      "  narratage runtime up <profile>       validate the Runtime Revision, start services and Worker",
+      "  narratage runtime status <profile>   inspect Worker, queue capacity and declared services",
+      "  narratage runtime logs <profile>     read Worker logs",
+      "  narratage runtime down <profile>     stop the owned Worker and external programs",
+    ],
+    services: [
+      colors.accent(colors.strong("narratage services")),
+      colors.dim("Operate only the external programs declared by Endpoints in one Runtime Profile."),
+      "",
+      "  narratage services up <profile> [--max-wait-ms <ms>]",
+      "  narratage services status <profile>",
+      "  narratage services down <profile>",
+    ],
+    queue: [
+      colors.accent(colors.strong("narratage queue")),
+      colors.dim("Inspect durable Build dispatch and Provider-authority capacity."),
+      "",
+      "  narratage queue --runtime <profile> [--watch]",
+      "  narratage queue --runtime <profile> --watch --jsonl",
+    ],
+    history: [
+      colors.accent(colors.strong("narratage history")),
+      colors.dim("Find accepted historical Logical Outputs without selecting them for a new Run."),
+      "",
+      "  narratage history <output-name> --runtime <profile> [--source <author-source>]",
+    ],
+  };
+  const selected = topics[topic];
+  return selected === undefined ? undefined : [...selected, ...common];
+}
+
+export function writeCliHelp(io: CliIo, topic?: string): void {
   const colors = palette(io.terminal?.isTTY === true && io.terminal.color);
+  if (topic !== undefined) {
+    const selected = commandHelp(topic, colors);
+    if (selected !== undefined) {
+      io.write(selected.join("\n"));
+      return;
+    }
+  }
   io.write([
     colors.accent(colors.strong("Narratage")),
     colors.dim("Write the story. Compile the result."),
