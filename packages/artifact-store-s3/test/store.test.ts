@@ -11,6 +11,7 @@ import { isManagedArtifactStore, isStreamingArtifactStore } from "@narratage/run
 class FakeS3 implements S3ObjectClient {
   readonly values = new Map<string, Uint8Array>();
   conflicts = 0;
+  gets = 0;
 
   async put(input: Parameters<S3ObjectClient["put"]>[0]): Promise<void> {
     const key = input.Key!;
@@ -26,6 +27,7 @@ class FakeS3 implements S3ObjectClient {
   }
 
   async get(input: Parameters<S3ObjectClient["get"]>[0]): Promise<Uint8Array | undefined> {
+    this.gets += 1;
     const value = this.values.get(input.Key!);
     return value === undefined ? undefined : Uint8Array.from(value);
   }
@@ -64,6 +66,7 @@ test("configured S3 service locks location without putting AWS credentials in th
 class FullFakeS3 extends FakeS3 {
   readonly uploads = new Map<string, Uint8Array[]>();
   copies = 0;
+  heads = 0;
 
   async open(input: Parameters<NonNullable<S3ObjectClient["open"]>>[0]) {
     const value = this.values.get(input.Key!);
@@ -77,6 +80,7 @@ class FullFakeS3 extends FakeS3 {
   }
 
   async head(input: Parameters<NonNullable<S3ObjectClient["head"]>>[0]) {
+    this.heads += 1;
     const value = this.values.get(input.Key!);
     return value === undefined ? undefined : { size: value.byteLength };
   }
@@ -182,6 +186,16 @@ test("a streamed read hands back bytes as they arrive, and refuses tampered cont
   await assert.rejects(async () => {
     for await (const chunk of (await store.open!(ref.digest))!) void chunk;
   }, /content digest differs/u);
+});
+
+test("presence uses object metadata while byte reads retain integrity verification", async () => {
+  const client = new FullFakeS3();
+  const store = new S3ArtifactStore({ client, bucket: "fixture" });
+  const ref = await store.put(new TextEncoder().encode("present"), "text/plain");
+  const gets = client.gets;
+  assert.equal(await store.has(ref.digest), true);
+  assert.equal(client.heads, 1);
+  assert.equal(client.gets, gets, "has did not download the object");
 });
 
 test("retention reports the Artifacts it stored, and whether a delete found one", async () => {

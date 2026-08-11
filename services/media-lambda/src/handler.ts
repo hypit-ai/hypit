@@ -1,5 +1,4 @@
-import { s3ArtifactKey } from "@narratage/artifact-store-s3";
-import { AwsS3ObjectClient } from "@narratage/artifact-store-s3";
+import { AwsS3ObjectClient, S3ArtifactStore } from "@narratage/artifact-store-s3";
 import type { S3ObjectClient } from "@narratage/artifact-store-s3";
 import {
   executeInspectMedia,
@@ -13,7 +12,8 @@ import {
 } from "@narratage/media-execution";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@narratage/media-execution";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import type { BlobRef, CanonicalValue, Digest } from "@narratage/protocol";
 import {
@@ -62,30 +62,27 @@ function positiveInteger(value: string | undefined, fallback: number): number {
  * agree rather than conflict.
  */
 function gateway(location: MediaLambdaArtifactLocation, client: S3ObjectClient) {
+  const store = new S3ArtifactStore({
+    bucket: location.bucket,
+    ...(location.prefix === undefined ? {} : { prefix: location.prefix }),
+    client,
+  });
   return {
     async get(source: BlobRef): Promise<Uint8Array | undefined> {
-      return await client.get({ Bucket: location.bucket, Key: s3ArtifactKey(location.prefix, source.digest) });
+      return await store.get(source.digest);
+    },
+    async open(source: BlobRef): Promise<AsyncIterable<Uint8Array> | undefined> {
+      if (store.open !== undefined) return await store.open(source.digest);
+      const bytes = await store.get(source.digest);
+      return bytes === undefined ? undefined : (async function* () { yield bytes; })();
     },
     async put(bytes: Uint8Array, mediaType: string): Promise<BlobRef> {
-      const copy = Uint8Array.from(bytes);
-      const digest = `sha256:${createHash("sha256").update(copy).digest("hex")}` as Digest;
-      try {
-        await client.put({
-          Bucket: location.bucket,
-          Key: s3ArtifactKey(location.prefix, digest),
-          Body: copy,
-          ContentLength: copy.byteLength,
-          ContentType: mediaType,
-          IfNoneMatch: "*",
-          Metadata: { "svml-digest": digest, "svml-size": String(copy.byteLength) },
-        });
-      } catch (error) {
-        const status = (error as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
-        // 412: these exact bytes are already stored. Under content addressing
-        // that is agreement, not conflict.
-        if (status !== 412) throw error;
-      }
-      return { kind: "blob", digest, size: copy.byteLength, mediaType };
+      return await store.put(bytes, mediaType);
+    },
+    async putFile(path: string, mediaType: string): Promise<BlobRef> {
+      return store.putStream === undefined
+        ? await store.put(await readFile(path), mediaType)
+        : await store.putStream(createReadStream(path), mediaType);
     },
   };
 }

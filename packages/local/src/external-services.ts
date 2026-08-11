@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
-import { mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import type { CapabilityRef } from "@narratage/protocol";
 import type { RuntimeExternalService, RuntimeServiceCommand, RuntimeServiceState } from "@narratage/runtime-adapter";
 
 import { declaredExternalServices } from "./config.js";
@@ -30,9 +31,18 @@ export type ExternalServiceReport = {
   readonly pid?: number;
 };
 
+export type ExternalServiceProgress = {
+  readonly id: string;
+  readonly phase: "checking" | "preparing" | "starting" | "waiting" | "ready";
+};
+
 export type ExternalServiceOptions = LoadRuntimeConfigOptions & {
   /** How long to wait for a started program to answer its probe. Default 300000. */
   readonly maxWaitMs?: number;
+  /** Human-facing progress only; never changes service selection or lifecycle. */
+  readonly onProgress?: (event: ExternalServiceProgress) => void;
+  /** When present, operate only programs backing at least one demanded capability. */
+  readonly capabilities?: readonly CapabilityRef[];
 };
 
 /** Two Endpoints may drive the same program; it is brought up once. */
@@ -48,6 +58,54 @@ function distinct(services: readonly { instance: string; service: RuntimeExterna
 
 function directory(root: string): string {
   return join(root, ".svml", "services");
+}
+
+const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
+
+async function withServiceLifecycleLock<T>(
+  root: string,
+  id: string,
+  timeoutMs: number,
+  runLocked: () => Promise<T>,
+): Promise<T> {
+  const path = join(directory(root), `${id}.lifecycle.lock`);
+  await mkdir(directory(root), { recursive: true });
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    let lock;
+    try {
+      lock = await open(path, "wx");
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+      const owner = await readFile(path, "utf8").then((text) => JSON.parse(text) as {
+        readonly pid?: unknown;
+      }).catch(() => undefined);
+      if (owner === undefined || !Number.isSafeInteger(owner.pid) || !alive(owner.pid as number)) {
+        await rm(path, { force: true });
+        continue;
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`External service ${id} lifecycle is busy in process ${String(owner.pid)}; lock: ${path}`);
+      }
+      await sleep(25);
+      continue;
+    }
+    try {
+      await lock.writeFile(JSON.stringify({ pid: process.pid, acquiredAt: Date.now() }), "utf8");
+      return await runLocked();
+    } finally {
+      await lock.close();
+      await rm(path, { force: true });
+    }
+  }
+}
+
+async function rotateLog(path: string): Promise<void> {
+  const size = await stat(path).then((value) => value.size).catch(() => 0);
+  if (size <= LOG_ROTATE_BYTES) return;
+  const previous = `${path}.previous`;
+  await rm(previous, { force: true });
+  await rename(path, previous);
 }
 
 async function readPid(root: string, id: string): Promise<number | undefined> {
@@ -103,16 +161,22 @@ async function bringUp(
   service: RuntimeExternalService,
   instances: readonly string[],
   maxWaitMs: number,
+  onProgress?: (event: ExternalServiceProgress) => void,
 ): Promise<ExternalServiceReport> {
   const base = { id: service.id, instances };
+  onProgress?.({ id: service.id, phase: "checking" });
   const initial = await service.probe();
-  if (initial.state === "ready") return { ...base, action: "already-running", state: initial };
+  if (initial.state === "ready") {
+    onProgress?.({ id: service.id, phase: "ready" });
+    return { ...base, action: "already-running", state: initial };
+  }
   if (initial.state === "mismatch") {
     // Never start a second copy beside a program that is already answering.
     return { ...base, action: "unchanged", state: initial };
   }
 
   if (service.prepare !== undefined) {
+    onProgress?.({ id: service.id, phase: "preparing" });
     const prepared = await run(root, service.prepare);
     if (!prepared.ok) {
       return { ...base, action: "unchanged", state: initial, detail: `${service.prepare.command} failed: ${prepared.detail}` };
@@ -122,11 +186,14 @@ async function bringUp(
     // Nothing to keep running: preparing was the whole job, and the probe says
     // whether it worked.
     const state = await service.probe();
+    if (state.state === "ready") onProgress?.({ id: service.id, phase: "ready" });
     return { ...base, action: state.state === "ready" ? "prepared" : "unchanged", state };
   }
 
+  onProgress?.({ id: service.id, phase: "starting" });
   await mkdir(directory(root), { recursive: true });
   const logPath = join(directory(root), `${service.id}.log`);
+  await rotateLog(logPath);
   const log = await open(logPath, "a");
   try {
     const child = spawn(service.start.command, [...service.start.args], {
@@ -140,7 +207,9 @@ async function bringUp(
       return { ...base, action: "unchanged", state: initial, detail: `${service.start.command} did not start`, logPath };
     }
     await writeFile(join(directory(root), `${service.id}.pid`), `${child.pid}\n`);
+    onProgress?.({ id: service.id, phase: "waiting" });
     const state = await waitForReady(service, maxWaitMs);
+    if (state.state === "ready") onProgress?.({ id: service.id, phase: "ready" });
     return {
       ...base,
       action: state.state === "ready" ? "started" : "unchanged",
@@ -160,10 +229,9 @@ export async function bringExternalServicesUp(
   options: ExternalServiceOptions = {},
 ): Promise<{ readonly root: string; readonly services: readonly ExternalServiceReport[] }> {
   const { root, services } = await declaredExternalServices(path, options);
-  const reports: ExternalServiceReport[] = [];
-  for (const { service, instances } of distinct(services)) {
-    reports.push(await bringUp(root, service, instances, options.maxWaitMs ?? 300_000));
-  }
+  const reports = await Promise.all(distinct(services).map(async ({ service, instances }) =>
+    await withServiceLifecycleLock(root, service.id, options.maxWaitMs ?? 300_000, async () =>
+      await bringUp(root, service, instances, options.maxWaitMs ?? 300_000, options.onProgress))));
   return { root, services: reports };
 }
 
@@ -173,27 +241,26 @@ export async function takeExternalServicesDown(
   options: ExternalServiceOptions = {},
 ): Promise<{ readonly root: string; readonly services: readonly ExternalServiceReport[] }> {
   const { root, services } = await declaredExternalServices(path, options);
-  const reports: ExternalServiceReport[] = [];
-  for (const { service, instances } of distinct(services)) {
+  const reports = await Promise.all(distinct(services).map(async ({ service, instances }): Promise<ExternalServiceReport> =>
+    await withServiceLifecycleLock(root, service.id, 30_000, async () => {
     const base = { id: service.id, instances };
     const pid = await readPid(root, service.id);
     if (pid === undefined || !alive(pid)) {
       if (pid !== undefined) await rm(join(directory(root), `${service.id}.pid`), { force: true });
       const state = await service.probe();
-      reports.push(state.state === "down"
+      return state.state === "down"
         ? { ...base, action: "nothing-to-stop", state }
         // Someone else's process, or one started by hand. Killing it is not this
         // command's business; saying so is.
-        : { ...base, action: "not-ours", state, detail: `${service.id} is running but this project did not start it` });
-      continue;
+        : { ...base, action: "not-ours", state, detail: `${service.id} is running but this project did not start it` };
     }
     process.kill(pid, "SIGTERM");
     const deadline = Date.now() + 15_000;
     while (alive(pid) && Date.now() < deadline) await sleep(200);
     if (alive(pid)) process.kill(pid, "SIGKILL");
     await rm(join(directory(root), `${service.id}.pid`), { force: true });
-    reports.push({ ...base, action: "stopped", state: await service.probe(), pid });
-  }
+    return { ...base, action: "stopped", state: await service.probe(), pid };
+    })));
   return { root, services: reports };
 }
 
@@ -203,16 +270,15 @@ export async function reportExternalServices(
   options: ExternalServiceOptions = {},
 ): Promise<{ readonly root: string; readonly services: readonly ExternalServiceReport[] }> {
   const { root, services } = await declaredExternalServices(path, options);
-  const reports: ExternalServiceReport[] = [];
-  for (const { service, instances } of distinct(services)) {
+  const reports = await Promise.all(distinct(services).map(async ({ service, instances }): Promise<ExternalServiceReport> => {
     const state = await service.probe();
     const pid = await readPid(root, service.id);
-    reports.push({
+    return {
       id: service.id,
       instances,
       state,
       ...(pid !== undefined && alive(pid) ? { pid } : {}),
-    });
-  }
+    };
+  }));
   return { root, services: reports };
 }

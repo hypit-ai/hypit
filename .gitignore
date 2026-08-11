@@ -6,6 +6,7 @@ coverage/
 *.log
 *.tmp
 *.temp
+*.lock.editing
 
 # Local editor and agent state is never part of the distribution.
 .claude/
@@ -36,6 +37,7 @@ playwright-report/
 test-results/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+*.tsbuildinfo
 .svml-cache/
 examples/**/assets/
 examples/**/build/

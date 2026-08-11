@@ -52,7 +52,7 @@ export default async function createTalkingFilmRuntime() {
 
   const execution = createLocalExecutionPackage("execution");
   const state = createSqliteRuntimeServicePackage({
-    path: join(root, ".svml", "runtime.sqlite"),
+    path: join(root, ".svml", "state.sqlite"),
     name: "state",
     buildInstance: "state.builds",
     operationInstance: "state.operations",

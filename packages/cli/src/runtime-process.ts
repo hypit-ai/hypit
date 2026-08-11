@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdir, open, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 export type RuntimeWorkerLaunch = {
@@ -27,6 +27,9 @@ type ProcessRecord = {
   readonly profileDigest?: string;
 };
 
+const LOG_TAIL_BYTES = 1024 * 1024;
+const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
+
 function paths(profile: string) {
   const absolute = resolve(profile);
   const id = createHash("sha256").update(absolute).digest("hex").slice(0, 16);
@@ -36,6 +39,7 @@ function paths(profile: string) {
     pid: join(root, "worker.json"),
     ready: join(root, "ready"),
     log: join(root, "worker.log"),
+    lock: join(root, "lifecycle.lock"),
   };
 }
 
@@ -56,6 +60,47 @@ function alive(pid: number): boolean {
   } catch {
     return false;
   }
+}
+
+async function withLifecycleLock<T>(profile: string, timeoutMs: number, run: () => Promise<T>): Promise<T> {
+  const location = paths(profile);
+  await mkdir(location.root, { recursive: true });
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    let lock;
+    try {
+      lock = await open(location.lock, "wx");
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+      const owner = await readFile(location.lock, "utf8").then((text) => JSON.parse(text) as {
+        readonly pid?: unknown;
+      }).catch(() => undefined);
+      if (owner === undefined || !Number.isSafeInteger(owner.pid) || !alive(owner.pid as number)) {
+        await unlink(location.lock).catch(() => undefined);
+        continue;
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`Runtime lifecycle is busy in process ${String(owner.pid)}; lock: ${location.lock}`);
+      }
+      await new Promise((resolveWait) => setTimeout(resolveWait, 25));
+      continue;
+    }
+    try {
+      await lock.writeFile(JSON.stringify({ pid: process.pid, acquiredAt: Date.now() }), "utf8");
+      return await run();
+    } finally {
+      await lock.close();
+      await unlink(location.lock).catch(() => undefined);
+    }
+  }
+}
+
+async function rotateLog(path: string): Promise<void> {
+  const size = await stat(path).then((value) => value.size).catch(() => 0);
+  if (size <= LOG_ROTATE_BYTES) return;
+  const previous = `${path}.previous`;
+  await unlink(previous).catch(() => undefined);
+  await rename(path, previous);
 }
 
 async function digestProfile(profile: string): Promise<string> {
@@ -145,44 +190,45 @@ export async function ensureRuntimeProcess(
   launch: RuntimeWorkerLaunch,
   timeoutMs = 10_000,
 ): Promise<RuntimeProcessState> {
-  const current = await runtimeProcessStatus(profile);
-  if (current.state === "running") return current;
-  if (current.state === "stale") {
-    await stopRuntimeProcess(profile, timeoutMs);
-  }
-  const absolute = resolve(profile);
-  const location = paths(absolute);
-  const profileDigest = await digestProfile(absolute);
-  await mkdir(location.root, { recursive: true });
-  await unlink(location.ready).catch(() => undefined);
-  const log = await open(location.log, "a");
-  const child = spawn(launch.command, [
-    ...launch.args,
-    "_worker",
-    absolute,
-    "--ready-file",
-    location.ready,
-  ], {
-    cwd: process.cwd(),
-    detached: true,
-    stdio: ["ignore", log.fd, log.fd],
-    env: process.env,
+  return await withLifecycleLock(profile, timeoutMs, async () => {
+    const current = await runtimeProcessStatus(profile);
+    if (current.state === "running") return current;
+    if (current.state === "stale") await stopRuntimeProcessUnlocked(profile, timeoutMs);
+    const absolute = resolve(profile);
+    const location = paths(absolute);
+    const profileDigest = await digestProfile(absolute);
+    await mkdir(location.root, { recursive: true });
+    await unlink(location.ready).catch(() => undefined);
+    await rotateLog(location.log);
+    const log = await open(location.log, "a");
+    const child = spawn(launch.command, [
+      ...launch.args,
+      "_worker",
+      absolute,
+      "--ready-file",
+      location.ready,
+    ], {
+      cwd: process.cwd(),
+      detached: true,
+      stdio: ["ignore", log.fd, log.fd],
+      env: process.env,
+    });
+    if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
+    const startedAt = Date.now();
+    await writeFile(location.pid, JSON.stringify({
+      format: "narratage.runtime-process@1",
+      profile: absolute,
+      pid: child.pid,
+      startedAt,
+      profileDigest,
+    } satisfies ProcessRecord), "utf8");
+    child.unref();
+    await log.close();
+    return await waitForReady(absolute, timeoutMs);
   });
-  if (child.pid === undefined) throw new Error("Runtime Worker process has no pid");
-  const startedAt = Date.now();
-  await writeFile(location.pid, JSON.stringify({
-    format: "narratage.runtime-process@1",
-    profile: absolute,
-    pid: child.pid,
-    startedAt,
-    profileDigest,
-  } satisfies ProcessRecord), "utf8");
-  child.unref();
-  await log.close();
-  return await waitForReady(absolute, timeoutMs);
 }
 
-export async function stopRuntimeProcess(profile: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
+async function stopRuntimeProcessUnlocked(profile: string, timeoutMs: number): Promise<RuntimeProcessState> {
   const current = await record(profile);
   const location = paths(profile);
   if (current === undefined || !alive(current.pid)) {
@@ -201,9 +247,26 @@ export async function stopRuntimeProcess(profile: string, timeoutMs = 10_000): P
   return { state: "stopped", profile: resolve(profile), logPath: location.log };
 }
 
+export async function stopRuntimeProcess(profile: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
+  return await withLifecycleLock(profile, timeoutMs, async () => await stopRuntimeProcessUnlocked(profile, timeoutMs));
+}
+
 export async function runtimeProcessLogs(profile: string): Promise<{ readonly path: string; readonly text: string }> {
   const path = paths(profile).log;
-  return { path, text: await readFile(path, "utf8").catch(() => "") };
+  let file;
+  try {
+    file = await open(path, "r");
+    const metadata = await file.stat();
+    const length = Math.min(metadata.size, LOG_TAIL_BYTES);
+    const buffer = Buffer.alloc(length);
+    const { bytesRead } = await file.read(buffer, 0, length, metadata.size - length);
+    return { path, text: buffer.subarray(0, bytesRead).toString("utf8") };
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return { path, text: "" };
+    throw error;
+  } finally {
+    await file?.close();
+  }
 }
 
 export async function markRuntimeProcessReady(path: string): Promise<void> {

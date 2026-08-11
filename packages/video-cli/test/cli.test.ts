@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -321,8 +321,11 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
     readonly ok: boolean;
     readonly diagnostics: readonly { readonly code: string; readonly subject?: string }[];
   };
-  assert.equal(diagnosis.ok, true);
-  assert.equal(diagnosis.diagnostics.length, 0);
+  assert.equal(diagnosis.ok, false);
+  assert.deepEqual(diagnosis.diagnostics.map((item) => ({ code: item.code, subject: item.subject })), [{
+    code: "RUNTIME_CREDENTIAL_MISSING",
+    subject: "kie.cli-test.apiKey",
+  }]);
   output = "";
   await runCli(["auth", "status", "kie.cli-test", "--runtime", profile], {
     write: (text) => { output += text; },
@@ -380,9 +383,11 @@ test("CLI package lock activates an installed package without changing the offic
   const directory = await mkdtemp(join(tmpdir(), "svml-cli-package-lock-"));
   const projectRoot = join(directory, "external-video-project");
   const installedPackage = join(directory, "narratage-install", "node_modules", "example-empty");
+  const installedExtra = join(directory, "narratage-install", "node_modules", "example-extra");
   const packageRoot = join(directory, "narratage-install");
   await mkdir(projectRoot, { recursive: true });
   await mkdir(installedPackage, { recursive: true });
+  await mkdir(installedExtra, { recursive: true });
   const implementationDigest = `sha256:${"2".repeat(64)}`;
   await writeFile(join(installedPackage, "package.json"), JSON.stringify({
     name: "example-empty",
@@ -411,6 +416,16 @@ test("CLI package lock activates an installed package without changing the offic
       }],
     };
   `, "utf8");
+  await writeFile(join(installedExtra, "package.json"), JSON.stringify({
+    name: "example-extra",
+    version: "1.0.0",
+    type: "module",
+    exports: "./activation.mjs",
+    svml: { activation: "./activation.mjs" },
+  }), "utf8");
+  await writeFile(join(installedExtra, "activation.mjs"), `
+    export default { format: "svml.node-package@1", name: "example-extra" };
+  `, "utf8");
   const file = join(projectRoot, "main.svml");
   const lockPath = join(projectRoot, "svml.packages.lock");
   await writeFile(file, `<?svml using="@narratage/markup@1"?>
@@ -437,6 +452,139 @@ test("CLI package lock activates an installed package without changing the offic
   const checked = JSON.parse(checkOutput) as { readonly ok: boolean; readonly modules: readonly string[] };
   assert.equal(checked.ok, true);
   assert.deepEqual(checked.modules, ["example.empty@1"]);
+
+  const editSentinel = `${lockPath}.editing`;
+  await writeFile(editSentinel, JSON.stringify({ pid: 999, host: "test" }), "utf8");
+  await assert.rejects(
+    async () => await runCli(["lock-packages", lockPath, "--add", "example-extra", "--package-root", packageRoot], {
+      write() {},
+    }),
+    /already being edited.*pid.*999/u,
+  );
+  await runCli(["lock-packages", lockPath, "--verify", "--package-root", packageRoot], { write() {} });
+  await rm(editSentinel);
+
+  const trustedActivation = await readFile(join(installedPackage, "activation.mjs"), "utf8");
+  const trustedLockDigest = (JSON.parse(await readFile(lockPath, "utf8")) as { readonly digest: string }).digest;
+  await writeFile(join(installedPackage, "activation.mjs"), `${trustedActivation}\n// unreviewed retained change\n`, "utf8");
+  await assert.rejects(
+    async () => await runCli(["lock-packages", lockPath, "--add", "example-extra", "--package-root", packageRoot], {
+      write() {},
+    }),
+    /retained package bytes changed.*use --refresh or an exact --package selection/u,
+  );
+  assert.equal((JSON.parse(await readFile(lockPath, "utf8")) as { readonly digest: string }).digest, trustedLockDigest);
+  await writeFile(join(installedPackage, "activation.mjs"), trustedActivation, "utf8");
+
+  let mutationOutput = "";
+  await runCli(["lock-packages", lockPath, "--add", "example-extra", "--package-root", packageRoot], {
+    write: (text) => { mutationOutput += text; },
+  });
+  const added = JSON.parse(mutationOutput) as {
+    readonly changed: boolean;
+    readonly mode: string;
+    readonly selected: readonly string[];
+    readonly added: readonly string[];
+    readonly closureChanges: {
+      readonly physical: { readonly added: readonly string[]; readonly removed: readonly string[] };
+      readonly activated: { readonly added: readonly string[]; readonly removed: readonly string[] };
+    };
+  };
+  assert.equal(added.changed, true);
+  assert.equal(added.mode, "mutate");
+  assert.deepEqual(added.selected, ["example-empty", "example-extra"]);
+  assert.deepEqual(added.added, ["example-extra"]);
+  assert.deepEqual(added.closureChanges, {
+    physical: { added: ["example-extra@1.0.0"], removed: [] },
+    activated: { added: ["example-extra@1.0.0"], removed: [] },
+  });
+  assert.equal((await readdir(projectRoot)).some((name) => name.endsWith(".editing")), false);
+
+  mutationOutput = "";
+  await runCli(["lock-packages", lockPath, "--add", "example-extra", "--package-root", packageRoot], {
+    write: (text) => { mutationOutput += text; },
+  });
+  const unchanged = JSON.parse(mutationOutput) as { readonly changed: boolean; readonly digest: string };
+  assert.equal(unchanged.changed, false);
+
+  let verifyOutput = "";
+  await runCli(["lock-packages", lockPath, "--verify", "--package-root", packageRoot], {
+    write: (text) => { verifyOutput += text; },
+  });
+  const verified = JSON.parse(verifyOutput) as { readonly ok: boolean; readonly mode: string; readonly digest: string };
+  assert.equal(verified.ok, true);
+  assert.equal(verified.mode, "verify");
+  assert.equal(verified.digest, unchanged.digest);
+
+  await assert.rejects(
+    async () => await runCli(["lock-packages", lockPath, "--remove", "example-missing", "--package-root", packageRoot], {
+      write() {},
+    }),
+    /example-missing is not selected.*no package authority was removed/u,
+  );
+  assert.equal((JSON.parse(await readFile(lockPath, "utf8")) as { readonly digest: string }).digest, unchanged.digest);
+
+  mutationOutput = "";
+  await writeFile(join(installedExtra, "activation.mjs"), `
+    export default { format: "svml.node-package@1", name: "example-extra" };
+    // Changed bytes do not prevent revoking this now-unreachable root.
+  `, "utf8");
+  await runCli(["lock-packages", lockPath, "--remove", "example-extra", "--package-root", packageRoot], {
+    write: (text) => { mutationOutput += text; },
+  });
+  const removed = JSON.parse(mutationOutput) as {
+    readonly changed: boolean;
+    readonly selected: readonly string[];
+    readonly removed: readonly string[];
+  };
+  assert.equal(removed.changed, true);
+  assert.deepEqual(removed.selected, ["example-empty"]);
+  assert.deepEqual(removed.removed, ["example-extra"]);
+
+  await assert.rejects(
+    async () => await runCli([
+      "lock-packages", lockPath,
+      "--add", "example-extra", "--remove", "example-extra",
+      "--package-root", packageRoot,
+    ], { write() {} }),
+    /cannot be added and removed in the same package-lock transaction/u,
+  );
+
+  let replaceOutput = "";
+  await runCli([
+    "lock-packages", lockPath,
+    "--package", "example-empty", "--package", "example-extra",
+    "--package-root", packageRoot,
+  ], { write: (text) => { replaceOutput += text; } });
+  const replaced = JSON.parse(replaceOutput) as { readonly mode: string; readonly selected: readonly string[] };
+  assert.equal(replaced.mode, "replace");
+  assert.deepEqual(replaced.selected, ["example-empty", "example-extra"]);
+
+  await runCli([
+    "lock-packages", lockPath,
+    "--package", "example-empty",
+    "--package-root", packageRoot,
+  ], { write() {} });
+
+  const originalLock = JSON.parse(await readFile(lockPath, "utf8")) as { readonly digest: string };
+  await writeFile(join(installedPackage, "activation.mjs"),
+    `${await readFile(join(installedPackage, "activation.mjs"), "utf8")}\n// refreshed physical bytes\n`, "utf8");
+  let refreshOutput = "";
+  await runCli(["lock-packages", lockPath, "--refresh", "--package-root", packageRoot], {
+    write: (text) => { refreshOutput += text; },
+  });
+  const refreshed = JSON.parse(refreshOutput) as { readonly ok: boolean; readonly digest: string };
+  assert.equal(refreshed.ok, true);
+  assert.notEqual(refreshed.digest, originalLock.digest);
+
+  let emptyOutput = "";
+  await runCli(["lock-packages", lockPath, "--remove", "example-empty", "--package-root", packageRoot], {
+    write: (text) => { emptyOutput += text; },
+  });
+  const empty = JSON.parse(emptyOutput) as { readonly selected: readonly string[]; readonly packages: readonly unknown[] };
+  assert.deepEqual(empty.selected, []);
+  assert.deepEqual(empty.packages, []);
+  await runCli(["lock-packages", lockPath, "--verify", "--package-root", packageRoot], { write() {} });
 });
 
 test("materializeRecord copies an archived Artifact without requiring a completed Build", async () => {
@@ -445,7 +593,9 @@ test("materializeRecord copies an archived Artifact without requiring a complete
   const artifactDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   const output = join(root, "out", "final.mp4");
   const runtime = {
-    async readArtifact(digest: string) { return digest === artifactDigest ? bytes : undefined; },
+    async openArtifact(digest: string) {
+      return digest === artifactDigest ? (async function* () { yield bytes; })() : undefined;
+    },
   } as Parameters<typeof materializeRecord>[0];
   const record = {
     id: "final.video",
@@ -469,10 +619,30 @@ test("materializeRecord writes structured intermediate facts as JSON", async () 
     id: "whisperx.evidence",
     value: { kind: "inline", value: { words: [{ text: "hello", start: 0, end: 0.4 }] } },
   } as unknown as Parameters<typeof materializeRecord>[1];
-  const result = await materializeRecord({ async readArtifact() { return undefined; } }, record, output);
+  const result = await materializeRecord({ async openArtifact() { return undefined; } }, record, output);
   assert.equal(result.kind, "json");
   if (record.value.kind !== "inline") assert.fail("fixture must be inline");
   assert.deepEqual(JSON.parse(await readFile(output, "utf8")), record.value.value);
+});
+
+test("streaming materialization verifies bytes before replacing an existing destination", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-get-verified-"));
+  const output = join(root, "final.mp4");
+  const expected = Buffer.from("expected");
+  const corrupt = Buffer.from("corrupt!");
+  const artifactDigest = `sha256:${createHash("sha256").update(expected).digest("hex")}`;
+  await writeFile(output, "keep-me", "utf8");
+  const record = {
+    id: "final.video",
+    value: { kind: "inline", value: { digest: artifactDigest, size: expected.byteLength, mediaType: "video/mp4" } },
+  } as unknown as Parameters<typeof materializeRecord>[1];
+
+  await assert.rejects(async () => await materializeRecord({
+    async openArtifact() { return (async function* () { yield corrupt; })(); },
+  }, record, output), /bytes differ/u);
+
+  assert.equal(await readFile(output, "utf8"), "keep-me");
+  assert.deepEqual(await readdir(root), ["final.mp4"]);
 });
 
 test("CLI inspect and get read the durable Build archive independently of build execution", async () => {
@@ -541,6 +711,10 @@ test("CLI inspect and get read the durable Build archive independently of build 
       name: "timing.rawEvidence",
       type: state.records[1]!.type,
       ref: { kind: "record", id: "record:whisperx" },
+    }, {
+      name: "unused.image",
+      type: state.records[0]!.type,
+      ref: { kind: "logical-output", id: "logical:unused" },
     }],
     createdAt: 100,
     updatedAt: 100,
@@ -565,7 +739,7 @@ export default {
   async credentials() { return []; },
   async putCredential() { throw new Error("not used"); },
   async deleteCredential() { throw new Error("not used"); },
-  async queue() { return { dispatches: [dispatch], capacity: [] }; },
+  async queue() { return { dispatches: [dispatch], capacity: [], operations: [] }; },
   async operation(id) { return id === operation.id ? operation : undefined; },
   async cancelOperation(id) { return id === operation.id ? { ...operation, cancellation: { status: "requested" } } : undefined; },
   async status(id) { return { build: id === "archive-1" ? { build: id, revision: 7, state: ${JSON.stringify(state)} } : undefined, catalog: id === "archive-1" ? catalog : undefined, operations: id === "archive-1" ? [operation] : [], dispatch: id === "archive-1" ? dispatch : undefined }; },
@@ -573,6 +747,11 @@ export default {
     if (digest === ${JSON.stringify(artifactDigest)}) return bytes;
     if (digest === ${JSON.stringify(rawDigest)}) return rawBytes;
     return undefined;
+  },
+  async openArtifact(digest) {
+    const value = digest === ${JSON.stringify(artifactDigest)} ? bytes
+      : digest === ${JSON.stringify(rawDigest)} ? rawBytes : undefined;
+    return value === undefined ? undefined : (async function* () { yield value; })();
   },
   async close() {},
 };\n`, "utf8");
@@ -595,6 +774,7 @@ export default {
   assert.deepEqual(inspected.archive.presentation.aliases.map((item) => [item.name, item.accepted]), [
     ["final.video", true],
     ["timing.rawEvidence", true],
+    ["unused.image", false],
   ]);
 
   let buildsOutput = "";
@@ -614,9 +794,43 @@ export default {
     status: "active",
     source: catalog.source,
     run: catalog.run,
-    aliasCount: 2,
+    aliasCount: 3,
     targets: ["final.video"],
   }]);
+
+  let historyOutput = "";
+  await runCli(["history", "final.video", "--runtime", runtimePath], {
+    write: (text) => { historyOutput += text; },
+  });
+  const history = JSON.parse(historyOutput) as {
+    readonly query: { readonly output: string };
+    readonly entries: readonly {
+      readonly build: string;
+      readonly source: { readonly path: string };
+      readonly output: { readonly name: string; readonly record: { readonly digest: string } };
+    }[];
+  };
+  assert.equal(history.query.output, "final.video");
+  assert.equal(history.entries.length, 1);
+  assert.equal(history.entries[0]?.build, "archive-1");
+  assert.equal(history.entries[0]?.source.path, catalog.source.path);
+  assert.equal(history.entries[0]?.output.name, "final.video");
+  assert.equal(history.entries[0]?.output.record.digest, recordDigest);
+
+  let sourceHistoryOutput = "";
+  await runCli(["history", "--source", catalog.source.path, "--runtime", runtimePath], {
+    write: (text) => { sourceHistoryOutput += text; },
+  });
+  const sourceHistory = JSON.parse(sourceHistoryOutput) as {
+    readonly entries: readonly { readonly output: { readonly name: string } }[];
+  };
+  assert.deepEqual(sourceHistory.entries.map((item) => item.output.name), ["final.video"]);
+
+  let absentHistoryOutput = "";
+  await runCli(["history", "unused.image", "--runtime", runtimePath], {
+    write: (text) => { absentHistoryOutput += text; },
+  });
+  assert.deepEqual((JSON.parse(absentHistoryOutput) as { readonly entries: readonly unknown[] }).entries, []);
 
   let statusOutput = "";
   await runCli(["status", "archive-1", "--runtime", runtimePath], {
@@ -628,7 +842,7 @@ export default {
   assert.deepEqual(status.catalog, {
     source: catalog.source,
     run: catalog.run,
-    aliasCount: 2,
+    aliasCount: 3,
     targets: ["final.video"],
   });
 

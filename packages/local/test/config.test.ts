@@ -8,6 +8,8 @@ import {
   createRuntimeEndpointAdapterFacet,
   createRuntimeServiceAdapterFacet,
 } from "@narratage/runtime-adapter";
+import { digestOf } from "@narratage/protocol";
+import { credentialRef, defineRuntimeServicePackage } from "@narratage/runtime";
 
 import {
   createRuntimeFromConfig,
@@ -30,6 +32,17 @@ const services = {
 };
 
 const required = { runtimeServices: [], services, scheduling: { maxConcurrency: 3 } } as const;
+
+function endpointPackage(instance: string, credentials: readonly unknown[] = []) {
+  return {
+    name: instance,
+    manifest: { facets: [] },
+    instance: { id: instance },
+    bindings: [],
+    credentials,
+    install() {},
+  } as never;
+}
 
 test("declarative Runtime config has no implicit local services", () => {
   assert.throws(() => parseRuntimeConfig({
@@ -126,9 +139,7 @@ test("doctor names the external program a Provider needs, and the command that s
   const declare = (use: string, service: unknown) =>
     registry.registerFacet(createRuntimeEndpointAdapterFacet({
       use,
-      validate() {},
-      create: () => ({}) as never,
-      service: () => service as never,
+      activate: (context) => ({ endpoint: endpointPackage(context.instance), externalService: service as never }),
     }));
   declare("example.absent", {
     id: "absent-one",
@@ -159,7 +170,7 @@ test("doctor names the external program a Provider needs, and the command that s
   await rm(root, { recursive: true, force: true });
 });
 
-test("doctor validates closed config without constructing adapters or cascading one root failure", async () => {
+test("doctor activates one pure Endpoint declaration without constructing Runtime services", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-read-only-doctor-"));
   const path = join(root, "svml.runtime.json");
   await writeFile(path, JSON.stringify({
@@ -190,33 +201,26 @@ test("doctor validates closed config without constructing adapters or cascading 
   }));
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.invalid",
-    validate() {
+    activate() {
       throw new Error("mode is invalid");
-    },
-    create() {
-      constructed += 1;
-      throw new Error("doctor constructed the invalid Endpoint");
-    },
-    doctor() {
-      invalidDoctorCalls += 1;
-      return [{ severity: "error", code: "SECOND_ERROR", message: "must never be reported" }];
     },
   }));
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.missing-credential",
-    validate() {},
-    create() {
-      constructed += 1;
-      throw new Error("missing credential also prevents construction");
-    },
-    doctor: () => [{
-      severity: "error",
-      code: "RUNTIME_CREDENTIAL_MISSING",
-      message: "one declared credential is absent",
-    }],
-    service() {
+    activate(context) {
       serviceDeclarations += 1;
-      return { id: "should-not-be-probed", probe: async () => ({ state: "ready" }) };
+      return {
+        endpoint: endpointPackage(context.instance),
+        diagnose: () => {
+          invalidDoctorCalls += 1;
+          return [{
+            severity: "error" as const,
+            code: "RUNTIME_CREDENTIAL_MISSING",
+            message: "one declared credential is absent",
+          }];
+        },
+        externalService: { id: "should-not-be-probed", probe: async () => ({ state: "ready" as const }) },
+      };
     },
   }));
 
@@ -229,7 +233,67 @@ test("doctor validates closed config without constructing adapters or cascading 
     { severity: "error", code: "RUNTIME_CREDENTIAL_MISSING", message: "one declared credential is absent" },
   ]);
   assert.equal(constructed, 0);
-  assert.equal(invalidDoctorCalls, 0);
-  assert.equal(serviceDeclarations, 0);
+  assert.equal(invalidDoctorCalls, 1);
+  assert.equal(serviceDeclarations, 1);
+  await rm(root, { recursive: true, force: true });
+});
+
+test("doctor resolves credentials from the same Endpoint declaration used by execution", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-credential-doctor-"));
+  const path = join(root, "svml.runtime.json");
+  await writeFile(path, JSON.stringify({
+    format: "svml.runtime-config@1",
+    ...required,
+    runtimeServices: [{ use: "example.credentials", instance: "credentials", config: {} }],
+    endpoints: [{ use: "example.provider", instance: "provider", config: {} }],
+    permissions: [],
+  }));
+
+  let endpointActivations = 0;
+  let credentialStoreConstructions = 0;
+  let credentialStoreCloses = 0;
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.provider",
+    activate(context) {
+      endpointActivations += 1;
+      return { endpoint: endpointPackage(context.instance, [{
+        endpoint: context.instance,
+        slot: "token",
+        label: "Example token",
+        kind: "secret",
+        ref: credentialRef("env", "EXAMPLE_TOKEN_THAT_IS_NOT_SET"),
+      }]) };
+    },
+  }));
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.credentials",
+    validate() {},
+    create(context) {
+      credentialStoreConstructions += 1;
+      return defineRuntimeServicePackage({
+        name: context.instance,
+        module: { name: "example.credentials", version: "1" },
+        services: [{
+          role: "credential-store",
+          facet: "credentials",
+          instance: context.instance,
+          implementation: { locator: "example.credentials", digest: digestOf("example.credentials@1") },
+          service: { async resolve() { return undefined; } },
+        }],
+        close() { credentialStoreCloses += 1; },
+      });
+    },
+  }));
+
+  const { diagnostics } = await doctorRuntimeConfig(path, { registry });
+  assert.deepEqual(diagnostics.map(({ code, message, subject }) => ({ code, message, subject })), [{
+    code: "RUNTIME_CREDENTIAL_MISSING",
+    message: "Example token for Endpoint provider is not configured in CredentialStore env",
+    subject: "provider.token",
+  }]);
+  assert.equal(endpointActivations, 1);
+  assert.equal(credentialStoreConstructions, 1);
+  assert.equal(credentialStoreCloses, 1);
   await rm(root, { recursive: true, force: true });
 });

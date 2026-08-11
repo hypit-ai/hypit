@@ -17,6 +17,7 @@
     "@narratage/media-pipeline": "workspace:*",
     "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
+    "@narratage/runtime": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
     "@narratage/runtime-adapter-node": "workspace:*",
     "@narratage/speech": "workspace:*"

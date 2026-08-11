@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+loader="$launcher_dir/node_modules/tsx/dist/loader.mjs"
+if [ ! -f "$loader" ]; then
+  echo "Narratage dependencies are not installed in $launcher_dir; run: pnpm install --frozen-lockfile" >&2
+  exit 1
+fi
+exec node --disable-warning=ExperimentalWarning \
+  --import "$loader" \
+  "$launcher_dir/packages/video-cli/src/cli.ts" "$@"

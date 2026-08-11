@@ -7,8 +7,6 @@ import {
 } from "@narratage/runtime-adapter";
 import { resolve } from "node:path";
 
-import { createSqliteRuntimeServicePackage } from "./store.js";
-
 const sqliteStateAdapter = createRuntimeServiceAdapterFacet({
   use: "@narratage/store-sqlite",
   validate(context) {
@@ -17,10 +15,11 @@ const sqliteStateAdapter = createRuntimeServiceAdapterFacet({
     if (runtimeConfigString(config.path, "SQLite path") === undefined) throw new Error("SQLite path is required");
     runtimeConfigPositiveInteger(config.busyTimeoutMs, "SQLite busyTimeoutMs");
   },
-  create(context) {
+  async create(context) {
     const config = runtimeConfigObject(context.config, "SQLite Runtime state");
     const path = runtimeConfigString(config.path, "SQLite path");
     if (path === undefined) throw new Error("SQLite path is required");
+    const { createSqliteRuntimeServicePackage } = await import("./store.js");
     return createSqliteRuntimeServicePackage({
       name: context.instance,
       path: resolve(context.root, path),

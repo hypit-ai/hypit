@@ -419,6 +419,7 @@ export class NodeDriver {
         status: "pending",
         checkpoint: outcome.checkpoint,
         ...(outcome.wakeAt === undefined ? {} : { wakeAt: outcome.wakeAt }),
+        ...(outcome.progress === undefined ? {} : { progress: outcome.progress }),
       });
       return await this.#completedOperation(
         state,
@@ -671,6 +672,7 @@ export class NodeDriver {
         status: "pending",
         checkpoint: observed.checkpoint,
         ...(observed.wakeAt === undefined ? {} : { wakeAt: observed.wakeAt }),
+        ...(observed.progress === undefined ? {} : { progress: observed.progress }),
       });
     }
     if (observed.status === "failed") {

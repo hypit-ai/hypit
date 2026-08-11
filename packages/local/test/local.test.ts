@@ -730,7 +730,7 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
     await runtime.build({
       id: "source-artifact-staging",
       state: createGreetingBuild(),
-      attachments: [{ artifact: sourceArtifact, bytes }],
+      attachments: [{ artifact: sourceArtifact, open: async () => (async function* () { yield bytes; })() }],
     });
     const blocked = await runtime.workOnce({ owner: "artifact-test", leaseMs: 5_000 });
     assert.equal(blocked?.terminal, "failed");
@@ -740,7 +740,10 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
       runtime.build({
         id: "tampered-source-artifact",
         state: createGreetingBuild(),
-        attachments: [{ artifact: sourceArtifact, bytes: new Uint8Array([0]) }],
+        attachments: [{
+          artifact: sourceArtifact,
+          open: async () => (async function* () { yield new Uint8Array([0]); })(),
+        }],
       }),
       /does not match its staged bytes/u,
     );

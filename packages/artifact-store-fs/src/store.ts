@@ -94,9 +94,6 @@ export class FileArtifactStore implements ArtifactStore {
       }
     }
     await unlink(temporary).catch(() => undefined);
-    if ((await this.get(digest)) === undefined) {
-      throw new Error(`Artifact ${digest} disappeared after storage`);
-    }
     return { kind: "blob", digest, size, mediaType };
   }
 
@@ -149,7 +146,12 @@ export class FileArtifactStore implements ArtifactStore {
   }
 
   async has(digest: Digest): Promise<boolean> {
-    return (await this.get(digest)) !== undefined;
+    try {
+      return (await stat(digestPath(this.root, digest))).isFile();
+    } catch (error) {
+      if (isNodeError(error, "ENOENT")) return false;
+      throw error;
+    }
   }
 
   async list(): Promise<readonly Digest[]> {

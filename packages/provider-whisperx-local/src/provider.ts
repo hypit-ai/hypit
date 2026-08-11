@@ -214,8 +214,35 @@ async function limitedJson(response: Response, maxBytes: number, subject: string
   readonly value: unknown;
   readonly bytes: Uint8Array;
 }> {
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  assert(bytes.byteLength <= maxBytes, `${subject} exceeded the configured response limit`);
+  const reader = response.body?.getReader();
+  let bytes: Uint8Array;
+  if (reader === undefined) {
+    bytes = new Uint8Array(await response.arrayBuffer());
+    assert(bytes.byteLength <= maxBytes, `${subject} exceeded the configured response limit`);
+  } else {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      while (true) {
+        const item = await reader.read();
+        if (item.done) break;
+        size += item.value.byteLength;
+        if (size > maxBytes) {
+          await reader.cancel();
+          throw new Error(`${subject} exceeded the configured response limit`);
+        }
+        chunks.push(item.value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+  }
   assert(response.ok, `${subject} failed with HTTP ${response.status}: ${Buffer.from(bytes).toString("utf8").slice(0, 500)}`);
   try {
     return { value: JSON.parse(Buffer.from(bytes).toString("utf8")), bytes };

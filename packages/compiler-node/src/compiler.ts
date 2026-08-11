@@ -38,20 +38,16 @@ function attachmentKey(artifact: BlobRef): string {
   return `${artifact.digest}\u0000${artifact.mediaType}`;
 }
 
-function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
-  return left.byteLength === right.byteLength && left.every((value, index) => value === right[index]);
-}
-
 function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): readonly ArtifactAttachment[] {
   const merged = new Map<string, ArtifactAttachment>();
   for (const item of groups.flat()) {
     const key = attachmentKey(item.artifact);
     const existing = merged.get(key);
     if (existing !== undefined) {
-      if (existing.artifact.size !== item.artifact.size || !sameBytes(existing.bytes, item.bytes)) {
+      if (existing.artifact.size !== item.artifact.size) {
         throw new NodeCompilerError(
           "SOURCE_ATTACHMENT_CONFLICT",
-          `Artifact attachment ${item.artifact.digest} carries conflicting bytes`,
+          `Artifact attachment ${item.artifact.digest} carries conflicting sizes`,
           item.artifact.digest,
         );
       }
@@ -59,7 +55,7 @@ function mergeAttachments(groups: readonly (readonly ArtifactAttachment[])[]): r
     }
     merged.set(key, {
       artifact: { ...item.artifact },
-      bytes: Uint8Array.from(item.bytes),
+      open: item.open,
     });
   }
   return [...merged.values()]
@@ -183,14 +179,17 @@ export class NodeCompiler {
         };
         const key = attachmentKey(artifact);
         const existing = embeddedAttachments.get(key);
-        if (existing !== undefined && !sameBytes(existing.bytes, bytes)) {
+        if (existing !== undefined && existing.artifact.size !== bytes.byteLength) {
           throw new NodeCompilerError(
             "SOURCE_ATTACHMENT_CONFLICT",
             `Embedded asset ${request.from} conflicts with ${artifact.digest}`,
             request.from,
           );
         }
-        embeddedAttachments.set(key, { artifact, bytes });
+        embeddedAttachments.set(key, {
+          artifact,
+          open: async () => (async function* () { yield Uint8Array.from(bytes); })(),
+        });
         return { artifact: { ...artifact } };
       },
       admitRecord: this.#admitRecord,

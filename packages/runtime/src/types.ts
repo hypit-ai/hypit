@@ -99,14 +99,18 @@ export type RuntimeCommandExecutor = {
 
 /** Content-addressed bytes. Location, retention and remote transport are adapter policy. */
 export type ArtifactStore = {
+  /** Admit bytes and compute their identity in the same pass. */
   put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
+  /** Return verified bytes; a digest mismatch is an error, not a cache miss. */
   get(digest: Digest): Promise<Uint8Array | undefined>;
+  /** Cheap presence query only. Integrity is checked when bytes cross get/open. */
   has(digest: Digest): Promise<boolean>;
 };
 
 /** Optional transfer capability. Core and components never require storage to expose it. */
 export type StreamingArtifactStore = ArtifactStore & {
   putStream(chunks: AsyncIterable<Uint8Array>, mediaType: string): Promise<BlobRef>;
+  /** Stream bytes once and reject completion when their digest does not match. */
   open(digest: Digest): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
