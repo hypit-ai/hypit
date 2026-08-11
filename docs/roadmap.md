@@ -34,7 +34,7 @@ graph model.
 ### A2. Runtime Profile usability — first public slice implemented
 
 The typed Runtime Profile/Closure API now has a declarative `svml.runtime.json` Host frontend for
-exact Scheduler/Worker and Store selection, credential references, Endpoints, lanes and permissions.
+exact Scheduler/Worker and Store selection, credential references, Endpoints, Authorities, resources and permissions.
 Adapter names resolve from a separately verified physical package closure; the generic and video
 CLIs import no Provider implementation. Effective Runtime implementation identity binds actual
 package bytes, not a self-asserted development label. `doctor` checks locks, configuration,
@@ -94,7 +94,7 @@ There is no automatic result reuse or hidden Candidate selection.
 
 The local reference Runtime now persists Build dispatch, Runtime journal, fenced leases and shared
 capacity in the explicitly selected Store. `build` is a durable submission; a detached Worker owns
-execution; `--follow` is an observer. Multiple processes share global/lane capacity, expired leases
+execution; `--follow` is an observer. Multiple processes share global and generic resource capacity, expired leases
 are fenced, and restart regenerates Commands from verified BuildState rather than serialized work.
 
 The target design is recorded in
@@ -110,6 +110,13 @@ The target design is recorded in
 
 The first implementation remains local SQLite/filesystem. Hosted auth, billing, multi-tenancy and
 distributed deployment are not prerequisites.
+
+The first Provider-hierarchy slice is also implemented: every Endpoint has an explicit Authority,
+every exact capability becomes a Route, both resource claims are acquired atomically, capacity
+misses remain durable instead of waiting inside a Worker, and dispatch claiming is filtered by the
+exact Runtime Closure. Historical-revision supervision and Authority lifecycle controls remain the
+next execution slice; see
+[`runtime-provider-scheduling.md`](./runtime-provider-scheduling.md).
 
 ### A7. Command-line product surface — operational slice implemented
 
@@ -181,7 +188,7 @@ following the port-mapping laws in [`model-input-ports.md`](./model-input-ports.
 Deterministic still-image work is also explicit rather than hidden in Track code:
 `@narratage/image-compose` and `@narratage/image-transform` lower their different author forms to the
 single `@narratage/raster` execution contract, and the local OpenCV Endpoint implements that one
-capability on its one configured lane.
+capability under its explicit Authority and exact Route resources.
 External cutout work is a separate `@narratage/background-removal` Need; KIE currently realizes it
 with Recraft without leaking that vendor choice into Core.
 

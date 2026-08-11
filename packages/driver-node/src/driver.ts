@@ -62,15 +62,14 @@ export type NodeDriverOptions = {
 type Executable =
   | {
       readonly command: InvokeProducerCommand;
-      readonly lane: string;
-      readonly maxConcurrency: number;
+      readonly resources: readonly import("@narratage/runtime").RuntimeResourceClaim[];
       readonly run: () => Promise<ProducerHandlerResult>;
     }
   | {
       readonly command: FulfillNeedCommand;
       readonly endpointId: string;
-      readonly lane: string;
-      readonly maxConcurrency: number;
+      readonly resources: readonly import("@narratage/runtime").RuntimeResourceClaim[];
+      readonly queue?: import("@narratage/runtime").RuntimeQueueRoute;
       readonly registration: EndpointRegistration;
     };
 
@@ -171,8 +170,11 @@ export class NodeDriver {
       return {
         executable: {
           command,
-          lane: registration.scheduling?.lane ?? `producer:${producerRegistryKey(command.producer)}`,
-          maxConcurrency: registration.scheduling?.maxConcurrency ?? Number.MAX_SAFE_INTEGER,
+          resources: registration.scheduling?.resources ?? [{
+            id: `producer:${producerRegistryKey(command.producer)}`,
+            maxActive: Number.MAX_SAFE_INTEGER,
+            maxInFlight: Number.MAX_SAFE_INTEGER,
+          }],
           run: async () =>
             registration.handler({
               command: structuredClone(command),
@@ -227,8 +229,12 @@ export class NodeDriver {
       executable: {
         command,
         endpointId: registration.id,
-        lane: registration.scheduling?.lane ?? `endpoint:${registration.id}`,
-        maxConcurrency: registration.scheduling?.maxConcurrency ?? 1,
+        resources: registration.scheduling?.resources ?? [{
+          id: `endpoint:${registration.id}`,
+          maxActive: 1,
+          maxInFlight: 1,
+        }],
+        ...(registration.scheduling?.queue === undefined ? {} : { queue: registration.scheduling.queue }),
         registration,
       },
     };
@@ -336,6 +342,8 @@ export class NodeDriver {
         || snapshot.build !== expected.build
         || snapshot.command !== expected.command
         || snapshot.endpoint !== expected.endpoint
+        || snapshot.authority !== expected.authority
+        || snapshot.route !== expected.route
         || snapshot.implementationDigest !== expected.implementationDigest
         || snapshot.runtimeClosure !== expected.runtimeClosure
         || snapshot.requestDigest !== expected.requestDigest) {
@@ -356,10 +364,13 @@ export class NodeDriver {
     if (runtimeClosure === undefined) throw new Error("recoverable Endpoint requires Runtime Closure");
     const implementation = executable.registration.runtimeImplementation;
     if (implementation === undefined) throw new Error("recoverable Endpoint has no implementation identity");
+    if (executable.queue === undefined) throw new Error("recoverable Endpoint has no Provider Authority route");
     const base = {
       build: context.build,
       command: executable.command.id,
       endpoint: executable.endpointId,
+      authority: executable.queue.authority,
+      route: executable.queue.route,
       implementationDigest: implementation.digest,
       runtimeClosure,
       requestDigest: executable.command.need.requestDigest,
@@ -523,12 +534,11 @@ export class NodeDriver {
       state,
       runnable: classifications.flatMap(({ executable }) => executable === undefined ? [] : [{
         command: executable.command,
-        lane: executable.lane,
-        maxConcurrency: executable.maxConcurrency,
+        resources: executable.resources,
+        ...(("queue" in executable && executable.queue !== undefined) ? { queue: executable.queue } : {}),
         capacityMode: "endpointId" in executable && executable.registration.kind === "recoverable"
           ? "recoverable"
           : "active",
-        maxInFlight: executable.maxConcurrency,
       }]),
       blocked: classifications
         .map((item) => item.blocked)
@@ -593,6 +603,8 @@ export class NodeDriver {
       build: operation.build,
       command: operation.command,
       endpoint: operation.endpoint,
+      authority: operation.authority,
+      route: operation.route,
       implementationDigest: operation.implementationDigest,
       runtimeClosure: operation.runtimeClosure,
       requestDigest: operation.requestDigest,
@@ -727,6 +739,9 @@ export class NodeDriver {
             ...(execution.wakeAt === undefined ? {} : { wakeAt: execution.wakeAt }),
           });
           return { status: "paused", state, journal, blocked: [] };
+        }
+        if (execution.status === "deferred") {
+          throw new Error("direct NodeDriver execution has no Runtime capacity admission to defer");
         }
         const event = execution.event;
         const accepted = reduce(state, event);

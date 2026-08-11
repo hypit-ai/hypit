@@ -12,6 +12,7 @@ import { createKieProvider } from "./provider.js";
 const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-kie",
   activate(context) {
+    if (context.authority === undefined) throw new Error("KIE Provider Authority is required");
     const config = runtimeConfigObject(context.config, "KIE");
     runtimeConfigExact(config, [
       "apiBaseUrl", "uploadBaseUrl", "apiKey", "defaultConcurrency", "pollIntervalMs",
@@ -37,7 +38,7 @@ const kieRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createKieProvider({
         instance: context.instance,
-        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        authority: context.authority,
         ...(apiBaseUrl === undefined ? {} : { apiBaseUrl }),
         ...(uploadBaseUrl === undefined ? {} : { uploadBaseUrl }),
         apiKey,

@@ -17,13 +17,22 @@ export type RuntimeBlockedCommand = {
 
 export type RuntimeRunnableCommand = {
   readonly command: CoreCommand;
-  /** One authority-wide concurrency bucket, normally an Endpoint instance or local implementation. */
-  readonly lane: string;
-  /** Registration default; a Runtime Profile may explicitly override it for this Scheduler. */
-  readonly maxConcurrency: number;
+  /** Every resource is acquired atomically before the command can cause a side effect. */
+  readonly resources: readonly RuntimeResourceClaim[];
+  readonly queue?: RuntimeQueueRoute;
   /** Recoverable work retains one shared in-flight reservation while polling. */
   readonly capacityMode?: "active" | "recoverable";
-  readonly maxInFlight?: number;
+};
+
+export type RuntimeResourceClaim = {
+  readonly id: string;
+  readonly maxActive: number;
+  readonly maxInFlight: number;
+};
+
+export type RuntimeQueueRoute = {
+  readonly authority: string;
+  readonly route: string;
 };
 
 export type RuntimeExecutionStores = {
@@ -77,7 +86,8 @@ export type RuntimeExecutionContext = {
 
 export type RuntimeExecutionResult =
   | { readonly status: "completed"; readonly event: BuildEvent }
-  | { readonly status: "pending"; readonly operation: Digest; readonly wakeAt?: number };
+  | { readonly status: "pending"; readonly operation: Digest; readonly wakeAt?: number }
+  | { readonly status: "deferred"; readonly wakeAt: number; readonly reason: string };
 
 /**
  * Minimal execution port used by a Scheduler. Implementations must regenerate the command from
@@ -164,8 +174,8 @@ export type ScheduledBuild = {
 export type SchedulerJournalEntry = {
   readonly command: string;
   readonly kind: CoreCommand["kind"];
-  readonly lane: string;
-  readonly status: "completed" | "pending" | "error";
+  readonly resources: readonly string[];
+  readonly status: "completed" | "pending" | "deferred" | "error";
   readonly event?: string;
   readonly operation?: Digest;
   readonly wakeAt?: number;
@@ -182,7 +192,7 @@ export type ScheduledBuildResult = {
 
 export type BuildSchedulerOptions = {
   readonly maxConcurrency?: number;
-  readonly laneLimits?: Readonly<Record<string, number>>;
+  readonly resourceLimits?: Readonly<Record<string, number>>;
   readonly maxEventsPerBuild?: number;
   readonly runtimeClosure?: RuntimeClosure;
   /** Optional durable authority. When present, every accepted Core Event is persisted by CAS. */

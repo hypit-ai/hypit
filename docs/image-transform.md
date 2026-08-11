@@ -113,7 +113,7 @@ pnpm test:image-opencv
 With no `pythonExecutable`, `services up` prepares the frozen project and the Adapter resolves its
 `.venv` for the Endpoint, probe and doctor. Set `pythonExecutable` only to opt into an externally
 managed compatible environment; that disables the managed prepare. The ordinary Runtime Scheduler
-owns admission and lane concurrency; the Provider does not create another queue. Temporary files
+owns admission and atomic Authority/Route concurrency; the Provider does not create another queue. Temporary files
 and OpenCV errors are Endpoint-local, while compact execution diagnostics live only in Receipt
 metadata.
 
@@ -143,7 +143,7 @@ contract vocabulary.
 ```
 
 Both author packages lower to the same `execute-raster` capability. The local OpenCV Endpoint has one
-Handler and one shared interpreter on its configured Scheduler lane; neither author form owns a queue.
+Handler and one shared interpreter under its configured Authority/Route resources; neither author form owns a queue.
 
 ## Background removal
 

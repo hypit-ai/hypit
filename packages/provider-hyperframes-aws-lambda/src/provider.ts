@@ -65,7 +65,7 @@ export type HyperframesLambdaQuality = "draft" | "standard" | "high";
 
 export type CreateAwsLambdaHyperframesProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   readonly stateMachineArn: string;
   readonly bucketName: string;
   /** Content identity of the deployed remote renderer, not merely its mutable ARN. */
@@ -685,7 +685,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     module: awsLambdaHyperframesProviderModuleRef,
     facet: "render",
     instance: config.instance ?? "hyperframes.aws-lambda",
-    ...(config.lane === undefined ? {} : { lane: config.lane }),
+    authority: config.authority ?? config.instance ?? "hyperframes.aws-lambda",
     implementation: {
       locator: "@narratage/provider-hyperframes-aws-lambda/render",
       digest: awsLambdaHyperframesProviderImplementationDigest,

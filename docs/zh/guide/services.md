@@ -80,7 +80,7 @@ node --run narratage -- operation <operation-id> --runtime svml.runtime.json
 ## WhisperX
 
 `@narratage/provider-whisperx-local` 声明热服务及健康探测，锁定协议、包版本、模型、设备、
-计算类型和 batch size。服务只读取允许目录下的规范证据 WAV。Runtime lane 避免无意义的
+计算类型和 batch size。服务只读取允许目录下的规范证据 WAV。Runtime Route 资源避免无意义的
 并发 `BUSY`。
 
 开发服务本身时仍可前台运行：

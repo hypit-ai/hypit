@@ -10,7 +10,7 @@ import type {
   LocalRuntimeControl,
 } from "@narratage/local";
 import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
-import type { BuildCatalogDescriptor, OperationProgress } from "@narratage/runtime";
+import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@narratage/runtime";
 import { isDigest } from "@narratage/protocol";
 import type { BuildState, CapabilityRef } from "@narratage/protocol";
 import { parseSourceHeader } from "@narratage/source";
@@ -643,6 +643,49 @@ function formatOperationProgress(progress: OperationProgress): string {
   return `${progress.phase} · ${amount}${progress.unit === undefined ? "" : ` ${progress.unit}`}`;
 }
 
+type QueueRouteSummary = {
+  readonly authority: string;
+  readonly route: string;
+  readonly queued: number;
+  readonly active: number;
+  readonly inFlight: number;
+};
+
+/** Derive the Provider → capability view from generic tickets; no model registry participates. */
+function summarizeQueueRoutes(capacity: readonly CapacityReservation[]): readonly QueueRouteSummary[] {
+  const groups = new Map<string, { authority: string; route: string; queued: number; active: number; inFlight: number }>();
+  for (const ticket of capacity) {
+    if (ticket.queue === undefined) continue;
+    const key = `${ticket.queue.authority}\u0000${ticket.queue.route}`;
+    const group = groups.get(key) ?? {
+      authority: ticket.queue.authority,
+      route: ticket.queue.route,
+      queued: 0,
+      active: 0,
+      inFlight: 0,
+    };
+    if (ticket.active === undefined && !ticket.inFlight) group.queued += 1;
+    if (ticket.active !== undefined) group.active += 1;
+    if (ticket.inFlight) group.inFlight += 1;
+    groups.set(key, group);
+  }
+  return [...groups.values()].sort((left, right) =>
+    left.authority.localeCompare(right.authority) || left.route.localeCompare(right.route));
+}
+
+function queueRouteLines(groups: readonly QueueRouteSummary[]): readonly string[] {
+  const lines: string[] = [];
+  let authority: string | undefined;
+  for (const group of groups) {
+    if (group.authority !== authority) {
+      authority = group.authority;
+      lines.push(authority);
+    }
+    lines.push(`  ${group.route}: queued ${group.queued} · active ${group.active} · remote ${group.inFlight}`);
+  }
+  return lines;
+}
+
 function inlineValuePreview(value: unknown, limit = 240): string {
   const encoded = JSON.stringify(value);
   if (encoded.length <= limit) return encoded;
@@ -1092,10 +1135,11 @@ export async function runCli(
       const queue = await runtime.queue();
       const counts = Object.fromEntries(["queued", "leased", "waiting", "blocked", "settling", "terminal"]
         .map((phase) => [phase, queue.dispatches.filter((item) => item.phase === phase).length]));
+      const routes = summarizeQueueRoutes(queue.capacity);
       const machine = {
         ok: worker.state === "running" && external.services.every((item) => item.state.state === "ready"),
         worker,
-        queue: { counts, capacity: queue.capacity },
+        queue: { counts, routes, capacity: queue.capacity },
         services: external.services,
       };
       writeOperational(machine, "Runtime status", machine.ok ? "success" : "warning", [
@@ -1104,7 +1148,7 @@ export async function runCli(
         ["Running", String(counts.leased ?? 0)],
         ["Waiting", String(counts.waiting ?? 0)],
         ["Capacity reservations", String(queue.capacity.length)],
-      ]);
+      ], queueRouteLines(routes));
       if (!machine.ok) io.setExitCode?.(1);
     } finally {
       await runtime.close();
@@ -1236,11 +1280,14 @@ export async function runCli(
             at: Date.now(),
             worker,
             dispatches: queue.dispatches,
+            routes: summarizeQueueRoutes(queue.capacity),
             capacity: queue.capacity,
             operations: queue.operations.map((item) => ({
               id: item.id,
               build: item.build,
               endpoint: item.endpoint,
+              authority: item.authority,
+              route: item.route,
               attempt: item.attempt,
               revision: item.revision,
               status: item.status,
@@ -1253,10 +1300,14 @@ export async function runCli(
             item.status === "created" || item.status === "pending");
           const buildLines = active.slice(0, args.verbose ? undefined : 12).map((item) =>
             `${item.build}: ${item.phase}${item.admission === "open" ? "" : ` · ${item.admission}`}`);
-          const capacityLines = queue.capacity.slice(0, args.verbose ? undefined : 12).map((item) =>
-            `${item.lane}: ${item.inFlight ? "in flight" : "parked"} · ${item.build}`);
+          const routeLines = queueRouteLines(summarizeQueueRoutes(queue.capacity));
+          const genericCapacityLines = queue.capacity.filter((item) => item.queue === undefined)
+            .slice(0, args.verbose ? undefined : 12)
+            .map((item) => `${item.resources.map((resource) => resource.id).join(" + ")}: ${item.active === undefined
+              ? "queued"
+              : "active"} · ${item.build}`);
           const operationLines = activeOperations.slice(0, args.verbose ? undefined : 12).map((item) =>
-            `${item.build} · ${item.endpoint}: ${item.progress === undefined
+            `${item.build} · ${item.authority} → ${item.route}: ${item.progress === undefined
               ? item.status
               : formatOperationProgress(item.progress)}`);
           writeOperational(value, "Runtime queue", active.length === 0 ? "success" : "info", [
@@ -1264,11 +1315,12 @@ export async function runCli(
             ["Active Operations", String(activeOperations.length)],
             ["Worker", worker.pid === undefined ? worker.state : `${worker.state} · ${worker.pid}`],
             ["Queued Builds", String(queue.dispatches.length)],
-            ["Reserved capacity", String(queue.capacity.length)],
+            ["Operation tickets", String(queue.capacity.length)],
           ], [
             ...buildLines,
             ...(operationLines.length === 0 ? [] : ["Operations:", ...operationLines]),
-            ...(capacityLines.length === 0 ? [] : ["Capacity:", ...capacityLines]),
+            ...(routeLines.length === 0 ? [] : ["Provider queues:", ...routeLines]),
+            ...(genericCapacityLines.length === 0 ? [] : ["Other resources:", ...genericCapacityLines]),
           ]);
         };
         if (!args.watch) await writeQueue();
@@ -1281,7 +1333,7 @@ export async function runCli(
         const machine = { build: args.file, operations: status.operations };
         writeOperational(machine, "Build operations", "info", [
           ["Build", args.file!], ["Operations", String(status.operations.length)],
-        ], status.operations.map((item) => `${item.id}: ${item.status} · ${item.endpoint}`
+        ], status.operations.map((item) => `${item.id}: ${item.status} · ${item.authority} → ${item.route}`
           + `${item.progress === undefined ? "" : ` · ${formatOperationProgress(item.progress)}`}`
           + `${item.failure === undefined ? "" : ` · ${item.failure.code}: ${item.failure.message}`}`
           + `${item.cancellation === undefined ? "" : ` · cancellation ${item.cancellation.status}`}`));
@@ -1291,6 +1343,7 @@ export async function runCli(
         writeOperational({ operation }, operation === undefined ? "Operation not found" : "Operation detail",
           operation === undefined ? "warning" : "info", operation === undefined ? [] : [
             ["Operation", operation.id], ["Status", operation.status], ["Endpoint", operation.endpoint],
+            ["Authority", operation.authority], ["Route", operation.route],
             ["Attempt", String(operation.attempt)],
             ...(operation.progress === undefined ? [] : [["Progress", formatOperationProgress(operation.progress)] as const]),
           ], operation?.failure === undefined ? [] : [

@@ -46,12 +46,20 @@ function sameRef(
 
 function verifyScheduling(scheduling: SchedulingHint | undefined): void {
   if (scheduling === undefined) return;
-  if (scheduling.lane !== undefined && scheduling.lane.trim().length === 0) {
-    throw new Error("scheduling lane must not be empty");
-  }
-  if (scheduling.maxConcurrency !== undefined
-    && (!Number.isSafeInteger(scheduling.maxConcurrency) || scheduling.maxConcurrency < 1)) {
-    throw new Error("scheduling maxConcurrency must be a positive safe integer");
+  if (scheduling.resources.length === 0) throw new Error("scheduling resources must not be empty");
+  const ids = scheduling.resources.map((resource) => {
+    if (resource.id.trim().length === 0) throw new Error("scheduling resource id must not be empty");
+    for (const [name, value] of [["maxActive", resource.maxActive], ["maxInFlight", resource.maxInFlight]] as const) {
+      if (!Number.isSafeInteger(value) || value < 1) {
+        throw new Error(`scheduling resource ${resource.id} ${name} must be a positive safe integer`);
+      }
+    }
+    return resource.id;
+  });
+  if (new Set(ids).size !== ids.length) throw new Error("scheduling resources contain duplicate ids");
+  if (scheduling.queue !== undefined
+    && (scheduling.queue.authority.trim().length === 0 || scheduling.queue.route.trim().length === 0)) {
+    throw new Error("scheduling queue authority and route must not be empty");
   }
 }
 
@@ -209,15 +217,35 @@ export class EndpointRegistry implements EndpointRegistrar {
       if (JSON.stringify(credentialSlots) !== JSON.stringify(endpoint.credentialSlots)) {
         throw new Error(`Endpoint ${endpoint.id} credential slots do not match the Runtime Closure`);
       }
+      const route = endpointCapabilityKey(binding.capability);
+      const declaredRoute = registration.scheduling?.queue;
+      if (declaredRoute !== undefined
+        && (declaredRoute.authority !== endpoint.authority || declaredRoute.route !== route)) {
+        throw new Error(`Endpoint ${endpoint.id} scheduling route differs from the Runtime Closure`);
+      }
       pending.push({
         key: endpointCapabilityKey(binding.capability),
         endpoint: endpoint.id,
-        scheduling: { lane: endpoint.lane, maxConcurrency: endpoint.maxConcurrency },
+        scheduling: {
+          queue: { authority: endpoint.authority, route },
+          resources: [
+            {
+              id: `authority:${endpoint.authority}`,
+              maxActive: endpoint.maxConcurrency,
+              maxInFlight: endpoint.maxConcurrency,
+            },
+            {
+              id: `route:${endpoint.authority}/${route}`,
+              maxActive: endpoint.maxConcurrency,
+              maxInFlight: endpoint.maxConcurrency,
+            },
+          ],
+        },
       });
     }
     for (const item of pending) {
       this.#bindings.set(item.key, item.endpoint);
-      this.#runtimeScheduling.set(item.endpoint, item.scheduling);
+      this.#runtimeScheduling.set(`${item.endpoint}\n${item.key}`, item.scheduling);
     }
     this.#runtimeClosure = closure.digest;
   }
@@ -233,7 +261,7 @@ export class EndpointRegistry implements EndpointRegistrar {
       const registration = registrations.find((candidate) => candidate.id === bound);
       const scheduling = registration === undefined
         ? undefined
-        : this.#runtimeScheduling.get(registration.id) ?? registration.scheduling;
+        : this.#runtimeScheduling.get(`${registration.id}\n${key}`) ?? registration.scheduling;
       return registration === undefined
         ? { status: "missing", endpointId: bound }
         : {
@@ -249,7 +277,7 @@ export class EndpointRegistry implements EndpointRegistrar {
       };
     }
     const registration = registrations[0]!;
-    const scheduling = this.#runtimeScheduling.get(registration.id) ?? registration.scheduling;
+    const scheduling = this.#runtimeScheduling.get(`${registration.id}\n${key}`) ?? registration.scheduling;
     return {
       status: "resolved",
       registration: scheduling === undefined ? registration : { ...registration, scheduling },

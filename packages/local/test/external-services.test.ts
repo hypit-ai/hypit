@@ -46,9 +46,9 @@ async function project(service: (root: string) => RuntimeExternalService) {
       },
     },
     endpoints: [
-      { use: "example.program", instance: "one", config: {} },
+      { use: "example.program", instance: "one", authority: "example.local", config: {} },
       // A second Endpoint driving the same program: it is brought up once.
-      { use: "example.program", instance: "two", config: {} },
+      { use: "example.program", instance: "two", authority: "example.local", config: {} },
     ],
     permissions: [],
     scheduling: { maxConcurrency: 1 },

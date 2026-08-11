@@ -20,30 +20,30 @@ export default async function createTalkingFilmRuntime() {
   const endpoints = [
     createKieProvider({
       instance: "kie.talking-film",
-      lane: "generation",
+      authority: "kie.talking-film",
       apiKey: credentialRef("env", "KIE_API_KEY"),
       defaultConcurrency: 2,
     }),
     createLocalMediaProvider({
       instance: "media.talking-film",
-      lane: "media",
+      authority: "media.talking-film",
       defaultConcurrency: 2,
     }),
     createLocalWhisperXProvider({
       instance: "whisperx.talking-film",
-      lane: "alignment",
+      authority: "whisperx.talking-film",
       defaultConcurrency: 1,
     }),
     createGoogleVertexCaptionProvider({
       project,
       instance: "vertex.talking-film",
-      lane: "planning",
+      authority: "vertex.talking-film",
       credentialsJson: credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),
       defaultConcurrency: 1,
     }),
     createLocalHyperframesProvider({
       instance: "hyperframes.talking-film",
-      lane: "render",
+      authority: "hyperframes.talking-film",
       workers: 2,
       quality: "standard",
       defaultConcurrency: 1,
@@ -90,13 +90,6 @@ export default async function createTalkingFilmRuntime() {
     ])],
     scheduling: {
       maxConcurrency: 4,
-      lanes: {
-        generation: 2,
-        media: 2,
-        alignment: 1,
-        planning: 1,
-        render: 1,
-      },
     },
   });
 }

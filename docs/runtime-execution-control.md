@@ -66,9 +66,10 @@ The Runtime journal is operational evidence, not video or domain data. It must n
 Records, media values or other graph edges. The BuildState remains valid without it; the journal
 exists so humans and Workers can explain and control execution.
 
-## 3. One Runtime Profile defines one execution domain
+## 3. One Runtime Profile selects the current revision of one execution domain
 
-An execution domain is the authority selected by one resolved Runtime Profile closure:
+An execution domain is the shared operational boundary selected by a Runtime Profile. The resolved
+Profile is one immutable Runtime Revision inside that domain:
 
 ```text
 execution domain
@@ -77,7 +78,7 @@ execution domain
 ├── ArtifactStore
 ├── BuildDispatchStore
 ├── RuntimeJournal
-├── Scheduler policy and lane capacities
+├── Scheduler policy and generic resource capacities
 ├── Worker population
 ├── Endpoint instances
 └── managed tools and daemons
@@ -126,10 +127,11 @@ and start the Worker last. It must never create cloud infrastructure, mutate IAM
 Provider or deploy Lambda. Those are explicit provisioning operations.
 
 The detached process record binds the canonical Profile path and an effective revision covering
-the Profile bytes plus both package locks it names. If the Profile or either lock changes while a
-Worker is alive, `runtime status` reports `stale`; the next `runtime up` or `build` stops that
-process and starts one from the new closure instead of silently executing new dispatches under old
-configuration.
+the Profile bytes plus both package locks it names. A Worker claims only dispatches with its exact
+Runtime Closure digest. Changing the Profile therefore cannot make an old Build execute with new
+code. Retaining and drain-starting historical revisions is specified in
+[`runtime-provider-scheduling.md`](./runtime-provider-scheduling.md); until that supervisor slice is
+implemented, missing historical revisions remain visibly unclaimed rather than being rerouted.
 
 `doctor` remains read-only. It validates the profile, locks, credentials and prerequisites. A
 healthy remote credential and a currently running local daemon are different diagnostics; liveness
@@ -198,8 +200,8 @@ distinguish:
 - **in-flight capacity**: remote jobs already submitted but still pending;
 - **submission rate**: Endpoint/provider-specific request-rate policy.
 
-For example, a generation lane with `active = 2` and `inFlight = 2` may poll cheaply while keeping
-at most two paid remote generations outstanding. A media lane may need only active capacity because
+For example, a Route resource with `active = 2` and `inFlight = 2` may poll cheaply while keeping
+at most two paid remote generations outstanding. A media resource may need only active capacity because
 its process ends with the admitted call. Provider rate limiting remains Endpoint policy; it is not
 creative graph selection.
 
@@ -254,7 +256,7 @@ The resource names may be refined with the CLI, but the information boundary is 
 - Runtime Closure and execution-domain identity;
 - Worker identity, lease heartbeat and version;
 - queued, leased, waiting, blocked and settling Build counts;
-- global, lane active and lane in-flight capacity;
+- global, Authority/Route active and in-flight capacity;
 - prepared tool and daemon state;
 - remote dependency diagnostics without secrets.
 
@@ -271,7 +273,7 @@ The resource names may be refined with the CLI, but the information boundary is 
 
 - exact Build, Core Command, Need, Endpoint instance and implementation identity;
 - attempt number, submission key and request digest;
-- lane, opaque recovery checkpoint, remote task identity and next wake time;
+- Provider Authority, exact capability Route, opaque recovery checkpoint, remote task identity and next wake time;
 - optional generic progress `{ phase, completed?, total?, unit? }`, persisted on every pending
   revision and supplied only by the Endpoint from measured Provider facts;
 - execution outcome and cancellation control state;
@@ -489,7 +491,7 @@ embedding-product concerns.
 
 The execution redesign is not complete until tests prove all of these:
 
-- two CLI submissions share one configured lane limit through the same local Worker;
+- two CLI submissions share configured Authority and Route limits through the same local Worker;
 - closing the submitting terminal does not pause the Build;
 - a Worker crash after remote submission resumes the same Operation and submission key;
 - no serialized queued Command can be tampered with because none is stored;

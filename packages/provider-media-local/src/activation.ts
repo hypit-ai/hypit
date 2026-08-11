@@ -16,6 +16,7 @@ import { localMediaToolchainService } from "./service.js";
 const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-media-local",
   activate(context) {
+    if (context.authority === undefined) throw new Error("local media Provider Authority is required");
     const config = runtimeConfigObject(context.config, "local media");
     runtimeConfigExact(config, [
       "ffmpegPath", "ffprobePath", "defaultConcurrency", "processTimeoutMs", "maxProbeOutputBytes",
@@ -30,7 +31,7 @@ const localMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalMediaProvider({
         instance: context.instance,
-        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        authority: context.authority,
         ...(ffmpegPath === undefined ? {} : { ffmpegPath }),
         ...(ffprobePath === undefined ? {} : { ffprobePath }),
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),

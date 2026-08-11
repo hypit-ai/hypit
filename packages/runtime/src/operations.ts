@@ -13,6 +13,8 @@ export type OperationIdentity = {
   readonly build: string;
   readonly command: string;
   readonly endpoint: string;
+  readonly authority: string;
+  readonly route: string;
   readonly implementationDigest: Digest;
   readonly runtimeClosure: Digest;
   readonly requestDigest: Digest;
@@ -97,6 +99,8 @@ export type OperationQuery = {
   readonly build?: string;
   readonly command?: string;
   readonly endpoint?: string;
+  readonly authority?: string;
+  readonly route?: string;
   readonly runtimeClosure?: Digest;
   readonly requestDigest?: Digest;
 };
@@ -126,6 +130,8 @@ function submissionContent(value: {
   readonly build: string;
   readonly command: string;
   readonly endpoint: string;
+  readonly authority: string;
+  readonly route: string;
   readonly implementationDigest: Digest;
   readonly runtimeClosure: Digest;
   readonly requestDigest: Digest;
@@ -136,6 +142,8 @@ function submissionContent(value: {
     build: value.build,
     command: value.command,
     endpoint: value.endpoint,
+    authority: value.authority,
+    route: value.route,
     implementationDigest: value.implementationDigest,
     runtimeClosure: value.runtimeClosure,
     requestDigest: value.requestDigest,
@@ -149,6 +157,8 @@ function identityContent(value: Omit<OperationIdentity, "id">): Omit<OperationId
     build: value.build,
     command: value.command,
     endpoint: value.endpoint,
+    authority: value.authority,
+    route: value.route,
     implementationDigest: value.implementationDigest,
     runtimeClosure: value.runtimeClosure,
     requestDigest: value.requestDigest,
@@ -163,6 +173,8 @@ export function sealOperationIdentity(
   assert(value.build.trim().length > 0, "Operation build id is empty");
   assert(value.command.trim().length > 0, "Operation command id is empty");
   assert(value.endpoint.trim().length > 0, "Operation Endpoint id is empty");
+  assert(value.authority.trim().length > 0, "Operation Provider Authority is empty");
+  assert(value.route.trim().length > 0, "Operation Capability Route is empty");
   assert(isDigest(value.implementationDigest), "Operation implementation digest is invalid");
   assert(isDigest(value.runtimeClosure), "Operation Runtime Closure digest is invalid");
   assert(isDigest(value.requestDigest), "Operation request digest is invalid");
@@ -305,6 +317,8 @@ export class MemoryOperationStore implements OperationStore {
       .filter((snapshot) => query.build === undefined || snapshot.build === query.build)
       .filter((snapshot) => query.command === undefined || snapshot.command === query.command)
       .filter((snapshot) => query.endpoint === undefined || snapshot.endpoint === query.endpoint)
+      .filter((snapshot) => query.authority === undefined || snapshot.authority === query.authority)
+      .filter((snapshot) => query.route === undefined || snapshot.route === query.route)
       .filter((snapshot) => query.runtimeClosure === undefined || snapshot.runtimeClosure === query.runtimeClosure)
       .filter((snapshot) => query.requestDigest === undefined || snapshot.requestDigest === query.requestDigest)
       .sort((left, right) => left.attempt - right.attempt || left.id.localeCompare(right.id))
@@ -352,6 +366,8 @@ export class MemoryOperationStore implements OperationStore {
       build: current.build,
       command: current.command,
       endpoint: current.endpoint,
+      authority: current.authority,
+      route: current.route,
       implementationDigest: current.implementationDigest,
       runtimeClosure: current.runtimeClosure,
       requestDigest: current.requestDigest,

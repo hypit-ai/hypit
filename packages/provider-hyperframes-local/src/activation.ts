@@ -17,6 +17,7 @@ import { localHyperframesBrowserService } from "./service.js";
 const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-hyperframes-local",
   activate(context) {
+    if (context.authority === undefined) throw new Error("local HyperFrames Provider Authority is required");
     const config = runtimeConfigObject(context.config, "local HyperFrames");
     runtimeConfigExact(config, [
       "nodePath", "hyperframesCliPath", "ffprobePath", "workers", "quality", "browserGpu",
@@ -51,7 +52,7 @@ const localHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalHyperframesProvider({
         instance: context.instance,
-        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        authority: context.authority,
         ...(nodePath === undefined ? {} : { nodePath }),
         ...(hyperframesCliPath === undefined ? {} : { hyperframesCliPath }),
         ...(ffprobePath === undefined ? {} : { ffprobePath }),

@@ -29,7 +29,7 @@ export const localWhisperXPunktTabDigest =
 
 export type CreateLocalWhisperXProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   /** Must resolve to the same machine because the protocol passes a staged local path. */
   readonly baseUrl?: string;
   readonly expectedModel?: string;
@@ -260,7 +260,7 @@ function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfil
   };
 }
 
-export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions = {}) {
+export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions) {
   const baseUrl = new URL(config.baseUrl ?? "http://127.0.0.1:8765");
   assert(baseUrl.protocol === "http:" && ["127.0.0.1", "localhost", "::1", "[::1]"].includes(baseUrl.hostname),
     "local WhisperX Provider requires a loopback HTTP service");
@@ -285,7 +285,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     module: localWhisperXProviderModuleRef,
     facet: "alignment",
     instance: config.instance ?? "whisperx.local",
-    ...(config.lane === undefined ? {} : { lane: config.lane }),
+    authority: config.authority ?? config.instance ?? "whisperx.local",
     implementation: {
       locator: "@narratage/provider-whisperx-local/svml-service",
       digest: localWhisperXProviderImplementationDigest,

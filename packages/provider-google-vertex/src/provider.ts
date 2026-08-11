@@ -45,7 +45,7 @@ export type CreateGoogleVertexCaptionProviderOptions = {
   readonly projectEnv?: string;
   readonly location?: string;
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   /** JSON contents, not a filesystem path. A CredentialStore decides where these bytes live. */
   readonly credentialsJson?: CredentialRef;
   readonly defaultConcurrency?: number;
@@ -221,7 +221,7 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
     module: googleVertexProviderModuleRef,
     facet: "caption-gemini",
     instance: options.instance ?? "google-vertex.caption",
-    ...(options.lane === undefined ? {} : { lane: options.lane }),
+    authority: options.authority ?? options.instance ?? "google-vertex.caption",
     implementation: {
       locator: "@narratage/provider-google-vertex/caption-gemini",
       digest: googleVertexProviderImplementationDigest,

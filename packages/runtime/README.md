@@ -6,7 +6,7 @@ The first implementation contains:
 
 - `RuntimeCommandExecutor`: regenerate Core-authorized commands and execute one by identity;
 - `LocalBuildScheduler`: one authoritative, queue-free scheduler shared by multiple Builds;
-- named concurrency lanes with Runtime Profile overrides;
+- atomic generic resource claims with Runtime Profile overrides;
 - static Runtime Module facets, sealed Profile resolution and a content-addressed Runtime Closure;
 - exact Endpoint capability/return bindings, implementation digests and permission allowlists;
 - `BuildStore` and `OperationStore` ports with compare-and-swap in-memory references;
@@ -23,8 +23,9 @@ credential authority. These remain trusted deployment packages, not author-impor
 
 The Scheduler does not traverse Graphs, choose Candidates, rewrite Needs or accept arbitrary
 serialized commands. Core remains the sole source of readiness and the sole Event acceptance law.
-Lanes only limit how many already-authorized commands execute concurrently. An Endpoint's remote job
-queue is still internal to that Endpoint and cannot advance another Build step.
+Resources only limit how many already-authorized commands execute concurrently. Provider Endpoints
+claim both an explicit Authority and an exact capability Route; the Store acquires them atomically.
+An Endpoint's vendor-side job system remains internal and cannot advance another Build step.
 
 `MemoryBuildStore` stores verified BuildState only. `MemoryOperationStore` separately records a
 content-addressed attempt identity, stable submission key, pending checkpoint and terminal result.

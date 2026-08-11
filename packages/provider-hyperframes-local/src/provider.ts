@@ -34,7 +34,7 @@ export type HyperframesBrowserGpu = "auto" | "software" | "hardware";
 
 export type CreateLocalHyperframesProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   readonly nodePath?: string;
   readonly hyperframesCliPath?: string;
   readonly ffprobePath?: string;
@@ -246,7 +246,7 @@ function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfil
   };
 }
 
-export function createLocalHyperframesProvider(config: CreateLocalHyperframesProviderOptions = {}) {
+export function createLocalHyperframesProvider(config: CreateLocalHyperframesProviderOptions) {
   const nodePath = config.nodePath ?? process.execPath;
   const hyperframesCliPath = config.hyperframesCliPath ?? defaultHyperframesCliPath();
   const ffprobePath = config.ffprobePath ?? "ffprobe";
@@ -306,7 +306,7 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
     module: localHyperframesProviderModuleRef,
     facet: "render",
     instance: config.instance ?? "hyperframes.local",
-    ...(config.lane === undefined ? {} : { lane: config.lane }),
+    authority: config.authority ?? config.instance ?? "hyperframes.local",
     implementation: {
       locator: "@narratage/provider-hyperframes-local/render",
       digest: localHyperframesProviderImplementationDigest,

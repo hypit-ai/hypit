@@ -248,7 +248,7 @@ The Runtime executes an already frozen plan. Its environment-neutral ports are:
 
 | Port | Responsibility |
 |---|---|
-| `BuildScheduler` | readiness, concurrency lanes, fairness |
+| `BuildScheduler` | readiness, atomic resource admission, fairness |
 | execution driver | attempt, retry and cancellation of one admitted Operation |
 | `BuildStore` | verified BuildState snapshots and compare-and-swap revisions |
 | `OperationStore` | external submission identity, checkpoint, reconciliation and completion |

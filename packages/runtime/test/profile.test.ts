@@ -71,7 +71,7 @@ function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
   };
 }
 
-function profile(options: { readonly operations?: boolean; readonly lane?: number } = {}) {
+function profile(options: { readonly operations?: boolean; readonly resource?: number } = {}) {
   return sealRuntimeProfile({
     name: "fixture.local",
     instances: [
@@ -89,7 +89,7 @@ function profile(options: { readonly operations?: boolean; readonly lane?: numbe
       {
         id: "greeting.local",
         facet: endpointFacet,
-        lane: "endpoint:greeting.local",
+        authority: "greeting.local",
       },
     ],
     scheduler: "scheduler.local",
@@ -109,7 +109,7 @@ function profile(options: { readonly operations?: boolean; readonly lane?: numbe
     }],
     scheduling: {
       maxConcurrency: 8,
-      lanes: [{ name: "endpoint:greeting.local", maxConcurrency: options.lane ?? 2 }],
+      resources: [{ id: "authority:greeting.local", maxConcurrency: options.resource ?? 2 }],
     },
   });
 }
@@ -126,11 +126,11 @@ test("Runtime Profile resolves installed static facets into one deterministic lo
   assert.equal(endpoint?.role, "capability-endpoint");
   if (endpoint?.role === "capability-endpoint") {
     assert.equal(endpoint.implementation.digest, endpointImplementationDigest);
-    assert.equal(endpoint.lane, "endpoint:greeting.local");
-    assert.equal(endpoint.maxConcurrency, 2);
+    assert.equal(endpoint.authority, "greeting.local");
+    assert.equal(endpoint.maxConcurrency, 1);
   }
-  assert.deepEqual(localSchedulerOptionsFromClosure(first).laneLimits, {
-    "endpoint:greeting.local": 2,
+  assert.deepEqual(localSchedulerOptionsFromClosure(first).resourceLimits, {
+    "authority:greeting.local": 2,
   });
   assert.doesNotThrow(() => verifyRuntimeCoverage(first, createGreetingBuild()));
 });
@@ -143,12 +143,12 @@ test("Profile order is not identity but an execution-policy change is", () => {
     ...normal,
     instances: [...normal.instances].reverse(),
     endpoints: [...normal.endpoints].reverse(),
-    scheduling: { ...normal.scheduling, lanes: [...normal.scheduling.lanes].reverse() },
+    scheduling: { ...normal.scheduling, resources: [...normal.scheduling.resources].reverse() },
   });
   assert.equal(normal.digest, reordered.digest);
   assert.notEqual(
     resolveRuntimeProfile(registry, normal).digest,
-    resolveRuntimeProfile(registry, profile({ lane: 1 })).digest,
+    resolveRuntimeProfile(registry, profile({ resource: 1 })).digest,
   );
 });
 

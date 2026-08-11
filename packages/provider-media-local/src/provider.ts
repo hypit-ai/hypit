@@ -25,7 +25,7 @@ export const localMediaProviderImplementationDigest = digestOf("@narratage/provi
 
 export type CreateLocalMediaProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   readonly ffmpegPath?: string;
   readonly ffprobePath?: string;
   readonly defaultConcurrency?: number;
@@ -56,7 +56,7 @@ function fulfillment(result: MediaOperationResult): EndpointFulfillment {
  * operations themselves live in `@narratage/media-execution`, shared with the
  * AWS Provider so one Need cannot mean two different transforms.
  */
-export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions = {}) {
+export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions) {
   const ffmpegPath = config.ffmpegPath ?? "ffmpeg";
   const ffprobePath = config.ffprobePath ?? "ffprobe";
   const processTimeoutMs = positiveInteger(config.processTimeoutMs ?? 10 * 60_000, "processTimeoutMs");
@@ -88,7 +88,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     module: localMediaProviderModuleRef,
     facet: "media",
     instance: config.instance ?? "media.local",
-    ...(config.lane === undefined ? {} : { lane: config.lane }),
+    authority: config.authority ?? config.instance ?? "media.local",
     implementation: {
       locator: "@narratage/provider-media-local/ffmpeg",
       digest: localMediaProviderImplementationDigest,

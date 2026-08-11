@@ -37,7 +37,7 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker�
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.production",
-      "lane": "generation",
+      "authority": "kie.production",
       "config": {
         "apiKey": { "store": "keychain", "key": "kie.api-key" },
         "defaultConcurrency": 2
@@ -51,10 +51,7 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker�
     "network:api.kie.ai",
     "network:kieai.redpandaai.co"
   ],
-  "scheduling": {
-    "maxConcurrency": 4,
-    "lanes": { "generation": 2 }
-  }
+  "scheduling": { "maxConcurrency": 4 }
 }
 ```
 
@@ -80,8 +77,9 @@ Narratage 安装目录加载校验后的包。
 
 ## 并发与权限
 
-`maxConcurrency` 和每个 lane 的上限由 DispatchStore 在所有共享 Worker 之间执行，不是某个
-CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；过期 Worker 不能继续准入结果。
+`maxConcurrency`、Provider Authority 与精确 Capability Route 的上限由 DispatchStore 在所有
+共享 Worker 之间执行，不是某个 CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；
+过期 Worker 不能继续准入结果。
 
 权限仍是显式 allowlist，例如 `network:<host>`、`filesystem:<scope>`、`process:<name>`。
 
