@@ -79,6 +79,7 @@ async function fixture(): Promise<{
     version: "1.0.0",
     type: "module",
     exports: "./activation.mjs",
+    dependencies: { "example-types": "1.0.0" },
     svml: { activation: "./activation.mjs" },
   }, null, 2), "utf8");
   await writeFile(join(extraRoot, "activation.mjs"), `export default {
@@ -240,6 +241,17 @@ test("an installed locked package carries inert Host facets and activatable comp
   }]);
 });
 
+test("an empty local trust selection is a valid authenticated package lock", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-empty-package-lock-"));
+  const path = join(root, "svml.packages.lock");
+  const lock = await createNodePackageLock([], root);
+  assert.deepEqual(lock.selected, []);
+  assert.deepEqual(lock.artifacts, []);
+  assert.deepEqual(lock.packages, []);
+  await writeNodePackageLock(path, lock);
+  assert.deepEqual(await loadNodePackageContributions(path, root), []);
+});
+
 test("dependency bytes are rejected before a locked contribution entry is reused", async () => {
   const item = await fixture();
   const lock = await createNodePackageLock(["example-card"], item.root);
@@ -305,6 +317,17 @@ test("an unrelated selected package does not contaminate another package's imple
   assert.notEqual(alone.digest, together.digest);
 });
 
+test("selection mutation keeps a shared dependency only through its retained root", async () => {
+  const item = await fixture();
+  const old = await createNodePackageLock(["example-card", "example-extra"], item.root);
+  const next = await createNodePackageLock(["example-extra"], item.root, {
+    retain: { from: old, selected: ["example-extra"] },
+  });
+  assert.deepEqual(next.selected, ["example-extra"]);
+  assert.deepEqual(next.artifacts.map((artifact) => artifact.name), ["example-extra", "example-types"]);
+  assert.deepEqual(next.packages.map((value) => value.specifier), ["example-extra"]);
+});
+
 test("a compute facet cannot claim another implementation than its static Manifest", async () => {
   const item = await fixture();
   const source = await readFile(item.activation, "utf8");
@@ -352,41 +375,42 @@ async function runtimeAdapterFixture(marker: string): Promise<{
         kind: "endpoint",
       },
       implementation: {
-        validate() {},
-        create(context) {
+        activate(context) {
           const facet = { module, name: "endpoint" };
-          return {
-            name: context.instance,
-            manifest: {
-              format: "svml.runtime-module@1",
-              name: module.name,
-              version: module.version,
-              facets: [{
-                name: facet.name,
-                role: "capability-endpoint",
-                implementation: { locator: "example-runtime-adapter/endpoint", digest: declared },
-                permissions: [],
-                fulfills: [{ capability, returns }],
-                lifecycle: "immediate",
-                defaultConcurrency: 1,
-                credentialSlots: [],
-              }],
-            },
-            instance: { id: context.instance, facet, configurationDigest: configuration },
-            bindings: [{ capability, returns, endpoint: context.instance }],
-            install(registry) {
-              registry.registerImmediateEndpoint(
-                context.instance,
-                capability,
-                returns,
-                () => ({
-                  value: { kind: "inline", value: "external" },
-                  conformance: "exact",
-                  delivery: { kind: "inline" },
-                  metadata: null,
-                }),
-                { runtimeImplementation: { facet, digest: declared, configurationDigest: configuration } },
-              );
+          return { endpoint: {
+              name: context.instance,
+              manifest: {
+                format: "svml.runtime-module@1",
+                name: module.name,
+                version: module.version,
+                facets: [{
+                  name: facet.name,
+                  role: "capability-endpoint",
+                  implementation: { locator: "example-runtime-adapter/endpoint", digest: declared },
+                  permissions: [],
+                  fulfills: [{ capability, returns }],
+                  lifecycle: "immediate",
+                  defaultConcurrency: 1,
+                  credentialSlots: [],
+                }],
+              },
+              instance: { id: context.instance, facet, configurationDigest: configuration },
+              bindings: [{ capability, returns, endpoint: context.instance }],
+              credentials: [],
+              install(registry) {
+                registry.registerImmediateEndpoint(
+                  context.instance,
+                  capability,
+                  returns,
+                  () => ({
+                    value: { kind: "inline", value: "external" },
+                    conformance: "exact",
+                    delivery: { kind: "inline" },
+                    metadata: null,
+                  }),
+                  { runtimeImplementation: { facet, digest: declared, configurationDigest: configuration } },
+                );
+              },
             },
           };
         },

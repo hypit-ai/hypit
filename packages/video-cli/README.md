@@ -11,26 +11,32 @@ the corresponding physical package. They never grant network, credential or proc
 From the repository:
 
 ```bash
-pnpm narratage lock-packages ./svml.packages.lock \
+node --run narratage -- lock-packages ./svml.packages.lock \
   --package @narratage/run-markup --package @narratage/script --package @example/cards --package-root .
-pnpm narratage lock-packages ./svml.runtime-packages.lock \
+node --run narratage -- lock-packages ./svml.runtime-packages.lock \
   --package @narratage/local --package @narratage/store-sqlite \
   --package @narratage/artifact-store-fs --package @narratage/credential-store-env \
   --package @narratage/provider-kie --package @narratage/provider-media-local --package-root .
-pnpm narratage check path/to/main.svml --package-lock ./svml.packages.lock --root .
-pnpm narratage check path/to/build.svrun --package-lock ./svml.packages.lock --root .
-pnpm narratage plan path/to/build.svrun --package-lock ./svml.packages.lock --root .
-pnpm narratage build path/to/build.svrun --package-lock ./svml.packages.lock \
+node --run narratage -- check path/to/main.svml --runtime ./svml.runtime.json --root .
+node --run narratage -- check path/to/build.svrun --runtime ./svml.runtime.json --root .
+node --run narratage -- plan path/to/build.svrun --runtime ./svml.runtime.json --root .
+node --run narratage -- build path/to/build.svrun \
   --runtime ./svml.runtime.json --build-id delivery-01 --follow --root .
-pnpm narratage status <build-id> --runtime ./svml.runtime.json
-pnpm narratage builds --runtime ./svml.runtime.json
-pnpm narratage inspect <build-id> --runtime ./svml.runtime.json
-pnpm narratage get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
-pnpm narratage cancel build <build-id> --runtime ./svml.runtime.json
-pnpm narratage cancel operation <operation-id> --runtime ./svml.runtime.json
-pnpm narratage doctor ./svml.runtime.json
-pnpm narratage gc ./svml.runtime.json
+node --run narratage -- status <build-id> --runtime ./svml.runtime.json
+node --run narratage -- builds --runtime ./svml.runtime.json
+node --run narratage -- history [source-output-name] --runtime ./svml.runtime.json [--source ./main.svml]
+node --run narratage -- inspect <build-id> --runtime ./svml.runtime.json
+node --run narratage -- get <build-id> --name final.video --runtime ./svml.runtime.json --to ./final.mp4
+node --run narratage -- cancel build <build-id> --runtime ./svml.runtime.json
+node --run narratage -- cancel operation <operation-id> --runtime ./svml.runtime.json
+node --run narratage -- doctor ./svml.runtime.json
+node --run narratage -- gc ./svml.runtime.json
 ```
+
+From a separate project directory during source development, run
+`/path/to/svml/narratage ... --package-root /path/to/svml`. The root launcher resolves its own
+installed TypeScript loader and CLI, so it neither invokes pnpm nor requires the current directory
+to contain Narratage's `package.json`.
 
 `--root` is only the Source Workspace containment boundary. `--package-root` is only the Host
 override used to resolve the installed packages named by a lock; by default this Distribution uses
@@ -66,10 +72,16 @@ without a selector it requires one distinct target, while `--name`, `--record` a
 a source output alias, accepted Record or demanded Logical Output. `--artifact` selects any nested
 BlobRef that the Build actually references. `--to` copies an Artifact or writes an inline structured
 value as JSON. It is Host egress only and never changes Build identity or retention.
+Blob egress uses the Store's streaming facet, verifies the declared size and content digest while
+writing a temporary file, then atomically replaces the requested destination. A large video is not
+loaded into CLI memory and a corrupt stream cannot overwrite an existing export.
 
 `builds` and source aliases come from an optional Host `BuildCatalog`. The Catalog contains paths
 and presentation names only. It is not Core truth or a Runtime Closure facet; `inspect` and `get`
 always resolve the alias back through the verified BuildState before accepting it.
+`history` searches those frozen Catalog names across Builds, but reports only Logical Outputs whose
+selected Record is present in verified BuildState. It neither infers renames nor lists unbuilt
+aliases; an old Catalog name and a current output name are connected explicitly in the Run Source.
 
 Historical Records, fixed files and generated previews are declared as ordinary Candidates in the
 Run Source and selected by explicit Satisfaction edges. The Host verifies a referenced prior Build

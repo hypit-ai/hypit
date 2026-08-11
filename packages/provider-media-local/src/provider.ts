@@ -15,6 +15,7 @@ import {
 import type { MediaExecutionEnvironment, MediaOperationResult } from "@narratage/media-execution";
 import { mediaPipelineCapabilities } from "@narratage/media-pipeline";
 import { canonicalize, digestOf } from "@narratage/protocol";
+import { isStreamingArtifactStore } from "@narratage/runtime";
 import { speechTypes } from "@narratage/speech";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 import type { EndpointFulfillment, EndpointInvocationContext } from "@narratage/endpoint-kit";
@@ -67,7 +68,15 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     label: "media.local",
     artifacts: {
       get: async (source) => await context.artifacts.get(source.digest),
+      open: async (source) => isStreamingArtifactStore(context.artifacts)
+        ? await context.artifacts.open(source.digest)
+        : await context.artifacts.get(source.digest).then((bytes) => bytes === undefined
+          ? undefined
+          : (async function* () { yield bytes; })()),
       put: async (bytes, mediaType) => await context.artifacts.put(bytes, mediaType),
+      putFile: async (path, mediaType) => isStreamingArtifactStore(context.artifacts)
+        ? await context.artifacts.putStream(createReadStream(path), mediaType)
+        : await context.artifacts.put(await readFile(path), mediaType),
     },
   });
   const operation = (
@@ -148,3 +157,5 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
     ],
   });
 }
+import { createReadStream } from "node:fs";
+import { readFile } from "node:fs/promises";

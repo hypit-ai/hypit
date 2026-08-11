@@ -45,18 +45,38 @@ export type OperationCancellationControl = {
   readonly lastError?: { readonly code: string; readonly message: string };
 };
 
+/**
+ * Provider-neutral, human-observable progress for one recoverable Operation.
+ *
+ * The opaque checkpoint remains the Provider's private recovery state. This
+ * deliberately small projection is the only part Runtime tools may display;
+ * it must not carry credentials, request bodies or vendor-specific payloads.
+ */
+export type OperationProgress = {
+  readonly phase: string;
+  readonly completed?: number;
+  readonly total?: number;
+  readonly unit?: string;
+};
+
 export type OperationSnapshot = OperationIdentity & {
   readonly revision: number;
   readonly status: "created" | "pending" | "completed" | "failed" | "cancelled";
   readonly checkpoint?: CanonicalValue;
   readonly wakeAt?: number;
+  readonly progress?: OperationProgress;
   readonly completion?: OperationCompletion;
   readonly failure?: OperationFailure;
   readonly cancellation?: OperationCancellationControl;
 };
 
 export type OperationUpdate =
-  | { readonly status: "pending"; readonly checkpoint: CanonicalValue; readonly wakeAt?: number }
+  | {
+      readonly status: "pending";
+      readonly checkpoint: CanonicalValue;
+      readonly wakeAt?: number;
+      readonly progress?: OperationProgress;
+    }
   | {
       readonly status: "completed";
       readonly completion: Omit<OperationCompletion, "digest">;
@@ -188,8 +208,27 @@ export function verifyOperationSnapshot(snapshot: OperationSnapshot): void {
   if (snapshot.status === "pending") {
     assert(snapshot.checkpoint !== undefined && presence === 1, "pending Operation requires only a checkpoint");
     if (snapshot.wakeAt !== undefined) epochMillisecond(snapshot.wakeAt, "Operation wakeAt");
+    if (snapshot.progress !== undefined) {
+      assert(snapshot.progress.phase.trim().length > 0, "Operation progress phase is empty");
+      if (snapshot.progress.completed !== undefined) {
+        assert(Number.isFinite(snapshot.progress.completed) && snapshot.progress.completed >= 0,
+          "Operation progress completed value is invalid");
+      }
+      if (snapshot.progress.total !== undefined) {
+        assert(Number.isFinite(snapshot.progress.total) && snapshot.progress.total >= 0,
+          "Operation progress total value is invalid");
+      }
+      if (snapshot.progress.completed !== undefined && snapshot.progress.total !== undefined) {
+        assert(snapshot.progress.completed <= snapshot.progress.total,
+          "Operation progress exceeds its total");
+      }
+      if (snapshot.progress.unit !== undefined) {
+        assert(snapshot.progress.unit.trim().length > 0, "Operation progress unit is empty");
+      }
+    }
   } else {
     assert(snapshot.wakeAt === undefined, `${snapshot.status} Operation cannot carry wakeAt`);
+    assert(snapshot.progress === undefined, `${snapshot.status} Operation cannot carry progress`);
   }
   if (snapshot.status === "completed") {
     assert(snapshot.completion !== undefined && presence === 1, "completed Operation requires only completion");
@@ -290,6 +329,7 @@ export class MemoryOperationStore implements OperationStore {
           status: current.status,
           ...(current.checkpoint === undefined ? {} : { checkpoint: structuredClone(current.checkpoint) }),
           ...(current.wakeAt === undefined ? {} : { wakeAt: current.wakeAt }),
+          ...(current.progress === undefined ? {} : { progress: structuredClone(current.progress) }),
           ...(current.completion === undefined ? {} : { completion: structuredClone(current.completion) }),
           ...(current.failure === undefined ? {} : { failure: structuredClone(current.failure) }),
           cancellation: structuredClone(update.cancellation),
@@ -299,6 +339,7 @@ export class MemoryOperationStore implements OperationStore {
           status: "pending" as const,
           checkpoint: structuredClone(update.checkpoint),
           ...(update.wakeAt === undefined ? {} : { wakeAt: epochMillisecond(update.wakeAt, "Operation wakeAt") }),
+          ...(update.progress === undefined ? {} : { progress: structuredClone(update.progress) }),
         }
         : update.status === "completed"
         ? { status: "completed" as const, completion: sealOperationCompletion(update.completion) }

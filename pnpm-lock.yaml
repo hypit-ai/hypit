@@ -14,6 +14,9 @@ importers:
       '@narratage/artifact-store-fs':
         specifier: workspace:*
         version: link:packages/artifact-store-fs
+      '@narratage/artifact-store-s3':
+        specifier: workspace:*
+        version: link:packages/artifact-store-s3
       '@narratage/audio-track':
         specifier: workspace:*
         version: link:packages/audio-track
@@ -53,9 +56,18 @@ importers:
       '@narratage/fonts-open':
         specifier: workspace:*
         version: link:packages/fonts-open
+      '@narratage/gemini-omni':
+        specifier: workspace:*
+        version: link:packages/gemini-omni
       '@narratage/generation':
         specifier: workspace:*
         version: link:packages/generation
+      '@narratage/gpt-image':
+        specifier: workspace:*
+        version: link:packages/gpt-image
+      '@narratage/grok-imagine':
+        specifier: workspace:*
+        version: link:packages/grok-imagine
       '@narratage/hyperframes':
         specifier: workspace:*
         version: link:packages/hyperframes
@@ -80,6 +92,12 @@ importers:
       '@narratage/mimo-tts':
         specifier: workspace:*
         version: link:packages/mimo-tts
+      '@narratage/minimax-h3':
+        specifier: workspace:*
+        version: link:packages/minimax-h3
+      '@narratage/nano-banana':
+        specifier: workspace:*
+        version: link:packages/nano-banana
       '@narratage/narrative':
         specifier: workspace:*
         version: link:packages/narrative
@@ -92,6 +110,9 @@ importers:
       '@narratage/provider-google-vertex':
         specifier: workspace:*
         version: link:packages/provider-google-vertex
+      '@narratage/provider-hyperframes-aws-lambda':
+        specifier: workspace:*
+        version: link:packages/provider-hyperframes-aws-lambda
       '@narratage/provider-hyperframes-local':
         specifier: workspace:*
         version: link:packages/provider-hyperframes-local
@@ -101,6 +122,9 @@ importers:
       '@narratage/provider-kie':
         specifier: workspace:*
         version: link:packages/provider-kie
+      '@narratage/provider-media-aws-lambda':
+        specifier: workspace:*
+        version: link:packages/provider-media-aws-lambda
       '@narratage/provider-media-local':
         specifier: workspace:*
         version: link:packages/provider-media-local
@@ -140,6 +164,9 @@ importers:
       '@narratage/seedance-kits':
         specifier: workspace:*
         version: link:packages/seedance-kits
+      '@narratage/seedream':
+        specifier: workspace:*
+        version: link:packages/seedream
       '@narratage/semantic-map':
         specifier: workspace:*
         version: link:packages/semantic-map
@@ -1708,6 +1735,9 @@ importers:
       '@narratage/render-hyperframes':
         specifier: workspace:*
         version: link:../render-hyperframes
+      '@narratage/runtime':
+        specifier: workspace:*
+        version: link:../runtime
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter
@@ -1898,6 +1928,9 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@narratage/runtime':
+        specifier: workspace:*
+        version: link:../runtime
       '@narratage/runtime-adapter':
         specifier: workspace:*
         version: link:../runtime-adapter

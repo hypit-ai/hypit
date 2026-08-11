@@ -15,47 +15,36 @@ import { localOpenCvService } from "./service.js";
 
 const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-image-opencv-local",
-  validate(context) {
+  activate(context) {
     const config = runtimeConfigObject(context.config, "local OpenCV image");
     runtimeConfigExact(config, [
       "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
     ], "local OpenCV image");
     runtimeConfigString(config.pythonExecutable, "OpenCV pythonExecutable");
-    runtimeConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency");
-    runtimeConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs");
-    runtimeConfigPositiveInteger(config.maxInputBytes, "OpenCV maxInputBytes");
-    runtimeConfigPositiveInteger(config.maxOutputBytes, "OpenCV maxOutputBytes");
-  },
-  create(context) {
-    const config = runtimeConfigObject(context.config, "local OpenCV image");
-    runtimeConfigExact(config, [
-      "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
-    ], "local OpenCV image");
-    const pythonExecutable = resolveLocalOpenCvDeployment(context).pythonExecutable;
-    return createLocalOpenCvImageProvider({
-      instance: context.instance,
-      ...(context.lane === undefined ? {} : { lane: context.lane }),
-      pythonExecutable,
-      ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency") === undefined
-        ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
-      ...(runtimeConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs") === undefined
-        ? {} : { processTimeoutMs: config.processTimeoutMs as number }),
-      ...(runtimeConfigPositiveInteger(config.maxInputBytes, "OpenCV maxInputBytes") === undefined
-        ? {} : { maxInputBytes: config.maxInputBytes as number }),
-      ...(runtimeConfigPositiveInteger(config.maxOutputBytes, "OpenCV maxOutputBytes") === undefined
-        ? {} : { maxOutputBytes: config.maxOutputBytes as number }),
-    });
-  },
-  async doctor(context) {
     const deployment = resolveLocalOpenCvDeployment(context);
-    return await diagnoseRuntimeExecutable({
-      root: context.root,
-      configured: deployment.pythonExecutable,
-      fallback: deployment.pythonExecutable,
-      subject: "OpenCV Python",
-    });
+    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "OpenCV defaultConcurrency");
+    const processTimeoutMs = runtimeConfigPositiveInteger(config.processTimeoutMs, "OpenCV processTimeoutMs");
+    const maxInputBytes = runtimeConfigPositiveInteger(config.maxInputBytes, "OpenCV maxInputBytes");
+    const maxOutputBytes = runtimeConfigPositiveInteger(config.maxOutputBytes, "OpenCV maxOutputBytes");
+    return {
+      endpoint: createLocalOpenCvImageProvider({
+        instance: context.instance,
+        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        pythonExecutable: deployment.pythonExecutable,
+        ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
+        ...(processTimeoutMs === undefined ? {} : { processTimeoutMs }),
+        ...(maxInputBytes === undefined ? {} : { maxInputBytes }),
+        ...(maxOutputBytes === undefined ? {} : { maxOutputBytes }),
+      }),
+      externalService: localOpenCvService(context),
+      diagnose: () => diagnoseRuntimeExecutable({
+        root: context.root,
+        configured: deployment.pythonExecutable,
+        fallback: deployment.pythonExecutable,
+        subject: "OpenCV Python",
+      }),
+    };
   },
-  service: localOpenCvService,
 });
 
 export const svmlPackage = {

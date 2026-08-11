@@ -19,7 +19,7 @@ import {
   defineEndpointPackage,
   wakeAfter,
 } from "@narratage/endpoint-kit";
-import { credentialRef } from "@narratage/runtime";
+import { credentialRef, isStreamingArtifactStore } from "@narratage/runtime";
 import type { ArtifactStore, CredentialRef } from "@narratage/runtime";
 
 import {
@@ -189,8 +189,33 @@ class KieClient {
     if (!response.ok) {
       throw new KieError("KIE_HTTP_ERROR", `KIE returned HTTP ${response.status}`, { status: response.status });
     }
-    const text = await response.text();
-    if (text.length > 2_000_000) throw new KieError("KIE_RESPONSE_TOO_LARGE", "KIE JSON response is too large");
+    const limit = 2_000_000;
+    const reader = response.body?.getReader();
+    let text: string;
+    if (reader === undefined) {
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength > limit) throw new KieError("KIE_RESPONSE_TOO_LARGE", "KIE JSON response is too large");
+      text = new TextDecoder().decode(bytes);
+    } else {
+      const decoder = new TextDecoder();
+      let size = 0;
+      let decoded = "";
+      try {
+        while (true) {
+          const item = await reader.read();
+          if (item.done) break;
+          size += item.value.byteLength;
+          if (size > limit) {
+            await reader.cancel();
+            throw new KieError("KIE_RESPONSE_TOO_LARGE", "KIE JSON response is too large");
+          }
+          decoded += decoder.decode(item.value, { stream: true });
+        }
+        text = decoded + decoder.decode();
+      } finally {
+        reader.releaseLock();
+      }
+    }
     try {
       return object(JSON.parse(text), "KIE response");
     } catch (error) {
@@ -200,25 +225,60 @@ class KieClient {
   }
 
   async upload(artifact: BlobRef, artifacts: ArtifactStore, apiKey: string): Promise<string> {
-    const bytes = await artifacts.get(artifact.digest);
-    if (bytes === undefined) throw new KieError("KIE_ARTIFACT_MISSING", `Artifact ${artifact.digest} is unavailable`, { retryable: false });
-    if (bytes.byteLength !== artifact.size) throw new KieError("KIE_ARTIFACT_SIZE_MISMATCH", `Artifact ${artifact.digest} size differs`);
-    if (bytes.byteLength > this.#options.maxArtifactBytes) {
+    if (artifact.size > this.#options.maxArtifactBytes) {
       throw new KieError("KIE_ARTIFACT_TOO_LARGE", `Artifact ${artifact.digest} exceeds the configured KIE upload limit`);
     }
     const hex = artifact.digest.slice("sha256:".length);
-    const form = new FormData();
-    const body = Uint8Array.from(bytes).buffer;
-    form.append("file", new Blob([body], { type: artifact.mediaType }), `${hex}.${mediaExtension(artifact.mediaType)}`);
-    form.append("uploadPath", `svml/${hex.slice(0, 2)}`);
-    form.append("fileName", `${hex}.${mediaExtension(artifact.mediaType)}`);
+    const fileName = `${hex}.${mediaExtension(artifact.mediaType)}`;
+    const boundary = `narratage-${hex}`;
+    const encode = (value: string) => new TextEncoder().encode(value);
+    const fileHead = encode(
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\n`
+      + `Content-Type: ${artifact.mediaType}\r\n\r\n`,
+    );
+    const fields = encode(
+      `\r\n--${boundary}\r\nContent-Disposition: form-data; name="uploadPath"\r\n\r\nsvml/${hex.slice(0, 2)}`
+      + `\r\n--${boundary}\r\nContent-Disposition: form-data; name="fileName"\r\n\r\n${fileName}`
+      + `\r\n--${boundary}--\r\n`,
+    );
+    const source = isStreamingArtifactStore(artifacts)
+      ? await artifacts.open(artifact.digest)
+      : await artifacts.get(artifact.digest).then((bytes) => bytes === undefined
+        ? undefined
+        : (async function* () { yield bytes; })());
+    if (source === undefined) {
+      throw new KieError("KIE_ARTIFACT_MISSING", `Artifact ${artifact.digest} is unavailable`, { retryable: false });
+    }
+    const maximum = this.#options.maxArtifactBytes;
+    const multipart = (async function* () {
+      yield fileHead;
+      const hash = createHash("sha256");
+      let size = 0;
+      for await (const chunk of source) {
+        size += chunk.byteLength;
+        if (size > artifact.size || size > maximum) {
+          throw new KieError("KIE_ARTIFACT_SIZE_MISMATCH", `Artifact ${artifact.digest} size differs`);
+        }
+        hash.update(chunk);
+        yield chunk;
+      }
+      if (size !== artifact.size || `sha256:${hash.digest("hex")}` !== artifact.digest) {
+        throw new KieError("KIE_ARTIFACT_SIZE_MISMATCH", `Artifact ${artifact.digest} bytes differ`);
+      }
+      yield fields;
+    })();
     let response: Record<string, unknown>;
     try {
       response = await this.#json(`${this.#options.uploadBaseUrl}/api/file-stream-upload`, {
         method: "POST",
-        headers: { authorization: `Bearer ${apiKey}` },
-        body: form,
-      });
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+          "content-type": `multipart/form-data; boundary=${boundary}`,
+          "content-length": String(fileHead.byteLength + artifact.size + fields.byteLength),
+        },
+        body: multipart as unknown as BodyInit,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" });
     } catch (error) {
       if (error instanceof KieError) {
         throw new KieError("KIE_UPLOAD_FAILED", error.message, {
@@ -300,7 +360,10 @@ class KieClient {
     return response.data;
   }
 
-  async download(original: string, expected: "image" | "video", apiKey: string): Promise<{ bytes: Uint8Array; mediaType: string }> {
+  async download(original: string, expected: "image" | "video", apiKey: string): Promise<{
+    chunks: AsyncIterable<Uint8Array>;
+    mediaType: string;
+  }> {
     const url = await this.#downloadUrl(original, apiKey);
     const response = await this.#fetch(url, { method: "GET" });
     if (!response.ok) throw new KieError("KIE_DOWNLOAD_FAILED", `KIE artifact download returned HTTP ${response.status}`);
@@ -308,36 +371,38 @@ class KieClient {
     if (Number.isFinite(declared) && declared > this.#options.maxArtifactBytes) {
       throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result exceeds the configured artifact limit");
     }
-    const reader = response.body?.getReader();
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    if (reader === undefined) {
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      if (bytes.byteLength > this.#options.maxArtifactBytes) throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
-      chunks.push(bytes);
-      size = bytes.byteLength;
-    } else {
-      while (true) {
-        const item = await reader.read();
-        if (item.done) break;
-        size += item.value.byteLength;
-        if (size > this.#options.maxArtifactBytes) {
-          await reader.cancel();
-          throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
-        }
-        chunks.push(item.value);
-      }
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; });
     const header = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
     const fallback = expected === "image" ? "image/png" : "video/mp4";
     const mediaType = header === undefined || header === "application/octet-stream" ? fallback : header;
     if (!mediaType.startsWith(`${expected}/`)) {
       throw new KieError("KIE_RESULT_MEDIA_MISMATCH", `KIE returned ${mediaType} for ${expected} generation`);
     }
-    return { bytes, mediaType };
+    const maximum = this.#options.maxArtifactBytes;
+    const chunks = response.body === null
+      ? (async function* () {
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          if (bytes.byteLength > maximum) throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
+          yield bytes;
+        })()
+      : (async function* () {
+          const reader = response.body!.getReader();
+          let size = 0;
+          try {
+            while (true) {
+              const item = await reader.read();
+              if (item.done) break;
+              size += item.value.byteLength;
+              if (size > maximum) {
+                await reader.cancel();
+                throw new KieError("KIE_ARTIFACT_TOO_LARGE", "KIE result is too large");
+              }
+              yield item.value;
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        })();
+    return { chunks, mediaType };
   }
 }
 
@@ -406,7 +471,9 @@ function endpoint(options: {
       return failure(new KieError("KIE_OPERATION_TIMEOUT", "KIE task did not become durably available before the deadline"));
     }
     const delayMs = Math.min(30_000, options.pollIntervalMs * (2 ** Math.min(failures, 5)));
-    return wakeAfter(canonicalize({ ...checkpoint, pollFailures: failures }), delayMs, options.now());
+    return wakeAfter(canonicalize({ ...checkpoint, pollFailures: failures }), delayMs, options.now(), {
+      phase: "poll-retry",
+    });
   };
   return {
     async start(context) {
@@ -436,7 +503,9 @@ function endpoint(options: {
           polls: 0,
           pollFailures: 0,
         };
-        return wakeAfter(canonicalize(checkpoint), options.pollIntervalMs, options.now());
+        return wakeAfter(canonicalize(checkpoint), options.pollIntervalMs, options.now(), {
+          phase: "submitted",
+        });
       } catch (error) {
         return failure(error);
       }
@@ -470,7 +539,9 @@ function endpoint(options: {
         const state = data.state;
         if (state === "waiting" || state === "queuing" || state === "generating") {
           const next = { ...checkpoint, polls: checkpoint.polls + 1, pollFailures: 0 };
-          return wakeAfter(canonicalize(next), options.pollIntervalMs, options.now());
+          return wakeAfter(canonicalize(next), options.pollIntervalMs, options.now(), {
+            phase: state,
+          });
         }
         if (state === "fail") {
           const vendorCode = typeof data.failCode === "string" && data.failCode.length > 0 ? data.failCode : "unknown";
@@ -484,7 +555,23 @@ function endpoint(options: {
         const artifacts: BlobRef[] = [];
         for (const url of urls) {
           const downloaded = await options.client.download(url, route.media, key);
-          artifacts.push(await context.artifacts.put(downloaded.bytes, downloaded.mediaType));
+          if (isStreamingArtifactStore(context.artifacts)) {
+            artifacts.push(await context.artifacts.putStream(downloaded.chunks, downloaded.mediaType));
+          } else {
+            const chunks: Uint8Array[] = [];
+            let size = 0;
+            for await (const chunk of downloaded.chunks) {
+              chunks.push(Uint8Array.from(chunk));
+              size += chunk.byteLength;
+            }
+            const bytes = new Uint8Array(size);
+            let offset = 0;
+            for (const chunk of chunks) {
+              bytes.set(chunk, offset);
+              offset += chunk.byteLength;
+            }
+            artifacts.push(await context.artifacts.put(bytes, downloaded.mediaType));
+          }
         }
         const result = route.packageResult(artifacts);
         const vendorMetrics: Record<string, CanonicalValue> = {};
@@ -593,3 +680,4 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
     })),
   });
 }
+import { createHash } from "node:crypto";

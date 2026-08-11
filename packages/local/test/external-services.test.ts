@@ -7,13 +7,20 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { createRuntimeEndpointAdapterFacet } from "@narratage/runtime-adapter";
 import type { RuntimeExternalService } from "@narratage/runtime-adapter";
+import type { CapabilityRef } from "@narratage/protocol";
 
 import {
   bringExternalServicesUp,
+  declaredExternalServices,
   reportExternalServices,
   RuntimeAdapterRegistry,
   takeExternalServicesDown,
 } from "@narratage/local";
+
+const requiredCapability = {
+  module: { name: "example.capabilities", version: "1" },
+  name: "Required",
+} as const satisfies CapabilityRef;
 
 /**
  * A stand-in program: `start` writes a file and sleeps, and the probe reads that
@@ -49,12 +56,59 @@ async function project(service: (root: string) => RuntimeExternalService) {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.program",
-    validate() {},
-    create: () => ({}) as never,
-    service: () => service(root),
+    activate: (context) => ({
+      endpoint: {
+        name: context.instance,
+        manifest: { facets: [] },
+        instance: { id: context.instance },
+        bindings: [{
+          capability: requiredCapability,
+          returns: { module: { name: "example.values", version: "1" }, name: "Value" },
+          endpoint: context.instance,
+        }],
+        credentials: [],
+        install() {},
+      } as never,
+      externalService: service(root),
+    }),
   }));
   return { root, path, options: { registry } };
 }
+
+test("a Build service selection ignores programs outside its demanded capabilities", async () => {
+  let probes = 0;
+  const configured = await project(() => ({
+    id: "unused",
+    async probe() {
+      probes += 1;
+      return { state: "ready" as const };
+    },
+  }));
+  const result = await bringExternalServicesUp(configured.path, {
+    ...configured.options,
+    capabilities: [{
+      module: { name: "another.capabilities", version: "1" },
+      name: "Other",
+    }],
+  });
+  assert.deepEqual(result.services, []);
+  assert.equal(probes, 0);
+});
+
+test("an empty Build capability set loads no Runtime Adapter closure", async () => {
+  const configured = await project(() => ({
+    id: "must-not-load",
+    async probe() {
+      throw new Error("an empty capability set must not activate or probe an Endpoint");
+    },
+  }));
+  const result = await declaredExternalServices(configured.path, {
+    // Deliberately omit the registry. Reaching adapter activation would fail
+    // because `example.program` is not installed in a package lock.
+    capabilities: [],
+  });
+  assert.deepEqual(result, { root: configured.root, services: [] });
+});
 
 function fileBackedService(root: string, marker: string): RuntimeExternalService {
   return {
@@ -74,12 +128,18 @@ function fileBackedService(root: string, marker: string): RuntimeExternalService
 test("up starts the program once for every Endpoint that drives it, and down stops it", async () => {
   const marker = join(await mkdtemp(join(tmpdir(), "svml-marker-")), "ready");
   const { root, path, options } = await project((projectRoot) => fileBackedService(projectRoot, marker));
+  const progress: string[] = [];
 
-  const started = await bringExternalServicesUp(path, { ...options, maxWaitMs: 20_000 });
+  const started = await bringExternalServicesUp(path, {
+    ...options,
+    maxWaitMs: 20_000,
+    onProgress: (event) => progress.push(`${event.id}:${event.phase}`),
+  });
   assert.equal(started.services.length, 1, "one program, not one per Endpoint");
   assert.deepEqual(started.services[0]!.instances, ["one", "two"]);
   assert.equal(started.services[0]!.action, "started");
   assert.deepEqual(started.services[0]!.state, { state: "ready" });
+  assert.deepEqual(progress, ["example:checking", "example:starting", "example:waiting", "example:ready"]);
 
   const pid = started.services[0]!.pid!;
   assert.equal(await readFile(join(root, ".svml", "services", "example.pid"), "utf8"), `${pid}\n`);
@@ -97,6 +157,27 @@ test("up starts the program once for every Endpoint that drives it, and down sto
   assert.throws(() => process.kill(pid, 0), "the detached program is gone");
   await assert.rejects(async () => await readFile(join(root, ".svml", "services", "example.pid"), "utf8"));
   await rm(root, { recursive: true, force: true });
+});
+
+test("concurrent up calls atomically share one external service process", async () => {
+  const markerRoot = await mkdtemp(join(tmpdir(), "svml-marker-concurrent-"));
+  const marker = join(markerRoot, "ready");
+  const { root, path, options } = await project((projectRoot) => fileBackedService(projectRoot, marker));
+  try {
+    const results = await Promise.all(Array.from({ length: 6 }, async () =>
+      await bringExternalServicesUp(path, { ...options, maxWaitMs: 20_000 })));
+    assert.equal(results.filter((item) => item.services[0]!.action === "started").length, 1);
+    assert.equal(results.filter((item) => item.services[0]!.action === "already-running").length, 5);
+    const pid = Number.parseInt(await readFile(join(root, ".svml", "services", "example.pid"), "utf8"), 10);
+    assert.ok(Number.isSafeInteger(pid) && pid > 0);
+    await takeExternalServicesDown(path, options);
+    await sleep(100);
+    assert.throws(() => process.kill(pid, 0));
+  } finally {
+    await takeExternalServicesDown(path, options).catch(() => undefined);
+    await rm(root, { recursive: true, force: true });
+    await rm(markerRoot, { recursive: true, force: true });
+  }
 });
 
 test("a program answering with another identity is never joined by a second copy", async () => {

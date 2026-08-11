@@ -14,6 +14,7 @@ import type { HyperframesDocument } from "@narratage/hyperframes";
 import { stageHyperframesProject } from "@narratage/hyperframes/project";
 import { renderHyperframesCapabilities } from "@narratage/render-hyperframes";
 import { canonicalize, digestOf } from "@narratage/protocol";
+import { isStreamingArtifactStore } from "@narratage/runtime";
 import type { BlobRef, CanonicalValue, Digest } from "@narratage/protocol";
 import { defineEndpointPackage } from "@narratage/endpoint-kit";
 
@@ -143,7 +144,15 @@ async function runProcess(args: {
   });
 }
 
-async function artifactBytes(context: EndpointInvocationContext, artifact: BlobRef): Promise<Uint8Array> {
+async function artifactBytes(
+  context: EndpointInvocationContext,
+  artifact: BlobRef,
+): Promise<Uint8Array | AsyncIterable<Uint8Array>> {
+  if (isStreamingArtifactStore(context.artifacts)) {
+    const chunks = await context.artifacts.open(artifact.digest);
+    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
+    return chunks;
+  }
   const bytes = await context.artifacts.get(artifact.digest);
   assert(bytes !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
   assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.digest} size differs`);
@@ -368,7 +377,9 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
             timeoutMs: processTimeoutMs,
             maxOutputBytes: maxProcessOutputBytes,
           });
-          const artifact = await context.artifacts.put(await readFile(output), "video/mp4");
+          const artifact = isStreamingArtifactStore(context.artifacts)
+            ? await context.artifacts.putStream(createReadStream(output), "video/mp4")
+            : await context.artifacts.put(await readFile(output), "video/mp4");
           const value: RenderedVisual = sealRenderedVisual({
             contract: "svml.rendered-visual@1",
             frameRate: document.frameRate,

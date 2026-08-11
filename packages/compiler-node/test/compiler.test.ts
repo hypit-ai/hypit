@@ -44,7 +44,7 @@ import {
   RunFrontendRegistry,
 } from "@narratage/run";
 import { runMarkupFrontend } from "@narratage/run-markup";
-import type { Workspace } from "@narratage/host";
+import type { ArtifactAttachment, Workspace } from "@narratage/host";
 import { WorkspaceError } from "@narratage/host";
 import {
   createMarkupAuthorFrontend,
@@ -290,7 +290,7 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
   return {
     async open(entryLocator) {
       const entry: AuthorSourceUnit = { id: entryLocator, name: "main.svml", text: sourceText };
-      let attachment: { readonly artifact: BlobRef; readonly bytes: Uint8Array } | undefined;
+      let attachment: { readonly artifact: BlobRef; readonly open: () => AsyncIterable<Uint8Array> } | undefined;
       return {
         entry,
         async resolveSource(_importer: AuthorSourceUnit, request: AuthorSourceImport) {
@@ -307,17 +307,34 @@ function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Workspace 
             size: bytes.byteLength,
             mediaType: request.mediaType,
           };
-          attachment = { artifact, bytes };
+          attachment = { artifact, open: async function* () { yield Uint8Array.from(bytes); } };
           return { artifact: { ...artifact } };
         },
         attachments() {
           return attachment === undefined
             ? []
-            : [{ artifact: { ...attachment.artifact }, bytes: Uint8Array.from(attachment.bytes) }];
+            : [{ artifact: { ...attachment.artifact }, open: attachment.open }];
         },
       };
     },
   };
+}
+
+async function readAttachment(attachment: ArtifactAttachment | undefined): Promise<Uint8Array | undefined> {
+  if (attachment === undefined) return undefined;
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for await (const chunk of await attachment.open()) {
+    chunks.push(Uint8Array.from(chunk));
+    size += chunk.byteLength;
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
 
 test("Node Compiler discovers real imports and emits a named public Author Graph export", async () => {
@@ -361,11 +378,13 @@ test("Author Frontend identity comes only from the mandatory Source Header, neve
 
 test("Run-only Fragment modules extend the execution closure without polluting the Author Graph", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-dual-graph-closure-"));
+  const unused = emptyManifest("example.unused-video-feature");
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
   await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
   <svml>
     <import as="lab" from="example.compiler-lab@1"/>
+    <import as="unused" from="example.unused-video-feature@1"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
   await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
@@ -377,7 +396,7 @@ test("Run-only Fragment modules extend the execution closure without polluting t
     <satisfy output="hello.result" candidate="one.result" fidelity="substitute"/>
   </svrun>`, "utf8");
 
-  const authorCompiler = compiler(root, [previewManifest]);
+  const authorCompiler = compiler(root, [previewManifest, unused]);
   const frontends = new RunFrontendRegistry();
   frontends.register(runMarkupFrontend);
   const fragments = new RunFragmentRegistry();
@@ -388,11 +407,16 @@ test("Run-only Fragment modules extend the execution closure without polluting t
 
   assert.deepEqual(
     compiled.author.program.closure.modules.map((item) => item.ref.name),
-    [laboratory.name],
+    [laboratory.name, unused.name],
   );
   assert.deepEqual(
     compiled.program.closure.modules.map((item) => item.ref.name).sort(),
+    [laboratory.name, previewModule.name, unused.name].sort(),
+  );
+  assert.deepEqual(
+    planned.state.program.closure.modules.map((item) => item.ref.name).sort(),
     [laboratory.name, previewModule.name].sort(),
+    "the durable Build keeps only modules needed by its selected execution slice",
   );
   assert.equal(compiled.run.graph.authorGraph, compiled.author.elaboration.graph.id);
   assert.equal(planned.plan.steps.length, 1);
@@ -415,7 +439,7 @@ test("source assets are content addressed, closure-bound and returned as a Host 
   const attachment = first.attachments[0];
   assert.equal(unit?.assets[0]?.from, "./reference.bin");
   assert.equal(unit?.assets[0]?.artifact.digest, attachment?.artifact.digest);
-  assert.deepEqual(attachment?.bytes, new Uint8Array([1, 2, 3, 4]));
+  assert.deepEqual(await readAttachment(attachment), new Uint8Array([1, 2, 3, 4]));
   assert.equal(first.module.records[0]?.value.kind, "blob");
   assert.equal(first.module.records[0]?.value.kind === "blob" ? first.module.records[0].value.digest : undefined, attachment?.artifact.digest);
   const tamperedUnit = first.closure.units.map((item) => item === unit
@@ -449,7 +473,7 @@ test("an installed package Surface can contribute locked bytes without an author
 
   const compiled = await assetCompiler({ root }).compileFile(file);
   const attachment = compiled.attachments[0];
-  assert.deepEqual(attachment?.bytes, new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
+  assert.deepEqual(await readAttachment(attachment), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
   assert.equal(compiled.closure.units[0]?.assets[0]?.from, "package:example.asset-lab/embedded.bin");
   assert.equal(compiled.closure.units[0]?.assets[0]?.artifact.digest, attachment?.artifact.digest);
   assert.equal(compiled.module.records[0]?.value.kind, "blob");
@@ -458,7 +482,7 @@ test("an installed package Surface can contribute locked bytes without an author
     : undefined, attachment?.artifact.digest);
 });
 
-test("filesystem Workspace contains symlinks and reads each canonical source only once", async () => {
+test("filesystem Workspace contains symlinks and locks source text plus asset identity once", async () => {
   const parent = await mkdtemp(join(tmpdir(), "svml-source-host-"));
   const root = join(parent, "project");
   await mkdir(root);
@@ -487,8 +511,9 @@ test("filesystem Workspace contains symlinks and reads each canonical source onl
   const lockedAsset = await workspace.resolveAsset(entry, { from: "./asset.bin", mediaType: "application/octet-stream" });
   assert.deepEqual(lockedAsset, firstAsset, "one Host locks an asset edge to the first bytes read");
   const detached = await workspace.attachments();
-  detached[0]?.bytes.fill(0);
-  assert.deepEqual((await workspace.attachments())[0]?.bytes, new Uint8Array([1, 2, 3]));
+  assert.deepEqual(await readAttachment(detached[0]), new Uint8Array([4, 5, 6, 7]),
+    "attachment bytes are opened lazily; Runtime rejects them if they no longer match the locked identity");
+  assert.equal((await workspace.attachments())[0]?.artifact.digest, firstAsset.artifact.digest);
   await assert.rejects(
     async () => await workspace.resolveSource(entry, {
       from: "./escaped.svs",
@@ -523,5 +548,8 @@ test("filesystem and in-memory Workspaces compile identical source and bytes to 
   assert.equal(memory.closure.id, filesystem.closure.id);
   assert.equal(memory.module.semanticDigest, filesystem.module.semanticDigest);
   assert.equal(memory.elaboration.graph.id, filesystem.elaboration.graph.id);
-  assert.deepEqual(memory.attachments, filesystem.attachments);
+  assert.deepEqual(memory.attachments.map((item) => item.artifact),
+    filesystem.attachments.map((item) => item.artifact));
+  assert.deepEqual(await readAttachment(memory.attachments[0]),
+    await readAttachment(filesystem.attachments[0]));
 });

@@ -46,6 +46,7 @@ async function readSecret(prompt: string): Promise<string> {
 
 const io: CliIo = {
   write: (text) => process.stdout.write(text),
+  setExitCode: (code) => { process.exitCode = code; },
   readSecret,
   terminal: {
     isTTY: process.stdout.isTTY === true,

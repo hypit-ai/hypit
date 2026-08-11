@@ -8,10 +8,14 @@ import type { BlobRef } from "@narratage/protocol";
 
 export type { HostFacet } from "./facet.js";
 
-/** Host transfer bytes. Their origin is deliberately absent from the Runtime contract. */
+/**
+ * Repeatably openable Host transfer bytes. Their origin is deliberately absent
+ * from the Runtime contract; Runtime verifies the opened stream against the
+ * declared BlobRef before admitting a Build.
+ */
 export type ArtifactAttachment = {
   readonly artifact: BlobRef;
-  readonly bytes: Uint8Array;
+  open(): Awaitable<AsyncIterable<Uint8Array>>;
 };
 
 /** One isolated, read-once definition session for exactly one compilation. */
