@@ -85,6 +85,10 @@ The `targets` attribute on `<svrun>` selects which set is active.
 Narratage has no implicit cache. Reusing a result is explicit Run Graph authoring — you declare
 historical Records as zero-input Candidates and connect them through Satisfaction edges.
 
+As soon as a generated image or take is accepted, pin it in the next `.svrun` with `build-record`
+and `satisfy`, let the consuming Target accept the declared fidelity, and inspect the frozen plan
+before starting paid downstream work.
+
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
@@ -185,6 +189,10 @@ that consume substitute inputs produce substitute results.
 ## Runtime Profile
 
 The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each type of work:
+
+Declarative `svml.runtime.json` is the standard form. Advanced trusted embedding may instead use
+`svml.runtime.ts`; both are passed to `--runtime` and assemble the same explicit roles. See the
+complete [Runtime Profile guide](../guide/runtime-profile.md).
 
 ```json
 {
@@ -291,7 +299,45 @@ require permissions not listed here.
 and one exact capability Route resource. Optional `resources` overrides use those opaque resource
 ids; they never select a model or Provider.
 
+## Configure selected credentials
+
+`check` and `plan` do not make live Provider requests and do not need API keys. Before `doctor` or a
+paid/external `build`, configure only the environment variables referenced by the selected Runtime
+Profile:
+
+| Variable | Provider/use |
+|---|---|
+| `KIE_API_KEY` | KIE models, including Seedance and GPT Image |
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud project with Vertex AI enabled |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Complete Vertex credential JSON contents, not a file path |
+| `MIMO_API_KEY` | Xiaomi MiMo TTS, only when that Endpoint is selected |
+
+Run only the lines for the Endpoints in your Profile. In macOS/Linux shells:
+
+```bash
+read -r -s KIE_API_KEY
+export KIE_API_KEY
+read -r -s MIMO_API_KEY
+export MIMO_API_KEY
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/narratage/google-service-account.json")"
+```
+
+In Windows PowerShell:
+
+```powershell
+$env:KIE_API_KEY = "your-key"
+$env:MIMO_API_KEY = "your-key"
+$env:GOOGLE_CLOUD_PROJECT = "your-project-id"
+$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\narratage\google-service-account.json"
+```
+
+Keep credentials out of Author Source, Run Source, Runtime Profile source, and committed files.
+`doctor` validates required credential presence without printing secret values.
+
 ## Build workflow
+
+Keep credentials, generated media, Runtime state/databases, and logs out of commits.
 
 ### 0. Install
 
@@ -378,7 +424,23 @@ node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 Doctor validates both locks, every selected Runtime role, Endpoint configuration, credential
 presence and bounded environment probes. It never starts the Worker or performs a paid request.
 
-### 2. Inspect the plan
+### 2. Start or reuse the Runtime
+
+```bash
+node --run narratage -- runtime up examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- runtime status examples/talking-head-aroll/svml.runtime.json
+```
+
+`runtime up` owns the detached durable Worker and every external program declared by the Profile.
+The narrower `services up|status|down` commands manage only those external programs and do not own
+the Worker lifecycle.
+
+### 3. Check source and inspect the plan
+
+```bash
+node --run narratage -- check examples/talking-head-aroll/main.svml \
+  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+```
 
 ```bash
 node --run narratage -- plan examples/talking-head-aroll/build.svrun \
@@ -388,7 +450,7 @@ node --run narratage -- plan examples/talking-head-aroll/build.svrun \
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
 Scheduler would issue.
 
-### 3. Submit the Build
+### 4. Submit the Build
 
 ```bash
 node --run narratage -- build examples/talking-head-aroll/build.svrun \
@@ -418,7 +480,15 @@ failed or cancelled Build remains terminal and is only reported. Use a new expli
 unchanged prompt intentionally needs another stochastic take. Reusing an explicit id for different
 compiled intent is rejected with both repair choices.
 
-### 4. Retrieve results
+### 5. Inspect and retrieve results
+
+```bash
+node --run narratage -- inspect my-film-001 \
+  --runtime examples/talking-head-aroll/svml.runtime.json
+```
+
+`inspect` reports durable Build state, demanded outputs, and accepted Records. Retrieve the selected
+archived Artifact only after those facts are correct:
 
 ```bash
 node --run narratage -- get my-film-001 \
@@ -435,7 +505,7 @@ exporting a large MP4 does not buffer the complete file in CLI memory.
 The terminal Build result prints the exact `get --name …` command for every targeted source alias;
 there is no need to inspect opaque Record ids just to export `final.video`.
 
-### 5. Reuse in a new Build
+### 6. Reuse in a new Build
 
 Create a new `.svrun` file that references the completed Build's Records (see [Reusing results](#reusing-results)
 above), then submit it:
@@ -445,3 +515,14 @@ node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun 
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --root . --build-id my-film-reuse-001 --follow
 ```
+
+### 7. Diagnose or stop the local Runtime
+
+```bash
+node --run narratage -- runtime logs examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- runtime down examples/talking-head-aroll/svml.runtime.json
+```
+
+`runtime down` stops the Worker from claiming more leases and stops Runtime-owned programs. It does
+not cancel durable Builds or remote Provider work. Start the same Profile again to resume local
+execution.

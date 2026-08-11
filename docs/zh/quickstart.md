@@ -5,6 +5,25 @@ description: 搭建 Narratage 并编译你的第一张视频图。
 
 # Quickstart
 
+## 选择开始方式
+
+**使用 Narratage skill。** 通过 Agent 自带的 skill 安装器安装完整的
+[`narratage` skill 文件夹](https://github.com/cashdiffusion/svml/tree/main/.agents/skills/narratage)，
+也可以把这个链接发给 Agent，让它安装并使用该 skill。已经克隆仓库时，直接让安装器读取
+`.agents/skills/narratage`；需要安装整个文件夹，而不是只复制 `SKILL.md`。
+
+```text
+安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
+实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
+```
+
+在本仓库内打开的 Codex 与 Claude 会通过已提交的 `.codex/skills`、`.claude/skills` 链接发现
+这份 canonical skill。如果 Windows checkout 没有保留软链接，直接把
+`.agents/skills/narratage` 交给 Agent。skill 生效后，Agent 会按需读取对应的 Quickstart 页面，
+你无需再手动通读后文。
+
+**手动开始。** 从[安装](#安装)继续，然后按顺序阅读七篇指南。
+
 **Narratage** 这个名字来自 1933 年《*New York Times*》对电影《*The Power and the
 Glory*》的一篇影评。那位影评人造出这个词，用来描述当时的一种新兴电影手法：
 **Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
@@ -15,13 +34,33 @@ Glory*》的一篇影评。那位影评人造出这个词，用来描述当时�
 
 ## 安装
 
-需要 Node.js 22+ 与 pnpm。
+源码工作区需要 Node.js 22+，并通过 Corepack 使用 pnpm 10.33.x。以下命令在 macOS/Linux
+Shell 与 Windows PowerShell 中相同：
+
+部分较新的 Node.js 发行版不再自带 Corepack。如果 `corepack --version` 不可用，先在任一
+Shell 中安装兼容版本：
+
+```text
+npm install --global corepack@0.34.5
+```
 
 ```bash
 corepack enable
+corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile
 pnpm check
 pnpm test
+```
+
+本地媒体处理还要求 `ffmpeg` 与 `ffprobe` 位于 `PATH`。Python 是可选依赖：只有 Runtime
+Profile 选择本地 WhisperX 或 OpenCV 时，才需要 Python 3.10–3.13 与
+[`uv`](https://docs.astral.sh/uv/)。在任一 Shell 中按锁定环境准备：
+
+```text
+uv python install 3.13
+uv sync --project services/whisperx --frozen
+uv sync --project services/image-opencv --frozen
+uv run --project services/whisperx --frozen svml-whisperx-prepare
 ```
 
 在源码仓库内可使用 `node --run narratage -- ...`。仓库外的视频项目直接执行
@@ -64,6 +103,6 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 | [SVS 样式表](./quickstart/styles.md) | CSS 风格的 Recipe：film、caption、B-roll、text、speech、字体 |
 | [媒体与生成](./quickstart/generation.md) | media:Image、media:Audio、estimate:Speech、Text Template、Seedance |
 | [时序与装配](./quickstart/timing.md) | speech:Spine、whisperx:Alignment、ProgramSpace、SemanticMap |
-| [字幕、Media 与文字](./quickstart/tracks.md) | caption-fine:Style/Track、caption:Program、Planner、Media Track 与 Text |
+| [字幕、Media、文字与音频](./quickstart/tracks.md) | Caption、Media、Typography 与 Audio Track 作者语法 |
 | [Film 与渲染](./quickstart/composition.md) | film:Film、render:Video、完整流水线演练 |
 | [Run Source 与 Build](./quickstart/run.md) | .svrun 语法、targets、复用、runtime profile、build 工作流 |

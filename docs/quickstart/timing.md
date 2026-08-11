@@ -68,6 +68,15 @@ all three values unless it overrides them. An audio Take cannot declare visual o
 is playing, `speech.visual` simply has no Present, so the Film background or peer Tracks remain
 visible.
 
+For voiceover timing, use an audio Take and supply the visuals through peer Media Tracks:
+
+```svml
+<speech:Spine id="speech" frame-rate="30"
+  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
+  <speech:Take audio={narration.audio} segment={story.segment.narration}/>
+</speech:Spine>
+```
+
 The fit Recipe is ordinary compile-time SVS data, for example:
 
 ```svs
@@ -134,6 +143,14 @@ ProgramSpace owns:
 
 Every component that operates in the time domain takes a `space` attribute pointing to
 `{speech.space}`.
+
+### Speech-free programs
+
+A speech-free film still needs an explicit, verified ProgramSpace. Select a previously accepted
+ProgramSpace Record in the Run Source with `build-record` and `satisfy`, then connect that named
+logical output to Tracks and Film. Use `during="program"` or explicit `start`/`end` windows. Without
+speech there is no measured SemanticMap, so omit WhisperX and Caption components and do not use
+Selection/Moment timing. See [Reusing results](./run.md#reusing-results) for Run Source syntax.
 
 ## SemanticMap
 

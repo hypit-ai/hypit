@@ -1,15 +1,17 @@
 ---
-title: 字幕、Media 与 Typography
-description: 视觉 Track 组件——字幕、媒体叠加层和排版叠加层。
+title: 字幕、Media、Typography 与 Audio
+description: 对等 Track 组件——字幕、媒体、排版与作者声明的音频。
 ---
 
-# 字幕、Media 与 Typography
+# 字幕、Media、Typography 与 Audio
 
-> **发布前说明：** Caption Fine、Media Track 与 Typography Track 都执行各自声明的作者 Surface。
+> **发布前说明：** Caption Fine、Media Track、Typography Track 与 Audio Track 都执行各自声明的作者 Surface。
 > 它们的作者 API 仍可演进；共享终端 Track/Visual IR 窄腰已在仓库内冻结，但尚未作为
 > npm ABI 发布。
 
-每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套），其 z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍三个官方视觉 Track 包：字幕、Media 和 Typography 叠加层。
+每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套）；视觉层的
+z 轴顺序由 SVS 中的 `stack-order` 属性决定。本页介绍 Caption、Media、Typography 与 Audio
+Track 的作者语法。
 
 ## 字幕系统
 
@@ -178,6 +180,41 @@ Operation。需要共享或特殊选流时仍可显式写 `<pipeline:Normalize>`
 **输出：**`{product-broll.visual}`；只有作者显式选择了源音频或 SFX 时才会出现
 `{product-broll.audio}`。
 
+## Audio Track
+
+`@narratage/audio-track` 把显式准备好的音频放进与视觉 Track 相同的 ProgramSpace。`Clip`
+消费 `SynchronizedMedia`；先规范化已声明或生成的音频 Blob，再选择精确节目窗口与占用方式：
+
+```svml
+<import as="media" from="@narratage/media@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="audio" from="@narratage/audio-track@1"/>
+
+<media:Audio id="music" src="./assets/music.wav"/>
+<pipeline:Normalize id="music-media" source={music}
+  video="none" audio="default" span-authority="audio" frame-rate="30"/>
+
+<audio:Track id="music-bed" space={speech.space}>
+  <audio:Clip source={music-media.media} during="program"
+    playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
+</audio:Track>
+```
+
+| 属性 | 必填 | 描述 |
+|---|---|---|
+| `Track.id` | 是 | 稳定的 Audio Track 身份 |
+| `Track.space` | 是 | 定义精确采样域与帧域的 ProgramSpace |
+| `Clip.source` | 是 | 显式选流并规范化后的 `SynchronizedMedia` |
+| `during`、`at`/`for` 或 `start`/`end` | 三种形式选一 | 全节目、Selection、Moment 或显式窗口 |
+| `map` | Selection/Moment 必填 | 用于解析语义时间的 SemanticMap |
+| `playback` | 否 | `once`、`once-end`、`loop`、`loop-end` 或有界 `stretch` |
+| `occurrences` | 否 | 语义来源有多次出现时选择 `one` 或 `each` |
+| `trim-start`、`trim-end` | 否 | 精确源裁切 |
+| `gain`、`fade-in`、`fade-out` | 否 | 显式的单 Clip 混音值 |
+
+该包不会自动提取、规范化、duck 或分配 bus。同一 Track 内的多个 Clip 与多个对等 Audio
+Track 都会作为独立输入进入 Film。输出 `{music-bed.track}` 是普通 `AudioTrack`。
+
 ## 文字叠加层
 
 在屏幕上显示的静态或定时文字——标题、标注、下方三分之一字幕条。
@@ -258,15 +295,18 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
 
 ## 组合示例
 
-三种 Track 类型在一个源文件中协同使用：
+四类 Track 在一个源文件中协同使用：
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="media" from="@narratage/media@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/typography-track@1"/>
+<import as="audio" from="@narratage/audio-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
@@ -300,13 +340,23 @@ Run 时，继续使用内联 `P`/`Span`/`Break`。
   </text:Area>
 </text:Track>
 
-<!-- All three tracks feed into Film -->
+<!-- Audio：先规范化一份已声明素材，再把它放满整个节目 -->
+<media:Audio id="music" src="./assets/music.wav"/>
+<pipeline:Normalize id="music-media" source={music}
+  video="none" audio="default" span-authority="audio" frame-rate="30"/>
+<audio:Track id="music-bed" space={speech.space}>
+  <audio:Clip source={music-media.media} during="program"
+    playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
+</audio:Track>
+
+<!-- 所有对等 Track 都进入 Film -->
 <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>
   <film:Track source={titles.track}/>
+  <film:Track source={music-bed.track}/>
 </film:Film>
 ```
 

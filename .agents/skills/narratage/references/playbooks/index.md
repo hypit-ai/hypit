@@ -1,54 +1,72 @@
 # Narratage production playbooks
 
-Portable production patterns for Narratage. These files describe what to author and inspect, not
-private renderer internals or an analysis-data contract.
+Use these playbooks to author production decisions directly in `.svml`, `.svs`, and `.svrun`
+sources. Each playbook names the SVML components, timing model, review gates, and reuse behavior
+needed for that craft or format.
 
-## Decision path
+## Required load order
 
-1. Identify the format: talking head, street interview, two-person podcast, voiceover desk demo, or
-   silent mixcut. Treat format files as editorial recipes; Narratage does not provide a native
-   generation surface for every format.
-2. Choose an official Seedance Kit when one matches, then apply universal gates:
-   `production-gates`, `visual-continuity`, and `seedance-directing`.
-3. Add focused craft: `image-prompt-style`, `b-roll`, `overlays`, `captions`, `persona-and-audio`,
-   or `screen-demo`.
-4. Read `svml-mapping.md`, then map the result to actual Narratage surfaces: Script, Seedance `TextVideo`/`FrameVideo`/
-   `ReferenceVideo`, Speech Spine, SemanticMap, peer Tracks, Film, and Run Source. If a format needs
-   a capability not present in the package surface, use supplied media or supported primitives and
-   record the gap.
-5. Run provider-free `check`/`plan`; only then release paid generation.
+1. Always read `craft/production-gates.md` and `craft/visual-continuity.md`.
+2. Read `craft/seedance-directing.md` whenever the Author Source invokes Seedance.
+3. Read the selected format file and only the additional craft files it names.
+4. Read the relevant authoritative Quickstart or package README before writing unfamiliar syntax.
 
-## Universal prompt policy
+## Shared SVML contract
 
-- Write all VLM instructions and all image/video generation prompts in English.
-- Preserve the original language only for verbatim dialogue, transcript text, and quoted sample lines.
-- Describe desired states directly. Do not mention mutually exclusive alternatives or objects that
-  should not appear; generation models can materialize them.
-- Never ask Seedance to render subtitles, captions, floating labels, stickers, or UI overlays. Author
-  those as `caption-fine:Track`, `text:Track`, or `media-track:Track`.
+- Put narrative truth in one `script` with Segments, Role Cues, Selections, and Moments.
+- Use `copy:Value`/`copy:Render` from `@narratage/text@1` for prompts and reusable copy.
+- Use `typo:Style`/`typo:Track` from `@narratage/typography-track@1` for editorial text.
+  Never use the same import alias for generic Text and typography.
+- Vendor the selected Seedance Kit into the project, choose stable axes in an SVS Recipe, and keep
+  dynamic dialogue/action/story in explicit Text edges.
+- Keep model invocation explicit with `seedance:TextVideo`, `seedance:FrameVideo`, or
+  `seedance:ReferenceVideo`; keep every media reference, duration, model, resolution, and aspect
+  ratio visible in the Author Source.
+- Build speech-led programs with `speech:Spine`, measure them with `whisperx:Alignment`, then add
+  peer Caption, Media, Typography, Ranking, Deck, Comment, Screen, and Audio Tracks.
+- Use `speech:Spine` for speech-bearing video or audio Takes. For speech-free formats, select a
+  verified ProgramSpace Record in `.svrun`, author explicit timing, and omit WhisperX/Caption work.
+- Assemble peer Tracks with `film:Film`, render with `render:Video`, and demand outputs through a
+  `.svrun` Target.
+- Stage expensive work with narrow target-sets. Pin and reuse an accepted Record through
+  `build-record` plus `satisfy`; Narratage has no implicit cache.
+- Use only elements and attributes documented by the current Quickstart or package README. Never
+  invent a component or attribute to fill in missing syntax.
+
+## Prompt policy
+
+- Write VLM instructions and image/video generation prompts in English. Keep original-language
+  dialogue, transcript, pronunciation, and quoted copy verbatim.
+- Describe the desired visible state directly. Omit unwanted concrete objects instead of naming
+  them inside negations or hypotheticals that a model may materialize.
+- Keep editorial captions, titles, stickers, cards, and callouts out of generation prompts. Author
+  them as explicit Tracks. Preserve text that is physically attached to a supplied product, screen,
+  document, or sign.
 
 ## Craft
 
-- `craft/image-prompt-style.md` — realistic reference-frame construction.
-- `craft/seedance-directing.md` — action prompts and physical motion envelopes.
-- `craft/visual-continuity.md` — identity, reverse views, props, and shot continuity.
-- `craft/b-roll.md` — story-first inserts and supplied/generated media decisions.
-- `craft/screen-demo.md` — UI and device demonstrations.
-- `craft/overlays.md` — text, stickers, PIP, timing, and gaps.
-- `craft/captions.md` — one caption program and measured timing.
-- `craft/persona-and-audio.md` — identity and voice references.
-- `craft/pip-overlay.md` — composited picture-in-picture.
-- `craft/sfx.md` — event-based sound effects.
-- `craft/production-gates.md` — free validation, review, and paid gates.
+- `craft/production-gates.md` — staged Targets, image review, paid generation, and explicit reuse.
+- `craft/visual-continuity.md` — identity, shot groups, reverse-view geometry, and prop invariants.
+- `craft/image-prompt-style.md` — English reference-image prompts and camera geometry.
+- `craft/seedance-directing.md` — Kit selection, Recipe axes, references, and motion direction.
+- `craft/b-roll.md` — story-led silent inserts and semantic placement.
+- `craft/screen-demo.md` — physically possible device/UI views and exact supplied UI.
+- `craft/captions.md` — complete Caption pipeline and review rules.
+- `craft/overlays.md` — Typography, Media, Comment, and Screen Tracks.
+- `craft/pip-overlay.md` — framed video, alpha cutouts, and picture-in-picture timing.
+- `craft/persona-and-audio.md` — identity, voice, TTS, normalization, and mix separation.
+- `craft/sfx.md` — event-led sound design on explicit Audio Tracks.
 
 ## Formats
 
-- `formats/talking-head.md`
-- `formats/street-interview.md`
-- `formats/two-person-podcast.md`
-- `formats/voiceover-desk-demo.md`
-- `formats/mixcut.md`
-- `formats/ranking-listicle.md`
-- `formats/scenario-call.md`
-- `formats/asmr.md`
-- `formats/mass-tarot.md`
+| Format | Additional craft to read |
+|---|---|
+| `formats/talking-head.md` | `seedance-directing`, `persona-and-audio`, `captions`, `b-roll`, `overlays` |
+| `formats/street-interview.md` | `seedance-directing`, `persona-and-audio`, `captions`, `b-roll` |
+| `formats/two-person-podcast.md` | `seedance-directing`, `persona-and-audio`, `captions`, `b-roll` |
+| `formats/scenario-call.md` | `seedance-directing`, `persona-and-audio`, `captions`, `overlays` |
+| `formats/ranking-listicle.md` | `captions`, `overlays`, `sfx` |
+| `formats/mass-tarot.md` | `b-roll`, `overlays`, `persona-and-audio`, `captions` |
+| `formats/voiceover-desk-demo.md` | `persona-and-audio`, `b-roll`, `screen-demo`, `captions`, `sfx` |
+| `formats/mixcut.md` | `image-prompt-style`, `b-roll`, `overlays`, `sfx` |
+| `formats/asmr.md` | `image-prompt-style`, `seedance-directing`, `persona-and-audio`, `sfx` |

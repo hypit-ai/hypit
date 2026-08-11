@@ -1,17 +1,17 @@
 ---
-title: Caption, Media & Typography
-description: Visual track components — captions, media overlays and typography overlays.
+title: Caption, Media, Typography & Audio
+description: Peer track components — captions, media, typography and authored audio.
 ---
 
-# Caption, Media & Typography
+# Caption, Media, Typography & Audio
 
-> **Pre-release note:** Caption Fine, Media Track and Typography Track execute their declared author Surfaces.
+> **Pre-release note:** Caption Fine, Media Track, Typography Track and Audio Track execute their declared author Surfaces.
 > Their author APIs may still evolve; the shared terminal Track/Visual IR waist is frozen inside the
 > repository but has not been published as an npm ABI.
 
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
-(no nesting), and their z-order is determined by the `stack-order` property in SVS. This page
-covers three official visual Track packages: captions, media, and typography overlays.
+(no nesting), and visual z-order is determined by the `stack-order` property in SVS. This page
+covers Caption, Media, Typography and Audio Track authoring.
 
 ## Caption system
 
@@ -211,6 +211,43 @@ or specially selected media, whose output then connects through `media=`.
 
 **Outputs:** `{product-broll.visual}` and, only when explicitly authored, `{product-broll.audio}`.
 
+## Audio tracks
+
+`@narratage/audio-track` places explicitly prepared audio on the same ProgramSpace as the visual
+Tracks. A `Clip` consumes `SynchronizedMedia`; normalize a declared or generated audio Blob first,
+then choose its exact program window and occupancy:
+
+```svml
+<import as="media" from="@narratage/media@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
+<import as="audio" from="@narratage/audio-track@1"/>
+
+<media:Audio id="music" src="./assets/music.wav"/>
+<pipeline:Normalize id="music-media" source={music}
+  video="none" audio="default" span-authority="audio" frame-rate="30"/>
+
+<audio:Track id="music-bed" space={speech.space}>
+  <audio:Clip source={music-media.media} during="program"
+    playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
+</audio:Track>
+```
+
+| Attribute | Required | Description |
+|---|---|---|
+| `Track.id` | yes | Stable Audio Track identity |
+| `Track.space` | yes | ProgramSpace that defines the exact sample and frame domain |
+| `Clip.source` | yes | Explicitly selected and normalized `SynchronizedMedia` |
+| `during`, `at`/`for`, or `start`/`end` | exactly one form | Whole-program, Selection, Moment, or explicit window |
+| `map` | for Selection/Moment | SemanticMap used to resolve semantic timing |
+| `playback` | no | `once`, `once-end`, `loop`, `loop-end`, or bounded `stretch` |
+| `occurrences` | no | `one` or `each` when a semantic source has multiple occurrences |
+| `trim-start`, `trim-end` | no | Exact source trim |
+| `gain`, `fade-in`, `fade-out` | no | Explicit per-clip mix values |
+
+The package performs no automatic extraction, normalization, ducking, or bus routing. Multiple
+Clips in one Track and multiple peer Audio Tracks remain independent inputs to Film. The output is
+`{music-bed.track}`, an ordinary `AudioTrack`.
+
 ## Text overlays
 
 Static or timed text displayed on screen — titles, callouts, lower thirds.
@@ -292,15 +329,18 @@ placement, timing, style and motion. Use inline `P`/`Span`/`Break` when the auth
 
 ## Combination example
 
-All three track types together in one source file:
+All four track families together in one source file:
 
 ```svml
 <import as="caption" from="@narratage/caption@1"/>
 <import as="caption-fine" from="@narratage/caption-fine@1"/>
 <import as="caption-ai" from="@narratage/caption-gemini@1"/>
 <import as="fonts" from="@narratage/fonts-open@1"/>
+<import as="media" from="@narratage/media@1"/>
+<import as="pipeline" from="@narratage/media-pipeline@1"/>
 <import as="media-track" from="@narratage/media-track@1"/>
 <import as="text" from="@narratage/typography-track@1"/>
+<import as="audio" from="@narratage/audio-track@1"/>
 <import as="space" from="@narratage/spatial@1"/>
 
 <!-- Captions: primary style for all text -->
@@ -334,13 +374,23 @@ All three track types together in one source file:
   </text:Area>
 </text:Track>
 
-<!-- All three tracks feed into Film -->
+<!-- Audio: normalize one declared source, then place it for the complete program -->
+<media:Audio id="music" src="./assets/music.wav"/>
+<pipeline:Normalize id="music-media" source={music}
+  video="none" audio="default" span-authority="audio" frame-rate="30"/>
+<audio:Track id="music-bed" space={speech.space}>
+  <audio:Clip source={music-media.media} during="program"
+    playback="loop-end" gain="0.28" fade-in="600ms" fade-out="800ms"/>
+</audio:Track>
+
+<!-- All peer tracks feed into Film -->
 <film:Film id="main" canvas={vertical} space={speech.space} appearance={studio.film.vertical}>
   <film:Track source={speech.visual}/>
   <film:Track source={speech.audioTrack}/>
   <film:Track source={cards.visual}/>
   <film:Track source={captions.track}/>
   <film:Track source={titles.track}/>
+  <film:Track source={music-bed.track}/>
 </film:Film>
 ```
 

@@ -205,15 +205,25 @@ Copy only the selected Kit `.svs` files into the video project's `./kits/` direc
 vendored project copy so the Kit bytes remain inside the Source Closure; do not reach back into a
 Narratage repository checkout from project source.
 
+Read the
+[`@narratage/seedance-kits` guide](https://github.com/cashdiffusion/svml/blob/main/packages/seedance-kits/README.md)
+and the [selected Kit source](https://github.com/cashdiffusion/svml/tree/main/packages/seedance-kits/kits)
+before authoring. Use an official Kit whenever its format matches. Keep generation instructions and
+dynamic prompt slots in English; preserve the authored language only for dialogue that must be
+spoken verbatim. Write a freeform English prompt only when none of the seven Kits applies.
+
 ```svml
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
 <import as="broll-kit" source="./kits/broll-v1.svs"/>
 
+<text:Value id="product-story">
+  Show the product opening, the primary feature activating, and the finished result in one readable sequence.
+</text:Value>
 <text:Render id="demo-prompt"
   template={broll-kit.broll-v1}
   recipe={studio.broll.product-demo}>
-  <text:Set name="story" text={copy.product-demo}/>
+  <text:Set name="story" text={product-story}/>
 </text:Render>
 
 <seedance:ReferenceVideo id="demo" model="mini"
@@ -231,11 +241,20 @@ The project Recipe selects axes such as `material-mode`, `story-shape` and `came
 `text:Render` reads only properties declared by the template; an explicit `text:Param` overrides a
 Recipe value. Dynamic story/dialogue/action/extra content remains a `Text` edge through `Set`.
 
-Available templates are `speaker-v1`, `broll-v1`, `podcast-v1`, `call-v1`, `street-interview-v1`,
-`motion-reference-v1` and `camera-reference-v1`. Podcast and Call expect two ordered image
-references plus two ordered audio references; Street Interview expects one scene image plus two
-ordered voices; the two reference-transfer templates expect one subject image and one reference
-video. Those shapes are visible in `seedance:ReferenceVideo`, not hidden in Kit execution code.
+Choose the Kit by format, then provide its declared dynamic slots and ordered references:
+
+| Format | Kit | Dynamic slots | Ordered references |
+|---|---|---|---|
+| Talking head | `speaker-v1` | `dialogue`; optional `action` | image 1 = speaker/scene; audio 1 = voice |
+| Silent B-roll | `broll-v1` | `story` | one or more authored images |
+| Two-person podcast | `podcast-v1` | `dialogue`; optional `action` | images 1/2 = A/B views; audio 1/2 = A/B voices |
+| Video call | `call-v1` | `dialogue`; optional `action` | images 1/2 = reversed call layouts; audio 1/2 = A/B voices |
+| Street interview | `street-interview-v1` | `dialogue`; optional `action` | image 1 = complete scene; audio 1/2 = interviewer/guest |
+| Motion transfer | `motion-reference-v1` | optional `direction` | image 1 = subject; video 1 = motion reference |
+| Camera transfer | `camera-reference-v1` | optional `direction` | image 1 = subject; video 1 = camera reference |
+
+These shapes remain visible in `seedance:ReferenceVideo`; Kit rendering does not hide media count or
+order.
 
 ## Street-interview prompt assembly
 

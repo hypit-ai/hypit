@@ -79,6 +79,9 @@ Run Source（`.svrun`）声明**要构建什么**——需要哪些输出、接�
 
 Narratage 没有隐式缓存。复用结果是显式的运行图编写——你将历史 Record 声明为零输入 Candidate，并通过 Satisfaction 边将它们连接起来。
 
+生成图片或 Take 一经验收，就在下一份 `.svrun` 中用 `build-record` 与 `satisfy` 固定它；
+消费它的 Target 要接受所声明的 fidelity，并在启动付费下游工作前检查冻结 plan。
+
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
@@ -173,6 +176,10 @@ Narratage 永远不会猜测两个名字代表同一份作者意图。`my-film-0
 ## Runtime Profile
 
 Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类型的工作：
+
+声明式 `svml.runtime.json` 是标准形式。高级可信嵌入也可以使用 `svml.runtime.ts`；两种形式
+都通过 `--runtime` 传入，并装配同样显式的角色。完整说明见
+[Runtime Profile 指南](../guide/runtime-profile.md)。
 
 ```json
 {
@@ -277,7 +284,44 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
 `maxConcurrency` 限制总的并行 Operation 数。Provider 会贡献一个 Authority 资源和一个精确
 Capability Route 资源，二者由 Store 原子获取；可选的 `resources` 只按不透明资源 id 覆盖容量。
 
+## 配置所选凭据
+
+`check` 与 `plan` 不会请求在线 Provider，因此不需要 API key。在运行 `doctor` 或付费/外部
+`build` 之前，只配置当前 Runtime Profile 实际引用的环境变量：
+
+| 变量 | Provider / 用途 |
+|---|---|
+| `KIE_API_KEY` | KIE 模型，包括 Seedance 与 GPT Image |
+| `GOOGLE_CLOUD_PROJECT` | 已启用 Vertex AI 的 Google Cloud project |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | 完整的 Vertex 凭据 JSON 内容，而不是文件路径 |
+| `MIMO_API_KEY` | Xiaomi MiMo TTS；只有选择该 Endpoint 时才需要 |
+
+只执行 Profile 中所选 Endpoint 对应的行。在 macOS/Linux Shell 中：
+
+```bash
+read -r -s KIE_API_KEY
+export KIE_API_KEY
+read -r -s MIMO_API_KEY
+export MIMO_API_KEY
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+export GOOGLE_APPLICATION_CREDENTIALS_JSON="$(<"$HOME/.config/narratage/google-service-account.json")"
+```
+
+在 Windows PowerShell 中：
+
+```powershell
+$env:KIE_API_KEY = "your-key"
+$env:MIMO_API_KEY = "your-key"
+$env:GOOGLE_CLOUD_PROJECT = "your-project-id"
+$env:GOOGLE_APPLICATION_CREDENTIALS_JSON = Get-Content -Raw "$HOME\.config\narratage\google-service-account.json"
+```
+
+不要把凭据写进 Author Source、Run Source、Runtime Profile 源文件或提交内容。`doctor` 会验证
+所需凭据是否存在，但不会打印秘密值。
+
 ## Build 工作流
+
+不要提交凭据、生成媒体、Runtime 状态/数据库或日志。
 
 ### 0. 安装
 
@@ -285,9 +329,10 @@ Capability Route 资源，二者由 Store 原子获取；可选的 `resources` �
 pnpm install
 ```
 
-这条命令在安装 Node 依赖的同时，也会准备好本地 Build 所需的 Python 服务（WhisperX、OpenCV）。
-如果 `uv` 不在 PATH 中，Python 步骤会跳过并给出提示——需要本地对齐或图像处理时请先安装
-[uv](https://docs.astral.sh/uv/)。
+这条命令只安装 JavaScript 工作区，不会下载 Python 模型，也不会准备仓库内的所有 Provider。
+`runtime up` / `services up` 会读取所选 Runtime Profile，只准备其中 Endpoint 声明的外部程序。
+只有 Profile 选择 WhisperX、OpenCV 等本地 Python 服务时，才需要先安装
+[`uv`](https://docs.astral.sh/uv/)；具体锁定环境命令见 Quickstart 首页的[安装](../quickstart.md#安装)。
 
 `narratage runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
 Worker。
@@ -357,7 +402,22 @@ node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；
 它不启动 Worker，也不发付费请求。
 
-### 2. 检查计划
+### 2. 启动或复用 Runtime
+
+```bash
+node --run narratage -- runtime up examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- runtime status examples/talking-head-aroll/svml.runtime.json
+```
+
+`runtime up` 负责后台耐久 Worker，以及 Profile 声明的全部外部程序。范围更窄的
+`services up|status|down` 只管理这些外部程序，不负责 Worker 生命周期。
+
+### 3. 检查 Source 与计划
+
+```bash
+node --run narratage -- check examples/talking-head-aroll/main.svml \
+  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+```
 
 ```bash
 node --run narratage -- plan examples/talking-head-aroll/build.svrun \
@@ -366,7 +426,7 @@ node --run narratage -- plan examples/talking-head-aroll/build.svrun \
 
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs。
 
-### 3. 提交 Build
+### 4. 提交 Build
 
 ```bash
 node --run narratage -- build examples/talking-head-aroll/build.svrun \
@@ -392,7 +452,15 @@ node --run narratage -- build examples/talking-head-aroll/build.svrun \
 继续；已完成、失败或取消的 Build 保持终态，只返回状态。相同 prompt 明确需要另一份随机结果时，
 使用新的显式 id。把已有显式 id 用到另一份编译意图上会被拒绝，并同时提示“换 id”或“恢复原 Source”。
 
-### 4. 获取结果
+### 5. 检查并获取结果
+
+```bash
+node --run narratage -- inspect my-film-001 \
+  --runtime examples/talking-head-aroll/svml.runtime.json
+```
+
+`inspect` 会显示耐久 Build 状态、所需输出与已接受的 Record。确认这些事实正确后，再获取所选
+归档 Artifact：
 
 ```bash
 node --run narratage -- get my-film-001 \
@@ -407,7 +475,7 @@ Record。Blob Artifact 会从所选 Store 流式读取，逐步校验长度与 S
 Build 的最终输出会为每个目标别名打印精确的 `get --name …` 命令，不必为了导出
 `final.video` 去查不透明的 Record id。
 
-### 5. 在新 Build 中复用
+### 6. 在新 Build 中复用
 
 创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文[复用结果](#复用结果)），然后提交：
 
@@ -416,3 +484,13 @@ node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun 
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --build-id my-film-reuse-001 --follow
 ```
+
+### 7. 诊断或停止本地 Runtime
+
+```bash
+node --run narratage -- runtime logs examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- runtime down examples/talking-head-aroll/svml.runtime.json
+```
+
+`runtime down` 会让 Worker 停止领取新 lease，并停止 Runtime 管理的程序；它不会取消耐久
+Build 或远程 Provider 工作。再次启动同一 Profile 即可恢复本地执行。

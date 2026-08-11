@@ -60,7 +60,18 @@ Surface 会把这句易读声明展开为普通 Media Pipeline Operation：检�
 
 视觉 Take 默认继承 Spine 上显式写出的三个视觉值，也可以逐段覆盖。纯音频 Take 禁止写
 视觉覆盖；它播放时 `speech.visual` 就没有 Present，Film 背景或平级 Track 会自然露出，
-系统不会伪造黑场。fit Recipe 只是普通编译期 SVS 数据，例如：
+系统不会伪造黑场。
+
+旁白时序使用 audio Take，画面则由对等 Media Track 提供：
+
+```svml
+<speech:Spine id="speech" frame-rate="30"
+  visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
+  <speech:Take audio={narration.audio} segment={story.segment.narration}/>
+</speech:Spine>
+```
+
+fit Recipe 只是普通编译期 SVS 数据，例如：
 
 ```svs
 speech.visual { fit: cover; }
@@ -120,6 +131,14 @@ ProgramSpace 包含：
 - **帧域**——整个节目的精确帧编号
 
 每个在时间域中运行的组件都通过 `space` 属性指向 `{speech.space}`。
+
+### 无语音节目
+
+无语音影片仍然需要一份显式且已验证的 ProgramSpace。在 Run Source 中用 `build-record` 与
+`satisfy` 选择一份此前已接受的 ProgramSpace Record，再把该具名逻辑输出连接给 Track 与
+Film。Track 使用 `during="program"` 或显式 `start`/`end` 窗口。没有语音就没有实测
+SemanticMap，因此省略 WhisperX 与 Caption 组件，也不要使用 Selection/Moment 时序。Run
+Source 语法见[复用结果](./run.md#复用结果)。
 
 ## SemanticMap
 
