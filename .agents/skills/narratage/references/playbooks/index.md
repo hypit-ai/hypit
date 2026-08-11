@@ -8,7 +8,8 @@ private renderer internals or an analysis-data contract.
 1. Identify the format: talking head, street interview, two-person podcast, voiceover desk demo, or
    silent mixcut. Treat format files as editorial recipes; Narratage does not provide a native
    generation surface for every format.
-2. Apply universal gates: `production-gates`, `visual-continuity`, and `seedance-directing`.
+2. Choose an official Seedance Kit when one matches, then apply universal gates:
+   `production-gates`, `visual-continuity`, and `seedance-directing`.
 3. Add focused craft: `image-prompt-style`, `b-roll`, `overlays`, `captions`, `persona-and-audio`,
    or `screen-demo`.
 4. Read `svml-mapping.md`, then map the result to actual Narratage surfaces: Script, Seedance `TextVideo`/`FrameVideo`/

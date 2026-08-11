@@ -10,7 +10,9 @@ coverage/
 # Local editor and agent state is never part of the distribution.
 .claude/
 .codex/
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/**
 .idea/
 .vscode/
 

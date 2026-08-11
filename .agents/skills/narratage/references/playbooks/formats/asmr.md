@@ -2,6 +2,9 @@
 
 Evidence level: thin.
 
+- Use the vendored `broll-v1` Kit. Select a practical material mode, a single readable story shape,
+  reference-locked camera language, and micro/readable motion in the Recipe; connect the exact
+  physical action through the `story` slot.
 - Use close, simple, predictable physical actions: cutting, pouring, wiping, pressing, folding, or
   rubbing. Keep motion micro/readable, not energetic or impact-heavy.
 - Keep the shot continuous and camera close/locked. Rapid cuts or large camera moves break the

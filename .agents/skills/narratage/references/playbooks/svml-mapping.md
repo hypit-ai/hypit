@@ -7,6 +7,7 @@ not aliases for the old canvas/JSON workflow.
 |---|---|
 | Story and dialogue | `Script`, `Segment`, `Role Cue`, `Selection`, `Moment` |
 | Prompt or reusable copy | `text:Value` and `text:Render` (backed by Text Templates) |
+| Reusable Seedance prompt contract | vendored `speaker-v1`, `broll-v1`, `podcast-v1`, `call-v1`, `street-interview-v1`, `motion-reference-v1`, or `camera-reference-v1` Kit + SVS Recipe |
 | Generated image | `gpt:Image`, `nano:Image`/`nano:ProImage`, or `seedream:TextImage`/`ReferenceImage` |
 | Text-to-video | `seedance:TextVideo` |
 | First-frame-to-video | `seedance:FrameVideo` |
