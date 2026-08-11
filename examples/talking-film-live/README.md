@@ -23,32 +23,32 @@ Prerequisites for the exact checked-in Runtime Profile:
 
 Prepare and health-check WhisperX as described in
 [`../../services/whisperx/README.md`](../../services/whisperx/README.md). `narratage check` validates
-source, Run Graph and exact Runtime capability coverage before scheduling, but it does not make a
-paid Provider request or promise that remote credentials and service health are valid.
+the source and Run Graph without making a paid Provider request. `narratage build` assembles the
+selected Runtime and rejects missing capability coverage before scheduling external work; neither
+command promises that remote credentials and service health are valid.
 
 Run the complete graph through the explicit Run Graph and declarative local Runtime Profile:
 
 The checked-in `svml.packages.lock` selects each author, Run and deterministic compute package
-independently; there is no implicit video bundle. Regenerate it after changing one of those package
-implementations with the package list documented in the lock file.
+independently; there is no implicit video bundle. After changing a selected package implementation,
+refresh its already explicit selection with
+`node --run narratage -- lock-packages examples/talking-film-live/svml.packages.lock --refresh`.
 The independent `svml.runtime-packages.lock` selects Local execution, SQLite state, filesystem
 Artifacts, environment credentials, KIE, local media, local WhisperX, Vertex and local HyperFrames
 adapters; adding another implementation does not change the CLI.
 
 ```bash
-pnpm narratage runtime up examples/talking-film-live/svml.runtime.json
+node --run narratage -- runtime up examples/talking-film-live/svml.runtime.json
 
-pnpm narratage build examples/talking-film-live/build.svrun \
+node --run narratage -- build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
-  --package-lock examples/talking-film-live/svml.packages.lock \
-  --root . \
   --build-id talking-film-live \
   --follow
 
-pnpm narratage inspect talking-film-live \
+node --run narratage -- inspect talking-film-live \
   --runtime examples/talking-film-live/svml.runtime.json
 
-pnpm narratage get talking-film-live \
+node --run narratage -- get talking-film-live \
   --runtime examples/talking-film-live/svml.runtime.json \
   --name final.video \
   --to examples/talking-film-live/output/final.mp4

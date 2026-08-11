@@ -109,6 +109,12 @@ execution topology. They do not change a Need or require another author componen
 The AWS HyperFrames Endpoint currently declines documents containing typed Surfaces until that
 remote route owns equivalent byte verification; it cannot silently provide weaker conformance.
 
+The shared executor stages normal media from an Artifact stream while verifying byte count and
+digest, and streams encoded outputs back through `putStream`. Animated WebP inspection and decoded
+surface verification still require bounded in-memory image data; that is an explicit random-access
+image boundary, not the default path for video. KIE reference uploads and generated downloads are
+streamed and content-checked as well.
+
 The three author-facing utility operations stay generic and graph-visible:
 
 - `Transform`: ordered trim and pitch-preserving retime over selected synchronized A/V;

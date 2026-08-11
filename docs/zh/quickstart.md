@@ -24,6 +24,10 @@ pnpm check
 pnpm test
 ```
 
+在源码仓库内可使用 `node --run narratage -- ...`。仓库外的视频项目直接执行
+`/path/to/svml/narratage ... --package-root /path/to/svml`；这个轻量入口不再启动 pnpm，源码、
+SQLite、Artifact 和输出仍全部留在外部项目的 Runtime Profile root 下。
+
 ## 三份输入
 
 每一次 Build 都接受三份彼此独立的输入：
@@ -42,10 +46,10 @@ Author Source 说明*做什么*。Run Source 说明*要哪些*。Runtime Profile
 WhisperX、Gemini Caption、B-roll、Text、Film、HyperFrames —— 全程不调用任何外部服务。
 
 ```bash
-pnpm narratage check examples/talking-film-graph-check/main.svml \
+node --run narratage -- check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
-pnpm narratage plan examples/talking-film-graph-check/build.svrun \
+node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
 

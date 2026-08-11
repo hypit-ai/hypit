@@ -95,7 +95,7 @@ Details and current gaps are maintained in
 Requirements:
 
 - Node.js 22+
-- pnpm
+- pnpm for installing and testing this source workspace
 - Python 3.10–3.13 only when running the local WhisperX service
 
 ```bash
@@ -104,27 +104,38 @@ pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 
+# `node --run` avoids launching pnpm for every CLI command.
 # Compile a complete provider-free author graph.
-pnpm narratage check examples/talking-film-graph-check/main.svml \
+node --run narratage -- check examples/talking-film-graph-check/main.svml \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 
 # Compile the self-described Run Graph and inspect its finite plan.
-pnpm narratage plan examples/talking-film-graph-check/build.svrun \
+node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
   --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
 ```
+
+`node --run narratage -- ...` is the short form inside this checkout. To keep a real video project
+in a completely separate directory, invoke the checkout's lightweight launcher from that project:
+
+```bash
+cd /path/to/my-video
+/path/to/svml/narratage check main.svml \
+  --package-lock svml.packages.lock --package-root /path/to/svml --root .
+```
+
+The launcher does not run pnpm and does not move source, state or outputs into this repository.
 
 The live example uses an explicit Run Graph, declarative local Runtime Profile and external
 credentials:
 
 ```bash
-pnpm narratage build examples/talking-film-live/build.svrun \
+node --run narratage -- build examples/talking-film-live/build.svrun \
   --runtime examples/talking-film-live/svml.runtime.json \
-  --package-lock examples/talking-film-live/svml.packages.lock \
   --root . \
   --build-id talking-film-live \
   --follow
 
-pnpm narratage get talking-film-live \
+node --run narratage -- get talking-film-live \
   --name final.video \
   --runtime examples/talking-film-live/svml.runtime.json \
   --to examples/talking-film-live/output/final.mp4
