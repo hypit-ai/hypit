@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
@@ -25,7 +26,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   readonly entry: AuthorSourceUnit;
   readonly #sourceCache = new Map<string, AuthorSourceUnit>();
   readonly #sourceEdges = new Map<string, AuthorSourceUnit>();
-  readonly #assetBytes = new Map<string, Uint8Array>();
+  readonly #assetIdentity = new Map<string, { readonly digest: BlobRef["digest"]; readonly size: number }>();
   readonly #assetEdges = new Map<string, string>();
   readonly #attachments = new Map<string, ArtifactAttachment>();
 
@@ -122,20 +123,29 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
       }
       this.#assetEdges.set(edge, canonical);
     }
-    let bytes = this.#assetBytes.get(canonical);
-    if (bytes === undefined) {
-      bytes = Uint8Array.from(await readFile(canonical));
-      this.#assetBytes.set(canonical, bytes);
+    let identity = this.#assetIdentity.get(canonical);
+    if (identity === undefined) {
+      const hash = createHash("sha256");
+      let size = 0;
+      for await (const chunk of createReadStream(canonical)) {
+        hash.update(chunk);
+        size += chunk.byteLength;
+      }
+      identity = { digest: `sha256:${hash.digest("hex")}`, size };
+      this.#assetIdentity.set(canonical, identity);
     }
     const artifact: BlobRef = {
       kind: "blob",
-      digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
-      size: bytes.byteLength,
+      digest: identity.digest,
+      size: identity.size,
       mediaType: request.mediaType,
     };
     const attachmentKey = `${artifact.digest}\u0000${artifact.mediaType}`;
     if (!this.#attachments.has(attachmentKey)) {
-      this.#attachments.set(attachmentKey, { artifact: { ...artifact }, bytes: Uint8Array.from(bytes) });
+      this.#attachments.set(attachmentKey, {
+        artifact: { ...artifact },
+        open: () => createReadStream(canonical),
+      });
     }
     return { artifact: { ...artifact } };
   };
@@ -146,7 +156,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         const byDigest = left.artifact.digest.localeCompare(right.artifact.digest);
         return byDigest === 0 ? left.artifact.mediaType.localeCompare(right.artifact.mediaType) : byDigest;
       })
-      .map((item) => ({ artifact: { ...item.artifact }, bytes: Uint8Array.from(item.bytes) }));
+      .map((item) => ({ artifact: { ...item.artifact }, open: item.open }));
   }
 }
 

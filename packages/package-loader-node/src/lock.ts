@@ -1,13 +1,16 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
+  open,
   readdir,
   readFile,
   realpath,
+  rename,
+  rm,
   stat,
-  writeFile,
 } from "node:fs/promises";
 import { createRequire } from "node:module";
 import {
+  basename,
   dirname,
   isAbsolute,
   join,
@@ -25,6 +28,7 @@ import type {
   LockedPackageArtifact,
   LoadedNodePackageSet,
   NodePackageContribution,
+  NodePackageLockCreateOptions,
   NodePackageLock,
 } from "./types.js";
 
@@ -43,6 +47,12 @@ type PackageJson = {
 type ResolvedPhysicalPackage = {
   readonly root: string;
   readonly json: PackageJson;
+};
+
+type ReachablePhysicalPackage = {
+  readonly physical: ResolvedPhysicalPackage;
+  /** Direct selection roots that can reach this physical package. Ephemeral; never serialized. */
+  readonly roots: ReadonlySet<string>;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -150,27 +160,41 @@ async function packageClosure(entries: readonly string[], root: string): Promise
 async function packageClosureFromPhysical(
   entries: readonly ResolvedPhysicalPackage[],
 ): Promise<readonly ResolvedPhysicalPackage[]> {
-  const resolved = new Map<string, ResolvedPhysicalPackage>();
-  const visit = async (item: ResolvedPhysicalPackage): Promise<void> => {
+  return (await packageClosureFromRoots(entries.map((physical, index) => ({
+    root: `anonymous:${index}`,
+    physical,
+  })))).map((item) => item.physical);
+}
+
+async function packageClosureFromRoots(
+  entries: readonly { readonly root: string; readonly physical: ResolvedPhysicalPackage }[],
+): Promise<readonly ReachablePhysicalPackage[]> {
+  const resolved = new Map<string, {
+    readonly physical: ResolvedPhysicalPackage;
+    readonly roots: Set<string>;
+  }>();
+  const visit = async (item: ResolvedPhysicalPackage, sourceRoot: string): Promise<void> => {
     const key = `${item.json.name}@${item.json.version}`;
     const existing = resolved.get(key);
     if (existing !== undefined) {
-      assert(await realpath(existing.root) === await realpath(item.root), `${key} resolves to two physical packages`);
-      return;
+      assert(await realpath(existing.physical.root) === await realpath(item.root), `${key} resolves to two physical packages`);
+      if (existing.roots.has(sourceRoot)) return;
+      existing.roots.add(sourceRoot);
+    } else {
+      resolved.set(key, { physical: item, roots: new Set([sourceRoot]) });
     }
-    resolved.set(key, item);
     for (const dependency of dependencyNames(item.json)) {
       try {
-        await visit(await resolvePhysicalPackage(dependency, item.root));
+        await visit(await resolvePhysicalPackage(dependency, item.root), sourceRoot);
       } catch (error) {
         if (optionalDependency(item.json, dependency)) continue;
         throw error;
       }
     }
   };
-  for (const entry of entries) await visit(entry);
+  for (const entry of entries) await visit(entry.physical, entry.root);
   return [...resolved.values()].sort((left, right) =>
-    `${left.json.name}@${left.json.version}`.localeCompare(`${right.json.name}@${right.json.version}`),
+    artifactKey(left.physical.json).localeCompare(artifactKey(right.physical.json)),
   );
 }
 
@@ -328,12 +352,41 @@ function parseLock(value: unknown): NodePackageLock {
   return lock;
 }
 
+/** Parse and authenticate a lock without resolving or executing its packages. */
+export async function readNodePackageLock(path: string): Promise<NodePackageLock> {
+  return parseLock(JSON.parse(await readFile(path, "utf8")));
+}
+
 async function resolvedArtifacts(closure: readonly ResolvedPhysicalPackage[]): Promise<readonly LockedPackageArtifact[]> {
   return await Promise.all(closure.map(async (item) => ({
     name: item.json.name,
     version: item.json.version,
     digest: await artifactDigest(item.root),
   })));
+}
+
+function artifactKey(item: { readonly name: string; readonly version: string }): string {
+  return `${item.name}@${item.version}`;
+}
+
+/**
+ * Select one package closure from a set whose physical bytes were already hashed.
+ *
+ * A lock load used to call `resolvedArtifacts()` for the complete closure and then
+ * call it again for every activated package's dependency closure. Shared packages
+ * were therefore read and hashed many times in one command. The complete physical
+ * closure has already rejected two locations for the same name/version, so its
+ * artifact digest is safe to reuse here without weakening byte verification.
+ */
+function artifactsForClosure(
+  closure: readonly ResolvedPhysicalPackage[],
+  verified: ReadonlyMap<string, LockedPackageArtifact>,
+): readonly LockedPackageArtifact[] {
+  return closure.map((item) => {
+    const artifact = verified.get(artifactKey(item.json));
+    assert(artifact !== undefined, `verified Artifact for ${artifactKey(item.json)} is missing`);
+    return artifact;
+  });
 }
 
 function sameArtifacts(left: readonly LockedPackageArtifact[], right: readonly LockedPackageArtifact[]): boolean {
@@ -345,12 +398,41 @@ function sameArtifacts(left: readonly LockedPackageArtifact[], right: readonly L
 export async function createNodePackageLock(
   specifiers: readonly string[],
   root: string,
+  options: NodePackageLockCreateOptions = {},
 ): Promise<NodePackageLock> {
   const unique = [...new Set(specifiers)].sort();
-  assert(unique.length > 0, "at least one Node package is required");
-  const selectedPhysical = await Promise.all(unique.map(async (specifier) =>
-    await resolvePhysicalPackage(specifier, root)));
-  const closure = await packageClosureFromPhysical(selectedPhysical);
+  const selectedPhysical = await Promise.all(unique.map(async (specifier) => ({
+    root: specifier,
+    physical: await resolvePhysicalPackage(specifier, root),
+  })));
+  const reachable = await packageClosureFromRoots(selectedPhysical);
+  const closure = reachable.map((item) => item.physical);
+
+  // Hash this candidate physical closure once, before any activation code executes. A selection
+  // mutation may admit new roots, but every package still reachable from a retained root must be
+  // byte-identical to the old authenticated lock.
+  const artifacts = await resolvedArtifacts(closure);
+  const artifactsByPackage = new Map(artifacts.map((item) => [artifactKey(item), item]));
+  if (options.retain !== undefined) {
+    const oldSelected = new Set(options.retain.from.selected);
+    const newSelected = new Set(unique);
+    const retained = new Set(options.retain.selected);
+    for (const specifier of retained) {
+      assert(oldSelected.has(specifier), `${specifier} is not a selected root in the existing package lock`);
+      assert(newSelected.has(specifier), `${specifier} is not retained by the new package selection`);
+    }
+    const locked = new Map(options.retain.from.artifacts.map((artifact) => [artifactKey(artifact), artifact.digest]));
+    for (const item of reachable) {
+      if (![...item.roots].some((specifier) => retained.has(specifier))) continue;
+      const artifact = artifactsByPackage.get(artifactKey(item.physical.json))!;
+      const expected = locked.get(artifactKey(item.physical.json));
+      assert(expected !== undefined,
+        `retained package closure introduced ${artifactKey(item.physical.json)}; use --refresh or an exact --package selection`);
+      assert(expected === artifact.digest,
+        `retained package bytes changed for ${artifactKey(item.physical.json)}; use --refresh or an exact --package selection`);
+    }
+  }
+
   const candidates = new Map<string, {
     readonly physical: ResolvedPhysicalPackage;
     readonly contribution: NodePackageContribution;
@@ -363,7 +445,7 @@ export async function createNodePackageLock(
     });
   }
 
-  const selectedKeys = new Set(selectedPhysical.map((item) => `${item.json.name}@${item.json.version}`));
+  const selectedKeys = new Set(selectedPhysical.map((item) => artifactKey(item.physical.json)));
   const activated = new Map<string, {
     readonly physical: ResolvedPhysicalPackage;
     readonly contribution: NodePackageContribution;
@@ -431,7 +513,10 @@ export async function createNodePackageLock(
 
   const packages: LockedNodePackage[] = [];
   for (const { physical, contribution } of activated.values()) {
-    const ownArtifacts = await resolvedArtifacts(await packageClosureFromPhysical([physical]));
+    const ownArtifacts = artifactsForClosure(
+      await packageClosureFromPhysical([physical]),
+      artifactsByPackage,
+    );
     packages.push({
       specifier: physical.json.name,
       package: { name: physical.json.name, version: physical.json.version },
@@ -442,13 +527,27 @@ export async function createNodePackageLock(
   return sealLock({
     format: "svml.node-package-lock@1",
     selected: unique,
-    artifacts: await resolvedArtifacts(closure),
+    artifacts,
     packages,
   });
 }
 
 export async function writeNodePackageLock(path: string, lock: NodePackageLock): Promise<void> {
-  await writeFile(path, `${JSON.stringify(lock, null, 2)}\n`, { encoding: "utf8", flag: "w" });
+  const target = resolve(path);
+  const temporary = join(dirname(target), `.${basename(target)}.${process.pid}.${randomUUID()}.tmp`);
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(temporary, "wx");
+    await handle.writeFile(`${JSON.stringify(lock, null, 2)}\n`, { encoding: "utf8" });
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await rename(temporary, target);
+  } catch (error) {
+    await handle?.close().catch(() => undefined);
+    await rm(temporary, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 /** Verify every selected physical artifact before executing any package activation code. */
@@ -456,10 +555,11 @@ export async function loadNodePackageSet(
   path: string,
   root = dirname(resolve(path)),
 ): Promise<LoadedNodePackageSet> {
-  const lock = parseLock(JSON.parse(await readFile(path, "utf8")));
+  const lock = await readNodePackageLock(path);
   const closure = await packageClosure(lock.selected, root);
   const artifacts = await resolvedArtifacts(closure);
   assert(sameArtifacts(artifacts, lock.artifacts), "installed Node package bytes do not match the lock");
+  const artifactsByPackage = new Map(artifacts.map((item) => [artifactKey(item), item]));
   const byName = new Map(closure.map((item) => [`${item.json.name}@${item.json.version}`, item]));
   const values: NodePackageContribution[] = [];
   for (const expected of lock.packages) {
@@ -469,7 +569,10 @@ export async function loadNodePackageSet(
     const contribution = await importContribution(physical);
     assert(digestOf(contributionMetadata(contribution)) === expected.facetsDigest,
       `${expected.specifier} facets do not match the lock`);
-    const ownArtifacts = await resolvedArtifacts(await packageClosureFromPhysical([physical]));
+    const ownArtifacts = artifactsForClosure(
+      await packageClosureFromPhysical([physical]),
+      artifactsByPackage,
+    );
     assert(digestOf({ format: "svml.package-closure@1", artifacts: ownArtifacts }) === expected.closureDigest,
       `${expected.specifier} dependency closure does not match the lock`);
     values.push(contribution);

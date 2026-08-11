@@ -163,6 +163,7 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
         readonly format?: string;
         readonly checkpoint?: unknown;
         readonly wakeAt?: number;
+        readonly progress?: OperationSnapshot["progress"];
       }
     : undefined;
   const mutable = row.status === "pending"
@@ -170,6 +171,7 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
       ? {
           checkpoint: pending.checkpoint,
           ...(pending.wakeAt === undefined ? {} : { wakeAt: pending.wakeAt }),
+          ...(pending.progress === undefined ? {} : { progress: pending.progress }),
         }
       : { checkpoint: pending }
     : row.status === "completed"
@@ -357,17 +359,26 @@ class SqliteOperationStore implements OperationStore {
   }
 
   async list(query: OperationQuery): Promise<readonly OperationSnapshot[]> {
+    const predicates: string[] = [];
+    const values: string[] = [];
+    for (const [field, value] of [
+      ["build", query.build],
+      ["command", query.command],
+      ["endpoint", query.endpoint],
+      ["runtimeClosure", query.runtimeClosure],
+      ["requestDigest", query.requestDigest],
+    ] as const) {
+      if (value === undefined) continue;
+      predicates.push(`json_extract(identity_json, '$.${field}') = ?`);
+      values.push(value);
+    }
     const rows = this.#database.prepare(`
       SELECT identity_json, revision, status, checkpoint_json, completion_json, failure_json, cancellation_json
       FROM svml_operations
+      ${predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`}
       ORDER BY operation_id ASC
-    `).all() as Row[];
+    `).all(...values) as Row[];
     return rows.map(parseOperationSnapshot)
-      .filter((snapshot) => query.build === undefined || snapshot.build === query.build)
-      .filter((snapshot) => query.command === undefined || snapshot.command === query.command)
-      .filter((snapshot) => query.endpoint === undefined || snapshot.endpoint === query.endpoint)
-      .filter((snapshot) => query.runtimeClosure === undefined || snapshot.runtimeClosure === query.runtimeClosure)
-      .filter((snapshot) => query.requestDigest === undefined || snapshot.requestDigest === query.requestDigest)
       .sort((left, right) => left.attempt - right.attempt || left.id.localeCompare(right.id));
   }
 
@@ -403,6 +414,7 @@ class SqliteOperationStore implements OperationStore {
       format: "svml.operation-pending@1",
       checkpoint: update.checkpoint,
       ...(update.wakeAt === undefined ? {} : { wakeAt: update.wakeAt }),
+      ...(update.progress === undefined ? {} : { progress: update.progress }),
     }) : null;
     const completion = update.status === "completed"
       ? canonicalStringify(sealOperationCompletion(update.completion))
@@ -514,13 +526,23 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
   }
 
   async list(query: DispatchQuery = {}): Promise<readonly BuildDispatchSnapshot[]> {
+    const predicates: string[] = [];
+    const values: string[] = [];
+    if (query.phases !== undefined) {
+      if (query.phases.length === 0) return [];
+      predicates.push(`phase IN (${query.phases.map(() => "?").join(", ")})`);
+      values.push(...query.phases);
+    }
+    if (query.admission !== undefined) {
+      predicates.push("admission = ?");
+      values.push(query.admission);
+    }
     const rows = this.#database.prepare(`
       SELECT * FROM svml_dispatches
+      ${predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`}
       ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
-    `).all() as Row[];
-    return rows.map(parseDispatchSnapshot)
-      .filter((item) => query.phases === undefined || query.phases.includes(item.phase))
-      .filter((item) => query.admission === undefined || item.admission === query.admission);
+    `).all(...values) as Row[];
+    return rows.map(parseDispatchSnapshot);
   }
 
   async claim(request: BuildDispatchClaim): Promise<BuildDispatchSnapshot | undefined> {
@@ -875,6 +897,24 @@ export class SqliteRuntimeState {
     this.#database.exec(`PRAGMA busy_timeout = ${positiveInteger(options.busyTimeoutMs ?? 5_000, "busyTimeoutMs")}`);
     this.#database.exec("PRAGMA journal_mode = WAL");
     this.#database.exec("PRAGMA synchronous = FULL");
+    const alreadyInitialized = this.#database.prepare(`
+      SELECT 1 AS present FROM sqlite_master
+      WHERE type = 'table' AND name = 'svml_store_meta'
+    `).get() as Row | undefined;
+    if (alreadyInitialized !== undefined) {
+      const version = this.#database.prepare(
+        "SELECT schema_version FROM svml_store_meta WHERE singleton = 1",
+      ).get() as Row | undefined;
+      if (version === undefined || version.schema_version !== databaseSchemaVersion) {
+        const found = version === undefined ? "an incomplete schema" : `schema ${String(version.schema_version)}`;
+        this.#database.close();
+        throw new Error(
+          `@narratage/store-sqlite found ${found} at ${absolute}; expected schema ${databaseSchemaVersion}. `
+          + "Pre-release Runtime state is not migrated automatically. Archive that database (including its -wal and -shm files) "
+          + "or select a new SQLite path in the Runtime Profile; Artifact files are separate and are not deleted.",
+        );
+      }
+    }
     this.#database.exec(`
       CREATE TABLE IF NOT EXISTS svml_store_meta (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
@@ -952,12 +992,8 @@ export class SqliteRuntimeState {
       CREATE INDEX IF NOT EXISTS svml_runtime_journal_build ON svml_runtime_journal (build_id, sequence);
       CREATE INDEX IF NOT EXISTS svml_runtime_journal_operation ON svml_runtime_journal (operation_id, sequence);
     `);
-    const version = this.#database.prepare("SELECT schema_version FROM svml_store_meta WHERE singleton = 1").get() as Row | undefined;
-    if (version === undefined) {
+    if (alreadyInitialized === undefined) {
       this.#database.prepare("INSERT INTO svml_store_meta (singleton, schema_version) VALUES (1, ?)").run(databaseSchemaVersion);
-    } else {
-      assert(version.schema_version === databaseSchemaVersion,
-        `unsupported @narratage/store-sqlite schema ${String(version.schema_version)}`);
     }
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);

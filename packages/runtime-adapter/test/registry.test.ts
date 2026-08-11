@@ -14,10 +14,22 @@ import {
   runtimeConfigString,
   RuntimeAdapterRegistry,
 } from "@narratage/runtime-adapter";
+import type { RuntimeAdapterFactoryContext } from "@narratage/runtime-adapter";
 
 const context = { root: "/tmp", instance: "one", config: {} };
+const endpointPackage = (instance: string, credentials: readonly unknown[] = []) => ({
+  name: instance,
+  manifest: { facets: [] },
+  instance: { id: instance },
+  bindings: [],
+  credentials,
+  install() {},
+}) as never;
 const endpoint = (use: string, extra: Record<string, unknown> = {}) =>
-  createRuntimeEndpointAdapterFacet({ use, validate() {}, create: () => ({ use }) as never, ...extra } as never);
+  createRuntimeEndpointAdapterFacet({
+    use,
+    activate: (value: RuntimeAdapterFactoryContext) => ({ endpoint: endpointPackage(value.instance), ...extra }),
+  } as never);
 
 test("a facet declares which kind it is, and the registry keeps the two apart", () => {
   const registry = new RuntimeAdapterRegistry();
@@ -42,76 +54,94 @@ test("asking an Endpoint adapter for a Runtime Service is refused, not coerced",
   await assert.rejects(async () => await registry.createEndpoint("example.absent", context));
 });
 
+test("a Runtime Service adapter cannot escape its configured instance namespace", async () => {
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeServiceAdapterFacet({
+    use: "example.escaping-service",
+    validate() {},
+    create: () => ({ services: [{ instance: { id: "someone-else" } }] }) as never,
+  }));
+  await assert.rejects(
+    async () => await registry.createService("example.escaping-service", context),
+    /outside configured namespace one/u,
+  );
+});
+
 test("one name is one adapter, so a second registration is an error rather than a winner", () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.endpoint"));
   assert.throws(() => registry.registerFacet(endpoint("example.endpoint")), /already registered/u);
 });
 
-test("a facet without create() is not a facet", () => {
+test("an Endpoint facet without activate() is not a facet", () => {
   assert.throws(
     () => createRuntimeEndpointAdapterFacet({ use: "x" } as never),
-    /does not implement create\(\)/u,
+    /does not implement activate\(\)/u,
   );
   assert.throws(
-    () => createRuntimeEndpointAdapterFacet({ use: "x", validate() {}, create: () => ({}), doctor: 1 } as never),
-    /doctor must be a function/u,
+    () => createRuntimeEndpointAdapterFacet({ use: "x", activate: 1 } as never),
+    /does not implement activate\(\)/u,
   );
   assert.throws(
-    () => createRuntimeEndpointAdapterFacet({ use: "x", create: () => ({}) } as never),
-    /does not implement validate\(\)/u,
-  );
-  assert.throws(
-    () => createRuntimeEndpointAdapterFacet({ use: "  ", validate() {}, create: () => ({}) } as never),
+    () => createRuntimeEndpointAdapterFacet({ use: "  ", activate: () => ({}) } as never),
     /use name is empty/u,
   );
 });
 
-test("validation is a separate gate and never constructs the selected adapter", async () => {
-  let created = 0;
+test("one activation validates and declares the selected Endpoint", async () => {
+  let activated = 0;
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(createRuntimeEndpointAdapterFacet({
     use: "example.validated",
-    validate(value) {
+    activate(value) {
+      activated += 1;
       if (value.config !== null && typeof value.config === "object" && "bad" in value.config) {
         throw new Error("bad config");
       }
-    },
-    create: () => {
-      created += 1;
-      return {} as never;
+      return { endpoint: endpointPackage(value.instance) };
     },
   }));
 
-  assert.deepEqual(registry.validate("example.validated", "endpoint", context), []);
-  assert.equal(created, 0);
-  assert.throws(
-    () => registry.validate("example.validated", "endpoint", { ...context, config: { bad: true } }),
+  await assert.rejects(
+    async () => await registry.activateEndpoint("example.validated", { ...context, config: { bad: true } }),
     /bad config/u,
   );
-  assert.equal(created, 0);
-  await registry.createEndpoint("example.validated", context);
-  assert.equal(created, 1);
+  const activation = await registry.activateEndpoint("example.validated", context);
+  assert.equal(activation.endpoint.instance.id, "one");
+  assert.equal(activated, 2);
 });
 
-test("an external service is present only when the adapter declares one", () => {
+test("credentials have one source: the activated Endpoint package", async () => {
+  const registry = new RuntimeAdapterRegistry();
+  registry.registerFacet(createRuntimeEndpointAdapterFacet({
+    use: "example.credentials",
+    activate(value) {
+      return { endpoint: endpointPackage(value.instance, [{ slot: "token" }]) };
+    },
+  }));
+  assert.deepEqual((await registry.activateEndpoint("example.credentials", context)).endpoint.credentials, [{ slot: "token" }]);
+});
+
+test("an external service is present only when the activation declares one", async () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.bare"));
   registry.registerFacet(endpoint("example.declaring", {
-    service: () => ({ id: "thing", probe: async () => ({ state: "ready" as const }) }),
+    externalService: { id: "thing", probe: async () => ({ state: "ready" as const }) },
   }));
-  assert.equal(registry.service("example.bare", context), undefined);
-  assert.equal(registry.service("example.declaring", context)?.id, "thing");
+  assert.equal((await registry.activateEndpoint("example.bare", context)).externalService, undefined);
+  assert.equal((await registry.activateEndpoint("example.declaring", context)).externalService?.id, "thing");
 });
 
-test("an adapter with no doctor reports nothing rather than failing", async () => {
+test("an activation may add diagnostics without another configuration declaration", async () => {
   const registry = new RuntimeAdapterRegistry();
   registry.registerFacet(endpoint("example.bare"));
   registry.registerFacet(endpoint("example.diagnosing", {
-    doctor: () => [{ severity: "warning" as const, code: "X", message: "m" }],
+    diagnose: () => [{ severity: "warning" as const, code: "X", message: "m" }],
   }));
-  assert.deepEqual(await registry.doctor("example.bare", "endpoint", context), []);
-  assert.equal((await registry.doctor("example.diagnosing", "endpoint", context)).length, 1);
+  const bare = await registry.activateEndpoint("example.bare", context);
+  const diagnosing = await registry.activateEndpoint("example.diagnosing", context);
+  assert.equal(bare.diagnose, undefined);
+  assert.equal((await diagnosing.diagnose!()).length, 1);
 });
 
 test("a produced facet is recognisable as a Runtime Adapter host facet", () => {

@@ -50,6 +50,7 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
       status: "pending",
       checkpoint: { remoteJob: "job-1" },
       wakeAt: 12_345,
+      progress: { phase: "generating" },
     });
     assert.equal(pending.status, "stored");
     first.close();
@@ -62,6 +63,7 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
     assert.equal(restoredOperation?.status, "pending");
     assert.deepEqual(restoredOperation?.checkpoint, { remoteJob: "job-1" });
     assert.equal(restoredOperation?.wakeAt, 12_345);
+    assert.deepEqual(restoredOperation?.progress, { phase: "generating" });
     assert.deepEqual((await second.operations.list({ build: "video" })).map((item) => item.id), [operation.id]);
 
     const updated = await second.builds.compareAndSwap("video", 0, initial);

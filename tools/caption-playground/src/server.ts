@@ -343,7 +343,8 @@ export function captionPlaygroundPlugin(options: CaptionPlaygroundOptions): Plug
             if (attachment === undefined) { response.statusCode = 404; response.end(); return; }
             response.setHeader("content-type", attachment.artifact.mediaType);
             response.setHeader("cache-control", "no-store");
-            response.end(Buffer.from(attachment.bytes));
+            for await (const chunk of await attachment.open()) response.write(chunk);
+            response.end();
             return;
           }
           const familyId = /^\/__caption\/font-css\/([a-z0-9-]+)$/u.exec(url.pathname)?.[1];

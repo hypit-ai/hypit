@@ -1,7 +1,9 @@
 import type { NodeCompiler } from "@narratage/compiler-node";
-import type { LocalRuntime } from "@narratage/local";
-import type { ExternalServiceReport, RuntimeConfigDoctorResult } from "@narratage/local";
+import type { LocalCredentialControl, LocalRuntime, LocalRuntimeControl } from "@narratage/local";
+import type { ExternalServiceProgress, ExternalServiceReport, RuntimeConfigDoctorResult } from "@narratage/local";
 import type { NodePackageContribution } from "@narratage/package-loader-node";
+import type { LoadedNodePackageSet } from "@narratage/package-loader-node";
+import type { CapabilityRef } from "@narratage/protocol";
 import type { RunFrontend } from "@narratage/run";
 
 export type CliCompilerOptions = {
@@ -24,13 +26,33 @@ export type CliDistribution = {
   /** Explicitly trusted Run Frontends; source Headers select among them without suffix defaults. */
   readonly runFrontends: readonly RunFrontend[];
   createCompiler(options: CliCompilerOptions): NodeCompiler;
-  createRuntimeFromConfig(path: string): Promise<LocalRuntime>;
+  /**
+   * Resolve the deterministic implementation lock named by a declarative
+   * Runtime Profile without constructing that Runtime. Trusted executable
+   * Runtime modules may decline and require an explicit CLI package lock.
+   */
+  resolveCompilationPackages?(path: string): Promise<{
+    readonly packageLock?: string;
+    readonly packageRoot?: string;
+  }>;
+  createRuntimeFromConfig(path: string, options?: {
+    /** Same-process package set already verified for compilation. */
+    readonly implementationPackages?: LoadedNodePackageSet;
+  }): Promise<LocalRuntime>;
+  /** Open only durable Stores for observation, cancellation, egress and maintenance. */
+  createRuntimeControlFromConfig(path: string): Promise<LocalRuntimeControl>;
+  /** Open only the selected Endpoint declaration and configured CredentialStores. */
+  createRuntimeCredentialsFromConfig(path: string, endpoint: string): Promise<LocalCredentialControl>;
   /** Re-enter this exact Distribution as the hidden durable Worker process. */
   runtimeWorkerLaunch(): { readonly command: string; readonly args: readonly string[] };
   doctorRuntimeConfig(path: string): Promise<RuntimeConfigDoctorResult>;
   /** The external programs a Runtime Profile implies: probe, prepare and start them. */
   readonly externalServices: {
-    up(path: string, options: { maxWaitMs?: number }): Promise<ExternalServiceResult>;
+    up(path: string, options: {
+      readonly maxWaitMs?: number;
+      readonly onProgress?: (event: ExternalServiceProgress) => void;
+      readonly capabilities?: readonly CapabilityRef[];
+    }): Promise<ExternalServiceResult>;
     down(path: string): Promise<ExternalServiceResult>;
     report(path: string): Promise<ExternalServiceResult>;
   };

@@ -100,11 +100,8 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
 
 const awsLambdaHyperframesRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-hyperframes-aws-lambda",
-  validate(context) {
-    providerOptions(context);
-  },
-  create(context) {
-    return createAwsLambdaHyperframesProvider(providerOptions(context));
+  activate(context) {
+    return { endpoint: createAwsLambdaHyperframesProvider(providerOptions(context)) };
   },
 });
 

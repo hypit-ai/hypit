@@ -69,8 +69,16 @@ or too-late requests continue reconciling the same Operation and never select an
 
 `LocalBuildRequest.attachments` is explicit Host ingress into the selected ArtifactStore. The Store's
 returned digest, media type and size must equal the claimed `BlobRef` before Core execution. Artifact
-retention is explicit maintenance: `narratage gc` previews by default and `--apply` removes only bytes
+attachments are reopenable streams; a streaming Store receives them without a whole-file compiler or
+Runtime buffer. A non-streaming replacement Store remains valid but explicitly pays the buffering cost.
+Operation progress is a small generic `{ phase, completed?, total?, unit? }` fact owned by the
+Endpoint, independent from its opaque recovery checkpoint.
+Artifact retention is explicit maintenance: `narratage gc` previews by default and `--apply` removes only bytes
 unreachable from retained Build and Operation facts.
+
+Worker and managed-service lifecycle changes are serialized by profile-scoped filesystem locks. Two
+simultaneous `build` commands therefore reuse one detached Worker rather than launching orphan
+processes. CLI log reads are tail-bounded and oversized logs rotate on the next managed start.
 
 `BuildCatalog` is optional Host presentation metadata. SQLite may expose one beside its execution
 facets, but Local never creates a second hidden database or treats aliases and source paths as Build

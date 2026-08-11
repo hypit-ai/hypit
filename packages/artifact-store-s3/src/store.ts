@@ -163,8 +163,25 @@ export class S3ArtifactStore implements ArtifactStore {
         const status = statusCode(error);
         if (status === 409 && attempt < this.#maxConflictRetries) continue;
         if (status !== 412) throw error;
-        const existing = await this.get(digest);
-        if (existing === undefined) throw new Error(`S3 reported existing Artifact ${digest}, but it cannot be read`);
+        const existing = this.#client.head === undefined
+          ? await this.#client.get({
+            Bucket: this.#bucket,
+            Key: this.key(digest),
+            ...(this.#expectedBucketOwner === undefined
+              ? {}
+              : { ExpectedBucketOwner: this.#expectedBucketOwner }),
+          }).then((value) => value === undefined ? undefined : { size: value.byteLength })
+          : await this.#client.head({
+            Bucket: this.#bucket,
+            Key: this.key(digest),
+            ...(this.#expectedBucketOwner === undefined
+              ? {}
+              : { ExpectedBucketOwner: this.#expectedBucketOwner }),
+          });
+        if (existing === undefined) throw new Error(`S3 reported existing Artifact ${digest}, but it is absent`);
+        if (existing.size !== copy.byteLength) {
+          throw new Error(`S3 Artifact ${digest} size differs from the bytes being stored`);
+        }
         return { kind: "blob", digest, size: copy.byteLength, mediaType };
       }
     }
@@ -187,8 +204,20 @@ export class S3ArtifactStore implements ArtifactStore {
   }
 
   async has(digest: Digest): Promise<boolean> {
-    // Existence by key is insufficient: ArtifactStore promises content identity, so verify bytes.
-    return (await this.get(digest)) !== undefined;
+    if (this.#client.head === undefined) return (await this.#client.get({
+      Bucket: this.#bucket,
+      Key: this.key(digest),
+      ...(this.#expectedBucketOwner === undefined
+        ? {}
+        : { ExpectedBucketOwner: this.#expectedBucketOwner }),
+    })) !== undefined;
+    return (await this.#client.head({
+      Bucket: this.#bucket,
+      Key: this.key(digest),
+      ...(this.#expectedBucketOwner === undefined
+        ? {}
+        : { ExpectedBucketOwner: this.#expectedBucketOwner }),
+    })) !== undefined;
   }
 
   /**

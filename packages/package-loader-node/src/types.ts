@@ -50,6 +50,14 @@ export type NodePackageLock = {
   readonly packages: readonly LockedNodePackage[];
 };
 
+/** Guard used by a direct-selection edit: retained roots may not acquire different bytes. */
+export type NodePackageLockCreateOptions = {
+  readonly retain?: {
+    readonly from: NodePackageLock;
+    readonly selected: readonly string[];
+  };
+};
+
 export type LoadedNodePackageSet = {
   readonly lock: NodePackageLock;
   readonly contributions: readonly NodePackageContribution[];

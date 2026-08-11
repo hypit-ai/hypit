@@ -11,7 +11,7 @@ import { localWhisperXService } from "./service.js";
 
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-whisperx-local",
-  validate(context) {
+  activate(context) {
     const config = runtimeConfigObject(context.config, "local WhisperX");
     runtimeConfigExact(config, [
       "baseUrl", "expectedModel", "expectedDevice", "expectedCompute", "expectedBatchSize",
@@ -19,27 +19,27 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       "defaultConcurrency", "requestTimeoutMs", "maxResponseBytes",
       "serviceCommand", "servicePrepareCommand",
     ], "local WhisperX");
-    const baseUrlValue = runtimeConfigString(config.baseUrl, "WhisperX baseUrl");
-    if (baseUrlValue !== undefined) {
-      const baseUrl = new URL(baseUrlValue);
-      if (baseUrl.protocol !== "http:"
-        || !["127.0.0.1", "localhost", "::1", "[::1]"].includes(baseUrl.hostname)) {
+    const baseUrl = runtimeConfigString(config.baseUrl, "WhisperX baseUrl");
+    if (baseUrl !== undefined) {
+      const parsed = new URL(baseUrl);
+      if (parsed.protocol !== "http:"
+        || !["127.0.0.1", "localhost", "::1", "[::1]"].includes(parsed.hostname)) {
         throw new Error("local WhisperX Provider requires a loopback HTTP service");
       }
     }
-    runtimeConfigString(config.expectedModel, "WhisperX expectedModel");
-    runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice");
-    runtimeConfigString(config.expectedCompute, "WhisperX expectedCompute");
-    runtimeConfigPositiveInteger(config.expectedBatchSize, "WhisperX expectedBatchSize");
-    runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion");
-    runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion");
-    const punkt = runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest");
-    if (punkt !== undefined && !/^[0-9a-f]{64}$/u.test(punkt)) {
+    const expectedModel = runtimeConfigString(config.expectedModel, "WhisperX expectedModel");
+    const expectedDevice = runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice");
+    const expectedCompute = runtimeConfigString(config.expectedCompute, "WhisperX expectedCompute");
+    const expectedBatchSize = runtimeConfigPositiveInteger(config.expectedBatchSize, "WhisperX expectedBatchSize");
+    const expectedServiceVersion = runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion");
+    const expectedWhisperXVersion = runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion");
+    const expectedPunktTabDigest = runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest");
+    if (expectedPunktTabDigest !== undefined && !/^[0-9a-f]{64}$/u.test(expectedPunktTabDigest)) {
       throw new Error("WhisperX expectedPunktTabDigest is invalid");
     }
-    runtimeConfigPositiveInteger(config.defaultConcurrency, "WhisperX defaultConcurrency");
-    runtimeConfigPositiveInteger(config.requestTimeoutMs, "WhisperX requestTimeoutMs");
-    runtimeConfigPositiveInteger(config.maxResponseBytes, "WhisperX maxResponseBytes");
+    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "WhisperX defaultConcurrency");
+    const requestTimeoutMs = runtimeConfigPositiveInteger(config.requestTimeoutMs, "WhisperX requestTimeoutMs");
+    const maxResponseBytes = runtimeConfigPositiveInteger(config.maxResponseBytes, "WhisperX maxResponseBytes");
     for (const key of ["serviceCommand", "servicePrepareCommand"] as const) {
       const value = config[key];
       if (value !== undefined
@@ -48,43 +48,25 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         throw new Error(`WhisperX ${key} must be a non-empty array of non-empty strings`);
       }
     }
+    return {
+      endpoint: createLocalWhisperXProvider({
+        instance: context.instance,
+        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        ...(baseUrl === undefined ? {} : { baseUrl }),
+        ...(expectedModel === undefined ? {} : { expectedModel }),
+        ...(expectedDevice === undefined ? {} : { expectedDevice }),
+        ...(expectedCompute === undefined ? {} : { expectedCompute }),
+        ...(expectedBatchSize === undefined ? {} : { expectedBatchSize }),
+        ...(expectedServiceVersion === undefined ? {} : { expectedServiceVersion }),
+        ...(expectedWhisperXVersion === undefined ? {} : { expectedWhisperXVersion }),
+        ...(expectedPunktTabDigest === undefined ? {} : { expectedPunktTabDigest }),
+        ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
+        ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+        ...(maxResponseBytes === undefined ? {} : { maxResponseBytes }),
+      }),
+      externalService: localWhisperXService(context),
+    };
   },
-  create(context) {
-    const config = runtimeConfigObject(context.config, "local WhisperX");
-    runtimeConfigExact(config, [
-      "baseUrl", "expectedModel", "expectedDevice", "expectedCompute", "expectedBatchSize",
-      "expectedServiceVersion", "expectedWhisperXVersion", "expectedPunktTabDigest",
-      "defaultConcurrency", "requestTimeoutMs", "maxResponseBytes",
-      "serviceCommand", "servicePrepareCommand",
-    ], "local WhisperX");
-    return createLocalWhisperXProvider({
-      instance: context.instance,
-      ...(context.lane === undefined ? {} : { lane: context.lane }),
-      ...(runtimeConfigString(config.baseUrl, "WhisperX baseUrl") === undefined
-        ? {} : { baseUrl: config.baseUrl as string }),
-      ...(runtimeConfigString(config.expectedModel, "WhisperX expectedModel") === undefined
-        ? {} : { expectedModel: config.expectedModel as string }),
-      ...(runtimeConfigString(config.expectedDevice, "WhisperX expectedDevice") === undefined
-        ? {} : { expectedDevice: config.expectedDevice as string }),
-      ...(runtimeConfigString(config.expectedCompute, "WhisperX expectedCompute") === undefined
-        ? {} : { expectedCompute: config.expectedCompute as string }),
-      ...(runtimeConfigPositiveInteger(config.expectedBatchSize, "WhisperX expectedBatchSize") === undefined
-        ? {} : { expectedBatchSize: config.expectedBatchSize as number }),
-      ...(runtimeConfigString(config.expectedServiceVersion, "WhisperX expectedServiceVersion") === undefined
-        ? {} : { expectedServiceVersion: config.expectedServiceVersion as string }),
-      ...(runtimeConfigString(config.expectedWhisperXVersion, "WhisperX expectedWhisperXVersion") === undefined
-        ? {} : { expectedWhisperXVersion: config.expectedWhisperXVersion as string }),
-      ...(runtimeConfigString(config.expectedPunktTabDigest, "WhisperX expectedPunktTabDigest") === undefined
-        ? {} : { expectedPunktTabDigest: config.expectedPunktTabDigest as string }),
-      ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "WhisperX defaultConcurrency") === undefined
-        ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
-      ...(runtimeConfigPositiveInteger(config.requestTimeoutMs, "WhisperX requestTimeoutMs") === undefined
-        ? {} : { requestTimeoutMs: config.requestTimeoutMs as number }),
-      ...(runtimeConfigPositiveInteger(config.maxResponseBytes, "WhisperX maxResponseBytes") === undefined
-        ? {} : { maxResponseBytes: config.maxResponseBytes as number }),
-    });
-  },
-  service: localWhisperXService,
 });
 
 export const svmlPackage = {

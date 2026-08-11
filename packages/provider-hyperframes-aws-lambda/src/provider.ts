@@ -227,7 +227,15 @@ function alreadyStopped(error: unknown): boolean {
       .includes(String((error as { readonly name?: unknown }).name));
 }
 
-async function artifactBytes(context: EndpointStartContext, artifact: BlobRef): Promise<Uint8Array> {
+async function artifactBytes(
+  context: EndpointStartContext,
+  artifact: BlobRef,
+): Promise<Uint8Array | AsyncIterable<Uint8Array>> {
+  if (isStreamingArtifactStore(context.artifacts)) {
+    const chunks = await context.artifacts.open(artifact.digest);
+    assert(chunks !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
+    return chunks;
+  }
   const bytes = await context.artifacts.get(artifact.digest);
   assert(bytes !== undefined, `HyperFrames Artifact ${artifact.digest} is unavailable`);
   assert(bytes.byteLength === artifact.size, `HyperFrames Artifact ${artifact.digest} size differs`);
@@ -536,13 +544,17 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       });
     } catch (error) {
       if (duplicateExecution(error)) {
-        return wakeAfter(canonicalize({ ...checkpoint, submission: "confirmed" }), pollIntervalMs, now());
+        return wakeAfter(canonicalize({ ...checkpoint, submission: "confirmed" }), pollIntervalMs, now(), {
+          phase: "submitted",
+        });
       }
       const rejected = rejectedSubmission(error);
       if (rejected !== undefined) return implementationFailure(rejected.code, error, rejected.retryable);
       // StartExecution may have reached AWS even when its response did not reach us. The
       // deterministic execution name makes polling this derived ARN safer than submitting a new job.
-      return wakeAfter(canonicalize(checkpoint), pollIntervalMs, now());
+      return wakeAfter(canonicalize(checkpoint), pollIntervalMs, now(), {
+        phase: "confirming-submission",
+      });
     }
     try {
       sameRender(handle, {
@@ -556,7 +568,9 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     } catch (error) {
       return implementationFailure("HYPERFRAMES_SUBMISSION_IDENTITY_MISMATCH", error, false);
     }
-    return wakeAfter(canonicalize({ ...checkpoint, submission: "confirmed" }), pollIntervalMs, now());
+    return wakeAfter(canonicalize({ ...checkpoint, submission: "confirmed" }), pollIntervalMs, now(), {
+      phase: "submitted",
+    });
   };
 
   const safeSubmit = async (
@@ -609,7 +623,9 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
         if (failures >= maxPollFailures) {
           return implementationFailure("HYPERFRAMES_PROGRESS_UNAVAILABLE", error, true);
         }
-        return wakeAfter(canonicalize({ ...checkpoint, pollFailures: failures }), pollIntervalMs, now());
+        return wakeAfter(canonicalize({ ...checkpoint, pollFailures: failures }), pollIntervalMs, now(), {
+          phase: "progress-retry",
+        });
       }
       try {
         verifyProgress(progress, document);
@@ -618,7 +634,14 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       }
       const next = { ...checkpoint, submission: "confirmed" as const,
         polls: checkpoint.polls + 1, pollFailures: 0 };
-      if (progress.status === "RUNNING") return wakeAfter(canonicalize(next), pollIntervalMs, now());
+      if (progress.status === "RUNNING") {
+        return wakeAfter(canonicalize(next), pollIntervalMs, now(), {
+          phase: "rendering",
+          completed: progress.framesRendered,
+          ...(progress.totalFrames === null ? {} : { total: progress.totalFrames }),
+          unit: "frames",
+        });
+      }
       if (progress.status !== "SUCCEEDED") {
         const details = progress.errors.map((item) => `${item.state}: ${item.error}: ${item.cause}`).join("; ");
         return implementationFailure(`HYPERFRAMES_${progress.status}`,

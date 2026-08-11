@@ -126,3 +126,34 @@ test("Vertex configuration exposes credential/queue policy without changing the 
   }]);
   assert.equal(facet.implementation.digest, googleVertexProviderImplementationDigest);
 });
+
+test("Vertex defers projectEnv resolution until the Endpoint handles a Need", async () => {
+  const variable = "NARRATAGE_TEST_MISSING_VERTEX_PROJECT";
+  const previous = process.env[variable];
+  delete process.env[variable];
+  try {
+    const provider = createGoogleVertexCaptionProvider({
+      projectEnv: variable,
+      generateContentImplementationDigest: digestOf("caption-gemini:unreached-transport"),
+      generateContent: async () => {
+        throw new Error("transport must not be reached");
+      },
+    });
+    const registry = new EndpointRegistry();
+    await provider.install(registry);
+    const requestNeed = need(request());
+    const resolution = registry.resolve(requestNeed);
+    assert.equal(resolution.status, "resolved");
+    assert.equal(resolution.registration.kind, "immediate");
+    const handler: ImmediateEndpointHandler = resolution.registration.handler;
+    await assert.rejects(async () => await handler({
+      command: { kind: "fulfill-need", id: "command:caption-gemini-missing-project", need: requestNeed },
+      need: requestNeed,
+      artifacts: new MemoryArtifactStore(),
+      credentials: { googleCredentials: { secret: JSON.stringify({ type: "service_account" }) } },
+    }), new RegExp(`Google Vertex project environment ${variable} is empty`));
+  } finally {
+    if (previous === undefined) delete process.env[variable];
+    else process.env[variable] = previous;
+  }
+});

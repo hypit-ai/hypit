@@ -22,6 +22,7 @@ import type {
 } from "@narratage/provider-hyperframes-aws-lambda";
 import { canonicalize, digestOf } from "@narratage/protocol";
 import type { CanonicalValue, Need } from "@narratage/protocol";
+import type { RuntimeEndpointAdapterImplementation } from "@narratage/runtime-adapter";
 import {
   hyperframesVisualRequest,
   renderHyperframesCapabilities,
@@ -272,7 +273,8 @@ test("the Lambda Endpoint declines frame domains and requirements it cannot pres
 
 test("the Runtime adapter refuses a hardware-GPU deployment wish instead of ignoring it", () => {
   const facet = awsLambdaActivation.hostFacets[0]!;
-  assert.throws(() => facet.implementation.create({
+  const implementation = facet.implementation as RuntimeEndpointAdapterImplementation;
+  assert.throws(() => implementation.activate({
     root: "/tmp",
     instance: "hyperframes.lambda.test",
     config: canonicalize({
@@ -378,6 +380,34 @@ test("an ambiguous StartExecution is recovered by the same name without redeploy
   assert.deepEqual(state.renderInputs[0]!.config, state.renderInputs[1]!.config);
   if (confirmed.status === "pending") {
     assert.equal((confirmed.checkpoint as Record<string, unknown>).submission, "confirmed");
+  }
+});
+
+test("running render progress is projected without exposing the recovery checkpoint", async () => {
+  const request = requestNeed();
+  const { client } = fakeClient({
+    async progress() {
+      return successfulProgress("s3://unused/while-running", {
+        status: "RUNNING",
+        overallProgress: 0.4,
+        framesRendered: 24,
+        totalFrames: 60,
+        outputFile: null,
+        endedAt: null,
+      });
+    },
+  });
+  const { endpoint } = await endpointFor(request, client);
+  const common = context(request, new MemoryArtifactStore());
+  const started = await endpoint.start(common);
+  const running = await endpoint.resume({
+    ...common,
+    checkpoint: started.status === "pending" ? started.checkpoint : undefined,
+  });
+  assert.equal(running.status, "pending");
+  if (running.status === "pending") {
+    assert.deepEqual(running.progress,
+      { phase: "rendering", completed: 24, total: 60, unit: "frames" });
   }
 });
 

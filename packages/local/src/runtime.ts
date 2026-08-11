@@ -13,17 +13,12 @@ import {
   loadNodePackageSet,
   collectNodePackageComponents,
 } from "@narratage/package-loader-node";
-import { isDigest } from "@narratage/protocol";
 import {
   RuntimeModuleRegistry,
   createBuildDispatchIdentity,
-  isEnumerableBuildStore,
-  isManagedArtifactStore,
   isStreamingArtifactStore,
-  operationCancellationRequestId,
   resolveRuntimeProfile,
   sealRuntimeProfile,
-  writableCredentialStore,
 } from "@narratage/runtime";
 import { TypeValidatorRegistry } from "@narratage/validation";
 import type {
@@ -32,6 +27,8 @@ import type {
 } from "@narratage/runtime";
 
 import { createProjectRuntimeServices } from "./project-services.js";
+import { createLocalRuntimeControl } from "./control.js";
+import { createLocalCredentialControl } from "./credentials.js";
 import type {
   CreateLocalRuntimeOptions,
   LocalBuildOptions,
@@ -62,25 +59,6 @@ function manifestDigest(manifest: RuntimeModuleManifest): string {
 function nonNegativeInteger(value: number, subject: string): number {
   assert(Number.isSafeInteger(value) && value >= 0, `${subject} must be a non-negative safe integer`);
   return value;
-}
-
-function collectArtifactDigests(
-  value: unknown,
-  digests: Set<import("@narratage/protocol").Digest>,
-  seen = new WeakSet<object>(),
-): void {
-  if (value === null || typeof value !== "object") return;
-  if (seen.has(value)) return;
-  seen.add(value);
-  if (!Array.isArray(value)) {
-    const item = value as Record<string, unknown>;
-    if (item.kind === "blob" && typeof item.digest === "string" && isDigest(item.digest)) {
-      digests.add(item.digest);
-    }
-  }
-  for (const nested of Array.isArray(value) ? value : Object.values(value)) {
-    collectArtifactDigests(nested, digests, seen);
-  }
 }
 
 async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<void> {
@@ -192,22 +170,38 @@ export async function createLocalRuntime(
     scheduling,
     runtimeClosure: options.closure.value,
   });
-  const credentialDescriptions = (options.endpoints ?? []).flatMap((item) => item.credentials);
-  const credential = (endpoint: string, slot: string) => {
-    const matches = credentialDescriptions.filter((item) => item.endpoint === endpoint && item.slot === slot);
-    assert(matches.length === 1, matches.length === 0
-      ? `Endpoint ${endpoint} has no credential slot ${slot}`
-      : `Endpoint ${endpoint} repeats credential slot ${slot}`);
-    return matches[0]!;
-  };
-  const credentialStatus = async (item: typeof credentialDescriptions[number]) => ({
-    ...structuredClone(item),
-    configured: await options.credentialStore.resolve(item.ref) !== undefined,
-    writable: await writableCredentialStore(options.credentialStore, item.ref) !== undefined,
+  const credentialControl = createLocalCredentialControl({
+    credentialStore: options.credentialStore,
+    endpoints: options.endpoints ?? [],
+  });
+  const control = createLocalRuntimeControl({
+    buildStore: options.buildStore,
+    ...(buildCatalog === undefined ? {} : { buildCatalog }),
+    operationStore: options.operationStore,
+    dispatchStore: options.dispatchStore,
+    journal: options.journal,
+    artifactStore: options.artifactStore,
   });
   const stageAttachments = async (request: LocalBuildRequest): Promise<void> => {
     for (const item of request.attachments ?? []) {
-      const stored = await options.artifactStore.put(Uint8Array.from(item.bytes), item.artifact.mediaType);
+      const stream = await item.open();
+      const stored = isStreamingArtifactStore(options.artifactStore)
+        ? await options.artifactStore.putStream(stream, item.artifact.mediaType)
+        : await options.artifactStore.put(await (async () => {
+            const chunks: Uint8Array[] = [];
+            let size = 0;
+            for await (const chunk of stream) {
+              chunks.push(Uint8Array.from(chunk));
+              size += chunk.byteLength;
+            }
+            const bytes = new Uint8Array(size);
+            let offset = 0;
+            for (const chunk of chunks) {
+              bytes.set(chunk, offset);
+              offset += chunk.byteLength;
+            }
+            return bytes;
+          })(), item.artifact.mediaType);
       assert(
         stored.digest === item.artifact.digest
           && stored.size === item.artifact.size
@@ -241,7 +235,8 @@ export async function createLocalRuntime(
       }
     }
     assert(stored.state.id === request.state.id,
-      `Build ${request.id} already names another Core Build`);
+      `Build ${request.id} already names another Core Build. Choose a new --build-id for a new Run, `
+      + "or restore the original Author/Run Sources to resume this Build");
     const created = await options.dispatchStore.create(createBuildDispatchIdentity({
       build: request.id,
       core: request.state.id,
@@ -282,93 +277,11 @@ export async function createLocalRuntime(
     return result;
   };
   return {
+    ...control,
+    ...credentialControl,
     build: runBuild,
     async buildMany(requests) {
       return await Promise.all(requests.map(submit));
-    },
-    async status(build) {
-      return {
-        build: await options.buildStore.read(build),
-        catalog: await buildCatalog?.read(build),
-        operations: await options.operationStore.list({ build }),
-        dispatch: await options.dispatchStore.read(build),
-      };
-    },
-    async queue() {
-      return {
-        dispatches: await options.dispatchStore.list(),
-        capacity: await options.dispatchStore.listCapacity(),
-      };
-    },
-    async operation(id) {
-      return await options.operationStore.read(id);
-    },
-    async journal(query) {
-      return await options.journal.list(query);
-    },
-    async credentials(endpoint) {
-      const selected = credentialDescriptions.filter((item) => endpoint === undefined || item.endpoint === endpoint);
-      return await Promise.all(selected.map(credentialStatus));
-    },
-    async putCredential(endpoint, slot, secret) {
-      assert(secret.length > 0, "credential secret is empty");
-      const item = credential(endpoint, slot);
-      const store = await writableCredentialStore(options.credentialStore, item.ref);
-      assert(store !== undefined, `CredentialStore ${item.ref.store} is not writable`);
-      await store.put(item.ref, { secret });
-      return await credentialStatus(item);
-    },
-    async deleteCredential(endpoint, slot) {
-      const item = credential(endpoint, slot);
-      const store = await writableCredentialStore(options.credentialStore, item.ref);
-      assert(store !== undefined, `CredentialStore ${item.ref.store} is not writable`);
-      const deleted = await store.delete(item.ref);
-      return { deleted, credential: await credentialStatus(item) };
-    },
-    async builds() {
-      return await buildCatalog?.list() ?? [];
-    },
-    async cancel(build, reason) {
-      if (await options.dispatchStore.read(build) === undefined) return undefined;
-      const dispatch = await options.dispatchStore.requestCancellation(build, reason);
-      await options.journal.append({
-        at: Date.now(),
-        kind: "cancellation-requested",
-        build,
-        detail: { ...(reason === undefined ? {} : { reason }) },
-      });
-      return dispatch;
-    },
-    async cancelOperation(id, reason) {
-      let current = await options.operationStore.read(id);
-      if (current === undefined) return undefined;
-      if (current.cancellation === undefined) {
-        const requestedAt = Date.now();
-        while (current.cancellation === undefined) {
-          const status = current.status === "completed" || current.status === "failed" || current.status === "cancelled"
-            ? "too-late" as const
-            : "requested" as const;
-          const written = await options.operationStore.compareAndSwap(current.id, current.revision, {
-            status: "control",
-            cancellation: {
-              requestedAt,
-              requestId: operationCancellationRequestId(current.id, requestedAt),
-              status,
-              attempts: 0,
-            },
-          });
-          current = written.status === "stored" ? written.snapshot : written.current;
-        }
-        await options.journal.append({
-          at: requestedAt,
-          kind: "cancellation-requested",
-          build: current.build,
-          operation: current.id,
-          detail: { scope: "operation", ...(reason === undefined ? {} : { reason }) },
-        });
-      }
-      await options.dispatchStore.wake(current.build);
-      return current;
     },
     async workOnce(workOptions) {
       return await worker.runOnce(workOptions);
@@ -376,37 +289,7 @@ export async function createLocalRuntime(
     async work(workOptions) {
       await worker.run(workOptions);
     },
-    async readArtifact(digest) {
-      return await options.artifactStore.get(digest);
-    },
-    async openArtifact(digest) {
-      if (isStreamingArtifactStore(options.artifactStore)) return await options.artifactStore.open(digest);
-      const bytes = await options.artifactStore.get(digest);
-      return bytes === undefined ? undefined : (async function* () { yield bytes; })();
-    },
-    async garbageCollectArtifacts(gc = {}) {
-      assert(isManagedArtifactStore(options.artifactStore),
-        "selected ArtifactStore does not expose explicit retention management");
-      assert(isEnumerableBuildStore(options.buildStore),
-        "selected BuildStore does not expose the maintenance index required for Artifact GC");
-      const reachable = new Set<import("@narratage/protocol").Digest>();
-      for (const snapshot of await options.buildStore.list()) collectArtifactDigests(snapshot.state, reachable);
-      for (const operation of await options.operationStore.list({})) collectArtifactDigests(operation, reachable);
-      const stored = await options.artifactStore.list();
-      const unreachable = stored.filter((digest) => !reachable.has(digest)).sort();
-      const deleted: import("@narratage/protocol").Digest[] = [];
-      if (gc.apply === true) {
-        for (const digest of unreachable) {
-          if (await options.artifactStore.delete(digest)) deleted.push(digest);
-        }
-      }
-      return {
-        reachable: [...reachable].sort(),
-        unreachable,
-        deleted,
-      };
-    },
-    close() {},
+    close: control.close,
   };
 }
 
@@ -423,6 +306,8 @@ export async function createProjectLocalRuntime(
   const lockedPackageSet = options.packageLock === undefined
     ? undefined
     : await loadNodePackageSet(resolve(root, options.packageLock), packageRoot);
+  assert(lockedPackageSet === undefined || options.implementationClosure === undefined,
+    "packageLock and implementationClosure are two sources for one implementation identity");
   const lockedComponents = lockedPackageSet === undefined
     ? []
     : collectNodePackageComponents(lockedPackageSet.contributions);
@@ -488,12 +373,15 @@ export async function createProjectLocalRuntime(
           : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
       },
       ...(options.validators === undefined ? {} : { validators: options.validators }),
-      ...(lockedPackageSet === undefined ? {} : { implementationClosure: lockedPackageSet.lock.digest }),
+      ...(lockedPackageSet === undefined && options.implementationClosure === undefined
+        ? {}
+        : { implementationClosure: lockedPackageSet?.lock.digest ?? options.implementationClosure }),
     });
     return {
       build: runtime.build,
       buildMany: runtime.buildMany,
       status: runtime.status,
+      activity: runtime.activity,
       queue: runtime.queue,
       operation: runtime.operation,
       journal: runtime.journal,

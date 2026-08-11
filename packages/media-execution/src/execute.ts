@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mediaTypes, sealMediaInspection, sealMuxedMedia, sealSynchronizedMedia, sealTimelineAudio, verifyMediaInspection, verifyMediaStreamSelection, verifyRenderedVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
@@ -50,7 +51,9 @@ import type { AnimatedWebp } from "./webp.js";
  */
 export type MediaArtifactGateway = {
   get(source: BlobRef): Promise<Uint8Array | undefined>;
+  open(source: BlobRef): Promise<AsyncIterable<Uint8Array> | undefined>;
   put(bytes: Uint8Array, mediaType: string): Promise<BlobRef>;
+  putFile(path: string, mediaType: string): Promise<BlobRef>;
 };
 
 export type MediaExecutionEnvironment = {
@@ -176,7 +179,22 @@ async function stageArtifact(
   source: BlobRef,
   path: string,
 ): Promise<void> {
-  await writeFile(path, await sourceBytes(env, source));
+  const chunks = await env.artifacts.open(source);
+  assert(chunks !== undefined, `Media source ${source.digest} is unavailable`);
+  const file = await open(path, "w");
+  const hash = createHash("sha256");
+  let size = 0;
+  try {
+    for await (const chunk of chunks) {
+      await file.write(chunk);
+      hash.update(chunk);
+      size += chunk.byteLength;
+    }
+  } finally {
+    await file.close();
+  }
+  assert(size === source.size, `Media source ${source.digest} size differs`);
+  assert(`sha256:${hash.digest("hex")}` === source.digest, `Media source ${source.digest} digest differs`);
 }
 
 function timestampFraction(value: MediaTimestamp): { numerator: bigint; denominator: bigint } {
@@ -420,11 +438,16 @@ async function outputInspection(args: {
   readonly maxProbeOutputBytes: number;
   readonly sharedLibraryPath?: string;
 }): Promise<MediaInspection> {
-  const bytes = await readFile(args.path);
+  const hash = createHash("sha256");
+  let size = 0;
+  for await (const chunk of createReadStream(args.path)) {
+    hash.update(chunk);
+    size += chunk.byteLength;
+  }
   const source: BlobRef = {
     kind: "blob",
-    digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}` as BlobRef["digest"],
-    size: bytes.byteLength,
+    digest: `sha256:${hash.digest("hex")}` as BlobRef["digest"],
+    size,
     mediaType: args.mediaType,
   };
   return await inspectFile({ source, input: args.path, ffprobePath: args.ffprobePath,
@@ -608,9 +631,10 @@ export async function executeInspectMedia(
   const work = await mkdtemp(join(tmpdir(), "svml-media-inspect-"));
   try {
     const input = join(work, "source.bin");
-    const bytes = await sourceBytes(env, need.source);
-    await writeFile(input, bytes);
-    const animation = parseAnimatedWebp(bytes);
+    const animationBytes = need.source.mediaType === "image/webp" ? await sourceBytes(env, need.source) : undefined;
+    if (animationBytes === undefined) await stageArtifact(env, need.source, input);
+    else await writeFile(input, animationBytes);
+    const animation = animationBytes === undefined ? undefined : parseAnimatedWebp(animationBytes);
     const inspection = animation === undefined
       ? await inspectFile({
         source: need.source,
@@ -636,9 +660,10 @@ export async function executeNormalizeMedia(
   const work = await mkdtemp(join(tmpdir(), "svml-media-normalize-"));
   try {
     const input = join(work, "source.bin");
-    const bytes = await sourceBytes(env, need.source);
-    await writeFile(input, bytes);
-    const animation = parseAnimatedWebp(bytes);
+    const animationBytes = need.source.mediaType === "image/webp" ? await sourceBytes(env, need.source) : undefined;
+    if (animationBytes === undefined) await stageArtifact(env, need.source, input);
+    else await writeFile(input, animationBytes);
+    const animation = animationBytes === undefined ? undefined : parseAnimatedWebp(animationBytes);
     let visualArtifact: BlobRef | undefined;
     let visualWidth: number | undefined;
     let visualHeight: number | undefined;
@@ -682,8 +707,7 @@ export async function executeNormalizeMedia(
       assert(visual.sampleAspectRatio.numerator === 1 && visual.sampleAspectRatio.denominator === 1
         && visual.rotationDegrees === 0,
       "Normalized visual retains non-square samples or display rotation");
-      const bytes = await readFile(output);
-      visualArtifact = await env.artifacts.put(bytes, "video/mp4");
+      visualArtifact = await env.artifacts.putFile(output, "video/mp4");
       visualWidth = visual.width;
       visualHeight = visual.height;
     }
@@ -720,7 +744,7 @@ export async function executeNormalizeMedia(
       const audio = inspected.streams.find((item): item is MediaAudioStream => item.kind === "audio");
       assert(audio?.decodedSampleFrames === plan.sampleFrames && audio.sampleRate === 48_000 && audio.channels === 2,
         "Normalized audio sample shape differs from its plan");
-      audioArtifact = await env.artifacts.put(await readFile(output), "audio/wav");
+      audioArtifact = await env.artifacts.putFile(output, "audio/wav");
     }
     const media = sealSynchronizedMedia({
       contract: "svml.synchronized-media@1",
@@ -886,7 +910,7 @@ export async function executeTransformMedia(
       assert(audios[0].sampleRate === 48_000 && audios[0].channels === 2,
         "Transformed media audio is not 48 kHz stereo");
     }
-    const artifact = await env.artifacts.put(await readFile(output), "video/mp4");
+    const artifact = await env.artifacts.putFile(output, "video/mp4");
     return artifactResult(artifact, canonicalize({
       provider: env.label,
       operation: "transform",
@@ -921,8 +945,7 @@ export async function executeExtractAudio(
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    const bytes = await readFile(output);
-    const artifact = await env.artifacts.put(bytes, "audio/wav");
+    const artifact = await env.artifacts.putFile(output, "audio/wav");
     await assertCanonicalWav({
       path: output,
       source: artifact,
@@ -1045,7 +1068,7 @@ export async function executeProjectSpeechEvidenceAudio(
       && streams[0]!.channels === 1
       && streams[0]!.decodedSampleFrames === need.evidenceSampleFrames,
     "Alignment evidence must be exact 16 kHz mono PCM s16");
-    const artifact = await env.artifacts.put(await readFile(output), "audio/wav");
+    const artifact = await env.artifacts.putFile(output, "audio/wav");
     const evidence: SpeechEvidenceAudio = sealSpeechEvidenceAudio({
       contract: "svml.speech-evidence-audio@1",
       artifact,
@@ -1143,8 +1166,7 @@ export async function executeRenderTimelineAudio(
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    const bytes = await readFile(output);
-    const artifact = await env.artifacts.put(bytes, "audio/wav");
+    const artifact = await env.artifacts.putFile(output, "audio/wav");
     const audio = await assertCanonicalWav({
       path: output,
       source: artifact,
@@ -1254,7 +1276,7 @@ export async function executeMuxProgramMedia(
     assert(roundPositive(finalAudioSpan.numerator * 48_000n, finalAudioSpan.denominator)
       === need.audio.sampleFrames,
     "Final mux audio presentation span differs from TimelineAudio");
-    const artifact = await env.artifacts.put(await readFile(output), "video/mp4");
+    const artifact = await env.artifacts.putFile(output, "video/mp4");
     const value: MuxedMedia = sealMuxedMedia({
       contract: "svml.muxed-media@1",
       frameRate: need.visual.frameRate,

@@ -21,6 +21,7 @@ import type {
   CredentialValue,
   OperationFailure,
   OperationIdentity,
+  OperationProgress,
   RuntimeEndpointBinding,
   RuntimeFacetRef,
   RuntimeModuleManifest,
@@ -50,7 +51,12 @@ export type ImmediateEndpointHandler = (
 ) => Awaitable<EndpointFulfillment>;
 
 export type EndpointOutcome =
-  | { readonly status: "pending"; readonly checkpoint: CanonicalValue; readonly wakeAt?: number }
+  | {
+      readonly status: "pending";
+      readonly checkpoint: CanonicalValue;
+      readonly wakeAt?: number;
+      readonly progress?: OperationProgress;
+    }
   | { readonly status: "completed"; readonly result: EndpointFulfillment }
   | { readonly status: "failed"; readonly failure: OperationFailure };
 
@@ -327,8 +333,19 @@ export function wakeAfter(
   checkpoint: CanonicalValue,
   delayMs: number,
   now = Date.now(),
-): { readonly status: "pending"; readonly checkpoint: CanonicalValue; readonly wakeAt: number } {
+  progress?: OperationProgress,
+): {
+  readonly status: "pending";
+  readonly checkpoint: CanonicalValue;
+  readonly wakeAt: number;
+  readonly progress?: OperationProgress;
+} {
   assert(Number.isSafeInteger(delayMs) && delayMs >= 0, "wake delay must be a non-negative safe integer");
   assert(Number.isSafeInteger(now) && now >= 0, "current time must be a non-negative epoch millisecond");
-  return { status: "pending", checkpoint, wakeAt: now + delayMs };
+  return {
+    status: "pending",
+    checkpoint,
+    wakeAt: now + delayMs,
+    ...(progress === undefined ? {} : { progress }),
+  };
 }
