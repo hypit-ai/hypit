@@ -8,9 +8,11 @@ coverage/
 *.temp
 *.lock.editing
 
-# Local editor and agent state is never part of the distribution.
-.claude/
-.codex/
+# Ignore local editor state while distributing repository skill-discovery links.
+.claude/*
+!.claude/skills
+.codex/*
+!.codex/skills
 .agents/*
 !.agents/skills/
 !.agents/skills/**

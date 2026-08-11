@@ -1,15 +1,58 @@
 # Talking-head format
 
-- Put a strong hook in the first Script Segment. Divide the script into semantic beats, usually 3–4
-  segments, each planned for 4–15 seconds with an 8–12 second target.
-- Keep one visual identity across A-roll: same face reference, room, wardrobe, and lighting. Use
-  B-roll for changes, not to drift the presenter base.
-- Use the vendored `speaker-v1` Kit with `text:Render`; select composition, camera, edit,
-  performance, and gesture through an SVS Recipe, then connect dialogue/action as Text edges.
-- Use `seedance:ReferenceVideo` for face/image/audio references; use `seedance:TextVideo` without an
-  identity reference. Keep dialogue and action as separate `text:Value` inputs.
-- Build one `speech:Spine` and one `whisperx:Alignment`. Add `caption:Program` +
-  `caption-fine:Track` only when requested; add B-roll through `media-track:Track` and editorial
-  titles through `text:Track`.
-- Review A-roll and B-roll independently, then validate the joined Film. Reuse accepted shots
-  explicitly in a later Run Source.
+Use one recurring presenter identity for a sequence of direct-to-camera speech takes, then add
+captions, B-roll, and editorial typography as peer Tracks.
+
+## Author the SVML program
+
+1. Write one Script with a strong opening Segment and 2–3 following Segments for context, evidence,
+   mechanism, payoff, or CTA. Keep each generated speaking take within 4–15 seconds; 8–12 seconds is
+   a useful target when the delivery remains natural.
+2. Run `estimate:Speech` for each Segment before generation.
+3. Vendor `speaker-v1.svs`. Put stable `composition-stability`, `camera-motion`, `edit-rhythm`,
+   `performance`, and `gesture` choices in an SVS Recipe.
+4. Render each take prompt with `copy:Render`; connect the Segment dialogue and one short English
+   action direction through `copy:Set`.
+5. Generate each take with `seedance:ReferenceVideo generate-audio="true"`, one accepted full
+   presenter/scene image, and the intended voice reference. Keep reference order identical across
+   the shot group.
+6. Assemble accepted takes in Script order with `speech:Spine`, then create one
+   `whisperx:Alignment` for the complete program.
+7. Add the exact-font Caption chain when captions are wanted: `caption-fine:Style` →
+   `caption:Program` → `caption-ai:Planner` → `caption-fine:Track`.
+8. Add B-roll through `media-track:Track`, editorial copy through `typo:Track`, then assemble with
+   `film:Film` and render with `render:Video`.
+
+## Direct the presenter
+
+- Keep face, apparent age, hair, wardrobe, room, light direction, lens feel, and framing envelope
+  stable across A-roll.
+- Put spoken words only in the Script-derived dialogue slot. Put visible performance in the action
+  slot: gaze changes, brows, nods, compact gestures, posture, breath, or one motivated object action.
+- Let each Segment finish one thought. Do not fragment a sentence merely to manufacture more cuts.
+- Keep hands inside the established frame and away from the face unless contact is the authored
+  action. Preserve every prop's count, support, label, and starting position.
+- Use B-roll for a genuine change of place, proof, mechanism, or emotional state. Do not make the
+  presenter identity drift to create variety.
+
+## Handle screens and reverse views
+
+When the presenter-facing shot is paired with a device-facing proof shot, define both camera
+positions before generating either image. The two opposing views must show different background
+sectors and different dominant landmark sets. Reusing the same wall, window, or furniture group is
+an automatic rejection. Preserve the same room, presenter, device, lighting logic, and eye line.
+
+Use supplied UI media whenever exact interface content matters. Keep explanatory text on
+`typo:Track`, not inside the generated shot.
+
+## Review and reuse
+
+- Review the full-resolution presenter image before any speaking take.
+- Review every A-roll take for identity, lip-sync, exact words, voice assignment, stable background,
+  hands, props, and generated text.
+- Review B-roll independently, then review the joined Film for pacing, semantic timing, caption
+  collisions, and audio clarity.
+- Pin every accepted image and take in the next Build with `.svrun` `build-record` and `satisfy`.
+
+Read `../craft/image-prompt-style.md`, `../craft/seedance-directing.md`, `../craft/captions.md`,
+`../craft/b-roll.md`, and `../craft/overlays.md` for the corresponding gates.
