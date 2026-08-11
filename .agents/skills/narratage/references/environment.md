@@ -6,6 +6,19 @@ WhisperX/OpenCV, `uv` for locked Python environments, and `ffmpeg`/`ffprobe` for
 macOS/Linux or Windows PowerShell:
 
 ```text
+node .agents/skills/narratage/scripts/check-environment.mjs
+```
+
+If the probe reports `corepack missing` (some newer Node.js distributions do not bundle it), install
+a compatible release from either shell:
+
+```text
+npm install --global corepack@0.34.5
+```
+
+Then install and validate the workspace:
+
+```text
 corepack enable
 corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile

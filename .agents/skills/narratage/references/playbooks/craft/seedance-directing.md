@@ -1,25 +1,58 @@
 # Seedance directing
 
-Separate the reusable format contract from per-take dialogue, action, story, or direction.
+## Build the prompt inputs
 
-- Select an official vendored Seedance Kit before composing prompt prose: `speaker-v1` for talking
-  heads, `broll-v1` for silent visual stories, `podcast-v1`, `call-v1`,
-  `street-interview-v1`, `motion-reference-v1`, or `camera-reference-v1`.
-- Render the Kit with `text:Render`; keep stable policy in an SVS Recipe and connect only dynamic
-  `dialogue`, `action`, `story`, or `direction` slots through `text:Set`. Do not duplicate the Kit's
-  reference, role, voice, camera, microphone, or hygiene blocks in a hand-written prompt.
-- Vendor the selected `.svs` into the video project's `./kits/` directory. Do not import it from a
-  separate Narratage checkout.
+1. Vendor one matching Kit into the project's `./kits/` directory.
+2. Import generic Text as `copy` and the vendored Kit under its own alias.
+3. Put stable creative choices in a named SVS Recipe.
+4. Render the Kit with `copy:Render`; connect only dynamic `dialogue`, `action`, `story`, or
+   `direction` slots through `copy:Set`.
+5. Feed the rendered Text to one explicit Seedance Surface and keep every reference edge visible.
 
-- Write one or two readable events, not frame-by-frame choreography: macro action plus micro eye,
-  brow, smile, concern, or breath feedback.
-- Start from the reference pose, objects, emotion, camera, and space. Do not introduce a new person,
-  prop, room, wardrobe, or angle.
-- Give physical motion envelopes: objects start in the hand or on the surface, travel a short distance,
-  move slowly and naturally, never fly, bounce, teleport, detach, or multiply.
-- Tie speech actions to actual Script order. Quote only words present in the Script; otherwise use
-  semantic phases such as opening, turn, and verdict.
-- Keep the face visible and hands away from it unless contact is required.
-- For a prompt with no matching Kit, end it with the English no-overlay sentence in
-  `reference-vlm.md`. Official Kits already own their format-specific hygiene block; do not append a
-  duplicate.
+Write every user-authored image/video generation instruction in English. Verbatim dialogue may retain
+the Script's authored language; do not translate or paraphrase quoted Script lines inside prompts.
+
+Choose the Kit by meaning:
+
+| Use | Kit | Expected ordered references |
+|---|---|---|
+| one speaking person | `speaker-v1` | image 1 = person/scene; audio 1 = voice when used |
+| silent B-roll | `broll-v1` | one or more authored images |
+| two-person podcast | `podcast-v1` | images 1/2 = final A/B views; audio 1/2 = A/B voices |
+| video call | `call-v1` | images 1/2 = reversed call layouts; audio 1/2 = A/B voices |
+| street interview | `street-interview-v1` | image 1 = complete scene; audio 1/2 = interviewer/guest |
+| body-motion transfer | `motion-reference-v1` | image 1 = subject; video 1 = motion reference |
+| camera-language transfer | `camera-reference-v1` | image 1 = subject; video 1 = camera reference |
+
+Use `seedance:TextVideo` for prompt-only generation, `seedance:FrameVideo` for first/optional-last
+frame control, and `seedance:ReferenceVideo` for image/video/audio references. Do not duplicate the
+Kit's fixed reference, role, voice, microphone, camera, or text-hygiene blocks in freeform prose.
+Set `generate-audio="false"` for silent B-roll and set it deliberately for speaking formats rather
+than relying on an unstated assumption.
+
+## Respect model contracts
+
+- Use model values `standard`, `fast`, or `mini`. `fast` and `mini` support only 480p/720p;
+  `standard` also supports 1080p/4k.
+- Keep duration at an integer from 4 through 15 seconds. Invalid values fail closed.
+- Respect the ReferenceVideo caps: at most 9 images, 3 videos, 3 audio clips, and 12 total files.
+  Reference audio requires at least one visual reference.
+- Use `estimate:Speech` for speech-driven duration planning; it estimates pronunciation length but
+  does not create measured timing.
+
+## Direct the shot
+
+- Write one or two readable events: a macro action plus small eye, brow, breath, smile, concern, or
+  posture feedback. Do not choreograph frame-by-frame poses.
+- Start from the reference pose, objects, emotion, camera, and room. Add only motion that follows from
+  visible facts already established by the image.
+- Give objects a physical motion envelope: known starting support/contact, short believable travel,
+  and stable count/shape. Avoid teleporting, flying, multiplying, or detaching props.
+- Tie speech actions to Script order. Quote only exact Script words; otherwise refer to semantic beats
+  such as opening, reversal, evidence, and verdict.
+- Keep faces readable and hands away from the face unless contact is the authored action.
+- Keep editorial subtitles, titles, cards, stickers, and floating text out of Seedance. Preserve only
+  physical labels/UI already attached to referenced objects.
+
+Review every reference image through `production-gates.md` before calling Seedance, then review the
+resulting take before adding it to Speech Spine or Media Track.

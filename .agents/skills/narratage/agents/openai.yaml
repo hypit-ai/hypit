@@ -1,4 +1,4 @@
 interface:
   display_name: "Narratage"
   short_description: "Build SVML videos with production playbooks"
-  default_prompt: "Use $narratage to author, validate, or refine a Narratage video graph and its production craft."
+  default_prompt: "Use $narratage to author, validate, or refine native SVML video sources and production craft."
