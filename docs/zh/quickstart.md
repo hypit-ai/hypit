@@ -17,20 +17,12 @@ Glory*》的一篇影评。那位影评人造出这个词，用来描述当时�
 
 ### 使用 Narratage skill
 
-通过 Agent 自带的 skill 安装器安装完整的
-[`narratage` skill 文件夹](https://github.com/cashdiffusion/svml/tree/main/.agents/skills/narratage)，
-也可以把这个链接发给 Agent，让它安装并使用该 skill。已经克隆仓库时，直接让安装器读取
-`.agents/skills/narratage`；需要安装整个文件夹，而不是只复制 `SKILL.md`。
+将以下指令发送给你的 Agent：
 
 ```text
 安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
 实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
 ```
-
-在本仓库内打开的 Codex 与 Claude 会通过已提交的 `.codex/skills`、`.claude/skills` 链接发现
-这份 canonical skill。如果 Windows checkout 没有保留软链接，直接把
-`.agents/skills/narratage` 交给 Agent。skill 生效后，Agent 会按需读取对应的 Quickstart 页面，
-你无需再手动通读后文。
 
 ### 手动开始
 

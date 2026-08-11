@@ -19,23 +19,13 @@ extension.
 
 ### Use the Narratage skill
 
-Install the complete
-[`narratage` skill folder](https://github.com/cashdiffusion/svml/tree/main/.agents/skills/narratage)
-with your agent's standard skill installer, or send that link to the agent and ask it to install and
-use the skill. If you already cloned the repository, point the installer at
-`.agents/skills/narratage`; install the whole folder, not only `SKILL.md`.
+Send the following instruction to your agent:
 
 ```text
 Install and use the narratage skill from this repository. Set up my environment, ask for only the
 API keys required by my Runtime Profile, and guide me through authoring and building my first SVML
 video.
 ```
-
-Codex and Claude sessions opened in this checkout can discover the canonical skill through the
-checked-in `.codex/skills` and `.claude/skills` links. If a Windows checkout does not preserve
-symlinks, give the agent `.agents/skills/narratage` directly. Once the skill is active, the agent
-loads the relevant Quickstart pages for you, so you do not need to read the rest of this guide
-manually.
 
 ### Continue manually
 
