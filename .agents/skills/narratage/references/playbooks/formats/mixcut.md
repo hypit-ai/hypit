@@ -1,5 +1,7 @@
 # Silent visual mixcut format
 
+- Render each generated beat through the vendored `broll-v1` Kit. Reuse an SVS Recipe for the shared
+  material/edit/camera language and vary only the beat-specific `story` Text when appropriate.
 - Each beat is a reference frame plus a silent generated motion clip. Keep clips 4–15 seconds, use
   distinct roles (hook, rhythm, detail/effect, conversion/payoff), and assemble ordered
   `media-track:Item` inputs deliberately.
