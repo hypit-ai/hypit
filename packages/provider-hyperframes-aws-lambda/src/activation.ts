@@ -33,6 +33,7 @@ function optionalInteger(
 }
 
 function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProviderOptions {
+  if (context.authority === undefined) throw new Error("AWS Lambda HyperFrames Provider Authority is required");
   const config = runtimeConfigObject(context.config, "AWS Lambda HyperFrames");
   runtimeConfigExact(config, CONFIG_KEYS, "AWS Lambda HyperFrames");
   const stateMachineArn = runtimeConfigString(config.stateMachineArn, "HyperFrames stateMachineArn");
@@ -79,7 +80,7 @@ function providerOptions(context: RuntimeAdapterFactoryContext): RuntimeProvider
   const maxAttempts = optionalInteger(config, "maxAttempts");
   return {
     instance: context.instance,
-    ...(context.lane === undefined ? {} : { lane: context.lane }),
+    authority: context.authority,
     stateMachineArn,
     bucketName,
     rendererImplementationDigest: rendererImplementationDigest as Digest,

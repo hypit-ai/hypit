@@ -31,7 +31,7 @@ Host facets with ABI `svml.runtime-adapter-host@1`. Each facet has only:
 
 - an exact `use` name;
 - kind `endpoint` or `runtime-service`;
-- for an Endpoint, one pure `activate()` declaration over project root, instance, lane and closed
+- for an Endpoint, one pure `activate()` declaration over project root, instance, Provider Authority and closed
   canonical configuration;
 - for a Runtime service whose construction may mutate deployment state, a pure validator, a deferred
   factory and an optional read-only doctor function.

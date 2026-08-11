@@ -6,6 +6,7 @@ import {
   NodeDriver,
   parseBuildState,
   EndpointRegistry,
+  endpointCapabilityKey,
   serializeBuildState,
 } from "@narratage/driver-node";
 import type {
@@ -125,7 +126,7 @@ function createParallelGreetingBuild(generationCount = 2) {
 }
 
 function configuredExecutor(options: {
-  readonly lane: string;
+  readonly resource: string;
   readonly defaultConcurrency: number;
   readonly observe: (active: number) => void;
   readonly runtimeImplementation?: RuntimeEndpointImplementation;
@@ -155,8 +156,11 @@ function configuredExecutor(options: {
     },
     {
       scheduling: {
-        lane: options.lane,
-        maxConcurrency: options.defaultConcurrency,
+        resources: [{
+          id: options.resource,
+          maxActive: options.defaultConcurrency,
+          maxInFlight: options.defaultConcurrency,
+        }],
       },
       ...(options.runtimeImplementation === undefined
         ? {}
@@ -259,7 +263,7 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
       { id: "journal.memory", facet: { module: runtimeModule, name: "journal" } },
       { id: "artifacts.memory", facet: { module: runtimeModule, name: "artifacts" } },
       { id: "credentials.memory", facet: { module: runtimeModule, name: "credentials" } },
-      { id: "generation.local", facet: providerFacet, lane: "endpoint:generation.local" },
+      { id: "generation.local", facet: providerFacet, authority: "fixture.account" },
     ],
     scheduler: "scheduler.local",
     worker: "worker.local",
@@ -278,7 +282,13 @@ function resolvedRuntime(laneLimit: number, lifecycle: "immediate" | "recoverabl
     }],
     scheduling: {
       maxConcurrency: 8,
-      lanes: [{ name: "endpoint:generation.local", maxConcurrency: laneLimit }],
+      resources: [
+        { id: "authority:fixture.account", maxConcurrency: laneLimit },
+        {
+          id: `route:fixture.account/${endpointCapabilityKey(capabilities.generation)}`,
+          maxConcurrency: laneLimit,
+        },
+      ],
     },
   }));
   return { closure, modules };
@@ -314,10 +324,10 @@ function recoverableExecutor(
   };
 }
 
-test("one local Scheduler shares an Endpoint lane across multiple Builds", async () => {
+test("one local Scheduler shares an Endpoint resource across multiple Builds", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
-    lane: "seedance:fixture.account",
+    resource: "authority:fixture.account",
     defaultConcurrency: 1,
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -333,14 +343,14 @@ test("one local Scheduler shares an Endpoint lane across multiple Builds", async
   assert.equal(getCalls(), 2);
   assert.equal(maximumActive, 1);
   assert.equal(results.every((result) =>
-    result.journal.some((entry) => entry.lane === "seedance:fixture.account")), true);
+    result.journal.some((entry) => entry.resources.includes("authority:fixture.account"))), true);
 });
 
-test("a Runtime Profile lane override changes parallelism without changing either Build", async () => {
+test("a Runtime Profile resource override changes parallelism without changing either Build", async () => {
   let maximumActive = 0;
-  const lane = "seedance:fixture.account";
+  const resource = "authority:fixture.account";
   const { executor } = configuredExecutor({
-    lane,
+    resource,
     defaultConcurrency: 1,
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -349,7 +359,7 @@ test("a Runtime Profile lane override changes parallelism without changing eithe
   const initial = createGreetingBuild();
   const scheduler = new LocalBuildScheduler(executor, {
     maxConcurrency: 8,
-    laneLimits: { [lane]: 2 },
+    resourceLimits: { [resource]: 2 },
   });
   const results = await scheduler.run([
     { id: "video-a", state: initial },
@@ -361,10 +371,10 @@ test("a Runtime Profile lane override changes parallelism without changing eithe
   assert.equal(results[0]?.state.request.digest, results[1]?.state.request.digest);
 });
 
-test("independent paid commands inside one Build may fill the same lane without duplicating their shared upstream", async () => {
+test("independent paid commands inside one Build may fill the same resource without duplicating their shared upstream", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
-    lane: "seedance:fixture.account",
+    resource: "authority:fixture.account",
     defaultConcurrency: 2,
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -385,7 +395,7 @@ test("independent paid commands inside one Build may fill the same lane without 
 test("durable scheduling keeps the rest of an in-flight command batch after one event is stored", async () => {
   let maximumActive = 0;
   const { executor, getCalls } = configuredExecutor({
-    lane: "seedance:fixture.account",
+    resource: "authority:fixture.account",
     defaultConcurrency: 2,
     observe(active) {
       maximumActive = Math.max(maximumActive, active);
@@ -446,7 +456,7 @@ test("a locked Runtime Closure assembles exact Endpoint code and Scheduler polic
   let maximumActive = 0;
   const { closure, modules } = resolvedRuntime(2);
   const { executor, endpoints } = configuredExecutor({
-    lane: "ignored-registration-lane",
+    resource: "authority:ignored-registration",
     defaultConcurrency: 1,
     runtimeImplementation: {
       facet: providerFacet,
@@ -468,14 +478,14 @@ test("a locked Runtime Closure assembles exact Endpoint code and Scheduler polic
   ]);
 
   assert.deepEqual(results.map((result) => result.status), ["complete", "complete"]);
-  assert.equal(maximumActive, 2, "the locked Profile override, not registration order, owns the lane");
+  assert.equal(maximumActive, 2, "the locked Profile override, not registration order, owns the resource");
   assert.equal(results.every((result) => result.state.receipts[0]?.fulfiller === "generation.local"), true);
 });
 
 test("a same-name Endpoint with different implementation bytes is rejected before execution", () => {
   const { closure, modules } = resolvedRuntime(1);
   const { endpoints, getCalls } = configuredExecutor({
-    lane: "endpoint:generation.local",
+    resource: "authority:fixture.account",
     defaultConcurrency: 1,
     runtimeImplementation: {
       facet: providerFacet,
@@ -492,7 +502,7 @@ test("a same-name Endpoint with different implementation bytes is rejected befor
 test("a same-name Endpoint with different configured-instance identity is rejected", () => {
   const { closure, modules } = resolvedRuntime(1);
   const { endpoints, getCalls } = configuredExecutor({
-    lane: "endpoint:generation.local",
+    resource: "authority:fixture.account",
     defaultConcurrency: 1,
     runtimeImplementation: {
       facet: providerFacet,
@@ -509,7 +519,7 @@ test("a same-name Endpoint with different configured-instance identity is reject
 test("a recoverable Runtime facet cannot be activated by a one-shot Handler", () => {
   const { closure, modules } = resolvedRuntime(1, "recoverable");
   const { endpoints, getCalls } = configuredExecutor({
-    lane: "endpoint:generation.local",
+    resource: "authority:fixture.account",
     defaultConcurrency: 1,
     runtimeImplementation: {
       facet: providerFacet,

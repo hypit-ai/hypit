@@ -43,7 +43,7 @@ Declarative activation names an ordinary CredentialRef, not an environment-speci
 {
   "use": "@narratage/provider-kie",
   "instance": "kie.personal",
-  "lane": "generation",
+  "authority": "kie.personal",
   "config": {
     "apiKey": { "store": "keychain", "key": "kie.api-key" },
     "defaultConcurrency": 2
@@ -83,7 +83,7 @@ Manifests actually imported by the author document; installing KIE does not add 
    immediately written to the configured content-addressed ArtifactStore, and removed from durable
    result metadata.
 5. The selected `BuildDispatchStore` owns shared Build capacity. This Provider contributes one KIE
-   lane and a conservative create-task interval; it does not introduce Redis or another source of
+   Authority plus exact capability Routes and a conservative create-task interval; it does not introduce Redis or another source of
    Build truth.
 
 The automated suite uses an adversarial fake KIE service. The credentialed smoke command is a paid

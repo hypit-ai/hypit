@@ -56,5 +56,5 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 
 - 编译失败时抛出带有描述性信息的错误，其中包含源码位置。
 - 运行时失败在 Build 状态机中记录为 Operation 失败。
-- 可恢复的失败会按照 Scheduler 的 lane 策略触发重试。
+- 可恢复的失败会在 Scheduler 资源准入后按照 Endpoint 策略触发重试。
 - 致命失败会让 Build 转入终止状态。

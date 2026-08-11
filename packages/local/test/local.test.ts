@@ -133,6 +133,7 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
     module: providerModule,
     facet: "generation",
     instance: "generation.auth-test",
+    authority: "generation.auth-test",
     implementation: { locator: "example.local-endpoint/generation", digest: providerDigest },
     credentials: { apiKey: credentialRef("memory", "generation.api-key") },
     credentialInputs: { apiKey: { label: "Generation API key" } },
@@ -274,7 +275,7 @@ test("project local runtime resumes durable work while component and endpoint pa
   const endpointPackage: EndpointPackage = {
     name: "example.endpoint.personal",
     manifest: providerManifest,
-    instance: { id: "generation.personal", facet: providerFacet },
+    instance: { id: "generation.personal", facet: providerFacet, authority: "generation.personal" },
     bindings: [{
       capability: capabilities.generation,
       returns: types.generated,
@@ -477,6 +478,8 @@ test("two durable Workers share one SQLite capacity limit across Runtime instanc
   } as const);
   let first: Awaited<ReturnType<typeof createProjectLocalRuntime>> | undefined;
   let second: Awaited<ReturnType<typeof createProjectLocalRuntime>> | undefined;
+  let firstTurn: Promise<unknown> | undefined;
+  let secondTurn: Promise<unknown> | undefined;
   try {
     first = await createProjectLocalRuntime({ root: directory, ...options() });
     second = await createProjectLocalRuntime({ root: directory, ...options() });
@@ -488,18 +491,23 @@ test("two durable Workers share one SQLite capacity limit across Runtime instanc
       id: "capacity-b",
       state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
     });
-    const firstTurn = first.workOnce({ owner: "worker-a", leaseMs: 120 });
+    firstTurn = first.workOnce({ owner: "worker-a", leaseMs: 120 });
     await firstEntered;
-    const secondTurn = second.workOnce({ owner: "worker-b", leaseMs: 120 });
+    secondTurn = second.workOnce({ owner: "worker-b", leaseMs: 120 });
     await new Promise((resolve) => setTimeout(resolve, 200));
     assert.equal(promptCalls, 1,
       "the second Worker cannot enter after the original capacity expiry while its peer keeps heartbeating");
-    assert.equal((await first.queue()).capacity.length, 1);
+    const tickets = (await first.queue()).capacity;
+    assert.equal(tickets.length, 2, "the active command and its blocked peer are both durable tickets");
+    assert.equal(tickets.filter((item) => item.active !== undefined).length, 1);
     release?.();
     await Promise.all([firstTurn, secondTurn]);
+    assert.equal(promptCalls, 1, "a capacity miss releases its Build instead of waiting inside the Worker");
+    await second.workOnce({ owner: "worker-b", leaseMs: 120 });
     assert.equal(promptCalls, 2);
   } finally {
     release?.();
+    await Promise.allSettled([firstTurn, secondTurn].filter((item): item is Promise<unknown> => item !== undefined));
     await second?.close();
     await first?.close();
     await rm(directory, { recursive: true, force: true });

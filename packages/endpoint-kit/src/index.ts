@@ -88,8 +88,15 @@ export type RecoverableEndpoint = {
 
 /** Endpoint/implementation scheduling metadata; it never changes Core demand or command identity. */
 export type EndpointScheduling = {
-  readonly lane?: string;
-  readonly maxConcurrency?: number;
+  readonly resources: readonly {
+    readonly id: string;
+    readonly maxActive: number;
+    readonly maxInFlight: number;
+  }[];
+  readonly queue?: {
+    readonly authority: string;
+    readonly route: string;
+  };
 };
 
 export type EndpointRetryPolicy = {
@@ -171,7 +178,8 @@ export type DefineEndpointPackageOptions = {
   readonly module: ModuleRef;
   readonly facet: string;
   readonly instance: string;
-  readonly lane?: string;
+  /** Explicit non-secret account, deployment or compute-pool identity. */
+  readonly authority: string;
   readonly implementation: {
     readonly locator: string;
     readonly digest: Digest;
@@ -207,7 +215,7 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     "Endpoint module identity is invalid");
   assert(options.facet.trim().length > 0, "Endpoint facet is empty");
   assert(options.instance.trim().length > 0, "Endpoint instance is empty");
-  if (options.lane !== undefined) assert(options.lane.trim().length > 0, "Endpoint lane is empty");
+  assert(options.authority.trim().length > 0, "Endpoint Provider Authority is empty");
   assert(options.implementation.locator.trim().length > 0, "Endpoint implementation locator is empty");
   assert(isDigest(options.implementation.digest), "Endpoint implementation digest is invalid");
   assert(options.capabilities.length > 0, "Endpoint package declares no capability");
@@ -276,8 +284,8 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
   const instance: RuntimeProfileInstance = {
     id: options.instance,
     facet,
+    authority: options.authority,
     configurationDigest,
-    ...(options.lane === undefined ? {} : { lane: options.lane }),
   };
   const bindings: readonly RuntimeEndpointBinding[] = fulfills.map((item) => ({
     ...item,
@@ -291,6 +299,8 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     credentials: credentialDescriptions,
     install(registry) {
       for (const capability of options.capabilities) {
+        const route = refKey(capability.capability);
+        const concurrency = positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency");
         const common: EndpointRegistrationOptions = {
           ...(capability.supports === undefined ? {} : { supports: capability.supports }),
           runtimeImplementation: {
@@ -300,8 +310,19 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
           },
           credentials,
           scheduling: {
-            lane: options.lane ?? `endpoint:${options.instance}`,
-            maxConcurrency: options.defaultConcurrency ?? 1,
+            queue: { authority: options.authority, route },
+            resources: [
+              {
+                id: `authority:${options.authority}`,
+                maxActive: concurrency,
+                maxInFlight: concurrency,
+              },
+              {
+                id: `route:${options.authority}/${route}`,
+                maxActive: concurrency,
+                maxInFlight: concurrency,
+              },
+            ],
           },
           ...(capability.lifecycle === "recoverable" && capability.retry !== undefined
             ? { retry: capability.retry }

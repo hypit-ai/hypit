@@ -186,8 +186,8 @@ Implemented:
   with a locked Python 3.13 environment, one Raster capability, one Handler and one shared pixel
   interpreter, returning only a new content-addressed image Blob; an explicitly configured Python
   transfers lifecycle ownership to the deployment instead of preparing the managed uv project;
-- shared global and named-lane capacity enforced across Builds and Worker processes by the selected
-  DispatchStore.
+- shared global and generic multi-resource capacity enforced atomically across Builds and Worker
+  processes by the selected DispatchStore; Provider Endpoints expose Authority plus exact Route.
 
 Not implemented:
 
@@ -199,6 +199,9 @@ Not implemented:
 - Secrets Manager or Vault adapters; multiple selected CredentialStores already compose by store
   name, with environment and Keychain implementations available;
 - deployment-specific Build release policy;
+- retained historical Runtime Revision supervision and explicit Authority
+  `open|draining|suspended|retired` lifecycle control; revision-filtered claiming already prevents
+  unsafe rerouting, so a missing old revision is currently left unclaimed;
 - hosted Scheduler, distributed leases, CommandDispatcher and multi-tenant product services;
 - arbitrary Volcengine, Fal, API-key Gemini or hosted-service Endpoint packages.
 

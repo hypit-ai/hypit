@@ -4,7 +4,6 @@ import type { BuildState, Digest } from "@narratage/protocol";
 import { capacityReservationId } from "@narratage/runtime";
 import type {
   BuildDispatchSnapshot,
-  CapacityReservation,
   DispatchLease,
   RuntimeCommandExecutor,
   RuntimeExecutionResult,
@@ -88,33 +87,30 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       `Build ${this.#build} Worker lease is stale`);
   }
 
-  async #acquire(descriptor: RuntimeRunnableCommand): Promise<CapacityReservation> {
-    while (true) {
-      await this.#assertAuthority();
-      const now = Date.now();
-      const acquired = await this.#options.stores.dispatch.acquireCapacity({
-        build: this.#build,
-        command: descriptor.command.id,
-        lane: descriptor.lane,
-        mode: descriptor.capacityMode ?? "active",
-        buildLease: this.#dispatchLease,
-        owner: this.#dispatchLease.owner,
-        token: randomUUID(),
-        now,
-        leaseMs: this.#leaseMs,
-        limits: {
-          globalActive: positive(this.#options.scheduling.maxConcurrency ?? 1, "global active capacity"),
-          laneActive: positive(
-            this.#options.scheduling.laneLimits?.[descriptor.lane] ?? descriptor.maxConcurrency,
-            `lane ${descriptor.lane} active capacity`,
-          ),
-          laneInFlight: positive(descriptor.maxInFlight ?? descriptor.maxConcurrency,
-            `lane ${descriptor.lane} in-flight capacity`),
-        },
-      });
-      if (acquired.status === "acquired") return acquired.reservation;
-      await pause(Math.max(1, acquired.retryAt - now));
-    }
+  async #acquire(descriptor: RuntimeRunnableCommand) {
+    await this.#assertAuthority();
+    const now = Date.now();
+    const resources = descriptor.resources.map((resource) => {
+      const override = this.#options.scheduling.resourceLimits?.[resource.id];
+      return override === undefined
+        ? resource
+        : { ...resource, maxActive: override, maxInFlight: override };
+    });
+    return await this.#options.stores.dispatch.acquireCapacity({
+      build: this.#build,
+      command: descriptor.command.id,
+      resources,
+      ...(descriptor.queue === undefined ? {} : { queue: descriptor.queue }),
+      mode: descriptor.capacityMode ?? "active",
+      buildLease: this.#dispatchLease,
+      owner: this.#dispatchLease.owner,
+      token: randomUUID(),
+      now,
+      leaseMs: this.#leaseMs,
+      limits: {
+        globalActive: positive(this.#options.scheduling.maxConcurrency ?? 1, "global active capacity"),
+      },
+    });
   }
 
   async executeCommand(
@@ -125,7 +121,17 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     assert(context.build === this.#build, "Capacity executor received another Build identity");
     const descriptor = this.#delegate.prepare(state).runnable.find((item) => item.command.id === commandId);
     assert(descriptor !== undefined, `command ${commandId} is not currently executable`);
-    const reservation = await this.#acquire(descriptor);
+    const acquired = await this.#acquire(descriptor);
+    if (acquired.status === "blocked") {
+      return {
+        status: "deferred",
+        wakeAt: acquired.retryAt,
+        reason: acquired.resource === undefined
+          ? acquired.reason
+          : `${acquired.reason}:${acquired.resource}`,
+      };
+    }
+    const reservation = acquired.reservation;
     const lease = reservation.active;
     assert(lease !== undefined, `Capacity reservation ${reservation.id} has no active lease`);
     let heartbeatError: unknown;
@@ -294,8 +300,11 @@ class DurableLocalWorker implements RuntimeWorker {
   async runOnce(options: { readonly owner: string; readonly leaseMs: number }): Promise<BuildDispatchSnapshot | undefined> {
     assert(options.owner.trim().length > 0, "Worker owner is empty");
     const leaseMs = positive(options.leaseMs, "Worker leaseMs");
+    const runtimeClosure = this.#options.runtimeClosure;
+    assert(runtimeClosure !== undefined, "durable Worker requires one exact Runtime Revision");
     const token = randomUUID();
     const dispatch = await this.#options.stores.dispatch.claim({
+      runtimeClosure: runtimeClosure.digest,
       owner: options.owner,
       token,
       now: Date.now(),
@@ -309,10 +318,8 @@ class DurableLocalWorker implements RuntimeWorker {
     const stored = await this.#options.stores.builds.read(dispatch.build);
     assert(stored !== undefined, `Dispatch ${dispatch.build} has no BuildState`);
     assert(stored.state.id === dispatch.core, `Dispatch ${dispatch.build} Core identity differs`);
-    if (this.#options.runtimeClosure !== undefined) {
-      assert(this.#options.runtimeClosure.digest === dispatch.runtimeClosure,
-        `Dispatch ${dispatch.build} Runtime Closure differs`);
-    }
+    assert(runtimeClosure.digest === dispatch.runtimeClosure,
+      `Dispatch ${dispatch.build} Runtime Closure differs`);
     const suppressedCommands = new Set<string>();
     const controlled = new CapacityExecutor(
       this.#executor,
@@ -357,12 +364,14 @@ class DurableLocalWorker implements RuntimeWorker {
         return terminal;
       }
       const pending = result.journal.filter((item) => item.status === "pending");
+      const deferred = result.journal.filter((item) => item.status === "deferred");
       const controlledOperations = (await this.#options.stores.operations.list({ build: dispatch.build }))
         .filter((item) => item.cancellation !== undefined)
         .filter((item) => item.status === "created" || item.status === "pending");
       const now = Date.now();
       const wakeTimes = [
         ...pending.map((item) => item.wakeAt ?? now + 1_000),
+        ...deferred.map((item) => item.wakeAt ?? now + 1_000),
         ...controlledOperations.map((item) => item.cancellation?.status === "requested"
           && item.cancellation.retryAt === undefined
           ? now

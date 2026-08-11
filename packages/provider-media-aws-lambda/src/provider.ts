@@ -30,7 +30,7 @@ const QUALIFIED_ARN =
 
 export type CreateAwsLambdaMediaProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   /** Must name a version or alias. See the assertion below for why. */
   readonly functionArn: string;
   readonly bucket: string;
@@ -120,7 +120,7 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
     module: awsLambdaMediaProviderModuleRef,
     facet: "media",
     instance: config.instance ?? "media.aws-lambda",
-    ...(config.lane === undefined ? {} : { lane: config.lane }),
+    authority: config.authority ?? config.instance ?? "media.aws-lambda",
     implementation: {
       locator: "@narratage/provider-media-aws-lambda/media",
       digest: awsLambdaMediaProviderImplementationDigest,

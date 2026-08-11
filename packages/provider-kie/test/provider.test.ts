@@ -68,6 +68,8 @@ function operation(request: Need) {
     build: "build:kie-test",
     command: "command:kie-test",
     endpoint: "kie.default",
+    authority: "kie.default",
+    route: "fixture.video",
     implementationDigest: kieProviderImplementationDigest,
     runtimeClosure: digestOf("runtime:kie-test"),
     requestDigest: request.requestDigest,

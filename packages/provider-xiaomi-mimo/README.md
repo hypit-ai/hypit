@@ -13,7 +13,7 @@ Runtime Profile example:
 {
   "use": "@narratage/provider-xiaomi-mimo",
   "instance": "mimo.official",
-  "lane": "xiaomi-mimo",
+  "authority": "mimo.official",
   "config": {
     "apiKey": { "store": "keychain", "key": "xiaomi-mimo.api-key" },
     "defaultConcurrency": 2
@@ -32,5 +32,5 @@ node --run narratage -- lock-packages svml.runtime-packages.lock \
   --package-root .
 ```
 
-The Provider declares a default concurrency limit on its selected Runtime lane. The shared
+The Provider declares default concurrency on its Authority and exact capability Routes. The shared
 Scheduler owns queuing across Builds; this package does not create a private queue.

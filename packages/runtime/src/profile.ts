@@ -68,8 +68,8 @@ export type RuntimeModuleManifest = {
 export type RuntimeProfileInstance = {
   readonly id: string;
   readonly facet: RuntimeFacetRef;
-  /** Optional authority-wide lane name. The default is endpoint:<instance id>. */
-  readonly lane?: string;
+  /** Required for capability Endpoints; absent for Scheduler and Store instances. */
+  readonly authority?: string;
   /** Digest of non-secret endpoint/store configuration. Secret bytes must never enter it. */
   readonly configurationDigest?: Digest;
 };
@@ -96,7 +96,7 @@ export type RuntimeProfile = {
   readonly endpoints: readonly RuntimeEndpointBinding[];
   readonly scheduling: {
     readonly maxConcurrency: number;
-    readonly lanes: readonly { readonly name: string; readonly maxConcurrency: number }[];
+    readonly resources: readonly { readonly id: string; readonly maxConcurrency: number }[];
   };
 };
 
@@ -119,7 +119,7 @@ export type ResolvedRuntimeEndpoint = {
   readonly fulfills: readonly RuntimeCapability[];
   readonly lifecycle: "immediate" | "recoverable";
   readonly credentialSlots: readonly string[];
-  readonly lane: string;
+  readonly authority: string;
   readonly maxConcurrency: number;
 };
 
@@ -295,8 +295,7 @@ export class RuntimeModuleRegistry {
           === JSON.stringify(resolved.facet.credentialSlots ?? []), `${instance.id} Endpoint credential slots differ`);
         assert(JSON.stringify(instance.fulfills.map(bindingKey))
           === JSON.stringify(resolved.facet.fulfills.map(bindingKey)), `${instance.id} Endpoint capabilities differ`);
-        const override = closure.scheduling.lanes.find((lane) => lane.name === instance.lane)?.maxConcurrency;
-        assert(instance.maxConcurrency === (override ?? resolved.facet.defaultConcurrency),
+        assert(instance.maxConcurrency === resolved.facet.defaultConcurrency,
           `${instance.id} Endpoint concurrency differs`);
       }
     }
@@ -311,7 +310,7 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
       .map((instance) => ({
         id: instance.id,
         facet: { module: { ...instance.facet.module }, name: instance.facet.name },
-        ...(instance.lane === undefined ? {} : { lane: instance.lane }),
+        ...(instance.authority === undefined ? {} : { authority: instance.authority }),
         ...(instance.configurationDigest === undefined
           ? {}
           : { configurationDigest: instance.configurationDigest }),
@@ -332,9 +331,9 @@ function profileContent(profile: RuntimeProfile): Omit<RuntimeProfile, "digest">
       .sort((left, right) => bindingKey(left).localeCompare(bindingKey(right))),
     scheduling: {
       maxConcurrency: profile.scheduling.maxConcurrency,
-      lanes: [...profile.scheduling.lanes]
-        .map((lane) => ({ name: lane.name, maxConcurrency: lane.maxConcurrency }))
-        .sort((left, right) => left.name.localeCompare(right.name)),
+      resources: [...profile.scheduling.resources]
+        .map((resource) => ({ id: resource.id, maxConcurrency: resource.maxConcurrency }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
     },
   };
 }
@@ -360,7 +359,7 @@ function verifyProfileShape(profile: RuntimeProfile): void {
     assert(instance.id.trim().length > 0, "Runtime Profile instance id is empty");
     assert(instance.facet.name.trim().length > 0, `${instance.id} facet name is empty`);
     assert(instance.facet.module.name.length > 0 && instance.facet.module.version.length > 0, `${instance.id} facet module is invalid`);
-    if (instance.lane !== undefined) assert(instance.lane.trim().length > 0, `${instance.id} lane is empty`);
+    if (instance.authority !== undefined) assert(instance.authority.trim().length > 0, `${instance.id} authority is empty`);
     if (instance.configurationDigest !== undefined) {
       assert(isDigest(instance.configurationDigest), `${instance.id} configuration digest is invalid`);
     }
@@ -372,12 +371,12 @@ function verifyProfileShape(profile: RuntimeProfile): void {
     return bindingKey(normalizeCapability(binding));
   });
   assert(new Set(bindings).size === bindings.length, "Runtime Profile repeats an Endpoint binding");
-  const laneNames = profile.scheduling.lanes.map((lane) => {
-    assert(lane.name.trim().length > 0, "Runtime Profile lane name is empty");
-    positiveInteger(lane.maxConcurrency, `Runtime lane ${lane.name}`);
-    return lane.name;
+  const resourceNames = profile.scheduling.resources.map((resource) => {
+    assert(resource.id.trim().length > 0, "Runtime Profile resource id is empty");
+    positiveInteger(resource.maxConcurrency, `Runtime resource ${resource.id}`);
+    return resource.id;
   });
-  assert(new Set(laneNames).size === laneNames.length, "Runtime Profile repeats a lane override");
+  assert(new Set(resourceNames).size === resourceNames.length, "Runtime Profile repeats a resource override");
 }
 
 export function sealRuntimeProfile(
@@ -413,7 +412,8 @@ function closureContent(closure: RuntimeClosure): Omit<RuntimeClosure, "digest">
       .sort((left, right) => bindingKey(left).localeCompare(bindingKey(right))),
     scheduling: {
       maxConcurrency: closure.scheduling.maxConcurrency,
-      lanes: [...closure.scheduling.lanes].map((lane) => ({ ...lane })).sort((left, right) => left.name.localeCompare(right.name)),
+      resources: [...closure.scheduling.resources].map((resource) => ({ ...resource }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
     },
   };
 }
@@ -429,12 +429,12 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     return moduleKey(item.module);
   });
   assert(new Set(moduleKeys).size === moduleKeys.length, "Runtime Closure repeats a module");
-  const laneNames = closure.scheduling.lanes.map((lane) => {
-    assert(lane.name.trim().length > 0, "Runtime Closure lane is empty");
-    positiveInteger(lane.maxConcurrency, `Runtime Closure lane ${lane.name}`);
-    return lane.name;
+  const resourceNames = closure.scheduling.resources.map((resource) => {
+    assert(resource.id.trim().length > 0, "Runtime Closure resource id is empty");
+    positiveInteger(resource.maxConcurrency, `Runtime Closure resource ${resource.id}`);
+    return resource.id;
   });
-  assert(new Set(laneNames).size === laneNames.length, "Runtime Closure repeats a lane override");
+  assert(new Set(resourceNames).size === resourceNames.length, "Runtime Closure repeats a resource override");
   const instances = new Map<string, ResolvedRuntimeInstance>();
   for (const instance of closure.instances) {
     assert(!instances.has(instance.id), `Runtime Closure repeats instance ${instance.id}`);
@@ -443,7 +443,7 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     assert(moduleKeys.includes(moduleKey(instance.facet.module)), `${instance.id} refers to an unlocked Runtime module`);
     sortedUniqueStrings(instance.permissions, `${instance.id} permissions`);
     if (instance.role === "capability-endpoint") {
-      assert(instance.lane.trim().length > 0, `${instance.id} Endpoint lane is empty`);
+      assert(instance.authority.trim().length > 0, `${instance.id} Endpoint authority is empty`);
       positiveInteger(instance.maxConcurrency, `${instance.id} Endpoint maxConcurrency`);
       assert(instance.fulfills.length > 0, `${instance.id} Endpoint fulfills nothing`);
       assert(new Set(instance.fulfills.map(bindingKey)).size === instance.fulfills.length,
@@ -508,16 +508,15 @@ export function resolveRuntimeProfile(
       permissions: [...resolved.facet.permissions],
     };
     if (resolved.facet.role !== "capability-endpoint") return { ...common, role: resolved.facet.role };
-    const lane = instance.lane ?? `endpoint:${instance.id}`;
-    const override = profile.scheduling.lanes.find((candidate) => candidate.name === lane)?.maxConcurrency;
+    assert(instance.authority !== undefined, `${instance.id} Endpoint Provider Authority is required`);
     return {
       ...common,
       role: "capability-endpoint",
       fulfills: resolved.facet.fulfills.map((item) => structuredClone(item)),
       lifecycle: resolved.facet.lifecycle,
       credentialSlots: [...(resolved.facet.credentialSlots ?? [])],
-      lane,
-      maxConcurrency: override ?? resolved.facet.defaultConcurrency,
+      authority: instance.authority,
+      maxConcurrency: resolved.facet.defaultConcurrency,
     };
   });
   const byId = new Map(instances.map((instance) => [instance.id, instance]));
@@ -600,13 +599,13 @@ export function verifyRuntimeCoverage(closure: RuntimeClosure, state: BuildState
 
 export function localSchedulerOptionsFromClosure(closure: RuntimeClosure): {
   readonly maxConcurrency: number;
-  readonly laneLimits: Readonly<Record<string, number>>;
+  readonly resourceLimits: Readonly<Record<string, number>>;
   readonly runtimeClosure: RuntimeClosure;
 } {
   verifyRuntimeClosure(closure);
   return {
     maxConcurrency: closure.scheduling.maxConcurrency,
-    laneLimits: Object.fromEntries(closure.scheduling.lanes.map((lane) => [lane.name, lane.maxConcurrency])),
+    resourceLimits: Object.fromEntries(closure.scheduling.resources.map((resource) => [resource.id, resource.maxConcurrency])),
     runtimeClosure: structuredClone(closure),
   };
 }

@@ -95,7 +95,7 @@ test("declarative adapters are explicit and never guessed", async () => {
   await writeFile(path, JSON.stringify({
     format: "svml.runtime-config@1",
     ...required,
-    endpoints: [{ use: "example.missing", instance: "missing", config: {} }],
+    endpoints: [{ use: "example.missing", instance: "missing", authority: "example.missing", config: {} }],
     permissions: [],
   }));
   await assert.rejects(
@@ -128,9 +128,9 @@ test("doctor names the external program a Provider needs, and the command that s
     format: "svml.runtime-config@1",
     ...required,
     endpoints: [
-      { use: "example.absent", instance: "absent", config: {} },
-      { use: "example.wrong", instance: "wrong", config: {} },
-      { use: "example.exploding", instance: "exploding", config: {} },
+      { use: "example.absent", instance: "absent", authority: "example.account", config: {} },
+      { use: "example.wrong", instance: "wrong", authority: "example.account", config: {} },
+      { use: "example.exploding", instance: "exploding", authority: "example.account", config: {} },
     ],
     permissions: [],
   }));
@@ -178,8 +178,8 @@ test("doctor activates one pure Endpoint declaration without constructing Runtim
     ...required,
     runtimeServices: [{ use: "example.store", instance: "store", config: { mode: "valid" } }],
     endpoints: [
-      { use: "example.invalid", instance: "invalid", config: { mode: "bad" } },
-      { use: "example.missing-credential", instance: "missing-credential", config: {} },
+      { use: "example.invalid", instance: "invalid", authority: "example.account", config: { mode: "bad" } },
+      { use: "example.missing-credential", instance: "missing-credential", authority: "example.account", config: {} },
     ],
     permissions: [],
   }));
@@ -245,7 +245,7 @@ test("doctor resolves credentials from the same Endpoint declaration used by exe
     format: "svml.runtime-config@1",
     ...required,
     runtimeServices: [{ use: "example.credentials", instance: "credentials", config: {} }],
-    endpoints: [{ use: "example.provider", instance: "provider", config: {} }],
+    endpoints: [{ use: "example.provider", instance: "provider", authority: "example.account", config: {} }],
     permissions: [],
   }));
 

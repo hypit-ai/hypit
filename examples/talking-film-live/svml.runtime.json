@@ -24,7 +24,7 @@
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.talking-film",
-      "lane": "generation",
+      "authority": "kie.talking-film",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
@@ -33,7 +33,7 @@
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.talking-film",
-      "lane": "media",
+      "authority": "media.talking-film",
       "config": {
         "defaultConcurrency": 2
       }
@@ -41,7 +41,7 @@
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.talking-film",
-      "lane": "alignment",
+      "authority": "whisperx.talking-film",
       "config": {
         "defaultConcurrency": 1
       }
@@ -49,7 +49,7 @@
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.talking-film",
-      "lane": "planning",
+      "authority": "vertex.talking-film",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
@@ -59,7 +59,7 @@
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.talking-film",
-      "lane": "render",
+      "authority": "hyperframes.talking-film",
       "config": {
         "workers": 2,
         "quality": "standard",
@@ -80,13 +80,6 @@
     "process:media"
   ],
   "scheduling": {
-    "maxConcurrency": 4,
-    "lanes": {
-      "generation": 2,
-      "media": 2,
-      "alignment": 1,
-      "planning": 1,
-      "render": 1
-    }
+    "maxConcurrency": 4
   }
 }

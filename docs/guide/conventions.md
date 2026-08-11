@@ -58,5 +58,5 @@ When adding a new package, add its path mapping to `tsconfig.json`:
 
 - Compilation failures throw with descriptive messages including source location.
 - Runtime failures are recorded as Operation failures in the Build state machine.
-- Recoverable failures trigger retry according to the Scheduler's lane policy.
+- Recoverable failures trigger retry according to Endpoint policy after Scheduler resource admission.
 - Fatal failures transition the Build to a terminal state.

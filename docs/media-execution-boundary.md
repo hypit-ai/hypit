@@ -93,7 +93,7 @@ with separate inputs, results, digests, retry histories and scheduling identitie
 audio/frame extraction, canonical speech-evidence projection, timeline-audio rendering and mux with
 bounded shell-free ffprobe/ffmpeg subprocesses. `@narratage/provider-hyperframes-local` fulfills the
 independent silent visual Need. One
-Runtime Scheduler applies configured Endpoint lane concurrency across Builds, while HyperFrames'
+Runtime Scheduler applies configured Endpoint Authority/Route concurrency across Builds, while HyperFrames'
 own `workers` option partitions frames inside one admitted render.
 
 The same domain library also owns generic `CompositableSurface` byte verification. Before local
