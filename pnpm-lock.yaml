@@ -2375,9 +2375,6 @@ importers:
       '@narratage/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@narratage/spatial':
-        specifier: workspace:*
-        version: link:../spatial
       '@narratage/speech':
         specifier: workspace:*
         version: link:../speech
@@ -2442,6 +2439,9 @@ importers:
       '@narratage/speech-basis':
         specifier: workspace:*
         version: link:../speech-basis
+      '@narratage/svs':
+        specifier: workspace:*
+        version: link:../svs
     devDependencies:
       '@narratage/caption':
         specifier: workspace:*
