@@ -58,6 +58,6 @@ The seven templates are:
 - `motion-reference-v1`: preserve the subject and transfer body motion only;
 - `camera-reference-v1`: preserve the subject and transfer camera language only.
 
-Speaker, B-roll, Podcast, Call and Street Interview retain useful orthogonal prompt axes from the legacy implementation. Historical aliases that emitted
-identical prose were removed. Speed, trim, last-frame extraction and audio extraction are ordinary
-media operations and intentionally do not live in these templates.
+Speaker, B-roll, Podcast, Call and Street Interview expose finite orthogonal prompt axes through
+their Text Templates. Speed, trim, last-frame extraction and audio extraction are ordinary media
+operations and intentionally do not live in these templates.

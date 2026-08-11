@@ -1,11 +1,15 @@
 # Street-interview format
 
-This is an editorial recipe, not a dedicated Narratage generation component. Compose it with a
-`seedance:ReferenceVideo` per authored take (or supplied takes), explicit image/audio references,
-and a shared `speech:Spine`; use `media-track:Track` for PIP/reaction layout.
+Use the vendored data-only `street-interview-v1` Kit; it is a reusable Text Template, not a new
+execution node. Render it with `text:Render` plus an SVS Recipe, then feed the result to one
+`seedance:ReferenceVideo` with one complete-scene image and two ordered voice references. Use a
+shared `speech:Spine` for take assembly and `media-track:Track` only for separate editorial overlays.
 
 - Establish one shared scene reference showing interviewer, guest, microphone, distance, and street
   context. Establish two short clean voice references and a Script with explicit speaker cues.
+- Use `A:` for the interviewer/first audio reference and `B:` for the guest/second audio reference.
+  Connect dialogue and optional take-specific action through the Kit slots instead of rebuilding its
+  role, microphone, scene, and no-overlay prompt blocks.
 - Keep one locked or softly handheld two-person view. Drift may be slight, but do not cut to a new
   angle or reconstruct the room. The active speaker is identified by mouth and microphone; the listener
   remains visibly alive and silent.

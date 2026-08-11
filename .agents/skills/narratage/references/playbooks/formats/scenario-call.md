@@ -1,7 +1,9 @@
 # Scenario-call format
 
-This is an editorial recipe, not a native call generator. Use two `seedance:ReferenceVideo` outputs
-or supplied video assets, then compose main/inset views with `media-track:Track` and explicit Frames.
+Use the vendored data-only `call-v1` Kit; it is a reusable Text Template, not a new execution node.
+Render it with `text:Render` plus an SVS Recipe, then feed one `seedance:ReferenceVideo` with the two
+final reversed call-layout images and two ordered voice references. Use supplied media and
+`media-track:Track` only when the call must be assembled from independent real feeds.
 
 Evidence level: thin.
 

@@ -4,6 +4,8 @@
   segments, each planned for 4–15 seconds with an 8–12 second target.
 - Keep one visual identity across A-roll: same face reference, room, wardrobe, and lighting. Use
   B-roll for changes, not to drift the presenter base.
+- Use the vendored `speaker-v1` Kit with `text:Render`; select composition, camera, edit,
+  performance, and gesture through an SVS Recipe, then connect dialogue/action as Text edges.
 - Use `seedance:ReferenceVideo` for face/image/audio references; use `seedance:TextVideo` without an
   identity reference. Keep dialogue and action as separate `text:Value` inputs.
 - Build one `speech:Spine` and one `whisperx:Alignment`. Add `caption:Program` +

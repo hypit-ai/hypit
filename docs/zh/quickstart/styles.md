@@ -310,13 +310,29 @@ Street Interview 与参考迁移 Kit 可以保持为纯数据，而不进入 See
 ```svs
 broll.product-demo {
   material-mode: product-beauty;
-  reference-plan: scene-plus-refs;
   story-shape: process-demo;
   edit-language: insert-cutaway;
   camera-language: product-macro;
   motion-intensity: readable;
 }
 ```
+
+Street Interview、Podcast 与 Call 使用同一套 Recipe 机制，不需要手写固定 Prompt。例如：
+
+```svs
+interview.street {
+  framing: soft-handheld;
+  edit-language: pause-trim;
+  pacing: compact;
+  performance: natural-street;
+  reaction: active;
+  gesture: natural;
+}
+```
+
+`street-interview-v1` 读取这六个轴。`podcast-v1` 与 `call-v1` 读取同名的 `framing`、
+`edit-language`、`pacing`、`performance`、`reaction` 和 `gesture` 轴，但使用各自的有限值。
+允许值和默认值以所选 Kit 文件为准。
 
 模型、分辨率、时长和参考媒体不是模板策略；它们继续存在于精确模型 Surface 与显式图边中。
 

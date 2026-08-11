@@ -24,5 +24,5 @@ pnpm narratage services up svml.runtime.json
 pnpm narratage doctor svml.runtime.json
 ```
 
-The repository owns skill discovery: `.agent/skills` is canonical, with repository-root
+The repository owns skill discovery: `.agents/skills` is canonical, with repository-root
 `.codex/skills` and `.claude/skills` links. This is checkout layout, not a skill setup operation.

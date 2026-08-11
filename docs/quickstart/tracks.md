@@ -96,8 +96,8 @@ while a Dual Text Atom remains one indivisible visible unit. Fine never guesses 
 
 `active-box` is independently `off`, `current` or `trail`. `active-box-continuity: isolated` paints
 one capsule per activated Atom; `joined` turns a trail into one ordered prefix whose background is
-continuous on each real browser line. Thus trail-colored text with a current-only Pill, the original
-Twinit behavior, is one Recipe—not a second renderer.
+continuous on each real browser line. Thus trail-colored text with a current-only Pill is one
+Recipe—not a second renderer.
 
 Fine wraps only between complete Atoms and never clips author text. It intentionally has no
 `max-lines`; use Cue bounds, Track width and font size to control density.

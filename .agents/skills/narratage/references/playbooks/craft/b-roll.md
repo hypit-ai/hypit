@@ -1,5 +1,8 @@
 # B-roll craft
 
+- Use the vendored `broll-v1` Kit with `text:Render`. Put `material-mode`, `story-shape`,
+  `edit-language`, `camera-language`, and `motion-intensity` in an SVS Recipe; connect only the
+  shot-specific micro-story through the required `story` slot.
 - Choose the narrative scene before writing prompts. A useful product arc is **problem → failed
   effort → product/mechanism → payoff**, but use the number of beats the story needs.
 - Design each shot as a paired package: the image prompt establishes every visible fact; the video
