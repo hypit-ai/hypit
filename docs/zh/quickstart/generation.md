@@ -15,7 +15,7 @@ description: 声明媒体资源并使用 Seedance 生成视频。
 <import as="estimate" from="@narratage/estimate@1"/>
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 ```
 
 ## media:Image
@@ -177,10 +177,13 @@ Endpoint，不会改变作者图。
 `@narratage/seedance-kits` 包含七个纯数据 Text Template。Kit 不是模型包装器：先用通用
 `text:Render` 生成 prompt，再把该 Text 与真实媒体引用显式接入低层 Seedance Surface。
 
+只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内
+副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Narratage 仓库 checkout。
+
 ```svml
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="broll-kit" source="../../packages/seedance-kits/kits/broll-v1.svs"/>
+<import as="broll-kit" source="./kits/broll-v1.svs"/>
 
 <text:Render id="demo-prompt"
   template={broll-kit.broll-v1}
@@ -201,6 +204,39 @@ action 和 extra 仍经由 `text:Set` 作为图边进入。现有模板包括 `s
 `call-v1`、`street-interview-v1`、`motion-reference-v1`、`camera-reference-v1`。
 媒体数量与顺序仍清楚地写在 `seedance:ReferenceVideo` 里，不藏进 Kit 代码。
 
+## 街访 Prompt 组装
+
+使用 `street-interview-v1` 复用场景、角色、麦克风、音色和无叠加文字契约。构图、剪辑、
+节奏、表演、反应与手势由 SVS Recipe 选择；动态输入只保留对白与可选的单段动作：
+
+```svml
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+
+<text:Value id="interview-action">
+  Let the guest pause briefly before the answer; keep the microphone handoff natural.
+</text:Value>
+
+<text:Render id="interview-prompt"
+  template={interview-kit.street-interview-v1}
+  recipe={studio.interview.street}>
+  <text:Set name="dialogue" text={story.segment.interview.dialogue}/>
+  <text:Set name="action" text={interview-action}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="interview-take" model="mini"
+  prompt={interview-prompt} duration={interview-duration.duration}
+  resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={interview-scene}/>
+  <seedance:Reference audio={interviewer-voice}/>
+  <seedance:Reference audio={guest-voice}/>
+</seedance:ReferenceVideo>
+```
+
+对白使用明确的 `A:`/`B:` 顺序：A 是采访者并绑定第一段音频参考，B 是受访者并绑定第二段。
+固定英文 Prompt 骨架由 Kit 负责，不要在手写 Prompt 中重复一遍。
+
 ## 口播 Prompt 组装
 
 口播创作不需要一个特殊的可执行组件。数据化的 `speaker-v1` Template、项目 Recipe 与每段的
@@ -209,7 +245,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 ```svml
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <text:Value id="hook-action">
   先紧迫地直视镜头，最后一句收住声音。
@@ -243,7 +279,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
 <import as="studio" source="./studio.svs"/>
-<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>

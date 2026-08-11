@@ -16,7 +16,7 @@ Every component shown here must be imported by its package specifier before use:
 <import as="estimate" from="@narratage/estimate@1"/>
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 ```
 
 ## media:Image
@@ -189,10 +189,14 @@ Runtime Endpoints for these exact Needs; neither changes the author graph.
 generic `text:Render` to produce the prompt, then connect that Text and the real media references to
 the low-level Seedance Surface.
 
+Copy only the selected Kit `.svs` files into the video project's `./kits/` directory. Import the
+vendored project copy so the Kit bytes remain inside the Source Closure; do not reach back into a
+Narratage repository checkout from project source.
+
 ```svml
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="broll-kit" source="../../packages/seedance-kits/kits/broll-v1.svs"/>
+<import as="broll-kit" source="./kits/broll-v1.svs"/>
 
 <text:Render id="demo-prompt"
   template={broll-kit.broll-v1}
@@ -221,6 +225,41 @@ references plus two ordered audio references; Street Interview expects one scene
 ordered voices; the two reference-transfer templates expect one subject image and one reference
 video. Those shapes are visible in `seedance:ReferenceVideo`, not hidden in Kit execution code.
 
+## Street-interview prompt assembly
+
+Use `street-interview-v1` for the stable scene, role, microphone, voice and no-overlay contracts.
+Select framing, edit, pacing, performance, reaction and gesture through an SVS Recipe; provide only
+the authored dialogue and optional per-take action as dynamic Text edges:
+
+```svml
+<import as="text" from="@narratage/text@1"/>
+<import as="seedance" from="@narratage/seedance@1"/>
+<import as="interview-kit" source="./kits/street-interview-v1.svs"/>
+
+<text:Value id="interview-action">
+  Let the guest pause briefly before the answer; keep the microphone handoff natural.
+</text:Value>
+
+<text:Render id="interview-prompt"
+  template={interview-kit.street-interview-v1}
+  recipe={studio.interview.street}>
+  <text:Set name="dialogue" text={story.segment.interview.dialogue}/>
+  <text:Set name="action" text={interview-action}/>
+</text:Render>
+
+<seedance:ReferenceVideo id="interview-take" model="mini"
+  prompt={interview-prompt} duration={interview-duration.duration}
+  resolution="720p" aspect-ratio="9:16" generate-audio="true">
+  <seedance:Reference image={interview-scene}/>
+  <seedance:Reference audio={interviewer-voice}/>
+  <seedance:Reference audio={guest-voice}/>
+</seedance:ReferenceVideo>
+```
+
+The dialogue uses explicit `A:`/`B:` order: A is the interviewer and maps to the first audio
+reference; B is the guest and maps to the second. The Kit owns the reusable English scaffold, so do
+not duplicate it in a hand-written prompt.
+
 ## Talking-head prompt assembly
 
 Talking-head authoring does not need a special executable component. The data-only `speaker-v1`
@@ -230,7 +269,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 ```svml
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
-<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <text:Value id="hook-action">
   Begin with urgent direct eye contact, then let the final admission land more quietly.
@@ -266,7 +305,7 @@ A two-take setup with estimated durations feeding explicit Text assembly and See
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
 <import as="studio" source="./studio.svs"/>
-<import as="speaker-kit" source="../../packages/seedance-kits/kits/speaker-v1.svs"/>
+<import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <media:Image id="presenter-clean" src="./assets/presenter-clean.png"/>
 <media:Image id="presenter-alt" src="./assets/presenter-alt.png"/>

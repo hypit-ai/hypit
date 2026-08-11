@@ -2,6 +2,8 @@
 
 Evidence level: thin.
 
+- Use the vendored `broll-v1` Kit for card/table motion. Keep shared material, story shape, camera,
+  edit, and motion policy in a Recipe; connect each reveal action through the `story` slot.
 - Preserve the four-part structure: question → three face-down cards → pick 1/2/3 prompt → individual
   reveals and interpretations.
 - Frame interpretation as reflection, not guaranteed fortune-telling. Offer themes/directions, not

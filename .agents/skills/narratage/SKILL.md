@@ -13,6 +13,8 @@ Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
 - Environment/setup or API keys → read `references/environment.md` and `references/credentials.md`.
 - SVML authoring → read `references/quickstart.md`, then the linked authoritative page under
   `docs/quickstart/`.
+- Seedance prompt assembly → read `references/seedance-kits.md`; reuse an official vendored Kit and
+  SVS Recipe before writing format scaffolding by hand.
 - Production craft or format choice → read `references/playbooks/index.md` and
   `references/playbooks/svml-mapping.md`, then only the relevant craft/format file.
 - Reference-video reverse engineering → read `references/reference-vlm.md`; have VLM emit

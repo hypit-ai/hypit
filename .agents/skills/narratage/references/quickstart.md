@@ -7,6 +7,7 @@ The repository docs are authoritative:
 | Script semantics | `docs/quickstart/script.md` |
 | SVS Recipes | `docs/quickstart/styles.md` |
 | Media and Seedance | `docs/quickstart/generation.md` |
+| Reusable Seedance Prompt Kits | `packages/seedance-kits/README.md` and the selected file under `packages/seedance-kits/kits/` |
 | Speech Spine and SemanticMap | `docs/quickstart/timing.md` |
 | Caption, Media, Text, Audio Tracks | `docs/quickstart/tracks.md` and the `@narratage/audio-track` package README |
 | Film and rendering | `docs/quickstart/composition.md` |

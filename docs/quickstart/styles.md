@@ -318,13 +318,30 @@ transfer Kits remain separate from Seedance execution.
 ```svs
 broll.product-demo {
   material-mode: product-beauty;
-  reference-plan: scene-plus-refs;
   story-shape: process-demo;
   edit-language: insert-cutaway;
   camera-language: product-macro;
   motion-intensity: readable;
 }
 ```
+
+Street Interview, Podcast and Call use the same Recipe mechanism rather than hand-written fixed
+prompt prose. For example:
+
+```svs
+interview.street {
+  framing: soft-handheld;
+  edit-language: pause-trim;
+  pacing: compact;
+  performance: natural-street;
+  reaction: active;
+  gesture: natural;
+}
+```
+
+`street-interview-v1` reads those six axes. `podcast-v1` and `call-v1` read the corresponding
+`framing`, `edit-language`, `pacing`, `performance`, `reaction` and `gesture` axes with their own
+finite values. The selected Kit file is the authority for allowed values and defaults.
 
 Model, resolution, duration and reference media are not template policy. They stay on the exact
 model Surface and graph edges.

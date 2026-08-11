@@ -11,6 +11,9 @@ overlay JSON or introduce a JSON-to-SVML conversion step.
   provided media; generated live-action PIP/B-roll may be real generated media.
 - Anchor recurring people/products/locations at the clearest shot and reuse references topologically.
 - Listen to audio for voice design. Transcribe speech, not burned-in captions.
+- Before hand-writing a Seedance prompt, select an official vendored Kit when the format matches:
+  `speaker-v1`, `broll-v1`, `podcast-v1`, `call-v1`, `street-interview-v1`,
+  `motion-reference-v1`, or `camera-reference-v1`. Supply only Recipe axes and dynamic slots.
 - Map transcript to Script; generated media to `seedance:TextVideo`/`FrameVideo`/`ReferenceVideo`;
   supplied assets to `media:Image`/`media:Audio` or `media-track:Item`; timing to `speech:Spine` and
   `whisperx:Alignment`; overlays to `caption:Program` + `caption-fine:Track`, `media-track:Track`,
