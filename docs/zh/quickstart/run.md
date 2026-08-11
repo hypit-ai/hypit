@@ -201,7 +201,7 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.main",
-      "lane": "generation",
+      "authority": "kie.main",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
@@ -210,19 +210,19 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.main",
-      "lane": "media",
+      "authority": "media.main",
       "config": { "defaultConcurrency": 2 }
     },
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.main",
-      "lane": "alignment",
+      "authority": "whisperx.main",
       "config": { "defaultConcurrency": 1 }
     },
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.main",
-      "lane": "planning",
+      "authority": "vertex.main",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
@@ -233,7 +233,7 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.main",
-      "lane": "render",
+      "authority": "hyperframes.main",
       "config": {
         "workers": 2,
         "quality": "standard",
@@ -253,28 +253,19 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
     "process:hyperframes",
     "process:media"
   ],
-  "scheduling": {
-    "maxConcurrency": 4,
-    "lanes": {
-      "generation": 2,
-      "media": 2,
-      "alignment": 1,
-      "planning": 1,
-      "render": 1
-    }
-  }
+  "scheduling": { "maxConcurrency": 4 }
 }
 ```
 
 ### Endpoint
 
-每个 endpoint 将一个 Provider 包绑定到具有并发通道的命名实例：
+每个 endpoint 将一个 Provider 包绑定到命名实例与显式的 Provider Authority：
 
 | 字段 | 说明 |
 |---|---|
 | `use` | Provider 包名（例如 `@narratage/provider-kie`） |
 | `instance` | 唯一的实例标识符 |
-| `lane` | 用于并发控制的调度通道 |
+| `authority` | 共享外部容量的账号、部署或计算池的稳定非秘密标识 |
 | `config` | Provider 专属非秘密配置、CredentialRef 与并发数 |
 
 ### 权限
@@ -283,7 +274,8 @@ Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类
 
 ### 调度
 
-`maxConcurrency` 限制总的并行 Operation 数。`lanes` 设置每个通道的并发上限，以防止某一类工作饿死其他工作。
+`maxConcurrency` 限制总的并行 Operation 数。Provider 会贡献一个 Authority 资源和一个精确
+Capability Route 资源，二者由 Store 原子获取；可选的 `resources` 只按不透明资源 id 覆盖容量。
 
 ## Build 工作流
 

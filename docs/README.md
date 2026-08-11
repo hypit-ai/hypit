@@ -28,6 +28,8 @@ the working tree contains only documents that should inform current implementati
   Runtime, recovery and environment replacement.
 - [`runtime-execution-control.md`](./runtime-execution-control.md) — target durable Build dispatch,
   Worker lifecycle, transparent queue inspection and unambiguous Build/Operation cancellation.
+- [`runtime-provider-scheduling.md`](./runtime-provider-scheduling.md) — explicit Provider
+  Authorities, exact capability Routes, immutable Runtime Revisions and atomic resource tickets.
 - [`cli-experience.md`](./cli-experience.md) — complete human/CI/machine terminal design,
   command hierarchy, visual language and decentralized Endpoint authentication.
 - [`runtime-adapter-loading.md`](./runtime-adapter-loading.md) — separately locked Provider

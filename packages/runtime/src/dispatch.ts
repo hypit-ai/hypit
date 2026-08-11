@@ -43,6 +43,8 @@ export type BuildDispatchCreate =
   | { readonly status: "existing"; readonly snapshot: BuildDispatchSnapshot };
 
 export type BuildDispatchClaim = {
+  /** Exact Runtime Revision this Worker can execute. Claims are filtered before leasing. */
+  readonly runtimeClosure: Digest;
   readonly owner: string;
   readonly token: string;
   readonly now: number;
@@ -64,8 +66,12 @@ export type CapacityMode = "active" | "recoverable";
 
 export type CapacityLimits = {
   readonly globalActive: number;
-  readonly laneActive: number;
-  readonly laneInFlight: number;
+};
+
+export type CapacityResourceClaim = {
+  readonly id: string;
+  readonly maxActive: number;
+  readonly maxInFlight: number;
 };
 
 export type CapacityReservation = {
@@ -73,7 +79,11 @@ export type CapacityReservation = {
   readonly id: Digest;
   readonly build: string;
   readonly command: string;
-  readonly lane: string;
+  readonly resources: readonly CapacityResourceClaim[];
+  readonly queue?: {
+    readonly authority: string;
+    readonly route: string;
+  };
   readonly mode: CapacityMode;
   readonly inFlight: boolean;
   readonly active?: DispatchLease;
@@ -84,7 +94,8 @@ export type CapacityReservation = {
 export type CapacityAcquireRequest = {
   readonly build: string;
   readonly command: string;
-  readonly lane: string;
+  readonly resources: readonly CapacityResourceClaim[];
+  readonly queue?: CapacityReservation["queue"];
   readonly mode: CapacityMode;
   /** Current Build authority; a stale Worker cannot reserve capacity after being fenced. */
   readonly buildLease: DispatchLease;
@@ -97,7 +108,12 @@ export type CapacityAcquireRequest = {
 
 export type CapacityAcquire =
   | { readonly status: "acquired"; readonly reservation: CapacityReservation }
-  | { readonly status: "blocked"; readonly retryAt: number; readonly reason: "global-active" | "lane-active" | "lane-in-flight" };
+  | {
+      readonly status: "blocked";
+      readonly retryAt: number;
+      readonly reason: "global-active" | "resource-active" | "resource-in-flight";
+      readonly resource?: string;
+    };
 
 /**
  * Durable execution control for Build identities, leases and shared capacity.
@@ -227,14 +243,23 @@ export function capacityReservationId(build: string, command: string): Digest {
 
 export function verifyCapacityLimits(value: CapacityLimits): void {
   positive(value.globalActive, "global active capacity");
-  positive(value.laneActive, "lane active capacity");
-  positive(value.laneInFlight, "lane in-flight capacity");
 }
 
 export function verifyCapacityReservation(value: CapacityReservation): void {
   assert(value.format === "svml.capacity-reservation@1", "Capacity reservation format is unsupported");
   assert(value.id === capacityReservationId(value.build, value.command), "Capacity reservation identity differs");
-  assert(value.lane.trim().length > 0, "Capacity reservation lane is empty");
+  assert(value.resources.length > 0, "Capacity reservation resources are empty");
+  const resources = value.resources.map((resource) => {
+    assert(resource.id.trim().length > 0, "Capacity resource id is empty");
+    positive(resource.maxActive, `Capacity resource ${resource.id} active limit`);
+    positive(resource.maxInFlight, `Capacity resource ${resource.id} in-flight limit`);
+    return resource.id;
+  });
+  assert(new Set(resources).size === resources.length, "Capacity reservation repeats a resource");
+  if (value.queue !== undefined) {
+    assert(value.queue.authority.trim().length > 0, "Capacity queue authority is empty");
+    assert(value.queue.route.trim().length > 0, "Capacity queue route is empty");
+  }
   assert(value.mode === "active" || value.mode === "recoverable", "Capacity reservation mode is invalid");
   if (value.active !== undefined) verifyDispatchLease(value.active, "Capacity lease");
   safeNonNegative(value.createdAt, "Capacity reservation createdAt");

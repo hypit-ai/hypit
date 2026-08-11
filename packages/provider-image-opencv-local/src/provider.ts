@@ -27,7 +27,7 @@ export const localOpenCvImageProviderImplementationDigest = digestOf(
 
 export type CreateLocalOpenCvImageProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   readonly pythonExecutable?: string;
   readonly processTimeoutMs?: number;
   readonly maxInputBytes?: number;
@@ -90,7 +90,7 @@ async function runProcess(options: {
   });
 }
 
-export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImageProviderOptions = {}) {
+export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImageProviderOptions) {
   const pythonExecutable = config.pythonExecutable ?? "python3";
   const processTimeoutMs = positiveInteger(config.processTimeoutMs ?? 5 * 60_000, "processTimeoutMs");
   const maxInputBytes = positiveInteger(config.maxInputBytes ?? 128 * 1024 * 1024, "maxInputBytes");
@@ -100,7 +100,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     module: localOpenCvImageProviderModuleRef,
     facet: "raster",
     instance: config.instance ?? "image.opencv.local",
-    ...(config.lane === undefined ? {} : { lane: config.lane }),
+    authority: config.authority ?? config.instance ?? "image.opencv.local",
     implementation: {
       locator: "@narratage/provider-image-opencv-local/raster-opencv",
       digest: localOpenCvImageProviderImplementationDigest,

@@ -10,8 +10,9 @@ the prototype API.
   component packages depend on that tiny structural port, not on this Node Driver.
 - `EndpointRegistry` binds an already explicit external capability to implementations that may use
   APIs, credentials, queues, local runtimes, devices or human services.
-- Registrations may declare a scheduling lane and default concurrency. The environment-neutral
-  `@narratage/runtime` Scheduler shares that lane across Builds; a Runtime Profile may override its limit.
+- Registrations may declare generic scheduling resources. Provider registrations claim one shared
+  Authority plus one exact capability Route. The environment-neutral `@narratage/runtime`
+  Scheduler acquires all claims atomically across Builds; a Runtime Profile may override limits.
 - A Producer receives only its command identity and immutable typed inputs. It has no ArtifactStore,
   credentials, network, queue or store handle; external work must be emitted as a typed `Need`.
 - Endpoints match the locked `CapabilityRef` and return `TypeRef`. Multiple exact endpoints require

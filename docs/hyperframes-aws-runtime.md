@@ -38,7 +38,7 @@ After installing the package into `svml.runtime-packages.lock`, configure one En
 {
   "use": "@narratage/provider-hyperframes-aws-lambda",
   "instance": "hyperframes.lambda.team",
-  "lane": "render",
+  "authority": "hyperframes.lambda.team",
   "config": {
     "stateMachineArn": "arn:aws:states:us-east-1:123456789012:stateMachine:hyperframes-team",
     "bucketName": "hyperframes-team-render-bucket",

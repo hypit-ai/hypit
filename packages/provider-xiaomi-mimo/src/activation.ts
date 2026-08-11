@@ -12,6 +12,7 @@ import { createXiaomiMimoProvider } from "./provider.js";
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-xiaomi-mimo",
   activate(context) {
+    if (context.authority === undefined) throw new Error("Xiaomi MiMo Provider Authority is required");
     const config = runtimeConfigObject(context.config, "Xiaomi MiMo");
     runtimeConfigExact(config, [
       "apiBaseUrl", "apiKey", "defaultConcurrency", "requestTimeoutMs",
@@ -36,7 +37,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createXiaomiMimoProvider({
         instance: context.instance,
-        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        authority: context.authority,
         ...(apiBaseUrl === undefined ? {} : { apiBaseUrl }),
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),

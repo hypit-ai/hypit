@@ -13,7 +13,7 @@ handler.
 
 There are deliberately two concurrency controls:
 
-- `defaultConcurrency` limits whole render requests admitted by the Runtime lane.
+- `defaultConcurrency` limits whole render requests admitted by Runtime Authority/Route resources.
 - `workers` controls HyperFrames' parallel Chrome frame workers inside one admitted render.
 
 The Provider owns both controls because they are deployment policy, not author intent. It never

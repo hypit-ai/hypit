@@ -104,7 +104,7 @@ job remains in the same state.
 
 `@narratage/provider-whisperx-local` declares the warm service. Its health probe locks protocol,
 package, model, device, compute type and batch size. It accepts only canonical evidence WAVs beneath
-the configured input roots. WhisperX remains one-at-a-time internally; the Runtime lane prevents
+the configured input roots. WhisperX remains one-at-a-time internally; the Runtime Route resource prevents
 avoidable `BUSY` responses.
 
 For service development it may be run directly:

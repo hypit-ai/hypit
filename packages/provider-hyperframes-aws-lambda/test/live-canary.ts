@@ -179,6 +179,8 @@ async function main(): Promise<void> {
     build: `build:hyperframes-aws-canary:${canaryId}`,
     command: commandId,
     endpoint: "hyperframes.aws-lambda.canary",
+    authority: "hyperframes.aws-lambda.canary",
+    route: "fixture.render",
     implementationDigest: digestOf("hyperframes-aws-canary:implementation"),
     runtimeClosure: digestOf("hyperframes-aws-canary:runtime"),
     requestDigest: need.requestDigest,

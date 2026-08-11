@@ -54,7 +54,7 @@ import type { EndpointManifest } from "@narratage/endpoint-kit";
 
 export function createMyServiceProvider(options: {
   instance: string;
-  lane?: string;
+  authority?: string;
   apiKey: CredentialRef;
   defaultConcurrency?: number;
 }) {
@@ -99,7 +99,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createMyServiceProvider({
         instance: context.instance,
-        lane: context.lane,
+        authority: context.authority,
         apiKey,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
       }),
@@ -192,7 +192,7 @@ instantiates its `use` id.
     {
       "use": "@narratage/provider-my-service",
       "instance": "my-service.project",
-      "lane": "generation",
+      "authority": "my-service.project",
       "config": {
         "apiKey": { "store": "keychain", "key": "my-service.api-key" },
         "defaultConcurrency": 2

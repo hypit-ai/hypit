@@ -76,6 +76,8 @@ function operation(request: Need) {
     build: "build:hyperframes-lambda-test",
     command: "command:hyperframes-lambda-test",
     endpoint: "hyperframes.aws-lambda.test",
+    authority: "hyperframes.aws-lambda.test",
+    route: "fixture.render",
     implementationDigest: digestOf("hyperframes-lambda:test-implementation"),
     runtimeClosure: digestOf("hyperframes-lambda:test-runtime"),
     requestDigest: request.requestDigest,
@@ -277,6 +279,7 @@ test("the Runtime adapter refuses a hardware-GPU deployment wish instead of igno
   assert.throws(() => implementation.activate({
     root: "/tmp",
     instance: "hyperframes.lambda.test",
+    authority: "hyperframes.lambda.test",
     config: canonicalize({
       stateMachineArn: STATE_MACHINE,
       bucketName: BUCKET,
@@ -290,7 +293,8 @@ test("one deterministic submission resumes and streams the exact output into the
   const { client, state } = fakeClient();
   const { endpoint, registration } = await endpointFor(request, client);
   assert.equal(registration.retry?.maxAttempts, 1);
-  assert.equal(registration.scheduling?.maxConcurrency, 2);
+  assert.equal(registration.scheduling?.resources.find((item) =>
+    item.id.startsWith("authority:"))?.maxActive, 2);
 
   const memory = new MemoryArtifactStore();
   let streamed = 0;

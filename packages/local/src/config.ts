@@ -33,7 +33,7 @@ import type { LocalRuntimeControl } from "./types.js";
 export type RuntimeConfigEntry = {
   readonly use: string;
   readonly instance: string;
-  readonly lane?: string;
+  readonly authority?: string;
   readonly config?: CanonicalValue;
 };
 
@@ -53,7 +53,7 @@ export type RuntimeConfigDocument = {
   readonly permissions: readonly string[];
   readonly scheduling: {
     readonly maxConcurrency: number;
-    readonly lanes?: Readonly<Record<string, number>>;
+    readonly resources?: Readonly<Record<string, number>>;
     readonly maxEventsPerBuild?: number;
   };
 };
@@ -94,14 +94,16 @@ function stringList(value: unknown, subject: string): readonly string[] {
   return items;
 }
 
-function entry(value: unknown, subject: string, laneAllowed: boolean): RuntimeConfigEntry {
+function entry(value: unknown, subject: string, authorityRequired: boolean): RuntimeConfigEntry {
   const item = object(value, subject);
-  exactKeys(item, laneAllowed ? ["use", "instance", "lane", "config"] : ["use", "instance", "config"], subject);
-  const lane = laneAllowed ? optionalString(item.lane, `${subject}.lane`) : undefined;
+  exactKeys(item, authorityRequired ? ["use", "instance", "authority", "config"] : ["use", "instance", "config"], subject);
+  const authority = authorityRequired
+    ? requiredString(item.authority, `${subject}.authority`)
+    : undefined;
   return {
     use: requiredString(item.use, `${subject}.use`),
     instance: requiredString(item.instance, `${subject}.instance`),
-    ...(lane === undefined ? {} : { lane }),
+    ...(authority === undefined ? {} : { authority }),
     ...(item.config === undefined ? {} : { config: canonicalize(item.config) }),
   };
 }
@@ -110,17 +112,17 @@ function entry(value: unknown, subject: string, laneAllowed: boolean): RuntimeCo
 function scheduling(value: unknown): RuntimeConfigDocument["scheduling"] {
   if (value === undefined) throw new Error("$runtime.scheduling is required");
   const item = object(value, "$runtime.scheduling");
-  exactKeys(item, ["maxConcurrency", "lanes", "maxEventsPerBuild"], "$runtime.scheduling");
-  const lanes = item.lanes === undefined ? undefined : object(item.lanes, "$runtime.scheduling.lanes");
-  const normalizedLanes = lanes === undefined ? undefined : Object.fromEntries(Object.entries(lanes).map(([name, limit]) => {
-    if (name.trim().length === 0) throw new Error("Runtime lane name must not be empty");
-    return [name, positiveInteger(limit, `$runtime.scheduling.lanes.${name}`)!];
+  exactKeys(item, ["maxConcurrency", "resources", "maxEventsPerBuild"], "$runtime.scheduling");
+  const resources = item.resources === undefined ? undefined : object(item.resources, "$runtime.scheduling.resources");
+  const normalizedResources = resources === undefined ? undefined : Object.fromEntries(Object.entries(resources).map(([name, limit]) => {
+    if (name.trim().length === 0) throw new Error("Runtime resource id must not be empty");
+    return [name, positiveInteger(limit, `$runtime.scheduling.resources.${name}`)!];
   }));
   const maxConcurrency = positiveInteger(item.maxConcurrency, "$runtime.scheduling.maxConcurrency");
   if (maxConcurrency === undefined) throw new Error("$runtime.scheduling.maxConcurrency is required");
   return {
     maxConcurrency,
-    ...(normalizedLanes === undefined ? {} : { lanes: normalizedLanes }),
+    ...(normalizedResources === undefined ? {} : { resources: normalizedResources }),
     ...(positiveInteger(item.maxEventsPerBuild, "$runtime.scheduling.maxEventsPerBuild") === undefined
       ? {}
       : { maxEventsPerBuild: item.maxEventsPerBuild as number }),
@@ -298,7 +300,7 @@ export async function declaredExternalServices(
     const activation = await registry.activateEndpoint(item.use, {
       root,
       instance: item.instance,
-      ...(item.lane === undefined ? {} : { lane: item.lane }),
+      authority: item.authority!,
       config: item.config ?? {},
     });
     if (options.capabilities !== undefined && !activation.endpoint.bindings.some((binding) =>
@@ -373,7 +375,7 @@ export async function doctorRuntimeConfig(
     const context = {
       root,
       instance: item.instance,
-      ...(item.lane === undefined ? {} : { lane: item.lane }),
+      authority: item.authority!,
       config: item.config ?? {},
     };
     let activation: RuntimeEndpointActivation;
@@ -522,7 +524,7 @@ export async function createRuntimeFromConfig(
     return await registry.createEndpoint(item.use, {
       root,
       instance: item.instance,
-      ...(item.lane === undefined ? {} : { lane: item.lane }),
+      authority: item.authority!,
       config: item.config ?? {},
     });
   }));
@@ -642,7 +644,7 @@ export async function createRuntimeCredentialsFromConfig(
     const endpoint = await registry.createEndpoint(endpointEntry.use, {
       root,
       instance: endpointEntry.instance,
-      ...(endpointEntry.lane === undefined ? {} : { lane: endpointEntry.lane }),
+      authority: endpointEntry.authority!,
       config: endpointEntry.config ?? {},
     });
     return createLocalCredentialControl({

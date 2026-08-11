@@ -300,14 +300,14 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
     endpoints: [{
       use: "@narratage/provider-kie",
       instance: "kie.cli-test",
-      lane: "generation",
+      authority: "kie.cli-test",
       config: { apiKey: { store: "env", key: "SVML_TEST_MISSING_KIE_KEY" }, defaultConcurrency: 2 },
     }],
     permissions: [
       "filesystem:state", "filesystem:artifacts", "environment:credentials",
       "network:api.kie.ai", "network:kieai.redpandaai.co",
     ],
-    scheduling: { maxConcurrency: 4, lanes: { generation: 2 } },
+    scheduling: { maxConcurrency: 4, resources: { "authority:kie.cli-test": 2 } },
   }), "utf8");
   let output = "";
   await runCli(["status", "missing-build", "--runtime", profile], {

@@ -86,7 +86,7 @@ packages.
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.personal",
-      "lane": "generation",
+      "authority": "kie.personal",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
@@ -100,10 +100,7 @@ packages.
     "network:api.kie.ai",
     "network:kieai.redpandaai.co"
   ],
-  "scheduling": {
-    "maxConcurrency": 8,
-    "lanes": { "generation": 2 }
-  }
+  "scheduling": { "maxConcurrency": 8 }
 }
 ```
 
@@ -209,8 +206,9 @@ narratage runtime down ./svml.runtime.json
 the narrower expert command for those programs only. Stopping a follow/watch terminal does not stop
 the Runtime or cancel a Build.
 
-Shared capacity is persisted by DispatchStore, so two local Workers cannot exceed global or lane
-limits. Lease generation fences a stale Worker after takeover. A crash-recovered Operation keeps
+Shared capacity is persisted by DispatchStore, so two local Workers cannot exceed global,
+Provider-Authority or exact capability-Route limits. Lease generation fences a stale Worker after
+takeover. A crash-recovered Operation keeps
 the same id and submission key; a completed journal entry is replayed without another remote
 submission.
 

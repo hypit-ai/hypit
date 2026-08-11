@@ -24,7 +24,8 @@ export type RuntimeAdapterFactoryContext = {
   /** Absolute project root resolved from the Runtime Profile document. */
   readonly root: string;
   readonly instance: string;
-  readonly lane?: string;
+  /** Required for Endpoint adapters; absent for Runtime service adapters. */
+  readonly authority?: string;
   readonly config: CanonicalValue;
 };
 
