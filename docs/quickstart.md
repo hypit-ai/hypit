@@ -5,9 +5,21 @@ description: Set up Narratage and compile your first video graph.
 
 # Quickstart
 
+The name **Narratage** comes from a 1933 *New York Times* review of the film *The Power and the
+Glory*. The critic coined the word to describe a then-new cinematic technique:
+**Narration + Montage** — a narrator's voice carries the story forward while the screen assembles
+a montage of scenes to match.
+
+That is exactly what this system does. The author writes a narrated Script with semantic anchors,
+and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
+Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml`
+extension.
+
 ## Choose your path
 
-**Use the Narratage skill.** Install the complete
+### Use the Narratage skill
+
+Install the complete
 [`narratage` skill folder](https://github.com/cashdiffusion/svml/tree/main/.agents/skills/narratage)
 with your agent's standard skill installer, or send that link to the agent and ask it to install and
 use the skill. If you already cloned the repository, point the installer at
@@ -25,18 +37,9 @@ symlinks, give the agent `.agents/skills/narratage` directly. Once the skill is 
 loads the relevant Quickstart pages for you, so you do not need to read the rest of this guide
 manually.
 
-**Continue manually.** Start with [Install](#install), then follow the seven guides in order.
+### Continue manually
 
-The name **Narratage** comes from a 1933 *New York Times* review of the film *The Power and the
-Glory*. The critic coined the word to describe a then-new cinematic technique:
-**Narration + Montage** — a narrator's voice carries the story forward while the screen assembles
-a montage of scenes to match.
-
-That is exactly what this system does. The author writes a narrated Script with semantic anchors,
-and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
-Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml`
-extension; development packages in this workspace reserve the `@narratage` scope. They have not
-been published to npm yet.
+Start with [Install](#install), then follow the seven guides in order.
 
 ## Install
 
