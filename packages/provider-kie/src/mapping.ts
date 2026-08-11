@@ -178,6 +178,11 @@ export const kieModelCatalog: readonly GenerationWireMapping[] = [
   seedanceMapping("seedance-2", "bytedance/seedance-2"),
   seedanceMapping("seedance-2-fast", "bytedance/seedance-2-fast"),
   seedanceMapping("seedance-2-mini", "bytedance/seedance-2-mini"),
+  {
+    ...seedanceMapping("seedance-2.5", "bytedance/seedance-2-5"),
+    // These are KIE output-envelope choices, not Seedance model inputs.
+    constants: { return_last_frame: false, output_format: "mp4" },
+  },
   minimaxMapping,
   geminiMapping,
   grokVideoMapping,

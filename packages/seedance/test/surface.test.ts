@@ -47,6 +47,21 @@ test("TextVideo exposes prompt-only generation without inventing a usage", async
   assert.equal(Object.keys(result.components[0]?.inputs ?? {}).some((name) => name.includes("media")), false);
 });
 
+test("Seedance 2.5 is an exact model with auto or 4-30 second duration", async () => {
+  const automatic = await decode(
+    '<seedance:TextVideo id="motion" model="2.5" prompt={direction} duration="-1" resolution="720p" aspect-ratio="9:16"/>',
+    decodeSeedanceTextVideoSurface,
+  );
+  assert.deepEqual(automatic.components[0]?.outputs, { video: "motion.video" });
+  await assert.rejects(
+    async () => await decode(
+      '<seedance:TextVideo id="invalid" model="2.5" prompt={direction} duration="3"/>',
+      decodeSeedanceTextVideoSurface,
+    ),
+    /-1 \(auto\) or between 4 and 30/u,
+  );
+});
+
 test("FrameVideo exposes first-frame and optional last-frame as exact model ports", async () => {
   const result = await decode(
     '<seedance:FrameVideo id="bridge" model="fast" prompt={direction} duration="5" first-frame={first.image} last-frame={last.image}/>',

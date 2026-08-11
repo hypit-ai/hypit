@@ -132,7 +132,10 @@ function modelSelection(element: StructuredElement) {
   if (requested === "mini" || requested === "seedance-2-mini") {
     return { endpoint: seedanceEndpoints.mini!, model: "seedance-2-mini" as const };
   }
-  throw new Error(`${element.name}.model must be standard, fast or mini`);
+  if (requested === "2.5" || requested === "seedance-2.5") {
+    return { endpoint: seedanceEndpoints.v25!, model: "seedance-2.5" as const };
+  }
+  throw new Error(`${element.name}.model must be standard, fast, mini or 2.5`);
 }
 
 function integerAttribute(element: StructuredElement, name: string): number {
@@ -162,11 +165,18 @@ function generationSettings(
 ): SeedancePortMap {
   const table = seedancePorts[model];
   const duration = generationPort(table, "duration");
-  if (duration.value.kind !== "number") throw new Error("Seedance duration port is not numeric");
   const durationSec = suppliedDurationSec ?? integerAttribute(element, "duration");
-  const { minimum = 0, maximum = Number.MAX_SAFE_INTEGER } = duration.value;
-  if (durationSec < minimum || durationSec > maximum) {
-    throw new Error(`${element.name}.duration must be between ${minimum} and ${maximum} seconds`);
+  if (duration.value.kind === "number") {
+    const { minimum = 0, maximum = Number.MAX_SAFE_INTEGER } = duration.value;
+    if (durationSec < minimum || durationSec > maximum) {
+      throw new Error(`${element.name}.duration must be between ${minimum} and ${maximum} seconds`);
+    }
+  } else if (duration.value.kind === "enum") {
+    if (!duration.value.values.includes(durationSec)) {
+      throw new Error(`${element.name}.duration must be -1 (auto) or between 4 and 30 seconds for ${model}`);
+    }
+  } else {
+    throw new Error("Seedance duration port is not numeric");
   }
   const resolutions = enumeratedPort(table, "resolution");
   const resolution = optionalStringAttribute(element, "resolution") ?? "720p";
