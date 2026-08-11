@@ -27,7 +27,7 @@ not part of the author model.
 Add the Provider independently to the Runtime package lock:
 
 ```sh
-pnpm narratage lock-packages svml.runtime-packages.lock \
+node --run narratage -- lock-packages svml.runtime-packages.lock \
   --package @narratage/provider-xiaomi-mimo \
   --package-root .
 ```

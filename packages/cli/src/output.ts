@@ -11,6 +11,8 @@ export type CliTerminal = {
 
 export type CliIo = {
   readonly write: (text: string) => void;
+  /** Concrete command shells expose process status without coupling the engine to Node globals. */
+  readonly setExitCode?: (code: number) => void;
   /** Interactive secret input supplied by the concrete CLI shell; never echoed or logged. */
   readonly readSecret?: (prompt: string) => Promise<string>;
   readonly terminal?: CliTerminal;
@@ -368,13 +370,21 @@ export function writeCliHelp(io: CliIo): void {
     colors.accent(colors.strong("Narratage")),
     colors.dim("Write the story. Compile the result."),
     "",
+    colors.strong("Typical flow"),
+    "  doctor <profile>                         verify packages, credentials and services",
+    "  check <source> --runtime <profile>        verify author or run intent",
+    "  plan <run-source> --runtime <profile>     inspect the exact demanded subgraph",
+    "  build <run-source> --runtime <profile>    submit durable work and ensure a Worker",
+    "  queue --runtime <profile> --watch         observe shared work without owning it",
+    "",
     colors.strong("Authoring"),
     "  check <source>              verify one self-described Author or Run source",
     "  plan <run-source>           freeze and inspect a Build plan",
-    "  build <run-source>          execute a Build through a Runtime Profile",
+    "  build <run-source>          submit a durable Build; --follow only observes",
     "",
     colors.strong("Archive"),
     "  builds                     list known Builds",
+    "  history [output]           find accepted historical Logical Outputs",
     "  status <build-id>          show Build and Operation status",
     "  inspect <build-id>         inspect accepted Records and demanded outputs",
     "  get <build-id>             read or materialize one archived result",
@@ -392,7 +402,7 @@ export function writeCliHelp(io: CliIo): void {
     "  gc <profile>               report unreachable Artifacts; --apply deletes",
     "",
     colors.strong("Packages"),
-    "  lock-packages <file>       lock explicitly installed packages",
+    "  lock-packages <file>       set, add, remove, refresh or verify local package trust",
     "",
     colors.strong("Output"),
     "  --json                     complete machine-readable result",

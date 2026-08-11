@@ -37,7 +37,7 @@ Official API reference: <https://mimo.mi.com/docs/zh-CN/quick-start/usage-guide/
 Add the author package to the project's explicit package lock before compiling:
 
 ```sh
-pnpm narratage lock-packages svml.packages.lock \
+node --run narratage -- lock-packages svml.packages.lock \
   --package @narratage/script \
   --package @narratage/mimo-tts \
   --root .

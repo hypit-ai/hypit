@@ -16,6 +16,7 @@
     "@narratage/media-execution": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/render-hyperframes": "workspace:*",
+    "@narratage/runtime": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*",
     "@narratage/runtime-adapter-node": "workspace:*",
     "hyperframes": "0.7.101"

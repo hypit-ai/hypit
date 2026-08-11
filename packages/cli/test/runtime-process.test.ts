@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -39,8 +39,17 @@ test("one detached Runtime Worker is observable, reusable and explicitly stoppab
     assert.ok(first.pid);
     const second = await ensureRuntimeProcess(profile, { command: "must-not-run", args: [] }, 5_000);
     assert.equal(second.pid, first.pid);
+    const concurrent = await Promise.all(Array.from({ length: 8 }, async () =>
+      await ensureRuntimeProcess(profile, { command: "must-not-run", args: [] }, 5_000)));
+    assert.deepEqual([...new Set(concurrent.map((item) => item.pid))], [first.pid],
+      "concurrent clients share one atomically launched Worker");
     assert.equal((await runtimeProcessStatus(profile)).state, "running");
     assert.match((await runtimeProcessLogs(profile)).text, /worker-ready/u);
+    const logPath = (await runtimeProcessLogs(profile)).path;
+    await appendFile(logPath, `${"x".repeat(1024 * 1024 + 64)}\ntail-marker\n`, "utf8");
+    const bounded = await runtimeProcessLogs(profile);
+    assert.ok(Buffer.byteLength(bounded.text) <= 1024 * 1024);
+    assert.match(bounded.text, /tail-marker/u);
     await writeFile(runtimeLock, "runtime-v2\n", "utf8");
     assert.equal((await runtimeProcessStatus(profile)).state, "stale");
     const replaced = await ensureRuntimeProcess(profile, { command: process.execPath, args: ["-e", program] }, 5_000);

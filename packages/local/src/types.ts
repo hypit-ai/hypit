@@ -12,6 +12,7 @@ import type {
   BuildSchedulerOptions,
   BuildSnapshot,
   BuildStore,
+  BuildDispatchStore,
   BuildDispatchSnapshot,
   CredentialStore,
   OperationStore,
@@ -57,6 +58,23 @@ export type CreateLocalRuntimeOptions = {
   readonly implementationClosure?: import("@narratage/protocol").Digest;
 };
 
+export type CreateLocalRuntimeControlOptions = {
+  readonly buildStore: BuildStore;
+  readonly buildCatalog?: BuildCatalog;
+  readonly operationStore: OperationStore;
+  readonly dispatchStore: BuildDispatchStore;
+  readonly journal: RuntimeJournal;
+  readonly artifactStore: ArtifactStore;
+  /** Optional owner supplied by the project service assembly. */
+  readonly close?: () => Awaitable<void>;
+};
+
+export type CreateLocalCredentialControlOptions = {
+  readonly credentialStore: CredentialStore;
+  readonly endpoints: readonly EndpointPackage[];
+  readonly close?: () => Awaitable<void>;
+};
+
 export type ProjectLocalRuntimeOptions = {
   /** Project directory containing the private .svml Runtime directory. Defaults to cwd. */
   readonly root?: string;
@@ -65,6 +83,8 @@ export type ProjectLocalRuntimeOptions = {
   readonly buildCatalog?: BuildCatalog;
   /** Exact installed implementation package lock. Source imports cannot change this selection. */
   readonly packageLock?: string;
+  /** Already verified implementation identity when components are supplied by this Host process. */
+  readonly implementationClosure?: import("@narratage/protocol").Digest;
   /**
    * Replaceable parts of the Runtime itself. One package may fill several roles;
    * every selected role is explicit, and two packages exposing the same instance
@@ -83,6 +103,14 @@ export type ProjectLocalRuntimeOptions = {
   };
   readonly validators?: LocalTypeValidatorRegistry;
 };
+
+export type ProjectLocalRuntimeControlOptions = Pick<ProjectLocalRuntimeOptions,
+  | "root"
+  | "buildCatalog"
+  | "runtimeServices"
+  | "runtimeSelection"
+  | "allowedPermissions"
+>;
 
 export type LocalBuildRequest = {
   /** Stable user/run identity. Reusing it resumes only the same Core Build identity. */
@@ -109,9 +137,17 @@ export type LocalRuntimeStatus = {
   readonly dispatch: BuildDispatchSnapshot | undefined;
 };
 
+/** Lightweight execution facts. Unlike status(), this does not read or verify the BuildState. */
+export type LocalRuntimeActivity = {
+  readonly operations: readonly OperationSnapshot[];
+  readonly dispatch: BuildDispatchSnapshot | undefined;
+};
+
 export type LocalRuntimeQueue = {
   readonly dispatches: readonly BuildDispatchSnapshot[];
   readonly capacity: readonly import("@narratage/runtime").CapacityReservation[];
+  /** Execution facts belonging to non-terminal queued Builds. */
+  readonly operations: readonly OperationSnapshot[];
 };
 
 export type LocalCredentialStatus = import("@narratage/endpoint-kit").EndpointCredentialDescription & {
@@ -136,6 +172,7 @@ export type LocalRuntime = {
   build(request: LocalBuildRequest, options?: LocalBuildOptions): Promise<LocalBuildSubmission>;
   buildMany(requests: readonly LocalBuildRequest[]): Promise<readonly LocalBuildSubmission[]>;
   status(build: string): Promise<LocalRuntimeStatus>;
+  activity(build: string): Promise<LocalRuntimeActivity>;
   queue(): Promise<LocalRuntimeQueue>;
   operation(id: Digest): Promise<OperationSnapshot | undefined>;
   journal(query?: import("@narratage/runtime").RuntimeJournalQuery): Promise<readonly import("@narratage/runtime").RuntimeJournalEntry[]>;
@@ -154,3 +191,27 @@ export type LocalRuntime = {
   garbageCollectArtifacts(options?: { readonly apply?: boolean }): Promise<ArtifactGarbageCollection>;
   close(): Awaitable<void>;
 };
+
+/** Durable project control that needs Stores but no Producer, Endpoint, Driver or Worker. */
+export type LocalRuntimeControl = Pick<LocalRuntime,
+  | "status"
+  | "activity"
+  | "queue"
+  | "operation"
+  | "journal"
+  | "builds"
+  | "cancel"
+  | "cancelOperation"
+  | "readArtifact"
+  | "openArtifact"
+  | "garbageCollectArtifacts"
+  | "close"
+>;
+
+/** Credential control for one or more exact Endpoint declarations; no execution state is opened. */
+export type LocalCredentialControl = Pick<LocalRuntime,
+  | "credentials"
+  | "putCredential"
+  | "deleteCredential"
+  | "close"
+>;

@@ -47,12 +47,15 @@ test("pending checkpoints and completion advance by CAS without entering BuildSt
     status: "pending",
     checkpoint: { remoteJob: "job-123", pollAfterMs: 5_000 },
     wakeAt: 10_000,
+    progress: { phase: "rendering", completed: 12, total: 60, unit: "frames" },
   });
   assert.equal(pending.status, "stored");
   if (pending.status !== "stored") return;
   assert.equal(pending.snapshot.status, "pending");
   assert.deepEqual(pending.snapshot.checkpoint, { remoteJob: "job-123", pollAfterMs: 5_000 });
   assert.equal(pending.snapshot.wakeAt, 10_000);
+  assert.deepEqual(pending.snapshot.progress,
+    { phase: "rendering", completed: 12, total: 60, unit: "frames" });
   assert.deepEqual((await store.list({ build: "video-42" })).map((item) => item.id), [operation.id]);
 
   const stale = await store.compareAndSwap(operation.id, 0, {
@@ -84,6 +87,17 @@ test("pending checkpoints and completion advance by CAS without entering BuildSt
     }),
     /already terminal/u,
   );
+});
+
+test("pending progress is bounded and cannot leak into terminal execution facts", async () => {
+  const store = new MemoryOperationStore();
+  const operation = identity();
+  await store.create(operation);
+  await assert.rejects(store.compareAndSwap(operation.id, 0, {
+    status: "pending",
+    checkpoint: { remoteJob: "job-123" },
+    progress: { phase: "rendering", completed: 61, total: 60, unit: "frames" },
+  }), /progress exceeds/u);
 });
 
 test("OperationStore returns defensive snapshots", async () => {

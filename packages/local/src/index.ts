@@ -6,14 +6,22 @@ export {
   localWorkerImplementationDigest,
 } from "./scheduler-package.js";
 export {
+  createLocalRuntimeControl,
+  createProjectLocalRuntimeControl,
+} from "./control.js";
+export { createLocalCredentialControl } from "./credentials.js";
+export {
   createLocalRuntime,
   createProjectLocalRuntime,
 } from "./runtime.js";
 export {
   createRuntimeFromConfig,
+  createRuntimeControlFromConfig,
+  createRuntimeCredentialsFromConfig,
   declaredExternalServices,
   doctorRuntimeConfig,
   parseRuntimeConfig,
+  runtimeConfigPackageSelection,
 } from "./config.js";
 export {
   bringExternalServicesUp,

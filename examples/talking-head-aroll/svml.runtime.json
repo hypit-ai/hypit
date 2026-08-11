@@ -4,7 +4,7 @@
   "runtimePackageLock": "./svml.runtime-packages.lock",
   "runtimeServices": [
     { "use": "@narratage/local", "instance": "execution" },
-    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/runtime.sqlite" } },
+    { "use": "@narratage/store-sqlite", "instance": "state", "config": { "path": ".svml/state.sqlite" } },
     { "use": "@narratage/artifact-store-fs", "instance": "artifacts", "config": { "path": ".svml/artifacts" } },
     { "use": "@narratage/credential-store-env", "instance": "credentials.env", "config": {} }
   ],

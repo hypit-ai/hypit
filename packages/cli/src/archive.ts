@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { LocalRuntime } from "@narratage/local";
@@ -17,6 +18,15 @@ export type ArchivedArtifactReference = ArtifactIdentity & {
   readonly path: string;
 };
 
+export type ArchivedLogicalOutput = {
+  readonly name: string;
+  readonly type: BuildCatalogEntry["aliases"][number]["type"];
+  readonly output: string;
+  readonly candidate: BuildState["plan"]["selections"][number]["candidate"];
+  readonly fidelity: BuildState["plan"]["selections"][number]["fidelity"];
+  readonly record: ReturnType<typeof summarizeRecord>;
+};
+
 function artifactIdentity(value: unknown): ArtifactIdentity | undefined {
   if (value === null || Array.isArray(value) || typeof value !== "object") return undefined;
   const candidate = value as Readonly<Record<string, unknown>>;
@@ -32,7 +42,7 @@ function recordArtifact(record: TypedRecord): ArtifactIdentity | undefined {
 }
 
 export async function materializeRecord(
-  runtime: Pick<LocalRuntime, "readArtifact">,
+  runtime: Pick<LocalRuntime, "openArtifact">,
   record: TypedRecord,
   destination: string,
 ): Promise<
@@ -51,16 +61,36 @@ export async function materializeRecord(
 }
 
 export async function materializeArtifact(
-  runtime: Pick<LocalRuntime, "readArtifact">,
+  runtime: Pick<LocalRuntime, "openArtifact">,
   artifact: ArtifactIdentity,
   destination: string,
   subject = "Build archive",
 ): Promise<{ readonly kind: "artifact"; readonly path: string; readonly digest: string; readonly size: number; readonly mediaType: string }> {
-  const bytes = await runtime.readArtifact(artifact.digest);
-  if (bytes === undefined) throw new Error(`Artifact ${artifact.digest} is absent from the selected ArtifactStore`);
-  if (bytes.byteLength !== artifact.size) throw new Error(`Artifact ${artifact.digest} size differs from ${subject}`);
   await mkdir(dirname(destination), { recursive: true });
-  await writeFile(destination, bytes);
+  const source = await runtime.openArtifact(artifact.digest);
+  if (source === undefined) throw new Error(`Artifact ${artifact.digest} is absent from the selected ArtifactStore`);
+  const temporary = `${destination}.narratage-${randomUUID()}.part`;
+  const output = await open(temporary, "wx");
+  const hash = createHash("sha256");
+  let size = 0;
+  try {
+    for await (const chunk of source) {
+      size += chunk.byteLength;
+      hash.update(chunk);
+      await output.write(chunk);
+    }
+    await output.sync();
+    await output.close();
+    if (size !== artifact.size) throw new Error(`Artifact ${artifact.digest} size differs from ${subject}`);
+    const digest = `sha256:${hash.digest("hex")}`;
+    if (digest !== artifact.digest) throw new Error(`Artifact ${artifact.digest} bytes differ from ${subject}`);
+    // Validate the complete temporary file before replacing an explicitly selected destination.
+    await rename(temporary, destination);
+  } catch (error) {
+    await output.close().catch(() => undefined);
+    await rm(temporary, { force: true });
+    throw error;
+  }
   return { kind: "artifact", path: destination, ...artifact };
 }
 
@@ -105,6 +135,37 @@ function summarizeRecord(record: TypedRecord) {
     storage: record.value.kind,
     artifacts: collectArtifacts(value),
   };
+}
+
+/**
+ * Public Logical Outputs that this exact Build actually selected and accepted.
+ *
+ * Catalog aliases alone are insufficient: a source can publish many Outputs while a Run targets
+ * only a small subgraph. Authored Record aliases are useful to `get`, but are not historical
+ * `build-record` Candidate roots, so this view intentionally excludes them as well.
+ */
+export function acceptedArchivedOutputs(
+  state: BuildState,
+  catalog: BuildCatalogEntry,
+): readonly ArchivedLogicalOutput[] {
+  if (catalog.core !== state.id) throw new Error("Build Catalog entry names another Core Build");
+  const records = new Map(state.records.map((record) => [record.id, record]));
+  const selections = new Map(state.plan.selections.map((selection) => [selection.output, selection]));
+  return catalog.aliases.flatMap((alias) => {
+    if (alias.ref.kind !== "logical-output") return [];
+    const selection = selections.get(alias.ref.id);
+    if (selection === undefined) return [];
+    const record = records.get(selection.record);
+    if (record === undefined) return [];
+    return [{
+      name: alias.name,
+      type: alias.type,
+      output: alias.ref.id,
+      candidate: selection.candidate,
+      fidelity: selection.fidelity,
+      record: summarizeRecord(record),
+    }];
+  });
 }
 
 export function selectArchivedRecord(

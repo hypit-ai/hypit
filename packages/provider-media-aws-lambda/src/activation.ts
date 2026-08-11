@@ -51,11 +51,8 @@ function providerOptions(context: RuntimeAdapterFactoryContext): CreateAwsLambda
 
 const awsLambdaMediaRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-media-aws-lambda",
-  validate(context) {
-    providerOptions(context);
-  },
-  create(context) {
-    return createAwsLambdaMediaProvider(providerOptions(context));
+  activate(context) {
+    return { endpoint: createAwsLambdaMediaProvider(providerOptions(context)) };
   },
   // ARN, region and bucket relationships are closed configuration facts. Live
   // Lambda availability remains an operation-time fact until a dedicated

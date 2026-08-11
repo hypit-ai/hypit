@@ -39,7 +39,10 @@ export type GenerateCaptionContent = (
 ) => Promise<{ readonly text: string; readonly totalTokenCount?: number; readonly modelVersion?: string }>;
 
 export type CreateGoogleVertexCaptionProviderOptions = {
-  readonly project: string;
+  /** Literal deployment project, mutually exclusive with projectEnv. */
+  readonly project?: string;
+  /** Environment variable resolved only when this Endpoint actually handles a Need. */
+  readonly projectEnv?: string;
   readonly location?: string;
   readonly instance?: string;
   readonly lane?: string;
@@ -187,8 +190,19 @@ function fulfillment(value: CanonicalValue, metadata: CanonicalValue): EndpointF
 }
 
 export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCaptionProviderOptions) {
-  assert(options.project.trim().length > 0, "Google Vertex project is empty");
-  const project = options.project.trim();
+  const projectValue = options.project?.trim();
+  const projectEnv = options.projectEnv?.trim();
+  assert((projectValue === undefined) !== (projectEnv === undefined),
+    "Google Vertex requires exactly one of project or projectEnv");
+  if (projectValue !== undefined) assert(projectValue.length > 0, "Google Vertex project is empty");
+  if (projectEnv !== undefined) assert(projectEnv.length > 0, "Google Vertex projectEnv is empty");
+  const resolveProject = (): string => {
+    if (projectValue !== undefined) return projectValue;
+    const value = process.env[projectEnv!]?.trim();
+    assert(value !== undefined && value.length > 0,
+      `Google Vertex project environment ${projectEnv} is empty`);
+    return value;
+  };
   const location = (options.location ?? "global").trim();
   assert(location.length > 0, "Google Vertex location is empty");
   const requestTimeoutMs = positiveInteger(options.requestTimeoutMs ?? 120_000, "requestTimeoutMs");
@@ -213,7 +227,15 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
       digest: googleVertexProviderImplementationDigest,
     },
     permissions: ["network:aiplatform.googleapis.com"],
-    configuration: canonicalize({ project, location, requestTimeoutMs, maxResponseBytes, transportDigest }),
+    configuration: canonicalize({
+      project: projectValue === undefined
+        ? { source: "environment", name: projectEnv! }
+        : { source: "literal", value: projectValue },
+      location,
+      requestTimeoutMs,
+      maxResponseBytes,
+      transportDigest,
+    }),
     credentials: {
       googleCredentials: options.credentialsJson ?? credentialRef("env", "GOOGLE_APPLICATION_CREDENTIALS_JSON"),
     },
@@ -235,6 +257,7 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
       },
       handler: async (context) => {
         const request = requestValue(context.need.constraints);
+        const project = resolveProject();
         const response = await withTimeout(requestTimeoutMs, (abortSignal) => generateContent({
           model: request.model,
           systemInstruction: request.systemInstruction,

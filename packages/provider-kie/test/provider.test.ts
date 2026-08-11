@@ -117,8 +117,12 @@ test("KIE uploads content-addressed references, resumes one task, and persists g
     calls.push(url);
     if (url.endsWith("/api/file-stream-upload")) {
       assert.equal(init?.method, "POST");
-      assert.ok(init?.body instanceof FormData);
-      assert.equal(init.body.get("fileName"), `${firstFrame.digest.slice(7)}.png`);
+      assert.match(String((init?.headers as Record<string, string>)["content-type"]), /^multipart\/form-data; boundary=/u);
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of init?.body as unknown as AsyncIterable<Uint8Array>) chunks.push(chunk);
+      const multipart = Buffer.concat(chunks).toString("latin1");
+      assert.match(multipart, /name="fileName"\r\n\r\n[0-9a-f]{64}\.png/u);
+      assert.ok(Buffer.concat(chunks).includes(Buffer.from([1, 2, 3])));
       return Response.json({
         success: true,
         code: 200,
@@ -164,6 +168,7 @@ test("KIE uploads content-addressed references, resumes one task, and persists g
   };
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");
+  assert.deepEqual(started.status === "pending" && started.progress, { phase: "submitted" });
   assert.equal(calls.length, 2);
   assert.equal(started.status === "pending" && (started.checkpoint as Record<string, unknown>).taskId, "task_seedance_test");
   const completed = await endpoint.resume({

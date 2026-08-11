@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, open, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { CompositableSurfaceRef } from "@narratage/media";
@@ -9,7 +9,9 @@ import { assertHyperframesDocument, materializeHyperframesHtml } from "./documen
 import type { HyperframesDocument } from "./types.js";
 
 /** Reads one content-addressed dependency. Whose store it comes from is the caller's business. */
-export type HyperframesArtifactReader = (artifact: BlobRef) => Promise<Uint8Array>;
+export type HyperframesArtifactReader = (
+  artifact: BlobRef,
+) => Promise<Uint8Array | AsyncIterable<Uint8Array>>;
 export type HyperframesSurfaceValidator = (
   surface: CompositableSurfaceRef,
   bytes: Uint8Array,
@@ -61,19 +63,44 @@ export async function stageHyperframesProject(options: {
   const surfaces = new Map(document.surfaces.map((surface) => [surface.artifact.digest, surface]));
   const validations = await Promise.all(document.artifacts.map(async (artifact) => {
     const name = `${artifact.digest.slice("sha256:".length)}${extension(artifact.mediaType)}`;
-    const bytes = await read(artifact);
-    if (bytes.byteLength !== artifact.size) {
+    const opened = await read(artifact);
+    const chunks = opened instanceof Uint8Array
+      ? (async function* () { yield opened; })()
+      : opened;
+    const hash = createHash("sha256");
+    const surface = surfaces.get(artifact.digest);
+    const retained: Uint8Array[] = [];
+    let size = 0;
+    const target = await open(join(artifactDirectory, name), "w");
+    try {
+      for await (const chunk of chunks) {
+        await target.write(chunk);
+        hash.update(chunk);
+        size += chunk.byteLength;
+        if (surface !== undefined) retained.push(Uint8Array.from(chunk));
+      }
+    } finally {
+      await target.close();
+    }
+    if (size !== artifact.size) {
       throw new Error(`HyperFrames Artifact ${artifact.digest} size differs`);
     }
-    const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    const digest = `sha256:${hash.digest("hex")}`;
     if (digest !== artifact.digest) {
       throw new Error(`HyperFrames Artifact ${artifact.digest} bytes differ`);
     }
-    const surface = surfaces.get(artifact.digest);
+    const bytes = surface === undefined ? undefined : (() => {
+      const value = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of retained) {
+        value.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      return value;
+    })();
     const validation = surface === undefined
       ? undefined
-      : await options.validateSurface!(structuredClone(surface), bytes.slice());
-    await writeFile(join(artifactDirectory, name), bytes);
+      : await options.validateSurface!(structuredClone(surface), bytes!.slice());
     paths.set(artifact.digest, `./artifacts/${name}`);
     return validation;
   }));

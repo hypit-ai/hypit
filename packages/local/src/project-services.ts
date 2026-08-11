@@ -9,7 +9,7 @@ import type {
   RuntimeServiceSelection,
 } from "@narratage/runtime";
 
-import type { ProjectLocalRuntimeOptions } from "./types.js";
+import type { ProjectLocalRuntimeControlOptions } from "./types.js";
 
 export type ProjectRuntimeServiceSelection = RuntimeServiceSelection;
 export type ProjectRuntimeServiceAssembly = RuntimeServiceAssembly;
@@ -49,7 +49,7 @@ function packageCatalog(
  */
 export async function createProjectRuntimeServices(
   _root: string,
-  options: ProjectLocalRuntimeOptions,
+  options: ProjectLocalRuntimeControlOptions,
 ): Promise<AssembledProjectRuntimeServices> {
   const packages = [...options.runtimeServices];
   try {

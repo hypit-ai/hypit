@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -159,8 +159,6 @@ test("CLI exits after durable submission and a restarted detached Worker complet
       "build", run,
       "--build-id", build,
       "--runtime", profile,
-      "--package-lock", authorLockPath,
-      "--package-root", process.cwd(),
       "--root", project,
       "--no-services",
     ]);
@@ -175,8 +173,6 @@ test("CLI exits after durable submission and a restarted detached Worker complet
       "build", run,
       "--build-id", build,
       "--runtime", profile,
-      "--package-lock", authorLockPath,
-      "--package-root", process.cwd(),
       "--root", project,
       "--no-services",
       "--follow",
@@ -210,6 +206,20 @@ test("CLI exits after durable submission and a restarted detached Worker complet
     const completed = await waitForBuild(project, profile, build);
     assert.equal((completed.build as { readonly status?: string }).status, "complete");
     assert.equal((completed.dispatch as { readonly terminal?: string }).terminal, "complete");
+
+    const queue = await cli(project, ["queue", "--runtime", profile]);
+    assert.equal((queue.dispatches as readonly { readonly phase: string }[])
+      .filter((item) => item.phase !== "terminal").length, 0);
+    const archive = await cli(project, ["builds", "--runtime", profile]);
+    assert.deepEqual((archive.builds as readonly { readonly build: string }[]).map((item) => item.build), [build]);
+    const inspected = await cli(project, ["inspect", build, "--runtime", profile]);
+    assert.equal((inspected.archive as { readonly status?: string }).status, "complete");
+    const exported = join(project, "output", "message.json");
+    const materialized = await cli(project, [
+      "get", build, "--runtime", profile, "--name", "message-004", "--to", exported,
+    ]);
+    assert.equal((materialized.materialized as { readonly kind?: string }).kind, "json");
+    assert.notEqual(JSON.parse(await readFile(exported, "utf8")), undefined);
   } finally {
     await stopRuntimeProcess(profile, 10_000).catch(() => undefined);
     await rm(project, { recursive: true, force: true });
