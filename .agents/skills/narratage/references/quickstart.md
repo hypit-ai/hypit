@@ -11,7 +11,7 @@ The repository docs are authoritative:
 | Speech Spine and SemanticMap | `docs/quickstart/timing.md` |
 | Caption, Media, Text, Audio Tracks | `docs/quickstart/tracks.md` and the `@narratage/audio-track` package README |
 | Film and rendering | `docs/quickstart/composition.md` |
-| Run Source and Runtime | `docs/quickstart/run.md` |
+| Run Source, durable Runtime, Builds, retrieval, and reuse | `docs/quickstart/run.md` and `references/runtime.md` |
 
 Canonical path:
 
@@ -19,3 +19,7 @@ Canonical path:
 
 Use explicit imports, exact fonts, Canvas/Frames, ProgramSpace, package locks, Targets, and Runtime
 authority. There is no implicit cache; reuse is explicit with `build-record` + `satisfy`.
+
+For execution, preserve the full lifecycle: diagnose the Profile, start or reuse the durable
+Runtime, inspect the frozen plan, submit a named Build, inspect its accepted Records, retrieve
+Artifacts, and declare any reuse explicitly in a new Run Source.
