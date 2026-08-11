@@ -5,9 +5,19 @@ description: 搭建 Narratage 并编译你的第一张视频图。
 
 # Quickstart
 
+**Narratage** 这个名字来自 1933 年《*New York Times*》对电影《*The Power and the
+Glory*》的一篇影评。那位影评人造出这个词，用来描述当时的一种新兴电影手法：
+**Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
+
+这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
+文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
+扩展名为 `.svml`。
+
 ## 选择开始方式
 
-**使用 Narratage skill。** 通过 Agent 自带的 skill 安装器安装完整的
+### 使用 Narratage skill
+
+通过 Agent 自带的 skill 安装器安装完整的
 [`narratage` skill 文件夹](https://github.com/cashdiffusion/svml/tree/main/.agents/skills/narratage)，
 也可以把这个链接发给 Agent，让它安装并使用该 skill。已经克隆仓库时，直接让安装器读取
 `.agents/skills/narratage`；需要安装整个文件夹，而不是只复制 `SKILL.md`。
@@ -22,15 +32,9 @@ description: 搭建 Narratage 并编译你的第一张视频图。
 `.agents/skills/narratage` 交给 Agent。skill 生效后，Agent 会按需读取对应的 Quickstart 页面，
 你无需再手动通读后文。
 
-**手动开始。** 从[安装](#安装)继续，然后按顺序阅读七篇指南。
+### 手动开始
 
-**Narratage** 这个名字来自 1933 年《*New York Times*》对电影《*The Power and the
-Glory*》的一篇影评。那位影评人造出这个词，用来描述当时的一种新兴电影手法：
-**Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
-
-这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
-文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
-扩展名为 `.svml`；当前工作区的开发包预留 `@narratage` 作用域，但尚未发布到 npm。
+从[安装](#安装)继续，然后按顺序阅读七篇指南。
 
 ## 安装
 
