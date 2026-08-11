@@ -56,6 +56,8 @@ export type CreateLocalRuntimeOptions = {
   readonly validators?: LocalTypeValidatorRegistry;
   /** Expected implementation package closure already bound into BuildRequest. */
   readonly implementationClosure?: import("@narratage/protocol").Digest;
+  /** Verified physical Runtime-adapter package lock; absent only for trusted direct embedding. */
+  readonly runtimePackageClosure?: import("@narratage/protocol").Digest;
 };
 
 export type CreateLocalRuntimeControlOptions = {
@@ -85,6 +87,8 @@ export type ProjectLocalRuntimeOptions = {
   readonly packageLock?: string;
   /** Already verified implementation identity when components are supplied by this Host process. */
   readonly implementationClosure?: import("@narratage/protocol").Digest;
+  /** Verified physical Runtime-adapter package lock; absent only for trusted direct embedding. */
+  readonly runtimePackageClosure?: import("@narratage/protocol").Digest;
   /**
    * Replaceable parts of the Runtime itself. One package may fill several roles;
    * every selected role is explicit, and two packages exposing the same instance

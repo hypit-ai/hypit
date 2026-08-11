@@ -91,6 +91,48 @@ function projectRuntimeFixture(directory: string) {
   } as const;
 }
 
+test("one local execution domain refuses a new Runtime Revision while an old Build is unfinished", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-local-revision-gate-"));
+  try {
+    const firstImplementation = digestOf("implementation:first");
+    const firstRuntimePackages = digestOf("runtime-packages:first");
+    const first = await createProjectLocalRuntime({
+      root: directory,
+      ...projectRuntimeFixture(directory),
+      implementationClosure: firstImplementation,
+      runtimePackageClosure: firstRuntimePackages,
+    });
+    await first.build({
+      id: "unfinished-build",
+      state: createGreetingBuild({ implementationClosure: firstImplementation }),
+    });
+    await first.close();
+
+    const changed = projectRuntimeFixture(directory);
+    await assert.rejects(
+      createProjectLocalRuntime({
+        root: directory,
+        ...changed,
+        implementationClosure: digestOf("implementation:second"),
+        runtimePackageClosure: firstRuntimePackages,
+      }),
+      /cannot enter this execution domain[\s\S]*unfinished-build[\s\S]*original Runtime Profile/u,
+    );
+    const changedRuntimePackages = projectRuntimeFixture(directory);
+    await assert.rejects(
+      createProjectLocalRuntime({
+        root: directory,
+        ...changedRuntimePackages,
+        implementationClosure: firstImplementation,
+        runtimePackageClosure: digestOf("runtime-packages:second"),
+      }),
+      /cannot enter this execution domain[\s\S]*unfinished-build[\s\S]*original Runtime Profile/u,
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("Artifact GC is explicit, dry-run by default, and only removes unreachable managed bytes", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-artifact-gc-"));
   try {

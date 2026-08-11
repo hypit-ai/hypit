@@ -20,8 +20,8 @@ uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv sync --project services/image-opencv --frozen
 uv run --project services/whisperx --frozen svml-whisperx-prepare
-pnpm narratage services up svml.runtime.json
-pnpm narratage doctor svml.runtime.json
+node --run narratage -- services up svml.runtime.json
+node --run narratage -- doctor svml.runtime.json
 ```
 
 The repository owns skill discovery: `.agents/skills` is canonical, with repository-root

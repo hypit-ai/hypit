@@ -18,7 +18,8 @@ export type BuildDispatchIdentity = {
   readonly id: Digest;
   readonly build: string;
   readonly core: Digest;
-  readonly runtimeClosure: Digest;
+  /** Exact execution revision: Runtime Closure plus author/runtime implementation package locks. */
+  readonly runtimeRevision: Digest;
 };
 
 export type BuildDispatchSnapshot = BuildDispatchIdentity & {
@@ -44,7 +45,7 @@ export type BuildDispatchCreate =
 
 export type BuildDispatchClaim = {
   /** Exact Runtime Revision this Worker can execute. Claims are filtered before leasing. */
-  readonly runtimeClosure: Digest;
+  readonly runtimeRevision: Digest;
   readonly owner: string;
   readonly token: string;
   readonly now: number;
@@ -61,6 +62,14 @@ export type DispatchQuery = {
   readonly phases?: readonly DispatchPhase[];
   readonly admission?: DispatchAdmission;
 };
+
+export const nonTerminalDispatchPhases = [
+  "queued",
+  "leased",
+  "waiting",
+  "blocked",
+  "settling",
+] as const satisfies readonly DispatchPhase[];
 
 export type CapacityMode = "active" | "recoverable";
 
@@ -194,18 +203,36 @@ function positive(value: number, subject: string): number {
 export function createBuildDispatchIdentity(input: {
   readonly build: string;
   readonly core: Digest;
-  readonly runtimeClosure: Digest;
+  readonly runtimeRevision: Digest;
 }): BuildDispatchIdentity {
   assert(input.build.trim().length > 0, "Build Dispatch build id is empty");
   assert(isDigest(input.core), "Build Dispatch Core digest is invalid");
-  assert(isDigest(input.runtimeClosure), "Build Dispatch Runtime Closure digest is invalid");
+  assert(isDigest(input.runtimeRevision), "Build Dispatch Runtime Revision digest is invalid");
   const content = {
     format: "svml.build-dispatch-identity@1" as const,
     build: input.build,
     core: input.core,
-    runtimeClosure: input.runtimeClosure,
+    runtimeRevision: input.runtimeRevision,
   };
   return { ...content, id: digestOf(content) };
+}
+
+export function createRuntimeRevision(input: {
+  readonly runtimeClosure: Digest;
+  readonly implementationClosure?: Digest;
+  readonly runtimePackageClosure?: Digest;
+}): Digest {
+  assert(isDigest(input.runtimeClosure), "Runtime Revision Runtime Closure digest is invalid");
+  assert(input.implementationClosure === undefined || isDigest(input.implementationClosure),
+    "Runtime Revision implementation closure digest is invalid");
+  assert(input.runtimePackageClosure === undefined || isDigest(input.runtimePackageClosure),
+    "Runtime Revision Runtime package closure digest is invalid");
+  return digestOf({
+    format: "svml.runtime-revision@1",
+    runtimeClosure: input.runtimeClosure,
+    implementationClosure: input.implementationClosure ?? null,
+    runtimePackageClosure: input.runtimePackageClosure ?? null,
+  });
 }
 
 export function verifyBuildDispatchIdentity(value: BuildDispatchIdentity): void {
@@ -234,6 +261,28 @@ export function verifyBuildDispatchSnapshot(value: BuildDispatchSnapshot): void 
   assert((value.phase === "terminal") === (value.terminal !== undefined), "only a terminal Dispatch may carry a terminal outcome");
   if (value.phase === "terminal") assert(value.admission === "closed", "terminal Dispatch admission must be closed");
   if (value.cancellation !== undefined) safeNonNegative(value.cancellation.requestedAt, "cancellation requestedAt");
+}
+
+/**
+ * One DispatchStore is one execution domain. It may admit only one Runtime Revision while work is
+ * unfinished. This keeps execution honest without retaining old code or inventing a multi-version
+ * Worker supervisor. A caller that intentionally wants another execution domain selects another
+ * DispatchStore.
+ */
+export function assertRuntimeRevisionAdmission(
+  runtimeRevision: Digest,
+  dispatches: readonly BuildDispatchSnapshot[],
+): void {
+  assert(isDigest(runtimeRevision), "Runtime Revision digest is invalid");
+  const conflicts = dispatches
+    .filter((item) => item.phase !== "terminal" && item.runtimeRevision !== runtimeRevision)
+    .sort((left, right) => left.build.localeCompare(right.build));
+  if (conflicts.length === 0) return;
+  throw new Error([
+    `Runtime Revision ${runtimeRevision} cannot enter this execution domain while unfinished Builds belong to another revision:`,
+    ...conflicts.map((item) => `  ${item.build} · ${item.phase} · ${item.runtimeRevision}`),
+    "Finish or cancel those Builds with their original Runtime Profile, restore that Profile and its package locks, or select another DispatchStore.",
+  ].join("\n"));
 }
 
 export function capacityReservationId(build: string, command: string): Digest {

@@ -686,6 +686,14 @@ function queueRouteLines(groups: readonly QueueRouteSummary[]): readonly string[
   return lines;
 }
 
+function externalServiceLine(service: ExternalServiceReport): string {
+  const stateDetail = "detail" in service.state ? ` — ${service.state.detail}` : "";
+  const action = service.action === undefined ? "" : ` · ${service.action}`;
+  const detail = service.detail === undefined ? "" : ` · ${service.detail}`;
+  const instances = service.instances.length === 0 ? "" : ` · ${service.instances.join(", ")}`;
+  return `${service.id}: ${service.state.state}${stateDetail}${action}${detail}${instances}`;
+}
+
 function inlineValuePreview(value: unknown, limit = 240): string {
   const encoded = JSON.stringify(value);
   if (encoded.length <= limit) return encoded;
@@ -821,7 +829,8 @@ export async function runCli(
   distribution: CliDistribution,
 ): Promise<void> {
   if (argv.length === 0 || argv[0] === "help" || argv.includes("--help")) {
-    writeCliHelp(io);
+    const topic = argv[0] === "help" ? argv[1] : argv.includes("--help") ? argv[0] : undefined;
+    writeCliHelp(io, topic);
     return;
   }
   const args = parseArgs(argv);
@@ -1067,17 +1076,26 @@ export async function runCli(
       : args.action === "down"
         ? await distribution.externalServices.down(profile)
         : await distribution.externalServices.report(profile);
+    const ready = result.services.every((item) => item.state.state === "ready");
+    const desiredState = args.action === "down" ? !result.services.some((item) => item.state.state === "ready") : ready;
     const machine = {
-      ok: result.services.every((item) => (args.action === "down" ? item.state.state !== "ready" : item.state.state === "ready")),
+      format: "narratage.cli-services-status@1" as const,
+      // A successful status query is not a failed lifecycle action. `ready` carries readiness.
+      ok: args.action === "status" ? true : desiredState,
+      ready,
       root: result.root,
       services: result.services,
     };
-    writeOperational(machine, `External services ${args.action}`, machine.ok ? "success" : "warning", [
+    const shownServices = args.verbose || args.action !== "status"
+      ? result.services
+      : result.services.filter((item) => item.state.state !== "ready");
+    writeOperational(machine, `External services ${args.action}`,
+      args.action === "status" ? ready ? "success" : "info" : machine.ok ? "success" : "warning", [
       ["Root", result.root],
       ["Services", String(result.services.length)],
       ["Ready", String(result.services.filter((item) => item.state.state === "ready").length)],
-    ]);
-    if (!machine.ok) io.setExitCode?.(1);
+    ], shownServices.map(externalServiceLine));
+    if (args.action !== "status" && !machine.ok) io.setExitCode?.(1);
     return;
   }
   if (args.command === "runtime") {
@@ -1086,6 +1104,10 @@ export async function runCli(
     }
     const profile = resolve(args.file!);
     if (args.action === "up") {
+      // Validate the exact Runtime Revision against unfinished work before replacing a stale Worker
+      // or starting external programs. A refusal must leave the old execution environment intact.
+      const validated = await loadLocalRuntime(profile, distribution);
+      await validated.close();
       const external = await distribution.externalServices.up(profile, {
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
         ...(reportServiceProgress === undefined ? {} : { onProgress: reportServiceProgress }),
@@ -1128,30 +1150,51 @@ export async function runCli(
       ]);
       return;
     }
-    const worker = await runtimeProcessStatus(profile);
-    const external = await distribution.externalServices.report(profile);
-    const runtime = await loadRuntimeControl(profile, distribution);
+    // These are independent views over one Profile. Load them concurrently without inventing a
+    // second registry; each selected package remains the authority for its own report.
+    const runtimeLoading = loadRuntimeControl(profile, distribution);
+    let runtime: LocalRuntimeControl | undefined;
     try {
+      const loaded = await Promise.all([
+        runtimeProcessStatus(profile),
+        distribution.externalServices.report(profile),
+        runtimeLoading,
+      ]);
+      const [worker, external, selectedRuntime] = loaded;
+      runtime = selectedRuntime;
       const queue = await runtime.queue();
       const counts = Object.fromEntries(["queued", "leased", "waiting", "blocked", "settling", "terminal"]
         .map((phase) => [phase, queue.dispatches.filter((item) => item.phase === phase).length]));
       const routes = summarizeQueueRoutes(queue.capacity);
+      const ready = worker.state === "running"
+        && external.services.every((item) => item.state.state === "ready");
+      const active = ["queued", "leased", "waiting", "blocked", "settling"]
+        .reduce((total, phase) => total + (counts[phase] ?? 0), 0);
+      const attention = active > 0 && !ready;
+      const unavailable = external.services.filter((item) => item.state.state !== "ready");
       const machine = {
-        ok: worker.state === "running" && external.services.every((item) => item.state.state === "ready"),
+        format: "narratage.cli-runtime-status@1" as const,
+        ok: true,
+        ready,
+        attention,
         worker,
         queue: { counts, routes, capacity: queue.capacity },
         services: external.services,
       };
-      writeOperational(machine, "Runtime status", machine.ok ? "success" : "warning", [
+      writeOperational(machine, "Runtime status", attention ? "warning" : ready ? "success" : "info", [
         ["Worker", worker.state],
         ["Queued", String(counts.queued ?? 0)],
         ["Running", String(counts.leased ?? 0)],
         ["Waiting", String(counts.waiting ?? 0)],
+        ["Services", `${external.services.length - unavailable.length}/${external.services.length} ready`],
         ["Capacity reservations", String(queue.capacity.length)],
-      ], queueRouteLines(routes));
-      if (!machine.ok) io.setExitCode?.(1);
+      ], [
+        ...unavailable.map(externalServiceLine),
+        ...queueRouteLines(routes),
+      ]);
     } finally {
-      await runtime.close();
+      if (runtime !== undefined) await runtime.close();
+      else await runtimeLoading.then(async (loaded) => await loaded.close(), () => undefined);
     }
     return;
   }
@@ -1352,7 +1395,8 @@ export async function runCli(
         if (operation === undefined) io.setExitCode?.(1);
       } else if (args.command === "builds") {
         const entries = await runtime.builds();
-        const builds = await Promise.all(entries.map(async (entry) => {
+        const inspected = args.json || args.verbose ? entries : entries.slice(0, 20);
+        const builds = await Promise.all(inspected.map(async (entry) => {
           const status = await runtime.status(entry.build);
           return {
             build: entry.build,
@@ -1363,12 +1407,13 @@ export async function runCli(
             ...summarizeBuildCatalog(entry, status.build?.state),
           };
         }));
-        writeOperational({ builds }, "Build archive", "info", [["Builds", String(builds.length)]],
-          builds.slice(0, args.verbose ? undefined : 20).map((item) => `${item.build}: ${item.status ?? "unknown"}`));
+        writeOperational({ builds }, "Build archive", "info", [["Builds", String(entries.length)]],
+          builds.map((item) => `${item.build}: ${item.status ?? "unknown"}`));
       } else if (args.command === "history") {
         const catalogs = await runtime.builds();
         const entries = (await Promise.all(catalogs.map(async (catalog) => {
           if (args.source !== undefined && catalog.source.path !== args.source) return [];
+          if (args.file !== undefined && !catalog.aliases.some((alias) => alias.name === args.file)) return [];
           const status = await runtime.status(catalog.build);
           if (status.build === undefined) return [];
           return acceptedArchivedOutputs(status.build.state, catalog)
@@ -1828,6 +1873,11 @@ export async function runCli(
       machine: result.plan,
       run: loaded.path,
       targetSet: loaded.run.graph.selectedTargets,
+      outputNames: Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
+        item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : [])),
+      candidateNames: Object.fromEntries(Object.entries(loaded.run.candidates)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([name, id]) => [id, name])),
     });
   } finally {
     await runtime?.close();
