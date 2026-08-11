@@ -50,7 +50,7 @@
     {
       "name": "@narratage/background-removal",
       "version": "0.0.0-dev",
-      "digest": "sha256:a9d70daf4af81911b62cd38ce04cecc5c7f157ef0150b9236bfe9db8ad688954"
+      "digest": "sha256:0c6e220f91019e9f21f083a7fe8f2c0a702ef1cb5098dbe08ef7b089e2aede9f"
     },
     {
       "name": "@narratage/caption-gemini",
@@ -505,7 +505,7 @@
     {
       "name": "esbuild",
       "version": "0.25.12",
-      "digest": "sha256:d45f05635279ab74b586ef526256666bf06353c35733ba7265669098f7b0f221"
+      "digest": "sha256:d428001f327707b220f882523c466e93d30edd744a796697f5c80141d418e520"
     },
     {
       "name": "escalade",
@@ -962,7 +962,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:b14b721bdc0c9d5d9ced1c345107c92a3a5878f3383dea2ecd3e310442c2a40c",
-      "closureDigest": "sha256:8b03af29b45cbcd9aa83905c273da8f7ba631f4b89498477175ee131c09e05eb"
+      "closureDigest": "sha256:43036453a4367efeaccff82e847831558f6f6827c6a4e7dd7da2b432302d1264"
     },
     {
       "specifier": "@narratage/provider-kie",
@@ -971,7 +971,7 @@
         "version": "0.0.0-dev"
       },
       "facetsDigest": "sha256:e61ebb911a33d4c5d0e4e4ee4fb69cdb790f4ced050ef35f7472bfbd72013d9b",
-      "closureDigest": "sha256:239b563cea714bdce1e1e0fbd0d552f2eb6717a348d02b13fcda53d6f6b194f1"
+      "closureDigest": "sha256:d4de31902b3c5630d6bf43c466f67cf3667da82e49eca0348281cfd08a08acaf"
     },
     {
       "specifier": "@narratage/provider-media-local",
@@ -1001,5 +1001,5 @@
       "closureDigest": "sha256:bf4698c24009fbf535790ae49ee852eb6e6a006fad4e771ba9002883c16ad54e"
     }
   ],
-  "digest": "sha256:b2b076a1b21b625b43ce0779003d15323327fcc31a0513bfd8a7f9e0fda317a2"
+  "digest": "sha256:ab6cb508d95a7def94240540bc5764875ba1bf3a8bfc8b9db646f0df9620fc2e"
 }
