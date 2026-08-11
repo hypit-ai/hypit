@@ -66,17 +66,11 @@ test("generates a video", async (t) => {
 });
 ```
 
-### Boundary 测试
+### 架构边界
 
-`tools/package-boundaries.test.mjs` 和 `tools/graph-first-value-boundary.test.mjs` 会在整个 workspace 范围内校验结构性不变量：
+包边界由 package manifest、公开入口和共享合同表达；测试只验证边界上可观察的行为。
+仓库不再把源码文本正则当作依赖分析或架构审查的替代品。
 
-- 依赖图无环
-- 领域中立闭包中只包含领域中立的包
-- CLI 不依赖任何 Provider 或作者包
-
-它们作为 `pnpm test` 的一部分，在每次提交时运行。
-
-这些测试在仓库开源时应当保留：协议、图、包边界与确定性单元测试是解耦规则的可执行定义。
 发布前应删除客户或品牌 fixture、凭据痕迹、付费产物、工作站绝对路径与一次性验收脚本。
 通用 live test 只有在显式 opt-in、不提交秘密，并且未设置开关时能在花钱前退出的情况下才保留。
 

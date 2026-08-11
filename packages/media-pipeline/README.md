@@ -23,7 +23,10 @@ Segment identities.
 
 The current normalization profile uses one source presentation origin, a requested rational video frame
 rate, and a 48 kHz stereo PCM render stem. It preserves input level: loudness/mastering remains a
-separate author policy.
+separate author policy. Its public `SynchronizedMedia` waist carries only the common frame domain,
+optional visual Artifact plus intrinsic extent, and optional audio Artifact. Stream indexes,
+authority choice and the trim/pad ledger remain in Selection and execution instead of travelling
+through every consumer.
 
 This package is the shared execution vocabulary, not mandatory authoring boilerplate. A consuming
 Surface that already owns the needed policy may expand the same finite graph itself. For example,

@@ -9,20 +9,25 @@ export {
   speechSpineTypes,
   speechSpineProgramSchema,
   speechSpineSetSchema,
+  speechSpineVisualSpecSchema,
   speechSpineSurfaceImplementationDigest,
 } from "./manifest.js";
 export {
-  appendSpeechSpineTake,
-  appendSpeechSpineTakeImplementationDigest,
+  appendSpeechSpineAudioTake,
+  appendSpeechSpineAudioTakeImplementationDigest,
+  appendSpeechSpineVisualTake,
+  appendSpeechSpineVisualTakeImplementationDigest,
   assembleSpeechBasis,
   assembleSpeechBasisImplementationDigest,
   assertSpeechSpineProgram,
   assertSpeechSpineSet,
+  assertSpeechSpineVisualSpec,
   compileSpeechSpineAudio,
   compileSpeechSpineAudioImplementationDigest,
   createSpeechSpineSet,
   createSpeechSpineSetImplementationDigest,
   sealSpeechSpineProgram,
+  sealSpeechSpineVisualSpec,
 } from "./program.js";
 export { decodeSpeechSpineSurface } from "./surface.js";
 export type * from "./types.js";

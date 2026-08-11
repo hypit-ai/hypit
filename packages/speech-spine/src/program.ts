@@ -1,5 +1,5 @@
 import type { NarrativeExcerpt } from "@narratage/narrative";
-import { verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
+import { synchronizedMediaSampleFrames, verifySynchronizedMedia, verifyTimelineAudio } from "@narratage/media";
 import type { SynchronizedMedia, TimelineAudio } from "@narratage/media";
 import { assertProgramSpaceIdentity, sealProgramSpace } from "@narratage/program-space";
 import type { ProgramSpace } from "@narratage/program-space";
@@ -11,15 +11,19 @@ import {
 } from "@narratage/media-pipeline";
 import type { AudioProgramPlan } from "@narratage/media-pipeline";
 import { canonicalize, digestOf } from "@narratage/protocol";
+import { assertContentFit, assertSpatialFrame } from "@narratage/spatial";
+import type { ContentFit, SpatialFrame } from "@narratage/spatial";
 
 import type {
   SpeechSpineProgram,
   SpeechSpineSet,
   SpeechSpineTake,
+  SpeechSpineVisualSpec,
 } from "./types.js";
 
 export const createSpeechSpineSetImplementationDigest = digestOf("@narratage/speech-spine/create-spine-set@1");
-export const appendSpeechSpineTakeImplementationDigest = digestOf("@narratage/speech-spine/append-spine-take@1");
+export const appendSpeechSpineAudioTakeImplementationDigest = digestOf("@narratage/speech-spine/append-spine-audio-take@1");
+export const appendSpeechSpineVisualTakeImplementationDigest = digestOf("@narratage/speech-spine/append-spine-visual-take@1");
 export const compileSpeechSpineAudioImplementationDigest = digestOf("@narratage/speech-spine/compile-spine-audio@1");
 export const assembleSpeechBasisImplementationDigest = digestOf("@narratage/speech-spine/assemble-speech-basis@1");
 
@@ -69,11 +73,29 @@ function sealSpeechSpineSet(value: SpeechSpineSet): SpeechSpineSet {
 function assertTake(take: SpeechSpineTake, program: SpeechSpineProgram): void {
   verifyExcerpt(take.segment);
   verifySynchronizedMedia(take.media);
-  assert(take.media.visual !== undefined, `Speech Segment ${take.segment.id} has no moving visual`);
   assert(take.media.audio !== undefined, `Speech Segment ${take.segment.id} has no speech audio`);
   assert(take.media.timeline.frameRate.numerator === program.frameRate.numerator
     && take.media.timeline.frameRate.denominator === program.frameRate.denominator,
   `Speech Segment ${take.segment.id} uses another frame rate`);
+  assert((take.media.visual === undefined) === (take.visual === undefined),
+    `Speech Segment ${take.segment.id} visual policy does not match its media`);
+  if (take.visual !== undefined) {
+    assertSpatialFrame(take.visual.frame);
+    assertContentFit(take.visual.fit);
+    assert(Number.isSafeInteger(take.visual.stackingOrder),
+      `Speech Segment ${take.segment.id} visual stacking order is invalid`);
+  }
+}
+
+export function sealSpeechSpineVisualSpec(value: SpeechSpineVisualSpec): SpeechSpineVisualSpec {
+  const result = structuredClone(value);
+  assertSpeechSpineVisualSpec(result);
+  return result;
+}
+
+export function assertSpeechSpineVisualSpec(value: SpeechSpineVisualSpec): void {
+  assert(value.contract === "svml.speech-spine-visual-spec@1", "Unsupported SpeechSpineVisualSpec contract");
+  assert(Number.isSafeInteger(value.stackingOrder), "SpeechSpineVisualSpec stacking order is invalid");
 }
 
 export function assertSpeechSpineSet(value: SpeechSpineSet): void {
@@ -94,21 +116,56 @@ export function createSpeechSpineSet(): SpeechSpineSet {
   });
 }
 
-export function appendSpeechSpineTake(
+function appendTake(
+  set: SpeechSpineSet,
+  program: SpeechSpineProgram,
+  take: SpeechSpineTake,
+): SpeechSpineSet {
+  assertSpeechSpineSet(set);
+  assertSpeechSpineProgram(program);
+  assertTake(take, program);
+  assert(!set.takes.some((item) => item.segment.id === take.segment.id), `Speech Spine repeats Segment ${take.segment.id}`);
+  return sealSpeechSpineSet({
+    contract: "svml.speech-spine-set@1",
+    takes: [...set.takes, take],
+  });
+}
+
+export function appendSpeechSpineAudioTake(
   set: SpeechSpineSet,
   program: SpeechSpineProgram,
   media: SynchronizedMedia,
   segment: NarrativeExcerpt,
 ): SpeechSpineSet {
-  assertSpeechSpineSet(set);
-  assertSpeechSpineProgram(program);
-  const take = { media, segment } satisfies SpeechSpineTake;
-  assertTake(take, program);
-  assert(!set.takes.some((item) => item.segment.id === segment.id), `Speech Spine repeats Segment ${segment.id}`);
-  return sealSpeechSpineSet({
-    contract: "svml.speech-spine-set@1",
-    takes: [...set.takes, take],
-  });
+  verifySynchronizedMedia(media);
+  assert(media.visual === undefined, `Speech Segment ${segment.id} audio Take unexpectedly contains a visual stream`);
+  return appendTake(set, program, { media, segment });
+}
+
+export function appendSpeechSpineVisualTake(
+  set: SpeechSpineSet,
+  program: SpeechSpineProgram,
+  media: SynchronizedMedia,
+  segment: NarrativeExcerpt,
+  frame: SpatialFrame,
+  fit: ContentFit,
+  visualSpec: SpeechSpineVisualSpec,
+): SpeechSpineSet {
+  assertSpatialFrame(frame);
+  assertContentFit(fit);
+  assertSpeechSpineVisualSpec(visualSpec);
+  verifySynchronizedMedia(media);
+  assert(media.visual !== undefined, `Speech Segment ${segment.id} visual Take has no visual stream`);
+  const take = {
+    media,
+    segment,
+    visual: {
+      frame: structuredClone(frame),
+      fit: structuredClone(fit),
+      stackingOrder: visualSpec.stackingOrder,
+    },
+  } satisfies SpeechSpineTake;
+  return appendTake(set, program, take);
 }
 
 function frameSample(frame: number, frameRate: SpeechSpineProgram["frameRate"]): number {
@@ -143,16 +200,17 @@ export function compileSpeechSpineAudio(program: SpeechSpineProgram, set: Speech
     frame += take.media.timeline.frameCount;
     const targetStartSample = frameSample(startFrame, program.frameRate);
     const targetEndSampleExclusive = frameSample(frame, program.frameRate);
-    assert(targetEndSampleExclusive - targetStartSample === audio.sampleFrames,
+    const sourceSampleFrames = synchronizedMediaSampleFrames(take.media);
+    assert(targetEndSampleExclusive - targetStartSample === sourceSampleFrames,
       `Speech Segment ${take.segment.id} audio does not exactly cover its normalized frame span`);
     return {
       id: `${String(index + 1).padStart(4, "0")}:${take.segment.id}`,
       artifact: audio.artifact,
       targetStartSample,
       targetEndSampleExclusive,
-      sourceSampleFrames: audio.sampleFrames,
+      sourceSampleFrames,
       sourceStartSample: 0,
-      sourceEndSampleExclusive: audio.sampleFrames,
+      sourceEndSampleExclusive: sourceSampleFrames,
       sourceLoop: false,
       sourcePhaseSample: 0,
       playbackRate: 1,
@@ -193,17 +251,27 @@ export function assembleSpeechBasis(
     frame += take.media.timeline.frameCount;
     return { segmentId: take.segment.id, startSec: seconds(startFrame), endSec: seconds(frame) };
   });
-  const visualClips = set.takes.map((take, index) => ({
-    segmentId: take.segment.id,
-    artifact: structuredClone(take.media.visual!.artifact),
-    extent: {
-      contract: "svml.intrinsic-extent@1" as const,
-      widthPx: take.media.visual!.width,
-      heightPx: take.media.visual!.height,
-    },
-    frameRate: { ...take.media.visual!.frameRate },
-    frameCount: take.media.visual!.frameCount,
-  }));
+  frame = 0;
+  const visualClips = set.takes.flatMap((take) => {
+    const startFrame = frame;
+    frame += take.media.timeline.frameCount;
+    if (take.media.visual === undefined || take.visual === undefined) return [];
+    return [{
+      segmentId: take.segment.id,
+      span: { startFrame, endFrameExclusive: frame },
+      artifact: structuredClone(take.media.visual.artifact),
+      extent: {
+        contract: "svml.intrinsic-extent@1" as const,
+        widthPx: take.media.visual.width,
+        heightPx: take.media.visual.height,
+      },
+      frameRate: { ...take.media.timeline.frameRate },
+      frameCount: take.media.timeline.frameCount,
+      frame: structuredClone(take.visual.frame),
+      fit: structuredClone(take.visual.fit),
+      stackingOrder: take.visual.stackingOrder,
+    }];
+  });
   return sealSpeechBasis({
     contract: "svml.speech-basis@1",
     programSpace: space,

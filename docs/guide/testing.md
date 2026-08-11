@@ -75,19 +75,13 @@ test("generates a video", async (t) => {
 });
 ```
 
-### Boundary tests
+### Architecture boundaries
 
-`tools/package-boundaries.test.mjs` and `tools/graph-first-value-boundary.test.mjs` verify
-structural invariants across the entire workspace:
+Package boundaries are expressed by package manifests, public entry points and shared contracts.
+Tests exercise observable behavior at those boundaries. The repository deliberately does not use
+source-text regex tests as a substitute for dependency analysis or architectural review.
 
-- Acyclic dependency graph
-- Domain-neutral closure contains only domain-neutral packages
-- CLI has no Provider or author-package dependency
-
-These run as part of `pnpm test` on every commit.
-
-These tests remain when the repository is opened: protocol, graph, package-boundary and deterministic
-unit tests are the executable definition of the decoupling rules. Before publication, remove customer
+Before publication, remove customer
 or brand fixtures, credential traces, paid output artifacts, absolute workstation paths and one-off
 acceptance harnesses. Generic live tests may remain only when they are explicitly opt-in, use no
 committed secret and fail before spending money unless their gate is set.

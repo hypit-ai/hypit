@@ -76,20 +76,7 @@ function speechBasis(
     contract: "svml.speech-basis@1",
     programSpace,
     audio: { kind: "blob", digest: audioDigest, size: 1, mediaType: "audio/wav" },
-    visualTrack: {
-      clips: segments.map((segment) => ({
-        segmentId: segment.segmentId,
-        artifact: {
-          kind: "blob",
-          digest: digestOf(`fixture:clip:${segment.segmentId}`),
-          size: 1,
-          mediaType: "video/mp4",
-        },
-        extent: { contract: "svml.intrinsic-extent@1", widthPx: 720, heightPx: 1280 },
-        frameRate: { ...programSpace.frameRate },
-        frameCount: Math.round((segment.endSec - segment.startSec) * 1_000),
-      })),
-    },
+    visualTrack: { clips: [] },
     segments,
   });
   return audioProjection(take);

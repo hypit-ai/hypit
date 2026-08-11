@@ -53,29 +53,11 @@ function media(id: string, sampleFrames: number): SynchronizedMedia {
   return {
     contract: "svml.synchronized-media@1",
     timeline: {
-      spanAuthority: "audio",
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: Math.max(1, Math.round(sampleFrames / 1_600)),
-      sampleRate: 48_000,
-      sampleFrames,
-    },
-    sourceMap: {
-      sourceOriginPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
-      sourceEndPts: { ticks: String(sampleFrames), timeBase: { numerator: 1, denominator: 48_000 } },
-      audioTrimStartSamples: 0,
-      audioTrimEndSamples: 0,
-      audioHeadSamples: 0,
-      audioContentSamples: sampleFrames,
-      audioTailSamples: 0,
     },
     audio: {
       artifact: { kind: "blob", digest: digestOf(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
-      sourceStreamIndex: 0,
-      codec: "pcm_s16le",
-      sampleRate: 48_000,
-      channels: 2,
-      sampleFrames,
-      loudness: "preserved",
     },
   };
 }

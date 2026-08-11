@@ -50,7 +50,7 @@ Common Track sources:
 
 | Source | Type | From |
 |---|---|---|
-| `{speech.visual}` | VisualTrack | `speech:Spine` — full-screen talking head |
+| `{speech.visual}` | VisualTrack | `speech:Spine` — sparse same-source speech visuals |
 | `{speech.audioTrack}` | AudioTrack | `speech:Spine` — synchronized audio |
 | `{captions.track}` | VisualTrack | a Caption Style-family Track — timed captions |
 | `{cards.visual}` | VisualTrack | `media-track:Track` — media overlays or B-roll |
@@ -66,7 +66,7 @@ Typical stacking order:
 
 | stack-order | Content |
 |---|---|
-| 10 | Speech visual (full-screen talking head) |
+| 10 | Example Speech visual (author-selected, not a built-in default) |
 | 40 | Media overlays |
 | 70 | Captions |
 | 90 | Text overlays |
@@ -145,13 +145,16 @@ The complete data flow from Script to rendered video. This example is based on
     prompt={direction} duration="5"/>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
     left="6%" top="6%" right="6%" bottom="84%"/>
   <space:Frame id="card-frame" within={vertical}
     left="10%" top="20%" right="10%" bottom="30%"/>
 
   <!-- 3. Timing: assemble spine and align words -->
-  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
     <speech:Take video={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>
@@ -204,6 +207,7 @@ The complete data flow from Script to rendered video. This example is based on
   film.vertical {
     background: #09090B;
   }
+  speech.visual { fit: cover; }
   media.card {
     stack-order: 40; fit: cover; playback: hold-start;
     frame-paint: #111116; clip: rounded; radius: 20;

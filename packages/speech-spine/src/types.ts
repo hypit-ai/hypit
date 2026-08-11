@@ -1,5 +1,6 @@
 import type { NarrativeExcerpt } from "@narratage/narrative";
 import type { SynchronizedMedia } from "@narratage/media";
+import type { ContentFit, SpatialFrame } from "@narratage/spatial";
 
 /** Author-owned policy for one ordered Speech Spine. */
 export type SpeechSpineProgram = {
@@ -14,6 +15,16 @@ export type SpeechSpineProgram = {
 export type SpeechSpineTake = {
   readonly segment: NarrativeExcerpt;
   readonly media: SynchronizedMedia;
+  readonly visual?: {
+    readonly frame: SpatialFrame;
+    readonly fit: ContentFit;
+    readonly stackingOrder: number;
+  };
+};
+
+export type SpeechSpineVisualSpec = {
+  readonly contract: "svml.speech-spine-visual-spec@1";
+  readonly stackingOrder: number;
 };
 
 /**
@@ -28,6 +39,11 @@ export type SpeechSpineSet = {
 export type SpeechSpineInput = {
   readonly mediaName: string;
   readonly segmentName: string;
+  readonly visual?: {
+    readonly frameName: string;
+    readonly fitName: string;
+    readonly visualSpecName: string;
+  };
 };
 
 export type SpeechSpineFragmentOptions = {

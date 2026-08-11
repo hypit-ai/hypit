@@ -1,6 +1,6 @@
 import { isDigest } from "@narratage/protocol";
 import { assertProgramSpaceIdentity, programSpaceFrameCount } from "@narratage/program-space";
-import { assertIntrinsicExtent } from "@narratage/spatial";
+import { assertContentFit, assertIntrinsicExtent, assertSpatialFrame } from "@narratage/spatial";
 import type { SpeechAudioBasis, SpeechBasis, SpeechDuration, SpeechEvidenceAudio } from "./types.js";
 function assertAudioBlob(value: SpeechBasis["audio"], label: string): void {
   if (value.kind !== "blob" || !isDigest(value.digest) || !Number.isSafeInteger(value.size)
@@ -34,39 +34,48 @@ export function assertSpeechBasisIdentity(basis: SpeechBasis): void {
   if (basis.contract !== "svml.speech-basis@1") throw new Error("Unsupported SpeechBasis contract.");
   assertProgramSpaceIdentity(basis.programSpace);
   assertAudioBlob(basis.audio, "SpeechBasis audio");
-  if (basis.segments.length === 0 || basis.visualTrack.clips.length !== basis.segments.length) {
-    throw new Error("SpeechBasis must pair every Segment with one visual clip.");
-  }
+  if (basis.segments.length === 0) throw new Error("SpeechBasis must contain at least one Segment.");
   let previousEnd = 0;
-  let accumulatedFrames = 0;
   const frameAt = (seconds: number): number => Math.round(
     seconds * basis.programSpace.frameRate.numerator / basis.programSpace.frameRate.denominator,
   );
-  for (const [index, segment] of basis.segments.entries()) {
-    const clip = basis.visualTrack.clips[index]!;
+  const segmentSpans = new Map<string, { readonly startFrame: number; readonly endFrameExclusive: number }>();
+  for (const segment of basis.segments) {
     if (!segment.segmentId || segment.startSec !== previousEnd || !Number.isFinite(segment.endSec)
       || segment.endSec <= segment.startSec || segment.endSec > basis.programSpace.durationSec) {
       throw new Error("SpeechBasis Segment is invalid or non-contiguous.");
     }
-    if (clip.segmentId !== segment.segmentId || clip.artifact.kind !== "blob" || !isDigest(clip.artifact.digest)
+    if (segmentSpans.has(segment.segmentId)) throw new Error(`SpeechBasis repeats Segment ${segment.segmentId}.`);
+    segmentSpans.set(segment.segmentId, {
+      startFrame: frameAt(segment.startSec),
+      endFrameExclusive: frameAt(segment.endSec),
+    });
+    previousEnd = segment.endSec;
+  }
+  if (frameAt(previousEnd) !== programSpaceFrameCount(basis.programSpace)) {
+    throw new Error("SpeechBasis Segments do not cover ProgramSpace.");
+  }
+  const seenVisuals = new Set<string>();
+  for (const clip of basis.visualTrack.clips) {
+    const segmentSpan = segmentSpans.get(clip.segmentId);
+    if (segmentSpan === undefined || seenVisuals.has(clip.segmentId)
+      || clip.artifact.kind !== "blob" || !isDigest(clip.artifact.digest)
       || !Number.isSafeInteger(clip.artifact.size) || clip.artifact.size < 0
       || !clip.artifact.mediaType.startsWith("video/")
       || clip.frameRate.numerator !== basis.programSpace.frameRate.numerator
       || clip.frameRate.denominator !== basis.programSpace.frameRate.denominator
-      || !Number.isSafeInteger(clip.frameCount) || clip.frameCount <= 0) {
+      || !Number.isSafeInteger(clip.frameCount) || clip.frameCount <= 0
+      || !Number.isSafeInteger(clip.span.startFrame) || !Number.isSafeInteger(clip.span.endFrameExclusive)
+      || clip.span.startFrame !== segmentSpan?.startFrame
+      || clip.span.endFrameExclusive !== segmentSpan?.endFrameExclusive
+      || clip.frameCount !== clip.span.endFrameExclusive - clip.span.startFrame
+      || !Number.isSafeInteger(clip.stackingOrder)) {
       throw new Error(`SpeechBasis visual clip ${clip.segmentId} is invalid.`);
     }
+    seenVisuals.add(clip.segmentId);
     assertIntrinsicExtent(clip.extent);
-    const startFrame = frameAt(segment.startSec);
-    const endFrame = frameAt(segment.endSec);
-    if (startFrame !== accumulatedFrames || endFrame - startFrame !== clip.frameCount) {
-      throw new Error(`SpeechBasis visual clip ${clip.segmentId} does not cover its Segment.`);
-    }
-    accumulatedFrames = endFrame;
-    previousEnd = segment.endSec;
-  }
-  if (accumulatedFrames !== programSpaceFrameCount(basis.programSpace)) {
-    throw new Error("SpeechBasis visuals do not cover ProgramSpace.");
+    assertSpatialFrame(clip.frame);
+    assertContentFit(clip.fit);
   }
 }
 export function assertSpeechAudioBasisIdentity(basis: SpeechAudioBasis): void {

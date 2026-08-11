@@ -11,3 +11,8 @@ for one primary face followed by exact glyph fallbacks. Media declarations do no
 inspect media, call a Provider or promote declared audio to speech. The consuming author package
 decides whether an audio artifact is a voice reference, soundtrack, evidence source or something
 else, and which visual component uses an exact Font.
+
+The same module owns the deliberately narrow `SynchronizedMedia` contract used after technical
+normalization. It contains one common `frameRate`/`frameCount`, an optional visual Artifact with its
+intrinsic pixel extent, and an optional audio Artifact. Source stream indexes, selection authority,
+normalization ledgers and repeated codec/rate constants are not downstream media fields.

@@ -22,6 +22,8 @@
   </script>
 
   <space:Canvas id="vertical" width="1080" height="1920"/>
+  <space:Frame id="speech-frame" within={vertical}
+    left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="title-frame" within={vertical}
     left="6%" top="6%" right="6%" bottom="84%"/>
   <space:Frame id="card-frame" within={vertical}
@@ -31,7 +33,8 @@
   <seedance:TextVideo id="take" model="mini" prompt={direction} duration="5" generate-audio="true"/>
   <seedance:TextVideo id="motion" model="mini" prompt={direction} duration="5"/>
 
-  <speech:Spine id="speech" canvas={vertical} frame-rate="30">
+  <speech:Spine id="speech" frame-rate="30"
+    visual-frame={speech-frame} visual-appearance={studio.speech.visual} visual-z="0">
     <speech:Take video={take.video} segment={story.segment.opening}/>
   </speech:Spine>
   <whisperx:Alignment id="timing" narrative={story} audio={speech.audio}/>

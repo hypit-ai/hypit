@@ -5,6 +5,8 @@
     background: #09090B;
   }
 
+  speech.visual { fit: cover; }
+
   caption.primary {
     cue-min-words: 2;
     cue-max-words: 5;
