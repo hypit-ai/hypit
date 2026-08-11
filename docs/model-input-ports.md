@@ -216,6 +216,7 @@ Provenance of the current tables, so a later reader knows what was actually chec
 | Model | Cross-checked against a second source | Single-source (KIE) |
 |---|---|---|
 | `seedance-2`, `-fast`, `-mini` | ByteDance launch material, fal | — |
+| `seedance-2.5` | — | complete published `bytedance/seedance-2-5` schema |
 | `minimax-h3` | MiniMax H3 published specs | — |
 | `gemini-omni-video` | — | limits and quota formula |
 | `gpt-image-2` | — | both endpoint schemas |

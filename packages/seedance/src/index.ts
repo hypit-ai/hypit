@@ -19,31 +19,33 @@ import { canonicalize, digestOf } from "@narratage/protocol";
 import type { Digest, ProducerRef, TypeRef, ValueSchema } from "@narratage/protocol";
 
 export const seedanceModuleRef = { name: "@narratage/seedance", version: "1" } as const;
-export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini"] as const;
+export const seedanceModels = ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"] as const;
 export type SeedanceModel = typeof seedanceModels[number];
 
 const ASPECT_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9", "adaptive"] as const;
 
+const SEEDANCE_25_DURATIONS = [-1, ...Array.from({ length: 27 }, (_item, index) => index + 4)] as const;
+
 /**
- * What Seedance 2 accepts is fixed when the model is trained; no service
- * reselling it can widen or narrow this. Every limit below is stated identically
- * by ByteDance's own launch material, KIE and fal — only the wire field names
- * differ between services, and those live in each Provider's wire mapping.
+ * Exact Seedance model inputs. Provider wire names are deliberately absent:
+ * KIE, Volcengine or another service maps these ports independently.
  *
- * Reference modalities are separate ports because the model gives each its own
- * capacity: 9 images, 3 videos, 3 audio clips, and no more than 12 files in
- * total. Only the resolution ceiling differs between the variants.
+ * Seedance 2.5 is not treated as an alias for a Seedance 2 variant. Its public
+ * KIE contract widens prompt/reference capacities and duration independently,
+ * so it receives its own exact Capability while reusing the same three author
+ * Surfaces.
  */
 function seedancePortTable(model: SeedanceModel): GenerationPortTable {
+  const is25 = model === "seedance-2.5";
   return sealGenerationPortTable({
     contract: "svml.generation-ports@1",
     model,
     result: "video",
     ports: [
-      { name: "prompt", value: { kind: "text", maxChars: 20_000 }, minItems: 1, maxItems: 1 },
-      { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 9 },
-      { name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0, maxItems: 3 },
-      { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0, maxItems: 3 },
+      { name: "prompt", value: { kind: "text", maxChars: is25 ? 30_000 : 20_000 }, minItems: 1, maxItems: 1 },
+      { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: is25 ? 30 : 9 },
+      { name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0, maxItems: is25 ? 10 : 3 },
+      { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0, maxItems: is25 ? 10 : 3 },
       { name: "firstFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
       { name: "lastFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
       {
@@ -56,7 +58,14 @@ function seedancePortTable(model: SeedanceModel): GenerationPortTable {
         maxItems: 1,
       },
       { name: "aspectRatio", value: { kind: "enum", values: [...ASPECT_RATIOS] }, minItems: 1, maxItems: 1 },
-      { name: "duration", value: { kind: "number", integer: true, minimum: 4, maximum: 15 }, minItems: 1, maxItems: 1 },
+      {
+        name: "duration",
+        value: is25
+          ? { kind: "enum", values: [...SEEDANCE_25_DURATIONS] }
+          : { kind: "number", integer: true, minimum: 4, maximum: 15 },
+        minItems: 1,
+        maxItems: 1,
+      },
       { name: "generateAudio", value: { kind: "boolean" }, minItems: 1, maxItems: 1 },
       { name: "webSearch", value: { kind: "boolean" }, minItems: 1, maxItems: 1 },
     ],
@@ -67,9 +76,11 @@ function seedancePortTable(model: SeedanceModel): GenerationPortTable {
       { kind: "atMostOneOf", ports: ["referenceVideo", "firstFrame"] },
       { kind: "atMostOneOf", ports: ["referenceAudio", "firstFrame"] },
       { kind: "requiresPresent", port: "lastFrame", needs: ["firstFrame"] },
-      // Reference audio cannot travel alone; it needs at least one visual reference.
-      { kind: "requiresAnyOf", port: "referenceAudio", anyOf: ["referenceImage", "referenceVideo"] },
-      { kind: "weightedTotal", weights: { referenceImage: 1, referenceVideo: 1, referenceAudio: 1 }, maximum: 12 },
+      ...(is25 ? [] : [
+        // Seedance 2 reference audio cannot travel alone; it needs a visual reference.
+        { kind: "requiresAnyOf" as const, port: "referenceAudio", anyOf: ["referenceImage", "referenceVideo"] },
+        { kind: "weightedTotal" as const, weights: { referenceImage: 1, referenceVideo: 1, referenceAudio: 1 }, maximum: 12 },
+      ]),
     ],
   });
 }
@@ -78,6 +89,7 @@ export const seedancePorts: Readonly<Record<SeedanceModel, GenerationPortTable>>
   "seedance-2": seedancePortTable("seedance-2"),
   "seedance-2-fast": seedancePortTable("seedance-2-fast"),
   "seedance-2-mini": seedancePortTable("seedance-2-mini"),
+  "seedance-2.5": seedancePortTable("seedance-2.5"),
 };
 
 export type SeedancePortMap = Readonly<Record<string, readonly GenerationPortValue[]>>;
@@ -173,9 +185,12 @@ const seedanceBaseDefinition = defineExactModelModule({
     ["standard", "seedance-2"],
     ["fast", "seedance-2-fast"],
     ["mini", "seedance-2-mini"],
+    ["v25", "seedance-2.5"],
   ] as const).map(([key, model]) => ({
     key,
-    requestTypeName: `${model.split("-").map((part) => part[0]!.toUpperCase() + part.slice(1)).join("")}Request`,
+    requestTypeName: model === "seedance-2.5"
+      ? "Seedance25Request"
+      : `${model.split("-").map((part) => part[0]!.toUpperCase() + part.slice(1)).join("")}Request`,
     producerName: `request-${model}`,
     ports: seedancePorts[model],
   })),
@@ -186,6 +201,7 @@ export const seedanceEndpointsByModel = {
   "seedance-2": seedanceEndpoints.standard!,
   "seedance-2-fast": seedanceEndpoints.fast!,
   "seedance-2-mini": seedanceEndpoints.mini!,
+  "seedance-2.5": seedanceEndpoints.v25!,
 } as const;
 
 export const seedanceManifest = {

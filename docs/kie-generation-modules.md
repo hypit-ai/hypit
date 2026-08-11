@@ -17,7 +17,7 @@ An author module says which model and mode is intended. The KIE package says how
 exact request. Runtime configuration selects the KIE implementation but cannot turn Seedance into
 Grok, choose a model from a generic `speaker` declaration, or mutate a safety field.
 
-The current seven families expose eleven exact capabilities—one per exact model. Where KIE splits a
+The current seven families expose twelve exact capabilities—one per exact model. Where KIE splits a
 model across several of its own endpoint slugs, that split is a route in this package's wire mapping
 rather than an extra Capability. This package imports no model package; it maps the input ports each
 model declares. See [`model-input-ports.md`](./model-input-ports.md).
@@ -60,8 +60,9 @@ requests.
 
 The model slugs and request fields were checked against KIE's current Market and File Upload API
 documentation on 2026-08-06 and rechecked on 2026-08-08, when several limits recorded in the port
-tables were corrected; Seedance and MiniMax were additionally cross-checked against ByteDance, fal
-and MiniMax's own published specifications. Tests cover all seven family identities, Gemini's weighted reference
+tables were corrected. Seedance 2.5 was added from KIE's published schema on 2026-08-12; the older
+Seedance variants and MiniMax were additionally cross-checked against ByteDance, fal and MiniMax's
+own published specifications. Tests cover all seven family identities, Gemini's weighted reference
 quota, explicit Seedream safety identity, Blob upload, recoverable polling, immediate artifact
 persistence, missing-checkpoint recovery, HTTP-200 business rejection and ambiguous-submission
 no-retry behavior.
@@ -87,6 +88,7 @@ selection and shared-origin A/V normalization are owned by the separate
 - file stream upload: <https://docs.kie.ai/file-upload-api/upload-file-stream/>
 - Seedance 2.0 Mini (the same request family is used for 2.0 and Fast):
   <https://docs.kie.ai/market/bytedance/seedance-2-mini>
+- Seedance 2.5: <https://docs.kie.ai/market/bytedance/seedance-2-5>
 - MiniMax H3: <https://docs.kie.ai/market/minimax-h3/text-to-video>
 - Gemini Omni Video: <https://docs.kie.ai/market/gemini-omni-video>
 - Grok Imagine video: <https://docs.kie.ai/market/grok-imagine/text-to-video>
