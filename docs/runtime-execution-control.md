@@ -66,6 +66,30 @@ The Runtime journal is operational evidence, not video or domain data. It must n
 Records, media values or other graph edges. The BuildState remains valid without it; the journal
 exists so humans and Workers can explain and control execution.
 
+### 2.1 Persistence is not environment snapshotting
+
+The local Runtime persists the minimum current facts needed to continue or inspect work:
+
+| Store | What remains | What is deliberately absent |
+|---|---|---|
+| BuildStore | latest verified BuildState plus one CAS counter | old code, old Profile, serialized Commands, every prior state revision |
+| OperationStore | one current row per external attempt, including remote checkpoint or terminal result | Provider clients, credentials, reconstructed environments |
+| BuildDispatchStore | current admission, lease, wake and capacity facts | executable request bodies or Runtime packages |
+| ArtifactStore | content-addressed bytes actually produced or attached | automatic reuse decisions |
+| BuildCatalog | Host aliases for finding Build outputs | graph truth or Candidate selection |
+| RuntimeJournal | append-only operational observations | author/video semantics |
+| process record | PID, Profile path and effective digest | code bytes, dependency copies or a restorable Runtime image |
+
+`snapshot` in TypeScript names a defensive immutable read of one current row; it does not mean a
+saved historical environment. SQLite overwrites the current Build row under CAS and never stores a
+chain of BuildState copies. The only opaque recovery payload is an Operation checkpoint owned by
+the exact Endpoint. It is necessary because a paid remote request may have been accepted before the
+local process stopped; resuming that same remote identity prevents accidental resubmission.
+
+The Runtime must never add Profile archives, package-byte snapshots, historical Worker images or
+automatic environment reconstruction. If an unfinished Build needs another Runtime Revision, the
+single-revision admission law rejects it and leaves the operational choice with the user.
+
 ## 3. One Runtime Profile selects the current revision of one execution domain
 
 An execution domain is the shared operational boundary selected by a Runtime Profile. The resolved
@@ -128,10 +152,11 @@ Provider or deploy Lambda. Those are explicit provisioning operations.
 
 The detached process record binds the canonical Profile path and an effective revision covering
 the Profile bytes plus both package locks it names. A Worker claims only dispatches with its exact
-Runtime Closure digest. Changing the Profile therefore cannot make an old Build execute with new
-code. Retaining and drain-starting historical revisions is specified in
-[`runtime-provider-scheduling.md`](./runtime-provider-scheduling.md); until that supervisor slice is
-implemented, missing historical revisions remain visibly unclaimed rather than being rerouted.
+Runtime Closure digest. One DispatchStore admits only one unfinished Runtime Revision, so changing
+the Profile or locks is rejected until old Builds finish or are cancelled. `runtime up` performs
+that check before it may replace a stale Worker or start external programs. The Runtime retains no
+historical code snapshot; selecting another DispatchStore explicitly selects another execution
+domain.
 
 `doctor` remains read-only. It validates the profile, locks, credentials and prerequisites. A
 healthy remote credential and a currently running local daemon are different diagnostics; liveness
@@ -147,7 +172,7 @@ ticket, conceptually:
 type BuildDispatch = {
   build: string;
   core: Digest;
-  runtimeClosure: Digest;
+  runtimeRevision: Digest;
   priority: number;
   availableAt: number;
   admission: "open" | "closing" | "closed";

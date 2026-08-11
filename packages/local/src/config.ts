@@ -237,8 +237,8 @@ async function installLockedRuntimeAdapters(
   path: string | undefined,
   lockRoot: string,
   packageRoot: string,
-): Promise<void> {
-  if (path === undefined) return;
+): Promise<import("@narratage/protocol").Digest | undefined> {
+  if (path === undefined) return undefined;
   const loaded = await loadNodePackageSet(resolve(lockRoot, path), packageRoot);
   const lockedPackages = new Map(loaded.lock.packages.map((item) => [item.package.name, item]));
   const artifacts = new Map(loaded.lock.artifacts.map((item) => [`${item.name}@${item.version}`, item]));
@@ -256,6 +256,7 @@ async function installLockedRuntimeAdapters(
       });
     }
   }
+  return loaded.lock.digest;
 }
 
 /** One Endpoint's declaration of an external program its Provider drives. */
@@ -503,16 +504,15 @@ export async function createRuntimeFromConfig(
     }
   }
   const registry = options.registry ?? new RuntimeAdapterRegistry();
-  const implementationPackages = options.implementationPackages
-    ?? (document.packageLock === undefined
-      ? undefined
-      : await Promise.all([
-        installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot),
-        loadNodePackageSet(resolve(root, document.packageLock), packageRoot),
-      ]).then(([, loaded]) => loaded));
-  if (options.implementationPackages !== undefined || document.packageLock === undefined) {
-    await installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot);
-  }
+  const implementationPackagesPromise = options.implementationPackages !== undefined
+    ? Promise.resolve(options.implementationPackages)
+    : document.packageLock === undefined
+      ? Promise.resolve(undefined)
+      : loadNodePackageSet(resolve(root, document.packageLock), packageRoot);
+  const [runtimePackageClosure, implementationPackages] = await Promise.all([
+    installLockedRuntimeAdapters(registry, document.runtimePackageLock, root, packageRoot),
+    implementationPackagesPromise,
+  ]);
   const runtimeServices = await Promise.all(document.runtimeServices.map(async (item) => {
     return await registry.createService(item.use, {
       root,
@@ -534,6 +534,7 @@ export async function createRuntimeFromConfig(
     ...(implementationPackages === undefined
       ? {}
       : { implementationClosure: implementationPackages.lock.digest }),
+    ...(runtimePackageClosure === undefined ? {} : { runtimePackageClosure }),
     runtimeServices,
     runtimeSelection: document.services,
     components: [

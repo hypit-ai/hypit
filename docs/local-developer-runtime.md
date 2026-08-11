@@ -214,8 +214,9 @@ submission.
 
 The detached process record binds an effective revision of the Runtime Profile and both package
 locks it names. Editing a Profile or regenerating either lock never reuses a Worker assembled from
-the old closure: status reports `stale`, and the next `runtime up` or `build` replaces that process
-while leaving durable Builds available for recovery.
+the old closure: status reports `stale`. If the same DispatchStore still has unfinished Builds, the
+new Runtime Revision is rejected before that Worker is replaced. Restore the old Profile and locks
+to finish or cancel those Builds, or explicitly select another DispatchStore.
 
 ## 5. Cancellation facts
 

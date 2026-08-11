@@ -30,10 +30,15 @@ clean final document.
 - durable queue phase counts and shared capacity reservations;
 - declared external-program health.
 
+A stopped idle Runtime is a valid observation, not a failed command. `runtime status` exits
+successfully after a successful query and reports `ready: false`; it becomes an attention warning
+when unfinished dispatch exists but the Worker or a required declared program is unavailable.
+
 The Worker record binds an effective Profile revision covering the Profile bytes plus both package
 locks it names. Editing the same Profile path or regenerating either lock makes the old process
-`stale`; the next `runtime up` or `build` replaces it before admitting work under the new
-configuration.
+`stale`. The next `runtime up` or `build` first checks the DispatchStore: unfinished work from the
+old revision rejects the new revision without stopping the old Worker or starting external
+programs. Once old work is terminal, replacement is allowed.
 
 `runtime down` asks the Worker to stop and then stops programs that the Profile owns. It does not
 cancel Builds or remote Provider jobs. Queued Builds remain durable and continue after the Runtime
@@ -56,6 +61,10 @@ Build queue. It operates only on adapter-declared programs such as:
 - local media executable compatibility probes.
 
 Remote-only Endpoints such as KIE have no local service.
+
+`services status` names every unavailable declared program and also treats a successful query as a
+successful command. Readiness remains explicit in its structured `ready` field. `services up` and
+`services down` are lifecycle requests and still fail when the requested state is not reached.
 
 ## Build relationship
 

@@ -132,7 +132,7 @@ test("plan groups operations by their declaring module", () => {
       fidelity: "exact",
       inputs: {},
       outputs: {},
-      needs: {},
+      needs: { generated: { id: "need-1", result: "record-1", accepts: "exact" } },
     }, {
       id: "step-2",
       producer: { module: { name: "@narratage/media", version: "1" }, name: "normalize" },
@@ -142,13 +142,43 @@ test("plan groups operations by their declaring module", () => {
       needs: {},
     }],
     goals: [],
+    selections: [{
+      output: "logical:take",
+      candidate: "candidate:preview",
+      fidelity: "substitute",
+      record: "record:take",
+    }],
+  };
+  const output = capture(human, {
+    kind: "plan",
+    machine: plan,
+    run: "/project/build.svrun",
+    targetSet: "film",
+    outputNames: { "logical:take": "take.video" },
+    candidateNames: { "candidate:preview": "preview" },
+  });
+  assert.match(output, /2\s+@narratage\/media@1/u);
+  assert.match(output, /Exact steps\s+1/u);
+  assert.match(output, /Substitute steps\s+1/u);
+  assert.match(output, /External requests/u);
+  assert.match(output, /1\s+@narratage\/media@1#inspect/u);
+  assert.match(output, /take\.video ← preview/u);
+  assert.match(output, /No external work was started\./u);
+});
+
+test("a plan with no Needs says so without knowing any Provider names", () => {
+  const plan: BuildPlan = {
+    format: "svml.plan@1",
+    id: digest,
+    graph: digest,
+    request: digest,
+    initialValues: [],
+    steps: [],
+    goals: [],
     selections: [],
   };
-  const output = capture(human, { kind: "plan", machine: plan, run: "/project/build.svrun", targetSet: "film" });
-  assert.match(output, /2\s+@narratage\/media@1/u);
-  assert.match(output, /Exact\s+1/u);
-  assert.match(output, /Substitute\s+1/u);
-  assert.match(output, /No external work was started\./u);
+  const output = capture(human, { kind: "plan", machine: plan, run: "/project/free.svrun", targetSet: "facts" });
+  assert.match(output, /No external requests/u);
 });
 
 test("human errors expose stable codes while JSON errors remain parseable", () => {
@@ -173,4 +203,12 @@ test("help is a successful product surface rather than a usage error", () => {
   assert.match(output, /Authoring/u);
   assert.match(output, /--json/u);
   assert.doesNotMatch(output, /CLI_ERROR/u);
+});
+
+test("command help explains only the selected shell grammar", () => {
+  let output = "";
+  writeCliHelp({ write(text) { output += text; } }, "build");
+  assert.match(output, /^narratage build\n/u);
+  assert.match(output, /--follow/u);
+  assert.doesNotMatch(output, /Authoring/u);
 });
