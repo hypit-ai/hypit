@@ -1,6 +1,6 @@
 # `@narratage/provider-kie`
 
-Recoverable KIE Market Provider for the eleven explicitly selected exact models and one generic
+Recoverable KIE Market Provider for the twelve explicitly selected exact models and one generic
 background-removal capability.
 
 This package is deployment code. Author source imports model modules such as `@narratage/seedance` or
@@ -11,7 +11,7 @@ choose another model.
 It imports no exact-model package. Every supported Capability contributes one `KieRoute`: exact
 Capability, return Type, request compiler, media/count limits and result packer. All Routes share one
 upload, admission, paid submission, checkpoint, polling and download state machine. Model mappings
-generate eleven Routes; Background Removal contributes the twelfth. See
+generate twelve Routes; Background Removal contributes the thirteenth. See
 [`model-input-ports.md`](../../docs/model-input-ports.md).
 
 ## Supported catalog
@@ -21,7 +21,7 @@ routes rather than extra Capabilities.
 
 | Author module | Exact models | KIE model slugs |
 |---|---|---|
-| `@narratage/seedance` | `seedance-2`, `-fast`, `-mini` | `bytedance/seedance-2*` |
+| `@narratage/seedance` | `seedance-2`, `-fast`, `-mini`, `seedance-2.5` | `bytedance/seedance-2*`, `bytedance/seedance-2-5` |
 | `@narratage/minimax-h3` | `minimax-h3` | `minimax-h3/{text,image,reference}-to-video` |
 | `@narratage/gemini-omni` | `gemini-omni-video` | `gemini-omni-video` |
 | `@narratage/grok-imagine` | `grok-imagine-video`, `-1.5-preview` | Grok Imagine video endpoints |
