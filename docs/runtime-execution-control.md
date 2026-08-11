@@ -213,8 +213,8 @@ possible:
 
 1. read Headers and lock-selected Frontends;
 2. compile Author and Run sources;
-3. freeze and verify the finite BuildPlan;
-4. validate Runtime coverage without constructing paid Endpoints;
+3. project the exact Target execution slice, then freeze and verify its finite BuildPlan;
+4. validate Runtime coverage from pure Endpoint activations without executing any handler;
 5. stage source Artifacts;
 6. idempotently create BuildState and Host Catalog presentation data;
 7. create or reopen the Build dispatch ticket;
@@ -223,8 +223,10 @@ possible:
 
 No Provider call, model load or daemon start occurs before steps 1–4 succeed.
 
-`--follow` subscribes to stores/journal after dispatch. `Ctrl-C` only detaches that observer. It is
-never shorthand for Build cancellation or Runtime shutdown.
+`--follow` observes lightweight Dispatch and Operation activity after submission, then reads the
+complete verified BuildState once at terminal presentation. It does not repeatedly deserialize the
+entire immutable Program while waiting. `Ctrl-C` only detaches that observer. It is never shorthand
+for Build cancellation or Runtime shutdown.
 
 The Runtime Profile must explicitly select how Worker lifecycle is controlled. A managed-local
 controller may spawn or wake the local Worker. An externally managed deployment may only verify
@@ -269,13 +271,19 @@ The resource names may be refined with the CLI, but the information boundary is 
 
 - exact Build, Core Command, Need, Endpoint instance and implementation identity;
 - attempt number, submission key and request digest;
-- lane, checkpoint, remote task identity and next wake time;
+- lane, opaque recovery checkpoint, remote task identity and next wake time;
+- optional generic progress `{ phase, completed?, total?, unit? }`, persisted on every pending
+  revision and supplied only by the Endpoint from measured Provider facts;
 - execution outcome and cancellation control state;
 - completion Artifact references or failure;
 - whether a completion has been accepted into Core.
 
 Provider metadata is visible only after secret redaction. Logs and journal entries must never print
 credential values.
+
+Progress is deliberately not decoded from a checkpoint by the CLI. Checkpoints belong to one
+Endpoint implementation and exist for recovery; progress is a small cross-Endpoint observation
+contract. An Endpoint with no measured total reports only a phase, never a fabricated percentage.
 
 The full TTY/plain/JSON rendering, watch screens, diagnostic format and confirmation language are
 specified in [`cli-experience.md`](./cli-experience.md).

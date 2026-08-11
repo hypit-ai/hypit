@@ -131,7 +131,7 @@ Add the path mapping so TypeScript resolves `@narratage/my-component` to source:
 ```bash
 pnpm install --frozen-lockfile
 
-pnpm narratage lock-packages <lock-file> \
+node --run narratage -- lock-packages <lock-file> \
   --package @narratage/my-component \
   [--package @narratage/other-direct-package ...] \
   --package-root .
@@ -140,6 +140,18 @@ pnpm narratage lock-packages <lock-file> \
 Only name direct packages you chose. Exact logical Module dependencies declared by their Manifests
 are added from the installed physical dependency closure automatically; missing or ambiguous
 providers make lock creation fail.
+
+For an existing lock, add only this direct package without repeating the other selections:
+
+```bash
+node --run narratage -- lock-packages <lock-file> \
+  --add @narratage/my-component \
+  --package-root .
+```
+
+Use `--remove` for an explicit revocation, `--refresh` to accept changed bytes for the unchanged
+selection, and `--verify` for a read-only closure check. Repeated `--package` always means the exact
+complete direct selection.
 
 ## 8. Use in Author Source
 

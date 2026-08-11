@@ -38,10 +38,10 @@ exact Scheduler/Worker and Store selection, credential references, Endpoints, la
 Adapter names resolve from a separately verified physical package closure; the generic and video
 CLIs import no Provider implementation. Effective Runtime implementation identity binds actual
 package bytes, not a self-asserted development label. `doctor` checks locks, configuration,
-credentials, executables and declared service health without running a Build or constructing an
-Endpoint/Store. Runtime Adapter Host ABI `@1` gives every adapter a required pure configuration
-gate, followed only for valid instances by optional read-only environment probes. A failed gate
-suppresses dependent diagnostics for that instance. Executable TypeScript remains the advanced
+credentials, executables and declared service health without running a Build or opening an execution
+Store. It evaluates the same pure Endpoint activation used by execution, then opens only explicitly
+selected CredentialStores for exact reference resolution. Credentials and prerequisites therefore
+have one declaration rather than a diagnostic mirror. Executable TypeScript remains the advanced
 trusted embedding API.
 
 Runtime Profile is deployment configuration. It must not enter author semantic identity or

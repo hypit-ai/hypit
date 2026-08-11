@@ -108,6 +108,39 @@ Narratage 没有隐式缓存。复用结果是显式的运行图编写——你�
 </svrun>
 ```
 
+### 查找可复用输出
+
+按照输出在各个历史 Build 冻结 Catalog 中的旧名字查询：
+
+```bash
+node --run narratage -- history hook-take.video \
+  --runtime ./svml.runtime.json
+```
+
+`history` 只列出该 Build 确实选择并验收过的公开 Logical Output。仅仅在源码中声明但没有
+运行出来的别名，以及不能作为 `build-record` Candidate 的 authored Record 别名，都不会混入
+结果。如果忘了旧名字，可以按 Catalog 当时记录的精确源码路径列出真正验收过的输出名：
+
+```bash
+node --run narratage -- history --source ./main.svml \
+  --runtime ./svml.runtime.json
+```
+
+输出名只是某个不可变历史 Catalog 内供人查找的名字，不是产物身份。真正身份由历史 Core
+Build、Logical Output 和 Record 摘要共同确定。假如当前源码把 `hook-take.video` 改名为
+`opening-shot.video`，`<build-record>` 仍写历史旧名，`<satisfy>` 写当前新名：
+
+```svml
+<build-record id="approved-opening"
+  build="my-film-001" output="hook-take.video"/>
+<satisfy output="opening-shot.video"
+  candidate="approved-opening" fidelity="substitute"/>
+```
+
+Narratage 永远不会猜测两个名字代表同一份作者意图。`my-film-001` 这样的可读 build-id 由
+`build --build-id` 提供；省略时使用不可变的编译后 Core Build 摘要。已经绑定的显式 build-id
+不能再用于另一份作者意图或运行意图。
+
 ### build-record
 
 声明一个由先前 Build 的历史 Record 支持的零输入 Candidate：
@@ -275,11 +308,11 @@ Worker。
 ```bash
 cd /opt/narratage
 
-pnpm narratage lock-packages /work/my-film/svml.packages.lock \
+node --run narratage -- lock-packages /work/my-film/svml.packages.lock \
   --package @narratage/script \
   --package @narratage/estimate
 
-pnpm narratage plan /work/my-film/build.svrun \
+node --run narratage -- plan /work/my-film/build.svrun \
   --package-lock /work/my-film/svml.packages.lock
 ```
 
@@ -326,7 +359,7 @@ Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只�
 ### 1. 诊断环境
 
 ```bash
-pnpm narratage doctor examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 ```
 
 Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测；
@@ -335,8 +368,8 @@ Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭�
 ### 2. 检查计划
 
 ```bash
-pnpm narratage plan examples/talking-head-aroll/build.svrun \
-  --package-lock examples/talking-head-aroll/svml.packages.lock --root .
+node --run narratage -- plan examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 在花费资金之前审查冻结的 BuildPlan。该计划展示调度器将发出的每个 Operation 和 Needs。
@@ -344,16 +377,14 @@ pnpm narratage plan examples/talking-head-aroll/build.svrun \
 ### 3. 提交 Build
 
 ```bash
-pnpm narratage build examples/talking-head-aroll/build.svrun \
+node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
-  --root . \
   --build-id my-film-001 \
   --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是
-观察者；Ctrl-C 不会取消任务。
+观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
 
 | 标志 | 说明 |
 |---|---|
@@ -364,24 +395,32 @@ pnpm narratage build examples/talking-head-aroll/build.svrun \
 | `--build-id` | 用户为此 Build 选择的标识符（用于检索和复用） |
 | `--follow` | 将 Build 进度流式输出到终端 |
 
+不传 `--build-id` 时，身份由编译后的作者意图和运行意图派生；重复同一条命令只会寻址同一个
+耐久 Build，不会偷偷再买一次生成。未完成的 Build 从已验收 Record 和可恢复 Endpoint checkpoint
+继续；已完成、失败或取消的 Build 保持终态，只返回状态。相同 prompt 明确需要另一份随机结果时，
+使用新的显式 id。把已有显式 id 用到另一份编译意图上会被拒绝，并同时提示“换 id”或“恢复原 Source”。
+
 ### 4. 获取结果
 
 ```bash
-pnpm narratage get my-film-001 \
+node --run narratage -- get my-film-001 \
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
-每个被接受的中间 Record 和 Artifact 在 Build 完成前都会被归档。`get` 会复制一份已持久化的 Record。
+每个被接受的中间 Record 和 Artifact 在 Build 完成前都会被归档。`get` 会复制一份已持久化的
+Record。Blob Artifact 会从所选 Store 流式读取，逐步校验长度与 SHA-256，完整通过后才原子替换
+目标路径；导出大 MP4 不会把整段视频塞进 CLI 内存。
+Build 的最终输出会为每个目标别名打印精确的 `get --name …` 命令，不必为了导出
+`final.video` 去查不透明的 Record id。
 
 ### 5. 在新 Build 中复用
 
 创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文[复用结果](#复用结果)），然后提交：
 
 ```bash
-pnpm narratage build examples/talking-head-aroll/reuse-generated.svrun \
+node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
-  --root . --build-id my-film-reuse-001 --follow
+  --build-id my-film-reuse-001 --follow
 ```

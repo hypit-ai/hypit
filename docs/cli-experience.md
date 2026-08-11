@@ -35,7 +35,7 @@ The default when stdout/stderr are attached to a terminal:
 - color and Unicode when supported;
 - compact tables, trees and key/value blocks;
 - transient spinners only while an immediate operation is genuinely running;
-- in-place refresh for `--watch`;
+- change-only durable rows for `--watch`; a future full-screen renderer may refresh in place;
 - prompts only when stdin is interactive;
 - paths relative to the project root where unambiguous;
 - shortened digests with an explicit way to reveal/copy the full value.
@@ -95,6 +95,7 @@ The existing short commands remain readable:
 
 ```text
 narratage builds --runtime <runtime-profile>
+narratage history [source-output-name] --runtime <runtime-profile> [--source <author-source>]
 narratage status <build-id> --runtime <runtime-profile>
 narratage inspect <build-id> --runtime <runtime-profile>
 narratage operations <build-id> --runtime <runtime-profile>
@@ -127,6 +128,10 @@ Current commands:
 
 ```text
 narratage lock-packages <lock-file> --package <installed-name> ...
+narratage lock-packages <lock-file> --add <installed-name> [--remove <selected-name>] ...
+narratage lock-packages <lock-file> --remove <selected-name> ...
+narratage lock-packages <lock-file> --refresh
+narratage lock-packages <lock-file> --verify
 narratage auth status <endpoint-instance> --runtime <runtime-profile>
 narratage auth login  <endpoint-instance> --runtime <runtime-profile>
 narratage auth logout <endpoint-instance> --runtime <runtime-profile>
@@ -135,6 +140,20 @@ narratage auth logout <endpoint-instance> --runtime <runtime-profile>
 `lock-packages` can become `packages lock` before release. Installing npm packages remains the job
 of npm, pnpm, Yarn or Bun; Narratage should not secretly invoke one package manager or maintain a
 central package marketplace.
+
+`--refresh` is the explicit development operation for rebuilding one existing lock from its
+authenticated `selected` list. It avoids copying a long package list after implementation bytes
+change, but never guesses a selection from source imports or installed-package enumeration.
+
+Repeated `--package` supplies the complete direct selection and therefore creates or replaces the
+lock. `--add`/`--remove` edit an existing direct selection as one atomic operation; they do not
+install packages. `--verify` authenticates the lock and compares its complete installed byte/facet
+closure without writing. This keeps installation, local trust selection, and Runtime instance
+configuration as three separate operations.
+
+Selection edits preserve the old trust boundary for every retained root. They reject changed or
+newly reachable bytes below retained roots rather than laundering those changes into an unrelated
+add/remove. Shared dependencies remain whenever another retained root still reaches them.
 
 Authentication addresses the configured Endpoint instance, such as `kie.personal`, not a model
 name such as Seedance. The same KIE credential may serve several model capabilities, while one model
@@ -476,14 +495,64 @@ Minimum common options:
 Authentication accepts `--from <file>` for non-interactive secret input; there is no hidden prompt
 mode switch.
 
-## 9. Implemented sequence
+## 9. Command latency and package loading
+
+The package manager is not part of Runtime execution. In this source checkout,
+`node --run narratage -- <command>` uses Node's package-script runner and avoids starting pnpm for
+every command; pnpm remains only the workspace installer/test runner. A published Distribution
+exposes one compiled `narratage` executable.
+Changing npm, pnpm, Yarn or Bun must not change Graph, Build or Runtime identity.
+
+Cold command work is divided explicitly:
+
+```text
+CLI launch
+  -> authenticate selected physical package bytes
+  -> activate locked Frontends/components
+  -> compile or open the selected Runtime stores
+  -> perform the requested command
+```
+
+The loader hashes each physical package at most once per command and projects per-package closure
+identities from that verified set. A JSON Runtime Profile is the single source for the Author lock
+used by `check`, `plan` and `build`; repeating `--package-lock` is unnecessary and a conflicting
+path is rejected. `check` and `plan` use a lazy archive view: merely naming the Profile does not
+construct Providers or open Stores, and Stores open only if a Run actually references a historical
+Build Candidate.
+When the foreground compiler has already verified that lock, Runtime construction in the same
+process reuses the loaded components and digest. A detached Worker is a separate trust process and
+still verifies its own closure once when it starts.
+
+Archive/control commands (`status`, `queue`, `builds`, `inspect`, `get`, cancellation and `gc`)
+assemble only the durable Store control surface selected by the Profile. They do not construct
+Seedance, Vertex, WhisperX, HyperFrames or other execution Endpoints. Provider credentials may be
+absent while a developer inspects or exports already archived work.
+
+Credential commands are narrower again: they construct only the named Endpoint declaration and
+the explicitly selected CredentialStores. They do not open Build state, a Worker or unrelated
+Endpoints. External-service preparation runs independent programs concurrently with explicit
+human progress events; `--follow` and `queue --watch` emit only durable state changes rather than
+silent waiting or unchanged one-second spam.
+
+Remaining distribution work before public release:
+
+- ship compiled JavaScript rather than starting the command engine through `tsx`;
+- avoid treating large content-only libraries, notably the open-font catalog, as executable
+  implementation dependencies when their selected bytes already enter the Source Graph as exact
+  content-addressed Artifacts;
+- add a long-lived compilation/watch mode only if normal cold commands remain perceptibly slow
+  after compiled package distribution. Such a process may verify a lock once and must become stale
+  when either the lock or installed implementation changes; a silent weak digest cache is not
+  acceptable.
+
+## 10. Implemented sequence
 
 The structured renderer, archive commands, Runtime/queue/Operation views, scoped cancellation,
 ordinary CredentialRefs, multi-Store composition, writable facets and generic auth commands are
 implemented. `init` remains intentionally absent until explicit project-template and public package
 distribution rules exist.
 
-## 10. Acceptance laws
+## 11. Acceptance laws
 
 - every current command has readable TTY, plain and JSON output;
 - JSON stdout contains no ANSI or progress prose;

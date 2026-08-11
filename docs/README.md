@@ -32,6 +32,8 @@ the working tree contains only documents that should inform current implementati
   command hierarchy, visual language and decentralized Endpoint authentication.
 - [`runtime-adapter-loading.md`](./runtime-adapter-loading.md) — separately locked Provider
   and Store activation, physical-code identity, diagnostics and explicit Artifact maintenance.
+- [`validation-boundaries.md`](./validation-boundaries.md) — the single-owner validation gates;
+  what is mandatory, what stays optional and what must never be revalidated downstream.
 - [`build-archive-and-egress.md`](./build-archive-and-egress.md) — Targets, durable Records,
   Artifact retention and optional Host materialization as four separate concerns.
 - [`speech-alignment.md`](./speech-alignment.md) — the Script and the recording as two

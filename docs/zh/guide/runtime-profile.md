@@ -85,14 +85,20 @@ CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；过期 W
 
 权限仍是显式 allowlist，例如 `network:<host>`、`filesystem:<scope>`、`process:<name>`。
 
+## 凭据控制不是 Runtime 执行
+
+`auth status|login|logout <endpoint-instance>` 只构造该 Endpoint 的声明和 Profile 明确选择的
+CredentialStore，不会打开 SQLite、启动 Worker、加载作者包或构造其他 Provider。因此登录
+KIE 不会被旧 Build 数据库或无关的 Vertex 配置拦住。
+
 ## 生命周期
 
 ```bash
-pnpm narratage doctor svml.runtime.json
-pnpm narratage runtime up svml.runtime.json
-pnpm narratage runtime status svml.runtime.json
-pnpm narratage runtime logs svml.runtime.json
-pnpm narratage runtime down svml.runtime.json
+node --run narratage -- doctor svml.runtime.json
+node --run narratage -- runtime up svml.runtime.json
+node --run narratage -- runtime status svml.runtime.json
+node --run narratage -- runtime logs svml.runtime.json
+node --run narratage -- runtime down svml.runtime.json
 ```
 
 `runtime up` 管理耐久 Worker 与声明的外部程序。`services up/status/down` 只管理外部程序，
@@ -100,17 +106,27 @@ pnpm narratage runtime down svml.runtime.json
 后台进程绑定覆盖 Profile 与两份 package lock 的有效修订摘要；任一文件变化后状态变为
 `stale`，下一次启动或提交会按新执行闭包替换进程，而不是继续复用旧装配。
 
+`doctor` 会求值 Endpoint Adapter 唯一的纯 `activate()` 声明，并直接从产生的 Endpoint package
+读取凭据、权限和前置条件；不存在另一份仅供诊断使用的凭据镜像。Activation 可以构造 handler，
+但不得解析密钥、访问网络、启动进程或修改持久状态。`doctor` 不构造 Scheduler、Worker、Build
+Store 或作者包，不会启动服务、写入 Runtime 状态或提交任务；它只打开 Profile 明确选择的
+CredentialStore 来解析引用，完成后立即关闭，并可执行显式声明的有界只读探测。
+
+预发布阶段不会原地迁移 SQLite 执行 schema。遇到更早的开发数据库时，CLI 会指出精确路径，
+要求把数据库连同 WAL 文件归档，或在 Profile 选择新路径。ArtifactStore 是独立选择的；该
+拒绝不会删除任何产物字节。
+
 ## Build、队列与归档
 
 ```bash
-pnpm narratage build build.svrun --runtime svml.runtime.json
-pnpm narratage build build.svrun --runtime svml.runtime.json --follow
-pnpm narratage queue --runtime svml.runtime.json --watch
-pnpm narratage status <build-id> --runtime svml.runtime.json
-pnpm narratage operations <build-id> --runtime svml.runtime.json
-pnpm narratage operation <operation-id> --runtime svml.runtime.json
-pnpm narratage inspect <build-id> --runtime svml.runtime.json
-pnpm narratage get <build-id> --runtime svml.runtime.json --name final.video --to output.mp4
+node --run narratage -- build build.svrun --runtime svml.runtime.json
+node --run narratage -- build build.svrun --runtime svml.runtime.json --follow
+node --run narratage -- queue --runtime svml.runtime.json --watch
+node --run narratage -- status <build-id> --runtime svml.runtime.json
+node --run narratage -- operations <build-id> --runtime svml.runtime.json
+node --run narratage -- operation <operation-id> --runtime svml.runtime.json
+node --run narratage -- inspect <build-id> --runtime svml.runtime.json
+node --run narratage -- get <build-id> --runtime svml.runtime.json --name final.video --to output.mp4
 ```
 
 不带 `--follow` 时，`build` 在耐久提交后退出；Worker 继续执行。`--follow` 只是观察，Ctrl-C
@@ -119,8 +135,8 @@ pnpm narratage get <build-id> --runtime svml.runtime.json --name final.video --t
 ## 取消
 
 ```bash
-pnpm narratage cancel build <build-id> --runtime svml.runtime.json
-pnpm narratage cancel operation <operation-id> --runtime svml.runtime.json
+node --run narratage -- cancel build <build-id> --runtime svml.runtime.json
+node --run narratage -- cancel operation <operation-id> --runtime svml.runtime.json
 ```
 
 Build 取消先关闭准入；Operation 取消只抑制那个精确实现。`accepted` 只是远端接受停止请求，
