@@ -15,10 +15,17 @@ The repository docs are authoritative:
 
 Canonical path:
 
-`Script → estimate:Speech/text → Seedance or supplied media → Speech Spine → WhisperX SemanticMap → peer Caption/Media/Text/Audio Tracks → Film → render:Video`.
+`Script → estimate:Speech/text → Seedance or supplied media → Speech Spine → WhisperX SemanticMap → peer Caption/Media/Typography/Audio Tracks → Film → render:Video`.
 
 Use explicit imports, exact fonts, Canvas/Frames, ProgramSpace, package locks, Targets, and Runtime
 authority. There is no implicit cache; reuse is explicit with `build-record` + `satisfy`.
+
+Use `speech:Take video={...}` for a speech-bearing A/V take and `speech:Take audio={...}` for
+voiceover. An audio Take creates program time and speech audio while peer Media Tracks provide the
+visuals.
+
+For a speech-free program, select a verified ProgramSpace Record through `.svrun` `build-record`
+and `satisfy`, use explicit Track windows, and omit WhisperX and Caption components.
 
 For execution, preserve the full lifecycle: diagnose the Profile, start or reuse the durable
 Runtime, inspect the frozen plan, submit a named Build, inspect its accepted Records, retrieve

@@ -6,22 +6,21 @@ Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 ## Execute the lifecycle
 
 ```bash
-pnpm narratage doctor path/to/svml.runtime.json
-pnpm narratage runtime up path/to/svml.runtime.json
-pnpm narratage runtime status path/to/svml.runtime.json
+node --run narratage -- doctor path/to/svml.runtime.json
+node --run narratage -- runtime up path/to/svml.runtime.json
+node --run narratage -- runtime status path/to/svml.runtime.json
 
-pnpm narratage check path/to/main.svml \
-  --package-lock path/to/svml.packages.lock --root .
-pnpm narratage plan path/to/build.svrun \
-  --package-lock path/to/svml.packages.lock --root .
+node --run narratage -- check path/to/main.svml \
+  --runtime path/to/svml.runtime.json --root .
+node --run narratage -- plan path/to/build.svrun \
+  --runtime path/to/svml.runtime.json --root .
 
-pnpm narratage build path/to/build.svrun \
+node --run narratage -- build path/to/build.svrun \
   --runtime path/to/svml.runtime.json \
-  --package-lock path/to/svml.packages.lock \
   --root . --build-id my-build-001 --follow
 
-pnpm narratage inspect my-build-001 --runtime path/to/svml.runtime.json
-pnpm narratage get my-build-001 \
+node --run narratage -- inspect my-build-001 --runtime path/to/svml.runtime.json
+node --run narratage -- get my-build-001 \
   --runtime path/to/svml.runtime.json \
   --name final.video --to path/to/output/final.mp4
 ```
@@ -40,7 +39,7 @@ durable Builds and does not cancel remote Provider work.
   terminal does not stop the Build.
 - `inspect` reads durable Build state and accepted Records. `get` copies an archived Artifact to the
   requested destination.
-- There is no implicit cache. Reuse Records only through a new `.svrun` containing `build-record`
+- There is no implicit cache. Pin and reuse Records through a new `.svrun` containing `build-record`
   and `satisfy`, with the target accepting the resulting fidelity.
 
 ## Keep project and package boundaries distinct

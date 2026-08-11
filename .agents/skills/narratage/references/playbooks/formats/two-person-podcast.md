@@ -1,21 +1,55 @@
 # Two-person podcast format
 
-Use the vendored data-only `podcast-v1` Kit; it is a reusable Text Template, not a new execution
-node. Render it with `text:Render` plus an SVS Recipe, then feed the result to
-`seedance:ReferenceVideo` with two final camera-position images and two ordered voice references.
-Use ordered `speech:Take` inputs and peer Tracks for assembly.
+Use two final camera-view references and intentional speaker/reaction cuts to build a coherent
+two-person conversation.
 
-- Prepare two final camera-position reference images, not isolated portraits. They establish room,
-  lighting, clothing, seating, and mutually consistent reverse views.
-- Prefix every Script line with an explicit speaker cue. Only the active speaker talks; the other host
-  remains present with breathing, listening, and reaction.
-- Use `A:`/`B:` dialogue and connect optional take-specific action through the Kit. Keep framing,
-  edit language, pacing, performance, reaction, and gesture in the Recipe rather than rewriting the
-  prompt scaffold.
-- Choose rhythm deliberately: follow the speaker for measured dialogue or cut to a meaningful listener
-  reaction. Framing changes are crops/pushes inside locked A/B views, never invented cameras/locations.
-- Use one `speech:Spine`, at most one `caption:Program` + `caption-fine:Track`, and `text:Track`/
-  `media-track:Track` for titles/evidence.
-  Keep dialogue/action prompts separate and in English.
-- Shape skeptical reviews asymmetrically: short challenge, longer grounded answer, mechanism/evidence,
-  and a payoff that returns to the opening hook.
+## Lock the two-view geometry first
+
+Draw the room and name camera positions A and B before generating either view.
+
+- View A and View B belong to the same room, but they must show different background sectors and
+  different dominant landmark sets.
+- The two backgrounds must never be identical, near-identical, horizontally mirrored, or the same
+  wall with only the person changed.
+- Preserve seating, eye lines, table edge, microphones, shared props, light direction, lens feel,
+  and left/right relationship across the pair.
+- Reject and regenerate both images when the geometry cannot explain how the two cameras occupy the
+  room.
+
+## Author the SVML program
+
+1. Write Script turns with explicit A/B Role Cues. Use Dual Text for exact display/pronunciation
+   differences while preserving the intended visible spelling.
+2. Prepare the accepted final A-view and B-view images plus ordered A/B voice references.
+3. Vendor `podcast-v1.svs`. Select `framing`, `edit-language`, `pacing`, `performance`, `reaction`,
+   and `gesture` in an SVS Recipe.
+4. Render each Segment with `copy:Render`, Script dialogue, and an optional English action direction.
+5. Generate each take with `seedance:ReferenceVideo generate-audio="true"`, both final views, and
+   both voice references in the Kit's declared order.
+6. Assemble accepted takes through `speech:Spine`, run `whisperx:Alignment`, then add exact-font
+   Captions, evidence Media, Typography, and optional Audio Tracks.
+7. Assemble with `film:Film`, render with `render:Video`, and use `.svrun` target-sets for staged
+   review and delivery.
+
+## Direct turns and cuts
+
+- Let each speaker finish a natural thought. Short challenges may lead into longer grounded answers;
+  do not create rapid alternation by splitting one sentence into fragments.
+- Use the Recipe's speaker-following or reaction-cut pattern. Do not write camera cuts, new angles,
+  zooms, or location changes into the action slot.
+- Camera stability and performer intensity are independent: a host may lean, laugh, gesture, or
+  change posture while the two established camera views remain fixed.
+- Only the current speaker moves their mouth. A listener cutaway stays silent but visually alive.
+- A skeptical format works well as bold claim → short challenge → mechanism/evidence → grounded
+  payoff that returns to the hook. A phone CTA is optional and appears only when the Script requires it.
+
+## Review and reuse
+
+Review the two reference images side by side before video generation. Reject same-background reverse
+views, broken eye lines, contradictory seating, duplicated microphones, prop drift, or impossible
+lighting. Then review every take for voice assignment, exact words, lip-sync, reaction timing,
+camera selection, and identity. Pin accepted views and takes through `.svrun` `build-record` and
+`satisfy`.
+
+Read `../craft/visual-continuity.md`, `../craft/seedance-directing.md`, `../craft/captions.md`, and
+`../craft/persona-and-audio.md`.

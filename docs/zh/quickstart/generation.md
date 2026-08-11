@@ -192,15 +192,24 @@ Endpoint，不会改变作者图。
 只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内
 副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Narratage 仓库 checkout。
 
+创作前阅读
+[`@narratage/seedance-kits` 指南](https://github.com/cashdiffusion/svml/blob/main/packages/seedance-kits/README.md)
+和[所选 Kit 源文件](https://github.com/cashdiffusion/svml/tree/main/packages/seedance-kits/kits)。格式匹配时
+优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者
+原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
+
 ```svml
 <import as="text" from="@narratage/text@1"/>
 <import as="seedance" from="@narratage/seedance@1"/>
 <import as="broll-kit" source="./kits/broll-v1.svs"/>
 
+<text:Value id="product-story">
+  Show the product opening, the primary feature activating, and the finished result in one readable sequence.
+</text:Value>
 <text:Render id="demo-prompt"
   template={broll-kit.broll-v1}
   recipe={studio.broll.product-demo}>
-  <text:Set name="story" text={copy.product-demo}/>
+  <text:Set name="story" text={product-story}/>
 </text:Render>
 
 <seedance:ReferenceVideo id="demo" model="mini"
@@ -211,10 +220,20 @@ Endpoint，不会改变作者图。
 </seedance:ReferenceVideo>
 ```
 
-项目 Recipe 选择模板声明的轴；显式 `text:Param` 可以覆盖 Recipe。动态 story、dialogue、
-action 和 extra 仍经由 `text:Set` 作为图边进入。现有模板包括 `speaker-v1`、`broll-v1`、`podcast-v1`、
-`call-v1`、`street-interview-v1`、`motion-reference-v1`、`camera-reference-v1`。
-媒体数量与顺序仍清楚地写在 `seedance:ReferenceVideo` 里，不藏进 Kit 代码。
+项目 Recipe 选择模板声明的轴；显式 `text:Param` 可以覆盖 Recipe。按格式选择 Kit，再提供它
+声明的动态 slot 与有序参考：
+
+| 格式 | Kit | 动态 slot | 有序参考 |
+|---|---|---|---|
+| 单人口播 | `speaker-v1` | `dialogue`；可选 `action` | image 1 = 人物/场景；audio 1 = 声音 |
+| 无声 B-roll | `broll-v1` | `story` | 一张或多张作者声明图片 |
+| 双人 Podcast | `podcast-v1` | `dialogue`；可选 `action` | image 1/2 = A/B 视角；audio 1/2 = A/B 声音 |
+| 视频通话 | `call-v1` | `dialogue`；可选 `action` | image 1/2 = 相反通话布局；audio 1/2 = A/B 声音 |
+| 街访 | `street-interview-v1` | `dialogue`；可选 `action` | image 1 = 完整场景；audio 1/2 = 采访者/受访者 |
+| 动作迁移 | `motion-reference-v1` | 可选 `direction` | image 1 = 主体；video 1 = 动作参考 |
+| 运镜迁移 | `camera-reference-v1` | 可选 `direction` | image 1 = 主体；video 1 = 运镜参考 |
+
+这些形状仍然清楚地写在 `seedance:ReferenceVideo` 中；Kit 渲染不会隐藏媒体数量与顺序。
 
 ## 街访 Prompt 组装
 
@@ -260,7 +279,7 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
 <import as="speaker-kit" source="./kits/speaker-v1.svs"/>
 
 <text:Value id="hook-action">
-  先紧迫地直视镜头，最后一句收住声音。
+  Begin with urgent direct eye contact, then let the final admission land more quietly.
 </text:Value>
 
 <text:Render id="hook-prompt"
@@ -301,8 +320,8 @@ dialogue/action 由普通 Text 模块组装，结果再像其他生成任务一�
   source={story.segment.hook.speech} policy={studio.speech.normal}/>
 <estimate:Speech id="meeting-duration"
   source={story.segment.meeting.speech} policy={studio.speech.normal}/>
-<text:Value id="hook-action">紧迫开场，最后一句放轻。</text:Value>
-<text:Value id="meeting-action">示意产品，然后回到镜头。</text:Value>
+<text:Value id="hook-action">Start urgently, then become quieter.</text:Value>
+<text:Value id="meeting-action">Indicate the product, then return to the lens.</text:Value>
 
 <text:Render id="hook-prompt" template={speaker-kit.speaker-v1} recipe={studio.speaker.host}>
   <text:Set name="dialogue" text={story.segment.hook.dialogue}/>
