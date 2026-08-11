@@ -19,15 +19,27 @@ Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
   `references/playbooks/svml-mapping.md`, then only the relevant craft/format file.
 - Reference-video reverse engineering → read `references/reference-vlm.md`; have VLM emit
   `main.svml`, optional `studio.svs`, and `build.svrun` directly, never a JSON storyboard.
-- Execution → `check` first, `plan` before paid work, then `build`; inspect and retrieve durable
-  outputs afterward.
+- Execution, Runtime control, Build inspection, or output retrieval → read
+  `references/runtime.md`; diagnose and start the durable Runtime, `check` Author Source, `plan`
+  before paid work, then submit, inspect, and retrieve the Build.
 
 ## Required loop
 
 ```bash
+node --run narratage -- doctor path/to/svml.runtime.json
+node --run narratage -- runtime up path/to/svml.runtime.json
 node --run narratage -- check path/to/main.svml --package-lock path/to/svml.packages.lock --root .
 node --run narratage -- plan path/to/build.svrun --package-lock path/to/svml.packages.lock --root .
+node --run narratage -- build path/to/build.svrun --runtime path/to/svml.runtime.json \
+  --package-lock path/to/svml.packages.lock --root . --build-id my-build-001 --follow
+node --run narratage -- inspect my-build-001 --runtime path/to/svml.runtime.json
+node --run narratage -- get my-build-001 --runtime path/to/svml.runtime.json \
+  --name final.video --to path/to/output/final.mp4
 ```
+
+Treat `--follow` as an observer: stopping it does not stop the durable Build. Use `runtime down`
+only to stop the Worker and Runtime-owned programs; it does not cancel Builds or remote Provider
+work.
 
 Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of commits.
 The repository's docs remain the syntax authority.
