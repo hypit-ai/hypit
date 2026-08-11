@@ -13,6 +13,8 @@ function identity(overrides: { readonly endpoint?: string; readonly runtimeClosu
     build: "video-42",
     command: "command:render",
     endpoint: overrides.endpoint ?? "hyperframes.local",
+    authority: "hyperframes.local",
+    route: "fixture.render",
     implementationDigest: digestOf("hyperframes.local/implementation@1"),
     runtimeClosure: (overrides.runtimeClosure ?? digestOf("runtime-closure:local")) as never,
     requestDigest: digestOf("render-request"),

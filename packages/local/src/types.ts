@@ -98,7 +98,7 @@ export type ProjectLocalRuntimeOptions = {
   readonly allowedPermissions: readonly string[];
   readonly scheduling: {
     readonly maxConcurrency: number;
-    readonly lanes?: Readonly<Record<string, number>>;
+    readonly resources?: Readonly<Record<string, number>>;
     readonly maxEventsPerBuild?: number;
   };
   readonly validators?: LocalTypeValidatorRegistry;

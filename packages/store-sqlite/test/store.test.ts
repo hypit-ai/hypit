@@ -39,6 +39,8 @@ test("SQLite stores verified Build facts and Operation checkpoints across reopen
       build: "video",
       command: "command:generation",
       endpoint: "kie.personal",
+      authority: "kie.personal",
+      route: "fixture.generation",
       implementationDigest: digestOf("kie-implementation"),
       runtimeClosure: digestOf("runtime-closure"),
       requestDigest: digestOf("generation-request"),
@@ -85,6 +87,8 @@ test("SQLite Operation CAS preserves a terminal completion", async () => {
       build: "video",
       command: "command:render",
       endpoint: "hyperframes.lambda",
+      authority: "hyperframes.lambda",
+      route: "fixture.render",
       implementationDigest: digestOf("hyperframes-lambda"),
       runtimeClosure: digestOf("runtime"),
       requestDigest: digestOf("render-request"),
@@ -123,6 +127,8 @@ test("SQLite keeps cancellation control independent from execution state", async
       build: "cancel-build",
       command: "command:cancel",
       endpoint: "endpoint.cancel",
+      authority: "endpoint.cancel",
+      route: "fixture.cancel",
       implementationDigest: digestOf("implementation.cancel"),
       runtimeClosure: digestOf("runtime.cancel"),
       requestDigest: digestOf("request.cancel"),
@@ -161,7 +167,7 @@ test("Host Catalog schema changes do not change the execution Runtime Closure", 
     assert.deepEqual(
       services.services.map((item) => item.instance.configurationDigest),
       [
-        ...Array(4).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 4, busyTimeoutMs: 5_000 })),
+        ...Array(4).fill(digestOf({ path: join(directory, "runtime.sqlite"), schemaVersion: 5, busyTimeoutMs: 5_000 })),
       ],
     );
     await services.close?.();
@@ -178,29 +184,35 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     await state.dispatch.create(createBuildDispatchIdentity({
       build: "build-a", core: digestOf("core:a"), runtimeClosure: closure,
     }), { now: 100 });
-    const first = await state.dispatch.claim({ owner: "worker-a", token: "lease-a", now: 100, leaseMs: 10 });
+    const foreignClosure = digestOf("runtime:another-revision");
+    await state.dispatch.create(createBuildDispatchIdentity({
+      build: "foreign-build", core: digestOf("core:foreign"), runtimeClosure: foreignClosure,
+    }), { now: 99, priority: 1_000 });
+    const first = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-a", token: "lease-a", now: 100, leaseMs: 10 });
     assert.ok(first?.lease);
+    assert.equal(first.build, "build-a", "a Worker must not lease a higher-priority foreign Runtime Revision");
     assert.equal(first.lease.fence, 1);
-    assert.equal(await state.dispatch.claim({ owner: "worker-b", token: "early", now: 105, leaseMs: 10 }), undefined);
-    const second = await state.dispatch.claim({ owner: "worker-b", token: "lease-b", now: 111, leaseMs: 10 });
+    assert.equal(await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-b", token: "early", now: 105, leaseMs: 10 }), undefined);
+    const second = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-b", token: "lease-b", now: 111, leaseMs: 10 });
     assert.ok(second?.lease);
     assert.equal(second.lease.fence, 2);
+    const paidResources = [{ id: "authority:paid", maxActive: 1, maxInFlight: 1 }];
     await assert.rejects(
       state.dispatch.release("build-a", first.lease, { phase: "waiting", availableAt: 120 }, 112),
       /stale/u,
     );
     await assert.rejects(
       state.dispatch.acquireCapacity({
-        build: "build-a", command: "command:a", lane: "paid", mode: "recoverable",
+        build: "build-a", command: "command:a", resources: paidResources, mode: "recoverable",
         buildLease: first.lease, owner: "worker-a", token: "capacity-a", now: 112, leaseMs: 10,
-        limits: { globalActive: 1, laneActive: 1, laneInFlight: 1 },
+        limits: { globalActive: 1 },
       }),
       /stale/u,
     );
     const reserved = await state.dispatch.acquireCapacity({
-      build: "build-a", command: "command:a", lane: "paid", mode: "recoverable",
+      build: "build-a", command: "command:a", resources: paidResources, mode: "recoverable",
       buildLease: second.lease, owner: "worker-b", token: "capacity-b", now: 112, leaseMs: 10,
-      limits: { globalActive: 1, laneActive: 1, laneInFlight: 1 },
+      limits: { globalActive: 1 },
     });
     assert.equal(reserved.status, "acquired");
 
@@ -219,19 +231,19 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     await state.dispatch.create(createBuildDispatchIdentity({
       build: "build-b", core: digestOf("core:b"), runtimeClosure: closure,
     }), { now: 112 });
-    const third = await state.dispatch.claim({ owner: "worker-c", token: "lease-c", now: 112, leaseMs: 10 });
+    const third = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-c", token: "lease-c", now: 112, leaseMs: 10 });
     assert.ok(third?.lease);
     const blocked = await state.dispatch.acquireCapacity({
-      build: "build-b", command: "command:b", lane: "paid", mode: "recoverable",
+      build: "build-b", command: "command:b", resources: paidResources, mode: "recoverable",
       buildLease: third.lease, owner: "worker-c", token: "capacity-c", now: 112, leaseMs: 10,
-      limits: { globalActive: 1, laneActive: 1, laneInFlight: 1 },
+      limits: { globalActive: 1 },
     });
     assert.equal(blocked.status, "blocked");
 
     await state.dispatch.create(createBuildDispatchIdentity({
       build: "build-c", core: digestOf("core:c"), runtimeClosure: closure,
     }), { now: 200, priority: 100 });
-    const fourth = await state.dispatch.claim({ owner: "worker-d", token: "lease-d", now: 200, leaseMs: 10 });
+    const fourth = await state.dispatch.claim({ runtimeClosure: closure, owner: "worker-d", token: "lease-d", now: 200, leaseMs: 10 });
     assert.ok(fourth?.lease);
     await state.dispatch.requestCancellation("build-c", "stop", 201);
     const cancelledWake = await state.dispatch.release(
@@ -243,6 +255,102 @@ test("SQLite fences expired Workers and shares capacity across Build dispatches"
     assert.equal(cancelledWake.admission, "closing");
     assert.equal(cancelledWake.availableAt, 201,
       "a cancellation racing with release cannot be delayed by the Worker's stale schedule");
+    const foreign = await state.dispatch.claim({
+      runtimeClosure: foreignClosure,
+      owner: "foreign-worker",
+      token: "foreign-lease",
+      now: 203,
+      leaseMs: 10,
+    });
+    assert.equal(foreign?.build, "foreign-build");
+    state.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("Authority and Route resources are acquired atomically across models", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "svml-sqlite-hierarchy-"));
+  try {
+    const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
+    const closure = digestOf("runtime:hierarchical-capacity");
+    const authority = { id: "authority:kie.main", maxActive: 2, maxInFlight: 2 };
+    const seedance = { id: "route:kie.main/seedance-2-mini", maxActive: 1, maxInFlight: 1 };
+    const minimax = { id: "route:kie.main/minimax-h3", maxActive: 2, maxInFlight: 2 };
+
+    const leaseBuild = async (build: string, now: number) => {
+      await state.dispatch.create(createBuildDispatchIdentity({
+        build,
+        core: digestOf(`core:${build}`),
+        runtimeClosure: closure,
+      }), { now });
+      const claimed = await state.dispatch.claim({
+        runtimeClosure: closure,
+        owner: `worker:${build}`,
+        token: `lease:${build}`,
+        now,
+        leaseMs: 1_000,
+      });
+      assert.equal(claimed?.build, build);
+      assert.ok(claimed.lease);
+      return claimed.lease;
+    };
+
+    const firstLease = await leaseBuild("seedance-a", 100);
+    const first = await state.dispatch.acquireCapacity({
+      build: "seedance-a",
+      command: "generate:a",
+      resources: [authority, seedance],
+      queue: { authority: "kie.main", route: "seedance-2-mini" },
+      mode: "recoverable",
+      buildLease: firstLease,
+      owner: "worker:seedance-a",
+      token: "capacity:a",
+      now: 100,
+      leaseMs: 1_000,
+      limits: { globalActive: 10 },
+    });
+    assert.equal(first.status, "acquired");
+    assert.ok(first.reservation.active);
+    await state.dispatch.parkCapacity(first.reservation.id, first.reservation.active, true, 101);
+
+    const secondLease = await leaseBuild("seedance-b", 102);
+    const sameRoute = await state.dispatch.acquireCapacity({
+      build: "seedance-b",
+      command: "generate:b",
+      resources: [authority, seedance],
+      queue: { authority: "kie.main", route: "seedance-2-mini" },
+      mode: "recoverable",
+      buildLease: secondLease,
+      owner: "worker:seedance-b",
+      token: "capacity:b",
+      now: 102,
+      leaseMs: 1_000,
+      limits: { globalActive: 10 },
+    });
+    assert.deepEqual(sameRoute, {
+      status: "blocked",
+      retryAt: 202,
+      reason: "resource-in-flight",
+      resource: seedance.id,
+    });
+
+    const thirdLease = await leaseBuild("minimax-a", 103);
+    const otherRoute = await state.dispatch.acquireCapacity({
+      build: "minimax-a",
+      command: "generate:c",
+      resources: [authority, minimax],
+      queue: { authority: "kie.main", route: "minimax-h3" },
+      mode: "recoverable",
+      buildLease: thirdLease,
+      owner: "worker:minimax-a",
+      token: "capacity:c",
+      now: 103,
+      leaseMs: 1_000,
+      limits: { globalActive: 10 },
+    });
+    assert.equal(otherRoute.status, "acquired",
+      "another model may use the remaining Provider Authority capacity");
     state.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

@@ -12,6 +12,7 @@ import { localWhisperXService } from "./service.js";
 const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-whisperx-local",
   activate(context) {
+    if (context.authority === undefined) throw new Error("WhisperX Provider Authority is required");
     const config = runtimeConfigObject(context.config, "local WhisperX");
     runtimeConfigExact(config, [
       "baseUrl", "expectedModel", "expectedDevice", "expectedCompute", "expectedBatchSize",
@@ -51,7 +52,7 @@ const localWhisperXRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalWhisperXProvider({
         instance: context.instance,
-        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        authority: context.authority,
         ...(baseUrl === undefined ? {} : { baseUrl }),
         ...(expectedModel === undefined ? {} : { expectedModel }),
         ...(expectedDevice === undefined ? {} : { expectedDevice }),

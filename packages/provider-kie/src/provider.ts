@@ -36,7 +36,7 @@ type Fetch = typeof globalThis.fetch;
 
 export type CreateKieProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   readonly apiBaseUrl?: string;
   readonly uploadBaseUrl?: string;
   readonly apiKey?: CredentialRef;
@@ -612,7 +612,7 @@ function endpoint(options: {
   };
 }
 
-export function createKieProvider(config: CreateKieProviderOptions = {}) {
+export function createKieProvider(config: CreateKieProviderOptions) {
   verifyKieRoutes();
   const apiBaseUrl = baseUrl(config.apiBaseUrl ?? "https://api.kie.ai", "apiBaseUrl");
   const uploadBaseUrl = baseUrl(config.uploadBaseUrl ?? "https://kieai.redpandaai.co", "uploadBaseUrl");
@@ -648,7 +648,7 @@ export function createKieProvider(config: CreateKieProviderOptions = {}) {
     module: kieProviderModuleRef,
     facet: "market",
     instance: config.instance ?? "kie.default",
-    ...(config.lane === undefined ? {} : { lane: config.lane }),
+    authority: config.authority ?? config.instance ?? "kie.default",
     implementation: {
       locator: "@narratage/provider-kie/market",
       digest: kieProviderImplementationDigest,

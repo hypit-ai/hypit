@@ -16,6 +16,7 @@ import { localOpenCvService } from "./service.js";
 const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-image-opencv-local",
   activate(context) {
+    if (context.authority === undefined) throw new Error("local OpenCV Provider Authority is required");
     const config = runtimeConfigObject(context.config, "local OpenCV image");
     runtimeConfigExact(config, [
       "pythonExecutable", "defaultConcurrency", "processTimeoutMs", "maxInputBytes", "maxOutputBytes",
@@ -29,7 +30,7 @@ const localOpenCvRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     return {
       endpoint: createLocalOpenCvImageProvider({
         instance: context.instance,
-        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        authority: context.authority,
         pythonExecutable: deployment.pythonExecutable,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(processTimeoutMs === undefined ? {} : { processTimeoutMs }),

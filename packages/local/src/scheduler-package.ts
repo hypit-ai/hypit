@@ -29,7 +29,7 @@ export function createLocalSchedulerPackage(
         locator: "@narratage/local/scheduler",
         digest: localSchedulerImplementationDigest,
       },
-      configuration: { algorithm: "queue-free-fair-lanes", version: 1 },
+      configuration: { algorithm: "queue-free-atomic-resources", version: 1 },
       service: {
         create(executor, options) {
           return new LocalBuildScheduler(executor, options);
@@ -54,7 +54,7 @@ export function createLocalExecutionPackage(
           locator: "@narratage/local/scheduler",
           digest: localSchedulerImplementationDigest,
         },
-        configuration: { algorithm: "fair-lanes", version: 1 },
+        configuration: { algorithm: "atomic-resources", version: 1 },
         service: {
           create(executor, options) {
             return new LocalBuildScheduler(executor, options);

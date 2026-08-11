@@ -121,8 +121,8 @@ export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
   const buildCatalog = options.buildCatalog;
-  if (options.scheduling?.maxConcurrency !== undefined || options.scheduling?.laneLimits !== undefined) {
-    throw new Error("a locked Runtime Closure owns maxConcurrency and lane limits");
+  if (options.scheduling?.maxConcurrency !== undefined || options.scheduling?.resourceLimits !== undefined) {
+    throw new Error("a locked Runtime Closure owns maxConcurrency and resource limits");
   }
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
@@ -154,7 +154,7 @@ export async function createLocalRuntime(
   });
   const scheduling = {
     maxConcurrency: options.closure.value.scheduling.maxConcurrency,
-    laneLimits: Object.fromEntries(options.closure.value.scheduling.lanes.map((lane) => [lane.name, lane.maxConcurrency])),
+    resourceLimits: Object.fromEntries(options.closure.value.scheduling.resources.map((resource) => [resource.id, resource.maxConcurrency])),
     ...(options.scheduling?.maxEventsPerBuild === undefined
       ? {} : { maxEventsPerBuild: options.scheduling.maxEventsPerBuild }),
   };
@@ -343,8 +343,8 @@ export async function createProjectLocalRuntime(
       endpoints: endpointPackages.flatMap((item) => item.bindings),
       scheduling: {
         maxConcurrency: options.scheduling.maxConcurrency,
-        lanes: Object.entries(options.scheduling.lanes ?? {}).map(([name, maxConcurrency]) => ({
-          name,
+        resources: Object.entries(options.scheduling.resources ?? {}).map(([id, maxConcurrency]) => ({
+          id,
           maxConcurrency,
         })),
       },

@@ -51,7 +51,7 @@ becomes its executor; interrupting the observer does not cancel the Build.
 
 The Worker stores no serialized Core command. After every restart it reopens verified BuildState and
 asks the selected Scheduler to regenerate the current commands. Recoverable Provider checkpoints
-remain in `OperationStore`; dispatch lease, heartbeat, admission and shared lane capacity remain in
+remain in `OperationStore`; dispatch lease, heartbeat, admission and shared resource capacity remain in
 `BuildDispatchStore`; operational history remains in `RuntimeJournal`.
 
 Cancellation first closes admission. Existing Operations keep their own execution fact and a

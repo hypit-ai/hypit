@@ -45,7 +45,7 @@ Two forms are supported:
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.production",
-      "lane": "generation",
+      "authority": "kie.production",
       "config": {
         "apiKey": { "store": "keychain", "key": "kie.api-key" },
         "defaultConcurrency": 2
@@ -54,19 +54,19 @@ Two forms are supported:
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.local",
-      "lane": "media",
+      "authority": "media.local",
       "config": { "defaultConcurrency": 2 }
     },
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.local",
-      "lane": "alignment",
+      "authority": "whisperx.local",
       "config": { "defaultConcurrency": 1 }
     },
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.local",
-      "lane": "planning",
+      "authority": "vertex.local",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "keychain", "key": "google.vertex-json" },
@@ -76,7 +76,7 @@ Two forms are supported:
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.local",
-      "lane": "render",
+      "authority": "hyperframes.local",
       "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
     }
   ],
@@ -91,16 +91,7 @@ Two forms are supported:
     "process:hyperframes",
     "process:media"
   ],
-  "scheduling": {
-    "maxConcurrency": 4,
-    "lanes": {
-      "generation": 2,
-      "media": 2,
-      "alignment": 1,
-      "planning": 1,
-      "render": 1
-    }
-  }
+  "scheduling": { "maxConcurrency": 4 }
 }
 ```
 
@@ -110,7 +101,7 @@ Two forms are supported:
 |---|---|
 | `use` | Adapter name, resolved from `runtimePackageLock` |
 | `instance` | Unique identifier for this Endpoint instance |
-| `lane` | Scheduling lane governing concurrency |
+| `authority` | Stable non-secret identity of the account, deployment or compute pool whose limits are shared |
 | `config` | Adapter-specific non-secret configuration, CredentialRefs, concurrency and timeouts |
 
 Credentials are addressed as `{ "store": "…", "key": "…" }`; secret bytes never enter the
@@ -139,9 +130,10 @@ Neither value enters Author or Run graph identity.
 
 ### Scheduling
 
-`maxConcurrency` caps admitted Operations across all Workers sharing the DispatchStore. Each named
-`lane` has its own sub-cap. Capacity reservations are durable and fenced by the Build lease rather
-than process-local counters.
+`maxConcurrency` caps admitted Operations across all Workers sharing the DispatchStore. Provider
+packages contribute an Authority resource and an exact capability Route resource; the Store
+acquires both atomically. Optional `resources` overrides address those opaque ids. Capacity tickets
+are durable and fenced by the Build lease rather than process-local counters.
 
 ### Permissions
 
@@ -181,13 +173,13 @@ export default async function createRuntime() {
   const endpoints = [
     createKieProvider({
       instance: "kie.prod",
-      lane: "generation",
+      authority: "kie.prod",
       apiKey: credentialRef("env", "KIE_API_KEY"),
       defaultConcurrency: 2,
     }),
     createLocalMediaProvider({
       instance: "media.prod",
-      lane: "media",
+      authority: "media.prod",
       defaultConcurrency: 2,
     }),
   ];
@@ -215,7 +207,6 @@ export default async function createRuntime() {
     ],
     scheduling: {
       maxConcurrency: 4,
-      lanes: { generation: 2, media: 2 },
     },
   });
 }

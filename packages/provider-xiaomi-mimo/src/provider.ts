@@ -32,7 +32,7 @@ type Fetch = typeof globalThis.fetch;
 
 export type CreateXiaomiMimoProviderOptions = {
   readonly instance?: string;
-  readonly lane?: string;
+  readonly authority?: string;
   readonly apiBaseUrl?: string;
   readonly apiKey?: CredentialRef;
   readonly defaultConcurrency?: number;
@@ -174,7 +174,7 @@ function fulfillment(value: CanonicalValue, metadata: CanonicalValue): EndpointF
   return { value: { kind: "inline", value }, conformance: "exact", delivery: "executed", metadata };
 }
 
-export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOptions = {}) {
+export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOptions) {
   const apiBaseUrl = normalizeBaseUrl(options.apiBaseUrl ?? "https://api.xiaomimimo.com/v1");
   const requestTimeoutMs = positiveInteger(options.requestTimeoutMs ?? 180_000, "requestTimeoutMs");
   const maxResponseBytes = positiveInteger(options.maxResponseBytes ?? 64 * 1024 * 1024, "maxResponseBytes");
@@ -243,7 +243,7 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
     module: xiaomiMimoProviderModuleRef,
     facet: "tts",
     instance: options.instance ?? "xiaomi-mimo.default",
-    ...(options.lane === undefined ? {} : { lane: options.lane }),
+    authority: options.authority ?? options.instance ?? "xiaomi-mimo.default",
     implementation: {
       locator: "@narratage/provider-xiaomi-mimo/tts",
       digest: xiaomiMimoProviderImplementationDigest,

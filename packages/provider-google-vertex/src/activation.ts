@@ -13,6 +13,7 @@ import { createGoogleVertexCaptionProvider } from "./provider.js";
 const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-google-vertex",
   activate(context) {
+    if (context.authority === undefined) throw new Error("Google Vertex Provider Authority is required");
     const config = runtimeConfigObject(context.config, "Google Vertex");
     runtimeConfigExact(config, [
       "project", "projectEnv", "location", "credentials", "defaultConcurrency",
@@ -33,7 +34,7 @@ const googleVertexRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       endpoint: createGoogleVertexCaptionProvider({
         ...(projectValue === undefined ? { projectEnv: projectEnv! } : { project: projectValue }),
         instance: context.instance,
-        ...(context.lane === undefined ? {} : { lane: context.lane }),
+        authority: context.authority,
         ...(location === undefined ? {} : { location }),
         credentialsJson: credentials,
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),

@@ -213,7 +213,7 @@ The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.main",
-      "lane": "generation",
+      "authority": "kie.main",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
@@ -222,19 +222,19 @@ The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.main",
-      "lane": "media",
+      "authority": "media.main",
       "config": { "defaultConcurrency": 2 }
     },
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.main",
-      "lane": "alignment",
+      "authority": "whisperx.main",
       "config": { "defaultConcurrency": 1 }
     },
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.main",
-      "lane": "planning",
+      "authority": "vertex.main",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
@@ -245,7 +245,7 @@ The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.main",
-      "lane": "render",
+      "authority": "hyperframes.main",
       "config": {
         "workers": 2,
         "quality": "standard",
@@ -265,28 +265,19 @@ The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each
     "process:hyperframes",
     "process:media"
   ],
-  "scheduling": {
-    "maxConcurrency": 4,
-    "lanes": {
-      "generation": 2,
-      "media": 2,
-      "alignment": 1,
-      "planning": 1,
-      "render": 1
-    }
-  }
+  "scheduling": { "maxConcurrency": 4 }
 }
 ```
 
 ### Endpoints
 
-Each endpoint binds a Provider package to a named instance with a concurrency lane:
+Each endpoint binds a Provider package to a named instance and an explicit Provider Authority:
 
 | Field | Description |
 |---|---|
 | `use` | Provider package name (e.g. `@narratage/provider-kie`) |
 | `instance` | Unique instance identifier |
-| `lane` | Scheduling lane for concurrency control |
+| `authority` | Stable non-secret identity of the account, deployment or compute pool whose limits are shared |
 | `config` | Provider-specific non-secret configuration and ordinary CredentialRefs |
 
 ### Permissions
@@ -296,8 +287,9 @@ require permissions not listed here.
 
 ### Scheduling
 
-`maxConcurrency` limits total parallel Operations. `lanes` sets per-lane concurrency limits to
-prevent one type of work from starving others.
+`maxConcurrency` limits total parallel Operations. Every Provider contributes an Authority resource
+and one exact capability Route resource. Optional `resources` overrides use those opaque resource
+ids; they never select a model or Provider.
 
 ## Build workflow
 

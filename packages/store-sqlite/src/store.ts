@@ -57,7 +57,7 @@ import type {
   RuntimeServicePackage,
 } from "@narratage/runtime";
 
-const databaseSchemaVersion = 4;
+const databaseSchemaVersion = 5;
 
 export const sqliteStoreModuleRef = {
   name: "@narratage/store-sqlite",
@@ -145,6 +145,8 @@ function operationIdentity(snapshot: OperationSnapshot): OperationIdentity {
     build: snapshot.build,
     command: snapshot.command,
     endpoint: snapshot.endpoint,
+    authority: snapshot.authority,
+    route: snapshot.route,
     implementationDigest: snapshot.implementationDigest,
     runtimeClosure: snapshot.runtimeClosure,
     requestDigest: snapshot.requestDigest,
@@ -365,6 +367,8 @@ class SqliteOperationStore implements OperationStore {
       ["build", query.build],
       ["command", query.command],
       ["endpoint", query.endpoint],
+      ["authority", query.authority],
+      ["route", query.route],
       ["runtimeClosure", query.runtimeClosure],
       ["requestDigest", query.requestDigest],
     ] as const) {
@@ -547,17 +551,19 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async claim(request: BuildDispatchClaim): Promise<BuildDispatchSnapshot | undefined> {
     assert(request.owner.trim().length > 0 && request.token.trim().length > 0, "Dispatch claim identity is empty");
+    assert(/^sha256:[0-9a-f]{64}$/u.test(request.runtimeClosure), "Dispatch claim Runtime Closure is invalid");
     const now = nonNegativeInteger(request.now, "Dispatch claim time");
     const leaseMs = positiveInteger(request.leaseMs, "Dispatch leaseMs");
     return transaction(this.#database, () => {
       const row = this.#database.prepare(`
         SELECT * FROM svml_dispatches
         WHERE phase != 'terminal'
+          AND json_extract(identity_json, '$.runtimeClosure') = ?
           AND available_at <= ?
           AND (lease_owner IS NULL OR lease_expires_at <= ?)
         ORDER BY priority DESC, available_at ASC, created_at ASC, build_id ASC
         LIMIT 1
-      `).get(now, now) as Row | undefined;
+      `).get(request.runtimeClosure, now, now) as Row | undefined;
       if (row === undefined) return undefined;
       assert(typeof row.build_id === "string" && typeof row.revision === "number" && typeof row.lease_fence === "number",
         "SQLite Dispatch claim row is invalid");
@@ -670,11 +676,26 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
   async acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire> {
     assert(request.owner.trim().length > 0 && request.token.trim().length > 0, "Capacity claimant is empty");
-    assert(request.lane.trim().length > 0, "Capacity lane is empty");
+    assert(request.resources.length > 0, "Capacity resources are empty");
     nonNegativeInteger(request.now, "Capacity acquisition time");
     positiveInteger(request.leaseMs, "Capacity leaseMs");
     verifyCapacityLimits(request.limits);
     verifyDispatchLease(request.buildLease);
+    const resources = [...request.resources].map((resource) => ({ ...resource }))
+      .sort((left, right) => left.id.localeCompare(right.id));
+    const resourceIds = resources.map((resource) => {
+      assert(resource.id.trim().length > 0, "Capacity resource id is empty");
+      positiveInteger(resource.maxActive, `Capacity resource ${resource.id} maxActive`);
+      positiveInteger(resource.maxInFlight, `Capacity resource ${resource.id} maxInFlight`);
+      return resource.id;
+    });
+    assert(new Set(resourceIds).size === resourceIds.length, "Capacity resources contain duplicates");
+    if (request.queue !== undefined) {
+      assert(request.queue.authority.trim().length > 0 && request.queue.route.trim().length > 0,
+        "Capacity queue authority and route are required");
+    }
+    const resourcesJson = canonicalStringify(resources);
+    const queueJson = request.queue === undefined ? null : canonicalStringify(request.queue);
     const id = capacityReservationId(request.build, request.command);
     return transaction(this.#database, () => {
       const dispatch = this.#database.prepare(`
@@ -683,57 +704,67 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
       `).get(request.build) as Row | undefined;
       assert(dispatch !== undefined && leaseMatches(dispatch, request.buildLease),
         `Dispatch ${request.build} lease is stale`);
-      const existing = this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row | undefined;
+      let existing = this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row | undefined;
+      if (existing === undefined) {
+        this.#database.prepare(`
+          INSERT INTO svml_capacity (
+            reservation_id, build_id, command_id, resources_json, queue_json, mode, in_flight,
+            active_owner, active_token, active_fence, active_expires_at, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 0, NULL, NULL, 0, NULL, ?, ?)
+        `).run(id, request.build, request.command, resourcesJson, queueJson, request.mode,
+          request.now, request.now);
+        existing = this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row;
+      }
+      assert(existing.build_id === request.build && existing.command_id === request.command
+        && existing.resources_json === resourcesJson && existing.queue_json === queueJson
+        && existing.mode === request.mode,
+      `Capacity reservation ${id} identity differs`);
       if (existing !== undefined && typeof existing.active_expires_at === "number" && existing.active_expires_at > request.now) {
-        return { status: "blocked", retryAt: existing.active_expires_at, reason: "lane-active" };
+        return { status: "blocked", retryAt: existing.active_expires_at, reason: "resource-active" };
       }
       const activeGlobal = this.#database.prepare(`
         SELECT COUNT(*) AS count FROM svml_capacity
         WHERE active_owner IS NOT NULL AND active_expires_at > ? AND reservation_id != ?
       `).get(request.now, id) as Row;
-      const activeLane = this.#database.prepare(`
-        SELECT COUNT(*) AS count FROM svml_capacity
-        WHERE lane = ? AND active_owner IS NOT NULL AND active_expires_at > ? AND reservation_id != ?
-      `).get(request.lane, request.now, id) as Row;
-      const inFlightLane = this.#database.prepare(`
-        SELECT COUNT(*) AS count FROM svml_capacity
-        WHERE lane = ? AND in_flight = 1 AND reservation_id != ?
-      `).get(request.lane, id) as Row;
-      assert(typeof activeGlobal.count === "number" && typeof activeLane.count === "number" && typeof inFlightLane.count === "number",
-        "SQLite Capacity counts are invalid");
+      assert(typeof activeGlobal.count === "number", "SQLite global Capacity count is invalid");
       const retryAtRow = this.#database.prepare(`
         SELECT MIN(active_expires_at) AS retry_at FROM svml_capacity
         WHERE active_owner IS NOT NULL AND active_expires_at > ?
       `).get(request.now) as Row;
       const retryAt = typeof retryAtRow.retry_at === "number" ? retryAtRow.retry_at : request.now + 100;
       if (activeGlobal.count >= request.limits.globalActive) return { status: "blocked", retryAt, reason: "global-active" };
-      if (activeLane.count >= request.limits.laneActive) return { status: "blocked", retryAt, reason: "lane-active" };
       const alreadyInFlight = existing?.in_flight === 1;
-      if (request.mode === "recoverable" && !alreadyInFlight && inFlightLane.count >= request.limits.laneInFlight) {
-        return { status: "blocked", retryAt, reason: "lane-in-flight" };
+      for (const resource of resources) {
+        const active = this.#database.prepare(`
+          SELECT COUNT(DISTINCT capacity.reservation_id) AS count
+          FROM svml_capacity AS capacity, json_each(capacity.resources_json) AS claim
+          WHERE json_extract(claim.value, '$.id') = ?
+            AND capacity.active_owner IS NOT NULL AND capacity.active_expires_at > ?
+            AND capacity.reservation_id != ?
+        `).get(resource.id, request.now, id) as Row;
+        const inFlight = this.#database.prepare(`
+          SELECT COUNT(DISTINCT capacity.reservation_id) AS count
+          FROM svml_capacity AS capacity, json_each(capacity.resources_json) AS claim
+          WHERE json_extract(claim.value, '$.id') = ?
+            AND capacity.in_flight = 1 AND capacity.reservation_id != ?
+        `).get(resource.id, id) as Row;
+        assert(typeof active.count === "number" && typeof inFlight.count === "number",
+          `SQLite Capacity counts for ${resource.id} are invalid`);
+        if (active.count >= resource.maxActive) {
+          return { status: "blocked", retryAt, reason: "resource-active", resource: resource.id };
+        }
+        if (request.mode === "recoverable" && !alreadyInFlight && inFlight.count >= resource.maxInFlight) {
+          return { status: "blocked", retryAt, reason: "resource-in-flight", resource: resource.id };
+        }
       }
       const fence = typeof existing?.active_fence === "number" ? existing.active_fence + 1 : 1;
-      if (existing === undefined) {
-        this.#database.prepare(`
-          INSERT INTO svml_capacity (
-            reservation_id, build_id, command_id, lane, mode, in_flight,
-            active_owner, active_token, active_fence, active_expires_at, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(id, request.build, request.command, request.lane, request.mode,
-          request.mode === "recoverable" ? 1 : 0,
-          request.owner, request.token, fence, request.now + request.leaseMs, request.now, request.now);
-      } else {
-        assert(existing.build_id === request.build && existing.command_id === request.command
-          && existing.lane === request.lane && existing.mode === request.mode,
-        `Capacity reservation ${id} identity differs`);
-        this.#database.prepare(`
-          UPDATE svml_capacity
-          SET in_flight = MAX(in_flight, ?), active_owner = ?, active_token = ?,
-              active_fence = ?, active_expires_at = ?, updated_at = ?
-          WHERE reservation_id = ?
-        `).run(request.mode === "recoverable" ? 1 : 0, request.owner, request.token,
-          fence, request.now + request.leaseMs, request.now, id);
-      }
+      this.#database.prepare(`
+        UPDATE svml_capacity
+        SET in_flight = MAX(in_flight, ?), active_owner = ?, active_token = ?,
+            active_fence = ?, active_expires_at = ?, updated_at = ?
+        WHERE reservation_id = ?
+      `).run(request.mode === "recoverable" ? 1 : 0, request.owner, request.token,
+        fence, request.now + request.leaseMs, request.now, id);
       return { status: "acquired", reservation: parseCapacityReservation(
         this.#database.prepare("SELECT * FROM svml_capacity WHERE reservation_id = ?").get(id) as Row,
       ) };
@@ -793,7 +824,7 @@ class SqliteBuildDispatchStore implements BuildDispatchStore {
 
 function parseCapacityReservation(row: Row): CapacityReservation {
   assert(typeof row.reservation_id === "string" && typeof row.build_id === "string"
-    && typeof row.command_id === "string" && typeof row.lane === "string" && typeof row.mode === "string",
+    && typeof row.command_id === "string" && typeof row.resources_json === "string" && typeof row.mode === "string",
   "SQLite Capacity row identity is invalid");
   assert(typeof row.in_flight === "number" && typeof row.created_at === "number" && typeof row.updated_at === "number",
     "SQLite Capacity row state is invalid");
@@ -808,7 +839,10 @@ function parseCapacityReservation(row: Row): CapacityReservation {
     id: row.reservation_id as Digest,
     build: row.build_id,
     command: row.command_id,
-    lane: row.lane,
+    resources: JSON.parse(row.resources_json) as CapacityReservation["resources"],
+    ...(typeof row.queue_json === "string"
+      ? { queue: JSON.parse(row.queue_json) as NonNullable<CapacityReservation["queue"]> }
+      : {}),
     mode: row.mode,
     inFlight: row.in_flight === 1,
     ...(active === undefined ? {} : { active }),
@@ -968,7 +1002,8 @@ export class SqliteRuntimeState {
         reservation_id TEXT PRIMARY KEY,
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
-        lane TEXT NOT NULL,
+        resources_json TEXT NOT NULL,
+        queue_json TEXT,
         mode TEXT NOT NULL CHECK (mode IN ('active', 'recoverable')),
         in_flight INTEGER NOT NULL CHECK (in_flight IN (0, 1)),
         active_owner TEXT,
@@ -979,7 +1014,7 @@ export class SqliteRuntimeState {
         updated_at INTEGER NOT NULL,
         UNIQUE (build_id, command_id)
       ) STRICT;
-      CREATE INDEX IF NOT EXISTS svml_capacity_lane ON svml_capacity (lane, in_flight, active_expires_at);
+      CREATE INDEX IF NOT EXISTS svml_capacity_state ON svml_capacity (in_flight, active_expires_at);
       CREATE TABLE IF NOT EXISTS svml_runtime_journal (
         sequence INTEGER PRIMARY KEY AUTOINCREMENT,
         at INTEGER NOT NULL,

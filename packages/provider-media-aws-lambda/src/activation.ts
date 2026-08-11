@@ -13,6 +13,7 @@ import type { CreateAwsLambdaMediaProviderOptions } from "./provider.js";
 const QUALIFIED_ARN = /^arn:aws(?:-[a-z]+)*:lambda:([a-z0-9-]+):\d{12}:function:[A-Za-z0-9-_]+:([A-Za-z0-9-_]+)$/u;
 
 function providerOptions(context: RuntimeAdapterFactoryContext): CreateAwsLambdaMediaProviderOptions {
+  if (context.authority === undefined) throw new Error("AWS Lambda media Provider Authority is required");
   const config = runtimeConfigObject(context.config, "AWS Lambda media");
   runtimeConfigExact(config, [
     "functionArn", "bucket", "prefix", "region", "defaultConcurrency",
@@ -40,7 +41,7 @@ function providerOptions(context: RuntimeAdapterFactoryContext): CreateAwsLambda
   const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "AWS Lambda defaultConcurrency");
   return {
     instance: context.instance,
-    ...(context.lane === undefined ? {} : { lane: context.lane }),
+    authority: context.authority,
     functionArn,
     bucket,
     ...(prefix === undefined ? {} : { prefix }),
