@@ -62,6 +62,9 @@ Implemented:
 - `@narratage/run-markup`: optional official `.svrun` Markup Frontend;
 - official compilation binds both Author Graph and Run Graph identities before deriving a finite
   BuildPlan; `plan` and `build` accept no hidden Target/Pin CLI intent;
+- each durable Build projects a deterministic Target execution slice, retaining selected and
+  promise-verifying primary Candidates while excluding unrelated Author modules, Records and Graph
+  branches from repeated BuildState verification;
 - Run-only Fragment Producer Modules extend a separately bound execution Program Closure without
   changing Author imports or Author Graph identity;
 - `@narratage/validation`: package-owned semantic validators and common Record admission;
@@ -102,12 +105,13 @@ Implemented:
   durable independently of optional `inspect` / `get --to` Host reads;
 - Host-only Build Catalog history and source output aliases through `builds`, `inspect` and
   `get --name`, without changing Core Build identity or Runtime Closure;
-- Runtime Adapter Host ABI `@1`: a required pure configuration validator is separate from
-  construction; `doctor` never calls adapter factories and suppresses dependent diagnostics after
-  one invalid configuration or failed prerequisite;
+- Runtime Adapter Host ABI `@1`: one pure Endpoint activation owns configuration, credentials,
+  prerequisites and the executable declaration; `doctor` evaluates it without executing handlers
+  and opens only the selected CredentialStore slice;
 - `doctor` read-only environment diagnostics for the current trusted adapters, filesystem streaming
-  Artifact transfer and explicit dry-run/apply reachability GC over every retained BuildState and
-  Operation;
+  Artifact transfer from author source through Provider execution, generic persisted Operation
+  progress, atomic managed-process lifecycle, and explicit dry-run/apply reachability GC over every
+  retained BuildState and Operation;
 - `@narratage/transport`, `@narratage/transport-aws-lambda`: capability-neutral
   invocation seams.
 

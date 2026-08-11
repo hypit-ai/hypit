@@ -224,8 +224,8 @@ export default async function createRuntime() {
 Pass either form to `--runtime`:
 
 ```bash
-pnpm narratage build build.svrun --runtime ./svml.runtime.json
-pnpm narratage build build.svrun --runtime ./svml.runtime.ts
+node --run narratage -- build build.svrun --runtime ./svml.runtime.json
+node --run narratage -- build build.svrun --runtime ./svml.runtime.ts
 ```
 
 Both forms describe the same explicit assembly. The TypeScript form is trusted embedding code, not
@@ -238,7 +238,7 @@ a source-language escape hatch or a place for author intent.
 Checks the Runtime Profile without running a Build or making paid requests:
 
 ```bash
-pnpm narratage doctor svml.runtime.json
+node --run narratage -- doctor svml.runtime.json
 ```
 
 Validates:
@@ -249,30 +249,45 @@ Validates:
 - Required executables (ffmpeg, ffprobe, chrome) are found
 - Declared external services are reachable and match the selected profile
 
-Runtime Adapter Host ABI `@1` separates a required pure configuration validator from the adapter
-factory. `doctor` never constructs an Endpoint or Store, starts a service, writes Runtime state or
-submits work. After configuration passes it may make bounded read-only environment probes. The first
-configuration or prerequisite failure for one instance suppresses diagnostics that merely result
-from that same failure.
+Runtime Adapter Host ABI `@1` gives each Endpoint one pure activation declaration. `doctor` evaluates
+that declaration and reads credentials, permissions and prerequisites from the resulting Endpoint
+package; there is no diagnostic-only credential mirror. Activation may construct handlers but may
+not resolve credentials, access the network, start a process or mutate durable state. `doctor` never
+constructs a Scheduler, Worker, Build Store or author package, starts a service, writes Runtime state
+or submits work. It opens only the CredentialStore adapters selected by the Profile, then closes
+them, and may run explicitly declared bounded read-only probes.
+
+### Credential control is not Runtime execution
+
+`auth status|login|logout <endpoint-instance>` constructs only that exact Endpoint declaration and
+the CredentialStores selected by the Profile. It does not open SQLite, start a Worker, load author
+packages or construct unrelated Providers. Logging into KIE therefore cannot be blocked by an old
+Build database or an unrelated Vertex configuration.
 
 ## Runtime lifecycle
 
 ```bash
-pnpm narratage runtime up svml.runtime.json
-pnpm narratage runtime status svml.runtime.json
-pnpm narratage runtime logs svml.runtime.json
-pnpm narratage runtime down svml.runtime.json
+node --run narratage -- runtime up svml.runtime.json
+node --run narratage -- runtime status svml.runtime.json
+node --run narratage -- runtime logs svml.runtime.json
+node --run narratage -- runtime down svml.runtime.json
 ```
 
 `runtime up` owns the detached Worker plus declared external programs. `services` remains a narrow
 expert command for those external programs only. A Build submission ensures the Runtime is up, but
 the Build terminal never owns execution.
 
+During the pre-release period SQLite execution schemas are intentionally not migrated in place.
+If a development database predates the selected Store implementation, the CLI names the exact path
+and asks the operator to archive that database (including its WAL companions) or select a new path.
+Artifact bytes live in the independently selected ArtifactStore and are never deleted by this
+refusal.
+
 ### gc (garbage collection)
 
 ```bash
-pnpm narratage gc svml.runtime.json            # dry-run
-pnpm narratage gc svml.runtime.json --apply     # delete unreachable Artifacts
+node --run narratage -- gc svml.runtime.json            # dry-run
+node --run narratage -- gc svml.runtime.json --apply     # delete unreachable Artifacts
 ```
 
 Walks every retained BuildState and Operation, computes reachable Artifact digests, and reports
@@ -286,13 +301,13 @@ Every Build archives all accepted Records and referenced Artifacts durably, inde
 ### List Builds
 
 ```bash
-pnpm narratage builds --runtime svml.runtime.json
+node --run narratage -- builds --runtime svml.runtime.json
 ```
 
 ### Inspect
 
 ```bash
-pnpm narratage inspect <build-id> --runtime svml.runtime.json
+node --run narratage -- inspect <build-id> --runtime svml.runtime.json
 ```
 
 Shows target bindings, demanded Logical Outputs, every accepted Record and Operation status.
@@ -301,19 +316,19 @@ Shows target bindings, demanded Logical Outputs, every accepted Record and Opera
 
 ```bash
 # By source output name
-pnpm narratage get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> --runtime svml.runtime.json \
   --name final.video --to output.mp4
 
 # By Record id
-pnpm narratage get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> --runtime svml.runtime.json \
   --record <record-id> --to output.json
 
 # By Logical Output id
-pnpm narratage get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> --runtime svml.runtime.json \
   --output <output-id>
 
 # By Artifact digest
-pnpm narratage get <build-id> --runtime svml.runtime.json \
+node --run narratage -- get <build-id> --runtime svml.runtime.json \
   --artifact <sha256:...> --to file.bin
 ```
 

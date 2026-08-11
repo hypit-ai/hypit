@@ -234,6 +234,14 @@ This permits all of the following without a special replacement rule:
 Pruning follows graph reachability only. A Product records common origin; it does not impose a
 `mustReplaceTogether` policy.
 
+The Author Program and realized Run Graph remain complete compilation products. One durable Build,
+however, carries only its exact **execution slice**: selected Target outputs, their explicitly
+selected Candidates, the primary Candidates required to verify those output promises, reachable
+Operations and authored Records, and the transitive module dependencies needed to validate that
+slice. Unrelated Tracks, renderers and schemas are not copied into every BuildState revision merely
+because the Author Source imported them. This is deterministic graph projection, not caching or a
+Runtime optimization, and it cannot change which Operations the BuildPlan demands.
+
 ## 6. Runtime and external capabilities
 
 The Runtime executes an already frozen plan. Its environment-neutral ports are:
@@ -309,8 +317,8 @@ identity, and only the Run Host validates and installs its Fragment exports. The
 special `runFragments` branch and does not interpret Run syntax.
 
 The reference local Host accepts `svml.runtime.json`. A separate `runtimePackageLock` selects
-physical packages whose verified `svml.runtime-adapter-host@1` facets may validate configuration and construct Endpoints and
-services. Exact `use` names resolve only inside that locked inventory. The Host rebinds each Runtime
+physical packages whose verified `svml.runtime-adapter-host@1` facets may activate Endpoint declarations and construct
+Runtime services. Exact `use` names resolve only inside that locked inventory. The Host rebinds each Runtime
 implementation identity to the package Artifact digest and that package's transitive dependency closure before
 resolving the Runtime Profile/Closure. The JSON contains non-secret configuration and credential
 references; executable `svml.runtime.ts` remains an advanced trusted embedding API.

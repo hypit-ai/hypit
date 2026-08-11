@@ -114,6 +114,41 @@ historical Records as zero-input Candidates and connect them through Satisfactio
 </svrun>
 ```
 
+### Finding reusable output
+
+Query an output name as it appeared in each historical Build's frozen Host Catalog:
+
+```bash
+node --run narratage -- history hook-take.video \
+  --runtime ./svml.runtime.json
+```
+
+`history` reports only public Logical Outputs that the Build actually selected and accepted. It
+does not list merely declared-but-unbuilt aliases or authored Record aliases that cannot back a
+`build-record` Candidate. If the old name is unknown, list accepted output names from Builds whose
+Catalog recorded an exact source path:
+
+```bash
+node --run narratage -- history --source ./main.svml \
+  --runtime ./svml.runtime.json
+```
+
+An output name is a human locator inside one immutable historical Catalog, not its identity. The
+historical Core Build, Logical Output and Record digests carry identity. If the current source
+renames `hook-take.video` to `opening-shot.video`, keep the old name on `<build-record>` and use the
+current name on `<satisfy>`:
+
+```svml
+<build-record id="approved-opening"
+  build="my-film-001" output="hook-take.video"/>
+<satisfy output="opening-shot.video"
+  candidate="approved-opening" fidelity="substitute"/>
+```
+
+Narratage never infers that two names mean the same author intent. A human-readable build-id such
+as `my-film-001` is supplied with `build --build-id`; omitting it uses the immutable compiled Core
+Build digest. Reusing one explicit build-id for different compiled Author or Run intent is rejected.
+
 ### build-record
 
 Declares a zero-input Candidate backed by a historical Record from a previous Build:
@@ -272,9 +307,11 @@ prevent one type of work from starving others.
 pnpm install
 ```
 
-This installs Node dependencies **and** prepares the Python services (WhisperX, OpenCV) that local
-Builds need. When `uv` is not on your PATH the Python step is skipped with a warning — install
-[uv](https://docs.astral.sh/uv/) first if you need local alignment or image processing.
+This installs only the JavaScript workspace. It does not download Python models or prepare every
+Provider found in the repository. `runtime up` / `services up` reads the selected Runtime Profile
+and prepares only the external programs its chosen Endpoints declare. Install
+[uv](https://docs.astral.sh/uv/) first only when that Profile selects a local Python service such as
+WhisperX or OpenCV.
 
 `narratage runtime up` starts the durable Worker and the external programs declared by the selected
 adapters. `build` also ensures that execution domain is running before it submits, but never owns
@@ -288,12 +325,12 @@ Author files do not have to live under this repository. For example, keep a proj
 ```bash
 cd /opt/narratage
 
-pnpm narratage lock-packages /work/my-film/svml.packages.lock \
+node --run narratage -- lock-packages /work/my-film/svml.packages.lock \
   --package @narratage/script \
   --package @narratage/estimate
 
-pnpm narratage plan /work/my-film/build.svrun \
-  --package-lock /work/my-film/svml.packages.lock
+node --run narratage -- plan /work/my-film/build.svrun \
+  --runtime /work/my-film/svml.runtime.json
 ```
 
 The Source Workspace defaults to the directory containing `build.svrun`; its relative Author
@@ -343,7 +380,7 @@ other than the CLI installation.
 ### 1. Diagnose the environment
 
 ```bash
-pnpm narratage doctor examples/talking-head-aroll/svml.runtime.json
+node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 ```
 
 Doctor validates both locks, every selected Runtime role, Endpoint configuration, credential
@@ -352,8 +389,8 @@ presence and bounded environment probes. It never starts the Worker or performs 
 ### 2. Inspect the plan
 
 ```bash
-pnpm narratage plan examples/talking-head-aroll/build.svrun \
-  --package-lock examples/talking-head-aroll/svml.packages.lock --root .
+node --run narratage -- plan examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json --root .
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
@@ -362,37 +399,49 @@ Scheduler would issue.
 ### 3. Submit the Build
 
 ```bash
-pnpm narratage build examples/talking-head-aroll/build.svrun \
+node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
   --root . \
   --build-id my-film-001 \
   --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
-`--follow`, the terminal is only an observer; interrupting it leaves the Build running.
+`--follow`, the terminal is only an observer; it reports durable phase/Operation-count changes and
+interrupting it leaves the Build running.
 
 | Flag | Description |
 |---|---|
 | `--runtime` | Path to the Runtime Profile |
-| `--package-lock` | Path to the package lock file |
+| `--package-lock` | Standalone compilation lock when no Runtime Profile is supplied; a JSON Profile single-sources it for `check`, `plan` and `build` |
 | `--package-root` | Host directory containing the installed packages named by the lock |
 | `--root` | Optional Source Workspace boundary; defaults to the entry Source directory |
 | `--build-id` | User-chosen identifier for this Build (used for retrieval and reuse) |
-| `--follow` | Stream Build progress to the terminal |
+| `--follow` | Wait for terminal state as an observer; durable execution remains with the Worker |
+
+Without `--build-id`, identity is derived from the compiled Author and Run intent: repeating the
+same command addresses the same durable Build and does not silently buy another generation. An
+unfinished Build continues from accepted Records and recoverable Endpoint checkpoints; a completed,
+failed or cancelled Build remains terminal and is only reported. Use a new explicit id when the same
+unchanged prompt intentionally needs another stochastic take. Reusing an explicit id for different
+compiled intent is rejected with both repair choices.
 
 ### 4. Retrieve results
 
 ```bash
-pnpm narratage get my-film-001 \
+node --run narratage -- get my-film-001 \
   --runtime examples/talking-head-aroll/svml.runtime.json \
   --name final.video \
   --to examples/talking-head-aroll/output/final.mp4
 ```
 
 Every accepted intermediate Record and Artifact is archived before the Build completes. `get` makes
-a copy of an already durable Record.
+a copy of an already durable Record. Blob Artifacts are streamed from the selected Store, checked
+against their declared size and SHA-256 digest, and only then atomically replace the destination;
+exporting a large MP4 does not buffer the complete file in CLI memory.
+
+The terminal Build result prints the exact `get --name …` command for every targeted source alias;
+there is no need to inspect opaque Record ids just to export `final.video`.
 
 ### 5. Reuse in a new Build
 
@@ -400,8 +449,7 @@ Create a new `.svrun` file that references the completed Build's Records (see [R
 above), then submit it:
 
 ```bash
-pnpm narratage build examples/talking-head-aroll/reuse-generated.svrun \
+node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --package-lock examples/talking-head-aroll/svml.packages.lock \
   --root . --build-id my-film-reuse-001 --follow
 ```

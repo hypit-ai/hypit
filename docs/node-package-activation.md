@@ -61,6 +61,39 @@ narratage lock-packages ./svml.packages.lock \
   --package-root .
 ```
 
+The command has one exact-selection form and three existing-lock forms:
+
+```bash
+# Exact selection: create or completely rebuild the lock.
+narratage lock-packages ./svml.packages.lock \
+  --package @example/cards --package @example/charts --package-root .
+
+# Atomic selection edit: both changes are resolved and written together.
+narratage lock-packages ./svml.packages.lock \
+  --add @example/maps --remove @example/charts --package-root .
+
+# Same selection, newly reviewed installed bytes.
+narratage lock-packages ./svml.packages.lock --refresh --package-root .
+
+# Read-only installed-closure verification.
+narratage lock-packages ./svml.packages.lock --verify --package-root .
+```
+
+Every write first owns one sibling `<lock>.editing` sentinel, so two local CLI processes cannot
+overwrite each other's selection edit. The writer then creates and syncs a complete temporary lock
+beside the destination and atomically renames it. A resolution, activation, validation, hashing or
+write failure cannot leave a truncated lock or partially apply a multi-package edit. A crashed
+writer may leave the human-readable sentinel behind; the next command names it instead of guessing
+that it is stale.
+
+`--add` and `--remove` edit only the direct `selected` roots. One physical traversal temporarily
+records which direct roots can reach each package and hashes every physical package once. Anything
+still reachable from a retained root is compared with the old lock before activation code runs;
+new closure may enter only through added roots, while a removed root's dependency remains when any
+retained root can still reach it. Root reachability is calculation state and is never serialized.
+Only `--refresh` and an exact repeated `--package` selection deliberately accept arbitrary current
+installed changes.
+
 Use it for compilation:
 
 ```bash
@@ -89,6 +122,11 @@ activation closure. The Loader has no knowledge of official package names and co
 catalogue. Lock creation may inspect activation entries inside the selected roots' already installed
 physical dependency closure to find the exact provider; ordinary loading executes only the
 contributions recorded in the verified lock.
+
+Selection editing belongs to the Node CLI Host, not the language Core. The Core receives only the
+resulting implementation-closure digest with a Build request. It neither knows package-manager
+names nor mutates locks. A different Host may implement the same contribution and closure protocol
+without Node or this command.
 
 Changing any selected package or dependency byte requires a new lock. A Source import never updates
 the lock and cannot download or activate a physical package.

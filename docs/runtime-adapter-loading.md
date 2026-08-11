@@ -31,13 +31,15 @@ Host facets with ABI `svml.runtime-adapter-host@1`. Each facet has only:
 
 - an exact `use` name;
 - kind `endpoint` or `runtime-service`;
-- a required pure validator over project root, instance, lane and closed canonical configuration;
-- a separately called factory over that same input;
-- an optional read-only doctor function.
+- for an Endpoint, one pure `activate()` declaration over project root, instance, lane and closed
+  canonical configuration;
+- for a Runtime service whose construction may mutate deployment state, a pure validator, a deferred
+  factory and an optional read-only doctor function.
 
-The Provider package owns translation from its configuration into an `EndpointPackage`. A Store
-package owns translation into a `RuntimeServicePackage`. The generic CLI and local Host know neither
-KIE nor FFmpeg nor S3.
+One Endpoint activation returns its `EndpointPackage`, optional diagnostics and optional external
+service lifecycle declaration. The Endpoint package itself is the only credential, permission,
+capability and scheduling source. A Store package owns translation into a `RuntimeServicePackage`.
+The generic CLI and local Host know neither KIE nor FFmpeg nor S3.
 
 ## 3. Identity and activation order
 
@@ -49,7 +51,7 @@ The Node Host performs these gates before execution:
 4. reject any lock/artifact/facet mismatch before importing activation code;
 5. install only valid Runtime Adapter Host facets;
 6. resolve every Profile `use` against that finite inventory;
-7. construct Endpoint and service packages;
+7. evaluate pure Endpoint activations and construct selected Runtime service packages;
 8. replace each declared Runtime facet digest with a digest over the physical package Artifact,
    that package's transitive dependency closure, adapter identity, facet name and declared digest;
 9. resolve permissions and the Runtime Closure;
@@ -71,13 +73,13 @@ absolute paths from checked-in configuration.
 narratage doctor ./svml.runtime.json
 ```
 
-Doctor is read-only. It verifies package bytes, calls the adapter's pure configuration validator,
-then asks a valid selected adapter to report missing credentials, executables or external-service
-health. A doctor hook may read environment variables, inspect executables, run a bounded local
-health check or issue a read-only remote probe such as S3 `HeadObject`; it may not write state,
-start a service or submit work. Doctor never calls the adapter factory, constructs an
-Endpoint/Store, submits a Provider job or executes a Build. One failed configuration gate or
-prerequisite suppresses dependent diagnostics for that instance.
+Doctor is read-only. It verifies package bytes and evaluates each selected Endpoint's pure activation
+once. Credentials, permissions, capabilities and external-service requirements come from that same
+activation used by execution, not a second diagnostic manifest. It constructs only the selected
+CredentialStore slice needed to resolve those exact references and never opens Build/Operation
+Stores. A diagnostic hook may read environment variables, inspect executables, run a bounded local
+health check or issue a read-only remote probe such as S3 `HeadObject`; it may not write state, start
+a service, submit a Provider job or execute a Build.
 
 ## 5. Artifact lifecycle
 
@@ -89,6 +91,11 @@ StreamingArtifactStore  putStream / open
 ManagedArtifactStore    list / delete
 EnumerableBuildStore    list verified Build snapshots
 ```
+
+`has()` is deliberately a cheap presence query (`stat`/`HeadObject`), not a hidden full download.
+`put`/`putStream` compute identity while admitting bytes; `get`/`open` verify identity while bytes
+cross the boundary. This keeps one integrity owner without reading a video twice merely to ask
+whether its key exists.
 
 The local filesystem implementation supports all three relevant capabilities. Explicit GC scans
 every retained BuildState and Operation for BlobRefs; all other stored digests are unreachable.

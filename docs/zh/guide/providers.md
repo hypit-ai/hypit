@@ -86,26 +86,20 @@ import { createMyServiceProvider } from "./provider.js";
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
 
-  validate(context) {
+  activate(context) {
     const config = runtimeConfigObject(context.config, "MyService");
     runtimeConfigExact(config, ["apiKey", "defaultConcurrency"], "MyService");
-    if (runtimeConfigCredentialRef(config.apiKey, "MyService apiKey") === undefined) {
-      throw new Error("MyService apiKey CredentialRef is required");
-    }
-    runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
-  },
-
-  create(context) {
-    const config = runtimeConfigObject(context.config, "MyService");
     const apiKey = runtimeConfigCredentialRef(config.apiKey, "MyService apiKey");
     if (apiKey === undefined) throw new Error("MyService apiKey CredentialRef is required");
-    return createMyServiceProvider({
-      instance: context.instance,
-      lane: context.lane,
-      apiKey,
-      ...(runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency") === undefined
-        ? {} : { defaultConcurrency: config.defaultConcurrency as number }),
-    });
+    const defaultConcurrency = runtimeConfigPositiveInteger(config.defaultConcurrency, "concurrency");
+    return {
+      endpoint: createMyServiceProvider({
+        instance: context.instance,
+        lane: context.lane,
+        apiKey,
+        ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
+      }),
+    };
   },
 });
 
@@ -118,8 +112,10 @@ export const svmlPackage = {
 export default svmlPackage;
 ```
 
-`validate` 是无副作用的纯校验；通过 Profile、lock 与权限校验后才会调用 `create`。凭据是否
-存在由通用 CredentialStore 与 Endpoint 描述路径诊断，Provider 不得硬编码环境变量 Store。
+`activate` 是唯一的纯部署声明。它返回的 Endpoint 同时拥有供 `doctor` 与执行使用的凭据引用、
+权限、capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；
+环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
+Provider 不得把环境变量硬编码成特殊的密钥 Store。
 
 ## 5. 声明外部服务（如需要）
 
@@ -142,18 +138,22 @@ export function createMyExternalService(): RuntimeExternalService {
 }
 ```
 
-在 activation 描述符中通过 `service` 参数接入：
+在同一个 activation 中把它与 Endpoint 一起返回：
 
 ```typescript
 const adapter = createRuntimeEndpointAdapterFacet({
   use: "@narratage/provider-my-service",
-  service: createMyExternalService,
-  // create, doctor …
+  activate(context) {
+    return {
+      endpoint: createMyServiceProvider(/* 已解析配置 */),
+      externalService: createMyExternalService(),
+    };
+  },
 });
 ```
 
-`narratage runtime up` 会准备、启动并探测外部程序，然后启动耐久 Worker。`build` 会确保
-Runtime 已运行。只调用远程 API 的 Provider 不声明 service。
+`narratage runtime up` 会准备、启动并探测外部程序，然后启动耐久 Worker。`build` 只启动
+所选 Producer steps 声明的 capability 所需服务。只调用远程 API 的 Provider 不声明 service。
 
 ## 6. 注册并锁定
 
@@ -166,10 +166,13 @@ Runtime 已运行。只调用远程 API 的 Provider 不声明 service。
 锁定进 Runtime 包锁文件：
 
 ```bash
-pnpm narratage lock-packages <runtime-lock> \
+node --run narratage -- lock-packages <runtime-lock> \
   --package @narratage/provider-my-service \
   --package-root .
 ```
+
+如果 Runtime 包锁已经存在，改用 `--add @narratage/provider-my-service`。这一步只改变本地
+信任选择；在 Runtime Profile 用 `use` 显式实例化之前，这个包仍然不会运行。
 
 ## 7. 在 svml.runtime.json 中引用
 
@@ -195,7 +198,7 @@ pnpm narratage lock-packages <runtime-lock> \
 验证配置：
 
 ```bash
-pnpm narratage doctor svml.runtime.json
+node --run narratage -- doctor svml.runtime.json
 ```
 
 ## 可供研究的现有 Provider
