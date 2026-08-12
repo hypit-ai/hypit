@@ -209,38 +209,6 @@ Target 与实现。Core 只负责解析、校验并推进由此得到的状态�
 
 规范性的最小法则见 [Core Kernel 规范](./spec/core-kernel.md)。
 
-## 不改 Core 也能扩展
-
-包可以各自独立地贡献：
-
-- 面向作者的 Surface 及其图下降；
-- 与其他包共享的类型化契约；
-- 确定性的计算 Operation；
-- 本地或远程的 Provider Endpoint；
-- Scheduler、凭据 Store 或 Artifact Store 的实现。
-
-Core 不维护视频模型、Track 或 Provider 的中央名单。已安装的包之间通过名义类型与显式的图边通信。
-
-按你要做的事选择指南：
-
-- [创作一支视频](https://narratage.hypit.ai/zh/quickstart)
-- [理解包的边界](https://narratage.hypit.ai/zh/guide/packages)
-- [添加一个 Author 包](https://narratage.hypit.ai/zh/guide/author-packages)
-- [添加一个 Provider](https://narratage.hypit.ai/zh/guide/providers)
-- [配置 Runtime Profile](https://narratage.hypit.ai/zh/guide/runtime-profile)
-- [开发 Narratage 本身](https://narratage.hypit.ai/zh/guide/develop)
-
-## 仓库结构
-
-```text
-packages/   Core、编译器、Runtime、视频包与 Provider 适配器
-services/   WhisperX、OpenCV 等本地外部程序
-examples/   可检查的源码与完整的 Runtime 示例
-docs/       narratage.hypit.ai 文档站点的源码
-spec/       规范性的协议与视频包契约
-tools/      仓库检查与专用开发工具
-```
-
 ## 开发
 
 下面的命令用于修改 Narratage 本身，不是用来做视频的：
