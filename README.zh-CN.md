@@ -18,8 +18,6 @@ Narratage 是一套面向 AI 视频创作的语义化、图原生系统。你写
 
 SVML 是创作语言，Narratage 是围绕它的编译器、运行时与包生态。
 
-Narratage 目前从源码仓库运行，npm 包与 CLI 尚未发布。
-
 ## 它写起来是什么样
 
 Script 始终是可读的散文。Segment 组织故事，Role Cue 指明谁在说话，Dual Text 把观众看到的文字与说话者
