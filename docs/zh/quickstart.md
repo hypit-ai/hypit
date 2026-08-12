@@ -1,104 +1,187 @@
 ---
-title: Quickstart
-description: 搭建 Narratage 并编译你的第一张视频图。
+title: 快速开始
+description: 安装 Narratage，编译第一张完整的 SVML 视频图，并准备真实 Build。
 ---
 
-# Quickstart
+# 快速开始
 
-**Narratage** 这个名字来自 1933 年《*New York Times*》对电影《*The Power and the
-Glory*》的一篇影评。那位影评人造出这个词，用来描述当时的一种新兴电影手法：
-**Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
+Narratage 把 SVML 作者源码编译成一张可见的执行图。在任何模型或外部服务开始工作之前，
+你可以先检查源码、选择一次 Run，并看清这次 Build 究竟需要执行什么。
 
-这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
-文字与音频组装成一部完成的影片。Author Source 使用 SVML（Semantic Video Markup Language）编写，
-扩展名为 `.svml`。
+本页先带你得到第一份安全的 Plan：不需要 API Key，也不会产生任何付费请求。
 
-## 选择开始方式
+## 1. 安装源码工作区
 
-### 使用 Narratage skill
-
-将以下指令发送给你的 Agent：
-
-```text
-安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
-实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
-```
-
-### 手动开始
-
-从[安装](#安装)继续，然后按顺序阅读七篇指南。
-
-## 安装
-
-源码工作区需要 Node.js 22+，并通过 Corepack 使用 pnpm 10.33.x。以下命令在 macOS/Linux
-Shell 与 Windows PowerShell 中相同：
-
-部分较新的 Node.js 发行版不再自带 Corepack。如果 `corepack --version` 不可用，先在任一
-Shell 中安装兼容版本：
-
-```text
-npm install --global corepack@0.34.5
-```
+Narratage 目前从源码仓库运行，需要 Node.js 22+，并通过 Corepack 使用 pnpm 10.33.x。
 
 ```bash
+git clone https://github.com/hypit-ai/narratage.git
+cd narratage
+corepack enable
+pnpm install --frozen-lockfile
+```
+
+如果系统没有 `corepack`：
+
+```bash
+npm install --global corepack@0.34.5
 corepack enable
 corepack prepare pnpm@10.33.0 --activate
 pnpm install --frozen-lockfile
-pnpm check
-pnpm test
 ```
 
-本地媒体处理还要求 `ffmpeg` 与 `ffprobe` 位于 `PATH`。Python 是可选依赖：只有 Runtime
-Profile 选择本地 WhisperX 或 OpenCV 时，才需要 Python 3.10–3.13 与
-[`uv`](https://docs.astral.sh/uv/)。在任一 Shell 中按锁定环境准备：
+`pnpm check` 和 `pnpm test` 是修改 Narratage 本身时使用的整仓检查。第一次使用 CLI
+不需要先跑完整测试。
+
+## 2. 编译示例
+
+仓库里的示例包含 Script、两次视频生成需求、Speech Spine、WhisperX 对齐、字幕、Media Track、
+文字、Film 与最终渲染。
+
+```bash
+node --run narratage -- check examples/talking-film-graph-check/main.svml \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock \
+  --root .
+```
+
+`check` 会读取自描述的源码，只加载锁中允许的包，并列出这份 Author Source 声明的公共类型化输出。
+
+接着编译 Run Source：
+
+```bash
+node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
+  --package-lock examples/talking-film-graph-check/svml.packages.lock \
+  --root .
+```
+
+`plan` 会连接 Author Graph 和 Run Graph，从 `final.video` 反向找到真正需要的子图，冻结将要使用的
+Operations 与外部 Needs。它绝不会启动 Provider。
+
+现在可以直接打开三份源码阅读：
+
+- [`main.svml`](https://github.com/hypit-ai/narratage/blob/main/examples/talking-film-graph-check/main.svml)：视频本身；
+- [`studio.svs`](https://github.com/hypit-ai/narratage/blob/main/examples/talking-film-graph-check/studio.svs)：可复用的视觉 Recipe；
+- [`build.svrun`](https://github.com/hypit-ai/narratage/blob/main/examples/talking-film-graph-check/build.svrun)：这次要求得到的输出。
+
+## 3. 认识项目里的文件
+
+一个实际视频项目通常有四份由人编写或配置的输入，以及两份自动生成的锁：
+
+| 文件 | 回答的问题 |
+|---|---|
+| `main.svml` | 要做的是什么视频？ |
+| `studio.svs` | 使用哪些可复用的 Recipe 值？ |
+| `build.svrun` | 这一次 Run 要哪些输出、选择哪些 Candidate？ |
+| `svml.runtime.json` | 在哪台机器、哪些 Store 和 Provider Endpoint 上执行？ |
+| `svml.packages.lock` | 允许使用哪些 Author/Compute 包字节？ |
+| `svml.runtime-packages.lock` | 允许使用哪些特权 Runtime 包字节？ |
+
+最短的记法是：
 
 ```text
+SVML 说明做什么。
+SVRUN 说明这次选什么。
+Runtime Profile 说明在哪里做。
+```
+
+同一个 `main.svml` 可以对应很多份 `.svrun`：单独生成图片、渲染成片，或者复用已经认可的镜头，
+都不需要修改作者对视频本身的表达。
+
+## 4. 建立自己的项目
+
+把视频项目和生成产物放在 Narratage 仓库之外。在项目目录里直接调用源码仓库提供的轻量启动器：
+
+```bash
+cd /path/to/my-video
+
+/path/to/narratage/narratage packages sync build.svrun \
+  --runtime svml.runtime.json --root .
+
+/path/to/narratage/narratage doctor svml.runtime.json
+/path/to/narratage/narratage check main.svml \
+  --runtime svml.runtime.json --root .
+/path/to/narratage/narratage plan build.svrun \
+  --runtime svml.runtime.json --root .
+```
+
+启动器使用 Narratage 仓库已经安装好的依赖，但源码、SQLite 状态、Artifact 和输出都会留在你的项目里。
+`packages sync` 根据 Run 闭包里的 imports 和 Runtime Profile 选择的 Adapter 生成两份包锁。
+
+需要完整 Runtime Profile 时，从
+[`examples/talking-film-live`](https://github.com/hypit-ai/narratage/tree/main/examples/talking-film-live) 的结构开始：复制文件结构，
+再换成自己的素材、Script、模型选择和凭据。
+
+## 5. Build 并取出结果
+
+在 `doctor`、`check` 和 `plan` 全部通过之后：
+
+```bash
+/path/to/narratage/narratage build build.svrun \
+  --runtime svml.runtime.json \
+  --build-id my-video-001 \
+  --follow
+```
+
+`build` 会持久化这次 Build、确保对应 Worker 可用，并只启动所选 Endpoint 声明的外部程序。
+`--follow` 只是观察器；关掉它不会停止 Build。
+
+```bash
+/path/to/narratage/narratage status my-video-001 \
+  --runtime svml.runtime.json
+
+/path/to/narratage/narratage queue \
+  --runtime svml.runtime.json --watch
+
+/path/to/narratage/narratage get my-video-001 \
+  --runtime svml.runtime.json \
+  --name final.video \
+  --to output/final.mp4
+```
+
+Runtime 会归档所有已经接受的中间 Record 和媒体。`get` 只负责把某个归档结果复制到便于人查看的位置，
+不会决定哪些中间结果应该被保存。
+
+## 真实 Build 可能使用的本地工具
+
+只安装当前 Runtime Profile 真正选择的部分：
+
+| 工具 | 什么时候需要 |
+|---|---|
+| `ffmpeg` / `ffprobe` | 使用本地媒体检查、归一化或 mux 时 |
+| Python 3.10–3.13 与 `uv` | 使用本地 WhisperX 或 OpenCV 时 |
+| Chromium | 本地 HyperFrames 渲染时由 Adapter 管理 |
+| API 凭据 | 选择 KIE、Vertex、Xiaomi 或 AWS Endpoint 时 |
+
+准备本地 Python 服务：
+
+```bash
 uv python install 3.13
 uv sync --project services/whisperx --frozen
 uv sync --project services/image-opencv --frozen
 uv run --project services/whisperx --frozen svml-whisperx-prepare
 ```
 
-在源码仓库内可使用 `node --run narratage -- ...`。仓库外的视频项目直接执行
-`/path/to/narratage/narratage ... --package-root /path/to/narratage`；这个轻量入口不再启动 pnpm，源码、
-SQLite、Artifact 和输出仍全部留在外部项目的 Runtime Profile root 下。
+修改 Runtime Profile 后运行 `narratage doctor svml.runtime.json`。它会报告缺少的工具、凭据和
+Endpoint 配置，但不会执行作者图。
 
-## 三份输入
+## 接下来读什么
 
-每一次 Build 都接受三份彼此独立的输入：
+可以按顺序理解完整创作路径，也可以直接进入正在修改的部分：
 
-| 输入 | 各自负责什么 | 典型文件 |
-|---|---|---|
-| **Author Source** | 口播稿、模型选择、轨道构成、输出图 | `.svml` |
-| **Run Source** | 要产出哪些输出、备选 candidates、satisfaction edges | `.svrun` |
-| **Runtime Profile** | endpoints、凭据、并发 | `svml.runtime.json` |
-
-Author Source 说明*做什么*。Run Source 说明*要哪些*。Runtime Profile 说明*在哪里做*。
-
-## 第一次图检查
-
-`talking-film-graph-check` 示例会编译一张完整的视频图 —— Script、Seedance、Speech、
-WhisperX、Gemini Caption、B-roll、Text、Film、HyperFrames —— 全程不调用任何外部服务。
-
-```bash
-node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
-
-node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
-```
-
-`check` 产出带类型的 Author Graph。`plan` 绑定 Author Graph 与 Run Graph，解析 Targets，
-并输出冻结的 BuildPlan —— 其中包含 Scheduler 将会发出的每一个 Operation 与 Needs。花钱之前先检查它。
-
-## 指南目录
-
-| 指南 | 主题 |
+| 指南 | 你会学到什么 |
 |---|---|
-| [Script](./quickstart/script.md) | Segment、Role Cue、Dual Text、Selection、Moment、文字投影 |
-| [SVS 样式表](./quickstart/styles.md) | CSS 风格的 Recipe：film、caption、B-roll、text、speech、字体 |
-| [媒体与生成](./quickstart/generation.md) | media:Image、media:Audio、estimate:Speech、Text Template、Seedance |
-| [时序与装配](./quickstart/timing.md) | speech:Spine、whisperx:Alignment、ProgramSpace、SemanticMap |
-| [字幕、Media、文字与音频](./quickstart/tracks.md) | Caption、Media、Typography 与 Audio Track 作者语法 |
-| [Film 与渲染](./quickstart/composition.md) | film:Film、render:Video、完整流水线演练 |
-| [Run Source 与 Build](./quickstart/run.md) | .svrun 语法、targets、复用、runtime profile、build 工作流 |
+| [Script](./quickstart/script.md) | Segment、说话人、Dual Text、Selection 与 Moment |
+| [SVS 样式表](./quickstart/styles.md) | 字幕、Media、文字与 Film 的可复用 Recipe |
+| [媒体与生成](./quickstart/generation.md) | 图片、音频、Prompt Text 与显式模型组件 |
+| [时序与装配](./quickstart/timing.md) | Speech Spine、WhisperX、ProgramSpace 与 SemanticMap |
+| [Tracks](./quickstart/tracks.md) | Caption、Media、Typography 与 Audio Track |
+| [Film 与渲染](./quickstart/composition.md) | 平级 Track 合成与显式渲染 |
+| [Run Source 与 Builds](./quickstart/run.md) | Targets、复用、Runtime Profile、Build 与取回结果 |
+
+如果使用编程 Agent，可以要求它使用仓库中的 `narratage` skill。Skill 遵循的仍然是同一套文件和命令，
+不会创造另一套工作流。
+
+## 名字的由来
+
+*Narratage* 原本描述的是“叙述驱动的蒙太奇”：声音负责推动故事，画面围绕叙述组接。
+这也是本项目最初的视频形态——文字是语义主轴，所有视觉内容以彼此平级的 Track 参与作品。

@@ -72,7 +72,7 @@ test("source distribution outside the mounted documentation contains no customer
 
 test("source distribution outside the mounted documentation contains no retired project identities", async () => {
   const retired = new RegExp(
-    String.raw`\b\x74\x77\x69\x6e\x69\x74\b|\b\x68\x79\x70\x69\x74\b|\b\x6d\x65\x67\x6e\x65\x74\x61\b`,
+    String.raw`\b\x74\x77\x69\x6e\x69\x74\b|\b\x6d\x65\x67\x6e\x65\x74\x61\b`,
     "giu",
   );
   const failures = [];

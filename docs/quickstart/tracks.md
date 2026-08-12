@@ -5,10 +5,6 @@ description: Peer track components — captions, media, typography and authored 
 
 # Caption, Media, Typography & Audio
 
-> **Pre-release note:** Caption Fine, Media Track, Typography Track and Audio Track execute their declared author Surfaces.
-> Their author APIs may still evolve; the shared terminal Track/Visual IR waist is frozen inside the
-> repository but has not been published as an npm ABI.
-
 Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
 (no nesting), and visual z-order is determined by the `stack-order` property in SVS. This page
 covers Caption, Media, Typography and Audio Track authoring.
