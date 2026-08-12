@@ -71,7 +71,7 @@ SQLite、Artifact 和输出仍全部留在外部项目的 Runtime Profile root �
 |---|---|---|
 | **Author Source** | 口播稿、模型选择、轨道构成、输出图 | `.svml` |
 | **Run Source** | 要产出哪些输出、备选 candidates、satisfaction edges | `.svrun` |
-| **Runtime Profile** | endpoints、凭据、并发、权限 | `svml.runtime.json` |
+| **Runtime Profile** | endpoints、凭据、并发 | `svml.runtime.json` |
 
 Author Source 说明*做什么*。Run Source 说明*要哪些*。Runtime Profile 说明*在哪里做*。
 

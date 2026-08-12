@@ -189,7 +189,7 @@ packages/example/
 
 一个物理包可以暴露多个可独立 activate 的 facet：
 
-| Facet | ABI | 权限 | 由谁选择 |
+| Facet | ABI | 能力边界 | 由谁选择 |
 |---|---|---|---|
 | `static` | Manifest 与身份 | 无 | 加载后始终可用 |
 | `author` | Frontend、Surface、Graph Fragment | 仅作者词汇 | 源码中的 `<import>`，经由编译器 Host |
@@ -216,7 +216,7 @@ SVML 使用按字节锁定的受信任代码执行。加载器会记录每个包
 }
 ```
 
-两个相互独立的 lock 闭包服务于不同的权限范围：
+两个相互独立的 lock 闭包服务于不同的信任范围：
 
 | Lock 文件 | 包含内容 | 身份范围 |
 |---|---|---|

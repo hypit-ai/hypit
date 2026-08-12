@@ -231,11 +231,9 @@ Build Target，也可以直接接到媒体裁切、音频/帧提取或模型参�
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="exact"/>
-  </target-set>
+  <target output="final.video"/>
 </svrun>
 ```
 

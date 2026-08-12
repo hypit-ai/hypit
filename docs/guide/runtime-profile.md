@@ -6,7 +6,7 @@ description: Configuring where Builds execute, diagnostics and Build archive.
 # Runtime Profile
 
 The Runtime Profile declares *where* a frozen Build executes: the Scheduler and Worker, all durable
-Stores, Endpoints, credentials, concurrency and permissions. It is deployment configuration, not
+Stores, Endpoints, credentials and concurrency. It is deployment configuration, not
 creative content—it never enters Author or Run graph identity.
 
 Two forms are supported:
@@ -45,7 +45,6 @@ Two forms are supported:
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.production",
-      "authority": "kie.production",
       "config": {
         "apiKey": { "store": "keychain", "key": "kie.api-key" },
         "defaultConcurrency": 2
@@ -54,19 +53,16 @@ Two forms are supported:
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.local",
-      "authority": "media.local",
       "config": { "defaultConcurrency": 2 }
     },
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.local",
-      "authority": "whisperx.local",
       "config": { "defaultConcurrency": 1 }
     },
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.local",
-      "authority": "vertex.local",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "keychain", "key": "google.vertex-json" },
@@ -76,20 +72,8 @@ Two forms are supported:
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.local",
-      "authority": "hyperframes.local",
       "config": { "workers": 2, "quality": "standard", "defaultConcurrency": 1 }
     }
-  ],
-  "permissions": [
-    "process:keychain",
-    "filesystem:artifacts",
-    "filesystem:state",
-    "filesystem:whisperx-staging",
-    "network:aiplatform.googleapis.com",
-    "network:api.kie.ai",
-    "network:whisperx-loopback",
-    "process:hyperframes",
-    "process:media"
   ],
   "scheduling": { "maxConcurrency": 4 }
 }
@@ -101,7 +85,7 @@ Two forms are supported:
 |---|---|
 | `use` | Adapter name, resolved from `runtimePackageLock` |
 | `instance` | Unique identifier for this Endpoint instance |
-| `authority` | Stable non-secret identity of the account, deployment or compute pool whose limits are shared |
+| `authority` | Optional shared account/compute-pool identity; omitted instances use their own `instance` id |
 | `config` | Adapter-specific non-secret configuration, CredentialRefs, concurrency and timeouts |
 
 Credentials are addressed as `{ "store": "…", "key": "…" }`; secret bytes never enter the
@@ -135,13 +119,12 @@ packages contribute an Authority resource and an exact capability Route resource
 acquires both atomically. Optional `resources` overrides address those opaque ids. Capacity tickets
 are durable and fenced by the Build lease rather than process-local counters.
 
-### Permissions
+### Trust boundary
 
-Each permission string grants one specific authority to the locked Endpoints:
-
-- `network:<host>` — outbound HTTP to that host
-- `filesystem:<scope>` — file access within a named scope
-- `process:<name>` — local process execution
+Runtime packages currently execute as trusted local code. Narratage does not pretend that a string
+allowlist can restrict Node code that shares the Host process. Arbitrary community runtime packages
+must wait for a real process/Wasm isolation boundary with enforceable filesystem, network, process
+and resource controls.
 
 ## Executable TypeScript
 
@@ -201,10 +184,6 @@ export default async function createRuntime() {
       },
     },
     endpoints,
-    allowedPermissions: [
-      "environment:credentials", "filesystem:artifacts", "filesystem:state",
-      ...endpoints.flatMap(e => e.manifest.facets.flatMap(f => f.permissions)),
-    ],
     scheduling: {
       maxConcurrency: 4,
     },
@@ -241,7 +220,7 @@ Validates:
 - Declared external services are reachable and match the selected profile
 
 Runtime Adapter Host ABI `@1` gives each Endpoint one pure activation declaration. `doctor` evaluates
-that declaration and reads credentials, permissions and prerequisites from the resulting Endpoint
+that declaration and reads credentials and prerequisites from the resulting Endpoint
 package; there is no diagnostic-only credential mirror. Activation may construct handlers but may
 not resolve credentials, access the network, start a process or mutate durable state. `doctor` never
 constructs a Scheduler, Worker, Build Store or author package, starts a service, writes Runtime state

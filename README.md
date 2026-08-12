@@ -43,8 +43,8 @@ There is no privileged final-video root. Any public Logical Output can be a Targ
 
 - A **Logical Output** is an author-visible typed result promise.
 - A **Candidate** is an independent typed supply backed by a Provided Value or Operation result.
-- A **Satisfaction** explicitly connects a Candidate to a Logical Output as `exact` or
-  `substitute`.
+- A **Satisfaction** explicitly connects one compatible Candidate to a Logical Output. Core does
+  not attach creative labels such as `exact`, `substitute` or `pin` to that edge.
 - A **Target** says which outputs this Build requires.
 - An **Operation** is one atomic execution instance. Shared identity means one execution; separate
   instances execute separately even when their parameters match.
@@ -119,11 +119,14 @@ in a completely separate directory, invoke the checkout's lightweight launcher f
 
 ```bash
 cd /path/to/my-video
-/path/to/svml/narratage check main.svml \
-  --package-lock svml.packages.lock --package-root /path/to/svml --root .
+/path/to/svml/narratage packages sync build.svrun \
+  --runtime svml.runtime.json --root .
+/path/to/svml/narratage check main.svml --runtime svml.runtime.json --root .
+/path/to/svml/narratage plan build.svrun --runtime svml.runtime.json --root .
 ```
 
-The launcher does not run pnpm and does not move source, state or outputs into this repository.
+The Runtime Profile may point `packageRoot` at this checkout during source development. The launcher
+does not run pnpm and does not move source, state or outputs into this repository.
 
 The live example uses an explicit Run Graph, declarative local Runtime Profile and external
 credentials:

@@ -1,11 +1,13 @@
 # Durable Runtime and Build workflow
 
-Read `docs/quickstart/run.md` as the authority for Run Source, Target, fidelity, Runtime Profile,
+Read `docs/quickstart/run.md` as the authority for Run Source, Target, Candidate, Runtime Profile,
 Build, retrieval, and reuse syntax. Use this file as the operational checklist.
 
 ## Execute the lifecycle
 
 ```bash
+node --run narratage -- packages sync path/to/build.svrun \
+  --runtime path/to/svml.runtime.json --root .
 node --run narratage -- doctor path/to/svml.runtime.json
 node --run narratage -- runtime up path/to/svml.runtime.json
 node --run narratage -- runtime status path/to/svml.runtime.json
@@ -39,8 +41,9 @@ durable Builds and does not cancel remote Provider work.
   terminal does not stop the Build.
 - `inspect` reads durable Build state and accepted Records. `get` copies an archived Artifact to the
   requested destination.
-- There is no implicit cache. Pin and reuse Records through a new `.svrun` containing `build-record`
-  and `satisfy`, with the target accepting the resulting fidelity.
+- There is no implicit cache or Pin state. Reuse Records through a new `.svrun` containing
+  `build-record` and `satisfy`; the Candidate supplies the exact nominal Type required by the
+  current Logical Output.
 
 ## Keep project and package boundaries distinct
 
