@@ -5,11 +5,32 @@ description: Install Narratage, compile a complete SVML video graph, and prepare
 
 # Quickstart
 
-Narratage turns an SVML (Semantic Video Markup Language) author source — a `.svml` file — into a
-visible execution graph. Before any model or external service runs, you can check the source, choose
-a Run, and inspect the exact work it would require.
+The name **Narratage** comes from a 1933 *New York Times* review of the film *The Power and the
+Glory*. The critic coined the word to describe a then-new cinematic technique:
+**Narration + Montage** — a narrator's voice carries the story forward while the screen assembles
+a montage of scenes to match.
 
-This page gets you to that first safe plan. It does not need API keys and does not make a paid call.
+That is exactly what this system does. The author writes a narrated Script with semantic anchors,
+and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
+Words are the semantic spine; visual contributions remain independently authored Tracks. Author
+Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml` extension.
+
+Narratage turns that source into a visible execution graph. Before any model or external service
+runs, you can check the source, choose a Run, and inspect the exact work it would require. This
+page gets you to that first safe plan: it needs no API keys and makes no paid call.
+
+## Use the Narratage skill
+
+If you use a coding agent, ask it to use the repository's `narratage` skill. The skill follows the
+same files and commands; it does not introduce a separate workflow. Send it this:
+
+```text
+Install and use the narratage skill from this repository. Set up my environment, ask for only the
+API keys required by my Runtime Profile, and guide me through authoring and building my first SVML
+video.
+```
+
+Otherwise, work through the five steps below.
 
 ## 1. Install the source workspace
 
@@ -181,20 +202,3 @@ Follow the authoring path in order, or jump directly to the part you are changin
 | [Film & Rendering](./quickstart/composition.md) | Peer Track composition and explicit rendering |
 | [Run Source & Builds](./quickstart/run.md) | Targets, reuse, Runtime Profiles, Builds and retrieval |
 
-If you use a coding agent, ask it to use the repository's `narratage` skill. The skill follows the
-same files and commands; it does not introduce a separate workflow.
-
-Send it this:
-
-```text
-Install and use the narratage skill from this repository. Install the whole
-.agents/skills/narratage folder, not only SKILL.md. Set up my environment, ask for only the API
-keys required by my Runtime Profile, and guide me through authoring and building my first SVML
-video.
-```
-
-## Why the name
-
-*Narratage* was coined for narration-driven montage: the narration carries the story while images
-assemble around it. That is the original video form behind this project—words are the semantic
-spine, and visual contributions remain independently authored Tracks.
