@@ -5,5 +5,4 @@ and deterministic two-frame content fitting. It owns no timing, Paint, motion, m
 renderer, Provider or Core behavior.
 
 The package exposes self-described `Canvas`, `Point`, `Path`, `Extent`, `Frame`, `AnchoredFrame` and
-`AspectFrame` author Surfaces plus pure geometry functions and fixed-port Producers. See
-[Shared Spatial Layout](https://narratage.hypit.ai/guide/spec/spatial-layout).
+`AspectFrame` author Surfaces plus pure geometry functions and fixed-port Producers.
