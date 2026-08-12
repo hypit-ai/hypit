@@ -113,13 +113,15 @@ export default svmlPackage;
 
 `specifiers` 数组列出了 `<import from="..."/>` 会去匹配的字符串。`surface` 字符串决定 XML 元素前缀（以 `mine` 导入时即为 `<mine:my-widget>`）。
 
-## 6. 在 tsconfig.json 中注册
-
-添加路径映射，让 TypeScript 把 `@narratage/my-component` 解析到源码：
+## 6. 声明包依赖
 
 ```json
-"@narratage/my-component": ["packages/my-component/src/index.ts"]
+"dependencies": {
+  "@narratage/protocol": "workspace:*"
+}
 ```
+
+pnpm 工作区链接负责解析包，不需要根路径注册表。
 
 ## 7. 安装并锁定
 

@@ -3,8 +3,7 @@
 Node runtime for executing Core commands without adding workflow semantics to Core.
 
 Its Manifest helpers only read Node filesystem paths and construct a verified Closure. Pure static
-Manifest JSON parsing belongs to `@narratage/protocol` and is re-exported here temporarily for callers of
-the prototype API.
+Manifest JSON parsing belongs to `@narratage/protocol`.
 
 - `ProducerRegistry` implements the host-neutral `@narratage/component-kit` Producer registrar. Deterministic
   component packages depend on that tiny structural port, not on this Node Driver.

@@ -98,19 +98,5 @@ The stack outputs an immutable function-version ARN and a complete JSON Endpoint
 function and Layer versions are retained across updates so a recorded Runtime Profile never changes
 meaning because a newer deployment happened.
 
-## Live canary
-
-The current deployed canary generates a one-second local fixture and runs the original five remote
-media operations: inspect/normalize, speech-evidence projection, timeline audio and mux. The three
-newer utility operations use the same tested handler but still need to be added to the live canary
-before all eight can be claimed as remotely witnessed. Its S3 prefix is isolated and removed after
-success or failure unless `NARRATAGE_MEDIA_CANARY_KEEP=1`.
-
-```bash
-export NARRATAGE_MEDIA_FUNCTION_ARN=arn:aws:lambda:us-east-1:123456789012:function:narratage-media-dev:1
-export NARRATAGE_MEDIA_ARTIFACT_BUCKET=narratage-artifacts-123456789012
-pnpm --filter @narratage/media-lambda canary
-```
-
 No paid AWS deployment runs in the normal test suite. The handler tests execute the real shared
 media implementation with local FFmpeg and an in-memory object store.

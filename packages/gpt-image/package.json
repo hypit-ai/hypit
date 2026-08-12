@@ -18,5 +18,16 @@
     "@narratage/model-kit": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/text": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/core": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/narrative": "workspace:*",
+    "@narratage/program-space": "workspace:*",
+    "@narratage/raster": "workspace:*",
+    "@narratage/run": "workspace:*",
+    "@narratage/seedance": "workspace:*",
+    "@narratage/spatial": "workspace:*",
+    "@narratage/speech": "workspace:*"
   }
 }

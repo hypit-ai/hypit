@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { spatialComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { compositionTypes, sealComposition, sealVisualTrack } from "@narratage/composition";
 import { computeModuleDigest, createResolvedClosure, sealBuildRequest, start } from "@narratage/core";

@@ -9,6 +9,7 @@
   "dependencies": {
     "@narratage/media": "workspace:*",
     "@narratage/media-pipeline": "workspace:*",
+    "@narratage/program-space": "workspace:*",
     "@narratage/protocol": "workspace:*",
     "@narratage/speech": "workspace:*"
   }

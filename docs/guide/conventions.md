@@ -25,7 +25,9 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 
 ## TypeScript configuration
 
-`tsconfig.json` extends `tsconfig.json` and adds `paths` mappings for all `@narratage/*` packages.
+The root `tsconfig.json` checks the workspace through ordinary pnpm package links. It contains no
+central `paths` registry: every package must declare every cross-package import in its own
+`dependencies` or `devDependencies`.
 
 | Setting | Value |
 |---|---|
@@ -36,11 +38,7 @@ description: Naming, module boundaries, TypeScript configuration and wire data.
 | `noUncheckedIndexedAccess` | `true` — indexed access returns `T \| undefined` |
 | `exactOptionalPropertyTypes` | `true` — `undefined` must be explicit |
 
-When adding a new package, add its path mapping to `tsconfig.json`:
-
-```json
-"@narratage/my-package": ["packages/my-package/src/index.ts"]
-```
+Adding a package does not require changing the root TypeScript configuration.
 
 ## Wire data
 

@@ -25,7 +25,8 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 
 ## TypeScript 配置
 
-`tsconfig.json` 继承 `tsconfig.json`，并为所有 `@narratage/*` 包添加 `paths` 映射。
+根 `tsconfig.json` 通过普通 pnpm 工作区链接检查全部包，不维护中央 `paths` 注册表。每个包必须在自己的
+`dependencies` 或 `devDependencies` 中声明所有跨包导入。
 
 | 配置项 | 值 |
 |---|---|
@@ -36,11 +37,7 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 | `noUncheckedIndexedAccess` | `true` — 索引访问返回 `T \| undefined` |
 | `exactOptionalPropertyTypes` | `true` — `undefined` 必须显式写出 |
 
-新增一个包时，要把它的路径映射加入 `tsconfig.json`：
-
-```json
-"@narratage/my-package": ["packages/my-package/src/index.ts"]
-```
+新增包不需要修改根 TypeScript 配置。
 
 ## wire 数据
 
