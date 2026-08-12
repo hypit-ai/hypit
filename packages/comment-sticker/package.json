@@ -20,5 +20,8 @@
     "@narratage/temporal": "workspace:*",
     "@narratage/text": "workspace:*",
     "@narratage/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/hyperframes": "workspace:*"
   }
 }

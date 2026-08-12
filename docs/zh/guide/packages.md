@@ -5,7 +5,8 @@ description: 五个分层、依赖边界、包的结构与 facet。
 
 # 包架构
 
-`packages/` 下的工作区包被组织成五个架构分层。每一层都有严格的依赖规则，并由测试在每次提交时强制执行。
+`packages/` 下的工作区包被组织成五个架构分层。每个包自行声明依赖。根工作区会安装完整源码树，让 Package
+Loader 能解析任意被显式锁定的包；但 TypeScript 不维护会掩盖漏依赖的中央路径别名。
 
 ## 五个分层
 
@@ -177,7 +178,7 @@ packages/example/
 }
 ```
 
-- `"exports"` 直接指向 TypeScript 源码。工作区的 `tsconfig.json` 通过 `paths` 把 `@narratage/*` 导入映射到源码入口。
+- `"exports"` 在开发期间直接指向 TypeScript 源码。pnpm 工作区链接根据导入包自身声明的依赖解析 `@narratage/*`。
 - `"svml.activation"` 是该包被 byte-locked 时 Package Loader 会读取的入口。它必须默认导出一个 `NodePackageContribution`。
 - 物理包版本在真正发布前保持 `0.0.0-dev`。Module 与 Frontend manifest 使用相互独立的逻辑协议版本 `1`；精确的实现身份由 lock 摘要确定。
 

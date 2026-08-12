@@ -1,4 +1,4 @@
-import { compositionComponent, spatialComponent, videoContractManifests } from "../../test-support/video-domain.js";
+import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
 import {
   registerProducerFacets,
   registerTypeValidatorFacets,

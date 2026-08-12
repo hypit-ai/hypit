@@ -37,6 +37,7 @@
     "@narratage/seedance": "workspace:*",
     "@narratage/seedream": "workspace:*",
     "@narratage/store-sqlite": "workspace:*",
+    "@narratage/text": "workspace:*",
     "@narratage/validation": "workspace:*"
   }
 }

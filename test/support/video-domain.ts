@@ -7,10 +7,10 @@ import { semanticMapManifest } from "@narratage/semantic-map";
 import { spatialComponent, spatialManifest } from "@narratage/spatial";
 import { speechManifest } from "@narratage/speech";
 import { speechEvidenceManifest } from "@narratage/speech-evidence";
-import { visualIrManifest } from "@narratage/visual-ir";
 import { temporalManifest } from "@narratage/temporal";
+import { visualIrManifest } from "@narratage/visual-ir";
 
-/** Test-only explicit video contract closure. Production packages import only the contracts they use. */
+/** Shared test fixture only; production packages import only the contracts they use. */
 export const videoContractManifests = [
   artifactManifest,
   narrativeManifest,
