@@ -133,6 +133,12 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 `check` verifies the Author Source and prints its typed outputs. `plan` shows the exact demanded
 subgraph and every external capability a real Build would need, without starting any of it.
 
+Node.js and pnpm are all either command needs. A real Build additionally needs `ffmpeg` and
+`ffprobe` on your `PATH` — `brew install ffmpeg` on macOS, `apt install ffmpeg` on Debian and
+Ubuntu — and, depending on the Runtime Profile you select, Python with `uv` or API credentials.
+`narratage doctor` reports what is missing before a Build runs; see
+[Local tools used by real Builds](https://narratage.hypit.ai/quickstart#local-tools-used-by-real-builds).
+
 ## Why a graph
 
 AI generation is slow, costly and non-deterministic, and each output tends to become the next
@@ -149,6 +155,20 @@ installable packages — Core hard-codes no model, Track or Provider.
   your first real Build.
 - [Develop](https://narratage.hypit.ai/guide/develop) — package architecture, adding an author
   package or a Provider.
+
+## Third-party software
+
+Narratage stands on work it does not ship.
+
+- [FFmpeg](https://ffmpeg.org/) — media inspection, normalization and muxing. Invoked as a separate
+  program you install yourself, under its own license.
+- [HyperFrames](https://www.npmjs.com/package/hyperframes) — renders Compositions in a headless
+  Chromium.
+- [WhisperX](https://github.com/m-bain/whisperX) — the word-level speech alignment behind caption
+  timing.
+- [Fontsource](https://fontsource.org/) — the open font catalog, delivered as pinned packages that
+  each carry their own SIL OFL 1.1 or Apache 2.0 license and their own font bytes. Narratage
+  neither vendors font files nor reads system fonts.
 
 ## License
 
