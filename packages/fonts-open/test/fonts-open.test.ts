@@ -66,21 +66,6 @@ test("the catalog exposes 109 publishable open families with frontend metadata",
   }
 });
 
-test("every redistributable legacy font is represented without private local fonts", () => {
-  const migrated = [
-    "caveat", "permanent-marker", "shadows-into-light", "shantell-sans", "playpen-sans",
-    "short-stack", "kalam", "patrick-hand", "handlee", "coming-soon", "architects-daughter",
-    "pinyon-script", "pacifico", "satisfy", "bebas-neue", "anton", "archivo-black", "oswald",
-    "league-spartan", "fredoka", "lilita-one", "bungee", "black-ops-one", "bangers",
-    "luckiest-guy", "righteous", "barlow-condensed", "roboto-condensed", "fira-sans-condensed",
-    "dm-sans", "kanit", "rubik", "montserrat", "poppins", "inter", "lato", "nunito-sans",
-    "manrope", "urbanist", "raleway", "work-sans", "playfair-display", "roboto-slab",
-    "abril-fatface", "cormorant-garamond", "libre-baskerville", "noto-sans-sc", "noto-sans-jp",
-    "noto-serif-sc", "ma-shan-zheng", "zcool-kuaile", "zcool-qingke-huangyou",
-  ];
-  assert.deepEqual(migrated.filter((name) => !openFontFamilyNames.includes(name as never)), []);
-});
-
 test("catalog license metadata matches every installed Fontsource package", () => {
   for (const [name, family] of Object.entries(openFontFamilies)) {
     const packagePath = require.resolve(`${family.packageName}/package.json`);

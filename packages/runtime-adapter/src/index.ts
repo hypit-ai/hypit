@@ -298,24 +298,6 @@ export class RuntimeAdapterRegistry {
     this.#register(facet, binding);
   }
 
-  /** Trusted embedding compatibility. Locked installed packages should use registerFacet(). */
-  registerEndpoint(
-    use: string,
-    create: (context: RuntimeAdapterFactoryContext) => EndpointPackage | Promise<EndpointPackage>,
-  ): void {
-    this.#register(createRuntimeEndpointAdapterFacet({
-      use,
-      async activate(context) {
-        return { endpoint: await create(context) };
-      },
-    }));
-  }
-
-  /** Trusted embedding compatibility. Locked installed packages should use registerFacet(). */
-  registerService(use: string, create: RuntimeServiceAdapterImplementation["create"]): void {
-    this.#register(createRuntimeServiceAdapterFacet({ use, validate() {}, create }));
-  }
-
   has(use: string, kind?: RuntimeAdapterKind): boolean {
     const value = this.#registrations.get(use);
     return value !== undefined && (kind === undefined || value.facet.identity.kind === kind);

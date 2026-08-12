@@ -1,7 +1,7 @@
 # `@narratage/script`
 
 Official raw Script Surface for the Markup Frontend. It parses prose-first named Segment blocks,
-newline-independent Role Cues, Dual Text, Selection, Moment and Slot syntax, and lowers them to a
+newline-independent Role Cues, Dual Text, Selection and Moment syntax, and lowers them to a
 canonical authored Narrative value with exactly `2M + 2N` semantic anchor identities.
 
 The package is an ordinary statically declared Surface module. Core does not import it and does not

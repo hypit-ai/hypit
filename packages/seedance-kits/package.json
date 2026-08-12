@@ -16,5 +16,9 @@
   "files": [
     "kits",
     "README.md"
-  ]
+  ],
+  "devDependencies": {
+    "@narratage/svs": "workspace:*",
+    "@narratage/text": "workspace:*"
+  }
 }

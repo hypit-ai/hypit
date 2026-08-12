@@ -724,6 +724,3 @@ export function projectMediaAudioTrack(space: ProgramSpace, program: MediaTrackP
   assertAudioTrackIdentity(track, space);
   return track;
 }
-
-/** Candidate-era name retained only inside this pre-release migration. */
-export const renderMediaTrack = projectMediaVisualTrack;

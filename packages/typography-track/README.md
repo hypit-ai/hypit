@@ -3,10 +3,9 @@
 Official provider-free Text overlay package. It owns a typed `TypographyTrackProgram` and lowers every
 item into an independently timed and stacked Present in the public VisualTrack contract.
 
-The current `TypographyTrackProgram@1` implements the complete pre-release Point/Area/Path author model:
+`TypographyTrackProgram@1` implements the complete Point/Area/Path author model:
 bounded rich documents, exact font stacks, ordered Paint, frame/content/paragraph/line/run/word/
-grapheme boxes, deterministic overflow and Unicode-aware local motion. Its author Surface remains
-pre-release even though the repository-internal Track and Visual IR waist is now frozen.
+grapheme boxes, deterministic overflow and Unicode-aware local motion.
 
 An item spanning the complete ProgramSpace is a persistent overlay; a shorter item is timed. They
 are not different Track kinds. Timing is projected through `@narratage/temporal`, and placement is
