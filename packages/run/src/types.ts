@@ -5,15 +5,12 @@ import type {
 import type {
   BuildState,
   Candidate,
-  CanonicalValue,
   Digest,
-  NeedAcceptance,
   OperationNode,
   Satisfaction,
   StoredValue,
   TypeRef,
 } from "@narratage/protocol";
-import type { RealizationOverlay } from "./realization.js";
 import type { SourceHeader } from "@narratage/source";
 
 export type RunSourceUnit = {
@@ -38,12 +35,6 @@ export type RunImport = {
 
 export type RunTarget = {
   readonly output: string;
-  readonly accepts: NeedAcceptance;
-};
-
-export type RunTargetSet = {
-  readonly id: string;
-  readonly targets: readonly RunTarget[];
 };
 
 export type RunProvidedValue = {
@@ -52,7 +43,14 @@ export type RunProvidedValue = {
   readonly type: TypeRef;
   /** File containing one StoredValue JSON object. */
   readonly from: string;
-  readonly provenance?: CanonicalValue;
+};
+
+/** Ordinary source file admitted as one content-addressed BlobArtifact Candidate. */
+export type RunProvidedFile = {
+  readonly kind: "file";
+  readonly id: string;
+  readonly from: string;
+  readonly mediaType: string;
 };
 
 export type RunBuildRecord = {
@@ -81,21 +79,19 @@ export type RunFragmentInstance = {
   readonly exports?: readonly string[];
 };
 
-export type RunCandidateDeclaration = RunProvidedValue | RunBuildRecord | RunFragmentInstance;
+export type RunCandidateDeclaration = RunProvidedValue | RunProvidedFile | RunBuildRecord | RunFragmentInstance;
 
 export type RunSatisfaction = {
   readonly output: string;
   /** Candidate id, or `fragment-instance.export`. */
   readonly candidate: string;
-  readonly fidelity: "exact" | "substitute";
 };
 
 export type RunDocument = {
   readonly format: "svml.run-document@1";
   readonly author: RunAuthorSourceRequest;
-  readonly selectedTargets: string;
   readonly imports: readonly RunImport[];
-  readonly targetSets: readonly RunTargetSet[];
+  readonly targets: readonly RunTarget[];
   readonly candidates: readonly RunCandidateDeclaration[];
   readonly satisfactions: readonly RunSatisfaction[];
 };
@@ -148,14 +144,6 @@ export interface RunFragmentRegistryLike {
   resolve(packageName: string, fragmentName: string): GraphFragment | undefined;
 }
 
-export type ResolvedRunTargetSet = {
-  readonly id: string;
-  readonly targets: readonly {
-    readonly output: string;
-    readonly accepts: NeedAcceptance;
-  }[];
-};
-
 /** Complete, mandatory execution-intent graph. Empty alternate Candidate sets are still a Run Graph. */
 export type RunGraph = {
   readonly format: "svml.run-graph@1";
@@ -165,8 +153,7 @@ export type RunGraph = {
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
   readonly satisfactions: readonly Satisfaction[];
-  readonly targetSets: readonly ResolvedRunTargetSet[];
-  readonly selectedTargets: string;
+  readonly targets: readonly { readonly output: string }[];
 };
 
 export type ResolveRunDocumentContext = {
@@ -174,6 +161,7 @@ export type ResolveRunDocumentContext = {
   readonly sourceClosure: RunSourceClosure;
   readonly fragments: RunFragmentRegistryLike;
   readonly readStoredValue: (from: string) => Promise<StoredValue> | StoredValue;
+  readonly readFile: (from: string, mediaType: string) => Promise<StoredValue> | StoredValue;
   readonly readBuild: (id: string) => Promise<BuildState | undefined> | BuildState | undefined;
   /** Host presentation lookup: resolve a prior Build's public output alias to its Logical Output id. */
   readonly resolveBuildOutput?: (
@@ -186,6 +174,5 @@ export type RunCompilation = {
   readonly closure: RunSourceClosure;
   readonly document: RunDocument;
   readonly graph: RunGraph;
-  readonly overlay?: RealizationOverlay;
   readonly candidates: Readonly<Record<string, string>>;
 };

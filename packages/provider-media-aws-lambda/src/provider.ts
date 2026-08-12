@@ -110,8 +110,6 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
       }
       return {
         value: reply.value,
-        conformance: "exact",
-        delivery: "executed",
         metadata: reply.metadata,
       };
     };
@@ -125,7 +123,6 @@ export function createAwsLambdaMediaProvider(config: CreateAwsLambdaMediaProvide
       locator: "@narratage/provider-media-aws-lambda/media",
       digest: awsLambdaMediaProviderImplementationDigest,
     },
-    permissions: ["network:aws:lambda", "network:aws:s3"],
     configuration: canonicalize(configuration as unknown as CanonicalValue),
     defaultConcurrency: config.defaultConcurrency ?? 8,
     capabilities: [

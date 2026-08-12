@@ -6,21 +6,20 @@ One Run Source is self-described and names one Author Source explicitly:
 
 ```xml
 <?svml using="@narratage/run-markup@1"?>
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-
-  <target-set id="delivery">
-    <target output="final.video" accepts="substitute"/>
-  </target-set>
+  <target output="final.video"/>
 
   <build-record id="opening" build="prior-build-id" output="opening-take"/>
-  <satisfy output="opening-take" candidate="opening" fidelity="substitute"/>
+  <file id="approved" from="./approved.mp4" media-type="video/mp4"/>
+  <satisfy output="opening-take" candidate="opening"/>
 </svrun>
 ```
 
 The Author Source's own Header—not this file and not its suffix—selects its Author Frontend.
 
-`<value>` declares a typed zero-input `StoredValue`. `<build-record>` exposes a verified prior
+`<value>` declares a typed zero-input `StoredValue`. `<file>` content-addresses ordinary source
+bytes as a zero-input BlobArtifact Candidate. `<build-record>` exposes a verified prior
 Build Record as a zero-input Candidate. `<fragment>` instantiates a trusted package Fragment and may
 export several Candidates backed by shared Operations. Two declarations are two instances; one
 declaration with several exports is one instance.

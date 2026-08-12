@@ -8,5 +8,6 @@ export const videoBuiltInPackageContributions = [] as const;
 export function createVideoCompiler(options: CliCompilerOptions) {
   return createMarkupNodeCompiler(options.packageContributions, {
     ...(options.workspaceRoot === undefined ? {} : { root: options.workspaceRoot }),
+    ...(options.assetRoots === undefined ? {} : { assetRoots: options.assetRoots }),
   });
 }

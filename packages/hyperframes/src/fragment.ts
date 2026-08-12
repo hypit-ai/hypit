@@ -29,7 +29,5 @@ export const hyperframesDocumentFragment = sealGraphFragment({
     name: "document",
     type: hyperframesTypes.document,
     root: operation("compile-document"),
-    semanticInputs: ["composition", "space"],
-    fidelity: "exact",
   }],
 });

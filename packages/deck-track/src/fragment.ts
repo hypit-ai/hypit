@@ -156,14 +156,13 @@ export function createDepthStackFragment(
     inputs: { canvas: input("canvas"), space: input("space"), program: operation("program") },
     result: { kind: "output", name: "track" },
   });
-  const semanticInputs = inputs.map(({ name: inputName }) => inputName);
   return sealGraphFragment({
     name,
     inputs,
     operations,
     exports: [
-      { name: "program", type: depthStackTypes.program, root: operation("program"), semanticInputs, fidelity: "exact" },
-      { name: "track", type: compositionTypes.visualTrack, root: operation("track"), semanticInputs, fidelity: "exact" },
+      { name: "program", type: depthStackTypes.program, root: operation("program") },
+      { name: "track", type: compositionTypes.visualTrack, root: operation("track") },
     ],
   });
 }

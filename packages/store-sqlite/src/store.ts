@@ -152,7 +152,6 @@ function operationIdentity(snapshot: OperationSnapshot): OperationIdentity {
     runtimeClosure: snapshot.runtimeClosure,
     requestDigest: snapshot.requestDigest,
     attempt: snapshot.attempt,
-    submissionKey: snapshot.submissionKey,
   };
 }
 
@@ -1095,7 +1094,6 @@ export function createSqliteRuntimeServicePackage(
             locator: "@narratage/store-sqlite/build-store",
             digest: sqliteBuildStoreImplementationDigest,
           },
-          permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
             schemaVersion: databaseSchemaVersion,
@@ -1111,7 +1109,6 @@ export function createSqliteRuntimeServicePackage(
             locator: "@narratage/store-sqlite/operation-store",
             digest: sqliteOperationStoreImplementationDigest,
           },
-          permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
             schemaVersion: databaseSchemaVersion,
@@ -1127,7 +1124,6 @@ export function createSqliteRuntimeServicePackage(
             locator: "@narratage/store-sqlite/dispatch-store",
             digest: sqliteDispatchStoreImplementationDigest,
           },
-          permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
             schemaVersion: databaseSchemaVersion,
@@ -1143,7 +1139,6 @@ export function createSqliteRuntimeServicePackage(
             locator: "@narratage/store-sqlite/runtime-journal",
             digest: sqliteRuntimeJournalImplementationDigest,
           },
-          permissions: ["filesystem:state"],
           configuration: {
             path: state.path,
             schemaVersion: databaseSchemaVersion,

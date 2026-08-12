@@ -73,8 +73,6 @@ const closure = createResolvedClosure([...videoContractManifests, speechBasisMan
 function program(): LinkedProgram {
   const origin = {
     kind: "authored" as const,
-    sourceDigest: digestOf("source:fragment"),
-    frontendClosureDigest: digestOf("frontend:fragment"),
   };
   const rawCanvas = sealRecord({
     id: "canvas:root",
@@ -83,7 +81,6 @@ function program(): LinkedProgram {
       contract: "svml.canvas-space@1", widthPx: 1080, heightPx: 1920,
       origin: "top-left", xDirection: "right", yDirection: "down", pixelAspect: "square",
     } },
-    conformance: "exact",
     origin,
   });
   const canvas = { ...rawCanvas, validation: sealTypeValidationReceipt({
@@ -99,14 +96,12 @@ function program(): LinkedProgram {
         id: "request:root",
         type: requestType,
         value: { kind: "inline", value: "Say hello." },
-        conformance: "exact",
         origin,
       }),
       sealRecord({
         id: "style:root",
         type: requestType,
         value: { kind: "inline", value: "Direct to camera." },
-        conformance: "exact",
         origin,
       }),
       canvas,
@@ -149,22 +144,16 @@ function speechFragment(): GraphFragment {
         name: "take",
         type: speechTypes.basis,
         root: operation("generate"),
-        semanticInputs: ["request", "style"],
-        fidelity: "exact",
       },
       {
         name: "audio",
         type: speechTypes.audioBasis,
         root: operation("audio"),
-        semanticInputs: ["request", "style"],
-        fidelity: "exact",
       },
       {
         name: "visual",
         type: compositionTypes.visualTrack,
         root: operation("visual"),
-        semanticInputs: ["request", "style"],
-        fidelity: "exact",
       },
     ],
   });
@@ -203,10 +192,9 @@ test("one FragmentInstance shares its generation Operation across all exports", 
   const request = sealBuildRequest({
     graph: compiled.id,
     targets: [
-      { output: "opening.audio", accepts: "exact" },
-      { output: "opening.visual", accepts: "exact" },
+      { output: "opening.audio" },
+      { output: "opening.visual" },
     ],
-    satisfactions: [],
   });
   const state = start(linked, compiled, request);
   assert.equal(
@@ -253,31 +241,13 @@ test("the same Fragment instance is deterministic while distinct instances never
   const state = start(linked, compiled, sealBuildRequest({
     graph: compiled.id,
     targets: [
-      { output: "opening.audio", accepts: "exact" },
-      { output: "closing.audio", accepts: "exact" },
+      { output: "opening.audio" },
+      { output: "closing.audio" },
     ],
-    satisfactions: [],
   }));
   assert.equal(
     state.plan.steps.filter((step) => step.producer.name === generateProducer.name).length,
     2,
-  );
-});
-
-test("a Fragment cannot capture an undeclared semantic input", () => {
-  const linked = program();
-  const valid = speechFragment();
-  const invalid = sealGraphFragment({
-    name: valid.name,
-    inputs: valid.inputs,
-    operations: valid.operations,
-    exports: valid.exports.map((item) => item.name === "take"
-      ? { ...item, semanticInputs: ["request"] }
-      : item),
-  });
-  assert.throws(
-    () => verifyGraphFragment(linked, invalid),
-    /captures undeclared input style/u,
   );
 });
 

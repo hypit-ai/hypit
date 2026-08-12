@@ -57,8 +57,8 @@ node --run narratage -- get talking-film-live \
 `build` is a durable submission. `--follow` only observes the detached Worker; closing this terminal
 does not cancel the Build.
 
-`build.svrun` owns the selected Target and fidelity. `svml.runtime.json` owns Provider instances,
-permissions and concurrency. The Build archives all accepted intermediate Records and referenced
+`build.svrun` owns the Targets and any explicit Candidate selections. `svml.runtime.json` owns Provider instances,
+credentials and concurrency. The Build archives all accepted intermediate Records and referenced
 Artifacts even when no destination path is requested. `get` only makes an optional copy of the
 already archived named target. The existing `svml.runtime.ts` shows the advanced executable
 embedding API and remains supported.
@@ -68,19 +68,17 @@ Candidates and their explicit Satisfaction edges to another `.svrun`:
 
 ```xml
 <?svml using="@narratage/run-markup@1"?>
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="substitute"/>
-  </target-set>
+  <target output="final.video"/>
   <build-record id="opening" build="prior-build-id" output="opening-take.video"/>
   <build-record id="answer" build="prior-build-id" output="answer-take.video"/>
-  <satisfy output="opening-take.video" candidate="opening" fidelity="substitute"/>
-  <satisfy output="answer-take.video" candidate="answer" fidelity="substitute"/>
+  <satisfy output="opening-take.video" candidate="opening"/>
+  <satisfy output="answer-take.video" candidate="answer"/>
 </svrun>
 ```
 
-The second Run compiles a new Build whose two shot outputs are explicitly selected substitute
-Existing values. It therefore contains no Seedance Operations or KIE Needs. Substitute fidelity
-propagates through the rebuilt media normalization, WhisperX, SemanticMap, Tracks, Film and
-HyperFrames path instead of being washed back to exact.
+The second Run compiles a new Build whose two shot outputs explicitly select historical values.
+It therefore contains no Seedance Operations or KIE Needs. The rebuilt media normalization,
+WhisperX, SemanticMap, Tracks, Film and HyperFrames path consumes those values through ordinary
+typed graph edges.

@@ -23,7 +23,7 @@ const runtimeModule = { name: "example.runtime-fixture", version: "1" } as const
 const endpointFacet = { module: runtimeModule, name: "greeting-endpoint" } as const;
 const endpointImplementationDigest = digestOf("example.runtime-fixture/greeting-endpoint@1");
 
-function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
+function manifest(): RuntimeModuleManifest {
   return {
     format: "svml.runtime-module@1",
     name: runtimeModule.name,
@@ -36,7 +36,6 @@ function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
           locator: "example.runtime-fixture/local-scheduler",
           digest: digestOf("example.runtime-fixture/local-scheduler@1"),
         },
-        permissions: [],
       },
       ...([
         ["local-worker", "worker"],
@@ -53,7 +52,6 @@ function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
           locator: `example.runtime-fixture/${name}`,
           digest: digestOf(`example.runtime-fixture/${name}@1`),
         },
-        permissions: [],
       })),
       {
         name: endpointFacet.name,
@@ -62,7 +60,6 @@ function manifest(permissions: readonly string[] = []): RuntimeModuleManifest {
           locator: "example.runtime-fixture/greeting-endpoint",
           digest: endpointImplementationDigest,
         },
-        permissions,
         fulfills: [{ capability: capabilities.generation, returns: types.generated }],
         lifecycle: "recoverable",
         defaultConcurrency: 1,
@@ -188,15 +185,6 @@ test("a selected CredentialStore is part of every explicit Runtime Profile", () 
       : facet),
   });
   assert.doesNotThrow(() => resolveRuntimeProfile(registry, profile()));
-});
-
-test("Runtime permissions require an explicit Host allowlist", () => {
-  const registry = new RuntimeModuleRegistry();
-  registry.register(manifest(["network", "credentials:greeting"]));
-  assert.throws(() => resolveRuntimeProfile(registry, profile()), /disallowed Runtime permission/u);
-  assert.doesNotThrow(() => resolveRuntimeProfile(registry, profile(), {
-    allowedPermissions: ["credentials:greeting", "network"],
-  }));
 });
 
 test("Coverage rejects an unbound demanded Need before the Scheduler starts", () => {

@@ -30,7 +30,5 @@ export const plannedCaptionTimingFragment = sealGraphFragment({
     name: "caption",
     type: captionTypes.timedProjection,
     root: operation("temporalize-caption-plan"),
-    semanticInputs: ["display", "correspondence", "map", "plan", "program"],
-    fidelity: "exact",
   }],
 });

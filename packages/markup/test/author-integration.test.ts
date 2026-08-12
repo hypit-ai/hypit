@@ -132,8 +132,6 @@ function singleOperationFragment(
       name: "result",
       type: resultType,
       root: { kind: "fragment-operation", operation: "produce" },
-      semanticInputs: [inputName],
-      fidelity: "exact",
     }],
   });
 }
@@ -257,8 +255,7 @@ test("Markup Surfaces compile forward author references into a Core BuildPlan", 
   const elaborated = elaborateAuthorModule(program, decoded.author, (id) => catalog.get(id));
   const state = start(program, elaborated.graph, sealBuildRequest({
     graph: elaborated.graph.id,
-    targets: [{ output: "final.result", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: "final.result" }],
   }));
 
   assert.deepEqual(

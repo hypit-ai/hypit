@@ -28,7 +28,9 @@ test("Source Header accepts a UTF-8 BOM but no implicit or duplicate Frontend", 
   );
   assert.throws(
     () => parseSourceHeader("duplicate.svml", '<?svml using="a@1"?>\n<?svml using="b@1"?>'),
-    (error: unknown) => error instanceof SourceHeaderError && error.code === "SOURCE_HEADER_DUPLICATE",
+    (error: unknown) => error instanceof SourceHeaderError
+      && error.code === "SOURCE_HEADER_DUPLICATE"
+      && error.message.startsWith("duplicate.svml:2:1:"),
   );
   assert.throws(
     () => parseSourceHeader("padded.svml", '<?svml using=" a@1"?>\n<body/>'),

@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { digestOf } from "@narratage/protocol";
+
 import { runCli } from "../src/main.js";
 import type { CliDistribution, ExternalServiceResult } from "../src/distribution.js";
 
@@ -21,7 +23,12 @@ function distribution(
   return {
     name: "test",
     builtInPackageContributions: [],
-    runFrontends: [{ id: "@narratage/run-markup@1" }],
+    runFrontends: [{
+      id: "@narratage/run-markup@1",
+      implementationDigest: digestOf("test-run-frontend"),
+      discover() { throw new Error("createRuntimeFromConfig is unavailable"); },
+      decode() { throw new Error("createRuntimeFromConfig is unavailable"); },
+    }],
     createCompiler: () => ({
       openFile: async (path: string) => ({
         entry: { name: path, text: '<?svml using="@narratage/run-markup@1"?>\n<svrun/>\n' },

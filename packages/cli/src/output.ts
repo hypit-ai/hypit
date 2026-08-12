@@ -69,13 +69,31 @@ export type RunCheckOutput = {
   readonly authorModuleClosure: string;
   readonly executionModuleClosure: string;
   readonly authorGraph: string;
-  readonly runGraph: string;
-  readonly graph: string;
-  readonly targetSet: string;
+  readonly runGraph?: string;
+  readonly graph?: string;
   readonly targets: readonly unknown[];
   readonly candidates: Readonly<Record<string, string>>;
   readonly satisfactions: readonly unknown[];
-  readonly steps: number;
+  readonly steps?: number;
+  readonly unresolvedBuildRecords?: readonly {
+    readonly id: string;
+    readonly build: string;
+    readonly output: string;
+  }[];
+};
+
+export type PlanPreflight = {
+  readonly ok: boolean;
+  readonly root: string;
+  readonly capabilities: readonly string[];
+  readonly diagnostics: readonly CliDiagnostic[];
+};
+
+export type PlanOutput = {
+  readonly format: "narratage.cli-plan@1";
+  readonly ok: boolean;
+  readonly plan: BuildPlan;
+  readonly preflight?: PlanPreflight;
 };
 
 export type CliPresentation =
@@ -97,9 +115,8 @@ export type CliPresentation =
     }
   | {
       readonly kind: "plan";
-      readonly machine: BuildPlan;
+      readonly machine: PlanOutput;
       readonly run: string;
-      readonly targetSet: string;
       /** Presentation names declared by this Author Source and Run Source. Never used to plan. */
       readonly outputNames?: Readonly<Record<string, string>>;
       readonly candidateNames?: Readonly<Record<string, string>>;
@@ -261,18 +278,23 @@ function renderRunCheck(
     ["Run", shortPath(view.machine.run)],
     ["Author", shortPath(view.machine.source)],
     ["Frontend", view.frontend],
-    ["Target set", view.machine.targetSet],
     ["Targets", String(view.machine.targets.length)],
     ["Candidates", String(Object.keys(view.machine.candidates).length)],
     ["Satisfactions", String(view.machine.satisfactions.length)],
-    ["Steps", String(view.machine.steps)],
+    ...(view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),
   ], colors));
+  const unresolved = view.machine.unresolvedBuildRecords ?? [];
+  if (unresolved.length > 0) {
+    lines.push("", heading("warning", `${unresolved.length} historical Candidate${unresolved.length === 1 ? "" : "s"} unresolved`, io, colors));
+    for (const item of unresolved) lines.push(`  ${item.id} ← ${item.build}/${item.output}`);
+    lines.push(`  ${colors.dim("The Run source is valid. plan/build will resolve these archived values.")}`);
+  }
   if (verbose) {
     lines.push("", colors.strong("Identity"));
     lines.push(...facts([
       ["Author graph", shortIdentity(view.machine.authorGraph)],
-      ["Run graph", shortIdentity(view.machine.runGraph)],
-      ["Build graph", shortIdentity(view.machine.graph)],
+      ...(view.machine.runGraph === undefined ? [] : [["Run graph", shortIdentity(view.machine.runGraph)] as const]),
+      ...(view.machine.graph === undefined ? [] : [["Build graph", shortIdentity(view.machine.graph)] as const]),
       ["Author closure", shortIdentity(view.machine.authorSourceClosure)],
       ["Run closure", shortIdentity(view.machine.runSourceClosure)],
     ], colors));
@@ -286,11 +308,10 @@ function renderPlan(
   colors: Palette,
   verbose: boolean,
 ): string {
-  const exact = view.machine.steps.filter((item) => item.fidelity === "exact").length;
-  const substitute = view.machine.steps.length - exact;
+  const plan = view.machine.plan;
   const grouped = new Map<string, number>();
   const requested = new Map<string, number>();
-  for (const step of view.machine.steps) {
+  for (const step of plan.steps) {
     const name = `${step.producer.module.name}@${step.producer.module.version}`;
     grouped.set(name, (grouped.get(name) ?? 0) + 1);
     const needs = Object.keys(step.needs).length;
@@ -303,11 +324,8 @@ function renderPlan(
   const requestCount = [...requested.values()].reduce((total, count) => total + count, 0);
   lines.push(...facts([
     ["Run", shortPath(view.run)],
-    ["Target set", view.targetSet],
-    ["Goals", String(view.machine.goals.length)],
-    ["Steps", String(view.machine.steps.length)],
-    ["Exact steps", String(exact)],
-    ["Substitute steps", String(substitute)],
+    ["Targets", String(plan.goals.length)],
+    ["Steps", String(plan.steps.length)],
     ["External requests", String(requestCount)],
   ], colors));
   if (grouped.size > 0) {
@@ -326,23 +344,31 @@ function renderPlan(
       lines.push(`  ${colors.warning(String(count).padStart(countWidth))}  ${producer}`);
     }
     lines.push(`  ${colors.dim("These Needs may reach the Endpoints selected by the Runtime Profile during build.")}`);
-  } else {
-    lines.push("", heading("success", "No external requests", io, colors));
   }
-  const visibleSelections = verbose
-    ? view.machine.selections
-    : view.machine.selections.filter((selection) => selection.fidelity === "substitute");
+  if (view.machine.preflight !== undefined
+    && (view.machine.preflight.capabilities.length > 0 || view.machine.preflight.diagnostics.length > 0)) {
+    lines.push("", colors.strong("Runtime preflight"));
+    for (const capability of view.machine.preflight.capabilities) lines.push(`  ${colors.accent(capability)}`);
+    if (view.machine.preflight.diagnostics.length === 0) {
+      lines.push(`  ${colors.success(glyph(io, "✓", "+"))} required deployment slice is ready`);
+    } else {
+      for (const item of view.machine.preflight.diagnostics) {
+        const mark = item.severity === "error" ? colors.error(glyph(io, "×", "x")) : colors.warning("!");
+        lines.push(`  ${mark} ${item.code}: ${item.message}`);
+      }
+    }
+    const capabilityCount = view.machine.preflight.capabilities.length;
+    lines.push(`  ${colors.dim(`Only the ${capabilityCount} demanded ${capabilityCount === 1 ? "capability was" : "capabilities were"} checked.`)}`);
+  }
+  const visibleSelections = verbose ? plan.selections : [];
   if (visibleSelections.length > 0) {
     lines.push("", colors.strong("Selections"));
     for (const selection of visibleSelections) {
-      const status = selection.fidelity === "exact"
-        ? colors.success(glyph(io, "✓", "+"))
-        : colors.warning("!");
+      const status = colors.success(glyph(io, "✓", "+"));
       const output = view.outputNames?.[selection.output] ?? shortOpaque(selection.output);
       const candidate = view.candidateNames?.[selection.candidate];
       lines.push(`  ${status} ${colors.accent(output)}`
-        + `${candidate === undefined ? "" : ` ← ${candidate}`}`
-        + `  ${colors.dim(selection.fidelity)}`);
+        + `${candidate === undefined ? "" : ` ← ${candidate}`}`);
       if (verbose && (output !== selection.output || candidate !== undefined)) {
         lines.push(`    ${colors.dim(`${shortOpaque(selection.output)} ← ${shortOpaque(selection.candidate)}`)}`);
       }
@@ -351,12 +377,11 @@ function renderPlan(
   if (verbose) {
     lines.push("", colors.strong("Identity"));
     lines.push(...facts([
-      ["Plan", shortIdentity(view.machine.id)],
-      ["Graph", shortIdentity(view.machine.graph)],
-      ["Request", shortIdentity(view.machine.request)],
+      ["Plan", shortIdentity(plan.id)],
+      ["Graph", shortIdentity(plan.graph)],
+      ["Request", shortIdentity(plan.request)],
     ], colors));
   }
-  lines.push("", colors.dim("No external work was started."));
   return `${lines.join("\n")}\n`;
 }
 
@@ -408,21 +433,22 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("narratage check")),
       colors.dim("Validate one self-described Author Source or Run Source without executing it."),
       "",
-      "  narratage check <source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>]",
+      "  narratage check <source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>] [--asset-root <directory>]",
     ],
     plan: [
       colors.accent(colors.strong("narratage plan")),
       colors.dim("Freeze the demanded subgraph and expose every selected Candidate and external Need."),
       "",
-      "  narratage plan <run-source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>]",
+      "  narratage plan <run-source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>] [--asset-root <directory>]",
       "",
+      "With --runtime, plan also preflights only the demanded deployment slice.",
       "Planning never starts external work.",
     ],
     build: [
       colors.accent(colors.strong("narratage build")),
       colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
       "",
-      "  narratage build <run-source> --runtime <profile> [--build-id <id>] [--follow] [--no-services]",
+      "  narratage build <run-source> --runtime <profile> [--asset-root <directory>] [--build-id <id>] [--follow] [--no-services]",
       "",
       "  --follow                   observe the Build; the Worker still owns execution",
       "  --no-services              do not start declared external programs",
@@ -458,6 +484,15 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  narratage history <output-name> --runtime <profile> [--source <author-source>]",
     ],
+    packages: [
+      colors.accent(colors.strong("narratage packages")),
+      colors.dim("Derive both package locks from one Run Source and Runtime Profile."),
+      "",
+      "  narratage packages sync <run-source> --runtime <profile> [--root <workspace>]",
+      "",
+      "The sources select author packages; the Profile selects Runtime packages.",
+      "This never installs packages or runs Providers.",
+    ],
   };
   const selected = topics[topic];
   return selected === undefined ? undefined : [...selected, ...common];
@@ -477,7 +512,7 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     colors.dim("Write the story. Compile the result."),
     "",
     colors.strong("Typical flow"),
-    "  doctor <profile>                         verify packages, credentials and services",
+    "  doctor <profile>                         audit the complete configured deployment",
     "  check <source> --runtime <profile>        verify author or run intent",
     "  plan <run-source> --runtime <profile>     inspect the exact demanded subgraph",
     "  build <run-source> --runtime <profile>    submit durable work and ensure a Worker",
@@ -508,6 +543,7 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     "  gc <profile>               report unreachable Artifacts; --apply deletes",
     "",
     colors.strong("Packages"),
+    "  packages sync <run> --runtime <profile>  derive both project locks",
     "  lock-packages <file>       set, add, remove, refresh or verify local package trust",
     "",
     colors.strong("Output"),

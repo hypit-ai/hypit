@@ -20,6 +20,7 @@ import { TypeValidatorRegistry } from "@narratage/validation";
 
 export type CreateMarkupNodeCompilerOptions = {
   readonly root?: string;
+  readonly assetRoots?: readonly string[];
   readonly workspace?: Workspace;
 };
 
@@ -61,6 +62,7 @@ export function createMarkupNodeCompiler(
     frontends,
     validators,
     ...(options.root === undefined ? {} : { root: options.root }),
+    ...(options.assetRoots === undefined ? {} : { assetRoots: options.assetRoots }),
     ...(options.workspace === undefined ? {} : { workspace: options.workspace }),
   });
 }

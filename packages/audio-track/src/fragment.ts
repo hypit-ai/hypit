@@ -54,7 +54,6 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
     { id: "audio:program", producer: audioTrackProducers.finalize, inputs: { set: operation(current), header: input("header") }, result: { kind: "output", name: "program" } },
     { id: "audio:track", producer: audioTrackProducers.render, inputs: { space: input("space"), program: operation("audio:program") }, result: { kind: "output", name: "track" } },
   );
-  const semanticInputs = ["header", "space", ...inputTypes.keys()];
   return sealGraphFragment({
     name,
     inputs: [
@@ -64,8 +63,8 @@ export function createAudioTrackFragment(items: readonly AudioTrackFragmentItem[
     ],
     operations,
     exports: [
-      { name: "program", type: audioTrackTypes.program, root: operation("audio:program"), semanticInputs, fidelity: "exact" },
-      { name: "track", type: compositionTypes.audioTrack, root: operation("audio:track"), semanticInputs, fidelity: "exact" },
+      { name: "program", type: audioTrackTypes.program, root: operation("audio:program") },
+      { name: "track", type: compositionTypes.audioTrack, root: operation("audio:track") },
     ],
   });
 }

@@ -40,14 +40,12 @@ export type RuntimeServiceFacet = {
   readonly name: string;
   readonly role: RuntimeServiceFacetRole;
   readonly implementation: RuntimeImplementation;
-  readonly permissions: readonly string[];
 };
 
 export type RuntimeEndpointFacet = {
   readonly name: string;
   readonly role: "capability-endpoint";
   readonly implementation: RuntimeImplementation;
-  readonly permissions: readonly string[];
   readonly fulfills: readonly RuntimeCapability[];
   readonly lifecycle: "immediate" | "recoverable";
   readonly defaultConcurrency: number;
@@ -106,7 +104,6 @@ export type ResolvedRuntimeService = {
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
   readonly configurationDigest: Digest;
-  readonly permissions: readonly string[];
 };
 
 export type ResolvedRuntimeEndpoint = {
@@ -115,7 +112,6 @@ export type ResolvedRuntimeEndpoint = {
   readonly facet: RuntimeFacetRef;
   readonly implementation: RuntimeImplementation;
   readonly configurationDigest: Digest;
-  readonly permissions: readonly string[];
   readonly fulfills: readonly RuntimeCapability[];
   readonly lifecycle: "immediate" | "recoverable";
   readonly credentialSlots: readonly string[];
@@ -141,10 +137,6 @@ export type RuntimeClosure = {
 type RegisteredRuntimeModule = {
   readonly manifest: RuntimeModuleManifest;
   readonly digest: Digest;
-};
-
-export type ResolveRuntimeProfileOptions = {
-  readonly allowedPermissions?: readonly string[];
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -222,7 +214,6 @@ function normalizeFacet(facet: RuntimeFacet): RuntimeFacet {
   const common = {
     name: facet.name,
     implementation: normalizeImplementation(facet.implementation, facet.name),
-    permissions: sortedUniqueStrings(facet.permissions, `${facet.name} permissions`),
   };
   if (facet.role !== "capability-endpoint") return { ...common, role: facet.role };
   const fulfills = facet.fulfills.map(normalizeCapability)
@@ -271,9 +262,8 @@ export class RuntimeModuleRegistry {
     return registered === undefined || facet === undefined ? undefined : { module: registered, facet };
   }
 
-  verifyClosure(closure: RuntimeClosure, options: ResolveRuntimeProfileOptions = {}): void {
+  verifyClosure(closure: RuntimeClosure): void {
     verifyRuntimeClosure(closure);
-    const allowed = new Set(options.allowedPermissions ?? []);
     const modules = new Map(closure.modules.map((item) => [moduleKey(item.module), item]));
     for (const instance of closure.instances) {
       const resolved = this.resolve(instance.facet);
@@ -284,11 +274,6 @@ export class RuntimeModuleRegistry {
       assert(instance.implementation.locator === resolved.facet.implementation.locator
         && instance.implementation.digest === resolved.facet.implementation.digest,
       `${instance.id} Runtime implementation differs`);
-      assert(JSON.stringify(instance.permissions) === JSON.stringify(resolved.facet.permissions),
-        `${instance.id} Runtime permissions differ`);
-      for (const permission of instance.permissions) {
-        assert(allowed.has(permission), `${instance.id} requires disallowed Runtime permission ${permission}`);
-      }
       if (instance.role === "capability-endpoint" && resolved.facet.role === "capability-endpoint") {
         assert(instance.lifecycle === resolved.facet.lifecycle, `${instance.id} Endpoint lifecycle differs`);
         assert(JSON.stringify(instance.credentialSlots)
@@ -350,7 +335,6 @@ function verifyProfileShape(profile: RuntimeProfile): void {
     journal: profile.stores.journal,
     artifacts: profile.stores.artifacts,
   })) assert(id.trim().length > 0, `Runtime Profile ${name} store is empty`);
-  assert(profile.stores.credentials.length > 0, "Runtime Profile selects no CredentialStore");
   for (const id of profile.stores.credentials) assert(id.trim().length > 0, "Runtime Profile CredentialStore id is empty");
   assert(new Set(profile.stores.credentials).size === profile.stores.credentials.length,
     "Runtime Profile repeats a CredentialStore");
@@ -441,7 +425,6 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
     assert(isDigest(instance.implementation.digest), `${instance.id} implementation digest is invalid`);
     assert(isDigest(instance.configurationDigest), `${instance.id} configuration digest is invalid`);
     assert(moduleKeys.includes(moduleKey(instance.facet.module)), `${instance.id} refers to an unlocked Runtime module`);
-    sortedUniqueStrings(instance.permissions, `${instance.id} permissions`);
     if (instance.role === "capability-endpoint") {
       assert(instance.authority.trim().length > 0, `${instance.id} Endpoint authority is empty`);
       positiveInteger(instance.maxConcurrency, `${instance.id} Endpoint maxConcurrency`);
@@ -488,24 +471,18 @@ export function verifyRuntimeClosure(closure: RuntimeClosure): void {
 export function resolveRuntimeProfile(
   registry: RuntimeModuleRegistry,
   profile: RuntimeProfile,
-  options: ResolveRuntimeProfileOptions = {},
 ): RuntimeClosure {
   verifyRuntimeProfile(profile);
-  const allowed = new Set(options.allowedPermissions ?? []);
   const modules = new Map<string, { readonly module: ModuleRef; readonly digest: Digest }>();
   const instances = profile.instances.map((instance): ResolvedRuntimeInstance => {
     const resolved = registry.resolve(instance.facet);
     assert(resolved !== undefined, `Runtime facet ${facetKey(instance.facet)} is not registered`);
-    for (const permission of resolved.facet.permissions) {
-      assert(allowed.has(permission), `${instance.id} requires disallowed Runtime permission ${permission}`);
-    }
     modules.set(moduleKey(instance.facet.module), { module: { ...instance.facet.module }, digest: resolved.module.digest });
     const common = {
       id: instance.id,
       facet: { module: { ...instance.facet.module }, name: instance.facet.name },
       implementation: { ...resolved.facet.implementation },
       configurationDigest: instance.configurationDigest ?? digestOf({}),
-      permissions: [...resolved.facet.permissions],
     };
     if (resolved.facet.role !== "capability-endpoint") return { ...common, role: resolved.facet.role };
     assert(instance.authority !== undefined, `${instance.id} Endpoint Provider Authority is required`);

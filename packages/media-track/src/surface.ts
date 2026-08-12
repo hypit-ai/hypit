@@ -304,7 +304,7 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
           id: inspectId,
           producer: mediaPipelineProducers.inspect,
           inputs: { source: input(layer.sourceName) },
-          result: { kind: "need", name: "inspection", accepts: "exact" },
+          result: { kind: "need", name: "inspection" },
         },
         {
           id: selectId,
@@ -319,7 +319,7 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
             source: input(layer.sourceName), inspection: operation(inspectId),
             selection: operation(selectId), request: operation(requestId),
           },
-          result: { kind: "need", name: "media", accepts: "exact" },
+          result: { kind: "need", name: "media" },
         },
         {
           id,
@@ -429,14 +429,13 @@ function createMediaTrackSurfaceFragment(inputTypes: readonly { readonly name: s
     { id: "track:visual", producer: mediaTrackProducers.projectVisual, inputs: { space: input("space"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } },
   );
   if (audio) operations.push({ id: "track:audio", producer: mediaTrackProducers.projectAudio, inputs: { space: input("space"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } });
-  const semanticInputs = inputTypes.map((entry) => entry.name);
   return sealGraphFragment({
     name,
     inputs: inputTypes,
     operations,
     exports: [
-      { name: "visual", type: compositionTypes.visualTrack, root: operation("track:visual"), semanticInputs, fidelity: "exact" },
-      ...(audio ? [{ name: "audio" as const, type: compositionTypes.audioTrack, root: operation("track:audio"), semanticInputs, fidelity: "exact" as const }] : []),
+      { name: "visual", type: compositionTypes.visualTrack, root: operation("track:visual") },
+      ...(audio ? [{ name: "audio" as const, type: compositionTypes.audioTrack, root: operation("track:audio") }] : []),
     ],
   });
 }

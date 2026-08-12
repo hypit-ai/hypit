@@ -412,7 +412,6 @@ export function createS3ArtifactStorePackage(
         locator: "@narratage/artifact-store-s3/artifact-store",
         digest: s3ArtifactStoreImplementationDigest,
       },
-      permissions: ["network:aws:s3"],
       configuration,
       service: new S3ArtifactStore({
         client,

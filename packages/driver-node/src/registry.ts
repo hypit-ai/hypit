@@ -21,7 +21,7 @@ import {
   verifyCredentialRef,
   verifyRuntimeClosure,
 } from "@narratage/runtime";
-import type { ResolveRuntimeProfileOptions, RuntimeClosure } from "@narratage/runtime";
+import type { RuntimeClosure } from "@narratage/runtime";
 
 import type {
   ProducerHandler,
@@ -184,10 +184,9 @@ export class EndpointRegistry implements EndpointRegistrar {
   applyRuntimeClosure(
     closure: RuntimeClosure,
     modules: RuntimeModuleRegistry,
-    options: ResolveRuntimeProfileOptions = {},
   ): void {
     verifyRuntimeClosure(closure);
-    modules.verifyClosure(closure, options);
+    modules.verifyClosure(closure);
     if (this.#runtimeClosure !== undefined && this.#runtimeClosure !== closure.digest) {
       throw new Error("Endpoint Registry is already bound to another Runtime Closure");
     }

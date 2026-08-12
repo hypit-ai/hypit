@@ -5,9 +5,10 @@ import type {
   RunDocument,
   RunFragmentInstance,
   RunImport,
+  RunProvidedFile,
   RunProvidedValue,
   RunSatisfaction,
-  RunTargetSet,
+  RunTarget,
 } from "@narratage/run";
 import {
   parseStructuredElement,
@@ -21,12 +22,21 @@ import type {
 export class RunSyntaxError extends Error {
   readonly code: string;
   readonly offset: number;
+  readonly sourceName: string | undefined;
+  readonly line: number | undefined;
+  readonly column: number | undefined;
 
-  constructor(code: string, message: string, offset: number) {
-    super(message);
+  constructor(code: string, message: string, offset: number, sourceName?: string, source?: string) {
+    const before = source === undefined ? undefined : source.slice(0, offset);
+    const line = before === undefined ? undefined : before.split("\n").length;
+    const column = before === undefined ? undefined : [...(before.split("\n").at(-1) ?? "")].length + 1;
+    super(sourceName === undefined || line === undefined ? message : `${sourceName}:${line}:${column}: ${message}`);
     this.name = "RunSyntaxError";
     this.code = code;
     this.offset = offset;
+    this.sourceName = sourceName;
+    this.line = line;
+    this.column = column;
   }
 }
 
@@ -67,14 +77,6 @@ function empty(element: StructuredElement): void {
   if (elements(element).length > 0) fail(element, "RUN_CHILD", `<${element.name}> must be empty`);
 }
 
-function conformance(element: StructuredElement, name: string): "exact" | "substitute" {
-  const value = stringAttribute(element, name);
-  if (value !== "exact" && value !== "substitute") {
-    fail(element, "RUN_CONFORMANCE", `<${element.name}> ${name} must be exact or substitute`);
-  }
-  return value;
-}
-
 export function parseTypeRef(value: string): TypeRef {
   const hash = value.lastIndexOf("#");
   const version = hash <= 0 ? -1 : value.lastIndexOf("@", hash);
@@ -99,16 +101,10 @@ function importDeclaration(element: StructuredElement): RunImport {
   return { from: stringAttribute(element, "from")!, as: stringAttribute(element, "as")! };
 }
 
-function targetSet(element: StructuredElement): RunTargetSet {
-  exactAttributes(element, ["id"]);
-  const targets = elements(element).map((child) => {
-    if (child.name !== "target") fail(child, "RUN_CHILD", `<target-set> does not accept <${child.name}>`);
-    exactAttributes(child, ["output", "accepts"]);
-    empty(child);
-    return { output: stringAttribute(child, "output")!, accepts: conformance(child, "accepts") };
-  });
-  if (targets.length === 0) fail(element, "RUN_TARGETS", `<target-set> must contain at least one target`);
-  return { id: stringAttribute(element, "id")!, targets };
+function target(element: StructuredElement): RunTarget {
+  exactAttributes(element, ["output"]);
+  empty(element);
+  return { output: stringAttribute(element, "output")! };
 }
 
 function provided(element: StructuredElement): RunProvidedValue {
@@ -125,6 +121,21 @@ function provided(element: StructuredElement): RunProvidedValue {
     id: stringAttribute(element, "id")!,
     type,
     from: stringAttribute(element, "from")!,
+  };
+}
+
+function file(element: StructuredElement): RunProvidedFile {
+  exactAttributes(element, ["id", "from", "media-type"]);
+  empty(element);
+  const mediaType = stringAttribute(element, "media-type")!;
+  if (!/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/iu.test(mediaType)) {
+    fail(element, "RUN_MEDIA_TYPE", "<file> media-type must be a concrete MIME media type");
+  }
+  return {
+    kind: "file",
+    id: stringAttribute(element, "id")!,
+    from: stringAttribute(element, "from")!,
+    mediaType,
   };
 }
 
@@ -175,12 +186,11 @@ function fragment(element: StructuredElement): RunFragmentInstance {
 }
 
 function satisfaction(element: StructuredElement): RunSatisfaction {
-  exactAttributes(element, ["output", "candidate", "fidelity"]);
+  exactAttributes(element, ["output", "candidate"]);
   empty(element);
   return {
     output: stringAttribute(element, "output")!,
     candidate: stringAttribute(element, "candidate")!,
-    fidelity: conformance(element, "fidelity"),
   };
 }
 
@@ -193,7 +203,7 @@ function unique(values: readonly string[], subject: string, element: StructuredE
 }
 
 /** Parse only the public Run language. No package code, Runtime or Provider executes here. */
-export function parseRunDocument(name: string, text: string): RunDocument {
+function parseRunDocumentBody(name: string, text: string): RunDocument {
   const source: SourceUnit = { name, text };
   const start = skipTextTrivia(source, 0);
   const parsed = parseStructuredElement(source, start);
@@ -201,12 +211,12 @@ export function parseRunDocument(name: string, text: string): RunDocument {
   if (end !== text.length) throw new RunSyntaxError("RUN_TRAILING", "Only trivia may follow </svrun>", end);
   const root = parsed.element;
   if (root.name !== "svrun") fail(root, "RUN_ROOT", "Run document root must be <svrun>");
-  exactAttributes(root, ["version", "targets"]);
+  exactAttributes(root, ["version"]);
   if (stringAttribute(root, "version") !== "1") fail(root, "RUN_VERSION", "Only .svrun version 1 is supported");
 
   let author: { readonly source: string } | undefined;
   const imports: RunImport[] = [];
-  const targetSets: RunTargetSet[] = [];
+  const targets: RunTarget[] = [];
   const candidates: RunCandidateDeclaration[] = [];
   const satisfactions: RunSatisfaction[] = [];
   let bodyStarted = false;
@@ -226,8 +236,9 @@ export function parseRunDocument(name: string, text: string): RunDocument {
     }
     bodyStarted = true;
     if (author === undefined) fail(child, "RUN_AUTHOR_MISSING", "<svrun> requires an opening <author> declaration");
-    if (child.name === "target-set") targetSets.push(targetSet(child));
+    if (child.name === "target") targets.push(target(child));
     else if (child.name === "value") candidates.push(provided(child));
+    else if (child.name === "file") candidates.push(file(child));
     else if (child.name === "build-record") candidates.push(buildRecord(child));
     else if (child.name === "fragment") candidates.push(fragment(child));
     else if (child.name === "satisfy") satisfactions.push(satisfaction(child));
@@ -236,20 +247,26 @@ export function parseRunDocument(name: string, text: string): RunDocument {
   if (author === undefined) fail(root, "RUN_AUTHOR_MISSING", "<svrun> requires exactly one <author> declaration");
 
   unique(imports.map((item) => item.as), "Run import alias", root);
-  unique(targetSets.map((item) => item.id), "Target set", root);
   unique(candidates.map((item) => item.id), "Candidate declaration", root);
-  for (const set of targetSets) unique(set.targets.map((item) => item.output), `${set.id} target`, root);
-  const selectedTargets = stringAttribute(root, "targets")!;
-  if (!targetSets.some((item) => item.id === selectedTargets)) {
-    fail(root, "RUN_TARGET_SET", `Selected target set ${selectedTargets} is not declared`);
-  }
+  unique(targets.map((item) => item.output), "Run target", root);
+  if (targets.length === 0) fail(root, "RUN_TARGETS", "<svrun> requires at least one <target>");
   return {
     format: "svml.run-document@1",
     author,
-    selectedTargets,
     imports,
-    targetSets,
+    targets,
     candidates,
     satisfactions,
   };
+}
+
+export function parseRunDocument(name: string, text: string): RunDocument {
+  try {
+    return parseRunDocumentBody(name, text);
+  } catch (error) {
+    if (error instanceof RunSyntaxError && error.sourceName === undefined) {
+      throw new RunSyntaxError(error.code, error.message, error.offset, name, text);
+    }
+    throw error;
+  }
 }

@@ -315,14 +315,12 @@ export function defineExactModelModule<const Key extends string>(
         id: "generate",
         producer: item.producer,
         inputs: { request: { kind: "fragment-input", name: "request" } },
-        result: { kind: "need", name: "generation", accepts: "exact" },
+        result: { kind: "need", name: "generation" },
       }],
       exports: [{
         name: "result",
         type: item.returns,
         root: { kind: "fragment-operation", operation: "generate" },
-        semanticInputs: ["request"],
-        fidelity: "exact",
       }],
     });
     return [item.spec.key, {
@@ -468,7 +466,7 @@ export function createExactModelPrimaryGenerationFragment(
     readonly id: string;
     readonly producer: ProducerRef;
     readonly inputs: Readonly<Record<string, { readonly kind: "fragment-input"; readonly name: string } | { readonly kind: "fragment-operation"; readonly operation: string }>>;
-    readonly result: { readonly kind: "output"; readonly name: string } | { readonly kind: "need"; readonly name: string; readonly accepts: "exact" };
+    readonly result: { readonly kind: "output"; readonly name: string } | { readonly kind: "need"; readonly name: string };
   }> = [];
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -519,7 +517,7 @@ export function createExactModelPrimaryGenerationFragment(
     id: "generate",
     producer: endpoint.producer,
     inputs: { request: operation("finalize-request") },
-    result: { kind: "need", name: "generation", accepts: "exact" },
+    result: { kind: "need", name: "generation" },
   });
   const result = endpoint.ports.result;
   const primaryProducer = result === "audio"
@@ -531,7 +529,6 @@ export function createExactModelPrimaryGenerationFragment(
     inputs: { set: operation("generate") },
     result: { kind: "output", name: result },
   });
-  const semanticInputs = inputs.map((entry) => entry.name);
   const shape = [
     ...textInputs.map((item) => `${item.name}=${item.port}:text`),
     ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
@@ -544,8 +541,6 @@ export function createExactModelPrimaryGenerationFragment(
       name: result,
       type: artifactTypes.blob,
       root: operation(`select-primary-${result}`),
-      semanticInputs,
-      fidelity: "exact",
     }],
   });
 }

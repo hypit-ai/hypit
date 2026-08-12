@@ -17,9 +17,6 @@ import type {
 import type { ResolvedModuleClosure } from "./module.js";
 import type { CanonicalValue, StoredValue } from "./value.js";
 
-export type Conformance = "exact" | "substitute";
-export type Delivery = "executed" | "cache" | "manual" | "provided";
-
 export type SourceRange = {
   readonly start: number;
   readonly end: number;
@@ -27,10 +24,6 @@ export type SourceRange = {
 
 export type AuthoredOrigin = {
   readonly kind: "authored";
-  readonly sourceDigest: Digest;
-  readonly frontendClosureDigest: Digest;
-  readonly sourceName?: string;
-  readonly range?: SourceRange;
 };
 
 export type DerivedOrigin = {
@@ -45,9 +38,6 @@ export type ObservedOrigin = {
 
 export type ProvidedOrigin = {
   readonly kind: "provided";
-  readonly candidate: CandidateId;
-  readonly requestDigest: Digest;
-  readonly provenance?: CanonicalValue;
 };
 
 export type RecordOrigin = AuthoredOrigin | DerivedOrigin | ObservedOrigin | ProvidedOrigin;
@@ -66,7 +56,6 @@ export type TypedRecord = {
   readonly type: TypeRef;
   readonly value: StoredValue;
   readonly digest: Digest;
-  readonly conformance: Conformance;
   readonly origin: RecordOrigin;
   readonly validation?: TypeValidationReceipt;
 };
@@ -79,8 +68,6 @@ export type TypedModule = {
   readonly semanticDigest: Digest;
 };
 
-export type NeedAcceptance = "exact" | "substitute";
-
 export type Need = {
   readonly id: NeedId;
   readonly capability: CapabilityRef;
@@ -88,9 +75,6 @@ export type Need = {
   readonly constraints: CanonicalValue;
   readonly requestedBy: DerivationId;
   readonly result: RecordId;
-  readonly accepts: NeedAcceptance;
-  /** Worst conformance inherited from the Producer inputs that requested this Need. */
-  readonly conformanceFloor: Conformance;
   readonly requestDigest: Digest;
 };
 
@@ -112,14 +96,8 @@ export type Receipt = {
   readonly requestDigest: Digest;
   readonly fulfiller: string;
   readonly implementation?: FulfillerImplementation;
-  /** Conformance reported by the external fulfiller before upstream quality is applied. */
-  readonly fulfillmentConformance: Conformance;
-  /** Effective conformance after applying the Need's inherited floor. */
-  readonly conformance: Conformance;
-  readonly delivery: Delivery;
   readonly output: RecordId;
   readonly outputDigest: Digest;
-  readonly metadata: CanonicalValue;
   readonly event: {
     readonly id: EventId;
     readonly digest: Digest;
@@ -153,7 +131,6 @@ export type Derivation = {
 export type NeedBinding = {
   readonly id: NeedId;
   readonly result: RecordId;
-  readonly accepts: NeedAcceptance;
 };
 
 export type RecordRef = {
@@ -177,8 +154,6 @@ export type LogicalOutput = {
   readonly id: LogicalOutputId;
   readonly type: TypeRef;
   readonly primary: CandidateId;
-  /** Author-visible facts that a Candidate may transitively depend upon. */
-  readonly semanticInputs: readonly GraphValueRef[];
 };
 
 export type OperationResult =
@@ -192,7 +167,6 @@ export type OperationResult =
       readonly name: string;
       readonly id: NeedId;
       readonly record: RecordId;
-      readonly accepts: NeedAcceptance;
     };
 
 export type OperationNode = {
@@ -205,7 +179,6 @@ export type OperationNode = {
 export type ProvidedValue = {
   readonly id: RecordId;
   readonly value: StoredValue;
-  readonly provenance?: CanonicalValue;
   readonly validation?: TypeValidationReceipt;
 };
 
@@ -224,10 +197,6 @@ export type CompiledGraph = {
   readonly format: "svml.graph@1";
   readonly id: Digest;
   readonly program: Digest;
-  /** Digest of the author graph before external Candidate attachment. */
-  readonly source: Digest;
-  /** Digest of the empty realization set or the locked Realization Closure. */
-  readonly realization: Digest;
   readonly outputs: readonly LogicalOutput[];
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
@@ -235,14 +204,11 @@ export type CompiledGraph = {
 
 export type BuildTarget = {
   readonly output: LogicalOutputId;
-  readonly accepts: NeedAcceptance;
 };
 
 export type Satisfaction = {
   readonly output: LogicalOutputId;
   readonly candidate: CandidateId;
-  /** Fidelity of this Candidate to this Logical Output promise. */
-  readonly fidelity: Conformance;
 };
 
 export type BuildRequest = {
@@ -251,21 +217,18 @@ export type BuildRequest = {
   /** Exact trusted implementation-package closure selected outside author source. */
   readonly implementationClosure?: Digest;
   readonly targets: readonly BuildTarget[];
-  readonly satisfactions: readonly Satisfaction[];
   readonly digest: Digest;
 };
 
 export type BuildSelection = {
   readonly output: LogicalOutputId;
   readonly candidate: CandidateId;
-  readonly fidelity: Conformance;
   readonly record: RecordId;
 };
 
 export type ProducerStep = {
   readonly id: StepId;
   readonly producer: ProducerRef;
-  readonly fidelity: Conformance;
   readonly inputs: Readonly<Record<string, RecordId>>;
   readonly outputs: Readonly<Record<string, RecordId>>;
   readonly needs: Readonly<Record<string, NeedBinding>>;
@@ -274,7 +237,6 @@ export type ProducerStep = {
 export type BuildGoal = {
   readonly record: RecordId;
   readonly type: TypeRef;
-  readonly accepts: NeedAcceptance;
 };
 
 export type BuildPlan = {
@@ -340,9 +302,6 @@ export type NeedFulfilledEvent = {
   readonly requestDigest: Digest;
   readonly fulfiller: string;
   readonly implementation?: FulfillerImplementation;
-  readonly conformance: Conformance;
-  readonly delivery: Delivery;
-  readonly metadata: CanonicalValue;
   readonly validation?: TypeValidationReceipt;
 };
 

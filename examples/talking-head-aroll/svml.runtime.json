@@ -24,7 +24,6 @@
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.talking-head-aroll",
-      "authority": "kie.talking-head-aroll",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
@@ -33,7 +32,6 @@
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.talking-head-aroll",
-      "authority": "media.talking-head-aroll",
       "config": {
         "defaultConcurrency": 2
       }
@@ -41,7 +39,6 @@
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.talking-head-aroll",
-      "authority": "whisperx.talking-head-aroll",
       "config": {
         "defaultConcurrency": 1
       }
@@ -49,7 +46,6 @@
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.talking-head-aroll",
-      "authority": "vertex.talking-head-aroll",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
@@ -60,25 +56,12 @@
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.talking-head-aroll",
-      "authority": "hyperframes.talking-head-aroll",
       "config": {
         "workers": 2,
         "quality": "standard",
         "defaultConcurrency": 1
       }
     }
-  ],
-  "permissions": [
-    "environment:credentials",
-    "filesystem:artifacts",
-    "filesystem:state",
-    "filesystem:whisperx-staging",
-    "network:aiplatform.googleapis.com",
-    "network:api.kie.ai",
-    "network:kieai.redpandaai.co",
-    "network:whisperx-loopback",
-    "process:hyperframes",
-    "process:media"
   ],
   "scheduling": {
     "maxConcurrency": 4

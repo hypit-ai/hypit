@@ -132,7 +132,7 @@ function labelFragment(id: string) {
       id: "bind", producer: depthStackProducers.bindLabelText,
       inputs: { style: input("style"), content: input("content") }, result: { kind: "output", name: "label" },
     }],
-    exports: [{ name: "label", type: depthStackTypes.cardLabel, root: operation, semanticInputs: ["style", "content"], fidelity: "exact" }],
+    exports: [{ name: "label", type: depthStackTypes.cardLabel, root: operation }],
   });
 }
 

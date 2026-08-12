@@ -412,7 +412,7 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
     assert.ok(fragment.exports.some((output) => output.name === "schedule"));
     assert.ok(fragment.exports.some((output) => output.name === "program"));
     assert.ok(fragment.exports.some((output) => output.name === "visual"));
-    assert.ok(fragment.exports.find((output) => output.name === "visual")?.semanticInputs.includes("frame"));
+    assert.ok(fragment.inputs.some((input) => input.name === "frame"));
   }
   const column = await decodeColumnSurface({
     sourceName: "ranking.svml", element: cases[1][1],
@@ -422,8 +422,6 @@ test("all four author Surfaces preserve explicit semantic, spatial, font, image 
   const audio = column.fragments[0]!.exports.find((output) => output.name === "audio");
   assert.ok(column.fragments[0]!.operations.some((operation) => operation.producer.name === rankingProducers.materializeTextItem.name));
   assert(audio !== undefined);
-  assert.equal(audio.semanticInputs.includes("frame"), false);
-  assert.equal(audio.semanticInputs.some((name) => name.endsWith("icon")), false);
   assert.deepEqual(Object.keys(column.components[0]!.outputs).sort(), ["audio", "program", "schedule", "visual"]);
 });
 

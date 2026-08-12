@@ -95,7 +95,6 @@ test("the Provider sends the Need verbatim with the bucket the function should u
   assert.equal(request.operation, "inspect");
   assert.deepEqual(request.artifacts, { bucket: "team-artifacts", prefix: "svml" });
   assert.deepEqual(request.constraints, canonicalize(inspectNeed));
-  assert.equal((outcome as { conformance: string }).conformance, "exact");
 });
 
 test("the remote Provider receives the exact AudioProgramPlan compiled for local execution", async () => {

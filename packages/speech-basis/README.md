@@ -10,7 +10,7 @@ these outputs as ports of one mutable workflow node.
 
 This gives the author several independent Logical Outputs while preserving one shared generation
 Operation. Selecting an Existing `SpeechBasis` stops generation and leaves both Projections usable;
-selecting only an Existing visual Candidate does not contaminate the independent exact audio path.
+selecting only an Existing visual Candidate does not change the independent audio path.
 
 `speechBasisComponent` enumerates all four Producer facets. Their identities are checked against the
 static `speechBasisManifest`, enter the installed implementation package lock, and can be activated by

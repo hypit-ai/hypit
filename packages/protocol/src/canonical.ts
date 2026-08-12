@@ -77,7 +77,6 @@ export function semanticRecordsDigest(records: readonly TypedRecord[]): Digest {
         id: record.id,
         type: record.type,
         value: record.value,
-        conformance: record.conformance,
       })),
   );
 }

@@ -9,7 +9,7 @@ function descriptor(core = digestOf("core:one")) {
     format: "svml.build-catalog-descriptor@1" as const,
     core,
     source: { path: "/project/main.svml", closure: digestOf("source:one") },
-    run: { path: "/project/delivery.svrun", targetSet: "delivery" },
+    run: { path: "/project/delivery.svrun" },
     aliases: [{
       name: "final.video",
       type: { module: { name: "example.media", version: "1" }, name: "Video" },

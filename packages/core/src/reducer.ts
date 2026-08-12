@@ -3,8 +3,6 @@ import type {
   BuildPlan,
   BuildRequest,
   BuildState,
-  CanonicalValue,
-  Conformance,
   CoreCommand,
   CoreTransition,
   CompiledGraph,
@@ -41,14 +39,6 @@ function withoutCommand(state: BuildState, id: string): readonly CoreCommand[] {
 
 function addAcceptedEvent(state: BuildState, event: BuildEvent): BuildState["acceptedEvents"] {
   return [...state.acceptedEvents, { id: event.id, digest: eventDigest(event) }];
-}
-
-function inheritedConformance(records: readonly TypedRecord[]): Conformance {
-  return records.some((record) => record.conformance === "substitute") ? "substitute" : "exact";
-}
-
-function effectiveConformance(left: Conformance, right: Conformance): Conformance {
-  return left === "substitute" || right === "substitute" ? "substitute" : "exact";
 }
 
 function inputRecords(state: BuildState, command: InvokeProducerCommand): TypedRecord[] {
@@ -102,7 +92,6 @@ function acceptProducerEvent(
   );
 
   const inputs = inputRecords(state, command);
-  const conformance = effectiveConformance(inheritedConformance(inputs), step.fidelity);
   const outputDrafts = producer.outputs
     .filter((port) => step.outputs[port.name] !== undefined)
     .map((port) => {
@@ -136,8 +125,6 @@ function acceptProducerEvent(
       returns: port.returns,
       constraints: normalized,
       result: binding.result,
-      accepts: binding.accepts,
-      conformanceFloor: conformance,
     } as const;
     return {
       id: binding.id,
@@ -161,7 +148,6 @@ function acceptProducerEvent(
     id: output.id,
     type: output.type,
     value: output.value,
-    conformance,
     origin: { kind: "derived", derivation: id },
     ...(output.validation === undefined ? {} : { validation: output.validation }),
   }));
@@ -200,30 +186,16 @@ function acceptNeedEvent(
     `${need.id} fulfillment is for another request`,
     need.id,
   );
-  invariant(
-    need.accepts === "substitute"
-      || event.conformance === "exact",
-    "SUBSTITUTE_NOT_ACCEPTED",
-    `${need.id} requires an exact fulfillment of its selected capability`,
-    need.id,
-  );
-
   const value = normalizeStoredValue(event.value);
   validateStoredValue(value, resolveType(state.program.closure, need.returns).schema, `$need.${need.id}`);
   const outputDigest = recordDigest(need.returns, value);
-  const metadata = canonicalize(event.metadata);
-  const conformance = effectiveConformance(need.conformanceFloor, event.conformance);
   const receiptDraft: Omit<Receipt, "id"> = {
     need: need.id,
     requestDigest: event.requestDigest,
     fulfiller: event.fulfiller,
     ...(event.implementation === undefined ? {} : { implementation: event.implementation }),
-    fulfillmentConformance: event.conformance,
-    conformance,
-    delivery: event.delivery,
     output: need.result,
     outputDigest,
-    metadata,
     event: { id: event.id, digest: eventDigest(event) },
   };
   const receipt: Receipt = { id: receiptId(receiptDraft), ...receiptDraft };
@@ -232,7 +204,6 @@ function acceptNeedEvent(
     type: need.returns,
     value,
     digest: outputDigest,
-    conformance,
     origin: { kind: "observed", receipt: receipt.id },
     ...(event.validation === undefined ? {} : { validation: event.validation }),
   };
@@ -291,11 +262,7 @@ function applyEvent(state: BuildState, event: BuildEvent): BuildState {
 }
 
 function goalsComplete(state: BuildState): boolean {
-  return state.plan.goals.every((goal) => {
-    const record = state.records.find((item) => item.id === goal.record);
-    if (record === undefined) return false;
-    return goal.accepts === "substitute" || record.conformance === "exact";
-  });
+  return state.plan.goals.every((goal) => state.records.some((record) => record.id === goal.record));
 }
 
 function schedule(state: BuildState): CoreTransition {

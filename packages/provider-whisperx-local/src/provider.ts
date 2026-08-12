@@ -254,8 +254,6 @@ async function limitedJson(response: Response, maxBytes: number, subject: string
 function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
   return {
     value: { kind: "inline", value },
-    conformance: "exact",
-    delivery: "executed",
     metadata,
   };
 }
@@ -290,7 +288,6 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
       locator: "@narratage/provider-whisperx-local/svml-service",
       digest: localWhisperXProviderImplementationDigest,
     },
-    permissions: ["filesystem:whisperx-staging", "network:whisperx-loopback"],
     configuration: canonicalize({
       baseUrl: normalizedBaseUrl,
       expectedModel,

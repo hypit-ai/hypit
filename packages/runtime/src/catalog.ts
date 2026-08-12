@@ -21,7 +21,6 @@ export type BuildCatalogDescriptor = {
   };
   readonly run?: {
     readonly path: string;
-    readonly targetSet?: string;
   };
   readonly aliases: readonly BuildCatalogAlias[];
 };
@@ -56,9 +55,6 @@ export function verifyBuildCatalogDescriptor(descriptor: BuildCatalogDescriptor)
   assert(isDigest(descriptor.source.closure), "Build Catalog source closure is invalid");
   if (descriptor.run !== undefined) {
     assert(descriptor.run.path.trim().length > 0, "Build Catalog Run path is empty");
-    if (descriptor.run.targetSet !== undefined) {
-      assert(descriptor.run.targetSet.trim().length > 0, "Build Catalog target-set name is empty");
-    }
   }
   const names = new Set<string>();
   for (const alias of descriptor.aliases) {

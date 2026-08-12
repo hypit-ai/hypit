@@ -23,7 +23,5 @@ export const speechEstimateFragment = sealGraphFragment({
     name: "duration",
     type: speechTypes.duration,
     root: operation("estimate"),
-    semanticInputs: ["speech", "policy"],
-    fidelity: "exact",
   }],
 });
