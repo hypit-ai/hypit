@@ -24,12 +24,6 @@ SVML 是创作语言，Narratage 是围绕它的编译器、运行时与包生�
 
 这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器把生成的视频、字幕、B-roll、文字与音频组装成一部完成的影片。
 
-## 为什么用图
-
-AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张平级的图：Author Graph 表达工作本身，Run Graph 为一次 Build 选择 Target 与 Candidate。Core 只负责解析、校验并推进由此得到的状态机，因此视频领域的概念都留在可独立安装的包里——Core 不硬编码任何模型、Track 或 Provider。
-
-规范性法则见 [Core Kernel 规范](https://narratage.hypit.ai/zh/guide/spec/core-kernel)。
-
 ## 它写起来是什么样
 
 Script 始终是可读的散文。Segment 组织故事，Role Cue 指明谁在说话，Dual Text 把观众看到的文字与说话者念出的内容分开，Selection 与 Moment 为语义区间和时间点命名——全程不引入时间码。
@@ -116,6 +110,12 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 ```
 
 `check` 校验 Author Source 并打印它的类型化输出。`plan` 展示被真正需要的子图，以及一次真实 Build 会用到的每一项外部能力，但不会启动其中任何一项。
+
+## 为什么用图
+
+AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张平级的图：Author Graph 表达工作本身，Run Graph 为一次 Build 选择 Target 与 Candidate。Core 只负责解析、校验并推进由此得到的状态机，因此视频领域的概念都留在可独立安装的包里——Core 不硬编码任何模型、Track 或 Provider。
+
+规范性法则见 [Core Kernel 规范](https://narratage.hypit.ai/zh/guide/spec/core-kernel)。
 
 ## 接下来去哪
 
