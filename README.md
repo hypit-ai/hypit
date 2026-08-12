@@ -103,6 +103,16 @@ Caption or Track component must explicitly consume that Selection. The full voca
 [Script](https://narratage.hypit.ai/quickstart/script); the complete checkable source is
 [`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml).
 
+## Use the Narratage skill
+
+If you use a coding agent, send it this:
+
+```text
+Install and use the narratage skill from this repository. Set up my environment, ask for only the
+API keys required by my Runtime Profile, and guide me through authoring and building my first SVML
+video.
+```
+
 ## Try it without API keys
 
 Node.js 22+ and pnpm 10.33.x:

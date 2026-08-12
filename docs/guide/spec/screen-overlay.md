@@ -187,7 +187,7 @@ Screen Overlay also cannot:
 - hide a sound effect inside a visual item.
 
 A visually masked hard cut remains two independent facts: the Media package owns the cut and the
-Screen Overlay happens to cover some of the same frames. A combined authored `Impact` Fragment may
+Screen Overlay happens to cover some of the same frames. A combined authored Fragment may
 produce one Visual Track and one Audio Track from the same Moment, but both outputs remain explicit
 peer edges into Film.
 

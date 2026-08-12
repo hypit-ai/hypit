@@ -486,8 +486,8 @@ Entry/exit or handoff SFX are explicit audio Artifact inputs with explicit gain.
 the exact resolved entry, exit or boundary point. They are not package-global filenames, mutable
 sound-library defaults or hidden lane SFX.
 
-The compiler does not return one atomic `MediaProduct` containing both terminal Tracks. It resolves
-one package-owned Media Program and provides separate deterministic projection Operations:
+The compiler resolves one package-owned Media Program and provides separate deterministic projection
+Operations, rather than one atomic value carrying both terminal Tracks:
 
 ```text
 Resolved Media Program ─┬─> project visual ─> VisualTrack
@@ -541,7 +541,7 @@ audio remains the separate canonical `SpeechAudioBasis -> AudioTrack` projection
 visual lowerer itself remains muted and does not rediscover container audio.
 
 This can be a code dependency on focused Media lowering helpers. It does not require exposing a
-public `MediaProgram` graph Type when no external component consumes that intermediate value. If a
+that intermediate value as a public graph Type when no external component consumes it. If a
 real graph consumer appears later, the package may expose its own versioned resolved Type; Core
 still does not register Media meaning.
 

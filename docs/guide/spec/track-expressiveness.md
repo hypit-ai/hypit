@@ -19,7 +19,7 @@ This gate answers one question:
 > Can production-used text, media-box, caption, stacking and local-effect behavior lower into the
 > same Track waist without adding package-family fields to Track, Composition or Core?
 
-Passing this gate does not make one universal `TrackProgram`. The six Track Program axes—content,
+Passing this gate does not make one universal Track Program. The six Track Program axes—content,
 temporal source, window projection, spatial source, occupancy and presentation—remain a separation
 discipline for package authors, not six mandatory public fields. The shared authoring laws and the
 current temporal design are specified in [`track-authoring.md`](./track-authoring.md).
