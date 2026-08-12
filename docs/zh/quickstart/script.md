@@ -174,6 +174,9 @@ Moment 编译为包含 `Point[]` 的 `MomentSet` 值。Selection 和 Moment 共�
 
 ## Slot
 
+> Script 解析器定义了 Slot 语法，但当前面向作者的 `<script>` Surface 尚未暴露绑定输入。
+> 不要在 `main.svml` 中写未绑定的 Slot，它会导致 `check` 失败。
+
 用于模板化 Script 的变量插值：
 
 ```svml

@@ -5,8 +5,9 @@ description: Install Narratage, compile a complete SVML video graph, and prepare
 
 # Quickstart
 
-Narratage turns an SVML author source into a visible execution graph. Before any model or external
-service runs, you can check the source, choose a Run, and inspect the exact work it would require.
+Narratage turns an SVML (Semantic Video Markup Language) author source — a `.svml` file — into a
+visible execution graph. Before any model or external service runs, you can check the source, choose
+a Run, and inspect the exact work it would require.
 
 This page gets you to that first safe plan. It does not need API keys and does not make a paid call.
 
@@ -172,7 +173,7 @@ Follow the authoring path in order, or jump directly to the part you are changin
 
 | Guide | What you will learn |
 |---|---|
-| [Script](./quickstart/script.md) | Segments, speakers, Dual Text, Selections and Moments |
+| [Script](./quickstart/script.md) | Segments, Role Cues, Dual Text, Selections, Moments and text projections |
 | [SVS Stylesheets](./quickstart/styles.md) | Reusable Recipes for captions, media, text and film |
 | [Media & Generation](./quickstart/generation.md) | Images, audio, prompt text and explicit model components |
 | [Timing & Assembly](./quickstart/timing.md) | Speech Spine, WhisperX, ProgramSpace and SemanticMap |
@@ -182,6 +183,15 @@ Follow the authoring path in order, or jump directly to the part you are changin
 
 If you use a coding agent, ask it to use the repository's `narratage` skill. The skill follows the
 same files and commands; it does not introduce a separate workflow.
+
+Send it this:
+
+```text
+Install and use the narratage skill from this repository. Install the whole
+.agents/skills/narratage folder, not only SKILL.md. Set up my environment, ask for only the API
+keys required by my Runtime Profile, and guide me through authoring and building my first SVML
+video.
+```
 
 ## Why the name
 
