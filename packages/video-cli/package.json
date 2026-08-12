@@ -14,8 +14,5 @@
     "@narratage/package-loader-node": "workspace:*",
     "@narratage/run-markup": "workspace:*",
     "@narratage/source": "workspace:*"
-  },
-  "devDependencies": {
-    "@narratage/package-loader-node": "workspace:*"
   }
 }

@@ -16,5 +16,15 @@
     "@narratage/spatial": "workspace:*",
     "@narratage/temporal": "workspace:*",
     "@narratage/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/hyperframes": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/speech-evidence": "workspace:*",
+    "@narratage/validation": "workspace:*",
+    "@narratage/visual-ir": "workspace:*"
   }
 }

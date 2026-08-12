@@ -23,60 +23,11 @@ single `final.video` target.
 The current deterministic estimate is 12, 15, 15 and 15 seconds. The Recipe deliberately caps a
 take at Seedance's 15-second request limit.
 
-Create the explicit package lock used by this development-workspace example:
+Synchronize both package locks from the Run Source and Runtime Profile:
 
 ```sh
-node --run narratage -- lock-packages examples/talking-head-aroll/svml.packages.lock \
-  --package @narratage/artifact \
-  --package @narratage/narrative \
-  --package @narratage/media \
-  --package @narratage/program-space \
-  --package @narratage/speech \
-  --package @narratage/speech-evidence \
-  --package @narratage/semantic-map \
-  --package @narratage/spatial \
-  --package @narratage/visual-ir \
-  --package @narratage/composition \
-  --package @narratage/svs \
-  --package @narratage/script \
-  --package @narratage/estimate \
-  --package @narratage/text \
-  --package @narratage/generation \
-  --package @narratage/seedance \
-  --package @narratage/speech-alignment \
-  --package @narratage/speech-basis \
-  --package @narratage/speech-spine \
-  --package @narratage/whisperx \
-  --package @narratage/caption \
-  --package @narratage/caption-fine \
-  --package @narratage/caption-gemini \
-  --package @narratage/fonts-open \
-  --package @narratage/film \
-  --package @narratage/hyperframes \
-  --package @narratage/media-pipeline \
-  --package @narratage/render-hyperframes \
-  --package @narratage/run-markup \
-  --package-root .
-
-node --run narratage -- lock-packages examples/talking-head-aroll/svml.runtime-packages.lock \
-  --package @narratage/local \
-  --package @narratage/store-sqlite \
-  --package @narratage/artifact-store-fs \
-  --package @narratage/credential-store-env \
-  --package @narratage/provider-kie \
-  --package @narratage/provider-media-local \
-  --package @narratage/provider-whisperx-local \
-  --package @narratage/provider-google-vertex \
-  --package @narratage/provider-hyperframes-local \
-  --package-root .
-```
-
-After package implementation changes, retain these explicit selections without repeating the long
-list:
-
-```sh
-node --run narratage -- lock-packages examples/talking-head-aroll/svml.packages.lock --refresh
-node --run narratage -- lock-packages examples/talking-head-aroll/svml.runtime-packages.lock --refresh
+node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 Inspect the authored graph—including the visible `*.prompt` Text output and `*.program`—without a paid call:

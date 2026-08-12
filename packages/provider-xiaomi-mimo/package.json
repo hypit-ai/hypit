@@ -15,5 +15,9 @@
     "@narratage/protocol": "workspace:*",
     "@narratage/runtime": "workspace:*",
     "@narratage/runtime-adapter": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/driver-node": "workspace:*",
+    "@narratage/mimo-tts": "workspace:*"
   }
 }

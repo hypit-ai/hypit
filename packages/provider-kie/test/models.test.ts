@@ -1,7 +1,6 @@
-import { videoContractManifests } from "../../test-support/video-domain.js";
-
 import assert from "node:assert/strict";
 import test from "node:test";
+import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { createResolvedClosure, digestOf } from "@narratage/core";
 
 import { verifyGraphFragment } from "@narratage/elaborator";
