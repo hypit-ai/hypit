@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@narratage/narrative": "workspace:*",
-    "@narratage/script": "workspace:*"
+    "@narratage/script": "workspace:*",
+    "@narratage/text": "workspace:*"
   }
 }

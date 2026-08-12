@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { videoContractManifests } from "../../test-support/video-domain.js";
+import { videoContractManifests } from "../../../test/support/video-domain.js";
 
 import { compositionDependency, compositionTypes } from "@narratage/composition";
 import type { VisualElement, VisualTimedSampling } from "@narratage/composition";

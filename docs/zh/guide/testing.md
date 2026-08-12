@@ -71,7 +71,7 @@ test("generates a video", async (t) => {
 包边界由 package manifest、公开入口和共享合同表达；测试只验证边界上可观察的行为。
 仓库不再把源码文本正则当作依赖分析或架构审查的替代品。
 
-发布前应删除客户或品牌 fixture、凭据痕迹、付费产物、工作站绝对路径与一次性验收脚本。
+不得提交客户或品牌 fixture、凭据痕迹、付费产物、工作站绝对路径与一次性交付脚本。
 通用 live test 只有在显式 opt-in、不提交秘密，并且未设置开关时能在花钱前退出的情况下才保留。
 
 ## 受环境开关控制的测试
@@ -90,4 +90,4 @@ test("generates a video", async (t) => {
 `examples/` 目录同时充当集成级别的夹具：
 - `examples/bootstrap/` — 最小源闭包检查
 - `examples/talking-film-graph-check/` — 不含 Provider 的完整图编译
-- `examples/talking-head-aroll/` — 显式复用历史 Candidate 的实时验收
+- `examples/talking-head-aroll/` — 显式复用历史 Candidate 的 live example

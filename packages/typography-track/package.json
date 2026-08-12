@@ -23,9 +23,12 @@
     "@narratage/svs": "workspace:*",
     "@narratage/temporal": "workspace:*",
     "@narratage/text": "workspace:*",
+    "@narratage/visual-ir": "workspace:*",
     "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/hyperframes": "workspace:*"
+    "@narratage/core": "workspace:*",
+    "@narratage/hyperframes": "workspace:*",
+    "@narratage/validation": "workspace:*"
   }
 }
