@@ -124,12 +124,10 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 
 AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张平级的图：Author Graph 表达工作本身，Run Graph 为一次 Build 选择 Target 与 Candidate。Core 只负责解析、校验并推进由此得到的状态机，因此视频领域的概念都留在可独立安装的包里——Core 不硬编码任何模型、Track 或 Provider。
 
-规范性法则见 [Core Kernel 规范](https://narratage.hypit.ai/zh/guide/spec/core-kernel)。
-
 ## 接下来去哪
 
 - [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 你掌控的文件、命令，以及第一次真实 Build。
-- [开发](https://narratage.hypit.ai/zh/guide/develop) —— 包架构、添加 Author 包或 Provider，以及全部规范文档。
+- [开发](https://narratage.hypit.ai/zh/guide/develop) —— 包架构、添加 Author 包或 Provider。
 
 ## 许可
 
