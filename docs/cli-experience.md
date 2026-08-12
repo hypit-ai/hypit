@@ -166,9 +166,10 @@ not the right gate for a partial Build.
 `plan <run> --runtime <profile>` derives the finite BuildPlan first, extracts its demanded capability
 set, and diagnoses only Endpoints, credentials and external programs intersecting that set. The
 result is printed with the plan and no external work is started. `build` performs the same scoped
-preflight before constructing the execution Runtime, creating a durable Build, or issuing an
-external request. The generic CLI compares capability references; it has no Provider-name switch or
-central capability registry.
+diagnostic first. Only a demanded managed program being down may advance to repair: the Runtime is
+validated, that exact program is prepared, and its readiness report must pass before a durable Build
+or external capability request is created. The generic CLI compares capability references; it has
+no Provider-name switch or central capability registry.
 
 `check <run>` remains static. In particular, a future `<build-record>` Candidate can be checked
 before its source Build exists. `plan` and `build` still require the exact archived value because a
@@ -308,12 +309,13 @@ These examples specify hierarchy, not exact ANSI escape codes.
   Source      main.svml
   Frontend    @narratage/markup@1
   Modules     12
-  Exports      3
+  Outputs      3
   Assets       4
 
-  final.video       svml.composition/RenderedVideo@1
-  speech.program    svml.speech/Program@1
-  captions.track    svml.visual-track/Track@1
+Runnable outputs
+  final.video       @narratage/artifact@1/BlobArtifact
+  speech.basis      @narratage/speech@1/SpeechBasis
+  captions.track    @narratage/composition@1/VisualTrack
 ```
 
 The normal view does not print every digest. `--verbose` reveals closure identities; `--json`
@@ -330,21 +332,14 @@ returns the complete structured result.
   Steps       18
   External requests   5
 
-Operations
-   4  @studio/generation@1
-   9  @studio/media@1
-   5  @studio/composition@1
-
 External requests
    4  @studio/generation@1#video
    1  @studio/media@1#speech-evidence
 
   These Needs may reach the Endpoints selected by the Runtime Profile during build.
 
-Selections
+Run choices
   → take-2.video ← retained-take-2
-
-No external work was started.
 ```
 
 Plan display is derived from the frozen plan and explicit Satisfaction edges. Producer and Need
@@ -387,12 +382,10 @@ Operations
 ↗ op_91ac  KIE Seedance       pending    next poll 8s
 ● op_3f28  local FFmpeg       running    00:04
 ! op_8d72  Vertex Caption     blocked    missing credential
-
-q quit   enter inspect   c cancel   r refresh
 ```
 
-Interactive keys are optional shortcuts over the same commands, not a hidden stateful UI. In a
-pipe, the same watch emits durable lines or JSONL.
+`queue --watch` is a read-only stream. Use the explicit `inspect` and `cancel` commands for actions;
+scripts consume the same facts through JSONL.
 
 ### 6.5 Doctor
 

@@ -115,12 +115,10 @@ corepack enable
 pnpm install --frozen-lockfile
 
 node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
-  --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock
 
 node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
-  --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock
 ```
 
 `check` verifies the Author Source and prints its typed outputs. `plan` shows the exact demanded
@@ -178,14 +176,13 @@ lightweight launcher from the project directory:
 ```bash
 cd /path/to/my-video
 
+# Setup once, then repeat only after imports or Runtime package choices change.
 /path/to/narratage/narratage packages sync build.svrun \
-  --runtime svml.runtime.json --root .
+  --runtime svml.runtime.json
 
-/path/to/narratage/narratage doctor svml.runtime.json
-/path/to/narratage/narratage check main.svml \
-  --runtime svml.runtime.json --root .
+# See the exact work selected by this Run.
 /path/to/narratage/narratage plan build.svrun \
-  --runtime svml.runtime.json --root .
+  --runtime svml.runtime.json
 
 /path/to/narratage/narratage build build.svrun \
   --runtime svml.runtime.json \
@@ -200,7 +197,8 @@ cd /path/to/my-video
 
 `build` submits durable work and ensures the selected Worker is available. `--follow` only observes
 that Build; closing the observer does not cancel it. Use `status`, `queue`, `operations` and
-`inspect` to see what is happening.
+`inspect` to see what is happening. `check` is useful while editing source; `doctor` diagnoses the
+whole deployment when setting up or troubleshooting it. Neither is a ritual before every Build.
 
 Read [Run Source & Builds](./docs/quickstart/run.md) before the first paid Build. It covers Runtime
 Profiles, credentials, concurrency, cancellation and explicit reuse of previous outputs.

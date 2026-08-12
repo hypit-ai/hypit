@@ -105,7 +105,7 @@ The two locks have different authority, but an ordinary project synchronizes bot
 declarations in one command:
 
 ```bash
-narratage packages sync ./build.svrun --runtime ./svml.runtime.json --root .
+narratage packages sync ./build.svrun --runtime ./svml.runtime.json
 ```
 
 The Author lock roots come from the self-described Run and recursively imported Author Sources.

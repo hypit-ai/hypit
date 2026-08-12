@@ -88,6 +88,17 @@ test("Runtime config is closed data and rejects unknown environment authority", 
   }), /does not accept apiKey/u);
 });
 
+test("removed central permissions receive an actionable migration error", () => {
+  assert.throws(() => parseRuntimeConfig({
+    format: "svml.runtime-config@1",
+    ...required,
+    endpoints: [],
+    permissions: { network: ["example.com"] },
+  }), (error: unknown) => error instanceof Error
+    && (error as Error & { readonly code?: string }).code === "RUNTIME_CONFIG_OUTDATED"
+    && /Remove this field/u.test(error.message));
+});
+
 test("Endpoint authority is optional and remains explicit only when shared", () => {
   const local = parseRuntimeConfig({
     format: "svml.runtime-config@1",

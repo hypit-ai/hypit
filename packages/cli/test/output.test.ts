@@ -41,7 +41,7 @@ test("author check renders a compact human summary without dumping identity", ()
       exports: [{
         name: "story",
         type: { module: { name: "@narratage/narrative", version: "1" }, name: "Narrative" },
-        kind: "record",
+        kind: "logical-output",
       }],
     },
   });
@@ -79,6 +79,44 @@ test("large author exports are bounded until verbose output is requested", () =>
   assert.match(compact, /3 more · use --verbose/u);
   assert.doesNotMatch(compact, /output-14/u);
   assert.match(capture({ ...human, verbose: true }, presentation), /output-14/u);
+});
+
+test("author check hides generated graph plumbing without deleting machine exports", () => {
+  const machine = {
+    format: "narratage.cli-check@1" as const,
+    sourceKind: "author" as const,
+    ok: true as const,
+    sourceClosure: digest,
+    moduleClosure: digest,
+    graph: digest,
+    units: 1,
+    sourceAssets: [],
+    modules: [],
+    exports: [{
+      name: "final.video",
+      type: { module: { name: "example", version: "1" }, name: "Video" },
+      kind: "logical-output",
+    }, {
+      name: "card.__canvas-frame",
+      type: { module: { name: "example", version: "1" }, name: "Frame" },
+      kind: "record",
+    }, {
+      name: "rendered.binding-0001",
+      type: { module: { name: "example", version: "1" }, name: "Binding" },
+      kind: "record",
+    }],
+  };
+  const presentation = {
+    kind: "check-author" as const,
+    source: "/project/main.svml",
+    frontend: "example@1",
+    machine,
+  };
+  const compact = capture(human, presentation);
+  assert.match(compact, /final\.video/u);
+  assert.doesNotMatch(compact, /__canvas-frame|binding-0001/u);
+  assert.match(capture({ ...human, verbose: true }, presentation), /__canvas-frame/u);
+  assert.deepEqual(machine.exports.length, 3);
 });
 
 test("verbose human output reveals shortened identities", () => {
@@ -120,7 +158,7 @@ test("JSON mode is exact machine data with no terminal decoration", () => {
   assert.doesNotMatch(output, /\u001b\[/u);
 });
 
-test("plan groups operations by their declaring module", () => {
+test("plan keeps named Run choices visible and leaves graph internals to verbose output", () => {
   const plan: BuildPlan = {
     format: "svml.plan@1",
     id: digest,
@@ -154,10 +192,19 @@ test("plan groups operations by their declaring module", () => {
     outputNames: { "logical:take": "take.video" },
     candidateNames: { "candidate:preview": "preview" },
   });
-  assert.match(output, /2\s+@narratage\/media@1/u);
+  assert.match(output, /Run choices/u);
+  assert.match(output, /take\.video\s+← preview/u);
+  assert.doesNotMatch(output, /Operations/u);
   assert.match(output, /External requests/u);
   assert.match(output, /1\s+@narratage\/media@1#inspect/u);
   assert.doesNotMatch(output, /No external work was started\./u);
+  assert.match(capture({ ...human, verbose: true }, {
+    kind: "plan",
+    machine: { format: "narratage.cli-plan@1", ok: true, plan },
+    run: "/project/build.svrun",
+    outputNames: { "logical:take": "take.video" },
+    candidateNames: { "candidate:preview": "preview" },
+  }), /2\s+@narratage\/media@1/u);
 });
 
 test("a plan with no Needs stays compact without knowing any Provider names", () => {
@@ -241,4 +288,12 @@ test("command help explains only the selected shell grammar", () => {
   assert.match(output, /^narratage build\n/u);
   assert.match(output, /--follow/u);
   assert.doesNotMatch(output, /Authoring/u);
+});
+
+test("archive commands have their own help instead of falling back to the global screen", () => {
+  let output = "";
+  writeCliHelp({ write(text) { output += text; } }, "get");
+  assert.match(output, /^narratage get\n/u);
+  assert.match(output, /copying never reruns work/u);
+  assert.doesNotMatch(output, /Typical flow/u);
 });

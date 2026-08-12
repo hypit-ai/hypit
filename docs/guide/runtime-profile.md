@@ -9,13 +9,6 @@ The Runtime Profile declares *where* a frozen Build executes: the Scheduler and 
 Stores, Endpoints, credentials and concurrency. It is deployment configuration, not
 creative content—it never enters Author or Run graph identity.
 
-Two forms are supported:
-
-| Form | File | Use case |
-|---|---|---|
-| Declarative JSON | `svml.runtime.json` | Standard path |
-| Executable TypeScript | `svml.runtime.ts` | Advanced embedding API |
-
 ## Declarative JSON
 
 ```json
@@ -126,80 +119,12 @@ allowlist can restrict Node code that shares the Host process. Arbitrary communi
 must wait for a real process/Wasm isolation boundary with enforceable filesystem, network, process
 and resource controls.
 
-## Executable TypeScript
+## Embedding API
 
-For advanced embedding, construct the Runtime programmatically:
-
-```typescript
-import { join } from "node:path";
-import { createFileArtifactStorePackage } from "@narratage/artifact-store-fs";
-import { createEnvironmentCredentialStorePackage } from "@narratage/credential-store-env";
-import { createLocalExecutionPackage, createProjectLocalRuntime } from "@narratage/local";
-import { createKieProvider } from "@narratage/provider-kie";
-import { createLocalMediaProvider } from "@narratage/provider-media-local";
-import { credentialRef } from "@narratage/runtime";
-import { createSqliteRuntimeServicePackage } from "@narratage/store-sqlite";
-
-export default async function createRuntime() {
-  const root = import.meta.dirname;
-  const execution = createLocalExecutionPackage("execution");
-  const state = createSqliteRuntimeServicePackage({
-    path: join(root, ".svml/runtime.sqlite"),
-    name: "state",
-    buildInstance: "state.builds",
-    operationInstance: "state.operations",
-    dispatchInstance: "state.dispatch",
-    journalInstance: "state.journal",
-  });
-  const artifacts = createFileArtifactStorePackage({ root: join(root, ".svml/artifacts"), instance: "artifacts" });
-  const credentials = createEnvironmentCredentialStorePackage({ instance: "credentials.env" });
-  const endpoints = [
-    createKieProvider({
-      instance: "kie.prod",
-      authority: "kie.prod",
-      apiKey: credentialRef("env", "KIE_API_KEY"),
-      defaultConcurrency: 2,
-    }),
-    createLocalMediaProvider({
-      instance: "media.prod",
-      authority: "media.prod",
-      defaultConcurrency: 2,
-    }),
-  ];
-
-  return await createProjectLocalRuntime({
-    root,
-    packageLock: "./svml.packages.lock",
-    runtimeServices: [execution, state, artifacts, credentials],
-    runtimeSelection: {
-      scheduler: "execution.scheduler",
-      worker: "execution.worker",
-      stores: {
-        build: "state.builds",
-        operations: "state.operations",
-        dispatch: "state.dispatch",
-        journal: "state.journal",
-        artifacts: "artifacts",
-        credentials: ["credentials.env"],
-      },
-    },
-    endpoints,
-    scheduling: {
-      maxConcurrency: 4,
-    },
-  });
-}
-```
-
-Pass either form to `--runtime`:
-
-```bash
-node --run narratage -- build build.svrun --runtime ./svml.runtime.json
-node --run narratage -- build build.svrun --runtime ./svml.runtime.ts
-```
-
-Both forms describe the same explicit assembly. The TypeScript form is trusted embedding code, not
-a source-language escape hatch or a place for author intent.
+The CLI deliberately accepts only declarative JSON Profiles. A server or application embedding
+Narratage may assemble the same Scheduler, Worker, Store and Endpoint roles directly through
+`@narratage/local`. That assembly is application code—not another Profile syntax and not a
+source-language escape hatch.
 
 ## Diagnostics
 

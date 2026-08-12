@@ -149,6 +149,11 @@ function serviceSelection(value: unknown): RuntimeServiceSelection {
 
 export function parseRuntimeConfig(value: unknown): RuntimeConfigDocument {
   const item = object(value, "$runtime");
+  if ("permissions" in item) {
+    throw Object.assign(new Error(
+      "$runtime.permissions was removed. Remove this field: Runtime access is declared by the selected Store, Endpoint, and external-service adapters instead of a central permission list.",
+    ), { code: "RUNTIME_CONFIG_OUTDATED" });
+  }
   exactKeys(item, [
     "format", "root", "packageRoot", "packageLock", "runtimePackageLock",
     "runtimeServices", "services", "endpoints", "scheduling",

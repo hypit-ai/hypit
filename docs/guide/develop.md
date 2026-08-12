@@ -56,7 +56,7 @@ narratage/
 | [Package architecture](./packages.md) | The five layers, dependency rules, package anatomy, facets |
 | [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, activation |
 | [Adding a Provider](./providers.md) | Step-by-step: new Endpoint adapter |
-| [Runtime Profile](./runtime-profile.md) | JSON and TypeScript configuration, diagnostics, Build archive |
+| [Runtime Profile](./runtime-profile.md) | Declarative CLI configuration, embedding boundary, diagnostics, Build archive |
 | [Caption Playground](./caption-playground.md) | Edit real Caption SVML/SVS with live feedback |
 | [Local services](./services.md) | WhisperX and OpenCV setup |
 | [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
