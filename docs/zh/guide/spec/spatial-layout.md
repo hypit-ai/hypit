@@ -24,9 +24,7 @@ ContentFit        how an extent is sized and aligned against a Frame
 FittedContent     the deterministic result of that fit
 ```
 
-当一个可视组件消费某个 `SpatialFrame` 时，该 frame 扮演的角色是它的 **Placement Frame**：组件被摆放
-在哪里，以及 frame 级别的 Paint 可以存在于哪里。随后每一个实际的 text/media 样本都会依据自身的固有尺寸和
-一个 `ContentFit` 推导出各自的 **Content Frame**。
+当一个可视组件消费某个 `SpatialFrame` 时，该 frame 扮演的角色是它的 **Placement Frame**：组件被摆放在哪里，以及 frame 级别的 Paint 可以存在于哪里。随后每一个实际的 text/media 样本都会依据自身的固有尺寸和一个 `ContentFit` 推导出各自的 **Content Frame**。
 
 这就是那两个 frame。它们并不总是嵌套关系：
 
@@ -45,13 +43,11 @@ Placement Frame         Content Frame
 因此把第二个称作“内框”是错误的。在 `cover`、缩放或局部运动之下，Content Frame 可能超出 Placement
 Frame。
 
-一个 Placement Frame 可以包含若干个显式样本。纯色底衬没有 Content Frame。一个模糊样本和一个前景样本各自
-拥有独立的 Content Frame，即使它们引用同一个 Artifact。不存在被所有图层共享的那种全局唯一“内框”。
+一个 Placement Frame 可以包含若干个显式样本。纯色底衬没有 Content Frame。一个模糊样本和一个前景样本各自拥有独立的 Content Frame，即使它们引用同一个 Artifact。不存在被所有图层共享的那种全局唯一“内框”。
 
 ## 2. 边界
 
-聚焦的视频领域包是 `@narratage/spatial`。它拥有纯类型、validator、面向可复用几何的作者 Surface 以及确定性
-的几何 Producer。它不拥有：
+聚焦的视频领域包是 `@narratage/spatial`。它拥有纯类型、validator、面向可复用几何的作者 Surface 以及确定性的几何 Producer。它不拥有：
 
 - 时间窗口或媒体的固有播放行为；
 - 文字折行或字形测量；
@@ -60,9 +56,7 @@ Frame。
 - z-order、转场或局部运动；
 - Composition、Runtime、Provider 或 Core 的行为。
 
-这些事实只通过图的边与 Spatial 相遇。例如，Media Inspection 选定一路可视流并产出其面向显示的 extent；
-某个 Media 包再显式地把该 extent 转换成 `IntrinsicExtent`，交给 Spatial 做 fitting。Spatial 永远不会打开
-一个 MP4，也不会猜测哪一路流是主流。
+这些事实只通过图的边与 Spatial 相遇。例如，Media Inspection 选定一路可视流并产出其面向显示的 extent；某个 Media 包再显式地把该 extent 转换成 `IntrinsicExtent`，交给 Spatial 做 fitting。Spatial 永远不会打开一个 MP4，也不会猜测哪一路流是主流。
 
 安装或修订这个包不得改变 Core。Core 看到的只是普通的带类型 Record 和 Operation。
 
@@ -84,8 +78,7 @@ type CanvasSpace = {
 
 宽和高是正整数。颜色、clear Paint、帧率和时长不是空间事实，都留在这个值之外。
 
-Canvas 必须先于 Track 声明，随后作为同一个图上的值连接到 Film/Composition。当前的 Film Surface 把宽高藏在
-最终的 Film 声明内部，这对精确的 Text 和 Media 布局来说太晚了。它的重写必须把 Canvas 声明与最终的 Track
+Canvas 必须先于 Track 声明，随后作为同一个图上的值连接到 Film/Composition。当前的 Film Surface 把宽高藏在最终的 Film 声明内部，这对精确的 Text 和 Media 布局来说太晚了。它的重写必须把 Canvas 声明与最终的 Track
 装配分开，而不是把宽高复制进每一份 Track Recipe。
 
 预期的源码形态是：
@@ -116,11 +109,9 @@ type SpatialFrame = {
 };
 ```
 
-宽和高必须为正。`xPx` 与 `yPx` 可以为负，也可以延伸到 Canvas 之外。画布外的 Frame 对进出场运动很有用，
-不得被悄悄 clamp、求交或拒绝。哪些像素可见由 Canvas 光栅化决定。Clamp 永远是一次显式的投影选择。
+宽和高必须为正。`xPx` 与 `yPx` 可以为负，也可以延伸到 Canvas 之外。画布外的 Frame 对进出场运动很有用，不得被悄悄 clamp、求交或拒绝。哪些像素可见由 Canvas 光栅化决定。Clamp 永远是一次显式的投影选择。
 
-作者输入可以使用相对 Canvas 的百分比或像素。它们会在消费者布局其内容之前编译成这一种已解析形式。百分比相对
-的是显式连接的父 Frame 的宽/高，而不是渲染器碰巧创建的某个 DOM 容器。
+作者输入可以使用相对 Canvas 的百分比或像素。它们会在消费者布局其内容之前编译成这一种已解析形式。百分比相对的是显式连接的父 Frame 的宽/高，而不是渲染器碰巧创建的某个 DOM 容器。
 
 三个作者组件在不需要 mode 字段的前提下覆盖了常见的构造语义：
 
@@ -141,8 +132,7 @@ type SpatialFrame = {
   x="100%" y="100%" width="32%" aspect={portrait.extent} anchor="bottom-right"/>
 ```
 
-`Frame` 不代表一个可见的盒子。它只产出几何。`AspectFrame` 可以消费一条通用的 `IntrinsicExtent` 边；它不
-依赖 Media。
+`Frame` 不代表一个可见的盒子。它只产出几何。`AspectFrame` 可以消费一条通用的 `IntrinsicExtent` 边；它不依赖 Media。
 
 九个规范锚点名是：
 
@@ -159,8 +149,7 @@ frame.x = target.x - frame.width  × selfAnchor.x + offset.x
 frame.y = target.y - frame.height × selfAnchor.y + offset.y
 ```
 
-每个具名锚点不过是一对可读的 `(0 | 0.5 | 1, 0 | 0.5 | 1)`。更高级的 Surface 可以暴露任意归一化锚点，而不必
-改变编译后的合同。
+每个具名锚点不过是一对可读的 `(0 | 0.5 | 1, 0 | 0.5 | 1)`。更高级的 Surface 可以暴露任意归一化锚点，而不必改变编译后的合同。
 
 安全区、左栏、标题区和商品区都是从 Canvas 或父 Frame 派生出来的普通具名 Frame。它们不是保留的全局 token。
 
@@ -177,10 +166,7 @@ type IntrinsicExtent = {
 ```
 
 这两个值是内容面向显示的、为正的自然像素 extent。`contain`、`cover`、`fit-width`、`fit-height` 和
-`stretch` 只需要它们的比值；`native` 和 `scale-down` 还会用到它们与 Canvas 像素的绝对关系。Media 可以在应用
-容器旋转和 sample aspect 信息之后推导它们。Text 可以从精确的字体排版推导它们。矢量组件必须选择一个显式的
-标称光栅 extent，而不是假装任意的 view-box 单位就是 Canvas 像素。它们都不会把源 Artifact、字体、组件族或
-上游摘要存进 `IntrinsicExtent`；这些关系仍然显现在图的边与 Derivation 上。
+`stretch` 只需要它们的比值；`native` 和 `scale-down` 还会用到它们与 Canvas 像素的绝对关系。Media 可以在应用容器旋转和 sample aspect 信息之后推导它们。Text 可以从精确的字体排版推导它们。矢量组件必须选择一个显式的标称光栅 extent，而不是假装任意的 view-box 单位就是 Canvas 像素。它们都不会把源 Artifact、字体、组件族或上游摘要存进 `IntrinsicExtent`；这些关系仍然显现在图的边与 Derivation 上。
 
 ## 6. ContentFit 与两个 frame 的方程
 
@@ -205,9 +191,7 @@ type ContentFit = {
 ```
 
 两个点都在各自的 Frame 内归一化。`framePoint` 说明所选的内容点想落在 Placement Frame 的哪个位置。
-`contentPoint` 说明源上的哪个固有点是重要的。这比旧的单一 `focalX/focalY` 更有表达力 —— 后者在两边悄悄用了
-同一个坐标。两个点的坐标都必须落在 `[0,1]`；有意超出该范围的位移使用 `offsetPx`，当结果必须留在范围之外
-时使用 `constraint="free"`。
+`contentPoint` 说明源上的哪个固有点是重要的。这比旧的单一 `focalX/focalY` 更有表达力 —— 后者在两边悄悄用了同一个坐标。两个点的坐标都必须落在 `[0,1]`；有意超出该范围的位移使用 `offsetPx`，当结果必须留在范围之外时使用 `constraint="free"`。
 
 给定 Placement Frame `(Vx, Vy, Vw, Vh)` 和固有 extent `(Sw, Sh)`，保持宽高比的基础缩放为：
 
@@ -227,8 +211,7 @@ Cw = Sw × scale
 Ch = Sh × scale
 ```
 
-`stretch` 有意放弃源宽高比，产出 `(Cw, Ch) = (Vw, Vh)`。它之所以是显式的，是因为成熟的编辑器允许形变；其他
-任何尺寸模式都不得形变。
+`stretch` 有意放弃源宽高比，产出 `(Cw, Ch) = (Vw, Vh)`。它之所以是显式的，是因为成熟的编辑器允许形变；其他任何尺寸模式都不得形变。
 
 约束之前：
 
@@ -249,8 +232,7 @@ Cw <= Vw: clamp Cx to [Vx,           Vx + Vw - Cw]
 Cw >= Vw: clamp Cx to [Vx + Vw - Cw, Vx          ]
 ```
 
-垂直方向的法则完全相同。这支持了真正的焦点摆放，比如“源上的 `(0.8, 0.35)` 这个点应当出现在 Frame 的中心”，
-同时不会允许意外露出未被覆盖的边条。
+垂直方向的法则完全相同。这支持了真正的焦点摆放，比如“源上的 `(0.8, 0.35)` 这个点应当出现在 Frame 的中心”，同时不会允许意外露出未被覆盖的边条。
 
 常见的九种对齐只是 `framePoint === contentPoint` 时的简写。居中 contain 和居中 cover 两边都是 `(0.5, 0.5)`。
 `top-left` 两边都是 `(0,0)`。如果作者刻意要让内容跑到外面，或者刻意让 Placement Frame 不被完全覆盖，就选择
@@ -265,20 +247,16 @@ type FittedContent = {
 };
 ```
 
-当需要裁剪到 Placement Frame 时，对应的源采样窗口是由 Placement Frame 与 Content Frame 的交集机械推导出来
-的。它不是第三个由作者撰写的盒子。fit 之后的旋转或透视变换可能让采样边界不再是矩形，因此要放在这层基础布局
-之后应用。
+当需要裁剪到 Placement Frame 时，对应的源采样窗口是由 Placement Frame 与 Content Frame 的交集机械推导出来的。它不是第三个由作者撰写的盒子。fit 之后的旋转或透视变换可能让采样边界不再是矩形，因此要放在这层基础布局之后应用。
 
 ## 7. Fit 不是运动，也不是占用
 
-一次 fit 计算产出的是基础 Content Frame。缩放、平移、旋转、透视和入场运动会在之后对该结果做变换。它们不会
-改动 `ContentFit`，也不会改动源宽高比。
+一次 fit 计算产出的是基础 Content Frame。缩放、平移、旋转、透视和入场运动会在之后对该结果做变换。它们不会改动 `ContentFit`，也不会改动源宽高比。
 
 这避免了旧有的歧义：`zoom` 被塞进 `contain`/`cover` 里，从而可能悄悄让所声明的 fit 不再成立。如果一段 Ken
 Burns 运动把一张 contain 的图片缩放到发生裁切，基础 fit 仍然是 `contain`，裁切是由之后的变换显式造成的。
 
-Spatial 的尺寸策略与固有时间占用也毫无关系。一段视频可以在空间上是 `contain`，同时在时间上播放一次、循环或
-拉伸。一张图片并不会仅仅因为它有固有的空间 extent 就获得某种固有的时间播放模式。
+Spatial 的尺寸策略与固有时间占用也毫无关系。一段视频可以在空间上是 `contain`，同时在时间上播放一次、循环或拉伸。一张图片并不会仅仅因为它有固有的空间 extent 就获得某种固有的时间播放模式。
 
 ## 8. 裁剪与 frame 形状
 
@@ -291,20 +269,17 @@ owned-shape          explicit shape/path owned by the same component
 ```
 
 圆角半径、椭圆/路径蒙版、描边和阴影属于表现，不属于坐标。Text 的辉光完全可以合理地溢出它的 Placement
-Frame；Media 卡片通常会把每个局部样本都裁剪到同一个圆角 Placement Frame。Runtime 不会根据内容类型推断出任何
-默认值。
+Frame；Media 卡片通常会把每个局部样本都裁剪到同一个圆角 Placement Frame。Runtime 不会根据内容类型推断出任何默认值。
 
 自有形状只能裁剪同一个组件贡献内的元素。它不能蒙版或采样另一个同级 Track。
 
 ## 9. 透明、纯色、模糊与替代底衬
 
-Placement Frame 中未被 Content Frame 绘制的区域本身不具备空间语义。Media/Text 的表现层提供的是一组有序的、
-显式自有图层。
+Placement Frame 中未被 Content Frame 绘制的区域本身不具备空间语义。Media/Text 的表现层提供的是一组有序的、显式自有图层。
 
 ### 透明
 
-不产出任何底衬图层。透明像素会在 Composition 时自然露出更低的 Track。这不是跨 Track 采样：该 Track 在那里
-根本没有贡献像素。
+不产出任何底衬图层。透明像素会在 Composition 时自然露出更低的 Track。这不是跨 Track 采样：该 Track 在那里根本没有贡献像素。
 
 ### 纯色或渐变
 
@@ -319,14 +294,11 @@ same source Artifact ─┬─> cover ContentFit -> blur/tone -> backing layer
                       └─> contain ContentFit            -> foreground layer
 ```
 
-两个样本共享同一个 Placement Frame，但拥有各自独立的 Content Frame 和效果。Artifact 收集会对完全相同的字节
-去重；渲染仍然执行两次显式采样。模糊实现必须在裁剪之前做边缘扩展/超采，以免高斯核造出非预期的透明或发暗
-边框。
+两个样本共享同一个 Placement Frame，但拥有各自独立的 Content Frame 和效果。Artifact 收集会对完全相同的字节去重；渲染仍然执行两次显式采样。模糊实现必须在裁剪之前做边缘扩展/超采，以免高斯核造出非预期的透明或发暗边框。
 
 ### 另一张图片或另一段视频
 
-替代源通过自己的图边进入，并获得属于自己的 Inspection、IntrinsicExtent、ContentFit，对于有时长的媒体还包括
-占用策略。它不是藏在某个 Style Recipe 里的字符串路径。
+替代源通过自己的图边进入，并获得属于自己的 Inspection、IntrinsicExtent、ContentFit，对于有时长的媒体还包括占用策略。它不是藏在某个 Style Recipe 里的字符串路径。
 
 因此通用的 Media 作者模型是有序的局部图层，而不是特殊的 `foreground/background` 字段：
 
@@ -347,8 +319,7 @@ same source Artifact ─┬─> cover ContentFit -> blur/tone -> backing layer
 ### 仍然被禁止的做法
 
 对已经累积出来的 Composition 施加 `backdrop-filter` 不属于上述任何一种情形。那会让结果依赖于任意的下层
-Track。要模糊另一个视觉物，组件必须显式接收那个视觉/媒体。要模糊一个已完成的下层合成，必须由更高阶的组件先
-显式拥有并物化那个合成。
+Track。要模糊另一个视觉物，组件必须显式接收那个视觉/媒体。要模糊一个已完成的下层合成，必须由更高阶的组件先显式拥有并物化那个合成。
 
 ## 10. Text、Ranking 与 Caption 的用法
 
@@ -362,8 +333,7 @@ Spatial 提供公共几何，同时不强加单一布局模型：
 - Comment Sticker 消费一个 Placement Frame，并拥有自己的头像/文字/内部布局；
 - Caption 可以消费一个 Placement Frame，但 Cue/Atom 的折行仍归 Caption 所有。
 
-Text 的布局盒和 Media 的 Content Frame 并不会仅仅因为都是矩形就成为同一个语义 Type。它们可以使用同样的纯几何
-辅助函数，同时各自仍然是包自有的已解析事实。
+Text 的布局盒和 Media 的 Content Frame 并不会仅仅因为都是矩形就成为同一个语义 Type。它们可以使用同样的纯几何辅助函数，同时各自仍然是包自有的已解析事实。
 
 ## 11. 图数据流与不传播元数据
 
@@ -431,8 +401,6 @@ Operation 校验，而不是靠把血缘元数据复制到每一个值上。
 - 由所选渲染器实现锁定的取整/光栅行为；
 - 共享 Type 中不存在 Core、Runtime、Film 族、Text 族或 Media 族的判别字段。
 
-纯几何矩阵与真实 Chromium witness 现已覆盖每一种尺寸模式、全部九种等点对齐、不相等的 bounded/free 焦点，
-以及部分/完全越出 Canvas 的 Frame。Media 归一化还会在推导 `IntrinsicExtent` 之前，把容器旋转和非方形 sample
+纯几何矩阵与真实 Chromium witness 现已覆盖每一种尺寸模式、全部九种等点对齐、不相等的 bounded/free 焦点，以及部分/完全越出 Canvas 的 Frame。Media 归一化还会在推导 `IntrinsicExtent` 之前，把容器旋转和非方形 sample
 aspect 物化成方形像素的视觉。Ranking 现在消费同样的显式 Frame 几何，且没有增加族判别字段。最终的 Visual IR
-兼容性审查现已通过；Spatial 自己的作者 Surface 仍处于预发布状态，在此期间不应再生长出任何包内局部的百分比
-词汇。
+兼容性审查现已通过；Spatial 自己的作者 Surface 仍处于预发布状态，在此期间不应再生长出任何包内局部的百分比词汇。

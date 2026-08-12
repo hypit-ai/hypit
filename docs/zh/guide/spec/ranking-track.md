@@ -6,16 +6,14 @@ description: 官方 Ranking 迁移的已实现可执行权威，包含全部四�
 # SVML Ranking Track 迁移
 
 状态：官方 Ranking 迁移的已实现可执行权威。四个作者组件、它们共享的触发式调度、可选的同级 AudioTrack
-lowering、作者 Surface 以及真实浏览器证据都在 `@narratage/ranking` 中执行。它不是对历史 node 格式的兼容
-承诺，也不是冻结的公开 ABI。
+lowering、作者 Surface 以及真实浏览器证据都在 `@narratage/ranking` 中执行。它不是对历史 node 格式的兼容承诺，也不是冻结的公开 ABI。
 
 ## 1. Ranking 的含义
 
 Ranking 是一个视频领域的作者组件，它把一个有序集合呈现为渐进的视觉状态。它不是 Core 概念、不是通用的
 Track 模式、不是 Provider，也不是渲染器特性。
 
-旧系统把四种本质不同的行为塞在同一个 `ranking_track` 节点和一个 `rankingType` 开关背后。新系统使用一个
-物理包 `@narratage/ranking@1`，但暴露四个互相独立的作者组件：
+旧系统把四种本质不同的行为塞在同一个 `ranking_track` 节点和一个 `rankingType` 开关背后。新系统使用一个物理包 `@narratage/ranking@1`，但暴露四个互相独立的作者组件：
 
 - `ranking:TierBoard` —— 把已揭示的条目放入具名的 tier 行；
 - `ranking:Column` —— 在舞台上展示一个当前条目，然后让它落位到带编号的列中；
@@ -25,8 +23,7 @@ Track 模式、不是 Provider，也不是渲染器特性。
 一个包是共享校验、调度构造、布局工具和绘制原语的正确单位。四个组件是作者语义的正确单位。不存在公开的
 `rankingType`、模式选择输入、动态端口注册表或 Runtime 渲染器注册表。
 
-第三方可以发布另一个 Ranking 包，无需在 Core 注册类型，也无需修改本包。安装并 import 该包后，它会通过
-普通的模块机制贡献自己的 Surface、Type、validator 和 fragment 编译器。
+第三方可以发布另一个 Ranking 包，无需在 Core 注册类型，也无需修改本包。安装并 import 该包后，它会通过普通的模块机制贡献自己的 Surface、Type、validator 和 fragment 编译器。
 
 ## 2. 来自旧实现的证据
 
@@ -81,25 +78,19 @@ Track 模式、不是 Provider，也不是渲染器特性。
 </ranking:Column>
 ```
 
-`during` 提供显式的外层窗口。`triggers` 提供一个有序的 Moment occurrence 集合。`terminal` 是最后一个活动
-阶段的显式终点；它可以早于外层终点，从而让完全落位后的结果继续可见。组件要求 trigger occurrence 的数量
-等于子条目的数量，并按作者书写顺序一一对应。
+`during` 提供显式的外层窗口。`triggers` 提供一个有序的 Moment occurrence 集合。`terminal` 是最后一个活动阶段的显式终点；它可以早于外层终点，从而让完全落位后的结果继续可见。组件要求 trigger occurrence 的数量等于子条目的数量，并按作者书写顺序一一对应。
 
 外层 Selection 与 terminal Moment 都使用严格的 `one` 语义。trigger Moment 使用严格的 `each` 语义。外层 /
-terminal 出现零次或多次、trigger 出现零次，以及任何 trigger 与条目的基数不匹配，都是编译错误；组件绝不会
-自己挑一个方便的 occurrence。
+terminal 出现零次或多次、trigger 出现零次，以及任何 trigger 与条目的基数不匹配，都是编译错误；组件绝不会自己挑一个方便的 occurrence。
 
 这种按位置配对由这四个组件声明，不是通用的 Core 行为。另一种第三方 Surface 可以给每个条目单独的 Moment
 边，并 lower 到同一套包内事实。
 
-Style 声明与使用保持分离。SVS 提供具名的通用 Recipe 数据；每个变体专属的 `*Style` 组件拥有各自允许的
-键，并把 Recipe 加上显式的字体边编译成一个带类型、由包拥有的 Style。诸如 tier 行、标签、图标和入场行为
-这类语义化的条目值不是绘制属性，不属于 SVS。
+Style 声明与使用保持分离。SVS 提供具名的通用 Recipe 数据；每个变体专属的 `*Style` 组件拥有各自允许的键，并把 Recipe 加上显式的字体边编译成一个带类型、由包拥有的 Style。诸如 tier 行、标签、图标和入场行为这类语义化的条目值不是绘制属性，不属于 SVS。
 
 ## 4. 组能看到兄弟，渲染出的 Track 不能
 
-渐进式 ranking 不能通过把每个子项当作孤立的 Track item 来编译。行位置、后继交接、活动条目状态和已落位的
-前缀都依赖这个有序的组。但这不意味着条目在渲染时互相检视。
+渐进式 ranking 不能通过把每个子项当作孤立的 Track item 来编译。行位置、后继交接、活动条目状态和已落位的前缀都依赖这个有序的组。但这不意味着条目在渲染时互相检视。
 
 作者组件首先把完整的子项列表和 trigger 集合编译成一份包内私有的调度：
 
@@ -138,8 +129,7 @@ Moment set + SemanticMap + ProgramSpace + outer/terminal projection + ordered it
 outer.start <= p1 < p2 < ... < pN < terminal <= outer.end
 ```
 
-任何非法或帧相等的序列都会整体失败。视觉与可选音频的 lowerer 消费同一份调度，因此运动与声音不会漂移，
-同时它们仍然是 Run Graph 中可以各自独立被 demand 的分支。
+任何非法或帧相等的序列都会整体失败。视觉与可选音频的 lowerer 消费同一份调度，因此运动与声音不会漂移，同时它们仍然是 Run Graph 中可以各自独立被 demand 的分支。
 
 ## 5. 共同的阶段模型
 
@@ -151,9 +141,7 @@ cumulative life    [p_i, O)
 settled life       [stage.end, O)
 ```
 
-`[B, p1)` 可以显示作者显式声明的空看板，但没有隐含的活动条目。`[T, O)` 是可选的完全落位后缀，没有活动
-条目。这些事实是由包拥有的兄弟排序，建立在 [`track-authoring.md`](./track-authoring.md) 的共享时间投影
-代数之上；它们不是一个新的 `Stage` 合同。
+`[B, p1)` 可以显示作者显式声明的空看板，但没有隐含的活动条目。`[T, O)` 是可选的完全落位后缀，没有活动条目。这些事实是由包拥有的兄弟排序，建立在 [`track-authoring.md`](./track-authoring.md) 的共享时间投影代数之上；它们不是一个新的 `Stage` 合同。
 
 ### TierBoard
 
@@ -190,13 +178,11 @@ settled life       [stage.end, O)
 - 标题、可选的显式强调区间和各行字符串都是作者内容，不是 LLM 字段。
 
 Typewriter 之所以留在 Ranking 包里，是因为尽管它大量使用文本排版，它的作者语义仍然是一个有序的渐进
-ranking。它可以与未来的 Text 实现共享底层的精确字体 / 排版工具，但不得依赖通用 Text Track Program，也不得
-冒充成它。
+ranking。它可以与未来的 Text 实现共享底层的精确字体 / 排版工具，但不得依赖通用 Text Track Program，也不得冒充成它。
 
 ## 6. 空间布局与 stacking
 
-每个组件拥有一个外层放置框和它自己的内部布局算法。Tier 单元格、Column 行或 Top Three 槽位不是通用的
-逐条目空间定位器。允许在这些子项上传入任意空间输入会摧毁组件的语义。
+每个组件拥有一个外层放置框和它自己的内部布局算法。Tier 单元格、Column 行或 Top Three 槽位不是通用的逐条目空间定位器。允许在这些子项上传入任意空间输入会摧毁组件的语义。
 
 放置与 stacking 保持独立：
 
@@ -207,8 +193,7 @@ ranking。它可以与未来的 Text 实现共享底层的精确字体 / 排版�
 - 产出的那一个 `VisualTrack` 不是 stacking context，因此同级 Track 的 Present 可以出现在看板与任意图标
   之间。
 
-任何包都不应仅仅为了获得多个 z 位置而发出多个 Track。稳定的 `tieBreak` 值来自作者声明的组件 / 条目身份，
-绝不来自求值顺序。
+任何包都不应仅仅为了获得多个 z 位置而发出多个 Track。稳定的 `tieBreak` 值来自作者声明的组件 / 条目身份，绝不来自求值顺序。
 
 所有归一化几何都相对于显式的外层框。各变体必需的尺寸参数包括：
 
@@ -217,8 +202,7 @@ ranking。它可以与未来的 Text 实现共享底层的精确字体 / 排版�
 - Top Three：中心 / 宽度、标签行、图标尺寸、光环宽度 / 配色以及揭示 / 强调运动；
 - Typewriter：纸张主题 / 绘制、内边距、行距、标题 / 条目排印、旋转、打字速度以及获胜标记的绘制 / 运动。
 
-绘制、几何和运动参数由拥有它们的 `*Style` 组件校验。未知的 Recipe 属性一律失败。不存在任意的 CSS 逃生
-出口。
+绘制、几何和运动参数由拥有它们的 `*Style` 组件校验。未知的 Recipe 属性一律失败。不存在任意的 CSS 逃生出口。
 
 ## 7. 媒体、字体与声音
 
@@ -233,16 +217,13 @@ URL、不要求 Runtime 挑选字体，也不指名某个渲染器组件。
 - 配置了声音就产出同级的 `AudioTrack`；没有声音就不产生被 demand 的音频分支；
 - 声音播放绝不进入 Hyperframes 或某个视觉 Track。
 
-Ranking 自身是确定性的，没有 Need、Provider、队列、凭据或环境适配器。如果输入图像是生成出来的，那次上游
-生成仍然是另一个 Graph 组件。
+Ranking 自身是确定性的，没有 Need、Provider、队列、凭据或环境适配器。如果输入图像是生成出来的，那次上游生成仍然是另一个 Graph 组件。
 
 ## 8. Run Graph 行为
 
-作者图导出普通的逻辑 `visual` 结果，以及在作者声明时导出 `audio` 结果。Target、Candidate 和替换受与其他
-所有组件相同的 Run Graph 法则约束。Ranking 不新增任何缓存、pin 或预览原语。
+作者图导出普通的逻辑 `visual` 结果，以及在作者声明时导出 `audio` 结果。Target、Candidate 和替换受与其他所有组件相同的 Run Graph 法则约束。Ranking 不新增任何缓存、pin 或预览原语。
 
-替换视觉结果不会改动音频结果。通过普通的显式输出映射，也可以用一个多输出 Candidate 同时替换两个输出。
-一旦每个被 demand 的原始输出都由选定的 Candidate 满足，demand 分析就会剪掉原来的 Ranking 分支及其时间 /
+替换视觉结果不会改动音频结果。通过普通的显式输出映射，也可以用一个多输出 Candidate 同时替换两个输出。一旦每个被 demand 的原始输出都由选定的 Candidate 满足，demand 分析就会剪掉原来的 Ranking 分支及其时间 /
 媒体祖先。不需要任何特殊的 Ranking 执行规则。
 
 ## 9. 迁移顺序与验收
@@ -271,9 +252,6 @@ Ranking 自身是确定性的，没有 Need、Provider、队列、凭据或环�
   Program；
 - 安装第五个组件包不需要改动任何中心家族注册表。
 
-本次迁移有意不保留历史 node JSON、模式切换、旧的动态端口、渲染器 id 或 Remotion 组件。历史项目是证据和
-视觉参考，不是一门尚未发布的语言的兼容义务。
+本次迁移有意不保留历史 node JSON、模式切换、旧的动态端口、渲染器 id 或 Remotion 组件。历史项目是证据和视觉参考，不是一门尚未发布的语言的兼容义务。
 
-包的测试矩阵覆盖上述每一条验收项。可选启用的 Chromium 见证会用单 worker 与分区 worker 分别求值全部四个
-组件，证明可见的 trigger 推进和最终的落位后缀，并且只对跨进程边缘抗锯齿的微观噪声设定容差。逻辑帧状态、
-几何、stacking、事件帧和作者声明的图边都保持精确。
+包的测试矩阵覆盖上述每一条验收项。可选启用的 Chromium 见证会用单 worker 与分区 worker 分别求值全部四个组件，证明可见的 trigger 推进和最终的落位后缀，并且只对跨进程边缘抗锯齿的微观噪声设定容差。逻辑帧状态、几何、stacking、事件帧和作者声明的图边都保持精确。
