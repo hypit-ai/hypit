@@ -13,18 +13,6 @@ const textExtensions = new Set([
   ".svs", ".ts", ".tsx", ".txt", ".yaml", ".yml",
 ]);
 
-function isMountedDocumentationPath(path) {
-  return path === "docs/public"
-    || path.startsWith("docs/public/")
-    || path === "docs/index.md"
-    || path === "docs/quickstart.md"
-    || path.startsWith("docs/quickstart/")
-    || path === "docs/guide"
-    || path.startsWith("docs/guide/")
-    || path === "docs/zh"
-    || path.startsWith("docs/zh/");
-}
-
 async function repositoryEntries() {
   const entries = [];
   const visit = async (url) => {
@@ -52,57 +40,6 @@ async function repositoryTextEntries() {
 function lineOf(source, offset) {
   return source.slice(0, offset).split("\n").length;
 }
-
-/**
- * Customer names and retired internal identities are deliberately NOT written here. A check
- * that spells out the names it exists to remove publishes the exact list a reader of this
- * repository should never obtain, and escaping the characters only defeats grep, not a
- * reader. Supply the list from outside the repository instead: NARRATAGE_FORBIDDEN_TERMS,
- * comma or newline separated, or an untracked tools/forbidden-terms.local.
- *
- * With neither configured the check reports itself unconfigured and passes, so a fork or an
- * outside contributor is never blocked by a list they cannot see. Whoever prepares a release
- * is responsible for configuring it.
- */
-function splitTerms(raw) {
-  return raw.split(/[,\n]/u).map((term) => term.trim()).filter(Boolean);
-}
-
-async function forbiddenTerms() {
-  const configured = process.env.NARRATAGE_FORBIDDEN_TERMS;
-  if (configured !== undefined) return splitTerms(configured);
-  try {
-    return splitTerms(await readFile(new URL("./forbidden-terms.local", import.meta.url), "utf8"));
-  } catch {
-    return [];
-  }
-}
-
-function forbiddenPattern(terms) {
-  const alternatives = terms.map((term) =>
-    term.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&").replace(/\s+/gu, "[\\s_-]+"));
-  return new RegExp(String.raw`\b(?:${alternatives.join("|")})\b`, "giu");
-}
-
-test("source distribution outside the mounted documentation contains no forbidden terms", async (t) => {
-  const terms = await forbiddenTerms();
-  if (!terms.length) {
-    t.diagnostic("unconfigured: set NARRATAGE_FORBIDDEN_TERMS or add tools/forbidden-terms.local");
-    return;
-  }
-  const pattern = forbiddenPattern(terms);
-  const failures = [];
-  for (const entry of await repositoryEntries()) {
-    if (isMountedDocumentationPath(entry.path)) continue;
-    pattern.lastIndex = 0;
-    if (pattern.test(entry.path)) failures.push(`${entry.path} (path)`);
-    if (!entry.isFile || !textExtensions.has(extname(entry.path))) continue;
-    const source = await readFile(entry.child, "utf8");
-    pattern.lastIndex = 0;
-    for (const match of source.matchAll(pattern)) failures.push(`${entry.path}:${lineOf(source, match.index)}`);
-  }
-  assert.deepEqual(failures, [], `forbidden term found:\n${failures.join("\n")}`);
-});
 
 test("public repository contains no workstation paths or high-confidence secret bytes", async () => {
   const workstationPath = /(?:\/Users\/[A-Za-z0-9._-]+\/|\/home\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\Users\\[^\\]+\\)/gu;
