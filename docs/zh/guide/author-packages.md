@@ -35,7 +35,7 @@ mkdir -p packages/my-component/src packages/my-component/test
 }
 ```
 
-只添加你的包实际导入的依赖。分层规则参见[包架构](./packages.md)。
+只添加你的包实际导入的依赖。分层规则参见 [包架构](./packages.md)。
 
 ## 3. 定义 Module Manifest
 
@@ -132,8 +132,7 @@ node --run narratage -- lock-packages <lock-file> \
   --package-root .
 ```
 
-这里只列出你直接选择的包。它们的 Manifest 声明的精确逻辑 Module 依赖，会从已安装的
-物理依赖闭包中自动加入；缺失、摘要不匹配或存在多个候选时，建锁会直接失败。
+这里只列出你直接选择的包。它们的 Manifest 声明的精确逻辑 Module 依赖，会从已安装的物理依赖闭包中自动加入；缺失、摘要不匹配或存在多个候选时，建锁会直接失败。
 
 已有锁只需增加这个直接包时，不必重写其他选择：
 

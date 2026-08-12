@@ -200,6 +200,7 @@ async function packageClosureFromRoots(
 
 const ALWAYS_IGNORED_DIRECTORIES = new Set([".git", "node_modules"]);
 const DEVELOPMENT_ROOT_DIRECTORIES = new Set([".cache", "coverage", "test", "tests", "__tests__"]);
+const OPERATING_SYSTEM_METADATA_FILES = new Set([".DS_Store"]);
 
 function developmentRootFile(name: string): boolean {
   return /^(?:readme|changelog|license)(?:\..*)?$/iu.test(name)
@@ -212,6 +213,9 @@ async function filesUnder(root: string, cursor = root): Promise<readonly string[
     if (entry.isDirectory() && ALWAYS_IGNORED_DIRECTORIES.has(entry.name)) continue;
     if (cursor === root && entry.isDirectory() && DEVELOPMENT_ROOT_DIRECTORIES.has(entry.name)) continue;
     if (cursor === root && entry.isFile() && developmentRootFile(entry.name)) continue;
+    // Finder metadata is not part of a package. Other dotfiles remain package bytes: a package may
+    // deliberately read one, so excluding every hidden file would let behavior drift past its lock.
+    if (entry.isFile() && OPERATING_SYSTEM_METADATA_FILES.has(entry.name)) continue;
     const path = join(cursor, entry.name);
     if (entry.isDirectory()) values.push(...await filesUnder(root, path));
     else if (entry.isFile()) values.push(path);
