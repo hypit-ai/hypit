@@ -30,6 +30,5 @@ machine does not acquire a hidden FFmpeg dependency.
 The production client uses the AWS SDK default credential chain. No access key is accepted by the
 package configuration or written into Runtime identity.
 
-See [`docs/hyperframes-aws-runtime.md`](../../docs/hyperframes-aws-runtime.md) for Runtime Profile
-configuration, recovery semantics, deployment review and the opt-in live canary. The canary uses a
-fresh operation identity on every run and cleans its exact render/site prefixes by default.
+The opt-in live canary uses a fresh operation identity on every run and cleans its exact
+render/site prefixes by default.

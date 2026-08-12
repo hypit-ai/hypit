@@ -7,6 +7,7 @@ description: 安装 Narratage，编译第一张完整的 SVML 视频图，并准
 
 Narratage 把 SVML 作者源码编译成一张可见的执行图。在任何模型或外部服务开始工作之前，
 你可以先检查源码、选择一次 Run，并看清这次 Build 究竟需要执行什么。
+SVML 即 Semantic Video Markup Language，Author Source 的扩展名是 `.svml`。
 
 本页先带你得到第一份安全的 Plan：不需要 API Key，也不会产生任何付费请求。
 
@@ -168,7 +169,7 @@ Endpoint 配置，但不会执行作者图。
 
 | 指南 | 你会学到什么 |
 |---|---|
-| [Script](./quickstart/script.md) | Segment、说话人、Dual Text、Selection 与 Moment |
+| [Script](./quickstart/script.md) | Segment、Role Cue、Dual Text、Selection、Moment 与文字投影 |
 | [SVS 样式表](./quickstart/styles.md) | 字幕、Media、文字与 Film 的可复用 Recipe |
 | [媒体与生成](./quickstart/generation.md) | 图片、音频、Prompt Text 与显式模型组件 |
 | [时序与装配](./quickstart/timing.md) | Speech Spine、WhisperX、ProgramSpace 与 SemanticMap |
@@ -178,6 +179,14 @@ Endpoint 配置，但不会执行作者图。
 
 如果使用编程 Agent，可以要求它使用仓库中的 `narratage` skill。Skill 遵循的仍然是同一套文件和命令，
 不会创造另一套工作流。
+
+把下面这段发给它：
+
+```text
+安装并使用这个仓库里的 narratage skill。要安装整个 .agents/skills/narratage 文件夹，
+而不是只复制 SKILL.md。配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，
+然后带我完成第一支 SVML 视频的创作与 Build。
+```
 
 ## 名字的由来
 
