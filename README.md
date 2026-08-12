@@ -19,9 +19,6 @@ available for later Runs.
 
 SVML is the authoring language. Narratage is the compiler, runtime and package ecosystem around it.
 
-Narratage currently runs from a source checkout. The npm packages and CLI have not been published
-yet.
-
 ## What it feels like
 
 The Script remains readable prose. Segments organize the story; Role Cues say who speaks; Dual Text
