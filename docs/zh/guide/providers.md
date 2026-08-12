@@ -113,8 +113,7 @@ export default svmlPackage;
 ```
 
 `activate` 是唯一的纯部署声明。它返回的 Endpoint 同时拥有供 `doctor` 与执行使用的凭据引用、
-capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；
-环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
+capability 和调度事实。Activation 不得解析密钥或环境来源的部署值、访问网络或启动任务；环境变量名会作为引用保留到真正处理匹配 Need 时。凭据是否存在由通用 CredentialStore 路径诊断，
 Provider 不得把环境变量硬编码成特殊的密钥 Store。
 
 ## 5. 声明外部服务（如需要）
@@ -152,8 +151,7 @@ const adapter = createRuntimeEndpointAdapterFacet({
 });
 ```
 
-`narratage runtime up` 会准备、启动并探测外部程序，然后启动耐久 Worker。`build` 只启动
-所选 Producer steps 声明的 capability 所需服务。只调用远程 API 的 Provider 不声明 service。
+`narratage runtime up` 会准备、启动并探测外部程序，然后启动耐久 Worker。`build` 只启动所选 Producer steps 声明的 capability 所需服务。只调用远程 API 的 Provider 不声明 service。
 
 ## 6. 注册并锁定
 
@@ -171,8 +169,7 @@ node --run narratage -- lock-packages <runtime-lock> \
   --package-root .
 ```
 
-如果 Runtime 包锁已经存在，改用 `--add @narratage/provider-my-service`。这一步只改变本地
-信任选择；在 Runtime Profile 用 `use` 显式实例化之前，这个包仍然不会运行。
+如果 Runtime 包锁已经存在，改用 `--add @narratage/provider-my-service`。这一步只改变本地信任选择；在 Runtime Profile 用 `use` 显式实例化之前，这个包仍然不会运行。
 
 ## 7. 在 svml.runtime.json 中引用
 

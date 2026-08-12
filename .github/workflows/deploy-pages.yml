@@ -43,6 +43,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # CI skips documentation-only pushes, so the hygiene checks that scan docs/ run here.
+      - name: Repository hygiene
+        run: pnpm test:release
+
       - name: Build documentation
         run: pnpm docs:build
 
