@@ -71,6 +71,12 @@ test("command options fail closed instead of being silently ignored", async () =
     ], io, distribution),
     /doctor already uses the Runtime Profile directory and its declared root; remove --root/u,
   );
+  await assert.rejects(
+    async () => await runCli([
+      "queue", "--runtime", "/tmp/svml.runtime.ts",
+    ], io, distribution),
+    /CLI Runtime Profiles are declarative JSON files/u,
+  );
 });
 
 test("auth opens only one Endpoint credential control, never the execution Runtime", async () => {

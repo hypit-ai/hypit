@@ -46,7 +46,7 @@ After intentionally installing, removing or changing selected packages, refresh 
 project locks in one reviewed action:
 
 ```text
-node --run narratage -- packages sync build.svrun --runtime svml.runtime.json --root .
+node --run narratage -- packages sync build.svrun --runtime svml.runtime.json
 ```
 
 This command derives Author roots from that Run/Author Source closure and Runtime roots from the

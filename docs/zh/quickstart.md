@@ -40,8 +40,7 @@ pnpm install --frozen-lockfile
 
 ```bash
 node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
-  --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock
 ```
 
 `check` 会读取自描述的源码，只加载锁中允许的包，并列出这份 Author Source 声明的公共类型化输出。
@@ -50,8 +49,7 @@ node --run narratage -- check examples/talking-film-graph-check/main.svml \
 
 ```bash
 node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock \
-  --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock
 ```
 
 `plan` 会连接 Author Graph 和 Run Graph，从 `final.video` 反向找到真正需要的子图，冻结将要使用的
@@ -95,13 +93,10 @@ Runtime Profile 说明在哪里做。
 cd /path/to/my-video
 
 /path/to/narratage/narratage packages sync build.svrun \
-  --runtime svml.runtime.json --root .
+  --runtime svml.runtime.json
 
-/path/to/narratage/narratage doctor svml.runtime.json
-/path/to/narratage/narratage check main.svml \
-  --runtime svml.runtime.json --root .
 /path/to/narratage/narratage plan build.svrun \
-  --runtime svml.runtime.json --root .
+  --runtime svml.runtime.json
 ```
 
 启动器使用 Narratage 仓库已经安装好的依赖，但源码、SQLite 状态、Artifact 和输出都会留在你的项目里。
@@ -113,7 +108,7 @@ cd /path/to/my-video
 
 ## 5. Build 并取出结果
 
-在 `doctor`、`check` 和 `plan` 全部通过之后：
+检查并确认计划之后：
 
 ```bash
 /path/to/narratage/narratage build build.svrun \
@@ -124,6 +119,9 @@ cd /path/to/my-video
 
 `build` 会持久化这次 Build、确保对应 Worker 可用，并只启动所选 Endpoint 声明的外部程序。
 `--follow` 只是观察器；关掉它不会停止 Build。
+
+编辑源码时使用 `check`；配置或排查部署时使用 `doctor`。它们都不会提交工作，但也不是每次
+Build 前必须重复的仪式。
 
 ```bash
 /path/to/narratage/narratage status my-video-001 \
