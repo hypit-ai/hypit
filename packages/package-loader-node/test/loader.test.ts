@@ -454,3 +454,32 @@ test("a third-party Runtime Adapter stays outside the Host and is identified by 
   assert.notEqual(first, `sha256:${"7".repeat(64)}`);
   assert.notEqual(first, second);
 });
+
+test("a package digest ignores editor and operating-system dotfiles", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-package-dotfile-"));
+  const packageRoot = join(root, "node_modules", "example-dotfile");
+  await mkdir(packageRoot, { recursive: true });
+  await writeFile(join(packageRoot, "package.json"), JSON.stringify({
+    name: "example-dotfile",
+    version: "1.0.0",
+    type: "module",
+    exports: "./index.mjs",
+    svml: { activation: "./index.mjs" },
+  }, null, 2), "utf8");
+  await writeFile(join(packageRoot, "index.mjs"), `export default {
+    format: "svml.node-package@1",
+    name: "example-dotfile",
+  };\n`, "utf8");
+
+  const before = await createNodePackageLock(["example-dotfile"], root);
+  // A Finder dropping is not part of the package. Hashing one made a lock written on macOS
+  // report every other machine as stale, and the failure read as an unrelated stale-lock error.
+  await writeFile(join(packageRoot, ".DS_Store"), "finder", "utf8");
+  const after = await createNodePackageLock(["example-dotfile"], root);
+
+  assert.equal(after.digest, before.digest);
+  assert.deepEqual(
+    after.artifacts.map((artifact) => artifact.digest),
+    before.artifacts.map((artifact) => artifact.digest),
+  );
+});
