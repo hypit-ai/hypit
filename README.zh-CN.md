@@ -90,7 +90,7 @@ Script 始终是可读的散文。Segment 组织故事，Role Cue 指明谁在�
 | `\@midnight` | 字面量 `@midnight` |
 | `<!-- ... -->` | 注释，不会进入任何输出文字 |
 
-标记名本身不带行为：`@silence` 不会让音频静音，必须由 Audio、Caption 或 Track 组件显式消费这个Selection。完整词汇见 [Script](https://narratage.hypit.ai/zh/quickstart/script)；完整且可检查的源码见[`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml)。
+标记名本身不带行为：`@silence` 不会让音频静音，必须由 Audio、Caption 或 Track 组件显式消费这个 Selection。完整词汇见 [Script](https://narratage.hypit.ai/zh/quickstart/script)；完整且可检查的源码见 [`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml)。
 
 ## 使用 Narratage skill
 
@@ -131,6 +131,6 @@ AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步�
 
 ## 许可
 
-Narratage 以 [Narratage 开源许可](./LICENSE) 发布，基于 Apache 2.0 并附加额外条款。你可以在自己的基础设施上运行它，包括用于所在组织的商业工作；也可以 fork、修改并以相同条款公开源码。将 Narratage作为多租户或托管服务运营，以及为商业利益向第三方提供它，都需要商业授权。你用 Narratage 产出的内容归你所有。
+Narratage 以 [Narratage 开源许可](./LICENSE) 发布，基于 Apache 2.0 并附加额外条款。你可以在自己的基础设施上运行它，包括用于所在组织的商业工作；也可以 fork、修改并以相同条款公开源码。将 Narratage 作为多租户或托管服务运营，以及为商业利益向第三方提供它，都需要商业授权。你用 Narratage 产出的内容归你所有。
 
-以英文 [`LICENSE`](./LICENSE) 文本为准。商业授权请联系[official@hypit.ai](mailto:official@hypit.ai?subject=%5BGitHub%5DNarratage%20Commercial%20License%20Inquiry)。
+以英文 [`LICENSE`](./LICENSE) 文本为准。商业授权请联系 [official@hypit.ai](mailto:official@hypit.ai?subject=%5BGitHub%5DNarratage%20Commercial%20License%20Inquiry)。
