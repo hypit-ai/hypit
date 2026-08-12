@@ -29,7 +29,7 @@ node --run narratage -- gc ./svml.runtime.json
 ```
 
 From a separate project directory during source development, run
-`/path/to/svml/narratage ...`. The Runtime Profile may point `packageRoot` at the checkout while the
+`/path/to/narratage/narratage ...`. The Runtime Profile may point `packageRoot` at the checkout while the
 root launcher resolves its own
 installed TypeScript loader and CLI, so it neither invokes pnpm nor requires the current directory
 to contain Narratage's `package.json`.
