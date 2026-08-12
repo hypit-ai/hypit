@@ -212,6 +212,10 @@ async function filesUnder(root: string, cursor = root): Promise<readonly string[
     if (entry.isDirectory() && ALWAYS_IGNORED_DIRECTORIES.has(entry.name)) continue;
     if (cursor === root && entry.isDirectory() && DEVELOPMENT_ROOT_DIRECTORIES.has(entry.name)) continue;
     if (cursor === root && entry.isFile() && developmentRootFile(entry.name)) continue;
+    // A package's bytes are the same on every machine. Dotfiles are editor and operating-system
+    // droppings — .DS_Store above all — so hashing them makes one developer's lock unusable
+    // everywhere else, and the failure reads as an unrelated stale-lock error.
+    if (entry.isFile() && entry.name.startsWith(".")) continue;
     const path = join(cursor, entry.name);
     if (entry.isDirectory()) values.push(...await filesUnder(root, path));
     else if (entry.isFile()) values.push(path);
