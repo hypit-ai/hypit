@@ -183,6 +183,8 @@ Follow the authoring path in order, or jump directly to the part you are changin
 | [Film & Rendering](./quickstart/composition.md) | Peer Track composition and explicit rendering |
 | [Run Source & Builds](./quickstart/run.md) | Targets, reuse, Runtime Profiles, Builds and retrieval |
 
+## Use the Narratage skill
+
 If you use a coding agent, ask it to use the repository's `narratage` skill. The skill follows the
 same files and commands; it does not introduce a separate workflow.
 

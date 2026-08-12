@@ -179,6 +179,8 @@ Endpoint 配置，但不会执行作者图。
 | [Film 与渲染](./quickstart/composition.md) | 平级 Track 合成与显式渲染 |
 | [Run Source 与 Builds](./quickstart/run.md) | Targets、复用、Runtime Profile、Build 与取回结果 |
 
+## 使用 Narratage skill
+
 如果使用编程 Agent，可以要求它使用仓库中的 `narratage` skill。Skill 遵循的仍然是同一套文件和命令，
 不会创造另一套工作流。
 
