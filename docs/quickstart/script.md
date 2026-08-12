@@ -188,22 +188,6 @@ name namespace — the same id cannot be used for both.
 
 Other components reference Moments via `{story.moment.ranking}`.
 
-## Slots
-
-> The Script parser defines Slot syntax, but the current author-facing `<script>` Surface does not
-> yet expose a binding input. Do not put an unbound Slot in `main.svml`; it will fail `check`.
-
-Variable interpolation for templated Scripts:
-
-```svml
-<intro>
-  <HOST> Meet <${product} | ${product_pronunciation}>.
-</intro>
-```
-
-Slot ids are 1–64 characters, starting with a letter or underscore. Binding values are literal
-text — they cannot inject SVML syntax. Slots are parsed first, then bound.
-
 ## Comments and escaping
 
 ```svml
@@ -220,7 +204,6 @@ Reserved syntax starters must be escaped:
 |---|---|
 | `\@` | literal `@` |
 | `\<` | literal `<` |
-| `\${` | literal `${` |
 | `\\` | literal `\` |
 
 Inside Dual Text, also escape `\|` and `\>`.

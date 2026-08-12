@@ -1,5 +1,5 @@
 import { artifactDependency } from "@narratage/artifact";
-import { videoContractManifests } from "../../test-support/video-domain.js";
+import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { registerTypeValidatorFacets } from "@narratage/component-kit";
 import { mediaDependency } from "@narratage/media";
 import { compositionTypes } from "@narratage/composition";

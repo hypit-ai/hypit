@@ -38,8 +38,7 @@ pnpm test             # 完整测试套件
 
 ```text
 narratage/
-├── packages/              82 workspace packages
-├── spec/                  16 normative specification documents
+├── packages/              workspace packages
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
 ├── services/              Python 服务 (whisperx, image-opencv)

@@ -5,7 +5,7 @@ on:
     branches: [main]
     # Documentation-only changes are covered by deploy-pages.yml, which builds the site and runs
     # the same repository hygiene checks. Nothing under docs/ is in tsconfig's include or reachable
-    # from the test suite, so type checking and 633 tests would prove nothing here.
+    # from the test suite, so type checking and the full test suite would prove nothing here.
     paths-ignore:
       - "docs/**"
   pull_request:

@@ -38,8 +38,7 @@ See [Testing](./testing.md) for environment-gated tests and test patterns.
 
 ```text
 narratage/
-├── packages/              86 workspace packages
-├── spec/                  16 normative specification documents
+├── packages/              workspace packages
 ├── docs/                  VitePress documentation site
 ├── examples/              runnable example sources
 ├── services/              Python services (whisperx, image-opencv)
