@@ -134,7 +134,7 @@ ProgramSpace 包含：
 `satisfy` 选择一份此前已接受的 ProgramSpace Record，再把该具名逻辑输出连接给 Track 与
 Film。Track 使用 `during="program"` 或显式 `start`/`end` 窗口。没有语音就没有实测
 SemanticMap，因此省略 WhisperX 与 Caption 组件，也不要使用 Selection/Moment 时序。Run
-Source 语法见[复用结果](./run.md#复用结果)。
+Source 语法见 [复用结果](./run.md#复用结果)。
 
 ## SemanticMap
 
