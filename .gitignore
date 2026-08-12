@@ -8,10 +8,6 @@ coverage/
 *.temp
 *.lock.editing
 
-# The forbidden-term list for the repository hygiene check. Kept out of the repository so
-# that the names it screens for are never published alongside the check itself.
-tools/forbidden-terms.local
-
 # Ignore local editor state while distributing repository skill-discovery links.
 .claude/*
 !.claude/skills
