@@ -6,7 +6,7 @@ description: Author, check, plan, build, inspect, and retrieve Narratage/SVML vi
 # Narratage
 
 Use this entrypoint for work in the `narratage` repository. Keep `.svml` Author Source, `.svrun` Run
-Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
+Source, and the declarative `svml.runtime.json` Runtime Profile separate.
 
 ## Route the task
 
@@ -24,19 +24,19 @@ Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
   `references/runtime.md`; diagnose and start the durable Runtime, `check` Author Source, `plan`
   before paid work, then submit, inspect, and retrieve the Build.
 
-## Required loop
+## Ordinary loop
 
 ```bash
-node --run narratage -- packages sync path/to/build.svrun --runtime path/to/svml.runtime.json --root .
-node --run narratage -- doctor path/to/svml.runtime.json
-node --run narratage -- check path/to/main.svml --runtime path/to/svml.runtime.json --root .
-node --run narratage -- plan path/to/build.svrun --runtime path/to/svml.runtime.json --root .
+node --run narratage -- plan path/to/build.svrun --runtime path/to/svml.runtime.json
 node --run narratage -- build path/to/build.svrun --runtime path/to/svml.runtime.json \
-  --root . --build-id my-build-001 --follow
+  --build-id my-build-001 --follow
 node --run narratage -- inspect my-build-001 --runtime path/to/svml.runtime.json
 node --run narratage -- get my-build-001 --runtime path/to/svml.runtime.json \
   --name final.video --to path/to/output/final.mp4
 ```
+
+Run `packages sync` after import or Runtime package selections change. Use `check` while editing and
+`doctor` for deployment setup or diagnosis; do not impose either as ceremony before every Build.
 
 Treat `--follow` as an observer: stopping it does not stop the durable Build. Use `runtime down`
 only to stop the Worker and Runtime-owned programs; it does not cancel Builds or remote Provider

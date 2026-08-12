@@ -9,13 +9,16 @@ The Author Source defines the video. A Run Source chooses which of its public ou
 which explicit Candidates, if any, should satisfy them. The Runtime Profile chooses the machine,
 stores and Provider endpoints that execute the resulting plan.
 
-Most work follows the same loop:
+Package trust is synchronized once after package selections change:
 
 ```bash
-narratage packages sync build.svrun --runtime svml.runtime.json --root .
-narratage doctor svml.runtime.json
-narratage check main.svml --runtime svml.runtime.json --root .
-narratage plan build.svrun --runtime svml.runtime.json --root .
+narratage packages sync build.svrun --runtime svml.runtime.json
+```
+
+Ordinary work then follows the short path:
+
+```bash
+narratage plan build.svrun --runtime svml.runtime.json
 narratage build build.svrun --runtime svml.runtime.json --build-id my-video-001 --follow
 narratage get my-video-001 --runtime svml.runtime.json --name final.video --to output/final.mp4
 ```
@@ -23,7 +26,8 @@ narratage get my-video-001 --runtime svml.runtime.json --name final.video --to o
 The checked-in source launcher is `/path/to/narratage/narratage`; commands written as `narratage`
 on this page mean that launcher or the future installed CLI.
 
-Only `build` submits work. `packages sync`, `doctor`, `check` and `plan` are safe preparation steps.
+Only `build` submits work. `plan` is the normal preview. `check` is an editing aid; `doctor` is a
+deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
 
 ```text
 main.svml          author meaning
@@ -187,11 +191,10 @@ human-supplied result uses the same mechanism.
 
 ## Runtime Profile
 
-The Runtime Profile (`svml.runtime.json`) tells the system **where** to run each type of work:
-
-Declarative `svml.runtime.json` is the standard form. Advanced trusted embedding may instead use
-`svml.runtime.ts`; both are passed to `--runtime` and assemble the same explicit roles. See the
-complete [Runtime Profile guide](../guide/runtime-profile.md).
+The declarative Runtime Profile (`svml.runtime.json`) tells the CLI **where** to run each type of
+work. Applications embedding Narratage may assemble the same Runtime roles through
+`@narratage/local`, but executable modules are not CLI Profiles. See the complete
+[Runtime Profile guide](../guide/runtime-profile.md).
 
 ```json
 {
@@ -413,7 +416,7 @@ After installing or updating packages, explicitly accept both declared closures:
 
 ```bash
 node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 The Author and Run sources choose author packages. The Runtime Profile chooses environment
@@ -436,12 +439,12 @@ Doctor is intentionally a **full profile audit**. For the environment required b
 
 ```bash
 node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 ```bash
 node --run narratage -- plan examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
@@ -457,7 +460,6 @@ commands manage external programs only and do not own the Worker lifecycle.
 ```bash
 node --run narratage -- build examples/talking-head-aroll/build.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root . \
   --build-id my-film-001 \
   --follow
 ```
@@ -515,7 +517,7 @@ above), then submit it:
 ```bash
 node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
   --runtime examples/talking-head-aroll/svml.runtime.json \
-  --root . --build-id my-film-reuse-001 --follow
+  --build-id my-film-reuse-001 --follow
 ```
 
 ### 7. Diagnose or stop the local Runtime

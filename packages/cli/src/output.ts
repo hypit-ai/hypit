@@ -183,6 +183,13 @@ function typeName(type: TypeRef): string {
   return `${type.module.name}@${type.module.version}/${type.name}`;
 }
 
+/** Frontends may export graph plumbing so later compilers can address it.
+ * Keep that machine surface intact, but do not make authors read generated
+ * binding names during an ordinary source check. */
+function isGeneratedExportName(name: string): boolean {
+  return name.includes(".__") || /\.binding-\d+$/u.test(name) || name.endsWith(".bindings");
+}
+
 function facts(rows: readonly (readonly [string, string])[], colors: Palette): string[] {
   const width = Math.max(...rows.map(([name]) => name.length), 0);
   return rows.map(([name, value]) => `  ${colors.dim(name.padEnd(width))}  ${value}`);
@@ -232,17 +239,22 @@ function renderAuthorCheck(
   verbose: boolean,
 ): string {
   const lines = [heading("success", "Source is valid", io, colors), ""];
+  const authorFacing = view.machine.exports.filter((item) => !isGeneratedExportName(item.name));
+  const outputs = authorFacing.filter((item) => item.kind === "logical-output");
+  const values = authorFacing.filter((item) => item.kind !== "logical-output");
+  const readable = verbose ? view.machine.exports : outputs;
   lines.push(...facts([
     ["Source", shortPath(view.source)],
     ["Frontend", view.frontend],
     ["Modules", String(view.machine.modules.length)],
     ["Units", String(view.machine.units)],
-    ["Exports", String(view.machine.exports.length)],
+    ["Outputs", String(outputs.length)],
+    ...(verbose ? [["Values", String(values.length)] as const] : []),
     ["Assets", String(view.machine.sourceAssets.length)],
   ], colors));
-  if (view.machine.exports.length > 0) {
-    lines.push("", colors.strong("Exports"));
-    const ordered = [...view.machine.exports].sort((left, right) => {
+  if (readable.length > 0) {
+    lines.push("", colors.strong(verbose ? "All exports" : "Runnable outputs"));
+    const ordered = [...readable].sort((left, right) => {
       const leftRank = left.kind === "logical-output" ? 0 : 1;
       const rightRank = right.kind === "logical-output" ? 0 : 1;
       return leftRank - rightRank || left.name.localeCompare(right.name);
@@ -250,7 +262,8 @@ function renderAuthorCheck(
     const shown = verbose ? ordered : ordered.slice(0, 12);
     const width = Math.max(...shown.map((item) => item.name.length));
     for (const item of shown) {
-      lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${typeName(item.type)}  ${colors.dim(item.kind)}`);
+      lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${typeName(item.type)}`
+        + `${verbose ? `  ${colors.dim(item.kind)}` : ""}`);
     }
     if (shown.length < ordered.length) {
       lines.push(`  ${colors.dim(`${ordered.length - shown.length} more · use --verbose for the complete list`)}`);
@@ -328,7 +341,7 @@ function renderPlan(
     ["Steps", String(plan.steps.length)],
     ["External requests", String(requestCount)],
   ], colors));
-  if (grouped.size > 0) {
+  if (verbose && grouped.size > 0) {
     lines.push("", colors.strong("Operations"));
     const entries = [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right));
     const countWidth = Math.max(...entries.map(([, count]) => String(count).length));
@@ -360,9 +373,11 @@ function renderPlan(
     const capabilityCount = view.machine.preflight.capabilities.length;
     lines.push(`  ${colors.dim(`Only the ${capabilityCount} demanded ${capabilityCount === 1 ? "capability was" : "capabilities were"} checked.`)}`);
   }
-  const visibleSelections = verbose ? plan.selections : [];
+  const visibleSelections = verbose
+    ? plan.selections
+    : plan.selections.filter((selection) => view.candidateNames?.[selection.candidate] !== undefined);
   if (visibleSelections.length > 0) {
-    lines.push("", colors.strong("Selections"));
+    lines.push("", colors.strong(verbose ? "Selections" : "Run choices"));
     for (const selection of visibleSelections) {
       const status = colors.success(glyph(io, "✓", "+"));
       const output = view.outputNames?.[selection.output] ?? shortOpaque(selection.output);
@@ -435,9 +450,15 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  narratage check <source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>] [--asset-root <directory>]",
     ],
+    doctor: [
+      colors.accent(colors.strong("narratage doctor")),
+      colors.dim("Diagnose one complete declarative Runtime Profile without submitting work."),
+      "",
+      "  narratage doctor <runtime-profile.json>",
+    ],
     plan: [
       colors.accent(colors.strong("narratage plan")),
-      colors.dim("Freeze the demanded subgraph and expose every selected Candidate and external Need."),
+      colors.dim("Freeze the demanded subgraph and expose explicit Run choices and every external Need."),
       "",
       "  narratage plan <run-source> [--runtime <profile>] [--package-lock <lock>] [--root <workspace>] [--asset-root <directory>]",
       "",
@@ -478,11 +499,69 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "  narratage queue --runtime <profile> [--watch]",
       "  narratage queue --runtime <profile> --watch --jsonl",
     ],
+    builds: [
+      colors.accent(colors.strong("narratage builds")),
+      colors.dim("List Builds archived by one Runtime Profile."),
+      "",
+      "  narratage builds --runtime <profile>",
+    ],
+    status: [
+      colors.accent(colors.strong("narratage status")),
+      colors.dim("Show the current state of one Build and its notable external Operations."),
+      "",
+      "  narratage status <build-id> --runtime <profile>",
+    ],
+    inspect: [
+      colors.accent(colors.strong("narratage inspect")),
+      colors.dim("Inspect one Build's targets and accepted archive."),
+      "",
+      "  narratage inspect <build-id> --runtime <profile>",
+    ],
+    get: [
+      colors.accent(colors.strong("narratage get")),
+      colors.dim("Read or copy one archived result; copying never reruns work."),
+      "",
+      "  narratage get <build-id> --runtime <profile> [--name <source-name>|--record <id>|--output <id>|--artifact <digest>] [--to <path>]",
+    ],
     history: [
       colors.accent(colors.strong("narratage history")),
       colors.dim("Find accepted historical Logical Outputs without selecting them for a new Run."),
       "",
       "  narratage history <output-name> --runtime <profile> [--source <author-source>]",
+      "  narratage history --source <author-source> --runtime <profile>",
+    ],
+    operations: [
+      colors.accent(colors.strong("narratage operations")),
+      colors.dim("List external Operation attempts belonging to one Build."),
+      "",
+      "  narratage operations <build-id> --runtime <profile>",
+    ],
+    operation: [
+      colors.accent(colors.strong("narratage operation")),
+      colors.dim("Inspect one exact external Operation realization."),
+      "",
+      "  narratage operation <operation-digest> --runtime <profile>",
+    ],
+    cancel: [
+      colors.accent(colors.strong("narratage cancel")),
+      colors.dim("Request cancellation without pretending an external Provider stopped instantly."),
+      "",
+      "  narratage cancel build <build-id> --runtime <profile> [--reason <text>]",
+      "  narratage cancel operation <operation-digest> --runtime <profile> [--reason <text>]",
+    ],
+    auth: [
+      colors.accent(colors.strong("narratage auth")),
+      colors.dim("Manage credentials required by one declared Endpoint instance."),
+      "",
+      "  narratage auth status <endpoint-instance> --runtime <profile> [--slot <name>]",
+      "  narratage auth login <endpoint-instance> --runtime <profile> [--slot <name>] [--from <secret-file>]",
+      "  narratage auth logout <endpoint-instance> --runtime <profile> [--slot <name>]",
+    ],
+    gc: [
+      colors.accent(colors.strong("narratage gc")),
+      colors.dim("Report unreachable archived Artifacts; delete them only with --apply."),
+      "",
+      "  narratage gc <profile> [--apply]",
     ],
     packages: [
       colors.accent(colors.strong("narratage packages")),
@@ -509,14 +588,14 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
   }
   io.write([
     colors.accent(colors.strong("Narratage")),
-    colors.dim("Write the story. Compile the result."),
+    colors.dim('"First, there was narration. Then, there were montages."'),
     "",
     colors.strong("Typical flow"),
-    "  doctor <profile>                         audit the complete configured deployment",
-    "  check <source> --runtime <profile>        verify author or run intent",
-    "  plan <run-source> --runtime <profile>     inspect the exact demanded subgraph",
-    "  build <run-source> --runtime <profile>    submit durable work and ensure a Worker",
-    "  queue --runtime <profile> --watch         observe shared work without owning it",
+    "  plan <run-source> --runtime <profile>     see exactly what this Run will demand",
+    "  build <run-source> --runtime <profile>    submit durable work; add --follow to watch",
+    "  get <build-id> --runtime <profile>        read or copy an archived result",
+    "  packages sync ...                         setup step after package selection changes",
+    "  doctor <profile>                          diagnose deployment setup when needed",
     "",
     colors.strong("Authoring"),
     "  check <source>              verify one self-described Author or Run source",

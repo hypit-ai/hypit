@@ -134,8 +134,7 @@ Build 取消先关闭准入；Operation 取消只抑制那个精确实现。`acc
 不等于已停止；系统继续协调到 `confirmed`、`unsupported`、`too-late` 或自然结束。迟到的付费
 产物继续归档，但不能进入被抑制的 Core 分支。Runtime 不会因此偷偷换 Candidate 或 Provider。
 
-## 高级 TypeScript 嵌入
+## 嵌入 API
 
-`svml.runtime.ts` 仍可用于可信的私有部署代码，但必须构造与选择同样完整的一组 Runtime
-service package。它不是作者语言逃生口，也没有隐藏默认值。仓库中的
-`examples/talking-film-live/svml.runtime.ts` 是可执行参考。
+CLI 只接受声明式 JSON Profile。嵌入 Narratage 的应用可以通过 `@narratage/local` 直接组装
+相同的 Runtime 角色；这属于应用代码，而不是第二种 CLI Profile 文件。

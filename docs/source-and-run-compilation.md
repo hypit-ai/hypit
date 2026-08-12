@@ -14,7 +14,7 @@ one rule unambiguous:
 |---|---|---|
 | Author Source | what the author declares and how declarations connect | `.svml`, `.svs`, or another package convention |
 | Run Source | which Author Source, Targets and explicit Candidate satisfactions this Build uses | `.svrun` |
-| Runtime Profile | where the already frozen work executes, with which Stores and Endpoints | `.json` / trusted embedding code |
+| Runtime Profile | where the already frozen work executes, with which Stores and Endpoints | `.json` |
 
 Only the first two compile into graphs. Runtime Profile is deployment configuration and cannot add a
 Target, Candidate, Satisfaction or author component.

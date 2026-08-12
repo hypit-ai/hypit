@@ -41,8 +41,8 @@ package bytes, not a self-asserted development label. `doctor` checks locks, con
 credentials, executables and declared service health without running a Build or opening an execution
 Store. It evaluates the same pure Endpoint activation used by execution, then opens only explicitly
 selected CredentialStores for exact reference resolution. Credentials and prerequisites therefore
-have one declaration rather than a diagnostic mirror. Executable TypeScript remains the advanced
-trusted embedding API.
+have one declaration rather than a diagnostic mirror. Applications may assemble the same roles
+through `@narratage/local`; executable application code is not a second CLI Profile format.
 
 The full `doctor` remains an audit of the whole selected deployment. `plan --runtime` and `build`
 instead derive the finite demand slice first and preflight only its capabilities before submitting

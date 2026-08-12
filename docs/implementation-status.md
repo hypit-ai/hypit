@@ -98,8 +98,8 @@ Implemented:
   `runtime up/status/logs/down`, queue/watch and Build/Operation inspection;
 - honest Build and scoped Operation cancellation separating request, admission, acknowledgment and
   factual terminal state; late results remain archived without entering suppressed branches;
-- declarative `svml.runtime.json` loading through a separate locked Runtime Adapter package closure,
-  with TypeScript Runtime assembly retained as the advanced embedding API;
+- declarative `svml.runtime.json` CLI loading through a separate locked Runtime Adapter package
+  closure, while embedding applications may assemble the same roles through `@narratage/local`;
 - domain-neutral Build archive inspection and Record egress: accepted intermediate Records remain
   durable independently of optional `inspect` / `get --to` Host reads;
 - Host-only Build Catalog history and source output aliases through `builds`, `inspect` and

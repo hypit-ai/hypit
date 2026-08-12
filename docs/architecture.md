@@ -324,7 +324,8 @@ physical packages whose verified `svml.runtime-adapter-host@1` facets may activa
 Runtime services. Exact `use` names resolve only inside that locked inventory. The Host rebinds each Runtime
 implementation identity to the package Artifact digest and that package's transitive dependency closure before
 resolving the Runtime Profile/Closure. The JSON contains non-secret configuration and credential
-references; executable `svml.runtime.ts` remains an advanced trusted embedding API.
+references. Applications embedding Narratage may assemble the same roles through
+`@narratage/local`; executable application code is not a second CLI Profile format.
 
 Cross-package communication is decentralized. A type-owning module publishes a nominal `TypeRef`,
 schema and optional semantic validator digest. Producers and consumers refer to that TypeRef. Core

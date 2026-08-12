@@ -1,5 +1,4 @@
 import { dirname, extname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { readFile } from "node:fs/promises";
 
 import type {
@@ -12,7 +11,7 @@ import type {
 import type { NodeCompiledSourceClosure } from "@narratage/compiler-node";
 import type { BuildCatalogDescriptor, CapacityReservation, OperationProgress } from "@narratage/runtime";
 import { isDigest } from "@narratage/protocol";
-import type { BuildState, CapabilityRef } from "@narratage/protocol";
+import type { BuildState, CapabilityRef, TypeRef } from "@narratage/protocol";
 import { parseSourceHeader } from "@narratage/source";
 import {
   createNodePackageLock,
@@ -230,7 +229,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
     if (item === "--runtime") {
       const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--runtime requires a Runtime Profile or trusted config module");
+      if (value === undefined || value.startsWith("--")) throw new Error("--runtime requires a declarative JSON Runtime Profile");
       runtime = resolve(value);
       index += 1;
       continue;
@@ -457,16 +456,16 @@ function usage(): string {
     "  narratage gc <runtime-profile.json> [--apply]",
     "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--root workspace] [--asset-root directory]",
     "  narratage plan <run-source> [--runtime profile.json] [--package-lock file] [--root workspace] [--asset-root directory]",
-    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--root workspace] [--asset-root directory] [--follow] [--no-services]",
-    "  narratage status <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  narratage builds --runtime profile.json|./svml.runtime.ts",
-    "  narratage history [source-output-name] --runtime profile.json|./svml.runtime.ts [--source author.svml]",
-    "  narratage inspect <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  narratage get <build-id> --runtime profile.json|./svml.runtime.ts [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
-    "  narratage operations <build-id> --runtime profile.json|./svml.runtime.ts",
-    "  narratage operation <operation-id> --runtime profile.json|./svml.runtime.ts",
-    "  narratage cancel build <build-id> --runtime profile.json|./svml.runtime.ts [--reason text]",
-    "  narratage cancel operation <operation-id> --runtime profile.json|./svml.runtime.ts [--reason text]",
+    "  narratage build <run-source> --runtime profile.json [--root workspace] [--asset-root directory] [--follow] [--no-services]",
+    "  narratage status <build-id> --runtime profile.json",
+    "  narratage builds --runtime profile.json",
+    "  narratage history [source-output-name] --runtime profile.json [--source author.svml]",
+    "  narratage inspect <build-id> --runtime profile.json",
+    "  narratage get <build-id> --runtime profile.json [--name source-name|--record record-id|--output logical-output-id|--artifact digest] [--to path]",
+    "  narratage operations <build-id> --runtime profile.json",
+    "  narratage operation <operation-id> --runtime profile.json",
+    "  narratage cancel build <build-id> --runtime profile.json [--reason text]",
+    "  narratage cancel operation <operation-id> --runtime profile.json [--reason text]",
     "  narratage auth status|login|logout <endpoint-instance> --runtime profile.json [--slot name] [--from secret-file]",
     "",
     "output:",
@@ -474,25 +473,13 @@ function usage(): string {
   ].join("\n");
 }
 
-function isLocalRuntime(value: unknown): value is LocalRuntime {
-  return typeof value === "object"
-    && value !== null
-    && "build" in value
-    && typeof value.build === "function"
-    && "builds" in value
-    && typeof value.builds === "function"
-    && "readArtifact" in value
-    && typeof value.readArtifact === "function"
-    && "openArtifact" in value
-    && typeof value.openArtifact === "function"
-    && "credentials" in value
-    && typeof value.credentials === "function"
-    && "putCredential" in value
-    && typeof value.putCredential === "function"
-    && "deleteCredential" in value
-    && typeof value.deleteCredential === "function"
-    && "close" in value
-    && typeof value.close === "function";
+function requireJsonRuntimeProfile(path: string): void {
+  if (extname(path) !== ".json") {
+    throw new Error(
+      `Narratage CLI Runtime Profiles are declarative JSON files; ${path} is not .json. `
+      + "Programmatic Runtime assembly belongs in an application that embeds @narratage/local.",
+    );
+  }
 }
 
 function createCatalogDescriptor(options: {
@@ -603,13 +590,18 @@ async function preflightPlan(
   } as const;
 }
 
-function assertPreflight(preflight: Awaited<ReturnType<typeof preflightPlan>>): void {
+function assertPreflight(
+  preflight: Awaited<ReturnType<typeof preflightPlan>>,
+  ignoredCodes: ReadonlySet<string> = new Set(),
+): void {
   if (preflight === undefined || preflight.ok) return;
-  const errors = preflight.diagnostics.filter((item) => item.severity === "error");
+  const errors = preflight.diagnostics.filter((item) =>
+    item.severity === "error" && !ignoredCodes.has(item.code));
+  if (errors.length === 0) return;
   throw new Error([
     `Runtime preflight failed for ${errors.length} demanded deployment requirement${errors.length === 1 ? "" : "s"}:`,
     ...errors.map((item) => `  ${item.code}${item.subject === undefined ? "" : ` (${item.subject})`}: ${item.message}`),
-    "No Build was submitted and no external request was made.",
+    "No Build was submitted and no external capability request was made.",
   ].join("\n"));
 }
 
@@ -618,35 +610,22 @@ async function loadLocalRuntime(
   distribution: CliDistribution,
   implementationPackages?: LoadedNodePackageSet,
 ): Promise<LocalRuntime> {
-  if (extname(path) === ".json") {
-    return await distribution.createRuntimeFromConfig(path, {
-      ...(implementationPackages === undefined ? {} : { implementationPackages }),
-    });
-  }
-  // A Runtime config is trusted executable deployment code, never an Author Frontend or .svml import.
-  const imported = await import(pathToFileURL(path).href) as {
-    readonly default?: unknown;
-    readonly runtime?: unknown;
-  };
-  let candidate = imported.default ?? imported.runtime;
-  if (typeof candidate === "function") candidate = await candidate();
-  else candidate = await candidate;
-  if (!isLocalRuntime(candidate)) {
-    throw new Error(`Runtime config ${path} must export a LocalRuntime or a function that creates one`);
-  }
-  return candidate;
+  requireJsonRuntimeProfile(path);
+  return await distribution.createRuntimeFromConfig(path, {
+    ...(implementationPackages === undefined ? {} : { implementationPackages }),
+  });
 }
 
 async function loadRuntimeControl(
   path: string,
   distribution: CliDistribution,
 ): Promise<LocalRuntimeControl> {
-  if (extname(path) === ".json") {
-    return await distribution.createRuntimeControlFromConfig(path);
-  }
-  // Trusted executable Runtime modules cannot be partially inspected without
-  // executing their own assembly. They retain the full-Runtime fallback.
-  return await loadLocalRuntime(path, distribution);
+  requireJsonRuntimeProfile(path);
+  return await distribution.createRuntimeControlFromConfig(path);
+}
+
+function displayType(type: TypeRef): string {
+  return `${type.module.name}@${type.module.version}/${type.name}`;
 }
 
 function submissionStatus(
@@ -926,6 +905,7 @@ export async function runCli(
     throw new Error("history requires an output name or --source path");
   }
   assertCommandOptions(args);
+  if (args.runtime !== undefined) requireJsonRuntimeProfile(args.runtime);
   if (args.command === "lock-packages") {
     const exact = args.packages.length > 0;
     const mutation = args.addPackages.length > 0 || args.removePackages.length > 0;
@@ -1133,12 +1113,15 @@ export async function runCli(
         runtime: { path: selection.runtimePackageLock, digest: runtimeAfter.digest, difference: runtime },
       }, changed ? "Project package locks synchronized" : "Project package locks already current",
       changed ? "success" : "info", [
-        ["Run", source], ["Profile", profile], ["Package root", packageRoot],
-        ["Author roots", String(sourceSelection.selected.length)],
-        ["Runtime roots", String(runtimePackages.length)],
-        ["Author changes", String(author.added.length + author.removed.length + author.changed.length)],
-        ["Runtime changes", String(runtime.added.length + runtime.removed.length + runtime.changed.length)],
+        ["Run", source], ["Profile", profile],
+        ["Author packages", String(sourceSelection.selected.length)],
+        ["Runtime packages", String(runtimePackages.length)],
+        ["Updated entries", String(author.added.length + author.removed.length + author.changed.length
+          + runtime.added.length + runtime.removed.length + runtime.changed.length)],
       ], args.verbose ? [
+        `Package root     ${packageRoot}`,
+        ...sourceSelection.selected.map((item) => `Author selected  ${item}`),
+        ...runtimePackages.map((item) => `Runtime selected ${item}`),
         ...author.changed.map((item) => `Author changed   ${item}`),
         ...author.added.map((item) => `Author added     ${item}`),
         ...author.removed.map((item) => `Author removed   ${item}`),
@@ -1155,6 +1138,7 @@ export async function runCli(
       throw new Error("doctor reads all deployment selection from the Runtime Profile itself");
     }
     const profile = resolve(args.file!);
+    requireJsonRuntimeProfile(profile);
     const result = await distribution.doctorRuntimeConfig(profile);
     const machine = {
       format: "narratage.cli-doctor@1" as const,
@@ -1178,6 +1162,7 @@ export async function runCli(
       throw new Error("--max-wait-ms applies to services up");
     }
     const profile = resolve(args.file!);
+    requireJsonRuntimeProfile(profile);
       const result = args.action === "up"
       ? await distribution.externalServices.up(profile, {
         ...(args.maxWaitMs === undefined ? {} : { maxWaitMs: args.maxWaitMs }),
@@ -1213,6 +1198,7 @@ export async function runCli(
       throw new Error("runtime takes up, down, status or logs");
     }
     const profile = resolve(args.file!);
+    requireJsonRuntimeProfile(profile);
     if (args.action === "up") {
       // Validate the exact Runtime Revision against unfinished work before replacing a stale Worker
       // or starting external programs. A refusal must leave the old execution environment intact.
@@ -1612,10 +1598,11 @@ export async function runCli(
       } else if (args.command === "inspect") {
         const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
+        const archive = inspectBuild(status.build.state, status.catalog);
         const machine = {
           build: status.build.build,
           revision: status.build.revision,
-          archive: inspectBuild(status.build.state, status.catalog),
+          archive,
           operations: status.operations.map((operation) => ({
             id: operation.id,
             command: operation.command,
@@ -1628,10 +1615,38 @@ export async function runCli(
             ...(operation.failure === undefined ? {} : { failure: operation.failure }),
           })),
         };
+        const aliases = archive.presentation?.aliases ?? [];
+        const aliasByOutput = new Map(aliases.flatMap((alias) =>
+          alias.ref.kind === "logical-output" ? [[alias.ref.id, alias] as const] : []));
+        const recordById = new Map(archive.records.map((record) => [record.id, record]));
+        const targetOutputs = new Set(archive.targets.map((target) => target.output));
+        const targetLines = archive.targets.map((target) => {
+          const alias = aliasByOutput.get(target.output);
+          const record = target.record === undefined ? undefined : recordById.get(target.record);
+          const name = alias?.name ?? target.output;
+          if (record === undefined) return `Target    ${name} · not accepted`;
+          return `Target    ${name} · ${displayType(record.type)} · ${record.digest.slice(0, 18)}…`;
+        });
+        const otherAccepted = archive.demandedOutputs.filter((item) =>
+          item.accepted && !targetOutputs.has(item.output));
+        const otherLines = args.verbose
+          ? otherAccepted.map((item) => {
+              const alias = aliasByOutput.get(item.output);
+              const record = recordById.get(item.record);
+              const name = alias?.name ?? item.output;
+              return record === undefined
+                ? `Output    ${name}`
+                : `Output    ${name} · ${displayType(record.type)} · ${record.digest.slice(0, 18)}…`;
+            })
+          : otherAccepted.length === 0
+            ? []
+            : [`Other accepted outputs  ${otherAccepted.length} · use --verbose to list them`];
         writeOperational(machine, "Build archive detail", "info", [
-          ["Build", status.build.build], ["Revision", String(status.build.revision)],
+          ["Build", status.build.build], ["Status", archive.status],
+          ["Targets", String(archive.targets.length)], ["Accepted records", String(archive.records.length)],
           ["Operations", String(status.operations.length)],
-        ]);
+          ...(args.verbose ? [["Revision", String(status.build.revision)] as const] : []),
+        ], [...targetLines, ...otherLines]);
       } else if (args.command === "get") {
         const status = await runtime.status(args.file!);
         if (status.build === undefined) throw new Error(`Build ${args.file} does not exist`);
@@ -1702,10 +1717,19 @@ export async function runCli(
             admission: result?.admission,
             terminal: result?.terminal,
           };
-          writeOperational(machine, result === undefined ? "Build not found" : "Build cancellation requested",
-            result === undefined ? "warning" : "success", [
+          const title = result === undefined
+            ? "Build not found"
+            : result.terminal === "cancelled"
+              ? "Build cancelled"
+              : result.phase === "terminal"
+                ? "Build already finished"
+                : "Build cancellation requested";
+          writeOperational(machine, title,
+            result === undefined ? "warning" : result.phase === "terminal" && result.terminal !== "cancelled" ? "info" : "success", [
               ["Build", args.file!], ["Admission", result?.admission ?? "missing"], ["Phase", result?.phase ?? "missing"],
-            ]);
+            ], result?.phase === "terminal" && result.terminal !== "cancelled"
+              ? [`No running work was changed; this Build is already ${result.terminal}.`]
+              : []);
           if (result === undefined) io.setExitCode?.(1);
         } else if (args.action === "operation") {
           if (args.file === undefined || !isDigest(args.file)) {
@@ -1830,7 +1854,7 @@ export async function runCli(
     }
   }
   if (args.command === "build") {
-    if (args.runtime === undefined) throw new Error("build requires --runtime with a Runtime Profile or trusted local config module");
+    if (args.runtime === undefined) throw new Error("build requires --runtime with a declarative JSON Runtime Profile");
     const archive = lazyRuntimeArchive(args.runtime, distribution);
     let loadedRun;
     try {
@@ -1846,7 +1870,12 @@ export async function runCli(
     }
     const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
     const preflight = await preflightPlan(args.runtime, distribution, result.state, loadedPackageSet);
-    assertPreflight(preflight);
+    // A managed program being down is repairable after Runtime validation;
+    // every other deployment error fails before we construct execution or
+    // start anything. With --no-services, readiness errors remain fatal.
+    assertPreflight(preflight, args.noServices
+      ? new Set()
+      : new Set(["EXTERNAL_SERVICE_DOWN", "EXTERNAL_SERVICE_MISMATCH"]));
     const runtime = await loadLocalRuntime(args.runtime, distribution, loadedPackageSet);
     try {
       const catalog = createCatalogDescriptor({

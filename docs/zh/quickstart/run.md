@@ -151,8 +151,8 @@ Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本�
 
 Runtime Profile（`svml.runtime.json`）告诉系统**在哪里**执行每种类型的工作：
 
-声明式 `svml.runtime.json` 是标准形式。高级可信嵌入也可以使用 `svml.runtime.ts`；两种形式
-都通过 `--runtime` 传入，并装配同样显式的角色。完整说明见
+CLI 只接受声明式 `svml.runtime.json`。嵌入 Narratage 的应用可以通过 `@narratage/local`
+直接组装相同的 Runtime 角色；应用代码不是另一种 CLI Profile。完整说明见
 [Runtime Profile 指南](../guide/runtime-profile.md)。
 
 ```json
@@ -366,7 +366,7 @@ Runtime 状态、归档 Artifact 和 lock 仍全部留在 `/work/my-film`。只�
 
 ```bash
 node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
-  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 Author/Run Source 选择作者包，Runtime Profile 选择环境包；该命令只闭包并锁定这两组声明，
@@ -388,7 +388,7 @@ Doctor 校验两份 lock、全部显式 Runtime 角色、Endpoint 配置、凭�
 
 ```bash
 node --run narratage -- check examples/talking-head-aroll/main.svml \
-  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+  --runtime examples/talking-head-aroll/svml.runtime.json
 ```
 
 ```bash

@@ -6,6 +6,8 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { createNodePackageLock, writeNodePackageLock } from "@narratage/package-loader-node";
+import { runCli as runCoreCli } from "@narratage/cli";
+import type { CliDistribution } from "@narratage/cli";
 import { materializeRecord, runVideoCli } from "@narratage/video-cli";
 import { videoCliDistribution } from "@narratage/video-cli";
 
@@ -658,7 +660,7 @@ test("streaming materialization verifies bytes before replacing an existing dest
 
 test("CLI inspect and get read the durable Build archive independently of build execution", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-archive-"));
-  const runtimePath = join(root, "runtime.mjs");
+  const runtimePath = join(root, "svml.runtime.json");
   const destination = join(root, "final.mp4");
   const rawDestination = join(root, "whisperx-raw.json");
   const bytes = Buffer.from("archived-video");
@@ -736,36 +738,47 @@ test("CLI inspect and get read the durable Build archive independently of build 
     status: "pending",
   };
   const dispatch = { build: "archive-1", phase: "waiting", admission: "open" };
-  await writeFile(runtimePath, `const bytes = Buffer.from(${JSON.stringify(bytes.toString("base64"))}, "base64");
-const rawBytes = Buffer.from(${JSON.stringify(rawBytes.toString("base64"))}, "base64");
-const catalog = ${JSON.stringify(catalog)};
-const operation = ${JSON.stringify(operation)};
-const dispatch = ${JSON.stringify(dispatch)};
-export default {
-  async build() { throw new Error("not used"); },
-  async builds() { return [catalog]; },
-  async credentials() { return []; },
-  async putCredential() { throw new Error("not used"); },
-  async deleteCredential() { throw new Error("not used"); },
-  async queue() { return { dispatches: [dispatch], capacity: [], operations: [] }; },
-  async operation(id) { return id === operation.id ? operation : undefined; },
-  async cancelOperation(id) { return id === operation.id ? { ...operation, cancellation: { status: "requested" } } : undefined; },
-  async status(id) { return { build: id === "archive-1" ? { build: id, revision: 7, state: ${JSON.stringify(state)} } : undefined, catalog: id === "archive-1" ? catalog : undefined, operations: id === "archive-1" ? [operation] : [], dispatch: id === "archive-1" ? dispatch : undefined }; },
-  async readArtifact(digest) {
-    if (digest === ${JSON.stringify(artifactDigest)}) return bytes;
-    if (digest === ${JSON.stringify(rawDigest)}) return rawBytes;
-    return undefined;
-  },
-  async openArtifact(digest) {
-    const value = digest === ${JSON.stringify(artifactDigest)} ? bytes
-      : digest === ${JSON.stringify(rawDigest)} ? rawBytes : undefined;
-    return value === undefined ? undefined : (async function* () { yield value; })();
-  },
-  async close() {},
-};\n`, "utf8");
+  const control = {
+    async builds() { return [catalog]; },
+    async queue() { return { dispatches: [dispatch], capacity: [], operations: [] }; },
+    async operation(id: string) { return id === operation.id ? operation : undefined; },
+    async cancelOperation(id: string) {
+      return id === operation.id ? { ...operation, cancellation: { status: "requested" } } : undefined;
+    },
+    async cancel(id: string) {
+      return id === "archive-1"
+        ? { build: id, phase: "terminal", admission: "closed", terminal: "complete" }
+        : undefined;
+    },
+    async status(id: string) {
+      return {
+        build: id === "archive-1" ? { build: id, revision: 7, state } : undefined,
+        catalog: id === "archive-1" ? catalog : undefined,
+        operations: id === "archive-1" ? [operation] : [],
+        dispatch: id === "archive-1" ? dispatch : undefined,
+      };
+    },
+    async readArtifact(digest: string) {
+      if (digest === artifactDigest) return bytes;
+      if (digest === rawDigest) return rawBytes;
+      return undefined;
+    },
+    async openArtifact(digest: string) {
+      const value = digest === artifactDigest ? bytes : digest === rawDigest ? rawBytes : undefined;
+      return value === undefined ? undefined : (async function* () { yield value; })();
+    },
+    async close() {},
+  };
+  const selected = {
+    createRuntimeControlFromConfig: async () => control,
+  } as unknown as CliDistribution;
+  const runArchiveCli = (
+    argv: readonly string[],
+    io: { readonly write: (text: string) => void },
+  ) => runCoreCli([...argv, "--json"], io, selected);
 
   let inspectedOutput = "";
-  await runCli(["inspect", "archive-1", "--runtime", runtimePath], {
+  await runArchiveCli(["inspect", "archive-1", "--runtime", runtimePath], {
     write: (text) => { inspectedOutput += text; },
   });
   const inspected = JSON.parse(inspectedOutput) as {
@@ -786,7 +799,7 @@ export default {
   ]);
 
   let buildsOutput = "";
-  await runCli(["builds", "--runtime", runtimePath], { write: (text) => { buildsOutput += text; } });
+  await runArchiveCli(["builds", "--runtime", runtimePath], { write: (text) => { buildsOutput += text; } });
   const listed = JSON.parse(buildsOutput) as {
     readonly builds: readonly {
       readonly build: string;
@@ -807,7 +820,7 @@ export default {
   }]);
 
   let historyOutput = "";
-  await runCli(["history", "final.video", "--runtime", runtimePath], {
+  await runArchiveCli(["history", "final.video", "--runtime", runtimePath], {
     write: (text) => { historyOutput += text; },
   });
   const history = JSON.parse(historyOutput) as {
@@ -826,7 +839,7 @@ export default {
   assert.equal(history.entries[0]?.output.record.digest, recordDigest);
 
   let sourceHistoryOutput = "";
-  await runCli(["history", "--source", catalog.source.path, "--runtime", runtimePath], {
+  await runArchiveCli(["history", "--source", catalog.source.path, "--runtime", runtimePath], {
     write: (text) => { sourceHistoryOutput += text; },
   });
   const sourceHistory = JSON.parse(sourceHistoryOutput) as {
@@ -835,13 +848,13 @@ export default {
   assert.deepEqual(sourceHistory.entries.map((item) => item.output.name), ["final.video"]);
 
   let absentHistoryOutput = "";
-  await runCli(["history", "unused.image", "--runtime", runtimePath], {
+  await runArchiveCli(["history", "unused.image", "--runtime", runtimePath], {
     write: (text) => { absentHistoryOutput += text; },
   });
   assert.deepEqual((JSON.parse(absentHistoryOutput) as { readonly entries: readonly unknown[] }).entries, []);
 
   let statusOutput = "";
-  await runCli(["status", "archive-1", "--runtime", runtimePath], {
+  await runArchiveCli(["status", "archive-1", "--runtime", runtimePath], {
     write: (text) => { statusOutput += text; },
   });
   const status = JSON.parse(statusOutput) as {
@@ -855,18 +868,18 @@ export default {
   });
 
   let queueOutput = "";
-  await runCli(["queue", "--runtime", runtimePath], { write: (text) => { queueOutput += text; } });
+  await runArchiveCli(["queue", "--runtime", runtimePath], { write: (text) => { queueOutput += text; } });
   const queue = JSON.parse(queueOutput) as { readonly dispatches: readonly { readonly phase: string }[] };
   assert.equal(queue.dispatches[0]?.phase, "waiting");
 
   let operationOutput = "";
-  await runCli(["operation", operationId, "--runtime", runtimePath], {
+  await runArchiveCli(["operation", operationId, "--runtime", runtimePath], {
     write: (text) => { operationOutput += text; },
   });
   assert.equal((JSON.parse(operationOutput) as { readonly operation?: { readonly id: string } }).operation?.id, operationId);
 
   let getOutput = "";
-  await runCli([
+  await runArchiveCli([
     "get", "archive-1", "--runtime", runtimePath,
     "--name", "final.video", "--to", destination,
   ], { write: (text) => { getOutput += text; } });
@@ -875,14 +888,14 @@ export default {
   assert.equal(got.materialized.kind, "artifact");
   assert.equal(got.materialized.digest, artifactDigest);
 
-  await runCli([
+  await runArchiveCli([
     "get", "archive-1", "--runtime", runtimePath,
     "--artifact", rawDigest, "--to", rawDestination,
   ], { write() {} });
   assert.deepEqual(await readFile(rawDestination), rawBytes);
 
   let cancellationOutput = "";
-  await runCli([
+  await runArchiveCli([
     "cancel", "operation", operationId, "--runtime", runtimePath,
     "--reason", "stop this attempt",
   ], { write: (text) => { cancellationOutput += text; } });
@@ -903,24 +916,28 @@ export default {
 
   const human = async (argv: readonly string[]) => {
     let output = "";
-    await runVideoCli([...argv, "--color", "never"], { write: (text) => { output += text; } });
+    await runCoreCli([...argv, "--color", "never"], { write: (text) => { output += text; } }, selected);
     return output;
   };
   assert.match(await human(["queue", "--runtime", runtimePath]), /Runtime queue[\s\S]*archive-1: waiting/u);
   assert.match(await human(["status", "archive-1", "--runtime", runtimePath]), /Build status[\s\S]*Dispatch\s+waiting/u);
+  assert.match(await human(["inspect", "archive-1", "--runtime", runtimePath]),
+    /Build archive detail[\s\S]*Target\s+final\.video[\s\S]*example@1\/Artifact/u);
   assert.match(await human(["operation", operationId, "--runtime", runtimePath]), /Operation detail[\s\S]*Status\s+pending/u);
   assert.match(await human(["cancel", "operation", operationId, "--runtime", runtimePath]),
     /Operation cancellation requested[\s\S]*Control\s+requested/u);
+  assert.match(await human(["cancel", "build", "archive-1", "--runtime", runtimePath]),
+    /Build already finished[\s\S]*No running work was changed; this Build is already complete/u);
   await assert.rejects(
-    runCli(["status", "archive-1", "--runtime", runtimePath, "--watch"], { write() {} }),
+    runArchiveCli(["status", "archive-1", "--runtime", runtimePath, "--watch"], { write() {} }),
     /--watch applies only to queue/u,
   );
   await assert.rejects(
-    runCli(["queue", "--runtime", runtimePath, "--jsonl"], { write() {} }),
+    runArchiveCli(["queue", "--runtime", runtimePath, "--jsonl"], { write() {} }),
     /--jsonl applies only to queue --watch/u,
   );
   await assert.rejects(
-    runCli(["queue", "--runtime", runtimePath, "--watch", "--json"], { write() {} }),
+    runArchiveCli(["queue", "--runtime", runtimePath, "--watch", "--json"], { write() {} }),
     /use --jsonl instead of --json/u,
   );
 });

@@ -8,7 +8,7 @@ Use staged Run Sources so unreviewed expensive outputs cannot silently feed late
   and factual claims before writing prompts.
 - Give every planned shot one job: hook, context, evidence, mechanism, reaction, payoff, transition,
   or CTA. Delete shots with no distinct job.
-- Confirm credentials, Runtime Profile, package locks, model limits, resolution, and permissions.
+- Confirm credentials, Runtime Profile, package locks, model limits, resolution, and Endpoint prerequisites.
   Run `doctor`, `check`, and `plan` before the first paid Build.
 
 ## Gate 1: build and review reference images
