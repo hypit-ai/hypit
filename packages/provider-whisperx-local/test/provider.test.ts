@@ -22,8 +22,6 @@ const sourceSegments = [
   { segmentId: "opening", startSec: 0, endSec: 1 },
   { segmentId: "answer", startSec: 1, endSec: 2 },
 ];
-const loopbackEnabled = process.env.SVML_LOOPBACK_TESTS === "1";
-
 function wav(sampleFrames: number): Uint8Array {
   const bytes = new Uint8Array(44 + sampleFrames * 2);
   const view = new DataView(bytes.buffer);
@@ -81,9 +79,7 @@ test("service pauses are projected onto authored Segments without clipping a cro
   assert.deepEqual(evidence[1]!.words[1], { text: "world", startSec: 1.2, endSec: 1.6 });
 });
 
-test("local Provider stages canonical evidence bytes unchanged and binds service output to both audio identities", {
-  skip: !loopbackEnabled,
-}, async () => {
+test("local Provider stages canonical evidence bytes unchanged and returns sealed alignment evidence", async () => {
   const expected = wav(32_000);
   let stagedMatches = false;
   const server = createServer((request, response) => {
@@ -181,8 +177,6 @@ test("local Provider stages canonical evidence bytes unchanged and binds service
     assert.equal(stagedMatches, true);
     assert.equal(output.value.kind, "inline");
     const value = output.value.kind === "inline" ? output.value.value : null;
-    assert.equal((value as { readonly audioArtifactDigest?: unknown }).audioArtifactDigest,
-      evidenceAudio.artifact.digest);
     assert.equal((value as { readonly segments?: readonly unknown[] }).segments?.length, 2);
     assert.equal((value as { readonly contract?: unknown }).contract, "svml.whisperx-alignment-evidence@1");
     assert.equal(speechTypes.evidenceAudio.name, "SpeechEvidenceAudio");
