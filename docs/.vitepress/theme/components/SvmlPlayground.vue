@@ -931,7 +931,7 @@ onBeforeUnmount(() => {
 
       <div class="preview-panel">
         <div class="real-preview-body">
-          <div ref="stageElement" class="live-ranking-stage" aria-label="Twinit RankingColumn 实时渲染画面">
+          <div ref="stageElement" class="live-ranking-stage" aria-label="Ranking Track 实时渲染画面">
             <div class="live-base-layer">
               <video
                 v-for="(scene, index) in baseScenes"
