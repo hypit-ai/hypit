@@ -84,35 +84,36 @@ html.home-page .VPNavBarTitle { display: flex; align-items: center; height: 64px
 html.home-page .VPNavBarTitle .title {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   width: auto;
   height: 32px;
   padding: 0;
   color: var(--ink);
-  font-family: var(--font-wordmark);
-  font-size: 30px;
-  font-weight: 700;
-  font-synthesis: weight;
-  letter-spacing: -.055em;
-  line-height: 30px;
-  -webkit-text-stroke: .2px currentColor;
-  paint-order: stroke fill;
+  font-size: 0;
 }
-html.home-page .VPNavBarTitle .title::before {
-  content: "cinematic_blur";
+html.home-page .nav-narratage-mark {
   display: block;
-  flex: 0 0 30px;
+  flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  font-family: "Material Symbols Rounded";
-  font-size: 30px;
-  font-style: normal;
-  font-weight: 400;
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-  letter-spacing: normal;
-  line-height: 30px;
-  text-align: center;
-  -webkit-text-stroke: 0;
+  color: var(--ink);
+  background: currentColor;
+  -webkit-mask: var(--narratage-mark-mask) center / contain no-repeat;
+  mask: var(--narratage-mark-mask) center / contain no-repeat;
+}
+html.home-page .nav-narratage-wordmark {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: 30px;
+  gap: .09em;
+  color: var(--ink);
+  font-size: 25px;
+  transform: translateY(1px);
+}
+html.home-page .nav-narratage-wordmark .narratage-wordmark-letter { height: 25px; }
+html.home-page .VPNavBarTitle .title > span:not([class]) {
+  display: none;
 }
 html.home-page .VPNavBarMenuLink,
 html.home-page .VPNavBarMenuGroup .text,
@@ -185,40 +186,28 @@ html.home-page .VPPage { background: var(--paper); }
   border: 0;
   padding: 0 .18em 0 .02em;
   color: var(--ink);
-  font-family: var(--font-wordmark);
   font-size: clamp(52px,7vw,88px);
   font-weight: 700;
   font-synthesis: weight;
-  line-height: .96;
-  letter-spacing: -.055em;
-  text-rendering: geometricPrecision;
-  text-transform: uppercase;
-  -webkit-text-stroke: .2px currentColor;
-  paint-order: stroke fill;
+  line-height: 1;
 }
-.wordmark-reveal {
-  display: inline-block;
-  width: 0;
-  overflow: hidden;
-  vertical-align: bottom;
-  white-space: nowrap;
-  animation: wordmark-type .7s steps(9,end) .18s forwards;
-}
-.wordmark-cursor {
-  display: inline-block;
-  margin-left: -.02em;
-  color: var(--accent);
-  animation: wordmark-cursor-blink .48s step-end .92s infinite;
-  -webkit-text-stroke: 0;
-}
-@keyframes wordmark-type { to { width: calc(9ch - .495em); } }
-@keyframes wordmark-cursor-blink { 50% { opacity: 0; } }
-.hero-intro-seen .wordmark-reveal {
-  width: calc(9ch - .495em);
+.narratage-wordmark { display: inline-flex; align-items: flex-end; gap: .09em; color: currentColor; vertical-align: bottom; }
+.narratage-wordmark-letter { display: block; width: var(--narratage-letter-width); height: 1em; flex: 0 0 auto; background: currentColor; -webkit-mask: var(--narratage-letter-mask) center / 100% 100% no-repeat; mask: var(--narratage-letter-mask) center / 100% 100% no-repeat; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter { opacity: 0; transform: translateY(.12em); animation: wordmark-letter-type .11s cubic-bezier(.22,1,.36,1) forwards; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(1) { animation-delay: .18s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(2) { animation-delay: .25s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(3) { animation-delay: .32s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(4) { animation-delay: .39s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(5) { animation-delay: .46s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(6) { animation-delay: .53s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(7) { animation-delay: .60s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(8) { animation-delay: .67s; }
+.narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(9) { animation-delay: .74s; }
+@keyframes wordmark-letter-type { to { opacity: 1; transform: translateY(0); } }
+.hero-intro-seen .narratage-wordmark.is-animated .narratage-wordmark-letter {
+  opacity: 1;
+  transform: none;
   animation: none;
-}
-.hero-intro-seen .wordmark-cursor {
-  animation: wordmark-cursor-blink .48s step-end infinite;
 }
 .hero-statement-viewport { position: relative; width: min(100%,900px); overflow: hidden; }
 .hero-statement-viewport-en { height: clamp(61.2px,8.16vw,106.08px); }
@@ -410,8 +399,7 @@ html.home-page .VPPage { background: var(--paper); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .wordmark-reveal { width: calc(9ch - .495em); animation: none !important; }
-  .wordmark-cursor { display: none; animation: none !important; }
+  .narratage-wordmark.is-animated .narratage-wordmark-letter { opacity: 1; transform: none; animation: none !important; }
   .hero-statement-viewport-en,
   .hero-statement-viewport-zh,
   .VPHome .VPHero .actions,
