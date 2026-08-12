@@ -1,3 +1,8 @@
+---
+title: SVML Audio Track Authoring
+description: implemented pre-release contract for the generic official Audio Track package, including.
+---
+
 # SVML Audio Track Authoring
 
 Status: implemented pre-release contract for the generic official Audio Track package, including

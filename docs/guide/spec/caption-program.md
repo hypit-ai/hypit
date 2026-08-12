@@ -1,3 +1,8 @@
+---
+title: Caption Program
+description: pre-release executable contract.
+---
+
 # Caption Program
 
 Status: pre-release executable contract.
@@ -6,7 +11,7 @@ Status: pre-release executable contract.
 
 Caption is an ordinary video component family. It turns immutable authored display text into one
 self-contained `VisualTrack`. It has no authority over Script wording, pronunciation, speech
-alignment, Provider selection, Runtime realization or Composition order.
+alignment, Provider selection, Runtime execution or Composition order.
 
 Its two independent graph branches are:
 
@@ -182,5 +187,5 @@ Caption v1 does not define:
 - a global Caption layer in Composition;
 - field-specific semantics in Core.
 
-Targets, Candidates and realizations remain external run intent. They do not change Caption data or
+Targets and Candidates remain external run intent. They do not change Caption data or
 planner semantics.

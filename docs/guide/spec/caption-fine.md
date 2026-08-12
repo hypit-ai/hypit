@@ -1,3 +1,8 @@
+---
+title: Fine Caption Style Family
+description: implemented pre-release Style family with complete browser evidence for the declared surface.
+---
+
 # Fine Caption Style Family
 
 Status: implemented pre-release Style family with complete browser evidence for the declared surface.

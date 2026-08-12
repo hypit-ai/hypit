@@ -1,3 +1,8 @@
+---
+title: SVML Visual IR
+description: implemented repository-internal `@1` compatibility waist; not yet published as an npm ABI.
+---
+
 # SVML Visual IR
 
 Status: implemented repository-internal `@1` compatibility waist; not yet published as an npm ABI.
