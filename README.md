@@ -220,39 +220,6 @@ advances the resulting state machine; video concepts remain in independently ins
 
 For the small normative laws, read the [Core Kernel specification](./spec/core-kernel.md).
 
-## Extend it without changing Core
-
-Packages may independently contribute:
-
-- an author-facing Surface and its graph lowering;
-- a typed contract shared with other packages;
-- a deterministic compute operation;
-- a local or remote Provider endpoint;
-- a Scheduler, credential store or Artifact store implementation.
-
-Core has no central list of video models, Tracks or Providers. Installed packages communicate through
-nominal types and explicit graph edges.
-
-Choose the guide that matches your work:
-
-- [Author a video](https://narratage.hypit.ai/quickstart)
-- [Understand package boundaries](https://narratage.hypit.ai/guide/packages)
-- [Add an author package](https://narratage.hypit.ai/guide/author-packages)
-- [Add a Provider](https://narratage.hypit.ai/guide/providers)
-- [Configure a Runtime Profile](https://narratage.hypit.ai/guide/runtime-profile)
-- [Develop Narratage itself](https://narratage.hypit.ai/guide/develop)
-
-## Repository map
-
-```text
-packages/   Core, compiler, Runtime, video packages and Provider adapters
-services/   Local external programs such as WhisperX and OpenCV
-examples/   Checkable sources and complete Runtime examples
-docs/       Source of the narratage.hypit.ai documentation site
-spec/       Normative protocol and video-package contracts
-tools/      Repository checks and focused development tools
-```
-
 ## Development
 
 The commands below are for changing Narratage itself, not for making a video:
