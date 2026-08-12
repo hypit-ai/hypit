@@ -84,9 +84,7 @@ speech.normal {
   language="en" pace="normal" min="4" max="15" rounding="round"/>
 ```
 
-英语官方档位为 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒。
-项目需要档位之间的连续值时，可以用 `rate="4.75"` 代替 `pace`；二者不能同时出现。
-策略没有隐式值：无论内联还是引用 Recipe，都必须写明 `language`、`min`、`max`、
+英语官方档位为 `slow = 4.2`、`normal = 4.6`、`fast = 5.0` 音节/秒。项目需要档位之间的连续值时，可以用 `rate="4.75"` 代替 `pace`；二者不能同时出现。策略没有隐式值：无论内联还是引用 Recipe，都必须写明 `language`、`min`、`max`、
 `rounding`，并且在 `pace` 和 `rate` 中恰好选择一个。
 
 **输出：** `{hook-duration.duration}`——估算的时长（秒），传递给生成组件。
@@ -114,11 +112,9 @@ speech.normal {
 ## Seedance 三种调用形状
 
 Seedance 只暴露模型能力，不暴露“口播”“B-roll”等创作用途。`standard`、`fast`、`mini`
-和 `2.5` 选择精确模型；调用形状则独立分为三种。三者都消费完整的普通 `Text` Prompt，
-并输出 `{id.video}`。
+和 `2.5` 选择精确模型；调用形状则独立分为三种。三者都消费完整的普通 `Text` Prompt，并输出 `{id.video}`。
 
-Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷偷替换成 2.5。它的精确
-合同支持 480p/720p，最多 30 张参考图、10 段参考视频、10 段参考音频；时长可写 `-1`
+Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷偷替换成 2.5。它的精确合同支持 480p/720p，最多 30 张参考图、10 段参考视频、10 段参考音频；时长可写 `-1`
 交给模型选择，也可明确写 4–30 秒的整数：
 
 ```svml
@@ -166,8 +162,7 @@ Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷�
 `id`、`model`、`prompt`、`duration`、`resolution`、
 `aspect-ratio`、`generate-audio`；`duration` 可以是字面量或显式 `{estimate.duration}` 边。
 
-可以直接抽取前一段生成视频里的音频，并通过普通图边给后续片段当作参考。这个操作不会
-把音频提升成语音证据，也不会凭空附加说话人语义：
+可以直接抽取前一段生成视频里的音频，并通过普通图边给后续片段当作参考。这个操作不会把音频提升成语音证据，也不会凭空附加说话人语义：
 
 ```svml
 <mediaop:ExtractAudio id="voice-from-opening"
@@ -180,8 +175,7 @@ Seedance 2.5 复用同样的 Surface，而不是由 Runtime 把别的模型偷�
 </seedance:ReferenceVideo>
 ```
 
-同一个媒体操作包还提供 `Transform`（按顺序截取、变速）和 `ExtractFrame`（首帧、尾帧、
-指定帧或指定时间取图）。本地 FFmpeg 与 AWS Lambda 只是这些精确 Need 的可互换 Runtime
+同一个媒体操作包还提供 `Transform`（按顺序截取、变速）和 `ExtractFrame`（首帧、尾帧、指定帧或指定时间取图）。本地 FFmpeg 与 AWS Lambda 只是这些精确 Need 的可互换 Runtime
 Endpoint，不会改变作者图。
 
 ## Seedance 语义 Kit
@@ -189,14 +183,11 @@ Endpoint，不会改变作者图。
 `@narratage/seedance-kits` 包含七个纯数据 Text Template。Kit 不是模型包装器：先用通用
 `text:Render` 生成 prompt，再把该 Text 与真实媒体引用显式接入低层 Seedance Surface。
 
-只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内
-副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Narratage 仓库 checkout。
+只把项目实际选择的 Kit `.svs` 文件复制进视频项目的 `./kits/` 目录，并导入这份项目内副本，使 Kit 字节保持在 Source Closure 内；项目源码不要反向引用 Narratage 仓库 checkout。
 
 创作前阅读
 [`@narratage/seedance-kits` 指南](https://github.com/hypit-ai/narratage/blob/main/packages/seedance-kits/README.md)
-和[所选 Kit 源文件](https://github.com/hypit-ai/narratage/tree/main/packages/seedance-kits/kits)。格式匹配时
-优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者
-原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
+和[所选 Kit 源文件](https://github.com/hypit-ai/narratage/tree/main/packages/seedance-kits/kits)。格式匹配时优先使用官方 Kit。生成指令与动态 prompt slot 必须使用英语；只有需要逐字说出的对白保留作者原语言。七个 Kit 都不适用时，才编写自由格式的英语 prompt。
 
 ```svml
 <import as="text" from="@narratage/text@1"/>
@@ -220,8 +211,7 @@ Endpoint，不会改变作者图。
 </seedance:ReferenceVideo>
 ```
 
-项目 Recipe 选择模板声明的轴；显式 `text:Param` 可以覆盖 Recipe。按格式选择 Kit，再提供它
-声明的动态 slot 与有序参考：
+项目 Recipe 选择模板声明的轴；显式 `text:Param` 可以覆盖 Recipe。按格式选择 Kit，再提供它声明的动态 slot 与有序参考：
 
 | 格式 | Kit | 动态 slot | 有序参考 |
 |---|---|---|---|
@@ -237,8 +227,7 @@ Endpoint，不会改变作者图。
 
 ## 街访 Prompt 组装
 
-使用 `street-interview-v1` 复用场景、角色、麦克风、音色和无叠加文字契约。构图、剪辑、
-节奏、表演、反应与手势由 SVS Recipe 选择；动态输入只保留对白与可选的单段动作：
+使用 `street-interview-v1` 复用场景、角色、麦克风、音色和无叠加文字契约。构图、剪辑、节奏、表演、反应与手势由 SVS Recipe 选择；动态输入只保留对白与可选的单段动作：
 
 ```svml
 <import as="text" from="@narratage/text@1"/>
@@ -265,8 +254,7 @@ Endpoint，不会改变作者图。
 </seedance:ReferenceVideo>
 ```
 
-对白使用明确的 `A:`/`B:` 顺序：A 是采访者并绑定第一段音频参考，B 是受访者并绑定第二段。
-固定英文 Prompt 骨架由 Kit 负责，不要在手写 Prompt 中重复一遍。
+对白使用明确的 `A:`/`B:` 顺序：A 是采访者并绑定第一段音频参考，B 是受访者并绑定第二段。固定英文 Prompt 骨架由 Kit 负责，不要在手写 Prompt 中重复一遍。
 
 ## 口播 Prompt 组装
 
