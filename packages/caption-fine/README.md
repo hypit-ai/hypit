@@ -62,5 +62,4 @@ One Track handles the default and ordered Style replacements. `font=` accepts ei
 the compact `fonts:Stack` above. Family, weight and style exist only on those exact font values;
 the Recipe owns size and appearance. Fallbacks keep their own honest face metadata. Omitting the stack is invalid rather than an environment-font
 prototype path. Fine never clips author text and intentionally has no `max-lines`.
-Common Caption, Composition and Core know none of Fine's Recipe fields or layout policy. See
-`spec/caption-fine.md` for the full parameter surface, defaults and non-goals.
+Common Caption, Composition and Core know none of Fine's Recipe fields or layout policy.
