@@ -1,11 +1,11 @@
 ---
 name: narratage
-description: Author, check, plan, build, inspect, and retrieve Narratage/SVML video sources; configure the cross-platform Node/pnpm/Python runtime and API keys; reconstruct reference video directly as .svml/.svs/.svrun sources; and apply native SVML production playbooks for prompts, continuity, captions, B-roll, overlays, audio, and common video formats. Use for this svml repository, its quickstart, SVML authoring, runtime profiles, reference-video reconstruction, or video craft decisions.
+description: Author, check, plan, build, inspect, and retrieve Narratage/SVML video sources; configure the cross-platform Node/pnpm/Python runtime and API keys; reconstruct reference video directly as .svml/.svs/.svrun sources; and apply native SVML production playbooks for prompts, continuity, captions, B-roll, overlays, audio, and common video formats. Use for the Narratage repository, its quickstart, SVML authoring, runtime profiles, reference-video reconstruction, or video craft decisions.
 ---
 
 # Narratage
 
-Use this entrypoint for work in the `svml` repository. Keep `.svml` Author Source, `.svrun` Run
+Use this entrypoint for work in the `narratage` repository. Keep `.svml` Author Source, `.svrun` Run
 Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
 
 ## Route the task
