@@ -27,8 +27,8 @@ Source, and `svml.runtime.json`/`.ts` Runtime Profile separate.
 ## Required loop
 
 ```bash
+node --run narratage -- packages sync path/to/build.svrun --runtime path/to/svml.runtime.json --root .
 node --run narratage -- doctor path/to/svml.runtime.json
-node --run narratage -- runtime up path/to/svml.runtime.json
 node --run narratage -- check path/to/main.svml --runtime path/to/svml.runtime.json --root .
 node --run narratage -- plan path/to/build.svrun --runtime path/to/svml.runtime.json --root .
 node --run narratage -- build path/to/build.svrun --runtime path/to/svml.runtime.json \
@@ -42,9 +42,9 @@ Treat `--follow` as an observer: stopping it does not stop the durable Build. Us
 only to stop the Worker and Runtime-owned programs; it does not cancel Builds or remote Provider
 work.
 
-Pin and reuse every accepted generated image or take in the next `.svrun` with `build-record` plus
-`satisfy`. Set the consuming Target to accept the declared fidelity, then review the frozen plan
-before paid downstream work.
+Reuse any accepted generated image or take in the next `.svrun` with `build-record` plus `satisfy`,
+then review the frozen plan before paid downstream work. Candidate selection has no Pin state or
+fidelity label.
 
 Preserve unrelated changes. Keep credentials, generated media, runtime state, and logs out of commits.
 The repository's docs remain the syntax authority.

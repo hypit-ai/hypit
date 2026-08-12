@@ -16,8 +16,8 @@ make the active speaker readable without changing the location or camera topolog
    then call `seedance:ReferenceVideo generate-audio="true"` with the scene image and both voices.
 6. Assemble the accepted Segment takes with `speech:Spine`, align the complete Script with
    `whisperx:Alignment`, then add Caption, Media, Typography, and Audio Tracks as needed.
-7. Assemble peer Tracks in `film:Film`, render with `render:Video`, and demand review or delivery
-   outputs through named `.svrun` target-sets.
+7. Assemble peer Tracks in `film:Film`, render with `render:Video`, and use separate `.svrun`
+   Sources with explicit Targets for review and delivery.
 
 ## Preserve the street-interview grammar
 

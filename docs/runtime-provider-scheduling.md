@@ -93,7 +93,7 @@ type OperationTicket = {
 It does not store a serialized Core Command, Need, prompt, credential or Provider request. Before a
 side effect, the Worker reopens verified BuildState, asks Core/Driver to regenerate the Command and
 checks that the regenerated Runtime Revision, Authority, Route and resource claims equal the
-ticket. OperationStore continues to own submission keys and opaque Provider checkpoints after
+ticket. OperationStore continues to own Operation identities and opaque Provider checkpoints after
 external submission.
 
 Deterministic Producers may use the same admission mechanism with ordinary resource claims, but

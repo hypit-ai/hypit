@@ -5,10 +5,9 @@ description: Declaring build targets, reusing results and configuring the runtim
 
 # Run Source & Builds
 
-The Run Source (`.svrun`) declares **what to build** — which outputs to demand, what fidelity to
-accept, and optionally how to reuse results from prior Builds. The Runtime Profile
-(`svml.runtime.json`) declares **where to run** — endpoints, credentials, concurrency, and
-permissions.
+The Run Source (`.svrun`) declares **what to build** — which outputs to demand and which explicit
+Candidates, if any, should replace their authored implementations. The Runtime Profile
+(`svml.runtime.json`) declares **where to run** — endpoints, credentials and concurrency.
 
 Neither of these changes what the video **is**. That is the Author Source's job.
 
@@ -25,27 +24,19 @@ Every `.svrun` file begins with its processing instruction:
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="exact"/>
-  </target-set>
+  <target output="final.video"/>
 </svrun>
 ```
 
 | Element | Description |
 |---|---|
-| `<svrun>` | Root element. `version="1"`, `targets` names the active target-set |
+| `<svrun>` | Root element. Its only attribute is `version="1"` |
 | `<author>` | Mandatory. `source` points to the `.svml` Author Source |
-| `<target-set>` | A named set of demanded outputs |
-| `<target>` | One demanded output: `output` names a Logical Output, `accepts` sets fidelity |
+| `<target>` | One demanded public Logical Output |
 
 ### Targets
-
-A **Target** names an output required by the Build and the worst fidelity it accepts:
-
-- `accepts="exact"` — the output must be exactly what the author declared
-- `accepts="substitute"` — an acceptable replacement is allowed (e.g. a prior generation)
 
 There is no privileged "final video" root. Any public Logical Output from any component can be a
 Target. The compiler only executes Operations needed to satisfy the demanded Targets — everything
@@ -56,47 +47,29 @@ else is pruned.
 You can demand multiple outputs from one Build:
 
 ```svml
-<target-set id="delivery">
-  <target output="final.video" accepts="exact"/>
-  <target output="captions.track" accepts="exact"/>
-</target-set>
+<target output="final.video"/>
+<target output="captions.track"/>
 ```
 
-Or define multiple target-sets and switch between them:
-
-```svml
-<svrun version="1" targets="preview">
-  <author source="./main.svml"/>
-
-  <target-set id="preview">
-    <target output="captions.track" accepts="substitute"/>
-  </target-set>
-
-  <target-set id="delivery">
-    <target output="final.video" accepts="exact"/>
-  </target-set>
-</svrun>
-```
-
-The `targets` attribute on `<svrun>` selects which set is active.
+Different build intentions should be separate `.svrun` files. They can point to the same Author
+Source without duplicating it. For example, `images.svrun` may target image outputs while
+`film.svrun` targets the final video.
 
 ## Reusing results
 
 Narratage has no implicit cache. Reusing a result is explicit Run Graph authoring — you declare
 historical Records as zero-input Candidates and connect them through Satisfaction edges.
 
-As soon as a generated image or take is accepted, pin it in the next `.svrun` with `build-record`
-and `satisfy`, let the consuming Target accept the declared fidelity, and inspect the frozen plan
-before starting paid downstream work.
+As soon as a generated image or take is accepted, reuse it explicitly in the next `.svrun` with
+`build-record` and `satisfy`, then inspect the frozen plan before starting paid downstream work.
+Core has no Pin state or fidelity label.
 
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="substitute"/>
-  </target-set>
+  <target output="final.video"/>
 
   <build-record id="hook-video"
     build="my-film-001" output="hook-take.video"/>
@@ -107,14 +80,10 @@ before starting paid downstream work.
   <build-record id="payoff-video"
     build="my-film-001" output="payoff-take.video"/>
 
-  <satisfy output="hook-take.video"
-    candidate="hook-video" fidelity="substitute"/>
-  <satisfy output="meeting-take.video"
-    candidate="meeting-video" fidelity="substitute"/>
-  <satisfy output="evidence-take.video"
-    candidate="evidence-video" fidelity="substitute"/>
-  <satisfy output="payoff-take.video"
-    candidate="payoff-video" fidelity="substitute"/>
+  <satisfy output="hook-take.video" candidate="hook-video"/>
+  <satisfy output="meeting-take.video" candidate="meeting-video"/>
+  <satisfy output="evidence-take.video" candidate="evidence-video"/>
+  <satisfy output="payoff-take.video" candidate="payoff-video"/>
 </svrun>
 ```
 
@@ -127,7 +96,7 @@ node --run narratage -- history hook-take.video \
   --runtime ./svml.runtime.json
 ```
 
-`history` reports only public Logical Outputs that the Build actually selected and accepted. It
+`history` reports only public Logical Outputs that the Build actually produced. It
 does not list merely declared-but-unbuilt aliases or authored Record aliases that cannot back a
 `build-record` Candidate. If the old name is unknown, list accepted output names from Builds whose
 Catalog recorded an exact source path:
@@ -145,8 +114,7 @@ current name on `<satisfy>`:
 ```svml
 <build-record id="approved-opening"
   build="my-film-001" output="hook-take.video"/>
-<satisfy output="opening-shot.video"
-  candidate="approved-opening" fidelity="substitute"/>
+<satisfy output="opening-shot.video" candidate="approved-opening"/>
 ```
 
 Narratage never infers that two names mean the same author intent. A human-readable build-id such
@@ -171,20 +139,28 @@ Connects a Candidate to a Logical Output:
 |---|---|
 | `output` | The Logical Output to satisfy |
 | `candidate` | The Candidate id (from `build-record`) |
-| `fidelity` | `exact` or `substitute` |
 
-The compiled plan prunes all upstream Operations that the substitute Candidates replace. This is a
+The compiled plan prunes all upstream Operations that the selected Candidates replace. This is a
 new Build, not a continuation of the old one. Downstream processing (normalization, WhisperX,
 captioning, rendering) still runs against the reused media.
 
-### Fidelity model
+Core does not label a Candidate as “exact” or “substitute”. Choosing a Candidate is the Run
+author's explicit implementation decision for that Build. Type compatibility is checked; creative
+equivalence is neither guessed nor carried as redundant metadata through the graph.
 
-- **`exact`** — the Candidate precisely matches what the author declared
-- **`substitute`** — the Candidate is an acceptable replacement
+### Using an existing file
 
-Substitute fidelity is **monotonic**: once a substitute enters the graph, it propagates downstream.
-You cannot wash it back to exact. If the final target accepts `substitute`, downstream Operations
-that consume substitute inputs produce substitute results.
+A local file is the simplest zero-input Candidate. The Run Source names the bytes and connects them
+to one current Logical Output:
+
+```svml
+<file id="approved-opening" from="./approved-opening.mp4" media-type="video/mp4"/>
+<satisfy output="opening-shot.video" candidate="approved-opening"/>
+```
+
+The file is read relative to the `.svrun`, content-addressed and archived with the Build. There is
+no special Pin state, filename cache or hidden history lookup. A black video, preview image or
+human-supplied result uses the same mechanism.
 
 ## Runtime Profile
 
@@ -221,7 +197,6 @@ complete [Runtime Profile guide](../guide/runtime-profile.md).
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.main",
-      "authority": "kie.main",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
@@ -230,19 +205,16 @@ complete [Runtime Profile guide](../guide/runtime-profile.md).
     {
       "use": "@narratage/provider-media-local",
       "instance": "media.main",
-      "authority": "media.main",
       "config": { "defaultConcurrency": 2 }
     },
     {
       "use": "@narratage/provider-whisperx-local",
       "instance": "whisperx.main",
-      "authority": "whisperx.main",
       "config": { "defaultConcurrency": 1 }
     },
     {
       "use": "@narratage/provider-google-vertex",
       "instance": "vertex.main",
-      "authority": "vertex.main",
       "config": {
         "projectEnv": "GOOGLE_CLOUD_PROJECT",
         "credentials": { "store": "env", "key": "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
@@ -253,25 +225,12 @@ complete [Runtime Profile guide](../guide/runtime-profile.md).
     {
       "use": "@narratage/provider-hyperframes-local",
       "instance": "hyperframes.main",
-      "authority": "hyperframes.main",
       "config": {
         "workers": 2,
         "quality": "standard",
         "defaultConcurrency": 1
       }
     }
-  ],
-  "permissions": [
-    "environment:credentials",
-    "filesystem:artifacts",
-    "filesystem:state",
-    "filesystem:whisperx-staging",
-    "network:aiplatform.googleapis.com",
-    "network:api.kie.ai",
-    "network:kieai.redpandaai.co",
-    "network:whisperx-loopback",
-    "process:hyperframes",
-    "process:media"
   ],
   "scheduling": { "maxConcurrency": 4 }
 }
@@ -285,13 +244,13 @@ Each endpoint binds a Provider package to a named instance and an explicit Provi
 |---|---|
 | `use` | Provider package name (e.g. `@narratage/provider-kie`) |
 | `instance` | Unique instance identifier |
-| `authority` | Stable non-secret identity of the account, deployment or compute pool whose limits are shared |
+| `authority` | Optional shared account/compute-pool identity; omit it when this instance owns its own limits |
 | `config` | Provider-specific non-secret configuration and ordinary CredentialRefs |
 
-### Permissions
+### Trust
 
-Explicit grants for filesystem, network, and process access. The scheduler refuses Operations that
-require permissions not listed here.
+Runtime packages currently execute as trusted local code. A real process/Wasm sandbox is required
+before arbitrary third-party runtime packages can be treated as untrusted.
 
 ### Scheduling
 
@@ -363,9 +322,8 @@ Author files do not have to live under this repository. For example, keep a proj
 ```bash
 cd /opt/narratage
 
-node --run narratage -- lock-packages /work/my-film/svml.packages.lock \
-  --package @narratage/script \
-  --package @narratage/estimate
+node --run narratage -- packages sync /work/my-film/build.svrun \
+  --runtime /work/my-film/svml.runtime.json
 
 node --run narratage -- plan /work/my-film/build.svrun \
   --runtime /work/my-film/svml.runtime.json
@@ -378,6 +336,18 @@ lock. The official CLI normally supplies its own installation location, so no pa
 needed above. Use `--root` only when deliberately widening the Source Workspace above the Run
 Source directory. Do not symlink a project into this repository: canonical-path containment
 intentionally rejects that escape.
+
+For a shared read-only media library, keep Source imports inside the project and authorize only its
+asset bytes explicitly:
+
+```bash
+node --run narratage -- plan /work/my-film/build.svrun \
+  --runtime /work/my-film/svml.runtime.json \
+  --asset-root /work/shared-media
+```
+
+`--asset-root` is repeatable. It never permits `.svml`/`.svs` source imports outside `--root`, and
+it does not enter Author or Build identity; the exact bytes still enter as content-addressed assets.
 
 The official CLI supplies the same installation location while reading the external project's
 Runtime Profile, so the Profile remains portable:
@@ -406,7 +376,6 @@ Runtime Profile, so the Profile remains portable:
     }
   },
   "endpoints": [],
-  "permissions": ["environment:credentials", "filesystem:artifacts", "filesystem:state"],
   "scheduling": { "maxConcurrency": 4 }
 }
 ```
@@ -415,7 +384,20 @@ Runtime state, archived Artifacts and the lock files remain under `/work/my-film
 `--package-root` or the Profile's `packageRoot` only when the packages intentionally live somewhere
 other than the CLI installation.
 
-### 1. Diagnose the environment
+### 1. Synchronize installed packages
+
+After installing or updating packages, explicitly accept both declared closures:
+
+```bash
+node --run narratage -- packages sync examples/talking-head-aroll/build.svrun \
+  --runtime examples/talking-head-aroll/svml.runtime.json --root .
+```
+
+The Author and Run sources choose author packages. The Runtime Profile chooses environment
+packages. `packages sync` closes and authenticates those two sets; it never scans the project,
+starts a Provider or generates media.
+
+### 2. Diagnose the environment
 
 ```bash
 node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
@@ -424,16 +406,8 @@ node --run narratage -- doctor examples/talking-head-aroll/svml.runtime.json
 Doctor validates both locks, every selected Runtime role, Endpoint configuration, credential
 presence and bounded environment probes. It never starts the Worker or performs a paid request.
 
-### 2. Start or reuse the Runtime
-
-```bash
-node --run narratage -- runtime up examples/talking-head-aroll/svml.runtime.json
-node --run narratage -- runtime status examples/talking-head-aroll/svml.runtime.json
-```
-
-`runtime up` owns the detached durable Worker and every external program declared by the Profile.
-The narrower `services up|status|down` commands manage only those external programs and do not own
-the Worker lifecycle.
+Doctor is intentionally a **full profile audit**. For the environment required by one Run, use
+`plan --runtime`: it checks only capabilities demanded by that finite plan.
 
 ### 3. Check source and inspect the plan
 
@@ -448,7 +422,12 @@ node --run narratage -- plan examples/talking-head-aroll/build.svrun \
 ```
 
 Review the frozen BuildPlan before spending money. The plan shows every Operation and Needs the
-Scheduler would issue.
+Scheduler would issue. With `--runtime`, it also reports only the relevant Endpoint, credential and
+external-program diagnostics. It never starts external work.
+
+`build` starts or reuses the detached Runtime automatically. Use `runtime up` only when you want to
+prepare it before submission; `runtime status` observes it. The narrower `services up|status|down`
+commands manage external programs only and do not own the Worker lifecycle.
 
 ### 4. Submit the Build
 

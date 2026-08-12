@@ -297,7 +297,7 @@ The resource names may be refined with the CLI, but the information boundary is 
 ### Operation status
 
 - exact Build, Core Command, Need, Endpoint instance and implementation identity;
-- attempt number, submission key and request digest;
+- attempt number and request digest; the content-addressed Operation id is the remote idempotency key;
 - Provider Authority, exact capability Route, opaque recovery checkpoint, remote task identity and next wake time;
 - optional generic progress `{ phase, completed?, total?, unit? }`, persisted on every pending
   revision and supplied only by the Endpoint from measured Provider facts;
@@ -404,7 +404,7 @@ pure Producer may complete before observing the signal; that is `too-late`, not 
 ### 7.3 Cancelling one Operation
 
 Operation cancellation addresses one exact Operation id, therefore one exact Build, Command,
-Endpoint implementation, request digest, attempt and submission key.
+Endpoint implementation, request digest and attempt. Their digest is the Operation id.
 
 Its semantics are:
 
@@ -465,11 +465,11 @@ does not add a special media or domain retention rule.
 |---|---|
 | cancel before Build claim | close ticket immediately; zero Endpoint calls |
 | cancel after claim but before admission | Worker observes control first and suppresses Command |
-| cancel concurrent with first submission | stable Operation identity and CAS decide; reconcile the same submission key, never submit a replacement to “check” |
+| cancel concurrent with first submission | stable Operation identity and CAS decide; reconcile the same Operation id, never submit a replacement to “check” |
 | cancel while remote pending | call exact Endpoint cancel; record `accepted`, `confirmed`, `unsupported` or `too-late` |
 | completion wins Operation CAS | completion remains factual; cancellation is `too-late` |
 | cancellation request wins CAS | later completion is archived but not reduced into the suppressed branch |
-| Worker crashes during cancellation | durable request and lease expiry let another Worker continue; no new submission key |
+| Worker crashes during cancellation | durable request and lease expiry let another Worker continue; no new Operation id |
 | repeated cancel commands | same request is idempotent; no duplicate Provider cancellation call beyond retry policy |
 | cancel after terminal completion/failure | report `too-late`; never rewrite terminal history |
 
@@ -486,7 +486,7 @@ claim that admission is already closed.
 | stop/restart WhisperX | manage one daemon; do not rewrite Build intent |
 | remove a queued notification | not allowed as a substitute for closing the authoritative dispatch ticket |
 | Provider timeout | factual Operation failure or pending uncertainty, not operator cancellation |
-| choose a substitute Candidate | compile a different explicit Run realization, not cancellation |
+| choose an alternate Candidate | compile a different explicit Run Graph, not cancellation |
 | release a Build or run Artifact GC | retention policy after execution, not cancellation |
 
 `runtime down` should be graceful by default: stop accepting new leases, let bounded local work
@@ -518,7 +518,7 @@ The execution redesign is not complete until tests prove all of these:
 
 - two CLI submissions share configured Authority and Route limits through the same local Worker;
 - closing the submitting terminal does not pause the Build;
-- a Worker crash after remote submission resumes the same Operation and submission key;
+- a Worker crash after remote submission resumes the same Operation id;
 - no serialized queued Command can be tampered with because none is stored;
 - cancelling an unclaimed Build makes zero Endpoint calls;
 - an unsupported remote cancellation stays visible and continues reconciliation;

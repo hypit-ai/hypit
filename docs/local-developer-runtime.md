@@ -86,19 +86,11 @@ packages.
     {
       "use": "@narratage/provider-kie",
       "instance": "kie.personal",
-      "authority": "kie.personal",
       "config": {
         "apiKey": { "store": "env", "key": "KIE_API_KEY" },
         "defaultConcurrency": 2
       }
     }
-  ],
-  "permissions": [
-    "environment:credentials",
-    "filesystem:artifacts",
-    "filesystem:state",
-    "network:api.kie.ai",
-    "network:kieai.redpandaai.co"
   ],
   "scheduling": { "maxConcurrency": 8 }
 }
@@ -109,80 +101,22 @@ exact instance id. Nothing is selected because it happens to be the only install
 The credentials array may contain several Stores; each resolves only references addressed to its
 own store name.
 
-The two locks have different authority:
+The two locks have different authority, but an ordinary project synchronizes both from their actual
+declarations in one command:
 
 ```bash
-narratage lock-packages ./svml.packages.lock \
-  --package @narratage/script --package @narratage/seedance --package-root .
-
-narratage lock-packages ./svml.runtime-packages.lock \
-  --package @narratage/local \
-  --package @narratage/store-sqlite \
-  --package @narratage/artifact-store-fs \
-  --package @narratage/credential-store-env \
-  --package @narratage/provider-kie \
-  --package-root .
+narratage packages sync ./build.svrun --runtime ./svml.runtime.json --root .
 ```
 
-During source development, refresh either lock without repeating its explicit selection:
-
-```bash
-narratage lock-packages ./svml.packages.lock --refresh
-narratage lock-packages ./svml.runtime-packages.lock --refresh
-```
-
-`--refresh` reuses only the authenticated `selected` array already recorded in that lock. It does
-not inspect Author Sources, discover packages or introduce a package registry.
-
-The lock selection has four explicit lifecycle operations:
-
-```bash
-# Create a lock, or replace its complete direct selection from scratch.
-narratage lock-packages ./svml.runtime-packages.lock \
-  --package @narratage/local \
-  --package @narratage/provider-kie
-
-# Edit one existing selection in a single transaction. Add and remove may be combined.
-narratage lock-packages ./svml.runtime-packages.lock \
-  --add @narratage/provider-image-opencv-local \
-  --remove @example/retired-endpoint
-
-# Accept current installed bytes for the same direct selection.
-narratage lock-packages ./svml.runtime-packages.lock --refresh
-
-# Verify the installed byte and facet closure without rewriting the lock.
-narratage lock-packages ./svml.runtime-packages.lock --verify
-```
-
-Repeated `--package` is the exact replacement operation, not an incremental add. `--add` and
-`--remove` require an existing authenticated lock and are committed atomically only after the new
-complete closure succeeds. Adding an already selected package is a no-write operation; removing a
-name that is not selected fails instead of pretending that authority was revoked. A package cannot
-be added and removed in the same transaction. Removing the final selection produces a valid empty
-trust lock. Any failure leaves the previous lock bytes intact.
-
-Writes are single-process administrative transactions. A sibling `<lock>.editing` sentinel is held
-from reading the old selection through the final atomic rename. It is a local Host file like Git's
-`index.lock`, not a Store, Runtime service or protocol value. If a process crashes, the next command
-reports its bounded owner metadata and requires an operator to confirm the process is gone before
-removing the stale sentinel.
-
-An edit changes direct trust roots, not serialized closure rows. Before writing, every root retained
-from the old selection and its complete physical closure must still match bytes authenticated by the
-old lock. `--add` may introduce only closure reachable from a newly added root; `--remove` drops only
-closure no longer reachable from any retained root. Therefore removing `A` does not remove shared
-dependency `X` when retained root `B` still requires `X`. Changed retained bytes are rejected with an
-instruction to use the deliberately broader `--refresh` or exact `--package` operation.
-The reachability labels exist only during this one traversal and do not add metadata to the lock.
-
-These commands never install or search for packages. npm, pnpm, Yarn or Bun may place resolvable
-package bytes under the chosen `--package-root`; the Node package Host adapter resolves those local
-bytes. The lock's local `selected` array is the only direct trust list. Package manifests provide
-their ordinary physical dependency closure, Module Manifests provide the logical implementation
-closure, and no Narratage registry contributes either list.
+The Author lock roots come from the self-described Run and recursively imported Author Sources.
+The Runtime lock roots come from explicit `runtimeServices[].use` and `endpoints[].use` entries.
+The command neither scans the directory nor installs or activates a package.
 
 The Author lock activates deterministic Producers and validators. The Runtime lock activates
 privileged service and Endpoint adapters. Source `<import>` cannot add Runtime authority.
+Package authors who need exact lock creation, low-level selection editing or byte-verification use
+`lock-packages`; those mechanics live in
+[`node-package-activation.md`](./node-package-activation.md), not in the ordinary video workflow.
 
 ## 4. Lifecycle and observation
 
@@ -209,7 +143,7 @@ the Runtime or cancel a Build.
 Shared capacity is persisted by DispatchStore, so two local Workers cannot exceed global,
 Provider-Authority or exact capability-Route limits. Lease generation fences a stale Worker after
 takeover. A crash-recovered Operation keeps
-the same id and submission key; a completed journal entry is replayed without another remote
+the same Operation id; a completed journal entry is replayed without another remote
 submission.
 
 The detached process record binds an effective revision of the Runtime Profile and both package

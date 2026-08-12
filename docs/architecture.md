@@ -55,15 +55,20 @@ changes graph topology or performs content-based common-subexpression eliminatio
 
 - nominal type and schema verification;
 - typed compiled-graph verification;
-- explicit Satisfaction resolution;
+- already-realized Candidate selection;
 - reverse reachability from arbitrary Targets;
 - finite BuildPlan derivation;
 - immutable Record, Need, Command, Event, Receipt and Derivation identity;
-- monotonic `exact` / `substitute` propagation;
 - deterministic state transitions and command regeneration on resume.
 
 Core does not parse source, load packages, execute code, call Providers, read credentials, own a
 queue, persist bytes or know any video type.
+
+One admission rule applies across the system: a public field or abstraction must own an independent
+choice, failure or replacement boundary and must not be derivable from an existing graph edge or
+fact. Dependencies belong in the graph, operational observations stay in Runtime, and display labels
+stay in the Host. A declared security policy without an enforcing process/Wasm boundary is not a
+security feature and is not part of the protocol.
 
 ## 3. Author Graph
 
@@ -71,8 +76,7 @@ An Author Graph is the typed meaning produced from author source. Its public res
 `LogicalOutput`s. Each Logical Output declares:
 
 - the nominal Type it promises;
-- a Primary Candidate;
-- the author-visible semantic inputs an implementation may depend on.
+- a Primary Candidate.
 
 The Author Graph may contain authored Records, Candidates and Operations. A source Surface may hide
 an arbitrary finite internal Fragment while still exporting a small, readable component interface.
@@ -148,13 +152,12 @@ type Candidate = {
 };
 ```
 
-It does not belong to a Logical Output and does not own fidelity. The connection is explicit:
+It does not belong to a Logical Output. The connection is explicit:
 
 ```ts
 type Satisfaction = {
   output: LogicalOutputId;
   candidate: CandidateId;
-  fidelity: "exact" | "substitute";
 };
 ```
 
@@ -171,7 +174,7 @@ Frontend is the official human-readable form of one complete:
 
 ```text
 Run Graph = Author Graph binding + Candidate/Operation graph
-          + Satisfaction[] + named Target sets + selected Target set
+          + Satisfaction[] + Target[]
 ```
 
 It will not contain credentials, queue configuration or Runtime placement.
@@ -196,7 +199,7 @@ Run-only Fragment Producers extend the execution Program Closure without enterin
 changing the Author Graph. The final Build identity binds that closure digest in addition to both
 graph identities.
 
-Named target sets make a useful stopping point reusable. `<value>` and `<build-record>` declare
+Separate Run Sources make useful stopping points reusable. `<value>` and `<build-record>` declare
 zero-input Candidates. Imported trusted Run Fragments declare Operation-backed Candidates; several
 exports from one Fragment declaration share one instance, while separate declarations remain
 separate executions.
@@ -228,15 +231,15 @@ This permits all of the following without a special replacement rule:
 
 - one alternate Product satisfies both outputs through shared projections;
 - two alternate instances separately satisfy the two outputs and execute twice;
-- one output is substituted while a demanded sibling keeps the default Product reachable;
-- all demanded default projections are substituted, so the default Product becomes unreachable.
+- one output selects an alternate Candidate while a demanded sibling keeps the author Product reachable;
+- all demanded outputs select alternate Candidates, so the author Product becomes unreachable.
 
 Pruning follows graph reachability only. A Product records common origin; it does not impose a
 `mustReplaceTogether` policy.
 
 The Author Program and realized Run Graph remain complete compilation products. One durable Build,
-however, carries only its exact **execution slice**: selected Target outputs, their explicitly
-selected Candidates, the primary Candidates required to verify those output promises, reachable
+however, carries only its exact **execution slice**: selected Target outputs, their realized
+Candidates, reachable
 Operations and authored Records, and the transitive module dependencies needed to validate that
 slice. Unrelated Tracks, renderers and schemas are not copied into every BuildState revision merely
 because the Author Source imported them. This is deterministic graph projection, not caching or a

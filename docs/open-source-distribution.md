@@ -78,7 +78,8 @@ Installing a package only makes its bytes available. Authority remains separatel
 - source imports may activate declared author vocabulary;
 - trusted compiler configuration activates Frontend, Surface and deterministic compute facets;
 - Runtime Profile activates Endpoint, Store, Scheduler, transport and credential facets;
-- permissions and credential references are granted to exact locked Endpoint instances.
+- credential references are bound to exact locked Endpoint instances; runtime packages remain trusted
+  until a real isolation boundary exists.
 
 No `<import>` installs an npm package, opens the network, reads a credential or starts a queue. A
 new author component therefore does not require a monolithic application release, while a new
@@ -214,7 +215,8 @@ locks and the Runtime Profile remain the authorities.
 A physical update is explicit:
 
 1. the project package manager changes selected package versions and records them in its lockfile;
-2. `narratage lock-packages` refreshes the Author/compute and Runtime package locks;
+2. `narratage packages sync <run-source> --runtime <profile>` derives and refreshes the
+   Author/compute and Runtime package locks from explicit project declarations;
 3. `narratage doctor`, `check` and `plan` expose environment, source and execution changes before a
    paid Build;
 4. new Builds use the new Runtime Revision;

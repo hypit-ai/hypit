@@ -235,11 +235,9 @@ The complete data flow from Script to rendered video. This example is based on
 ```svml
 <?svml using="@narratage/run-markup@1"?>
 
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="final.video" accepts="exact"/>
-  </target-set>
+  <target output="final.video"/>
 </svrun>
 ```
 

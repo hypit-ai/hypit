@@ -132,6 +132,7 @@ narratage lock-packages <lock-file> --add <installed-name> [--remove <selected-n
 narratage lock-packages <lock-file> --remove <selected-name> ...
 narratage lock-packages <lock-file> --refresh
 narratage lock-packages <lock-file> --verify
+narratage packages sync <run-source> --runtime <runtime-profile>
 narratage auth status <endpoint-instance> --runtime <runtime-profile>
 narratage auth login  <endpoint-instance> --runtime <runtime-profile>
 narratage auth logout <endpoint-instance> --runtime <runtime-profile>
@@ -141,15 +142,37 @@ narratage auth logout <endpoint-instance> --runtime <runtime-profile>
 of npm, pnpm, Yarn or Bun; Narratage should not secretly invoke one package manager or maintain a
 central package marketplace.
 
-`--refresh` is the explicit development operation for rebuilding one existing lock from its
-authenticated `selected` list. It avoids copying a long package list after implementation bytes
-change, but never guesses a selection from source imports or installed-package enumeration.
+`packages sync` is the ordinary project-level trust action after imports, Runtime `use` entries, an
+install or a source checkout changes. It derives Author roots from the Run/Author Source closure and
+Runtime roots from the Profile, then writes the two exact locks declared by that Profile. It never
+installs packages, scans a directory for guesses, activates Providers or rewrites source.
+The lower-level `lock-packages` command remains available to package authors.
+
+`--refresh` is the lower-level package-development operation for rebuilding one existing lock from
+its authenticated `selected` list.
 
 Repeated `--package` supplies the complete direct selection and therefore creates or replaces the
 lock. `--add`/`--remove` edit an existing direct selection as one atomic operation; they do not
 install packages. `--verify` authenticates the lock and compares its complete installed byte/facet
 closure without writing. This keeps installation, local trust selection, and Runtime instance
 configuration as three separate operations.
+
+### 3.5 Full doctor versus one-Run preflight
+
+`doctor <profile>` deliberately audits the complete configured deployment. It may therefore report
+an unavailable WhisperX or Vertex Endpoint even when the next Run only draws local images. This is
+not the right gate for a partial Build.
+
+`plan <run> --runtime <profile>` derives the finite BuildPlan first, extracts its demanded capability
+set, and diagnoses only Endpoints, credentials and external programs intersecting that set. The
+result is printed with the plan and no external work is started. `build` performs the same scoped
+preflight before constructing the execution Runtime, creating a durable Build, or issuing an
+external request. The generic CLI compares capability references; it has no Provider-name switch or
+central capability registry.
+
+`check <run>` remains static. In particular, a future `<build-record>` Candidate can be checked
+before its source Build exists. `plan` and `build` still require the exact archived value because a
+deterministic execution graph cannot contain a placeholder historical Record.
 
 Selection edits preserve the old trust boundary for every retained root. They reject changed or
 newly reachable bytes below retained roots rather than laundering those changes into an unrelated
@@ -245,16 +268,15 @@ Color is reinforcement, never the only signal:
 
 | Meaning | Glyph | Color role |
 |---|---|---|
-| complete/healthy/exact | `✓` | green |
+| complete/healthy | `✓` | green |
 | active/selected | `●` or `→` | cyan/brand accent |
 | queued/waiting | `◷` | blue |
-| warning/substitute | `!` | amber |
+| warning | `!` | amber |
 | failed/unavailable | `×` | red |
 | cancelled/suppressed | `−` | dim neutral |
 | remote Provider work | `↗` | magenta accent only where useful |
 
-ASCII fallbacks are required. `exact` and `substitute` must always retain their words because color
-cannot carry conformance.
+ASCII fallbacks are required. Color never carries information by itself.
 
 ### 5.3 Shared primitives
 
@@ -303,11 +325,9 @@ returns the complete structured result.
 ✓ Build plan is valid
 
   Run         delivery.svrun
-  Target set  delivery
+  Targets     final.video
   Goals       1
   Steps       18
-  Exact steps        17
-  Substitute steps    1
   External requests   5
 
 Operations
@@ -322,7 +342,7 @@ External requests
   These Needs may reach the Endpoints selected by the Runtime Profile during build.
 
 Selections
-  ! take-2.video ← retained-take-2  substitute
+  → take-2.video ← retained-take-2
 
 No external work was started.
 ```

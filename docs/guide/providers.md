@@ -117,7 +117,7 @@ export default svmlPackage;
 ```
 
 `activate` is the one pure deployment declaration. The Endpoint it returns owns the credential
-references, permissions, capabilities and scheduling facts used by both `doctor` and execution.
+references, capabilities and scheduling facts used by both `doctor` and execution.
 Activation must not resolve secrets or environment-sourced deployment values, access the network or
 start work. It keeps environment names as references until a matching Need is handled. Credential
 presence is diagnosed through the generic CredentialStore path; a Provider must not special-case
@@ -198,9 +198,6 @@ instantiates its `use` id.
         "defaultConcurrency": 2
       }
     }
-  ],
-  "permissions": [
-    "network:api.my-service.com"
   ]
 }
 ```

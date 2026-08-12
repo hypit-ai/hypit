@@ -20,7 +20,7 @@ Write `main.svml`, optional `studio.svs`, and `build.svrun` directly.
   `caption-fine:Style`, `caption:Program`, `caption-ai:Planner`, and `caption-fine:Track`; put
   editorial text on `typo:Track`; then assemble with `film:Film`, render with `render:Video`, and
   demand the desired outputs in `build.svrun`.
-- Route every generated reference image through `playbooks/craft/production-gates.md`. Pin and reuse
+- Route every generated reference image through `playbooks/craft/production-gates.md`. Explicitly reuse
   each accepted image or take in the next Build with `.svrun` `build-record` and `satisfy`.
 
 Generated image prompt structure: an English reality contract matching the observed capture medium,
