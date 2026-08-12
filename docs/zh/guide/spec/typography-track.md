@@ -22,8 +22,7 @@ authored document
 × deterministic local motion
 ```
 
-一个普通的透明标题、整句话外面套一个背景、每一行渲染行各套一个背景、孤立的词 Pill、连成一体的荧光笔
-几何，以及逐字素簇的打字机效果，都是这个模型中的不同取值。它们不是不同的渲染器组件，也不需要在 Core、
+一个普通的透明标题、整句话外面套一个背景、每一行渲染行各套一个背景、孤立的词 Pill、连成一体的荧光笔几何，以及逐字素簇的打字机效果，都是这个模型中的不同取值。它们不是不同的渲染器组件，也不需要在 Core、
 Film 或 Composition 里开分支。
 
 “完整”不等于把有史以来所有特效都塞进一个扁平对象。它的意思是：
@@ -41,8 +40,7 @@ HyperFrames 只是这门语言的一个渲染器，而不是 Text 的定义。
 
 ### 2.1 Current Narratage slice
 
-当前 `packages/typography-track` 的实现只有一个固定矩形框、一个纯字符串，以及一个包含颜色、字号、字族、
-字重、行高、水平/垂直对齐、单一背景、圆角、内边距和字距的 `TextAppearance`。它的 Surface 恰好只接受
+当前 `packages/typography-track` 的实现只有一个固定矩形框、一个纯字符串，以及一个包含颜色、字号、字族、字重、行高、水平/垂直对齐、单一背景、圆角、内边距和字距的 `TextAppearance`。它的 Surface 恰好只接受
 `text`、`during` 和 `appearance`；它的 Recipe 恰好要求十一个标量属性。
 
 它目前无法表达：
@@ -70,8 +68,7 @@ HyperFrames 只是这门语言的一个渲染器，而不是 Text 的定义。
 - frame/content/line/word 背景目标；
 - line box、cap height 和 ink bound 三种度量。
 
-它的渲染器还实现了纯色/渐变字形填充、外描边、阴影、辉光、气泡尾巴、整个 item 的入场/循环运动、打字机
-显现以及行/词背景。这些都是有价值的行为见证。
+它的渲染器还实现了纯色/渐变字形填充、外描边、阴影、辉光、气泡尾巴、整个 item 的入场/循环运动、打字机显现以及行/词背景。这些都是有价值的行为见证。
 
 这份实现同样暴露了它为什么不能被照搬成新合同：
 
@@ -84,8 +81,7 @@ HyperFrames 只是这门语言的一个渲染器，而不是 Text 的定义。
 - 一个指针会悄悄创建出背景，而且好几个默认值是渲染器自己发明的；
 - 完全没有富 run、路径文字或可重复 Paint Layer 的模型。
 
-一份经过审计的历史导出包含 32 个 Text Track 和 53 个 Text item。使用频率最高的属性是对齐、字族/字号、
-颜色、字重、背景、圆角和内边距。描边、大写、不换行、全宽背景、字距和阴影也有使用。该样本中没有任何
+一份经过审计的历史导出包含 32 个 Text Track 和 53 个 Text item。使用频率最高的属性是对齐、字族/字号、颜色、字重、背景、圆角和内边距。描边、大写、不换行、全宽背景、字距和阴影也有使用。该样本中没有任何
 Text 动画使用记录。这证明了常规交付的基线；但它不足以成为排除下文那些成熟编辑器能力的理由。
 
 ### 2.3 External editor attack matrix
@@ -129,8 +125,7 @@ Text 动画使用记录。这证明了常规交付的基线；但它不足以成
   VisualTrack lowering
 ```
 
-Point、Area 和 Path 之所以是三个独立的作者组件，是因为它们断言的几何不同。它们不是那种会让端口忽隐忽现
-的 `mode` 字段。它们仍然可以下降到同一个带标签的 `TextItemProgram` 联合类型，并作为对等 item 共存于同一个
+Point、Area 和 Path 之所以是三个独立的作者组件，是因为它们断言的几何不同。它们不是那种会让端口忽隐忽现的 `mode` 字段。它们仍然可以下降到同一个带标签的 `TextItemProgram` 联合类型，并作为对等 item 共存于同一个
 Text Track 中。
 
 有两项能力的输入实质不同，因此留在常规 Text 之外：
@@ -138,12 +133,9 @@ Text Track 中。
 - Text Mask 组件必须显式消费文字形状和它所遮罩的媒体/图形；它不得去采样恰好位于其下方的那个 Track；
 - 真正的 3D Text 拥有挤出、材质、灯光和相机语义，通常物化为带 alpha 的 Surface。
 
-在后续的官方发行版中，它们可以是独立的包，也可以是需要单独导入的组件。包的数量是发行决策；但它们的图
-合同必须保持分离。两种情况都不会给 Core 增加分支。
+在后续的官方发行版中，它们可以是独立的包，也可以是需要单独导入的组件。包的数量是发行决策；但它们的图合同必须保持分离。两种情况都不会给 Core 增加分支。
 
-官方的本地 Text Mask 见证刻意只接受一个精确的单行 Area Text 形状和一个显式的静态 `CompositableSurface`。
-富 run、多行/Path 排布、序列动画和定时素材都会 fail closed，并走与 3D Text 相同的“物化 Surface”逃生路线。
-这条边界避免了假装浏览器 `foreignObject` 遮罩是可移植且精确的。
+官方的本地 Text Mask 见证刻意只接受一个精确的单行 Area Text 形状和一个显式的静态 `CompositableSurface`。富 run、多行/Path 排布、序列动画和定时素材都会 fail closed，并走与 3D Text 相同的“物化 Surface”逃生路线。这条边界避免了假装浏览器 `foreignObject` 遮罩是可移植且精确的。
 
 ## 4. Authored Text Document
 
@@ -182,8 +174,7 @@ type TextInline =
 document > paragraph > explicit run > rendered line > Unicode word > grapheme cluster
 ```
 
-`rendered line` 只有在确定了精确字体和最终几何之后才存在。字素簇是常规情况下作者可见的最小动画/装饰单元。
-一个 shaped glyph 未必与某个 Unicode 字符或字素簇一一对应，因此公开的作者模型不得假装它们一一对应。
+`rendered line` 只有在确定了精确字体和最终几何之后才存在。字素簇是常规情况下作者可见的最小动画/装饰单元。一个 shaped glyph 未必与某个 Unicode 字符或字素簇一一对应，因此公开的作者模型不得假装它们一一对应。
 
 ## 5. Three spatial forms
 
@@ -195,8 +186,7 @@ point/frame/path 几何；Text 随后用三种形态之一去解释这份几何�
 
 ### 5.1 Point Text
 
-Point Text 是锚定在某个解析点上的固有尺寸文字。它通常紧贴内容、不做软换行，并使用显式的内联/块级锚点。
-手动分段仍然有效。常规的标题、标签和贴纸都是 Point Text。
+Point Text 是锚定在某个解析点上的固有尺寸文字。它通常紧贴内容、不做软换行，并使用显式的内联/块级锚点。手动分段仍然有效。常规的标题、标签和贴纸都是 Point Text。
 
 ### 5.2 Area Text
 
@@ -214,14 +204,11 @@ Area Text 在解析出的 frame 内排布。它显式选择：
 - 是否裁剪到摆放 frame；
 - 度量边：line box、cap height 或 ink bounds。
 
-溢出是诚实的作者意图。`ellipsis` 可能省略掉可见的被声明文字，因此必须显式写出。`shrink` 必须声明最小
-缩放比例，并在完整文字仍放不下时失败；它不得悄悄越过那个下限。这一点与 Caption 不同——Caption 绝不能裁剪
-或丢弃作者的显示 Atom。
+溢出是诚实的作者意图。`ellipsis` 可能省略掉可见的被声明文字，因此必须显式写出。`shrink` 必须声明最小缩放比例，并在完整文字仍放不下时失败；它不得悄悄越过那个下限。这一点与 Caption 不同——Caption 绝不能裁剪或丢弃作者的显示 Atom。
 
 ### 5.3 Path Text
 
-Path Text 消费一条显式自有的矢量路径，外加 Text Document 和 Style。它拥有路径侧、朝向、起止边距、对齐、
-反向和溢出。给边距做动画会让文字沿路径移动；给路径做动画则改变路径本身。它绝不会去发现或采样另一个
+Path Text 消费一条显式自有的矢量路径，外加 Text Document 和 Style。它拥有路径侧、朝向、起止边距、对齐、反向和溢出。给边距做动画会让文字沿路径移动；给路径做动画则改变路径本身。它绝不会去发现或采样另一个
 Track 中的形状。
 
 Path Text 需要一个通用的矢量/路径终端原语，或者一个自有的物化 Surface。它不能靠序列化一段无类型的
@@ -242,8 +229,7 @@ Typography 与 Paint、布局相互分离，但参与布局度量。它包括：
 - 文字变换、小型大写字母、上标与下标的呈现；
 - 所选布局实现支持时的 CJK 专用间距/压缩控制。
 
-精确的字体字节仍是显式的作者图输入。它们不是藏在 Recipe 里的名字，也不由 Runtime 挑选。字体 shaping/布局
-实现的身份由被接受的推导/渲染 receipt 绑定；Core 仍然对字体一无所知。
+精确的字体字节仍是显式的作者图输入。它们不是藏在 Recipe 里的名字，也不由 Runtime 挑选。字体 shaping/布局实现的身份由被接受的推导/渲染 receipt 绑定；Core 仍然对字体一无所知。
 
 ## 7. Ordered Paint model
 
@@ -263,8 +249,7 @@ type TextPaintLayer =
 ```
 
 `ColorPaint` 支持纯色、线性渐变和径向渐变，带一份有序的颜色与不透明度 stop 列表。重复使用 Stroke 或
-Shadow 是合法的，顺序具有语义。渲染器可以用复制字形 Layer 的方式来下降外描边，但那是实现细节，而不是
-一个含义随浏览器而变的作者开关。
+Shadow 是合法的，顺序具有语义。渲染器可以用复制字形 Layer 的方式来下降外描边，但那是实现细节，而不是一个含义随浏览器而变的作者开关。
 
 Box Paint 有这些目标：
 
@@ -273,8 +258,7 @@ frame | content | paragraph | line | run | word | grapheme
 ```
 
 它的装饰独立拥有填充、border、内边距、各角圆角和阴影。`isolated` 为每个目标创建一个独立的装饰单元。
-`joined` 在每一条渲染行内把相邻的被选片段合并，并给该行片段一个诚实的端头。非法组合（例如在 `frame` 上
-使用 continuity）会在 Text 校验期失败。
+`joined` 在每一条渲染行内把相邻的被选片段合并，并给该行片段一个诚实的端头。非法组合（例如在 `frame` 上使用 continuity）会在 Text 校验期失败。
 
 这一条规则就表达了常见的全部情形：
 
@@ -288,9 +272,7 @@ frame | content | paragraph | line | run | word | grapheme
 | 连成一体的马克笔/荧光笔 | `target=word, continuity=joined` |
 | 字母块 | `target=grapheme, continuity=isolated` |
 
-气泡尾巴是显式声明、附着在某个 Box Paint Layer 上的部件，带有方位、偏移、尺寸和自己的 Paint。它不会悄悄
-强制生成一个背景。毛玻璃不属于普通 Box Paint，因为它要采样 Track 背后的像素；它需要一个显式自有的媒体
-输入，或者一个物化的自包含组件。
+气泡尾巴是显式声明、附着在某个 Box Paint Layer 上的部件，带有方位、偏移、尺寸和自己的 Paint。它不会悄悄强制生成一个背景。毛玻璃不属于普通 Box Paint，因为它要采样 Track 背后的像素；它需要一个显式自有的媒体输入，或者一个物化的自包含组件。
 
 ## 8. Motion and sequence selectors
 
@@ -306,24 +288,16 @@ frame | content | paragraph | line | run | word | grapheme
 unit selector × selected property channels × keyframes × stagger/order
 ```
 
-单元选择器可以指向 paragraph、line、run、word 或 grapheme。它显式选择范围、正向/反向顺序、延迟/扩散、
-循环次数以及任何确定性随机种子。属性通道包括局部变换、不透明度、模糊和字形 Paint 值。打字机是这个模型上
-的一个字素簇显现预设，而不是字符串切片。滚动字幕和横向滚动只是 Area Text 上普通的 item 级运动。
+单元选择器可以指向 paragraph、line、run、word 或 grapheme。它显式选择范围、正向/反向顺序、延迟/扩散、循环次数以及任何确定性随机种子。属性通道包括局部变换、不透明度、模糊和字形 Paint 值。打字机是这个模型上的一个字素簇显现预设，而不是字符串切片。滚动字幕和横向滚动只是 Area Text 上普通的 item 级运动。
 
-任何运动名称都不是隐藏的回调。`pop`、`spring`、`slide` 或 `wobble` 这类预设，会在终端渲染之前编译成有限的
-或在解析上有界的、由包自有的运动值。两条运动通道通过各自独立的包裹器或显式的变换合成顺序进行合成；后者
-不会覆盖前者。
+任何运动名称都不是隐藏的回调。`pop`、`spring`、`slide` 或 `wobble` 这类预设，会在终端渲染之前编译成有限的或在解析上有界的、由包自有的运动值。两条运动通道通过各自独立的包裹器或显式的变换合成顺序进行合成；后者不会覆盖前者。
 
-动画的生命期与 Item 的可见性相互独立。一段运动可以在 Item 窗口结束前就完成，此时它最终被声明的状态一直
-保持到 Item 消失。一段运动也可以超出窗口，此时 Item 窗口只是裁剪它，而不改写它的时序。序列运动和 Path
-Text 运动遵循同样的规则。这既避免了仅仅因为标题一直可见就拒绝一段完全合理的快速标题动画，也避免了为了
-塞进短窗口而悄悄给慢速动画重新计时。
+动画的生命期与 Item 的可见性相互独立。一段运动可以在 Item 窗口结束前就完成，此时它最终被声明的状态一直保持到 Item 消失。一段运动也可以超出窗口，此时 Item 窗口只是裁剪它，而不改写它的时序。序列运动和 Path
+Text 运动遵循同样的规则。这既避免了仅仅因为标题一直可见就拒绝一段完全合理的快速标题动画，也避免了为了塞进短窗口而悄悄给慢速动画重新计时。
 
 ## 9. Style declaration, SVS and readable authoring
 
-声明与使用保持分离。SVS 仍是通用的标量 Recipe 语言；它不得学会 Text 的 Paint 数组，也不得变成第二个
-渲染器。Text Style Surface 读取具名 Recipe、精确的 Font 引用和重复的结构化 Layer 声明，校验它们，然后产出
-一份完整的、由包自有的 `TextStyle` Record。
+声明与使用保持分离。SVS 仍是通用的标量 Recipe 语言；它不得学会 Text 的 Paint 数组，也不得变成第二个渲染器。Text Style Surface 读取具名 Recipe、精确的 Font 引用和重复的结构化 Layer 声明，校验它们，然后产出一份完整的、由包自有的 `TextStyle` Record。
 
 预期的作者写法是：
 
@@ -362,9 +336,7 @@ item 也可以改为消费一个普通的图 `Text` 值：
 </text:Track>
 ```
 
-`content={Text}` 与内联正文内容互斥。前者从精确的图值物化出一段纯文本文档 run；后者拥有有界的富文档，
-并可使用 `P`、`Span` 和 `Break`。这既阻止了 Frontend 把运行时 Text 复制进隐藏的被声明状态，又让富排版
-明确归本包所有。
+`content={Text}` 与内联正文内容互斥。前者从精确的图值物化出一段纯文本文档 run；后者拥有有界的富文档，并可使用 `P`、`Span` 和 `Break`。这既阻止了 Frontend 把运行时 Text 复制进隐藏的被声明状态，又让富排版明确归本包所有。
 
 这套写法在当前共享的时间/空间 Surface 语法上可执行。它的重要性质是：
 
@@ -403,9 +375,7 @@ Composition -> selected final renderer
 每一项外部依赖都由图边承载。Text 值只包含固有的 Text 语义。任何上游 Record 都不会仅仅因为后面某个 Text
 消费者需要，就凭空长出 text、role、source、style、font 或 layout 元数据。
 
-布局实现可以使用被锁定的浏览器、HarfBuzz/Skia/Pango 或其他精确引擎。它必须绑定实际的实现和字体字节。
-浏览器的 line box 不会作为通用图元数据向外传播；它要么是渲染器 receipt 所拥有的确定性终端布局，要么是包
-自有的、用于物化 Surface 的已解析几何。
+布局实现可以使用被锁定的浏览器、HarfBuzz/Skia/Pango 或其他精确引擎。它必须绑定实际的实现和字体字节。浏览器的 line box 不会作为通用图元数据向外传播；它要么是渲染器 receipt 所拥有的确定性终端布局，要么是包自有的、用于物化 Surface 的已解析几何。
 
 ## 11. Terminal Visual IR findings
 
@@ -417,19 +387,15 @@ Composition -> selected final renderer
 - 有序可重复的 Paint 与 Unicode 单元动画始终是序列化数据，绝不是回调；
 - 精确的字体 Artifact 和带类型的 `CompositableSurface` 值走普通的 Artifact 边界。
 
-HyperFrames 参考编译器实现了这些原语，同时不向作者包暴露 HTML、CSS、SVG 或渲染器脚本。一个单独安装的
-非原生 Text fixture 证明了挤出/材质/灯光/相机语义可以留在窄腰之外，只贡献一个带类型的 alpha Surface。
-不受支持的富遮罩走同一条路径。
+HyperFrames 参考编译器实现了这些原语，同时不向作者包暴露 HTML、CSS、SVG 或渲染器脚本。一个单独安装的非原生 Text fixture 证明了挤出/材质/灯光/相机语义可以留在窄腰之外，只贡献一个带类型的 alpha Surface。不受支持的富遮罩走同一条路径。
 
-这些始终是视频终端的事实，绝不是 Core 的事实。渲染器 receipt、Surface 字节校验、Deck/Ranking 见证以及最终的
-兼容性审计，如今都在不向共享窄腰添加 Text 语义的前提下通过。
+这些始终是视频终端的事实，绝不是 Core 的事实。渲染器 receipt、Surface 字节校验、Deck/Ranking 见证以及最终的兼容性审计，如今都在不向共享窄腰添加 Text 语义的前提下通过。
 
 ## 12. Feedback into Fine Caption
 
 Text 与 Caption 共享的是排版实现难题，而不是作者语义。
 
-下列内容可以通过一个聚焦的视频领域实现库共享（暂定为 `@narratage/typography`）；在真正出现跨包边之前，
-它没有 Author Surface，也没有图 Type：
+下列内容可以通过一个聚焦的视频领域实现库共享（暂定为 `@narratage/typography`）；在真正出现跨包边之前，它没有 Author Surface，也没有图 Type：
 
 - Unicode 字素簇/词/双向切分；
 - 精确的字体栈加载与 shaping；
@@ -438,8 +404,7 @@ Text 与 Caption 共享的是排版实现难题，而不是作者语义。
 - 字素簇安全的打字机效果与确定性的选择器求值；
 - 终端富文本下降辅助函数。
 
-这并不会造出一个通用的 Text Program。Caption 仍保留 `CaptionDisplaySequence`、Cue、Atom、语音对应关系和
-卡拉 OK 时序。Text 仍保留段落、富 run、point/area/path 布局和任意序列选择器。
+这并不会造出一个通用的 Text Program。Caption 仍保留 `CaptionDisplaySequence`、Cue、Atom、语音对应关系和卡拉 OK 时序。Text 仍保留段落、富 run、point/area/path 布局和任意序列选择器。
 
 本次审计发现的、可落到 Caption 上的具体改进是：
 
@@ -449,8 +414,7 @@ Text 与 Caption 共享的是排版实现难题，而不是作者语义。
 4. 复用字素簇安全的文字变换/显现以及精确 shaping；
 5. 把 joined 的活动 Pill 几何保留在共享的行片段实现上。
 
-Caption **不得**继承 Text 的 ellipsis、裁剪、缩放适配、路径排布、任意富 run 时序或选择器生成的语音时序。
-它始终展示作者完整的不可变 Atom，并且只从已证明的 Atom 窗口激活。
+Caption **不得**继承 Text 的 ellipsis、裁剪、缩放适配、路径排布、任意富 run 时序或选择器生成的语音时序。它始终展示作者完整的不可变 Atom，并且只从已证明的 Atom 窗口激活。
 
 ## 13. Migration order and acceptance gates
 

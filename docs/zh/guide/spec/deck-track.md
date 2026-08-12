@@ -5,13 +5,11 @@ description: 官方深度栈 Deck 迁移的已实现可执行权威，记录旧 
 
 # SVML 深度栈 Deck Track
 
-状态：官方深度栈 Deck 迁移的已实现可执行权威。它记录了旧 Deck 实现所使用的行为，但它不是冻结的
-公开 ABI，也不定义通用的 Deck 协议。
+状态：官方深度栈 Deck 迁移的已实现可执行权威。它记录了旧 Deck 实现所使用的行为，但它不是冻结的公开 ABI，也不定义通用的 Deck 协议。
 
 ## 1. 结论
 
-Deck 不是 Media Item 的一种模式，也不是 Media Track 的第三个原语。它是更高阶的视觉组件，只是它的
-成员恰好使用了媒体素材。
+Deck 不是 Media Item 的一种模式，也不是 Media Track 的第三个原语。它是更高阶的视觉组件，只是它的成员恰好使用了媒体素材。
 
 第一个官方实现是 `@narratage/deck-track`。它诚实的作者含义是一个**深度栈 Deck**：
 
@@ -39,8 +37,7 @@ Core、Film、Composition 和 HyperFrames 都不知道某个贡献来自 Deck。
 
 ## 2. 为什么 Deck 在 Media Track 之外
 
-Media Item 回答的是单个素材如何呈现。Media Sequence 回答的是成员如何在同一个共享表面上相互替换。
-深度栈 Deck 回答的是另一个问题：当当前成员改变时，整个有序集合如何改变姿态。
+Media Item 回答的是单个素材如何呈现。Media Sequence 回答的是成员如何在同一个共享表面上相互替换。深度栈 Deck 回答的是另一个问题：当当前成员改变时，整个有序集合如何改变姿态。
 
 在同一帧上，一个 Deck 可能同时显示：
 
@@ -50,8 +47,7 @@ Media Item 回答的是单个素材如何呈现。Media Sequence 回答的是成
 - 按相对深度区分的不同偏移、缩放、旋转、不透明度和色调；
 - 一次让每个保留 Card 从旧姿态移动到新姿态的转场。
 
-这是集合状态，而不是源采样、适配或“出场 / 入场”成对交接。把它留在 Media Track 里，会让一个历史遗留
-的呈现模型看起来像通用的媒体原语。
+这是集合状态，而不是源采样、适配或“出场 / 入场”成对交接。把它留在 Media Track 里，会让一个历史遗留的呈现模型看起来像通用的媒体原语。
 
 ## 3. 目前还没有通用的 Deck 合同
 
@@ -65,9 +61,7 @@ Media Item 回答的是单个素材如何呈现。Media Sequence 回答的是成
 - 时间轴历史；
 - 看板与条目一同演化的 Ranking 板。
 
-这些包可以定义不同的作者 Surface、校验与 lowering，它们只需要发出终端 `VisualTrack` 合同即可。只有当
-多个真实实现证明存在一条更小的共同法则之后，我们才应该抽出共享的 Deck 库。仅仅共用“Deck”这个名词，
-不构成设立中心协议的证据。
+这些包可以定义不同的作者 Surface、校验与 lowering，它们只需要发出终端 `VisualTrack` 合同即可。只有当多个真实实现证明存在一条更小的共同法则之后，我们才应该抽出共享的 Deck 库。仅仅共用“Deck”这个名词，不构成设立中心协议的证据。
 
 因此第一个包应该暴露一个诚实的组件名，例如 `DepthStack`，而不是声称它的字段描述了所有可能的 Deck。
 
@@ -84,8 +78,7 @@ Media Item 回答的是单个素材如何呈现。Media Sequence 回答的是成
 @narratage/composition    terminal VisualTrack waist
 ```
 
-`@narratage/deck-track` 可以复用 Media Track 中聚焦的实现函数，或者后续某个纯实现层的媒体 lowering 库。
-这种代码复用并不会让 Deck 变成 Media Track 组件，也不会通过 Core 暴露通用的 `MediaProgram` 或
+`@narratage/deck-track` 可以复用 Media Track 中聚焦的实现函数，或者后续某个纯实现层的媒体 lowering 库。这种代码复用并不会让 Deck 变成 Media Track 组件，也不会通过 Core 暴露通用的 `MediaProgram` 或
 `DeckProgram`。
 
 这个包不做以下事情：
@@ -122,8 +115,7 @@ Media Item 回答的是单个素材如何呈现。Media Sequence 回答的是成
 组件本身产出一个普通的 `VisualTrack`。它不嵌套在 `<media:Track>` 里，也不通过 `mode="deck"` 选择。
 
 SVML 拥有拓扑：有序的 Card 成员关系、source 边、trigger 引用、终止点、Frame 以及可选的标签输入。SVS
-拥有可复用参数：可见邻域、深度姿态、frame Paint 和 reflow 运动。SVS 不能创建 Card、隐藏 source 边或
-选择 Provider。
+拥有可复用参数：可见邻域、深度姿态、frame Paint 和 reflow 运动。SVS 不能创建 Card、隐藏 source 边或选择 Provider。
 
 ## 6. 精确的状态模型
 
@@ -139,8 +131,7 @@ p1 < p2 < ... < pN < T
 current(f) = greatest i such that pi <= f
 ```
 
-在 `p1` 之前，除非有显式的初始状态策略另行规定，组件处于非激活状态。在 `T` 及其之后，除了作者显式声明
-的退场运动之外，组件同样处于非激活状态。
+在 `p1` 之前，除非有显式的初始状态策略另行规定，组件处于非激活状态。在 `T` 及其之后，除了作者显式声明的退场运动之外，组件同样处于非激活状态。
 
 包会校验作者声明的出现顺序。它绝不会把相等、逆序或缺失的 trigger 点整理成一份看似合法的呈现。
 
@@ -182,16 +173,13 @@ Sequence transition   coordinates outgoing member + incoming member
 Deck reflow           coordinates the union of old-visible + new-visible Cards
 ```
 
-它们不得共用同一个 `transitionStyle` 联合类型。Card 还可以拥有自己的当前项强调效果，但它不能改动属于
-另一个 Track 的像素。
+它们不得共用同一个 `transitionStyle` 联合类型。Card 还可以拥有自己的当前项强调效果，但它不能改动属于另一个 Track 的像素。
 
-渲染器把状态和姿态求值为绝对帧号的纯函数，不保留可变的“上一帧”状态。因此任意帧渲染、分块 Lambda 渲染
-和乱序帧求值都保持确定性。
+渲染器把状态和姿态求值为绝对帧号的纯函数，不保留可变的“上一帧”状态。因此任意帧渲染、分块 Lambda 渲染和乱序帧求值都保持确定性。
 
 ## 8. Card 素材与播放
 
-每个 Card 都可以复用与 Media Item 相同的显式 layer、Content Fit、裁剪和 frame Paint 法则。这属于实现
-复用，不是作者模型的继承。
+每个 Card 都可以复用与 Media Item 相同的显式 layer、Content Fit、裁剪和 frame Paint 法则。这属于实现复用，不是作者模型的继承。
 
 带时间的 Card 源必须定义它在非当前项时如何采样：
 
@@ -203,16 +191,13 @@ past trail       hold source tail, continue, or hide according to explicit polic
 
 静态素材不需要播放策略。视频绝不能在仅作为未来预览时悄悄播完。
 
-Card 标签是可选的显式 Text 输入。Deck 包可以复用 typography lowering，但它不能从文件名、URL 或隐藏的
-图像元数据推导 Text 事实。
+Card 标签是可选的显式 Text 输入。Deck 包可以复用 typography lowering，但它不能从文件名、URL 或隐藏的图像元数据推导 Text 事实。
 
-初版 DepthStack 只有视觉。如果后续某个 Deck 组件要暴露源音频，它必须以独立且显式的 `AudioTrack` 投影
-提供，并带有作者声明的当前成员 / 交接法则；音频绝不能仅仅因为某个 Card 的容器里含有音频流就变得可闻。
+初版 DepthStack 只有视觉。如果后续某个 Deck 组件要暴露源音频，它必须以独立且显式的 `AudioTrack` 投影提供，并带有作者声明的当前成员 / 交接法则；音频绝不能仅仅因为某个 Card 的容器里含有音频流就变得可闻。
 
 ## 9. Stacking
 
-Deck Track 没有 Track 级 z-index，也不创建 stacking context。当同级 Track 需要插入其间时，看板 / 背景与
-各个 Card 可以 lower 成各自独立的绝对 stack Present。
+Deck Track 没有 Track 级 z-index，也不创建 stacking context。当同级 Track 需要插入其间时，看板 / 背景与各个 Card 可以 lower 成各自独立的绝对 stack Present。
 
 相对深度只决定自有 Card 之间的顺序。reflow 期间的临时顺序也只存在于这一显式关系内部，它不会分配全局 z 段。
 
@@ -251,10 +236,7 @@ Deck Track 没有 Track 级 z-index，也不创建 stacking context。当同级 
 7. 证明静态与带时间素材的非激活播放行为；
 8. 迁移一个真实的旧系统 Deck，并且只有在验收矩阵通过之后才冻结。
 
-第 1–8 步在 `@narratage/deck-track` 中执行。包测试覆盖下文列出的每一种状态、校验、播放、标签和扩展场景。
-真实的 HyperFrames 见证会渲染一个旧风格的三 Card 深度栈两次——一次单 worker、一次三个分区 worker——并
-逐字节比较每一帧解码结果，同时证明每个作者声明的当前状态都被绘制出来。这完成了 Deck 包的验收矩阵，独立
-的通用 E1–E8 终端 VisualTrack / Visual IR 关卡现在也已通过。
+第 1–8 步在 `@narratage/deck-track` 中执行。包测试覆盖下文列出的每一种状态、校验、播放、标签和扩展场景。真实的 HyperFrames 见证会渲染一个旧风格的三 Card 深度栈两次——一次单 worker、一次三个分区 worker——并逐字节比较每一帧解码结果，同时证明每个作者声明的当前状态都被绘制出来。这完成了 Deck 包的验收矩阵，独立的通用 E1–E8 终端 VisualTrack / Visual IR 关卡现在也已通过。
 
 要求的证据包括：
 

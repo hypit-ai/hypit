@@ -5,14 +5,12 @@ description: 统一官方 Media Track 的可执行预发布权威文档。Item/S
 
 # SVML Media Track 创作
 
-状态：统一官方 Media Track 的可执行预发布权威文档。Item/Sequence 两个 Surface、定时素材、
-有序 Layer、运动、Handoff、独立的音频投影以及受限的 Speech 投影均已实现。原先的
+状态：统一官方 Media Track 的可执行预发布权威文档。Item/Sequence 两个 Surface、定时素材、有序 Layer、运动、Handoff、独立的音频投影以及受限的 Speech 投影均已实现。原先的
 `@narratage/broll` 垂直切片已被移除，而不是作为兼容层保留。本合同尚不是冻结的公开 ABI。
 
 ## 1. Conclusion
 
-全画幅插叙、下方证据卡、角落图片、透明贴纸、动图、短视频以及普通的替换序列，并不是各不相同的
-终端 Track family。它们只是同一组媒体关注点的不同组合：
+全画幅插叙、下方证据卡、角落图片、透明贴纸、动图、短视频以及普通的替换序列，并不是各不相同的终端 Track family。它们只是同一组媒体关注点的不同组合：
 
 ```text
 source material
@@ -28,8 +26,7 @@ optional owned pairwise replacement relationship
 optional explicit audio projection
 ```
 
-它们属于同一个视频领域包 `@narratage/media-track`，并且全部下降为普通的对等 `VisualTrack`；
-只有在作者显式声明时，才会同时下降为 `AudioTrack` 值。
+它们属于同一个视频领域包 `@narratage/media-track`，并且全部下降为普通的对等 `VisualTrack`；只有在作者显式声明时，才会同时下降为 `AudioTrack` 值。
 
 一个包不等于一个带条件分支的超级组件。作者 Surface 暴露两个语义不同的组件：
 
@@ -38,13 +35,10 @@ Media Item       one independent presentation with one projected window
 Media Sequence   ordered members replace one another on one shared surface
 ```
 
-`Item` 和 `Sequence` 共享聚焦的值族和下降代码。它们之所以是两个独立组件，是因为拓扑、校验和端口
-都不同。不存在 `mode="broll | sequence | overlay"` 这样的字段，也不存在“选了某个 mode 就冒出另一个
-隐藏组件”的步骤。
+`Item` 和 `Sequence` 共享聚焦的值族和下降代码。它们之所以是两个独立组件，是因为拓扑、校验和端口都不同。不存在 `mode="broll | sequence | overlay"` 这样的字段，也不存在“选了某个 mode 就冒出另一个隐藏组件”的步骤。
 
 深度堆叠的 Deck 被刻意排除在本包之外。它是更高阶的集合状态组件，而不是媒体原语。官方的迁移模型在
-[`deck-track.md`](./deck-track.md) 中独立规定；未来的 Carousel、Fan、Grid 或其他 Deck 包并不必须采用
-那套模型。
+[`deck-track.md`](./deck-track.md) 中独立规定；未来的 Carousel、Fan、Grid 或其他 Deck 包并不必须采用那套模型。
 
 “B-roll” 仍是有用的剪辑术语或 Recipe 名称，但它不是公开的数据 Type。
 
@@ -85,8 +79,7 @@ Surface 物化 Need。Provider 不会重新解释 placement、motion、transitio
 - 已归一化的定时视觉素材，带精确帧率、帧数和尺寸；
 - 带类型的 `CompositableSurface` 素材，带精确的静态/逐帧时序和 alpha 模式。
 
-固有事实的所有者仍然是 `@narratage/media`。Media Track 包内部可以使用包内的已解析联合类型，但不得
-再造一个通用媒体 Type，也不得把 provider、源路径、Narrative 摘要或上游血缘复制进每一个 item。
+固有事实的所有者仍然是 `@narratage/media`。Media Track 包内部可以使用包内的已解析联合类型，但不得再造一个通用媒体 Type，也不得把 provider、源路径、Narrative 摘要或上游血缘复制进每一个 item。
 
 按文件名推断是非法的。具体来说：
 
@@ -97,8 +90,7 @@ Surface 物化 Need。Provider 不会重新解释 placement、motion、transitio
 - 含音频的 MP4 不会因此就让那段音频可听；
 - 带 alpha 的视觉素材必须保留显式的 alpha 合同。
 
-多个 Layer 可以引用同一个 Artifact。图和 Artifact 收集器会对字节做去重；渲染器仍然独立求值每一个
-被声明的 sample。
+多个 Layer 可以引用同一个 Artifact。图和 Artifact 收集器会对字节做去重；渲染器仍然独立求值每一个被声明的 sample。
 
 ## 4. The orthogonal item model
 
@@ -189,14 +181,11 @@ type MediaItemProgram = {
 SVML 拥有拓扑：source、Frame、时间引用、Item/Sequence 成员关系、Handoff 边、标签和声音输入。
 SVS 拥有具名的可复用参数包：Content Fit、frame Paint、裁剪、运动参数和转场外观。
 
-SVS Recipe 不能隐藏一条 source 边，不能创建 member，不能选择 Provider，也不能让两个独立的 Item 变成
-一个 Sequence。把一个转场 Recipe 应用到整个 Sequence，会在解析后的 Program 里把这个选择物化到每一条
-被声明的 Handoff 上。因此 Recipe 既保持简洁，又不会退化成第二套图语言。
+SVS Recipe 不能隐藏一条 source 边，不能创建 member，不能选择 Provider，也不能让两个独立的 Item 变成一个 Sequence。把一个转场 Recipe 应用到整个 Sequence，会在解析后的 Program 里把这个选择物化到每一条被声明的 Handoff 上。因此 Recipe 既保持简洁，又不会退化成第二套图语言。
 
 ### Small framed inset with a smooth rise
 
-小画框不是另一个组件。它就是一个普通 Item，只不过它显式的 Placement Frame 比 Canvas 小。使用点的
-结构依然可读：
+小画框不是另一个组件。它就是一个普通 Item，只不过它显式的 Placement Frame 比 Canvas 小。使用点的结构依然可读：
 
 ```svml
 <space:AnchoredFrame id="product-inset" within={safe}
@@ -233,17 +222,13 @@ motion.smooth-rise
 ```
 
 “下方”必须无歧义。`below-canvas` 由 Canvas 和解析后的 Item 尺寸推导出一个画布外的起始位姿；
-`offset-y: 120px` 则从最终 Frame 的下方开始，未必要离开画面。两者都下降为逐帧精确的局部变换，并且
-都不改变最终的 Spatial Frame。
+`offset-y: 120px` 则从最终 Frame 的下方开始，未必要离开画面。两者都下降为逐帧精确的局部变换，并且都不改变最终的 Spatial Frame。
 
-普通的柔边或发光边缘下降为自有的 border 加 box shadow/drop shadow。真正不规则的毛边、撕纸边或噪点边
-不是什么魔法 `border-style`：它是一个显式的局部 Layer，比如一张透明边框 Artifact 或一个确定性的
-`CompositableSurface`。由于该 Layer 会影响图拓扑和 Artifact 收集，它的 source 必须在 SVML 里接上
-（例如写成 `<media:Layer surface={fuzzyFrame.surface}/>`）；SVS 可以给它上样式，但不能隐藏这条 source
+普通的柔边或发光边缘下降为自有的 border 加 box shadow/drop shadow。真正不规则的毛边、撕纸边或噪点边不是什么魔法 `border-style`：它是一个显式的局部 Layer，比如一张透明边框 Artifact 或一个确定性的
+`CompositableSurface`。由于该 Layer 会影响图拓扑和 Artifact 收集，它的 source 必须在 SVML 里接上（例如写成 `<media:Layer surface={fuzzyFrame.surface}/>`）；SVS 可以给它上样式，但不能隐藏这条 source
 边。外层的生命周期包裹器会带着 frame Paint、边缘 Layer 和内容一起运动。
 
-内置的缓动名称可以直接下降到 Visual IR。更复杂的贝塞尔或弹簧 Recipe 仍归 Media 包管，可以被确定性地
-采样为按帧寻址的关键帧；这不需要 Core、Composition 或 Runtime 学会一种新的运动类型。
+内置的缓动名称可以直接下降到 Visual IR。更复杂的贝塞尔或弹簧 Recipe 仍归 Media 包管，可以被确定性地采样为按帧寻址的关键帧；这不需要 Core、Composition 或 Runtime 学会一种新的运动类型。
 
 ## 6. Independent Item timing
 
@@ -257,12 +242,9 @@ Item 使用 [`track-authoring.md`](./track-authoring.md) 中的通用流水线�
 6. 求值生命周期运动与采样运动；
 7. 产出自包含的 Present。
 
-独立的 Item 保持独立。它们的窗口可以重叠，并按各自显式的绝对 stacking key 合成。Program 顺序不会让
-它们互斥，不会裁掉优先级更低的 item，不会自动缝合空隙，也不会推断出一个 Sequence。
+独立的 Item 保持独立。它们的窗口可以重叠，并按各自显式的绝对 stacking key 合成。Program 顺序不会让它们互斥，不会裁掉优先级更低的 item，不会自动缝合空隙，也不会推断出一个 Sequence。
 
-全屏 B-roll 不过是一个 Placement Frame 等于 Canvas、前景 Layer 通常用 `cover` 的 Item。小图、GIF 或
-视频只是同一个 Item 配上更小的 Frame。“不要挡住人脸”不是 Media 的某个 mode：作者要么消费一个合适的
-具名 Frame，要么由上游具备主体感知能力的布局组件显式产出一个。
+全屏 B-roll 不过是一个 Placement Frame 等于 Canvas、前景 Layer 通常用 `cover` 的 Item。小图、GIF 或视频只是同一个 Item 配上更小的 Frame。“不要挡住人脸”不是 Media 的某个 mode：作者要么消费一个合适的具名 Frame，要么由上游具备主体感知能力的布局组件显式产出一个。
 
 ## 7. Ordered local layers
 
@@ -292,8 +274,7 @@ type MediaSampleLayer = {
 - 替代衬底：由另一个显式 source 提供衬底 Layer；
 - 装饰卡片：Paint、border/阴影/内边距，再加一个或多个媒体 Layer。
 
-每个媒体 Layer 都由自己的固有尺寸和 `ContentFit` 推导出自己的 Content Frame。不存在特殊的
-前景/背景配对，也不存在唯一的共享内框。
+每个媒体 Layer 都由自己的固有尺寸和 `ContentFit` 推导出自己的 Content Frame。不存在特殊的前景/背景配对，也不存在唯一的共享内框。
 
 Frame 级裁剪是显式的：不裁、裁到 Placement Frame，或裁到自有形状。圆角、border、阴影、内边距和
 frame Paint 都属于表现层。它们不能改变 Spatial 几何，也不能采样另一个 Track。
@@ -313,12 +294,9 @@ loop/end       choose phase so the source tail meets the window end
 stretch        map the complete effective source interval onto the window
 ```
 
-不存在 `auto`、`native`、`finish`、`freeze` 或 `phased` 这类作者枚举值。图像不会被塞一个假的播放模式。
-源 trim 在 occupancy 之前执行。空间上的 contain/cover 与时间上的 stretch 互不相干。
+不存在 `auto`、`native`、`finish`、`freeze` 或 `phased` 这类作者枚举值。图像不会被塞一个假的播放模式。源 trim 在 occupancy 之前执行。空间上的 contain/cover 与时间上的 stretch 互不相干。
 
-即使某个 `once` Layer 提前结束，Item 的目标窗口依然有效。其他 Paint 或媒体 Layer 可以继续存在。若作者
-希望整个 item 保持可见，就选 `hold`、补一个常驻 Layer，或者直接写一个更短的目标窗口；编译器绝不会靠
-猜哪个 Layer 是主 Layer 来收缩 Item。
+即使某个 `once` Layer 提前结束，Item 的目标窗口依然有效。其他 Paint 或媒体 Layer 可以继续存在。若作者希望整个 item 保持可见，就选 `hold`、补一个常驻 Layer，或者直接写一个更短的目标窗口；编译器绝不会靠猜哪个 Layer 是主 Layer 来收缩 Item。
 
 ## 9. Media motion has four separate channels
 
@@ -338,13 +316,11 @@ type MediaSamplingMotion = {
 
 ### Entry motion
 
-作用于一个 Item 或 Group 在其可见包络起始处所拥有的全部像素。合理的带类型 Recipe 包括淡入、方向滑入、
-缩放、弹出、回弹、局部模糊显现、擦除、翻转和旋转。
+作用于一个 Item 或 Group 在其可见包络起始处所拥有的全部像素。合理的带类型 Recipe 包括淡入、方向滑入、缩放、弹出、回弹、局部模糊显现、擦除、翻转和旋转。
 
 ### Sustain motion
 
-作用于可见包络期间。漂浮、呼吸、脉冲、摇摆、抖动和漂移都是合理的算子。被声明的有序列表按确定性方式
-求值；多个变换不会悄悄互相覆盖。
+作用于可见包络期间。漂浮、呼吸、脉冲、摇摆、抖动和漂移都是合理的算子。被声明的有序列表按确定性方式求值；多个变换不会悄悄互相覆盖。
 
 ### Exit motion
 
@@ -355,9 +331,7 @@ type MediaSamplingMotion = {
 作用于某一个媒体 Layer 已完成 fit 的 Content Frame。归一化关键帧可以驱动缩放、源点/内容点位移和旋转。
 Ken Burns 是一个采样运动 Recipe，既不是 Base 特效，也不是 occupancy 模式。
 
-即使 entry 与 exit 重叠，它们各自被声明的时长也保持不变。包在每一帧同时求值两者，并确定性地合成它们
-彼此独立的 opacity、transform、filter 和 clip 通道。它绝不会按比例压缩任何一侧，也绝不会把 Item 跑两遍。
-可见的 Item 窗口仍然是最终的裁剪边界。
+即使 entry 与 exit 重叠，它们各自被声明的时长也保持不变。包在每一帧同时求值两者，并确定性地合成它们彼此独立的 opacity、transform、filter 和 clip 通道。它绝不会按比例压缩任何一侧，也绝不会把 Item 跑两遍。可见的 Item 窗口仍然是最终的裁剪边界。
 
 变换栈是固定的，因此各通道不会互相覆盖：
 
@@ -378,8 +352,7 @@ absolute Present stacking
 
 ## 10. Sequence: explicit member replacement
 
-一个 Sequence 拥有两个或更多嵌套的 Member，它们共享一个 Placement Frame 和一个外层生命周期。它必须被
-显式创建；相邻的 Item、重叠的窗口或某个转场 Recipe 都不会隐含成员关系。
+一个 Sequence 拥有两个或更多嵌套的 Member，它们共享一个 Placement Frame 和一个外层生命周期。它必须被显式创建；相邻的 Item、重叠的窗口或某个转场 Recipe 都不会隐含成员关系。
 
 每个 Member 拥有：
 
@@ -399,11 +372,9 @@ logical member 2 phase   [p2, p3)
 logical member N phase   [pN, T)
 ```
 
-源码中的 occurrence 顺序具有权威性。编译器绝不按物理时间排序。缺失、同帧、逆序或超出 Program 范围的
-激活点，会让整个 Sequence 原子性失败。
+源码中的 occurrence 顺序具有权威性。编译器绝不按物理时间排序。缺失、同帧、逆序或超出 Program 范围的激活点，会让整个 Sequence 原子性失败。
 
-每一对相邻成员都拥有一条显式的 Handoff。不存在只活在编辑器或 Runtime 里的转场默认值；“应用到全部”
-会把同一个被选中的转场物化到每一条边上。
+每一对相邻成员都拥有一条显式的 Handoff。不存在只活在编辑器或 Runtime 里的转场默认值；“应用到全部”会把同一个被选中的转场物化到每一条边上。
 
 ### Pair transition
 
@@ -424,23 +395,19 @@ handoff.start = p - r × d
 handoff.end   = p + (1-r) × d
 ```
 
-帧量化保持转场总长度精确不变。相邻的 handoff 窗口不得重叠；非法时长直接失败，而不是造出一个隐式的
-三源转场。
+帧量化保持转场总长度精确不变。相邻的 handoff 窗口不得重叠；非法时长直接失败，而不是造出一个隐式的三源转场。
 
-在 handoff 期间，退出与进入的 Member surface 都由该 Sequence 拥有。它们的媒体 sample 在各自被展开的
-视觉跨度上连续播放。转场既不改变 ProgramSpace，也不改变上游的 Selection/Moment 点。
+在 handoff 期间，退出与进入的 Member surface 都由该 Sequence 拥有。它们的媒体 sample 在各自被展开的视觉跨度上连续播放。转场既不改变 ProgramSpace，也不改变上游的 Selection/Moment 点。
 
 Sequence 的 handoff 只能在其共享的 Placement Frame 内部工作。这让 cut、crossfade、push、wipe、cover 和
-page turn 都成为诚实的局部关系。针对 `composite_below` 的外层 handoff 被刻意废弃：它会读取并改动无关的
-下层 Track。
+page turn 都成为诚实的局部关系。针对 `composite_below` 的外层 handoff 被刻意废弃：它会读取并改动无关的下层 Track。
 
 Sequence 自身可以使用普通的 entry/exit 运动。在下层 Track 之上做全屏淡出是合法的，因为改变的只是
 Sequence 的不透明度；而把下层 Track 推走或翻页则不合法。
 
 ## 11. Audio is explicit and projected separately
 
-视觉素材默认静音，除非作者显式地从恰好一个具名媒体 Layer 中选取源音频。这是 item 级别的，因此前景与
-它自身的模糊副本不会意外地把同一个源混两遍。
+视觉素材默认静音，除非作者显式地从恰好一个具名媒体 Layer 中选取源音频。这是 item 级别的，因此前景与它自身的模糊副本不会意外地把同一个源混两遍。
 
 ```ts
 type MediaSourceAudioProjection = {
@@ -455,19 +422,16 @@ type MediaSourceAudioProjection = {
 - `crossfade` 使用显式声明的音频 handoff 窗口；
 - 视觉转场绝不会悄悄替你选一个音频转场。
 
-entry/exit 或 handoff 的音效是显式的音频 Artifact 输入，带显式增益。它们在解析出的精确 entry、exit 或
-边界点上下降。它们不是包级全局文件名、不是可变的音效库默认值，也不是隐藏的通道音效。
+entry/exit 或 handoff 的音效是显式的音频 Artifact 输入，带显式增益。它们在解析出的精确 entry、exit 或边界点上下降。它们不是包级全局文件名、不是可变的音效库默认值，也不是隐藏的通道音效。
 
-编译器不会返回一个同时包含两个终端 Track 的原子 `MediaProduct`。它解析出一个包自有的 Media Program，
-并提供彼此独立的确定性投影 Operation：
+编译器不会返回一个同时包含两个终端 Track 的原子 `MediaProduct`。它解析出一个包自有的 Media Program，并提供彼此独立的确定性投影 Operation：
 
 ```text
 Resolved Media Program ─┬─> project visual ─> VisualTrack
                         └─> project audio  ─> AudioTrack
 ```
 
-因此，任一终端输出都可以被 Run Graph 独立地定向、替换或满足。当两者同时被需求时，它们仍通过一条显式的
-图边共享同一份已解析调度，而不是复制两份时序元数据。
+因此，任一终端输出都可以被 Run Graph 独立地定向、替换或满足。当两者同时被需求时，它们仍通过一条显式的图边共享同一份已解析调度，而不是复制两份时序元数据。
 
 一个纯视觉 Item 不会仅因为它的源容器里带音频流，就去要求音频归一化或渲染。
 
@@ -476,8 +440,7 @@ Resolved Media Program ─┬─> project visual ─> VisualTrack
 Media Track 自身没有 z-index。每一个解析出的顶层 Item 或 Sequence surface，以及任何可被单独穿插的
 member/Layer，都会产出绝对的 Present stacking key。
 
-frame Paint 与紧耦合的媒体 sample 可以留在同一棵 Present 局部元素树里。当对等 Track 必须能出现在某块
-板、卡片、图标或 Layer 之间时，包会产出带独立绝对 key 的独立 Present。Track 归属关系绝不创建 stacking
+frame Paint 与紧耦合的媒体 sample 可以留在同一棵 Present 局部元素树里。当对等 Track 必须能出现在某块板、卡片、图标或 Layer 之间时，包会产出带独立绝对 key 的独立 Present。Track 归属关系绝不创建 stacking
 上下文。
 
 Sequence handoff 内部的临时顺序由包自有，且只在该关系的那些帧内存在。它不会预留一条全局 z 带。
@@ -500,22 +463,15 @@ no Sequence state
 no source-audio projection
 ```
 
-Speech 的作者 Surface 接受原始 `video=`，并在装配前展开同一套通用的检查与归一化图，按 Spine 显式的
-帧率选取主运动视频加默认音频。原始 `audio=` 展开为音频权威的归一化图，不贡献任何视觉 Present；它绝不
-凭空造出黑场素材。已准备好的 `media=` 仍是直接的精确输入。视觉 Take 继承 Spine 显式的 `visual-frame`、
-`visual-appearance` 和 `visual-z`，并可在这几个受限的轴上做逐 Take 覆盖。装配之后，Speech 音频仍走独立的
-规范路径 `SpeechAudioBasis -> AudioTrack` 投影；受限的视觉下降器本身保持静音，不会去重新发现容器音频。
+Speech 的作者 Surface 接受原始 `video=`，并在装配前展开同一套通用的检查与归一化图，按 Spine 显式的帧率选取主运动视频加默认音频。原始 `audio=` 展开为音频权威的归一化图，不贡献任何视觉 Present；它绝不凭空造出黑场素材。已准备好的 `media=` 仍是直接的精确输入。视觉 Take 继承 Spine 显式的 `visual-frame`、
+`visual-appearance` 和 `visual-z`，并可在这几个受限的轴上做逐 Take 覆盖。装配之后，Speech 音频仍走独立的规范路径 `SpeechAudioBasis -> AudioTrack` 投影；受限的视觉下降器本身保持静音，不会去重新发现容器音频。
 
-这可以是对聚焦的 Media 下降辅助函数的代码依赖。当没有任何外部组件消费那个中间值时，它并不需要暴露
-一个公开的 `MediaProgram` 图 Type。若日后真的出现图消费者，包可以暴露自己的带版本已解析 Type；Core 仍然
-不会注册 Media 语义。
+这可以是对聚焦的 Media 下降辅助函数的代码依赖。当没有任何外部组件消费那个中间值时，它并不需要暴露一个公开的 `MediaProgram` 图 Type。若日后真的出现图消费者，包可以暴露自己的带版本已解析 Type；Core 仍然不会注册 Media 语义。
 
-作者导入的是 Speech Spine，其 manifest 声明了自身的包依赖。作者不需要仅仅因为实现复用了 Media 下降，
-就再导入第二个解析器。
+作者导入的是 Speech Spine，其 manifest 声明了自身的包依赖。作者不需要仅仅因为实现复用了 Media 下降，就再导入第二个解析器。
 
 普通 Media Item 可以直接消费 `during={story.segment.answer}`。这不是隐式 Selection：Temporal 解析的是
-Segment 早已存在的结构性起止锚点。当作者的真实意图是 Selection 和 Moment 时，同一个 Item 仍然可以消费
-它们。
+Segment 早已存在的结构性起止锚点。当作者的真实意图是 Selection 和 Moment 时，同一个 Item 仍然可以消费它们。
 
 ## 14. Legacy audit: retained and retired
 
@@ -548,8 +504,7 @@ Segment 早已存在的结构性起止锚点。当作者的真实意图是 Selec
 - 外层 `composite_below` 转场以及一切 Base FX 依赖；
 - 把 VisualTrack 与 AudioTrack 的满足耦合在一起的打包式 B-roll Product。
 
-旧的 Deck 行为在 [`deck-track.md`](./deck-track.md) 中独立迁移；把它从 Media Track 移除并不等于删掉这项
-能力。
+旧的 Deck 行为在 [`deck-track.md`](./deck-track.md) 中独立迁移；把它从 Media Track 移除并不等于删掉这项能力。
 
 ## 15. Package and implementation shape
 
@@ -575,9 +530,7 @@ depends on
 包内部可以使用聚焦的文件划分，或未来仅供实现使用的库。但它不得造出一个被 Text、Caption、Ranking 和
 Media 共用的大一统创作库，也不得在新增一个媒体 Recipe、运动算子或组件包时要求 Core 发版。
 
-原先的 `@narratage/broll` 包在迁移期间用作回归见证，现已废弃。由于项目处于预发布阶段，不保留任何兼容包。
-“B-roll” 仍是描述某个 Item 或 Sequence 的有用剪辑术语，而不是终端 Type 或作者包。源素材与生成文件保持
-原样，不受影响。
+原先的 `@narratage/broll` 包在迁移期间用作回归见证，现已废弃。由于项目处于预发布阶段，不保留任何兼容包。“B-roll” 仍是描述某个 Item 或 Sequence 的有用剪辑术语，而不是终端 Type 或作者包。源素材与生成文件保持原样，不受影响。
 
 ## 16. Implementation order
 
