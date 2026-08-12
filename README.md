@@ -5,10 +5,11 @@
 <p align="center"><em>“First, there was narration. Then, there were montages.”</em></p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/">Documentation</a> ·
-  <a href="https://narratage.hypit.ai/zh/">中文文档</a> ·
-  <a href="https://narratage.hypit.ai/quickstart">Quickstart</a> ·
-  <a href="./examples/README.md">Examples</a>
+  <a href="https://narratage.hypit.ai/quickstart">Quickstart</a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://narratage.hypit.ai/guide/develop">Develop</a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
 Narratage is a semantic, graph-native system for making AI video. You write the story, choose the
@@ -94,8 +95,8 @@ instead of nesting. `tagline` shows that a Segment may be roleless. Repeating th
 creates multiple non-contiguous occurrences.
 Marker names carry no built-in behavior: `@silence` does not mute audio; an Audio, Caption or Track
 component must explicitly consume that Selection. The complete escape set and Slot parser contract
-are documented in [Script](https://narratage.hypit.ai/quickstart/script); Slot binding is not yet exposed by the
-author-facing `<script>` Surface, so the README does not pretend it is usable source syntax today.
+are documented in [Script](https://narratage.hypit.ai/quickstart/script). Slot binding is not yet
+exposed by the author-facing `<script>` Surface.
 
 The outer component lines are deliberately an excerpt: they show how generated media, alignment and
 Tracks consume Script projections. See the complete, checkable
@@ -137,8 +138,6 @@ WhisperX, OpenCV or HyperFrames.
 | `svml.runtime.json` | The machine environment: stores, endpoints, credentials and concurrency |
 | `svml.packages.lock` | Generated lock for author and compute packages |
 | `svml.runtime-packages.lock` | Generated lock for Runtime and Provider packages |
-
-The boundaries are deliberate:
 
 - SVML says what the author means and explicitly chooses model families where that choice matters.
 - SVRUN says what this Run should produce and which compatible results should satisfy its outputs.

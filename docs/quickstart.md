@@ -12,8 +12,7 @@ a montage of scenes to match.
 
 That is exactly what this system does. The author writes a narrated Script with semantic anchors,
 and the compiler assembles generated video, captions, B-roll, text and audio into a finished film.
-Words are the semantic spine; visual contributions remain independently authored Tracks. Author
-Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml` extension.
+Author Sources are written in SVML (Semantic Video Markup Language) and carry the `.svml` extension.
 
 Narratage turns that source into a visible execution graph. Before any model or external service
 runs, you can check the source, choose a Run, and inspect the exact work it would require. This
@@ -21,8 +20,7 @@ page gets you to that first safe plan: it needs no API keys and makes no paid ca
 
 ## Use the Narratage skill
 
-If you use a coding agent, ask it to use the repository's `narratage` skill. The skill follows the
-same files and commands; it does not introduce a separate workflow. Send it this:
+If you use a coding agent, send it this:
 
 ```text
 Install and use the narratage skill from this repository. Set up my environment, ask for only the
