@@ -123,7 +123,6 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
       result: { kind: "output", name: "track" },
     },
   );
-  const semanticInputs = ["canvas", "header", "space", ...types.keys()];
   return sealGraphFragment({
     name,
     inputs: [
@@ -134,8 +133,8 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
     ],
     operations,
     exports: [
-      { name: "program", type: commentStickerTypes.program, root: operation("comment:program"), semanticInputs, fidelity: "exact" },
-      { name: "track", type: compositionTypes.visualTrack, root: operation("comment:track"), semanticInputs, fidelity: "exact" },
+      { name: "program", type: commentStickerTypes.program, root: operation("comment:program") },
+      { name: "track", type: compositionTypes.visualTrack, root: operation("comment:track") },
     ],
   });
 }

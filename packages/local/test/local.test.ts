@@ -50,7 +50,6 @@ const providerManifest: RuntimeModuleManifest = {
     name: providerFacet.name,
     role: "capability-endpoint",
     implementation: { locator: "example.local-endpoint/generation", digest: providerDigest },
-    permissions: [],
     fulfills: [{ capability: capabilities.generation, returns: types.generated }],
     lifecycle: "recoverable",
     defaultConcurrency: 1,
@@ -86,7 +85,6 @@ function projectRuntimeFixture(directory: string) {
         credentials: ["credentials.env"],
       },
     },
-    allowedPermissions: ["filesystem:state", "filesystem:artifacts", "environment:credentials"],
     scheduling: { maxConcurrency: 4 },
   } as const;
 }
@@ -199,7 +197,6 @@ test("Endpoint-declared credentials use the selected writable Store without a Pr
         ...base.runtimeSelection,
         stores: { ...base.runtimeSelection.stores, credentials: ["credentials.memory"] },
       },
-      allowedPermissions: ["filesystem:state", "filesystem:artifacts"],
       endpoints: [endpoint],
     });
     assert.deepEqual((await runtime.credentials("generation.auth-test")).map((item) => ({
@@ -290,7 +287,7 @@ test("project local runtime resumes durable work while component and endpoint pa
   const recoverableEndpoint: RecoverableEndpoint = {
     start({ operation }) {
       starts += 1;
-      const pending = { status: "pending" as const, checkpoint: { remoteJob: operation.submissionKey }, wakeAt: Date.now() };
+      const pending = { status: "pending" as const, checkpoint: { remoteJob: operation.id }, wakeAt: Date.now() };
       if (!holdNextStart) return pending;
       holdNextStart = false;
       startEntered?.();
@@ -303,8 +300,6 @@ test("project local runtime resumes durable work while component and endpoint pa
         status: "completed",
         result: {
           value: { kind: "inline", value: "Hello from durable local Runtime" },
-          conformance: "exact",
-          delivery: "executed",
           metadata: { checkpoint },
         },
       };
@@ -527,11 +522,11 @@ test("two durable Workers share one SQLite capacity limit across Runtime instanc
     second = await createProjectLocalRuntime({ root: directory, ...options() });
     await first.build({
       id: "capacity-a",
-      state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+      state: createGreetingBuild({ generationRealization: "placeholder" }),
     });
     await second.build({
       id: "capacity-b",
-      state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+      state: createGreetingBuild({ generationRealization: "placeholder" }),
     });
     firstTurn = first.workOnce({ owner: "worker-a", leaseMs: 120 });
     await firstEntered;
@@ -620,7 +615,7 @@ test("project local runtime activates locked compute facets without deployment s
     });
     await runtime.build({
       id: "unlocked-preview",
-      state: createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+      state: createGreetingBuild({ generationRealization: "placeholder" }),
     });
     const refused = await runtime.workOnce({ owner: "locked-test", leaseMs: 5_000 });
     assert.equal(refused?.terminal, "failed");
@@ -629,8 +624,7 @@ test("project local runtime activates locked compute facets without deployment s
       id: "locked-preview",
       state: createGreetingBuild({
         generationRealization: "placeholder",
-        goalAccepts: "substitute",
-        implementationClosure: lock.digest,
+                implementationClosure: lock.digest,
       }),
     });
     assert.equal(result.status, "queued");
@@ -724,7 +718,7 @@ test("two installed Schedulers are unambiguous because the Profile selects one",
   }
 });
 
-test("project local runtime accepts a permission-checked replacement ArtifactStore package", async () => {
+test("project local runtime accepts an explicitly selected replacement ArtifactStore package", async () => {
   const directory = await mkdtemp(join(tmpdir(), "svml-local-artifacts-"));
   const module = { name: "example.remote-artifacts", version: "1" } as const;
   const artifactStore = new MemoryArtifactStore();
@@ -739,35 +733,20 @@ test("project local runtime accepts a permission-checked replacement ArtifactSto
           locator: "example.remote-artifacts",
           digest: digestOf("example.remote-artifacts@1"),
         },
-        permissions: ["network:remote-artifacts"],
         configuration: { bucket: "fixture" },
         service: artifactStore,
     }],
   });
   try {
-    const denied = projectRuntimeFixture(directory);
-    await assert.rejects(
-      createProjectLocalRuntime({
-        root: directory,
-        ...denied,
-        runtimeServices: [...denied.runtimeServices, artifacts],
-        runtimeSelection: {
-          ...denied.runtimeSelection,
-          stores: { ...denied.runtimeSelection.stores, artifacts: "artifacts.remote" },
-        },
-      }),
-      /disallowed Runtime permission network:remote-artifacts/u,
-    );
-    const allowed = projectRuntimeFixture(directory);
+    const selected = projectRuntimeFixture(directory);
     const runtime = await createProjectLocalRuntime({
       root: directory,
-      ...allowed,
-      runtimeServices: [...allowed.runtimeServices, artifacts],
+      ...selected,
+      runtimeServices: [...selected.runtimeServices, artifacts],
       runtimeSelection: {
-        ...allowed.runtimeSelection,
-        stores: { ...allowed.runtimeSelection.stores, artifacts: "artifacts.remote" },
+        ...selected.runtimeSelection,
+        stores: { ...selected.runtimeSelection.stores, artifacts: "artifacts.remote" },
       },
-      allowedPermissions: [...allowed.allowedPermissions, "network:remote-artifacts"],
     });
     const bytes = new Uint8Array([7, 8, 9]);
     const sourceArtifact = {

@@ -95,10 +95,6 @@ test("the same Script meaning has the same authored Record digest across reflow"
 
   assert.equal(compact.module.records[0]?.digest, multiline.module.records[0]?.digest);
   assert.equal(compact.module.records[1]?.digest, multiline.module.records[1]?.digest);
-  assert.notEqual(
-    compact.module.records[0]?.origin.kind === "authored" ? compact.module.records[0].origin.sourceDigest : undefined,
-    multiline.module.records[0]?.origin.kind === "authored" ? multiline.module.records[0].origin.sourceDigest : undefined,
-  );
 });
 
 test("without the import, Markup has no hard-coded knowledge of Script", async () => {

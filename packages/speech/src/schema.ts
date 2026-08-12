@@ -13,7 +13,7 @@ const audioBlobRef = object({
   mediaType: { schema: { kind: "literal", value: "audio/wav" } },
 });
 const segment = object({ segmentId: { schema: string }, startSec: { schema: number }, endSec: { schema: number } });
-export const speechDurationSchema: ValueSchema = object({ contract: { schema: { kind: "literal", value: "svml.speech-duration@1" } }, durationSec: { schema: number } });
+export const speechDurationSchema: ValueSchema = number;
 export const speechBasisSchema: ValueSchema = object({
   contract: { schema: { kind: "literal", value: "svml.speech-basis@1" } }, programSpace: { schema: programSpaceSchema }, audio: { schema: audioBlobRef },
   visualTrack: { schema: object({ clips: { schema: { kind: "array", items: object({ segmentId: { schema: string }, artifact: { schema: object({

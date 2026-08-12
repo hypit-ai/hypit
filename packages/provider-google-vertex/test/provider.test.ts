@@ -66,8 +66,6 @@ function need(requestValue: CaptionGeminiRequest): Need {
     constraints,
     requestedBy: "derivation:caption-gemini",
     result: "record:caption-gemini",
-    accepts: "exact",
-    conformanceFloor: "exact",
     requestDigest: digestOf({ capability: captionGeminiCapabilities.plan, constraints }),
   };
 }

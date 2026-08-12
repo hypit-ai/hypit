@@ -53,7 +53,6 @@ test("local WhisperX Provider pins the complete service runtime and is independe
   assert.equal(facet?.role, "capability-endpoint");
   assert(facet?.role === "capability-endpoint");
   assert.equal(facet.defaultConcurrency, 2);
-  assert.deepEqual(facet.permissions, ["filesystem:whisperx-staging", "network:whisperx-loopback"]);
   assert.throws(
     () => createLocalWhisperXProvider({ baseUrl: "https://whisper.example.com" }),
     /loopback/u,
@@ -158,8 +157,6 @@ test("local Provider stages canonical evidence bytes unchanged and binds service
       constraints,
       requestedBy: "derivation:whisperx-loopback",
       result: "record:whisperx-loopback",
-      accepts: "exact",
-      conformanceFloor: "exact",
       requestDigest: digestOf({
         capability: whisperXCapabilities.alignment,
         returns: whisperXTypes.alignmentEvidence,

@@ -152,7 +152,6 @@ export function createKeychainCredentialStorePackage(
         locator: "@narratage/credential-store-keychain",
         digest: keychainCredentialStoreImplementationDigest,
       },
-      permissions: ["process:keychain"],
       configuration: { source: "os-keychain", service, explicitKeysOnly: true },
       service: new KeychainCredentialStore({
         service,

@@ -23,7 +23,7 @@ type OpeningTag = {
 };
 
 function fail(source: SourceUnit, code: string, message: string, offset?: number): never {
-  throw new MarkupFrontendError(code, message, source.name, offset);
+  throw new MarkupFrontendError(code, message, source.name, offset, source.text);
 }
 
 function decodeEntities(value: string, source: SourceUnit, offset: number): string {

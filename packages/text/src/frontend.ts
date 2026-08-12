@@ -33,13 +33,7 @@ export const textSvsFrontend: AuthorFrontend = {
       id,
       type: textTypes.template,
       value: { kind: "inline", value: template as unknown as import("@narratage/protocol").CanonicalValue },
-      conformance: "exact",
-      origin: {
-        kind: "authored",
-        sourceDigest: source.sourceDigest,
-        frontendClosureDigest: textImplementationDigests.svsFrontend,
-        sourceName: source.name,
-      },
+      origin: { kind: "authored" },
     });
     verifyRecordStructure(context.closure, record);
     const exports: AuthorSourceExport[] = [{ name: id, ref: { kind: "record", id }, type: textTypes.template }];

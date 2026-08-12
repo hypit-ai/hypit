@@ -170,16 +170,14 @@ const closure = createResolvedClosure([
 ]);
 const origin = {
   kind: "authored" as const,
-  sourceDigest: digestOf("source:film-test"),
-  frontendClosureDigest: digestOf("frontend:film-test"),
 };
 const records = await Promise.all([
-  sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space), conformance: "exact", origin }),
-  sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas), conformance: "exact", origin }),
-  sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram), conformance: "exact", origin }),
-  sealRecord({ id: "text-program", type: typographyTrackTypes.program, value: stored(textProgram), conformance: "exact", origin }),
-  sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), conformance: "exact", origin }),
-  sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), conformance: "exact", origin }),
+  sealRecord({ id: "space", type: programSpaceTypes.programSpace, value: stored(space), origin }),
+  sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas), origin }),
+  sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram), origin }),
+  sealRecord({ id: "text-program", type: typographyTrackTypes.program, value: stored(textProgram), origin }),
+  sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background), origin }),
+  sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio), origin }),
 ].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
 const linked = link(closure, [sealTypedModule({ id: "author:film-test", closureDigest: closure.digest, records })]);
 
@@ -238,8 +236,7 @@ const graph: CompiledGraph = sealCompiledGraph({ program: linked.semanticDigest,
 function build(target: string) {
   return start(linked, graph, sealBuildRequest({
     graph: graph.id,
-    targets: [{ output: target, accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: target }],
   }));
 }
 

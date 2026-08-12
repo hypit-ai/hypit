@@ -29,7 +29,7 @@ export const renderHyperframesFragment = sealGraphFragment({
       id: "request-visual-render",
       producer: renderHyperframesProducers.requestVisual,
       inputs: { document: operation("compile-document") },
-      result: { kind: "need", name: "visual", accepts: "exact" },
+      result: { kind: "need", name: "visual" },
     },
     {
       id: "compile-audio-program",
@@ -41,7 +41,7 @@ export const renderHyperframesFragment = sealGraphFragment({
       id: "request-audio-render",
       producer: mediaPipelineProducers.renderAudio,
       inputs: { plan: operation("compile-audio-program") },
-      result: { kind: "need", name: "audio", accepts: "exact" },
+      result: { kind: "need", name: "audio" },
     },
     {
       id: "request-mux",
@@ -50,7 +50,7 @@ export const renderHyperframesFragment = sealGraphFragment({
         visual: operation("request-visual-render"),
         audio: operation("request-audio-render"),
       },
-      result: { kind: "need", name: "media", accepts: "exact" },
+      result: { kind: "need", name: "media" },
     },
     {
       id: "project-video",
@@ -63,7 +63,5 @@ export const renderHyperframesFragment = sealGraphFragment({
     name: "video",
     type: artifactTypes.blob,
     root: operation("project-video"),
-    semanticInputs: ["composition", "space"],
-    fidelity: "exact",
   }],
 });

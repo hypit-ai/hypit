@@ -18,7 +18,6 @@ export type AssembledProjectRuntimeServices = {
   readonly assembly: ProjectRuntimeServiceAssembly;
   readonly catalog: BuildCatalog | undefined;
   readonly selection: ProjectRuntimeServiceSelection;
-  readonly allowedPermissions: readonly string[];
   close(): Promise<void>;
 };
 
@@ -45,7 +44,7 @@ function packageCatalog(
 
 /**
  * Assemble only the services named by the Runtime Profile. This layer never manufactures a
- * Scheduler, Worker, Store, path, permission or credential source on the project's behalf.
+ * Scheduler, Worker, Store, path or credential source on the project's behalf.
  */
 export async function createProjectRuntimeServices(
   _root: string,
@@ -60,7 +59,6 @@ export async function createProjectRuntimeServices(
       assembly,
       catalog,
       selection: options.runtimeSelection,
-      allowedPermissions: [...options.allowedPermissions],
       close: () => assembly.close(),
     };
   } catch (error) {

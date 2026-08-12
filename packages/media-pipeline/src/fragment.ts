@@ -21,7 +21,7 @@ export const synchronizedMediaFragment = sealGraphFragment({
       id: "inspect",
       producer: mediaPipelineProducers.inspect,
       inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection", accepts: "exact" },
+      result: { kind: "need", name: "inspection" },
     },
     {
       id: "select",
@@ -38,15 +38,13 @@ export const synchronizedMediaFragment = sealGraphFragment({
         selection: operation("select"),
         request: input("request"),
       },
-      result: { kind: "need", name: "media", accepts: "exact" },
+      result: { kind: "need", name: "media" },
     },
   ],
   exports: [{
     name: "media",
     type: mediaTypes.synchronized,
     root: operation("normalize"),
-    semanticInputs: ["request", "source"],
-    fidelity: "exact",
   }],
 });
 
@@ -62,7 +60,7 @@ export const transformMediaFragment = sealGraphFragment({
       id: "inspect",
       producer: mediaPipelineProducers.inspect,
       inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection", accepts: "exact" },
+      result: { kind: "need", name: "inspection" },
     },
     {
       id: "select",
@@ -79,21 +77,19 @@ export const transformMediaFragment = sealGraphFragment({
         selection: operation("select"),
         request: input("selection"),
       },
-      result: { kind: "need", name: "media", accepts: "exact" },
+      result: { kind: "need", name: "media" },
     },
     {
       id: "transform",
       producer: mediaPipelineProducers.transform,
       inputs: { media: operation("normalize"), program: input("program") },
-      result: { kind: "need", name: "video", accepts: "exact" },
+      result: { kind: "need", name: "video" },
     },
   ],
   exports: [{
     name: "video",
     type: artifactTypes.blob,
     root: operation("transform"),
-    semanticInputs: ["program", "selection", "source"],
-    fidelity: "exact",
   }],
 });
 
@@ -108,21 +104,19 @@ export const extractAudioFragment = sealGraphFragment({
       id: "inspect",
       producer: mediaPipelineProducers.inspect,
       inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection", accepts: "exact" },
+      result: { kind: "need", name: "inspection" },
     },
     {
       id: "extract",
       producer: mediaPipelineProducers.extractAudio,
       inputs: { source: input("source"), inspection: operation("inspect"), request: input("request") },
-      result: { kind: "need", name: "audio", accepts: "exact" },
+      result: { kind: "need", name: "audio" },
     },
   ],
   exports: [{
     name: "audio",
     type: artifactTypes.blob,
     root: operation("extract"),
-    semanticInputs: ["request", "source"],
-    fidelity: "exact",
   }],
 });
 
@@ -137,20 +131,18 @@ export const extractFrameFragment = sealGraphFragment({
       id: "inspect",
       producer: mediaPipelineProducers.inspect,
       inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection", accepts: "exact" },
+      result: { kind: "need", name: "inspection" },
     },
     {
       id: "extract",
       producer: mediaPipelineProducers.extractFrame,
       inputs: { source: input("source"), inspection: operation("inspect"), request: input("request") },
-      result: { kind: "need", name: "image", accepts: "exact" },
+      result: { kind: "need", name: "image" },
     },
   ],
   exports: [{
     name: "image",
     type: artifactTypes.blob,
     root: operation("extract"),
-    semanticInputs: ["request", "source"],
-    fidelity: "exact",
   }],
 });

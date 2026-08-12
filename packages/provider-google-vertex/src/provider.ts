@@ -183,8 +183,6 @@ async function withTimeout<T>(timeoutMs: number, task: (signal: AbortSignal) => 
 function fulfillment(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
   return {
     value: { kind: "inline", value },
-    conformance: "exact",
-    delivery: "executed",
     metadata,
   };
 }
@@ -226,7 +224,6 @@ export function createGoogleVertexCaptionProvider(options: CreateGoogleVertexCap
       locator: "@narratage/provider-google-vertex/caption-gemini",
       digest: googleVertexProviderImplementationDigest,
     },
-    permissions: ["network:aiplatform.googleapis.com"],
     configuration: canonicalize({
       project: projectValue === undefined
         ? { source: "environment", name: projectEnv! }

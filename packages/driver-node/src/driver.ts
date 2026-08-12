@@ -267,9 +267,6 @@ export class NodeDriver {
       requestDigest: executable.command.need.requestDigest,
       fulfiller: executable.endpointId,
       ...(implementation === undefined ? {} : { implementation }),
-      conformance: result.conformance,
-      delivery: result.delivery,
-      metadata: result.metadata,
       ...(validation === undefined ? {} : { validation }),
     } as const;
     return { ...content, id: `event:${digestOf(content)}` };
@@ -334,7 +331,7 @@ export class NodeDriver {
 
   #assertOperationHistory(
     history: readonly OperationSnapshot[],
-    expected: Omit<OperationIdentity, "format" | "id" | "attempt" | "submissionKey">,
+    expected: Omit<OperationIdentity, "format" | "id" | "attempt">,
   ): void {
     history.forEach((snapshot, index) => {
       verifyOperationSnapshot(snapshot);
@@ -453,21 +450,9 @@ export class NodeDriver {
         maxAttempts,
       );
     }
-    const result: EndpointFulfillment = {
-      ...outcome.result,
-      metadata: {
-        endpoint: structuredClone(outcome.result.metadata),
-        runtime: {
-          operation: identity.id,
-          submissionKey: identity.submissionKey,
-          closure: runtimeClosure,
-          implementation: implementation.digest,
-        },
-      },
-    };
     const written = await operations.compareAndSwap(identity.id, current.revision, {
       status: "completed",
-      completion: result,
+      completion: outcome.result,
     });
     return await this.#completedOperation(
       state,
@@ -609,7 +594,6 @@ export class NodeDriver {
       runtimeClosure: operation.runtimeClosure,
       requestDigest: operation.requestDigest,
       attempt: operation.attempt,
-      submissionKey: operation.submissionKey,
     };
     const endpointContext = {
       command: structuredClone(executable.command),

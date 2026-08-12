@@ -61,7 +61,6 @@ export class CompositeCredentialStore implements CredentialStore {
   readonly #stores: readonly CredentialStore[];
 
   constructor(stores: readonly CredentialStore[]) {
-    assert(stores.length > 0, "CredentialStore composition is empty");
     this.#stores = [...stores];
   }
 

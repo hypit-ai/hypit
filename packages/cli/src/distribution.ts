@@ -9,6 +9,8 @@ import type { RunFrontend } from "@narratage/run";
 export type CliCompilerOptions = {
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
   readonly workspaceRoot?: string;
+  /** Additional Host-authorized asset roots. These never widen Source imports. */
+  readonly assetRoots?: readonly string[];
   readonly packageContributions: readonly NodePackageContribution[];
 };
 
@@ -27,13 +29,26 @@ export type CliDistribution = {
   readonly runFrontends: readonly RunFrontend[];
   createCompiler(options: CliCompilerOptions): NodeCompiler;
   /**
+   * Read the self-described Run Source and its Author Source closure, then return
+   * only the installed package roots those sources explicitly select.
+   *
+   * This is Distribution syntax work. The generic CLI never scans a directory,
+   * guesses an entry filename or teaches Core about package names.
+   */
+  discoverSourcePackages?(path: string, options?: {
+    readonly workspaceRoot?: string;
+  }): Promise<{ readonly selected: readonly string[] }>;
+  /**
    * Resolve the deterministic implementation lock named by a declarative
    * Runtime Profile without constructing that Runtime. Trusted executable
    * Runtime modules may decline and require an explicit CLI package lock.
    */
   resolveCompilationPackages?(path: string): Promise<{
     readonly packageLock?: string;
+    readonly runtimePackageLock?: string;
     readonly packageRoot?: string;
+    /** Installed Runtime package roots explicitly selected by this Profile. */
+    readonly runtimePackages?: readonly string[];
   }>;
   createRuntimeFromConfig(path: string, options?: {
     /** Same-process package set already verified for compilation. */
@@ -45,7 +60,10 @@ export type CliDistribution = {
   createRuntimeCredentialsFromConfig(path: string, endpoint: string): Promise<LocalCredentialControl>;
   /** Re-enter this exact Distribution as the hidden durable Worker process. */
   runtimeWorkerLaunch(): { readonly command: string; readonly args: readonly string[] };
-  doctorRuntimeConfig(path: string): Promise<RuntimeConfigDoctorResult>;
+  doctorRuntimeConfig(path: string, options?: {
+    readonly capabilities?: readonly CapabilityRef[];
+    readonly implementationPackages?: LoadedNodePackageSet;
+  }): Promise<RuntimeConfigDoctorResult>;
   /** The external programs a Runtime Profile implies: probe, prepare and start them. */
   readonly externalServices: {
     up(path: string, options: {

@@ -28,9 +28,7 @@ const spec = sealImageComposeLayerSpec({
 const source = { kind: "blob" as const, digest: digestOf("hero-image"), size: 123, mediaType: "image/png" };
 
 function record(id: string, type: TypeRef, value: StoredValue): TypedRecord {
-  return { id, type, value, digest: digestOf({ id, value }), conformance: "exact", origin: {
-    kind: "authored", sourceDigest: digestOf("source"), frontendClosureDigest: digestOf("frontend"),
-  } };
+  return { id, type, value, digest: digestOf({ id, value }), origin: { kind: "authored" } };
 }
 
 test("Image Compose is an ordered Layer graph with no privileged base image", () => {

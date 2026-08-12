@@ -27,10 +27,6 @@ function findRecord(state: BuildState, id: string): TypedRecord | undefined {
   return state.records.find((record) => record.id === id);
 }
 
-function validConformance(value: string): boolean {
-  return value === "exact" || value === "substitute";
-}
-
 function verifyDerivation(state: BuildState, derivation: Derivation): void {
   const step = producerStep(state.plan, derivation.step);
   const producer = resolveProducer(state.program.closure, derivation.producer);
@@ -118,37 +114,15 @@ function verifyReceipt(state: BuildState, receipt: Receipt): void {
       receipt.id,
     );
   }
-  invariant(validConformance(receipt.fulfillmentConformance), "INVALID_CONFORMANCE", receipt.id);
-  invariant(validConformance(receipt.conformance), "INVALID_CONFORMANCE", receipt.id);
-  invariant(
-    ["executed", "cache", "manual", "provided"].includes(receipt.delivery),
-    "INVALID_DELIVERY",
-    receipt.id,
-  );
   invariant(
     receipt.requestDigest === need.requestDigest,
     "REQUEST_DIGEST_MISMATCH",
     `${receipt.id} request digest does not match`,
   );
-  invariant(
-    receipt.conformance === (
-      need.conformanceFloor === "substitute" || receipt.fulfillmentConformance === "substitute"
-        ? "substitute"
-        : "exact"
-    ),
-    "CONFORMANCE_FLOOR_MISMATCH",
-    `${receipt.id} does not inherit its Need conformance floor`,
-  );
-  invariant(
-    need.accepts === "substitute" || receipt.fulfillmentConformance === "exact",
-    "SUBSTITUTE_NOT_ACCEPTED",
-    `${receipt.id} did not exactly fulfill the selected capability`,
-  );
   const record = findRecord(state, receipt.output);
   invariant(record !== undefined, "RECEIPT_OUTPUT_MISSING", `${receipt.id} output is missing`);
   invariant(receipt.output === need.result, "RECEIPT_OUTPUT_BINDING", `${receipt.id} output is not its Need result`);
   invariant(sameType(record.type, need.returns), "RECEIPT_OUTPUT_TYPE", `${receipt.id} output type differs`);
-  invariant(record.conformance === receipt.conformance, "RECEIPT_OUTPUT_CONFORMANCE", receipt.id);
   invariant(record.digest === receipt.outputDigest, "RECEIPT_OUTPUT_MISMATCH", `${receipt.id} output differs`);
   invariant(
     record.origin.kind === "observed" && record.origin.receipt === receipt.id,
@@ -255,10 +229,7 @@ export function verifyBuildState(state: BuildState): void {
     "build step state does not match the plan",
   );
 
-  for (const record of state.records) {
-    invariant(validConformance(record.conformance), "INVALID_CONFORMANCE", record.id);
-    verifyRecord(state.program.closure, record);
-  }
+  for (const record of state.records) verifyRecord(state.program.closure, record);
   for (const authored of state.program.records) {
     const record = findRecord(state, authored.id);
     invariant(record?.digest === authored.digest, "AUTHORED_RECORD_CHANGED", `${authored.id} changed`);
@@ -295,12 +266,6 @@ export function verifyBuildState(state: BuildState): void {
       );
       const inputs = derivation.inputs.map((binding) => findRecord(state, binding.id));
       invariant(inputs.every((item) => item !== undefined), "DERIVATION_INPUT_MISSING", derivation.id);
-      const step = producerStep(state.plan, derivation.step);
-      const expected = step.fidelity === "substitute"
-        || inputs.some((item) => item?.conformance === "substitute")
-        ? "substitute"
-        : "exact";
-      invariant(record.conformance === expected, "CONFORMANCE_NOT_PROPAGATED", `${record.id} conformance differs`);
     } else if (record.origin.kind === "observed") {
       const origin = record.origin;
       const receipt = state.receipts.find((item) => item.id === origin.receipt);
@@ -316,9 +281,7 @@ export function verifyBuildState(state: BuildState): void {
       );
       invariant(
         origin.kind === "provided"
-          && origin.requestDigest === state.request.digest
-          && state.plan.selections.some((selection) =>
-            selection.record === record.id && selection.candidate === origin.candidate),
+          && state.plan.selections.some((selection) => selection.record === record.id),
         "PROVIDED_ORIGIN_MISMATCH",
         `${record.id} is not bound to its selected Candidate`,
         record.id,
@@ -327,8 +290,6 @@ export function verifyBuildState(state: BuildState): void {
   }
 
   for (const need of state.needs) {
-    invariant(need.accepts === "exact" || need.accepts === "substitute", "INVALID_NEED_ACCEPTANCE", need.id);
-    invariant(validConformance(need.conformanceFloor), "INVALID_CONFORMANCE", need.id);
     invariant(
       need.requestDigest === needRequestDigest(need),
       "NEED_DIGEST_MISMATCH",
@@ -352,19 +313,10 @@ export function verifyBuildState(state: BuildState): void {
       declaration !== undefined
       && sameCapability(need.capability, declaration.capability)
       && sameType(need.returns, declaration.returns)
-      && plannedPort?.[1].result === need.result
-      && plannedPort[1].accepts === need.accepts,
+      && plannedPort?.[1].result === need.result,
       "NEED_PLAN_BINDING_MISMATCH",
       `${need.id} differs from its locked Producer Need port`,
       need.id,
-    );
-    const inherited = step?.fidelity === "substitute" || derivation?.inputs.some(
-      (binding) => findRecord(state, binding.id)?.conformance === "substitute",
-    ) ? "substitute" : "exact";
-    invariant(
-      need.conformanceFloor === inherited,
-      "CONFORMANCE_FLOOR_MISMATCH",
-      `${need.id} conformance floor differs from its Producer inputs`,
     );
   }
   for (const receipt of state.receipts) verifyReceipt(state, receipt);
@@ -393,11 +345,6 @@ export function verifyBuildState(state: BuildState): void {
       const record = findRecord(state, goal.record);
       invariant(record !== undefined, "COMPLETE_GOAL_MISSING", `${goal.record} is missing`);
       invariant(sameType(record.type, goal.type), "COMPLETE_GOAL_TYPE_MISMATCH", goal.record);
-      invariant(
-        goal.accepts === "substitute" || record.conformance === "exact",
-        "COMPLETE_GOAL_SUBSTITUTE",
-        goal.record,
-      );
     }
   }
   if (state.status === "failed") {

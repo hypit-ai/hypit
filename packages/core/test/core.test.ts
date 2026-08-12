@@ -78,9 +78,6 @@ test("Core executes its derived finite plan through Need, Receipt and completion
     value: { kind: "inline", value: "Hello, Ada!" },
     requestDigest: current.command.need.requestDigest,
     fulfiller: "test:greeting",
-    conformance: "exact",
-    delivery: "executed",
-    metadata: { model: "fixture" },
   });
   const assemble = transition.commands.find(
     (command): command is InvokeProducerCommand => command.kind === "invoke-producer",
@@ -167,25 +164,6 @@ test("oneOf literal discrimination preserves exact-one semantics", () => {
   );
 });
 
-test("an exact Need rejects a substitute fulfillment", () => {
-  const current = reachNeed();
-  assert.throws(
-    () =>
-      reduce(current.state, {
-        kind: "need-fulfilled",
-        id: "event:substitute",
-        command: current.command.id,
-        value: { kind: "inline", value: "Placeholder" },
-        requestDigest: current.command.need.requestDigest,
-        fulfiller: "test:placeholder",
-        conformance: "substitute",
-        delivery: "provided",
-        metadata: {},
-      }),
-    (error: unknown) => error instanceof CoreError && error.code === "SUBSTITUTE_NOT_ACCEPTED",
-  );
-});
-
 test("serialized BuildState survives a JSON round trip", () => {
   const current = reachNeed();
   const restored = JSON.parse(JSON.stringify(current.state)) as BuildState;
@@ -207,8 +185,6 @@ test("a recomputed Need cannot change the capability locked by its Producer port
     returns: need.returns,
     constraints: need.constraints,
     result: need.result,
-    accepts: need.accepts,
-    conformanceFloor: need.conformanceFloor,
   });
   (need as { requestDigest: string }).requestDigest = requestDigest;
 
@@ -251,7 +227,6 @@ test("a caller cannot replace Core's graph-derived plan", () => {
       {
         id: "unused",
         producer: producers.makePrompt,
-        fidelity: "exact" as const,
         inputs: { intent: "intent:root" },
         outputs: { prompt: "prompt:unused" },
         needs: {},

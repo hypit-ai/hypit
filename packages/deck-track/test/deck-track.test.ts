@@ -405,7 +405,8 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-moment-card"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack-until-selection-end"));
   assert.equal(fragment.inputs.filter((input) => input.type.name === narrativeTypes.moment.name).length, 2);
-  assert.ok(fragment.exports.every((output) => output.semanticInputs.includes("frame") && output.semanticInputs.includes("terminal")));
+  assert.ok(fragment.inputs.some((input) => input.name === "frame"));
+  assert.ok(fragment.inputs.some((input) => input.name === "terminal"));
 });
 
 test("Label Surface compiles explicit exact-font text rather than media metadata", async () => {

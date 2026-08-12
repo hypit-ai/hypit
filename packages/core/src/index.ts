@@ -16,7 +16,6 @@ export {
   verifyTypeValidationReceipt,
 } from "./link.js";
 export {
-  EMPTY_REALIZATION_DIGEST,
   operationResultRecord,
   operationResultType,
   resolveCandidate,
@@ -25,7 +24,6 @@ export {
   sealBuildRequest,
   sealCompiledGraph,
   satisfiedCandidate,
-  satisfactionForOutput,
   valueRefKey,
   verifyBuildRequest,
   verifyCompiledGraph,

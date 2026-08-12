@@ -44,7 +44,7 @@ test("normal English speech estimate follows the delivery-density policy", () =>
   );
   assert.equal(countSpeechEstimateUnits(source.value, "en"), 20);
   const result = estimateSpeechDuration(source, normal);
-  assert.equal(result.durationSec, 4);
+  assert.equal(result, 4);
 });
 
 test("English pace presets occupy adjacent integer durations", () => {
@@ -59,7 +59,7 @@ test("English pace presets occupy adjacent integer durations", () => {
       maximumSec: normal.maximumSec,
       rounding: normal.rounding,
     }),
-  ).durationSec;
+  );
   assert.deepEqual([estimate("slow"), estimate("normal"), estimate("fast")], [12, 11, 10]);
 });
 
@@ -73,7 +73,7 @@ test("a numeric rate gives SVS a continuous author-controlled pace", () => {
     maximumSec: normal.maximumSec,
     rounding: normal.rounding,
   }));
-  assert.equal(result.durationSec, 10);
+  assert.equal(result, 10);
 });
 
 test("the author Surface requires one complete explicit inline policy", async () => {
@@ -89,9 +89,9 @@ test("the author Surface requires one complete explicit inline policy", async ()
 });
 
 test("the minimum applies before rounding and the maximum applies after rounding", () => {
-  assert.equal(estimateSpeechDuration(sealText("Hello."), normal).durationSec, 4);
+  assert.equal(estimateSpeechDuration(sealText("Hello."), normal), 4);
   const bounded = sealSpeechEstimatePolicy({ ...normal, maximumSec: 4.5 });
-  assert.equal(estimateSpeechDuration(sealText("This sentence intentionally contains far more spoken syllables than the selected model duration allows."), bounded).durationSec, 4.5);
+  assert.equal(estimateSpeechDuration(sealText("This sentence intentionally contains far more spoken syllables than the selected model duration allows."), bounded), 4.5);
 });
 
 test("an SVS Recipe configures one reusable estimate policy without becoming executable", () => {

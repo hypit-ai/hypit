@@ -48,7 +48,6 @@ test("one Endpoint definition generates Manifest, instance, bindings and host-ne
     instance: "example.personal",
     authority: "example.personal",
     implementation,
-    permissions: ["network:example.test"],
     configuration: { baseUrl: "https://example.test" },
     credentials: { apiKey: credentialRef("env", "EXAMPLE_API_KEY") },
     defaultConcurrency: 3,
@@ -58,9 +57,6 @@ test("one Endpoint definition generates Manifest, instance, bindings and host-ne
       returns: types.generated,
       handler: () => ({
         value: { kind: "inline", value: "generated" },
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       }),
     }],
   });
@@ -102,9 +98,6 @@ test("non-secret Endpoint configuration and credential references change instanc
       returns: types.generated,
       handler: () => ({
         value: { kind: "inline", value: "generated" },
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       }),
     }],
   }).instance.configurationDigest;

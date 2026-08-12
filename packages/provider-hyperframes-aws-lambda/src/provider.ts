@@ -91,7 +91,7 @@ export type CreateAwsLambdaHyperframesProviderOptions = {
 type HyperframesCheckpoint = {
   readonly contract: typeof CHECKPOINT_CONTRACT;
   readonly requestDigest: Digest;
-  readonly submissionKey: Digest;
+  readonly operationId: Digest;
   readonly executionName: string;
   readonly executionArn: string;
   readonly renderId: string;
@@ -165,12 +165,12 @@ function implementationFailure(code: string, error: unknown, retryable: boolean)
   };
 }
 
-function executionName(submissionKey: Digest): string {
-  return `narratage-${submissionKey.slice("sha256:".length)}`;
+function executionName(operationId: Digest): string {
+  return `narratage-${operationId.slice("sha256:".length)}`;
 }
 
-function outputKey(submissionKey: Digest): string {
-  return `renders/narratage/${submissionKey.slice("sha256:".length)}/visual.mp4`;
+function outputKey(operationId: Digest): string {
+  return `renders/narratage/${operationId.slice("sha256:".length)}/visual.mp4`;
 }
 
 function expectedOutputUri(bucketName: string, key: string): string {
@@ -185,7 +185,7 @@ function sameRender(actual: HyperframesLambdaRender, expected: {
   readonly bucketName: string;
   readonly projectS3Uri: string;
 }): void {
-  assert(actual.renderId === expected.executionName, "HyperFrames render id differs from its submission key");
+  assert(actual.renderId === expected.executionName, "HyperFrames render id differs from its Operation id");
   assert(actual.executionArn === expected.executionArn, "HyperFrames execution ARN differs from its deterministic identity");
   assert(actual.outputS3Uri === expected.outputS3Uri, "HyperFrames output URI differs from its deterministic key");
   assert(actual.stateMachineArn === expected.stateMachineArn, "HyperFrames render used another state machine");
@@ -259,11 +259,11 @@ function verifyCheckpoint(value: CanonicalValue | undefined, context: EndpointRe
   const item = value as unknown as HyperframesCheckpoint;
   assert(item.contract === CHECKPOINT_CONTRACT, "HyperFrames checkpoint contract is invalid");
   assert(item.requestDigest === context.need.requestDigest, "HyperFrames checkpoint request differs");
-  assert(item.submissionKey === context.operation.submissionKey, "HyperFrames checkpoint submission differs");
-  assert(item.executionName === executionName(context.operation.submissionKey),
+  assert(item.operationId === context.operation.id, "HyperFrames checkpoint Operation differs");
+  assert(item.executionName === executionName(context.operation.id),
     "HyperFrames checkpoint execution name differs");
   assert(item.renderId === item.executionName, "HyperFrames checkpoint render id differs");
-  assert(isDigest(item.requestDigest) && isDigest(item.submissionKey), "HyperFrames checkpoint digest is invalid");
+  assert(isDigest(item.requestDigest) && isDigest(item.operationId), "HyperFrames checkpoint digest is invalid");
   assert(item.startedAt >= 0 && Number.isSafeInteger(item.startedAt), "HyperFrames checkpoint start time is invalid");
   nonNegativeInteger(item.polls, "HyperFrames checkpoint polls");
   nonNegativeInteger(item.pollFailures, "HyperFrames checkpoint poll failures");
@@ -346,8 +346,6 @@ function fulfillment(
   });
   return {
     value: { kind: "inline", value: canonicalize(value) },
-    conformance: "exact",
-    delivery: "executed",
     metadata: canonicalize({
       contract: "svml.hyperframes-renderer-attestation@1",
       provider: "hyperframes.aws-lambda",
@@ -479,13 +477,13 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
     submission: HyperframesCheckpoint["submission"],
     startedAt: number,
   ): HyperframesCheckpoint => {
-    const name = executionName(context.operation.submissionKey);
-    const output = expectedOutputUri(config.bucketName, outputKey(context.operation.submissionKey));
+    const name = executionName(context.operation.id);
+    const output = expectedOutputUri(config.bucketName, outputKey(context.operation.id));
     const expectedArn = executionArn(machine, name);
     return {
       contract: CHECKPOINT_CONTRACT,
       requestDigest: context.need.requestDigest,
-      submissionKey: context.operation.submissionKey,
+      operationId: context.operation.id,
       executionName: name,
       executionArn: expectedArn,
       renderId: name,
@@ -539,7 +537,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
         bucketName: config.bucketName,
         stateMachineArn: machine.arn,
         region,
-        outputKey: outputKey(context.operation.submissionKey),
+        outputKey: outputKey(context.operation.id),
         executionName: checkpoint.executionName,
       });
     } catch (error) {
@@ -597,7 +595,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
           "HyperFrames checkpoint deployment differs");
         assert(checkpoint.executionArn === executionArn(machine, checkpoint.executionName),
           "HyperFrames checkpoint execution ARN differs");
-        assert(checkpoint.outputS3Uri === expectedOutputUri(config.bucketName, outputKey(context.operation.submissionKey)),
+        assert(checkpoint.outputS3Uri === expectedOutputUri(config.bucketName, outputKey(context.operation.id)),
           "HyperFrames checkpoint output URI differs");
       } catch (error) {
         return implementationFailure("HYPERFRAMES_CHECKPOINT_INVALID", error, false);
@@ -659,7 +657,7 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       }
     },
     async cancel(context) {
-      const target = executionArn(machine, executionName(context.operation.submissionKey));
+      const target = executionArn(machine, executionName(context.operation.id));
       if (context.checkpoint !== undefined) {
         const checkpoint = verifyCheckpoint(context.checkpoint, context);
         verifySite(checkpoint.site, config.bucketName);
@@ -690,7 +688,6 @@ export function createAwsLambdaHyperframesProvider(config: CreateAwsLambdaHyperf
       locator: "@narratage/provider-hyperframes-aws-lambda/render",
       digest: awsLambdaHyperframesProviderImplementationDigest,
     },
-    permissions: ["network:aws:s3", "network:aws:states"],
     configuration: canonicalize({
       stateMachineArn: machine.arn,
       bucketName: config.bucketName,

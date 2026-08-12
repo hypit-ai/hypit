@@ -11,10 +11,9 @@ export const backgroundRemovalFragment = sealGraphFragment({
   inputs: [{ name: "source", type: artifactTypes.blob }],
   operations: [{
     id: "image:remove-background", producer: backgroundRemovalProducers.request,
-    inputs: { source: input("source") }, result: { kind: "need", name: "image", accepts: "exact" },
+    inputs: { source: input("source") }, result: { kind: "need", name: "image" },
   }],
   exports: [{
     name: "image", type: artifactTypes.blob, root: operation("image:remove-background"),
-    semanticInputs: ["source"], fidelity: "exact",
   }],
 });

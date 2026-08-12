@@ -166,26 +166,15 @@ export function createRankingFragment(
       result: { kind: "output", name: "track" },
     });
   }
-  const scheduleSemanticInputs = ["header", "map", "space", "outer", "triggers", "terminal", ...items.map((item) => item.specName)];
-  const visualSemanticInputs = [
-    ...scheduleSemanticInputs, "frame", "style",
-    ...(variant === "typewriter-list" ? ["title"] : []),
-    ...items.flatMap((item) => item.iconName === undefined ? [] : [item.iconName]),
-  ];
-  const audioSemanticInputs = [
-    ...scheduleSemanticInputs, "style", "sound-style",
-    ...(sound.appearName === undefined ? [] : [sound.appearName]),
-    ...(sound.moveName === undefined ? [] : [sound.moveName]),
-  ];
   return sealGraphFragment({
     name,
     inputs,
     operations,
     exports: [
-      { name: "schedule", type: rankingTypes.schedule, root: operation("schedule"), semanticInputs: scheduleSemanticInputs, fidelity: "exact" },
-      { name: "program", type: selected.program, root: operation("program"), semanticInputs: visualSemanticInputs, fidelity: "exact" },
-      { name: "visual", type: compositionTypes.visualTrack, root: operation("visual"), semanticInputs: visualSemanticInputs, fidelity: "exact" },
-      ...(hasAudio ? [{ name: "audio", type: compositionTypes.audioTrack, root: operation("audio"), semanticInputs: audioSemanticInputs, fidelity: "exact" as const }] : []),
+      { name: "schedule", type: rankingTypes.schedule, root: operation("schedule") },
+      { name: "program", type: selected.program, root: operation("program") },
+      { name: "visual", type: compositionTypes.visualTrack, root: operation("visual") },
+      ...(hasAudio ? [{ name: "audio", type: compositionTypes.audioTrack, root: operation("audio") }] : []),
     ],
   });
 }

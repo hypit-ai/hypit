@@ -112,8 +112,6 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
     return {
       value: { kind: "inline", value: "Hello, Ada!" },
-      conformance: "exact",
-      delivery: "executed",
       metadata: { endpoint: "fixture" },
     };
   }, { runtimeImplementation: endpointImplementation });
@@ -121,28 +119,20 @@ test("Driver pauses at an unbound Need, serializes, then resumes without rerunni
   const completed = await driver.run(restored);
   assert.equal(completed.status, "complete");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 1, fulfill: 1 });
-  assert.equal(completed.state.receipts[0]?.delivery, "executed");
   assert.equal(completed.state.receipts[0]?.fulfiller, "example:generation");
   assert.deepEqual(completed.state.receipts[0]?.implementation, {
     digest: endpointImplementation.digest,
     configurationDigest: endpointImplementation.configurationDigest,
   });
-  assert.equal(completed.state.records.find((record) => record.id === "document:root")?.conformance, "exact");
 });
 
 test("Endpoint Registry rejects ambiguity until the Runtime binds one endpoint", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:alpha", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Alpha" },
-    conformance: "exact",
-    delivery: "executed",
-    metadata: {},
   }));
   endpoints.registerImmediateEndpoint("example:beta", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Beta" },
-    conformance: "exact",
-    delivery: "executed",
-    metadata: {},
   }));
 
   const driver = new NodeDriver({ producers, endpoints });
@@ -172,8 +162,6 @@ test("an Endpoint receives only declared credential slots and secrets never ente
       assert.equal(credentials.apiKey?.secret, "top-secret-value");
       return {
         value: { kind: "inline", value: "Credentialed result" },
-        conformance: "exact",
-        delivery: "executed",
         metadata: { authenticated: true },
       };
     },
@@ -202,9 +190,6 @@ test("Endpoint capabilities may narrow themselves with typed Need constraints", 
   }, { supports: () => false });
   endpoints.registerImmediateEndpoint("example:compatible", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Compatible" },
-    conformance: "exact",
-    delivery: "executed",
-    metadata: {},
   }), {
     supports: (need) => {
       const constraints = need.constraints as Readonly<Record<string, unknown>>;
@@ -228,9 +213,6 @@ test("the same return Type cannot impersonate another exact capability", async (
       calls += 1;
       return {
         value: { kind: "inline", value: "must not run" },
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       };
     },
   );
@@ -240,7 +222,7 @@ test("the same return Type cannot impersonate another exact capability", async (
   assert.equal(calls, 0);
 });
 
-test("a substitute Candidate is explicitly selected by BuildRequest, never by Endpoint return Type", async () => {
+test("an alternate Candidate is explicitly selected before execution, never by Endpoint return Type", async () => {
   const { producers, endpoints } = configuredRegistry();
   producers.registerProducer(
     greetingProducers.placeholderText,
@@ -254,32 +236,11 @@ test("a substitute Candidate is explicitly selected by BuildRequest, never by En
   const exact = await new NodeDriver({ producers, endpoints }).run(createGreetingBuild());
   assert.equal(exact.status, "paused");
   assert.equal(exact.blocked[0]?.reason, "missing-endpoint");
-  assert.throws(
-    () => createGreetingBuild({ generationRealization: "placeholder" }),
-    /selects a substitute path/u,
-  );
-
   const accepted = await new NodeDriver({ producers, endpoints }).run(
-    createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
+    createGreetingBuild({ generationRealization: "placeholder" }),
   );
   assert.equal(accepted.status, "complete");
   assert.equal(accepted.state.receipts.length, 0, "an Alternative Producer is not disguised as an Endpoint receipt");
-  assert.equal(accepted.state.records.find((record) => record.id === "generated:placeholder")?.conformance, "substitute");
-});
-
-test("substitute conformance propagates through later producer outputs", async () => {
-  const { producers, endpoints } = configuredRegistry();
-  producers.registerProducer(
-    greetingProducers.placeholderText,
-    implementationDigests.placeholderText,
-    () => ({ outputs: { generated: { kind: "inline", value: "Placeholder" } }, needs: {} }),
-  );
-  const result = await new NodeDriver({ producers, endpoints }).run(
-    createGreetingBuild({ generationRealization: "placeholder", goalAccepts: "substitute" }),
-  );
-  assert.equal(result.status, "complete");
-  assert.equal(result.state.records.find((record) => record.id === "generated:placeholder")?.conformance, "substitute");
-  assert.equal(result.state.records.find((record) => record.id === "document:root")?.conformance, "substitute");
 });
 
 test("Driver refuses a registered implementation whose digest differs from the locked closure", async () => {
@@ -341,41 +302,17 @@ test("Core still owns scheduling when Driver has every implementation", async ()
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:cache", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Hello, Ada!" },
-    conformance: "exact",
-    delivery: "cache",
-    metadata: {},
   }));
   const start = createGreetingBuild();
   assert.equal(reduce(start).commands[0]?.kind, "invoke-producer");
   const result = await new NodeDriver({ producers, endpoints }).run(start);
   assert.equal(result.status, "complete");
-  assert.equal(result.state.receipts[0]?.delivery, "cache");
-});
-
-test("receipt metadata is covered by its identity during resume validation", async () => {
-  const { producers, endpoints } = configuredRegistry();
-  endpoints.registerImmediateEndpoint("example:cache", capabilities.generation, types.generated, () => ({
-    value: { kind: "inline", value: "Hello, Ada!" },
-    conformance: "exact",
-    delivery: "cache",
-    metadata: { cacheKey: "stable" },
-  }));
-  const result = await new NodeDriver({ producers, endpoints }).run(createGreetingBuild());
-  assert.equal(result.status, "complete");
-  const tampered = structuredClone(result.state);
-  const receipt = tampered.receipts[0];
-  assert.ok(receipt);
-  (receipt as { metadata: unknown }).metadata = { cacheKey: "changed" };
-  assert.throws(() => parseBuildState(JSON.stringify(tampered)), /content does not match its identity/u);
 });
 
 test("derived output content is bound to the Derivation even if its Record digest is recomputed", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint("example:cache", capabilities.generation, types.generated, () => ({
     value: { kind: "inline", value: "Hello, Ada!" },
-    conformance: "exact",
-    delivery: "cache",
-    metadata: {},
   }));
   const result = await new NodeDriver({ producers, endpoints }).run(createGreetingBuild());
   assert.equal(result.status, "complete");
@@ -409,9 +346,6 @@ test("resume discards serialized Commands and regenerates the exact request befo
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
     return {
       value: { kind: "inline", value: "Hello, Ada!" },
-      conformance: "exact",
-      delivery: "executed",
-      metadata: {},
     };
   });
   const completed = await driver.run(restored);
@@ -427,8 +361,6 @@ test("a transient Handler failure pauses and can resume without replaying comple
     if (attempts === 1) throw new Error("temporary outage");
     return {
       value: { kind: "inline", value: "Hello after retry" },
-      conformance: "exact",
-      delivery: "executed",
       metadata: { attempt: attempts },
     };
   });

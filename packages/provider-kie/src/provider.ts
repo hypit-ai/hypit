@@ -583,8 +583,6 @@ function endpoint(options: {
           status: "completed",
           result: {
             value: result,
-            conformance: "exact",
-            delivery: "executed",
             metadata: canonicalize({
               provider: "kie",
               taskId: checkpoint.taskId,
@@ -653,10 +651,6 @@ export function createKieProvider(config: CreateKieProviderOptions) {
       locator: "@narratage/provider-kie/market",
       digest: kieProviderImplementationDigest,
     },
-    permissions: [...new Set([
-      `network:${new URL(apiBaseUrl).hostname}`,
-      `network:${new URL(uploadBaseUrl).hostname}`,
-    ])].sort(),
     configuration: canonicalize({
       apiBaseUrl,
       uploadBaseUrl,

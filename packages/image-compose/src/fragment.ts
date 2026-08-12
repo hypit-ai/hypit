@@ -36,9 +36,8 @@ export function createImageComposeFragment(layers: readonly ImageComposeFragment
   operations.push({
     id: "image:compose", producer: imageComposeProducers.request,
     inputs: { canvas: input("canvas"), options: input("options"), layers: operation(previous) },
-    result: { kind: "need", name: "image", accepts: "exact" },
+    result: { kind: "need", name: "image" },
   });
-  const semanticInputs = ["canvas", "options", ...layers.flatMap((layer) => [layer.sourceName, layer.frameName, layer.specName])];
   return sealGraphFragment({
     name,
     inputs: [
@@ -51,6 +50,6 @@ export function createImageComposeFragment(layers: readonly ImageComposeFragment
       ]),
     ],
     operations,
-    exports: [{ name: "image", type: artifactTypes.blob, root: operation("image:compose"), semanticInputs, fidelity: "exact" }],
+    exports: [{ name: "image", type: artifactTypes.blob, root: operation("image:compose") }],
   });
 }

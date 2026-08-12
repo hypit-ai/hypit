@@ -27,7 +27,7 @@ export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
         id: "generate",
         producer: endpoint.producer,
         inputs: { request: input("request") },
-        result: { kind: "need", name: "generation", accepts: "exact" },
+        result: { kind: "need", name: "generation" },
       },
       {
         id: "select-primary-video",
@@ -40,8 +40,6 @@ export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
       name: "video",
       type: artifactTypes.blob,
       root: operation("select-primary-video"),
-      semanticInputs: ["request"],
-      fidelity: "exact",
     }],
   });
 }
@@ -111,7 +109,7 @@ export function createSeedanceDurationGenerationFragment(
       id: "generate",
       producer: endpoint.producer,
       inputs: { request: operation("finalize-request") },
-      result: { kind: "need", name: "generation", accepts: "exact" },
+      result: { kind: "need", name: "generation" },
     },
     {
       id: "select-primary-video",
@@ -132,8 +130,6 @@ export function createSeedanceDurationGenerationFragment(
       name: "video",
       type: artifactTypes.blob,
       root: operation("select-primary-video"),
-      semanticInputs: inputs.map((entry) => entry.name),
-      fidelity: "exact",
     }],
   });
 }

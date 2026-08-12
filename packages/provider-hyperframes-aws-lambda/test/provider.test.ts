@@ -61,8 +61,6 @@ function requestNeed(document = documentFixture()): Need {
     constraints,
     requestedBy: "derivation:hyperframes-lambda-test",
     result: "record:hyperframes-lambda-test",
-    accepts: "exact",
-    conformanceFloor: "exact",
     requestDigest: digestOf({
       capability: renderHyperframesCapabilities.renderVisual,
       returns: mediaTypes.renderedVisual,
@@ -85,8 +83,8 @@ function operation(request: Need) {
   });
 }
 
-function outputKey(submissionKey: string): string {
-  return `renders/narratage/${submissionKey.slice("sha256:".length)}/visual.mp4`;
+function outputKey(operationId: string): string {
+  return `renders/narratage/${operationId.slice("sha256:".length)}/visual.mp4`;
 }
 
 function successfulProgress(outputS3Uri: string, overrides: Partial<HyperframesLambdaProgress> = {}) {
@@ -327,7 +325,7 @@ test("one deterministic submission resumes and streams the exact output into the
   assert.doesNotThrow(() => validateDistributedRenderConfig(state.renderInputs[0]!.config),
     "the locked SDK must accept the exact configuration sent by the Endpoint");
   assert.equal(state.renderInputs[0]!.executionName,
-    `narratage-${common.operation.submissionKey.slice("sha256:".length)}`);
+    `narratage-${common.operation.id.slice("sha256:".length)}`);
 
   const completed = await endpoint.resume({
     ...common,
@@ -500,7 +498,7 @@ test("cancellation stops the deterministic execution even before a checkpoint ex
   const common = context(request, new MemoryArtifactStore());
   await endpoint.cancel({ ...common, checkpoint: undefined });
   assert.deepEqual(state.stopped, [
-    `${EXECUTION_PREFIX}narratage-${common.operation.submissionKey.slice("sha256:".length)}`,
+    `${EXECUTION_PREFIX}narratage-${common.operation.id.slice("sha256:".length)}`,
   ]);
   const started = await endpoint.start(common);
   assert.equal(started.status, "pending");

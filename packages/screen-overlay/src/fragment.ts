@@ -34,13 +34,12 @@ export function createScreenOverlayFragment(items: readonly ScreenOverlayFragmen
     { id: "overlay:program", producer: screenOverlayProducers.finalize, inputs: { set: operation(current), header: input("header") }, result: { kind: "output", name: "program" } },
     { id: "overlay:track", producer: screenOverlayProducers.render, inputs: { canvas: input("canvas"), space: input("space"), program: operation("overlay:program") }, result: { kind: "output", name: "track" } },
   );
-  const semanticInputs = ["canvas", "header", "space", ...types.keys()];
   return sealGraphFragment({ name, inputs: [
     { name: "canvas", type: spatialTypes.canvas }, { name: "header", type: screenOverlayTypes.header },
     { name: "space", type: programSpaceTypes.programSpace }, ...[...types].map(([inputName, type]) => ({ name: inputName, type })),
   ], operations, exports: [
-    { name: "program", type: screenOverlayTypes.program, root: operation("overlay:program"), semanticInputs, fidelity: "exact" },
-    { name: "track", type: compositionTypes.visualTrack, root: operation("overlay:track"), semanticInputs, fidelity: "exact" },
+    { name: "program", type: screenOverlayTypes.program, root: operation("overlay:program") },
+    { name: "track", type: compositionTypes.visualTrack, root: operation("overlay:track") },
   ] });
 }
 export const programScreenOverlayFragment = createScreenOverlayFragment([{ kind: "program", specName: "spec" }], "@narratage/screen-overlay/one-program-item@1");

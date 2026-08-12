@@ -53,8 +53,6 @@ export function createTextRenderFragment(entries: readonly TextFragmentBinding[]
       name: "text",
       type: textTypes.text,
       root: operation("render"),
-      semanticInputs: inputs.map((entry) => entry.name),
-      fidelity: "exact",
     }],
   });
 }

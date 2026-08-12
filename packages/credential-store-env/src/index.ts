@@ -54,7 +54,6 @@ export function createEnvironmentCredentialStorePackage(
         locator: "@narratage/credential-store-env",
         digest: environmentCredentialStoreImplementationDigest,
       },
-      permissions: ["environment:credentials"],
       configuration: { source: "process-environment", explicitKeysOnly: true },
       service: new EnvironmentCredentialStore(options.environment),
     }],

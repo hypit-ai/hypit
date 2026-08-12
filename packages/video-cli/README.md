@@ -11,14 +11,9 @@ the corresponding physical package. They never grant network, credential or proc
 From the repository:
 
 ```bash
-node --run narratage -- lock-packages ./svml.packages.lock \
-  --package @narratage/run-markup --package @narratage/script --package @example/cards --package-root .
-node --run narratage -- lock-packages ./svml.runtime-packages.lock \
-  --package @narratage/local --package @narratage/store-sqlite \
-  --package @narratage/artifact-store-fs --package @narratage/credential-store-env \
-  --package @narratage/provider-kie --package @narratage/provider-media-local --package-root .
+node --run narratage -- packages sync path/to/build.svrun \
+  --runtime ./svml.runtime.json --root .
 node --run narratage -- check path/to/main.svml --runtime ./svml.runtime.json --root .
-node --run narratage -- check path/to/build.svrun --runtime ./svml.runtime.json --root .
 node --run narratage -- plan path/to/build.svrun --runtime ./svml.runtime.json --root .
 node --run narratage -- build path/to/build.svrun \
   --runtime ./svml.runtime.json --build-id delivery-01 --follow --root .
@@ -34,11 +29,13 @@ node --run narratage -- gc ./svml.runtime.json
 ```
 
 From a separate project directory during source development, run
-`/path/to/svml/narratage ... --package-root /path/to/svml`. The root launcher resolves its own
+`/path/to/svml/narratage ...`. The Runtime Profile may point `packageRoot` at the checkout while the
+root launcher resolves its own
 installed TypeScript loader and CLI, so it neither invokes pnpm nor requires the current directory
 to contain Narratage's `package.json`.
 
-`--root` is only the Source Workspace containment boundary. `--package-root` is only the Host
+`--root` is only the Source Workspace containment boundary. `--asset-root` may additionally admit
+explicit asset bytes without widening Source imports. `--package-root` is only the Host
 override used to resolve the installed packages named by a lock; by default this Distribution uses
 its own installation location. Keeping the two concepts separate lets a video project live outside
 this checkout without weakening canonical-path source and asset containment. A JSON Runtime Profile

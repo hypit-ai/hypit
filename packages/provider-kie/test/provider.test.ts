@@ -26,8 +26,6 @@ function need(constraints: CanonicalValue): Need {
     constraints,
     requestedBy: "derivation:kie-test",
     result: "record:kie-test",
-    accepts: "exact",
-    conformanceFloor: "exact",
     requestDigest: digestOf({ capability: "seedance-mini", constraints }),
   };
 }
@@ -36,7 +34,6 @@ function removeBackgroundNeed(constraints: CanonicalValue): Need {
   return {
     id: "need:remove-background", capability: backgroundRemovalCapabilities.remove, returns: artifactTypes.blob,
     constraints, requestedBy: "derivation:remove-background", result: "record:remove-background",
-    accepts: "exact", conformanceFloor: "exact",
     requestDigest: digestOf({ capability: backgroundRemovalCapabilities.remove, constraints }),
   };
 }

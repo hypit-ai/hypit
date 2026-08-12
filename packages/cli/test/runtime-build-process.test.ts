@@ -106,11 +106,9 @@ test("CLI exits after durable submission and a restarted detached Worker complet
     await writeFile(source, authorSource(5), "utf8");
     await writeFile(run, `<?svml using="@narratage/run-markup@1"?>
 
-<svrun version="1" targets="delivery">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="delivery">
-    <target output="message-004" accepts="exact"/>
-  </target-set>
+  <target output="message-004"/>
 </svrun>
 `, "utf8");
     await writeFile(profile, JSON.stringify({
@@ -138,7 +136,6 @@ test("CLI exits after durable submission and a restarted detached Worker complet
         },
       },
       endpoints: [],
-      permissions: ["filesystem:state", "filesystem:artifacts", "environment:credentials"],
       scheduling: { maxConcurrency: 2 },
     }, null, 2), "utf8");
 

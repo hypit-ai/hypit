@@ -2,19 +2,12 @@ export { RunFragmentRegistry } from "./registry.js";
 export {
   createBuildRecordCandidate,
   createProvidedCandidate,
-  RealizationError,
-  resolveRealization,
-  sealRealizationOverlay,
-  verifyRealizationOverlay,
-  verifyResolvedRealization,
-} from "./realization.js";
+  CandidateError,
+} from "./candidate.js";
 export type {
   BuildRecordCandidateInput,
   ProvidedCandidateInput,
-  RealizationClosure,
-  RealizationOverlay,
-  ResolvedRealization,
-} from "./realization.js";
+} from "./candidate.js";
 export {
   createRunFragmentHostFacet,
   installRunFragmentHostFacets,

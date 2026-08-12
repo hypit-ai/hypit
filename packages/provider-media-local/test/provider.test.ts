@@ -159,8 +159,6 @@ function need(
     constraints,
     requestedBy: `derivation:${id}`,
     result: `record:${id}`,
-    accepts: "exact",
-    conformanceFloor: "exact",
     requestDigest: digestOf({ capability, returns, constraints }),
   };
 }

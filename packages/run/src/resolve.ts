@@ -14,8 +14,7 @@ import type {
 import {
   createBuildRecordCandidate,
   createProvidedCandidate,
-  sealRealizationOverlay,
-} from "./realization.js";
+} from "./candidate.js";
 
 import { sealRunGraph } from "./graph.js";
 
@@ -39,6 +38,10 @@ export function collectRunModuleRequests(
   for (const declaration of document.candidates) {
     if (declaration.kind === "provided") {
       requests.add(moduleRequest(declaration.type.module));
+      continue;
+    }
+    if (declaration.kind === "file") {
+      requests.add("@narratage/artifact@1");
       continue;
     }
     if (declaration.kind !== "fragment") continue;
@@ -116,9 +119,24 @@ export async function resolveRunDocument(
       bindCandidateName(declaration.id, candidate.id);
       continue;
     }
+    if (declaration.kind === "file") {
+      const value = await context.readFile(declaration.from, declaration.mediaType);
+      assertStoredValue(value, declaration.from);
+      const candidate = createProvidedCandidate({
+        type: { module: { name: "@narratage/artifact", version: "1" }, name: "BlobArtifact" },
+        value,
+      });
+      addCandidate(candidate);
+      bindCandidateName(declaration.id, candidate.id);
+      continue;
+    }
     if (declaration.kind === "build-record") {
       const build = await context.readBuild(declaration.build);
-      if (build === undefined) throw new Error(`Build ${declaration.build} does not exist`);
+      if (build === undefined) {
+        throw new Error(
+          `Build ${declaration.build} does not exist; create that Build first or update build-record ${declaration.id}`,
+        );
+      }
       const sourceOutput = await context.resolveBuildOutput?.(declaration.build, declaration.output)
         ?? declaration.output;
       const candidate = createBuildRecordCandidate({
@@ -152,39 +170,23 @@ export async function resolveRunDocument(
     return {
       output: logicalOutput(context, item.output),
       candidate,
-      fidelity: item.fidelity,
     } as const;
   });
-  const targetSets = document.targetSets.map((set) => ({
-    id: set.id,
-    targets: set.targets.map((item) => ({
-      output: logicalOutput(context, item.output),
-      accepts: item.accepts,
-    })),
-  }));
+  const targets = document.targets.map((item) => ({ output: logicalOutput(context, item.output) }));
   const resolvedCandidates = [...candidates.values()];
   const resolvedOperations = [...operations.values()];
-  const overlay = resolvedCandidates.length === 0
-    ? undefined
-    : sealRealizationOverlay({
-      sourceGraph: context.compilation.elaboration.graph.id,
-      candidates: resolvedCandidates,
-      operations: resolvedOperations,
-    });
   const graph = sealRunGraph({
     authorGraph: context.compilation.elaboration.graph.id,
     sourceClosure: context.sourceClosure.id,
     candidates: resolvedCandidates,
     operations: resolvedOperations,
     satisfactions,
-    targetSets,
-    selectedTargets: document.selectedTargets,
+    targets,
   });
   return {
     closure: context.sourceClosure,
     document,
     graph,
-    ...(overlay === undefined ? {} : { overlay }),
     candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
   };
 }

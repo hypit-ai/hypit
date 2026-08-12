@@ -240,8 +240,6 @@ function visualRequest(value: CanonicalValue): HyperframesDocument {
 function result(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
   return {
     value: { kind: "inline", value },
-    conformance: "exact",
-    delivery: "executed",
     metadata,
   };
 }
@@ -311,7 +309,6 @@ export function createLocalHyperframesProvider(config: CreateLocalHyperframesPro
       locator: "@narratage/provider-hyperframes-local/render",
       digest: localHyperframesProviderImplementationDigest,
     },
-    permissions: ["process:hyperframes"],
     configuration,
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{

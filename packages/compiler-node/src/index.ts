@@ -13,6 +13,7 @@ export type {
   NodeCompiledSourceClosure,
 } from "./compiler.js";
 export type {
+  NodeCheckedRun,
   NodeCompiledRun,
   NodeRunCompilerOptions,
   PlannedBuild,

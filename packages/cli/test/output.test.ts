@@ -4,6 +4,7 @@ import test from "node:test";
 import type { BuildPlan } from "@narratage/protocol";
 
 import { renderCliError, writeCliHelp, writeCliOutput } from "../src/output.js";
+import type { PlanPreflight } from "../src/output.js";
 
 const digest = `sha256:${"1".repeat(64)}` as const;
 
@@ -129,14 +130,12 @@ test("plan groups operations by their declaring module", () => {
     steps: [{
       id: "step-1",
       producer: { module: { name: "@narratage/media", version: "1" }, name: "inspect" },
-      fidelity: "exact",
       inputs: {},
       outputs: {},
-      needs: { generated: { id: "need-1", result: "record-1", accepts: "exact" } },
+      needs: { generated: { id: "need-1", result: "record-1" } },
     }, {
       id: "step-2",
       producer: { module: { name: "@narratage/media", version: "1" }, name: "normalize" },
-      fidelity: "substitute",
       inputs: {},
       outputs: {},
       needs: {},
@@ -145,28 +144,23 @@ test("plan groups operations by their declaring module", () => {
     selections: [{
       output: "logical:take",
       candidate: "candidate:preview",
-      fidelity: "substitute",
       record: "record:take",
     }],
   };
   const output = capture(human, {
     kind: "plan",
-    machine: plan,
+    machine: { format: "narratage.cli-plan@1", ok: true, plan },
     run: "/project/build.svrun",
-    targetSet: "film",
     outputNames: { "logical:take": "take.video" },
     candidateNames: { "candidate:preview": "preview" },
   });
   assert.match(output, /2\s+@narratage\/media@1/u);
-  assert.match(output, /Exact steps\s+1/u);
-  assert.match(output, /Substitute steps\s+1/u);
   assert.match(output, /External requests/u);
   assert.match(output, /1\s+@narratage\/media@1#inspect/u);
-  assert.match(output, /take\.video ← preview/u);
-  assert.match(output, /No external work was started\./u);
+  assert.doesNotMatch(output, /No external work was started\./u);
 });
 
-test("a plan with no Needs says so without knowing any Provider names", () => {
+test("a plan with no Needs stays compact without knowing any Provider names", () => {
   const plan: BuildPlan = {
     format: "svml.plan@1",
     id: digest,
@@ -177,8 +171,44 @@ test("a plan with no Needs says so without knowing any Provider names", () => {
     goals: [],
     selections: [],
   };
-  const output = capture(human, { kind: "plan", machine: plan, run: "/project/free.svrun", targetSet: "facts" });
-  assert.match(output, /No external requests/u);
+  const output = capture(human, {
+    kind: "plan",
+    machine: { format: "narratage.cli-plan@1", ok: true, plan },
+    run: "/project/free.svrun",
+  });
+  assert.match(output, /External requests\s+0/u);
+  assert.doesNotMatch(output, /No external requests/u);
+});
+
+test("plan runtime preflight presents only demanded capabilities", () => {
+  const plan: BuildPlan = {
+    format: "svml.plan@1",
+    id: digest,
+    graph: digest,
+    request: digest,
+    initialValues: [],
+    steps: [],
+    goals: [],
+    selections: [],
+  };
+  const preflight: PlanPreflight = {
+      ok: false,
+      root: "/project",
+      capabilities: ["@example/image@1#generate"],
+      diagnostics: [{
+        severity: "error",
+        code: "RUNTIME_CREDENTIAL_MISSING",
+        message: "Image key is absent",
+      }],
+  };
+  const output = capture(human, {
+    kind: "plan",
+    machine: { format: "narratage.cli-plan@1", ok: false, plan, preflight },
+    run: "/project/images.svrun",
+  });
+  assert.match(output, /Runtime preflight/u);
+  assert.match(output, /@example\/image@1#generate/u);
+  assert.match(output, /Image key is absent/u);
 });
 
 test("human errors expose stable codes while JSON errors remain parseable", () => {
