@@ -98,7 +98,7 @@ test("the dynamic Fragment exposes every Text and media edge as an explicit sema
     "request-graph-native-image",
     "select-primary-image",
   ]);
-  assert.deepEqual(fragment.exports[0]?.semanticInputs, [
+  assert.deepEqual(fragment.inputs.map((input) => input.name), [
     "draft", "first:artifact", "first:binding", "prompt:text", "second:artifact", "second:binding",
   ]);
 });

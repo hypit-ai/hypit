@@ -25,7 +25,6 @@ function identity(overrides: { readonly endpoint?: string; readonly runtimeClosu
 test("Operation identity locks Build, Command, Endpoint, implementation and Runtime Closure", () => {
   const first = identity();
   assert.equal(first.id, identity().id);
-  assert.equal(first.submissionKey, identity().submissionKey);
   assert.notEqual(first.id, identity({ endpoint: "hyperframes.hosted" }).id);
   assert.notEqual(first.id, identity({ runtimeClosure: digestOf("runtime-closure:hosted") }).id);
 });
@@ -37,7 +36,7 @@ test("OperationStore idempotently discovers an existing submission after restart
   const restored = await store.create(operation);
   assert.equal(created.status, "created");
   assert.equal(restored.status, "existing");
-  assert.equal(restored.snapshot.submissionKey, created.snapshot.submissionKey);
+  assert.equal(restored.snapshot.id, created.snapshot.id);
   assert.equal(restored.snapshot.revision, 0);
 });
 
@@ -71,8 +70,6 @@ test("pending checkpoints and completion advance by CAS without entering BuildSt
     status: "completed",
     completion: {
       value: { kind: "inline", value: { artifact: "video.mp4" } },
-      conformance: "exact",
-      delivery: "executed",
       metadata: { remoteJob: "job-123" },
     },
   });

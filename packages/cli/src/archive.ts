@@ -23,7 +23,6 @@ export type ArchivedLogicalOutput = {
   readonly type: BuildCatalogEntry["aliases"][number]["type"];
   readonly output: string;
   readonly candidate: BuildState["plan"]["selections"][number]["candidate"];
-  readonly fidelity: BuildState["plan"]["selections"][number]["fidelity"];
   readonly record: ReturnType<typeof summarizeRecord>;
 };
 
@@ -130,7 +129,6 @@ function summarizeRecord(record: TypedRecord) {
     id: record.id,
     type: record.type,
     digest: record.digest,
-    conformance: record.conformance,
     origin: record.origin,
     storage: record.value.kind,
     artifacts: collectArtifacts(value),
@@ -162,7 +160,6 @@ export function acceptedArchivedOutputs(
       type: alias.type,
       output: alias.ref.id,
       candidate: selection.candidate,
-      fidelity: selection.fidelity,
       record: summarizeRecord(record),
     }];
   });
@@ -224,10 +221,8 @@ export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
       const record = selection === undefined ? undefined : records.get(selection.record);
       return {
         output: target.output,
-        accepts: target.accepts,
         ...(selection === undefined ? {} : {
           candidate: selection.candidate,
-          fidelity: selection.fidelity,
           record: selection.record,
           accepted: record !== undefined,
         }),
@@ -236,7 +231,6 @@ export function inspectBuild(state: BuildState, catalog?: BuildCatalogEntry) {
     demandedOutputs: state.plan.selections.map((selection) => ({
       output: selection.output,
       candidate: selection.candidate,
-      fidelity: selection.fidelity,
       record: selection.record,
       accepted: records.has(selection.record),
     })),

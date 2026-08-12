@@ -148,8 +148,7 @@ test("Speech Spine lowers ordered Takes into media normalization, one audio plan
   const target = resolveCompiledSourceExport(compiled, "speech.visual", compositionTypes.visualTrack);
   const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
-    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
   }));
   const names = build.plan.steps.map((step) => step.producer.name);
   assert.equal(names.filter((name) => name === mediaPipelineProducers.inspect.name).length, 2);

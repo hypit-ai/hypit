@@ -315,8 +315,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   assert.equal(trackExport.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
-    targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     audioTrackProducers.createSet.name,

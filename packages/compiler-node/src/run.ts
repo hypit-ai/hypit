@@ -2,7 +2,6 @@ import type { Workspace, WorkspaceSession } from "@narratage/host";
 import {
   compileBuild,
   createResolvedClosure,
-  EMPTY_REALIZATION_DIGEST,
   link,
   sealBuildRequest,
   sealCompiledGraph,
@@ -21,7 +20,6 @@ import type {
   ModuleRef,
   StoredValue,
 } from "@narratage/protocol";
-import { resolveRealization } from "@narratage/run";
 import {
   collectRunModuleRequests,
   compileRunSource,
@@ -63,6 +61,21 @@ export type NodeCompiledRun = {
   readonly attachments: readonly ArtifactAttachment[];
 };
 
+export type NodeCheckedRun = {
+  readonly source: string;
+  readonly authorSource: string;
+  readonly author: NodeCompiledSourceClosure;
+  readonly program: LinkedProgram;
+  readonly closure: RunCompilation["closure"];
+  readonly document: RunCompilation["document"];
+  readonly unresolvedBuildRecords: readonly {
+    readonly id: string;
+    readonly build: string;
+    readonly output: string;
+  }[];
+  readonly attachments: readonly ArtifactAttachment[];
+};
+
 export type PlannedBuild = {
   readonly compilation: NodeCompiledRun;
   readonly request: BuildRequest;
@@ -81,9 +94,8 @@ function moduleKey(ref: ModuleRef): string {
  * Build does not need unrelated Tracks, renderers and their schemas merely
  * because the Author Source imported them. Keeping those bytes in every state
  * revision made a four-node estimate Build carry megabytes of unrelated video
- * declarations. The Build graph below retains the selected Candidates plus the
- * primary Candidates required to verify their Logical Output promises, and no
- * other executable branch.
+ * declarations. The Build graph below retains only the realized Candidates and
+ * their reachable executable branches.
  */
 function executionSlice(
   program: LinkedProgram,
@@ -94,7 +106,6 @@ function executionSlice(
   const outputById = new Map(graph.outputs.map((item) => [item.id, item]));
   const candidateById = new Map(graph.candidates.map((item) => [item.id, item]));
   const operationById = new Map(graph.operations.map((item) => [item.id, item]));
-  const satisfactionByOutput = new Map(request.satisfactions.map((item) => [item.output, item]));
   const selectionByOutput = new Map(preliminary.selections.map((item) => [item.output, item]));
   const outputs = new Set<string>();
   const candidates = new Set<string>();
@@ -129,15 +140,7 @@ function executionSlice(
     const output = outputById.get(id);
     if (output === undefined) throw new Error(`execution slice refers to absent Logical Output ${id}`);
     outputs.add(id);
-    // The primary remains the exact promise witness even when this Run chooses
-    // an explicit substitute Candidate.
-    visitCandidate(output.primary);
-    visitCandidate(
-      selectionByOutput.get(id)?.candidate
-        ?? satisfactionByOutput.get(id)?.candidate
-        ?? output.primary,
-    );
-    output.semanticInputs.forEach(visitRef);
+    visitCandidate(selectionByOutput.get(id)?.candidate ?? output.primary);
   };
   request.targets.forEach((target) => visitOutput(target.output));
 
@@ -175,9 +178,6 @@ function executionSlice(
     outputs: selectedOutputs,
     candidates: selectedCandidates,
     operations: selectedOperations,
-    ...(graph.realization === EMPTY_REALIZATION_DIGEST
-      ? {}
-      : { source: graph.source, realization: graph.realization }),
   });
   return { program: slicedProgram, graph: slicedGraph };
 }
@@ -222,6 +222,15 @@ async function storedValueFromWorkspace(
   return decodeStoredValue(await attachmentBytes(attachment), from);
 }
 
+async function fileValueFromWorkspace(
+  workspace: WorkspaceSession,
+  source: RunSourceUnit,
+  from: string,
+  mediaType: string,
+): Promise<StoredValue> {
+  return (await workspace.resolveAsset(source, { from, mediaType })).artifact;
+}
+
 /** Node Host for the second, mandatory source graph. It never guesses a Frontend from a suffix. */
 export class NodeRunCompiler {
   readonly #options: NodeRunCompilerOptions;
@@ -246,6 +255,99 @@ export class NodeRunCompiler {
     return await this.compileSource(workspace.entry, workspace);
   }
 
+  /**
+   * Validate both source documents without materializing historical Build values.
+   *
+   * A future BuildRecord is valid Run intent even before that Build exists. It
+   * becomes executable only when plan/build resolves its exact archived value.
+   */
+  async checkSource(source: RunSourceUnit, workspace: WorkspaceSession): Promise<NodeCheckedRun> {
+    const decoded = await compileRunSource(source, this.#options.frontends);
+    const authorSource = await workspace.resolveSource(source, {
+      from: decoded.document.author.source,
+      alias: "author",
+    });
+    const author = await this.#options.authorCompiler.compileSource(authorSource, workspace);
+    const program = this.#options.authorCompiler.extendExecutionProgram(
+      author.program,
+      collectRunModuleRequests(decoded.document, this.#options.fragments),
+    );
+    const authorOutput = (name: string) => {
+      const found = author.exports.find((item) => item.name === name);
+      if (found === undefined) throw new Error(`unknown source export ${name}`);
+      return found;
+    };
+    const imports = new Map(decoded.document.imports.map((item) => [item.as, item.from]));
+    const candidateNames = new Set<string>();
+    for (const declaration of decoded.document.candidates) {
+      if (declaration.kind === "provided") {
+        await storedValueFromWorkspace(workspace, source, declaration.from);
+        candidateNames.add(declaration.id);
+        continue;
+      }
+      if (declaration.kind === "file") {
+        await fileValueFromWorkspace(workspace, source, declaration.from, declaration.mediaType);
+        candidateNames.add(declaration.id);
+        continue;
+      }
+      if (declaration.kind === "build-record") {
+        candidateNames.add(declaration.id);
+        continue;
+      }
+      const packageName = imports.get(declaration.using.alias);
+      if (packageName === undefined) throw new Error(`Run Fragment alias ${declaration.using.alias} is not imported`);
+      const fragment = this.#options.fragments.resolve(packageName, declaration.using.name);
+      if (fragment === undefined) throw new Error(`${packageName} exports no Run Fragment ${declaration.using.name}`);
+      const inputs = new Map(declaration.inputs.map((item) => [item.name, item.from]));
+      for (const expected of fragment.inputs) {
+        const from = inputs.get(expected.name);
+        if (from === undefined) throw new Error(`Run Fragment ${declaration.id} has no input ${expected.name}`);
+        const actual = authorOutput(from).type;
+        if (actual.name !== expected.type.name
+          || actual.module.name !== expected.type.module.name
+          || actual.module.version !== expected.type.module.version) {
+          throw new Error(`Run Fragment ${declaration.id} input ${expected.name} has the wrong type`);
+        }
+      }
+      const unknownInput = declaration.inputs.find((item) => !fragment.inputs.some((expected) => expected.name === item.name));
+      if (unknownInput !== undefined) throw new Error(`Run Fragment ${declaration.id} has unknown input ${unknownInput.name}`);
+      const selected = declaration.exports ?? fragment.exports.map((item) => item.name);
+      for (const name of selected) {
+        if (!fragment.exports.some((item) => item.name === name)) {
+          throw new Error(`Run Fragment ${declaration.id} has no export ${name}`);
+        }
+        candidateNames.add(`${declaration.id}.${name}`);
+      }
+    }
+    for (const satisfaction of decoded.document.satisfactions) {
+      const output = authorOutput(satisfaction.output);
+      if (output.ref.kind !== "logical-output") {
+        throw new Error(`${satisfaction.output} is an authored Record, not a realizable Logical Output`);
+      }
+      if (!candidateNames.has(satisfaction.candidate)) {
+        throw new Error(`Unknown Run Candidate ${satisfaction.candidate}`);
+      }
+    }
+    for (const target of decoded.document.targets) {
+      const output = authorOutput(target.output);
+      if (output.ref.kind !== "logical-output") {
+        throw new Error(`${target.output} is an authored Record, not a realizable Logical Output`);
+      }
+    }
+    return {
+      source: source.id,
+      authorSource: authorSource.id,
+      author,
+      program,
+      closure: decoded.closure,
+      document: decoded.document,
+      unresolvedBuildRecords: decoded.document.candidates.flatMap((item) => item.kind === "build-record"
+        ? [{ id: item.id, build: item.build, output: item.output }]
+        : []),
+      attachments: await workspace.attachments(),
+    };
+  }
+
   /** Compile both source graphs in one read-once Workspace session selected by the Host. */
   async compileSource(source: RunSourceUnit, workspace: WorkspaceSession): Promise<NodeCompiledRun> {
     const decoded = await compileRunSource(source, this.#options.frontends);
@@ -266,8 +368,11 @@ export class NodeRunCompiler {
       sourceClosure: decoded.closure,
       fragments: this.#options.fragments,
       readStoredValue: async (from) => await storedValueFromWorkspace(workspace, source, from),
+      readFile: async (from, mediaType) => await fileValueFromWorkspace(workspace, source, from, mediaType),
       async readBuild(id) {
-        if (readBuild === undefined) throw new Error(`Run refers to Build ${id}, but the Host has no BuildArchive`);
+        if (readBuild === undefined) {
+          throw new Error(`Run contains historical Build Candidate ${id}; plan/build requires --runtime to resolve it`);
+        }
         return await readBuild(id);
       },
       ...(resolveBuildOutput === undefined ? {} : {
@@ -288,38 +393,26 @@ export class NodeRunCompiler {
 
   planCompilation(compilation: NodeCompiledRun, implementationClosure?: Digest): PlannedBuild {
     const authorGraph = compilation.author.elaboration.graph;
-    const realized = compilation.run.overlay === undefined
-      ? authorGraph
-      : resolveRealization(
-          compilation.program,
-          authorGraph,
-          [compilation.run.overlay],
-        ).graph;
+    const selected = new Map(compilation.run.graph.satisfactions.map((item) => [item.output, item.candidate]));
     const fullGraph = sealCompiledGraph({
-      program: realized.program,
-      source: authorGraph.id,
-      realization: compilation.run.graph.id,
-      outputs: realized.outputs,
-      candidates: realized.candidates,
-      operations: realized.operations,
+      program: compilation.program.semanticDigest,
+      outputs: authorGraph.outputs.map((output) => ({
+        ...output,
+        primary: selected.get(output.id) ?? output.primary,
+      })),
+      candidates: [...authorGraph.candidates, ...compilation.run.graph.candidates],
+      operations: [...authorGraph.operations, ...compilation.run.graph.operations],
     });
-    const selected = compilation.run.graph.targetSets.find(
-      (item) => item.id === compilation.run.graph.selectedTargets,
-    );
-    if (selected === undefined) throw new Error(`Run Graph selects absent Target Set ${compilation.run.graph.selectedTargets}`);
     const fullRequest = sealBuildRequest({
       graph: fullGraph.id,
       ...(implementationClosure === undefined ? {} : { implementationClosure }),
-      targets: selected.targets,
-      satisfactions: compilation.run.graph.satisfactions,
+      targets: compilation.run.graph.targets,
     });
     const sliced = executionSlice(compilation.program, fullGraph, fullRequest);
-    const slicedOutputs = new Set(sliced.graph.outputs.map((item) => item.id));
     const request = sealBuildRequest({
       graph: sliced.graph.id,
       ...(implementationClosure === undefined ? {} : { implementationClosure }),
-      targets: selected.targets,
-      satisfactions: compilation.run.graph.satisfactions.filter((item) => slicedOutputs.has(item.output)),
+      targets: compilation.run.graph.targets,
     });
     const state = start(sliced.program, sliced.graph, request);
     return { compilation, request, plan: state.plan, state };

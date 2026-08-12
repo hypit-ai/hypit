@@ -158,8 +158,6 @@ const fragment = sealGraphFragment({
     name: "result",
     type: resultType,
     root: { kind: "fragment-operation", operation: "produce" },
-    semanticInputs: [],
-    fidelity: "exact",
   }],
 });
 
@@ -247,8 +245,6 @@ const previewFragment = sealGraphFragment({
     name: "result",
     type: resultType,
     root: { kind: "fragment-operation", operation: "preview" },
-    semanticInputs: [],
-    fidelity: "substitute",
   }],
 });
 
@@ -388,12 +384,12 @@ test("Run-only Fragment modules extend the execution closure without polluting t
     <lab:Result id="hello"/>
   </svml>`, "utf8");
   await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
-  <svrun version="1" targets="preview">
+  <svrun version="1">
     <author source="./main.svml"/>
     <import from="@example/preview" as="preview"/>
-    <target-set id="preview"><target output="hello.result" accepts="substitute"/></target-set>
+    <target output="hello.result"/>
     <fragment id="one" using="preview:result"/>
-    <satisfy output="hello.result" candidate="one.result" fidelity="substitute"/>
+    <satisfy output="hello.result" candidate="one.result"/>
   </svrun>`, "utf8");
 
   const authorCompiler = compiler(root, [previewManifest, unused]);
@@ -421,6 +417,44 @@ test("Run-only Fragment modules extend the execution closure without polluting t
   assert.equal(compiled.run.graph.authorGraph, compiled.author.elaboration.graph.id);
   assert.equal(planned.plan.steps.length, 1);
   assert.equal(planned.plan.steps[0]?.producer.name, previewProducer.name);
+});
+
+test("static Run checking accepts a future BuildRecord without opening a BuildArchive", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-future-build-record-"));
+  const authorFile = join(root, "main.svml");
+  const runFile = join(root, "reuse.svrun");
+  await writeFile(authorFile, `<?svml using="@narratage/markup@1"?>
+  <svml>
+    <import as="lab" from="example.compiler-lab@1"/>
+    <lab:Result id="hello"/>
+  </svml>`, "utf8");
+  await writeFile(runFile, `<?svml using="@narratage/run-markup@1"?>
+  <svrun version="1">
+    <author source="./main.svml"/>
+    <target output="hello.result"/>
+    <build-record id="prior" build="future-build" output="hello.result"/>
+    <satisfy output="hello.result" candidate="prior"/>
+  </svrun>`, "utf8");
+  const authorCompiler = compiler(root);
+  const frontends = new RunFrontendRegistry();
+  frontends.register(runMarkupFrontend);
+  const runCompiler = new NodeRunCompiler({
+    authorCompiler,
+    frontends,
+    fragments: new RunFragmentRegistry(),
+    root,
+  });
+  const workspace = await new NodeFilesystemWorkspace({ root }).open(runFile);
+  const checked = await runCompiler.checkSource(workspace.entry, workspace);
+  assert.deepEqual(checked.unresolvedBuildRecords, [{
+    id: "prior",
+    build: "future-build",
+    output: "hello.result",
+  }]);
+  await assert.rejects(
+    runCompiler.compileSource(workspace.entry, workspace),
+    /plan\/build requires --runtime to resolve it/u,
+  );
 });
 
 test("source assets are content addressed, closure-bound and returned as a Host transfer bundle", async () => {
@@ -528,6 +562,29 @@ test("filesystem Workspace contains symlinks and locks source text plus asset id
     }),
     (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_ASSET_OUTSIDE_ROOT",
   );
+});
+
+test("an asset root widens bytes without widening Source imports", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "svml-asset-root-"));
+  const project = join(parent, "project");
+  const library = join(parent, "library");
+  await mkdir(project);
+  await mkdir(library);
+  const entryPath = join(project, "main.svml");
+  const assetPath = join(library, "shared.bin");
+  const sourcePath = join(library, "shared.svs");
+  await writeFile(entryPath, "entry", "utf8");
+  await writeFile(assetPath, new Uint8Array([2, 7, 1, 8]));
+  await writeFile(sourcePath, "shared source", "utf8");
+  const workspace = await new NodeFilesystemWorkspace({ root: project, assetRoots: [library] }).open(entryPath);
+  assert.equal((await workspace.resolveAsset(workspace.entry, {
+    from: "../library/shared.bin",
+    mediaType: "application/octet-stream",
+  })).artifact.size, 4);
+  await assert.rejects(async () => await workspace.resolveSource(workspace.entry, {
+    from: "../library/shared.svs",
+    alias: "shared",
+  }), (error: unknown) => error instanceof WorkspaceError && error.code === "SOURCE_OUTSIDE_ROOT");
 });
 
 test("filesystem and in-memory Workspaces compile identical source and bytes to one semantic result", async () => {

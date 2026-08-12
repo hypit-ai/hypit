@@ -138,11 +138,8 @@ function createProgram(): LinkedProgram {
     id: "request:opening",
     type: requestType,
     value: { kind: "inline", value: "Generate the opening speech take." },
-    conformance: "exact",
     origin: {
       kind: "authored",
-      sourceDigest: digestOf("source:speech-basis-product"),
-      frontendClosureDigest: digestOf("frontend:speech-basis-product"),
     },
   });
   return link(closure, [sealTypedModule({
@@ -171,19 +168,16 @@ function createGraph(program: LinkedProgram): CompiledGraph {
         id: "opening.take",
         type: speechTypes.basis,
         primary: "opening.take.generate",
-        semanticInputs: [record("request:opening")],
       },
       {
         id: "opening.audio",
         type: speechTypes.audioBasis,
         primary: "opening.audio.project",
-        semanticInputs: [output("opening.take")],
       },
       {
         id: "opening.visual",
         type: compositionTypes.visualTrack,
         primary: "opening.visual.project",
-        semanticInputs: [output("opening.take")],
       },
     ],
     candidates: [
@@ -200,7 +194,6 @@ function createGraph(program: LinkedProgram): CompiledGraph {
           value: {
             id: "provided:opening-take",
             value: { kind: "inline", value: existingTake },
-            provenance: { library: "approved-takes", take: "opening-v2" },
           },
         },
       },
@@ -222,7 +215,6 @@ function createGraph(program: LinkedProgram): CompiledGraph {
           value: {
             id: "provided:opening-visual",
             value: existingVisualValue,
-            provenance: { library: "approved-clips", clip: "opening-v3" },
             validation: existingVisualValidation,
           },
         },
@@ -252,19 +244,23 @@ function createGraph(program: LinkedProgram): CompiledGraph {
 }
 
 function build(
-  targetAccepts: Readonly<Record<string, "exact" | "substitute">>,
+  targets: readonly string[],
   satisfactionMap: Readonly<Record<string, string>> = {},
 ) {
   const program = createProgram();
-  const graph = createGraph(program);
+  const sourceGraph = createGraph(program);
+  const graph = sealCompiledGraph({
+    program: sourceGraph.program,
+    outputs: sourceGraph.outputs.map((item) => ({
+      ...item,
+      primary: satisfactionMap[item.id] ?? item.primary,
+    })),
+    candidates: sourceGraph.candidates,
+    operations: sourceGraph.operations,
+  });
   const request: BuildRequest = sealBuildRequest({
     graph: graph.id,
-    targets: Object.entries(targetAccepts).map(([outputId, accepts]) => ({ output: outputId, accepts })),
-    satisfactions: Object.entries(satisfactionMap).map(([outputId, candidate]) => ({
-      output: outputId,
-      candidate,
-      fidelity: candidate === "opening.visual.existing" ? "substitute" as const : "exact" as const,
-    })),
+    targets: targets.map((outputId) => ({ output: outputId })),
   });
   return start(program, graph, request);
 }
@@ -274,7 +270,7 @@ function stepIds(state: ReturnType<typeof build>): string[] {
 }
 
 test("SpeechBasis is one Product and audio/visual are ordinary shared projections", () => {
-  const state = build({ "opening.audio": "exact", "opening.visual": "exact" });
+  const state = build(["opening.audio", "opening.visual"]);
   assert.deepEqual(stepIds(state), [
     "generate-opening",
     "project-opening-audio",
@@ -306,9 +302,9 @@ test("SpeechBasis projects to peer generic visual and audio Tracks", () => {
   );
 });
 
-test("a substitute visual Candidate does not contaminate an independent exact audio path", () => {
+test("a visual Candidate does not affect an independent audio path", () => {
   const state = build(
-    { "opening.audio": "exact", "opening.visual": "substitute" },
+    ["opening.audio", "opening.visual"],
     { "opening.visual": "opening.visual.existing" },
   );
   assert.deepEqual(stepIds(state), ["generate-opening", "project-opening-audio"]);
@@ -324,7 +320,7 @@ test("a substitute visual Candidate does not contaminate an independent exact au
 
 test("selecting an Existing SpeechBasis stops generation but keeps both projections", () => {
   const state = build(
-    { "opening.audio": "exact", "opening.visual": "exact" },
+    ["opening.audio", "opening.visual"],
     { "opening.take": "opening.take.existing" },
   );
   assert.deepEqual(stepIds(state), ["project-opening-audio", "project-opening-visual"]);
@@ -344,7 +340,7 @@ test("the Build Machine executes one shared generation for both projected output
   });
   registerProducerFacets(registry, speechBasisComponent.producers);
   const result = await new NodeDriver({ producers: registry, validators: validatorRegistry() }).run(
-    build({ "opening.audio": "exact", "opening.visual": "exact" }),
+    build(["opening.audio", "opening.visual"]),
   );
   assert.equal(result.status, "complete");
   assert.equal(generations, 1);

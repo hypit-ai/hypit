@@ -328,13 +328,7 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
     id: item.ids.request,
     type: item.endpoint.requestType,
     value: { kind: "inline", value: item.request },
-    conformance: "exact",
-    origin: {
-      kind: "authored",
-      sourceDigest: digestOf(item.ids.source),
-      frontendClosureDigest: digestOf("@narratage/provider-kie/live-smoke/frontend@1"),
-      sourceName: "provider-kie/live-smoke",
-    },
+    origin: { kind: "authored" },
   });
   const authored = await admitRecord(closure, draft, validators);
   const program = link(closure, [sealTypedModule({
@@ -348,7 +342,6 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
       id: item.ids.output,
       type: item.endpoint.returns,
       primary: item.ids.candidate,
-      semanticInputs: [{ kind: "record", id: authored.id }],
     }],
     candidates: [{
       id: item.ids.candidate,
@@ -364,14 +357,12 @@ async function createBuild(item: SmokeCase): Promise<ReturnType<typeof start>> {
         name: "generation",
         id: item.ids.need,
         record: item.ids.result,
-        accepts: "exact",
       },
     }],
   });
   return start(program, graph, sealBuildRequest({
     graph: graph.id,
-    targets: [{ output: item.ids.output, accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: item.ids.output }],
   }));
 }
 
@@ -453,10 +444,6 @@ async function main(): Promise<void> {
       ...[...new Map(selected.map((item) => [item.component.name, item.component])).values()],
     ],
     endpoints: [provider],
-    allowedPermissions: [
-      "filesystem:state", "filesystem:artifacts", "environment:credentials",
-      ...provider.manifest.facets.flatMap((facet) => facet.permissions),
-    ],
     scheduling: { maxConcurrency: 1 },
   });
   const failures: string[] = [];

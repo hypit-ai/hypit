@@ -358,22 +358,6 @@ export function verifyRecordStructure(
       declaration.validator.implementation.digest,
     );
   }
-  if (record.origin.kind === "authored") {
-    invariant(isDigest(record.origin.sourceDigest), "INVALID_DIGEST", `${record.id} source digest is invalid`);
-    invariant(
-      isDigest(record.origin.frontendClosureDigest),
-      "INVALID_DIGEST",
-      `${record.id} frontend closure digest is invalid`,
-    );
-    invariant(record.conformance === "exact", "AUTHORED_SUBSTITUTE", `${record.id} authored record is substitute`);
-  } else if (record.origin.kind === "provided") {
-    invariant(record.origin.candidate.length > 0, "EMPTY_CANDIDATE_ID", `${record.id} Candidate id is empty`);
-    invariant(
-      isDigest(record.origin.requestDigest),
-      "INVALID_DIGEST",
-      `${record.id} BuildRequest digest is invalid`,
-    );
-  }
 }
 
 export function verifyRecord(

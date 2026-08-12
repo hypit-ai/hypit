@@ -32,7 +32,7 @@ import {
   selectArchivedRecord,
   summarizeBuildCatalog,
 } from "./archive.js";
-import { collectRunFrontends, loadRunFile } from "./run-file.js";
+import { checkRunFile, collectRunFrontends, loadRunFile } from "./run-file.js";
 import type { CliDistribution } from "./distribution.js";
 import { writeCliHelp, writeCliOutput } from "./output.js";
 import type { CliColorMode, CliIo } from "./output.js";
@@ -52,10 +52,9 @@ type ParsedArgs = {
   readonly file: string | undefined;
   /** Canonical containment boundary for Author and Run Sources plus source assets. */
   readonly workspaceRoot: string | undefined;
+  readonly assetRoots: readonly string[];
   /** Host directory whose node_modules contains the packages named by a package lock. */
   readonly packageRoot: string | undefined;
-  readonly targets: readonly string[];
-  readonly substitute: boolean;
   readonly runtime: string | undefined;
   readonly buildId: string | undefined;
   readonly follow: boolean;
@@ -71,7 +70,6 @@ type ParsedArgs = {
   readonly name: string | undefined;
   readonly artifact: string | undefined;
   readonly to: string | undefined;
-  readonly pins: readonly { readonly output: string; readonly build: string }[];
   readonly apply: boolean;
   /** Leave the declared external programs alone; build against what is running. */
   readonly noServices: boolean;
@@ -92,15 +90,16 @@ type ParsedArgs = {
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   const [command, ...tail] = argv;
-  const scoped = command === "services" || command === "runtime" || command === "cancel" || command === "auth";
+  const scoped = command === "services" || command === "runtime" || command === "cancel" || command === "auth"
+    || command === "packages";
   const action = scoped ? tail[0] : undefined;
   const positional = scoped ? tail.slice(1) : tail;
   const noFile = command === "builds" || command === "queue";
   const hasFile = !noFile && positional[0] !== undefined && !positional[0]!.startsWith("--");
   const file = hasFile ? positional[0] : undefined;
   const rest = noFile || !hasFile ? positional : positional.slice(1);
-  const targets: string[] = [];
   let workspaceRoot: string | undefined;
+  const assetRoots: string[] = [];
   let packageRoot: string | undefined;
   let runtime: string | undefined;
   let buildId: string | undefined;
@@ -112,13 +111,11 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   const removePackages: string[] = [];
   let refresh = false;
   let verifyPackageLock = false;
-  let substitute = false;
   let record: string | undefined;
   let output: string | undefined;
   let name: string | undefined;
   let artifact: string | undefined;
   let to: string | undefined;
-  const pins: { output: string; build: string }[] = [];
   let apply = false;
   let noServices = false;
   let json = false;
@@ -136,8 +133,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     const item = rest[index]!;
     if (item.startsWith("--")) {
       const repeatable = [
-        "--package", "--add", "--remove", "--target", "--pin", "--json", "--jsonl", "--watch", "--verbose", "--debug",
-        "--no-color", "--refresh", "--accept-substitute", "--follow", "--apply", "--no-services",
+        "--package", "--add", "--remove", "--json", "--jsonl", "--watch", "--verbose", "--debug",
+        "--no-color", "--refresh", "--follow", "--apply", "--no-services", "--asset-root",
       ].includes(item);
       if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
       seenOptions.add(item);
@@ -174,17 +171,17 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       index += 1;
       continue;
     }
-    if (item === "--target") {
-      const target = rest[index + 1];
-      if (target === undefined || target.startsWith("--")) throw new Error("--target requires an export name");
-      targets.push(target);
-      index += 1;
-      continue;
-    }
     if (item === "--root") {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--root requires a directory");
       workspaceRoot = resolve(value);
+      index += 1;
+      continue;
+    }
+    if (item === "--asset-root") {
+      const value = rest[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error("--asset-root requires a directory");
+      assetRoots.push(resolve(value));
       index += 1;
       continue;
     }
@@ -229,10 +226,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
     if (item === "--verify") {
       verifyPackageLock = true;
-      continue;
-    }
-    if (item === "--accept-substitute") {
-      substitute = true;
       continue;
     }
     if (item === "--runtime") {
@@ -284,15 +277,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       const value = rest[index + 1];
       if (value === undefined || value.startsWith("--")) throw new Error("--build-id requires a stable identity");
       buildId = value;
-      index += 1;
-      continue;
-    }
-    if (item === "--pin") {
-      const value = rest[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new Error("--pin requires output=build-id");
-      const separator = value.indexOf("=");
-      if (separator <= 0 || separator === value.length - 1) throw new Error("--pin requires output=build-id");
-      pins.push({ output: value.slice(0, separator), build: value.slice(separator + 1) });
       index += 1;
       continue;
     }
@@ -360,9 +344,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     action,
     file,
     workspaceRoot,
+    assetRoots,
     packageRoot,
-    targets,
-    substitute,
     runtime,
     buildId,
     follow,
@@ -378,7 +361,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     name,
     artifact,
     to,
-    pins,
     apply,
     noServices,
     json,
@@ -402,6 +384,9 @@ function assertCommandOptions(args: ParsedArgs): void {
   switch (args.command) {
     case "lock-packages":
       add("--package", "--add", "--remove", "--refresh", "--verify", "--package-root");
+      break;
+    case "packages":
+      add("--runtime", "--root", "--package-root");
       break;
     case "services":
       // This command has older, more specific diagnostics for deployment-selection
@@ -438,16 +423,19 @@ function assertCommandOptions(args: ParsedArgs): void {
       break;
     case "check":
     case "plan":
-      add("--runtime", "--package-lock", "--package-root", "--root");
+      add("--runtime", "--package-lock", "--package-root", "--root", "--asset-root");
       break;
     case "build":
-      add("--runtime", "--package-lock", "--package-root", "--root", "--build-id", "--follow",
+      add("--runtime", "--package-lock", "--package-root", "--root", "--asset-root", "--build-id", "--follow",
         "--max-wait-ms", "--no-services");
       break;
   }
   const invalid = args.seenOptions.find((item) => !allowed.has(item));
   if (invalid !== undefined) {
     const command = args.action === undefined ? args.command : `${args.command} ${args.action}`;
+    if (args.command === "doctor" && invalid === "--root") {
+      throw new Error("doctor already uses the Runtime Profile directory and its declared root; remove --root");
+    }
     throw new Error(`${invalid} does not apply to ${command}`);
   }
   if (args.seenOptions.includes("--color") && args.seenOptions.includes("--no-color")) {
@@ -461,14 +449,15 @@ function usage(): string {
     "  narratage lock-packages <lock> --package name [...] [--package-root directory]  # exact create/replace",
     "  narratage lock-packages <lock> (--add name [...] | --remove name [...]) [--package-root directory]",
     "  narratage lock-packages <lock> (--refresh | --verify) [--package-root directory]",
+    "  narratage packages sync <run-source> --runtime <runtime-profile.json> [--root workspace]",
     "  narratage doctor <runtime-profile.json>",
     "  narratage services up|down|status <runtime-profile.json> [--max-wait-ms milliseconds]",
     "  narratage runtime up|status|logs|down <runtime-profile.json>",
     "  narratage queue --runtime profile.json [--watch]",
     "  narratage gc <runtime-profile.json> [--apply]",
-    "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--package-root directory] [--root workspace]",
-    "  narratage plan <run-source> [--runtime profile.json] [--package-lock file] [--package-root directory] [--root workspace]",
-    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--root workspace] [--follow] [--no-services]",
+    "  narratage check <self-described-source> [--runtime profile.json] [--package-lock file] [--root workspace] [--asset-root directory]",
+    "  narratage plan <run-source> [--runtime profile.json] [--package-lock file] [--root workspace] [--asset-root directory]",
+    "  narratage build <run-source> --runtime profile.json|./svml.runtime.ts [--root workspace] [--asset-root directory] [--follow] [--no-services]",
     "  narratage status <build-id> --runtime profile.json|./svml.runtime.ts",
     "  narratage builds --runtime profile.json|./svml.runtime.ts",
     "  narratage history [source-output-name] --runtime profile.json|./svml.runtime.ts [--source author.svml]",
@@ -510,7 +499,7 @@ function createCatalogDescriptor(options: {
   readonly core: BuildCatalogDescriptor["core"];
   readonly source: string;
   readonly compilation: NodeCompiledSourceClosure;
-  readonly run?: { readonly path: string; readonly targetSet?: string };
+  readonly run?: { readonly path: string };
 }): BuildCatalogDescriptor {
   const aliases = options.compilation.exports.map((item) => {
     if (item.ref.kind === "operation-result") {
@@ -527,7 +516,6 @@ function createCatalogDescriptor(options: {
     },
     ...(options.run === undefined ? {} : { run: {
       path: resolve(options.run.path),
-      ...(options.run.targetSet === undefined ? {} : { targetSet: options.run.targetSet }),
     } }),
     aliases,
   };
@@ -589,6 +577,40 @@ function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
     }
   }
   return [...found.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => value);
+}
+
+function capabilityName(capability: CapabilityRef): string {
+  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
+}
+
+async function preflightPlan(
+  runtimeProfile: string,
+  distribution: CliDistribution,
+  state: BuildState,
+  implementationPackages?: LoadedNodePackageSet,
+) {
+  if (extname(runtimeProfile) !== ".json") return undefined;
+  const capabilities = demandedCapabilities(state);
+  const result = await distribution.doctorRuntimeConfig(runtimeProfile, {
+    capabilities,
+    ...(implementationPackages === undefined ? {} : { implementationPackages }),
+  });
+  return {
+    ok: !result.diagnostics.some((item) => item.severity === "error"),
+    root: result.root,
+    capabilities: capabilities.map(capabilityName),
+    diagnostics: result.diagnostics,
+  } as const;
+}
+
+function assertPreflight(preflight: Awaited<ReturnType<typeof preflightPlan>>): void {
+  if (preflight === undefined || preflight.ok) return;
+  const errors = preflight.diagnostics.filter((item) => item.severity === "error");
+  throw new Error([
+    `Runtime preflight failed for ${errors.length} demanded deployment requirement${errors.length === 1 ? "" : "s"}:`,
+    ...errors.map((item) => `  ${item.code}${item.subject === undefined ? "" : ` (${item.subject})`}: ${item.message}`),
+    "No Build was submitted and no external request was made.",
+  ].join("\n"));
 }
 
 async function loadLocalRuntime(
@@ -880,7 +902,7 @@ export async function runCli(
     }
     return;
   }
-  const known = args.command === "lock-packages" || args.command === "check" || args.command === "plan"
+  const known = args.command === "lock-packages" || args.command === "packages" || args.command === "check" || args.command === "plan"
     || args.command === "build" || args.command === "status" || args.command === "builds"
     || args.command === "history"
     || args.command === "inspect" || args.command === "get" || args.command === "cancel"
@@ -902,9 +924,6 @@ export async function runCli(
   }
   if (args.command === "history" && args.file === undefined && args.source === undefined) {
     throw new Error("history requires an output name or --source path");
-  }
-  if (args.targets.length > 0 || args.substitute || args.pins.length > 0) {
-    throw new Error("Targets, Candidate selections and fidelity belong in a self-described Run Source; CLI --target, --pin and --accept-substitute are not supported");
   }
   assertCommandOptions(args);
   if (args.command === "lock-packages") {
@@ -1037,6 +1056,97 @@ export async function runCli(
           ["Digest", lock.digest],
         ]);
     });
+    return;
+  }
+  if (args.command === "packages") {
+    if (args.action !== "sync") {
+      throw new Error("packages takes one action: packages sync <run-source> --runtime <runtime-profile.json>");
+    }
+    if (args.runtime === undefined) {
+      throw new Error("packages sync requires --runtime <runtime-profile.json>");
+    }
+    const source = resolve(args.file!);
+    const profile = resolve(args.runtime);
+    if (extname(profile) !== ".json") throw new Error("packages sync requires a declarative JSON Runtime Profile");
+    const selection = await distribution.resolveCompilationPackages?.(profile);
+    if (selection?.packageLock === undefined || selection.runtimePackageLock === undefined) {
+      throw new Error("packages sync requires the Runtime Profile to declare both packageLock and runtimePackageLock");
+    }
+    if (selection.runtimePackages === undefined) {
+      throw new Error("this Distribution cannot discover Runtime packages from the selected Profile");
+    }
+    const runtimePackages = selection.runtimePackages;
+    const sourceSelection = await distribution.discoverSourcePackages?.(source, {
+      ...(args.workspaceRoot === undefined ? {} : { workspaceRoot: args.workspaceRoot }),
+    });
+    if (sourceSelection === undefined) {
+      throw new Error("this Distribution cannot discover packages from the selected Run Source");
+    }
+    const packageRoot = args.packageRoot ?? selection.packageRoot ?? distribution.packageRoot ?? dirname(profile);
+    const locks = [resolve(selection.packageLock), resolve(selection.runtimePackageLock)].sort();
+    if (locks[0] === locks[1]) throw new Error("packageLock and runtimePackageLock must be different files");
+    const summarizeDifference = (before: NodePackageLock | undefined, after: NodePackageLock) => {
+      const oldArtifacts = new Map(before?.artifacts.map((item) => [`${item.name}@${item.version}`, item.digest]) ?? []);
+      const newArtifacts = new Map(after.artifacts.map((item) => [`${item.name}@${item.version}`, item.digest]));
+      return {
+        added: [...newArtifacts.keys()].filter((key) => !oldArtifacts.has(key)).sort(),
+        removed: [...oldArtifacts.keys()].filter((key) => !newArtifacts.has(key)).sort(),
+        changed: [...newArtifacts.entries()]
+          .filter(([key, digest]) => oldArtifacts.has(key) && oldArtifacts.get(key) !== digest)
+          .map(([key]) => key).sort(),
+      };
+    };
+    const readExistingLock = async (path: string): Promise<NodePackageLock | undefined> => {
+      try {
+        return await readNodePackageLock(path);
+      } catch (error) {
+        if (error !== null && typeof error === "object" && "code" in error
+          && (error as { readonly code?: unknown }).code === "ENOENT") return undefined;
+        throw error;
+      }
+    };
+    await withPackageLockEdit(locks[0]!, async () => await withPackageLockEdit(locks[1]!, async () => {
+      const authorBefore = await readExistingLock(selection.packageLock!);
+      const runtimeBefore = await readExistingLock(selection.runtimePackageLock!);
+      const [authorAfter, runtimeAfter] = await Promise.all([
+        createNodePackageLock(sourceSelection.selected, packageRoot),
+        createNodePackageLock(runtimePackages, packageRoot),
+      ]);
+      await writeNodePackageLock(selection.packageLock!, authorAfter);
+      await writeNodePackageLock(selection.runtimePackageLock!, runtimeAfter);
+      const author = summarizeDifference(authorBefore, authorAfter);
+      const runtime = summarizeDifference(runtimeBefore, runtimeAfter);
+      const changed = [...author.added, ...author.removed, ...author.changed,
+        ...runtime.added, ...runtime.removed, ...runtime.changed].length > 0
+        || authorBefore?.digest !== authorAfter.digest || runtimeBefore?.digest !== runtimeAfter.digest;
+      writeOperational({
+        ok: true,
+        changed,
+        source,
+        profile,
+        packageRoot,
+        selected: {
+          author: sourceSelection.selected,
+          runtime: runtimePackages,
+        },
+        author: { path: selection.packageLock, digest: authorAfter.digest, difference: author },
+        runtime: { path: selection.runtimePackageLock, digest: runtimeAfter.digest, difference: runtime },
+      }, changed ? "Project package locks synchronized" : "Project package locks already current",
+      changed ? "success" : "info", [
+        ["Run", source], ["Profile", profile], ["Package root", packageRoot],
+        ["Author roots", String(sourceSelection.selected.length)],
+        ["Runtime roots", String(runtimePackages.length)],
+        ["Author changes", String(author.added.length + author.removed.length + author.changed.length)],
+        ["Runtime changes", String(runtime.added.length + runtime.removed.length + runtime.changed.length)],
+      ], args.verbose ? [
+        ...author.changed.map((item) => `Author changed   ${item}`),
+        ...author.added.map((item) => `Author added     ${item}`),
+        ...author.removed.map((item) => `Author removed   ${item}`),
+        ...runtime.changed.map((item) => `Runtime changed  ${item}`),
+        ...runtime.added.map((item) => `Runtime added    ${item}`),
+        ...runtime.removed.map((item) => `Runtime removed  ${item}`),
+      ] : []);
+    }));
     return;
   }
   if (args.command === "doctor") {
@@ -1251,6 +1361,15 @@ export async function runCli(
       } else if (args.action === "login") {
         const [item] = credentials;
         if (item === undefined) throw new Error(`Endpoint ${args.file} has no matching credential`);
+        if (!item.writable) {
+          const source = item.ref.store === "env"
+            ? `set ${item.ref.key} in the environment`
+            : `configure ${item.ref.key} through CredentialStore ${item.ref.store}`;
+          throw new Error(
+            `CredentialStore ${item.ref.store} is read-only for ${item.label}; ${source}, `
+            + "or select a writable CredentialStore such as keychain in the Runtime Profile",
+          );
+        }
         const raw = args.from === undefined
           ? await io.readSecret?.(`${item.label}: `)
           : await readFile(args.from, "utf8");
@@ -1641,6 +1760,7 @@ export async function runCli(
   const runFrontends = collectRunFrontends(distribution.runFrontends, packageContributions);
   const compiler = distribution.createCompiler({
     ...(args.workspaceRoot === undefined ? {} : { workspaceRoot: args.workspaceRoot }),
+    ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
     packageContributions,
   });
   const workspace = await compiler.openFile(args.file!);
@@ -1656,42 +1776,28 @@ export async function runCli(
     throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
   }
   if (args.command === "check") {
-    let runtime: RuntimeArchiveView | undefined;
-    try {
-      runtime = args.runtime === undefined || !runMode
-        ? undefined
-        : lazyRuntimeArchive(args.runtime, distribution);
-      if (runMode) {
-        const loaded = await loadRunFile({
+    if (runMode) {
+        const loaded = await checkRunFile({
           workspace,
           authorCompiler: compiler,
           frontends: runFrontends,
           packageContributions,
-          ...(runtime === undefined ? {} : { runtime }),
         });
-        const planned = loaded.compiler.planCompilation(
-          loaded,
-          loadedPackageSet?.lock.digest,
-        );
-        const selected = loaded.run.graph.targetSets.find((item) => item.id === loaded.run.graph.selectedTargets)!;
         const machine = {
           format: "narratage.cli-check@1" as const,
           sourceKind: "run" as const,
           ok: true,
-          run: loaded.path,
+          run: loaded.source,
           source: loaded.authorSource,
           authorSourceClosure: loaded.author.closure.id,
-          runSourceClosure: loaded.run.closure.id,
+          runSourceClosure: loaded.closure.id,
           authorModuleClosure: loaded.author.program.closure.digest,
           executionModuleClosure: loaded.program.closure.digest,
           authorGraph: loaded.author.elaboration.graph.id,
-          runGraph: loaded.run.graph.id,
-          graph: planned.request.graph,
-          targetSet: loaded.run.graph.selectedTargets,
-          targets: selected.targets,
-          candidates: loaded.run.candidates,
-          satisfactions: loaded.run.graph.satisfactions,
-          steps: planned.plan.steps.length,
+          targets: loaded.document.targets,
+          candidates: Object.fromEntries(loaded.document.candidates.map((item) => [item.id, item.kind])),
+          satisfactions: loaded.document.satisfactions,
+          unresolvedBuildRecords: loaded.unresolvedBuildRecords,
         } as const;
         writeCliOutput(io, args, {
           kind: "check-run",
@@ -1699,7 +1805,8 @@ export async function runCli(
           frontend: sourceHeader.using,
         });
         return;
-      }
+    }
+    {
       const result = await compiler.compileSource(workspace.entry, workspace);
       const machine = {
         format: "narratage.cli-check@1" as const,
@@ -1720,29 +1827,34 @@ export async function runCli(
         frontend: sourceHeader.using,
       });
       return;
-    } finally {
-      await runtime?.close();
     }
   }
   if (args.command === "build") {
     if (args.runtime === undefined) throw new Error("build requires --runtime with a Runtime Profile or trusted local config module");
-    const runtime = await loadLocalRuntime(args.runtime, distribution, loadedPackageSet);
+    const archive = lazyRuntimeArchive(args.runtime, distribution);
+    let loadedRun;
     try {
-      const loadedRun = await loadRunFile({
+      loadedRun = await loadRunFile({
         workspace,
         authorCompiler: compiler,
         frontends: runFrontends,
         packageContributions,
-        runtime,
+        runtime: archive,
       });
-      const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
+    } finally {
+      await archive.close();
+    }
+    const result = loadedRun.compiler.planCompilation(loadedRun, loadedPackageSet?.lock.digest);
+    const preflight = await preflightPlan(args.runtime, distribution, result.state, loadedPackageSet);
+    assertPreflight(preflight);
+    const runtime = await loadLocalRuntime(args.runtime, distribution, loadedPackageSet);
+    try {
       const catalog = createCatalogDescriptor({
         core: result.state.id,
         source: loadedRun.authorSource,
         compilation: result.compilation.author,
         run: {
           path: loadedRun.path,
-          targetSet: loadedRun.run.graph.selectedTargets,
         },
       });
       const request = {
@@ -1810,7 +1922,6 @@ export async function runCli(
           return {
             record: goal.record,
             type: goal.type,
-            accepts: goal.accepts,
             ...(record === undefined ? {} : { digest: record.digest, value: record.value }),
           };
         }),
@@ -1868,17 +1979,25 @@ export async function runCli(
       ...(runtime === undefined ? {} : { runtime }),
     });
     const result = loaded.compiler.planCompilation(loaded, loadedPackageSet?.lock.digest);
+    const preflight = args.runtime === undefined
+      ? undefined
+      : await preflightPlan(args.runtime, distribution, result.state, loadedPackageSet);
     writeCliOutput(io, args, {
       kind: "plan",
-      machine: result.plan,
+      machine: {
+        format: "narratage.cli-plan@1",
+        ok: preflight?.ok ?? true,
+        plan: result.plan,
+        ...(preflight === undefined ? {} : { preflight }),
+      },
       run: loaded.path,
-      targetSet: loaded.run.graph.selectedTargets,
       outputNames: Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
         item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : [])),
       candidateNames: Object.fromEntries(Object.entries(loaded.run.candidates)
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([name, id]) => [id, name])),
     });
+    if (preflight !== undefined && !preflight.ok) io.setExitCode?.(1);
   } finally {
     await runtime?.close();
   }

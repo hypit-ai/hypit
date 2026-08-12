@@ -59,7 +59,6 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     },
     result: { kind: "output" as const, name: "composition" },
   });
-  const semanticInputs = ["program", "canvas", "space", ...tracks.map((track) => track.name)];
   return sealGraphFragment({
     name: options.name?.trim() || "@narratage/film/assembly@1",
     inputs: [
@@ -77,8 +76,6 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
         name: "composition",
         type: compositionTypes.composition,
         root: operation("film:composition"),
-        semanticInputs,
-        fidelity: "exact",
       },
     ],
   });

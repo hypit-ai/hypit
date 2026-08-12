@@ -477,10 +477,9 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
   const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
     targets: [
-      { output: ordinaryTrack.ref.kind === "logical-output" ? ordinaryTrack.ref.id : "", accepts: "exact" },
-      { output: track.ref.kind === "logical-output" ? track.ref.id : "", accepts: "exact" },
+      { output: ordinaryTrack.ref.kind === "logical-output" ? ordinaryTrack.ref.id : "" },
+      { output: track.ref.kind === "logical-output" ? track.ref.id : "" },
     ],
-    satisfactions: [],
   }));
   const producers = build.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === typographyTrackProducers.bindPoint.name).length, 1);

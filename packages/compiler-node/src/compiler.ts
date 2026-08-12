@@ -98,6 +98,8 @@ export type NodeCompilerOptions = {
   readonly frontends: AuthorFrontendRegistryLike;
   /** Files reachable through source imports must resolve inside this root. Defaults to entry dirname. */
   readonly root?: string;
+  /** Additional Host-authorized roots for asset bytes, never Source imports. */
+  readonly assetRoots?: readonly string[];
   /** Replaces the default Node filesystem definition environment. */
   readonly workspace?: Workspace;
   /** Trusted Type-owner validators used to admit authored Records before linking. */
@@ -123,7 +125,7 @@ export class NodeCompiler {
         "NodeCompiler accepts validators or a custom Record admitter, not both",
       );
     }
-    if (options.workspace !== undefined && options.root !== undefined) {
+    if (options.workspace !== undefined && (options.root !== undefined || options.assetRoots !== undefined)) {
       throw new NodeCompilerError(
         "AMBIGUOUS_WORKSPACE",
         "NodeCompiler accepts a Workspace or the root option for its default filesystem Workspace, not both",
@@ -143,6 +145,7 @@ export class NodeCompiler {
     return this.#options.workspace === undefined
       ? await new NodeFilesystemWorkspace({
           ...(this.#options.root === undefined ? {} : { root: this.#options.root }),
+          ...(this.#options.assetRoots === undefined ? {} : { assetRoots: this.#options.assetRoots }),
         }).open(resolve(file))
       : await this.#options.workspace.open(file);
   }

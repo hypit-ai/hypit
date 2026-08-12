@@ -82,12 +82,6 @@ export default async function createTalkingFilmRuntime() {
       },
     },
     endpoints,
-    allowedPermissions: [...new Set([
-      "filesystem:state",
-      "filesystem:artifacts",
-      "environment:credentials",
-      ...endpoints.flatMap((endpoint) => endpoint.manifest.facets.flatMap((facet) => facet.permissions)),
-    ])],
     scheduling: {
       maxConcurrency: 4,
     },

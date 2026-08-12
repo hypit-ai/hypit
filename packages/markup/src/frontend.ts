@@ -66,7 +66,7 @@ function sameModule(left: ModuleRef, right: ModuleRef): boolean {
 }
 
 function fail(source: SourceUnit, code: string, message: string, offset?: number): never {
-  throw new MarkupFrontendError(code, message, source.name, offset);
+  throw new MarkupFrontendError(code, message, source.name, offset, source.text);
 }
 
 function moduleForImport(
@@ -295,14 +295,7 @@ export async function decodeMarkup(source: SourceUnit, context: MarkupDecodeCont
         id: draft.id,
         type: draft.type,
         value: draft.value,
-        conformance: "exact",
-        origin: {
-          kind: "authored",
-          sourceDigest,
-          frontendClosureDigest,
-          sourceName: source.name,
-          range: draft.range,
-        },
+        origin: { kind: "authored" },
       });
       verifyRecordStructure(context.closure, record);
       records.push(record);

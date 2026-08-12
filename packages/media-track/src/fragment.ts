@@ -42,8 +42,8 @@ export const stillMediaTrackFragment = sealGraphFragment({
     }, result: { kind: "output", name: "track" } },
   ],
   exports: [
-    { name: "program", type: mediaTrackTypes.program, root: operation("finalize"), semanticInputs: ["header", "space", "canvas", "source", "extent", "frame", "fit", "sample-spec", "item-spec"], fidelity: "exact" },
-    { name: "track", type: compositionTypes.visualTrack, root: operation("visual"), semanticInputs: ["header", "space", "canvas", "source", "extent", "frame", "fit", "sample-spec", "item-spec"], fidelity: "exact" },
+    { name: "program", type: mediaTrackTypes.program, root: operation("finalize") },
+    { name: "track", type: compositionTypes.visualTrack, root: operation("visual") },
   ],
 });
 
@@ -51,5 +51,5 @@ export const renderMediaTrackFragment = sealGraphFragment({
   name: "@narratage/media-track/project-visual@1",
   inputs: [{ name: "space", type: programSpaceTypes.programSpace }, { name: "program", type: mediaTrackTypes.program }],
   operations: [{ id: "visual", producer: mediaTrackProducers.projectVisual, inputs: { space: input("space"), program: input("program") }, result: { kind: "output", name: "track" } }],
-  exports: [{ name: "track", type: compositionTypes.visualTrack, root: operation("visual"), semanticInputs: ["space", "program"], fidelity: "exact" }],
+  exports: [{ name: "track", type: compositionTypes.visualTrack, root: operation("visual") }],
 });

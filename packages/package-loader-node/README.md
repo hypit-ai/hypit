@@ -5,6 +5,12 @@ physical package and declared dependency byte plus Module, Author/Run Frontend, 
 Validator identities. Loading verifies all artifacts and checks deterministic compute facets
 against their static Manifests before returning verified `NodePackageContribution` values.
 
+The artifact digest covers the files that ship the package's behavior and assets. Package-root test suites,
+coverage/cache directories and project-only README, license and tool configuration files are excluded, so
+editing documentation or tests does not make an otherwise identical installed implementation unusable.
+Nested runtime assets are not excluded merely because one of their parent directories happens to be named
+`test`.
+
 The caller selects only package roots. During the explicit lock action, the Loader follows exact
 Module Manifest dependencies (`ModuleRef + digest`) and adds the unique installed contribution that
 provides each one. This is a local dependency closure, not a built-in package map or registry.

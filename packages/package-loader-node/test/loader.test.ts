@@ -387,7 +387,6 @@ async function runtimeAdapterFixture(marker: string): Promise<{
                   name: facet.name,
                   role: "capability-endpoint",
                   implementation: { locator: "example-runtime-adapter/endpoint", digest: declared },
-                  permissions: [],
                   fulfills: [{ capability, returns }],
                   lifecycle: "immediate",
                   defaultConcurrency: 1,
@@ -404,7 +403,6 @@ async function runtimeAdapterFixture(marker: string): Promise<{
                   returns,
                   () => ({
                     value: { kind: "inline", value: "external" },
-                    conformance: "exact",
                     delivery: { kind: "inline" },
                     metadata: null,
                   }),

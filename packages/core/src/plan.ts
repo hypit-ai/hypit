@@ -2,7 +2,6 @@ import type {
   BuildPlan,
   BuildRequest,
   CompiledGraph,
-  Conformance,
   GraphValueRef,
   LinkedProgram,
   OperationNode,
@@ -23,10 +22,6 @@ import {
 } from "./graph.js";
 import { resolveProducer, sealRecord, verifyRecord } from "./link.js";
 import { sameType, typeKey } from "./reference.js";
-
-function worst(left: Conformance, right: Conformance): Conformance {
-  return left === "substitute" || right === "substitute" ? "substitute" : "exact";
-}
 
 function exactKeys(
   actual: Readonly<Record<string, unknown>>,
@@ -62,7 +57,6 @@ type ResolvedSource = {
 type DemandedOperation = {
   readonly operation: OperationNode;
   readonly inputs: Readonly<Record<string, RecordId>>;
-  fidelity: Conformance;
 };
 
 type ProducedRecord = {
@@ -111,13 +105,12 @@ export function compileBuild(
       return { record: record.id, type: record.type };
     }
     if (ref.kind === "logical-output") return resolveOutput(ref.id);
-    return demandOperation(ref.operation, "exact");
+    return demandOperation(ref.operation);
   };
 
-  const demandOperation = (id: string, fidelity: Conformance): ResolvedSource => {
+  const demandOperation = (id: string): ResolvedSource => {
     const existing = demanded.get(id);
     if (existing !== undefined) {
-      existing.fidelity = worst(existing.fidelity, fidelity);
       const operation = existing.operation;
       const producer = resolveProducer(program.closure, operation.producer);
       const type = operation.result.kind === "output"
@@ -133,7 +126,7 @@ export function compileBuild(
       Object.entries(operation.inputs).map(([name, ref]) => [name, resolveRef(ref).record]),
     );
     resolvingOperations.delete(id);
-    demanded.set(id, { operation, inputs, fidelity });
+    demanded.set(id, { operation, inputs });
     const producer = resolveProducer(program.closure, operation.producer);
     const type = operation.result.kind === "output"
       ? producer.outputs.find((port) => port.name === operation.result.name)?.type
@@ -148,22 +141,15 @@ export function compileBuild(
     invariant(!resolvingOutputs.has(id), "SELECTED_GRAPH_CYCLE", `selected graph cycles through ${id}`, id);
     resolvingOutputs.add(id);
     const output = resolveLogicalOutput(graph, id);
-    const selected = satisfiedCandidate(graph, request, id);
-    const { candidate, fidelity } = selected;
+    const candidate = satisfiedCandidate(graph, id);
     let resolved: ResolvedSource;
     if (candidate.root.kind === "value") {
       const record = sealRecord({
         id: candidate.root.value.id,
         type: candidate.type,
         value: candidate.root.value.value,
-        conformance: fidelity,
         origin: {
           kind: "provided",
-          candidate: candidate.id,
-          requestDigest: request.digest,
-          ...(candidate.root.value.provenance === undefined
-            ? {}
-            : { provenance: candidate.root.value.provenance }),
         },
         ...(candidate.root.value.validation === undefined
           ? {}
@@ -175,21 +161,16 @@ export function compileBuild(
       if (previous === undefined) {
         initialValues.set(record.id, record);
       } else {
-        const { conformance: _previousConformance, ...previousFact } = previous;
-        const { conformance: _recordConformance, ...currentFact } = record;
         invariant(
-          canonicalStringify(previousFact) === canonicalStringify(currentFact),
+          canonicalStringify(previous) === canonicalStringify(record),
           "PROVIDED_RECORD_CONFLICT",
           `${record.id} has conflicting Provided Values`,
           record.id,
         );
-        // One materialized fact has one plan-wide conformance. If callers need the same bytes with
-        // independent path fidelity, the Run Graph must expose explicit identity projections.
-        initialValues.set(record.id, { ...previous, conformance: worst(previous.conformance, fidelity) });
       }
       resolved = { record: record.id, type: record.type };
     } else {
-      resolved = demandOperation(candidate.root.result.operation, fidelity);
+      resolved = demandOperation(candidate.root.result.operation);
     }
     invariant(
       sameType(resolved.type, output.type),
@@ -199,7 +180,7 @@ export function compileBuild(
     );
     resolvingOutputs.delete(id);
     resolvedOutputs.set(id, resolved);
-    selections.set(id, { output: id, candidate: candidate.id, fidelity, record: resolved.record });
+    selections.set(id, { output: id, candidate: candidate.id, record: resolved.record });
     return resolved;
   };
 
@@ -207,10 +188,9 @@ export function compileBuild(
 
   const steps: ProducerStep[] = [...demanded.values()]
     .sort((a, b) => a.operation.id.localeCompare(b.operation.id))
-    .map(({ operation, inputs, fidelity }) => ({
+    .map(({ operation, inputs }) => ({
       id: operation.id,
       producer: operation.producer,
-      fidelity,
       inputs,
       outputs: operation.result.kind === "output"
         ? { [operation.result.name]: operation.result.record }
@@ -220,21 +200,19 @@ export function compileBuild(
             [operation.result.name]: {
               id: operation.result.id,
               result: operation.result.record,
-              accepts: operation.result.accepts,
             },
           }
         : {},
     }));
 
   const goals = targetSources
-    .map(({ target, source }) => ({ record: source.record, type: source.type, accepts: target.accepts }))
+    .map(({ source }) => ({ record: source.record, type: source.type }))
     .sort((a, b) => a.record.localeCompare(b.record));
   const sortedInitial = [...initialValues.values()].sort((a, b) => a.id.localeCompare(b.id));
   const sortedSelections = [...selections.values()].sort((a, b) => a.output.localeCompare(b.output));
   const content = planContent(graph, request, sortedInitial, steps, goals, sortedSelections);
   const plan: BuildPlan = { ...content, id: digestOf(content) };
   validatePlanStructure(program, graph, request, plan);
-  verifyStaticGoalConformance(program, plan);
   return plan;
 }
 
@@ -268,11 +246,6 @@ function validatePlanStructure(
     exactKeys(step.inputs, producer.inputs.map((port) => port.name), `${step.id}.inputs`);
     subsetKeys(step.outputs, producer.outputs.map((port) => port.name), `${step.id}.outputs`);
     subsetKeys(step.needs, producer.needs.map((port) => port.name), `${step.id}.needs`);
-    invariant(
-      step.fidelity === "exact" || step.fidelity === "substitute",
-      "INVALID_CONFORMANCE",
-      `${step.id} fidelity is invalid`,
-    );
     invariant(
       Object.keys(step.outputs).length + Object.keys(step.needs).length === 1,
       "STEP_RESULT_NORMAL_FORM",
@@ -323,33 +296,6 @@ function validatePlanStructure(
   }
   assertAcyclic(plan, records);
   assertAllStepsReachGoal(plan, records);
-}
-
-function verifyStaticGoalConformance(program: LinkedProgram, plan: BuildPlan): void {
-  const conformances = new Map(program.records.map((record) => [record.id, record.conformance]));
-  for (const record of plan.initialValues) conformances.set(record.id, record.conformance);
-  const pending = new Map(plan.steps.map((step) => [step.id, step]));
-  while (pending.size > 0) {
-    let progressed = false;
-    for (const [id, step] of pending) {
-      const inputs = Object.values(step.inputs).map((record) => conformances.get(record));
-      if (inputs.some((item) => item === undefined)) continue;
-      const conformance = inputs.reduce<Conformance>((result, item) => worst(result, item as Conformance), step.fidelity);
-      Object.values(step.outputs).forEach((record) => conformances.set(record, conformance));
-      Object.values(step.needs).forEach((need) => conformances.set(need.result, conformance));
-      pending.delete(id);
-      progressed = true;
-    }
-    invariant(progressed, "PLAN_CYCLE", "build plan contains a producer cycle");
-  }
-  for (const goal of plan.goals) {
-    invariant(
-      goal.accepts === "substitute" || conformances.get(goal.record) === "exact",
-      "TARGET_REJECTS_SUBSTITUTE",
-      `exact Target ${goal.record} selects a substitute path`,
-      goal.record,
-    );
-  }
 }
 
 export function validatePlan(
@@ -416,4 +362,3 @@ export function producerStep(plan: BuildPlan, id: string): ProducerStep {
   invariant(step !== undefined, "UNKNOWN_STEP", `unknown step ${id}`, id);
   return step;
 }
-

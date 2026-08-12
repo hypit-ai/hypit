@@ -44,7 +44,7 @@ browser upload, repository object or remote content store.
 
 Frontend output passes a Host-owned Record admission hook before linking. The hook is permitted to
 attach validation evidence but is forbidden to rewrite Record identity, Type, value, digest,
-conformance or origin. `@narratage/compiler-node` wires this to `@narratage/validation` by default, so authored
+or origin. `@narratage/compiler-node` wires this to `@narratage/validation` by default, so authored
 values use the same Type-owner gate as Producer, Provider and provided Candidate values.
 
 A `svml.fragment@1` value may reference only declared Fragment inputs and local Operations. It
@@ -59,9 +59,8 @@ Primary Candidates; Run exports become independent typed Candidates plus explici
 edges. The result is ordinary graph data that Core validates again before freezing a BuildPlan.
 
 `exportRunFragment()` is the canonical Run-Graph boundary: it exports independent Candidates and
-does not name an Author Logical Output. `bindCandidateFragment()` remains compatibility sugar that
-additionally creates Satisfaction edges; new Run frontends should keep graph declaration and
-`output -> candidate + fidelity` selection separate.
+does not name an Author Logical Output. Run frontends keep Candidate declaration and the explicit
+`output -> candidate` Satisfaction edge separate.
 
 `@narratage/elaborator` is not a public `@narratage/author` subsystem. It is a reusable graph-construction
 library. A domain normally adds its own contract and component packages; Text remains only one

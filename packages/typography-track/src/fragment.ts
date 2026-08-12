@@ -25,7 +25,5 @@ export const typographyTrackFragment = sealGraphFragment({
     name: "track",
     type: compositionTypes.visualTrack,
     root: operation("render"),
-    semanticInputs: ["space", "program"],
-    fidelity: "exact",
   }],
 });

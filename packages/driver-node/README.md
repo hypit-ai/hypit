@@ -29,14 +29,14 @@ the prototype API.
 - Endpoint credentials are resolved only for the slots declared by that locked endpoint, immediately
   before `start/resume/cancel`; secret bytes never become Driver journal or Core state.
 - A pending Endpoint may publish `wakeAt`. Retryable terminal failure creates a new attempt and
-  submission key under the endpoint's finite retry policy; cancellation becomes an explicit terminal
+  Operation id under the endpoint's finite retry policy; cancellation becomes an explicit terminal
   failure that Core accepts through its ordinary command-failed Event.
-- Preview, fallback and reuse are graph-level Candidates selected by BuildRequest, not Endpoint
-  modes. A reused value is an Existing-Value Candidate; “Pin” is only the host UI action that selects
-  it. Satisfaction fidelity is sealed into the Core-derived plan before execution.
+- Preview, fallback and reuse are graph-level Candidates selected before Core planning, not Endpoint
+  modes. A reused value is an Existing-Value Candidate; “Pin” is only a possible host UI word for
+  authoring that explicit selection.
 - Endpoint identity becomes the Receipt fulfiller. The Driver also copies the locked Endpoint
   implementation/configuration and applied Runtime closure digests into the Receipt; handlers return
-  only value, conformance, delivery and metadata and cannot self-assert implementation identity.
+  only value and operational metadata and cannot self-assert implementation identity.
 - `TypeValidatorRegistry` is a separate exact-Type registry. Before an Event exists, the Driver
   structurally checks every result, executes the Type owner's digest-locked validator when declared,
   and attaches the resulting receipt. Producer and Endpoint handlers cannot self-assert validation.
@@ -44,7 +44,7 @@ the prototype API.
 Build state is serializable. Missing Endpoints, generation latency and transient endpoint errors pause a
 build without replaying completed Producers.
 
-`start()` and `resume()` receive the same stable submission key. `resume(undefined)` is intentional:
+`start()` and `resume()` receive the same stable Operation id. `resume(undefined)` is intentional:
 it covers a stop after submission intent was journaled but before a remote job checkpoint was saved.
 The Endpoint must use that key to find-or-submit idempotently; the Driver cannot manufacture remote
 exactly-once semantics for an API that does not provide them.

@@ -34,8 +34,7 @@ function authored(path: string, type: SurfaceResolvedReference["type"], value: u
         ? value as never
         : { kind: "inline", value: value as never },
       digest: digestOf(value),
-      conformance: "exact",
-      origin: { kind: "authored", sourceDigest: digestOf("mimo-source"), frontendClosureDigest: digestOf("mimo-frontend") },
+      origin: { kind: "authored" },
     },
   };
 }

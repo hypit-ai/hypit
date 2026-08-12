@@ -210,8 +210,7 @@ test("the self-described Screen Surface parses into a finite peer-Track graph", 
   assert.equal(trackExport.ref.kind, "logical-output");
   const build = start(compiled.program, compiled.elaboration.graph, sealBuildRequest({
     graph: compiled.elaboration.graph.id,
-    targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
   }));
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     screenOverlayProducers.createSet.name,

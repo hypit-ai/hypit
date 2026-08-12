@@ -23,13 +23,13 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       id: "prepare-evidence-audio",
       producer: mediaPipelineProducers.projectSpeechEvidenceAudio,
       inputs: { audio: input("audio") },
-      result: { kind: "need", name: "evidenceAudio", accepts: "exact" },
+      result: { kind: "need", name: "evidenceAudio" },
     },
     {
       id: "request-whisperx",
       producer: whisperXProducers.request,
       inputs: { audio: operation("prepare-evidence-audio") },
-      result: { kind: "need", name: "alignment", accepts: "exact" },
+      result: { kind: "need", name: "alignment" },
     },
     {
       id: "normalize-evidence",
@@ -49,22 +49,16 @@ export const whisperXSpeechAlignmentFragment = sealGraphFragment({
       name: "rawEvidence",
       type: whisperXTypes.alignmentEvidence,
       root: operation("request-whisperx"),
-      semanticInputs: ["audio"],
-      fidelity: "exact",
     },
     {
       name: "evidence",
       type: speechEvidenceTypes.alignedTranscript,
       root: operation("normalize-evidence"),
-      semanticInputs: ["audio"],
-      fidelity: "exact",
     },
     {
       name: "map",
       type: semanticMapTypes.complete,
       root: operation("locate-speech"),
-      semanticInputs: ["narrative", "audio"],
-      fidelity: "exact",
     },
   ],
 });

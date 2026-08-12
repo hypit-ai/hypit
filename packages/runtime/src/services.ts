@@ -61,7 +61,6 @@ type RuntimeServiceDefinitionBase<Role extends RuntimeServiceFacetRole, Service>
     readonly locator: string;
     readonly digest: Digest;
   };
-  readonly permissions?: readonly string[];
   readonly configuration?: CanonicalValue;
   readonly service: Service;
 };
@@ -117,15 +116,6 @@ function assert(condition: unknown, message: string): asserts condition {
 function serviceFacetKey(service: RuntimeService): string {
   const ref = service.instance.facet;
   return `${ref.module.name}@${ref.module.version}#${ref.name}`;
-}
-
-function normalizePermissions(values: readonly string[]): readonly string[] {
-  const permissions = [...values].map((value) => {
-    assert(value.trim().length > 0, "Runtime service permission is empty");
-    return value;
-  }).sort();
-  assert(new Set(permissions).size === permissions.length, "Runtime service repeats a permission");
-  return permissions;
 }
 
 function callable(value: object, name: string, subject: string): void {
@@ -210,7 +200,6 @@ export function defineRuntimeServicePackage(
       name: definition.facet,
       role: definition.role,
       implementation: { ...definition.implementation },
-      permissions: normalizePermissions(definition.permissions ?? []),
     })),
   };
   const result: RuntimeServicePackage = {
@@ -292,7 +281,6 @@ export function assembleRuntimeServices(
   const dispatch = selectedService(services, selection.stores.dispatch, "dispatch-store");
   const journal = selectedService(services, selection.stores.journal, "runtime-journal");
   const artifacts = selectedService(services, selection.stores.artifacts, "artifact-store");
-  assert(selection.stores.credentials.length > 0, "Runtime must explicitly select at least one CredentialStore");
   const credentialServices = selection.stores.credentials.map((id) => selectedService(services, id, "credential-store")!);
   const selected = [scheduler, worker, build, operations, dispatch, journal, artifacts, ...credentialServices]
     .filter((item): item is NonNullable<typeof item> => item !== undefined);

@@ -8,7 +8,7 @@ The first implementation contains:
 - `LocalBuildScheduler`: one authoritative, queue-free scheduler shared by multiple Builds;
 - atomic generic resource claims with Runtime Profile overrides;
 - static Runtime Module facets, sealed Profile resolution and a content-addressed Runtime Closure;
-- exact Endpoint capability/return bindings, implementation digests and permission allowlists;
+- exact Endpoint capability/return bindings and implementation digests;
 - `BuildStore` and `OperationStore` ports with compare-and-swap in-memory references;
 - a recoverable Endpoint lifecycle that journals before `start`, checkpoints `pending`,
   calls `resume` after a restart, and records wake, retry, failure and cancellation state;
@@ -28,7 +28,8 @@ claim both an explicit Authority and an exact capability Route; the Store acquir
 An Endpoint's vendor-side job system remains internal and cannot advance another Build step.
 
 `MemoryBuildStore` stores verified BuildState only. `MemoryOperationStore` separately records a
-content-addressed attempt identity, stable submission key, pending checkpoint and terminal result.
+content-addressed attempt identity, pending checkpoint and terminal result. The Operation id is also
+the stable key supplied to an upstream system when it supports idempotent submission.
 Changing the Build, Command, Endpoint implementation or Runtime Closure changes that identity.
 Nothing in the Operation journal becomes an accepted domain fact until an Endpoint completion is
 validated and reduced by Core. If a process stops after completion is journaled but before Core
@@ -40,5 +41,5 @@ environment credentials, the local follow loop, Endpoint implementations and
 `@narratage/endpoint-kit` live in separate packages. The repository already contains KIE, Vertex and
 several local media/service Endpoint packages; distributed attempt leases and additional hosted
 adapters remain deployment work. An Endpoint whose upstream API cannot look up or deduplicate the
-supplied `submissionKey` cannot promise exactly-once remote work across the crash window; its
+supplied Operation id cannot promise exactly-once remote work across the crash window; its
 `resume(undefined)` must explicitly reconcile that uncertainty.

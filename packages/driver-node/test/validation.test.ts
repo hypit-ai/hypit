@@ -181,13 +181,11 @@ function outputGraph(linked: LinkedProgram): CompiledGraph {
         id: "measurement",
         type: measurementType,
         primary: "measure",
-        semanticInputs: [],
       },
       {
         id: "report",
         type: reportType,
         primary: "report",
-        semanticInputs: [{ kind: "logical-output", id: "measurement" }],
       },
     ],
     candidates: [
@@ -222,8 +220,7 @@ function outputGraph(linked: LinkedProgram): CompiledGraph {
 function outputBuild(linked: LinkedProgram, graph = outputGraph(linked)) {
   return start(linked, graph, sealBuildRequest({
     graph: graph.id,
-    targets: [{ output: "report", accepts: "exact" }],
-    satisfactions: [],
+    targets: [{ output: "report" }],
   }));
 }
 
@@ -302,7 +299,6 @@ function providerGraph(linked: LinkedProgram): CompiledGraph {
       id: "measurement",
       type: measurementType,
       primary: "request",
-      semanticInputs: [],
     }],
     candidates: [{
       id: "request",
@@ -318,7 +314,6 @@ function providerGraph(linked: LinkedProgram): CompiledGraph {
         name: "measurement",
         id: "need:measurement",
         record: "measurement:endpoint",
-        accepts: "exact",
       },
     }],
   });
@@ -339,9 +334,6 @@ async function providerBuild(measured: number) {
     measurementType,
     () => ({
       value: { kind: "inline", value: { value: measured, unit: "ticks" } },
-      conformance: "exact",
-      delivery: "executed",
-      metadata: {},
     }),
   );
   return await new NodeDriver({ producers: hosts, endpoints, validators: registry() }).run(start(
@@ -349,8 +341,7 @@ async function providerBuild(measured: number) {
     graph,
     sealBuildRequest({
       graph: graph.id,
-      targets: [{ output: "measurement", accepts: "exact" }],
-      satisfactions: [],
+      targets: [{ output: "measurement" }],
     }),
   ));
 }
@@ -372,11 +363,8 @@ test("authored values require a receipt bound to their exact Type and content", 
     id: "measurement:authored",
     type: measurementType,
     value: { kind: "inline", value: { value: 10, unit: "ticks" } },
-    conformance: "exact",
     origin: {
       kind: "authored",
-      sourceDigest: digestOf("measurement-source"),
-      frontendClosureDigest: digestOf("measurement-frontend"),
     },
   });
   assert.throws(() => verifyRecord(linked.closure, raw), /requires .*validator/u);

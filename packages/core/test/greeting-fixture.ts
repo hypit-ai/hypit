@@ -134,30 +134,25 @@ export function greetingGraph(program: LinkedProgram, includeSide = false): Comp
         id: "prompt",
         type: types.prompt,
         primary: "make-prompt",
-        semanticInputs: [{ kind: "record", id: "intent:root" }],
       },
       {
         id: "generated",
         type: types.generated,
         primary: "request-text",
-        semanticInputs: [{ kind: "logical-output", id: "prompt" }],
       },
       {
         id: "document",
         type: types.document,
         primary: "assemble",
-        semanticInputs: [{ kind: "logical-output", id: "generated" }],
       },
       ...(includeSide ? [{
         id: "side-generated",
         type: types.generated,
         primary: "side-placeholder",
-        semanticInputs: [{ kind: "logical-output" as const, id: "prompt" }],
       }, {
         id: "side-document",
         type: types.document,
         primary: "side-assemble",
-        semanticInputs: [{ kind: "logical-output" as const, id: "side-generated" }],
       }] : []),
     ],
     candidates: [
@@ -181,7 +176,7 @@ export function greetingGraph(program: LinkedProgram, includeSide = false): Comp
         id: "request-text",
         producer: producers.requestText,
         inputs: { prompt: { kind: "logical-output", id: "prompt" } },
-        result: { kind: "need", name: "generation", id: "need:generation", record: "generated:root", accepts: "exact" },
+        result: { kind: "need", name: "generation", id: "need:generation", record: "generated:root" },
       },
       {
         id: "placeholder-text",
@@ -212,7 +207,6 @@ export function greetingGraph(program: LinkedProgram, includeSide = false): Comp
 
 export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
-  readonly goalAccepts?: "exact" | "substitute";
   readonly implementationClosure?: import("@narratage/protocol").Digest;
   readonly includeSideTarget?: boolean;
 }): BuildState {
@@ -221,13 +215,7 @@ export function createGreetingBuild(options?: {
     id: "intent:root",
     type: types.intent,
     value: { kind: "inline", value: { name: "Ada" } },
-    conformance: "exact",
-    origin: {
-      kind: "authored",
-      sourceDigest: digestOf("source:greeting"),
-      frontendClosureDigest: digestOf("frontend:test"),
-      sourceName: "greeting.test",
-    },
+    origin: { kind: "authored" },
   });
   const typedModule = sealTypedModule({
     id: "author:greeting",
@@ -235,23 +223,25 @@ export function createGreetingBuild(options?: {
     records: [authored],
   });
   const program = link(closure, [typedModule]);
-  const graph = greetingGraph(program, options?.includeSideTarget ?? false);
+  const sourceGraph = greetingGraph(program, options?.includeSideTarget ?? false);
+  const graph = options?.generationRealization === "placeholder"
+    ? sealCompiledGraph({
+        program: sourceGraph.program,
+        outputs: sourceGraph.outputs.map((item) => item.id === "generated"
+          ? { ...item, primary: "placeholder-text" }
+          : item),
+        candidates: sourceGraph.candidates,
+        operations: sourceGraph.operations,
+      })
+    : sourceGraph;
   const request = sealBuildRequest({
     graph: graph.id,
     ...(options?.implementationClosure === undefined
       ? {}
       : { implementationClosure: options.implementationClosure }),
-    targets: [...(options?.includeSideTarget ? [{ output: "side-document", accepts: "exact" as const }] : []), {
+    targets: [...(options?.includeSideTarget ? [{ output: "side-document" }] : []), {
       output: "document",
-      accepts: options?.goalAccepts ?? "exact",
     }],
-    satisfactions: options?.generationRealization === "placeholder"
-      ? [{
-          output: "generated",
-          candidate: "placeholder-text",
-          fidelity: "substitute",
-        }]
-      : [],
   });
   return start(program, graph, request);
 }

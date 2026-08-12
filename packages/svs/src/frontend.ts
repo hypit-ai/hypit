@@ -29,14 +29,7 @@ export const svsFrontend: AuthorFrontend = {
       id: recipe.value.path,
       type: svsRecipeType,
       value: { kind: "inline", value: recipe.value },
-      conformance: "exact",
-      origin: {
-        kind: "authored",
-        sourceDigest,
-        frontendClosureDigest: svsFrontendImplementationDigest,
-        sourceName: source.name,
-        range: recipe.range,
-      },
+      origin: { kind: "authored" },
     }));
     records.forEach((record) => verifyRecordStructure(context.closure, record));
     const exports: AuthorSourceExport[] = records.map((record) => ({

@@ -194,10 +194,7 @@ export function estimateSpeechDuration(
   const raw = units / resolveSpeechEstimateRate(policy, language);
   const firstClamp = Math.min(policy.maximumSec, Math.max(policy.minimumSec, raw));
   const durationSec = Math.min(policy.maximumSec, Math.max(policy.minimumSec, rounded(firstClamp, policy.rounding)));
-  const duration = sealSpeechDuration({
-    contract: "svml.speech-duration@1",
-    durationSec,
-  });
+  const duration = sealSpeechDuration(durationSec);
   assertSpeechDurationIdentity(duration);
   return duration;
 }

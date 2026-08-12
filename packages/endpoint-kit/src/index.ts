@@ -6,8 +6,6 @@ import {
 import type {
   CanonicalValue,
   CapabilityRef,
-  Conformance,
-  Delivery,
   Digest,
   FulfillNeedCommand,
   ModuleRef,
@@ -33,9 +31,8 @@ export type Awaitable<T> = T | Promise<T>;
 
 export type EndpointFulfillment = {
   readonly value: StoredValue;
-  readonly conformance: Conformance;
-  readonly delivery: Delivery;
-  readonly metadata: CanonicalValue;
+  /** Provider-specific operational detail retained by OperationStore, never forwarded into Core data. */
+  readonly metadata?: CanonicalValue;
 };
 
 export type EndpointInvocationContext = {
@@ -100,7 +97,7 @@ export type EndpointScheduling = {
 };
 
 export type EndpointRetryPolicy = {
-  /** Includes the first submission. A new attempt receives a new submission key. */
+  /** Includes the first submission. A new attempt receives a new Operation id. */
   readonly maxAttempts: number;
 };
 
@@ -184,7 +181,6 @@ export type DefineEndpointPackageOptions = {
     readonly locator: string;
     readonly digest: Digest;
   };
-  readonly permissions?: readonly string[];
   /** Non-secret deployment facts such as base URL, region and credential references. */
   readonly configuration?: CanonicalValue;
   readonly credentials?: Readonly<Record<string, CredentialRef>>;
@@ -224,8 +220,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
     "one Endpoint facet cannot mix immediate and recoverable lifecycles");
   const keys = options.capabilities.map((item) => refKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint package repeats a capability");
-  const permissions = [...(options.permissions ?? [])].sort();
-  assert(new Set(permissions).size === permissions.length, "Endpoint package repeats a permission");
   const credentials = Object.fromEntries(Object.entries(options.credentials ?? {})
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([slot, ref]) => {
@@ -274,7 +268,6 @@ export function defineEndpointPackage(options: DefineEndpointPackageOptions): En
       name: options.facet,
       role: "capability-endpoint",
       implementation: { ...options.implementation },
-      permissions,
       fulfills,
       lifecycle,
       defaultConcurrency: positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency"),

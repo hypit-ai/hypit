@@ -171,7 +171,7 @@ async function limitedResponseText(response: Response, maxBytes: number): Promis
 }
 
 function fulfillment(value: CanonicalValue, metadata: CanonicalValue): EndpointFulfillment {
-  return { value: { kind: "inline", value }, conformance: "exact", delivery: "executed", metadata };
+  return { value: { kind: "inline", value }, metadata };
 }
 
 export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOptions) {
@@ -248,7 +248,6 @@ export function createXiaomiMimoProvider(options: CreateXiaomiMimoProviderOption
       locator: "@narratage/provider-xiaomi-mimo/tts",
       digest: xiaomiMimoProviderImplementationDigest,
     },
-    permissions: [`network:${new URL(apiBaseUrl).hostname}`],
     configuration: canonicalize({
       apiBaseUrl, requestTimeoutMs, maxResponseBytes, maxVoiceSampleBase64Bytes, transportDigest,
     }),

@@ -99,8 +99,6 @@ test("SQLite Operation CAS preserves a terminal completion", async () => {
       status: "completed",
       completion: {
         value: { kind: "inline", value: { artifact: "video.mp4" } },
-        conformance: "exact",
-        delivery: "executed",
         metadata: { task: "lambda-1" },
       },
     });
@@ -145,9 +143,6 @@ test("SQLite keeps cancellation control independent from execution state", async
       status: "completed",
       completion: {
         value: { kind: "inline", value: "late result" },
-        conformance: "exact",
-        delivery: "executed",
-        metadata: {},
       },
     });
     assert.equal(completed.status, "stored");

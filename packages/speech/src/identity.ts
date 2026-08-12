@@ -6,9 +6,9 @@ function assertAudioBlob(value: SpeechBasis["audio"], label: string): void {
   if (value.kind !== "blob" || !isDigest(value.digest) || !Number.isSafeInteger(value.size)
     || value.size < 0 || value.mediaType !== "audio/wav") throw new Error(`${label} must be a canonical WAV BlobRef.`);
 }
-export function sealSpeechDuration(value: SpeechDuration): SpeechDuration { return structuredClone(value); }
+export function sealSpeechDuration(value: SpeechDuration): SpeechDuration { return value; }
 export function assertSpeechDurationIdentity(value: SpeechDuration): void {
-  if (value.contract !== "svml.speech-duration@1" || !Number.isFinite(value.durationSec) || value.durationSec <= 0) throw new Error("SpeechDuration is invalid.");
+  if (!Number.isFinite(value) || value <= 0) throw new Error("SpeechDuration is invalid.");
 }
 export function speechEvidenceSampleBoundary(masterSampleBoundary: number): number {
   if (!Number.isSafeInteger(masterSampleBoundary) || masterSampleBoundary < 0) throw new Error("Speech evidence source sample boundary is invalid.");

@@ -13,9 +13,7 @@ Derivations and advances a serializable `BuildState` with pure `reduce(state, ev
 Derivations bind Producer and implementation identity, input/output Record digests, Need request
 digests and the accepted event digest. Need Receipts content-address the Driver-attested Endpoint
 implementation/configuration/Runtime closure binding when present, without Core learning what that
-implementation does. Needs carry the conformance floor inherited from their
-inputs, so an exact external response cannot wash a substitute upstream back to exact. An exact
-Need above a substitute floor fails before an external Handler can run.
+implementation does.
 
 Cross-package Types are nominal: exact module name, version and type name must match. Core checks
 their package-owned structural Schema. If the Type owner locked a semantic validator in its

@@ -7,6 +7,7 @@ import test from "node:test";
 
 import { createNodePackageLock, writeNodePackageLock } from "@narratage/package-loader-node";
 import { materializeRecord, runVideoCli } from "@narratage/video-cli";
+import { videoCliDistribution } from "@narratage/video-cli";
 
 import { videoTestPackages } from "./packages.js";
 
@@ -14,6 +15,24 @@ const runCli = (
   argv: readonly string[],
   io: { readonly write: (text: string) => void },
 ) => runVideoCli([...argv, "--json"], io, videoTestPackages);
+
+test("source package selection is derived from Run and Author imports", async () => {
+  const root = await mkdtemp(join(tmpdir(), "svml-cli-package-selection-"));
+  try {
+    await writeFile(join(root, "style.svs"), `<?svml using="@narratage/svs@1"?>\n<sheet version="1"/>`, "utf8");
+    await writeFile(join(root, "main.svml"), `<?svml using="@narratage/markup@1"?>
+<svml>
+  <import from="@narratage/script@1"/>
+  <import as="style" source="./style.svs"/>
+  <script id="story"><line><HOST>Hello.</line></script>
+</svml>`, "utf8");
+    const run = await writeRun(root, "build.svrun", [{ output: "story" }]);
+    const discovered = await videoCliDistribution.discoverSourcePackages!(run, { workspaceRoot: root });
+    assert.deepEqual(discovered.selected, ["@narratage/run-markup", "@narratage/script", "@narratage/svs"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("production video CLI has no implicit author or Run packages", async () => {
   const root = await mkdtemp(join(tmpdir(), "svml-cli-empty-distribution-"));
@@ -33,15 +52,13 @@ test("production video CLI has no implicit author or Run packages", async () => 
 async function writeRun(
   root: string,
   name: string,
-  targets: readonly { readonly output: string; readonly accepts?: "exact" | "substitute" }[],
+  targets: readonly { readonly output: string }[],
 ): Promise<string> {
   const path = join(root, name);
   await writeFile(path, `<?svml using="@narratage/run-markup@1"?>
-<svrun version="1" targets="selected">
+<svrun version="1">
   <author source="./main.svml"/>
-  <target-set id="selected">
-    ${targets.map((target) => `<target output="${target.output}" accepts="${target.accepts ?? "exact"}"/>`).join("\n    ")}
-  </target-set>
+  ${targets.map((target) => `<target output="${target.output}"/>`).join("\n  ")}
 </svrun>`, "utf8");
   return path;
 }
@@ -243,9 +260,9 @@ test("Text Template and exact Seedance keep speaker prompt assembly visible in t
   const run = await writeRun(root, "build.svrun", [{ output: "take.video" }]);
   let planOutput = "";
   await runCli(["plan", run], { write: (text) => { planOutput += text; } });
-  const plan = JSON.parse(planOutput) as {
+  const plan = (JSON.parse(planOutput) as { readonly plan: {
     readonly steps: readonly { readonly producer: { readonly name: string } }[];
-  };
+  } }).plan;
   assert.deepEqual(plan.steps.map((step) => step.producer.name).sort(), [
     "bind-request-seedance-2-mini-referenceImage",
     "bind-request-seedance-2-mini-referenceAudio",
@@ -303,10 +320,6 @@ test("CLI accepts a declarative Runtime Profile without an executable config mod
       authority: "kie.cli-test",
       config: { apiKey: { store: "env", key: "SVML_TEST_MISSING_KIE_KEY" }, defaultConcurrency: 2 },
     }],
-    permissions: [
-      "filesystem:state", "filesystem:artifacts", "environment:credentials",
-      "network:api.kie.ai", "network:kieai.redpandaai.co",
-    ],
     scheduling: { maxConcurrency: 4, resources: { "authority:kie.cli-test": 2 } },
   }), "utf8");
   let output = "";
@@ -349,13 +362,12 @@ test("one checked-in fixture closes the complete provider-free video plan", asyn
     "--root",
     process.cwd(),
   ], { write: (text) => { output += text; } });
-  const plan = JSON.parse(output) as {
+  const plan = (JSON.parse(output) as { readonly plan: {
     readonly goals: readonly unknown[];
     readonly steps: readonly {
-      readonly fidelity: "exact" | "substitute";
       readonly producer: { readonly name: string };
     }[];
-  };
+  } }).plan;
   const producers = new Set(plan.steps.map((step) => step.producer.name));
   for (const name of [
     "request-seedance-2-mini",
@@ -376,7 +388,6 @@ test("one checked-in fixture closes the complete provider-free video plan", asyn
     assert.equal(producers.has(name), true, name);
   }
   assert.equal(plan.goals.length, 1);
-  assert.equal(plan.steps.every((step) => step.fidelity === "exact"), true);
 });
 
 test("CLI package lock activates an installed package without changing the official host", async () => {
@@ -664,14 +675,13 @@ test("CLI inspect and get read the durable Build archive independently of build 
     graph: { id: `sha256:${"4".repeat(64)}` },
     request: {
       digest: requestDigest,
-      targets: [{ output: "logical:final", accepts: "exact" }],
+      targets: [{ output: "logical:final" }],
     },
     plan: {
       goals: [{ record: "record:final" }],
       selections: [{
         output: "logical:final",
         candidate: "candidate:render",
-        fidelity: "exact",
         record: "record:final",
       }],
     },
@@ -680,7 +690,6 @@ test("CLI inspect and get read the durable Build archive independently of build 
       type: { module: { name: "example", version: "1" }, name: "Artifact" },
       value: { kind: "inline", value: { digest: artifactDigest, size: bytes.byteLength, mediaType: "video/mp4" } },
       digest: recordDigest,
-      conformance: "exact",
       origin: { kind: "authored", module: "example" },
     }, {
       id: "record:whisperx",
@@ -690,7 +699,6 @@ test("CLI inspect and get read the durable Build archive independently of build 
         rawEvidenceArtifact: { kind: "blob", digest: rawDigest, size: rawBytes.byteLength, mediaType: "application/json" },
       } },
       digest: `sha256:${"5".repeat(64)}`,
-      conformance: "exact",
       origin: { kind: "authored", module: "example" },
     }],
     receipts: [],
@@ -702,7 +710,7 @@ test("CLI inspect and get read the durable Build archive independently of build 
     build: "archive-1",
     core: buildDigest,
     source: { path: join(root, "main.svml"), closure: `sha256:${"6".repeat(64)}` },
-    run: { path: join(root, "delivery.svrun"), targetSet: "delivery" },
+    run: { path: join(root, "delivery.svrun") },
     aliases: [{
       name: "final.video",
       type: state.records[0]!.type,

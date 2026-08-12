@@ -673,11 +673,8 @@ test("timed visual occupancy resolves every alignment into exact source-frame se
   }), /normalized to ProgramSpace frame rate/u);
 });
 
-test("the graph witness keeps every source, extent, fit, frame, time and appearance input explicit", () => {
+test("the graph keeps every source, extent, fit, frame, time and appearance input explicit", () => {
   assert.deepEqual(stillMediaTrackFragment.inputs.map((input) => input.name), [
-    "canvas", "extent", "fit", "frame", "header", "item-spec", "sample-spec", "source", "space",
-  ]);
-  assert.deepEqual(stillMediaTrackFragment.exports[0]?.semanticInputs, [
     "canvas", "extent", "fit", "frame", "header", "item-spec", "sample-spec", "source", "space",
   ]);
 });

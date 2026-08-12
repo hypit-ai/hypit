@@ -50,7 +50,6 @@ async function project(service: (root: string) => RuntimeExternalService) {
       // A second Endpoint driving the same program: it is brought up once.
       { use: "example.program", instance: "two", authority: "example.local", config: {} },
     ],
-    permissions: [],
     scheduling: { maxConcurrency: 1 },
   }));
   const registry = new RuntimeAdapterRegistry();

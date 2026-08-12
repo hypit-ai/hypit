@@ -76,7 +76,7 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
       id: "spine:audio:render",
       producer: mediaPipelineProducers.renderAudio,
       inputs: { plan: operation("spine:audio:plan") },
-      result: { kind: "need", name: "audio", accepts: "exact" },
+      result: { kind: "need", name: "audio" },
     },
     {
       id: "spine:basis",
@@ -109,32 +109,23 @@ export function createSpeechSpineFragment(options: SpeechSpineFragmentOptions) {
       result: { kind: "output", name: "track" },
     },
   );
-  const semanticInputs = [...new Set(["program", ...options.takes.flatMap((take) => [
-    take.mediaName, take.segmentName, ...(take.visual === undefined ? [] : [
-      take.visual.frameName, take.visual.fitName, take.visual.visualSpecName,
-    ]),
-  ])])];
   return sealGraphFragment({
     name: options.name?.trim() || "@narratage/speech-spine/spine@1",
     inputs: [...declaredInputs.entries()].map(([name, type]) => ({ name, type })),
     operations,
     exports: [
-      { name: "basis", type: speechTypes.basis, root: operation("spine:basis"), semanticInputs, fidelity: "exact" },
+      { name: "basis", type: speechTypes.basis, root: operation("spine:basis") },
       {
-        name: "space", type: programSpaceTypes.programSpace, root: operation("spine:space"), semanticInputs,
-        fidelity: "exact",
+        name: "space", type: programSpaceTypes.programSpace, root: operation("spine:space"),
       },
       {
-        name: "audio", type: speechTypes.audioBasis, root: operation("spine:audio-basis"), semanticInputs,
-        fidelity: "exact",
+        name: "audio", type: speechTypes.audioBasis, root: operation("spine:audio-basis"),
       },
       {
-        name: "visual", type: compositionTypes.visualTrack, root: operation("spine:visual-track"), semanticInputs,
-        fidelity: "exact",
+        name: "visual", type: compositionTypes.visualTrack, root: operation("spine:visual-track"),
       },
       {
-        name: "audioTrack", type: compositionTypes.audioTrack, root: operation("spine:audio-track"), semanticInputs,
-        fidelity: "exact",
+        name: "audioTrack", type: compositionTypes.audioTrack, root: operation("spine:audio-track"),
       },
     ],
   });

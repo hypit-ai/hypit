@@ -45,8 +45,6 @@ function positiveInteger(value: number, subject: string): number {
 function fulfillment(result: MediaOperationResult): EndpointFulfillment {
   return {
     value: result.value,
-    conformance: "exact",
-    delivery: "executed",
     metadata: result.metadata,
   };
 }
@@ -93,7 +91,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       locator: "@narratage/provider-media-local/ffmpeg",
       digest: localMediaProviderImplementationDigest,
     },
-    permissions: ["process:media"],
     configuration: canonicalize(common),
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [

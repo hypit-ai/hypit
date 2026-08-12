@@ -18,15 +18,13 @@ export function eventDigest(event: unknown): Digest {
 }
 
 export function needRequestDigest(
-  need: Pick<Need, "capability" | "returns" | "constraints" | "result" | "accepts" | "conformanceFloor">,
+  need: Pick<Need, "capability" | "returns" | "constraints" | "result">,
 ): Digest {
   return digestOf({
     capability: need.capability,
     returns: need.returns,
     constraints: need.constraints,
     result: need.result,
-    accepts: need.accepts,
-    conformanceFloor: need.conformanceFloor,
   });
 }
 
