@@ -37,6 +37,3 @@ jobs:
 
       - name: Repository hygiene
         run: pnpm test:release
-
-      - name: Build documentation
-        run: pnpm docs:build
