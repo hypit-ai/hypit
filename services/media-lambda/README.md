@@ -44,6 +44,29 @@ source sha256 38f5363bef58d74547e5055846d76d8b20bb2872a87b0aab71611b010b437a6f
 AWS mounts Layer `bin/` and `lib/` as `/opt/bin` and `/opt/lib`. The handler additionally executes
 both binaries with `-version` once per warm environment and refuses work unless both report 8.0.1.
 
+## Why the build is GPL, and the line it must not cross
+
+This is a GPL build, not the LGPL one from the same upstream release. The encode path requires
+`libx264`, which is a GPL component: it exists only in builds configured with `--enable-gpl`.
+`REQUIRED_ENCODERS` in `packages/media-execution/src/toolchain.ts` names it explicitly, so an LGPL
+archive would fail the toolchain probe rather than degrade quietly. Moving to the LGPL archive is
+therefore not a URL change; it means replacing the H.264 encoder and re-tuning every encode flag.
+
+The GPL obligations attach to whoever *conveys* the binary. Here nobody does. `build-layer.mjs`
+downloads the archive on the operator's own machine, and `deploy.sh` refuses to run unless the
+resolved AWS account matches the configured `AWS_ACCOUNT_ID`, so the Layer is published only into
+the operator's own account. The operator obtains FFmpeg from its upstream, not from Narratage.
+
+That boundary is the whole argument, so keep it intact:
+
+- Do not publish a prebuilt Layer ARN for others to consume, and do not ship or mirror the built
+  `ffmpeg-layer.zip`. Either one makes the publisher a distributor of GPL binaries, which then
+  requires offering the corresponding FFmpeg source alongside it.
+- Distributing that Layer would additionally collide with the repository's own LICENSE, whose extra
+  conditions GPL-3.0 section 7 does not permit a distributor to add.
+- The upstream `LICENSE.txt` is already copied into the Layer and the provenance is recorded in
+  `/opt/narratage-layer.json`. Keep both.
+
 ## Authority and bytes
 
 The function role can only read and write objects in the selected ArtifactStore bucket and append
