@@ -1,17 +1,11 @@
-# SVML Ranking Track Migration
-
-Status: implemented executable authority for the official Ranking migration. All four author
-components, their shared triggered schedule, optional peer AudioTrack lowering, author Surfaces and
-real-browser evidence execute in `@narratage/ranking`. It is not a compatibility promise for the
-historical node format or a frozen public ABI.
+# SVML Ranking Track
 
 ## 1. What Ranking means
 
 Ranking is a video-domain author component that presents one ordered collection as a progressive
 visual state. It is not a Core concept, a generic Track mode, a Provider or a renderer feature.
 
-The old system placed four materially different behaviors behind one `ranking_track` node and a
-`rankingType` switch. The new system uses one physical package, `@narratage/ranking@1`, but exposes
+One physical package, `@narratage/ranking@1`, exposes
 four independent author components:
 
 - `ranking:TierBoard` — place revealed items into named tier rows;
@@ -27,36 +21,7 @@ A third party can publish another Ranking package without registering a type in 
 this package. Installing and importing that package contributes its own Surface, Types, validators
 and fragment compiler through the ordinary module mechanism.
 
-## 2. Evidence from the old implementation
-
-The reviewed old-project inventory contains 21 migrated Ranking nodes:
-
-| Historical variant | Reviewed uses | Item counts seen |
-|---|---:|---|
-| Tier | 10 | 5–6 |
-| Typewriter | 5 | 5 |
-| Column | 3 | 4–5 |
-| Top Three | 3 | 3 |
-
-The inventory proves that all four meanings are real, but not that their old representation should
-survive. The old implementation had these structural problems:
-
-1. one UI/node identity changed meaning by switching a mode and disconnecting its dynamic ports;
-2. the same item `start/end` pair meant visibility, animation phase, successor handoff or nothing,
-   depending on the renderer;
-3. Top Three ignored item end times, while Typewriter used their union only to decide whether the
-   paper was mounted;
-4. renderers inspected all sibling segments, sorted or counted them, and manufactured group state
-   after the generic Track Program had already lost that meaning;
-5. one global z-index prevented the board and individual icons from interleaving with peer Tracks;
-6. raw URLs, environment font names, Remotion component ids and three mirrored registries leaked
-   environment/renderer details into the component;
-7. short windows could silently suppress motion sound instead of fitting visual and sound phases to
-   one shared finite schedule.
-
-Migration preserves the useful visual capabilities, not these accidental semantics.
-
-## 3. Author-facing shape
+## 2. Author-facing shape
 
 The executable author Surface is:
 
@@ -104,7 +69,7 @@ variant-specific `*Style` component owns the allowed keys and compiles the Recip
 edges into a typed package-owned Style. Semantic item values such as tier row, label, icon and entry
 behavior are not paint properties and do not belong in SVS.
 
-## 4. The group sees siblings; rendered Tracks do not
+## 3. The group sees siblings; rendered Tracks do not
 
 A progressive ranking cannot be compiled by treating every child as an isolated Track item. Row
 placement, successor handoff, active-item state and the settled prefix depend on the ordered group.
@@ -154,7 +119,7 @@ Every invalid or equal-frame sequence fails atomically. The visual and optional 
 consume the same schedule, so motion and sound cannot drift while remaining independently
 demandable branches of the Run Graph.
 
-## 5. Common phase model
+## 4. Common phase model
 
 For outer window `[B, O)`, triggers `p1 ... pN` and terminal `T`, entry `i` receives:
 
@@ -208,7 +173,7 @@ ranking, despite its heavy use of text layout. It may share low-level exact-font
 with the future Text implementation, but it must not depend on or masquerade as a generic Text
 Track Program.
 
-## 6. Spatial layout and stacking
+## 5. Spatial layout and stacking
 
 Each component owns one outer placement box and its internal layout algorithm. A Tier cell, Column
 row or Top Three slot is not a generic per-item spatial locator. Allowing arbitrary spatial inputs
@@ -240,7 +205,7 @@ All normalized geometry is relative to the explicit outer box. Required variant 
 Paint, geometry and motion parameters are validated by the owning `*Style` component. Unknown
 Recipe properties fail. There is no arbitrary CSS escape hatch.
 
-## 7. Media, fonts and sound
+## 6. Media, fonts and sound
 
 Images and sounds enter through explicit `BlobArtifact` edges. Fonts enter through explicit,
 content-addressed font stack edges. Ranking never stores a URL, asks the Runtime to choose a font,
@@ -257,7 +222,7 @@ Optional sound effects are ordinary authored inputs:
 Ranking itself is deterministic and has no Need, Provider, queue, credential or environment
 adapter. If an input image is generated, that upstream generation remains another Graph component.
 
-## 8. Run-Graph behavior
+## 7. Run-Graph behavior
 
 The author graph exports ordinary logical `visual` and, when authored, `audio` results. Targets,
 Candidates and replacement are governed by the same Run Graph laws as every other component.
@@ -267,39 +232,3 @@ Replacing the visual result does not mutate the audio result. Replacing both out
 multi-output Candidate is also possible through ordinary explicit output mapping. Once every
 demanded original output is satisfied by selected Candidates, demand analysis prunes the original
 Ranking branch and its temporal/media ancestors. No special Ranking execution rule is required.
-
-## 9. Migration order and acceptance
-
-Implemented in this order:
-
-1. **Implemented:** the shared temporal projection and triggered-schedule laws;
-2. **Implemented:** `@narratage/ranking@1` with four separate Programs/Styles and one private schedule utility;
-3. **Implemented:** TierBoard and Column, which together prove cumulative and exclusive stage
-   semantics plus independent stacking;
-4. **Implemented:** TopThree;
-5. **Implemented:** TypewriterList using exact font/layout primitives;
-6. **Implemented:** optional AudioTrack lowering from the same schedule;
-7. **Implemented:** a real-browser progressive-state witness and one author-Surface graph check per component.
-
-Acceptance requires:
-
-- trigger/item cardinality, stable identities and all boundary failures are tested;
-- `T < O` visibly proves a final settled suffix;
-- short stages deterministically fit their local animation and sound phases without changing stage
-  boundaries; a very short Typewriter stage may reveal several graphemes on the same frame;
-- board and per-item Presents interleave with a peer Track at unrelated absolute z positions;
-- visual and sound event frames agree exactly;
-- missing optional images work only for variants that declare them optional;
-- fonts and media are content-addressed dependencies;
-- each component can revise its own Program without changing Core, Runtime, Composition,
-  Hyperframes or another Ranking component;
-- installing a fifth component package requires no central family registry change.
-
-The migration intentionally does not preserve historical node JSON, mode switching, old dynamic
-ports, renderer ids or Remotion components. Historical projects are evidence and visual references,
-not a compatibility obligation for an unreleased language.
-
-The package test matrix covers every acceptance item above. The opt-in Chromium witness evaluates
-all four components with one worker and partitioned workers, proves visible trigger progression and
-the final settled suffix, and bounds only microscopic cross-process edge-antialiasing noise. Logical
-frame state, geometry, stacking, event frames and authored graph edges remain exact.

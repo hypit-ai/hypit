@@ -1,11 +1,5 @@
 # Shared Spatial Layout
 
-Status: executable foundational authority for shared Spatial geometry. `@narratage/spatial`
-implements CanvasSpace, Frame/Point/Path, IntrinsicExtent, ContentFit and pure fitting; Film now
-consumes the same explicit CanvasSpace as Track layout. Text, Media and all four Ranking witnesses
-execute, and the repository-internal Visual IR compatibility audit passes. Public package ABI
-publication remains separate.
-
 ## 1. Conclusion
 
 The shared spatial system owns coordinate geometry, not Text, Media or CSS. Its stable vocabulary is:
@@ -103,7 +97,7 @@ An intended source shape is:
 </film:Film>
 ```
 
-The exact Surface spelling remains pre-freeze. The one-value dataflow is normative.
+The example Surface spelling is illustrative. The one-value dataflow is normative.
 
 ## 4. SpatialFrame construction
 
@@ -215,8 +209,7 @@ type ContentFit = {
 
 Points are normalized in their own Frames. `framePoint` says where in the Placement Frame the
 chosen content point wants to land. `contentPoint` says which intrinsic source point is important.
-This is more expressive than the old single `focalX/focalY`, which silently used the same coordinate
-on both sides. Both point coordinates must lie in `[0,1]`; deliberate displacement beyond those
+Both point coordinates must lie in `[0,1]`; deliberate displacement beyond those
 bounds uses `offsetPx` and, when it must remain out of bounds, `constraint="free"`.
 
 Given Placement Frame `(Vx, Vy, Vw, Vh)` and intrinsic extent `(Sw, Sh)`, the aspect-preserving
@@ -287,8 +280,7 @@ therefore applied after this base layout.
 A fit calculation produces the base Content Frame. Zoom, pan, rotation, perspective and entrance
 motion transform that result later. They do not mutate the `ContentFit` or source aspect.
 
-This prevents the old ambiguity where `zoom` was embedded inside `contain`/`cover` and could quietly
-invalidate the claimed fit. If a Ken Burns motion zooms a contained image until it crops, the base
+If a Ken Burns motion zooms a contained image until it crops, the base
 fit remains `contain` and the later transform explicitly creates the crop.
 
 Spatial sizing is also unrelated to intrinsic temporal occupancy. A video may be `contain` in space
@@ -408,60 +400,3 @@ Every dependency is a graph edge. `BlobArtifact` does not gain placement fields.
 does not gain source, role, timing or Artifact digests. `VisualTrack` does not gain `focal`, B-roll
 or Text fields. Affinity is validated by the multi-input fitting/lowering Operation rather than by
 copying lineage metadata through every value.
-
-## 12. Legacy findings retained and retired
-
-Retained:
-
-- normalized author placement and source-aspect-aware anchored placement;
-- independent source fitting and temporal occupancy;
-- contain, cover, fit-width and fit-height equations;
-- independent foreground and backing sampling;
-- source focal alignment and explicit attachment points;
-- optional transparent, solid and self-blurred backings;
-- local motion over sampling/placement.
-
-Retired:
-
-- `SpaceLocator` as a union mixing regions, VLM inference, avoidance, path signals and fixed boxes;
-- nine-grid codes as separate algorithms;
-- one `focalX/focalY` reused as both source and target point;
-- `MediaBoxStyle` treating exactly one foreground and one special backing as the universal model;
-- embedding zoom into fit;
-- renderer-specific CSS and FFmpeg formulas as two sources of truth;
-- hidden `object-fit`, `object-position` or `backdrop-filter` defaults.
-
-## 13. Implementation and acceptance order
-
-1. **Implemented:** add the focused `@narratage/spatial` package with `CanvasSpace`, Frame/Point/Path,
-   `IntrinsicExtent`, `ContentFit` and pure fit validation;
-2. **Implemented:** split Canvas declaration from Film assembly and connect the same Canvas value to Track layout and
-   Composition;
-3. **Implemented:** migrate one simple Text Area and one simple Media still image through shared geometry;
-4. **Implemented:** add exact browser tests for every fit and alignment law;
-5. **Implemented:** prove ordered transparent/color/self-blur/alternate-source Media layers;
-6. **Implemented:** migrate all four Ranking components through explicit shared Frames; Comment
-   Sticker remains deferred until it has its own design;
-7. only then freeze the Spatial Types and related Visual IR behavior.
-
-The test matrix must include:
-
-- portrait, landscape and square intrinsic extents against portrait, landscape and square Frames;
-- every sizing mode, including explicit distortion and scale-down;
-- all nine equal-point alignments plus unequal source/frame focal points;
-- bounded versus free alignment;
-- negative/partially/fully off-canvas Placement and Content Frames;
-- parent Frame percentages and pixel offsets;
-- source rotation/sample-aspect normalized before Spatial;
-- transparent, solid, same-source blur and alternate image/video layers;
-- independent backing and foreground Content Frames;
-- rounding/raster behavior locked by the selected renderer implementation;
-- no Core, Runtime, Film-family, Text-family or Media-family discriminator in the shared Types.
-
-The pure geometry matrix and real Chromium witness now cover every sizing mode, all nine equal-point
-alignments, unequal bounded/free focal points and partially/fully off-Canvas Frames. Media
-normalization additionally materializes container rotation and non-square sample aspect into a
-square-pixel visual before deriving `IntrinsicExtent`. Ranking now consumes the same explicit Frame
-geometry without adding a family discriminator. The final Visual IR compatibility audit now passes;
-Spatial's own author Surface remains pre-release, and no package-local percentage vocabulary should
-grow in the meantime.

@@ -1,9 +1,5 @@
 # SVML Audio Track Authoring
 
-Status: implemented pre-release contract for the generic official Audio Track package, including
-its self-described author Surface, exact sample-domain lowering and local/remote execution witness.
-It is not yet a frozen public ABI.
-
 ## Purpose
 
 `@narratage/audio-track` lets an author place already selected and normalized audio material into
@@ -92,7 +88,7 @@ An illustrative author Surface may remain compact:
 </audio:Track>
 ```
 
-This spelling is illustrative rather than a frozen Surface. `during`, `at` and `for` must lower to
+This spelling is illustrative; `during`, `at` and `for` must lower to
 the shared point-expression and window-projection algebra; they cannot create a second timing
 engine.
 
@@ -159,11 +155,10 @@ The laws are:
 | `loop/end` | choose phase so the source tail meets the window end | play the source tail |
 | `stretch` | slow into the complete window | accelerate into the complete window |
 
-`once` replaces the old ambiguous `native` / `finish` behavior. End alignment is not reverse
+End alignment is not reverse
 playback. `loop/end` changes loop phase; it does not reverse samples. `stretch` is pitch-preserving,
 must stay inside the authored rate bounds and fails rather than silently applying a faster rate and
-then truncating. The old `fit_base` rule—speed up by at most 1.1x and silently cut the rest—is
-retired.
+then truncating.
 
 Explicit silence is represented by the absence of a clip over that interval. Padding a file with
 silence is a separate media transformation when the padded bytes themselves matter.
@@ -185,9 +180,8 @@ automatic music-bed behavior. Those are legitimate future audio-processing or mi
 they must consume explicit inputs and make their behavior author-visible. A runtime or Provider may
 not add them as an environment preference.
 
-The former terminal `bus: speech | music | sfx | source` label has been removed. It had no rendering
-effect and therefore carried no honest meaning. A future mix-routing contract must have an explicit
-consumer and graph behavior; merely naming a clip `music` cannot cause ducking.
+A future mix-routing contract must have an explicit consumer and graph behavior; merely naming a
+clip `music` cannot cause ducking.
 
 ## 7. Lowering and execution
 
@@ -207,45 +201,3 @@ The package emits one `AudioTrack` even when it owns many clips. That is an auth
 not a privileged lane. A package that naturally owns one visual hit and one sound hit may emit peer
 `VisualTrack` and `AudioTrack` outputs from one Fragment, while Film receives both through ordinary
 edges.
-
-## 8. Legacy migration audit
-
-Retain:
-
-- arbitrary audio inputs;
-- Program-full, Selection, Moment and absolute placement;
-- overlapping music/SFX/voice contributions;
-- per-item gain and fades;
-- one-shot, loop and bounded pitch-preserving stretch;
-- explicit source trim and start/end alignment.
-
-Retire:
-
-- dynamic numbered ports as the saved author truth;
-- `z_index` on audio;
-- implicit full timing hidden in a node executor;
-- config-row priority clipping;
-- `fit_base` and its silent speed-then-truncate behavior;
-- `fill: freeze` for audio;
-- automatic extraction of whatever audio happens to be inside a video;
-- inert bus labels and hidden mastering.
-
-## 9. Implementation and acceptance
-
-The shared Temporal package and the pre-freeze terminal Audio candidate have now been completed
-without a Core branch, Provider-family branch or privileged Film lane:
-
-1. **Implemented:** add the `@narratage/audio-track` author package and self-described Surface;
-2. **Implemented:** consume explicit normalized `SynchronizedMedia` inputs;
-3. **Implemented:** sample-exact trim and every occupancy law;
-4. **Implemented:** lower to the peer terminal `AudioTrack`;
-5. **Implemented:** graph tests for arbitrary item counts and Selection/Moment `one` / `each`;
-6. **Implemented:** sample-level tests for shorter/equal/longer sources, both alignments, loops, stretch bounds
-   and fades;
-7. **Implemented:** two overlapping items and two peer Audio Tracks produce the same planned mix facts;
-8. **Implemented:** local FFmpeg and remote Lambda Providers receive the identical
-   content-addressed `AudioProgramPlan`; the real FFmpeg witness additionally checks exact loop
-   phase sample by sample.
-
-The migration is incomplete if adding this package requires a Core branch, a Film audio family, a
-new queue, a Provider name in SVML or a hidden Base-audio rule.
