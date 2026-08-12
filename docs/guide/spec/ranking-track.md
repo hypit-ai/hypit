@@ -1,3 +1,8 @@
+---
+title: SVML Ranking Track Migration
+description: implemented executable authority for the official Ranking migration. All four author.
+---
+
 # SVML Ranking Track Migration
 
 Status: implemented executable authority for the official Ranking migration. All four author
@@ -65,7 +70,7 @@ The executable author Surface is:
 <import as="fonts" from="@narratage/fonts-open@1"/>
 <import as="studio" source="./studio.svs"/>
 
-<fonts:Stack id="ranking-fonts" family="inter" weight="700"/>
+<fonts:Stack id="ranking-fonts" family="inter" weight="700" style="normal"/>
 
 <ranking:ColumnStyle id="column-style"
   recipe={studio.ranking.column}

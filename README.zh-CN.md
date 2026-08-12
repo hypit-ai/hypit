@@ -5,11 +5,13 @@
 <p align="center"><em>“First, there was narration. Then, there were montages.”</em></p>
 
 <p align="center">
-  <a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="./README.md">English</a>
+  <a href="https://narratage.hypit.ai/zh/quickstart">快速开始</a>&nbsp;&nbsp;<a href="https://narratage.hypit.ai/zh/guide/develop">开发</a>&nbsp;&nbsp;<a href="./README.md">English</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/hypit-ai/narratage/actions/workflows/deploy-pages.yml"><img alt="Documentation" src="https://github.com/hypit-ai/narratage/actions/workflows/deploy-pages.yml/badge.svg"></a>
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0%20with%20conditions-blue.svg"></a>
+  <a href="https://github.com/hypit-ai/narratage/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/narratage?style=flat"></a>
 </p>
 
 Narratage 是一套面向 AI 视频创作的语义化、图原生系统。你写下故事，选择模型与视觉组件，声明想要哪些
@@ -17,6 +19,23 @@ Narratage 是一套面向 AI 视频创作的语义化、图原生系统。你写
 保留下来，供后续 Run 使用。
 
 SVML 是创作语言，Narratage 是围绕它的编译器、运行时与包生态。
+
+## 名字的由来
+
+1933 年《*New York Times*》对电影《*The Power and the Glory*》的一篇影评造出了 **narratage** 这个
+词，用来描述当时的一种新兴手法：旁白加蒙太奇——声音推动故事前进，画面组接出与之呼应的段落。
+
+这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器把生成的视频、字幕、B-roll、文字
+与音频组装成一部完成的影片。
+
+## 为什么用图
+
+AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张
+平级的图：Author Graph 表达工作本身，Run Graph 为一次 Build 选择 Target 与 Candidate。Core 只负责
+解析、校验并推进由此得到的状态机，因此视频领域的概念都留在可独立安装的包里——Core 不硬编码任何模型、
+Track 或 Provider。
+
+规范性法则见 [Core Kernel 规范](https://narratage.hypit.ai/zh/guide/spec/core-kernel)。
 
 ## 它写起来是什么样
 
@@ -70,35 +89,28 @@ Script 始终是可读的散文。Segment 组织故事，Role Cue 指明谁在�
   frame={card-frame}/>
 ```
 
-这段 Script 展示了完整的标记词汇：
+上面这段 Script 里的每一个标记：
 
 | 写法 | 含义 |
 |---|---|
-| `<opening>...</opening>` / `<pause/>` | 有台词的 Segment 与空 Segment |
-| `<MARA>` | Role Cue，持续到下一个 Cue 或 Segment 结束 |
-| `<2:13 A.M. \| two thirteen in the morning>` | 左侧为显示文字，右侧为念出的文字 |
-| `< \| only>` | 只念不显示的口语衬词 |
-| `@mystery ... @/mystery` | 边界向内吸收的 Selection |
-| `~@proof ... @/proof~` | 边界向外吸收的 Selection |
-| 重复的 `@beat ... @/beat` | 一个 Selection 的多次不连续出现 |
-| `@flash!` / `~@cut!` | 附着在下一个词开头 / 上一个词结尾的 Moment |
-| `\@midnight` | 字面量 `@midnight`，不是标记 |
-| `<!-- ... -->` | 源码注释，不进入任何文字投影 |
+| `<opening>...</opening>` / `<pause/>` | 一个有台词的 Segment，和一个空的 |
+| `<MARA>` | Role Cue，一直生效到下一个 Cue 或本 Segment 结束 |
+| `<2:13 A.M. \| two thirteen in the morning>` | 左边显示，右边念出 |
+| `< \| only>` | 只念，不进字幕 |
+| `@mystery ... @/mystery` | Selection，恰好覆盖两个标记之间的词 |
+| `~@proof ... @/proof~` | 同上，但两端各向外多吃掉相邻的一个词 |
+| 重复的 `@beat ... @/beat` | 同一个 Selection 出现在多个位置 |
+| `@flash!` / `~@cut!` | Moment，落在下一个词的词首／上一个词的词尾 |
+| `\@midnight` | 字面量 `@midnight` |
+| `<!-- ... -->` | 注释，不会进入任何输出文字 |
 
-`@whole` 跨越了 Segment 边界；`@claim` 与 `proof` 表明 Selection 可以交叉而非只能嵌套；`tagline`
-说明 Segment 可以没有角色。重复同一个 Selection id 会产生多次不连续的出现。
 标记名本身不带行为：`@silence` 不会让音频静音，必须由 Audio、Caption 或 Track 组件显式消费这个
-Selection。完整的转义规则与 Slot 解析契约见 [Script](https://narratage.hypit.ai/zh/quickstart/script)。
-面向作者的 `<script>` Surface 目前尚未暴露 Slot 绑定。
-
-外层的组件行是刻意节选的，用来展示生成媒体、对齐与 Track 如何消费 Script 的投影。完整且可检查的源码
-见 [`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml)，其中包含 import、
-布局、字幕、Film 与渲染。带命名空间的组件都来自包，Core 不硬编码 Seedance、WhisperX、Caption 或 Film。
+Selection。完整词汇见 [Script](https://narratage.hypit.ai/zh/quickstart/script)；完整且可检查的源码见
+[`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml)。
 
 ## 不需要 API Key 也能试
 
-需要 Node.js 22+ 与 pnpm 10.33.x。下面的命令会安装源码工作区，并在不启动任何 Provider、不产生任何
-付费请求的前提下编译出一张完整的视频图：
+需要 Node.js 22+ 与 pnpm 10.33.x：
 
 ```bash
 git clone https://github.com/hypit-ai/narratage.git
@@ -114,108 +126,13 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 ```
 
 `check` 校验 Author Source 并打印它的类型化输出。`plan` 展示被真正需要的子图，以及一次真实 Build 会
-用到的每一项外部能力。Plan 阶段永远不会启动外部工作。
+用到的每一项外部能力，但不会启动其中任何一项。
 
-如果 Corepack 不可用，或者你想运行本地 media、WhisperX、OpenCV 或 HyperFrames，请看
-[快速开始](https://narratage.hypit.ai/zh/quickstart)。
+## 接下来去哪
 
-## 你掌控的文件
-
-| 文件 | 用途 |
-|---|---|
-| `main.svml` | 这支视频：Script、所选模型、Track 与 Composition |
-| `studio.svs` | 可选。由 Author Source 导入的可复用视觉与提示词 Recipe |
-| `build.svrun` | 一次 Run 需要的输出，包括显式复用或替换的 Candidate |
-| `svml.runtime.json` | 机器环境：Store、Endpoint、凭据与并发 |
-| `svml.packages.lock` | 生成的 Author 与计算包 lock |
-| `svml.runtime-packages.lock` | 生成的 Runtime 与 Provider 包 lock |
-
-- SVML 表达作者的意图，并在模型族的选择会影响结果时显式作出选择。
-- SVRUN 表达这次 Run 要产出什么，以及哪些既有结果可以满足这些输出。
-- Runtime Profile 表达这些 Operation 在哪里执行。
-- Provider 把精确的能力请求翻译成本地程序或远程 API，不会重新解释作者的创作选择。
-
-## 从源码到成品
-
-```text
-main.svml + studio.svs
-          │
-          ▼
-      Author Graph  ◀──── build.svrun 选择 Target 与 Candidate
-          │
-          ▼
-     冻结的 BuildPlan    此时尚未启动任何外部工作
-          │
-          ▼
- Runtime Profile ─────── Worker、Store 与确切的 Provider Endpoint
-          │
-          ▼
- 已接受的 Record ────── 可检查、可复用，或用 `get` 取出
-```
-
-不存在特权化的“最终视频”根节点。一次 Run 的 Target 可以是一张生成的图片、一份转写映射、一条 Track，
-也可以是完成的成片。编译器从这些 Target 反向追溯依赖，不调度无关的工作。
-
-## 跑一个真实项目
-
-把视频项目放在 Narratage 仓库之外。源码开发阶段，从项目目录调用仓库里的轻量启动器：
-
-```bash
-cd /path/to/my-video
-
-# 一次性配置，之后只在 import 或 Runtime 包选择变化后重复。
-/path/to/narratage/narratage packages sync build.svrun \
-  --runtime svml.runtime.json
-
-# 看清这次 Run 选中的确切工作。
-/path/to/narratage/narratage plan build.svrun \
-  --runtime svml.runtime.json
-
-/path/to/narratage/narratage build build.svrun \
-  --runtime svml.runtime.json \
-  --build-id my-video-001 \
-  --follow
-
-/path/to/narratage/narratage get my-video-001 \
-  --runtime svml.runtime.json \
-  --name final.video \
-  --to output/final.mp4
-```
-
-`build` 提交持久化的工作，并确保选定的 Worker 可用。`--follow` 只是观察这次 Build，关闭观察端不会取消
-它。用 `status`、`queue`、`operations` 与 `inspect` 查看正在发生什么。`check` 用于编辑源码，
-`doctor` 用于配置和排查部署——它们都不是每次 Build 前必须重复的仪式。
-
-第一次付费 Build 之前，请先读
-[Run Source 与 Build](https://narratage.hypit.ai/zh/quickstart/run)，其中涵盖 Runtime Profile、
-凭据、并发、取消，以及对既有输出的显式复用。
-
-## 为什么用图语言
-
-AI 生成慢、贵、易错，而且不确定；它的输出常常又是下一步的输入。线性脚本或隐藏的工作流执行器无法清楚
-回答下面这些问题：
-
-- 作者到底请求了什么？
-- 此刻真正需要哪个结果？
-- 由哪个实现、哪个 Provider 产出？
-- 哪张既有图片或视频应当被有意复用？
-- 什么可以并行，什么在等待上游结果？
-- 最终被接受的输出究竟由什么产生？
-
-Narratage 把这些选择呈现为两张平级的图：Author Graph 表达工作本身，Run Graph 为一次 Build 选择
-Target 与实现。Core 只负责解析、校验并推进由此得到的状态机；视频领域的概念都留在可独立安装的包里。
-
-规范性的最小法则见 [Core Kernel 规范](./spec/core-kernel.md)。
-
-## 开发
-
-下面的命令用于修改 Narratage 本身，不是用来做视频的：
-
-```bash
-pnpm check
-pnpm test
-pnpm docs:build
-```
+- [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 你掌控的文件、命令，以及第一次真实 Build。
+- [开发](https://narratage.hypit.ai/zh/guide/develop) —— 包架构、添加 Author 包或 Provider，以及全部
+  规范文档。
 
 ## 许可
 

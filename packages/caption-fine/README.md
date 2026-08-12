@@ -63,4 +63,4 @@ the compact `fonts:Stack` above. Family, weight and style exist only on those ex
 the Recipe owns size and appearance. Fallbacks keep their own honest face metadata. Omitting the stack is invalid rather than an environment-font
 prototype path. Fine never clips author text and intentionally has no `max-lines`.
 Common Caption, Composition and Core know none of Fine's Recipe fields or layout policy. See
-`spec/caption-fine.md` for the full parameter surface, defaults and non-goals.
+[Fine Caption Style](https://narratage.hypit.ai/guide/spec/caption-fine) for the full parameter surface, defaults and non-goals.

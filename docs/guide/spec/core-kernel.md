@@ -1,3 +1,8 @@
+---
+title: Narratage Core Kernel
+description: current executable contract. Persisted Graph, BuildRequest, Plan and BuildState wire.
+---
+
 # Narratage Core Kernel
 
 Status: current executable contract. Persisted Graph, BuildRequest, Plan and BuildState wire

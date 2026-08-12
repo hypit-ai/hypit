@@ -6,4 +6,4 @@ renderer, Provider or Core behavior.
 
 The package exposes self-described `Canvas`, `Point`, `Path`, `Extent`, `Frame`, `AnchoredFrame` and
 `AspectFrame` author Surfaces plus pure geometry functions and fixed-port Producers. See
-[`../../spec/spatial-layout.md`](../../spec/spatial-layout.md).
+[Shared Spatial Layout](https://narratage.hypit.ai/guide/spec/spatial-layout).

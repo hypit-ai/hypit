@@ -1,3 +1,8 @@
+---
+title: SVML Media Track Authoring
+description: executable pre-release authority for the unified official Media Track. Item/Sequence.
+---
+
 # SVML Media Track Authoring
 
 Status: executable pre-release authority for the unified official Media Track. Item/Sequence
