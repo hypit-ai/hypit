@@ -2,7 +2,7 @@
   <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420">
 </p>
 
-<p align="center"><strong>Write the story. Compile the video.</strong></p>
+<p align="center"><em>“First, there was narration. Then, there were montages.”</em></p>
 
 <p align="center">
   <a href="https://narratage.hypit.ai/">Documentation</a> ·

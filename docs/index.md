@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: "Narratage"
-  text: "Write the story. Compile the video."
+  text: "“First, there was narration. Then, there were montages.”"
   tagline: "A semantic, graph-native system for AI video production. Author intent stays readable; generation, timing, tracks and rendering remain replaceable packages."
   actions:
     - theme: brand
