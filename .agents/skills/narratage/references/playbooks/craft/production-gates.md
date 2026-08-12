@@ -13,14 +13,14 @@ Use staged Run Sources so unreviewed expensive outputs cannot silently feed late
 
 ## Gate 1: build and review reference images
 
-1. Create a narrow `.svrun` target-set that demands only the generated reference-image outputs.
+1. Create a narrow `.svrun` containing Targets only for the generated reference-image outputs.
 2. Submit that Build, then use `inspect` and `get` to retrieve every candidate image.
 3. If the Agent can view images, open the actual full-resolution outputs and review every image
    itself. Do not approve from prompts, metadata, filenames, or thumbnails alone.
 4. Reject and regenerate any failed image. Do not connect a failed image to Seedance, Media Track,
    image composition, or another downstream generator.
-5. Pin accepted image Records with `.svrun` `build-record` and connect them to the next Build with
-   `satisfy`. Changing the target-set alone does not select those Records.
+5. Reuse accepted image Records with `.svrun` `build-record` and connect them to the next Build with
+   `satisfy`. Changing the Target list alone does not select those Records.
 
 Apply this checklist to every image:
 
@@ -71,13 +71,11 @@ visual QA.
 Use explicit Run Source authoring for every accepted reuse:
 
 ```svml
-<target-set id="delivery">
-  <target output="final.video" accepts="substitute"/>
-</target-set>
+<target output="final.video"/>
 <build-record id="accepted-take" build="reviewed-build-001"
   output="opening-take.video"/>
-<satisfy output="opening-take.video" candidate="accepted-take"
-  fidelity="substitute"/>
+<satisfy output="opening-take.video" candidate="accepted-take"/>
 ```
 
-Substitute fidelity propagates downstream. The demanded final Target must explicitly accept it.
+The selected Candidate must supply the Logical Output's exact nominal Type. Core does not infer
+creative equivalence or propagate a substitute-quality label downstream.

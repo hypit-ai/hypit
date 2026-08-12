@@ -110,7 +110,8 @@ Lock creation is the trust action. Normal loading:
 2. follows each selected contribution's exact Manifest dependencies (`ModuleRef + digest`);
 3. adds the unique provider found inside the selected roots' installed dependency closure;
 4. rejects missing, digest-mismatched or ambiguous Module providers;
-5. hashes every package file except nested `node_modules` and `.git` directories;
+5. hashes package behavior and runtime assets while excluding nested `node_modules`/`.git` and
+   package-root tests, coverage/cache, README/license and tool configuration files;
 6. on normal loading, rejects any artifact-set difference before importing activation code;
 7. imports only the contributions recorded in the lock and compares all facet identities;
 8. checks Producer and Validator facets against their Module Manifests;

@@ -28,7 +28,7 @@ needed for that craft or format.
   verified ProgramSpace Record in `.svrun`, author explicit timing, and omit WhisperX/Caption work.
 - Assemble peer Tracks with `film:Film`, render with `render:Video`, and demand outputs through a
   `.svrun` Target.
-- Stage expensive work with narrow target-sets. Pin and reuse an accepted Record through
+- Stage expensive work with narrow `.svrun` Targets. Explicitly reuse an accepted Record through
   `build-record` plus `satisfy`; Narratage has no implicit cache.
 - Use only elements and attributes documented by the current Quickstart or package README. Never
   invent a component or attribute to fill in missing syntax.

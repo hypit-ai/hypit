@@ -6,7 +6,7 @@ This document separates four concerns that must never be collapsed into one opti
 
 | Concern | Authority | Meaning |
 |---|---|---|
-| Demand | Target set in Run intent | which finite reverse-reachable subgraph executes |
+| Demand | Target list in Run intent | which finite reverse-reachable subgraph executes |
 | Realization | Candidate and Satisfaction in Run intent | which explicit implementation supplies each demanded Logical Output |
 | Archive | Runtime Stores | durable facts and bytes produced by that execution |
 | Egress | Host command or explicit side-effect Operation | where a user copies or publishes an already archived result |

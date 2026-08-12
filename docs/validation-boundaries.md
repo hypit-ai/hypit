@@ -18,7 +18,7 @@ domain value. Dependencies remain explicit graph edges.
 | Source compilation | syntax, imports, declared ports, typed Author Graph | inspect Provider credentials or media bytes |
 | Run compilation | Targets, Candidate bindings, finite selected Run Graph | invent a Candidate or cache decision |
 | Core admission | command/event identity, derivation integrity, state transition legality | understand video, subtitles, KIE or filesystems |
-| Runtime admission | selected Endpoint coverage, permissions, capacity and durable dispatch | change author meaning or validate unused Endpoints |
+| Runtime admission | selected Endpoint coverage, capacity and durable dispatch | change author meaning or validate unused Endpoints |
 | Endpoint activation | parse one selected deployment config and declare capabilities, credential/environment references and prerequisites once | resolve those references, call a Provider, start a process or mutate state |
 | Provider execution | translate one Need, bound requests/responses, report factual progress and cancellation | reinterpret the graph or accept an undeclared capability |
 | Artifact boundary | compute identity on write; verify identity while bytes are read | download or rehash whole bytes for a presence query |

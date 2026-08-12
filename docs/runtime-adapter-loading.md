@@ -54,7 +54,7 @@ The Node Host performs these gates before execution:
 7. evaluate pure Endpoint activations and construct selected Runtime service packages;
 8. replace each declared Runtime facet digest with a digest over the physical package Artifact,
    that package's transitive dependency closure, adapter identity, facet name and declared digest;
-9. resolve permissions and the Runtime Closure;
+9. resolve the Runtime Closure;
 10. allow the Driver to execute Core-derived Commands.
 
 The registration proxy applies the same rebound digest to the executable handler registration.
@@ -74,7 +74,7 @@ narratage doctor ./svml.runtime.json
 ```
 
 Doctor is read-only. It verifies package bytes and evaluates each selected Endpoint's pure activation
-once. Credentials, permissions, capabilities and external-service requirements come from that same
+once. Credentials, capabilities and external-service requirements come from that same
 activation used by execution, not a second diagnostic manifest. It constructs only the selected
 CredentialStore slice needed to resolve those exact references and never opens Build/Operation
 Stores. A diagnostic hook may read environment variables, inspect executables, run a bounded local
