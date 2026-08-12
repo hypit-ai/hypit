@@ -26,7 +26,7 @@ It generically verifies Surface declarations in the same immutable module closur
 parses or dispatches one. It does not parse source, resolve package locations, execute
 implementations, access artifact bytes, select Provider endpoints or discover undeclared graph
 structure. Those responsibilities remain outside Core. The normative laws are in
-[`../../spec/core-kernel.md`](../../spec/core-kernel.md).
+[Core Kernel](https://narratage.hypit.ai/guide/spec/core-kernel).
 
 For a non-video domain, the irreducible reusable base is only `@narratage/protocol` plus `@narratage/core`.
 Most source languages will also use `@narratage/elaborator` to turn modular component declarations into a

@@ -1,3 +1,8 @@
+---
+title: Typography Track Authoring and Expressiveness
+description: implemented pre-release authority for the official two-dimensional Text package. The.
+---
+
 # Typography Track Authoring and Expressiveness
 
 Status: implemented pre-release authority for the official two-dimensional Text package. The

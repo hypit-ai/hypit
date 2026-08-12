@@ -1,3 +1,8 @@
+---
+title: SVML Video Track Authoring Model
+description: executable temporal authority shared by the official Track packages. The focused.
+---
+
 # SVML Video Track Authoring Model
 
 Status: executable temporal authority shared by the official Track packages. The focused
