@@ -20,5 +20,4 @@ restricted internal projection.
 The automatic lowering is Surface behavior, not a privileged Runtime route: it produces the same
 ordinary Media Pipeline Operations that an author can write explicitly through
 `@narratage/media-pipeline`. The package does not add Media, B-roll or Provider meaning to Core,
-Film, Composition or HyperFrames. “B-roll” is an editorial use of an ordinary Item or Sequence. The
-authoring contract lives in `spec/media-track.md`.
+Film, Composition or HyperFrames. “B-roll” is an editorial use of an ordinary Item or Sequence.

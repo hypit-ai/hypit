@@ -25,8 +25,7 @@ receipt uniformly but never executes the validator; trusted Host admission lives
 It generically verifies Surface declarations in the same immutable module closure, but never
 parses or dispatches one. It does not parse source, resolve package locations, execute
 implementations, access artifact bytes, select Provider endpoints or discover undeclared graph
-structure. Those responsibilities remain outside Core. The normative laws are in
-[`../../spec/core-kernel.md`](../../spec/core-kernel.md).
+structure. Those responsibilities remain outside Core.
 
 For a non-video domain, the irreducible reusable base is only `@narratage/protocol` plus `@narratage/core`.
 Most source languages will also use `@narratage/elaborator` to turn modular component declarations into a

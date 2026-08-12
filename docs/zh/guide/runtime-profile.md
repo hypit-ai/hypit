@@ -5,8 +5,7 @@ description: 显式配置 Build 的执行环境、状态存储、凭据与并发
 
 # Runtime Profile
 
-Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker、全部 Store、Endpoint、
-凭据和并发。它属于部署配置，绝不进入 Author Graph 或 Run Graph 身份。
+Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker、全部 Store、Endpoint、凭据和并发。它属于部署配置，绝不进入 Author Graph 或 Run Graph 身份。
 
 ## 声明式 Profile
 
@@ -49,11 +48,9 @@ Runtime Profile 声明冻结后的 Build *在哪里*执行：Scheduler、Worker�
 
 `runtimeServices` 激活已安装的实现；`services` 按实例 id 逐项选择 Scheduler、Worker、
 BuildStore、OperationStore、DispatchStore、RuntimeJournal、ArtifactStore 和一个或多个
-CredentialStore。不存在“因为只装了一个所以自动选中”，`@narratage/local` 也不补 SQLite、
-文件系统或凭据默认值。
+CredentialStore。不存在“因为只装了一个所以自动选中”，`@narratage/local` 也不补 SQLite、文件系统或凭据默认值。
 
-凭据只写地址：`{ "store": "…", "key": "…" }`，秘密字节不进 Profile。多个 Store 可以
-并存，每个 Store 只响应属于自己命名空间的引用。
+凭据只写地址：`{ "store": "…", "key": "…" }`，秘密字节不进 Profile。多个 Store 可以并存，每个 Store 只响应属于自己命名空间的引用。
 
 ## 文件边界
 
@@ -69,9 +66,7 @@ Narratage 安装目录加载校验后的包。
 
 ## 并发与信任边界
 
-`maxConcurrency`、Provider Authority 与精确 Capability Route 的上限由 DispatchStore 在所有
-共享 Worker 之间执行，不是某个 CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；
-过期 Worker 不能继续准入结果。
+`maxConcurrency`、Provider Authority 与精确 Capability Route 的上限由 DispatchStore 在所有共享 Worker 之间执行，不是某个 CLI 进程里的计数器。容量租约跟随 Build 的 fenced lease；过期 Worker 不能继续准入结果。
 
 Runtime Adapter 当前是可信本地代码。开放任意第三方 Adapter 之前，需要真正的进程或 Wasm
 隔离；字符串 allowlist 不能限制同一 Node 进程里的代码。
@@ -92,20 +87,15 @@ node --run narratage -- runtime logs svml.runtime.json
 node --run narratage -- runtime down svml.runtime.json
 ```
 
-`runtime up` 管理耐久 Worker 与声明的外部程序。`services up/status/down` 只管理外部程序，
-不会启动 Worker。`build` 会确保 Runtime 已启动，但 Build 所在终端从不拥有执行权。
-后台进程绑定覆盖 Profile 与两份 package lock 的有效修订摘要；任一文件变化后状态变为
+`runtime up` 管理耐久 Worker 与声明的外部程序。`services up/status/down` 只管理外部程序，不会启动 Worker。`build` 会确保 Runtime 已启动，但 Build 所在终端从不拥有执行权。后台进程绑定覆盖 Profile 与两份 package lock 的有效修订摘要；任一文件变化后状态变为
 `stale`，下一次启动或提交会按新执行闭包替换进程，而不是继续复用旧装配。
 
 `doctor` 会求值 Endpoint Adapter 唯一的纯 `activate()` 声明，并直接从产生的 Endpoint package
-读取凭据和前置条件；不存在另一份仅供诊断使用的凭据镜像。Activation 可以构造 handler，
-但不得解析密钥、访问网络、启动进程或修改持久状态。`doctor` 不构造 Scheduler、Worker、Build
+读取凭据和前置条件；不存在另一份仅供诊断使用的凭据镜像。Activation 可以构造 handler，但不得解析密钥、访问网络、启动进程或修改持久状态。`doctor` 不构造 Scheduler、Worker、Build
 Store 或作者包，不会启动服务、写入 Runtime 状态或提交任务；它只打开 Profile 明确选择的
 CredentialStore 来解析引用，完成后立即关闭，并可执行显式声明的有界只读探测。
 
-预发布阶段不会原地迁移 SQLite 执行 schema。遇到更早的开发数据库时，CLI 会指出精确路径，
-要求把数据库连同 WAL 文件归档，或在 Profile 选择新路径。ArtifactStore 是独立选择的；该
-拒绝不会删除任何产物字节。
+预发布阶段不会原地迁移 SQLite 执行 schema。遇到更早的开发数据库时，CLI 会指出精确路径，要求把数据库连同 WAL 文件归档，或在 Profile 选择新路径。ArtifactStore 是独立选择的；该拒绝不会删除任何产物字节。
 
 ## Build、队列与归档
 
@@ -130,11 +120,8 @@ node --run narratage -- cancel build <build-id> --runtime svml.runtime.json
 node --run narratage -- cancel operation <operation-id> --runtime svml.runtime.json
 ```
 
-Build 取消先关闭准入；Operation 取消只抑制那个精确实现。`accepted` 只是远端接受停止请求，
-不等于已停止；系统继续协调到 `confirmed`、`unsupported`、`too-late` 或自然结束。迟到的付费
-产物继续归档，但不能进入被抑制的 Core 分支。Runtime 不会因此偷偷换 Candidate 或 Provider。
+Build 取消先关闭准入；Operation 取消只抑制那个精确实现。`accepted` 只是远端接受停止请求，不等于已停止；系统继续协调到 `confirmed`、`unsupported`、`too-late` 或自然结束。迟到的付费产物继续归档，但不能进入被抑制的 Core 分支。Runtime 不会因此偷偷换 Candidate 或 Provider。
 
 ## 嵌入 API
 
-CLI 只接受声明式 JSON Profile。嵌入 Narratage 的应用可以通过 `@narratage/local` 直接组装
-相同的 Runtime 角色；这属于应用代码，而不是第二种 CLI Profile 文件。
+CLI 只接受声明式 JSON Profile。嵌入 Narratage 的应用可以通过 `@narratage/local` 直接组装相同的 Runtime 角色；这属于应用代码，而不是第二种 CLI Profile 文件。

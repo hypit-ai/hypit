@@ -34,5 +34,3 @@ they define the board vocabulary rather than dynamic item copy.
   <ranking:ColumnItem label={winner}/>
 </ranking:Column>
 ```
-
-See [`../../spec/ranking-track.md`](../../spec/ranking-track.md) for the authoring contract.
