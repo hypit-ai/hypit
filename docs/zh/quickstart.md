@@ -23,9 +23,8 @@ Narratage 把这份源码编译成一张可见的执行图。在任何模型或�
 不会创造另一套工作流。把下面这段发给它：
 
 ```text
-安装并使用这个仓库里的 narratage skill。要安装整个 .agents/skills/narratage 文件夹，
-而不是只复制 SKILL.md。配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，
-然后带我完成第一支 SVML 视频的创作与 Build。
+安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
+实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
 ```
 
 否则，按下面五个步骤依次进行。
