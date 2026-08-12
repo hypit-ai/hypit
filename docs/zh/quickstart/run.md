@@ -307,7 +307,7 @@ pnpm install
 
 这条命令只安装 JavaScript 工作区，不会下载 Python 模型，也不会准备仓库内的所有 Provider。
 `runtime up` / `services up` 会读取所选 Runtime Profile，只准备其中 Endpoint 声明的外部程序。只有 Profile 选择 WhisperX、OpenCV 等本地 Python 服务时，才需要先安装
-[`uv`](https://docs.astral.sh/uv/)；具体锁定环境命令见 Quickstart 首页的[安装](../quickstart.md#安装)。
+[`uv`](https://docs.astral.sh/uv/)；具体锁定环境命令见 Quickstart 首页的 [安装](../quickstart.md#安装)。
 
 `narratage runtime up` 管理后台 Worker 和外部程序；`build` 会确保 Runtime 已运行，但不拥有
 Worker。
@@ -460,7 +460,7 @@ Build 的最终输出会为每个目标别名打印精确的 `get --name …` �
 
 ### 6. 在新 Build 中复用
 
-创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文[复用结果](#复用结果)），然后提交：
+创建一个引用已完成 Build 的 Record 的新 `.svrun` 文件（参见上文 [复用结果](#复用结果)），然后提交：
 
 ```bash
 node --run narratage -- build examples/talking-head-aroll/reuse-generated.svrun \
