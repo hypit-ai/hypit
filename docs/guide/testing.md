@@ -81,10 +81,9 @@ Package boundaries are expressed by package manifests, public entry points and s
 Tests exercise observable behavior at those boundaries. The repository deliberately does not use
 source-text regex tests as a substitute for dependency analysis or architectural review.
 
-Before publication, remove customer
-or brand fixtures, credential traces, paid output artifacts, absolute workstation paths and one-off
-acceptance harnesses. Generic live tests may remain only when they are explicitly opt-in, use no
-committed secret and fail before spending money unless their gate is set.
+Do not commit customer or brand fixtures, credential traces, paid output artifacts, absolute
+workstation paths or one-off delivery harnesses. Generic live tests may remain only when they are
+explicitly opt-in, use no committed secret and fail before spending money unless their gate is set.
 
 ## Environment-gated tests
 
@@ -102,4 +101,4 @@ ordinary `.svml`, `.svs` and `.svrun` files that exercise specific compilation p
 The `examples/` directory also serves as integration-level fixtures:
 - `examples/bootstrap/` — smallest source closure check
 - `examples/talking-film-graph-check/` — complete graph compilation without Providers
-- `examples/talking-head-aroll/` — live acceptance with explicit historical-Candidate reuse
+- `examples/talking-head-aroll/` — live example with explicit prior-Build Candidate reuse

@@ -21,6 +21,5 @@ The low-level TypeScript factory retains an environment-reference convenience fo
 declarative Runtime activation has no implicit credential source. Credentials never enter author source, Runtime Closure, BuildState,
 Operation state, Prompt or Receipt metadata.
 
-The legacy implementation used `GOOGLE_APPLICATION_CREDENTIALS` as an ADC file path. A host
-may preserve that deployment mechanism in a file-backed CredentialStore, but the Provider itself
-does not read arbitrary paths or ambient environment variables.
+A host may expose an ADC file through a file-backed CredentialStore, but the Provider itself does
+not read arbitrary paths or ambient environment variables.

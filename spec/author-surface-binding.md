@@ -1,8 +1,5 @@
 # Author Surface Binding
 
-Status: implemented compiler contract for trusted package-owned Surfaces; third-party isolation is
-not yet implemented.
-
 ## 1. Purpose
 
 The generic Markup Frontend owns element syntax. A package-owned Surface owns what one imported tag
@@ -133,17 +130,3 @@ Surface Binding is not:
 The current Host executes only explicitly registered trusted Surface implementations. Locked code
 bytes, permission enforcement and isolation are required before arbitrary community Surface code
 can execute.
-
-## 8. Executable proof
-
-The non-video `example.recipe-card` fixture proves the boundary:
-
-1. SVS emits a generic Recipe;
-2. the Card Surface reads only its explicit public reference;
-3. Card validates `fill` and `padding` during author compilation;
-4. Card emits a nominal `CardAppearance` Record;
-5. the runtime Producer consumes `CardAppearance`, not `SVS Recipe`;
-6. an invalid color fails before a BuildPlan or external operation exists;
-7. changing only the source-import alias preserves the Program Record and Graph identities.
-
-Video packages must use this same mechanism rather than adding a video-specific compiler path.

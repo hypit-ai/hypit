@@ -7,17 +7,10 @@ import type { SvsRecipe } from "@narratage/svs";
 
 export type FilmAppearance = { readonly clearColor: string };
 
-export const defaultFilmRecipe: Readonly<Record<string, string>> = {
-  background: "#09090b",
-};
-
-export const filmRecipeKeys: readonly string[] = Object.keys(defaultFilmRecipe);
-
 export function assertFilmRecipe(properties: SvsRecipe["properties"]): void {
   const actual = Object.keys(properties).sort().join(" ");
-  const expected = [...filmRecipeKeys].sort().join(" ");
-  if (actual !== expected) {
-    throw new Error(`Film Recipe requires exactly ${[...filmRecipeKeys].sort().join(", ")}`);
+  if (actual !== "background") {
+    throw new Error("Film Recipe requires exactly background");
   }
 }
 

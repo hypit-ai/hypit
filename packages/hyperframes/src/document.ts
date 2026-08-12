@@ -389,11 +389,8 @@ function renderElement(
     `data-start="${context.presentStart}"`,
     `data-duration="${context.presentDuration}"`,
     `data-track-index="${context.stackIndex}"`,
-    element.mediaStartSec === undefined ? "" : `data-media-start="${element.mediaStartSec}"`,
-    element.playbackRate === undefined ? "" : `data-playback-rate="${element.playbackRate}"`,
     element.kind === "video" && element.muted !== false ? "muted" : "",
     element.kind === "video" ? "playsinline" : "",
-    element.loop ? "loop" : "",
   ].filter(Boolean).join(" ");
   const source = escapeHtml(hyperframesArtifactUri(element.artifact.digest));
   if (element.kind === "image") return `<img ${common} ${media} src="${source}"/>`;

@@ -1,16 +1,13 @@
 # SVML Video Track Authoring Model
 
-Status: executable temporal authority shared by the official Track packages. The focused
-`@narratage/temporal` package implements strict occurrence expansion, exact rational window
-projection and triggered sibling schedules. Shared Spatial, Text, Ranking, Media,
-Audio and Screen Overlay are now specified in [`spatial-layout.md`](./spatial-layout.md),
+The focused `@narratage/temporal` package implements strict occurrence expansion, exact rational
+window projection and triggered sibling schedules. Shared Spatial, Text, Ranking, Media, Audio and
+Screen Overlay are specified in [`spatial-layout.md`](./spatial-layout.md),
 [`typography-track.md`](./typography-track.md), [`ranking-track.md`](./ranking-track.md),
 [`media-track.md`](./media-track.md), [`deck-track.md`](./deck-track.md),
 [`audio-track.md`](./audio-track.md) and
-[`screen-overlay.md`](./screen-overlay.md). The independently designed
-`@narratage/comment-sticker` package now uses the same Temporal and Spatial foundations and lowers
-to one peer VisualTrack. This is deliberately not a compatibility promise for a released public
-ABI.
+[`screen-overlay.md`](./screen-overlay.md). `@narratage/comment-sticker` uses the same Temporal and
+Spatial foundations and lowers to one peer VisualTrack.
 
 ## Purpose
 
@@ -136,10 +133,9 @@ type TemporalWindowProjection = {
 };
 ```
 
-The serialized contract will use explicit units for durations. Seconds, milliseconds and integral
-frames are distinct author inputs; conversion to a rational ProgramSpace must have one deterministic
-boundary-quantization rule. `base_start` and `base_end` are retired names because the current
-architecture has no privileged Base Track.
+The serialized contract uses explicit units for durations. Seconds, milliseconds and integral
+frames are distinct author inputs; conversion to a rational ProgramSpace has one deterministic
+boundary-quantization rule. The vocabulary contains no privileged Base Track boundaries.
 
 Common author meanings are ordinary expressions:
 
@@ -170,8 +166,7 @@ repeating an occurrence-invariant projection would otherwise manufacture identic
 
 ## 4. Occurrence expansion is strict and precedes projection
 
-The old shape `{ kind: "single", cardinality: "exactly_one" }` repeats one fact twice. The executable
-contract has two non-overlapping choices:
+The contract has two non-overlapping choices:
 
 ```ts
 type OccurrenceExpansion =
@@ -364,7 +359,7 @@ type IntrinsicPlayback =
   | { readonly mode: "stretch" };
 ```
 
-`once` replaces the ambiguous old word `finish`. End alignment never means reverse playback. It
+End alignment never means reverse playback. It
 means the forward-playing source ends at the projected window's end. If the source is longer than
 the window, start alignment selects the source head and end alignment selects the source tail.
 
@@ -389,7 +384,7 @@ occupancy and are unrelated.
 
 ## 7. Package ownership
 
-The former umbrella `contracts` package is intentionally absent. Nominal shared meanings are owned
+There is no umbrella `contracts` package. Nominal shared meanings are owned
 by focused modules such as Narrative, ProgramSpace, Media and Composition; Core has no registry of
 video-domain unions.
 
@@ -416,56 +411,15 @@ Speech Spine establishes ProgramSpace and contiguous speech takes. Other Tracks 
 whole Narrative Segment through its two structural anchors directly, without pretending it is an
 authored Selection.
 
-## 8. Migration consequences
+## 8. Package consequences
 
 The current `typography-track` Surface consumes the shared temporal package for Program, Selection
 and Moment bindings, explicit point expressions and `one`/`each` expansion. It does not maintain a
 second timing enum. Media Track consumes the same package for Item and Sequence timing.
 
-The executable acceptance coverage includes:
-
-- Selection and Moment `one` success and cardinality failure;
-- Selection and Moment `each`, stable occurrence identity and source-order preservation;
-- rejection of occurrence-invariant `each` projections with multiple occurrences;
-- all common point-expression combinations, including Program boundaries and absolute time;
-- crossed source anchors consumed and ignored by different projections;
-- negative offsets, ProgramSpace intersection, entirely out-of-range windows, reversed windows,
-  zero windows and the one-frame minimum;
-- rational frame rates and deterministic half-open frame quantization;
-- atomic failure when one of several `each` occurrences is invalid;
-- package-owned disjoint, independent and sequence relations remaining separate from expansion;
-- cumulative and successor-handoff trigger sequences, including explicit terminal boundaries,
-  equal-frame collisions, non-monotonic source order, stable identities and optional explicit
-  initial state;
-- durationless products and shorter/equal/longer intrinsic products under every supported playback
-  and alignment policy;
-- explicit audio behavior rather than reuse of visual `hold` semantics.
-
 ## 9. Ranking specialization
 
-The complete Ranking audit, component split, group schedule and executable migration are specified in
-[`ranking-track.md`](./ranking-track.md). Ranking now validates that the common temporal algebra can
+The Ranking component split and group schedule are specified in [`ranking-track.md`](./ranking-track.md).
+Ranking validates that the common temporal algebra can
 support cumulative state, exclusive current stages and a final settled suffix without adding
 Ranking or `Stage` meaning to Core or the public Track contract.
-
-## 10. Migration state
-
-Comment Sticker content, layout and presentation are implemented as an independent author package;
-it shares only the common Temporal, Spatial and terminal VisualTrack vocabulary. No currently
-specified Track family remains blocked on this common authoring model.
-
-For every currently specified official Track package, the implemented acceptance matrix proves
-Text, Caption, Media, Deck, Ranking and Screen Overlay lower to peer VisualTrack values, while
-generic Audio and optional Media/Ranking sound lower to peer AudioTrack values without changing
-Core or Composition.
-
-Generic Audio Track and self-contained Screen Overlay are now specified separately in
-[`audio-track.md`](./audio-track.md) and [`screen-overlay.md`](./screen-overlay.md). Audio reuses the
-same temporal algebra but has truthful sample occupancy rather than visual hold semantics. Screen
-Overlay is a full-canvas peer contribution, not a cross-Track adjustment layer.
-
-Unified Item/Sequence Media authoring, all motion channels, internal handoffs, explicit audio
-projection and Speech Spine's restricted reuse are now specified in
-[`media-track.md`](./media-track.md). The old depth-stack Deck is an independent higher-order Track
-component specified in [`deck-track.md`](./deck-track.md). B-roll is an editorial Recipe/usage
-rather than another public Track family.
