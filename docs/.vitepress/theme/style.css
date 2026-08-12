@@ -97,10 +97,8 @@ html.home-page .nav-narratage-mark {
   width: 30px;
   height: 30px;
   color: var(--ink);
-  background: currentColor;
-  -webkit-mask: var(--narratage-mark-mask) center / contain no-repeat;
-  mask: var(--narratage-mark-mask) center / contain no-repeat;
 }
+html.home-page .nav-narratage-mark svg { display: block; width: 100%; height: 100%; }
 html.home-page .nav-narratage-wordmark {
   display: inline-flex;
   align-items: center;
@@ -192,7 +190,8 @@ html.home-page .VPPage { background: var(--paper); }
   line-height: 1;
 }
 .narratage-wordmark { display: inline-flex; align-items: flex-end; gap: .09em; color: currentColor; vertical-align: bottom; }
-.narratage-wordmark-letter { display: block; width: var(--narratage-letter-width); height: 1em; flex: 0 0 auto; background: currentColor; -webkit-mask: var(--narratage-letter-mask) center / 100% 100% no-repeat; mask: var(--narratage-letter-mask) center / 100% 100% no-repeat; }
+.narratage-wordmark-letter { display: block; width: var(--narratage-letter-width); height: 1em; flex: 0 0 auto; }
+.narratage-wordmark-letter svg { display: block; width: 100%; height: 100%; color: inherit; }
 .narratage-wordmark.is-animated .narratage-wordmark-letter { opacity: 0; transform: translateY(.12em); animation: wordmark-letter-type .11s cubic-bezier(.22,1,.36,1) forwards; }
 .narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(1) { animation-delay: .18s; }
 .narratage-wordmark.is-animated .narratage-wordmark-letter:nth-child(2) { animation-delay: .25s; }

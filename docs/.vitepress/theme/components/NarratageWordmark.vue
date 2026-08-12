@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import nUrl from "../assets/narratage-logo/glyph-1.svg";
-import aTopUrl from "../assets/narratage-logo/glyph-4.svg";
-import rTopUrl from "../assets/narratage-logo/glyph-6.svg";
-import rSecondUrl from "../assets/narratage-logo/glyph-5.svg";
-import aBottomUrl from "../assets/narratage-logo/glyph-3.svg";
-import tUrl from "../assets/narratage-logo/glyph-9.svg";
-import aLastUrl from "../assets/narratage-logo/glyph-2.svg";
-import gUrl from "../assets/narratage-logo/glyph-7.svg";
-import eUrl from "../assets/narratage-logo/glyph-8.svg";
+import nSvg from "../assets/narratage-logo/glyph-1.svg?raw";
+import aTopSvg from "../assets/narratage-logo/glyph-4.svg?raw";
+import rTopSvg from "../assets/narratage-logo/glyph-6.svg?raw";
+import rSecondSvg from "../assets/narratage-logo/glyph-5.svg?raw";
+import aBottomSvg from "../assets/narratage-logo/glyph-3.svg?raw";
+import tSvg from "../assets/narratage-logo/glyph-9.svg?raw";
+import aLastSvg from "../assets/narratage-logo/glyph-2.svg?raw";
+import gSvg from "../assets/narratage-logo/glyph-7.svg?raw";
+import eSvg from "../assets/narratage-logo/glyph-8.svg?raw";
 
 const letters = [
-  { url: nUrl, width: .499 },
-  { url: aTopUrl, width: .472 },
-  { url: rTopUrl, width: .462 },
-  { url: rSecondUrl, width: .467 },
-  { url: aBottomUrl, width: .474 },
-  { url: tUrl, width: .457 },
-  { url: aLastUrl, width: .469 },
-  { url: gUrl, width: .467 },
-  { url: eUrl, width: .37 },
+  { svg: nSvg, width: .499 },
+  { svg: aTopSvg, width: .472 },
+  { svg: rTopSvg, width: .462 },
+  { svg: rSecondSvg, width: .467 },
+  { svg: aBottomSvg, width: .474 },
+  { svg: tSvg, width: .457 },
+  { svg: aLastSvg, width: .469 },
+  { svg: gSvg, width: .467 },
+  { svg: eSvg, width: .37 },
 ];
 withDefaults(defineProps<{ class?: string; label?: string; animate?: boolean }>(), { label: "NARRATAGE", animate: false });
 </script>
@@ -27,10 +27,11 @@ withDefaults(defineProps<{ class?: string; label?: string; animate?: boolean }>(
   <span class="narratage-wordmark" :class="[$props.class, { 'is-animated': animate }]" role="img" :aria-label="label">
     <span
       v-for="(letter, index) in letters"
-      :key="`${letter.url}-${index}`"
+      :key="index"
       class="narratage-wordmark-letter"
-      :style="{ '--narratage-letter-mask': `url(${letter.url})`, '--narratage-letter-width': `${letter.width}em` }"
+      :style="{ '--narratage-letter-width': `${letter.width}em` }"
       aria-hidden="true"
+      v-html="letter.svg"
     ></span>
   </span>
 </template>
