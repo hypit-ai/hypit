@@ -1,9 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/narratage-logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/public/narratage-logo-vector.svg">
-    <img alt="Narratage" src="docs/public/narratage-logo-vector.svg" width="420">
-  </picture>
+  <img alt="Narratage" src="docs/public/narratage-logo.svg" width="420">
 </p>
 
 <p align="center"><strong>Write the story. Compile the video.</strong></p>
@@ -31,7 +27,7 @@ The Script remains readable prose. Segments organize the story; Role Cues say wh
 separates what viewers read from what the speaker says; Selections and Moments name semantic ranges
 and points without introducing timecodes.
 
-```svml
+```xml
 <script id="story">
   @whole
 
