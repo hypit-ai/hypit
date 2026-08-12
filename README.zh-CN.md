@@ -120,6 +120,8 @@ node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
 
 `check` 校验 Author Source 并打印它的类型化输出。`plan` 展示被真正需要的子图，以及一次真实 Build 会用到的每一项外部能力，但不会启动其中任何一项。
 
+上面两条命令只需要 Node.js 与 pnpm。一次真实的 Build 还需要 `PATH` 上有 `ffmpeg` 与 `ffprobe`——macOS 用 `brew install ffmpeg`，Debian 与 Ubuntu 用 `apt install ffmpeg`——以及视你选择的 Runtime Profile 而定的 Python 与 `uv`、或 API 凭据。运行 `narratage doctor` 会在 Build 开始前报告缺什么，另见[真实 Build 可能使用的本地工具](https://narratage.hypit.ai/zh/quickstart#真实-build-可能使用的本地工具)。
+
 ## 为什么用图
 
 AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步的输入。Narratage 把由此产生的选择呈现为两张平级的图：Author Graph 表达工作本身，Run Graph 为一次 Build 选择 Target 与 Candidate。Core 只负责解析、校验并推进由此得到的状态机，因此视频领域的概念都留在可独立安装的包里——Core 不硬编码任何模型、Track 或 Provider。
@@ -129,6 +131,15 @@ AI 生成慢、贵、不确定，而且每一步的输出往往就是下一步�
 - [演示](https://narratage.hypit.ai/zh/) —— 直观演示：悬停 Script 中的标记区间，旁边即刻显示它对应的画面。
 - [快速开始](https://narratage.hypit.ai/zh/quickstart) —— 你掌控的文件、命令，以及第一次真实 Build。
 - [开发](https://narratage.hypit.ai/zh/guide/develop) —— 包架构、添加 Author 包或 Provider。
+
+## 第三方软件
+
+Narratage 依赖一些它并不随附的工作。
+
+- [FFmpeg](https://ffmpeg.org/) —— 媒体探测、规范化与封装。作为一个由你自行安装的独立程序被调用，遵循其自身许可。
+- [HyperFrames](https://www.npmjs.com/package/hyperframes) —— 在无头 Chromium 中渲染 Composition。
+- [WhisperX](https://github.com/m-bain/whisperX) —— 字幕时间轴背后的词级语音对齐。
+- [Fontsource](https://fontsource.org/) —— 开放字体目录，以钉版包的形式交付，每个包自带各自的 SIL OFL 1.1 或 Apache 2.0 许可证与字体字节。Narratage 既不内置字体文件，也不读取系统字体。
 
 ## 许可
 
