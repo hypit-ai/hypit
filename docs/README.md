@@ -1,20 +1,39 @@
 # Documentation
 
-Narratage documentation is intentionally split by authority. Git history preserves discarded designs;
-the working tree contains only documents that should inform current implementation or public use.
+Use the shortest path that matches what you are trying to do. The author guides explain the product;
+the developer guides explain extension points; architecture and specifications define implementation
+boundaries.
 
-## Start here
+## Make a video
 
-1. [`../README.md`](../README.md) — project overview and development entrypoint.
-2. [`architecture.md`](./architecture.md) — current Author Graph, Run Graph, Satisfaction, Runtime
+1. [`../README.md`](../README.md) — understand Narratage and run the first provider-free commands.
+2. [`quickstart.md`](./quickstart.md) — install the checkout, compile a complete video graph and set
+   up a project outside the repository.
+3. [`quickstart/script.md`](./quickstart/script.md) through
+   [`quickstart/composition.md`](./quickstart/composition.md) — author Script, style, generation,
+   timing, Tracks, Film and rendering.
+4. [`quickstart/run.md`](./quickstart/run.md) — choose Targets, configure the Runtime, build, inspect,
+   reuse and retrieve results.
+
+The website publishes these pages at [narratage.hypit.ai](https://narratage.hypit.ai/).
+
+## Extend Narratage
+
+1. [`guide/develop.md`](./guide/develop.md) — repository setup and guide index.
+2. [`guide/packages.md`](./guide/packages.md) — package layers, facets and dependency rules.
+3. [`guide/author-packages.md`](./guide/author-packages.md) — add author vocabulary and graph lowering.
+4. [`guide/providers.md`](./guide/providers.md) — implement an external capability endpoint.
+5. [`guide/runtime-profile.md`](./guide/runtime-profile.md) — assemble Schedulers, Stores and Providers.
+
+## Understand the system
+
+1. [`architecture.md`](./architecture.md) — current Author Graph, Run Graph, Satisfaction, Runtime
    and package boundaries.
-3. [`implementation-status.md`](./implementation-status.md) — what actually executes today.
-4. [`roadmap.md`](./roadmap.md) — active domain-neutral, environment/Provider and delivery-driven
-   video-package work.
-5. [`open-source-distribution.md`](./open-source-distribution.md) — what can ship independently,
-   current packaging truth and public-release gates.
-6. [`../spec/core-kernel.md`](../spec/core-kernel.md) — compact normative Kernel laws for the
+2. [`../spec/core-kernel.md`](../spec/core-kernel.md) — compact normative Kernel laws for the
    current `@1` wire data.
+3. [`implementation-status.md`](./implementation-status.md) — what actually executes today.
+4. [`roadmap.md`](./roadmap.md) — remaining domain-neutral, environment and video-package work.
+5. [`open-source-distribution.md`](./open-source-distribution.md) — packaging facts and release gates.
 
 ## Domain-neutral implementation records
 

@@ -5,11 +5,34 @@ description: Declaring build targets, reusing results and configuring the runtim
 
 # Run Source & Builds
 
-The Run Source (`.svrun`) declares **what to build** — which outputs to demand and which explicit
-Candidates, if any, should replace their authored implementations. The Runtime Profile
-(`svml.runtime.json`) declares **where to run** — endpoints, credentials and concurrency.
+The Author Source defines the video. A Run Source chooses which of its public outputs to produce and
+which explicit Candidates, if any, should satisfy them. The Runtime Profile chooses the machine,
+stores and Provider endpoints that execute the resulting plan.
 
-Neither of these changes what the video **is**. That is the Author Source's job.
+Most work follows the same loop:
+
+```bash
+narratage packages sync build.svrun --runtime svml.runtime.json --root .
+narratage doctor svml.runtime.json
+narratage check main.svml --runtime svml.runtime.json --root .
+narratage plan build.svrun --runtime svml.runtime.json --root .
+narratage build build.svrun --runtime svml.runtime.json --build-id my-video-001 --follow
+narratage get my-video-001 --runtime svml.runtime.json --name final.video --to output/final.mp4
+```
+
+The checked-in source launcher is `/path/to/narratage/narratage`; commands written as `narratage`
+on this page mean that launcher or the future installed CLI.
+
+Only `build` submits work. `packages sync`, `doctor`, `check` and `plan` are safe preparation steps.
+
+```text
+main.svml          author meaning
+build.svrun        this Run's Targets and Candidate choices
+svml.runtime.json  execution environment
+```
+
+Run Source and Runtime Profile do not silently rewrite the video. Creative model choices remain in
+the Author Source or in packages that it explicitly imports.
 
 ## Run Source syntax
 
@@ -38,9 +61,9 @@ Every `.svrun` file begins with its processing instruction:
 
 ### Targets
 
-There is no privileged "final video" root. Any public Logical Output from any component can be a
-Target. The compiler only executes Operations needed to satisfy the demanded Targets — everything
-else is pruned.
+A Target is simply an output you want from this Build. It may be a generated image, a video take, a
+timing map, a Track or the final render. The compiler only executes Operations needed for the chosen
+Targets; unrelated branches are left alone.
 
 ### Multiple targets
 

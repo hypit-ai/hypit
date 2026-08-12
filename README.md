@@ -1,235 +1,223 @@
 # Narratage
 
-Narratage is a compiler and runtime for building expensive, recoverable creative workflows from
-human-readable intent. Its sources are written in SVML, its graph markup language.
+> Write the story. Compile the video.
 
-The name is a 1930s film-industry term — narration plus montage: narration-driven storytelling
-with montage in a supporting role. The reference video distribution follows that technique. An
-author addresses a video with words rather than timecodes: Script defines the semantic truth,
-generated speech supplies acoustic evidence, and independent packages lower captions, B-roll,
-text and speech into peer Tracks.
+Narratage is a semantic, graph-native system for making AI video. You write the story, choose the
+models and visual components, and state which outputs you want. Narratage turns that intent into a
+finite execution plan, runs only the work the result depends on, and keeps every accepted output
+available for later Runs.
 
-Narratage is pre-release. It has completed a real paid talking-video acceptance sequence, but the
-repository is currently a source-checkout workspace rather than a published npm distribution; its
-public package names and video authoring ABI are not frozen yet.
+SVML is the authoring language. Narratage is the compiler, runtime and package ecosystem around it.
 
-## Why a graph language
+[Documentation](https://narratage.hypit.ai/) ·
+[中文文档](https://narratage.hypit.ai/zh/) ·
+[Quickstart](https://narratage.hypit.ai/quickstart) ·
+[Examples](./examples/README.md)
 
-AIGC operations are slow, costly, fallible and non-deterministic. Their results frequently become
-inputs to later compilation. A usable system must therefore distinguish:
+Narratage currently runs from a source checkout. The npm packages and CLI have not been published
+yet.
 
-- what the author requested;
-- which implementation is used for this Run;
-- which results are actually demanded;
-- what has already been materialized;
-- where an external capability executes;
-- which facts and code produced every accepted result.
+## What it feels like
 
-Narratage compiles those decisions before execution:
+The Script remains readable prose. Semantic anchors live beside the words they describe; generation,
+timing, captions and composition refer back to that meaning.
 
-```text
-Author Graph + Run Graph + Satisfaction edges + Targets
-                              │
-                              ▼
-                       frozen BuildPlan
-                              │
-                              ▼
-                 recoverable verified execution
+```svml
+<script id="story">
+  <opening>
+    <HOST>Meaning @demo becomes the source @/demo.</opening>
+</script>
+
+<seedance:TextVideo id="take"
+  model="mini"
+  prompt={direction}
+  duration="5"
+  generate-audio="true"/>
+
+<whisperx:Alignment id="timing"
+  narrative={story}
+  audio={speech.audio}/>
+
+<media-track:Item
+  video={motion.video}
+  during={story.selection.demo}
+  frame={card-frame}/>
+
+<film:Film id="main" canvas={vertical} space={speech.space}>
+  <film:Track source={speech.visual}/>
+  <film:Track source={cards.visual}/>
+  <film:Track source={captions.track}/>
+</film:Film>
 ```
 
-There is no privileged final-video root. Any public Logical Output can be a Target.
+This is an excerpt from the complete, checkable
+[`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml) example. Namespaced
+elements are supplied by imported packages; the language does not hard-code Seedance, WhisperX,
+Caption or Film into its Core.
 
-## Core model
+## Try it without API keys
 
-- A **Logical Output** is an author-visible typed result promise.
-- A **Candidate** is an independent typed supply backed by a Provided Value or Operation result.
-- A **Satisfaction** explicitly connects one compatible Candidate to a Logical Output. Core does
-  not attach creative labels such as `exact`, `substitute` or `pin` to that edge.
-- A **Target** says which outputs this Build requires.
-- An **Operation** is one atomic execution instance. Shared identity means one execution; separate
-  instances execute separately even when their parameters match.
-- Core resolves the selected reverse closure and freezes a finite BuildPlan before any external
-  command runs.
-
-Product actions such as pinning a previous video, using a black preview or selecting an alternate
-fragment are ordinary Run Graph authoring. Core contains no Pin, preview mode, automatic cache or
-Provider fallback branch.
-
-See [the architecture](docs/architecture.md) and
-[Core Kernel specification](spec/core-kernel.md).
-
-## What works today
-
-The repository implements:
-
-- domain-neutral Protocol, Core, graph elaboration and Node compiler Host;
-- mandatory self-described Author/Run sources with no suffix-selected or default parser;
-- official `.svml` markup, Script Surface, `.svs` Recipes and `.svrun` execution intent;
-- locked trusted package activation without package-specific Core registration;
-- recoverable Runtime scheduling with concurrency lanes, retries and cancellation;
-- SQLite Build/Operation stores and filesystem/S3 Artifact stores;
-- exact Endpoint binding and scoped credentials;
-- eleven exact image/video models declaring their own input ports, reached through the KIE Provider;
-- three exact MiMo TTS models, independently reached through Xiaomi's official Provider;
-- local ffprobe/ffmpeg media processing;
-- S3 multipart Artifact streaming and AWS Lambda media processing;
-- managed warm local WhisperX service;
-- Vertex Gemini display-only Caption planning;
-- local frame-parallel HyperFrames rendering;
-- recoverable Step Functions/Lambda HyperFrames rendering;
-- Speech, Fine Caption, Typography, Media Item/Sequence, Deck, Ranking, Comment Sticker, Audio and
-  Screen Overlay packages lowering to peer Tracks, followed by Film, HyperFrames and final mux.
-
-The complete live path is:
-
-```text
-Script → Estimate → Seedance × N → media normalization → WhisperX → SemanticMap
-       → Gemini CaptionPlan → peer Tracks → Film → HyperFrames → audio mix → MP4
-```
-
-Details and current gaps are maintained in
-[implementation status](docs/implementation-status.md).
-
-## Quick start
-
-Requirements:
-
-- Node.js 22+
-- pnpm for installing and testing this source workspace
-- Python 3.10–3.13 only when running the local WhisperX service
+You need Node.js 22+ and pnpm 10.33.x. These commands install the source workspace and compile a
+complete video graph without starting a Provider or making a paid request:
 
 ```bash
+git clone https://github.com/hypit-ai/narratage.git
+cd narratage
 corepack enable
 pnpm install --frozen-lockfile
-pnpm check
-pnpm test
 
-# `node --run` avoids launching pnpm for every CLI command.
-# Compile a complete provider-free author graph.
 node --run narratage -- check examples/talking-film-graph-check/main.svml \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock \
+  --root .
 
-# Compile the self-described Run Graph and inspect its finite plan.
 node --run narratage -- plan examples/talking-film-graph-check/build.svrun \
-  --package-lock examples/talking-film-graph-check/svml.packages.lock --root .
+  --package-lock examples/talking-film-graph-check/svml.packages.lock \
+  --root .
 ```
 
-`node --run narratage -- ...` is the short form inside this checkout. To keep a real video project
-in a completely separate directory, invoke the checkout's lightweight launcher from that project:
+`check` verifies the Author Source and prints its typed outputs. `plan` shows the exact demanded
+subgraph and every external capability a real Build would need. Planning never starts external work.
+
+See the [Quickstart](./docs/quickstart.md) if Corepack is unavailable or you want to run local media,
+WhisperX, OpenCV or HyperFrames.
+
+## The files you control
+
+| File | Purpose |
+|---|---|
+| `main.svml` | The video: Script, chosen models, Tracks and Composition |
+| `studio.svs` | Optional reusable visual and prompt Recipes imported by the Author Source |
+| `build.svrun` | The outputs required for one Run, including explicit reuse or alternate Candidates |
+| `svml.runtime.json` | The machine environment: stores, endpoints, credentials and concurrency |
+| `svml.packages.lock` | Generated lock for author and compute packages |
+| `svml.runtime-packages.lock` | Generated lock for Runtime and Provider packages |
+
+The boundaries are deliberate:
+
+- SVML says what the author means and explicitly chooses model families where that choice matters.
+- SVRUN says what this Run should produce and which compatible results should satisfy its outputs.
+- The Runtime Profile says where those operations execute.
+- Providers translate exact capability requests into local programs or remote APIs. They do not
+  reinterpret the author's creative choice.
+
+## From source to output
+
+```text
+main.svml + studio.svs
+          │
+          ▼
+      Author Graph  ◀──── build.svrun selects Targets and Candidates
+          │
+          ▼
+     frozen BuildPlan    no external work has started yet
+          │
+          ▼
+ Runtime Profile ─────── Worker, Stores and exact Provider Endpoints
+          │
+          ▼
+ accepted Records ────── inspect, reuse, or materialize with `get`
+```
+
+There is no privileged “final video” root. A Run can target a generated image, a transcript map, a
+Track, or the completed video. The compiler follows dependencies backward from those Targets and
+does not schedule unrelated work.
+
+## Run a real project
+
+Keep video projects outside the Narratage checkout. During source development, call the checkout's
+lightweight launcher from the project directory:
 
 ```bash
 cd /path/to/my-video
+
 /path/to/narratage/narratage packages sync build.svrun \
   --runtime svml.runtime.json --root .
-/path/to/narratage/narratage check main.svml --runtime svml.runtime.json --root .
-/path/to/narratage/narratage plan build.svrun --runtime svml.runtime.json --root .
-```
 
-The Runtime Profile may point `packageRoot` at this checkout during source development. The launcher
-does not run pnpm and does not move source, state or outputs into this repository.
+/path/to/narratage/narratage doctor svml.runtime.json
+/path/to/narratage/narratage check main.svml \
+  --runtime svml.runtime.json --root .
+/path/to/narratage/narratage plan build.svrun \
+  --runtime svml.runtime.json --root .
 
-The live example uses an explicit Run Graph, declarative local Runtime Profile and external
-credentials:
-
-```bash
-node --run narratage -- build examples/talking-film-live/build.svrun \
-  --runtime examples/talking-film-live/svml.runtime.json \
-  --root . \
-  --build-id talking-film-live \
+/path/to/narratage/narratage build build.svrun \
+  --runtime svml.runtime.json \
+  --build-id my-video-001 \
   --follow
 
-node --run narratage -- get talking-film-live \
+/path/to/narratage/narratage get my-video-001 \
+  --runtime svml.runtime.json \
   --name final.video \
-  --runtime examples/talking-film-live/svml.runtime.json \
-  --to examples/talking-film-live/output/final.mp4
+  --to output/final.mp4
 ```
 
-The Build archives every accepted intermediate Record and Artifact before `get` makes an optional
-human-readable copy. `builds`, `inspect` and `get --name` use a Host-only catalog of source aliases;
-the selected Record is still verified against the authoritative BuildState.
+`build` submits durable work and ensures the selected Worker is available. `--follow` only observes
+that Build; closing the observer does not cancel it. Use `status`, `queue`, `operations` and
+`inspect` to see what is happening.
 
-Read its [deployment requirements](examples/talking-film-live/README.md) before running it. Paid
-credentials, presenter assets, local databases and generated outputs are not committed.
+Read [Run Source & Builds](./docs/quickstart/run.md) before the first paid Build. It covers Runtime
+Profiles, credentials, concurrency, cancellation and explicit reuse of previous outputs.
 
-## Author source versus execution environment
+## Why a graph language
 
-These inputs are separate by design:
+AI generation is slow, costly, fallible and non-deterministic. Its outputs often become the next
+step's inputs. A linear script or hidden workflow runner cannot clearly answer all of these questions:
 
-| Input | Owns |
-|---|---|
-| `.svml` | author meaning, explicit model/component choices and graph references |
-| `.svs` | reusable package-defined Recipe values |
-| `.svrun` | Targets, Candidates and explicit Satisfaction edges for one reusable Run |
-| `svml.runtime.json` / `svml.runtime.ts` | Scheduler, Stores, credential references, Endpoints and concurrency |
-| `svml.packages.lock` | physical author/compute implementation closure |
-| `svml.runtime-packages.lock` | physical Provider/Store adapter closure and privileged code identity |
+- What did the author request?
+- Which result is required right now?
+- Which implementation and Provider will produce it?
+- Which earlier image or video should be reused deliberately?
+- What can run in parallel, and what is waiting on an upstream result?
+- What actually produced the accepted output?
 
-Source imports activate author vocabulary only. They never authorize network, filesystem, process,
-credential or queue access.
+Narratage makes those choices visible as two peer graphs: the Author Graph expresses the work, and
+the Run Graph selects Targets and realizations for one Build. Core only resolves, verifies and
+advances the resulting state machine; video concepts remain in independently installable packages.
 
-## Packages and extension
+For the full model, read [Architecture](./docs/architecture.md). For the small normative laws, read
+the [Core Kernel specification](./spec/core-kernel.md).
 
-A physical package may expose separately locked facets:
+## Extend it without changing Core
 
-```text
-author    Frontend, Surface, Graph Fragment
-compute   deterministic Producer or Type Validator
-endpoint  privileged local/remote capability implementation
-runtime   Scheduler or Store implementation
-```
+Packages may independently contribute:
 
-Packages communicate through nominal Types published by their owners. Core does not contain a
-central union of Narrative, Track, Seedance or any other domain type. Installing a trusted package
-can add a new component or Endpoint without republishing Core.
+- an author-facing Surface and its graph lowering;
+- a typed contract shared with other packages;
+- a deterministic compute operation;
+- a local or remote Provider endpoint;
+- a Scheduler, credential store or Artifact store implementation.
 
-Current package execution is for explicitly installed, byte-locked trusted code. Arbitrary
-community Parser/Producer/Validator execution still needs a real isolation and permission boundary.
+Core has no central list of video models, Tracks or Providers. Installed packages communicate through
+nominal types and explicit graph edges.
+
+Choose the guide that matches your work:
+
+- [Author a video](./docs/quickstart.md)
+- [Understand package boundaries](./docs/guide/packages.md)
+- [Add an author package](./docs/guide/author-packages.md)
+- [Add a Provider](./docs/guide/providers.md)
+- [Configure a Runtime Profile](./docs/guide/runtime-profile.md)
+- [Develop Narratage itself](./docs/guide/develop.md)
 
 ## Repository map
 
 ```text
-packages/protocol        immutable wire contracts
-packages/artifact        domain-neutral content-addressed byte Type
-packages/core            domain-neutral Demand compiler and Build state machine
-packages/source          mandatory Source Header; no syntax default
-packages/elaborator      author declarations and hygienic Fragment expansion
-packages/compiler-node   reference Node compiler Host
-packages/compiler-markup-node  optional official Markup compiler assembly
-packages/package-loader-node syntax-neutral trusted physical-package loading
-packages/cli             generic commands requiring an explicit Distribution
-packages/video-cli       official video command application; no author-package aggregate
-packages/run             syntax-neutral Run Source closure and complete Run Graph compiler
-packages/run-markup        optional official human-readable Run Frontend
-packages/runtime         environment-neutral scheduling and Store ports
-packages/driver-node     trusted Node command execution
-packages/local           in-process SQLite/filesystem developer assembly
-packages/*               optional Frontend, domain, Endpoint and adapter packages
-services/whisperx        managed warm local WhisperX External Service
-spec                     current normative contracts
-docs                     architecture, status, roadmap and focused implementation records
-examples                 source-closure checks and the live acceptance witness
+packages/   Core, compiler, Runtime, video packages and Provider adapters
+services/   Local external programs such as WhisperX and OpenCV
+examples/   Checkable sources and complete Runtime examples
+docs/       User guides, architecture and implementation records
+spec/       Normative protocol and video-package contracts
+tools/      Repository checks and focused development tools
 ```
-
-Start with the [documentation map](docs/README.md) and [roadmap](docs/roadmap.md).
-The [open-source distribution plan](docs/open-source-distribution.md) records what can ship
-independently and what remains before the first public package release.
 
 ## Development
 
-```bash
-pnpm check       # TypeScript across every workspace package
-pnpm test        # package test suites and repository boundary tests
+The commands below are for changing Narratage itself, not for making a video:
 
-pnpm test:whisperx-service
-pnpm smoke:kie   # opt-in paid Provider smoke test; requires credentials
+```bash
+pnpm check
+pnpm test
+pnpm docs:build
 ```
 
-## Current priorities
-
-The domain-neutral Run/Runtime foundation, developer inspection path, replaceable local/AWS
-Endpoint environments and current pre-release video packages are implemented. Current work is
-delivery-driven correction, deployment hardening and preparing a source-checkout project for its
-first public package release. Fresh generation, historical reuse and previews remain ordinary
-explicit `.svrun` choices rather than a second workflow layer. The repository-internal Track and
-Visual IR waist is frozen; author-facing video Surfaces remain pre-release. See the
-[implementation status](docs/implementation-status.md) and [roadmap](docs/roadmap.md).
+Current implementation facts and remaining work live in
+[Implementation Status](./docs/implementation-status.md) and the [Roadmap](./docs/roadmap.md).
