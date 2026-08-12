@@ -10,8 +10,7 @@ description: 可选官方 Screen Overlay 包的已实现预发布合同及其自
 
 ## 目的
 
-`@narratage/screen-overlay` 在作者声明的时间窗口内贡献自包含的、通常是全画布的像素。一次 Flash、暗角、
-扫描线薄纱或确定性漏光，都只是普通的 `VisualTrack`，与 Text、Caption、Media 或 Ranking 完全一样。
+`@narratage/screen-overlay` 在作者声明的时间窗口内贡献自包含的、通常是全画布的像素。一次 Flash、暗角、扫描线薄纱或确定性漏光，都只是普通的 `VisualTrack`，与 Text、Caption、Media 或 Ranking 完全一样。
 
 它不是调整图层、不是有特权的后合成钩子、不是转场引擎，也不是读取下层 Track 像素的手段。
 
@@ -45,13 +44,9 @@ Core、Runtime 和 Composition 都不认识 Screen Overlay。Composition 只校�
 - 上一个或下一个场景；
 - 浏览器 backdrop 或环境纹理。
 
-普通的 source-over alpha 合成是允许的：每个带 alpha 的 Track 都是这样抵达画布的。凡是结果依赖未知下层像素
-的混合模式或滤镜，都不是自包含的。
+普通的 source-over alpha 合成是允许的：每个带 alpha 的 Track 都是这样抵达画布的。凡是结果依赖未知下层像素的混合模式或滤镜，都不是自包含的。
 
-这条法则意味着旧的、无源的 `backdrop-filter` 版高斯模糊、Color Adjust 和 Zoom Blur 都不是 Screen Overlay。
-若要诚实地保留这些效果，媒体效果组件必须通过图边接收要变换的精确媒体或可合成 Surface，然后输出它自己
-变换后的素材或 Track。如果将来某个组件显式地把一组选定的 Track 光栅化成一个 Surface，消费那个 Surface 同样
-是显式的；Screen Overlay 永远不会获得一个隐秘的“当前帧”输入。
+这条法则意味着旧的、无源的 `backdrop-filter` 版高斯模糊、Color Adjust 和 Zoom Blur 都不是 Screen Overlay。若要诚实地保留这些效果，媒体效果组件必须通过图边接收要变换的精确媒体或可合成 Surface，然后输出它自己变换后的素材或 Track。如果将来某个组件显式地把一组选定的 Track 光栅化成一个 Surface，消费那个 Surface 同样是显式的；Screen Overlay 永远不会获得一个隐秘的“当前帧”输入。
 
 ## 2. 作者包，不是算子注册表
 
@@ -69,15 +64,13 @@ Core、Runtime 和 Composition 都不认识 Screen Overlay。Composition 只校�
 </screen:Track>
 ```
 
-这只是示意性的 Surface 语法。编译出的 Program 包含显式的组件身份、参数和时间绑定；它不是一个由 Core 拥有
-的、字符串化的 `effect="..."` 开关。
+这只是示意性的 Surface 语法。编译出的 Program 包含显式的组件身份、参数和时间绑定；它不是一个由 Core 拥有的、字符串化的 `effect="..."` 开关。
 
 对这个小规模的官方集合来说，一个包很方便，但它不是中心注册表。第三方可以发布另一个自描述的包，把新组件
 lower 到同一个 Visual Track 窄腰。只要现有的 Visual IR 或一个带类型的 Surface 能表达出来，新增一个 overlay
 就不得要求改动 Core、Film、Composition 或 HyperFrames。
 
-外观默认值和具名组合属于 `.svs` recipe。包拥有参数校验和确定性 lowering。Runtime Profile 与 Provider 不
-选择视觉效果。
+外观默认值和具名组合属于 `.svs` recipe。包拥有参数校验和确定性 lowering。Runtime Profile 与 Provider 不选择视觉效果。
 
 ## 3. Program 的各个轴
 
@@ -98,12 +91,10 @@ type ScreenOverlayItemSpec = {
 - `projection` 与 `expansion` 使用共享的 Selection / Moment / Program 代数；
 - `stackingOrder` 结合稳定的作者身份解析为一个普通的绝对 Present 键。
 
-画布几何在这里不是作者选择的 Spatial Frame。Screen Overlay 有意拥有整个连接进来的 CanvasSpace。局部画面的
-光效、图像、卡片或模糊属于普通的 Media、Text 或组件 Track，使用
+画布几何在这里不是作者选择的 Spatial Frame。Screen Overlay 有意拥有整个连接进来的 CanvasSpace。局部画面的光效、图像、卡片或模糊属于普通的 Media、Text 或组件 Track，使用
 [`spatial-layout.md`](./spatial-layout.md)。
 
-条目默认相互独立。重叠是合法的，会产生多个普通 Present。不存在单例的 Screen Overlay 泳道，也没有全局的
-合并步骤。
+条目默认相互独立。重叠是合法的，会产生多个普通 Present。不存在单例的 Screen Overlay 泳道，也没有全局的合并步骤。
 
 ## 4. 时间与局部包络
 
@@ -111,12 +102,9 @@ Selection、Moment、Program 和绝对时间都通过 [`track-authoring.md`](./t
 没有自己的 `from`、`until`、`manual` 或短语匹配式的时间法则。
 
 投影出的窗口只回答条目在哪里存在。窗口内的包络属于组件呈现。例如 Flash 可以定义 attack、峰值和 decay；
-Directional Matte 可以把一条边从一侧移到另一侧；Grain 可以保持稳定。旧的那个在每个效果时长 30% 处达到峰值
-的通用三角包络，作为隐藏的呈现策略被废弃。
+Directional Matte 可以把一条边从一侧移到另一侧；Grain 可以保持稳定。旧的那个在每个效果时长 30% 处达到峰值的通用三角包络，作为隐藏的呈现策略被废弃。
 
-Recipe 默认值可以提供包络，但解析后的 Program 必须包含精确的参数。效果不能为了容纳动画而扩张自己投影出的
-窗口。作者写得更长的包络只会被该窗口裁剪；它不会被拒绝，也不会被偷偷加速。非法或零长度的窗口仍然通过公共
-时间 validator 失败。
+Recipe 默认值可以提供包络，但解析后的 Program 必须包含精确的参数。效果不能为了容纳动画而扩张自己投影出的窗口。作者写得更长的包络只会被该窗口裁剪；它不会被拒绝，也不会被偷偷加速。非法或零长度的窗口仍然通过公共时间 validator 失败。
 
 ## 5. 可移植的官方组件集
 
@@ -136,17 +124,14 @@ Recipe 默认值可以提供包络，但解析后的 Program 必须包含精确�
 
 ### 自有 Surface 的候选
 
-把它们做成确定性的、带 alpha 的 `CompositableSurface` 值可能更容易或更精确，但当前的官方实现正好能完全
-落在封闭的、无代码的 Visual IR 里：
+把它们做成确定性的、带 alpha 的 `CompositableSurface` 值可能更容易或更精确，但当前的官方实现正好能完全落在封闭的、无代码的 Visual IR 里：
 
 - `Grain` —— 数量、颗粒尺寸、单色 / 彩色、运动速率和必需的 seed；
 - `LightLeak` —— 颜色、角度、柔和度、行程、强度，以及随机时必需的 seed；
 - `Bokeh` —— 数量、尺寸范围、颜色 / 色温、漂移和必需的 seed；
 - `TVStatic` —— 数量、噪点尺寸、扫描线贡献、运动速率和必需的 seed。
 
-只有当两种方式都产出完全相同的声明像素时，选择 Visual IR 还是 Surface 才是 lowerer 的实现决策。它不能取决
-于恰好由哪个 Runtime 执行这次 Build。做实体化的实现可以发出一次普通的 Provider Need，但该 Need 返回的是带
-类型的自有 Surface，而不会收到下层合成结果。
+只有当两种方式都产出完全相同的声明像素时，选择 Visual IR 还是 Surface 才是 lowerer 的实现决策。它不能取决于恰好由哪个 Runtime 执行这次 Build。做实体化的实现可以发出一次普通的 Provider Need，但该 Need 返回的是带类型的自有 Surface，而不会收到下层合成结果。
 
 一切随机行为都要求一个显式解析出的 seed。`Math.random()`、墙上时钟、GPU 噪声或依赖渲染器的熵都是非法的。
 
@@ -171,20 +156,15 @@ Screen Overlay 同样不能：
 - 预留最顶层的 z-index；
 - 把音效藏在视觉条目内部。
 
-被视觉遮盖的硬切仍然是两个独立事实：Media 包拥有那个切点，而 Screen Overlay 恰好覆盖了其中一些帧。作者
-组合出的 `Impact` Fragment 可以从同一个 Moment 产出一个 Visual Track 和一个 Audio Track，但两个输出仍然是
-进入 Film 的显式同级边。
+被视觉遮盖的硬切仍然是两个独立事实：Media 包拥有那个切点，而 Screen Overlay 恰好覆盖了其中一些帧。作者组合出的 `Impact` Fragment 可以从同一个 Moment 产出一个 Visual Track 和一个 Audio Track，但两个输出仍然是进入 Film 的显式同级边。
 
 ## 7. Stacking
 
-旧的固定 `z_index: 200` 规则被废弃。“Screen”描述的是全画布几何，不是某个魔法渲染阶段。每个 Present 都获得
-一个显式的绝对 stacking 意图，Composition 把它与其他所有 Present 一同展平。
+旧的固定 `z_index: 200` 规则被废弃。“Screen”描述的是全画布几何，不是某个魔法渲染阶段。每个 Present 都获得一个显式的绝对 stacking 意图，Composition 把它与其他所有 Present 一同展平。
 
-作者可以有意把暗角放在字幕之下、把闪光放在字幕之上，或者把颗粒放在两个图形层之间。包的 recipe 可以提供
-方便的 stacking 默认值，但 Film 和 Composition 绝不会按包的家族做分支，也绝不会强行把它顶到最上层。
+作者可以有意把暗角放在字幕之下、把闪光放在字幕之上，或者把颗粒放在两个图形层之间。包的 recipe 可以提供方便的 stacking 默认值，但 Film 和 Composition 绝不会按包的家族做分支，也绝不会强行把它顶到最上层。
 
-如果某个 overlay 包在不同的 stacking 位置发出多个 Present，同级 Track 可以按照扁平 Track 法则的要求在它们
-之间交错。
+如果某个 overlay 包在不同的 stacking 位置发出多个 Present，同级 Track 可以按照扁平 Track 法则的要求在它们之间交错。
 
 ## 8. 旧系统迁移审计
 
@@ -224,5 +204,4 @@ Screen Overlay 同样不能：
 8. **已实现：** 多个 Overlay Track 按 stacking 键与同级 Track 交错；
 9. **已实现：** 拒绝任何下层合成结果、兄弟 Track、backdrop-filter 或隐藏音频依赖的反例测试。
 
-如果新增一个 overlay 需要在 Core 里加分支、在 Composition 里加家族、在 HyperFrames 里加组件开关，或者需要
-对已合成像素做隐式快照，那么这个设计就是失败的。
+如果新增一个 overlay 需要在 Core 里加分支、在 Composition 里加家族、在 HyperFrames 里加组件开关，或者需要对已合成像素做隐式快照，那么这个设计就是失败的。

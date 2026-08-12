@@ -12,10 +12,7 @@ description: Script 作者面的规范性合同：Segment、Role Cue、Dual Text
 > parser、projection、source-map 和 temporal golden fixtures 后，才可声称
 > 支持 SVML v1。
 
-SVML 是语义视频源语言，不是像素渲染格式。本文只定义它最高频、最需要保持
-可读性的稿子区 `<script>`；画布、节点、样式、生成参数和其他 Program 区域的
-外层文档结构另行设计。v1 发布后，新增语义应首先组合本文已有构造；确需改变
-正文语法时再发布新版本，不能因为早期原型行为而削弱当前 v1。
+SVML 是语义视频源语言，不是像素渲染格式。本文只定义它最高频、最需要保持可读性的稿子区 `<script>`；画布、节点、样式、生成参数和其他 Program 区域的外层文档结构另行设计。v1 发布后，新增语义应首先组合本文已有构造；确需改变正文语法时再发布新版本，不能因为早期原型行为而削弱当前 v1。
 
 ## 一页合同
 
@@ -30,14 +27,11 @@ SVML 是语义视频源语言，不是像素渲染格式。本文只定义它最
 | `Moment` | 一个或多个显式完整的语义时刻 | 半截区间、持续时间 |
 | `Slot` | 注入运行时文字值 | 注入 SVML 语法或任意 AST |
 
-注释是 trivia，不是第七种语义构造。任何字幕样式、B-roll、Ranking、Deck、
-音效、静音、生成提示、节点端口和消费策略都在 `<script>` 外引用
-Selection 或 Moment。消费者不归属于某个 Segment；一个消费者可有多个
-端口，每个端口可接一个或多个 Selection/Moment。Selection 可以跨 Segment
+注释是 trivia，不是第七种语义构造。任何字幕样式、B-roll、Ranking、Deck、音效、静音、生成提示、节点端口和消费策略都在 `<script>` 外引用
+Selection 或 Moment。消费者不归属于某个 Segment；一个消费者可有多个端口，每个端口可接一个或多个 Selection/Moment。Selection 可以跨 Segment
 或由非连通区间组成，Moment 也可以有多个 occurrence。
 
-Script 编译必须先生成保留源码映射的 Narrative IR，再从同一份 IR 投影三种
-文本。禁止先生成三个互不相关的字符串，再猜它们之间的对应关系。
+Script 编译必须先生成保留源码映射的 Narrative IR，再从同一份 IR 投影三种文本。禁止先生成三个互不相关的字符串，再猜它们之间的对应关系。
 
 | 投影 | 内容 | 典型消费者 |
 |---|---|---|
@@ -67,8 +61,7 @@ Script 编译必须先生成保留源码映射的 Narrative IR，再从同一份
 </script>
 ```
 
-若 `product = "SVML"`、`product_pronunciation = "ess vee em ell"`，三个文本投影
-分别是：
+若 `product = "SVML"`、`product_pronunciation = "ess vee em ell"`，三个文本投影分别是：
 
 ```text
 dialogue
@@ -86,14 +79,12 @@ Meet SVML.
 
 `silence` 只是 Selection 的名字，不会自动让音频静音。它完整选择了空
 Segment 的两个独立结构端点；真正的静音或素材行为由外部 Program 决定。
-`pop` 是一个默认吸右的 Moment，解析到 `laughed` 的起音；它同样不进入
-任何文本投影。
+`pop` 是一个默认吸右的 Moment，解析到 `laughed` 的起音；它同样不进入任何文本投影。
 
 ## 1. 文档与 Segment
 
 在官方 Markup Frontend 中，一个 `<script>` Surface 实例产生一份 Narrative；
-`<script>` 外壳由 Text 根据导入后的 Surface Registry 分派，Script Parser 接收的
-只是它的 raw body。Script body 的 Segment 形式只有具名块和具名空块：
+`<script>` 外壳由 Text 根据导入后的 Surface Registry 分派，Script Parser 接收的只是它的 raw body。Script body 的 Segment 形式只有具名块和具名空块：
 
 ```svml
 <intro>
@@ -136,8 +127,7 @@ Segment 的两个独立结构端点；真正的静音或素材行为由外部 Pr
 
 ## 2. Role Cue
 
-Role Cue 只在 Parser 已进入某个 Segment body 后出现，并开启一个 spoken turn。
-它的识别由解析状态决定，与逻辑行首和物理换行无关：
+Role Cue 只在 Parser 已进入某个 Segment body 后出现，并开启一个 spoken turn。它的识别由解析状态决定，与逻辑行首和物理换行无关：
 
 ```svml
 <dialogue>
@@ -162,8 +152,7 @@ B: It’s 8:30.
 
 在 `speech` 和 `caption` 投影中，`<A>`、`<B>` 都被移除。Role Cue 不是
 speaker 数据模型，不建立人物实体，不选择音色，也不对字幕隐式分组。外部
-Program 可以显式写 `role="A"` 查询这些 spoken turn。Caption Program 将这类
-查询直接降低为 `CaptionDisplayWordSubset`；它不是时间 Selection，也不伪造 Selection
+Program 可以显式写 `role="A"` 查询这些 spoken turn。Caption Program 将这类查询直接降低为 `CaptionDisplayWordSubset`；它不是时间 Selection，也不伪造 Selection
 Record。仅有 `<A>` 本身不触发任何样式、人物、音色或素材行为。
 
 为消除歧义：
@@ -219,11 +208,9 @@ Dual Text 是一个不可嵌套的原子对应单元，而不是简单的字符�
 <lmao | laughed my @middle ass out @/middle>
 ```
 
-`middle` 可以供 B-roll 或音效使用；若它被用作该 `lmao` 的局部字幕替换区，
-则必须报错。作者可通过拆分原子提供明确映射。
+`middle` 可以供 B-roll 或音效使用；若它被用作该 `lmao` 的局部字幕替换区，则必须报错。作者可通过拆分原子提供明确映射。
 
-Dual Text 只表达“实际说了什么”。IPA、SSML、重音、语速、语种、情绪、
-音色和厂商专用发音字典不是第四种正文文本层，应由外部生成/语音 Program
+Dual Text 只表达“实际说了什么”。IPA、SSML、重音、语速、语种、情绪、音色和厂商专用发音字典不是第四种正文文本层，应由外部生成/语音 Program
 引用 Selection 或词典资源表达。
 
 ## 4. Selection
@@ -236,10 +223,7 @@ Selection 是由作者显式闭合的语义区间声明：
 ```
 
 每个开始标记都必须有同 id 的结束标记。Script 的公开值为每个 occurrence
-输出已经解析好的 `startAnchorId` 与 `endAnchorId`；不存在 start-only 对象、
-消费者默认补尾或“信息传了一半”的状态。左右 affinity、token 下标和源码范围
-属于 Parser/Source Map，不泄漏到公开 Selection。需要物理时间的下游必须把这
-两个身份与显式连接的 `CompleteSemanticMap` 投影为区间。
+输出已经解析好的 `startAnchorId` 与 `endAnchorId`；不存在 start-only 对象、消费者默认补尾或“信息传了一半”的状态。左右 affinity、token 下标和源码范围属于 Parser/Source Map，不泄漏到公开 Selection。需要物理时间的下游必须把这两个身份与显式连接的 `CompleteSemanticMap` 投影为区间。
 
 “闭合”指源码的两个端点都被明确声明。物理运行时使用半开
 `[startFrame, endFrameExclusive)` Frame Span。
@@ -292,8 +276,7 @@ before ~@x hello @/x~ after
 @a one @b two @/a three @/b
 ```
 
-规范要求解析器按 id 管理开放状态，而不是使用一条全局栈。以下情况必须
-失败：
+规范要求解析器按 id 管理开放状态，而不是使用一条全局栈。以下情况必须失败：
 
 - 未闭合、孤立 close 或 open/close id 不一致；
 - 同一个 id 尚未闭合就再次 open；
@@ -305,8 +288,7 @@ SelectionSet 以及同一集合的不同 occurrence 可以在物理时间上重�
 
 ### 4.3 可选时间边界
 
-Slot 绑定、Dual Text speech 投影和 NFC 归一化之后，v1 使用规范定义的
-确定性 `speech-tokenizer-v1`：
+Slot 绑定、Dual Text speech 投影和 NFC 归一化之后，v1 使用规范定义的确定性 `speech-tokenizer-v1`：
 
 - 东亚表意文字和假名单字符成 token；
 - 其他受支持文字/数字脚本形成最大连续 run；
@@ -314,8 +296,7 @@ Slot 绑定、Dual Text speech 投影和 NFC 归一化之后，v1 使用规范�
 - 空白、标点、emoji 和其他分隔字符不产生词法 token。
 
 因此标点本身不可被计时，Selection/Moment 也不可切入单个 token。v1
-编译器在移除零宽标记后再 tokenization，所以未来若需要字素、音节或音素
-边界，可以在新的 timing profile / Script Surface 版本中复用相同的
+编译器在移除零宽标记后再 tokenization，所以未来若需要字素、音节或音素边界，可以在新的 timing profile / Script Surface 版本中复用相同的
 Selection/Moment 类型；v1 不应为尚不存在的精度引入新正文符号。
 
 若 Script 有 `N` 个 Segment，第 `k` 个 Segment 有 `mₖ` 个 speech token，且
@@ -338,8 +319,7 @@ segment[k].end
 ```
 
 Program 起点和终点属于 ProgramBasis，不额外进入 Semantic Anchor Index。空
-Segment 仍有独立 start/end，即使二者最终重合；任意不同 identity 即使最终
-落到同一帧也不能合并。
+Segment 仍有独立 start/end，即使二者最终重合；任意不同 identity 即使最终落到同一帧也不能合并。
 
 Locator 必须提交覆盖全部 `2M + 2N` identity 的总映射：
 
@@ -351,11 +331,7 @@ SemanticAnchorIdentity → ProgramPoint(ProgramSpace)
 切点在此完全平等：段首标记左吸附取该 Segment 自己的起始切点，绝不越到前一个
 Segment 的词尾。下游拿到的是 anchor 身份，不再自行做下标推算。
 
-定位是全覆盖的：每个 Segment 的每个 token 都带有窗口，无论它被测得、由相邻
-字符推得，还是因为转写从未触及而由插值补出。窗口倒序、越出所属 Segment 或
-与邻居重叠，都按测得原样报出；那是关于录音的事实，如何解释属于把它投影到
-时间轴的那一方。定位只在 Script、音频与转写不是同一组三件事时失败，绝不因为
-一个时间戳而失败。
+定位是全覆盖的：每个 Segment 的每个 token 都带有窗口，无论它被测得、由相邻字符推得，还是因为转写从未触及而由插值补出。窗口倒序、越出所属 Segment 或与邻居重叠，都按测得原样报出；那是关于录音的事实，如何解释属于把它投影到时间轴的那一方。定位只在 Script、音频与转写不是同一组三件事时失败，绝不因为一个时间戳而失败。
 
 每个点都必须存在。消费者不得补点、移动点或从相邻 occurrence 借点。每个 Segment
 内部必须非降序：
@@ -371,8 +347,7 @@ A.start ≤ B.start
 A.end   ≤ B.end
 ```
 
-这允许硬切、重叠与留白，同时禁止一个 Locator 把后写的整个 Segment 静默排到
-前写 Segment 之前：
+这允许硬切、重叠与留白，同时禁止一个 Locator 把后写的整个 Segment 静默排到前写 Segment 之前：
 
 ```text
 hard cut   A.end == B.start
@@ -383,14 +358,10 @@ gap        B.start >  A.end
 若未来需要真正重排或并行 speech，应发布显式的非线性叙事模型；v1 不让普通
 Range 在不同 Locator 下反向或消失。
 
-同一份 Selection 在不同 fulfillment 产生的 `CompleteSemanticMap` 上可得到
-预览或成片区间。Map 使用相同 identity。Script 本身不含秒数、帧号或采样点。
-Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只
-量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
+同一份 Selection 在不同 fulfillment 产生的 `CompleteSemanticMap` 上可得到预览或成片区间。Map 使用相同 identity。Script 本身不含秒数、帧号或采样点。
+Script Surface 不绑定帧率、采样率或渲染器。后端一旦选择物理时钟，必须只量化一次并让所有消费者复用同一整数边界；后端时钟变化不改变本语言表面。
 
-对齐、结构端点、projection 或帧量化可能使某个 occurrence 最终成为零长或
-反向区间。实现必须产生明确诊断，不能静默丢弃、移动 Selection 端点、借用
-相邻 occurrence 或替作者补范围。
+对齐、结构端点、projection 或帧量化可能使某个 occurrence 最终成为零长或反向区间。实现必须产生明确诊断，不能静默丢弃、移动 Selection 端点、借用相邻 occurrence 或替作者补范围。
 
 ## 5. Moment
 
@@ -458,8 +429,7 @@ at="phrase.start"      <!-- SelectionSet 的各 range 起点投影 -->
 at="phrase.end"        <!-- SelectionSet 的各 range 终点投影 -->
 ```
 
-`at="phrase"` 不得默认猜成 start，`during="pop"` 也必须类型报错。一个
-消费者若同时需要窗口和触发点，必须使用两个字段/端口，而不是构造
+`at="phrase"` 不得默认猜成 start，`during="pop"` 也必须类型报错。一个消费者若同时需要窗口和触发点，必须使用两个字段/端口，而不是构造
 `Range | Point | mixed[]` 的多态 TemporalRef。端口需要 `one` 还是 `each`
 属于消费者 cardinality 契约，不改变 Script 的单/多 occurrence 语法。
 
@@ -476,9 +446,7 @@ ${product}
 <${product} | ${product_pronunciation}>
 ```
 
-Slot id 经 NFC 后必须由 1–64 个字符组成：首字符为 Unicode Letter 或 `_`，
-其余字符可为 Unicode Letter、Mark、Decimal Number、`_` 或 `-`。绑定值是
-单行 Unicode 纯文本，不能含 CR/LF 或控制字符。
+Slot id 经 NFC 后必须由 1–64 个字符组成：首字符为 Unicode Letter 或 `_`，其余字符可为 Unicode Letter、Mark、Decimal Number、`_` 或 `-`。绑定值是单行 Unicode 纯文本，不能含 CR/LF 或控制字符。
 
 关键安全规则：
 
@@ -531,16 +499,12 @@ temporal name namespace。三者的 id 均满足：
 边界保留必要分隔并规范化布局空白；字幕 cue 切分与硬换行由外部 Caption
 Program 决定。
 
-结构标签和注释不依靠独占一行才被解析。规范 formatter 把结构标签和注释
-各自放在独立行，使用两空格缩进 Segment、四空格缩进 Segment 内的 spoken
+结构标签和注释不依靠独占一行才被解析。规范 formatter 把结构标签和注释各自放在独立行，使用两空格缩进 Segment、四空格缩进 Segment 内的 spoken
 content，并在 Segment 之间留一空行。formatter 前后重新解析所得 Narrative
 IR 的语义内容必须相同；允许变化的只有 source range 和 source hash。
 
 注释使用 `<!-- ... -->`，可以跨行但不能嵌套，也不能写进 Dual Text、Slot、
-temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之间允许布局
-空白的位置，并按布局空白处理；规范 formatter 将其独占一行。注释不进入
-任何投影、token、Selection、Moment 或 hash 的语义内容；需要可复现源码
-身份时可以另算 source hash。
+temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之间允许布局空白的位置，并按布局空白处理；规范 formatter 将其独占一行。注释不进入任何投影、token、Selection、Moment 或 hash 的语义内容；需要可复现源码身份时可以另算 source hash。
 
 ## 8. Narrative IR 与消费者合同
 
@@ -560,12 +524,10 @@ temporal marker、Role Cue 或结构标签内部。注释可出现在 atom 之�
 - 完整有序的 `CaptionDisplaySequence`、独立的 `CaptionCorrespondence`，以及每个显式
   Selection 对应的 `CaptionDisplayWordSubset`。字幕无需也不得从公开 Selection 反推词下标。
 
-外部 Program 的 `role="label"` selector 可以从上述词全集投影自己的词子集；
-同一 label 的多次 Turn 是多个有序、互不相邻的命中。它是 Caption author surface
+外部 Program 的 `role="label"` selector 可以从上述词全集投影自己的词子集；同一 label 的多次 Turn 是多个有序、互不相邻的命中。它是 Caption author surface
 内部的显式查询，不是 Role Cue 的隐式字幕行为，也不建立 speaker entity。
 
-SelectionSet/MomentSet 是消费者边界，不是 Segment 的子对象。典型外部
-关系是：
+SelectionSet/MomentSet 是消费者边界，不是 Segment 的子对象。典型外部关系是：
 
 ```text
 Script ──compile──> Narrative IR ──project──> dialogue / speech
@@ -581,13 +543,10 @@ CaptionDisplayWordSubset C ──words──> caption.Program
 
 一个 Ranking、B-roll 或其他节点可以有多个动态端口，各端口接受不同
 Selection/Moment；同一集合也可以被多个消费者复用。未来 Graph
-语法可以把这些类型边写成 `during=` / `at=`，但它们必须引用已解析的名字
-或端点投影，不能接受模糊自然语言 locator。
+语法可以把这些类型边写成 `during=` / `at=`，但它们必须引用已解析的名字或端点投影，不能接受模糊自然语言 locator。
 
 Caption 的多样式、region、cue segmentation、annotation、mute 和 layout
-都属于 Caption Program。Caption consumer 若要求互斥 token ownership，重叠必须作为该消费者的
-编译错误；这不是 Script 禁止 Selection 重叠。未来 Caption 若支持 overlay，
-只扩展 Caption Program，不扩展正文语法。
+都属于 Caption Program。Caption consumer 若要求互斥 token ownership，重叠必须作为该消费者的编译错误；这不是 Script 禁止 Selection 重叠。未来 Caption 若支持 overlay，只扩展 Caption Program，不扩展正文语法。
 
 当前 Caption Program 使用一个覆盖全部可见词的默认 Style，再按源码顺序应用 Role
 或显式 Selection 的整 Style 替换，最后命中的规则获胜。无 Role 的 Turn 自动保留默认
@@ -610,8 +569,7 @@ Style；修改一个局部区间不要求作者书写它的补集。完整规则
 | 语气、情绪、音色、重音、语速、SSML | Speech/Generation Program |
 | Consumer、节点、端口、DAG 接线 | `<script>` 外的 SVML 区域 |
 
-这些边界保证 Script 保持“可直接阅读的稿子”，同时不阻止完整 SVML 最终
-确定性编译 DAG 和时间线。
+这些边界保证 Script 保持“可直接阅读的稿子”，同时不阻止完整 SVML 最终确定性编译 DAG 和时间线。
 
 ## 10. 完备性与扩展判定
 
@@ -625,9 +583,7 @@ Style；修改一个局部区间不要求作者书写它的补集。完整规则
 6. 运行时文字输入不同：Slot。
 7. 字幕、画面、音频、生成或消费行为不同：Script 外的 Program。
 
-只要需求能落入这七项，就不得发明新的 inline delimiter。若七项都不能
-无损表达，应先证明它属于稿子语义而不是 Program，再以新版本提案处理；
-不得让现有解析器“顺便支持”。
+只要需求能落入这七项，就不得发明新的 inline delimiter。若七项都不能无损表达，应先证明它属于稿子语义而不是 Program，再以新版本提案处理；不得让现有解析器“顺便支持”。
 
 ## 11. 实现验收
 

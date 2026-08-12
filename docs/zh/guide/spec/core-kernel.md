@@ -7,8 +7,7 @@ description: 当前可执行合同：持久化 Graph、BuildRequest、Plan 与 B
 
 状态：当前可执行合同。持久化的 Graph、BuildRequest、Plan 与 BuildState wire 格式都是 `@1`。
 
-Core 是与领域无关的图 Demand 编译器，以及一台经过校验的 Build 状态机。它不解析源码、不加载包、
-不执行实现、不选择 Endpoint、不访问凭据、不持久化 Artifact，也不认识任何视频词汇。
+Core 是与领域无关的图 Demand 编译器，以及一台经过校验的 Build 状态机。它不解析源码、不加载包、不执行实现、不选择 Endpoint、不访问凭据、不持久化 Artifact，也不认识任何视频词汇。
 
 ## 输入
 
@@ -65,11 +64,8 @@ Core 只接受不可变的、已经完成链接的数据：
 
 ## 边界
 
-`@narratage/protocol` 持有 wire 数据与身份。`@narratage/core` 持有校验、Demand 编译和状态转移。编译器
-包持有源码与图的构造。Runtime 持有调度、持久化与放置。Endpoint 包履约确切的 Capability。领域包持有共享
-词汇与 validator。
+`@narratage/protocol` 持有 wire 数据与身份。`@narratage/core` 持有校验、Demand 编译和状态转移。编译器包持有源码与图的构造。Runtime 持有调度、持久化与放置。Endpoint 包履约确切的 Capability。领域包持有共享词汇与 validator。
 
-文件后缀、包名和 TypeScript class 都不授予 Kernel 特权。在 Core 之后发布的领域包，可以只通过 manifest、
-名义 Type 和普通 Operation 参与进来，不需要重新发布 Core。
+文件后缀、包名和 TypeScript class 都不授予 Kernel 特权。在 Core 之后发布的领域包，可以只通过 manifest、名义 Type 和普通 Operation 参与进来，不需要重新发布 Core。
 
 Kernel 没有特权终端输出，没有 Film 根节点，没有视频流水线方向，也没有单 Target 限制。
