@@ -1,6 +1,6 @@
 ---
 title: SVML Track and Composition
-description: executable repository-internal `@1` compatibility waist; all gates in.
+description: Executable repository-internal `@1` compatibility waist for Track and Composition.
 ---
 
 # SVML Track and Composition

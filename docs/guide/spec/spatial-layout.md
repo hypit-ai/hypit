@@ -428,10 +428,10 @@ Retained:
 
 Retired:
 
-- `SpaceLocator` as a union mixing regions, VLM inference, avoidance, path signals and fixed boxes;
+- one locator union mixing regions, VLM inference, avoidance, path signals and fixed boxes;
 - nine-grid codes as separate algorithms;
 - one `focalX/focalY` reused as both source and target point;
-- `MediaBoxStyle` treating exactly one foreground and one special backing as the universal model;
+- a media box style treating exactly one foreground and one special backing as the universal model;
 - embedding zoom into fit;
 - renderer-specific CSS and FFmpeg formulas as two sources of truth;
 - hidden `object-fit`, `object-position` or `backdrop-filter` defaults.

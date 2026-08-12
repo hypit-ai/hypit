@@ -92,6 +92,15 @@ Script 始终是可读的散文。Segment 组织故事，Role Cue 指明谁在�
 
 标记名本身不带行为：`@silence` 不会让音频静音，必须由 Audio、Caption 或 Track 组件显式消费这个Selection。完整词汇见 [Script](https://narratage.hypit.ai/zh/quickstart/script)；完整且可检查的源码见[`talking-film-graph-check`](./examples/talking-film-graph-check/main.svml)。
 
+## 使用 Narratage skill
+
+如果使用编程 Agent，把下面这段发给它：
+
+```text
+安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
+实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
+```
+
 ## 不需要 API Key 也能试
 
 需要 Node.js 22+ 与 pnpm 10.33.x：
