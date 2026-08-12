@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hypit-ai/narratage/actions/workflows/deploy-pages.yml"><img alt="Docs" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/deploy-pages.yml?branch=main&label=Docs"></a>
+  <a href="https://github.com/hypit-ai/narratage/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hypit-ai/narratage/ci.yml?branch=main&label=CI"></a>
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0%20with%20conditions-blue.svg"></a>
   <a href="https://github.com/hypit-ai/narratage/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/hypit-ai/narratage?style=flat"></a>
 </p>

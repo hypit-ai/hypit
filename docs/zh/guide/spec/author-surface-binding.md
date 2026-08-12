@@ -46,12 +46,9 @@ type       exact nominal TypeRef
 record?    defensively copied TypedRecord when the public export is already an authored Record
 ```
 
-组件输出没有编译期 Record，因此省略 `record`。如果某个 Surface 需要检查值本身（例如 Recipe 解码器），
-它必须要求一份作者 Record，并在引用无法解析、Type 不对或此时还没有值时，于 `check` 阶段失败。
+组件输出没有编译期 Record，因此省略 `record`。如果某个 Surface 需要检查值本身（例如 Recipe 解码器），它必须要求一份作者 Record，并在引用无法解析、Type 不对或此时还没有值时，于 `check` 阶段失败。
 
-只有被 import 的 SourceUnit 的公开 record export 会被暴露出来。私有的子 record 不属于 resolver 的范围。
-每一份返回的 Record 都是防御性的规范化副本，因此 Surface 代码无法改写已经编译完成的子 SourceUnit 或此前
-的声明。
+只有被 import 的 SourceUnit 的公开 record export 会被暴露出来。私有的子 record 不属于 resolver 的范围。每一份返回的 Record 都是防御性的规范化副本，因此 Surface 代码无法改写已经编译完成的子 SourceUnit 或此前的声明。
 
 ## 4. 包的归属
 
@@ -85,8 +82,7 @@ Core
   sees only typed Records, LogicalOutputs, Candidates and Operations
 ```
 
-不存在一张通用属性表。另一个包完全可以通过另一个被显式 import 的 Surface 来解释同一份通用 Recipe，并
-产出不同的名义 Program。Surface 永远不由 Recipe 的形状来选中；是作者写下带命名空间的组件时选中它的。
+不存在一张通用属性表。另一个包完全可以通过另一个被显式 import 的 Surface 来解释同一份通用 Recipe，并产出不同的名义 Program。Surface 永远不由 Recipe 的形状来选中；是作者写下带命名空间的组件时选中它的。
 
 ## 5. Surface 输出法则
 
@@ -101,8 +97,7 @@ Frontend 用源码与 Frontend Closure 身份为作者 Record 的来源封印，
 Host 的准入闸门。Surface 不能注入未声明 Type 的 Record。
 
 由 Recipe 推导出的带类型 Program，应当包含其所属包做语义校验所需的任何源码摘要。它的作者来源已经绑定了
-Surface 实现摘要和递归编译得到的 Source Closure。别名写法与文件系统位置的变化可能改变源码身份，但不会
-改变带类型的 Program 值，也不会改变最终 Graph 的含义。
+Surface 实现摘要和递归编译得到的 Source Closure。别名写法与文件系统位置的变化可能改变源码身份，但不会改变带类型的 Program 值，也不会改变最终 Graph 的含义。
 
 ## 6. 前向引用法则
 
@@ -126,8 +121,7 @@ Surface Binding 不是：
 - 全局 SVS 解码器；
 - 读取凭据、文件、网络或 Store 的许可。
 
-当前的 Host 只执行显式注册的受信任 Surface 实现。要让任意社区 Surface 代码可以执行，必须先具备按字节锁定
-的代码、权限强制和隔离。
+当前的 Host 只执行显式注册的受信任 Surface 实现。要让任意社区 Surface 代码可以执行，必须先具备按字节锁定的代码、权限强制和隔离。
 
 ## 8. 可执行的证明
 
