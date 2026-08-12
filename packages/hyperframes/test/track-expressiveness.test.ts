@@ -293,7 +293,15 @@ test("one content box lowers independent backdrop and foreground samples of one 
           order: 1,
           kind: "video",
           artifact: media,
-          mediaStartSec: 0.5,
+          sampling: {
+            sourceFrameRate: { numerator: 30, denominator: 1 },
+            sourceFrameCount: 300,
+            segments: [{
+              target: { startFrame: 0, endFrameExclusive: 120 },
+              sourceFrame: { numerator: 15, denominator: 1 },
+              rate: { numerator: 1, denominator: 1 },
+            }],
+          },
           muted: true,
           style: [
             { name: "position", value: "absolute" },
@@ -311,7 +319,15 @@ test("one content box lowers independent backdrop and foreground samples of one 
           order: 2,
           kind: "video",
           artifact: media,
-          mediaStartSec: 0.5,
+          sampling: {
+            sourceFrameRate: { numerator: 30, denominator: 1 },
+            sourceFrameCount: 300,
+            segments: [{
+              target: { startFrame: 0, endFrameExclusive: 120 },
+              sourceFrame: { numerator: 15, denominator: 1 },
+              rate: { numerator: 1, denominator: 1 },
+            }],
+          },
           muted: true,
           style: [
             { name: "position", value: "absolute" },

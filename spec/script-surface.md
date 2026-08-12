@@ -1,12 +1,5 @@
 # SVML Script Surface
 
-> **Draft; not frozen.**
->
-> SVML 尚未公开发布，不存在需要兼容的旧语言版本。本文直接定义首个公开目标
-> Script Surface v1；仓库中的早期原型不是规范合同。实现只有在通过本文的
-> parser、projection、source-map 和 temporal golden fixtures 后，才可声称
-> 支持 SVML v1。
-
 SVML 是语义视频源语言，不是像素渲染格式。本文只定义它最高频、最需要保持
 可读性的稿子区 `<script>`；画布、节点、样式、生成参数和其他 Program 区域的
 外层文档结构另行设计。v1 发布后，新增语义应首先组合本文已有构造；确需改变
@@ -623,19 +616,3 @@ Style；修改一个局部区间不要求作者书写它的补集。完整规则
 只要需求能落入这七项，就不得发明新的 inline delimiter。若七项都不能
 无损表达，应先证明它属于稿子语义而不是 Program，再以新版本提案处理；
 不得让现有解析器“顺便支持”。
-
-## 11. 实现验收
-
-一个实现只有同时满足以下证据，才能声明支持 Script Surface v1：
-
-1. 本文全部正例、反例、投影和 source-map golden fixtures；
-2. parser、formatter、Narrative IR 与三投影不依赖 provider 或渲染器；
-3. SelectionSet 支持闭合、交叉、非连通 occurrence 与左右 affinity；
-4. MomentSet 支持 `@id!` / `~@id!`、单/多 occurrence 与 `at` 类型闸；
-5. Dual Text 在 speech、caption 与时间映射上保持一个可审计 source map；
-6. Slot 采用 parse-first、literal-only binding，不能注入语法；
-7. 未知版本、未知保留语法、混合 temporal type 与 partial dual atom 全部
-   fail closed。
-8. `2M + 2N` identity 的规范序列化、digest、完整 Map 与相邻 Segment 双单调
-   约束都有 golden fixtures；硬切、overlap、gap、空 Segment 和端点重合均被
-   覆盖。

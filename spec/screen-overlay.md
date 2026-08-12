@@ -1,9 +1,5 @@
 # SVML Screen Overlay Authoring
 
-Status: implemented pre-release contract for the optional official Screen Overlay package. Its
-self-described Surface, eleven typed components and sequential/parallel browser evidence execute;
-it is not yet a frozen public ABI.
-
 ## Purpose
 
 `@narratage/screen-overlay` contributes self-contained, usually full-canvas pixels over an authored
@@ -47,8 +43,8 @@ It must not sample:
 Normal source-over alpha compositing is allowed: that is how every alpha-bearing Track reaches the
 canvas. Blend modes or filters whose result depends on unknown lower pixels are not self-contained.
 
-This law means the old source-free `backdrop-filter` implementations of Gaussian Blur, Color
-Adjust and Zoom Blur are not Screen Overlays. To preserve those effects honestly, a media-effect
+This law means source-free `backdrop-filter` implementations of Gaussian Blur, Color Adjust and
+Zoom Blur are not Screen Overlays. To preserve those effects honestly, a media-effect
 component must receive the exact media or compositable Surface to transform through a graph edge,
 then output its own transformed material or Track. If a future component explicitly rasterizes a
 selected group of Tracks into a Surface, consuming that Surface is also explicit; Screen Overlay
@@ -120,14 +116,14 @@ presentation. For example, a Flash may define attack, peak and decay; a Directio
 an edge from one side to another; Grain may remain steady. The old universal triangle that peaked
 at 30% of every effect's duration is retired as hidden presentation policy.
 
-Recipe defaults may supply an envelope, but the resolved Program must contain the exact parameters.
+Recipes may supply an envelope, but the resolved Program must contain the exact parameters.
 An effect cannot expand its projected window to fit an animation. A longer authored envelope is
 simply clipped by that window; it is not rejected or secretly sped up. Invalid or zero-length
 windows still fail through the common temporal validator.
 
 ## 5. Portable official component set
 
-The useful old effects divide into two honest lowering groups.
+The supported effects divide into two lowering groups.
 
 ### Direct Visual IR candidates
 
@@ -161,16 +157,16 @@ or renderer-dependent entropy is invalid.
 
 ## 6. Explicitly excluded effects
 
-The following old names are excluded from the source-free package:
+The following effects are excluded from the source-free package:
 
-| Old effect | Why excluded | Honest replacement |
+| Effect | Why excluded | Honest replacement |
 |---|---|---|
 | `gaussian_blur` | must read pixels being blurred | media/surface filter with explicit input |
 | `color_adjust` | exposure/contrast/saturation/hue alter input pixels | media/surface color transform with explicit input |
 | `zoom_blur` | a real radial blur requires the visual being sampled | media/surface effect with explicit input |
 | screen/multiply/overlay blend wash | result depends on lower pixels | source-over alpha approximation, or explicit-input materialization |
 
-This does not delete the visual result. It rejects the old privilege by which a supposedly ordinary
+This does not forbid the visual result. It rejects the privilege by which a supposedly ordinary
 Track could mutate everything beneath it.
 
 Screen Overlay also cannot:
@@ -188,7 +184,7 @@ peer edges into Film.
 
 ## 7. Stacking
 
-The old fixed `z_index: 200` rule is retired. “Screen” describes full-canvas geometry, not a magical
+“Screen” describes full-canvas geometry, not a magical
 render phase. Every Present receives an explicit absolute stacking intent and Composition flattens
 it with all other Presents.
 
@@ -198,45 +194,3 @@ Composition never switch on the package family and never force it to the top.
 
 If one overlay package emits multiple Presents at different stacking positions, peer Tracks may
 interleave between them exactly as required by the flat Track law.
-
-## 8. Legacy migration audit
-
-Retain:
-
-- short Moment hits and long Program overlays;
-- Selection, Moment and absolute temporal placement;
-- full-canvas flash, veil, vignette, light leak, grain, scan lines, bokeh and static visuals;
-- deterministic effect-specific parameters and local envelopes;
-- several simultaneous effects;
-- optional explicit owned textures or materialized alpha Surfaces.
-
-Retire:
-
-- singleton slot semantics;
-- fixed topmost z-index and special post-caption render phase;
-- one central string operator registry as system truth;
-- the universal 30%-peak envelope;
-- hidden `backdrop-filter` access;
-- `mix-blend-mode` across Tracks;
-- pretending screen hits are scene transitions;
-- hidden lane-level enter/exit SFX;
-- any Base FX counterpart or placeholder.
-
-## 9. Lowering and acceptance
-
-Implementation follows the shared Temporal and existing Visual Track contracts:
-
-1. **Implemented:** the self-described `@narratage/screen-overlay` author package;
-2. **Implemented:** eleven separate typed author components rather than one unvalidated bag;
-3. **Implemented:** exact code-free `svml.visual-ir@1` lowering; the generic typed owned-Surface
-   escape remains available when a future component cannot be represented exactly;
-4. **Implemented:** connected CanvasSpace and ProgramSpace, never Film globals;
-5. **Implemented:** ordinary absolute-stack Presents;
-6. **Implemented:** deterministic structural/frame tests for every component and envelope;
-7. **Implemented:** identical pixels across one-worker and three-worker real Chromium rendering;
-8. **Implemented:** multiple Overlay Tracks interleave with peer Tracks by stacking key;
-9. **Implemented:** negative tests rejecting any lower-composite, sibling-Track, backdrop-filter or hidden audio
-   dependency.
-
-The design fails if installing a new overlay requires a Core branch, a Composition family, a
-HyperFrames component switch or an implicit snapshot of already composed pixels.

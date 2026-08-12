@@ -35,4 +35,4 @@ they define the board vocabulary rather than dynamic item copy.
 </ranking:Column>
 ```
 
-See [`../../spec/ranking-track.md`](../../spec/ranking-track.md) for the normative pre-release model.
+See [`../../spec/ranking-track.md`](../../spec/ranking-track.md) for the authoring contract.
