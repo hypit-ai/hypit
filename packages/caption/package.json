@@ -18,6 +18,7 @@
     "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
+    "@narratage/program-space": "workspace:*",
     "@narratage/script": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/speech-alignment": "workspace:*",

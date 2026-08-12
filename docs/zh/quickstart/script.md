@@ -172,21 +172,6 @@ Moment 编译为包含 `Point[]` 的 `MomentSet` 值。Selection 和 Moment 共�
 
 其他组件通过 `{story.moment.ranking}` 引用 Moment。
 
-## Slot
-
-> Script 解析器定义了 Slot 语法，但当前面向作者的 `<script>` Surface 尚未暴露绑定输入。
-> 不要在 `main.svml` 中写未绑定的 Slot，它会导致 `check` 失败。
-
-用于模板化 Script 的变量插值：
-
-```svml
-<intro>
-  <HOST> Meet <${product} | ${product_pronunciation}>.
-</intro>
-```
-
-Slot id 为 1–64 个字符，以字母或下划线开头。绑定值为纯文本——它们无法注入 SVML 语法。Slot 先被解析，再进行绑定。
-
 ## 注释与转义
 
 ```svml
@@ -203,7 +188,6 @@ Slot id 为 1–64 个字符，以字母或下划线开头。绑定值为纯文�
 |---|---|
 | `\@` | 字面量 `@` |
 | `\<` | 字面量 `<` |
-| `\${` | 字面量 `${` |
 | `\\` | 字面量 `\` |
 
 在 Dual Text 内部，还需转义 `\|` 和 `\>`。

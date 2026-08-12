@@ -18,8 +18,7 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "build:layer": "node build-layer.mjs",
-    "canary": "node --import tsx canary.ts"
+    "build:layer": "node build-layer.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

@@ -155,10 +155,12 @@ const adapter = createRuntimeEndpointAdapterFacet({
 
 ## 6. 注册并锁定
 
-在 `tsconfig.json` 中添加路径映射：
+在 Provider 自己的 `package.json` 中声明所有导入包：
 
 ```json
-"@narratage/provider-my-service": ["packages/provider-my-service/src/index.ts"]
+"dependencies": {
+  "@narratage/runtime-adapter": "workspace:*"
+}
 ```
 
 锁定进 Runtime 包锁文件：
@@ -206,5 +208,5 @@ node --run narratage -- doctor svml.runtime.json
 | `provider-hyperframes-local` | 本地进程：Chrome 渲染，带 worker 并行与输出探测校验 |
 | `provider-hyperframes-aws-lambda` | 远程可恢复任务：确定性 Step Functions 提交、轮询与 S3 流式落库 |
 | `provider-image-opencv-local` | 本地 Python：有界的 OpenCV/NumPy，配合锁定的 Python 环境 |
-| `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的八项能力；当前已部署 canary 覆盖原来的五项 |
+| `provider-media-aws-lambda` | 远程同步 Lambda：与本地媒体相同的八项能力 |
 | `provider-xiaomi-mimo` | 远程即时 API：把精确 MiMo TTS 请求落成持久化音频 Artifact |

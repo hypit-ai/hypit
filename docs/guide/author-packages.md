@@ -118,13 +118,15 @@ export default svmlPackage;
 The `specifiers` array lists the strings that an `<import from="..."/>` will match against. The
 `surface` string determines the XML element prefix (`<mine:my-widget>` when imported as `mine`).
 
-## 6. Register in tsconfig.json
-
-Add the path mapping so TypeScript resolves `@narratage/my-component` to source:
+## 6. Declare package dependencies
 
 ```json
-"@narratage/my-component": ["packages/my-component/src/index.ts"]
+"dependencies": {
+  "@narratage/protocol": "workspace:*"
+}
 ```
+
+pnpm workspace links resolve the package. No root path registry is involved.
 
 ## 7. Install and lock
 

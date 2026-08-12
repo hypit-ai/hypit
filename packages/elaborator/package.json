@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@narratage/composition": "workspace:*",
+    "@narratage/spatial": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/speech-basis": "workspace:*"
   }

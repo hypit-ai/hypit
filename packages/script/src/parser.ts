@@ -126,7 +126,6 @@ export function parseScript(
   sourceName: string,
   input: string,
   sourceOffset = 0,
-  bindings: Readonly<Record<string, string>> = {},
 ): ParsedNarrative {
   const source = input.replace(/\r\n?/gu, "\n").normalize("NFC");
   const fail = (code: string, message: string, offset?: number): never => {
@@ -240,28 +239,10 @@ export function parseScript(
       bufferStart = end;
     };
     for (let index = 0; index < raw.length;) {
-      if (raw.startsWith("${", index)) {
-        flush(index);
-        const close = raw.indexOf("}", index + 2);
-        if (close < 0) fail("SCRIPT_SLOT_UNCLOSED", "Unclosed Script Slot.", absoluteStart + index);
-        const id = raw.slice(index + 2, close);
-        if (!/^[\p{L}_][\p{L}\p{M}\p{N}_-]{0,63}$/u.test(id)) {
-          fail("SCRIPT_SLOT_ID", `Invalid Script Slot "${id}".`, absoluteStart + index);
-        }
-        const value = bindings[id]
-          ?? fail("SCRIPT_SLOT_UNBOUND", `Script Slot "${id}" is not bound.`, absoluteStart + index);
-        if (/[\r\n\p{Cc}]/u.test(value)) fail("SCRIPT_SLOT_VALUE", `Script Slot "${id}" must be single-line text.`);
-        pieces.push({ value, start: absoluteStart + index, end: absoluteStart + close + 1 });
-        index = close + 1;
-        bufferStart = index;
-        continue;
-      }
       if (raw[index] === "\\") {
-        const known = raw.startsWith("\\${", index)
-          ? { value: "${", length: 3 }
-          : ["@", "<", "\\", ...(dual ? ["|", ">"] : [])].includes(raw[index + 1] ?? "")
-            ? { value: raw[index + 1]!, length: 2 }
-            : undefined;
+        const known = ["@", "<", "\\", ...(dual ? ["|", ">"] : [])].includes(raw[index + 1] ?? "")
+          ? { value: raw[index + 1]!, length: 2 }
+          : undefined;
         const escape = known
           ?? fail("SCRIPT_ESCAPE", `Unknown Script escape "${raw.slice(index, index + 2)}".`, absoluteStart + index);
         buffer += escape.value;
@@ -351,14 +332,8 @@ export function parseScript(
       }
     };
     while (index < raw.length) {
-      if (raw.startsWith("${", index)) {
-        const close = raw.indexOf("}", index + 2);
-        if (close < 0) fail("SCRIPT_SLOT_UNCLOSED", "Unclosed Script Slot.", absoluteStart + index);
-        index = close + 1;
-        continue;
-      }
       if (raw[index] === "\\") {
-        index += raw.startsWith("\\${", index) ? 3 : 2;
+        index += 2;
         continue;
       }
       const marker = parseMarker(raw, index);
@@ -505,7 +480,7 @@ export function parseScript(
         || source[offset] === "@"
       ) break;
       if (source[offset] === "\\") {
-        offset += source.startsWith("\\${", offset) ? 3 : Math.min(2, source.length - offset);
+        offset += Math.min(2, source.length - offset);
         continue;
       }
       offset += 1;

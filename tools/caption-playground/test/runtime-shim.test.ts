@@ -5,7 +5,7 @@ import { sealComposition, sealVisualTrack } from "@narratage/composition";
 import { compileHyperframesDocument } from "@narratage/hyperframes";
 import { sealProgramSpace } from "@narratage/program-space";
 
-import { injectRuntimeShim } from "../tools/caption-playground/src/preview/runtime-shim.js";
+import { injectRuntimeShim } from "../src/preview/runtime-shim.js";
 
 const space = sealProgramSpace({
   contract: "svml.program-space@1",

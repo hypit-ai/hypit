@@ -10,6 +10,7 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
+    "@narratage/artifact": "workspace:*",
     "@narratage/component-kit": "workspace:*",
     "@narratage/composition": "workspace:*",
     "@narratage/elaborator": "workspace:*",
@@ -24,5 +25,9 @@
     "@narratage/temporal": "workspace:*",
     "@narratage/text": "workspace:*",
     "@narratage/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/core": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*"
   }
 }

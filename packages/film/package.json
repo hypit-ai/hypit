@@ -20,10 +20,11 @@
     "@narratage/markup": "workspace:*"
   },
   "devDependencies": {
-    "@narratage/component-kit": "workspace:*",
     "@narratage/core": "workspace:*",
     "@narratage/driver-node": "workspace:*",
     "@narratage/hyperframes": "workspace:*",
+    "@narratage/media": "workspace:*",
+    "@narratage/text": "workspace:*",
     "@narratage/typography-track": "workspace:*",
     "@narratage/validation": "workspace:*"
   }

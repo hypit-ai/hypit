@@ -113,3 +113,40 @@ test("project-owned production Module and Frontend identities use literal versio
   assert.deepEqual(failures, [],
     `project-owned logical identities must use literal version \"1\":\n${failures.join("\n")}`);
 });
+
+function packageImports(source) {
+  const matches = source.matchAll(/(?:\bfrom\s+|\bimport\s*\(|^\s*import\s+)["'](@narratage\/[a-z0-9-]+)(?:\/[^"']*)?["']/gmu);
+  return [...matches].map((match) => match[1]);
+}
+
+test("each package declares every cross-package import it owns", async () => {
+  const entries = await repositoryEntries();
+  const manifests = new Map();
+  for (const entry of entries) {
+    const match = /^packages\/([^/]+)\/package\.json$/u.exec(entry.path);
+    if (match === null) continue;
+    manifests.set(match[1], JSON.parse(await readFile(entry.child, "utf8")));
+  }
+  const failures = [];
+  for (const entry of entries) {
+    const match = /^packages\/([^/]+)\/(src|test)\/.*\.(?:ts|tsx|mts|cts|mjs)$/u.exec(entry.path);
+    if (match === null) continue;
+    const [directory, area] = [match[1], match[2]];
+    const manifest = manifests.get(directory);
+    if (manifest === undefined) {
+      failures.push(`${entry.path} (package has no package.json)`);
+      continue;
+    }
+    const allowed = new Set([
+      ...Object.keys(manifest.dependencies ?? {}),
+      ...(area === "test" ? Object.keys(manifest.devDependencies ?? {}) : []),
+    ]);
+    const source = await readFile(entry.child, "utf8");
+    for (const dependency of new Set(packageImports(source))) {
+      if (dependency !== manifest.name && !allowed.has(dependency)) {
+        failures.push(`${entry.path} (${dependency})`);
+      }
+    }
+  }
+  assert.deepEqual(failures, [], `undeclared package imports found:\n${failures.join("\n")}`);
+});

@@ -20,5 +20,15 @@
     "@narratage/semantic-map": "workspace:*",
     "@narratage/temporal": "workspace:*",
     "@narratage/markup": "workspace:*"
+  },
+  "devDependencies": {
+    "@narratage/artifact": "workspace:*",
+    "@narratage/core": "workspace:*",
+    "@narratage/media-pipeline": "workspace:*",
+    "@narratage/spatial": "workspace:*",
+    "@narratage/speech": "workspace:*",
+    "@narratage/speech-evidence": "workspace:*",
+    "@narratage/validation": "workspace:*",
+    "@narratage/visual-ir": "workspace:*"
   }
 }

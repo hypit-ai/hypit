@@ -18,7 +18,6 @@ import {
   NodeDriver,
   EndpointRegistry,
   parseBuildState,
-  parseModuleManifestText,
   serializeBuildState,
 } from "@narratage/driver-node";
 import type {
@@ -29,6 +28,7 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@narratage/protocol";
+import { parseModuleManifestText } from "@narratage/protocol";
 import {
   TypeValidationError,
   TypeValidatorRegistry,

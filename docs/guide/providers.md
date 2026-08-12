@@ -166,10 +166,12 @@ steps. Providers that call only remote APIs omit this step entirely—leave `"se
 
 ## 6. Register and lock
 
-Add the path mapping to `tsconfig.json`:
+Declare every imported package in the Provider's own `package.json`:
 
 ```json
-"@narratage/provider-my-service": ["packages/provider-my-service/src/index.ts"]
+"dependencies": {
+  "@narratage/runtime-adapter": "workspace:*"
+}
 ```
 
 Lock into a Runtime package lock:
@@ -219,5 +221,5 @@ node --run narratage -- doctor svml.runtime.json
 | `provider-hyperframes-local` | Local process: Chrome rendering with worker parallelism and output probe validation |
 | `provider-hyperframes-aws-lambda` | Remote recoverable job: deterministic Step Functions submission, polling and S3 streaming |
 | `provider-image-opencv-local` | Local Python: bounded OpenCV/NumPy with locked Python environment |
-| `provider-media-aws-lambda` | Remote synchronous Lambda: the same eight capabilities as local media; the deployed canary currently covers the original five |
+| `provider-media-aws-lambda` | Remote synchronous Lambda: the same eight capabilities as local media |
 | `provider-xiaomi-mimo` | Remote immediate API: exact MiMo TTS requests to persisted audio Artifacts |

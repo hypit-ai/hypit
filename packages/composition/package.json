@@ -21,6 +21,7 @@
     "@narratage/core": "workspace:*",
     "@narratage/narrative": "workspace:*",
     "@narratage/semantic-map": "workspace:*",
+    "@narratage/spatial": "workspace:*",
     "@narratage/speech": "workspace:*",
     "@narratage/speech-evidence": "workspace:*",
     "@narratage/validation": "workspace:*"
