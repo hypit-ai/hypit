@@ -1,6 +1,19 @@
-# Narratage
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/narratage-logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/public/narratage-logo-vector.svg">
+    <img alt="Narratage" src="docs/public/narratage-logo-vector.svg" width="420">
+  </picture>
+</p>
 
-> Write the story. Compile the video.
+<p align="center"><strong>Write the story. Compile the video.</strong></p>
+
+<p align="center">
+  <a href="https://narratage.hypit.ai/">Documentation</a> ·
+  <a href="https://narratage.hypit.ai/zh/">中文文档</a> ·
+  <a href="https://narratage.hypit.ai/quickstart">Quickstart</a> ·
+  <a href="./examples/README.md">Examples</a>
+</p>
 
 Narratage is a semantic, graph-native system for making AI video. You write the story, choose the
 models and visual components, and state which outputs you want. Narratage turns that intent into a
@@ -8,11 +21,6 @@ finite execution plan, runs only the work the result depends on, and keeps every
 available for later Runs.
 
 SVML is the authoring language. Narratage is the compiler, runtime and package ecosystem around it.
-
-[Documentation](https://narratage.hypit.ai/) ·
-[中文文档](https://narratage.hypit.ai/zh/) ·
-[Quickstart](https://narratage.hypit.ai/quickstart) ·
-[Examples](./examples/README.md)
 
 Narratage currently runs from a source checkout. The npm packages and CLI have not been published
 yet.
@@ -27,25 +35,28 @@ and points without introducing timecodes.
 <script id="story">
   @whole
 
-  <hook>
-    <ALICE> @problem @beat Never let anyone take credit for your work. @/beat @/problem
-  </hook>
+  <opening>
+    <MARA> @mystery @beat At <2:13 A.M. | two thirteen in the morning>,
+           every billboard in the city began telling the same story. @/beat @/mystery
+  </opening>
 
-  <answer>
-    <!-- Selections may cross; the markers do not have to nest like XML. -->
+  <reveal>
+    <!-- The screens wake before the city does. -->
     @claim
-    <BOB> Before ~@proof the report appears @reveal! on screen @/claim,
-          I call it <SVML | semantic video markup language> @/proof~.
-    <ALICE> @beat I < | honestly> wish I'd had it sooner @/beat ~@cut!
-             — and yes, I said \@proof aloud.
-  </answer>
+    <NOAH> Whose story?
+    <MARA> Mine. They spent ten years ~@proof cutting me out of @flash!
+           every photograph. @/claim So I put myself back into all of them @/proof~.
+    <NOAH> @beat You rewrote the whole city? @/beat
+    <MARA> I < | only> changed one thing ~@cut!: the ending.
+           I signed it \@midnight.
+  </reveal>
 
   @silence
   <pause/>
   @/silence
 
   <tagline>
-    Meaning becomes the source.
+    By sunrise, the city remembered the woman history had erased.
   </tagline>
 
   @/whole~
@@ -53,7 +64,7 @@ and points without introducing timecodes.
 
 <seedance:TextVideo id="take"
   model="mini"
-  prompt={story.segment.hook.dialogue}
+  prompt={story.segment.opening.dialogue}
   duration="5"
   generate-audio="true"/>
 
@@ -71,15 +82,15 @@ The Script excerpt shows the complete marker vocabulary:
 
 | Form | Meaning |
 |---|---|
-| `<hook>...</hook>` / `<pause/>` | spoken and empty Segments |
-| `<ALICE>` | a Role Cue; it continues until the next cue or Segment end |
-| `<SVML \| semantic video markup language>` | display text on the left, spoken text on the right |
-| `< \| honestly>` | spoken filler deliberately absent from captions |
-| `@problem ... @/problem` | Selection whose boundaries absorb inward |
+| `<opening>...</opening>` / `<pause/>` | spoken and empty Segments |
+| `<MARA>` | a Role Cue; it continues until the next cue or Segment end |
+| `<2:13 A.M. \| two thirteen in the morning>` | display text on the left, spoken text on the right |
+| `< \| only>` | spoken filler deliberately absent from captions |
+| `@mystery ... @/mystery` | Selection whose boundaries absorb inward |
 | `~@proof ... @/proof~` | Selection whose boundaries absorb outward |
 | repeated `@beat ... @/beat` | one non-contiguous Selection with multiple occurrences |
-| `@reveal!` / `~@cut!` | Moments attached to the next word start / previous word end |
-| `\@proof` | a literal `@proof`, not a marker |
+| `@flash!` / `~@cut!` | Moments attached to the next word start / previous word end |
+| `\@midnight` | a literal `@midnight`, not a marker |
 | `<!-- ... -->` | a source comment; it enters no text projection |
 
 `@whole` crosses Segment boundaries; `@claim` and `proof` demonstrate that Selections may cross
