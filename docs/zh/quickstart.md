@@ -5,11 +5,29 @@ description: 安装 Narratage，编译第一张完整的 SVML 视频图，并准
 
 # 快速开始
 
-Narratage 把 SVML 作者源码编译成一张可见的执行图。在任何模型或外部服务开始工作之前，
-你可以先检查源码、选择一次 Run，并看清这次 Build 究竟需要执行什么。
-SVML 即 Semantic Video Markup Language，Author Source 的扩展名是 `.svml`。
+**Narratage** 这个名字来自 1933 年《*New York Times*》对电影《*The Power and the
+Glory*》的一篇影评。那位影评人造出这个词，用来描述当时的一种新兴电影手法：
+**Narration + Montage** —— 旁白的声音推动故事前进，同时画面组接出与之呼应的蒙太奇。
 
-本页先带你得到第一份安全的 Plan：不需要 API Key，也不会产生任何付费请求。
+这套系统做的正是这件事。作者写下带有语义锚点的口播 Script，编译器则把生成的视频、字幕、B-roll、
+文字与音频组装成一部完成的影片。文字是语义主轴，所有视觉内容以彼此平级的 Track 参与作品。
+Author Source 使用 SVML（Semantic Video Markup Language）编写，扩展名为 `.svml`。
+
+Narratage 把这份源码编译成一张可见的执行图。在任何模型或外部服务开始工作之前，你可以先检查源码、
+选择一次 Run，并看清这次 Build 究竟需要执行什么。本页先带你得到第一份安全的 Plan：不需要 API Key，
+也不会产生任何付费请求。
+
+## 使用 Narratage skill
+
+如果使用编程 Agent，可以要求它使用仓库中的 `narratage` skill。Skill 遵循的仍然是同一套文件和命令，
+不会创造另一套工作流。把下面这段发给它：
+
+```text
+安装并使用这个仓库里的 narratage skill。配置我的环境，只向我索取当前 Runtime Profile
+实际需要的 API key，然后带我完成第一支 SVML 视频的创作与 Build。
+```
+
+否则，按下面五个步骤依次进行。
 
 ## 1. 安装源码工作区
 
@@ -177,18 +195,3 @@ Endpoint 配置，但不会执行作者图。
 | [Film 与渲染](./quickstart/composition.md) | 平级 Track 合成与显式渲染 |
 | [Run Source 与 Builds](./quickstart/run.md) | Targets、复用、Runtime Profile、Build 与取回结果 |
 
-如果使用编程 Agent，可以要求它使用仓库中的 `narratage` skill。Skill 遵循的仍然是同一套文件和命令，
-不会创造另一套工作流。
-
-把下面这段发给它：
-
-```text
-安装并使用这个仓库里的 narratage skill。要安装整个 .agents/skills/narratage 文件夹，
-而不是只复制 SKILL.md。配置我的环境，只向我索取当前 Runtime Profile 实际需要的 API key，
-然后带我完成第一支 SVML 视频的创作与 Build。
-```
-
-## 名字的由来
-
-*Narratage* 原本描述的是“叙述驱动的蒙太奇”：声音负责推动故事，画面围绕叙述组接。
-这也是本项目最初的视频形态——文字是语义主轴，所有视觉内容以彼此平级的 Track 参与作品。
