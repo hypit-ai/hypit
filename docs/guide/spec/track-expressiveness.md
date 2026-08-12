@@ -1,3 +1,8 @@
+---
+title: SVML Track Expressiveness Gate
+description: all E1–E8 gates execute; repository-internal `svml.visual-track@1` waist frozen pre-publication.
+---
+
 # SVML Track Expressiveness Gate
 
 Status: all E1–E8 gates execute; repository-internal `svml.visual-track@1` waist frozen pre-publication.

@@ -1,3 +1,8 @@
+---
+title: Author Surface Binding
+description: implemented compiler contract for trusted package-owned Surfaces; third-party isolation is.
+---
+
 # Author Surface Binding
 
 Status: implemented compiler contract for trusted package-owned Surfaces; third-party isolation is

@@ -1,3 +1,8 @@
+---
+title: SVML Script Surface
+description: Script 作者面的规范性合同：Segment、Role Cue、Dual Text、Selection、Moment 与 Slot。
+---
+
 # SVML Script Surface
 
 > **Draft; not frozen.**

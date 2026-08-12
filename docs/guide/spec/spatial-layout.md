@@ -1,3 +1,8 @@
+---
+title: Shared Spatial Layout
+description: executable foundational authority for shared Spatial geometry. `@narratage/spatial`.
+---
+
 # Shared Spatial Layout
 
 Status: executable foundational authority for shared Spatial geometry. `@narratage/spatial`
@@ -381,7 +386,7 @@ Spatial provides common geometry without forcing one layout model:
 - Area Text consumes a Placement Frame, then performs package-owned paragraph flow inside it;
 - Path Text consumes an explicit `SpatialPath`;
 - Media consumes a Placement Frame and derives one Content Frame per sample;
-- Ranking consumes Frames/Points for its board, slots and staging areas, then owns sibling layout;
+- Ranking consumes one Placement Frame and owns board, slot and staging-area layout inside it;
 - Comment Sticker consumes a Placement Frame and owns its avatar/text/internal layout;
 - Caption may consume a Placement Frame, but Cue/Atom wrapping remains Caption-owned.
 

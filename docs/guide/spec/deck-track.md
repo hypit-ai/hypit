@@ -1,3 +1,8 @@
+---
+title: SVML Depth-Stack Deck Track
+description: implemented executable authority for the official depth-stack Deck migration. It records.
+---
+
 # SVML Depth-Stack Deck Track
 
 Status: implemented executable authority for the official depth-stack Deck migration. It records

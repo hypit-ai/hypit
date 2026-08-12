@@ -35,4 +35,4 @@ they define the board vocabulary rather than dynamic item copy.
 </ranking:Column>
 ```
 
-See [`../../spec/ranking-track.md`](../../spec/ranking-track.md) for the normative pre-release model.
+See [Ranking Track](https://narratage.hypit.ai/guide/spec/ranking-track) for the normative pre-release model.
