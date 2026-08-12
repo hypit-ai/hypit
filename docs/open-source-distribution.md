@@ -32,7 +32,8 @@ As of this audit:
 - package exports generally point at TypeScript source rather than compiled ESM and declarations;
 - there is no published CLI binary backed by built JavaScript—the checkout launcher uses `tsx`;
 - pull-request CI is absent; the only GitHub workflow publishes the documentation site;
-- the repository root has no license, contribution, security, conduct, changelog or notice files;
+- the repository root carries `LICENSE` but no contribution, security, conduct, changelog or notice
+  files;
 - SQLite rejects an incompatible schema instead of migrating it;
 - local WhisperX and OpenCV managed deployments still locate projects relative to the monorepo;
 - type checking, the full test suite, release-hygiene tests and documentation build pass in the
@@ -131,8 +132,8 @@ Lambda or remote service implementing the same locked capability.
 
 Before making the repository public:
 
-1. choose a license and add `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, a code of conduct and a
-   third-party notice policy;
+1. add `CONTRIBUTING.md`, `SECURITY.md`, a code of conduct and a third-party notice policy to sit
+   alongside the chosen `LICENSE`;
 2. scan every commit, branch and tag for credentials, customer names, workstation paths and files
    that were deleted only from the working tree;
 3. audit every documentation image, font, video and other redistributed asset for provenance and

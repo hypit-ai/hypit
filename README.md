@@ -269,3 +269,13 @@ pnpm docs:build
 
 Current implementation facts and remaining work live in
 [Implementation Status](./docs/implementation-status.md) and the [Roadmap](./docs/roadmap.md).
+
+## License
+
+Narratage is released under the [Narratage Open Source License](./LICENSE), based on Apache 2.0 with
+additional conditions. You may run it on your own infrastructure, including for your organization's
+commercial work, and you may fork, modify and publish the source under the same terms. Operating
+Narratage as a multi-tenant or hosted service, and supplying it to third parties for commercial
+gain, each require a commercial license. Content you produce with Narratage belongs to you.
+
+For commercial licensing, email [official@hypit.ai](mailto:official@hypit.ai?subject=%5BGitHub%5DNarratage%20Commercial%20License%20Inquiry).
