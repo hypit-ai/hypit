@@ -257,9 +257,7 @@ speech.normal {
 | `max` | 最大时长（秒） |
 | `rounding` | 取整模式：`none`、`round`、`ceil` |
 
-英语三个具名档位分别解析为每秒 `4.2`、`4.6`、`5.0` 个音节。项目需要连续可调值时，
-用数值 `rate` 代替 `pace`。
-所有属性都必须显式提供：`language`、`min`、`max`、`rounding`，并且在 `pace` 与
+英语三个具名档位分别解析为每秒 `4.2`、`4.6`、`5.0` 个音节。项目需要连续可调值时，用数值 `rate` 代替 `pace`。所有属性都必须显式提供：`language`、`min`、`max`、`rounding`，并且在 `pace` 与
 `rate` 中恰好选择一个。Estimate 包不会补充隐藏策略默认值。
 
 通过 `estimate:Speech` 的 `policy` 属性引用：
@@ -271,8 +269,7 @@ speech.normal {
 
 ## Speaker Text Template
 
-这个 Recipe 选择纯数据 `speaker-v1` Text Template 声明的 Prompt 轴。模型、分辨率、参考素材
-与时长仍是 `seedance:ReferenceVideo` 的显式输入，不藏在 Recipe 里。
+这个 Recipe 选择纯数据 `speaker-v1` Text Template 声明的 Prompt 轴。模型、分辨率、参考素材与时长仍是 `seedance:ReferenceVideo` 的显式输入，不藏在 Recipe 里。
 
 ```svs
 speaker.host {
@@ -303,8 +300,7 @@ speaker.host {
 
 ## 通用 Text Template Recipe
 
-无需领域包装器也能使用同一优先级。`text:Render` 可以读取任意 SVS Recipe，只投影模板
-明确声明的属性，并允许显式 `text:Param` 覆盖。这使 Seedance 的 B-roll、Podcast、Call、
+无需领域包装器也能使用同一优先级。`text:Render` 可以读取任意 SVS Recipe，只投影模板明确声明的属性，并允许显式 `text:Param` 覆盖。这使 Seedance 的 B-roll、Podcast、Call、
 Street Interview 与参考迁移 Kit 可以保持为纯数据，而不进入 Seedance 执行代码。
 
 ```svs
@@ -331,15 +327,13 @@ interview.street {
 ```
 
 `street-interview-v1` 读取这六个轴。`podcast-v1` 与 `call-v1` 读取同名的 `framing`、
-`edit-language`、`pacing`、`performance`、`reaction` 和 `gesture` 轴，但使用各自的有限值。
-允许值和默认值以所选 Kit 文件为准。
+`edit-language`、`pacing`、`performance`、`reaction` 和 `gesture` 轴，但使用各自的有限值。允许值和默认值以所选 Kit 文件为准。
 
 模型、分辨率、时长和参考媒体不是模板策略；它们继续存在于精确模型 Surface 与显式图边中。
 
 ## 精确字体声明
 
-SVS 描述字体策略，但不选择或打开字体字节。常用开源字体由私有的预发布字体目录显式
-导入；只有作者图真正引用的字体会进入本次 Build：
+SVS 描述字体策略，但不选择或打开字体字节。常用开源字体由私有的预发布字体目录显式导入；只有作者图真正引用的字体会进入本次 Build：
 
 ```svml
 <import as="fonts" from="@narratage/fonts-open@1"/>
@@ -356,9 +350,7 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
 | `style` | `normal` 或该字体族支持的 `italic` |
 | `emoji` | `Stack` 可选的 `color`（COLRv1）或 `mono` 兜底 |
 
-目录现有 109 个开源字体族，覆盖手写、书法、展示、无衬线、衬线、等宽、CJK、其他
-文字系统与 Emoji。Fontsource 依赖固定为 `5.3.0`，Chromium 兼容的 COLRv1 Emoji 包另行
-锁定版本；编译器把已安装字节哈希成内容寻址的字体值，Build 过程不会下载字体，Runtime
+目录现有 109 个开源字体族，覆盖手写、书法、展示、无衬线、衬线、等宽、CJK、其他文字系统与 Emoji。Fontsource 依赖固定为 `5.3.0`，Chromium 兼容的 COLRv1 Emoji 包另行锁定版本；编译器把已安装字节哈希成内容寻址的字体值，Build 过程不会下载字体，Runtime
 也不猜字体：
 
 ```svml
@@ -367,10 +359,7 @@ SVS 描述字体策略，但不选择或打开字体字节。常用开源字体�
 ```
 
 `fonts:Stack` 产出通用 `FontStackRef`，主字体与 Fallback 都保留自己的真实元数据；
-Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是
-一条逻辑边。终端 Text 与 Fine Caption 都拒绝省略字体栈；Visual IR 不接受机器字体兜底。
-对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如
-包含 VS16 的 `☎️`）；任何包都不会为了强制彩色而改写显示稿。
+Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是一条逻辑边。终端 Text 与 Fine Caption 都拒绝省略字体栈；Visual IR 不接受机器字体兜底。对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如包含 VS16 的 `☎️`）；任何包都不会为了强制彩色而改写显示稿。
 
 品牌字体与自定义字体仍是显式作者资产，不会被塞进共享目录：
 
