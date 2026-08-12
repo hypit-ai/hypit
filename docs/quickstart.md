@@ -25,9 +25,8 @@ If you use a coding agent, ask it to use the repository's `narratage` skill. The
 same files and commands; it does not introduce a separate workflow. Send it this:
 
 ```text
-Install and use the narratage skill from this repository. Install the whole
-.agents/skills/narratage folder, not only SKILL.md. Set up my environment, ask for only the API
-keys required by my Runtime Profile, and guide me through authoring and building my first SVML
+Install and use the narratage skill from this repository. Set up my environment, ask for only the
+API keys required by my Runtime Profile, and guide me through authoring and building my first SVML
 video.
 ```
 
